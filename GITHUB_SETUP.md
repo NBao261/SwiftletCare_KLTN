@@ -42,30 +42,30 @@ Sau đó vào **GitHub → Settings → General → Default branch** → đổi 
 
 #### Ruleset cho `main` (Production — khóa chặt nhất)
 
-| Setting | Giá trị |
-|---|---|
-| Branch name pattern | `main` |
-| Restrict deletions | ✅ BẬT |
-| Require linear history | ✅ BẬT (merge sạch, không có merge commit rối) |
-| Require a pull request before merging | ✅ BẬT |
-| → Required approvals | **1** (Owner phải approve) |
-| → Dismiss stale reviews | ✅ BẬT |
-| → Require review from code owners | ✅ BẬT |
-| Require status checks to pass | ✅ BẬT (nếu có CI) |
-| Block force pushes | ✅ BẬT |
-| Restrict who can push to matching branches | ✅ BẬT → chỉ **Owner** |
+| Setting                                    | Giá trị                                        |
+| ------------------------------------------ | ---------------------------------------------- |
+| Branch name pattern                        | `main`                                         |
+| Restrict deletions                         | ✅ BẬT                                         |
+| Require linear history                     | ✅ BẬT (merge sạch, không có merge commit rối) |
+| Require a pull request before merging      | ✅ BẬT                                         |
+| → Required approvals                       | **1** (Owner phải approve)                     |
+| → Dismiss stale reviews                    | ✅ BẬT                                         |
+| → Require review from code owners          | ✅ BẬT                                         |
+| Require status checks to pass              | ✅ BẬT (nếu có CI)                             |
+| Block force pushes                         | ✅ BẬT                                         |
+| Restrict who can push to matching branches | ✅ BẬT → chỉ **Owner**                         |
 
 #### Ruleset cho `develop` (Integration — kiểm soát vừa phải)
 
-| Setting | Giá trị |
-|---|---|
-| Branch name pattern | `develop` |
-| Restrict deletions | ✅ BẬT |
-| Require a pull request before merging | ✅ BẬT |
-| → Required approvals | **1** (ít nhất 1 member review) |
-| → Dismiss stale reviews | ✅ BẬT |
-| Block force pushes | ✅ BẬT |
-| Allow force pushes | ❌ TẮT |
+| Setting                               | Giá trị                         |
+| ------------------------------------- | ------------------------------- |
+| Branch name pattern                   | `develop`                       |
+| Restrict deletions                    | ✅ BẬT                          |
+| Require a pull request before merging | ✅ BẬT                          |
+| → Required approvals                  | **1** (ít nhất 1 member review) |
+| → Dismiss stale reviews               | ✅ BẬT                          |
+| Block force pushes                    | ✅ BẬT                          |
+| Allow force pushes                    | ❌ TẮT                          |
 
 > **Lưu ý:** Không cần `Require linear history` cho `develop` — team merge thường xuyên nên cho phép merge commit.
 
@@ -129,11 +129,11 @@ Tạo file `.github/pull_request_template.md`:
 
 **GitHub → Settings → Collaborators → Add people**
 
-| Vai trò | GitHub Permission |
-|---|---|
-| Thành viên team chính | **Write** |
-| Reviewer bên ngoài | **Read** |
-| Owner (bạn) | **Admin** |
+| Vai trò               | GitHub Permission |
+| --------------------- | ----------------- |
+| Thành viên team chính | **Write**         |
+| Reviewer bên ngoài    | **Read**          |
+| Owner (bạn)           | **Admin**         |
 
 ---
 
@@ -162,7 +162,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Validate commit messages
         run: |
@@ -277,12 +277,12 @@ git push origin feat/pid-control
 
 ### Tên nhánh chuẩn
 
-| Loại | Pattern | Ví dụ |
-|---|---|---|
-| Feature | `feat/<name>` | `feat/pid-humidity-control` |
-| Bug fix | `fix/<name>` | `fix/bytetrack-double-count` |
-| Documentation | `docs/<name>` | `docs/srs-express-update` |
-| Chore/Config | `chore/<name>` | `chore/setup-mqtt-broker` |
+| Loại           | Pattern         | Ví dụ                          |
+| -------------- | --------------- | ------------------------------ |
+| Feature        | `feat/<name>`   | `feat/pid-humidity-control`    |
+| Bug fix        | `fix/<name>`    | `fix/bytetrack-double-count`   |
+| Documentation  | `docs/<name>`   | `docs/srs-express-update`      |
+| Chore/Config   | `chore/<name>`  | `chore/setup-mqtt-broker`      |
 | Hotfix từ main | `hotfix/<name>` | `hotfix/auth-crash-production` |
 
 ---
@@ -312,11 +312,11 @@ git push origin feat/pid-control
 
 > Owner hoặc reviewer approve → dùng **"Squash and merge"** hoặc **"Merge commit"**
 
-| Strategy | Khi nào dùng |
-|---|---|
+| Strategy             | Khi nào dùng                                            |
+| -------------------- | ------------------------------------------------------- |
 | **Squash and merge** | Feature nhỏ, nhiều commit WIP → gộp thành 1 commit sạch |
-| **Merge commit** | Feature lớn, muốn giữ lịch sử chi tiết |
-| **Rebase and merge** | Muốn lịch sử tuyến tính (linear history) |
+| **Merge commit**     | Feature lớn, muốn giữ lịch sử chi tiết                  |
+| **Rebase and merge** | Muốn lịch sử tuyến tính (linear history)                |
 
 **Khuyến nghị cho SwiftletCare:** Dùng **Squash and merge** để `develop` log sạch.
 
@@ -349,6 +349,7 @@ git push origin --delete feat/pid-control
 ```
 
 Commit CHANGELOG:
+
 ```bash
 git checkout develop
 git add CHANGELOG.md
@@ -515,5 +516,5 @@ Quy tắc vàng:
 
 ---
 
-*Tài liệu này được lưu tại `GITHUB_SETUP.md` trong repo SwiftletCare.*  
-*Cập nhật lần cuối: 2026-09-07*
+_Tài liệu này được lưu tại `GITHUB_SETUP.md` trong repo SwiftletCare._  
+_Cập nhật lần cuối: 2026-09-07_

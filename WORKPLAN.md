@@ -1,4 +1,5 @@
 # 📋 WORKPLAN – SwiftletCare KLTN
+
 ## Kế hoạch Triển khai Chi tiết — 5 Thành viên / 8 Tuần (Tháng 9–10/2026)
 
 > **Dựa trên:** SRS SwiftletCare v1.0.0 (IEEE 830-1998)  
@@ -9,13 +10,13 @@
 
 ## 📌 Phân công Thành viên Cố định
 
-| Ký hiệu | Vai trò | Chịu trách nhiệm chính |
-| ------- | ------- | ---------------------- |
-| **M1**  | Hardware Engineer | ESP32 firmware, PID, cảm biến, relay, mạch điện |
-| **M2**  | AI/ML Engineer | Dataset, YOLOv8, ByteTrack, RPi deployment |
-| **M3**  | Backend Developer | Express API, MongoDB, MQTT, WebSocket, Alert Engine |
-| **M4**  | Frontend Developer | ReactJS Dashboard, PWA, charts, realtime UI |
-| **M5**  | QA + Tech Writer (Owner) | Integration test, kiểm thử thực tế, KLTN báo cáo |
+| Ký hiệu | Vai trò                  | Chịu trách nhiệm chính                              |
+| ------- | ------------------------ | --------------------------------------------------- |
+| **M1**  | Hardware Engineer        | ESP32 firmware, PID, cảm biến, relay, mạch điện     |
+| **M2**  | AI/ML Engineer           | Dataset, YOLOv8, ByteTrack, RPi deployment          |
+| **M3**  | Backend Developer        | Express API, MongoDB, MQTT, WebSocket, Alert Engine |
+| **M4**  | Frontend Developer       | ReactJS Dashboard, PWA, charts, realtime UI         |
+| **M5**  | QA + Tech Writer (Owner) | Integration test, kiểm thử thực tế, KLTN báo cáo    |
 
 > ⚠️ **M5 = chủ repo** → review PR, approve merge vào `develop`, maintain GitHub Actions CI, điều phối tech decisions.
 
@@ -35,6 +36,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ## ⚙️ QUY TẮC CHUNG
 
 ### Git Workflow
+
 - Mỗi task → 1 branch riêng từ `develop`
 - Format: `feat/m1-pid-control`, `fix/m3-mqtt-auth`, `docs/m5-srs-update`
 - Commit phải qua validator: `python -X utf8 .agents/skills/git-commit-convention/scripts/validate_commit.py "<msg>"`
@@ -42,6 +44,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - Merge vào `main` chỉ khi sprint demo thành công
 
 ### Definition of Done (DoD) — mỗi task
+
 - [ ] Code chạy được, không crash
 - [ ] Commit đúng format `type(scope): subject`
 - [ ] PR đã được merge vào `develop`
@@ -51,6 +54,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ---
 
 ## 🚀 SPRINT 1 — Foundation & Setup
+
 **Thời gian:** Tuần 1–2 (08/09 → 21/09/2026)  
 **Sprint Goal:** Toàn bộ môi trường dev sẵn sàng, scaffolding xong, phần cứng mua sắm xong.
 
@@ -59,6 +63,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🔧 M1 — Hardware Engineer
 
 #### TASK-M1-001 | Mua sắm & Kiểm tra BOM
+
 - **Branch:** `chore/m1-hardware-bom`
 - **Deadline:** 10/09/2026
 - **Công việc:**
@@ -70,6 +75,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **Commit mẫu:** `chore(hardware): verify all BOM components received and functional`
 
 #### TASK-M1-002 | Setup PlatformIO + ESP32 Project
+
 - **Branch:** `chore/m1-platformio-setup`
 - **Deadline:** 12/09/2026
 - **Công việc:**
@@ -81,6 +87,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **Commit mẫu:** `chore(hardware): init platformio project with required sensor libraries`
 
 #### TASK-M1-003 | Thiết kế Sơ đồ Mạch
+
 - **Branch:** `docs/m1-circuit-diagram`
 - **Deadline:** 14/09/2026
 - **Công việc:**
@@ -92,6 +99,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **Commit mẫu:** `docs(hardware): add ESP32 wiring diagram with sensor pin mapping`
 
 #### TASK-M1-004 | Đọc Cảm biến – Basic Firmware
+
 - **Branch:** `feat/m1-sensor-reading`
 - **Deadline:** 21/09/2026
 - **Công việc:**
@@ -107,6 +115,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🤖 M2 — AI/ML Engineer
 
 #### TASK-M2-001 | Setup Raspberry Pi 4 + OS
+
 - **Branch:** `chore/m2-rpi-setup`
 - **Deadline:** 11/09/2026
 - **Công việc:**
@@ -119,6 +128,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **Commit mẫu:** `chore(rpi): setup raspberry pi 4 with python env and opencv`
 
 #### TASK-M2-002 | Thu thập Dataset Chim Yến
+
 - **Branch:** `feat/m2-dataset-collection`
 - **Deadline:** 21/09/2026
 - **Công việc:**
@@ -131,6 +141,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §11.1 — Dataset Requirements
 
 #### TASK-M2-003 | Annotation Dataset (Roboflow)
+
 - **Branch:** `feat/m2-dataset-annotation`
 - **Deadline:** 21/09/2026 (song song với M2-002)
 - **Công việc:**
@@ -146,6 +157,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 💻 M3 — Backend Developer
 
 #### TASK-M3-001 | Setup Backend Project
+
 - **Branch:** `chore/m3-backend-scaffold`
 - **Deadline:** 11/09/2026
 - **Công việc:**
@@ -171,6 +183,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **Commit mẫu:** `chore(api): scaffold express project with folder structure and dependencies`
 
 #### TASK-M3-002 | MongoDB Schema + Models
+
 - **Branch:** `feat/m3-mongodb-models`
 - **Deadline:** 14/09/2026
 - **Công việc:**
@@ -187,6 +200,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §8.2 — Schema Chi tiết
 
 #### TASK-M3-003 | AUTH Module
+
 - **Branch:** `feat/m3-auth-module`
 - **Deadline:** 21/09/2026
 - **Công việc:**
@@ -204,6 +218,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** AUTH-FR-001 → AUTH-FR-007
 
 #### TASK-M3-004 | Setup MQTT Broker (EMQX)
+
 - **Branch:** `chore/m3-mqtt-broker`
 - **Deadline:** 16/09/2026
 - **Công việc:**
@@ -220,6 +235,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🎨 M4 — Frontend Developer
 
 #### TASK-M4-001 | Setup Frontend Project (ReactJS + Vite + PWA)
+
 - **Branch:** `chore/m4-frontend-scaffold`
 - **Deadline:** 12/09/2026
 - **Công việc:**
@@ -233,6 +249,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **Commit mẫu:** `chore(pwa): scaffold vite react project with tailwind and pwa plugin`
 
 #### TASK-M4-002 | Design System & Layout
+
 - **Branch:** `feat/m4-design-system`
 - **Deadline:** 16/09/2026
 - **Công việc:**
@@ -246,6 +263,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** UX-NFR-001, UX-NFR-004
 
 #### TASK-M4-003 | Login & Auth Pages
+
 - **Branch:** `feat/m4-auth-pages`
 - **Deadline:** 21/09/2026
 - **Công việc:**
@@ -263,6 +281,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🔍 M5 — QA & Tech Writer (Owner)
 
 #### TASK-M5-001 | Hoàn thiện Dev Environment
+
 - **Branch:** `chore/m5-dev-environment`
 - **Deadline:** 10/09/2026
 - **Công việc:**
@@ -276,6 +295,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **Commit mẫu:** `chore(ci): setup docker compose dev environment with mongodb emqx and minio`
 
 #### TASK-M5-002 | Tạo API Contract (OpenAPI Spec)
+
 - **Branch:** `docs/m5-api-spec`
 - **Deadline:** 16/09/2026
 - **Công việc:**
@@ -287,6 +307,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §9.1 — REST API Endpoints
 
 #### TASK-M5-003 | Sprint 1 Review + Retrospective
+
 - **Branch:** `docs/m5-sprint1-review`
 - **Deadline:** 21/09/2026
 - **Công việc:**
@@ -299,6 +320,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ---
 
 ## 🔥 SPRINT 2 — Core Features
+
 **Thời gian:** Tuần 3–4 (22/09 → 05/10/2026)  
 **Sprint Goal:** Firmware PID hoạt động, Backend FARM+ENV API xong, AI model v1 trained, Frontend dashboard cơ bản hiển thị dữ liệu thật.
 
@@ -307,6 +329,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🔧 M1 — Hardware Engineer
 
 #### TASK-M1-005 | MQTT Client trên ESP32
+
 - **Branch:** `feat/m1-mqtt-client`
 - **Deadline:** 25/09/2026
 - **Công việc:**
@@ -322,6 +345,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ENV-FR-001, ENV-FR-002, ENV-FR-015, §9.2
 
 #### TASK-M1-006 | PID Control Algorithm
+
 - **Branch:** `feat/m1-pid-control`
 - **Deadline:** 29/09/2026
 - **Công việc:**
@@ -339,6 +363,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ENV-FR-010 → ENV-FR-019
 
 #### TASK-M1-007 | Local Buffer + SPIFFS
+
 - **Branch:** `feat/m1-offline-buffer`
 - **Deadline:** 05/10/2026
 - **Công việc:**
@@ -349,6 +374,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** REL-NFR-003, ENV-FR-014
 
 #### TASK-M1-008 | Speaker Failure Detection (Audio Anomaly)
+
 - **Branch:** `feat/m1-audio-anomaly`
 - **Deadline:** 05/10/2026
 - **Công việc:**
@@ -363,6 +389,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🤖 M2 — AI/ML Engineer
 
 #### TASK-M2-004 | Train YOLOv8 Model v1
+
 - **Branch:** `feat/m2-yolov8-train`
 - **Deadline:** 29/09/2026
 - **Công việc:**
@@ -376,6 +403,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §11.2 — Model Specifications
 
 #### TASK-M2-005 | Deploy Model lên RPi + Inference Pipeline
+
 - **Branch:** `feat/m2-rpi-inference`
 - **Deadline:** 05/10/2026
 - **Công việc:**
@@ -391,6 +419,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** VISION-FR-001, VISION-FR-002, §11.2, PERF-NFR-004
 
 #### TASK-M2-006 | ByteTrack Integration + Counting Logic
+
 - **Branch:** `feat/m2-bytetrack-counting`
 - **Deadline:** 05/10/2026
 - **Công việc:**
@@ -408,6 +437,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 💻 M3 — Backend Developer
 
 #### TASK-M3-005 | FARM Module API
+
 - **Branch:** `feat/m3-farm-api`
 - **Deadline:** 26/09/2026
 - **Công việc:**
@@ -421,6 +451,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** FARM-FR-001, FARM-FR-002, AUTH-FR-005
 
 #### TASK-M3-006 | Device Registration API
+
 - **Branch:** `feat/m3-device-registration`
 - **Deadline:** 29/09/2026
 - **Công việc:**
@@ -434,6 +465,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** FARM-FR-003, FARM-FR-004, FARM-FR-005, ENV-FR-006
 
 #### TASK-M3-007 | MQTT Subscriber + Telemetry Ingestion
+
 - **Branch:** `feat/m3-telemetry-ingestion`
 - **Deadline:** 05/10/2026
 - **Công việc:**
@@ -446,6 +478,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ENV-FR-004, VISION-FR-008, VISION-FR-009, FARM-FR-005
 
 #### TASK-M3-008 | WebSocket với Socket.io
+
 - **Branch:** `feat/m3-websocket`
 - **Deadline:** 05/10/2026
 - **Công việc:**
@@ -463,6 +496,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🎨 M4 — Frontend Developer
 
 #### TASK-M4-004 | Dashboard Home — Real-time Sensor Cards
+
 - **Branch:** `feat/m4-dashboard-home`
 - **Deadline:** 29/09/2026
 - **Công việc:**
@@ -476,6 +510,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ENV-FR-005, FARM-FR-005
 
 #### TASK-M4-005 | Relay Control UI (Manual Override)
+
 - **Branch:** `feat/m4-relay-control`
 - **Deadline:** 03/10/2026
 - **Công việc:**
@@ -488,6 +523,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ENV-FR-016, ENV-FR-017, ENV-FR-018
 
 #### TASK-M4-006 | Farm & Device Management Pages
+
 - **Branch:** `feat/m4-farm-management`
 - **Deadline:** 05/10/2026
 - **Công việc:**
@@ -504,6 +540,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🔍 M5 — QA & Tech Writer
 
 #### TASK-M5-004 | Integration Test: MQTT End-to-End
+
 - **Branch:** `test/m5-mqtt-integration`
 - **Deadline:** 03/10/2026
 - **Công việc:**
@@ -516,6 +553,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §13.2 — MQTT End-to-End
 
 #### TASK-M5-005 | Cập nhật WORKPLAN & Issues
+
 - **Branch:** `docs/m5-progress-update`
 - **Deadline:** 05/10/2026
 - **Công việc:**
@@ -528,6 +566,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ---
 
 ## 🔗 SPRINT 3 — Integration & Frontend Complete
+
 **Thời gian:** Tuần 5–6 (06/10 → 19/10/2026)  
 **Sprint Goal:** Toàn bộ luồng dữ liệu end-to-end hoạt động. Alert system live. Dashboard analytics đầy đủ. PWA installable.
 
@@ -536,6 +575,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🔧 M1 — Hardware Engineer
 
 #### TASK-M1-009 | Predator Alert Integration
+
 - **Branch:** `feat/m1-power-outage-detection`
 - **Deadline:** 10/10/2026
 - **Công việc:**
@@ -546,6 +586,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** THREAT-FR-009, THREAT-FR-012, REL-NFR-007
 
 #### TASK-M1-010 | Lắp ráp Prototype hoàn chỉnh trong hộp IP65
+
 - **Branch:** `docs/m1-prototype-assembly`
 - **Deadline:** 19/10/2026
 - **Công việc:**
@@ -562,6 +603,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🤖 M2 — AI/ML Engineer
 
 #### TASK-M2-007 | Predator Detection + Alert Publisher
+
 - **Branch:** `feat/m2-predator-detection`
 - **Deadline:** 12/10/2026
 - **Công việc:**
@@ -574,6 +616,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** THREAT-FR-001→004
 
 #### TASK-M2-008 | Live Stream Setup (HLS)
+
 - **Branch:** `feat/m2-hls-livestream`
 - **Deadline:** 19/10/2026
 - **Công việc:**
@@ -585,6 +628,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** VISION-FR-013, VISION-FR-007
 
 #### TASK-M2-009 | Return Rate Alert Logic
+
 - **Branch:** `feat/m2-return-rate-alert`
 - **Deadline:** 19/10/2026
 - **Công việc:**
@@ -598,6 +642,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 💻 M3 — Backend Developer
 
 #### TASK-M3-009 | Alert Engine
+
 - **Branch:** `feat/m3-alert-engine`
 - **Deadline:** 12/10/2026
 - **Công việc:**
@@ -612,6 +657,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ALERT-FR-001 → ALERT-FR-009
 
 #### TASK-M3-010 | Telemetry & Analytics API
+
 - **Branch:** `feat/m3-analytics-api`
 - **Deadline:** 16/10/2026
 - **Công việc:**
@@ -625,6 +671,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ANALYTICS-FR-001, 002, 003, PERF-NFR-003
 
 #### TASK-M3-011 | Alert API + Notification Preferences
+
 - **Branch:** `feat/m3-alert-api`
 - **Deadline:** 19/10/2026
 - **Công việc:**
@@ -635,6 +682,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ALERT-FR-005 → ALERT-FR-009, SEC-NFR-006
 
 #### TASK-M3-012 | MinIO/S3 Integration
+
 - **Branch:** `feat/m3-minio-integration`
 - **Deadline:** 16/10/2026
 - **Công việc:**
@@ -649,6 +697,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🎨 M4 — Frontend Developer
 
 #### TASK-M4-007 | Alert Center + Notification Center
+
 - **Branch:** `feat/m4-alert-center`
 - **Deadline:** 12/10/2026
 - **Công việc:**
@@ -661,6 +710,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ALERT-FR-007, ALERT-FR-009
 
 #### TASK-M4-008 | Analytics Dashboard
+
 - **Branch:** `feat/m4-analytics`
 - **Deadline:** 16/10/2026
 - **Công việc:**
@@ -673,6 +723,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ANALYTICS-FR-001 → ANALYTICS-FR-005
 
 #### TASK-M4-009 | Live Camera Stream + Bird Count Display
+
 - **Branch:** `feat/m4-camera-livestream`
 - **Deadline:** 19/10/2026
 - **Công việc:**
@@ -684,6 +735,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** VISION-FR-012, VISION-FR-013
 
 #### TASK-M4-010 | PWA & Mobile Optimization
+
 - **Branch:** `feat/m4-pwa-mobile`
 - **Deadline:** 19/10/2026
 - **Công việc:**
@@ -700,6 +752,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🔍 M5 — QA & Tech Writer
 
 #### TASK-M5-006 | Integration Test: Full Alert Pipeline
+
 - **Branch:** `test/m5-alert-pipeline`
 - **Deadline:** 14/10/2026
 - **Công việc:**
@@ -711,6 +764,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §13.2 — Alert Pipeline
 
 #### TASK-M5-007 | Performance Baseline Test
+
 - **Branch:** `test/m5-performance-baseline`
 - **Deadline:** 19/10/2026
 - **Công việc:**
@@ -723,6 +777,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ---
 
 ## 🏁 SPRINT 4 — Polish, Testing & Thesis
+
 **Thời gian:** Tuần 7–8 (20/10 → 31/10/2026)  
 **Sprint Goal:** Toàn bộ tính năng MVP hoàn chỉnh, kiểm thử thực tế, demo chuẩn bị bảo vệ.
 
@@ -731,6 +786,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🔧 M1 — Hardware Engineer
 
 #### TASK-M1-011 | Hardware Testing & Sensor Calibration
+
 - **Branch:** `test/m1-hardware-validation`
 - **Deadline:** 27/10/2026
 - **Công việc:**
@@ -742,6 +798,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §13.4 — Hardware Testing
 
 #### TASK-M1-012 | Viết Tài liệu Firmware
+
 - **Branch:** `docs/m1-firmware-docs`
 - **Deadline:** 31/10/2026
 - **Công việc:**
@@ -756,6 +813,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🤖 M2 — AI/ML Engineer
 
 #### TASK-M2-010 | Model v2 Training (Nếu cần)
+
 - **Branch:** `feat/m2-model-v2`
 - **Deadline:** 25/10/2026
 - **Công việc:**
@@ -766,6 +824,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §11.2, §11.4
 
 #### TASK-M2-011 | AI Counting Accuracy Test
+
 - **Branch:** `test/m2-counting-accuracy`
 - **Deadline:** 31/10/2026
 - **Công việc:**
@@ -777,6 +836,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §13.5 — AI Model Evaluation
 
 #### TASK-M2-012 | Viết Tài liệu AI Pipeline
+
 - **Branch:** `docs/m2-ai-pipeline-docs`
 - **Deadline:** 31/10/2026
 - **Công việc:**
@@ -791,6 +851,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 💻 M3 — Backend Developer
 
 #### TASK-M3-013 | Security Hardening
+
 - **Branch:** `feat/m3-security`
 - **Deadline:** 24/10/2026
 - **Công việc:**
@@ -804,6 +865,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §12 — Security Requirements
 
 #### TASK-M3-014 | ENV Config & Threshold API
+
 - **Branch:** `feat/m3-env-config`
 - **Deadline:** 24/10/2026
 - **Công việc:**
@@ -814,6 +876,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ENV-FR-006, ENV-FR-016, ENV-FR-018, ENV-FR-019
 
 #### TASK-M3-015 | Nest Growth Logging API
+
 - **Branch:** `feat/m3-nest-logging`
 - **Deadline:** 28/10/2026
 - **Công việc:**
@@ -823,6 +886,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ANALYTICS-FR-004
 
 #### TASK-M3-016 | Backend Docs + API Finalization
+
 - **Branch:** `docs/m3-api-final`
 - **Deadline:** 31/10/2026
 - **Công việc:**
@@ -837,6 +901,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🎨 M4 — Frontend Developer
 
 #### TASK-M4-011 | Settings & Notification Preferences
+
 - **Branch:** `feat/m4-settings`
 - **Deadline:** 24/10/2026
 - **Công việc:**
@@ -847,6 +912,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ALERT-FR-005, ALERT-FR-006, ENV-FR-006, UX-NFR-004
 
 #### TASK-M4-012 | Export & Nest Growth Logging
+
 - **Branch:** `feat/m4-export-nest`
 - **Deadline:** 28/10/2026
 - **Công việc:**
@@ -857,6 +923,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** ANALYTICS-FR-004, ANALYTICS-FR-006
 
 #### TASK-M4-013 | UI Polish & Bug Fixes
+
 - **Branch:** `fix/m4-ui-polish`
 - **Deadline:** 31/10/2026
 - **Công việc:**
@@ -873,6 +940,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 ### 🔍 M5 — QA & Tech Writer
 
 #### TASK-M5-008 | End-to-End System Test
+
 - **Branch:** `test/m5-e2e-system`
 - **Deadline:** 26/10/2026
 - **Công việc:**
@@ -885,6 +953,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 - **SRS refs:** §10 — Business Flows, §13.2
 
 #### TASK-M5-009 | Viết Báo cáo KLTN (Chương 3 + 4)
+
 - **Branch:** `docs/m5-kltn-chapter3-4`
 - **Deadline:** 31/10/2026
 - **Công việc:**
@@ -899,6 +968,7 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
   - Bảng kết quả test
 
 #### TASK-M5-010 | Sprint 4 Review + Demo Chuẩn bị
+
 - **Branch:** `docs/m5-sprint4-demo`
 - **Deadline:** 31/10/2026
 - **Công việc:**
@@ -914,14 +984,14 @@ Tuần 7-8   │ SPRINT 4 │ Polish, Testing & Thesis Prep
 
 ## 📊 Tổng hợp Tasks theo Thành viên
 
-| Thành viên | Sprint 1 | Sprint 2 | Sprint 3 | Sprint 4 | Tổng Tasks |
-|---|---|---|---|---|---|
+| Thành viên      | Sprint 1             | Sprint 2             | Sprint 3             | Sprint 4             | Tổng Tasks   |
+| --------------- | -------------------- | -------------------- | -------------------- | -------------------- | ------------ |
 | **M1 Hardware** | M1-001~004 (4 tasks) | M1-005~008 (4 tasks) | M1-009~010 (2 tasks) | M1-011~012 (2 tasks) | **12 tasks** |
-| **M2 AI/ML** | M2-001~003 (3 tasks) | M2-004~006 (3 tasks) | M2-007~009 (3 tasks) | M2-010~012 (3 tasks) | **12 tasks** |
-| **M3 Backend** | M3-001~004 (4 tasks) | M3-005~008 (4 tasks) | M3-009~012 (4 tasks) | M3-013~016 (4 tasks) | **16 tasks** |
+| **M2 AI/ML**    | M2-001~003 (3 tasks) | M2-004~006 (3 tasks) | M2-007~009 (3 tasks) | M2-010~012 (3 tasks) | **12 tasks** |
+| **M3 Backend**  | M3-001~004 (4 tasks) | M3-005~008 (4 tasks) | M3-009~012 (4 tasks) | M3-013~016 (4 tasks) | **16 tasks** |
 | **M4 Frontend** | M4-001~003 (3 tasks) | M4-004~006 (3 tasks) | M4-007~010 (4 tasks) | M4-011~013 (3 tasks) | **13 tasks** |
-| **M5 QA/Lead** | M5-001~003 (3 tasks) | M5-004~005 (2 tasks) | M5-006~007 (2 tasks) | M5-008~010 (3 tasks) | **10 tasks** |
-| **TỔNG** | **17** | **16** | **15** | **15** | **63 tasks** |
+| **M5 QA/Lead**  | M5-001~003 (3 tasks) | M5-004~005 (2 tasks) | M5-006~007 (2 tasks) | M5-008~010 (3 tasks) | **10 tasks** |
+| **TỔNG**        | **17**               | **16**               | **15**               | **15**               | **63 tasks** |
 
 ---
 
@@ -953,13 +1023,13 @@ M5-001 (dev env) → M5-002 (api spec) → unblocks M3 và M4
 
 ## ⚠️ Rủi ro & Giải pháp
 
-| Rủi ro | Xác suất | Giải pháp |
-|---|---|---|
-| RPi FPS < 25 với model ONNX | Cao | Thử NCNN INT8; giảm input resolution 480×480 |
-| Dataset chim yến khó thu thập | Trung bình | Dùng Open Images + synthetic augmentation |
-| MQTT latency cao | Thấp | Switch QoS 0 cho telemetry; tune EMQX |
-| Zalo ZNS approval mất thời gian | Cao | Mock ZNS trong dev; dùng email/SMS làm fallback |
-| Hardware lắp ráp lỗi | Thấp | Test từng linh kiện riêng trước (M1-001) |
+| Rủi ro                          | Xác suất   | Giải pháp                                                             |
+| ------------------------------- | ---------- | --------------------------------------------------------------------- |
+| RPi FPS < 25 với model ONNX     | Cao        | Thử NCNN INT8; giảm input resolution 480×480                          |
+| Dataset chim yến khó thu thập   | Trung bình | Dùng Open Images + synthetic augmentation                             |
+| MQTT latency cao                | Thấp       | Switch QoS 0 cho telemetry; tune EMQX                                 |
+| Zalo ZNS approval mất thời gian | Cao        | Mock ZNS trong dev; dùng email/SMS làm fallback                       |
+| Hardware lắp ráp lỗi            | Thấp       | Test từng linh kiện riêng trước (M1-001)                              |
 | Scope creep (tùy chọn features) | Trung bình | Chỉ làm "Bắt buộc" trong Sprint 1-3; "Tùy chọn" chỉ khi còn thời gian |
 
 ---
@@ -1025,16 +1095,19 @@ SwiftletCare_KLTN/
 > Dán vào GitHub Projects, dùng làm weekly standup template.
 
 **Mỗi thứ Hai — Standup:**
+
 - [ ] Mỗi thành viên báo cáo: tuần qua làm gì, tuần này làm gì, blocker gì?
 - [ ] M5 review PRs còn pending
 - [ ] Update GitHub Kanban board
 
 **Mỗi thứ Sáu — Weekly Check:**
+
 - [ ] Push tất cả work-in-progress lên remote branch
 - [ ] Không để code untracked quá 3 ngày
 - [ ] Report tiến độ theo WORKPLAN này
 
 **Mỗi Sprint End (Chủ Nhật):**
+
 - [ ] Tất cả tasks của sprint phải merge vào `develop`
 - [ ] M5 chạy integration tests
 - [ ] Demo 15 phút cho team: show what works

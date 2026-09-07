@@ -1,0 +1,112 @@
+# SwiftletCare – Docker Compose (Development Environment)
+# Bao gồm: MongoDB + EMQX MQTT Broker + MinIO S3
+# Chạy: docker compose up -d
+
+version: '3.9'
+
+services:
+  # ── MongoDB ──────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: swiftletcare-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: swiftletcare_dev
+      MONGO_INITDB_DATABASE: swiftletcare
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./docs/db/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    healthcheck:
+      test: mongosh --eval "db.adminCommand('ping')" --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── EMQX MQTT Broker ─────────────────────────────────────────────────────────
+  # SRS: §9.2, SEC-NFR-001
+  emqx:
+    image: emqx/emqx:5.7.0
+    container_name: swiftletcare-emqx
+    restart: unless-stopped
+    environment:
+      EMQX_NAME: swiftletcare
+      EMQX_NODE__COOKIE: swiftletcare_secret
+      # Allow anonymous for dev (disable in production)
+      EMQX_AUTH__ANONYMOUS__ALLOW_ANONYMOUS: "true"
+    ports:
+      - "1883:1883"    # MQTT (dev only, non-TLS)
+      - "8883:8883"    # MQTT over TLS (SEC-NFR-001)
+      - "8083:8083"    # MQTT over WebSocket
+      - "18083:18083"  # EMQX Web Dashboard (admin:public)
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+    healthcheck:
+      test: ["CMD", "emqx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO (S3-compatible storage) ─────────────────────────────────────────────
+  # SRS: THREAT-FR-002, SEC-NFR-006
+  minio:
+    image: minio/minio:latest
+    container_name: swiftletcare-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # MinIO Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO Init (create bucket) ───────────────────────────────────────────────
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin123;
+      mc mb local/swiftletcare-snapshots --ignore-existing;
+      mc anonymous set none local/swiftletcare-snapshots;
+      echo 'MinIO bucket ready';
+      "
+
+  # ── Redis (session/cache) ─────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: swiftletcare-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongo_data:
+  emqx_data:
+  emqx_log:
+  minio_data:
+  redis_data:
+
+networks:
+  default:
+    name: swiftletcare-network

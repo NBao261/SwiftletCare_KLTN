@@ -1,0 +1,55 @@
+﻿# Dependencies
+node_modules/
+.npm/
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Secrets and certs (NEVER commit)
+*.pem
+*.key
+*.crt
+config/certs/
+config/firebase-service-account.json
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+venv/
+.venv/
+ai-pipeline/models/*.onnx
+
+# PlatformIO
+firmware/.pio/
+firmware/.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Docker
+docker-compose.override.yml
+
+# Test coverage
+coverage/
+.coverage

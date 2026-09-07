@@ -1,0 +1,60 @@
+﻿# SwiftletCare AI Pipeline Configuration
+# SRS: §9.2, §11.2, §11.3
+
+camera:
+  rtsp_url: "rtsp://admin:password@192.168.1.64:554/stream1"
+  target_fps: 30
+  resolution: [2560, 1440]   # 2K
+
+model:
+  path: "models/swiftletcare_v1.onnx"
+  input_size: 640            # YOLO input resolution
+  confidence_threshold: 0.5
+  nms_iou_threshold: 0.45
+  classes:
+    0: swiftlet
+    1: rat
+    2: snake
+    3: owl
+  predator_classes: [1, 2, 3]
+  predator_confidence_min: 0.70    # THREAT-FR-001
+
+tracking:
+  algorithm: bytetrack           # primary (§11.3)
+  track_confirmation_frames: 3   # min frames to confirm (THREAT-FR-003)
+  max_active_tracks: 50
+  counting_line_y_ratio: 0.5     # vertical position of counting line (0.0-1.0)
+
+mqtt:
+  broker: "localhost"
+  port: 8883                     # TLS (SEC-NFR-001)
+  username: "rpi-node-01"
+  password: ""                   # loaded from env
+  tls_ca_cert: "config/ca.crt"
+  farm_id: ""                    # loaded from env
+  house_id: ""
+  zone_id: ""
+  publish_interval_sec: 30       # VISION-FR-006
+
+sessions:
+  morning_exit:
+    start: "05:30"
+    end:   "07:00"
+  evening_entry:
+    start: "17:30"
+    end:   "19:00"
+
+storage:
+  minio_endpoint: "localhost:9000"
+  minio_bucket: "swiftletcare-snapshots"
+  snapshot_dir: "/tmp/snapshots"
+
+alerts:
+  predator_temporal_filter_frames: 2   # THREAT-FR-003
+  return_rate_drop_threshold: 0.20     # 20% drop triggers alert (VISION-FR-011)
+  return_rate_window_days: 7
+
+logging:
+  level: INFO
+  file: "logs/pipeline.log"
+  rotation: "10 MB"
