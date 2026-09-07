@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "SwiftletCare",
+    "slug": "swiftletcare-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "swiftletcare",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D9488"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "vn.swiftletcare.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Quét QR Code để đăng ký thiết bị",
+        "NSLocationWhenInUseUsageDescription": "Hiển thị vị trí trang trại trên bản đồ"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0D9488"
+      },
+      "package": "vn.swiftletcare.app",
+      "permissions": [
+        "CAMERA",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-notifications",
+      [
+        "expo-camera",
+        { "cameraPermission": "Cho phép SwiftletCare sử dụng camera để quét QR Code." }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      },
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
