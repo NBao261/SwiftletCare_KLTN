@@ -1,4 +1,4 @@
-﻿import express, { Application, Request, Response, NextFunction } from 'express'
+﻿import express, { Application, Request, Response } from 'express'
 import helmet from 'helmet'
 import cors from 'cors'
 import morgan from 'morgan'
@@ -42,7 +42,7 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Not Found' })
 })
 
-// ── Error Handler ──────────────────────────────────────────────────────────────
+// ── Error Handler (must be last, 4-arg signature) ─────────────────────────────
 app.use(errorHandler)
 
 export default app

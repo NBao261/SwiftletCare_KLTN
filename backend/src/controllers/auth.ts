@@ -1,19 +1,27 @@
-﻿import { Request, Response } from 'express'
+import { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
-import { User, IUser } from '@/models/User'
-import type { AuthRequest, JwtAccessPayload } from '@/types'
+import { User } from '@/models/User'
+import type { JwtAccessPayload } from '@/types'
 import logger from '@/utils/logger'
 
 const ACCESS_TTL  = process.env.JWT_ACCESS_TTL  ?? '15m'
 const REFRESH_TTL = process.env.JWT_REFRESH_TTL ?? '30d'
 
 function signAccess(userId: string, role: string): string {
-  return jwt.sign({ sub: userId, role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: ACCESS_TTL } as jwt.SignOptions)
+  return jwt.sign(
+    { sub: userId, role },
+    process.env.JWT_ACCESS_SECRET!,
+    { expiresIn: ACCESS_TTL } as jwt.SignOptions
+  )
 }
 
 function signRefresh(userId: string): string {
-  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn: REFRESH_TTL } as jwt.SignOptions)
+  return jwt.sign(
+    { sub: userId },
+    process.env.JWT_REFRESH_SECRET!,
+    { expiresIn: REFRESH_TTL } as jwt.SignOptions
+  )
 }
 
 /** POST /auth/register – AUTH-FR-001 */
@@ -32,7 +40,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     const user = new User({ email, password_hash: password, full_name, phone })
     await user.save()
 
-    logger.info('User registered', { userId: user._id, email })
+    logger.info('User registered', { userId: String(user._id), email })
     res.status(201).json({ data: user })
   } catch (err) {
     logger.error('Register error', { err })
@@ -58,11 +66,14 @@ export async function login(req: Request, res: Response): Promise<void> {
     const accessToken  = signAccess(String(user._id), user.role)
     const refreshToken = signRefresh(String(user._id))
 
-    // Store refresh token
-    user.refresh_tokens.push({ token: refreshToken, expires: new Date(Date.now() + 30 * 86400 * 1000) })
+    // Store refresh token (AUTH-FR-003)
+    user.refresh_tokens.push({
+      token: refreshToken,
+      expires: new Date(Date.now() + 30 * 86400 * 1000),
+    })
     await user.save()
 
-    // Send refresh token as httpOnly cookie
+    // httpOnly cookie for CSRF protection
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === 'production',
@@ -80,20 +91,22 @@ export async function login(req: Request, res: Response): Promise<void> {
 /** POST /auth/refresh – AUTH-FR-003 */
 export async function refresh(req: Request, res: Response): Promise<void> {
   try {
-    const token = req.cookies?.refreshToken as string | undefined
+    const token = (req.cookies as Record<string, string | undefined>)?.refreshToken
     if (!token) {
       res.status(401).json({ error: 'No refresh token' })
       return
     }
 
-    const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as { sub: string }
+    const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as JwtAccessPayload
     const user = await User.findById(payload.sub)
     if (!user) {
       res.status(401).json({ error: 'User not found' })
       return
     }
 
-    const isValid = user.refresh_tokens.some(t => t.token === token && t.expires > new Date())
+    const isValid = user.refresh_tokens.some(
+      t => t.token === token && t.expires > new Date()
+    )
     if (!isValid) {
       res.status(401).json({ error: 'Refresh token revoked or expired' })
       return
@@ -107,11 +120,14 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 }
 
 /** POST /auth/logout – AUTH-FR-006 */
-export async function logout(req: AuthRequest, res: Response): Promise<void> {
+export async function logout(req: Request, res: Response): Promise<void> {
   try {
-    const token = req.cookies?.refreshToken as string | undefined
+    const token = (req.cookies as Record<string, string | undefined>)?.refreshToken
     if (token) {
-      await User.updateOne({ _id: req.user._id }, { $pull: { refresh_tokens: { token } } })
+      await User.updateOne(
+        { _id: req.user._id },
+        { $pull: { refresh_tokens: { token } } }
+      )
     }
     res.clearCookie('refreshToken')
     res.json({ data: { message: 'Logged out successfully' } })

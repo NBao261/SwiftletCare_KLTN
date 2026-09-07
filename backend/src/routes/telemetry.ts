@@ -8,9 +8,9 @@ const router = Router()
 router.use(authenticate)
 
 /** GET /telemetry/zones/:id/latest – ENV-FR-004 */
-router.get('/zones/:id/latest',  [param('id').isMongoId()], validate, telemetryController.getLatest)
+router.get('/zones/:id/latest',  param('id').isMongoId(), validate, telemetryController.getLatest)
 
-/** GET /telemetry/zones/:id/history?from=&to=&interval=  – ANALYTICS-FR-001 */
+/** GET /telemetry/zones/:id/history?from=&to=&interval= – ANALYTICS-FR-001 */
 router.get(
   '/zones/:id/history',
   [param('id').isMongoId(), query('from').optional().isISO8601(), query('to').optional().isISO8601()],

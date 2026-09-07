@@ -1,6 +1,5 @@
-﻿import { Response } from 'express'
-import type { AuthRequest } from '@/types'
+﻿import { Request, Response } from 'express'
 
-export async function list(req: AuthRequest, res: Response): Promise<void>        { res.status(501).json({ error: 'Not implemented yet' }) }
-export async function getOne(req: AuthRequest, res: Response): Promise<void>      { res.status(501).json({ error: 'Not implemented yet' }) }
-export async function acknowledge(req: AuthRequest, res: Response): Promise<void> { res.status(501).json({ error: 'Not implemented yet' }) }
+export async function list(_req: Request, res: Response): Promise<void>        { res.status(501).json({ error: 'Not implemented yet' }) }
+export async function getOne(_req: Request, res: Response): Promise<void>      { res.status(501).json({ error: 'Not implemented yet' }) }
+export async function acknowledge(_req: Request, res: Response): Promise<void> { res.status(501).json({ error: 'Not implemented yet' }) }

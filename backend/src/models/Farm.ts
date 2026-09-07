@@ -1,4 +1,4 @@
-﻿import { Schema, model, Document, Types } from 'mongoose'
+import { Schema, model, Document, Types } from 'mongoose'
 
 /**
  * Farm + Member Document – SRS §8.2, FARM-FR-001
@@ -15,7 +15,7 @@ export interface IFarm extends Document {
   address: string
   coordinates?: { lat: number; lng: number }
   owner_id: Types.ObjectId
-  members: IFarmMember[]
+  members: Types.DocumentArray<IFarmMember & Document>
   is_deleted: boolean
   created_at: Date
 }
@@ -40,9 +40,11 @@ const farmSchema = new Schema<IFarm>(
 )
 
 // Soft-delete scope
-farmSchema.pre(/^find/, function (this: ReturnType<typeof farmSchema.query>, next) {
-  void (this as { where: Function }).where({ is_deleted: false })
-  next()
+farmSchema.pre('find', function () {
+  this.where({ is_deleted: false })
+})
+farmSchema.pre('findOne', function () {
+  this.where({ is_deleted: false })
 })
 
 export const Farm = model<IFarm>('Farm', farmSchema)

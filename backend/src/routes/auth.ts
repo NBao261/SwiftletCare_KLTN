@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+﻿import { Router, Request, Response, NextFunction } from 'express'
 import { body } from 'express-validator'
 import * as authController from '@/controllers/auth'
 import { authenticate } from '@/middlewares/auth'

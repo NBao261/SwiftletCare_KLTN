@@ -1,4 +1,4 @@
-﻿import { Schema, model, Document, Types } from 'mongoose'
+import { Schema, model, Document, Types } from 'mongoose'
 import bcrypt from 'bcryptjs'
 import type { Role, NotificationPreferences } from '@/types'
 
@@ -31,7 +31,7 @@ const userSchema = new Schema<IUser>(
     phone:         { type: String, trim: true },
     password_hash: { type: String, required: true },
     full_name:     { type: String, required: true, trim: true },
-    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'OPERATOR'] as Role[], default: 'FARM_OWNER' },
+    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'OPERATOR'] satisfies Role[], default: 'FARM_OWNER' },
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
     notification_preferences: {
@@ -51,23 +51,23 @@ const userSchema = new Schema<IUser>(
 )
 
 // Hash password before save (SEC-NFR-003: bcrypt cost=12)
-userSchema.pre<IUser>('save', async function (next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password_hash')) return next()
   this.password_hash = await bcrypt.hash(this.password_hash, 12)
   next()
 })
 
 userSchema.methods.comparePassword = function (plain: string): Promise<boolean> {
-  return bcrypt.compare(plain, this.password_hash)
+  return bcrypt.compare(plain, this.password_hash) as Promise<boolean>
 }
 
 // Never return sensitive fields in JSON responses
 userSchema.methods.toJSON = function () {
-  const obj = this.toObject<IUser>()
-  delete (obj as Partial<IUser>).password_hash
-  delete (obj as Partial<IUser>).otp_code
-  delete (obj as Partial<IUser>).otp_expires
-  delete (obj as Partial<IUser>).refresh_tokens
+  const obj = this.toObject() as Partial<IUser> & Record<string, unknown>
+  delete obj.password_hash
+  delete obj.otp_code
+  delete obj.otp_expires
+  delete obj.refresh_tokens
   return obj
 }
 

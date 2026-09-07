@@ -1,10 +1,10 @@
-﻿import { Response, NextFunction } from 'express'
+﻿import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import { User } from '@/models/User'
-import type { AuthRequest, JwtAccessPayload, Role } from '@/types'
+import type { JwtAccessPayload, Role } from '@/types'
 import logger from '@/utils/logger'
 
-export async function authenticate(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Missing or invalid Authorization header' })
@@ -19,7 +19,14 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       res.status(401).json({ error: 'User not found or inactive' })
       return
     }
-    req.user = user as AuthRequest['user']
+    req.user = {
+      _id:                      String(user._id),
+      email:                    user.email,
+      role:                     user.role,
+      full_name:                user.full_name,
+      is_active:                user.is_active,
+      notification_preferences: user.notification_preferences,
+    }
     next()
   } catch (err) {
     if ((err as Error).name === 'TokenExpiredError') {
@@ -32,8 +39,8 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 }
 
 export function requireRole(...roles: Role[]) {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!roles.includes(req.user?.role)) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.role)) {
       res.status(403).json({ error: 'Insufficient permissions' })
       return
     }

@@ -7,13 +7,8 @@ import { validate } from '@/middlewares/validate'
 const router = Router()
 router.use(authenticate)
 
-/** GET  /alerts?farmId=&severity=&status=&page=&limit= – ALERT-FR-007 */
-router.get('/',     alertController.list)
-
-/** GET  /alerts/:id */
-router.get('/:id',  [param('id').isMongoId()], validate, alertController.getOne)
-
-/** PUT  /alerts/:id/acknowledge – ALERT-FR-009 */
+router.get('/',    alertController.list)
+router.get('/:id', param('id').isMongoId(), validate, alertController.getOne)
 router.put(
   '/:id/acknowledge',
   [param('id').isMongoId(), body('note').optional().isString()],
