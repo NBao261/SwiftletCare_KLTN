@@ -60,6 +60,26 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
+    "testTimeout": 30000,
+    "setupFilesAfterFramework": ["<rootDir>/tests/setup.ts"],
+    "globals": {
+      "ts-jest": {
+        "tsconfig": "./tsconfig.test.json"
+      }
+    },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "testMatch": [
+      "**/tests/**/*.test.ts",
+      "**/tests/**/*.spec.ts"
+    ],
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/types/**",
+      "!src/**/*.d.ts"
+    ],
     "coverageThreshold": {
       "global": { "lines": 80 }
     }
