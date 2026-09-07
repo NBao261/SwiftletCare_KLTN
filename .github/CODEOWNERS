@@ -1,0 +1,17 @@
+# CODEOWNERS – SwiftletCare KLTN
+# Tài liệu: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Format: <pattern>   @<github-username>
+# Owner phải approve mọi PR vào main khi file khớp pattern.
+
+# Mặc định: mọi file trong repo cần Owner approve khi merge vào main
+*   @NBao261
+
+# Agent rules và skills — chỉ Owner sửa
+.agents/   @NBao261
+
+# CI/CD và GitHub config — chỉ Owner sửa
+.github/   @NBao261
+
+# Commit config — chỉ Owner sửa
+.commitlintrc.json   @NBao261

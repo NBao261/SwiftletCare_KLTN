@@ -1,0 +1,62 @@
+name: CI – SwiftletCare
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+jobs:
+  # ── Job 1: Validate commit messages ────────────────────────────────────────
+  validate-commits:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate last 5 commit messages
+        run: |
+          python -X utf8 .agents/skills/git-commit-convention/scripts/validate_commit.py --log 5
+
+  # ── Job 2: Check for secrets accidentally committed ──────────────────────
+  check-secrets:
+    name: Check for Leaked Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for secrets with gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Job 3: Lint (thêm khi có code) ───────────────────────────────────────
+  # lint:
+  #   name: Lint Code
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #     - run: npm ci
+  #     - run: npm run lint
+
+  # ── Job 4: Tests (thêm khi có test) ──────────────────────────────────────
+  # test:
+  #   name: Run Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: npm ci
+  #     - run: npm test
