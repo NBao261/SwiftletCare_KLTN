@@ -1,10 +1,24 @@
 ---
 name: git-commit-convention
 description: Chuẩn commit message cho SwiftletCare theo Conventional Commits + Changelog tự động. Bắt buộc áp dụng mỗi khi AI thực hiện git commit hoặc push lên GitHub.
-when_to_use: "LUÔN áp dụng khi thực hiện git add, git commit, hoặc git push. Áp dụng khi tạo nhánh mới, viết changelog, hoặc tổng kết thay đổi theo sprint."
+when_to_use: "MANDATORY khi bất kỳ agent nào thực hiện: git commit, git push, git add, tạo commit, đẩy code, push lên github, commit changes, stage files, merge branch, tạo PR. Áp dụng khi viết changelog, tổng kết sprint, hoặc review lịch sử commit. KHÔNG có ngoại lệ — mọi git operation đều cần skill này."
 allowed-tools: Read, Write, Edit, Bash
 version: 2.0.0
 priority: HIGH
+triggers:
+  - "git commit"
+  - "git push"
+  - "git add"
+  - "commit"
+  - "push"
+  - "tạo commit"
+  - "đẩy code"
+  - "push lên"
+  - "commit lên"
+  - "changelog"
+  - "merge"
+  - "pull request"
+  - "PR"
 ---
 
 # Git Commit Convention – SwiftletCare
