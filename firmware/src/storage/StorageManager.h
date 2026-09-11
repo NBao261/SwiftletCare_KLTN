@@ -6,15 +6,15 @@
 #include "sensors/SensorManager.h"
 
 namespace StorageManager {
-  void begin();
+void begin();
 
-  // NVS – config persistence
-  void saveConfig();
-  void loadConfig();
+// NVS – config persistence
+void saveConfig();
+void loadConfig();
 
-  // SPIFFS – offline telemetry buffer
-  void   bufferTelemetry(const SensorData& data);
-  void   flushBuffer();        // Upload all buffered records via MQTT
-  int    getBufferCount();
-  void   clearBuffer();
-}
+// SPIFFS – offline telemetry buffer
+void bufferTelemetry(const SensorData &data);
+void flushBuffer(); // Upload all buffered records via MQTT
+int getBufferCount();
+void clearBuffer();
+} // namespace StorageManager

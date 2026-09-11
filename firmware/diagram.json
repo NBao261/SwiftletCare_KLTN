@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "author": "SwiftletCare",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "sht31",
+      "top": -200,
+      "left": -200,
+      "attrs": { "label": "SHT31 (T+H)" }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht22",
+      "top": -200,
+      "left": -50,
+      "attrs": { "label": "DHT22 (Outdoor)" }
+    },
+    {
+      "type": "wokwi-photoresistor-sensor",
+      "id": "bh1750",
+      "top": 200,
+      "left": -250,
+      "attrs": { "label": "BH1750 (Light)" }
+    },
+    {
+      "type": "wokwi-slide-potentiometer",
+      "id": "mq135",
+      "top": 200,
+      "left": -100,
+      "attrs": { "travelLength": "30", "label": "MQ-135 (CO2/NH3)" }
+    },
+    {
+      "type": "wokwi-slide-potentiometer",
+      "id": "max9814",
+      "top": 200,
+      "left": 50,
+      "attrs": { "travelLength": "30", "label": "MAX9814 (Sound)" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "relay_misting",
+      "top": -180,
+      "left": 200,
+      "attrs": { "color": "blue", "label": "Relay1: Misting" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "relay_fan",
+      "top": -120,
+      "left": 200,
+      "attrs": { "color": "green", "label": "Relay2: Fan" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "relay_heater",
+      "top": -60,
+      "left": 200,
+      "attrs": { "color": "red", "label": "Relay3: Heater" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "relay_light",
+      "top": 0,
+      "left": 200,
+      "attrs": { "color": "yellow", "label": "Relay4: Light" }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer",
+      "top": 60,
+      "left": 200,
+      "attrs": { "label": "Alert Buzzer" }
+    }
+  ],
+  "connections": [
+    ["esp:3V3",   "sht31:VCC",         "red",    ["v0"]],
+    ["esp:GND.1", "sht31:GND",         "black",  ["v0"]],
+    ["esp:13",    "sht31:SDA",         "gold",   ["v0"]],
+
+    ["esp:3V3",   "dht22:VCC",         "red",    ["v0"]],
+    ["esp:GND.1", "dht22:GND",         "black",  ["v0"]],
+    ["esp:4",     "dht22:SDA",         "green",  ["v0"]],
+
+    ["esp:3V3",   "bh1750:VCC",        "red",    ["v0"]],
+    ["esp:GND.1", "bh1750:GND",        "black",  ["v0"]],
+    ["esp:33",    "bh1750:DO",         "purple", ["v0"]],
+    ["esp:32",    "bh1750:AO",         "brown",  ["v0"]],
+
+    ["esp:3V3",   "mq135:VCC",         "red",    ["v0"]],
+    ["esp:GND.2", "mq135:GND",         "black",  ["v0"]],
+    ["esp:34",    "mq135:SIG",         "orange", ["v0"]],
+
+    ["esp:3V3",   "max9814:VCC",       "red",    ["v0"]],
+    ["esp:GND.2", "max9814:GND",       "black",  ["v0"]],
+    ["esp:35",    "max9814:SIG",       "cyan",   ["v0"]],
+
+    ["esp:26",    "relay_misting:A",   "blue",   ["v0"]],
+    ["esp:GND.2", "relay_misting:C",   "black",  ["v0"]],
+
+    ["esp:27",    "relay_fan:A",       "green",  ["v0"]],
+    ["esp:GND.2", "relay_fan:C",       "black",  ["v0"]],
+
+    ["esp:14",    "relay_heater:A",    "red",    ["v0"]],
+    ["esp:GND.2", "relay_heater:C",    "black",  ["v0"]],
+
+    ["esp:12",    "relay_light:A",     "yellow", ["v0"]],
+    ["esp:GND.2", "relay_light:C",     "black",  ["v0"]],
+
+    ["esp:25",    "buzzer:1",          "magenta",["v0"]],
+    ["esp:GND.2", "buzzer:2",          "black",  ["v0"]]
+  ],
+  "dependencies": {}
+}
