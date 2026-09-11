@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "2.0",
+  "checkedAt": "2026-09-09T08:19:13Z",
+  "tier": "portable",
+  "platform": "Windows-11-10.0.22621-SP0",
+  "python": "3.12.3",
+  "node": "v22.15.0",
+  "drawio": null,
+  "skillRoot": "C:\\Users\\Admin\\Desktop\\SwiftletCare_KLTN\\.agents\\skills\\nexcanvas-drawio",
+  "capabilities": {
+    "authorNativeDrawio": true,
+    "validateContracts": true,
+    "structuralQa": true,
+    "layoutBuiltIn": true,
+    "layoutElk": true,
+    "renderCli": false,
+    "openBrowser": true,
+    "imageGeneration": false
+  },
+  "limitations": [
+    "Draw.io Desktop CLI not found; rendered visual QA cannot be completed."
+  ]
+}

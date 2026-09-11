@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "title": "SwiftletCare Context Diagram",
+    "version": "1.0.0",
+    "lockedAt": "2026-09-09T15:20:00+07:00"
+  },
+  "viewIntent": "architecture",
+  "route": {
+    "family": "software",
+    "profile": "c4-context"
+  },
+  "notation": "C4 Level 1 Context Diagram",
+  "layout": {
+    "orientation": "hub-and-spoke",
+    "composition": "radial",
+    "canvas": {
+      "width": 1800,
+      "height": 1200
+    }
+  },
+  "theme": {
+    "system": "#1565C0",
+    "external": "#ECEFF1",
+    "person": "#08427B",
+    "edge": "#546E7A",
+    "background": "#FAFAFA"
+  },
+  "audience": "Development team, thesis committee, stakeholders",
+  "deliveryTarget": "Editable .drawio file for review and export",
+  "language": "vi"
+}

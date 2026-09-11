@@ -1,0 +1,240 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="NexCanvas" version="2.0" type="device">
+  <diagram id="arch" name="SwiftletCare System Architecture">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1300" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ===== TITLE ===== -->
+        <mxCell id="title" value="&lt;font style='font-size:22px;font-weight:700;color:#1A237E'&gt;SwiftletCare – Kiến trúc Hệ thống&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#78909C'&gt;Tiered Edge AI &amp;amp; IoT Architecture&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="50" y="12" width="550" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== LEGEND ===== -->
+        <mxCell id="legend-box" value="&lt;font style='font-size:10px;font-weight:700;color:#333'&gt;Chú thích&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:9px;color:#1565C0'&gt;── Đồng bộ (Sync/REST)&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:9px;color:#E65100'&gt;- - Bất đồng bộ (MQTT/Async)&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:9px;color:#2E7D32'&gt;── Ghi dữ liệu (Write)&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:9px;color:#7B1FA2'&gt;- - Thông báo (Notification)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fillColor=#FAFAFA;strokeColor=#E0E0E0;strokeWidth=1;fontFamily=Segoe UI,Arial,sans-serif;spacingLeft=8;spacingTop=6;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="12" width="270" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== USERS ===== -->
+        <mxCell id="farm-owner" value="&lt;b&gt;👤 Chủ nhà yến&lt;/b&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Farm Owner&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;fontSize=11;fontColor=#0D47A1;arcSize=20;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="410" y="78" width="155" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="operator" value="&lt;b&gt;👤 Kỹ thuật viên&lt;/b&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Operator&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;fontSize=11;fontColor=#0D47A1;arcSize=20;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1235" y="78" width="155" height="58" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TIER: CLIENTS ===== -->
+        <mxCell id="bnd-clients" value="&lt;b&gt;CLIENTS&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=2;dashed=0;verticalAlign=top;align=left;fontStyle=1;fontSize=13;fontColor=#2E7D32;spacingTop=6;spacingLeft=12;arcSize=5;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="250" y="162" width="1300" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="web-dashboard" value="&lt;b&gt;Web Dashboard&lt;/b&gt;&lt;br&gt;&lt;font color='#558B2F' style='font-size:9px'&gt;ReactJS · Vite · TailwindCSS · Chart.js&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#388E3C;strokeWidth=1.5;fontSize=11;fontColor=#1B5E20;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="340" y="182" width="260" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="mobile-pwa" value="&lt;b&gt;Mobile PWA&lt;/b&gt;&lt;br&gt;&lt;font color='#558B2F' style='font-size:9px'&gt;ReactJS PWA · Vite · Service Worker&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#388E3C;strokeWidth=1.5;fontSize=11;fontColor=#1B5E20;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="182" width="260" height="62" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TIER 3: CLOUD LAYER ===== -->
+        <mxCell id="bnd-cloud" value="&lt;b&gt;TIER 3 – CLOUD LAYER&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2.5;dashed=0;verticalAlign=top;align=left;fontStyle=1;fontSize=14;fontColor=#1565C0;spacingTop=6;spacingLeft=12;arcSize=4;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="50" y="290" width="1700" height="375" as="geometry"/>
+        </mxCell>
+
+        <!-- MQTT Broker (centered, prominent) -->
+        <mxCell id="mqtt-broker" value="&lt;b&gt;MQTT Broker&lt;/b&gt;&lt;br&gt;&lt;font color='#BF360C' style='font-size:9px'&gt;EMQX / Mosquitto · TLS 1.2+ · Device Cert Auth&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;strokeWidth=2;fontSize=12;fontColor=#BF360C;arcSize=10;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="690" y="315" width="420" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- Backend Services sub-boundary -->
+        <mxCell id="bnd-backend" value="&lt;b&gt;Backend Services&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#90A4AE;strokeWidth=1;dashed=1;dashPattern=5 3;verticalAlign=top;align=left;fontStyle=1;fontSize=10;fontColor=#546E7A;spacingTop=4;spacingLeft=8;arcSize=4;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="75" y="388" width="870" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="express-api" value="&lt;b&gt;Express.js API&lt;/b&gt;&lt;br&gt;&lt;font color='#1565C0' style='font-size:8px'&gt;Node.js 20 · TypeScript · JWT&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=1.5;fontSize=10;fontColor=#0D47A1;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="95" y="406" width="190" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="telemetry-agg" value="&lt;b&gt;Telemetry Aggregator&lt;/b&gt;&lt;br&gt;&lt;font color='#1565C0' style='font-size:8px'&gt;MQTT.js subscriber&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=1.5;fontSize=10;fontColor=#0D47A1;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="305" y="406" width="190" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="alert-engine" value="&lt;b&gt;Alert Engine&lt;/b&gt;&lt;br&gt;&lt;font color='#1565C0' style='font-size:8px'&gt;Background service · Dedup&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=1.5;fontSize=10;fontColor=#0D47A1;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="515" y="406" width="190" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="socketio" value="&lt;b&gt;WebSocket Server&lt;/b&gt;&lt;br&gt;&lt;font color='#1565C0' style='font-size:8px'&gt;Socket.io · Real-time push&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=1.5;fontSize=10;fontColor=#0D47A1;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="725" y="406" width="190" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- Notification Channels sub-boundary -->
+        <mxCell id="bnd-notif" value="&lt;b&gt;Notification Channels&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#AB47BC;strokeWidth=1;dashed=1;dashPattern=5 3;verticalAlign=top;align=left;fontStyle=1;fontSize=10;fontColor=#7B1FA2;spacingTop=4;spacingLeft=8;arcSize=4;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="965" y="388" width="760" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="fcm" value="&lt;b&gt;Firebase FCM&lt;/b&gt;&lt;br&gt;&lt;font color='#6A1B9A' style='font-size:8px'&gt;Push Notification&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#7B1FA2;strokeWidth=1.5;fontSize=10;fontColor=#4A148C;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="985" y="406" width="210" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="zalo-zns" value="&lt;b&gt;Zalo ZNS&lt;/b&gt;&lt;br&gt;&lt;font color='#6A1B9A' style='font-size:8px'&gt;Zalo Notification Service&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#7B1FA2;strokeWidth=1.5;fontSize=10;fontColor=#4A148C;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="1215" y="406" width="210" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="sms-twilio" value="&lt;b&gt;SMS&lt;/b&gt;&lt;br&gt;&lt;font color='#6A1B9A' style='font-size:8px'&gt;Twilio / ESMS&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#7B1FA2;strokeWidth=1.5;fontSize=10;fontColor=#4A148C;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="1445" y="406" width="210" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- Data Stores sub-boundary -->
+        <mxCell id="bnd-data" value="&lt;b&gt;Data Stores&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#00897B;strokeWidth=1;dashed=1;dashPattern=5 3;verticalAlign=top;align=left;fontStyle=1;fontSize=10;fontColor=#00695C;spacingTop=4;spacingLeft=8;arcSize=4;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="75" y="510" width="1640" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="mongodb" value="&lt;b&gt;MongoDB&lt;/b&gt;&lt;br&gt;&lt;font color='#004D40' style='font-size:8px'&gt;Telemetry · Farms · Alerts · Users&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#B2DFDB;strokeColor=#00695C;strokeWidth=1.5;fontSize=10;fontColor=#004D40;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="220" y="530" width="200" height="75" as="geometry"/>
+        </mxCell>
+        <mxCell id="redis" value="&lt;b&gt;Redis&lt;/b&gt;&lt;br&gt;&lt;font color='#004D40' style='font-size:8px'&gt;Cache · Session · Pub/Sub&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#B2DFDB;strokeColor=#00695C;strokeWidth=1.5;fontSize=10;fontColor=#004D40;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="680" y="530" width="200" height="75" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3-minio" value="&lt;b&gt;S3 / MinIO&lt;/b&gt;&lt;br&gt;&lt;font color='#004D40' style='font-size:8px'&gt;Snapshots · Video clips · Presigned URL&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#B2DFDB;strokeColor=#00695C;strokeWidth=1.5;fontSize=10;fontColor=#004D40;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="530" width="220" height="75" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TIER 2: EDGE GATEWAY ===== -->
+        <mxCell id="bnd-gateway" value="&lt;b&gt;TIER 2 – EDGE GATEWAY&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F57F17;strokeWidth=2.5;dashed=0;verticalAlign=top;align=left;fontStyle=1;fontSize=14;fontColor=#F57F17;spacingTop=6;spacingLeft=12;arcSize=5;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="300" y="695" width="1200" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="router-4g" value="&lt;b&gt;Router 4G LTE&lt;/b&gt;&lt;br&gt;&lt;font color='#E65100' style='font-size:9px'&gt;Cat4 150Mbps · Wi-Fi · 3 LAN&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;strokeWidth=1.5;fontSize=11;fontColor=#E65100;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="450" y="715" width="300" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="poe-switch" value="&lt;b&gt;PoE Switch&lt;/b&gt;&lt;br&gt;&lt;font color='#E65100' style='font-size:9px'&gt;4× PoE 48V · 2× Uplink&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;strokeWidth=1.5;fontSize=11;fontColor=#E65100;arcSize=12;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="715" width="260" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TIER 1: EDGE DEVICES ===== -->
+        <mxCell id="bnd-edge" value="&lt;b&gt;TIER 1 – EDGE DEVICES&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#5E35B1;strokeWidth=2.5;dashed=0;verticalAlign=top;align=left;fontStyle=1;fontSize=14;fontColor=#5E35B1;spacingTop=6;spacingLeft=12;arcSize=4;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="50" y="825" width="1700" height="430" as="geometry"/>
+        </mxCell>
+
+        <!-- Tier 1A: ESP32 IoT Node -->
+        <mxCell id="bnd-tier1a" value="&lt;b&gt;Tier 1A – ESP32 IoT Node&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F7FA;strokeColor=#0097A7;strokeWidth=1.5;dashed=0;verticalAlign=top;align=left;fontStyle=1;fontSize=11;fontColor=#00695C;spacingTop=5;spacingLeft=10;arcSize=4;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="75" y="855" width="790" height="375" as="geometry"/>
+        </mxCell>
+        <mxCell id="sensors" value="&lt;b&gt;Cảm biến (×5)&lt;/b&gt;&lt;br&gt;&lt;font color='#006064' style='font-size:8px'&gt;SHT31 · BH1750 · MQ-135 · DHT22 · MAX9814&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B2EBF2;strokeColor=#0097A7;strokeWidth=1.5;fontSize=10;fontColor=#004D40;arcSize=10;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="310" y="888" width="310" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="esp32" value="&lt;b&gt;ESP32-WROOM-32D&lt;/b&gt;&lt;br&gt;&lt;font color='#01579B' style='font-size:9px'&gt;FreeRTOS · PID Control · MQTT · 5 Sensors · 4 Relays&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B3E5FC;strokeColor=#0277BD;strokeWidth=2;fontSize=12;fontColor=#01579B;arcSize=10;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="265" y="972" width="400" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="actuators" value="&lt;b&gt;Relay (×4) + Actuators&lt;/b&gt;&lt;br&gt;&lt;font color='#006064' style='font-size:8px'&gt;Phun sương · Quạt · Sưởi · Đèn&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B2EBF2;strokeColor=#0097A7;strokeWidth=1.5;fontSize=10;fontColor=#004D40;arcSize=10;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="310" y="1075" width="310" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Tier 1B: Edge AI Node -->
+        <mxCell id="bnd-tier1b" value="&lt;b&gt;Tier 1B – Edge AI Node&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#8E24AA;strokeWidth=1.5;dashed=0;verticalAlign=top;align=left;fontStyle=1;fontSize=11;fontColor=#6A1B9A;spacingTop=5;spacingLeft=10;arcSize=4;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="915" y="855" width="810" height="375" as="geometry"/>
+        </mxCell>
+        <mxCell id="ip-camera" value="&lt;b&gt;IP Camera PoE 4MP&lt;/b&gt;&lt;br&gt;&lt;font color='#4A148C' style='font-size:8px'&gt;Starlight IR · 2K@30FPS · RTSP&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=1.5;fontSize=10;fontColor=#4A148C;arcSize=10;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="888" width="290" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="rpi4" value="&lt;b&gt;Raspberry Pi 4 (4GB)&lt;/b&gt;&lt;br&gt;&lt;font color='#311B92' style='font-size:9px'&gt;Python · OpenCV · ONNX Runtime · Edge AI Hub&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1C4E9;strokeColor=#4527A0;strokeWidth=2;fontSize=12;fontColor=#311B92;arcSize=10;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1115" y="972" width="400" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="yolo-model" value="&lt;b&gt;YOLOv8 + ByteTrack&lt;/b&gt;&lt;br&gt;&lt;font color='#4A148C' style='font-size:8px'&gt;ONNX/NCNN · Đếm chim · Phát hiện thiên địch&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=1.5;fontSize=10;fontColor=#4A148C;arcSize=10;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="1075" width="290" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ===================== EDGES ===================== -->
+
+        <!-- User → Client -->
+        <mxCell id="e1" value="Quản lý" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#78909C;fontColor=#546E7A;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.35;entryY=0;entryDx=0;entryDy=0;" edge="1" source="farm-owner" target="web-dashboard" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" value="Cảnh báo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#78909C;fontColor=#546E7A;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="farm-owner" target="mobile-pwa" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" value="Giám sát" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#78909C;fontColor=#546E7A;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;" edge="1" source="operator" target="mobile-pwa" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Client → Cloud (REST API) -->
+        <mxCell id="e4" value="REST API · HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#1565C0;fontColor=#1565C0;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="web-dashboard" target="express-api" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" value="REST API · HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#1565C0;fontColor=#1565C0;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.9;entryY=0;entryDx=0;entryDy=0;" edge="1" source="mobile-pwa" target="express-api" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Cloud → Client (WebSocket) -->
+        <mxCell id="e6" value="WebSocket" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#1565C0;fontColor=#1565C0;fontSize=9;dashed=1;dashPattern=6 3;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.3;exitY=0;exitDx=0;exitDy=0;entryX=0.7;entryY=1;entryDx=0;entryDy=0;" edge="1" source="socketio" target="web-dashboard" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" value="WebSocket" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#1565C0;fontColor=#1565C0;fontSize=9;dashed=1;dashPattern=6 3;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.7;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" source="socketio" target="mobile-pwa" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- MQTT → Backend -->
+        <mxCell id="e8" value="Subscribe telemetry" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E65100;fontColor=#BF360C;fontSize=9;dashed=1;dashPattern=8 4;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="mqtt-broker" target="telemetry-agg" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" value="Subscribe alerts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E65100;fontColor=#BF360C;fontSize=9;dashed=1;dashPattern=8 4;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="mqtt-broker" target="alert-engine" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="Publish commands" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E65100;fontColor=#BF360C;fontSize=9;dashed=1;dashPattern=8 4;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.1;entryY=1;entryDx=0;entryDy=0;" edge="1" source="express-api" target="mqtt-broker" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Backend → Data Stores -->
+        <mxCell id="e11" value="Write time-series" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#2E7D32;fontColor=#2E7D32;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="telemetry-agg" target="mongodb" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="CRUD · Mongoose" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#2E7D32;fontColor=#2E7D32;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.2;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="express-api" target="mongodb" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e13" value="Write alerts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#2E7D32;fontColor=#2E7D32;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;" edge="1" source="alert-engine" target="mongodb" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14" value="Cache" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#2E7D32;fontColor=#2E7D32;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;" edge="1" source="express-api" target="redis" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e15" value="Snapshots" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#2E7D32;fontColor=#2E7D32;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;" edge="1" source="alert-engine" target="s3-minio" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Alert Engine → Notifications -->
+        <mxCell id="e16" value="Push" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#7B1FA2;fontColor=#7B1FA2;fontSize=9;dashed=1;dashPattern=6 3;fontFamily=Segoe UI,Arial,sans-serif;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="alert-engine" target="fcm" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e17" value="ZNS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#7B1FA2;fontColor=#7B1FA2;fontSize=9;dashed=1;dashPattern=6 3;fontFamily=Segoe UI,Arial,sans-serif;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="alert-engine" target="zalo-zns" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e18" value="SMS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#7B1FA2;fontColor=#7B1FA2;fontSize=9;dashed=1;dashPattern=6 3;fontFamily=Segoe UI,Arial,sans-serif;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="alert-engine" target="sms-twilio" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Gateway ↔ Cloud -->
+        <mxCell id="e19" value="4G LTE · TLS 1.2+" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#E65100;fontColor=#BF360C;fontSize=10;dashed=1;dashPattern=8 4;fontFamily=Segoe UI,Arial,sans-serif;fontStyle=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" source="router-4g" target="mqtt-broker" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Edge → Gateway -->
+        <mxCell id="e20" value="MQTT · Wi-Fi" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E65100;fontColor=#BF360C;fontSize=9;dashed=1;dashPattern=8 4;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.3;entryY=1;entryDx=0;entryDy=0;" edge="1" source="esp32" target="router-4g" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e21" value="MQTT · LAN" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E65100;fontColor=#BF360C;fontSize=9;dashed=1;dashPattern=8 4;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.7;entryY=1;entryDx=0;entryDy=0;" edge="1" source="rpi4" target="router-4g" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- PoE → Camera -->
+        <mxCell id="e22" value="PoE · Ethernet" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#455A64;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="poe-switch" target="ip-camera" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Edge internal -->
+        <mxCell id="e23" value="I²C / Analog" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#455A64;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="sensors" target="esp32" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e24" value="PID Control · GPIO" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#455A64;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="esp32" target="actuators" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e25" value="RTSP · 2K@30FPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#455A64;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="ip-camera" target="rpi4" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e26" value="Inference + Tracking" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#455A64;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="rpi4" target="yolo-model" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

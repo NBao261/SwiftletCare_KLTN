@@ -1,0 +1,141 @@
+{
+  "schemaVersion": "2.0",
+  "status": "confirmed",
+  "sources": [
+    {
+      "id": "conversation-1",
+      "type": "conversation",
+      "location": "Current user request",
+      "snapshot": "2026-09-09T07:52:56Z"
+    },
+    {
+      "id": "repo-1",
+      "type": "repository",
+      "location": "C:\\Users\\Admin\\Desktop\\SwiftletCare_KLTN",
+      "snapshot": "efde788f49b1040c9fbc5084274290a129755e26",
+      "repository": {
+        "remote": "https://github.com/NBao261/SwiftletCare_KLTN.git",
+        "revision": "efde788f49b1040c9fbc5084274290a129755e26",
+        "dirty": true,
+        "capturedAt": "2026-09-09T07:53:02Z"
+      }
+    },
+    {
+      "id": "srs-doc",
+      "type": "document",
+      "location": "SRS_SwiftletCare.md",
+      "snapshot": "2026-09-09"
+    }
+  ],
+  "facts": [
+    {
+      "id": "fact-tier-model",
+      "claim": "System uses 3-tier Edge AI & IoT architecture: Tier 1A (ESP32 sensor/actuator nodes), Tier 1B (Raspberry Pi Edge AI nodes), Tier 2 (4G LTE Gateway), Tier 3 (Cloud Layer)",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-esp32",
+      "claim": "ESP32-WROOM-32D runs FreeRTOS, reads 5 sensors (SHT31, BH1750, MQ-135, DHT22, MAX9814), drives 4 relays (misting, ventilation, heating, light), executes closed-loop PID control, publishes via MQTT over TLS QoS 1",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-rpi-edge",
+      "claim": "Raspberry Pi 4 (4GB) receives RTSP from IP Camera PoE 4MP, runs YOLOv8/YOLOv10 + ByteTrack for swiftlet counting and predator detection (rat, snake, owl), publishes results via MQTT",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-gateway",
+      "claim": "Router 4G LTE Cat4 acts as edge gateway providing local LAN/Wi-Fi to ESP32 and PoE switch for IP Camera, uplinks to cloud via 4G",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-mqtt-broker",
+      "claim": "EMQX/Mosquitto MQTT Broker handles pub/sub message routing between edge devices and cloud backend with TLS 1.2+ and device certificate authentication",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-backend",
+      "claim": "Node.js + Express.js backend with Mongoose ORM, socket.io WebSocket, JWT auth, handles REST API, MQTT subscription, telemetry aggregation, and alert processing",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-mongodb",
+      "claim": "MongoDB stores telemetry time-series, farm/house/zone hierarchy, user accounts, alerts, bird count records",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-redis",
+      "claim": "Redis provides caching and session management for horizontal scaling",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-s3",
+      "claim": "S3/MinIO stores alert snapshots and video clips, accessed via presigned URLs with 15-minute TTL",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-alert-engine",
+      "claim": "Alert Engine classifies alerts into 4 severity levels (CRITICAL/HIGH/MEDIUM/LOW), sends notifications via Firebase FCM Push, Zalo ZNS, and SMS (Twilio/ESMS), with deduplication and quiet hours",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-frontend",
+      "claim": "ReactJS + Vite PWA dashboard with TailwindCSS, Chart.js, socket.io-client for real-time updates, installable on iOS/Android",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-ip-camera",
+      "claim": "IP Camera PoE 4MP Starlight with Smart IR 30m, RTSP streaming at 2K resolution 30FPS, powered via PoE switch",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-sensors",
+      "claim": "5 sensors: SHT31 (temp/humidity), BH1750 (light), MQ-135 (NH3/CO2), DHT22 (outdoor reference), MAX9814 (microphone/audio)",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-actuators",
+      "claim": "4 relay-controlled actuators: misting pump, ventilation fan, heater, light control",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "fact-users",
+      "claim": "3 user roles: Farm Owner (full access), Operator (view + manual control), Administrator (system config)",
+      "evidence": ["srs-doc"],
+      "confidence": "confirmed"
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "assume-single-site",
+      "claim": "Diagram shows a single-site deployment topology with one gateway connecting to the cloud",
+      "reason": "SRS describes 1-5 buildings per owner; diagram shows representative single site"
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "exclude-ai-training",
+      "claim": "AI model training pipeline (Roboflow/CVAT/Colab) excluded from system architecture; it is an offline development workflow",
+      "reason": "Training pipeline is a development concern, not runtime architecture"
+    },
+    {
+      "id": "exclude-ota",
+      "claim": "OTA firmware update mechanism excluded for diagram clarity",
+      "reason": "OTA is a maintenance operation, not part of core runtime data flow"
+    }
+  ]
+}

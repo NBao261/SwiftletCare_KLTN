@@ -1,0 +1,143 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="NexCanvas" version="2.0" type="device">
+  <diagram id="ctx" name="SwiftletCare Context Diagram (C4 Level 1)">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1200" background="#FAFAFA">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ═══════════════════ TITLE & SUBTITLE ═══════════════════ -->
+        <mxCell id="title" value="&lt;font style='font-size:24px;font-weight:800;color:#1A237E;letter-spacing:0.5px'&gt;SwiftletCare – Context Diagram&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:12px;color:#78909C;font-weight:400'&gt;C4 Level 1 · Hệ thống IoT &amp;amp; Edge AI Quản lý Nhà yến Thông minh&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="50" y="18" width="700" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════ LEGEND ═══════════════════ -->
+        <mxCell id="legend" value="&lt;font style='font-size:10px;font-weight:700;color:#37474F'&gt;Chú thích (Legend)&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:9px;color:#1565C0'&gt;■ Hệ thống SwiftletCare&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:9px;color:#90A4AE'&gt;□ Hệ thống bên ngoài (External System)&lt;/font&gt;&lt;br&gt;&lt;font style='font-size:9px;color:#08427B'&gt;● Tác nhân (Person/Actor)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fillColor=#FFFFFF;strokeColor=#CFD8DC;strokeWidth=1;fontFamily=Segoe UI,Arial,sans-serif;spacingLeft=10;spacingTop=8;spacingRight=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="960" width="240" height="82" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════ ACTORS (TOP ROW) ═══════════════════ -->
+
+        <!-- Farm Owner -->
+        <mxCell id="farm-owner" value="&lt;b style='font-size:13px;color:#0D47A1'&gt;👤 Chủ nhà yến&lt;/b&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;[Person]&lt;/font&gt;&lt;br&gt;&lt;font color='#455A64' style='font-size:9px'&gt;Quản lý farm, xem dashboard,&lt;br&gt;cấu hình thiết bị, nhận cảnh báo&lt;/font&gt;" style="shape=mxgraph.c4.person2;whiteSpace=wrap;html=1;align=center;verticalAlign=top;metaEdit=1;points=[[0.5,0,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0]];fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=11;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="195" y="105" width="220" height="145" as="geometry"/>
+        </mxCell>
+
+        <!-- Operator -->
+        <mxCell id="operator" value="&lt;b style='font-size:13px;color:#0D47A1'&gt;👤 Kỹ thuật viên&lt;/b&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;[Person]&lt;/font&gt;&lt;br&gt;&lt;font color='#455A64' style='font-size:9px'&gt;Giám sát môi trường,&lt;br&gt;điều khiển thủ công relay&lt;/font&gt;" style="shape=mxgraph.c4.person2;whiteSpace=wrap;html=1;align=center;verticalAlign=top;metaEdit=1;points=[[0.5,0,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0]];fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=11;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="790" y="105" width="220" height="145" as="geometry"/>
+        </mxCell>
+
+        <!-- Administrator -->
+        <mxCell id="admin" value="&lt;b style='font-size:13px;color:#0D47A1'&gt;👤 Quản trị viên&lt;/b&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;[Person]&lt;/font&gt;&lt;br&gt;&lt;font color='#455A64' style='font-size:9px'&gt;Quản lý tài khoản,&lt;br&gt;cấu hình hệ thống, audit log&lt;/font&gt;" style="shape=mxgraph.c4.person2;whiteSpace=wrap;html=1;align=center;verticalAlign=top;metaEdit=1;points=[[0.5,0,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0]];fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=11;fontFamily=Segoe UI,Arial,sans-serif;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="105" width="220" height="145" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════ CENTRAL SYSTEM (C4 Blue Box) ═══════════════════ -->
+        <mxCell id="system" value="&lt;b style='font-size:18px;color:#FFFFFF'&gt;SwiftletCare Platform&lt;/b&gt;&lt;br&gt;&lt;font color='#B3E5FC' style='font-size:10px'&gt;[Software System]&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font color='#E1F5FE' style='font-size:11px'&gt;Hệ thống IoT &amp;amp; Edge AI toàn diện&lt;br&gt;quản lý nhà yến thông minh.&lt;br&gt;&lt;br&gt;Bao gồm: Web Dashboard, Mobile PWA,&lt;br&gt;Backend API, MQTT Broker, ESP32 Firmware,&lt;br&gt;Edge AI Vision, Alert Engine,&lt;br&gt;MongoDB, Redis.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=3;fontSize=14;fontColor=#FFFFFF;arcSize=6;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;spacingTop=10;spacingBottom=10;" vertex="1" parent="1">
+          <mxGeometry x="500" y="370" width="800" height="320" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════ EXTERNAL SYSTEMS (LEFT) ═══════════════════ -->
+
+        <!-- ESP32 IoT Node -->
+        <mxCell id="esp32-node" value="&lt;b style='font-size:12px;color:#37474F'&gt;ESP32 IoT Controller&lt;/b&gt;&lt;br&gt;&lt;font color='#78909C' style='font-size:9px'&gt;[External Hardware]&lt;/font&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Vi điều khiển ESP32-WROOM-32D.&lt;br&gt;Thu thập 5 cảm biến, PID Control,&lt;br&gt;điều khiển 4 relay phun sương/&lt;br&gt;quạt/sưởi/đèn.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;fontSize=11;fontColor=#37474F;arcSize=6;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="30" y="370" width="260" height="135" as="geometry"/>
+        </mxCell>
+
+        <!-- Edge AI Node (RPi + Camera) -->
+        <mxCell id="edge-ai-node" value="&lt;b style='font-size:12px;color:#37474F'&gt;Edge AI Vision Node&lt;/b&gt;&lt;br&gt;&lt;font color='#78909C' style='font-size:9px'&gt;[External Hardware]&lt;/font&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Raspberry Pi 4 + IP Camera PoE 4MP.&lt;br&gt;YOLOv8 + ByteTrack: đếm chim yến&lt;br&gt;entry/exit, phát hiện thiên địch&lt;br&gt;(chuột, rắn, cú mèo).&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;fontSize=11;fontColor=#37474F;arcSize=6;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="30" y="555" width="260" height="135" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════ EXTERNAL SYSTEMS (RIGHT) ═══════════════════ -->
+
+        <!-- Firebase FCM -->
+        <mxCell id="firebase-fcm" value="&lt;b style='font-size:12px;color:#37474F'&gt;Firebase Cloud Messaging&lt;/b&gt;&lt;br&gt;&lt;font color='#78909C' style='font-size:9px'&gt;[External Service · Google]&lt;/font&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Gửi Push Notification đến&lt;br&gt;Web Dashboard và Mobile PWA.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;fontSize=11;fontColor=#37474F;arcSize=6;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1510" y="350" width="260" height="105" as="geometry"/>
+        </mxCell>
+
+        <!-- Zalo ZNS -->
+        <mxCell id="zalo-zns" value="&lt;b style='font-size:12px;color:#37474F'&gt;Zalo ZNS API&lt;/b&gt;&lt;br&gt;&lt;font color='#78909C' style='font-size:9px'&gt;[External Service · Zalo]&lt;/font&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Gửi thông báo Zalo cho&lt;br&gt;cảnh báo CRITICAL và HIGH.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;fontSize=11;fontColor=#37474F;arcSize=6;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1510" y="490" width="260" height="105" as="geometry"/>
+        </mxCell>
+
+        <!-- SMS Gateway -->
+        <mxCell id="sms-gateway" value="&lt;b style='font-size:12px;color:#37474F'&gt;SMS Gateway&lt;/b&gt;&lt;br&gt;&lt;font color='#78909C' style='font-size:9px'&gt;[External Service · Twilio / ESMS.vn]&lt;/font&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Gửi SMS dự phòng&lt;br&gt;khi mạng kém.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;fontSize=11;fontColor=#37474F;arcSize=6;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1510" y="630" width="260" height="105" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════ EXTERNAL SYSTEMS (BOTTOM) ═══════════════════ -->
+
+        <!-- S3 / MinIO -->
+        <mxCell id="s3-minio" value="&lt;b style='font-size:12px;color:#37474F'&gt;S3 / MinIO Storage&lt;/b&gt;&lt;br&gt;&lt;font color='#78909C' style='font-size:9px'&gt;[External Service · Object Storage]&lt;/font&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Lưu trữ snapshot cảnh báo, video clips.&lt;br&gt;Truy cập qua Presigned URL (TTL 15').&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;fontSize=11;fontColor=#37474F;arcSize=6;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="390" y="830" width="280" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- Google OAuth -->
+        <mxCell id="google-oauth" value="&lt;b style='font-size:12px;color:#37474F'&gt;Google OAuth 2.0&lt;/b&gt;&lt;br&gt;&lt;font color='#78909C' style='font-size:9px'&gt;[External Service · Google]&lt;/font&gt;&lt;br&gt;&lt;font color='#546E7A' style='font-size:9px'&gt;Xác thực đăng nhập Social Login&lt;br&gt;cho Farm Owner và Operator.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;fontSize=11;fontColor=#37474F;arcSize=6;shadow=1;fontFamily=Segoe UI,Arial,sans-serif;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="830" width="280" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════ EDGES ═══════════════════ -->
+
+        <!-- Farm Owner → System -->
+        <mxCell id="e1" value="Quản lý farm, xem dashboard&lt;br&gt;real-time, nhận cảnh báo đa kênh&lt;br&gt;&lt;font style='font-size:8px;color:#1565C0'&gt;[Web Dashboard, Mobile PWA · HTTPS]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" source="farm-owner" target="system" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Operator → System -->
+        <mxCell id="e2" value="Giám sát môi trường, điều khiển&lt;br&gt;thủ công relay, xem dữ liệu&lt;br&gt;&lt;font style='font-size:8px;color:#1565C0'&gt;[Mobile PWA · HTTPS]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="operator" target="system" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Admin → System -->
+        <mxCell id="e3" value="Quản lý tài khoản, phân quyền,&lt;br&gt;cấu hình hệ thống, audit log&lt;br&gt;&lt;font style='font-size:8px;color:#1565C0'&gt;[Web Dashboard · HTTPS]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" source="admin" target="system" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ESP32 ↔ System (bidirectional) -->
+        <mxCell id="e4" value="Gửi dữ liệu cảm biến&lt;br&gt;(nhiệt độ, độ ẩm, ánh sáng, khí, âm thanh)&lt;br&gt;&lt;font style='font-size:8px;color:#E65100'&gt;[MQTT QoS 1 · TLS 1.2+]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="esp32-node" target="system" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4b" value="Nhận lệnh điều khiển relay&lt;br&gt;&lt;font style='font-size:8px;color:#E65100'&gt;[MQTT · TLS 1.2+]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;dashed=1;dashPattern=6 3;fontFamily=Segoe UI,Arial,sans-serif;exitX=0;exitY=0.65;exitDx=0;exitDy=0;entryX=1;entryY=0.65;entryDx=0;entryDy=0;" edge="1" source="system" target="esp32-node" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Edge AI ↔ System (bidirectional) -->
+        <mxCell id="e5" value="Gửi kết quả đếm chim yến&lt;br&gt;(entry/exit count, confidence)&lt;br&gt;Cảnh báo thiên địch + snapshot&lt;br&gt;&lt;font style='font-size:8px;color:#E65100'&gt;[MQTT QoS 1 · TLS 1.2+]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="edge-ai-node" target="system" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5b" value="Gửi cấu hình detection, ROI&lt;br&gt;&lt;font style='font-size:8px;color:#E65100'&gt;[MQTT · TLS 1.2+]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;dashed=1;dashPattern=6 3;fontFamily=Segoe UI,Arial,sans-serif;exitX=0;exitY=0.85;exitDx=0;exitDy=0;entryX=1;entryY=0.85;entryDx=0;entryDy=0;" edge="1" source="system" target="edge-ai-node" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- System → Firebase FCM -->
+        <mxCell id="e6" value="Gửi Push Notification&lt;br&gt;&lt;font style='font-size:8px;color:#7B1FA2'&gt;[FCM API · HTTPS]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="system" target="firebase-fcm" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- System → Zalo ZNS -->
+        <mxCell id="e7" value="Gửi thông báo Zalo&lt;br&gt;&lt;font style='font-size:8px;color:#7B1FA2'&gt;[ZNS API · HTTPS]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="system" target="zalo-zns" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- System → SMS Gateway -->
+        <mxCell id="e8" value="Gửi SMS dự phòng&lt;br&gt;&lt;font style='font-size:8px;color:#7B1FA2'&gt;[Twilio API · HTTPS]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="system" target="sms-gateway" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- System → S3/MinIO -->
+        <mxCell id="e9" value="Lưu trữ snapshot, video clips&lt;br&gt;Presigned URL (TTL 15 phút)&lt;br&gt;&lt;font style='font-size:8px;color:#2E7D32'&gt;[S3 API · HTTPS]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="system" target="s3-minio" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- System → Google OAuth -->
+        <mxCell id="e10" value="Social Login (OAuth 2.0)&lt;br&gt;&lt;font style='font-size:8px;color:#1565C0'&gt;[OAuth2 · HTTPS]&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#546E7A;fontColor=#37474F;fontSize=9;fontFamily=Segoe UI,Arial,sans-serif;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="system" target="google-oauth" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

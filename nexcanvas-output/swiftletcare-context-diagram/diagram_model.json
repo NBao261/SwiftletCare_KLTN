@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "2.0",
+  "title": "SwiftletCare Context Diagram",
+  "showTitle": false,
+  "viewIntent": "architecture",
+  "route": {
+    "family": "software",
+    "profile": "c4-container"
+  },
+  "audience": "engineering stakeholders",
+  "deliveryTarget": "engineering-doc",
+  "language": "vi",
+  "theme": "technical-editorial",
+  "visualArchetype": "technical-editorial",
+  "direction": "LR",
+  "canvas": {
+    "width": 1600,
+    "height": 900
+  },
+  "boundaries": [],
+  "nodes": [
+    {
+      "id": "system",
+      "label": "SwiftletCare Context Diagram",
+      "kind": "system",
+      "importance": "primary",
+      "evidence": []
+    }
+  ],
+  "edges": [],
+  "legend": [],
+  "sourceSnapshot": "source_model.json",
+  "assumptions": []
+}

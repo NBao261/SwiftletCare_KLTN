@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "2.0",
+  "status": "confirmed",
+  "viewIntent": "architecture",
+  "route": {
+    "family": "runtime-cloud",
+    "profile": "deployment"
+  },
+  "theme": "technical-editorial",
+  "visualArchetype": "provider-neutral-reference",
+  "canvas": {
+    "width": 1800,
+    "height": 1100
+  },
+  "layoutStrategy": "phase-rows",
+  "sourceHash": "pending-rebuild",
+  "decisions": {
+    "audience": "engineering stakeholders and thesis committee",
+    "viewIntent": "architecture",
+    "deliveryTarget": "engineering-doc",
+    "notation": "deployment-tiered",
+    "layout": "phase-rows",
+    "layoutRationale": "phase-rows best represents the 4-tier vertical hierarchy (Edge Devices → Gateway → Cloud → Clients) with clear horizontal grouping within each tier. Runner-up dense-phase-columns would force horizontal reading but the tiered IoT architecture is naturally top-to-bottom.",
+    "visualArchetype": "provider-neutral-reference",
+    "assetPolicy": "verified-exact-or-generic",
+    "language": "vi"
+  }
+}

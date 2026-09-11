@@ -11,7 +11,7 @@
 ## 📌 Phân công Thành viên Cố định
 
 | Ký hiệu | Vai trò                  | Chịu trách nhiệm chính                              |
-| ------- | ------------------------ | --------------------------------------------------- |
+| ---------| --------------------------| -----------------------------------------------------|
 | **M1**  | Hardware Engineer        | ESP32 firmware, PID, cảm biến, relay, mạch điện     |
 | **M2**  | AI/ML Engineer           | Dataset, YOLOv8, ByteTrack, RPi deployment          |
 | **M3**  | Backend Developer        | Express API, MongoDB, MQTT, WebSocket, Alert Engine |

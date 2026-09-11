@@ -1,0 +1,564 @@
+{
+  "schemaVersion": "2.0",
+  "title": "SwiftletCare – Kiến trúc Hệ thống",
+  "showTitle": true,
+  "viewIntent": "architecture",
+  "route": {
+    "family": "runtime-cloud",
+    "profile": "deployment"
+  },
+  "audience": "engineering stakeholders",
+  "deliveryTarget": "engineering-doc",
+  "language": "vi",
+  "theme": "technical-editorial",
+  "visualArchetype": "provider-neutral-reference",
+  "direction": "LR",
+  "canvas": {
+    "width": 1800,
+    "height": 1100
+  },
+  "layoutStrategy": "phase-rows",
+  "boundaries": [
+    {
+      "id": "tier1-edge",
+      "label": "TIER 1 – EDGE DEVICES",
+      "kind": "runtime",
+      "description": "Thiết bị biên tại nhà yến",
+      "children": ["tier1a-sensors", "tier1b-ai"],
+      "layout": { "order": 0 }
+    },
+    {
+      "id": "tier1a-sensors",
+      "label": "Tier 1A – ESP32 IoT Node",
+      "kind": "runtime",
+      "description": "MCU cảm biến và điều khiển",
+      "children": ["esp32", "sensors", "actuators"],
+      "layout": { "order": 0 }
+    },
+    {
+      "id": "tier1b-ai",
+      "label": "Tier 1B – Edge AI Node",
+      "kind": "runtime",
+      "description": "Xử lý thị giác máy tính biên",
+      "children": ["rpi4", "ip-camera", "yolo-model"],
+      "layout": { "order": 1 }
+    },
+    {
+      "id": "tier2-gateway",
+      "label": "TIER 2 – EDGE GATEWAY",
+      "kind": "runtime",
+      "description": "Cổng kết nối Internet",
+      "children": ["router-4g", "poe-switch"],
+      "layout": { "order": 1 }
+    },
+    {
+      "id": "tier3-cloud",
+      "label": "TIER 3 – CLOUD LAYER",
+      "kind": "runtime",
+      "description": "Dịch vụ đám mây và backend",
+      "children": ["cloud-messaging", "cloud-backend", "cloud-storage", "cloud-notification"],
+      "layout": { "order": 2 }
+    },
+    {
+      "id": "cloud-messaging",
+      "label": "Messaging",
+      "kind": "logical",
+      "children": ["mqtt-broker"],
+      "layout": { "order": 0 }
+    },
+    {
+      "id": "cloud-backend",
+      "label": "Backend Services",
+      "kind": "logical",
+      "children": ["express-api", "telemetry-aggregator", "alert-engine", "socketio"],
+      "layout": { "order": 1 }
+    },
+    {
+      "id": "cloud-storage",
+      "label": "Data Stores",
+      "kind": "logical",
+      "children": ["mongodb", "redis", "s3-minio"],
+      "layout": { "order": 2 }
+    },
+    {
+      "id": "cloud-notification",
+      "label": "Notification Channels",
+      "kind": "logical",
+      "children": ["fcm", "zalo-zns", "sms-twilio"],
+      "layout": { "order": 3 }
+    },
+    {
+      "id": "tier4-clients",
+      "label": "CLIENTS",
+      "kind": "runtime",
+      "description": "Ứng dụng người dùng",
+      "children": ["web-dashboard", "mobile-pwa"],
+      "layout": { "order": 3 }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "esp32",
+      "label": "ESP32-WROOM-32D",
+      "kind": "container",
+      "technology": "FreeRTOS / Arduino",
+      "description": "MCU: thu thập cảm biến, PID control, điều khiển relay, MQTT publish",
+      "importance": "primary",
+      "evidence": ["fact-esp32"],
+      "layout": { "order": 0, "track": 0.3 }
+    },
+    {
+      "id": "sensors",
+      "label": "Cảm biến (×5)",
+      "kind": "hardware",
+      "technology": "SHT31, BH1750, MQ-135, DHT22, MAX9814",
+      "description": "Nhiệt độ, Độ ẩm, Ánh sáng, Khí CO₂/NH₃, Âm thanh",
+      "evidence": ["fact-sensors"],
+      "layout": { "order": 1, "track": 0.1 }
+    },
+    {
+      "id": "actuators",
+      "label": "Relay (×4) + Actuators",
+      "kind": "hardware",
+      "technology": "Phun sương, Quạt, Sưởi, Đèn",
+      "description": "Điều khiển thiết bị đầu ra qua relay 4 kênh",
+      "evidence": ["fact-actuators"],
+      "layout": { "order": 2, "track": 0.5 }
+    },
+    {
+      "id": "ip-camera",
+      "label": "IP Camera PoE 4MP",
+      "kind": "hardware",
+      "technology": "Hikvision/Dahua Starlight IR",
+      "description": "Camera giám sát 2K@30FPS, hỗ trợ Night Vision",
+      "evidence": ["fact-ip-camera"],
+      "layout": { "order": 0, "track": 0.1 }
+    },
+    {
+      "id": "rpi4",
+      "label": "Raspberry Pi 4",
+      "kind": "container",
+      "technology": "Python / OpenCV / ONNX Runtime",
+      "description": "Edge AI Hub: chạy inference và tracking trên luồng video RTSP",
+      "importance": "primary",
+      "evidence": ["fact-rpi-edge"],
+      "layout": { "order": 1, "track": 0.3 }
+    },
+    {
+      "id": "yolo-model",
+      "label": "YOLOv8 + ByteTrack",
+      "kind": "component",
+      "technology": "ONNX / NCNN quantized",
+      "description": "Object detection + Multi-Object Tracking: đếm chim, phát hiện thiên địch",
+      "evidence": ["fact-rpi-edge"],
+      "layout": { "order": 2, "track": 0.5 }
+    },
+    {
+      "id": "router-4g",
+      "label": "Router 4G LTE",
+      "kind": "infrastructure",
+      "technology": "Cat4 150Mbps",
+      "description": "Internet gateway, cung cấp Wi-Fi cho ESP32 và LAN cho PoE switch",
+      "importance": "primary",
+      "evidence": ["fact-gateway"],
+      "layout": { "order": 0, "track": 0.3 }
+    },
+    {
+      "id": "poe-switch",
+      "label": "PoE Switch",
+      "kind": "infrastructure",
+      "technology": "4 cổng PoE 48V",
+      "description": "Cấp nguồn và dữ liệu cho IP Camera qua Ethernet",
+      "evidence": ["fact-gateway"],
+      "layout": { "order": 1, "track": 0.7 }
+    },
+    {
+      "id": "mqtt-broker",
+      "label": "MQTT Broker",
+      "kind": "container",
+      "technology": "EMQX / Mosquitto",
+      "description": "Pub/Sub message routing, TLS 1.2+, Device Certificate Auth",
+      "importance": "primary",
+      "evidence": ["fact-mqtt-broker"],
+      "layout": { "order": 0, "track": 0.5 }
+    },
+    {
+      "id": "express-api",
+      "label": "Express.js API",
+      "kind": "container",
+      "technology": "Node.js 20 LTS / TypeScript",
+      "description": "REST API: Auth, Farm, Devices, Telemetry, Alerts, Analytics",
+      "importance": "primary",
+      "evidence": ["fact-backend"],
+      "layout": { "order": 0, "track": 0.3 }
+    },
+    {
+      "id": "telemetry-aggregator",
+      "label": "Telemetry Aggregator",
+      "kind": "component",
+      "technology": "MQTT.js subscriber",
+      "description": "Thu thập, validate và lưu dữ liệu cảm biến từ MQTT",
+      "evidence": ["fact-backend"],
+      "layout": { "order": 1, "track": 0.2 }
+    },
+    {
+      "id": "alert-engine",
+      "label": "Alert Engine",
+      "kind": "component",
+      "technology": "Background service",
+      "description": "Phân tích sự kiện, phân loại mức độ, dedup, gửi thông báo đa kênh",
+      "importance": "primary",
+      "evidence": ["fact-alert-engine"],
+      "layout": { "order": 2, "track": 0.5 }
+    },
+    {
+      "id": "socketio",
+      "label": "WebSocket Server",
+      "kind": "component",
+      "technology": "Socket.io",
+      "description": "Real-time push: telemetry, relay status, bird count, alerts đến clients",
+      "evidence": ["fact-backend"],
+      "layout": { "order": 3, "track": 0.8 }
+    },
+    {
+      "id": "mongodb",
+      "label": "MongoDB",
+      "kind": "datastore",
+      "technology": "Document DB",
+      "description": "Telemetry time-series, farms, users, alerts, bird counts",
+      "importance": "primary",
+      "evidence": ["fact-mongodb"],
+      "layout": { "order": 0, "track": 0.2 }
+    },
+    {
+      "id": "redis",
+      "label": "Redis",
+      "kind": "datastore",
+      "technology": "In-memory cache",
+      "description": "Session management, caching, pub/sub nội bộ",
+      "evidence": ["fact-redis"],
+      "layout": { "order": 1, "track": 0.5 }
+    },
+    {
+      "id": "s3-minio",
+      "label": "S3 / MinIO",
+      "kind": "datastore",
+      "technology": "Object Storage",
+      "description": "Lưu trữ snapshots cảnh báo, video clips. Presigned URL TTL 15 phút",
+      "evidence": ["fact-s3"],
+      "layout": { "order": 2, "track": 0.8 }
+    },
+    {
+      "id": "fcm",
+      "label": "Firebase FCM",
+      "kind": "external-service",
+      "technology": "Push Notification",
+      "description": "Web Push và Mobile Push qua Service Worker",
+      "evidence": ["fact-alert-engine"],
+      "layout": { "order": 0, "track": 0.2 }
+    },
+    {
+      "id": "zalo-zns",
+      "label": "Zalo ZNS",
+      "kind": "external-service",
+      "technology": "Zalo Notification Service",
+      "description": "Thông báo qua Zalo cho cảnh báo CRITICAL/HIGH",
+      "evidence": ["fact-alert-engine"],
+      "layout": { "order": 1, "track": 0.5 }
+    },
+    {
+      "id": "sms-twilio",
+      "label": "SMS (Twilio/ESMS)",
+      "kind": "external-service",
+      "technology": "SMS Gateway",
+      "description": "Kênh dự phòng khi mạng kém",
+      "evidence": ["fact-alert-engine"],
+      "layout": { "order": 2, "track": 0.8 }
+    },
+    {
+      "id": "web-dashboard",
+      "label": "Web Dashboard",
+      "kind": "webapp",
+      "technology": "ReactJS / Vite / TailwindCSS",
+      "description": "SPA Dashboard: biểu đồ real-time, quản lý farm, analytics, live stream",
+      "importance": "primary",
+      "evidence": ["fact-frontend"],
+      "layout": { "order": 0, "track": 0.3 }
+    },
+    {
+      "id": "mobile-pwa",
+      "label": "Mobile PWA",
+      "kind": "webapp",
+      "technology": "ReactJS PWA / Vite",
+      "description": "Progressive Web App cài trên iOS/Android, nhận Push notification",
+      "importance": "primary",
+      "evidence": ["fact-frontend"],
+      "layout": { "order": 1, "track": 0.7 }
+    },
+    {
+      "id": "farm-owner",
+      "label": "Chủ nhà yến",
+      "kind": "person",
+      "description": "Farm Owner: quản lý, cấu hình, xem dashboard, nhận cảnh báo",
+      "evidence": ["fact-users"],
+      "layout": { "order": 0, "track": 0.3 }
+    },
+    {
+      "id": "operator",
+      "label": "Kỹ thuật viên",
+      "kind": "person",
+      "description": "Operator: giám sát, điều khiển thủ công, xử lý sự cố",
+      "evidence": ["fact-users"],
+      "layout": { "order": 1, "track": 0.7 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-sensors-esp32",
+      "source": "sensors",
+      "target": "esp32",
+      "label": "Đọc dữ liệu · I²C/Analog",
+      "kind": "sync",
+      "evidence": ["fact-sensors"]
+    },
+    {
+      "id": "e-esp32-actuators",
+      "source": "esp32",
+      "target": "actuators",
+      "label": "PID Control · GPIO",
+      "kind": "sync",
+      "evidence": ["fact-actuators"]
+    },
+    {
+      "id": "e-camera-rpi",
+      "source": "ip-camera",
+      "target": "rpi4",
+      "label": "RTSP stream · 2K@30FPS",
+      "kind": "async",
+      "evidence": ["fact-ip-camera"]
+    },
+    {
+      "id": "e-rpi-yolo",
+      "source": "rpi4",
+      "target": "yolo-model",
+      "label": "Inference + Tracking",
+      "kind": "sync",
+      "evidence": ["fact-rpi-edge"]
+    },
+    {
+      "id": "e-camera-poe",
+      "source": "poe-switch",
+      "target": "ip-camera",
+      "label": "PoE 48V + Data · Ethernet",
+      "kind": "sync",
+      "evidence": ["fact-gateway"]
+    },
+    {
+      "id": "e-esp32-router",
+      "source": "esp32",
+      "target": "router-4g",
+      "label": "MQTT · Wi-Fi",
+      "kind": "async",
+      "evidence": ["fact-esp32"]
+    },
+    {
+      "id": "e-rpi-router",
+      "source": "rpi4",
+      "target": "router-4g",
+      "label": "MQTT · Wi-Fi/LAN",
+      "kind": "async",
+      "evidence": ["fact-rpi-edge"]
+    },
+    {
+      "id": "e-poe-router",
+      "source": "poe-switch",
+      "target": "router-4g",
+      "label": "Ethernet uplink",
+      "kind": "sync",
+      "evidence": ["fact-gateway"]
+    },
+    {
+      "id": "e-router-mqtt",
+      "source": "router-4g",
+      "target": "mqtt-broker",
+      "label": "4G LTE · TLS 1.2+",
+      "kind": "async",
+      "evidence": ["fact-gateway"]
+    },
+    {
+      "id": "e-mqtt-telemetry",
+      "source": "mqtt-broker",
+      "target": "telemetry-aggregator",
+      "label": "Subscribe telemetry · MQTT.js",
+      "kind": "async",
+      "evidence": ["fact-backend"]
+    },
+    {
+      "id": "e-mqtt-alert-engine",
+      "source": "mqtt-broker",
+      "target": "alert-engine",
+      "label": "Subscribe alerts · vision/alert",
+      "kind": "async",
+      "evidence": ["fact-alert-engine"]
+    },
+    {
+      "id": "e-mqtt-command",
+      "source": "express-api",
+      "target": "mqtt-broker",
+      "label": "Publish commands · relay/command",
+      "kind": "async",
+      "evidence": ["fact-backend"]
+    },
+    {
+      "id": "e-telemetry-mongodb",
+      "source": "telemetry-aggregator",
+      "target": "mongodb",
+      "label": "Ghi time-series · Mongoose",
+      "kind": "write",
+      "evidence": ["fact-mongodb"]
+    },
+    {
+      "id": "e-api-mongodb",
+      "source": "express-api",
+      "target": "mongodb",
+      "label": "CRUD · Mongoose ODM",
+      "kind": "write",
+      "evidence": ["fact-mongodb"]
+    },
+    {
+      "id": "e-api-redis",
+      "source": "express-api",
+      "target": "redis",
+      "label": "Cache / Session",
+      "kind": "sync",
+      "evidence": ["fact-redis"]
+    },
+    {
+      "id": "e-alert-s3",
+      "source": "alert-engine",
+      "target": "s3-minio",
+      "label": "Upload snapshots",
+      "kind": "write",
+      "evidence": ["fact-s3"]
+    },
+    {
+      "id": "e-alert-fcm",
+      "source": "alert-engine",
+      "target": "fcm",
+      "label": "Push notification",
+      "kind": "async",
+      "evidence": ["fact-alert-engine"]
+    },
+    {
+      "id": "e-alert-zalo",
+      "source": "alert-engine",
+      "target": "zalo-zns",
+      "label": "ZNS template",
+      "kind": "async",
+      "evidence": ["fact-alert-engine"]
+    },
+    {
+      "id": "e-alert-sms",
+      "source": "alert-engine",
+      "target": "sms-twilio",
+      "label": "SMS dự phòng",
+      "kind": "async",
+      "evidence": ["fact-alert-engine"]
+    },
+    {
+      "id": "e-api-socketio",
+      "source": "express-api",
+      "target": "socketio",
+      "label": "Emit events",
+      "kind": "sync",
+      "evidence": ["fact-backend"]
+    },
+    {
+      "id": "e-telemetry-socketio",
+      "source": "telemetry-aggregator",
+      "target": "socketio",
+      "label": "Forward real-time data",
+      "kind": "async",
+      "evidence": ["fact-backend"]
+    },
+    {
+      "id": "e-socketio-web",
+      "source": "socketio",
+      "target": "web-dashboard",
+      "label": "WebSocket · real-time",
+      "kind": "async",
+      "evidence": ["fact-frontend"]
+    },
+    {
+      "id": "e-socketio-pwa",
+      "source": "socketio",
+      "target": "mobile-pwa",
+      "label": "WebSocket · real-time",
+      "kind": "async",
+      "evidence": ["fact-frontend"]
+    },
+    {
+      "id": "e-web-api",
+      "source": "web-dashboard",
+      "target": "express-api",
+      "label": "REST API · HTTPS/JWT",
+      "kind": "sync",
+      "evidence": ["fact-frontend"]
+    },
+    {
+      "id": "e-pwa-api",
+      "source": "mobile-pwa",
+      "target": "express-api",
+      "label": "REST API · HTTPS/JWT",
+      "kind": "sync",
+      "evidence": ["fact-frontend"]
+    },
+    {
+      "id": "e-owner-web",
+      "source": "farm-owner",
+      "target": "web-dashboard",
+      "label": "Quản lý & Giám sát",
+      "kind": "sync",
+      "evidence": ["fact-users"]
+    },
+    {
+      "id": "e-owner-pwa",
+      "source": "farm-owner",
+      "target": "mobile-pwa",
+      "label": "Nhận cảnh báo & Giám sát",
+      "kind": "sync",
+      "evidence": ["fact-users"]
+    },
+    {
+      "id": "e-operator-pwa",
+      "source": "operator",
+      "target": "mobile-pwa",
+      "label": "Điều khiển & Xem",
+      "kind": "sync",
+      "evidence": ["fact-users"]
+    },
+    {
+      "id": "e-alert-mongodb",
+      "source": "alert-engine",
+      "target": "mongodb",
+      "label": "Lưu alerts · Mongoose",
+      "kind": "write",
+      "evidence": ["fact-alert-engine"]
+    }
+  ],
+  "legend": [
+    { "label": "Đồng bộ (sync)", "kind": "sync" },
+    { "label": "Bất đồng bộ (async/MQTT)", "kind": "async" },
+    { "label": "Ghi dữ liệu (write)", "kind": "write" },
+    { "label": "Người dùng", "kind": "person" },
+    { "label": "Container/Service", "kind": "container" },
+    { "label": "Phần cứng", "kind": "hardware" },
+    { "label": "Lưu trữ", "kind": "datastore" },
+    { "label": "Dịch vụ bên ngoài", "kind": "external-service" }
+  ],
+  "sourceSnapshot": "source_model.json",
+  "assumptions": [
+    "Sơ đồ thể hiện kiến trúc runtime cho một trang trại đại diện",
+    "Notification channels (FCM, Zalo ZNS, SMS) là dịch vụ bên ngoài"
+  ]
+}

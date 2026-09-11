@@ -42,13 +42,13 @@ Sau đó vào **GitHub → Settings → General → Default branch** → đổi 
 
 #### Ruleset cho `main` (Production — khóa chặt nhất)
 
-| Setting                                    | Giá trị                                        |
-| ------------------------------------------ | ---------------------------------------------- |
-| Branch name pattern                        | `main`                                         |
+| Setting                                    | Giá trị                                       |
+| --------------------------------------------| -----------------------------------------------|
+| Branch name pattern                        | `main`                                        |
 | Restrict deletions                         | ✅ BẬT                                         |
 | Require linear history                     | ✅ BẬT (merge sạch, không có merge commit rối) |
 | Require a pull request before merging      | ✅ BẬT                                         |
-| → Required approvals                       | **1** (Owner phải approve)                     |
+| → Required approvals                       | **1** (Owner phải approve)                    |
 | → Dismiss stale reviews                    | ✅ BẬT                                         |
 | → Require review from code owners          | ✅ BẬT                                         |
 | Require status checks to pass              | ✅ BẬT (nếu có CI)                             |
@@ -58,14 +58,14 @@ Sau đó vào **GitHub → Settings → General → Default branch** → đổi 
 #### Ruleset cho `develop` (Integration — kiểm soát vừa phải)
 
 | Setting                               | Giá trị                         |
-| ------------------------------------- | ------------------------------- |
+| ---------------------------------------| ---------------------------------|
 | Branch name pattern                   | `develop`                       |
-| Restrict deletions                    | ✅ BẬT                          |
-| Require a pull request before merging | ✅ BẬT                          |
+| Restrict deletions                    | ✅ BẬT                           |
+| Require a pull request before merging | ✅ BẬT                           |
 | → Required approvals                  | **1** (ít nhất 1 member review) |
-| → Dismiss stale reviews               | ✅ BẬT                          |
-| Block force pushes                    | ✅ BẬT                          |
-| Allow force pushes                    | ❌ TẮT                          |
+| → Dismiss stale reviews               | ✅ BẬT                           |
+| Block force pushes                    | ✅ BẬT                           |
+| Allow force pushes                    | ❌ TẮT                           |
 
 > **Lưu ý:** Không cần `Require linear history` cho `develop` — team merge thường xuyên nên cho phép merge commit.
 

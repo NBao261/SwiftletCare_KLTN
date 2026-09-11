@@ -1,0 +1,242 @@
+{
+  "ok": false,
+  "counts": {
+    "error": 32,
+    "warning": 27,
+    "info": 0
+  },
+  "issues": [
+    {
+      "severity": "error",
+      "code": "intent-scope",
+      "message": "A architecture view requires at least two meaningful nodes.",
+      "location": "nodes"
+    },
+    {
+      "severity": "error",
+      "code": "architecture-structure",
+      "message": "Architecture views require at least one relationship or meaningful boundary.",
+      "location": "edges"
+    },
+    {
+      "severity": "error",
+      "code": "c4-element",
+      "message": "c4-container needs its notation-specific C4 element type.",
+      "location": "profile"
+    },
+    {
+      "severity": "warning",
+      "code": "c4-technology",
+      "message": "C4 container/component nodes should state their technology.",
+      "location": "nodes"
+    },
+    {
+      "severity": "error",
+      "code": "schema-version",
+      "message": "source_model schemaVersion must be 2.0.",
+      "location": "schemaVersion"
+    },
+    {
+      "severity": "error",
+      "code": "status",
+      "message": "source_model status must be draft or confirmed.",
+      "location": "status"
+    },
+    {
+      "severity": "error",
+      "code": "sources",
+      "message": "sources must be an array.",
+      "location": "sources"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[0].claim must be a non-empty string.",
+      "location": "facts[0].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[0].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[1].claim must be a non-empty string.",
+      "location": "facts[1].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[1].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[2].claim must be a non-empty string.",
+      "location": "facts[2].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[2].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[3].claim must be a non-empty string.",
+      "location": "facts[3].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[3].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[4].claim must be a non-empty string.",
+      "location": "facts[4].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[4].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[5].claim must be a non-empty string.",
+      "location": "facts[5].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[5].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[6].claim must be a non-empty string.",
+      "location": "facts[6].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[6].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[7].claim must be a non-empty string.",
+      "location": "facts[7].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[7].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[8].claim must be a non-empty string.",
+      "location": "facts[8].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[8].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[9].claim must be a non-empty string.",
+      "location": "facts[9].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[9].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "required-string",
+      "message": "facts[10].claim must be a non-empty string.",
+      "location": "facts[10].claim"
+    },
+    {
+      "severity": "error",
+      "code": "fact-evidence",
+      "message": "Every fact requires at least one evidence reference.",
+      "location": "facts[10].evidence"
+    },
+    {
+      "severity": "error",
+      "code": "drawio-route",
+      "message": "Draw.io route metadata does not match diagram_model.",
+      "location": "mxfile@nc-route"
+    },
+    {
+      "severity": "error",
+      "code": "drawio-view-intent",
+      "message": "Draw.io view intent metadata does not match diagram_model.",
+      "location": "mxfile@nc-view-intent"
+    },
+    {
+      "severity": "error",
+      "code": "drawio-archetype",
+      "message": "Draw.io visual archetype metadata does not match diagram_model.",
+      "location": "mxfile@nc-visual-archetype"
+    },
+    {
+      "severity": "error",
+      "code": "drawio-node-drift",
+      "message": "Draw.io node ids do not match diagram_model.",
+      "location": "nodes"
+    }
+  ],
+  "schemaVersion": "2.0",
+  "checkedAt": "2026-09-09T08:27:09Z",
+  "geometry": {
+    "profile": "composition",
+    "errors": [],
+    "warnings": [
+      "Box system 'SwiftletCare Platform [Software System] Hệ thống IoT & Edge AI toàn diện quản lý nhà yến thông minh. Bao gồm: Web Dashboard, Mobile PWA, Backend API, MQTT Broker, ESP32 Firmware, Edge AI Vision, Alert Engine, MongoDB, Redis.' looks like a real service/component but does not use an image/mxgraph icon style.",
+      "Box s3-minio 'S3 / MinIO Storage [External Service · Object Storage] Lưu trữ snapshot cảnh báo, video clips. Truy cập qua Presigned URL (TTL 15').' looks like a real service/component but does not use an image/mxgraph icon style.",
+      "Edge e1 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e1 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e2 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e2 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e3 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e3 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e4 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e4 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e4b constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e4b constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e5 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e5 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e5b constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e5b constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e6 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e6 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e7 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e7 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e8 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e8 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e9 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e9 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0.",
+      "Edge e10 constrains its source port but does not explicitly set exitPerimeter=1 and sourcePerimeterSpacing=0.",
+      "Edge e10 constrains its target port but does not explicitly set entryPerimeter=1 and targetPerimeterSpacing=0."
+    ]
+  }
+}

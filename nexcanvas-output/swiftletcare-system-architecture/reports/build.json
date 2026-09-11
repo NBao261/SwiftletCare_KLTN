@@ -1,0 +1,8 @@
+{
+  "output": "artifacts/diagram.drawio",
+  "route": "runtime-cloud/deployment",
+  "nodes": 23,
+  "edges": 29,
+  "embeddedAssets": [],
+  "modelHash": "f793fbf523b517d6b5850c371d01cca07a5b0bdebbc10e97db372af27076890b"
+}
