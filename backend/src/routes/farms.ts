@@ -23,4 +23,8 @@ router.post('/houses/:houseId/zones',        requireRole('FARM_OWNER','ADMIN'), 
 router.get ('/houses/:houseId/zones',        farmController.listZones)
 router.put ('/zones/:zoneId/thresholds',     requireRole('FARM_OWNER','ADMIN'), farmController.updateThresholds)
 
+// Sales Staff assignment (AUTH-FR-005b, Module SALES §5.10)
+router.post('/:id/sales-staff', requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('email').isEmail(), validate, farmController.inviteSalesStaff)
+router.get ('/:id/sales-staff', param('id').isMongoId(), validate, farmController.listSalesStaff)
+
 export default router

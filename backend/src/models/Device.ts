@@ -15,6 +15,17 @@ export interface ISensorNode extends Document {
   relay_states: RelayStates
   control_mode: ControlMode
   override_expiry?: Date
+  // ENV-FR-013b: hệ thống loa ru (Relay IN2 + DFPlayer Mini)
+  speaker_schedule: {
+    enabled: boolean
+    windows: Array<{ start: string; end: string }>
+  }
+  audio: {
+    current_track: number
+    volume: number
+    playing: boolean
+    loop: boolean
+  }
   registered_at: Date
 }
 
@@ -39,12 +50,22 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     rssi:             { type: Number },
     relay_states: {
       misting:     { type: Boolean, default: false },
+      speaker:     { type: Boolean, default: false },
       ventilation: { type: Boolean, default: false },
       heating:     { type: Boolean, default: false },
-      light:       { type: Boolean, default: false },
     },
     control_mode:    { type: String, enum: ['AUTO','MANUAL'] as ControlMode[], default: 'AUTO' },
     override_expiry: { type: Date },
+    speaker_schedule: {
+      enabled: { type: Boolean, default: true },
+      windows: [{ start: String, end: String }],
+    },
+    audio: {
+      current_track: { type: Number, default: 1 },
+      volume:        { type: Number, default: 20 },
+      playing:       { type: Boolean, default: false },
+      loop:          { type: Boolean, default: true },
+    },
     registered_at:   { type: Date, default: Date.now },
   },
   { timestamps: false }

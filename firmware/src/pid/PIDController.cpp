@@ -1,12 +1,12 @@
 /**
- * PIDController.cpp – PID algorithm + closed-loop control + threat alerts
- * SRS: ENV-FR-010..018, THREAT-FR-006..012
+ * PIDController.cpp – On-off closed-loop control + threat detection
+ * SRS: ENV-FR-010..019, THREAT-FR-006, THREAT-FR-011, THREAT-FR-013
  */
 #include "PIDController.h"
 #include "config/Config.h"
 #include <Arduino.h>
 
-// ── PIDLoop (generic PID algorithm) ──────────────────────────────────────────
+// ── PIDLoop (generic PID algorithm, reserved for future proportional control) ──
 
 PIDLoop::PIDLoop(float kp, float ki, float kd, float setpoint)
     : _kp(kp), _ki(ki), _kd(kd), _setpoint(setpoint) {}
@@ -14,15 +14,11 @@ PIDLoop::PIDLoop(float kp, float ki, float kd, float setpoint)
 float PIDLoop::compute(float measurement, unsigned long dt) {
   float error = _setpoint - measurement;
   float dtSec = dt / 1000.0f;
-  if (dtSec <= 0)
-    dtSec = 0.01f;
+  if (dtSec <= 0) dtSec = 0.01f;
 
   _integral += error * dtSec;
-  // Anti-windup clamp
-  if (_integral > 100.0f)
-    _integral = 100.0f;
-  if (_integral < -100.0f)
-    _integral = -100.0f;
+  if (_integral > 100.0f) _integral = 100.0f;
+  if (_integral < -100.0f) _integral = -100.0f;
 
   float derivative = (error - _prevError) / dtSec;
   _prevError = error;
@@ -31,66 +27,49 @@ float PIDLoop::compute(float measurement, unsigned long dt) {
 }
 
 void PIDLoop::setSetpoint(float sp) { _setpoint = sp; }
-void PIDLoop::reset() {
-  _integral = 0;
-  _prevError = 0;
-}
+void PIDLoop::reset() { _integral = 0; _prevError = 0; }
 
-// ── RelayState implementation ────────────────────────────────────────────────
+// ── RelayState implementation (Guide §8: kích mức CAO) ───────────────────────
 
 void RelayState::init() {
   pinMode(PIN_RELAY_MISTING, OUTPUT);
+  pinMode(PIN_RELAY_SPEAKER, OUTPUT);
   pinMode(PIN_RELAY_VENTILATION, OUTPUT);
   pinMode(PIN_RELAY_HEATING, OUTPUT);
-  pinMode(PIN_RELAY_LIGHT, OUTPUT);
-  // All OFF at boot
   digitalWrite(PIN_RELAY_MISTING, LOW);
+  digitalWrite(PIN_RELAY_SPEAKER, LOW);
   digitalWrite(PIN_RELAY_VENTILATION, LOW);
   digitalWrite(PIN_RELAY_HEATING, LOW);
-  digitalWrite(PIN_RELAY_LIGHT, LOW);
 }
 
 void RelayState::applyRelay(int pin, bool state) {
-  // Active-HIGH for Wokwi LED simulation (HIGH = ON)
-  // For real relay module: change to state ? LOW : HIGH
+  // Jumper đặt kích mức CAO (Guide §8): HIGH = bật
   digitalWrite(pin, state ? HIGH : LOW);
 }
 
 String RelayState::toJson() const {
   String json = "{";
   json += "\"misting\":" + String(misting ? "true" : "false") + ",";
+  json += "\"speaker\":" + String(speaker ? "true" : "false") + ",";
   json += "\"ventilation\":" + String(ventilation ? "true" : "false") + ",";
-  json += "\"heating\":" + String(heating ? "true" : "false") + ",";
-  json += "\"light\":" + String(light ? "true" : "false") + ",";
-  json += "\"misting_override\":" + String(mistingOverride ? "true" : "false") +
-          ",";
-  json += "\"ventilation_override\":" +
-          String(ventilationOverride ? "true" : "false") + ",";
-  json += "\"heating_override\":" + String(heatingOverride ? "true" : "false") +
-          ",";
-  json += "\"light_override\":" + String(lightOverride ? "true" : "false");
+  json += "\"heating\":" + String(heating ? "true" : "false");
   json += "}";
   return json;
 }
 
-// ── PID Control Functions (ENV-FR-010..013) ──────────────────────────────────
-
 namespace PIDController {
 
-// Pump dry detection counter (THREAT-FR-011)
+// Pump dry detection state (THREAT-FR-011)
 static unsigned long mistingOnSince = 0;
 static float humidityWhenMistingStarted = 0;
 
 // ENV-FR-010: humidity < min → misting ON
 void runHumidityControl(float humidity, RelayState &relay) {
-  if (relay.mistingOverride)
-    return;
+  if (relay.mistingOverride) return;
 
   bool shouldMist = (humidity < Config::humidityMin);
 
-  // Track pump-dry detection (THREAT-FR-011)
   if (shouldMist && !relay.misting) {
-    // Just turned ON
     mistingOnSince = millis();
     humidityWhenMistingStarted = humidity;
   }
@@ -99,63 +78,48 @@ void runHumidityControl(float humidity, RelayState &relay) {
   relay.applyRelay(PIN_RELAY_MISTING, relay.misting);
 
   if (relay.misting) {
-    Serial.println("[PID] MISTING ON  (humidity=" + String(humidity, 1) +
-                   "% < min=" + String(Config::humidityMin, 1) + "%)");
+    Serial.println("[PID] MISTING ON (humidity=" + String(humidity, 1) + "% < min=" + String(Config::humidityMin, 1) + "%)");
   }
 }
 
-// ENV-FR-011 + ENV-FR-012: temperature control
-void runTemperatureControl(float temperature, RelayState &relay) {
-  // Ventilation: temp > max → fan ON
-  if (!relay.ventilationOverride) {
-    relay.ventilation = (temperature > Config::tempMax);
-    relay.applyRelay(PIN_RELAY_VENTILATION, relay.ventilation);
-    if (relay.ventilation) {
-      Serial.println("[PID] FAN ON  (temp=" + String(temperature, 1) +
-                     "°C > max=" + String(Config::tempMax, 1) + "°C)");
-    }
-  }
+// ENV-FR-011: temp > max HOẶC nh3 > nh3_max HOẶC co2 > co2_max → quạt ON
+void runVentilationControl(float temperature, float nh3, float co2, RelayState &relay) {
+  if (relay.ventilationOverride) return;
 
-  // Heating: temp < min → heater ON
-  if (!relay.heatingOverride) {
-    relay.heating = (temperature < Config::tempMin);
-    relay.applyRelay(PIN_RELAY_HEATING, relay.heating);
-    if (relay.heating) {
-      Serial.println("[PID] HEATER ON  (temp=" + String(temperature, 1) +
-                     "°C < min=" + String(Config::tempMin, 1) + "°C)");
-    }
+  bool shouldVent = (temperature > Config::tempMax) ||
+                     (nh3 > Config::nh3Max) ||
+                     (co2 > Config::co2Max);
+
+  relay.ventilation = shouldVent;
+  relay.applyRelay(PIN_RELAY_VENTILATION, relay.ventilation);
+
+  if (relay.ventilation) {
+    Serial.println("[PID] FAN ON (temp=" + String(temperature, 1) + " nh3=" + String(nh3, 1) + " co2=" + String(co2, 0) + ")");
   }
 }
 
-// ENV-FR-013: light > max → light OFF (birds prefer dark)
-void runLightControl(float lux, RelayState &relay) {
-  if (relay.lightOverride)
-    return;
-  relay.light = (lux <= Config::lightMax);
-  relay.applyRelay(PIN_RELAY_LIGHT, relay.light);
-}
-
-// CO2 > max → force ventilation ON
-void runCO2Control(float co2, RelayState &relay) {
-  if (relay.ventilationOverride)
-    return;
-  if (co2 > Config::co2Max) {
-    relay.ventilation = true;
-    relay.applyRelay(PIN_RELAY_VENTILATION, true);
-    Serial.println("[PID] FAN FORCED ON  (CO2=" + String(co2, 0) +
-                   " ppm > max=" + String(Config::co2Max) + ")");
+// ENV-FR-012: temp < min → sưởi ON (chỉ khi có gắn thiết bị sưởi ở IN4)
+void runHeatingControl(float temperature, RelayState &relay) {
+  if (relay.heatingOverride) return;
+  relay.heating = (temperature < Config::tempMin);
+  relay.applyRelay(PIN_RELAY_HEATING, relay.heating);
+  if (relay.heating) {
+    Serial.println("[PID] HEATER ON (temp=" + String(temperature, 1) + "°C < min=" + String(Config::tempMin, 1) + "°C)");
   }
 }
 
 // ── Manual Override (ENV-FR-016..018) ──────────────────────────────────────
 
-void setManualOverride(const char *relayName, bool state,
-                       unsigned long durationMs, RelayState &relay) {
+void setManualOverride(const char *relayName, bool state, unsigned long durationMs, RelayState &relay) {
   String name(relayName);
   if (name == "misting") {
     relay.mistingOverride = true;
     relay.misting = state;
     relay.applyRelay(PIN_RELAY_MISTING, state);
+  } else if (name == "speaker") {
+    relay.speakerOverride = true;
+    relay.speaker = state;
+    relay.applyRelay(PIN_RELAY_SPEAKER, state);
   } else if (name == "ventilation") {
     relay.ventilationOverride = true;
     relay.ventilation = state;
@@ -164,66 +128,56 @@ void setManualOverride(const char *relayName, bool state,
     relay.heatingOverride = true;
     relay.heating = state;
     relay.applyRelay(PIN_RELAY_HEATING, state);
-  } else if (name == "light") {
-    relay.lightOverride = true;
-    relay.light = state;
-    relay.applyRelay(PIN_RELAY_LIGHT, state);
   }
   relay.overrideExpiryMs = millis() + durationMs;
-  Serial.println("[PID] MANUAL OVERRIDE: " + name + " = " +
-                 String(state ? "ON" : "OFF") + " for " +
-                 String(durationMs / 60000) + " min");
+  Serial.println("[PID] MANUAL OVERRIDE: " + name + " = " + String(state ? "ON" : "OFF") + " for " + String(durationMs / 60000) + " min");
 }
 
 void checkOverrideExpiry(RelayState &relay) {
   if (relay.overrideExpiryMs > 0 && millis() > relay.overrideExpiryMs) {
     relay.mistingOverride = false;
+    relay.speakerOverride = false;
     relay.ventilationOverride = false;
     relay.heatingOverride = false;
-    relay.lightOverride = false;
     relay.overrideExpiryMs = 0;
     Serial.println("[PID] Manual override EXPIRED → back to AUTO");
   }
 }
 
-// ── Threat Detection Actuators ─────────────────────────────────────────────
+// ── Threat Detection (THREAT-FR-006, 011, 013) ──────────────────────────────
 
-void buzzAlert(int beeps, int durationMs) {
-  for (int i = 0; i < beeps; i++) {
-    digitalWrite(PIN_BUZZER, HIGH);
-    delay(durationMs);
-    digitalWrite(PIN_BUZZER, LOW);
-    if (i < beeps - 1)
-      delay(durationMs / 2);
-  }
-}
+ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, bool audioPlaying) {
+  ThreatFlags flags;
 
-void handleThreatAlerts(const SensorData &data, const RelayState &relay) {
-  // THREAT-FR-006: Speaker failure
-  if (data.speakerAlert) {
-    buzzAlert(5, 200);
-    Serial.println("[THREAT] ⚠ SPEAKER_FAILURE → buzzer alert");
-  }
+  // THREAT-FR-013: cảm biến đơn lẻ lỗi / toàn bus lỗi
+  flags.sensorFault = (data.failedCount > 0 && data.failedCount < 3);
+  flags.busFailure = SensorManager::isBusFailure();
 
-  // THREAT-FR-007: Bird panic
-  if (data.panicAlert) {
-    buzzAlert(3, 500);
-    Serial.println("[THREAT] ⚠ BIRD_PANIC → buzzer alert");
+  // THREAT-FR-006: SPEAKER_FAILURE — relay speaker ON + DFPlayer đang phát
+  // nhưng dB không tăng so với baseline nền
+  if (relay.speaker && audioPlaying && SensorManager::isAudioBaselineReady()) {
+    float baseline = SensorManager::getAudioBaseline();
+    if (baseline > 0 && data.soundDb < baseline * (1.0f - AUDIO_DROP_THRESHOLD)) {
+      flags.speakerFailure = true;
+      Serial.println("[THREAT] ⚠ SPEAKER_FAILURE: dB=" + String(data.soundDb, 1) + " baseline=" + String(baseline, 1));
+    }
   }
 
-  // THREAT-FR-011: Pump dry (misting ON > 5 min but humidity not increasing)
+  // THREAT-FR-011: PUMP_DRY — misting ON > 5 phút nhưng ẩm không tăng
   if (relay.misting && mistingOnSince > 0) {
     unsigned long elapsed = millis() - mistingOnSince;
-    if (elapsed > 300000) { // 5 minutes
+    if (elapsed > 300000) {
       if (data.humidity <= humidityWhenMistingStarted + 2.0f) {
-        buzzAlert(10, 100);
-        Serial.println(
-            "[THREAT] ⚠ PUMP_DRY → misting ON 5 min but humidity not rising!");
-        mistingOnSince = millis(); // Reset to avoid continuous buzzing
+        flags.pumpDry = true;
+        Serial.println("[THREAT] ⚠ PUMP_DRY: misting ON 5' nhưng độ ẩm không tăng!");
+        mistingOnSince = millis(); // tránh báo liên tục
       }
     }
   } else {
     mistingOnSince = 0;
   }
+
+  return flags;
 }
+
 } // namespace PIDController

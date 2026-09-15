@@ -10,6 +10,11 @@ import AlertsPage from '@/pages/Alerts/AlertsPage'
 import AnalyticsPage from '@/pages/Analytics/AnalyticsPage'
 import LiveStreamPage from '@/pages/LiveStream/LiveStreamPage'
 import SettingsPage from '@/pages/Settings/SettingsPage'
+import TicketsPage from '@/pages/Tickets/TicketsPage'
+import TicketDetailPage from '@/pages/Tickets/TicketDetailPage'
+import HarvestPage from '@/pages/Harvest/HarvestPage'
+import MarketplacePage from '@/pages/Marketplace/MarketplacePage'
+import ListingDetailPage from '@/pages/Marketplace/ListingDetailPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
@@ -22,6 +27,8 @@ export default function App() {
       {/* Public */}
       <Route path="/login"    element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/marketplace"     element={<MarketplacePage />} />
+      <Route path="/marketplace/:id" element={<ListingDetailPage />} />
 
       {/* Protected – wrapped in sidebar layout */}
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
@@ -32,6 +39,9 @@ export default function App() {
         <Route path="alerts"     element={<AlertsPage />} />
         <Route path="analytics"  element={<AnalyticsPage />} />
         <Route path="stream/:id" element={<LiveStreamPage />} />
+        <Route path="tickets"    element={<TicketsPage />} />
+        <Route path="tickets/:id" element={<TicketDetailPage />} />
+        <Route path="harvests"   element={<HarvestPage />} />
         <Route path="settings"   element={<SettingsPage />} />
       </Route>
     </Routes>

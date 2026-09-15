@@ -49,6 +49,7 @@ const zoneSchema = new Schema<IZone>(
       humidity_min: { type: Number, default: 75.0 },
       humidity_max: { type: Number, default: 95.0 },
       light_max:    { type: Number, default: 0.2 },
+      nh3_max:      { type: Number, default: 25 },
       co2_max:      { type: Number, default: 1500 },
     },
     threshold_history: [{

@@ -1,122 +1,142 @@
 /**
- * SensorManager.cpp – Read all sensors (Wokwi-compatible)
+ * SensorManager.cpp – Modbus RTU polling of the 5-sensor RS485 bus
  *
- * Wokwi simulation mapping:
- *   SHT31 (I2C)  → DHT22 #1 on PIN_SHT31_SIM (GPIO13)
- *   DHT22 (outdoor) → DHT22 #2 on PIN_DHT22 (GPIO4)
- *   BH1750 (I2C) → Photoresistor analog on PIN_BH1750_AO (GPIO32)
- *   MQ-135       → Slide potentiometer on PIN_MQ135 (GPIO34)
- *   MAX9814      → Slide potentiometer on PIN_MAX9814 (GPIO35)
+ * Bus: UART TTL→RS485 V2, ESP32 GPIO17→TXD, GPIO16→RXD, 4800bps 8-N-1
+ * Register map (Function 0x03, Components Guide v3.3 §5):
+ *   Noise      (ID1) reg 0x0000            ÷10   = dB
+ *   CO2        (ID2) reg 0x0000                  = ppm
+ *   NH3        (ID3) reg 0x0000                  = ppm
+ *   Light      (ID4) reg 0x0002 (2 reg, 32-bit) ×100 = Lux
+ *   Temp/Humid (ID5) reg 0x0000+0x0001      ÷10   = °C, %RH
  *
- * SRS: ENV-FR-001, ENV-FR-003
+ * SRS: ENV-FR-001..003, THREAT-FR-013 (SENSOR_FAULT / RS485_BUS_FAILURE)
  */
 #include "SensorManager.h"
 #include "config/Config.h"
-#include <DHT.h>
+#include <ModbusMaster.h>
 #include <cmath>
 
-static DHT sht31Sim(PIN_SHT31_SIM, DHT22); // Indoor (simulates SHT31)
-static DHT dht22(PIN_DHT22, DHT22);        // Outdoor
+static ModbusMaster modbus;
 
-// Audio baseline tracking (THREAT-FR-006)
-static float audioBaseline = 0;
-static float audioSamples[300]; // 5-min window at 1 sample/s
+// RS485_BUS_FAILURE tracking: ≥3/5 IDs timeout for 3 consecutive cycles (THREAT-FR-013)
+static int consecutiveBusFailureCycles = 0;
+
+// Audio baseline tracking for SPEAKER_FAILURE (THREAT-FR-006), consumed by PIDController
+static float audioSamples[AUDIO_BASELINE_WINDOW_SAMPLES];
 static int audioIdx = 0;
-static bool baselineReady = false;
+static bool audioBaselineReady = false;
+static float audioBaseline = 0;
+
+static void preTransmission() {}  // RS485 module V2 is auto-direction (no DE/RE pin)
+static void postTransmission() {}
 
 namespace SensorManager {
 
 void begin() {
-  sht31Sim.begin();
-  dht22.begin();
-  pinMode(PIN_BH1750_AO, INPUT);
-  pinMode(PIN_MQ135, INPUT);
-  pinMode(PIN_MAX9814, INPUT);
-  pinMode(PIN_BUZZER, OUTPUT);
-  digitalWrite(PIN_BUZZER, LOW);
-  Serial.println("[Sensors] All initialized (Wokwi mode)");
+  Serial2.begin(MODBUS_BAUDRATE, SERIAL_8N1, PIN_RS485_RX, PIN_RS485_TX);
+  modbus.preTransmission(preTransmission);
+  modbus.postTransmission(postTransmission);
+  Serial.println("[Sensors] RS485 Modbus bus initialized @ " + String(MODBUS_BAUDRATE) + "bps");
+}
+
+// Đọc 1 thanh ghi 16-bit, trả về true nếu thành công
+static bool readRegister(uint8_t slaveId, uint16_t reg, int16_t &outValue) {
+  modbus.begin(slaveId, Serial2);
+  uint8_t result = modbus.readHoldingRegisters(reg, 1);
+  if (result != modbus.ku8MBSuccess) return false;
+  outValue = (int16_t)modbus.getResponseBuffer(0);
+  return true;
+}
+
+// Đọc 2 thanh ghi liên tiếp (dùng cho Light 32-bit và Temp/Humid)
+static bool readRegisters2(uint8_t slaveId, uint16_t startReg, int16_t &reg0, int16_t &reg1) {
+  modbus.begin(slaveId, Serial2);
+  uint8_t result = modbus.readHoldingRegisters(startReg, 2);
+  if (result != modbus.ku8MBSuccess) return false;
+  reg0 = (int16_t)modbus.getResponseBuffer(0);
+  reg1 = (int16_t)modbus.getResponseBuffer(1);
+  return true;
 }
 
 SensorData readAll() {
   SensorData d;
   d.timestamp = millis();
+  d.failedCount = 0;
+  int16_t r0 = 0, r1 = 0;
 
-  // ── Indoor T+H (SHT31 simulated by DHT22 #1) ─────────────────────────
-  d.temperature = sht31Sim.readTemperature();
-  d.humidity = sht31Sim.readHumidity();
+  // ── Noise (ID1) ──────────────────────────────────────────────────────
+  d.noiseOk = readRegister(MODBUS_ID_NOISE, 0x0000, r0);
+  d.soundDb = d.noiseOk ? r0 / 10.0f : NAN;
+  if (!d.noiseOk) d.failedCount++;
 
-  // ── Outdoor T+H (DHT22 #2) ───────────────────────────────────────────
-  d.tempOutdoor = dht22.readTemperature();
-  d.humidOutdoor = dht22.readHumidity();
+  // ── CO2 (ID2) ────────────────────────────────────────────────────────
+  d.co2Ok = readRegister(MODBUS_ID_CO2, 0x0000, r0);
+  d.co2Ppm = d.co2Ok ? (float)r0 : NAN;
+  if (!d.co2Ok) d.failedCount++;
 
-  // ── Light (BH1750 simulated by photoresistor analog) ──────────────────
-  int lightRaw = analogRead(PIN_BH1750_AO);
-  // Map 0-4095 → 0-65535 lux (BH1750 range)
-  d.lightLux = (float)lightRaw * 65535.0f / 4095.0f;
+  // ── NH3 (ID3) ────────────────────────────────────────────────────────
+  d.nh3Ok = readRegister(MODBUS_ID_NH3, 0x0000, r0);
+  d.nh3Ppm = d.nh3Ok ? (float)r0 : NAN;
+  if (!d.nh3Ok) d.failedCount++;
 
-  // ── Gas/CO2 (MQ-135 potentiometer) ────────────────────────────────────
-  int mqRaw = analogRead(PIN_MQ135);
-  // Map 0-4095 → 400-5000 ppm
-  d.co2Ppm = 400.0f + ((float)mqRaw / 4095.0f) * 4600.0f;
+  // ── Light (ID4, 2 reg 32-bit) ────────────────────────────────────────
+  d.lightOk = readRegisters2(MODBUS_ID_LIGHT, 0x0002, r0, r1);
+  d.lightLux = d.lightOk ? (((uint32_t)(uint16_t)r0 << 16 | (uint16_t)r1) * 100.0f) : NAN;
+  if (!d.lightOk) d.failedCount++;
 
-  // ── Sound (MAX9814 potentiometer) ─────────────────────────────────────
-  int sndRaw = analogRead(PIN_MAX9814);
-  // Map 0-4095 → 30-120 dB
-  d.soundDb = 30.0f + ((float)sndRaw / 4095.0f) * 90.0f;
+  // ── Temp/Humid (ID5, cuối bus) ───────────────────────────────────────
+  d.tempHumidOk = readRegisters2(MODBUS_ID_TEMP_HUMID, 0x0000, r0, r1);
+  d.temperature = d.tempHumidOk ? r0 / 10.0f : NAN;
+  d.humidity    = d.tempHumidOk ? r1 / 10.0f : NAN;
+  if (!d.tempHumidOk) d.failedCount++;
 
-  // ── Audio baseline tracking (THREAT-FR-006) ──────────────────────────
-  audioSamples[audioIdx % 300] = d.soundDb;
-  audioIdx++;
-  if (audioIdx >= 300) {
-    baselineReady = true;
-    float sum = 0;
-    for (int i = 0; i < 300; i++)
-      sum += audioSamples[i];
-    audioBaseline = sum / 300.0f;
+  // ── THREAT-FR-013: RS485_BUS_FAILURE (≥3/5 timeout, 3 chu kỳ liên tiếp) ─
+  if (d.failedCount >= 3) {
+    consecutiveBusFailureCycles++;
+  } else {
+    consecutiveBusFailureCycles = 0;
   }
 
-  // Check speaker failure: amplitude drop > 70%
-  if (baselineReady && audioBaseline > 0) {
-    float dropRatio = d.soundDb / audioBaseline;
-    if (dropRatio < (1.0f - AUDIO_DROP_THRESHOLD)) {
-      d.speakerAlert = true;
-      Serial.println(
-          "[THREAT] SPEAKER_FAILURE detected! dB=" + String(d.soundDb, 1) +
-          " baseline=" + String(audioBaseline, 1));
+  // ── Audio baseline tracking (feeds THREAT-FR-006 in PIDController) ────
+  if (d.noiseOk) {
+    audioSamples[audioIdx % AUDIO_BASELINE_WINDOW_SAMPLES] = d.soundDb;
+    audioIdx++;
+    if (audioIdx >= AUDIO_BASELINE_WINDOW_SAMPLES) {
+      audioBaselineReady = true;
+      float sum = 0;
+      for (int i = 0; i < AUDIO_BASELINE_WINDOW_SAMPLES; i++) sum += audioSamples[i];
+      audioBaseline = sum / AUDIO_BASELINE_WINDOW_SAMPLES;
     }
-  }
-
-  // Check bird panic: sudden spike
-  if (d.soundDb > 100.0f) {
-    d.panicAlert = true;
-    Serial.println("[THREAT] BIRD_PANIC detected! dB=" + String(d.soundDb, 1));
   }
 
   d.isValid = validateRange(d);
 
   // ── Serial output ────────────────────────────────────────────────────
-  Serial.println("────────── Sensor Reading ──────────");
-  Serial.println("  Indoor  T: " + String(d.temperature, 1) +
-                 "°C  H: " + String(d.humidity, 1) + "%");
-  Serial.println("  Outdoor T: " + String(d.tempOutdoor, 1) +
-                 "°C  H: " + String(d.humidOutdoor, 1) + "%");
-  Serial.println("  Light: " + String(d.lightLux, 1) + " lux");
-  Serial.println("  CO2:   " + String(d.co2Ppm, 0) + " ppm");
-  Serial.println("  Sound: " + String(d.soundDb, 1) + " dB");
-  Serial.println("────────────────────────────────────");
+  Serial.println("────────── Sensor Reading (RS485) ──────────");
+  Serial.println("  Temp/Humid : " + String(d.temperature, 1) + "°C / " + String(d.humidity, 1) + "%  " + (d.tempHumidOk ? "OK" : "FAULT"));
+  Serial.println("  Light      : " + String(d.lightLux, 1) + " lux  " + (d.lightOk ? "OK" : "FAULT"));
+  Serial.println("  NH3        : " + String(d.nh3Ppm, 1) + " ppm  " + (d.nh3Ok ? "OK" : "FAULT"));
+  Serial.println("  CO2        : " + String(d.co2Ppm, 0) + " ppm  " + (d.co2Ok ? "OK" : "FAULT"));
+  Serial.println("  Sound      : " + String(d.soundDb, 1) + " dB  " + (d.noiseOk ? "OK" : "FAULT"));
+  if (consecutiveBusFailureCycles >= 3) {
+    Serial.println("  ⚠ RS485_BUS_FAILURE: " + String(d.failedCount) + "/5 IDs timeout, " + String(consecutiveBusFailureCycles) + " cycles");
+  }
+  Serial.println("──────────────────────────────────────────");
 
   return d;
 }
 
 bool validateRange(const SensorData &data) {
-  if (std::isnan(data.temperature) || std::isnan(data.humidity))
-    return false;
-  if (data.temperature < -40 || data.temperature > 80)
-    return false;
-  if (data.humidity < 0 || data.humidity > 100)
-    return false;
+  if (std::isnan(data.temperature) || std::isnan(data.humidity)) return false;
+  if (data.temperature < -40 || data.temperature > 80) return false;
+  if (data.humidity < 0 || data.humidity > 100) return false;
   return true;
 }
+
+bool isBusFailure() { return consecutiveBusFailureCycles >= 3; }
+float getAudioBaseline() { return audioBaseline; }
+bool isAudioBaselineReady() { return audioBaselineReady; }
+
 } // namespace SensorManager
 
 String SensorData::toJson() const {
@@ -124,12 +144,9 @@ String SensorData::toJson() const {
   json += "\"temperature\":" + String(temperature, 1) + ",";
   json += "\"humidity\":" + String(humidity, 1) + ",";
   json += "\"light_lux\":" + String(lightLux, 1) + ",";
+  json += "\"nh3_ppm\":" + String(nh3Ppm, 1) + ",";
   json += "\"co2_ppm\":" + String(co2Ppm, 0) + ",";
   json += "\"sound_db\":" + String(soundDb, 1) + ",";
-  json += "\"temp_outdoor\":" + String(tempOutdoor, 1) + ",";
-  json += "\"hum_outdoor\":" + String(humidOutdoor, 1) + ",";
-  json += "\"speaker_alert\":" + String(speakerAlert ? "true" : "false") + ",";
-  json += "\"panic_alert\":" + String(panicAlert ? "true" : "false") + ",";
   json += "\"ts\":" + String(timestamp);
   json += "}";
   return json;

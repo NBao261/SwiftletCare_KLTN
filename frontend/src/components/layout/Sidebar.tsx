@@ -7,6 +7,8 @@ const NAV_ITEMS = [
   { to: '/devices',   label: 'Thiết bị',   icon: '📡' },
   { to: '/alerts',    label: 'Cảnh báo',   icon: '🔔' },
   { to: '/analytics', label: 'Phân tích',  icon: '📈' },
+  { to: '/tickets',   label: 'Ticket',     icon: '🎫' },
+  { to: '/harvests',  label: 'Thu hoạch',  icon: '🪺' },
   { to: '/settings',  label: 'Cài đặt',    icon: '⚙️' },
 ]
 

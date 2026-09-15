@@ -9,6 +9,7 @@ export interface ITelemetry extends Document {
   temperature?: number
   humidity?: number
   light_lux?: number
+  nh3_ppm?: number
   co2_ppm?: number
   sound_db?: number
   is_anomaly: boolean
@@ -22,6 +23,7 @@ const telemetrySchema = new Schema<ITelemetry>(
     temperature: { type: Number },
     humidity:    { type: Number },
     light_lux:   { type: Number },
+    nh3_ppm:     { type: Number },
     co2_ppm:     { type: Number },
     sound_db:    { type: Number },
     is_anomaly:  { type: Boolean, default: false },

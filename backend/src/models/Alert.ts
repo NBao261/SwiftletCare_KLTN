@@ -30,6 +30,7 @@ const alertSchema = new Schema<IAlert>(
       enum: [
         'THRESHOLD_BREACH','PREDATOR_DETECTED','NODE_OFFLINE','SPEAKER_FAILURE',
         'PUMP_DRY','BIRD_PANIC','POWER_OUTAGE','LOW_RETURN_RATE','EDGE_AI_DEGRADED',
+        'SENSOR_FAULT','RS485_BUS_FAILURE',
       ] as AlertType[],
       required: true,
     },

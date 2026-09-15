@@ -31,4 +31,6 @@ export const ENDPOINTS = {
   BIRD_COUNT_DAILY:  '/analytics/bird-count/daily',
   BIRD_COUNT_TRENDS: '/analytics/bird-count/trends',
   ENV_CORRELATION:   '/analytics/correlation',
+  // Tickets (Module TICKET §5.9)
+  TICKETS: '/tickets',
 } as const

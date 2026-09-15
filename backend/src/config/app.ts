@@ -11,6 +11,14 @@ import deviceRoutes    from '@/routes/devices'
 import telemetryRoutes from '@/routes/telemetry'
 import alertRoutes     from '@/routes/alerts'
 import analyticsRoutes from '@/routes/analytics'
+import harvestRoutes        from '@/routes/harvests'
+import marketplaceRoutes    from '@/routes/marketplace'
+import ticketRoutes         from '@/routes/tickets'
+import productRoutes        from '@/routes/products'
+import inventoryRoutes      from '@/routes/inventory'
+import orderRoutes          from '@/routes/orders'
+import returnRequestRoutes  from '@/routes/returnRequests'
+import salesReportsRoutes   from '@/routes/salesReports'
 
 const app: Application = express()
 
@@ -36,6 +44,20 @@ app.use('/devices',   deviceRoutes)
 app.use('/telemetry', telemetryRoutes)
 app.use('/alerts',    alertRoutes)
 app.use('/analytics', analyticsRoutes)
+
+// Module MARKET (§5.8) — thuộc phạm vi MVP (landing page + form liên hệ)
+app.use('/harvests',    harvestRoutes)
+app.use('/marketplace', marketplaceRoutes)
+
+// Module TICKET (§5.9) — thuộc phạm vi MVP
+app.use('/tickets', ticketRoutes)
+
+// Module SALES (§5.10) — Giai đoạn 2, stretch (không bắt buộc nghiệm thu KLTN)
+app.use('/products',        productRoutes)
+app.use('/inventory',       inventoryRoutes)
+app.use('/orders',          orderRoutes)
+app.use('/return-requests', returnRequestRoutes)
+app.use('/sales-reports',   salesReportsRoutes)
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {

@@ -1,5 +1,6 @@
 /**
  * MQTTManager.cpp – MQTT client (PubSubClient) over WiFi
+ * Topic schema đúng SRS §9.2: swiftletcare/{farmId}/{houseId}/{zoneId}/...
  * SRS: ENV-FR-001, ENV-FR-015, §9.2, SEC-NFR-001
  */
 #include "MQTTManager.h"
@@ -13,10 +14,9 @@ static WiFiClientSecure wifiSecure;
 static PubSubClient mqtt;
 static unsigned long lastHeartbeat = 0;
 
-// MQTT topic helpers
+// MQTT topic helpers (§9.2)
 static String topicBase() {
-  return String("swiftlet/") + Config::farmId + "/" + Config::houseId + "/" +
-         Config::zoneId;
+  return String("swiftletcare/") + Config::farmId + "/" + Config::houseId + "/" + Config::zoneId;
 }
 
 static void mqttCallback(char *topic, byte *payload, unsigned int length) {
@@ -26,7 +26,7 @@ static void mqttCallback(char *topic, byte *payload, unsigned int length) {
     msg += (char)payload[i];
 
   String t(topic);
-  if (t.endsWith("/command/relay")) {
+  if (t.endsWith("/relay/command")) {
     MQTTManager::onRelayCommand(msg.c_str());
   } else if (t.endsWith("/config/update")) {
     MQTTManager::onConfigUpdate(msg.c_str());
@@ -36,8 +36,7 @@ static void mqttCallback(char *topic, byte *payload, unsigned int length) {
 namespace MQTTManager {
 
 void begin() {
-  wifiSecure
-      .setInsecure(); // Skip cert validation for dev; use CA cert in production
+  wifiSecure.setInsecure(); // Skip cert validation for dev; use CA cert in production
   mqtt.setClient(wifiSecure);
   mqtt.setServer(Config::mqttBroker, MQTT_PORT);
   mqtt.setCallback(mqttCallback);
@@ -48,13 +47,10 @@ void begin() {
 void loop() {
   if (!mqtt.connected()) {
     String clientId = String("SC-") + Config::deviceId;
-    if (mqtt.connect(clientId.c_str(), Config::mqttUsername,
-                     Config::mqttPassword)) {
+    if (mqtt.connect(clientId.c_str(), Config::mqttUsername, Config::mqttPassword)) {
       Serial.println("[MQTT] Connected");
-      mqtt.subscribe((topicBase() + "/command/relay").c_str(),
-                     MQTT_QOS_COMMAND);
-      mqtt.subscribe((topicBase() + "/config/update").c_str(),
-                     MQTT_QOS_COMMAND);
+      mqtt.subscribe((topicBase() + "/relay/command").c_str(), MQTT_QOS_COMMAND);
+      mqtt.subscribe((topicBase() + "/config/update").c_str(), MQTT_QOS_COMMAND);
     } else {
       Serial.println("[MQTT] Connection failed, rc=" + String(mqtt.state()));
     }
@@ -71,20 +67,18 @@ void loop() {
 bool isConnected() { return mqtt.connected(); }
 
 void publishTelemetry(const SensorData &data, const RelayState &relay) {
-  if (!mqtt.connected())
-    return;
+  if (!mqtt.connected()) return;
   JsonDocument doc;
   doc["temperature"] = data.temperature;
   doc["humidity"] = data.humidity;
   doc["light_lux"] = data.lightLux;
+  doc["nh3_ppm"] = data.nh3Ppm;
   doc["co2_ppm"] = data.co2Ppm;
   doc["sound_db"] = data.soundDb;
-  doc["temp_outdoor"] = data.tempOutdoor;
-  doc["hum_outdoor"] = data.humidOutdoor;
-  doc["misting"] = relay.misting;
-  doc["ventilation"] = relay.ventilation;
-  doc["heating"] = relay.heating;
-  doc["light"] = relay.light;
+  doc["relay_states"]["misting"] = relay.misting;
+  doc["relay_states"]["speaker"] = relay.speaker;
+  doc["relay_states"]["ventilation"] = relay.ventilation;
+  doc["relay_states"]["heating"] = relay.heating;
   doc["ts"] = data.timestamp;
 
   String payload;
@@ -93,8 +87,7 @@ void publishTelemetry(const SensorData &data, const RelayState &relay) {
 }
 
 void publishHeartbeat() {
-  if (!mqtt.connected())
-    return;
+  if (!mqtt.connected()) return;
   JsonDocument doc;
   doc["device_id"] = Config::deviceId;
   doc["uptime_ms"] = millis();
@@ -107,16 +100,12 @@ void publishHeartbeat() {
 }
 
 void publishRelayState(const RelayState &relay) {
-  if (!mqtt.connected())
-    return;
-  mqtt.publish((topicBase() + "/relay/state").c_str(), relay.toJson().c_str(),
-               true);
+  if (!mqtt.connected()) return;
+  mqtt.publish((topicBase() + "/relay/status").c_str(), relay.toJson().c_str(), true);
 }
 
-void publishAlert(const char *alertType, const char *severity,
-                  const char *payload) {
-  if (!mqtt.connected())
-    return;
+void publishAlert(const char *alertType, const char *severity, const char *payload) {
+  if (!mqtt.connected()) return;
   JsonDocument doc;
   doc["type"] = alertType;
   doc["severity"] = severity;
@@ -126,12 +115,15 @@ void publishAlert(const char *alertType, const char *severity,
 
   String msg;
   serializeJson(doc, msg);
+  // Alerts không có topic riêng trong §9.2 cho ESP32 (chỉ vision/alert cho RPi) —
+  // publish qua relay/status kèm cờ alert để backend suy ra, hoặc mở rộng topic
+  // riêng `alert` nếu cần. Tạm publish lên `{base}/alert` (ngoài §9.2, cần backend cấu hình subscribe thêm).
   mqtt.publish((topicBase() + "/alert").c_str(), msg.c_str(), false);
 }
 
 void onRelayCommand(const char *payload) {
   Serial.println("[MQTT] Relay command: " + String(payload));
-  // Parse JSON command and apply manual override
+  // TODO: parse JSON {relayName, state, durationMs} và gọi PIDController::setManualOverride
 }
 
 void onConfigUpdate(const char *payload) {

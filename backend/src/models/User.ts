@@ -13,6 +13,7 @@ export interface IUser extends Document {
   password_hash: string
   full_name: string
   role: Role
+  assigned_regions?: string[] // chỉ dùng khi role=TECHNICIAN (AUTH-FR-005c)
   avatar_url?: string
   is_active: boolean
   notification_preferences: NotificationPreferences
@@ -31,7 +32,8 @@ const userSchema = new Schema<IUser>(
     phone:         { type: String, trim: true },
     password_hash: { type: String, required: true },
     full_name:     { type: String, required: true, trim: true },
-    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'OPERATOR'] satisfies Role[], default: 'FARM_OWNER' },
+    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'OPERATOR', 'TECHNICIAN', 'SALES_STAFF'] satisfies Role[], default: 'FARM_OWNER' },
+    assigned_regions: [{ type: String }],
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
     notification_preferences: {

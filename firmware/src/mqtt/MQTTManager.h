@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MQTTManager – MQTT client over TLS (port 8883)
  * Pub/Sub telemetry, commands, heartbeat
  * SRS: ENV-FR-001, ENV-FR-015, §9.2, SEC-NFR-001
@@ -13,7 +13,7 @@ namespace MQTTManager {
   void loop();
   bool isConnected();
 
-  // Publish
+  // Publish (topics §9.2: swiftletcare/{farmId}/{houseId}/{zoneId}/...)
   void publishTelemetry (const SensorData& data, const RelayState& relay);
   void publishHeartbeat ();
   void publishRelayState(const RelayState& relay);

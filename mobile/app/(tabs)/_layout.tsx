@@ -19,6 +19,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="farms"     options={{ title: 'Trang trại', tabBarLabel: 'Farms' }} />
       <Tabs.Screen name="alerts"    options={{ title: 'Cảnh báo', tabBarLabel: 'Alerts', tabBarBadge: unreadCount > 0 ? unreadCount : undefined }} />
       <Tabs.Screen name="analytics" options={{ title: 'Phân tích', tabBarLabel: 'Analytics' }} />
+      <Tabs.Screen name="tickets"   options={{ title: 'Ticket', tabBarLabel: 'Tickets' }} />
       <Tabs.Screen name="settings"  options={{ title: 'Cài đặt', tabBarLabel: 'Settings' }} />
     </Tabs>
   )

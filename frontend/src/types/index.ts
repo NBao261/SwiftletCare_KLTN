@@ -1,7 +1,9 @@
 ﻿// SwiftletCare TypeScript Type Definitions
 // Generated from SRS §8.2 MongoDB Schemas
 
-export type Role = 'ADMIN' | 'FARM_OWNER' | 'OPERATOR'
+// SRS v1.7.0: OPERATOR gộp vào FARM_OWNER; TECHNICIAN/SALES_STAFF là 2 role mới.
+// 'OPERATOR' giữ lại để tương thích ngược, không dùng cho code mới.
+export type Role = 'ADMIN' | 'FARM_OWNER' | 'OPERATOR' | 'TECHNICIAN' | 'SALES_STAFF'
 export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'
@@ -9,8 +11,22 @@ export type AlertType =
   | 'THRESHOLD_BREACH' | 'PREDATOR_DETECTED' | 'NODE_OFFLINE'
   | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'BIRD_PANIC'
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
+  | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'
 export type SessionType = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode = 'AUTO' | 'MANUAL'
+
+// Module TICKET (§5.9)
+export type TicketType =
+  | 'SENSOR_FAULT' | 'RS485_BUS_FAILURE' | 'ACTUATOR_FAILURE' | 'NODE_OFFLINE'
+  | 'EDGE_AI_DEGRADED' | 'POWER_OUTAGE' | 'SPEAKER_FAILURE' | 'PREDATOR_DETECTED'
+  | 'INSTALLATION' | 'MAINTENANCE' | 'OTHER'
+export type TicketPriority = 'P1' | 'P2' | 'P3'
+export type TicketStatus = 'NEW' | 'IN_PROGRESS' | 'AWAITING_FIELD_CONFIRMATION' | 'CLOSED'
+
+// Module MARKET (§5.8)
+export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
+export type HarvestStatus = 'DRAFT' | 'LISTED' | 'ARCHIVED'
+export type ListingStatus = 'AVAILABLE' | 'SOLD' | 'HIDDEN'
 
 export interface User {
   _id: string; email: string; phone?: string; full_name: string; role: Role; avatar_url?: string
@@ -33,21 +49,46 @@ export interface Zone {
   thresholds: {
     temp_min: number; temp_max: number
     humidity_min: number; humidity_max: number
-    light_max: number; co2_max: number
+    light_max: number; nh3_max: number; co2_max: number
   }
 }
 
+// Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation, IN4=heating
 export interface SensorNode {
   _id: string; device_id: string; zone_id: string
   firmware_version: string; last_heartbeat: string
   status: DeviceStatus; rssi: number; control_mode: ControlMode
-  relay_states: { misting: boolean; ventilation: boolean; heating: boolean; light: boolean }
+  relay_states: { misting: boolean; speaker: boolean; ventilation: boolean; heating: boolean }
   override_expiry?: string
 }
 
 export interface TelemetryRecord {
   timestamp: string; temperature: number; humidity: number
-  light_lux: number; co2_ppm: number; sound_db: number; is_anomaly: boolean
+  light_lux: number; nh3_ppm: number; co2_ppm: number; sound_db: number; is_anomaly: boolean
+}
+
+// Module TICKET (§5.9, §8.2)
+export interface Ticket {
+  _id: string; farm_id: string; zone_id?: string; alert_id?: string
+  type: TicketType; priority: TicketPriority; status: TicketStatus
+  assigned_to?: string
+  sla_response_due_at?: string; sla_resolve_due_at?: string; is_sla_breached: boolean
+  notes: Array<{ author_id: string; content: string; created_at: string }>
+  satisfaction_rating?: number
+  created_at: string; closed_at?: string
+}
+
+// Module MARKET (§5.8, §8.2)
+export interface HarvestBatch {
+  _id: string; farm_id: string; zone_id: string; trace_code: string
+  harvest_date: string; nest_count: number; weight_grams: number
+  nest_type: NestType; status: HarvestStatus; created_at: string
+}
+
+export interface NestListing {
+  _id: string; harvest_batch_id: string; farm_id: string
+  title: string; description?: string; price_vnd?: number; price_unit: string
+  listing_status: ListingStatus; view_count: number; inquiry_count: number
 }
 
 export interface Alert {

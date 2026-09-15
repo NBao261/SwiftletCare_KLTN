@@ -12,3 +12,5 @@ export async function listHouses(_req: Request, res: Response): Promise<void>   
 export async function createZone(_req: Request, res: Response): Promise<void>     { res.status(501).json({ error: 'Not implemented yet' }) }
 export async function listZones(_req: Request, res: Response): Promise<void>      { res.status(501).json({ error: 'Not implemented yet' }) }
 export async function updateThresholds(_req: Request, res: Response): Promise<void> { res.status(501).json({ error: 'Not implemented yet' }) }
+export async function inviteSalesStaff(_req: Request, res: Response): Promise<void> { res.status(501).json({ error: 'Not implemented yet' }) }
+export async function listSalesStaff(_req: Request, res: Response): Promise<void>   { res.status(501).json({ error: 'Not implemented yet' }) }
