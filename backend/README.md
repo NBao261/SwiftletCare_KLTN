@@ -14,6 +14,15 @@ npm run dev               # tsx watch, hot reload
 
 Lưu ý dev: EMQX tự ký cert TLS trên 8883 → Node `mqtt` client mặc định reject. Dùng cổng **1883 non-TLS** cho backend ở dev (`MQTT_BROKER_URL=mqtt://localhost:1883`), đổi lại `mqtts://...:8883` + CA cert thật khi lên production.
 
+## API Docs (Swagger)
+
+Spec OpenAPI 3.0 ở `docs/api/api-spec.yaml` (gốc repo) — nguồn sự thật duy nhất, sửa file này khi thêm/đổi endpoint. Server tự đọc file này lúc boot:
+
+- Swagger UI: `http://localhost:3000/api-docs`
+- Raw YAML: `http://localhost:3000/api-docs.yaml`
+
+Endpoint đánh dấu 🚧 trong summary là stub (501) — request/response schema mô tả *hợp đồng dự kiến*, chưa có logic thật.
+
 ## Kiến trúc — Route → Controller → Service → Model
 
 ```

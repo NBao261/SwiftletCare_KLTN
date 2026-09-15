@@ -1,0 +1,1062 @@
+openapi: 3.0.3
+
+info:
+  title: SwiftletCare API
+  version: 1.0.0
+  description: |
+    REST API cho hệ thống SwiftletCare (giám sát/điều khiển môi trường nhà yến,
+    đếm chim, cảnh báo, ticket, marketplace). Xem `SwiftletCare_SRS.md` §9.
+
+    **Lưu ý:** SRS §9.0 quy ước base path `/api/v1`, nhưng code thực tế
+    (`backend/src/config/app.ts`) hiện mount route trực tiếp ở root (vd
+    `/auth/login`, không phải `/api/v1/auth/login`) — file này mô tả đúng
+    path THẬT ĐANG CHẠY, không phải path lý thuyết trong SRS. Khi backend
+    đổi sang có prefix `/api/v1`, cập nhật lại `servers` bên dưới.
+
+    **Response envelope** dùng chung cho mọi endpoint:
+    `{ success: boolean, data?, meta?: {page,limit,total}, error?: {code,message} }`.
+
+    **Trạng thái triển khai:** endpoint đánh dấu 🚧 trong summary là **stub**,
+    hiện trả `501 { success:false, error:{code:"NOT_IMPLEMENTED"} }` —
+    request/response schema mô tả là *hợp đồng dự kiến* theo SRS, chưa có
+    logic thật phía sau. Xem `backend/README.md` mục "Module → phạm vi".
+
+servers:
+  - url: http://localhost:3000
+    description: Local dev (docker-compose mongodb + emqx)
+
+tags:
+  - name: Auth
+    description: AUTH-FR-001..008
+  - name: Farms
+    description: FARM-FR-001..002, AUTH-FR-005/005b (farm/house/zone/member/sales-staff)
+  - name: Devices
+    description: FARM-FR-003..006, ENV-FR-016..018 (sensor/camera node, relay control)
+  - name: Telemetry
+    description: ENV-FR-001..005
+  - name: Alerts
+    description: ALERT-FR-001..009 (🚧 stub)
+  - name: Analytics
+    description: ANALYTICS-FR-001..005, VISION-FR-008..011 (🚧 stub)
+  - name: Harvests
+    description: MARKET-FR-001..005 (🚧 stub)
+  - name: Marketplace
+    description: MARKET-FR-006..013 (🚧 stub)
+  - name: Tickets
+    description: TICKET-FR-001..012 (🚧 stub)
+  - name: Sales
+    description: SALES-FR-001..010 — Giai đoạn 2, stretch (🚧 stub)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ── AUTH ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Đăng ký tài khoản
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, full_name]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                full_name: { type: string }
+                phone: { type: string }
+      responses:
+        '201':
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - properties: { data: { $ref: '#/components/schemas/User' } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập (email/password)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Đăng nhập thành công — refreshToken trả qua httpOnly cookie
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          accessToken: { type: string }
+                          user: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Làm mới Access Token bằng refreshToken cookie
+      security: []
+      responses:
+        '200':
+          description: Access token mới
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - properties: { data: { type: object, properties: { accessToken: { type: string } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Đăng xuất — thu hồi refreshToken hiện tại
+      responses:
+        '200': { description: Đã đăng xuất, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/otp/send:
+    post:
+      tags: [Auth]
+      summary: Gửi OTP về email (dev hiện chỉ log ra console, chưa nối SMTP/Zalo thật)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
+      responses:
+        '200': { description: Đã gửi (hoặc im lặng nếu email không tồn tại), content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+
+  /auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: Xác thực OTP, trả accessToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp]
+              properties: { email: { type: string, format: email }, otp: { type: string } }
+      responses:
+        '200':
+          description: OTP hợp lệ
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - properties:
+                      data:
+                        type: object
+                        properties: { accessToken: { type: string }, user: { $ref: '#/components/schemas/User' } }
+        '400': { description: OTP sai hoặc hết hạn, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+
+  # ── FARMS ─────────────────────────────────────────────────────────────────
+  /farms:
+    get:
+      tags: [Farms]
+      summary: Danh sách farm của user hiện tại (ADMIN thấy tất cả)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { type: array, items: { $ref: '#/components/schemas/Farm' } } } }] } } } }
+    post:
+      tags: [Farms]
+      summary: Tạo farm mới (người tạo trở thành Primary Owner)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, address]
+              properties:
+                name: { type: string }
+                address: { type: string }
+                coordinates: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
+      responses:
+        '201': { description: Đã tạo, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Farm' } } }] } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /farms/{id}:
+    parameters: [{ $ref: '#/components/parameters/FarmId' }]
+    get:
+      tags: [Farms]
+      summary: Chi tiết farm
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Farm' } } }] } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Farms]
+      summary: Cập nhật farm (owner/member)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                address: { type: string }
+                coordinates: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Farm' } } }] } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Farms]
+      summary: Xóa mềm farm — chỉ Primary Owner
+      responses:
+        '200': { description: Đã xóa, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /farms/{id}/members:
+    post:
+      tags: [Farms]
+      summary: Mời thành viên Farm Owner khác (AUTH-FR-005) — chỉ Primary Owner, người được mời phải đã có tài khoản
+      parameters: [{ $ref: '#/components/parameters/FarmId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
+      responses:
+        '201': { description: Đã thêm thành viên, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Farm' } } }] } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Email chưa có tài khoản, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /farms/{id}/sales-staff:
+    parameters: [{ $ref: '#/components/parameters/FarmId' }]
+    post:
+      tags: [Farms]
+      summary: Mời Sales Staff vào farm (AUTH-FR-005b) — chỉ Primary Owner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
+      responses:
+        '201': { description: Đã gán Sales Staff, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    get:
+      tags: [Farms]
+      summary: Danh sách Sales Staff của farm
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+
+  /farms/{id}/houses:
+    parameters: [{ $ref: '#/components/parameters/FarmId' }]
+    post:
+      tags: [Farms]
+      summary: Tạo House trong farm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties: { name: { type: string }, floors: { type: integer }, description: { type: string } }
+      responses:
+        '201': { description: Đã tạo, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/House' } } }] } } } }
+    get:
+      tags: [Farms]
+      summary: Danh sách House của farm
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { type: array, items: { $ref: '#/components/schemas/House' } } } }] } } } }
+
+  /farms/houses/{houseId}/zones:
+    parameters: [{ $ref: '#/components/parameters/HouseId' }]
+    post:
+      tags: [Farms]
+      summary: Tạo Zone trong house
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string }, floor: { type: integer } } }
+      responses:
+        '201': { description: Đã tạo, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Zone' } } }] } } } }
+    get:
+      tags: [Farms]
+      summary: Danh sách Zone của house
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { type: array, items: { $ref: '#/components/schemas/Zone' } } } }] } } } }
+
+  /farms/zones/{zoneId}/thresholds:
+    put:
+      tags: [Farms]
+      summary: Cập nhật ngưỡng cảnh báo/điều khiển của Zone (ENV-FR-006, lưu lịch sử ENV-FR-009)
+      parameters: [{ $ref: '#/components/parameters/ZoneId' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Thresholds' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Zone' } } }] } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ── DEVICES ───────────────────────────────────────────────────────────────
+  /devices/sensor-nodes/register:
+    post:
+      tags: [Devices]
+      summary: Đăng ký ESP32 Sensor Node vào 1 Zone (FARM-FR-003)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id, zone_id]
+              properties: { device_id: { type: string, example: node_001 }, zone_id: { type: string } }
+      responses:
+        '201': { description: Đã đăng ký, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/SensorNode' } } }] } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /devices/sensor-nodes:
+    get:
+      tags: [Devices]
+      summary: Danh sách ESP32 Sensor Node
+      parameters:
+        - name: zoneId
+          in: query
+          schema: { type: string }
+          description: Lọc theo Zone
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { type: array, items: { $ref: '#/components/schemas/SensorNode' } } } }] } } } }
+
+  /devices/sensor-nodes/{id}:
+    get:
+      tags: [Devices]
+      summary: Chi tiết Sensor Node (FARM-FR-006 — firmware version, uptime, RSSI)
+      parameters: [{ $ref: '#/components/parameters/NodeId' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/SensorNode' } } }] } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /devices/sensor-nodes/{id}/thresholds:
+    put:
+      tags: [Devices]
+      summary: Cập nhật ngưỡng qua device (tương đương PUT /farms/zones/:zoneId/thresholds), publish MQTT config/update
+      parameters: [{ $ref: '#/components/parameters/NodeId' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Thresholds' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /devices/sensor-nodes/{id}/relay:
+    post:
+      tags: [Devices]
+      summary: Điều khiển relay — Manual Override, publish MQTT relay/command tới ESP32 (ENV-FR-016..018)
+      parameters: [{ $ref: '#/components/parameters/NodeId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [relayName, state]
+              properties:
+                relayName: { type: string, enum: [misting, speaker, ventilation, heating] }
+                state: { type: boolean }
+                durationMs: { type: integer, default: 1800000, description: "Thời gian override trước khi tự trả về AUTO (mặc định 30 phút)" }
+      responses:
+        '200': { description: Đã publish lệnh, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/SensorNode' } } }] } } } }
+        '400': { description: relayName không hợp lệ, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /devices/camera-nodes/register:
+    post:
+      tags: [Devices]
+      summary: Đăng ký Raspberry Pi Camera Node (FARM-FR-004)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id, zone_id]
+              properties: { device_id: { type: string }, zone_id: { type: string }, rtsp_url: { type: string } }
+      responses:
+        '201': { description: Đã đăng ký, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/CameraNode' } } }] } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /devices/camera-nodes:
+    get:
+      tags: [Devices]
+      summary: Danh sách Camera Node
+      parameters:
+        - name: zoneId
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { type: array, items: { $ref: '#/components/schemas/CameraNode' } } } }] } } } }
+
+  # ── TELEMETRY ─────────────────────────────────────────────────────────────
+  /telemetry/zones/{id}/latest:
+    get:
+      tags: [Telemetry]
+      summary: Giá trị cảm biến mới nhất của Zone (ENV-FR-004)
+      parameters: [{ $ref: '#/components/parameters/ZoneIdPath' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Telemetry' } } }] } } } }
+        '404': { description: Chưa có dữ liệu, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+
+  /telemetry/zones/{id}/history:
+    get:
+      tags: [Telemetry]
+      summary: Lịch sử telemetry (ANALYTICS-FR-001)
+      parameters:
+        - { $ref: '#/components/parameters/ZoneIdPath' }
+        - { $ref: '#/components/parameters/From' }
+        - { $ref: '#/components/parameters/To' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { type: array, items: { $ref: '#/components/schemas/Telemetry' } } } }] } } } }
+
+  # ── ALERTS (stub) ─────────────────────────────────────────────────────────
+  /alerts:
+    get:
+      tags: [Alerts]
+      summary: 🚧 Danh sách cảnh báo (phân trang, filter)
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /alerts/{id}:
+    get:
+      tags: [Alerts]
+      summary: 🚧 Chi tiết cảnh báo
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /alerts/{id}/acknowledge:
+    put:
+      tags: [Alerts]
+      summary: 🚧 Xác nhận cảnh báo (ALERT-FR-009)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { note: { type: string } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  # ── ANALYTICS (stub) ──────────────────────────────────────────────────────
+  /analytics/bird-count/daily:
+    get:
+      tags: [Analytics]
+      summary: 🚧 Thống kê đếm chim hàng ngày
+      parameters: [{ name: zoneId, in: query, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /analytics/bird-count/trends:
+    get:
+      tags: [Analytics]
+      summary: 🚧 Xu hướng đàn chim (VISION-FR-010)
+      parameters: [{ name: zoneId, in: query, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /analytics/correlation:
+    get:
+      tags: [Analytics]
+      summary: 🚧 Tương quan môi trường vs return rate
+      parameters: [{ name: zoneId, in: query, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  # ── HARVESTS (stub) ───────────────────────────────────────────────────────
+  /harvests:
+    post:
+      tags: [Harvests]
+      summary: 🚧 Tạo Harvest Batch (auto-attach env/flock snapshot — MARKET-FR-001/002/003)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [zone_id, harvest_date]
+              properties: { zone_id: { type: string }, harvest_date: { type: string, format: date-time } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    get:
+      tags: [Harvests]
+      summary: 🚧 Danh sách Harvest Batch của farm
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /harvests/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [Harvests]
+      summary: 🚧 Chi tiết Harvest Batch
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    put:
+      tags: [Harvests]
+      summary: 🚧 Cập nhật Harvest Batch (chỉ khi DRAFT)
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    delete:
+      tags: [Harvests]
+      summary: 🚧 Xóa mềm Harvest Batch
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  # ── MARKETPLACE (stub) ────────────────────────────────────────────────────
+  /marketplace/listings:
+    get:
+      tags: [Marketplace]
+      summary: 🚧 Danh sách Listing công khai (filter, phân trang)
+      security: []
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    post:
+      tags: [Marketplace]
+      summary: 🚧 Tạo Nest Listing từ Harvest Batch
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [harvest_batch_id], properties: { harvest_batch_id: { type: string } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /marketplace/listings/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [Marketplace]
+      summary: 🚧 Chi tiết Listing + Traceability Card
+      security: []
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    put:
+      tags: [Marketplace]
+      summary: 🚧 Cập nhật Listing
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /marketplace/trace/{traceCode}:
+    get:
+      tags: [Marketplace]
+      summary: 🚧 Tra cứu nguồn gốc lô yến qua Trace Code/QR
+      security: []
+      parameters: [{ name: traceCode, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /marketplace/listings/{id}/inquiries:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      tags: [Marketplace]
+      summary: 🚧 Buyer gửi form liên hệ
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buyer_name, message]
+              properties: { buyer_name: { type: string }, buyer_phone: { type: string }, buyer_email: { type: string }, message: { type: string } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    get:
+      tags: [Marketplace]
+      summary: 🚧 Owner xem danh sách liên hệ
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /marketplace/listings/{id}/stats:
+    get:
+      tags: [Marketplace]
+      summary: 🚧 Thống kê lượt xem/liên hệ
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /marketplace/farms/{id}/profile:
+    get:
+      tags: [Marketplace]
+      summary: 🚧 Farm Profile công khai
+      security: []
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  # ── TICKETS (stub) ────────────────────────────────────────────────────────
+  /tickets:
+    post:
+      tags: [Tickets]
+      summary: 🚧 Farm Owner tạo ticket báo lỗi thủ công
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [type], properties: { type: { $ref: '#/components/schemas/TicketType' } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    get:
+      tags: [Tickets]
+      summary: 🚧 Danh sách ticket (filter farm/status/priority/assignee)
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /tickets/kpi:
+    get:
+      tags: [Tickets]
+      summary: 🚧 Dashboard KPI xử lý ticket theo Technician — chỉ ADMIN
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /tickets/{id}:
+    get:
+      tags: [Tickets]
+      summary: 🚧 Chi tiết ticket + lịch sử ghi chú
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /tickets/{id}/status:
+    put:
+      tags: [Tickets]
+      summary: 🚧 Technician cập nhật trạng thái ticket
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [status], properties: { status: { $ref: '#/components/schemas/TicketStatus' } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /tickets/{id}/notes:
+    post:
+      tags: [Tickets]
+      summary: 🚧 Thêm ghi chú xử lý
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [content], properties: { content: { type: string } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /tickets/{id}/sat-checklist:
+    put:
+      tags: [Tickets]
+      summary: 🚧 Cập nhật checklist nghiệm thu lắp đặt (Technician)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /tickets/{id}/escalate:
+    post:
+      tags: [Tickets]
+      summary: 🚧 Escalate thủ công lên Admin
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /tickets/{id}/rating:
+    post:
+      tags: [Tickets]
+      summary: 🚧 Farm Owner đánh giá mức hài lòng sau khi đóng ticket
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [satisfaction_rating], properties: { satisfaction_rating: { type: integer, minimum: 1, maximum: 5 } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  # ── SALES (stub, Giai đoạn 2) ─────────────────────────────────────────────
+  /products:
+    get:
+      tags: [Sales]
+      summary: 🚧 Danh sách Product công khai
+      security: []
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    post:
+      tags: [Sales]
+      summary: 🚧 Sales Staff tạo Product từ Harvest Batch
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [harvest_batch_id], properties: { harvest_batch_id: { type: string } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /products/{id}:
+    put:
+      tags: [Sales]
+      summary: 🚧 Chỉnh sửa Product
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /products/{id}/submit-review:
+    post:
+      tags: [Sales]
+      summary: 🚧 Gửi Product cho Admin duyệt
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /products/{id}/review:
+    put:
+      tags: [Sales]
+      summary: 🚧 Admin duyệt/từ chối Product
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [review_status], properties: { review_status: { type: string, enum: [PENDING_REVIEW, APPROVED, REJECTED] } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /inventory/{productId}:
+    get:
+      tags: [Sales]
+      summary: 🚧 Xem tồn kho hiện tại của 1 Product
+      parameters: [{ name: productId, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /orders:
+    post:
+      tags: [Sales]
+      summary: 🚧 Buyer tạo đơn hàng (hỗ trợ guest checkout — AUTH-FR-008)
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [shipping_address], properties: { shipping_address: { type: string } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+    get:
+      tags: [Sales]
+      summary: 🚧 Danh sách đơn hàng (Sales Staff/Admin)
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /orders/{orderCode}:
+    get:
+      tags: [Sales]
+      summary: 🚧 Tra cứu đơn hàng theo mã (guest hoặc JWT)
+      security: []
+      parameters: [{ name: orderCode, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /orders/{id}/confirm:
+    put:
+      tags: [Sales]
+      summary: 🚧 Sales Staff xác nhận đơn (kiểm tra tồn kho)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /orders/{id}/status:
+    put:
+      tags: [Sales]
+      summary: 🚧 Cập nhật trạng thái đơn (PACKED/SHIPPING/DELIVERED)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [status], properties: { status: { type: string } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /orders/{id}/return-requests:
+    post:
+      tags: [Sales]
+      summary: 🚧 Buyer/Sales Staff tạo yêu cầu đổi trả
+      security: []
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /return-requests/{id}/verify:
+    put:
+      tags: [Sales]
+      summary: 🚧 Sales Staff xác minh tình trạng hàng hoàn
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /return-requests/{id}/resolve:
+    put:
+      tags: [Sales]
+      summary: 🚧 Admin ra quyết định cuối (hoàn tiền/đổi hàng/từ chối)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+  /sales-reports:
+    get:
+      tags: [Sales]
+      summary: 🚧 Báo cáo doanh số theo Farm/khoảng thời gian
+      responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Header: `Authorization: Bearer <accessToken>` — accessToken lấy từ /auth/login, /auth/refresh, hoặc /auth/otp/verify"
+
+  parameters:
+    FarmId:      { name: id,        in: path, required: true, schema: { type: string }, description: Farm ObjectId }
+    HouseId:     { name: houseId,   in: path, required: true, schema: { type: string }, description: House ObjectId }
+    ZoneId:      { name: zoneId,    in: path, required: true, schema: { type: string }, description: Zone ObjectId }
+    ZoneIdPath:  { name: id,        in: path, required: true, schema: { type: string }, description: Zone ObjectId }
+    NodeId:      { name: id,        in: path, required: true, schema: { type: string }, description: SensorNode ObjectId }
+    From:        { name: from,      in: query, schema: { type: string, format: date-time } }
+    To:          { name: to,        in: query, schema: { type: string, format: date-time } }
+    Page:        { name: page,      in: query, schema: { type: integer, default: 1 } }
+    Limit:       { name: limit,     in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+
+  responses:
+    NotImplemented:
+      description: 🚧 Endpoint chưa được triển khai
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+          example: { success: false, error: { code: NOT_IMPLEMENTED, message: "Endpoint chưa được triển khai" } }
+    NotFound:
+      description: Không tìm thấy
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Forbidden:
+      description: Không có quyền
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Unauthorized:
+      description: Chưa xác thực / token không hợp lệ
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Conflict:
+      description: Trùng lặp dữ liệu
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    ValidationError:
+      description: Dữ liệu gửi lên không hợp lệ
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  schemas:
+    ApiSuccess:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: {}
+        meta:
+          type: object
+          properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } }
+
+    ApiError:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          properties:
+            code: { type: string, example: NOT_FOUND }
+            message: { type: string, example: "Không tìm thấy farm" }
+
+    Role:
+      type: string
+      enum: [ADMIN, FARM_OWNER, TECHNICIAN, SALES_STAFF, OPERATOR]
+      description: "OPERATOR giữ lại để tương thích ngược (SRS v1.7.0 đã gộp vào FARM_OWNER) — không dùng cho tài khoản mới"
+
+    User:
+      type: object
+      properties:
+        _id: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        full_name: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        assigned_regions: { type: array, items: { type: string }, description: "chỉ dùng khi role=TECHNICIAN" }
+        avatar_url: { type: string }
+        is_active: { type: boolean }
+        notification_preferences:
+          type: object
+          properties:
+            push: { type: boolean }
+            zalo: { type: boolean }
+            sms: { type: boolean }
+            quiet_hours: { type: object, properties: { start: { type: string }, end: { type: string } } }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Farm:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        address: { type: string }
+        coordinates: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
+        owner_id: { type: string, description: Primary Owner }
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id: { type: string }
+              is_primary: { type: boolean }
+              joined_at: { type: string, format: date-time }
+        is_deleted: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    House:
+      type: object
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        name: { type: string }
+        floors: { type: integer }
+        description: { type: string }
+        created_at: { type: string, format: date-time }
+
+    Thresholds:
+      type: object
+      properties:
+        temp_min: { type: number, example: 26 }
+        temp_max: { type: number, example: 31 }
+        humidity_min: { type: number, example: 75 }
+        humidity_max: { type: number, example: 95 }
+        light_max: { type: number, example: 0.2 }
+        nh3_max: { type: number, example: 25 }
+        co2_max: { type: number, example: 1500 }
+
+    Zone:
+      type: object
+      properties:
+        _id: { type: string }
+        house_id: { type: string }
+        name: { type: string }
+        floor: { type: integer }
+        thresholds: { $ref: '#/components/schemas/Thresholds' }
+        threshold_history:
+          type: array
+          items:
+            type: object
+            properties:
+              changed_by: { type: string }
+              changed_at: { type: string, format: date-time }
+              old_values: { type: object }
+              new_values: { type: object }
+        created_at: { type: string, format: date-time }
+
+    RelayStates:
+      type: object
+      description: "Guide v3.3 §8-9: IN1=misting, IN2=speaker (loa ru), IN3=ventilation, IN4=heating"
+      properties:
+        misting: { type: boolean }
+        speaker: { type: boolean }
+        ventilation: { type: boolean }
+        heating: { type: boolean }
+
+    SensorNode:
+      type: object
+      properties:
+        _id: { type: string }
+        device_id: { type: string, example: node_001 }
+        zone_id: { type: string }
+        firmware_version: { type: string }
+        last_heartbeat: { type: string, format: date-time }
+        status: { type: string, enum: [ONLINE, OFFLINE, ERROR, DEGRADED] }
+        rssi: { type: number }
+        relay_states: { $ref: '#/components/schemas/RelayStates' }
+        control_mode: { type: string, enum: [AUTO, MANUAL] }
+        override_expiry: { type: string, format: date-time }
+        speaker_schedule:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            windows: { type: array, items: { type: object, properties: { start: { type: string }, end: { type: string } } } }
+        audio:
+          type: object
+          properties:
+            current_track: { type: integer }
+            volume: { type: integer, minimum: 0, maximum: 30 }
+            playing: { type: boolean }
+            loop: { type: boolean }
+        registered_at: { type: string, format: date-time }
+
+    CameraNode:
+      type: object
+      properties:
+        _id: { type: string }
+        device_id: { type: string }
+        zone_id: { type: string }
+        rtsp_url: { type: string }
+        status: { type: string, enum: [ONLINE, OFFLINE, ERROR, DEGRADED] }
+        last_heartbeat: { type: string, format: date-time }
+        model_version: { type: string }
+        registered_at: { type: string, format: date-time }
+
+    Telemetry:
+      type: object
+      properties:
+        _id: { type: string }
+        node_id: { type: string }
+        zone_id: { type: string }
+        timestamp: { type: string, format: date-time }
+        temperature: { type: number, nullable: true, description: "°C, từ ES35-SW" }
+        humidity: { type: number, nullable: true, description: "%RH, từ ES35-SW" }
+        light_lux: { type: number, nullable: true, description: "lux, từ ES-ALS-02" }
+        nh3_ppm: { type: number, nullable: true, description: "ppm, từ ES-NH3-01" }
+        co2_ppm: { type: number, nullable: true, description: "ppm, từ ES-CO2-01" }
+        sound_db: { type: number, nullable: true, description: "dB, từ ES-NOISE-01" }
+        is_anomaly: { type: boolean }
+
+    AlertType:
+      type: string
+      enum:
+        - THRESHOLD_BREACH
+        - PREDATOR_DETECTED
+        - NODE_OFFLINE
+        - SPEAKER_FAILURE
+        - PUMP_DRY
+        - BIRD_PANIC
+        - POWER_OUTAGE
+        - LOW_RETURN_RATE
+        - EDGE_AI_DEGRADED
+        - SENSOR_FAULT
+        - RS485_BUS_FAILURE
+
+    Alert:
+      type: object
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        zone_id: { type: string, nullable: true }
+        node_id: { type: string, nullable: true }
+        type: { $ref: '#/components/schemas/AlertType' }
+        severity: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] }
+        title: { type: string }
+        message: { type: string }
+        snapshot_url: { type: string, nullable: true }
+        metadata: { type: object }
+        status: { type: string, enum: [ACTIVE, ACKNOWLEDGED, RESOLVED] }
+        created_at: { type: string, format: date-time }
+        acknowledged_at: { type: string, format: date-time, nullable: true }
+        acknowledged_by: { type: string, nullable: true }
+        acknowledgement_note: { type: string, nullable: true }
+
+    TicketType:
+      type: string
+      enum: [SENSOR_FAULT, RS485_BUS_FAILURE, ACTUATOR_FAILURE, NODE_OFFLINE, EDGE_AI_DEGRADED, POWER_OUTAGE, SPEAKER_FAILURE, PREDATOR_DETECTED, INSTALLATION, MAINTENANCE, OTHER]
+    TicketStatus:
+      type: string
+      enum: [NEW, IN_PROGRESS, AWAITING_FIELD_CONFIRMATION, CLOSED]
+
+    Ticket:
+      type: object
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        zone_id: { type: string, nullable: true }
+        alert_id: { type: string, nullable: true }
+        type: { $ref: '#/components/schemas/TicketType' }
+        priority: { type: string, enum: [P1, P2, P3] }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        assigned_to: { type: string, nullable: true }
+        sla_response_due_at: { type: string, format: date-time, nullable: true }
+        sla_resolve_due_at: { type: string, format: date-time, nullable: true }
+        is_sla_breached: { type: boolean }
+        notes:
+          type: array
+          items:
+            type: object
+            properties: { author_id: { type: string }, content: { type: string }, created_at: { type: string, format: date-time } }
+        satisfaction_rating: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        created_at: { type: string, format: date-time }
+        closed_at: { type: string, format: date-time, nullable: true }

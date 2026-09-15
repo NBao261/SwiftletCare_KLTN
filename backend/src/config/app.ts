@@ -3,8 +3,13 @@ import helmet from 'helmet'
 import cors from 'cors'
 import morgan from 'morgan'
 import cookieParser from 'cookie-parser'
+import swaggerUi from 'swagger-ui-express'
+import YAML from 'yaml'
+import fs from 'fs'
+import path from 'path'
 import { rateLimiter } from '@/middlewares/rateLimiter'
 import { errorHandler } from '@/middlewares/errorHandler'
+import logger from '@/utils/logger'
 
 import authRoutes      from '@/routes/auth'
 import farmRoutes      from '@/routes/farms'
@@ -38,6 +43,16 @@ app.use(cookieParser()) // cần cho req.cookies.refreshToken (AUTH-FR-003)
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
+
+// ── API Docs (Swagger UI đọc trực tiếp docs/api/api-spec.yaml) ───────────────
+try {
+  const specPath = path.resolve(__dirname, '../../../docs/api/api-spec.yaml')
+  const openApiSpec = YAML.parse(fs.readFileSync(specPath, 'utf-8')) as Record<string, unknown>
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
+  app.get('/api-docs.yaml', (_req: Request, res: Response) => res.sendFile(specPath))
+} catch (err) {
+  logger.warn('Swagger spec không load được — /api-docs sẽ không khả dụng', { err })
+}
 
 // ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/auth',      authRoutes)
