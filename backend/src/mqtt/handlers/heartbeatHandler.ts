@@ -1,16 +1,12 @@
-﻿import type { HeartbeatPayload } from '@/types'
+import * as deviceService from '@/services/deviceService'
+import type { HeartbeatPayload } from '@/types'
 import logger from '@/utils/logger'
 
-/**
- * heartbeatHandler – processes MQTT messages and persists to MongoDB
- * TODO: Implement full logic in TASK-M3 sprint
- */
+/** heartbeatHandler – adapter mỏng: parse MQTT message rồi giao cho deviceService xử lý (FARM-FR-005) */
 export async function handleHeartbeat(topicParts: string[], message: Record<string, unknown>): Promise<void> {
   try {
-    const payload = message as unknown as HeartbeatPayload
-    // TODO: validate, upsert device, save to DB, emit Socket.io event
-    logger.debug('heartbeatHandler received', { topicParts, payload })
+    await deviceService.recordHeartbeat(message as unknown as HeartbeatPayload)
   } catch (err) {
-    logger.error('heartbeatHandler error', { err })
+    logger.warn('heartbeatHandler: could not process', { topicParts, err: (err as Error).message })
   }
 }

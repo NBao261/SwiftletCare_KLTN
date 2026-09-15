@@ -36,6 +36,9 @@
 #define DFPLAYER_DEFAULT_VOLUME 20 // 0-30
 #define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
 
+// ── Firmware version (báo lên backend qua heartbeat — FARM-FR-006) ──────────
+#define FIRMWARE_VERSION "1.0.0"
+
 // ── Timing ────────────────────────────────────────────────────────────────
 #define WATCHDOG_TIMEOUT_SEC 30
 #define SENSOR_INTERVAL_MS 10000 // 10 seconds (ENV-FR-002)

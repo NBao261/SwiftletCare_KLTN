@@ -161,6 +161,12 @@ export interface WsBirdCountUpdate {
   timestamp: string
 }
 
+export interface WsDeviceStatusChange {
+  nodeId: string
+  status: DeviceStatus
+  timestamp: string
+}
+
 export interface WsAlertNew {
   alertId: string
   severity: AlertSeverity

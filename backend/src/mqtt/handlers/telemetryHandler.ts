@@ -1,16 +1,12 @@
-﻿import type { TelemetryPayload } from '@/types'
+import * as telemetryService from '@/services/telemetryService'
+import type { TelemetryPayload } from '@/types'
 import logger from '@/utils/logger'
 
-/**
- * telemetryHandler – processes MQTT messages and persists to MongoDB
- * TODO: Implement full logic in TASK-M3 sprint
- */
+/** telemetryHandler – adapter mỏng: parse MQTT message rồi giao cho telemetryService xử lý */
 export async function handleTelemetry(topicParts: string[], message: Record<string, unknown>): Promise<void> {
   try {
-    const payload = message as unknown as TelemetryPayload
-    // TODO: validate, upsert device, save to DB, emit Socket.io event
-    logger.debug('telemetryHandler received', { topicParts, payload })
+    await telemetryService.ingestTelemetry(message as unknown as TelemetryPayload)
   } catch (err) {
-    logger.error('telemetryHandler error', { err })
+    logger.warn('telemetryHandler: could not ingest', { topicParts, err: (err as Error).message })
   }
 }
