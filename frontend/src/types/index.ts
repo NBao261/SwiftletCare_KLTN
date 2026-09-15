@@ -1,10 +1,12 @@
 ﻿// SwiftletCare TypeScript Type Definitions
 // Generated from SRS §8.2 MongoDB Schemas
 
-// SRS v1.7.0: OPERATOR gộp vào FARM_OWNER; TECHNICIAN/SALES_STAFF là 2 role mới.
-// 'OPERATOR' giữ lại để tương thích ngược, không dùng cho code mới.
-export type Role = 'ADMIN' | 'FARM_OWNER' | 'OPERATOR' | 'TECHNICIAN' | 'SALES_STAFF'
-export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
+// SRS AUTH-FR-004: 4 role tham gia RBAC. Buyer đăng ký qua OTP không mang role
+// nào (role = null) vì không truy cập endpoint nào bị chặn theo role.
+export type Role = 'ADMIN' | 'FARM_OWNER' | 'TECHNICIAN' | 'SALES_STAFF'
+// PENDING: Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi
+// heartbeat đầu tiên (SRS §8.2, Flow 1).
+export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'
 export type AlertType =
@@ -38,6 +40,8 @@ export interface User {
 
 export interface Farm {
   _id: string; name: string; address: string
+  /** Khu vực (VD 'HCMC') — khớp assigned_regions của Technician phụ trách (AUTH-FR-005c) */
+  region?: string
   coordinates?: { lat: number; lng: number }
   owner_id: string
   members: Array<{ user_id: string; is_primary: boolean; joined_at: string }>

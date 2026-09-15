@@ -3,10 +3,10 @@ import type { ApiResponse, Farm, House, Zone } from '@/types'
 
 export const farmApi = {
   list:   () => api.get<ApiResponse<Farm[]>>('/farms'),
-  create: (input: { name: string; address: string; coordinates?: { lat: number; lng: number } }) =>
+  create: (input: { name: string; address: string; region?: string; coordinates?: { lat: number; lng: number } }) =>
     api.post<ApiResponse<Farm>>('/farms', input),
   getOne: (id: string) => api.get<ApiResponse<Farm>>(`/farms/${id}`),
-  update: (id: string, input: Partial<{ name: string; address: string }>) =>
+  update: (id: string, input: Partial<{ name: string; address: string; region: string }>) =>
     api.put<ApiResponse<Farm>>(`/farms/${id}`, input),
   remove: (id: string) => api.delete<ApiResponse<{ message: string }>>(`/farms/${id}`),
   inviteMember: (id: string, email: string) =>

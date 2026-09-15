@@ -4,8 +4,11 @@ import { useTelemetry } from "@/hooks/useTelemetry";
 import { Badge, Button } from "@/components/ui";
 import SensorCard from "@/components/common/SensorCard";
 import EmptyState from "@/components/common/EmptyState";
+import {
+  IconTemp, IconHumidity, IconLight, IconGas, IconSound,
+} from "@/components/ui/icons";
 
-const ZONE_THRESHOLDS_DEFAULT = {
+const T = {
   temp_min: 26,
   temp_max: 31,
   humidity_min: 75,
@@ -24,8 +27,8 @@ export default function DashboardPage() {
   if (!selectedZoneId) {
     return (
       <EmptyState
-        title="Chưa chọn Zone nào"
-        description="Vào trang Trang trại, chọn 1 zone rồi bấm “Dashboard” để xem số liệu realtime."
+        title="Chưa chọn khu vực nào"
+        description="Chọn khu vực ở thanh trên cùng để xem số liệu môi trường thời gian thực, hoặc tạo trang trại mới nếu bạn vừa bắt đầu."
         action={
           <Link to="/farms">
             <Button>Đi tới Trang trại</Button>
@@ -35,77 +38,82 @@ export default function DashboardPage() {
     );
   }
 
-  const t = ZONE_THRESHOLDS_DEFAULT;
+  const tempAnomaly =
+    data.temperature !== undefined &&
+    (data.temperature < T.temp_min || data.temperature > T.temp_max);
+  const humidityAnomaly =
+    data.humidity !== undefined &&
+    (data.humidity < T.humidity_min || data.humidity > T.humidity_max);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-charcoal">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="label-caption">Khu vực đang xem</p>
+          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">
             {selectedZoneName}
-          </h1>
-          <p className="mt-1 text-sm text-warmGray">
-            Dữ liệu môi trường thời gian thực
           </p>
         </div>
-        <Badge tone={isLive ? "positive" : hasEverReceived ? "critical" : "neutral"}>
-          {isLive
-            ? "● Live"
-            : hasEverReceived
-              ? "● Mất kết nối"
-              : "Đang tải..."}
-        </Badge>
+        <div className="flex items-center gap-3">
+          {data.timestamp && (
+            <span className="hidden text-xs text-warmGray sm:block">
+              Cập nhật {new Date(data.timestamp).toLocaleTimeString("vi-VN")}
+            </span>
+          )}
+          <Badge
+            tone={isLive ? "positive" : hasEverReceived ? "critical" : "neutral"}
+          >
+            <span
+              className={
+                isLive
+                  ? "h-1.5 w-1.5 rounded-full bg-charcoal"
+                  : hasEverReceived
+                    ? "h-1.5 w-1.5 rounded-full bg-alertRed"
+                    : "h-1.5 w-1.5 rounded-full bg-warmGray"
+              }
+            />
+            {isLive ? "Live" : hasEverReceived ? "Mất kết nối" : "Đang tải"}
+          </Badge>
+        </div>
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-warmGray">Đang tải dữ liệu...</p>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[136px] animate-pulse rounded-2xl border border-warmGray/15 bg-warmGray/10"
+            />
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           <SensorCard
-            label="Nhiệt độ"
-            value={data.temperature}
-            unit="°C"
-            isAnomaly={
-              data.temperature !== undefined &&
-              (data.temperature < t.temp_min || data.temperature > t.temp_max)
-            }
+            label="Nhiệt độ" value={data.temperature} unit="°C" icon={IconTemp}
+            range={`${T.temp_min}–${T.temp_max}°C`} isAnomaly={tempAnomaly}
           />
           <SensorCard
-            label="Độ ẩm"
-            value={data.humidity}
-            unit="%"
-            isAnomaly={
-              data.humidity !== undefined &&
-              (data.humidity < t.humidity_min || data.humidity > t.humidity_max)
-            }
+            label="Độ ẩm" value={data.humidity} unit="%" icon={IconHumidity}
+            range={`${T.humidity_min}–${T.humidity_max}%`} isAnomaly={humidityAnomaly}
           />
           <SensorCard
-            label="Ánh sáng"
-            value={data.light_lux}
-            unit="lux"
-            decimals={1}
+            label="Ánh sáng" value={data.light_lux} unit="lux" icon={IconLight}
+            range="< 0.2 lux"
           />
           <SensorCard
-            label="NH3"
-            value={data.nh3_ppm}
-            unit="ppm"
-            isAnomaly={data.nh3_ppm !== undefined && data.nh3_ppm > t.nh3_max}
+            label="NH3" value={data.nh3_ppm} unit="ppm" icon={IconGas}
+            range={`< ${T.nh3_max} ppm`}
+            isAnomaly={data.nh3_ppm !== undefined && data.nh3_ppm > T.nh3_max}
           />
           <SensorCard
-            label="CO2"
-            value={data.co2_ppm}
-            unit="ppm"
-            decimals={0}
-            isAnomaly={data.co2_ppm !== undefined && data.co2_ppm > t.co2_max}
+            label="CO2" value={data.co2_ppm} unit="ppm" decimals={0} icon={IconGas}
+            range={`< ${T.co2_max} ppm`}
+            isAnomaly={data.co2_ppm !== undefined && data.co2_ppm > T.co2_max}
           />
-          <SensorCard label="Âm thanh" value={data.sound_db} unit="dB" />
+          <SensorCard
+            label="Âm thanh" value={data.sound_db} unit="dB" icon={IconSound}
+          />
         </div>
-      )}
-
-      {data.timestamp && (
-        <p className="text-xs text-warmGray">
-          Cập nhật lúc {new Date(data.timestamp).toLocaleTimeString("vi-VN")}
-        </p>
       )}
     </div>
   );

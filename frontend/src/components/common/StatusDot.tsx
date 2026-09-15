@@ -2,6 +2,7 @@ import { cn } from '@/utils/cn'
 import type { DeviceStatus } from '@/types'
 
 const STATUS_CLASS: Record<DeviceStatus, string> = {
+  PENDING:  'bg-insightPeach',
   ONLINE:   'bg-limeMist',
   OFFLINE:  'bg-warmGray',
   ERROR:    'bg-alertRed',
@@ -9,7 +10,8 @@ const STATUS_CLASS: Record<DeviceStatus, string> = {
 }
 
 const STATUS_LABEL: Record<DeviceStatus, string> = {
-  ONLINE: 'Online', OFFLINE: 'Offline', ERROR: 'Lỗi', DEGRADED: 'Suy giảm',
+  // PENDING = đã khai báo nhưng chưa từng gửi heartbeat (Flow 1 bước 4→8)
+  PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Offline', ERROR: 'Lỗi', DEGRADED: 'Suy giảm',
 }
 
 interface StatusDotProps {

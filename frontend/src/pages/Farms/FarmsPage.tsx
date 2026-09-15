@@ -1,6 +1,8 @@
 import { useState, FormEvent } from "react";
 import { useFarms, useCreateFarm } from "@/hooks/useFarms";
 import { Button, Input, Modal, Card } from "@/components/ui";
+import { IconFarm } from "@/components/ui/icons";
+import { cn } from "@/utils/cn";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import EmptyState from "@/components/common/EmptyState";
 import HouseZoneManager from "./HouseZoneManager";
@@ -10,7 +12,7 @@ export default function FarmsPage() {
   const { data: farms, isLoading } = useFarms();
   const createFarm = useCreateFarm();
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: "", address: "" });
+  const [form, setForm] = useState({ name: "", address: "", region: "" });
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
 
   function handleCreate(e: FormEvent) {
@@ -18,21 +20,18 @@ export default function FarmsPage() {
     createFarm.mutate(form, {
       onSuccess: () => {
         setShowCreate(false);
-        setForm({ name: "", address: "" });
+        setForm({ name: "", address: "", region: "" });
       },
     });
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-charcoal">Trang trại</h1>
-          <p className="mt-1 text-sm text-warmGray">
-            Quản lý farm, nhà yến và zone của bạn
-          </p>
-        </div>
-        <Button onClick={() => setShowCreate(true)}>+ Tạo Farm</Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-warmGray">
+          Quản lý trang trại, nhà yến và khu vực của bạn
+        </p>
+        <Button onClick={() => setShowCreate(true)}>+ Tạo trang trại</Button>
       </div>
 
       {isLoading && <LoadingSkeleton count={2} className="h-28 w-full" />}
@@ -42,7 +41,7 @@ export default function FarmsPage() {
           title="Chưa có trang trại nào"
           description="Tạo farm đầu tiên để bắt đầu quản lý nhà yến, zone và thiết bị."
           action={
-            <Button onClick={() => setShowCreate(true)}>+ Tạo Farm</Button>
+            <Button onClick={() => setShowCreate(true)}>+ Tạo trang trại</Button>
           }
         />
       )}
@@ -54,16 +53,31 @@ export default function FarmsPage() {
             variant={selectedFarmId === farm._id ? "active" : "default"}
           >
             <button
-              className="flex w-full items-center justify-between text-left"
+              className="flex w-full items-center justify-between gap-3 text-left"
               onClick={() =>
                 setSelectedFarmId((id) => (id === farm._id ? null : farm._id))
               }
             >
-              <div>
-                <p className="font-bold">{farm.name}</p>
-                <p className="text-sm text-warmGray">{farm.address}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className={cn(
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+                    selectedFarmId === farm._id
+                      ? "bg-charcoal text-white"
+                      : "bg-warmGray/10 text-charcoal",
+                  )}
+                >
+                  <IconFarm />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate font-bold">{farm.name}</p>
+                  <p className="truncate text-sm text-warmGray">
+                    {farm.address}
+                    {farm.region ? ` · ${farm.region}` : ""}
+                  </p>
+                </div>
               </div>
-              <span className="text-sm font-medium">
+              <span className="shrink-0 text-sm font-semibold">
                 {selectedFarmId === farm._id ? "Thu gọn" : "Quản lý"}
               </span>
             </button>
@@ -94,6 +108,12 @@ export default function FarmsPage() {
             onChange={(e) =>
               setForm((f) => ({ ...f, address: e.target.value }))
             }
+          />
+          <Input
+            label="Khu vực"
+            value={form.region}
+            onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
+            placeholder="VD: HCMC — dùng để phân công kỹ thuật viên phụ trách"
           />
           <Button
             type="submit"
