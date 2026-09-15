@@ -2,23 +2,24 @@
  * Config.cpp – Runtime configuration defaults
  */
 #include "Config.h"
+#include "Secrets.h" // KHÔNG commit — copy từ Secrets.h.example rồi điền giá trị thật
 #include <ArduinoJson.h>
 
 namespace Config {
-// WiFi credentials (override via NVS or hardcode for dev)
-const char *wifiSsid = "SwiftletCare_AP";
-const char *wifiPassword = "swiftlet2026";
+// WiFi credentials
+const char *wifiSsid = SECRET_WIFI_SSID;
+const char *wifiPassword = SECRET_WIFI_PASSWORD;
 
 // MQTT broker
-const char *mqttBroker = "mqtt.swiftletcare.local";
-const char *mqttUsername = "esp32_node";
-const char *mqttPassword = "mqtt_secret";
+const char *mqttBroker = SECRET_MQTT_BROKER;
+const char *mqttUsername = SECRET_MQTT_USERNAME;
+const char *mqttPassword = SECRET_MQTT_PASSWORD;
 
 // Device identity
-const char *farmId = "farm_001";
-const char *houseId = "house_001";
-const char *zoneId = "zone_001";
-const char *deviceId = "node_001";
+const char *farmId = SECRET_FARM_ID;
+const char *houseId = SECRET_HOUSE_ID;
+const char *zoneId = SECRET_ZONE_ID;
+const char *deviceId = SECRET_DEVICE_ID;
 
 // Runtime thresholds (loaded from NVS, fallback to defaults)
 float tempMin = DEFAULT_TEMP_MIN;

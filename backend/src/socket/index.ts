@@ -2,16 +2,17 @@
 import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
 import logger from '@/utils/logger'
-import type { JwtAccessPayload, WsTelemetryUpdate, WsRelayUpdate, WsBirdCountUpdate, WsAlertNew } from '@/types'
+import type { JwtAccessPayload, WsTelemetryUpdate, WsRelayUpdate, WsBirdCountUpdate, WsAlertNew, WsDeviceStatusChange } from '@/types'
 
 let io: Server | null = null
 
 /** Socket event types emitted by the server (§9.3) */
 export type ServerEvents = {
-  TELEMETRY_UPDATE:  (data: WsTelemetryUpdate) => void
-  RELAY_UPDATE:      (data: WsRelayUpdate) => void
-  BIRD_COUNT_UPDATE: (data: WsBirdCountUpdate) => void
-  ALERT_NEW:         (data: WsAlertNew) => void
+  TELEMETRY_UPDATE:     (data: WsTelemetryUpdate) => void
+  RELAY_UPDATE:         (data: WsRelayUpdate) => void
+  BIRD_COUNT_UPDATE:    (data: WsBirdCountUpdate) => void
+  ALERT_NEW:            (data: WsAlertNew) => void
+  DEVICE_STATUS_CHANGE: (data: WsDeviceStatusChange) => void
 }
 
 /** Socket event types received from clients */
@@ -81,4 +82,9 @@ export function emitBirdCountUpdate(zoneId: string, data: WsBirdCountUpdate): vo
 /** Emit ALERT_NEW to all clients in a zone */
 export function emitAlertNew(zoneId: string, data: WsAlertNew): void {
   io?.to(`zone:${zoneId}`).emit('ALERT_NEW', data)
+}
+
+/** Emit DEVICE_STATUS_CHANGE to all clients in a zone (FARM-FR-005) */
+export function emitDeviceStatusChange(zoneId: string, data: WsDeviceStatusChange): void {
+  io?.to(`zone:${zoneId}`).emit('DEVICE_STATUS_CHANGE', data)
 }

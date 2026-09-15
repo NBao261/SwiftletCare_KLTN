@@ -2,6 +2,7 @@
 import helmet from 'helmet'
 import cors from 'cors'
 import morgan from 'morgan'
+import cookieParser from 'cookie-parser'
 import { rateLimiter } from '@/middlewares/rateLimiter'
 import { errorHandler } from '@/middlewares/errorHandler'
 
@@ -31,6 +32,7 @@ app.use(rateLimiter)
 app.use(morgan('combined'))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
+app.use(cookieParser()) // cần cho req.cookies.refreshToken (AUTH-FR-003)
 
 // ── Health Check ───────────────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {

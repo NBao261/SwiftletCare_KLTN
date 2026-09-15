@@ -1,4 +1,5 @@
 ﻿import { Request, Response, NextFunction } from 'express'
+import { AppError } from '@/utils/AppError'
 import logger from '@/utils/logger'
 
 interface MongoError extends Error {
@@ -6,20 +7,24 @@ interface MongoError extends Error {
   keyPattern?: Record<string, unknown>
 }
 
-export function errorHandler(err: MongoError, req: Request, res: Response, _next: NextFunction): void {
+export function errorHandler(err: MongoError | AppError, req: Request, res: Response, _next: NextFunction): void {
   logger.error('Unhandled error', { err, path: req.path, method: req.method })
 
-  if (err.name === 'ValidationError') {
-    res.status(422).json({ error: 'Validation failed', details: err.message })
-    return
-  }
-  if (err.code === 11000) {
-    const field = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'field'
-    res.status(409).json({ error: 'Duplicate entry', field })
+  // Lỗi nghiệp vụ do service throw (NotFoundError/ForbiddenError/... — utils/AppError.ts)
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({ success: false, error: { code: err.code, message: err.message } })
     return
   }
 
-  const status = (err as { status?: number }).status ?? 500
-  const message = status === 500 ? 'Internal server error' : err.message
-  res.status(status).json({ error: message })
+  if (err.name === 'ValidationError') {
+    res.status(422).json({ success: false, error: { code: 'VALIDATION_ERROR', message: err.message } })
+    return
+  }
+  if ((err as MongoError).code === 11000) {
+    const field = (err as MongoError).keyPattern ? Object.keys((err as MongoError).keyPattern!)[0] : 'field'
+    res.status(409).json({ success: false, error: { code: 'DUPLICATE', message: `${field} đã tồn tại` } })
+    return
+  }
+
+  res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Lỗi server' } })
 }

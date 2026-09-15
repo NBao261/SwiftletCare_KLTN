@@ -4,9 +4,9 @@ import { Schema, model, Document, Types } from 'mongoose'
  * Farm + Member Document – SRS §8.2, FARM-FR-001
  */
 export interface IFarmMember {
-  user_id:   Types.ObjectId
-  role:      'OPERATOR'
-  joined_at: Date
+  user_id:    Types.ObjectId
+  is_primary: boolean // true = người tạo Farm (AUTH-FR-005); mọi member đều role FARM_OWNER
+  joined_at:  Date
 }
 
 export interface IFarm extends Document {
@@ -30,9 +30,9 @@ const farmSchema = new Schema<IFarm>(
     },
     owner_id:  { type: Schema.Types.ObjectId, ref: 'User', required: true },
     members: [{
-      user_id:   { type: Schema.Types.ObjectId, ref: 'User' },
-      role:      { type: String, enum: ['OPERATOR'], default: 'OPERATOR' },
-      joined_at: { type: Date, default: Date.now },
+      user_id:    { type: Schema.Types.ObjectId, ref: 'User' },
+      is_primary: { type: Boolean, default: false },
+      joined_at:  { type: Date, default: Date.now },
     }],
     is_deleted: { type: Boolean, default: false },
   },

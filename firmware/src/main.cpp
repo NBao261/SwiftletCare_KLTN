@@ -16,6 +16,7 @@
 
 #include "audio/AudioManager.h"
 #include "config/Config.h"
+#include "config/Secrets.h"
 #include "mqtt/MQTTManager.h"
 #include "pid/PIDController.h"
 #include "sensors/SensorManager.h"
@@ -24,6 +25,13 @@
 #include <WiFi.h>
 #include <esp_task_wdt.h>
 #include <time.h>
+
+// OTA update qua WiFi (http://<ip-esp32>/update) — chỉ cần cắm USB lần đầu,
+// các lần nạp firmware sau thực hiện qua mạng. TASK-A8, 7.2
+// (ELEGANTOTA_USE_ASYNC_WEBSERVER được định nghĩa qua build_flags trong platformio.ini)
+#include <ESPAsyncWebServer.h>
+#include <ElegantOTA.h>
+static AsyncWebServer otaServer(80);
 
 // ── FreeRTOS Task Handles ────────────────────────────────────────────────────
 TaskHandle_t sensorTaskHandle = NULL;
@@ -87,6 +95,14 @@ void setup() {
     Serial.println("\n[WiFi] ✓ Connected! IP: " + WiFi.localIP().toString() +
                    " RSSI: " + String(WiFi.RSSI()) + " dBm");
     configTime(7 * 3600, 0, "pool.ntp.org"); // GMT+7, cho lịch loa ru (ENV-FR-013b)
+
+    // ── OTA server (TASK-A8) ────────────────────────────────────────────────
+    otaServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(200, "text/plain", "SwiftletCare ESP32 — cập nhật firmware tại /update");
+    });
+    ElegantOTA.begin(&otaServer, SECRET_OTA_USERNAME, SECRET_OTA_PASSWORD);
+    otaServer.begin();
+    Serial.println("[OTA] Sẵn sàng tại http://" + WiFi.localIP().toString() + "/update");
   } else {
     Serial.println("\n[WiFi] ✗ Failed! Running in OFFLINE mode (REL-NFR-001)");
   }

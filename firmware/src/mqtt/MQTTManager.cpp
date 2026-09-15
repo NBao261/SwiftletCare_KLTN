@@ -14,6 +14,10 @@ static WiFiClientSecure wifiSecure;
 static PubSubClient mqtt;
 static unsigned long lastHeartbeat = 0;
 
+// relayState sống trong main.cpp (dùng chung với pidTask) — MQTTManager chỉ
+// áp Manual Override lên đó khi có lệnh từ cloud (ENV-FR-016).
+extern RelayState relayState;
+
 // MQTT topic helpers (§9.2)
 static String topicBase() {
   return String("swiftletcare/") + Config::farmId + "/" + Config::houseId + "/" + Config::zoneId;
@@ -69,6 +73,7 @@ bool isConnected() { return mqtt.connected(); }
 void publishTelemetry(const SensorData &data, const RelayState &relay) {
   if (!mqtt.connected()) return;
   JsonDocument doc;
+  doc["deviceId"] = Config::deviceId; // backend tra SensorNode theo field này (telemetryHandler.ts)
   doc["temperature"] = data.temperature;
   doc["humidity"] = data.humidity;
   doc["light_lux"] = data.lightLux;
@@ -89,10 +94,13 @@ void publishTelemetry(const SensorData &data, const RelayState &relay) {
 void publishHeartbeat() {
   if (!mqtt.connected()) return;
   JsonDocument doc;
-  doc["device_id"] = Config::deviceId;
-  doc["uptime_ms"] = millis();
+  // Field names khớp backend/src/types/domain.ts HeartbeatPayload
+  doc["deviceId"] = Config::deviceId;
+  doc["firmwareVersion"] = FIRMWARE_VERSION;
   doc["rssi"] = WiFi.RSSI();
-  doc["free_heap"] = ESP.getFreeHeap();
+  doc["freeHeap"] = ESP.getFreeHeap();
+  doc["uptime"] = millis();
+  doc["timestamp"] = millis();
 
   String payload;
   serializeJson(doc, payload);
@@ -123,7 +131,27 @@ void publishAlert(const char *alertType, const char *severity, const char *paylo
 
 void onRelayCommand(const char *payload) {
   Serial.println("[MQTT] Relay command: " + String(payload));
-  // TODO: parse JSON {relayName, state, durationMs} và gọi PIDController::setManualOverride
+
+  JsonDocument doc;
+  if (deserializeJson(doc, payload)) {
+    Serial.println("[MQTT] Relay command: invalid JSON");
+    return;
+  }
+
+  const char *relayName = doc["relayName"] | "";
+  bool state = doc["state"] | false;
+  unsigned long durationMs = doc["durationMs"] | (unsigned long)MANUAL_OVERRIDE_MS;
+
+  if (strlen(relayName) == 0) {
+    Serial.println("[MQTT] Relay command: missing relayName");
+    return;
+  }
+
+  // ENV-FR-016..018: bật Manual Override, tạm dừng PID cho relay này
+  PIDController::setManualOverride(relayName, state, durationMs, relayState);
+
+  // Xác nhận lại trạng thái ngay cho backend/dashboard (ENV-FR-015)
+  publishRelayState(relayState);
 }
 
 void onConfigUpdate(const char *payload) {

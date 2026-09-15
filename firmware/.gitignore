@@ -3,6 +3,9 @@
 .pioenvs/
 .piolibdeps/
 
+# Real WiFi/MQTT credentials — copy Secrets.h.example → Secrets.h and fill in
+src/config/Secrets.h
+
 # Build and IDE files
 .vscode/
 .idea/

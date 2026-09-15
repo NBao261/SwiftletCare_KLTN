@@ -47,12 +47,24 @@ void RelayState::applyRelay(int pin, bool state) {
   digitalWrite(pin, state ? HIGH : LOW);
 }
 
+// Field names/cấu trúc khớp backend/src/types/domain.ts RelayStatusPayload.
+// LƯU Ý: mỗi relay có cờ override riêng (mistingOverride, speakerOverride...)
+// nhưng schema backend (SensorNode.control_mode) chỉ có 1 field AUTO/MANUAL
+// cho cả node — đây là rút gọn hợp lý: MANUAL nếu CÓ BẤT KỲ relay nào đang bị
+// override, AUTO nếu không cái nào. Trạng thái override chi tiết từng relay
+// hiện chưa expose qua API/MQTT riêng.
 String RelayState::toJson() const {
+  bool anyOverride = mistingOverride || speakerOverride || ventilationOverride || heatingOverride;
+
   String json = "{";
+  json += "\"deviceId\":\"" + String(Config::deviceId) + "\",";
+  json += "\"relay_states\":{";
   json += "\"misting\":" + String(misting ? "true" : "false") + ",";
   json += "\"speaker\":" + String(speaker ? "true" : "false") + ",";
   json += "\"ventilation\":" + String(ventilation ? "true" : "false") + ",";
   json += "\"heating\":" + String(heating ? "true" : "false");
+  json += "},";
+  json += "\"control_mode\":\"" + String(anyOverride ? "MANUAL" : "AUTO") + "\"";
   json += "}";
   return json;
 }
