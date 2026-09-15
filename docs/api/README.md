@@ -1,16 +1,14 @@
 ﻿# SwiftletCare API Documentation
-**Version:** 1.0.0 | **Base URL:** `https://api.swiftletcare.vn`
+**Version:** 1.0.0 | **Dev base URL:** `http://localhost:3000` (production TBD, chưa deploy)
 
 ## Authentication
-All endpoints (except `/auth/*`) require `Authorization: Bearer <access_token>`
+Hầu hết endpoint (trừ `/auth/*`, `/marketplace/*` public, `/orders` guest checkout...) yêu cầu `Authorization: Bearer <access_token>`
 
-## Quick Reference
-See `api-spec.yaml` for full OpenAPI 3.0 specification.
+## Xem API
 
-### Modules
-- [Auth](./auth.md) – Registration, login, JWT, OTP
-- [Farms](./farms.md) – Farm/House/Zone CRUD
-- [Devices](./devices.md) – ESP32 and RPi node management
-- [Telemetry](./telemetry.md) – Sensor data queries
-- [Alerts](./alerts.md) – Alert management and acknowledgement
-- [Analytics](./analytics.md) – Bird count trends, correlations
+`api-spec.yaml` (cùng thư mục) là OpenAPI 3.0 spec đầy đủ — nguồn sự thật duy nhất, sửa file này khi thêm/đổi endpoint. Backend tự serve Swagger UI đọc trực tiếp file này, không cần đọc YAML tay:
+
+- Chạy `npm run dev` trong `backend/` rồi mở `http://localhost:3000/api-docs`
+- Hoặc paste nội dung `api-spec.yaml` vào https://editor.swagger.io để xem offline
+
+Endpoint đánh dấu 🚧 trong summary là stub (501, chưa có logic thật) — xem `backend/README.md` mục "Module → phạm vi" để biết trạng thái từng module.
