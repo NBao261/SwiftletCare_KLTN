@@ -1,77 +1,88 @@
-﻿# SwiftletCare – KLTN FA26
+# SwiftletCare – KLTN FA26
 
 > **Hệ thống tự động hóa và giám sát nhà yến** sử dụng IoT + Edge AI + Cloud
 
 [![CI](https://github.com/NBao261/SwiftletCare_KLTN/actions/workflows/ci.yml/badge.svg)](https://github.com/NBao261/SwiftletCare_KLTN/actions)
 
-## 📁 Cấu trúc Repository
+## Cấu trúc Repository
 
 ```
 SwiftletCare_KLTN/
-├── firmware/          # ESP32 PlatformIO – sensor, PID, MQTT
-├── ai-pipeline/       # Raspberry Pi 4 – YOLOv8 + ByteTrack
-├── backend/           # Node.js Express API + MQTT + WebSocket
-├── frontend/          # ReactJS PWA – Dashboard + Mobile
-├── docs/              # Tài liệu kỹ thuật và test reports
-├── docker-compose.yml # Dev environment (MongoDB, EMQX, MinIO)
-├── SRS_SwiftletCare.md
-├── WORKPLAN.md
+├── firmware/          # ESP32 PlatformIO – RS485 sensor, PID, MQTT, loa ru
+├── ai-pipeline/       # Raspberry Pi 4 – YOLOv8 + ByteTrack (chưa triển khai)
+├── backend/           # Node.js Express API + MQTT + Socket.io
+├── frontend/          # React web dashboard (Vite + Tailwind)
+├── mobile/            # Expo/React Native app
+├── docs/              # Tài liệu kỹ thuật (docs/api/api-spec.yaml = OpenAPI spec)
+├── docker-compose.yml # Dev environment (MongoDB, EMQX, MinIO, Redis)
+├── SwiftletCare_SRS.md
+├── SwiftletCare_Components_Guide_v3.3.md
+├── SwiftletCare_TASK_DETAIL_Checklist.md
 └── GITHUB_SETUP.md
 ```
 
-## 🚀 Quick Start
+## Chạy local (sau khi restart máy)
 
-### 1. Khởi động Dev Environment
+### 1. Docker — MongoDB + EMQX (MQTT broker)
+
+Mở Docker Desktop trước, đợi sẵn sàng, rồi:
+
 ```bash
-docker compose up -d
-# MongoDB: localhost:27017
-# EMQX:    localhost:18083 (admin/public)
-# MinIO:   localhost:9001  (minioadmin/minioadmin123)
+docker compose up -d mongodb emqx
 ```
 
+Data MongoDB đã lưu trong Docker volume — **không cần chạy lại `npm run seed`** ở các lần sau, chỉ cần lần đầu setup máy mới.
+
 ### 2. Backend
+
 ```bash
 cd backend
-cp .env.example .env   # điền thông tin thực tế
+cp .env.example .env   # chỉ cần lần đầu — sửa theo comment trong file (Mongo/MQTT dev dùng cổng 1883 non-TLS)
 npm install
 npm run dev
-# API: http://localhost:3000
+# API: http://localhost:3000 — health check: GET /health
+# Swagger UI: http://localhost:3000/api-docs
 ```
 
 ### 3. Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
-# App: http://localhost:5173
+# App: http://localhost:5173 (Vite proxy /api -> backend :3000, không cần cấu hình CORS thủ công)
 ```
 
-### 4. AI Pipeline (trên Raspberry Pi)
+### 4. Firmware (ESP32)
+
+Chỉ cần **cấp nguồn** (USB hoặc 12V qua Buck) — firmware lưu vĩnh viễn trong chip, không cần nạp lại trừ khi đổi code. Tự kết nối WiFi/MQTT bằng thông tin trong `firmware/src/config/Secrets.h` (file cục bộ, không commit — xem `firmware/src/config/Secrets.h.example`).
+
+Chỉ nạp lại khi sửa firmware:
+```bash
+cd firmware
+# Cắm USB, giữ nút BOOT trên board khi upload nếu auto-reset không hoạt động
+"$USERPROFILE/.platformio/penv/Scripts/platformio.exe" run -e esp32dev -t upload
+```
+
+### 5. AI Pipeline (trên Raspberry Pi, chưa triển khai)
+
 ```bash
 cd ai-pipeline
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-# Sao chép model vào models/
 python src/stream.py
 ```
 
-### 5. Firmware (ESP32)
-```bash
-cd firmware
-# Mở PlatformIO IDE
-# Cấu hình src/config/Config.h
-# PlatformIO: Build → Upload
-```
+## Tài liệu
 
-## 📖 Tài liệu
-
-- [SRS](./SRS_SwiftletCare.md) – Software Requirements Specification
-- [WORKPLAN](./WORKPLAN.md) – Kế hoạch 8 tuần 5 thành viên
+- [SRS](./SwiftletCare_SRS.md) – Software Requirements Specification v1.11.0
+- [Components Guide](./SwiftletCare_Components_Guide_v3.3.md) – BOM & đấu nối phần cứng
+- [Task Checklist](./SwiftletCare_TASK_DETAIL_Checklist.md) – Việc theo sprint, đánh dấu tiến độ
 - [GITHUB_SETUP](./GITHUB_SETUP.md) – Git workflow cho team
-- [API Docs](./docs/api/README.md) – REST API reference
-- [BOM](./docs/hardware/BOM.md) – Bill of Materials phần cứng
+- [API Docs](./docs/api/README.md) – OpenAPI spec (`docs/api/api-spec.yaml`) + Swagger UI
+- Từng module có README riêng: `backend/README.md`, `frontend/README.md`, `firmware/README.md`, `mobile/README.md`, `ai-pipeline/README.md`
 
-## 👥 Team
+## Team
 
 | Thành viên | Vai trò | Module |
 |---|---|---|

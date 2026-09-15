@@ -210,7 +210,7 @@
 - [ ] API đăng ký Sensor Node qua QR `[FARM-FR-003, Flow 1]` — API đăng ký có (`POST /devices/sensor-nodes/register`), nhưng chưa có luồng quét QR
 - [ ] Logic sinh mqttCredentials khi đăng ký device `[Flow 1]`
 - [ ] Setup EMQX broker + TLS + Device Certificate `[SEC-NFR-001/005]` — EMQX + TLS đã chạy (dev), chưa có Device Certificate (mTLS) riêng từng thiết bị
-- [ ] MQTT subscriber heartbeat → status ONLINE/OFFLINE `[FARM-FR-005]` — mới có chiều ONLINE (heartbeat→ONLINE verify thật); chưa có job tự chuyển OFFLINE khi mất heartbeat
+- [x] MQTT subscriber heartbeat → status ONLINE/OFFLINE `[FARM-FR-005]` — heartbeat→ONLINE verify thật; node-cron 10s (`jobs/deviceOfflineJob.ts`) tự chuyển OFFLINE khi last_heartbeat > 30s, phát DEVICE_STATUS_CHANGE
 - [x] API xem chi tiết device (firmware, uptime, RSSI) `[FARM-FR-006]`
 
 ## C3. Telemetry & Realtime (Sprint 2)
@@ -299,12 +299,12 @@
 
 ## D2. Farm & Device UI (Sprint 2)
 
-- [ ] Màn danh sách Farm + tạo Farm `[FARM-FR-001]`
-- [ ] Màn House/Zone management `[FARM-FR-002]`
+- [x] Màn danh sách Farm + tạo Farm `[FARM-FR-001]`
+- [x] Màn House/Zone management `[FARM-FR-002]`
 - [ ] Màn onboarding thiết bị quét QR `[FARM-FR-003, UX-NFR-005]`
-- [ ] Màn danh sách Device + trạng thái ONLINE/OFFLINE realtime `[FARM-FR-005, 006]`
-- [ ] Socket.io-client subscribe JOIN_ZONE `[9.3]`
-- [ ] Dashboard 5 chart realtime: nhiệt/ẩm/lux/NH3/CO2/dB `[ENV-FR-005]` ⚠️ 5 cảm biến thật
+- [x] Màn danh sách Device + trạng thái ONLINE/OFFLINE realtime `[FARM-FR-005, 006]` — StatusDot theo `SensorNode.status`, tự cập nhật qua DEVICE_STATUS_CHANGE (kể cả chiều OFFLINE từ deviceOfflineJob)
+- [x] Socket.io-client subscribe JOIN_ZONE `[9.3]`
+- [ ] Dashboard 5 chart realtime: nhiệt/ẩm/lux/NH3/CO2/dB `[ENV-FR-005]` ⚠️ hiện là SensorCard số liệu tức thời, chưa có biểu đồ theo thời gian; 5 cảm biến thật chưa đấu dây đủ
 - [ ] UI mời thành viên Farm Owner / Sales Staff `[AUTH-FR-005, 005b]`
 
 ## D3. Điều khiển Relay & Loa ru UI (Sprint 3)

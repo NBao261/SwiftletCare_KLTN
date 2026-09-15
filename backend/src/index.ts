@@ -9,6 +9,7 @@ import app              from './config/app'
 import { connectDB }    from './config/db'
 import { initSocket }   from './socket'
 import { connectMQTT }  from './mqtt/client'
+import { startDeviceOfflineJob } from './jobs/deviceOfflineJob'
 import logger           from './utils/logger'
 
 const PORT = Number(process.env.PORT ?? 3000)
@@ -25,6 +26,9 @@ async function bootstrap(): Promise<void> {
 
   // 4. Connect MQTT broker + start subscriptions (§9.2)
   connectMQTT()
+
+  // 4b. Offline-detection cron (FARM-FR-005)
+  startDeviceOfflineJob()
 
   // 5. Start HTTP server
   httpServer.listen(PORT, () => {

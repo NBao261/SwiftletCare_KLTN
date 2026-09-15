@@ -17,7 +17,9 @@ const ZONE_THRESHOLDS_DEFAULT = {
 /** Dashboard – 6 chỉ số realtime của Zone đang chọn (ENV-FR-005) */
 export default function DashboardPage() {
   const { selectedZoneId, selectedZoneName } = useZoneStore();
-  const { data, isLoading, isLive } = useTelemetry(selectedZoneId ?? undefined);
+  const { data, isLoading, isLive, hasEverReceived } = useTelemetry(
+    selectedZoneId ?? undefined,
+  );
 
   if (!selectedZoneId) {
     return (
@@ -46,8 +48,12 @@ export default function DashboardPage() {
             Dữ liệu môi trường thời gian thực
           </p>
         </div>
-        <Badge tone={isLive ? "positive" : "neutral"}>
-          {isLive ? "● Live" : "Đang tải..."}
+        <Badge tone={isLive ? "positive" : hasEverReceived ? "critical" : "neutral"}>
+          {isLive
+            ? "● Live"
+            : hasEverReceived
+              ? "● Mất kết nối"
+              : "Đang tải..."}
         </Badge>
       </div>
 
