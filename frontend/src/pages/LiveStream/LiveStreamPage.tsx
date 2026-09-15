@@ -1,10 +1,11 @@
-﻿// LiveStream Page – stub: implement in TASK-M4 sprint
-// SRS: see WORKPLAN.md
+// LiveStream Page – stub: cần RPi Edge AI Node + RTSP/HLS (chưa lắp phần cứng)
+// SRS: VISION-FR-013
+import ComingSoon from "@/components/common/ComingSoon";
 export default function LiveStreamPage() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-slate-100">LiveStream</h1>
-      <p className="text-slate-400 mt-2">Coming soon – see WORKPLAN.md</p>
-    </div>
-  )
+    <ComingSoon
+      title="Live Stream"
+      note="Cần Camera Node (Raspberry Pi + RTSP) đã lắp đặt và onboard."
+    />
+  );
 }

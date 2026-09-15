@@ -1,39 +1,38 @@
-﻿import { NavLink } from 'react-router-dom'
-// SRS: UX-NFR-001 – responsive sidebar
+import { NavLink } from 'react-router-dom'
+import { cn } from '@/utils/cn'
 
+// SRS: UX-NFR-001 – responsive sidebar. Style: FE_Design_Swiftlet.md §3.C
+// (Nền Sidebar Charcoal + accent Lime Mist)
 const NAV_ITEMS = [
-  { to: '/dashboard', label: 'Dashboard',  icon: '📊' },
-  { to: '/farms',     label: 'Trang trại', icon: '🏠' },
-  { to: '/devices',   label: 'Thiết bị',   icon: '📡' },
-  { to: '/alerts',    label: 'Cảnh báo',   icon: '🔔' },
-  { to: '/analytics', label: 'Phân tích',  icon: '📈' },
-  { to: '/tickets',   label: 'Ticket',     icon: '🎫' },
-  { to: '/harvests',  label: 'Thu hoạch',  icon: '🪺' },
-  { to: '/settings',  label: 'Cài đặt',    icon: '⚙️' },
+  { to: '/dashboard', label: 'Tổng quan' },
+  { to: '/farms',     label: 'Trang trại' },
+  { to: '/devices',   label: 'Thiết bị' },
+  { to: '/alerts',    label: 'Cảnh báo' },
+  { to: '/analytics', label: 'Phân tích' },
+  { to: '/tickets',   label: 'Ticket' },
+  { to: '/harvests',  label: 'Thu hoạch' },
+  { to: '/settings',  label: 'Cài đặt' },
 ]
 
 export default function Sidebar() {
   return (
-    <aside className="w-60 bg-slate-900 border-r border-slate-800 flex flex-col">
-      {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800">
-        <span className="text-teal-400 font-bold text-lg tracking-tight">🐦 SwiftletCare</span>
+    <aside className="flex w-64 shrink-0 flex-col bg-charcoal">
+      <div className="flex h-16 items-center px-6">
+        <span className="text-lg font-bold tracking-tight text-white">SwiftletCare</span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 space-y-1 p-3">
         {NAV_ITEMS.map(item => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-               ${isActive
-                 ? 'bg-teal-600/20 text-teal-300 border border-teal-600/30'
-                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'}`
+              cn(
+                'flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-colors',
+                isActive ? 'bg-limeMist text-charcoal font-bold' : 'text-white/70 hover:bg-white/10 hover:text-white',
+              )
             }
           >
-            <span className="text-base">{item.icon}</span>
             {item.label}
           </NavLink>
         ))}

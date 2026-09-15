@@ -30,7 +30,9 @@ const app: Application = express()
 
 // ── Security ───────────────────────────────────────────────────────────────────
 app.use(helmet())
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? '*' }))
+// credentials:true bắt buộc để trình duyệt lưu/gửi cookie refreshToken (AUTH-FR-003)
+// cross-origin (frontend :5173 -> backend :3000) — không dùng được origin '*' khi bật credentials.
+app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173', credentials: true }))
 app.use(rateLimiter)
 
 // ── Logging & Parsing ──────────────────────────────────────────────────────────

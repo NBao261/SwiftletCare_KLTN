@@ -254,6 +254,7 @@ void mqttTask(void *pvParameters) {
       StorageManager::flushBuffer();
     }
 
-    vTaskDelay(pdMS_TO_TICKS(10000)); // publish every 10s
+    // Dùng chung Config::sensorIntervalMs với sensorTask — tránh 2 con số lệch nhau
+    vTaskDelay(pdMS_TO_TICKS(Config::sensorIntervalMs));
   }
 }

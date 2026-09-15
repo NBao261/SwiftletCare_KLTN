@@ -8,13 +8,5 @@ export const formatDate = (iso: string) =>
 export const formatSensor = (value: number | undefined, unit: string, decimals = 1) =>
   value !== undefined ? `${value.toFixed(decimals)} ${unit}` : '--'
 
-/** Severity color class */
-export const severityClass = (severity: string) => ({
-  CRITICAL: 'badge-critical',
-  HIGH:     'badge-high',
-  MEDIUM:   'badge-medium',
-  LOW:      'badge-low',
-}[severity] ?? 'badge-low')
-
 /** Format return rate */
 export const formatReturnRate = (rate: number) => `${rate.toFixed(1)}%`

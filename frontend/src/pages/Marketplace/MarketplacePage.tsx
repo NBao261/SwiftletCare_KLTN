@@ -1,10 +1,6 @@
-// Marketplace Page (public) – stub: implement in TASK-M4 sprint (Module MARKET §5.8, D7)
-// SRS: see WORKPLAN.md
+// Marketplace Page (public) – stub: backend controllers/marketplace.ts chưa có logic (501)
+// SRS: MARKET-FR-006..013
+import ComingSoon from "@/components/common/ComingSoon";
 export default function MarketplacePage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-slate-100">Chợ tổ yến</h1>
-      <p className="text-slate-400 mt-2">Coming soon – see WORKPLAN.md</p>
-    </div>
-  )
+  return <ComingSoon title="Chợ tổ yến" />;
 }
