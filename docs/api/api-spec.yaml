@@ -16,8 +16,9 @@ info:
     **Response envelope** dùng chung cho mọi endpoint:
     `{ success: boolean, data?, meta?: {page,limit,total}, error?: {code,message} }`.
 
-    **Trạng thái triển khai:** endpoint đánh dấu 🚧 trong summary là **stub**,
-    hiện trả `501 { success:false, error:{code:"NOT_IMPLEMENTED"} }` —
+    **Trạng thái triển khai:** endpoint thuộc các tag ghi "(stub)" (Alerts,
+    Analytics, Harvests, Marketplace, Tickets, Sales) hiện trả
+    `501 { success:false, error:{code:"NOT_IMPLEMENTED"} }` —
     request/response schema mô tả là *hợp đồng dự kiến* theo SRS, chưa có
     logic thật phía sau. Xem `backend/README.md` mục "Module → phạm vi".
 
@@ -35,17 +36,17 @@ tags:
   - name: Telemetry
     description: ENV-FR-001..005
   - name: Alerts
-    description: ALERT-FR-001..009 (🚧 stub)
+    description: ALERT-FR-001..009 (stub)
   - name: Analytics
-    description: ANALYTICS-FR-001..005, VISION-FR-008..011 (🚧 stub)
+    description: ANALYTICS-FR-001..005, VISION-FR-008..011 (stub)
   - name: Harvests
-    description: MARKET-FR-001..005 (🚧 stub)
+    description: MARKET-FR-001..005 (stub)
   - name: Marketplace
-    description: MARKET-FR-006..013 (🚧 stub)
+    description: MARKET-FR-006..013 (stub)
   - name: Tickets
-    description: TICKET-FR-001..012 (🚧 stub)
+    description: TICKET-FR-001..012 (stub)
   - name: Sales
-    description: SALES-FR-001..010 — Giai đoạn 2, stretch (🚧 stub)
+    description: SALES-FR-001..010 — Giai đoạn 2, stretch (stub)
 
 security:
   - bearerAuth: []
@@ -445,20 +446,20 @@ paths:
   /alerts:
     get:
       tags: [Alerts]
-      summary: 🚧 Danh sách cảnh báo (phân trang, filter)
+      summary: Danh sách cảnh báo (phân trang, filter)
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /alerts/{id}:
     get:
       tags: [Alerts]
-      summary: 🚧 Chi tiết cảnh báo
+      summary: Chi tiết cảnh báo
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /alerts/{id}/acknowledge:
     put:
       tags: [Alerts]
-      summary: 🚧 Xác nhận cảnh báo (ALERT-FR-009)
+      summary: Xác nhận cảnh báo (ALERT-FR-009)
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
@@ -470,21 +471,21 @@ paths:
   /analytics/bird-count/daily:
     get:
       tags: [Analytics]
-      summary: 🚧 Thống kê đếm chim hàng ngày
+      summary: Thống kê đếm chim hàng ngày
       parameters: [{ name: zoneId, in: query, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /analytics/bird-count/trends:
     get:
       tags: [Analytics]
-      summary: 🚧 Xu hướng đàn chim (VISION-FR-010)
+      summary: Xu hướng đàn chim (VISION-FR-010)
       parameters: [{ name: zoneId, in: query, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /analytics/correlation:
     get:
       tags: [Analytics]
-      summary: 🚧 Tương quan môi trường vs return rate
+      summary: Tương quan môi trường vs return rate
       parameters: [{ name: zoneId, in: query, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
@@ -492,7 +493,7 @@ paths:
   /harvests:
     post:
       tags: [Harvests]
-      summary: 🚧 Tạo Harvest Batch (auto-attach env/flock snapshot — MARKET-FR-001/002/003)
+      summary: Tạo Harvest Batch (auto-attach env/flock snapshot — MARKET-FR-001/002/003)
       requestBody:
         content:
           application/json:
@@ -503,34 +504,34 @@ paths:
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     get:
       tags: [Harvests]
-      summary: 🚧 Danh sách Harvest Batch của farm
+      summary: Danh sách Harvest Batch của farm
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /harvests/{id}:
     parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
     get:
       tags: [Harvests]
-      summary: 🚧 Chi tiết Harvest Batch
+      summary: Chi tiết Harvest Batch
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     put:
       tags: [Harvests]
-      summary: 🚧 Cập nhật Harvest Batch (chỉ khi DRAFT)
+      summary: Cập nhật Harvest Batch (chỉ khi DRAFT)
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     delete:
       tags: [Harvests]
-      summary: 🚧 Xóa mềm Harvest Batch
+      summary: Xóa mềm Harvest Batch
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   # ── MARKETPLACE (stub) ────────────────────────────────────────────────────
   /marketplace/listings:
     get:
       tags: [Marketplace]
-      summary: 🚧 Danh sách Listing công khai (filter, phân trang)
+      summary: Danh sách Listing công khai (filter, phân trang)
       security: []
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     post:
       tags: [Marketplace]
-      summary: 🚧 Tạo Nest Listing từ Harvest Batch
+      summary: Tạo Nest Listing từ Harvest Batch
       requestBody:
         content:
           application/json:
@@ -541,18 +542,18 @@ paths:
     parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
     get:
       tags: [Marketplace]
-      summary: 🚧 Chi tiết Listing + Traceability Card
+      summary: Chi tiết Listing + Traceability Card
       security: []
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     put:
       tags: [Marketplace]
-      summary: 🚧 Cập nhật Listing
+      summary: Cập nhật Listing
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /marketplace/trace/{traceCode}:
     get:
       tags: [Marketplace]
-      summary: 🚧 Tra cứu nguồn gốc lô yến qua Trace Code/QR
+      summary: Tra cứu nguồn gốc lô yến qua Trace Code/QR
       security: []
       parameters: [{ name: traceCode, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
@@ -561,7 +562,7 @@ paths:
     parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
     post:
       tags: [Marketplace]
-      summary: 🚧 Buyer gửi form liên hệ
+      summary: Buyer gửi form liên hệ
       security: []
       requestBody:
         content:
@@ -573,20 +574,20 @@ paths:
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     get:
       tags: [Marketplace]
-      summary: 🚧 Owner xem danh sách liên hệ
+      summary: Owner xem danh sách liên hệ
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /marketplace/listings/{id}/stats:
     get:
       tags: [Marketplace]
-      summary: 🚧 Thống kê lượt xem/liên hệ
+      summary: Thống kê lượt xem/liên hệ
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /marketplace/farms/{id}/profile:
     get:
       tags: [Marketplace]
-      summary: 🚧 Farm Profile công khai
+      summary: Farm Profile công khai
       security: []
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
@@ -595,7 +596,7 @@ paths:
   /tickets:
     post:
       tags: [Tickets]
-      summary: 🚧 Farm Owner tạo ticket báo lỗi thủ công
+      summary: Farm Owner tạo ticket báo lỗi thủ công
       requestBody:
         content:
           application/json:
@@ -603,26 +604,26 @@ paths:
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     get:
       tags: [Tickets]
-      summary: 🚧 Danh sách ticket (filter farm/status/priority/assignee)
+      summary: Danh sách ticket (filter farm/status/priority/assignee)
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /tickets/kpi:
     get:
       tags: [Tickets]
-      summary: 🚧 Dashboard KPI xử lý ticket theo Technician — chỉ ADMIN
+      summary: Dashboard KPI xử lý ticket theo Technician — chỉ ADMIN
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /tickets/{id}:
     get:
       tags: [Tickets]
-      summary: 🚧 Chi tiết ticket + lịch sử ghi chú
+      summary: Chi tiết ticket + lịch sử ghi chú
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /tickets/{id}/status:
     put:
       tags: [Tickets]
-      summary: 🚧 Technician cập nhật trạng thái ticket
+      summary: Technician cập nhật trạng thái ticket
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
@@ -633,7 +634,7 @@ paths:
   /tickets/{id}/notes:
     post:
       tags: [Tickets]
-      summary: 🚧 Thêm ghi chú xử lý
+      summary: Thêm ghi chú xử lý
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
@@ -644,21 +645,21 @@ paths:
   /tickets/{id}/sat-checklist:
     put:
       tags: [Tickets]
-      summary: 🚧 Cập nhật checklist nghiệm thu lắp đặt (Technician)
+      summary: Cập nhật checklist nghiệm thu lắp đặt (Technician)
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /tickets/{id}/escalate:
     post:
       tags: [Tickets]
-      summary: 🚧 Escalate thủ công lên Admin
+      summary: Escalate thủ công lên Admin
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /tickets/{id}/rating:
     post:
       tags: [Tickets]
-      summary: 🚧 Farm Owner đánh giá mức hài lòng sau khi đóng ticket
+      summary: Farm Owner đánh giá mức hài lòng sau khi đóng ticket
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
@@ -670,12 +671,12 @@ paths:
   /products:
     get:
       tags: [Sales]
-      summary: 🚧 Danh sách Product công khai
+      summary: Danh sách Product công khai
       security: []
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     post:
       tags: [Sales]
-      summary: 🚧 Sales Staff tạo Product từ Harvest Batch
+      summary: Sales Staff tạo Product từ Harvest Batch
       requestBody:
         content:
           application/json:
@@ -685,21 +686,21 @@ paths:
   /products/{id}:
     put:
       tags: [Sales]
-      summary: 🚧 Chỉnh sửa Product
+      summary: Chỉnh sửa Product
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /products/{id}/submit-review:
     post:
       tags: [Sales]
-      summary: 🚧 Gửi Product cho Admin duyệt
+      summary: Gửi Product cho Admin duyệt
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /products/{id}/review:
     put:
       tags: [Sales]
-      summary: 🚧 Admin duyệt/từ chối Product
+      summary: Admin duyệt/từ chối Product
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
@@ -710,14 +711,14 @@ paths:
   /inventory/{productId}:
     get:
       tags: [Sales]
-      summary: 🚧 Xem tồn kho hiện tại của 1 Product
+      summary: Xem tồn kho hiện tại của 1 Product
       parameters: [{ name: productId, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /orders:
     post:
       tags: [Sales]
-      summary: 🚧 Buyer tạo đơn hàng (hỗ trợ guest checkout — AUTH-FR-008)
+      summary: Buyer tạo đơn hàng (hỗ trợ guest checkout — AUTH-FR-008)
       security: []
       requestBody:
         content:
@@ -726,13 +727,13 @@ paths:
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
     get:
       tags: [Sales]
-      summary: 🚧 Danh sách đơn hàng (Sales Staff/Admin)
+      summary: Danh sách đơn hàng (Sales Staff/Admin)
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /orders/{orderCode}:
     get:
       tags: [Sales]
-      summary: 🚧 Tra cứu đơn hàng theo mã (guest hoặc JWT)
+      summary: Tra cứu đơn hàng theo mã (guest hoặc JWT)
       security: []
       parameters: [{ name: orderCode, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
@@ -740,14 +741,14 @@ paths:
   /orders/{id}/confirm:
     put:
       tags: [Sales]
-      summary: 🚧 Sales Staff xác nhận đơn (kiểm tra tồn kho)
+      summary: Sales Staff xác nhận đơn (kiểm tra tồn kho)
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /orders/{id}/status:
     put:
       tags: [Sales]
-      summary: 🚧 Cập nhật trạng thái đơn (PACKED/SHIPPING/DELIVERED)
+      summary: Cập nhật trạng thái đơn (PACKED/SHIPPING/DELIVERED)
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
@@ -758,7 +759,7 @@ paths:
   /orders/{id}/return-requests:
     post:
       tags: [Sales]
-      summary: 🚧 Buyer/Sales Staff tạo yêu cầu đổi trả
+      summary: Buyer/Sales Staff tạo yêu cầu đổi trả
       security: []
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -770,21 +771,21 @@ paths:
   /return-requests/{id}/verify:
     put:
       tags: [Sales]
-      summary: 🚧 Sales Staff xác minh tình trạng hàng hoàn
+      summary: Sales Staff xác minh tình trạng hàng hoàn
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /return-requests/{id}/resolve:
     put:
       tags: [Sales]
-      summary: 🚧 Admin ra quyết định cuối (hoàn tiền/đổi hàng/từ chối)
+      summary: Admin ra quyết định cuối (hoàn tiền/đổi hàng/từ chối)
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
   /sales-reports:
     get:
       tags: [Sales]
-      summary: 🚧 Báo cáo doanh số theo Farm/khoảng thời gian
+      summary: Báo cáo doanh số theo Farm/khoảng thời gian
       responses: { '501': { $ref: '#/components/responses/NotImplemented' } }
 
 components:
@@ -808,7 +809,7 @@ components:
 
   responses:
     NotImplemented:
-      description: 🚧 Endpoint chưa được triển khai
+      description: Endpoint chưa được triển khai
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ApiError' }
