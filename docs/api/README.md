@@ -11,4 +11,4 @@ Hầu hết endpoint (trừ `/auth/*`, `/marketplace/*` public, `/orders` guest 
 - Chạy `npm run dev` trong `backend/` rồi mở `http://localhost:3000/api-docs`
 - Hoặc paste nội dung `api-spec.yaml` vào https://editor.swagger.io để xem offline
 
-Endpoint đánh dấu 🚧 trong summary là stub (501, chưa có logic thật) — xem `backend/README.md` mục "Module → phạm vi" để biết trạng thái từng module.
+Endpoint thuộc các tag ghi "(stub)" là stub (501, chưa có logic thật) — xem `backend/README.md` mục "Module → phạm vi" để biết trạng thái từng module.
