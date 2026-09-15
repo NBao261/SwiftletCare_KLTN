@@ -41,7 +41,11 @@
 
 // ── Timing ────────────────────────────────────────────────────────────────
 #define WATCHDOG_TIMEOUT_SEC 30
-#define SENSOR_INTERVAL_MS 10000 // 10 seconds (ENV-FR-002)
+// ⚠️ SRS ENV-FR-002 quy định 5-60s; đặt 1000ms theo yêu cầu thực tế của user để
+// dashboard cập nhật liên tục. Với RS485, mỗi Slave ID timeout ~1s (ModbusMaster
+// mặc định), nên khi còn cảm biến chưa đấu dây, chu kỳ đọc THỰC TẾ vẫn bị kéo dài
+// bởi số lần timeout đó (vd 4/5 cảm biến timeout ≈ 4s/chu kỳ) — không phải lỗi.
+#define SENSOR_INTERVAL_MS 1000
 #define PID_INTERVAL_MS 10000
 #define MQTT_HEARTBEAT_MS 30000    // 30 seconds (FARM-FR-005)
 #define MANUAL_OVERRIDE_MS 1800000 // 30 minutes (ENV-FR-018)

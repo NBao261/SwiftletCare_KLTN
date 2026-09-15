@@ -1,13 +1,19 @@
-﻿import { io, Socket } from 'socket.io-client'
+import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/store/authStore'
-import type { TelemetryUpdateEvent, RelayUpdateEvent, BirdCountUpdateEvent, AlertNewEvent } from '@/types'
+import type { TelemetryUpdateEvent, RelayUpdateEvent, BirdCountUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent } from '@/types'
+
+// Dev: '' = same-origin (localhost:5173) — vite.config.ts proxy '/socket.io' ->
+// http://localhost:3000 (ws:true) chuyển tiếp handshake. Production: set VITE_WS_URL
+// trỏ thẳng origin backend thật.
+const SOCKET_URL = import.meta.env.VITE_WS_URL || ''
 
 let socket: Socket | null = null
 
+/** Lazy-tạo 1 socket duy nhất cho cả app — connect/disconnect do useSocket() hook quản lý */
 export function getSocket(): Socket {
   if (!socket) {
     const token = useAuthStore.getState().accessToken
-    socket = io(import.meta.env.VITE_API_URL || '/', {
+    socket = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket'],
       autoConnect: false,
@@ -18,6 +24,10 @@ export function getSocket(): Socket {
 
 export function joinZone(zoneId: string) {
   getSocket().emit('JOIN_ZONE', { zoneId })
+}
+
+export function leaveZone(zoneId: string) {
+  getSocket().emit('LEAVE_ZONE', { zoneId })
 }
 
 export function onTelemetryUpdate(cb: (data: TelemetryUpdateEvent) => void) {
@@ -38,4 +48,9 @@ export function onBirdCountUpdate(cb: (data: BirdCountUpdateEvent) => void) {
 export function onAlertNew(cb: (data: AlertNewEvent) => void) {
   getSocket().on('ALERT_NEW', cb)
   return () => getSocket().off('ALERT_NEW', cb)
+}
+
+export function onDeviceStatusChange(cb: (data: DeviceStatusChangeEvent) => void) {
+  getSocket().on('DEVICE_STATUS_CHANGE', cb)
+  return () => getSocket().off('DEVICE_STATUS_CHANGE', cb)
 }

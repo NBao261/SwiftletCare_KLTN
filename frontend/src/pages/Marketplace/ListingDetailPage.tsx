@@ -1,13 +1,9 @@
-// Listing Detail Page (public, Traceability Card) – stub: implement in TASK-M4 sprint
-// SRS: MARKET-FR-009, see WORKPLAN.md
+// Listing Detail Page (public, Traceability Card) – stub: backend chưa có logic (501)
+// SRS: MARKET-FR-009
 import { useParams } from 'react-router-dom'
+import ComingSoon from '@/components/common/ComingSoon'
 
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>()
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-slate-100">Sản phẩm #{id}</h1>
-      <p className="text-slate-400 mt-2">Coming soon – see WORKPLAN.md</p>
-    </div>
-  )
+  return <ComingSoon title={`Sản phẩm #${id}`} />
 }

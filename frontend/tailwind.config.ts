@@ -1,39 +1,38 @@
-﻿import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss'
 
-// SwiftletCare Design System
-// SRS: UX-NFR-001, UX-NFR-004
+// SwiftletCare Design System — xem FE_Design_Swiftlet.md (nguồn sự thật duy nhất
+// cho màu sắc/bo góc/typography). CHỈ dùng 8 màu định nghĩa dưới đây, không phối
+// thêm màu ngoài bảng.
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Primary palette – teal/green for agriculture
-        primary: {
-          50:  '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-          950: '#042f2e',
-        },
-        // Severity colors
-        critical: '#ef4444',
-        high:     '#f97316',
-        medium:   '#eab308',
-        low:      '#22c55e',
+        white:         '#FFFFFF', // Nền mặc định toàn bộ màn hình & card / chữ trên nền tối
+        charcoal:      '#27231F', // Chữ chính / Nút primary / Track toggle ON
+        limeMist:      '#ECFFA9', // Accent duy nhất — Active card / Badge / Swipe thumb
+        graphite:      '#4E4A46', // Card xám đậm phụ / Track toggle OFF
+        warmGray:      '#878380', // Chữ phụ / Border opacity / Label caption
+        climateOrange: '#F0813A', // Cảnh báo vi khí hậu / trạng thái climate active
+        alertRed:      '#E13A3A', // Cảnh báo khẩn cấp / Live
+        insightPeach:  '#F5C89E', // Series phụ trên biểu đồ phân tích
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+        sans: ['Inter', 'Plus Jakarta Sans', 'ui-sans-serif', 'system-ui'],
+      },
+      borderRadius: {
+        xl:   '16px',
+        '2xl': '20px',
+        '3xl': '28px',
+        full: '999px',
+      },
+      boxShadow: {
+        card: '0 8px 24px rgba(39,35,31,0.06)',
+        dock: '0 12px 32px rgba(39,35,31,0.12)',
+        icon: '0 2px 8px rgba(39,35,31,0.06)',
       },
       animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in':    'fadeIn 0.3s ease-in-out',
+        'fade-in': 'fadeIn 0.2s ease-in-out',
       },
       keyframes: {
         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },

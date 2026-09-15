@@ -39,11 +39,13 @@ export interface User {
 export interface Farm {
   _id: string; name: string; address: string
   coordinates?: { lat: number; lng: number }
-  owner_id: string; members: Array<{ user_id: string; role: 'OPERATOR'; joined_at: string }>
+  owner_id: string
+  members: Array<{ user_id: string; is_primary: boolean; joined_at: string }>
+  is_deleted: boolean
   created_at: string
 }
 
-export interface House { _id: string; farm_id: string; name: string; floors: number }
+export interface House { _id: string; farm_id: string; name: string; floors: number; description?: string }
 export interface Zone {
   _id: string; house_id: string; name: string; floor: number
   thresholds: {
@@ -54,17 +56,29 @@ export interface Zone {
 }
 
 // Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation, IN4=heating
+export interface RelayStates { misting: boolean; speaker: boolean; ventilation: boolean; heating: boolean }
+export type RelayName = keyof RelayStates
+
 export interface SensorNode {
   _id: string; device_id: string; zone_id: string
-  firmware_version: string; last_heartbeat: string
-  status: DeviceStatus; rssi: number; control_mode: ControlMode
-  relay_states: { misting: boolean; speaker: boolean; ventilation: boolean; heating: boolean }
+  firmware_version: string; last_heartbeat?: string
+  status: DeviceStatus; rssi?: number; control_mode: ControlMode
+  relay_states: RelayStates
   override_expiry?: string
+  speaker_schedule: { enabled: boolean; windows: Array<{ start: string; end: string }> }
+  audio: { current_track: number; volume: number; playing: boolean; loop: boolean }
+  registered_at: string
+}
+
+export interface CameraNode {
+  _id: string; device_id: string; zone_id: string; rtsp_url?: string
+  status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string
 }
 
 export interface TelemetryRecord {
-  timestamp: string; temperature: number; humidity: number
-  light_lux: number; nh3_ppm: number; co2_ppm: number; sound_db: number; is_anomaly: boolean
+  _id?: string; node_id?: string; zone_id?: string
+  timestamp: string; temperature?: number; humidity?: number
+  light_lux?: number; nh3_ppm?: number; co2_ppm?: number; sound_db?: number; is_anomaly: boolean
 }
 
 // Module TICKET (§5.9, §8.2)
@@ -105,14 +119,27 @@ export interface BirdCountRecord {
   return_rate: number; confidence_avg: number
 }
 
+// ── API response envelope (§9.0) ───────────────────────────────────────────────
+export interface ApiResponse<T = unknown> {
+  success: boolean
+  data: T
+  meta?: { page?: number; limit?: number; total?: number }
+  error?: { code: string; message: string }
+}
+
 // ── WebSocket Event Payloads (§9.3) ───────────────────────────────────────────
 export interface TelemetryUpdateEvent {
   zoneId: string; temperature: number; humidity: number
-  light: number; co2: number; sound: number; timestamp: string
+  light: number; nh3: number; co2: number; sound: number
+  relayStates: RelayStates; controlMode: ControlMode; timestamp: string
 }
 
 export interface RelayUpdateEvent {
-  zoneId: string; relayName: string; state: boolean; mode: ControlMode
+  zoneId: string; relayName: RelayName; state: boolean; mode: ControlMode; overrideExpiry?: string
+}
+
+export interface DeviceStatusChangeEvent {
+  nodeId: string; status: DeviceStatus; timestamp: string
 }
 
 export interface BirdCountUpdateEvent {
