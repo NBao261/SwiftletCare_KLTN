@@ -10,6 +10,9 @@ import type { CurrentUser } from '@/services/farmService'
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
 type RelayName = typeof RELAY_NAMES[number]
 
+/** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
+export const OFFLINE_THRESHOLD_MS = 30_000
+
 /**
  * Kiểm tra quyền + trả về chain Zone→House→Farm của 1 zone — dùng để (a) xác
  * thực quyền sở hữu và (b) ghép topic MQTT `swiftletcare/{farmId}/{houseId}/
@@ -117,13 +120,7 @@ export async function listCameraNodes(zoneId?: string) {
   return CameraNode.find(filter).sort({ registered_at: -1 })
 }
 
-/**
- * FARM-FR-005 — gọi từ mqtt/handlers/heartbeatHandler.ts.
- * TODO (mở rộng sau): cần 1 job định kỳ (node-cron — đã có trong package.json
- * nhưng chưa dùng) quét các node có last_heartbeat quá cũ (>30s) để tự
- * chuyển status → OFFLINE, vì hệ thống hiện chỉ cập nhật ONLINE khi có
- * heartbeat tới, không tự phát hiện mất kết nối.
- */
+/** FARM-FR-005 — gọi từ mqtt/handlers/heartbeatHandler.ts. */
 export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong heartbeat payload')
 
@@ -141,6 +138,28 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
     emitDeviceStatusChange(String(node.zone_id), {
       nodeId: String(node._id),
       status: 'ONLINE',
+      timestamp: new Date().toISOString(),
+    })
+  }
+}
+
+/**
+ * FARM-FR-005 — gọi định kỳ từ jobs/deviceOfflineJob.ts (node-cron). `recordHeartbeat`
+ * chỉ chuyển node sang ONLINE khi có heartbeat tới; hàm này là chiều ngược lại —
+ * quét các node đang ONLINE nhưng last_heartbeat đã quá `OFFLINE_THRESHOLD_MS`
+ * (mất kết nối/mất nguồn) và tự chuyển sang OFFLINE, phát DEVICE_STATUS_CHANGE.
+ */
+export async function markStaleDevicesOffline(): Promise<void> {
+  const staleBefore = new Date(Date.now() - OFFLINE_THRESHOLD_MS)
+  const staleNodes = await SensorNode.find({ status: 'ONLINE', last_heartbeat: { $lt: staleBefore } })
+
+  for (const node of staleNodes) {
+    node.status = 'OFFLINE'
+    await node.save()
+
+    emitDeviceStatusChange(String(node.zone_id), {
+      nodeId: String(node._id),
+      status: 'OFFLINE',
       timestamp: new Date().toISOString(),
     })
   }

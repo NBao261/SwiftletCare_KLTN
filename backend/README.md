@@ -87,7 +87,7 @@ src/
 | FARM (farm/house/zone/member/sales-staff) | Đã code đầy đủ (`farmService.ts`) | |
 | Device (sensor/camera node, relay control) | Đã code đầy đủ (`deviceService.ts`) | Relay control publish MQTT thật — xem ghi chú topic bên dưới |
 | ENV/Telemetry (ingest MQTT, REST latest/history) | Đã code đầy đủ (`telemetryService.ts`) | |
-| Heartbeat, Relay status confirm (MQTT) | Đã code đầy đủ (`deviceService.ts`) | Chưa có job tự động OFFLINE khi mất heartbeat >30s — xem TODO trong code |
+| Heartbeat, Relay status confirm (MQTT) | Đã code đầy đủ (`deviceService.ts`) | Job `node-cron` mỗi 10s (`jobs/deviceOfflineJob.ts`) tự chuyển OFFLINE khi mất heartbeat >30s, phát `DEVICE_STATUS_CHANGE` |
 | ALERT, ANALYTICS, VISION (bird-count MQTT) | Scaffold (controller 501, handler log-only) | MVP — cần implement theo `SwiftletCare_TASK_DETAIL_Checklist.md` mục C |
 | TICKET | Scaffold (501) | MVP — §5.9 |
 | MARKET (harvest/marketplace) | Scaffold (501) | MVP (landing + form liên hệ) — §5.8 |

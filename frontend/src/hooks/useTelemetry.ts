@@ -1,15 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { telemetryApi } from '@/services/api'
 import { joinZone, leaveZone, onTelemetryUpdate } from '@/services/socket'
 import { useSocket } from './useSocket'
 import type { TelemetryUpdateEvent } from '@/types'
 
+/**
+ * Nếu không nhận thêm dữ liệu realtime trong khoảng này, coi badge "Live" là hết
+ * hạn (thiết bị có thể đã mất kết nối/mất nguồn) — độc lập với backend, vốn chỉ
+ * tự chuyển SensorNode.status sang OFFLINE sau 30s không có heartbeat (FARM-FR-005,
+ * xem deviceService.markStaleDevicesOffline). Đặt ngắn hơn để UI phản ứng nhanh hơn.
+ */
+const STALE_TIMEOUT_MS = 20_000
+
 /** useTelemetry – giá trị mới nhất qua REST, sau đó realtime qua Socket.io (ENV-FR-004/005) */
 export function useTelemetry(zoneId: string | undefined) {
   useSocket()
   const queryClient = useQueryClient()
   const [live, setLive] = useState<TelemetryUpdateEvent | null>(null)
+  const [isStale, setIsStale] = useState(false)
+  const lastEventAtRef = useRef<number | null>(null)
 
   const query = useQuery({
     queryKey: ['telemetry', 'latest', zoneId],
@@ -21,15 +31,25 @@ export function useTelemetry(zoneId: string | undefined) {
   useEffect(() => {
     if (!zoneId) return
     setLive(null)
+    setIsStale(false)
+    lastEventAtRef.current = null
     joinZone(zoneId)
     const off = onTelemetryUpdate(data => {
       if (data.zoneId !== zoneId) return
       setLive(data)
+      setIsStale(false)
+      lastEventAtRef.current = Date.now()
       void queryClient.invalidateQueries({ queryKey: ['telemetry', 'latest', zoneId] })
     })
+    const staleCheck = setInterval(() => {
+      if (lastEventAtRef.current !== null && Date.now() - lastEventAtRef.current > STALE_TIMEOUT_MS) {
+        setIsStale(true)
+      }
+    }, 2000)
     return () => {
       leaveZone(zoneId)
       off()
+      clearInterval(staleCheck)
     }
   }, [zoneId, queryClient])
 
@@ -47,6 +67,7 @@ export function useTelemetry(zoneId: string | undefined) {
     },
     relayStates: live?.relayStates,
     controlMode: live?.controlMode,
-    isLive: !!live,
+    isLive: !!live && !isStale,
+    hasEverReceived: !!live,
   }
 }
