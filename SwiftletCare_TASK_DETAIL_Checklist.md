@@ -1,8 +1,10 @@
-# SwiftletCare — BẢNG TASK CHI TIẾT (Micro-task Checklist) v2
+# SwiftletCare — BẢNG TASK CHI TIẾT (Micro-task Checklist) v3
 
-**Bám theo:** SRS v1.11.0 + Components Guide v3.3 + Sensor Config Guide + Camera Guide Nhà Yến | **Phạm vi:** Giai đoạn 1 (MVP)
+**Bám theo:** SRS v1.12.0 + Components Guide v3.3 + Sensor Config Guide + Camera Guide Nhà Yến | **Phạm vi:** Giai đoạn 1 (MVP)
 
 > **[v2 cập nhật]** theo linh kiện thực tế đã mua: ESP32 NodeMCU 38 chân + đế mở rộng, **2 mạch Buck** (tách nguồn PAM8403), Domino TB1504, relay kích H/L (đặt mức High), DFPlayer + PAM8403 6W có volume, camera IR 940nm.
+>
+> **[v3 cập nhật — theo SRS v1.12.0]** Đổi mô hình onboarding thiết bị: **Technician thao tác qua Web Console** (không phải Farm Owner tự quét QR qua Mobile App như bản checklist cũ) — xem Flow 1/1b. Thêm hẳn 9 Flow mới (Flow 11→19: đăng ký/đăng nhập/quên mật khẩu, mời thành viên, điều khiển relay thủ công + auto-revert, offline-detection, OTA, mời Sales Staff, duyệt sản phẩm, cảnh báo tồn kho, quản lý tài khoản Admin) → mục A/C/D/E dưới đây đã bổ sung task tương ứng. Ticket thêm loại `INSTALLATION` (Flow 9b) đi kèm cơ chế tự động định tuyến giống ticket báo lỗi.
 >
 > **[Cập nhật]** Các mục `[x]` dưới đây đã được build và **verify trực tiếp** (build/test/demo E2E thật — ESP32 vật lý, backend chạy thật, MongoDB/MQTT thật) trong phiên làm việc gần nhất. Một số mục ghi chú thêm (*) là code đã hoàn chỉnh nhưng chưa demo E2E đầy đủ với phần cứng thật (ví dụ 4/5 cảm biến RS485 chưa đấu dây) — team vẫn nên tự code review theo đúng quy tắc DoD trước khi tin tưởng hoàn toàn.
 
@@ -27,7 +29,7 @@
 
 ## A1. Chuẩn bị & Cấu hình cảm biến (Sprint 1)
 
-- [ ] Đọc kỹ Components Guide v3.2 (mục 1-9) + Sensor Config Guide `[Guide]`
+- [ ] Đọc kỹ Components Guide v3.3 (mục 1-9) + Sensor Config Guide `[Guide]`
 - [ ] Chuẩn bị đồ nghề: VOM, mỏ hàn (nếu cần), dây jumper, thẻ microSD, cáp USB
 - [ ] Cài Arduino IDE + thư viện `ModbusMaster`, `DFRobotDFPlayerMini`
 - [x] Đấu thử ESP32 + module UART-RS485 V2 (GPIO17→TXD, GPIO16→RXD, VCC 5V, GND) `[Guide 5]`
@@ -67,14 +69,21 @@
 
 ## A4. Firmware MQTT & Onboarding (Sprint 2)
 
+> **[v3]** Onboarding đổi hẳn model: firmware KHÔNG còn decode QR (QR/secretKey được Technician quét trên Web Console, không phải trên thiết bị) — việc của firmware là **tự phát AP-mode khi chưa có cấu hình**, nhận {wifiSsid, wifiPassword, farmId, houseId, zoneId, mqttCredentials} qua 1 endpoint HTTP cục bộ, lưu NVS rồi mới kết nối WiFi thật (FARM-FR-003b, Flow 1 bước 5-8).
+
 - [x] Kết nối Wi-Fi (từ Router 4G) `[Guide 1]`
 - [x] Kết nối MQTT Broker over TLS (port 8883), QoS 1 `[7.2, SEC-NFR-001]` — ⚠️ lưu ý: PubSubClient chỉ publish được QoS 0, cần đổi lib nếu bắt buộc QoS 1 khi publish
 - [x] Publish telemetry topic `swiftletcare/{farmId}/{houseId}/{zoneId}/telemetry` `[ENV-FR-001, 9.2]`
 - [x] Publish heartbeat topic + relay status topic `[9.2]`
-- [ ] 🤝 Nhận QR onboarding: decode {deviceId, secretKey} → gọi API M3 `[Flow 1]`
-- [ ] Nhận Wi-Fi credential qua BLE/AP mode `[Flow 1]`
+- [ ] Boot-time check NVS: có cấu hình WiFi/farmId/houseId/zoneId chưa → có thì chạy bình thường, chưa thì vào AP-mode `[FARM-FR-003b, Flow 1 bước 5]`
+- [ ] Tự phát SoftAP `"SwiftletCare-Setup-<deviceId>"` khi chưa có cấu hình (dùng `WiFi.softAP()`, không cần thư viện ngoài) `[FARM-FR-003b]`
+- [ ] Serve trang cấu hình cục bộ tại `192.168.4.1` (ESPAsyncWebServer đã có sẵn cho OTA) nhận JSON `{wifiSsid, wifiPassword, farmId, houseId, zoneId, mqttUsername, mqttPassword}` từ Web Console `[Flow 1 bước 6]`
+- [ ] Lưu cấu hình nhận được vào NVS qua StorageManager, khởi động lại, tự kết nối WiFi thật + MQTT bằng credentials mới `[Flow 1 bước 7]`
+- [ ] Bad case: sai WiFi thật → tự quay lại AP-mode sau 60s để nhập lại, giữ nguyên farmId/houseId/zoneId/mqttCredentials đã nhận `[Flow 1 case 6a]`
+- [ ] Bad case: không kết nối được vào AP tạm → ESP32 tự quay lại AP-mode sau 5 phút không nhận cấu hình mới `[Flow 1 case 5a]`
 - [x] Gửi heartbeat đầu tiên → backend cập nhật ONLINE `[FARM-FR-005]`
 - [x] Nhận lệnh config/update từ cloud qua MQTT `[9.2]` (*)
+- [ ] 🤝 Test AP-mode E2E với Web Console thật của M3/M4 (Flow 1 bước 5-9)
 
 ## A5. Firmware Relay điều khiển (Sprint 3)
 
@@ -112,6 +121,9 @@
 ## A8. Firmware OTA & Hardware Test (Sprint 5)
 
 - [ ] OTA Update Task: nhận lệnh, tải & flash firmware mới qua MQTT `[7.2, TICKET-FR-008]` — đã có OTA nhưng qua HTTP (ElegantOTA `/update`), chưa phải qua MQTT như yêu cầu
+- [ ] Xác thực checksum file `.bin` trước khi flash, từ chối + rollback nếu sai `[Flow 15 case 4b]`
+- [ ] Test rollback tự động: cố tình flash firmware lỗi (boot loop) → xác nhận ESP32 tự quay lại firmware cũ ở lần reset kế tiếp, không bị "gạch" máy `[Flow 15 case 5a]`
+- [ ] Test tải OTA thất bại giữa chừng (rút mạng khi đang tải) → xác nhận vẫn chạy firmware cũ bình thường `[Flow 15 case 4a]`
 - [ ] Test Offline Resilience: ngắt mạng >24h, PID vẫn chạy `[13.4]`
 - [ ] Test Power Recovery: ngắt/cắm nguồn, reconnect ≤30s `[13.4, PERF-NFR-007]`
 - [ ] Test độ bền relay: bật/tắt 10.000 lần `[13.4]`
@@ -191,7 +203,7 @@
 ## C1. Auth & Phân quyền 5 role (Sprint 1)
 
 - [x] Khởi tạo repo Express + TypeScript `[7.4]`
-- [ ] Schema `users` với enum role: ADMIN/FARM_OWNER/TECHNICIAN/SALES_STAFF `[AUTH-FR-004, 8.2]` ⚠️ 5 role, bỏ OPERATOR — ⚠️ hiện vẫn giữ `OPERATOR` trong enum để tương thích ngược (chưa xóa hẳn theo yêu cầu SRS v1.7.0)
+- [ ] Schema `users` với enum role: ADMIN/FARM_OWNER/TECHNICIAN/SALES_STAFF `[AUTH-FR-004, 8.2]` ⚠️ 5 role, bỏ OPERATOR — ⚠️ hiện vẫn giữ `OPERATOR` trong enum để tương thích ngược (chưa xóa hẳn theo yêu cầu SRS v1.7.0) — **ưu tiên dọn trước khi thêm role mới**, kiểm tra không còn user nào role này trong DB rồi xoá khỏi enum + `devices.ts` route
 - [x] API `POST /auth/register` + OTP (email/phone) `[AUTH-FR-001]` — OTP hiện chỉ log console, chưa nối SMTP/Zalo thật
 - [x] API `POST /auth/login` (email/password) `[AUTH-FR-002]` — verify thật qua API
 - [ ] Tích hợp OAuth2 Google `[AUTH-FR-002]`
@@ -200,18 +212,39 @@
 - [x] API mời thành viên Farm Owner khác (Primary Owner) `[AUTH-FR-005]`
 - [ ] API mời Sales Staff / tạo Technician (Admin) `[AUTH-FR-005b, 005c]` — mời Sales Staff (Farm Owner) đã có; Admin tự tạo tài khoản Technician/Sales Staff trực tiếp CHƯA có API riêng
 - [ ] Guest checkout (không cần tài khoản) `[AUTH-FR-008]`
-- [ ] Audit log đăng nhập/thay đổi cấu hình `[AUTH-FR-007]`
+- [ ] Audit log đăng nhập/thay đổi cấu hình — schema `audit_logs` + middleware ghi log `[AUTH-FR-007, 8.2]`
 - [x] Envelope response chuẩn + pagination + mã lỗi HTTP `[9.0]`
+
+### C1b. Quên mật khẩu, Lời mời, Khoá/Xoá tài khoản `[mới v1.12.0, Flow 11/12/19]`
+
+- [ ] Schema `invitations` (farm_id, invited_email, invited_role, token, status, expires_at) `[AUTH-FR-010, 8.2]`
+- [ ] API `POST /auth/forgot-password` — sinh OTP/token TTL 15p, gửi email/SMS `[AUTH-FR-009]`
+- [ ] API `POST /auth/reset-password` — xác thực OTP, đổi mật khẩu, thu hồi mọi Refresh Token cũ `[AUTH-FR-009]`
+- [ ] API `POST /farms/:id/members` sinh `Invitation` (TTL 7 ngày) thay vì thêm thẳng vào `farms.members` `[AUTH-FR-010]`
+- [ ] API `GET/POST /invitations/:token`, `/accept`, `/decline` — bao gồm case email chưa có tài khoản dẫn thẳng vào đăng ký `[Flow 12]`
+- [ ] Job/cron chuyển `Invitation` quá 7 ngày → status EXPIRED `[AUTH-FR-010]`
+- [ ] API `DELETE /farms/:id/members/:userId` — chặn Primary Owner tự gỡ chính mình `[Flow 12 case 5a]`
+- [ ] Thêm field `deactivated_at/reason`, `password_reset_token_hash/expires_at` vào schema `users` `[8.2]`
+- [ ] API `GET /admin/users`, `PUT /admin/users/:id/status` (khoá/mở khoá kèm lý do bắt buộc) `[AUTH-FR-011]`
+- [ ] Middleware JWT kiểm tra `is_active` mỗi request (không chỉ lúc login) — chặn ngay cả khi Access Token còn hạn `[AUTH-FR-011]`
+- [ ] API `POST /auth/delete-request`, `GET/PUT /admin/delete-requests/:id/complete` `[AUTH-FR-012]`
+- [ ] Logic cascade khi xoá Primary Owner: còn thành viên khác → chuyển `owner_id`; hết thành viên → xoá mềm Farm `[AUTH-FR-012, Flow 19 bước 7a/7b]`
 
 ## C2. Farm & Device (Sprint 2)
 
 - [x] Schema `farms` (owner_id + members với is_primary), `houses`, `zones` `[8.2]`
 - [x] API CRUD Farm/House/Zone `[FARM-FR-001, 002]` — verify thật qua API
-- [ ] API đăng ký Sensor Node qua QR `[FARM-FR-003, Flow 1]` — API đăng ký có (`POST /devices/sensor-nodes/register`), nhưng chưa có luồng quét QR
-- [ ] Logic sinh mqttCredentials khi đăng ký device `[Flow 1]`
+- [ ] Giới hạn `POST /devices/sensor-nodes/register` chỉ role TECHNICIAN gọi được (hiện Farm Owner nào cũng gọi được, sai theo model mới) `[FARM-FR-003, RACI mục 4.4]`
+- [ ] Cấp sẵn cặp `{device_id, secretKey}` trước khi Technician nạp firmware (kho thiết bị nội bộ, đơn giản hoá cho KLTN có thể chỉ cần Admin nhập tay 1 danh sách) `[Flow 1 bước 3]`
+- [ ] Kiểm tra `secretKey` khớp trước khi tạo `SensorNode`, trả lỗi rõ ràng nếu sai/đã đăng ký Farm khác `[Flow 1 case 3a]`
+- [ ] Thêm status `PENDING` vào enum `sensor_nodes.status` (giữa lúc Technician tạo record và lúc thiết bị gửi heartbeat đầu tiên) `[8.2]`
+- [ ] Logic sinh mqttCredentials riêng cho từng thiết bị khi đăng ký `[Flow 1 bước 4]`
+- [ ] Endpoint HTTP cục bộ trên Web Console hiển thị hướng dẫn kết nối AP-mode + gửi JSON cấu hình xuống ESP32 qua `192.168.4.1` `[FARM-FR-003b, Flow 1 bước 5-6]`
+- [ ] Job/cảnh báo "Kích hoạt quá hạn" nếu quá 15 phút vẫn `PENDING` chưa nhận heartbeat `[Flow 1 case 8a]`
 - [ ] Setup EMQX broker + TLS + Device Certificate `[SEC-NFR-001/005]` — EMQX + TLS đã chạy (dev), chưa có Device Certificate (mTLS) riêng từng thiết bị
-- [x] MQTT subscriber heartbeat → status ONLINE/OFFLINE `[FARM-FR-005]` — heartbeat→ONLINE verify thật; node-cron 10s (`jobs/deviceOfflineJob.ts`) tự chuyển OFFLINE khi last_heartbeat > 30s, phát DEVICE_STATUS_CHANGE
+- [x] MQTT subscriber heartbeat → status ONLINE/OFFLINE `[FARM-FR-005]` — heartbeat→ONLINE verify thật; node-cron 10s (`jobs/deviceOfflineJob.ts`) tự chuyển OFFLINE khi last_heartbeat > 30s, phát DEVICE_STATUS_CHANGE — **đã verify khớp đúng Flow 14 trong SRS**
 - [x] API xem chi tiết device (firmware, uptime, RSSI) `[FARM-FR-006]`
+- [ ] API `DELETE`/thay thế SensorNode giữ lại lịch sử telemetry cũ `[FARM-FR-008]`
 
 ## C3. Telemetry & Realtime (Sprint 2)
 
@@ -227,7 +260,10 @@
 - [x] API cấu hình ngưỡng Zone (bỏ h2s_max/tvoc_max) `[ENV-FR-006]`
 - [x] API điều khiển relay → publish MQTT command `[ENV-FR-016]` — verify thật: API→MQTT publish đúng topic
 - [ ] API điều khiển loa ru (chọn bài/volume/lịch play/stop) `[ENV-FR-013b]`
-- [ ] Logic Manual Override auto-expire 30p (scheduler) `[ENV-FR-018]` — field `override_expiry` được set, nhưng chưa có job backend tự trả về AUTO khi hết hạn (mới có phía firmware)
+- [ ] Logic Manual Override auto-expire 30p (scheduler) `[ENV-FR-018]` — field `override_expiry` được set, nhưng chưa có job backend tự trả về AUTO khi hết hạn (mới có phía firmware) — **cần làm giống mẫu `deviceOfflineJob.ts` (node-cron) đã có, xem Flow 13 bước 6**
+- [ ] Idempotent: bấm lại nút cùng trạng thái để gia hạn `override_expiry` thêm 30p thay vì lỗi `[Flow 13 case 4a]`
+- [ ] Hiển thị trạng thái "Đang chờ xác nhận từ thiết bị" tách biệt "đã xác nhận" khi ESP32 chưa phản hồi `relay/status` `[Flow 13 case 2a/2b]`
+- [ ] Xếp hàng lệnh trả về AUTO nếu ESP32 đang mất kết nối lúc hết hạn override, áp dụng ngay khi kết nối lại `[Flow 13 case 6a]`
 - [ ] Lưu lịch sử override + thay đổi cấu hình `[ENV-FR-019, 009]` — lịch sử đổi ngưỡng (threshold_history) đã có; lịch sử override riêng biệt CHƯA có
 - [x] Event RELAY_UPDATE qua socket.io `[9.3]`
 
@@ -239,7 +275,7 @@
 - [ ] Setup Firebase FCM push `[ALERT-FR-002]`
 - [ ] Setup Zalo ZNS cho CRITICAL/HIGH `[ALERT-FR-003]`
 - [ ] API cấu hình kênh nhận + giờ im lặng `[ALERT-FR-005, 006]`
-- [ ] API alerts list + acknowledge + ghi chú `[ALERT-FR-007, 009]`
+- [ ] API alerts list + acknowledge + ghi chú `[ALERT-FR-007, 009]` — hỗ trợ ghi chú "Báo động giả" (false positive) tách biệt "Đã xử lý" `[Flow 4 case 9a]`
 - [ ] Event ALERT_NEW qua socket.io `[9.3]`
 
 ## C6. Vision Backend & Analytics (Sprint 4-6)
@@ -254,27 +290,36 @@
 ## C7. Ticket & SLA (Sprint 5)
 
 - [ ] Schema `tickets` (type/priority/status/sla/sat_checklist) `[8.2]` — model đã có, chưa có logic
-- [ ] API tạo ticket thủ công `[TICKET-FR-001]`
+- [ ] Thêm type `INSTALLATION` vào enum + field `scheduled_visit_at` (Farm Owner chọn thẳng lúc tạo, không qua bước liên hệ) `[TICKET-FR-001, 8.2, Flow 9b bước 1]`
+- [ ] API tạo ticket thủ công (báo lỗi + INSTALLATION) `[TICKET-FR-001]`
 - [ ] Logic tự tạo ticket từ Alert CRITICAL/HIGH chưa ack 15p `[TICKET-FR-002]`
-- [ ] Logic gán priority P1/P2/P3 tự động `[TICKET-FR-003]`
-- [ ] Ticket Router gán Technician theo assigned_regions `[TICKET-FR-004, 005]`
+- [ ] Logic gán priority P1/P2/P3 tự động (INSTALLATION/MAINTENANCE mặc định P3) `[TICKET-FR-003]`
+- [ ] Ticket Router gán Technician theo assigned_regions — áp dụng cho **mọi loại ticket kể cả INSTALLATION**, không cần Admin chọn tay `[TICKET-FR-004, 005, Flow 9b bước 3]`
+- [ ] Technician tự sửa `scheduled_visit_at`/yêu cầu gán lại nếu không sắp xếp được đúng giờ `[TICKET-FR-004b, Flow 9 case 4a, Flow 9b case 4a]`
 - [ ] Tính sla_response/resolve_due, job escalate khi vượt SLA `[TICKET-FR-006, 009, SLA-NFR-002]`
-- [ ] API cập nhật status, notes, sat-checklist, rating, KPI `[TICKET-FR-007~012]`
+- [ ] API cập nhật status, notes, sat-checklist, rating, KPI `[TICKET-FR-007~012]` — đủ 4 trạng thái `MỚI→ĐANG XỬ LÝ→CHỜ XÁC NHẬN HIỆN TRƯỜNG→ĐÃ ĐÓNG` cho cả 2 loại ticket
+- [ ] Chặn đóng ticket INSTALLATION nếu SAT checklist chưa đạt, giữ status ĐANG XỬ LÝ + đặt lại `scheduled_visit_at` `[TICKET-FR-010, Flow 9b case 6a]`
+- [ ] **API Admin toàn quyền can thiệp ticket bất kỳ** (đổi Technician/priority/ngày hẹn, đóng/huỷ) không giới hạn ở SLA breach `[TICKET-FR-005b]`
+- [ ] API Farm Owner tự huỷ ticket giữa chừng `[Flow 9 case 6c, Flow 9b case 4a]`
+- [ ] API Technician "Yêu cầu gán lại" ticket bị gán nhầm khu vực `[Flow 9 case 4a]`
 
 ## C8. Marketplace (Sprint 6)
 
 - [ ] Schema `harvest_batches`, `nest_listings`, `contact_inquiries` `[8.2]` — model đã có, chưa có logic
 - [ ] API tạo Harvest Batch + auto-attach env_snapshot (5 cảm biến, 7 ngày) `[MARKET-FR-001, 002]`
+- [ ] Bad case: Zone chưa đủ 7 ngày dữ liệu → đánh dấu `insufficient_data: true` thay vì hiện số liệu sai/rỗng `[Flow 7 case 3a]`
 - [ ] Auto-attach flock_snapshot (bird_count 30 ngày) `[MARKET-FR-003]`
 - [ ] Sinh trace_code UUID + QR `[MARKET-FR-004]`
+- [ ] Chặn sửa/xoá Harvest Batch sau khi đã đăng bán (status khác DRAFT), chỉ cho đổi status Listing `[MARKET-FR-005, Flow 7 case 5a]`
 - [ ] API Listing CRUD + public list/detail/trace/inquiry/profile `[MARKET-FR-006~013]`
+- [ ] Bad case: `GET /marketplace/trace/:traceCode` với mã không tồn tại → thông báo rõ ràng, không lộ lỗi hệ thống; thêm rate limit riêng cho endpoint public này `[Flow 7 case 11a, SEC-NFR-004]`
 
 ## C9. Security & Privacy (Sprint 6)
 
 - [x] Rate limiting ≤100 req/phút `[SEC-NFR-004]`
 - [x] Input validation toàn bộ endpoint `[12.4]` — express-validator trên các route đã code logic thật
 - [x] bcrypt cost≥12, JWT HS256 `[SEC-NFR-003, 12.1]`
-- [ ] Logic consent khi đăng ký + API xóa tài khoản `[PRIV-NFR-001, 003]`
+- [ ] Logic consent khi đăng ký + API xóa tài khoản `[PRIV-NFR-001, 003]` — API xoá tài khoản chi tiết xem C1b (AUTH-FR-012, Flow 19)
 
 ## C10. Hardening & Báo cáo (Sprint 7-8)
 
@@ -282,6 +327,12 @@
 - [ ] Test coverage ≥80% `[13.1]`
 - [ ] Viết phần Backend Architecture cho báo cáo
 - [ ] **(stretch)** Module SALES: products/inventory/orders (COD-only) `[SALES-FR-001~010]` — route/model/controller đã scaffold (501), chưa có logic thật
+- [ ] **(stretch)** API `PUT /products/:id/review` (duyệt/từ chối) + cho gửi lại `submit-review` sau REJECTED `[SALES-FR-002, Flow 17]`
+- [ ] **(stretch)** Admin chuyển APPROVED → REJECTED bất kỳ lúc nào nếu phát hiện vi phạm sau duyệt `[Flow 17 case 4d]`
+- [ ] **(stretch)** Thông báo Sales Staff khi tồn kho dưới ngưỡng tối thiểu; tự tắt khi nhập thêm Harvest Batch `[SALES-FR-004, Flow 18]`
+- [ ] **(stretch)** Soft-reserve atomic ở tầng DB, tránh race condition 2 Buyer cùng mua sản phẩm sắp hết `[SALES-NFR-001, Flow 10 case 4a]`
+- [ ] **(stretch)** Không tạo Order/soft-reserve nếu thanh toán online thất bại giữa chừng `[Flow 10 case 3b]`
+- [ ] **(stretch)** API mời Sales Staff dùng chung `Invitation` với Farm Owner (khác `invited_role`) `[Flow 16]`
 
 ---
 
@@ -293,7 +344,11 @@
 - [ ] Setup PWA plugin + Service Worker `[UX-NFR-002, 003]`
 - [ ] Màn Đăng ký (email/phone + OTP) `[AUTH-FR-001]`
 - [ ] Màn Đăng nhập (email/password + Google) `[AUTH-FR-002]`
+- [ ] Bad case UI: email trùng gợi ý "Quên mật khẩu", OTP sai/hết hạn, sai mật khẩu quá 5 lần khoá tạm 15p `[Flow 11 case 1a/2a/3a]`
+- [ ] Màn "Quên mật khẩu" (nhập email/SĐT → OTP → mật khẩu mới) `[AUTH-FR-009, Flow 11 bước 6-7]`
 - [ ] Axios + interceptor auto refresh token `[AUTH-FR-003]`
+- [ ] Xử lý Refresh Token hết hạn/bị thu hồi → buộc đăng xuất về màn login `[Flow 11 case 4a]`
+- [ ] Màn chấp nhận/từ chối lời mời (`/invitations/:token`) — có pre-fill email nếu dẫn sang đăng ký `[AUTH-FR-010, Flow 12]`
 - [ ] Layout Dashboard responsive `[UX-NFR-001]`
 - [ ] Setup i18n Việt/Anh `[UX-NFR-004]`
 
@@ -301,17 +356,24 @@
 
 - [x] Màn danh sách Farm + tạo Farm `[FARM-FR-001]`
 - [x] Màn House/Zone management `[FARM-FR-002]`
-- [ ] Màn onboarding thiết bị quét QR `[FARM-FR-003, UX-NFR-005]`
+- [ ] Màn "Web Console Onboarding" cho Technician (chỉ role TECHNICIAN thấy, không phải Farm Owner) — bước 1: chọn Farm → House → Zone đích `[FARM-FR-003, Flow 1 bước 2]`
+- [ ] Bước 2: quét/nhập Device ID + secretKey, hiển thị lỗi rõ ràng nếu sai/đã thuộc Farm khác `[Flow 1 bước 3, case 3a]`
+- [ ] Bước 3: hướng dẫn kết nối vào AP tạm của ESP32 + nút "Thử lại" nếu không thấy mạng `[FARM-FR-003b, Flow 1 bước 5, case 5a]`
+- [ ] Bước 4: form nhập WiFi thật của farm, gửi kèm mqttCredentials xuống thiết bị `[Flow 1 bước 6]`
+- [ ] Bước 5: polling/socket chờ status PENDING → ONLINE, hiển thị "Kích hoạt quá hạn" nếu >15 phút `[Flow 1 bước 8, case 8a]`
 - [x] Màn danh sách Device + trạng thái ONLINE/OFFLINE realtime `[FARM-FR-005, 006]` — StatusDot theo `SensorNode.status`, tự cập nhật qua DEVICE_STATUS_CHANGE (kể cả chiều OFFLINE từ deviceOfflineJob)
 - [x] Socket.io-client subscribe JOIN_ZONE `[9.3]`
+- [x] Badge "Live"/"Mất kết nối" tự chuyển sau 20s không nhận telemetry mới (độc lập với backend 30s) `[Flow 14 bước 6]` — đã code trong `useTelemetry.ts`, verify thật
 - [ ] Dashboard 5 chart realtime: nhiệt/ẩm/lux/NH3/CO2/dB `[ENV-FR-005]` ⚠️ hiện là SensorCard số liệu tức thời, chưa có biểu đồ theo thời gian; 5 cảm biến thật chưa đấu dây đủ
-- [ ] UI mời thành viên Farm Owner / Sales Staff `[AUTH-FR-005, 005b]`
+- [ ] UI mời thành viên Farm Owner / Sales Staff — dùng chung màn Invitation (D1), chỉ khác `invited_role` `[AUTH-FR-005, 005b, Flow 12]`
+- [ ] Màn danh sách thành viên Farm + nút gỡ thành viên (Primary Owner) `[Flow 12 bước 5]`
 
 ## D3. Điều khiển Relay & Loa ru UI (Sprint 3)
 
 - [ ] Màn cấu hình ngưỡng Zone (temp/humidity/light/nh3/co2) `[ENV-FR-006]` ⚠️ bỏ h2s/tvoc
 - [ ] UI bật/tắt relay phun sương/quạt thủ công + badge AUTO/MANUAL `[ENV-FR-016, 017]`
-- [ ] UI đếm ngược Manual Override 30p `[ENV-FR-018]`
+- [ ] UI đếm ngược Manual Override 30p + bấm lại để gia hạn thêm 30p `[ENV-FR-018, Flow 13 case 4a]`
+- [ ] Trạng thái "Đang chờ xác nhận từ thiết bị" khác màu với "đã xác nhận" khi chưa nhận `relay/status` `[Flow 13 case 2a/2b]`
 - [ ] UI điều khiển loa ru: chọn bài, volume slider, play/stop, cấu hình lịch `[ENV-FR-013b]`
 - [ ] Màn lịch sử override `[ENV-FR-019]`
 - [ ] Xử lý event RELAY_UPDATE realtime `[9.3]`
@@ -335,9 +397,13 @@
 
 ## D6. Ticket UI (Sprint 5)
 
-- [ ] Màn Farm Owner tạo ticket (chọn loại lỗi) `[TICKET-FR-001]`
+- [ ] Màn Farm Owner tạo ticket báo lỗi (chọn loại lỗi) `[TICKET-FR-001]`
+- [ ] Màn Farm Owner "Yêu cầu lắp đặt" — chọn ngày giờ hẹn cụ thể ngay lúc tạo (`scheduled_visit_at`), không có bước liên hệ `[TICKET-FR-001, Flow 9b bước 1]`
 - [ ] Màn danh sách + chi tiết ticket + timeline ghi chú `[TICKET-FR-007]`
-- [ ] UI Technician cập nhật status + checklist SAT `[TICKET-FR-007, 010]`
+- [ ] UI Technician cập nhật status + checklist SAT `[TICKET-FR-007, 010]` — chặn nút "Đóng ticket" nếu checklist chưa đạt `[Flow 9b case 6a]`
+- [ ] Nút Technician "Yêu cầu gán lại" (kèm lý do) `[Flow 9 case 4a]`
+- [ ] Nút Farm Owner "Huỷ yêu cầu" trước ngày hẹn `[Flow 9b case 4a]`
+- [ ] UI Admin can thiệp toàn quyền: đổi Technician/ngày hẹn/priority, đóng-huỷ bất kỳ ticket nào `[TICKET-FR-005b]`
 - [ ] UI đánh giá 1-5 sao + Dashboard KPI (Admin) `[TICKET-FR-011, 012]`
 
 ## D7. Marketplace UI (Sprint 6)
@@ -349,8 +415,18 @@
 - [ ] Traceability Card (biểu đồ nhiệt/ẩm 7 ngày, return rate) `[MARKET-FR-009]`
 - [ ] Form liên hệ Buyer + trang tra cứu Trace Code/QR `[MARKET-FR-010, 011]`
 - [ ] Consent screen đăng ký + chức năng xóa tài khoản `[PRIV-NFR-001, 003]`
+- [ ] **(stretch)** UI Admin duyệt/từ chối Product (kèm lý do) + Sales Staff sửa & gửi lại sau REJECTED `[SALES-FR-002, Flow 17]`
+- [ ] **(stretch)** Badge cảnh báo tồn kho thấp trên trang Product (Sales Staff + Farm Owner đều thấy) `[SALES-FR-004, Flow 18]`
 
-## D8. Polish & Báo cáo (Sprint 7-8)
+## D8. Quản trị Tài khoản (Admin) & OTA (Technician) `[mới v1.12.0]`
+
+- [ ] Trang Admin: danh sách tài khoản, filter theo role/trạng thái `[AUTH-FR-011]`
+- [ ] UI khoá/mở khoá tài khoản kèm ô nhập lý do bắt buộc `[AUTH-FR-011, Flow 19 bước 2]`
+- [ ] Thông báo "Tài khoản đã bị khoá" kèm lý do khi user cố đăng nhập `[Flow 19 bước 4]`
+- [ ] Trang Admin: danh sách yêu cầu xoá tài khoản + nút xác nhận hoàn tất `[AUTH-FR-012, Flow 19 bước 6-8]`
+- [ ] UI Technician "Đẩy OTA" — chọn thiết bị + phiên bản firmware, xem trạng thái tải/flash `[TICKET-FR-008, Flow 15]`
+
+## D9. Polish & Báo cáo (Sprint 7-8)
 
 - [ ] Lighthouse tuning: Perf≥80, PWA≥90 `[UX-NFR-007]`
 - [ ] Test responsive desktop/tablet/mobile `[UX-NFR-001]`
@@ -380,11 +456,19 @@
 ## E3. Integration Testing (Sprint 2-6)
 
 - [x] 🤝 Test MQTT E2E (ESP32→Broker→Backend→DB) `[13.2]` — verify thật với ESP32 vật lý
-- [ ] 🤝 Test onboarding QR flow `[Flow 1]`
+- [ ] 🤝 Test onboarding qua Web Console (Technician) + AP-mode WiFi thật `[Flow 1]`
+- [ ] Test bad case Flow 1: secretKey sai, AP-mode fail, sai WiFi thật, SAT checklist không đạt `[Flow 1 case 3a/5a/6a/case checklist]`
+- [x] Test offline-detection: rút nguồn ESP32 → StatusDot đỏ trong ≤30s, badge Live → "Mất kết nối" trong ≤20s, cắm lại → tự Online `[Flow 14]` — verify thật đã thực hiện trong buổi làm việc
 - [ ] 🤝 Test Manual Override + loa ru theo lịch `[13.2]`
+- [ ] Test override auto-expire 30p thật (không chỉ trên giấy) + gia hạn override `[Flow 13]`
+- [ ] Test đăng ký/đăng nhập/quên mật khẩu/refresh token đầy đủ bad case `[Flow 11]`
+- [ ] 🤝 Test mời thành viên Farm/Sales Staff — chấp nhận/từ chối/hết hạn `[Flow 12]`
+- [ ] 🤝 Test ticket INSTALLATION: tạo → tự động gán Technician → Web Console onboarding → SAT → đóng `[Flow 9b]`
+- [ ] Test Admin khoá/mở khoá tài khoản + JWT bị chặn ngay dù token còn hạn `[Flow 19]`
+- [ ] Test OTA + rollback khi firmware lỗi `[Flow 15]`
 - [ ] 🤝 Test Bird Count E2E `[13.2]`
 - [ ] 🤝 Test Alert Pipeline đa kênh `[13.2]`
-- [ ] 🤝 Test Flow 7 (Harvest→Listing→Trace) `[13.2]`
+- [ ] 🤝 Test Flow 7 (Harvest→Listing→Trace) + bad case Trace Code không tồn tại `[13.2, Flow 7]`
 
 ## E4. Performance Testing (Sprint 4, 7)
 
@@ -418,14 +502,18 @@
 > Các mốc 🤝 cần ≥2 người ngồi cùng nhau, không ai làm riêng được.
 
 - [x] **M1+M3** — Firmware publish MQTT ↔ Backend nhận & lưu (Sprint 2) `[13.2]` — verify thật: ESP32 → EMQX → backend → MongoDB
-- [ ] **M1+M3+M4** — Onboarding thiết bị end-to-end: quét QR → API → ESP32 kết nối → dashboard (Sprint 2) `[Flow 1]`
-- [ ] **M1+M3+M4** — Điều khiển relay/loa ru: bấm UI → API → MQTT → ESP32 phản hồi (Sprint 3) `[Flow 2]` — mới có API→MQTT (chưa có UI, chưa demo ESP32 phản hồi thật do Secrets.h ESP32 hiện chưa trỏ đúng farmId/houseId/zoneId thật)
+- [ ] **M1+M3+M4** — Onboarding thiết bị end-to-end qua Web Console: Technician chọn Zone → nhập secretKey → AP-mode WiFi → ESP32 kết nối → dashboard (Sprint 2) `[Flow 1]` — **đổi khỏi model "Farm Owner quét QR" cũ, xem SRS v1.12.0 §4.1**
+- [x] **M1+M3+M4** — Offline-detection: rút nguồn ESP32 → StatusDot + badge Live tự chuyển Offline không cần F5 (Sprint 2-3) `[Flow 14]` — verify thật, đã hoàn thành trong buổi làm việc
+- [ ] **M1+M3+M4** — Điều khiển relay/loa ru: bấm UI → API → MQTT → ESP32 phản hồi (Sprint 3) `[Flow 2, 13]` — mới có API→MQTT (chưa có UI, chưa demo ESP32 phản hồi thật do Secrets.h ESP32 hiện chưa trỏ đúng farmId/houseId/zoneId thật)
 - [ ] **M2+M3** — RPi publish bird-count ↔ Backend tính return rate (Sprint 4) `[Flow 3]`
 - [ ] **M2+M3** — Predator detection: RPi → S3 upload → Alert đa kênh (Sprint 5) `[Flow 4]`
-- [ ] **M1+M2** — Lắp Camera Node thật + onboarding (Sprint 5) `[Flow 1b]`
-- [ ] **M3+M4** — Ticket lifecycle: tạo → gán → xử lý → đóng (Sprint 5) `[Flow 9]`
+- [ ] **M1+M2** — Lắp Camera Node thật + onboarding qua Web Console (Sprint 5) `[Flow 1b]`
+- [ ] **M3+M4** — Ticket lifecycle báo lỗi: tạo → gán tự động → xử lý → đóng (Sprint 5) `[Flow 9]`
+- [ ] **M3+M4** — Ticket INSTALLATION: Farm Owner yêu cầu → Ticket Router tự gán Technician → onboarding Flow 1 → SAT → đóng (Sprint 5) `[Flow 9b]`
+- [ ] **M3+M4** — Đăng ký/đăng nhập/quên mật khẩu/mời thành viên end-to-end (Sprint 1-2) `[Flow 11, 12]`
+- [ ] **M3+M4** — Admin khoá/mở khoá + xử lý yêu cầu xoá tài khoản end-to-end (Sprint 6) `[Flow 19]`
 - [ ] **M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`
-- [ ] **Cả nhóm** — Master Flow demo tổng: giám sát + điều khiển + loa ru + cảnh báo + ticket (Sprint 8)
+- [ ] **Cả nhóm** — Master Flow demo tổng: onboarding + giám sát + điều khiển + loa ru + cảnh báo + ticket (báo lỗi & lắp đặt) + quản lý tài khoản (Sprint 8)
 
 ---
 
@@ -438,4 +526,4 @@
 
 ---
 
-_Bảng task chi tiết đi kèm WORKPLAN v2 + SRS v1.10.0 + Components Guide v3.2. Dùng file này để làm việc hàng ngày; dùng WORKPLAN v2 để nhìn tổng thể theo sprint._
+_Bảng task chi tiết v3 đi kèm WORKPLAN v2 + SRS v1.12.0 + Components Guide v3.3. Dùng file này để làm việc hàng ngày; dùng WORKPLAN v2 để nhìn tổng thể theo sprint._

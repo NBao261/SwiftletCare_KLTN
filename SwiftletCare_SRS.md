@@ -7,7 +7,7 @@
 | Trường thông tin        | Nội dung                            |
 | ----------------------- | ----------------------------------- |
 | **Tên dự án**           | SwiftletCare                        |
-| **Phiên bản SRS**       | 1.11.0                              |
+| **Phiên bản SRS**       | 1.12.0                              |
 | **Ngày tạo**            | 07/09/2026                          |
 | **Thời gian thực hiện** | Tháng 7/2026 – Tháng 12/2026 (FA26) |
 | **Chuyên ngành**        | Software Engineering (SE)           |
@@ -176,13 +176,13 @@ SwiftletCare bao gồm **5 sản phẩm đầu ra cụ thể**:
 
 | Actor             | Mô tả                                                                                                                                 | Quyền hạn                                                                                                                                                                                                            | Tài khoản được tạo bởi                                                                                 |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Farm Owner**    | Chủ nhà yến và nhân viên vận hành farm (1 vai trò gộp chung); mỗi Farm có 1 Primary Owner + có thể có thêm thành viên Farm Owner khác | Full access: quản lý farm/zone/thiết bị, xem dashboard, điều khiển thủ công, tạo/xử lý ticket báo lỗi, mời thêm Farm Owner khác hoặc Sales Staff, đăng bán yến. Primary Owner có thêm quyền: xóa farm, gỡ thành viên | **Primary Owner: tự đăng ký** (AUTH-FR-001); **thành viên khác: được Primary Owner mời** (AUTH-FR-005) |
-| **Technician**    | Nhân viên hỗ trợ kỹ thuật **phía công ty SwiftletCare** (không thuộc farm)                                                            | Lắp đặt/kích hoạt thiết bị (device binding), tiếp nhận & xử lý ticket theo SLA, bảo trì định kỳ, đẩy OTA firmware                                                                                                    | Administrator tạo, gán khu vực phụ trách                                                               |
+| **Farm Owner**    | Chủ nhà yến và nhân viên vận hành farm (1 vai trò gộp chung); mỗi Farm có 1 Primary Owner + có thể có thêm thành viên Farm Owner khác | Quản lý thông tin farm/house/zone (tạo, đổi tên, xóa mềm), **xem** dashboard thời gian thực của thiết bị đã được Technician lắp đặt & kích hoạt, **chỉnh thông số vận hành** (ngưỡng cảnh báo môi trường — ENV-FR-006, điều khiển relay thủ công — ENV-FR-016..018), tạo/xử lý ticket báo lỗi, mời thêm Farm Owner khác hoặc Sales Staff, đăng bán yến. Primary Owner có thêm quyền: xóa farm, gỡ thành viên. **Không tự đăng ký/gỡ bỏ/thay thế thiết bị vật lý** — việc này thuộc về Technician (mô hình giống thợ lắp mạng/camera: khách hàng chỉ dùng, không tự đấu nối) | **Primary Owner: tự đăng ký** (AUTH-FR-001); **thành viên khác: được Primary Owner mời** (AUTH-FR-005) |
+| **Technician**    | Nhân viên hỗ trợ kỹ thuật **phía công ty SwiftletCare** (không thuộc farm)                                                            | Lắp đặt phần cứng tại farm; **đăng ký/kích hoạt/gỡ bỏ/thay thế thiết bị vào đúng Farm→House→Zone qua Web Console Onboarding chuyên dụng** (bao gồm cấu hình WiFi thật cho thiết bị qua AP-mode ngay tại chỗ, không cần cắm USB nạp lại firmware mỗi lần lắp — FARM-FR-003/003b); tiếp nhận & xử lý ticket theo SLA, bảo trì định kỳ, đẩy OTA firmware                                                                                                    | Administrator tạo, gán khu vực phụ trách                                                               |
 | **Sales Staff**   | Nhân viên vận hành thương mại, quản lý 1 hoặc nhiều Farm                                                                              | Quản lý sản phẩm (chờ Admin duyệt), nhập sản lượng thu hoạch, quản lý tồn kho, xử lý đơn hàng & vận chuyển, xử lý đổi trả cấp Farm, xem báo cáo doanh số                                                             | Farm Owner mời **hoặc** Administrator tạo (farm liên kết/HTX)                                          |
 | **Buyer**         | Người mua yến, khách hàng tiềm năng/đối tác                                                                                           | Xem Marketplace công khai (không cần đăng nhập), xem truy xuất nguồn gốc, đặt hàng (guest hoặc có tài khoản), theo dõi đơn hàng, liên hệ Farm Owner                                                                  | Tự đăng ký hoặc **guest checkout** (không bắt buộc TK)                                                 |
 | **Administrator** | Quản trị nền tảng SwiftletCare                                                                                                        | Quản lý tài khoản toàn hệ thống, duyệt sản phẩm, cấu hình SLA/ngưỡng mặc định/hoa hồng, phân xử tranh chấp cấp cao, audit log                                                                                        | Tài khoản gốc hệ thống (seed/super-admin tạo)                                                          |
 
-> **Ghi chú quan trọng (giải quyết mâu thuẫn của các bản trước):** Chốt lại: **Farm Owner (Primary) luôn tự đăng ký phần mềm** (AUTH-FR-001/002); các thành viên Farm Owner khác được Primary Owner mời và có quyền vận hành ngang nhau (không phân quyền theo Zone trong phạm vi KLTN). Vai trò của **Technician chỉ là "kích hoạt/gán thiết bị"** (device binding) sau khi Farm đã có tài khoản Farm Owner — không phải người tạo tài khoản Farm Owner. Xem Flow 1/1b (mục 10) và Flow 8 (mục 10) để biết chi tiết 2 đường onboarding: tự phục vụ qua QR (UX-NFR-005) và có hỗ trợ Technician khi lắp đặt vật lý/khi self-onboarding thất bại.
+> **Ghi chú quan trọng (giải quyết mâu thuẫn của các bản trước):** Chốt lại: **Farm Owner (Primary) luôn tự đăng ký phần mềm** (AUTH-FR-001/002); các thành viên Farm Owner khác được Primary Owner mời và có quyền vận hành ngang nhau (không phân quyền theo Zone trong phạm vi KLTN). **[Cập nhật — mô hình "công ty vận hành, khách hàng chỉ dùng", giống lắp mạng/camera an ninh]** Việc **đăng ký/kích hoạt thiết bị là một luồng nghiệp vụ chính thức trên Web, chỉ do Technician thực hiện** (không còn đường tự phục vụ song song cho Farm Owner như bản trước) — Farm Owner không tự quét QR/tự cấu hình thiết bị, chỉ nhận bàn giao thiết bị đã hoạt động và thao tác trên dữ liệu/thông số sau đó. Lý do: (1) khớp đúng mô hình kinh doanh — công ty SwiftletCare bán sản phẩm + vận hành nền tảng, không bàn giao đứt quyền kiểm soát kỹ thuật cho khách hàng; (2) việc lắp đặt vật lý (đấu dây RS485) vốn dĩ đã cần Technician có mặt tại farm, nên để họ hoàn tất luôn bước kích hoạt phần mềm trong cùng 1 lượt ghé thăm là hợp lý và giảm rủi ro cấu hình sai. Xem Flow 1/1b (mục 10) đã viết lại theo luồng Technician Web Console.
 
 ### 4.2. Actor Hệ thống (Background Services)
 
@@ -253,15 +253,25 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 | Đăng ký/đăng nhập                                | R (Primary tự đăng ký; thành viên khác được mời) | R (tự đăng ký/guest) |    - (Admin tạo)     | - (Farm Owner mời/Admin tạo) |  - (tài khoản gốc)  |
 | Xem dữ liệu cảm biến nhà yến mình                |                        R                         |          -           | R (khi xử lý ticket) |              -               |     A (toàn bộ)     |
 | Điều khiển thiết bị (relay)                      |                        R                         |          -           | R (khắc phục sự cố)  |              -               |          -          |
-| Tạo/xử lý ticket lỗi                             |                     R (tạo)                      |          -           |      R (xử lý)       |              -               |    A (escalate)     |
-| Gán/kích hoạt thiết bị vào Farm                  |                        -                         |          -           |          R           |              -               |      A (duyệt)      |
+| Tạo/xử lý ticket lỗi ³                           |                     R (tạo)                      |          -           |      R (xử lý)       |              -               | A (escalate/can thiệp) |
+| Gán/kích hoạt thiết bị vào Farm ¹                |                        -                         |          -           |          R           |              -               |      I (audit)      |
+| Yêu cầu lắp đặt nhà yến mới ²                     |                     R (tạo)                      |          -           |   R (nhận tự động & thực hiện)      |              -               | I (audit/can thiệp) |
 | Tạo/sửa sản phẩm                                 |                        I                         |          -           |          -           |              R               |      A (duyệt)      |
 | Nhập sản lượng thu hoạch & tồn kho               |                        I                         |          -           |          -           |              R               |          I          |
 | Mua hàng, thanh toán                             |                        -                         |          R           |          -           |              -               |          -          |
 | Xác nhận đơn & cập nhật trạng thái vận chuyển    |                        I                         |     I (theo dõi)     |          -           |              R               |          -          |
-| Duyệt tài khoản/khóa tài khoản                   |                        -                         |          -           |          -           |              -               |         R/A         |
+| Duyệt tài khoản/khóa-mở khóa tài khoản (Flow 19) |                        I                         |          I           |          I           |              I               |         R/A         |
+| Yêu cầu xoá tài khoản (right to erasure, Flow 19)|                     R (yêu cầu)                  |      R (yêu cầu)     |      R (yêu cầu)     |           R (yêu cầu)        | A (xử lý ≤30 ngày)  |
+| Quên mật khẩu / quản lý phiên đăng nhập (Flow 11)|                        R                         |          R           |          R           |              R               |          -          |
+| Đẩy OTA firmware (Flow 15)                       |                        I                         |          -           |          R           |              -               |          I          |
 | Xử lý khiếu nại đơn hàng                         |                        I                         |   R (tạo yêu cầu)    |          -           | R (xác minh, xử lý cấp Farm) | A (phân xử cấp cao) |
 | Cấu hình ngưỡng cảnh báo mặc định, SLA, hoa hồng |                        I                         |          -           |          I           |              I               |         R/A         |
+
+> ¹ **Gán/kích hoạt thiết bị vào Farm** là việc của **Technician** (nhân viên công ty), không phải Farm Owner tự làm — giống mô hình lắp mạng/camera an ninh: kỹ thuật viên của nhà cung cấp dịch vụ tới lắp đặt phần cứng **và** kích hoạt kết nối luôn trong cùng 1 lượt, khách hàng (Farm Owner) chỉ xem và chỉnh thông số vận hành sau khi thiết bị đã hoạt động. Technician chỉ kích hoạt được thiết bị cho Farm nằm trong `assigned_regions` của mình (xem `users.assigned_regions`, AUTH-FR-005c, mục 8.2) — không phải toàn quyền trên mọi Farm. Admin không cần duyệt từng lần kích hoạt (tránh làm chậm lắp đặt hiện trường) nhưng được thông báo để audit. **[Sửa BA Review — lần 2]** Bản trước (do phiên trước hiểu nhầm là mô hình "bàn giao phần mềm cho Farm Owner tự vận hành") ghi Farm Owner = R tự đăng ký qua QR — không đúng với mô hình SaaS mà công ty SwiftletCare vẫn vận hành nền tảng và kiểm soát qua Technician/Admin (xem mô tả actor Technician/Admin, mục 4.1: cả hai đều "phía công ty SwiftletCare").
+
+> ² **Yêu cầu lắp đặt nhà yến mới** đi qua ticket loại `INSTALLATION` (TICKET-FR-001/004/004b, Flow 9b) — dùng chung cơ chế Ticket Router tự động như ticket báo lỗi: Technician phụ trách khu vực (`assigned_regions`) nhận ticket ngay, không cần Admin chọn tay cho từng ticket. Admin chỉ **I (audit)** trong vận hành bình thường vì việc "điều phối" thật sự đã xảy ra từ trước — lúc Admin gán khu vực phụ trách cho Technician (AUTH-FR-005c) — chứ không phải điều phối lặp lại mỗi khi có ticket mới. Xem thêm ghi chú ³ về quyền can thiệp khi cần.
+
+> ³ **Cả 2 dòng ticket ở trên (báo lỗi và lắp đặt)**: dù vận hành bình thường là tự động (Ticket Router) và Farm Owner/Technician tự xử lý, **Administrator luôn có toàn quyền can thiệp bất kỳ ticket nào, bất kỳ lúc nào** — xem, sửa, đổi Technician phụ trách, đổi ngày giờ hẹn, đổi priority, đóng/huỷ (TICKET-FR-005b). Đây không phải quyền có điều kiện (chỉ khi vượt SLA hay thiếu Technician) mà là quyền quản trị nền tảng luôn sẵn có, dùng khi có khiếu nại hoặc sai sót phát sinh.
 
 ---
 
@@ -271,16 +281,20 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 
 | ID           | Yêu cầu                                                                                                                                                                                                                                                                                                                                                    | Mức độ   |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| AUTH-FR-001  | Hệ thống cho phép đăng ký tài khoản bằng email/số điện thoại, xác thực OTP                                                                                                                                                                                                                                                                                 | Bắt buộc |
-| AUTH-FR-002  | Hỗ trợ đăng nhập bằng email/mật khẩu và OAuth2 (Google)                                                                                                                                                                                                                                                                                                    | Bắt buộc |
-| AUTH-FR-003  | Quản lý phiên đăng nhập bằng JWT Access Token (15 phút) + Refresh Token (30 ngày)                                                                                                                                                                                                                                                                          | Bắt buộc |
-| AUTH-FR-004  | Phân quyền theo Role: `ADMIN`, `FARM_OWNER`, `TECHNICIAN`, `SALES_STAFF` (enum thống nhất với schema `users.role`, xem mục 8.2; `BUYER` không có trong enum vì hỗ trợ guest checkout — xem SALES-FR-013). **[v1.7.0]** Bỏ role `OPERATOR` — đã gộp vào `FARM_OWNER`                                                                                        | Bắt buộc |
-| AUTH-FR-005  | Farm Owner (Primary — người tạo Farm) có thể mời thêm thành viên khác vào Farm với **cùng vai trò Farm Owner**; mọi thành viên Farm Owner của 1 Farm có quyền vận hành ngang nhau (xem `farms.members`, mục 8.2). **[v1.7.0]** Không còn phân quyền theo Zone riêng cho thành viên được mời — nếu cần trong tương lai, đây là điểm mở rộng ở Giai đoạn 2/3 | Bắt buộc |
-| AUTH-FR-005b | Farm Owner có thể mời Sales Staff vào Farm của mình (many-to-many); nếu Farm không có Sales Staff, Farm Owner tự động có toàn bộ quyền của Sales Staff trên Farm đó (permission-based, không ép buộc tạo tài khoản riêng)                                                                                                                                  | Bắt buộc |
-| AUTH-FR-005c | Administrator có thể tạo tài khoản Technician và gán khu vực địa lý phụ trách (`assigned_regions`); Administrator cũng có thể tạo tài khoản Sales Staff và gán vào 1+ Farm cho trường hợp farm liên kết/hợp tác xã                                                                                                                                         | Bắt buộc |
+| AUTH-FR-001  | Hệ thống cho phép đăng ký tài khoản bằng email/số điện thoại, xác thực OTP — luồng đầy đủ kể cả bad case xem Flow 11                                                                                                                                                                                                                                                                                | Bắt buộc |
+| AUTH-FR-002  | Hỗ trợ đăng nhập bằng email/mật khẩu và OAuth2 (Google) — xem Flow 11                                                                                                                                                                                                                                                                                    | Bắt buộc |
+| AUTH-FR-003  | Quản lý phiên đăng nhập bằng JWT Access Token (15 phút) + Refresh Token (30 ngày) — xem Flow 11                                                                                                                                                                                                                                                                          | Bắt buộc |
+| AUTH-FR-004  | Phân quyền theo Role: `ADMIN`, `FARM_OWNER`, `TECHNICIAN`, `SALES_STAFF` (enum thống nhất với schema `users.role`, xem mục 8.2; `BUYER` không có trong enum RBAC vì hỗ trợ guest checkout — xem SALES-FR-013). **[v1.7.0]** Bỏ role `OPERATOR` — đã gộp vào `FARM_OWNER`. **[Làm rõ v1.12.0]** Buyer đăng ký tài khoản qua OTP vẫn là 1 document trong `users` (để `orders.buyer_id` ref tới, phục vụ tra cứu lịch sử đơn hàng) nhưng có `role: null` — không tham gia RBAC vì không có endpoint nào dành riêng cho Buyer bị chặn bởi role middleware (Marketplace/checkout đều public hoặc theo `orders.buyer_id`, không theo role) | Bắt buộc |
+| AUTH-FR-005  | Farm Owner (Primary — người tạo Farm) có thể mời thêm thành viên khác vào Farm với **cùng vai trò Farm Owner**; mọi thành viên Farm Owner của 1 Farm có quyền vận hành ngang nhau (xem `farms.members`, mục 8.2). **[v1.7.0]** Không còn phân quyền theo Zone riêng cho thành viên được mời — nếu cần trong tương lai, đây là điểm mở rộng ở Giai đoạn 2/3. Luồng mời/chấp nhận/từ chối đầy đủ xem Flow 12 | Bắt buộc |
+| AUTH-FR-005b | Farm Owner có thể mời Sales Staff vào Farm của mình (many-to-many); nếu Farm không có Sales Staff, Farm Owner tự động có toàn bộ quyền của Sales Staff trên Farm đó (permission-based, không ép buộc tạo tài khoản riêng) — xem Flow 16                                                                                                                                  | Bắt buộc |
+| AUTH-FR-005c | Administrator có thể tạo tài khoản Technician và gán khu vực địa lý phụ trách (`assigned_regions`); Administrator cũng có thể tạo tài khoản Sales Staff và gán vào 1+ Farm cho trường hợp farm liên kết/hợp tác xã — xem Flow 16                                                                                                                                         | Bắt buộc |
 | AUTH-FR-006  | Hỗ trợ xác thực 2 yếu tố (2FA) bằng TOTP (Google Authenticator)                                                                                                                                                                                                                                                                                            | Tùy chọn |
 | AUTH-FR-007  | Ghi audit log mọi hành động đăng nhập, thay đổi cấu hình                                                                                                                                                                                                                                                                                                   | Bắt buộc |
 | AUTH-FR-008  | Buyer có thể đặt hàng dạng **guest checkout** (chỉ nhập tên, SĐT/email, địa chỉ giao hàng) mà không cần tạo tài khoản; nếu muốn theo dõi đơn hàng nhiều lần thì đăng ký bằng OTP số điện thoại                                                                                                                                                             | Bắt buộc |
+| AUTH-FR-009 **[mới v1.12.0]**  | Quên mật khẩu: user nhập email/SĐT → hệ thống gửi OTP hoặc link đặt lại (TTL 15 phút, dùng 1 lần) → xác thực → đặt mật khẩu mới. Sau khi đổi thành công, mọi Refresh Token cũ của user bị thu hồi (buộc đăng nhập lại trên các thiết bị khác) — xem Flow 11 | Bắt buộc |
+| AUTH-FR-010 **[mới v1.12.0]**  | Lời mời thành viên (Farm Owner mời Farm Owner khác — AUTH-FR-005, hoặc mời Sales Staff — AUTH-FR-005b) có TTL 7 ngày và trạng thái `PENDING → ACCEPTED / DECLINED / EXPIRED`; người được mời nhận thông báo (email/push) kèm link chấp nhận; nếu email chưa có tài khoản, chấp nhận lời mời dẫn thẳng vào luồng đăng ký (Flow 11) — xem Flow 12 | Bắt buộc |
+| AUTH-FR-011 **[mới v1.12.0]**  | Administrator có thể khoá (`is_active=false`) hoặc mở khoá tài khoản bất kỳ, kèm lý do bắt buộc (ghi vào audit log — AUTH-FR-007); tài khoản bị khoá vẫn còn dữ liệu nhưng mọi request JWT của user đó bị từ chối (401) kể cả token còn hạn — không chỉ chặn lúc login — xem Flow 19 | Bắt buộc |
+| AUTH-FR-012 **[mới v1.12.0]**  | User có thể yêu cầu xoá tài khoản và dữ liệu cá nhân (PRIV-NFR-003 — quyền được xoá theo Nghị định 13/2023/NĐ-CP); Administrator xử lý yêu cầu trong ≤ 30 ngày. Quy tắc cascade: nếu là Primary Owner của Farm còn thành viên khác → chuyển `owner_id` cho thành viên `joined_at` sớm nhất trước khi xoá; nếu Farm không còn thành viên nào khác → xóa mềm luôn Farm đó (không xoá dữ liệu telemetry lịch sử, chỉ ẩn khỏi giao diện, phục vụ nghĩa vụ lưu trữ hồ sơ) — xem Flow 19 | Bắt buộc |
 
 ### 5.2. Module FARM – Quản lý Trang trại & Thiết bị
 
@@ -288,12 +302,13 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 | ----------- | ------------------------------------------------------------------------------------------ | -------- |
 | FARM-FR-001 | Tạo, cập nhật, xóa mềm thông tin trang trại (Farm): tên, địa chỉ, tọa độ GPS, mô tả        | Bắt buộc |
 | FARM-FR-002 | Mỗi Farm có thể chứa nhiều House (tòa nhà yến), mỗi House nhiều Zone (tầng/khu vực)        | Bắt buộc |
-| FARM-FR-003 | Đăng ký thiết bị IoT Node (ESP32 Controller) bằng Device ID + QR Code Onboarding           | Bắt buộc |
-| FARM-FR-004 | Đăng ký AI Camera Node (Raspberry Pi) bằng Node ID + QR Code Onboarding                    | Bắt buộc |
-| FARM-FR-005 | Xem trạng thái online/offline của từng thiết bị theo thời gian thực (Last Heartbeat ≤ 30s) | Bắt buộc |
+| FARM-FR-003 | **Technician** đăng ký thiết bị IoT Node (ESP32 Controller) bằng Device ID + QR Code, qua **Web Console Onboarding chuyên dụng** (không phải Farm Owner tự làm — xem actor Technician, mục 4.1) | Bắt buộc |
+| FARM-FR-003b | Web Console Onboarding cho phép Technician cấu hình WiFi thật của farm cho thiết bị **tại chỗ qua AP-mode** (ESP32 tự phát mạng WiFi tạm khi chưa có cấu hình, Technician kết nối vào và điền form) — không cần cắm cáp USB nạp lại firmware mỗi lần lắp đặt một thiết bị mới | Bắt buộc |
+| FARM-FR-004 | **Technician** đăng ký AI Camera Node (Raspberry Pi) bằng Node ID + QR Code qua cùng Web Console Onboarding                    | Bắt buộc |
+| FARM-FR-005 | Xem trạng thái online/offline của từng thiết bị theo thời gian thực (Last Heartbeat ≤ 30s) — chi tiết cơ chế tự động phát hiện mất kết nối/mất nguồn xem Flow 14 | Bắt buộc |
 | FARM-FR-006 | Xem thông tin chi tiết thiết bị: firmware version, uptime, cường độ tín hiệu Wi-Fi (RSSI)  | Bắt buộc |
-| FARM-FR-007 | Gán thiết bị vào Zone cụ thể; một Zone có thể có nhiều node cảm biến và nhiều camera       | Bắt buộc |
-| FARM-FR-008 | Gỡ bỏ và thay thế thiết bị mà không mất lịch sử dữ liệu cũ                                 | Bắt buộc |
+| FARM-FR-007 | **Technician** gán thiết bị vào Zone cụ thể khi onboarding; một Zone có thể có nhiều node cảm biến và nhiều camera. Farm Owner chỉ xem, không tự gán/đổi Zone của thiết bị | Bắt buộc |
+| FARM-FR-008 | **Technician** gỡ bỏ và thay thế thiết bị mà không mất lịch sử dữ liệu cũ (qua Web Console, không phải Farm Owner)                                 | Bắt buộc |
 
 ### 5.3. Module ENV – Giám sát & Điều khiển Môi trường
 
@@ -334,7 +349,7 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 | ---------- | ------------------------------------------------------------------------------------------------ | -------- |
 | ENV-FR-016 | Farm Owner có thể bật/tắt thủ công từng relay qua Web/Mobile UI                                  | Bắt buộc |
 | ENV-FR-017 | Khi ở chế độ Manual Override, PID Control bị tạm dừng cho relay đó; hiển thị cảnh báo rõ ràng    | Bắt buộc |
-| ENV-FR-018 | Manual Override tự động hết hạn sau thời gian cấu hình (mặc định 30 phút), trả về chế độ tự động | Bắt buộc |
+| ENV-FR-018 | Manual Override tự động hết hạn sau thời gian cấu hình (mặc định 30 phút), trả về chế độ tự động — luồng đầy đủ kể cả bad case xem Flow 13 | Bắt buộc |
 | ENV-FR-019 | Lịch sử mọi lần override được ghi lại (user, thời gian, relay, trạng thái)                       | Bắt buộc |
 
 ### 5.4. Module VISION – AI Camera & Đếm Chim
@@ -460,19 +475,21 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 
 | ID            | Yêu cầu                                                                                                                                                                                                             | Mức độ   |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| TICKET-FR-001 | Farm Owner tạo ticket báo lỗi thủ công, chọn loại lỗi: `SENSOR_FAULT`, `RS485_BUS_FAILURE`, `ACTUATOR_FAILURE`, `NODE_OFFLINE`, `EDGE_AI_DEGRADED`, `POWER_OUTAGE`, `SPEAKER_FAILURE`, `PREDATOR_DETECTED`, `OTHER` | Bắt buộc |
+| TICKET-FR-001 | Farm Owner tạo ticket thủ công, chọn loại: nhóm **báo lỗi** (`SENSOR_FAULT`, `RS485_BUS_FAILURE`, `ACTUATOR_FAILURE`, `NODE_OFFLINE`, `EDGE_AI_DEGRADED`, `POWER_OUTAGE`, `SPEAKER_FAILURE`, `PREDATOR_DETECTED`, `OTHER`) hoặc nhóm **yêu cầu dịch vụ** (`INSTALLATION` — yêu cầu lắp đặt House/Zone/thiết bị mới, xem Flow 9b). Với ticket `INSTALLATION`, Farm Owner chọn luôn **ngày giờ hẹn mong muốn** (`scheduled_visit_at`) ngay lúc tạo — không cần thêm bước liên hệ qua lại để chốt lịch | Bắt buộc |
 | TICKET-FR-002 | Hệ thống tự động tạo ticket và liên kết với Alert tương ứng khi Alert Engine phát sinh cảnh báo CRITICAL/HIGH chưa được acknowledge trong 15 phút                                                                   | Bắt buộc |
-| TICKET-FR-003 | Mỗi ticket có mức ưu tiên P1/P2/P3, gán tự động theo loại lỗi (VD: `RS485_BUS_FAILURE`, `PREDATOR_DETECTED` → P1 mặc định) nhưng Technician có thể điều chỉnh thủ công kèm lý do                                    | Bắt buộc |
-| TICKET-FR-004 | Ticket Router (actor hệ thống, mục 4.2) tự động gán ticket cho Technician phụ trách khu vực địa lý của Farm (theo `assigned_regions`)                                                                               | Bắt buộc |
-| TICKET-FR-005 | Nếu không có Technician nào phù hợp khu vực hoặc Technician phụ trách đang quá tải (> N ticket mở), Ticket Router gán cho Technician dự phòng hoặc đưa vào hàng đợi chung                                           | Bắt buộc |
+| TICKET-FR-003 | Mỗi ticket có mức ưu tiên P1/P2/P3, gán tự động theo loại (VD: `RS485_BUS_FAILURE`, `PREDATOR_DETECTED` → P1 mặc định; `INSTALLATION`/`MAINTENANCE` → P3 mặc định vì không khẩn cấp) nhưng Technician/Admin có thể điều chỉnh thủ công kèm lý do                                    | Bắt buộc |
+| TICKET-FR-004 | Ticket Router (actor hệ thống, mục 4.2) tự động gán **mọi loại ticket** (kể cả `INSTALLATION`) cho Technician phụ trách khu vực địa lý của Farm, dựa theo `assigned_regions` mà **Administrator đã điều phối từ trước** (AUTH-FR-005c) — không cần Admin can thiệp thủ công theo từng ticket phát sinh | Bắt buộc |
+| TICKET-FR-004b | Với ticket loại `INSTALLATION`: `scheduled_visit_at` do **Farm Owner chọn sẵn lúc tạo ticket** (TICKET-FR-001), không phải Technician/Admin đặt sau. Sau khi Ticket Router tự động gán, Technician chỉ cần xác nhận tiếp nhận đúng ngày giờ đó (không có bước liên hệ qua lại để chốt lịch). Nếu Technician không sắp xếp được đúng giờ đã chọn, Technician tự sửa `scheduled_visit_at` kèm ghi chú lý do, hoặc báo Administrator can thiệp gán lại (xem TICKET-FR-005b). SLA phản hồi của `INSTALLATION` tính theo thời điểm Technician xác nhận tiếp nhận (VD ≤ 24h kể từ lúc tạo ticket), khác với SLA khắc phục sự cố của ticket báo lỗi (TICKET-FR-006) | Bắt buộc |
+| TICKET-FR-005 | Nếu không có Technician nào phù hợp khu vực hoặc Technician phụ trách đang quá tải (> N ticket mở), Ticket Router gán cho Technician dự phòng hoặc đưa vào hàng đợi chung | Bắt buộc |
+| TICKET-FR-005b | **Administrator có toàn quyền quản lý mọi ticket** (mọi loại, mọi trạng thái, bất kể do Ticket Router tự động gán hay ai tạo): xem chi tiết, sửa thông tin, đổi priority/`scheduled_visit_at`, gán lại (reassign) sang Technician khác, hoặc đóng/huỷ ticket. Đây là quyền can thiệp **luôn sẵn có** để xử lý ngoại lệ, khiếu nại, hoặc sai sót phát sinh — không giới hạn ở trường hợp vượt SLA (TICKET-FR-009) hay không tìm được Technician phù hợp (TICKET-FR-005) | Bắt buộc |
 
 #### 5.9.2. Xử lý & SLA
 
 | ID            | Yêu cầu                                                                                                                                                                                                                        | Mức độ   |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | TICKET-FR-006 | SLA cấu hình được bởi Administrator theo mức ưu tiên; mặc định đề xuất: **P1** phản hồi ≤ 30 phút / xử lý ≤ 4 giờ, **P2** phản hồi ≤ 4 giờ / xử lý ≤ 24 giờ, **P3** phản hồi ≤ 24 giờ / xử lý ≤ 72 giờ                         | Bắt buộc |
-| TICKET-FR-007 | Technician cập nhật trạng thái ticket theo luồng: `MỚI → ĐANG XỬ LÝ → CHỜ XÁC NHẬN HIỆN TRƯỜNG → ĐÃ ĐÓNG`; mỗi lần đổi trạng thái ghi log kèm ghi chú                                                                          | Bắt buộc |
-| TICKET-FR-008 | Technician có thể xử lý từ xa (restart thiết bị, đẩy OTA, cập nhật cấu hình qua MQTT command) trước khi quyết định cần đến hiện trường                                                                                         | Bắt buộc |
+| TICKET-FR-007 | Technician cập nhật trạng thái ticket theo đúng luồng đầy đủ cho **mọi loại ticket** (kể cả `INSTALLATION` — xem Flow 9b): `MỚI` (chờ tiếp nhận) → `ĐANG XỬ LÝ` (đã tiếp nhận, đang xử lý/chuẩn bị lắp đặt) → `CHỜ XÁC NHẬN HIỆN TRƯỜNG` (đã làm xong tại farm, chờ checklist/xác nhận) → `ĐÃ ĐÓNG`; mỗi lần đổi trạng thái ghi log kèm ghi chú | Bắt buộc |
+| TICKET-FR-008 | Technician có thể xử lý từ xa (restart thiết bị, đẩy OTA, cập nhật cấu hình qua MQTT command) trước khi quyết định cần đến hiện trường — luồng OTA đầy đủ kể cả rollback khi lỗi xem Flow 15 | Bắt buộc |
 | TICKET-FR-009 | Nếu ticket vượt SLA xử lý mà chưa đóng, hệ thống tự động **escalate**: gửi thông báo cho Administrator và Technician dự phòng                                                                                                  | Bắt buộc |
 | TICKET-FR-010 | Với ticket "Lắp đặt mới", Technician bắt buộc hoàn thành **checklist nghiệm thu (Site Acceptance Test)** trước khi đóng ticket: kiểm tra 5 địa chỉ Modbus phản hồi đúng, camera RTSP ổn định, kết nối 4G, relay đóng/ngắt đúng | Bắt buộc |
 | TICKET-FR-011 | Farm Owner đánh giá mức độ hài lòng (1–5 sao) sau khi ticket đóng                                                                                                                                                              | Tùy chọn |
@@ -490,10 +507,10 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 | ID           | Yêu cầu                                                                                                                                                      | Mức độ   |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | SALES-FR-001 | Sales Staff tạo **Product** từ 1 Harvest Batch (MARKET-FR-001): tên, mô tả, giá, hình ảnh, liên kết `env_snapshot`/`flock_snapshot` để hiển thị Traceability | Bắt buộc |
-| SALES-FR-002 | Product gửi Administrator duyệt trước khi hiển thị công khai trên Marketplace (trạng thái: `PENDING_REVIEW → APPROVED / REJECTED`)                           | Bắt buộc |
+| SALES-FR-002 | Product gửi Administrator duyệt trước khi hiển thị công khai trên Marketplace (trạng thái: `PENDING_REVIEW → APPROVED / REJECTED`) — luồng đầy đủ kể cả từ chối/gửi lại xem Flow 17                           | Bắt buộc |
 | SALES-FR-003 | Mỗi lần Sales Staff nhập đợt thu hoạch mới (liên kết Harvest Batch), số lượng tự động **cộng vào Inventory** theo loại sản phẩm                              | Bắt buộc |
-| SALES-FR-004 | Sales Staff xem tồn kho hiện tại theo từng sản phẩm; hệ thống tự cảnh báo khi tồn kho dưới ngưỡng tối thiểu cấu hình được                                    | Bắt buộc |
-| SALES-FR-005 | Khi tồn kho về 0, sản phẩm tự động chuyển trạng thái `OUT_OF_STOCK`, ẩn khỏi trang đặt hàng (vẫn hiển thị để xem thông tin)                                  | Bắt buộc |
+| SALES-FR-004 | Sales Staff xem tồn kho hiện tại theo từng sản phẩm; hệ thống tự cảnh báo khi tồn kho dưới ngưỡng tối thiểu cấu hình được — xem Flow 18                                    | Bắt buộc |
+| SALES-FR-005 | Khi tồn kho về 0, sản phẩm tự động chuyển trạng thái `OUT_OF_STOCK`, ẩn khỏi trang đặt hàng (vẫn hiển thị để xem thông tin) — xem Flow 18                                  | Bắt buộc |
 
 #### 5.10.2. Đơn hàng & Vận chuyển
 
@@ -731,6 +748,8 @@ Order (1) ──< (0..1) Shipment
 Order (1) ──< (0..N) ReturnRequest
 HarvestBatch (1) ──< (1) NestListing
 NestListing (1) ──< (N) ContactInquiry (from Buyer)
+Farm (1) ──< (N) Invitation                          # lời mời Farm Owner/Sales Staff, mới v1.12.0
+User (1) ──< (N) AuditLog (actor_id)                 # mới v1.12.0, AUTH-FR-007
 ```
 
 > `NestListing`/`ContactInquiry` (Giai đoạn 1, mục 5.8) vẫn giữ nguyên cho luồng "đăng tin + liên hệ" đơn giản. Các entity mới `Product/Inventory/Order/OrderItem/Shipment/ReturnRequest/Ticket` (Giai đoạn 2, mục 5.9/5.10) là **lớp mở rộng phía trên** — `Product` tham chiếu `harvest_batch_id` giống `NestListing` để tái sử dụng dữ liệu Traceability đã có, tránh trùng lặp mô hình.
@@ -746,7 +765,7 @@ NestListing (1) ──< (N) ContactInquiry (from Buyer)
   "phone": "string",
   "password_hash": "string (bcrypt, null nếu chỉ đăng nhập OTP)",
   "full_name": "string",
-  "role": "enum: ADMIN | FARM_OWNER | TECHNICIAN | SALES_STAFF",
+  "role": "enum: ADMIN | FARM_OWNER | TECHNICIAN | SALES_STAFF | null (null = Buyer đã đăng ký qua OTP theo SALES-FR-013 — vẫn là 1 document trong `users` để orders.buyer_id ref tới, nhưng không mang role RBAC nào vì Buyer không truy cập bất kỳ endpoint nào bị chặn bởi role middleware, mục 12.1)",
   "assigned_regions": [
     "string (chỉ dùng khi role=TECHNICIAN, VD: ['HCMC', 'Long An'])"
   ],
@@ -759,7 +778,43 @@ NestListing (1) ──< (N) ContactInquiry (from Buyer)
   },
   "created_at": "ISODate",
   "updated_at": "ISODate",
-  "is_active": "boolean"
+  "is_active": "boolean",
+  "deactivated_at": "ISODate (nullable — set khi Admin khoá tài khoản, AUTH-FR-011)",
+  "deactivated_reason": "string (nullable, bắt buộc nhập khi khoá)",
+  "password_reset_token_hash": "string (nullable, hash của OTP/token đặt lại mật khẩu, AUTH-FR-009)",
+  "password_reset_expires_at": "ISODate (nullable)"
+}
+```
+
+#### `invitations` — [mới v1.12.0, AUTH-FR-010]
+
+```json
+{
+  "_id": "ObjectId",
+  "farm_id": "ObjectId (ref: farms)",
+  "invited_email": "string",
+  "invited_role": "enum: FARM_OWNER | SALES_STAFF",
+  "invited_by": "ObjectId (ref: users)",
+  "token": "string (unique, dùng trong link mời)",
+  "status": "enum: PENDING | ACCEPTED | DECLINED | EXPIRED",
+  "expires_at": "ISODate (created_at + 7 ngày)",
+  "created_at": "ISODate",
+  "responded_at": "ISODate (nullable)"
+}
+```
+
+#### `audit_logs` — [mới v1.12.0, AUTH-FR-007]
+
+```json
+{
+  "_id": "ObjectId",
+  "actor_id": "ObjectId (ref: users, nullable nếu hệ thống tự thực hiện)",
+  "action": "string (VD: LOGIN, LOGIN_FAILED, PASSWORD_RESET, ACCOUNT_LOCKED, ACCOUNT_UNLOCKED, THRESHOLD_UPDATED, RELAY_OVERRIDE, TICKET_REASSIGNED, PRODUCT_APPROVED)",
+  "target_type": "string (VD: user, farm, sensor_node, ticket, product)",
+  "target_id": "ObjectId (nullable)",
+  "metadata": "object (chi tiết thay đổi, before/after nếu có)",
+  "ip_address": "string (nullable)",
+  "created_at": "ISODate"
 }
 ```
 
@@ -826,7 +881,7 @@ NestListing (1) ──< (N) ContactInquiry (from Buyer)
   "zone_id": "ObjectId (ref: zones)",
   "firmware_version": "string",
   "last_heartbeat": "ISODate",
-  "status": "enum: ONLINE | OFFLINE | ERROR",
+  "status": "enum: PENDING | ONLINE | OFFLINE | ERROR (PENDING = Technician đã tạo record qua Web Console Onboarding nhưng thiết bị chưa gửi heartbeat đầu tiên — xem Flow 1, mục 10)",
   "rssi": "number (dBm)",
   "relay_states": {
     "misting": "boolean (kênh IN1, GPIO25 — phun sương)",
@@ -998,6 +1053,7 @@ NestListing (1) ──< (N) ContactInquiry (from Buyer)
   "priority": "enum: P1 | P2 | P3",
   "status": "enum: NEW | IN_PROGRESS | AWAITING_FIELD_CONFIRMATION | CLOSED",
   "assigned_to": "ObjectId (ref: users, role=TECHNICIAN)",
+  "scheduled_visit_at": "ISODate (nullable — chỉ dùng cho type=INSTALLATION/MAINTENANCE; Farm Owner chọn ngay lúc tạo ticket (TICKET-FR-001), Technician chỉ xác nhận; Admin có thể sửa lại nếu cần điều phối lại, TICKET-FR-005b)",
   "sla_response_due_at": "ISODate",
   "sla_resolve_due_at": "ISODate",
   "is_sla_breached": "boolean",
@@ -1154,17 +1210,33 @@ NestListing (1) ──< (N) ContactInquiry (from Buyer)
 | POST   | `/auth/logout`     | Thu hồi Refresh Token        | JWT           |
 | POST   | `/auth/otp/send`   | Gửi OTP xác thực email/phone | Public        |
 | POST   | `/auth/otp/verify` | Xác thực OTP                 | Public        |
+| POST   | `/auth/forgot-password` | Gửi OTP/link đặt lại mật khẩu (AUTH-FR-009) | Public        |
+| POST   | `/auth/reset-password`  | Đặt mật khẩu mới bằng OTP/token nhận được   | Public        |
+| POST   | `/auth/delete-request`  | User tự yêu cầu xoá tài khoản (AUTH-FR-012) | JWT           |
 
 #### Farms
 
-| Method | Endpoint             | Mô tả                                            | Auth                |
-| ------ | -------------------- | ------------------------------------------------ | ------------------- |
-| GET    | `/farms`             | Danh sách farm của user                          | JWT                 |
-| POST   | `/farms`             | Tạo farm mới (người tạo trở thành Primary Owner) | JWT (OWNER)         |
-| GET    | `/farms/:id`         | Chi tiết farm                                    | JWT                 |
-| PUT    | `/farms/:id`         | Cập nhật farm                                    | JWT (OWNER)         |
-| DELETE | `/farms/:id`         | Xóa mềm farm                                     | JWT (Primary OWNER) |
-| POST   | `/farms/:id/members` | Mời thành viên Farm Owner khác                   | JWT (OWNER)         |
+| Method | Endpoint                    | Mô tả                                            | Auth                |
+| ------ | ---------------------------- | ------------------------------------------------ | ------------------- |
+| GET    | `/farms`                     | Danh sách farm của user                          | JWT                 |
+| POST   | `/farms`                     | Tạo farm mới (người tạo trở thành Primary Owner) | JWT (OWNER)         |
+| GET    | `/farms/:id`                 | Chi tiết farm                                    | JWT                 |
+| PUT    | `/farms/:id`                 | Cập nhật farm                                    | JWT (OWNER)         |
+| DELETE | `/farms/:id`                 | Xóa mềm farm                                     | JWT (Primary OWNER) |
+| POST   | `/farms/:id/members`         | Mời thành viên Farm Owner khác (tạo invitation, AUTH-FR-010) | JWT (OWNER)         |
+| DELETE | `/farms/:id/members/:userId` | Gỡ thành viên khỏi Farm                          | JWT (Primary OWNER) |
+| GET    | `/invitations/:token`        | Xem chi tiết lời mời trước khi chấp nhận         | Public              |
+| POST   | `/invitations/:token/accept` | Chấp nhận lời mời (Farm Owner hoặc Sales Staff)  | Public/JWT          |
+| POST   | `/invitations/:token/decline`| Từ chối lời mời                                  | Public              |
+
+#### Quản lý Tài khoản — [Admin, mới v1.12.0]
+
+| Method | Endpoint                | Mô tả                                                        | Auth         |
+| ------ | ------------------------ | ------------------------------------------------------------- | ------------ |
+| GET    | `/admin/users`           | Danh sách toàn bộ tài khoản (filter theo role/trạng thái)     | JWT (ADMIN)  |
+| PUT    | `/admin/users/:id/status`| Khoá/mở khoá tài khoản kèm lý do (AUTH-FR-011)                | JWT (ADMIN)  |
+| GET    | `/admin/delete-requests` | Danh sách yêu cầu xoá tài khoản đang chờ xử lý                | JWT (ADMIN)  |
+| PUT    | `/admin/delete-requests/:id/complete` | Xác nhận đã xoá xong dữ liệu theo AUTH-FR-012    | JWT (ADMIN)  |
 
 #### Devices
 
@@ -1279,43 +1351,92 @@ swiftletcare/{farmId}/{houseId}/{zoneId}/vision/heartbeat
 JOIN_ZONE: { zoneId }
 
 # Server emit
-TELEMETRY_UPDATE: { zoneId, temperature, humidity, light, nh3, h2s, co2, tvoc, sound, timestamp }
+TELEMETRY_UPDATE: { zoneId, temperature, humidity, light, nh3, co2, sound, timestamp }
 RELAY_UPDATE: { zoneId, relayName, state, mode }
 BIRD_COUNT_UPDATE: { zoneId, entryCount, exitCount, sessionType, timestamp }
 ALERT_NEW: { alertId, severity, type, title, message, snapshotUrl }
 DEVICE_STATUS_CHANGE: { nodeId, status, timestamp }
 ```
 
+> **[Sửa v1.12.0]** `TELEMETRY_UPDATE` trước đây còn sót `h2s`, `tvoc` — 2 trường này đã bị loại bỏ khỏi `ENV-FR-003`/schema `telemetry` từ v1.8.0 (không mua cảm biến rời) nhưng quên cập nhật ở đây, gây lệch giữa event payload và dữ liệu thật.
+
 ---
 
 ## 10. Luồng Xử lý Nghiệp vụ (Flows)
 
-### Flow 1: Onboarding Thiết bị (QR Code Provisioning)
+### Flow 1: Onboarding Thiết bị (Technician Web Console — FARM-FR-003/003b)
+
+> **[Cập nhật — mô hình "công ty vận hành, khách hàng chỉ dùng"]** Khác bản trước (Farm Owner tự quét QR qua Mobile App): đăng ký/kích hoạt thiết bị giờ là 1 luồng nghiệp vụ chính thức trên **Web, chỉ Technician thao tác** — giống kỹ thuật viên nhà mạng/lắp camera tới lắp đặt và kích hoạt kết nối trong cùng 1 lượt. Farm Owner không tham gia luồng này, chỉ thấy kết quả cuối (thiết bị xuất hiện trong Zone, có dữ liệu).
 
 ```
-1. Farm Owner mở Mobile App → chọn "Thêm thiết bị"
-2. App hiển thị màn hình quét QR
-3. Quét QR Code trên vỏ ESP32 → App decode: {deviceId, deviceType, secretKey}
-4. App gửi POST /devices/register với {deviceId, secretKey, zoneId}
-5. Backend tạo device record, trả về {mqttCredentials: {username, password, broker}}
-6. App hiển thị WiFi credential → Owner nhập vào ESP32 qua BLE hoặc AP mode
-7. ESP32 kết nối WiFi → kết nối MQTT Broker với credentials nhận được
-8. ESP32 gửi heartbeat đầu tiên → Backend cập nhật status ONLINE
-9. App hiển thị "Thiết bị đã kết nối thành công" ✓
+0. (Tiền đề) Farm Owner đã tạo Farm→House→Zone từ trước trên Web (FARM-FR-001/002);
+   nếu chưa có, Technician có thể tạo hộ khi tới lắp đặt (cùng quyền truy cập Farm
+   qua assigned_regions).
+1. Technician lắp đặt phần cứng tại farm: đấu dây RS485 (5 cảm biến), đấu relay 4 kênh,
+   cấp nguồn ESP32.
+2. Technician đăng nhập Web Dashboard (tài khoản Technician) → mở "Web Console
+   Onboarding" → chọn Farm → House → Zone đích.
+3. Quét/nhập Device ID + secretKey in trên vỏ ESP32 (được công ty cấp sẵn lúc chuẩn bị
+   thiết bị, không phải Farm Owner tự sinh ra) → Technician bấm "Bắt đầu kích hoạt".
+4. Backend xác thực {deviceId, secretKey}, tạo SensorNode record (trạng thái PENDING,
+   gán sẵn zone_id đã chọn ở bước 2), sinh mqttCredentials riêng cho thiết bị này.
+5. Vì ESP32 mới chưa có WiFi, Technician dùng điện thoại/laptop kết nối vào mạng AP
+   tạm do ESP32 tự phát ("SwiftletCare-Setup-<deviceId>") — Web Console hiển thị
+   hướng dẫn bước này.
+6. Technician mở trang cấu hình cục bộ tại 192.168.4.1 (do ESP32 tự phục vụ) → điền
+   WiFi thật của farm; Web Console (đang mở song song trên mạng chính) đẩy kèm
+   {farmId, houseId, zoneId, mqttCredentials} xuống thiết bị qua cùng kết nối AP.
+7. ESP32 lưu cấu hình vào NVS, khởi động lại, tự kết nối WiFi thật + MQTT Broker
+   bằng mqttCredentials nhận được.
+8. ESP32 gửi heartbeat đầu tiên → Backend cập nhật SensorNode status: PENDING → ONLINE.
+9. Web Console hiển thị "Thiết bị đã kết nối thành công" → Technician xác nhận bàn giao.
+10. Farm Owner đăng nhập Web Dashboard, thấy thiết bị mới đã có dữ liệu trong đúng Zone —
+    không cần thao tác gì thêm.
+
+--- Trường hợp lỗi/ngoại lệ ---
+3a. secretKey sai hoặc deviceId đã được đăng ký cho Farm khác trước đó → Web Console
+    báo lỗi rõ ràng ("Mã kích hoạt không đúng" / "Thiết bị đã thuộc về Farm khác"),
+    không tạo SensorNode record, Technician kiểm tra lại nhãn dán trên vỏ máy
+5a. Technician không kết nối được vào AP tạm của ESP32 (tín hiệu yếu, ESP32 lỗi khi
+    boot vào chế độ AP) → SensorNode vẫn ở status PENDING → Web Console cho phép
+    "Thử lại" (ESP32 tự quay lại AP-mode nếu sau 5 phút không nhận được cấu hình
+    mới, không cần rút nguồn cắm lại thủ công)
+6a. Technician điền sai WiFi thật của farm (sai mật khẩu) → bước 7 thất bại, ESP32
+    không kết nối được WiFi thật → tự động quay lại AP-mode sau 60 giây để nhập lại,
+    KHÔNG mất cấu hình farmId/houseId/zoneId/mqttCredentials đã nhận trước đó
+7a. WiFi thật đúng nhưng MQTT Broker không kết nối được (broker down, sai
+    mqttCredentials do lỗi backend) → ESP32 vẫn giữ kết nối WiFi, tự retry MQTT mỗi
+    10s; nếu quá 5 phút chưa kết nối được, Web Console hiển thị cảnh báo cho
+    Technician biết cần kiểm tra phía backend/broker (không phải lỗi tại thiết bị)
+8a. Quá 15 phút kể từ bước 4 mà chưa nhận heartbeat đầu tiên (SensorNode vẫn PENDING)
+    → hệ thống tự đánh dấu ticket/record là "Kích hoạt quá hạn", Technician xem lại
+    toàn bộ các bước 5-7 tại hiện trường trước khi báo hỏng thiết bị
 ```
 
-### Flow 1b: Onboarding AI Camera Node (Raspberry Pi)
+### Flow 1b: Onboarding AI Camera Node (Raspberry Pi) — Technician thực hiện
 
 ```
-1. Farm Owner mở Web/Mobile App → "Thêm thiết bị" → chọn loại "AI Camera Node"
-2. App hiển thị màn hình quét QR dán trên vỏ Raspberry Pi (chứa {nodeId, secretKey})
-3. App gửi POST /api/v1/devices/camera-nodes/register {nodeId, secretKey, zoneId, rtspUrl}
+1. Technician lắp đặt Camera IP PoE + Raspberry Pi tại Zone, đấu nối PoE Switch.
+2. Technician mở Web Console Onboarding → chọn Farm → House → Zone → loại thiết bị
+   "AI Camera Node" → quét/nhập Node ID + secretKey (dán sẵn trên vỏ RPi).
+3. Web Console gửi POST /devices/camera-nodes/register {nodeId, secretKey, zoneId, rtspUrl}
 4. Backend tạo camera_node record, trả về {mqttCredentials, streamConfig}
-5. Kỹ thuật viên cấu hình RTSP URL của Camera IP PoE vào RPi (qua màn hình HDMI tạm thời hoặc SSH)
+5. Technician cấu hình RTSP URL của Camera IP PoE vào RPi (qua màn hình HDMI tạm thời
+   hoặc SSH) và nhập WiFi/LAN nếu cần
 6. RPi khởi động service AI (PM2) → kết nối MQTT Broker → publish heartbeat đầu tiên
 7. RPi chạy self-test: đọc thử 10 frame từ RTSP, xác nhận FPS ≥ 25 trước khi báo ONLINE
-8. Backend cập nhật status ONLINE → App hiển thị "Camera đã kết nối thành công" kèm ảnh preview 1 frame
-9. Nếu self-test thất bại (FPS thấp hoặc RTSP timeout) → App hiển thị lỗi cụ thể và gợi ý khắc phục (kiểm tra dây LAN, nguồn PoE)
+8. Backend cập nhật status ONLINE → Web Console hiển thị "Camera đã kết nối thành công"
+   kèm ảnh preview 1 frame → Technician xác nhận bàn giao
+9. Nếu self-test thất bại (FPS thấp hoặc RTSP timeout) → Web Console hiển thị lỗi cụ thể
+   và gợi ý khắc phục (kiểm tra dây LAN, nguồn PoE) ngay tại hiện trường
+
+--- Trường hợp lỗi/ngoại lệ ---
+3a. secretKey sai hoặc nodeId đã đăng ký cho Farm khác → giống Flow 1 bước 3a, không
+    tạo camera_node record
+9a. Self-test thất bại lặp lại > 3 lần liên tiếp (đã kiểm tra dây/nguồn) → Technician
+    tạo Ticket loại `SENSOR_FAULT` ngay tại chỗ (không cần rời farm rồi Farm Owner
+    phải tạo lại) để theo dõi lịch sử xử lý, nghi ngờ lỗi phần cứng Camera/RPi cần
+    đổi máy
 ```
 
 ### Flow 2: Closed-loop Environmental Control
@@ -1361,6 +1482,14 @@ DEVICE_STATUS_CHANGE: { nodeId, status, timestamp }
    - Zalo ZNS: Template "Cảnh báo khẩn: Thiên địch xâm nhập" + URL ảnh
 8. Dashboard alert badge: +1 CRITICAL
 9. Farm Owner nhận notification → mở app → xem ảnh → acknowledge + ghi chú "Đã xử lý"
+
+--- Trường hợp lỗi/ngoại lệ ---
+9a. Farm Owner xem ảnh snapshot và xác định đây là **false positive** (VD: bóng đổ
+    giống hình rắn) → acknowledge với ghi chú "Báo động giả" thay vì "Đã xử lý" —
+    dữ liệu này được giữ lại làm feedback cải thiện model AI ở Phase 3 (không có
+    vòng lặp tự động retrain trong phạm vi KLTN, chỉ lưu để nhóm xem xét thủ công)
+9b. Farm Owner không mở app trong 15 phút (CRITICAL chưa acknowledge) → hệ thống tự
+    tạo Ticket theo TICKET-FR-002, chuyển sang Flow 9 để Technician cũng được báo
 ```
 
 ### Flow 5: Alert khi Loa dẫn dụ Hỏng
@@ -1408,6 +1537,20 @@ DEVICE_STATUS_CHANGE: { nodeId, status, timestamp }
 10. Sau khi bán xong → Owner cập nhật Listing status: SOLD
 11. Buyer nhận sản phẩm → quét QR Code trên bao bì → GET /marketplace/trace/:traceCode
     → Hiển thị đầy đủ thông tin nguồn gốc lô yến đã mua
+
+--- Trường hợp lỗi/ngoại lệ ---
+3a. Zone chưa đủ 7 ngày dữ liệu telemetry (farm mới, mới lắp thiết bị) → hệ thống
+    vẫn tạo Harvest Batch nhưng `env_snapshot` đánh dấu `insufficient_data: true`,
+    hiển thị rõ trên Traceability Card ("Chưa đủ dữ liệu môi trường lịch sử") thay
+    vì hiện số liệu sai lệch hoặc rỗng gây hiểu nhầm
+5a. Owner sửa/xoá Harvest Batch sau khi đã "Đăng bán" (status khác DRAFT) → hệ thống
+    từ chối theo MARKET-FR-005, chỉ cho cập nhật trạng thái Listing (AVAILABLE/
+    SOLD/HIDDEN), không cho sửa lại env_snapshot/flock_snapshot đã gắn — đảm bảo
+    tính toàn vẹn dữ liệu truy xuất đã công bố
+11a. Buyer nhập/quét Trace Code không tồn tại hoặc sai định dạng → trả về thông báo
+    rõ ràng "Không tìm thấy lô yến với mã này, vui lòng kiểm tra lại" (không lộ chi
+    tiết lỗi hệ thống), tránh dùng để dò brute-force trace_code (thêm rate limit
+    theo SEC-NFR-004 cho riêng endpoint public này)
 ```
 
 ### Flow 8: Xử lý Sự cố Cảm biến RS485 & Cảnh báo Đa kênh (Sensor-to-Alert)
@@ -1437,8 +1580,77 @@ DEVICE_STATUS_CHANGE: { nodeId, status, timestamp }
 6b. Cần đến hiện trường → lên lịch hẹn với Farm Owner → sửa chữa/thay thế → chạy lại checklist SAT → status: CLOSED
 7. Trong suốt quá trình, nếu vượt sla_resolve_due_at mà chưa CLOSED → hệ thống tự động escalate (SLA-NFR-002):
    thông báo Administrator + gán thêm Technician dự phòng
+7b. Ngoài escalate tự động ở bước 7, Administrator có thể chủ động xem và can thiệp
+    sửa ticket này (đổi Technician, đổi priority, đóng/huỷ) bất kỳ lúc nào nếu phát
+    sinh vấn đề/khiếu nại, không cần đợi vượt SLA (TICKET-FR-005b)
 8. Farm Owner đánh giá mức độ hài lòng (1-5 sao) sau khi ticket đóng
 9. Administrator xem dashboard KPI: tỉ lệ đúng SLA theo từng Technician (TICKET-FR-012)
+
+--- Trường hợp lỗi/ngoại lệ ---
+4a. Technician bị gán nhầm (ticket ngoài `assigned_regions` do dữ liệu farm sai địa
+    chỉ, hoặc Technician đang nghỉ) → Technician bấm "Yêu cầu gán lại" kèm lý do →
+    ticket quay về hàng đợi, Ticket Router thử gán Technician dự phòng khác
+    (TICKET-FR-005); nếu vẫn không có ai phù hợp → escalate cho Admin
+5a. Sự cố tự hết trước khi Technician kịp xử lý (VD: mất điện tạm thời rồi có điện
+    lại, alert tự chuyển RESOLVED) → Technician xác nhận không cần can thiệp thêm →
+    status: CLOSED, ghi chú "Tự phục hồi, không cần sửa chữa"
+6c. Farm Owner tự huỷ ticket giữa chừng (đã tự khắc phục được, hoặc báo nhầm) →
+    status: CLOSED kèm ghi chú "Farm Owner tự đóng" — Technician đang xử lý (nếu đã
+    IN_PROGRESS) nhận thông báo dừng, không cần tới hiện trường nữa
+```
+
+### Flow 9b: Yêu cầu Lắp đặt Nhà Yến Mới (Farm Owner → Ticket Router → Technician)
+
+> Khác Flow 9 chỉ ở **loại ticket và SLA** (lên lịch hẹn thay vì khắc phục sự cố) — cơ chế định tuyến giống hệt nhau: Ticket Router tự động gán theo `assigned_regions`, không cần Admin can thiệp từng ticket, vì Admin **đã điều phối trước** ở bước gán khu vực phụ trách cho Technician (AUTH-FR-005c) — không phải điều phối lại mỗi khi có ticket mới. Đây là luồng trả lời câu hỏi "farm owner có nhà yến mới thì sao" — Farm Owner không tự lắp/kích hoạt được (xem actor Farm Owner, mục 4.1), phải qua ticket này.
+
+```
+1. Farm Owner có nhà yến mới → mở Web Dashboard → "Yêu cầu lắp đặt" → tạo ticket
+   type=INSTALLATION: mô tả (VD: "Nhà yến mới, 1 tầng, cần 1 bộ ESP32 + 5 cảm biến"),
+   địa chỉ, số lượng House/Zone dự kiến, và chọn thẳng NGÀY GIỜ HẸN cụ thể
+   (`scheduled_visit_at`, TICKET-FR-001/004b) — không có bước liên hệ qua lại để
+   chốt lịch. (Nếu House/Zone thật trong hệ thống chưa có — có thể tạo cùng lúc
+   Technician xuống khảo sát, hoặc Farm Owner tự tạo House rỗng trước theo
+   FARM-FR-002, tuỳ chọn.)
+2. Ticket vào trạng thái `MỚI`, priority mặc định P3 (TICKET-FR-003)
+3. Ticket Router tự động gán ticket cho Technician phụ trách khu vực của Farm, theo
+   `assigned_regions` mà Admin đã thiết lập từ trước (TICKET-FR-004) — giống hệt cơ
+   chế Flow 9, không có bước Admin duyệt/chọn tay ở đây
+4. **Tiếp nhận:** Technician nhận thông báo được gán, thấy sẵn ngày giờ hẹn Farm
+   Owner đã chọn → bấm xác nhận tiếp nhận → status: `MỚI` → `ĐANG XỬ LÝ`. Nếu không
+   sắp xếp được đúng giờ đó, Technician tự sửa `scheduled_visit_at` kèm ghi chú, hoặc
+   báo Administrator can thiệp gán lại/đổi lịch (TICKET-FR-005b)
+5. **Đang xử lý:** đúng ngày giờ hẹn, Technician xuống farm, khảo sát/tạo House-Zone
+   còn thiếu (FARM-FR-001/002 — nếu Farm Owner chưa tạo trước), lắp đặt phần cứng,
+   rồi thực hiện Flow 1 (Onboarding Thiết bị qua Web Console) để kích hoạt thiết bị
+   vào đúng Zone — ticket vẫn ở status `ĐANG XỬ LÝ` trong suốt quá trình này
+6. **Chờ xác nhận hiện trường:** Technician hoàn thành checklist nghiệm thu SAT
+   (TICKET-FR-010: 5 địa chỉ Modbus, camera RTSP, kết nối 4G, relay đóng/ngắt) →
+   cập nhật ticket status: `ĐANG XỬ LÝ` → `CHỜ XÁC NHẬN HIỆN TRƯỜNG`
+7. **Đóng ticket:** sau khi checklist đạt, Technician đóng ticket → status:
+   `CHỜ XÁC NHẬN HIỆN TRƯỜNG` → `ĐÃ ĐÓNG` (mỗi bước đổi trạng thái đều ghi log kèm
+   ghi chú, TICKET-FR-007)
+8. Farm Owner nhận thông báo "Nhà yến mới đã sẵn sàng" → đăng nhập, thấy House/Zone
+   mới đã có dữ liệu thời gian thực, không cần thao tác kỹ thuật gì thêm
+9. Farm Owner đánh giá mức độ hài lòng (1-5 sao, TICKET-FR-011, tuỳ chọn)
+10. **Xuyên suốt các bước 2-9:** Administrator có thể xem và can thiệp sửa ticket này
+    bất kỳ lúc nào (đổi Technician, đổi ngày giờ, đổi priority, đóng/huỷ) nếu phát
+    sinh vấn đề — không phải chỉ giới hạn ở trường hợp ngoại lệ (TICKET-FR-005b).
+    Bình thường Admin không cần thao tác gì, chỉ xem KPI tổng hợp (TICKET-FR-012)
+
+--- Trường hợp lỗi/ngoại lệ ---
+4a. Farm Owner huỷ yêu cầu trước ngày hẹn (đổi ý, hoặc dời vô thời hạn) — có thể xảy
+    ra ở bất kỳ thời điểm nào từ bước 1 đến trước bước 5 → Farm Owner tự đổi status
+    ticket → `ĐÃ ĐÓNG` (huỷ), ghi chú lý do — Technician được gán nhận thông báo để
+    không xuống farm theo lịch cũ
+4b. Đến ngày hẹn nhưng Technician không tới được (ốm, sự cố cá nhân) và không kịp tự
+    đổi lịch → sau `sla_response_due_at` mà ticket vẫn `MỚI`/chưa xác nhận tiếp nhận
+    đúng hạn → tự động escalate cho Administrator (giống TICKET-FR-009) để gán
+    Technician dự phòng
+6a. SAT checklist KHÔNG đạt (VD: 1/5 địa chỉ Modbus không phản hồi, camera RTSP
+    chập chờn) → Technician KHÔNG được đóng ticket (TICKET-FR-010 chặn cứng) →
+    ghi chú lý do → status giữ `ĐANG XỬ LÝ`, đặt lại `scheduled_visit_at` cho lần
+    quay lại gần nhất (VD: chờ hàng thay thế) → Farm Owner nhận thông báo "Cần
+    thêm 1 buổi lắp đặt" kèm lý do
 ```
 
 ### Flow 10: Đặt hàng, Xử lý Đơn & Đổi trả (Buyer ↔ Sales Staff ↔ Admin) — [Giai đoạn 2]
@@ -1446,9 +1658,16 @@ DEVICE_STATUS_CHANGE: { nodeId, status, timestamp }
 ```
 1. Buyer xem Product (đã qua Admin duyệt) → xem Traceability Card → thêm giỏ hàng
 2. Buyer checkout: chọn guest checkout hoặc đăng nhập → nhập địa chỉ giao hàng → chọn COD/thanh toán online
-3. Nếu thanh toán online: chuyển cổng thanh toán → xác nhận kết quả → tạo Order (status: PENDING_CONFIRMATION)
+3. Nếu thanh toán online: chuyển cổng thanh toán → xác nhận kết quả
+   3a. Thanh toán thành công → tạo Order (status: PENDING_CONFIRMATION)
+   3b. Thanh toán thất bại/huỷ giữa chừng (hết phiên, sai OTP ngân hàng...) → KHÔNG
+       tạo Order, KHÔNG soft-reserve tồn kho, Buyer quay lại giỏ hàng thử lại
    Nếu COD: tạo Order ngay (status: PENDING_CONFIRMATION)
 4. Hệ thống soft-reserve số lượng tương ứng trong Inventory (SALES-FR-006)
+4a. Sản phẩm vừa hết hàng đúng lúc Buyer checkout (race condition 2 Buyer cùng mua
+    sản phẩm sắp hết) → thao tác soft-reserve atomic ở tầng DB (SALES-NFR-001) đảm
+    bảo chỉ 1 Buyer giữ được hàng; Buyer còn lại nhận lỗi rõ ràng "Sản phẩm vừa hết
+    hàng" ngay khi checkout, không tạo Order treo
 5. Order được gửi đến Sales Staff phụ trách Farm nguồn của sản phẩm
 6. Sales Staff kiểm tra tồn kho thật → xác nhận đơn (status: CONFIRMED)
    Nếu Farm đang có ticket P1/CRITICAL mở → hệ thống cảnh báo chéo, Sales Staff cân nhắc liên hệ Buyer trước khi xác nhận (SALES-FR-016)
@@ -1460,9 +1679,264 @@ DEVICE_STATUS_CHANGE: { nodeId, status, timestamp }
 11. Sales Staff xác nhận đủ/không đủ điều kiện đổi-trả → Admin ra quyết định cuối: hoàn tiền qua cổng thanh toán hoặc điều phối đổi hàng
 ```
 
+### Flow 11: Đăng ký, Đăng nhập & Quản lý Phiên (Farm Owner/Buyer) — [mới v1.12.0]
+
+```
+1. User mở Web → "Đăng ký" → nhập email/SĐT → hệ thống gửi OTP (AUTH-FR-001)
+2. User nhập OTP đúng trong thời hạn → tạo tài khoản (`role: FARM_OWNER` nếu đăng ký
+   từ Web Dashboard, hoặc `role: null` nếu là Buyer đăng ký từ Marketplace — AUTH-FR-004,
+   SALES-FR-013) → Farm Owner tự động trở thành Primary Owner nếu đây là Farm đầu
+   tiên họ tạo
+3. Đăng nhập bằng email/mật khẩu hoặc OAuth2 Google (AUTH-FR-002) → nhận Access
+   Token (15 phút) + Refresh Token (30 ngày, lưu ở httpOnly cookie)
+4. Access Token hết hạn giữa phiên làm việc → Frontend tự gọi POST /auth/refresh
+   bằng Refresh Token → nhận Access Token mới, User không cảm nhận được gián đoạn
+5. User bấm "Đăng xuất" → Refresh Token hiện tại bị thu hồi (POST /auth/logout)
+
+--- Trường hợp lỗi/ngoại lệ ---
+1a. Email/SĐT đã tồn tại → hệ thống báo lỗi, gợi ý "Quên mật khẩu" (Flow 11 bước
+    dưới) thay vì tạo trùng tài khoản
+2a. OTP sai quá 5 lần hoặc hết hạn (TTL mặc định 5 phút) → yêu cầu gửi lại OTP mới,
+    khoá tạm gửi OTP 60 giây/lần để chống spam SMS/email
+3a. Sai mật khẩu quá 5 lần liên tiếp trong 15 phút → khoá đăng nhập tạm thời 15 phút
+    cho tài khoản đó (không phải khoá vĩnh viễn như AUTH-FR-011 do Admin) — chống
+    brute-force, không cần code CAPTCHA riêng cho phạm vi KLTN
+3b. Tài khoản bị Admin khoá (`is_active=false`) → đăng nhập thành công về mặt mật
+    khẩu nhưng bị chặn ngay sau đó, hiển thị "Tài khoản đã bị khoá, liên hệ hỗ trợ"
+    kèm lý do nếu Admin đã ghi (AUTH-FR-011)
+4a. Refresh Token hết hạn (>30 ngày không dùng) hoặc đã bị thu hồi (do đổi mật khẩu
+    ở nơi khác — AUTH-FR-009, hoặc bị Admin khoá) → Frontend buộc đăng xuất, chuyển
+    về màn hình đăng nhập, không tự đăng nhập lại được
+
+--- Quên mật khẩu (AUTH-FR-009) ---
+6. User bấm "Quên mật khẩu" → nhập email/SĐT → POST /auth/forgot-password → nhận
+   OTP/link đặt lại (TTL 15 phút, dùng 1 lần)
+7. User nhập OTP + mật khẩu mới → POST /auth/reset-password → mật khẩu đổi thành
+   công → mọi Refresh Token cũ bị thu hồi → yêu cầu đăng nhập lại
+7a. OTP/link hết hạn hoặc đã dùng → hệ thống từ chối, yêu cầu bắt đầu lại từ bước 6
+```
+
+### Flow 12: Mời & Quản lý Thành viên Farm (Farm Owner) — [mới v1.12.0]
+
+```
+1. Primary Owner mở Farm → "Mời thành viên" → nhập email + chọn vai trò
+   (FARM_OWNER khác — AUTH-FR-005, hoặc Sales Staff — AUTH-FR-005b)
+2. Hệ thống tạo `Invitation` (status: PENDING, TTL 7 ngày) → gửi email/thông báo
+   kèm link `/invitations/:token`
+3a. Email đã có tài khoản → người được mời đăng nhập → bấm "Chấp nhận" →
+    POST /invitations/:token/accept → thêm vào `farms.members` (Farm Owner) hoặc
+    tạo `SalesAssignment` (Sales Staff) → status: ACCEPTED
+3b. Email chưa có tài khoản → bấm link mời → dẫn thẳng vào Flow 11 bước 1 (đăng ký)
+    với email pre-fill → đăng ký xong tự động accept invitation luôn, không cần
+    thao tác thêm lần 2
+4. Người mời (Primary Owner) thấy thành viên mới xuất hiện trong danh sách Farm,
+   có quyền vận hành ngang nhau ngay lập tức (AUTH-FR-005)
+5. Primary Owner có thể gỡ thành viên bất kỳ lúc nào (DELETE /farms/:id/members/:userId)
+   → thành viên bị gỡ mất quyền truy cập Farm ngay (JWT vẫn hợp lệ nhưng middleware
+   kiểm tra lại `farms.members` mỗi request, không cache quyền trong token)
+
+--- Trường hợp lỗi/ngoại lệ ---
+3c. Người được mời bấm "Từ chối" → status: DECLINED, Primary Owner nhận thông báo
+3d. Quá 7 ngày không phản hồi → status tự chuyển EXPIRED, link không còn dùng được
+    → Primary Owner phải gửi lời mời mới nếu vẫn cần
+5a. Primary Owner cố gỡ chính mình → hệ thống từ chối (Farm luôn phải có ít nhất 1
+    Primary Owner) — muốn rời Farm, Primary Owner phải chuyển quyền cho thành viên
+    khác trước (thao tác thủ công qua Admin nếu cần, ngoài phạm vi UI tự phục vụ
+    Phase 1)
+```
+
+### Flow 13: Điều khiển Relay Thủ công & Tự động Hết hạn Override (Farm Owner) — [mới v1.12.0, ENV-FR-016..019]
+
+```
+1. Farm Owner mở Dashboard Zone → bấm bật/tắt 1 relay (VD: Misting) thủ công
+2. Frontend gọi POST /devices/sensor-nodes/:id/relay {relayName, state: true} →
+   Backend cập nhật `control_mode: MANUAL`, đặt `override_expiry = now + 30 phút`
+   (mặc định, cấu hình được — ENV-FR-018), publish MQTT command tới ESP32
+3. ESP32 nhận lệnh → đóng relay → publish `relay/status` xác nhận → Backend cập
+   nhật `relay_states` thật, emit RELAY_UPDATE qua WebSocket
+4. Dashboard hiển thị relay đang ở chế độ MANUAL kèm đồng hồ đếm ngược tới
+   `override_expiry` (ENV-FR-017 — cảnh báo rõ ràng khi đang override)
+5. PID Control tạm dừng cho riêng relay đó trong lúc MANUAL (relay khác vẫn tự động
+   bình thường)
+6. Hết 30 phút → hệ thống tự trả relay đó về `control_mode: AUTO`, publish lệnh tắt
+   override xuống ESP32 → PID tiếp quản lại theo ngưỡng đã cấu hình (ENV-FR-018)
+7. Mọi lần bật/tắt override được ghi lại: user, thời gian, relay, trạng thái
+   (ENV-FR-019)
+
+--- Trường hợp lỗi/ngoại lệ ---
+2a. ESP32 đang mất kết nối MQTT lúc Farm Owner bấm nút → Backend vẫn cập nhật DB
+    lạc quan (optimistic) nhưng Dashboard hiển thị rõ trạng thái "Đang chờ xác
+    nhận từ thiết bị" (khác màu với trạng thái đã xác nhận) cho tới khi nhận được
+    `relay/status` thật — tránh Farm Owner tưởng lầm lệnh đã chạy trong khi ESP32
+    chưa hề nhận được
+2b. Quá 30 giây không nhận được xác nhận từ ESP32 → Dashboard báo "Không thể xác
+    nhận trạng thái relay, kiểm tra kết nối thiết bị" (liên kết chéo với Flow 14 —
+    có thể thiết bị đã mất kết nối)
+4a. Farm Owner muốn gia hạn thêm trước khi hết 30 phút → bấm lại nút bật (idempotent,
+    cùng trạng thái) → `override_expiry` được làm mới thêm 30 phút từ thời điểm đó
+6a. Ngay lúc hệ thống tự trả về AUTO (bước 6) mà ESP32 đang mất kết nối → lệnh trả
+    về AUTO được xếp hàng, ESP32 tự áp dụng ngay khi kết nối lại (không bị mất lệnh)
+```
+
+### Flow 14: Thiết bị Mất kết nối/Mất nguồn → Dashboard Tự động chuyển Offline (Farm Owner) — [mới v1.12.0, FARM-FR-005]
+
+> Trả lời trực tiếp câu hỏi thực tế đã phát sinh trong quá trình phát triển: "nếu rút thiết bị ra hoặc mất nguồn thì Dashboard có tự hiểu là Offline không". Đã cài đặt thật (không chỉ là đặc tả trên giấy).
+
+```
+1. ESP32 gửi heartbeat mỗi 30 giây (MQTT_HEARTBEAT_MS, mục 7.2) trong điều kiện
+   hoạt động bình thường → Backend cập nhật `last_heartbeat`, `status: ONLINE`
+2. Farm Owner rút nguồn/dây mạng của ESP32 → thiết bị ngừng gửi heartbeat và
+   telemetry ngay lập tức, không có tín hiệu "tôi sắp tắt" nào được gửi trước
+   (mất điện đột ngột, không phải graceful shutdown)
+3. Một job nền chạy mỗi 10 giây quét toàn bộ SensorNode đang `ONLINE` nhưng
+   `last_heartbeat` đã quá 30 giây (FARM-FR-005) → tự động chuyển `status: OFFLINE`
+4. Backend phát sự kiện `DEVICE_STATUS_CHANGE` qua WebSocket tới mọi client đang
+   mở Zone đó
+5. Trang "Thiết bị" (Devices) cập nhật chấm trạng thái (StatusDot) từ xanh → đỏ
+   ngay lập tức, không cần Farm Owner bấm F5
+6. Song song, badge "Live" trên Dashboard cũng tự chuyển "Mất kết nối" sau tối đa
+   20 giây không nhận thêm dữ liệu telemetry mới — cơ chế độc lập ở phía client,
+   phản ứng nhanh hơn 30 giây từ phía backend, phòng trường hợp socket bị nghẽn
+7. Farm Owner cắm nguồn/dây mạng lại → ESP32 khởi động, kết nối WiFi + MQTT →
+   gửi heartbeat đầu tiên → Backend chuyển lại `status: ONLINE` → DEVICE_STATUS_CHANGE
+   phát lại → Dashboard tự chuyển xanh trở lại, không cần thao tác gì thêm
+
+--- Trường hợp lỗi/ngoại lệ ---
+2a. Mất mạng/nhiễu tín hiệu RẤT NGẮN (dưới 30 giây) rồi tự phục hồi → job nền ở
+    bước 3 KHÔNG kịp đánh dấu OFFLINE (do kiểm tra mỗi 10s và ngưỡng 30s) → tránh
+    "nhấp nháy" trạng thái gây khó chịu cho Farm Owner vì những đợt rớt mạng bình
+    thường không đáng báo động
+3a. Nếu thiết bị OFFLINE kéo dài, THREAT-FR-009 song song phát alert NODE_OFFLINE
+    (ngưỡng riêng 60 giây, mức cảnh báo chính thức) — khác với việc đổi StatusDot
+    ở bước 3-5 vốn chỉ là trạng thái hiển thị tức thời, không phải alert cần
+    acknowledge
+```
+
+### Flow 15: Cập nhật Firmware qua OTA (Technician) — [mới v1.12.0, TICKET-FR-008]
+
+```
+1. Technician xác định cần cập nhật firmware (bugfix, tính năng mới) cho 1 hoặc
+   nhiều SensorNode qua Web Console
+2. Technician chọn thiết bị → "Đẩy OTA" → chọn phiên bản firmware đã build sẵn
+   (`.bin` upload lên S3/MinIO trước đó ở bước build/release nội bộ team)
+3. Backend publish lệnh OTA qua MQTT `config/update` (hoặc gọi trực tiếp
+   ElegantOTA endpoint `http://<ip-esp32>/update` nếu cùng LAN) kèm URL firmware
+4. ESP32 tải file `.bin`, xác thực (checksum), ghi vào partition OTA dự phòng
+5. Ghi thành công → ESP32 tự khởi động lại vào firmware mới → gửi heartbeat với
+   `firmware_version` mới → Backend cập nhật, Technician xác nhận thành công
+
+--- Trường hợp lỗi/ngoại lệ ---
+4a. Tải file thất bại giữa chừng (mất mạng) → ESP32 tiếp tục chạy firmware CŨ
+    (partition OTA mới không được đánh dấu hợp lệ) → không có gián đoạn vận hành,
+    Technician thử đẩy lại OTA sau
+4b. Checksum sai (file hỏng khi tải) → ESP32 từ chối flash, tự rollback, giữ
+    nguyên firmware cũ, log lỗi qua Serial/MQTT để Technician biết cần build lại
+5a. Firmware mới bị lỗi (boot loop, watchdog reset liên tục) → ESP32 tự động
+    rollback về firmware cũ ở lần khởi động lại kế tiếp nếu không thấy heartbeat
+    thành công trong X giây (cơ chế OTA rollback tiêu chuẩn của ESP-IDF/Arduino-OTA)
+    — tránh biến thiết bị thành "gạch" (bricked) từ xa, không ai gỡ về sửa tay được
+```
+
+### Flow 16: Mời & Onboarding Sales Staff (Farm Owner/Admin) — [mới v1.12.0, Giai đoạn 2]
+
+```
+1a. Farm Owner mời Sales Staff qua Flow 12 (dùng chung cơ chế Invitation, khác
+    Farm Owner chỉ ở `invited_role: SALES_STAFF`)
+1b. HOẶC Administrator tự tạo tài khoản Sales Staff cho trường hợp farm liên kết/
+    hợp tác xã (AUTH-FR-005c) → gán trực tiếp vào 1+ Farm qua `SalesAssignment`,
+    không cần qua bước mời/chấp nhận
+2. Sales Staff đăng nhập → thấy danh sách Farm mình được gán → chọn Farm để quản
+   lý sản phẩm/tồn kho/đơn hàng (Flow 17, Flow 10)
+
+--- Trường hợp lỗi/ngoại lệ ---
+1c. Sales Staff được mời bởi nhiều Farm khác nhau → 1 tài khoản Sales Staff có thể
+    có nhiều `SalesAssignment` (many-to-many, đúng theo ER diagram mục 8.1) — không
+    cần tạo tài khoản riêng cho mỗi Farm
+1d. Farm Owner gỡ Sales Staff khỏi Farm (tương tự Flow 12 bước 5) → Sales Staff mất
+    quyền truy cập Farm đó ngay, các Order/Product đã tạo trước đó vẫn giữ nguyên
+    lịch sử (không xoá), chỉ chặn thao tác mới
+```
+
+### Flow 17: Duyệt/Từ chối Sản phẩm (Administrator ↔ Sales Staff) — [mới v1.12.0, SALES-FR-002, Giai đoạn 2]
+
+```
+1. Sales Staff tạo Product từ 1 Harvest Batch → POST /products (status: DRAFT)
+2. Sales Staff hoàn thiện thông tin (giá, mô tả, ảnh) → POST /products/:id/submit-review
+   → status: PENDING_REVIEW
+3. Administrator xem danh sách Product chờ duyệt → kiểm tra thông tin, đối chiếu
+   Traceability (env_snapshot/flock_snapshot có hợp lý không)
+4a. Đạt yêu cầu → PUT /products/:id/review {decision: APPROVED} → status: APPROVED
+    → Product hiển thị công khai trên Marketplace, cộng vào Inventory (SALES-FR-003)
+4b. Không đạt → PUT /products/:id/review {decision: REJECTED, reason} → status:
+    REJECTED, Sales Staff nhận thông báo kèm lý do cụ thể
+
+--- Trường hợp lỗi/ngoại lệ ---
+4c. Sau khi REJECTED, Sales Staff sửa lại thông tin theo góp ý → gọi lại
+    POST /products/:id/submit-review → quay về PENDING_REVIEW, lặp lại từ bước 3
+    (không giới hạn số lần gửi lại trong phạm vi KLTN)
+4d. Product đã APPROVED nhưng sau đó phát hiện vi phạm (thông tin sai sự thật) →
+    Administrator có quyền chuyển thẳng về REJECTED/ẩn khỏi Marketplace bất kỳ lúc
+    nào (không chỉ giới hạn ở bước duyệt lần đầu), tương tự tinh thần TICKET-FR-005b
+```
+
+### Flow 18: Cảnh báo Tồn kho Thấp (Sales Staff) — [mới v1.12.0, SALES-FR-004/005, Giai đoạn 2]
+
+```
+1. Mỗi khi Order chuyển DELIVERED, tồn kho Product bị trừ chính thức (SALES-FR-009)
+2. Nếu tồn kho sau khi trừ xuống dưới ngưỡng tối thiểu (cấu hình được theo từng
+   Product) → hệ thống gửi thông báo cho Sales Staff phụ trách
+3. Sales Staff nhập thêm Harvest Batch mới liên kết Product đó → tồn kho tự cộng
+   lại (SALES-FR-003), thông báo cảnh báo tự tắt khi vượt lại ngưỡng
+
+--- Trường hợp lỗi/ngoại lệ ---
+1a. Tồn kho về đúng 0 → Product tự chuyển `OUT_OF_STOCK`, ẩn khỏi trang đặt hàng
+    (Buyer không checkout được) nhưng vẫn xem được thông tin/Traceability
+    (SALES-FR-005) — tránh Buyer đặt hàng vào sản phẩm không còn hàng
+1b. Sales Staff không xử lý cảnh báo trong thời gian dài (không có SLA cứng như
+    Ticket vì đây không phải sự cố kỹ thuật) → Farm Owner (đồng sở hữu Farm) cũng
+    nhìn thấy cảnh báo tồn kho thấp trên Dashboard chung, có thể tự nhắc Sales
+    Staff ngoài hệ thống
+```
+
+### Flow 19: Quản lý Tài khoản bởi Administrator (khoá/mở khoá, xoá theo yêu cầu) — [mới v1.12.0, AUTH-FR-011/012, PRIV-NFR-003]
+
+```
+--- Khoá/Mở khoá tài khoản ---
+1. Administrator phát hiện/nhận báo cáo tài khoản vi phạm (spam, gian lận đơn
+   hàng, lạm dụng hệ thống) → mở trang Quản lý Tài khoản → tìm user
+2. PUT /admin/users/:id/status {is_active: false, reason} → tài khoản bị khoá,
+   lý do bắt buộc nhập, ghi vào `audit_logs`
+3. Mọi request JWT tiếp theo của user đó bị middleware từ chối (401) ngay cả khi
+   Access Token còn hạn — không cần đợi token hết hạn tự nhiên (AUTH-FR-011)
+4. User cố đăng nhập lại → thấy thông báo "Tài khoản đã bị khoá" kèm lý do
+5. Administrator xem lại, quyết định mở khoá khi hợp lý → PUT .../status
+   {is_active: true} → user đăng nhập lại bình thường
+
+--- Xoá tài khoản theo yêu cầu (Right to Erasure) ---
+6. User (bất kỳ role nào) vào Cài đặt tài khoản → "Yêu cầu xoá tài khoản" →
+   POST /auth/delete-request → tạo yêu cầu, Administrator nhận thông báo
+7. Administrator xem yêu cầu, xác minh danh tính (đối chiếu email đã xác thực),
+   xử lý trong ≤ 30 ngày theo AUTH-FR-012:
+   7a. Nếu là Primary Owner của Farm còn thành viên khác → chuyển `owner_id` sang
+       thành viên `joined_at` sớm nhất, thông báo cho thành viên đó
+   7b. Nếu Primary Owner mà Farm không còn thành viên nào khác → xoá mềm luôn Farm
+       (giữ lại dữ liệu telemetry lịch sử phục vụ nghĩa vụ lưu trữ, chỉ ẩn khỏi UI)
+8. Administrator xác nhận hoàn tất → PUT /admin/delete-requests/:id/complete →
+   tài khoản bị xoá/ẩn PII (email/SĐT/tên thay bằng placeholder), user nhận email
+   xác nhận cuối cùng trước khi mất quyền truy cập
+
+--- Trường hợp lỗi/ngoại lệ ---
+2a. Administrator cố khoá chính tài khoản Admin khác duy nhất còn lại → hệ thống
+    có thể cho phép (không giới hạn cứng như Primary Owner ở Flow 12, vì có thể có
+    tài khoản gốc/super-admin dự phòng ngoài UI) nhưng cảnh báo rõ trước khi xác nhận
+7c. User gửi yêu cầu xoá nhưng đang có Order/Ticket dở dang → Administrator có thể
+    tạm hoãn xử lý và ghi chú lý do (VD: chờ hoàn tất giao dịch) thay vì xoá ngay,
+    miễn vẫn phản hồi trong hạn 30 ngày cho user biết tình trạng
+```
+
 ### Sơ đồ Luồng Chính Toàn Hệ thống (Master Flow)
 
-> Gộp toàn bộ các luồng actor + hệ thống nền thành 1 bức tranh swimlane, thể hiện 2 trục nghiệp vụ song song (Vận hành Kỹ thuật và Thương mại) cùng chia sẻ 1 nguồn dữ liệu gốc là Farm/Zone.
+> Gộp toàn bộ các luồng actor + hệ thống nền thành 1 bức tranh swimlane, thể hiện 2 trục nghiệp vụ song song (Vận hành Kỹ thuật và Thương mại) cùng chia sẻ 1 nguồn dữ liệu gốc là Farm/Zone. **[Cập nhật v1.12.0]** Đã thêm nhánh Technician lắp đặt/kích hoạt thiết bị (Flow 1/1b), yêu cầu lắp đặt nhà yến mới đi thẳng vào Ticket Router (Flow 9b), phát hiện mất kết nối tự động (Flow 14), và quản lý tài khoản của Admin (Flow 19). Sơ đồ này chỉ minh hoạ luồng dữ liệu chính ở tầm cao — 8 Flow còn lại thiên về nghiệp vụ tài khoản/phiên đăng nhập (Flow 11-13, 15-18) không vẽ riêng ở đây vì không thêm actor/node mới, xem chi tiết từng Flow tương ứng.
 
 ```mermaid
 flowchart LR
@@ -1476,9 +1950,9 @@ flowchart LR
     end
 
     subgraph L3["Trục Vận hành Kỹ thuật"]
-        FarmerOps["Farm Owner<br/>giám sát & điều khiển"]
-        TicketQ["Ticket Router"]
-        TechOps["Technician<br/>xử lý sự cố theo SLA"]
+        FarmerOps["Farm Owner<br/>giám sát, chỉnh thông số, yêu cầu lắp đặt"]
+        TicketQ["Ticket Router<br/>(báo lỗi + INSTALLATION)"]
+        TechOps["Technician<br/>xử lý sự cố theo SLA<br/>+ lắp đặt/kích hoạt qua Web Console"]
     end
 
     subgraph L4["Trục Thương mại (Giai đoạn 2)"]
@@ -1498,10 +1972,13 @@ flowchart LR
     MQTT -- "Snapshot môi trường/đàn chim theo chu kỳ" --> Harvest
     MQTT --> AlertEngine
     AlertEngine -- "Cảnh báo ngưỡng/sự cố" --> FarmerOps
-    AlertEngine -- "Tạo Ticket tự động hoặc do Farm Owner báo" --> TicketQ
+    AlertEngine -- "Tạo Ticket tự động hoặc do Farm Owner báo (Flow 8/9)" --> TicketQ
+    FarmerOps -- "Yêu cầu lắp đặt nhà yến mới (Flow 9b)" --> TicketQ
     TicketQ --> TechOps
     TechOps -- "Đóng ticket/escalate" --> AdminOps
-    FarmerOps -- "Điều khiển thủ công qua Relay" --> Sensor
+    TechOps -- "Lắp đặt + kích hoạt thiết bị qua Web Console (Flow 1/1b)" --> Sensor
+    FarmerOps -- "Điều khiển thủ công qua Relay (Flow 13)" --> Sensor
+    MQTT -.->|"Mất heartbeat >30s → tự chuyển Offline (Flow 14)"| FarmerOps
 
     Harvest --> Listing
     Listing -- "Chờ duyệt" --> AdminOps
@@ -1514,6 +1991,7 @@ flowchart LR
 
     AdminOps -.-> TicketQ
     AdminOps -.->|"Cảnh báo chéo: Farm đang gặp sự cố<br/>→ tạm dừng nhận đơn mới"| Fulfill
+    AdminOps -.->|"Quản lý tài khoản: khoá/mở khoá/xoá theo yêu cầu (Flow 19)<br/>— áp dụng cho mọi actor, chỉ vẽ đại diện 1 nhánh"| FarmerOps
 ```
 
 ---
@@ -1815,6 +2293,8 @@ Hệ thống thu thập dữ liệu cá nhân (email, số điện thoại, tên
 | **Guest Checkout**             | Buyer đặt hàng không cần tạo tài khoản, chỉ cần thông tin liên hệ tối thiểu (SALES-FR-013)                                                   |
 | **RS485 Bus Failure**          | Sự cố mất tín hiệu đồng loạt nhiều cảm biến/relay do dùng chung 1 bus RS485 daisy-chain (THREAT-FR-013)                                      |
 | **SAT (Site Acceptance Test)** | Checklist nghiệm thu kỹ thuật tại hiện trường trước khi Technician bàn giao thiết bị cho Farm Owner (TICKET-FR-010)                          |
+| **OTA (Over-The-Air Update)** | Cập nhật firmware ESP32 từ xa qua WiFi (ElegantOTA), không cần cắm USB nạp lại — có cơ chế tự rollback nếu firmware mới lỗi (Flow 15)          |
+| **Right to Erasure**           | Quyền yêu cầu xoá tài khoản/dữ liệu cá nhân của người dùng, theo tinh thần Nghị định 13/2023/NĐ-CP về Bảo vệ Dữ liệu Cá nhân (PRIV-NFR-003, AUTH-FR-012, Flow 19) |
 
 ---
 
@@ -1832,5 +2312,6 @@ _Tài liệu SRS này được tạo ngày 07/09/2026. Mọi thay đổi yêu c�
 | 1.9.0     | 12/09/2026 | **Bổ sung Relay điều khiển (Relay thường/GPIO) + 3 actuator:** (1) chọn **module Relay thường 4 kênh 5V có opto cách ly, kích GPIO** thay cho relay Modbus RS485 (đơn giản, rẻ, tách riêng khỏi bus RS485); (2) **mở khoá nhóm ENV-FR-010→019** (bỏ trạng thái BLOCKED) — cập nhật ENV-FR-010/011/012 dùng relay GPIO với mã chân cụ thể (IN1=GPIO25 phun sương, IN3=GPIO27 quạt, IN4=GPIO14 sưởi dự phòng); (3) **thêm ENV-FR-013b** — điều khiển **loa ru dẫn dụ** (IN2=GPIO26) theo lịch cố định (5-7h, 17-19h), liên kết THREAT-FR-006 phát hiện loa hỏng; (4) cập nhật schema `sensor_nodes.relay_states` thêm `speaker`, `relay_type='GPIO'`, `speaker_schedule`; (5) BOM v3.1 thêm 4 dòng: module relay 4 kênh + máy phun sương + loa ru + quạt thông gió; (6) firmware 7.2 thêm Relay Task + mã chân GPIO + lưu ý kích mức thấp. Chi tiết: xem phụ lục `SwiftletCare_Relay_Addon.md`                                                                                                                                                                                                                                                                                 |
 | 1.10.0    | 12/09/2026 | **Bổ sung hệ thống âm thanh loa ru (nạp & phát file):** (1) thêm **DFPlayer Mini** (đọc MP3/WAV từ thẻ microSD, giao tiếp UART GPIO32/33) + **amply PAM8403** + thẻ microSD vào BOM — làm rõ amply KHÔNG tự phát file, bắt buộc cần DFPlayer làm nguồn phát; (2) mở rộng **ENV-FR-013b** với chuỗi hoạt động đầy đủ: Relay IN2 đóng nguồn amply → DFPlayer play file từ SD → PAM8403 khuếch đại → loa; điều khiển play/stop/volume/loop qua UART theo lịch; (3) thêm field `audio` (current_track, volume, playing, loop) vào schema `sensor_nodes`; (4) firmware 7.2 thêm **Audio Task** với thư viện DFRobotDFPlayerMini; (5) phân 2 mức: Mức 1 nạp sẵn SD + điều khiển từ xa (MVP), Mức 2 upload file từ cloud → ESP32 ghi SD (stretch goal). Chi tiết: xem phụ lục `SwiftletCare_Relay_Audio_Guide.md` (gộp chung Relay + Âm thanh, thay `SwiftletCare_Relay_Addon.md`)                                                                                                                                                                                                                                                                                                  |
 | 1.11.0    | 12/09/2026 | **Chốt BOM theo LINH KIỆN THỰC TẾ đã mua (IC Đây Rồi + EPCB):** (1) ESP32 = **NodeMCU 38 chân Type-C CP2102** + **đế mở rộng 38 chân** (đấu dây không cần hàn); (2) **DÙNG 2 MẠCH BUCK LM2596 3A** — Buck#1 cho ESP32+RS485, Buck#2 riêng cho PAM8403+DFPlayer+relay (vì PAM8403 6W ngốn 1.2A, tách nguồn tránh sụt áp treo ESP32); (3) Domino = **TB1504 (4 mối 15A/600V)**; (4) Relay = **module 4 kênh opto cách ly kích H/L chọn Jumper** — đặt kích mức CAO (High=bật), firmware `digitalWrite(HIGH)`=bật; (5) **DFPlayer Mini** (hỗ trợ MP3/WAV/WMA, thư mục ≤100×255 bài, SD ≤32GB) + **PAM8403 6W Hifi có núm volume** (5V-1.2A, lọc nhiễu); (6) cập nhật firmware 7.2: relay kích High thay vì Low; (7) ⚠️ cảnh báo ngân sách nguồn nhánh Buck#2 ~2.1A — nếu loa lớn thì cấp 220V riêng cho amply/loa; (8) Camera nhánh Vision = **camera nhà yến IR 940nm không phát sáng** (không làm chim sợ), 2.8mm góc rộng, IP66+, RTSP — theo 6 tiêu chí chuẩn ngành, chạy AI trên laptop. Chi tiết: `SwiftletCare_Components_Guide_v3.3.md` + `SwiftletCare_Camera_Guide_NhaYen_Full.md`                                                                                    |
+| 1.12.0    | 16/09/2026 | **Rà soát toàn diện luồng nghiệp vụ + đổi mô hình vận hành thiết bị (dựa trên code thực tế đã chạy):** (1) Đổi mô hình onboarding thiết bị từ "Farm Owner tự quét QR" sang **"Technician thao tác qua Web Console" (giống kỹ thuật viên lắp mạng/camera)** — cập nhật actor Farm Owner/Technician (mục 4.1), RACI (mục 4.4), FARM-FR-003/003b/004/007/008, viết lại Flow 1/1b; (2) Thêm **TICKET loại `INSTALLATION`** cho luồng "Farm Owner có nhà yến mới → Ticket Router tự động gán Technician (không qua Admin điều phối tay)" — TICKET-FR-001/003/004/004b/005b, Flow 9b (mới), field `scheduled_visit_at` do Farm Owner chọn thẳng lúc tạo ticket; (3) Thêm **quyền can thiệp toàn diện của Admin trên mọi ticket** (TICKET-FR-005b) và làm rõ TICKET-FR-007 áp dụng đủ 4 trạng thái cho mọi loại ticket; (4) **Bổ sung 9 Flow hoàn toàn mới** (Flow 11→19) để mỗi actor có luồng nghiệp vụ đầy đủ cả happy path lẫn bad case: đăng ký/đăng nhập/quên mật khẩu/refresh token (Flow 11), mời-chấp nhận-từ chối thành viên Farm (Flow 12), điều khiển relay thủ công + auto-revert override (Flow 13), **thiết bị mất kết nối/mất nguồn → Dashboard tự Offline** khớp đúng cơ chế đã code thật — `deviceOfflineJob` cron 10s + ngưỡng 30s heartbeat + client-side staleness 20s (Flow 14), OTA firmware + rollback khi lỗi (Flow 15), mời/onboarding Sales Staff (Flow 16), duyệt/từ chối sản phẩm (Flow 17), cảnh báo tồn kho thấp (Flow 18), quản lý tài khoản Admin — khoá/mở khoá + xoá theo yêu cầu PRIV-NFR-003 (Flow 19); (5) Thêm **bad case cho các Flow đã có**: Flow 1/1b (secretKey sai, AP-mode/WiFi lỗi, SAT thất bại), Flow 4 (false positive), Flow 7 (Trace Code không tồn tại, race condition sửa Harvest Batch sau khi đăng bán), Flow 9/9b (Technician xin gán lại, Farm Owner huỷ ticket, SAT thất bại tại hiện trường), Flow 10 (thanh toán thất bại, hết hàng do race condition); (6) Thêm **AUTH-FR-009→012** (quên mật khẩu, lời mời thành viên có TTL, khoá/mở khoá tài khoản, xoá tài khoản theo PRIV-NFR-003) và các API endpoint tương ứng (mục 9.1); (7) Thêm collection `invitations`, `audit_logs` và field `deactivated_at/reason`, `password_reset_token_hash` vào `users` (mục 8.1, 8.2); (8) Sửa lỗi lệch dữ liệu: `TELEMETRY_UPDATE` WebSocket event (mục 9.3) còn sót `h2s`/`tvoc` dù đã bỏ 2 cảm biến này từ v1.8.0; (9) **Rà soát cuối:** sửa 3 lỗi đánh số bad-case sai bước phân nhánh (Flow 9b) và 2 dòng RACI thiếu vai trò (xoá tài khoản phải áp dụng mọi role, không chỉ Farm Owner/Sales Staff); thêm thuật ngữ OTA + Right to Erasure vào Bảng Thuật ngữ; (10) **Hoàn thiện:** cập nhật sơ đồ Master Flow (mục 10) thêm nhánh Technician Web Console onboarding, ticket INSTALLATION, offline-detection, quản lý tài khoản Admin; làm rõ `users.role = null` cho Buyer đã đăng ký (không phải bỏ sót, mà Buyer không tham gia RBAC) |
 
-_Phiên bản hiện tại: 1.11.0 | Ngày cập nhật: 12/09/2026 | Trạng thái: DRAFT — chờ điền tên thành viên phụ trách (mục 14.1) và chốt mô hình thu tiền (RISK-08). Toàn bộ linh kiện phần cứng đã mua & chốt BOM thực tế (5 cảm biến + 2 Buck + đế ESP32 + relay H/L + DFPlayer/PAM8403 + camera IR 940nm), sẵn sàng lắp ráp & lập trình_
+_Phiên bản hiện tại: 1.12.0 | Ngày cập nhật: 16/09/2026 | Trạng thái: DRAFT — chờ điền tên thành viên phụ trách (mục 14.1) và chốt mô hình thu tiền (RISK-08). Toàn bộ linh kiện phần cứng đã mua & chốt BOM thực tế (5 cảm biến + 2 Buck + đế ESP32 + relay H/L + DFPlayer/PAM8403 + camera IR 940nm); backend AUTH/FARM/DEVICE/TELEMETRY + offline-detection đã code và chạy thật; luồng nghiệp vụ đã rà soát đầy đủ 19 Flow cho cả 5 actor, sẵn sàng làm cơ sở code tiếp Technician Web Console + các Flow mới_
