@@ -825,6 +825,7 @@ User (1) ──< (N) AuditLog (actor_id)                 # mới v1.12.0, AUTH-F
   "_id": "ObjectId",
   "name": "string",
   "address": "string",
+  "region": "string (nullable, VD: 'HCMC' — khu vực địa lý dùng để khớp với users.assigned_regions, xác định Technician nào được lắp đặt/xử lý ticket cho farm này; AUTH-FR-005c, TICKET-FR-004, RACI mục 4.4 ghi chú ¹. Farm chưa gán region thì không Technician nào truy cập được)",
   "coordinates": { "lat": "number", "lng": "number" },
   "owner_id": "ObjectId (ref: users — Primary Owner, người tạo Farm)",
   "members": [

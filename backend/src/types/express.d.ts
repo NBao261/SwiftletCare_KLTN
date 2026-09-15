@@ -4,7 +4,7 @@
  *
  * This file must be a .d.ts module (not .ts) and must be included via tsconfig.
  */
-import type { Role, NotificationPreferences } from './domain'
+import type { Role, NotificationPreferences } from './domain.types'
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -16,6 +16,7 @@ declare global {
         role: Role
         full_name: string
         is_active: boolean
+        assigned_regions?: string[]
         notification_preferences: NotificationPreferences
       }
     }

@@ -5,12 +5,12 @@
 
 import 'dotenv/config'
 import { createServer } from 'http'
-import app              from './config/app'
-import { connectDB }    from './config/db'
+import app              from './config/app.config'
+import { connectDB }    from './config/db.config'
 import { initSocket }   from './socket'
-import { connectMQTT }  from './mqtt/client'
-import { startDeviceOfflineJob } from './jobs/deviceOfflineJob'
-import logger           from './utils/logger'
+import { connectMQTT }  from './mqtt/mqtt.client'
+import { startDeviceOfflineJob } from './jobs/deviceOffline.job'
+import logger           from './utils/logger.util'
 
 const PORT = Number(process.env.PORT ?? 3000)
 

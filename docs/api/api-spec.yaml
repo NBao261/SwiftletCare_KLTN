@@ -181,12 +181,16 @@ paths:
   /farms:
     get:
       tags: [Farms]
-      summary: Danh sách farm của user hiện tại (ADMIN thấy tất cả)
+      summary: Danh sách farm của user hiện tại
+      description: |
+        - FARM_OWNER: các farm mình sở hữu hoặc là thành viên
+        - TECHNICIAN: các farm có `region` nằm trong `assigned_regions` của mình (để chọn Farm→House→Zone khi onboarding — Flow 1 bước 2)
+        - ADMIN: tất cả
       responses:
         '200': { description: OK, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { type: array, items: { $ref: '#/components/schemas/Farm' } } } }] } } } }
     post:
       tags: [Farms]
-      summary: Tạo farm mới (người tạo trở thành Primary Owner)
+      summary: Tạo farm mới (người tạo trở thành Primary Owner) — FARM_OWNER/ADMIN
       requestBody:
         required: true
         content:
@@ -197,6 +201,7 @@ paths:
               properties:
                 name: { type: string }
                 address: { type: string }
+                region: { type: string, example: HCMC, description: "Khu vực để định tuyến Technician phụ trách — nên nhập, nếu bỏ trống thì không Technician nào lắp đặt/xử lý ticket được cho farm này" }
                 coordinates: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
       responses:
         '201': { description: Đã tạo, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Farm' } } }] } } } }
@@ -324,7 +329,15 @@ paths:
   /devices/sensor-nodes/register:
     post:
       tags: [Devices]
-      summary: Đăng ký ESP32 Sensor Node vào 1 Zone (FARM-FR-003)
+      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — chỉ TECHNICIAN/ADMIN (FARM-FR-003)"
+      description: |
+        Bước 3-4 của Flow 1 (Web Console Onboarding). **Farm Owner không gọi được
+        endpoint này** (403) — theo mô hình "công ty vận hành, khách hàng chỉ dùng",
+        việc lắp đặt/kích hoạt thiết bị do Technician thực hiện tại hiện trường.
+
+        Technician chỉ đăng ký được cho Farm thuộc `assigned_regions` của mình.
+        Node tạo ra ở trạng thái `PENDING`, chỉ chuyển `ONLINE` khi thiết bị gửi
+        heartbeat đầu tiên (Flow 1 bước 8).
       requestBody:
         required: true
         content:
@@ -334,7 +347,8 @@ paths:
               required: [device_id, zone_id]
               properties: { device_id: { type: string, example: node_001 }, zone_id: { type: string } }
       responses:
-        '201': { description: Đã đăng ký, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/SensorNode' } } }] } } } }
+        '201': { description: "Đã đăng ký (status=PENDING)", content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/SensorNode' } } }] } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
 
   /devices/sensor-nodes:
@@ -374,7 +388,12 @@ paths:
   /devices/sensor-nodes/{id}/relay:
     post:
       tags: [Devices]
-      summary: Điều khiển relay — Manual Override, publish MQTT relay/command tới ESP32 (ENV-FR-016..018)
+      summary: "Điều khiển relay — Manual Override (ENV-FR-016..018), FARM_OWNER/TECHNICIAN/ADMIN"
+      description: |
+        Publish MQTT `relay/command` tới ESP32, đặt `control_mode=MANUAL` và
+        `override_expiry = now + durationMs`. Farm Owner dùng để vận hành hằng ngày,
+        Technician dùng khi khắc phục sự cố (RACI mục 4.4). Gọi lại cùng trạng thái
+        để gia hạn override (Flow 13 case 4a).
       parameters: [{ $ref: '#/components/parameters/NodeId' }]
       requestBody:
         required: true
@@ -395,7 +414,7 @@ paths:
   /devices/camera-nodes/register:
     post:
       tags: [Devices]
-      summary: Đăng ký Raspberry Pi Camera Node (FARM-FR-004)
+      summary: "Đăng ký Raspberry Pi Camera Node — chỉ TECHNICIAN/ADMIN (FARM-FR-004, Flow 1b)"
       requestBody:
         required: true
         content:
@@ -852,8 +871,8 @@ components:
 
     Role:
       type: string
-      enum: [ADMIN, FARM_OWNER, TECHNICIAN, SALES_STAFF, OPERATOR]
-      description: "OPERATOR giữ lại để tương thích ngược (SRS v1.7.0 đã gộp vào FARM_OWNER) — không dùng cho tài khoản mới"
+      enum: [ADMIN, FARM_OWNER, TECHNICIAN, SALES_STAFF]
+      description: "AUTH-FR-004. Buyer đăng ký qua OTP không mang role nào (role=null) vì không tham gia RBAC"
 
     User:
       type: object
@@ -882,6 +901,7 @@ components:
         _id: { type: string }
         name: { type: string }
         address: { type: string }
+        region: { type: string, example: HCMC, description: "Khu vực địa lý — khớp users.assigned_regions để xác định Technician phụ trách (AUTH-FR-005c)" }
         coordinates: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
         owner_id: { type: string, description: Primary Owner }
         members:
@@ -952,7 +972,7 @@ components:
         zone_id: { type: string }
         firmware_version: { type: string }
         last_heartbeat: { type: string, format: date-time }
-        status: { type: string, enum: [ONLINE, OFFLINE, ERROR, DEGRADED] }
+        status: { type: string, enum: [PENDING, ONLINE, OFFLINE, ERROR, DEGRADED], description: "PENDING = Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi heartbeat đầu tiên (Flow 1)" }
         rssi: { type: number }
         relay_states: { $ref: '#/components/schemas/RelayStates' }
         control_mode: { type: string, enum: [AUTO, MANUAL] }
@@ -978,7 +998,7 @@ components:
         device_id: { type: string }
         zone_id: { type: string }
         rtsp_url: { type: string }
-        status: { type: string, enum: [ONLINE, OFFLINE, ERROR, DEGRADED] }
+        status: { type: string, enum: [PENDING, ONLINE, OFFLINE, ERROR, DEGRADED], description: "PENDING = Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi heartbeat đầu tiên (Flow 1)" }
         last_heartbeat: { type: string, format: date-time }
         model_version: { type: string }
         registered_at: { type: string, format: date-time }
