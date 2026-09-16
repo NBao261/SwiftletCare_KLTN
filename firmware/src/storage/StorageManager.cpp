@@ -46,6 +46,20 @@ void loadConfig() {
   Serial.println("[Storage] Config loaded from NVS");
 }
 
+bool loadWifiCredentials(String &ssid, String &password) {
+  if (!prefs.isKey("wifiSsid"))
+    return false; // chưa từng cấu hình qua captive portal — dùng mặc định Secrets.h
+  ssid = prefs.getString("wifiSsid", "");
+  password = prefs.getString("wifiPass", "");
+  return ssid.length() > 0;
+}
+
+void saveWifiCredentials(const String &ssid, const String &password) {
+  prefs.putString("wifiSsid", ssid);
+  prefs.putString("wifiPass", password);
+  Serial.println("[Storage] Đã lưu WiFi mới vào NVS: " + ssid);
+}
+
 void bufferTelemetry(const SensorData &data) {
   File f = SPIFFS.open(BUFFER_FILE, FILE_APPEND);
   if (!f) {

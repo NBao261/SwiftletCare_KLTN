@@ -76,8 +76,11 @@
 #define MQTT_QOS_ALERT 1
 
 namespace Config {
-extern const char *wifiSsid;
-extern const char *wifiPassword;
+// String (không phải const char*) vì WiFiProvisioner có thể ghi đè giá trị này
+// bằng WiFi mới nhập qua captive portal, đọc lại từ NVS lúc boot — khác với
+// mqttBroker/mqttUsername/... vẫn cố định theo Secrets.h (không đổi khi đổi WiFi).
+extern String wifiSsid;
+extern String wifiPassword;
 extern const char *mqttBroker;
 extern const char *mqttUsername;
 extern const char *mqttPassword;
