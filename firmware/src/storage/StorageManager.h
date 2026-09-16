@@ -18,6 +18,12 @@ void loadConfig();
 bool loadWifiCredentials(String &ssid, String &password); // false nếu chưa từng lưu
 void saveWifiCredentials(const String &ssid, const String &password);
 
+// NVS – IP MQTT broker nhập qua captive portal (cùng form với WiFi, xem
+// WiFiProvisioner) — tách riêng vì đổi độc lập với WiFi (WiFi có thể đúng
+// nhưng IP broker sai/đổi mạng khác).
+bool loadMqttBroker(String &broker); // false nếu chưa từng lưu
+void saveMqttBroker(const String &broker);
+
 // SPIFFS – offline telemetry buffer
 void bufferTelemetry(const SensorData &data);
 void flushBuffer(); // Upload all buffered records via MQTT

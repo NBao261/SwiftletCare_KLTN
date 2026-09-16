@@ -61,6 +61,8 @@ static const char *PORTAL_HTML = R"HTML(
     <input name="ssid" required autocomplete="off">
     <label>Mat khau</label>
     <input name="password" type="password" autocomplete="off">
+    <label>Dia chi IP MQTT Broker (de trong neu khong doi)</label>
+    <input name="mqttBroker" value="%MQTT_BROKER%" autocomplete="off">
     <button type="submit">Ket noi</button>
   </form>
 </div>
@@ -74,9 +76,9 @@ static const char *SAVED_HTML = R"HTML(
 <style>body{font-family:sans-serif;display:flex;min-height:100vh;
 align-items:center;justify-content:center;text-align:center;padding:0 24px}</style>
 </head><body><div>
-<h2>Da luu WiFi moi</h2>
-<p>Thiet bi dang khoi dong lai va ket noi. Neu sai mat khau, thiet bi se tu
-phat lai mang cau hinh nay sau ~10 giay de ban nhap lai.</p>
+<h2>Da luu cau hinh moi</h2>
+<p>Thiet bi dang khoi dong lai va ket noi. Neu sai WiFi/MQTT broker, thiet bi
+se tu phat lai mang cau hinh nay de ban nhap lai.</p>
 </div></body></html>
 )HTML";
 
@@ -103,6 +105,7 @@ void startCaptivePortal(AsyncWebServer &server) {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = String(PORTAL_HTML);
     html.replace("%DEVICE_ID%", Config::deviceId);
+    html.replace("%MQTT_BROKER%", Config::mqttBroker);
     request->send(200, "text/html", html);
   });
 
@@ -116,6 +119,18 @@ void startCaptivePortal(AsyncWebServer &server) {
                            ? request->getParam("password", true)->value()
                            : "";
     StorageManager::saveWifiCredentials(ssid, password);
+
+    // MQTT broker: optional, để trống nghĩa là giữ nguyên giá trị cũ (không
+    // ghi gì vào NVS, MQTTManager::begin() vẫn dùng giá trị đã lưu trước đó
+    // hoặc mặc định Secrets.h nếu chưa từng đổi).
+    if (request->hasParam("mqttBroker", true)) {
+      String broker = request->getParam("mqttBroker", true)->value();
+      broker.trim();
+      if (broker.length() > 0) {
+        StorageManager::saveMqttBroker(broker);
+      }
+    }
+
     request->send(200, "text/html", SAVED_HTML);
     // Delay nhỏ để response kịp gửi về trình duyệt trước khi mất kết nối AP
     delay(1500);

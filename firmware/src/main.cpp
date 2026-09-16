@@ -141,6 +141,14 @@ void loop() {
     // portal thay vì phải tự mở http://192.168.4.1
     WiFiProvisioner::handleDnsLoop();
     vTaskDelay(pdMS_TO_TICKS(50));
+  } else if (MQTTManager::isBrokerUnreachable()) {
+    // WiFi vẫn ổn nhưng MQTT không connect được suốt — nhiều khả năng IP LAN
+    // broker cũ sai (đổi mạng WiFi khác). Bật lại đúng captive portal (đặt ở
+    // đây, không gọi trực tiếp từ mqttTask, để tránh đổi WiFi.mode()/khởi
+    // động AsyncWebServer từ 1 FreeRTOS task khác core).
+    Serial.println("[MQTT] Broker không phản hồi sau nhiều lần thử — bật "
+                   "AP-mode để nhập lại địa chỉ broker");
+    WiFiProvisioner::startCaptivePortal(otaServer);
   } else {
     vTaskDelay(pdMS_TO_TICKS(1000));
   }

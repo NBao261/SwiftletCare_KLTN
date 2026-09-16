@@ -60,6 +60,18 @@ void saveWifiCredentials(const String &ssid, const String &password) {
   Serial.println("[Storage] Đã lưu WiFi mới vào NVS: " + ssid);
 }
 
+bool loadMqttBroker(String &broker) {
+  if (!prefs.isKey("mqttBroker"))
+    return false; // chưa từng cấu hình qua captive portal — dùng mặc định Secrets.h
+  broker = prefs.getString("mqttBroker", "");
+  return broker.length() > 0;
+}
+
+void saveMqttBroker(const String &broker) {
+  prefs.putString("mqttBroker", broker);
+  Serial.println("[Storage] Đã lưu MQTT broker mới vào NVS: " + broker);
+}
+
 void bufferTelemetry(const SensorData &data) {
   File f = SPIFFS.open(BUFFER_FILE, FILE_APPEND);
   if (!f) {
