@@ -9,8 +9,8 @@ cp .env.example .env   # rồi sửa MONGODB_URI/MQTT_BROKER_URL khớp docker-c
 npm install
 docker compose up -d mongodb emqx   # từ thư mục gốc repo
 npm run seed             # tạo sẵn 1 Farm Owner + 1 Technician + Farm/House/Zone/SensorNode để test nhanh
-npm run dev               # tsx watch, hot reload
-npm run mdns              # (nếu có ESP32 thật) chạy ở terminal khác — xem mục ESP32 dưới đây
+npm run dev               # (terminal 1) tsx watch, hot reload
+npm run mdns              # (terminal 2, nếu có ESP32 thật) xem mục ESP32 dưới đây — để chạy song song, không tắt
 ```
 
 Lưu ý dev: EMQX tự ký cert TLS trên 8883 → Node `mqtt` client mặc định reject. Dùng cổng **1883 non-TLS** cho backend ở dev (`MQTT_BROKER_URL=mqtt://localhost:1883`), đổi lại `mqtts://...:8883` + CA cert thật khi lên production.
@@ -51,6 +51,24 @@ Lưu ý dev: EMQX tự ký cert TLS trên 8883 → Node `mqtt` client mặc đ�
      tại trong DB (seed script tạo sẵn `node_001`) — backend tra thiết bị theo `deviceId`
      trong payload JSON, **không** theo farmId/houseId/zoneId trong topic MQTT (xem mục
      "Quan trọng — topic MQTT" bên dưới).
+
+## Firmware (ESP32)
+
+Code ở `firmware/` (PlatformIO, không phải npm) — dùng CLI `pio` (cài kèm VSCode
+PlatformIO extension, hoặc `pip install platformio`):
+
+```bash
+cd firmware
+cp src/config/Secrets.h.example src/config/Secrets.h   # rồi điền WiFi/MQTT/farmId thật — xem file, có hướng dẫn
+pio run -e esp32dev                          # build thử, không cần cắm board (kiểm tra compile trước khi nạp)
+pio run -e esp32dev --target upload          # nạp vào ESP32 qua USB (cần cắm board)
+pio device monitor -b 115200                 # xem log Serial (Ctrl+C để thoát)
+```
+
+`pio run --target upload` chỉ cần chạy khi **đổi code** firmware. Đổi WiFi hoặc IP MQTT
+broker (kể cả đổi mạng khác hẳn) **không cần** upload lại — xem cơ chế tự phục vụ ở mục
+"Kích hoạt ESP32 thật" bên dưới (mDNS tự dò broker, hoặc captive portal nhập tay qua điện
+thoại nếu mDNS không hoạt động).
 
 ## API Docs (Swagger)
 
@@ -152,6 +170,7 @@ Lệnh điều khiển (`relay/command`, `config/update`) publish tới `swiftle
 ```bash
 npm run build   # tsc → dist/
 npm run seed    # tạo User/Farm/House/Zone/SensorNode test
+npm run mdns    # phát mDNS "swiftletcare-broker.local" cho ESP32 tự dò broker (chạy song song docker-compose)
 npm test        # Jest (unit + integration)
 npm run lint
 ```
