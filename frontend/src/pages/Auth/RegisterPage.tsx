@@ -1,21 +1,21 @@
 import { useState, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button, Input, Card } from '@/components/ui'
+import { getApiErrorMessage } from '@/utils/helpers'
 
-/** Register Page – AUTH-FR-001 */
+/** Register Page – AUTH-FR-001. `?email=` prefill khi tới từ link lời mời (Flow 12). */
 export default function RegisterPage() {
   const { register } = useAuth()
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '', password: '' })
+  const [searchParams] = useSearchParams()
+  const [form, setForm] = useState({ full_name: '', email: searchParams.get('email') ?? '', phone: '', password: '' })
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     register.mutate(form)
   }
 
-  const errorMessage = register.isError
-    ? ((register.error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ?? 'Đăng ký thất bại')
-    : undefined
+  const errorMessage = register.isError ? getApiErrorMessage(register.error, 'Đăng ký thất bại') : undefined
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4 py-8">

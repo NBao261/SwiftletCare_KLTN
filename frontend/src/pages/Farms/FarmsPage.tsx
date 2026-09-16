@@ -6,6 +6,11 @@ import { cn } from "@/utils/cn";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import EmptyState from "@/components/common/EmptyState";
 import HouseZoneManager from "./HouseZoneManager";
+import FarmMembersManager from "./FarmMembersManager";
+
+const FARM_TABS = ["houses", "members"] as const;
+type FarmTab = (typeof FARM_TABS)[number];
+const FARM_TAB_LABEL: Record<FarmTab, string> = { houses: "Nhà & Zone", members: "Thành viên" };
 
 /** Farms Page – FARM-FR-001, FARM-FR-002 */
 export default function FarmsPage() {
@@ -14,6 +19,7 @@ export default function FarmsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", address: "", region: "" });
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<FarmTab>("houses");
 
   function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -41,7 +47,9 @@ export default function FarmsPage() {
           title="Chưa có trang trại nào"
           description="Tạo farm đầu tiên để bắt đầu quản lý nhà yến, zone và thiết bị."
           action={
-            <Button onClick={() => setShowCreate(true)}>+ Tạo trang trại</Button>
+            <Button onClick={() => setShowCreate(true)}>
+              + Tạo trang trại
+            </Button>
           }
         />
       )}
@@ -82,7 +90,27 @@ export default function FarmsPage() {
               </span>
             </button>
             {selectedFarmId === farm._id && (
-              <HouseZoneManager farmId={farm._id} />
+              <div className="mt-4 border-t border-warmGray/15 pt-4">
+                <div className="flex gap-1 rounded-2xl bg-warmGray/10 p-1">
+                  {FARM_TABS.map(t => (
+                    <button
+                      key={t}
+                      onClick={(e) => { e.stopPropagation(); setActiveTab(t) }}
+                      className={cn(
+                        "flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
+                        activeTab === t ? "bg-white text-charcoal shadow-card" : "text-warmGray",
+                      )}
+                    >
+                      {FARM_TAB_LABEL[t]}
+                    </button>
+                  ))}
+                </div>
+                {activeTab === "houses" ? (
+                  <HouseZoneManager farmId={farm._id} farmName={farm.name} />
+                ) : (
+                  <FarmMembersManager farmId={farm._id} />
+                )}
+              </div>
             )}
           </Card>
         ))}

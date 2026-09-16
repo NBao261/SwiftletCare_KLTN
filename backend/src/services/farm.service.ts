@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { Farm, IFarm } from '@/models/farm.model'
+import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
@@ -54,10 +54,39 @@ export async function createFarm(
   })
 }
 
-export async function getFarm(farmId: string, user: CurrentUser): Promise<IFarm> {
+/**
+ * FE cần tên/email từng thành viên để hiển thị màn "Quản lý thành viên" (không
+ * chỉ user_id thô). Query thêm 1 lượt Users theo id thay vì đổi hẳn sang
+ * `.populate()` để KHÔNG đụng `hasFarmAccess`/`isPrimaryOwner` — 2 hàm đó so
+ * sánh `String(farm.owner_id)`/`String(m.user_id)` với ObjectId thô, populate
+ * sẽ biến chúng thành object và làm sai so sánh ở mọi nơi khác dùng chung
+ * `findFarmOrThrow`.
+ */
+export interface FarmMemberDetail extends IFarmMember { full_name?: string; email?: string }
+export interface FarmDetail extends Omit<IFarm, 'members'> {
+  members: FarmMemberDetail[]
+  owner?: { full_name?: string; email?: string }
+}
+
+export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDetail> {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
-  return farm
+
+  const memberIds = [farm.owner_id, ...farm.members.map(m => m.user_id)]
+  const users = await User.find({ _id: { $in: memberIds } }).select('full_name email').lean()
+  const userMap = new Map(users.map(u => [String(u._id), u]))
+
+  const plain = farm.toObject() as unknown as FarmDetail
+  plain.owner = {
+    full_name: userMap.get(String(farm.owner_id))?.full_name,
+    email:     userMap.get(String(farm.owner_id))?.email,
+  }
+  plain.members = plain.members.map(m => ({
+    ...m,
+    full_name: userMap.get(String(m.user_id))?.full_name,
+    email:     userMap.get(String(m.user_id))?.email,
+  }))
+  return plain
 }
 
 export async function updateFarm(

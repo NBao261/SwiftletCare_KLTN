@@ -3,6 +3,8 @@ import { useAuthStore } from '@/store/authStore'
 import MainLayout from '@/components/layout/MainLayout'
 import LoginPage from '@/pages/Auth/LoginPage'
 import RegisterPage from '@/pages/Auth/RegisterPage'
+import ForgotPasswordPage from '@/pages/Auth/ForgotPasswordPage'
+import InvitationPage from '@/pages/Invitations/InvitationPage'
 import DashboardPage from '@/pages/Dashboard/DashboardPage'
 import FarmsPage from '@/pages/Farms/FarmsPage'
 import DevicesPage from '@/pages/Devices/DevicesPage'
@@ -25,8 +27,10 @@ export default function App() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/login"    element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login"            element={<LoginPage />} />
+      <Route path="/register"         element={<RegisterPage />} />
+      <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
+      <Route path="/invitations/:token" element={<InvitationPage />} />
       <Route path="/marketplace"     element={<MarketplacePage />} />
       <Route path="/marketplace/:id" element={<ListingDetailPage />} />
 

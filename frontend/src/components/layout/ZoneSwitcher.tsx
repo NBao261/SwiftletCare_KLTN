@@ -43,7 +43,8 @@ export default function ZoneSwitcher() {
   }, [open])
 
   function handlePick(zoneId: string, zoneName: string) {
-    setZone(zoneId, zoneName)
+    const farm = farms?.find(f => f._id === farmId)
+    setZone(farmId!, farm?.name ?? '', zoneId, zoneName)
     setOpen(false)
     setFarmId(null)
     setHouseId(null)

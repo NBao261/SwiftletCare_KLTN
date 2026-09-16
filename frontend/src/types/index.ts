@@ -36,6 +36,8 @@ export interface User {
     push: boolean; zalo: boolean; sms: boolean
     quiet_hours: { start: string; end: string }
   }
+  /** AUTH-FR-012 — đã yêu cầu xoá tài khoản, chờ Administrator xử lý trong ≤30 ngày */
+  deletion_requested_at?: string
 }
 
 export interface Farm {
@@ -44,7 +46,9 @@ export interface Farm {
   region?: string
   coordinates?: { lat: number; lng: number }
   owner_id: string
-  members: Array<{ user_id: string; is_primary: boolean; joined_at: string }>
+  /** Chỉ có ở GET /farms/:id (đã populate tên/email, xem farm.service.ts getFarm) */
+  owner?: { full_name?: string; email?: string }
+  members: Array<{ user_id: string; is_primary: boolean; joined_at: string; full_name?: string; email?: string }>
   is_deleted: boolean
   created_at: string
 }
@@ -64,13 +68,16 @@ export interface Invitation {
 }
 
 export interface House { _id: string; farm_id: string; name: string; floors: number; description?: string }
+
+export interface Thresholds {
+  temp_min: number; temp_max: number
+  humidity_min: number; humidity_max: number
+  light_max: number; nh3_max: number; co2_max: number
+}
+
 export interface Zone {
   _id: string; house_id: string; name: string; floor: number
-  thresholds: {
-    temp_min: number; temp_max: number
-    humidity_min: number; humidity_max: number
-    light_max: number; nh3_max: number; co2_max: number
-  }
+  thresholds: Thresholds
 }
 
 // Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation, IN4=heating
@@ -100,27 +107,66 @@ export interface TelemetryRecord {
 }
 
 // Module TICKET (§5.9, §8.2)
+export interface TicketSatChecklist {
+  modbus_addresses_ok: boolean
+  camera_rtsp_ok: boolean
+  lte_connection_ok: boolean
+  relay_test_ok: boolean
+}
+
 export interface Ticket {
-  _id: string; farm_id: string; zone_id?: string; alert_id?: string
+  _id: string; farm_id: string; zone_id?: string; alert_id?: string; created_by?: string
   type: TicketType; priority: TicketPriority; status: TicketStatus
-  assigned_to?: string
+  assigned_to?: string | { _id: string; full_name: string; email: string }
+  /** Chỉ dùng cho type=INSTALLATION/MAINTENANCE (TICKET-FR-004b) */
+  scheduled_visit_at?: string
   sla_response_due_at?: string; sla_resolve_due_at?: string; is_sla_breached: boolean
-  notes: Array<{ author_id: string; content: string; created_at: string }>
+  sat_checklist: TicketSatChecklist
+  notes: Array<{ author_id?: string; content: string; created_at: string }>
   satisfaction_rating?: number
   created_at: string; closed_at?: string
 }
 
 // Module MARKET (§5.8, §8.2)
+export interface EnvSnapshot {
+  avg_temperature?: number; avg_humidity?: number; avg_light_lux?: number
+  avg_nh3_ppm?: number; avg_co2_ppm?: number
+  telemetry_range?: { from: string; to: string }
+  /** true khi Zone chưa đủ 7 ngày dữ liệu — Traceability Card nên nói rõ, không hiện số sai lệch */
+  insufficient_data?: boolean
+}
+
+export interface FlockSnapshot {
+  avg_return_rate_30d?: number
+  estimated_population?: number
+}
+
 export interface HarvestBatch {
-  _id: string; farm_id: string; zone_id: string; trace_code: string
+  _id: string; farm_id: string; zone_id: string; created_by?: string; trace_code: string
   harvest_date: string; nest_count: number; weight_grams: number
-  nest_type: NestType; status: HarvestStatus; created_at: string
+  nest_type: NestType; product_images: string[]
+  env_snapshot: EnvSnapshot; flock_snapshot: FlockSnapshot
+  status: HarvestStatus
+  /** Set khi đã tạo Nest Listing từ batch này (MARKET-FR-006) */
+  listing_id?: string
+  is_deleted: boolean
+  created_at: string; updated_at?: string
 }
 
 export interface NestListing {
-  _id: string; harvest_batch_id: string; farm_id: string
+  _id: string; harvest_batch_id: string | HarvestBatch; farm_id: string
   title: string; description?: string; price_vnd?: number; price_unit: string
-  listing_status: ListingStatus; view_count: number; inquiry_count: number
+  listing_status: ListingStatus
+  contact_info: { show_phone: boolean; show_email: boolean; show_zalo: boolean }
+  view_count: number; inquiry_count: number
+  published_at?: string
+}
+
+/** MARKET-FR-010 — Buyer gửi liên hệ tới 1 Nest Listing */
+export interface ContactInquiry {
+  _id: string; listing_id: string
+  buyer_name: string; buyer_phone?: string; buyer_email?: string; message: string
+  created_at: string
 }
 
 export interface Alert {
@@ -141,7 +187,8 @@ export interface BirdCountRecord {
 export interface ApiResponse<T = unknown> {
   success: boolean
   data: T
-  meta?: { page?: number; limit?: number; total?: number }
+  /** `unreadCount` chỉ có ở GET /alerts (ALERT-FR-007 — số cảnh báo ACTIVE) */
+  meta?: { page?: number; limit?: number; total?: number; unreadCount?: number }
   error?: { code: string; message: string }
 }
 

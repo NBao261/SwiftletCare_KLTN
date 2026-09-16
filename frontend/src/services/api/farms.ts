@@ -18,7 +18,10 @@ export const farmApi = {
 
   inviteSalesStaff: (id: string, email: string) =>
     api.post<ApiResponse<Invitation>>(`/farms/${id}/sales-staff`, { email }),
-  listSalesStaff: (id: string) => api.get<ApiResponse<unknown[]>>(`/farms/${id}/sales-staff`),
+  listSalesStaff: (id: string) =>
+    api.get<ApiResponse<Array<{ _id: string; farm_id: string; sales_staff_id: { _id: string; full_name: string; email: string }; invited_by?: string }>>>(
+      `/farms/${id}/sales-staff`,
+    ),
 
   createHouse: (farmId: string, input: { name: string; floors?: number; description?: string }) =>
     api.post<ApiResponse<House>>(`/farms/${farmId}/houses`, input),

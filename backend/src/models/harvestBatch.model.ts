@@ -26,6 +26,9 @@ export interface IHarvestBatch extends Document {
     estimated_population?: number
   }
   status: HarvestStatus
+  /** Set khi tạo Nest Listing từ batch này (market.service.ts createListing) — cho FE tra lại
+   * listing tương ứng (xem lượt xem/liên hệ) mà không cần thêm endpoint "danh sách listing của tôi" */
+  listing_id?: Types.ObjectId
   created_at: Date
   updated_at: Date
   is_deleted: boolean
@@ -55,6 +58,7 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
       estimated_population: { type: Number },
     },
     status: { type: String, enum: ['DRAFT','LISTED','ARCHIVED'] as HarvestStatus[], default: 'DRAFT' },
+    listing_id: { type: Schema.Types.ObjectId, ref: 'NestListing' },
     is_deleted: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }

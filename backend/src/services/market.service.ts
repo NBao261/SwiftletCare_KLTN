@@ -183,6 +183,7 @@ export async function createListing(user: CurrentUser, input: CreateListingInput
   })
 
   batch.status = 'LISTED'
+  batch.listing_id = listing._id
   await batch.save()
   return listing
 }

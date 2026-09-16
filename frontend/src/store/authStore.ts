@@ -9,6 +9,8 @@ interface AuthState {
   setAuth:         (user: User, accessToken: string) => void
   clearAuth:       () => void
   setAccessToken:  (token: string) => void
+  /** Gộp field mới vào user hiện tại — dùng khi API chỉ trả message, không trả lại User đầy đủ */
+  updateUser:      (partial: Partial<User>) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -20,6 +22,7 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: true }),
       clearAuth: () => set({ user: null, accessToken: null, isAuthenticated: false }),
       setAccessToken: (token) => set({ accessToken: token }),
+      updateUser: (partial) => set(s => ({ user: s.user ? { ...s.user, ...partial } : s.user })),
     }),
     { name: 'swiftletcare-auth', partialize: (s) => ({ user: s.user, accessToken: s.accessToken, isAuthenticated: s.isAuthenticated }) }
   )

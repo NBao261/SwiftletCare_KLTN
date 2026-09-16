@@ -7,6 +7,8 @@ interface AlertState {
   incrementUnread: () => void
   setLatestAlert: (alert: Alert) => void
   resetUnread: () => void
+  /** Đồng bộ từ `meta.unreadCount` của GET /alerts (nguồn sự thật — số cảnh báo ACTIVE) */
+  setUnreadCount: (n: number) => void
 }
 
 export const useAlertStore = create<AlertState>((set) => ({
@@ -15,4 +17,5 @@ export const useAlertStore = create<AlertState>((set) => ({
   incrementUnread: () => set(s => ({ unreadCount: s.unreadCount + 1 })),
   setLatestAlert:  (alert) => set({ latestAlert: alert }),
   resetUnread:     () => set({ unreadCount: 0 }),
+  setUnreadCount:  (n) => set({ unreadCount: n }),
 }))

@@ -12,7 +12,13 @@ import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import EmptyState from "@/components/common/EmptyState";
 
 /** HouseZoneManager – quản lý House/Zone của 1 Farm (FARM-FR-002) */
-export default function HouseZoneManager({ farmId }: { farmId: string }) {
+export default function HouseZoneManager({
+  farmId,
+  farmName,
+}: {
+  farmId: string;
+  farmName: string;
+}) {
   const { data: houses, isLoading } = useHouses(farmId);
   const createHouse = useCreateHouse(farmId);
   const [showCreateHouse, setShowCreateHouse] = useState(false);
@@ -55,7 +61,13 @@ export default function HouseZoneManager({ farmId }: { farmId: string }) {
       )}
 
       {houses?.map((house) => (
-        <HouseRow key={house._id} houseId={house._id} name={house.name} />
+        <HouseRow
+          key={house._id}
+          farmId={farmId}
+          farmName={farmName}
+          houseId={house._id}
+          name={house.name}
+        />
       ))}
 
       <Modal
@@ -84,7 +96,17 @@ export default function HouseZoneManager({ farmId }: { farmId: string }) {
   );
 }
 
-function HouseRow({ houseId, name }: { houseId: string; name: string }) {
+function HouseRow({
+  farmId,
+  farmName,
+  houseId,
+  name,
+}: {
+  farmId: string;
+  farmName: string;
+  houseId: string;
+  name: string;
+}) {
   const [expanded, setExpanded] = useState(false);
   return (
     <Card>
@@ -97,12 +119,22 @@ function HouseRow({ houseId, name }: { houseId: string; name: string }) {
           {expanded ? "Thu gọn" : "Xem Zone"}
         </span>
       </button>
-      {expanded && <ZoneManager houseId={houseId} />}
+      {expanded && (
+        <ZoneManager farmId={farmId} farmName={farmName} houseId={houseId} />
+      )}
     </Card>
   );
 }
 
-function ZoneManager({ houseId }: { houseId: string }) {
+function ZoneManager({
+  farmId,
+  farmName,
+  houseId,
+}: {
+  farmId: string;
+  farmName: string;
+  houseId: string;
+}) {
   const { data: zones, isLoading } = useZones(houseId);
   const createZone = useCreateZone(houseId);
   const setZone = useZoneStore((s) => s.setZone);
@@ -124,7 +156,7 @@ function ZoneManager({ houseId }: { houseId: string }) {
   }
 
   function goTo(zoneId: string, zoneName: string, path: string) {
-    setZone(zoneId, zoneName);
+    setZone(farmId, farmName, zoneId, zoneName);
     navigate(path);
   }
 
