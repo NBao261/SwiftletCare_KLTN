@@ -11,8 +11,10 @@ namespace Config {
 String wifiSsid = SECRET_WIFI_SSID;
 String wifiPassword = SECRET_WIFI_PASSWORD;
 
-// MQTT broker
-const char *mqttBroker = SECRET_MQTT_BROKER;
+// MQTT broker — giá trị mặc định từ Secrets.h, có thể bị ghi đè bằng IP mới
+// nhập qua captive portal (đổi WiFi mạng khác => IP LAN broker cũng đổi, xem
+// MQTTManager::begin() + WiFiProvisioner).
+String mqttBroker = SECRET_MQTT_BROKER;
 const char *mqttUsername = SECRET_MQTT_USERNAME;
 const char *mqttPassword = SECRET_MQTT_PASSWORD;
 

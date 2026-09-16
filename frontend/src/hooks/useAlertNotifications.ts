@@ -4,6 +4,7 @@ import { onAlertNew } from '@/services/socket'
 import { useAlertStore } from '@/store/alertStore'
 import { useToastStore } from '@/store/toastStore'
 import { useSocket } from './useSocket'
+import { useUnreadAlertCount } from './useAlerts'
 
 /**
  * Global listener cho ALERT_NEW (§9.3) — mount 1 lần ở MainLayout, không phụ
@@ -13,6 +14,7 @@ import { useSocket } from './useSocket'
  */
 export function useAlertNotifications(): void {
   useSocket()
+  useUnreadAlertCount()
   const queryClient = useQueryClient()
   const incrementUnread = useAlertStore(s => s.incrementUnread)
   const setLatestAlert = useAlertStore(s => s.setLatestAlert)

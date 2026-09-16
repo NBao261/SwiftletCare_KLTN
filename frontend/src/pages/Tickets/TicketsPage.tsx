@@ -1,5 +1,5 @@
 // Tickets Page – TICKET-FR-001..004b/006/007
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useZoneStore } from '@/store/zoneStore'
 import { useTicketsList, useCreateTicket } from '@/hooks/useTickets'
@@ -8,25 +8,15 @@ import ZonePicker, { type ZonePickerValue } from '@/components/common/ZonePicker
 import EmptyState from '@/components/common/EmptyState'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import Pagination from '@/components/common/Pagination'
+import FilterChip from '@/components/common/FilterChip'
 import { IconTicket } from '@/components/ui/icons'
 import { useToastStore } from '@/store/toastStore'
 import { formatDate, getApiErrorMessage } from '@/utils/helpers'
-import { cn } from '@/utils/cn'
+import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
 import type { TicketType, TicketStatus } from '@/types'
 import type { CreateTicketInput } from '@/services/api/tickets'
 
-const TICKET_TYPE_LABEL: Record<TicketType, string> = {
-  SENSOR_FAULT: 'Lỗi cảm biến', RS485_BUS_FAILURE: 'Lỗi bus RS485', ACTUATOR_FAILURE: 'Lỗi thiết bị chấp hành',
-  NODE_OFFLINE: 'Thiết bị mất kết nối', EDGE_AI_DEGRADED: 'Camera AI suy giảm', POWER_OUTAGE: 'Mất điện',
-  SPEAKER_FAILURE: 'Lỗi loa ru', PREDATOR_DETECTED: 'Phát hiện thiên địch',
-  INSTALLATION: 'Yêu cầu lắp đặt mới', MAINTENANCE: 'Bảo trì định kỳ', OTHER: 'Khác',
-}
 const INSTALLATION_TYPES: TicketType[] = ['INSTALLATION', 'MAINTENANCE']
-const STATUS_LABEL: Record<TicketStatus, string> = {
-  NEW: 'Mới', IN_PROGRESS: 'Đang xử lý', AWAITING_FIELD_CONFIRMATION: 'Chờ xác nhận hiện trường', CLOSED: 'Đã đóng',
-}
-const STATUS_TONE = { NEW: 'critical', IN_PROGRESS: 'warning', AWAITING_FIELD_CONFIRMATION: 'info', CLOSED: 'neutral' } as const
-const PRIORITY_TONE = { P1: 'critical', P2: 'warning', P3: 'neutral' } as const
 
 export default function TicketsPage() {
   const [status, setStatus] = useState<TicketStatus | undefined>(undefined)
@@ -86,20 +76,6 @@ export default function TicketsPage() {
   )
 }
 
-function FilterChip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
-        active ? 'bg-charcoal text-white' : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20',
-      )}
-    >
-      {label}
-    </button>
-  )
-}
-
 function CreateTicketModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { selectedFarmId, selectedZoneId } = useZoneStore()
   const createTicket = useCreateTicket()
@@ -109,6 +85,12 @@ function CreateTicketModal({ open, onClose }: { open: boolean; onClose: () => vo
   const [type, setType] = useState<TicketType>('OTHER')
   const [description, setDescription] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
+
+  // Modal không unmount giữa các lần mở (chỉ toggle `open`) — resync theo
+  // ZoneSwitcher mỗi lần mở lại, tránh prefill nhầm zone cũ đã đổi ở TopBar.
+  useEffect(() => {
+    if (open) setZone({ farmId: selectedFarmId ?? undefined, zoneId: selectedZoneId ?? undefined })
+  }, [open, selectedFarmId, selectedZoneId])
 
   const needsSchedule = INSTALLATION_TYPES.includes(type)
 

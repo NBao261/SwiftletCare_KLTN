@@ -17,7 +17,10 @@ export function useUpdateListing(farmId: string | undefined) {
   return useMutation({
     mutationFn: ({ id, ...input }: { id: string; title?: string; description?: string; price_vnd?: number; listing_status?: ListingStatus }) =>
       marketplaceApi.updateListing(id, input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['harvests', farmId] }),
+    onSuccess: (_data, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: ['harvests', farmId] })
+      void queryClient.invalidateQueries({ queryKey: ['listing-stats', id] })
+    },
   })
 }
 

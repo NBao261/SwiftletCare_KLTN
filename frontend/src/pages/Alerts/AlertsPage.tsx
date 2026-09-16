@@ -1,11 +1,13 @@
 // Alerts Page – ALERT-FR-001/002/006/007/008/009
-import { useState, FormEvent } from 'react'
+import { useState } from 'react'
 import { useAlertsList, useAcknowledgeAlert } from '@/hooks/useAlerts'
-import { Card, Button, Modal, Textarea } from '@/components/ui'
+import { Card, Button } from '@/components/ui'
 import AlertBadge from '@/components/common/AlertBadge'
 import EmptyState from '@/components/common/EmptyState'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import Pagination from '@/components/common/Pagination'
+import FilterChip from '@/components/common/FilterChip'
+import NoteActionModal from '@/components/common/NoteActionModal'
 import { IconAlert } from '@/components/ui/icons'
 import { cn } from '@/utils/cn'
 import { formatDate, getApiErrorMessage } from '@/utils/helpers'
@@ -94,47 +96,26 @@ export default function AlertsPage() {
   )
 }
 
-function FilterChip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
-        active ? 'bg-charcoal text-white' : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20',
-      )}
-    >
-      {label}
-    </button>
-  )
-}
-
 function AcknowledgeModal({ alertId, onClose }: { alertId: string | null; onClose: () => void }) {
   const acknowledge = useAcknowledgeAlert()
   const push = useToastStore(s => s.push)
-  const [note, setNote] = useState('')
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    if (!alertId) return
-    acknowledge.mutate({ id: alertId, note: note.trim() || undefined }, {
-      onSuccess: () => { push('Đã xác nhận cảnh báo'); setNote(''); onClose() },
-      onError: (err) => push(getApiErrorMessage(err, 'Xác nhận thất bại'), 'error'),
-    })
-  }
 
   return (
-    <Modal open={!!alertId} onClose={onClose} title="Xác nhận cảnh báo">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Textarea
-          label="Ghi chú (tùy chọn)"
-          placeholder="VD: Báo động giả, đã kiểm tra tại chỗ..."
-          value={note}
-          onChange={e => setNote(e.target.value)}
-        />
-        <Button type="submit" loading={acknowledge.isPending} className="w-full">
-          Xác nhận
-        </Button>
-      </form>
-    </Modal>
+    <NoteActionModal
+      open={!!alertId}
+      onClose={onClose}
+      title="Xác nhận cảnh báo"
+      label="Ghi chú (tùy chọn)"
+      placeholder="VD: Báo động giả, đã kiểm tra tại chỗ..."
+      submitLabel="Xác nhận"
+      loading={acknowledge.isPending}
+      onSubmit={(note) => {
+        if (!alertId) return
+        acknowledge.mutate({ id: alertId, note: note.trim() || undefined }, {
+          onSuccess: () => { push('Đã xác nhận cảnh báo'); onClose() },
+          onError: (err) => push(getApiErrorMessage(err, 'Xác nhận thất bại'), 'error'),
+        })
+      }}
+    />
   )
 }

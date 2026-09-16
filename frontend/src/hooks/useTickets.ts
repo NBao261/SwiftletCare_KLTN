@@ -1,20 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ticketApi } from '@/services/api'
+import { usePaginatedListQuery } from './usePaginatedListQuery'
+import type { Ticket } from '@/types'
 import type { CreateTicketInput, ListTicketsQuery } from '@/services/api/tickets'
 
 /** Module TICKET §5.9 */
 export function useTicketsList(query: ListTicketsQuery) {
-  const result = useQuery({
-    queryKey: ['tickets', query],
-    queryFn: () => ticketApi.list(query),
-  })
-  return {
-    records: result.data?.data.data ?? [],
-    total: result.data?.data.meta?.total ?? 0,
-    page: result.data?.data.meta?.page ?? query.page ?? 1,
-    limit: result.data?.data.meta?.limit ?? query.limit ?? 20,
-    isLoading: result.isLoading,
-  }
+  return usePaginatedListQuery<Ticket>(
+    ['tickets', query],
+    () => ticketApi.list(query),
+    query.page ?? 1,
+    query.limit ?? 20,
+  )
 }
 
 export function useTicket(id: string | undefined) {

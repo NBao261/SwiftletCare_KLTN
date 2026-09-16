@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { invitationApi } from '@/services/api'
 
 /** AUTH-FR-010, Flow 12 — xem trước lời mời qua token, không cần đăng nhập */
@@ -12,13 +12,17 @@ export function useInvitationPreview(token: string | undefined) {
 }
 
 export function useAcceptInvitation() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (token: string) => invitationApi.accept(token),
+    onSuccess: (_data, token) => void queryClient.invalidateQueries({ queryKey: ['invitation', token] }),
   })
 }
 
 export function useDeclineInvitation() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (token: string) => invitationApi.decline(token),
+    onSuccess: (_data, token) => void queryClient.invalidateQueries({ queryKey: ['invitation', token] }),
   })
 }

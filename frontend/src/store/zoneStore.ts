@@ -27,6 +27,17 @@ export const useZoneStore = create<ZoneState>()(
         set({ selectedFarmId: farmId, selectedFarmName: farmName, selectedZoneId: zoneId, selectedZoneName: zoneName }),
       clearZone: () => set({ selectedFarmId: null, selectedFarmName: null, selectedZoneId: null, selectedZoneName: null }),
     }),
-    { name: 'swiftletcare-zone' },
+    {
+      name: 'swiftletcare-zone',
+      version: 1,
+      // v0 → v1: thêm selectedFarmId/selectedFarmName. Dữ liệu cũ chỉ có 2 field
+      // zone — persist mặc định sẽ merge nông và để farm = null trong khi zone
+      // vẫn còn giá trị, khiến các trang gate theo farmId "kẹt" dù UI hiện như
+      // đã chọn. Buộc reset cả 2 để user chọn lại từ đầu, nhất quán.
+      migrate: (persisted, version) => {
+        if (version < 1) return { selectedFarmId: null, selectedFarmName: null, selectedZoneId: null, selectedZoneName: null }
+        return persisted as ZoneState
+      },
+    },
   ),
 )

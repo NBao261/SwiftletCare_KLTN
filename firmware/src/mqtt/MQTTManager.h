@@ -12,6 +12,10 @@ namespace MQTTManager {
   void begin();
   void loop();
   bool isConnected();
+  // true khi connect thất bại liên tiếp quá ngưỡng dù WiFi vẫn lên — dấu hiệu
+  // IP broker sai/đổi mạng. main.cpp dùng cờ này để tự bật lại captive portal
+  // (giống lúc WiFi fail) cho phép nhập lại IP broker qua điện thoại.
+  bool isBrokerUnreachable();
 
   // Publish (topics §9.2: swiftletcare/{farmId}/{houseId}/{zoneId}/...)
   void publishTelemetry (const SensorData& data, const RelayState& relay);

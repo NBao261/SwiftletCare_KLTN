@@ -71,19 +71,27 @@
 #define AUDIO_DROP_THRESHOLD 0.70f       // 70% drop = SPEAKER_FAILURE
 
 // ── MQTT Broker (§9.2) ───────────────────────────────────────────────────────
-#define MQTT_PORT 8883 // TLS (SEC-NFR-001)
+// Dev: cổng 1883 non-TLS — khớp cách backend đang kết nối EMQX (xem
+// backend/.env.example), tránh toàn bộ lớp phức tạp TLS/cert tự ký trên ESP32
+// (đã gặp lỗi "start_ssl_client... Software caused connection abort" ở 8883).
+// Production: đổi lại 8883 (SEC-NFR-001) + nạp CA cert thật, đừng dùng
+// setInsecure().
+#define MQTT_PORT 1883
 #define MQTT_QOS_TELEMETRY 0
 #define MQTT_QOS_COMMAND 1
 #define MQTT_QOS_ALERT 1
 
 namespace Config {
-// String (không phải const char*) vì WiFiProvisioner có thể ghi đè giá trị này
-// bằng WiFi mới nhập qua captive portal, đọc lại từ NVS lúc boot — khác với
-// mqttBroker/mqttUsername/... vẫn cố định theo Secrets.h (không đổi khi đổi
-// WiFi).
+// wifiSsid/wifiPassword/mqttBroker là String (không phải const char*) vì cả 3
+// có thể bị ghi đè lúc runtime bằng giá trị mới nhập qua captive portal
+// (WiFiProvisioner đọc lại wifiSsid/Password từ NVS lúc tryConnect();
+// MQTTManager::begin() đọc lại mqttBroker từ NVS) — khác với mqttUsername/
+// mqttPassword/farmId/houseId/zoneId/deviceId vẫn cố định theo Secrets.h
+// (những giá trị đó vẫn thuộc phạm vi Technician lúc lắp máy, không đổi qua
+// portal — xem FARM-FR-003b).
 extern String wifiSsid;
 extern String wifiPassword;
-extern const char *mqttBroker;
+extern String mqttBroker;
 extern const char *mqttUsername;
 extern const char *mqttPassword;
 extern const char *farmId;
