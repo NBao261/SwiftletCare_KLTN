@@ -15,6 +15,7 @@ router.get   ('/:id',          param('id').isMongoId(), validate, farmController
 router.put   ('/:id',          requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, farmController.update)
 router.delete('/:id',          requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, farmController.remove)
 router.post  ('/:id/members',  requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('email').isEmail(), validate, farmController.inviteMember)
+router.delete('/:id/members/:userId', requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
 
 // Houses — Technician được tạo hộ House/Zone khi xuống lắp đặt mà Farm Owner
 // chưa kịp tạo trước (Flow 9b bước 5); quyền vẫn giới hạn theo assigned_regions.

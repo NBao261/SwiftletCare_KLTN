@@ -13,6 +13,9 @@ router.get ('/',                   ticketController.list)
 router.get ('/kpi',                requireRole('ADMIN'), ticketController.kpi)
 router.get ('/:id',                param('id').isMongoId(), validate, ticketController.getOne)
 router.put ('/:id/status',         requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('status').notEmpty(), validate, ticketController.updateStatus)
+// Farm Owner tự huỷ ticket của mình khi đã tự khắc phục / không cần lắp nữa
+// (Flow 9 case 6c, Flow 9b case 4a) — khác /status ở chỗ không đòi SAT checklist
+router.put ('/:id/cancel',         requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('reason').notEmpty(), validate, ticketController.cancel)
 router.post('/:id/notes',          param('id').isMongoId(), body('content').notEmpty(), validate, ticketController.addNote)
 router.put ('/:id/sat-checklist',  requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, ticketController.updateSatChecklist)
 router.post('/:id/escalate',       requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, ticketController.escalate)

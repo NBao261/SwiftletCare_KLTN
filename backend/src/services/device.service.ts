@@ -169,6 +169,41 @@ export async function markStaleDevicesOffline(): Promise<void> {
   }
 }
 
+/**
+ * ENV-FR-018 — gọi định kỳ từ jobs/overrideExpiry.job.ts. Firmware cũng tự hết
+ * hạn override sau 30 phút, nhưng backend phải tự trả về AUTO độc lập: nếu chỉ
+ * dựa vào firmware, khi thiết bị mất kết nối đúng lúc hết hạn thì DB sẽ kẹt ở
+ * MANUAL vĩnh viễn và dashboard hiển thị sai chế độ.
+ */
+export async function expireManualOverrides(): Promise<number> {
+  const expired = await SensorNode.find({
+    control_mode: 'MANUAL',
+    override_expiry: { $lt: new Date() },
+  })
+
+  for (const node of expired) {
+    node.control_mode = 'AUTO'
+    node.override_expiry = undefined
+    await node.save()
+
+    const chain = await findZoneChainOrThrow(String(node.zone_id)).catch(() => null)
+    if (chain) {
+      publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
+        action: 'clear_override',
+      })
+      for (const relayName of Object.keys(node.relay_states) as Array<keyof RelayStates>) {
+        emitRelayUpdate(String(chain.zone._id), {
+          zoneId: String(chain.zone._id),
+          relayName,
+          state: node.relay_states[relayName],
+          mode: 'AUTO',
+        })
+      }
+    }
+  }
+  return expired.length
+}
+
 /** ENV-FR-015 — xác nhận trạng thái relay thật từ ESP32 (gọi từ mqtt/handlers/relayStatus.handler.ts) */
 export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong relay/status payload')

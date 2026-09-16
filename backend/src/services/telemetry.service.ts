@@ -1,7 +1,10 @@
 import { Telemetry, ITelemetry } from '@/models/telemetry.model'
 import { SensorNode } from '@/models/device.model'
+import { Zone } from '@/models/houseZone.model'
 import { emitTelemetryUpdate } from '@/socket'
+import { findThresholdBreaches, raiseThresholdAlert } from '@/services/alert.service'
 import { NotFoundError } from '@/utils/appError.util'
+import logger from '@/utils/logger.util'
 import type { TelemetryPayload } from '@/types'
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
@@ -50,6 +53,12 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
   const node = await SensorNode.findOne({ device_id: payload.deviceId })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
+  // ENV-FR-004 — đối chiếu ngưỡng của Zone để gắn cờ bất thường + sinh cảnh báo.
+  // Zone bị xoá giữa chừng thì vẫn lưu telemetry (không mất dữ liệu), chỉ bỏ
+  // qua phần đánh giá ngưỡng.
+  const zone = await Zone.findById(node.zone_id)
+  const breaches = zone ? findThresholdBreaches(payload, zone.thresholds) : []
+
   await Telemetry.create({
     node_id: node._id,
     zone_id: node.zone_id,
@@ -60,8 +69,17 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
     nh3_ppm:     isFiniteNumber(payload.nh3_ppm)     ? payload.nh3_ppm     : undefined,
     co2_ppm:     isFiniteNumber(payload.co2_ppm)     ? payload.co2_ppm     : undefined,
     sound_db:    isFiniteNumber(payload.sound_db)    ? payload.sound_db    : undefined,
-    is_anomaly: false, // TODO: so với Zone.thresholds khi module ENV ngưỡng được implement đầy đủ
+    is_anomaly: breaches.length > 0,
   })
+
+  // Không chặn luồng ghi telemetry nếu Alert Engine lỗi — dữ liệu cảm biến vẫn
+  // quan trọng hơn việc gửi được cảnh báo (ALERT-FR-008 tự dedup nên gọi mỗi
+  // chu kỳ 10s không tạo spam).
+  if (breaches.length > 0) {
+    void raiseThresholdAlert(String(node.zone_id), String(node._id), breaches).catch((err: Error) =>
+      logger.error('Tạo cảnh báo vượt ngưỡng thất bại', { deviceId: payload.deviceId, err }),
+    )
+  }
 
   node.status = 'ONLINE'
   node.last_heartbeat = new Date()

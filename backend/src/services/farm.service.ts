@@ -1,10 +1,15 @@
+import crypto from 'crypto'
 import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
+import { Invitation, IInvitation } from '@/models/invitation.model'
 import { hasFarmAccess, isPrimaryOwner } from '@/utils/farmAccess.util'
-import { NotFoundError, ForbiddenError, ConflictError } from '@/utils/appError.util'
+import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser } from '@/types'
+
+/** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
+const INVITATION_TTL_MS = 7 * 86400_000
 
 async function findFarmOrThrow(farmId: string): Promise<IFarm> {
   const farm = await Farm.findById(farmId)
@@ -79,24 +84,129 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
   await farm.save()
 }
 
-/** AUTH-FR-005 */
-export async function inviteMember(farmId: string, user: CurrentUser, email: string): Promise<IFarm> {
+/**
+ * AUTH-FR-005/AUTH-FR-010, Flow 12 bước 1-2 — tạo Invitation thay vì thêm thẳng
+ * vào farm.members. Không còn đòi email đã có tài khoản (khác bản cũ): nếu
+ * chưa có, người được mời sẽ đăng ký trước rồi tự động accept (Flow 12 bước 3b,
+ * xử lý ở registerUser bên auth.service khi email trùng invitation PENDING).
+ */
+export async function inviteMember(farmId: string, user: CurrentUser, email: string): Promise<IInvitation> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được mời thành viên')
 
-  const invitee = await User.findOne({ email })
-  if (!invitee) {
-    // MVP: chỉ hỗ trợ mời người đã có tài khoản; pending-invite cho người
-    // chưa đăng ký để Giai đoạn 2.
-    throw NotFoundError('Email chưa có tài khoản — yêu cầu họ đăng ký trước')
-  }
-  if (farm.members.some(m => String(m.user_id) === String(invitee._id))) {
+  const normalizedEmail = email.toLowerCase().trim()
+  const existingMember = await User.findOne({ email: normalizedEmail })
+  if (existingMember && farm.members.some(m => String(m.user_id) === String(existingMember._id))) {
     throw ConflictError('Người dùng đã là thành viên farm này')
   }
 
-  farm.members.push({ user_id: invitee._id, is_primary: false, joined_at: new Date() } as never)
+  const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
+  if (pending) throw ConflictError('Đã có lời mời đang chờ phản hồi gửi tới email này')
+
+  return Invitation.create({
+    farm_id: farm._id,
+    invited_email: normalizedEmail,
+    invited_role: 'FARM_OWNER',
+    invited_by: user._id,
+    token: crypto.randomBytes(24).toString('hex'),
+    status: 'PENDING',
+    expires_at: new Date(Date.now() + INVITATION_TTL_MS),
+  })
+}
+
+/**
+ * Flow 12 bước 3a/3b — chấp nhận lời mời. Idempotent theo trạng thái: gọi lại
+ * trên invitation đã ACCEPTED/DECLINED/EXPIRED thì báo lỗi rõ ràng thay vì âm
+ * thầm thành công, để UI không hiểu nhầm.
+ */
+export async function acceptInvitation(token: string, user: CurrentUser): Promise<IFarm | { salesAssignment: true }> {
+  const invitation = await Invitation.findOne({ token })
+  if (!invitation) throw NotFoundError('Lời mời không tồn tại')
+  if (invitation.status !== 'PENDING') throw ConflictError(`Lời mời này đã ${STATUS_LABEL[invitation.status]}`)
+  if (invitation.expires_at < new Date()) {
+    invitation.status = 'EXPIRED'
+    await invitation.save()
+    throw ConflictError('Lời mời đã hết hạn (quá 7 ngày) — yêu cầu Farm Owner mời lại')
+  }
+  if (invitation.invited_email !== user.email?.toLowerCase()) {
+    throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
+  }
+
+  invitation.status = 'ACCEPTED'
+  invitation.responded_at = new Date()
+  await invitation.save()
+
+  if (invitation.invited_role === 'SALES_STAFF') {
+    await SalesAssignment.findOneAndUpdate(
+      { farm_id: invitation.farm_id, sales_staff_id: user._id },
+      { $setOnInsert: { invited_by: invitation.invited_by } },
+      { upsert: true },
+    )
+    return { salesAssignment: true }
+  }
+
+  const farm = await findFarmOrThrow(String(invitation.farm_id))
+  if (!farm.members.some(m => String(m.user_id) === user._id)) {
+    farm.members.push({ user_id: user._id, is_primary: false, joined_at: new Date() } as never)
+    await farm.save()
+  }
+  return farm
+}
+
+const STATUS_LABEL: Record<IInvitation['status'], string> = {
+  PENDING:  'đang chờ',
+  ACCEPTED: 'được chấp nhận',
+  DECLINED: 'bị từ chối',
+  EXPIRED:  'hết hạn',
+}
+
+/** Flow 12 case 3c — từ chối, không cần đăng nhập (link công khai theo token) */
+export async function declineInvitation(token: string): Promise<void> {
+  const invitation = await Invitation.findOne({ token })
+  if (!invitation) throw NotFoundError('Lời mời không tồn tại')
+  if (invitation.status !== 'PENDING') throw ConflictError(`Lời mời này đã ${STATUS_LABEL[invitation.status]}`)
+
+  invitation.status = 'DECLINED'
+  invitation.responded_at = new Date()
+  await invitation.save()
+}
+
+/** Xem trước lời mời (không cần đăng nhập) — hiển thị tên farm trước khi bấm chấp nhận */
+export async function getInvitationByToken(token: string) {
+  const invitation = await Invitation.findOne({ token })
+  if (!invitation) throw NotFoundError('Lời mời không tồn tại')
+  const farm = await Farm.findById(invitation.farm_id).select('name address').lean()
+  const userExists = !!(await User.findOne({ email: invitation.invited_email }).select('_id').lean())
+  return { invitation, farm, userExists }
+}
+
+/**
+ * Flow 12 bước 5 + case 5a — gỡ thành viên. Farm luôn phải còn ít nhất 1 Primary
+ * Owner nên chặn cứng việc Primary Owner tự gỡ chính mình; muốn rời Farm thì
+ * phải chuyển quyền Primary trước (ngoài phạm vi UI tự phục vụ Phase 1, xem SRS §4.1).
+ */
+export async function removeMember(farmId: string, user: CurrentUser, targetUserId: string): Promise<IFarm> {
+  const farm = await findFarmOrThrow(farmId)
+  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được gỡ thành viên')
+
+  if (String(farm.owner_id) === targetUserId) {
+    throw BadRequestError('Không thể gỡ Primary Owner — Farm luôn phải có ít nhất 1 Primary Owner')
+  }
+  const memberIndex = farm.members.findIndex(m => String(m.user_id) === targetUserId)
+  if (memberIndex === -1) throw NotFoundError('Người dùng không phải thành viên farm này')
+
+  farm.members.splice(memberIndex, 1)
   await farm.save()
   return farm
+}
+
+/** Job nền: chuyển Invitation quá hạn sang EXPIRED (AUTH-FR-010, Flow 12 case 3d) */
+export async function expireStaleInvitations(): Promise<number> {
+  const result = await Invitation.updateMany(
+    { status: 'PENDING', expires_at: { $lt: new Date() } },
+    { $set: { status: 'EXPIRED' } },
+  )
+  return result.modifiedCount
 }
 
 /** FARM-FR-002 */
@@ -152,19 +262,24 @@ export async function updateZoneThresholds(zoneId: string, user: CurrentUser, up
   return zone
 }
 
-/** AUTH-FR-005b */
-export async function inviteSalesStaff(farmId: string, user: CurrentUser, email: string) {
+/** AUTH-FR-005b, Flow 16 — dùng chung cơ chế Invitation với mời Farm Owner (AUTH-FR-005/010) */
+export async function inviteSalesStaff(farmId: string, user: CurrentUser, email: string): Promise<IInvitation> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được mời Sales Staff')
 
-  const staff = await User.findOne({ email })
-  if (!staff) throw NotFoundError('Email chưa có tài khoản Sales Staff')
+  const normalizedEmail = email.toLowerCase().trim()
+  const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
+  if (pending) throw ConflictError('Đã có lời mời đang chờ phản hồi gửi tới email này')
 
-  return SalesAssignment.findOneAndUpdate(
-    { farm_id: farm._id, sales_staff_id: staff._id },
-    { $setOnInsert: { invited_by: user._id } },
-    { upsert: true, new: true },
-  )
+  return Invitation.create({
+    farm_id: farm._id,
+    invited_email: normalizedEmail,
+    invited_role: 'SALES_STAFF',
+    invited_by: user._id,
+    token: crypto.randomBytes(24).toString('hex'),
+    status: 'PENDING',
+    expires_at: new Date(Date.now() + INVITATION_TTL_MS),
+  })
 }
 
 export async function listSalesStaff(farmId: string, user: CurrentUser) {

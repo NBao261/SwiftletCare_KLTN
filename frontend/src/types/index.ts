@@ -49,6 +49,20 @@ export interface Farm {
   created_at: string
 }
 
+/** AUTH-FR-010, Flow 12 — lời mời thành viên/Sales Staff, hết hạn sau 7 ngày nếu không phản hồi */
+export interface Invitation {
+  _id: string
+  farm_id: string
+  invited_email: string
+  invited_role: Extract<Role, 'FARM_OWNER' | 'SALES_STAFF'>
+  invited_by: string
+  token: string
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
+  expires_at: string
+  responded_at?: string
+  created_at: string
+}
+
 export interface House { _id: string; farm_id: string; name: string; floors: number; description?: string }
 export interface Zone {
   _id: string; house_id: string; name: string; floor: number

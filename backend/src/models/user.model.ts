@@ -19,6 +19,11 @@ export interface IUser extends Document {
   notification_preferences: NotificationPreferences
   otp_code?: string
   otp_expires?: Date
+  /** AUTH-FR-009 — lưu hash chứ không phải OTP thô, để lộ DB cũng không đặt lại được mật khẩu người khác */
+  password_reset_token_hash?: string
+  password_reset_expires_at?: Date
+  /** AUTH-FR-012 — user tự yêu cầu xoá, Admin xử lý trong ≤30 ngày (PRIV-NFR-003) */
+  deletion_requested_at?: Date
   refresh_tokens: Array<{ token: string; expires: Date }>
   created_at: Date
   updated_at: Date
@@ -47,6 +52,9 @@ const userSchema = new Schema<IUser>(
     },
     otp_code:      { type: String },
     otp_expires:   { type: Date },
+    password_reset_token_hash: { type: String },
+    password_reset_expires_at: { type: Date },
+    deletion_requested_at:     { type: Date },
     refresh_tokens: [{ token: String, expires: Date }],
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }

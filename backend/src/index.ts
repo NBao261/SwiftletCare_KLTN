@@ -10,6 +10,9 @@ import { connectDB }    from './config/db.config'
 import { initSocket }   from './socket'
 import { connectMQTT }  from './mqtt/mqtt.client'
 import { startDeviceOfflineJob } from './jobs/deviceOffline.job'
+import { startAlertEscalationJob } from './jobs/alertEscalation.job'
+import { startOverrideExpiryJob } from './jobs/overrideExpiry.job'
+import { startInvitationExpiryJob } from './jobs/invitationExpiry.job'
 import logger           from './utils/logger.util'
 
 const PORT = Number(process.env.PORT ?? 3000)
@@ -27,8 +30,12 @@ async function bootstrap(): Promise<void> {
   // 4. Connect MQTT broker + start subscriptions (§9.2)
   connectMQTT()
 
-  // 4b. Offline-detection cron (FARM-FR-005)
+  // 4b. Các job nền: phát hiện offline (FARM-FR-005), tự tạo ticket từ cảnh báo
+  // chưa xác nhận (TICKET-FR-002), hết hạn Manual Override (ENV-FR-018)
   startDeviceOfflineJob()
+  startAlertEscalationJob()
+  startOverrideExpiryJob()
+  startInvitationExpiryJob()
 
   // 5. Start HTTP server
   httpServer.listen(PORT, () => {

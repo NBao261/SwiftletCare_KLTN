@@ -41,11 +41,43 @@ export async function remove(req: Request, res: Response, next: NextFunction): P
   } catch (err) { next(err) }
 }
 
-/** POST /farms/:id/members – AUTH-FR-005 */
+/** POST /farms/:id/members – AUTH-FR-005/010, Flow 12 bước 1 */
 export async function inviteMember(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const farm = await farmService.inviteMember(req.params.id, req.user, req.body.email as string)
-    res.status(201).json({ success: true, data: farm })
+    const invitation = await farmService.inviteMember(req.params.id, req.user, req.body.email as string)
+    res.status(201).json({ success: true, data: invitation })
+  } catch (err) { next(err) }
+}
+
+/** DELETE /farms/:id/members/:userId – Flow 12 bước 5 */
+export async function removeMember(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const farm = await farmService.removeMember(req.params.id, req.user, req.params.userId)
+    res.json({ success: true, data: farm })
+  } catch (err) { next(err) }
+}
+
+/** GET /invitations/:token – xem trước lời mời, không cần đăng nhập */
+export async function getInvitation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await farmService.getInvitationByToken(req.params.token)
+    res.json({ success: true, data: result })
+  } catch (err) { next(err) }
+}
+
+/** POST /invitations/:token/accept – AUTH-FR-010, Flow 12 bước 3a */
+export async function acceptInvitation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await farmService.acceptInvitation(req.params.token, req.user)
+    res.json({ success: true, data: result })
+  } catch (err) { next(err) }
+}
+
+/** POST /invitations/:token/decline – Flow 12 case 3c, công khai không cần đăng nhập */
+export async function declineInvitation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    await farmService.declineInvitation(req.params.token)
+    res.json({ success: true, data: { message: 'Đã từ chối lời mời' } })
   } catch (err) { next(err) }
 }
 

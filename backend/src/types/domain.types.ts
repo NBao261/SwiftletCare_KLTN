@@ -61,6 +61,7 @@ export interface JwtAccessPayload {
  */
 export interface CurrentUser {
   _id: string
+  email: string
   role: Role
   assigned_regions?: string[]
 }

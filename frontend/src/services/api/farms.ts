@@ -1,5 +1,5 @@
 import api from './client'
-import type { ApiResponse, Farm, House, Zone } from '@/types'
+import type { ApiResponse, Farm, House, Zone, Invitation } from '@/types'
 
 export const farmApi = {
   list:   () => api.get<ApiResponse<Farm[]>>('/farms'),
@@ -9,8 +9,16 @@ export const farmApi = {
   update: (id: string, input: Partial<{ name: string; address: string; region: string }>) =>
     api.put<ApiResponse<Farm>>(`/farms/${id}`, input),
   remove: (id: string) => api.delete<ApiResponse<{ message: string }>>(`/farms/${id}`),
+
+  // AUTH-FR-010, Flow 12 — mời thành viên qua Invitation (không còn thêm thẳng vào members)
   inviteMember: (id: string, email: string) =>
-    api.post<ApiResponse<Farm>>(`/farms/${id}/members`, { email }),
+    api.post<ApiResponse<Invitation>>(`/farms/${id}/members`, { email }),
+  removeMember: (id: string, userId: string) =>
+    api.delete<ApiResponse<Farm>>(`/farms/${id}/members/${userId}`),
+
+  inviteSalesStaff: (id: string, email: string) =>
+    api.post<ApiResponse<Invitation>>(`/farms/${id}/sales-staff`, { email }),
+  listSalesStaff: (id: string) => api.get<ApiResponse<unknown[]>>(`/farms/${id}/sales-staff`),
 
   createHouse: (farmId: string, input: { name: string; floors?: number; description?: string }) =>
     api.post<ApiResponse<House>>(`/farms/${farmId}/houses`, input),

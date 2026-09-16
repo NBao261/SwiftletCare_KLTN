@@ -65,3 +65,36 @@ export async function verifyOtp(req: Request, res: Response, next: NextFunction)
     res.json({ success: true, data: { accessToken, user } })
   } catch (err) { next(err) }
 }
+
+/** POST /auth/forgot-password – AUTH-FR-009, Flow 11 bước 6 */
+export async function forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    await authService.forgotPassword(req.body.email as string)
+    res.json({ success: true, data: { message: 'Nếu email tồn tại, mã đặt lại mật khẩu đã được gửi' } })
+  } catch (err) { next(err) }
+}
+
+/** POST /auth/reset-password – AUTH-FR-009, Flow 11 bước 7 */
+export async function resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email, token, newPassword } = req.body as { email: string; token: string; newPassword: string }
+    await authService.resetPassword(email, token, newPassword)
+    res.json({ success: true, data: { message: 'Đã đổi mật khẩu, vui lòng đăng nhập lại' } })
+  } catch (err) { next(err) }
+}
+
+/** PUT /auth/notification-preferences – ALERT-FR-005/006 */
+export async function updateNotificationPreferences(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const user = await authService.updateNotificationPreferences(req.user._id, req.body)
+    res.json({ success: true, data: user })
+  } catch (err) { next(err) }
+}
+
+/** POST /auth/delete-request – AUTH-FR-012, PRIV-NFR-003 */
+export async function requestDeletion(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    await authService.requestAccountDeletion(req.user._id)
+    res.json({ success: true, data: { message: 'Đã ghi nhận yêu cầu xoá tài khoản, sẽ xử lý trong tối đa 30 ngày' } })
+  } catch (err) { next(err) }
+}

@@ -38,4 +38,21 @@ router.post('/otp/send', [body('email').isEmail()], validate, authController.sen
 /** POST /auth/otp/verify – AUTH-FR-005 */
 router.post('/otp/verify', authController.verifyOtp)
 
+/** POST /auth/forgot-password – AUTH-FR-009 */
+router.post('/forgot-password', [body('email').isEmail()], validate, authController.forgotPassword)
+
+/** POST /auth/reset-password – AUTH-FR-009 */
+router.post(
+  '/reset-password',
+  [body('email').isEmail(), body('token').notEmpty(), body('newPassword').isLength({ min: 8 })],
+  validate,
+  authController.resetPassword,
+)
+
+/** PUT /auth/notification-preferences – ALERT-FR-005/006 */
+router.put('/notification-preferences', authenticate, authController.updateNotificationPreferences)
+
+/** POST /auth/delete-request – AUTH-FR-012 */
+router.post('/delete-request', authenticate, authController.requestDeletion)
+
 export default router

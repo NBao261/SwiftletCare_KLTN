@@ -13,9 +13,10 @@ router.get ('/trace/:traceCode',      marketController.traceByCode)
 router.post('/listings/:id/inquiries',param('id').isMongoId(), body('buyer_name').notEmpty(), body('message').notEmpty(), validate, marketController.createInquiry)
 router.get ('/farms/:id/profile',     param('id').isMongoId(), validate, marketController.farmProfile)
 
-/** Farm Owner only */
-router.post('/listings',                requireRole('FARM_OWNER','ADMIN'), authenticate, body('harvest_batch_id').isMongoId(), validate, marketController.createListing)
-router.put ('/listings/:id',            requireRole('FARM_OWNER','ADMIN'), authenticate, param('id').isMongoId(), validate, marketController.updateListing)
+/** Farm Owner only — `authenticate` PHẢI đứng trước `requireRole` vì requireRole
+ * đọc req.user do authenticate gán; đảo thứ tự thì mọi request đều 403 */
+router.post('/listings',                authenticate, requireRole('FARM_OWNER','ADMIN'), body('harvest_batch_id').isMongoId(), body('title').notEmpty(), validate, marketController.createListing)
+router.put ('/listings/:id',            authenticate, requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, marketController.updateListing)
 router.get ('/listings/:id/inquiries',  authenticate, requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, marketController.listInquiries)
 router.get ('/listings/:id/stats',      authenticate, requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, marketController.listingStats)
 

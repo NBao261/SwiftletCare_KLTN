@@ -241,7 +241,7 @@ paths:
   /farms/{id}/members:
     post:
       tags: [Farms]
-      summary: Mời thành viên Farm Owner khác (AUTH-FR-005) — chỉ Primary Owner, người được mời phải đã có tài khoản
+      summary: Mời thành viên Farm Owner khác (AUTH-FR-010, Flow 12) — chỉ Primary Owner. Tạo một Invitation PENDING (hết hạn sau 7 ngày); không còn yêu cầu email đã có tài khoản — nếu chưa có, người được mời đăng ký xong sẽ tự động accept.
       parameters: [{ $ref: '#/components/parameters/FarmId' }]
       requestBody:
         required: true
@@ -249,29 +249,72 @@ paths:
           application/json:
             schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
       responses:
-        '201': { description: Đã thêm thành viên, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Farm' } } }] } } } }
+        '201': { description: Đã tạo lời mời, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Invitation' } } }] } } } }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { description: Email chưa có tài khoản, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { description: Đã là thành viên, hoặc đã có lời mời PENDING gửi tới email này, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+
+  /farms/{id}/members/{userId}:
+    delete:
+      tags: [Farms]
+      summary: Gỡ thành viên khỏi farm (Flow 12 bước 5) — chỉ Primary Owner, không thể tự gỡ chính mình
+      parameters:
+        - { $ref: '#/components/parameters/FarmId' }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Đã gỡ, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Farm' } } }] } } } }
+        '400': { description: Không thể gỡ Primary Owner, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Không phải thành viên farm này, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
 
   /farms/{id}/sales-staff:
     parameters: [{ $ref: '#/components/parameters/FarmId' }]
     post:
       tags: [Farms]
-      summary: Mời Sales Staff vào farm (AUTH-FR-005b) — chỉ Primary Owner
+      summary: Mời Sales Staff vào farm (AUTH-FR-005b, Flow 16) — chỉ Primary Owner, dùng chung cơ chế Invitation với mời Farm Owner
       requestBody:
         required: true
         content:
           application/json:
             schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
       responses:
-        '201': { description: Đã gán Sales Staff, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+        '201': { description: Đã tạo lời mời, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/ApiSuccess' }, { properties: { data: { $ref: '#/components/schemas/Invitation' } } }] } } } }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
     get:
       tags: [Farms]
       summary: Danh sách Sales Staff của farm
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+
+  /invitations/{token}:
+    parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [Farms]
+      summary: Xem trước lời mời qua token (AUTH-FR-010, Flow 12 bước 3) — không cần đăng nhập, dùng để hiển thị tên farm trước khi accept/decline
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+        '404': { description: Lời mời không tồn tại, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+
+  /invitations/{token}/accept:
+    post:
+      tags: [Farms]
+      summary: Chấp nhận lời mời (Flow 12 bước 3a) — yêu cầu đăng nhập bằng đúng email được mời
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Đã chấp nhận, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+        '403': { description: Đăng nhập sai email được mời, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Lời mời đã accept/decline/hết hạn, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+
+  /invitations/{token}/decline:
+    post:
+      tags: [Farms]
+      summary: Từ chối lời mời (Flow 12 case 3c) — link công khai, không cần đăng nhập
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Đã từ chối, content: { application/json: { schema: { $ref: '#/components/schemas/ApiSuccess' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Lời mời đã accept/decline/hết hạn, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
 
   /farms/{id}/houses:
     parameters: [{ $ref: '#/components/parameters/FarmId' }]
@@ -913,6 +956,21 @@ components:
               is_primary: { type: boolean }
               joined_at: { type: string, format: date-time }
         is_deleted: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    Invitation:
+      type: object
+      description: AUTH-FR-010, Flow 12 — lời mời thành viên/Sales Staff, hết hạn sau 7 ngày nếu không phản hồi
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        invited_email: { type: string, format: email }
+        invited_role: { type: string, enum: [FARM_OWNER, SALES_STAFF] }
+        invited_by: { type: string }
+        token: { type: string }
+        status: { type: string, enum: [PENDING, ACCEPTED, DECLINED, EXPIRED] }
+        expires_at: { type: string, format: date-time }
+        responded_at: { type: string, format: date-time }
         created_at: { type: string, format: date-time }
 
     House:
