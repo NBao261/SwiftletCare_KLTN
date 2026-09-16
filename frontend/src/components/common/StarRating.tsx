@@ -27,8 +27,7 @@ export default function StarRating({ value = 0, onChange, readOnly }: StarRating
         >
           <svg
             width="24" height="24" viewBox="0 0 20 20"
-            fill={star <= display ? '#F0813A' : 'none'}
-            stroke={star <= display ? '#F0813A' : '#878380'}
+            className={star <= display ? 'fill-climateOrange stroke-climateOrange' : 'fill-none stroke-warmGray'}
             strokeWidth="1.4" strokeLinejoin="round"
           >
             <path d="M10 2.5l2.3 4.7 5.2.7-3.8 3.6.9 5.1L10 14.1l-4.6 2.5.9-5.1-3.8-3.6 5.2-.7Z" />

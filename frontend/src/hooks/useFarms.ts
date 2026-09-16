@@ -120,5 +120,8 @@ export function useFarmZones(farmId: string | undefined) {
       return perHouse.flat() as FlatZone[]
     },
     enabled: !!farmId,
+    // House/Zone hiếm khi đổi cấu trúc — tránh request N+1 (listHouses + listZones
+    // từng house) lặp lại theo staleTime toàn cục 30s ở cả 3 nơi gọi hook này.
+    staleTime: 5 * 60 * 1000,
   })
 }

@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useAuth } from '@/hooks/useAuth'
 import { Card, Badge, Button, Input, Toggle } from '@/components/ui'
@@ -67,6 +67,16 @@ function NotificationPreferencesCard() {
   const [sms, setSms] = useState(prefs?.sms ?? false)
   const [quietStart, setQuietStart] = useState(prefs?.quiet_hours?.start ?? '')
   const [quietEnd, setQuietEnd] = useState(prefs?.quiet_hours?.end ?? '')
+
+  // user (và prefs) có thể đổi từ nơi khác (tab khác, refetch) trong lúc trang
+  // này đang mở — resync lại form thay vì chỉ seed 1 lần lúc mount.
+  useEffect(() => {
+    setPush(prefs?.push ?? true)
+    setZalo(prefs?.zalo ?? false)
+    setSms(prefs?.sms ?? false)
+    setQuietStart(prefs?.quiet_hours?.start ?? '')
+    setQuietEnd(prefs?.quiet_hours?.end ?? '')
+  }, [prefs])
 
   function handleSave() {
     updateNotificationPreferences.mutate(

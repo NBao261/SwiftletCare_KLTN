@@ -2,25 +2,15 @@
 import { useState, FormEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket } from '@/hooks/useTickets'
-import { Button, Badge, Card, Textarea, Modal } from '@/components/ui'
+import { Button, Badge, Card, Textarea } from '@/components/ui'
 import StarRating from '@/components/common/StarRating'
+import NoteActionModal from '@/components/common/NoteActionModal'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import EmptyState from '@/components/common/EmptyState'
 import { useToastStore } from '@/store/toastStore'
 import { formatDate, getApiErrorMessage } from '@/utils/helpers'
-import type { TicketStatus, TicketType } from '@/types'
+import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
 
-const TICKET_TYPE_LABEL: Record<TicketType, string> = {
-  SENSOR_FAULT: 'Lỗi cảm biến', RS485_BUS_FAILURE: 'Lỗi bus RS485', ACTUATOR_FAILURE: 'Lỗi thiết bị chấp hành',
-  NODE_OFFLINE: 'Thiết bị mất kết nối', EDGE_AI_DEGRADED: 'Camera AI suy giảm', POWER_OUTAGE: 'Mất điện',
-  SPEAKER_FAILURE: 'Lỗi loa ru', PREDATOR_DETECTED: 'Phát hiện thiên địch',
-  INSTALLATION: 'Yêu cầu lắp đặt mới', MAINTENANCE: 'Bảo trì định kỳ', OTHER: 'Khác',
-}
-const STATUS_LABEL: Record<TicketStatus, string> = {
-  NEW: 'Mới', IN_PROGRESS: 'Đang xử lý', AWAITING_FIELD_CONFIRMATION: 'Chờ xác nhận hiện trường', CLOSED: 'Đã đóng',
-}
-const STATUS_TONE = { NEW: 'critical', IN_PROGRESS: 'warning', AWAITING_FIELD_CONFIRMATION: 'info', CLOSED: 'neutral' } as const
-const PRIORITY_TONE = { P1: 'critical', P2: 'warning', P3: 'neutral' } as const
 const SAT_LABEL = {
   modbus_addresses_ok: '5 địa chỉ Modbus phản hồi đúng',
   camera_rtsp_ok: 'Camera RTSP ổn định',
@@ -180,29 +170,24 @@ function RatingCard({ ticketId, existingRating }: { ticketId: string; existingRa
 function CancelTicketModal({ open, onClose, ticketId }: { open: boolean; onClose: () => void; ticketId: string }) {
   const cancelTicket = useCancelTicket()
   const push = useToastStore(s => s.push)
-  const [reason, setReason] = useState('')
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    cancelTicket.mutate({ id: ticketId, reason }, {
-      onSuccess: () => { push('Đã hủy ticket'); setReason(''); onClose() },
-      onError: (err) => push(getApiErrorMessage(err, 'Hủy ticket thất bại'), 'error'),
-    })
-  }
 
   return (
-    <Modal open={open} onClose={onClose} title="Hủy ticket">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Textarea
-          label="Lý do hủy" required
-          placeholder="VD: Đã tự khắc phục được, không cần lắp nữa..."
-          value={reason} onChange={e => setReason(e.target.value)}
-        />
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>Đóng</Button>
-          <Button type="submit" variant="danger" className="flex-1" loading={cancelTicket.isPending}>Hủy ticket</Button>
-        </div>
-      </form>
-    </Modal>
+    <NoteActionModal
+      open={open}
+      onClose={onClose}
+      title="Hủy ticket"
+      label="Lý do hủy"
+      placeholder="VD: Đã tự khắc phục được, không cần lắp nữa..."
+      submitLabel="Hủy ticket"
+      required
+      danger
+      loading={cancelTicket.isPending}
+      onSubmit={(reason) => {
+        cancelTicket.mutate({ id: ticketId, reason }, {
+          onSuccess: () => { push('Đã hủy ticket'); onClose() },
+          onError: (err) => push(getApiErrorMessage(err, 'Hủy ticket thất bại'), 'error'),
+        })
+      }}
+    />
   )
 }
