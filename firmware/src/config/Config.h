@@ -16,11 +16,11 @@
 #define MODBUS_BAUDRATE 4800 // all 5 sensors unified at 4800bps (Guide §3)
 
 // Modbus Slave IDs (Guide §2.1, §4)
-#define MODBUS_ID_NOISE 1        // ES-NOISE-01
-#define MODBUS_ID_CO2 2          // ES-CO2-01
-#define MODBUS_ID_NH3 3          // ES-NH3-01
-#define MODBUS_ID_LIGHT 4        // ES-ALS-02
-#define MODBUS_ID_TEMP_HUMID 5   // ES35-SW (SHT35), cuối bus, DIP Pin5 ON
+#define MODBUS_ID_NOISE 1      // ES-NOISE-01
+#define MODBUS_ID_CO2 2        // ES-CO2-01
+#define MODBUS_ID_NH3 3        // ES-NH3-01
+#define MODBUS_ID_LIGHT 4      // ES-ALS-02
+#define MODBUS_ID_TEMP_HUMID 5 // ES35-SW (SHT35), cuối bus, DIP Pin5 ON
 
 // ── Relay 4 kênh (kích mức CAO, Guide §8-9) ──────────────────────────────────
 #define PIN_RELAY_MISTING 25     // IN1 – phun sương
@@ -42,9 +42,10 @@
 // ── Timing ────────────────────────────────────────────────────────────────
 #define WATCHDOG_TIMEOUT_SEC 30
 // ⚠️ SRS ENV-FR-002 quy định 5-60s; đặt 1000ms theo yêu cầu thực tế của user để
-// dashboard cập nhật liên tục. Với RS485, mỗi Slave ID timeout ~1s (ModbusMaster
-// mặc định), nên khi còn cảm biến chưa đấu dây, chu kỳ đọc THỰC TẾ vẫn bị kéo dài
-// bởi số lần timeout đó (vd 4/5 cảm biến timeout ≈ 4s/chu kỳ) — không phải lỗi.
+// dashboard cập nhật liên tục. Với RS485, mỗi Slave ID timeout ~1s
+// (ModbusMaster mặc định), nên khi còn cảm biến chưa đấu dây, chu kỳ đọc THỰC
+// TẾ vẫn bị kéo dài bởi số lần timeout đó (vd 4/5 cảm biến timeout ≈ 4s/chu kỳ)
+// — không phải lỗi.
 #define SENSOR_INTERVAL_MS 1000
 #define PID_INTERVAL_MS 10000
 #define MQTT_HEARTBEAT_MS 30000    // 30 seconds (FARM-FR-005)
@@ -78,7 +79,8 @@
 namespace Config {
 // String (không phải const char*) vì WiFiProvisioner có thể ghi đè giá trị này
 // bằng WiFi mới nhập qua captive portal, đọc lại từ NVS lúc boot — khác với
-// mqttBroker/mqttUsername/... vẫn cố định theo Secrets.h (không đổi khi đổi WiFi).
+// mqttBroker/mqttUsername/... vẫn cố định theo Secrets.h (không đổi khi đổi
+// WiFi).
 extern String wifiSsid;
 extern String wifiPassword;
 extern const char *mqttBroker;
