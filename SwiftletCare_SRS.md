@@ -7,7 +7,7 @@
 | Trường thông tin        | Nội dung                            |
 | ----------------------- | ----------------------------------- |
 | **Tên dự án**           | SwiftletCare                        |
-| **Phiên bản SRS**       | 1.12.0                              |
+| **Phiên bản SRS**       | 1.13.0                              |
 | **Ngày tạo**            | 07/09/2026                          |
 | **Thời gian thực hiện** | Tháng 7/2026 – Tháng 12/2026 (FA26) |
 | **Chuyên ngành**        | Software Engineering (SE)           |
@@ -254,7 +254,8 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 | Xem dữ liệu cảm biến nhà yến mình                |                        R                         |          -           | R (khi xử lý ticket) |              -               |     A (toàn bộ)     |
 | Điều khiển thiết bị (relay)                      |                        R                         |          -           | R (khắc phục sự cố)  |              -               |          -          |
 | Tạo/xử lý ticket lỗi ³                           |                     R (tạo)                      |          -           |      R (xử lý)       |              -               | A (escalate/can thiệp) |
-| Gán/kích hoạt thiết bị vào Farm ¹                |                        -                         |          -           |          R           |              -               |      I (audit)      |
+| Gán/kích hoạt/dời thiết bị (Farm→Zone khác) ¹    |                        -                         |          -           |          R           |              -               |      I (audit)      |
+| Tự đổi WiFi cho thiết bị đã lắp ⁴ (Flow 20)      |                        R                         |          -           |    R (nếu hỗ trợ)     |              -               |          -          |
 | Yêu cầu lắp đặt nhà yến mới ²                     |                     R (tạo)                      |          -           |   R (nhận tự động & thực hiện)      |              -               | I (audit/can thiệp) |
 | Tạo/sửa sản phẩm                                 |                        I                         |          -           |          -           |              R               |      A (duyệt)      |
 | Nhập sản lượng thu hoạch & tồn kho               |                        I                         |          -           |          -           |              R               |          I          |
@@ -267,7 +268,9 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 | Xử lý khiếu nại đơn hàng                         |                        I                         |   R (tạo yêu cầu)    |          -           | R (xác minh, xử lý cấp Farm) | A (phân xử cấp cao) |
 | Cấu hình ngưỡng cảnh báo mặc định, SLA, hoa hồng |                        I                         |          -           |          I           |              I               |         R/A         |
 
-> ¹ **Gán/kích hoạt thiết bị vào Farm** là việc của **Technician** (nhân viên công ty), không phải Farm Owner tự làm — giống mô hình lắp mạng/camera an ninh: kỹ thuật viên của nhà cung cấp dịch vụ tới lắp đặt phần cứng **và** kích hoạt kết nối luôn trong cùng 1 lượt, khách hàng (Farm Owner) chỉ xem và chỉnh thông số vận hành sau khi thiết bị đã hoạt động. Technician chỉ kích hoạt được thiết bị cho Farm nằm trong `assigned_regions` của mình (xem `users.assigned_regions`, AUTH-FR-005c, mục 8.2) — không phải toàn quyền trên mọi Farm. Admin không cần duyệt từng lần kích hoạt (tránh làm chậm lắp đặt hiện trường) nhưng được thông báo để audit. **[Sửa BA Review — lần 2]** Bản trước (do phiên trước hiểu nhầm là mô hình "bàn giao phần mềm cho Farm Owner tự vận hành") ghi Farm Owner = R tự đăng ký qua QR — không đúng với mô hình SaaS mà công ty SwiftletCare vẫn vận hành nền tảng và kiểm soát qua Technician/Admin (xem mô tả actor Technician/Admin, mục 4.1: cả hai đều "phía công ty SwiftletCare").
+> ¹ **Gán/kích hoạt/dời thiết bị** (kể cả FARM-FR-007b — chuyển thiết bị đã lắp sang Zone/Farm khác, Flow 21) là việc của **Technician** (nhân viên công ty), không phải Farm Owner tự làm — giống mô hình lắp mạng/camera an ninh: kỹ thuật viên của nhà cung cấp dịch vụ tới lắp đặt phần cứng **và** kích hoạt kết nối luôn trong cùng 1 lượt, khách hàng (Farm Owner) chỉ xem và chỉnh thông số vận hành sau khi thiết bị đã hoạt động. Technician chỉ kích hoạt được thiết bị cho Farm nằm trong `assigned_regions` của mình (xem `users.assigned_regions`, AUTH-FR-005c, mục 8.2) — không phải toàn quyền trên mọi Farm. Admin không cần duyệt từng lần kích hoạt (tránh làm chậm lắp đặt hiện trường) nhưng được thông báo để audit. **[Sửa BA Review — lần 2]** Bản trước (do phiên trước hiểu nhầm là mô hình "bàn giao phần mềm cho Farm Owner tự vận hành") ghi Farm Owner = R tự đăng ký qua QR — không đúng với mô hình SaaS mà công ty SwiftletCare vẫn vận hành nền tảng và kiểm soát qua Technician/Admin (xem mô tả actor Technician/Admin, mục 4.1: cả hai đều "phía công ty SwiftletCare").
+
+> ⁴ **Tự đổi WiFi** khác hẳn ghi chú ¹ (gán/dời thiết bị) — đây là **khu công khai** của AP-mode (FARM-FR-003c), không đụng farmId/houseId/zoneId/mqttCredentials nên không cần `secretKey`, không cần Technician xác nhận gì. Farm Owner (hoặc bất kỳ ai đứng gần thiết bị) tự làm được. Technician chỉ "R (nếu hỗ trợ)" trong trường hợp họ đang có mặt tại farm vì lý do khác (VD đang xử lý ticket) và tiện tay làm luôn, không phải trách nhiệm bắt buộc của họ.
 
 > ² **Yêu cầu lắp đặt nhà yến mới** đi qua ticket loại `INSTALLATION` (TICKET-FR-001/004/004b, Flow 9b) — dùng chung cơ chế Ticket Router tự động như ticket báo lỗi: Technician phụ trách khu vực (`assigned_regions`) nhận ticket ngay, không cần Admin chọn tay cho từng ticket. Admin chỉ **I (audit)** trong vận hành bình thường vì việc "điều phối" thật sự đã xảy ra từ trước — lúc Admin gán khu vực phụ trách cho Technician (AUTH-FR-005c) — chứ không phải điều phối lặp lại mỗi khi có ticket mới. Xem thêm ghi chú ³ về quyền can thiệp khi cần.
 
@@ -303,12 +306,14 @@ _(Đường nét đứt = tích hợp thuộc Giai đoạn 2 trở đi, chưa b�
 | FARM-FR-001 | Tạo, cập nhật, xóa mềm thông tin trang trại (Farm): tên, địa chỉ, tọa độ GPS, mô tả        | Bắt buộc |
 | FARM-FR-002 | Mỗi Farm có thể chứa nhiều House (tòa nhà yến), mỗi House nhiều Zone (tầng/khu vực)        | Bắt buộc |
 | FARM-FR-003 | **Technician** đăng ký thiết bị IoT Node (ESP32 Controller) bằng Device ID + QR Code, qua **Web Console Onboarding chuyên dụng** (không phải Farm Owner tự làm — xem actor Technician, mục 4.1) | Bắt buộc |
-| FARM-FR-003b | Web Console Onboarding cho phép Technician cấu hình WiFi thật của farm cho thiết bị **tại chỗ qua AP-mode** (ESP32 tự phát mạng WiFi tạm khi chưa có cấu hình, Technician kết nối vào và điền form) — không cần cắm cáp USB nạp lại firmware mỗi lần lắp đặt một thiết bị mới | Bắt buộc |
+| FARM-FR-003b | Web Console Onboarding cho phép Technician cấu hình WiFi thật của farm cho thiết bị **tại chỗ qua AP-mode** (ESP32 tự phát mạng WiFi tạm khi chưa có cấu hình, Technician kết nối vào và điền form) — không cần cắm cáp USB nạp lại firmware mỗi lần lắp đặt một thiết bị mới. **[Làm rõ v1.13.0]** Payload AP-mode lúc onboarding lần đầu gồm `{wifiSsid, wifiPassword, farmId, houseId, zoneId, mqttUsername, mqttPassword, secretKey}` — thiết bị lưu riêng `secretKey` vào NVS (không hiển thị lại cho ai) để dùng làm mật khẩu cục bộ xác thực Technician trong các lần cấu hình lại sau này khi thiết bị không có mạng (xem FARM-FR-007b, Flow 20) | Bắt buộc |
+| FARM-FR-003c **[mới v1.13.0]** | AP-mode có 2 khu tách biệt trên cùng 1 trang: **khu công khai** (chỉ đổi WiFi, ai đứng gần thiết bị cũng sửa được — không cần biết `secretKey`, phục vụ Farm Owner tự đổi WiFi khi farm đổi router mà thiết bị đã lắp xong, xem Flow 20) và **khu nâng cao** (đổi farmId/houseId/zoneId/mqttCredentials — bị khoá, chỉ mở khi nhập đúng `secretKey` đã lưu lúc onboarding lần đầu, xem FARM-FR-007b, Flow 21). Farm Owner không biết `secretKey` nên không tự dời được Zone của thiết bị, đúng RACI mục 4.4 | Bắt buộc |
 | FARM-FR-004 | **Technician** đăng ký AI Camera Node (Raspberry Pi) bằng Node ID + QR Code qua cùng Web Console Onboarding                    | Bắt buộc |
 | FARM-FR-005 | Xem trạng thái online/offline của từng thiết bị theo thời gian thực (Last Heartbeat ≤ 30s) — chi tiết cơ chế tự động phát hiện mất kết nối/mất nguồn xem Flow 14 | Bắt buộc |
 | FARM-FR-006 | Xem thông tin chi tiết thiết bị: firmware version, uptime, cường độ tín hiệu Wi-Fi (RSSI)  | Bắt buộc |
 | FARM-FR-007 | **Technician** gán thiết bị vào Zone cụ thể khi onboarding; một Zone có thể có nhiều node cảm biến và nhiều camera. Farm Owner chỉ xem, không tự gán/đổi Zone của thiết bị | Bắt buộc |
 | FARM-FR-008 | **Technician** gỡ bỏ và thay thế thiết bị mà không mất lịch sử dữ liệu cũ (qua Web Console, không phải Farm Owner)                                 | Bắt buộc |
+| FARM-FR-007b **[mới v1.13.0]** | **Technician** dời thiết bị đã lắp sang Zone khác (cùng Farm) hoặc Farm khác — khác FARM-FR-007 (gán lần đầu lúc onboarding) ở chỗ thiết bị đã có dữ liệu lịch sử, không mất khi đổi Zone. Hệ thống xử lý theo 2 nhánh tuỳ tình trạng kết nối (Flow 21): **(a) còn mạng** — Technician chọn Zone đích trên Web Console, backend gửi lệnh qua MQTT topic cũ, thiết bị tự cập nhật rồi kết nối lại theo topic mới, không cần ai tới hiện trường; **(b) mất mạng** (dời tới nơi khác WiFi) — Technician tới hiện trường, mở khu nâng cao trong AP-mode (FARM-FR-003c), nhập đúng `secretKey` của thiết bị để xác thực cục bộ (không có mạng nên không xác thực qua JWT được). Mọi lần đổi đều ghi `audit_logs` (mục 8.2) | Bắt buộc |
 
 ### 5.3. Module ENV – Giám sát & Điều khiển Môi trường
 
@@ -880,6 +885,7 @@ User (1) ──< (N) AuditLog (actor_id)                 # mới v1.12.0, AUTH-F
   "_id": "ObjectId",
   "device_id": "string (unique, hardware MAC-based)",
   "zone_id": "ObjectId (ref: zones)",
+  "secret_key_hash": "string (bcrypt, giống password_hash của users — mới v1.13.0, FARM-FR-003b/007b. Chỉ dùng để BACKEND đối chiếu khi cần (VD xác nhận thiết bị trong log), không phải nguồn để Technician tra lại — Technician luôn đọc secretKey trực tiếp từ nhãn dán vật lý trên vỏ thiết bị vì họ bắt buộc phải đứng cạnh máy lúc cần dùng nó (nhánh mất mạng, Flow 21), không cần và không nên có API 'xem lại secretKey' qua web vì đó là lỗ hổng bảo mật không cần thiết",
   "firmware_version": "string",
   "last_heartbeat": "ISODate",
   "status": "enum: PENDING | ONLINE | OFFLINE | ERROR (PENDING = Technician đã tạo record qua Web Console Onboarding nhưng thiết bị chưa gửi heartbeat đầu tiên — xem Flow 1, mục 10)",
@@ -1247,6 +1253,7 @@ User (1) ──< (N) AuditLog (actor_id)                 # mới v1.12.0, AUTH-F
 | GET    | `/devices/sensor-nodes`                | Danh sách ESP32 nodes  | JWT  |
 | PUT    | `/devices/sensor-nodes/:id/thresholds` | Cập nhật ngưỡng        | JWT  |
 | POST   | `/devices/sensor-nodes/:id/relay`      | Điều khiển relay       | JWT  |
+| PUT    | `/devices/sensor-nodes/:id/reassign-zone` **[mới v1.13.0]** | Dời thiết bị sang Zone/Farm khác (FARM-FR-007b) — chỉ khi thiết bị đang ONLINE, publish MQTT `config/reassign`; trả lỗi rõ ràng nếu thiết bị đang OFFLINE (hướng dẫn Technician dùng nhánh AP-mode tại chỗ + đọc secretKey trên nhãn dán thiết bị, Flow 21) | JWT (TECHNICIAN/ADMIN) |
 | GET    | `/devices/camera-nodes`                | Danh sách Camera nodes | JWT  |
 
 #### Telemetry & Analytics
@@ -1333,6 +1340,13 @@ swiftletcare/{farmId}/{houseId}/{zoneId}/heartbeat
 # Lệnh từ Cloud xuống ESP32
 swiftletcare/{farmId}/{houseId}/{zoneId}/relay/command
 swiftletcare/{farmId}/{houseId}/{zoneId}/config/update
+swiftletcare/{farmId}/{houseId}/{zoneId}/config/reassign   # mới v1.13.0, FARM-FR-007b — dời
+                                                            # Zone khi thiết bị còn mạng: payload
+                                                            # {newFarmId, newHouseId, newZoneId,
+                                                            # newMqttUsername, newMqttPassword}.
+                                                            # ESP32 lưu NVS rồi tự disconnect/
+                                                            # reconnect theo topic mới, KHÔNG cần
+                                                            # AP-mode (khác nhánh mất mạng, Flow 21)
 
 # Từ Raspberry Pi Edge AI
 swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count
@@ -1935,6 +1949,80 @@ DEVICE_STATUS_CHANGE: { nodeId, status, timestamp }
     miễn vẫn phản hồi trong hạn 30 ngày cho user biết tình trạng
 ```
 
+### Flow 20: Farm Owner Tự Đổi WiFi cho Thiết bị Đã Lắp (khu công khai AP-mode) — [mới v1.13.0, FARM-FR-003c]
+
+> Trả lời câu hỏi thực tế phát sinh khi thiết bị bị mang đi chỗ khác/farm đổi router: trước đây phải cắm USB sửa `Secrets.h` và nạp lại firmware — không hợp lý vì đây không phải việc kỹ thuật, không nên bắt Farm Owner chờ Technician. Khác Flow 1 (onboarding thiết bị mới, Technician-only) và Flow 21 (dời Zone, Technician-only): đây là **khu công khai** của AP-mode, ai đứng gần thiết bị cũng dùng được, không cần `secretKey`. Đã cài đặt thật (`firmware/src/wifi/WiFiProvisioner`), không chỉ là đặc tả trên giấy.
+
+```
+1. Farm đổi router/đổi WiFi, hoặc thiết bị được mang tới vị trí khác — ESP32
+   không kết nối được WiFi đã lưu trong NVS nữa
+2. Sau ~10 giây thử kết nối thất bại, ESP32 tự phát SoftAP
+   `SwiftletCare-Setup-<deviceId>` (mở, không mật khẩu) — đồng thời vẫn khởi
+   động bình thường các task cảm biến/relay/PID (không ảnh hưởng REL-NFR-001)
+3. Farm Owner (hoặc bất kỳ ai đứng gần thiết bị) lấy điện thoại, kết nối vào
+   mạng đó → trình duyệt tự bật popup trang cấu hình (captive portal, DNS
+   redirect mọi domain về thiết bị)
+4. Nhập tên WiFi + mật khẩu mới của farm → bấm "Kết nối"
+5. ESP32 lưu WiFi mới vào NVS, khởi động lại, tự kết nối bằng WiFi mới,
+   khôi phục lại hoạt động bình thường (MQTT reconnect, flush buffer offline)
+6. Không cần backend, không cần Web Console, không cần Technician — farmId/
+   houseId/zoneId/mqttCredentials giữ nguyên vì không đổi (khác Flow 21)
+
+--- Trường hợp lỗi/ngoại lệ ---
+4a. Nhập sai mật khẩu WiFi mới → sau restart kết nối thất bại → ESP32 tự
+    quay lại bước 2 (phát AP lần nữa) để nhập lại — không giới hạn số lần thử
+5a. Không có ai đứng gần thiết bị để cấu hình → ESP32 vẫn ở AP-mode vô thời
+    hạn (không tự thoát), nhưng vẫn tiếp tục điều khiển cục bộ + đệm dữ liệu
+    offline bình thường; chỉ mất phần gửi dữ liệu lên Cloud cho tới khi có
+    người cấu hình lại
+```
+
+### Flow 21: Technician Dời Thiết bị sang Zone/Farm Khác — [mới v1.13.0, FARM-FR-007b]
+
+> Khác Flow 20 (Farm Owner tự đổi WiFi, khu công khai): đây là **khu nâng cao** của AP-mode, cần `secretKey` mới mở khoá được vì đổi farmId/houseId/zoneId sai sẽ gán nhầm dữ liệu telemetry vĩnh viễn sang Zone khác — không thể để Farm Owner tự làm (RACI mục 4.4).
+
+```
+1. Farm Owner báo Technician muốn dời 1 thiết bị đã lắp sang Zone khác (cùng
+   Farm) hoặc sang Farm khác (VD thiết bị dư ở Farm này, thiếu ở Farm kia)
+2. Technician xác định thiết bị đích còn ONLINE hay đã OFFLINE (do sắp dời
+   khỏi vùng phủ WiFi cũ) — 2 nhánh xử lý khác nhau:
+
+--- Nhánh A: thiết bị còn ONLINE (dời trong cùng vùng phủ WiFi) ---
+3a. Technician mở trang quản lý thiết bị trên Web Dashboard → chọn thiết bị
+    → "Dời sang Zone khác" → chọn Farm→House→Zone đích (chỉ thấy Farm trong
+    `assigned_regions` của mình, kể cả Farm đích khác Farm nguồn)
+4a. Backend kiểm tra Technician có quyền trên CẢ Farm nguồn lẫn Farm đích →
+    publish lệnh qua topic MQTT CŨ: `config/reassign` kèm
+    {newFarmId, newHouseId, newZoneId, newMqttUsername, newMqttPassword}
+5a. ESP32 nhận lệnh, lưu cấu hình mới vào NVS, ngắt kết nối MQTT cũ, kết nối
+    lại theo topic mới — không cần AP-mode, không cần ai tới hiện trường
+6a. Backend cập nhật `zone_id` của SensorNode, ghi `audit_logs`, giữ nguyên
+    lịch sử telemetry cũ (không mất dữ liệu, chỉ đổi chủ sở hữu từ thời điểm
+    dời đi)
+
+--- Nhánh B: thiết bị đã/sắp OFFLINE (dời khác vùng phủ WiFi) ---
+3b. Technician tới hiện trường lắp đặt thiết bị tại vị trí mới — vì WiFi
+    cũ không còn phủ tới, ESP32 tự vào AP-mode (giống Flow 20 bước 2)
+4b. Technician kết nối vào AP tạm, mở khu **nâng cao** trong trang cấu hình
+    (khác form WiFi công khai) → nhập `secretKey` đọc trực tiếp từ nhãn dán
+    trên vỏ thiết bị (không tra qua web — đang đứng cạnh máy sẵn rồi)
+5b. ESP32 đối chiếu `secretKey` nhập vào với giá trị đã lưu trong NVS từ lúc
+    onboarding lần đầu (Flow 1) — khớp thì mở khoá form farmId/houseId/
+    zoneId/mqttCredentials mới; Technician điền form này CÙNG với WiFi mới
+    của vị trí mới trong 1 lượt
+6b. ESP32 lưu tất cả vào NVS, khởi động lại, kết nối WiFi mới + MQTT theo
+    topic mới
+7b. Khi thiết bị gửi heartbeat đầu tiên theo Zone mới, backend tự cập nhật
+    `zone_id`, ghi `audit_logs` — giống bước 6a
+
+--- Trường hợp lỗi/ngoại lệ ---
+4a-x. Technician không có quyền trên Farm đích (ngoài `assigned_regions`) →
+      API từ chối 403, gợi ý báo Admin điều chỉnh `assigned_regions` nếu
+      thật sự cần dời sang khu vực đó
+5b-x. Nhập sai `secretKey` quá 5 lần → khu nâng cao tự khoá 15 phút (chống
+      dò mật khẩu qua AP mở), khu công khai (đổi WiFi) vẫn dùng bình thường
+```
+
 ### Sơ đồ Luồng Chính Toàn Hệ thống (Master Flow)
 
 > Gộp toàn bộ các luồng actor + hệ thống nền thành 1 bức tranh swimlane, thể hiện 2 trục nghiệp vụ song song (Vận hành Kỹ thuật và Thương mại) cùng chia sẻ 1 nguồn dữ liệu gốc là Farm/Zone. **[Cập nhật v1.12.0]** Đã thêm nhánh Technician lắp đặt/kích hoạt thiết bị (Flow 1/1b), yêu cầu lắp đặt nhà yến mới đi thẳng vào Ticket Router (Flow 9b), phát hiện mất kết nối tự động (Flow 14), và quản lý tài khoản của Admin (Flow 19). Sơ đồ này chỉ minh hoạ luồng dữ liệu chính ở tầm cao — 8 Flow còn lại thiên về nghiệp vụ tài khoản/phiên đăng nhập (Flow 11-13, 15-18) không vẽ riêng ở đây vì không thêm actor/node mới, xem chi tiết từng Flow tương ứng.
@@ -2315,4 +2403,6 @@ _Tài liệu SRS này được tạo ngày 07/09/2026. Mọi thay đổi yêu c�
 | 1.11.0    | 12/09/2026 | **Chốt BOM theo LINH KIỆN THỰC TẾ đã mua (IC Đây Rồi + EPCB):** (1) ESP32 = **NodeMCU 38 chân Type-C CP2102** + **đế mở rộng 38 chân** (đấu dây không cần hàn); (2) **DÙNG 2 MẠCH BUCK LM2596 3A** — Buck#1 cho ESP32+RS485, Buck#2 riêng cho PAM8403+DFPlayer+relay (vì PAM8403 6W ngốn 1.2A, tách nguồn tránh sụt áp treo ESP32); (3) Domino = **TB1504 (4 mối 15A/600V)**; (4) Relay = **module 4 kênh opto cách ly kích H/L chọn Jumper** — đặt kích mức CAO (High=bật), firmware `digitalWrite(HIGH)`=bật; (5) **DFPlayer Mini** (hỗ trợ MP3/WAV/WMA, thư mục ≤100×255 bài, SD ≤32GB) + **PAM8403 6W Hifi có núm volume** (5V-1.2A, lọc nhiễu); (6) cập nhật firmware 7.2: relay kích High thay vì Low; (7) ⚠️ cảnh báo ngân sách nguồn nhánh Buck#2 ~2.1A — nếu loa lớn thì cấp 220V riêng cho amply/loa; (8) Camera nhánh Vision = **camera nhà yến IR 940nm không phát sáng** (không làm chim sợ), 2.8mm góc rộng, IP66+, RTSP — theo 6 tiêu chí chuẩn ngành, chạy AI trên laptop. Chi tiết: `SwiftletCare_Components_Guide_v3.3.md` + `SwiftletCare_Camera_Guide_NhaYen_Full.md`                                                                                    |
 | 1.12.0    | 16/09/2026 | **Rà soát toàn diện luồng nghiệp vụ + đổi mô hình vận hành thiết bị (dựa trên code thực tế đã chạy):** (1) Đổi mô hình onboarding thiết bị từ "Farm Owner tự quét QR" sang **"Technician thao tác qua Web Console" (giống kỹ thuật viên lắp mạng/camera)** — cập nhật actor Farm Owner/Technician (mục 4.1), RACI (mục 4.4), FARM-FR-003/003b/004/007/008, viết lại Flow 1/1b; (2) Thêm **TICKET loại `INSTALLATION`** cho luồng "Farm Owner có nhà yến mới → Ticket Router tự động gán Technician (không qua Admin điều phối tay)" — TICKET-FR-001/003/004/004b/005b, Flow 9b (mới), field `scheduled_visit_at` do Farm Owner chọn thẳng lúc tạo ticket; (3) Thêm **quyền can thiệp toàn diện của Admin trên mọi ticket** (TICKET-FR-005b) và làm rõ TICKET-FR-007 áp dụng đủ 4 trạng thái cho mọi loại ticket; (4) **Bổ sung 9 Flow hoàn toàn mới** (Flow 11→19) để mỗi actor có luồng nghiệp vụ đầy đủ cả happy path lẫn bad case: đăng ký/đăng nhập/quên mật khẩu/refresh token (Flow 11), mời-chấp nhận-từ chối thành viên Farm (Flow 12), điều khiển relay thủ công + auto-revert override (Flow 13), **thiết bị mất kết nối/mất nguồn → Dashboard tự Offline** khớp đúng cơ chế đã code thật — `deviceOfflineJob` cron 10s + ngưỡng 30s heartbeat + client-side staleness 20s (Flow 14), OTA firmware + rollback khi lỗi (Flow 15), mời/onboarding Sales Staff (Flow 16), duyệt/từ chối sản phẩm (Flow 17), cảnh báo tồn kho thấp (Flow 18), quản lý tài khoản Admin — khoá/mở khoá + xoá theo yêu cầu PRIV-NFR-003 (Flow 19); (5) Thêm **bad case cho các Flow đã có**: Flow 1/1b (secretKey sai, AP-mode/WiFi lỗi, SAT thất bại), Flow 4 (false positive), Flow 7 (Trace Code không tồn tại, race condition sửa Harvest Batch sau khi đăng bán), Flow 9/9b (Technician xin gán lại, Farm Owner huỷ ticket, SAT thất bại tại hiện trường), Flow 10 (thanh toán thất bại, hết hàng do race condition); (6) Thêm **AUTH-FR-009→012** (quên mật khẩu, lời mời thành viên có TTL, khoá/mở khoá tài khoản, xoá tài khoản theo PRIV-NFR-003) và các API endpoint tương ứng (mục 9.1); (7) Thêm collection `invitations`, `audit_logs` và field `deactivated_at/reason`, `password_reset_token_hash` vào `users` (mục 8.1, 8.2); (8) Sửa lỗi lệch dữ liệu: `TELEMETRY_UPDATE` WebSocket event (mục 9.3) còn sót `h2s`/`tvoc` dù đã bỏ 2 cảm biến này từ v1.8.0; (9) **Rà soát cuối:** sửa 3 lỗi đánh số bad-case sai bước phân nhánh (Flow 9b) và 2 dòng RACI thiếu vai trò (xoá tài khoản phải áp dụng mọi role, không chỉ Farm Owner/Sales Staff); thêm thuật ngữ OTA + Right to Erasure vào Bảng Thuật ngữ; (10) **Hoàn thiện:** cập nhật sơ đồ Master Flow (mục 10) thêm nhánh Technician Web Console onboarding, ticket INSTALLATION, offline-detection, quản lý tài khoản Admin; làm rõ `users.role = null` cho Buyer đã đăng ký (không phải bỏ sót, mà Buyer không tham gia RBAC) |
 
-_Phiên bản hiện tại: 1.12.0 | Ngày cập nhật: 16/09/2026 | Trạng thái: DRAFT — chờ điền tên thành viên phụ trách (mục 14.1) và chốt mô hình thu tiền (RISK-08). Toàn bộ linh kiện phần cứng đã mua & chốt BOM thực tế (5 cảm biến + 2 Buck + đế ESP32 + relay H/L + DFPlayer/PAM8403 + camera IR 940nm); backend AUTH/FARM/DEVICE/TELEMETRY + offline-detection đã code và chạy thật; luồng nghiệp vụ đã rà soát đầy đủ 19 Flow cho cả 5 actor, sẵn sàng làm cơ sở code tiếp Technician Web Console + các Flow mới_
+| 1.13.0    | 16/09/2026 | **Bổ sung luồng đổi WiFi/dời thiết bị sau khi đã lắp (xuất phát từ câu hỏi thực tế + code firmware đã chạy thật):** (1) Thêm **FARM-FR-003c** — AP-mode chia 2 khu: khu công khai (đổi WiFi, ai cũng dùng được) và khu nâng cao (đổi farmId/houseId/zoneId/mqttCredentials, khoá bằng `secretKey`); mở rộng FARM-FR-003b nói rõ payload onboarding gồm cả `secretKey` để thiết bị lưu NVS dùng cho lần sau; (2) Thêm **FARM-FR-007b** — Technician dời thiết bị đã lắp sang Zone/Farm khác, 2 nhánh: còn mạng (lệnh MQTT `config/reassign` qua topic cũ, không cần tới hiện trường) và mất mạng (AP-mode + secretKey tại hiện trường); (3) Thêm **Flow 20** (Farm Owner tự đổi WiFi — khớp đúng `firmware/src/wifi/WiFiProvisioner` đã code và verify trên phần cứng + điện thoại thật) và **Flow 21** (Technician dời thiết bị, đủ 2 nhánh online/offline); (4) Thêm topic MQTT `config/reassign` (mục 9.2), endpoint `PUT /devices/sensor-nodes/:id/reassign-zone` (mục 9.1), field `secret_key_hash` vào schema `sensor_nodes` (mục 8.2, lưu hash giống `password_hash` — không phải nơi để Technician tra lại secretKey, họ đọc trực tiếp từ nhãn dán vật lý); (5) Cập nhật RACI (mục 4.4): tách rõ "gán/kích hoạt/dời thiết bị" (Technician, ghi chú ¹ mở rộng) khỏi "tự đổi WiFi" (Farm Owner, ghi chú ⁴ mới) — 2 việc khác hẳn nhau về mức độ nhạy cảm dù cùng dùng chung cơ chế AP-mode |
+
+_Phiên bản hiện tại: 1.13.0 | Ngày cập nhật: 16/09/2026 | Trạng thái: DRAFT — chờ điền tên thành viên phụ trách (mục 14.1) và chốt mô hình thu tiền (RISK-08). Toàn bộ linh kiện phần cứng đã mua & chốt BOM thực tế (5 cảm biến + 2 Buck + đế ESP32 + relay H/L + DFPlayer/PAM8403 + camera IR 940nm); backend AUTH/FARM/DEVICE/TELEMETRY + offline-detection + tự đổi WiFi qua AP-mode đã code và chạy thật; luồng nghiệp vụ đã rà soát đầy đủ 21 Flow cho cả 5 actor, sẵn sàng làm cơ sở code tiếp Web Console onboarding (A4b) + dời thiết bị (Flow 21 nhánh online)_
