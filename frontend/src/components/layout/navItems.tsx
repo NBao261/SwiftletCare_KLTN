@@ -28,7 +28,7 @@ export const NAV_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { to: '/farms',     label: 'Trang trại', icon: IconFarm },
       { to: '/tickets',   label: 'Ticket',     icon: IconTicket },
-      { to: '/harvests',  label: 'Thu hoạch',  icon: IconHarvest },
+      { to: '/harvests',  label: 'Thu hoạch & Chợ yến',  icon: IconHarvest },
     ],
   },
   {

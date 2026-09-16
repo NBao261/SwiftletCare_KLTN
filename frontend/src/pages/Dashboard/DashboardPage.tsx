@@ -5,7 +5,11 @@ import { Badge, Button } from "@/components/ui";
 import SensorCard from "@/components/common/SensorCard";
 import EmptyState from "@/components/common/EmptyState";
 import {
-  IconTemp, IconHumidity, IconLight, IconGas, IconSound,
+  IconTemp,
+  IconHumidity,
+  IconLight,
+  IconGas,
+  IconSound,
 } from "@/components/ui/icons";
 
 const T = {
@@ -61,7 +65,9 @@ export default function DashboardPage() {
             </span>
           )}
           <Badge
-            tone={isLive ? "positive" : hasEverReceived ? "critical" : "neutral"}
+            tone={
+              isLive ? "positive" : hasEverReceived ? "critical" : "neutral"
+            }
           >
             <span
               className={
@@ -89,29 +95,50 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           <SensorCard
-            label="Nhiệt độ" value={data.temperature} unit="°C" icon={IconTemp}
-            range={`${T.temp_min}–${T.temp_max}°C`} isAnomaly={tempAnomaly}
+            label="Nhiệt độ"
+            value={data.temperature}
+            unit="°C"
+            icon={IconTemp}
+            range={`${T.temp_min}–${T.temp_max}°C`}
+            isAnomaly={tempAnomaly}
           />
           <SensorCard
-            label="Độ ẩm" value={data.humidity} unit="%" icon={IconHumidity}
-            range={`${T.humidity_min}–${T.humidity_max}%`} isAnomaly={humidityAnomaly}
+            label="Độ ẩm"
+            value={data.humidity}
+            unit="%"
+            icon={IconHumidity}
+            range={`${T.humidity_min}–${T.humidity_max}%`}
+            isAnomaly={humidityAnomaly}
           />
           <SensorCard
-            label="Ánh sáng" value={data.light_lux} unit="lux" icon={IconLight}
+            label="Ánh sáng"
+            value={data.light_lux}
+            unit="lux"
+            icon={IconLight}
             range="< 0.2 lux"
           />
           <SensorCard
-            label="NH3" value={data.nh3_ppm} unit="ppm" icon={IconGas}
+            label="NH3"
+            value={data.nh3_ppm}
+            unit="ppm"
+            icon={IconGas}
             range={`< ${T.nh3_max} ppm`}
             isAnomaly={data.nh3_ppm !== undefined && data.nh3_ppm > T.nh3_max}
           />
           <SensorCard
-            label="CO2" value={data.co2_ppm} unit="ppm" decimals={0} icon={IconGas}
+            label="CO2"
+            value={data.co2_ppm}
+            unit="ppm"
+            decimals={0}
+            icon={IconGas}
             range={`< ${T.co2_max} ppm`}
             isAnomaly={data.co2_ppm !== undefined && data.co2_ppm > T.co2_max}
           />
           <SensorCard
-            label="Âm thanh" value={data.sound_db} unit="dB" icon={IconSound}
+            label="Âm thanh"
+            value={data.sound_db}
+            unit="dB"
+            icon={IconSound}
           />
         </div>
       )}

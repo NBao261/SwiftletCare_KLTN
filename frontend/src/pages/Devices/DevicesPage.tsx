@@ -12,6 +12,7 @@ import RelayToggle from "@/components/common/RelayToggle";
 import EmptyState from "@/components/common/EmptyState";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import { useToastStore } from "@/store/toastStore";
+import { getApiErrorMessage } from "@/utils/helpers";
 
 const RELAY_LABELS = {
   misting: "Phun sương",
@@ -64,10 +65,7 @@ export default function DevicesPage() {
       setShowRegister(false);
       setDeviceId("");
     } catch (err) {
-      const message = (
-        err as { response?: { data?: { error?: { message?: string } } } }
-      )?.response?.data?.error?.message;
-      push(message ?? "Kích hoạt thiết bị thất bại", "error");
+      push(getApiErrorMessage(err, "Kích hoạt thiết bị thất bại"), "error");
     } finally {
       setRegistering(false);
     }
@@ -122,14 +120,16 @@ export default function DevicesPage() {
                     {node.device_id}
                   </p>
                   <p className="truncate text-xs text-warmGray">
-                    Firmware {node.firmware_version} · RSSI{" "}
-                    {node.rssi ?? "--"} dBm
+                    Firmware {node.firmware_version} · RSSI {node.rssi ?? "--"}{" "}
+                    dBm
                   </p>
                 </div>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <StatusDot status={node.status} />
-                <Badge tone={node.control_mode === "MANUAL" ? "warning" : "neutral"}>
+                <Badge
+                  tone={node.control_mode === "MANUAL" ? "warning" : "neutral"}
+                >
                   {node.control_mode === "MANUAL" ? "Thủ công" : "Tự động"}
                 </Badge>
               </div>
@@ -137,8 +137,9 @@ export default function DevicesPage() {
 
             {node.status === "PENDING" ? (
               <p className="rounded-xl bg-insightPeach/25 px-3 py-2.5 text-xs font-medium text-charcoal">
-                Thiết bị đã khai báo nhưng chưa kết nối lần nào — cấp nguồn và cấu
-                hình WiFi để hoàn tất. Điều khiển relay sẽ bật khi thiết bị online.
+                Thiết bị đã khai báo nhưng chưa kết nối lần nào — cấp nguồn và
+                cấu hình WiFi để hoàn tất. Điều khiển relay sẽ bật khi thiết bị
+                online.
               </p>
             ) : (
               <div className="divide-y divide-warmGray/10 border-t border-warmGray/10">
@@ -174,9 +175,9 @@ export default function DevicesPage() {
             placeholder="VD: node_001 (in trên vỏ ESP32)"
           />
           <p className="text-xs text-warmGray">
-            Sau khi kích hoạt, thiết bị ở trạng thái “Chờ kết nối” cho tới khi gửi
-            heartbeat đầu tiên. Cấp nguồn ESP32 và cấu hình WiFi của farm cho thiết
-            bị để hoàn tất.
+            Sau khi kích hoạt, thiết bị ở trạng thái “Chờ kết nối” cho tới khi
+            gửi heartbeat đầu tiên. Cấp nguồn ESP32 và cấu hình WiFi của farm
+            cho thiết bị để hoàn tất.
           </p>
           <Button type="submit" loading={registering} className="w-full">
             Kích hoạt

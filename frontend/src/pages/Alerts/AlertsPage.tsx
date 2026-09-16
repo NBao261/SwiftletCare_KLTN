@@ -1,6 +1,140 @@
-// Alerts Page – stub: backend controllers/alerts.ts chưa có logic (501)
-// SRS: ALERT-FR-001..009
-import ComingSoon from '@/components/common/ComingSoon'
+// Alerts Page – ALERT-FR-001/002/006/007/008/009
+import { useState, FormEvent } from 'react'
+import { useAlertsList, useAcknowledgeAlert } from '@/hooks/useAlerts'
+import { Card, Button, Modal, Textarea } from '@/components/ui'
+import AlertBadge from '@/components/common/AlertBadge'
+import EmptyState from '@/components/common/EmptyState'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton'
+import Pagination from '@/components/common/Pagination'
+import { IconAlert } from '@/components/ui/icons'
+import { cn } from '@/utils/cn'
+import { formatDate, getApiErrorMessage } from '@/utils/helpers'
+import { useToastStore } from '@/store/toastStore'
+import type { AlertSeverity, AlertStatus } from '@/types'
+
+const STATUS_FILTERS: Array<{ value: AlertStatus | undefined; label: string }> = [
+  { value: undefined, label: 'Tất cả' },
+  { value: 'ACTIVE', label: 'Đang mở' },
+  { value: 'ACKNOWLEDGED', label: 'Đã xác nhận' },
+  { value: 'RESOLVED', label: 'Đã xử lý' },
+]
+
+const SEVERITY_FILTERS: Array<{ value: AlertSeverity | undefined; label: string }> = [
+  { value: undefined, label: 'Mọi mức' },
+  { value: 'CRITICAL', label: 'CRITICAL' },
+  { value: 'HIGH', label: 'HIGH' },
+  { value: 'MEDIUM', label: 'MEDIUM' },
+  { value: 'LOW', label: 'LOW' },
+]
+
 export default function AlertsPage() {
-  return <ComingSoon title="Cảnh báo" />
+  const [status, setStatus] = useState<AlertStatus | undefined>(undefined)
+  const [severity, setSeverity] = useState<AlertSeverity | undefined>(undefined)
+  const [page, setPage] = useState(1)
+  const [ackTargetId, setAckTargetId] = useState<string | null>(null)
+
+  const { records, total, limit, isLoading } = useAlertsList({ status, severity, page, limit: 10 })
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-2">
+        {STATUS_FILTERS.map(f => (
+          <FilterChip key={f.label} active={status === f.value} label={f.label} onClick={() => { setStatus(f.value); setPage(1) }} />
+        ))}
+        <span className="mx-1 h-5 w-px bg-warmGray/20" />
+        {SEVERITY_FILTERS.map(f => (
+          <FilterChip key={f.label} active={severity === f.value} label={f.label} onClick={() => { setSeverity(f.value); setPage(1) }} />
+        ))}
+      </div>
+
+      {isLoading && <LoadingSkeleton count={3} className="h-24 w-full" />}
+
+      {!isLoading && records.length === 0 && (
+        <EmptyState
+          icon={<IconAlert width={28} height={28} />}
+          title="Không có cảnh báo nào"
+          description="Khi hệ thống phát hiện bất thường (môi trường vượt ngưỡng, thiết bị mất kết nối, thiên địch...), cảnh báo sẽ hiện ở đây."
+        />
+      )}
+
+      <div className="flex flex-col gap-3">
+        {records.map(alert => (
+          <Card key={alert._id} className="flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <AlertBadge severity={alert.severity} />
+                <p className="font-bold text-charcoal">{alert.title}</p>
+              </div>
+              <span className="shrink-0 text-xs text-warmGray">{formatDate(alert.created_at)}</span>
+            </div>
+            <p className="text-sm text-warmGray">{alert.message}</p>
+            <div className="flex items-center justify-between pt-1">
+              <span className={cn('text-xs font-semibold', alert.status === 'ACTIVE' ? 'text-alertRed' : 'text-warmGray')}>
+                {alert.status === 'ACTIVE' ? 'Chưa xác nhận' : alert.status === 'ACKNOWLEDGED' ? 'Đã xác nhận' : 'Đã xử lý'}
+              </span>
+              {alert.status === 'ACTIVE' && (
+                <Button variant="secondary" size="sm" onClick={() => setAckTargetId(alert._id)}>
+                  Xác nhận
+                </Button>
+              )}
+            </div>
+            {alert.acknowledgement_note && (
+              <p className="rounded-xl bg-warmGray/5 px-3 py-2 text-xs text-warmGray">
+                Ghi chú: {alert.acknowledgement_note}
+              </p>
+            )}
+          </Card>
+        ))}
+      </div>
+
+      <Pagination page={page} limit={limit} total={total} onChange={setPage} />
+
+      <AcknowledgeModal alertId={ackTargetId} onClose={() => setAckTargetId(null)} />
+    </div>
+  )
+}
+
+function FilterChip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
+        active ? 'bg-charcoal text-white' : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20',
+      )}
+    >
+      {label}
+    </button>
+  )
+}
+
+function AcknowledgeModal({ alertId, onClose }: { alertId: string | null; onClose: () => void }) {
+  const acknowledge = useAcknowledgeAlert()
+  const push = useToastStore(s => s.push)
+  const [note, setNote] = useState('')
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!alertId) return
+    acknowledge.mutate({ id: alertId, note: note.trim() || undefined }, {
+      onSuccess: () => { push('Đã xác nhận cảnh báo'); setNote(''); onClose() },
+      onError: (err) => push(getApiErrorMessage(err, 'Xác nhận thất bại'), 'error'),
+    })
+  }
+
+  return (
+    <Modal open={!!alertId} onClose={onClose} title="Xác nhận cảnh báo">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Textarea
+          label="Ghi chú (tùy chọn)"
+          placeholder="VD: Báo động giả, đã kiểm tra tại chỗ..."
+          value={note}
+          onChange={e => setNote(e.target.value)}
+        />
+        <Button type="submit" loading={acknowledge.isPending} className="w-full">
+          Xác nhận
+        </Button>
+      </form>
+    </Modal>
+  )
 }

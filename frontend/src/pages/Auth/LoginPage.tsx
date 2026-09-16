@@ -1,23 +1,24 @@
 import { useState, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button, Input } from '@/components/ui'
 import { IconTemp, IconHumidity, IconSound } from '@/components/ui/icons'
+import { getApiErrorMessage } from '@/utils/helpers'
 
 /** Login Page – AUTH-FR-002 */
 export default function LoginPage() {
   const { login } = useAuth()
+  const [searchParams] = useSearchParams()
+  const returnTo = searchParams.get('returnTo') ?? undefined
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    login.mutate({ email, password })
+    login.mutate({ email, password, returnTo })
   }
 
-  const errorMessage = login.isError
-    ? ((login.error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ?? 'Đăng nhập thất bại')
-    : undefined
+  const errorMessage = login.isError ? getApiErrorMessage(login.error, 'Đăng nhập thất bại') : undefined
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -47,6 +48,9 @@ export default function LoginPage() {
               label="Mật khẩu" type="password" required autoComplete="current-password"
               value={password} onChange={e => setPassword(e.target.value)}
             />
+            <Link to="/forgot-password" className="-mt-2 self-end text-xs font-semibold text-charcoal underline underline-offset-2">
+              Quên mật khẩu?
+            </Link>
             {errorMessage && (
               <p className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">
                 {errorMessage}

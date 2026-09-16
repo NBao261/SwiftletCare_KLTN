@@ -43,6 +43,15 @@ void begin() {
                  String(MODBUS_BAUDRATE) + "bps");
 }
 
+// Bus chưa terminate đúng cách (đang trong quá trình khắc phục phần cứng) nên
+// sóng phản xạ (ringing) sau MỘT LẦN CÓ THIẾT BỊ TRẢ LỜI cần thời gian ngắn để
+// tắt hẳn trước khi gửi query kế tiếp — nếu không, query ngay sau đó dễ bị lỗi
+// CRC/timeout dù thiết bị đó hoàn toàn bình thường. Thực tế đo được: lỗi luôn
+// rơi đúng vào ID được đọc NGAY SAU một lần đọc thành công, không rơi vào ID
+// theo sau 1 lần timeout (vì timeout = im lặng hoàn toàn, không có gì để dội).
+// Không cần delay sau timeout vì ModbusMaster đã tự chờ ~1s timeout sẵn rồi.
+static constexpr uint32_t BUS_SETTLE_MS = 20;
+
 // Đọc 1 thanh ghi 16-bit, trả về true nếu thành công
 static bool readRegister(uint8_t slaveId, uint16_t reg, int16_t &outValue) {
   modbus.begin(slaveId, Serial2);
@@ -50,6 +59,7 @@ static bool readRegister(uint8_t slaveId, uint16_t reg, int16_t &outValue) {
   if (result != modbus.ku8MBSuccess)
     return false;
   outValue = (int16_t)modbus.getResponseBuffer(0);
+  delay(BUS_SETTLE_MS);
   return true;
 }
 
@@ -62,6 +72,7 @@ static bool readRegisters2(uint8_t slaveId, uint16_t startReg, int16_t &reg0,
     return false;
   reg0 = (int16_t)modbus.getResponseBuffer(0);
   reg1 = (int16_t)modbus.getResponseBuffer(1);
+  delay(BUS_SETTLE_MS);
   return true;
 }
 

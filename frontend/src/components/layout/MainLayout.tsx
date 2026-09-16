@@ -3,9 +3,12 @@ import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import MobileDock from './MobileDock'
 import Toast from '@/components/common/Toast'
+import { useAlertNotifications } from '@/hooks/useAlertNotifications'
 
 /** Main layout — sidebar (desktop) / dock nổi (mobile) + topbar + nội dung (FE_Design_Swiftlet.md §3) */
 export default function MainLayout() {
+  useAlertNotifications()
+
   return (
     <div className="flex h-screen overflow-hidden bg-white">
       <Sidebar />
