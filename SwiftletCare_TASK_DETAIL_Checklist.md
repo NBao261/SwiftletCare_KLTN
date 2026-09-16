@@ -75,15 +75,27 @@
 - [x] Kết nối MQTT Broker over TLS (port 8883), QoS 1 `[7.2, SEC-NFR-001]` — ⚠️ lưu ý: PubSubClient chỉ publish được QoS 0, cần đổi lib nếu bắt buộc QoS 1 khi publish
 - [x] Publish telemetry topic `swiftletcare/{farmId}/{houseId}/{zoneId}/telemetry` `[ENV-FR-001, 9.2]`
 - [x] Publish heartbeat topic + relay status topic `[9.2]`
-- [ ] Boot-time check NVS: có cấu hình WiFi/farmId/houseId/zoneId chưa → có thì chạy bình thường, chưa thì vào AP-mode `[FARM-FR-003b, Flow 1 bước 5]`
-- [ ] Tự phát SoftAP `"SwiftletCare-Setup-<deviceId>"` khi chưa có cấu hình (dùng `WiFi.softAP()`, không cần thư viện ngoài) `[FARM-FR-003b]`
-- [ ] Serve trang cấu hình cục bộ tại `192.168.4.1` (ESPAsyncWebServer đã có sẵn cho OTA) nhận JSON `{wifiSsid, wifiPassword, farmId, houseId, zoneId, mqttUsername, mqttPassword}` từ Web Console `[Flow 1 bước 6]`
-- [ ] Lưu cấu hình nhận được vào NVS qua StorageManager, khởi động lại, tự kết nối WiFi thật + MQTT bằng credentials mới `[Flow 1 bước 7]`
-- [ ] Bad case: sai WiFi thật → tự quay lại AP-mode sau 60s để nhập lại, giữ nguyên farmId/houseId/zoneId/mqttCredentials đã nhận `[Flow 1 case 6a]`
-- [ ] Bad case: không kết nối được vào AP tạm → ESP32 tự quay lại AP-mode sau 5 phút không nhận cấu hình mới `[Flow 1 case 5a]`
 - [x] Gửi heartbeat đầu tiên → backend cập nhật ONLINE `[FARM-FR-005]`
 - [x] Nhận lệnh config/update từ cloud qua MQTT `[9.2]` (*)
-- [ ] 🤝 Test AP-mode E2E với Web Console thật của M3/M4 (Flow 1 bước 5-9)
+
+### A4a. Tự đổi WiFi không cần USB/nạp lại — `wifi/WiFiProvisioner.h/.cpp` (đã code + verify phần cứng thật)
+
+> Khác phạm vi FARM-FR-003b bên dưới (Web Console của Technician cho thiết bị **mới**): đây là tự phục vụ cho thiết bị **đã lắp xong**, chỉ đổi WiFi khi farm đổi router/đổi vị trí — không đụng farmId/houseId/zoneId/mqttCredentials, không cần Technician/Web Console. Xuất phát từ câu hỏi thực tế "đổi WiFi phải sửa Secrets.h + nạp lại rất phiền".
+
+- [x] Boot-time thử WiFi đã lưu trong NVS (`StorageManager::loadWifiCredentials`), rơi về mặc định Secrets.h nếu chưa từng cấu hình qua portal
+- [x] Kết nối thất bại (~10s) → tự phát SoftAP `SwiftletCare-Setup-<deviceId>` (mở, không mật khẩu)
+- [x] Captive portal (DNSServer + ESPAsyncWebServer dùng chung instance với OTA): form nhập SSID/mật khẩu, tự popup trên điện thoại qua `onNotFound` redirect
+- [x] Lưu WiFi mới vào NVS (`StorageManager::saveWifiCredentials`) → `ESP.restart()` → tự kết nối lại bằng WiFi mới
+- [x] Sensor/Relay/PID/MQTT vẫn khởi động bình thường dù đang ở AP-mode (không phá REL-NFR-001 — điều khiển cục bộ vẫn chạy khi mất mạng)
+- [x] Bad case: nhập sai WiFi mới → sau restart kết nối lại thất bại → tự quay lại AP-mode (qua chu trình reboot ~10s, không phải timer 60s cùng phiên) để nhập lại
+- [x] 🤝 Test E2E bằng phần cứng + điện thoại thật: cố ý sai mật khẩu → AP hiện trên điện thoại → portal tự popup → nhập WiFi thật → lưu NVS → tự reboot → kết nối lại → lên EMQX (`SC-node_001`) — **đã verify từng bước qua log Serial thật, không chỉ đọc code**
+- [x] Sửa 1 lỗi thật phát hiện lúc test: gọi `softAPConfig()` trước `softAP()` khiến DHCP của AP không lên đúng (điện thoại thấy SSID nhưng không kết nối được) — đổi lại đúng thứ tự
+
+### A4b. Onboarding thiết bị MỚI qua Web Console (Technician) — CHƯA code
+
+- [ ] Boot-time check NVS: có farmId/houseId/zoneId/mqttCredentials chưa → có thì chạy bình thường, chưa thì vào AP-mode chờ Web Console `[FARM-FR-003b, Flow 1 bước 5]`
+- [ ] Serve trang cấu hình cục bộ tại `192.168.4.1` nhận thêm `{farmId, houseId, zoneId, mqttUsername, mqttPassword}` từ Web Console (không chỉ wifiSsid/wifiPassword như A4a) `[Flow 1 bước 6]`
+- [ ] 🤝 Test AP-mode E2E với Web Console thật của M3/M4 khi Web Console được code (Flow 1 bước 5-9)
 
 ## A5. Firmware Relay điều khiển (Sprint 3)
 
@@ -456,8 +468,9 @@
 ## E3. Integration Testing (Sprint 2-6)
 
 - [x] 🤝 Test MQTT E2E (ESP32→Broker→Backend→DB) `[13.2]` — verify thật với ESP32 vật lý
-- [ ] 🤝 Test onboarding qua Web Console (Technician) + AP-mode WiFi thật `[Flow 1]`
-- [ ] Test bad case Flow 1: secretKey sai, AP-mode fail, sai WiFi thật, SAT checklist không đạt `[Flow 1 case 3a/5a/6a/case checklist]`
+- [x] Test đổi WiFi tự phục vụ qua AP-mode/captive portal (A4a) trên phần cứng + điện thoại thật: sai mật khẩu → AP hiện → portal tự popup → nhập WiFi thật → lưu NVS → tự reboot → kết nối lại → lên EMQX `[FARM-FR-003b tự phục vụ]` — phát hiện + sửa luôn lỗi thứ tự `softAPConfig()`/`softAP()` trong lúc test
+- [ ] 🤝 Test onboarding thiết bị MỚI qua Web Console (Technician) khi Web Console được code (A4b) `[Flow 1]`
+- [ ] Test bad case Flow 1: secretKey sai, SAT checklist không đạt (phần Web Console, A4b) `[Flow 1 case 3a/case checklist]`
 - [x] Test offline-detection: rút nguồn ESP32 → StatusDot đỏ trong ≤30s, badge Live → "Mất kết nối" trong ≤20s, cắm lại → tự Online `[Flow 14]` — verify thật đã thực hiện trong buổi làm việc
 - [ ] 🤝 Test Manual Override + loa ru theo lịch `[13.2]`
 - [ ] Test override auto-expire 30p thật (không chỉ trên giấy) + gia hạn override `[Flow 13]`

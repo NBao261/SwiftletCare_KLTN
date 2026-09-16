@@ -21,6 +21,7 @@
 #include "pid/PIDController.h"
 #include "sensors/SensorManager.h"
 #include "storage/StorageManager.h"
+#include "wifi/WiFiProvisioner.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_task_wdt.h>
@@ -28,7 +29,8 @@
 
 // OTA update qua WiFi (http://<ip-esp32>/update) — chỉ cần cắm USB lần đầu,
 // các lần nạp firmware sau thực hiện qua mạng. TASK-A8, 7.2
-// (ELEGANTOTA_USE_ASYNC_WEBSERVER được định nghĩa qua build_flags trong platformio.ini)
+// (ELEGANTOTA_USE_ASYNC_WEBSERVER được định nghĩa qua build_flags trong
+// platformio.ini)
 #include <ESPAsyncWebServer.h>
 #include <ElegantOTA.h>
 static AsyncWebServer otaServer(80);
@@ -82,29 +84,30 @@ void setup() {
   StorageManager::begin();
   Config::load();
 
-  // ── Connect WiFi ─────────────────────────────────────────────────────────
-  Serial.print("[WiFi] Connecting to " + String(Config::wifiSsid));
-  WiFi.begin(Config::wifiSsid, Config::wifiPassword);
-  int retries = 0;
-  while (WiFi.status() != WL_CONNECTED && retries < 20) {
-    delay(500);
-    Serial.print(".");
-    retries++;
-  }
-  if (WiFi.status() == WL_CONNECTED) {
+  // ── Connect WiFi (tự bật AP-mode để cấu hình lại nếu không kết nối được) ──
+  // FARM-FR-003b: đổi WiFi trên thiết bị đã lắp không cần Technician/USB —
+  // xem WiFiProvisioner.h. Task cảm biến/relay/PID vẫn khởi động bình thường
+  // ở dưới dù nhánh nào xảy ra (REL-NFR-001, offline resilience).
+  bool wifiConnected = WiFiProvisioner::tryConnect();
+  if (wifiConnected) {
     Serial.println("\n[WiFi] ✓ Connected! IP: " + WiFi.localIP().toString() +
                    " RSSI: " + String(WiFi.RSSI()) + " dBm");
-    configTime(7 * 3600, 0, "pool.ntp.org"); // GMT+7, cho lịch loa ru (ENV-FR-013b)
+    configTime(7 * 3600, 0,
+               "pool.ntp.org"); // GMT+7, cho lịch loa ru (ENV-FR-013b)
 
     // ── OTA server (TASK-A8) ────────────────────────────────────────────────
     otaServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-      request->send(200, "text/plain", "SwiftletCare ESP32 — cập nhật firmware tại /update");
+      request->send(200, "text/plain",
+                    "SwiftletCare ESP32 — cập nhật firmware tại /update");
     });
     ElegantOTA.begin(&otaServer, SECRET_OTA_USERNAME, SECRET_OTA_PASSWORD);
     otaServer.begin();
-    Serial.println("[OTA] Sẵn sàng tại http://" + WiFi.localIP().toString() + "/update");
+    Serial.println("[OTA] Sẵn sàng tại http://" + WiFi.localIP().toString() +
+                   "/update");
   } else {
-    Serial.println("\n[WiFi] ✗ Failed! Running in OFFLINE mode (REL-NFR-001)");
+    Serial.println(
+        "\n[WiFi] ✗ Không kết nối được — bật AP-mode để cấu hình lại WiFi");
+    WiFiProvisioner::startCaptivePortal(otaServer);
   }
 
   // ── Initialize sensors (RS485 Modbus bus, Guide v3.3 §5) ─────────────────
@@ -133,7 +136,14 @@ void setup() {
 // ══════════════════════════════════════════════════════════════════════════════
 void loop() {
   esp_task_wdt_reset();
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  if (WiFiProvisioner::isPortalActive()) {
+    // DNS cần trả lời nhanh để trình duyệt điện thoại tự bật popup captive
+    // portal thay vì phải tự mở http://192.168.4.1
+    WiFiProvisioner::handleDnsLoop();
+    vTaskDelay(pdMS_TO_TICKS(50));
+  } else {
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
 }
 
 // ── Sensor Task (Core 1)
@@ -192,21 +202,29 @@ void pidTask(void *pvParameters) {
 
       // Run closed-loop control (ENV-FR-010..012)
       PIDController::runHumidityControl(data.humidity, relayState);
-      PIDController::runVentilationControl(data.temperature, data.nh3Ppm, data.co2Ppm, relayState);
+      PIDController::runVentilationControl(data.temperature, data.nh3Ppm,
+                                           data.co2Ppm, relayState);
       PIDController::runHeatingControl(data.temperature, relayState);
 
       // Threat detection (THREAT-FR-006, 011, 013)
-      PIDController::ThreatFlags threats =
-          PIDController::handleThreatAlerts(data, relayState, AudioManager::isPlaying());
+      PIDController::ThreatFlags threats = PIDController::handleThreatAlerts(
+          data, relayState, AudioManager::isPlaying());
 
       if (threats.speakerFailure)
-        MQTTManager::publishAlert("SPEAKER_FAILURE", "CRITICAL", "Amplitude dB không tăng khi loa ru đang phát");
+        MQTTManager::publishAlert(
+            "SPEAKER_FAILURE", "CRITICAL",
+            "Amplitude dB không tăng khi loa ru đang phát");
       if (threats.pumpDry)
-        MQTTManager::publishAlert("PUMP_DRY", "MEDIUM", "Misting ON 5 phút nhưng độ ẩm không tăng");
+        MQTTManager::publishAlert("PUMP_DRY", "MEDIUM",
+                                  "Misting ON 5 phút nhưng độ ẩm không tăng");
       if (threats.sensorFault)
-        MQTTManager::publishAlert("SENSOR_FAULT", "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");
+        MQTTManager::publishAlert(
+            "SENSOR_FAULT", "MEDIUM",
+            "Một cảm biến RS485 không phản hồi (timeout/CRC)");
       if (threats.busFailure)
-        MQTTManager::publishAlert("RS485_BUS_FAILURE", "CRITICAL", "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");
+        MQTTManager::publishAlert(
+            "RS485_BUS_FAILURE", "CRITICAL",
+            "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");
     }
 
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(Config::pidIntervalMs));
@@ -254,7 +272,8 @@ void mqttTask(void *pvParameters) {
       StorageManager::flushBuffer();
     }
 
-    // Dùng chung Config::sensorIntervalMs với sensorTask — tránh 2 con số lệch nhau
+    // Dùng chung Config::sensorIntervalMs với sensorTask — tránh 2 con số lệch
+    // nhau
     vTaskDelay(pdMS_TO_TICKS(Config::sensorIntervalMs));
   }
 }

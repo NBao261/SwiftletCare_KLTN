@@ -12,6 +12,12 @@ void begin();
 void saveConfig();
 void loadConfig();
 
+// NVS – WiFi credentials nhập qua captive portal (WiFiProvisioner). Tách khỏi
+// saveConfig()/loadConfig() vì vòng đời khác hẳn: chỉ ghi khi người dùng chủ
+// động đổi WiFi, không phải mỗi lần đổi ngưỡng cảm biến.
+bool loadWifiCredentials(String &ssid, String &password); // false nếu chưa từng lưu
+void saveWifiCredentials(const String &ssid, const String &password);
+
 // SPIFFS – offline telemetry buffer
 void bufferTelemetry(const SensorData &data);
 void flushBuffer(); // Upload all buffered records via MQTT

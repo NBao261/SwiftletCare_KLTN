@@ -1,7 +1,8 @@
 import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { Button, Input, Card } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
+import { IconTemp, IconHumidity, IconSound } from '@/components/ui/icons'
 
 /** Login Page – AUTH-FR-002 */
 export default function LoginPage() {
@@ -19,33 +20,88 @@ export default function LoginPage() {
     : undefined
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white px-4">
-      <Card size="lg" className="w-full max-w-sm">
-        <h1 className="mb-1 text-2xl font-bold text-charcoal">Đăng nhập</h1>
-        <p className="mb-6 text-sm text-warmGray">Quản lý nhà yến thông minh</p>
+    <div className="flex min-h-screen bg-white">
+      {/* Cột form */}
+      <div className="flex w-full flex-col justify-center px-6 py-10 lg:w-[46%] lg:px-16">
+        <div className="mx-auto w-full max-w-sm">
+          <div className="mb-10 flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-charcoal text-sm font-extrabold text-white">
+              S
+            </span>
+            <span className="text-base font-bold tracking-tight text-charcoal">SwiftletCare</span>
+          </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input
-            label="Email" type="email" required autoComplete="email"
-            value={email} onChange={e => setEmail(e.target.value)}
-          />
-          <Input
-            label="Mật khẩu" type="password" required autoComplete="current-password"
-            value={password} onChange={e => setPassword(e.target.value)}
-          />
-          {errorMessage && <p className="text-sm text-alertRed">{errorMessage}</p>}
-          <Button type="submit" size="lg" loading={login.isPending} className="mt-2 w-full">
+          <h1 className="text-[28px] font-bold leading-tight tracking-tight text-charcoal">
             Đăng nhập
-          </Button>
-        </form>
+          </h1>
+          <p className="mt-1.5 text-sm text-warmGray">
+            Giám sát và điều khiển nhà yến từ xa
+          </p>
 
-        <p className="mt-6 text-center text-sm text-warmGray">
-          Chưa có tài khoản?{' '}
-          <Link to="/register" className="font-semibold text-charcoal underline">
-            Đăng ký
-          </Link>
-        </p>
-      </Card>
+          <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+            <Input
+              label="Email" type="email" required autoComplete="email"
+              value={email} onChange={e => setEmail(e.target.value)}
+            />
+            <Input
+              label="Mật khẩu" type="password" required autoComplete="current-password"
+              value={password} onChange={e => setPassword(e.target.value)}
+            />
+            {errorMessage && (
+              <p className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">
+                {errorMessage}
+              </p>
+            )}
+            <Button type="submit" size="lg" loading={login.isPending} className="mt-2 w-full">
+              Đăng nhập
+            </Button>
+          </form>
+
+          <p className="mt-8 text-center text-sm text-warmGray">
+            Chưa có tài khoản?{' '}
+            <Link to="/register" className="font-semibold text-charcoal underline underline-offset-2">
+              Đăng ký
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Cột giới thiệu — ẩn trên mobile để form chiếm trọn màn hình */}
+      <div className="hidden flex-1 items-center justify-center bg-charcoal p-12 lg:flex">
+        <div className="w-full max-w-md">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/50">
+            Hệ thống giám sát nhà yến
+          </p>
+          <p className="mt-3 text-3xl font-bold leading-tight tracking-tight text-white">
+            Vi khí hậu ổn định,
+            <br />
+            đàn yến ở lại.
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-white/60">
+            Theo dõi nhiệt độ, độ ẩm, khí NH3/CO2 và âm thanh theo thời gian thực;
+            hệ thống tự điều khiển phun sương, thông gió và loa ru ngay cả khi mất
+            kết nối Internet.
+          </p>
+
+          <div className="mt-10 grid grid-cols-3 gap-3">
+            <StatChip icon={<IconTemp width={18} height={18} />} value="26–31" unit="°C" />
+            <StatChip icon={<IconHumidity width={18} height={18} />} value="75–95" unit="%" />
+            <StatChip icon={<IconSound width={18} height={18} />} value="24/7" unit="giám sát" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StatChip({ icon, value, unit }: { icon: React.ReactNode; value: string; unit: string }) {
+  return (
+    <div className="rounded-2xl bg-white/5 p-4">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-limeMist text-charcoal">
+        {icon}
+      </span>
+      <p className="mt-3 text-lg font-extrabold leading-none text-white">{value}</p>
+      <p className="mt-1 text-xs text-white/50">{unit}</p>
     </div>
   )
 }

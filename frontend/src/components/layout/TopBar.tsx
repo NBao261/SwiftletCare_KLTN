@@ -1,55 +1,62 @@
-import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/store/authStore'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAlertStore } from '@/store/alertStore'
+import { useAuthStore } from '@/store/authStore'
 import { useAuth } from '@/hooks/useAuth'
-import { Button } from '@/components/ui'
+import ZoneSwitcher from './ZoneSwitcher'
+import { IconBell, IconLogout } from '@/components/ui/icons'
+import { NAV_SECTIONS } from './navItems'
+
+/** Tiêu đề trang theo route hiện tại — lấy từ cùng nguồn với sidebar để không lệch */
+function usePageTitle(): string {
+  const { pathname } = useLocation()
+  const all = NAV_SECTIONS.flatMap(s => s.items)
+  const match = all.find(i => pathname === i.to || pathname.startsWith(`${i.to}/`))
+  return match?.label ?? 'SwiftletCare'
+}
 
 export default function TopBar() {
-  const user        = useAuthStore(s => s.user)
   const unreadCount = useAlertStore(s => s.unreadCount)
+  const user = useAuthStore(s => s.user)
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const title = usePageTitle()
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-warmGray/15 bg-white px-6">
-      <div className="text-sm text-warmGray">SwiftletCare v1.0</div>
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-warmGray/15 bg-white px-4 lg:px-6">
+      {/* Trái: tên trang (desktop) / thương hiệu (mobile, vì sidebar bị ẩn) */}
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-charcoal text-sm font-extrabold text-white lg:hidden">
+          S
+        </span>
+        <h1 className="truncate text-lg font-bold tracking-tight text-charcoal">{title}</h1>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2">
+        <ZoneSwitcher />
+
         <button
           onClick={() => navigate('/alerts')}
-          className="relative flex h-10 w-10 items-center justify-center rounded-full text-charcoal hover:bg-warmGray/10"
-          aria-label="Thông báo"
+          className="relative flex h-10 w-10 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10"
+          aria-label={unreadCount > 0 ? `Thông báo (${unreadCount} chưa đọc)` : 'Thông báo'}
         >
-          <BellIcon />
+          <IconBell />
           {unreadCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-alertRed text-[10px] font-bold text-white">
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-alertRed px-1 text-[10px] font-bold text-white">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </button>
 
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-charcoal text-sm font-semibold text-white">
-            {user?.full_name?.[0]?.toUpperCase() ?? 'U'}
-          </div>
-          <span className="text-sm font-medium text-charcoal">{user?.full_name}</span>
-        </div>
-
-        <Button variant="secondary" size="sm" onClick={() => logout.mutate()}>
-          Đăng xuất
-        </Button>
+        {/* Mobile: sidebar (chứa avatar + đăng xuất) bị ẩn nên đưa ra đây */}
+        <button
+          onClick={() => logout.mutate()}
+          aria-label="Đăng xuất"
+          title={user?.full_name ? `Đăng xuất ${user.full_name}` : 'Đăng xuất'}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10 lg:hidden"
+        >
+          <IconLogout />
+        </button>
       </div>
     </header>
-  )
-}
-
-function BellIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path
-        d="M10 2.5c-2.9 0-5.25 2.35-5.25 5.25v2.6l-1.2 2.2c-.3.55.1 1.2.72 1.2h11.46c.62 0 1.02-.65.72-1.2l-1.2-2.2v-2.6C15.25 4.85 12.9 2.5 10 2.5Z"
-        stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"
-      />
-      <path d="M8.2 16a1.8 1.8 0 0 0 3.6 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
   )
 }

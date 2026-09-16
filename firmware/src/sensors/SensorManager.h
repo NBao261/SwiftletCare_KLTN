@@ -10,9 +10,9 @@ struct SensorData {
   float temperature; // °C   (ES35-SW, reg0 ÷10)
   float humidity;    // %RH  (ES35-SW, reg1 ÷10)
   float lightLux;    // lux  (ES-ALS-02, reg2-3 ×100)
-  float nh3Ppm;       // ppm  (ES-NH3-01, reg0)
-  float co2Ppm;       // ppm  (ES-CO2-01, reg0)
-  float soundDb;      // dB   (ES-NOISE-01, reg0 ÷10)
+  float nh3Ppm;      // ppm  (ES-NH3-01, reg0)
+  float co2Ppm;      // ppm  (ES-CO2-01, reg0)
+  float soundDb;     // dB   (ES-NOISE-01, reg0 ÷10)
   unsigned long timestamp;
   bool isValid;
 
@@ -31,7 +31,7 @@ namespace SensorManager {
 void begin();
 SensorData readAll();
 bool validateRange(const SensorData &data);
-bool isBusFailure();     // THREAT-FR-013: ≥3/5 IDs timeout, 3 consecutive cycles
+bool isBusFailure(); // THREAT-FR-013: ≥3/5 IDs timeout, 3 consecutive cycles
 float getAudioBaseline(); // THREAT-FR-006: rolling dB baseline (0 if not ready)
 bool isAudioBaselineReady();
 } // namespace SensorManager

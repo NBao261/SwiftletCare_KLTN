@@ -12,7 +12,7 @@ export function useFarms() {
 export function useCreateFarm() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { name: string; address: string }) => farmApi.create(input),
+    mutationFn: (input: { name: string; address: string; region?: string }) => farmApi.create(input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['farms'] }),
   })
 }

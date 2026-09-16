@@ -6,9 +6,10 @@
 #include <ArduinoJson.h>
 
 namespace Config {
-// WiFi credentials
-const char *wifiSsid = SECRET_WIFI_SSID;
-const char *wifiPassword = SECRET_WIFI_PASSWORD;
+// WiFi credentials — giá trị mặc định từ Secrets.h, có thể bị WiFiProvisioner
+// ghi đè bằng giá trị đã lưu trong NVS (WiFi nhập qua captive portal AP-mode).
+String wifiSsid = SECRET_WIFI_SSID;
+String wifiPassword = SECRET_WIFI_PASSWORD;
 
 // MQTT broker
 const char *mqttBroker = SECRET_MQTT_BROKER;

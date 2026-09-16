@@ -1,7 +1,7 @@
 ﻿import { Server, Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
-import logger from '@/utils/logger'
+import logger from '@/utils/logger.util'
 import type { JwtAccessPayload, WsTelemetryUpdate, WsRelayUpdate, WsBirdCountUpdate, WsAlertNew, WsDeviceStatusChange } from '@/types'
 
 let io: Server | null = null
