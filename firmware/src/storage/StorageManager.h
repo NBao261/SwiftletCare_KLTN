@@ -26,7 +26,19 @@ void saveMqttBroker(const String &broker);
 
 // SPIFFS – offline telemetry buffer
 void bufferTelemetry(const SensorData &data);
-void flushBuffer(); // Upload all buffered records via MQTT
+
+// Callback dùng để publish 1 dòng JSON đã buffer — tách khỏi MQTTManager để
+// StorageManager (lớp thấp hơn) không phải include/phụ thuộc ngược lên
+// MQTTManager (MQTTManager.cpp đã include StorageManager.h). Trả về true
+// nếu publish thành công.
+typedef bool (*PublishLineFn)(const String &jsonLine);
+
+// Đọc từng dòng JSONL trong buffer, gọi publishLine() cho từng dòng. Chỉ xoá
+// buffer nếu TẤT CẢ dòng trong lượt này publish thành công; nếu 1 dòng lỗi
+// giữa chừng, dừng lại và GIỮ NGUYÊN file để lần flush kế tiếp thử lại từ
+// đầu (chấp nhận khả năng publish trùng — dashboard/telemetry consumer chịu
+// được dữ liệu trùng — còn hơn mất vĩnh viễn dữ liệu offline).
+void flushBuffer(PublishLineFn publishLine);
 int getBufferCount();
 void clearBuffer();
 } // namespace StorageManager

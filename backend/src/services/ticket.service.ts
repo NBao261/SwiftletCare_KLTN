@@ -2,10 +2,11 @@ import { Ticket, ITicket } from '@/models/ticket.model'
 import { Alert } from '@/models/alert.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
-import { listAccessibleFarmIds, assertFarmAccess } from '@/services/alert.service'
+import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util'
+import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
-import type { CurrentUser, TicketType, TicketPriority, TicketStatus } from '@/types'
+import type { CurrentUser, AlertType, TicketType, TicketPriority, TicketStatus } from '@/types'
 
 /** TICKET-FR-003 — priority mặc định theo loại; Technician/Admin chỉnh tay được sau */
 const DEFAULT_PRIORITY: Record<TicketType, TicketPriority> = {
@@ -38,6 +39,27 @@ const ALLOWED_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
 }
 
 const INSTALLATION_TYPES: TicketType[] = ['INSTALLATION', 'MAINTENANCE']
+
+/**
+ * Alert Engine phát nhiều loại cảnh báo hơn TicketType hỗ trợ — ép kiểu trực
+ * tiếp (`alert.type as TicketType`) tạo ra giá trị enum không hợp lệ cho
+ * BIRD_PANIC/THRESHOLD_BREACH/PUMP_DRY/LOW_RETURN_RATE, làm `Ticket.create`
+ * throw ValidationError và crash cả batch xử lý stale alert. Map rõ ràng
+ * từng giá trị, loại không có ticket type tương ứng thì dùng OTHER.
+ */
+const ALERT_TYPE_TO_TICKET_TYPE: Record<AlertType, TicketType> = {
+  SENSOR_FAULT:      'SENSOR_FAULT',
+  RS485_BUS_FAILURE: 'RS485_BUS_FAILURE',
+  NODE_OFFLINE:      'NODE_OFFLINE',
+  POWER_OUTAGE:      'POWER_OUTAGE',
+  SPEAKER_FAILURE:   'SPEAKER_FAILURE',
+  PREDATOR_DETECTED: 'PREDATOR_DETECTED',
+  EDGE_AI_DEGRADED:  'EDGE_AI_DEGRADED',
+  THRESHOLD_BREACH:  'OTHER',
+  BIRD_PANIC:        'OTHER',
+  PUMP_DRY:          'OTHER',
+  LOW_RETURN_RATE:   'OTHER',
+}
 
 /**
  * TICKET-FR-004 — Ticket Router: gán Technician phụ trách khu vực của Farm.
@@ -129,34 +151,55 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
     severity: { $in: ['CRITICAL', 'HIGH'] },
     created_at: { $lt: staleBefore },
   })
+  if (staleAlerts.length === 0) return 0
+
+  // Batch dedup: 1 query cho cả batch thay vì findOne từng alert.
+  const alreadyTicketed = new Set(
+    (await Ticket.find({ alert_id: { $in: staleAlerts.map(a => a._id) } }).select('alert_id').lean())
+      .map(t => String(t.alert_id)),
+  )
+  const toProcess = staleAlerts.filter(a => !alreadyTicketed.has(String(a._id)))
+
+  // Cache routeToTechnician theo farmId trong 1 lượt chạy job — nhiều alert
+  // cùng farm (thường gặp) chỉ tính tải Technician 1 lần, không phải mỗi alert.
+  const technicianCache = new Map<string, string | null>()
+  async function routeToTechnicianCached(farmId: string): Promise<string | null> {
+    if (!technicianCache.has(farmId)) {
+      technicianCache.set(farmId, await routeToTechnician(farmId))
+    }
+    return technicianCache.get(farmId) ?? null
+  }
 
   let created = 0
-  for (const alert of staleAlerts) {
-    // Đã có ticket gắn với alert này thì bỏ qua (tránh tạo trùng mỗi lần job chạy)
-    const existing = await Ticket.findOne({ alert_id: alert._id })
-    if (existing) continue
+  for (const alert of toProcess) {
+    try {
+      const ticketType = ALERT_TYPE_TO_TICKET_TYPE[alert.type as AlertType] ?? 'OTHER'
+      const priority = DEFAULT_PRIORITY[ticketType]
+      const [responseH, resolveH] = SLA_HOURS[priority]
+      const now = Date.now()
+      const assignedTo = await routeToTechnicianCached(String(alert.farm_id))
 
-    const priority = DEFAULT_PRIORITY[(alert.type as TicketType)] ?? 'P2'
-    const [responseH, resolveH] = SLA_HOURS[priority]
-    const now = Date.now()
-    const assignedTo = await routeToTechnician(String(alert.farm_id))
-
-    await Ticket.create({
-      farm_id:  alert.farm_id,
-      zone_id:  alert.zone_id,
-      alert_id: alert._id,
-      type:     (alert.type as TicketType) ?? 'OTHER',
-      priority,
-      status:   'NEW',
-      assigned_to: assignedTo ?? undefined,
-      sla_response_due_at: new Date(now + responseH * 3600_000),
-      sla_resolve_due_at:  new Date(now + resolveH * 3600_000),
-      notes: [{
-        content: `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
-        created_at: new Date(),
-      }],
-    })
-    created++
+      await Ticket.create({
+        farm_id:  alert.farm_id,
+        zone_id:  alert.zone_id,
+        alert_id: alert._id,
+        type:     ticketType,
+        priority,
+        status:   'NEW',
+        assigned_to: assignedTo ?? undefined,
+        sla_response_due_at: new Date(now + responseH * 3600_000),
+        sla_resolve_due_at:  new Date(now + resolveH * 3600_000),
+        notes: [{
+          content: `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
+          created_at: new Date(),
+        }],
+      })
+      created++
+    } catch (err) {
+      // 1 alert lỗi không được chặn các alert khác trong cùng batch — trước
+      // đây throw ở đây làm abort cả for loop, không tạo được ticket nào khác.
+      logger.error('Tạo ticket tự động từ alert thất bại', { alertId: String(alert._id), err })
+    }
   }
   return created
 }
@@ -177,11 +220,10 @@ export async function listTickets(user: CurrentUser, query: ListTicketsQuery) {
   if (query.priority) filter.priority = query.priority
   if (query.assignedToMe) filter.assigned_to = user._id
 
-  const page = query.page ?? 1
-  const limit = Math.min(query.limit ?? 20, 100)
+  const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total] = await Promise.all([
-    Ticket.find(filter).sort({ created_at: -1 }).skip((page - 1) * limit).limit(limit)
+    Ticket.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit)
       .populate('assigned_to', 'full_name email').lean(),
     Ticket.countDocuments(filter),
   ])
@@ -273,11 +315,19 @@ export async function escalateTicket(ticketId: string, user: CurrentUser, reason
 
 /** TICKET-FR-011 — Farm Owner đánh giá sau khi ticket đóng */
 export async function rateTicket(ticketId: string, user: CurrentUser, rating: number): Promise<ITicket> {
-  const ticket = await getTicket(ticketId, user)
+  const ticket = await getTicket(ticketId, user) // đã xác nhận user có quyền trên farm của ticket
   if (ticket.status !== 'CLOSED') throw ConflictError('Chỉ đánh giá được ticket đã đóng')
-  if (String(ticket.created_by) !== user._id && user.role !== 'ADMIN') {
-    throw ForbiddenError('Chỉ người tạo ticket mới được đánh giá')
+
+  const isCreator = !!ticket.created_by && String(ticket.created_by) === user._id
+  // Ticket tự tạo từ Alert (TICKET-FR-002, createTicketsFromStaleAlerts) không
+  // có created_by vì chạy trong cron job, không có user context — coi Farm
+  // Owner của farm đó (đã qua check quyền ở getTicket) là người được đánh giá,
+  // thay vì chỉ giới hạn cho ADMIN.
+  const isSystemGeneratedRatableByOwner = !ticket.created_by && user.role === 'FARM_OWNER'
+  if (!isCreator && !isSystemGeneratedRatableByOwner && user.role !== 'ADMIN') {
+    throw ForbiddenError('Chỉ người tạo ticket hoặc Farm Owner mới được đánh giá')
   }
+
   ticket.satisfaction_rating = rating
   await ticket.save()
   return ticket

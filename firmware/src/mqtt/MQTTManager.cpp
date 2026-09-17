@@ -19,7 +19,17 @@ static unsigned long lastHeartbeat = 0;
 
 // Đếm số lần connect() thất bại liên tiếp — sai/đổi IP broker không làm WiFi
 // fail nên không tái dùng được trigger captive-portal cũ, cần đếm riêng.
-static int mqttFailCount = 0;
+// volatile: biến này được GHI trong mqttTask (pin vào Core 0, xem main.cpp)
+// và ĐỌC trong isBrokerUnreachable() gọi từ Arduino loop() (Core 1 mặc định)
+// — 2 core khác nhau, không có mutex/atomic bảo vệ, nên cần volatile để loop()
+// không bao giờ đọc phải giá trị cache cũ trong register do compiler tối ưu.
+// volatile (không cần mutex/std::atomic) là đủ vì đây là counter đơn giản với
+// đúng 1 writer + 1 reader, không có read-modify-write phức hợp xuyên core
+// (mqttTask chỉ increment/reset; loop() chỉ so sánh với ngưỡng). Khác với
+// portalActive trong WiFiProvisioner.cpp (cố tình KHÔNG volatile, vì chỉ được
+// ghi/đọc từ cùng 1 task/core, không có race xuyên core) — đừng "sửa" biến đó
+// theo cùng lý do vì không áp dụng được.
+static volatile int mqttFailCount = 0;
 // ≈30 lần retry ở nhịp hiện tại (mqttTask delay = Config::sensorIntervalMs ≈
 // 1s/lần) ≈ 30 giây — đủ lâu để không trigger nhầm lúc broker container mới
 // khởi động chưa kịp lên, nhưng không quá lâu để người dùng phải chờ.
@@ -58,11 +68,28 @@ static bool resolveBrokerViaMdns() {
 // relayState sống trong main.cpp (dùng chung với pidTask) — MQTTManager chỉ
 // áp Manual Override lên đó khi có lệnh từ cloud (ENV-FR-016).
 extern RelayState relayState;
+// dataMutex sống trong main.cpp, bảo vệ relayState/latestSensorData xuyên
+// 3 task — MQTTManager cần lock khi đọc/ghi relayState từ onRelayCommand()
+// (chạy trong mqttTask, Core 0) vì pidTask (Core 1) đọc/ghi relayState mỗi
+// chu kỳ không đồng bộ (relayState là struct nhiều field, không phải 1
+// scalar như mqttFailCount — cần mutex thật, volatile không đủ).
+extern SemaphoreHandle_t dataMutex;
 
-// MQTT topic helpers (§9.2)
-static String topicBase() {
-  return String("swiftletcare/") + Config::farmId + "/" + Config::houseId + "/" + Config::zoneId;
-}
+// MQTT topic helpers (§9.2). Base đã được tính 1 lần trong main.cpp setup()
+// (đơn luồng, trước khi tạo task nào) vào biến toàn cục mqttTopicBase — vì
+// hàm này được gọi từ CẢ mqttTask (Core 0) LẪN pidTask (Core 1, qua
+// publishAlert()), và Config::farmId/houseId/zoneId không đổi lúc runtime
+// (const char* trỏ Secrets.h, không như wifiSsid/mqttBroker). KHÔNG dùng
+// biến static cục bộ tính lười ("magic static") trong hàm này dù C++11 có
+// guard thread-safe cho kiểu đó — lý do là lần gọi ĐẦU TIÊN của hàm này chỉ
+// xảy ra sau khi mqtt.connected() lần đầu trả true (mọi hàm publish* đều
+// return sớm nếu chưa connected), mà bản thân mqtt.connected()/
+// PubSubClient::_state lại bị đọc xuyên core KHÔNG có đồng bộ (gap có sẵn từ
+// trước, ngoài phạm vi fix này) — không muốn chồng thêm 1 giả định "trust
+// compiler guard" lên trên 1 gap đồng bộ đã tồn tại. Tính sẵn 1 lần ở
+// setup() đơn giản hơn, chứng minh đúng dễ hơn.
+extern String mqttTopicBase; // định nghĩa + gán 1 lần trong main.cpp setup()
+static const String &topicBase() { return mqttTopicBase; }
 
 static void mqttCallback(char *topic, byte *payload, unsigned int length) {
   String msg;
@@ -82,6 +109,12 @@ namespace MQTTManager {
 
 void begin() {
   mqtt.setClient(wifiClient);
+
+#if MQTT_PORT != 8883
+  Serial.println("[MQTT] CANH BAO: dang dung cong " + String(MQTT_PORT) +
+                 " (cleartext, khong TLS) — CHI danh cho dev. KHONG deploy len "
+                 "nha yen that (SEC-NFR-001) khi con o cau hinh nay.");
+#endif
 
   // Ưu tiên tự tìm broker qua mDNS — hoạt động ngay cả khi đổi mạng WiFi,
   // không ai cần biết/nhập IP thủ công. Chỉ khi mDNS thất bại (mạng chặn
@@ -195,6 +228,15 @@ void publishAlert(const char *alertType, const char *severity, const char *paylo
   mqtt.publish((topicBase() + "/alert").c_str(), msg.c_str(), false);
 }
 
+// Publish 1 dòng JSON telemetry đã buffer offline, nguyên văn (không build
+// lại từ SensorData sống) — dùng làm callback cho StorageManager::flushBuffer()
+// (REL-NFR-003). Trả về true nếu publish thành công (StorageManager dùng giá
+// trị này để quyết định có xoá buffer hay giữ lại thử lại lần sau).
+bool publishRawTelemetryLine(const String &jsonLine) {
+  if (!mqtt.connected()) return false;
+  return mqtt.publish((topicBase() + "/telemetry").c_str(), jsonLine.c_str(), false);
+}
+
 void onRelayCommand(const char *payload) {
   Serial.println("[MQTT] Relay command: " + String(payload));
 
@@ -213,11 +255,16 @@ void onRelayCommand(const char *payload) {
     return;
   }
 
-  // ENV-FR-016..018: bật Manual Override, tạm dừng PID cho relay này
-  PIDController::setManualOverride(relayName, state, durationMs, relayState);
-
-  // Xác nhận lại trạng thái ngay cho backend/dashboard (ENV-FR-015)
-  publishRelayState(relayState);
+  // ENV-FR-016..018: bật Manual Override, tạm dừng PID cho relay này.
+  // relayState là struct nhiều field (4 relay bool + 4 override bool + 1
+  // expiry) đọc/ghi đồng thời bởi pidTask (Core 1) — khoá dataMutex để tránh
+  // torn read/write xuyên struct.
+  if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+    PIDController::setManualOverride(relayName, state, durationMs, relayState);
+    // Xác nhận lại trạng thái ngay cho backend/dashboard (ENV-FR-015)
+    publishRelayState(relayState);
+    xSemaphoreGive(dataMutex);
+  }
 }
 
 void onConfigUpdate(const char *payload) {
