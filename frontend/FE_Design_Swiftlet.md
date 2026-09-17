@@ -190,3 +190,109 @@ module.exports = {
 - [x] **Chuẩn bo góc (Bo góc cong tròn mềm mại):** Card dùng `20px` - `28px` (`rounded-2xl` / `rounded-3xl`), Button & Control dùng `rounded-full` (`999px`).
 - [x] **Cảnh báo màu Cam:** Dùng `#F0813A` (Climate Orange) cho các trạng thái vi khí hậu active & khảo sát/cảnh báo như Ảnh 1, 3.
 - [x] **Cảnh báo màu Đỏ:** Dùng `#E13A3A` (Alert Red) cho các cảnh báo khẩn / Live camera như Ảnh 3, 5.
+
+---
+
+## 7. QUY TẮC KỸ THUẬT FRONTEND (Component dùng chung, State, Hiệu năng)
+
+Phần này bắt buộc áp dụng cho code trong `frontend/src` — không chỉ màu/bo góc mà cả cách tổ
+chức code, để nhiều người cùng sửa không bị lệch pattern hay copy-paste lại logic đã có sẵn.
+
+### 7.1. LUÔN kiểm tra `components/ui/` và `components/common/` trước khi viết UI mới
+
+- `components/ui/` — primitive dùng ở mọi nơi: `Button`, `Input`, `Select`, `Textarea`,
+  `Modal`, `Card`, `Badge`, `Toggle`. **Không** viết `<button className="...">` tay hay style
+  lại `<input>` thô — luôn import từ đây.
+- `components/common/` — widget dùng chung nhiều trang, ví dụ:
+  - `FilterChip` — chip lọc dạng pill (dùng ở AlertsPage, TicketsPage).
+  - `NoteActionModal` — modal 1 field Textarea + submit (Acknowledge alert, Cancel ticket...).
+    Chỉ hợp với modal 1-field dạng ghi chú; modal nhiều field (VD mời thành viên) thì viết
+    riêng, không ép vào đây.
+  - `Pagination`, `ZonePicker`, `EmptyState`, `LoadingSkeleton`, `ConfirmModal`, `StarRating`,
+    `AlertBadge`, `Toast`.
+  - Trước khi thêm 1 chip/modal/empty-state/skeleton mới, **grep tên tương tự trong
+    `components/common/` trước** — nếu đã có component gần giống, mở rộng props của nó thay vì
+    viết file mới.
+
+### 7.2. Hooks & data fetching (TanStack React Query)
+
+- 1 file `hooks/use<Resource>.ts` / resource (VD `useTickets.ts`, `useAlerts.ts`), bọc
+  `useQuery`/`useMutation` từ `services/api/<resource>.ts` — component/page **không** gọi
+  `services/api` trực tiếp.
+- Danh sách có phân trang: dùng `usePaginatedListQuery()` (`hooks/usePaginatedListQuery.ts`) để
+  unwrap envelope `{data, meta:{total,page,limit}}` — không tự viết lại logic này ở hook mới.
+- **Mutation nào làm thay đổi dữ liệu mà 1 query KHÁC đang hiển thị cũng phải
+  `invalidateQueries` đúng key đó trong `onSuccess`**, không chỉ invalidate key của chính nó.
+  Ví dụ thật: đổi trạng thái tin đăng (`useUpdateListing`) phải invalidate cả
+  `['harvests', farmId]` **và** `['listing-stats', id]` vì `ListingPanel` đọc từ key thứ 2.
+  Quên bước này là nguồn bug "thao tác thành công nhưng UI không cập nhật" phổ biến nhất.
+- `Modal` không unmount giữa các lần mở (chỉ toggle prop `open`) — nếu form seed dữ liệu từ
+  props/store, **phải** `useEffect(() => { if (open) setForm(...) }, [open, ...])` để resync
+  mỗi lần mở lại, không seed 1 lần duy nhất trong `useState(() => ...)` (dữ liệu sẽ bị stale ở
+  lần mở thứ 2).
+
+### 7.3. Tách file khi 1 page quá lớn
+
+Khi 1 page vượt quá ~150-200 dòng hoặc có ≥2 modal/tab, tách theo cấu trúc (xem
+`pages/Harvest/`, `pages/Analytics/` làm mẫu):
+
+```
+pages/<Feature>/
+  <Feature>Page.tsx     # chỉ page shell + orchestration, không chứa logic con
+  constants.ts          # label/tone maps, hằng số riêng của feature này
+  components/           # sub-component hiển thị (card, panel, stat block...)
+  modals/                # modal tạo/sửa/xoá
+  tabs/                  # nếu page có tab, 1 file / tab
+```
+
+Label/tone map dùng ở ≥2 file (VD `TICKET_TYPE_LABEL`, `STATUS_TONE`) chuyển vào
+`constants/<resource>.ts` ở cấp `src/constants/` (không phải `pages/<Feature>/constants.ts`)
+nếu dùng xuyên page — ví dụ `constants/tickets.ts` dùng chung giữa `TicketsPage` và
+`TicketDetailPage`.
+
+### 7.4. State toàn cục (Zustand)
+
+- Store dùng chung nhiều trang (VD `zoneStore` — farm/zone đang chọn) đặt ở `store/`.
+- Khi **đổi shape** của 1 store có `persist()`, **bắt buộc** bump `version` và viết `migrate()`
+  trong config `persist` — không được để user có `localStorage` cũ rehydrate vào state mới với
+  field thiếu/`null` một cách âm thầm (xem `store/zoneStore.ts` làm mẫu).
+
+### 7.5. Hiệu năng
+
+- Object truyền cho thư viện ngoài re-render theo identity (Chart.js `data`/`options`, v.v.)
+  **phải** bọc `useMemo` với dependency đúng — object literal viết trực tiếp trong JSX sẽ tạo
+  identity mới mỗi render, buộc thư viện diff/update lại dù dữ liệu không đổi.
+- Query có dữ liệu ít đổi (VD cấu trúc House/Zone của 1 Farm) nên đặt `staleTime` dài hơn mặc
+  định thay vì để refetch theo nhịp 30s toàn cục, đặc biệt nếu query đó là pattern N+1 (gọi
+  nhiều request con) — xem `useFarmZones` (`hooks/useFarms.ts`).
+- Route nặng (dùng thêm thư viện lớn như Chart.js) phải `React.lazy(() => import(...))` — xem
+  `App.tsx`. **Đặt `<Suspense>` sát nơi thật sự suspend** (trong `MainLayout` quanh `<Outlet/>`),
+  **không bọc cả `<Routes>`** — bọc ở cấp cao làm Sidebar/TopBar bị unmount/nháy toàn màn hình
+  mỗi lần vào 1 route lazy lần đầu.
+- Kết nối realtime dùng chung (Socket.io) là 1 instance singleton cho cả app — hook nào gọi
+  connect/disconnect phải dùng **reference counting** (xem `hooks/useSocket.ts`), không tự
+  `disconnect()` khi unmount vì có thể giết kết nối mà 1 hook khác (VD listener cảnh báo toàn
+  cục ở `MainLayout`) vẫn đang cần.
+
+### 7.6. Quy tắc đặt tên file
+
+Nhất quán 1 file / 1 resource, giống quy tắc backend (`<resource>.<layer>.ts`):
+
+| Loại | Quy tắc | Ví dụ |
+|---|---|---|
+| API client | `services/api/<resource>.ts` | `tickets.ts`, `harvests.ts` |
+| Hook | `hooks/use<Resource>.ts` | `useTickets.ts`, `useHarvests.ts` |
+| Page | `pages/<Feature>/<Feature>Page.tsx` | `pages/Tickets/TicketsPage.tsx` |
+| Store | `store/<name>Store.ts` | `store/zoneStore.ts` |
+| Constants dùng chung | `constants/<resource>.ts` | `constants/tickets.ts` |
+
+### 7.7. Màu sắc/bo góc — không có ngoại lệ ngoài `chartTheme.ts`
+
+- **Không hardcode mã hex** trong component — luôn dùng class Tailwind theo token đã định nghĩa
+  ở Mục 5 (`text-climateOrange`, `fill-warmGray`, `border-warmGray/15`...). Token đổi giá trị ở
+  1 nơi (`tailwind.config.ts`) phải tự động phản ánh ra toàn bộ UI.
+- Ngoại lệ **duy nhất**: `utils/chartTheme.ts` — Chart.js nhận string màu literal, không nhận
+  class Tailwind, nên phải khai báo hex trực tiếp. Vẫn phải khai báo **1 lần** ở đây
+  (`CHART_COLORS`/`CHART_PALETTE`) rồi import ra dùng, không lặp lại hex ở từng chart.
+- Bo góc chỉ dùng đúng 4 giá trị đã định nghĩa (`rounded-xl/2xl/3xl/full`) — không dùng
+  `rounded-lg`/`rounded-md` tùy hứng, dù Tailwind mặc định vẫn cho phép.
