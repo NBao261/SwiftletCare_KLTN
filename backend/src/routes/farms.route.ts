@@ -23,9 +23,9 @@ router.post('/:id/houses',   requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), par
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
 
 // Zones (under house)
-router.post('/houses/:houseId/zones',        requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), farmController.createZone)
-router.get ('/houses/:houseId/zones',        farmController.listZones)
-router.put ('/zones/:zoneId/thresholds',     requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), farmController.updateThresholds)
+router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('houseId').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createZone)
+router.get ('/houses/:houseId/zones',    param('houseId').isMongoId(), validate, farmController.listZones)
+router.put ('/zones/:zoneId/thresholds', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.updateThresholds)
 
 // Sales Staff assignment (AUTH-FR-005b, Module SALES §5.10)
 router.post('/:id/sales-staff', requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('email').isEmail(), validate, farmController.inviteSalesStaff)

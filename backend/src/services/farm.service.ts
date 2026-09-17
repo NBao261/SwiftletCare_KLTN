@@ -1,31 +1,15 @@
 import crypto from 'crypto'
 import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
-import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
+import { House, Zone, IZone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
-import { hasFarmAccess, isPrimaryOwner } from '@/utils/farmAccess.util'
+import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow } from '@/utils/farmAccess.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser } from '@/types'
 
 /** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
 const INVITATION_TTL_MS = 7 * 86400_000
-
-async function findFarmOrThrow(farmId: string): Promise<IFarm> {
-  const farm = await Farm.findById(farmId)
-  if (!farm) throw NotFoundError('Không tìm thấy farm')
-  return farm
-}
-
-async function findZoneChainOrThrow(zoneId: string): Promise<{ zone: IZone; house: IHouse; farm: IFarm }> {
-  const zone = await Zone.findById(zoneId)
-  if (!zone) throw NotFoundError('Không tìm thấy zone')
-  const house = await House.findById(zone.house_id)
-  if (!house) throw NotFoundError('Không tìm thấy house của zone')
-  const farm = await Farm.findById(house.farm_id)
-  if (!farm) throw NotFoundError('Không tìm thấy farm của zone')
-  return { zone, house, farm }
-}
 
 /**
  * FARM-FR-001. Technician thấy các Farm thuộc `assigned_regions` của mình để còn
@@ -316,6 +300,3 @@ export async function listSalesStaff(farmId: string, user: CurrentUser) {
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
   return SalesAssignment.find({ farm_id: farm._id }).populate('sales_staff_id', 'full_name email')
 }
-
-// Dùng lại ở deviceService (đăng ký thiết bị cần kiểm tra quyền trên zone)
-export { findZoneChainOrThrow, findFarmOrThrow }

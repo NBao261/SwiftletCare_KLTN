@@ -1,9 +1,10 @@
 import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
-import { findZoneChainOrThrow } from '@/services/farm.service'
-import { hasFarmAccess } from '@/utils/farmAccess.util'
+import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
-import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { raiseNodeOfflineAlert } from '@/services/alert.service'
+import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser } from '@/types'
 
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
@@ -13,26 +14,13 @@ type RelayName = typeof RELAY_NAMES[number]
 export const OFFLINE_THRESHOLD_MS = 30_000
 
 /**
- * Kiểm tra quyền + trả về chain Zone→House→Farm của 1 zone — dùng để (a) xác
- * thực quyền sở hữu và (b) ghép topic MQTT `swiftletcare/{farmId}/{houseId}/
- * {zoneId}/...`. LƯU Ý: firmware phải được cấu hình bằng đúng 3 ObjectId thật
- * này (Technician đẩy xuống qua AP-mode khi onboarding — FARM-FR-003b, Flow 1
- * bước 6) để lệnh điều khiển thật sự tới đúng thiết bị.
- */
-async function checkZoneAccess(zoneId: string, user: CurrentUser) {
-  const chain = await findZoneChainOrThrow(zoneId)
-  if (!hasFarmAccess(chain.farm, user)) throw ForbiddenError('Không có quyền trên zone này')
-  return chain
-}
-
-/**
  * FARM-FR-003 — chỉ Technician (hoặc Admin) thực hiện, qua Web Console Onboarding.
  * Node được tạo ở trạng thái PENDING và chỉ chuyển ONLINE khi thiết bị gửi
  * heartbeat đầu tiên (Flow 1 bước 4→8), nên Farm Owner nhìn thấy ngay là thiết bị
  * đã khai báo nhưng chưa thật sự kết nối.
  */
 export async function registerSensorNode(user: CurrentUser, input: { device_id: string; zone_id: string }): Promise<ISensorNode> {
-  await checkZoneAccess(input.zone_id, user)
+  await assertZoneAccess(input.zone_id, user)
 
   const existing = await SensorNode.findOne({ device_id: input.device_id })
   if (existing) throw ConflictError('device_id đã được đăng ký')
@@ -40,22 +28,33 @@ export async function registerSensorNode(user: CurrentUser, input: { device_id: 
   return SensorNode.create({ device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING' })
 }
 
-export async function listSensorNodes(zoneId?: string): Promise<ISensorNode[]> {
-  const filter = zoneId ? { zone_id: zoneId } : {}
-  return SensorNode.find(filter).sort({ registered_at: -1 })
+/**
+ * FARM-FR-005/006 — có `zoneId` thì check quyền đúng zone đó; không có thì lọc
+ * theo toàn bộ zone user được quyền xem, KHÔNG trả về mọi thiết bị trong hệ
+ * thống (trước đây bỏ sót — Farm Owner farm A đọc được thiết bị farm B).
+ */
+export async function listSensorNodes(zoneId: string | undefined, user: CurrentUser): Promise<ISensorNode[]> {
+  if (zoneId) {
+    await assertZoneAccess(zoneId, user)
+    return SensorNode.find({ zone_id: zoneId }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+  }
+  const accessibleZoneIds = await listAccessibleZoneIds(user)
+  return SensorNode.find({ zone_id: { $in: accessibleZoneIds } }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
 }
 
 /** FARM-FR-006 */
-export async function getSensorNode(nodeId: string): Promise<ISensorNode> {
+export async function getSensorNode(nodeId: string, user: CurrentUser): Promise<ISensorNode> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  await assertZoneAccess(String(node.zone_id), user)
   return node
 }
 
 /** ENV-FR-006 (qua device, tương đương farmService.updateZoneThresholds) */
 export async function updateNodeThresholds(nodeId: string, user: CurrentUser, updates: object) {
-  const node = await getSensorNode(nodeId)
-  const chain = await checkZoneAccess(String(node.zone_id), user)
+  const node = await SensorNode.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  const chain = await assertZoneAccess(String(node.zone_id), user)
 
   const oldValues = { ...chain.zone.thresholds }
   chain.zone.thresholds = { ...chain.zone.thresholds, ...updates }
@@ -77,8 +76,9 @@ export async function controlRelay(
   user: CurrentUser,
   input: { relayName: string; state: boolean; durationMs?: number },
 ): Promise<ISensorNode> {
-  const node = await getSensorNode(nodeId)
-  const chain = await checkZoneAccess(String(node.zone_id), user)
+  const node = await SensorNode.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  const chain = await assertZoneAccess(String(node.zone_id), user)
 
   if (!RELAY_NAMES.includes(input.relayName as RelayName)) {
     throw BadRequestError(`relayName phải là 1 trong: ${RELAY_NAMES.join(', ')}`)
@@ -111,7 +111,7 @@ export async function controlRelay(
 
 /** FARM-FR-004 — chỉ Technician/Admin, cùng Web Console Onboarding với sensor node (Flow 1b) */
 export async function registerCameraNode(user: CurrentUser, input: { device_id: string; zone_id: string; rtsp_url?: string }) {
-  await checkZoneAccess(input.zone_id, user)
+  await assertZoneAccess(input.zone_id, user)
 
   const existing = await CameraNode.findOne({ device_id: input.device_id })
   if (existing) throw ConflictError('device_id đã được đăng ký')
@@ -119,9 +119,13 @@ export async function registerCameraNode(user: CurrentUser, input: { device_id: 
   return CameraNode.create({ ...input, status: 'PENDING' })
 }
 
-export async function listCameraNodes(zoneId?: string) {
-  const filter = zoneId ? { zone_id: zoneId } : {}
-  return CameraNode.find(filter).sort({ registered_at: -1 })
+export async function listCameraNodes(zoneId: string | undefined, user: CurrentUser) {
+  if (zoneId) {
+    await assertZoneAccess(zoneId, user)
+    return CameraNode.find({ zone_id: zoneId }).sort({ registered_at: -1 }).lean()
+  }
+  const accessibleZoneIds = await listAccessibleZoneIds(user)
+  return CameraNode.find({ zone_id: { $in: accessibleZoneIds } }).sort({ registered_at: -1 }).lean()
 }
 
 /** FARM-FR-005 — gọi từ mqtt/handlers/heartbeat.handler.ts. */
@@ -156,17 +160,26 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
 export async function markStaleDevicesOffline(): Promise<void> {
   const staleBefore = new Date(Date.now() - OFFLINE_THRESHOLD_MS)
   const staleNodes = await SensorNode.find({ status: 'ONLINE', last_heartbeat: { $lt: staleBefore } })
+    .select('_id zone_id')
+    .lean()
+  if (staleNodes.length === 0) return
 
-  for (const node of staleNodes) {
-    node.status = 'OFFLINE'
-    await node.save()
+  // 1 updateMany thay vì N lần .save() tuần tự — job này chạy mỗi 10s, N có
+  // thể lớn khi cả nhà mất điện cùng lúc.
+  await SensorNode.updateMany({ _id: { $in: staleNodes.map(n => n._id) } }, { status: 'OFFLINE' })
 
+  await Promise.all(staleNodes.map(async node => {
     emitDeviceStatusChange(String(node.zone_id), {
       nodeId: String(node._id),
       status: 'OFFLINE',
       timestamp: new Date().toISOString(),
     })
-  }
+    // THREAT-FR-009 — trước đây job này chỉ đổi trạng thái, không hề tạo Alert
+    // nên NODE_OFFLINE không bao giờ xuất hiện trong danh sách cảnh báo.
+    await raiseNodeOfflineAlert(String(node._id)).catch((err: Error) =>
+      logger.error('Tạo cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
+    )
+  }))
 }
 
 /**
@@ -179,26 +192,36 @@ export async function expireManualOverrides(): Promise<number> {
   const expired = await SensorNode.find({
     control_mode: 'MANUAL',
     override_expiry: { $lt: new Date() },
-  })
+  }).lean()
+  if (expired.length === 0) return 0
+
+  await SensorNode.updateMany(
+    { _id: { $in: expired.map(n => n._id) } },
+    { control_mode: 'AUTO', $unset: { override_expiry: 1 } },
+  )
+
+  // Nhiều node có thể cùng zone — dedupe zoneId trước khi tra chain, tránh
+  // lặp lại 3 lượt findById (Zone→House→Farm) cho cùng 1 zone nhiều lần.
+  const uniqueZoneIds = [...new Set(expired.map(n => String(n.zone_id)))]
+  const chainByZone = new Map(
+    await Promise.all(
+      uniqueZoneIds.map(async zid => [zid, await findZoneChainOrThrow(zid).catch(() => null)] as const),
+    ),
+  )
 
   for (const node of expired) {
-    node.control_mode = 'AUTO'
-    node.override_expiry = undefined
-    await node.save()
-
-    const chain = await findZoneChainOrThrow(String(node.zone_id)).catch(() => null)
-    if (chain) {
-      publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
-        action: 'clear_override',
+    const chain = chainByZone.get(String(node.zone_id))
+    if (!chain) continue
+    publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
+      action: 'clear_override',
+    })
+    for (const relayName of Object.keys(node.relay_states) as Array<keyof RelayStates>) {
+      emitRelayUpdate(String(chain.zone._id), {
+        zoneId: String(chain.zone._id),
+        relayName,
+        state: node.relay_states[relayName],
+        mode: 'AUTO',
       })
-      for (const relayName of Object.keys(node.relay_states) as Array<keyof RelayStates>) {
-        emitRelayUpdate(String(chain.zone._id), {
-          zoneId: String(chain.zone._id),
-          relayName,
-          state: node.relay_states[relayName],
-          mode: 'AUTO',
-        })
-      }
     }
   }
   return expired.length

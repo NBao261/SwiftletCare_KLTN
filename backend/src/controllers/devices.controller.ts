@@ -1,58 +1,45 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response } from 'express'
 import * as deviceService from '@/services/device.service'
+import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** POST /devices/sensor-nodes/register – FARM-FR-003 */
-export async function registerSensorNode(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const node = await deviceService.registerSensorNode(req.user, req.body)
-    res.status(201).json({ success: true, data: node })
-  } catch (err) { next(err) }
-}
+export const registerSensorNode = asyncHandler(async (req: Request, res: Response) => {
+  const node = await deviceService.registerSensorNode(req.user, req.body)
+  res.status(201).json({ success: true, data: node })
+})
 
 /** GET /devices/sensor-nodes?zoneId= */
-export async function listSensorNodes(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const nodes = await deviceService.listSensorNodes(req.query.zoneId as string | undefined)
-    res.json({ success: true, data: nodes })
-  } catch (err) { next(err) }
-}
+export const listSensorNodes = asyncHandler(async (req: Request, res: Response) => {
+  const nodes = await deviceService.listSensorNodes(req.query.zoneId as string | undefined, req.user)
+  res.json({ success: true, data: nodes })
+})
 
 /** GET /devices/sensor-nodes/:id – FARM-FR-006 */
-export async function getSensorNode(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const node = await deviceService.getSensorNode(req.params.id)
-    res.json({ success: true, data: node })
-  } catch (err) { next(err) }
-}
+export const getSensorNode = asyncHandler(async (req: Request, res: Response) => {
+  const node = await deviceService.getSensorNode(req.params.id, req.user)
+  res.json({ success: true, data: node })
+})
 
 /** PUT /devices/sensor-nodes/:id/thresholds – ENV-FR-006 */
-export async function updateThresholds(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const zone = await deviceService.updateNodeThresholds(req.params.id, req.user, req.body)
-    res.json({ success: true, data: zone })
-  } catch (err) { next(err) }
-}
+export const updateThresholds = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await deviceService.updateNodeThresholds(req.params.id, req.user, req.body)
+  res.json({ success: true, data: zone })
+})
 
 /** POST /devices/sensor-nodes/:id/relay – ENV-FR-016..018 */
-export async function controlRelay(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const node = await deviceService.controlRelay(req.params.id, req.user, req.body)
-    res.json({ success: true, data: node })
-  } catch (err) { next(err) }
-}
+export const controlRelay = asyncHandler(async (req: Request, res: Response) => {
+  const node = await deviceService.controlRelay(req.params.id, req.user, req.body)
+  res.json({ success: true, data: node })
+})
 
 /** POST /devices/camera-nodes/register – FARM-FR-004 */
-export async function registerCameraNode(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const node = await deviceService.registerCameraNode(req.user, req.body)
-    res.status(201).json({ success: true, data: node })
-  } catch (err) { next(err) }
-}
+export const registerCameraNode = asyncHandler(async (req: Request, res: Response) => {
+  const node = await deviceService.registerCameraNode(req.user, req.body)
+  res.status(201).json({ success: true, data: node })
+})
 
 /** GET /devices/camera-nodes?zoneId= */
-export async function listCameraNodes(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const nodes = await deviceService.listCameraNodes(req.query.zoneId as string | undefined)
-    res.json({ success: true, data: nodes })
-  } catch (err) { next(err) }
-}
+export const listCameraNodes = asyncHandler(async (req: Request, res: Response) => {
+  const nodes = await deviceService.listCameraNodes(req.query.zoneId as string | undefined, req.user)
+  res.json({ success: true, data: nodes })
+})
