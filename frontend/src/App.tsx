@@ -11,6 +11,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import RequireRole from "@/components/auth/RequireRole";
 import { setNavigate } from "@/utils/navigation";
+import { getRoleHomePath } from "@/components/layout/navItems";
 import type { Role } from "@/types";
 
 // Code-splitting theo route — tránh bundle chính kéo theo chart.js/date-fns
@@ -80,13 +81,7 @@ function NavigationBridge() {
 /** Trang mặc định sau khi vào "/" hoặc gõ URL không tồn tại — tuỳ role vì mỗi role có bộ trang riêng. */
 function RoleHomeRedirect() {
   const role = useAuthStore((s) => s.user?.role);
-  const home: Record<Role, string> = {
-    FARM_OWNER: "/dashboard",
-    ADMIN: "/system-status",
-    TECHNICIAN: "/devices",
-    SALES_STAFF: "/sales-home",
-  };
-  return <Navigate to={role ? home[role] : "/dashboard"} replace />;
+  return <Navigate to={getRoleHomePath(role)} replace />;
 }
 
 function RouteFallback() {

@@ -54,9 +54,10 @@ export default function TopBar() {
         {/* Mobile: sidebar (chứa avatar + đăng xuất) bị ẩn nên đưa ra đây */}
         <button
           onClick={() => logout.mutate()}
+          disabled={logout.isPending}
           aria-label="Đăng xuất"
           title={user?.full_name ? `Đăng xuất ${user.full_name}` : 'Đăng xuất'}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10 lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
         >
           <IconLogout />
         </button>

@@ -79,3 +79,38 @@ export function getNavSections(role: Role | undefined): NavSection[] {
 export function getDockItems(role: Role | undefined): NavItem[] {
   return getNavSections(role).flatMap(s => s.items).slice(0, 4)
 }
+
+/**
+ * Trang "nhà" của mỗi role — dùng cho cả `RoleHomeRedirect` (App.tsx, khi vào
+ * "/" hoặc URL không tồn tại) LẪN `useAuth.ts` (điều hướng ngay sau khi đăng
+ * nhập thành công). Gộp về 1 chỗ để không lệch nhau — trước đây App.tsx tự
+ * khai báo riêng còn useAuth.ts hardcode "/dashboard", khiến Technician/Admin/
+ * Sales Staff đăng nhập xong bị đưa nhầm vào trang họ không có quyền, văng
+ * sang /403 ngay sau khi login.
+ */
+const ROLE_HOME: Record<Role, string> = {
+  FARM_OWNER: '/dashboard',
+  ADMIN: '/system-status',
+  TECHNICIAN: '/devices',
+  SALES_STAFF: '/sales-home',
+}
+
+export function getRoleHomePath(role: Role | undefined): string {
+  return role ? ROLE_HOME[role] : '/dashboard'
+}
+
+/**
+ * true nếu role được phép vào path này — dùng để kiểm tra `returnTo` trước khi
+ * điều hướng sau login (useAuth.ts). Không rõ path lạ (không nằm trong nav, VD
+ * `/settings`, `/tickets/:id` con) thì mặc định tin — route thật vẫn tự chặn
+ * qua RequireRole nếu sai, hàm này chỉ tránh trường hợp PHỔ BIẾN: đăng xuất
+ * account A trên 1 trang riêng của role A rồi đăng nhập account B (role khác)
+ * qua đúng URL đó, bị đưa thẳng vào trang A không có quyền rồi văng /403 ngay.
+ * Bảo thủ theo hướng an toàn: chỉ nói "không" khi CHẮC CHẮN path đó có danh
+ * sách role giới hạn và role hiện tại không nằm trong đó.
+ */
+export function canAccessPath(role: Role | undefined, path: string): boolean {
+  const item = ALL_NAV_ITEMS.find(i => path === i.to || path.startsWith(`${i.to}/`))
+  if (!item) return true
+  return !!role && item.roles.includes(role)
+}

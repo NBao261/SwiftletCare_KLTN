@@ -38,7 +38,7 @@ export default function SettingsPage() {
       <SecurityCard />
       <DeletionCard />
 
-      <Button variant="danger" className="max-w-lg w-full" onClick={() => logout.mutate()}>
+      <Button variant="danger" className="max-w-lg w-full" loading={logout.isPending} onClick={() => logout.mutate()}>
         Đăng xuất
       </Button>
     </div>

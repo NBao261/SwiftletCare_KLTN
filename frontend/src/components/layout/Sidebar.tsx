@@ -67,9 +67,10 @@ export default function Sidebar() {
           </span>
           <button
             onClick={() => logout.mutate()}
+            disabled={logout.isPending}
             aria-label="Đăng xuất"
             title="Đăng xuất"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <IconLogout width={18} height={18} />
           </button>
