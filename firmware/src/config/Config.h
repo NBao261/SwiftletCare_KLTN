@@ -67,7 +67,14 @@
 #define SPEAKER_WINDOW_2_END_HOUR 19
 
 // ── Audio Anomaly Detection (THREAT-FR-006, dựa trên ES-NOISE-01) ───────────
-#define AUDIO_BASELINE_WINDOW_SAMPLES 30 // ~5 phút @ chu kỳ đọc 10s
+// 300 mẫu × Config::sensorIntervalMs (mặc định SENSOR_INTERVAL_MS=1000ms,
+// xem giải thích ở trên) = 300s = 5 phút, đúng ý định gốc THREAT-FR-006.
+// LƯU Ý: con số 300 GẮN CHẶT với SENSOR_INTERVAL_MS ≈ 1s — nếu sau này đổi
+// SENSOR_INTERVAL_MS (vd về lại 5-60s theo đúng SRS), phải tính lại số này
+// (trước đây 30 mẫu tưởng ứng với chu kỳ đọc 10s = 5 phút, nhưng thực tế chu
+// kỳ đọc là 1s nên 30 mẫu chỉ ≈ 30s, làm cửa sổ baseline ngắn hơn dự định 10
+// lần). RAM: 300 float = 1200 byte, không đáng kể trên ESP32 320KB.
+#define AUDIO_BASELINE_WINDOW_SAMPLES 300
 #define AUDIO_DROP_THRESHOLD 0.70f       // 70% drop = SPEAKER_FAILURE
 
 // ── MQTT Broker (§9.2) ───────────────────────────────────────────────────────
@@ -77,9 +84,22 @@
 // Production: đổi lại 8883 (SEC-NFR-001) + nạp CA cert thật, đừng dùng
 // setInsecure().
 #define MQTT_PORT 1883
-#define MQTT_QOS_TELEMETRY 0
+
+// Cờ build dành riêng cho 1 build variant "production" trong tương lai — CHƯA
+// tồn tại, không định nghĩa ở đâu trong repo (không có trong platformio.ini).
+// Cố tình làm build fail ngay nếu ai đó bật cờ này trước khi TLS/CA-cert thật
+// được implement trong MQTTManager.cpp, để tránh cảm giác an toàn giả ("đây
+// là bản production") trong khi thực chất vẫn gửi MQTT cleartext qua 1883.
+#ifdef SWIFTLETCARE_PRODUCTION_BUILD
+#error "SWIFTLETCARE_PRODUCTION_BUILD requires MQTT_PORT=8883 + TLS (WiFiClientSecure + CA cert) -- not implemented in MQTTManager.cpp yet. Remove this flag (stay on dev port 1883), or add real TLS infrastructure first."
+#endif
+
+// Chỉ còn MQTT_QOS_COMMAND: đây là QoS DUY NHẤT thực sự dùng được, vì
+// PubSubClient::publish() không có tham số QoS (luôn gửi QoS 0) — chỉ
+// subscribe() mới nhận QoS (xem MQTTManager.cpp mqtt.subscribe(...,
+// MQTT_QOS_COMMAND)). MQTT_QOS_TELEMETRY/MQTT_QOS_ALERT trước đây không được
+// dùng ở đâu cả (dead code, dễ gây hiểu lầm là publish có QoS) — đã bỏ.
 #define MQTT_QOS_COMMAND 1
-#define MQTT_QOS_ALERT 1
 
 namespace Config {
 // wifiSsid/wifiPassword/mqttBroker là String (không phải const char*) vì cả 3
@@ -99,25 +119,37 @@ extern const char *houseId;
 extern const char *zoneId;
 extern const char *deviceId;
 
-// Runtime config (loaded from NVS)
-extern float tempMin;
-extern float tempMax;
-extern float humidityMin;
-extern float humidityMax;
-extern float lightMax;
-extern int nh3Max;
-extern int co2Max;
+// Runtime config (loaded from NVS). volatile: các field dưới đây được GHI
+// trong Config::update() (chạy trong mqttTask, Core 0, xem
+// MQTTManager::onConfigUpdate) và ĐỌC mỗi chu kỳ bởi pidTask (Core 1, qua
+// PIDController.cpp) và/hoặc AudioManager::updateSchedule() (gọi từ
+// pidTask) — cùng loại cross-core visibility hazard đã fix cho
+// mqttFailCount trong MQTTManager.cpp (static volatile int, xem comment ở
+// đó). QUAN TRỌNG: volatile phải khớp ở CẢ HAI phía — extern ở đây VÀ định
+// nghĩa thật trong Config.cpp — nếu không, 2 khai báo của cùng 1 biến ngoại
+// vi không khớp cv-qualifier.
+// sensorIntervalMs/pidIntervalMs KHÔNG cần volatile: chỉ được set 1 lần từ
+// StorageManager::loadConfig() trong setup() (đơn luồng, trước khi tạo task
+// nào) — Config::update() không xử lý 2 key này, không ai ghi lại lúc
+// runtime (đã kiểm tra lại toàn bộ Config::update()).
+extern volatile float tempMin;
+extern volatile float tempMax;
+extern volatile float humidityMin;
+extern volatile float humidityMax;
+extern volatile float lightMax;
+extern volatile int nh3Max;
+extern volatile int co2Max;
 extern int sensorIntervalMs;
 extern int pidIntervalMs;
 
 // Speaker schedule (ENV-FR-013b) – overridable via MQTT config/update
-extern bool speakerScheduleEnabled;
-extern int speakerWindow1StartHour;
-extern int speakerWindow1EndHour;
-extern int speakerWindow2StartHour;
-extern int speakerWindow2EndHour;
-extern int speakerVolume;
-extern int speakerTrack;
+extern volatile bool speakerScheduleEnabled;
+extern volatile int speakerWindow1StartHour;
+extern volatile int speakerWindow1EndHour;
+extern volatile int speakerWindow2StartHour;
+extern volatile int speakerWindow2EndHour;
+extern volatile int speakerVolume;
+extern volatile int speakerTrack;
 
 void load();                          // Load from NVS
 void save();                          // Persist to NVS

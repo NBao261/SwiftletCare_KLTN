@@ -43,7 +43,7 @@ private:
 
 namespace PIDController {
 void runHumidityControl(float humidity, RelayState &relay);   // ENV-FR-010
-void runVentilationControl(float temperature, float nh3, float co2, RelayState &relay); // ENV-FR-011
+void runVentilationControl(const SensorData &data, RelayState &relay); // ENV-FR-011
 void runHeatingControl(float temperature, RelayState &relay); // ENV-FR-012
 
 void setManualOverride(const char *relayName, bool state,

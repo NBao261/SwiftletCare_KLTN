@@ -1,5 +1,8 @@
 /**
- * MQTTManager – MQTT client over TLS (port 8883)
+ * MQTTManager – PubSubClient qua WiFiClient thường (cleartext), dev-only ở
+ * port 1883 (xem MQTT_PORT trong Config.h). Lên production cần đổi sang
+ * WiFiClientSecure + port 8883 + CA cert thật (SEC-NFR-001) — CHƯA implement;
+ * xem cờ SWIFTLETCARE_PRODUCTION_BUILD ở Config.h.
  * Pub/Sub telemetry, commands, heartbeat
  * SRS: ENV-FR-001, ENV-FR-015, §9.2, SEC-NFR-001
  */
@@ -22,6 +25,10 @@ namespace MQTTManager {
   void publishHeartbeat ();
   void publishRelayState(const RelayState& relay);
   void publishAlert     (const char* alertType, const char* severity, const char* payload);
+  // Publish 1 dòng JSON telemetry NGUYÊN VĂN (không build lại từ SensorData
+  // sống) — dùng làm callback cho StorageManager::flushBuffer() khi re-publish
+  // dữ liệu buffer offline (REL-NFR-003). Trả về true nếu publish thành công.
+  bool publishRawTelemetryLine(const String &jsonLine);
 
   // Subscribe callbacks
   void onRelayCommand  (const char* payload);

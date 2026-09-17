@@ -178,6 +178,7 @@ bool isAudioBaselineReady() { return audioBaselineReady; }
 
 String SensorData::toJson() const {
   String json = "{";
+  json += "\"deviceId\":\"" + String(Config::deviceId) + "\",";
   json += "\"temperature\":" + String(temperature, 1) + ",";
   json += "\"humidity\":" + String(humidity, 1) + ",";
   json += "\"light_lux\":" + String(lightLux, 1) + ",";
