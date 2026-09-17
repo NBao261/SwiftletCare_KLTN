@@ -11,7 +11,10 @@ import FarmMembersManager from "./FarmMembersManager";
 
 const FARM_TABS = ["houses", "members"] as const;
 type FarmTab = (typeof FARM_TABS)[number];
-const FARM_TAB_LABEL: Record<FarmTab, string> = { houses: "Nhà & Zone", members: "Thành viên" };
+const FARM_TAB_LABEL: Record<FarmTab, string> = {
+  houses: "Nhà & Zone",
+  members: "Thành viên",
+};
 
 /** Farms Page – FARM-FR-001, FARM-FR-002 */
 export default function FarmsPage() {
@@ -99,13 +102,18 @@ export default function FarmsPage() {
             {selectedFarmId === farm._id && (
               <div className="mt-4 border-t border-warmGray/15 pt-4">
                 <div className="flex gap-1 rounded-2xl bg-warmGray/10 p-1">
-                  {FARM_TABS.map(t => (
+                  {FARM_TABS.map((t) => (
                     <button
                       key={t}
-                      onClick={(e) => { e.stopPropagation(); setActiveTab(t) }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab(t);
+                      }}
                       className={cn(
                         "flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
-                        activeTab === t ? "bg-white text-charcoal shadow-card" : "text-warmGray",
+                        activeTab === t
+                          ? "bg-white text-charcoal shadow-card"
+                          : "text-warmGray",
                       )}
                     >
                       {FARM_TAB_LABEL[t]}

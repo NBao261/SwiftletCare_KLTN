@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/utils/cn'
-import { NAV_SECTIONS } from './navItems'
+import { getNavSections } from './navItems'
 import { IconLogout } from '@/components/ui/icons'
 import { ROLE_LABEL } from '@/constants/roles'
 
@@ -13,6 +13,7 @@ import { ROLE_LABEL } from '@/constants/roles'
 export default function Sidebar() {
   const user = useAuthStore(s => s.user)
   const { logout } = useAuth()
+  const sections = getNavSections(user?.role)
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-charcoal lg:flex">
@@ -24,7 +25,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-3">
-        {NAV_SECTIONS.map(section => (
+        {sections.map(section => (
           <div key={section.title} className="mb-4">
             <p className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40">
               {section.title}

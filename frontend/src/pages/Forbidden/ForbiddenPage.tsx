@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui'
-import EmptyState from '@/components/common/EmptyState'
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui";
+import EmptyState from "@/components/common/EmptyState";
 
 /** Trang 403 — hiển thị khi RequireRole chặn 1 route vì user không đủ quyền. */
 export default function ForbiddenPage() {
@@ -18,5 +18,5 @@ export default function ForbiddenPage() {
         />
       </div>
     </div>
-  )
+  );
 }

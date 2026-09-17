@@ -1,17 +1,34 @@
 import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
+import { House, Zone } from '@/models/houseZone.model'
+import { Farm } from '@/models/farm.model'
 import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
 import { raiseNodeOfflineAlert } from '@/services/alert.service'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
-import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser } from '@/types'
+import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
 
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
 type RelayName = typeof RELAY_NAMES[number]
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
+
+/** Ưu tiên hiển thị node có vấn đề lên trước trong màn hình xem nhanh toàn hệ thống (OPS-NFR-004) */
+const STATUS_ORDER: Record<DeviceStatus, number> = { ERROR: 0, OFFLINE: 1, DEGRADED: 2, PENDING: 3, ONLINE: 4 }
+
+export interface SystemNodeStatusItem {
+  _id: string
+  device_id: string
+  type: 'sensor' | 'camera'
+  status: DeviceStatus
+  last_heartbeat?: Date
+  rssi?: number
+  farm_name: string
+  house_name: string
+  zone_name: string
+}
 
 /**
  * FARM-FR-003 — chỉ Technician (hoặc Admin) thực hiện, qua Web Console Onboarding.
@@ -250,4 +267,69 @@ export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<v
       overrideExpiry: node.override_expiry?.toISOString(),
     })
   }
+}
+
+/**
+ * OPS-NFR-004 — màn hình xem nhanh trạng thái TẤT CẢ node (sensor + camera) toàn
+ * hệ thống cho Admin, khác `listSensorNodes`/`listCameraNodes` (yêu cầu chọn 1
+ * zone hoặc chỉ trả về theo zone user có quyền xem). Route giới hạn requireRole('ADMIN')
+ * nên `listAccessibleZoneIds` ở đây thực chất luôn trả về MỌI zone trong hệ thống
+ * (farmAccess.util.ts#listAccessibleFarmIds trả toàn bộ Farm cho role ADMIN).
+ */
+export async function getSystemNodeStatus(user: CurrentUser): Promise<{
+  summary: Record<'total' | Lowercase<DeviceStatus>, number>
+  nodes: SystemNodeStatusItem[]
+}> {
+  const zoneIds = await listAccessibleZoneIds(user)
+  const [sensorNodes, cameraNodes] = await Promise.all([
+    SensorNode.find({ zone_id: { $in: zoneIds } }).lean(),
+    CameraNode.find({ zone_id: { $in: zoneIds } }).lean(),
+  ])
+
+  // Join Zone→House→Farm trong code thay vì .populate() lồng nhau — chỉ 3 query
+  // dedupe theo id, không phụ thuộc N+1 dù số node tăng lên (cùng pattern với
+  // expireManualOverrides() ở trên).
+  const usedZoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]
+  const zones = await Zone.find({ _id: { $in: usedZoneIds } }).select('name house_id').lean()
+  const houseIds = [...new Set(zones.map(z => String(z.house_id)))]
+  const houses = await House.find({ _id: { $in: houseIds } }).select('name farm_id').lean()
+  const farmIds = [...new Set(houses.map(h => String(h.farm_id)))]
+  const farms = await Farm.find({ _id: { $in: farmIds } }).select('name').lean()
+
+  const zoneById = new Map(zones.map(z => [String(z._id), z]))
+  const houseById = new Map(houses.map(h => [String(h._id), h]))
+  const farmById = new Map(farms.map(f => [String(f._id), f]))
+
+  function resolveNames(zoneId: string): { zone_name: string; house_name: string; farm_name: string } {
+    const zone = zoneById.get(zoneId)
+    const house = zone ? houseById.get(String(zone.house_id)) : undefined
+    const farm = house ? farmById.get(String(house.farm_id)) : undefined
+    return {
+      zone_name: zone?.name ?? '—',
+      house_name: house?.name ?? '—',
+      farm_name: farm?.name ?? '—',
+    }
+  }
+
+  const nodes: SystemNodeStatusItem[] = [
+    ...sensorNodes.map(n => ({
+      _id: String(n._id), device_id: n.device_id, type: 'sensor' as const, status: n.status,
+      last_heartbeat: n.last_heartbeat, rssi: n.rssi, ...resolveNames(String(n.zone_id)),
+    })),
+    ...cameraNodes.map(n => ({
+      _id: String(n._id), device_id: n.device_id, type: 'camera' as const, status: n.status,
+      last_heartbeat: n.last_heartbeat, ...resolveNames(String(n.zone_id)),
+    })),
+  ].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+
+  const summary = nodes.reduce(
+    (acc, n) => {
+      acc.total += 1
+      acc[n.status.toLowerCase() as Lowercase<DeviceStatus>] += 1
+      return acc
+    },
+    { total: 0, online: 0, offline: 0, pending: 0, error: 0, degraded: 0 },
+  )
+
+  return { summary, nodes }
 }

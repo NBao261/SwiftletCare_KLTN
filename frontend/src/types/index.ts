@@ -105,6 +105,17 @@ export interface CameraNode {
   status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string
 }
 
+// OPS-NFR-004 — GET /devices/system-status (chỉ Admin)
+export interface SystemNodeStatusItem {
+  _id: string; device_id: string; type: 'sensor' | 'camera'; status: DeviceStatus
+  last_heartbeat?: string; rssi?: number
+  farm_name: string; house_name: string; zone_name: string
+}
+export interface SystemNodeStatus {
+  summary: { total: number; online: number; offline: number; pending: number; error: number; degraded: number }
+  nodes: SystemNodeStatusItem[]
+}
+
 export interface TelemetryRecord {
   _id?: string; node_id?: string; zone_id?: string
   timestamp: string; temperature?: number; humidity?: number
