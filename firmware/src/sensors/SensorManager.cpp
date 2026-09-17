@@ -43,14 +43,17 @@ void begin() {
                  String(MODBUS_BAUDRATE) + "bps");
 }
 
-// Bus chưa terminate đúng cách (đang trong quá trình khắc phục phần cứng) nên
-// sóng phản xạ (ringing) sau MỘT LẦN CÓ THIẾT BỊ TRẢ LỜI cần thời gian ngắn để
+// Sóng phản xạ (ringing) sau MỘT LẦN CÓ THIẾT BỊ TRẢ LỜI cần thời gian ngắn để
 // tắt hẳn trước khi gửi query kế tiếp — nếu không, query ngay sau đó dễ bị lỗi
 // CRC/timeout dù thiết bị đó hoàn toàn bình thường. Thực tế đo được: lỗi luôn
 // rơi đúng vào ID được đọc NGAY SAU một lần đọc thành công, không rơi vào ID
 // theo sau 1 lần timeout (vì timeout = im lặng hoàn toàn, không có gì để dội).
 // Không cần delay sau timeout vì ModbusMaster đã tự chờ ~1s timeout sẵn rồi.
-static constexpr uint32_t BUS_SETTLE_MS = 20;
+// 20ms ban đầu không đủ: sau khi gắn điện trở termination 120Ω ở cuối bus
+// (Domino5, ES35-SW) vẫn còn FAULT chập chờn ở ES35-SW (ID5, đọc ngay sau
+// Light/ID4) — tăng lên 70ms để thử loại trừ khả năng do thời gian settle
+// chưa đủ, trước khi nghi ngờ tiếp dây/domino lỏng hoặc bản thân cảm biến.
+static constexpr uint32_t BUS_SETTLE_MS = 70;
 
 // Đọc 1 thanh ghi 16-bit, trả về true nếu thành công
 static bool readRegister(uint8_t slaveId, uint16_t reg, int16_t &outValue) {

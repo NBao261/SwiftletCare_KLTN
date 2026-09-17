@@ -40,6 +40,11 @@ export interface User {
   deletion_requested_at?: string
 }
 
+// AUTH-FR-002/003 — request/response cho POST /auth/login, /auth/register
+export interface LoginRequest { email: string; password: string }
+export interface RegisterRequest { email: string; password: string; full_name: string; phone?: string }
+export interface LoginResponse { accessToken: string; user: User }
+
 export interface Farm {
   _id: string; name: string; address: string
   /** Khu vực (VD 'HCMC') — khớp assigned_regions của Technician phụ trách (AUTH-FR-005c) */

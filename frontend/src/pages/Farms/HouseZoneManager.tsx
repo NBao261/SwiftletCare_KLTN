@@ -7,6 +7,7 @@ import {
   useCreateZone,
 } from "@/hooks/useFarms";
 import { useZoneStore } from "@/store/zoneStore";
+import { usePermission } from "@/hooks/usePermission";
 import { Button, Input, Modal, Card } from "@/components/ui";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import EmptyState from "@/components/common/EmptyState";
@@ -21,6 +22,8 @@ export default function HouseZoneManager({
 }) {
   const { data: houses, isLoading } = useHouses(farmId);
   const createHouse = useCreateHouse(farmId);
+  // Backend: POST /farms/:id/houses chỉ cho FARM_OWNER, TECHNICIAN, ADMIN
+  const canManage = usePermission("FARM_OWNER", "TECHNICIAN", "ADMIN");
   const [showCreateHouse, setShowCreateHouse] = useState(false);
   const [houseName, setHouseName] = useState("");
 
@@ -43,13 +46,15 @@ export default function HouseZoneManager({
         <h3 className="text-sm font-bold uppercase tracking-wide text-warmGray">
           Nhà yến (House)
         </h3>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setShowCreateHouse(true)}
-        >
-          + Thêm nhà
-        </Button>
+        {canManage && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowCreateHouse(true)}
+          >
+            + Thêm nhà
+          </Button>
+        )}
       </div>
 
       {isLoading && <LoadingSkeleton count={2} className="h-16 w-full" />}
@@ -137,6 +142,8 @@ function ZoneManager({
 }) {
   const { data: zones, isLoading } = useZones(houseId);
   const createZone = useCreateZone(houseId);
+  // Backend: POST /farms/houses/:houseId/zones chỉ cho FARM_OWNER, TECHNICIAN, ADMIN
+  const canManage = usePermission("FARM_OWNER", "TECHNICIAN", "ADMIN");
   const setZone = useZoneStore((s) => s.setZone);
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
@@ -164,13 +171,15 @@ function ZoneManager({
     <div className="mt-4 flex flex-col gap-2 border-t border-warmGray/15 pt-4">
       <div className="flex items-center justify-between">
         <span className="label-caption">Zone</span>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setShowCreate(true)}
-        >
-          + Thêm zone
-        </Button>
+        {canManage && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowCreate(true)}
+          >
+            + Thêm zone
+          </Button>
+        )}
       </div>
 
       {isLoading && <LoadingSkeleton className="h-10 w-full" />}

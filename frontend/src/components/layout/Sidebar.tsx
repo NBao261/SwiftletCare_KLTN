@@ -4,13 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/utils/cn'
 import { NAV_SECTIONS } from './navItems'
 import { IconLogout } from '@/components/ui/icons'
-
-const ROLE_LABEL: Record<string, string> = {
-  ADMIN: 'Quản trị viên',
-  FARM_OWNER: 'Chủ nhà yến',
-  TECHNICIAN: 'Kỹ thuật viên',
-  SALES_STAFF: 'Nhân viên kinh doanh',
-}
+import { ROLE_LABEL } from '@/constants/roles'
 
 /**
  * Sidebar desktop — FE_Design_Swiftlet.md §3.C (nền Charcoal, accent Lime Mist).
@@ -67,7 +61,7 @@ export default function Sidebar() {
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold text-white">{user?.full_name}</span>
             <span className="block truncate text-xs text-white/50">
-              {ROLE_LABEL[user?.role ?? ''] ?? user?.role}
+              {user?.role ? ROLE_LABEL[user.role] : ''}
             </span>
           </span>
           <button
