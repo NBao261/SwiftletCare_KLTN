@@ -2,6 +2,7 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useZoneStore } from '@/store/zoneStore'
+import { usePermission } from '@/hooks/usePermission'
 import { useTicketsList, useCreateTicket } from '@/hooks/useTickets'
 import { Button, Modal, Select, Textarea, Badge, Card } from '@/components/ui'
 import ZonePicker, { type ZonePickerValue } from '@/components/common/ZonePicker'
@@ -23,6 +24,8 @@ export default function TicketsPage() {
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const navigate = useNavigate()
+  // Backend: POST /tickets chỉ cho FARM_OWNER, ADMIN
+  const canCreate = usePermission('FARM_OWNER', 'ADMIN')
 
   const { records, total, limit, isLoading } = useTicketsList({ status, page, limit: 10 })
 
@@ -35,7 +38,7 @@ export default function TicketsPage() {
             <FilterChip key={s} active={status === s} label={STATUS_LABEL[s]} onClick={() => { setStatus(s); setPage(1) }} />
           ))}
         </div>
-        <Button onClick={() => setShowCreate(true)}>+ Tạo ticket</Button>
+        {canCreate && <Button onClick={() => setShowCreate(true)}>+ Tạo ticket</Button>}
       </div>
 
       {isLoading && <LoadingSkeleton count={3} className="h-20 w-full" />}
@@ -45,7 +48,7 @@ export default function TicketsPage() {
           icon={<IconTicket width={28} height={28} />}
           title="Không có ticket nào"
           description="Tạo ticket khi gặp sự cố kỹ thuật hoặc cần yêu cầu lắp đặt/bảo trì thiết bị."
-          action={<Button onClick={() => setShowCreate(true)}>+ Tạo ticket</Button>}
+          action={canCreate ? <Button onClick={() => setShowCreate(true)}>+ Tạo ticket</Button> : undefined}
         />
       )}
 

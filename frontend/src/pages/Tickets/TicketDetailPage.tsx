@@ -2,6 +2,7 @@
 import { useState, FormEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket } from '@/hooks/useTickets'
+import { usePermission } from '@/hooks/usePermission'
 import { Button, Badge, Card, Textarea } from '@/components/ui'
 import StarRating from '@/components/common/StarRating'
 import NoteActionModal from '@/components/common/NoteActionModal'
@@ -26,12 +27,14 @@ export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: ticket, isLoading } = useTicket(id)
   const [showCancel, setShowCancel] = useState(false)
+  // Backend: PUT /tickets/:id/cancel và POST /tickets/:id/rating chỉ cho FARM_OWNER, ADMIN
+  const canManageTicket = usePermission('FARM_OWNER', 'ADMIN')
 
   if (isLoading) return <LoadingSkeleton className="h-96 w-full" />
   if (!ticket) return <EmptyState title="Không tìm thấy ticket" description="Ticket có thể đã bị xoá hoặc bạn không có quyền xem." />
 
   const isInstallation = ticket.type === 'INSTALLATION' || ticket.type === 'MAINTENANCE'
-  const canCancel = ticket.status !== 'CLOSED'
+  const canCancel = canManageTicket && ticket.status !== 'CLOSED'
 
   return (
     <div className="flex flex-col gap-5">
@@ -138,6 +141,8 @@ function RatingCard({ ticketId, existingRating }: { ticketId: string; existingRa
   const rateTicket = useRateTicket()
   const push = useToastStore(s => s.push)
   const [rating, setRating] = useState(existingRating ?? 0)
+  // Backend: POST /tickets/:id/rating chỉ cho FARM_OWNER, ADMIN
+  const canRate = usePermission('FARM_OWNER', 'ADMIN')
 
   if (existingRating) {
     return (
@@ -147,6 +152,8 @@ function RatingCard({ ticketId, existingRating }: { ticketId: string; existingRa
       </Card>
     )
   }
+
+  if (!canRate) return null
 
   return (
     <Card>

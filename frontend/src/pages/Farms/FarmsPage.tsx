@@ -1,5 +1,6 @@
 import { useState, FormEvent } from "react";
 import { useFarms, useCreateFarm } from "@/hooks/useFarms";
+import { usePermission } from "@/hooks/usePermission";
 import { Button, Input, Modal, Card } from "@/components/ui";
 import { IconFarm } from "@/components/ui/icons";
 import { cn } from "@/utils/cn";
@@ -16,6 +17,8 @@ const FARM_TAB_LABEL: Record<FarmTab, string> = { houses: "Nhà & Zone", members
 export default function FarmsPage() {
   const { data: farms, isLoading } = useFarms();
   const createFarm = useCreateFarm();
+  // Backend: POST /farms chỉ cho FARM_OWNER, ADMIN
+  const canCreateFarm = usePermission("FARM_OWNER", "ADMIN");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", address: "", region: "" });
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
@@ -37,7 +40,9 @@ export default function FarmsPage() {
         <p className="text-sm text-warmGray">
           Quản lý trang trại, nhà yến và khu vực của bạn
         </p>
-        <Button onClick={() => setShowCreate(true)}>+ Tạo trang trại</Button>
+        {canCreateFarm && (
+          <Button onClick={() => setShowCreate(true)}>+ Tạo trang trại</Button>
+        )}
       </div>
 
       {isLoading && <LoadingSkeleton count={2} className="h-28 w-full" />}
@@ -47,9 +52,11 @@ export default function FarmsPage() {
           title="Chưa có trang trại nào"
           description="Tạo farm đầu tiên để bắt đầu quản lý nhà yến, zone và thiết bị."
           action={
-            <Button onClick={() => setShowCreate(true)}>
-              + Tạo trang trại
-            </Button>
+            canCreateFarm ? (
+              <Button onClick={() => setShowCreate(true)}>
+                + Tạo trang trại
+              </Button>
+            ) : undefined
           }
         />
       )}

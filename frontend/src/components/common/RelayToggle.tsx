@@ -1,5 +1,6 @@
 import { Toggle, Badge } from '@/components/ui'
 import { useControlRelay } from '@/hooks/useDevices'
+import { usePermission } from '@/hooks/usePermission'
 import type { RelayName, ControlMode } from '@/types'
 
 interface RelayToggleProps {
@@ -13,6 +14,8 @@ interface RelayToggleProps {
 /** RelayToggle – bật/tắt relay thủ công + badge AUTO/MANUAL (ENV-FR-016, 017) */
 export default function RelayToggle({ nodeId, relayName, label, checked, mode }: RelayToggleProps) {
   const controlRelay = useControlRelay()
+  // Backend: POST /devices/sensor-nodes/:id/relay chỉ cho FARM_OWNER, TECHNICIAN, ADMIN
+  const canControl = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
 
   return (
     <div className="flex items-center justify-between py-3">
@@ -22,7 +25,7 @@ export default function RelayToggle({ nodeId, relayName, label, checked, mode }:
       </div>
       <Toggle
         checked={checked}
-        disabled={controlRelay.isPending}
+        disabled={!canControl || controlRelay.isPending}
         onChange={state => controlRelay.mutate({ nodeId, relayName, state })}
         aria-label={label}
       />

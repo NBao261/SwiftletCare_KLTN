@@ -6,8 +6,7 @@ import { Button, Card } from '@/components/ui'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import { useToastStore } from '@/store/toastStore'
 import { getApiErrorMessage } from '@/utils/helpers'
-
-const ROLE_LABEL: Record<string, string> = { FARM_OWNER: 'Farm Owner (thành viên)', SALES_STAFF: 'Sales Staff' }
+import { INVITE_ROLE_LABEL } from '@/constants/roles'
 
 export default function InvitationPage() {
   const { token } = useParams<{ token: string }>()
@@ -63,7 +62,7 @@ export default function InvitationPage() {
 
         <div className="mt-5 rounded-xl bg-warmGray/5 px-4 py-3 text-sm">
           <p><span className="text-warmGray">Email được mời:</span> <span className="font-semibold text-charcoal">{invitation.invited_email}</span></p>
-          <p className="mt-1"><span className="text-warmGray">Vai trò:</span> <span className="font-semibold text-charcoal">{ROLE_LABEL[invitation.invited_role]}</span></p>
+          <p className="mt-1"><span className="text-warmGray">Vai trò:</span> <span className="font-semibold text-charcoal">{INVITE_ROLE_LABEL[invitation.invited_role]}</span></p>
         </div>
 
         {isExpired ? (

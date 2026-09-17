@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useZoneStore } from "@/store/zoneStore";
-import { useAuthStore } from "@/store/authStore";
+import { usePermission } from "@/hooks/usePermission";
 import { useSensorNodes } from "@/hooks/useDevices";
 import { deviceApi } from "@/services/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,10 +24,9 @@ const RELAY_LABELS = {
 /** Devices Page – FARM-FR-003/005/006, ENV-FR-016..018 */
 export default function DevicesPage() {
   const { selectedZoneId, selectedZoneName } = useZoneStore();
-  const role = useAuthStore((s) => s.user?.role);
   // Đăng ký/kích hoạt thiết bị là việc của Technician (SRS §4.1, FARM-FR-003) —
   // Farm Owner chỉ xem và điều khiển relay, muốn lắp thêm thì tạo ticket lắp đặt.
-  const canOnboard = role === "TECHNICIAN" || role === "ADMIN";
+  const canOnboard = usePermission("TECHNICIAN", "ADMIN");
   const { data: nodes, isLoading } = useSensorNodes(
     selectedZoneId ?? undefined,
   );

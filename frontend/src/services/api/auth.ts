@@ -1,12 +1,10 @@
 import api from './client'
-import type { ApiResponse, User } from '@/types'
-
-export interface LoginResponse { accessToken: string; user: User }
+import type { ApiResponse, LoginRequest, LoginResponse, RegisterRequest, User } from '@/types'
 
 export const authApi = {
-  register: (input: { email: string; password: string; full_name: string; phone?: string }) =>
+  register: (input: RegisterRequest) =>
     api.post<ApiResponse<User>>('/auth/register', input),
-  login: (input: { email: string; password: string }) =>
+  login: (input: LoginRequest) =>
     api.post<ApiResponse<LoginResponse>>('/auth/login', input),
   logout: () => api.post<ApiResponse<{ message: string }>>('/auth/logout'),
 

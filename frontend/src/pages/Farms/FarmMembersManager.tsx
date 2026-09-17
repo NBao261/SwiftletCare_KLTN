@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { useAuthStore } from '@/store/authStore'
+import { usePermission } from '@/hooks/usePermission'
 import { useFarm, useInviteMember, useRemoveMember, useInviteSalesStaff, useSalesStaff } from '@/hooks/useFarms'
 import { Button, Input, Modal, Badge } from '@/components/ui'
 import ConfirmModal from '@/components/common/ConfirmModal'
@@ -12,6 +13,7 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
   const { data: farm, isLoading } = useFarm(farmId)
   const { data: salesStaff } = useSalesStaff(farmId)
   const currentUserId = useAuthStore(s => s.user?._id)
+  const isAdmin = usePermission('ADMIN')
   const [showInviteMember, setShowInviteMember] = useState(false)
   const [showInviteSales, setShowInviteSales] = useState(false)
   const [removeTargetId, setRemoveTargetId] = useState<string | null>(null)
@@ -21,7 +23,9 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
   if (isLoading) return <LoadingSkeleton count={2} className="h-16 w-full" />
   if (!farm) return null
 
-  const isPrimaryOwner = farm.owner_id === currentUserId
+  // Khớp backend farmAccess.util.ts#isPrimaryOwner: ADMIN hoặc đúng owner_id của farm
+  // (không phải mọi FARM_OWNER — thành viên được mời không có quyền mời/gỡ thêm người khác).
+  const isPrimaryOwner = isAdmin || farm.owner_id === currentUserId
 
   function handleRemove() {
     if (!removeTargetId) return
