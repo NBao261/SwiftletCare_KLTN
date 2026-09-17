@@ -1,5 +1,6 @@
 ﻿import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { queryClient } from '@/services/queryClient'
 import type { User } from '@/types'
 
 interface AuthState {
@@ -36,3 +37,23 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+// Đồng bộ đăng xuất giữa các tab cùng trình duyệt — tab A bấm "Đăng xuất" (ghi
+// localStorage) thì tab B đang mở cũng phải mất phiên ngay, không chờ tới lần
+// gọi API kế tiếp mới bị 401 rồi mới biết. Chỉ đồng bộ CHIỀU ĐĂNG XUẤT (không
+// đồng bộ đăng nhập) — tab B tự nhiên có phiên riêng, không nên bất ngờ đổi
+// user chỉ vì tab A vừa đăng nhập.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'swiftletcare-auth' || !e.newValue) return
+    try {
+      const next = JSON.parse(e.newValue) as { state?: { isAuthenticated?: boolean } }
+      if (next.state?.isAuthenticated === false && useAuthStore.getState().isAuthenticated) {
+        useAuthStore.getState().clearAuth()
+        queryClient.clear()
+      }
+    } catch {
+      // localStorage bị sửa tay/hỏng định dạng — bỏ qua, không crash app
+    }
+  })
+}

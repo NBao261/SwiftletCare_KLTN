@@ -28,6 +28,15 @@ export function useSensorNodes(zoneId?: string) {
   return query
 }
 
+/** useSystemNodeStatus – OPS-NFR-004, Admin xem nhanh trạng thái mọi node toàn hệ thống */
+export function useSystemNodeStatus() {
+  return useQuery({
+    queryKey: ['system-node-status'],
+    queryFn: () => deviceApi.getSystemStatus().then(r => r.data.data),
+    refetchInterval: 30_000, // trang "xem nhanh" — tự làm mới thay vì bắt người xem F5
+  })
+}
+
 export function useControlRelay() {
   const queryClient = useQueryClient()
   return useMutation({

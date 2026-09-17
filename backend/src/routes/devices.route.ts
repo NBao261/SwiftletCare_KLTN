@@ -22,4 +22,7 @@ router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','TECHNICIA
 router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').notEmpty(), body('zone_id').isMongoId(), validate, deviceController.registerCameraNode)
 router.get ('/camera-nodes',                 deviceController.listCameraNodes)
 
+// OPS-NFR-004 — màn hình xem nhanh trạng thái mọi node (sensor + camera) toàn hệ thống, chỉ Admin.
+router.get ('/system-status',                requireRole('ADMIN'), deviceController.getSystemStatus)
+
 export default router

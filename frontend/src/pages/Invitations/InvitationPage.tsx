@@ -7,6 +7,7 @@ import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import { useToastStore } from '@/store/toastStore'
 import { getApiErrorMessage } from '@/utils/helpers'
 import { INVITE_ROLE_LABEL } from '@/constants/roles'
+import { getRoleHomePath } from '@/components/layout/navItems'
 
 export default function InvitationPage() {
   const { token } = useParams<{ token: string }>()
@@ -40,7 +41,11 @@ export default function InvitationPage() {
   function handleAccept() {
     if (!token) return
     accept.mutate(token, {
-      onSuccess: () => { push('Đã chấp nhận lời mời'); navigate('/dashboard') },
+      // Chấp nhận lời mời không đổi role của tài khoản hiện có (chỉ thêm vào
+      // farm.members hoặc tạo SalesAssignment — xem farm.service.ts), nên
+      // user.role trong store vẫn đúng ngay lúc này — về đúng trang nhà của
+      // role đó thay vì hardcode '/dashboard' (Sales Staff sẽ bị văng /403).
+      onSuccess: () => { push('Đã chấp nhận lời mời'); navigate(getRoleHomePath(user?.role)) },
       onError: (err) => push(getApiErrorMessage(err, 'Chấp nhận thất bại'), 'error'),
     })
   }

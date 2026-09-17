@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import { redirectToLogin } from '@/utils/navigation'
+import { queryClient } from '@/services/queryClient'
 
 // Dev: vite.config.ts proxy '/api' -> http://localhost:3000 (bỏ prefix /api trước
 // khi forward) — tránh CORS hoàn toàn vì trình duyệt coi đây là same-origin.
@@ -50,6 +51,7 @@ api.interceptors.response.use(
         return api(original)
       } catch {
         useAuthStore.getState().clearAuth()
+        queryClient.clear() // phiên hết hạn — dọn sạch cache cũ, tránh lộ dữ liệu sang phiên đăng nhập sau
         redirectToLogin(window.location.pathname + window.location.search)
       }
     }

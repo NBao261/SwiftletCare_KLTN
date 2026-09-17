@@ -144,6 +144,9 @@ function ZoneManager({
   const createZone = useCreateZone(houseId);
   // Backend: POST /farms/houses/:houseId/zones chỉ cho FARM_OWNER, TECHNICIAN, ADMIN
   const canManage = usePermission("FARM_OWNER", "TECHNICIAN", "ADMIN");
+  // Route /dashboard chỉ cho FARM_OWNER (RequireRole trong App.tsx) — nút này
+  // trước đây hiện cho mọi role, khiến Technician/Admin bấm vào bị đá sang /403.
+  const canViewDashboard = usePermission("FARM_OWNER");
   const setZone = useZoneStore((s) => s.setZone);
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
@@ -194,13 +197,15 @@ function ZoneManager({
         >
           <span className="text-sm font-medium text-charcoal">{zone.name}</span>
           <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => goTo(zone._id, zone.name, "/dashboard")}
-            >
-              Dashboard
-            </Button>
+            {canViewDashboard && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => goTo(zone._id, zone.name, "/dashboard")}
+              >
+                Dashboard
+              </Button>
+            )}
             <Button
               variant="secondary"
               size="sm"

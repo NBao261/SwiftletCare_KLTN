@@ -3,14 +3,18 @@ import * as authService from '@/services/auth.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 const REFRESH_COOKIE_MAX_AGE = 30 * 86400 * 1000
+// Dùng chung cho cả set lẫn clear — Express chỉ thực sự xoá được cookie nếu
+// options truyền vào res.clearCookie() khớp với options lúc res.cookie() set
+// nó (trừ maxAge/expires); truyền thiếu (đặc biệt secure/sameSite) có thể khiến
+// trình duyệt không nhận diện đúng cookie cần xoá, để sót refreshToken cũ lại.
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure:   process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+}
 
 function setRefreshCookie(res: Response, token: string): void {
-  res.cookie('refreshToken', token, {
-    httpOnly: true,
-    secure:   process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge:   REFRESH_COOKIE_MAX_AGE,
-  })
+  res.cookie('refreshToken', token, { ...REFRESH_COOKIE_OPTIONS, maxAge: REFRESH_COOKIE_MAX_AGE })
 }
 
 /** POST /auth/register – AUTH-FR-001 */
@@ -37,7 +41,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   const token = (req.cookies as Record<string, string | undefined>)?.refreshToken
   await authService.logoutUser(req.user._id, token)
-  res.clearCookie('refreshToken')
+  res.clearCookie('refreshToken', REFRESH_COOKIE_OPTIONS)
   res.json({ success: true, data: { message: 'Đã đăng xuất' } })
 })
 
