@@ -12,9 +12,10 @@ let socket: Socket | null = null
 /** Lazy-tạo 1 socket duy nhất cho cả app — connect/disconnect do useSocket() hook quản lý */
 export function getSocket(): Socket {
   if (!socket) {
-    const token = useAuthStore.getState().accessToken
     socket = io(SOCKET_URL, {
-      auth: { token },
+      // Dạng hàm — socket.io-client gọi lại trước MỖI lần connect/reconnect nên
+      // luôn lấy access token mới nhất, kể cả sau khi client.ts đã refresh token.
+      auth: (cb) => cb({ token: useAuthStore.getState().accessToken }),
       transports: ['websocket'],
       autoConnect: false,
     })
