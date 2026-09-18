@@ -32,6 +32,8 @@ servers:
 tags:
   - name: Auth
     description: AUTH-FR-001..003/004/005/005b/009/010/012 (đăng ký/đăng nhập/JWT/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản)
+  - name: Admin
+    description: AUTH-FR-005c/007/011/012, TICKET-FR-005b, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician/Sales Staff, can thiệp ticket toàn quyền, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
   - name: Farms
     description: FARM-FR-001..002/007, AUTH-FR-005/005b/010 (farm/house/zone/member/sales-staff/invitation)
   - name: Devices
@@ -371,6 +373,177 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
+
+  # ── ADMIN ─────────────────────────────────────────────────────────────────
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: "Danh sách tài khoản, lọc theo role/trạng thái (AUTH-FR-011) — chỉ ADMIN"
+      parameters:
+        - { name: role, in: query, schema: { $ref: "#/components/schemas/Role" } }
+        - { name: status, in: query, schema: { type: string, enum: [active, inactive] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/User" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{id}/status:
+    put:
+      tags: [Admin]
+      summary: "Khoá/mở khoá tài khoản (AUTH-FR-011, Flow 19) — chỉ ADMIN"
+      description: |
+        Bắt buộc `reason` khi khoá (`is_active=false`); không bắt buộc khi mở
+        khoá. Middleware `authenticate` chặn ngay request kế tiếp của user này
+        dù access token còn hạn — không cần đợi token hết hạn tự nhiên.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_active]
+              properties:
+                is_active: { type: boolean }
+                reason: { type: string, description: "Bắt buộc khi is_active=false" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/User" } }
+        "400":
+          description: "Thiếu reason khi khoá tài khoản"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/delete-requests:
+    get:
+      tags: [Admin]
+      summary: "Danh sách yêu cầu xoá tài khoản đang chờ xử lý (AUTH-FR-012) — chỉ ADMIN"
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/User" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/delete-requests/{id}/complete:
+    put:
+      tags: [Admin]
+      summary: "Xác nhận hoàn tất xử lý xoá tài khoản (AUTH-FR-012, Flow 19 bước 7-8) — chỉ ADMIN"
+      description: |
+        Cascade: Farm mà user là Primary Owner còn thành viên khác → chuyển
+        `owner_id` cho người có `joined_at` sớm nhất; hết thành viên → xoá mềm
+        Farm. Gỡ user khỏi `members` của các Farm khác nếu chỉ là thành viên
+        thường. Anonymize email/phone/full_name, không xoá document (giữ FK
+        cho lịch sử ticket/farm).
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: "Đã xử lý xong (anonymized)"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/User" } }
+        "400":
+          description: "Người dùng này chưa gửi yêu cầu xoá tài khoản"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/technicians:
+    post:
+      tags: [Admin]
+      summary: "Admin tự tạo tài khoản Technician + gán khu vực phụ trách (AUTH-FR-005c, Flow 16) — chỉ ADMIN"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, full_name, assigned_regions]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                full_name: { type: string }
+                phone: { type: string }
+                assigned_regions:
+                  type: array
+                  items: { type: string }
+                  example: ["HCMC", "Long An"]
+      responses:
+        "201":
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/User" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/sales-staff:
+    post:
+      tags: [Admin]
+      summary: "Admin tự tạo tài khoản Sales Staff + gán thẳng vào Farm (AUTH-FR-005c, Flow 16 path 1b) — chỉ ADMIN"
+      description: Dùng cho farm liên kết/hợp tác — bỏ qua bước mời/chấp nhận Invitation thông thường (Flow 16).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, full_name, farm_ids]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                full_name: { type: string }
+                phone: { type: string }
+                farm_ids: { type: array, items: { type: string } }
+      responses:
+        "201":
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/User" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   # ── FARMS ─────────────────────────────────────────────────────────────────
   /farms:
@@ -1264,6 +1437,63 @@ paths:
                   },
               },
           }
+
+  /devices/fleet-status:
+    get:
+      tags: [Devices, Admin]
+      summary: "Dashboard trạng thái toàn bộ node hệ thống (OPS-NFR-004) — chỉ ADMIN"
+      description: |
+        Khác `GET /devices/sensor-nodes`/`camera-nodes` (luôn giới hạn theo
+        quyền Farm của user) — endpoint này liệt kê TẤT CẢ SensorNode/CameraNode
+        trong hệ thống kèm đếm theo status, phục vụ Admin xem nhanh sức khoẻ hạ
+        tầng toàn công ty, không theo từng Farm riêng lẻ.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          sensorNodes:
+                            type: object
+                            properties:
+                              total: { type: integer }
+                              PENDING: { type: integer }
+                              ONLINE: { type: integer }
+                              OFFLINE: { type: integer }
+                              ERROR: { type: integer }
+                              DEGRADED: { type: integer }
+                          cameraNodes:
+                            type: object
+                            properties:
+                              total: { type: integer }
+                              PENDING: { type: integer }
+                              ONLINE: { type: integer }
+                              OFFLINE: { type: integer }
+                              ERROR: { type: integer }
+                              DEGRADED: { type: integer }
+                          nodes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                device_id: { type: string }
+                                type: { type: string, enum: [SENSOR, CAMERA] }
+                                zone_id: { type: string }
+                                status:
+                                  {
+                                    type: string,
+                                    enum: [PENDING, ONLINE, OFFLINE, ERROR, DEGRADED],
+                                  }
+                                last_heartbeat: { type: string, format: date-time, nullable: true }
+                                farm_id: { type: string, nullable: true }
+                                farm_name: { type: string, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── TELEMETRY ─────────────────────────────────────────────────────────────
   /telemetry/zones/{id}/latest:
@@ -2717,6 +2947,44 @@ paths:
               },
           }
 
+  /tickets/{id}/admin-override:
+    put:
+      tags: [Tickets, Admin]
+      summary: "Admin toàn quyền can thiệp ticket bất kỳ (TICKET-FR-005b) — chỉ ADMIN"
+      description: |
+        Không giới hạn ở SLA breach hay ticket của farm mình — Admin đổi được
+        `assigned_to`/`priority`/`scheduled_visit_at`/`status` bất kỳ lúc nào,
+        bỏ qua `ALLOWED_TRANSITIONS` thường áp dụng cho `PUT /tickets/:id/status`
+        và không đòi SAT checklist khi đóng ticket lắp đặt. `reason` luôn được
+        ghi vào `notes` của ticket.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                assigned_to: { type: string, description: "Đổi Technician phụ trách" }
+                priority: { type: string, enum: [P1, P2, P3] }
+                scheduled_visit_at: { type: string, format: date-time }
+                status: { $ref: "#/components/schemas/TicketStatus" }
+                reason: { type: string, description: "Lý do can thiệp, ghi vào notes + audit_logs" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   # ── SALES (stub, Giai đoạn 2) ─────────────────────────────────────────────
   /products:
     get:
@@ -3050,6 +3318,19 @@ components:
           }
         avatar_url: { type: string }
         is_active: { type: boolean }
+        deactivated_at:
+          {
+            type: string,
+            format: date-time,
+            nullable: true,
+            description: "AUTH-FR-011 — thời điểm Admin khoá tài khoản",
+          }
+        deactivated_reason:
+          {
+            type: string,
+            nullable: true,
+            description: "AUTH-FR-011 — lý do bắt buộc khi khoá tài khoản, ghi cùng audit_logs",
+          }
         notification_preferences:
           type: object
           properties:
