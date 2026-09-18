@@ -1,12 +1,11 @@
 import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
-import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds } from '@/utils/farmAccess.util'
+import { findZoneChainOrThrow } from '@/services/farm.service'
+import { hasFarmAccess } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
-import { raiseNodeOfflineAlert } from '@/services/alert.service'
-import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
-import logger from '@/utils/logger.util'
+import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
 
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
@@ -342,67 +341,53 @@ export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<v
   }
 }
 
+function countByStatus(nodes: Array<{ status: DeviceStatus }>) {
+  const counts: Record<DeviceStatus, number> = { PENDING: 0, ONLINE: 0, OFFLINE: 0, ERROR: 0, DEGRADED: 0 }
+  for (const n of nodes) counts[n.status]++
+  return { total: nodes.length, ...counts }
+}
+
 /**
- * OPS-NFR-004 — màn hình xem nhanh trạng thái TẤT CẢ node (sensor + camera) toàn
- * hệ thống cho Admin, khác `listSensorNodes`/`listCameraNodes` (yêu cầu chọn 1
- * zone hoặc chỉ trả về theo zone user có quyền xem). Route giới hạn requireRole('ADMIN')
- * nên `listAccessibleZoneIds` ở đây thực chất luôn trả về MỌI zone trong hệ thống
- * (farmAccess.util.ts#listAccessibleFarmIds trả toàn bộ Farm cho role ADMIN).
+ * OPS-NFR-004 — Admin dashboard xem nhanh trạng thái toàn bộ node trong hệ
+ * thống (không giới hạn theo Farm, khác `listSensorNodes` dùng cho Farm Owner).
+ * Join thủ công Zone→House→Farm bằng 1-2 query gộp thay vì N+1 populate, vì quy
+ * mô KLTN không cần tối ưu bằng aggregation pipeline.
  */
-export async function getSystemNodeStatus(user: CurrentUser): Promise<{
-  summary: Record<'total' | Lowercase<DeviceStatus>, number>
-  nodes: SystemNodeStatusItem[]
-}> {
-  const zoneIds = await listAccessibleZoneIds(user)
+export async function getFleetStatus() {
   const [sensorNodes, cameraNodes] = await Promise.all([
-    SensorNode.find({ zone_id: { $in: zoneIds } }).lean(),
-    CameraNode.find({ zone_id: { $in: zoneIds } }).lean(),
+    SensorNode.find().sort({ registered_at: -1 }).lean(),
+    CameraNode.find().sort({ registered_at: -1 }).lean(),
   ])
 
-  // Join Zone→House→Farm trong code thay vì .populate() lồng nhau — chỉ 3 query
-  // dedupe theo id, không phụ thuộc N+1 dù số node tăng lên (cùng pattern với
-  // expireManualOverrides() ở trên).
-  const usedZoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]
-  const zones = await Zone.find({ _id: { $in: usedZoneIds } }).select('name house_id').lean()
+  const zoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]
+  const zones = await Zone.find({ _id: { $in: zoneIds } }).lean()
   const houseIds = [...new Set(zones.map(z => String(z.house_id)))]
-  const houses = await House.find({ _id: { $in: houseIds } }).select('name farm_id').lean()
+  const houses = await House.find({ _id: { $in: houseIds } }).lean()
   const farmIds = [...new Set(houses.map(h => String(h.farm_id)))]
   const farms = await Farm.find({ _id: { $in: farmIds } }).select('name').lean()
 
-  const zoneById = new Map(zones.map(z => [String(z._id), z]))
-  const houseById = new Map(houses.map(h => [String(h._id), h]))
-  const farmById = new Map(farms.map(f => [String(f._id), f]))
+  const houseIdByZoneId = new Map(zones.map(z => [String(z._id), String(z.house_id)]))
+  const farmIdByHouseId = new Map(houses.map(h => [String(h._id), String(h.farm_id)]))
+  const farmNameById    = new Map(farms.map(f => [String(f._id), f.name]))
 
-  function resolveNames(zoneId: string): { zone_name: string; house_name: string; farm_name: string } {
-    const zone = zoneById.get(zoneId)
-    const house = zone ? houseById.get(String(zone.house_id)) : undefined
-    const farm = house ? farmById.get(String(house.farm_id)) : undefined
-    return {
-      zone_name: zone?.name ?? '—',
-      house_name: house?.name ?? '—',
-      farm_name: farm?.name ?? '—',
-    }
+  function resolveFarm(zoneId: string): { farm_id?: string; farm_name?: string } {
+    const houseId = houseIdByZoneId.get(zoneId)
+    const farmId  = houseId ? farmIdByHouseId.get(houseId) : undefined
+    return farmId ? { farm_id: farmId, farm_name: farmNameById.get(farmId) } : {}
   }
 
-  const nodes: SystemNodeStatusItem[] = [
-    ...sensorNodes.map(n => ({
-      _id: String(n._id), device_id: n.device_id, type: 'sensor' as const, status: n.status,
-      last_heartbeat: n.last_heartbeat, rssi: n.rssi, ...resolveNames(String(n.zone_id)),
-    })),
-    ...cameraNodes.map(n => ({
-      _id: String(n._id), device_id: n.device_id, type: 'camera' as const, status: n.status,
-      last_heartbeat: n.last_heartbeat, ...resolveNames(String(n.zone_id)),
-    })),
-  ].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
-
-  const summary = nodes.reduce(
-    (acc, n) => {
-      acc.total += 1
-      acc[n.status.toLowerCase() as Lowercase<DeviceStatus>] += 1
-      return acc
-    },
-    { total: 0, online: 0, offline: 0, pending: 0, error: 0, degraded: 0 },
-  )
-
-  return { summary, nodes }
+  return {
+    sensorNodes: countByStatus(sensorNodes),
+    cameraNodes: countByStatus(cameraNodes),
+    nodes: [
+      ...sensorNodes.map(n => ({
+        device_id: n.device_id, type: 'SENSOR' as const, zone_id: String(n.zone_id),
+        status: n.status, last_heartbeat: n.last_heartbeat, ...resolveFarm(String(n.zone_id)),
+      })),
+      ...cameraNodes.map(n => ({
+        device_id: n.device_id, type: 'CAMERA' as const, zone_id: String(n.zone_id),
+        status: n.status, last_heartbeat: n.last_heartbeat, ...resolveFarm(String(n.zone_id)),
+      })),
+    ],
+  }
 }

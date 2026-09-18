@@ -12,6 +12,7 @@ import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import logger from '@/utils/logger.util'
 
 import authRoutes      from '@/routes/auth.route'
+import adminRoutes     from '@/routes/admin.route'
 import farmRoutes      from '@/routes/farms.route'
 import invitationRoutes from '@/routes/invitations.route'
 import deviceRoutes    from '@/routes/devices.route'
@@ -59,6 +60,7 @@ try {
 
 // ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/auth',      authRoutes)
+app.use('/admin',     adminRoutes)
 app.use('/farms',       farmRoutes)
 app.use('/invitations', invitationRoutes)
 app.use('/devices',   deviceRoutes)
