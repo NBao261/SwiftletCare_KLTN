@@ -175,6 +175,12 @@ void startCaptivePortal(AsyncWebServer &server) {
       }
     }
 
+    // farmId/houseId/zoneId KHÔNG đi qua form AP-mode nữa (đã thử — vướng
+    // captive-portal auto-detect của OS mở trang trước khi Technician kịp mở
+    // link có query param, mất identity im lặng). Thiết bị boot lên với
+    // farmId/houseId/zoneId mặc định (Secrets.h hoặc NVS cũ), backend tự nhận
+    // ra qua heartbeat lệch topic và đẩy config/reassign để sửa — xem
+    // device.service.ts recordHeartbeat() (FARM-FR-003b, tự chữa).
     request->send(200, "text/html", SAVED_HTML);
     // Delay nhỏ để response kịp gửi về trình duyệt trước khi mất kết nối AP
     delay(1500);
