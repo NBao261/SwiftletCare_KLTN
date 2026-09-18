@@ -22,4 +22,7 @@ router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','TECHNICIA
 router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').notEmpty(), body('zone_id').isMongoId(), validate, deviceController.registerCameraNode)
 router.get ('/camera-nodes',                 deviceController.listCameraNodes)
 
+// OPS-NFR-004 — Admin dashboard trạng thái node toàn hệ thống
+router.get ('/fleet-status',                 requireRole('ADMIN'), deviceController.getFleetStatus)
+
 export default router

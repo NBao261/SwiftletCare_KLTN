@@ -1,10 +1,12 @@
 import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
+import { House, Zone } from '@/models/houseZone.model'
+import { Farm } from '@/models/farm.model'
 import { findZoneChainOrThrow } from '@/services/farm.service'
 import { hasFarmAccess } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
-import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser } from '@/types'
+import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
 
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
 type RelayName = typeof RELAY_NAMES[number]
@@ -226,5 +228,56 @@ export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<v
       mode: node.control_mode,
       overrideExpiry: node.override_expiry?.toISOString(),
     })
+  }
+}
+
+function countByStatus(nodes: Array<{ status: DeviceStatus }>) {
+  const counts: Record<DeviceStatus, number> = { PENDING: 0, ONLINE: 0, OFFLINE: 0, ERROR: 0, DEGRADED: 0 }
+  for (const n of nodes) counts[n.status]++
+  return { total: nodes.length, ...counts }
+}
+
+/**
+ * OPS-NFR-004 — Admin dashboard xem nhanh trạng thái toàn bộ node trong hệ
+ * thống (không giới hạn theo Farm, khác `listSensorNodes` dùng cho Farm Owner).
+ * Join thủ công Zone→House→Farm bằng 1-2 query gộp thay vì N+1 populate, vì quy
+ * mô KLTN không cần tối ưu bằng aggregation pipeline.
+ */
+export async function getFleetStatus() {
+  const [sensorNodes, cameraNodes] = await Promise.all([
+    SensorNode.find().sort({ registered_at: -1 }).lean(),
+    CameraNode.find().sort({ registered_at: -1 }).lean(),
+  ])
+
+  const zoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]
+  const zones = await Zone.find({ _id: { $in: zoneIds } }).lean()
+  const houseIds = [...new Set(zones.map(z => String(z.house_id)))]
+  const houses = await House.find({ _id: { $in: houseIds } }).lean()
+  const farmIds = [...new Set(houses.map(h => String(h.farm_id)))]
+  const farms = await Farm.find({ _id: { $in: farmIds } }).select('name').lean()
+
+  const houseIdByZoneId = new Map(zones.map(z => [String(z._id), String(z.house_id)]))
+  const farmIdByHouseId = new Map(houses.map(h => [String(h._id), String(h.farm_id)]))
+  const farmNameById    = new Map(farms.map(f => [String(f._id), f.name]))
+
+  function resolveFarm(zoneId: string): { farm_id?: string; farm_name?: string } {
+    const houseId = houseIdByZoneId.get(zoneId)
+    const farmId  = houseId ? farmIdByHouseId.get(houseId) : undefined
+    return farmId ? { farm_id: farmId, farm_name: farmNameById.get(farmId) } : {}
+  }
+
+  return {
+    sensorNodes: countByStatus(sensorNodes),
+    cameraNodes: countByStatus(cameraNodes),
+    nodes: [
+      ...sensorNodes.map(n => ({
+        device_id: n.device_id, type: 'SENSOR' as const, zone_id: String(n.zone_id),
+        status: n.status, last_heartbeat: n.last_heartbeat, ...resolveFarm(String(n.zone_id)),
+      })),
+      ...cameraNodes.map(n => ({
+        device_id: n.device_id, type: 'CAMERA' as const, zone_id: String(n.zone_id),
+        status: n.status, last_heartbeat: n.last_heartbeat, ...resolveFarm(String(n.zone_id)),
+      })),
+    ],
   }
 }

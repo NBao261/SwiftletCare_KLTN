@@ -56,3 +56,10 @@ export async function listCameraNodes(req: Request, res: Response, next: NextFun
     res.json({ success: true, data: nodes })
   } catch (err) { next(err) }
 }
+
+/** GET /devices/fleet-status – OPS-NFR-004 */
+export async function getFleetStatus(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    res.json({ success: true, data: await deviceService.getFleetStatus() })
+  } catch (err) { next(err) }
+}
