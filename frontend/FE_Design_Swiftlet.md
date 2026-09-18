@@ -296,3 +296,32 @@ Nhất quán 1 file / 1 resource, giống quy tắc backend (`<resource>.<layer>
   (`CHART_COLORS`/`CHART_PALETTE`) rồi import ra dùng, không lặp lại hex ở từng chart.
 - Bo góc chỉ dùng đúng 4 giá trị đã định nghĩa (`rounded-xl/2xl/3xl/full`) — không dùng
   `rounded-lg`/`rounded-md` tùy hứng, dù Tailwind mặc định vẫn cho phép.
+
+### 7.8. Tổ chức `pages/` theo role — không để page "khơi khơi" ngoài các nhóm
+
+`pages/` chia thành 5 nhóm cấp 1 theo role sở hữu, để nhìn cây thư mục là biết ngay role nào
+dùng trang nào, không phải mở `App.tsx` dò từng `RequireRole`:
+
+```
+pages/
+  Public/      # Không cần đăng nhập (Auth, Invitations, Marketplace, Forbidden)
+  Admin/       # Chỉ ADMIN
+  FarmOwner/   # Chỉ FARM_OWNER
+  SalesStaff/  # Chỉ SALES_STAFF
+  Shared/      # Dùng chung ≥2 role CỤ THỂ — KHÔNG mặc định hiểu là "mọi role"
+```
+
+- **Trang chỉ 1 role dùng** → thư mục của đúng role đó (`Admin/`, `FarmOwner/`, `SalesStaff/`).
+  Hiện chưa có `Technician/` vì chưa có trang nào chỉ riêng Technician — mọi quyền của
+  Technician đều nằm trong `Shared/`; nếu sau này có trang thật sự chỉ Technician mới thêm
+  thư mục đó, không tạo thư mục rỗng trước.
+- **Trang ≥2 role dùng chung** → `Shared/<Feature>/`. Không suy luận "Shared = tất cả role" —
+  role chính xác nào được vào lấy từ `allow={...}` của `RequireRole` bọc route đó trong
+  `App.tsx` (nguồn sự thật duy nhất), tự thêm comment 1 dòng ở khai báo `lazy()` nếu cần nhắc.
+- **Trang public** (không `ProtectedRoute`, xem route list trong `App.tsx`) → `Public/`.
+- Cấu trúc bên trong mỗi `<Feature>/` (file page + `constants.ts`/`components/`/`modals/`/
+  `tabs/`) giữ nguyên theo 7.3, chỉ đổi vị trí thư mục cha — di chuyển cả cụm khi 1 feature có
+  sub-component riêng (VD `Shared/Farms/` gồm cả `FarmsPage.tsx`, `HouseZoneManager.tsx`,
+  `FarmMembersManager.tsx`).
+- Thêm page mới **luôn phải** rơi vào đúng 1 trong 5 nhóm trên trước khi viết code — không tạo
+  thư mục mới ở cấp `pages/` nằm ngoài 5 nhóm này.

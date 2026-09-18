@@ -16,32 +16,52 @@ import type { Role } from "@/types";
 
 // Code-splitting theo route — tránh bundle chính kéo theo chart.js/date-fns
 // (chỉ AnalyticsPage dùng) cho mọi user kể cả khi họ chưa từng vào /analytics.
-const LoginPage = lazy(() => import("@/pages/Auth/LoginPage"));
-const RegisterPage = lazy(() => import("@/pages/Auth/RegisterPage"));
+// Cấu trúc thư mục pages/ theo role sở hữu (Public/Admin/FarmOwner/SalesStaff/
+// Shared — Shared = dùng chung nhiều role cụ thể, xem RequireRole allow=... ở
+// từng route bên dưới để biết chính xác role nào) — không có role nào "khơi
+// khơi" ngoài các nhóm này.
+const LoginPage = lazy(() => import("@/pages/Public/Auth/LoginPage"));
+const RegisterPage = lazy(() => import("@/pages/Public/Auth/RegisterPage"));
 const ForgotPasswordPage = lazy(
-  () => import("@/pages/Auth/ForgotPasswordPage"),
+  () => import("@/pages/Public/Auth/ForgotPasswordPage"),
 );
-const InvitationPage = lazy(() => import("@/pages/Invitations/InvitationPage"));
-const DashboardPage = lazy(() => import("@/pages/Dashboard/DashboardPage"));
-const FarmsPage = lazy(() => import("@/pages/Farms/FarmsPage"));
-const DevicesPage = lazy(() => import("@/pages/Devices/DevicesPage"));
-const AlertsPage = lazy(() => import("@/pages/Alerts/AlertsPage"));
-const AnalyticsPage = lazy(() => import("@/pages/Analytics/AnalyticsPage"));
-const LiveStreamPage = lazy(() => import("@/pages/LiveStream/LiveStreamPage"));
-const SettingsPage = lazy(() => import("@/pages/Settings/SettingsPage"));
-const TicketsPage = lazy(() => import("@/pages/Tickets/TicketsPage"));
-const TicketDetailPage = lazy(() => import("@/pages/Tickets/TicketDetailPage"));
-const HarvestPage = lazy(() => import("@/pages/Harvest/HarvestPage"));
+const InvitationPage = lazy(
+  () => import("@/pages/Public/Invitations/InvitationPage"),
+);
+const DashboardPage = lazy(
+  () => import("@/pages/FarmOwner/Dashboard/DashboardPage"),
+);
+const FarmsPage = lazy(() => import("@/pages/Shared/Farms/FarmsPage"));
+const DevicesPage = lazy(() => import("@/pages/Shared/Devices/DevicesPage"));
+const AlertsPage = lazy(() => import("@/pages/Shared/Alerts/AlertsPage"));
+const AnalyticsPage = lazy(
+  () => import("@/pages/FarmOwner/Analytics/AnalyticsPage"),
+);
+const LiveStreamPage = lazy(
+  () => import("@/pages/Shared/LiveStream/LiveStreamPage"),
+);
+const SettingsPage = lazy(
+  () => import("@/pages/Shared/Settings/SettingsPage"),
+);
+const TicketsPage = lazy(() => import("@/pages/Shared/Tickets/TicketsPage"));
+const TicketDetailPage = lazy(
+  () => import("@/pages/Shared/Tickets/TicketDetailPage"),
+);
+const HarvestPage = lazy(() => import("@/pages/Shared/Harvest/HarvestPage"));
 const MarketplacePage = lazy(
-  () => import("@/pages/Marketplace/MarketplacePage"),
+  () => import("@/pages/Public/Marketplace/MarketplacePage"),
 );
 const ListingDetailPage = lazy(
-  () => import("@/pages/Marketplace/ListingDetailPage"),
+  () => import("@/pages/Public/Marketplace/ListingDetailPage"),
 );
-const ForbiddenPage = lazy(() => import("@/pages/Forbidden/ForbiddenPage"));
-const SalesHomePage = lazy(() => import("@/pages/SalesHome/SalesHomePage"));
+const ForbiddenPage = lazy(
+  () => import("@/pages/Public/Forbidden/ForbiddenPage"),
+);
+const SalesHomePage = lazy(
+  () => import("@/pages/SalesStaff/SalesHome/SalesHomePage"),
+);
 const AdminNodeStatusPage = lazy(
-  () => import("@/pages/AdminNodeStatus/AdminNodeStatusPage"),
+  () => import("@/pages/Admin/AdminNodeStatus/AdminNodeStatusPage"),
 );
 
 // Route ứng với công việc vận hành farm — Sales Staff chưa có màn hình nghiệp vụ
