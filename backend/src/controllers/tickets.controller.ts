@@ -89,3 +89,11 @@ export async function kpi(_req: Request, res: Response, next: NextFunction): Pro
     res.json({ success: true, data: await ticketService.getKpi() })
   } catch (err) { next(err) }
 }
+
+/** PUT /tickets/:id/admin-override – TICKET-FR-005b */
+export async function adminOverride(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const ticket = await ticketService.adminOverrideTicket(req.params.id, req.user, req.body)
+    res.json({ success: true, data: ticket })
+  } catch (err) { next(err) }
+}
