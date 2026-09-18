@@ -10,6 +10,9 @@ import { IconDevice } from "@/components/ui/icons";
 import StatusDot from "@/components/common/StatusDot";
 import RelayToggle from "@/components/common/RelayToggle";
 import EmptyState from "@/components/common/EmptyState";
+import FarmHouseZonePicker, {
+  FarmHouseZonePickerValue,
+} from "@/components/common/FarmHouseZonePicker";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import { useToastStore } from "@/store/toastStore";
 import { getApiErrorMessage } from "@/utils/helpers";
@@ -36,6 +39,12 @@ export default function DevicesPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [deviceId, setDeviceId] = useState("");
   const [registering, setRegistering] = useState(false);
+
+  const [reassignNodeId, setReassignNodeId] = useState<string | null>(null);
+  const [reassignTarget, setReassignTarget] = useState<
+    Partial<FarmHouseZonePickerValue>
+  >({});
+  const [reassigning, setReassigning] = useState(false);
 
   if (!selectedZoneId) {
     return (
@@ -67,6 +76,25 @@ export default function DevicesPage() {
       push(getApiErrorMessage(err, "Kích hoạt thiết bị thất bại"), "error");
     } finally {
       setRegistering(false);
+    }
+  }
+
+  async function handleReassign(e: FormEvent) {
+    e.preventDefault();
+    if (!reassignNodeId || !reassignTarget.zoneId) return;
+    setReassigning(true);
+    try {
+      await deviceApi.reassignZone(reassignNodeId, reassignTarget.zoneId);
+      await queryClient.invalidateQueries({ queryKey: ["sensor-nodes"] });
+      push(
+        "Đã gửi lệnh dời Zone — thiết bị sẽ khởi động lại và kết nối lại sau vài giây",
+      );
+      setReassignNodeId(null);
+      setReassignTarget({});
+    } catch (err) {
+      push(getApiErrorMessage(err, "Dời Zone thất bại"), "error");
+    } finally {
+      setReassigning(false);
     }
   }
 
@@ -156,6 +184,18 @@ export default function DevicesPage() {
                 ))}
               </div>
             )}
+
+            {canOnboard && node.status === "ONLINE" && (
+              <div className="mt-3 border-t border-warmGray/10 pt-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setReassignNodeId(node._id)}
+                >
+                  Dời sang Zone khác
+                </Button>
+              </div>
+            )}
           </Card>
         ))}
       </div>
@@ -180,6 +220,34 @@ export default function DevicesPage() {
           </p>
           <Button type="submit" loading={registering} className="w-full">
             Kích hoạt
+          </Button>
+        </form>
+      </Modal>
+
+      <Modal
+        open={reassignNodeId !== null}
+        onClose={() => {
+          setReassignNodeId(null);
+          setReassignTarget({});
+        }}
+        title="Dời thiết bị sang Zone khác"
+      >
+        <form onSubmit={handleReassign} className="flex flex-col gap-4">
+          <FarmHouseZonePicker
+            value={reassignTarget}
+            onChange={setReassignTarget}
+          />
+          <p className="text-xs text-warmGray">
+            Thiết bị sẽ khởi động lại và kết nối lại theo Zone mới (~5-10
+            giây). Chỉ thực hiện được khi thiết bị đang online.
+          </p>
+          <Button
+            type="submit"
+            loading={reassigning}
+            disabled={!reassignTarget.zoneId}
+            className="w-full"
+          >
+            Xác nhận dời Zone
           </Button>
         </form>
       </Modal>
