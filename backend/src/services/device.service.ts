@@ -1,11 +1,12 @@
 import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
-import { findZoneChainOrThrow } from '@/services/farm.service'
-import { hasFarmAccess } from '@/utils/farmAccess.util'
+import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
-import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { raiseNodeOfflineAlert } from '@/services/alert.service'
+import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
 
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
@@ -13,21 +14,6 @@ type RelayName = typeof RELAY_NAMES[number]
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
-
-/** Ưu tiên hiển thị node có vấn đề lên trước trong màn hình xem nhanh toàn hệ thống (OPS-NFR-004) */
-const STATUS_ORDER: Record<DeviceStatus, number> = { ERROR: 0, OFFLINE: 1, DEGRADED: 2, PENDING: 3, ONLINE: 4 }
-
-export interface SystemNodeStatusItem {
-  _id: string
-  device_id: string
-  type: 'sensor' | 'camera'
-  status: DeviceStatus
-  last_heartbeat?: Date
-  rssi?: number
-  farm_name: string
-  house_name: string
-  zone_name: string
-}
 
 /**
  * FARM-FR-003 — chỉ Technician (hoặc Admin) thực hiện, qua Web Console Onboarding.
