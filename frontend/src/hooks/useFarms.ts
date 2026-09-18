@@ -58,11 +58,34 @@ export function useCreateZone(houseId: string) {
   })
 }
 
+export function useZone(zoneId: string | undefined) {
+  return useQuery({
+    queryKey: ['zone', zoneId],
+    queryFn: () => farmApi.getZone(zoneId!).then(r => r.data.data),
+    enabled: !!zoneId,
+  })
+}
+
 export function useUpdateThresholds(zoneId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (thresholds: Partial<Zone['thresholds']>) => farmApi.updateThresholds(zoneId, thresholds),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['zones'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['zones'] })
+      void queryClient.invalidateQueries({ queryKey: ['zone', zoneId] })
+    },
+  })
+}
+
+/** ENV-FR-020 */
+export function useResetThresholds(zoneId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => farmApi.resetThresholds(zoneId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['zones'] })
+      void queryClient.invalidateQueries({ queryKey: ['zone', zoneId] })
+    },
   })
 }
 

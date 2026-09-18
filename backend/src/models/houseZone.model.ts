@@ -17,6 +17,7 @@ export interface IThresholdHistoryEntry {
   changed_at: Date
   old_values: Partial<Thresholds>
   new_values: Partial<Thresholds>
+  source: 'MANUAL' | 'RESET_TO_DEFAULT'
 }
 
 export interface IZone extends Document {
@@ -57,6 +58,7 @@ const zoneSchema = new Schema<IZone>(
       changed_at: { type: Date },
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
+      source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT'] },
     }],
   },
   { timestamps: { createdAt: 'created_at' } }

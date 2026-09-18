@@ -86,9 +86,21 @@ export const listZones = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: zones })
 })
 
+/** GET /farms/zones/:zoneId – ENV-FR-006, FE lấy thresholds hiện tại trước khi mở form sửa */
+export const getZone = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await farmService.getZone(req.params.zoneId, req.user)
+  res.json({ success: true, data: zone })
+})
+
 /** PUT /farms/zones/:zoneId/thresholds – ENV-FR-006 */
 export const updateThresholds = asyncHandler(async (req: Request, res: Response) => {
   const zone = await farmService.updateZoneThresholds(req.params.zoneId, req.user, req.body)
+  res.json({ success: true, data: zone })
+})
+
+/** PUT /farms/zones/:zoneId/thresholds/reset – ENV-FR-020 */
+export const resetThresholds = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await farmService.resetZoneThresholds(req.params.zoneId, req.user)
   res.json({ success: true, data: zone })
 })
 

@@ -69,7 +69,9 @@ export default function DevicesPage() {
         zone_id: selectedZoneId!,
       });
       await queryClient.invalidateQueries({ queryKey: ["sensor-nodes"] });
-      push(`Đã kích hoạt thiết bị "${deviceId}" — chờ thiết bị kết nối`);
+      push(
+        `Đã kích hoạt thiết bị "${deviceId}" — cấp nguồn & cấu hình WiFi qua AP-mode, hệ thống sẽ tự nhận đúng Zone khi thiết bị online`,
+      );
       setShowRegister(false);
       setDeviceId("");
     } catch (err) {
@@ -216,7 +218,8 @@ export default function DevicesPage() {
           <p className="text-xs text-warmGray">
             Sau khi kích hoạt, thiết bị ở trạng thái “Chờ kết nối” cho tới khi
             gửi heartbeat đầu tiên. Cấp nguồn ESP32 và cấu hình WiFi của farm
-            cho thiết bị để hoàn tất.
+            cho thiết bị qua AP-mode để hoàn tất — hệ thống tự nhận đúng Zone,
+            không cần thao tác gì thêm.
           </p>
           <Button type="submit" loading={registering} className="w-full">
             Kích hoạt

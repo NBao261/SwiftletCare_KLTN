@@ -1,11 +1,12 @@
 import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
-import { findZoneChainOrThrow } from '@/services/farm.service'
-import { hasFarmAccess } from '@/utils/farmAccess.util'
+import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
-import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { raiseNodeOfflineAlert } from '@/services/alert.service'
+import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
 
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
@@ -13,21 +14,6 @@ type RelayName = typeof RELAY_NAMES[number]
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
-
-/** Ưu tiên hiển thị node có vấn đề lên trước trong màn hình xem nhanh toàn hệ thống (OPS-NFR-004) */
-const STATUS_ORDER: Record<DeviceStatus, number> = { ERROR: 0, OFFLINE: 1, DEGRADED: 2, PENDING: 3, ONLINE: 4 }
-
-export interface SystemNodeStatusItem {
-  _id: string
-  device_id: string
-  type: 'sensor' | 'camera'
-  status: DeviceStatus
-  last_heartbeat?: Date
-  rssi?: number
-  farm_name: string
-  house_name: string
-  zone_name: string
-}
 
 /**
  * FARM-FR-003 — chỉ Technician (hoặc Admin) thực hiện, qua Web Console Onboarding.
@@ -181,7 +167,18 @@ export async function listCameraNodes(zoneId: string | undefined, user: CurrentU
 }
 
 /** FARM-FR-005 — gọi từ mqtt/handlers/heartbeat.handler.ts. */
-export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> {
+/**
+ * `topicParts` — ['swiftletcare', farmId, houseId, zoneId, 'heartbeat'] (mqtt.client.ts
+ * đã split() sẵn topic thật của message này, khác payload.deviceId chỉ để tra SensorNode).
+ * FARM-FR-003b (tự chữa): thiết bị mới onboarding vẫn publish theo farmId/houseId/zoneId
+ * MẶC ĐỊNH (Secrets.h/NVS cũ) cho tới khi có ai đẩy identity thật xuống — AP-mode form
+ * không còn làm việc này nữa (đã thử, vướng captive-portal auto-detect của OS làm mất
+ * dữ liệu, xem WiFiProvisioner.cpp). Thay vào đó: so farmId/houseId/zoneId TRÊN TOPIC
+ * heartbeat vừa nhận với chain THẬT của node.zone_id — lệch thì tự đẩy config/reassign
+ * lên đúng topic (cũ) mà heartbeat vừa tới, y hệt cơ chế Flow 21 Nhánh A nhưng do backend
+ * tự kích hoạt thay vì Technician bấm nút.
+ */
+export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: string[]): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong heartbeat payload')
 
   const node = await SensorNode.findOne({ device_id: payload.deviceId })
@@ -200,6 +197,32 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
       status: 'ONLINE',
       timestamp: new Date().toISOString(),
     })
+  }
+
+  if (topicParts && topicParts.length >= 4) {
+    const [, topicFarmId, topicHouseId, topicZoneId] = topicParts
+    try {
+      const chain = await findZoneChainOrThrow(String(node.zone_id))
+      const realFarmId = String(chain.farm._id)
+      const realHouseId = String(chain.house._id)
+      const realZoneId = String(chain.zone._id)
+      if (topicFarmId !== realFarmId || topicHouseId !== realHouseId || topicZoneId !== realZoneId) {
+        logger.info('Heartbeat tới trên topic lệch với Zone thật — tự đẩy config/reassign', {
+          deviceId: payload.deviceId,
+          from: `${topicFarmId}/${topicHouseId}/${topicZoneId}`,
+          to: `${realFarmId}/${realHouseId}/${realZoneId}`,
+        })
+        publishCommand(topicFarmId, topicHouseId, topicZoneId, 'config/reassign', {
+          newFarmId: realFarmId,
+          newHouseId: realHouseId,
+          newZoneId: realZoneId,
+        })
+      }
+    } catch (err) {
+      // Zone của node có thể đã bị xoá/đổi — không chặn xử lý heartbeat bình
+      // thường chỉ vì bước tự chữa topic thất bại.
+      logger.warn('Không tự sửa được topic lệch cho heartbeat', { deviceId: payload.deviceId, err: (err as Error).message })
+    }
   }
 }
 

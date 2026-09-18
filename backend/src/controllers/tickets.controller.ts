@@ -67,16 +67,12 @@ export const rate = asyncHandler(async (req: Request, res: Response) => {
 })
 
 /** GET /tickets/kpi – TICKET-FR-012 */
-export async function kpi(_req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    res.json({ success: true, data: await ticketService.getKpi() })
-  } catch (err) { next(err) }
-}
+export const kpi = asyncHandler(async (_req: Request, res: Response) => {
+  res.json({ success: true, data: await ticketService.getKpi() })
+})
 
 /** PUT /tickets/:id/admin-override – TICKET-FR-005b */
-export async function adminOverride(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const ticket = await ticketService.adminOverrideTicket(req.params.id, req.user, req.body)
-    res.json({ success: true, data: ticket })
-  } catch (err) { next(err) }
-}
+export const adminOverride = asyncHandler(async (req: Request, res: Response) => {
+  const ticket = await ticketService.adminOverrideTicket(req.params.id, req.user, req.body)
+  res.json({ success: true, data: ticket })
+})
