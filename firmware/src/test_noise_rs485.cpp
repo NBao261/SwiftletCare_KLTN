@@ -31,7 +31,7 @@ void loop() {
     if (result == node.ku8MBSuccess) {
       Serial.println("\n🎉🎉🎉 BINGO! TÌM THẤY CẢM BIẾN 🎉🎉🎉");
       Serial.printf("   - Slave ID thực tế: %d\n", id);
-      Serial.printf("   - Baudrate thực tế: 4800\n", id);
+      Serial.printf("   - Baudrate thực tế: 4800\n");
       Serial.printf("   - Giá trị thanh ghi 0x0000: %d\n\n", node.getResponseBuffer(0));
       delay(10000); // Dừng lại 10 giây để bạn đọc
     } else if (result != node.ku8MBResponseTimedOut) {
@@ -39,7 +39,7 @@ void loop() {
       // Điều này cũng chứng tỏ ĐÃ TÌM THẤY đúng ID và Baudrate
       Serial.println("\n⚠️ TÌM THẤY CẢM BIẾN NHƯNG THANH GHI 0x0000 BỊ LỖI!");
       Serial.printf("   - Slave ID thực tế: %d\n", id);
-      Serial.printf("   - Baudrate thực tế: 4800\n", id);
+      Serial.printf("   - Baudrate thực tế: 4800\n");
       Serial.printf("   - Mã lỗi Modbus: 0x%02X\n\n", result);
       delay(10000);
     }
@@ -62,13 +62,13 @@ void loop() {
     if (result == node.ku8MBSuccess) {
       Serial.println("\n🎉🎉🎉 BINGO! TÌM THẤY CẢM BIẾN 🎉🎉🎉");
       Serial.printf("   - Slave ID thực tế: %d\n", id);
-      Serial.printf("   - Baudrate thực tế: 9600\n", id);
+      Serial.printf("   - Baudrate thực tế: 9600\n");
       Serial.printf("   - Giá trị thanh ghi 0x0000: %d\n\n", node.getResponseBuffer(0));
       delay(10000);
     } else if (result != node.ku8MBResponseTimedOut) {
       Serial.println("\n⚠️ TÌM THẤY CẢM BIẾN NHƯNG THANH GHI 0x0000 BỊ LỖI!");
       Serial.printf("   - Slave ID thực tế: %d\n", id);
-      Serial.printf("   - Baudrate thực tế: 9600\n", id);
+      Serial.printf("   - Baudrate thực tế: 9600\n");
       Serial.printf("   - Mã lỗi Modbus: 0x%02X\n\n", result);
       delay(10000);
     }

@@ -1,12 +1,11 @@
 import { Alert, IAlert } from '@/models/alert.model'
-import { Zone } from '@/models/houseZone.model'
+import { Zone, House } from '@/models/houseZone.model'
 import { SensorNode } from '@/models/device.model'
-import { House } from '@/models/houseZone.model'
-import { Farm } from '@/models/farm.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
-import { hasFarmAccess } from '@/utils/farmAccess.util'
+import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError, ForbiddenError, ConflictError } from '@/utils/appError.util'
+import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { AlertType, AlertSeverity, CurrentUser, Thresholds, TelemetryPayload } from '@/types'
 
@@ -137,9 +136,9 @@ const METRIC_LABEL: Record<string, string> = {
 export async function raiseThresholdAlert(zoneId: string, nodeId: string, breaches: ThresholdBreach[]): Promise<void> {
   if (breaches.length === 0) return
 
-  const zone = await Zone.findById(zoneId)
+  const zone = await Zone.findById(zoneId).lean()
   if (!zone) return
-  const house = await House.findById(zone.house_id)
+  const house = await House.findById(zone.house_id).lean()
   if (!house) return
 
   const detail = breaches
@@ -184,11 +183,10 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   if (query.status) filter.status = query.status
   if (query.severity) filter.severity = query.severity
 
-  const page = query.page ?? 1
-  const limit = Math.min(query.limit ?? 20, 100)
+  const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total, unreadCount] = await Promise.all([
-    Alert.find(filter).sort({ created_at: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
     Alert.countDocuments(filter),
     Alert.countDocuments({ ...filter, status: 'ACTIVE' }),
   ])
@@ -219,35 +217,13 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
   return alert
 }
 
-// ── Helper dùng chung ────────────────────────────────────────────────────────
-
-/** Danh sách farm user được phép xem — dùng chung cho alert/ticket listing */
-export async function listAccessibleFarmIds(user: CurrentUser) {
-  if (user.role === 'ADMIN') return (await Farm.find().select('_id').lean()).map(f => f._id)
-  if (user.role === 'TECHNICIAN') {
-    return (await Farm.find({ region: { $in: user.assigned_regions ?? [] } }).select('_id').lean()).map(f => f._id)
-  }
-  return (
-    await Farm.find({ $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] })
-      .select('_id')
-      .lean()
-  ).map(f => f._id)
-}
-
-export async function assertFarmAccess(farmId: string, user: CurrentUser) {
-  const farm = await Farm.findById(farmId)
-  if (!farm) throw NotFoundError('Không tìm thấy farm')
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  return farm
-}
-
 /** Dùng cho job phát hiện thiết bị offline (FARM-FR-005 → THREAT-FR-009) */
 export async function raiseNodeOfflineAlert(nodeId: string): Promise<void> {
-  const node = await SensorNode.findById(nodeId)
+  const node = await SensorNode.findById(nodeId).lean()
   if (!node) return
-  const zone = await Zone.findById(node.zone_id)
+  const zone = await Zone.findById(node.zone_id).lean()
   if (!zone) return
-  const house = await House.findById(zone.house_id)
+  const house = await House.findById(zone.house_id).lean()
   if (!house) return
 
   await createAlert({

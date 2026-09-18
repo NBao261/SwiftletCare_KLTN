@@ -4,10 +4,11 @@ import { NestListing, INestListing } from '@/models/nestListing.model'
 import { ContactInquiry } from '@/models/contactInquiry.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
-import { Zone, House } from '@/models/houseZone.model'
+import { Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
-import { assertFarmAccess, listAccessibleFarmIds } from '@/services/alert.service'
+import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError, ConflictError } from '@/utils/appError.util'
+import { paginate } from '@/utils/helpers.util'
 import type { CurrentUser, NestType, ListingStatus } from '@/types'
 
 /** MARKET-FR-002 — cửa sổ lấy trung bình môi trường trước ngày thu hoạch */
@@ -85,11 +86,7 @@ export interface CreateHarvestInput {
 
 /** MARKET-FR-001..004 — tạo đợt thu hoạch, tự gắn truy xuất nguồn gốc + trace_code */
 export async function createHarvest(user: CurrentUser, input: CreateHarvestInput): Promise<IHarvestBatch> {
-  const zone = await Zone.findById(input.zone_id)
-  if (!zone) throw NotFoundError('Không tìm thấy zone')
-  const house = await House.findById(zone.house_id)
-  if (!house) throw NotFoundError('Không tìm thấy house của zone')
-  await assertFarmAccess(String(house.farm_id), user)
+  const { zone, house } = await assertZoneAccess(input.zone_id, user)
 
   const harvestDate = new Date(input.harvest_date)
   const [envSnapshot, flockSnapshot] = await Promise.all([
@@ -183,6 +180,7 @@ export async function createListing(user: CurrentUser, input: CreateListingInput
   })
 
   batch.status = 'LISTED'
+  batch.listing_id = listing._id
   await batch.save()
   return listing
 }
@@ -206,8 +204,7 @@ export async function updateListing(
 export async function listPublicListings(query: {
   nestType?: string; region?: string; minPrice?: number; maxPrice?: number; page?: number; limit?: number
 }) {
-  const page = query.page ?? 1
-  const limit = Math.min(query.limit ?? 20, 100)
+  const { page, skip, limit } = paginate(query.page, query.limit)
 
   const filter: Record<string, unknown> = { listing_status: 'AVAILABLE' }
   if (query.minPrice !== undefined || query.maxPrice !== undefined) {
@@ -220,19 +217,22 @@ export async function listPublicListings(query: {
     const farmIds = (await Farm.find({ region: query.region }).select('_id').lean()).map(f => f._id)
     filter.farm_id = { $in: farmIds }
   }
+  // nest_type nằm ở HarvestBatch (không denormalize lên NestListing) — resolve
+  // trước thành danh sách batchId rồi lọc bằng Mongo, KHÔNG filter sau khi đã
+  // skip/limit (trước đây làm vậy khiến 1 trang có thể rỗng dù còn kết quả
+  // khớp ở trang sau, và `total` báo sai vì tính trên tập chưa lọc).
+  if (query.nestType) {
+    const batchIds = (await HarvestBatch.find({ nest_type: query.nestType }).select('_id').lean()).map(b => b._id)
+    filter.harvest_batch_id = { $in: batchIds }
+  }
 
   const [records, total] = await Promise.all([
-    NestListing.find(filter).sort({ published_at: -1 }).skip((page - 1) * limit).limit(limit)
+    NestListing.find(filter).sort({ published_at: -1 }).skip(skip).limit(limit)
       .populate('harvest_batch_id', 'nest_type harvest_date weight_grams product_images trace_code').lean(),
     NestListing.countDocuments(filter),
   ])
 
-  // Lọc theo loại yến phải làm sau populate vì nest_type nằm ở HarvestBatch
-  const filtered = query.nestType
-    ? records.filter(r => (r.harvest_batch_id as unknown as { nest_type?: string })?.nest_type === query.nestType)
-    : records
-
-  return { records: filtered, total, page, limit }
+  return { records, total, page, limit }
 }
 
 /** MARKET-FR-009 — Traceability Card (công khai) + đếm lượt xem (MARKET-FR-012) */
@@ -252,7 +252,9 @@ export async function getListingDetail(id: string) {
  * tiết hệ thống, tránh bị dò mã hàng loạt.
  */
 export async function traceByCode(traceCode: string) {
-  const batch = await HarvestBatch.findOne({ trace_code: traceCode }).lean()
+  // `is_deleted: false` phải khai rõ trong filter — hook `pre('find', ...)` ở
+  // harvestBatch.model.ts chỉ chặn method `.find()`, không chặn `.findOne()`.
+  const batch = await HarvestBatch.findOne({ trace_code: traceCode, is_deleted: false }).lean()
   if (!batch) throw NotFoundError('Không tìm thấy lô yến với mã này, vui lòng kiểm tra lại')
 
   const [farm, zone] = await Promise.all([
@@ -288,9 +290,13 @@ export async function getListingStats(listingId: string, user: CurrentUser) {
   const listing = await NestListing.findById(listingId)
   if (!listing) throw NotFoundError('Không tìm thấy tin đăng')
   await assertFarmAccess(String(listing.farm_id), user)
+  // Đếm trực tiếp từ ContactInquiry (nguồn dữ liệu thật, `listInquiries` cũng
+  // dùng chính collection này) thay vì tin field đếm lưu sẵn — tránh lệch nếu
+  // 1 lần tăng counter (`createInquiry`) bị lỗi giữa đường.
+  const inquiryCount = await ContactInquiry.countDocuments({ listing_id: listing._id })
   return {
     view_count: listing.view_count,
-    inquiry_count: listing.inquiry_count,
+    inquiry_count: inquiryCount,
     published_at: listing.published_at,
     listing_status: listing.listing_status,
   }
@@ -303,7 +309,9 @@ export async function getFarmProfile(farmId: string) {
 
   const [listingCount, batchCount] = await Promise.all([
     NestListing.countDocuments({ farm_id: farmId, listing_status: 'AVAILABLE' }),
-    HarvestBatch.countDocuments({ farm_id: farmId }),
+    // `is_deleted: false` phải khai rõ — `.countDocuments()` không chạy qua
+    // hook `pre('find', ...)` của schema (chỉ chặn `.find()`).
+    HarvestBatch.countDocuments({ farm_id: farmId, is_deleted: false }),
   ])
 
   const yearsActive = Math.max(

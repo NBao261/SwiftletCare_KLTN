@@ -12,12 +12,21 @@ export function errorHandler(err: MongoError | AppError, req: Request, res: Resp
 
   // Lỗi nghiệp vụ do service throw (NotFoundError/ForbiddenError/... — utils/appError.util.ts)
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({ success: false, error: { code: err.code, message: err.message } })
+    res.status(err.statusCode).json({
+      success: false,
+      error: { code: err.code, message: err.message, ...(err.details !== undefined && { details: err.details }) },
+    })
     return
   }
 
   if (err.name === 'ValidationError') {
     res.status(422).json({ success: false, error: { code: 'VALIDATION_ERROR', message: err.message } })
+    return
+  }
+  // ObjectId sai định dạng (VD :id không phải hex 24 ký tự) — trước đây rơi
+  // xuống nhánh 500 mặc định, báo sai là lỗi server trong khi đây là lỗi input.
+  if (err.name === 'CastError') {
+    res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'ID không hợp lệ' } })
     return
   }
   if ((err as MongoError).code === 11000) {

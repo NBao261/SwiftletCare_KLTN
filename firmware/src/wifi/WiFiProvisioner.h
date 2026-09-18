@@ -6,13 +6,17 @@
  * rồi nạp lại qua USB — việc này đúng ra không cần Technician (không đụng
  * phần cứng), nên không nên bắt Farm Owner chờ Technician chỉ vì đổi WiFi.
  *
- * Giải pháp: nếu WiFi đã lưu (NVS hoặc mặc định Secrets.h) kết nối thất bại,
- * ESP32 tự phát 1 mạng WiFi tạm ("SwiftletCare-Setup-<deviceId>"). Ai đó (Farm
- * Owner, không cần kỹ thuật) lấy điện thoại kết nối vào, trình duyệt tự mở
- * trang nhập WiFi mới (captive portal) — nhập xong, ESP32 lưu vào NVS và khởi
- * động lại. Không cần Web Dashboard, không cần Technician, không đổi
- * farmId/houseId/zoneId/mqttCredentials (những thứ đó vẫn của Technician lúc
- * lắp máy mới — xem Flow 1, FARM-FR-003b).
+ * Giải pháp: nếu WiFi đã lưu (NVS hoặc mặc định Secrets.h) kết nối thất bại —
+ * HOẶC WiFi vẫn lên nhưng MQTT broker không connect được quá lâu dù đã thử
+ * mDNS tự tìm ("swiftletcare-broker.local", xem
+ * MQTTManager::resolveBrokerViaMdns()/isBrokerUnreachable()) — ESP32 tự phát
+ * 1 mạng WiFi tạm ("SwiftletCare-Setup-<deviceId>"). Ai đó (Farm Owner, không
+ * cần kỹ thuật) lấy điện thoại kết nối vào, trình duyệt tự mở trang nhập lại
+ * WiFi và/hoặc IP MQTT broker (captive portal, chỉ cần dùng khi mDNS không
+ * hoạt động được, VD mạng chặn multicast) — nhập xong, ESP32 lưu vào NVS và
+ * khởi động lại. Không cần Web Dashboard, không cần Technician, không đổi
+ * farmId/houseId/zoneId/mqttUsername/mqttPassword (những thứ đó vẫn của
+ * Technician lúc lắp máy mới — xem Flow 1, FARM-FR-003b).
  */
 #pragma once
 #include <Arduino.h>

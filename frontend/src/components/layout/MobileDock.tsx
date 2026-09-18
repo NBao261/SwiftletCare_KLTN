@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/utils/cn'
-import { DOCK_ITEMS } from './navItems'
+import { getDockItems } from './navItems'
+import { useAuthStore } from '@/store/authStore'
 
 /**
  * Bottom Floating Dock cho mobile/tablet — FE_Design_Swiftlet.md §2.2.9 & §3.A:
@@ -10,13 +11,16 @@ import { DOCK_ITEMS } from './navItems'
  * gần như không dùng được ở 375px (UX-NFR-001 yêu cầu hỗ trợ ≥375px).
  */
 export default function MobileDock() {
+  const role = useAuthStore(s => s.user?.role)
+  const items = getDockItems(role)
+
   return (
     <nav
       aria-label="Điều hướng chính"
       className="fixed inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:hidden"
     >
       <div className="flex items-center gap-1 rounded-full border border-warmGray/15 bg-white p-2 shadow-dock">
-        {DOCK_ITEMS.map(item => (
+        {items.map(item => (
           <NavLink
             key={item.to}
             to={item.to}

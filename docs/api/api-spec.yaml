@@ -3370,6 +3370,10 @@ components:
             properties: { lat: { type: number }, lng: { type: number } },
           }
         owner_id: { type: string, description: Primary Owner }
+        owner:
+          type: object
+          description: "Chỉ có ở GET /farms/:id — tên/email Primary Owner (tra thêm từ users, không đổi owner_id)"
+          properties: { full_name: { type: string }, email: { type: string, format: email } }
         members:
           type: array
           items:
@@ -3378,6 +3382,8 @@ components:
               user_id: { type: string }
               is_primary: { type: boolean }
               joined_at: { type: string, format: date-time }
+              full_name: { type: string, description: "Chỉ có ở GET /farms/:id" }
+              email: { type: string, format: email, description: "Chỉ có ở GET /farms/:id" }
         is_deleted: { type: boolean }
         created_at: { type: string, format: date-time }
 
@@ -3674,6 +3680,7 @@ components:
             avg_return_rate_30d: { type: number, nullable: true }
             estimated_population: { type: integer, nullable: true }
         status: { $ref: "#/components/schemas/HarvestStatus" }
+        listing_id: { type: string, nullable: true, description: "Set khi đã tạo Nest Listing từ batch này (MARKET-FR-006) — dùng để tra GET /marketplace/listings/:id/stats,inquiries" }
         is_deleted: { type: boolean }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }

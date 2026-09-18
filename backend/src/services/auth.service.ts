@@ -11,6 +11,14 @@ const ACCESS_TTL  = process.env.JWT_ACCESS_TTL  ?? '15m'
 const REFRESH_TTL = process.env.JWT_REFRESH_TTL ?? '30d'
 const REFRESH_TTL_MS = 30 * 86400 * 1000
 
+/** Chuẩn hoá email dùng nhất quán ở MỌI nơi tra cứu/lưu — tránh 'User@Test.com'
+ *  và 'user@test.com' bị coi là 2 tài khoản khác nhau. */
+const normalizeEmail = (email: string) => email.toLowerCase().trim()
+
+/** Hash 1 chiều (sha256) cho mã dùng 1 lần — OTP đăng nhập và token reset mật
+ *  khẩu đều dùng chung, để lộ DB đọc cũng không lấy được mã gốc còn hiệu lực. */
+const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
+
 function signAccess(userId: string, role: string): string {
   return jwt.sign({ sub: userId, role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: ACCESS_TTL } as jwt.SignOptions)
 }
@@ -24,7 +32,7 @@ export interface LoginInput { email: string; password: string }
 
 /** AUTH-FR-001 */
 export async function registerUser(input: RegisterInput): Promise<IUser> {
-  const normalizedEmail = input.email.toLowerCase().trim()
+  const normalizedEmail = normalizeEmail(input.email)
   const existing = await User.findOne({ email: normalizedEmail })
   if (existing) throw ConflictError('Email đã được đăng ký')
 
@@ -38,7 +46,10 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
   })
 
   const user = new User({
-    email: input.email,
+    // Lưu dạng đã chuẩn hoá — nếu lưu input.email thô, dup-check ở trên (query
+    // theo normalizedEmail) sẽ không khớp lần đăng ký sau với case khác, tạo
+    // được 2 tài khoản cho cùng 1 email thật.
+    email: normalizedEmail,
     password_hash: input.password, // hash tự động qua pre-save hook (User.ts)
     full_name: input.full_name,
     phone: input.phone,
@@ -69,7 +80,7 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
 
 /** AUTH-FR-002, AUTH-FR-003 */
 export async function loginUser(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-  const user = await User.findOne({ email: input.email })
+  const user = await User.findOne({ email: normalizeEmail(input.email) })
   if (!user || !(await user.comparePassword(input.password))) {
     throw UnauthorizedError('Sai email hoặc mật khẩu')
   }
@@ -113,11 +124,13 @@ export async function logoutUser(userId: string, refreshToken: string | undefine
 
 /** AUTH-FR-001/005 – gửi OTP (không tiết lộ email có tồn tại hay không) */
 export async function sendOtp(email: string): Promise<void> {
-  const user = await User.findOne({ email })
+  const user = await User.findOne({ email: normalizeEmail(email) })
   if (!user) return // im lặng, tránh dò email tồn tại
 
   const otp = crypto.randomInt(100000, 999999).toString()
-  user.otp_code = otp
+  // Hash trước khi lưu — giống token reset mật khẩu, tránh lộ DB đọc là dùng
+  // được OTP còn hiệu lực để đăng nhập (khác trước đây lưu thẳng plaintext).
+  user.otp_code = hashToken(otp)
   user.otp_expires = new Date(Date.now() + 10 * 60 * 1000)
   await user.save()
 
@@ -128,8 +141,8 @@ export async function sendOtp(email: string): Promise<void> {
 
 /** AUTH-FR-001/005 */
 export async function verifyOtp(email: string, otp: string): Promise<{ user: IUser; accessToken: string }> {
-  const user = await User.findOne({ email })
-  if (!user || user.otp_code !== otp || !user.otp_expires || user.otp_expires < new Date()) {
+  const user = await User.findOne({ email: normalizeEmail(email) })
+  if (!user || user.otp_code !== hashToken(otp) || !user.otp_expires || user.otp_expires < new Date()) {
     throw new AppError(400, 'INVALID_OTP', 'OTP không đúng hoặc đã hết hạn')
   }
 
@@ -143,14 +156,12 @@ export async function verifyOtp(email: string, otp: string): Promise<{ user: IUs
 /** AUTH-FR-009 — TTL 15 phút, dùng 1 lần (Flow 11 bước 6) */
 const RESET_TOKEN_TTL_MS = 15 * 60 * 1000
 
-const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
-
 /**
  * AUTH-FR-009 — gửi mã đặt lại mật khẩu. Im lặng khi email không tồn tại để
  * không biến endpoint này thành công cụ dò tài khoản (Flow 11 case 1a).
  */
 export async function forgotPassword(email: string): Promise<void> {
-  const user = await User.findOne({ email })
+  const user = await User.findOne({ email: normalizeEmail(email) })
   if (!user) return
 
   const token = crypto.randomInt(100000, 999999).toString()
@@ -169,7 +180,7 @@ export async function forgotPassword(email: string): Promise<void> {
  * chặn đăng nhập mới (Flow 11 bước 7).
  */
 export async function resetPassword(email: string, token: string, newPassword: string): Promise<void> {
-  const user = await User.findOne({ email })
+  const user = await User.findOne({ email: normalizeEmail(email) })
   if (
     !user ||
     !user.password_reset_token_hash ||

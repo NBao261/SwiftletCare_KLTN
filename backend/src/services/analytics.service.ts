@@ -1,9 +1,8 @@
 import { Types } from 'mongoose'
 import { Telemetry } from '@/models/telemetry.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
-import { Zone, House } from '@/models/houseZone.model'
-import { assertFarmAccess } from '@/services/alert.service'
-import { NotFoundError, BadRequestError } from '@/utils/appError.util'
+import { assertZoneAccess } from '@/utils/farmAccess.util'
+import { BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
 /** ANALYTICS-FR-001 — các khoảng thời gian dashboard hỗ trợ */
@@ -21,15 +20,6 @@ const RANGE_MS: Record<string, number> = {
  * frontend vẽ (vỡ trình duyệt + PERF-NFR-003 P95 ≤ 500ms).
  */
 const MAX_BUCKETS = 120
-
-async function assertZoneAccess(zoneId: string, user: CurrentUser) {
-  const zone = await Zone.findById(zoneId)
-  if (!zone) throw NotFoundError('Không tìm thấy zone')
-  const house = await House.findById(zone.house_id)
-  if (!house) throw NotFoundError('Không tìm thấy house của zone')
-  await assertFarmAccess(String(house.farm_id), user)
-  return zone
-}
 
 function resolveRange(range: string) {
   const ms = RANGE_MS[range]
@@ -90,7 +80,7 @@ export async function compareZones(user: CurrentUser, zoneIds: string[], range: 
 
   const results = await Promise.all(
     zoneIds.map(async zoneId => {
-      const zone = await assertZoneAccess(zoneId, user)
+      const { zone } = await assertZoneAccess(zoneId, user)
       const [agg] = await Telemetry.aggregate([
         { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from, $lte: to } } },
         {

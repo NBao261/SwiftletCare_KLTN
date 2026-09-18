@@ -3,14 +3,17 @@ import { SensorNode } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'
 import { emitTelemetryUpdate } from '@/socket'
 import { findThresholdBreaches, raiseThresholdAlert } from '@/services/alert.service'
+import { assertZoneAccess } from '@/utils/farmAccess.util'
 import { NotFoundError } from '@/utils/appError.util'
+import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
-import type { TelemetryPayload } from '@/types'
+import type { TelemetryPayload, CurrentUser } from '@/types'
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 /** GET /telemetry/zones/:id/latest – ENV-FR-004 */
-export async function getLatest(zoneId: string): Promise<ITelemetry> {
+export async function getLatest(zoneId: string, user: CurrentUser): Promise<ITelemetry> {
+  await assertZoneAccess(zoneId, user)
   const latest = await Telemetry.findOne({ zone_id: zoneId }).sort({ timestamp: -1 }).lean()
   if (!latest) throw NotFoundError('Chưa có dữ liệu cho zone này')
   return latest as unknown as ITelemetry
@@ -20,7 +23,9 @@ export interface HistoryQuery { from?: string; to?: string; page?: number; limit
 export interface HistoryResult { records: ITelemetry[]; total: number; page: number; limit: number }
 
 /** GET /telemetry/zones/:id/history – ANALYTICS-FR-001 */
-export async function getHistory(zoneId: string, query: HistoryQuery): Promise<HistoryResult> {
+export async function getHistory(zoneId: string, user: CurrentUser, query: HistoryQuery): Promise<HistoryResult> {
+  await assertZoneAccess(zoneId, user)
+
   const filter: Record<string, unknown> = { zone_id: zoneId }
   if (query.from || query.to) {
     filter.timestamp = {
@@ -29,11 +34,10 @@ export async function getHistory(zoneId: string, query: HistoryQuery): Promise<H
     }
   }
 
-  const page = query.page ?? 1
-  const limit = Math.min(query.limit ?? 100, 1000)
+  const { page, skip, limit } = paginate(query.page, query.limit, { defaultLimit: 100, maxLimit: 1000 })
 
   const [records, total] = await Promise.all([
-    Telemetry.find(filter).sort({ timestamp: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    Telemetry.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).lean(),
     Telemetry.countDocuments(filter),
   ])
 
@@ -56,7 +60,7 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
   // ENV-FR-004 — đối chiếu ngưỡng của Zone để gắn cờ bất thường + sinh cảnh báo.
   // Zone bị xoá giữa chừng thì vẫn lưu telemetry (không mất dữ liệu), chỉ bỏ
   // qua phần đánh giá ngưỡng.
-  const zone = await Zone.findById(node.zone_id)
+  const zone = await Zone.findById(node.zone_id).lean()
   const breaches = zone ? findThresholdBreaches(payload, zone.thresholds) : []
 
   await Telemetry.create({

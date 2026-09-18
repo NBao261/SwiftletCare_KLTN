@@ -45,6 +45,17 @@ SemaphoreHandle_t dataMutex;
 SensorData latestSensorData;
 RelayState relayState;
 
+// MQTT topic base "swiftletcare/{farmId}/{houseId}/{zoneId}" — tính 1 lần
+// trong setup() (đơn luồng, trước khi tạo task nào), SAU KHI đã nạp
+// farmId/houseId/zoneId từ NVS (nếu có, xem StorageManager::loadIdentity()
+// bên dưới — Flow 21 Nhánh A, FARM-FR-007b). Từ đây tới lần dời Zone tiếp
+// theo (luôn kèm ESP.restart(), xem MQTTManager::onConfigReassign()),
+// Config::farmId/houseId/zoneId không đổi lúc runtime; sau setup() biến này
+// chỉ ĐỌC (không ghi lại) nên mqttTask (Core 0) và pidTask (Core 1, qua
+// publishAlert) đọc an toàn không cần mutex. Xem giải thích đầy đủ ở
+// MQTTManager.cpp topicBase().
+String mqttTopicBase;
+
 // ── Boot reason tracking (THREAT-FR-012) ─────────────────────────────────────
 static bool wasUnexpectedReset = false;
 
@@ -83,6 +94,21 @@ void setup() {
   // ── Initialize storage (NVS + SPIFFS) ────────────────────────────────────
   StorageManager::begin();
   Config::load();
+
+  // ── Nạp định danh Farm/House/Zone đã dời (nếu có) — Flow 21 Nhánh A ──────
+  // FARM-FR-007b: chưa từng dời Zone → giữ mặc định Secrets.h (đã gán trong
+  // Config.cpp). PHẢI chạy trước khi mqttTopicBase được tính bên dưới.
+  {
+    String savedFarmId, savedHouseId, savedZoneId;
+    if (StorageManager::loadIdentity(savedFarmId, savedHouseId, savedZoneId)) {
+      Config::farmId = savedFarmId;
+      Config::houseId = savedHouseId;
+      Config::zoneId = savedZoneId;
+      Serial.println("[Config] Đã nạp định danh Farm/House/Zone từ NVS (đã "
+                     "dời qua config/reassign): " +
+                     savedFarmId + "/" + savedHouseId + "/" + savedZoneId);
+    }
+  }
 
   // ── Connect WiFi (tự bật AP-mode để cấu hình lại nếu không kết nối được) ──
   // FARM-FR-003b: đổi WiFi trên thiết bị đã lắp không cần Technician/USB —
@@ -123,6 +149,10 @@ void setup() {
   // ── Create mutex ─────────────────────────────────────────────────────────
   dataMutex = xSemaphoreCreateMutex();
 
+  // ── MQTT topic base (đơn luồng, phải chạy trước khi tạo mqttTask/pidTask) ──
+  mqttTopicBase = String("swiftletcare/") + Config::farmId + "/" +
+                 Config::houseId + "/" + Config::zoneId;
+
   // ── Create FreeRTOS Tasks ────────────────────────────────────────────────
   xTaskCreatePinnedToCore(sensorTask, "SensorTask", 4096, NULL, 2,
                           &sensorTaskHandle, 1);
@@ -141,6 +171,14 @@ void loop() {
     // portal thay vì phải tự mở http://192.168.4.1
     WiFiProvisioner::handleDnsLoop();
     vTaskDelay(pdMS_TO_TICKS(50));
+  } else if (MQTTManager::isBrokerUnreachable()) {
+    // WiFi vẫn ổn nhưng MQTT không connect được suốt — nhiều khả năng IP LAN
+    // broker cũ sai (đổi mạng WiFi khác). Bật lại đúng captive portal (đặt ở
+    // đây, không gọi trực tiếp từ mqttTask, để tránh đổi WiFi.mode()/khởi
+    // động AsyncWebServer từ 1 FreeRTOS task khác core).
+    Serial.println("[MQTT] Broker không phản hồi sau nhiều lần thử — bật "
+                   "AP-mode để nhập lại địa chỉ broker");
+    WiFiProvisioner::startCaptivePortal(otaServer);
   } else {
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
@@ -188,28 +226,44 @@ void pidTask(void *pvParameters) {
       xSemaphoreGive(dataMutex);
     }
 
-    // Speaker schedule (ENV-FR-013b) – bật/tắt Relay IN2 + DFPlayer theo lịch,
-    // trừ khi đang Manual Override
-    if (!relayState.speakerOverride) {
-      bool shouldPlay = AudioManager::updateSchedule();
-      relayState.speaker = shouldPlay;
-      relayState.applyRelay(PIN_RELAY_SPEAKER, shouldPlay);
+    // relayState bị đọc/ghi đồng thời bởi mqttTask (onRelayCommand, publish
+    // telemetry/relay-status) — khoá dataMutex quanh TOÀN BỘ đoạn động tới
+    // relayState (kể cả nhánh loa lịch ngoài if (data.isValid)). KHÔNG giữ
+    // khoá qua các publishAlert() bên dưới: publishAlert() làm I/O mạng
+    // (mqtt.publish(), có thể block vài giây) và không đụng relayState/
+    // latestSensorData nữa (threats đã là bản copy cục bộ) — giữ khoá qua đó
+    // sẽ làm sensorTask/mqttTask bị treo chờ dataMutex không cần thiết.
+    PIDController::ThreatFlags threats;
+    bool haveThreats = false;
+
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      // Speaker schedule (ENV-FR-013b) – bật/tắt Relay IN2 + DFPlayer theo
+      // lịch, trừ khi đang Manual Override
+      if (!relayState.speakerOverride) {
+        bool shouldPlay = AudioManager::updateSchedule();
+        relayState.speaker = shouldPlay;
+        relayState.applyRelay(PIN_RELAY_SPEAKER, shouldPlay);
+      }
+
+      if (data.isValid) {
+        // Check manual override expiry (ENV-FR-018)
+        PIDController::checkOverrideExpiry(relayState);
+
+        // Run closed-loop control (ENV-FR-010..012)
+        PIDController::runHumidityControl(data.humidity, relayState);
+        PIDController::runVentilationControl(data, relayState);
+        PIDController::runHeatingControl(data.temperature, relayState);
+
+        // Threat detection (THREAT-FR-006, 011, 013)
+        threats = PIDController::handleThreatAlerts(
+            data, relayState, AudioManager::isPlaying());
+        haveThreats = true;
+      }
+
+      xSemaphoreGive(dataMutex);
     }
 
-    if (data.isValid) {
-      // Check manual override expiry (ENV-FR-018)
-      PIDController::checkOverrideExpiry(relayState);
-
-      // Run closed-loop control (ENV-FR-010..012)
-      PIDController::runHumidityControl(data.humidity, relayState);
-      PIDController::runVentilationControl(data.temperature, data.nh3Ppm,
-                                           data.co2Ppm, relayState);
-      PIDController::runHeatingControl(data.temperature, relayState);
-
-      // Threat detection (THREAT-FR-006, 011, 013)
-      PIDController::ThreatFlags threats = PIDController::handleThreatAlerts(
-          data, relayState, AudioManager::isPlaying());
-
+    if (haveThreats) {
       if (threats.speakerFailure)
         MQTTManager::publishAlert(
             "SPEAKER_FAILURE", "CRITICAL",
@@ -256,12 +310,14 @@ void mqttTask(void *pvParameters) {
 
     // Publish telemetry (ENV-FR-001)
     SensorData data;
+    RelayState relaySnapshot;
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       data = latestSensorData;
+      relaySnapshot = relayState;
       xSemaphoreGive(dataMutex);
     }
-    MQTTManager::publishTelemetry(data, relayState);
-    MQTTManager::publishRelayState(relayState);
+    MQTTManager::publishTelemetry(data, relaySnapshot);
+    MQTTManager::publishRelayState(relaySnapshot);
 
     // Threat alerts (SPEAKER_FAILURE/PUMP_DRY/SENSOR_FAULT/RS485_BUS_FAILURE)
     // are published directly from pidTask (THREAT-FR-006/011/013) where the
@@ -269,7 +325,9 @@ void mqttTask(void *pvParameters) {
 
     // Flush offline buffer when connected (REL-NFR-003)
     if (MQTTManager::isConnected()) {
-      StorageManager::flushBuffer();
+      StorageManager::flushBuffer([](const String &jsonLine) {
+        return MQTTManager::publishRawTelemetryLine(jsonLine);
+      });
     }
 
     // Dùng chung Config::sensorIntervalMs với sensorTask — tránh 2 con số lệch
