@@ -15,7 +15,8 @@ void loadConfig();
 // NVS – WiFi credentials nhập qua captive portal (WiFiProvisioner). Tách khỏi
 // saveConfig()/loadConfig() vì vòng đời khác hẳn: chỉ ghi khi người dùng chủ
 // động đổi WiFi, không phải mỗi lần đổi ngưỡng cảm biến.
-bool loadWifiCredentials(String &ssid, String &password); // false nếu chưa từng lưu
+bool loadWifiCredentials(String &ssid,
+                         String &password); // false nếu chưa từng lưu
 void saveWifiCredentials(const String &ssid, const String &password);
 
 // NVS – IP MQTT broker nhập qua captive portal (cùng form với WiFi, xem
@@ -23,6 +24,15 @@ void saveWifiCredentials(const String &ssid, const String &password);
 // nhưng IP broker sai/đổi mạng khác).
 bool loadMqttBroker(String &broker); // false nếu chưa từng lưu
 void saveMqttBroker(const String &broker);
+
+// NVS – định danh Farm/House/Zone nhận qua lệnh MQTT config/reassign (Flow 21
+// Nhánh A, FARM-FR-007b) — tách riêng vì chỉ ghi khi Technician dời thiết bị
+// sang Zone khác, không phải lúc khởi động bình thường. Chưa từng dời →
+// dùng mặc định Secrets.h (SECRET_FARM_ID/HOUSE_ID/ZONE_ID).
+bool loadIdentity(String &farmId, String &houseId,
+                  String &zoneId); // false nếu chưa từng lưu
+void saveIdentity(const String &farmId, const String &houseId,
+                  const String &zoneId);
 
 // SPIFFS – offline telemetry buffer
 void bufferTelemetry(const SensorData &data);

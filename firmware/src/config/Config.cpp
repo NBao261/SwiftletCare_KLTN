@@ -19,10 +19,14 @@ String mqttBroker = SECRET_MQTT_BROKER;
 const char *mqttUsername = SECRET_MQTT_USERNAME;
 const char *mqttPassword = SECRET_MQTT_PASSWORD;
 
-// Device identity
-const char *farmId = SECRET_FARM_ID;
-const char *houseId = SECRET_HOUSE_ID;
-const char *zoneId = SECRET_ZONE_ID;
+// Device identity — farmId/houseId/zoneId mặc định từ Secrets.h, có thể bị
+// ghi đè bằng giá trị mới nhận qua lệnh MQTT config/reassign (Flow 21 Nhánh A,
+// FARM-FR-007b) và lưu vào NVS — xem main.cpp setup() (StorageManager::loadIdentity())
+// và MQTTManager::onConfigReassign(). deviceId KHÔNG đổi lúc runtime (định danh
+// vật lý cố định của thiết bị, không thuộc phạm vi dời Zone).
+String farmId = SECRET_FARM_ID;
+String houseId = SECRET_HOUSE_ID;
+String zoneId = SECRET_ZONE_ID;
 const char *deviceId = SECRET_DEVICE_ID;
 
 // Runtime thresholds (loaded from NVS, fallback to defaults). volatile:

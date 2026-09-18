@@ -46,10 +46,14 @@ SensorData latestSensorData;
 RelayState relayState;
 
 // MQTT topic base "swiftletcare/{farmId}/{houseId}/{zoneId}" — tính 1 lần
-// trong setup() (đơn luồng, trước khi tạo task nào) vì Config::farmId/
-// houseId/zoneId không đổi lúc runtime; sau setup() biến này chỉ ĐỌC (không
-// ghi lại) nên mqttTask (Core 0) và pidTask (Core 1, qua publishAlert) đọc
-// an toàn không cần mutex. Xem giải thích đầy đủ ở MQTTManager.cpp topicBase().
+// trong setup() (đơn luồng, trước khi tạo task nào), SAU KHI đã nạp
+// farmId/houseId/zoneId từ NVS (nếu có, xem StorageManager::loadIdentity()
+// bên dưới — Flow 21 Nhánh A, FARM-FR-007b). Từ đây tới lần dời Zone tiếp
+// theo (luôn kèm ESP.restart(), xem MQTTManager::onConfigReassign()),
+// Config::farmId/houseId/zoneId không đổi lúc runtime; sau setup() biến này
+// chỉ ĐỌC (không ghi lại) nên mqttTask (Core 0) và pidTask (Core 1, qua
+// publishAlert) đọc an toàn không cần mutex. Xem giải thích đầy đủ ở
+// MQTTManager.cpp topicBase().
 String mqttTopicBase;
 
 // ── Boot reason tracking (THREAT-FR-012) ─────────────────────────────────────
@@ -90,6 +94,21 @@ void setup() {
   // ── Initialize storage (NVS + SPIFFS) ────────────────────────────────────
   StorageManager::begin();
   Config::load();
+
+  // ── Nạp định danh Farm/House/Zone đã dời (nếu có) — Flow 21 Nhánh A ──────
+  // FARM-FR-007b: chưa từng dời Zone → giữ mặc định Secrets.h (đã gán trong
+  // Config.cpp). PHẢI chạy trước khi mqttTopicBase được tính bên dưới.
+  {
+    String savedFarmId, savedHouseId, savedZoneId;
+    if (StorageManager::loadIdentity(savedFarmId, savedHouseId, savedZoneId)) {
+      Config::farmId = savedFarmId;
+      Config::houseId = savedHouseId;
+      Config::zoneId = savedZoneId;
+      Serial.println("[Config] Đã nạp định danh Farm/House/Zone từ NVS (đã "
+                     "dời qua config/reassign): " +
+                     savedFarmId + "/" + savedHouseId + "/" + savedZoneId);
+    }
+  }
 
   // ── Connect WiFi (tự bật AP-mode để cấu hình lại nếu không kết nối được) ──
   // FARM-FR-003b: đổi WiFi trên thiết bị đã lắp không cần Technician/USB —

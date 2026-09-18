@@ -126,6 +126,42 @@ export async function controlRelay(
   return node
 }
 
+/**
+ * FARM-FR-007b, Flow 21 Nhánh A — Technician dời thiết bị sang Zone/Farm khác
+ * trong khi thiết bị còn ONLINE. Publish MQTT config/reassign lên topic CŨ
+ * (farm/house/zone hiện tại), ESP32 tự lưu định danh mới vào NVS + restart +
+ * kết nối lại theo topic mới. Nhánh B (thiết bị OFFLINE, AP-mode + secretKey)
+ * chưa được implement — chỉ hỗ trợ dời khi ONLINE.
+ */
+export async function reassignZone(
+  nodeId: string,
+  user: CurrentUser,
+  input: { newZoneId: string },
+): Promise<ISensorNode> {
+  const node = await SensorNode.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+
+  if (node.status !== 'ONLINE') {
+    throw ConflictError('Thiết bị đang OFFLINE — chỉ dời Zone được khi thiết bị ONLINE (nhánh AP-mode chưa được hỗ trợ)')
+  }
+
+  // Check quyền trên CẢ Farm nguồn lẫn Farm đích (SRS Flow 21 bước 4a).
+  const sourceChain = await assertZoneAccess(String(node.zone_id), user)
+  const destChain = await assertZoneAccess(input.newZoneId, user)
+
+  // Publish lên topic CŨ — thiết bị vẫn đang lắng nghe ở đó cho tới khi restart.
+  publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'config/reassign', {
+    newFarmId: String(destChain.farm._id),
+    newHouseId: String(destChain.house._id),
+    newZoneId: String(destChain.zone._id),
+  })
+
+  // Cập nhật lạc quan — giống pattern controlRelay/updateNodeThresholds ở trên.
+  node.zone_id = destChain.zone._id
+  await node.save()
+  return node
+}
+
 /** FARM-FR-004 — chỉ Technician/Admin, cùng Web Console Onboarding với sensor node (Flow 1b) */
 export async function registerCameraNode(user: CurrentUser, input: { device_id: string; zone_id: string; rtsp_url?: string }) {
   await assertZoneAccess(input.zone_id, user)

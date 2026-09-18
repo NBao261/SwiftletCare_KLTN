@@ -64,10 +64,14 @@ void loadConfig() {
   Config::sensorIntervalMs = prefs.getInt("sensorMs", SENSOR_INTERVAL_MS);
   Config::pidIntervalMs = prefs.getInt("pidMs", PID_INTERVAL_MS);
   Config::speakerScheduleEnabled = prefs.getBool("spkEn", true);
-  Config::speakerWindow1StartHour = prefs.getInt("spkW1Start", SPEAKER_WINDOW_1_START_HOUR);
-  Config::speakerWindow1EndHour = prefs.getInt("spkW1End", SPEAKER_WINDOW_1_END_HOUR);
-  Config::speakerWindow2StartHour = prefs.getInt("spkW2Start", SPEAKER_WINDOW_2_START_HOUR);
-  Config::speakerWindow2EndHour = prefs.getInt("spkW2End", SPEAKER_WINDOW_2_END_HOUR);
+  Config::speakerWindow1StartHour =
+      prefs.getInt("spkW1Start", SPEAKER_WINDOW_1_START_HOUR);
+  Config::speakerWindow1EndHour =
+      prefs.getInt("spkW1End", SPEAKER_WINDOW_1_END_HOUR);
+  Config::speakerWindow2StartHour =
+      prefs.getInt("spkW2Start", SPEAKER_WINDOW_2_START_HOUR);
+  Config::speakerWindow2EndHour =
+      prefs.getInt("spkW2End", SPEAKER_WINDOW_2_END_HOUR);
   Config::speakerVolume = prefs.getInt("spkVol", DFPLAYER_DEFAULT_VOLUME);
   Config::speakerTrack = prefs.getInt("spkTrack", DFPLAYER_DEFAULT_TRACK);
   Serial.println("[Storage] Config loaded from NVS");
@@ -75,7 +79,8 @@ void loadConfig() {
 
 bool loadWifiCredentials(String &ssid, String &password) {
   if (!prefs.isKey("wifiSsid"))
-    return false; // chưa từng cấu hình qua captive portal — dùng mặc định Secrets.h
+    return false; // chưa từng cấu hình qua captive portal — dùng mặc định
+                  // Secrets.h
   ssid = prefs.getString("wifiSsid", "");
   password = prefs.getString("wifiPass", "");
   return ssid.length() > 0;
@@ -89,7 +94,8 @@ void saveWifiCredentials(const String &ssid, const String &password) {
 
 bool loadMqttBroker(String &broker) {
   if (!prefs.isKey("mqttBroker"))
-    return false; // chưa từng cấu hình qua captive portal — dùng mặc định Secrets.h
+    return false; // chưa từng cấu hình qua captive portal — dùng mặc định
+                  // Secrets.h
   broker = prefs.getString("mqttBroker", "");
   return broker.length() > 0;
 }
@@ -99,8 +105,27 @@ void saveMqttBroker(const String &broker) {
   Serial.println("[Storage] Đã lưu MQTT broker mới vào NVS: " + broker);
 }
 
+bool loadIdentity(String &farmId, String &houseId, String &zoneId) {
+  if (!prefs.isKey("idFarmId"))
+    return false; // chưa từng dời Zone — dùng mặc định Secrets.h
+  farmId = prefs.getString("idFarmId", "");
+  houseId = prefs.getString("idHouseId", "");
+  zoneId = prefs.getString("idZoneId", "");
+  return farmId.length() > 0 && houseId.length() > 0 && zoneId.length() > 0;
+}
+
+void saveIdentity(const String &farmId, const String &houseId,
+                  const String &zoneId) {
+  prefs.putString("idFarmId", farmId);
+  prefs.putString("idHouseId", houseId);
+  prefs.putString("idZoneId", zoneId);
+  Serial.println("[Storage] Đã lưu định danh Farm/House/Zone mới vào NVS: " +
+                 farmId + "/" + houseId + "/" + zoneId);
+}
+
 void bufferTelemetry(const SensorData &data) {
-  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE) return;
+  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
+    return;
   File f = SPIFFS.open(BUFFER_FILE, FILE_APPEND);
   if (!f) {
     Serial.println("[Storage] Cannot open buffer file");
@@ -119,7 +144,8 @@ void bufferTelemetry(const SensorData &data) {
 static void clearBufferInternal() { SPIFFS.remove(BUFFER_FILE); }
 
 void flushBuffer(PublishLineFn publishLine) {
-  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE) return;
+  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
+    return;
 
   if (!SPIFFS.exists(BUFFER_FILE)) {
     xSemaphoreGive(bufferMutex);
@@ -128,7 +154,8 @@ void flushBuffer(PublishLineFn publishLine) {
 
   File f = SPIFFS.open(BUFFER_FILE, FILE_READ);
   if (!f || f.size() == 0) {
-    if (f) f.close();
+    if (f)
+      f.close();
     xSemaphoreGive(bufferMutex);
     return;
   }
@@ -140,7 +167,8 @@ void flushBuffer(PublishLineFn publishLine) {
   while (f.available()) {
     String line = f.readStringUntil('\n');
     line.trim();
-    if (line.length() == 0) continue;
+    if (line.length() == 0)
+      continue;
     if (!publishLine(line)) {
       allOk = false;
       break;
@@ -159,7 +187,8 @@ void flushBuffer(PublishLineFn publishLine) {
 }
 
 int getBufferCount() {
-  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE) return 0;
+  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
+    return 0;
   if (!SPIFFS.exists(BUFFER_FILE)) {
     xSemaphoreGive(bufferMutex);
     return 0;
@@ -180,7 +209,8 @@ int getBufferCount() {
 }
 
 void clearBuffer() {
-  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE) return;
+  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
+    return;
   clearBufferInternal();
   xSemaphoreGive(bufferMutex);
 }

@@ -75,7 +75,7 @@
 // kỳ đọc là 1s nên 30 mẫu chỉ ≈ 30s, làm cửa sổ baseline ngắn hơn dự định 10
 // lần). RAM: 300 float = 1200 byte, không đáng kể trên ESP32 320KB.
 #define AUDIO_BASELINE_WINDOW_SAMPLES 300
-#define AUDIO_DROP_THRESHOLD 0.70f       // 70% drop = SPEAKER_FAILURE
+#define AUDIO_DROP_THRESHOLD 0.70f // 70% drop = SPEAKER_FAILURE
 
 // ── MQTT Broker (§9.2) ───────────────────────────────────────────────────────
 // Dev: cổng 1883 non-TLS — khớp cách backend đang kết nối EMQX (xem
@@ -91,7 +91,8 @@
 // được implement trong MQTTManager.cpp, để tránh cảm giác an toàn giả ("đây
 // là bản production") trong khi thực chất vẫn gửi MQTT cleartext qua 1883.
 #ifdef SWIFTLETCARE_PRODUCTION_BUILD
-#error "SWIFTLETCARE_PRODUCTION_BUILD requires MQTT_PORT=8883 + TLS (WiFiClientSecure + CA cert) -- not implemented in MQTTManager.cpp yet. Remove this flag (stay on dev port 1883), or add real TLS infrastructure first."
+#error                                                                         \
+    "SWIFTLETCARE_PRODUCTION_BUILD requires MQTT_PORT=8883 + TLS (WiFiClientSecure + CA cert) -- not implemented in MQTTManager.cpp yet. Remove this flag (stay on dev port 1883), or add real TLS infrastructure first."
 #endif
 
 // Chỉ còn MQTT_QOS_COMMAND: đây là QoS DUY NHẤT thực sự dùng được, vì
@@ -102,21 +103,27 @@
 #define MQTT_QOS_COMMAND 1
 
 namespace Config {
-// wifiSsid/wifiPassword/mqttBroker là String (không phải const char*) vì cả 3
-// có thể bị ghi đè lúc runtime bằng giá trị mới nhập qua captive portal
-// (WiFiProvisioner đọc lại wifiSsid/Password từ NVS lúc tryConnect();
-// MQTTManager::begin() đọc lại mqttBroker từ NVS) — khác với mqttUsername/
-// mqttPassword/farmId/houseId/zoneId/deviceId vẫn cố định theo Secrets.h
-// (những giá trị đó vẫn thuộc phạm vi Technician lúc lắp máy, không đổi qua
-// portal — xem FARM-FR-003b).
+// wifiSsid/wifiPassword/mqttBroker/farmId/houseId/zoneId là String (không phải
+// const char*) vì đều có thể bị ghi đè lúc runtime bằng giá trị mới:
+// wifiSsid/wifiPassword qua captive portal (WiFiProvisioner đọc lại từ NVS lúc
+// tryConnect()); mqttBroker qua captive portal (MQTTManager::begin() đọc lại
+// từ NVS); farmId/houseId/zoneId qua lệnh MQTT config/reassign (Flow 21 Nhánh
+// A, FARM-FR-007b — xem MQTTManager::onConfigReassign() + main.cpp setup()
+// StorageManager::loadIdentity()). Việc ghi đè farmId/houseId/zoneId CHỈ xảy
+// ra trong setup() trước khi mqttTask/pidTask được tạo (bằng ESP.restart() sau
+// khi lưu NVS — không hot-swap lúc task đang chạy), nên KHÔNG vi phạm giả định
+// "đọc xuyên core không cần mutex" của mqttTopicBase (xem MQTTManager.cpp).
+// mqttUsername/mqttPassword/deviceId vẫn cố định theo Secrets.h — hệ thống MQTT
+// credential riêng theo thiết bị chưa được implement (ngoài phạm vi Flow 21
+// Nhánh A hiện tại).
 extern String wifiSsid;
 extern String wifiPassword;
 extern String mqttBroker;
 extern const char *mqttUsername;
 extern const char *mqttPassword;
-extern const char *farmId;
-extern const char *houseId;
-extern const char *zoneId;
+extern String farmId;
+extern String houseId;
+extern String zoneId;
 extern const char *deviceId;
 
 // Runtime config (loaded from NVS). volatile: các field dưới đây được GHI

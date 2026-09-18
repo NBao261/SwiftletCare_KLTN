@@ -79,7 +79,10 @@ extern SemaphoreHandle_t dataMutex;
 // (đơn luồng, trước khi tạo task nào) vào biến toàn cục mqttTopicBase — vì
 // hàm này được gọi từ CẢ mqttTask (Core 0) LẪN pidTask (Core 1, qua
 // publishAlert()), và Config::farmId/houseId/zoneId không đổi lúc runtime
-// (const char* trỏ Secrets.h, không như wifiSsid/mqttBroker). KHÔNG dùng
+// SAU setup() (nay là String, có thể được nạp từ NVS TRONG setup() — xem
+// main.cpp — nhưng lần đổi tiếp theo, nếu có, chỉ tới qua onConfigReassign()
+// bên dưới, luôn kết thúc bằng ESP.restart() nên không có ai đổi giá trị này
+// trong lúc task đang chạy). KHÔNG dùng
 // biến static cục bộ tính lười ("magic static") trong hàm này dù C++11 có
 // guard thread-safe cho kiểu đó — lý do là lần gọi ĐẦU TIÊN của hàm này chỉ
 // xảy ra sau khi mqtt.connected() lần đầu trả true (mọi hàm publish* đều
@@ -102,6 +105,8 @@ static void mqttCallback(char *topic, byte *payload, unsigned int length) {
     MQTTManager::onRelayCommand(msg.c_str());
   } else if (t.endsWith("/config/update")) {
     MQTTManager::onConfigUpdate(msg.c_str());
+  } else if (t.endsWith("/config/reassign")) {
+    MQTTManager::onConfigReassign(msg.c_str());
   }
 }
 
@@ -151,6 +156,7 @@ void loop() {
       mqttFailCount = 0;
       mqtt.subscribe((topicBase() + "/relay/command").c_str(), MQTT_QOS_COMMAND);
       mqtt.subscribe((topicBase() + "/config/update").c_str(), MQTT_QOS_COMMAND);
+      mqtt.subscribe((topicBase() + "/config/reassign").c_str(), MQTT_QOS_COMMAND);
     } else {
       mqttFailCount++;
       Serial.println("[MQTT] Connection failed, rc=" + String(mqtt.state()));
@@ -270,5 +276,38 @@ void onRelayCommand(const char *payload) {
 void onConfigUpdate(const char *payload) {
   Serial.println("[MQTT] Config update: " + String(payload));
   Config::update(payload);
+}
+
+// Flow 21 Nhánh A (FARM-FR-007b): Technician dời thiết bị sang Zone/Farm khác
+// trong khi thiết bị còn ONLINE. Backend publish lệnh này lên topic CŨ (dựa
+// trên farmId/houseId/zoneId hiện tại của thiết bị). Lưu định danh mới vào
+// NVS rồi restart — mqttTopicBase chỉ được tính lại 1 lần trong setup() (xem
+// main.cpp + giải thích ở topicBase() phía trên), không hot-swap khi task
+// đang chạy, để không phá vỡ giả định "đọc xuyên core không cần mutex".
+// newMqttUsername/newMqttPassword (nếu có trong payload) bị BỎ QUA có chủ ý —
+// hệ thống MQTT credential riêng theo thiết bị chưa được implement (ngoài
+// phạm vi Flow 21 Nhánh A hiện tại).
+void onConfigReassign(const char *payload) {
+  Serial.println("[MQTT] Config reassign: " + String(payload));
+
+  JsonDocument doc;
+  if (deserializeJson(doc, payload)) {
+    Serial.println("[MQTT] Config reassign: invalid JSON");
+    return;
+  }
+
+  const char *newFarmId = doc["newFarmId"] | "";
+  const char *newHouseId = doc["newHouseId"] | "";
+  const char *newZoneId = doc["newZoneId"] | "";
+
+  if (strlen(newFarmId) == 0 || strlen(newHouseId) == 0 || strlen(newZoneId) == 0) {
+    Serial.println("[MQTT] Config reassign: thiếu newFarmId/newHouseId/newZoneId");
+    return;
+  }
+
+  StorageManager::saveIdentity(newFarmId, newHouseId, newZoneId);
+  Serial.println("[MQTT] Đã lưu định danh mới — khởi động lại để áp dụng...");
+  delay(1500); // để log/response kịp flush trước khi restart
+  ESP.restart();
 }
 } // namespace MQTTManager
