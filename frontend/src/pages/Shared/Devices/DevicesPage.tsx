@@ -13,6 +13,7 @@ import EmptyState from "@/components/common/EmptyState";
 import FarmHouseZonePicker, {
   FarmHouseZonePickerValue,
 } from "@/components/common/FarmHouseZonePicker";
+import ThresholdsModal from "@/components/common/ThresholdsModal";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import { useToastStore } from "@/store/toastStore";
 import { getApiErrorMessage } from "@/utils/helpers";
@@ -30,6 +31,10 @@ export default function DevicesPage() {
   // Đăng ký/kích hoạt thiết bị là việc của Technician (SRS §4.1, FARM-FR-003) —
   // Farm Owner chỉ xem và điều khiển relay, muốn lắp thêm thì tạo ticket lắp đặt.
   const canOnboard = usePermission("TECHNICIAN", "ADMIN");
+  // Chỉnh ngưỡng tự động (ENV-FR-006) chỉ thuộc Farm Owner theo RACI — đặt
+  // ngay trong trang Thiết bị & Cảm biến cho tiện (trước ở trang Trang trại,
+  // ẩn sâu trong House→Zone, khó thấy).
+  const isFarmOwner = usePermission("FARM_OWNER");
   const { data: nodes, isLoading } = useSensorNodes(
     selectedZoneId ?? undefined,
   );
@@ -39,6 +44,7 @@ export default function DevicesPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [deviceId, setDeviceId] = useState("");
   const [registering, setRegistering] = useState(false);
+  const [showThresholds, setShowThresholds] = useState(false);
 
   const [reassignNodeId, setReassignNodeId] = useState<string | null>(null);
   const [reassignTarget, setReassignTarget] = useState<
@@ -109,11 +115,21 @@ export default function DevicesPage() {
             {selectedZoneName}
           </p>
         </div>
-        {canOnboard && (
-          <Button onClick={() => setShowRegister(true)}>
-            + Kích hoạt thiết bị
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isFarmOwner && (
+            <Button
+              variant="secondary"
+              onClick={() => setShowThresholds(true)}
+            >
+              Ngưỡng cảm biến
+            </Button>
+          )}
+          {canOnboard && (
+            <Button onClick={() => setShowRegister(true)}>
+              + Kích hoạt thiết bị
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading && <LoadingSkeleton count={2} className="h-40 w-full" />}
@@ -254,6 +270,14 @@ export default function DevicesPage() {
           </Button>
         </form>
       </Modal>
+
+      {showThresholds && (
+        <ThresholdsModal
+          zoneId={selectedZoneId}
+          zoneName={selectedZoneName ?? ""}
+          onClose={() => setShowThresholds(false)}
+        />
+      )}
     </div>
   );
 }
