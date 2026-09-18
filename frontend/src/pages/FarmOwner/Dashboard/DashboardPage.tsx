@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useZoneStore } from "@/store/zoneStore";
 import { useTelemetry } from "@/hooks/useTelemetry";
+import { useZone } from "@/hooks/useFarms";
 import { Badge, Button } from "@/components/ui";
 import SensorCard from "@/components/common/SensorCard";
 import EmptyState from "@/components/common/EmptyState";
@@ -12,11 +13,16 @@ import {
   IconSound,
 } from "@/components/ui/icons";
 
-const T = {
+// Chỉ dùng khi useZone() chưa tải xong (F5 lần đầu) — khớp default trong
+// backend/src/models/houseZone.model.ts, KHÔNG phải nguồn thật. Ngưỡng thật
+// lấy từ zone.thresholds bên dưới, phản ánh đúng giá trị Farm Owner đã chỉnh
+// qua trang Trang trại → Ngưỡng (ENV-FR-006), kể cả sau khi reset (ENV-FR-020).
+const FALLBACK_THRESHOLDS = {
   temp_min: 26,
   temp_max: 31,
   humidity_min: 75,
   humidity_max: 95,
+  light_max: 0.2,
   nh3_max: 25,
   co2_max: 1500,
 };
@@ -27,6 +33,8 @@ export default function DashboardPage() {
   const { data, isLoading, isLive, hasEverReceived } = useTelemetry(
     selectedZoneId ?? undefined,
   );
+  const { data: zone } = useZone(selectedZoneId ?? undefined);
+  const T = zone?.thresholds ?? FALLBACK_THRESHOLDS;
 
   if (!selectedZoneId) {
     return (
@@ -115,7 +123,7 @@ export default function DashboardPage() {
             value={data.light_lux}
             unit="lux"
             icon={IconLight}
-            range="< 0.2 lux"
+            range={`< ${T.light_max} lux`}
           />
           <SensorCard
             label="NH3"

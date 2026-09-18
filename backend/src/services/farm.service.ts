@@ -5,6 +5,7 @@ import { User } from '@/models/user.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow } from '@/utils/farmAccess.util'
+import { publishCommand } from '@/mqtt/mqtt.client'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser } from '@/types'
 
@@ -257,21 +258,72 @@ export async function listZones(houseId: string, user: CurrentUser) {
 }
 
 /** ENV-FR-006, ENV-FR-009 (lưu lịch sử thay đổi) */
-export async function updateZoneThresholds(zoneId: string, user: CurrentUser, updates: Partial<Thresholds>): Promise<IZone> {
+/** ENV-FR-006 — GET đơn 1 Zone, chủ yếu để FE lấy `thresholds` hiện tại trước khi mở form sửa. */
+export async function getZone(zoneId: string, user: CurrentUser): Promise<IZone> {
   const { zone, farm } = await findZoneChainOrThrow(zoneId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
+  return zone
+}
+
+// ENV-FR-020: chưa có system_settings/default_thresholds (SYSTEM-FR-002, Admin
+// cấu hình được) — dùng tạm giá trị mặc định kỹ thuật cố định, KHỚP ĐÚNG
+// firmware/src/config/Config.h (DEFAULT_TEMP_MIN...DEFAULT_CO2_MAX) và schema
+// Zone.thresholds default ở trên. Khi SYSTEM-FR-002 được xây, thay nguồn này
+// bằng system_settings.default_thresholds.
+const FIXED_DEFAULT_THRESHOLDS: Thresholds = {
+  temp_min: 26.0,
+  temp_max: 31.0,
+  humidity_min: 75.0,
+  humidity_max: 95.0,
+  light_max: 0.2,
+  nh3_max: 25,
+  co2_max: 1500,
+}
+
+/** ENV-FR-006, Flow 22 nhánh A — validate min<max trước khi ghi, publish config/update để ESP32 áp dụng ngay. */
+export async function updateZoneThresholds(zoneId: string, user: CurrentUser, updates: Partial<Thresholds>): Promise<IZone> {
+  const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
+
+  const merged = { ...zone.thresholds, ...updates }
+  if (merged.temp_min >= merged.temp_max) throw BadRequestError('temp_min phải nhỏ hơn temp_max')
+  if (merged.humidity_min >= merged.humidity_max) throw BadRequestError('humidity_min phải nhỏ hơn humidity_max')
+  if (merged.light_max < 0 || merged.nh3_max < 0 || merged.co2_max < 0) {
+    throw BadRequestError('light_max/nh3_max/co2_max không được âm')
+  }
 
   const oldValues = { ...zone.thresholds }
-  zone.thresholds = { ...zone.thresholds, ...updates }
+  zone.thresholds = merged
   zone.threshold_history.push({
     changed_by: user._id as never,
     changed_at: new Date(),
     old_values: oldValues,
     new_values: updates,
+    source: 'MANUAL',
   } as never)
   await zone.save()
 
-  // TODO: publish MQTT config/update tới ESP32 của zone này khi cần áp dụng realtime
+  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
+  return zone
+}
+
+/** ENV-FR-020, Flow 22 nhánh B — reset cả 7 ngưỡng về mặc định kỹ thuật cố định (xem ghi chú FIXED_DEFAULT_THRESHOLDS). */
+export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Promise<IZone> {
+  const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
+
+  const oldValues = { ...zone.thresholds }
+  zone.thresholds = { ...FIXED_DEFAULT_THRESHOLDS }
+  zone.threshold_history.push({
+    changed_by: user._id as never,
+    changed_at: new Date(),
+    old_values: oldValues,
+    new_values: FIXED_DEFAULT_THRESHOLDS,
+    source: 'RESET_TO_DEFAULT',
+  } as never)
+  await zone.save()
+
+  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
   return zone
 }
 
