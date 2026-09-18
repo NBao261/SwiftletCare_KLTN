@@ -1,6 +1,8 @@
-# SwiftletCare — Hướng dẫn Linh kiện & Đấu nối Toàn diện (v3.3)
+# SwiftletCare — Hướng dẫn Linh kiện & Đấu nối Toàn diện (v3.5)
 
-**Phiên bản:** v3.3 (cập nhật cụm điều khiển + âm thanh theo linh kiện THẬT đã mua) | Thay thế v3.2. Chốt theo datasheet EPCB (cảm biến) + IC Đây Rồi (điều khiển/âm thanh).
+**Phiên bản:** v3.5 (sửa lại quạt tản nhiệt: **12V 5x5cm** thay cho 5V 4x4x1cm ghi nhầm ở v3.4) | Thay thế v3.4. Chốt theo datasheet EPCB (cảm biến) + IC Đây Rồi (điều khiển/âm thanh).
+
+> ⚠️ **Lưu ý phạm vi:** quạt tản nhiệt 12V 5x5cm là quạt cho **mô hình/hộp demo** (mô phỏng lưu thông khí/tản nhiệt quy mô prototype), **không phải** quạt thông gió công suất lớn cho chuồng yến thật. Nếu triển khai thực tế cho chuồng lớn, cần thay bằng quạt thông gió 12V/220V công suất cao hơn (dòng lớn hơn nhiều so với 0.09A của quạt này).
 
 ---
 
@@ -30,12 +32,15 @@
 
 ```
 AC Adapter 12V/2A ──> Domino TB1504 (12V) ──┬──> Buck LM2596 #1 (12V→5V) ──> ESP32 (qua đế mở rộng) + Module RS485
-                                             ├──> Buck LM2596 #2 (12V→5V/1.2A+) ──> PAM8403 + DFPlayer + Relay
-                                             └──> Rail 12V ──> 5 cảm biến (VCC/GND)
+                                             │                              └─[qua Relay IN1]─> Mạch phun sương 108KHz (5V)
+                                             ├──> Buck LM2596 #2 (12V→5V/1.2A+) ──> PAM8403 + DFPlayer + Relay (logic)
+                                             │                                    └─[qua Relay IN2]─> Nguồn PAM8403
+                                             └──> Rail 12V ──┬─> 5 cảm biến (VCC/GND)
+                                                              └─[qua Relay IN3]─> Quạt tản nhiệt 12V 5x5cm (demo)
 
 BUS RS485 (A/B): Noise(ID1) ─ CO2(ID2) ─ NH3(ID3) ─ Light(ID4) ─ ES35-SW(ID5, cuối bus)
-Relay 4 kênh (kích chọn Jumper): IN1→phun sương │ IN2→nguồn amply loa ru │ IN3→quạt │ IN4→dự phòng
-Loa ru: ESP32 ──UART──> DFPlayer ──> PAM8403 (volume) ──> Loa
+Relay 4 kênh (kích chọn Jumper): IN1→mạch phun sương (5V) │ IN2→nguồn amply loa ru │ IN3→quạt tản nhiệt (12V, demo) │ IN4→dự phòng
+Loa ru: ESP32 ──UART──> DFPlayer ──> PAM8403 (volume) ──> Loa 8Ω 10W
 ESP32 ── Wi-Fi ──> Router 4G ──> Cloud (MQTT)
 ```
 
@@ -66,22 +71,22 @@ ESP32 ── Wi-Fi ──> Router 4G ──> Cloud (MQTT)
 
 ### 2.3. Relay & Actuator
 
-| STT | Thiết bị                                    | Model thực tế                                                 | Kênh/GPIO    | Ghi chú           |
-| --- | ------------------------------------------- | ------------------------------------------------------------- | ------------ | ----------------- |
-| 14  | **Module 4 Relay 5V opto cách ly kích H/L** | Chọn mức kích bằng Jumper, 250VAC-10A/30VDC-10A, ~200mA/relay | —            | Đã mua            |
-| 15  | Máy phun sương                              | (12V/220V)                                                    | IN1 · GPIO25 | Tăng ẩm           |
-| 16  | Quạt thông gió                              | (12V/220V)                                                    | IN3 · GPIO27 | Giảm nhiệt/xả khí |
-| 17  | (dự phòng: sưởi/đèn)                        | —                                                             | IN4 · GPIO14 | Mở rộng           |
+| STT | Thiết bị                                    | Model thực tế                                                                       | Kênh/GPIO    | Ghi chú                                                                                                          |
+| --- | ------------------------------------------- | ----------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| 14  | **Module 4 Relay 5V opto cách ly kích H/L** | Chọn mức kích bằng Jumper, 250VAC-10A/30VDC-10A, ~200mA/relay                       | —            | Đã mua                                                                                                           |
+| 15  | Mạch phun sương siêu âm 108KHz              | 5V Type-C, ~300mA (<2W), board 45×19mm, loa siêu âm Ø20/12mm, kèm bông 10cm + gá đỡ | IN1 · GPIO25 | Tăng ẩm. **Tải 5V thật** (không phải 12V/220V) — COM relay lấy nguồn từ Buck #1                                  |
+| 16  | Quạt tản nhiệt 12V 5x5cm                    | 12V/0.09A (~1.08W), 4000±10%rpm, 18dB, 18.17-25.97 CFM, 2 dây JST-PH                | IN3 · GPIO27 | ⚠️ Quạt cho mô hình demo (không đủ công suất thông gió chuồng thật). **Tải 12V** — COM relay lấy trực tiếp từ rail 12V (Domino TB1504), không qua Buck |
+| 17  | (dự phòng: sưởi/đèn)                        | —                                                                                   | IN4 · GPIO14 | Mở rộng                                                                                                          |
 
 ### 2.4. Hệ thống âm thanh Loa ru
 
-| STT | Thiết bị                                  | Model thực tế                                                                | Ghi chú                                        |
-| --- | ----------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------- |
-| 18  | **DFPlayer Mini**                         | MP3/WAV/WMA từ microSD (FAT16/32, ≤32GB), ampli tích hợp, điều khiển UART/IO | Thư mục ≤100, mỗi mục ≤255 bài; 6 mức âm lượng |
-| 19  | **Amply PAM8403 6W Hifi 2.0 (có volume)** | Class-D, 2×3W, nguồn 5V-1.2A, loa 4Ω/8Ω, có núm chỉnh volume + lọc nhiễu     | Cần nguồn đủ 1.2A                              |
-| 20  | Thẻ microSD                               | ≤32GB FAT32                                                                  | Chứa file âm thanh                             |
-| 21  | Loa ru                                    | (có sẵn)                                                                     | Nguồn amply đóng/ngắt qua Relay IN2            |
-| 22  | Điện trở 1kΩ                              | —                                                                            | Bảo vệ chân RX DFPlayer                        |
+| STT | Thiết bị                                  | Model thực tế                                                                | Ghi chú                                                                                                               |
+| --- | ----------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 18  | **DFPlayer Mini**                         | MP3/WAV/WMA từ microSD (FAT16/32, ≤32GB), ampli tích hợp, điều khiển UART/IO | Thư mục ≤100, mỗi mục ≤255 bài; 6 mức âm lượng                                                                        |
+| 19  | **Amply PAM8403 6W Hifi 2.0 (có volume)** | Class-D, 2×3W, nguồn 5V-1.2A, loa 4Ω/8Ω, có núm chỉnh volume + lọc nhiễu     | Cần nguồn đủ 1.2A                                                                                                     |
+| 20  | Thẻ microSD                               | ≤32GB FAT32                                                                  | Chứa file âm thanh                                                                                                    |
+| 21  | Loa ru                                    | **Loa 8Ω 10W**, 50×90mm, dày 38.5mm                                          | Nguồn amply đóng/ngắt qua Relay IN2; PAM8403 6W ra ~2-3W thực tế trên 8Ω (dưới ngưỡng chịu tải 10W của loa — an toàn) |
+| 22  | Điện trở 1kΩ                              | —                                                                            | Bảo vệ chân RX DFPlayer                                                                                               |
 
 ### 2.5. Camera (tách nhánh Vision — xem guide camera riêng)
 
@@ -126,9 +131,14 @@ ESP32 ── Wi-Fi ──> Router 4G ──> Cloud (MQTT)
 
 ```
 AC Adapter 12V/2A ──> Domino TB1504 (4 mối, 15A) ──┬── Buck #1 (12V→5V) ──> ESP32 + Module RS485 (~0.5A)
-                                                    ├── Buck #2 (12V→5V) ──> PAM8403 + DFPlayer + Relay (~1.5A)
-                                                    └── 12V trực tiếp ──> 5 cảm biến + tải relay 12V
+                                                    │                    └─[qua Relay IN1]─> Mạch phun sương 108KHz (~0.3A)
+                                                    ├── Buck #2 (12V→5V) ──> PAM8403 + DFPlayer + Relay logic (~2.1A)
+                                                    │                    └─[qua Relay IN2]─> Nguồn PAM8403
+                                                    └── 12V trực tiếp ──┬─> 5 cảm biến (~0.5A)
+                                                                         └─[qua Relay IN3]─> Quạt tản nhiệt 12V (~0.09A)
 ```
+
+⚠️ **Cập nhật v3.5:** quạt tản nhiệt thực tế là **12V 5x5cm** (0.09A) — COM của Relay IN3 lấy trực tiếp từ **rail 12V** (Domino TB1504), không qua Buck nào cả. Mạch phun sương vẫn là tải **5V** (không đổi từ v3.4) → COM của Relay IN1 lấy nguồn từ **Buck #1** (còn dư tải), KHÔNG lấy từ Buck #2 (đã sát ngưỡng 2.1A). Xem [9.2](#92-phía-tải-nocom).
 
 - **Buck LM2596 3A** đủ dòng cho từng nhánh (mỗi con tối đa 3A).
 - **Chỉnh mỗi Buck ra đúng 5V** bằng biến trở + đo VOM **trước khi cắm** ESP32/module (⚠️ nếu chưa chỉnh, ngõ ra có thể cao gây cháy).
@@ -151,28 +161,31 @@ Bạn đã mua **đế mở rộng ESP32 38 chân** (domino 3.81mm) — đây l�
 
 ## 8. Module Relay 4 kênh kích H/L (Jumper)
 
-Bạn đã mua **module 4 relay 5V opto cách ly, kích H/L chọn bằng Jumper** — tốt hơn loại cố định mức kích:
+Bạn đã mua **module "4 Relay Module High/Low Level"** (relay Tongling JQC-3FF-S-Z 5VDC, 10A/250VAC), opto cách ly, kích H/L chọn bằng Jumper — đã xác nhận thực tế trên board:
 
-- **Chọn mức kích bằng Jumper:** có thể để **kích mức cao (High=5V=bật)** hoặc **mức thấp (Low=0V=bật)**.
-- **Khuyến nghị SwiftletCare:** đặt Jumper ở **kích mức CAO (High)** cho trực quan — `digitalWrite(pin, HIGH)` = bật thiết bị, `LOW` = tắt (dễ hiểu, khớp logic thông thường). Ghi rõ trong firmware.
+- **Domino điều khiển** (góc dưới trái board, in nhãn rõ): **DC+ / DC- / IN1 / IN2 / IN3 / IN4** — DC+ = VCC 5V, DC- = GND. Đấu 6 dây vít vào đây, không phải header rời.
+- **Domino tải**: mỗi relay có 3 domino riêng (NC-COM-NO) nằm cạnh relay tương ứng, tổng 12 domino cho 4 kênh.
+- **Jumper H/L: khối jumper màu VÀNG ở góc trên trái board**, nhãn dọc bên cạnh ghi **"S1 S2 S3 S4"** (ứng với IN1-IN4) và **"H"/"L"** đánh dấu 2 hàng chân — **mỗi kênh có 1 jumper riêng** (4 jumper độc lập, không phải 1 jumper chung cho cả board).
+- ⚠️ **Đây là thao tác VẬT LÝ, không phải code:** tắt nguồn → rút từng nắp jumper vàng → cắm lại vào hàng chân gần chữ **"H"** (hàng phía trên, gần các relay) cho cả 4 kênh S1-S4. Việc này quyết định phần cứng cần mức điện áp nào ở chân IN để đóng relay, độc lập với firmware.
+- **Khuyến nghị SwiftletCare:** đặt cả 4 jumper vật lý ở **"H" (High)** cho trực quan — firmware dùng `digitalWrite(pin, HIGH)` = bật thiết bị, `LOW` = tắt. Jumper và code **phải khớp nhau**; nếu để jumper "L" mà code vẫn `HIGH`=bật thì relay sẽ hoạt động ngược.
 - Opto + transistor cách ly → an toàn cho ESP32.
-- Tiếp điểm 250VAC-10A / 30VDC-10A → đóng được cả tải 220VAC.
+- Tiếp điểm relay Tongling JQC-3FF-S-Z: **10A/250VAC, 15A/125VAC** → đóng được cả tải 220VAC.
 - Dòng tiêu thụ ~200mA/relay khi đóng.
 
 ## 9. Ánh xạ & đấu nối Relay
 
-### 9.1. Phía điều khiển (qua đế mở rộng ESP32)
+### 9.1. Phía điều khiển (domino DC+/DC-/IN1-4 trên board relay)
 
-| Chân Relay | Nối vào (domino đế ESP32)   |
-| ---------- | --------------------------- |
-| VCC        | 5V (từ Buck #2)             |
-| GND        | GND chung                   |
-| IN1        | GPIO25 — phun sương         |
-| IN2        | GPIO26 — nguồn amply loa ru |
-| IN3        | GPIO27 — quạt               |
-| IN4        | GPIO14 — dự phòng           |
+| Chân domino relay | Nối vào (domino đế ESP32)       |
+| ------------------ | ------------------------------- |
+| DC+                 | 5V (từ Buck #2)                 |
+| DC-                 | GND chung                       |
+| IN1                 | GPIO25 — mạch phun sương 108KHz |
+| IN2                 | GPIO26 — nguồn amply loa ru     |
+| IN3                 | GPIO27 — quạt tản nhiệt 12V demo |
+| IN4                 | GPIO14 — dự phòng               |
 
-> Đặt Jumper mỗi relay ở **High-level trigger**. Firmware: `digitalWrite(IN, HIGH)` = bật.
+> Đặt cả 4 jumper vàng (S1-S4) ở hàng **"H"**. Firmware: `digitalWrite(IN, HIGH)` = bật.
 
 ### 9.2. Phía tải (NO/COM)
 
@@ -181,9 +194,10 @@ Nguồn tải (+) ──► COM ──[relay đóng]──► NO ──► dây 
 Nguồn tải (-) ─────────────────────────────► dây (-) thiết bị
 ```
 
-- IN1→phun sương, IN3→quạt (12V hoặc 220V qua NO-COM).
-- IN2→**nguồn cấp PAM8403** (5V từ Buck #2, qua NO-COM) → relay đóng thì amply mới có điện.
-- ⚠️ Tải 220VAC: cần người có chuyên môn điện, relay chịu 250VAC-10A OK.
+- **IN1→mạch phun sương 108KHz**: COM lấy **5V từ Buck #1**, NO→dây (+) mạch phun sương, GND chung → NO-COM. Mặt loa siêu âm có vết hàn hướng lên (mặt phun sương); mặt còn lại tiếp nước qua bông 10cm.
+- **IN3→quạt tản nhiệt 12V 5x5cm**: COM lấy **12V trực tiếp từ Domino TB1504** (không qua Buck), NO→dây đỏ (+) quạt, GND/dây đen (-) quạt → GND chung. Quạt 2 dây JST-PH, không có dây PWM/tacho — chỉ bật/tắt qua relay, không đọc được tốc độ.
+- **IN2→nguồn cấp PAM8403** (5V từ Buck #2, qua NO-COM) → relay đóng thì amply mới có điện.
+- ⚠️ Nếu sau này đổi quạt/phun sương sang bản 220V thật (ngoài phạm vi demo), COM phải đổi sang rail 220VAC (cần người có chuyên môn điện); relay chịu tối đa 250VAC-10A / 30VDC-10A.
 
 ---
 
@@ -241,13 +255,16 @@ Hết giờ (7:00): stop() → ngắt Relay IN2 (GPIO26=LOW) → cắt điện a
 
 ## 13. Ngân sách nguồn (tính lại)
 
-| Nhánh             | Thiết bị                                                | Dòng      |
-| ----------------- | ------------------------------------------------------- | --------- |
-| **Buck #1 (5V)**  | ESP32 + module RS485                                    | ~0.5A     |
-| **Buck #2 (5V)**  | PAM8403 (1.2A) + DFPlayer (~0.3A) + relay (3×0.2A=0.6A) | ~2.1A ⚠️  |
-| **12V trực tiếp** | 5 cảm biến + tải relay 12V                              | ~0.5-1.3A |
+| Nhánh             | Thiết bị                                                                     | Dòng     |
+| ----------------- | ------------------------------------------------------------------------------ | -------- |
+| **Buck #1 (5V)**  | ESP32 + module RS485 (~0.5A) + mạch phun sương (~0.3A, qua IN1)                | ~0.8A    |
+| **Buck #2 (5V)**  | PAM8403 (1.2A) + DFPlayer (~0.3A) + relay (4×0.2A=0.8A)                        | ~2.3A ⚠️ |
+| **12V trực tiếp** | 5 cảm biến (~0.5A) + quạt tản nhiệt 12V (~0.09A, qua IN3)                      | ~0.59A   |
 
-⚠️ **Cảnh báo:** nhánh Buck #2 có thể chạm/vượt 2.1A khi loa phát hết công suất + 3 relay đóng cùng lúc. Buck LM2596 3A **vừa đủ** nhưng sát ngưỡng.
+⚠️ **Cảnh báo:** nhánh Buck #2 có thể chạm/vượt 2.1-2.3A khi loa phát hết công suất + cả 4 relay đóng cùng lúc (dòng cuộn hút relay tính cả IN1/IN3 dù tải thực đã chuyển sang Buck #1/rail 12V). Buck LM2596 3A **vừa đủ** nhưng sát ngưỡng.
+
+- Quạt tản nhiệt (12V, 0.09A) gần như không đáng kể trong ngân sách — đi thẳng từ rail 12V (dư ~11.4A so với Adapter 2A) qua relay IN3, không ảnh hưởng Buck nào.
+- Mạch phun sương chuyển sang **Buck #1** (thay vì gộp vào Buck #2 như thiết kế cũ với tải 12V/220V), nên Buck #2 **không bị nặng thêm** so với v3.3 — vẫn chỉ gánh PAM8403+DFPlayer+relay.
 
 - **Khuyến nghị:** nếu loa ru công suất lớn, **cấp nguồn 220VAC riêng cho amply/loa** (relay IN2 đóng/ngắt 220V), giảm tải cho Buck #2 → an toàn hơn nhiều.
 - Tổng từ Adapter 12V/2A: nếu tất cả tải 12V+5V cộng lại vượt 2A (24W) → cân nhắc nâng adapter lên **12V/3A hoặc 5A**, hoặc tách nguồn 220V cho loa/bơm/quạt.
@@ -257,17 +274,18 @@ Hết giờ (7:00): stop() → ngắt Relay IN2 (GPIO26=LOW) → cắt điện a
 - [ ] Cấu hình 5 cảm biến (ID 1-5, cùng 4800bps) bằng ESP32 sketch — đổi baud ES35-SW
 - [ ] Cắm ESP32 38 chân vào đế mở rộng, bắt vít vào hộp
 - [ ] Đấu AC Adapter 12V → Domino TB1504
-- [ ] Chỉnh Buck #1 ra 5V (đo VOM) → cấp ESP32 + module RS485
-- [ ] Chỉnh Buck #2 ra 5V (đo VOM) → cấp PAM8403 + DFPlayer + relay
+- [ ] Chỉnh Buck #1 ra 5V (đo VOM) → cấp ESP32 + module RS485 + tải phun sương (qua relay IN1)
+- [ ] Chỉnh Buck #2 ra 5V (đo VOM) → cấp PAM8403 + DFPlayer + relay (logic)
 - [ ] Đấu bus RS485: module → 5 cảm biến (ES35-SW cuối bus, DIP Pin5 ON, màu dây riêng)
-- [ ] Đặt Jumper 4 relay ở kích mức CAO (High)
+- [ ] Đặt jumper vàng cả 4 kênh (S1-S4) ở hàng "H" (High level)
 - [ ] Đấu relay IN1/IN2/IN3/IN4 → GPIO25/26/27/14
-- [ ] Đấu tải: IN1→phun sương, IN3→quạt, IN2→nguồn PAM8403
+- [ ] Đấu tải: IN1→mạch phun sương (COM từ Buck #1, 5V), IN3→quạt tản nhiệt 12V (COM từ rail 12V trực tiếp), IN2→nguồn PAM8403 (COM từ Buck #2)
+- [ ] Lắp bông 10cm vào gá đỡ trên loa siêu âm (mặt có vết hàn hướng lên), đổ nước đúng mức trước khi cấp điện mạch phun sương
 - [ ] Chép file MP3 (0001.mp3...) vào thẻ SD, cắm DFPlayer
-- [ ] Đấu DFPlayer: RX←GPIO33 (trở 1kΩ), TX→GPIO32, DAC→PAM8403→loa
-- [ ] Nạp firmware, test: đọc 5 cảm biến, bật/tắt 3 relay, phát loa ru
+- [ ] Đấu DFPlayer: RX←GPIO33 (trở 1kΩ), TX→GPIO32, DAC→PAM8403→loa 8Ω 10W
+- [ ] Nạp firmware, test: đọc 5 cảm biến, bật/tắt 4 relay (kể cả phun sương/quạt), phát loa ru
 - [ ] Kiểm tra dB tăng khi loa kêu (verify SPEAKER_FAILURE logic)
 
 ---
 
-_Guide v3.3 cập nhật theo linh kiện thật đã mua (IC Đây Rồi + EPCB). Điểm mới quan trọng: 2 mạch Buck (tách nguồn cho PAM8403 6W), đế mở rộng ESP32 (không cần hàn), relay kích H/L chọn Jumper. Đi kèm SRS v1.11.0. Camera xem guide riêng._
+_Guide v3.5 sửa lại thông số quạt tản nhiệt theo linh kiện THẬT: **12V 5x5cm (0.09A)**, không phải 5V 4x4x1cm như v3.4 ghi nhầm. Do đó COM relay IN3 chuyển về lấy **trực tiếp từ rail 12V** (không qua Buck #1 nữa) — chỉ mạch phun sương 108KHz (5V) mới lấy nguồn từ Buck #1. Quạt tản nhiệt vẫn chỉ phù hợp mô hình demo, không thay thế quạt thông gió công suất lớn cho chuồng thật. Kế thừa v3.4: mạch phun sương siêu âm 108KHz, loa 8Ω 10W, board relay Tongling JQC-3FF-S-Z với domino DC+/DC-/IN1-4 và jumper vàng S1-S4 riêng từng kênh. Kế thừa v3.3: 2 mạch Buck (tách nguồn cho PAM8403 6W), đế mở rộng ESP32 (không cần hàn). Đi kèm SRS v1.11.0. Camera xem guide riêng._
