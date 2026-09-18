@@ -16,6 +16,9 @@ export interface IUser extends Document {
   assigned_regions?: string[] // chỉ dùng khi role=TECHNICIAN (AUTH-FR-005c)
   avatar_url?: string
   is_active: boolean
+  /** AUTH-FR-011 — bắt buộc có lý do khi Admin khoá tài khoản, ghi cùng lúc với is_active=false (Flow 19) */
+  deactivated_at?: Date
+  deactivated_reason?: string
   notification_preferences: NotificationPreferences
   otp_code?: string
   otp_expires?: Date
@@ -41,6 +44,8 @@ const userSchema = new Schema<IUser>(
     assigned_regions: [{ type: String }],
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
+    deactivated_at:     { type: Date },
+    deactivated_reason: { type: String },
     notification_preferences: {
       push:  { type: Boolean, default: true },
       zalo:  { type: Boolean, default: true },

@@ -45,13 +45,16 @@ export const registerCameraNode = asyncHandler(async (req: Request, res: Respons
 })
 
 /** GET /devices/camera-nodes?zoneId= */
-export const listCameraNodes = asyncHandler(async (req: Request, res: Response) => {
-  const nodes = await deviceService.listCameraNodes(req.query.zoneId as string | undefined, req.user)
-  res.json({ success: true, data: nodes })
-})
+export async function listCameraNodes(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const nodes = await deviceService.listCameraNodes(req.query.zoneId as string | undefined)
+    res.json({ success: true, data: nodes })
+  } catch (err) { next(err) }
+}
 
-/** GET /devices/system-status – OPS-NFR-004, Admin xem nhanh trạng thái mọi node toàn hệ thống */
-export const getSystemStatus = asyncHandler(async (req: Request, res: Response) => {
-  const result = await deviceService.getSystemNodeStatus(req.user)
-  res.json({ success: true, data: result })
-})
+/** GET /devices/fleet-status – OPS-NFR-004 */
+export async function getFleetStatus(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    res.json({ success: true, data: await deviceService.getFleetStatus() })
+  } catch (err) { next(err) }
+}
