@@ -222,9 +222,9 @@
 - [x] JWT Access (15p) + Refresh (30 ngày), API refresh/logout `[AUTH-FR-003]`
 - [x] Middleware RBAC theo 5 role `[AUTH-FR-004, 12.1]`
 - [x] API mời thành viên Farm Owner khác (Primary Owner) `[AUTH-FR-005]`
-- [ ] API mời Sales Staff / tạo Technician (Admin) `[AUTH-FR-005b, 005c]` — mời Sales Staff (Farm Owner) đã có; Admin tự tạo tài khoản Technician/Sales Staff trực tiếp CHƯA có API riêng
+- [x] API Admin tạo Technician (kèm `assigned_regions`) / tạo Sales Staff trực tiếp `[AUTH-FR-005c]` — merge qua PR #16. Riêng luồng Farm Owner **đề xuất** Sales Staff → Admin duyệt `[AUTH-FR-005b đổi v1.16.0, 005d]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [ ] Guest checkout (không cần tài khoản) `[AUTH-FR-008]`
-- [ ] Audit log đăng nhập/thay đổi cấu hình — schema `audit_logs` + middleware ghi log `[AUTH-FR-007, 8.2]`
+- [ ] Audit log đăng nhập/thay đổi cấu hình — schema `audit_logs` + middleware ghi log `[AUTH-FR-007, 8.2]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [x] Envelope response chuẩn + pagination + mã lỗi HTTP `[9.0]`
 
 ### C1b. Quên mật khẩu, Lời mời, Khoá/Xoá tài khoản `[mới v1.12.0, Flow 11/12/19]`
@@ -237,10 +237,19 @@
 - [ ] Job/cron chuyển `Invitation` quá 7 ngày → status EXPIRED `[AUTH-FR-010]`
 - [ ] API `DELETE /farms/:id/members/:userId` — chặn Primary Owner tự gỡ chính mình `[Flow 12 case 5a]`
 - [ ] Thêm field `deactivated_at/reason`, `password_reset_token_hash/expires_at` vào schema `users` `[8.2]`
-- [ ] API `GET /admin/users`, `PUT /admin/users/:id/status` (khoá/mở khoá kèm lý do bắt buộc) `[AUTH-FR-011]`
-- [ ] Middleware JWT kiểm tra `is_active` mỗi request (không chỉ lúc login) — chặn ngay cả khi Access Token còn hạn `[AUTH-FR-011]`
-- [ ] API `POST /auth/delete-request`, `GET/PUT /admin/delete-requests/:id/complete` `[AUTH-FR-012]`
-- [ ] Logic cascade khi xoá Primary Owner: còn thành viên khác → chuyển `owner_id`; hết thành viên → xoá mềm Farm `[AUTH-FR-012, Flow 19 bước 7a/7b]`
+- [x] API `GET /admin/users`, `PUT /admin/users/:id/status` (khoá/mở khoá kèm lý do bắt buộc) `[AUTH-FR-011]` — merge qua PR #16
+- [x] Middleware JWT kiểm tra `is_active` mỗi request (không chỉ lúc login) — chặn ngay cả khi Access Token còn hạn `[AUTH-FR-011]` — merge qua PR #16
+- [x] API `POST /auth/delete-request`, `GET/PUT /admin/delete-requests/:id/complete` `[AUTH-FR-012]` — merge qua PR #16
+- [x] Logic cascade khi xoá Primary Owner: còn thành viên khác → chuyển `owner_id`; hết thành viên → xoá mềm Farm `[AUTH-FR-012, Flow 19 bước 7a/7b]` — merge qua PR #16
+
+### C1c. Module SYSTEM & duyệt Sales Staff `[mới SRS v1.16.0, §5.11, Flow 16]`
+
+- [ ] API `GET /system/audit-logs` lọc theo actor/action/target/thời gian `[SYSTEM-FR-001]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
+- [ ] Collection `system_settings` + API `GET/PUT /system/settings/default-thresholds`; reset ngưỡng Zone đọc từ đây `[SYSTEM-FR-002, ENV-FR-007/020]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
+- [ ] API `GET /system/health-overview` (farm/zone/thiết bị/ticket/tài khoản) `[SYSTEM-FR-003]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
+- [ ] Farm Owner đề xuất Sales Staff → Admin duyệt/từ chối (`sales_assignment_requests`) `[AUTH-FR-005b, 005d]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
+- [ ] UI Admin: audit log, ngưỡng mặc định, tổng quan hệ thống, duyệt đề xuất Sales Staff `[SYSTEM-FR-001..003, AUTH-FR-005d]`
+- [ ] Chat theo ticket (Farm Owner ↔ Technician, Admin tham gia được) + tin nhắn hệ thống khi Admin reassign `[TICKET-FR-014..017]`
 
 ## C2. Farm & Device (Sprint 2)
 
@@ -311,7 +320,7 @@
 - [ ] Tính sla_response/resolve_due, job escalate khi vượt SLA `[TICKET-FR-006, 009, SLA-NFR-002]`
 - [ ] API cập nhật status, notes, sat-checklist, rating, KPI `[TICKET-FR-007~012]` — đủ 4 trạng thái `MỚI→ĐANG XỬ LÝ→CHỜ XÁC NHẬN HIỆN TRƯỜNG→ĐÃ ĐÓNG` cho cả 2 loại ticket
 - [ ] Chặn đóng ticket INSTALLATION nếu SAT checklist chưa đạt, giữ status ĐANG XỬ LÝ + đặt lại `scheduled_visit_at` `[TICKET-FR-010, Flow 9b case 6a]`
-- [ ] **API Admin toàn quyền can thiệp ticket bất kỳ** (đổi Technician/priority/ngày hẹn, đóng/huỷ) không giới hạn ở SLA breach `[TICKET-FR-005b]`
+- [x] **API Admin toàn quyền can thiệp ticket bất kỳ** (đổi Technician/priority/ngày hẹn, đóng/huỷ) không giới hạn ở SLA breach `[TICKET-FR-005b]` — merge qua PR #16
 - [ ] API Farm Owner tự huỷ ticket giữa chừng `[Flow 9 case 6c, Flow 9b case 4a]`
 - [ ] API Technician "Yêu cầu gán lại" ticket bị gán nhầm khu vực `[Flow 9 case 4a]`
 
@@ -463,7 +472,7 @@
 
 - [ ] Deploy staging (VPS/Render/Railway) `[17.1]`
 - [ ] Setup logging JSON structured (winston/morgan) `[OPS-NFR-001]`
-- [ ] Dashboard admin xem trạng thái node toàn hệ thống `[OPS-NFR-004]`
+- [ ] Dashboard admin xem trạng thái node toàn hệ thống `[OPS-NFR-004]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 
 ## E3. Integration Testing (Sprint 2-6)
 
