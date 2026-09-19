@@ -6,7 +6,7 @@
  */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
-import { User, IUser } from '@/models/User'
+import { User, IUser } from '@/models/user.model'
 
 let mongod: MongoMemoryServer
 
