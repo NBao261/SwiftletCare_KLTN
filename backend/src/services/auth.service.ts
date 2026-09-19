@@ -88,9 +88,16 @@ export async function loginUser(input: LoginInput): Promise<{ user: IUser; acces
     await logAction(userId, 'LOGIN_FAILED', 'user', userId, { reason: user ? 'WRONG_PASSWORD' : 'UNKNOWN_EMAIL' })
     throw UnauthorizedError('Sai email hoặc mật khẩu')
   }
+  // Chỉ báo lý do khoá SAU khi mật khẩu đúng (Flow 19 bước 4) — người đoán mò
+  // mật khẩu không biết được tài khoản có bị khoá hay không.
   if (!user.is_active) {
     await logAction(String(user._id), 'LOGIN_FAILED', 'user', String(user._id), { reason: 'ACCOUNT_DISABLED' })
-    throw new AppError(403, 'ACCOUNT_DISABLED', 'Tài khoản đã bị khóa')
+    const reason = user.deactivated_reason ?? null
+    throw new AppError(
+      403, 'ACCOUNT_DISABLED',
+      reason ? `Tài khoản đã bị khoá. Lý do: ${reason}` : 'Tài khoản đã bị khoá',
+      { reason },
+    )
   }
 
   const accessToken  = signAccess(String(user._id), user.role)

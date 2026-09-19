@@ -44,6 +44,9 @@ export async function listUsers(query: ListUsersQuery) {
 export async function setUserStatus(
   adminId: string, userId: string, isActive: boolean, reason?: string,
 ): Promise<IUser> {
+  // Không cho tự khoá mình: người gọi luôn là 1 Admin đang hoạt động, nên chặn
+  // tự khoá là đủ đảm bảo hệ thống luôn còn ít nhất 1 Admin (Flow 19 case 2a).
+  if (adminId === userId) throw BadRequestError('Không thể tự khoá tài khoản của chính mình')
   if (!isActive && !reason?.trim()) {
     throw BadRequestError('Phải nhập lý do khi khoá tài khoản')
   }
@@ -88,6 +91,7 @@ export async function listDeletionRequests(query: ListQuery) {
  * - Anonymize thông tin cá nhân, không xoá document (giữ FK cho tickets/farms lịch sử).
  */
 export async function completeDeletionRequest(adminId: string, userId: string): Promise<IUser> {
+  if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
   const user = await User.findById(userId)
   if (!user) throw NotFoundError('Không tìm thấy người dùng')
   if (!user.deletion_requested_at) {
@@ -123,6 +127,9 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   user.avatar_url = undefined
   user.is_active = false
   user.refresh_tokens = [] as never
+  // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và
+  // không bị xử lý (chạy lại cascade) lần 2
+  user.deletion_requested_at = undefined
   await user.save()
 
   await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, { farmsTransferred: ownedFarms.length })
