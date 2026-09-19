@@ -250,7 +250,14 @@ export async function createZone(houseId: string, user: CurrentUser, input: { na
   if (!house) throw NotFoundError('Không tìm thấy house')
   const farm = await findFarmOrThrow(String(house.farm_id))
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
-  return Zone.create({ house_id: house._id, ...input })
+  // Zone mới dùng ngưỡng mặc định hệ thống do Admin cấu hình (ENV-FR-007), cùng
+  // nguồn với "Reset về mặc định" — không dùng default cứng trong schema.
+  return Zone.create({
+    house_id: house._id,
+    name: input.name,
+    floor: input.floor,
+    thresholds: await getDefaultThresholds(),
+  })
 }
 
 export async function listZones(houseId: string, user: CurrentUser) {
