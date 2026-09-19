@@ -159,6 +159,27 @@ export async function createTechnician(adminId: string, input: CreateTechnicianI
   return user
 }
 
+/**
+ * AUTH-FR-005c, Flow 21 case 4a-x — Admin điều chỉnh khu vực phụ trách. Có
+ * hiệu lực ngay ở request kế tiếp vì middleware authenticate đọc lại
+ * assigned_regions từ DB mỗi request, không lấy từ JWT.
+ */
+export async function updateTechnicianRegions(
+  adminId: string, technicianId: string, regions: string[],
+): Promise<IUser> {
+  const technician = await User.findById(technicianId)
+  if (!technician) throw NotFoundError('Không tìm thấy người dùng')
+  if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ gán khu vực được cho tài khoản Technician')
+
+  const before = [...(technician.assigned_regions ?? [])]
+  const after = [...new Set(regions.map(r => r.trim()).filter(Boolean))]
+  technician.assigned_regions = after
+  await technician.save()
+
+  await logAction(adminId, 'TECHNICIAN_REGIONS_UPDATED', 'user', technicianId, { before, after })
+  return technician
+}
+
 export interface CreateSalesStaffInput {
   email: string; password: string; full_name: string; phone?: string; farm_ids: string[]
 }
@@ -184,6 +205,20 @@ export async function createSalesStaff(adminId: string, input: CreateSalesStaffI
 
   await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'SALES_STAFF', farm_ids: input.farm_ids })
   return user
+}
+
+/**
+ * Flow 16 case 1e — Admin gỡ Sales Staff khỏi 1 Farm. Chỉ xoá bản ghi gán,
+ * không đụng tài khoản Sales Staff (có thể còn gán ở Farm khác) hay
+ * Order/Product đã tạo trước đó.
+ */
+export async function unassignSalesStaff(adminId: string, farmId: string, salesStaffId: string): Promise<void> {
+  const assignment = await SalesAssignment.findOneAndDelete({ farm_id: farmId, sales_staff_id: salesStaffId })
+  if (!assignment) throw NotFoundError('Sales Staff này không được gán vào farm')
+
+  await logAction(adminId, 'SALES_STAFF_UNASSIGNED', 'sales_assignment', String(assignment._id), {
+    farm_id: farmId, sales_staff_id: salesStaffId,
+  })
 }
 
 // ── Duyệt đề xuất Sales Staff của Farm Owner — AUTH-FR-005d, Flow 16 bước 1b ───

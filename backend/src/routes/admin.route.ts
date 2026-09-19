@@ -31,6 +31,18 @@ router.post('/sales-staff',
   adminController.createSalesStaff,
 )
 
+/** Điều chỉnh khu vực Technician / gỡ Sales Staff khỏi farm – AUTH-FR-005c, Flow 21 4a-x, Flow 16 1e */
+router.put('/technicians/:id/regions',
+  param('id').isMongoId(),
+  body('assigned_regions').isArray({ min: 1 }), body('assigned_regions.*').isString().trim().notEmpty(),
+  validate,
+  adminController.updateTechnicianRegions,
+)
+router.delete('/farms/:farmId/sales-staff/:salesStaffId',
+  param('farmId').isMongoId(), param('salesStaffId').isMongoId(), validate,
+  adminController.unassignSalesStaff,
+)
+
 /** Duyệt đề xuất Sales Staff của Farm Owner – AUTH-FR-005d, Flow 16 bước 1b */
 router.get('/sales-staff-requests',
   query('status').optional().isIn(['PENDING', 'APPROVED', 'REJECTED']), validate,

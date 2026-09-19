@@ -61,6 +61,24 @@ export async function createSalesStaff(req: Request, res: Response, next: NextFu
   } catch (err) { next(err) }
 }
 
+/** PUT /admin/technicians/:id/regions – AUTH-FR-005c, Flow 21 case 4a-x */
+export async function updateTechnicianRegions(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const technician = await adminService.updateTechnicianRegions(
+      req.user._id, req.params.id, req.body.assigned_regions as string[],
+    )
+    res.json({ success: true, data: technician })
+  } catch (err) { next(err) }
+}
+
+/** DELETE /admin/farms/:farmId/sales-staff/:salesStaffId – Flow 16 case 1e */
+export async function unassignSalesStaff(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    await adminService.unassignSalesStaff(req.user._id, req.params.farmId, req.params.salesStaffId)
+    res.json({ success: true, data: { message: 'Đã gỡ Sales Staff khỏi farm' } })
+  } catch (err) { next(err) }
+}
+
 /** GET /admin/sales-staff-requests – AUTH-FR-005d */
 export async function listSalesStaffRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
