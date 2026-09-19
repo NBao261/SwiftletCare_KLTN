@@ -16,14 +16,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Validate last 5 commit messages
-        run: |
-          python -X utf8 .agents/skills/git-commit-convention/scripts/validate_commit.py --log 5
+      - name: Validate commit messages (commitlint)
+        uses: wagoid/commitlint-github-action@v6
 
   # ── Job 2: Check for secrets accidentally committed ──────────────────────
   check-secrets:
