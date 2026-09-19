@@ -3,6 +3,7 @@ import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
 import { House, Zone, IZone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
+import { SalesAssignmentRequest, ISalesAssignmentRequest } from '@/models/salesAssignmentRequest.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
@@ -314,24 +315,39 @@ export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Pr
   return zone
 }
 
-/** AUTH-FR-005b, Flow 16 — dùng chung cơ chế Invitation với mời Farm Owner (AUTH-FR-005/010) */
-export async function inviteSalesStaff(farmId: string, user: CurrentUser, email: string): Promise<IInvitation> {
+/**
+ * AUTH-FR-005b (đổi v1.16.0), Flow 16 bước 1b — Farm Owner chỉ ĐỀ XUẤT Sales
+ * Staff, không tự kích hoạt: Sales Staff là nhân sự phía công ty nên phải qua
+ * Admin duyệt (AUTH-FR-005d, admin.service#decideSalesStaffRequest).
+ */
+export async function requestSalesStaff(farmId: string, user: CurrentUser, email: string): Promise<ISalesAssignmentRequest> {
   const farm = await findFarmOrThrow(farmId)
-  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được mời Sales Staff')
+  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được đề xuất Sales Staff')
 
   const normalizedEmail = email.toLowerCase().trim()
-  const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
-  if (pending) throw ConflictError('Đã có lời mời đang chờ phản hồi gửi tới email này')
+  const pending = await SalesAssignmentRequest.findOne({ farm_id: farm._id, sales_staff_email: normalizedEmail, status: 'PENDING' })
+  if (pending) throw ConflictError('Đã có đề xuất đang chờ Admin duyệt cho email này')
 
-  return Invitation.create({
+  const existingUser = await User.findOne({ email: normalizedEmail }).select('role').lean()
+  if (existingUser && existingUser.role !== 'SALES_STAFF') {
+    throw ConflictError('Email này đang thuộc 1 tài khoản không phải Sales Staff')
+  }
+  if (existingUser && await SalesAssignment.exists({ farm_id: farm._id, sales_staff_id: existingUser._id })) {
+    throw ConflictError('Sales Staff này đã được gán vào farm')
+  }
+
+  return SalesAssignmentRequest.create({
     farm_id: farm._id,
-    invited_email: normalizedEmail,
-    invited_role: 'SALES_STAFF',
-    invited_by: user._id,
-    token: crypto.randomBytes(24).toString('hex'),
-    status: 'PENDING',
-    expires_at: new Date(Date.now() + INVITATION_TTL_MS),
+    requested_by: user._id,
+    sales_staff_email: normalizedEmail,
   })
+}
+
+/** Flow 16 bước 1b/1d — Farm Owner xem kết quả duyệt (kèm lý do nếu bị từ chối) */
+export async function listSalesStaffRequests(farmId: string, user: CurrentUser) {
+  const farm = await findFarmOrThrow(farmId)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
+  return SalesAssignmentRequest.find({ farm_id: farm._id }).sort({ created_at: -1 }).lean()
 }
 
 export async function listSalesStaff(farmId: string, user: CurrentUser) {

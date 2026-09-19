@@ -519,8 +519,11 @@ paths:
   /admin/sales-staff:
     post:
       tags: [Admin]
-      summary: "Admin tự tạo tài khoản Sales Staff + gán thẳng vào Farm (AUTH-FR-005c, Flow 16 path 1b) — chỉ ADMIN"
-      description: Dùng cho farm liên kết/hợp tác — bỏ qua bước mời/chấp nhận Invitation thông thường (Flow 16).
+      summary: "Admin tự tạo tài khoản Sales Staff + gán thẳng vào Farm (AUTH-FR-005c, Flow 16 bước 1a) — chỉ ADMIN"
+      description: |
+        Đường chính thức để có Sales Staff (từ SRS v1.16.0, Sales Staff là nhân
+        sự phía công ty). Đường phụ là duyệt đề xuất của Farm Owner qua
+        `/admin/sales-staff-requests`.
       requestBody:
         required: true
         content:
@@ -545,6 +548,71 @@ paths:
                   - properties: { data: { $ref: "#/components/schemas/User" } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/sales-staff-requests:
+    get:
+      tags: [Admin]
+      summary: "Danh sách đề xuất Sales Staff từ Farm Owner (AUTH-FR-005d) — chỉ ADMIN"
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [PENDING, APPROVED, REJECTED] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK (populate farm_id, requested_by, reviewed_by)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/sales-staff-requests/{id}/decision:
+    put:
+      tags: [Admin]
+      summary: "Duyệt hoặc từ chối đề xuất Sales Staff (AUTH-FR-005d, Flow 16) — chỉ ADMIN"
+      description: |
+        - `APPROVED`: email chưa có tài khoản thì tạo tài khoản SALES_STAFF với
+          mật khẩu ngẫu nhiên và gửi mã đặt lại mật khẩu (luồng AUTH-FR-009;
+          dev chỉ log `[DEV RESET]` ra console); sau đó tạo `SalesAssignment`
+          với `requested_via` trỏ về đề xuất này.
+        - `REJECTED`: bắt buộc `reason`, lưu vào `review_note` để Farm Owner xem.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [APPROVED, REJECTED] }
+                reason: { type: string, description: "Bắt buộc khi REJECTED" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
+        "400":
+          description: "Từ chối mà thiếu reason"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Đề xuất đã được xử lý trước đó, hoặc email thuộc tài khoản không phải Sales Staff"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   # ── SYSTEM ────────────────────────────────────────────────────────────────
@@ -941,7 +1009,11 @@ paths:
     parameters: [{ $ref: "#/components/parameters/FarmId" }]
     post:
       tags: [Farms]
-      summary: Mời Sales Staff vào farm (AUTH-FR-005b, Flow 16) — chỉ Primary Owner, dùng chung cơ chế Invitation với mời Farm Owner
+      summary: "Đề xuất Sales Staff cho farm (AUTH-FR-005b đổi v1.16.0, Flow 16 bước 1b) — chỉ Primary Owner"
+      description: |
+        Chỉ tạo đề xuất `PENDING`, KHÔNG tự kích hoạt — Administrator duyệt/từ
+        chối ở `PUT /admin/sales-staff-requests/{id}/decision` (AUTH-FR-005d).
+        Theo dõi kết quả ở `GET /farms/{id}/sales-staff-requests`.
       requestBody:
         required: true
         content:
@@ -954,31 +1026,19 @@ paths:
               }
       responses:
         "201":
-          {
-            description: Đã tạo lời mời,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data:
-                                    { $ref: "#/components/schemas/Invitation" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
+          description: Đã tạo đề xuất (status=PENDING)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409":
+          description: "Đã có đề xuất PENDING cho email này / email thuộc tài khoản không phải Sales Staff / đã được gán vào farm"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
     get:
       tags: [Farms]
       summary: Danh sách Sales Staff của farm
@@ -992,6 +1052,23 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiSuccess" } },
               },
           }
+
+  /farms/{id}/sales-staff-requests:
+    get:
+      tags: [Farms]
+      summary: "Farm Owner xem các đề xuất Sales Staff của farm và kết quả duyệt (Flow 16 bước 1b/1d)"
+      parameters: [{ $ref: "#/components/parameters/FarmId" }]
+      responses:
+        "200":
+          description: OK (mới nhất trước; `review_note` là lý do nếu bị từ chối)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /invitations/{token}:
     parameters:
@@ -3436,6 +3513,20 @@ components:
         target_type: { type: string, example: user }
         target_id: { type: string, nullable: true }
         metadata: { type: object, description: "Chi tiết thay đổi, thường có before/after" }
+        created_at: { type: string, format: date-time }
+
+    SalesAssignmentRequest:
+      type: object
+      description: "AUTH-FR-005b/005d — collection sales_assignment_requests (SRS §8.2)"
+      properties:
+        _id: { type: string }
+        farm_id: { type: string, description: "Populate { name, region } ở endpoint Admin" }
+        requested_by: { type: string, description: "Farm Owner đề xuất; populate { full_name, email } ở endpoint Admin" }
+        sales_staff_email: { type: string, format: email }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+        reviewed_by: { type: string, nullable: true }
+        review_note: { type: string, nullable: true, description: "Lý do khi REJECTED" }
+        reviewed_at: { type: string, format: date-time, nullable: true }
         created_at: { type: string, format: date-time }
 
     User:

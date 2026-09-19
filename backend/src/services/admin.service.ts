@@ -1,7 +1,13 @@
+import crypto from 'crypto'
 import { User, IUser } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
+import {
+  SalesAssignmentRequest, ISalesAssignmentRequest, SalesAssignmentRequestStatus,
+} from '@/models/salesAssignmentRequest.model'
 import { logAction } from '@/services/auditLog.service'
+import { forgotPassword } from '@/services/auth.service'
+import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Role } from '@/types'
 
@@ -171,4 +177,85 @@ export async function createSalesStaff(adminId: string, input: CreateSalesStaffI
 
   await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'SALES_STAFF', farm_ids: input.farm_ids })
   return user
+}
+
+// ── Duyệt đề xuất Sales Staff của Farm Owner — AUTH-FR-005d, Flow 16 bước 1b ───
+
+export interface ListSalesStaffRequestsQuery {
+  status?: SalesAssignmentRequestStatus
+  page?: string | number
+  limit?: string | number
+}
+
+export async function listSalesStaffRequests(query: ListSalesStaffRequestsQuery) {
+  const filter = query.status ? { status: query.status } : {}
+  const { page, skip, limit } = paginate(query.page, query.limit)
+
+  const [records, total] = await Promise.all([
+    SalesAssignmentRequest.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit)
+      .populate('farm_id', 'name region')
+      .populate('requested_by', 'full_name email')
+      .populate('reviewed_by', 'full_name email')
+      .lean(),
+    SalesAssignmentRequest.countDocuments(filter),
+  ])
+  return { records, total, page, limit }
+}
+
+/**
+ * Email chưa có tài khoản thì tạo mới với mật khẩu ngẫu nhiên rồi gửi mã đặt
+ * lại mật khẩu (tái dùng luồng quên mật khẩu AUTH-FR-009) — Admin không cần
+ * biết hay chuyển mật khẩu cho ai. Không tự đổi role nếu email đã thuộc
+ * Farm Owner/Technician: đổi role ngầm sẽ tước quyền cũ của họ.
+ */
+async function findOrCreateSalesStaff(adminId: string, email: string): Promise<IUser> {
+  const existing = await User.findOne({ email })
+  if (existing) {
+    if (existing.role !== 'SALES_STAFF') {
+      throw ConflictError(`Email này thuộc tài khoản ${existing.role}, không thể gán làm Sales Staff`)
+    }
+    return existing
+  }
+
+  const user = await User.create({
+    email,
+    password_hash: crypto.randomBytes(24).toString('hex'),
+    full_name: email.split('@')[0],
+    role: 'SALES_STAFF',
+  })
+  await forgotPassword(email)
+  await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'SALES_STAFF', via: 'SALES_STAFF_REQUEST' })
+  return user
+}
+
+export async function decideSalesStaffRequest(
+  adminId: string, requestId: string, decision: 'APPROVED' | 'REJECTED', reason?: string,
+): Promise<ISalesAssignmentRequest> {
+  if (decision === 'REJECTED' && !reason?.trim()) {
+    throw BadRequestError('Phải nhập lý do khi từ chối đề xuất')
+  }
+
+  const request = await SalesAssignmentRequest.findById(requestId)
+  if (!request) throw NotFoundError('Không tìm thấy đề xuất')
+  if (request.status !== 'PENDING') throw ConflictError(`Đề xuất này đã được xử lý (${request.status})`)
+
+  if (decision === 'APPROVED') {
+    const salesStaff = await findOrCreateSalesStaff(adminId, request.sales_staff_email)
+    await SalesAssignment.findOneAndUpdate(
+      { farm_id: request.farm_id, sales_staff_id: salesStaff._id },
+      { $setOnInsert: { invited_by: request.requested_by, requested_via: request._id } },
+      { upsert: true },
+    )
+  }
+
+  request.status = decision
+  request.reviewed_by = adminId as never
+  request.review_note = reason?.trim() || undefined
+  request.reviewed_at = new Date()
+  await request.save()
+
+  await logAction(adminId, `SALES_STAFF_REQUEST_${decision}`, 'sales_assignment_request', requestId, {
+    farm_id: String(request.farm_id), email: request.sales_staff_email, reason: request.review_note,
+  })
+  return request
 }
