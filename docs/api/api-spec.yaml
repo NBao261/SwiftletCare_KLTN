@@ -1438,15 +1438,15 @@ paths:
               },
           }
 
-  /devices/fleet-status:
+  /devices/system-status:
     get:
       tags: [Devices, Admin]
-      summary: "Dashboard trạng thái toàn bộ node hệ thống (OPS-NFR-004) — chỉ ADMIN"
+      summary: "Trạng thái toàn bộ node hệ thống (OPS-NFR-004) — chỉ ADMIN"
       description: |
         Khác `GET /devices/sensor-nodes`/`camera-nodes` (luôn giới hạn theo
         quyền Farm của user) — endpoint này liệt kê TẤT CẢ SensorNode/CameraNode
-        trong hệ thống kèm đếm theo status, phục vụ Admin xem nhanh sức khoẻ hạ
-        tầng toàn công ty, không theo từng Farm riêng lẻ.
+        trong hệ thống kèm đếm theo status (gộp cả 2 loại), phục vụ trang Admin
+        "Trạng thái hệ thống" (`SystemNodeStatus` bên frontend).
       responses:
         "200":
           description: OK
@@ -1459,40 +1459,25 @@ paths:
                       data:
                         type: object
                         properties:
-                          sensorNodes:
-                            type: object
-                            properties:
-                              total: { type: integer }
-                              PENDING: { type: integer }
-                              ONLINE: { type: integer }
-                              OFFLINE: { type: integer }
-                              ERROR: { type: integer }
-                              DEGRADED: { type: integer }
-                          cameraNodes:
-                            type: object
-                            properties:
-                              total: { type: integer }
-                              PENDING: { type: integer }
-                              ONLINE: { type: integer }
-                              OFFLINE: { type: integer }
-                              ERROR: { type: integer }
-                              DEGRADED: { type: integer }
+                          summary: { $ref: "#/components/schemas/DeviceStatusSummary" }
                           nodes:
                             type: array
                             items:
                               type: object
                               properties:
+                                _id: { type: string }
                                 device_id: { type: string }
-                                type: { type: string, enum: [SENSOR, CAMERA] }
-                                zone_id: { type: string }
+                                type: { type: string, enum: [sensor, camera] }
                                 status:
                                   {
                                     type: string,
                                     enum: [PENDING, ONLINE, OFFLINE, ERROR, DEGRADED],
                                   }
                                 last_heartbeat: { type: string, format: date-time, nullable: true }
-                                farm_id: { type: string, nullable: true }
-                                farm_name: { type: string, nullable: true }
+                                rssi: { type: number, nullable: true, description: "Chỉ có với sensor" }
+                                farm_name: { type: string }
+                                house_name: { type: string }
+                                zone_name: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── TELEMETRY ─────────────────────────────────────────────────────────────
@@ -3301,6 +3286,17 @@ components:
       type: string
       enum: [ADMIN, FARM_OWNER, TECHNICIAN, SALES_STAFF]
       description: "AUTH-FR-004. Buyer đăng ký qua OTP không mang role nào (role=null) vì không tham gia RBAC"
+
+    DeviceStatusSummary:
+      type: object
+      description: "Đếm SensorNode + CameraNode theo trạng thái (OPS-NFR-004, SYSTEM-FR-003)"
+      properties:
+        total: { type: integer }
+        online: { type: integer }
+        offline: { type: integer }
+        pending: { type: integer }
+        error: { type: integer }
+        degraded: { type: integer }
 
     User:
       type: object
