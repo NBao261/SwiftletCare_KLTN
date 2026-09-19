@@ -386,16 +386,35 @@ export async function adminOverrideTicket(
   if (!ticket) throw NotFoundError('Không tìm thấy ticket')
 
   const changes: Record<string, unknown> = {}
-  if (updates.assigned_to !== undefined) { ticket.assigned_to = updates.assigned_to as never; changes.assigned_to = updates.assigned_to }
-  if (updates.priority !== undefined) { ticket.priority = updates.priority; changes.priority = updates.priority }
+  if (updates.assigned_to !== undefined) {
+    const technician = await User.findById(updates.assigned_to).select('role is_active').lean()
+    if (!technician || technician.role !== 'TECHNICIAN' || !technician.is_active) {
+      throw BadRequestError('Chỉ gán được cho Technician đang hoạt động')
+    }
+    changes.assigned_to = { before: ticket.assigned_to ? String(ticket.assigned_to) : null, after: updates.assigned_to }
+    ticket.assigned_to = technician._id
+  }
+  if (updates.priority !== undefined && updates.priority !== ticket.priority) {
+    // SLA tính theo priority (TICKET-FR-006) và mốc là lúc tạo ticket, không
+    // phải lúc Admin sửa — nếu không, nâng P3→P1 vẫn giữ hạn 72h cũ.
+    const [responseH, resolveH] = SLA_HOURS[updates.priority]
+    const createdAt = ticket.created_at.getTime()
+    changes.priority = { before: ticket.priority, after: updates.priority }
+    ticket.priority = updates.priority
+    ticket.sla_response_due_at = new Date(createdAt + responseH * 3600_000)
+    ticket.sla_resolve_due_at  = new Date(createdAt + resolveH * 3600_000)
+    changes.sla_resolve_due_at = ticket.sla_resolve_due_at
+  }
   if (updates.scheduled_visit_at !== undefined) {
     ticket.scheduled_visit_at = new Date(updates.scheduled_visit_at)
     changes.scheduled_visit_at = updates.scheduled_visit_at
   }
   if (updates.status !== undefined) {
+    changes.status = { before: ticket.status, after: updates.status }
     ticket.status = updates.status
-    changes.status = updates.status
-    if (updates.status === 'CLOSED') ticket.closed_at = new Date()
+    // Mở lại ticket đã đóng thì gỡ closed_at, nếu không KPI thời gian xử lý
+    // trung bình (getKpi) sẽ tính theo lần đóng cũ.
+    ticket.closed_at = updates.status === 'CLOSED' ? new Date() : undefined
   }
 
   ticket.notes.push({

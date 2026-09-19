@@ -21,6 +21,12 @@ router.put ('/:id/sat-checklist',  requireRole('TECHNICIAN','ADMIN'), param('id'
 router.post('/:id/escalate',       requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, ticketController.escalate)
 router.post('/:id/rating',         requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('satisfaction_rating').isInt({ min: 1, max: 5 }), validate, ticketController.rate)
 // TICKET-FR-005b — Admin toàn quyền can thiệp: đổi Technician/priority/ngày hẹn/status bất kỳ lúc nào
-router.put ('/:id/admin-override', requireRole('ADMIN'), param('id').isMongoId(), body('reason').notEmpty(), validate, ticketController.adminOverride)
+router.put ('/:id/admin-override', requireRole('ADMIN'),
+  param('id').isMongoId(), body('reason').notEmpty(),
+  body('assigned_to').optional().isMongoId(),
+  body('priority').optional().isIn(['P1', 'P2', 'P3']),
+  body('status').optional().isIn(['NEW', 'IN_PROGRESS', 'AWAITING_FIELD_CONFIRMATION', 'CLOSED']),
+  body('scheduled_visit_at').optional().isISO8601(),
+  validate, ticketController.adminOverride)
 
 export default router
