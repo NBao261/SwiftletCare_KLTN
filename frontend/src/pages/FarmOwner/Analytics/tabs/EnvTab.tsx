@@ -38,7 +38,7 @@ export default function EnvTab({
     ...baseChartOptions,
     scales: {
       x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...xAxisTicks } },
-      y: { ...baseChartOptions.scales.y, title: { display: true, text: metricDef.unit, color: CHART_COLORS.warmGray, font: { family: 'Inter', size: 11 } } },
+      y: { ...baseChartOptions.scales.y, title: { display: true, text: metricDef.unit, color: CHART_COLORS.warmGray, font: { family: 'Plus Jakarta Sans', size: 11 } } },
     },
   } as ChartOptions<'line'>), [metricDef.unit])
 

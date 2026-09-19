@@ -1,5 +1,6 @@
 // Alerts Page – ALERT-FR-001/002/006/007/008/009
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAlertsList, useAcknowledgeAlert } from "@/hooks/useAlerts";
 import { Card, Button } from "@/components/ui";
 import AlertBadge from "@/components/common/AlertBadge";
@@ -40,6 +41,10 @@ export default function AlertsPage() {
   );
   const [page, setPage] = useState(1);
   const [ackTargetId, setAckTargetId] = useState<string | null>(null);
+  // Bấm 1 thông báo ở NotificationPopover (TopBar) điều hướng sang đây kèm
+  // ?highlight=<id> — cuộn tới & làm nổi đúng dòng đó nếu đang nằm trong trang/filter hiện tại.
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
 
   const { records, total, limit, isLoading } = useAlertsList({
     status,
@@ -88,7 +93,16 @@ export default function AlertsPage() {
 
       <div className="flex flex-col gap-3">
         {records.map((alert) => (
-          <Card key={alert._id} className="flex flex-col gap-2">
+          <Card
+            key={alert._id}
+            ref={(el) => {
+              if (el && alert._id === highlightId) el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+            className={cn(
+              "flex flex-col gap-2",
+              alert._id === highlightId && "ring-2 ring-alertRed/40",
+            )}
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <AlertBadge severity={alert.severity} />

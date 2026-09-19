@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui";
 import EmptyState from "@/components/common/EmptyState";
 import { useAuthStore } from "@/store/authStore";
-import { getRoleHomePath } from "@/components/layout/navItems";
+import { getRoleHomePath } from "@/constants/navigation";
 
 /** Trang 403 — hiển thị khi RequireRole chặn 1 route vì user không đủ quyền. */
 export default function ForbiddenPage() {

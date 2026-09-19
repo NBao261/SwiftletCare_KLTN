@@ -3,6 +3,7 @@ import { useState, FormEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket } from '@/hooks/useTickets'
 import { usePermission } from '@/hooks/usePermission'
+import { usePageBreadcrumb } from '@/hooks/useBreadcrumb'
 import { Button, Badge, Card, Textarea } from '@/components/ui'
 import StarRating from '@/components/common/StarRating'
 import NoteActionModal from '@/components/common/NoteActionModal'
@@ -29,6 +30,8 @@ export default function TicketDetailPage() {
   const [showCancel, setShowCancel] = useState(false)
   // Backend: PUT /tickets/:id/cancel và POST /tickets/:id/rating chỉ cho FARM_OWNER, ADMIN
   const canManageTicket = usePermission('FARM_OWNER', 'ADMIN')
+  // Breadcrumb TopBar: "Ticket / <loại> #<6 ký tự cuối id>" — dẫn xuất từ chính route :id, không có API riêng trả "tiêu đề" ticket
+  usePageBreadcrumb(ticket ? [{ label: `${TICKET_TYPE_LABEL[ticket.type]} #${ticket._id.slice(-6)}` }] : [])
 
   if (isLoading) return <LoadingSkeleton className="h-96 w-full" />
   if (!ticket) return <EmptyState title="Không tìm thấy ticket" description="Ticket có thể đã bị xoá hoặc bạn không có quyền xem." />

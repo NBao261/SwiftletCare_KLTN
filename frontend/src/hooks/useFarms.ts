@@ -125,3 +125,37 @@ export function useFarmZones(farmId: string | undefined) {
     staleTime: 5 * 60 * 1000,
   })
 }
+
+export interface AllZone extends Zone { houseName: string; farmId: string; farmName: string }
+
+/**
+ * Zone phẳng của TẤT CẢ farm user đang có quyền xem — dùng cho chế độ "Tất cả"
+ * của ZoneSwitcher (Dashboard hiện lưới tổng quan mọi zone thay vì bắt chọn 1
+ * zone trước). Không có endpoint backend gộp sẵn nên gọi listHouses/listZones
+ * lặp qua từng farm ở client — chấp nhận được vì phần lớn tài khoản chỉ có 1-2
+ * farm (xem comment ZoneSwitcher).
+ */
+export function useAllZones() {
+  const { data: farms } = useFarms()
+  return useQuery({
+    queryKey: ['all-zones', farms?.map(f => f._id)],
+    queryFn: async () => {
+      const perFarm = await Promise.all(
+        (farms ?? []).map(async farm => {
+          const houses = (await farmApi.listHouses(farm._id)).data.data
+          const perHouse = await Promise.all(
+            houses.map(house =>
+              farmApi.listZones(house._id).then(r =>
+                r.data.data.map(z => ({ ...z, houseName: house.name, farmId: farm._id, farmName: farm.name })),
+              ),
+            ),
+          )
+          return perHouse.flat()
+        }),
+      )
+      return perFarm.flat() as AllZone[]
+    },
+    enabled: !!farms,
+    staleTime: 5 * 60 * 1000,
+  })
+}

@@ -1,38 +1,29 @@
 import { useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useFarms, useCreateFarm } from "@/hooks/useFarms";
 import { usePermission } from "@/hooks/usePermission";
 import { Button, Input, Modal, Card } from "@/components/ui";
-import { IconFarm } from "@/components/ui/icons";
-import { cn } from "@/utils/cn";
+import { IconFarm, IconChevronRight } from "@/components/ui/icons";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import EmptyState from "@/components/common/EmptyState";
-import HouseZoneManager from "./HouseZoneManager";
-import FarmMembersManager from "./FarmMembersManager";
 
-const FARM_TABS = ["houses", "members"] as const;
-type FarmTab = (typeof FARM_TABS)[number];
-const FARM_TAB_LABEL: Record<FarmTab, string> = {
-  houses: "Nhà & Zone",
-  members: "Thành viên",
-};
-
-/** Farms Page – FARM-FR-001, FARM-FR-002 */
+/** Farms Page – FARM-FR-001, FARM-FR-002 — danh sách farm, bấm 1 farm để drill-down sang /farms/:farmId */
 export default function FarmsPage() {
   const { data: farms, isLoading } = useFarms();
   const createFarm = useCreateFarm();
+  const navigate = useNavigate();
   // Backend: POST /farms chỉ cho FARM_OWNER, ADMIN
   const canCreateFarm = usePermission("FARM_OWNER", "ADMIN");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", address: "", region: "" });
-  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<FarmTab>("houses");
 
   function handleCreate(e: FormEvent) {
     e.preventDefault();
     createFarm.mutate(form, {
-      onSuccess: () => {
+      onSuccess: (res) => {
         setShowCreate(false);
         setForm({ name: "", address: "", region: "" });
+        navigate(`/farms/${res.data.data._id}`);
       },
     });
   }
@@ -66,25 +57,13 @@ export default function FarmsPage() {
 
       <div className="flex flex-col gap-3">
         {farms?.map((farm) => (
-          <Card
-            key={farm._id}
-            variant={selectedFarmId === farm._id ? "active" : "default"}
-          >
+          <Card key={farm._id}>
             <button
               className="flex w-full items-center justify-between gap-3 text-left"
-              onClick={() =>
-                setSelectedFarmId((id) => (id === farm._id ? null : farm._id))
-              }
+              onClick={() => navigate(`/farms/${farm._id}`)}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <span
-                  className={cn(
-                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
-                    selectedFarmId === farm._id
-                      ? "bg-charcoal text-white"
-                      : "bg-warmGray/10 text-charcoal",
-                  )}
-                >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-warmGray/10 text-charcoal">
                   <IconFarm />
                 </span>
                 <div className="min-w-0">
@@ -95,38 +74,8 @@ export default function FarmsPage() {
                   </p>
                 </div>
               </div>
-              <span className="shrink-0 text-sm font-semibold">
-                {selectedFarmId === farm._id ? "Thu gọn" : "Quản lý"}
-              </span>
+              <IconChevronRight width={18} height={18} className="shrink-0 text-warmGray" />
             </button>
-            {selectedFarmId === farm._id && (
-              <div className="mt-4 border-t border-warmGray/15 pt-4">
-                <div className="flex gap-1 rounded-2xl bg-warmGray/10 p-1">
-                  {FARM_TABS.map((t) => (
-                    <button
-                      key={t}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveTab(t);
-                      }}
-                      className={cn(
-                        "flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
-                        activeTab === t
-                          ? "bg-white text-charcoal shadow-card"
-                          : "text-warmGray",
-                      )}
-                    >
-                      {FARM_TAB_LABEL[t]}
-                    </button>
-                  ))}
-                </div>
-                {activeTab === "houses" ? (
-                  <HouseZoneManager farmId={farm._id} farmName={farm.name} />
-                ) : (
-                  <FarmMembersManager farmId={farm._id} />
-                )}
-              </div>
-            )}
           </Card>
         ))}
       </div>

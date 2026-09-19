@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom";
 import { useZoneStore } from "@/store/zoneStore";
 import { useTelemetry } from "@/hooks/useTelemetry";
+import { useAllZones } from "@/hooks/useFarms";
 import { Badge, Button } from "@/components/ui";
 import SensorCard from "@/components/common/SensorCard";
 import EmptyState from "@/components/common/EmptyState";
+import ZoneOverviewCard from "./components/ZoneOverviewCard";
+import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import {
   IconTemp,
   IconHumidity,
@@ -23,22 +26,49 @@ const T = {
 
 /** Dashboard – 6 chỉ số realtime của Zone đang chọn (ENV-FR-005) */
 export default function DashboardPage() {
-  const { selectedZoneId, selectedZoneName } = useZoneStore();
+  const { selectedZoneId, selectedZoneName, setZone } = useZoneStore();
   const { data, isLoading, isLive, hasEverReceived } = useTelemetry(
     selectedZoneId ?? undefined,
   );
+  const { data: allZones, isLoading: isLoadingAllZones } = useAllZones();
 
   if (!selectedZoneId) {
+    if (isLoadingAllZones) {
+      return <LoadingSkeleton count={4} className="h-32 w-full" />;
+    }
+
+    if (!allZones?.length) {
+      return (
+        <EmptyState
+          title="Chưa có khu vực nào"
+          description="Tạo trang trại, nhà yến và zone để bắt đầu xem số liệu môi trường thời gian thực."
+          action={
+            <Link to="/farms">
+              <Button>Đi tới Trang trại</Button>
+            </Link>
+          }
+        />
+      );
+    }
+
     return (
-      <EmptyState
-        title="Chưa chọn khu vực nào"
-        description="Chọn khu vực ở thanh trên cùng để xem số liệu môi trường thời gian thực, hoặc tạo trang trại mới nếu bạn vừa bắt đầu."
-        action={
-          <Link to="/farms">
-            <Button>Đi tới Trang trại</Button>
-          </Link>
-        }
-      />
+      <div className="flex flex-col gap-5">
+        <div className="min-w-0">
+          <p className="label-caption">Khu vực đang xem</p>
+          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">
+            Tất cả nhà yến
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+          {allZones.map((zone) => (
+            <ZoneOverviewCard
+              key={zone._id}
+              zone={zone}
+              onClick={() => setZone(zone.farmId, zone.farmName, zone._id, zone.name)}
+            />
+          ))}
+        </div>
+      </div>
     );
   }
 

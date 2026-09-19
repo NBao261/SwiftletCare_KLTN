@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/utils/cn'
 
 /**
- * Button — bám đúng "Bảng Phân Loại Màu Nút Bấm Mặc Định" (FE_Design_Swiftlet.md §2.3)
+ * Button — bám đúng "Bảng Phân Loại Màu Nút Bấm Mặc Định" (FE_Design_Claude.md §5.1)
  *
  *   primary   Charcoal bg / White text     — hành động chính duy nhất trên màn hình
  *   accent    Lime Mist bg / Charcoal text — kích hoạt đặc biệt, badge nổi bật

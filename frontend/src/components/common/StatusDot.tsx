@@ -2,9 +2,9 @@ import { cn } from '@/utils/cn'
 import type { DeviceStatus } from '@/types'
 
 const STATUS_CLASS: Record<DeviceStatus, string> = {
-  PENDING:  'bg-insightPeach',
-  ONLINE:   'bg-limeMist',
-  OFFLINE:  'bg-warmGray',
+  PENDING:  'bg-orange-300', // chờ kết nối lần đầu — nhạt hơn DEGRADED để phân biệt 2 mức "chưa ổn"
+  ONLINE:   'bg-success',
+  OFFLINE:  'bg-gray-400',
   ERROR:    'bg-alertRed',
   DEGRADED: 'bg-climateOrange',
 }
