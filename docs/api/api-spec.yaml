@@ -34,6 +34,8 @@ tags:
     description: AUTH-FR-001..003/004/005/005b/009/010/012 (đăng ký/đăng nhập/JWT/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản)
   - name: Admin
     description: AUTH-FR-005c/007/011/012, TICKET-FR-005b, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician/Sales Staff, can thiệp ticket toàn quyền, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
+  - name: System
+    description: SYSTEM-FR-001..003 (Module SYSTEM §5.11 — xem audit log, ngưỡng mặc định hệ thống, tổng quan sức khỏe hệ thống) — mọi endpoint chỉ ADMIN
   - name: Farms
     description: FARM-FR-001..002/007, AUTH-FR-005/005b/010 (farm/house/zone/member/sales-staff/invitation)
   - name: Devices
@@ -544,6 +546,124 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ── SYSTEM ────────────────────────────────────────────────────────────────
+  /system/audit-logs:
+    get:
+      tags: [System]
+      summary: "Xem/lọc Audit Log toàn hệ thống (SYSTEM-FR-001) — chỉ ADMIN"
+      description: |
+        Các action đang được ghi: LOGIN, LOGIN_FAILED, ACCOUNT_LOCKED,
+        ACCOUNT_UNLOCKED, ACCOUNT_DELETED, USER_CREATED, THRESHOLD_UPDATED,
+        DEFAULT_THRESHOLDS_UPDATED, RELAY_OVERRIDE, DEVICE_REASSIGNED,
+        TICKET_ADMIN_OVERRIDE, SALES_STAFF_REQUEST_APPROVED/REJECTED.
+      parameters:
+        - { name: actorId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string, example: LOGIN_FAILED } }
+        - { name: targetType, in: query, schema: { type: string, example: user } }
+        - { name: targetId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK (mới nhất trước)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/AuditLog" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /system/settings/default-thresholds:
+    get:
+      tags: [System]
+      summary: "Xem ngưỡng mặc định hệ thống (SYSTEM-FR-002, ENV-FR-007) — chỉ ADMIN"
+      description: Chưa từng cấu hình thì trả giá trị gốc (khớp firmware Config.h).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Thresholds" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [System]
+      summary: "Chỉnh ngưỡng mặc định hệ thống (SYSTEM-FR-002) — chỉ ADMIN"
+      description: |
+        Gửi 1 phần hoặc cả 7 trường, phần còn lại giữ nguyên. Đây là nguồn
+        Farm Owner dùng khi "Reset về mặc định" 1 Zone (ENV-FR-020) — KHÔNG tự
+        áp xuống các Zone đang chạy. Mọi thay đổi ghi audit log.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Thresholds" }
+      responses:
+        "200":
+          description: Giá trị sau khi cập nhật
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Thresholds" } }
+        "400":
+          description: "min >= max hoặc giá trị âm"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /system/health-overview:
+    get:
+      tags: [System]
+      summary: "Tổng quan sức khỏe hệ thống (SYSTEM-FR-003) — chỉ ADMIN"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          farms: { type: object, properties: { total: { type: integer } } }
+                          zones: { type: object, properties: { total: { type: integer } } }
+                          devices: { $ref: "#/components/schemas/DeviceStatusSummary" }
+                          openTickets:
+                            type: object
+                            description: Ticket chưa CLOSED theo priority
+                            properties:
+                              total: { type: integer }
+                              P1: { type: integer }
+                              P2: { type: integer }
+                              P3: { type: integer }
+                          users:
+                            type: object
+                            properties:
+                              total: { type: integer }
+                              active: { type: integer }
+                              inactive: { type: integer }
+                              byRole:
+                                type: object
+                                additionalProperties:
+                                  type: object
+                                  properties:
+                                    active: { type: integer }
+                                    inactive: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── FARMS ─────────────────────────────────────────────────────────────────
   /farms:
@@ -3297,6 +3417,26 @@ components:
         pending: { type: integer }
         error: { type: integer }
         degraded: { type: integer }
+
+    AuditLog:
+      type: object
+      description: "AUTH-FR-007 — collection audit_logs (SRS §8.2)"
+      properties:
+        _id: { type: string }
+        actor_id:
+          nullable: true
+          description: "Populate { _id, full_name, email, role }; null nếu hệ thống tự thực hiện hoặc đăng nhập bằng email không tồn tại"
+          type: object
+          properties:
+            _id: { type: string }
+            full_name: { type: string }
+            email: { type: string }
+            role: { $ref: "#/components/schemas/Role" }
+        action: { type: string, example: ACCOUNT_LOCKED }
+        target_type: { type: string, example: user }
+        target_id: { type: string, nullable: true }
+        metadata: { type: object, description: "Chi tiết thay đổi, thường có before/after" }
+        created_at: { type: string, format: date-time }
 
     User:
       type: object

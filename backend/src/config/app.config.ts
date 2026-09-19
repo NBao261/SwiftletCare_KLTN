@@ -13,6 +13,7 @@ import logger from '@/utils/logger.util'
 
 import authRoutes      from '@/routes/auth.route'
 import adminRoutes     from '@/routes/admin.route'
+import systemRoutes    from '@/routes/system.route'
 import farmRoutes      from '@/routes/farms.route'
 import invitationRoutes from '@/routes/invitations.route'
 import deviceRoutes    from '@/routes/devices.route'
@@ -61,6 +62,7 @@ try {
 // ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/auth',      authRoutes)
 app.use('/admin',     adminRoutes)
+app.use('/system',    systemRoutes)
 app.use('/farms',       farmRoutes)
 app.use('/invitations', invitationRoutes)
 app.use('/devices',   deviceRoutes)

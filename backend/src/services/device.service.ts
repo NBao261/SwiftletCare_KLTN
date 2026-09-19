@@ -342,7 +342,7 @@ export interface DeviceStatusSummary {
   total: number; online: number; offline: number; pending: number; error: number; degraded: number
 }
 
-function summarizeByStatus(nodes: Array<{ status: DeviceStatus }>): DeviceStatusSummary {
+export function summarizeByStatus(nodes: Array<{ status: DeviceStatus }>): DeviceStatusSummary {
   const summary: DeviceStatusSummary = { total: nodes.length, online: 0, offline: 0, pending: 0, error: 0, degraded: 0 }
   for (const n of nodes) summary[n.status.toLowerCase() as Exclude<keyof DeviceStatusSummary, 'total'>]++
   return summary
