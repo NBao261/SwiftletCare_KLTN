@@ -5,6 +5,7 @@ import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds } from '@
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
 import { raiseNodeOfflineAlert } from '@/services/alert.service'
+import { logAction } from '@/services/auditLog.service'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
@@ -69,6 +70,9 @@ export async function updateNodeThresholds(nodeId: string, user: CurrentUser, up
   await chain.zone.save()
 
   publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', chain.zone.thresholds)
+  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(chain.zone._id), {
+    source: 'MANUAL', viaNodeId: nodeId, before: oldValues, after: chain.zone.thresholds,
+  })
   return chain.zone
 }
 
@@ -108,6 +112,9 @@ export async function controlRelay(
     overrideExpiry: node.override_expiry.toISOString(),
   })
 
+  await logAction(user._id, 'RELAY_OVERRIDE', 'sensor_node', String(node._id), {
+    relayName: input.relayName, state: input.state, durationMs: overrideMs,
+  })
   return node
 }
 
@@ -144,6 +151,10 @@ export async function reassignZone(
   // Cập nhật lạc quan — giống pattern controlRelay/updateNodeThresholds ở trên.
   node.zone_id = destChain.zone._id
   await node.save()
+
+  await logAction(user._id, 'DEVICE_REASSIGNED', 'sensor_node', String(node._id), {
+    fromZoneId: String(sourceChain.zone._id), toZoneId: String(destChain.zone._id),
+  })
   return node
 }
 

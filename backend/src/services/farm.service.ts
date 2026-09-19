@@ -6,6 +6,7 @@ import { SalesAssignment } from '@/models/salesAssignment.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
+import { logAction } from '@/services/auditLog.service'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser } from '@/types'
 
@@ -304,6 +305,7 @@ export async function updateZoneThresholds(zoneId: string, user: CurrentUser, up
   await zone.save()
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
+  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), { source: 'MANUAL', before: oldValues, after: zone.thresholds })
   return zone
 }
 
@@ -324,6 +326,7 @@ export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Pr
   await zone.save()
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
+  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), { source: 'RESET_TO_DEFAULT', before: oldValues, after: zone.thresholds })
   return zone
 }
 
