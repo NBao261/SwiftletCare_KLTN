@@ -39,7 +39,7 @@ const ALL_NAV_SECTIONS: NavSection[] = [
       // OPS-NFR-004 — màn hình xem nhanh trạng thái mọi node toàn hệ thống, chỉ Admin.
       { to: '/system-status', label: 'Trạng thái hệ thống', icon: IconDashboard, roles: ['ADMIN'] },
       { to: '/dashboard', label: 'Tổng quan', icon: IconDashboard, roles: FARM_OWNER_ONLY },
-      { to: '/devices',   label: 'Thiết bị',  icon: IconDevice, roles: OPS_ROLES },
+      { to: '/devices',   label: 'Thiết bị & Cảm biến',  icon: IconDevice, roles: OPS_ROLES },
       { to: '/alerts',    label: 'Cảnh báo',  icon: IconAlert, roles: OPS_ROLES },
     ],
   },

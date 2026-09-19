@@ -25,7 +25,10 @@ router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.l
 // Zones (under house)
 router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('houseId').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createZone)
 router.get ('/houses/:houseId/zones',    param('houseId').isMongoId(), validate, farmController.listZones)
+router.get ('/zones/:zoneId',            param('zoneId').isMongoId(), validate, farmController.getZone)
 router.put ('/zones/:zoneId/thresholds', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.updateThresholds)
+// ENV-FR-020 — reset về mặc định kỹ thuật cố định (chưa có system_settings admin-configurable, xem farm.service.ts)
+router.put ('/zones/:zoneId/thresholds/reset', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.resetThresholds)
 
 // Sales Staff assignment (AUTH-FR-005b, Module SALES §5.10)
 router.post('/:id/sales-staff', requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('email').isEmail(), validate, farmController.inviteSalesStaff)

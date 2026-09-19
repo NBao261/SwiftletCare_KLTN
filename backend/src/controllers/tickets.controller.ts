@@ -70,3 +70,9 @@ export const rate = asyncHandler(async (req: Request, res: Response) => {
 export const kpi = asyncHandler(async (_req: Request, res: Response) => {
   res.json({ success: true, data: await ticketService.getKpi() })
 })
+
+/** PUT /tickets/:id/admin-override – TICKET-FR-005b */
+export const adminOverride = asyncHandler(async (req: Request, res: Response) => {
+  const ticket = await ticketService.adminOverrideTicket(req.params.id, req.user, req.body)
+  res.json({ success: true, data: ticket })
+})

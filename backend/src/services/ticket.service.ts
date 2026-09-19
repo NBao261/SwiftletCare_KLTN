@@ -3,6 +3,7 @@ import { Alert } from '@/models/alert.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util'
+import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -361,4 +362,49 @@ export async function getKpi() {
     avgResolveHours: sla?.avgResolveMs ? +(sla.avgResolveMs / 3600_000).toFixed(1) : null,
     slaComplianceRate: sla?.total ? +(((sla.total - (sla.breached ?? 0)) / sla.total) * 100).toFixed(1) : null,
   }
+}
+
+export interface AdminOverrideInput {
+  assigned_to?: string
+  priority?: TicketPriority
+  scheduled_visit_at?: string
+  status?: TicketStatus
+  reason: string
+}
+
+/**
+ * TICKET-FR-005b — Administrator có toàn quyền can thiệp bất kỳ ticket nào, bất
+ * kỳ lúc nào, không giới hạn ở SLA breach hay không tìm được Technician phù
+ * hợp (khác `escalateTicket`/`updateStatus` vốn theo đúng quy trình thường).
+ * Cố tình KHÔNG áp `ALLOWED_TRANSITIONS`/SAT checklist — đây là lối thoát cho
+ * ngoại lệ/khiếu nại mà quy trình chuẩn không xử lý được.
+ */
+export async function adminOverrideTicket(
+  ticketId: string, adminUser: CurrentUser, updates: AdminOverrideInput,
+): Promise<ITicket> {
+  const ticket = await Ticket.findById(ticketId)
+  if (!ticket) throw NotFoundError('Không tìm thấy ticket')
+
+  const changes: Record<string, unknown> = {}
+  if (updates.assigned_to !== undefined) { ticket.assigned_to = updates.assigned_to as never; changes.assigned_to = updates.assigned_to }
+  if (updates.priority !== undefined) { ticket.priority = updates.priority; changes.priority = updates.priority }
+  if (updates.scheduled_visit_at !== undefined) {
+    ticket.scheduled_visit_at = new Date(updates.scheduled_visit_at)
+    changes.scheduled_visit_at = updates.scheduled_visit_at
+  }
+  if (updates.status !== undefined) {
+    ticket.status = updates.status
+    changes.status = updates.status
+    if (updates.status === 'CLOSED') ticket.closed_at = new Date()
+  }
+
+  ticket.notes.push({
+    author_id: adminUser._id as never,
+    content: `Admin can thiệp: ${updates.reason}`,
+    created_at: new Date(),
+  })
+  await ticket.save()
+
+  await logAction(adminUser._id, 'TICKET_ADMIN_OVERRIDE', 'ticket', ticketId, changes)
+  return ticket.populate('assigned_to', 'full_name email')
 }

@@ -50,8 +50,7 @@ export const listCameraNodes = asyncHandler(async (req: Request, res: Response) 
   res.json({ success: true, data: nodes })
 })
 
-/** GET /devices/system-status – OPS-NFR-004, Admin xem nhanh trạng thái mọi node toàn hệ thống */
-export const getSystemStatus = asyncHandler(async (req: Request, res: Response) => {
-  const result = await deviceService.getSystemNodeStatus(req.user)
-  res.json({ success: true, data: result })
+/** GET /devices/fleet-status – OPS-NFR-004, chỉ Admin */
+export const getFleetStatus = asyncHandler(async (_req: Request, res: Response) => {
+  res.json({ success: true, data: await deviceService.getFleetStatus() })
 })

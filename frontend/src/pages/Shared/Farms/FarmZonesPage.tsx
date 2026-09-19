@@ -21,7 +21,7 @@ export default function FarmZonesPage() {
   // Backend: POST /farms/houses/:houseId/zones chỉ cho FARM_OWNER, TECHNICIAN, ADMIN
   const canManage = usePermission("FARM_OWNER", "TECHNICIAN", "ADMIN");
   // Route /dashboard chỉ cho FARM_OWNER (RequireRole trong App.tsx) — nút này chỉ hiện cho role được vào
-  const canViewDashboard = usePermission("FARM_OWNER");
+  const isFarmOwner = usePermission("FARM_OWNER");
   const setZone = useZoneStore((s) => s.setZone);
   const [showCreate, setShowCreate] = useState(false);
   const [zoneName, setZoneName] = useState("");
@@ -75,13 +75,13 @@ export default function FarmZonesPage() {
           <div key={zone._id} className="flex items-center justify-between rounded-xl bg-warmGray/5 px-4 py-2.5">
             <span className="text-sm font-medium text-charcoal">{zone.name}</span>
             <div className="flex gap-2">
-              {canViewDashboard && (
+              {isFarmOwner && (
                 <Button variant="secondary" size="sm" onClick={() => goTo(zone._id, zone.name, "/dashboard")}>
                   Dashboard
                 </Button>
               )}
               <Button variant="secondary" size="sm" onClick={() => goTo(zone._id, zone.name, "/devices")}>
-                Thiết bị
+                Thiết bị & Cảm biến
               </Button>
             </div>
           </div>

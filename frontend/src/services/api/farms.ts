@@ -30,7 +30,11 @@ export const farmApi = {
   createZone: (houseId: string, input: { name: string; floor?: number }) =>
     api.post<ApiResponse<Zone>>(`/farms/houses/${houseId}/zones`, input),
   listZones: (houseId: string) => api.get<ApiResponse<Zone[]>>(`/farms/houses/${houseId}/zones`),
+  getZone: (zoneId: string) => api.get<ApiResponse<Zone>>(`/farms/zones/${zoneId}`),
 
   updateThresholds: (zoneId: string, thresholds: Partial<Zone['thresholds']>) =>
     api.put<ApiResponse<Zone>>(`/farms/zones/${zoneId}/thresholds`, thresholds),
+  // ENV-FR-020 — reset về mặc định kỹ thuật cố định (xem farm.service.ts)
+  resetThresholds: (zoneId: string) =>
+    api.put<ApiResponse<Zone>>(`/farms/zones/${zoneId}/thresholds/reset`, {}),
 }
