@@ -11,8 +11,9 @@ import { rateLimiter } from '@/middlewares/rateLimiter.middleware'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { requestContext } from '@/middlewares/requestContext.middleware'
 import logger from '@/utils/logger.util'
+import { parseTrustProxy } from '@/utils/trustProxy.util'
 
-import authRoutes      from '@/routes/auth.route'
+import authRoutes     from '@/routes/auth.route'
 import adminRoutes     from '@/routes/admin.route'
 import systemRoutes    from '@/routes/system.route'
 import farmRoutes      from '@/routes/farms.route'
@@ -34,11 +35,9 @@ const app: Application = express()
 
 // Sau reverse proxy/tunnel (Cloudflare, nginx) req.ip mặc định là IP của proxy —
 // audit log và rate limit sẽ gom mọi client về 1 địa chỉ. Đặt TRUST_PROXY=<số hop>
-// (hoặc true/loopback...) khi triển khai sau proxy; bỏ trống = không tin header.
-const trustProxy = process.env.TRUST_PROXY
-if (trustProxy) {
-  app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy === 'true' ? true : trustProxy)
-}
+// (hoặc loopback/danh sách IP proxy) khi triển khai sau proxy; bỏ trống = không tin header.
+const trustProxy = parseTrustProxy(process.env.TRUST_PROXY)
+if (trustProxy !== false) app.set('trust proxy', trustProxy)
 
 // ── Security ───────────────────────────────────────────────────────────────────
 app.use(helmet())
