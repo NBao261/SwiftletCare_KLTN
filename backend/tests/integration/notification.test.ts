@@ -70,6 +70,23 @@ describe('notifyUser', () => {
     expect(sentTo('push')).toHaveLength(1)
   })
 
+  it('emails an overriding address instead of the current one (used after the account was anonymized)', async () => {
+    const user = await User.create({ email: 'deleted-x@swiftletcare.local', password_hash: 'password123', full_name: 'Gone', role: 'FARM_OWNER' })
+
+    await notifyUser(String(user._id), message, { email: 'real@test.vn' })
+
+    expect(sentTo('email')).toEqual([expect.objectContaining({ email: 'real@test.vn' })])
+  })
+
+  it('emailOnly sends no push even when the user has push enabled', async () => {
+    const user = await User.create({ email: 'owner@test.vn', password_hash: 'password123', full_name: 'Owner', role: 'FARM_OWNER' })
+
+    await notifyUser(String(user._id), message, { emailOnly: true })
+
+    expect(sentTo('push')).toHaveLength(0)
+    expect(sentTo('email')).toHaveLength(1)
+  })
+
   it('does nothing and does not throw for an unknown user', async () => {
     await expect(notifyUser(String(new mongoose.Types.ObjectId()), message)).resolves.toBeUndefined()
     expect(sentTo('push')).toHaveLength(0)
