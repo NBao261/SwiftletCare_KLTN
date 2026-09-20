@@ -11,7 +11,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import RequireRole from "@/components/auth/RequireRole";
 import { setNavigate } from "@/utils/navigation";
-import { getRoleHomePath } from "@/components/layout/navItems";
+import { getRoleHomePath } from "@/constants/navigation";
 import type { Role } from "@/types";
 
 // Code-splitting theo route — tránh bundle chính kéo theo chart.js/date-fns
@@ -32,6 +32,12 @@ const DashboardPage = lazy(
   () => import("@/pages/FarmOwner/Dashboard/DashboardPage"),
 );
 const FarmsPage = lazy(() => import("@/pages/Shared/Farms/FarmsPage"));
+const FarmHousesPage = lazy(
+  () => import("@/pages/Shared/Farms/FarmHousesPage"),
+);
+const FarmZonesPage = lazy(
+  () => import("@/pages/Shared/Farms/FarmZonesPage"),
+);
 const DevicesPage = lazy(() => import("@/pages/Shared/Devices/DevicesPage"));
 const AlertsPage = lazy(() => import("@/pages/Shared/Alerts/AlertsPage"));
 const AnalyticsPage = lazy(
@@ -69,7 +75,7 @@ const AdminNodeStatusPage = lazy(
 const OPS_ROLES: Role[] = ["FARM_OWNER", "TECHNICIAN", "ADMIN"];
 // Dashboard/Analytics (giám sát môi trường chi tiết theo zone) là công cụ vận
 // hành hằng ngày CỦA RIÊNG Farm Owner — Technician/Admin xử lý kỹ thuật/ticket,
-// không cần chi tiết tới mức đó (xem navItems.tsx).
+// không cần chi tiết tới mức đó (xem constants/navigation.ts).
 const FARM_OWNER_ONLY: Role[] = ["FARM_OWNER"];
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -161,6 +167,22 @@ export default function App() {
             element={
               <RequireRole allow={OPS_ROLES}>
                 <FarmsPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="farms/:farmId"
+            element={
+              <RequireRole allow={OPS_ROLES}>
+                <FarmHousesPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="farms/:farmId/houses/:houseId"
+            element={
+              <RequireRole allow={OPS_ROLES}>
+                <FarmZonesPage />
               </RequireRole>
             }
           />

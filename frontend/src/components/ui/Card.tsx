@@ -1,4 +1,4 @@
-import { HTMLAttributes } from 'react'
+import { forwardRef, HTMLAttributes } from 'react'
 import { cn } from '@/utils/cn'
 
 /** Card — mục 2.1 (rounded-2xl trung bình / rounded-3xl lớn) + 2.2.8 (card active Lime Mist) */
@@ -13,9 +13,10 @@ const VARIANT_CLASS: Record<NonNullable<CardProps['variant']>, string> = {
   dark:    'bg-graphite text-white',
 }
 
-export function Card({ variant = 'default', size = 'md', className, children, ...props }: CardProps) {
-  return (
+export const Card = forwardRef<HTMLDivElement, CardProps>(
+  ({ variant = 'default', size = 'md', className, children, ...props }, ref) => (
     <div
+      ref={ref}
       className={cn(
         size === 'lg' ? 'rounded-3xl p-6' : 'rounded-2xl p-5',
         VARIANT_CLASS[variant],
@@ -25,5 +26,6 @@ export function Card({ variant = 'default', size = 'md', className, children, ..
     >
       {children}
     </div>
-  )
-}
+  ),
+)
+Card.displayName = 'Card'

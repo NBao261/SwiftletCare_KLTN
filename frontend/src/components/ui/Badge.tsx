@@ -2,8 +2,8 @@ import { HTMLAttributes } from 'react'
 import { cn } from '@/utils/cn'
 
 /**
- * Badge — pill trạng thái, giới hạn trong 8 màu chuẩn (FE_Design_Swiftlet.md).
- * Map ý nghĩa: positive/ONLINE→limeMist, warning/MEDIUM→climateOrange,
+ * Badge — pill trạng thái, giới hạn trong bảng màu chuẩn (FE_Design_Claude.md §2).
+ * Map ý nghĩa: positive/ONLINE→success (accent-600, §2.5), warning/MEDIUM→climateOrange,
  * critical/HIGH→alertRed, neutral/OFFLINE→warmGray, info→graphite.
  */
 export type BadgeTone = 'positive' | 'warning' | 'critical' | 'neutral' | 'info'
@@ -13,7 +13,7 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const TONE_CLASS: Record<BadgeTone, string> = {
-  positive: 'bg-limeMist text-charcoal',
+  positive: 'bg-success/15 text-accent-800',
   warning:  'bg-climateOrange/15 text-climateOrange',
   critical: 'bg-alertRed/15 text-alertRed',
   neutral:  'bg-warmGray/15 text-warmGray',

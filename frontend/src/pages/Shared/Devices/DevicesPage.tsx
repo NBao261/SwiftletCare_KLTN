@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Modal, Card, Badge } from "@/components/ui";
 import { IconDevice } from "@/components/ui/icons";
 import StatusDot from "@/components/common/StatusDot";
-import RelayToggle from "@/components/common/RelayToggle";
+import RelayToggle from "./components/RelayToggle";
 import EmptyState from "@/components/common/EmptyState";
 import FarmHouseZonePicker, {
   FarmHouseZonePickerValue,
@@ -181,7 +181,7 @@ export default function DevicesPage() {
             </div>
 
             {node.status === "PENDING" ? (
-              <p className="rounded-xl bg-insightPeach/25 px-3 py-2.5 text-xs font-medium text-charcoal">
+              <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
                 Thiết bị đã khai báo nhưng chưa kết nối lần nào — cấp nguồn và
                 cấu hình WiFi để hoàn tất. Điều khiển relay sẽ bật khi thiết bị
                 online.

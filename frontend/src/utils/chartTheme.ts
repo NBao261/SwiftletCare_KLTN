@@ -14,22 +14,24 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler)
 
 /**
- * Bảng màu chart — CHỈ dùng 8 màu chuẩn (FE_Design_Swiftlet.md §1). `insightPeach`
- * được định nghĩa đúng vai trò "series phụ trên biểu đồ phân tích".
+ * Bảng màu chart — bám bảng màu chuẩn FE_Design_Claude.md §2. Chart.js nhận
+ * string màu literal nên đây là ngoại lệ duy nhất không dùng class Tailwind.
+ * `gray300` thay cho "insightPeach" cũ — series phụ dùng thang xám gray-300→
+ * gray-700 theo §2.6, không dùng màu ngoài hệ thống.
  */
 export const CHART_COLORS = {
   charcoal: '#27231F',
   graphite: '#4E4A46',
   warmGray: '#878380',
-  climateOrange: '#F0813A',
-  alertRed: '#E13A3A',
-  insightPeach: '#F5C89E',
+  gray300: '#C5C4C3',
+  climateOrange: '#ED8F50',
+  alertRed: '#D53F35',
 } as const
 
 /** Cycle 6 màu (bỏ white/limeMist — không đủ tương phản cho bar/line trên nền trắng) */
 export const CHART_PALETTE = [
   CHART_COLORS.charcoal, CHART_COLORS.climateOrange, CHART_COLORS.graphite,
-  CHART_COLORS.alertRed, CHART_COLORS.warmGray, CHART_COLORS.insightPeach,
+  CHART_COLORS.alertRed, CHART_COLORS.warmGray, CHART_COLORS.gray300,
 ]
 
 /**
@@ -47,8 +49,8 @@ export const baseChartOptions = {
     legend: { display: false },
     tooltip: {
       backgroundColor: CHART_COLORS.charcoal,
-      titleFont: { family: 'Inter', weight: 700 },
-      bodyFont: { family: 'Inter' },
+      titleFont: { family: 'Plus Jakarta Sans', weight: 700 },
+      bodyFont: { family: 'Plus Jakarta Sans' },
       padding: 10,
       cornerRadius: 12,
     },
@@ -56,11 +58,11 @@ export const baseChartOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { color: CHART_COLORS.warmGray, font: { family: 'Inter', size: 11 } },
+      ticks: { color: CHART_COLORS.warmGray, font: { family: 'Plus Jakarta Sans', size: 11 } },
     },
     y: {
       grid: { color: 'rgba(135,131,128,0.12)' },
-      ticks: { color: CHART_COLORS.warmGray, font: { family: 'Inter', size: 11 } },
+      ticks: { color: CHART_COLORS.warmGray, font: { family: 'Plus Jakarta Sans', size: 11 } },
     },
   },
 }

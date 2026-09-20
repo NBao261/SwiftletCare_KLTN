@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/utils/cn'
-import { getDockItems } from './navItems'
+import { getDockItems } from '@/constants/navigation'
 import { useAuthStore } from '@/store/authStore'
 
 /**
- * Bottom Floating Dock cho mobile/tablet — FE_Design_Swiftlet.md §2.2.9 & §3.A:
- * khung `rounded-full` nền trắng, shadow dock, nút tròn bên trong.
+ * Bottom Floating Dock cho mobile/tablet — khung `rounded-full` nền trắng,
+ * shadow dock, nút tròn bên trong (màu theo FE_Design_Claude.md §2).
  *
  * Trước đây sidebar `w-64` cố định chiếm gần hết màn hình điện thoại khiến app
  * gần như không dùng được ở 375px (UX-NFR-001 yêu cầu hỗ trợ ≥375px).

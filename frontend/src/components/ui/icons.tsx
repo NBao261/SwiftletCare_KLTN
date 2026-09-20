@@ -2,7 +2,7 @@ import type { SVGProps } from 'react'
 
 /**
  * Bộ icon nội bộ — SVG stroke dùng `currentColor` nên tự ăn theo màu chữ, không
- * thêm màu ngoài 8 màu chuẩn (FE_Design_Swiftlet.md §1). Không dùng thư viện
+ * thêm màu ngoài bảng màu chuẩn (FE_Design_Claude.md §2). Không dùng thư viện
  * icon ngoài để giữ bundle nhẹ và kiểm soát được nét vẽ đồng nhất (stroke 1.6).
  */
 type IconProps = SVGProps<SVGSVGElement>
@@ -84,6 +84,14 @@ export const IconClose = (p: IconProps) => (
 
 export const IconPin = (p: IconProps) => (
   <Svg {...p}><path d="M10 17.5s5.5-5 5.5-9a5.5 5.5 0 1 0-11 0c0 4 5.5 9 5.5 9Z" /><circle cx="10" cy="8.5" r="2" /></Svg>
+)
+
+export const IconGlobe = (p: IconProps) => (
+  <Svg {...p}><circle cx="10" cy="10" r="7.5" /><path d="M2.5 10h15M10 2.5c2.2 2 3.3 4.9 3.3 7.5s-1.1 5.5-3.3 7.5c-2.2-2-3.3-4.9-3.3-7.5S7.8 4.5 10 2.5Z" /></Svg>
+)
+
+export const IconCheck = (p: IconProps) => (
+  <Svg {...p}><path d="m4 10.5 3.8 3.8L16 6" /></Svg>
 )
 
 // ── Icon cho từng chỉ số cảm biến (ENV-FR-003) ─────────────────────────────

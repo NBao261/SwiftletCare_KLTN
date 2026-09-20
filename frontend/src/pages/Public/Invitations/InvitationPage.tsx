@@ -7,7 +7,7 @@ import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import { useToastStore } from '@/store/toastStore'
 import { getApiErrorMessage } from '@/utils/helpers'
 import { INVITE_ROLE_LABEL } from '@/constants/roles'
-import { getRoleHomePath } from '@/components/layout/navItems'
+import { getRoleHomePath } from '@/constants/navigation'
 
 export default function InvitationPage() {
   const { token } = useParams<{ token: string }>()
