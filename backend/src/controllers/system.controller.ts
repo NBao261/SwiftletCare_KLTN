@@ -28,6 +28,16 @@ export const updateDefaultThresholds = asyncHandler(async (req: Request, res: Re
   res.json({ success: true, data: thresholds })
 })
 
+/** GET /system/settings/sla – TICKET-FR-006, SLA-NFR-001 */
+export const getSlaHours = asyncHandler(async (_req: Request, res: Response) => {
+  res.json({ success: true, data: await systemService.getSlaHours() })
+})
+
+/** PUT /system/settings/sla – TICKET-FR-006, SLA-NFR-001 */
+export const updateSlaHours = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await systemService.updateSlaHours(req.user._id, req.body) })
+})
+
 /** GET /system/health-overview – SYSTEM-FR-003 */
 export const getHealthOverview = asyncHandler(async (_req: Request, res: Response) => {
   res.json({ success: true, data: await systemService.getHealthOverview() })

@@ -74,6 +74,13 @@ export interface NotificationPreferences {
   quiet_hours: { start: string; end: string }
 }
 
+/** TICKET-FR-006, SLA-NFR-001 — SLA theo mức ưu tiên, Admin cấu hình được */
+export interface SlaLevel {
+  response_hours: number
+  resolve_hours: number
+}
+export type SlaConfig = Record<TicketPriority, SlaLevel>
+
 export interface Thresholds {
   temp_min: number
   temp_max: number

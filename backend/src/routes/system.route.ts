@@ -25,6 +25,16 @@ router.put('/settings/default-thresholds',
   systemController.updateDefaultThresholds,
 )
 
+router.get('/settings/sla', systemController.getSlaHours)
+router.put('/settings/sla',
+  ...['P1', 'P2', 'P3'].flatMap(p => [
+    body(`${p}.response_hours`).optional().isFloat({ gt: 0 }),
+    body(`${p}.resolve_hours`).optional().isFloat({ gt: 0 }),
+  ]),
+  validate,
+  systemController.updateSlaHours,
+)
+
 router.get('/health-overview', systemController.getHealthOverview)
 
 export default router
