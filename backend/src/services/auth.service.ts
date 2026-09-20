@@ -79,6 +79,24 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
   return user
 }
 
+/**
+ * AUTH-FR-011, Flow 19 bước 4 — chặn tài khoản bị Admin khoá ở MỌI đường đăng
+ * nhập (mật khẩu lẫn OTP), kèm lý do để user biết phải liên hệ ai. Chỉ gọi sau
+ * khi đã xác thực xong danh tính, để người đoán mò không dò được trạng thái
+ * tài khoản người khác.
+ */
+async function assertLoginAllowed(user: IUser): Promise<void> {
+  if (user.is_active) return
+
+  await logAction(String(user._id), 'LOGIN_FAILED', 'user', String(user._id), { reason: 'ACCOUNT_DISABLED' })
+  const reason = user.deactivated_reason ?? null
+  throw new AppError(
+    403, 'ACCOUNT_DISABLED',
+    reason ? `Tài khoản đã bị khoá. Lý do: ${reason}` : 'Tài khoản đã bị khoá',
+    { reason },
+  )
+}
+
 /** AUTH-FR-002, AUTH-FR-003 */
 export async function loginUser(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
   const user = await User.findOne({ email: normalizeEmail(input.email) })
@@ -88,17 +106,7 @@ export async function loginUser(input: LoginInput): Promise<{ user: IUser; acces
     await logAction(userId, 'LOGIN_FAILED', 'user', userId, { reason: user ? 'WRONG_PASSWORD' : 'UNKNOWN_EMAIL' })
     throw UnauthorizedError('Sai email hoặc mật khẩu')
   }
-  // Chỉ báo lý do khoá SAU khi mật khẩu đúng (Flow 19 bước 4) — người đoán mò
-  // mật khẩu không biết được tài khoản có bị khoá hay không.
-  if (!user.is_active) {
-    await logAction(String(user._id), 'LOGIN_FAILED', 'user', String(user._id), { reason: 'ACCOUNT_DISABLED' })
-    const reason = user.deactivated_reason ?? null
-    throw new AppError(
-      403, 'ACCOUNT_DISABLED',
-      reason ? `Tài khoản đã bị khoá. Lý do: ${reason}` : 'Tài khoản đã bị khoá',
-      { reason },
-    )
-  }
+  await assertLoginAllowed(user)
 
   const accessToken  = signAccess(String(user._id), user.role)
   const refreshToken = signRefresh(String(user._id))
@@ -161,10 +169,13 @@ export async function verifyOtp(email: string, otp: string): Promise<{ user: IUs
     throw new AppError(400, 'INVALID_OTP', 'OTP không đúng hoặc đã hết hạn')
   }
 
+  await assertLoginAllowed(user)
+
   user.otp_code = undefined
   user.otp_expires = undefined
   await user.save()
 
+  await logAction(String(user._id), 'LOGIN', 'user', String(user._id), { method: 'OTP' })
   return { user, accessToken: signAccess(String(user._id), user.role) }
 }
 

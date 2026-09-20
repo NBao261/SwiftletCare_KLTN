@@ -216,7 +216,13 @@ export async function listTickets(user: CurrentUser, query: ListTicketsQuery) {
   const accessibleFarms = await listAccessibleFarmIds(user)
   const filter: Record<string, unknown> = { farm_id: { $in: accessibleFarms } }
 
-  if (query.farmId) filter.farm_id = query.farmId
+  // Lọc theo 1 farm cụ thể phải kiểm quyền riêng: gán thẳng query.farmId vào
+  // filter sẽ ghi đè danh sách farm được phép ở trên, cho phép đọc ticket của
+  // farm bất kỳ chỉ bằng cách đoán id.
+  if (query.farmId) {
+    await assertFarmAccess(query.farmId, user)
+    filter.farm_id = query.farmId
+  }
   if (query.status) filter.status = query.status
   if (query.priority) filter.priority = query.priority
   if (query.assignedToMe) filter.assigned_to = user._id
