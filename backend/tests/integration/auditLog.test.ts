@@ -11,6 +11,7 @@ import { CameraNode, SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
+import app from '@/config/app.config'
 import { requestContext } from '@/middlewares/requestContext.middleware'
 import { logAction } from '@/services/auditLog.service'
 import { requestAccountDeletion, resetPassword } from '@/services/auth.service'
@@ -44,24 +45,24 @@ afterEach(async () => {
 })
 
 // Cùng thứ tự middleware như app.config.ts (body parser rồi tới requestContext)
-const app = express()
-app.use(express.json())
-app.use(requestContext)
-app.post('/echo-ip', (_req, res) => { res.json({ ip: getRequestIp() ?? null }) })
-app.post('/log', async (_req, res) => {
+const miniApp = express()
+miniApp.use(express.json())
+miniApp.use(requestContext)
+miniApp.post('/echo-ip', (_req, res) => { res.json({ ip: getRequestIp() ?? null }) })
+miniApp.post('/log', async (_req, res) => {
   await logAction(undefined, 'CONTEXT_TEST', 'user')
   res.sendStatus(204)
 })
 
 describe('request IP capture', () => {
   it('exposes the client IP to code running inside the request, after body parsing', async () => {
-    const res = await request(app).post('/echo-ip').send({ any: 'body' }).expect(200)
+    const res = await request(miniApp).post('/echo-ip').send({ any: 'body' }).expect(200)
     expect(res.body.ip).toBeTruthy()
     expect(res.body.ip).not.toMatch(/^::ffff:/)
   })
 
   it('stores ip_address on audit logs written during a request', async () => {
-    await request(app).post('/log').send({ any: 'body' }).expect(204)
+    await request(miniApp).post('/log').send({ any: 'body' }).expect(204)
     const log = await AuditLog.findOne({ action: 'CONTEXT_TEST' })
     expect(log?.ip_address).toBeTruthy()
   })
@@ -71,6 +72,18 @@ describe('request IP capture', () => {
     const log = await AuditLog.findOne({ action: 'BACKGROUND' })
     expect(log).not.toBeNull()
     expect(log?.ip_address).toBeUndefined()
+  })
+})
+
+describe('app.config wiring', () => {
+  it('records the client IP for audit logs written by real routes (requestContext is mounted before the routers)', async () => {
+    await User.create({ email: 'who@test.vn', password_hash: 'password123', full_name: 'Who', role: 'FARM_OWNER' })
+
+    await request(app).post('/auth/login').send({ email: 'who@test.vn', password: 'wrong-password' }).expect(401)
+
+    const log = await AuditLog.findOne({ action: 'LOGIN_FAILED' })
+    expect(log).not.toBeNull()
+    expect(log?.ip_address).toBeTruthy()
   })
 })
 
