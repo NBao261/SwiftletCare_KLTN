@@ -2,7 +2,7 @@ import type { ComponentType, SVGProps } from 'react'
 import {
   IconDashboard, IconFarm, IconDevice, IconAlert,
   IconAnalytics, IconTicket, IconHarvest, IconSettings, IconUsers,
-  IconBell,
+  IconBell, IconOnboarding, IconOTA,
 } from '@/components/ui/icons'
 import type { Role } from '@/types'
 
@@ -44,8 +44,8 @@ const ALL_NAV_SECTIONS: NavSection[] = [
   {
     title: 'Vận hành',
     items: [
-      // Trang nhà Admin sau đăng nhập (ROLE_HOME) — đặt đầu sidebar, xem chi
-      // tiết ở section "Hệ thống" trong comment dưới (SYSTEM-FR-003).
+      // Trang nhà Admin sau đăng nhập (ROLE_HOME) — đặt đầu sidebar
+      // (SYSTEM-FR-003). /system-status redirect về đây từ PR #29.
       { to: '/system/health', label: 'Tổng quan hệ thống', icon: IconDashboard, roles: ['ADMIN'], dock: ['ADMIN'] },
       { to: '/dashboard', label: 'Tổng quan', icon: IconDashboard, roles: FARM_OWNER_ONLY },
       { to: '/devices',   label: 'Thiết bị & Cảm biến',  icon: IconDevice, roles: OPS_ROLES },
@@ -55,8 +55,10 @@ const ALL_NAV_SECTIONS: NavSection[] = [
   {
     title: 'Quản lý',
     items: [
-      { to: '/farms',     label: 'Trang trại', icon: IconFarm, roles: OPS_ROLES },
+      // Tickets trước Farms để Technician dock mobile (4 mục đầu) luôn có Tickets
+      // Thứ tự Technician dock: Devices → Alerts → Tickets → Farms
       { to: '/tickets',   label: 'Ticket',     icon: IconTicket, roles: OPS_ROLES, dock: ['ADMIN'] },
+      { to: '/farms',     label: 'Trang trại', icon: IconFarm, roles: OPS_ROLES },
       // Quản lý tài khoản người dùng toàn hệ thống — chỉ Admin (AUTH-FR-011, RACI mục 4.4)
       { to: '/users',     label: 'Người dùng', icon: IconUsers, roles: ['ADMIN'], dock: ['ADMIN'] },
       // Hàng đợi xoá tài khoản (AUTH-FR-012) + đề xuất Sales Staff (AUTH-FR-005d) — chỉ Admin
@@ -69,15 +71,25 @@ const ALL_NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    // Module SYSTEM (mục 5.11, mới v1.16.0) — "control center" chỉ Admin: audit
-    // log, ngưỡng mặc định hệ thống, tổng quan sức khỏe hệ thống. "Tổng quan hệ
-    // thống" (gộp luôn OPS-NFR-004 — xem DeviceStatusSummary.tsx trong
-    // SystemHealthPage) được đặt lên đầu sidebar (section "Vận hành" trên) vì
-    // là trang nhà của Admin — không lặp lại ở đây.
+    // Section riêng cho tools kỹ thuật của Technician — không chen vào 4 mục đầu
+    // để tránh đẩy Tickets/Farms ra khỏi dock mobile (getDockItems lấy 4 đầu tiên).
+    // Technician không có dock? → getDockItems fallback slice(0,4):
+    // Devices → Alerts → Tickets → Farms ✓
+    title: 'Kỹ thuật',
+    items: [
+      // Technician-only: Onboarding ESP32 + OTA firmware (F-TC-01 / F-TC-03)
+      { to: '/onboarding', label: 'Onboarding thiết bị', icon: IconOnboarding, roles: ['TECHNICIAN'] },
+      { to: '/ota',        label: 'OTA Firmware',        icon: IconOTA,        roles: ['TECHNICIAN'] },
+    ],
+  },
+  {
+    // Module SYSTEM (mục 5.11, v1.16.0) — "control center" chỉ Admin: audit
+    // log, ngưỡng mặc định hệ thống. "Tổng quan hệ thống" (SYSTEM-FR-003) đặt
+    // ở section "Vận hành" trên vì là trang nhà của Admin — không lặp lại ở đây.
     title: 'Hệ thống',
     items: [
-      { to: '/system/settings', label: 'Cấu hình mặc định', icon: IconSettings, roles: ['ADMIN'] },
-      { to: '/system/audit-log', label: 'Nhật ký hệ thống', icon: IconAnalytics, roles: ['ADMIN'] },
+      { to: '/system/settings',  label: 'Cấu hình mặc định', icon: IconSettings,  roles: ['ADMIN'] },
+      { to: '/system/audit-log', label: 'Nhật ký hệ thống',  icon: IconAnalytics, roles: ['ADMIN'] },
     ],
   },
   {
@@ -88,6 +100,7 @@ const ALL_NAV_SECTIONS: NavSection[] = [
     ],
   },
 ]
+
 
 /** Toàn bộ nav item, không lọc theo role — TopBar dùng để tra tiêu đề trang (không phụ thuộc ai đang xem). */
 export const ALL_NAV_ITEMS: NavItem[] = ALL_NAV_SECTIONS.flatMap(s => s.items)
@@ -106,6 +119,9 @@ const DOCK_SIZE = 4
 /**
  * Mục hiển thị trên dock mobile: ưu tiên các mục có `dock` ghim cho role này;
  * role không ghim gì thì lấy DOCK_SIZE mục đầu tiên của nav đã lọc (tần suất dùng hằng ngày).
+ *
+ * Technician không có item nào với dock: ['TECHNICIAN'] → fallback slice(0,4):
+ * Devices → Alerts → Tickets → Farms (đúng theo thứ tự section Vận hành + Quản lý)
  */
 export function getDockItems(role: Role | undefined): NavItem[] {
   if (!role) return []
@@ -125,7 +141,8 @@ export function getDockItems(role: Role | undefined): NavItem[] {
 const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
   ADMIN: '/system/health',
-  TECHNICIAN: '/devices',
+  // SRS SCR-TC02: Technician landing = Ticket list (xem task đang được gán)
+  TECHNICIAN: '/tickets',
   SALES_STAFF: '/sales-home',
 }
 

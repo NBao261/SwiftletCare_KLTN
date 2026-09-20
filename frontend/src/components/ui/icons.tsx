@@ -125,17 +125,17 @@ export const IconBag = (p: IconProps) => (
   <Svg {...p}><path d="M6.5 8V6a3.5 3.5 0 0 1 7 0v2" /><rect x="3.5" y="8" width="13" height="10" rx="2" /></Svg>
 )
 
-/** Tai nghe có mic — nhân viên kinh doanh/chăm sóc khách (Sales Staff); IconBag trông giống ổ khoá khi thu nhỏ nên không dùng cho vai trò */
+/** Tai nghe có mic — nhân viên kinh doanh/chăm sóc khách (Sales Staff) */
 export const IconHeadset = (p: IconProps) => (
   <Svg {...p}><path d="M4 12v-1.5a6 6 0 0 1 12 0V12" /><rect x="3" y="11" width="3" height="5" rx="1.5" /><rect x="14" y="11" width="3" height="5" rx="1.5" /><path d="M16 16v.5a2 2 0 0 1-2 2h-2.5" /></Svg>
 )
 
-/** 1 người — dùng cho vai trò đơn lẻ (VD nút chọn Kỹ thuật viên); IconUsers là nhóm người cho mục "Người dùng" */
+/** 1 người — dùng cho vai trò đơn lẻ; IconUsers là nhóm người cho mục "Người dùng" */
 export const IconUser = (p: IconProps) => (
   <Svg {...p}><circle cx="10" cy="7" r="3.2" /><path d="M4 17.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /></Svg>
 )
 
-/** "Người dùng" — nhóm người dùng */
+/** "Người dùng" — nhóm người dùng (Admin nav) */
 export const IconUsers = (p: IconProps) => (
   <Svg {...p}><circle cx="8" cy="7" r="3" /><path d="M2 18c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="14.5" cy="6" r="2.5" /><path d="M18 17c0-2.8-1.5-5-3.5-5.7" /></Svg>
 )
@@ -155,4 +155,33 @@ export const IconSortAsc = (p: IconProps) => (
 )
 export const IconSortDesc = (p: IconProps) => (
   <Svg {...p}><path d="M10 4.5v11" /><path d="m5.5 11 4.5 4.5L14.5 11" /></Svg>
+)
+
+// ── Icon riêng cho role Technician ──────────────────────────────────────────
+/** Onboarding thiết bị — bo mạch ESP32 + dấu cộng */
+export const IconOnboarding = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="14" height="10" rx="2" />
+    <path d="M7 5V3.5M10 5V3.5M13 5V3.5" />
+    <path d="M7 15v1.5M10 15v1.5M13 15v1.5" />
+    <path d="M3 9h-1M3 11h-1M17 9h1M17 11h1" />
+    <circle cx="10" cy="10" r="1.5" />
+    <path d="M10 7.5v1M10 11.5v1M7.5 10h1M11.5 10h1" />
+  </Svg>
+)
+
+/** OTA Firmware — mũi tên tải lên + chip */
+export const IconOTA = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M10 2.5v9M7 8l3-3 3 3" />
+    <rect x="4.5" y="12" width="11" height="5.5" rx="1.5" />
+    <path d="M7.5 14.75h5M9.5 14.75v2" />
+  </Svg>
+)
+
+/** Cờ lê kỹ thuật — wrench icon */
+export const IconWrench = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14.5 3.5a3.5 3.5 0 0 1-4.6 4.9L5 13.3a1.5 1.5 0 0 0 2.1 2.1l4.9-4.9a3.5 3.5 0 0 1 4.9-4.6l-2 2 .7.7 1.4 1.4.7.7 2-2Z" />
+  </Svg>
 )

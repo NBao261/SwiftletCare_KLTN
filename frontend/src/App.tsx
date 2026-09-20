@@ -53,6 +53,19 @@ const TicketsPage = lazy(() => import("@/pages/Shared/Tickets/TicketsPage"));
 const TicketDetailPage = lazy(
   () => import("@/pages/Shared/Tickets/TicketDetailPage"),
 );
+// Technician-specific pages (F-TC-01 / F-TC-02 / F-TC-03)
+const TechnicianTicketsPage = lazy(
+  () => import("@/pages/Technician/Tickets/TechnicianTicketsPage"),
+);
+const TechnicianTicketDetailPage = lazy(
+  () => import("@/pages/Technician/Tickets/TechnicianTicketDetailPage"),
+);
+const OnboardingPage = lazy(
+  () => import("@/pages/Technician/Onboarding/OnboardingPage"),
+);
+const OTAPage = lazy(
+  () => import("@/pages/Technician/OTA/OTAPage"),
+);
 const HarvestPage = lazy(() => import("@/pages/Shared/Harvest/HarvestPage"));
 const MarketplacePage = lazy(
   () => import("@/pages/Public/Marketplace/MarketplacePage"),
@@ -116,6 +129,20 @@ function NavigationBridge() {
 function RoleHomeRedirect() {
   const role = useAuthStore((s) => s.user?.role);
   return <Navigate to={getRoleHomePath(role)} replace />;
+}
+
+/** Technician thấy TechnicianTicketsPage, các role khác thấy TicketsPage chung (SCR-TC02) */
+function TicketsRoleRouter() {
+  const role = useAuthStore((s) => s.user?.role);
+  if (role === "TECHNICIAN") return <TechnicianTicketsPage />;
+  return <TicketsPage />;
+}
+
+/** Technician thấy TechnicianTicketDetailPage, các role khác thấy TicketDetailPage chung */
+function TicketDetailRoleRouter() {
+  const role = useAuthStore((s) => s.user?.role);
+  if (role === "TECHNICIAN") return <TechnicianTicketDetailPage />;
+  return <TicketDetailPage />;
 }
 
 function RouteFallback() {
@@ -222,7 +249,8 @@ export default function App() {
             path="tickets"
             element={
               <RequireRole allow={OPS_ROLES}>
-                <TicketsPage />
+                {/* Technician thấy view riêng (SCR-TC02), các role khác dùng Shared view */}
+                <TicketsRoleRouter />
               </RequireRole>
             }
           />
@@ -230,7 +258,24 @@ export default function App() {
             path="tickets/:id"
             element={
               <RequireRole allow={OPS_ROLES}>
-                <TicketDetailPage />
+                <TicketDetailRoleRouter />
+              </RequireRole>
+            }
+          />
+          {/* Technician-only routes (F-TC-01 Onboarding + F-TC-03 OTA) */}
+          <Route
+            path="onboarding"
+            element={
+              <RequireRole allow={["TECHNICIAN"]}>
+                <OnboardingPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="ota"
+            element={
+              <RequireRole allow={["TECHNICIAN"]}>
+                <OTAPage />
               </RequireRole>
             }
           />
