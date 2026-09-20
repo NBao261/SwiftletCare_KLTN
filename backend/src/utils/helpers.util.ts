@@ -17,6 +17,9 @@ export function safeParse<T>(json: string): T | null {
 /**
  * Paginate a Mongoose query — trả cả `page` đã chuẩn hoá (không chỉ skip/limit)
  * để service dùng thẳng cho response `meta`, khỏi tính `page` riêng ở nơi gọi.
+ * Giá trị không hợp lệ (NaN, ≤ 0, không phải số) rơi về mặc định thay vì lọt
+ * xuống Mongo — `skip` âm hoặc `limit(NaN)` làm request nổ 500, `limit(0)`
+ * lại nghĩa là "không giới hạn".
  */
 export function paginate(
   page: number | string | undefined,
@@ -24,7 +27,9 @@ export function paginate(
   opts: { defaultLimit?: number; maxLimit?: number } = {},
 ): { page: number; skip: number; limit: number } {
   const { defaultLimit = 20, maxLimit = 100 } = opts
-  const p = Math.max(1, Number(page ?? 1))
-  const l = Math.min(maxLimit, Number(limit ?? defaultLimit))
+  const rawPage = Number(page)
+  const rawLimit = Number(limit)
+  const p = Number.isFinite(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1
+  const l = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(maxLimit, Math.floor(rawLimit)) : defaultLimit
   return { page: p, skip: (p - 1) * l, limit: l }
 }

@@ -3,17 +3,33 @@ import { body, param, query } from 'express-validator'
 import * as adminController from '@/controllers/admin.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import type { Role } from '@/types'
 
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
 
+const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'TECHNICIAN', 'SALES_STAFF']
+// Không chặn cứng limit > 100 — paginate() tự kẹp về mức tối đa như mọi list khác
+const paginationQuery = [
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1 }),
+]
+
 /** Quản lý tài khoản – AUTH-FR-011, AUTH-FR-012, Flow 19 */
-router.get('/users',                          adminController.listUsers)
+router.get('/users',
+  query('role').optional().isIn(ROLES), query('status').optional().isIn(['active', 'inactive']),
+  ...paginationQuery, validate,
+  adminController.listUsers,
+)
+// toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false"/"0" lọt xuống service là truthy
 router.put('/users/:id/status',
-  param('id').isMongoId(), body('is_active').isBoolean(), validate,
+  param('id').isMongoId(), body('is_active').isBoolean().toBoolean(), validate,
   adminController.setUserStatus,
 )
-router.get('/delete-requests',                adminController.listDeletionRequests)
+router.get('/delete-requests',
+  ...paginationQuery, validate,
+  adminController.listDeletionRequests,
+)
 router.put('/delete-requests/:id/complete',
   param('id').isMongoId(), validate,
   adminController.completeDeletionRequest,
@@ -22,7 +38,7 @@ router.put('/delete-requests/:id/complete',
 /** Admin tự tạo tài khoản Technician/Sales Staff – AUTH-FR-005c, Flow 16 */
 router.post('/technicians',
   body('email').isEmail(), body('password').isLength({ min: 8 }), body('full_name').trim().notEmpty(),
-  body('assigned_regions').isArray({ min: 1 }), validate,
+  body('assigned_regions').isArray({ min: 1 }), body('assigned_regions.*').isString().trim().notEmpty(), validate,
   adminController.createTechnician,
 )
 router.post('/sales-staff',
@@ -45,7 +61,7 @@ router.delete('/farms/:farmId/sales-staff/:salesStaffId',
 
 /** Duyệt đề xuất Sales Staff của Farm Owner – AUTH-FR-005d, Flow 16 bước 1b */
 router.get('/sales-staff-requests',
-  query('status').optional().isIn(['PENDING', 'APPROVED', 'REJECTED']), validate,
+  query('status').optional().isIn(['PENDING', 'APPROVED', 'REJECTED']), ...paginationQuery, validate,
   adminController.listSalesStaffRequests,
 )
 router.put('/sales-staff-requests/:id/decision',

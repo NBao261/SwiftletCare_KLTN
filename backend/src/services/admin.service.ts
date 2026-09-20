@@ -13,11 +13,11 @@ import type { Role } from '@/types'
 
 // ── Quản lý tài khoản — AUTH-FR-011, AUTH-FR-012, Flow 19 ──────────────────────
 
-export interface ListUsersQuery {
+export interface ListQuery { page?: string | number; limit?: string | number }
+
+export interface ListUsersQuery extends ListQuery {
   role?: Role
   status?: 'active' | 'inactive'
-  page?: number
-  limit?: number
 }
 
 export async function listUsers(query: ListUsersQuery) {
@@ -25,11 +25,10 @@ export async function listUsers(query: ListUsersQuery) {
   if (query.role) filter.role = query.role
   if (query.status) filter.is_active = query.status === 'active'
 
-  const page = query.page ?? 1
-  const limit = Math.min(query.limit ?? 20, 100)
+  const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total] = await Promise.all([
-    User.find(filter).sort({ created_at: -1 }).skip((page - 1) * limit).limit(limit),
+    User.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit),
     User.countDocuments(filter),
   ])
   return { records, total, page, limit }
@@ -69,15 +68,12 @@ export async function setUserStatus(
   return user
 }
 
-export interface ListQuery { page?: number; limit?: number }
-
 export async function listDeletionRequests(query: ListQuery) {
-  const page = query.page ?? 1
-  const limit = Math.min(query.limit ?? 20, 100)
+  const { page, skip, limit } = paginate(query.page, query.limit)
   const filter = { deletion_requested_at: { $ne: null } }
 
   const [records, total] = await Promise.all([
-    User.find(filter).sort({ deletion_requested_at: 1 }).skip((page - 1) * limit).limit(limit),
+    User.find(filter).sort({ deletion_requested_at: 1 }).skip(skip).limit(limit),
     User.countDocuments(filter),
   ])
   return { records, total, page, limit }
@@ -223,10 +219,8 @@ export async function unassignSalesStaff(adminId: string, farmId: string, salesS
 
 // ── Duyệt đề xuất Sales Staff của Farm Owner — AUTH-FR-005d, Flow 16 bước 1b ───
 
-export interface ListSalesStaffRequestsQuery {
+export interface ListSalesStaffRequestsQuery extends ListQuery {
   status?: SalesAssignmentRequestStatus
-  page?: string | number
-  limit?: string | number
 }
 
 export async function listSalesStaffRequests(query: ListSalesStaffRequestsQuery) {

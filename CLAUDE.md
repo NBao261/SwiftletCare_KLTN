@@ -83,7 +83,7 @@ routes/*.ts (express-validator + requireRole)
 
 Binding rules when adding/editing backend code:
 
-- **Controllers never contain business logic** — just read `req.params/body/query/user`, call one service function, return `res.json({success, data, meta?})`, and `catch (err) { next(err) }` (no manual try/catch error formatting).
+- **Controllers never contain business logic** — just read `req.params/body/query/user`, call one service function, return `res.json({success, data, meta?})`. Wrap every handler in `asyncHandler` (`utils/asyncHandler.util.ts`, which forwards rejections to `next`) instead of writing `try { … } catch (err) { next(err) }` by hand — never format errors in the controller.
 - **Services throw via `utils/appError.util.ts`** (`NotFoundError`, `ForbiddenError`, `ConflictError`, `BadRequestError`, `UnauthorizedError`); `middlewares/errorHandler.middleware.ts` is the only place that turns those into HTTP responses.
 - **Every response follows the envelope** `{ success, data?, meta?: {page,limit,total}, error?: {code, message} }` — including 501 stubs (via `utils/notImplemented.util.ts`) for the not-yet-built Sales module. `utils/helpers.util.ts#paginate()` normalizes `page`/`limit` (default 20, max 100) into that `meta` shape consistently across list endpoints.
 - **MQTT handlers (`mqtt/handlers/*.ts`) are thin adapters**: parse `topicParts`/`message`, call one service function (e.g. `telemetry.handler.ts` → `telemetry.service.ts#ingestTelemetry()`), never query the DB directly.
