@@ -49,14 +49,14 @@ export async function listAuditLogs(query: ListAuditLogsQuery) {
 
 // ── SYSTEM-FR-002: ngưỡng mặc định hệ thống ─────────────────────────────────
 
-/**
- * Chưa từng cấu hình thì trả giá trị gốc, không ghi DB lúc đọc — document chỉ
- * được tạo khi Admin thực sự lưu lần đầu (updateDefaultThresholds).
- */
 /** Lọc theo khoá singleton để upsert bám vào unique index — xem systemSetting.model.ts */
 const SINGLETON = { _singleton: true }
 const DUPLICATE_KEY = 11000
 
+/**
+ * Chưa từng cấu hình thì trả giá trị gốc, không ghi DB lúc đọc — document chỉ
+ * được tạo khi Admin thực sự lưu lần đầu (updateDefaultThresholds).
+ */
 export async function getDefaultThresholds(): Promise<Thresholds> {
   const setting = await SystemSetting.findOne(SINGLETON).lean()
   return setting?.default_thresholds ?? { ...DEFAULT_THRESHOLDS }
@@ -112,18 +112,19 @@ export async function updateSlaHours(adminId: string, input: Record<string, unkn
 
 const PRIORITIES: TicketPriority[] = ['P1', 'P2', 'P3']
 
-async function countActiveZones(): Promise<number> {
+/** Zone thuộc farm chưa xoá mềm — nguồn chung để Farm, Zone và thiết bị đếm khớp nhau */
+async function findActiveZoneIds() {
   const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
   const houseIds = await House.find({ farm_id: { $in: farmIds } }).distinct('_id')
-  return Zone.countDocuments({ house_id: { $in: houseIds } })
+  return Zone.find({ house_id: { $in: houseIds } }).distinct('_id')
 }
 
 export async function getHealthOverview() {
-  const [farmCount, zoneCount, sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
+  const zoneIds = await findActiveZoneIds()
+  const [farmCount, sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
     Farm.countDocuments({ is_deleted: false }),
-    countActiveZones(),
-    SensorNode.find().select('status').lean(),
-    CameraNode.find().select('status').lean(),
+    SensorNode.find({ zone_id: { $in: zoneIds } }).select('status').lean(),
+    CameraNode.find({ zone_id: { $in: zoneIds } }).select('status').lean(),
     Ticket.aggregate<{ _id: TicketPriority; count: number }>([
       { $match: { status: { $ne: 'CLOSED' } } },
       { $group: { _id: '$priority', count: { $sum: 1 } } },
@@ -155,7 +156,7 @@ export async function getHealthOverview() {
 
   return {
     farms: { total: farmCount },
-    zones: { total: zoneCount },
+    zones: { total: zoneIds.length },
     devices: summarizeByStatus([...sensorStatuses, ...cameraStatuses]),
     openTickets,
     users,

@@ -6,6 +6,7 @@ export interface IInvitation extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   invited_email: string
+  /** Chỉ FARM_OWNER còn được tạo mới; SALES_STAFF giữ lại làm dữ liệu cũ (trước v1.16.0), không còn luồng nào chấp nhận */
   invited_role: Extract<Role, 'FARM_OWNER' | 'SALES_STAFF'>
   invited_by: Types.ObjectId
   token: string

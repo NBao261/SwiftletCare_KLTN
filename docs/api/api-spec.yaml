@@ -424,6 +424,12 @@ paths:
         dù access token còn hạn — không cần đợi token hết hạn tự nhiên.
         Admin không tự khoá được chính mình, nhờ vậy hệ thống luôn còn ít nhất
         1 Admin đang hoạt động (Flow 19 case 2a).
+
+        Khi khoá: thu hồi mọi refresh token và ngắt các kết nối Socket.io đang
+        mở của user (kết nối mới bằng access token còn hạn cũng bị từ chối). Nếu
+        user là Technician còn ticket đang giao, response kèm
+        `meta.openTickets` (số ticket chưa đóng) để Admin gán lại bằng
+        `PUT /tickets/{id}/admin-override`.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -434,7 +440,9 @@ paths:
               type: object
               required: [is_active]
               properties:
-                is_active: { type: boolean }
+                is_active:
+                  type: boolean
+                  description: "Chuỗi \"true\"/\"false\"/\"1\"/\"0\" cũng được chấp nhận và ép về boolean trước khi xử lý"
                 reason: { type: string, description: "Bắt buộc khi is_active=false" }
       responses:
         "200":
@@ -452,6 +460,7 @@ paths:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /admin/delete-requests:
     get:
@@ -483,8 +492,33 @@ paths:
         thường. Anonymize email/phone/full_name, không xoá document (giữ FK
         cho lịch sử ticket/farm). Xử lý xong thì gỡ `deletion_requested_at` —
         tài khoản rời khỏi `GET /admin/delete-requests` và không xử lý lại được.
+
+        Còn ticket đang mở (được giao cho user, do user tạo, hoặc thuộc Farm sẽ
+        bị xoá mềm) thì trả 409 `HAS_OPEN_TICKETS` kèm `error.details.openTickets`
+        (Flow 19 bước 7c) — xử lý xong ticket rồi gọi lại, hoặc gửi `force: true`
+        để vẫn xoá. Mỗi Farm được chuyển chủ/xoá mềm có 1 bản ghi audit riêng
+        (`FARM_OWNERSHIP_TRANSFERRED`, `FARM_SOFT_DELETED`) và chủ mới cùng người bị
+        xoá nhận thông báo; kết nối Socket.io của user bị ngắt. Cũng dọn các liên
+        kết trỏ tới user: xoá `SalesAssignment` của Sales Staff bị xoá, từ chối
+        (`REJECTED`, kèm lý do) các đề xuất Sales Staff đang chờ do hoặc về user đó,
+        cho hết hạn (`EXPIRED`) các lời mời đang chờ user đã gửi, đặt `deleted_at`
+        (tài khoản đã xoá không khoá/mở khoá lại được, 409). Audit `ACCOUNT_DELETED`
+        ghi `farmsTransferred`, `farmsDeleted`, `salesAssignmentsRemoved`, `forced`. Nếu lỗi giữa chừng
+        (Mongo standalone, không transaction) thì gọi lại được: farm đã xử lý xong
+        không bị xử lý lần nữa.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                force:
+                  type: boolean
+                  default: false
+                  description: "true = bỏ qua cảnh báo ticket đang mở và vẫn xoá"
       responses:
         "200":
           description: "Đã xử lý xong (anonymized)"
@@ -501,6 +535,12 @@ paths:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "HAS_OPEN_TICKETS — user còn ticket đang mở, kèm `error.details.openTickets`; gửi `force: true` để vẫn xoá"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /admin/technicians:
     post:
@@ -637,14 +677,18 @@ paths:
   /admin/sales-staff-requests:
     get:
       tags: [Admin]
-      summary: "Danh sách đề xuất Sales Staff từ Farm Owner (AUTH-FR-005d) — chỉ ADMIN"
+      summary: "Danh sách đề xuất thêm / yêu cầu gỡ Sales Staff từ Farm Owner (AUTH-FR-005d) — chỉ ADMIN"
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [PENDING, APPROVED, REJECTED] } }
+        - name: type
+          in: query
+          description: "ADD gồm cả đề xuất tạo trước khi có field `type`"
+          schema: { type: string, enum: [ADD, REMOVE] }
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
       responses:
         "200":
-          description: OK (populate farm_id, requested_by, reviewed_by)
+          description: OK (populate farm_id, requested_by, sales_staff_id — chỉ với REMOVE —, reviewed_by)
           content:
             application/json:
               schema:
@@ -664,6 +708,22 @@ paths:
           dev chỉ log `[DEV RESET]` ra console); sau đó tạo `SalesAssignment`
           với `requested_via` trỏ về đề xuất này.
         - `REJECTED`: bắt buộc `reason`, lưu vào `review_note` để Farm Owner xem.
+        - Đề xuất `type=REMOVE` (Farm Owner yêu cầu gỡ, Flow 16 bước 1e):
+          `APPROVED` chỉ xoá `SalesAssignment` của farm đó (không đụng tài khoản
+          Sales Staff), coi như xong nếu đã gỡ từ trước; `REJECTED` giữ nguyên
+          phân công và cũng bắt buộc `reason`.
+
+        Nhận quyền xử lý nguyên tử TRƯỚC khi tạo/xoá bất cứ thứ gì: hai Admin xử
+        lý đồng thời cùng một đề xuất (dù cùng hay khác quyết định) thì chỉ 1
+        người thành công và chạm vào tài khoản/phân công, người còn lại nhận 409
+        mà không để lại tác dụng phụ. Nếu bước thực thi lỗi (VD email thuộc tài
+        khoản không phải Sales Staff, farm đã bị xoá) thì đề xuất được trả về
+        `PENDING` để xử lý lại hoặc từ chối; các điều kiện biết trước (farm còn
+        tồn tại, email không thuộc tài khoản khác role) được kiểm tra TRƯỚC khi
+        nhận quyền xử lý nên không để lại dấu vết. Đề xuất kẹt ở `APPROVED` mà chưa
+        có tác dụng nào (tiến trình chết giữa chừng) được duyệt lại sau 60 giây để
+        làm nốt phần còn thiếu; trong 60 giây đó người thứ hai nhận 409. Farm Owner
+        nhận thông báo kết quả (kèm lý do nếu bị từ chối).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -705,11 +765,14 @@ paths:
       tags: [System]
       summary: "Xem/lọc Audit Log toàn hệ thống (SYSTEM-FR-001) — chỉ ADMIN"
       description: |
-        Các action đang được ghi: LOGIN, LOGIN_FAILED, ACCOUNT_LOCKED,
-        ACCOUNT_UNLOCKED, ACCOUNT_DELETED, USER_CREATED, THRESHOLD_UPDATED,
-        DEFAULT_THRESHOLDS_UPDATED, RELAY_OVERRIDE, DEVICE_REASSIGNED,
-        TICKET_ADMIN_OVERRIDE, SALES_STAFF_REQUEST_APPROVED/REJECTED,
-        TECHNICIAN_REGIONS_UPDATED, SALES_STAFF_UNASSIGNED.
+        Các action đang được ghi: LOGIN, LOGIN_FAILED, PASSWORD_RESET,
+        ACCOUNT_LOCKED, ACCOUNT_UNLOCKED, DELETION_REQUESTED, ACCOUNT_DELETED,
+        FARM_OWNERSHIP_TRANSFERRED, FARM_SOFT_DELETED, USER_CREATED,
+        TECHNICIAN_REGIONS_UPDATED, THRESHOLD_UPDATED, DEFAULT_THRESHOLDS_UPDATED,
+        RELAY_OVERRIDE, DEVICE_REGISTERED, DEVICE_REASSIGNED, TICKET_ADMIN_OVERRIDE,
+        SALES_STAFF_REQUEST_APPROVED/REJECTED, SALES_STAFF_UNASSIGNED.
+        Mỗi bản ghi có `ip_address` của request gây ra hành động (rỗng nếu do hệ
+        thống tự thực hiện).
       parameters:
         - { name: actorId, in: query, schema: { type: string } }
         - { name: action, in: query, schema: { type: string, example: LOGIN_FAILED } }
@@ -753,7 +816,9 @@ paths:
       description: |
         Gửi 1 phần hoặc cả 7 trường, phần còn lại giữ nguyên. Đây là nguồn
         Farm Owner dùng khi "Reset về mặc định" 1 Zone (ENV-FR-020) — KHÔNG tự
-        áp xuống các Zone đang chạy. Mọi thay đổi ghi audit log.
+        áp xuống các Zone đang chạy. Mọi thay đổi ghi audit log. Mỗi giá trị phải nằm
+        trong khoảng đo của cảm biến tương ứng (nhiệt −40..125°C, ẩm 0..100%,
+        ánh sáng ≤ 200.000 lux, NH3 ≤ 500 ppm, CO2 ≤ 5000 ppm), nếu không 422.
       requestBody:
         required: true
         content:
@@ -769,7 +834,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/Thresholds" } }
         "400":
-          description: "min >= max hoặc giá trị âm"
+          description: "min >= max, giá trị âm, hoặc kết quả sau khi gộp với giá trị hiện tại vượt khoảng đo cảm biến"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
@@ -1186,11 +1251,11 @@ paths:
   /farms/{id}/sales-staff-requests:
     get:
       tags: [Farms]
-      summary: "Farm Owner xem các đề xuất Sales Staff của farm và kết quả duyệt (Flow 16 bước 1b/1d)"
+      summary: "Farm Owner xem các đề xuất thêm / yêu cầu gỡ Sales Staff của farm và kết quả duyệt (Flow 16 bước 1b/1d/1e)"
       parameters: [{ $ref: "#/components/parameters/FarmId" }]
       responses:
         "200":
-          description: OK (mới nhất trước; `review_note` là lý do nếu bị từ chối)
+          description: OK (mới nhất trước; `type` phân biệt ADD/REMOVE; `review_note` là lý do nếu bị từ chối)
           content:
             application/json:
               schema:
@@ -1199,6 +1264,37 @@ paths:
                   - properties:
                       data: { type: array, items: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /farms/{id}/sales-staff/{salesStaffId}/removal-requests:
+    post:
+      tags: [Farms]
+      summary: "Farm Owner yêu cầu gỡ Sales Staff khỏi farm (Flow 16 bước 1e) — chỉ Primary Owner"
+      description: |
+        Chỉ tạo yêu cầu `PENDING` với `type=REMOVE`, KHÔNG gỡ ngay — Administrator
+        duyệt/từ chối ở `PUT /admin/sales-staff-requests/{id}/decision` (hoặc gỡ
+        thẳng bằng `DELETE /admin/farms/{farmId}/sales-staff/{salesStaffId}`).
+        Theo dõi kết quả ở `GET /farms/{id}/sales-staff-requests`. Admin không
+        dùng endpoint này (403) vì đã có quyền gỡ trực tiếp.
+      parameters:
+        - { $ref: "#/components/parameters/FarmId" }
+        - { name: salesStaffId, in: path, required: true, schema: { type: string } }
+      responses:
+        "201":
+          description: Đã tạo yêu cầu gỡ (status=PENDING, type=REMOVE)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Đã có yêu cầu gỡ Sales Staff này đang chờ Admin xử lý"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /invitations/{token}:
     parameters:
@@ -1439,6 +1535,9 @@ paths:
     put:
       tags: [Farms]
       summary: Cập nhật ngưỡng cảnh báo/điều khiển của Zone (ENV-FR-006, lưu lịch sử ENV-FR-009)
+      description: |
+        Kiểm tra từng cặp min<max và khoảng đo của từng cảm biến (nhiệt −40..125°C,
+        ẩm 0..100%, ánh sáng ≤ 200.000 lux, NH3 ≤ 500 ppm, CO2 ≤ 5000 ppm) — 400 nếu vi phạm.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -1467,6 +1566,28 @@ paths:
               },
           }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /farms/zones/{zoneId}/thresholds/reset:
+    put:
+      tags: [Farms]
+      summary: "Reset ngưỡng của Zone về mặc định hệ thống (ENV-FR-020, Flow 22 nhánh B)"
+      description: |
+        Ghi đè cả 7 ngưỡng của Zone bằng `system_settings.default_thresholds` hiện
+        hành (chưa cấu hình thì dùng giá trị gốc khớp firmware), thêm 1 bản ghi
+        `threshold_history` với `source=RESET_TO_DEFAULT`, publish `config/update`
+        xuống thiết bị và ghi audit log `THRESHOLD_UPDATED`.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      responses:
+        "200":
+          description: Zone sau khi reset
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Zone" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   # ── DEVICES ───────────────────────────────────────────────────────────────
   /devices/sensor-nodes/register:
@@ -1857,7 +1978,7 @@ paths:
         - { $ref: "#/components/parameters/From" }
         - { $ref: "#/components/parameters/To" }
         - { $ref: "#/components/parameters/Page" }
-        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/TelemetryLimit" }
       responses:
         "200":
           {
@@ -3547,7 +3668,15 @@ components:
       {
         name: limit,
         in: query,
-        schema: { type: integer, default: 100, maximum: 1000 },
+        description: "Số bản ghi mỗi trang — mặc định 20, tối đa 100 (giá trị lớn hơn được kẹp về 100). Giá trị không phải số nguyên ≥ 1: các endpoint /admin/* trả 422, các danh sách khác dùng mặc định",
+        schema: { type: integer, minimum: 1, default: 20, maximum: 100 },
+      }
+    TelemetryLimit:
+      {
+        name: limit,
+        in: query,
+        description: "Riêng lịch sử telemetry — mặc định 100, tối đa 1000",
+        schema: { type: integer, minimum: 1, default: 100, maximum: 1000 },
       }
 
   responses:
@@ -3674,6 +3803,7 @@ components:
         target_type: { type: string, example: user }
         target_id: { type: string, nullable: true }
         metadata: { type: object, description: "Chi tiết thay đổi, thường có before/after" }
+        ip_address: { type: string, nullable: true, description: "IP client của request; null khi hệ thống tự thực hiện ngoài request (job nền, MQTT). Đặt TRUST_PROXY khi chạy sau proxy để có IP thật" }
         created_at: { type: string, format: date-time }
 
     SalesAssignmentRequest:
@@ -3682,7 +3812,9 @@ components:
       properties:
         _id: { type: string }
         farm_id: { type: string, description: "Populate { name, region } ở endpoint Admin" }
+        type: { type: string, enum: [ADD, REMOVE], description: "ADD = đề xuất thêm; REMOVE = yêu cầu gỡ (Flow 16 bước 1e). Document cũ không có field này được hiểu là ADD" }
         requested_by: { type: string, description: "Farm Owner đề xuất; populate { full_name, email } ở endpoint Admin" }
+        sales_staff_id: { type: string, nullable: true, description: "Chỉ có khi type=REMOVE; populate { full_name, email } ở endpoint Admin" }
         sales_staff_email: { type: string, format: email }
         status: { type: string, enum: [PENDING, APPROVED, REJECTED] }
         reviewed_by: { type: string, nullable: true }
@@ -3782,7 +3914,7 @@ components:
         _id: { type: string }
         farm_id: { type: string }
         invited_email: { type: string, format: email }
-        invited_role: { type: string, enum: [FARM_OWNER, SALES_STAFF] }
+        invited_role: { type: string, enum: [FARM_OWNER, SALES_STAFF], description: "Chỉ FARM_OWNER còn được tạo mới. SALES_STAFF là dữ liệu cũ (trước v1.16.0): accept trả 409, đăng ký không tiêu thụ, không còn luồng nào tự gán quyền — Sales Staff nay đi qua /farms/{id}/sales-staff + Admin duyệt" }
         invited_by: { type: string }
         token: { type: string }
         status: { type: string, enum: [PENDING, ACCEPTED, DECLINED, EXPIRED] }

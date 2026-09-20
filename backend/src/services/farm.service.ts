@@ -9,7 +9,7 @@ import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow } 
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
-import { assertValidThresholds } from '@/utils/thresholds.util'
+import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser } from '@/types'
 
@@ -118,7 +118,11 @@ export async function inviteMember(farmId: string, user: CurrentUser, email: str
     throw ConflictError('Người dùng đã là thành viên farm này')
   }
 
-  const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
+  // Chỉ tính lời mời Farm Owner: lời mời SALES_STAFF kiểu cũ còn tồn đọng không còn chấp nhận được
+  // (xem acceptInvitation) nên không được chặn việc mời lại email đó làm Farm Owner.
+  const pending = await Invitation.findOne({
+    farm_id: farm._id, invited_email: normalizedEmail, invited_role: 'FARM_OWNER', status: 'PENDING',
+  })
   if (pending) throw ConflictError('Đã có lời mời đang chờ phản hồi gửi tới email này')
 
   return Invitation.create({
@@ -137,7 +141,7 @@ export async function inviteMember(farmId: string, user: CurrentUser, email: str
  * trên invitation đã ACCEPTED/DECLINED/EXPIRED thì báo lỗi rõ ràng thay vì âm
  * thầm thành công, để UI không hiểu nhầm.
  */
-export async function acceptInvitation(token: string, user: CurrentUser): Promise<IFarm | { salesAssignment: true }> {
+export async function acceptInvitation(token: string, user: CurrentUser): Promise<IFarm> {
   const invitation = await Invitation.findOne({ token })
   if (!invitation) throw NotFoundError('Lời mời không tồn tại')
   if (invitation.status !== 'PENDING') throw ConflictError(`Lời mời này đã ${STATUS_LABEL[invitation.status]}`)
@@ -150,18 +154,16 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
     throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
   }
 
+  // Từ v1.16.0 Sales Staff không còn đi qua lời mời mà qua đề xuất + Admin duyệt
+  // (AUTH-FR-005b/005d). Lời mời SALES_STAFF cũ còn tồn đọng thì từ chối rõ ràng,
+  // không tự gán quyền; lời mời vẫn PENDING để tự hết hạn.
+  if (invitation.invited_role !== 'FARM_OWNER') {
+    throw ConflictError('Lời mời Sales Staff kiểu cũ không còn được hỗ trợ — nhờ Farm Owner gửi đề xuất Sales Staff mới để Admin duyệt')
+  }
+
   invitation.status = 'ACCEPTED'
   invitation.responded_at = new Date()
   await invitation.save()
-
-  if (invitation.invited_role === 'SALES_STAFF') {
-    await SalesAssignment.findOneAndUpdate(
-      { farm_id: invitation.farm_id, sales_staff_id: user._id },
-      { $setOnInsert: { invited_by: invitation.invited_by } },
-      { upsert: true },
-    )
-    return { salesAssignment: true }
-  }
 
   const farm = await findFarmOrThrow(String(invitation.farm_id))
   if (!farm.members.some(m => String(m.user_id) === user._id)) {
@@ -281,7 +283,9 @@ export async function updateZoneThresholds(zoneId: string, user: CurrentUser, up
   const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
 
-  const merged = { ...zone.thresholds, ...updates }
+  // pickThresholds: chỉ nhận 7 khoá ngưỡng và ép về số; null/chuỗi rỗng thành NaN để assert từ chối
+  const picked = pickThresholds(updates as Record<string, unknown>)
+  const merged = { ...zone.thresholds, ...picked }
   assertValidThresholds(merged)
 
   const oldValues = { ...zone.thresholds }
@@ -290,7 +294,7 @@ export async function updateZoneThresholds(zoneId: string, user: CurrentUser, up
     changed_by: user._id as never,
     changed_at: new Date(),
     old_values: oldValues,
-    new_values: updates,
+    new_values: picked,
     source: 'MANUAL',
   } as never)
   await zone.save()
@@ -332,7 +336,10 @@ export async function requestSalesStaff(farmId: string, user: CurrentUser, email
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được đề xuất Sales Staff')
 
   const normalizedEmail = email.toLowerCase().trim()
-  const pending = await SalesAssignmentRequest.findOne({ farm_id: farm._id, sales_staff_email: normalizedEmail, status: 'PENDING' })
+  // `$ne: 'REMOVE'` thay vì `'ADD'`: request tạo trước khi có field `type` không mang giá trị nào
+  const pending = await SalesAssignmentRequest.findOne({
+    farm_id: farm._id, type: { $ne: 'REMOVE' }, sales_staff_email: normalizedEmail, status: 'PENDING',
+  })
   if (pending) throw ConflictError('Đã có đề xuất đang chờ Admin duyệt cho email này')
 
   const existingUser = await User.findOne({ email: normalizedEmail }).select('role').lean()
@@ -347,6 +354,37 @@ export async function requestSalesStaff(farmId: string, user: CurrentUser, email
     farm_id: farm._id,
     requested_by: user._id,
     sales_staff_email: normalizedEmail,
+  })
+}
+
+/**
+ * Flow 16 bước 1e — Farm Owner muốn gỡ Sales Staff khỏi farm chỉ được YÊU CẦU
+ * (đối xứng với việc gán); Admin duyệt ở /admin/sales-staff-requests thì mới xoá
+ * SalesAssignment. Cùng bảng với đề xuất thêm nhưng `type: 'REMOVE'`.
+ */
+export async function requestSalesStaffRemoval(
+  farmId: string, user: CurrentUser, salesStaffId: string,
+): Promise<ISalesAssignmentRequest> {
+  const farm = await findFarmOrThrow(farmId)
+  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được yêu cầu gỡ Sales Staff')
+
+  const assignment = await SalesAssignment.exists({ farm_id: farm._id, sales_staff_id: salesStaffId })
+  if (!assignment) throw NotFoundError('Sales Staff này không được gán vào farm')
+
+  const salesStaff = await User.findById(salesStaffId).select('email').lean()
+  if (!salesStaff) throw NotFoundError('Không tìm thấy Sales Staff')
+
+  const pending = await SalesAssignmentRequest.findOne({
+    farm_id: farm._id, type: 'REMOVE', sales_staff_id: salesStaff._id, status: 'PENDING',
+  })
+  if (pending) throw ConflictError('Đã có yêu cầu gỡ Sales Staff này đang chờ Admin xử lý')
+
+  return SalesAssignmentRequest.create({
+    farm_id: farm._id,
+    type: 'REMOVE',
+    requested_by: user._id,
+    sales_staff_id: salesStaff._id,
+    sales_staff_email: salesStaff.email,
   })
 }
 

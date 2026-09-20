@@ -3,7 +3,7 @@ import { body, query } from 'express-validator'
 import * as systemController from '@/controllers/system.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
-import { THRESHOLD_KEYS } from '@/utils/thresholds.util'
+import { THRESHOLD_KEYS, THRESHOLD_LIMITS } from '@/utils/thresholds.util'
 
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
@@ -20,7 +20,7 @@ router.get('/audit-logs',
 
 router.get('/settings/default-thresholds', systemController.getDefaultThresholds)
 router.put('/settings/default-thresholds',
-  ...THRESHOLD_KEYS.map(key => body(key).optional().isFloat()),
+  ...THRESHOLD_KEYS.map(key => body(key).optional().isFloat({ min: THRESHOLD_LIMITS[key].min, max: THRESHOLD_LIMITS[key].max })),
   validate,
   systemController.updateDefaultThresholds,
 )
