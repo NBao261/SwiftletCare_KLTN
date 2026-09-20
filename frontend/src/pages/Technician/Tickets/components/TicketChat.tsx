@@ -28,6 +28,8 @@ export function TicketChat({ ticketId }: Props) {
   const user = useAuthStore(s => s.user)
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  // containerRef — scroll trong nội bộ chat, KHÔNG đụng đến scroll của trang
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Fetch tin nhắn — khi backend ready: ticketApi.getMessages(ticketId)
   // retry: false + refetchInterval disabled — tránh spam 404 khi endpoint chưa impl
@@ -39,9 +41,13 @@ export function TicketChat({ ticketId }: Props) {
     // refetchInterval: 15_000, // TODO: bật lại khi BE endpoint ready
   })
 
-  // Cuộn xuống tin nhắn mới nhất
+  // Chỉ scroll xuống khi có tin nhắn thực sự — tránh kéo trang xuống cuối khi mount
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length === 0) return
+    // Scroll trong container nội bộ, không dùng scrollIntoView (sẽ cuốn toàn trang)
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight
+    }
   }, [messages])
 
   const sendMut = useMutation({
@@ -71,7 +77,7 @@ export function TicketChat({ ticketId }: Props) {
       <p className="label-caption mb-3">CHAT VỚI FARM OWNER</p>
 
       {/* Message list */}
-      <div className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
+      <div ref={containerRef} className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
         {isLoading && (
           <p className="py-6 text-center text-sm text-warmGray">Đang tải tin nhắn…</p>
         )}
