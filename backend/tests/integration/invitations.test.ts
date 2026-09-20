@@ -9,7 +9,7 @@ import { Invitation } from '@/models/invitation.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
 import { User } from '@/models/user.model'
 import { registerUser } from '@/services/auth.service'
-import { acceptInvitation } from '@/services/farm.service'
+import { acceptInvitation, inviteMember } from '@/services/farm.service'
 
 let mongod: MongoMemoryServer
 
@@ -84,5 +84,22 @@ describe('acceptInvitation', () => {
 
     expect(await SalesAssignment.countDocuments()).toBe(0)
     expect((await Invitation.findById(invitation._id))!.status).toBe('PENDING')
+  })
+})
+
+describe('inviteMember', () => {
+  it('is not blocked by a leftover SALES_STAFF invitation for the same email', async () => {
+    const { owner, farm } = await seed('SALES_STAFF')
+
+    const invitation = await inviteMember(String(farm._id), { _id: String(owner._id), role: 'FARM_OWNER' } as never, 'invitee@test.vn')
+
+    expect(invitation.invited_role).toBe('FARM_OWNER')
+    expect(invitation.status).toBe('PENDING')
+  })
+
+  it('still refuses a second pending FARM_OWNER invitation for the same email', async () => {
+    const { owner, farm } = await seed('FARM_OWNER')
+    await expect(inviteMember(String(farm._id), { _id: String(owner._id), role: 'FARM_OWNER' } as never, 'invitee@test.vn'))
+      .rejects.toMatchObject({ statusCode: 409 })
   })
 })

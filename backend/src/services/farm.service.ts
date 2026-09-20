@@ -118,7 +118,11 @@ export async function inviteMember(farmId: string, user: CurrentUser, email: str
     throw ConflictError('Người dùng đã là thành viên farm này')
   }
 
-  const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
+  // Chỉ tính lời mời Farm Owner: lời mời SALES_STAFF kiểu cũ còn tồn đọng không còn chấp nhận được
+  // (xem acceptInvitation) nên không được chặn việc mời lại email đó làm Farm Owner.
+  const pending = await Invitation.findOne({
+    farm_id: farm._id, invited_email: normalizedEmail, invited_role: 'FARM_OWNER', status: 'PENDING',
+  })
   if (pending) throw ConflictError('Đã có lời mời đang chờ phản hồi gửi tới email này')
 
   return Invitation.create({
