@@ -38,8 +38,9 @@ export function SlaRing({ ticket, size = 36 }: Props) {
     urgency === 'warning'  ? 'text-climateOrange' :
     'text-warmGray'
 
+  // Ticket CLOSED hoặc không có SLA → hiển thị text tĩnh, không cần ring
   if (!ticket.sla_resolve_due_at || ticket.status === 'CLOSED') {
-    return <span className="text-xs text-warmGray">{sla.text}</span>
+    return <span className={`text-xs ${textColor}`}>{sla.text}</span>
   }
 
   return (
