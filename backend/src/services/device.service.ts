@@ -28,7 +28,11 @@ export async function registerSensorNode(user: CurrentUser, input: { device_id: 
   const existing = await SensorNode.findOne({ device_id: input.device_id })
   if (existing) throw ConflictError('device_id đã được đăng ký')
 
-  return SensorNode.create({ device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING' })
+  const node = await SensorNode.create({ device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING' })
+  await logAction(user._id, 'DEVICE_REGISTERED', 'sensor_node', String(node._id), {
+    deviceId: input.device_id, zoneId: input.zone_id,
+  })
+  return node
 }
 
 /**
@@ -165,7 +169,11 @@ export async function registerCameraNode(user: CurrentUser, input: { device_id: 
   const existing = await CameraNode.findOne({ device_id: input.device_id })
   if (existing) throw ConflictError('device_id đã được đăng ký')
 
-  return CameraNode.create({ ...input, status: 'PENDING' })
+  const node = await CameraNode.create({ ...input, status: 'PENDING' })
+  await logAction(user._id, 'DEVICE_REGISTERED', 'camera_node', String(node._id), {
+    deviceId: input.device_id, zoneId: input.zone_id,
+  })
+  return node
 }
 
 export async function listCameraNodes(zoneId: string | undefined, user: CurrentUser) {

@@ -87,3 +87,49 @@ async function sendSms(phone: string | undefined, body: string): Promise<void> {
   // TODO(E6): nối Twilio/ESMS (ALERT-FR-004, kênh dự phòng khi mạng kém).
   logger.info('[notify:sms] (chưa nối SMS gateway thật)', { phone, body })
 }
+
+async function sendEmail(email: string | undefined, subject: string, body: string): Promise<void> {
+  // TODO(E6): nối SMTP bằng nodemailer (đã có trong dependencies) — cùng chỗ với luồng OTP/đặt lại mật khẩu.
+  logger.info('[notify:email] (chưa nối SMTP thật)', { email, subject, body })
+}
+
+// ── Thông báo nghiệp vụ tới 1 người dùng (không gắn với Alert) ─────────────────
+
+export interface UserNotification {
+  title: string
+  body: string
+}
+
+/**
+ * Thông báo giao dịch tới 1 user: kết quả duyệt Sales Staff (Flow 16), chuyển
+ * quyền chủ farm / xoá tài khoản (Flow 19), yêu cầu xoá tài khoản gửi Admin.
+ * Khác `dispatchAlertNotification`: không áp giờ im lặng (đây không phải cảnh báo
+ * môi trường) và luôn gửi thêm email vì user có thể chưa mở app. Như các kênh
+ * khác, bước GỬI cuối dừng ở adapter (chưa có credential thật).
+ *
+ * Không throw: thông báo hỏng không được làm hỏng nghiệp vụ chính (cùng triết lý
+ * với `logAction`). Gọi TRƯỚC khi ẩn danh tài khoản nếu cần email thật của user.
+ */
+export async function notifyUser(userId: string, message: UserNotification): Promise<void> {
+  try {
+    const user = await User.findById(userId).select('email notification_preferences').lean()
+    if (!user) return
+
+    if (user.notification_preferences?.push !== false) {
+      await sendPush(String(user._id), message.title, message.body)
+    }
+    await sendEmail(user.email, message.title, message.body)
+  } catch (err) {
+    logger.warn('Gửi thông báo nghiệp vụ thất bại', { err, userId, title: message.title })
+  }
+}
+
+/** Thông báo tới mọi Administrator đang hoạt động (VD: có yêu cầu xoá tài khoản mới) */
+export async function notifyAdmins(message: UserNotification): Promise<void> {
+  try {
+    const admins = await User.find({ role: 'ADMIN', is_active: true }).select('_id').lean()
+    await Promise.all(admins.map(a => notifyUser(String(a._id), message)))
+  } catch (err) {
+    logger.warn('Gửi thông báo tới Admin thất bại', { err, title: message.title })
+  }
+}

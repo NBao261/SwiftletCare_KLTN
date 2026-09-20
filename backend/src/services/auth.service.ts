@@ -5,6 +5,7 @@ import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
 import { logAction } from '@/services/auditLog.service'
+import { notifyAdmins } from '@/services/notification.service'
 import type { JwtAccessPayload } from '@/types'
 import { AppError, ConflictError, UnauthorizedError } from '@/utils/appError.util'
 
@@ -211,6 +212,8 @@ export async function resetPassword(email: string, token: string, newPassword: s
   user.password_reset_expires_at = undefined
   user.refresh_tokens = [] as never
   await user.save()
+
+  await logAction(String(user._id), 'PASSWORD_RESET', 'user', String(user._id))
 }
 
 /** ALERT-FR-005/006 — Farm Owner chọn kênh nhận thông báo + giờ im lặng */
@@ -244,5 +247,12 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
 
   user.deletion_requested_at = new Date()
   await user.save()
+
+  await logAction(userId, 'DELETION_REQUESTED', 'user', userId)
+  // Flow 19 bước 6 — Administrator nhận thông báo để xử lý trong ≤ 30 ngày
+  await notifyAdmins({
+    title: 'Yêu cầu xoá tài khoản mới',
+    body: `${user.full_name} (${user.role ?? 'Buyer'}) vừa gửi yêu cầu xoá tài khoản — cần xử lý trong ≤ 30 ngày.`,
+  })
   return user
 }

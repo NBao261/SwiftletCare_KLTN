@@ -26,5 +26,8 @@ const auditLogSchema = new Schema<IAuditLog>(
 
 auditLogSchema.index({ target_type: 1, target_id: 1 })
 auditLogSchema.index({ actor_id: 1, created_at: -1 })
+// SYSTEM-FR-001 luôn sort created_at:-1 và lọc theo khoảng thời gian / loại hành động
+auditLogSchema.index({ created_at: -1 })
+auditLogSchema.index({ action: 1, created_at: -1 })
 
 export const AuditLog = model<IAuditLog>('AuditLog', auditLogSchema)

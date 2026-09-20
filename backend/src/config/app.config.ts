@@ -9,6 +9,7 @@ import fs from 'fs'
 import path from 'path'
 import { rateLimiter } from '@/middlewares/rateLimiter.middleware'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
+import { requestContext } from '@/middlewares/requestContext.middleware'
 import logger from '@/utils/logger.util'
 
 import authRoutes      from '@/routes/auth.route'
@@ -31,6 +32,14 @@ import salesReportsRoutes   from '@/routes/salesReports.route'
 
 const app: Application = express()
 
+// Sau reverse proxy/tunnel (Cloudflare, nginx) req.ip mặc định là IP của proxy —
+// audit log và rate limit sẽ gom mọi client về 1 địa chỉ. Đặt TRUST_PROXY=<số hop>
+// (hoặc true/loopback...) khi triển khai sau proxy; bỏ trống = không tin header.
+const trustProxy = process.env.TRUST_PROXY
+if (trustProxy) {
+  app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy === 'true' ? true : trustProxy)
+}
+
 // ── Security ───────────────────────────────────────────────────────────────────
 app.use(helmet())
 // credentials:true bắt buộc để trình duyệt lưu/gửi cookie refreshToken (AUTH-FR-003)
@@ -43,6 +52,7 @@ app.use(morgan('combined'))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser()) // cần cho req.cookies.refreshToken (AUTH-FR-003)
+app.use(requestContext) // IP client cho audit_logs — phải đứng trước các router
 
 // ── Health Check ───────────────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
