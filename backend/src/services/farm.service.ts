@@ -137,7 +137,7 @@ export async function inviteMember(farmId: string, user: CurrentUser, email: str
  * trên invitation đã ACCEPTED/DECLINED/EXPIRED thì báo lỗi rõ ràng thay vì âm
  * thầm thành công, để UI không hiểu nhầm.
  */
-export async function acceptInvitation(token: string, user: CurrentUser): Promise<IFarm | { salesAssignment: true }> {
+export async function acceptInvitation(token: string, user: CurrentUser): Promise<IFarm> {
   const invitation = await Invitation.findOne({ token })
   if (!invitation) throw NotFoundError('Lời mời không tồn tại')
   if (invitation.status !== 'PENDING') throw ConflictError(`Lời mời này đã ${STATUS_LABEL[invitation.status]}`)
@@ -150,18 +150,16 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
     throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
   }
 
+  // Từ v1.16.0 Sales Staff không còn đi qua lời mời mà qua đề xuất + Admin duyệt
+  // (AUTH-FR-005b/005d). Lời mời SALES_STAFF cũ còn tồn đọng thì từ chối rõ ràng,
+  // không tự gán quyền; lời mời vẫn PENDING để tự hết hạn.
+  if (invitation.invited_role !== 'FARM_OWNER') {
+    throw ConflictError('Lời mời Sales Staff kiểu cũ không còn được hỗ trợ — nhờ Farm Owner gửi đề xuất Sales Staff mới để Admin duyệt')
+  }
+
   invitation.status = 'ACCEPTED'
   invitation.responded_at = new Date()
   await invitation.save()
-
-  if (invitation.invited_role === 'SALES_STAFF') {
-    await SalesAssignment.findOneAndUpdate(
-      { farm_id: invitation.farm_id, sales_staff_id: user._id },
-      { $setOnInsert: { invited_by: invitation.invited_by } },
-      { upsert: true },
-    )
-    return { salesAssignment: true }
-  }
 
   const farm = await findFarmOrThrow(String(invitation.farm_id))
   if (!farm.members.some(m => String(m.user_id) === user._id)) {

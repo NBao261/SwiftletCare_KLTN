@@ -3,7 +3,6 @@ import crypto from 'crypto'
 import { User, IUser } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
-import { SalesAssignment } from '@/models/salesAssignment.model'
 import { logAction } from '@/services/auditLog.service'
 import { notifyAdmins } from '@/services/notification.service'
 import type { JwtAccessPayload } from '@/types'
@@ -38,11 +37,13 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
   const existing = await User.findOne({ email: normalizedEmail })
   if (existing) throw ConflictError('Email đã được đăng ký')
 
-  // Flow 12 bước 3b — nếu email trùng một lời mời PENDING còn hạn, người dùng
-  // nhận thẳng vai trò được mời (thay vì mặc định FARM_OWNER) và lời mời tự
-  // động được accept ngay khi đăng ký xong, không cần thao tác thêm.
+  // Flow 12 bước 3b — nếu email trùng một lời mời Farm Owner PENDING còn hạn, lời
+  // mời tự động được accept ngay khi đăng ký xong, không cần thao tác thêm. Chỉ
+  // lời mời FARM_OWNER: từ v1.16.0 Sales Staff không còn đi qua lời mời (đề xuất +
+  // Admin duyệt, AUTH-FR-005b/005d), nên lời mời SALES_STAFF cũ tồn đọng bị bỏ qua.
   const invitation = await Invitation.findOne({
     invited_email: normalizedEmail,
+    invited_role: 'FARM_OWNER',
     status: 'PENDING',
     expires_at: { $gt: new Date() },
   })
@@ -64,17 +65,9 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
     invitation.responded_at = new Date()
     await invitation.save()
 
-    if (invitation.invited_role === 'SALES_STAFF') {
-      await SalesAssignment.findOneAndUpdate(
-        { farm_id: invitation.farm_id, sales_staff_id: user._id },
-        { $setOnInsert: { invited_by: invitation.invited_by } },
-        { upsert: true },
-      )
-    } else {
-      await Farm.findByIdAndUpdate(invitation.farm_id, {
-        $addToSet: { members: { user_id: user._id, is_primary: false, joined_at: new Date() } },
-      })
-    }
+    await Farm.findByIdAndUpdate(invitation.farm_id, {
+      $addToSet: { members: { user_id: user._id, is_primary: false, joined_at: new Date() } },
+    })
   }
 
   return user
