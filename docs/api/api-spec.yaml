@@ -710,8 +710,12 @@ paths:
         người thành công và chạm vào tài khoản/phân công, người còn lại nhận 409
         mà không để lại tác dụng phụ. Nếu bước thực thi lỗi (VD email thuộc tài
         khoản không phải Sales Staff, farm đã bị xoá) thì đề xuất được trả về
-        `PENDING` để xử lý lại hoặc từ chối. Farm Owner nhận thông báo kết quả
-        (kèm lý do nếu bị từ chối).
+        `PENDING` để xử lý lại hoặc từ chối; các điều kiện biết trước (farm còn
+        tồn tại, email không thuộc tài khoản khác role) được kiểm tra TRƯỚC khi
+        nhận quyền xử lý nên không để lại dấu vết. Đề xuất kẹt ở `APPROVED` mà chưa
+        có tác dụng nào (tiến trình chết giữa chừng) được duyệt lại sau 60 giây để
+        làm nốt phần còn thiếu; trong 60 giây đó người thứ hai nhận 409. Farm Owner
+        nhận thông báo kết quả (kèm lý do nếu bị từ chối).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3603,7 +3607,7 @@ components:
       {
         name: limit,
         in: query,
-        description: "Số bản ghi mỗi trang — mặc định 20, tối đa 100 (giá trị lớn hơn được kẹp về 100; giá trị không hợp lệ dùng mặc định)",
+        description: "Số bản ghi mỗi trang — mặc định 20, tối đa 100 (giá trị lớn hơn được kẹp về 100). Giá trị không phải số nguyên ≥ 1: các endpoint /admin/* trả 422, các danh sách khác dùng mặc định",
         schema: { type: integer, minimum: 1, default: 20, maximum: 100 },
       }
     TelemetryLimit:
