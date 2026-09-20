@@ -1,7 +1,7 @@
 // OnboardingPage — F-TC-01 / Stitch A3 + B5 + B6 + B7 + B9 + C1
 // Wizard 6 bước lắp đặt thiết bị ESP32 — shell + state only
 // Logic từng bước được tách sang ./steps/
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui'
 import { Step1Location }   from './steps/Step1Location'
@@ -66,7 +66,8 @@ export default function OnboardingPage() {
   const patch = (partial: Partial<OnboardingState>) =>
     setData(prev => ({ ...prev, ...partial }))
 
-  const next = () => setStep(s => s + 1)
+  // useCallback tránh Step5 re-subscribe socket mỗi khi OnboardingPage re-render
+  const next = useCallback(() => setStep(s => s + 1), [])
   const back = () => setStep(s => s - 1)
 
   return (
