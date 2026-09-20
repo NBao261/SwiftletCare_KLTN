@@ -376,6 +376,8 @@ export interface AdminOverrideInput {
   scheduled_visit_at?: string
   status?: TicketStatus
   reason: string
+  /** Ép gán Technician ngoài khu vực phụ trách — xem ghi chú trong hàm */
+  force?: boolean
 }
 
 /**
@@ -393,11 +395,27 @@ export async function adminOverrideTicket(
 
   const changes: Record<string, unknown> = {}
   if (updates.assigned_to !== undefined) {
-    const technician = await User.findById(updates.assigned_to).select('role is_active').lean()
+    const technician = await User.findById(updates.assigned_to).select('role is_active assigned_regions').lean()
     if (!technician || technician.role !== 'TECHNICIAN' || !technician.is_active) {
       throw BadRequestError('Chỉ gán được cho Technician đang hoạt động')
     }
+
+    // Quyền xem ticket của Technician dựa trên assigned_regions (farmAccess.util).
+    // Gán người ngoài vùng thì chính họ mở ticket lên cũng bị chặn 403 — ticket
+    // thành mồ côi. Admin vẫn ép được bằng force (TICKET-FR-005b), nhưng phải
+    // là quyết định có ý thức và được ghi lại.
+    const farm = await Farm.findById(ticket.farm_id).select('region').lean()
+    const coversRegion = !!farm?.region && (technician.assigned_regions ?? []).includes(farm.region)
+    if (!coversRegion && !updates.force) {
+      const regions = (technician.assigned_regions ?? []).join(', ') || 'chưa gán vùng nào'
+      throw BadRequestError(
+        `Technician này phụ trách ${regions}, không khớp khu vực "${farm?.region ?? 'chưa đặt'}" của farm. ` +
+        'Gửi kèm force=true nếu vẫn muốn gán.',
+      )
+    }
+
     changes.assigned_to = { before: ticket.assigned_to ? String(ticket.assigned_to) : null, after: updates.assigned_to }
+    if (!coversRegion) changes.forcedOutOfRegion = true
     ticket.assigned_to = technician._id
   }
   if (updates.priority !== undefined && updates.priority !== ticket.priority) {

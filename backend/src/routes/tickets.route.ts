@@ -27,6 +27,7 @@ router.put ('/:id/admin-override', requireRole('ADMIN'),
   body('priority').optional().isIn(['P1', 'P2', 'P3']),
   body('status').optional().isIn(['NEW', 'IN_PROGRESS', 'AWAITING_FIELD_CONFIRMATION', 'CLOSED']),
   body('scheduled_visit_at').optional().isISO8601(),
+  body('force').optional().isBoolean(),
   validate, ticketController.adminOverride)
 
 export default router
