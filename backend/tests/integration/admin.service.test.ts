@@ -7,6 +7,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
+import { Invitation } from '@/models/invitation.model'
 import { SalesAssignmentRequest } from '@/models/salesAssignmentRequest.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
@@ -49,7 +50,7 @@ afterEach(async () => {
   jest.clearAllMocks()
   await Promise.all([
     AuditLog.deleteMany({}), Farm.deleteMany({}), SalesAssignment.deleteMany({}),
-    SalesAssignmentRequest.deleteMany({}), Ticket.deleteMany({}), User.deleteMany({}),
+    Invitation.deleteMany({}), SalesAssignmentRequest.deleteMany({}), Ticket.deleteMany({}), User.deleteMany({}),
   ])
 })
 
@@ -264,6 +265,74 @@ describe('completeDeletionRequest', () => {
 
     await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).resolves.toBeDefined()
     expect(await auditActions('ACCOUNT_DELETED')).toHaveLength(1)
+  })
+
+  describe('clean-up of records pointing at the deleted user', () => {
+    it('marks the account deleted so it can no longer be locked or unlocked', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+
+      const user = await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+      expect(user.deleted_at).toBeInstanceOf(Date)
+      await expect(setUserStatus(String(admin._id), String(leaver._id), true)).rejects.toMatchObject({ statusCode: 409 })
+      expect((await User.findById(leaver._id))!.is_active).toBe(false)
+    })
+
+    it('removes the assignments of a deleted Sales Staff and reports how many', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const sales = await mkUser('sales@test.vn', 'SALES_STAFF', requested)
+      const otherSales = await mkUser('other-sales@test.vn', 'SALES_STAFF')
+      await SalesAssignment.create([
+        { farm_id: oid(), sales_staff_id: sales._id, invited_by: admin._id },
+        { farm_id: oid(), sales_staff_id: sales._id, invited_by: admin._id },
+        { farm_id: oid(), sales_staff_id: otherSales._id, invited_by: admin._id },
+      ])
+
+      await completeDeletionRequest(String(admin._id), String(sales._id))
+
+      expect(await SalesAssignment.countDocuments({ sales_staff_id: sales._id })).toBe(0)
+      expect(await SalesAssignment.countDocuments({ sales_staff_id: otherSales._id })).toBe(1)
+      const [done] = await auditActions('ACCOUNT_DELETED')
+      expect(done.metadata).toMatchObject({ salesAssignmentsRemoved: 2 })
+    })
+
+    it('rejects pending Sales Staff requests made by, or about, the deleted user and leaves others alone', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+      const bystander = await mkUser('bystander@test.vn')
+      const farm = oid()
+      const madeByLeaver = await SalesAssignmentRequest.create({ farm_id: farm, requested_by: leaver._id, sales_staff_email: 'new@test.vn' })
+      const aboutLeaver = await SalesAssignmentRequest.create({ farm_id: farm, requested_by: bystander._id, sales_staff_email: 'leaver@test.vn' })
+      const unrelated = await SalesAssignmentRequest.create({ farm_id: farm, requested_by: bystander._id, sales_staff_email: 'someone@test.vn' })
+
+      await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+      for (const id of [madeByLeaver._id, aboutLeaver._id]) {
+        const r = (await SalesAssignmentRequest.findById(id))!
+        expect(r.status).toBe('REJECTED')
+        expect(String(r.reviewed_by)).toBe(String(admin._id))
+        expect(r.review_note).toContain('đã bị xoá')
+      }
+      expect((await SalesAssignmentRequest.findById(unrelated._id))!.status).toBe('PENDING')
+    })
+
+    it('expires the pending invitations the deleted user had sent', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+      const other = await mkUser('other@test.vn')
+      const inv = (invitedBy: unknown, token: string) => Invitation.create({
+        farm_id: oid(), invited_email: `${token}@test.vn`, invited_role: 'FARM_OWNER', invited_by: invitedBy,
+        token, expires_at: new Date(Date.now() + 86_400_000),
+      })
+      const mine = await inv(leaver._id, 'mine')
+      const theirs = await inv(other._id, 'theirs')
+
+      await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+      expect((await Invitation.findById(mine._id))!.status).toBe('EXPIRED')
+      expect((await Invitation.findById(theirs._id))!.status).toBe('PENDING')
+    })
   })
 
   describe('open tickets (Flow 19 bước 7c)', () => {
