@@ -6,13 +6,13 @@ import { useTicketsList } from '@/hooks/useTickets'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import EmptyState from '@/components/common/EmptyState'
 import { IconTicket } from '@/components/ui/icons'
-import { isSlaBreached, getSlaUrgency, formatSlaCountdown } from './components/ticketHelpers'
+import { isSlaBreached } from './components/ticketHelpers'
 import { TicketStatBar } from './components/TicketStatBar'
 import { TicketCard } from './components/TicketCard'
+import { SlaRing } from './components/SlaRing'
 import { UpdateStatusModal } from './components/UpdateStatusModal'
 import { ReassignModal } from './components/ReassignModal'
-import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
-import { Badge } from '@/components/ui'
+import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
 import { useNavigate } from 'react-router-dom'
 import { formatDate } from '@/utils/helpers'
 import type { Ticket, TicketStatus, TicketType } from '@/types'
@@ -148,7 +148,21 @@ function PaginationBar({ page, totalPages, totalItems, pageSize, onPage }: Pagin
   )
 }
 
-// ── Table Row ─────────────────────────────────────────────────────────────────
+// Priority dot color map
+const PRIORITY_DOT_CLS: Record<string, string> = {
+  P1: 'bg-alertRed ring-alertRed/20',
+  P2: 'bg-climateOrange ring-climateOrange/20',
+  P3: 'bg-warmGray ring-warmGray/20',
+}
+
+// Status dot color map
+const STATUS_DOT_CLS: Record<string, string> = {
+  NEW: 'bg-charcoal',
+  IN_PROGRESS: 'bg-climateOrange',
+  AWAITING_FIELD_CONFIRMATION: 'bg-limeMist',
+  CLOSED: 'bg-warmGray',
+}
+
 function TicketTableRow({
   ticket, index, onUpdateStatus, onReassign,
 }: {
@@ -158,63 +172,71 @@ function TicketTableRow({
   onReassign: (t: Ticket) => void
 }) {
   const navigate = useNavigate()
-  const sla      = formatSlaCountdown(ticket)
-  const urgency  = getSlaUrgency(ticket)
   const breached = isSlaBreached(ticket)
 
-  const slaColor =
-    urgency === 'breached' ? 'text-alertRed font-semibold' :
-    urgency === 'critical' ? 'text-alertRed'               :
-    urgency === 'warning'  ? 'text-climateOrange'          :
-    'text-warmGray'
-
   const rowBg = breached ? 'bg-alertRed/[0.03]' : index % 2 === 0 ? 'bg-white' : 'bg-graphite/[0.02]'
+  const dotCls = PRIORITY_DOT_CLS[ticket.priority] ?? PRIORITY_DOT_CLS.P3
+  const statusDotCls = STATUS_DOT_CLS[ticket.status] ?? 'bg-warmGray'
 
   return (
     <tr
-      className={`${rowBg} group cursor-pointer transition-colors hover:bg-limeMist/10`}
+      className={`${rowBg} group cursor-pointer transition-all duration-200 hover:bg-limeMist/10 hover:shadow-sm`}
       onClick={() => navigate(`/tickets/${ticket._id}`)}
       role="row"
+      style={{ animationDelay: `${index * 30}ms` }}
     >
+      {/* Priority dot */}
       <td className="whitespace-nowrap py-3 pl-5 pr-3">
-        <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
+        <div className="flex items-center gap-2">
+          <span className={`inline-block h-3 w-3 rounded-full ring-4 ${dotCls} ${ticket.priority === 'P1' ? 'animate-pulse-sla' : ''}`} />
+          <span className="text-xs font-bold text-charcoal">{ticket.priority}</span>
+        </div>
       </td>
+      {/* Type */}
       <td className="max-w-[180px] truncate py-3 pr-3 text-sm font-medium text-charcoal">
         {TICKET_TYPE_LABEL[ticket.type as TicketType]}
       </td>
+      {/* Status with dot */}
       <td className="whitespace-nowrap py-3 pr-3">
-        <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-graphite/10 bg-white px-2.5 py-1 text-xs font-semibold text-charcoal shadow-icon">
+          <span className={`inline-block h-2 w-2 rounded-full ${statusDotCls}`} />
+          {STATUS_LABEL[ticket.status]}
+        </span>
       </td>
-      <td className={`whitespace-nowrap py-3 pr-3 text-sm ${slaColor}`}>
-        {sla.text}
+      {/* SLA Ring */}
+      <td className="whitespace-nowrap py-3 pr-3">
+        <SlaRing ticket={ticket} size={28} />
       </td>
+      {/* Date */}
       <td className="whitespace-nowrap py-3 pr-3 text-sm text-warmGray">
         {formatDate(ticket.created_at)}
       </td>
+      {/* Note */}
       <td className="max-w-[200px] py-3 pr-3">
         {ticket.notes[0] && (
-          <p className="truncate text-sm text-warmGray">{ticket.notes[0].content}</p>
+          <p className="truncate text-sm text-warmGray">💬 {ticket.notes[0].content}</p>
         )}
       </td>
+      {/* Actions */}
       <td className="whitespace-nowrap py-3 pr-5" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100">
           {ticket.status === 'NEW' && (
             <button
               onClick={() => onUpdateStatus(ticket)}
-              className="rounded-full bg-charcoal px-2.5 py-1 text-xs font-medium text-white hover:bg-charcoal/90"
+              className="rounded-full bg-charcoal px-2.5 py-1 text-xs font-medium text-white transition-all hover:bg-charcoal/90 active:scale-95"
             >
               Tiếp nhận
             </button>
           )}
           <button
             onClick={() => onUpdateStatus(ticket)}
-            className="rounded-full border border-graphite/20 px-2.5 py-1 text-xs font-medium text-charcoal hover:bg-graphite/10"
+            className="rounded-full border border-graphite/15 px-2.5 py-1 text-xs font-medium text-charcoal transition-all hover:border-charcoal/30 hover:bg-graphite/5 active:scale-95"
           >
             Cập nhật
           </button>
           <button
             onClick={() => onReassign(ticket)}
-            className="rounded-full border border-graphite/20 px-2.5 py-1 text-xs font-medium text-charcoal hover:bg-graphite/10"
+            className="rounded-full border border-graphite/15 px-2.5 py-1 text-xs font-medium text-charcoal transition-all hover:border-charcoal/30 hover:bg-graphite/5 active:scale-95"
           >
             Gán lại
           </button>
