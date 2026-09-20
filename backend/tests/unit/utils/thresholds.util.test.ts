@@ -44,6 +44,20 @@ describe('assertValidThresholds — sensor ranges', () => {
     expect(() => assertValidThresholds({ ...valid, temp_max: '30' as never })).not.toThrow()
   })
 
+  it('compares numeric strings as numbers, not alphabetically', () => {
+    // "30" >= "4" là false theo thứ tự chữ cái nên khoảng đảo ngược từng lọt qua
+    expect(() => assertValidThresholds({ ...valid, temp_min: '30' as never, temp_max: '4' as never }))
+      .toThrow('temp_min phải nhỏ hơn temp_max')
+    // "5" >= "30" là true theo thứ tự chữ cái nên khoảng hợp lệ từng bị từ chối
+    expect(() => assertValidThresholds({ ...valid, temp_min: '5' as never, temp_max: '30' as never })).not.toThrow()
+    expect(() => assertValidThresholds({ ...valid, humidity_min: '9' as never, humidity_max: '10' as never })).not.toThrow()
+  })
+
+  it.each([null, '', '   ', [], {}, true, false, undefined])('rejects %p instead of treating it as 0', bad => {
+    expect(() => assertValidThresholds({ ...valid, nh3_max: bad as never })).toThrow('nh3_max phải là một số hợp lệ')
+    expect(() => assertValidThresholds({ ...valid, temp_min: bad as never })).toThrow('temp_min phải là một số hợp lệ')
+  })
+
   it('keeps the system defaults inside the sensor ranges', () => {
     for (const key of THRESHOLD_KEYS) {
       const { min, max } = THRESHOLD_LIMITS[key]
@@ -83,5 +97,18 @@ describe('assertValidThresholds', () => {
 describe('pickThresholds', () => {
   it('keeps only known threshold keys and coerces to number', () => {
     expect(pickThresholds({ temp_max: '32', role: 'ADMIN', __proto__injected: 1 })).toEqual({ temp_max: 32 })
+  })
+
+  it('turns null, blank and non-numeric input into NaN so assertValidThresholds rejects it', () => {
+    const picked = pickThresholds({ temp_min: null, temp_max: '', humidity_min: 'abc', humidity_max: [], co2_max: 1200 })
+    expect(Number.isNaN(picked.temp_min)).toBe(true)
+    expect(Number.isNaN(picked.temp_max)).toBe(true)
+    expect(Number.isNaN(picked.humidity_min)).toBe(true)
+    expect(Number.isNaN(picked.humidity_max)).toBe(true)
+    expect(picked.co2_max).toBe(1200)
+  })
+
+  it('ignores keys that were not sent', () => {
+    expect(pickThresholds({})).toEqual({})
   })
 })

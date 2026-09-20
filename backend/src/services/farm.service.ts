@@ -9,7 +9,7 @@ import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow } 
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
-import { assertValidThresholds } from '@/utils/thresholds.util'
+import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser } from '@/types'
 
@@ -279,7 +279,9 @@ export async function updateZoneThresholds(zoneId: string, user: CurrentUser, up
   const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
 
-  const merged = { ...zone.thresholds, ...updates }
+  // pickThresholds: chỉ nhận 7 khoá ngưỡng và ép về số; null/chuỗi rỗng thành NaN để assert từ chối
+  const picked = pickThresholds(updates as Record<string, unknown>)
+  const merged = { ...zone.thresholds, ...picked }
   assertValidThresholds(merged)
 
   const oldValues = { ...zone.thresholds }
@@ -288,7 +290,7 @@ export async function updateZoneThresholds(zoneId: string, user: CurrentUser, up
     changed_by: user._id as never,
     changed_at: new Date(),
     old_values: oldValues,
-    new_values: updates,
+    new_values: picked,
     source: 'MANUAL',
   } as never)
   await zone.save()

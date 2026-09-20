@@ -36,30 +36,42 @@ export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: numb
   co2_max:      { min: 0,   max: 5000,    unit: 'ppm' },
 }
 
+/**
+ * Chỉ giá trị thật sự là số (hoặc chuỗi số) mới hợp lệ. Ép thẳng bằng Number()
+ * sẽ cho null/''/[]/false lọt qua thành 0, còn so sánh 2 chuỗi số ("30" >= "4")
+ * theo thứ tự chữ cái làm đảo kết quả min<max.
+ */
+function toNumber(value: unknown): number {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string' && value.trim() !== '') return Number(value)
+  return NaN
+}
+
 export function assertValidThresholds(t: Thresholds): void {
-  // Number(): giá trị ghép từ body có thể còn là chuỗi số ("30") — Mongoose vẫn ép được khi lưu
+  const n = {} as Record<keyof Thresholds, number>
   for (const key of THRESHOLD_KEYS) {
-    if (!Number.isFinite(Number(t[key]))) throw BadRequestError(`${key} phải là một số hợp lệ`)
+    n[key] = toNumber(t[key])
+    if (!Number.isFinite(n[key])) throw BadRequestError(`${key} phải là một số hợp lệ`)
   }
-  if (t.temp_min >= t.temp_max) throw BadRequestError('temp_min phải nhỏ hơn temp_max')
-  if (t.humidity_min >= t.humidity_max) throw BadRequestError('humidity_min phải nhỏ hơn humidity_max')
-  if (t.light_max < 0 || t.nh3_max < 0 || t.co2_max < 0) {
+
+  if (n.temp_min >= n.temp_max) throw BadRequestError('temp_min phải nhỏ hơn temp_max')
+  if (n.humidity_min >= n.humidity_max) throw BadRequestError('humidity_min phải nhỏ hơn humidity_max')
+  if (n.light_max < 0 || n.nh3_max < 0 || n.co2_max < 0) {
     throw BadRequestError('light_max/nh3_max/co2_max không được âm')
   }
   for (const key of THRESHOLD_KEYS) {
     const { min, max, unit } = THRESHOLD_LIMITS[key]
-    const value = Number(t[key])
-    if (value < min || value > max) {
+    if (n[key] < min || n[key] > max) {
       throw BadRequestError(`${key} phải nằm trong khoảng ${min}–${max} ${unit} (khoảng đo của cảm biến)`)
     }
   }
 }
 
-/** Chỉ giữ 7 khoá ngưỡng hợp lệ — chặn body chèn thêm field lạ vào document */
+/** Chỉ giữ 7 khoá ngưỡng hợp lệ — chặn body chèn thêm field lạ vào document. Giá trị không phải số thành NaN. */
 export function pickThresholds(input: Record<string, unknown>): Partial<Thresholds> {
   const picked: Partial<Thresholds> = {}
   for (const key of THRESHOLD_KEYS) {
-    if (input[key] !== undefined) picked[key] = Number(input[key])
+    if (input[key] !== undefined) picked[key] = toNumber(input[key]) // NaN nếu không phải số — assertValidThresholds sẽ từ chối
   }
   return picked
 }

@@ -6,6 +6,7 @@ import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
 import { raiseNodeOfflineAlert } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
+import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
@@ -57,19 +58,24 @@ export async function getSensorNode(nodeId: string, user: CurrentUser): Promise<
   return node
 }
 
-/** ENV-FR-006 (qua device, tương đương farmService.updateZoneThresholds) */
+/** ENV-FR-006 (qua device, tương đương farmService.updateZoneThresholds — cùng validate) */
 export async function updateNodeThresholds(nodeId: string, user: CurrentUser, updates: object) {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   const chain = await assertZoneAccess(String(node.zone_id), user)
 
+  const picked = pickThresholds(updates as Record<string, unknown>)
+  const merged = { ...chain.zone.thresholds, ...picked }
+  assertValidThresholds(merged)
+
   const oldValues = { ...chain.zone.thresholds }
-  chain.zone.thresholds = { ...chain.zone.thresholds, ...updates }
+  chain.zone.thresholds = merged
   chain.zone.threshold_history.push({
     changed_by: user._id as never,
     changed_at: new Date(),
     old_values: oldValues,
-    new_values: updates as never,
+    new_values: picked,
+    source: 'MANUAL',
   } as never)
   await chain.zone.save()
 
