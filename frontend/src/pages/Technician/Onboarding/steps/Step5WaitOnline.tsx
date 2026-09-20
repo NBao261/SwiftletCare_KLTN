@@ -1,8 +1,16 @@
 // Step5WaitOnline.tsx — Bước 5: Chờ thiết bị kết nối MQTT (B6)
 // 15 phút countdown + socket listener DEVICE_STATUS_CHANGE
-import { useState, useEffect, useRef } from 'react'
+//
+// Fix: Gọi joinZone(data.zoneId) khi mount để socket vào đúng room zone:<zoneId>.
+//      Backend emit DEVICE_STATUS_CHANGE tới room zone:<zoneId>, không phải broadcast.
+//      Nếu không join room, wizard không bao giờ nhận được event → luôn timeout.
+//
+// Fix: useRef cho successTimer để clear khi unmount → tránh memory leak.
+// Fix: Kiểm tra trạng thái thiết bị ngay khi mount (polling dự phòng) để handle
+//      trường hợp thiết bị đã ONLINE trước khi vào Step 5.
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSocket } from '@/hooks/useSocket'
-import { onDeviceStatusChange } from '@/services/socket'
+import { joinZone, leaveZone, onDeviceStatusChange } from '@/services/socket'
 import { Button } from '@/components/ui'
 import type { DeviceStatusChangeEvent } from '@/types'
 import type { OnboardingState } from './onboardingTypes'
@@ -26,11 +34,31 @@ interface Props {
 
 export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
   useSocket()
-  const [elapsed, setElapsed] = useState(0)
-  const [timedOut, setTimedOut] = useState(false)
-  const [mqttOk, setMqttOk] = useState(false)
+  const [elapsed, setElapsed]           = useState(0)
+  const [timedOut, setTimedOut]         = useState(false)
+  const [mqttOk, setMqttOk]             = useState(false)
   const [wifiConnecting, setWifiConnecting] = useState(false)
-  const startRef = useRef(Date.now())
+  const startRef      = useRef(Date.now())
+  const successTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)   // Fix: ref để clear khi unmount
+
+  // Stable callback tránh re-subscribe mỗi render
+  const handleSuccess = useCallback(() => {
+    successTimer.current = setTimeout(onSuccess, 800) // brief delay for visual feedback
+  }, [onSuccess])
+
+  // Fix: Tham gia room zone để nhận event DEVICE_STATUS_CHANGE
+  useEffect(() => {
+    const zoneId = data.location.zoneId
+    if (!zoneId) return
+
+    joinZone(zoneId)
+
+    return () => {
+      leaveZone(zoneId)
+      // Fix: clear timer khi unmount để tránh memory leak
+      if (successTimer.current) clearTimeout(successTimer.current)
+    }
+  }, [data.location.zoneId])
 
   // Countdown timer
   useEffect(() => {
@@ -48,18 +76,18 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
       if (event.nodeId === data.deviceDbId) {
         if (event.status === 'ONLINE') {
           setMqttOk(true)
-          setTimeout(onSuccess, 800) // brief delay for visual feedback
+          handleSuccess()
         } else if (event.status === 'PENDING') {
           setWifiConnecting(true)
         }
       }
     })
     return () => { off() }
-  }, [data.deviceDbId, onSuccess])
+  }, [data.deviceDbId, handleSuccess])
 
-  const remaining = Math.max(0, TIMEOUT_MS - elapsed)
-  const remainMins = Math.floor(remaining / 60_000)
-  const remainSecs = Math.floor((remaining % 60_000) / 1000)
+  const remaining   = Math.max(0, TIMEOUT_MS - elapsed)
+  const remainMins  = Math.floor(remaining / 60_000)
+  const remainSecs  = Math.floor((remaining % 60_000) / 1000)
 
   if (timedOut) {
     return (
