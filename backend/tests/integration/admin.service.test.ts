@@ -220,17 +220,35 @@ describe('completeDeletionRequest', () => {
     await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).rejects.toMatchObject({ statusCode: 400 })
   })
 
-  it('sends the final notice while the real email still exists', async () => {
+  it('sends the final notice to the old email only after the anonymization has been saved', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
-    const emailsSeen: string[] = []
-    ;(notifyUser as jest.Mock).mockImplementation(async (id: string) => {
-      emailsSeen.push((await User.findById(id).lean())!.email)
-    })
 
     await completeDeletionRequest(String(admin._id), String(leaver._id))
 
-    expect(emailsSeen).toEqual(['leaver@test.vn'])
+    expect(notifyUser).toHaveBeenCalledWith(
+      String(leaver._id),
+      expect.objectContaining({ title: 'Tài khoản của bạn đã được xoá' }),
+      { email: 'leaver@test.vn', emailOnly: true },
+    )
+  })
+
+  it('does not announce the deletion when saving the anonymization fails, and announces exactly once after a re-run', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    const finalNotices = () =>
+      (notifyUser as jest.Mock).mock.calls.filter(c => c[1].title === 'Tài khoản của bạn đã được xoá')
+
+    const saveSpy = jest.spyOn(User.prototype, 'save').mockImplementationOnce((() => Promise.reject(new Error('DB blip'))) as never)
+    await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).rejects.toThrow('DB blip')
+
+    expect(finalNotices()).toHaveLength(0)
+    expect((await User.findById(leaver._id))!.email).toBe('leaver@test.vn')
+    expect((await User.findById(leaver._id))!.deletion_requested_at).toBeInstanceOf(Date)
+
+    saveSpy.mockRestore()
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+    expect(finalNotices()).toHaveLength(1)
   })
 
   describe('open tickets (Flow 19 bước 7c)', () => {
@@ -313,7 +331,7 @@ describe('completeDeletionRequest', () => {
 
     expect(await auditActions('FARM_OWNERSHIP_TRANSFERRED')).toHaveLength(2)
     const [done] = await auditActions('ACCOUNT_DELETED')
-    expect(done.metadata).toMatchObject({ farmsTransferred: 1, farmsDeleted: 0 }) // chỉ tính lần chạy này
+    expect(done.metadata).toMatchObject({ farmsTransferred: 2, farmsDeleted: 0 }) // tổng qua cả 2 lần chạy, lấy từ audit từng farm
     expect(await Farm.countDocuments({ owner_id: leaver._id })).toBe(0)
   })
 })
@@ -470,6 +488,60 @@ describe('decideSalesStaffRequest', () => {
     const { admin, request } = await seed()
     await decideSalesStaffRequest(String(admin._id), String(request._id), 'REJECTED', 'no')
     await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
+  })
+
+  it('never leaves an approval half-applied when a rejection races it', async () => {
+    const { admin, owner, farm } = await seed('unused@test.vn')
+    for (let i = 0; i < 6; i++) {
+      const email = `racer${i}@test.vn`
+      const req = await SalesAssignmentRequest.create({ farm_id: farm._id, requested_by: owner._id, sales_staff_email: email })
+
+      const results = await Promise.allSettled([
+        decideSalesStaffRequest(String(admin._id), String(req._id), 'APPROVED'),
+        decideSalesStaffRequest(String(admin._id), String(req._id), 'REJECTED', 'no'),
+      ])
+
+      expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1)
+      const finalStatus = (await SalesAssignmentRequest.findById(req._id))!.status
+      const assignments = await SalesAssignment.countDocuments({ requested_via: req._id })
+      const account = await User.findOne({ email })
+      if (finalStatus === 'APPROVED') {
+        expect(assignments).toBe(1)
+        expect(account).not.toBeNull()
+      } else {
+        expect(finalStatus).toBe('REJECTED')
+        expect(assignments).toBe(0)
+        expect(account).toBeNull() // người thua không được để lại tài khoản/phân công mồ côi
+      }
+    }
+  })
+
+  it('never removes an assignment for a removal request that was rejected in the race', async () => {
+    const { admin, owner, sales, farm } = await (async () => {
+      const ctx = await seed('unused@test.vn')
+      const sales = await mkUser('sales@test.vn', 'SALES_STAFF')
+      await SalesAssignment.create({ farm_id: ctx.farm._id, sales_staff_id: sales._id, invited_by: ctx.admin._id })
+      return { ...ctx, sales }
+    })()
+    for (let i = 0; i < 4; i++) {
+      // dựng lại phân công mỗi vòng để vòng sau vẫn có thứ để gỡ
+      await SalesAssignment.updateOne(
+        { farm_id: farm._id, sales_staff_id: sales._id },
+        { $setOnInsert: { invited_by: admin._id } }, { upsert: true },
+      )
+      const req = await SalesAssignmentRequest.create({
+        farm_id: farm._id, type: 'REMOVE', requested_by: owner._id, sales_staff_id: sales._id, sales_staff_email: 'sales@test.vn',
+      })
+
+      await Promise.allSettled([
+        decideSalesStaffRequest(String(admin._id), String(req._id), 'APPROVED'),
+        decideSalesStaffRequest(String(admin._id), String(req._id), 'REJECTED', 'no'),
+      ])
+
+      const finalStatus = (await SalesAssignmentRequest.findById(req._id))!.status
+      const stillAssigned = await SalesAssignment.countDocuments({ farm_id: farm._id, sales_staff_id: sales._id })
+      expect(stillAssigned).toBe(finalStatus === 'APPROVED' ? 0 : 1)
+    }
   })
 
   it('lets exactly one of two concurrent approvals win', async () => {

@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { User, IUser } from '@/models/user.model'
+import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { Ticket } from '@/models/ticket.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
@@ -146,8 +147,6 @@ export async function completeDeletionRequest(
     }
   }
 
-  let farmsTransferred = 0
-  let farmsDeleted = 0
   for (const farm of ownedFarms) {
     const otherMembers = farm.members.filter(m => String(m.user_id) !== userId)
     if (otherMembers.length > 0) {
@@ -158,7 +157,6 @@ export async function completeDeletionRequest(
       const selfIndex = farm.members.findIndex(m => String(m.user_id) === userId)
       if (selfIndex !== -1) farm.members.splice(selfIndex, 1)
       await farm.save()
-      farmsTransferred++
 
       await logAction(adminId, 'FARM_OWNERSHIP_TRANSFERRED', 'farm', String(farm._id), {
         fromUserId: userId, toUserId: String(nextOwner.user_id),
@@ -170,7 +168,6 @@ export async function completeDeletionRequest(
     } else {
       farm.is_deleted = true
       await farm.save()
-      farmsDeleted++
 
       await logAction(adminId, 'FARM_SOFT_DELETED', 'farm', String(farm._id), {
         reason: 'OWNER_ACCOUNT_DELETED', ownerId: userId,
@@ -184,11 +181,7 @@ export async function completeDeletionRequest(
     { $pull: { members: { user_id: user._id } } },
   )
 
-  // Gửi thông báo cuối TRƯỚC khi ẩn danh — sau đó email thật không còn để gửi
-  await notifyUser(userId, {
-    title: 'Tài khoản của bạn đã được xoá',
-    body: 'Yêu cầu xoá tài khoản và dữ liệu cá nhân của bạn trên SwiftletCare đã hoàn tất.',
-  })
+  const contactEmail = user.email // giữ lại để gửi thông báo cuối sau khi ẩn danh
 
   user.email = `deleted-${String(user._id)}@swiftletcare.local`
   user.phone = undefined
@@ -202,6 +195,18 @@ export async function completeDeletionRequest(
   await user.save()
   disconnectUser(userId)
 
+  // Chỉ báo "đã xoá" SAU khi ẩn danh đã lưu thành công: lưu lỗi thì user không bị báo nhầm,
+  // và lần chạy lại gửi đúng 1 lần. Email cũ truyền riêng vì tài khoản vừa bị ẩn danh.
+  await notifyUser(userId, {
+    title: 'Tài khoản của bạn đã được xoá',
+    body: 'Yêu cầu xoá tài khoản và dữ liệu cá nhân của bạn trên SwiftletCare đã hoàn tất.',
+  }, { email: contactEmail, emailOnly: true })
+
+  // Tổng qua MỌI lần chạy (kể cả lần lỗi giữa chừng trước đó) — đọc từ audit từng farm thay vì đếm riêng lần này
+  const [farmsTransferred, farmsDeleted] = await Promise.all([
+    AuditLog.countDocuments({ action: 'FARM_OWNERSHIP_TRANSFERRED', 'metadata.fromUserId': userId }),
+    AuditLog.countDocuments({ action: 'FARM_SOFT_DELETED', 'metadata.ownerId': userId }),
+  ])
   await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, {
     farmsTransferred, farmsDeleted, forced: opts.force === true,
   })
@@ -382,31 +387,10 @@ export async function decideSalesStaffRequest(
     throw BadRequestError('Phải nhập lý do khi từ chối đề xuất')
   }
 
-  const request = await SalesAssignmentRequest.findById(requestId)
-  if (!request) throw NotFoundError('Không tìm thấy đề xuất')
-  if (request.status !== 'PENDING') throw ConflictError(`Đề xuất này đã được xử lý (${request.status})`)
-
-  const farm = await Farm.findById(request.farm_id).select('name').lean() // hook tự loại farm đã xoá mềm
-  const isRemoval = request.type === 'REMOVE'
-
-  if (decision === 'APPROVED') {
-    if (isRemoval) {
-      // Đã gỡ từ trước (VD Admin gỡ thẳng) thì coi như xong — không báo lỗi, thao tác idempotent
-      await removeAssignment(adminId, request.farm_id, request.sales_staff_id, { requestedVia: requestId })
-    } else {
-      if (!farm) throw ConflictError('Farm của đề xuất này không còn tồn tại')
-      const salesStaff = await findOrCreateSalesStaff(adminId, request.sales_staff_email)
-      await SalesAssignment.findOneAndUpdate(
-        { farm_id: request.farm_id, sales_staff_id: salesStaff._id },
-        { $setOnInsert: { invited_by: request.requested_by, requested_via: request._id } },
-        { upsert: true },
-      )
-    }
-  }
-
-  // Chốt trạng thái nguyên tử: hai Admin bấm gần như đồng thời thì chỉ 1 người thắng. Các
-  // bước phía trên đều idempotent nên người thua không để lại rác, chỉ nhận 409.
-  const finalized = await SalesAssignmentRequest.findOneAndUpdate(
+  // Nhận quyền xử lý NGUYÊN TỬ trước khi tạo/xoá bất cứ thứ gì: hai Admin bấm gần như đồng thời
+  // (kể cả một duyệt, một từ chối) thì chỉ người thắng được chạm vào tài khoản/phân công; người thua
+  // nhận 409 mà không để lại tác dụng phụ nào.
+  const request = await SalesAssignmentRequest.findOneAndUpdate(
     { _id: requestId, status: 'PENDING' },
     {
       status: decision,
@@ -416,26 +400,57 @@ export async function decideSalesStaffRequest(
     },
     { new: true },
   )
-  if (!finalized) throw ConflictError('Đề xuất này vừa được Admin khác xử lý')
+  if (!request) {
+    const existing = await SalesAssignmentRequest.findById(requestId).select('status').lean()
+    if (!existing) throw NotFoundError('Không tìm thấy đề xuất')
+    throw ConflictError(`Đề xuất này đã được xử lý (${existing.status})`)
+  }
+
+  const isRemoval = request.type === 'REMOVE'
+  const farm = await Farm.findById(request.farm_id).select('name').lean() // hook tự loại farm đã xoá mềm
+
+  try {
+    if (decision === 'APPROVED') {
+      if (isRemoval) {
+        // Đã gỡ từ trước (VD Admin gỡ thẳng) thì coi như xong — không báo lỗi, thao tác idempotent
+        await removeAssignment(adminId, request.farm_id, request.sales_staff_id, { requestedVia: requestId })
+      } else {
+        if (!farm) throw ConflictError('Farm của đề xuất này không còn tồn tại')
+        const salesStaff = await findOrCreateSalesStaff(adminId, request.sales_staff_email)
+        await SalesAssignment.findOneAndUpdate(
+          { farm_id: request.farm_id, sales_staff_id: salesStaff._id },
+          { $setOnInsert: { invited_by: request.requested_by, requested_via: request._id } },
+          { upsert: true },
+        )
+      }
+    }
+  } catch (err) {
+    // Trả về PENDING để Admin xử lý lại (hoặc từ chối) thay vì kẹt ở "đã duyệt" mà chưa có gì được tạo
+    await SalesAssignmentRequest.updateOne(
+      { _id: requestId, status: decision, reviewed_by: adminId },
+      { $set: { status: 'PENDING' }, $unset: { reviewed_by: 1, reviewed_at: 1, review_note: 1 } },
+    )
+    throw err
+  }
 
   await logAction(adminId, `SALES_STAFF_REQUEST_${decision}`, 'sales_assignment_request', requestId, {
     type: isRemoval ? 'REMOVE' : 'ADD',
-    farm_id: String(finalized.farm_id), email: finalized.sales_staff_email, reason: finalized.review_note,
+    farm_id: String(request.farm_id), email: request.sales_staff_email, reason: request.review_note,
   })
 
   // Flow 16 bước 1b/1d/1e — Farm Owner nhận kết quả (kèm lý do nếu bị từ chối)
   const farmName = farm?.name ?? 'của bạn'
-  const email = finalized.sales_staff_email
+  const email = request.sales_staff_email
   const message = isRemoval
     ? decision === 'APPROVED'
       ? { title: 'Yêu cầu gỡ Sales Staff đã được duyệt', body: `${email} đã được gỡ khỏi farm ${farmName}.` }
-      : { title: 'Yêu cầu gỡ Sales Staff bị từ chối', body: `Yêu cầu gỡ ${email} khỏi farm ${farmName} bị từ chối. Lý do: ${finalized.review_note}.` }
+      : { title: 'Yêu cầu gỡ Sales Staff bị từ chối', body: `Yêu cầu gỡ ${email} khỏi farm ${farmName} bị từ chối. Lý do: ${request.review_note}.` }
     : decision === 'APPROVED'
       ? { title: 'Đề xuất Sales Staff đã được duyệt', body: `${email} đã được gán làm Sales Staff cho farm ${farmName}.` }
       : {
         title: 'Đề xuất Sales Staff bị từ chối',
-        body: `Đề xuất ${email} cho farm ${farmName} bị từ chối. Lý do: ${finalized.review_note}. Bạn có thể đề xuất lại với email khác.`,
+        body: `Đề xuất ${email} cho farm ${farmName} bị từ chối. Lý do: ${request.review_note}. Bạn có thể đề xuất lại với email khác.`,
       }
-  await notifyUser(String(finalized.requested_by), message)
-  return finalized
+  await notifyUser(String(request.requested_by), message)
+  return request
 }

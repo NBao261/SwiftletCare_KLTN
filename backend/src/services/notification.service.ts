@@ -100,6 +100,13 @@ export interface UserNotification {
   body: string
 }
 
+export interface NotifyUserOptions {
+  /** Địa chỉ email dùng thay cho email hiện tại của user — cần khi tài khoản vừa bị ẩn danh hoá */
+  email?: string
+  /** Chỉ gửi email, bỏ qua push (tài khoản đã bị vô hiệu hoá) */
+  emailOnly?: boolean
+}
+
 /**
  * Thông báo giao dịch tới 1 user: kết quả duyệt Sales Staff (Flow 16), chuyển
  * quyền chủ farm / xoá tài khoản (Flow 19), yêu cầu xoá tài khoản gửi Admin.
@@ -108,17 +115,17 @@ export interface UserNotification {
  * khác, bước GỬI cuối dừng ở adapter (chưa có credential thật).
  *
  * Không throw: thông báo hỏng không được làm hỏng nghiệp vụ chính (cùng triết lý
- * với `logAction`). Gọi TRƯỚC khi ẩn danh tài khoản nếu cần email thật của user.
+ * với `logAction`). Thông báo sau khi ẩn danh tài khoản thì truyền `email` cũ.
  */
-export async function notifyUser(userId: string, message: UserNotification): Promise<void> {
+export async function notifyUser(userId: string, message: UserNotification, opts: NotifyUserOptions = {}): Promise<void> {
   try {
     const user = await User.findById(userId).select('email notification_preferences').lean()
     if (!user) return
 
-    if (user.notification_preferences?.push !== false) {
+    if (!opts.emailOnly && user.notification_preferences?.push !== false) {
       await sendPush(String(user._id), message.title, message.body)
     }
-    await sendEmail(user.email, message.title, message.body)
+    await sendEmail(opts.email ?? user.email, message.title, message.body)
   } catch (err) {
     logger.warn('Gửi thông báo nghiệp vụ thất bại', { err, userId, title: message.title })
   }
