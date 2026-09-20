@@ -18,14 +18,16 @@
 - [ ] `perf` – Cải thiện hiệu năng
 - [ ] `test` – Thêm/sửa test
 - [ ] `chore` – Cấu hình, dependency
+- [ ] `ci` – CI/CD
+- [ ] `style` – Format code, không đổi logic
+- [ ] `revert` – Revert commit trước đó
 - [ ] `security` – Vá bảo mật
 - [ ] `breaking` – Breaking change
 
 ## Checklist trước khi tạo PR
 
 - [ ] Code chạy được trên máy local không có lỗi
-- [ ] Commit message đúng format: `type(scope): subject`
-- [ ] Đã validate commit: `python -X utf8 .agents/skills/git-commit-convention/scripts/validate_commit.py --staged`
+- [ ] Commit message đúng format: `type(scope): subject`, theo `type-enum`/`scope-enum` trong `.commitlintrc.json` (CI tự validate bằng commitlint khi mở PR)
 - [ ] Không có conflict với `develop` (đã `git pull origin develop`)
 - [ ] Đã test tính năng/fix thủ công
 - [ ] **KHÔNG** commit file `.env`, credentials, API key, secret
