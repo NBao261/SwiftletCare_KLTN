@@ -4,6 +4,7 @@ import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
+import { getSlaHours } from '@/services/system.service'
 import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -24,11 +25,17 @@ const DEFAULT_PRIORITY: Record<TicketType, TicketPriority> = {
   OTHER:             'P3',
 }
 
-/** TICKET-FR-006 — SLA mặc định (giờ) theo priority: [phản hồi, xử lý] */
-const SLA_HOURS: Record<TicketPriority, [number, number]> = {
-  P1: [0.5, 4],
-  P2: [4, 24],
-  P3: [24, 72],
+/**
+ * TICKET-FR-006, SLA-NFR-001 — SLA do Admin cấu hình (system_settings), không
+ * hard-code. Chưa cấu hình thì rơi về DEFAULT_SLA trong sla.util.
+ */
+async function slaDueDates(priority: TicketPriority, from: Date) {
+  const sla = await getSlaHours()
+  const base = from.getTime()
+  return {
+    sla_response_due_at: new Date(base + sla[priority].response_hours * 3600_000),
+    sla_resolve_due_at:  new Date(base + sla[priority].resolve_hours * 3600_000),
+  }
 }
 
 /** TICKET-FR-007 — chỉ cho đi tiến theo thứ tự, không nhảy cóc/lùi tuỳ tiện */
@@ -109,8 +116,7 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
   }
 
   const priority = DEFAULT_PRIORITY[input.type]
-  const [responseH, resolveH] = SLA_HOURS[priority]
-  const now = Date.now()
+  const sla = await slaDueDates(priority, new Date())
 
   const assignedTo = await routeToTechnician(input.farm_id)
   if (!assignedTo) {
@@ -129,8 +135,7 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
     status:   'NEW',
     assigned_to: assignedTo ?? undefined,
     scheduled_visit_at: input.scheduled_visit_at ? new Date(input.scheduled_visit_at) : undefined,
-    sla_response_due_at: new Date(now + responseH * 3600_000),
-    sla_resolve_due_at:  new Date(now + resolveH * 3600_000),
+    ...sla,
     notes: input.description
       ? [{ author_id: user._id, content: input.description, created_at: new Date() }]
       : [],
@@ -176,8 +181,7 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
     try {
       const ticketType = ALERT_TYPE_TO_TICKET_TYPE[alert.type as AlertType] ?? 'OTHER'
       const priority = DEFAULT_PRIORITY[ticketType]
-      const [responseH, resolveH] = SLA_HOURS[priority]
-      const now = Date.now()
+      const sla = await slaDueDates(priority, new Date())
       const assignedTo = await routeToTechnicianCached(String(alert.farm_id))
 
       await Ticket.create({
@@ -188,8 +192,7 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
         priority,
         status:   'NEW',
         assigned_to: assignedTo ?? undefined,
-        sla_response_due_at: new Date(now + responseH * 3600_000),
-        sla_resolve_due_at:  new Date(now + resolveH * 3600_000),
+        ...sla,
         notes: [{
           content: `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
           created_at: new Date(),
@@ -320,6 +323,35 @@ export async function escalateTicket(ticketId: string, user: CurrentUser, reason
   return ticket
 }
 
+/**
+ * TICKET-FR-009, SLA-NFR-002 — gọi định kỳ từ jobs/slaBreach.job.ts. Trước đây
+ * `is_sla_breached` chỉ bật khi Technician bấm escalate tay, nên ticket quá hạn
+ * mà không ai đụng tới vẫn được tính là đúng SLA trong KPI của Admin.
+ */
+export async function markBreachedTickets(): Promise<number> {
+  const overdue = await Ticket.find({
+    status: { $ne: 'CLOSED' },
+    is_sla_breached: false,
+    sla_resolve_due_at: { $lt: new Date() },
+  })
+
+  for (const ticket of overdue) {
+    ticket.is_sla_breached = true
+    ticket.notes.push({
+      content: `Tự động đánh dấu vượt hạn xử lý SLA (hạn ${ticket.sla_resolve_due_at?.toISOString()})`,
+      created_at: new Date(),
+    } as never)
+    await ticket.save()
+
+    await logAction(undefined, 'TICKET_SLA_BREACHED', 'ticket', String(ticket._id), {
+      priority: ticket.priority,
+      assigned_to: ticket.assigned_to ? String(ticket.assigned_to) : null,
+      sla_resolve_due_at: ticket.sla_resolve_due_at,
+    })
+  }
+  return overdue.length
+}
+
 /** TICKET-FR-011 — Farm Owner đánh giá sau khi ticket đóng */
 export async function rateTicket(ticketId: string, user: CurrentUser, rating: number): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user) // đã xác nhận user có quyền trên farm của ticket
@@ -421,12 +453,11 @@ export async function adminOverrideTicket(
   if (updates.priority !== undefined && updates.priority !== ticket.priority) {
     // SLA tính theo priority (TICKET-FR-006) và mốc là lúc tạo ticket, không
     // phải lúc Admin sửa — nếu không, nâng P3→P1 vẫn giữ hạn 72h cũ.
-    const [responseH, resolveH] = SLA_HOURS[updates.priority]
-    const createdAt = ticket.created_at.getTime()
+    const sla = await slaDueDates(updates.priority, ticket.created_at)
     changes.priority = { before: ticket.priority, after: updates.priority }
     ticket.priority = updates.priority
-    ticket.sla_response_due_at = new Date(createdAt + responseH * 3600_000)
-    ticket.sla_resolve_due_at  = new Date(createdAt + resolveH * 3600_000)
+    ticket.sla_response_due_at = sla.sla_response_due_at
+    ticket.sla_resolve_due_at  = sla.sla_resolve_due_at
     changes.sla_resolve_due_at = ticket.sla_resolve_due_at
   }
   if (updates.scheduled_visit_at !== undefined) {

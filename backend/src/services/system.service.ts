@@ -9,7 +9,8 @@ import { summarizeByStatus } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
 import { DEFAULT_THRESHOLDS, assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
-import type { Thresholds, TicketPriority } from '@/types'
+import { DEFAULT_SLA, assertValidSla, pickSla } from '@/utils/sla.util'
+import type { SlaConfig, Thresholds, TicketPriority } from '@/types'
 
 // ── SYSTEM-FR-001: Audit Log viewer ──────────────────────────────────────────
 
@@ -61,6 +62,23 @@ export async function getDefaultThresholds(): Promise<Thresholds> {
   return setting?.default_thresholds ?? { ...DEFAULT_THRESHOLDS }
 }
 
+/**
+ * Ghi vào document singleton. Hai request cùng insert lần đầu: 1 thắng, request
+ * còn lại nhận E11000 từ unique index `_singleton` — chạy lại thì document đã
+ * tồn tại nên rơi vào nhánh update bình thường.
+ */
+async function writeSetting(update: Record<string, unknown>): Promise<void> {
+  const write = () => SystemSetting.findOneAndUpdate(
+    SINGLETON, update, { upsert: true, new: true, setDefaultsOnInsert: true },
+  )
+  try {
+    await write()
+  } catch (err) {
+    if ((err as { code?: number }).code !== DUPLICATE_KEY) throw err
+    await write()
+  }
+}
+
 export async function updateDefaultThresholds(
   adminId: string, input: Record<string, unknown>,
 ): Promise<Thresholds> {
@@ -68,22 +86,25 @@ export async function updateDefaultThresholds(
   const after: Thresholds = { ...before, ...pickThresholds(input) }
   assertValidThresholds(after)
 
-  const write = () => SystemSetting.findOneAndUpdate(
-    SINGLETON,
-    { default_thresholds: after, updated_by: adminId },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  )
-
-  try {
-    await write()
-  } catch (err) {
-    // Hai request cùng insert lần đầu: 1 thắng, request còn lại nhận E11000.
-    // Chạy lại thì document đã tồn tại nên rơi vào nhánh update bình thường.
-    if ((err as { code?: number }).code !== DUPLICATE_KEY) throw err
-    await write()
-  }
-
+  await writeSetting({ default_thresholds: after, updated_by: adminId })
   await logAction(adminId, 'DEFAULT_THRESHOLDS_UPDATED', 'system_settings', undefined, { before, after })
+  return after
+}
+
+// ── TICKET-FR-006 / SLA-NFR-001: SLA do Admin cấu hình ───────────────────────
+
+export async function getSlaHours(): Promise<SlaConfig> {
+  const setting = await SystemSetting.findOne(SINGLETON).lean()
+  return setting?.sla_hours ?? { ...DEFAULT_SLA }
+}
+
+export async function updateSlaHours(adminId: string, input: Record<string, unknown>): Promise<SlaConfig> {
+  const before = await getSlaHours()
+  const after = pickSla(input, before)
+  assertValidSla(after)
+
+  await writeSetting({ sla_hours: after, updated_by: adminId })
+  await logAction(adminId, 'SLA_UPDATED', 'system_settings', undefined, { before, after })
   return after
 }
 
