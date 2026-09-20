@@ -284,6 +284,7 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
 
   ticket.status = 'CLOSED'
   ticket.closed_at = new Date()
+  ticket.cancelled_at = new Date()
   ticket.notes.push({
     author_id: user._id as never,
     content: `Huỷ bởi ${user.role === 'FARM_OWNER' ? 'Farm Owner' : user.role}: ${reason}`,
@@ -373,32 +374,84 @@ export async function rateTicket(ticketId: string, user: CurrentUser, rating: nu
 }
 
 /** TICKET-FR-012 — KPI cho Administrator */
+const percent = (part: number, whole: number) => (whole ? +((part / whole) * 100).toFixed(1) : null)
+const toHours = (ms?: number | null) => (ms ? +(ms / 3600_000).toFixed(1) : null)
+
+interface TechnicianKpiRow {
+  _id: unknown
+  total: number
+  closed: number
+  cancelled: number
+  resolveMsSum: number
+  resolvedCount: number
+  due: number
+  dueBreached: number
+  technician?: { full_name?: string; email?: string }
+}
+
+/**
+ * TICKET-FR-012 — KPI cho Administrator.
+ *
+ * Hai điểm quan trọng về cách tính, vì bản trước cho ra số liệu đẹp giả tạo:
+ * - Ticket bị huỷ (`cancelled_at`) không phải việc đã xử lý, nên loại khỏi
+ *   thời gian xử lý trung bình và khỏi tỉ lệ SLA.
+ * - Tỉ lệ đúng SLA tính trên MỌI ticket đã tới hạn, gồm cả ticket đang treo
+ *   quá hạn — nếu chỉ đếm ticket đã đóng thì ticket trễ nhất (chưa ai đóng)
+ *   lại bị loại khỏi mẫu số, làm tỉ lệ luôn gần 100%.
+ */
 export async function getKpi() {
-  const [byStatus, byTechnician, slaStats] = await Promise.all([
+  const now = new Date()
+  const resolvedMatch = { status: 'CLOSED', closed_at: { $ne: null }, cancelled_at: null }
+  const dueMatch = { cancelled_at: null, sla_resolve_due_at: { $ne: null, $lt: now } }
+
+  const [byStatus, byTechnician, resolveStats, slaStats] = await Promise.all([
     Ticket.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
-    Ticket.aggregate([
+    Ticket.aggregate<TechnicianKpiRow>([
       { $match: { assigned_to: { $ne: null } } },
-      { $group: { _id: '$assigned_to', total: { $sum: 1 }, closed: { $sum: { $cond: [{ $eq: ['$status', 'CLOSED'] }, 1, 0] } } } },
-    ]),
-    Ticket.aggregate([
-      { $match: { status: 'CLOSED', closed_at: { $ne: null } } },
       {
         $group: {
-          _id: null,
-          avgResolveMs: { $avg: { $subtract: ['$closed_at', '$created_at'] } },
-          breached: { $sum: { $cond: ['$is_sla_breached', 1, 0] } },
+          _id: '$assigned_to',
           total: { $sum: 1 },
+          closed: { $sum: { $cond: [{ $eq: ['$status', 'CLOSED'] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$cancelled_at', null] }, null] }, 1, 0] } },
+          resolveMsSum: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, { $subtract: ['$closed_at', '$created_at'] }, 0] } },
+          resolvedCount: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
+          due: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }] }, 1, 0] } },
+          dueBreached: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }, '$is_sla_breached'] }, 1, 0] } },
         },
       },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'technician' } },
+      { $unwind: { path: '$technician', preserveNullAndEmptyArrays: true } },
+    ]),
+    Ticket.aggregate([
+      { $match: resolvedMatch },
+      { $group: { _id: null, avgResolveMs: { $avg: { $subtract: ['$closed_at', '$created_at'] } }, total: { $sum: 1 } } },
+    ]),
+    Ticket.aggregate([
+      { $match: dueMatch },
+      { $group: { _id: null, total: { $sum: 1 }, breached: { $sum: { $cond: ['$is_sla_breached', 1, 0] } } } },
     ]),
   ])
 
-  const sla = slaStats[0] as { avgResolveMs?: number; breached?: number; total?: number } | undefined
+  const resolved = resolveStats[0] as { avgResolveMs?: number; total?: number } | undefined
+  const sla = slaStats[0] as { total?: number; breached?: number } | undefined
+
   return {
     byStatus,
-    byTechnician,
-    avgResolveHours: sla?.avgResolveMs ? +(sla.avgResolveMs / 3600_000).toFixed(1) : null,
-    slaComplianceRate: sla?.total ? +(((sla.total - (sla.breached ?? 0)) / sla.total) * 100).toFixed(1) : null,
+    byTechnician: byTechnician.map(row => ({
+      technician_id: String(row._id),
+      full_name: row.technician?.full_name ?? null,
+      email: row.technician?.email ?? null,
+      total: row.total,
+      closed: row.closed,
+      cancelled: row.cancelled,
+      avgResolveHours: row.resolvedCount ? toHours(row.resolveMsSum / row.resolvedCount) : null,
+      slaComplianceRate: percent(row.due - row.dueBreached, row.due),
+    })),
+    resolvedTickets: resolved?.total ?? 0,
+    avgResolveHours: toHours(resolved?.avgResolveMs),
+    ticketsPastDue: sla?.total ?? 0,
+    slaComplianceRate: percent((sla?.total ?? 0) - (sla?.breached ?? 0), sla?.total ?? 0),
   }
 }
 

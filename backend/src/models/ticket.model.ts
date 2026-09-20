@@ -37,6 +37,12 @@ export interface ITicket extends Document {
   satisfaction_rating?: number
   created_at: Date
   closed_at?: Date
+  /**
+   * TICKET-FR-012 — ticket bị huỷ cũng chuyển sang CLOSED, nhưng không phải là
+   * việc đã được xử lý. Không tách ra thì KPI tính chúng như ticket hoàn thành
+   * sau vài phút, kéo thời gian xử lý trung bình xuống giả tạo.
+   */
+  cancelled_at?: Date
 }
 
 const ticketSchema = new Schema<ITicket>(
@@ -74,6 +80,7 @@ const ticketSchema = new Schema<ITicket>(
     }],
     satisfaction_rating: { type: Number, min: 1, max: 5 },
     closed_at: { type: Date },
+    cancelled_at: { type: Date },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: false }, versionKey: false }
 )
