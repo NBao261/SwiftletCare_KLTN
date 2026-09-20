@@ -1,7 +1,10 @@
 // Step4WiFi.tsx — Bước 4: Cấu hình WiFi nhà yến cho ESP32 (B9)
+// TODO [BE-GAP]: Bước này cần gọi trực tiếp HTTP endpoint của ESP32 ở AP-mode
+// (fetch('http://192.168.4.1/configure', { body: JSON.stringify({ssid, pass}) }))
+// Hiện tại KHÔNG có backend endpoint nào nhận cấu hình WiFi.
+// Demo: lưu ssid/wifiPass vào OnboardingState và chuyển bước tiếp — không gửi gì đến ESP32.
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ticketApi } from '@/services/api/tickets'
 import { Button } from '@/components/ui'
 import type { OnboardingState } from './onboardingTypes'
 
@@ -17,11 +20,14 @@ export function Step4WiFi({ data, patch, onNext, onBack }: Props) {
   const [sendError, setSendError] = useState('')
 
   const mut = useMutation({
-    mutationFn: () =>
-      // Placeholder: production sẽ gọi fetch local AP endpoint của ESP32
-      ticketApi.addNote('onboarding', `WiFi cấu hình: ${data.ssid}`),
+    mutationFn: async () => {
+      // TODO [BE-GAP]: Thực tế cần gọi fetch('http://192.168.4.1/configure', ...)
+      // để gửi ssid/wifiPass trực tiếp tới ESP32 qua AP local network.
+      // Hiện tại: giả lập thành công (chỉ lưu state, không gọi API nào)
+      await new Promise(r => setTimeout(r, 500))
+    },
     onSuccess: () => onNext(),
-    onError: () => setSendError('Không thể gửi cấu hình — ESP32 có thể đã quay về AP-mode (timeout 60s). Thử lại từ Bước 3.'),
+    onError: () => setSendError('Chưa có API cấu hình WiFi — chức năng này đang được phát triển.'),
   })
 
   return (

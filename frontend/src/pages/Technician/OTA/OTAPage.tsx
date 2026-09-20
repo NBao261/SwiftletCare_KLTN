@@ -1,6 +1,13 @@
 // OTAPage — F-TC-03 / Stitch A4 + B4 + B8
 // OTA Firmware Management: layout + state management
 // Logic hiển thị được tách sang ./components/
+//
+// TODO [BE-GAP]: Toàn bộ trang này là UI DEMO — chưa kết nối thiết bị thật.
+// - startOTA() dùng setInterval/setTimeout giả lập tiến trình, KHÔNG gọi API nào.
+// - Danh sách firmware và changelog trong otaTypes.ts là dữ liệu giả (mock data).
+// - Backend cần endpoint: POST /devices/sensor-nodes/:id/ota để kích hoạt OTA thật.
+// Khi backend có endpoint, thay startOTA() bằng mutation gọi API và listen socket
+// event OTA_PROGRESS để cập nhật tiến trình thực tế.
 import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { deviceApi } from '@/services/api'
