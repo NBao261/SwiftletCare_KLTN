@@ -4,6 +4,7 @@ import { User, IUser } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
+import { logAction } from '@/services/auditLog.service'
 import type { JwtAccessPayload } from '@/types'
 import { AppError, ConflictError, UnauthorizedError } from '@/utils/appError.util'
 
@@ -82,9 +83,22 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
 export async function loginUser(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
   const user = await User.findOne({ email: normalizeEmail(input.email) })
   if (!user || !(await user.comparePassword(input.password))) {
+    // Email không tồn tại thì không ghi email vào log (SRS §12.3 — không lưu PII thô trong audit log)
+    const userId = user ? String(user._id) : undefined
+    await logAction(userId, 'LOGIN_FAILED', 'user', userId, { reason: user ? 'WRONG_PASSWORD' : 'UNKNOWN_EMAIL' })
     throw UnauthorizedError('Sai email hoặc mật khẩu')
   }
-  if (!user.is_active) throw new AppError(403, 'ACCOUNT_DISABLED', 'Tài khoản đã bị khóa')
+  // Chỉ báo lý do khoá SAU khi mật khẩu đúng (Flow 19 bước 4) — người đoán mò
+  // mật khẩu không biết được tài khoản có bị khoá hay không.
+  if (!user.is_active) {
+    await logAction(String(user._id), 'LOGIN_FAILED', 'user', String(user._id), { reason: 'ACCOUNT_DISABLED' })
+    const reason = user.deactivated_reason ?? null
+    throw new AppError(
+      403, 'ACCOUNT_DISABLED',
+      reason ? `Tài khoản đã bị khoá. Lý do: ${reason}` : 'Tài khoản đã bị khoá',
+      { reason },
+    )
+  }
 
   const accessToken  = signAccess(String(user._id), user.role)
   const refreshToken = signRefresh(String(user._id))
@@ -92,6 +106,7 @@ export async function loginUser(input: LoginInput): Promise<{ user: IUser; acces
   user.refresh_tokens.push({ token: refreshToken, expires: new Date(Date.now() + REFRESH_TTL_MS) })
   await user.save()
 
+  await logAction(String(user._id), 'LOGIN', 'user', String(user._id))
   return { user, accessToken, refreshToken }
 }
 

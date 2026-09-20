@@ -26,6 +26,6 @@ router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), 
 router.get ('/camera-nodes',                 deviceController.listCameraNodes)
 
 // OPS-NFR-004 — Admin dashboard trạng thái node toàn hệ thống
-router.get ('/fleet-status',                 requireRole('ADMIN'), deviceController.getFleetStatus)
+router.get ('/system-status',                requireRole('ADMIN'), deviceController.getSystemStatus)
 
 export default router

@@ -6,6 +6,8 @@ export interface ISalesAssignment extends Document {
   farm_id: Types.ObjectId
   sales_staff_id: Types.ObjectId
   invited_by: Types.ObjectId
+  /** Flow 16 bước 1b — có khi gán qua đề xuất của Farm Owner được Admin duyệt */
+  requested_via?: Types.ObjectId
   assigned_at: Date
 }
 
@@ -14,6 +16,7 @@ const salesAssignmentSchema = new Schema<ISalesAssignment>(
     farm_id:        { type: Schema.Types.ObjectId, ref: 'Farm', required: true },
     sales_staff_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     invited_by:     { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    requested_via:  { type: Schema.Types.ObjectId, ref: 'SalesAssignmentRequest' },
   },
   { timestamps: { createdAt: 'assigned_at', updatedAt: false }, versionKey: false }
 )

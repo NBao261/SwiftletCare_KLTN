@@ -3,9 +3,13 @@ import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
 import { House, Zone, IZone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
+import { SalesAssignmentRequest, ISalesAssignmentRequest } from '@/models/salesAssignmentRequest.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
+import { logAction } from '@/services/auditLog.service'
+import { getDefaultThresholds } from '@/services/system.service'
+import { assertValidThresholds } from '@/utils/thresholds.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser } from '@/types'
 
@@ -246,7 +250,14 @@ export async function createZone(houseId: string, user: CurrentUser, input: { na
   if (!house) throw NotFoundError('Không tìm thấy house')
   const farm = await findFarmOrThrow(String(house.farm_id))
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
-  return Zone.create({ house_id: house._id, ...input })
+  // Zone mới dùng ngưỡng mặc định hệ thống do Admin cấu hình (ENV-FR-007), cùng
+  // nguồn với "Reset về mặc định" — không dùng default cứng trong schema.
+  return Zone.create({
+    house_id: house._id,
+    name: input.name,
+    floor: input.floor,
+    thresholds: await getDefaultThresholds(),
+  })
 }
 
 export async function listZones(houseId: string, user: CurrentUser) {
@@ -265,32 +276,13 @@ export async function getZone(zoneId: string, user: CurrentUser): Promise<IZone>
   return zone
 }
 
-// ENV-FR-020: chưa có system_settings/default_thresholds (SYSTEM-FR-002, Admin
-// cấu hình được) — dùng tạm giá trị mặc định kỹ thuật cố định, KHỚP ĐÚNG
-// firmware/src/config/Config.h (DEFAULT_TEMP_MIN...DEFAULT_CO2_MAX) và schema
-// Zone.thresholds default ở trên. Khi SYSTEM-FR-002 được xây, thay nguồn này
-// bằng system_settings.default_thresholds.
-const FIXED_DEFAULT_THRESHOLDS: Thresholds = {
-  temp_min: 26.0,
-  temp_max: 31.0,
-  humidity_min: 75.0,
-  humidity_max: 95.0,
-  light_max: 0.2,
-  nh3_max: 25,
-  co2_max: 1500,
-}
-
 /** ENV-FR-006, Flow 22 nhánh A — validate min<max trước khi ghi, publish config/update để ESP32 áp dụng ngay. */
 export async function updateZoneThresholds(zoneId: string, user: CurrentUser, updates: Partial<Thresholds>): Promise<IZone> {
   const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
 
   const merged = { ...zone.thresholds, ...updates }
-  if (merged.temp_min >= merged.temp_max) throw BadRequestError('temp_min phải nhỏ hơn temp_max')
-  if (merged.humidity_min >= merged.humidity_max) throw BadRequestError('humidity_min phải nhỏ hơn humidity_max')
-  if (merged.light_max < 0 || merged.nh3_max < 0 || merged.co2_max < 0) {
-    throw BadRequestError('light_max/nh3_max/co2_max không được âm')
-  }
+  assertValidThresholds(merged)
 
   const oldValues = { ...zone.thresholds }
   zone.thresholds = merged
@@ -304,47 +296,65 @@ export async function updateZoneThresholds(zoneId: string, user: CurrentUser, up
   await zone.save()
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
+  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), { source: 'MANUAL', before: oldValues, after: zone.thresholds })
   return zone
 }
 
-/** ENV-FR-020, Flow 22 nhánh B — reset cả 7 ngưỡng về mặc định kỹ thuật cố định (xem ghi chú FIXED_DEFAULT_THRESHOLDS). */
+/** ENV-FR-020, Flow 22 nhánh B — reset cả 7 ngưỡng về mặc định hệ thống do Admin cấu hình (SYSTEM-FR-002). */
 export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Promise<IZone> {
   const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
 
+  const defaults = await getDefaultThresholds()
   const oldValues = { ...zone.thresholds }
-  zone.thresholds = { ...FIXED_DEFAULT_THRESHOLDS }
+  zone.thresholds = { ...defaults }
   zone.threshold_history.push({
     changed_by: user._id as never,
     changed_at: new Date(),
     old_values: oldValues,
-    new_values: FIXED_DEFAULT_THRESHOLDS,
+    new_values: defaults,
     source: 'RESET_TO_DEFAULT',
   } as never)
   await zone.save()
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
+  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), { source: 'RESET_TO_DEFAULT', before: oldValues, after: zone.thresholds })
   return zone
 }
 
-/** AUTH-FR-005b, Flow 16 — dùng chung cơ chế Invitation với mời Farm Owner (AUTH-FR-005/010) */
-export async function inviteSalesStaff(farmId: string, user: CurrentUser, email: string): Promise<IInvitation> {
+/**
+ * AUTH-FR-005b (đổi v1.16.0), Flow 16 bước 1b — Farm Owner chỉ ĐỀ XUẤT Sales
+ * Staff, không tự kích hoạt: Sales Staff là nhân sự phía công ty nên phải qua
+ * Admin duyệt (AUTH-FR-005d, admin.service#decideSalesStaffRequest).
+ */
+export async function requestSalesStaff(farmId: string, user: CurrentUser, email: string): Promise<ISalesAssignmentRequest> {
   const farm = await findFarmOrThrow(farmId)
-  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được mời Sales Staff')
+  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được đề xuất Sales Staff')
 
   const normalizedEmail = email.toLowerCase().trim()
-  const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
-  if (pending) throw ConflictError('Đã có lời mời đang chờ phản hồi gửi tới email này')
+  const pending = await SalesAssignmentRequest.findOne({ farm_id: farm._id, sales_staff_email: normalizedEmail, status: 'PENDING' })
+  if (pending) throw ConflictError('Đã có đề xuất đang chờ Admin duyệt cho email này')
 
-  return Invitation.create({
+  const existingUser = await User.findOne({ email: normalizedEmail }).select('role').lean()
+  if (existingUser && existingUser.role !== 'SALES_STAFF') {
+    throw ConflictError('Email này đang thuộc 1 tài khoản không phải Sales Staff')
+  }
+  if (existingUser && await SalesAssignment.exists({ farm_id: farm._id, sales_staff_id: existingUser._id })) {
+    throw ConflictError('Sales Staff này đã được gán vào farm')
+  }
+
+  return SalesAssignmentRequest.create({
     farm_id: farm._id,
-    invited_email: normalizedEmail,
-    invited_role: 'SALES_STAFF',
-    invited_by: user._id,
-    token: crypto.randomBytes(24).toString('hex'),
-    status: 'PENDING',
-    expires_at: new Date(Date.now() + INVITATION_TTL_MS),
+    requested_by: user._id,
+    sales_staff_email: normalizedEmail,
   })
+}
+
+/** Flow 16 bước 1b/1d — Farm Owner xem kết quả duyệt (kèm lý do nếu bị từ chối) */
+export async function listSalesStaffRequests(farmId: string, user: CurrentUser) {
+  const farm = await findFarmOrThrow(farmId)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
+  return SalesAssignmentRequest.find({ farm_id: farm._id }).sort({ created_at: -1 }).lean()
 }
 
 export async function listSalesStaff(farmId: string, user: CurrentUser) {

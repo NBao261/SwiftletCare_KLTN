@@ -34,6 +34,8 @@ tags:
     description: AUTH-FR-001..003/004/005/005b/009/010/012 (đăng ký/đăng nhập/JWT/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản)
   - name: Admin
     description: AUTH-FR-005c/007/011/012, TICKET-FR-005b, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician/Sales Staff, can thiệp ticket toàn quyền, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
+  - name: System
+    description: SYSTEM-FR-001..003 (Module SYSTEM §5.11 — xem audit log, ngưỡng mặc định hệ thống, tổng quan sức khỏe hệ thống) — mọi endpoint chỉ ADMIN
   - name: Farms
     description: FARM-FR-001..002/007, AUTH-FR-005/005b/010 (farm/house/zone/member/sales-staff/invitation)
   - name: Devices
@@ -117,6 +119,19 @@ paths:
                           accessToken: { type: string }
                           user: { $ref: "#/components/schemas/User" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: |
+            Tài khoản bị Admin khoá (AUTH-FR-011, Flow 19 bước 4). Chỉ trả sau
+            khi mật khẩu đúng — sai mật khẩu vẫn là 401, không lộ trạng thái khoá.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+              example:
+                success: false
+                error:
+                  code: ACCOUNT_DISABLED
+                  message: "Tài khoản đã bị khoá. Lý do: Vi phạm điều khoản sử dụng"
+                  details: { reason: "Vi phạm điều khoản sử dụng" }
 
   /auth/refresh:
     post:
@@ -404,6 +419,8 @@ paths:
         Bắt buộc `reason` khi khoá (`is_active=false`); không bắt buộc khi mở
         khoá. Middleware `authenticate` chặn ngay request kế tiếp của user này
         dù access token còn hạn — không cần đợi token hết hạn tự nhiên.
+        Admin không tự khoá được chính mình, nhờ vậy hệ thống luôn còn ít nhất
+        1 Admin đang hoạt động (Flow 19 case 2a).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -426,7 +443,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/User" } }
         "400":
-          description: "Thiếu reason khi khoá tài khoản"
+          description: "Thiếu reason khi khoá tài khoản, hoặc Admin tự khoá chính mình"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
@@ -461,7 +478,8 @@ paths:
         `owner_id` cho người có `joined_at` sớm nhất; hết thành viên → xoá mềm
         Farm. Gỡ user khỏi `members` của các Farm khác nếu chỉ là thành viên
         thường. Anonymize email/phone/full_name, không xoá document (giữ FK
-        cho lịch sử ticket/farm).
+        cho lịch sử ticket/farm). Xử lý xong thì gỡ `deletion_requested_at` —
+        tài khoản rời khỏi `GET /admin/delete-requests` và không xử lý lại được.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -474,7 +492,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/User" } }
         "400":
-          description: "Người dùng này chưa gửi yêu cầu xoá tài khoản"
+          description: "Người dùng chưa gửi yêu cầu xoá / yêu cầu đã được xử lý / Admin tự xử lý tài khoản của chính mình"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
@@ -514,11 +532,79 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /admin/technicians/{id}/regions:
+    put:
+      tags: [Admin]
+      summary: "Điều chỉnh khu vực phụ trách của Technician (AUTH-FR-005c, Flow 21 case 4a-x) — chỉ ADMIN"
+      description: |
+        Thay toàn bộ `assigned_regions` (giá trị được trim + bỏ trùng). Có hiệu
+        lực ngay ở request kế tiếp của Technician, không cần đăng nhập lại.
+        Lưu ý: phải ghi khớp đúng `farms.region` (VD `HCMC` ≠ `Hồ Chí Minh`).
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assigned_regions]
+              properties:
+                assigned_regions:
+                  type: array
+                  minItems: 1
+                  items: { type: string }
+                  example: ["HCMC", "Long An"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/User" } }
+        "400":
+          description: "Tài khoản không phải Technician"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/farms/{farmId}/sales-staff/{salesStaffId}:
+    delete:
+      tags: [Admin]
+      summary: "Gỡ Sales Staff khỏi 1 farm (Flow 16 case 1e) — chỉ ADMIN"
+      description: |
+        Chỉ xoá bản ghi gán (`SalesAssignment`). Tài khoản Sales Staff (có thể
+        còn gán ở farm khác) và Order/Product đã tạo trước đó giữ nguyên.
+      parameters:
+        - { name: farmId, in: path, required: true, schema: { type: string } }
+        - { name: salesStaffId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Đã gỡ
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiSuccess" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: "Sales Staff này không được gán vào farm"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /admin/sales-staff:
     post:
       tags: [Admin]
-      summary: "Admin tự tạo tài khoản Sales Staff + gán thẳng vào Farm (AUTH-FR-005c, Flow 16 path 1b) — chỉ ADMIN"
-      description: Dùng cho farm liên kết/hợp tác — bỏ qua bước mời/chấp nhận Invitation thông thường (Flow 16).
+      summary: "Admin tự tạo tài khoản Sales Staff + gán thẳng vào Farm (AUTH-FR-005c, Flow 16 bước 1a) — chỉ ADMIN"
+      description: |
+        Đường chính thức để có Sales Staff (từ SRS v1.16.0, Sales Staff là nhân
+        sự phía công ty). Đường phụ là duyệt đề xuất của Farm Owner qua
+        `/admin/sales-staff-requests`.
       requestBody:
         required: true
         content:
@@ -544,6 +630,190 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/sales-staff-requests:
+    get:
+      tags: [Admin]
+      summary: "Danh sách đề xuất Sales Staff từ Farm Owner (AUTH-FR-005d) — chỉ ADMIN"
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [PENDING, APPROVED, REJECTED] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK (populate farm_id, requested_by, reviewed_by)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/sales-staff-requests/{id}/decision:
+    put:
+      tags: [Admin]
+      summary: "Duyệt hoặc từ chối đề xuất Sales Staff (AUTH-FR-005d, Flow 16) — chỉ ADMIN"
+      description: |
+        - `APPROVED`: email chưa có tài khoản thì tạo tài khoản SALES_STAFF với
+          mật khẩu ngẫu nhiên và gửi mã đặt lại mật khẩu (luồng AUTH-FR-009;
+          dev chỉ log `[DEV RESET]` ra console); sau đó tạo `SalesAssignment`
+          với `requested_via` trỏ về đề xuất này.
+        - `REJECTED`: bắt buộc `reason`, lưu vào `review_note` để Farm Owner xem.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [APPROVED, REJECTED] }
+                reason: { type: string, description: "Bắt buộc khi REJECTED" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
+        "400":
+          description: "Từ chối mà thiếu reason"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Đề xuất đã được xử lý trước đó, hoặc email thuộc tài khoản không phải Sales Staff"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ── SYSTEM ────────────────────────────────────────────────────────────────
+  /system/audit-logs:
+    get:
+      tags: [System]
+      summary: "Xem/lọc Audit Log toàn hệ thống (SYSTEM-FR-001) — chỉ ADMIN"
+      description: |
+        Các action đang được ghi: LOGIN, LOGIN_FAILED, ACCOUNT_LOCKED,
+        ACCOUNT_UNLOCKED, ACCOUNT_DELETED, USER_CREATED, THRESHOLD_UPDATED,
+        DEFAULT_THRESHOLDS_UPDATED, RELAY_OVERRIDE, DEVICE_REASSIGNED,
+        TICKET_ADMIN_OVERRIDE, SALES_STAFF_REQUEST_APPROVED/REJECTED,
+        TECHNICIAN_REGIONS_UPDATED, SALES_STAFF_UNASSIGNED.
+      parameters:
+        - { name: actorId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string, example: LOGIN_FAILED } }
+        - { name: targetType, in: query, schema: { type: string, example: user } }
+        - { name: targetId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK (mới nhất trước)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/AuditLog" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /system/settings/default-thresholds:
+    get:
+      tags: [System]
+      summary: "Xem ngưỡng mặc định hệ thống (SYSTEM-FR-002, ENV-FR-007) — chỉ ADMIN"
+      description: Chưa từng cấu hình thì trả giá trị gốc (khớp firmware Config.h).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Thresholds" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [System]
+      summary: "Chỉnh ngưỡng mặc định hệ thống (SYSTEM-FR-002) — chỉ ADMIN"
+      description: |
+        Gửi 1 phần hoặc cả 7 trường, phần còn lại giữ nguyên. Đây là nguồn
+        Farm Owner dùng khi "Reset về mặc định" 1 Zone (ENV-FR-020) — KHÔNG tự
+        áp xuống các Zone đang chạy. Mọi thay đổi ghi audit log.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Thresholds" }
+      responses:
+        "200":
+          description: Giá trị sau khi cập nhật
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Thresholds" } }
+        "400":
+          description: "min >= max hoặc giá trị âm"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /system/health-overview:
+    get:
+      tags: [System]
+      summary: "Tổng quan sức khỏe hệ thống (SYSTEM-FR-003) — chỉ ADMIN"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          farms: { type: object, properties: { total: { type: integer } } }
+                          zones: { type: object, properties: { total: { type: integer } } }
+                          devices: { $ref: "#/components/schemas/DeviceStatusSummary" }
+                          openTickets:
+                            type: object
+                            description: Ticket chưa CLOSED theo priority
+                            properties:
+                              total: { type: integer }
+                              P1: { type: integer }
+                              P2: { type: integer }
+                              P3: { type: integer }
+                          users:
+                            type: object
+                            properties:
+                              total: { type: integer }
+                              active: { type: integer }
+                              inactive: { type: integer }
+                              byRole:
+                                type: object
+                                additionalProperties:
+                                  type: object
+                                  properties:
+                                    active: { type: integer }
+                                    inactive: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── FARMS ─────────────────────────────────────────────────────────────────
   /farms:
@@ -821,7 +1091,11 @@ paths:
     parameters: [{ $ref: "#/components/parameters/FarmId" }]
     post:
       tags: [Farms]
-      summary: Mời Sales Staff vào farm (AUTH-FR-005b, Flow 16) — chỉ Primary Owner, dùng chung cơ chế Invitation với mời Farm Owner
+      summary: "Đề xuất Sales Staff cho farm (AUTH-FR-005b đổi v1.16.0, Flow 16 bước 1b) — chỉ Primary Owner"
+      description: |
+        Chỉ tạo đề xuất `PENDING`, KHÔNG tự kích hoạt — Administrator duyệt/từ
+        chối ở `PUT /admin/sales-staff-requests/{id}/decision` (AUTH-FR-005d).
+        Theo dõi kết quả ở `GET /farms/{id}/sales-staff-requests`.
       requestBody:
         required: true
         content:
@@ -834,31 +1108,19 @@ paths:
               }
       responses:
         "201":
-          {
-            description: Đã tạo lời mời,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data:
-                                    { $ref: "#/components/schemas/Invitation" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
+          description: Đã tạo đề xuất (status=PENDING)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409":
+          description: "Đã có đề xuất PENDING cho email này / email thuộc tài khoản không phải Sales Staff / đã được gán vào farm"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
     get:
       tags: [Farms]
       summary: Danh sách Sales Staff của farm
@@ -872,6 +1134,23 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiSuccess" } },
               },
           }
+
+  /farms/{id}/sales-staff-requests:
+    get:
+      tags: [Farms]
+      summary: "Farm Owner xem các đề xuất Sales Staff của farm và kết quả duyệt (Flow 16 bước 1b/1d)"
+      parameters: [{ $ref: "#/components/parameters/FarmId" }]
+      responses:
+        "200":
+          description: OK (mới nhất trước; `review_note` là lý do nếu bị từ chối)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /invitations/{token}:
     parameters:
@@ -1438,15 +1717,15 @@ paths:
               },
           }
 
-  /devices/fleet-status:
+  /devices/system-status:
     get:
       tags: [Devices, Admin]
-      summary: "Dashboard trạng thái toàn bộ node hệ thống (OPS-NFR-004) — chỉ ADMIN"
+      summary: "Trạng thái toàn bộ node hệ thống (OPS-NFR-004) — chỉ ADMIN"
       description: |
         Khác `GET /devices/sensor-nodes`/`camera-nodes` (luôn giới hạn theo
         quyền Farm của user) — endpoint này liệt kê TẤT CẢ SensorNode/CameraNode
-        trong hệ thống kèm đếm theo status, phục vụ Admin xem nhanh sức khoẻ hạ
-        tầng toàn công ty, không theo từng Farm riêng lẻ.
+        trong hệ thống kèm đếm theo status (gộp cả 2 loại), phục vụ trang Admin
+        "Trạng thái hệ thống" (`SystemNodeStatus` bên frontend).
       responses:
         "200":
           description: OK
@@ -1459,40 +1738,25 @@ paths:
                       data:
                         type: object
                         properties:
-                          sensorNodes:
-                            type: object
-                            properties:
-                              total: { type: integer }
-                              PENDING: { type: integer }
-                              ONLINE: { type: integer }
-                              OFFLINE: { type: integer }
-                              ERROR: { type: integer }
-                              DEGRADED: { type: integer }
-                          cameraNodes:
-                            type: object
-                            properties:
-                              total: { type: integer }
-                              PENDING: { type: integer }
-                              ONLINE: { type: integer }
-                              OFFLINE: { type: integer }
-                              ERROR: { type: integer }
-                              DEGRADED: { type: integer }
+                          summary: { $ref: "#/components/schemas/DeviceStatusSummary" }
                           nodes:
                             type: array
                             items:
                               type: object
                               properties:
+                                _id: { type: string }
                                 device_id: { type: string }
-                                type: { type: string, enum: [SENSOR, CAMERA] }
-                                zone_id: { type: string }
+                                type: { type: string, enum: [sensor, camera] }
                                 status:
                                   {
                                     type: string,
                                     enum: [PENDING, ONLINE, OFFLINE, ERROR, DEGRADED],
                                   }
                                 last_heartbeat: { type: string, format: date-time, nullable: true }
-                                farm_id: { type: string, nullable: true }
-                                farm_name: { type: string, nullable: true }
+                                rssi: { type: number, nullable: true, description: "Chỉ có với sensor" }
+                                farm_name: { type: string }
+                                house_name: { type: string }
+                                zone_name: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── TELEMETRY ─────────────────────────────────────────────────────────────
@@ -2957,6 +3221,10 @@ paths:
         bỏ qua `ALLOWED_TRANSITIONS` thường áp dụng cho `PUT /tickets/:id/status`
         và không đòi SAT checklist khi đóng ticket lắp đặt. `reason` luôn được
         ghi vào `notes` của ticket.
+        - `assigned_to` phải là Technician đang hoạt động.
+        - Đổi `priority` thì tính lại `sla_response_due_at`/`sla_resolve_due_at`
+          theo SLA của priority mới, mốc là `created_at` của ticket.
+        - Mở lại ticket đã `CLOSED` thì gỡ `closed_at`.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -2981,6 +3249,11 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/Ticket" } }
+        "400":
+          description: "assigned_to không phải Technician đang hoạt động"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -3301,6 +3574,51 @@ components:
       type: string
       enum: [ADMIN, FARM_OWNER, TECHNICIAN, SALES_STAFF]
       description: "AUTH-FR-004. Buyer đăng ký qua OTP không mang role nào (role=null) vì không tham gia RBAC"
+
+    DeviceStatusSummary:
+      type: object
+      description: "Đếm SensorNode + CameraNode theo trạng thái (OPS-NFR-004, SYSTEM-FR-003)"
+      properties:
+        total: { type: integer }
+        online: { type: integer }
+        offline: { type: integer }
+        pending: { type: integer }
+        error: { type: integer }
+        degraded: { type: integer }
+
+    AuditLog:
+      type: object
+      description: "AUTH-FR-007 — collection audit_logs (SRS §8.2)"
+      properties:
+        _id: { type: string }
+        actor_id:
+          nullable: true
+          description: "Populate { _id, full_name, email, role }; null nếu hệ thống tự thực hiện hoặc đăng nhập bằng email không tồn tại"
+          type: object
+          properties:
+            _id: { type: string }
+            full_name: { type: string }
+            email: { type: string }
+            role: { $ref: "#/components/schemas/Role" }
+        action: { type: string, example: ACCOUNT_LOCKED }
+        target_type: { type: string, example: user }
+        target_id: { type: string, nullable: true }
+        metadata: { type: object, description: "Chi tiết thay đổi, thường có before/after" }
+        created_at: { type: string, format: date-time }
+
+    SalesAssignmentRequest:
+      type: object
+      description: "AUTH-FR-005b/005d — collection sales_assignment_requests (SRS §8.2)"
+      properties:
+        _id: { type: string }
+        farm_id: { type: string, description: "Populate { name, region } ở endpoint Admin" }
+        requested_by: { type: string, description: "Farm Owner đề xuất; populate { full_name, email } ở endpoint Admin" }
+        sales_staff_email: { type: string, format: email }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+        reviewed_by: { type: string, nullable: true }
+        review_note: { type: string, nullable: true, description: "Lý do khi REJECTED" }
+        reviewed_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
 
     User:
       type: object

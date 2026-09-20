@@ -104,10 +104,16 @@ export const resetThresholds = asyncHandler(async (req: Request, res: Response) 
   res.json({ success: true, data: zone })
 })
 
-/** POST /farms/:id/sales-staff – AUTH-FR-005b */
-export const inviteSalesStaff = asyncHandler(async (req: Request, res: Response) => {
-  const assignment = await farmService.inviteSalesStaff(req.params.id, req.user, req.body.email as string)
-  res.status(201).json({ success: true, data: assignment })
+/** POST /farms/:id/sales-staff – AUTH-FR-005b (đề xuất, chờ Admin duyệt) */
+export const requestSalesStaff = asyncHandler(async (req: Request, res: Response) => {
+  const request = await farmService.requestSalesStaff(req.params.id, req.user, req.body.email as string)
+  res.status(201).json({ success: true, data: request })
+})
+
+/** GET /farms/:id/sales-staff-requests – Flow 16 bước 1b/1d */
+export const listSalesStaffRequests = asyncHandler(async (req: Request, res: Response) => {
+  const requests = await farmService.listSalesStaffRequests(req.params.id, req.user)
+  res.json({ success: true, data: requests })
 })
 
 /** GET /farms/:id/sales-staff */

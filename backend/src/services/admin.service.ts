@@ -1,7 +1,13 @@
+import crypto from 'crypto'
 import { User, IUser } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
+import {
+  SalesAssignmentRequest, ISalesAssignmentRequest, SalesAssignmentRequestStatus,
+} from '@/models/salesAssignmentRequest.model'
 import { logAction } from '@/services/auditLog.service'
+import { forgotPassword } from '@/services/auth.service'
+import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Role } from '@/types'
 
@@ -38,6 +44,9 @@ export async function listUsers(query: ListUsersQuery) {
 export async function setUserStatus(
   adminId: string, userId: string, isActive: boolean, reason?: string,
 ): Promise<IUser> {
+  // Không cho tự khoá mình: người gọi luôn là 1 Admin đang hoạt động, nên chặn
+  // tự khoá là đủ đảm bảo hệ thống luôn còn ít nhất 1 Admin (Flow 19 case 2a).
+  if (adminId === userId) throw BadRequestError('Không thể tự khoá tài khoản của chính mình')
   if (!isActive && !reason?.trim()) {
     throw BadRequestError('Phải nhập lý do khi khoá tài khoản')
   }
@@ -82,6 +91,7 @@ export async function listDeletionRequests(query: ListQuery) {
  * - Anonymize thông tin cá nhân, không xoá document (giữ FK cho tickets/farms lịch sử).
  */
 export async function completeDeletionRequest(adminId: string, userId: string): Promise<IUser> {
+  if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
   const user = await User.findById(userId)
   if (!user) throw NotFoundError('Không tìm thấy người dùng')
   if (!user.deletion_requested_at) {
@@ -117,6 +127,9 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   user.avatar_url = undefined
   user.is_active = false
   user.refresh_tokens = [] as never
+  // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và
+  // không bị xử lý (chạy lại cascade) lần 2
+  user.deletion_requested_at = undefined
   await user.save()
 
   await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, { farmsTransferred: ownedFarms.length })
@@ -146,6 +159,27 @@ export async function createTechnician(adminId: string, input: CreateTechnicianI
   return user
 }
 
+/**
+ * AUTH-FR-005c, Flow 21 case 4a-x — Admin điều chỉnh khu vực phụ trách. Có
+ * hiệu lực ngay ở request kế tiếp vì middleware authenticate đọc lại
+ * assigned_regions từ DB mỗi request, không lấy từ JWT.
+ */
+export async function updateTechnicianRegions(
+  adminId: string, technicianId: string, regions: string[],
+): Promise<IUser> {
+  const technician = await User.findById(technicianId)
+  if (!technician) throw NotFoundError('Không tìm thấy người dùng')
+  if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ gán khu vực được cho tài khoản Technician')
+
+  const before = [...(technician.assigned_regions ?? [])]
+  const after = [...new Set(regions.map(r => r.trim()).filter(Boolean))]
+  technician.assigned_regions = after
+  await technician.save()
+
+  await logAction(adminId, 'TECHNICIAN_REGIONS_UPDATED', 'user', technicianId, { before, after })
+  return technician
+}
+
 export interface CreateSalesStaffInput {
   email: string; password: string; full_name: string; phone?: string; farm_ids: string[]
 }
@@ -171,4 +205,99 @@ export async function createSalesStaff(adminId: string, input: CreateSalesStaffI
 
   await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'SALES_STAFF', farm_ids: input.farm_ids })
   return user
+}
+
+/**
+ * Flow 16 case 1e — Admin gỡ Sales Staff khỏi 1 Farm. Chỉ xoá bản ghi gán,
+ * không đụng tài khoản Sales Staff (có thể còn gán ở Farm khác) hay
+ * Order/Product đã tạo trước đó.
+ */
+export async function unassignSalesStaff(adminId: string, farmId: string, salesStaffId: string): Promise<void> {
+  const assignment = await SalesAssignment.findOneAndDelete({ farm_id: farmId, sales_staff_id: salesStaffId })
+  if (!assignment) throw NotFoundError('Sales Staff này không được gán vào farm')
+
+  await logAction(adminId, 'SALES_STAFF_UNASSIGNED', 'sales_assignment', String(assignment._id), {
+    farm_id: farmId, sales_staff_id: salesStaffId,
+  })
+}
+
+// ── Duyệt đề xuất Sales Staff của Farm Owner — AUTH-FR-005d, Flow 16 bước 1b ───
+
+export interface ListSalesStaffRequestsQuery {
+  status?: SalesAssignmentRequestStatus
+  page?: string | number
+  limit?: string | number
+}
+
+export async function listSalesStaffRequests(query: ListSalesStaffRequestsQuery) {
+  const filter = query.status ? { status: query.status } : {}
+  const { page, skip, limit } = paginate(query.page, query.limit)
+
+  const [records, total] = await Promise.all([
+    SalesAssignmentRequest.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit)
+      .populate('farm_id', 'name region')
+      .populate('requested_by', 'full_name email')
+      .populate('reviewed_by', 'full_name email')
+      .lean(),
+    SalesAssignmentRequest.countDocuments(filter),
+  ])
+  return { records, total, page, limit }
+}
+
+/**
+ * Email chưa có tài khoản thì tạo mới với mật khẩu ngẫu nhiên rồi gửi mã đặt
+ * lại mật khẩu (tái dùng luồng quên mật khẩu AUTH-FR-009) — Admin không cần
+ * biết hay chuyển mật khẩu cho ai. Không tự đổi role nếu email đã thuộc
+ * Farm Owner/Technician: đổi role ngầm sẽ tước quyền cũ của họ.
+ */
+async function findOrCreateSalesStaff(adminId: string, email: string): Promise<IUser> {
+  const existing = await User.findOne({ email })
+  if (existing) {
+    if (existing.role !== 'SALES_STAFF') {
+      throw ConflictError(`Email này thuộc tài khoản ${existing.role}, không thể gán làm Sales Staff`)
+    }
+    return existing
+  }
+
+  const user = await User.create({
+    email,
+    password_hash: crypto.randomBytes(24).toString('hex'),
+    full_name: email.split('@')[0],
+    role: 'SALES_STAFF',
+  })
+  await forgotPassword(email)
+  await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'SALES_STAFF', via: 'SALES_STAFF_REQUEST' })
+  return user
+}
+
+export async function decideSalesStaffRequest(
+  adminId: string, requestId: string, decision: 'APPROVED' | 'REJECTED', reason?: string,
+): Promise<ISalesAssignmentRequest> {
+  if (decision === 'REJECTED' && !reason?.trim()) {
+    throw BadRequestError('Phải nhập lý do khi từ chối đề xuất')
+  }
+
+  const request = await SalesAssignmentRequest.findById(requestId)
+  if (!request) throw NotFoundError('Không tìm thấy đề xuất')
+  if (request.status !== 'PENDING') throw ConflictError(`Đề xuất này đã được xử lý (${request.status})`)
+
+  if (decision === 'APPROVED') {
+    const salesStaff = await findOrCreateSalesStaff(adminId, request.sales_staff_email)
+    await SalesAssignment.findOneAndUpdate(
+      { farm_id: request.farm_id, sales_staff_id: salesStaff._id },
+      { $setOnInsert: { invited_by: request.requested_by, requested_via: request._id } },
+      { upsert: true },
+    )
+  }
+
+  request.status = decision
+  request.reviewed_by = adminId as never
+  request.review_note = reason?.trim() || undefined
+  request.reviewed_at = new Date()
+  await request.save()
+
+  await logAction(adminId, `SALES_STAFF_REQUEST_${decision}`, 'sales_assignment_request', requestId, {
+    farm_id: String(request.farm_id), email: request.sales_staff_email, reason: request.review_note,
+  })
+  return request
 }
