@@ -43,9 +43,15 @@ export function SATChecklist({ ticketId, checklist }: Props) {
   })
 
   function toggle(key: keyof TicketSatChecklist) {
+    const prevState = local[key]           // lưu state cũ trước khi optimistic update
     const next = { ...local, [key]: !local[key] }
-    setLocal(next)
-    toggleMut.mutate({ [key]: next[key] })
+    setLocal(next)                         // optimistic update ngay
+    toggleMut.mutate({ [key]: next[key] }, {
+      onError: () => {
+        // Rollback nếu API thất bại
+        setLocal(prev => ({ ...prev, [key]: prevState }))
+      },
+    })
   }
 
   const checkedCount = Object.values(local).filter(Boolean).length

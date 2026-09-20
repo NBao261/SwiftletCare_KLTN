@@ -21,3 +21,15 @@ export function formatSlaCountdown(ticket: Ticket): { text: string; breached: bo
 export function assigneeName(assigned: Ticket['assigned_to']): string {
   return typeof assigned === 'object' && assigned ? assigned.full_name : 'Chưa gán'
 }
+
+/** Trả về mức độ urgent của SLA — dùng để xác định màu sắc hiển thị (thay string matching) */
+export type SlaUrgency = 'ok' | 'warning' | 'critical' | 'breached'
+
+export function getSlaUrgency(ticket: Ticket): SlaUrgency {
+  if (!ticket.sla_resolve_due_at) return 'ok'
+  const diff = new Date(ticket.sla_resolve_due_at).getTime() - Date.now()
+  if (diff < 0)           return 'breached'
+  if (diff < 3_600_000)   return 'critical'  // < 1 giờ
+  if (diff < 7_200_000)   return 'warning'   // < 2 giờ
+  return 'ok'
+}

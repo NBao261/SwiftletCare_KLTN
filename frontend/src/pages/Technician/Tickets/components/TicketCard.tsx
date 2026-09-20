@@ -7,7 +7,7 @@ import { Badge, Card } from '@/components/ui'
 import { useToastStore } from '@/store/toastStore'
 import { formatDate, getApiErrorMessage } from '@/utils/helpers'
 import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
-import { isSlaBreached, formatSlaCountdown } from './ticketHelpers'
+import { isSlaBreached, formatSlaCountdown, getSlaUrgency } from './ticketHelpers'
 import type { Ticket, TicketStatus } from '@/types'
 
 // ── Inline accept button (chỉ khi status=NEW) ─────────────────────────────────
@@ -67,7 +67,14 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
   const navigate = useNavigate()
   const sla = formatSlaCountdown(ticket)
   const breached = isSlaBreached(ticket)
+  const urgency = getSlaUrgency(ticket)
   const isInstall = ticket.type === 'INSTALLATION' || ticket.type === 'MAINTENANCE'
+
+  const slaColorClass =
+    urgency === 'breached' ? 'text-alertRed' :
+    urgency === 'critical' ? 'font-bold text-alertRed' :
+    urgency === 'warning'  ? 'font-bold text-climateOrange' :
+    'text-warmGray'
 
   return (
     <Card
@@ -75,10 +82,14 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
         breached ? 'border-l-4 border-alertRed ring-1 ring-alertRed/20' : ''
       }`}
     >
-      {/* Clickable body → navigate to detail */}
+      {/* Clickable body → navigate to detail (a11y: keyboard + screen reader) */}
       <div
         className="cursor-pointer p-5"
+        role="button"
+        tabIndex={0}
+        aria-label={`Xem chi tiết ticket: ${TICKET_TYPE_LABEL[ticket.type]}`}
         onClick={() => navigate(`/tickets/${ticket._id}`)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigate(`/tickets/${ticket._id}`) }}
       >
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
@@ -87,13 +98,7 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
         </div>
 
         <div className="mt-2 flex items-center gap-4">
-          <span className={`text-sm font-medium ${
-            sla.breached
-              ? 'text-alertRed'
-              : sla.text.startsWith('Còn 1h') || sla.text.startsWith('Còn 0h')
-                ? 'font-bold text-climateOrange'
-                : 'text-warmGray'
-          }`}>
+          <span className={`text-sm font-medium ${slaColorClass}`}>
             {sla.text}
           </span>
           <span className="text-xs text-warmGray">{formatDate(ticket.created_at)}</span>
