@@ -26,18 +26,16 @@ export function RescheduleModal({ ticket, onClose }: Props) {
     : ''
 
   const mut = useMutation({
-    mutationFn: () => {
-      // TODO [🔴 B1 Blocker]: Backend cần expose endpoint
-      // PUT /tickets/:id { scheduled_visit_at: newDate }
-      // Hiện tại chỉ thêm ghi chú — ngày hẹn thực sự KHÔNG thay đổi trên DB.
-      // Khi backend có endpoint, thêm:
-      //   ticketApi.updateScheduledDate(ticket._id, newDate)
-      // Song song với addNote để tạo audit log.
-      return ticketApi.addNote(ticket._id, autoNote)
-    },
+    mutationFn: () =>
+      // Gọi song song: cập nhật ngày thật + thêm audit log ghi chú
+      // updateScheduledDate cần BE endpoint PUT /tickets/:id/scheduled-date (xem tickets.ts)
+      Promise.all([
+        ticketApi.updateScheduledDate(ticket._id, newDate),
+        ticketApi.addNote(ticket._id, autoNote),
+      ]),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      push('Ghi chú ngày hẹn đã được thêm (cần backend để cập nhật ngày thực sự)')
+      push('Đã cập nhật ngày hẹn thành công')
       onClose()
     },
     onError: (err) => push(getApiErrorMessage(err, 'Đổi lịch thất bại'), 'error'),

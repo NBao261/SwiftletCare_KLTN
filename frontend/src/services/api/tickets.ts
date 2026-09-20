@@ -56,6 +56,19 @@ export const ticketApi = {
   escalate:           (id: string, reason?: string) => api.post<ApiResponse<Ticket>>(`/tickets/${id}/escalate`, { reason }),
   /** Admin — quyền can thiệp thường trực, bất kể trạng thái/SLA (TICKET-FR-005b) */
   adminOverride:      (id: string, input: AdminOverrideInput) => api.put<ApiResponse<Ticket>>(`/tickets/${id}/admin-override`, input),
+
+  // TODO [BE-GAP]: PUT /tickets/:id/scheduled-date — Technician đổi ngày hẹn
+  updateScheduledDate: (id: string, scheduledVisitAt: string) =>
+    api.put<ApiResponse<Ticket>>(`/tickets/${id}/scheduled-date`, { scheduled_visit_at: scheduledVisitAt }),
+
+  // TODO [BE-GAP]: GET /tickets/:id/messages — Chat (TICKET-FR-014..017)
+  getMessages: (id: string) =>
+    api.get<ApiResponse<unknown[]>>(`/tickets/${id}/messages`),
+
+  // TODO [BE-GAP]: POST /tickets/:id/messages — Gửi tin nhắn chat
+  sendMessage: (id: string, content: string) =>
+    api.post<ApiResponse<unknown>>(`/tickets/${id}/messages`, { content }),
+
   kpi: () => api.get<ApiResponse<{
     byStatus: Array<{ _id: TicketStatus; count: number }>
     byTechnician: Array<{ _id: string; total: number; closed: number }>

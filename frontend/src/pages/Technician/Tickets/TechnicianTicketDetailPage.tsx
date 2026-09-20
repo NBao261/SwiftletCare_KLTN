@@ -17,6 +17,7 @@ import { AddNoteCard }      from './components/AddNoteCard'
 import { UpdateStatusModal } from './components/UpdateStatusModal'
 import { ReassignModal }    from './components/ReassignModal'
 import { RescheduleModal }  from './components/RescheduleModal'
+import { TicketChat }       from './components/TicketChat'
 
 // ── Info row helper (local — only used here) ──────────────────────────────────
 function InfoRow({ label, value, valueClass = 'text-charcoal' }: {
@@ -141,6 +142,9 @@ export default function TechnicianTicketDetailPage() {
           </Card>
 
           <AddNoteCard ticketId={ticket._id} />
+
+          {/* TICKET-FR-014..017: Chat realtime với Farm Owner */}
+          <TicketChat ticketId={ticket._id} />
         </div>
 
         {/* RIGHT — ticket metadata */}
