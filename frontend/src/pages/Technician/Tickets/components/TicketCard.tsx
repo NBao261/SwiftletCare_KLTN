@@ -73,12 +73,13 @@ function AcceptButton({ ticketId }: { ticketId: string }) {
   )
 }
 
-// ── Action button ─────────────────────────────────────────────────────────────
-function ActionBtn({ label, onClick }: { label: string; onClick: (e: React.MouseEvent) => void }) {
+// ── Action button ─────────────────────────────────────────────────
+function ActionBtn({ label, onClick, disabled }: { label: string; onClick: (e: React.MouseEvent) => void; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-full border border-graphite/15 px-3.5 py-1.5 text-sm font-medium text-charcoal transition-all duration-200 hover:border-charcoal/30 hover:bg-graphite/5 hover:shadow-sm active:scale-95"
+      disabled={disabled}
+      className="rounded-full border border-graphite/15 px-3.5 py-1.5 text-sm font-medium text-charcoal transition-all duration-200 hover:border-charcoal/30 hover:bg-graphite/5 hover:shadow-sm active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {label}
     </button>
@@ -135,22 +136,25 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
         )}
       </div>
 
-      {/* Action bar */}
+      {/* Action bar — M1: disable Cập nhật + Gán lại khi CLOSED */}
       <div className="flex flex-wrap gap-2 border-t border-graphite/[0.08] bg-graphite/[0.02] px-5 py-3">
         {ticket.status === 'NEW' && <AcceptButton ticketId={ticket._id} />}
 
         <ActionBtn
           label="✏️ Cập nhật"
           onClick={e => { e.stopPropagation(); onUpdateStatus(ticket) }}
+          disabled={ticket.status === 'CLOSED'}
         />
         <ActionBtn
           label="🔄 Gán lại"
           onClick={e => { e.stopPropagation(); onReassign(ticket) }}
+          disabled={ticket.status === 'CLOSED'}
         />
         {isInstall && (
           <ActionBtn
             label="📅 Sửa ngày hẹn"
             onClick={e => { e.stopPropagation(); navigate(`/tickets/${ticket._id}?action=reschedule`) }}
+            disabled={ticket.status === 'CLOSED'}
           />
         )}
       </div>

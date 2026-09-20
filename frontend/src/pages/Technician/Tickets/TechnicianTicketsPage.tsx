@@ -219,7 +219,8 @@ function TicketTableRow({
       </td>
       {/* Actions */}
       <td className="whitespace-nowrap py-3 pr-5" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100">
+        {/* M2: group-focus-within để keyboard user nhìn thấy nút khi tab vào */}
+        <div className="flex items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
           {ticket.status === 'NEW' && (
             <button
               onClick={() => onUpdateStatus(ticket)}
@@ -228,15 +229,18 @@ function TicketTableRow({
               Tiếp nhận
             </button>
           )}
+          {/* M1: Disable Cập nhật + Gán lại khi CLOSED */}
           <button
             onClick={() => onUpdateStatus(ticket)}
-            className="rounded-full border border-graphite/15 px-2.5 py-1 text-xs font-medium text-charcoal transition-all hover:border-charcoal/30 hover:bg-graphite/5 active:scale-95"
+            disabled={ticket.status === 'CLOSED'}
+            className="rounded-full border border-graphite/15 px-2.5 py-1 text-xs font-medium text-charcoal transition-all hover:border-charcoal/30 hover:bg-graphite/5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Cập nhật
           </button>
           <button
             onClick={() => onReassign(ticket)}
-            className="rounded-full border border-graphite/15 px-2.5 py-1 text-xs font-medium text-charcoal transition-all hover:border-charcoal/30 hover:bg-graphite/5 active:scale-95"
+            disabled={ticket.status === 'CLOSED'}
+            className="rounded-full border border-graphite/15 px-2.5 py-1 text-xs font-medium text-charcoal transition-all hover:border-charcoal/30 hover:bg-graphite/5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Gán lại
           </button>
@@ -418,6 +422,18 @@ export default function TechnicianTicketsPage() {
           </span>
         )}
       </div>
+
+      {/* M3: Cảnh báo khi total > records (backend cắt ở limit:100, ticket cũ bị mất) */}
+      {!isLoading && total > records.length && (
+        <div className="flex items-start gap-3 rounded-xl border border-climateOrange/30 bg-climateOrange/[0.08] px-4 py-3">
+          <span className="shrink-0 text-climateOrange">⚠️</span>
+          <p className="text-sm text-climateOrange">
+            Chỉ tải được <strong>{records.length}</strong> / <strong>{total}</strong> ticket.
+            Các ticket cũ hơn có thể bị ẩn.{' '}
+            <span className="font-medium">Dùng bộ lọc Trạng thái hoặc tìm kiếm để tìm ticket cụ thể.</span>
+          </p>
+        </div>
+      )}
 
       {/* Loading */}
       {isLoading && <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />}
