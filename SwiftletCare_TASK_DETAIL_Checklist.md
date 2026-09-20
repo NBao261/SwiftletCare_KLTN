@@ -377,11 +377,11 @@
 
 - [x] Màn danh sách Farm + tạo Farm `[FARM-FR-001]`
 - [x] Màn House/Zone management `[FARM-FR-002]`
-- [ ] Màn "Web Console Onboarding" cho Technician (chỉ role TECHNICIAN thấy, không phải Farm Owner) — bước 1: chọn Farm → House → Zone đích `[FARM-FR-003, Flow 1 bước 2]`
-- [ ] Bước 2: quét/nhập Device ID + secretKey, hiển thị lỗi rõ ràng nếu sai/đã thuộc Farm khác `[Flow 1 bước 3, case 3a]`
-- [ ] Bước 3: hướng dẫn kết nối vào AP tạm của ESP32 + nút "Thử lại" nếu không thấy mạng `[FARM-FR-003b, Flow 1 bước 5, case 5a]`
-- [ ] Bước 4: form nhập WiFi thật của farm, gửi kèm mqttCredentials xuống thiết bị `[Flow 1 bước 6]`
-- [ ] Bước 5: polling/socket chờ status PENDING → ONLINE, hiển thị "Kích hoạt quá hạn" nếu >15 phút `[Flow 1 bước 8, case 8a]`
+- [x] Màn "Web Console Onboarding" cho Technician (chỉ role TECHNICIAN thấy, không phải Farm Owner) — bước 1: chọn Farm → House → Zone đích `[FARM-FR-003, Flow 1 bước 2]`
+- [x] Bước 2: quét/nhập Device ID + secretKey, hiển thị lỗi rõ ràng nếu sai/đã thuộc Farm khác `[Flow 1 bước 3, case 3a]`
+- [x] Bước 3: hướng dẫn kết nối vào AP tạm của ESP32 + nút "Thử lại" nếu không thấy mạng `[FARM-FR-003b, Flow 1 bước 5, case 5a]`
+- [x] Bước 4: form nhập WiFi thật của farm, gửi kèm mqttCredentials xuống thiết bị `[Flow 1 bước 6]`
+- [x] Bước 5: polling/socket chờ status PENDING → ONLINE, hiển thị "Kích hoạt quá hạn" nếu >15 phút `[Flow 1 bước 8, case 8a]`
 - [x] Màn danh sách Device + trạng thái ONLINE/OFFLINE realtime `[FARM-FR-005, 006]` — StatusDot theo `SensorNode.status`, tự cập nhật qua DEVICE_STATUS_CHANGE (kể cả chiều OFFLINE từ deviceOfflineJob)
 - [x] Socket.io-client subscribe JOIN_ZONE `[9.3]`
 - [x] Badge "Live"/"Mất kết nối" tự chuyển sau 20s không nhận telemetry mới (độc lập với backend 30s) `[Flow 14 bước 6]` — đã code trong `useTelemetry.ts`, verify thật
@@ -420,9 +420,9 @@
 
 - [ ] Màn Farm Owner tạo ticket báo lỗi (chọn loại lỗi) `[TICKET-FR-001]`
 - [ ] Màn Farm Owner "Yêu cầu lắp đặt" — chọn ngày giờ hẹn cụ thể ngay lúc tạo (`scheduled_visit_at`), không có bước liên hệ `[TICKET-FR-001, Flow 9b bước 1]`
-- [ ] Màn danh sách + chi tiết ticket + timeline ghi chú `[TICKET-FR-007]`
-- [ ] UI Technician cập nhật status + checklist SAT `[TICKET-FR-007, 010]` — chặn nút "Đóng ticket" nếu checklist chưa đạt `[Flow 9b case 6a]`
-- [ ] Nút Technician "Yêu cầu gán lại" (kèm lý do) `[Flow 9 case 4a]`
+- [x] Màn danh sách + chi tiết ticket + timeline ghi chú `[TICKET-FR-007]`
+- [x] UI Technician cập nhật status + checklist SAT `[TICKET-FR-007, 010]` — chặn nút "Đóng ticket" nếu checklist chưa đạt `[Flow 9b case 6a]`
+- [x] Nút Technician "Yêu cầu gán lại" (kèm lý do) `[Flow 9 case 4a]`
 - [ ] Nút Farm Owner "Huỷ yêu cầu" trước ngày hẹn `[Flow 9b case 4a]`
 - [ ] UI Admin can thiệp toàn quyền: đổi Technician/ngày hẹn/priority, đóng-huỷ bất kỳ ticket nào `[TICKET-FR-005b]`
 - [ ] UI đánh giá 1-5 sao + Dashboard KPI (Admin) `[TICKET-FR-011, 012]`
@@ -445,7 +445,7 @@
 - [ ] UI khoá/mở khoá tài khoản kèm ô nhập lý do bắt buộc `[AUTH-FR-011, Flow 19 bước 2]`
 - [ ] Thông báo "Tài khoản đã bị khoá" kèm lý do khi user cố đăng nhập `[Flow 19 bước 4]`
 - [ ] Trang Admin: danh sách yêu cầu xoá tài khoản + nút xác nhận hoàn tất `[AUTH-FR-012, Flow 19 bước 6-8]`
-- [ ] UI Technician "Đẩy OTA" — chọn thiết bị + phiên bản firmware, xem trạng thái tải/flash `[TICKET-FR-008, Flow 15]`
+- [x] UI Technician "Đẩy OTA" — chọn thiết bị + phiên bản firmware, xem trạng thái tải/flash `[TICKET-FR-008, Flow 15]`
 
 ## D9. Polish & Báo cáo (Sprint 7-8)
 
