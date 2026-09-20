@@ -24,7 +24,14 @@ export function paginate(
   opts: { defaultLimit?: number; maxLimit?: number } = {},
 ): { page: number; skip: number; limit: number } {
   const { defaultLimit = 20, maxLimit = 100 } = opts
-  const p = Math.max(1, Number(page ?? 1))
-  const l = Math.min(maxLimit, Number(limit ?? defaultLimit))
+  // Số rác từ query string (?page=abc → NaN, ?limit=-5 → âm) rơi thẳng xuống
+  // .skip()/.limit() sẽ làm Mongo ném lỗi 500. Không hợp lệ thì dùng mặc định.
+  const toPositiveInt = (value: number | string | undefined, fallback: number): number => {
+    const n = Math.floor(Number(value))
+    return Number.isFinite(n) && n > 0 ? n : fallback
+  }
+
+  const p = toPositiveInt(page, 1)
+  const l = Math.min(maxLimit, toPositiveInt(limit, defaultLimit))
   return { page: p, skip: (p - 1) * l, limit: l }
 }

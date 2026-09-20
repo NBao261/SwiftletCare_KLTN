@@ -5,6 +5,7 @@ import { SalesAssignment } from '@/models/salesAssignment.model'
 import {
   SalesAssignmentRequest, ISalesAssignmentRequest, SalesAssignmentRequestStatus,
 } from '@/models/salesAssignmentRequest.model'
+import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { forgotPassword } from '@/services/auth.service'
 import { paginate } from '@/utils/helpers.util'
@@ -53,6 +54,9 @@ export async function setUserStatus(
 
   const user = await User.findById(userId)
   if (!user) throw NotFoundError('Không tìm thấy người dùng')
+  // Tài khoản đã xoá theo Nghị định 13 thì PII đã bị ẩn danh — mở khoá lại sẽ
+  // tạo ra tài khoản "sống" nhưng rỗng thông tin.
+  if (user.deleted_at) throw ConflictError('Tài khoản đã bị xoá theo yêu cầu, không thể khoá/mở khoá')
 
   user.is_active = isActive
   if (isActive) {
@@ -121,6 +125,19 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
     { $pull: { members: { user_id: user._id } } },
   )
 
+  // Dọn các liên kết trỏ tới user, nếu không sẽ thành dữ liệu mồ côi: farm vẫn
+  // hiện "đã có Sales Staff" trỏ tới tài khoản đã xoá, còn đề xuất/lời mời
+  // đang chờ vẫn duyệt hoặc chấp nhận được sau khi người tạo đã biến mất.
+  const oldEmail = user.email
+  const [removedAssignments] = await Promise.all([
+    SalesAssignment.deleteMany({ sales_staff_id: user._id }),
+    SalesAssignmentRequest.updateMany(
+      { status: 'PENDING', $or: [{ requested_by: user._id }, { sales_staff_email: oldEmail }] },
+      { $set: { status: 'REJECTED', reviewed_by: adminId, review_note: 'Tài khoản liên quan đã bị xoá theo yêu cầu', reviewed_at: new Date() } },
+    ),
+    Invitation.updateMany({ status: 'PENDING', invited_by: user._id }, { $set: { status: 'EXPIRED' } }),
+  ])
+
   user.email = `deleted-${String(user._id)}@swiftletcare.local`
   user.phone = undefined
   user.full_name = 'Tài khoản đã xoá'
@@ -130,9 +147,13 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và
   // không bị xử lý (chạy lại cascade) lần 2
   user.deletion_requested_at = undefined
+  user.deleted_at = new Date()
   await user.save()
 
-  await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, { farmsTransferred: ownedFarms.length })
+  await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, {
+    farmsTransferred: ownedFarms.length,
+    salesAssignmentsRemoved: removedAssignments.deletedCount,
+  })
   return user
 }
 

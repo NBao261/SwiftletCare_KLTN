@@ -202,6 +202,9 @@ paths:
     post:
       tags: [Auth]
       summary: Xác thực OTP, trả accessToken
+      description: |
+        Tài khoản bị Admin khoá cũng bị chặn ở đây giống `/auth/login`, trả 403
+        `ACCOUNT_DISABLED` kèm `details.reason` (AUTH-FR-011, Flow 19 bước 4).
       security: []
       requestBody:
         required: true
@@ -767,6 +770,51 @@ paths:
                   - properties: { data: { $ref: "#/components/schemas/Thresholds" } }
         "400":
           description: "min >= max hoặc giá trị âm"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /system/settings/sla:
+    get:
+      tags: [System]
+      summary: "Xem SLA theo mức ưu tiên (TICKET-FR-006, SLA-NFR-001) — chỉ ADMIN"
+      description: Chưa cấu hình thì trả giá trị đề xuất trong SRS (P1 0.5/4h, P2 4/24h, P3 24/72h).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SlaConfig" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [System]
+      summary: "Chỉnh SLA theo mức ưu tiên (TICKET-FR-006) — chỉ ADMIN"
+      description: |
+        Gửi 1 phần hoặc cả 3 mức, phần còn lại giữ nguyên. Áp dụng cho ticket
+        tạo MỚI và cho ticket được Admin đổi priority; ticket cũ giữ hạn đã tính.
+        Job nền so `sla_resolve_due_at` mỗi 2 phút để đánh dấu vượt hạn
+        (TICKET-FR-009, SLA-NFR-002).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SlaConfig" }
+      responses:
+        "200":
+          description: Giá trị sau khi cập nhật
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SlaConfig" } }
+        "400":
+          description: "Giá trị ≤ 0, hoặc hạn phản hồi muộn hơn hạn xử lý"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
@@ -2772,7 +2820,11 @@ paths:
     get:
       tags: [Tickets]
       summary: "Danh sách ticket (filter farm/status/priority/assignee)"
-      description: "Farm Owner chỉ thấy ticket farm mình; Technician thấy farm trong `assigned_regions`; Admin thấy tất cả."
+      description: |
+        Farm Owner chỉ thấy ticket farm mình; Technician thấy farm trong
+        `assigned_regions`; Admin thấy tất cả. Lọc theo `farmId` được kiểm
+        quyền riêng — farm không thuộc phạm vi của user thì trả 403, không
+        trả về danh sách rỗng.
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - {
@@ -2848,25 +2900,29 @@ paths:
                                 },
                             }
                           byTechnician:
-                            {
-                              type: array,
-                              items:
-                                {
-                                  type: object,
-                                  properties:
-                                    {
-                                      _id: { type: string },
-                                      total: { type: integer },
-                                      closed: { type: integer },
-                                    },
-                                },
-                            }
-                          avgResolveHours: { type: number, nullable: true }
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                technician_id: { type: string }
+                                full_name: { type: string, nullable: true }
+                                email: { type: string, nullable: true }
+                                total: { type: integer }
+                                closed: { type: integer }
+                                cancelled: { type: integer }
+                                avgResolveHours: { type: number, nullable: true }
+                                slaComplianceRate: { type: number, nullable: true }
+                          resolvedTickets:
+                            { type: integer, description: "Ticket đã đóng, KHÔNG tính ticket bị huỷ" }
+                          avgResolveHours:
+                            { type: number, nullable: true, description: "Giờ, tính trên resolvedTickets" }
+                          ticketsPastDue:
+                            { type: integer, description: "Ticket đã qua hạn xử lý, kể cả còn đang mở" }
                           slaComplianceRate:
                             {
                               type: number,
                               nullable: true,
-                              description: "% ticket đóng đúng SLA",
+                              description: "% ticket đúng SLA trên tổng ticket đã tới hạn (gồm cả ticket quá hạn còn treo), bỏ qua ticket bị huỷ",
                             }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -3574,6 +3630,20 @@ components:
       type: string
       enum: [ADMIN, FARM_OWNER, TECHNICIAN, SALES_STAFF]
       description: "AUTH-FR-004. Buyer đăng ký qua OTP không mang role nào (role=null) vì không tham gia RBAC"
+
+    SlaConfig:
+      type: object
+      description: "TICKET-FR-006, SLA-NFR-001 — SLA theo mức ưu tiên, lưu ở system_settings.sla_hours"
+      properties:
+        P1: { $ref: "#/components/schemas/SlaLevel" }
+        P2: { $ref: "#/components/schemas/SlaLevel" }
+        P3: { $ref: "#/components/schemas/SlaLevel" }
+
+    SlaLevel:
+      type: object
+      properties:
+        response_hours: { type: number, example: 0.5 }
+        resolve_hours: { type: number, example: 4 }
 
     DeviceStatusSummary:
       type: object

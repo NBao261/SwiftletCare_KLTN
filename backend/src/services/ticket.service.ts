@@ -4,6 +4,7 @@ import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
+import { getSlaHours } from '@/services/system.service'
 import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -24,11 +25,17 @@ const DEFAULT_PRIORITY: Record<TicketType, TicketPriority> = {
   OTHER:             'P3',
 }
 
-/** TICKET-FR-006 — SLA mặc định (giờ) theo priority: [phản hồi, xử lý] */
-const SLA_HOURS: Record<TicketPriority, [number, number]> = {
-  P1: [0.5, 4],
-  P2: [4, 24],
-  P3: [24, 72],
+/**
+ * TICKET-FR-006, SLA-NFR-001 — SLA do Admin cấu hình (system_settings), không
+ * hard-code. Chưa cấu hình thì rơi về DEFAULT_SLA trong sla.util.
+ */
+async function slaDueDates(priority: TicketPriority, from: Date) {
+  const sla = await getSlaHours()
+  const base = from.getTime()
+  return {
+    sla_response_due_at: new Date(base + sla[priority].response_hours * 3600_000),
+    sla_resolve_due_at:  new Date(base + sla[priority].resolve_hours * 3600_000),
+  }
 }
 
 /** TICKET-FR-007 — chỉ cho đi tiến theo thứ tự, không nhảy cóc/lùi tuỳ tiện */
@@ -109,8 +116,7 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
   }
 
   const priority = DEFAULT_PRIORITY[input.type]
-  const [responseH, resolveH] = SLA_HOURS[priority]
-  const now = Date.now()
+  const sla = await slaDueDates(priority, new Date())
 
   const assignedTo = await routeToTechnician(input.farm_id)
   if (!assignedTo) {
@@ -129,8 +135,7 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
     status:   'NEW',
     assigned_to: assignedTo ?? undefined,
     scheduled_visit_at: input.scheduled_visit_at ? new Date(input.scheduled_visit_at) : undefined,
-    sla_response_due_at: new Date(now + responseH * 3600_000),
-    sla_resolve_due_at:  new Date(now + resolveH * 3600_000),
+    ...sla,
     notes: input.description
       ? [{ author_id: user._id, content: input.description, created_at: new Date() }]
       : [],
@@ -176,8 +181,7 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
     try {
       const ticketType = ALERT_TYPE_TO_TICKET_TYPE[alert.type as AlertType] ?? 'OTHER'
       const priority = DEFAULT_PRIORITY[ticketType]
-      const [responseH, resolveH] = SLA_HOURS[priority]
-      const now = Date.now()
+      const sla = await slaDueDates(priority, new Date())
       const assignedTo = await routeToTechnicianCached(String(alert.farm_id))
 
       await Ticket.create({
@@ -188,8 +192,7 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
         priority,
         status:   'NEW',
         assigned_to: assignedTo ?? undefined,
-        sla_response_due_at: new Date(now + responseH * 3600_000),
-        sla_resolve_due_at:  new Date(now + resolveH * 3600_000),
+        ...sla,
         notes: [{
           content: `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
           created_at: new Date(),
@@ -216,7 +219,13 @@ export async function listTickets(user: CurrentUser, query: ListTicketsQuery) {
   const accessibleFarms = await listAccessibleFarmIds(user)
   const filter: Record<string, unknown> = { farm_id: { $in: accessibleFarms } }
 
-  if (query.farmId) filter.farm_id = query.farmId
+  // Lọc theo 1 farm cụ thể phải kiểm quyền riêng: gán thẳng query.farmId vào
+  // filter sẽ ghi đè danh sách farm được phép ở trên, cho phép đọc ticket của
+  // farm bất kỳ chỉ bằng cách đoán id.
+  if (query.farmId) {
+    await assertFarmAccess(query.farmId, user)
+    filter.farm_id = query.farmId
+  }
   if (query.status) filter.status = query.status
   if (query.priority) filter.priority = query.priority
   if (query.assignedToMe) filter.assigned_to = user._id
@@ -275,6 +284,7 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
 
   ticket.status = 'CLOSED'
   ticket.closed_at = new Date()
+  ticket.cancelled_at = new Date()
   ticket.notes.push({
     author_id: user._id as never,
     content: `Huỷ bởi ${user.role === 'FARM_OWNER' ? 'Farm Owner' : user.role}: ${reason}`,
@@ -314,6 +324,35 @@ export async function escalateTicket(ticketId: string, user: CurrentUser, reason
   return ticket
 }
 
+/**
+ * TICKET-FR-009, SLA-NFR-002 — gọi định kỳ từ jobs/slaBreach.job.ts. Trước đây
+ * `is_sla_breached` chỉ bật khi Technician bấm escalate tay, nên ticket quá hạn
+ * mà không ai đụng tới vẫn được tính là đúng SLA trong KPI của Admin.
+ */
+export async function markBreachedTickets(): Promise<number> {
+  const overdue = await Ticket.find({
+    status: { $ne: 'CLOSED' },
+    is_sla_breached: false,
+    sla_resolve_due_at: { $lt: new Date() },
+  })
+
+  for (const ticket of overdue) {
+    ticket.is_sla_breached = true
+    ticket.notes.push({
+      content: `Tự động đánh dấu vượt hạn xử lý SLA (hạn ${ticket.sla_resolve_due_at?.toISOString()})`,
+      created_at: new Date(),
+    } as never)
+    await ticket.save()
+
+    await logAction(undefined, 'TICKET_SLA_BREACHED', 'ticket', String(ticket._id), {
+      priority: ticket.priority,
+      assigned_to: ticket.assigned_to ? String(ticket.assigned_to) : null,
+      sla_resolve_due_at: ticket.sla_resolve_due_at,
+    })
+  }
+  return overdue.length
+}
+
 /** TICKET-FR-011 — Farm Owner đánh giá sau khi ticket đóng */
 export async function rateTicket(ticketId: string, user: CurrentUser, rating: number): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user) // đã xác nhận user có quyền trên farm của ticket
@@ -335,32 +374,84 @@ export async function rateTicket(ticketId: string, user: CurrentUser, rating: nu
 }
 
 /** TICKET-FR-012 — KPI cho Administrator */
+const percent = (part: number, whole: number) => (whole ? +((part / whole) * 100).toFixed(1) : null)
+const toHours = (ms?: number | null) => (ms ? +(ms / 3600_000).toFixed(1) : null)
+
+interface TechnicianKpiRow {
+  _id: unknown
+  total: number
+  closed: number
+  cancelled: number
+  resolveMsSum: number
+  resolvedCount: number
+  due: number
+  dueBreached: number
+  technician?: { full_name?: string; email?: string }
+}
+
+/**
+ * TICKET-FR-012 — KPI cho Administrator.
+ *
+ * Hai điểm quan trọng về cách tính, vì bản trước cho ra số liệu đẹp giả tạo:
+ * - Ticket bị huỷ (`cancelled_at`) không phải việc đã xử lý, nên loại khỏi
+ *   thời gian xử lý trung bình và khỏi tỉ lệ SLA.
+ * - Tỉ lệ đúng SLA tính trên MỌI ticket đã tới hạn, gồm cả ticket đang treo
+ *   quá hạn — nếu chỉ đếm ticket đã đóng thì ticket trễ nhất (chưa ai đóng)
+ *   lại bị loại khỏi mẫu số, làm tỉ lệ luôn gần 100%.
+ */
 export async function getKpi() {
-  const [byStatus, byTechnician, slaStats] = await Promise.all([
+  const now = new Date()
+  const resolvedMatch = { status: 'CLOSED', closed_at: { $ne: null }, cancelled_at: null }
+  const dueMatch = { cancelled_at: null, sla_resolve_due_at: { $ne: null, $lt: now } }
+
+  const [byStatus, byTechnician, resolveStats, slaStats] = await Promise.all([
     Ticket.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
-    Ticket.aggregate([
+    Ticket.aggregate<TechnicianKpiRow>([
       { $match: { assigned_to: { $ne: null } } },
-      { $group: { _id: '$assigned_to', total: { $sum: 1 }, closed: { $sum: { $cond: [{ $eq: ['$status', 'CLOSED'] }, 1, 0] } } } },
-    ]),
-    Ticket.aggregate([
-      { $match: { status: 'CLOSED', closed_at: { $ne: null } } },
       {
         $group: {
-          _id: null,
-          avgResolveMs: { $avg: { $subtract: ['$closed_at', '$created_at'] } },
-          breached: { $sum: { $cond: ['$is_sla_breached', 1, 0] } },
+          _id: '$assigned_to',
           total: { $sum: 1 },
+          closed: { $sum: { $cond: [{ $eq: ['$status', 'CLOSED'] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$cancelled_at', null] }, null] }, 1, 0] } },
+          resolveMsSum: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, { $subtract: ['$closed_at', '$created_at'] }, 0] } },
+          resolvedCount: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
+          due: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }] }, 1, 0] } },
+          dueBreached: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }, '$is_sla_breached'] }, 1, 0] } },
         },
       },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'technician' } },
+      { $unwind: { path: '$technician', preserveNullAndEmptyArrays: true } },
+    ]),
+    Ticket.aggregate([
+      { $match: resolvedMatch },
+      { $group: { _id: null, avgResolveMs: { $avg: { $subtract: ['$closed_at', '$created_at'] } }, total: { $sum: 1 } } },
+    ]),
+    Ticket.aggregate([
+      { $match: dueMatch },
+      { $group: { _id: null, total: { $sum: 1 }, breached: { $sum: { $cond: ['$is_sla_breached', 1, 0] } } } },
     ]),
   ])
 
-  const sla = slaStats[0] as { avgResolveMs?: number; breached?: number; total?: number } | undefined
+  const resolved = resolveStats[0] as { avgResolveMs?: number; total?: number } | undefined
+  const sla = slaStats[0] as { total?: number; breached?: number } | undefined
+
   return {
     byStatus,
-    byTechnician,
-    avgResolveHours: sla?.avgResolveMs ? +(sla.avgResolveMs / 3600_000).toFixed(1) : null,
-    slaComplianceRate: sla?.total ? +(((sla.total - (sla.breached ?? 0)) / sla.total) * 100).toFixed(1) : null,
+    byTechnician: byTechnician.map(row => ({
+      technician_id: String(row._id),
+      full_name: row.technician?.full_name ?? null,
+      email: row.technician?.email ?? null,
+      total: row.total,
+      closed: row.closed,
+      cancelled: row.cancelled,
+      avgResolveHours: row.resolvedCount ? toHours(row.resolveMsSum / row.resolvedCount) : null,
+      slaComplianceRate: percent(row.due - row.dueBreached, row.due),
+    })),
+    resolvedTickets: resolved?.total ?? 0,
+    avgResolveHours: toHours(resolved?.avgResolveMs),
+    ticketsPastDue: sla?.total ?? 0,
+    slaComplianceRate: percent((sla?.total ?? 0) - (sla?.breached ?? 0), sla?.total ?? 0),
   }
 }
 
@@ -370,6 +461,8 @@ export interface AdminOverrideInput {
   scheduled_visit_at?: string
   status?: TicketStatus
   reason: string
+  /** Ép gán Technician ngoài khu vực phụ trách — xem ghi chú trong hàm */
+  force?: boolean
 }
 
 /**
@@ -387,22 +480,37 @@ export async function adminOverrideTicket(
 
   const changes: Record<string, unknown> = {}
   if (updates.assigned_to !== undefined) {
-    const technician = await User.findById(updates.assigned_to).select('role is_active').lean()
+    const technician = await User.findById(updates.assigned_to).select('role is_active assigned_regions').lean()
     if (!technician || technician.role !== 'TECHNICIAN' || !technician.is_active) {
       throw BadRequestError('Chỉ gán được cho Technician đang hoạt động')
     }
+
+    // Quyền xem ticket của Technician dựa trên assigned_regions (farmAccess.util).
+    // Gán người ngoài vùng thì chính họ mở ticket lên cũng bị chặn 403 — ticket
+    // thành mồ côi. Admin vẫn ép được bằng force (TICKET-FR-005b), nhưng phải
+    // là quyết định có ý thức và được ghi lại.
+    const farm = await Farm.findById(ticket.farm_id).select('region').lean()
+    const coversRegion = !!farm?.region && (technician.assigned_regions ?? []).includes(farm.region)
+    if (!coversRegion && !updates.force) {
+      const regions = (technician.assigned_regions ?? []).join(', ') || 'chưa gán vùng nào'
+      throw BadRequestError(
+        `Technician này phụ trách ${regions}, không khớp khu vực "${farm?.region ?? 'chưa đặt'}" của farm. ` +
+        'Gửi kèm force=true nếu vẫn muốn gán.',
+      )
+    }
+
     changes.assigned_to = { before: ticket.assigned_to ? String(ticket.assigned_to) : null, after: updates.assigned_to }
+    if (!coversRegion) changes.forcedOutOfRegion = true
     ticket.assigned_to = technician._id
   }
   if (updates.priority !== undefined && updates.priority !== ticket.priority) {
     // SLA tính theo priority (TICKET-FR-006) và mốc là lúc tạo ticket, không
     // phải lúc Admin sửa — nếu không, nâng P3→P1 vẫn giữ hạn 72h cũ.
-    const [responseH, resolveH] = SLA_HOURS[updates.priority]
-    const createdAt = ticket.created_at.getTime()
+    const sla = await slaDueDates(updates.priority, ticket.created_at)
     changes.priority = { before: ticket.priority, after: updates.priority }
     ticket.priority = updates.priority
-    ticket.sla_response_due_at = new Date(createdAt + responseH * 3600_000)
-    ticket.sla_resolve_due_at  = new Date(createdAt + resolveH * 3600_000)
+    ticket.sla_response_due_at = sla.sla_response_due_at
+    ticket.sla_resolve_due_at  = sla.sla_resolve_due_at
     changes.sla_resolve_due_at = ticket.sla_resolve_due_at
   }
   if (updates.scheduled_visit_at !== undefined) {

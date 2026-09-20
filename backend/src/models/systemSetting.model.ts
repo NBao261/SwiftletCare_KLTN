@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose'
-import type { Thresholds } from '@/types'
+import type { SlaConfig, Thresholds } from '@/types'
 
 /** SystemSetting – SRS §8.2, SYSTEM-FR-002. Singleton: collection chỉ có 1 document. */
 export interface ISystemSetting extends Document {
@@ -7,8 +7,18 @@ export interface ISystemSetting extends Document {
   /** Khoá ép singleton — xem ghi chú ở schema */
   _singleton: boolean
   default_thresholds: Thresholds
+  /** TICKET-FR-006, SLA-NFR-001 — có thể chưa có nếu Admin chưa từng chỉnh SLA */
+  sla_hours?: SlaConfig
   updated_by?: Types.ObjectId
   updated_at: Date
+}
+
+// Không đặt required: `sla_hours` là tuỳ chọn (chưa cấu hình thì dùng DEFAULT_SLA),
+// mà required ở trường con sẽ bắt buộc cả document phải có SLA mới lưu được.
+// Ràng buộc giá trị do assertValidSla (utils/sla.util.ts) kiểm ở tầng service.
+const slaLevelSchema = {
+  response_hours: { type: Number },
+  resolve_hours:  { type: Number },
 }
 
 const systemSettingSchema = new Schema<ISystemSetting>(
@@ -29,6 +39,11 @@ const systemSettingSchema = new Schema<ISystemSetting>(
       light_max:    { type: Number, required: true },
       nh3_max:      { type: Number, required: true },
       co2_max:      { type: Number, required: true },
+    },
+    sla_hours: {
+      P1: slaLevelSchema,
+      P2: slaLevelSchema,
+      P3: slaLevelSchema,
     },
     updated_by: { type: Schema.Types.ObjectId, ref: 'User' },
   },
