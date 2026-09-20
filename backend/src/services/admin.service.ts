@@ -13,6 +13,7 @@ import { notifyUser } from '@/services/notification.service'
 import { disconnectUser } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
 import { AppError, NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import logger from '@/utils/logger.util'
 import type { Role } from '@/types'
 
 const DUPLICATE_KEY = 11000
@@ -181,6 +182,14 @@ export async function completeDeletionRequest(
     { $pull: { members: { user_id: user._id } } },
   )
 
+  // Tổng qua MỌI lần chạy (kể cả lần lỗi giữa chừng trước đó), đọc từ audit từng farm — tính TRƯỚC bước
+  // ẩn danh không thể đảo ngược để một lỗi đọc DB ở đây vẫn cho phép chạy lại. Đây là số liệu theo audit
+  // (ghi audit là best-effort, xem logAction), không phải nguồn sự thật về dữ liệu farm.
+  const [farmsTransferred, farmsDeleted] = await Promise.all([
+    AuditLog.countDocuments({ action: 'FARM_OWNERSHIP_TRANSFERRED', 'metadata.fromUserId': userId }),
+    AuditLog.countDocuments({ action: 'FARM_SOFT_DELETED', 'metadata.ownerId': userId }),
+  ])
+
   const contactEmail = user.email // giữ lại để gửi thông báo cuối sau khi ẩn danh
 
   user.email = `deleted-${String(user._id)}@swiftletcare.local`
@@ -202,11 +211,6 @@ export async function completeDeletionRequest(
     body: 'Yêu cầu xoá tài khoản và dữ liệu cá nhân của bạn trên SwiftletCare đã hoàn tất.',
   }, { email: contactEmail, emailOnly: true })
 
-  // Tổng qua MỌI lần chạy (kể cả lần lỗi giữa chừng trước đó) — đọc từ audit từng farm thay vì đếm riêng lần này
-  const [farmsTransferred, farmsDeleted] = await Promise.all([
-    AuditLog.countDocuments({ action: 'FARM_OWNERSHIP_TRANSFERRED', 'metadata.fromUserId': userId }),
-    AuditLog.countDocuments({ action: 'FARM_SOFT_DELETED', 'metadata.ownerId': userId }),
-  ])
   await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, {
     farmsTransferred, farmsDeleted, forced: opts.force === true,
   })
@@ -379,6 +383,16 @@ async function findOrCreateSalesStaff(adminId: string, email: string): Promise<I
   }
 }
 
+/** Đề xuất đã "duyệt" nhưng chưa có tác dụng gì mà im lặng quá lâu = tiến trình xử lý đã chết giữa chừng */
+const STUCK_APPROVAL_MS = 60_000
+
+async function approvalEffectsApplied(request: ISalesAssignmentRequest): Promise<boolean> {
+  if (request.type === 'REMOVE') {
+    return !(await SalesAssignment.exists({ farm_id: request.farm_id, sales_staff_id: request.sales_staff_id }))
+  }
+  return Boolean(await SalesAssignment.exists({ requested_via: request._id }))
+}
+
 export async function decideSalesStaffRequest(
   adminId: string, requestId: string, decision: 'APPROVED' | 'REJECTED', reason?: string,
 ): Promise<ISalesAssignmentRequest> {
@@ -387,27 +401,49 @@ export async function decideSalesStaffRequest(
     throw BadRequestError('Phải nhập lý do khi từ chối đề xuất')
   }
 
-  // Nhận quyền xử lý NGUYÊN TỬ trước khi tạo/xoá bất cứ thứ gì: hai Admin bấm gần như đồng thời
-  // (kể cả một duyệt, một từ chối) thì chỉ người thắng được chạm vào tài khoản/phân công; người thua
-  // nhận 409 mà không để lại tác dụng phụ nào.
-  const request = await SalesAssignmentRequest.findOneAndUpdate(
-    { _id: requestId, status: 'PENDING' },
-    {
-      status: decision,
-      reviewed_by: adminId,
-      reviewed_at: new Date(),
-      ...(trimmedReason ? { review_note: trimmedReason } : {}),
-    },
-    { new: true },
-  )
-  if (!request) {
-    const existing = await SalesAssignmentRequest.findById(requestId).select('status').lean()
-    if (!existing) throw NotFoundError('Không tìm thấy đề xuất')
-    throw ConflictError(`Đề xuất này đã được xử lý (${existing.status})`)
+  const existing = await SalesAssignmentRequest.findById(requestId)
+  if (!existing) throw NotFoundError('Không tìm thấy đề xuất')
+  const isRemoval = existing.type === 'REMOVE'
+
+  // Đề xuất đã "duyệt" mà tiến trình xử lý chết trước khi tạo được gì (không còn ai sửa được) thì duyệt lại
+  // sau STUCK_APPROVAL_MS sẽ làm nốt phần còn thiếu. Trong khoảng đó người thứ hai vẫn nhận 409 — tức đang xử lý.
+  let resumed = false
+  if (existing.status !== 'PENDING') {
+    const staleApproval = decision === 'APPROVED' && existing.status === 'APPROVED'
+      && existing.reviewed_at !== undefined && Date.now() - existing.reviewed_at.getTime() > STUCK_APPROVAL_MS
+    resumed = staleApproval && !(await approvalEffectsApplied(existing))
+    if (!resumed) throw ConflictError(`Đề xuất này đã được xử lý (${existing.status})`)
   }
 
-  const isRemoval = request.type === 'REMOVE'
-  const farm = await Farm.findById(request.farm_id).select('name').lean() // hook tự loại farm đã xoá mềm
+  // Mọi điều kiện biết trước được phải kiểm tra TRƯỚC khi nhận quyền xử lý: lỗi ở đây để đề xuất còn PENDING
+  const farm = await Farm.findById(existing.farm_id).select('name').lean() // hook tự loại farm đã xoá mềm
+  if (decision === 'APPROVED' && !isRemoval) {
+    if (!farm) throw ConflictError('Farm của đề xuất này không còn tồn tại')
+    const account = await User.findOne({ email: existing.sales_staff_email })
+    if (account) assertSalesStaff(account)
+  }
+
+  // Nhận quyền xử lý NGUYÊN TỬ trước khi tạo/xoá bất cứ thứ gì: hai Admin bấm gần như đồng thời (kể cả một
+  // duyệt, một từ chối) thì chỉ người thắng được chạm vào tài khoản/phân công; người thua nhận 409 mà không
+  // để lại tác dụng phụ nào.
+  let request: ISalesAssignmentRequest = existing
+  if (!resumed) {
+    const claimed = await SalesAssignmentRequest.findOneAndUpdate(
+      { _id: requestId, status: 'PENDING' },
+      {
+        status: decision,
+        reviewed_by: adminId,
+        reviewed_at: new Date(),
+        ...(trimmedReason ? { review_note: trimmedReason } : {}),
+      },
+      { new: true },
+    )
+    if (!claimed) {
+      const current = await SalesAssignmentRequest.findById(requestId).select('status').lean()
+      throw ConflictError(`Đề xuất này đã được xử lý (${current?.status ?? 'không rõ'})`)
+    }
+    request = claimed
+  }
 
   try {
     if (decision === 'APPROVED') {
@@ -415,7 +451,6 @@ export async function decideSalesStaffRequest(
         // Đã gỡ từ trước (VD Admin gỡ thẳng) thì coi như xong — không báo lỗi, thao tác idempotent
         await removeAssignment(adminId, request.farm_id, request.sales_staff_id, { requestedVia: requestId })
       } else {
-        if (!farm) throw ConflictError('Farm của đề xuất này không còn tồn tại')
         const salesStaff = await findOrCreateSalesStaff(adminId, request.sales_staff_email)
         await SalesAssignment.findOneAndUpdate(
           { farm_id: request.farm_id, sales_staff_id: salesStaff._id },
@@ -425,16 +460,19 @@ export async function decideSalesStaffRequest(
       }
     }
   } catch (err) {
-    // Trả về PENDING để Admin xử lý lại (hoặc từ chối) thay vì kẹt ở "đã duyệt" mà chưa có gì được tạo
-    await SalesAssignmentRequest.updateOne(
-      { _id: requestId, status: decision, reviewed_by: adminId },
-      { $set: { status: 'PENDING' }, $unset: { reviewed_by: 1, reviewed_at: 1, review_note: 1 } },
-    )
+    // Trả về PENDING để Admin xử lý lại (hoặc từ chối) thay vì kẹt ở "đã duyệt" mà chưa có gì được tạo. Lỗi hoàn
+    // tác chỉ được ghi log: nếu ném ra sẽ che mất lỗi gốc; đề xuất kẹt lại sẽ được duyệt lại sau STUCK_APPROVAL_MS.
+    if (!resumed) {
+      await SalesAssignmentRequest.updateOne(
+        { _id: requestId, status: decision, reviewed_by: adminId },
+        { $set: { status: 'PENDING' }, $unset: { reviewed_by: 1, reviewed_at: 1, review_note: 1 } },
+      ).catch(rollbackErr => logger.error('Không hoàn tác được trạng thái đề xuất sau khi xử lý lỗi', { rollbackErr, requestId }))
+    }
     throw err
   }
 
   await logAction(adminId, `SALES_STAFF_REQUEST_${decision}`, 'sales_assignment_request', requestId, {
-    type: isRemoval ? 'REMOVE' : 'ADD',
+    type: isRemoval ? 'REMOVE' : 'ADD', resumed,
     farm_id: String(request.farm_id), email: request.sales_staff_email, reason: request.review_note,
   })
 

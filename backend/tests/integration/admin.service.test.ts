@@ -251,6 +251,21 @@ describe('completeDeletionRequest', () => {
     expect(finalNotices()).toHaveLength(1)
   })
 
+  it('stays re-runnable when reading the audit totals fails, because that happens before the anonymization', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    jest.spyOn(AuditLog, 'countDocuments').mockRejectedValueOnce(new Error('DB blip') as never)
+
+    await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).rejects.toThrow('DB blip')
+
+    const untouched = (await User.findById(leaver._id))!
+    expect(untouched.email).toBe('leaver@test.vn')
+    expect(untouched.deletion_requested_at).toBeInstanceOf(Date)
+
+    await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).resolves.toBeDefined()
+    expect(await auditActions('ACCOUNT_DELETED')).toHaveLength(1)
+  })
+
   describe('open tickets (Flow 19 bước 7c)', () => {
     it('answers 409 HAS_OPEN_TICKETS with the count and changes nothing', async () => {
       const admin = await mkUser('admin@test.vn', 'ADMIN')
@@ -466,6 +481,12 @@ describe('decideSalesStaffRequest', () => {
 
     await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
     expect(await User.countDocuments({ email: 'newsales@test.vn' })).toBe(0)
+
+    // điều kiện biết trước được kiểm tra TRƯỚC khi nhận quyền xử lý: đề xuất còn nguyên PENDING, chưa ai đứng tên
+    const untouched = (await SalesAssignmentRequest.findById(request._id).lean())!
+    expect(untouched.status).toBe('PENDING')
+    expect(untouched.reviewed_by).toBeUndefined()
+    expect(untouched.reviewed_at).toBeUndefined()
   })
 
   it('rejecting requires a reason and tells the farm owner why', async () => {
@@ -542,6 +563,95 @@ describe('decideSalesStaffRequest', () => {
       const stillAssigned = await SalesAssignment.countDocuments({ farm_id: farm._id, sales_staff_id: sales._id })
       expect(stillAssigned).toBe(finalStatus === 'APPROVED' ? 0 : 1)
     }
+  })
+
+  describe('when applying the approval fails after the request was claimed', () => {
+    it('puts the request back to PENDING with the decision fields cleared, and a retry succeeds', async () => {
+      const { admin, request } = await seed()
+      ;(forgotPassword as jest.Mock).mockRejectedValueOnce(new Error('SMTP down'))
+
+      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toThrow('SMTP down')
+
+      const restored = (await SalesAssignmentRequest.findById(request._id).lean())!
+      expect(restored.status).toBe('PENDING')
+      expect(restored.reviewed_by).toBeUndefined()
+      expect(restored.reviewed_at).toBeUndefined()
+      expect(restored.review_note).toBeUndefined()
+
+      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).resolves.toMatchObject({ status: 'APPROVED' })
+      expect(await User.countDocuments({ email: 'newsales@test.vn' })).toBe(1) // tài khoản tạo ở lần lỗi được dùng lại
+      expect(await SalesAssignment.countDocuments({ requested_via: request._id })).toBe(1)
+    })
+
+    it('reports the original error even when the rollback write also fails, and the stuck request heals on a later approval', async () => {
+      const { admin, request } = await seed()
+      ;(forgotPassword as jest.Mock).mockRejectedValueOnce(new Error('SMTP down'))
+      jest.spyOn(SalesAssignmentRequest, 'updateOne').mockRejectedValueOnce(new Error('rollback failed') as never)
+
+      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toThrow('SMTP down')
+      expect((await SalesAssignmentRequest.findById(request._id))!.status).toBe('APPROVED') // kẹt: claim đã ghi, hoàn tác lỗi
+
+      // ngay lập tức: vẫn coi là đang xử lý
+      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
+
+      // sau STUCK_APPROVAL_MS không có tác dụng nào thì duyệt lại sẽ làm nốt
+      await SalesAssignmentRequest.collection.updateOne({ _id: request._id }, { $set: { reviewed_at: new Date(Date.now() - 120_000) } })
+      const other = await mkUser('admin2@test.vn', 'ADMIN')
+      await expect(decideSalesStaffRequest(String(other._id), String(request._id), 'APPROVED')).resolves.toMatchObject({ status: 'APPROVED' })
+
+      expect(await SalesAssignment.countDocuments({ requested_via: request._id })).toBe(1)
+      const [audit] = await auditActions('SALES_STAFF_REQUEST_APPROVED')
+      expect(audit.metadata).toMatchObject({ resumed: true })
+    })
+  })
+
+  describe('resuming an approval whose worker died', () => {
+    const backdate = (id: unknown, ms: number) =>
+      SalesAssignmentRequest.collection.updateOne({ _id: id as never }, { $set: { reviewed_at: new Date(Date.now() - ms) } })
+
+    it('does not touch a fresh approval that has no effect yet: it is still being processed (409)', async () => {
+      const { admin, request } = await seed()
+      await SalesAssignmentRequest.collection.updateOne(
+        { _id: request._id }, { $set: { status: 'APPROVED', reviewed_by: admin._id, reviewed_at: new Date() } })
+
+      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
+      expect(await SalesAssignment.countDocuments()).toBe(0)
+    })
+
+    it('never re-applies an approval that already took effect', async () => {
+      const { admin, request } = await seed()
+      await decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')
+      await backdate(request._id, 120_000)
+      ;(notifyUser as jest.Mock).mockClear()
+
+      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
+      expect(notifyUser).not.toHaveBeenCalled()
+      expect(await auditActions('SALES_STAFF_REQUEST_APPROVED')).toHaveLength(1)
+    })
+
+    it('never resumes a rejection or lets a different decision override an approval', async () => {
+      const { admin, request } = await seed()
+      await SalesAssignmentRequest.collection.updateOne(
+        { _id: request._id }, { $set: { status: 'APPROVED', reviewed_by: admin._id, reviewed_at: new Date(Date.now() - 120_000) } })
+
+      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'REJECTED', 'no')).rejects.toMatchObject({ statusCode: 409 })
+      expect((await SalesAssignmentRequest.findById(request._id))!.status).toBe('APPROVED')
+    })
+
+    it('resumes a stuck removal approval by deleting the assignment that is still there', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const owner = await mkUser('owner@test.vn')
+      const sales = await mkUser('sales@test.vn', 'SALES_STAFF')
+      const farm = await mkFarm(owner)
+      await SalesAssignment.create({ farm_id: farm._id, sales_staff_id: sales._id, invited_by: admin._id })
+      const req = await SalesAssignmentRequest.create({
+        farm_id: farm._id, type: 'REMOVE', requested_by: owner._id, sales_staff_id: sales._id, sales_staff_email: 'sales@test.vn',
+        status: 'APPROVED', reviewed_by: admin._id, reviewed_at: new Date(Date.now() - 120_000),
+      })
+
+      await expect(decideSalesStaffRequest(String(admin._id), String(req._id), 'APPROVED')).resolves.toMatchObject({ status: 'APPROVED' })
+      expect(await SalesAssignment.countDocuments({ farm_id: farm._id, sales_staff_id: sales._id })).toBe(0)
+    })
   })
 
   it('lets exactly one of two concurrent approvals win', async () => {
