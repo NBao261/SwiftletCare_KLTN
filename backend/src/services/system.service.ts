@@ -52,8 +52,12 @@ export async function listAuditLogs(query: ListAuditLogsQuery) {
  * Chưa từng cấu hình thì trả giá trị gốc, không ghi DB lúc đọc — document chỉ
  * được tạo khi Admin thực sự lưu lần đầu (updateDefaultThresholds).
  */
+/** Lọc theo khoá singleton để upsert bám vào unique index — xem systemSetting.model.ts */
+const SINGLETON = { _singleton: true }
+const DUPLICATE_KEY = 11000
+
 export async function getDefaultThresholds(): Promise<Thresholds> {
-  const setting = await SystemSetting.findOne().lean()
+  const setting = await SystemSetting.findOne(SINGLETON).lean()
   return setting?.default_thresholds ?? { ...DEFAULT_THRESHOLDS }
 }
 
@@ -64,11 +68,20 @@ export async function updateDefaultThresholds(
   const after: Thresholds = { ...before, ...pickThresholds(input) }
   assertValidThresholds(after)
 
-  await SystemSetting.findOneAndUpdate(
-    {},
+  const write = () => SystemSetting.findOneAndUpdate(
+    SINGLETON,
     { default_thresholds: after, updated_by: adminId },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   )
+
+  try {
+    await write()
+  } catch (err) {
+    // Hai request cùng insert lần đầu: 1 thắng, request còn lại nhận E11000.
+    // Chạy lại thì document đã tồn tại nên rơi vào nhánh update bình thường.
+    if ((err as { code?: number }).code !== DUPLICATE_KEY) throw err
+    await write()
+  }
 
   await logAction(adminId, 'DEFAULT_THRESHOLDS_UPDATED', 'system_settings', undefined, { before, after })
   return after
