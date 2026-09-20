@@ -3835,7 +3835,7 @@ components:
         _id: { type: string }
         farm_id: { type: string }
         invited_email: { type: string, format: email }
-        invited_role: { type: string, enum: [FARM_OWNER, SALES_STAFF] }
+        invited_role: { type: string, enum: [FARM_OWNER, SALES_STAFF], description: "Chỉ FARM_OWNER còn được tạo mới. SALES_STAFF là dữ liệu cũ (trước v1.16.0): accept trả 409, đăng ký không tiêu thụ, không còn luồng nào tự gán quyền — Sales Staff nay đi qua /farms/{id}/sales-staff + Admin duyệt" }
         invited_by: { type: string }
         token: { type: string }
         status: { type: string, enum: [PENDING, ACCEPTED, DECLINED, EXPIRED] }
