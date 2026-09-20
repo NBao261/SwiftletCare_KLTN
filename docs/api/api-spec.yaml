@@ -705,9 +705,13 @@ paths:
           Sales Staff), coi như xong nếu đã gỡ từ trước; `REJECTED` giữ nguyên
           phân công và cũng bắt buộc `reason`.
 
-        Chốt trạng thái nguyên tử: hai Admin xử lý đồng thời cùng một đề xuất thì
-        chỉ 1 người thành công, người còn lại nhận 409. Farm Owner nhận thông
-        báo kết quả (kèm lý do nếu bị từ chối).
+        Nhận quyền xử lý nguyên tử TRƯỚC khi tạo/xoá bất cứ thứ gì: hai Admin xử
+        lý đồng thời cùng một đề xuất (dù cùng hay khác quyết định) thì chỉ 1
+        người thành công và chạm vào tài khoản/phân công, người còn lại nhận 409
+        mà không để lại tác dụng phụ. Nếu bước thực thi lỗi (VD email thuộc tài
+        khoản không phải Sales Staff, farm đã bị xoá) thì đề xuất được trả về
+        `PENDING` để xử lý lại hoặc từ chối. Farm Owner nhận thông báo kết quả
+        (kèm lý do nếu bị từ chối).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -749,11 +753,14 @@ paths:
       tags: [System]
       summary: "Xem/lọc Audit Log toàn hệ thống (SYSTEM-FR-001) — chỉ ADMIN"
       description: |
-        Các action đang được ghi: LOGIN, LOGIN_FAILED, ACCOUNT_LOCKED,
-        ACCOUNT_UNLOCKED, ACCOUNT_DELETED, USER_CREATED, THRESHOLD_UPDATED,
-        DEFAULT_THRESHOLDS_UPDATED, RELAY_OVERRIDE, DEVICE_REASSIGNED,
-        TICKET_ADMIN_OVERRIDE, SALES_STAFF_REQUEST_APPROVED/REJECTED,
-        TECHNICIAN_REGIONS_UPDATED, SALES_STAFF_UNASSIGNED.
+        Các action đang được ghi: LOGIN, LOGIN_FAILED, PASSWORD_RESET,
+        ACCOUNT_LOCKED, ACCOUNT_UNLOCKED, DELETION_REQUESTED, ACCOUNT_DELETED,
+        FARM_OWNERSHIP_TRANSFERRED, FARM_SOFT_DELETED, USER_CREATED,
+        TECHNICIAN_REGIONS_UPDATED, THRESHOLD_UPDATED, DEFAULT_THRESHOLDS_UPDATED,
+        RELAY_OVERRIDE, DEVICE_REGISTERED, DEVICE_REASSIGNED, TICKET_ADMIN_OVERRIDE,
+        SALES_STAFF_REQUEST_APPROVED/REJECTED, SALES_STAFF_UNASSIGNED.
+        Mỗi bản ghi có `ip_address` của request gây ra hành động (rỗng nếu do hệ
+        thống tự thực hiện).
       parameters:
         - { name: actorId, in: query, schema: { type: string } }
         - { name: action, in: query, schema: { type: string, example: LOGIN_FAILED } }
@@ -1914,7 +1921,7 @@ paths:
         - { $ref: "#/components/parameters/From" }
         - { $ref: "#/components/parameters/To" }
         - { $ref: "#/components/parameters/Page" }
-        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/TelemetryLimit" }
       responses:
         "200":
           {
@@ -3596,7 +3603,15 @@ components:
       {
         name: limit,
         in: query,
-        schema: { type: integer, default: 100, maximum: 1000 },
+        description: "Số bản ghi mỗi trang — mặc định 20, tối đa 100 (giá trị lớn hơn được kẹp về 100; giá trị không hợp lệ dùng mặc định)",
+        schema: { type: integer, minimum: 1, default: 20, maximum: 100 },
+      }
+    TelemetryLimit:
+      {
+        name: limit,
+        in: query,
+        description: "Riêng lịch sử telemetry — mặc định 100, tối đa 1000",
+        schema: { type: integer, minimum: 1, default: 100, maximum: 1000 },
       }
 
   responses:
