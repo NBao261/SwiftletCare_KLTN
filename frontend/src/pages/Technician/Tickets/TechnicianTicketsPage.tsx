@@ -1,5 +1,5 @@
 // TechnicianTicketsPage — SCR-TC02 / F-TC-02 / Stitch A1 + C2
-// Landing page: tab pills, stat bar, toolbar (search + sort + filter) + table list
+// Landing page: tab pills, stat bar, toolbar (search + sort + filter) + table list + pagination
 // Logic nặng được tách sang ./components/
 import { useState, useMemo } from 'react'
 import { useTicketsList } from '@/hooks/useTickets'
@@ -17,10 +17,12 @@ import { useNavigate } from 'react-router-dom'
 import { formatDate } from '@/utils/helpers'
 import type { Ticket, TicketStatus, TicketType } from '@/types'
 
-// ── Tab config ────────────────────────────────────────────────────────────────
-type TechTab = 'mine' | 'in_progress' | 'overdue'
-type SortKey = 'created_at' | 'priority' | 'sla' | 'status'
-type SortDir = 'asc' | 'desc'
+// ── Config ────────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 12   // số ticket mỗi trang
+
+type TechTab  = 'mine' | 'in_progress' | 'overdue'
+type SortKey  = 'created_at' | 'priority' | 'sla' | 'status'
+type SortDir  = 'asc' | 'desc'
 type ViewMode = 'table' | 'card'
 
 const TABS: { id: TechTab; label: string; icon: string }[] = [
@@ -66,6 +68,86 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   )
 }
 
+// ── Pagination Bar ─────────────────────────────────────────────────────────────
+interface PaginationProps {
+  page: number
+  totalPages: number
+  totalItems: number
+  pageSize: number
+  onPage: (p: number) => void
+}
+
+function PaginationBar({ page, totalPages, totalItems, pageSize, onPage }: PaginationProps) {
+  if (totalPages <= 1) return null
+
+  const from = (page - 1) * pageSize + 1
+  const to   = Math.min(page * pageSize, totalItems)
+
+  // Tạo mảng trang hiển thị: luôn giữ first/last + 2 trang xung quanh current
+  function getPages(): (number | '…')[] {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const pages: (number | '…')[] = [1]
+    if (page > 3) pages.push('…')
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i)
+    if (page < totalPages - 2) pages.push('…')
+    pages.push(totalPages)
+    return pages
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-graphite/10 bg-graphite/[0.02] px-5 py-3">
+      {/* Info */}
+      <p className="text-xs text-warmGray">
+        Hiển thị <span className="font-semibold text-charcoal">{from}–{to}</span> / <span className="font-semibold text-charcoal">{totalItems}</span> ticket
+      </p>
+
+      {/* Page buttons */}
+      <div className="flex items-center gap-1">
+        {/* Prev */}
+        <button
+          onClick={() => onPage(page - 1)}
+          disabled={page === 1}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-graphite/20 text-sm text-charcoal transition-colors hover:bg-graphite/10 disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Trang trước"
+        >
+          ‹
+        </button>
+
+        {getPages().map((p, i) =>
+          p === '…' ? (
+            <span key={`ellipsis-${i}`} className="flex h-8 w-8 items-center justify-center text-xs text-warmGray">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPage(p as number)}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                p === page
+                  ? 'bg-charcoal text-white shadow-sm'
+                  : 'border border-graphite/20 text-charcoal hover:bg-graphite/10'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        {/* Next */}
+        <button
+          onClick={() => onPage(page + 1)}
+          disabled={page === totalPages}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-graphite/20 text-sm text-charcoal transition-colors hover:bg-graphite/10 disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Trang tiếp"
+        >
+          ›
+        </button>
+      </div>
+
+      {/* Page size info */}
+      <p className="text-xs text-warmGray">{PAGE_SIZE} / trang</p>
+    </div>
+  )
+}
+
 // ── Table Row ─────────────────────────────────────────────────────────────────
 function TicketTableRow({
   ticket, index, onUpdateStatus, onReassign,
@@ -94,39 +176,26 @@ function TicketTableRow({
       onClick={() => navigate(`/tickets/${ticket._id}`)}
       role="row"
     >
-      {/* Priority */}
       <td className="whitespace-nowrap py-3 pl-5 pr-3">
         <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
       </td>
-
-      {/* Loại */}
       <td className="max-w-[180px] truncate py-3 pr-3 text-sm font-medium text-charcoal">
         {TICKET_TYPE_LABEL[ticket.type as TicketType]}
       </td>
-
-      {/* Trạng thái */}
       <td className="whitespace-nowrap py-3 pr-3">
         <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
       </td>
-
-      {/* SLA */}
       <td className={`whitespace-nowrap py-3 pr-3 text-sm ${slaColor}`}>
         {sla.text}
       </td>
-
-      {/* Ngày tạo */}
       <td className="whitespace-nowrap py-3 pr-3 text-sm text-warmGray">
         {formatDate(ticket.created_at)}
       </td>
-
-      {/* Ghi chú ngắn */}
       <td className="max-w-[200px] py-3 pr-3">
         {ticket.notes[0] && (
           <p className="truncate text-sm text-warmGray">{ticket.notes[0].content}</p>
         )}
       </td>
-
-      {/* Actions — hiện khi hover */}
       <td className="whitespace-nowrap py-3 pr-5" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
           {ticket.status === 'NEW' && (
@@ -163,11 +232,12 @@ export default function TechnicianTicketsPage() {
   const [sortDir,      setSortDir]      = useState<SortDir>('asc')
   const [search,       setSearch]       = useState('')
   const [filterStatus, setFilterStatus] = useState<TicketStatus | ''>('')
+  const [page,         setPage]         = useState(1)   // pagination state
   const [statusModal,  setStatusModal]  = useState<Ticket | null>(null)
   const [reassignModal, setReassignModal] = useState<Ticket | null>(null)
 
-  // Tabbed query
-  const { records, total, isLoading } = useTicketsList({ ...TAB_QUERY[activeTab], limit: 50 })
+  // Tabbed query — limit 100 để đủ data cho client-side filter + paginate
+  const { records, total, isLoading } = useTicketsList({ ...TAB_QUERY[activeTab], limit: 100 })
 
   // Stats query
   const { records: statRecords } = useTicketsList(
@@ -179,11 +249,9 @@ export default function TechnicianTicketsPage() {
     [activeTab, records, statRecords],
   )
 
-  // Pipeline: overdue filter → search → status filter → sort
-  const displayRecords = useMemo(() => {
+  // Pipeline: overdue → search → status filter → sort
+  const filteredRecords = useMemo(() => {
     let list = activeTab === 'overdue' ? records.filter(isSlaBreached) : records
-
-    // Search: khớp loại hoặc ghi chú
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(t =>
@@ -192,21 +260,30 @@ export default function TechnicianTicketsPage() {
         STATUS_LABEL[t.status]?.toLowerCase().includes(q),
       )
     }
-
-    // Filter by status
-    if (filterStatus) {
-      list = list.filter(t => t.status === filterStatus)
-    }
-
+    if (filterStatus) list = list.filter(t => t.status === filterStatus)
     return sortTickets(list, sortKey, sortDir)
   }, [records, activeTab, search, filterStatus, sortKey, sortDir])
 
-  // Toggle sort
+  // Paginate client-side
+  const totalPages     = Math.max(1, Math.ceil(filteredRecords.length / PAGE_SIZE))
+  const safePage       = Math.min(page, totalPages)
+  const displayRecords = filteredRecords.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  // Helper: reset về trang 1 khi filter/sort/tab thay đổi
+  function resetPage() { setPage(1) }
+
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortKey(key); setSortDir('asc') }
+    resetPage()
   }
 
+  function handleTabChange(tab: TechTab) {
+    setActiveTab(tab)
+    setSearch('')
+    setFilterStatus('')
+    resetPage()
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -229,7 +306,7 @@ export default function TechnicianTicketsPage() {
         {TABS.map(tab => (
           <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id); setSearch(''); setFilterStatus('') }}
+            onClick={() => handleTabChange(tab.id)}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'bg-charcoal text-white'
@@ -241,7 +318,7 @@ export default function TechnicianTicketsPage() {
         ))}
       </div>
 
-      {/* Toolbar: Search + Filter + Sort + View toggle */}
+      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Search */}
         <div className="relative flex-1 min-w-[200px]">
@@ -249,13 +326,13 @@ export default function TechnicianTicketsPage() {
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); resetPage() }}
             placeholder="Tìm theo loại, ghi chú..."
             className="w-full rounded-xl border border-graphite/20 bg-white py-2.5 pl-9 pr-4 text-sm text-charcoal placeholder:text-warmGray/50 focus:border-charcoal focus:outline-none"
           />
           {search && (
             <button
-              onClick={() => setSearch('')}
+              onClick={() => { setSearch(''); resetPage() }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-warmGray/60 hover:text-charcoal"
             >✕</button>
           )}
@@ -264,7 +341,7 @@ export default function TechnicianTicketsPage() {
         {/* Status filter */}
         <select
           value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value as TicketStatus | '')}
+          onChange={e => { setFilterStatus(e.target.value as TicketStatus | ''); resetPage() }}
           className="rounded-xl border border-graphite/20 bg-white px-3.5 py-2.5 text-sm text-charcoal focus:border-charcoal focus:outline-none"
         >
           <option value="">Tất cả trạng thái</option>
@@ -274,7 +351,7 @@ export default function TechnicianTicketsPage() {
           <option value="CLOSED">Đã đóng</option>
         </select>
 
-        {/* Sort quick buttons (chỉ ở card view) */}
+        {/* Sort buttons — card view only */}
         {viewMode === 'card' && (
           <div className="flex items-center gap-2 rounded-xl border border-graphite/20 bg-white px-3 py-2">
             <span className="text-xs font-semibold text-warmGray">Sắp xếp:</span>
@@ -301,33 +378,30 @@ export default function TechnicianTicketsPage() {
             className={`px-3 py-2.5 text-sm transition-colors ${
               viewMode === 'table' ? 'bg-charcoal text-white' : 'bg-white text-warmGray hover:bg-graphite/10'
             }`}
-          >
-            ☰
-          </button>
+          >☰</button>
           <button
             onClick={() => setViewMode('card')}
             title="Dạng thẻ"
             className={`px-3 py-2.5 text-sm transition-colors ${
               viewMode === 'card' ? 'bg-charcoal text-white' : 'bg-white text-warmGray hover:bg-graphite/10'
             }`}
-          >
-            ⊞
-          </button>
+          >⊞</button>
         </div>
 
         {/* Result count */}
         {!isLoading && (
           <span className="text-sm text-warmGray">
-            {displayRecords.length} kết quả
+            {filteredRecords.length} kết quả
+            {(search || filterStatus) && <span className="ml-1 text-xs text-warmGray/70">(đã lọc)</span>}
           </span>
         )}
       </div>
 
       {/* Loading */}
-      {isLoading && <LoadingSkeleton count={4} className="h-14 w-full" />}
+      {isLoading && <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />}
 
-      {/* Empty state */}
-      {!isLoading && displayRecords.length === 0 && (
+      {/* Empty */}
+      {!isLoading && filteredRecords.length === 0 && (
         <EmptyState
           icon={<IconTicket width={28} height={28} />}
           title={search || filterStatus ? 'Không tìm thấy ticket nào' : 'Không có ticket nào'}
@@ -340,49 +414,42 @@ export default function TechnicianTicketsPage() {
       )}
 
       {/* ── TABLE VIEW ── */}
-      {!isLoading && viewMode === 'table' && displayRecords.length > 0 && (
+      {!isLoading && viewMode === 'table' && filteredRecords.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-graphite/15 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left" role="table">
               <thead>
                 <tr className="border-b border-graphite/10 bg-graphite/[0.03]">
-                  {/* Priority */}
                   <th
                     className="cursor-pointer whitespace-nowrap py-3 pl-5 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
                     onClick={() => handleSort('priority')}
                   >
                     Ưu tiên<SortIcon active={sortKey === 'priority'} dir={sortDir} />
                   </th>
-                  {/* Loại */}
                   <th className="whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                     Loại ticket
                   </th>
-                  {/* Trạng thái */}
                   <th
                     className="cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
                     onClick={() => handleSort('status')}
                   >
                     Trạng thái<SortIcon active={sortKey === 'status'} dir={sortDir} />
                   </th>
-                  {/* SLA */}
                   <th
                     className="cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
                     onClick={() => handleSort('sla')}
                   >
                     Thời hạn SLA<SortIcon active={sortKey === 'sla'} dir={sortDir} />
                   </th>
-                  {/* Ngày tạo */}
                   <th
                     className="cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
                     onClick={() => handleSort('created_at')}
                   >
                     Ngày tạo<SortIcon active={sortKey === 'created_at'} dir={sortDir} />
                   </th>
-                  {/* Ghi chú */}
                   <th className="py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                     Ghi chú gần nhất
                   </th>
-                  {/* Actions */}
                   <th className="py-3 pr-5 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                     Thao tác
                   </th>
@@ -402,18 +469,19 @@ export default function TechnicianTicketsPage() {
             </table>
           </div>
 
-          {/* Table footer */}
-          <div className="border-t border-graphite/10 bg-graphite/[0.02] px-5 py-2.5">
-            <p className="text-xs text-warmGray">
-              Hiển thị <span className="font-semibold text-charcoal">{displayRecords.length}</span> / {total} ticket
-              {(search || filterStatus) && ' (đã lọc)'}
-            </p>
-          </div>
+          {/* Pagination */}
+          <PaginationBar
+            page={safePage}
+            totalPages={totalPages}
+            totalItems={filteredRecords.length}
+            pageSize={PAGE_SIZE}
+            onPage={setPage}
+          />
         </div>
       )}
 
       {/* ── CARD VIEW ── */}
-      {!isLoading && viewMode === 'card' && displayRecords.length > 0 && (
+      {!isLoading && viewMode === 'card' && filteredRecords.length > 0 && (
         <div className="flex flex-col gap-3">
           {displayRecords.map(ticket => (
             <TicketCard
@@ -423,6 +491,19 @@ export default function TechnicianTicketsPage() {
               onReassign={setReassignModal}
             />
           ))}
+
+          {/* Pagination dưới card view */}
+          {totalPages > 1 && (
+            <div className="overflow-hidden rounded-2xl border border-graphite/15 bg-white shadow-sm">
+              <PaginationBar
+                page={safePage}
+                totalPages={totalPages}
+                totalItems={filteredRecords.length}
+                pageSize={PAGE_SIZE}
+                onPage={setPage}
+              />
+            </div>
+          )}
         </div>
       )}
 
