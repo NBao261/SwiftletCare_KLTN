@@ -30,8 +30,9 @@ router.get('/delete-requests',
   ...paginationQuery, validate,
   adminController.listDeletionRequests,
 )
+// force: bỏ qua cảnh báo ticket đang mở (Flow 19 bước 7c)
 router.put('/delete-requests/:id/complete',
-  param('id').isMongoId(), validate,
+  param('id').isMongoId(), body('force').optional().isBoolean().toBoolean(), validate,
   adminController.completeDeletionRequest,
 )
 

@@ -17,10 +17,11 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
 
 /** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
 export const setUserStatus = asyncHandler(async (req: Request, res: Response) => {
-  const user = await adminService.setUserStatus(
+  const { user, openTickets } = await adminService.setUserStatus(
     req.user._id, req.params.id, req.body.is_active as boolean, req.body.reason as string | undefined,
   )
-  res.json({ success: true, data: user })
+  // Khoá Technician còn ticket đang giao: báo số ticket để Admin gán lại
+  res.json({ success: true, data: user, ...(openTickets ? { meta: { openTickets } } : {}) })
 })
 
 /** GET /admin/delete-requests – AUTH-FR-012 */
@@ -34,7 +35,9 @@ export const listDeletionRequests = asyncHandler(async (req: Request, res: Respo
 
 /** PUT /admin/delete-requests/:id/complete – AUTH-FR-012, Flow 19 bước 7-8 */
 export const completeDeletionRequest = asyncHandler(async (req: Request, res: Response) => {
-  const user = await adminService.completeDeletionRequest(req.user._id, req.params.id)
+  const user = await adminService.completeDeletionRequest(req.user._id, req.params.id, {
+    force: req.body?.force === true,
+  })
   res.json({ success: true, data: user })
 })
 
