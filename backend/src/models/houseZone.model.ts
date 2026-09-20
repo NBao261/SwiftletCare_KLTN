@@ -1,4 +1,5 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
+import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import type { Thresholds } from '@/types'
 
 /**
@@ -45,13 +46,13 @@ const zoneSchema = new Schema<IZone>(
     name:     { type: String, required: true },
     floor:    { type: Number, default: 1 },
     thresholds: {
-      temp_min:     { type: Number, default: 26.0 },
-      temp_max:     { type: Number, default: 31.0 },
-      humidity_min: { type: Number, default: 75.0 },
-      humidity_max: { type: Number, default: 95.0 },
-      light_max:    { type: Number, default: 0.2 },
-      nh3_max:      { type: Number, default: 25 },
-      co2_max:      { type: Number, default: 1500 },
+      temp_min:     { type: Number, default: DEFAULT_THRESHOLDS.temp_min },
+      temp_max:     { type: Number, default: DEFAULT_THRESHOLDS.temp_max },
+      humidity_min: { type: Number, default: DEFAULT_THRESHOLDS.humidity_min },
+      humidity_max: { type: Number, default: DEFAULT_THRESHOLDS.humidity_max },
+      light_max:    { type: Number, default: DEFAULT_THRESHOLDS.light_max },
+      nh3_max:      { type: Number, default: DEFAULT_THRESHOLDS.nh3_max },
+      co2_max:      { type: Number, default: DEFAULT_THRESHOLDS.co2_max },
     },
     threshold_history: [{
       changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
