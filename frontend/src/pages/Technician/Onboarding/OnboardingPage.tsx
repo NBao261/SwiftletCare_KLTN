@@ -17,29 +17,34 @@ const STEP_LABELS = ['Vị trí', 'Thiết bị', 'Kết nối AP', 'WiFi farm',
 
 function WizardStepper({ current }: { current: number }) {
   return (
-    <div className="flex items-center">
+    <div className="relative flex w-full items-start justify-between py-2 sm:px-2">
+      {/* Background line */}
+      <div 
+        className="absolute top-6 h-0.5 -translate-y-1/2 rounded-full bg-graphite/15" 
+        style={{ left: '8.33%', right: '8.33%' }}
+      />
+      
+      {/* Active line */}
+      <div 
+        className="absolute top-6 h-0.5 -translate-y-1/2 rounded-full bg-charcoal transition-all duration-500 ease-in-out"
+        style={{ left: '8.33%', width: `${(current / (STEP_LABELS.length - 1)) * 83.33}%` }}
+      />
+
       {STEP_LABELS.map((label, i) => {
         const done   = i < current
         const active = i === current
         return (
-          <div key={label} className="flex flex-1 items-center">
-            <div className="flex flex-col items-center gap-1">
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-all ${
-                done   ? 'bg-charcoal text-white' :
-                active ? 'h-9 w-9 bg-limeMist text-charcoal ring-2 ring-charcoal' :
-                         'bg-graphite/15 text-warmGray'
-              }`}>
-                {done ? '✓' : i + 1}
-              </div>
-              <span className={`hidden text-center text-[10px] font-semibold sm:block ${
-                active ? 'text-charcoal' : 'text-warmGray'
-              }`}>
-                {label}
-              </span>
+          <div key={label} className="relative z-10 flex w-1/6 flex-col items-center gap-2">
+            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-all duration-300 ${
+              done   ? 'bg-charcoal text-white shadow-sm ring-4 ring-white' :
+              active ? 'bg-limeMist text-charcoal shadow-sm ring-4 ring-white' :
+                       'bg-white text-warmGray ring-2 ring-graphite/15 ring-offset-2 ring-offset-white'
+            }`}>
+              {done ? '✓' : i + 1}
             </div>
-            {i < STEP_LABELS.length - 1 && (
-              <div className={`mx-1 h-0.5 flex-1 ${i < current ? 'bg-charcoal' : 'bg-graphite/20'}`} />
-            )}
+            <span className={`text-center text-[10px] sm:text-[11px] font-semibold tracking-wide ${active ? 'text-charcoal' : 'text-warmGray'}`}>
+              {label}
+            </span>
           </div>
         )
       })}
