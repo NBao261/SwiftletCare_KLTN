@@ -332,7 +332,10 @@ export async function requestSalesStaff(farmId: string, user: CurrentUser, email
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được đề xuất Sales Staff')
 
   const normalizedEmail = email.toLowerCase().trim()
-  const pending = await SalesAssignmentRequest.findOne({ farm_id: farm._id, sales_staff_email: normalizedEmail, status: 'PENDING' })
+  // `$ne: 'REMOVE'` thay vì `'ADD'`: request tạo trước khi có field `type` không mang giá trị nào
+  const pending = await SalesAssignmentRequest.findOne({
+    farm_id: farm._id, type: { $ne: 'REMOVE' }, sales_staff_email: normalizedEmail, status: 'PENDING',
+  })
   if (pending) throw ConflictError('Đã có đề xuất đang chờ Admin duyệt cho email này')
 
   const existingUser = await User.findOne({ email: normalizedEmail }).select('role').lean()
@@ -347,6 +350,37 @@ export async function requestSalesStaff(farmId: string, user: CurrentUser, email
     farm_id: farm._id,
     requested_by: user._id,
     sales_staff_email: normalizedEmail,
+  })
+}
+
+/**
+ * Flow 16 bước 1e — Farm Owner muốn gỡ Sales Staff khỏi farm chỉ được YÊU CẦU
+ * (đối xứng với việc gán); Admin duyệt ở /admin/sales-staff-requests thì mới xoá
+ * SalesAssignment. Cùng bảng với đề xuất thêm nhưng `type: 'REMOVE'`.
+ */
+export async function requestSalesStaffRemoval(
+  farmId: string, user: CurrentUser, salesStaffId: string,
+): Promise<ISalesAssignmentRequest> {
+  const farm = await findFarmOrThrow(farmId)
+  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được yêu cầu gỡ Sales Staff')
+
+  const assignment = await SalesAssignment.exists({ farm_id: farm._id, sales_staff_id: salesStaffId })
+  if (!assignment) throw NotFoundError('Sales Staff này không được gán vào farm')
+
+  const salesStaff = await User.findById(salesStaffId).select('email').lean()
+  if (!salesStaff) throw NotFoundError('Không tìm thấy Sales Staff')
+
+  const pending = await SalesAssignmentRequest.findOne({
+    farm_id: farm._id, type: 'REMOVE', sales_staff_id: salesStaff._id, status: 'PENDING',
+  })
+  if (pending) throw ConflictError('Đã có yêu cầu gỡ Sales Staff này đang chờ Admin xử lý')
+
+  return SalesAssignmentRequest.create({
+    farm_id: farm._id,
+    type: 'REMOVE',
+    requested_by: user._id,
+    sales_staff_id: salesStaff._id,
+    sales_staff_email: salesStaff.email,
   })
 }
 

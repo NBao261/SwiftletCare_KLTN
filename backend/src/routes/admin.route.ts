@@ -62,7 +62,8 @@ router.delete('/farms/:farmId/sales-staff/:salesStaffId',
 
 /** Duyệt đề xuất Sales Staff của Farm Owner – AUTH-FR-005d, Flow 16 bước 1b */
 router.get('/sales-staff-requests',
-  query('status').optional().isIn(['PENDING', 'APPROVED', 'REJECTED']), ...paginationQuery, validate,
+  query('status').optional().isIn(['PENDING', 'APPROVED', 'REJECTED']),
+  query('type').optional().isIn(['ADD', 'REMOVE']), ...paginationQuery, validate,
   adminController.listSalesStaffRequests,
 )
 router.put('/sales-staff-requests/:id/decision',

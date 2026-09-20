@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import * as adminService from '@/services/admin.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
-import type { SalesAssignmentRequestStatus } from '@/models/salesAssignmentRequest.model'
+import type { SalesAssignmentRequestStatus, SalesAssignmentRequestType } from '@/models/salesAssignmentRequest.model'
 import type { Role } from '@/types'
 
 /** GET /admin/users – AUTH-FR-011 */
@@ -71,6 +71,7 @@ export const unassignSalesStaff = asyncHandler(async (req: Request, res: Respons
 export const listSalesStaffRequests = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit } = await adminService.listSalesStaffRequests({
     status: req.query.status as SalesAssignmentRequestStatus | undefined,
+    type:   req.query.type as SalesAssignmentRequestType | undefined,
     page:   req.query.page as string | undefined,
     limit:  req.query.limit as string | undefined,
   })

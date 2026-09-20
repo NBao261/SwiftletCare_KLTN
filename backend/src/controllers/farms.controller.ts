@@ -110,6 +110,12 @@ export const requestSalesStaff = asyncHandler(async (req: Request, res: Response
   res.status(201).json({ success: true, data: request })
 })
 
+/** POST /farms/:id/sales-staff/:salesStaffId/removal-requests – Flow 16 bước 1e (yêu cầu gỡ, chờ Admin duyệt) */
+export const requestSalesStaffRemoval = asyncHandler(async (req: Request, res: Response) => {
+  const request = await farmService.requestSalesStaffRemoval(req.params.id, req.user, req.params.salesStaffId)
+  res.status(201).json({ success: true, data: request })
+})
+
 /** GET /farms/:id/sales-staff-requests – Flow 16 bước 1b/1d */
 export const listSalesStaffRequests = asyncHandler(async (req: Request, res: Response) => {
   const requests = await farmService.listSalesStaffRequests(req.params.id, req.user)

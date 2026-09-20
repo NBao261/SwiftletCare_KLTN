@@ -4,7 +4,7 @@ import { Farm } from '@/models/farm.model'
 import { Ticket } from '@/models/ticket.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
 import {
-  SalesAssignmentRequest, ISalesAssignmentRequest, SalesAssignmentRequestStatus,
+  SalesAssignmentRequest, ISalesAssignmentRequest, SalesAssignmentRequestStatus, SalesAssignmentRequestType,
 } from '@/models/salesAssignmentRequest.model'
 import { logAction } from '@/services/auditLog.service'
 import { forgotPassword } from '@/services/auth.service'
@@ -288,34 +288,49 @@ export async function createSalesStaff(adminId: string, input: CreateSalesStaffI
   return user
 }
 
+/** Xoá bản ghi gán + audit; trả false nếu không có bản ghi nào để xoá */
+async function removeAssignment(
+  adminId: string, farmId: unknown, salesStaffId: unknown, extra: Record<string, unknown> = {},
+): Promise<boolean> {
+  const assignment = await SalesAssignment.findOneAndDelete({ farm_id: farmId, sales_staff_id: salesStaffId })
+  if (!assignment) return false
+
+  await logAction(adminId, 'SALES_STAFF_UNASSIGNED', 'sales_assignment', String(assignment._id), {
+    farm_id: String(farmId), sales_staff_id: String(salesStaffId), ...extra,
+  })
+  return true
+}
+
 /**
  * Flow 16 case 1e — Admin gỡ Sales Staff khỏi 1 Farm. Chỉ xoá bản ghi gán,
  * không đụng tài khoản Sales Staff (có thể còn gán ở Farm khác) hay
  * Order/Product đã tạo trước đó.
  */
 export async function unassignSalesStaff(adminId: string, farmId: string, salesStaffId: string): Promise<void> {
-  const assignment = await SalesAssignment.findOneAndDelete({ farm_id: farmId, sales_staff_id: salesStaffId })
-  if (!assignment) throw NotFoundError('Sales Staff này không được gán vào farm')
-
-  await logAction(adminId, 'SALES_STAFF_UNASSIGNED', 'sales_assignment', String(assignment._id), {
-    farm_id: farmId, sales_staff_id: salesStaffId,
-  })
+  if (!(await removeAssignment(adminId, farmId, salesStaffId))) {
+    throw NotFoundError('Sales Staff này không được gán vào farm')
+  }
 }
 
 // ── Duyệt đề xuất Sales Staff của Farm Owner — AUTH-FR-005d, Flow 16 bước 1b ───
 
 export interface ListSalesStaffRequestsQuery extends ListQuery {
   status?: SalesAssignmentRequestStatus
+  type?: SalesAssignmentRequestType
 }
 
 export async function listSalesStaffRequests(query: ListSalesStaffRequestsQuery) {
-  const filter = query.status ? { status: query.status } : {}
+  const filter: Record<string, unknown> = {}
+  if (query.status) filter.status = query.status
+  // ADD gồm cả request cũ chưa có field `type`
+  if (query.type) filter.type = query.type === 'REMOVE' ? 'REMOVE' : { $ne: 'REMOVE' }
   const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total] = await Promise.all([
     SalesAssignmentRequest.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit)
       .populate('farm_id', 'name region')
       .populate('requested_by', 'full_name email')
+      .populate('sales_staff_id', 'full_name email')
       .populate('reviewed_by', 'full_name email')
       .lean(),
     SalesAssignmentRequest.countDocuments(filter),
@@ -372,15 +387,21 @@ export async function decideSalesStaffRequest(
   if (request.status !== 'PENDING') throw ConflictError(`Đề xuất này đã được xử lý (${request.status})`)
 
   const farm = await Farm.findById(request.farm_id).select('name').lean() // hook tự loại farm đã xoá mềm
+  const isRemoval = request.type === 'REMOVE'
 
   if (decision === 'APPROVED') {
-    if (!farm) throw ConflictError('Farm của đề xuất này không còn tồn tại')
-    const salesStaff = await findOrCreateSalesStaff(adminId, request.sales_staff_email)
-    await SalesAssignment.findOneAndUpdate(
-      { farm_id: request.farm_id, sales_staff_id: salesStaff._id },
-      { $setOnInsert: { invited_by: request.requested_by, requested_via: request._id } },
-      { upsert: true },
-    )
+    if (isRemoval) {
+      // Đã gỡ từ trước (VD Admin gỡ thẳng) thì coi như xong — không báo lỗi, thao tác idempotent
+      await removeAssignment(adminId, request.farm_id, request.sales_staff_id, { requestedVia: requestId })
+    } else {
+      if (!farm) throw ConflictError('Farm của đề xuất này không còn tồn tại')
+      const salesStaff = await findOrCreateSalesStaff(adminId, request.sales_staff_email)
+      await SalesAssignment.findOneAndUpdate(
+        { farm_id: request.farm_id, sales_staff_id: salesStaff._id },
+        { $setOnInsert: { invited_by: request.requested_by, requested_via: request._id } },
+        { upsert: true },
+      )
+    }
   }
 
   // Chốt trạng thái nguyên tử: hai Admin bấm gần như đồng thời thì chỉ 1 người thắng. Các
@@ -398,19 +419,23 @@ export async function decideSalesStaffRequest(
   if (!finalized) throw ConflictError('Đề xuất này vừa được Admin khác xử lý')
 
   await logAction(adminId, `SALES_STAFF_REQUEST_${decision}`, 'sales_assignment_request', requestId, {
+    type: isRemoval ? 'REMOVE' : 'ADD',
     farm_id: String(finalized.farm_id), email: finalized.sales_staff_email, reason: finalized.review_note,
   })
 
-  // Flow 16 bước 1b/1d — Farm Owner nhận kết quả (kèm lý do nếu bị từ chối để đề xuất lại)
+  // Flow 16 bước 1b/1d/1e — Farm Owner nhận kết quả (kèm lý do nếu bị từ chối)
   const farmName = farm?.name ?? 'của bạn'
-  await notifyUser(String(finalized.requested_by), decision === 'APPROVED'
-    ? {
-      title: 'Đề xuất Sales Staff đã được duyệt',
-      body: `${finalized.sales_staff_email} đã được gán làm Sales Staff cho farm ${farmName}.`,
-    }
-    : {
-      title: 'Đề xuất Sales Staff bị từ chối',
-      body: `Đề xuất ${finalized.sales_staff_email} cho farm ${farmName} bị từ chối. Lý do: ${finalized.review_note}. Bạn có thể đề xuất lại với email khác.`,
-    })
+  const email = finalized.sales_staff_email
+  const message = isRemoval
+    ? decision === 'APPROVED'
+      ? { title: 'Yêu cầu gỡ Sales Staff đã được duyệt', body: `${email} đã được gỡ khỏi farm ${farmName}.` }
+      : { title: 'Yêu cầu gỡ Sales Staff bị từ chối', body: `Yêu cầu gỡ ${email} khỏi farm ${farmName} bị từ chối. Lý do: ${finalized.review_note}.` }
+    : decision === 'APPROVED'
+      ? { title: 'Đề xuất Sales Staff đã được duyệt', body: `${email} đã được gán làm Sales Staff cho farm ${farmName}.` }
+      : {
+        title: 'Đề xuất Sales Staff bị từ chối',
+        body: `Đề xuất ${email} cho farm ${farmName} bị từ chối. Lý do: ${finalized.review_note}. Bạn có thể đề xuất lại với email khác.`,
+      }
+  await notifyUser(String(finalized.requested_by), message)
   return finalized
 }
