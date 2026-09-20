@@ -5,12 +5,16 @@ import type { Ticket } from '@/types'
 import type { AdminOverrideInput, CreateTicketInput, ListTicketsQuery } from '@/services/api/tickets'
 
 /** Module TICKET §5.9 */
-export function useTicketsList(query: ListTicketsQuery) {
+export function useTicketsList(
+  query: ListTicketsQuery,
+  options?: { enabled?: boolean; staleTime?: number; refetchInterval?: number },
+) {
   return usePaginatedListQuery<Ticket>(
     ['tickets', query],
     () => ticketApi.list(query),
     query.page ?? 1,
     query.limit ?? 20,
+    options,
   )
 }
 

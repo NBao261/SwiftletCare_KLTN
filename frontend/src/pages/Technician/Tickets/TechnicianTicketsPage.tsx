@@ -1,7 +1,7 @@
 // TechnicianTicketsPage — SCR-TC02 / F-TC-02 / Stitch A1 + C2
 // Landing page: tab pills, stat bar, danh sách ticket + inline actions
 // Logic nặng được tách sang ./components/
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTicketsList } from '@/hooks/useTickets'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import EmptyState from '@/components/common/EmptyState'
@@ -37,8 +37,16 @@ export default function TechnicianTicketsPage() {
   // Tabbed query
   const { records, total, isLoading } = useTicketsList({ ...TAB_QUERY[activeTab], limit: 50 })
 
-  // Stats dùng query riêng (không phụ thuộc tab đang active)
-  const { records: allMine } = useTicketsList({ assignedToMe: true, limit: 200 })
+  // Stats query — chạy riêng để lấy số liệu stat bar, staleTime cao để tránh refetch không cần thiết
+  // Chỉ fetch khi không đang ở tab 'mine' (nếu đang ở mine → dùng lại records luôn)
+  const { records: statRecords } = useTicketsList(
+    { assignedToMe: true, limit: 200 },
+    { enabled: activeTab !== 'mine', staleTime: 60_000 },
+  )
+  const statData = useMemo(
+    () => activeTab === 'mine' ? records : statRecords,
+    [activeTab, records, statRecords],
+  )
 
   // Lọc overdue client-side (API không hỗ trợ filter is_sla_breached)
   const displayRecords = activeTab === 'overdue' ? records.filter(isSlaBreached) : records
@@ -57,7 +65,7 @@ export default function TechnicianTicketsPage() {
       </div>
 
       {/* Stat bar */}
-      <TicketStatBar tickets={allMine} />
+      <TicketStatBar tickets={statData} />
 
       {/* Tab pills */}
       <div className="flex gap-2 overflow-x-auto pb-1">
