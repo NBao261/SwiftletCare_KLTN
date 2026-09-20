@@ -1,4 +1,7 @@
 // ReassignModal.tsx — B2: Yêu cầu gán lại Ticket
+// Fix: Disable khi ticket CLOSED
+// Fix: Gắn nhãn TODO [BE-GAP] — API escalate KHÔNG gán lại ai, chỉ set is_sla_breached=true.
+//      Chức năng reassign thật chưa có endpoint, dùng tạm escalate để ghi nhận yêu cầu.
 // Dùng chung: TechnicianTicketsPage + TechnicianTicketDetailPage
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -18,6 +21,11 @@ export function ReassignModal({ ticket, onClose }: Props) {
   const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
 
+  const isClosed = ticket.status === 'CLOSED'
+
+  // TODO [BE-GAP]: ticketApi.escalate chỉ set is_sla_breached=true + thêm note,
+  // KHÔNG gán lại Technician. Cần endpoint riêng POST /tickets/:id/reassign-request
+  // khi backend có. Hiện tại: ghi nhận yêu cầu qua note, Admin/Dispatcher xử lý thủ công.
   const mut = useMutation({
     mutationFn: () => ticketApi.escalate(ticket._id, reason),
     onSuccess: () => {
@@ -33,29 +41,45 @@ export function ReassignModal({ ticket, onClose }: Props) {
   return (
     <Modal open onClose={onClose} title="Yêu cầu gán lại Ticket">
       <div className="flex flex-col gap-4">
+        {/* Cảnh báo nếu ticket đã CLOSED */}
+        {isClosed && (
+          <div className="rounded-xl border border-alertRed/20 bg-alertRed/[0.08] px-4 py-3">
+            <p className="text-sm font-semibold text-alertRed">
+              ⚠️ Ticket đã đóng — không thể yêu cầu gán lại
+            </p>
+          </div>
+        )}
+
         <Textarea
           label="Lý do yêu cầu gán lại"
           value={reason}
           onChange={e => setReason(e.target.value)}
           placeholder="Mô tả lý do bạn không thể xử lý ticket này (tối thiểu 10 ký tự)..."
           rows={4}
+          disabled={isClosed}
         />
         <p className={`-mt-2 text-right text-xs ${reason.length < 10 ? 'text-climateOrange' : 'text-warmGray'}`}>
           {reason.length}/200
         </p>
 
-        <div className="rounded-xl border border-climateOrange/30 bg-climateOrange/8 px-4 py-3">
-          <p className="text-sm text-climateOrange">
-            ⚠️ Ticket Router sẽ tự động phân công lại cho kỹ thuật viên khác trong khu vực.
-          </p>
-        </div>
+        {!isClosed && (
+          <div className="rounded-xl border border-climateOrange/30 bg-climateOrange/[0.08] px-4 py-3">
+            <p className="text-sm text-climateOrange">
+              ⚠️ Yêu cầu sẽ được ghi nhận. Admin hoặc Dispatcher sẽ phân công lại thủ công.
+            </p>
+            <p className="mt-1 text-xs text-warmGray">
+              {/* TODO [BE-GAP]: Khi có endpoint reassign thật, thay bằng phân công tự động */}
+              Phân công tự động sẽ khả dụng khi backend có endpoint reassign.
+            </p>
+          </div>
+        )}
 
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1">Huỷ</Button>
           <Button
             onClick={() => mut.mutate()}
             loading={mut.isPending}
-            disabled={!isValid}
+            disabled={!isValid || isClosed}
             className="flex-1"
           >
             Gửi yêu cầu gán lại

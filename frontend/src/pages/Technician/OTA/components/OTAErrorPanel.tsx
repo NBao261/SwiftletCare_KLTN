@@ -13,7 +13,7 @@ export function OTAErrorPanel({ error, currentFw, targetFw, onRetry }: Props) {
   if (error === 'DOWNLOAD_TIMEOUT') {
     return (
       <div className="flex flex-col gap-3">
-        <div className="flex items-start gap-2 rounded-xl border border-alertRed/20 bg-alertRed/8 px-4 py-3">
+        <div className="flex items-start gap-2 rounded-xl border border-alertRed/20 bg-alertRed/[0.08] px-4 py-3">
           <span className="text-xl">❌</span>
           <div>
             <p className="font-semibold text-alertRed">Tải firmware thất bại</p>
@@ -28,7 +28,7 @@ export function OTAErrorPanel({ error, currentFw, targetFw, onRetry }: Props) {
   if (error === 'CHECKSUM_MISMATCH') {
     return (
       <div className="flex flex-col gap-3">
-        <div className="flex items-start gap-2 rounded-xl border border-climateOrange/20 bg-climateOrange/8 px-4 py-3">
+        <div className="flex items-start gap-2 rounded-xl border border-climateOrange/20 bg-climateOrange/[0.08] px-4 py-3">
           <span className="text-xl">⚠️</span>
           <div>
             <p className="font-semibold text-climateOrange">File firmware bị hỏng</p>
@@ -46,7 +46,7 @@ export function OTAErrorPanel({ error, currentFw, targetFw, onRetry }: Props) {
   if (error === 'ROLLBACK') {
     return (
       <div className="flex flex-col gap-3">
-        <div className="flex items-start gap-2 rounded-xl border border-climateOrange/20 bg-climateOrange/8 px-4 py-3">
+        <div className="flex items-start gap-2 rounded-xl border border-climateOrange/20 bg-climateOrange/[0.08] px-4 py-3">
           <span className="text-xl">🔄</span>
           <div>
             <p className="font-semibold text-climateOrange">Boot loop phát hiện — đã rollback</p>

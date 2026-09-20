@@ -75,7 +75,7 @@ export default function TechnicianTicketDetailPage() {
       {/* Back — tăng click area, dễ bấm mobile */}
       <Link
         to="/tickets"
-        className="inline-flex w-fit items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-charcoal transition-colors hover:bg-graphite/8 hover:underline"
+        className="inline-flex w-fit items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-charcoal transition-colors hover:bg-graphite/[0.08] hover:underline"
       >
         ← Quay lại danh sách
       </Link>

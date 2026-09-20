@@ -13,7 +13,7 @@ interface DeviceRowProps {
 function DeviceRow({ node, selected, onSelect }: DeviceRowProps) {
   const isOffline = node.status === 'OFFLINE' || node.status === 'ERROR'
   return (
-    <tr className={`border-b border-graphite/8 transition-colors hover:bg-graphite/[0.03] ${selected ? 'bg-charcoal/5' : ''}`}>
+    <tr className={`border-b border-graphite/[0.08] transition-colors hover:bg-graphite/[0.03] ${selected ? 'bg-charcoal/5' : ''}`}>
       <td className="px-4 py-3"><StatusDot status={node.status as DeviceStatus} /></td>
       <td className="px-4 py-3 font-mono text-sm font-semibold text-charcoal">{node.device_id}</td>
       <td className="px-4 py-3 text-warmGray">—</td>

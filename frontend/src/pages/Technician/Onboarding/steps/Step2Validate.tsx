@@ -133,7 +133,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
       )}
 
       {error === 'DEVICE_ALREADY_REGISTERED' && (
-        <div className="rounded-xl border border-l-4 border-climateOrange/30 border-l-climateOrange bg-climateOrange/8 px-4 py-3">
+        <div className="rounded-xl border border-l-4 border-climateOrange/30 border-l-climateOrange bg-climateOrange/[0.08] px-4 py-3">
           <p className="font-semibold text-climateOrange">✗ Thiết bị đã tồn tại trên hệ thống</p>
           <ul className="mt-1.5 flex flex-col gap-1 text-sm text-climateOrange/80">
             <li>• Thiết bị đang được gán cho một Farm khác</li>

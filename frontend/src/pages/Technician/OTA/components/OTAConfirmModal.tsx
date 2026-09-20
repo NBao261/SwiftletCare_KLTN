@@ -52,7 +52,7 @@ export function OTAConfirmModal({ node, firmware, onClose, onConfirm }: Props) {
         </div>
 
         {/* Warning */}
-        <div className="flex items-start gap-2.5 rounded-xl border border-climateOrange/30 bg-climateOrange/8 px-4 py-3">
+        <div className="flex items-start gap-2.5 rounded-xl border border-climateOrange/30 bg-climateOrange/[0.08] px-4 py-3">
           <span className="mt-0.5 shrink-0 text-climateOrange">⚠️</span>
           <p className="text-sm text-climateOrange">
             Thiết bị sẽ mất kết nối <strong>2–5 phút</strong> trong quá trình cập nhật.

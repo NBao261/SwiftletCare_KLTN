@@ -1,4 +1,7 @@
 // RescheduleModal.tsx — B3: Sửa ngày hẹn khảo sát
+// Fix: Promise.all → sequential (addNote CHỈ gọi sau khi updateScheduledDate thành công)
+// Fix: bg-warmGray/8 → bg-warmGray/[0.08] (Tailwind v3.4 không có /8 trong opacity scale)
+// TODO [BE-GAP]: PUT /tickets/:id/scheduled-date chưa có ở backend
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ticketApi } from '@/services/api/tickets'
@@ -26,13 +29,12 @@ export function RescheduleModal({ ticket, onClose }: Props) {
     : ''
 
   const mut = useMutation({
-    mutationFn: () =>
-      // Gọi song song: cập nhật ngày thật + thêm audit log ghi chú
-      // updateScheduledDate cần BE endpoint PUT /tickets/:id/scheduled-date (xem tickets.ts)
-      Promise.all([
-        ticketApi.updateScheduledDate(ticket._id, newDate),
-        ticketApi.addNote(ticket._id, autoNote),
-      ]),
+    mutationFn: async () => {
+      // Sequential: đổi ngày trước, chỉ ghi note nếu đổi ngày thành công
+      // Tránh trường hợp note ghi "đổi lịch A→B" nhưng scheduled_visit_at không đổi
+      await ticketApi.updateScheduledDate(ticket._id, newDate)
+      await ticketApi.addNote(ticket._id, autoNote)
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tickets'] })
       push('Đã cập nhật ngày hẹn thành công')
@@ -45,7 +47,7 @@ export function RescheduleModal({ ticket, onClose }: Props) {
     <Modal open onClose={onClose} title="Sửa ngày hẹn khảo sát">
       <div className="flex flex-col gap-4">
         {ticket.scheduled_visit_at && (
-          <div className="rounded-xl bg-warmGray/8 px-4 py-3">
+          <div className="rounded-xl bg-warmGray/[0.08] px-4 py-3">
             <p className="text-sm text-warmGray">Ngày hẹn hiện tại:</p>
             <p className="font-semibold text-charcoal line-through opacity-50">
               {formatDate(ticket.scheduled_visit_at)}

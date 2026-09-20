@@ -136,7 +136,7 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
       </div>
 
       {/* Action bar */}
-      <div className="flex flex-wrap gap-2 border-t border-graphite/8 bg-graphite/[0.02] px-5 py-3">
+      <div className="flex flex-wrap gap-2 border-t border-graphite/[0.08] bg-graphite/[0.02] px-5 py-3">
         {ticket.status === 'NEW' && <AcceptButton ticketId={ticket._id} />}
 
         <ActionBtn
