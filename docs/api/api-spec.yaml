@@ -498,7 +498,12 @@ paths:
         (Flow 19 bước 7c) — xử lý xong ticket rồi gọi lại, hoặc gửi `force: true`
         để vẫn xoá. Mỗi Farm được chuyển chủ/xoá mềm có 1 bản ghi audit riêng
         (`FARM_OWNERSHIP_TRANSFERRED`, `FARM_SOFT_DELETED`) và chủ mới cùng người bị
-        xoá nhận thông báo; kết nối Socket.io của user bị ngắt. Nếu lỗi giữa chừng
+        xoá nhận thông báo; kết nối Socket.io của user bị ngắt. Cũng dọn các liên
+        kết trỏ tới user: xoá `SalesAssignment` của Sales Staff bị xoá, từ chối
+        (`REJECTED`, kèm lý do) các đề xuất Sales Staff đang chờ do hoặc về user đó,
+        cho hết hạn (`EXPIRED`) các lời mời đang chờ user đã gửi, đặt `deleted_at`
+        (tài khoản đã xoá không khoá/mở khoá lại được, 409). Audit `ACCOUNT_DELETED`
+        ghi `farmsTransferred`, `farmsDeleted`, `salesAssignmentsRemoved`, `forced`. Nếu lỗi giữa chừng
         (Mongo standalone, không transaction) thì gọi lại được: farm đã xử lý xong
         không bị xử lý lần nữa.
       parameters:
