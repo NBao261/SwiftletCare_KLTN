@@ -30,12 +30,13 @@ export function TicketChat({ ticketId }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Fetch tin nhắn — khi backend ready: ticketApi.getMessages(ticketId)
-  const { data: messages = [], isLoading } = useQuery<TicketMessage[]>({
+  // retry: false + refetchInterval disabled — tránh spam 404 khi endpoint chưa impl
+  const { data: messages = [], isLoading, isError } = useQuery<TicketMessage[]>({
     queryKey: ['tickets', 'chat', ticketId],
     queryFn: () =>
       ticketApi.getMessages(ticketId).then(r => r.data.data as TicketMessage[]),
-    // Polling mỗi 15s (fallback nếu socket chưa có) — sẽ bỏ khi có socket event
-    refetchInterval: 15_000,
+    retry: false,
+    // refetchInterval: 15_000, // TODO: bật lại khi BE endpoint ready
   })
 
   // Cuộn xuống tin nhắn mới nhất
@@ -75,7 +76,16 @@ export function TicketChat({ ticketId }: Props) {
           <p className="py-6 text-center text-sm text-warmGray">Đang tải tin nhắn…</p>
         )}
 
-        {!isLoading && messages.length === 0 && (
+      {/* Endpoint chưa triển khai — graceful fallback */}
+        {isError && (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <span className="text-2xl">🔧</span>
+            <p className="text-sm font-medium text-charcoal">Tính năng chat đang phát triển</p>
+            <p className="text-xs text-warmGray">Endpoint backend chưa sẵn sàng. Hãy dùng phần Ghi chú ở trên để liên lạc.</p>
+          </div>
+        )}
+
+        {!isError && !isLoading && messages.length === 0 && (
           <p className="py-6 text-center text-sm text-warmGray">
             Chưa có tin nhắn nào. Bắt đầu cuộc trò chuyện với Farm Owner.
           </p>
@@ -116,25 +126,28 @@ export function TicketChat({ ticketId }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="mt-3 flex gap-2 border-t border-graphite/10 pt-3">
-        <textarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Nhắn tin với Farm Owner… (Enter để gửi, Shift+Enter xuống dòng)"
-          rows={2}
-          className="flex-1 resize-none rounded-xl border border-graphite/20 bg-transparent px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warmGray/60 focus:border-charcoal focus:outline-none"
-        />
-        <Button
-          onClick={handleSend}
-          loading={sendMut.isPending}
-          disabled={!text.trim()}
-          className="shrink-0 self-end"
-        >
-          Gửi
-        </Button>
-      </div>
+      {/* Input — ẩn khi endpoint chưa impl */}
+      {!isError && (
+        <div className="mt-3 flex gap-2 border-t border-graphite/10 pt-3">
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Nhắn tin với Farm Owner… (Enter để gửi, Shift+Enter xuống dòng)"
+            rows={2}
+            className="flex-1 resize-none rounded-xl border border-graphite/20 bg-transparent px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warmGray/60 focus:border-charcoal focus:outline-none"
+          />
+          <Button
+            onClick={handleSend}
+            loading={sendMut.isPending}
+            disabled={!text.trim()}
+            className="shrink-0 self-end"
+          >
+            Gửi
+          </Button>
+        </div>
+      )}
+
     </Card>
   )
 }
