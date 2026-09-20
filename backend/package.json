@@ -71,7 +71,7 @@
     "preset": "ts-jest",
     "testEnvironment": "node",
     "testTimeout": 30000,
-    "setupFilesAfterFramework": [
+    "setupFilesAfterEnv": [
       "<rootDir>/tests/setup.ts"
     ],
     "globals": {
