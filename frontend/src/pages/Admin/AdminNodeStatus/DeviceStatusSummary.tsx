@@ -1,4 +1,5 @@
-// Admin — xem nhanh trạng thái mọi node toàn hệ thống (OPS-NFR-004)
+// Admin — trạng thái mọi node toàn hệ thống (OPS-NFR-004), tách khỏi trang riêng
+// để làm 1 section của SystemHealthPage (SYSTEM-FR-003) — vẫn dùng hook thật.
 import { useSystemNodeStatus } from "@/hooks/useDevices";
 import { Card, Badge } from "@/components/ui";
 import { IconDevice } from "@/components/ui/icons";
@@ -24,18 +25,13 @@ function emptySummary() {
   return { total: 0, online: 0, offline: 0, error: 0, degraded: 0, pending: 0 };
 }
 
-export default function AdminNodeStatusPage() {
+export default function DeviceStatusSummary() {
   const { data, isLoading } = useSystemNodeStatus();
   const summary = data?.summary ?? emptySummary();
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <p className="label-caption">Toàn hệ thống</p>
-        <p className="text-2xl font-bold tracking-tight text-charcoal">
-          Trạng thái thiết bị
-        </p>
-      </div>
+    <div className="flex flex-col gap-3">
+      <p className="label-caption">Thiết bị</p>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {SUMMARY_ITEMS.map(({ key, label }) => (
