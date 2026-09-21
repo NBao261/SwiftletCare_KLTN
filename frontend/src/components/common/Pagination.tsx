@@ -19,7 +19,7 @@ export default function Pagination({ page, limit, total, onChange }: PaginationP
   return (
     <div className="flex items-center justify-between gap-3 pt-2">
       <p className="text-sm text-warmGray">
-        {from}–{to} trong {total}
+        Hiển thị {from}–{to} trong {total}
       </p>
       <div className="flex gap-2">
         <Button variant="secondary" size="sm" disabled={!hasPrev} onClick={() => onChange(page - 1)}>

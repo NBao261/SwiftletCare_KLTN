@@ -40,6 +40,9 @@ export interface User {
   deletion_requested_at?: string
 }
 
+/** Chiều sắp xếp dùng chung cho DataTable + các hook list có sort */
+export type SortDirection = 'asc' | 'desc'
+
 // AUTH-FR-002/003 — request/response cho POST /auth/login, /auth/register
 export interface LoginRequest { email: string; password: string }
 export interface RegisterRequest { email: string; password: string; full_name: string; phone?: string }
