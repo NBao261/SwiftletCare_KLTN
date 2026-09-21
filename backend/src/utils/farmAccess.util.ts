@@ -97,3 +97,14 @@ export async function listAccessibleZoneIds(user: CurrentUser) {
   const zones = await Zone.find({ house_id: { $in: houses.map(h => h._id) } }).select('_id').lean()
   return zones.map(z => z._id)
 }
+
+/**
+ * Mọi Zone thuộc Farm chưa xoá mềm, không phụ thuộc user — nguồn chung để các màn
+ * hình toàn hệ thống của Admin (tổng quan sức khỏe, trạng thái node) đếm Farm, Zone
+ * và thiết bị khớp nhau: thiết bị của Farm đã xoá mềm không còn hiện ở đâu cả.
+ */
+export async function listActiveZoneIds() {
+  const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
+  const houseIds = await House.find({ farm_id: { $in: farmIds } }).distinct('_id')
+  return Zone.find({ house_id: { $in: houseIds } }).distinct('_id')
+}
