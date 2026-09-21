@@ -41,14 +41,18 @@ export function Step6SAT({ data, onDone }: Props) {
 
   const completeMut = useMutation({
     mutationFn: async () => {
-      // data.deviceDbId là ID của ticket liên kết với thiết bị vừa onboard (từ Step2)
-      // Nếu không có (lắp thiết bị độc lập, không từ ticket), bỏ qua API call
-      if (!data.deviceDbId) return
-      await ticketApi.updateSatChecklist(data.deviceDbId, sat)
+      // data.ticketId là ID của Ticket INSTALLATION liên kết với lần onboard này.
+      // Được truyền từ URL query ?ticketId=... khi Technician vào Onboarding từ màn hình Ticket.
+      // Nếu không có (onboard thủ công từ nav, không từ ticket), bỏ qua API call.
+      //
+      // FIX: dùng data.ticketId (ticket _id) — KHÔNG phải data.deviceDbId (SensorNode _id).
+      // ticketApi.updateSatChecklist(ticketId, sat) cần ticket ID để patch SAT fields trên ticket.
+      if (!data.ticketId) return
+      await ticketApi.updateSatChecklist(data.ticketId, sat)
     },
     onSuccess: () => {
       push('🎉 Lắp đặt hoàn tất! Farm Owner đã được thông báo.')
-      onDone(data.deviceDbId || undefined)
+      onDone(data.ticketId || undefined)
     },
     onError: (err) => push(getApiErrorMessage(err, 'Hoàn thành thất bại'), 'error'),
   })

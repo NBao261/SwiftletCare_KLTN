@@ -23,17 +23,19 @@ export function ReassignModal({ ticket, onClose }: Props) {
 
   const isClosed = ticket.status === 'CLOSED'
 
-  // TODO [BE-GAP]: ticketApi.escalate chỉ set is_sla_breached=true + thêm note,
+  // TODO [BE-GAP]: ticketApi.escalate đặt is_sla_breached=true + thêm note,
   // KHÔNG gán lại Technician. Cần endpoint riêng POST /tickets/:id/reassign-request
   // khi backend có. Hiện tại: ghi nhận yêu cầu qua note, Admin/Dispatcher xử lý thủ công.
+  //
+  // ⚠️  Tác động thật: gọi API này sẽ đánh dấu ticket này vi phạm SLA trên hệ thống.
   const mut = useMutation({
     mutationFn: () => ticketApi.escalate(ticket._id, reason),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      push('Yêu cầu gán lại đã được gửi')
+      push('Đã báo cáo — Admin sẽ phân công lại thủ công')
       onClose()
     },
-    onError: (err) => push(getApiErrorMessage(err, 'Gửi yêu cầu thất bại'), 'error'),
+    onError: (err) => push(getApiErrorMessage(err, 'Gửi báo cáo thất bại'), 'error'),
   })
 
   const isValid = reason.trim().length >= 10
@@ -63,11 +65,16 @@ export function ReassignModal({ ticket, onClose }: Props) {
         </p>
 
         {!isClosed && (
-          <div className="rounded-xl border border-climateOrange/30 bg-climateOrange/[0.08] px-4 py-3">
-            <p className="text-sm text-climateOrange">
-              ⚠️ Yêu cầu sẽ được ghi nhận. Admin hoặc Dispatcher sẽ phân công lại thủ công.
+          <div className="rounded-xl border border-alertRed/30 bg-alertRed/[0.06] px-4 py-3">
+            <p className="text-sm font-semibold text-alertRed">
+              ⚠️ Lưu ý quan trọng — Tác động thật đến hệ thống
             </p>
-            <p className="mt-1 text-xs text-warmGray">
+            <ul className="mt-1.5 flex flex-col gap-1 text-xs text-alertRed/80">
+              <li>• Hành động này sẽ <strong>đánh dấu ticket vi phạm SLA</strong> trên hệ thống ngay lập tức</li>
+              <li>• Admin hoặc Dispatcher sẽ phân công lại thủ công sau khi nhận yêu cầu</li>
+              <li>• Chỉ dùng khi thật sự không thể xử lý ticket này</li>
+            </ul>
+            <p className="mt-2 text-[11px] text-warmGray">
               {/* TODO [BE-GAP]: Khi có endpoint reassign thật, thay bằng phân công tự động */}
               Phân công tự động sẽ khả dụng khi backend có endpoint reassign.
             </p>
@@ -82,7 +89,7 @@ export function ReassignModal({ ticket, onClose }: Props) {
             disabled={!isValid || isClosed}
             className="flex-1"
           >
-            Gửi yêu cầu gán lại
+            Báo cáo không thể xử lý
           </Button>
         </div>
       </div>

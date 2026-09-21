@@ -2,10 +2,9 @@
 import { useState } from 'react'
 import { deviceApi } from '@/services/api'
 import { Button } from '@/components/ui'
-import { getApiErrorMessage } from '@/utils/helpers'
 import type { OnboardingState, DeviceType } from './onboardingTypes'
 
-type ValidateError  = 'INVALID_SECRET_KEY' | 'DEVICE_ALREADY_REGISTERED' | null
+type ValidateError  = 'INVALID_SECRET_KEY' | 'DEVICE_ALREADY_REGISTERED' | 'UNKNOWN' | null
 type ValidateStatus = 'idle' | 'loading' | 'success' | 'error'
 
 interface Props {
@@ -34,8 +33,18 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
       setValidatedModel(`ESP32-WROOM-32D · ${data.deviceType === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'}`)
       setStatus('success')
     } catch (err: unknown) {
-      const msg = getApiErrorMessage(err, '')
-      setError(msg.includes('already') ? 'DEVICE_ALREADY_REGISTERED' : 'INVALID_SECRET_KEY')
+      // FIX: dùng HTTP status code để phân loại lỗi, không string-match message
+      // 409 Conflict = Device ID đã được đăng ký trên Farm khác
+      // 400/401 = Device ID hoặc Secret Key không hợp lệ
+      // Các lỗi khác (500, network) → UNKNOWN để không mislead user
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 409) {
+        setError('DEVICE_ALREADY_REGISTERED')
+      } else if (status === 400 || status === 401) {
+        setError('INVALID_SECRET_KEY')
+      } else {
+        setError('UNKNOWN')
+      }
       setStatus('error')
     }
   }
@@ -149,6 +158,13 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
           <p className="font-semibold text-alertRed">✗ Xác thực thất bại</p>
           <p className="mt-1 text-sm text-alertRed/80">Mã kích hoạt không khớp với Device ID này.</p>
+        </div>
+      )}
+
+      {error === 'UNKNOWN' && (
+        <div className="rounded-xl border border-l-4 border-graphite/30 border-l-graphite bg-graphite/5 px-4 py-3">
+          <p className="font-semibold text-charcoal">✗ Lỗi kết nối</p>
+          <p className="mt-1 text-sm text-warmGray">Không thể kết nối đến máy chủ. Kiểm tra mạng và thử lại.</p>
         </div>
       )}
 

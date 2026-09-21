@@ -1,9 +1,13 @@
 // OnboardingPage — F-TC-01 / Stitch A3 + B5 + B6 + B7 + B9 + C1
 // Wizard 6 bước lắp đặt thiết bị ESP32 — shell + state only
 // Logic từng bước được tách sang ./steps/
+//
+// ticketId: đọc từ URL query ?ticketId=<id> khi Technician bắt đầu Onboarding
+// từ màn hình Ticket (INSTALLATION ticket). Nếu vào trực tiếp từ nav, ticketId = undefined.
 import { useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '@/components/ui'
+import DemoBanner from '@/components/common/DemoBanner'
 import { Step1Location }   from './steps/Step1Location'
 import { Step2Validate }   from './steps/Step2Validate'
 import { Step3ConnectAP }  from './steps/Step3ConnectAP'
@@ -59,14 +63,20 @@ const INITIAL_STATE: OnboardingState = {
   deviceId:   '',
   secretKey:  '',
   deviceDbId: '',
+  ticketId:   undefined,
   ssid:       '',
   wifiPass:   '',
 }
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [step, setStep] = useState(0)
-  const [data, setData] = useState<OnboardingState>(INITIAL_STATE)
+  // Đọc ticketId từ URL query param ?ticketId=xxx (khi vào từ màn hình Ticket)
+  const [data, setData] = useState<OnboardingState>({
+    ...INITIAL_STATE,
+    ticketId: searchParams.get('ticketId') ?? undefined,
+  })
 
   const patch = (partial: Partial<OnboardingState>) =>
     setData(prev => ({ ...prev, ...partial }))
@@ -77,6 +87,12 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Demo banner — Step4 WiFi config và một số bước chưa có backend endpoint */}
+      <DemoBanner
+        title="Một số bước chưa kết nối backend thật"
+        description="Bước 4 (cấu hình WiFi) đang dùng endpoint demo. Các bước còn lại (đăng ký thiết bị, chờ MQTT, nghiệm thu) hoạt động với backend thật khi endpoint đã sẵn sàng."
+      />
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-charcoal">Onboarding thiết bị mới</h1>

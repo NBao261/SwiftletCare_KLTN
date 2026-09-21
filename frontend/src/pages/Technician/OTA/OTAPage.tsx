@@ -11,6 +11,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { deviceApi } from '@/services/api'
+import DemoBanner from '@/components/common/DemoBanner'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
 import EmptyState from '@/components/common/EmptyState'
 import { IconOTA } from '@/components/ui/icons'
@@ -99,6 +100,12 @@ export default function OTAPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Demo banner — toàn bộ tiến trình OTA là giả lập, chưa gọi backend API */}
+      <DemoBanner
+        title="Giao diện Demo — OTA chưa kết nối backend"
+        description="Tiến trình cập nhật firmware trên trang này là giả lập (setInterval). Backend cần endpoint POST /devices/sensor-nodes/:id/ota để kích hoạt OTA thật. Danh sách firmware bên dưới là dữ liệu mẫu."
+      />
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-charcoal">OTA Firmware</h1>

@@ -9,7 +9,11 @@ export type OnboardingState = {
   deviceType: DeviceType
   deviceId:   string
   secretKey:  string
-  deviceDbId: string  // _id sau khi register thành công
+  /** _id của SensorNode trong DB sau khi registerSensorNode thành công (Step2) */
+  deviceDbId: string
+  /** _id của Ticket liên kết với lắp đặt này — đọc từ URL query ?ticketId=...
+   *  Dùng ở Step6 để gọi updateSatChecklist. Undefined nếu onboard không từ ticket. */
+  ticketId:   string | undefined
   ssid:       string  // WiFi farm SSID
   wifiPass:   string
 }
