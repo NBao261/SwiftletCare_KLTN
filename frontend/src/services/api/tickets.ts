@@ -1,5 +1,5 @@
 import api from './client'
-import type { ApiResponse, Ticket, TicketType, TicketStatus, TicketSatChecklist } from '@/types'
+import type { ApiResponse, Ticket, TicketType, TicketStatus, TicketPriority, TicketSatChecklist } from '@/types'
 
 export interface CreateTicketInput {
   farm_id: string
@@ -9,6 +9,25 @@ export interface CreateTicketInput {
   /** Bắt buộc khi type=INSTALLATION/MAINTENANCE (TICKET-FR-004b) */
   scheduled_visit_at?: string
   alert_id?: string
+}
+
+/**
+ * TICKET-FR-005b — PUT /tickets/:id/admin-override. `reason` bắt buộc (được ghi
+ * thành note "Admin can thiệp: ..." + audit log TICKET_ADMIN_OVERRIDE); các
+ * trường còn lại tuỳ chọn, gửi trường nào sửa trường đó.
+ */
+export interface AdminOverrideInput {
+  reason: string
+  assigned_to?: string
+  priority?: TicketPriority
+  status?: TicketStatus
+  /** ISO8601 */
+  scheduled_visit_at?: string
+  /**
+   * Gán Technician không phụ trách khu vực của farm → backend 400 kèm gợi ý
+   * "Gửi kèm force=true nếu vẫn muốn gán" — chỉ gửi true sau khi Admin xác nhận.
+   */
+  force?: boolean
 }
 
 export interface ListTicketsQuery {
@@ -35,6 +54,8 @@ export const ticketApi = {
   updateStatus:       (id: string, status: TicketStatus, note?: string) => api.put<ApiResponse<Ticket>>(`/tickets/${id}/status`, { status, note }),
   updateSatChecklist: (id: string, updates: Partial<TicketSatChecklist>) => api.put<ApiResponse<Ticket>>(`/tickets/${id}/sat-checklist`, updates),
   escalate:           (id: string, reason?: string) => api.post<ApiResponse<Ticket>>(`/tickets/${id}/escalate`, { reason }),
+  /** Admin — quyền can thiệp thường trực, bất kể trạng thái/SLA (TICKET-FR-005b) */
+  adminOverride:      (id: string, input: AdminOverrideInput) => api.put<ApiResponse<Ticket>>(`/tickets/${id}/admin-override`, input),
   kpi: () => api.get<ApiResponse<{
     byStatus: Array<{ _id: TicketStatus; count: number }>
     byTechnician: Array<{ _id: string; total: number; closed: number }>

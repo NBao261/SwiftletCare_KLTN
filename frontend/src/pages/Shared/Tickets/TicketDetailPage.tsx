@@ -12,6 +12,7 @@ import EmptyState from '@/components/common/EmptyState'
 import { useToastStore } from '@/store/toastStore'
 import { formatDate, getApiErrorMessage } from '@/utils/helpers'
 import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
+import { ChangePriorityModal, ReassignTicketModal, RescheduleModal } from './AdminOverrideModals'
 
 const SAT_LABEL = {
   modbus_addresses_ok: '5 địa chỉ Modbus phản hồi đúng',
@@ -28,8 +29,15 @@ export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: ticket, isLoading } = useTicket(id)
   const [showCancel, setShowCancel] = useState(false)
+  const [showChangePriority, setShowChangePriority] = useState(false)
+  const [showReassign, setShowReassign] = useState(false)
+  const [showReschedule, setShowReschedule] = useState(false)
   // Backend: PUT /tickets/:id/cancel và POST /tickets/:id/rating chỉ cho FARM_OWNER, ADMIN
   const canManageTicket = usePermission('FARM_OWNER', 'ADMIN')
+  // TICKET-FR-005b — quyền can thiệp thường trực của Admin trên MỌI ticket, bất
+  // kể trạng thái/SLA (không gate theo status !== 'CLOSED' như canCancel).
+  // 3 modal ở AdminOverrideModals.tsx, cùng gọi PUT /tickets/:id/admin-override.
+  const canAdminIntervene = usePermission('ADMIN')
   // Breadcrumb TopBar: "Ticket / <loại> #<6 ký tự cuối id>" — dẫn xuất từ chính route :id, không có API riêng trả "tiêu đề" ticket
   usePageBreadcrumb(ticket ? [{ label: `${TICKET_TYPE_LABEL[ticket.type]} #${ticket._id.slice(-6)}` }] : [])
 
@@ -53,9 +61,18 @@ export default function TicketDetailPage() {
             <h1 className="mt-2 text-xl font-bold text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</h1>
             <p className="mt-1 text-sm text-warmGray">Tạo lúc {formatDate(ticket.created_at)}</p>
           </div>
-          {canCancel && (
-            <Button variant="danger" size="sm" onClick={() => setShowCancel(true)}>Hủy ticket</Button>
-          )}
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {canAdminIntervene && (
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setShowChangePriority(true)}>Đổi ưu tiên</Button>
+                <Button variant="secondary" size="sm" onClick={() => setShowReassign(true)}>Gán lại KTV</Button>
+                <Button variant="secondary" size="sm" onClick={() => setShowReschedule(true)}>Đổi lịch hẹn</Button>
+              </div>
+            )}
+            {canCancel && (
+              <Button variant="danger" size="sm" onClick={() => setShowCancel(true)}>Hủy ticket</Button>
+            )}
+          </div>
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-warmGray/10 pt-4 text-sm sm:grid-cols-4">
@@ -87,6 +104,13 @@ export default function TicketDetailPage() {
       )}
 
       <CancelTicketModal open={showCancel} onClose={() => setShowCancel(false)} ticketId={ticket._id} />
+      {canAdminIntervene && (
+        <>
+          <ChangePriorityModal open={showChangePriority} onClose={() => setShowChangePriority(false)} ticket={ticket} />
+          <ReassignTicketModal open={showReassign} onClose={() => setShowReassign(false)} ticket={ticket} />
+          <RescheduleModal open={showReschedule} onClose={() => setShowReschedule(false)} ticket={ticket} />
+        </>
+      )}
     </div>
   )
 }
