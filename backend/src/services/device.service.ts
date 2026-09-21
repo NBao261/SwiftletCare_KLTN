@@ -1,7 +1,7 @@
 import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
-import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds } from '@/utils/farmAccess.util'
+import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
 import { raiseNodeOfflineAlert } from '@/services/alert.service'
@@ -366,12 +366,14 @@ export function summarizeByStatus(nodes: Array<{ status: DeviceStatus }>): Devic
  * OPS-NFR-004 — Admin xem nhanh trạng thái toàn bộ node trong hệ thống (không
  * giới hạn theo Farm, khác `listSensorNodes`). Shape khớp `SystemNodeStatus`
  * bên frontend (trang AdminNodeStatus). Join Zone→House→Farm bằng vài query gộp
- * thay vì N+1 populate.
+ * thay vì N+1 populate. Chỉ tính thiết bị của Farm chưa xoá mềm — cùng phạm vi với
+ * `getHealthOverview` (SYSTEM-FR-003), để 2 màn hình trên cùng trang không lệch số.
  */
 export async function getSystemStatus() {
+  const activeZoneIds = await listActiveZoneIds()
   const [sensorNodes, cameraNodes] = await Promise.all([
-    SensorNode.find().sort({ registered_at: -1 }).lean(),
-    CameraNode.find().sort({ registered_at: -1 }).lean(),
+    SensorNode.find({ zone_id: { $in: activeZoneIds } }).sort({ registered_at: -1 }).lean(),
+    CameraNode.find({ zone_id: { $in: activeZoneIds } }).sort({ registered_at: -1 }).lean(),
   ])
 
   const zoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]

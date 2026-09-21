@@ -1,12 +1,12 @@
 import { AuditLog } from '@/models/auditLog.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Farm } from '@/models/farm.model'
-import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode, CameraNode } from '@/models/device.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { summarizeByStatus } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
+import { listActiveZoneIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
 import { DEFAULT_THRESHOLDS, assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { DEFAULT_SLA, assertValidSla, pickSla } from '@/utils/sla.util'
@@ -112,15 +112,8 @@ export async function updateSlaHours(adminId: string, input: Record<string, unkn
 
 const PRIORITIES: TicketPriority[] = ['P1', 'P2', 'P3']
 
-/** Zone thuộc farm chưa xoá mềm — nguồn chung để Farm, Zone và thiết bị đếm khớp nhau */
-async function findActiveZoneIds() {
-  const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
-  const houseIds = await House.find({ farm_id: { $in: farmIds } }).distinct('_id')
-  return Zone.find({ house_id: { $in: houseIds } }).distinct('_id')
-}
-
 export async function getHealthOverview() {
-  const zoneIds = await findActiveZoneIds()
+  const zoneIds = await listActiveZoneIds()
   const [farmCount, sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
     Farm.countDocuments({ is_deleted: false }),
     SensorNode.find({ zone_id: { $in: zoneIds } }).select('status').lean(),

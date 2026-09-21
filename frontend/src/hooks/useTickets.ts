@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ticketApi } from '@/services/api'
 import { usePaginatedListQuery } from './usePaginatedListQuery'
 import type { Ticket } from '@/types'
-import type { CreateTicketInput, ListTicketsQuery } from '@/services/api/tickets'
+import type { AdminOverrideInput, CreateTicketInput, ListTicketsQuery } from '@/services/api/tickets'
 
 /** Module TICKET §5.9 */
 export function useTicketsList(query: ListTicketsQuery) {
@@ -49,6 +49,23 @@ export function useAddTicketNote() {
   return useMutation({
     mutationFn: ({ id, content }: { id: string; content: string }) => ticketApi.addNote(id, content),
     onSuccess: (_data, { id }) => invalidateTicket(queryClient, id),
+  })
+}
+
+/**
+ * TICKET-FR-005b — Admin đổi Technician / priority / lịch hẹn / status trên
+ * MỌI ticket. Backend trả ticket đã populate assigned_to nên ghi thẳng vào cache
+ * detail rồi mới invalidate list (đổi priority cũng đổi SLA nên không patch tay).
+ */
+export function useAdminOverrideTicket() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & AdminOverrideInput) =>
+      ticketApi.adminOverride(id, input).then(r => r.data.data),
+    onSuccess: (ticket, { id }) => {
+      queryClient.setQueryData(['tickets', 'detail', id], ticket)
+      invalidateTicket(queryClient, id)
+    },
   })
 }
 

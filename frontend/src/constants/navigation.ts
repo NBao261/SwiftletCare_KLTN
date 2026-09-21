@@ -15,8 +15,8 @@ export interface NavItem {
   /**
    * Role nào được ghim mục này lên MobileDock (tối đa DOCK_SIZE mục/role). Không
    * khai báo thì dock lấy DOCK_SIZE mục đầu tiên của nav đã lọc theo role — đủ
-   * cho Farm Owner/Technician, nhưng Admin có nhiều mục hơn nên phải chọn tay,
-   * nếu không Người dùng/Yêu cầu tài khoản không bao giờ vào được từ điện thoại.
+   * cho Farm Owner/Technician, nhưng Admin có 9 mục nên phải chọn tay, nếu
+   * không Người dùng/Yêu cầu tài khoản không bao giờ vào được từ điện thoại.
    */
   dock?: Role[]
 }
@@ -31,8 +31,8 @@ const OPS_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'ADMIN']
 // chim) là công cụ vận hành hằng ngày CỦA RIÊNG Farm Owner — SRS không mô tả
 // Technician/Admin dùng 2 trang này (họ xử lý kỹ thuật/ticket, không giám sát
 // môi trường chi tiết theo zone). Technician/Admin "check tín hiệu" qua trang
-// Thiết bị (online/offline/RSSI theo zone); Admin có thêm trang riêng xem toàn
-// hệ thống (OPS-NFR-004, xem mục "Trạng thái hệ thống" dưới).
+// Thiết bị (online/offline/RSSI theo zone); Admin có thêm mục "Hệ thống" riêng
+// xem toàn hệ thống (Module SYSTEM, mục 5.11 — xem section "Hệ thống" dưới).
 const FARM_OWNER_ONLY: Role[] = ['FARM_OWNER']
 
 /**
@@ -44,8 +44,9 @@ const ALL_NAV_SECTIONS: NavSection[] = [
   {
     title: 'Vận hành',
     items: [
-      // OPS-NFR-004 — màn hình xem nhanh trạng thái mọi node toàn hệ thống, chỉ Admin.
-      { to: '/system-status', label: 'Trạng thái hệ thống', icon: IconDashboard, roles: ['ADMIN'], dock: ['ADMIN'] },
+      // Trang nhà Admin sau đăng nhập (ROLE_HOME) — đặt đầu sidebar, xem chi
+      // tiết ở section "Hệ thống" trong comment dưới (SYSTEM-FR-003).
+      { to: '/system/health', label: 'Tổng quan hệ thống', icon: IconDashboard, roles: ['ADMIN'], dock: ['ADMIN'] },
       { to: '/dashboard', label: 'Tổng quan', icon: IconDashboard, roles: FARM_OWNER_ONLY },
       { to: '/devices',   label: 'Thiết bị & Cảm biến',  icon: IconDevice, roles: OPS_ROLES },
       { to: '/alerts',    label: 'Cảnh báo',  icon: IconAlert, roles: OPS_ROLES },
@@ -65,6 +66,18 @@ const ALL_NAV_SECTIONS: NavSection[] = [
       // cũng không hiện mục này (route /harvests vẫn cho Admin gọi được, chỉ
       // ẩn khỏi nav).
       { to: '/harvests',  label: 'Thu hoạch & Chợ yến', icon: IconHarvest, roles: FARM_OWNER_ONLY },
+    ],
+  },
+  {
+    // Module SYSTEM (mục 5.11, mới v1.16.0) — "control center" chỉ Admin: audit
+    // log, ngưỡng mặc định hệ thống, tổng quan sức khỏe hệ thống. "Tổng quan hệ
+    // thống" (gộp luôn OPS-NFR-004 — xem DeviceStatusSummary.tsx trong
+    // SystemHealthPage) được đặt lên đầu sidebar (section "Vận hành" trên) vì
+    // là trang nhà của Admin — không lặp lại ở đây.
+    title: 'Hệ thống',
+    items: [
+      { to: '/system/settings', label: 'Cấu hình mặc định', icon: IconSettings, roles: ['ADMIN'] },
+      { to: '/system/audit-log', label: 'Nhật ký hệ thống', icon: IconAnalytics, roles: ['ADMIN'] },
     ],
   },
   {
@@ -111,7 +124,7 @@ export function getDockItems(role: Role | undefined): NavItem[] {
  */
 const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
-  ADMIN: '/system-status',
+  ADMIN: '/system/health',
   TECHNICIAN: '/devices',
   SALES_STAFF: '/sales-home',
 }
