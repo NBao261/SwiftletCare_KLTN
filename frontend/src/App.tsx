@@ -69,6 +69,10 @@ const SalesHomePage = lazy(
 const AdminNodeStatusPage = lazy(
   () => import("@/pages/Admin/AdminNodeStatus/AdminNodeStatusPage"),
 );
+const UsersPage = lazy(() => import("@/pages/Admin/Users/UsersPage"));
+const AccountRequestsPage = lazy(
+  () => import("@/pages/Admin/AccountRequests/AccountRequestsPage"),
+);
 
 // Route ứng với công việc vận hành farm — Sales Staff chưa có màn hình nghiệp vụ
 // riêng (module Bán hàng thuộc Giai đoạn 2, xem SalesHomePage) nên không thuộc nhóm này.
@@ -232,6 +236,24 @@ export default function App() {
             element={
               <RequireRole allow={["FARM_OWNER", "ADMIN"]}>
                 <HarvestPage />
+              </RequireRole>
+            }
+          />
+          {/* Quản lý tài khoản người dùng toàn hệ thống — chỉ Admin */}
+          <Route
+            path="users"
+            element={
+              <RequireRole allow={["ADMIN"]}>
+                <UsersPage />
+              </RequireRole>
+            }
+          />
+          {/* AUTH-FR-012 (xoá tài khoản) + AUTH-FR-005d (đề xuất Sales Staff) — chỉ Admin */}
+          <Route
+            path="account-requests"
+            element={
+              <RequireRole allow={["ADMIN"]}>
+                <AccountRequestsPage />
               </RequireRole>
             }
           />

@@ -1,7 +1,8 @@
 import type { ComponentType, SVGProps } from 'react'
 import {
   IconDashboard, IconFarm, IconDevice, IconAlert,
-  IconAnalytics, IconTicket, IconHarvest, IconSettings,
+  IconAnalytics, IconTicket, IconHarvest, IconSettings, IconUsers,
+  IconBell,
 } from '@/components/ui/icons'
 import type { Role } from '@/types'
 
@@ -11,6 +12,13 @@ export interface NavItem {
   icon: ComponentType<SVGProps<SVGSVGElement>>
   /** Role nào được thấy mục này trong Sidebar/MobileDock — mỗi role có sidebar riêng, không dùng chung. */
   roles: Role[]
+  /**
+   * Role nào được ghim mục này lên MobileDock (tối đa DOCK_SIZE mục/role). Không
+   * khai báo thì dock lấy DOCK_SIZE mục đầu tiên của nav đã lọc theo role — đủ
+   * cho Farm Owner/Technician, nhưng Admin có nhiều mục hơn nên phải chọn tay,
+   * nếu không Người dùng/Yêu cầu tài khoản không bao giờ vào được từ điện thoại.
+   */
+  dock?: Role[]
 }
 
 interface NavSection {
@@ -37,7 +45,7 @@ const ALL_NAV_SECTIONS: NavSection[] = [
     title: 'Vận hành',
     items: [
       // OPS-NFR-004 — màn hình xem nhanh trạng thái mọi node toàn hệ thống, chỉ Admin.
-      { to: '/system-status', label: 'Trạng thái hệ thống', icon: IconDashboard, roles: ['ADMIN'] },
+      { to: '/system-status', label: 'Trạng thái hệ thống', icon: IconDashboard, roles: ['ADMIN'], dock: ['ADMIN'] },
       { to: '/dashboard', label: 'Tổng quan', icon: IconDashboard, roles: FARM_OWNER_ONLY },
       { to: '/devices',   label: 'Thiết bị & Cảm biến',  icon: IconDevice, roles: OPS_ROLES },
       { to: '/alerts',    label: 'Cảnh báo',  icon: IconAlert, roles: OPS_ROLES },
@@ -47,7 +55,11 @@ const ALL_NAV_SECTIONS: NavSection[] = [
     title: 'Quản lý',
     items: [
       { to: '/farms',     label: 'Trang trại', icon: IconFarm, roles: OPS_ROLES },
-      { to: '/tickets',   label: 'Ticket',     icon: IconTicket, roles: OPS_ROLES },
+      { to: '/tickets',   label: 'Ticket',     icon: IconTicket, roles: OPS_ROLES, dock: ['ADMIN'] },
+      // Quản lý tài khoản người dùng toàn hệ thống — chỉ Admin (AUTH-FR-011, RACI mục 4.4)
+      { to: '/users',     label: 'Người dùng', icon: IconUsers, roles: ['ADMIN'], dock: ['ADMIN'] },
+      // Hàng đợi xoá tài khoản (AUTH-FR-012) + đề xuất Sales Staff (AUTH-FR-005d) — chỉ Admin
+      { to: '/account-requests', label: 'Yêu cầu tài khoản', icon: IconBell, roles: ['ADMIN'], dock: ['ADMIN'] },
       // Backend: toàn bộ router harvests chỉ requireRole(FARM_OWNER, ADMIN) —
       // và theo lựa chọn sản phẩm, Admin dùng sidebar giống Technician nên
       // cũng không hiện mục này (route /harvests vẫn cho Admin gọi được, chỉ
@@ -75,9 +87,18 @@ export function getNavSections(role: Role | undefined): NavSection[] {
     .filter(section => section.items.length > 0)
 }
 
-/** 4 mục đầu tiên trong nav đã lọc theo role — hiển thị trên dock mobile (tần suất dùng hằng ngày). */
+/** Số mục tối đa trên dock — 4 nút tròn + 1 nhãn mục đang mở vừa khít 375px (UX-NFR-001). */
+const DOCK_SIZE = 4
+
+/**
+ * Mục hiển thị trên dock mobile: ưu tiên các mục có `dock` ghim cho role này;
+ * role không ghim gì thì lấy DOCK_SIZE mục đầu tiên của nav đã lọc (tần suất dùng hằng ngày).
+ */
 export function getDockItems(role: Role | undefined): NavItem[] {
-  return getNavSections(role).flatMap(s => s.items).slice(0, 4)
+  if (!role) return []
+  const items = getNavSections(role).flatMap(s => s.items)
+  const pinned = items.filter(item => item.dock?.includes(role))
+  return (pinned.length > 0 ? pinned : items).slice(0, DOCK_SIZE)
 }
 
 /**
