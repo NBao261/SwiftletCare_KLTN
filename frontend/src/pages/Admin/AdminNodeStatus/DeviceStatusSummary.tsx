@@ -7,7 +7,7 @@ import StatusDot from "@/components/common/StatusDot";
 import EmptyState from "@/components/common/EmptyState";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
 import { formatDate } from "@/utils/helpers";
-import type { SystemNodeStatusItem } from "@/types";
+import type { SystemNodeStatus, SystemNodeStatusItem } from "@/types";
 
 const SUMMARY_ITEMS: Array<{
   key: keyof ReturnType<typeof emptySummary>;
@@ -25,9 +25,14 @@ function emptySummary() {
   return { total: 0, online: 0, offline: 0, error: 0, degraded: 0, pending: 0 };
 }
 
-export default function DeviceStatusSummary() {
+/**
+ * `summary` (tuỳ chọn) — số liệu tóm tắt do trang cha truyền vào, để các thẻ đếm
+ * lấy cùng nguồn với Farm/Zone bên cạnh (SystemHealthPage dùng `devices` của
+ * health-overview). Không truyền thì dùng tóm tắt của chính danh sách node.
+ */
+export default function DeviceStatusSummary({ summary: summaryOverride }: { summary?: SystemNodeStatus["summary"] }) {
   const { data, isLoading } = useSystemNodeStatus();
-  const summary = data?.summary ?? emptySummary();
+  const summary = summaryOverride ?? data?.summary ?? emptySummary();
 
   return (
     <div className="flex flex-col gap-3">

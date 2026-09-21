@@ -110,7 +110,7 @@ export function ReassignTicketModal({ open, onClose, ticket }: BaseProps) {
       onSuccess: () => { push('Đã gán lại kỹ thuật viên'); onClose() },
       onError: (err) => {
         // Chưa force mà backend chặn vì ngoài vùng → hỏi lại thay vì chỉ báo lỗi
-        if (!force && isOutOfRegionError(err)) setForceConfirm(getApiErrorMessage(err, ''))
+        if (!force && isOutOfRegionError(err)) setForceConfirm(`${selected?.full_name ?? 'Kỹ thuật viên này'} không phụ trách khu vực của farm (hoặc farm chưa được gán khu vực). Nếu vẫn gán, kỹ thuật viên này sẽ không tự mở được ticket cho đến khi được thêm vùng phụ trách.`)
         else push(getApiErrorMessage(err, 'Gán lại kỹ thuật viên thất bại'), 'error')
       },
     })

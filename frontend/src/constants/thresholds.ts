@@ -34,7 +34,11 @@ export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: numb
   co2_max:      { min: 0,   max: 5000,    unit: 'ppm' },
 }
 
-/** Nhãn + bước nhập cho form 7 ngưỡng (SystemSettingsPage, ThresholdsModal) */
+/**
+ * Nhãn + bước nhập cho form 7 ngưỡng. Hiện chỉ SystemSettingsPage dùng; ThresholdsModal (Farm Owner,
+ * cùng 7 trường và cùng khoảng đo ở backend) vẫn giữ bản riêng — nên chuyển sang dùng chung với
+ * `validateThresholds`/`parseThresholdInput` để cũng hết lỗi `Number('')` → 0.
+ */
 export const THRESHOLD_FIELDS: Array<{ key: keyof Thresholds; label: string; step: string }> = [
   { key: 'temp_min',     label: 'Nhiệt độ min (°C)',   step: '0.1' },
   { key: 'temp_max',     label: 'Nhiệt độ max (°C)',   step: '0.1' },

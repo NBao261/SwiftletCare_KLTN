@@ -75,14 +75,14 @@ export default function SystemHealthPage() {
                     key={role}
                     label={ROLE_LABEL[role]}
                     value={byRole?.active ?? 0}
-                    hint={byRole?.inactive ? `+${byRole.inactive} đã khoá` : undefined}
+                    hint={byRole?.inactive ? `+${byRole.inactive} khoá/đã xoá` : undefined}
                   />
                 )
               })}
             </div>
           </section>
 
-          <DeviceStatusSummary />
+          <DeviceStatusSummary summary={data.devices} />
         </>
       )}
     </div>

@@ -43,5 +43,6 @@ export function useSystemHealth() {
   return useQuery({
     queryKey: ['system-health'],
     queryFn: () => systemApi.getHealthOverview().then(r => r.data.data),
+    refetchInterval: 30_000, // màn "xem nhanh" — cùng nhịp với danh sách node bên dưới (useSystemNodeStatus)
   })
 }
