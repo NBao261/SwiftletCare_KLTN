@@ -53,6 +53,19 @@ const config: Config = {
       fontFamily: {
         sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui'],
       },
+      // ── Thang chữ FE_Design_Claude.md §2.8 — size/line-height/weight đi kèm nhau ──
+      // Dùng `text-h1`, `text-body`, `text-small`, `text-caption`... thay cho text-2xl/
+      // text-sm/text-xs mặc định (lệch 1–2px so với spec). `text-metric` cần thêm
+      // `tabular-nums` (font-variant không nằm được trong fontSize).
+      fontSize: {
+        h1:      ['26px', { lineHeight: '34px', fontWeight: '700' }],
+        h2:      ['20px', { lineHeight: '28px', fontWeight: '600' }],
+        h3:      ['16px', { lineHeight: '24px', fontWeight: '600' }],
+        body:    ['14px', { lineHeight: '22px' }],
+        small:   ['13px', { lineHeight: '18px' }],
+        caption: ['11px', { lineHeight: '16px', fontWeight: '600', letterSpacing: '0.04em' }],
+        metric:  ['32px', { lineHeight: '38px', fontWeight: '700' }],
+      },
       borderRadius: {
         xl:   '16px',
         '2xl': '20px',

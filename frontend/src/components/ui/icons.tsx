@@ -94,6 +94,11 @@ export const IconCheck = (p: IconProps) => (
   <Svg {...p}><path d="m4 10.5 3.8 3.8L16 6" /></Svg>
 )
 
+/** Kính lúp — icon trái ô tìm kiếm */
+export const IconSearch = (p: IconProps) => (
+  <Svg {...p}><circle cx="8.5" cy="8.5" r="5.5" /><path d="m17 17-4-4" /></Svg>
+)
+
 // ── Icon cho từng chỉ số cảm biến (ENV-FR-003) ─────────────────────────────
 export const IconTemp = (p: IconProps) => (
   <Svg {...p}><path d="M8 11.2V4.5a2 2 0 1 1 4 0v6.7a4 4 0 1 1-4 0Z" /><path d="M10 8v4.5" /></Svg>
@@ -113,4 +118,41 @@ export const IconGas = (p: IconProps) => (
 
 export const IconSound = (p: IconProps) => (
   <Svg {...p}><path d="M4 8v4M7.5 5.5v9M11 3.5v13M14.5 7v6M18 9v2" /></Svg>
+)
+
+/** "Sàn & Đơn hàng" — túi mua sắm */
+export const IconBag = (p: IconProps) => (
+  <Svg {...p}><path d="M6.5 8V6a3.5 3.5 0 0 1 7 0v2" /><rect x="3.5" y="8" width="13" height="10" rx="2" /></Svg>
+)
+
+/** Tai nghe có mic — nhân viên kinh doanh/chăm sóc khách (Sales Staff); IconBag trông giống ổ khoá khi thu nhỏ nên không dùng cho vai trò */
+export const IconHeadset = (p: IconProps) => (
+  <Svg {...p}><path d="M4 12v-1.5a6 6 0 0 1 12 0V12" /><rect x="3" y="11" width="3" height="5" rx="1.5" /><rect x="14" y="11" width="3" height="5" rx="1.5" /><path d="M16 16v.5a2 2 0 0 1-2 2h-2.5" /></Svg>
+)
+
+/** 1 người — dùng cho vai trò đơn lẻ (VD nút chọn Kỹ thuật viên); IconUsers là nhóm người cho mục "Người dùng" */
+export const IconUser = (p: IconProps) => (
+  <Svg {...p}><circle cx="10" cy="7" r="3.2" /><path d="M4 17.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /></Svg>
+)
+
+/** "Người dùng" — nhóm người dùng */
+export const IconUsers = (p: IconProps) => (
+  <Svg {...p}><circle cx="8" cy="7" r="3" /><path d="M2 18c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="14.5" cy="6" r="2.5" /><path d="M18 17c0-2.8-1.5-5-3.5-5.7" /></Svg>
+)
+
+/** "Thao tác khác" — menu 3 chấm dọc (dùng trong ActionsMenu theo dòng bảng) */
+export const IconMore = (p: IconProps) => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" {...p}>
+    <circle cx="10" cy="4.5" r="1.5" />
+    <circle cx="10" cy="10" r="1.5" />
+    <circle cx="10" cy="15.5" r="1.5" />
+  </svg>
+)
+
+/** Mũi tên sắp xếp cột bảng (DataTable) — 2 chiều asc/desc */
+export const IconSortAsc = (p: IconProps) => (
+  <Svg {...p}><path d="M10 15.5V4.5" /><path d="m5.5 9 4.5-4.5L14.5 9" /></Svg>
+)
+export const IconSortDesc = (p: IconProps) => (
+  <Svg {...p}><path d="M10 4.5v11" /><path d="m5.5 11 4.5 4.5L14.5 11" /></Svg>
 )
