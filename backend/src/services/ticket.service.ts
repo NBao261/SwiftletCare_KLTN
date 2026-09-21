@@ -491,7 +491,8 @@ export async function adminOverrideTicket(
     // là quyết định có ý thức và được ghi lại.
     const farm = await Farm.findById(ticket.farm_id).select('region').lean()
     const coversRegion = !!farm?.region && (technician.assigned_regions ?? []).includes(farm.region)
-    if (!coversRegion && !updates.force) {
+    // Chỉ đúng `true` mới ép được — chuỗi "false" (truthy) từ 1 đường gọi không qua route không được bỏ qua kiểm tra
+    if (!coversRegion && updates.force !== true) {
       const regions = (technician.assigned_regions ?? []).join(', ') || 'chưa gán vùng nào'
       throw BadRequestError(
         `Technician này phụ trách ${regions}, không khớp khu vực "${farm?.region ?? 'chưa đặt'}" của farm. ` +

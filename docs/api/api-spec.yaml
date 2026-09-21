@@ -3398,7 +3398,12 @@ paths:
         bỏ qua `ALLOWED_TRANSITIONS` thường áp dụng cho `PUT /tickets/:id/status`
         và không đòi SAT checklist khi đóng ticket lắp đặt. `reason` luôn được
         ghi vào `notes` của ticket.
-        - `assigned_to` phải là Technician đang hoạt động.
+        - `assigned_to` phải là Technician đang hoạt động **và phụ trách khu vực
+          (`assigned_regions`) của farm** — người ngoài vùng sẽ bị chặn 403 khi mở
+          chính ticket đó nên ticket thành mồ côi. Gửi `force: true` để vẫn gán;
+          quyết định này được ghi `forcedOutOfRegion` vào audit log. `force` chỉ có
+          tác dụng khi là boolean `true` (chuỗi `"true"`/`"1"` được ép về `true`,
+          `"false"`/`"0"` về `false`).
         - Đổi `priority` thì tính lại `sla_response_due_at`/`sla_resolve_due_at`
           theo SLA của priority mới, mốc là `created_at` của ticket.
         - Mở lại ticket đã `CLOSED` thì gỡ `closed_at`.
@@ -3417,6 +3422,7 @@ paths:
                 scheduled_visit_at: { type: string, format: date-time }
                 status: { $ref: "#/components/schemas/TicketStatus" }
                 reason: { type: string, description: "Lý do can thiệp, ghi vào notes + audit_logs" }
+                force: { type: boolean, default: false, description: "true = vẫn gán Technician ngoài khu vực phụ trách của farm" }
       responses:
         "200":
           description: OK
@@ -3427,7 +3433,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/Ticket" } }
         "400":
-          description: "assigned_to không phải Technician đang hoạt động"
+          description: "assigned_to không phải Technician đang hoạt động, hoặc không phụ trách khu vực của farm mà chưa gửi force: true"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
