@@ -1,6 +1,6 @@
 // ADMIN — Yêu cầu tài khoản: xoá tài khoản (AUTH-FR-012, Flow 19) + đề xuất/gỡ Sales Staff (AUTH-FR-005d, Flow 16 bước 1b/1e)
 // Gọi API thật qua hooks/useAccountRequests.ts (/admin/delete-requests, /admin/sales-staff-requests).
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   useDeleteRequestsList, useCompleteDeleteRequest,
   useSalesAssignmentRequestsList, useDecideSalesAssignmentRequest,
@@ -20,6 +20,20 @@ const DELETE_SLA_DAYS = 30
 const PAGE_SIZE = 20
 
 type Tab = 'DELETE' | 'SALES_STAFF'
+
+/**
+ * Xử lý xong mục cuối của trang N (N > 1) thì trang đó trống trong khi các trang trước
+ * vẫn còn — kéo `page` lùi về trang cuối còn dữ liệu, thay vì để người dùng kẹt ở
+ * trang rỗng (không có Pagination để quay lại). Trả true khi đang ở trang vượt quá.
+ */
+function useClampedPage(page: number, setPage: (page: number) => void, total: number, limit: number, isLoading: boolean): boolean {
+  const lastPage = Math.max(1, Math.ceil(total / limit))
+  const beyondLastPage = !isLoading && page > lastPage
+  useEffect(() => {
+    if (beyondLastPage) setPage(lastPage)
+  }, [beyondLastPage, lastPage, setPage])
+  return beyondLastPage
+}
 
 export default function AccountRequestsPage() {
   const [tab, setTab] = useState<Tab>('DELETE')
@@ -67,6 +81,7 @@ function readOpenTickets(err: unknown): number | null {
 function DeleteRequestsTab() {
   const [page, setPage] = useState(1)
   const { records: requests, total, limit, isLoading } = useDeleteRequestsList({ page, limit: PAGE_SIZE })
+  const clamping = useClampedPage(page, setPage, total, limit, isLoading)
   const completeDeleteRequest = useCompleteDeleteRequest()
   const push = useToastStore(s => s.push)
   const [target, setTarget] = useState<User | null>(null)
@@ -88,7 +103,7 @@ function DeleteRequestsTab() {
     })
   }
 
-  if (isLoading) return <LoadingSkeleton count={2} className="h-24 w-full" />
+  if (isLoading || clamping) return <LoadingSkeleton count={2} className="h-24 w-full" />
   if (!requests.length) {
     return (
       <EmptyState
@@ -154,12 +169,13 @@ const REQUEST_TYPE_LABEL: Record<SalesAssignmentRequest['type'], string> = { ADD
 function SalesStaffRequestsTab() {
   const [page, setPage] = useState(1)
   const { records: requests, total, limit, isLoading } = useSalesAssignmentRequestsList({ page, limit: PAGE_SIZE })
+  const clamping = useClampedPage(page, setPage, total, limit, isLoading)
   const decide = useDecideSalesAssignmentRequest()
   const push = useToastStore(s => s.push)
   const [approveTarget, setApproveTarget] = useState<SalesAssignmentRequest | null>(null)
   const [rejectTarget, setRejectTarget] = useState<SalesAssignmentRequest | null>(null)
 
-  if (isLoading) return <LoadingSkeleton count={2} className="h-24 w-full" />
+  if (isLoading || clamping) return <LoadingSkeleton count={2} className="h-24 w-full" />
   if (!requests.length) {
     return (
       <EmptyState
