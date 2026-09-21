@@ -66,13 +66,17 @@ const ForbiddenPage = lazy(
 const SalesHomePage = lazy(
   () => import("@/pages/SalesStaff/SalesHome/SalesHomePage"),
 );
-const AdminNodeStatusPage = lazy(
-  () => import("@/pages/Admin/AdminNodeStatus/AdminNodeStatusPage"),
-);
 const UsersPage = lazy(() => import("@/pages/Admin/Users/UsersPage"));
 const AccountRequestsPage = lazy(
   () => import("@/pages/Admin/AccountRequests/AccountRequestsPage"),
 );
+const SystemHealthPage = lazy(
+  () => import("@/pages/Admin/SystemHealth/SystemHealthPage"),
+);
+const SystemSettingsPage = lazy(
+  () => import("@/pages/Admin/SystemSettings/SystemSettingsPage"),
+);
+const AuditLogPage = lazy(() => import("@/pages/Admin/AuditLog/AuditLogPage"));
 
 // Route ứng với công việc vận hành farm — Sales Staff chưa có màn hình nghiệp vụ
 // riêng (module Bán hàng thuộc Giai đoạn 2, xem SalesHomePage) nên không thuộc nhóm này.
@@ -257,12 +261,30 @@ export default function App() {
               </RequireRole>
             }
           />
-          {/* OPS-NFR-004 — chỉ Admin */}
+          {/* Module SYSTEM (mục 5.11) — chỉ Admin. /system/health gộp cả OPS-NFR-004 (trạng thái node) */}
+          {/* /system-status (trang AdminNodeStatus cũ) đã gộp vào /system/health — giữ redirect cho bookmark/link cũ */}
+          <Route path="system-status" element={<Navigate to="/system/health" replace />} />
           <Route
-            path="system-status"
+            path="system/health"
             element={
               <RequireRole allow={["ADMIN"]}>
-                <AdminNodeStatusPage />
+                <SystemHealthPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="system/settings"
+            element={
+              <RequireRole allow={["ADMIN"]}>
+                <SystemSettingsPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="system/audit-log"
+            element={
+              <RequireRole allow={["ADMIN"]}>
+                <AuditLogPage />
               </RequireRole>
             }
           />
