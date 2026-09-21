@@ -27,7 +27,8 @@ router.put ('/:id/admin-override', requireRole('ADMIN'),
   body('priority').optional().isIn(['P1', 'P2', 'P3']),
   body('status').optional().isIn(['NEW', 'IN_PROGRESS', 'AWAITING_FIELD_CONFIRMATION', 'CLOSED']),
   body('scheduled_visit_at').optional().isISO8601(),
-  body('force').optional().isBoolean(),
+  // toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false"/"0" lọt xuống service là truthy và bỏ qua kiểm tra khu vực
+  body('force').optional().isBoolean().toBoolean(),
   validate, ticketController.adminOverride)
 
 export default router
