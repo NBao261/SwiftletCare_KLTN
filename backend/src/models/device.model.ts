@@ -9,6 +9,11 @@ export interface ISensorNode extends Document {
   device_id: string
   zone_id: Types.ObjectId
   firmware_version: string
+  /**
+   * TICKET-FR-008, Flow 15 — lệnh OTA đã gửi, chờ heartbeat báo đúng
+   * `firmware_version` mới để xác nhận thành công (bước 5).
+   */
+  ota_pending?: { version: string; url: string; requested_at: Date; requested_by?: Types.ObjectId }
   last_heartbeat?: Date
   status: DeviceStatus
   rssi?: number
@@ -69,6 +74,15 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     device_id:        { type: String, required: true, unique: true },
     zone_id:          { type: Schema.Types.ObjectId, ref: 'Zone', required: true },
     firmware_version: { type: String, default: '1.0.0' },
+    ota_pending: {
+      type: new Schema({
+        version:      { type: String, required: true },
+        url:          { type: String, required: true },
+        requested_at: { type: Date, required: true },
+        requested_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      }, { _id: false }),
+      default: undefined,
+    },
     last_heartbeat:   { type: Date },
     // PENDING = Technician vừa tạo qua Web Console Onboarding, chờ heartbeat đầu
     // tiên (Flow 1 bước 4→8). cron job `deviceOffline.job` chỉ quét node ONLINE nên node

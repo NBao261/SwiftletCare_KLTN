@@ -1,4 +1,5 @@
 import { SensorNode, CameraNode, ISensorNode, IN_SERVICE } from '@/models/device.model'
+import { Ticket } from '@/models/ticket.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
 import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds, listActiveZoneIds } from '@/utils/farmAccess.util'
@@ -260,8 +261,17 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
   node.last_heartbeat = new Date()
   if (payload.rssi !== undefined) node.rssi = payload.rssi
   if (payload.firmwareVersion) node.firmware_version = payload.firmwareVersion
+  // Flow 15 bước 5 — heartbeat đầu tiên chạy đúng bản mới = OTA thành công
+  const otaDone = node.ota_pending && payload.firmwareVersion === node.ota_pending.version ? node.ota_pending : null
+  if (otaDone) node.ota_pending = undefined
   node.activation_overdue_at = undefined // đã kết nối được thì không còn "kích hoạt quá hạn"
   await node.save()
+
+  if (otaDone) {
+    await logAction(otaDone.requested_by ? String(otaDone.requested_by) : undefined, 'DEVICE_OTA_SUCCEEDED', 'sensor_node', String(node._id), {
+      deviceId: node.device_id, version: otaDone.version,
+    })
+  }
 
   if (wasOffline) {
     emitDeviceStatusChange(String(node.zone_id), {
@@ -392,6 +402,88 @@ export async function replaceSensorNode(
     oldDeviceId: old.device_id, newDeviceId: input.new_device_id, newNodeId: String(newNode._id), reason: input.reason,
   })
   return { oldNode, newNode }
+}
+
+// ── TICKET-FR-008 / Flow 15: xử lý từ xa ─────────────────────────────────────
+
+export type RemoteCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
+
+export interface RemoteCommandInput {
+  command: RemoteCommand
+  /** Ghi kết quả vào ticket đang xử lý (Flow 9 bước 5) */
+  ticket_id?: string
+  ota?: { version: string; url: string; sha256: string }
+}
+
+/**
+ * TICKET-FR-008 — Technician thử xử lý từ xa trước khi quyết định ra hiện
+ * trường. Cả 3 lệnh đi qua topic `config/update` đã có trong §9.2 (Flow 15 bước
+ * 3 chỉ định OTA dùng topic này), phân biệt bằng trường `command`:
+ * - PUSH_CONFIG: đẩy lại toàn bộ ngưỡng hiện hành của Zone (thiết bị lệch cấu hình)
+ * - RESTART: `{ command: 'RESTART' }`
+ * - OTA: `{ command: 'OTA', ota: { version, url, sha256 } }` — ESP32 tự tải, kiểm
+ *   checksum, ghi partition dự phòng, rollback nếu lỗi (Flow 15 bước 4, case 4a–5a)
+ * Firmware cũ bỏ qua key lạ trong `config/update` nên gửi RESTART/OTA tới thiết
+ * bị chưa hỗ trợ không làm hỏng ngưỡng đang chạy.
+ */
+export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input: RemoteCommandInput) {
+  const node = await SensorNode.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
+  const chain = await assertZoneAccess(String(node.zone_id), user)
+  if (node.status !== 'ONLINE') {
+    throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE`)
+  }
+
+  const ticket = input.ticket_id ? await Ticket.findById(input.ticket_id) : null
+  if (input.ticket_id) {
+    if (!ticket) throw NotFoundError('Không tìm thấy ticket')
+    if (String(ticket.farm_id) !== String(chain.farm._id)) throw BadRequestError('Ticket không thuộc farm của thiết bị này')
+    if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
+  }
+
+  let payload: Record<string, unknown>
+  let summary: string
+  switch (input.command) {
+    case 'PUSH_CONFIG':
+      payload = { ...chain.zone.thresholds }
+      summary = 'đẩy lại cấu hình ngưỡng của Zone'
+      break
+    case 'RESTART':
+      payload = { command: 'RESTART' }
+      summary = 'khởi động lại thiết bị'
+      break
+    case 'OTA': {
+      if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
+      if (input.ota.version === node.firmware_version) {
+        throw ConflictError(`Thiết bị đang chạy đúng phiên bản ${input.ota.version}`)
+      }
+      const { version, url, sha256 } = input.ota
+      payload = { command: 'OTA', ota: { version, url, sha256 } }
+      node.ota_pending = { version: input.ota.version, url: input.ota.url, requested_at: new Date(), requested_by: user._id as never }
+      await node.save()
+      summary = `đẩy OTA ${node.firmware_version} → ${input.ota.version}`
+      break
+    }
+    default:
+      throw BadRequestError('command phải là RESTART, PUSH_CONFIG hoặc OTA')
+  }
+
+  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', payload)
+
+  if (ticket) {
+    ticket.notes.push({
+      author_id: user._id as never,
+      content: `Xử lý từ xa trên thiết bị ${node.device_id}: ${summary}`,
+      created_at: new Date(),
+    })
+    await ticket.save()
+  }
+  await logAction(user._id, 'DEVICE_COMMAND_SENT', 'sensor_node', String(node._id), {
+    deviceId: node.device_id, command: input.command, ticketId: input.ticket_id ?? null,
+    ...(input.ota ? { version: input.ota.version, url: input.ota.url } : {}),
+  })
+  return node
 }
 
 /** Flow 1 case 8a — SRS: quá 15 phút từ lúc đăng ký (bước 4) mà chưa có heartbeat đầu tiên */
