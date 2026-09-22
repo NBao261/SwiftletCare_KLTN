@@ -18,6 +18,10 @@ export interface ITicket extends Document {
   priority: TicketPriority
   status: TicketStatus
   assigned_to?: Types.ObjectId
+  /** TICKET-FR-017 — Technician từng phụ trách: mất quyền gửi chat nhưng vẫn xem lại lịch sử */
+  previous_assignees: Types.ObjectId[]
+  /** TICKET-FR-015 — sắp xếp danh sách ticket theo hoạt động chat gần nhất */
+  last_message_at?: Date
   /**
    * Chỉ dùng cho type=INSTALLATION/MAINTENANCE. Farm Owner chọn thẳng ngày giờ
    * hẹn ngay lúc tạo ticket (TICKET-FR-001/004b, Flow 9b bước 1) — không có bước
@@ -70,6 +74,8 @@ const ticketSchema = new Schema<ITicket>(
     priority: { type: String, enum: ['P1','P2','P3'] as TicketPriority[], required: true },
     status:   { type: String, enum: ['NEW','IN_PROGRESS','AWAITING_FIELD_CONFIRMATION','CLOSED'] as TicketStatus[], default: 'NEW' },
     assigned_to: { type: Schema.Types.ObjectId, ref: 'User' },
+    previous_assignees: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    last_message_at: { type: Date },
     scheduled_visit_at:  { type: Date },
     sla_response_due_at: { type: Date },
     sla_resolve_due_at:  { type: Date },

@@ -6,6 +6,8 @@ import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util
 import { logAction } from '@/services/auditLog.service'
 import { getSlaHours, getTicketRouting } from '@/services/system.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
+import { postSystemMessage } from '@/services/ticketChat.service'
+import { emitTicketAssigneeChanged } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -255,6 +257,28 @@ export async function getTicket(ticketId: string, user: CurrentUser): Promise<IT
   return ticket
 }
 
+/**
+ * TICKET-FR-017 — sau khi đổi người phụ trách: người cũ vào `previous_assignees`
+ * (còn xem lại chat, mất quyền gửi) và thread chat nhận 1 tin hệ thống. Gọi
+ * TRƯỚC `ticket.save()` để previous_assignees được lưu cùng lượt.
+ */
+function trackAssigneeChange(ticket: ITicket, from: string | null): void {
+  if (from && from !== assigneeIdOf(ticket) && !ticket.previous_assignees.some(id => String(id) === from)) {
+    ticket.previous_assignees.push(from as never)
+  }
+}
+
+async function announceAssigneeChange(ticket: ITicket, from: string | null): Promise<void> {
+  const to = assigneeIdOf(ticket)
+  if (from === to) return
+  const technician = to ? await User.findById(to).select('full_name').lean() : null
+  await postSystemMessage(
+    String(ticket._id),
+    technician ? `Đã chuyển xử lý sang ${technician.full_name}` : 'Ticket đang chờ Administrator gán Technician mới',
+  )
+  emitTicketAssigneeChanged(String(ticket._id), { from, to })
+}
+
 /** `assigned_to` có thể đã populate (getTicket) hoặc còn là ObjectId — lấy id dạng chuỗi cho cả 2 */
 export function assigneeIdOf(ticket: Pick<ITicket, 'assigned_to'>): string | null {
   const assignee = ticket.assigned_to as unknown as { _id?: unknown } | undefined
@@ -360,6 +384,7 @@ export async function requestReassign(ticketId: string, user: CurrentUser, reaso
   const to = await routeToTechnician(String(ticket.farm_id), { exclude: from ? [from] : [] })
 
   ticket.assigned_to = (to ?? undefined) as never
+  trackAssigneeChange(ticket, from)
   ticket.status = 'NEW'
   ticket.responded_at = undefined
   ticket.notes.push({
@@ -370,6 +395,7 @@ export async function requestReassign(ticketId: string, user: CurrentUser, reaso
   await ticket.save()
 
   await logAction(user._id, 'TICKET_REASSIGN_REQUESTED', 'ticket', ticketId, { from, to, reason })
+  await announceAssigneeChange(ticket, from)
   if (to) {
     void notifyUser(to, {
       title: `Bạn được gán ticket ${ticket.priority}`,
@@ -642,6 +668,7 @@ export async function adminOverrideTicket(
 ): Promise<ITicket> {
   const ticket = await Ticket.findById(ticketId)
   if (!ticket) throw NotFoundError('Không tìm thấy ticket')
+  const previousAssignee = assigneeIdOf(ticket)
 
   const changes: Record<string, unknown> = {}
   if (updates.assigned_to !== undefined) {
@@ -668,6 +695,7 @@ export async function adminOverrideTicket(
     changes.assigned_to = { before: ticket.assigned_to ? String(ticket.assigned_to) : null, after: updates.assigned_to }
     if (!coversRegion) changes.forcedOutOfRegion = true
     ticket.assigned_to = technician._id
+    trackAssigneeChange(ticket, previousAssignee)
   }
   if (updates.priority !== undefined && updates.priority !== ticket.priority) {
     // SLA tính theo priority (TICKET-FR-006) và mốc là lúc tạo ticket, không
@@ -699,5 +727,6 @@ export async function adminOverrideTicket(
   await ticket.save()
 
   await logAction(adminUser._id, 'TICKET_ADMIN_OVERRIDE', 'ticket', ticketId, changes)
+  await announceAssigneeChange(ticket, previousAssignee)
   return ticket.populate('assigned_to', 'full_name email')
 }
