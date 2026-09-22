@@ -98,6 +98,21 @@ export interface AuditLogEntry {
 /** SYSTEM-FR-002 — nguồn cho ENV-FR-020 "reset về mặc định", cùng shape 7 trường với Zone.thresholds */
 export type SystemDefaultThresholds = Thresholds
 
+/** TICKET-FR-006, SLA-NFR-001 — hạn phản hồi/xử lý (giờ) do Admin cấu hình theo mức ưu tiên */
+export interface SlaLevel { response_hours: number; resolve_hours: number }
+export type SlaConfig = Record<TicketPriority, SlaLevel>
+
+/**
+ * Chỉ có ở response GET của 2 màn cấu hình Admin (không có ở response PUT) —
+ * vắng mặt nếu Admin chưa từng lưu (backend vẫn đang trả giá trị gốc/đề xuất).
+ */
+export interface SettingsMeta {
+  updated_at?: string
+  updated_by?: { _id: string; full_name: string } | null
+}
+export type SystemDefaultThresholdsWithMeta = SystemDefaultThresholds & SettingsMeta
+export type SlaConfigWithMeta = SlaConfig & SettingsMeta
+
 /**
  * SYSTEM-FR-003 — đúng shape `GET /system/health-overview`: chỉ đếm theo trạng
  * thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; ticket chỉ đếm
