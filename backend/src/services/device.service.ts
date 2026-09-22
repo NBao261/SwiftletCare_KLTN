@@ -10,7 +10,7 @@ import { logAction } from '@/services/auditLog.service'
 import { notifyUser } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
-import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { NotFoundError, ConflictError, BadRequestError, ForbiddenError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
 
@@ -426,6 +426,58 @@ export interface RemoteCommandInput {
  * Firmware cũ bỏ qua key lạ trong `config/update` nên gửi RESTART/OTA tới thiết
  * bị chưa hỗ trợ không làm hỏng ngưỡng đang chạy.
  */
+/**
+ * Flow 15 — ESP32 sẽ tải và flash đúng file ở URL này, còn sha256 do chính người
+ * gửi lệnh đặt nên không chống được file độc. Nguồn firmware vì vậy phải bị khoá:
+ * chỉ HTTPS và chỉ các host nội bộ khai báo trong `OTA_ALLOWED_HOSTS` (nơi team
+ * upload bản build, VD MinIO). Chưa cấu hình thì chặn hết — an toàn mặc định.
+ */
+function assertAllowedFirmwareUrl(url: string): void {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw BadRequestError('URL firmware không hợp lệ')
+  }
+  if (parsed.protocol !== 'https:') throw BadRequestError('Firmware phải tải qua HTTPS')
+
+  const allowed = (process.env.OTA_ALLOWED_HOSTS ?? '').split(',').map(h => h.trim().toLowerCase()).filter(Boolean)
+  if (!allowed.includes(parsed.hostname.toLowerCase())) {
+    throw BadRequestError(`Host firmware "${parsed.hostname}" không nằm trong danh sách được phép (OTA_ALLOWED_HOSTS)`)
+  }
+}
+
+/** Flow 15 case 4a–5a — quá thời gian này chưa có heartbeat chạy bản mới thì coi OTA thất bại (đã rollback) */
+export const OTA_CONFIRM_TIMEOUT_MS = 30 * 60 * 1000
+
+/**
+ * Gọi từ jobs/activationOverdue.job.ts. ESP32 tự rollback khi OTA lỗi nên backend
+ * không bao giờ nhận được tin báo lỗi — chỉ biết qua việc heartbeat vẫn báo bản
+ * cũ. Không có bước này `ota_pending` treo mãi, Technician tưởng vẫn đang cập nhật.
+ */
+export async function markOtaTimeouts(): Promise<number> {
+  const cutoff = new Date(Date.now() - OTA_CONFIRM_TIMEOUT_MS)
+  const nodes = await SensorNode.find({ 'ota_pending.requested_at': { $lt: cutoff }, ...IN_SERVICE })
+  for (const node of nodes) {
+    const pending = node.ota_pending!
+    node.ota_failed = { version: pending.version, failed_at: new Date(), running_version: node.firmware_version }
+    node.ota_pending = undefined
+    await node.save()
+
+    const requester = pending.requested_by ? String(pending.requested_by) : undefined
+    await logAction(requester, 'DEVICE_OTA_TIMEOUT', 'sensor_node', String(node._id), {
+      deviceId: node.device_id, version: pending.version, runningVersion: node.firmware_version,
+    })
+    if (requester) {
+      void notifyUser(requester, {
+        title: 'Cập nhật firmware không thành công',
+        body: `Thiết bị ${node.device_id} vẫn chạy ${node.firmware_version} sau 30 phút (mục tiêu ${pending.version}) — có thể đã rollback, kiểm tra log thiết bị.`,
+      })
+    }
+  }
+  return nodes.length
+}
+
 export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input: RemoteCommandInput) {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
@@ -440,6 +492,10 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     if (!ticket) throw NotFoundError('Không tìm thấy ticket')
     if (String(ticket.farm_id) !== String(chain.farm._id)) throw BadRequestError('Ticket không thuộc farm của thiết bị này')
     if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
+    // Ghi note vào ticket là thao tác xử lý — cùng quy tắc với đổi trạng thái: chỉ người được gán
+    if (user.role === 'TECHNICIAN' && String(ticket.assigned_to ?? '') !== user._id) {
+      throw ForbiddenError('Chỉ Technician đang được gán ticket này mới ghi lệnh từ xa vào ticket')
+    }
   }
 
   let payload: Record<string, unknown>
@@ -455,12 +511,14 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
       break
     case 'OTA': {
       if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
+      assertAllowedFirmwareUrl(input.ota.url)
       if (input.ota.version === node.firmware_version) {
         throw ConflictError(`Thiết bị đang chạy đúng phiên bản ${input.ota.version}`)
       }
       const { version, url, sha256 } = input.ota
       payload = { command: 'OTA', ota: { version, url, sha256 } }
       node.ota_pending = { version: input.ota.version, url: input.ota.url, requested_at: new Date(), requested_by: user._id as never }
+      node.ota_failed = undefined
       await node.save()
       summary = `đẩy OTA ${node.firmware_version} → ${input.ota.version}`
       break

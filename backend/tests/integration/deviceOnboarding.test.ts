@@ -17,7 +17,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode, CameraNode } from '@/models/device.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { User } from '@/models/user.model'
-import { markOverdueActivations, recordHeartbeat, ACTIVATION_TIMEOUT_MS } from '@/services/device.service'
+import { markOverdueActivations, markOtaTimeouts, recordHeartbeat, ACTIVATION_TIMEOUT_MS, OTA_CONFIRM_TIMEOUT_MS } from '@/services/device.service'
 import { createProvisionedDevice } from '@/services/provisionedDevice.service'
 import { Ticket } from '@/models/ticket.model'
 import { publishCommand } from '@/mqtt/mqtt.client'
@@ -26,6 +26,7 @@ import type { Role } from '@/types'
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
+process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.vn'
 
 const app = express()
 app.use(express.json())
@@ -247,16 +248,42 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
   })
 
   it('gắn vào ticket cùng farm thì ghi note; thiết bị OFFLINE hoặc ticket farm khác bị từ chối', async () => {
-    const { techToken, node, a, b } = await onlineNode()
-    const ticket = await Ticket.create({ farm_id: a.farm._id, type: 'NODE_OFFLINE', priority: 'P2' })
+    const { techToken, node, a, b, tech } = await onlineNode()
+    const ticket = await Ticket.create({ farm_id: a.farm._id, type: 'NODE_OFFLINE', priority: 'P2', assigned_to: tech._id })
     await send(techToken, node._id, { command: 'RESTART', ticket_id: String(ticket._id) }).expect(202)
     expect((await Ticket.findById(ticket._id))!.notes.at(-1)!.content).toContain('khởi động lại')
 
-    const other = await Ticket.create({ farm_id: b.farm._id, type: 'OTHER', priority: 'P3' })
+    const other = await Ticket.create({ farm_id: b.farm._id, type: 'OTHER', priority: 'P3', assigned_to: tech._id })
+    const notMine = await Ticket.create({ farm_id: a.farm._id, type: 'OTHER', priority: 'P3' })
+    await send(techToken, node._id, { command: 'RESTART', ticket_id: String(notMine._id) }).expect(403)
     await send(techToken, node._id, { command: 'RESTART', ticket_id: String(other._id) }).expect(400)
 
     await SensorNode.updateOne({ _id: node._id }, { status: 'OFFLINE' })
     await send(techToken, node._id, { command: 'RESTART' }).expect(409)
     expect(publishCommand).toHaveBeenCalledTimes(1)
+  })
+
+  it('OTA chỉ nhận HTTPS từ host trong OTA_ALLOWED_HOSTS', async () => {
+    const { techToken, node } = await onlineNode()
+    await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, url: 'http://fw.swiftletcare.vn/a.bin' } }).expect(422)
+    const res = await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, url: 'https://evil.example.com/a.bin' } }).expect(400)
+    expect(res.body.error.message).toContain('OTA_ALLOWED_HOSTS')
+    expect(publishCommand).not.toHaveBeenCalled()
+  })
+
+  it('OTA quá 30 phút chưa xác nhận → ota_failed + audit, lần gửi sau xoá cờ lỗi', async () => {
+    const { techToken, node } = await onlineNode()
+    await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(202)
+    await SensorNode.updateOne({ _id: node._id }, { 'ota_pending.requested_at': new Date(Date.now() - OTA_CONFIRM_TIMEOUT_MS - 1000) })
+
+    expect(await markOtaTimeouts()).toBe(1)
+    const failed = (await SensorNode.findById(node._id))!
+    expect(failed.ota_pending).toBeUndefined()
+    expect(failed.ota_failed).toMatchObject({ version: '1.3.0', running_version: '1.2.4' })
+    expect(await AuditLog.countDocuments({ action: 'DEVICE_OTA_TIMEOUT' })).toBe(1)
+    expect(await markOtaTimeouts()).toBe(0)
+
+    await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(202)
+    expect((await SensorNode.findById(node._id))!.ota_failed).toBeUndefined()
   })
 })

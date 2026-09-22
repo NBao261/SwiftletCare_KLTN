@@ -33,7 +33,7 @@ router.post('/sensor-nodes/:id/commands', requireRole('TECHNICIAN','ADMIN'), par
   body('command').isIn(['RESTART', 'PUSH_CONFIG', 'OTA']),
   body('ticket_id').optional().isMongoId(),
   body('ota.version').if(body('command').equals('OTA')).isString().trim().matches(/^v?\d+\.\d+\.\d+$/),
-  body('ota.url').if(body('command').equals('OTA')).isURL({ protocols: ['http', 'https'], require_protocol: true, require_tld: false }),
+  body('ota.url').if(body('command').equals('OTA')).isURL({ protocols: ['https'], require_protocol: true, require_tld: false }),
   body('ota.sha256').if(body('command').equals('OTA')).isHash('sha256'),
   validate, deviceController.sendCommand)
 router.post('/camera-nodes/:id/decommission', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.decommission('camera'))
