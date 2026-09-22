@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef } from 'react'
-import { Button } from './Button'
+import { Button } from '@/components/ui/Button'
 
 /** Modal Bottom Sheet cơ bản — mục 2.1 (rounded-3xl) */
 interface ModalProps {

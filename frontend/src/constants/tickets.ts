@@ -1,6 +1,6 @@
 import type { TicketType, TicketStatus } from '@/types'
 
-/** Nhãn/tone hiển thị Ticket — dùng chung giữa TicketsPage (list) và TicketDetailPage */
+/** Nhãn/tone hiển thị Ticket — dùng chung giữa TechnicianTicketsPage (list) và TechnicianTicketDetailPage */
 export const TICKET_TYPE_LABEL: Record<TicketType, string> = {
   SENSOR_FAULT: 'Lỗi cảm biến', RS485_BUS_FAILURE: 'Lỗi bus RS485', ACTUATOR_FAILURE: 'Lỗi thiết bị chấp hành',
   NODE_OFFLINE: 'Thiết bị mất kết nối', EDGE_AI_DEGRADED: 'Camera AI suy giảm', POWER_OUTAGE: 'Mất điện',

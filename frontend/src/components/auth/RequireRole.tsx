@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
-import { usePermission } from '@/hooks/usePermission'
+import { usePermission } from '@/hooks/common/usePermission'
 import type { Role } from '@/types'
 
 interface RequireRoleProps {

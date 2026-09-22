@@ -1,4 +1,4 @@
-import { useFarms, useFarmZones } from '@/hooks/useFarms'
+import { useFarms, useFarmZones } from '@/hooks/shared/useFarms'
 import { Select } from '@/components/ui'
 
 export interface ZonePickerValue { farmId: string; zoneId: string }
@@ -11,7 +11,7 @@ interface ZonePickerProps {
 
 /**
  * 2 select lồng nhau Farm → Zone, dùng trong form (tạo Harvest bắt buộc chọn
- * zone, tạo Ticket thì zone tùy chọn). Khác `ZoneSwitcher` ở TopBar (popover
+ * zone, tạo Ticket thì zone tùy chọn). Khác `ZoneSwitcher` ở AppHeader (popover
  * điều hướng) — đây là control form thường, không đụng lại component đó để
  * tránh regression UX đang chạy tốt.
  */

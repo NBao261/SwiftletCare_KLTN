@@ -1,5 +1,5 @@
 import { HTMLAttributes } from 'react'
-import { cn } from '@/utils/cn'
+import { cn } from '@/lib/cn'
 
 /**
  * Badge — pill trạng thái, giới hạn trong bảng màu chuẩn (FE_Design_Claude.md §2).

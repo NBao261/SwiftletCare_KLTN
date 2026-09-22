@@ -11,8 +11,8 @@ export function useLogin() {
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       authApi.login(email, password),
     onSuccess: async (res) => {
-      const { accessToken, user } = (res.data as { data: LoginResponse }).data
-      await setAuth(user, accessToken, '') // refreshToken from httpOnly cookie
+      const { accessToken, refreshToken, user } = (res.data as { data: LoginResponse }).data
+      await setAuth(user, accessToken, refreshToken ?? '')
       connectSocket()
     },
   })

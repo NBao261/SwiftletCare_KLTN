@@ -1,5 +1,5 @@
 import { forwardRef, HTMLAttributes } from 'react'
-import { cn } from '@/utils/cn'
+import { cn } from '@/lib/cn'
 
 /** Card — mục 2.1 (rounded-2xl trung bình / rounded-3xl lớn) + 2.2.8 (card active Lime Mist) */
 interface CardProps extends HTMLAttributes<HTMLDivElement> {

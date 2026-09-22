@@ -236,6 +236,7 @@ export interface ApiError {
 // ── Auth ────────────────────────────────────────────────────────────────────────
 export interface LoginResponse {
   accessToken: string
+  refreshToken?: string
   user: User
 }
 

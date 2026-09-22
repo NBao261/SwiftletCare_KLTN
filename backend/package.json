@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch --include \"./src/**/*\" src/index.ts",
-    "seed": "tsx src/scripts/seed.ts",
+    "seed": "tsx src/scripts/seed.script.ts",
+    "mdns": "tsx src/scripts/mdns-responder.script.ts",
     "build": "tsc",
     "build:check": "tsc --noEmit",
     "test": "jest --coverage",

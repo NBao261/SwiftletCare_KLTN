@@ -17,6 +17,20 @@ function setRefreshCookie(res: Response, token: string): void {
   res.cookie('refreshToken', token, { ...REFRESH_COOKIE_OPTIONS, maxAge: REFRESH_COOKIE_MAX_AGE })
 }
 
+/** Mobile (Expo/React Native) không có cookie jar nên không thể dùng httpOnly
+ *  cookie như web — client gửi header này để được cấp refreshToken qua JSON
+ *  body thay vì chỉ qua Set-Cookie. Web không gửi header này nên không đổi gì. */
+function isMobileClient(req: Request): boolean {
+  return req.headers['x-client'] === 'mobile'
+}
+
+/** Chấp nhận refreshToken từ body (mobile) HOẶC cookie (web) — /refresh và
+ *  /logout phải phục vụ cả 2 nguồn vì mobile không có cookie jar. */
+function readRefreshToken(req: Request): string | undefined {
+  return (req.body as Record<string, string | undefined>)?.refreshToken ??
+    (req.cookies as Record<string, string | undefined>)?.refreshToken
+}
+
 /** POST /auth/register – AUTH-FR-001 */
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const user = await authService.registerUser(req.body)
@@ -27,19 +41,21 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { user, accessToken, refreshToken } = await authService.loginUser(req.body)
   setRefreshCookie(res, refreshToken)
-  res.json({ success: true, data: { accessToken, user } })
+  const data: { accessToken: string; user: typeof user; refreshToken?: string } = { accessToken, user }
+  if (isMobileClient(req)) data.refreshToken = refreshToken
+  res.json({ success: true, data })
 })
 
 /** POST /auth/refresh – AUTH-FR-003 */
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
-  const token = (req.cookies as Record<string, string | undefined>)?.refreshToken
+  const token = readRefreshToken(req)
   const { accessToken } = await authService.refreshAccessToken(token)
   res.json({ success: true, data: { accessToken } })
 })
 
 /** POST /auth/logout – AUTH-FR-006 */
 export const logout = asyncHandler(async (req: Request, res: Response) => {
-  const token = (req.cookies as Record<string, string | undefined>)?.refreshToken
+  const token = readRefreshToken(req)
   await authService.logoutUser(req.user._id, token)
   res.clearCookie('refreshToken', REFRESH_COOKIE_OPTIONS)
   res.json({ success: true, data: { message: 'Đã đăng xuất' } })
@@ -55,8 +71,11 @@ export const sendOtp = asyncHandler(async (req: Request, res: Response) => {
 /** POST /auth/otp/verify – AUTH-FR-005 */
 export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   const { email, otp } = req.body as { email: string; otp: string }
-  const { user, accessToken } = await authService.verifyOtp(email, otp)
-  res.json({ success: true, data: { accessToken, user } })
+  const { user, accessToken, refreshToken } = await authService.verifyOtp(email, otp)
+  setRefreshCookie(res, refreshToken)
+  const data: { accessToken: string; user: typeof user; refreshToken?: string } = { accessToken, user }
+  if (isMobileClient(req)) data.refreshToken = refreshToken
+  res.json({ success: true, data })
 })
 
 /** POST /auth/forgot-password – AUTH-FR-009, Flow 11 bước 6 */

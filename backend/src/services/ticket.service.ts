@@ -86,14 +86,19 @@ async function routeToTechnician(farmId: string): Promise<string | null> {
   }).lean()
   if (candidates.length === 0) return null
 
-  // Chọn người đang ít việc nhất để tránh dồn tải (TICKET-FR-005)
-  const openCounts = await Promise.all(
-    candidates.map(async c => ({
-      id: String(c._id),
-      open: await Ticket.countDocuments({ assigned_to: c._id, status: { $ne: 'CLOSED' } }),
-    })),
-  )
-  openCounts.sort((a, b) => a.open - b.open)
+  // Chọn người đang ít việc nhất để tránh dồn tải (TICKET-FR-005). 1 aggregate
+  // cho cả batch thay vì 1 countDocuments/candidate (N+1) — cùng idiom "$in theo
+  // batch" mà createTicketsFromStaleAlerts bên dưới đã dùng cho bước dedup.
+  const candidateIds = candidates.map(c => c._id)
+  const counts = await Ticket.aggregate([
+    { $match: { assigned_to: { $in: candidateIds }, status: { $ne: 'CLOSED' } } },
+    { $group: { _id: '$assigned_to', count: { $sum: 1 } } },
+  ])
+  const countMap = new Map(counts.map(c => [String(c._id), c.count as number]))
+
+  const openCounts = candidates
+    .map(c => ({ id: String(c._id), open: countMap.get(String(c._id)) ?? 0 }))
+    .sort((a, b) => a.open - b.open)
   return openCounts[0].id
 }
 
