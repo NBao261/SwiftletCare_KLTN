@@ -25,6 +25,7 @@ import analyticsRoutes from '@/routes/analytics.route'
 import harvestRoutes        from '@/routes/harvests.route'
 import marketplaceRoutes    from '@/routes/marketplace.route'
 import ticketRoutes         from '@/routes/tickets.route'
+import maintenanceScheduleRoutes from '@/routes/maintenanceSchedules.route'
 import productRoutes        from '@/routes/products.route'
 import inventoryRoutes      from '@/routes/inventory.route'
 import orderRoutes          from '@/routes/orders.route'
@@ -85,6 +86,7 @@ app.use('/marketplace', marketplaceRoutes)
 
 // Module TICKET (§5.9) — thuộc phạm vi MVP
 app.use('/tickets', ticketRoutes)
+app.use('/maintenance-schedules', maintenanceScheduleRoutes)
 
 // Module SALES (§5.10) — Giai đoạn 2, stretch (không bắt buộc nghiệm thu KLTN)
 app.use('/products',        productRoutes)

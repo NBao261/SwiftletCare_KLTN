@@ -159,6 +159,41 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
 }
 
 /**
+ * TICKET-FR-013 — ticket MAINTENANCE do job lịch bảo trì tạo (không có người
+ * dùng tạo nên không qua createTicket/assertFarmAccess). Đi qua đúng Ticket
+ * Router + SLA như ticket thường.
+ */
+export async function createMaintenanceTicket(input: {
+  farm_id: string; zone_id?: string; scheduled_visit_at: Date; description: string
+}): Promise<ITicket> {
+  const priority = DEFAULT_PRIORITY.MAINTENANCE
+  const sla = await slaDueDates(priority, new Date())
+  const assignedTo = await routeToTechnician(input.farm_id)
+
+  const ticket = await Ticket.create({
+    farm_id: input.farm_id,
+    zone_id: input.zone_id,
+    type: 'MAINTENANCE',
+    priority,
+    status: 'NEW',
+    assigned_to: assignedTo ?? undefined,
+    scheduled_visit_at: input.scheduled_visit_at,
+    ...sla,
+    notes: [{ content: input.description, created_at: new Date() }],
+  })
+
+  if (assignedTo) {
+    void notifyUser(assignedTo, {
+      title: 'Ticket bảo trì định kỳ mới',
+      body: `${input.description} — hẹn ${input.scheduled_visit_at.toLocaleString('vi-VN')}`,
+    })
+  } else {
+    notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
+  }
+  return ticket
+}
+
+/**
  * TICKET-FR-002 — tự tạo ticket từ Alert CRITICAL/HIGH chưa acknowledge sau 15
  * phút. Gọi định kỳ từ jobs/alertEscalation.job.ts.
  */
