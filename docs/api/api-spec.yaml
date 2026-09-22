@@ -760,6 +760,55 @@ paths:
         "422": { $ref: "#/components/responses/ValidationError" }
 
   # ── SYSTEM ────────────────────────────────────────────────────────────────
+  /admin/provisioned-devices:
+    post:
+      tags: [Admin]
+      summary: "Nhập thiết bị vào kho, cấp secretKey để in nhãn (FARM-FR-003) — chỉ ADMIN"
+      description: |
+        `secret_key` (dạng XXXX-XXXX-XXXX) chỉ trả về **đúng 1 lần** trong response
+        này — backend chỉ lưu SHA-256, không xem lại được. Technician nhập cặp
+        `{device_id, secret_key}` khi onboarding.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id, kind]
+              properties:
+                device_id: { type: string, example: node_101 }
+                kind: { type: string, enum: [SENSOR, CAMERA] }
+      responses:
+        "201":
+          description: Đã cấp
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    get:
+      tags: [Admin]
+      summary: "Danh sách kho thiết bị (FARM-FR-003) — chỉ ADMIN"
+      parameters:
+        - { name: kind, in: query, schema: { type: string, enum: [SENSOR, CAMERA] } }
+        - { name: claimed, in: query, schema: { type: string, enum: ["true", "false"] }, description: "Đã/chưa kích hoạt" }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: array, items: { $ref: "#/components/schemas/ProvisionedDevice" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /system/audit-logs:
     get:
       tags: [System]
@@ -883,6 +932,41 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /system/settings/ticket-routing:
+    get:
+      tags: [System]
+      summary: "Ngưỡng quá tải của Ticket Router (TICKET-FR-005) — chỉ ADMIN"
+      description: "Technician có ≥ N ticket chưa đóng không được Router gán thêm. Mặc định 10."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/TicketRoutingConfig" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [System]
+      summary: "Chỉnh ngưỡng quá tải của Ticket Router (TICKET-FR-005) — chỉ ADMIN"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TicketRoutingConfig" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/TicketRoutingConfig" } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
@@ -1600,19 +1684,24 @@ paths:
         việc lắp đặt/kích hoạt thiết bị do Technician thực hiện tại hiện trường.
 
         Technician chỉ đăng ký được cho Farm thuộc `assigned_regions` của mình.
+        Phải nhập đúng cặp `{device_id, secret_key}` in trên nhãn thiết bị (do Admin
+        cấp qua `POST /admin/provisioned-devices`, không phân biệt hoa/thường).
         Node tạo ra ở trạng thái `PENDING`, chỉ chuyển `ONLINE` khi thiết bị gửi
-        heartbeat đầu tiên (Flow 1 bước 8).
+        heartbeat đầu tiên (Flow 1 bước 8). Quá 15 phút chưa có heartbeat thì node
+        được gắn `activation_overdue_at` và người đăng ký nhận thông báo (case 8a).
+        Thiết bị đã gỡ (FARM-FR-008) đăng ký lại được — bản ghi cũ đổi tên, giữ lịch sử.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [device_id, zone_id]
+              required: [device_id, zone_id, secret_key]
               properties:
                 {
-                  device_id: { type: string, example: node_001 },
+                  device_id: { type: string, example: node_002 },
                   zone_id: { type: string },
+                  secret_key: { type: string, example: DEMO-NODE-0002, description: "In trên nhãn thiết bị (seed dev: node_002 / DEMO-NODE-0002)" },
                 }
       responses:
         "201":
@@ -1639,8 +1728,14 @@ paths:
                   },
               },
           }
+        "400":
+          description: "Mã kích hoạt không đúng (sai secret_key hoặc device_id không có trong kho) — Flow 1 case 3a"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409":
+          description: "\"Thiết bị đã thuộc về Farm khác\" hoặc \"device_id đã được đăng ký\" trong cùng Farm"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes:
     get:
@@ -1806,16 +1901,18 @@ paths:
     post:
       tags: [Devices]
       summary: "Đăng ký Raspberry Pi Camera Node — chỉ TECHNICIAN/ADMIN (FARM-FR-004, Flow 1b)"
+      description: "Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho."
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [device_id, zone_id]
+              required: [device_id, zone_id, secret_key]
               properties:
                 {
-                  device_id: { type: string },
+                  device_id: { type: string, example: cam_001 },
+                  secret_key: { type: string, example: DEMO-CAM-0001 },
                   zone_id: { type: string },
                   rtsp_url: { type: string },
                 }
@@ -1885,6 +1982,141 @@ paths:
                   },
               },
           }
+
+  /devices/sensor-nodes/{id}/decommission:
+    post:
+      tags: [Devices]
+      summary: "Gỡ bỏ thiết bị, giữ lịch sử dữ liệu (FARM-FR-008) — TECHNICIAN/ADMIN"
+      description: |
+        Không xoá document: telemetry/alert cũ tham chiếu `node_id` nên vẫn truy
+        vấn được. Thiết bị bị ẩn khỏi danh sách/thống kê, heartbeat/telemetry từ
+        `device_id` này bị bỏ qua, lệnh relay/ngưỡng/dời zone trả 409.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" } }
+      responses:
+        "200":
+          description: "Đã gỡ (decommissioned_at được gán)"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /devices/sensor-nodes/{id}/replace:
+    post:
+      tags: [Devices]
+      summary: "Thay thiết bị hỏng bằng thiết bị mới cùng Zone (FARM-FR-008) — TECHNICIAN/ADMIN"
+      description: |
+        Đăng ký thiết bị mới (cần `secret_key` như onboarding, trạng thái PENDING)
+        vào đúng Zone của thiết bị cũ, chép lịch loa/âm lượng, rồi gỡ thiết bị cũ
+        với `replaced_by` trỏ sang node mới. Sai `secret_key` thì thiết bị cũ giữ nguyên.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_device_id, secret_key, reason]
+              properties:
+                new_device_id: { type: string, example: node_002 }
+                secret_key: { type: string, example: DEMO-NODE-0002 }
+                reason: { type: string, example: "Cảm biến NH3 chết" }
+      responses:
+        "201":
+          description: Đã thay
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { oldNode: { $ref: "#/components/schemas/SensorNode" }, newNode: { $ref: "#/components/schemas/SensorNode" } } } }
+        "400": { description: "Mã kích hoạt không đúng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /devices/sensor-nodes/{id}/commands:
+    post:
+      tags: [Devices]
+      summary: "Xử lý từ xa: khởi động lại / đẩy lại ngưỡng / OTA firmware (TICKET-FR-008, Flow 15) — TECHNICIAN/ADMIN"
+      description: |
+        Chỉ gửi được khi thiết bị ONLINE. Cả 3 lệnh publish lên topic
+        `swiftletcare/{farmId}/{houseId}/{zoneId}/config/update` (§9.2):
+        - `PUSH_CONFIG`: toàn bộ ngưỡng hiện hành của Zone
+        - `RESTART`: `{ "command": "RESTART" }`
+        - `OTA`: `{ "command": "OTA", "ota": { version, url, sha256 } }` — node lưu
+          `ota_pending`, heartbeat báo đúng `firmware_version` mới thì ghi audit
+          `DEVICE_OTA_SUCCEEDED` (Flow 15 bước 5)
+
+        **Firmware hiện tại chưa xử lý `command`** (bỏ qua key lạ nên an toàn) —
+        cần bổ sung phía ESP32. Có `ticket_id` thì hành động được ghi vào note ticket.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [command]
+              properties:
+                command: { type: string, enum: [RESTART, PUSH_CONFIG, OTA] }
+                ticket_id: { type: string, description: "Ticket cùng farm, chưa đóng" }
+                ota:
+                  type: object
+                  description: "Bắt buộc khi command=OTA"
+                  properties:
+                    version: { type: string, example: "1.3.0" }
+                    url: { type: string, example: "https://fw.swiftletcare.vn/esp32-1.3.0.bin" }
+                    sha256: { type: string, example: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
+      responses:
+        "202":
+          description: Đã gửi lệnh
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
+        "400": { description: "Ticket không thuộc farm của thiết bị", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Thiết bị không ONLINE / đã gỡ, ticket đã đóng, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/camera-nodes/{id}/decommission:
+    post:
+      tags: [Devices]
+      summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — TECHNICIAN/ADMIN"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" } }
+      responses:
+        "200":
+          description: Đã gỡ
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/CameraNode" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /devices/system-status:
     get:
@@ -2874,6 +3106,92 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
 
   # ── TICKETS ───────────────────────────────────────────────────────────────
+  /maintenance-schedules:
+    get:
+      tags: [Tickets]
+      summary: "Danh sách lịch bảo trì định kỳ (TICKET-FR-013) — FARM_OWNER/TECHNICIAN/ADMIN"
+      parameters:
+        - { name: farmId, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: array, items: { $ref: "#/components/schemas/MaintenanceSchedule" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Tickets]
+      summary: "Tạo lịch bảo trì định kỳ (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
+      description: |
+        Job chạy đầu mỗi giờ: lịch đến `next_due_at` sinh 1 ticket MAINTENANCE (qua
+        Ticket Router, `scheduled_visit_at` = hạn) rồi dời hạn sang chu kỳ kế tiếp ở tương lai.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [farm_id, description, interval_days, next_due_at]
+              properties:
+                farm_id: { type: string }
+                zone_id: { type: string, description: "Phải thuộc farm_id" }
+                description: { type: string, example: "Vệ sinh đầu dò NH3/CO2" }
+                interval_days: { type: integer, minimum: 1, maximum: 365, example: 30 }
+                next_due_at: { type: string, format: date-time }
+      responses:
+        "201":
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/MaintenanceSchedule" } }
+        "400": { description: "next_due_at không ở tương lai / zone khác farm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /maintenance-schedules/{id}:
+    put:
+      tags: [Tickets]
+      summary: "Sửa / tạm dừng lịch bảo trì (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                zone_id: { type: string }
+                description: { type: string }
+                interval_days: { type: integer, minimum: 1, maximum: 365 }
+                next_due_at: { type: string, format: date-time }
+                is_active: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/MaintenanceSchedule" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Tickets]
+      summary: "Xoá lịch bảo trì (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Đã xoá, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /tickets:
     post:
       tags: [Tickets]
@@ -2961,6 +3279,7 @@ paths:
             schema: { type: string, enum: [P1, P2, P3] },
           }
         - { name: assignedToMe, in: query, schema: { type: boolean } }
+        - { name: unassigned, in: query, schema: { type: boolean }, description: "TICKET-FR-005 — hàng đợi chung: ticket chưa có Technician" }
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
       responses:
@@ -3034,6 +3353,7 @@ paths:
                                 closed: { type: integer }
                                 cancelled: { type: integer }
                                 avgResolveHours: { type: number, nullable: true }
+                                avgResponseHours: { type: number, nullable: true, description: "Tạo ticket → Technician xác nhận tiếp nhận (responded_at)" }
                                 slaComplianceRate: { type: number, nullable: true }
                           resolvedTickets:
                             { type: integer, description: "Ticket đã đóng, KHÔNG tính ticket bị huỷ" }
@@ -3091,6 +3411,10 @@ paths:
         → CLOSED` (không nhảy cóc/lùi tuỳ tiện). Với ticket `INSTALLATION`/
         `MAINTENANCE`, không cho chuyển `CLOSED` nếu `sat_checklist` chưa đạt
         đủ 4 mục (TICKET-FR-010).
+
+        Chỉ Technician **đang được gán** (hoặc Admin) mới đổi được — Technician
+        khác cùng vùng xem được ticket nhưng nhận 403. Lần đầu chuyển
+        `IN_PROGRESS` ghi `responded_at` (mốc SLA phản hồi, TICKET-FR-004b).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3248,7 +3572,7 @@ paths:
   /tickets/{id}/sat-checklist:
     put:
       tags: [Tickets]
-      summary: "Cập nhật checklist nghiệm thu lắp đặt (TICKET-FR-010) — TECHNICIAN/ADMIN"
+      summary: "Cập nhật checklist nghiệm thu lắp đặt (TICKET-FR-010) — TECHNICIAN được gán/ADMIN"
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3294,7 +3618,8 @@ paths:
   /tickets/{id}/escalate:
     post:
       tags: [Tickets]
-      summary: "Escalate thủ công lên Admin (TICKET-FR-009) — TECHNICIAN/ADMIN"
+      summary: "Escalate thủ công lên Admin (TICKET-FR-009) — TECHNICIAN được gán/ADMIN"
+      description: "Ghi audit `TICKET_ESCALATED` và thông báo mọi Admin. Ticket đã đóng → 409."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3326,6 +3651,127 @@ paths:
               },
           }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /tickets/{id}/scheduled-date:
+    put:
+      tags: [Tickets]
+      summary: "Technician tự dời lịch hẹn kèm lý do (TICKET-FR-004b) — TECHNICIAN được gán/ADMIN"
+      description: |
+        Chỉ ticket INSTALLATION/MAINTENANCE chưa đóng; ngày mới phải ở tương lai.
+        Ghi note + audit `TICKET_RESCHEDULED`, Farm Owner nhận thông báo.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scheduled_visit_at, reason]
+              properties:
+                scheduled_visit_at: { type: string, format: date-time }
+                reason: { type: string, example: "Trùng lịch lắp đặt farm khác" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
+        "400": { description: "Ngày không ở tương lai hoặc ticket không có lịch hẹn", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { description: "Không phải Technician đang được gán", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /tickets/{id}/reassign-request:
+    post:
+      tags: [Tickets]
+      summary: "Technician xin gán lại ticket kèm lý do (Flow 9 case 4a) — TECHNICIAN được gán"
+      description: |
+        Ticket Router chọn Technician khác trong vùng (loại người xin, bỏ qua người
+        quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại; không còn
+        ai → `assigned_to` để trống (hàng đợi chung, `GET /tickets?unassigned=true`)
+        và Admin được thông báo. Thread chat nhận tin hệ thống (TICKET-FR-017).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Farm ghi sai khu vực, thực tế ở Long An" } }
+      responses:
+        "200":
+          description: "Ticket sau khi gán lại (assigned_to đã populate hoặc null)"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /tickets/{id}/messages:
+    get:
+      tags: [Tickets]
+      summary: "Lịch sử chat của ticket (TICKET-FR-015) — FARM_OWNER/TECHNICIAN/ADMIN"
+      description: |
+        Trang 1 là tin mới nhất; trong mỗi trang tin xếp cũ → mới. Được đọc: Admin,
+        Farm Owner/thành viên của farm, Technician đang hoặc từng phụ trách ticket.
+        Technician khác cùng vùng không đọc được (Flow 23 case 6a).
+
+        Realtime qua Socket.io: emit `JOIN_TICKET_CHAT { ticketId }` (ack
+        `{ ok }`), `SEND_TICKET_MESSAGE { ticketId, content, clientMessageId }`
+        (ack `{ ok, data: TicketMessage }`); server phát `TICKET_MESSAGE_NEW` và
+        `TICKET_CHAT_ASSIGNEE_CHANGED` tới room `ticket:{ticketId}`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: array, items: { $ref: "#/components/schemas/TicketMessage" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Tickets]
+      summary: "Gửi tin nhắn (TICKET-FR-014/016) — dự phòng khi client không giữ WebSocket"
+      description: |
+        Chỉ gửi khi ticket chưa đóng (đã đóng → 409, kênh chỉ đọc). Technician chỉ
+        gửi được khi đang là `assigned_to` (kiểm lại mỗi lần gửi). Gửi lại cùng
+        `client_message_id` trả về tin đã lưu, không tạo trùng.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 2000 }
+                client_message_id: { type: string, maxLength: 100 }
+      responses:
+        "201":
+          description: Đã gửi
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/TicketMessage" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Ticket đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /tickets/{id}/rating:
     post:
@@ -4019,6 +4465,20 @@ components:
             playing: { type: boolean }
             loop: { type: boolean }
         registered_at: { type: string, format: date-time }
+        ota_pending:
+          type: object
+          nullable: true
+          description: "TICKET-FR-008 — OTA đã gửi, chờ heartbeat báo đúng version"
+          properties:
+            version: { type: string }
+            url: { type: string }
+            requested_at: { type: string, format: date-time }
+            requested_by: { type: string }
+        registered_by: { type: string, nullable: true }
+        activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
+        decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
+        decommission_reason: { type: string, nullable: true }
+        replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }
 
     CameraNode:
       type: object
@@ -4036,6 +4496,11 @@ components:
         last_heartbeat: { type: string, format: date-time }
         model_version: { type: string }
         registered_at: { type: string, format: date-time }
+        registered_by: { type: string, nullable: true }
+        activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
+        decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
+        decommission_reason: { type: string, nullable: true }
+        replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }
 
     Telemetry:
       type: object
@@ -4133,6 +4598,10 @@ components:
         sla_response_due_at: { type: string, format: date-time, nullable: true }
         sla_resolve_due_at: { type: string, format: date-time, nullable: true }
         is_sla_breached: { type: boolean }
+        responded_at: { type: string, format: date-time, nullable: true, description: "Technician xác nhận tiếp nhận (lần đầu IN_PROGRESS)" }
+        is_sla_response_breached: { type: boolean, description: "Quá sla_response_due_at mà vẫn NEW" }
+        previous_assignees: { type: array, items: { type: string }, description: "TICKET-FR-017 — Technician từng phụ trách (chỉ đọc chat)" }
+        last_message_at: { type: string, format: date-time, nullable: true }
         sat_checklist:
           type: object
           description: "TICKET-FR-010 — bắt buộc đủ 4 mục trước khi đóng ticket lắp đặt"
@@ -4155,6 +4624,53 @@ components:
           { type: integer, minimum: 1, maximum: 5, nullable: true }
         created_at: { type: string, format: date-time }
         closed_at: { type: string, format: date-time, nullable: true }
+
+    TicketMessage:
+      type: object
+      description: "TICKET-FR-014..017 — tin nhắn chat trong ticket"
+      properties:
+        _id: { type: string }
+        ticket_id: { type: string }
+        content: { type: string }
+        author_id: { type: string, nullable: true }
+        author_name: { type: string, nullable: true }
+        role: { type: string, enum: [FARM_OWNER, TECHNICIAN, ADMIN, SYSTEM] }
+        is_system: { type: boolean }
+        client_message_id: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    MaintenanceSchedule:
+      type: object
+      description: "TICKET-FR-013 — lịch bảo trì định kỳ theo Farm"
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        zone_id: { type: string, nullable: true }
+        description: { type: string }
+        interval_days: { type: integer }
+        next_due_at: { type: string, format: date-time }
+        is_active: { type: boolean }
+        created_by: { type: string }
+        last_ticket_id: { type: string, nullable: true }
+        last_generated_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    ProvisionedDevice:
+      type: object
+      description: "FARM-FR-003 — thiết bị trong kho (không bao giờ trả secret_key/hash)"
+      properties:
+        _id: { type: string }
+        device_id: { type: string }
+        kind: { type: string, enum: [SENSOR, CAMERA] }
+        claimed_at: { type: string, format: date-time, nullable: true }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+
+    TicketRoutingConfig:
+      type: object
+      required: [max_open_tickets_per_technician]
+      properties:
+        max_open_tickets_per_technician: { type: integer, minimum: 1, maximum: 100, example: 10 }
 
     HarvestStatus:
       type: string
