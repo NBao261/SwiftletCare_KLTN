@@ -33,6 +33,7 @@
   .input {
     @apply bg-white border border-warmGray/25 rounded-xl px-4 py-2.5 text-charcoal
            placeholder:text-warmGray focus:outline-none focus:border-charcoal
-           transition-colors w-full text-sm;
+           transition-colors w-full text-sm
+           disabled:cursor-not-allowed disabled:border-warmGray/10 disabled:bg-gray-50 disabled:text-warmGray/80;
   }
 }
