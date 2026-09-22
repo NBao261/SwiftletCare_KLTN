@@ -58,3 +58,17 @@ export const listCameraNodes = asyncHandler(async (req: Request, res: Response) 
 export const getSystemStatus = asyncHandler(async (_req: Request, res: Response) => {
   res.json({ success: true, data: await deviceService.getSystemStatus() })
 })
+
+/** POST /devices/{sensor|camera}-nodes/:id/decommission – FARM-FR-008 */
+export const decommission = (kind: deviceService.DeviceKind) => asyncHandler(async (req: Request, res: Response) => {
+  const node = await deviceService.decommissionDevice(kind, req.params.id, req.user, req.body.reason as string)
+  res.json({ success: true, data: node })
+})
+
+/** POST /devices/sensor-nodes/:id/replace – FARM-FR-008 */
+export const replaceSensorNode = asyncHandler(async (req: Request, res: Response) => {
+  const result = await deviceService.replaceSensorNode(req.params.id, req.user, {
+    new_device_id: req.body.new_device_id, secret_key: req.body.secret_key, reason: req.body.reason,
+  })
+  res.status(201).json({ success: true, data: result })
+})

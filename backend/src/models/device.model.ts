@@ -31,6 +31,14 @@ export interface ISensorNode extends Document {
   registered_by?: Types.ObjectId
   /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
   activation_overdue_at?: Date
+  /**
+   * FARM-FR-008 — thiết bị đã gỡ khỏi hiện trường. Không xoá document vì
+   * telemetry/alert cũ tham chiếu node_id; chỉ loại khỏi mọi danh sách/luồng MQTT.
+   */
+  decommissioned_at?: Date
+  decommission_reason?: string
+  /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
+  replaced_by?: Types.ObjectId
 }
 
 export interface ICameraNode extends Document {
@@ -46,6 +54,14 @@ export interface ICameraNode extends Document {
   registered_by?: Types.ObjectId
   /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
   activation_overdue_at?: Date
+  /**
+   * FARM-FR-008 — thiết bị đã gỡ khỏi hiện trường. Không xoá document vì
+   * telemetry/alert cũ tham chiếu node_id; chỉ loại khỏi mọi danh sách/luồng MQTT.
+   */
+  decommissioned_at?: Date
+  decommission_reason?: string
+  /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
+  replaced_by?: Types.ObjectId
 }
 
 const sensorNodeSchema = new Schema<ISensorNode>(
@@ -80,6 +96,9 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     registered_at:   { type: Date, default: Date.now },
     registered_by:   { type: Schema.Types.ObjectId, ref: 'User' },
     activation_overdue_at: { type: Date },
+    decommissioned_at:   { type: Date },
+    decommission_reason: { type: String },
+    replaced_by:         { type: Schema.Types.ObjectId },
   },
   { timestamps: false }
 )
@@ -95,6 +114,9 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     registered_at:  { type: Date, default: Date.now },
     registered_by:  { type: Schema.Types.ObjectId, ref: 'User' },
     activation_overdue_at: { type: Date },
+    decommissioned_at:   { type: Date },
+    decommission_reason: { type: String },
+    replaced_by:         { type: Schema.Types.ObjectId },
   },
   { timestamps: false }
 )
@@ -108,6 +130,9 @@ cameraNodeSchema.index({ zone_id: 1 })
 // activationOverdue.job quét node PENDING theo registered_at mỗi phút
 sensorNodeSchema.index({ status: 1, registered_at: 1 })
 cameraNodeSchema.index({ status: 1, registered_at: 1 })
+
+/** FARM-FR-008 — điều kiện "thiết bị còn hoạt động", dùng chung cho mọi truy vấn */
+export const IN_SERVICE = { decommissioned_at: null } as const
 
 export const SensorNode = model<ISensorNode>('SensorNode', sensorNodeSchema)
 export const CameraNode = model<ICameraNode>('CameraNode', cameraNodeSchema)

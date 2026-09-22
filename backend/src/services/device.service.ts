@@ -1,4 +1,4 @@
-import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
+import { SensorNode, CameraNode, ISensorNode, IN_SERVICE } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
 import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds, listActiveZoneIds } from '@/utils/farmAccess.util'
@@ -34,6 +34,15 @@ async function assertNotRegistered(existingZoneId: unknown, targetFarmId: string
 }
 
 /**
+ * FARM-FR-008 — thiết bị đã gỡ được lắp lại (ở chỗ khác): `device_id` là unique
+ * nên đổi tên bản ghi cũ để nhường chỗ. Bản ghi cũ giữ nguyên `_id` nên toàn bộ
+ * telemetry/alert lịch sử vẫn trỏ đúng vào nó.
+ */
+async function retireDeviceId(Model: typeof SensorNode, nodeId: unknown, deviceId: string): Promise<void> {
+  await Model.updateOne({ _id: nodeId }, { device_id: `${deviceId}#retired-${Date.now()}` })
+}
+
+/**
  * FARM-FR-003 — chỉ Technician (hoặc Admin) thực hiện, qua Web Console Onboarding.
  * Phải nhập đúng cặp {device_id, secretKey} trên nhãn (Flow 1 bước 3–4). Node
  * được tạo ở trạng thái PENDING và chỉ chuyển ONLINE khi thiết bị gửi heartbeat
@@ -44,8 +53,9 @@ export async function registerSensorNode(user: CurrentUser, input: RegisterDevic
   const { farm } = await assertZoneAccess(input.zone_id, user)
   await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
 
-  const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id').lean()
-  if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
+  const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
+  if (existing?.decommissioned_at) await retireDeviceId(SensorNode, existing._id, input.device_id)
+  else if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
 
   const node = await SensorNode.create({
     device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING', registered_by: user._id,
@@ -65,10 +75,15 @@ export async function registerSensorNode(user: CurrentUser, input: RegisterDevic
 export async function listSensorNodes(zoneId: string | undefined, user: CurrentUser): Promise<ISensorNode[]> {
   if (zoneId) {
     await assertZoneAccess(zoneId, user)
-    return SensorNode.find({ zone_id: zoneId }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+    return SensorNode.find({ zone_id: zoneId, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
   }
   const accessibleZoneIds = await listAccessibleZoneIds(user)
-  return SensorNode.find({ zone_id: { $in: accessibleZoneIds } }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+  return SensorNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+}
+
+/** Thiết bị đã gỡ vẫn xem được (lịch sử) nhưng không còn nhận lệnh */
+function assertInService(node: { decommissioned_at?: Date }): void {
+  if (node.decommissioned_at) throw ConflictError('Thiết bị đã được gỡ bỏ khỏi hệ thống')
 }
 
 /** FARM-FR-006 */
@@ -83,6 +98,7 @@ export async function getSensorNode(nodeId: string, user: CurrentUser): Promise<
 export async function updateNodeThresholds(nodeId: string, user: CurrentUser, updates: object) {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user)
 
   const picked = pickThresholds(updates as Record<string, unknown>)
@@ -115,6 +131,7 @@ export async function controlRelay(
 ): Promise<ISensorNode> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user)
 
   if (!RELAY_NAMES.includes(input.relayName as RelayName)) {
@@ -163,6 +180,7 @@ export async function reassignZone(
 ): Promise<ISensorNode> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
 
   if (node.status !== 'ONLINE') {
     throw ConflictError('Thiết bị đang OFFLINE — chỉ dời Zone được khi thiết bị ONLINE (nhánh AP-mode chưa được hỗ trợ)')
@@ -194,8 +212,9 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterDevic
   const { farm } = await assertZoneAccess(input.zone_id, user)
   await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
 
-  const existing = await CameraNode.findOne({ device_id: input.device_id }).select('zone_id').lean()
-  if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
+  const existing = await CameraNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
+  if (existing?.decommissioned_at) await retireDeviceId(CameraNode as never, existing._id, input.device_id)
+  else if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
 
   // Chọn field tường minh — trải thẳng body vào create() cho phép client tự đặt status/registered_at
   const node = await CameraNode.create({
@@ -212,10 +231,10 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterDevic
 export async function listCameraNodes(zoneId: string | undefined, user: CurrentUser) {
   if (zoneId) {
     await assertZoneAccess(zoneId, user)
-    return CameraNode.find({ zone_id: zoneId }).sort({ registered_at: -1 }).lean()
+    return CameraNode.find({ zone_id: zoneId, ...IN_SERVICE }).sort({ registered_at: -1 }).lean()
   }
   const accessibleZoneIds = await listAccessibleZoneIds(user)
-  return CameraNode.find({ zone_id: { $in: accessibleZoneIds } }).sort({ registered_at: -1 }).lean()
+  return CameraNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean()
 }
 
 /** FARM-FR-005 — gọi từ mqtt/handlers/heartbeat.handler.ts. */
@@ -233,7 +252,7 @@ export async function listCameraNodes(zoneId: string | undefined, user: CurrentU
 export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: string[]): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong heartbeat payload')
 
-  const node = await SensorNode.findOne({ device_id: payload.deviceId })
+  const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
   const wasOffline = node.status !== 'ONLINE'
@@ -310,6 +329,71 @@ export async function markStaleDevicesOffline(): Promise<void> {
   }))
 }
 
+// ── FARM-FR-008: gỡ bỏ / thay thế thiết bị ───────────────────────────────────
+
+export type DeviceKind = 'sensor' | 'camera'
+const DEVICE_MODELS = { sensor: SensorNode, camera: CameraNode as unknown as typeof SensorNode }
+const TARGET_TYPES = { sensor: 'sensor_node', camera: 'camera_node' } as const
+
+/**
+ * FARM-FR-008 — Technician gỡ thiết bị khỏi hiện trường. Document được giữ lại
+ * (telemetry/alert cũ tham chiếu `node_id`), chỉ đánh dấu `decommissioned_at`
+ * để loại khỏi danh sách, thống kê và mọi luồng MQTT (heartbeat/telemetry từ
+ * device_id này bị bỏ qua).
+ */
+export async function decommissionDevice(
+  kind: DeviceKind, nodeId: string, user: CurrentUser, reason: string, replacedBy?: unknown,
+) {
+  const Model = DEVICE_MODELS[kind]
+  const node = await Model.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  await assertZoneAccess(String(node.zone_id), user)
+  assertInService(node)
+
+  node.decommissioned_at = new Date()
+  node.decommission_reason = reason
+  node.status = 'OFFLINE'
+  if (replacedBy) node.replaced_by = replacedBy as never
+  await node.save()
+
+  emitDeviceStatusChange(String(node.zone_id), {
+    nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString(),
+  })
+  await logAction(user._id, 'DEVICE_DECOMMISSIONED', TARGET_TYPES[kind], String(node._id), {
+    deviceId: node.device_id, zoneId: String(node.zone_id), reason, replacedBy: replacedBy ? String(replacedBy) : null,
+  })
+  return node
+}
+
+/**
+ * FARM-FR-008 — thay thiết bị hỏng bằng thiết bị mới cùng Zone. Thiết bị mới đi
+ * qua đúng luồng onboarding (secretKey trên nhãn, PENDING chờ heartbeat); cấu
+ * hình loa của node cũ được chép sang để Farm Owner không phải cài lại. Ngưỡng
+ * môi trường nằm ở Zone nên tự áp dụng. Tạo node mới TRƯỚC khi gỡ node cũ: nếu
+ * secretKey sai thì node cũ vẫn nguyên, không rơi vào trạng thái mất cả hai.
+ */
+export async function replaceSensorNode(
+  nodeId: string, user: CurrentUser, input: { new_device_id: string; secret_key: string; reason: string },
+): Promise<{ oldNode: ISensorNode; newNode: ISensorNode }> {
+  const old = await SensorNode.findById(nodeId)
+  if (!old) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(old)
+  if (old.device_id === input.new_device_id) throw BadRequestError('Thiết bị mới phải có device_id khác thiết bị cũ')
+
+  const newNode = await registerSensorNode(user, {
+    device_id: input.new_device_id, zone_id: String(old.zone_id), secret_key: input.secret_key,
+  })
+  newNode.speaker_schedule = old.speaker_schedule
+  newNode.audio = { ...old.audio, playing: false }
+  await newNode.save()
+
+  const oldNode = await decommissionDevice('sensor', nodeId, user, input.reason, newNode._id)
+  await logAction(user._id, 'DEVICE_REPLACED', 'sensor_node', String(old._id), {
+    oldDeviceId: old.device_id, newDeviceId: input.new_device_id, newNodeId: String(newNode._id), reason: input.reason,
+  })
+  return { oldNode, newNode }
+}
+
 /** Flow 1 case 8a — SRS: quá 15 phút từ lúc đăng ký (bước 4) mà chưa có heartbeat đầu tiên */
 export const ACTIVATION_TIMEOUT_MS = 15 * 60 * 1000
 
@@ -320,7 +404,7 @@ export const ACTIVATION_TIMEOUT_MS = 15 * 60 * 1000
  */
 export async function markOverdueActivations(): Promise<number> {
   const cutoff = new Date(Date.now() - ACTIVATION_TIMEOUT_MS)
-  const filter = { status: 'PENDING', registered_at: { $lt: cutoff }, activation_overdue_at: null }
+  const filter = { status: 'PENDING', registered_at: { $lt: cutoff }, activation_overdue_at: null, ...IN_SERVICE }
   let count = 0
 
   for (const [Model, targetType] of [[SensorNode, 'sensor_node'], [CameraNode, 'camera_node']] as const) {
@@ -393,7 +477,7 @@ export async function expireManualOverrides(): Promise<number> {
 export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong relay/status payload')
 
-  const node = await SensorNode.findOne({ device_id: payload.deviceId })
+  const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
   node.relay_states = payload.relay_states
@@ -434,8 +518,8 @@ export function summarizeByStatus(nodes: Array<{ status: DeviceStatus }>): Devic
 export async function getSystemStatus() {
   const activeZoneIds = await listActiveZoneIds()
   const [sensorNodes, cameraNodes] = await Promise.all([
-    SensorNode.find({ zone_id: { $in: activeZoneIds } }).sort({ registered_at: -1 }).lean(),
-    CameraNode.find({ zone_id: { $in: activeZoneIds } }).sort({ registered_at: -1 }).lean(),
+    SensorNode.find({ zone_id: { $in: activeZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean(),
+    CameraNode.find({ zone_id: { $in: activeZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean(),
   ])
 
   const zoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]

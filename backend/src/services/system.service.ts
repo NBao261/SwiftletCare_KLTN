@@ -1,7 +1,7 @@
 import { AuditLog } from '@/models/auditLog.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Farm } from '@/models/farm.model'
-import { SensorNode, CameraNode } from '@/models/device.model'
+import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { summarizeByStatus } from '@/services/device.service'
@@ -143,8 +143,8 @@ export async function getHealthOverview() {
   const zoneIds = await listActiveZoneIds()
   const [farmCount, sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
     Farm.countDocuments({ is_deleted: false }),
-    SensorNode.find({ zone_id: { $in: zoneIds } }).select('status').lean(),
-    CameraNode.find({ zone_id: { $in: zoneIds } }).select('status').lean(),
+    SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
+    CameraNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
     Ticket.aggregate<{ _id: TicketPriority; count: number }>([
       { $match: { status: { $ne: 'CLOSED' } } },
       { $group: { _id: '$priority', count: { $sum: 1 } } },

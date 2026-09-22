@@ -18,6 +18,7 @@ import { SensorNode, CameraNode } from '@/models/device.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { User } from '@/models/user.model'
 import { markOverdueActivations, recordHeartbeat, ACTIVATION_TIMEOUT_MS } from '@/services/device.service'
+import { createProvisionedDevice } from '@/services/provisionedDevice.service'
 import type { Role } from '@/types'
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
@@ -147,5 +148,57 @@ describe('markOverdueActivations (Flow 1 case 8a)', () => {
     const healed = (await SensorNode.findById(late._id))!
     expect(healed.status).toBe('ONLINE')
     expect(healed.activation_overdue_at).toBeUndefined()
+  })
+})
+
+describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
+  async function installed() {
+    const ctx = await seed()
+    const res = await register(ctx.techToken, { device_id: 'node_100', zone_id: String(ctx.a.zone._id), secret_key: ctx.secretKey }).expect(201)
+    return { ...ctx, nodeId: res.body.data._id as string }
+  }
+  const post = (path: string, token: string, body: object) =>
+    request(app).post(path).set('Authorization', `Bearer ${token}`).send(body)
+
+  it('gỡ bỏ: giữ document, ẩn khỏi danh sách, bỏ qua heartbeat, chặn lệnh', async () => {
+    const { techToken, nodeId } = await installed()
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, {}).expect(422)
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'Hỏng nguồn' }).expect(200)
+
+    const node = (await SensorNode.findById(nodeId))!
+    expect(node.decommissioned_at).toBeInstanceOf(Date)
+    const list = await request(app).get('/devices/sensor-nodes').set('Authorization', `Bearer ${techToken}`).expect(200)
+    expect(list.body.data).toHaveLength(0)
+
+    await expect(recordHeartbeat({ deviceId: 'node_100' } as never)).rejects.toThrow()
+    await post(`/devices/sensor-nodes/${nodeId}/relay`, techToken, { relayName: 'misting', state: true }).expect(409)
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'lần 2' }).expect(409)
+    expect(await AuditLog.countDocuments({ action: 'DEVICE_DECOMMISSIONED' })).toBe(1)
+  })
+
+  it('thay thế: node mới cùng zone, chép lịch loa, node cũ trỏ replaced_by', async () => {
+    const { techToken, nodeId, tech, a } = await installed()
+    await SensorNode.updateOne({ _id: nodeId }, { speaker_schedule: { enabled: false, windows: [{ start: '05:00', end: '06:00' }] } })
+    const { secret_key } = await createProvisionedDevice(String(tech._id), { device_id: 'node_200', kind: 'SENSOR' })
+
+    await post(`/devices/sensor-nodes/${nodeId}/replace`, techToken, { new_device_id: 'node_200', secret_key: 'WRONG-KEY', reason: 'x' }).expect(400)
+    expect((await SensorNode.findById(nodeId))!.decommissioned_at).toBeUndefined() // key sai → node cũ còn nguyên
+
+    const res = await post(`/devices/sensor-nodes/${nodeId}/replace`, techToken, { new_device_id: 'node_200', secret_key, reason: 'Cảm biến chết' }).expect(201)
+    const { oldNode, newNode } = res.body.data
+    expect(newNode.zone_id).toBe(String(a.zone._id))
+    expect(newNode.status).toBe('PENDING')
+    expect(newNode.speaker_schedule.enabled).toBe(false)
+    expect(oldNode.replaced_by).toBe(newNode._id)
+    expect(await AuditLog.countDocuments({ action: 'DEVICE_REPLACED' })).toBe(1)
+  })
+
+  it('thiết bị đã gỡ lắp lại được, bản ghi cũ đổi tên nhưng giữ _id', async () => {
+    const { techToken, nodeId, secretKey, b } = await installed()
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'Chuyển farm' }).expect(200)
+
+    const res = await register(techToken, { device_id: 'node_100', zone_id: String(b.zone._id), secret_key: secretKey }).expect(201)
+    expect(res.body.data._id).not.toBe(nodeId)
+    expect((await SensorNode.findById(nodeId))!.device_id).toMatch(/^node_100#retired-/)
   })
 })
