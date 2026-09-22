@@ -3,11 +3,16 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.3.0 · **Cập nhật:** 22/09/2026 · **Thay thế:** v2.2.0
+**Phiên bản:** 2.3.1 · **Cập nhật:** 22/09/2026 · **Thay thế:** v2.3.0
 
 ---
 
 ## 0. Changelog
+
+### v2.3.0 → v2.3.1
+| # | Thay đổi |
+|---|---|
+| 1 | **Mục 5.4 đổi từ `<MockDataNotice />` (component riêng) sang 1 dòng `<p>` italic viết trực tiếp tại nơi dùng.** Nhãn "dữ liệu giả" chỉ có 1 dòng chữ, không có logic/props gì đáng để tách file riêng trong `components/ui/` — tạo file cho nó là dư thừa. |
 
 ### v2.2.0 → v2.3.0
 | # | Thay đổi |
@@ -282,7 +287,13 @@ Icon-box cảnh báo trên cùng (biến thể Orange/Red mục 2.7) → tiêu �
 
 Hành vi giữ nguyên theo v2.0.0 — chỉ đổi giá trị màu: mọi chỗ trước đây ghi `--ink-850`/`#111728` nay đọc `--gray-900`. Vạch ngưỡng trên Gauge dùng `--gray-700` (Graphite, tự động cập nhật qua token).
 
-### 5.4. `<MockDataNotice />`
+### 5.4. Nhãn "dữ liệu giả"
+
+Không tạo component riêng cho việc này — chỉ 1 dòng `<p>` italic đặt cạnh/dưới tiêu đề section chứa số liệu chưa có API thật:
+
+```html
+<p className="text-[11px] font-medium italic text-warmGray">This data is FAKE and has not been MOCKAPI</p>
+```
 
 ```
 Tiêu đề section
