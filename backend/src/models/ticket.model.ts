@@ -42,6 +42,19 @@ export interface ITicket extends Document {
    */
   responded_at?: Date
   is_sla_response_breached: boolean
+  /**
+   * Lúc ticket được giao cho Technician hiện tại. KPI thời gian phản hồi đo từ
+   * mốc này chứ không phải `created_at`: ticket chuyền qua người thứ hai thì
+   * người mới không phải chịu thời gian người trước giữ ticket.
+   */
+  assigned_at?: Date
+  /**
+   * TICKET-FR-009 — Technician chủ động xin Admin can thiệp. Tách khỏi
+   * `is_sla_breached` (vượt hạn xử lý) vì escalate đúng lúc là làm đúng quy
+   * trình, không được tính là vi phạm SLA trong KPI.
+   */
+  escalated_at?: Date
+  escalation_reason?: string
   sat_checklist: {
     modbus_addresses_ok: boolean
     camera_rtsp_ok: boolean
@@ -90,6 +103,9 @@ const ticketSchema = new Schema<ITicket>(
     is_sla_breached:     { type: Boolean, default: false },
     responded_at:        { type: Date },
     is_sla_response_breached: { type: Boolean, default: false },
+    assigned_at:         { type: Date },
+    escalated_at:        { type: Date },
+    escalation_reason:   { type: String },
     sat_checklist: {
       modbus_addresses_ok: { type: Boolean, default: false },
       camera_rtsp_ok:      { type: Boolean, default: false },

@@ -112,6 +112,20 @@ describe('xác nhận tiếp nhận (responded_at)', () => {
     const row = kpi.byTechnician.find(r => r.technician_id === String(assignee._id))!
     expect(row.avgResponseHours).toBeCloseTo(2, 1)
   })
+
+  it('KPI tính từ lúc được giao, không phạt người nhận ticket chuyền tay', async () => {
+    const { ticket, colleague } = await seed()
+    // Ticket tạo 6 giờ trước, mới chuyển cho người thứ hai 1 giờ trước, họ nhận sau 30 phút
+    await Ticket.collection.updateOne({ _id: ticket._id }, { $set: {
+      created_at: new Date(Date.now() - 6 * 3600_000),
+      assigned_to: colleague._id,
+      assigned_at: new Date(Date.now() - 3600_000),
+      responded_at: new Date(Date.now() - 1800_000),
+    } })
+    const kpi = await getKpi()
+    const row = kpi.byTechnician.find(r => r.technician_id === String(colleague._id))!
+    expect(row.avgResponseHours).toBeCloseTo(0.5, 1)
+  })
 })
 
 describe('markResponseBreachedTickets', () => {
@@ -137,6 +151,12 @@ describe('escalate', () => {
     const { ticket, assigneeToken } = await seed()
     await post(`/tickets/${ticket._id}/escalate`, assigneeToken, { reason: 'Cần linh kiện' }).expect(200)
     expect(await AuditLog.countDocuments({ action: 'TICKET_ESCALATED', target_id: String(ticket._id) })).toBe(1)
+
+    // Escalate là xin hỗ trợ, không phải vi phạm SLA — không được kéo KPI của Technician xuống
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.escalated_at).toBeInstanceOf(Date)
+    expect(saved.escalation_reason).toBe('Cần linh kiện')
+    expect(saved.is_sla_breached).toBe(false)
 
     await Ticket.updateOne({ _id: ticket._id }, { status: 'CLOSED' })
     await post(`/tickets/${ticket._id}/escalate`, assigneeToken, {}).expect(409)
@@ -194,6 +214,18 @@ describe('POST /tickets/:id/reassign-request', () => {
     const queue = await request(app).get('/tickets?unassigned=true').set('Authorization', `Bearer ${adminToken}`).expect(200)
     expect(queue.body.data.map((t: { _id: string }) => t._id)).toEqual([String(ticket._id)])
     expect(owner).toBeDefined()
+  })
+
+  it('không đẩy ngược ticket về người đã từng từ chối', async () => {
+    const { ticket, assigneeToken, colleague, colleagueToken } = await seed()
+    await post(`/tickets/${ticket._id}/reassign-request`, assigneeToken, { reason: 'Nghỉ phép' }).expect(200)
+    expect(String((await Ticket.findById(ticket._id))!.assigned_to)).toBe(String(colleague._id))
+
+    // Người thứ hai cũng xin gán lại → không được trả về người đầu, ticket vào hàng đợi chung
+    await post(`/tickets/${ticket._id}/reassign-request`, colleagueToken, { reason: 'Đang ở farm khác' }).expect(200)
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.assigned_to).toBeUndefined()
+    expect(saved.previous_assignees).toHaveLength(2)
   })
 
   it('Technician khác không xin gán lại hộ được', async () => {

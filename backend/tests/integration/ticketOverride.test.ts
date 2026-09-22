@@ -130,4 +130,23 @@ describe('adminOverrideTicket called directly (not through the route)', () => {
       assigned_to: String(outOfRegion._id), reason: 'x', force: true,
     })).resolves.toBeDefined()
   })
+
+  it('gán Technician mới thì ticket quay về NEW để người mới xác nhận tiếp nhận', async () => {
+    const { token, ticket, inRegion } = await seed()
+    await Ticket.updateOne({ _id: ticket._id }, { status: 'IN_PROGRESS', responded_at: new Date() })
+
+    await override(token, ticket._id, { assigned_to: String(inRegion._id), reason: 'Điều phối lại' }).expect(200)
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.status).toBe('NEW')
+    expect(saved.responded_at).toBeUndefined()
+    expect(saved.assigned_at).toBeInstanceOf(Date)
+  })
+
+  it('Admin ép luôn trạng thái thì giữ nguyên trạng thái Admin chọn', async () => {
+    const { token, ticket, inRegion } = await seed()
+    await override(token, ticket._id, {
+      assigned_to: String(inRegion._id), status: 'IN_PROGRESS', reason: 'Đang xử lý tiếp',
+    }).expect(200)
+    expect((await Ticket.findById(ticket._id))!.status).toBe('IN_PROGRESS')
+  })
 })

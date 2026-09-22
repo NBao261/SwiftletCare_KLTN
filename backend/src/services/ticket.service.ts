@@ -147,6 +147,7 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
     priority,
     status:   'NEW',
     assigned_to: assignedTo ?? undefined,
+    assigned_at: assignedTo ? new Date() : undefined,
     scheduled_visit_at: input.scheduled_visit_at ? new Date(input.scheduled_visit_at) : undefined,
     ...sla,
     notes: input.description
@@ -177,6 +178,7 @@ export async function createMaintenanceTicket(input: {
     priority,
     status: 'NEW',
     assigned_to: assignedTo ?? undefined,
+    assigned_at: assignedTo ? new Date() : undefined,
     scheduled_visit_at: input.scheduled_visit_at,
     ...sla,
     notes: [{ content: input.description, created_at: new Date() }],
@@ -233,6 +235,7 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
         priority,
         status:   'NEW',
         assigned_to: assignedTo ?? undefined,
+        assigned_at: assignedTo ? new Date() : undefined,
         ...sla,
         notes: [{
           content: `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
@@ -428,9 +431,13 @@ export async function requestReassign(ticketId: string, user: CurrentUser, reaso
   if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
 
   const from = assigneeIdOf(ticket)
-  const to = await routeToTechnician(String(ticket.farm_id), { exclude: from ? [from] : [] })
+  // Loại cả những người từng bị chuyển khỏi ticket này: gán lại cho người vừa
+  // từ chối chỉ tạo vòng đá qua đá lại, không ai xử lý.
+  const declined = [...(from ? [from] : []), ...ticket.previous_assignees.map(p => String(p.user_id))]
+  const to = await routeToTechnician(String(ticket.farm_id), { exclude: declined })
 
   ticket.assigned_to = (to ?? undefined) as never
+  ticket.assigned_at = to ? new Date() : undefined
   trackAssigneeChange(ticket, from)
   ticket.status = 'NEW'
   ticket.responded_at = undefined
@@ -500,7 +507,11 @@ export async function escalateTicket(ticketId: string, user: CurrentUser, reason
   assertAssignee(ticket, user)
   if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
 
-  ticket.is_sla_breached = true
+  // KHÔNG bật `is_sla_breached`: escalate là xin hỗ trợ (thiếu linh kiện, vượt
+  // khả năng xử lý), ticket có thể vẫn còn trong hạn. Trộn 2 khái niệm làm KPI
+  // phạt oan Technician chủ động báo sớm (TICKET-FR-009 vs TICKET-FR-012).
+  ticket.escalated_at = new Date()
+  ticket.escalation_reason = reason
   ticket.notes.push({
     author_id: user._id as never,
     content: `Escalate lên Administrator${reason ? `: ${reason}` : ''}`,
@@ -620,6 +631,7 @@ interface TechnicianKpiRow {
   dueBreached: number
   responseMsSum: number
   respondedCount: number
+  escalated: number
   technician?: { full_name?: string; email?: string }
 }
 
@@ -652,9 +664,10 @@ export async function getKpi() {
           resolvedCount: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
           due: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }] }, 1, 0] } },
           dueBreached: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }, '$is_sla_breached'] }, 1, 0] } },
-          // TICKET-FR-004b — thời gian từ lúc tạo tới lúc Technician xác nhận tiếp nhận
-          responseMsSum: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, { $subtract: ['$responded_at', '$created_at'] }, 0] } },
+          // TICKET-FR-004b — từ lúc ticket được giao (không phải lúc tạo) tới lúc Technician xác nhận tiếp nhận
+          responseMsSum: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, { $subtract: ['$responded_at', { $ifNull: ['$assigned_at', '$created_at'] }] }, 0] } },
           respondedCount: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, 1, 0] } },
+          escalated: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$escalated_at', null] }, null] }, 1, 0] } },
         },
       },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'technician' } },
@@ -684,6 +697,7 @@ export async function getKpi() {
       cancelled: row.cancelled,
       avgResolveHours: row.resolvedCount ? toHours(row.resolveMsSum / row.resolvedCount) : null,
       avgResponseHours: row.respondedCount ? toHours(row.responseMsSum / row.respondedCount) : null,
+      escalated: row.escalated,
       slaComplianceRate: percent(row.due - row.dueBreached, row.due),
     })),
     resolvedTickets: resolved?.total ?? 0,
@@ -742,7 +756,14 @@ export async function adminOverrideTicket(
     changes.assigned_to = { before: ticket.assigned_to ? String(ticket.assigned_to) : null, after: updates.assigned_to }
     if (!coversRegion) changes.forcedOutOfRegion = true
     ticket.assigned_to = technician._id
+    ticket.assigned_at = new Date()
     trackAssigneeChange(ticket, previousAssignee)
+    // Người mới phải tự xác nhận tiếp nhận, trừ khi Admin ép luôn trạng thái
+    if (previousAssignee !== String(technician._id) && updates.status === undefined) {
+      changes.status = { before: ticket.status, after: 'NEW' }
+      ticket.status = 'NEW'
+      ticket.responded_at = undefined
+    }
   }
   if (updates.priority !== undefined && updates.priority !== ticket.priority) {
     // SLA tính theo priority (TICKET-FR-006) và mốc là lúc tạo ticket, không
