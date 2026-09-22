@@ -133,7 +133,7 @@ export async function sendMessage(
   } catch (err) {
     // Flow 23 case 5a — client gửi lại cùng clientMessageId sau khi mất ack: trả lại tin đã lưu, không phát lại
     if ((err as { code?: number }).code !== DUPLICATE_KEY || !clientMessageId) throw err
-    const existing = await TicketMessage.findOne({ sender_id: user._id, client_message_id: clientMessageId })
+    const existing = await TicketMessage.findOne({ ticket_id: ticket._id, sender_id: user._id, client_message_id: clientMessageId })
       .populate('sender_id', 'full_name').lean<PopulatedMessage>()
     return toDto(existing!)
   }

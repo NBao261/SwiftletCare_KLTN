@@ -33,9 +33,11 @@ const ticketMessageSchema = new Schema<ITicketMessage>(
 
 // Lịch sử chat luôn đọc theo ticket, mới nhất trước (phân trang ngược)
 ticketMessageSchema.index({ ticket_id: 1, created_at: -1 })
-// Dedupe gửi lại — chỉ áp cho tin có client_message_id
+// Dedupe gửi lại — chỉ áp cho tin có client_message_id. Phải gồm cả ticket_id:
+// client thường đánh số tin theo từng cuộc trò chuyện, unique theo mỗi người gửi
+// sẽ khiến tin "số 1" của ticket thứ hai bị coi là trùng và không bao giờ được lưu.
 ticketMessageSchema.index(
-  { sender_id: 1, client_message_id: 1 },
+  { ticket_id: 1, sender_id: 1, client_message_id: 1 },
   { unique: true, partialFilterExpression: { client_message_id: { $type: 'string' } } },
 )
 

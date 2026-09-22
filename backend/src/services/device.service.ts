@@ -483,6 +483,12 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user)
+  // Validate nội dung lệnh trước trạng thái thiết bị: URL firmware sai thì phải
+  // báo đúng lý do đó, không lẫn với "thiết bị chưa ONLINE".
+  if (input.command === 'OTA') {
+    if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
+    assertAllowedFirmwareUrl(input.ota.url)
+  }
   if (node.status !== 'ONLINE') {
     throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE`)
   }
@@ -511,7 +517,6 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
       break
     case 'OTA': {
       if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
-      assertAllowedFirmwareUrl(input.ota.url)
       if (input.ota.version === node.firmware_version) {
         throw ConflictError(`Thiết bị đang chạy đúng phiên bản ${input.ota.version}`)
       }

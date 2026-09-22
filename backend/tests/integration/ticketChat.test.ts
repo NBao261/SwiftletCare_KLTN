@@ -136,6 +136,18 @@ describe('REST /tickets/:id/messages', () => {
     expect(retry.body.data._id).toBe(first.body.data._id)
     expect(await TicketMessage.countDocuments()).toBe(1)
   })
+
+  it('cùng client_message_id ở ticket khác vẫn được lưu (client đánh số theo từng cuộc trò chuyện)', async () => {
+    const { ticket, owner, t } = await seed()
+    const second = await Ticket.create({
+      farm_id: ticket.farm_id, type: 'OTHER', priority: 'P3', status: 'IN_PROGRESS', created_by: owner._id,
+    })
+    await send(ticket._id, t.owner, { content: 'tin 1 của ticket A', client_message_id: 'm-1' }).expect(201)
+    const other = await send(second._id, t.owner, { content: 'tin 1 của ticket B', client_message_id: 'm-1' }).expect(201)
+
+    expect(other.body.data.content).toBe('tin 1 của ticket B')
+    expect(await TicketMessage.countDocuments()).toBe(2)
+  })
 })
 
 describe('đổi Technician phụ trách (TICKET-FR-017)', () => {
