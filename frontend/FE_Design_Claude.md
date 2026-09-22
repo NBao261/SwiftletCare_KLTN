@@ -3,11 +3,17 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.2.0 · **Cập nhật:** 20/09/2026 · **Thay thế:** v2.1.0
+**Phiên bản:** 2.3.0 · **Cập nhật:** 22/09/2026 · **Thay thế:** v2.2.0
 
 ---
 
 ## 0. Changelog
+
+### v2.2.0 → v2.3.0
+| # | Thay đổi |
+|---|---|
+| 1 | **Thêm mục 12 — Cấu trúc thư mục Frontend, tổ chức theo role.** Quy định file mới đặt ở đâu: cây thư mục đầy đủ, bảng quyết định 2 câu hỏi, quy ước đặt tên `[Role][ChứcNăng]Page`, ba tầng component `ui`/`common`/`features`, mỗi role một layout với menu khai ngay trong file, các ngoại lệ đã thống nhất và checklist thêm màn hình mới. Không sửa đổi quy định thiết kế nào của các mục 1–11. |
+| 2 | **Thêm 12.9–12.11 — quy tắc đặt tên file, quy tắc sinh thư mục mới, và bảng đối chiếu với quy ước doanh nghiệp.** Chốt công thức `[Role][ChứcNăng]` PascalCase cho component/page, giải thích vì sao `hooks/`, `apis/`, `types/`, `validations/`, `routes/` cố ý KHÔNG dùng PascalCase. Không đổi tên file nào trong mã nguồn. |
 
 ### v2.1.0 → v2.2.0
 | # | Thay đổi |
@@ -430,6 +436,212 @@ module.exports = {
   },
 };
 ```
+
+---
+
+## 12. Cấu trúc thư mục Frontend — tổ chức theo role
+
+> Mục này quy định **file mới đặt ở đâu**. Mục 9 nói về tái dùng component giữa các role; mục này nói về vị trí vật lý của file. Hai mục bổ sung cho nhau: tái dùng component (mục 9) nhưng vẫn phải đặt đúng thư mục role sở hữu (mục này).
+
+### 12.1. Nguyên tắc
+
+1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `technician/` · `sales-staff/` · `auth/` · `shared/` · `common/`. Không gom theo feature, không để file rải rác cạnh trang dùng nó.
+2. **Vào `shared/` chỉ khi từ 2 role trở lên thật sự dùng.** Một role dùng thì về thư mục role đó, dù file trông "chung chung" tới đâu. Đây là luật chống `shared/` phình thành bãi rác.
+3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** `TechnicianDevicesPage` vẫn được Farm Owner và Admin mở. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
+4. **Mọi import dùng alias `@/`**, không dùng đường dẫn tương đối `../`. Nhờ vậy dời file chỉ phải sửa đúng đường dẫn của chính nó.
+5. **Một tính năng = một thư mục.** Component/modal/hằng số riêng của một màn hình nằm cùng chỗ trong `components/features/<role>/<area>/`, kể cả khi chỉ một trang dùng.
+
+### 12.2. Cây thư mục
+
+```
+frontend/src/
+├── apis/                      Tầng HTTP — 1 file <resource>.api.ts mỗi tài nguyên
+│   ├── admin/                 users.api · system.api
+│   ├── auth/                  auth.api · invitations.api
+│   ├── farm-owner/            analytics.api · telemetry.api · harvests.api · marketplace.api
+│   └── shared/                farms.api · alerts.api · devices.api · tickets.api
+│
+├── components/
+│   ├── auth/                  RequireRole
+│   ├── ui/                    Design system — KHÔNG biết domain (chỉ phụ thuộc lib/cn)
+│   │                          primitive: Button Card Badge Input Select Textarea Toggle Modal
+│   │                          tổ hợp:    DataTable Pagination FilterChip EmptyState
+│   │                                     LoadingSkeleton StarRating ActionsMenu SelectMenu
+│   │                                     ConfirmModal NoteActionModal ComingSoon
+│   │                          + icons.tsx · useFloatingMenu.ts · index.ts (barrel duy nhất)
+│   ├── common/                CÓ biết domain và dùng ở >= 2 nơi. Cố ý giữ nhỏ.
+│   │                          ZoneSwitcher · NotificationPopover · Toast · ZonePicker · StatusDot
+│   ├── features/              Component riêng của từng tính năng
+│   │   ├── admin/             users/ · system/ · tickets/
+│   │   ├── farm-owner/        dashboard/ · analytics/ · farms/ · harvest/
+│   │   └── technician/        devices/ · alerts/
+│   └── layouts/               Đúng 7 file — 4 của role, 3 dùng chung
+│                              AdminLayout · FarmOwnerLayout · TechnicianLayout · SalesStaffLayout
+│                              AppShell · AppSidebar · AppHeader
+│
+├── pages/                     CHỈ chứa *Page.tsx
+│   ├── admin/                 AdminUsersPage · AdminAccountRequestsPage · AdminSystemHealthPage
+│   │                          AdminSystemSettingsPage · AdminAuditLogPage
+│   ├── farm-owner/            FarmOwnerDashboardPage · FarmOwnerAnalyticsPage · FarmOwnerFarmsPage
+│   │                          FarmOwnerFarmHousesPage · FarmOwnerFarmZonesPage
+│   │                          FarmOwnerHarvestPage · FarmOwnerLiveStreamPage
+│   ├── technician/            TechnicianDevicesPage · TechnicianAlertsPage
+│   │                          TechnicianTicketsPage · TechnicianTicketDetailPage
+│   ├── sales-staff/           SalesStaffHomePage
+│   ├── auth/                  LoginPage · RegisterPage · ForgotPasswordPage · InvitationPage
+│   └── (gốc)                  SettingsPage · MarketplacePage · ListingDetailPage · ForbiddenPage
+│                              — 4 trang không thuộc nghiệp vụ role nào
+│
+├── routes/                    1 file cho mỗi thư mục pages/<role>/
+│                              admin · farm-owner · technician · sales-staff · public
+│
+├── hooks/                     React Query hooks bọc apis/
+│   ├── admin/ · auth/ · farm-owner/ · shared/
+│   └── common/                Hạ tầng không gắn role:
+│                              usePermission · useSocket · usePaginatedListQuery · useBreadcrumb
+│
+├── validations/               Hàm kiểm tra form, thuần logic
+│   ├── admin/                 user.validation.ts
+│   └── common/                threshold.validation.ts
+│
+├── types/                     Chia theo MODULE backend, không theo role (xem 12.7)
+│                              auth · farm · device · telemetry · alert · ticket
+│                              harvest · vision · system · socket · common
+│                              + index.ts (barrel, giữ `@/types` chạy như cũ)
+│
+├── constants/                 roles (nhóm role + getRoleHomePath + canAccessPath)
+│                              thresholds · tickets · auditActions
+│
+├── stores/                    Zustand: authStore · alertStore · toastStore
+│                              zoneStore · breadcrumbStore
+│
+├── lib/                       axios · queryClient · socket · cn
+│                              helpers · navigation · chartTheme
+│
+├── providers/                 AppProviders.tsx — mọi provider bọc cây React
+│
+├── App.tsx                    Ghép các nhóm route + RoleLayout + 2 route không thuộc role nào
+└── main.tsx                   Điểm vào, chỉ mount AppProviders
+```
+
+### 12.3. Bảng quyết định — file mới đặt ở đâu
+
+Hỏi lần lượt 2 câu, dừng ở câu trả lời đầu tiên:
+
+| # | Câu hỏi | Trả lời | Đặt vào |
+|---|---|---|---|
+| 1 | File có import `@/types` (enum nghiệp vụ), `@/hooks`, `@/apis` hoặc `@/stores` không? | **Không** | `components/ui/` — bất kể mấy nơi dùng |
+| 2 | Có bao nhiêu role thật sự dùng? | **1 role** | thư mục của chính role đó (`features/<role>/<area>/`, `apis/<role>/`, `hooks/<role>/`) |
+| 2 | | **>= 2 role** | `shared/` (với `apis/` · `hooks/`) hoặc `components/common/` (với component) |
+
+Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`usePermission`, `useSocket`) → `hooks/common/`.
+
+### 12.4. `pages/` — quy ước đặt tên `[Role][Chức năng]Page`
+
+- Tên file **mang luôn tên role sở hữu**: `AdminUsersPage.tsx`, `FarmOwnerHarvestPage.tsx`, `TechnicianDevicesPage.tsx`.
+- **Tên hàm component trùng tên file** — `export default function TechnicianDevicesPage()`.
+- `pages/` **không có** thư mục `shared/` hay `public/`. Trang nhiều role dùng chung đặt ở thư mục role sở hữu nghiệp vụ chính (Thiết bị/Cảnh báo/Ticket → `technician/`; Trang trại/Thu hoạch/Camera → `farm-owner/`).
+- Trang không thuộc nghiệp vụ role nào để thẳng ở gốc `pages/`; màn đăng nhập/đăng ký/nhận lời mời ở `pages/auth/`.
+- **Trong `pages/` không được có gì ngoài `*Page.tsx`.** Modal, tab, cột bảng, hằng số riêng của trang đều nằm ở `components/features/<role>/<area>/`.
+
+### 12.5. `layouts/` — mỗi role một layout, menu viết trong file
+
+- 4 file `<Role>Layout.tsx` **khai mảng `menuSections` đầy đủ ngay đầu file**, mỗi mục là `{ label, path, icon }` viết literal — không tra từ bảng nav dùng chung. Mở `AdminLayout.tsx` là thấy trọn menu của Admin.
+- `dockItems` khai thêm khi dock mobile cần chọn tay (Admin có 10 mục nên phải chọn); các role khác dùng `firstDockItems(menuSections)` lấy 4 mục đầu.
+- `AppShell` giữ toàn bộ khung (sidebar + header + nội dung + Toast) và mount listener socket cảnh báo. `AppSidebar` thuần trình bày, render cùng menu ở 2 breakpoint (rail `w-64` desktop + dock nổi mobile). `AppHeader` giữ breadcrumb + zone + chuông + ngôn ngữ.
+- `RoleLayout` trong `App.tsx` chọn layout theo `user.role` **lúc chạy**, vì URL của SwiftletCare không có tiền tố role (`/devices` dùng chung 3 role) nên không gắn layout theo nhánh route được.
+- **Thêm/bớt mục menu của một role: sửa đúng file layout của role đó, không đụng chỗ nào khác.** Nếu mục đó cũng cần chặn `returnTo` sau đăng nhập thì thêm một dòng vào bảng `MENU_ACCESS` trong `constants/roles.ts`.
+
+### 12.6. Ba tầng component — phân biệt `ui/` · `common/` · `features/`
+
+| Tầng | Biết domain? | Số nơi dùng | Ví dụ |
+|---|---|---|---|
+| `ui/` | Không | bất kỳ | `Button` · `DataTable` · `EmptyState` · `ConfirmModal` |
+| `common/` | Có | >= 2 | `ZoneSwitcher` · `ZonePicker` · `StatusDot` |
+| `features/<role>/<area>/` | Có | 1 | `ThresholdsModal` · `SensorCard` · `CreateUserModal` |
+
+`ui/` là design system **tự chứa**: phụ thuộc duy nhất `@/lib/cn`. Không file nào trong `ui/` được import barrel `@/components/ui` của chính nó — import thẳng module anh em để tránh vòng lặp.
+
+### 12.7. Ngoại lệ đã thống nhất — đừng "sửa lại cho đúng"
+
+| Chỗ | Vì sao lệch quy tắc chung |
+|---|---|
+| `types/` chia theo **module backend**, không theo role | Type là shape thực thể mirror model Mongoose. `Zone`, `Alert`, `Ticket` được 3 role đọc, không có chủ sở hữu duy nhất. Ép vào thư mục role thì hoặc phải nhân bản, hoặc 80% type dồn vào `types/shared/`. |
+| `components/features/admin/tickets/AdminOverrideModals.tsx` nằm ở `admin/` nhưng bị trang Technician import | Là UI riêng của Admin, gated bằng `usePermission('ADMIN')` trong `TechnicianTicketDetailPage`. Khi một component là **năng lực của role này render trong màn của role khác**, quyền sở hữu thắng nơi import. |
+| `constants/roles.ts` giữ bảng `MENU_ACCESS` tách rời menu trong layout | Không thể đọc ngược menu từ file layout: `useAuth` cần `canAccessPath`, mà layout lại render `AppHeader` gọi `useAuth` → import vòng, lỗi lúc chạy. |
+| `apis/shared/` + `hooks/shared/` còn tồn tại (9 file) | Đã kiểm bằng đồ thị import: `farms`/`alerts` được cả 4 role chạm tới vì chính khung app render `ZoneSwitcher` + `NotificationPopover`; `devices`/`tickets` dùng bởi admin + technician. **Không có `components/features/shared/`.** |
+
+### 12.8. Checklist khi thêm một màn hình mới
+
+1. Màn này thuộc nghiệp vụ role nào? → tạo `pages/<role>/<Role><ChứcNăng>Page.tsx`, tên hàm trùng tên file.
+2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts` (`OPS_ROLES`, `FARM_OWNER_ONLY`, `ADMIN_ONLY`, `HARVEST_ROLES`).
+3. Cần lên sidebar? → thêm `{ label, path, icon }` vào `menuSections` trong `<Role>Layout.tsx`, và thêm dòng vào `MENU_ACCESS` (`constants/roles.ts`).
+4. Endpoint mới → `apis/<role>/<resource>.api.ts`; hook bọc React Query → `hooks/<role>/use<Resource>.ts`.
+5. Component riêng của màn → `components/features/<role>/<area>/`. **Không để trong `pages/`.**
+6. Kiểu dữ liệu mới → `types/<module>.types.ts` (theo module backend), barrel `types/index.ts` tự re-export.
+7. Form có kiểm tra hợp lệ → hàm thuần trong `validations/<role|common>/<tên>.validation.ts`, component chỉ gọi.
+8. Chạy `npx tsc --noEmit` và `npm run build` trước khi commit (repo chưa có test FE, `npm run lint` thiếu cấu hình ESLint).
+
+### 12.9. Quy tắc đặt tên file
+
+**Nguyên tắc gốc:** file nào *là một thực thể của React* (component, page, layout) → **PascalCase**, viết hoa chữ cái đầu của mọi từ, không gạch nối, không gạch dưới. File nào *là một module hạ tầng* (endpoint, kiểu dữ liệu, store, hằng số, tiện ích) → giữ quy ước đuôi phân loại của hệ sinh thái React/TypeScript. Trộn hai quy ước này là **cố ý**, không phải thiếu nhất quán — xem 12.11.
+
+**Công thức tên component/page:** `[Role][ChứcNăng]` hoặc `[TênFeature]`.
+- File thuộc **một role** → bắt đầu bằng tên role viết PascalCase: `Admin`, `FarmOwner`, `Technician`, `SalesStaff`.
+- File **không thuộc role nào** (`ui/`, `common/`, `auth/`, 4 trang gốc `pages/`) → **không có tiền tố role**, chỉ tên feature.
+- **Tên hàm export trùng đúng tên file**: `AdminUsersPage.tsx` → `export default function AdminUsersPage()`.
+
+| Lớp | Quy tắc tên | Ví dụ |
+|---|---|---|
+| `pages/<role>/` | `[Role][ChứcNăng]Page.tsx` | `AdminUsersPage.tsx` · `FarmOwnerHarvestPage.tsx` · `TechnicianDevicesPage.tsx` |
+| `pages/auth/` + 4 trang gốc `pages/` | `[ChứcNăng]Page.tsx` — không role | `LoginPage.tsx` · `SettingsPage.tsx` · `ForbiddenPage.tsx` |
+| `components/features/<role>/<area>/` | `[Role][TênFeature].tsx` | `AdminCreateUserModal.tsx` · `FarmOwnerListingPanel.tsx` · `TechnicianRelayToggle.tsx` |
+| `components/layouts/` | `[Role]Layout.tsx` cho layout của role · `App[Phần].tsx` cho khung dùng chung | `AdminLayout.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` |
+| `components/ui/` · `components/common/` | `[TênFeature].tsx` — **không** tiền tố role | `DataTable.tsx` · `ConfirmModal.tsx` · `ZoneSwitcher.tsx` |
+| `hooks/<bucket>/` | `use[Resource].ts` — camelCase, **bắt buộc** bắt đầu bằng `use` | `useUsers.ts` · `useFarms.ts` · `usePermission.ts` |
+| `apis/<bucket>/` | `<resource>.api.ts` | `users.api.ts` · `farms.api.ts` |
+| `types/` | `<module>.types.ts` | `auth.types.ts` · `device.types.ts` |
+| `validations/<bucket>/` | `<resource>.validation.ts` | `user.validation.ts` · `threshold.validation.ts` |
+| `routes/` | `<role>.routes.tsx` | `admin.routes.tsx` · `farm-owner.routes.tsx` |
+| `stores/` | `<tên>Store.ts` — camelCase | `authStore.ts` · `alertStore.ts` |
+| `constants/` · `lib/` · `providers/` | camelCase, tên nói đúng nội dung | `auditActions.ts` · `chartTheme.ts` · `AppProviders.tsx` |
+| Thư mục | **kebab-case** cho tên role nhiều từ | `farm-owner/` · `sales-staff/` |
+
+**Hằng số riêng của một feature** đi kèm component trong cùng thư mục, đặt `<area>.constants.ts`: `users.constants.ts`, `harvest.constants.ts`. Hằng số dùng chung toàn app thì về `constants/`.
+
+### 12.10. Khi nào được tạo thư mục mới, và tạo ở đâu
+
+Không tự sinh thư mục tuỳ ý. Chỉ 4 trường hợp dưới đây được tạo mới:
+
+| Tình huống | Tạo ở đâu | Điều kiện |
+|---|---|---|
+| Thêm một **nhóm màn hình mới** cho role đã có | `components/features/<role>/<area-mới>/` | `<area>` đặt theo danh từ nghiệp vụ số nhiều, kebab-case nếu nhiều từ: `harvest/`, `account-requests/` |
+| Thêm **role mới** vào hệ thống | Đồng thời 5 chỗ: `pages/<role>/` · `routes/<role>.routes.tsx` · `components/layouts/<Role>Layout.tsx` · `apis/<role>/` và `hooks/<role>/` (chỉ khi có endpoint riêng) | Phải cập nhật luôn `Role` trong `types/common.types.ts`, `ROLE_LABEL` + `ROLE_HOME` + `MENU_ACCESS` trong `constants/roles.ts`, và nhánh `switch` trong `RoleLayout` (`App.tsx`) |
+| Một file trong `shared/` chuyển thành **chỉ 1 role dùng** (hoặc ngược lại) | Dời sang bucket đúng, tạo thư mục đích nếu chưa có | Kiểm bằng đồ thị import thật, không đoán. Một role dùng → về thư mục role; >= 2 role → `shared/` |
+| Thêm một **lớp quan tâm mới** (VD `workers/`, `i18n/`) | Cấp 1 trong `src/` | Chỉ khi thật sự là một lớp mới, và phải bổ sung vào cây ở mục 12.2 trước khi code |
+
+**Không tạo:** `components/features/shared/` · thư mục con trong `pages/<role>/` · thư mục `components/` hay `utils/` riêng bên trong một feature · thư mục chỉ chứa đúng 1 file mà lớp cha đã đủ rõ.
+
+### 12.11. Đối chiếu với quy ước doanh nghiệp
+
+Cấu trúc này theo mô hình **phân lớp + cắt lát theo role** (layered + sliced) — cùng họ với `bulletproof-react` và Feature-Sliced Design, là mặc định của phần lớn dự án React quy mô vừa/lớn. Ba điểm bám chuẩn quan trọng nhất:
+
+| Tiêu chí chuẩn ngành | SwiftletCare |
+|---|---|
+| Component PascalCase, tên file trùng tên component | Đạt — 67/67 file component và page |
+| Hook `useXxx` camelCase | Đạt — đổi sang PascalCase sẽ làm quy tắc `react-hooks` của ESLint không nhận diện được, nên **không** áp PascalCase cho `hooks/` |
+| Module hạ tầng dùng đuôi phân loại (`.api`, `.types`, `.validation`, `.routes`) | Đạt — giống Angular style guide (`*.service.ts`) và NestJS (`*.module.ts`); đây là lý do `apis/`, `types/`, `validations/`, `routes/` **không** PascalCase |
+| Tầng UI không phụ thuộc domain | Đạt — `components/ui/` chỉ phụ thuộc `lib/cn` |
+| Không có "thư mục rác" dùng chung phình to | Đạt — `common/` giữ ở mức nhỏ, không có `features/shared/`, `utils/` đã gộp vào `lib/` |
+| Quyền truy cập khai tập trung | Đạt — toàn bộ `allow={...}` nằm trong `routes/`, nhóm role khai một chỗ ở `constants/roles.ts` |
+
+**Khác biệt có chủ đích so với mẫu ngành:** `types/` chia theo module backend chứ không theo role (lý do ở 12.7), và tên page mang tiền tố role — mẫu ngành thường chỉ có `UsersPage.tsx` vì URL đã có tiền tố `/admin/`. SwiftletCare không có tiền tố role trên URL nên tiền tố được đưa vào tên file để bù lại.
+
+### 12.12. Nên / Không nên
+
+**Nên:** đặt file theo bảng 12.3 · đặt tên theo bảng 12.9 · tên trang mang tên role · giữ `pages/` chỉ có `*Page.tsx` · dùng alias `@/` · dời file sang bucket khác ngay khi số role dùng nó thay đổi · đọc `routes/` khi cần biết ai vào được trang nào.
+
+**Không nên:** không tạo `components/features/shared/` · không để file một role dùng nằm trong `shared/` "để dành sau này" · không nhét component/modal vào `pages/` · không import `@/types`/`@/hooks`/`@/apis`/`@/stores` từ trong `components/ui/` · không suy quyền truy cập từ tên thư mục · không tách file chỉ vì nguyên tắc — số file ít và tên file tự nói lên chủ sở hữu quan trọng hơn.
 
 ---
 
