@@ -1,12 +1,14 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useDefaultThresholds } from '@/hooks/admin/useSystem'
 import { Button, Card } from '@/components/ui'
 import { IconEdit } from '@/components/ui/icons'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { getApiErrorMessage } from '@/lib/helpers'
+import { cn } from '@/lib/cn'
 import { THRESHOLD_LIMITS } from '@/validations/common/threshold.validation'
+import { THRESHOLD_KEYS, FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
 import { THRESHOLD_GROUPS } from './system.constants'
-import LastUpdatedFooter from './LastUpdatedFooter'
 import ThresholdsEditModal from './ThresholdsEditModal'
 
 /** 1 giá trị trong cặp min/max — nhãn MIN/MAX nhỏ phía trên số để không lẫn 2 bên khi đứng cạnh nhau. Đặt trên panel nền trắng nên dùng màu charcoal thay vì trắng. */
@@ -28,6 +30,7 @@ function MinMaxValue({ label, value, unit }: { label: string; value: number; uni
 export default function ThresholdsCard() {
   const { data, isLoading, error } = useDefaultThresholds()
   const [isEditing, setIsEditing] = useState(false)
+  const isDefault = data && THRESHOLD_KEYS.every(k => data[k] === FACTORY_DEFAULT_THRESHOLDS[k])
 
   return (
     <>
@@ -39,6 +42,17 @@ export default function ThresholdsCard() {
         <div className="flex items-start justify-between gap-6">
           <div className="mt-2 flex min-w-0 items-center gap-2.5">
             <h2 className="font-bold text-white">Ngưỡng môi trường mặc định</h2>
+            {data && (
+              <span
+                title={isDefault ? undefined : 'Khác với mặc định kỹ thuật gốc'}
+                className={cn(
+                  'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                  isDefault ? 'bg-white/10 text-white/70' : 'bg-limeMist text-charcoal',
+                )}
+              >
+                {isDefault ? 'Mặc định gốc' : 'Đã tuỳ chỉnh'}
+              </span>
+            )}
           </div>
           {data && (
             <Button
@@ -67,38 +81,45 @@ export default function ThresholdsCard() {
         )}
 
         {data && (
-          <>
-            <dl className="grid flex-1 grid-cols-1 content-center gap-3 sm:grid-cols-2">
-              {THRESHOLD_GROUPS.map(group => {
-                const Icon = group.icon
-                return (
-                  // Cả icon + tiêu đề + giá trị gộp chung 1 panel nền trắng (trước đây icon/tiêu đề nằm ngoài, trên nền đen)
-                  <div key={group.label} className="flex items-start gap-2 rounded-2xl bg-white p-3">
-                    {/* Icon-box tròn, lime — cùng cặp màu pill nav active (SideBar.tsx: bg-limeMist text-charcoal) */}
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
-                      <Icon width={18} height={18} />
-                    </span>
-                    {/* Tiêu đề + giá trị chung 1 cột — giá trị thẳng hàng với tiêu đề thay vì thẳng hàng với icon */}
-                    <div className="min-w-0 flex-1">
-                      <dt className="label-caption text-sm font-bold text-charcoal">{group.label}</dt>
-                      {group.kind === 'range' ? (
-                        <dd className="mt-2 flex items-end gap-3">
-                          <MinMaxValue label="Tối thiểu" value={data[group.minKey]} unit={THRESHOLD_LIMITS[group.minKey].unit} />
-                          <span className="pb-1.5 text-charcoal/25">–</span>
-                          <MinMaxValue label="Tối đa" value={data[group.maxKey]} unit={THRESHOLD_LIMITS[group.maxKey].unit} />
-                        </dd>
-                      ) : (
-                        <dd className="mt-2 items-baseline text-xl font-bold tabular-nums text-charcoal">
-                          {data[group.key]} <span className="text-xs font-semibold text-charcoal/50">{THRESHOLD_LIMITS[group.key].unit}</span>
-                        </dd>
-                      )}
-                    </div>
+          <dl className="grid flex-1 grid-cols-1 content-center gap-3 sm:grid-cols-2">
+            {THRESHOLD_GROUPS.map(group => {
+              const Icon = group.icon
+              return (
+                // Cả icon + tiêu đề + giá trị gộp chung 1 panel nền trắng (trước đây icon/tiêu đề nằm ngoài, trên nền đen)
+                <div key={group.label} className="flex items-start gap-2 rounded-2xl bg-white p-3">
+                  {/* Icon-box tròn, lime — cùng cặp màu pill nav active (SideBar.tsx: bg-limeMist text-charcoal) */}
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
+                    <Icon width={18} height={18} />
+                  </span>
+                  {/* Tiêu đề + giá trị chung 1 cột — giá trị thẳng hàng với tiêu đề thay vì thẳng hàng với icon */}
+                  <div className="min-w-0 flex-1">
+                    <dt className="label-caption normal-case text-sm font-bold text-charcoal">{group.label}</dt>
+                    {group.kind === 'range' ? (
+                      <dd className="mt-2 flex items-end gap-3">
+                        <MinMaxValue label="Tối thiểu" value={data[group.minKey]} unit={THRESHOLD_LIMITS[group.minKey].unit} />
+                        <span className="pb-1.5 text-charcoal/25">–</span>
+                        <MinMaxValue label="Tối đa" value={data[group.maxKey]} unit={THRESHOLD_LIMITS[group.maxKey].unit} />
+                      </dd>
+                    ) : (
+                      <dd className="mt-2 items-baseline text-xl font-bold tabular-nums text-charcoal">
+                        {data[group.key]} <span className="text-xs font-semibold text-charcoal/50">{THRESHOLD_LIMITS[group.key].unit}</span>
+                      </dd>
+                    )}
                   </div>
-                )
-              })}
-            </dl>
-            <LastUpdatedFooter meta={data} borderClass="border-white/10" textClass="text-white/40" />
-          </>
+                </div>
+              )
+            })}
+          </dl>
+        )}
+
+        {/* Audit log phân biệt 2 khối cấu hình bằng `action`, không phải target_id (backend log target_type='system_settings', target_id để trống) */}
+        {data && !isDefault && (
+          <Link
+            to="/system/audit-log?action=DEFAULT_THRESHOLDS_UPDATED"
+            className="mt-3 self-end text-xs font-semibold text-white/50 underline underline-offset-2 hover:text-white"
+          >
+            Xem lịch sử thay đổi
+          </Link>
         )}
       </Card>
 

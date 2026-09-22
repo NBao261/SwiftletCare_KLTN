@@ -24,17 +24,15 @@ export function useDefaultThresholds() {
 /**
  * SYSTEM-FR-002 — PUT /system/settings/default-thresholds. Dùng cho cả "Lưu"
  * lẫn "Khôi phục mặc định gốc" (gửi FACTORY_DEFAULT_THRESHOLDS) — backend không
- * có endpoint reset riêng. Response PUT không kèm updated_at/updated_by (chỉ GET
- * có) nên invalidate thay vì setQueryData thẳng, để card đọc lại đúng meta mới
- * nhất; cũng làm mới danh sách nhật ký vì mỗi lần lưu đều ghi audit log.
+ * có endpoint reset riêng. Ghi vào audit log nên cũng làm mới danh sách nhật ký.
  */
 export function useUpdateDefaultThresholds() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: SystemDefaultThresholds) =>
       systemApi.updateDefaultThresholds(input).then(r => r.data.data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['system-default-thresholds'] })
+    onSuccess: (data) => {
+      queryClient.setQueryData(['system-default-thresholds'], data)
       void queryClient.invalidateQueries({ queryKey: ['audit-logs'] })
     },
   })
@@ -51,18 +49,16 @@ export function useSlaHours() {
 /**
  * TICKET-FR-006 — PUT /system/settings/sla. Dùng cho cả "Lưu" lẫn "Khôi phục mặc
  * định gốc" (gửi FACTORY_DEFAULT_SLA) — backend không có endpoint reset riêng.
- * Response PUT không kèm updated_at/updated_by (chỉ GET có) nên invalidate thay
- * vì setQueryData thẳng, để card đọc lại đúng meta mới nhất. Chỉ áp dụng cho
- * ticket tạo mới/đổi ưu tiên sau khi lưu — không hồi tố hạn SLA của ticket đang
- * mở, nên cũng làm mới danh sách nhật ký (SLA_UPDATED).
+ * Chỉ áp dụng cho ticket tạo mới/đổi ưu tiên sau khi lưu — không hồi tố hạn SLA
+ * của ticket đang mở, nên cũng làm mới danh sách nhật ký (SLA_UPDATED).
  */
 export function useUpdateSlaHours() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: SlaConfig) =>
       systemApi.updateSlaHours(input).then(r => r.data.data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['system-sla'] })
+    onSuccess: (data) => {
+      queryClient.setQueryData(['system-sla'], data)
       void queryClient.invalidateQueries({ queryKey: ['audit-logs'] })
     },
   })

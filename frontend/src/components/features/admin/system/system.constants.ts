@@ -15,10 +15,10 @@ export type ThresholdGroup =
 export const THRESHOLD_GROUPS: ThresholdGroup[] = [
   { kind: 'range', label: 'Nhiệt độ', icon: IconTemp, minKey: 'temp_min', maxKey: 'temp_max' },
   { kind: 'range', label: 'Độ ẩm', icon: IconHumidity, minKey: 'humidity_min', maxKey: 'humidity_max' },
-  { kind: 'single', label: 'Ánh sáng max', icon: IconLight, key: 'light_max' },
+  { kind: 'single', label: 'Ánh sáng tối đa', icon: IconLight, key: 'light_max' },
   // NH3/CO2 trước đây cùng dùng IconGas (2 icon lửa giống hệt nhau, dễ đọc nhầm) — tách riêng: IconAlert (tam giác cảnh báo) và IconCloud (mây)
-  { kind: 'single', label: 'NH3 max', icon: IconAlert, key: 'nh3_max' },
-  { kind: 'single', label: 'CO2 max', icon: IconCloud, key: 'co2_max' },
+  { kind: 'single', label: 'NH3 tối đa', icon: IconAlert, key: 'nh3_max' },
+  { kind: 'single', label: 'CO2 tối đa', icon: IconCloud, key: 'co2_max' },
 ]
 
 /** Icon-box theo mức ưu tiên SLA — 3/4 biến thể tông màu mục 2.7 (đỏ=CRITICAL, cam=vừa, xám=neutral) */

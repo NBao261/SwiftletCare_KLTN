@@ -1,6 +1,7 @@
 // ADMIN — Nhật ký hệ thống (SYSTEM-FR-001): GET /system/audit-logs, lọc theo
 // người thực hiện / hành động / khoảng ngày, phân trang server.
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuditLogList } from '@/hooks/admin/useSystem'
 import { useUsersPicker } from '@/hooks/admin/useUsers'
 import { AUDIT_ACTION_LABEL, AUDIT_TARGET_LABEL } from '@/constants/auditActions'
@@ -31,8 +32,14 @@ function startOfDayIso(date: string) { return new Date(`${date}T00:00:00`).toISO
 function endOfDayIso(date: string) { return new Date(`${date}T23:59:59.999`).toISOString() }
 
 export default function AdminAuditLogPage() {
+  // ?action=... cho phép trang khác link sang với bộ lọc sẵn (VD "Xem lịch sử thay đổi" ở trang Cấu hình mặc định).
+  // Chỉ dùng làm giá trị KHỞI TẠO — sau đó state tự quản, không đồng bộ ngược lên URL.
+  const [searchParams] = useSearchParams()
   const [actorId, setActorId] = useState(ALL)
-  const [action, setAction] = useState(ALL)
+  const [action, setAction] = useState(() => {
+    const fromUrl = searchParams.get('action') ?? ALL
+    return fromUrl in AUDIT_ACTION_LABEL ? fromUrl : ALL
+  })
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)

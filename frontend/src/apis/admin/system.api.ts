@@ -1,8 +1,5 @@
 import api from '@/lib/axios'
-import type {
-  ApiResponse, AuditLogEntry, SlaConfig, SlaConfigWithMeta,
-  SystemDefaultThresholds, SystemDefaultThresholdsWithMeta, SystemHealthSummary,
-} from '@/types'
+import type { ApiResponse, AuditLogEntry, SlaConfig, SystemDefaultThresholds, SystemHealthSummary } from '@/types'
 
 /** GET /system/audit-logs — mọi filter đều tuỳ chọn; sort cố định created_at desc. */
 export interface ListAuditLogsQuery {
@@ -29,19 +26,19 @@ export const systemApi = {
   listAuditLogs: (query?: ListAuditLogsQuery) =>
     api.get<ApiResponse<AuditLogEntry[]>>('/system/audit-logs', { params: query }),
 
-  /** SYSTEM-FR-002 — chưa cấu hình bao giờ thì backend trả giá trị gốc, khi đó updated_at/updated_by vắng mặt */
+  /** SYSTEM-FR-002 — chưa cấu hình bao giờ thì backend trả giá trị gốc */
   getDefaultThresholds: () =>
-    api.get<ApiResponse<SystemDefaultThresholdsWithMeta>>('/system/settings/default-thresholds'),
+    api.get<ApiResponse<SystemDefaultThresholds>>('/system/settings/default-thresholds'),
 
-  /** SYSTEM-FR-002 — 400 nếu min ≥ max / ngoài khoảng đo cảm biến; ghi DEFAULT_THRESHOLDS_UPDATED vào audit log. Response PUT không kèm meta — hook invalidate query để lấy lại updated_at/updated_by mới. */
+  /** SYSTEM-FR-002 — 400 nếu min ≥ max / ngoài khoảng đo cảm biến; ghi DEFAULT_THRESHOLDS_UPDATED vào audit log */
   updateDefaultThresholds: (input: Partial<SystemDefaultThresholds>) =>
     api.put<ApiResponse<SystemDefaultThresholds>>('/system/settings/default-thresholds', input),
 
-  /** TICKET-FR-006, SLA-NFR-001 — chưa cấu hình bao giờ thì backend trả DEFAULT_SLA (sla.util.ts), khi đó updated_at/updated_by vắng mặt */
+  /** TICKET-FR-006, SLA-NFR-001 — chưa cấu hình bao giờ thì backend trả DEFAULT_SLA (sla.util.ts) */
   getSlaHours: () =>
-    api.get<ApiResponse<SlaConfigWithMeta>>('/system/settings/sla'),
+    api.get<ApiResponse<SlaConfig>>('/system/settings/sla'),
 
-  /** TICKET-FR-006 — 400 nếu giờ ≤0 hoặc hạn phản hồi muộn hơn hạn xử lý; ghi SLA_UPDATED vào audit log. Response PUT không kèm meta — hook invalidate query để lấy lại updated_at/updated_by mới. */
+  /** TICKET-FR-006 — 400 nếu giờ ≤0 hoặc hạn phản hồi muộn hơn hạn xử lý; ghi SLA_UPDATED vào audit log */
   updateSlaHours: (input: Partial<SlaConfig>) =>
     api.put<ApiResponse<SlaConfig>>('/system/settings/sla', input),
 

@@ -31,17 +31,6 @@ export interface SlaLevel { response_hours: number; resolve_hours: number }
 export type SlaConfig = Record<TicketPriority, SlaLevel>
 
 /**
- * Chỉ có ở response GET của 2 màn cấu hình Admin (không có ở response PUT) —
- * vắng mặt nếu Admin chưa từng lưu (backend vẫn đang trả giá trị gốc/đề xuất).
- */
-export interface SettingsMeta {
-  updated_at?: string
-  updated_by?: { _id: string; full_name: string } | null
-}
-export type SystemDefaultThresholdsWithMeta = SystemDefaultThresholds & SettingsMeta
-export type SlaConfigWithMeta = SlaConfig & SettingsMeta
-
-/**
  * SYSTEM-FR-003 — đúng shape `GET /system/health-overview`: chỉ đếm theo trạng
  * thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; ticket chỉ đếm
  * ticket chưa CLOSED; `users.byRole` có thể có khoá 'NONE' (buyer không mang role).
