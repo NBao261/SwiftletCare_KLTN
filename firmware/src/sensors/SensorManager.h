@@ -5,6 +5,7 @@
  */
 #pragma once
 #include <Arduino.h>
+#include <ArduinoJson.h>
 
 struct SensorData {
   float temperature; // °C   (ES35-SW, reg0 ÷10)
@@ -13,7 +14,10 @@ struct SensorData {
   float nh3Ppm;      // ppm  (ES-NH3-01, reg0)
   float co2Ppm;      // ppm  (ES-CO2-01, reg0)
   float soundDb;     // dB   (ES-NOISE-01, reg0 ÷10)
-  unsigned long timestamp;
+  unsigned long timestamp = 0; // millis() lúc đọc — 0 = chưa đọc lần nào
+  // Epoch ms (NTP) lúc đọc — 0 nếu đồng hồ chưa sync. Backend dùng làm thời
+  // điểm đo thật, nhất là cho dữ liệu buffer offline flush lại (REL-NFR-003).
+  uint64_t epochMs = 0;
   bool isValid;
 
   // Per-slave read status (THREAT-FR-013: SENSOR_FAULT / RS485_BUS_FAILURE)
@@ -24,6 +28,10 @@ struct SensorData {
   bool tempHumidOk = false;
   int failedCount = 0; // number of Slave IDs that timed out this cycle
 
+  // Field cảm biến theo backend TelemetryPayload — định nghĩa DUY NHẤT ở đây,
+  // dùng chung cho telemetry sống (MQTTManager) và buffer offline (toJson()).
+  // NaN (cảm biến timeout) được ArduinoJson ghi thành null, JSON luôn hợp lệ.
+  void fillJson(JsonDocument &doc) const;
   String toJson() const;
 };
 
