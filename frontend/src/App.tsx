@@ -1,90 +1,22 @@
 import { Suspense, lazy, useEffect } from "react";
-import {
-  Routes,
-  Route,
-  Navigate,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
-import { useAuthStore } from "@/store/authStore";
-import MainLayout from "@/components/layout/MainLayout";
-import LoadingSkeleton from "@/components/common/LoadingSkeleton";
-import RequireRole from "@/components/auth/RequireRole";
-import { setNavigate } from "@/utils/navigation";
-import { getRoleHomePath } from "@/constants/navigation";
-import type { Role } from "@/types";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/authStore";
+import AdminLayout from "@/components/layouts/AdminLayout";
+import FarmOwnerLayout from "@/components/layouts/FarmOwnerLayout";
+import TechnicianLayout from "@/components/layouts/TechnicianLayout";
+import SalesStaffLayout from "@/components/layouts/SalesStaffLayout";
+import AppShell from "@/components/layouts/AppShell";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { setNavigate } from "@/lib/navigation";
+import { getRoleHomePath } from "@/constants/roles";
+import { publicRoutes } from "@/routes/public.routes";
+import { farmOwnerRoutes } from "@/routes/farm-owner.routes";
+import { technicianRoutes } from "@/routes/technician.routes";
+import { adminRoutes } from "@/routes/admin.routes";
+import { salesStaffRoutes } from "@/routes/sales-staff.routes";
 
-// Code-splitting theo route — tránh bundle chính kéo theo chart.js/date-fns
-// (chỉ AnalyticsPage dùng) cho mọi user kể cả khi họ chưa từng vào /analytics.
-// Cấu trúc thư mục pages/ theo role sở hữu (Public/Admin/FarmOwner/SalesStaff/
-// Shared — Shared = dùng chung nhiều role cụ thể, xem RequireRole allow=... ở
-// từng route bên dưới để biết chính xác role nào) — không có role nào "khơi
-// khơi" ngoài các nhóm này.
-const LoginPage = lazy(() => import("@/pages/Public/Auth/LoginPage"));
-const RegisterPage = lazy(() => import("@/pages/Public/Auth/RegisterPage"));
-const ForgotPasswordPage = lazy(
-  () => import("@/pages/Public/Auth/ForgotPasswordPage"),
-);
-const InvitationPage = lazy(
-  () => import("@/pages/Public/Invitations/InvitationPage"),
-);
-const DashboardPage = lazy(
-  () => import("@/pages/FarmOwner/Dashboard/DashboardPage"),
-);
-const FarmsPage = lazy(() => import("@/pages/Shared/Farms/FarmsPage"));
-const FarmHousesPage = lazy(
-  () => import("@/pages/Shared/Farms/FarmHousesPage"),
-);
-const FarmZonesPage = lazy(
-  () => import("@/pages/Shared/Farms/FarmZonesPage"),
-);
-const DevicesPage = lazy(() => import("@/pages/Shared/Devices/DevicesPage"));
-const AlertsPage = lazy(() => import("@/pages/Shared/Alerts/AlertsPage"));
-const AnalyticsPage = lazy(
-  () => import("@/pages/FarmOwner/Analytics/AnalyticsPage"),
-);
-const LiveStreamPage = lazy(
-  () => import("@/pages/Shared/LiveStream/LiveStreamPage"),
-);
-const SettingsPage = lazy(
-  () => import("@/pages/Shared/Settings/SettingsPage"),
-);
-const TicketsPage = lazy(() => import("@/pages/Shared/Tickets/TicketsPage"));
-const TicketDetailPage = lazy(
-  () => import("@/pages/Shared/Tickets/TicketDetailPage"),
-);
-const HarvestPage = lazy(() => import("@/pages/Shared/Harvest/HarvestPage"));
-const MarketplacePage = lazy(
-  () => import("@/pages/Public/Marketplace/MarketplacePage"),
-);
-const ListingDetailPage = lazy(
-  () => import("@/pages/Public/Marketplace/ListingDetailPage"),
-);
-const ForbiddenPage = lazy(
-  () => import("@/pages/Public/Forbidden/ForbiddenPage"),
-);
-const SalesHomePage = lazy(
-  () => import("@/pages/SalesStaff/SalesHome/SalesHomePage"),
-);
-const UsersPage = lazy(() => import("@/pages/Admin/Users/UsersPage"));
-const AccountRequestsPage = lazy(
-  () => import("@/pages/Admin/AccountRequests/AccountRequestsPage"),
-);
-const SystemHealthPage = lazy(
-  () => import("@/pages/Admin/SystemHealth/SystemHealthPage"),
-);
-const SystemSettingsPage = lazy(
-  () => import("@/pages/Admin/SystemSettings/SystemSettingsPage"),
-);
-const AuditLogPage = lazy(() => import("@/pages/Admin/AuditLog/AuditLogPage"));
-
-// Route ứng với công việc vận hành farm — Sales Staff chưa có màn hình nghiệp vụ
-// riêng (module Bán hàng thuộc Giai đoạn 2, xem SalesHomePage) nên không thuộc nhóm này.
-const OPS_ROLES: Role[] = ["FARM_OWNER", "TECHNICIAN", "ADMIN"];
-// Dashboard/Analytics (giám sát môi trường chi tiết theo zone) là công cụ vận
-// hành hằng ngày CỦA RIÊNG Farm Owner — Technician/Admin xử lý kỹ thuật/ticket,
-// không cần chi tiết tới mức đó (xem constants/navigation.ts).
-const FARM_OWNER_ONLY: Role[] = ["FARM_OWNER"];
+/** Cài đặt tài khoản — route duy nhất mọi role đã đăng nhập đều dùng, nên nằm ngay đây thay vì trong một file route theo role. */
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -102,7 +34,31 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/** Đăng ký navigate() của router vào bridge để client.ts (ngoài React tree) dùng được. */
+/**
+ * Khung ứng dụng theo role người đang đăng nhập. Khác các dự án gắn layout theo
+ * nhánh route (`/admin/*`): URL của SwiftletCare không có tiền tố role
+ * (`/devices` dùng chung cho 3 role) nên phải chọn lúc chạy.
+ */
+function RoleLayout() {
+  const role = useAuthStore((s) => s.user?.role);
+
+  switch (role) {
+    case "ADMIN":
+      return <AdminLayout />;
+    case "TECHNICIAN":
+      return <TechnicianLayout />;
+    case "SALES_STAFF":
+      return <SalesStaffLayout />;
+    case "FARM_OWNER":
+      return <FarmOwnerLayout />;
+    // Role lạ từ token cũ: vẫn dựng khung để Outlet render được, chỉ là chưa có
+    // menu — giống hành vi cũ khi lọc nav bằng role không khớp.
+    default:
+      return <AppShell menuSections={[]} dockItems={[]} />;
+  }
+}
+
+/** Đăng ký navigate() của router vào bridge để lib/axios.ts (ngoài React tree) dùng được. */
 function NavigationBridge() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -126,170 +82,36 @@ function RouteFallback() {
   );
 }
 
+/**
+ * Bảng route gốc. Chi tiết nằm trong `routes/<role>.routes.tsx`, một file cho
+ * mỗi thư mục `pages/<role>/`: file đó tự lazy-load trang của mình
+ * (code-splitting theo route) và tự khai `RequireRole`. Thư mục chứa trang cho
+ * biết role SỞ HỮU nghiệp vụ đó, còn `allow={...}` trong file route mới là
+ * danh sách role thật sự vào được — VD trang trong `pages/technician/` vẫn mở
+ * cho Farm Owner và Admin qua `allow={OPS_ROLES}`.
+ */
 export default function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <NavigationBridge />
       <Routes>
-        {/* Public */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/invitations/:token" element={<InvitationPage />} />
-        <Route path="/marketplace" element={<MarketplacePage />} />
-        <Route path="/marketplace/:id" element={<ListingDetailPage />} />
-        <Route path="/403" element={<ForbiddenPage />} />
+        {publicRoutes}
 
-        {/* Protected – wrapped in sidebar layout */}
+        {/* Đã đăng nhập — bọc trong khung sidebar/topbar */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <MainLayout />
+              <RoleLayout />
             </ProtectedRoute>
           }
         >
           <Route index element={<RoleHomeRedirect />} />
-
-          {/* Sales Staff chưa có màn hình vận hành farm nào — các route dưới đây
-              chỉ dành cho FARM_OWNER/TECHNICIAN/ADMIN, chặn cả khi gõ thẳng URL. */}
-          {/* Dashboard/Analytics (giám sát môi trường chi tiết) chỉ Farm Owner — Technician/Admin dùng Devices/Trạng thái hệ thống */}
-          <Route
-            path="dashboard"
-            element={
-              <RequireRole allow={FARM_OWNER_ONLY}>
-                <DashboardPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="analytics"
-            element={
-              <RequireRole allow={FARM_OWNER_ONLY}>
-                <AnalyticsPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="farms"
-            element={
-              <RequireRole allow={OPS_ROLES}>
-                <FarmsPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="farms/:farmId"
-            element={
-              <RequireRole allow={OPS_ROLES}>
-                <FarmHousesPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="farms/:farmId/houses/:houseId"
-            element={
-              <RequireRole allow={OPS_ROLES}>
-                <FarmZonesPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="devices"
-            element={
-              <RequireRole allow={OPS_ROLES}>
-                <DevicesPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="alerts"
-            element={
-              <RequireRole allow={OPS_ROLES}>
-                <AlertsPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="stream/:id"
-            element={
-              <RequireRole allow={OPS_ROLES}>
-                <LiveStreamPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="tickets"
-            element={
-              <RequireRole allow={OPS_ROLES}>
-                <TicketsPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="tickets/:id"
-            element={
-              <RequireRole allow={OPS_ROLES}>
-                <TicketDetailPage />
-              </RequireRole>
-            }
-          />
-          {/* Backend: toàn bộ router harvests chỉ requireRole(FARM_OWNER, ADMIN) */}
-          <Route
-            path="harvests"
-            element={
-              <RequireRole allow={["FARM_OWNER", "ADMIN"]}>
-                <HarvestPage />
-              </RequireRole>
-            }
-          />
-          {/* Quản lý tài khoản người dùng toàn hệ thống — chỉ Admin */}
-          <Route
-            path="users"
-            element={
-              <RequireRole allow={["ADMIN"]}>
-                <UsersPage />
-              </RequireRole>
-            }
-          />
-          {/* AUTH-FR-012 (xoá tài khoản) + AUTH-FR-005d (đề xuất Sales Staff) — chỉ Admin */}
-          <Route
-            path="account-requests"
-            element={
-              <RequireRole allow={["ADMIN"]}>
-                <AccountRequestsPage />
-              </RequireRole>
-            }
-          />
-          {/* Module SYSTEM (mục 5.11) — chỉ Admin. /system/health gộp cả OPS-NFR-004 (trạng thái node) */}
-          {/* /system-status (trang AdminNodeStatus cũ) đã gộp vào /system/health — giữ redirect cho bookmark/link cũ */}
-          <Route path="system-status" element={<Navigate to="/system/health" replace />} />
-          <Route
-            path="system/health"
-            element={
-              <RequireRole allow={["ADMIN"]}>
-                <SystemHealthPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="system/settings"
-            element={
-              <RequireRole allow={["ADMIN"]}>
-                <SystemSettingsPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="system/audit-log"
-            element={
-              <RequireRole allow={["ADMIN"]}>
-                <AuditLogPage />
-              </RequireRole>
-            }
-          />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="sales-home" element={<SalesHomePage />} />
+          {farmOwnerRoutes}
+          {technicianRoutes}
+          {adminRoutes}
+          {salesStaffRoutes}
         </Route>
 
         <Route path="*" element={<RoleHomeRedirect />} />
