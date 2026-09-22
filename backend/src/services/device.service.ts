@@ -6,6 +6,8 @@ import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
 import { raiseNodeOfflineAlert } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
+import { notifyUser } from '@/services/notification.service'
+import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -17,19 +19,38 @@ type RelayName = typeof RELAY_NAMES[number]
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
 
+export interface RegisterDeviceInput { device_id: string; zone_id: string; secret_key: string }
+
+/**
+ * Flow 1 case 3a — thiết bị đã có bản ghi: nói rõ là thuộc Farm khác (Technician
+ * cần kiểm tra lại nhãn) hay chỉ là đăng ký trùng trong cùng Farm.
+ */
+async function assertNotRegistered(existingZoneId: unknown, targetFarmId: string): Promise<never> {
+  const chain = await findZoneChainOrThrow(String(existingZoneId)).catch(() => null)
+  if (chain && String(chain.farm._id) !== targetFarmId) {
+    throw ConflictError('Thiết bị đã thuộc về Farm khác')
+  }
+  throw ConflictError('device_id đã được đăng ký')
+}
+
 /**
  * FARM-FR-003 — chỉ Technician (hoặc Admin) thực hiện, qua Web Console Onboarding.
- * Node được tạo ở trạng thái PENDING và chỉ chuyển ONLINE khi thiết bị gửi
- * heartbeat đầu tiên (Flow 1 bước 4→8), nên Farm Owner nhìn thấy ngay là thiết bị
- * đã khai báo nhưng chưa thật sự kết nối.
+ * Phải nhập đúng cặp {device_id, secretKey} trên nhãn (Flow 1 bước 3–4). Node
+ * được tạo ở trạng thái PENDING và chỉ chuyển ONLINE khi thiết bị gửi heartbeat
+ * đầu tiên (bước 8), nên Farm Owner nhìn thấy ngay là thiết bị đã khai báo nhưng
+ * chưa thật sự kết nối.
  */
-export async function registerSensorNode(user: CurrentUser, input: { device_id: string; zone_id: string }): Promise<ISensorNode> {
-  await assertZoneAccess(input.zone_id, user)
+export async function registerSensorNode(user: CurrentUser, input: RegisterDeviceInput): Promise<ISensorNode> {
+  const { farm } = await assertZoneAccess(input.zone_id, user)
+  await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
 
-  const existing = await SensorNode.findOne({ device_id: input.device_id })
-  if (existing) throw ConflictError('device_id đã được đăng ký')
+  const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id').lean()
+  if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
 
-  const node = await SensorNode.create({ device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING' })
+  const node = await SensorNode.create({
+    device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING', registered_by: user._id,
+  })
+  await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'sensor_node', String(node._id), {
     deviceId: input.device_id, zoneId: input.zone_id,
   })
@@ -169,13 +190,19 @@ export async function reassignZone(
 }
 
 /** FARM-FR-004 — chỉ Technician/Admin, cùng Web Console Onboarding với sensor node (Flow 1b) */
-export async function registerCameraNode(user: CurrentUser, input: { device_id: string; zone_id: string; rtsp_url?: string }) {
-  await assertZoneAccess(input.zone_id, user)
+export async function registerCameraNode(user: CurrentUser, input: RegisterDeviceInput & { rtsp_url?: string }) {
+  const { farm } = await assertZoneAccess(input.zone_id, user)
+  await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
 
-  const existing = await CameraNode.findOne({ device_id: input.device_id })
-  if (existing) throw ConflictError('device_id đã được đăng ký')
+  const existing = await CameraNode.findOne({ device_id: input.device_id }).select('zone_id').lean()
+  if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
 
-  const node = await CameraNode.create({ ...input, status: 'PENDING' })
+  // Chọn field tường minh — trải thẳng body vào create() cho phép client tự đặt status/registered_at
+  const node = await CameraNode.create({
+    device_id: input.device_id, zone_id: input.zone_id, rtsp_url: input.rtsp_url,
+    status: 'PENDING', registered_by: user._id,
+  })
+  await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'camera_node', String(node._id), {
     deviceId: input.device_id, zoneId: input.zone_id,
   })
@@ -214,6 +241,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
   node.last_heartbeat = new Date()
   if (payload.rssi !== undefined) node.rssi = payload.rssi
   if (payload.firmwareVersion) node.firmware_version = payload.firmwareVersion
+  node.activation_overdue_at = undefined // đã kết nối được thì không còn "kích hoạt quá hạn"
   await node.save()
 
   if (wasOffline) {
@@ -280,6 +308,40 @@ export async function markStaleDevicesOffline(): Promise<void> {
       logger.error('Tạo cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
     )
   }))
+}
+
+/** Flow 1 case 8a — SRS: quá 15 phút từ lúc đăng ký (bước 4) mà chưa có heartbeat đầu tiên */
+export const ACTIVATION_TIMEOUT_MS = 15 * 60 * 1000
+
+/**
+ * Flow 1 case 8a — gọi từ jobs/activationOverdue.job.ts. Node còn PENDING quá
+ * hạn được đánh dấu 1 lần (không đổi status: thiết bị vẫn có thể lên mạng sau
+ * khi Technician kiểm tra lại bước 5–7), ghi audit và báo người đã onboarding.
+ */
+export async function markOverdueActivations(): Promise<number> {
+  const cutoff = new Date(Date.now() - ACTIVATION_TIMEOUT_MS)
+  const filter = { status: 'PENDING', registered_at: { $lt: cutoff }, activation_overdue_at: null }
+  let count = 0
+
+  for (const [Model, targetType] of [[SensorNode, 'sensor_node'], [CameraNode, 'camera_node']] as const) {
+    const nodes = await (Model as typeof SensorNode).find(filter).select('device_id zone_id registered_by').lean()
+    if (nodes.length === 0) continue
+    await (Model as typeof SensorNode).updateMany({ _id: { $in: nodes.map(n => n._id) } }, { activation_overdue_at: new Date() })
+
+    for (const node of nodes) {
+      await logAction(undefined, 'DEVICE_ACTIVATION_OVERDUE', targetType, String(node._id), {
+        deviceId: node.device_id, zoneId: String(node.zone_id),
+      })
+      if (node.registered_by) {
+        void notifyUser(String(node.registered_by), {
+          title: 'Thiết bị kích hoạt quá hạn',
+          body: `Thiết bị ${node.device_id} chưa gửi heartbeat sau 15 phút. Kiểm tra lại AP-mode, WiFi farm và kết nối MQTT tại hiện trường.`,
+        })
+      }
+    }
+    count += nodes.length
+  }
+  return count
 }
 
 /**

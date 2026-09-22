@@ -27,6 +27,10 @@ export interface ISensorNode extends Document {
     loop: boolean
   }
   registered_at: Date
+  /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
+  registered_by?: Types.ObjectId
+  /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
+  activation_overdue_at?: Date
 }
 
 export interface ICameraNode extends Document {
@@ -38,6 +42,10 @@ export interface ICameraNode extends Document {
   last_heartbeat?: Date
   model_version?: string
   registered_at: Date
+  /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
+  registered_by?: Types.ObjectId
+  /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
+  activation_overdue_at?: Date
 }
 
 const sensorNodeSchema = new Schema<ISensorNode>(
@@ -70,6 +78,8 @@ const sensorNodeSchema = new Schema<ISensorNode>(
       loop:          { type: Boolean, default: true },
     },
     registered_at:   { type: Date, default: Date.now },
+    registered_by:   { type: Schema.Types.ObjectId, ref: 'User' },
+    activation_overdue_at: { type: Date },
   },
   { timestamps: false }
 )
@@ -83,6 +93,8 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     last_heartbeat: { type: Date },
     model_version:  { type: String },
     registered_at:  { type: Date, default: Date.now },
+    registered_by:  { type: Schema.Types.ObjectId, ref: 'User' },
+    activation_overdue_at: { type: Date },
   },
   { timestamps: false }
 )
@@ -93,6 +105,9 @@ sensorNodeSchema.index({ status: 1, last_heartbeat: 1 })
 // zone_id là filter chính của mọi danh sách thiết bị theo zone (dashboard).
 sensorNodeSchema.index({ zone_id: 1 })
 cameraNodeSchema.index({ zone_id: 1 })
+// activationOverdue.job quét node PENDING theo registered_at mỗi phút
+sensorNodeSchema.index({ status: 1, registered_at: 1 })
+cameraNodeSchema.index({ status: 1, registered_at: 1 })
 
 export const SensorNode = model<ISensorNode>('SensorNode', sensorNodeSchema)
 export const CameraNode = model<ICameraNode>('CameraNode', cameraNodeSchema)

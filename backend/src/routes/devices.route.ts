@@ -10,7 +10,8 @@ router.use(authenticate)
 // Sensor Nodes (ESP32)
 // Đăng ký/kích hoạt thiết bị là việc của Technician (nhân viên công ty) qua Web
 // Console Onboarding — Farm Owner KHÔNG tự đăng ký (SRS §4.1, FARM-FR-003, RACI mục 4.4).
-router.post('/sensor-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').notEmpty(), body('zone_id').isMongoId(), validate, deviceController.registerSensorNode)
+// Flow 1 bước 3–4 — phải kèm secretKey in trên nhãn thiết bị
+router.post('/sensor-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
 router.get ('/sensor-nodes',                 deviceController.listSensorNodes)
 router.get ('/sensor-nodes/:id',             param('id').isMongoId(), validate, deviceController.getSensorNode)
 // Chỉnh thông số vận hành vẫn thuộc Farm Owner (ENV-FR-006); Technician chỉnh khi xử lý sự cố.
@@ -22,7 +23,7 @@ router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','TECHNICIA
 router.put ('/sensor-nodes/:id/reassign-zone', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('newZoneId').isMongoId(), validate, deviceController.reassignZone)
 
 // Camera Nodes (RPi)
-router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').notEmpty(), body('zone_id').isMongoId(), validate, deviceController.registerCameraNode)
+router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerCameraNode)
 router.get ('/camera-nodes',                 deviceController.listCameraNodes)
 
 // OPS-NFR-004 — Admin dashboard trạng thái node toàn hệ thống

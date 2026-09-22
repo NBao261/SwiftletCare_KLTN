@@ -19,6 +19,8 @@ import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode } from '@/models/device.model'
+import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisionedDevice.model'
+import { hashKey } from '@/services/provisionedDevice.service'
 import logger from '@/utils/logger.util'
 
 /** Khu vực của farm demo — Technician phải có region này trong assigned_regions */
@@ -101,6 +103,21 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Created sensor node: ${node.device_id} → zone ${zone._id}`)
   } else {
     logger.info(`[seed] Sensor node already exists: ${node.device_id}`)
+  }
+
+  // ── Kho thiết bị xuất xưởng (FARM-FR-003) — secretKey cố định CHỈ cho dev ──
+  // node_001 đã gắn sẵn vào zone ở trên; node_002/cam_001 để thử luồng onboarding thật.
+  const demoDevices: Array<[string, ProvisionedDeviceKind, string, boolean]> = [
+    [deviceId,   'SENSOR', 'DEMO-NODE-0001', true],
+    ['node_002', 'SENSOR', 'DEMO-NODE-0002', false],
+    ['cam_001',  'CAMERA', 'DEMO-CAM-0001',  false],
+  ]
+  for (const [id, kind, secretKey, claimed] of demoDevices) {
+    if (await ProvisionedDevice.exists({ device_id: id })) continue
+    await ProvisionedDevice.create({
+      device_id: id, kind, secret_key_hash: hashKey(secretKey), ...(claimed ? { claimed_at: new Date() } : {}),
+    })
+    logger.info(`[seed] Provisioned device: ${id} (${kind}, secretKey: ${secretKey})`)
   }
 
   logger.info('[seed] Done. Zone ID để test API/socket:', { zoneId: String(zone._id) })

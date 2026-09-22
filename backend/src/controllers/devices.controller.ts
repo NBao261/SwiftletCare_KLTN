@@ -4,7 +4,9 @@ import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** POST /devices/sensor-nodes/register – FARM-FR-003 */
 export const registerSensorNode = asyncHandler(async (req: Request, res: Response) => {
-  const node = await deviceService.registerSensorNode(req.user, req.body)
+  const node = await deviceService.registerSensorNode(req.user, {
+    device_id: req.body.device_id, zone_id: req.body.zone_id, secret_key: req.body.secret_key,
+  })
   res.status(201).json({ success: true, data: node })
 })
 
@@ -40,7 +42,9 @@ export const reassignZone = asyncHandler(async (req: Request, res: Response) => 
 
 /** POST /devices/camera-nodes/register – FARM-FR-004 */
 export const registerCameraNode = asyncHandler(async (req: Request, res: Response) => {
-  const node = await deviceService.registerCameraNode(req.user, req.body)
+  const node = await deviceService.registerCameraNode(req.user, {
+    device_id: req.body.device_id, zone_id: req.body.zone_id, secret_key: req.body.secret_key, rtsp_url: req.body.rtsp_url,
+  })
   res.status(201).json({ success: true, data: node })
 })
 
