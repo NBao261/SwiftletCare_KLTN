@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ticketApi } from '@/services/api'
-import { usePaginatedListQuery } from './usePaginatedListQuery'
+import { ticketApi } from '@/apis/shared/tickets.api'
+import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import type { Ticket } from '@/types'
-import type { AdminOverrideInput, CreateTicketInput, ListTicketsQuery } from '@/services/api/tickets'
+import type { AdminOverrideInput, CreateTicketInput, ListTicketsQuery } from '@/apis/shared/tickets.api'
 
 /** Module TICKET §5.9 */
 export function useTicketsList(query: ListTicketsQuery) {

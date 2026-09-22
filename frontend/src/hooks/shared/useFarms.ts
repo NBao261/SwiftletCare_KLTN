@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { farmApi } from '@/services/api'
+import { farmApi } from '@/apis/shared/farms.api'
 import type { Zone } from '@/types'
 
 export function useFarms() {

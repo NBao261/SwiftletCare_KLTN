@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { analyticsApi } from '@/services/api'
-import type { AnalyticsRange } from '@/services/api/analytics'
+import { analyticsApi } from '@/apis/farm-owner/analytics.api'
+import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api'
 
 /** ANALYTICS-FR-001 — biểu đồ lịch sử môi trường theo khoảng thời gian */
 export function useEnvSummary(zoneId: string | undefined, range: AnalyticsRange) {
@@ -25,15 +25,6 @@ export function useBirdCountTrends(zoneId: string | undefined, days: number) {
   return useQuery({
     queryKey: ['analytics', 'bird-count-trends', zoneId, days],
     queryFn: () => analyticsApi.birdCountTrends(zoneId!, days).then(r => r.data.data),
-    enabled: !!zoneId,
-  })
-}
-
-/** ANALYTICS-FR-003 — tương quan môi trường vs return rate (chờ dữ liệu VISION) */
-export function useEnvBirdCorrelation(zoneId: string | undefined, days: number) {
-  return useQuery({
-    queryKey: ['analytics', 'correlation', zoneId, days],
-    queryFn: () => analyticsApi.correlation(zoneId!, days).then(r => r.data.data),
     enabled: !!zoneId,
   })
 }

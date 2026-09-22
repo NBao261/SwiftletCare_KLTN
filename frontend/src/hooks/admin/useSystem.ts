@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { systemApi, type ListAuditLogsQuery } from '@/services/api'
-import { usePaginatedListQuery } from './usePaginatedListQuery'
+import { systemApi, type ListAuditLogsQuery } from '@/apis/admin/system.api'
+import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import type { SystemDefaultThresholds } from '@/types'
 
 /** SYSTEM-FR-001 — GET /system/audit-logs, phân trang server. */

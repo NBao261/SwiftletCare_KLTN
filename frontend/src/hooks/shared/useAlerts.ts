@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { alertApi } from '@/services/api'
-import { useAlertStore } from '@/store/alertStore'
-import { usePaginatedListQuery } from './usePaginatedListQuery'
+import { alertApi } from '@/apis/shared/alerts.api'
+import { useAlertStore } from '@/stores/alertStore'
+import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import type { Alert, AlertSeverity, AlertStatus } from '@/types'
 
 export interface AlertsListQuery {

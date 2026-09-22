@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { invitationApi } from '@/services/api'
+import { invitationApi } from '@/apis/auth/invitations.api'
 
 /** AUTH-FR-010, Flow 12 — xem trước lời mời qua token, không cần đăng nhập */
 export function useInvitationPreview(token: string | undefined) {

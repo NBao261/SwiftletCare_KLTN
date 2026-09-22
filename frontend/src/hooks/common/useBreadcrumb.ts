@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { useBreadcrumbStore, type Crumb } from '@/store/breadcrumbStore'
+import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
 
 /**
  * Trang gọi hook này để đăng ký các cấp breadcrumb PHÍA SAU tên trang gốc — VD
  * `usePageBreadcrumb([{ label: farm.name, onClick: () => navigate(`/farms/${farmId}`) }, { label: house.name }])`
  * cho path `/farms/:farmId/houses/:houseId` sẽ ra "Trang trại / Nhà Yến Demo / Tầng 1".
- * Phần tử cuối trong mảng là vị trí hiện tại — không cần gắn onClick, TopBar tự
+ * Phần tử cuối trong mảng là vị trí hiện tại — không cần gắn onClick, AppHeader tự
  * hiển thị mờ và không cho bấm.
  *
  * Dùng `signal` (chuỗi nhãn nối lại) làm dependency thay vì mảng `crumbs` — mảng

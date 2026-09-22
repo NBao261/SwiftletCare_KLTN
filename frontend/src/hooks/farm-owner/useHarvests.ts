@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { harvestApi } from '@/services/api'
-import type { CreateHarvestInput } from '@/services/api/harvests'
+import { harvestApi } from '@/apis/farm-owner/harvests.api'
+import type { CreateHarvestInput } from '@/apis/farm-owner/harvests.api'
 
 /** MARKET-FR-001..005 */
 export function useHarvests(farmId: string | undefined) {
@@ -11,13 +11,6 @@ export function useHarvests(farmId: string | undefined) {
   })
 }
 
-export function useHarvest(id: string | undefined) {
-  return useQuery({
-    queryKey: ['harvests', 'detail', id],
-    queryFn: () => harvestApi.getOne(id!).then(r => r.data.data),
-    enabled: !!id,
-  })
-}
 
 export function useCreateHarvest(farmId: string | undefined) {
   const queryClient = useQueryClient()

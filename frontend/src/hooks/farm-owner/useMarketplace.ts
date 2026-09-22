@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { marketplaceApi } from '@/services/api'
-import type { CreateListingInput } from '@/services/api/marketplace'
+import { marketplaceApi } from '@/apis/farm-owner/marketplace.api'
+import type { CreateListingInput } from '@/apis/farm-owner/marketplace.api'
 import type { ListingStatus } from '@/types'
 
 /** MARKET-FR-006 — tạo Nest Listing từ 1 Harvest Batch */

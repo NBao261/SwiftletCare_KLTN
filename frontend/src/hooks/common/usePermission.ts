@@ -1,8 +1,8 @@
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore } from '@/stores/authStore'
 import type { Role } from '@/types'
 
 /** Primitive dùng chung cho cả check inline (vd usePermission) lẫn RequireRole. */
-export function hasRole(role: Role | undefined, ...allowed: Role[]): boolean {
+function hasRole(role: Role | undefined, ...allowed: Role[]): boolean {
   return !!role && allowed.includes(role)
 }
 

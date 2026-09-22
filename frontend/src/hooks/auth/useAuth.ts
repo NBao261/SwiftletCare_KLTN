@@ -1,10 +1,10 @@
 import { flushSync } from 'react-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { authApi } from '@/services/api'
-import { useAuthStore } from '@/store/authStore'
-import { queryClient } from '@/services/queryClient'
-import { getRoleHomePath, canAccessPath } from '@/constants/navigation'
+import { authApi } from '@/apis/auth/auth.api'
+import { useAuthStore } from '@/stores/authStore'
+import { queryClient } from '@/lib/queryClient'
+import { getRoleHomePath, canAccessPath } from '@/constants/roles'
 import type { User } from '@/types'
 
 /** useAuth – login/register/logout/quên mật khẩu/thông báo/xoá tài khoản (AUTH-FR-001..003/009/012) */

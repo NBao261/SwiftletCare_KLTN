@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { getSocket } from '@/services/socket'
-import { useAuthStore } from '@/store/authStore'
+import { getSocket } from '@/lib/socket'
+import { useAuthStore } from '@/stores/authStore'
 
 // Nhiều hook (useAlertNotifications, useTelemetry, useSensorNodes) cùng dùng 1
 // socket singleton — đếm số consumer đang mount để chỉ connect() ở consumer đầu

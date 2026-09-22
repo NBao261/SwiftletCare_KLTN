@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { telemetryApi } from '@/services/api'
-import { joinZone, leaveZone, onTelemetryUpdate } from '@/services/socket'
-import { useSocket } from './useSocket'
+import { telemetryApi } from '@/apis/farm-owner/telemetry.api'
+import { joinZone, leaveZone, onTelemetryUpdate } from '@/lib/socket'
+import { useSocket } from '@/hooks/common/useSocket'
 import type { TelemetryUpdateEvent } from '@/types'
 
 /**

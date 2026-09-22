@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { deviceApi } from '@/services/api'
-import { onRelayUpdate, onDeviceStatusChange } from '@/services/socket'
-import { useSocket } from './useSocket'
+import { deviceApi } from '@/apis/shared/devices.api'
+import { onRelayUpdate, onDeviceStatusChange } from '@/lib/socket'
+import { useSocket } from '@/hooks/common/useSocket'
 import type { RelayName } from '@/types'
 
 /** useSensorNodes – danh sách device + realtime status/relay qua socket (FARM-FR-005, ENV-FR-015) */

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminApi } from '@/services/api'
-import { usePaginatedListQuery } from './usePaginatedListQuery'
+import { adminApi } from '@/apis/admin/users.api'
+import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import type { SalesAssignmentRequest, User } from '@/types'
 
 export interface QueuePageQuery { page?: number; limit?: number }

@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { onAlertNew } from '@/services/socket'
-import { useAlertStore } from '@/store/alertStore'
-import { useToastStore } from '@/store/toastStore'
-import { useSocket } from './useSocket'
-import { useUnreadAlertCount } from './useAlerts'
+import { onAlertNew } from '@/lib/socket'
+import { useAlertStore } from '@/stores/alertStore'
+import { useToastStore } from '@/stores/toastStore'
+import { useSocket } from '@/hooks/common/useSocket'
+import { useUnreadAlertCount } from '@/hooks/shared/useAlerts'
 
 /**
  * Global listener cho ALERT_NEW (§9.3) — mount 1 lần ở MainLayout, không phụ

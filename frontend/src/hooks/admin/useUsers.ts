@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminApi, type CreateTechnicianInput, type CreateSalesStaffInput } from '@/services/api'
+import { adminApi, type CreateTechnicianInput, type CreateSalesStaffInput } from '@/apis/admin/users.api'
 import type { User, Role, UserStatus, SortDirection } from '@/types'
 
 export type UsersSortKey = 'full_name' | 'email' | 'role' | 'status' | 'created_at'
@@ -36,7 +36,7 @@ function matchesSearch(user: User, search: string): boolean {
   return user.full_name.toLowerCase().includes(s) || user.email.toLowerCase().includes(s)
 }
 
-export function sortUsers(list: User[], sortKey?: UsersSortKey, sortDir: SortDirection = 'asc'): User[] {
+function sortUsers(list: User[], sortKey?: UsersSortKey, sortDir: SortDirection = 'asc'): User[] {
   if (!sortKey) return list
   const dir = sortDir === 'asc' ? 1 : -1
   return [...list].sort((a, b) => {
@@ -96,7 +96,7 @@ export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = 
   return { records, total, truncated: total > records.length, isLoading: result.isLoading }
 }
 
-/** Technician đang hoạt động để gán lại ticket (TicketDetailPage, TICKET-FR-005b) */
+/** Technician đang hoạt động để gán lại ticket (TechnicianTicketDetailPage, TICKET-FR-005b) */
 export function useTechniciansList() {
   return useUsersPicker({ role: 'TECHNICIAN', activeOnly: true })
 }
