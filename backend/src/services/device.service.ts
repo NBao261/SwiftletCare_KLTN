@@ -10,9 +10,10 @@ import { logAction } from '@/services/auditLog.service'
 import { notifyUser } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
+import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { NotFoundError, ConflictError, BadRequestError, ForbiddenError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
-import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus } from '@/types'
+import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds } from '@/types'
 
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
 type RelayName = typeof RELAY_NAMES[number]
@@ -96,7 +97,7 @@ export async function getSensorNode(nodeId: string, user: CurrentUser): Promise<
 }
 
 /** ENV-FR-006 (qua device, tương đương farmService.updateZoneThresholds — cùng validate) */
-export async function updateNodeThresholds(nodeId: string, user: CurrentUser, updates: object) {
+export async function updateNodeThresholds(nodeId: string, user: CurrentUser, updates: Partial<Thresholds>) {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
@@ -106,22 +107,9 @@ export async function updateNodeThresholds(nodeId: string, user: CurrentUser, up
   const merged = { ...chain.zone.thresholds, ...picked }
   assertValidThresholds(merged)
 
-  const oldValues = { ...chain.zone.thresholds }
-  chain.zone.thresholds = merged
-  chain.zone.threshold_history.push({
-    changed_by: user._id as never,
-    changed_at: new Date(),
-    old_values: oldValues,
-    new_values: picked,
-    source: 'MANUAL',
-  } as never)
-  await chain.zone.save()
-
-  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', chain.zone.thresholds)
-  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(chain.zone._id), {
-    source: 'MANUAL', viaNodeId: nodeId, before: oldValues, after: chain.zone.thresholds,
+  return applyThresholdUpdate(chain, user, {
+    thresholds: merged, historyValues: picked, source: 'MANUAL', logDetails: { viaNodeId: nodeId },
   })
-  return chain.zone
 }
 
 /** ENV-FR-016..018 (Manual Override) */

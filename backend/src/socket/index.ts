@@ -3,6 +3,7 @@ import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
 import { User } from '@/models/user.model'
 import { assertCanJoin, sendMessage, type TicketMessageDto } from '@/services/ticketChat.service'
+import { assertZoneAccess } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser, JwtAccessPayload, WsTelemetryUpdate, WsRelayUpdate, WsBirdCountUpdate, WsAlertNew, WsDeviceStatusChange } from '@/types'
 
@@ -28,8 +29,12 @@ async function socketUser(socket: Socket): Promise<CurrentUser> {
  * Xác thực kết nối realtime. Ngoài chữ ký JWT còn phải đọc lại `is_active`:
  * token còn hạn nhưng tài khoản đã bị Admin khoá/xoá thì vẫn phải bị từ chối,
  * giống middleware `authenticate` của REST (AUTH-FR-011).
+ *
+ * Trả về `CurrentUser` đầy đủ (không chỉ payload JWT) vì `JOIN_ZONE` cần gọi
+ * `assertZoneAccess` — cùng hàm check quyền mà REST dùng — nên cần cả
+ * `assigned_regions` (Technician) chứ không chỉ `sub`/`role`.
  */
-export async function verifySocketToken(token: string | undefined): Promise<JwtAccessPayload> {
+export async function verifySocketToken(token: string | undefined): Promise<CurrentUser> {
   if (!token) throw new Error('Unauthorized: missing token')
 
   let payload: JwtAccessPayload
@@ -39,9 +44,9 @@ export async function verifySocketToken(token: string | undefined): Promise<JwtA
     throw new Error('Unauthorized: invalid token')
   }
 
-  const user = await User.findById(payload.sub).select('is_active').lean()
+  const user = await User.findById(payload.sub).select('is_active email role assigned_regions').lean()
   if (!user?.is_active) throw new Error('Unauthorized: account inactive')
-  return payload
+  return { _id: String(user._id), email: user.email, role: user.role, assigned_regions: user.assigned_regions }
 }
 
 /** AUTH-FR-011 — ngắt mọi kết nối realtime của 1 user (gọi khi Admin khoá/xoá tài khoản) */
@@ -78,9 +83,10 @@ export function initSocket(httpServer: HttpServer): void {
   // JWT authentication for Socket.io connections
   io.use((socket: Socket, next: (err?: Error) => void) => {
     verifySocketToken(socket.handshake.auth?.token as string | undefined)
-      .then(payload => {
-        socket.data.userId = payload.sub
-        socket.data.role   = payload.role
+      .then(user => {
+        socket.data.userId = user._id
+        socket.data.role   = user.role
+        socket.data.user   = user
         next()
       })
       // Lỗi hạ tầng (VD mất kết nối DB) không được lộ message thô ra client
@@ -91,9 +97,19 @@ export function initSocket(httpServer: HttpServer): void {
     logger.info(`Socket connected: ${socket.id} [user=${socket.data.userId as string}]`)
     void socket.join(userRoom(socket.data.userId as string))
 
+    // Phải check assertZoneAccess (giống REST) trước khi cho join — thiếu bước này
+    // là 1 user đã đăng nhập bất kỳ có thể join room của zone farm khác và nhận
+    // telemetry/alert/relay real-time không thuộc quyền mình (IDOR qua WebSocket).
     socket.on('JOIN_ZONE', ({ zoneId }: { zoneId: string }) => {
-      void socket.join(`zone:${zoneId}`)
-      logger.debug(`Socket ${socket.id} joined zone:${zoneId}`)
+      const currentUser = socket.data.user as CurrentUser
+      void assertZoneAccess(zoneId, currentUser)
+        .then(() => {
+          void socket.join(`zone:${zoneId}`)
+          logger.debug(`Socket ${socket.id} joined zone:${zoneId}`)
+        })
+        .catch(() => {
+          logger.warn(`Socket ${socket.id} [user=${currentUser._id}] denied JOIN_ZONE for zone:${zoneId}`)
+        })
     })
 
     socket.on('LEAVE_ZONE', ({ zoneId }: { zoneId: string }) => {

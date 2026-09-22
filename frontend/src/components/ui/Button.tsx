@@ -1,5 +1,5 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react'
-import { cn } from '@/utils/cn'
+import { cn } from '@/lib/cn'
 
 /**
  * Button — bám đúng "Bảng Phân Loại Màu Nút Bấm Mặc Định" (FE_Design_Claude.md §5.1)
@@ -13,7 +13,7 @@ import { cn } from '@/utils/cn'
  *
  * Disabled tự động áp dụng qua thuộc tính HTML `disabled` (§2.3 hàng "Disabled").
  */
-export type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'climate' | 'danger' | 'icon'
+type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'climate' | 'danger' | 'icon'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
