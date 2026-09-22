@@ -5,11 +5,10 @@ import { User } from '@/models/user.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
 import { SalesAssignmentRequest, ISalesAssignmentRequest } from '@/models/salesAssignmentRequest.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
-import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow } from '@/utils/farmAccess.util'
-import { publishCommand } from '@/mqtt/mqtt.client'
-import { logAction } from '@/services/auditLog.service'
+import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow, assertZoneAccess } from '@/utils/farmAccess.util'
 import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
+import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser } from '@/types'
 
@@ -280,50 +279,22 @@ export async function getZone(zoneId: string, user: CurrentUser): Promise<IZone>
 
 /** ENV-FR-006, Flow 22 nhánh A — validate min<max trước khi ghi, publish config/update để ESP32 áp dụng ngay. */
 export async function updateZoneThresholds(zoneId: string, user: CurrentUser, updates: Partial<Thresholds>): Promise<IZone> {
-  const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
+  const chain = await assertZoneAccess(zoneId, user)
 
   // pickThresholds: chỉ nhận 7 khoá ngưỡng và ép về số; null/chuỗi rỗng thành NaN để assert từ chối
   const picked = pickThresholds(updates as Record<string, unknown>)
-  const merged = { ...zone.thresholds, ...picked }
+  const merged = { ...chain.zone.thresholds, ...picked }
   assertValidThresholds(merged)
 
-  const oldValues = { ...zone.thresholds }
-  zone.thresholds = merged
-  zone.threshold_history.push({
-    changed_by: user._id as never,
-    changed_at: new Date(),
-    old_values: oldValues,
-    new_values: picked,
-    source: 'MANUAL',
-  } as never)
-  await zone.save()
-
-  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
-  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), { source: 'MANUAL', before: oldValues, after: zone.thresholds })
-  return zone
+  return applyThresholdUpdate(chain, user, { thresholds: merged, historyValues: picked, source: 'MANUAL' })
 }
 
 /** ENV-FR-020, Flow 22 nhánh B — reset cả 7 ngưỡng về mặc định hệ thống do Admin cấu hình (SYSTEM-FR-002). */
 export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Promise<IZone> {
-  const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
-
+  const chain = await assertZoneAccess(zoneId, user)
   const defaults = await getDefaultThresholds()
-  const oldValues = { ...zone.thresholds }
-  zone.thresholds = { ...defaults }
-  zone.threshold_history.push({
-    changed_by: user._id as never,
-    changed_at: new Date(),
-    old_values: oldValues,
-    new_values: defaults,
-    source: 'RESET_TO_DEFAULT',
-  } as never)
-  await zone.save()
 
-  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
-  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), { source: 'RESET_TO_DEFAULT', before: oldValues, after: zone.thresholds })
-  return zone
+  return applyThresholdUpdate(chain, user, { thresholds: { ...defaults }, historyValues: defaults, source: 'RESET_TO_DEFAULT' })
 }
 
 /**

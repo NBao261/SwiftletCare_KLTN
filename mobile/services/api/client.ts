@@ -9,7 +9,9 @@ import { API_BASE_URL, ENDPOINTS } from '@/constants/api'
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15_000,
-  headers: { 'Content-Type': 'application/json' },
+  // 'X-Client': 'mobile' báo cho backend biết client này không có cookie jar
+  // (không như web) nên cần được cấp refreshToken qua JSON body, không chỉ Set-Cookie.
+  headers: { 'Content-Type': 'application/json', 'X-Client': 'mobile' },
 })
 
 // ── Request interceptor: attach access token ───────────────────────────────────
@@ -57,7 +59,11 @@ api.interceptors.response.use(
 
     try {
       const refreshToken = await SecureStore.getItemAsync('refreshToken')
-      const { data } = await axios.post(`${API_BASE_URL}${ENDPOINTS.AUTH_REFRESH}`, { refreshToken })
+      const { data } = await axios.post(
+        `${API_BASE_URL}${ENDPOINTS.AUTH_REFRESH}`,
+        { refreshToken },
+        { headers: { 'X-Client': 'mobile' } },
+      )
       const newToken = (data as { data: { accessToken: string } }).data.accessToken
       await SecureStore.setItemAsync('accessToken', newToken)
       processQueue(null, newToken)
