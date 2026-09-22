@@ -1,19 +1,19 @@
 import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useZoneStore } from "@/stores/zoneStore";
 import { useTelemetry } from "@/hooks/farm-owner/useTelemetry";
 import { useAllZones, useZone } from "@/hooks/shared/useFarms";
-import { Badge, Button } from "@/components/ui";
-import SensorCard from "@/components/features/farm-owner/dashboard/SensorCard";
+import { Button } from "@/components/ui";
 import EmptyState from "@/components/ui/EmptyState";
 import ZoneOverviewCard from "@/components/features/farm-owner/dashboard/ZoneOverviewCard";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import {
-  IconTemp,
-  IconHumidity,
-  IconLight,
-  IconGas,
-  IconSound,
-} from "@/components/ui/icons";
+import ScadaModeBanner from "@/components/features/farm-owner/dashboard/ScadaModeBanner";
+import EcoHealthCard from "@/components/features/farm-owner/dashboard/EcoHealthCard";
+import ControlSubsystemPanel from "@/components/features/farm-owner/dashboard/ControlSubsystemPanel";
+import EnvSensorPanel from "@/components/features/farm-owner/dashboard/EnvSensorPanel";
+import BirdVisionCard from "@/components/features/farm-owner/dashboard/BirdVisionCard";
+import NestingDensityCard from "@/components/features/farm-owner/dashboard/NestingDensityCard";
+import SensorAlertLogTable from "@/components/features/farm-owner/dashboard/SensorAlertLogTable";
 
 // Chỉ dùng khi useZone() chưa tải xong (F5 lần đầu) — khớp default trong
 // backend/src/models/houseZone.model.ts, KHÔNG phải nguồn thật. Ngưỡng thật
@@ -31,8 +31,8 @@ const FALLBACK_THRESHOLDS = {
 
 /** Dashboard – 6 chỉ số realtime của Zone đang chọn (ENV-FR-005) */
 export default function FarmOwnerDashboardPage() {
-  const { selectedZoneId, selectedZoneName, setZone } = useZoneStore();
-  const { data, isLoading, isLive, hasEverReceived } = useTelemetry(
+  const { selectedZoneId, selectedZoneName, setZone, clearZone } = useZoneStore();
+  const { data, isLoading, isLive, hasEverReceived, relayStates, controlMode } = useTelemetry(
     selectedZoneId ?? undefined,
   );
   const { data: allZones, isLoading: isLoadingAllZones } = useAllZones();
@@ -85,100 +85,74 @@ export default function FarmOwnerDashboardPage() {
   const humidityAnomaly =
     data.humidity !== undefined &&
     (data.humidity < T.humidity_min || data.humidity > T.humidity_max);
+  const nh3Anomaly =
+    data.nh3_ppm !== undefined && data.nh3_ppm > T.nh3_max;
+  const co2Anomaly =
+    data.co2_ppm !== undefined && data.co2_ppm > T.co2_max;
+
+  if (isLoading) {
+    return <LoadingSkeleton count={4} className="h-40 w-full" />;
+  }
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="label-caption">Khu vực đang xem</p>
-          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">
-            {selectedZoneName}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {data.timestamp && (
-            <span className="hidden text-xs text-warmGray sm:block">
-              Cập nhật {new Date(data.timestamp).toLocaleTimeString("vi-VN")}
-            </span>
-          )}
-          <Badge
-            tone={
-              isLive ? "positive" : hasEverReceived ? "critical" : "neutral"
-            }
-          >
-            <span
-              className={
-                isLive
-                  ? "h-1.5 w-1.5 rounded-full bg-charcoal"
-                  : hasEverReceived
-                    ? "h-1.5 w-1.5 rounded-full bg-alertRed"
-                    : "h-1.5 w-1.5 rounded-full bg-warmGray"
-              }
-            />
-            {isLive ? "Live" : hasEverReceived ? "Mất kết nối" : "Đang tải"}
-          </Badge>
+      <div className="flex items-center gap-[5px]">
+        {/* Quay lại trong phạm vi trang Dashboard (về lưới "Tất cả nhà yến"), không phải lịch sử trình duyệt */}
+        <button
+          onClick={() => clearZone()}
+          aria-label="Quay lại Tất cả nhà yến"
+          title="Quay lại Tất cả nhà yến"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-warmGray/15 bg-white text-charcoal shadow-icon transition-colors hover:bg-warmGray/10"
+        >
+          <ArrowLeft width={18} height={18} />
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <ScadaModeBanner
+            isLive={isLive}
+            hasEverReceived={hasEverReceived}
+            lastSyncedAt={data.timestamp}
+          />
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[136px] animate-pulse rounded-2xl border border-warmGray/15 bg-warmGray/10"
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          <SensorCard
-            label="Nhiệt độ"
-            value={data.temperature}
-            unit="°C"
-            icon={IconTemp}
-            range={`${T.temp_min}–${T.temp_max}°C`}
-            isAnomaly={tempAnomaly}
-          />
-          <SensorCard
-            label="Độ ẩm"
-            value={data.humidity}
-            unit="%"
-            icon={IconHumidity}
-            range={`${T.humidity_min}–${T.humidity_max}%`}
-            isAnomaly={humidityAnomaly}
-          />
-          <SensorCard
-            label="Ánh sáng"
-            value={data.light_lux}
-            unit="lux"
-            icon={IconLight}
-            range={`< ${T.light_max} lux`}
-          />
-          <SensorCard
-            label="NH3"
-            value={data.nh3_ppm}
-            unit="ppm"
-            icon={IconGas}
-            range={`< ${T.nh3_max} ppm`}
-            isAnomaly={data.nh3_ppm !== undefined && data.nh3_ppm > T.nh3_max}
-          />
-          <SensorCard
-            label="CO2"
-            value={data.co2_ppm}
-            unit="ppm"
-            decimals={0}
-            icon={IconGas}
-            range={`< ${T.co2_max} ppm`}
-            isAnomaly={data.co2_ppm !== undefined && data.co2_ppm > T.co2_max}
-          />
-          <SensorCard
-            label="Âm thanh"
-            value={data.sound_db}
-            unit="dB"
-            icon={IconSound}
-          />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <EcoHealthCard
+          humidity={data.humidity}
+          temperature={data.temperature}
+          nh3={data.nh3_ppm}
+          humidityAnomaly={humidityAnomaly}
+          temperatureAnomaly={tempAnomaly}
+          nh3Anomaly={nh3Anomaly}
+        />
+        <ControlSubsystemPanel
+          zoneName={selectedZoneName ?? undefined}
+          relayStates={relayStates}
+          controlMode={controlMode}
+          temperatureAnomaly={tempAnomaly}
+        />
+      </div>
+
+      <EnvSensorPanel
+        temperature={data.temperature}
+        humidity={data.humidity}
+        lightLux={data.light_lux}
+        nh3={data.nh3_ppm}
+        co2={data.co2_ppm}
+        soundDb={data.sound_db}
+        temperatureAnomaly={tempAnomaly}
+        humidityAnomaly={humidityAnomaly}
+        nh3Anomaly={nh3Anomaly}
+        co2Anomaly={co2Anomaly}
+        thresholds={T}
+      />
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <BirdVisionCard />
+        <NestingDensityCard />
+      </div>
+
+      <SensorAlertLogTable />
     </div>
   );
 }
