@@ -145,11 +145,14 @@ describe('markOverdueActivations (Flow 1 case 8a)', () => {
     const late = await SensorNode.create({ device_id: 'late', zone_id: a.zone._id, registered_at: old, registered_by: tech._id })
     await SensorNode.create({ device_id: 'fresh', zone_id: a.zone._id })
     await SensorNode.create({ device_id: 'online', zone_id: a.zone._id, status: 'ONLINE', registered_at: old })
+    // Camera chưa có kênh heartbeat (ai-pipeline chưa deploy) nên không bị báo quá hạn
+    await CameraNode.create({ device_id: 'cam_late', zone_id: a.zone._id, registered_at: old, registered_by: tech._id })
 
     expect(await markOverdueActivations()).toBe(1)
     expect((await SensorNode.findById(late._id))!.activation_overdue_at).toBeInstanceOf(Date)
     expect(await AuditLog.countDocuments({ action: 'DEVICE_ACTIVATION_OVERDUE' })).toBe(1)
     expect(await markOverdueActivations()).toBe(0)
+    expect((await CameraNode.findOne({ device_id: 'cam_late' }))!.activation_overdue_at).toBeUndefined()
 
     await recordHeartbeat({ deviceId: 'late' } as never)
     const healed = (await SensorNode.findById(late._id))!

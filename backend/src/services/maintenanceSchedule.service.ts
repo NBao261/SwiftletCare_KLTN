@@ -1,4 +1,5 @@
 import { MaintenanceSchedule, IMaintenanceSchedule } from '@/models/maintenanceSchedule.model'
+import { Farm } from '@/models/farm.model'
 import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { createMaintenanceTicket } from '@/services/ticket.service'
 import { logAction } from '@/services/auditLog.service'
@@ -8,6 +9,13 @@ import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
 const DAY_MS = 86400_000
+const HOUR_MS = 3600_000
+
+/**
+ * Tạo ticket TRƯỚC hạn bấy nhiêu ngày để Technician còn sắp lịch, chuẩn bị vật
+ * tư — tạo đúng lúc đến hạn thì ngày hẹn rơi vào quá khứ ngay khi ticket sinh ra.
+ */
+const LEAD_DAYS = Number(process.env.MAINTENANCE_LEAD_DAYS ?? 3)
 
 export interface MaintenanceScheduleInput {
   farm_id?: string
@@ -101,18 +109,33 @@ export async function deleteSchedule(id: string, user: CurrentUser): Promise<voi
 }
 
 /**
- * TICKET-FR-013 — gọi mỗi giờ từ jobs/maintenanceSchedule.job.ts. Mỗi lịch đến
- * hạn được "giành" bằng findOneAndUpdate có điều kiện đúng `next_due_at` cũ:
- * 2 tiến trình chạy cùng lúc (VD 2 instance backend) chỉ 1 bên thắng nên không
- * tạo ticket trùng. Lịch bị trễ nhiều chu kỳ (server tắt lâu) chỉ tạo 1 ticket
- * rồi nhảy thẳng tới chu kỳ kế tiếp ở tương lai.
+ * TICKET-FR-013 — gọi mỗi giờ từ jobs/maintenanceSchedule.job.ts. Ticket được
+ * tạo sớm `LEAD_DAYS` ngày trước hạn. Mỗi lịch được "giành" bằng
+ * findOneAndUpdate có điều kiện đúng `next_due_at` cũ: 2 tiến trình chạy cùng
+ * lúc (VD 2 instance backend) chỉ 1 bên thắng nên không tạo ticket trùng. Lịch
+ * bị trễ nhiều chu kỳ (server tắt lâu) chỉ tạo 1 ticket rồi nhảy thẳng tới chu
+ * kỳ kế tiếp ở tương lai.
  */
 export async function generateDueMaintenanceTickets(now = new Date()): Promise<number> {
-  const due = await MaintenanceSchedule.find({ is_active: true, next_due_at: { $lte: now } }).lean()
+  const horizon = new Date(now.getTime() + LEAD_DAYS * DAY_MS)
+  const due = await MaintenanceSchedule.find({ is_active: true, next_due_at: { $lte: horizon } }).lean()
   let created = 0
 
   for (const schedule of due) {
-    const periods = Math.floor((now.getTime() - schedule.next_due_at.getTime()) / (schedule.interval_days * DAY_MS)) + 1
+    // Farm xoá mềm: model Farm lọc sẵn `is_deleted` nên query trả null. Không
+    // tự tắt thì mỗi chu kỳ lại sinh 1 ticket không ai gán được + báo Admin.
+    if (!(await Farm.exists({ _id: schedule.farm_id }))) {
+      await MaintenanceSchedule.updateOne({ _id: schedule._id }, { is_active: false })
+      await logAction(undefined, 'MAINTENANCE_SCHEDULE_DISABLED', 'maintenance_schedule', String(schedule._id), {
+        reason: 'Farm đã bị xoá', farmId: String(schedule.farm_id),
+      })
+      continue
+    }
+
+    // Lịch đến hạn trong tương lai gần (trong khoảng lead) vẫn nhảy đúng 1 chu kỳ —
+    // để periods = 0 thì `next` bằng giá trị cũ và lịch sẽ sinh ticket lặp mỗi giờ.
+    const elapsed = now.getTime() - schedule.next_due_at.getTime()
+    const periods = Math.max(1, Math.floor(elapsed / (schedule.interval_days * DAY_MS)) + 1)
     const next = new Date(schedule.next_due_at.getTime() + periods * schedule.interval_days * DAY_MS)
     const claimed = await MaintenanceSchedule.findOneAndUpdate(
       { _id: schedule._id, next_due_at: schedule.next_due_at, is_active: true },
@@ -125,7 +148,8 @@ export async function generateDueMaintenanceTickets(now = new Date()): Promise<n
       const ticket = await createMaintenanceTicket({
         farm_id: String(schedule.farm_id),
         zone_id: schedule.zone_id ? String(schedule.zone_id) : undefined,
-        scheduled_visit_at: schedule.next_due_at,
+        // Lịch trễ (server tắt lâu) thì hẹn sớm nhất 1 giờ nữa, không hẹn ngược về quá khứ
+        scheduled_visit_at: new Date(Math.max(schedule.next_due_at.getTime(), now.getTime() + HOUR_MS)),
         description: `Bảo trì định kỳ (mỗi ${schedule.interval_days} ngày): ${schedule.description}`,
       })
       await MaintenanceSchedule.updateOne({ _id: schedule._id }, { last_ticket_id: ticket._id })

@@ -551,31 +551,32 @@ export const ACTIVATION_TIMEOUT_MS = 15 * 60 * 1000
  * Flow 1 case 8a — gọi từ jobs/activationOverdue.job.ts. Node còn PENDING quá
  * hạn được đánh dấu 1 lần (không đổi status: thiết bị vẫn có thể lên mạng sau
  * khi Technician kiểm tra lại bước 5–7), ghi audit và báo người đã onboarding.
+ *
+ * CHỈ quét SensorNode: Camera Node (Raspberry Pi) chưa có kênh heartbeat nào —
+ * `ai-pipeline` chưa deploy, mqtt/handlers không xử lý `vision/heartbeat` — nên
+ * camera nào cũng sẽ bị báo "quá hạn" sau 15 phút dù lắp đúng. Mở lại phần
+ * camera khi có handler heartbeat cho nó.
  */
 export async function markOverdueActivations(): Promise<number> {
   const cutoff = new Date(Date.now() - ACTIVATION_TIMEOUT_MS)
-  const filter = { status: 'PENDING', registered_at: { $lt: cutoff }, activation_overdue_at: null, ...IN_SERVICE }
-  let count = 0
+  const nodes = await SensorNode.find({
+    status: 'PENDING', registered_at: { $lt: cutoff }, activation_overdue_at: null, ...IN_SERVICE,
+  }).select('device_id zone_id registered_by').lean()
+  if (nodes.length === 0) return 0
 
-  for (const [Model, targetType] of [[SensorNode, 'sensor_node'], [CameraNode, 'camera_node']] as const) {
-    const nodes = await (Model as typeof SensorNode).find(filter).select('device_id zone_id registered_by').lean()
-    if (nodes.length === 0) continue
-    await (Model as typeof SensorNode).updateMany({ _id: { $in: nodes.map(n => n._id) } }, { activation_overdue_at: new Date() })
-
-    for (const node of nodes) {
-      await logAction(undefined, 'DEVICE_ACTIVATION_OVERDUE', targetType, String(node._id), {
-        deviceId: node.device_id, zoneId: String(node.zone_id),
+  await SensorNode.updateMany({ _id: { $in: nodes.map(n => n._id) } }, { activation_overdue_at: new Date() })
+  for (const node of nodes) {
+    await logAction(undefined, 'DEVICE_ACTIVATION_OVERDUE', 'sensor_node', String(node._id), {
+      deviceId: node.device_id, zoneId: String(node.zone_id),
+    })
+    if (node.registered_by) {
+      void notifyUser(String(node.registered_by), {
+        title: 'Thiết bị kích hoạt quá hạn',
+        body: `Thiết bị ${node.device_id} chưa gửi heartbeat sau 15 phút. Kiểm tra lại AP-mode, WiFi farm và kết nối MQTT tại hiện trường.`,
       })
-      if (node.registered_by) {
-        void notifyUser(String(node.registered_by), {
-          title: 'Thiết bị kích hoạt quá hạn',
-          body: `Thiết bị ${node.device_id} chưa gửi heartbeat sau 15 phút. Kiểm tra lại AP-mode, WiFi farm và kết nối MQTT tại hiện trường.`,
-        })
-      }
     }
-    count += nodes.length
   }
-  return count
+  return nodes.length
 }
 
 /**

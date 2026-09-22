@@ -113,7 +113,8 @@ describe('generateDueMaintenanceTickets', () => {
     const [ticket] = await Ticket.find().lean()
     expect(ticket).toMatchObject({ type: 'MAINTENANCE', status: 'NEW' })
     expect(String(ticket.assigned_to)).toBe(String(tech._id))
-    expect(ticket.scheduled_visit_at).toEqual(dueAt)
+    // Hạn đã trôi qua → hẹn sớm nhất 1 giờ nữa, không hẹn ngược về quá khứ
+    expect(ticket.scheduled_visit_at!.getTime()).toBeGreaterThan(Date.now())
 
     const updated = (await MaintenanceSchedule.findById(schedule._id))!
     expect(updated.next_due_at.getTime()).toBe(dueAt.getTime() + 7 * DAY)
@@ -133,5 +134,30 @@ describe('generateDueMaintenanceTickets', () => {
     const a = (await MaintenanceSchedule.findOne({ description: 'A' }))!
     expect(a.next_due_at.getTime()).toBeGreaterThan(Date.now())
     expect(a.next_due_at.getTime()).toBeLessThanOrEqual(Date.now() + DAY)
+  })
+
+  it('tạo ticket trước hạn (lead time) và không tạo lại ở lượt quét sau', async () => {
+    const { farm } = await seed()
+    const dueAt = new Date(Date.now() + 2 * DAY) // trong khoảng lead 3 ngày
+    const schedule = await MaintenanceSchedule.create({ farm_id: farm._id, description: 'Thay lọc', interval_days: 30, next_due_at: dueAt })
+
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+    const [ticket] = await Ticket.find().lean()
+    expect(ticket.scheduled_visit_at).toEqual(dueAt) // vẫn hẹn đúng ngày đến hạn
+    expect((await MaintenanceSchedule.findById(schedule._id))!.next_due_at.getTime()).toBe(dueAt.getTime() + 30 * DAY)
+
+    expect(await generateDueMaintenanceTickets()).toBe(0)
+    expect(await Ticket.countDocuments()).toBe(1)
+  })
+
+  it('farm đã xoá mềm: tự tắt lịch, không sinh ticket mồ côi', async () => {
+    const { farm } = await seed()
+    const schedule = await MaintenanceSchedule.create({ farm_id: farm._id, description: 'A', interval_days: 7, next_due_at: new Date(Date.now() - 1000) })
+    await Farm.updateOne({ _id: farm._id }, { is_deleted: true })
+
+    expect(await generateDueMaintenanceTickets()).toBe(0)
+    expect(await Ticket.countDocuments()).toBe(0)
+    expect((await MaintenanceSchedule.findById(schedule._id))!.is_active).toBe(false)
+    expect(await AuditLog.countDocuments({ action: 'MAINTENANCE_SCHEDULE_DISABLED' })).toBe(1)
   })
 })
