@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { useAlertsList, useAcknowledgeAlert } from '@/hooks/useAlerts'
-import { useAlertStore } from '@/store/alertStore'
-import { formatDate } from '@/utils/helpers'
+import { useAlertsList, useAcknowledgeAlert } from '@/hooks/shared/useAlerts'
+import { useAlertStore } from '@/stores/alertStore'
+import { formatDate } from '@/lib/helpers'
 import { IconBell } from '@/components/ui/icons'
-import { cn } from '@/utils/cn'
+import { cn } from '@/lib/cn'
 import type { Alert, ApiResponse } from '@/types'
 
 /** Query giống hệt tham số truyền cho `useAlertsList` bên dưới — dùng lại làm key để patch cache lạc quan khi ack. */
 const RECENT_ALERTS_QUERY = { limit: 6 }
 
 /**
- * Dropdown chuông thông báo trên TopBar — 6 cảnh báo gần nhất (ALERT-FR-007),
+ * Dropdown chuông thông báo trên AppHeader — 6 cảnh báo gần nhất (ALERT-FR-007),
  * không filter status để thấy cả cái vừa xử lý. Badge/`unreadCount` lấy từ
  * `useAlertStore` (đồng bộ realtime qua `useAlertNotifications`, mount ở
  * MainLayout) chứ không tự đếm lại ở đây để tránh lệch số với chuông.
@@ -32,7 +32,7 @@ export default function NotificationPopover() {
    * + trừ badge NGAY (UI phản hồi tức thì), rồi mới gọi API acknowledge thật ở nền
    * (invalidate ['alerts'] khi xong để đồng bộ lại số liệu chính xác từ server).
    * Luôn đóng dropdown và điều hướng sang trang Cảnh báo, kèm `highlight` để
-   * AlertsPage cuộn tới đúng dòng đó (xem AlertsPage.tsx).
+   * TechnicianAlertsPage cuộn tới đúng dòng đó (xem TechnicianAlertsPage.tsx).
    */
   function handleNotificationClick(alert: Alert) {
     if (alert.status === 'ACTIVE') {

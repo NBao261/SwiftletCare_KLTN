@@ -74,18 +74,6 @@ export const IconLogout = (p: IconProps) => (
   <Svg {...p}><path d="M7.5 17h-3A1.5 1.5 0 0 1 3 15.5v-11A1.5 1.5 0 0 1 4.5 3h3" /><path d="m12.5 13.5 3.5-3.5-3.5-3.5" /><path d="M16 10H7" /></Svg>
 )
 
-export const IconMenu = (p: IconProps) => (
-  <Svg {...p}><path d="M3 6h14M3 10h14M3 14h14" /></Svg>
-)
-
-export const IconClose = (p: IconProps) => (
-  <Svg {...p}><path d="m5 5 10 10M15 5 5 15" /></Svg>
-)
-
-export const IconPin = (p: IconProps) => (
-  <Svg {...p}><path d="M10 17.5s5.5-5 5.5-9a5.5 5.5 0 1 0-11 0c0 4 5.5 9 5.5 9Z" /><circle cx="10" cy="8.5" r="2" /></Svg>
-)
-
 export const IconGlobe = (p: IconProps) => (
   <Svg {...p}><circle cx="10" cy="10" r="7.5" /><path d="M2.5 10h15M10 2.5c2.2 2 3.3 4.9 3.3 7.5s-1.1 5.5-3.3 7.5c-2.2-2-3.3-4.9-3.3-7.5S7.8 4.5 10 2.5Z" /></Svg>
 )
@@ -120,12 +108,7 @@ export const IconSound = (p: IconProps) => (
   <Svg {...p}><path d="M4 8v4M7.5 5.5v9M11 3.5v13M14.5 7v6M18 9v2" /></Svg>
 )
 
-/** "Sàn & Đơn hàng" — túi mua sắm */
-export const IconBag = (p: IconProps) => (
-  <Svg {...p}><path d="M6.5 8V6a3.5 3.5 0 0 1 7 0v2" /><rect x="3.5" y="8" width="13" height="10" rx="2" /></Svg>
-)
-
-/** Tai nghe có mic — nhân viên kinh doanh/chăm sóc khách (Sales Staff); IconBag trông giống ổ khoá khi thu nhỏ nên không dùng cho vai trò */
+/** Tai nghe có mic — nhân viên kinh doanh/chăm sóc khách (Sales Staff); túi mua sắm trông giống ổ khoá khi thu nhỏ nên không dùng cho vai trò */
 export const IconHeadset = (p: IconProps) => (
   <Svg {...p}><path d="M4 12v-1.5a6 6 0 0 1 12 0V12" /><rect x="3" y="11" width="3" height="5" rx="1.5" /><rect x="14" y="11" width="3" height="5" rx="1.5" /><path d="M16 16v.5a2 2 0 0 1-2 2h-2.5" /></Svg>
 )

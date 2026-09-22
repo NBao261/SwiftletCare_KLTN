@@ -3,7 +3,7 @@
  * khớp NGUYÊN VĂN chuỗi backend truyền vào `logAction()` (grep "logAction(" trong
  * backend/src/services + jobs) — không phải enum, backend ghi string tự do nên
  * mã lạ vẫn có thể xuất hiện; UI hiện thẳng mã đó khi không có nhãn.
- * Dùng chung cho dropdown lọc + danh sách AuditLogPage.
+ * Dùng chung cho dropdown lọc + danh sách AdminAuditLogPage.
  */
 export const AUDIT_ACTION_LABEL: Record<string, string> = {
   // ── Tài khoản (admin.service.ts / auth.service.ts) ─────────────────────────

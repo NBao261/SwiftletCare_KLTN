@@ -1,5 +1,5 @@
-import { useToastStore } from '@/store/toastStore'
-import { cn } from '@/utils/cn'
+import { useToastStore } from '@/stores/toastStore'
+import { cn } from '@/lib/cn'
 
 /** Toast – container hiển thị toàn bộ thông báo, mount 1 lần ở MainLayout */
 export default function Toast() {
