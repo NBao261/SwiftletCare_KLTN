@@ -8,7 +8,10 @@ export interface Crumb {
 
 interface BreadcrumbState {
   trail: Crumb[]
+  /** Mô tả ngắn dưới breadcrumb, do trang tự đăng ký qua `usePageSubtitle` — rỗng thì AppHeader không render dòng này */
+  subtitle: string
   setTrail: (trail: Crumb[]) => void
+  setSubtitle: (subtitle: string) => void
 }
 
 /**
@@ -19,5 +22,7 @@ interface BreadcrumbState {
  */
 export const useBreadcrumbStore = create<BreadcrumbState>(set => ({
   trail: [],
+  subtitle: '',
   setTrail: trail => set({ trail }),
+  setSubtitle: subtitle => set({ subtitle }),
 }))

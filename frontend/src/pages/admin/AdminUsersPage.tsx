@@ -4,6 +4,7 @@
 // (constants.ts) và từng modal (*Modal.tsx) nằm ở file riêng trong cùng thư mục.
 import { useState } from 'react'
 import { useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
+import { usePageSubtitle } from '@/hooks/common/useBreadcrumb'
 import { Button, Input } from '@/components/ui'
 import { IconSortAsc, IconSortDesc, IconSearch } from '@/components/ui/icons'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -38,6 +39,8 @@ export default function AdminUsersPage() {
   const [editTarget, setEditTarget] = useState<User | null>(null)
   const [lockTarget, setLockTarget] = useState<User | null>(null)
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null)
+
+  usePageSubtitle('Tài khoản toàn hệ thống — tạo Kỹ thuật viên/Nhân viên kinh doanh, đổi vùng phụ trách, khoá/mở khoá tài khoản.')
 
   const { records, total, limit, isLoading } = useUsersList({
     status, role: role || undefined, search: search || undefined, sortBy, sortDir, page, limit: 10,
@@ -76,12 +79,8 @@ export default function AdminUsersPage() {
   }, (page - 1) * limit, currentUserId)
 
   return (
+    // Tiêu đề trang do AppHeader (topbar) tự tra từ menu — không lặp lại trong nội dung
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="label-caption">Quản trị hệ thống</p>
-        <h1 className="text-h1 tracking-tight text-charcoal">Người dùng</h1>
-      </div>
-
       {/* Hàng 1: tìm kiếm + tạo tài khoản. 1 nút duy nhất — Admin chỉ tạo Technician/Sales
           Staff (AUTH-FR-005c), chọn vai trò ngay trong modal thay vì 2 nút riêng. */}
       <div className="flex flex-wrap items-center gap-3">

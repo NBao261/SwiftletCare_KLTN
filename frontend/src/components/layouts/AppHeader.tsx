@@ -58,6 +58,7 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
   const page = usePageTitle(menuSections)
   const selectedZoneName = useZoneStore(s => s.selectedZoneName)
   const registeredTrail = useBreadcrumbStore(s => s.trail)
+  const subtitle = useBreadcrumbStore(s => s.subtitle)
   // Khớp RequireRole của route /alerts — Sales Staff không có trang này nên không hiện nút
   const canViewAlerts = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
 
@@ -73,62 +74,68 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
   ]
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 bg-transparent px-4 lg:px-6">
-      {/* Trái: breadcrumb tên trang → thực thể đang xem (desktop) / thương hiệu (mobile, vì sidebar bị ẩn) */}
-      <nav aria-label="breadcrumb" className="flex min-w-0 items-baseline gap-1.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-charcoal text-sm font-extrabold text-white lg:hidden">
-          S
-        </span>
-        {trail.map((crumb, i) => {
-          const isRoot = i === 0
-          const isLast = i === trail.length - 1
-          const clickable = !!crumb.onClick && !isLast
-          const textClass = isRoot
-            ? 'truncate text-2xl font-extrabold tracking-tight text-charcoal'
-            : isLast
-              ? 'truncate text-sm font-medium text-warmGray'
-              : 'truncate text-sm font-semibold text-charcoal'
-          return (
-            <span key={i} className="flex min-w-0 items-baseline gap-1.5">
-              {!isRoot && <span aria-hidden="true" className="shrink-0 text-lg font-medium text-warmGray/40">/</span>}
-              {clickable ? (
-                <button onClick={crumb.onClick} className={cn(textClass, 'transition-opacity hover:opacity-70')}>
-                  {crumb.label}
-                </button>
-              ) : (
-                <span className={textClass} aria-current={isLast ? 'page' : undefined}>
-                  {crumb.label}
-                </span>
-              )}
-            </span>
-          )
-        })}
-      </nav>
+    <header className="sticky top-0 z-10 bg-transparent px-4 pb-2 lg:px-6">
+      {/* Hàng gốc giữ nguyên h-16 — trang không đăng ký subtitle thì topbar cao y hệt trước đây */}
+      <div className="flex h-16 shrink-0 items-center justify-between gap-3">
+        {/* Trái: breadcrumb tên trang → thực thể đang xem (desktop) / thương hiệu (mobile, vì sidebar bị ẩn) */}
+        <nav aria-label="breadcrumb" className="flex min-w-0 items-baseline gap-1.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-charcoal text-sm font-extrabold text-white lg:hidden">
+            S
+          </span>
+          {trail.map((crumb, i) => {
+            const isRoot = i === 0
+            const isLast = i === trail.length - 1
+            const clickable = !!crumb.onClick && !isLast
+            const textClass = isRoot
+              ? 'truncate text-2xl font-extrabold tracking-tight text-charcoal'
+              : isLast
+                ? 'truncate text-sm font-medium text-warmGray'
+                : 'truncate text-sm font-semibold text-charcoal'
+            return (
+              <span key={i} className="flex min-w-0 items-baseline gap-1.5">
+                {!isRoot && <span aria-hidden="true" className="shrink-0 text-lg font-medium text-warmGray/40">/</span>}
+                {clickable ? (
+                  <button onClick={crumb.onClick} className={cn(textClass, 'transition-opacity hover:opacity-70')}>
+                    {crumb.label}
+                  </button>
+                ) : (
+                  <span className={textClass} aria-current={isLast ? 'page' : undefined}>
+                    {crumb.label}
+                  </span>
+                )}
+              </span>
+            )
+          })}
+        </nav>
 
-      <div className="flex shrink-0 items-center gap-3">
-        <ZoneSwitcher />
-        <LanguageToggle />
+        <div className="flex shrink-0 items-center gap-3">
+          <ZoneSwitcher />
+          <LanguageToggle />
 
-        {canViewAlerts && <NotificationPopover />}
+          {canViewAlerts && <NotificationPopover />}
 
-        <span
-          className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-charcoal text-sm font-bold text-white lg:flex"
-          aria-hidden="true"
-        >
-          {user?.full_name?.[0]?.toUpperCase() ?? 'U'}
-        </span>
+          <span
+            className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-charcoal text-sm font-bold text-white lg:flex"
+            aria-hidden="true"
+          >
+            {user?.full_name?.[0]?.toUpperCase() ?? 'U'}
+          </span>
 
-        {/* Mobile: sidebar (chứa nút đăng xuất) bị ẩn nên đưa ra đây */}
-        <button
-          onClick={() => logout.mutate()}
-          disabled={logout.isPending}
-          aria-label="Đăng xuất"
-          title={user?.full_name ? `Đăng xuất ${user.full_name}` : 'Đăng xuất'}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
-        >
-          <IconLogout />
-        </button>
+          {/* Mobile: sidebar (chứa nút đăng xuất) bị ẩn nên đưa ra đây */}
+          <button
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+            aria-label="Đăng xuất"
+            title={user?.full_name ? `Đăng xuất ${user.full_name}` : 'Đăng xuất'}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
+          >
+            <IconLogout />
+          </button>
+        </div>
       </div>
+
+      {/* Mô tả ngắn 1 trang tự đăng ký qua usePageSubtitle — thay cho việc trang tự vẽ lại tiêu đề/mô tả trong nội dung (trùng tên trang topbar đã tự lấy từ menu) */}
+      {subtitle && <p className="text-sm text-warmGray">{subtitle}</p>}
     </header>
   )
 }

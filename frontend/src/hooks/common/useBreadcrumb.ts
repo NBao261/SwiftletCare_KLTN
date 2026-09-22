@@ -24,3 +24,18 @@ export function usePageBreadcrumb(crumbs: Crumb[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signal, setTrail])
 }
+
+/**
+ * Trang gọi hook này để hiện 1 dòng mô tả ngắn dưới breadcrumb trong topbar
+ * (AppHeader) — thay cho việc mỗi trang tự vẽ lại tiêu đề/mô tả trong nội dung,
+ * vốn trùng lặp với tên trang topbar đã tự lấy từ menu. Trang không gọi hook
+ * thì AppHeader không hiện dòng này.
+ */
+export function usePageSubtitle(subtitle: string) {
+  const setSubtitle = useBreadcrumbStore(s => s.setSubtitle)
+
+  useEffect(() => {
+    setSubtitle(subtitle)
+    return () => setSubtitle('')
+  }, [subtitle, setSubtitle])
+}
