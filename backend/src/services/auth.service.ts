@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
+import bcrypt from 'bcryptjs'
 import { User, IUser } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
@@ -19,6 +20,11 @@ const normalizeEmail = (email: string) => email.toLowerCase().trim()
 /** Hash 1 chiều (sha256) cho mã dùng 1 lần — OTP đăng nhập và token reset mật
  *  khẩu đều dùng chung, để lộ DB đọc cũng không lấy được mã gốc còn hiệu lực. */
 const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
+
+/** Hash bcrypt (cost=12) hợp lệ bất kỳ — KHÔNG phải mật khẩu thật của ai. Dùng để
+ *  giữ nguyên chi phí bcrypt.compare() khi email không tồn tại, tránh lộ email có
+ *  tồn tại hay không qua chênh lệch thời gian phản hồi của /auth/login. */
+const DUMMY_BCRYPT_HASH = '$2a$12$CwTycUXWue0Thq9StjUM0uJ8g/qXY7jkNwptbCFmehyoNwaN9pmlq'
 
 function signAccess(userId: string, role: string): string {
   return jwt.sign({ sub: userId, role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: ACCESS_TTL } as jwt.SignOptions)
@@ -94,7 +100,13 @@ async function assertLoginAllowed(user: IUser): Promise<void> {
 /** AUTH-FR-002, AUTH-FR-003 */
 export async function loginUser(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
   const user = await User.findOne({ email: normalizeEmail(input.email) })
-  if (!user || !(await user.comparePassword(input.password))) {
+  // Luôn chạy bcrypt.compare kể cả khi user không tồn tại (so với hash giả
+  // DUMMY_BCRYPT_HASH) — nếu bỏ qua bước này, response cho "email không tồn tại"
+  // trả về nhanh hơn đo được so với "sai mật khẩu", lộ email nào đã đăng ký.
+  const passwordMatches = user
+    ? await user.comparePassword(input.password)
+    : await bcrypt.compare(input.password, DUMMY_BCRYPT_HASH)
+  if (!user || !passwordMatches) {
     // Email không tồn tại thì không ghi email vào log (SRS §12.3 — không lưu PII thô trong audit log)
     const userId = user ? String(user._id) : undefined
     await logAction(userId, 'LOGIN_FAILED', 'user', userId, { reason: user ? 'WRONG_PASSWORD' : 'UNKNOWN_EMAIL' })
@@ -157,7 +169,7 @@ export async function sendOtp(email: string): Promise<void> {
 }
 
 /** AUTH-FR-001/005 */
-export async function verifyOtp(email: string, otp: string): Promise<{ user: IUser; accessToken: string }> {
+export async function verifyOtp(email: string, otp: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
   const user = await User.findOne({ email: normalizeEmail(email) })
   if (!user || user.otp_code !== hashToken(otp) || !user.otp_expires || user.otp_expires < new Date()) {
     throw new AppError(400, 'INVALID_OTP', 'OTP không đúng hoặc đã hết hạn')
@@ -167,10 +179,15 @@ export async function verifyOtp(email: string, otp: string): Promise<{ user: IUs
 
   user.otp_code = undefined
   user.otp_expires = undefined
+
+  // Giống loginUser() — phải cấp refresh token ở đây, nếu không phiên đăng nhập
+  // qua OTP không có cách nào silent-refresh và hết hạn sau ACCESS_TTL (15 phút).
+  const refreshToken = signRefresh(String(user._id))
+  user.refresh_tokens.push({ token: refreshToken, expires: new Date(Date.now() + REFRESH_TTL_MS) })
   await user.save()
 
   await logAction(String(user._id), 'LOGIN', 'user', String(user._id), { method: 'OTP' })
-  return { user, accessToken: signAccess(String(user._id), user.role) }
+  return { user, accessToken: signAccess(String(user._id), user.role), refreshToken }
 }
 
 /** AUTH-FR-009 — TTL 15 phút, dùng 1 lần (Flow 11 bước 6) */
