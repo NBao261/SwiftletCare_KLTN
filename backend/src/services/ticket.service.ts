@@ -7,7 +7,7 @@ import { logAction } from '@/services/auditLog.service'
 import { getSlaHours, getTicketRouting } from '@/services/system.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { postSystemMessage } from '@/services/ticketChat.service'
-import { emitTicketAssigneeChanged } from '@/socket'
+import { emitTicketAssigneeChanged, removeUserFromTicketRoom } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -294,24 +294,36 @@ export async function getTicket(ticketId: string, user: CurrentUser): Promise<IT
 
 /**
  * TICKET-FR-017 — sau khi đổi người phụ trách: người cũ vào `previous_assignees`
- * (còn xem lại chat, mất quyền gửi) và thread chat nhận 1 tin hệ thống. Gọi
- * TRƯỚC `ticket.save()` để previous_assignees được lưu cùng lượt.
+ * kèm mốc bị chuyển — chỉ xem lại lịch sử tới mốc đó, mất quyền gửi — và thread
+ * chat nhận 1 tin hệ thống. Gọi TRƯỚC `ticket.save()` để lưu cùng lượt. Người
+ * từng phụ trách 2 lần thì giữ mốc mới nhất.
  */
 function trackAssigneeChange(ticket: ITicket, from: string | null): void {
-  if (from && from !== assigneeIdOf(ticket) && !ticket.previous_assignees.some(id => String(id) === from)) {
-    ticket.previous_assignees.push(from as never)
-  }
+  if (!from || from === assigneeIdOf(ticket)) return
+  const existing = ticket.previous_assignees.find(p => String(p.user_id) === from)
+  if (existing) existing.until = new Date()
+  else ticket.previous_assignees.push({ user_id: from as never, until: new Date() })
 }
 
 async function announceAssigneeChange(ticket: ITicket, from: string | null): Promise<void> {
   const to = assigneeIdOf(ticket)
   if (from === to) return
   const technician = to ? await User.findById(to).select('full_name').lean() : null
-  await postSystemMessage(
+  const handover = await postSystemMessage(
     String(ticket._id),
     technician ? `Đã chuyển xử lý sang ${technician.full_name}` : 'Ticket đang chờ Administrator gán Technician mới',
   )
+  // Nới mốc `until` của người cũ tới đúng tin bàn giao: họ cần thấy lý do mình
+  // bị chuyển, nhưng không thấy trao đổi phát sinh sau đó.
+  if (from) {
+    await Ticket.updateOne(
+      { _id: ticket._id, 'previous_assignees.user_id': from },
+      { $set: { 'previous_assignees.$.until': handover.created_at } },
+    )
+  }
   emitTicketAssigneeChanged(String(ticket._id), { from, to })
+  // Người cũ phải rời room ngay, nếu không vẫn nhận realtime cuộc trao đổi sau khi mất quyền
+  if (from) removeUserFromTicketRoom(from, String(ticket._id))
 }
 
 /** `assigned_to` có thể đã populate (getTicket) hoặc còn là ObjectId — lấy id dạng chuỗi cho cả 2 */

@@ -23,12 +23,17 @@ process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 // socket.io giả — ghi lại handler 'connection' và các lệnh emit theo room
 const mockHandlers: { connection?: (socket: unknown) => void } = {}
 const mockEmits: Array<{ room: string; event: string; data: unknown }> = []
+// Ghi lại io.in(<room nguồn>).socketsLeave(<room rời>) — cách người cũ bị đá khỏi kênh chat
+const mockLeaves: Array<{ from: string; left: string }> = []
 jest.mock('socket.io', () => ({
   Server: jest.fn().mockImplementation(() => ({
     use: () => undefined,
     on: (event: string, fn: never) => { if (event === 'connection') mockHandlers.connection = fn },
     to: (room: string) => ({ emit: (event: string, data: unknown) => mockEmits.push({ room, event, data }) }),
-    in: () => ({ disconnectSockets: jest.fn() }),
+    in: (from: string) => ({
+      disconnectSockets: jest.fn(),
+      socketsLeave: (left: string) => mockLeaves.push({ from, left }),
+    }),
   })),
 }))
 
@@ -53,6 +58,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   mockEmits.length = 0
+  mockLeaves.length = 0
   await Promise.all([
     AuditLog.deleteMany({}), Farm.deleteMany({}), Ticket.deleteMany({}), TicketMessage.deleteMany({}), User.deleteMany({}),
   ])
@@ -145,10 +151,17 @@ describe('đổi Technician phụ trách (TICKET-FR-017)', () => {
     expect(res.body.data[1]).toMatchObject({ role: 'SYSTEM', is_system: true, author_id: null })
     expect(mockEmits.some(e => e.event === 'TICKET_CHAT_ASSIGNEE_CHANGED')).toBe(true)
 
-    await history(ticket._id, t.tech).expect(200)
     const blocked = await send(ticket._id, t.tech, { content: 'còn gửi được không?' }).expect(403)
     expect(blocked.body.error.message).toContain('chuyển cho Technician khác')
     await send(ticket._id, t.other, { content: 'Tôi tiếp nhận' }).expect(201)
+
+    // Người cũ chỉ còn thấy lịch sử tới tin bàn giao, không thấy trao đổi sau đó
+    const oldView = await history(ticket._id, t.tech).expect(200)
+    expect(oldView.body.data.map((m: { content: string }) => m.content))
+      .toEqual(['Tin của người cũ', 'Đã chuyển xử lý sang other'])
+    expect(oldView.body.meta.total).toBe(2)
+    const newView = await history(ticket._id, t.other).expect(200)
+    expect(newView.body.data).toHaveLength(3)
   })
 })
 
@@ -184,5 +197,22 @@ describe('Socket JOIN_TICKET_CHAT / SEND_TICKET_MESSAGE', () => {
     const res = await call('JOIN_TICKET_CHAT', { ticketId: String(ticket._id) })
     expect(res.ok).toBe(false)
     expect(socket.join).not.toHaveBeenCalledWith(`ticket:${ticket._id}`)
+  })
+
+  it('Technician cũ không join lại được room (chỉ đọc lịch sử qua REST)', async () => {
+    const { ticket, tech, other, t } = await seed()
+    const { socket, call } = fakeSocket(tech._id)
+    expect(await call('JOIN_TICKET_CHAT', { ticketId: String(ticket._id) })).toEqual({ ok: true })
+
+    await request(app).put(`/tickets/${ticket._id}/admin-override`).set('Authorization', `Bearer ${t.admin}`)
+      .send({ assigned_to: String(other._id), reason: 'Điều phối lại' }).expect(200)
+
+    const res = await call('JOIN_TICKET_CHAT', { ticketId: String(ticket._id) })
+    expect(res.ok).toBe(false)
+    expect(res.error).toContain('xem lại được lịch sử cũ')
+    // Lúc reassign, server đã đá mọi socket của người cũ khỏi room chat
+    expect(mockLeaves).toContainEqual({ from: `user:${tech._id}`, left: `ticket:${ticket._id}` })
+    // Chỉ join room chat đúng 1 lần (lần đầu), lần sau bị từ chối
+    expect(socket.join.mock.calls.filter(c => c[0] === `ticket:${ticket._id}`)).toHaveLength(1)
   })
 })

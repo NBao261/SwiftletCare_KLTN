@@ -163,6 +163,11 @@ export function emitTicketMessage(ticketId: string, data: TicketMessageDto): voi
   io?.to(ticketRoom(ticketId)).emit('TICKET_MESSAGE_NEW', data)
 }
 
+/** TICKET-FR-017 — Technician bị chuyển ticket phải rời kênh chat ngay (chỉ còn đọc lịch sử cũ qua REST) */
+export function removeUserFromTicketRoom(userId: string, ticketId: string): void {
+  io?.in(userRoom(userId)).socketsLeave(ticketRoom(ticketId))
+}
+
 /** TICKET-FR-017 — đổi Technician phụ trách giữa cuộc trò chuyện */
 export function emitTicketAssigneeChanged(ticketId: string, data: { from: string | null; to: string | null }): void {
   io?.to(ticketRoom(ticketId)).emit('TICKET_CHAT_ASSIGNEE_CHANGED', { ticketId, ...data })

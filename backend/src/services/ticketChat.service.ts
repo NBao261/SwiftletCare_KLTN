@@ -40,37 +40,51 @@ function toDto(m: PopulatedMessage): TicketMessageDto {
 
 const currentAssignee = (ticket: Pick<ITicket, 'assigned_to'>) => (ticket.assigned_to ? String(ticket.assigned_to) : null)
 
+/** TICKET-FR-017 — mốc Technician này bị chuyển khỏi ticket (null nếu chưa từng phụ trách) */
+function removedAt(ticket: ITicket, userId: string): Date | null {
+  return ticket.previous_assignees?.find(p => String(p.user_id) === userId)?.until ?? null
+}
+
 /**
- * TICKET-FR-014 — ai được VÀO kênh chat (đọc lịch sử):
+ * TICKET-FR-014 — ai được đọc kênh chat:
  * - Admin: luôn được (TICKET-FR-005b)
  * - Farm Owner/thành viên của farm sở hữu ticket (không tính Technician/Sales cùng farm)
- * - Technician đang phụ trách, hoặc từng phụ trách (TICKET-FR-017: người cũ vẫn xem lại được)
+ * - Technician đang phụ trách; người TỪNG phụ trách chỉ đọc lịch sử cũ (`limitedUntil`)
  * Technician khác cùng vùng thì KHÔNG — khác quyền xem ticket (Flow 23 case 6a).
  */
-async function canRead(ticket: ITicket, user: CurrentUser): Promise<boolean> {
-  if (user.role === 'ADMIN') return true
+async function readScope(ticket: ITicket, user: CurrentUser): Promise<{ allowed: boolean; limitedUntil?: Date }> {
+  if (user.role === 'ADMIN') return { allowed: true }
   if (user.role === 'TECHNICIAN') {
-    return currentAssignee(ticket) === user._id
-      || (ticket.previous_assignees ?? []).some(id => String(id) === user._id)
+    if (currentAssignee(ticket) === user._id) return { allowed: true }
+    const until = removedAt(ticket, user._id)
+    return until ? { allowed: true, limitedUntil: until } : { allowed: false }
   }
   if (user.role === 'FARM_OWNER') {
     const farm = await findFarmOrThrow(String(ticket.farm_id))
-    return hasFarmAccess(farm, user)
+    return { allowed: hasFarmAccess(farm, user) }
   }
-  return false
+  return { allowed: false }
 }
 
-async function loadTicketForChat(ticketId: string, user: CurrentUser): Promise<ITicket> {
+async function loadTicketForChat(
+  ticketId: string, user: CurrentUser,
+): Promise<{ ticket: ITicket; limitedUntil?: Date }> {
   const ticket = await Ticket.findById(ticketId)
   if (!ticket) throw NotFoundError('Không tìm thấy ticket')
+  const scope = await readScope(ticket, user)
   // Cùng thông báo cho "không có quyền" — không xác nhận ticket tồn tại với người ngoài
-  if (!(await canRead(ticket, user))) throw ForbiddenError('Không có quyền tham gia trò chuyện của ticket này')
-  return ticket
+  if (!scope.allowed) throw ForbiddenError('Không có quyền tham gia trò chuyện của ticket này')
+  return { ticket, limitedUntil: scope.limitedUntil }
 }
 
-/** Flow 23 bước 2 — gọi khi client JOIN_TICKET_CHAT */
+/**
+ * Flow 23 bước 2 — gọi khi client JOIN_TICKET_CHAT. Người từng phụ trách KHÔNG
+ * vào room được: vào room là nhận tin realtime, trong khi họ chỉ được xem lại
+ * lịch sử cũ qua REST (TICKET-FR-017).
+ */
 export async function assertCanJoin(ticketId: string, user: CurrentUser): Promise<void> {
-  await loadTicketForChat(ticketId, user)
+  const { limitedUntil } = await loadTicketForChat(ticketId, user)
+  if (limitedUntil) throw ForbiddenError('Ticket đã chuyển cho Technician khác — bạn chỉ xem lại được lịch sử cũ')
 }
 
 /**
@@ -78,12 +92,14 @@ export async function assertCanJoin(ticketId: string, user: CurrentUser): Promis
  * trả theo thứ tự cũ → mới để client nối thẳng vào khung chat.
  */
 export async function listMessages(ticketId: string, user: CurrentUser, query: { page?: string | number; limit?: string | number }) {
-  await loadTicketForChat(ticketId, user)
+  const { limitedUntil } = await loadTicketForChat(ticketId, user)
+  // Technician cũ chỉ thấy tin tới lúc bị chuyển (TICKET-FR-017)
+  const filter = { ticket_id: ticketId, ...(limitedUntil ? { created_at: { $lte: limitedUntil } } : {}) }
   const { page, skip, limit } = paginate(query.page, query.limit, { defaultLimit: 50, maxLimit: 100 })
   const [records, total] = await Promise.all([
-    TicketMessage.find({ ticket_id: ticketId }).sort({ created_at: -1, _id: -1 }).skip(skip).limit(limit)
+    TicketMessage.find(filter).sort({ created_at: -1, _id: -1 }).skip(skip).limit(limit)
       .populate('sender_id', 'full_name').lean<PopulatedMessage[]>(),
-    TicketMessage.countDocuments({ ticket_id: ticketId }),
+    TicketMessage.countDocuments(filter),
   ])
   return { records: records.reverse().map(toDto), total, page, limit }
 }
@@ -100,7 +116,7 @@ export async function sendMessage(
   if (!content) throw BadRequestError('Nội dung tin nhắn không được để trống')
   if (content.length > MAX_MESSAGE_LENGTH) throw BadRequestError(`Tin nhắn tối đa ${MAX_MESSAGE_LENGTH} ký tự`)
 
-  const ticket = await loadTicketForChat(ticketId, user)
+  const { ticket } = await loadTicketForChat(ticketId, user)
   if (ticket.status === 'CLOSED') {
     throw ConflictError('Ticket đã đóng — trò chuyện chỉ còn xem lại, muốn trao đổi tiếp hãy tạo ticket mới')
   }
