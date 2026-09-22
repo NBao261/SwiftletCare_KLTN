@@ -5,6 +5,7 @@ import { Farm } from '@/models/farm.model'
 import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { getSlaHours } from '@/services/system.service'
+import { notifyAdmins } from '@/services/notification.service'
 import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -247,11 +248,32 @@ export async function getTicket(ticketId: string, user: CurrentUser): Promise<IT
   return ticket
 }
 
+/** `assigned_to` có thể đã populate (getTicket) hoặc còn là ObjectId — lấy id dạng chuỗi cho cả 2 */
+export function assigneeIdOf(ticket: Pick<ITicket, 'assigned_to'>): string | null {
+  const assignee = ticket.assigned_to as unknown as { _id?: unknown } | undefined
+  return assignee ? String(assignee._id ?? assignee) : null
+}
+
+/**
+ * Quyền xem ticket của Technician đi theo khu vực (assigned_regions), nên mọi
+ * Technician cùng vùng đều mở được ticket. Nhưng thao tác xử lý (đổi trạng
+ * thái, SAT, escalate, đổi lịch, xin gán lại) chỉ thuộc về người đang được gán
+ * — nếu không, Technician A đóng được ticket của Technician B và KPI tính sai
+ * người. Admin luôn được phép (TICKET-FR-005b).
+ */
+function assertAssignee(ticket: ITicket, user: CurrentUser): void {
+  if (user.role === 'ADMIN') return
+  if (assigneeIdOf(ticket) !== user._id) {
+    throw ForbiddenError('Chỉ Technician đang được gán ticket này mới được xử lý')
+  }
+}
+
 /** TICKET-FR-007 + TICKET-FR-010 (chặn đóng ticket lắp đặt khi SAT chưa đạt) */
 export async function updateStatus(
   ticketId: string, user: CurrentUser, newStatus: TicketStatus, note?: string,
 ): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user)
+  assertAssignee(ticket, user)
 
   if (!ALLOWED_TRANSITIONS[ticket.status].includes(newStatus)) {
     throw BadRequestError(`Không thể chuyển ticket từ ${ticket.status} sang ${newStatus}`)
@@ -268,6 +290,8 @@ export async function updateStatus(
 
   ticket.status = newStatus
   if (newStatus === 'CLOSED') ticket.closed_at = new Date()
+  // Mốc tiếp nhận chỉ ghi lần đầu — IN_PROGRESS lần 2 (quay lại từ AWAITING_FIELD_CONFIRMATION) không phải phản hồi mới
+  if (newStatus === 'IN_PROGRESS' && !ticket.responded_at) ticket.responded_at = new Date()
   if (note) ticket.notes.push({ author_id: user._id as never, content: note, created_at: new Date() })
   await ticket.save()
   return ticket
@@ -306,6 +330,8 @@ export async function updateSatChecklist(
   ticketId: string, user: CurrentUser, updates: Partial<ITicket['sat_checklist']>,
 ): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user)
+  assertAssignee(ticket, user)
+  if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng, không sửa checklist nghiệm thu được nữa')
   ticket.sat_checklist = { ...ticket.sat_checklist, ...updates }
   await ticket.save()
   return ticket
@@ -314,6 +340,9 @@ export async function updateSatChecklist(
 /** TICKET-FR-009 / SLA-NFR-002 — escalate thủ công (tự động do job xử lý) */
 export async function escalateTicket(ticketId: string, user: CurrentUser, reason?: string): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user)
+  assertAssignee(ticket, user)
+  if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
+
   ticket.is_sla_breached = true
   ticket.notes.push({
     author_id: user._id as never,
@@ -321,6 +350,13 @@ export async function escalateTicket(ticketId: string, user: CurrentUser, reason
     created_at: new Date(),
   })
   await ticket.save()
+
+  await logAction(user._id, 'TICKET_ESCALATED', 'ticket', ticketId, { reason: reason ?? null })
+  // Flow 9 bước 7: escalate nghĩa là Admin phải biết — trước đây chỉ bật cờ, không ai được báo
+  void notifyAdmins({
+    title: `Ticket ${ticket.priority} được escalate`,
+    body: `Ticket ${ticketId} (${ticket.type}) cần Administrator can thiệp${reason ? `: ${reason}` : ''}`,
+  })
   return ticket
 }
 
@@ -349,8 +385,47 @@ export async function markBreachedTickets(): Promise<number> {
       assigned_to: ticket.assigned_to ? String(ticket.assigned_to) : null,
       sla_resolve_due_at: ticket.sla_resolve_due_at,
     })
+    // Flow 9 bước 7: tự động escalate = thông báo Administrator
+    void notifyAdmins({
+      title: `Ticket ${ticket.priority} vượt hạn xử lý SLA`,
+      body: `Ticket ${String(ticket._id)} (${ticket.type}) chưa đóng dù đã quá hạn ${ticket.sla_resolve_due_at?.toISOString()}`,
+    })
   }
   return overdue.length
+}
+
+/**
+ * TICKET-FR-004b — ticket vẫn NEW (chưa ai xác nhận tiếp nhận) khi đã quá
+ * `sla_response_due_at`. Tách riêng cờ `is_sla_response_breached` vì trễ phản
+ * hồi khác trễ xử lý: ticket có thể nhận muộn nhưng vẫn xong đúng hạn.
+ */
+export async function markResponseBreachedTickets(): Promise<number> {
+  const late = await Ticket.find({
+    status: 'NEW',
+    responded_at: null,
+    is_sla_response_breached: false,
+    sla_response_due_at: { $lt: new Date() },
+  })
+
+  for (const ticket of late) {
+    ticket.is_sla_response_breached = true
+    ticket.notes.push({
+      content: `Tự động đánh dấu vượt hạn phản hồi SLA — chưa Technician nào xác nhận tiếp nhận (hạn ${ticket.sla_response_due_at?.toISOString()})`,
+      created_at: new Date(),
+    } as never)
+    await ticket.save()
+
+    await logAction(undefined, 'TICKET_SLA_RESPONSE_BREACHED', 'ticket', String(ticket._id), {
+      priority: ticket.priority,
+      assigned_to: assigneeIdOf(ticket),
+      sla_response_due_at: ticket.sla_response_due_at,
+    })
+    void notifyAdmins({
+      title: `Ticket ${ticket.priority} chưa được tiếp nhận`,
+      body: `Ticket ${String(ticket._id)} (${ticket.type}) quá hạn phản hồi mà vẫn chưa có Technician xác nhận`,
+    })
+  }
+  return late.length
 }
 
 /** TICKET-FR-011 — Farm Owner đánh giá sau khi ticket đóng */
@@ -386,6 +461,8 @@ interface TechnicianKpiRow {
   resolvedCount: number
   due: number
   dueBreached: number
+  responseMsSum: number
+  respondedCount: number
   technician?: { full_name?: string; email?: string }
 }
 
@@ -418,6 +495,9 @@ export async function getKpi() {
           resolvedCount: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
           due: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }] }, 1, 0] } },
           dueBreached: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }, '$is_sla_breached'] }, 1, 0] } },
+          // TICKET-FR-004b — thời gian từ lúc tạo tới lúc Technician xác nhận tiếp nhận
+          responseMsSum: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, { $subtract: ['$responded_at', '$created_at'] }, 0] } },
+          respondedCount: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, 1, 0] } },
         },
       },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'technician' } },
@@ -446,6 +526,7 @@ export async function getKpi() {
       closed: row.closed,
       cancelled: row.cancelled,
       avgResolveHours: row.resolvedCount ? toHours(row.resolveMsSum / row.resolvedCount) : null,
+      avgResponseHours: row.respondedCount ? toHours(row.responseMsSum / row.respondedCount) : null,
       slaComplianceRate: percent(row.due - row.dueBreached, row.due),
     })),
     resolvedTickets: resolved?.total ?? 0,

@@ -27,6 +27,13 @@ export interface ITicket extends Document {
   sla_response_due_at?: Date
   sla_resolve_due_at?: Date
   is_sla_breached: boolean
+  /**
+   * TICKET-FR-004b, Flow 9 bước 4 — lúc Technician xác nhận tiếp nhận (NEW →
+   * IN_PROGRESS lần đầu). Không có mốc này thì `sla_response_due_at` chỉ là con
+   * số trang trí, không đo được Technician có phản hồi đúng hạn hay không.
+   */
+  responded_at?: Date
+  is_sla_response_breached: boolean
   sat_checklist: {
     modbus_addresses_ok: boolean
     camera_rtsp_ok: boolean
@@ -67,6 +74,8 @@ const ticketSchema = new Schema<ITicket>(
     sla_response_due_at: { type: Date },
     sla_resolve_due_at:  { type: Date },
     is_sla_breached:     { type: Boolean, default: false },
+    responded_at:        { type: Date },
+    is_sla_response_breached: { type: Boolean, default: false },
     sat_checklist: {
       modbus_addresses_ok: { type: Boolean, default: false },
       camera_rtsp_ok:      { type: Boolean, default: false },
