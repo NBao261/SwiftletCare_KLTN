@@ -19,6 +19,12 @@ router.put ('/:id/cancel',         requireRole('FARM_OWNER','ADMIN'), param('id'
 router.post('/:id/notes',          param('id').isMongoId(), body('content').notEmpty(), validate, ticketController.addNote)
 router.put ('/:id/sat-checklist',  requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, ticketController.updateSatChecklist)
 router.post('/:id/escalate',       requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, ticketController.escalate)
+// TICKET-FR-004b — Technician không sắp xếp được đúng giờ Farm Owner chọn thì tự dời, lý do bắt buộc
+router.put ('/:id/scheduled-date',   requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
+  body('scheduled_visit_at').isISO8601(), body('reason').trim().notEmpty(), validate, ticketController.reschedule)
+// Flow 9 case 4a — Technician bị gán nhầm xin chuyển cho người khác
+router.post('/:id/reassign-request', requireRole('TECHNICIAN'), param('id').isMongoId(),
+  body('reason').trim().notEmpty(), validate, ticketController.requestReassign)
 router.post('/:id/rating',         requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('satisfaction_rating').isInt({ min: 1, max: 5 }), validate, ticketController.rate)
 // TICKET-FR-005b — Admin toàn quyền can thiệp: đổi Technician/priority/ngày hẹn/status bất kỳ lúc nào
 router.put ('/:id/admin-override', requireRole('ADMIN'),

@@ -4,8 +4,8 @@ import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
-import { getSlaHours } from '@/services/system.service'
-import { notifyAdmins } from '@/services/notification.service'
+import { getSlaHours, getTicketRouting } from '@/services/system.service'
+import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -71,12 +71,13 @@ const ALERT_TYPE_TO_TICKET_TYPE: Record<AlertType, TicketType> = {
 }
 
 /**
- * TICKET-FR-004 — Ticket Router: gán Technician phụ trách khu vực của Farm.
+ * TICKET-FR-004/005 — Ticket Router: gán Technician phụ trách khu vực của Farm.
  * Áp dụng cho MỌI loại ticket kể cả INSTALLATION (SRS v1.12.0 bỏ bước Admin
- * điều phối tay). Trả về null nếu không có ai phù hợp → TICKET-FR-005 để Admin
- * can thiệp.
+ * điều phối tay). Chọn người ít việc nhất, bỏ qua người đã quá tải (≥ ngưỡng
+ * Admin cấu hình) và người trong `exclude` (Technician vừa xin gán lại — Flow 9
+ * case 4a). Trả về null nếu không còn ai → ticket vào hàng đợi chung, Admin can thiệp.
  */
-async function routeToTechnician(farmId: string): Promise<string | null> {
+async function routeToTechnician(farmId: string, opts: { exclude?: string[] } = {}): Promise<string | null> {
   const farm = await Farm.findById(farmId)
   if (!farm?.region) return null
 
@@ -84,18 +85,27 @@ async function routeToTechnician(farmId: string): Promise<string | null> {
     role: 'TECHNICIAN',
     is_active: true,
     assigned_regions: farm.region,
+    ...(opts.exclude?.length ? { _id: { $nin: opts.exclude } } : {}),
   }).lean()
   if (candidates.length === 0) return null
 
-  // Chọn người đang ít việc nhất để tránh dồn tải (TICKET-FR-005)
+  const { max_open_tickets_per_technician: maxOpen } = await getTicketRouting()
   const openCounts = await Promise.all(
     candidates.map(async c => ({
       id: String(c._id),
       open: await Ticket.countDocuments({ assigned_to: c._id, status: { $ne: 'CLOSED' } }),
     })),
   )
-  openCounts.sort((a, b) => a.open - b.open)
-  return openCounts[0].id
+  const available = openCounts.filter(c => c.open < maxOpen).sort((a, b) => a.open - b.open)
+  return available[0]?.id ?? null
+}
+
+/** TICKET-FR-005 — không ai nhận được thì Admin phải biết, không để ticket nằm im trong hàng đợi */
+function notifyUnassigned(ticket: Pick<ITicket, '_id' | 'type' | 'priority'>, why: string): void {
+  void notifyAdmins({
+    title: `Ticket ${ticket.priority} chưa có Technician phụ trách`,
+    body: `Ticket ${String(ticket._id)} (${ticket.type}) đang ở hàng đợi chung: ${why}`,
+  })
 }
 
 export interface CreateTicketInput {
@@ -142,6 +152,7 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
       : [],
   })
 
+  if (!assignedTo) notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
   return ticket
 }
 
@@ -167,25 +178,17 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
   )
   const toProcess = staleAlerts.filter(a => !alreadyTicketed.has(String(a._id)))
 
-  // Cache routeToTechnician theo farmId trong 1 lượt chạy job — nhiều alert
-  // cùng farm (thường gặp) chỉ tính tải Technician 1 lần, không phải mỗi alert.
-  const technicianCache = new Map<string, string | null>()
-  async function routeToTechnicianCached(farmId: string): Promise<string | null> {
-    if (!technicianCache.has(farmId)) {
-      technicianCache.set(farmId, await routeToTechnician(farmId))
-    }
-    return technicianCache.get(farmId) ?? null
-  }
-
   let created = 0
   for (const alert of toProcess) {
     try {
       const ticketType = ALERT_TYPE_TO_TICKET_TYPE[alert.type as AlertType] ?? 'OTHER'
       const priority = DEFAULT_PRIORITY[ticketType]
       const sla = await slaDueDates(priority, new Date())
-      const assignedTo = await routeToTechnicianCached(String(alert.farm_id))
+      // Không cache theo farm: mỗi ticket vừa tạo làm tăng tải của người được gán,
+      // cache sẽ dồn cả loạt alert của 1 farm cho cùng 1 người, vượt ngưỡng quá tải.
+      const assignedTo = await routeToTechnician(String(alert.farm_id))
 
-      await Ticket.create({
+      const ticket = await Ticket.create({
         farm_id:  alert.farm_id,
         zone_id:  alert.zone_id,
         alert_id: alert._id,
@@ -199,6 +202,7 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
           created_at: new Date(),
         }],
       })
+      if (!assignedTo) notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
       created++
     } catch (err) {
       // 1 alert lỗi không được chặn các alert khác trong cùng batch — trước
@@ -213,6 +217,8 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
 
 export interface ListTicketsQuery {
   farmId?: string; status?: string; priority?: string; assignedToMe?: boolean
+  /** TICKET-FR-005 — hàng đợi chung: ticket chưa ai nhận */
+  unassigned?: boolean
   page?: number; limit?: number
 }
 
@@ -230,6 +236,7 @@ export async function listTickets(user: CurrentUser, query: ListTicketsQuery) {
   if (query.status) filter.status = query.status
   if (query.priority) filter.priority = query.priority
   if (query.assignedToMe) filter.assigned_to = user._id
+  else if (query.unassigned) filter.assigned_to = null
 
   const { page, skip, limit } = paginate(query.page, query.limit)
 
@@ -295,6 +302,83 @@ export async function updateStatus(
   if (note) ticket.notes.push({ author_id: user._id as never, content: note, created_at: new Date() })
   await ticket.save()
   return ticket
+}
+
+/**
+ * TICKET-FR-004b — ngày hẹn do Farm Owner chọn lúc tạo ticket; Technician không
+ * sắp xếp được thì tự dời, nhưng bắt buộc nêu lý do và Farm Owner phải được báo
+ * (không có bước thương lượng lịch qua lại).
+ */
+export async function rescheduleVisit(
+  ticketId: string, user: CurrentUser, scheduledVisitAt: string, reason: string,
+): Promise<ITicket> {
+  const ticket = await getTicket(ticketId, user)
+  assertAssignee(ticket, user)
+  if (!INSTALLATION_TYPES.includes(ticket.type)) {
+    throw BadRequestError('Chỉ ticket lắp đặt/bảo trì mới có lịch hẹn')
+  }
+  if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
+
+  const next = new Date(scheduledVisitAt)
+  if (Number.isNaN(next.getTime()) || next.getTime() <= Date.now()) {
+    throw BadRequestError('Ngày hẹn mới phải ở tương lai')
+  }
+
+  const before = ticket.scheduled_visit_at ?? null
+  ticket.scheduled_visit_at = next
+  ticket.notes.push({
+    author_id: user._id as never,
+    content: `Đổi lịch hẹn ${before ? `từ ${before.toISOString()} ` : ''}sang ${next.toISOString()}: ${reason}`,
+    created_at: new Date(),
+  })
+  await ticket.save()
+
+  await logAction(user._id, 'TICKET_RESCHEDULED', 'ticket', ticketId, { before, after: next, reason })
+  const farm = await Farm.findById(ticket.farm_id).select('owner_id').lean()
+  const ownerId = ticket.created_by ?? farm?.owner_id
+  if (ownerId) {
+    void notifyUser(String(ownerId), {
+      title: 'Lịch hẹn kỹ thuật đã thay đổi',
+      body: `Technician dời lịch hẹn sang ${next.toLocaleString('vi-VN')}. Lý do: ${reason}`,
+    })
+  }
+  return ticket
+}
+
+/**
+ * Flow 9 case 4a — Technician bị gán nhầm (ngoài khu vực thật, đang nghỉ...)
+ * xin gán lại kèm lý do. Router thử người khác trong vùng (loại người xin);
+ * không còn ai thì ticket vào hàng đợi chung và Admin được báo (TICKET-FR-005).
+ * Ticket về NEW để người mới phải xác nhận tiếp nhận lại từ đầu.
+ */
+export async function requestReassign(ticketId: string, user: CurrentUser, reason: string): Promise<ITicket> {
+  const ticket = await getTicket(ticketId, user)
+  assertAssignee(ticket, user)
+  if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
+
+  const from = assigneeIdOf(ticket)
+  const to = await routeToTechnician(String(ticket.farm_id), { exclude: from ? [from] : [] })
+
+  ticket.assigned_to = (to ?? undefined) as never
+  ticket.status = 'NEW'
+  ticket.responded_at = undefined
+  ticket.notes.push({
+    author_id: user._id as never,
+    content: `Yêu cầu gán lại: ${reason}. ${to ? 'Đã chuyển cho Technician khác.' : 'Không còn Technician phù hợp — chờ Administrator điều phối.'}`,
+    created_at: new Date(),
+  })
+  await ticket.save()
+
+  await logAction(user._id, 'TICKET_REASSIGN_REQUESTED', 'ticket', ticketId, { from, to, reason })
+  if (to) {
+    void notifyUser(to, {
+      title: `Bạn được gán ticket ${ticket.priority}`,
+      body: `Ticket ${ticketId} (${ticket.type}) được chuyển từ Technician khác. Lý do: ${reason}`,
+    })
+  } else {
+    notifyUnassigned(ticket, `Technician phụ trách xin gán lại (${reason}) và không còn ai rảnh trong vùng`)
+  }
+  return ticket.populate('assigned_to', 'full_name email')
 }
 
 /**

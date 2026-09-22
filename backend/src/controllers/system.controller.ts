@@ -38,6 +38,16 @@ export const updateSlaHours = asyncHandler(async (req: Request, res: Response) =
   res.json({ success: true, data: await systemService.updateSlaHours(req.user._id, req.body) })
 })
 
+/** GET /system/settings/ticket-routing – TICKET-FR-005 */
+export const getTicketRouting = asyncHandler(async (_req: Request, res: Response) => {
+  res.json({ success: true, data: await systemService.getTicketRouting() })
+})
+
+/** PUT /system/settings/ticket-routing – TICKET-FR-005 */
+export const updateTicketRouting = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await systemService.updateTicketRouting(req.user._id, req.body) })
+})
+
 /** GET /system/health-overview – SYSTEM-FR-003 */
 export const getHealthOverview = asyncHandler(async (_req: Request, res: Response) => {
   res.json({ success: true, data: await systemService.getHealthOverview() })
