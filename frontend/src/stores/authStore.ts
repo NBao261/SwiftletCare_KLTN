@@ -1,6 +1,6 @@
 ﻿import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { queryClient } from '@/services/queryClient'
+import { queryClient } from '@/lib/queryClient'
 import type { User } from '@/types'
 
 interface AuthState {
