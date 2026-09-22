@@ -1,4 +1,4 @@
-import api from './client'
+import api from '@/lib/axios'
 import type { ApiResponse, Ticket, TicketType, TicketStatus, TicketPriority, TicketSatChecklist } from '@/types'
 
 export interface CreateTicketInput {

@@ -1,4 +1,4 @@
-import api from './client'
+import api from '@/lib/axios'
 import type { ApiResponse, AuditLogEntry, SystemDefaultThresholds, SystemHealthSummary } from '@/types'
 
 /** GET /system/audit-logs — mọi filter đều tuỳ chọn; sort cố định created_at desc. */

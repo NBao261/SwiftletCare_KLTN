@@ -1,4 +1,4 @@
-import api from './client'
+import api from '@/lib/axios'
 import type { ApiResponse, HarvestBatch, NestType } from '@/types'
 
 export interface CreateHarvestInput {

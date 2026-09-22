@@ -1,4 +1,4 @@
-import api from './client'
+import api from '@/lib/axios'
 import type { ApiResponse, NestListing, ContactInquiry, ListingStatus } from '@/types'
 
 export interface CreateListingInput {

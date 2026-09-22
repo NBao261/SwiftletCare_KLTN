@@ -1,4 +1,4 @@
-import api from './client'
+import api from '@/lib/axios'
 import type { ApiResponse, SensorNode, CameraNode, RelayName, SystemNodeStatus } from '@/types'
 
 export const deviceApi = {

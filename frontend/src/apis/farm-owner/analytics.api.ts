@@ -1,4 +1,4 @@
-import api from './client'
+import api from '@/lib/axios'
 import type { ApiResponse, Thresholds } from '@/types'
 
 export type AnalyticsRange = '1h' | '6h' | '24h' | '7d' | '30d'

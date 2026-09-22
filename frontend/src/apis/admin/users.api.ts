@@ -1,4 +1,4 @@
-import api from './client'
+import api from '@/lib/axios'
 import type { ApiResponse, User, Role, SalesAssignmentRequest } from '@/types'
 
 /** GET /admin/users — backend chỉ lọc theo role + is_active, sort cố định created_at desc. */
