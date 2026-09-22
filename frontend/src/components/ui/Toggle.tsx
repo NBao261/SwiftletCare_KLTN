@@ -1,4 +1,4 @@
-import { cn } from '@/utils/cn'
+import { cn } from '@/lib/cn'
 
 /** Toggle switch — mục 2.2.6: track ON=charcoal, OFF=warmGray/30%, thumb trắng */
 interface ToggleProps {

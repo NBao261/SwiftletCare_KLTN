@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useZoneStore } from '@/store/zoneStore'
-import { useFarms, useHouses, useZones } from '@/hooks/useFarms'
+import { useZoneStore } from '@/stores/zoneStore'
+import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
 import { IconCheck, IconChevronDown, IconChevronRight } from '@/components/ui/icons'
-import { cn } from '@/utils/cn'
+import { cn } from '@/lib/cn'
 
 /**
  * Bộ chọn Zone trên thanh trên cùng.
