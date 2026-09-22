@@ -61,12 +61,13 @@ const INITIAL_STATE: OnboardingState = {
   location:   {},
   deviceType: 'SENSOR_NODE',
   deviceId:   '',
-  secretKey:  '',
+  // secretKey bị bỏ — xem TODO [BE-GAP] trong onboardingTypes.ts và Step2Validate.tsx
   deviceDbId: '',
   ticketId:   undefined,
   ssid:       '',
   wifiPass:   '',
 }
+
 
 export default function OnboardingPage() {
   const navigate = useNavigate()

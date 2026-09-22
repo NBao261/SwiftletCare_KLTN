@@ -1,10 +1,14 @@
-// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID + Secret Key) — B9 + C1
+// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID) — B9 + C1
+// Fix: Bỏ secretKey input — endpoint registerSensorNode chỉ nhận { device_id, zone_id },
+// không xác thực secret_key phía backend. Giữ field trong form tạo cảm giác bảo mật ảo.
+// TODO [BE-GAP]: Thêm lại ô secretKey khi backend thêm secret_key vào registerSensorNode payload.
+// Fix: dùng HTTP status code để phân loại lỗi, không string-match message
 import { useState } from 'react'
 import { deviceApi } from '@/services/api'
 import { Button } from '@/components/ui'
 import type { OnboardingState, DeviceType } from './onboardingTypes'
 
-type ValidateError  = 'INVALID_SECRET_KEY' | 'DEVICE_ALREADY_REGISTERED' | 'UNKNOWN' | null
+type ValidateError  = 'DEVICE_ALREADY_REGISTERED' | 'INVALID_DEVICE' | 'UNKNOWN' | null
 type ValidateStatus = 'idle' | 'loading' | 'success' | 'error'
 
 interface Props {
@@ -18,10 +22,9 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
   const [status, setStatus] = useState<ValidateStatus>('idle')
   const [error, setError] = useState<ValidateError>(null)
   const [validatedModel, setValidatedModel] = useState('')
-  const [showSecret, setShowSecret] = useState(false)
 
   async function handleValidate() {
-    if (!data.deviceId.trim() || !data.secretKey.trim()) return
+    if (!data.deviceId.trim()) return
     setStatus('loading')
     setError(null)
     try {
@@ -35,13 +38,13 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
     } catch (err: unknown) {
       // FIX: dùng HTTP status code để phân loại lỗi, không string-match message
       // 409 Conflict = Device ID đã được đăng ký trên Farm khác
-      // 400/401 = Device ID hoặc Secret Key không hợp lệ
+      // 400/404 = Device ID không tồn tại / không hợp lệ
       // Các lỗi khác (500, network) → UNKNOWN để không mislead user
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (status === 409) {
+      const httpStatus = (err as { response?: { status?: number } })?.response?.status
+      if (httpStatus === 409) {
         setError('DEVICE_ALREADY_REGISTERED')
-      } else if (status === 400 || status === 401) {
-        setError('INVALID_SECRET_KEY')
+      } else if (httpStatus === 400 || httpStatus === 404) {
+        setError('INVALID_DEVICE')
       } else {
         setError('UNKNOWN')
       }
@@ -53,7 +56,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-lg font-bold text-charcoal">Bước 2 — Xác thực thiết bị</h2>
-        <p className="mt-1 text-sm text-warmGray">Nhập thông tin trên nhãn dán mặt sau thiết bị ESP32.</p>
+        <p className="mt-1 text-sm text-warmGray">Nhập Device ID trên nhãn dán mặt sau thiết bị ESP32.</p>
       </div>
 
       {/* Device type selector */}
@@ -97,35 +100,10 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         )}
       </div>
 
-      {/* Secret Key */}
-      <div className="flex flex-col gap-1.5">
-        <label className="label-caption">Mã kích hoạt (Secret Key)</label>
-        <div className="flex gap-2">
-          <input
-            type={showSecret ? 'text' : 'password'}
-            value={data.secretKey}
-            onChange={e => { patch({ secretKey: e.target.value }); setStatus('idle') }}
-            placeholder="••••••••••••"
-            className={`input flex-1 font-mono ${
-              error === 'INVALID_SECRET_KEY' ? 'border-2 border-alertRed focus:border-alertRed' : ''
-            }`}
-          />
-          <button
-            onClick={() => setShowSecret(s => !s)}
-            className="rounded-xl border border-graphite/20 px-3 text-warmGray hover:bg-graphite/10"
-          >
-            {showSecret ? '🙈' : '👁'}
-          </button>
-        </div>
-        {error === 'INVALID_SECRET_KEY' && (
-          <p className="text-sm text-alertRed">❌ Mã kích hoạt không đúng. Kiểm tra lại nhãn thiết bị.</p>
-        )}
-      </div>
-
       <Button
         onClick={handleValidate}
         loading={status === 'loading'}
-        disabled={!data.deviceId.trim() || !data.secretKey.trim() || status === 'loading'}
+        disabled={!data.deviceId.trim() || status === 'loading'}
         className="w-full justify-center"
       >
         Xác thực thiết bị
@@ -154,10 +132,10 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         </div>
       )}
 
-      {error === 'INVALID_SECRET_KEY' && (
+      {error === 'INVALID_DEVICE' && (
         <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
-          <p className="font-semibold text-alertRed">✗ Xác thực thất bại</p>
-          <p className="mt-1 text-sm text-alertRed/80">Mã kích hoạt không khớp với Device ID này.</p>
+          <p className="font-semibold text-alertRed">✗ Device ID không hợp lệ</p>
+          <p className="mt-1 text-sm text-alertRed/80">Kiểm tra lại Device ID trên nhãn dán mặt sau thiết bị.</p>
         </div>
       )}
 

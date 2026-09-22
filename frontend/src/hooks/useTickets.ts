@@ -18,6 +18,19 @@ export function useTicketsList(
   )
 }
 
+/**
+ * KPI tổng hợp toàn bộ ticket của role hiện tại — không bị giới hạn bởi
+ * client-side `limit`. Dùng cho TicketStatBar thay cho query `limit:200`.
+ */
+export function useTicketsKpi() {
+  return useQuery({
+    queryKey: ['tickets', 'kpi'],
+    queryFn: () => ticketApi.kpi().then(r => r.data.data),
+    staleTime: 30_000,   // cache 30s — stat bar không cần real-time tuyệt đối
+  })
+}
+
+
 export function useTicket(id: string | undefined) {
   return useQuery({
     queryKey: ['tickets', 'detail', id],

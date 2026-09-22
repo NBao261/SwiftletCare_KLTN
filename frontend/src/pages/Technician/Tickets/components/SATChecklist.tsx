@@ -7,13 +7,8 @@ import { Button, Card } from '@/components/ui'
 import { useToastStore } from '@/store/toastStore'
 import { getApiErrorMessage } from '@/utils/helpers'
 import type { TicketSatChecklist } from '@/types'
-
-const SAT_ITEMS: { key: keyof TicketSatChecklist; label: string; subLabel: string }[] = [
-  { key: 'modbus_addresses_ok', label: 'Modbus RS485',    subLabel: '5 địa chỉ phản hồi OK' },
-  { key: 'camera_rtsp_ok',      label: 'Camera RTSP',     subLabel: 'Stream ổn định ≥ 30 giây' },
-  { key: 'lte_connection_ok',   label: 'Kết nối 4G/LTE',  subLabel: 'MQTT broker OK, latency < 200ms' },
-  { key: 'relay_test_ok',       label: 'Relay đóng/ngắt', subLabel: 'Tất cả IN1–IN4 đáp ứng lệnh' },
-]
+import { SAT_ITEMS } from './ticketHelpers'
+// SAT_ITEMS được xuất từ ticketHelpers — nguồn sự thật duy nhất, không khai báo trùng với Step6SAT
 
 interface Props {
   ticketId: string

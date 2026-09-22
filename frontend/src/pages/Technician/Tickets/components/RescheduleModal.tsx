@@ -1,13 +1,11 @@
 // RescheduleModal.tsx — B3: Sửa ngày hẹn khảo sát
 // Fix: Promise.all → sequential (addNote CHỈ gọi sau khi updateScheduledDate thành công)
 // Fix: bg-warmGray/8 → bg-warmGray/[0.08] (Tailwind v3.4 không có /8 trong opacity scale)
-// TODO [BE-GAP]: PUT /tickets/:id/scheduled-date chưa có ở backend
+// TODO [BE-GAP]: PUT /tickets/:id/scheduled-date chưa có ở backend (grep tickets.route.ts: không có route này).
+// Fix: disable nút submit + banner giải thích để Technician không điền form rồi nhận lỗi 404.
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ticketApi } from '@/services/api/tickets'
 import { Button, Modal } from '@/components/ui'
-import { useToastStore } from '@/store/toastStore'
-import { formatDate, getApiErrorMessage } from '@/utils/helpers'
+import { formatDate } from '@/utils/helpers'
 import type { Ticket } from '@/types'
 
 interface Props {
@@ -16,8 +14,6 @@ interface Props {
 }
 
 export function RescheduleModal({ ticket, onClose }: Props) {
-  const push = useToastStore(s => s.push)
-  const queryClient = useQueryClient()
   const [newDate, setNewDate] = useState('')
 
   const today = new Date().toISOString().slice(0, 16)
@@ -28,35 +24,33 @@ export function RescheduleModal({ ticket, onClose }: Props) {
       } → ${formatDate(new Date(newDate).toISOString())}`
     : ''
 
-  const mut = useMutation({
-    mutationFn: async () => {
-      // Sequential: đổi ngày trước, chỉ ghi note nếu đổi ngày thành công
-      // Tránh trường hợp note ghi "đổi lịch A→B" nhưng scheduled_visit_at không đổi
-      await ticketApi.updateScheduledDate(ticket._id, newDate)
-      await ticketApi.addNote(ticket._id, autoNote)
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      push('Đã cập nhật ngày hẹn thành công')
-      onClose()
-    },
-    onError: (err) => push(getApiErrorMessage(err, 'Đổi lịch thất bại'), 'error'),
-  })
-
   return (
     <Modal open onClose={onClose} title="Sửa ngày hẹn khảo sát">
       <div className="flex flex-col gap-4">
+        {/* TODO [BE-GAP]: Banner thay thế nút submit — xoá khi có PUT /tickets/:id/scheduled-date */}
+        <div className="flex items-start gap-3 rounded-xl border border-climateOrange/40 bg-climateOrange/[0.08] px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-climateOrange" aria-hidden="true">🔧</span>
+          <div>
+            <p className="text-sm font-semibold text-climateOrange">Tính năng đang phát triển</p>
+            <p className="mt-0.5 text-xs text-climateOrange/80">
+              Đổi ngày hẹn trực tiếp chưa khả dụng. Để thay đổi lịch khảo sát, liên hệ Admin
+              — Admin có thể dùng chức năng <strong>Admin Override</strong> để cập nhật{' '}
+              <code className="rounded bg-climateOrange/10 px-1 font-mono text-[11px]">scheduled_visit_at</code>.
+            </p>
+          </div>
+        </div>
+
         {ticket.scheduled_visit_at && (
           <div className="rounded-xl bg-warmGray/[0.08] px-4 py-3">
             <p className="text-sm text-warmGray">Ngày hẹn hiện tại:</p>
-            <p className="font-semibold text-charcoal line-through opacity-50">
+            <p className="font-semibold text-charcoal">
               {formatDate(ticket.scheduled_visit_at)}
             </p>
           </div>
         )}
 
         <div className="flex flex-col gap-1.5">
-          <label className="label-caption">Ngày hẹn mới</label>
+          <label className="label-caption">Ngày hẹn mới (xem trước)</label>
           <input
             type="datetime-local"
             min={today}
@@ -68,18 +62,17 @@ export function RescheduleModal({ ticket, onClose }: Props) {
 
         {autoNote && (
           <div className="rounded-xl bg-limeMist/10 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-warmGray">Ghi chú tự động</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-warmGray">Ghi chú sẽ được tạo</p>
             <p className="mt-1 text-sm text-charcoal">{autoNote}</p>
           </div>
         )}
 
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Huỷ</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">Đóng</Button>
           <Button
-            onClick={() => mut.mutate()}
-            loading={mut.isPending}
-            disabled={!newDate}
-            className="flex-1"
+            disabled
+            title="Tính năng đổi lịch đang phát triển — liên hệ Admin"
+            className="flex-1 cursor-not-allowed opacity-40"
           >
             Xác nhận đổi lịch
           </Button>

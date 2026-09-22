@@ -1,4 +1,7 @@
 // Step6SAT.tsx — Bước 6: Nghiệm thu SAT Checklist + hoàn tất (B7)
+// Fix toast: nếu không có ticketId (vào từ nav, không từ ticket) thì
+// không thông báo sai "đã báo Farm Owner" khi chưa có API nào được gọi.
+// Fix SAT_ITEMS: import từ ticketHelpers thay vì khai báo trùng.
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { ticketApi } from '@/services/api/tickets'
@@ -7,18 +10,8 @@ import { useToastStore } from '@/store/toastStore'
 import { getApiErrorMessage } from '@/utils/helpers'
 import type { TicketSatChecklist } from '@/types'
 import type { OnboardingState } from './onboardingTypes'
-
-const SAT_ITEMS: {
-  key: keyof TicketSatChecklist
-  label: string
-  subLabel: string
-  cameraOnly?: boolean
-}[] = [
-  { key: 'modbus_addresses_ok', label: 'Modbus RS485',    subLabel: '5 địa chỉ phản hồi đúng' },
-  { key: 'camera_rtsp_ok',      label: 'Camera RTSP',     subLabel: 'Stream ổn định ≥ 30s', cameraOnly: true },
-  { key: 'lte_connection_ok',   label: 'Kết nối 4G/LTE',  subLabel: 'MQTT OK, latency < 200ms' },
-  { key: 'relay_test_ok',       label: 'Relay đóng/ngắt', subLabel: 'IN1–IN4 đáp ứng lệnh' },
-]
+import { SAT_ITEMS } from '../../Tickets/components/ticketHelpers'
+// SAT_ITEMS nguồn sự thật từ ticketHelpers — cả SATChecklist và Step6SAT dùng chung
 
 interface Props {
   data: OnboardingState
@@ -51,7 +44,12 @@ export function Step6SAT({ data, onDone }: Props) {
       await ticketApi.updateSatChecklist(data.ticketId, sat)
     },
     onSuccess: () => {
-      push('🎉 Lắp đặt hoàn tất! Farm Owner đã được thông báo.')
+      // Fix: không nói "Đã báo Farm Owner" nếu không có ticketId — Farm Owner chưa được thông báo gì
+      if (data.ticketId) {
+        push('🎉 Lắp đặt hoàn tất! Farm Owner đã được thông báo.')
+      } else {
+        push('Onboarding hoàn tất. Vào ticket INSTALLATION để cập nhật SAT checklist.')
+      }
       onDone(data.ticketId || undefined)
     },
     onError: (err) => push(getApiErrorMessage(err, 'Hoàn thành thất bại'), 'error'),

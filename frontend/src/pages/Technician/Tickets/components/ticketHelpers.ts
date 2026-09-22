@@ -55,3 +55,24 @@ export function getSlaUrgency(ticket: Ticket): SlaUrgency {
   if (diff < 7_200_000)   return 'warning'   // < 2 giờ
   return 'ok'
 }
+
+// ── SAT Checklist ───────────────────────────────────────────────────────────────────────
+// Nguồn sự thật duy nhất cho cả SATChecklist (Ticket detail) và Step6SAT (Onboarding
+// wizard). Trước đây khai báo trùng ở cả 2 file; đưa về đây để business thay
+// đổi checklist chỉ cần sửa 1 chỗ.
+import type { TicketSatChecklist } from '@/types'
+
+export interface SatItem {
+  key: keyof TicketSatChecklist
+  label: string
+  subLabel: string
+  /** Chỉ hiển thị khi thiết bị là CAMERA_NODE */
+  cameraOnly?: boolean
+}
+
+export const SAT_ITEMS: SatItem[] = [
+  { key: 'modbus_addresses_ok', label: 'Modbus RS485',    subLabel: '5 địa chỉ phản hồi OK' },
+  { key: 'camera_rtsp_ok',      label: 'Camera RTSP',     subLabel: 'Stream ổn định ≥ 30 giây', cameraOnly: true },
+  { key: 'lte_connection_ok',   label: 'Kết nối 4G/LTE',  subLabel: 'MQTT broker OK, latency < 200ms' },
+  { key: 'relay_test_ok',       label: 'Relay đóng/ngắt', subLabel: 'Tất cả IN1–IN4 đáp ứng lệnh' },
+]

@@ -1,6 +1,8 @@
 // TechnicianTicketsPage — SCR-TC02 / F-TC-02 / Stitch A1 + C2
 // Landing page: tab pills, stat bar, toolbar (search + sort + filter) + table list + pagination
 // Logic nặng được tách sang ./components/
+// Refactor: server-side pagination (page + limit:PAGE_SIZE) thay vì limit:100 client-side.
+// TicketStatBar tự fetch KPI endpoint — không cần truyền tickets[] prop.
 import { useState, useMemo } from 'react'
 import { useTicketsList } from '@/hooks/useTickets'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
@@ -262,20 +264,17 @@ export default function TechnicianTicketsPage() {
   const [statusModal,  setStatusModal]  = useState<Ticket | null>(null)
   const [reassignModal, setReassignModal] = useState<Ticket | null>(null)
 
-  // Tabbed query — limit 100 để đủ data cho client-side filter + paginate
-  const { records, total, isLoading } = useTicketsList({ ...TAB_QUERY[activeTab], limit: 100 })
+  // Server-side pagination — truyền page + limit xuống GET /tickets, không fetch bulk rồi slice client-side.
+  // Filter (search, status) + sort vẫn chạy client-side trên trang hiện tại (12 records) — hành vi pagination chuẩn.
+  // Tab 'overdue' filter isSlaBreached client-side trên trang hiện tại.
+  // TODO [BE-GAP]: Khi backend hỗ trợ ?slaBreached=true, truyền param để filter server-side chính xác hơn.
+  const { records, total, isLoading } = useTicketsList({
+    ...TAB_QUERY[activeTab],
+    page,
+    limit: PAGE_SIZE,
+  })
 
-  // Stats query
-  const { records: statRecords } = useTicketsList(
-    { assignedToMe: true, limit: 200 },
-    { enabled: activeTab !== 'mine', staleTime: 60_000 },
-  )
-  const statData = useMemo(
-    () => activeTab === 'mine' ? records : statRecords,
-    [activeTab, records, statRecords],
-  )
-
-  // Pipeline: overdue → search → status filter → sort
+  // Pipeline: overdue → search → status filter → sort (trên page hiện tại)
   const filteredRecords = useMemo(() => {
     let list = activeTab === 'overdue' ? records.filter(isSlaBreached) : records
     if (search.trim()) {
@@ -290,10 +289,10 @@ export default function TechnicianTicketsPage() {
     return sortTickets(list, sortKey, sortDir)
   }, [records, activeTab, search, filterStatus, sortKey, sortDir])
 
-  // Paginate client-side
-  const totalPages     = Math.max(1, Math.ceil(filteredRecords.length / PAGE_SIZE))
+  // Pagination từ server total
+  const totalPages     = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const safePage       = Math.min(page, totalPages)
-  const displayRecords = filteredRecords.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const displayRecords = filteredRecords   // records đã là PAGE_SIZE bản ghi từ server
 
   // Helper: reset về trang 1 khi filter/sort/tab thay đổi
   function resetPage() { setPage(1) }
@@ -324,8 +323,8 @@ export default function TechnicianTicketsPage() {
         </span>
       </div>
 
-      {/* Stat bar */}
-      <TicketStatBar tickets={statData} />
+      {/* Stat bar — tự fetch KPI endpoint, không nhận prop */}
+      <TicketStatBar />
 
       {/* Tab pills */}
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -423,17 +422,7 @@ export default function TechnicianTicketsPage() {
         )}
       </div>
 
-      {/* M3: Cảnh báo khi total > records (backend cắt ở limit:100, ticket cũ bị mất) */}
-      {!isLoading && total > records.length && (
-        <div className="flex items-start gap-3 rounded-xl border border-climateOrange/30 bg-climateOrange/[0.08] px-4 py-3">
-          <span className="shrink-0 text-climateOrange">⚠️</span>
-          <p className="text-sm text-climateOrange">
-            Chỉ tải được <strong>{records.length}</strong> / <strong>{total}</strong> ticket.
-            Các ticket cũ hơn có thể bị ẩn.{' '}
-            <span className="font-medium">Dùng bộ lọc Trạng thái hoặc tìm kiếm để tìm ticket cụ thể.</span>
-          </p>
-        </div>
-      )}
+      {/* Không cần banner cảnh báo nữa — server pagination trả đúng page, không bao giờ mất ticket */}
 
       {/* Loading */}
       {isLoading && <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />}
@@ -507,11 +496,11 @@ export default function TechnicianTicketsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* Pagination — totalItems từ server */}
           <PaginationBar
             page={safePage}
             totalPages={totalPages}
-            totalItems={filteredRecords.length}
+            totalItems={total}
             pageSize={PAGE_SIZE}
             onPage={setPage}
           />
@@ -530,13 +519,13 @@ export default function TechnicianTicketsPage() {
             />
           ))}
 
-          {/* Pagination dưới card view */}
+          {/* Pagination dưới card view — totalItems từ server */}
           {totalPages > 1 && (
             <div className="overflow-hidden rounded-2xl border border-graphite/15 bg-white shadow-sm">
               <PaginationBar
                 page={safePage}
                 totalPages={totalPages}
-                totalItems={filteredRecords.length}
+                totalItems={total}
                 pageSize={PAGE_SIZE}
                 onPage={setPage}
               />

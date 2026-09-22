@@ -1,11 +1,7 @@
 // TicketStatBar.tsx — 3 stat cards hiển thị tổng quan tickets của Technician
-// Visual Elevation: icon, accent ring, trend arrow, hover scale
-import type { Ticket } from '@/types'
-import { isSlaBreached } from './ticketHelpers'
-
-interface Props {
-  tickets: Ticket[]
-}
+// Refactor: dùng useTicketsKpi() thay vì nhận tickets[] prop với limit:200
+// Lý do: KPI endpoint trả aggregates toàn bộ — không bị giới hạn client-side limit
+import { useTicketsKpi } from '@/hooks/useTickets'
 
 interface StatCardProps {
   label: string
@@ -13,9 +9,10 @@ interface StatCardProps {
   icon: string
   accent?: 'red' | 'orange' | 'default'
   total?: number
+  loading?: boolean
 }
 
-function StatCard({ label, value, icon, accent = 'default', total }: StatCardProps) {
+function StatCard({ label, value, icon, accent = 'default', total, loading }: StatCardProps) {
   const ringClass =
     accent === 'red'    && value > 0 ? 'ring-2 ring-alertRed/25' :
     accent === 'orange' && value > 0 ? 'ring-2 ring-climateOrange/25' :
@@ -42,10 +39,14 @@ function StatCard({ label, value, icon, accent = 'default', total }: StatCardPro
       <div className="flex flex-col gap-0.5">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-warmGray">{label}</span>
         <div className="flex items-baseline gap-2">
-          <span className={`text-2xl font-bold tabular-nums ${valueColor} ${accent === 'red' && value > 0 ? 'animate-pulse-sla' : ''}`}>
-            {value}
-          </span>
-          {total !== undefined && total > 0 && (
+          {loading ? (
+            <span className="h-7 w-8 animate-pulse rounded bg-graphite/10" />
+          ) : (
+            <span className={`text-2xl font-bold tabular-nums ${valueColor} ${accent === 'red' && value > 0 ? 'animate-pulse-sla' : ''}`}>
+              {value}
+            </span>
+          )}
+          {!loading && total !== undefined && total > 0 && (
             <span className="text-xs text-warmGray">/ {total}</span>
           )}
         </div>
@@ -54,16 +55,30 @@ function StatCard({ label, value, icon, accent = 'default', total }: StatCardPro
   )
 }
 
-export function TicketStatBar({ tickets }: Props) {
-  const statsOpen     = tickets.filter(t => t.status !== 'CLOSED').length
-  const statsBreached = tickets.filter(isSlaBreached).length
-  const statsAwaiting = tickets.filter(t => t.status === 'AWAITING_FIELD_CONFIRMATION').length
+/**
+ * Stat bar dùng KPI endpoint — không bị giới hạn bởi client-side pagination.
+ * API: GET /tickets/kpi → { byStatus: [{_id, count}], slaComplianceRate, ... }
+ */
+export function TicketStatBar() {
+  const { data: kpi, isLoading } = useTicketsKpi()
+
+  // Tính từ byStatus array
+  const countByStatus = (status: string) =>
+    kpi?.byStatus.find(s => s._id === status)?.count ?? 0
+
+  const total       = kpi?.byStatus.reduce((sum, s) => sum + s.count, 0) ?? 0
+  const closed      = countByStatus('CLOSED')
+  const open        = total - closed
+  // SLA compliance rate → suy ra số ticket vi phạm từ tỷ lệ và tổng
+  const slaRate     = kpi?.slaComplianceRate ?? null
+  const breached    = slaRate !== null ? Math.round(total * (1 - slaRate / 100)) : 0
+  const awaiting    = countByStatus('AWAITING_FIELD_CONFIRMATION')
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <StatCard label="Đang mở"      value={statsOpen}     icon="📋" total={tickets.length} />
-      <StatCard label="Quá hạn SLA"  value={statsBreached} icon="🔴" accent="red" />
-      <StatCard label="Chờ xác nhận" value={statsAwaiting} icon="⏳" accent="orange" />
+      <StatCard label="Đang mở"      value={open}     icon="📋" total={total}  loading={isLoading} />
+      <StatCard label="Quá hạn SLA"  value={breached} icon="🔴" accent="red"   loading={isLoading} />
+      <StatCard label="Chờ xác nhận" value={awaiting} icon="⏳" accent="orange" loading={isLoading} />
     </div>
   )
 }
