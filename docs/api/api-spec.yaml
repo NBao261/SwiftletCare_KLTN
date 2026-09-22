@@ -2055,12 +2055,16 @@ paths:
         `swiftletcare/{farmId}/{houseId}/{zoneId}/config/update` (§9.2):
         - `PUSH_CONFIG`: toàn bộ ngưỡng hiện hành của Zone
         - `RESTART`: `{ "command": "RESTART" }`
-        - `OTA`: `{ "command": "OTA", "ota": { version, url, sha256 } }` — node lưu
+        - `OTA`: `{ "command": "OTA", "ota": { version, url, sha256 } }` — URL phải
+          là HTTPS và host nằm trong `OTA_ALLOWED_HOSTS` (sha256 do chính người gửi
+          đặt nên không thay được việc khoá nguồn firmware); node lưu
           `ota_pending`, heartbeat báo đúng `firmware_version` mới thì ghi audit
-          `DEVICE_OTA_SUCCEEDED` (Flow 15 bước 5)
+          `DEVICE_OTA_SUCCEEDED` (Flow 15 bước 5); quá 30 phút chưa xác nhận thì
+          chuyển sang `ota_failed` (thiết bị đã rollback) và báo người gửi
 
         **Firmware hiện tại chưa xử lý `command`** (bỏ qua key lạ nên an toàn) —
-        cần bổ sung phía ESP32. Có `ticket_id` thì hành động được ghi vào note ticket.
+        cần bổ sung phía ESP32. Có `ticket_id` thì hành động được ghi vào note
+        ticket — Technician phải là người đang được gán ticket đó.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -2071,7 +2075,7 @@ paths:
               required: [command]
               properties:
                 command: { type: string, enum: [RESTART, PUSH_CONFIG, OTA] }
-                ticket_id: { type: string, description: "Ticket cùng farm, chưa đóng" }
+                ticket_id: { type: string, description: "Ticket cùng farm, chưa đóng, do chính Technician này phụ trách" }
                 ota:
                   type: object
                   description: "Bắt buộc khi command=OTA"
@@ -2088,7 +2092,7 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
-        "400": { description: "Ticket không thuộc farm của thiết bị", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "400": { description: "Ticket không thuộc farm của thiết bị, hoặc URL firmware không phải HTTPS/không thuộc OTA_ALLOWED_HOSTS", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: "Thiết bị không ONLINE / đã gỡ, ticket đã đóng, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -3128,8 +3132,10 @@ paths:
       tags: [Tickets]
       summary: "Tạo lịch bảo trì định kỳ (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
       description: |
-        Job chạy đầu mỗi giờ: lịch đến `next_due_at` sinh 1 ticket MAINTENANCE (qua
-        Ticket Router, `scheduled_visit_at` = hạn) rồi dời hạn sang chu kỳ kế tiếp ở tương lai.
+        Job chạy đầu mỗi giờ, tạo ticket MAINTENANCE trước hạn `MAINTENANCE_LEAD_DAYS`
+        ngày (mặc định 3) qua Ticket Router rồi dời hạn sang chu kỳ kế tiếp. Lịch trễ
+        nhiều chu kỳ hẹn sớm nhất 1 giờ sau, không hẹn về quá khứ; lịch của farm đã
+        xoá mềm tự chuyển `is_active=false`.
       requestBody:
         required: true
         content:
@@ -3353,7 +3359,8 @@ paths:
                                 closed: { type: integer }
                                 cancelled: { type: integer }
                                 avgResolveHours: { type: number, nullable: true }
-                                avgResponseHours: { type: number, nullable: true, description: "Tạo ticket → Technician xác nhận tiếp nhận (responded_at)" }
+                                avgResponseHours: { type: number, nullable: true, description: "Giao ticket (assigned_at) → Technician xác nhận tiếp nhận (responded_at)" }
+                                escalated: { type: integer, description: "Số ticket Technician chủ động escalate" }
                                 slaComplianceRate: { type: number, nullable: true }
                           resolvedTickets:
                             { type: integer, description: "Ticket đã đóng, KHÔNG tính ticket bị huỷ" }
@@ -3619,7 +3626,10 @@ paths:
     post:
       tags: [Tickets]
       summary: "Escalate thủ công lên Admin (TICKET-FR-009) — TECHNICIAN được gán/ADMIN"
-      description: "Ghi audit `TICKET_ESCALATED` và thông báo mọi Admin. Ticket đã đóng → 409."
+      description: |
+        Ghi `escalated_at`/`escalation_reason`, audit `TICKET_ESCALATED` và thông báo
+        mọi Admin. **Không** bật `is_sla_breached` — escalate là xin hỗ trợ, cờ vượt
+        hạn chỉ do job SLA đặt khi thật sự quá `sla_resolve_due_at`. Ticket đã đóng → 409.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3629,7 +3639,7 @@ paths:
       responses:
         "200":
           {
-            description: "Đã escalate (is_sla_breached=true)",
+            description: "Đã escalate (escalated_at được ghi)",
             content:
               {
                 application/json:
@@ -3689,8 +3699,8 @@ paths:
       tags: [Tickets]
       summary: "Technician xin gán lại ticket kèm lý do (Flow 9 case 4a) — TECHNICIAN được gán"
       description: |
-        Ticket Router chọn Technician khác trong vùng (loại người xin, bỏ qua người
-        quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại; không còn
+        Ticket Router chọn Technician khác trong vùng (loại người xin và mọi người
+        đã từng bị chuyển khỏi ticket này, bỏ qua người quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại; không còn
         ai → `assigned_to` để trống (hàng đợi chung, `GET /tickets?unassigned=true`)
         và Admin được thông báo. Thread chat nhận tin hệ thống (TICKET-FR-017).
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -3721,8 +3731,10 @@ paths:
       summary: "Lịch sử chat của ticket (TICKET-FR-015) — FARM_OWNER/TECHNICIAN/ADMIN"
       description: |
         Trang 1 là tin mới nhất; trong mỗi trang tin xếp cũ → mới. Được đọc: Admin,
-        Farm Owner/thành viên của farm, Technician đang hoặc từng phụ trách ticket.
-        Technician khác cùng vùng không đọc được (Flow 23 case 6a).
+        Farm Owner/thành viên của farm, Technician đang phụ trách. Technician TỪNG
+        phụ trách chỉ đọc được lịch sử tới tin hệ thống báo bàn giao và không
+        `JOIN_TICKET_CHAT` được nữa (TICKET-FR-017). Technician khác cùng vùng
+        không đọc được (Flow 23 case 6a).
 
         Realtime qua Socket.io: emit `JOIN_TICKET_CHAT { ticketId }` (ack
         `{ ok }`), `SEND_TICKET_MESSAGE { ticketId, content, clientMessageId }`
@@ -4474,6 +4486,14 @@ components:
             url: { type: string }
             requested_at: { type: string, format: date-time }
             requested_by: { type: string }
+        ota_failed:
+          type: object
+          nullable: true
+          description: "OTA quá 30 phút chưa xác nhận — thiết bị vẫn chạy running_version (đã rollback)"
+          properties:
+            version: { type: string }
+            failed_at: { type: string, format: date-time }
+            running_version: { type: string }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
@@ -4600,7 +4620,17 @@ components:
         is_sla_breached: { type: boolean }
         responded_at: { type: string, format: date-time, nullable: true, description: "Technician xác nhận tiếp nhận (lần đầu IN_PROGRESS)" }
         is_sla_response_breached: { type: boolean, description: "Quá sla_response_due_at mà vẫn NEW" }
-        previous_assignees: { type: array, items: { type: string }, description: "TICKET-FR-017 — Technician từng phụ trách (chỉ đọc chat)" }
+        assigned_at: { type: string, format: date-time, nullable: true, description: "Lúc giao cho Technician hiện tại — mốc tính KPI phản hồi" }
+        escalated_at: { type: string, format: date-time, nullable: true, description: "TICKET-FR-009 — Technician xin Admin can thiệp (khác vượt hạn SLA)" }
+        escalation_reason: { type: string, nullable: true }
+        previous_assignees:
+          type: array
+          description: "TICKET-FR-017 — Technician từng phụ trách; chỉ đọc chat tới mốc `until`"
+          items:
+            type: object
+            properties:
+              user_id: { type: string }
+              until: { type: string, format: date-time }
         last_message_at: { type: string, format: date-time, nullable: true }
         sat_checklist:
           type: object
