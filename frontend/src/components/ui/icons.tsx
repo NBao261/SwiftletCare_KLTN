@@ -62,6 +62,11 @@ export const IconBell = (p: IconProps) => (
   <Svg {...p}><path d="M10 2.5A5.25 5.25 0 0 0 4.75 7.75v2.6l-1.2 2.2c-.3.55.1 1.2.72 1.2h11.46c.62 0 1.02-.65.72-1.2l-1.2-2.2v-2.6A5.25 5.25 0 0 0 10 2.5Z" /><path d="M8.2 16a1.8 1.8 0 0 0 3.6 0" /></Svg>
 )
 
+/** Bút chì — nút "Chỉnh sửa" */
+export const IconEdit = (p: IconProps) => (
+  <Svg {...p}><path d="M13.4 3.6a1.8 1.8 0 0 1 2.5 0l.5.5a1.8 1.8 0 0 1 0 2.5L6.5 16.5 3 17.5l1-3.5Z" /><path d="M11.8 5.2 14.8 8.2" /></Svg>
+)
+
 export const IconChevronDown = (p: IconProps) => (
   <Svg {...p}><path d="m5.5 8 4.5 4.5L14.5 8" /></Svg>
 )
@@ -114,6 +119,11 @@ export const IconLight = (p: IconProps) => (
 
 export const IconGas = (p: IconProps) => (
   <Svg {...p}><path d="M5 13.5c0-2.5 2-3.2 2-5.5 0-1.4-.6-2.4-.6-2.4s3.4.9 3.4 4.3c0 1 .6 1.6 1.2 1.6.9 0 1.4-.9 1.2-2 1.4 1.1 2.3 2.6 2.3 4a5.5 5.5 0 0 1-11 0Z" /></Svg>
+)
+
+/** CO2 — mây, phân biệt với IconGas (NH3 dùng IconAlert — tam giác cảnh báo) */
+export const IconCloud = (p: IconProps) => (
+  <Svg {...p}><path d="M6 15h8a3 3 0 0 0 .5-5.96 4.5 4.5 0 0 0-8.6-1.66A3.5 3.5 0 0 0 6 15Z" /></Svg>
 )
 
 export const IconSound = (p: IconProps) => (
