@@ -116,6 +116,26 @@ export async function controlRelay(
   return node
 }
 
+/** ENV-FR-018 — trả thiết bị về AUTO ngay, không đợi hết hạn override */
+export async function clearRelayOverride(nodeId: string, user: CurrentUser): Promise<ISensorNode> {
+  const node = await SensorNode.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  const chain = await assertZoneAccess(String(node.zone_id), user)
+  if (node.control_mode === 'AUTO') return node
+
+  node.control_mode = 'AUTO'
+  node.override_expiry = undefined
+  await node.save()
+
+  const zoneId = String(chain.zone._id)
+  publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', { action: 'clear_override' })
+  for (const relayName of RELAY_NAMES) {
+    emitRelayUpdate(zoneId, { zoneId, relayName, state: node.relay_states[relayName], mode: 'AUTO' })
+  }
+  await logAction(user._id, 'RELAY_OVERRIDE_CLEARED', 'sensor_node', String(node._id), {})
+  return node
+}
+
 /**
  * FARM-FR-007b, Flow 21 Nhánh A — Technician dời thiết bị sang Zone/Farm khác
  * trong khi thiết bị còn ONLINE. Publish MQTT config/reassign lên topic CŨ
@@ -219,7 +239,16 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
       const realFarmId = String(chain.farm._id)
       const realHouseId = String(chain.house._id)
       const realZoneId = String(chain.zone._id)
-      if (topicFarmId !== realFarmId || topicHouseId !== realHouseId || topicZoneId !== realZoneId) {
+      const topicMatches = topicFarmId === realFarmId && topicHouseId === realHouseId && topicZoneId === realZoneId
+      if (topicMatches && (payload.justConnected || wasOffline)) {
+        // config/update không retained + PubSubClient clean session → thiết bị
+        // offline/restart lúc ngưỡng hay lịch loa bị sửa sẽ giữ mãi giá trị cũ
+        // trong NVS. Đẩy lại bộ config hiện hành mỗi lần thiết bị vừa (re)connect.
+        publishCommand(realFarmId, realHouseId, realZoneId, 'config/update', buildDeviceConfig(chain.zone.thresholds, node))
+      }
+      // Topic lệch: chỉ reassign — thiết bị restart, heartbeat `justConnected`
+      // kế tiếp (đúng topic) sẽ tự đồng bộ config ở nhánh trên.
+      if (!topicMatches) {
         logger.info('Heartbeat tới trên topic lệch với Zone thật — tự đẩy config/reassign', {
           deviceId: payload.deviceId,
           from: `${topicFarmId}/${topicHouseId}/${topicZoneId}`,
@@ -237,6 +266,82 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
       logger.warn('Không tự sửa được topic lệch cho heartbeat', { deviceId: payload.deviceId, err: (err as Error).message })
     }
   }
+}
+
+/**
+ * FARM-FR-005 — thiết bị vừa gửi dữ liệu (telemetry): làm mới last_heartbeat và,
+ * nếu trước đó chưa ONLINE, phát DEVICE_STATUS_CHANGE giống recordHeartbeat.
+ * Dùng updateOne thay vì save() vì được gọi dày (telemetry.service).
+ */
+export async function markNodeSeen(node: Pick<ISensorNode, '_id' | 'zone_id' | 'status'>): Promise<void> {
+  await SensorNode.updateOne({ _id: node._id }, { status: 'ONLINE', last_heartbeat: new Date() })
+  if (node.status !== 'ONLINE') {
+    emitDeviceStatusChange(String(node.zone_id), {
+      nodeId: String(node._id),
+      status: 'ONLINE',
+      timestamp: new Date().toISOString(),
+    })
+  }
+}
+
+const hourOf = (hhmm: string) => Number(hhmm.slice(0, 2))
+
+/**
+ * Payload MQTT `config/update` đầy đủ cho 1 ESP32 — key khớp firmware
+ * `Config::update()` (firmware/src/config/Config.cpp). Ngưỡng thuộc Zone, lịch
+ * loa ru thuộc từng thiết bị (ENV-FR-006, ENV-FR-013b). Firmware chỉ có 2 khung
+ * giờ theo giờ tròn; `windows` rỗng = chưa từng cấu hình → không gửi key khung
+ * giờ để firmware giữ mặc định của nó; chỉ 1 khung → khung 2 = 0-0 (không bao giờ khớp).
+ */
+export function buildDeviceConfig(t: Thresholds, node: Pick<ISensorNode, 'speaker_schedule' | 'audio'>) {
+  const [w1, w2] = node.speaker_schedule.windows
+  return {
+    temp_min: t.temp_min,
+    temp_max: t.temp_max,
+    humidity_min: t.humidity_min,
+    humidity_max: t.humidity_max,
+    light_max: t.light_max,
+    nh3_max: t.nh3_max,
+    co2_max: t.co2_max,
+    speaker_schedule_enabled: node.speaker_schedule.enabled,
+    speaker_volume: node.audio.volume,
+    speaker_track: node.audio.current_track,
+    ...(w1 && {
+      speaker_window1_start_hour: hourOf(w1.start),
+      speaker_window1_end_hour: hourOf(w1.end),
+      speaker_window2_start_hour: w2 ? hourOf(w2.start) : 0,
+      speaker_window2_end_hour: w2 ? hourOf(w2.end) : 0,
+    }),
+  }
+}
+
+export interface SpeakerScheduleInput {
+  enabled?: boolean
+  windows?: Array<{ start: string; end: string }>
+  volume?: number
+  track?: number
+}
+
+/** ENV-FR-013b — lịch loa ru của 1 thiết bị, publish ngay xuống ESP32 qua config/update */
+export async function updateSpeakerSchedule(nodeId: string, user: CurrentUser, input: SpeakerScheduleInput): Promise<ISensorNode> {
+  const node = await SensorNode.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  const chain = await assertZoneAccess(String(node.zone_id), user)
+
+  // "HH:00" cùng định dạng 2 chữ số nên so sánh chuỗi = so sánh giờ
+  const badWindow = input.windows?.find(w => w.start >= w.end)
+  if (badWindow) throw BadRequestError(`Khung giờ ${badWindow.start}-${badWindow.end} không hợp lệ: giờ bắt đầu phải trước giờ kết thúc`)
+
+  if (input.enabled !== undefined) node.speaker_schedule.enabled = input.enabled
+  if (input.windows) node.speaker_schedule.windows = input.windows.map(({ start, end }) => ({ start, end }))
+  if (input.volume !== undefined) node.audio.volume = input.volume
+  if (input.track !== undefined) node.audio.current_track = input.track
+  await node.save()
+
+  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update',
+    buildDeviceConfig(chain.zone.thresholds, node))
+  await logAction(user._id, 'SPEAKER_SCHEDULE_UPDATED', 'sensor_node', String(node._id), { ...input })
+  return node
 }
 
 /**
@@ -322,10 +427,11 @@ export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<v
   const node = await SensorNode.findOne({ device_id: payload.deviceId })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
+  // Không đụng status/last_heartbeat: liveness chỉ do heartbeat/telemetry quyết
+  // định (message relay/status retained cũ từng làm "hồi sinh" thiết bị đã chết).
   node.relay_states = payload.relay_states
   node.control_mode = payload.control_mode
-  node.status = 'ONLINE'
-  node.last_heartbeat = new Date()
+  if (payload.control_mode === 'AUTO') node.override_expiry = undefined
   await node.save()
 
   const zoneId = String(node.zone_id)

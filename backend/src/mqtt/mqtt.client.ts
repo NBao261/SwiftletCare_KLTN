@@ -13,6 +13,7 @@ const TOPICS = [
   'swiftletcare/+/+/+/telemetry',         // ENV-FR-001
   'swiftletcare/+/+/+/heartbeat',          // FARM-FR-005
   'swiftletcare/+/+/+/relay/status',       // ENV-FR-015
+  'swiftletcare/+/+/+/alert',              // THREAT-FR-006/011/012/013 (ESP32)
   'swiftletcare/+/+/+/vision/bird-count',  // VISION-FR-006
   'swiftletcare/+/+/+/vision/alert',       // THREAT-FR-001
 ] as const
@@ -35,7 +36,11 @@ export function connectMQTT(): void {
     TOPICS.forEach(topic => client!.subscribe(topic, { qos: 1 }))
   })
 
-  client.on('message', (topic: string, payload: Buffer) => {
+  client.on('message', (topic: string, payload: Buffer, packet: mqtt.IPublishPacket) => {
+    // Mọi topic thiết bị là trạng thái sống — message retained (VD relay/status
+    // do firmware cũ publish retain=true) được broker phát lại cho MỌI thiết bị
+    // mỗi lần backend (re)connect, kể cả thiết bị đã chết → bỏ qua.
+    if (packet.retain) return
     try {
       const message = JSON.parse(payload.toString()) as Record<string, unknown>
       const parts   = topic.split('/')  // [swiftletcare, farmId, houseId, zoneId, ...type]
@@ -44,7 +49,7 @@ export function connectMQTT(): void {
       else if (topic.endsWith('/heartbeat'))   void handleHeartbeat(parts, message)
       else if (topic.endsWith('/relay/status'))void handleRelayStatus(parts, message)
       else if (topic.endsWith('/bird-count'))  void handleBirdCount(parts, message)
-      else if (topic.endsWith('/vision/alert'))void handleAlert(parts, message)
+      else if (topic.endsWith('/alert'))       void handleAlert(parts, message)  // cả {base}/alert (ESP32) lẫn vision/alert (RPi)
     } catch (err) {
       logger.error('MQTT message parse error', { err })
     }
