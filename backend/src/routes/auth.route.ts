@@ -36,7 +36,12 @@ router.post('/logout', authenticate, authController.logout)
 router.post('/otp/send', [body('email').isEmail()], validate, authController.sendOtp)
 
 /** POST /auth/otp/verify – AUTH-FR-005 */
-router.post('/otp/verify', authController.verifyOtp)
+router.post(
+  '/otp/verify',
+  [body('email').isEmail(), body('otp').isLength({ min: 6, max: 6 }).isNumeric()],
+  validate,
+  authController.verifyOtp,
+)
 
 /** POST /auth/forgot-password – AUTH-FR-009 */
 router.post('/forgot-password', [body('email').isEmail()], validate, authController.forgotPassword)
