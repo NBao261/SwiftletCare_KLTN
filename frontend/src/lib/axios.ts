@@ -1,7 +1,7 @@
 import axios from 'axios'
-import { useAuthStore } from '@/store/authStore'
-import { redirectToLogin } from '@/utils/navigation'
-import { queryClient } from '@/services/queryClient'
+import { useAuthStore } from '@/stores/authStore'
+import { redirectToLogin } from '@/lib/navigation'
+import { queryClient } from '@/lib/queryClient'
 
 // Dev: vite.config.ts proxy '/api' -> http://localhost:3000 (bỏ prefix /api trước
 // khi forward) — tránh CORS hoàn toàn vì trình duyệt coi đây là same-origin.

@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client'
-import { useAuthStore } from '@/store/authStore'
-import type { TelemetryUpdateEvent, RelayUpdateEvent, BirdCountUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent } from '@/types'
+import { useAuthStore } from '@/stores/authStore'
+import type { TelemetryUpdateEvent, RelayUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent } from '@/types'
 
 // Dev: '' = same-origin (localhost:5173) — vite.config.ts proxy '/socket.io' ->
 // http://localhost:3000 (ws:true) chuyển tiếp handshake. Production: set VITE_WS_URL
@@ -41,10 +41,6 @@ export function onRelayUpdate(cb: (data: RelayUpdateEvent) => void) {
   return () => getSocket().off('RELAY_UPDATE', cb)
 }
 
-export function onBirdCountUpdate(cb: (data: BirdCountUpdateEvent) => void) {
-  getSocket().on('BIRD_COUNT_UPDATE', cb)
-  return () => getSocket().off('BIRD_COUNT_UPDATE', cb)
-}
 
 export function onAlertNew(cb: (data: AlertNewEvent) => void) {
   getSocket().on('ALERT_NEW', cb)
