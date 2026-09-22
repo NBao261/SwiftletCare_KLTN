@@ -15,6 +15,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
+import { getSystemStatus } from '@/services/device.service'
 import { getDefaultThresholds, getHealthOverview, updateDefaultThresholds } from '@/services/system.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 
@@ -141,5 +142,41 @@ describe('getHealthOverview', () => {
     expect(overview.zones.total).toBe(0)
     expect(overview.devices.total).toBe(0)
     expect(overview.openTickets.total).toBe(0)
+  })
+})
+
+describe('getSystemStatus (OPS-NFR-004)', () => {
+  async function seedFarm(name: string, deleted = false) {
+    const owner = await User.create({ email: `${name}@test.vn`, password_hash: 'password123', full_name: name, role: 'FARM_OWNER' })
+    const farm = await Farm.create({ name, address: 'HCMC', owner_id: owner._id, is_deleted: deleted })
+    const house = await House.create({ farm_id: farm._id, name: `${name}-house` })
+    const zone = await Zone.create({ house_id: house._id, name: `${name}-zone` })
+    return { farm, zone }
+  }
+
+  it('leaves out nodes of soft-deleted farms, so it agrees with the health overview shown beside it', async () => {
+    const live = await seedFarm('live')
+    const gone = await seedFarm('gone', true)
+    await SensorNode.create({ device_id: 'S-live', zone_id: live.zone._id, status: 'ONLINE' })
+    await CameraNode.create({ device_id: 'C-live', zone_id: live.zone._id, status: 'OFFLINE' })
+    await SensorNode.create({ device_id: 'S-gone', zone_id: gone.zone._id, status: 'ONLINE' })
+    await CameraNode.create({ device_id: 'C-gone', zone_id: gone.zone._id, status: 'ONLINE' })
+
+    const status = await getSystemStatus()
+
+    expect(status.summary).toMatchObject({ total: 2, online: 1, offline: 1 })
+    expect(status.nodes.map(n => n.device_id).sort()).toEqual(['C-live', 'S-live'])
+    expect(status.nodes.every(n => n.farm_name === 'live')).toBe(true)
+    expect(status.summary).toEqual((await getHealthOverview()).devices)
+  })
+
+  it('returns an empty list when every farm is soft-deleted', async () => {
+    const gone = await seedFarm('gone', true)
+    await SensorNode.create({ device_id: 'S-gone', zone_id: gone.zone._id, status: 'ONLINE' })
+
+    const status = await getSystemStatus()
+
+    expect(status.summary.total).toBe(0)
+    expect(status.nodes).toEqual([])
   })
 })

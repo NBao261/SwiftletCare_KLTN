@@ -1894,7 +1894,9 @@ paths:
         Khác `GET /devices/sensor-nodes`/`camera-nodes` (luôn giới hạn theo
         quyền Farm của user) — endpoint này liệt kê TẤT CẢ SensorNode/CameraNode
         trong hệ thống kèm đếm theo status (gộp cả 2 loại), phục vụ trang Admin
-        "Trạng thái hệ thống" (`SystemNodeStatus` bên frontend).
+        "Trạng thái hệ thống" (`SystemNodeStatus` bên frontend). Chỉ tính thiết bị
+        của Farm chưa xoá mềm — cùng phạm vi với `devices` của
+        `GET /system/health-overview`, để số liệu hai nơi khớp nhau.
       responses:
         "200":
           description: OK
