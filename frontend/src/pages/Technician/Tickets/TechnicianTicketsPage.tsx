@@ -1,8 +1,9 @@
 // TechnicianTicketsPage — SCR-TC02 / F-TC-02 / Stitch A1 + C2
 // Landing page: tab pills, stat bar, toolbar (search + sort + filter) + table list + pagination
 // Logic nặng được tách sang ./components/
-// Refactor: server-side pagination (page + limit:PAGE_SIZE) thay vì limit:100 client-side.
-// TicketStatBar tự fetch KPI endpoint — không cần truyền tickets[] prop.
+// Pagination: tab mine/in_progress dùng server-side (page+limit:12).
+//             tab overdue dùng bulk fetch (limit:100) + client filter + client paginate
+//             vì server không có ?slaBreached param, phân trang server trên tap overdue bị sai.
 import { useState, useMemo } from 'react'
 import { useTicketsList } from '@/hooks/useTickets'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton'
@@ -264,19 +265,40 @@ export default function TechnicianTicketsPage() {
   const [statusModal,  setStatusModal]  = useState<Ticket | null>(null)
   const [reassignModal, setReassignModal] = useState<Ticket | null>(null)
 
-  // Server-side pagination — truyền page + limit xuống GET /tickets, không fetch bulk rồi slice client-side.
-  // Filter (search, status) + sort vẫn chạy client-side trên trang hiện tại (12 records) — hành vi pagination chuẩn.
-  // Tab 'overdue' filter isSlaBreached client-side trên trang hiện tại.
-  // TODO [BE-GAP]: Khi backend hỗ trợ ?slaBreached=true, truyền param để filter server-side chính xác hơn.
-  const { records, total, isLoading } = useTicketsList({
-    ...TAB_QUERY[activeTab],
-    page,
-    limit: PAGE_SIZE,
-  })
+  // ── Data fetch theo 2 chế độ ────────────────────────────────────────────────────────────
+  // CHẾA ĐỘ 1: mine + in_progress — server pagination (page+limit:PAGE_SIZE)
+  const serverQuery = useTicketsList(
+    { ...TAB_QUERY[activeTab], page, limit: PAGE_SIZE },
+    { enabled: activeTab !== 'overdue' },
+  )
 
-  // Pipeline: overdue → search → status filter → sort (trên page hiện tại)
+  // CHẾA ĐỘ 2: overdue — bulk fetch rồi filter isSlaBreached client-side,
+  // sau đó tự paginate trên tập đã lọc. Lý do không dùng server pagination:
+  // TAB_QUERY.overdue = { assignedToMe:true } (giống mine), server không biết
+  // ticket nào overdue nằm ở trang nào → totalPages tính sai, rải rác nhiều trang.
+  // TODO [BE-GAP]: khi backend hỗ trợ ?slaBreached=true, chuyển về server pagination.
+  const overdueQuery = useTicketsList(
+    { assignedToMe: true, limit: 100 },
+    { enabled: activeTab === 'overdue', staleTime: 30_000 },
+  )
+
+  // Stats query riêng — luôn fetch bất kể tab đang mở để stat bar không bị 0
+  // khi đổi sang tab in_progress/overdue.
+  // Lý do không dùng GET /tickets/kpi: endpoint đó là requireRole('ADMIN'),
+  // Technician gọi → 403. Chấp nhận capped ở limit:50 — đủ với phần lớn Technician.
+  const statsQuery = useTicketsList(
+    { assignedToMe: true, limit: 50 },
+    { staleTime: 60_000 },
+  )
+
+  const isOverdue = activeTab === 'overdue'
+  const records   = isOverdue ? overdueQuery.records : serverQuery.records
+  const total     = isOverdue ? overdueQuery.total   : serverQuery.total
+  const isLoading = isOverdue ? overdueQuery.isLoading : serverQuery.isLoading
+
+  // Pipeline: overdue → search → status filter → sort
   const filteredRecords = useMemo(() => {
-    let list = activeTab === 'overdue' ? records.filter(isSlaBreached) : records
+    let list = isOverdue ? records.filter(isSlaBreached) : records
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(t =>
@@ -287,12 +309,18 @@ export default function TechnicianTicketsPage() {
     }
     if (filterStatus) list = list.filter(t => t.status === filterStatus)
     return sortTickets(list, sortKey, sortDir)
-  }, [records, activeTab, search, filterStatus, sortKey, sortDir])
+  }, [records, isOverdue, search, filterStatus, sortKey, sortDir])
 
-  // Pagination từ server total
-  const totalPages     = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const safePage       = Math.min(page, totalPages)
-  const displayRecords = filteredRecords   // records đã là PAGE_SIZE bản ghi từ server
+  // Pagination: chế độ overdue dùng client total (số ticket overdue đã lọc)
+  //             chế độ mine/in_progress dùng server total
+  const clientTotal  = filteredRecords.length
+  const paginTotal   = isOverdue ? clientTotal : total
+  const totalPages   = Math.max(1, Math.ceil(paginTotal / PAGE_SIZE))
+  const safePage     = Math.min(page, totalPages)
+  // overdue: slice client; mine/in_progress: records đã đúng page từ server
+  const displayRecords = isOverdue
+    ? filteredRecords.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+    : filteredRecords
 
   // Helper: reset về trang 1 khi filter/sort/tab thay đổi
   function resetPage() { setPage(1) }
@@ -323,8 +351,8 @@ export default function TechnicianTicketsPage() {
         </span>
       </div>
 
-      {/* Stat bar — tự fetch KPI endpoint, không nhận prop */}
-      <TicketStatBar />
+      {/* Stat bar — nhận tickets từ stats query riêng (không dùng KPI endpoint vì ADMIN-only) */}
+      <TicketStatBar tickets={statsQuery.records} />
 
       {/* Tab pills */}
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -422,7 +450,11 @@ export default function TechnicianTicketsPage() {
         )}
       </div>
 
-      {/* Không cần banner cảnh báo nữa — server pagination trả đúng page, không bao giờ mất ticket */}
+      {/* Search/sort hoạt động trong phạm vi dữ liệu đã tải */}
+      {/* Tab overdue: tải 100 records, search/sort trên toàn bộ */}
+      {/* Tab mine/in_progress: tải 12 records/trang, search/sort trong trang hiện tại */}
+      {/* TODO [BE-GAP]: khi backend có ?search, chuyển search lên server để hoạt động cross-page */}
+
 
       {/* Loading */}
       {isLoading && <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />}
@@ -496,11 +528,11 @@ export default function TechnicianTicketsPage() {
             </table>
           </div>
 
-          {/* Pagination — totalItems từ server */}
+          {/* Pagination — totalItems theo chế độ: overdue=client, mine/in_progress=server */}
           <PaginationBar
             page={safePage}
             totalPages={totalPages}
-            totalItems={total}
+            totalItems={paginTotal}
             pageSize={PAGE_SIZE}
             onPage={setPage}
           />
@@ -525,7 +557,7 @@ export default function TechnicianTicketsPage() {
               <PaginationBar
                 page={safePage}
                 totalPages={totalPages}
-                totalItems={total}
+                totalItems={paginTotal}
                 pageSize={PAGE_SIZE}
                 onPage={setPage}
               />
