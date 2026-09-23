@@ -57,7 +57,7 @@ const MOCK_DATASETS: Record<RangeTab, RangeDataset> = {
 function barColors(d: RangeDataset): string[] {
   return d.values.map((_, i) => {
     if (i === d.peakReturnIndex) return CHART_COLORS.climateOrange
-    if (i === d.peakDepartIndex) return '#D2F93A' // lime-500 — "đỉnh chim xuất đàn"
+    if (i === d.peakDepartIndex) return CHART_COLORS.limeBright // "đỉnh chim xuất đàn"
     if (i === d.stableIndex) return CHART_COLORS.charcoal
     return CHART_COLORS.gray300
   })

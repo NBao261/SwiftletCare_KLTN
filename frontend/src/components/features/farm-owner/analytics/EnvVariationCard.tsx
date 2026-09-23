@@ -12,8 +12,6 @@ import RangeChips from '@/components/features/farm-owner/analytics/RangeChips'
 import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api'
 import type { Thresholds } from '@/types'
 
-const ACCENT_GREEN = '#B5D32C' // accent-600 — không có sẵn trong CHART_COLORS (chỉ dùng cho đường Độ ẩm ở card này)
-
 /** Tô nền dải "lý tưởng" [min,max] trên trục Nhiệt độ (trái) — không cần thêm chartjs-plugin-annotation. */
 function idealZonePlugin(min: number, max: number): Plugin<'line'> {
   return {
@@ -69,7 +67,7 @@ export default function EnvVariationCard({
       {
         label: 'Độ ẩm (%)',
         data: data?.series.map(p => p.humidity ?? null) ?? [],
-        borderColor: ACCENT_GREEN,
+        borderColor: CHART_COLORS.accentGreen,
         backgroundColor: 'rgba(181,211,44,0.08)',
         yAxisID: 'y1',
         fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true,

@@ -5,8 +5,6 @@ import { Camera } from 'lucide-react'
 import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme'
 import { Card } from '@/components/ui'
 
-const ACCENT_GREEN = '#B5D32C'
-
 interface HourlyPoint { hour: string; exit: number; entry: number }
 
 /**
@@ -38,7 +36,7 @@ export default function BirdFlowCard({ onExpandCorrelation }: { onExpandCorrelat
     labels: MOCK_HOURLY.map(p => p.hour),
     datasets: [
       { label: 'Bay đi', data: MOCK_HOURLY.map(p => p.exit), backgroundColor: CHART_COLORS.climateOrange, borderRadius: 6, maxBarThickness: 18 },
-      { label: 'Về tổ', data: MOCK_HOURLY.map(p => p.entry), backgroundColor: ACCENT_GREEN, borderRadius: 6, maxBarThickness: 18 },
+      { label: 'Về tổ', data: MOCK_HOURLY.map(p => p.entry), backgroundColor: CHART_COLORS.accentGreen, borderRadius: 6, maxBarThickness: 18 },
     ],
   }), [])
 

@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import type { AnalyticsRange, EnvSummaryPoint } from '@/apis/farm-owner/analytics.api'
+import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api'
 
 export const RANGES: Array<{ value: AnalyticsRange; label: string }> = [
   { value: '1h', label: '1 giờ' }, { value: '6h', label: '6 giờ' }, { value: '24h', label: '24 giờ' },
@@ -19,16 +19,6 @@ export type MetricKey = typeof METRICS[number]['key']
 export function labelForRange(iso: string, range: AnalyticsRange): string {
   const date = parseISO(iso)
   return range === '7d' || range === '30d' ? format(date, 'dd/MM') : format(date, 'HH:mm')
-}
-
-export function seriesStats(series: EnvSummaryPoint[], key: MetricKey): { min: number; max: number; avg: number } | null {
-  const values = series.map(p => p[key]).filter((v): v is number => typeof v === 'number')
-  if (values.length === 0) return null
-  return {
-    min: Math.min(...values),
-    max: Math.max(...values),
-    avg: values.reduce((a, b) => a + b, 0) / values.length,
-  }
 }
 
 export const xAxisTicks = { autoSkip: true, maxRotation: 0, maxTicksLimit: 8 }

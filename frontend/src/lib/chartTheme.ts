@@ -26,6 +26,10 @@ export const CHART_COLORS = {
   gray300: '#C5C4C3',
   climateOrange: '#ED8F50',
   alertRed: '#D53F35',
+  /** accent-600 — đường/bar "Độ ẩm" và trạng thái tích cực (EnvVariationCard, BirdFlowCard) */
+  accentGreen: '#B5D32C',
+  /** lime-500 — "đỉnh chim xuất đàn" (BirdVisionCard), tách khỏi accentGreen vì khác sắc độ */
+  limeBright: '#D2F93A',
 } as const
 
 /** Cycle 6 màu (bỏ white/limeMist — không đủ tương phản cho bar/line trên nền trắng) */
