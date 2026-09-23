@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import type { AnalyticsRange, EnvSummaryPoint } from '@/apis/farm-owner/analytics.api'
+import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api'
 
 export const RANGES: Array<{ value: AnalyticsRange; label: string }> = [
   { value: '1h', label: '1 giờ' }, { value: '6h', label: '6 giờ' }, { value: '24h', label: '24 giờ' },
@@ -16,23 +16,31 @@ export const METRICS = [
 ] as const
 export type MetricKey = typeof METRICS[number]['key']
 
-export const TABS = ['env', 'compare', 'bird'] as const
-export type Tab = typeof TABS[number]
-export const TAB_LABEL: Record<Tab, string> = { env: 'Môi trường', compare: 'So sánh Zone', bird: 'Đàn chim' }
-
 export function labelForRange(iso: string, range: AnalyticsRange): string {
   const date = parseISO(iso)
   return range === '7d' || range === '30d' ? format(date, 'dd/MM') : format(date, 'HH:mm')
 }
 
-export function seriesStats(series: EnvSummaryPoint[], key: MetricKey): { min: number; max: number; avg: number } | null {
-  const values = series.map(p => p[key]).filter((v): v is number => typeof v === 'number')
-  if (values.length === 0) return null
-  return {
-    min: Math.min(...values),
-    max: Math.max(...values),
-    avg: values.reduce((a, b) => a + b, 0) / values.length,
-  }
-}
-
 export const xAxisTicks = { autoSkip: true, maxRotation: 0, maxTicksLimit: 8 }
+
+/**
+ * Hệ số tương quan Pearson (r) giữa 2 chuỗi cùng độ dài — dùng cho
+ * CorrelationCard (độ ẩm × return rate, ANALYTICS-FR-003). Trả `null` nếu
+ * không đủ điểm dữ liệu hoặc 1 trong 2 chuỗi không có phương sai (chia cho 0).
+ */
+export function pearsonCorrelation(xs: number[], ys: number[]): number | null {
+  const n = Math.min(xs.length, ys.length)
+  if (n < 2) return null
+  const meanX = xs.reduce((a, b) => a + b, 0) / n
+  const meanY = ys.reduce((a, b) => a + b, 0) / n
+  let cov = 0, varX = 0, varY = 0
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - meanX
+    const dy = ys[i] - meanY
+    cov += dx * dy
+    varX += dx * dx
+    varY += dy * dy
+  }
+  if (varX === 0 || varY === 0) return null
+  return cov / Math.sqrt(varX * varY)
+}
