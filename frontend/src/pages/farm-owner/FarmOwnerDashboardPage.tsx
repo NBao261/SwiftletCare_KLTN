@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { useZoneStore } from "@/stores/zoneStore";
 import { useTelemetry } from "@/hooks/farm-owner/useTelemetry";
 import { useAllZones, useZone } from "@/hooks/shared/useFarms";
+import { useSensorNodes } from "@/hooks/shared/useDevices";
 import { Button } from "@/components/ui";
 import EmptyState from "@/components/ui/EmptyState";
 import ZoneOverviewCard from "@/components/features/farm-owner/dashboard/ZoneOverviewCard";
@@ -38,6 +39,15 @@ export default function FarmOwnerDashboardPage() {
   const { data: allZones, isLoading: isLoadingAllZones } = useAllZones();
   const { data: zone } = useZone(selectedZoneId ?? undefined);
   const T = zone?.thresholds ?? FALLBACK_THRESHOLDS;
+  // useTelemetry chỉ có relayStates/controlMode SAU khi nhận event TELEMETRY_UPDATE đầu tiên qua
+  // socket, và không nghe RELAY_UPDATE — nên override thủ công (controlRelay) hay hết hạn override
+  // (expireManualOverrides) không hiện ngay trên panel. useSensorNodes đã tự invalidate theo
+  // RELAY_UPDATE/DEVICE_STATUS_CHANGE (hooks/shared/useDevices.ts), nên dùng REST của nó làm giá trị
+  // ban đầu + fallback khi socket đứng yên, còn telemetry socket (mới hơn khi đang live) vẫn ưu tiên.
+  const { data: sensorNodes } = useSensorNodes(selectedZoneId ?? undefined, { enabled: !!selectedZoneId });
+  const restNode = sensorNodes?.[0];
+  const effectiveRelayStates = relayStates ?? restNode?.relay_states;
+  const effectiveControlMode = controlMode ?? restNode?.control_mode;
 
   if (!selectedZoneId) {
     if (isLoadingAllZones) {
@@ -127,8 +137,8 @@ export default function FarmOwnerDashboardPage() {
         />
         <ControlSubsystemPanel
           zoneName={selectedZoneName ?? undefined}
-          relayStates={relayStates}
-          controlMode={controlMode}
+          relayStates={effectiveRelayStates}
+          controlMode={effectiveControlMode}
           tooHot={tooHot}
           tooCold={tooCold}
         />
