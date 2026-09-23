@@ -62,6 +62,13 @@ const CorrelationCard = forwardRef<HTMLDivElement, { zoneId: string }>(({ zoneId
         <EmptyState
           title="Chưa đủ dữ liệu tương quan"
           description="Cần module VISION (Camera AI đếm chim, Raspberry Pi) hoạt động để có return rate thật."
+          // Nút mở rộng 90 ngày trước đây chỉ nằm trong nhánh points.length >= 2 — nếu 30 ngày chưa đủ
+          // 2 điểm nhưng 90 ngày thì đủ, người dùng kẹt ở EmptyState và không có cách nào bấm sang 90.
+          action={days === 30 && (
+            <button onClick={() => setDays(90)} className="text-sm font-semibold text-charcoal hover:underline">
+              Thử mở rộng sang 90 ngày →
+            </button>
+          )}
         />
       ) : (
         <>
