@@ -20,6 +20,8 @@ interface SelectMenuProps<V extends string> {
 
 const OPTION_HEIGHT = 36
 const MENU_PADDING = 8
+/** Quá số dòng này thì danh sách có thanh cuộn — khớp `max-h-72` (288px = 8 × 36) bên dưới */
+const MAX_VISIBLE_OPTIONS = 8
 
 /**
  * Dropdown chọn 1 giá trị, thay cho <select> native ở các hàng filter: <select>
@@ -27,11 +29,13 @@ const MENU_PADDING = 8
  * không theo được bảng màu §2 (highlight = LIME MIST). Trigger là pill h-8 cùng
  * chiều cao chip/nút sort; danh sách portal ra body (useFloatingMenu). Hỗ trợ
  * bàn phím: ↑/↓ di chuyển, Enter/Space chọn, Esc đóng.
+ * `options[0]` phải là giá trị mặc định ("Mọi …"): chọn option khác thì trigger
+ * viền xanh (accent-600) để thấy ngay bộ lọc nào đang bật.
  */
 export default function SelectMenu<V extends string>({ value, options, onChange, ariaLabel, className }: SelectMenuProps<V>) {
   const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
     align: 'left',
-    estimatedHeight: options.length * OPTION_HEIGHT + MENU_PADDING,
+    estimatedHeight: Math.min(options.length, MAX_VISIBLE_OPTIONS) * OPTION_HEIGHT + MENU_PADDING,
     matchTriggerWidth: true,
   })
   const selectedIndex = Math.max(0, options.findIndex(o => o.value === value))
@@ -39,6 +43,11 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
 
   // Mỗi lần mở lại, con trỏ bàn phím đứng ở option đang chọn
   useEffect(() => { if (open) setActiveIndex(selectedIndex) }, [open, selectedIndex])
+
+  // Danh sách dài có thanh cuộn: giữ option đang trỏ (↑/↓ hoặc đang chọn lúc mở) trong tầm nhìn
+  useEffect(() => {
+    if (open) menuRef.current?.children[activeIndex]?.scrollIntoView({ block: 'nearest' })
+  }, [open, activeIndex, menuRef])
 
   function select(index: number) {
     onChange(options[index].value)
@@ -58,6 +67,8 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
   }
 
   const selected = options[selectedIndex]
+  // Quy ước: option đầu tiên là giá trị mặc định ("Mọi …"). Chọn khác đi = đang lọc → viền xanh
+  const isFiltered = value !== options[0]?.value
 
   return (
     <>
@@ -72,7 +83,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
         aria-label={ariaLabel}
         className={cn(
           'inline-flex h-8 items-center gap-1.5 rounded-full border bg-white pl-3.5 pr-2.5 text-xs font-semibold text-charcoal transition-colors',
-          open ? 'border-charcoal' : 'border-warmGray/25 hover:border-warmGray/50',
+          open ? 'border-charcoal' : isFiltered ? 'border-accent-600' : 'border-warmGray/25 hover:border-warmGray/50',
           className,
         )}
       >
@@ -86,7 +97,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
           role="listbox"
           aria-label={ariaLabel}
           style={style}
-          className="z-50 animate-fade-in overflow-hidden rounded-xl border border-warmGray/15 bg-white py-1 shadow-dock"
+          className="z-50 max-h-72 animate-fade-in overflow-y-auto overscroll-contain rounded-xl border border-warmGray/15 bg-white py-1 shadow-dock [scrollbar-width:thin]"
         >
           {options.map((opt, index) => {
             const isSelected = index === selectedIndex
