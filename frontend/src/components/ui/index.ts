@@ -17,6 +17,7 @@ export { default as SelectMenu, type SelectMenuOption } from '@/components/ui/Se
 export { default as DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 export { default as Pagination } from '@/components/ui/Pagination'
 export { default as FilterChip } from '@/components/ui/FilterChip'
+export { default as SearchInput } from '@/components/ui/SearchInput'
 export { default as EmptyState } from '@/components/ui/EmptyState'
 export { default as LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 export { default as StarRating } from '@/components/ui/StarRating'

@@ -5,8 +5,8 @@
 import { useState } from 'react'
 import { useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
 import { usePageSubtitle } from '@/hooks/common/useBreadcrumb'
-import { Button, Input } from '@/components/ui'
-import { IconSortAsc, IconSortDesc, IconSearch } from '@/components/ui/icons'
+import { Button, SearchInput } from '@/components/ui'
+import { IconSortAsc, IconSortDesc } from '@/components/ui/icons'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import FilterChip from '@/components/ui/FilterChip'
@@ -85,11 +85,10 @@ export default function AdminUsersPage() {
           Staff (AUTH-FR-005c), chọn vai trò ngay trong modal thay vì 2 nút riêng. */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-[200px] flex-1">
-          <Input
-            icon={<IconSearch width={16} height={16} />}
+          <SearchInput
             placeholder="Tìm tên/email trong trang này..."
             value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
+            onChange={v => { setSearch(v); setPage(1) }}
           />
         </div>
         <Button onClick={() => setShowCreate(true)}>+ Tạo tài khoản</Button>
