@@ -22,8 +22,12 @@ function idealZonePlugin(min: number, max: number): Plugin<'line'> {
       const { ctx, chartArea, scales } = chart
       const yScale = scales.y
       if (!chartArea || !yScale) return
-      const yTop = yScale.getPixelForValue(max)
-      const yBottom = yScale.getPixelForValue(min)
+      // getPixelForValue không tự cắt theo chartArea — khi ngưỡng nằm ngoài dải trục Y hiện tại
+      // (VD nhiệt độ thực 20-23°C nhưng ngưỡng 26-31°C), yTop/yBottom lọt ra ngoài chartArea.top
+      // và mảng màu tô đè lên legend/tiêu đề phía trên. Kẹp lại trước khi vẽ.
+      const yTop = Math.max(chartArea.top, Math.min(yScale.getPixelForValue(max), chartArea.bottom))
+      const yBottom = Math.min(chartArea.bottom, Math.max(yScale.getPixelForValue(min), chartArea.top))
+      if (yBottom <= yTop) return
       ctx.save()
       ctx.fillStyle = 'rgba(181,211,44,0.10)'
       ctx.fillRect(chartArea.left, yTop, chartArea.right - chartArea.left, yBottom - yTop)
@@ -136,7 +140,10 @@ export default function EnvVariationCard({
         <LoadingSkeleton className="h-72 w-full" />
       ) : data && data.series.length > 0 ? (
         <div className="h-72">
-          <Line data={chartData} options={chartOptions} plugins={plugins} />
+          {/* react-chartjs-2 5.3.1 chỉ đọc prop `plugins` một lần lúc `new Chart(...)` (dist/index.js:79-90)
+              — nếu thresholds về sau khi chart đã mount (hoặc đổi ở nơi khác), dải "vùng lý tưởng" sẽ
+              không bao giờ cập nhật. Ép remount bằng key đổi theo min/max để plugin luôn khớp ngưỡng mới. */}
+          <Line key={`${thresholds?.temp_min ?? '_'}-${thresholds?.temp_max ?? '_'}`} data={chartData} options={chartOptions} plugins={plugins} />
         </div>
       ) : (
         <div className="flex h-72 items-center justify-center text-sm text-warmGray">Chưa có dữ liệu trong khoảng thời gian này</div>
