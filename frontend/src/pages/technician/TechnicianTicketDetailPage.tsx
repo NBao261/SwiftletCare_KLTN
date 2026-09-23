@@ -1,4 +1,7 @@
 // Ticket Detail Page – TICKET-FR-001..004b/006/007/009/010/011
+// Trang này dùng chung cho tất cả role — mỗi role nhìn thấy các phần UI khác nhau:
+//   - Farm Owner / Admin: xem thông tin, huỷ, đánh giá, Admin can thiệp
+//   - Technician: xem + cập nhật trạng thái, ghi chú, SAT checklist, chat, SLA breach banner
 import { useState, FormEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket } from '@/hooks/shared/useTickets'
@@ -13,13 +16,11 @@ import { useToastStore } from '@/stores/toastStore'
 import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
 import { ChangePriorityModal, ReassignTicketModal, RescheduleModal } from '@/components/features/admin/tickets/AdminOverrideModals'
-
-const SAT_LABEL = {
-  modbus_addresses_ok: '5 địa chỉ Modbus phản hồi đúng',
-  camera_rtsp_ok: 'Camera RTSP ổn định',
-  lte_connection_ok: 'Kết nối 4G ổn định',
-  relay_test_ok: 'Relay đóng/ngắt đúng',
-} as const
+// ── Technician components ───────────────────────────────────────────────────
+import { SAT_ITEMS } from '@/components/features/technician/tickets/ticketHelpers'
+import { SLABreachBanner } from '@/components/features/technician/tickets/SLABreachBanner'
+import { StatusStepper } from '@/components/features/technician/tickets/StatusStepper'
+import { TicketChat } from '@/components/features/technician/tickets/TicketChat'
 
 function assigneeName(assigned: string | { full_name: string; email: string } | undefined): string | undefined {
   return typeof assigned === 'object' ? assigned.full_name : undefined
@@ -83,14 +84,20 @@ export default function TechnicianTicketDetailPage() {
         </dl>
       </Card>
 
+      {/* Technician: SLA Breach Banner */}
+      {ticket.is_sla_breached && <SLABreachBanner />}
+
+      {/* Technician: Status Stepper */}
+      <StatusStepper current={ticket.status} />
+
       {isInstallation && (
         <Card>
           <p className="label-caption mb-3">Checklist nghiệm thu (Technician xác nhận)</p>
           <div className="flex flex-col gap-2">
-            {Object.entries(SAT_LABEL).map(([key, label]) => (
-              <div key={key} className="flex items-center gap-2.5 text-sm">
-                <span className={cnDot(ticket.sat_checklist[key as keyof typeof SAT_LABEL])} />
-                <span className={ticket.sat_checklist[key as keyof typeof SAT_LABEL] ? 'text-charcoal' : 'text-warmGray'}>{label}</span>
+            {SAT_ITEMS.map(item => (
+              <div key={item.key} className="flex items-center gap-2.5 text-sm">
+                <span className={cnDot(ticket.sat_checklist[item.key])} />
+                <span className={ticket.sat_checklist[item.key] ? 'text-charcoal' : 'text-warmGray'}>{item.label}</span>
               </div>
             ))}
           </div>
@@ -98,6 +105,9 @@ export default function TechnicianTicketDetailPage() {
       )}
 
       <NotesTimeline ticketId={ticket._id} notes={ticket.notes} />
+
+      {/* Technician: Real-time chat */}
+      {ticket.status !== 'CLOSED' && <TicketChat ticketId={ticket._id} />}
 
       {ticket.status === 'CLOSED' && (
         <RatingCard ticketId={ticket._id} existingRating={ticket.satisfaction_rating} />

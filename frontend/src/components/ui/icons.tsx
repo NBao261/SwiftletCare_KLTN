@@ -139,3 +139,31 @@ export const IconSortAsc = (p: IconProps) => (
 export const IconSortDesc = (p: IconProps) => (
   <Svg {...p}><path d="M10 4.5v11" /><path d="m5.5 11 4.5 4.5L14.5 11" /></Svg>
 )
+
+/** Onboarding — chip + điểm kết nối */
+export const IconOnboarding = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="14" height="10" rx="2" />
+    <path d="M7 5V3.5M10 5V3.5M13 5V3.5" />
+    <path d="M7 15v1.5M10 15v1.5M13 15v1.5" />
+    <path d="M3 9h-1M3 11h-1M17 9h1M17 11h1" />
+    <circle cx="10" cy="10" r="1.5" />
+    <path d="M10 7.5v1M10 11.5v1M7.5 10h1M11.5 10h1" />
+  </Svg>
+)
+
+/** OTA Firmware — mũi tên tải lên + chip */
+export const IconOTA = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M10 2.5v9M7 8l3-3 3 3" />
+    <rect x="4.5" y="12" width="11" height="5.5" rx="1.5" />
+    <path d="M7.5 14.75h5M9.5 14.75v2" />
+  </Svg>
+)
+
+/** Cờ lê kỹ thuật — wrench icon */
+export const IconWrench = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14.5 3.5a3.5 3.5 0 0 1-4.6 4.9L5 13.3a1.5 1.5 0 0 0 2.1 2.1l4.9-4.9a3.5 3.5 0 0 1 4.9-4.6l-2 2 .7.7 1.4 1.4.7.7 2-2Z" />
+  </Svg>
+)
