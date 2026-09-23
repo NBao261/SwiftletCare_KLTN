@@ -7,15 +7,17 @@ const RELAY_ITEMS: Array<{ key: RelayName; label: string; icon: typeof Droplets 
   { key: 'misting', label: 'Phun sương siêu âm', icon: Droplets },
   { key: 'ventilation', label: 'Thông gió đối lưu', icon: Wind },
   { key: 'speaker', label: 'Hệ âm thanh dẫn dụ', icon: Volume2 },
-  { key: 'heating', label: 'Hao hụt nhiệt mái', icon: Flame },
+  { key: 'heating', label: 'Sưởi ấm', icon: Flame },
 ]
 
 interface ControlSubsystemPanelProps {
   zoneName?: string
   relayStates?: RelayStates
   controlMode?: ControlMode
-  /** Nhiệt độ đang vượt ngưỡng — tô cảnh báo cho relay sưởi/thoát nhiệt (ENV-FR-004) */
-  temperatureAnomaly?: boolean
+  /** Nhiệt độ đang VƯỢT trần ngưỡng — tô cảnh báo relay thoát nhiệt/thông gió (ENV-FR-004) */
+  tooHot?: boolean
+  /** Nhiệt độ đang DƯỚI sàn ngưỡng — tô cảnh báo relay sưởi (ENV-FR-004) */
+  tooCold?: boolean
 }
 
 /**
@@ -26,7 +28,7 @@ interface ControlSubsystemPanelProps {
  * đều bám relay_states/control_mode thật qua socket telemetry.
  */
 export default function ControlSubsystemPanel({
-  zoneName, relayStates, controlMode, temperatureAnomaly,
+  zoneName, relayStates, controlMode, tooHot, tooCold,
 }: ControlSubsystemPanelProps) {
   return (
     <Card size="lg" className="flex h-full flex-col gap-5">
@@ -45,7 +47,9 @@ export default function ControlSubsystemPanel({
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {RELAY_ITEMS.map(item => {
           const isOn = relayStates?.[item.key]
-          const isHeatingAnomaly = item.key === 'heating' && temperatureAnomaly
+          // heating chống LẠNH (bật khi tooCold) — ventilation thoát nhiệt/chống NÓNG (bật khi tooHot).
+          // Đảo ngược 2 cờ này từng khiến relay sưởi báo "Quá nhiệt" đúng lúc nhà yến đang quá lạnh.
+          const anomalyLabel = item.key === 'heating' && tooCold ? 'Quá lạnh' : item.key === 'ventilation' && tooHot ? 'Quá nhiệt' : null
           const Icon = item.icon
           return (
             <div key={item.key} className="flex flex-col items-center gap-2 rounded-2xl border border-warmGray/15 p-3 text-center">
@@ -55,19 +59,19 @@ export default function ControlSubsystemPanel({
                 strokeWidth={7}
                 trackClassName="stroke-warmGray/10"
                 className={cn(
-                  relayStates === undefined ? 'stroke-warmGray/20' : isHeatingAnomaly ? 'stroke-climateOrange' : isOn ? 'stroke-success' : 'stroke-warmGray/25',
+                  relayStates === undefined ? 'stroke-warmGray/20' : anomalyLabel ? 'stroke-climateOrange' : isOn ? 'stroke-success' : 'stroke-warmGray/25',
                 )}
               >
                 <div className="flex flex-col items-center gap-0.5">
-                  <Icon width={16} height={16} className={cn(relayStates === undefined ? 'text-warmGray' : isHeatingAnomaly ? 'text-climateOrange' : isOn ? 'text-success' : 'text-warmGray')} />
+                  <Icon width={16} height={16} className={cn(relayStates === undefined ? 'text-warmGray' : anomalyLabel ? 'text-climateOrange' : isOn ? 'text-success' : 'text-warmGray')} />
                   <span className="text-[11px] font-extrabold text-charcoal">
                     {relayStates === undefined ? '--' : isOn ? 'BẬT' : 'TẮT'}
                   </span>
                 </div>
               </RadialGauge>
               <p className="label-caption leading-tight">{item.label}</p>
-              <p className={cn('text-xs font-semibold', isHeatingAnomaly ? 'text-climateOrange' : 'text-warmGray')}>
-                {isHeatingAnomaly ? 'Quá nhiệt' : controlMode ? `Chế độ ${controlMode}` : '--'}
+              <p className={cn('text-xs font-semibold', anomalyLabel ? 'text-climateOrange' : 'text-warmGray')}>
+                {anomalyLabel ?? (controlMode ? `Chế độ ${controlMode}` : '--')}
               </p>
             </div>
           )

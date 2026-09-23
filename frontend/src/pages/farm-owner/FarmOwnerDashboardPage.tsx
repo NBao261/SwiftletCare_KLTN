@@ -79,9 +79,9 @@ export default function FarmOwnerDashboardPage() {
     );
   }
 
-  const tempAnomaly =
-    data.temperature !== undefined &&
-    (data.temperature < T.temp_min || data.temperature > T.temp_max);
+  const tooCold = data.temperature !== undefined && data.temperature < T.temp_min;
+  const tooHot = data.temperature !== undefined && data.temperature > T.temp_max;
+  const tempAnomaly = tooCold || tooHot;
   const humidityAnomaly =
     data.humidity !== undefined &&
     (data.humidity < T.humidity_min || data.humidity > T.humidity_max);
@@ -129,7 +129,8 @@ export default function FarmOwnerDashboardPage() {
           zoneName={selectedZoneName ?? undefined}
           relayStates={relayStates}
           controlMode={controlMode}
-          temperatureAnomaly={tempAnomaly}
+          tooHot={tooHot}
+          tooCold={tooCold}
         />
       </div>
 
