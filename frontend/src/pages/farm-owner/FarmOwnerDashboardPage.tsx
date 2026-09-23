@@ -42,12 +42,20 @@ export default function FarmOwnerDashboardPage() {
   // useTelemetry chỉ có relayStates/controlMode SAU khi nhận event TELEMETRY_UPDATE đầu tiên qua
   // socket, và không nghe RELAY_UPDATE — nên override thủ công (controlRelay) hay hết hạn override
   // (expireManualOverrides) không hiện ngay trên panel. useSensorNodes đã tự invalidate theo
-  // RELAY_UPDATE/DEVICE_STATUS_CHANGE (hooks/shared/useDevices.ts), nên dùng REST của nó làm giá trị
-  // ban đầu + fallback khi socket đứng yên, còn telemetry socket (mới hơn khi đang live) vẫn ưu tiên.
+  // RELAY_UPDATE/DEVICE_STATUS_CHANGE (hooks/shared/useDevices.ts).
   const { data: sensorNodes } = useSensorNodes(selectedZoneId ?? undefined, { enabled: !!selectedZoneId });
   const restNode = sensorNodes?.[0];
+  // relayStates: ưu tiên socket — telemetry payload (MQTTManager.cpp publishTelemetry) có
+  // relay_states thật từ firmware, nên khi đang live nó mới hơn REST.
   const effectiveRelayStates = relayStates ?? restNode?.relay_states;
-  const effectiveControlMode = controlMode ?? restNode?.control_mode;
+  // controlMode: ƯU TIÊN REST, ngược với relayStates ở trên. Firmware KHÔNG gửi control_mode trong
+  // telemetry (chỉ có relay_states — publishTelemetry, MQTTManager.cpp:178-191; control_mode chỉ có
+  // trong payload relay/status, PIDController.cpp:69), nên backend luôn điền mặc định
+  // `payload.control_mode ?? 'AUTO'` (telemetry.service.ts:102). Vì vậy controlMode từ useTelemetry
+  // LUÔN LÀ 'AUTO' bất kể zone đang MANUAL hay không — ưu tiên nó sẽ đè mất MANUAL suốt thời gian
+  // override, đúng lúc người dùng cần biết panel đang ở chế độ gì. REST mới là nguồn được ghi bởi
+  // controlRelay/confirmRelayStatus/expireManualOverrides và tự invalidate theo RELAY_UPDATE.
+  const effectiveControlMode = restNode?.control_mode ?? controlMode;
 
   if (!selectedZoneId) {
     if (isLoadingAllZones) {
