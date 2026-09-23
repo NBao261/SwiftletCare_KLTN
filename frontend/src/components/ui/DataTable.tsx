@@ -20,7 +20,8 @@ interface DataTableProps<T> {
   sortDirection?: SortDirection
   onSortChange?: (key: string) => void
   emptyMessage?: string
-  /** Cả dòng bấm được (VD mở trang chi tiết) — cột "Thao tác" tự stopPropagation để không kích hoạt đôi */
+  /** Cả dòng bấm được (VD mở trang chi tiết) — nơi gọi tự stopPropagation ở cột có nút riêng
+   *  (VD cột "Thao tác") để không vừa mở menu vừa điều hướng, DataTable không tự làm việc đó */
   onRowClick?: (row: T) => void
   /** px — ép mọi dòng cao bằng nhau bất kể 1 hay nhiều dòng nội dung, để khung bảng không đổi theo dữ liệu */
   rowHeight?: number
@@ -83,8 +84,13 @@ export default function DataTable<T>({
               <tr
                 key={getRowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={onRowClick ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row) }
+                } : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? 'button' : undefined}
                 style={rowHeight ? { height: rowHeight } : undefined}
-                className={cn('transition-colors hover:bg-warmGray/5', onRowClick && 'cursor-pointer')}
+                className={cn('transition-colors hover:bg-warmGray/5', onRowClick && 'cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-charcoal')}
               >
                 {columns.map(col => (
                   <td key={col.key} className={cn('px-4 py-3 align-middle text-charcoal', ALIGN_CLASS[col.align ?? 'left'], col.className)}>
