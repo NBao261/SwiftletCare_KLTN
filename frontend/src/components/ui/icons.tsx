@@ -100,6 +100,10 @@ export const IconChevronRight = (p: IconProps) => (
   <Svg {...p}><path d="m8 5.5 4.5 4.5L8 14.5" /></Svg>
 )
 
+export const IconChevronsRight = (p: IconProps) => (
+  <Svg {...p}><path d="m5 5.5 4.5 4.5L5 14.5" /><path d="m10.5 5.5 4.5 4.5-4.5 4.5" /></Svg>
+)
+
 export const IconLogout = (p: IconProps) => (
   <Svg {...p}><path d="M7.5 17h-3A1.5 1.5 0 0 1 3 15.5v-11A1.5 1.5 0 0 1 4.5 3h3" /><path d="m12.5 13.5 3.5-3.5-3.5-3.5" /><path d="M16 10H7" /></Svg>
 )
