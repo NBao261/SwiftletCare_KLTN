@@ -28,3 +28,17 @@ export function useBirdCountTrends(zoneId: string | undefined, days: number) {
     enabled: !!zoneId,
   })
 }
+
+/**
+ * ANALYTICS-FR-003 — tương quan độ ẩm/nhiệt độ × return rate. Endpoint có
+ * thật, nhưng return_rate đằng sau nó phụ thuộc VISION (ai-pipeline chưa
+ * deploy — xem CLAUDE.md), nên nơi gọi hook này vẫn phải tự gắn nhãn "dữ liệu
+ * giả" (FE_Design_Claude.md §5.4) cho tới khi VISION lên thật.
+ */
+export function useCorrelation(zoneId: string | undefined, days: number) {
+  return useQuery({
+    queryKey: ['analytics', 'correlation', zoneId, days],
+    queryFn: () => analyticsApi.correlation(zoneId!, days).then(r => r.data.data),
+    enabled: !!zoneId,
+  })
+}

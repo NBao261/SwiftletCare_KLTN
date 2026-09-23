@@ -36,3 +36,25 @@ export function seriesStats(series: EnvSummaryPoint[], key: MetricKey): { min: n
 }
 
 export const xAxisTicks = { autoSkip: true, maxRotation: 0, maxTicksLimit: 8 }
+
+/**
+ * Hệ số tương quan Pearson (r) giữa 2 chuỗi cùng độ dài — dùng cho
+ * CorrelationCard (độ ẩm × return rate, ANALYTICS-FR-003). Trả `null` nếu
+ * không đủ điểm dữ liệu hoặc 1 trong 2 chuỗi không có phương sai (chia cho 0).
+ */
+export function pearsonCorrelation(xs: number[], ys: number[]): number | null {
+  const n = Math.min(xs.length, ys.length)
+  if (n < 2) return null
+  const meanX = xs.reduce((a, b) => a + b, 0) / n
+  const meanY = ys.reduce((a, b) => a + b, 0) / n
+  let cov = 0, varX = 0, varY = 0
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - meanX
+    const dy = ys[i] - meanY
+    cov += dx * dy
+    varX += dx * dx
+    varY += dy * dy
+  }
+  if (varX === 0 || varY === 0) return null
+  return cov / Math.sqrt(varX * varY)
+}
