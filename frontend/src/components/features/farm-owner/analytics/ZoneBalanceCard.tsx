@@ -3,7 +3,7 @@ import { Wind } from 'lucide-react'
 import { Badge, Button, Card } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useFarmZones } from '@/hooks/shared/useFarms'
-import { useEnvCompare } from '@/hooks/farm-owner/useAnalytics'
+import { useEnvCompareBatched } from '@/hooks/farm-owner/useAnalytics'
 import { cn } from '@/lib/cn'
 import type { Thresholds } from '@/types'
 
@@ -13,6 +13,8 @@ interface ZoneScore {
   score: number
   status: string
   detail: string
+  /** false = chưa nhận telemetry (xám, không tính vào "zone tệ nhất") — true = có dữ liệu thật, kể cả 0 điểm */
+  hasData: boolean
 }
 
 /** % đạt yêu cầu của 1 giá trị so với dải ngưỡng [min,max] — 100 khi trong dải, giảm dần khi lệch xa. */
@@ -31,9 +33,10 @@ function statusFor(score: number): string {
   return 'Dưới mục tiêu'
 }
 
-function barTone(score: number): string {
-  if (score >= 80) return 'bg-success'
-  if (score >= 65) return 'bg-climateOrange'
+function barTone(z: ZoneScore): string {
+  if (!z.hasData) return 'bg-warmGray/30'
+  if (z.score >= 80) return 'bg-success'
+  if (z.score >= 65) return 'bg-climateOrange'
   return 'bg-alertRed'
 }
 
@@ -46,30 +49,35 @@ function barTone(score: number): string {
 export default function ZoneBalanceCard({ farmId }: { farmId: string | undefined }) {
   const { data: zones, isLoading: isLoadingZones } = useFarmZones(farmId)
   const zoneIds = useMemo(() => zones?.map(z => z._id) ?? [], [zones])
-  const { data: compare, isLoading: isLoadingCompare } = useEnvCompare(zoneIds, '24h')
+  const { zones: compareZones, isLoading: isLoadingCompare, isError } = useEnvCompareBatched(zoneIds, '24h')
 
   const scores: ZoneScore[] = useMemo(() => {
-    if (!zones || !compare) return []
+    if (!zones) return []
     return zones.map(zone => {
-      const metrics = compare.zones.find(z => z.zoneId === zone._id)?.metrics
+      const metrics = compareZones.find(z => z.zoneId === zone._id)?.metrics
       const T: Thresholds = zone.thresholds
+      const label = `${zone.houseName} / ${zone.name}`
       if (!metrics || metrics.temperature === undefined || metrics.humidity === undefined) {
-        return { zoneId: zone._id, label: `${zone.houseName} / ${zone.name}`, score: 0, status: 'Chưa có dữ liệu', detail: 'Chưa nhận telemetry trong 24h qua' }
+        return { zoneId: zone._id, label, score: 0, status: 'Chưa có dữ liệu', detail: 'Chưa nhận telemetry trong 24h qua', hasData: false }
       }
       const tempScore = rangeScore(metrics.temperature, T.temp_min, T.temp_max)
       const humidityScore = rangeScore(metrics.humidity, T.humidity_min, T.humidity_max)
       const score = Math.round((tempScore + humidityScore) / 2)
       return {
         zoneId: zone._id,
-        label: `${zone.houseName} / ${zone.name}`,
+        label,
         score,
         status: statusFor(score),
         detail: `Độ ẩm ${metrics.humidity.toFixed(1)}%, Nhiệt độ ${metrics.temperature.toFixed(1)}°C`,
+        hasData: true,
       }
     }).sort((a, b) => b.score - a.score)
-  }, [zones, compare])
+  }, [zones, compareZones])
 
-  const worst = scores.filter(s => s.score > 0).sort((a, b) => a.score - b.score)[0]
+  // Zone lệch ngưỡng nặng nhất (kể cả 0/100) vẫn phải lọt vào gợi ý — chỉ loại zone
+  // THẬT SỰ chưa có dữ liệu (hasData=false), không lọc theo score>0 như trước (từng
+  // khiến chính zone nguy hiểm nhất — điểm 0 do lệch ngưỡng — bị coi như "chưa có dữ liệu").
+  const worst = scores.filter(s => s.hasData).sort((a, b) => a.score - b.score)[0]
   const isLoading = isLoadingZones || isLoadingCompare
 
   return (
@@ -85,6 +93,8 @@ export default function ZoneBalanceCard({ farmId }: { farmId: string | undefined
 
         {isLoading ? (
           <LoadingSkeleton count={3} className="h-10 w-full" />
+        ) : isError ? (
+          <p className="text-sm text-alertRed">Không tải được dữ liệu so sánh Zone — thử tải lại trang.</p>
         ) : scores.length === 0 ? (
           <p className="text-sm text-warmGray">Trang trại này chưa có zone nào.</p>
         ) : (
@@ -98,7 +108,7 @@ export default function ZoneBalanceCard({ farmId }: { farmId: string | undefined
                   <span className="shrink-0 font-bold text-charcoal">{z.score}/100</span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-warmGray/10">
-                  <div className={cn('h-full rounded-full', barTone(z.score))} style={{ width: `${z.score}%` }} />
+                  <div className={cn('h-full rounded-full', barTone(z))} style={{ width: `${z.score}%` }} />
                 </div>
               </div>
             ))}
