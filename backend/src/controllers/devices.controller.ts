@@ -30,14 +30,15 @@ export const updateThresholds = asyncHandler(async (req: Request, res: Response)
 
 /** POST /devices/sensor-nodes/:id/relay – ENV-FR-016..018 */
 export const controlRelay = asyncHandler(async (req: Request, res: Response) => {
-  const node = await deviceService.controlRelay(req.params.id, req.user, req.body)
-  res.json({ success: true, data: node })
+  const { node, delivered } = await deviceService.controlRelay(req.params.id, req.user, req.body)
+  // commandDelivered=false: đã lưu trạng thái mong muốn nhưng lệnh chưa tới broker
+  res.json({ success: true, data: node, meta: { commandDelivered: delivered } })
 })
 
 /** PUT /devices/sensor-nodes/:id/reassign-zone – FARM-FR-007b, Flow 21 Nhánh A */
 export const reassignZone = asyncHandler(async (req: Request, res: Response) => {
-  const node = await deviceService.reassignZone(req.params.id, req.user, req.body)
-  res.json({ success: true, data: node })
+  const { node, delivered } = await deviceService.reassignZone(req.params.id, req.user, req.body)
+  res.json({ success: true, data: node, meta: { commandDelivered: delivered } })
 })
 
 /** POST /devices/camera-nodes/register – FARM-FR-004 */

@@ -54,7 +54,17 @@ export function connectMQTT(): void {
   client.on('offline', () => logger.warn('MQTT offline – reconnecting...'))
 }
 
-export function publishCommand(farmId: string, houseId: string, zoneId: string, subtopic: string, payload: unknown): void {
+/**
+ * Trả về false khi lệnh KHÔNG đi được tới broker (chưa kết nối lần nào, hoặc
+ * đang mất kết nối). Trước đây hàm này nuốt im lặng nên API vẫn báo "đã gửi lệnh"
+ * dù không có gì rời khỏi backend — Technician đứng ở farm chờ thiết bị phản hồi.
+ */
+export function publishCommand(farmId: string, houseId: string, zoneId: string, subtopic: string, payload: unknown): boolean {
   const topic = `swiftletcare/${farmId}/${houseId}/${zoneId}/${subtopic}`
-  client?.publish(topic, JSON.stringify(payload), { qos: 1 })
+  if (!client?.connected) {
+    logger.warn('Không gửi được lệnh MQTT — broker chưa kết nối', { topic })
+    return false
+  }
+  client.publish(topic, JSON.stringify(payload), { qos: 1 })
+  return true
 }

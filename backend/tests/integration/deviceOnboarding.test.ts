@@ -19,11 +19,13 @@ import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { User } from '@/models/user.model'
 import { markOverdueActivations, markOtaTimeouts, recordHeartbeat, ACTIVATION_TIMEOUT_MS, OTA_CONFIRM_TIMEOUT_MS } from '@/services/device.service'
 import { createProvisionedDevice } from '@/services/provisionedDevice.service'
+import { Alert } from '@/models/alert.model'
 import { Ticket } from '@/models/ticket.model'
+import { createTicketsFromStaleAlerts } from '@/services/ticket.service'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import type { Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.vn'
@@ -50,9 +52,10 @@ afterEach(async () => {
   await Promise.all([
     AuditLog.deleteMany({}), Farm.deleteMany({}), House.deleteMany({}), Zone.deleteMany({}),
     SensorNode.deleteMany({}), CameraNode.deleteMany({}), ProvisionedDevice.deleteMany({}), User.deleteMany({}),
-    Ticket.deleteMany({}),
+    Ticket.deleteMany({}), Alert.deleteMany({}),
   ])
   jest.clearAllMocks()
+  ;(publishCommand as jest.Mock).mockReturnValue(true)
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -288,5 +291,70 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
 
     await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(202)
     expect((await SensorNode.findById(node._id))!.ota_failed).toBeUndefined()
+  })
+
+  it('lệnh không tới được broker → 503, không ghi ota_pending', async () => {
+    const { techToken, node } = await onlineNode()
+    ;(publishCommand as jest.Mock).mockReturnValue(false)
+
+    const res = await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(503)
+    expect(res.body.error.message).toContain('MQTT')
+    expect((await SensorNode.findById(node._id))!.ota_pending).toBeUndefined()
+    await send(techToken, node._id, { command: 'RESTART' }).expect(503)
+  })
+
+  it('thiết bị DEGRADED vẫn nhận được lệnh, PENDING/OFFLINE thì không', async () => {
+    const { techToken, node } = await onlineNode()
+    await SensorNode.updateOne({ _id: node._id }, { status: 'DEGRADED' })
+    await send(techToken, node._id, { command: 'RESTART' }).expect(202)
+
+    await SensorNode.updateOne({ _id: node._id }, { status: 'ERROR' })
+    await send(techToken, node._id, { command: 'RESTART' }).expect(409)
+  })
+})
+
+describe('heartbeat đầu tiên đẩy ngưỡng của Zone xuống thiết bị (Flow 1 bước 9)', () => {
+  it('đẩy đúng ngưỡng Zone 1 lần, lần sau không đẩy lại', async () => {
+    const { techToken, a, secretKey } = await seed()
+    await Zone.updateOne({ _id: a.zone._id }, { 'thresholds.temp_min': 28, 'thresholds.temp_max': 30 })
+    await register(techToken, { device_id: 'node_100', zone_id: String(a.zone._id), secret_key: secretKey }).expect(201)
+
+    await recordHeartbeat({ deviceId: 'node_100' } as never)
+    const [, , zoneId, topic, payload] = (publishCommand as jest.Mock).mock.calls[0]
+    expect([zoneId, topic]).toEqual([String(a.zone._id), 'config/update'])
+    expect(payload).toMatchObject({ temp_min: 28, temp_max: 30 })
+    expect((await SensorNode.findOne({ device_id: 'node_100' }))!.config_pushed_at).toBeInstanceOf(Date)
+
+    ;(publishCommand as jest.Mock).mockClear()
+    await recordHeartbeat({ deviceId: 'node_100' } as never)
+    expect(publishCommand).not.toHaveBeenCalled()
+  })
+})
+
+describe('gỡ thiết bị thì dọn cảnh báo của nó (FARM-FR-008)', () => {
+  it('cảnh báo còn mở chuyển RESOLVED, ticket đang mở được ghi chú, không sinh ticket rác', async () => {
+    const { techToken, a, secretKey } = await seed()
+    const nodeId = (await register(techToken, { device_id: 'node_100', zone_id: String(a.zone._id), secret_key: secretKey }).expect(201)).body.data._id
+
+    const stale = new Date(Date.now() - 20 * 60_000)
+    const alert = await Alert.create({
+      farm_id: a.farm._id, zone_id: a.zone._id, node_id: nodeId, type: 'NODE_OFFLINE', severity: 'HIGH',
+      title: 'Mất kết nối', message: 'x', status: 'ACTIVE', created_at: stale,
+    })
+    const ticket = await Ticket.create({ farm_id: a.farm._id, alert_id: alert._id, type: 'NODE_OFFLINE', priority: 'P2' })
+
+    await request(app).post(`/devices/sensor-nodes/${nodeId}/decommission`)
+      .set('Authorization', `Bearer ${techToken}`).send({ reason: 'Thiết bị chết, thu hồi' }).expect(200)
+
+    expect((await Alert.findById(alert._id))!.status).toBe('RESOLVED')
+    expect((await Alert.findById(alert._id))!.resolved_at).toBeInstanceOf(Date)
+    expect((await Ticket.findById(ticket._id))!.notes.at(-1)!.content).toContain('đã được gỡ khỏi hệ thống')
+
+    const audit = await AuditLog.findOne({ action: 'DEVICE_DECOMMISSIONED' }).lean()
+    expect(audit!.metadata).toMatchObject({ closedAlerts: 1, notedTickets: 1 })
+
+    // Cảnh báo cũ còn sót của thiết bị đã gỡ cũng không được biến thành ticket
+    await Alert.updateOne({ _id: alert._id }, { status: 'ACTIVE' })
+    expect(await createTicketsFromStaleAlerts()).toBe(0)
   })
 })

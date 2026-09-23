@@ -102,6 +102,14 @@ describe('xác nhận tiếp nhận (responded_at)', () => {
     expect((await Ticket.findById(ticket._id))!.responded_at).toEqual(first)
   })
 
+  it('đóng thẳng ticket từ NEW (sự cố tự hết) vẫn ghi mốc phản hồi', async () => {
+    const { ticket, assigneeToken } = await seed()
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, {
+      status: 'CLOSED', note: 'Tự phục hồi, không cần sửa chữa',
+    }).expect(200)
+    expect((await Ticket.findById(ticket._id))!.responded_at).toBeInstanceOf(Date)
+  })
+
   it('KPI có thời gian phản hồi trung bình theo Technician', async () => {
     const { ticket, assignee } = await seed()
     // created_at bất biến qua Mongoose — ghi thẳng collection để giả lập ticket tạo 3 giờ trước

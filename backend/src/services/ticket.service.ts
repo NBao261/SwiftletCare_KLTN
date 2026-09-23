@@ -1,5 +1,6 @@
 import { Ticket, ITicket } from '@/models/ticket.model'
 import { Alert } from '@/models/alert.model'
+import { SensorNode } from '@/models/device.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util'
@@ -223,7 +224,17 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
     (await Ticket.find({ alert_id: { $in: staleAlerts.map(a => a._id) } }).select('alert_id').lean())
       .map(t => String(t.alert_id)),
   )
-  const toProcess = staleAlerts.filter(a => !alreadyTicketed.has(String(a._id)))
+  // Cảnh báo cũ của thiết bị đã gỡ (FARM-FR-008) không được biến thành ticket:
+  // không còn gì ở hiện trường để sửa. 1 truy vấn cho cả batch, cùng idiom dedup ở trên.
+  const nodeIds = [...new Set(staleAlerts.map(a => a.node_id).filter(Boolean))]
+  const removedNodeIds = new Set(
+    (await SensorNode.find({ _id: { $in: nodeIds }, decommissioned_at: { $ne: null } }).select('_id').lean())
+      .map(n => String(n._id)),
+  )
+
+  const toProcess = staleAlerts.filter(a =>
+    !alreadyTicketed.has(String(a._id)) && !(a.node_id && removedNodeIds.has(String(a.node_id))),
+  )
 
   let created = 0
   for (const alert of toProcess) {
@@ -379,8 +390,10 @@ export async function updateStatus(
 
   ticket.status = newStatus
   if (newStatus === 'CLOSED') ticket.closed_at = new Date()
-  // Mốc tiếp nhận chỉ ghi lần đầu — IN_PROGRESS lần 2 (quay lại từ AWAITING_FIELD_CONFIRMATION) không phải phản hồi mới
-  if (newStatus === 'IN_PROGRESS' && !ticket.responded_at) ticket.responded_at = new Date()
+  // Mốc tiếp nhận chỉ ghi lần đầu — IN_PROGRESS lần 2 (quay lại từ AWAITING_FIELD_CONFIRMATION) không phải phản hồi mới.
+  // Đóng thẳng từ NEW (sự cố tự hết — Flow 9 case 5a) cũng là đã phản hồi, nếu
+  // không công xử lý đó biến mất khỏi KPI thời gian phản hồi.
+  if (!ticket.responded_at && (newStatus === 'IN_PROGRESS' || newStatus === 'CLOSED')) ticket.responded_at = new Date()
   if (note) ticket.notes.push({ author_id: user._id as never, content: note, created_at: new Date() })
   await ticket.save()
   return ticket

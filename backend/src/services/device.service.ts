@@ -5,13 +5,14 @@ import { Farm } from '@/models/farm.model'
 import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
-import { raiseNodeOfflineAlert } from '@/services/alert.service'
+import { raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
+import { Alert } from '@/models/alert.model'
 import { logAction } from '@/services/auditLog.service'
 import { notifyUser } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
-import { NotFoundError, ConflictError, BadRequestError, ForbiddenError } from '@/utils/appError.util'
+import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds } from '@/types'
 
@@ -117,7 +118,7 @@ export async function controlRelay(
   nodeId: string,
   user: CurrentUser,
   input: { relayName: string; state: boolean; durationMs?: number },
-): Promise<ISensorNode> {
+): Promise<{ node: ISensorNode; delivered: boolean }> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
@@ -135,7 +136,9 @@ export async function controlRelay(
   node.override_expiry = new Date(Date.now() + overrideMs)
   await node.save()
 
-  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
+  // Lệnh không tới được broker thì DB vẫn giữ trạng thái mong muốn (ESP32 sẽ
+  // đồng bộ khi online lại), nhưng phải nói thật cho UI biết qua `delivered`.
+  const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
     relayName: input.relayName,
     state: input.state,
     durationMs: overrideMs,
@@ -150,9 +153,9 @@ export async function controlRelay(
   })
 
   await logAction(user._id, 'RELAY_OVERRIDE', 'sensor_node', String(node._id), {
-    relayName: input.relayName, state: input.state, durationMs: overrideMs,
+    relayName: input.relayName, state: input.state, durationMs: overrideMs, delivered,
   })
-  return node
+  return { node, delivered }
 }
 
 /**
@@ -166,7 +169,7 @@ export async function reassignZone(
   nodeId: string,
   user: CurrentUser,
   input: { newZoneId: string },
-): Promise<ISensorNode> {
+): Promise<{ node: ISensorNode; delivered: boolean }> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
@@ -180,7 +183,7 @@ export async function reassignZone(
   const destChain = await assertZoneAccess(input.newZoneId, user)
 
   // Publish lên topic CŨ — thiết bị vẫn đang lắng nghe ở đó cho tới khi restart.
-  publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'config/reassign', {
+  const delivered = publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'config/reassign', {
     newFarmId: String(destChain.farm._id),
     newHouseId: String(destChain.house._id),
     newZoneId: String(destChain.zone._id),
@@ -191,9 +194,9 @@ export async function reassignZone(
   await node.save()
 
   await logAction(user._id, 'DEVICE_REASSIGNED', 'sensor_node', String(node._id), {
-    fromZoneId: String(sourceChain.zone._id), toZoneId: String(destChain.zone._id),
+    fromZoneId: String(sourceChain.zone._id), toZoneId: String(destChain.zone._id), delivered,
   })
-  return node
+  return { node, delivered }
 }
 
 /** FARM-FR-004 — chỉ Technician/Admin, cùng Web Console Onboarding với sensor node (Flow 1b) */
@@ -238,6 +241,31 @@ export async function listCameraNodes(zoneId: string | undefined, user: CurrentU
  * lên đúng topic (cũ) mà heartbeat vừa tới, y hệt cơ chế Flow 21 Nhánh A nhưng do backend
  * tự kích hoạt thay vì Technician bấm nút.
  */
+/**
+ * Thiết bị mới lắp (Flow 1) hoặc vừa thay (FARM-FR-008) khởi động bằng ngưỡng gốc
+ * trong firmware, KHÔNG phải ngưỡng Farm Owner đã đặt cho Zone — trước đây phải
+ * đợi ai đó sửa ngưỡng hoặc bấm PUSH_CONFIG thì thiết bị mới chạy đúng, trong khi
+ * dashboard vẫn hiển thị ngưỡng của Zone. Đẩy ngay lần nó lên mạng đầu tiên;
+ * `config_pushed_at` để không lặp lại mỗi lần rớt mạng rồi kết nối lại.
+ */
+async function pushZoneConfigOnFirstContact(node: ISensorNode): Promise<void> {
+  try {
+    const chain = await findZoneChainOrThrow(String(node.zone_id))
+    publishCommand(
+      String(chain.farm._id), String(chain.house._id), String(chain.zone._id),
+      'config/update', chain.zone.thresholds,
+    )
+    node.config_pushed_at = new Date()
+    await node.save()
+    logger.info('Đã đẩy ngưỡng Zone xuống thiết bị mới lên mạng', {
+      deviceId: node.device_id, zoneId: String(node.zone_id),
+    })
+  } catch (err) {
+    // Không chặn xử lý heartbeat chỉ vì bước đồng bộ cấu hình lỗi — lần heartbeat sau thử lại
+    logger.warn('Không đẩy được ngưỡng Zone xuống thiết bị', { deviceId: node.device_id, err: (err as Error).message })
+  }
+}
+
 export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: string[]): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong heartbeat payload')
 
@@ -245,6 +273,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
   const wasOffline = node.status !== 'ONLINE'
+  const needsConfig = !node.config_pushed_at
   node.status = 'ONLINE'
   node.last_heartbeat = new Date()
   if (payload.rssi !== undefined) node.rssi = payload.rssi
@@ -260,6 +289,9 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
       deviceId: node.device_id, version: otaDone.version,
     })
   }
+
+  // Lần bắt tay đầu tiên: thiết bị chưa từng nhận cấu hình nào từ backend
+  if (needsConfig) await pushZoneConfigOnFirstContact(node)
 
   if (wasOffline) {
     emitDeviceStatusChange(String(node.zone_id), {
@@ -334,6 +366,25 @@ const DEVICE_MODELS = { sensor: SensorNode, camera: CameraNode as unknown as typ
 const TARGET_TYPES = { sensor: 'sensor_node', camera: 'camera_node' } as const
 
 /**
+ * Ticket đang mở sinh ra từ cảnh báo của thiết bị vừa gỡ: chỉ thêm ghi chú, KHÔNG
+ * tự đóng — người xử lý vẫn phải xác nhận đã bàn giao xong (TICKET-FR-007).
+ */
+async function noteTicketsOfRemovedDevice(nodeId: string, deviceId: string): Promise<number> {
+  const alertIds = await Alert.find({ node_id: nodeId }).select('_id').lean()
+  if (alertIds.length === 0) return 0
+
+  const tickets = await Ticket.find({ alert_id: { $in: alertIds.map(a => a._id) }, status: { $ne: 'CLOSED' } })
+  for (const ticket of tickets) {
+    ticket.notes.push({
+      content: `Thiết bị ${deviceId} đã được gỡ khỏi hệ thống — kiểm tra lại trước khi đóng ticket này`,
+      created_at: new Date(),
+    } as never)
+    await ticket.save()
+  }
+  return tickets.length
+}
+
+/**
  * FARM-FR-008 — Technician gỡ thiết bị khỏi hiện trường. Document được giữ lại
  * (telemetry/alert cũ tham chiếu `node_id`), chỉ đánh dấu `decommissioned_at`
  * để loại khỏi danh sách, thống kê và mọi luồng MQTT (heartbeat/telemetry từ
@@ -357,8 +408,13 @@ export async function decommissionDevice(
   emitDeviceStatusChange(String(node.zone_id), {
     nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString(),
   })
+
+  const closedAlerts = await resolveAlertsForNode(String(node._id), `Thiết bị đã được gỡ bỏ: ${reason}`)
+  const notedTickets = await noteTicketsOfRemovedDevice(String(node._id), node.device_id)
+
   await logAction(user._id, 'DEVICE_DECOMMISSIONED', TARGET_TYPES[kind], String(node._id), {
-    deviceId: node.device_id, zoneId: String(node.zone_id), reason, replacedBy: replacedBy ? String(replacedBy) : null,
+    deviceId: node.device_id, zoneId: String(node.zone_id), reason,
+    replacedBy: replacedBy ? String(replacedBy) : null, closedAlerts, notedTickets,
   })
   return node
 }
@@ -477,8 +533,10 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
     assertAllowedFirmwareUrl(input.ota.url)
   }
-  if (node.status !== 'ONLINE') {
-    throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE`)
+  // DEGRADED = vẫn online, chỉ hỏng 1 phần (VD 1 cảm biến im) — restart/đẩy lại
+  // cấu hình chính là cách xử lý đầu tiên cho tình trạng đó, không được chặn.
+  if (node.status !== 'ONLINE' && node.status !== 'DEGRADED') {
+    throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE hoặc DEGRADED`)
   }
 
   const ticket = input.ticket_id ? await Ticket.findById(input.ticket_id) : null
@@ -510,9 +568,6 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
       }
       const { version, url, sha256 } = input.ota
       payload = { command: 'OTA', ota: { version, url, sha256 } }
-      node.ota_pending = { version: input.ota.version, url: input.ota.url, requested_at: new Date(), requested_by: user._id as never }
-      node.ota_failed = undefined
-      await node.save()
       summary = `đẩy OTA ${node.firmware_version} → ${input.ota.version}`
       break
     }
@@ -520,7 +575,18 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
       throw BadRequestError('command phải là RESTART, PUSH_CONFIG hoặc OTA')
   }
 
-  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', payload)
+  const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', payload)
+  if (!delivered) {
+    // Không ghi ota_pending khi lệnh chưa rời backend: nếu ghi, UI hiện "đang cập
+    // nhật" rồi 30 phút sau báo thất bại cho một lệnh chưa từng được gửi đi.
+    throw ServiceUnavailableError('Không gửi được lệnh: backend chưa kết nối MQTT broker. Thử lại sau ít phút.')
+  }
+
+  if (input.command === 'OTA' && input.ota) {
+    node.ota_pending = { version: input.ota.version, url: input.ota.url, requested_at: new Date(), requested_by: user._id as never }
+    node.ota_failed = undefined
+    await node.save()
+  }
 
   if (ticket) {
     ticket.notes.push({

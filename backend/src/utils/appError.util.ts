@@ -19,3 +19,5 @@ export const ForbiddenError  = (message: string): AppError => new AppError(403, 
 export const ConflictError   = (message: string): AppError => new AppError(409, 'CONFLICT', message)
 export const BadRequestError = (message: string): AppError => new AppError(400, 'BAD_REQUEST', message)
 export const UnauthorizedError = (message: string): AppError => new AppError(401, 'UNAUTHORIZED', message)
+/** Phụ thuộc bên ngoài không sẵn sàng (VD MQTT broker) — client thử lại sau là hợp lý */
+export const ServiceUnavailableError = (message: string): AppError => new AppError(503, 'SERVICE_UNAVAILABLE', message)
