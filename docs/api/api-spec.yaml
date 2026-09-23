@@ -2051,7 +2051,8 @@ paths:
       tags: [Devices]
       summary: "Xử lý từ xa: khởi động lại / đẩy lại ngưỡng / OTA firmware (TICKET-FR-008, Flow 15) — TECHNICIAN/ADMIN"
       description: |
-        Chỉ gửi được khi thiết bị ONLINE. Cả 3 lệnh publish lên topic
+        Chỉ gửi được khi thiết bị `ONLINE` hoặc `DEGRADED` (hỏng một phần nhưng
+        vẫn kết nối — restart/đẩy lại cấu hình chính là cách xử lý cho tình trạng đó). Cả 3 lệnh publish lên topic
         `swiftletcare/{farmId}/{houseId}/{zoneId}/config/update` (§9.2):
         - `PUSH_CONFIG`: toàn bộ ngưỡng hiện hành của Zone
         - `RESTART`: `{ "command": "RESTART" }`
@@ -2094,8 +2095,9 @@ paths:
                   - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
         "400": { description: "Ticket không thuộc farm của thiết bị, hoặc URL firmware không phải HTTPS/không thuộc OTA_ALLOWED_HOSTS", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { description: "Thiết bị không ONLINE / đã gỡ, ticket đã đóng, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "409": { description: "Thiết bị PENDING/OFFLINE/ERROR hoặc đã gỡ, ticket đã đóng, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { description: "Backend chưa kết nối MQTT broker — lệnh chưa rời backend, `ota_pending` KHÔNG được ghi", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
 
   /devices/camera-nodes/{id}/decommission:
     post:
@@ -4496,7 +4498,8 @@ components:
             running_version: { type: string }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
-        decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
+        config_pushed_at: { type: string, format: date-time, nullable: true, description: "Backend đã đẩy ngưỡng của Zone xuống thiết bị (heartbeat đầu tiên)" }
+        decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống; cảnh báo còn mở của nó được đóng theo" }
         decommission_reason: { type: string, nullable: true }
         replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }
 
@@ -4574,6 +4577,7 @@ components:
         status: { type: string, enum: [ACTIVE, ACKNOWLEDGED, RESOLVED] }
         created_at: { type: string, format: date-time }
         acknowledged_at: { type: string, format: date-time, nullable: true }
+        resolved_at: { type: string, format: date-time, nullable: true, description: "Sự cố hết, hoặc thiết bị đã được gỡ khỏi hệ thống (FARM-FR-008)" }
         acknowledged_by: { type: string, nullable: true }
         acknowledgement_note: { type: string, nullable: true }
 
