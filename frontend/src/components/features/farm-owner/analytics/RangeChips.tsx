@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 import { RANGES } from "@/components/features/farm-owner/analytics/analytics.constants";
 import type { AnalyticsRange } from "@/apis/farm-owner/analytics.api";
 
-/** 5 mốc thời gian (1h/6h/24h/7d/30d) — dùng cho EnvTab/CompareTab. KHÔNG dùng cho BirdTab
+/** 5 mốc thời gian (1h/6h/24h/7d/30d) — dùng cho EnvVariationCard/CompareTab. KHÔNG dùng cho BirdTab
  *  (chỉ có 2 giá trị 7d/30d, xem BirdRangeToggle riêng). */
 export default function RangeChips({
   range,

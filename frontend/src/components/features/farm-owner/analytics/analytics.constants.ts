@@ -16,10 +16,6 @@ export const METRICS = [
 ] as const
 export type MetricKey = typeof METRICS[number]['key']
 
-export const TABS = ['env', 'compare', 'bird'] as const
-export type Tab = typeof TABS[number]
-export const TAB_LABEL: Record<Tab, string> = { env: 'Môi trường', compare: 'So sánh Zone', bird: 'Đàn chim' }
-
 export function labelForRange(iso: string, range: AnalyticsRange): string {
   const date = parseISO(iso)
   return range === '7d' || range === '30d' ? format(date, 'dd/MM') : format(date, 'HH:mm')
