@@ -67,6 +67,31 @@ export const IconEdit = (p: IconProps) => (
   <Svg {...p}><path d="M13.4 3.6a1.8 1.8 0 0 1 2.5 0l.5.5a1.8 1.8 0 0 1 0 2.5L6.5 16.5 3 17.5l1-3.5Z" /><path d="M11.8 5.2 14.8 8.2" /></Svg>
 )
 
+// ── Loại hành động nhật ký hệ thống (auditLog.constants.ts) ─────────────────
+export const IconLogin = (p: IconProps) => (
+  <Svg {...p}><path d="M11.5 3h3A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-3" /><path d="m7.5 6.5 3.5 3.5-3.5 3.5" /><path d="M11 10H3" /></Svg>
+)
+
+export const IconPlusCircle = (p: IconProps) => (
+  <Svg {...p}><circle cx="10" cy="10" r="7.5" /><path d="M10 6.5v7M6.5 10h7" /></Svg>
+)
+
+export const IconTrash = (p: IconProps) => (
+  <Svg {...p}><path d="M3.5 5.5h13" /><path d="M8 5.5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5" /><path d="M5 5.5 5.8 16a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L15 5.5" /></Svg>
+)
+
+export const IconShield = (p: IconProps) => (
+  <Svg {...p}><path d="M10 2.5 4 4.8v4.7c0 3.8 2.6 6.4 6 8 3.4-1.6 6-4.2 6-8V4.8Z" /></Svg>
+)
+
+export const IconActivity = (p: IconProps) => (
+  <Svg {...p}><path d="M2.5 10h3l2-5.5 5 11 2-5.5h3" /></Svg>
+)
+
+export const IconCopy = (p: IconProps) => (
+  <Svg {...p}><rect x="7" y="7" width="10" height="10" rx="2" /><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-7A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13H7" /></Svg>
+)
+
 export const IconChevronDown = (p: IconProps) => (
   <Svg {...p}><path d="m5.5 8 4.5 4.5L14.5 8" /></Svg>
 )
