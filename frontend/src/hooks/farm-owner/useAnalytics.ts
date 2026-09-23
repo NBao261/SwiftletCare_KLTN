@@ -36,19 +36,24 @@ function chunk<T>(items: T[], size: number): T[][] {
  */
 export function useEnvCompareBatched(zoneIds: string[], range: AnalyticsRange) {
   const batches = useMemo(() => chunk(zoneIds, 6), [zoneIds])
-  const results = useQueries({
+  // `combine` (TanStack Query v5) thay vì useMemo(fn, [results]) trên kết quả useQueries: mảng
+  // `results` là instance MỚI ở mọi render (useQueries luôn tạo lại), nên useMemo khoá theo nó
+  // không bao giờ tái dùng được — zones là tham chiếu mới mỗi render, kéo theo `scores` trong
+  // ZoneBalanceCard bị tính lại dù dữ liệu không đổi. Kết quả trả về từ `combine` được React Query
+  // tự structural-share (replaceEqualDeep) giữa các lần render, nên `zones` chỉ đổi tham chiếu khi
+  // nội dung thật sự đổi.
+  return useQueries({
     queries: batches.map(ids => ({
       queryKey: ['analytics', 'env-compare', ids, range],
       queryFn: () => analyticsApi.envCompare(ids, range).then(r => r.data.data),
       enabled: ids.length > 0,
     })),
+    combine: (results) => ({
+      isLoading: zoneIds.length > 0 && results.some(r => r.isLoading),
+      isError: results.some(r => r.isError),
+      zones: results.flatMap((r): EnvCompareZone[] => r.data?.zones ?? []),
+    }),
   })
-  const zones = useMemo(() => results.flatMap((r): EnvCompareZone[] => r.data?.zones ?? []), [results])
-  return {
-    isLoading: zoneIds.length > 0 && results.some(r => r.isLoading),
-    isError: results.some(r => r.isError),
-    zones,
-  }
 }
 
 /** VISION-FR-009/010/011, ANALYTICS-FR-002 — xu hướng đàn chim (chờ dữ liệu VISION) */
