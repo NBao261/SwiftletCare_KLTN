@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Radio } from 'lucide-react'
 import { Badge } from '@/components/ui'
 
@@ -17,6 +18,14 @@ export default function ScadaModeBanner({
   hasEverReceived: boolean
   lastSyncedAt?: string
 }) {
+  // secondsAgoLabel() chỉ tính lại lúc component render — không có gì kích render lại nên dòng chữ
+  // đứng yên (VD kẹt ở "22s trước") đúng lúc thiết bị mất kết nối và người dùng cần biết đã bao lâu.
+  // Tick nhẹ mỗi giây để label luôn khớp thời gian thực.
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => tick(t => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
   const syncedLabel = lastSyncedAt ? secondsAgoLabel(lastSyncedAt) : 'Chưa đồng bộ'
 
   return (
@@ -45,5 +54,9 @@ function secondsAgoLabel(iso: string): string {
   const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
   if (seconds < 60) return `${seconds}s trước`
   const minutes = Math.round(seconds / 60)
-  return `${minutes} phút trước`
+  if (minutes < 60) return `${minutes} phút trước`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours} giờ trước`
+  const days = Math.round(hours / 24)
+  return `${days} ngày trước`
 }
