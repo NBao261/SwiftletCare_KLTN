@@ -1,4 +1,5 @@
 ﻿import { Request, Response, NextFunction } from 'express'
+import { MulterError } from 'multer'
 import { AppError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 
@@ -7,7 +8,7 @@ interface MongoError extends Error {
   keyPattern?: Record<string, unknown>
 }
 
-export function errorHandler(err: MongoError | AppError, req: Request, res: Response, _next: NextFunction): void {
+export function errorHandler(err: MongoError | AppError | MulterError, req: Request, res: Response, _next: NextFunction): void {
   logger.error('Unhandled error', { err, path: req.path, method: req.method })
 
   // Lỗi nghiệp vụ do service throw (NotFoundError/ForbiddenError/... — utils/appError.util.ts)
@@ -16,6 +17,13 @@ export function errorHandler(err: MongoError | AppError, req: Request, res: Resp
       success: false,
       error: { code: err.code, message: err.message, ...(err.details !== undefined && { details: err.details }) },
     })
+    return
+  }
+
+  // Upload file (ENV-FR-013c) — VD vượt 10MB (SRS §12.4)
+  if (err instanceof MulterError) {
+    const message = err.code === 'LIMIT_FILE_SIZE' ? 'File vượt quá dung lượng cho phép (10MB)' : `File upload không hợp lệ: ${err.message}`
+    res.status(400).json({ success: false, error: { code: 'INVALID_UPLOAD', message } })
     return
   }
 

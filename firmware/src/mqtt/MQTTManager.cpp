@@ -4,6 +4,7 @@
  * SRS: ENV-FR-001, ENV-FR-015, §9.2, SEC-NFR-001
  */
 #include "MQTTManager.h"
+#include "audio/AudioManager.h"
 #include "config/Config.h"
 #include "storage/StorageManager.h"
 #include <ArduinoJson.h>
@@ -16,6 +17,10 @@
 static WiFiClient wifiClient;
 static PubSubClient mqtt;
 static unsigned long lastHeartbeat = 0;
+// true từ lúc connect thành công tới khi heartbeat đầu tiên gửi được — heartbeat
+// đó mang cờ justConnected để backend đẩy lại config/update (ngưỡng + lịch loa)
+// mà thiết bị có thể đã lỡ lúc offline/restart. Chỉ đọc/ghi trong mqttTask.
+static bool justConnected = false;
 
 // Đếm số lần connect() thất bại liên tiếp — sai/đổi IP broker không làm WiFi
 // fail nên không tái dùng được trigger captive-portal cũ, cần đếm riêng.
@@ -74,6 +79,9 @@ extern RelayState relayState;
 // chu kỳ không đồng bộ (relayState là struct nhiều field, không phải 1
 // scalar như mqttFailCount — cần mutex thật, volatile không đủ).
 extern SemaphoreHandle_t dataMutex;
+// pidTask chạy mỗi PID_INTERVAL_MS (10s) — lệnh nghe thử đánh thức nó ngay để
+// loa kêu trong ~1s thay vì chờ tới chu kỳ kế tiếp.
+extern TaskHandle_t pidTaskHandle;
 
 // MQTT topic helpers (§9.2). Base đã được tính 1 lần trong main.cpp setup()
 // (đơn luồng, trước khi tạo task nào) vào biến toàn cục mqttTopicBase — vì
@@ -107,6 +115,8 @@ static void mqttCallback(char *topic, byte *payload, unsigned int length) {
     MQTTManager::onConfigUpdate(msg.c_str());
   } else if (t.endsWith("/config/reassign")) {
     MQTTManager::onConfigReassign(msg.c_str());
+  } else if (t.endsWith("/audio/command")) {
+    MQTTManager::onAudioCommand(msg.c_str());
   }
 }
 
@@ -154,9 +164,11 @@ void loop() {
     if (mqtt.connect(clientId.c_str(), Config::mqttUsername, Config::mqttPassword)) {
       Serial.println("[MQTT] Connected");
       mqttFailCount = 0;
+      justConnected = true;
       mqtt.subscribe((topicBase() + "/relay/command").c_str(), MQTT_QOS_COMMAND);
       mqtt.subscribe((topicBase() + "/config/update").c_str(), MQTT_QOS_COMMAND);
       mqtt.subscribe((topicBase() + "/config/reassign").c_str(), MQTT_QOS_COMMAND);
+      mqtt.subscribe((topicBase() + "/audio/command").c_str(), MQTT_QOS_COMMAND);
     } else {
       mqttFailCount++;
       Serial.println("[MQTT] Connection failed, rc=" + String(mqtt.state()));
@@ -164,9 +176,9 @@ void loop() {
   }
   mqtt.loop();
 
-  // Heartbeat (FARM-FR-005)
-  if (millis() - lastHeartbeat > MQTT_HEARTBEAT_MS) {
-    publishHeartbeat();
+  // Heartbeat (FARM-FR-005) — gửi ngay sau mỗi lần connect, sau đó mỗi 30s
+  if (justConnected || millis() - lastHeartbeat > MQTT_HEARTBEAT_MS) {
+    if (publishHeartbeat()) justConnected = false;
     lastHeartbeat = millis();
   }
 }
@@ -178,26 +190,20 @@ bool isBrokerUnreachable() { return mqttFailCount >= MQTT_PROVISION_TRIGGER_FAIL
 void publishTelemetry(const SensorData &data, const RelayState &relay) {
   if (!mqtt.connected()) return;
   JsonDocument doc;
-  doc["deviceId"] = Config::deviceId; // backend tra SensorNode theo field này (telemetryHandler.ts)
-  doc["temperature"] = data.temperature;
-  doc["humidity"] = data.humidity;
-  doc["light_lux"] = data.lightLux;
-  doc["nh3_ppm"] = data.nh3Ppm;
-  doc["co2_ppm"] = data.co2Ppm;
-  doc["sound_db"] = data.soundDb;
+  data.fillJson(doc); // deviceId + 6 cảm biến + timestamp (epoch ms)
   doc["relay_states"]["misting"] = relay.misting;
   doc["relay_states"]["speaker"] = relay.speaker;
   doc["relay_states"]["ventilation"] = relay.ventilation;
   doc["relay_states"]["heating"] = relay.heating;
-  doc["ts"] = data.timestamp;
+  doc["control_mode"] = relay.anyOverride() ? "MANUAL" : "AUTO";
 
   String payload;
   serializeJson(doc, payload);
   mqtt.publish((topicBase() + "/telemetry").c_str(), payload.c_str(), false);
 }
 
-void publishHeartbeat() {
-  if (!mqtt.connected()) return;
+bool publishHeartbeat() {
+  if (!mqtt.connected()) return false;
   JsonDocument doc;
   // Field names khớp backend/src/types/domain.ts HeartbeatPayload
   doc["deviceId"] = Config::deviceId;
@@ -206,32 +212,33 @@ void publishHeartbeat() {
   doc["freeHeap"] = ESP.getFreeHeap();
   doc["uptime"] = millis();
   doc["timestamp"] = millis();
+  if (justConnected) doc["justConnected"] = true;
 
   String payload;
   serializeJson(doc, payload);
-  mqtt.publish((topicBase() + "/heartbeat").c_str(), payload.c_str(), false);
+  return mqtt.publish((topicBase() + "/heartbeat").c_str(), payload.c_str(), false);
 }
 
-void publishRelayState(const RelayState &relay) {
-  if (!mqtt.connected()) return;
-  mqtt.publish((topicBase() + "/relay/status").c_str(), relay.toJson().c_str(), true);
+// KHÔNG retain: relay/status là trạng thái sống — message retained bị broker
+// phát lại cho backend mỗi lần backend (re)connect, kể cả khi thiết bị đã chết.
+bool publishRelayState(const RelayState &relay) {
+  if (!mqtt.connected()) return false;
+  return mqtt.publish((topicBase() + "/relay/status").c_str(), relay.toJson().c_str(), false);
 }
 
-void publishAlert(const char *alertType, const char *severity, const char *payload) {
-  if (!mqtt.connected()) return;
+// Topic `{base}/alert` (SRS §9.2) — backend alert.handler.ts tra thiết bị
+// theo field `deviceId`. Trả false nếu chưa gửi được để caller thử lại.
+bool publishAlert(const char *alertType, const char *severity, const char *payload) {
+  if (!mqtt.connected()) return false;
   JsonDocument doc;
+  doc["deviceId"] = Config::deviceId;
   doc["type"] = alertType;
   doc["severity"] = severity;
   doc["message"] = payload;
-  doc["device_id"] = Config::deviceId;
-  doc["ts"] = millis();
 
   String msg;
   serializeJson(doc, msg);
-  // Alerts không có topic riêng trong §9.2 cho ESP32 (chỉ vision/alert cho RPi) —
-  // publish qua relay/status kèm cờ alert để backend suy ra, hoặc mở rộng topic
-  // riêng `alert` nếu cần. Tạm publish lên `{base}/alert` (ngoài §9.2, cần backend cấu hình subscribe thêm).
-  mqtt.publish((topicBase() + "/alert").c_str(), msg.c_str(), false);
+  return mqtt.publish((topicBase() + "/alert").c_str(), msg.c_str(), false);
 }
 
 // Publish 1 dòng JSON telemetry đã buffer offline, nguyên văn (không build
@@ -249,6 +256,17 @@ void onRelayCommand(const char *payload) {
   JsonDocument doc;
   if (deserializeJson(doc, payload)) {
     Serial.println("[MQTT] Relay command: invalid JSON");
+    return;
+  }
+
+  // Backend overrideExpiry.job.ts: override đã hết hạn phía server → về AUTO ngay
+  if (doc["action"] == "clear_override") {
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      PIDController::clearOverrides(relayState);
+      publishRelayState(relayState);
+      xSemaphoreGive(dataMutex);
+    }
+    Serial.println("[MQTT] Relay command: clear_override → AUTO");
     return;
   }
 
@@ -271,6 +289,30 @@ void onRelayCommand(const char *payload) {
     publishRelayState(relayState);
     xSemaphoreGive(dataMutex);
   }
+}
+
+// ENV-FR-013c(c): {"action":"play","track":N} | {"action":"stop"} — one-shot,
+// không ghi NVS (khác config/update). Xem AudioManager::requestPlay().
+void onAudioCommand(const char *payload) {
+  Serial.println("[MQTT] Audio command: " + String(payload));
+  JsonDocument doc;
+  if (deserializeJson(doc, payload)) {
+    Serial.println("[MQTT] Audio command: invalid JSON");
+    return;
+  }
+  if (doc["action"] == "play") {
+    int track = doc["track"] | 0;
+    if (track <= 0) {
+      Serial.println("[MQTT] Audio command: thiếu track");
+      return;
+    }
+    AudioManager::requestPlay(track);
+  } else if (doc["action"] == "stop") {
+    AudioManager::requestStop();
+  } else {
+    return;
+  }
+  if (pidTaskHandle) xTaskNotifyGive(pidTaskHandle);
 }
 
 void onConfigUpdate(const char *payload) {

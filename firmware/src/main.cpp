@@ -59,6 +59,19 @@ String mqttTopicBase;
 // ── Boot reason tracking (THREAT-FR-012) ─────────────────────────────────────
 static bool wasUnexpectedReset = false;
 
+// Gửi cảnh báo theo CẠNH LÊN: 1 lần khi sự cố bắt đầu, không lặp lại mỗi chu kỳ
+// PID (10s) chừng nào sự cố còn đó — trước đây 1 cảm biến hỏng sinh ~288 cảnh
+// báo/ngày (dedup backend chỉ chặn 5 phút). Gửi thất bại (mất MQTT) thì giữ
+// reported=false để thử lại chu kỳ sau; sự cố hết thì reset để lần sau báo lại.
+static void reportOnRise(bool active, bool &reported, const char *type,
+                         const char *severity, const char *message) {
+  if (!active) {
+    reported = false;
+  } else if (!reported) {
+    reported = MQTTManager::publishAlert(type, severity, message);
+  }
+}
+
 // ── Task Declarations ────────────────────────────────────────────────────────
 void sensorTask(void *pvParameters);
 void pidTask(void *pvParameters);
@@ -215,7 +228,6 @@ void sensorTask(void *pvParameters) {
 // ENV-FR-010..018 – Closed-loop PID control
 void pidTask(void *pvParameters) {
   esp_task_wdt_add(NULL);
-  TickType_t lastWake = xTaskGetTickCount();
 
   while (true) {
     esp_task_wdt_reset();
@@ -237,10 +249,10 @@ void pidTask(void *pvParameters) {
     bool haveThreats = false;
 
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      // Speaker schedule (ENV-FR-013b) – bật/tắt Relay IN2 + DFPlayer theo
-      // lịch, trừ khi đang Manual Override
+      // Loa ru (ENV-FR-013b/013c) – luôn cập nhật lịch + lệnh nghe thử cho
+      // DFPlayer, nhưng chỉ áp ra Relay IN2 khi không Manual Override
+      bool shouldPlay = AudioManager::updateSchedule();
       if (!relayState.speakerOverride) {
-        bool shouldPlay = AudioManager::updateSchedule();
         relayState.speaker = shouldPlay;
         relayState.applyRelay(PIN_RELAY_SPEAKER, shouldPlay);
       }
@@ -264,24 +276,24 @@ void pidTask(void *pvParameters) {
     }
 
     if (haveThreats) {
-      if (threats.speakerFailure)
-        MQTTManager::publishAlert(
-            "SPEAKER_FAILURE", "CRITICAL",
-            "Amplitude dB không tăng khi loa ru đang phát");
-      if (threats.pumpDry)
-        MQTTManager::publishAlert("PUMP_DRY", "MEDIUM",
-                                  "Misting ON 5 phút nhưng độ ẩm không tăng");
-      if (threats.sensorFault)
-        MQTTManager::publishAlert(
-            "SENSOR_FAULT", "MEDIUM",
-            "Một cảm biến RS485 không phản hồi (timeout/CRC)");
-      if (threats.busFailure)
-        MQTTManager::publishAlert(
-            "RS485_BUS_FAILURE", "CRITICAL",
-            "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");
+      static bool speakerReported = false, pumpReported = false,
+                  sensorReported = false, busReported = false;
+      reportOnRise(threats.speakerFailure, speakerReported, "SPEAKER_FAILURE",
+                   "CRITICAL", "Amplitude dB không tăng khi loa ru đang phát");
+      // pumpDry chỉ true đúng 1 chu kỳ mỗi đợt phun (PIDController) — nếu gửi
+      // thất bại thì mất cảnh báo đợt đó, chấp nhận được (không lặp spam).
+      reportOnRise(threats.pumpDry, pumpReported, "PUMP_DRY", "MEDIUM",
+                   "Misting ON 5 phút nhưng độ ẩm không tăng");
+      reportOnRise(threats.sensorFault, sensorReported, "SENSOR_FAULT",
+                   "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");
+      reportOnRise(threats.busFailure, busReported, "RS485_BUS_FAILURE",
+                   "CRITICAL",
+                   "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");
     }
 
-    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(Config::pidIntervalMs));
+    // Chờ tới chu kỳ kế tiếp, hoặc tỉnh sớm khi có lệnh nghe thử
+    // (MQTTManager::onAudioCommand → xTaskNotifyGive)
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(Config::pidIntervalMs));
   }
 }
 
@@ -302,22 +314,44 @@ void mqttTask(void *pvParameters) {
     // THREAT-FR-012: Publish POWER_OUTAGE alert once after reconnect
     if (wasUnexpectedReset && MQTTManager::isConnected() &&
         !powerOutagePublished) {
-      MQTTManager::publishAlert("POWER_OUTAGE", "HIGH",
-                                "ESP32 recovered from unexpected reset");
-      powerOutagePublished = true;
-      Serial.println("[MQTT] Published POWER_OUTAGE alert");
+      powerOutagePublished = MQTTManager::publishAlert(
+          "POWER_OUTAGE", "HIGH", "ESP32 recovered from unexpected reset");
+      if (powerOutagePublished)
+        Serial.println("[MQTT] Published POWER_OUTAGE alert");
     }
 
-    // Publish telemetry (ENV-FR-001)
+    // Publish telemetry (ENV-FR-001). Chỉ gửi khi lấy được snapshot thật VÀ
+    // sensorTask đã đọc xong ít nhất 1 lần — trước đó latestSensorData toàn
+    // số 0, backend coi là nhiệt/ẩm dưới ngưỡng → THRESHOLD_BREACH giả lúc boot.
     SensorData data;
     RelayState relaySnapshot;
+    bool haveSnapshot = false;
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       data = latestSensorData;
       relaySnapshot = relayState;
       xSemaphoreGive(dataMutex);
+      haveSnapshot = true;
     }
-    MQTTManager::publishTelemetry(data, relaySnapshot);
-    MQTTManager::publishRelayState(relaySnapshot);
+    if (haveSnapshot && data.timestamp != 0)
+      MQTTManager::publishTelemetry(data, relaySnapshot);
+
+    // relay/status (ENV-FR-015): chỉ khi trạng thái đổi (PID bật/tắt, override
+    // hết hạn...) hoặc định kỳ để tự sửa nếu 1 message QoS0 bị rơi — không gửi
+    // mỗi giây như trước (mỗi message = 1 lần ghi DB + 4 socket event ở backend).
+    static String lastRelayJson;
+    static unsigned long lastRelayPublish = 0;
+    if (!MQTTManager::isConnected()) {
+      lastRelayJson = ""; // kết nối lại → gửi ngay trạng thái hiện tại
+    } else if (haveSnapshot) {
+      String relayJson = relaySnapshot.toJson();
+      if (relayJson != lastRelayJson ||
+          millis() - lastRelayPublish > MQTT_HEARTBEAT_MS) {
+        if (MQTTManager::publishRelayState(relaySnapshot)) {
+          lastRelayJson = relayJson;
+          lastRelayPublish = millis();
+        }
+      }
+    }
 
     // Threat alerts (SPEAKER_FAILURE/PUMP_DRY/SENSOR_FAULT/RS485_BUS_FAILURE)
     // are published directly from pidTask (THREAT-FR-006/011/013) where the
@@ -326,6 +360,7 @@ void mqttTask(void *pvParameters) {
     // Flush offline buffer when connected (REL-NFR-003)
     if (MQTTManager::isConnected()) {
       StorageManager::flushBuffer([](const String &jsonLine) {
+        esp_task_wdt_reset(); // buffer vài giờ ≈ 1-2 nghìn dòng, lâu hơn WDT 30s
         return MQTTManager::publishRawTelemetryLine(jsonLine);
       });
     }

@@ -21,6 +21,7 @@ struct RelayState {
 
   void init();
   void applyRelay(int pin, bool state); // kích mức CAO = bật (Guide §8)
+  bool anyOverride() const; // control_mode MANUAL/AUTO gửi lên backend
   String toJson() const;
 };
 
@@ -49,6 +50,9 @@ void runHeatingControl(float temperature, RelayState &relay); // ENV-FR-012
 void setManualOverride(const char *relayName, bool state,
                        unsigned long durationMs, RelayState &relay);
 void checkOverrideExpiry(RelayState &relay);
+// Trả mọi relay về AUTO ngay — dùng khi hết hạn override và khi backend gửi
+// relay/command {"action":"clear_override"} (overrideExpiry.job.ts).
+void clearOverrides(RelayState &relay);
 
 // Threat detection (THREAT-FR-006, 011, 013) – chỉ tính flags, main.cpp/MQTTManager publish alert
 struct ThreatFlags {

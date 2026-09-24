@@ -121,6 +121,8 @@ export interface HeartbeatPayload {
   freeHeap: number
   uptime: number
   timestamp: number
+  /** true ở heartbeat đầu tiên sau mỗi lần ESP32 (re)connect MQTT — backend đẩy lại config/update */
+  justConnected?: boolean
 }
 
 export interface RelayStatusPayload {
