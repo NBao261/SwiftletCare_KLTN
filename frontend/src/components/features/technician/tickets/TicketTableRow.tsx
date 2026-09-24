@@ -14,10 +14,10 @@ import type { Ticket, TicketType } from '@/types'
 
 // Sort icon — dùng SVG icon chuẩn thay vì ký tự unicode ↑↓
 function SortIconIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-  if (!active) return <IconSortDesc width={12} height={12} className="opacity-30" />
+  if (!active) return null
   return dir === 'asc'
-    ? <IconSortAsc width={12} height={12} />
-    : <IconSortDesc width={12} height={12} />
+    ? <IconSortAsc width={12} height={12} className="ml-1 inline-block" />
+    : <IconSortDesc width={12} height={12} className="ml-1 inline-block" />
 }
 
 // Export SortIcon để TicketTableView dùng trong header

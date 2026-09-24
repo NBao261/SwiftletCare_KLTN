@@ -56,8 +56,8 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   // ── UI State ──────────────────────────────────────────────────────────────
   const [activeTab,     setActiveTab]     = useState<TechTab>('mine')
   const [viewMode,      setViewMode]      = useState<ViewMode>('table')
-  const [sortKey,       setSortKey]       = useState<SortKey>('priority')
-  const [sortDir,       setSortDir]       = useState<SortDir>('asc')
+  const [sortKey,       setSortKey]       = useState<SortKey>('created_at')
+  const [sortDir,       setSortDir]       = useState<SortDir>('desc')
   const [search,        setSearch]        = useState('')
   const [filterStatus,  setFilterStatus]  = useState<TicketStatus | ''>('')
   const [page,          setPage]          = useState(1)
@@ -131,7 +131,7 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
 
   const handleSort = useCallback((key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    else { setSortKey(key); setSortDir('asc') }
+    else { setSortKey(key); setSortDir('desc') } // Default to desc for new keys
     resetPage()
   }, [sortKey, resetPage])
 
@@ -151,8 +151,8 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     setActiveTab('mine')
     setSearch('')
     setFilterStatus('')
-    setSortKey('priority')
-    setSortDir('asc')
+    setSortKey('created_at')
+    setSortDir('desc')
     resetPage()
   }, [resetPage])
 

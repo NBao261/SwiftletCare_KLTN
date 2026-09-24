@@ -28,11 +28,8 @@ export function TicketTableView({
         <table className="w-full border-collapse text-left" role="table">
           <thead>
             <tr className="border-b border-graphite/10 bg-graphite/[0.03]">
-              <th
-                className="cursor-pointer whitespace-nowrap py-3 pl-5 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
-                onClick={() => onSort('priority')}
-              >
-                Ưu tiên<SortIcon active={sortKey === 'priority'} dir={sortDir} />
+              <th className="whitespace-nowrap py-3 pl-5 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
+                Ưu tiên
               </th>
               <th className="whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                 Loại ticket

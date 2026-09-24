@@ -20,8 +20,8 @@ const FILTERABLE_STATUSES: TicketStatus[] = ['NEW', 'IN_PROGRESS', 'AWAITING_FIE
  * - Còn lại: hiển thị đủ 4 keys
  */
 function getValidSortKeys(isOverdueActive: boolean, filterStatus: TicketStatus | ''): SortKey[] {
-  if (isOverdueActive || filterStatus === 'IN_PROGRESS') return ['priority', 'sla', 'created_at']
-  return ['priority', 'sla', 'created_at', 'status']
+  if (isOverdueActive || filterStatus === 'IN_PROGRESS') return ['sla', 'created_at']
+  return ['sla', 'created_at', 'status']
 }
 
 interface Props {
@@ -48,10 +48,11 @@ interface Props {
 }
 
 const SORT_LABELS: Record<SortKey, string> = {
-  priority: 'Ưu tiên', sla: 'SLA', created_at: 'Ngày', status: 'Trạng thái',
+  sla: 'SLA', created_at: 'Ngày', status: 'Trạng thái',
 }
 
-function SortIcon({ dir }: { dir: SortDir }) {
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return null
   return dir === 'asc'
     ? <IconSortAsc width={12} height={12} className="ml-1" />
     : <IconSortDesc width={12} height={12} className="ml-1" />
@@ -73,8 +74,8 @@ export const TicketToolbar = memo(function TicketToolbar({
     search !== '' ||
     filterStatus !== '' ||
     isOverdueActive ||
-    sortKey !== 'priority' ||
-    sortDir !== 'asc'
+    sortKey !== 'created_at' ||
+    sortDir !== 'desc'
 
   return (
     <div className="flex flex-col gap-3">
@@ -178,7 +179,7 @@ export const TicketToolbar = memo(function TicketToolbar({
                 )}
               >
                 {SORT_LABELS[k]}
-                {active && <SortIcon dir={sortDir} />}
+                <SortIcon active={active} dir={sortDir} />
               </button>
             )
           })}

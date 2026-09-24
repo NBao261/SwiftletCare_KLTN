@@ -7,7 +7,7 @@ import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
 export const PAGE_SIZE = 12 // số ticket mỗi trang
 
 export type TechTab  = 'mine' | 'in_progress' | 'overdue'
-export type SortKey  = 'created_at' | 'priority' | 'sla' | 'status'
+export type SortKey  = 'created_at' | 'sla' | 'status'
 export type SortDir  = 'asc' | 'desc'
 export type ViewMode = 'table' | 'card'
 
@@ -39,9 +39,7 @@ export const STATUS_DOT_CLS: Record<string, string> = {
 export function sortTickets(tickets: Ticket[], key: SortKey, dir: SortDir): Ticket[] {
   return [...tickets].sort((a, b) => {
     let cmp = 0
-    if (key === 'priority') {
-      cmp = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9)
-    } else if (key === 'status') {
+    if (key === 'status') {
       cmp = (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)
     } else if (key === 'sla') {
       const ta = a.sla_resolve_due_at ? new Date(a.sla_resolve_due_at).getTime() : Infinity
