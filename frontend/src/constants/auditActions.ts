@@ -27,6 +27,12 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   DEVICE_REASSIGNED: 'Chuyển thiết bị sang zone khác',
   THRESHOLD_UPDATED: 'Cập nhật ngưỡng zone',
   RELAY_OVERRIDE: 'Điều khiển relay thủ công',
+  RELAY_OVERRIDE_CLEARED: 'Trả relay về tự động',
+  SPEAKER_SCHEDULE_UPDATED: 'Cập nhật lịch loa ru',
+  AUDIO_TRACK_UPLOADED: 'Upload file loa ru',
+  AUDIO_TRACK_SYNC_UPDATED: 'Đánh dấu chép file loa ru vào thẻ SD',
+  AUDIO_TRACK_SELECTED: 'Chọn bài loa ru mặc định',
+  AUDIO_TRACK_DELETED: 'Xoá file loa ru',
 
   // ── Ticket (ticket.service.ts / alertEscalation.job.ts) ────────────────────
   TICKET_ADMIN_OVERRIDE: 'Admin can thiệp ticket',

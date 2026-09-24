@@ -5,12 +5,16 @@ import type { Ticket } from '@/types'
 import type { AdminOverrideInput, CreateTicketInput, ListTicketsQuery } from '@/apis/shared/tickets.api'
 
 /** Module TICKET §5.9 */
-export function useTicketsList(query: ListTicketsQuery) {
+export function useTicketsList(
+  query: ListTicketsQuery,
+  options?: { enabled?: boolean; staleTime?: number; refetchInterval?: number },
+) {
   return usePaginatedListQuery<Ticket>(
     ['tickets', query],
     () => ticketApi.list(query),
     query.page ?? 1,
     query.limit ?? 20,
+    options,
   )
 }
 
@@ -74,6 +78,38 @@ export function useRateTicket() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, rating }: { id: string; rating: number }) => ticketApi.rate(id, rating),
+    onSuccess: (_data, { id }) => invalidateTicket(queryClient, id),
+  })
+}
+
+// ── Technician hooks ────────────────────────────────────────────────────────────
+
+/** Technician cập nhật trạng thái ticket */
+export function useUpdateTicketStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, status, note }: { id: string; status: string; note?: string }) =>
+      ticketApi.updateStatus(id, status as import('@/types').TicketStatus, note),
+    onSuccess: (_data, { id }) => invalidateTicket(queryClient, id),
+  })
+}
+
+/** Technician cập nhật SAT checklist */
+export function useUpdateSatChecklist() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<import('@/types').TicketSatChecklist> }) =>
+      ticketApi.updateSatChecklist(id, updates),
+    onSuccess: (_data, { id }) => invalidateTicket(queryClient, id),
+  })
+}
+
+/** Technician escalate ticket */
+export function useEscalateTicket() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      ticketApi.escalate(id, reason),
     onSuccess: (_data, { id }) => invalidateTicket(queryClient, id),
   })
 }

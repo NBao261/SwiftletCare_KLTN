@@ -1,4 +1,7 @@
 // Ticket Detail Page – TICKET-FR-001..004b/006/007/009/010/011
+// Trang này dùng chung cho tất cả role — mỗi role nhìn thấy các phần UI khác nhau:
+//   - Farm Owner / Admin: xem thông tin, huỷ, đánh giá, Admin can thiệp
+//   - Technician: xem + cập nhật trạng thái, ghi chú, SAT checklist, chat, SLA breach banner
 import { useState, FormEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket } from '@/hooks/shared/useTickets'
@@ -12,14 +15,13 @@ import EmptyState from '@/components/ui/EmptyState'
 import { useToastStore } from '@/stores/toastStore'
 import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
+// RescheduleModal gated by canAdminIntervene (ADMIN) — owned by admin/tickets/ per rule 12.7
 import { ChangePriorityModal, ReassignTicketModal, RescheduleModal } from '@/components/features/admin/tickets/AdminOverrideModals'
-
-const SAT_LABEL = {
-  modbus_addresses_ok: '5 địa chỉ Modbus phản hồi đúng',
-  camera_rtsp_ok: 'Camera RTSP ổn định',
-  lte_connection_ok: 'Kết nối 4G ổn định',
-  relay_test_ok: 'Relay đóng/ngắt đúng',
-} as const
+// ── Technician components ───────────────────────────────────────────────────
+import { SAT_ITEMS } from '@/components/features/technician/tickets/ticketHelpers'
+import { SLABreachBanner } from '@/components/features/technician/tickets/SLABreachBanner'
+import { StatusStepper } from '@/components/features/technician/tickets/StatusStepper'
+import { TicketChat } from '@/components/features/technician/tickets/TicketChat'
 
 function assigneeName(assigned: string | { full_name: string; email: string } | undefined): string | undefined {
   return typeof assigned === 'object' ? assigned.full_name : undefined
@@ -49,19 +51,27 @@ export default function TechnicianTicketDetailPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link to="/tickets" className="text-sm font-semibold text-charcoal hover:underline">← Quay lại danh sách</Link>
+      <Link 
+        to="/tickets" 
+        className="group inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-warmGray shadow-sm ring-1 ring-inset ring-warmGray/10 transition-all hover:bg-warmGray/5 hover:text-charcoal"
+      >
+        <span className="transition-transform duration-200 group-hover:-translate-x-0.5">←</span>
+        Quay lại danh sách
+      </Link>
 
-      <Card size="lg">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2.5">
               <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
               <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
             </div>
-            <h1 className="mt-2 text-xl font-bold text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</h1>
-            <p className="mt-1 text-sm text-warmGray">Tạo lúc {formatDate(ticket.created_at)}</p>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</h1>
+              <p className="mt-1 text-sm font-medium text-warmGray">Tạo lúc {formatDate(ticket.created_at)}</p>
+            </div>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <div className="flex shrink-0 flex-col items-end gap-2">
             {canAdminIntervene && (
               <div className="flex flex-wrap justify-end gap-2">
                 <Button variant="secondary" size="sm" onClick={() => setShowChangePriority(true)}>Đổi ưu tiên</Button>
@@ -75,7 +85,7 @@ export default function TechnicianTicketDetailPage() {
           </div>
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-warmGray/10 pt-4 text-sm sm:grid-cols-4">
+        <dl className="mt-4 flex flex-wrap gap-x-12 gap-y-4 border-t border-warmGray/10 pt-4 text-sm">
           <InfoItem label="Kỹ thuật viên phụ trách" value={assigneeName(ticket.assigned_to) ?? 'Chưa gán'} />
           {ticket.scheduled_visit_at && <InfoItem label="Ngày hẹn" value={formatDate(ticket.scheduled_visit_at)} />}
           {ticket.sla_resolve_due_at && <InfoItem label="Hạn xử lý (SLA)" value={formatDate(ticket.sla_resolve_due_at)} />}
@@ -83,14 +93,20 @@ export default function TechnicianTicketDetailPage() {
         </dl>
       </Card>
 
+      {/* Technician: SLA Breach Banner */}
+      {ticket.is_sla_breached && <SLABreachBanner />}
+
+      {/* Technician: Status Stepper */}
+      <StatusStepper current={ticket.status} />
+
       {isInstallation && (
         <Card>
           <p className="label-caption mb-3">Checklist nghiệm thu (Technician xác nhận)</p>
           <div className="flex flex-col gap-2">
-            {Object.entries(SAT_LABEL).map(([key, label]) => (
-              <div key={key} className="flex items-center gap-2.5 text-sm">
-                <span className={cnDot(ticket.sat_checklist[key as keyof typeof SAT_LABEL])} />
-                <span className={ticket.sat_checklist[key as keyof typeof SAT_LABEL] ? 'text-charcoal' : 'text-warmGray'}>{label}</span>
+            {SAT_ITEMS.map(item => (
+              <div key={item.key} className="flex items-center gap-2.5 text-sm">
+                <span className={cnDot(ticket.sat_checklist[item.key])} />
+                <span className={ticket.sat_checklist[item.key] ? 'text-charcoal' : 'text-warmGray'}>{item.label}</span>
               </div>
             ))}
           </div>
@@ -98,6 +114,9 @@ export default function TechnicianTicketDetailPage() {
       )}
 
       <NotesTimeline ticketId={ticket._id} notes={ticket.notes} />
+
+      {/* Technician: Real-time chat */}
+      {ticket.status !== 'CLOSED' && <TicketChat ticketId={ticket._id} />}
 
       {ticket.status === 'CLOSED' && (
         <RatingCard ticketId={ticket._id} existingRating={ticket.satisfaction_rating} />

@@ -15,6 +15,7 @@
 #include "config/Config.h"
 #include <ModbusMaster.h>
 #include <cmath>
+#include <time.h>
 
 static ModbusMaster modbus;
 
@@ -82,6 +83,8 @@ static bool readRegisters2(uint8_t slaveId, uint16_t startReg, int16_t &reg0,
 SensorData readAll() {
   SensorData d;
   d.timestamp = millis();
+  time_t now = time(nullptr);
+  d.epochMs = now > 1700000000 ? (uint64_t)now * 1000ULL : 0; // chưa sync NTP → 0
   d.failedCount = 0;
   int16_t r0 = 0, r1 = 0;
 
@@ -179,16 +182,21 @@ bool isAudioBaselineReady() { return audioBaselineReady; }
 
 } // namespace SensorManager
 
+void SensorData::fillJson(JsonDocument &doc) const {
+  doc["deviceId"] = Config::deviceId; // backend tra SensorNode theo field này
+  doc["temperature"] = temperature;
+  doc["humidity"] = humidity;
+  doc["light_lux"] = lightLux;
+  doc["nh3_ppm"] = nh3Ppm;
+  doc["co2_ppm"] = co2Ppm;
+  doc["sound_db"] = soundDb;
+  if (epochMs) doc["timestamp"] = epochMs; // thiếu → backend lấy giờ nhận
+}
+
 String SensorData::toJson() const {
-  String json = "{";
-  json += "\"deviceId\":\"" + String(Config::deviceId) + "\",";
-  json += "\"temperature\":" + String(temperature, 1) + ",";
-  json += "\"humidity\":" + String(humidity, 1) + ",";
-  json += "\"light_lux\":" + String(lightLux, 1) + ",";
-  json += "\"nh3_ppm\":" + String(nh3Ppm, 1) + ",";
-  json += "\"co2_ppm\":" + String(co2Ppm, 0) + ",";
-  json += "\"sound_db\":" + String(soundDb, 1) + ",";
-  json += "\"ts\":" + String(timestamp);
-  json += "}";
+  JsonDocument doc;
+  fillJson(doc);
+  String json;
+  serializeJson(doc, json);
   return json;
 }
