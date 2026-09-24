@@ -208,15 +208,32 @@ export async function createMaintenanceTicket(input: {
 /**
  * TICKET-FR-002 — tự tạo ticket từ Alert CRITICAL/HIGH chưa acknowledge sau 15
  * phút. Gọi định kỳ từ jobs/alertEscalation.job.ts.
+ *
+ * Riêng NODE_OFFLINE: chỉ khi thiết bị mất kết nối LIÊN TỤC quá
+ * NODE_OFFLINE_TICKET_AFTER_MS (alert còn mở = vẫn offline, vì markNodeSeen
+ * đóng alert ngay khi thiết bị online lại), kể cả khi chủ trại đã xác nhận —
+ * xác nhận không làm thiết bị kết nối lại. Mỗi lần mất kết nối là 1 alert mới
+ * nên được tối đa 1 ticket; nếu ticket của lần trước còn mở thì chỉ ghi chú vào đó.
  */
 export const UNACKED_ALERT_THRESHOLD_MS = 15 * 60 * 1000
+export const NODE_OFFLINE_TICKET_AFTER_MS = 60 * 60 * 1000
 
 export async function createTicketsFromStaleAlerts(): Promise<number> {
-  const staleBefore = new Date(Date.now() - UNACKED_ALERT_THRESHOLD_MS)
+  const now = Date.now()
   const staleAlerts = await Alert.find({
-    status: 'ACTIVE',
-    severity: { $in: ['CRITICAL', 'HIGH'] },
-    created_at: { $lt: staleBefore },
+    $or: [
+      {
+        type: { $ne: 'NODE_OFFLINE' },
+        status: 'ACTIVE',
+        severity: { $in: ['CRITICAL', 'HIGH'] },
+        created_at: { $lt: new Date(now - UNACKED_ALERT_THRESHOLD_MS) },
+      },
+      {
+        type: 'NODE_OFFLINE',
+        status: { $in: ['ACTIVE', 'ACKNOWLEDGED'] },
+        created_at: { $lt: new Date(now - NODE_OFFLINE_TICKET_AFTER_MS) },
+      },
+    ],
   })
   if (staleAlerts.length === 0) return 0
 
@@ -237,9 +254,33 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
     !alreadyTicketed.has(String(a._id)) && !(a.node_id && removedNodeIds.has(String(a.node_id))),
   )
 
+  // Ticket mất kết nối của lần trước còn mở, theo từng thiết bị — cũng 2 truy vấn cho cả batch.
+  const offlineNodeIds = [...new Set(toProcess.filter(a => a.type === 'NODE_OFFLINE' && a.node_id).map(a => String(a.node_id)))]
+  const openOfflineTicketByNode = new Map<string, InstanceType<typeof Ticket>>()
+  if (offlineNodeIds.length > 0) {
+    const pastAlerts = await Alert.find({ type: 'NODE_OFFLINE', node_id: { $in: offlineNodeIds } }).select('_id node_id').lean()
+    const nodeOfAlert = new Map(pastAlerts.map(a => [String(a._id), String(a.node_id)]))
+    const openTickets = await Ticket.find({ alert_id: { $in: pastAlerts.map(a => a._id) }, status: { $ne: 'CLOSED' } })
+    for (const t of openTickets) openOfflineTicketByNode.set(nodeOfAlert.get(String(t.alert_id))!, t)
+  }
+
   let created = 0
   for (const alert of toProcess) {
     try {
+      const since = alert.created_at.toLocaleString('vi-VN')
+      const openTicket = alert.type === 'NODE_OFFLINE' ? openOfflineTicketByNode.get(String(alert.node_id)) : undefined
+      if (openTicket) {
+        // Trỏ ticket sang alert mới để lần chạy sau `alreadyTicketed` bỏ qua alert
+        // này (không ghi chú lặp mỗi 2 phút); ghi chú giữ lại lịch sử các lần mất kết nối.
+        openTicket.notes.push({
+          content: `Thiết bị mất kết nối lại từ ${since} (hơn 1 giờ) — cảnh báo mới "${alert.title}"`,
+          created_at: new Date(),
+        } as never)
+        openTicket.alert_id = alert._id
+        await openTicket.save()
+        continue
+      }
+
       const ticketType = ALERT_TYPE_TO_TICKET_TYPE[alert.type as AlertType] ?? 'OTHER'
       const priority = DEFAULT_PRIORITY[ticketType]
       const sla = await slaDueDates(priority, new Date())
@@ -258,7 +299,9 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
         assigned_at: assignedTo ? new Date() : undefined,
         ...sla,
         notes: [{
-          content: `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
+          content: alert.type === 'NODE_OFFLINE'
+            ? `Tự tạo vì thiết bị mất kết nối liên tục hơn 1 giờ (từ ${since}) — cảnh báo "${alert.title}" (TICKET-FR-002)`
+            : `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
           created_at: new Date(),
         }],
       })
