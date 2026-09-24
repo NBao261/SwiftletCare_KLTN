@@ -16,6 +16,14 @@ interface SelectMenuProps<V extends string> {
   /** Nhãn cho screen reader — trigger chỉ hiện label của option đang chọn */
   ariaLabel: string
   className?: string
+  /**
+   * Kiểu ô form (trong modal): trigger dùng class `.input` như Input/Select, không tô viền
+   * xanh "đang lọc" — ở form, chọn 1 giá trị là chuyện bình thường, không phải bộ lọc đang bật.
+   */
+  field?: boolean
+  disabled?: boolean
+  /** Chỉ với `field`: viền đỏ như Input có `error` */
+  invalid?: boolean
 }
 
 const OPTION_HEIGHT = 36
@@ -32,7 +40,7 @@ const MAX_VISIBLE_OPTIONS = 8
  * `options[0]` phải là giá trị mặc định ("Mọi …"): chọn option khác thì trigger
  * viền xanh (accent-600) để thấy ngay bộ lọc nào đang bật.
  */
-export default function SelectMenu<V extends string>({ value, options, onChange, ariaLabel, className }: SelectMenuProps<V>) {
+export default function SelectMenu<V extends string>({ value, options, onChange, ariaLabel, className, field, disabled, invalid }: SelectMenuProps<V>) {
   const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
     align: 'left',
     estimatedHeight: Math.min(options.length, MAX_VISIBLE_OPTIONS) * OPTION_HEIGHT + MENU_PADDING,
@@ -63,6 +71,8 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
     if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, options.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)) }
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(activeIndex) }
+    // Nằm trong Modal (field): Esc chỉ đóng danh sách — chặn lan lên document kẻo Modal đóng luôn, mất dữ liệu đang nhập
+    else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
     else if (e.key === 'Tab') setOpen(false)
   }
 
@@ -77,18 +87,24 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
         type="button"
         onClick={toggle}
         onKeyDown={onTriggerKeyDown}
+        disabled={disabled}
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
+        aria-invalid={invalid || undefined}
         className={cn(
-          'inline-flex h-8 items-center gap-1.5 rounded-full border bg-white pl-3.5 pr-2.5 text-xs font-semibold text-charcoal transition-colors',
-          open ? 'border-charcoal' : isFiltered ? 'border-accent-600' : 'border-warmGray/25 hover:border-warmGray/50',
+          field
+            ? cn('input flex items-center justify-between gap-2 text-left', open ? 'border-charcoal' : invalid && 'border-alertRed')
+            : cn(
+                'inline-flex h-8 items-center gap-1.5 rounded-full border bg-white pl-3.5 pr-2.5 text-xs font-semibold text-charcoal transition-colors',
+                open ? 'border-charcoal' : isFiltered ? 'border-accent-600' : 'border-warmGray/25 hover:border-warmGray/50',
+              ),
           className,
         )}
       >
         <span className="truncate">{selected?.label}</span>
-        <IconChevronDown width={14} height={14} className={cn('shrink-0 text-warmGray transition-transform', open && 'rotate-180')} />
+        <IconChevronDown width={field ? 16 : 14} height={field ? 16 : 14} className={cn('shrink-0 text-warmGray transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && createPortal(
