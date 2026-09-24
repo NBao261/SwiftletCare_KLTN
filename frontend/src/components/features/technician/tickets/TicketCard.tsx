@@ -70,7 +70,7 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
     >
       {/* Clickable body */}
       <div
-        className="cursor-pointer p-5"
+        className="cursor-pointer px-5 py-3.5"
         role="button"
         tabIndex={0}
         aria-label={`Xem chi tiết ticket: ${TICKET_TYPE_LABEL[ticket.type]}`}
@@ -79,19 +79,19 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
       >
         {/* Row 1: Priority + Type + Actions */}
         <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <PriorityDot priority={ticket.priority} />
             <span className="text-base font-bold text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</span>
           </div>
           {actionItems.length > 0 && (
-            <div className="shrink-0 -mr-2 -mt-1" onClick={e => e.stopPropagation()}>
+            <div className="shrink-0 -mr-2 -mt-1.5" onClick={e => e.stopPropagation()}>
               <ActionsMenu items={actionItems} />
             </div>
           )}
         </div>
 
         {/* Row 2: Status + SLA + Date */}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-graphite/5 pt-4">
+        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 border-t border-graphite/5 pt-3">
           <div className="flex flex-wrap items-center gap-4">
             <StatusBadge status={ticket.status} />
             <SlaRing ticket={ticket} size={28} />
