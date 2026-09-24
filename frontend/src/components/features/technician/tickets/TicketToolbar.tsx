@@ -93,44 +93,52 @@ export const TicketToolbar = memo(function TicketToolbar({
 
       </div>
 
-      {/* ── Hàng 2: Unified FilterChips + Sort + Hủy lọc ── */}
-      <div className="flex flex-wrap items-center gap-3">
-
-        {/*
-          FilterChips thống nhất — thay thế hoàn toàn 3 tab cũ:
-          [Tất cả] [Mới] [Đang xử lý] [Chờ xác nhận] [Đã đóng] [🔴 Quá hạn SLA]
-          - Các chips status và chip Quá hạn SLA là loại trừ lẫn nhau (radio).
-          - Click chip status → tắt overdue mode nếu đang bật, set filterStatus.
-          - Click "Quá hạn SLA" → tắt filterStatus, bật overdue mode.
-        */}
-        <div className="flex flex-wrap gap-2">
-          {/* Chip "Tất cả" — active khi không có filter nào được chọn */}
-          <FilterChip
-            active={!isOverdueActive && filterStatus === ''}
-            label="Tất cả"
-            onClick={() => {
-              if (isOverdueActive) onOverdueToggle()
-              onFilterStatusChange('')
-            }}
-          />
-          {/* Chips theo status */}
-          {FILTERABLE_STATUSES.map(s => (
+      {/* ── Hàng 2: Unified FilterChips + Hủy lọc (Trái) & Sort (Phải) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {/*
+            FilterChips thống nhất — thay thế hoàn toàn 3 tab cũ:
+            [Tất cả] [Mới] [Đang xử lý] [Chờ xác nhận] [Đã đóng] [🔴 Quá hạn SLA]
+            - Các chips status và chip Quá hạn SLA là loại trừ lẫn nhau (radio).
+            - Click chip status → tắt overdue mode nếu đang bật, set filterStatus.
+            - Click "Quá hạn SLA" → tắt filterStatus, bật overdue mode.
+          */}
+          <div className="flex flex-wrap gap-2">
+            {/* Chip "Tất cả" — active khi không có filter nào được chọn */}
             <FilterChip
-              key={s}
-              active={!isOverdueActive && filterStatus === s}
-              label={STATUS_LABEL[s]}
+              active={!isOverdueActive && filterStatus === ''}
+              label="Tất cả"
               onClick={() => {
                 if (isOverdueActive) onOverdueToggle()
-                onFilterStatusChange(s)
+                onFilterStatusChange('')
               }}
             />
-          ))}
-          {/* Chip đặc biệt: Quá hạn SLA */}
-          <FilterChip
-            active={isOverdueActive}
-            label="🔴 Quá hạn SLA"
-            onClick={onOverdueToggle}
-          />
+            {/* Chips theo status */}
+            {FILTERABLE_STATUSES.map(s => (
+              <FilterChip
+                key={s}
+                active={!isOverdueActive && filterStatus === s}
+                label={STATUS_LABEL[s]}
+                onClick={() => {
+                  if (isOverdueActive) onOverdueToggle()
+                  onFilterStatusChange(s)
+                }}
+              />
+            ))}
+            {/* Chip đặc biệt: Quá hạn SLA */}
+            <FilterChip
+              active={isOverdueActive}
+              label="🔴 Quá hạn SLA"
+              onClick={onOverdueToggle}
+            />
+          </div>
+
+          {hasActiveFilters && (
+            <Button variant="danger" size="sm" className="h-8 px-3.5 text-xs" onClick={onClearFilters}>
+              Hủy lọc
+            </Button>
+          )}
         </div>
 
         {/* Sort buttons — keys hợp lệ thay đổi theo context */}
@@ -153,12 +161,6 @@ export const TicketToolbar = memo(function TicketToolbar({
             )
           })}
         </div>
-
-        {hasActiveFilters && (
-          <Button variant="danger" size="sm" className="h-8 px-3.5 text-xs" onClick={onClearFilters}>
-            Hủy lọc
-          </Button>
-        )}
       </div>
 
       {/* Cảnh báo: search/filter chỉ trong trang hiện tại (server-paginated) */}
