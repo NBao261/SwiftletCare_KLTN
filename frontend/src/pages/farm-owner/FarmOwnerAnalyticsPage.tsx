@@ -1,20 +1,27 @@
 // Analytics Page – ANALYTICS-FR-001..003/005, VISION-FR-008..011
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import '@/lib/chartTheme'
 import { useZoneStore } from '@/stores/zoneStore'
+import { useZone } from '@/hooks/shared/useFarms'
+import { useTelemetry } from '@/hooks/farm-owner/useTelemetry'
 import EmptyState from '@/components/ui/EmptyState'
-import { cn } from '@/lib/cn'
-import { TABS, TAB_LABEL, type Tab, type MetricKey } from '@/components/features/farm-owner/analytics/analytics.constants'
-import EnvTab from '@/components/features/farm-owner/analytics/EnvTab'
+import EnvVariationCard from '@/components/features/farm-owner/analytics/EnvVariationCard'
+import ZoneBalanceCard from '@/components/features/farm-owner/analytics/ZoneBalanceCard'
+import BirdFlowCard from '@/components/features/farm-owner/analytics/BirdFlowCard'
+import CorrelationCard from '@/components/features/farm-owner/analytics/CorrelationCard'
 import CompareTab from '@/components/features/farm-owner/analytics/CompareTab'
 import BirdTab from '@/components/features/farm-owner/analytics/BirdTab'
+import { METRICS, type MetricKey } from '@/components/features/farm-owner/analytics/analytics.constants'
 import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api'
 
 export default function FarmOwnerAnalyticsPage() {
-  const [tab, setTab] = useState<Tab>('env')
   const [range, setRange] = useState<AnalyticsRange>('24h')
-  const [metric, setMetric] = useState<MetricKey>('temperature')
+  const [compareRange, setCompareRange] = useState<AnalyticsRange>('24h')
+  const [compareMetric, setCompareMetric] = useState<MetricKey>(METRICS[0].key)
   const { selectedZoneId, selectedZoneName, selectedFarmId } = useZoneStore()
+  const { data: zone } = useZone(selectedZoneId ?? undefined)
+  const telemetry = useTelemetry(selectedZoneId ?? undefined)
+  const correlationRef = useRef<HTMLDivElement>(null)
 
   if (!selectedZoneId) {
     return (
@@ -27,30 +34,41 @@ export default function FarmOwnerAnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="label-caption">Khu vực đang xem</p>
-          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">{selectedZoneName}</p>
-        </div>
-        <div className="flex gap-1 rounded-2xl bg-warmGray/10 p-1">
-          {TABS.map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                'rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
-                tab === t ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-              )}
-            >
-              {TAB_LABEL[t]}
-            </button>
-          ))}
-        </div>
+      <div className="min-w-0">
+        <p className="label-caption">Khu vực đang xem</p>
+        <p className="truncate text-2xl font-bold tracking-tight text-charcoal">{selectedZoneName}</p>
       </div>
 
-      {tab === 'env' && <EnvTab zoneId={selectedZoneId} range={range} setRange={setRange} metric={metric} setMetric={setMetric} />}
-      {tab === 'compare' && <CompareTab farmId={selectedFarmId ?? undefined} range={range} setRange={setRange} metric={metric} setMetric={setMetric} />}
-      {tab === 'bird' && <BirdTab zoneId={selectedZoneId} />}
+      <EnvVariationCard
+        zoneId={selectedZoneId}
+        range={range}
+        setRange={setRange}
+        thresholds={zone?.thresholds}
+        live={{ isLive: telemetry.isLive, nh3_ppm: telemetry.data.nh3_ppm, co2_ppm: telemetry.data.co2_ppm }}
+      />
+
+      <ZoneBalanceCard farmId={selectedFarmId ?? undefined} />
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <BirdFlowCard onExpandCorrelation={() => correlationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
+        <CorrelationCard ref={correlationRef} zoneId={selectedZoneId} />
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <h2 className="text-h2 text-charcoal">So sánh môi trường giữa các Zone</h2>
+        <CompareTab
+          farmId={selectedFarmId ?? undefined}
+          range={compareRange}
+          setRange={setCompareRange}
+          metric={compareMetric}
+          setMetric={setCompareMetric}
+        />
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <h2 className="text-h2 text-charcoal">Xu hướng đàn chim theo ngày</h2>
+        <BirdTab zoneId={selectedZoneId} />
+      </div>
     </div>
   )
 }

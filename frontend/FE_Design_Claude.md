@@ -3,11 +3,22 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.3.0 · **Cập nhật:** 22/09/2026 · **Thay thế:** v2.2.0
+**Phiên bản:** 2.4.0 · **Cập nhật:** 24/09/2026 · **Thay thế:** v2.3.1
 
 ---
 
 ## 0. Changelog
+
+### v2.3.1 → v2.4.0
+| # | Thay đổi |
+|---|---|
+| 1 | **Thêm mục 13 — Quy tắc code bắt buộc khi review PR** (luồng dữ liệu, React Query, Zustand, socket, xử lý lỗi, TypeScript, style, phân quyền, hợp đồng API, hiệu năng, a11y, checklist trước PR). Mỗi quy tắc gắn mức **[Bắt buộc]** (vi phạm → Request changes) hoặc **[Nên]** (góp ý). Rút ra từ code đang chạy — code hiện tại đã đạt tất cả quy tắc [Bắt buộc] trừ các nợ đã liệt kê ở 13.14. |
+| 2 | **Đối chiếu lại với code thật và sửa chỗ lệch:** mục 6 (i18n chưa cài — ghi rõ trạng thái), mục 7 (SYSTEM-FR-001/002/003 đã xong), mục 9 (`Timeline`/`ThresholdConfigCard` chưa tồn tại), 12.2 (thêm `audioTracks`, `validations/technician/`, hook còn thiếu), 12.7 (số file `shared/`), 12.8 (ESLint đã có cấu hình), 12.9/12.11 (component trong `features/` **không** mang tiền tố role — khớp toàn bộ file đang có). |
+
+### v2.3.0 → v2.3.1
+| # | Thay đổi |
+|---|---|
+| 1 | **Mục 5.4 đổi từ `<MockDataNotice />` (component riêng) sang 1 dòng `<p>` italic viết trực tiếp tại nơi dùng.** Nhãn "dữ liệu giả" chỉ có 1 dòng chữ, không có logic/props gì đáng để tách file riêng trong `components/ui/` — tạo file cho nó là dư thừa. |
 
 ### v2.2.0 → v2.3.0
 | # | Thay đổi |
@@ -282,7 +293,13 @@ Icon-box cảnh báo trên cùng (biến thể Orange/Red mục 2.7) → tiêu �
 
 Hành vi giữ nguyên theo v2.0.0 — chỉ đổi giá trị màu: mọi chỗ trước đây ghi `--ink-850`/`#111728` nay đọc `--gray-900`. Vạch ngưỡng trên Gauge dùng `--gray-700` (Graphite, tự động cập nhật qua token).
 
-### 5.4. `<MockDataNotice />`
+### 5.4. Nhãn "dữ liệu giả"
+
+Không tạo component riêng cho việc này — chỉ 1 dòng `<p>` italic đặt cạnh/dưới tiêu đề section chứa số liệu chưa có API thật:
+
+```html
+<p className="text-[11px] font-medium italic text-warmGray">This data is FAKE and has not been MOCKAPI</p>
+```
 
 ```
 Tiêu đề section
@@ -293,7 +310,9 @@ This data is FAKE and has not been MOCKAPI     ← text-mock-notice, --gray-500,
 
 ## 6. i18n — Đa ngôn ngữ (VI/EN)
 
-*(Không đổi so với v2.0.0)* — `react-i18next`, namespace theo module (`common`, `sidebar`, `dashboard`, `alerts`, `tickets`, `farm`, `sensors`, `roles`), không hardcode chuỗi hiển thị, đơn vị đo (°C/%/ppm/lux/dB) không dịch.
+**Trạng thái: định hướng, CHƯA áp dụng.** `react-i18next` chưa được cài; toàn bộ UI hiện viết thẳng tiếng Việt. Khi review PR **không** yêu cầu `t('...')` cho tới khi có PR riêng cài i18n.
+
+Thiết kế khi áp dụng: `react-i18next`, namespace theo module (`common`, `sidebar`, `dashboard`, `alerts`, `tickets`, `farm`, `sensors`, `roles`), không hardcode chuỗi hiển thị, đơn vị đo (°C/%/ppm/lux/dB) không dịch. Trong lúc chờ: chuỗi hiển thị viết tiếng Việt có dấu, nhất quán thuật ngữ với màn đã có (VD "Zone", "Farm", "Ticket" giữ tiếng Anh như UI hiện tại).
 
 ---
 
@@ -308,14 +327,14 @@ This data is FAKE and has not been MOCKAPI     ← text-mock-notice, --gray-500,
 | Cảnh báo thiên địch từ camera | THREAT-FR-001/002/003 | 🟡/⬜ | **Có** |
 | Chat trực tiếp trong Ticket | TICKET-FR-014→017 | ⬜ Chưa cài | **Có** |
 | Reset ngưỡng Zone về mặc định | ENV-FR-020 | ✅ Đã code (v1.18.0) | Không |
-| Audit Log toàn hệ thống (Admin) | SYSTEM-FR-001 | ⬜ Chưa cài | **Có** |
-| Cấu hình ngưỡng mặc định hệ thống (Admin) | SYSTEM-FR-002 | ⬜ Chưa cài | **Có** |
-| Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ⬜ Chưa cài | **Có** |
+| Audit Log toàn hệ thống (Admin) | SYSTEM-FR-001 | ✅ Đã code (`GET /system/audit-logs`) | Không |
+| Cấu hình ngưỡng mặc định hệ thống (Admin) | SYSTEM-FR-002 | ✅ Đã code (`GET/PUT /system/settings/default-thresholds`) | Không |
+| Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ✅ Đã code (`GET /system/health-overview`) | Không |
 | Module SALES (sản phẩm/đơn hàng/tồn kho) | SALES-FR-* | ⬜ Stub, GĐ2 | **Có** |
 | Đăng bán/Truy xuất nguồn gốc (Marketplace) | MARKET-FR-* | ✅ Đã code | Không |
 | Push notification FCM/Zalo/SMS thật | ALERT-FR-002/003/004 | 🟡 chưa nối credential | Có (màn cấu hình kênh) |
 
-*Giới hạn:* phiên làm việc này không có quyền đọc repo backend thật — bảng trên cần đối chiếu lại code sống trước khi go-live.
+*Giới hạn:* bảng này là ảnh chụp tại v2.4.0 (SRS v1.21.0). Nguồn sự thật luôn là cột "Trạng thái Backend" trong `SwiftletCare_SRS.md` §5 — lệch nhau thì tin SRS và sửa bảng này.
 
 ---
 
@@ -337,11 +356,13 @@ Trước khi dựng chart: tự hỏi *"chuỗi thời gian, danh mục, tỷ tr
 
 | Loại màn hình | Component dùng chung | Áp dụng |
 |---|---|---|
-| Bảng dữ liệu | `<DataTable />` | Mọi role |
-| Nhật ký/lịch sử | `<Timeline />` | Admin Audit Log, Ticket notes, threshold_history |
-| Cấu hình ngưỡng cảm biến | `<ThresholdConfigCard />` | Farm Owner (Zone) + Admin (mặc định hệ thống) — cùng component, khác quyền ghi |
-| Popup xác nhận | `<ConfirmModal />` | Toàn bộ 4 role |
-| Stat card | `<StatCard />` | Dashboard mọi role |
+| Bảng dữ liệu | `<DataTable />` (`components/ui/`) | Mọi role |
+| Popup xác nhận | `<ConfirmModal />` (`components/ui/`) | Toàn bộ 4 role |
+| Nhật ký/lịch sử | `<Timeline />` — **chưa tồn tại** | Admin Audit Log, Ticket notes, threshold_history |
+| Cấu hình ngưỡng cảm biến | `<ThresholdConfigCard />` — **chưa tồn tại** (hiện là `features/technician/devices/ThresholdsModal`) | Farm Owner (Zone) + Admin (mặc định hệ thống) — cùng component, khác quyền ghi |
+| Stat card | `<StatCard />` — **chưa dùng chung** (đang là hàm cục bộ trong `AdminSystemHealthPage`) | Dashboard mọi role |
+
+Component "chưa tồn tại" là định hướng: PR **không** bị yêu cầu dùng chúng. Khi màn thứ hai cần đúng giao diện đó thì tách ra theo bảng 12.3 thay vì viết bản thứ hai.
 
 Trước khi thêm màn hình riêng cho 1 role: kiểm tra role khác đã có màn tương tự chưa — tái dùng component, khác nhau ở **data/quyền**, không khác nhau ở **giao diện**.
 
@@ -349,7 +370,7 @@ Trước khi thêm màn hình riêng cho 1 role: kiểm tra role khác đã có 
 
 ## 10. Nên / Không nên
 
-**Nên:** icon-box đúng 4 biến thể (2.7) · kiểm bảng mục 7 trước khi hiển thị số liệu mới · tra bảng mục 8 trước khi chọn chart · dùng `t('...')` cho mọi chuỗi · dùng đúng 1 thang xám ấm (2.2) cho mọi nhu cầu "đậm/nhạt".
+**Nên:** icon-box đúng 4 biến thể (2.7) · kiểm bảng mục 7 trước khi hiển thị số liệu mới · tra bảng mục 8 trước khi chọn chart · dùng `t('...')` cho mọi chuỗi *(khi i18n đã cài — xem mục 6)* · dùng đúng 1 thang xám ấm (2.2) cho mọi nhu cầu "đậm/nhạt".
 
 **Không nên:** không dùng màu ngoài mục 2 (kể cả xám mặc định của framework) · không đổi layout sidebar/topbar ngoài 2 ngoại lệ mục 4.1 · không dùng overlay đen `rgba(0,0,0,x)` cho modal — luôn `rgba(39,35,31,x)` + blur · không để card trắng chạm sát nhau không padding trên nền xám · không tạo bảng/form riêng cho từng role nếu bản chất giống nhau.
 
@@ -460,6 +481,7 @@ frontend/src/
 │   ├── auth/                  auth.api · invitations.api
 │   ├── farm-owner/            analytics.api · telemetry.api · harvests.api · marketplace.api
 │   └── shared/                farms.api · alerts.api · devices.api · tickets.api
+│                              audioTracks.api (⚠ chỉ Technician dùng — nợ, xem 13.14)
 │
 ├── components/
 │   ├── auth/                  RequireRole
@@ -496,13 +518,19 @@ frontend/src/
 │                              admin · farm-owner · technician · sales-staff · public
 │
 ├── hooks/                     React Query hooks bọc apis/
-│   ├── admin/ · auth/ · farm-owner/ · shared/
+│   ├── admin/                 useUsers · useSystem · useAccountRequests
+│   ├── auth/                  useAuth · useInvitations
+│   ├── farm-owner/            useAnalytics · useTelemetry · useHarvests · useMarketplace
+│   ├── shared/                useFarms · useAlerts · useDevices · useTickets
+│   │                          useAlertNotifications (listener socket AppShell mount)
+│   │                          useAudioTracks (⚠ chỉ Technician dùng — nợ, xem 13.14)
 │   └── common/                Hạ tầng không gắn role:
 │                              usePermission · useSocket · usePaginatedListQuery · useBreadcrumb
 │
 ├── validations/               Hàm kiểm tra form, thuần logic
 │   ├── admin/                 user.validation.ts
-│   └── common/                threshold.validation.ts
+│   ├── technician/            audioTrack.validation.ts
+│   └── common/                threshold.validation.ts · speakerSchedule.validation.ts
 │
 ├── types/                     Chia theo MODULE backend, không theo role (xem 12.7)
 │                              auth · farm · device · telemetry · alert · ticket
@@ -569,7 +597,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `types/` chia theo **module backend**, không theo role | Type là shape thực thể mirror model Mongoose. `Zone`, `Alert`, `Ticket` được 3 role đọc, không có chủ sở hữu duy nhất. Ép vào thư mục role thì hoặc phải nhân bản, hoặc 80% type dồn vào `types/shared/`. |
 | `components/features/admin/tickets/AdminOverrideModals.tsx` nằm ở `admin/` nhưng bị trang Technician import | Là UI riêng của Admin, gated bằng `usePermission('ADMIN')` trong `TechnicianTicketDetailPage`. Khi một component là **năng lực của role này render trong màn của role khác**, quyền sở hữu thắng nơi import. |
 | `constants/roles.ts` giữ bảng `MENU_ACCESS` tách rời menu trong layout | Không thể đọc ngược menu từ file layout: `useAuth` cần `canAccessPath`, mà layout lại render `AppHeader` gọi `useAuth` → import vòng, lỗi lúc chạy. |
-| `apis/shared/` + `hooks/shared/` còn tồn tại (9 file) | Đã kiểm bằng đồ thị import: `farms`/`alerts` được cả 4 role chạm tới vì chính khung app render `ZoneSwitcher` + `NotificationPopover`; `devices`/`tickets` dùng bởi admin + technician. **Không có `components/features/shared/`.** |
+| `apis/shared/` + `hooks/shared/` còn tồn tại (11 file, gồm 2 file `audioTracks` đang nằm sai chỗ — xem 13.14) | Đã kiểm bằng đồ thị import: `farms`/`alerts` được cả 4 role chạm tới vì chính khung app render `ZoneSwitcher` + `NotificationPopover`; `devices`/`tickets` dùng bởi admin + technician. **Không có `components/features/shared/`.** |
 
 ### 12.8. Checklist khi thêm một màn hình mới
 
@@ -580,22 +608,23 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 5. Component riêng của màn → `components/features/<role>/<area>/`. **Không để trong `pages/`.**
 6. Kiểu dữ liệu mới → `types/<module>.types.ts` (theo module backend), barrel `types/index.ts` tự re-export.
 7. Form có kiểm tra hợp lệ → hàm thuần trong `validations/<role|common>/<tên>.validation.ts`, component chỉ gọi.
-8. Chạy `npx tsc --noEmit` và `npm run build` trước khi commit (repo chưa có test FE, `npm run lint` thiếu cấu hình ESLint).
+8. Chạy `npm run lint`, `npx tsc --noEmit` và `npm run build` trước khi commit (xem 13.13). Repo chưa có test FE nào dù `npm test` (vitest) đã cấu hình.
 
 ### 12.9. Quy tắc đặt tên file
 
 **Nguyên tắc gốc:** file nào *là một thực thể của React* (component, page, layout) → **PascalCase**, viết hoa chữ cái đầu của mọi từ, không gạch nối, không gạch dưới. File nào *là một module hạ tầng* (endpoint, kiểu dữ liệu, store, hằng số, tiện ích) → giữ quy ước đuôi phân loại của hệ sinh thái React/TypeScript. Trộn hai quy ước này là **cố ý**, không phải thiếu nhất quán — xem 12.11.
 
-**Công thức tên component/page:** `[Role][ChứcNăng]` hoặc `[TênFeature]`.
-- File thuộc **một role** → bắt đầu bằng tên role viết PascalCase: `Admin`, `FarmOwner`, `Technician`, `SalesStaff`.
-- File **không thuộc role nào** (`ui/`, `common/`, `auth/`, 4 trang gốc `pages/`) → **không có tiền tố role**, chỉ tên feature.
+**Công thức tên:** tiền tố role **chỉ** dùng ở nơi thư mục không tự nói lên role.
+- **Page** trong `pages/<role>/` và **layout** của role → bắt đầu bằng tên role PascalCase: `Admin`, `FarmOwner`, `Technician`, `SalesStaff` (URL không có tiền tố role nên tên file bù lại).
+- **Component trong `components/features/<role>/<area>/`** → **không** tiền tố role, chỉ tên feature (`ThresholdsModal`, `CreateUserModal`) — đường dẫn `features/<role>/` đã nói role. Đây là quy ước đang chạy ở toàn bộ file trong `features/`; không đổi tên file cũ.
+- File **không thuộc role nào** (`ui/`, `common/`, `auth/`, 4 trang gốc `pages/`) → không tiền tố role.
 - **Tên hàm export trùng đúng tên file**: `AdminUsersPage.tsx` → `export default function AdminUsersPage()`.
 
 | Lớp | Quy tắc tên | Ví dụ |
 |---|---|---|
 | `pages/<role>/` | `[Role][ChứcNăng]Page.tsx` | `AdminUsersPage.tsx` · `FarmOwnerHarvestPage.tsx` · `TechnicianDevicesPage.tsx` |
 | `pages/auth/` + 4 trang gốc `pages/` | `[ChứcNăng]Page.tsx` — không role | `LoginPage.tsx` · `SettingsPage.tsx` · `ForbiddenPage.tsx` |
-| `components/features/<role>/<area>/` | `[Role][TênFeature].tsx` | `AdminCreateUserModal.tsx` · `FarmOwnerListingPanel.tsx` · `TechnicianRelayToggle.tsx` |
+| `components/features/<role>/<area>/` | `[TênFeature].tsx` — không tiền tố role; cột bảng `<area>Columns.tsx` (camelCase, vì là hàm build cột chứ không phải component) | `CreateUserModal.tsx` · `ListingPanel.tsx` · `RelayToggle.tsx` · `userColumns.tsx` |
 | `components/layouts/` | `[Role]Layout.tsx` cho layout của role · `App[Phần].tsx` cho khung dùng chung | `AdminLayout.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` |
 | `components/ui/` · `components/common/` | `[TênFeature].tsx` — **không** tiền tố role | `DataTable.tsx` · `ConfirmModal.tsx` · `ZoneSwitcher.tsx` |
 | `hooks/<bucket>/` | `use[Resource].ts` — camelCase, **bắt buộc** bắt đầu bằng `use` | `useUsers.ts` · `useFarms.ts` · `usePermission.ts` |
@@ -628,7 +657,7 @@ Cấu trúc này theo mô hình **phân lớp + cắt lát theo role** (layered 
 
 | Tiêu chí chuẩn ngành | SwiftletCare |
 |---|---|
-| Component PascalCase, tên file trùng tên component | Đạt — 67/67 file component và page |
+| Component PascalCase, tên file trùng tên component | Đạt — mọi file component và page |
 | Hook `useXxx` camelCase | Đạt — đổi sang PascalCase sẽ làm quy tắc `react-hooks` của ESLint không nhận diện được, nên **không** áp PascalCase cho `hooks/` |
 | Module hạ tầng dùng đuôi phân loại (`.api`, `.types`, `.validation`, `.routes`) | Đạt — giống Angular style guide (`*.service.ts`) và NestJS (`*.module.ts`); đây là lý do `apis/`, `types/`, `validations/`, `routes/` **không** PascalCase |
 | Tầng UI không phụ thuộc domain | Đạt — `components/ui/` chỉ phụ thuộc `lib/cn` |
@@ -642,6 +671,117 @@ Cấu trúc này theo mô hình **phân lớp + cắt lát theo role** (layered 
 **Nên:** đặt file theo bảng 12.3 · đặt tên theo bảng 12.9 · tên trang mang tên role · giữ `pages/` chỉ có `*Page.tsx` · dùng alias `@/` · dời file sang bucket khác ngay khi số role dùng nó thay đổi · đọc `routes/` khi cần biết ai vào được trang nào.
 
 **Không nên:** không tạo `components/features/shared/` · không để file một role dùng nằm trong `shared/` "để dành sau này" · không nhét component/modal vào `pages/` · không import `@/types`/`@/hooks`/`@/apis`/`@/stores` từ trong `components/ui/` · không suy quyền truy cập từ tên thư mục · không tách file chỉ vì nguyên tắc — số file ít và tên file tự nói lên chủ sở hữu quan trọng hơn.
+
+---
+
+## 13. Quy tắc code — áp dụng khi viết và khi review PR frontend
+
+> Mục 1–12 nói *trông thế nào* và *đặt ở đâu*; mục này nói *viết thế nào*. Mỗi quy tắc có mức:
+> **[Bắt buộc]** — vi phạm thì PR bị *Request changes*. **[Nên]** — góp ý, không chặn merge.
+> Quy tắc chỉ áp cho code **thêm/sửa trong PR**; nợ cũ đã liệt kê ở 13.14 không tính vào PR không đụng tới nó.
+> Mọi quy tắc ở đây đều khớp code đang chạy tại v2.4.0 — nếu thấy code cũ "vi phạm" mà không có trong 13.14, sửa tài liệu hoặc code trong cùng PR, đừng để hai bên lệch nhau.
+
+### 13.1. Luồng dữ liệu — một chiều, qua hook
+
+```
+page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  →  lib/axios.ts  →  backend
+```
+
+- **[Bắt buộc]** Component và page **không** import `@/lib/axios`, không gọi `fetch`, không gọi hàm trong `apis/` trực tiếp. Chỉ được `import type` từ `apis/` (VD `AnalyticsRange`, `CreateHarvestInput`).
+- **[Bắt buộc]** Mỗi endpoint mới = 1 hàm trong `apis/<bucket>/<resource>.api.ts` + hook React Query trong `hooks/<bucket>/use<Resource>.ts`. Bucket chọn theo bảng 12.3.
+- **[Bắt buộc]** Endpoint danh sách trả `{ data, meta: { page, limit, total } }` → hook dùng `usePaginatedListQuery` (`hooks/common/`), không tự bóc `meta` lại.
+- **[Bắt buộc]** Đường dẫn, tên field, kiểu dữ liệu khớp `docs/api/api-spec.yaml` (nguồn sự thật hợp đồng API). Route **không** có tiền tố `/api/v1`; `lib/axios` đã gắn base `/api` (Vite proxy bỏ prefix). Không đoán field — endpoint chưa có trong spec thì phải có PR backend/spec đi kèm.
+
+### 13.2. Server state — React Query
+
+- **[Bắt buộc]** Dữ liệu lấy từ backend chỉ sống trong cache React Query. **Không** chép vào Zustand hay `useState` để "giữ cho tiện" (trừ giá trị nháp của form).
+- **[Bắt buộc]** `queryKey` là mảng bắt đầu bằng tên resource, tham số theo sau: `['farms']`, `['farms', farmId]`, `['sensor-nodes', zoneId]`. Key mới phải khớp tiền tố của key đang có cho cùng resource để `invalidateQueries` bắt được.
+- **[Nên]** Mutation tự `invalidateQueries` ngay trong hook (`onSuccess`), không để component phải nhớ. Dùng `queryClient` trực tiếp trong component chỉ khi cập nhật lạc quan/đặc thù màn đó (như `NotificationPopover`).
+- **[Bắt buộc]** Không tự đặt `staleTime`/`retry` khác mặc định (`lib/queryClient.ts`: 30s, 1 lần) nếu không có lý do ghi bằng comment.
+
+### 13.3. Client state — Zustand
+
+- **[Bắt buộc]** Store chỉ giữ trạng thái **thuần client** dùng ở nhiều màn: `authStore`, `zoneStore` (zone đang chọn), `alertStore` (cảnh báo realtime), `toastStore`, `breadcrumbStore`. Thêm store mới phải trả lời được "vì sao không phải React Query / state cục bộ".
+- **[Nên]** Đọc store bằng selector (`useToastStore(s => s.push)`), không lấy cả object để tránh re-render thừa.
+
+### 13.4. Realtime — Socket.io
+
+- **[Bắt buộc]** Component/page **không** import `@/lib/socket`. Kết nối và đăng ký sự kiện đi qua hook (`useSocket`, `useTelemetry`, `useAlertNotifications`).
+- **[Bắt buộc]** Mọi `on*`/`joinZone` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`) — thiếu cleanup là rò listener mỗi lần đổi zone.
+- **[Bắt buộc]** Tên sự kiện và payload khớp backend (`TELEMETRY_UPDATE`, `RELAY_UPDATE`, `ALERT_NEW`, `DEVICE_STATUS_CHANGE`, `BIRD_COUNT_UPDATE`; type trong `types/socket.types.ts`).
+
+### 13.5. Lỗi, loading, rỗng
+
+- **[Bắt buộc]** Lỗi API hiển thị cho người dùng bằng `getApiErrorMessage(err, '<câu tiếng Việt dễ hiểu>')` (`lib/helpers.ts`) — qua toast (`useToastStore(s => s.push)(msg, 'error')`) hoặc lỗi inline dưới form. **Không** nuốt lỗi im lặng (`catch {}` trống), không in object lỗi thô / stack ra UI.
+- **[Bắt buộc]** Hành động thành công mà người dùng không tự thấy kết quả (lưu, xoá, gửi) → toast `success`.
+- **[Bắt buộc]** Màn có dữ liệu bất đồng bộ phải có đủ 3 trạng thái: đang tải (`LoadingSkeleton`), rỗng (`EmptyState`), lỗi. Không để màn trắng.
+- **[Bắt buộc]** Hành động phá huỷ/không hoàn tác (xoá, khoá tài khoản, tắt relay khẩn…) đi qua `ConfirmModal` theo 5.2; nút đang gửi request phải `disabled` để không bấm 2 lần.
+
+### 13.6. TypeScript
+
+- **[Bắt buộc]** Không `any`, không `as any`, không `@ts-ignore`/`@ts-expect-error` (code hiện tại: 0 chỗ). Kiểu chưa rõ → `unknown` rồi thu hẹp.
+- **[Bắt buộc]** Kiểu thực thể lấy từ `@/types` (chia theo module backend, 12.7). Không khai lại interface `Zone`, `Alert`… cục bộ.
+- **[Bắt buộc]** Enum (`Role`, `DeviceStatus`, `AlertSeverity/Type/Status`, `TicketType/Priority/Status`…) phải đồng bộ với `backend/src/types/domain.types.ts`. Đổi/thêm giá trị enum thì sửa **cả hai phía trong cùng PR** hoặc PR phải ghi rõ PR backend đi kèm.
+- **[Bắt buộc]** `eslint-disable` chỉ được dùng từng dòng (`-next-line`), đúng 1 rule, kèm comment giải thích vì sao (như `ActionsMenu.tsx`, `useBreadcrumb.ts`). Cấm `eslint-disable` cả file.
+
+### 13.7. Style
+
+- **[Bắt buộc]** Màu chỉ lấy từ token trong `tailwind.config.ts`: thang `gray` / `lime` / `accent` / `orange` / `red` và alias `charcoal` · `graphite` · `warmGray` · `limeMist` · `success` · `climateOrange` · `alertRed` · `stone` · `white`. **Không** viết hex/`rgb()` trong `className` hay `style` (kể cả arbitrary value `bg-[#...]` — code hiện còn 1 chỗ, xem 13.14), không dùng palette mặc định của Tailwind (`slate`, `zinc`, `neutral`, `blue`, `green`…). Lưu ý `stone` đã bị ghi đè = `#EAEAEA` (canvas), không phải thang stone của Tailwind.
+- **[Nên]** Chữ dùng thang `text-h1` · `text-h2` · `text-h3` · `text-body` · `text-small` · `text-caption` · `text-metric` (mục 2.8) thay cho `text-sm`/`text-2xl` mặc định. Code cũ còn ~230 chỗ dùng size mặc định (13.14) nên chưa bắt buộc; file mới tạo thì nên dùng thang này ngay từ đầu.
+- **[Bắt buộc]** Modal/popup dùng `Modal` / `ConfirmModal` / `NoteActionModal` trong `components/ui/`, không tự dựng overlay (overlay tự dựng rất dễ dùng `bg-black/…` — trái 5.2).
+- **[Bắt buộc]** Không sửa layout/kích thước sidebar, topbar (4.1).
+- **[Nên]** Dùng `cn()` (`lib/cn`) để ghép class điều kiện thay vì nối chuỗi template.
+
+### 13.8. Phân quyền
+
+- **[Bắt buộc]** Trang mới được chặn bằng `<RequireRole allow={...}>` trong `routes/<role>.routes.tsx`, nhóm role lấy từ `constants/roles.ts` — không viết mảng role literal tại chỗ.
+- **[Bắt buộc]** Ẩn/disable nút theo quyền dùng `usePermission(...)`, không rải `user.role === '...'` trong component (so sánh role của **dòng dữ liệu** để hiển thị — như cột role trong bảng user — thì được).
+- **[Bắt buộc]** Ẩn UI **không phải** là bảo mật. Hành động nhạy cảm phải được backend chặn; PR thêm nút mới cho role nào thì endpoint tương ứng phải cho phép đúng role đó (đối chiếu `requireRole` phía backend / spec).
+- **[Bắt buộc]** Thêm mục menu: sửa `menuSections` trong `<Role>Layout.tsx` **và** thêm dòng `MENU_ACCESS` trong `constants/roles.ts` (12.5).
+
+### 13.9. Dữ liệu giả & tính năng chưa có
+
+- **[Bắt buộc]** Tính năng chưa có API thật: dùng `ComingSoon` (`components/ui/`), hoặc hiển thị số liệu giả **kèm** dòng thông báo theo 5.4 và bảng mục 7. Không đưa số liệu hardcode lên như thật.
+- **[Bắt buộc]** Không để lại dữ liệu mock/hardcode ở màn **đã** có API thật (mục 7 ghi "Không cần nhãn").
+
+### 13.10. Routing & hiệu năng
+
+- **[Bắt buộc]** Trang mới được `lazy()` trong file `routes/` của role (code-splitting; hiện mọi trang đều lazy, kể cả `SettingsPage` trong `App.tsx`). Không import tĩnh trang vào `App.tsx` hay file route.
+- **[Bắt buộc]** Không import thư viện nặng (`chart.js`, `react-chartjs-2`, `date-fns`, `video.js`) vào file nằm trong bundle chính: `App.tsx`, `components/layouts/`, `components/common/`, `components/ui/`, `stores/`, `lib/` (trừ `lib/chartTheme.ts`).
+- **[Nên]** Danh sách dài dùng phân trang server (`usePaginatedListQuery` + `Pagination`), không tải hết rồi cắt ở client.
+
+### 13.11. Accessibility tối thiểu
+
+- **[Bắt buộc]** Hành động bấm được là `<button>` (hoặc `Button`), điều hướng là `<Link>`/`NavLink` — không `div onClick` cho hành động (wrapper chỉ để `stopPropagation`, như trong `SensorAlertLogTable`, thì được).
+- **[Bắt buộc]** Nút chỉ có icon phải có `aria-label` tiếng Việt.
+- **[Bắt buộc]** Input trong form có label gắn đúng (`Input`/`Select`/`Textarea` của `ui/` đã hỗ trợ `label`).
+- **[Nên]** Trạng thái không chỉ truyền bằng màu — kèm chữ hoặc icon (mục 2.6 đã yêu cầu icon + label cho cảm biến).
+
+### 13.12. Vệ sinh code
+
+- **[Bắt buộc]** Không để `console.log`/`console.debug` (hiện 0 chỗ), không để code bị comment-out, không để import/biến thừa (ESLint `no-unused-vars` sẽ báo).
+- **[Bắt buộc]** Mọi import dùng alias `@/` (12.1).
+- **[Nên]** Comment giải thích **vì sao** (lý do nghiệp vụ, mã FR trong SRS như `// AUTH-FR-003`), không mô tả lại code làm gì.
+
+### 13.13. Trước khi mở PR
+
+- **[Bắt buộc]** Cả ba lệnh pass trong `frontend/`: `npm run lint` · `npx tsc --noEmit` · `npm run build`. CI chưa chạy lint/test nên người mở PR tự chịu trách nhiệm.
+- **[Bắt buộc]** PR điền đủ `.github/pull_request_template.md`; commit theo `.commitlintrc.json` (scope FE thường dùng: `web`, `pwa`).
+- **[Bắt buộc]** PR đổi giao diện đính kèm ảnh chụp màn hình (desktop + mobile width) vào mô tả PR.
+- **[Nên]** Logic thuần (validation, helper, format) mới thêm có test vitest `*.test.ts` cạnh file — repo chưa có test FE, mỗi PR thêm được một ít là tốt.
+
+### 13.14. Nợ đã biết — không tính vào PR không đụng tới
+
+| Chỗ | Vi phạm | Cách trả nợ |
+|---|---|---|
+| `apis/shared/audioTracks.api.ts` + `hooks/shared/useAudioTracks.ts` | Chỉ Technician dùng (`features/technician/devices/AudioTracksModal`) → sai 12.1 nguyên tắc 2 | Dời về `apis/technician/` + `hooks/technician/` |
+| `pages/technician/TechnicianDevicesPage.tsx` | Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên]) | Chuyển vào `onSuccess` của mutation trong `useDevices` |
+| Mục 6 i18n | Chưa cài `react-i18next`, UI hardcode tiếng Việt | PR riêng cài i18n, sau đó 13.x mới yêu cầu `t('...')` |
+| `StatCard` cục bộ trong `AdminSystemHealthPage` | Mục 9 muốn dùng chung | Tách ra khi màn thứ hai cần |
+| `features/farm-owner/dashboard/BirdVisionCard.tsx` — `bg-[#D2F93A]` | Hex hardcode (13.7) | Đổi sang token `bg-lime-500` (cùng giá trị) |
+| ~230 chỗ `text-xs`/`text-sm`/`text-lg`/`text-2xl`… | Lệch thang chữ 2.8 (13.7 [Nên]) | Đổi dần khi sửa file đó |
+
+PR đụng vào file trong bảng thì **nên** trả nợ luôn; bắt buộc chỉ khi PR làm nợ nặng thêm (VD thêm consumer thứ hai vẫn chỉ của Technician vào `shared/`).
 
 ---
 
