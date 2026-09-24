@@ -25,37 +25,34 @@ export function TicketTableView({
   return (
     <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left" role="table">
+        <table className="w-full min-w-[960px] table-fixed border-collapse text-left" role="table">
           <thead>
             <tr className="border-b border-graphite/10 bg-graphite/[0.03]">
-              <th className="whitespace-nowrap py-3 pl-5 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
+              <th className="w-[12%] whitespace-nowrap py-3 pl-5 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                 Ưu tiên
               </th>
-              <th className="whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
+              <th className="w-[24%] whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                 Loại ticket
               </th>
               <th
-                className="cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
+                className="w-[20%] cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
                 onClick={() => onSort('status')}
               >
                 Trạng thái<SortIcon active={sortKey === 'status'} dir={sortDir} />
               </th>
               <th
-                className="cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
+                className="w-[20%] cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
                 onClick={() => onSort('sla')}
               >
                 Thời hạn SLA<SortIcon active={sortKey === 'sla'} dir={sortDir} />
               </th>
               <th
-                className="cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
+                className="w-[14%] cursor-pointer whitespace-nowrap py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray hover:text-charcoal"
                 onClick={() => onSort('created_at')}
               >
                 Ngày tạo<SortIcon active={sortKey === 'created_at'} dir={sortDir} />
               </th>
-              <th className="w-full py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
-                Ghi chú gần nhất
-              </th>
-              <th className="whitespace-nowrap py-3 pr-5 text-right text-[11px] font-semibold uppercase tracking-wider text-warmGray">
+              <th className="w-[10%] py-3 pr-5 text-center text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                 Thao tác
               </th>
             </tr>
