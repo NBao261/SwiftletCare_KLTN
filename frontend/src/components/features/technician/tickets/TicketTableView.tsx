@@ -52,10 +52,10 @@ export function TicketTableView({
               >
                 Ngày tạo<SortIcon active={sortKey === 'created_at'} dir={sortDir} />
               </th>
-              <th className="py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
+              <th className="w-full py-3 pr-3 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                 Ghi chú gần nhất
               </th>
-              <th className="py-3 pr-5 text-[11px] font-semibold uppercase tracking-wider text-warmGray">
+              <th className="whitespace-nowrap py-3 pr-5 text-right text-[11px] font-semibold uppercase tracking-wider text-warmGray">
                 Thao tác
               </th>
             </tr>

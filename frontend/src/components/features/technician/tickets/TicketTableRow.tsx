@@ -83,15 +83,15 @@ export const TicketTableRow = memo(function TicketTableRow({
       </td>
 
       {/* Latest note */}
-      <td className="max-w-[200px] py-3 pr-3">
+      <td className="w-full max-w-0 py-3 pr-3">
         {ticket.notes[0] && (
           <p className="truncate text-sm text-warmGray">💬 {ticket.notes[0].content}</p>
         )}
       </td>
 
       {/* Actions — chặn click không lan ra row */}
-      <td className="whitespace-nowrap py-3 pr-5" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+      <td className="w-1 whitespace-nowrap py-3 pr-5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
           {ticket.status === 'NEW' && (
             <Button
               size="sm"
