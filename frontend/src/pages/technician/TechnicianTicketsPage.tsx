@@ -22,17 +22,17 @@ import { PAGE_SIZE } from '@/components/features/technician/tickets/ticketListTy
 export default function TechnicianTicketsPage() {
   const {
     // UI state
-    activeTab, viewMode, sortKey, sortDir, search, filterStatus,
+    isOverdueActive, viewMode, sortKey, sortDir, search, filterStatus,
     statusModal, reassignModal,
     // Actions
-    handleTabChange, handleSort,
+    handleOverdueToggle, handleSort,
     handleSearchChange, handleFilterStatusChange, handleClearFilters, handleViewModeChange,
     setPage, setStatusModal, setReassignModal,
     // Data
     displayRecords, filteredRecords,
     safePage, totalPages, paginTotal,
     isLoading, statsRecords, total,
-    isOverdue, overdueTotal,
+    overdueTotal,
   } = useTicketsPageData()
 
   const hasResults = !isLoading && filteredRecords.length > 0
@@ -51,20 +51,21 @@ export default function TechnicianTicketsPage() {
         </span>
       </div>
 
-      {/* ── Stat Bar ── (stats query riêng, không dùng KPI — ADMIN-only endpoint) */}
+      {/* ── Stat Bar ── */}
       <TicketStatBar tickets={statsRecords} />
 
-      {/* ── Tabs + Search + Filter + View Mode ── */}
+      {/* ── Search + Unified Filter + Sort + View Mode ── */}
       <TicketToolbar
-        activeTab={activeTab}          onTabChange={handleTabChange}
-        search={search}                onSearchChange={handleSearchChange}
-        filterStatus={filterStatus}    onFilterStatusChange={handleFilterStatusChange}
-        viewMode={viewMode}            onViewModeChange={handleViewModeChange}
-        sortKey={sortKey}              sortDir={sortDir}   onSort={handleSort}
+        isOverdueActive={isOverdueActive}   onOverdueToggle={handleOverdueToggle}
+        filterStatus={filterStatus}          onFilterStatusChange={handleFilterStatusChange}
+        search={search}                      onSearchChange={handleSearchChange}
+        viewMode={viewMode}                  onViewModeChange={handleViewModeChange}
+        sortKey={sortKey}                    sortDir={sortDir}  onSort={handleSort}
         onClearFilters={handleClearFilters}
-        isLoading={isLoading}          resultCount={filteredRecords.length}
-        isOverdue={isOverdue}          overdueTotal={overdueTotal}
+        isLoading={isLoading}                resultCount={filteredRecords.length}
+        overdueTotal={overdueTotal}
       />
+
 
       {/* ── Loading skeleton ── */}
       {isLoading && <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />}

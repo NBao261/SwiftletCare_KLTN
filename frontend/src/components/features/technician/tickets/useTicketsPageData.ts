@@ -12,8 +12,8 @@ import type { Ticket, TicketStatus } from '@/types'
 import type { TechTab, SortKey, SortDir, ViewMode } from '@/components/features/technician/tickets/ticketListTypes'
 
 export interface TicketsPageState {
-  // Filter / UI state
-  activeTab: TechTab
+  // isOverdueActive thay thế activeTab trong public API — TicketToolbar không cần biết về TechTab
+  isOverdueActive: boolean
   viewMode: ViewMode
   sortKey: SortKey
   sortDir: SortDir
@@ -26,7 +26,8 @@ export interface TicketsPageState {
 }
 
 export interface TicketsPageActions {
-  handleTabChange: (tab: TechTab) => void
+  // handleTabChange đã ẩn khỏi public API — dùng handleOverdueToggle thay thế
+  handleOverdueToggle: () => void
   handleSort: (key: SortKey) => void
   handleSearchChange: (val: string) => void
   handleFilterStatusChange: (val: TicketStatus | '') => void
@@ -38,20 +39,15 @@ export interface TicketsPageActions {
 }
 
 export interface TicketsPageData {
-  // Records đã xử lý (filter + sort + slice cho page hiện tại)
   displayRecords: Ticket[]
   filteredRecords: Ticket[]
-  // Pagination
   safePage: number
   totalPages: number
   paginTotal: number
-  // Loading
   isLoading: boolean
-  // Stats (always-on, cho TicketStatBar)
   statsRecords: Ticket[]
-  // Server total (hiển thị ở header)
   total: number
-  // Overdue specific
+  // isOverdue vẫn giữ cho các warning/logic nội bộ, map từ isOverdueActive
   isOverdue: boolean
   overdueTotal: number
 }
@@ -120,12 +116,18 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   // ── Actions ───────────────────────────────────────────────────────────────
   const resetPage = useCallback(() => setPage(1), [])
 
-  const handleTabChange = useCallback((tab: TechTab) => {
-    setActiveTab(tab)
-    setSearch('')
-    setFilterStatus('')
+  /** Toggle chế độ Quá hạn SLA — thay thế handleTabChange trong public API */
+  const handleOverdueToggle = useCallback(() => {
+    if (activeTab === 'overdue') {
+      // Tắt overdue → về tab 'mine' (tất cả)
+      setActiveTab('mine')
+    } else {
+      // Bật overdue → clear filter status để tránh conflict
+      setActiveTab('overdue')
+      setFilterStatus('')
+    }
     resetPage()
-  }, [resetPage])
+  }, [activeTab, resetPage])
 
   const handleSort = useCallback((key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -139,11 +141,14 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   }, [resetPage])
 
   const handleFilterStatusChange = useCallback((val: TicketStatus | '') => {
+    // Nếu đang ở overdue, click chip status → switch về mine
+    if (activeTab === 'overdue') setActiveTab('mine')
     setFilterStatus(val)
     resetPage()
-  }, [resetPage])
+  }, [activeTab, resetPage])
 
   const handleClearFilters = useCallback(() => {
+    setActiveTab('mine')
     setSearch('')
     setFilterStatus('')
     setSortKey('priority')
@@ -156,11 +161,12 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   }, [])
 
   return {
-    // State
-    activeTab, viewMode, sortKey, sortDir, search, filterStatus, page,
+    // State (public)
+    isOverdueActive: isOverdue, // alias cho TicketToolbar — mapping từ internal activeTab
+    viewMode, sortKey, sortDir, search, filterStatus, page,
     statusModal, reassignModal,
     // Actions
-    handleTabChange, handleSort,
+    handleOverdueToggle, handleSort,
     handleSearchChange, handleFilterStatusChange, handleClearFilters, handleViewModeChange,
     setPage, setStatusModal, setReassignModal,
     // Data
@@ -169,7 +175,7 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     isLoading,
     statsRecords: statsQuery.records,
     total,
-    isOverdue,
+    isOverdue, // giữ cho Page dùng trong EmptyState
     overdueTotal: overdueQuery.total,
   }
 }
