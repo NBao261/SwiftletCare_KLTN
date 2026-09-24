@@ -1,4 +1,4 @@
-// TicketToolbar.tsx — Tabs + Search + Filter + Sort (card mode) + View Toggle
+// TicketToolbar.tsx — Tabs + Search + Filter + Sort + View Toggle
 // Pure presentational component — không giữ state, nhận callback từ parent.
 // Wrap bằng memo để tránh re-render khi Page re-render do state modal thay đổi.
 import { memo } from 'react'
@@ -12,28 +12,34 @@ import { STATUS_LABEL } from '@/constants/tickets'
 
 const FILTERABLE_STATUSES: TicketStatus[] = ['NEW', 'IN_PROGRESS', 'AWAITING_FIELD_CONFIRMATION', 'CLOSED']
 
+/**
+ * Sort keys hợp lệ theo từng tab:
+ * - 'mine'        → tất cả status → cho phép sort theo cả Trạng thái
+ * - 'in_progress' → API đã lock status = IN_PROGRESS → ẩn sort Trạng thái (vô nghĩa)
+ * - 'overdue'     → tập trung vào SLA/Ưu tiên → ẩn sort Trạng thái
+ */
+const SORT_KEYS_BY_TAB: Record<TechTab, SortKey[]> = {
+  mine:        ['priority', 'sla', 'created_at', 'status'],
+  in_progress: ['priority', 'sla', 'created_at'],
+  overdue:     ['priority', 'sla', 'created_at'],
+}
+
 interface Props {
-  // Tab
   activeTab: TechTab
   onTabChange: (tab: TechTab) => void
-  // Search
   search: string
   onSearchChange: (val: string) => void
-  // Filter
+  // Filter status — chỉ hiển thị khi tab không lock status sẵn
   filterStatus: TicketStatus | ''
   onFilterStatusChange: (val: TicketStatus | '') => void
-  // Sort — hiển thị trong cả table và card view (nhất quán với Admin)
   viewMode: ViewMode
   sortKey: SortKey
   sortDir: SortDir
   onSort: (key: SortKey) => void
   onClearFilters: () => void
-  // View mode toggle
   onViewModeChange: (mode: ViewMode) => void
-  // Result count
   isLoading: boolean
   resultCount: number
-  // Warnings
   isOverdue: boolean
   overdueTotal: number
 }
@@ -42,8 +48,7 @@ const SORT_LABELS: Record<SortKey, string> = {
   priority: 'Ưu tiên', sla: 'SLA', created_at: 'Ngày', status: 'Trạng thái',
 }
 
-function SortIconInline({ active, dir }: { active: boolean; dir: SortDir }) {
-  if (!active) return <IconSortDesc width={12} height={12} className="ml-1 opacity-30" />
+function SortIconInline({ dir }: { dir: SortDir }) {
   return dir === 'asc'
     ? <IconSortAsc width={12} height={12} className="ml-1" />
     : <IconSortDesc width={12} height={12} className="ml-1" />
@@ -58,29 +63,40 @@ export const TicketToolbar = memo(function TicketToolbar({
   isLoading, resultCount,
   isOverdue, overdueTotal,
 }: Props) {
-  const hasActiveFilters = search !== '' || filterStatus !== '' || sortKey !== 'priority' || sortDir !== 'asc'
+  // Tab 'in_progress' đã lock status=IN_PROGRESS qua API → FilterChips status là dư thừa
+  const showStatusFilter = activeTab !== 'in_progress'
+  // Sort keys hợp lệ theo context của tab hiện tại
+  const validSortKeys = SORT_KEYS_BY_TAB[activeTab]
+  // Nút "Hủy lọc" chỉ hiện khi thực sự có filter/sort khác mặc định
+  const hasActiveFilters =
+    search !== '' ||
+    (showStatusFilter && filterStatus !== '') ||
+    sortKey !== 'priority' ||
+    sortDir !== 'asc'
+
   return (
     <div className="flex flex-col gap-3">
-      {/* Tab pills */}
+
+      {/* ── Tabs ── */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+            className={cn(
+              'shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors',
               activeTab === tab.id
                 ? 'bg-charcoal text-white'
                 : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20'
-            }`}
+            )}
           >
             {tab.icon} {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Hàng 1: Search + View controls */}
+      {/* ── Hàng 1: Search + View mode toggle + Result count ── */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Search input */}
         <div className="min-w-[200px] flex-1">
           <Input
             icon={<IconSearch width={16} height={16} />}
@@ -115,31 +131,48 @@ export const TicketToolbar = memo(function TicketToolbar({
           </button>
         </div>
 
-        {/* Result count */}
         {!isLoading && (
           <span className="text-sm text-warmGray">
             {resultCount} kết quả
-            {(search || filterStatus) && (
-              <span className="ml-1 text-xs text-warmGray/70">(đã lọc)</span>
-            )}
+            {hasActiveFilters && <span className="ml-1 text-xs text-warmGray/70">(đã lọc)</span>}
           </span>
         )}
       </div>
 
-      {/* Hàng 2: Filter + Sort + Hủy lọc */}
+      {/* ── Hàng 2: Filter Status + Sort + Hủy lọc ── */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Status filter — Dùng FilterChip pill */}
-        <div className="flex flex-nowrap gap-2">
-          <FilterChip active={filterStatus === ''} label="Tất cả" onClick={() => onFilterStatusChange('')} />
-          {FILTERABLE_STATUSES.map(s => (
-            <FilterChip key={s} active={filterStatus === s} label={STATUS_LABEL[s]} onClick={() => onFilterStatusChange(s)} />
-          ))}
-        </div>
 
-        {/* Sort buttons — giống AdminUsersPage, không có container border bọc ngoài */}
+        {/*
+          Status FilterChips — CHỈ hiển thị khi tab KHÔNG lock status sẵn.
+          - Tab 'mine': tất cả status → cần lọc → HIỆN chips
+          - Tab 'in_progress': API đã lọc IN_PROGRESS → ẨN chips (dư thừa & gây nhầm)
+          - Tab 'overdue': các status có thể khác nhau → HIỆN chips
+        */}
+        {showStatusFilter && (
+          <div className="flex flex-nowrap gap-2">
+            <FilterChip
+              active={filterStatus === ''}
+              label="Tất cả"
+              onClick={() => onFilterStatusChange('')}
+            />
+            {FILTERABLE_STATUSES.map(s => (
+              <FilterChip
+                key={s}
+                active={filterStatus === s}
+                label={STATUS_LABEL[s]}
+                onClick={() => onFilterStatusChange(s)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/*
+          Sort buttons — chỉ hiển thị keys CÓ Ý NGHĨA với tab đang active.
+          - Sort "Trạng thái" bị ẩn ở 'in_progress' và 'overdue' vì kết quả đã đồng nhất.
+        */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="label-caption">Sắp xếp:</span>
-          {(['priority', 'sla', 'created_at', 'status'] as SortKey[]).map(k => {
+          {validSortKeys.map(k => {
             const active = sortKey === k
             return (
               <button
@@ -151,26 +184,27 @@ export const TicketToolbar = memo(function TicketToolbar({
                 )}
               >
                 {SORT_LABELS[k]}
-                {active && <SortIconInline active={true} dir={sortDir} />}
+                {active && <SortIconInline dir={sortDir} />}
               </button>
             )
           })}
         </div>
 
-        {/* Nút hủy lọc */}
         {hasActiveFilters && (
-          <Button variant="danger" size="sm" className="h-8 px-3.5 text-xs" onClick={onClearFilters}>Hủy lọc</Button>
+          <Button variant="danger" size="sm" className="h-8 px-3.5 text-xs" onClick={onClearFilters}>
+            Hủy lọc
+          </Button>
         )}
       </div>
 
-      {/* Warning: search scope giới hạn trong trang */}
-      {(search || filterStatus) && !isOverdue && (
+      {/* Cảnh báo: search/filter chỉ áp dụng trong trang hiện tại */}
+      {(search || (showStatusFilter && filterStatus)) && !isOverdue && (
         <p className="-mt-2 text-xs text-climateOrange">
-          Tìm kiếm và sắp xếp chỉ áp dụng trong trang hiện tại ({PAGE_SIZE} ticket). Dữ liệu ở các trang khác không được tìm.
+          Tìm kiếm và lọc chỉ áp dụng trong trang hiện tại ({PAGE_SIZE} ticket). Dữ liệu ở các trang khác không được tìm.
         </p>
       )}
 
-      {/* Warning: overdue > 100 */}
+      {/* Cảnh báo: overdue > 100 ticket */}
       {isOverdue && !isLoading && overdueTotal > 100 && (
         <p className="-mt-2 text-xs text-alertRed">
           Bạn có hơn 100 ticket quá hạn. Danh sách dưới đây chỉ hiển thị 100 ticket gần nhất. Vui lòng xử lý các ticket ưu tiên cao trước.
