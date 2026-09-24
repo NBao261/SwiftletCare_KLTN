@@ -29,10 +29,10 @@ export const PRIORITY_DOT_CLS: Record<string, string> = {
 }
 
 export const STATUS_DOT_CLS: Record<string, string> = {
-  NEW: 'bg-charcoal',
+  NEW: 'bg-blue-500',
   IN_PROGRESS: 'bg-climateOrange',
-  AWAITING_FIELD_CONFIRMATION: 'bg-limeMist',
-  CLOSED: 'bg-warmGray',
+  AWAITING_FIELD_CONFIRMATION: 'bg-purple-500',
+  CLOSED: 'bg-emerald-500',
 }
 
 /** Sort danh sách ticket theo key + direction */
