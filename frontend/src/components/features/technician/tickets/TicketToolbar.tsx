@@ -29,9 +29,6 @@ interface Props {
   onOverdueToggle: () => void
   filterStatus: TicketStatus | ''
   onFilterStatusChange: (val: TicketStatus | '') => void
-  // Search
-  search: string
-  onSearchChange: (val: string) => void
   // Sort
   sortKey: SortKey
   sortDir: SortDir
@@ -57,7 +54,6 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 export const TicketToolbar = memo(function TicketToolbar({
   isOverdueActive, onOverdueToggle,
   filterStatus, onFilterStatusChange,
-  search, onSearchChange,
   sortKey, sortDir, onSort, onClearFilters,
   isLoading,
   overdueTotal,
@@ -65,8 +61,8 @@ export const TicketToolbar = memo(function TicketToolbar({
   const validSortKeys = getValidSortKeys(isOverdueActive, filterStatus)
 
   // Có đang áp dụng bộ lọc nào không (để hiển thị nút "Hủy lọc")
+  // Lưu ý: `search` không được đưa vào hasActiveFilters vì search đang disabled (chưa có BE hỗ trợ)
   const hasActiveFilters =
-    search !== '' ||
     filterStatus !== '' ||
     isOverdueActive ||
     sortKey !== 'created_at' ||
@@ -77,13 +73,15 @@ export const TicketToolbar = memo(function TicketToolbar({
 
       {/* ── Hàng 1: Search + View mode toggle + Result count ── */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-[200px] flex-1">
+        <div className="min-w-[200px] flex-1" title="Tìm kiếm toàn bộ đang chờ Backend hỗ trợ (TODO [BE-GAP])">
           <Input
             icon={<IconSearch width={16} height={16} />}
             type="text"
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            placeholder="Tìm theo loại, ghi chú..."
+            value={""}
+            onChange={() => { /* disabled — chưa có API search từ BE */ }}
+            placeholder="Tìm kiếm (chưa hỗ trợ)..."
+            disabled
+            className="cursor-not-allowed opacity-50"
           />
         </div>
 

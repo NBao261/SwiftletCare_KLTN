@@ -11,6 +11,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSocket } from '@/hooks/common/useSocket'
 import { joinZone, leaveZone, onDeviceStatusChange } from '@/lib/socket'
+import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
 import type { DeviceStatusChangeEvent } from '@/types'
 import type { OnboardingState } from './onboardingTypes'
@@ -59,6 +60,24 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
       if (successTimer.current) clearTimeout(successTimer.current)
     }
   }, [data.location.zoneId])
+
+  // Fix: Polling dự phòng khi mount — bắt case thiết bị đã ONLINE trước khi vào Step 5.
+  // Socket chỉ bắn khi có transition trạng thái SAU khi mount.
+  // Nếu thiết bị online ở Step3/4, không có transition → không nhận socket event → timeout sai.
+  useEffect(() => {
+    if (!data.deviceDbId) return
+    let cancelled = false
+    deviceApi.getSensorNode(data.deviceDbId)
+      .then(res => {
+        if (cancelled) return
+        if (res.data.data.status === 'ONLINE') {
+          setMqttOk(true)
+          handleSuccess()
+        }
+      })
+      .catch(() => { /* Bỏ qua lỗi mạng — socket vẫn hoạt động song song */ })
+    return () => { cancelled = true }
+  }, [data.deviceDbId, handleSuccess])
 
   // Countdown timer
   useEffect(() => {

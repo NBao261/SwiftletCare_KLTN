@@ -2,7 +2,7 @@
 // TODO [BE-GAP]: Bước này cần gọi trực tiếp HTTP endpoint của ESP32 ở AP-mode
 // (fetch('http://192.168.4.1/configure', { body: JSON.stringify({ssid, pass}) }))
 // Hiện tại KHÔNG có backend endpoint nào nhận cấu hình WiFi.
-// Demo: lưu ssid/wifiPass vào OnboardingState và chuyển bước tiếp — không gửi gì đến ESP32.
+// DEMO MODE: lưu ssid/wifiPass vào OnboardingState và chuyển bước tiếp — không gửi gì đến ESP32.
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Button } from '@/components/ui'
@@ -37,6 +37,18 @@ export function Step4WiFi({ data, patch, onNext, onBack }: Props) {
         <p className="mt-1 text-sm text-warmGray">
           Nhập thông tin WiFi của nhà yến để ESP32 tự kết nối sau khi cài đặt.
         </p>
+      </div>
+
+      {/* TODO [BE-GAP]: Banner cảnh báo Demo — xóa khi có API gửi cấu hình WiFi đến ESP32 */}
+      <div className="flex items-start gap-3 rounded-xl border border-climateOrange/40 bg-climateOrange/[0.08] px-4 py-3">
+        <span className="mt-0.5 shrink-0 text-climateOrange" aria-hidden="true">🔧</span>
+        <div>
+          <p className="text-sm font-semibold text-climateOrange">Chế độ Demo — Chưa gửi cấu hình thật</p>
+          <p className="mt-0.5 text-xs text-climateOrange/80">
+            Bước này hiện chưa gửi SSID/mật khẩu đến ESP32 (cần kết nối trực tiếp qua AP local). Đây là bản demo — thông tin WiFi chỉ được lưu tạm trong wizard.
+            Bước tiếp theo sẽ <strong>chờ socket event từ thiết bị</strong>.
+          </p>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -88,7 +100,7 @@ export function Step4WiFi({ data, patch, onNext, onBack }: Props) {
           disabled={!data.ssid.trim()}
           className="flex-1"
         >
-          Gửi cấu hình đến ESP32
+          Ghi nhớ WiFi & Tiếp tục
         </Button>
       </div>
     </div>

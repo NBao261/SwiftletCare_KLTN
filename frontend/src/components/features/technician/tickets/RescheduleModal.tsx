@@ -9,11 +9,12 @@ import { formatDate } from '@/lib/helpers'
 import type { Ticket } from '@/types'
 
 interface Props {
+  open: boolean
   ticket: Ticket
   onClose: () => void
 }
 
-export function RescheduleModal({ ticket, onClose }: Props) {
+export function RescheduleModal({ open, ticket, onClose }: Props) {
   const [newDate, setNewDate] = useState('')
 
   const today = new Date().toISOString().slice(0, 16)
@@ -25,7 +26,7 @@ export function RescheduleModal({ ticket, onClose }: Props) {
     : ''
 
   return (
-    <Modal open onClose={onClose} title="Sửa ngày hẹn khảo sát">
+    <Modal open={open} onClose={onClose} title="Sửa ngày hẹn khảo sát">
       <div className="flex flex-col gap-4">
         {/* TODO [BE-GAP]: Banner thay thế nút submit — xoá khi có PUT /tickets/:id/scheduled-date */}
         <div className="flex items-start gap-3 rounded-xl border border-climateOrange/40 bg-climateOrange/[0.08] px-4 py-3">

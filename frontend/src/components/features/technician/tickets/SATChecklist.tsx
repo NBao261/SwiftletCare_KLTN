@@ -32,7 +32,7 @@ export function SATChecklist({ ticketId, checklist }: Props) {
       ticketApi.updateStatus(ticketId, 'CLOSED', 'Kỹ thuật viên hoàn tất SAT checklist.'),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      push('Lắp đặt hoàn tất! Farm Owner đã được thông báo.')
+      push('Đã đóng ticket thành công. Vui lòng thông báo cho Farm Owner.')
     },
     onError: (err) => push(getApiErrorMessage(err, 'Hoàn thành thất bại'), 'error'),
   })

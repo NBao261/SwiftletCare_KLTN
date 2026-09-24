@@ -20,11 +20,11 @@ import { PAGE_SIZE } from '@/components/features/technician/tickets/ticketListTy
 export default function TechnicianTicketsPage() {
   const {
     // UI state
-    isOverdueActive, sortKey, sortDir, search, filterStatus,
+    isOverdueActive, sortKey, sortDir, filterStatus,
     statusModal, reassignModal,
     // Actions
     handleOverdueToggle, handleSort,
-    handleSearchChange, handleFilterStatusChange, handleClearFilters,
+    handleFilterStatusChange, handleClearFilters,
     setPage, setStatusModal, setReassignModal,
     // Data
     displayRecords, filteredRecords,
@@ -56,7 +56,6 @@ export default function TechnicianTicketsPage() {
       <TicketToolbar
         isOverdueActive={isOverdueActive}   onOverdueToggle={handleOverdueToggle}
         filterStatus={filterStatus}          onFilterStatusChange={handleFilterStatusChange}
-        search={search}                      onSearchChange={handleSearchChange}
         sortKey={sortKey}                    sortDir={sortDir}  onSort={handleSort}
         onClearFilters={handleClearFilters}
         isLoading={isLoading}
@@ -71,10 +70,10 @@ export default function TechnicianTicketsPage() {
       {isEmpty && (
         <EmptyState
           icon={<IconTicket width={28} height={28} />}
-          title={search || filterStatus ? 'Không tìm thấy ticket nào' : 'Không có ticket nào'}
+          title={filterStatus ? 'Không tìm thấy ticket nào' : 'Không có ticket nào'}
           description={
-            search || filterStatus
-              ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.'
+            filterStatus
+              ? 'Thử thay đổi bộ lọc.'
               : 'Chưa có ticket nào được gán cho bạn trong mục này.'
           }
         />

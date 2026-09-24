@@ -6,7 +6,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useTicketsList } from '@/hooks/shared/useTickets'
 import { isSlaBreached } from '@/components/features/technician/tickets/ticketHelpers'
-import { sortTickets, filterBySearch, filterByStatus } from '@/components/features/technician/tickets/ticketListTypes'
+import { sortTickets, filterByStatus } from '@/components/features/technician/tickets/ticketListTypes'
 import { PAGE_SIZE } from '@/components/features/technician/tickets/ticketListTypes'
 import type { Ticket, TicketStatus } from '@/types'
 import type { TechTab, SortKey, SortDir } from '@/components/features/technician/tickets/ticketListTypes'
@@ -93,14 +93,15 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   const total     = isOverdue ? overdueQuery.total : serverQuery.total
   const isLoading = isOverdue ? overdueQuery.isLoading : serverQuery.isLoading
 
-  // Pipeline: overdue filter → search → status filter → sort
+  // Pipeline: overdue filter → status filter (overdue tab only, client-side bulk) → sort
+  // Lưu ý: filterBySearch đã được GỤ Bỏ — search đang disabled ở TicketToolbar (chưa có BE hỗ trợ).
+  // filterStatus được gửi xuống server (đã fix từ round 5), nên không cần client-filter ở tab mine/in_progress.
   const filteredRecords = useMemo(() => {
     let list = isOverdue ? records.filter(isSlaBreached) : records
-    list = filterBySearch(list, search)
-    // FIX: filterStatus trên overdue tab vẫn client-side (bulk data)
+    // filterStatus trên overdue tab vẫn client-side (bulk data)
     if (isOverdue) list = filterByStatus(list, filterStatus)
     return sortTickets(list, sortKey, sortDir)
-  }, [records, isOverdue, search, filterStatus, sortKey, sortDir])
+  }, [records, isOverdue, filterStatus, sortKey, sortDir])
 
   const clientTotal    = filteredRecords.length
   const paginTotal     = isOverdue ? clientTotal : total

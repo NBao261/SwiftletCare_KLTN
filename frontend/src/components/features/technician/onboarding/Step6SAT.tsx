@@ -46,7 +46,7 @@ export function Step6SAT({ data, onDone }: Props) {
     onSuccess: () => {
       // Fix: không nói "Đã báo Farm Owner" nếu không có ticketId — Farm Owner chưa được thông báo gì
       if (data.ticketId) {
-        push('🎉 Lắp đặt hoàn tất! Farm Owner đã được thông báo.')
+        push('🎉 Lắp đặt hoàn tất! Vui lòng liên hệ Farm Owner để xác nhận bàn giao.')
       } else {
         push('Onboarding hoàn tất. Vào ticket INSTALLATION để cập nhật SAT checklist.')
       }
