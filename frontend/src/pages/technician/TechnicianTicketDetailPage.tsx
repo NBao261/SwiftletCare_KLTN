@@ -58,16 +58,16 @@ export default function TechnicianTicketDetailPage() {
         Quay lại danh sách
       </Link>
 
-      <Card size="lg">
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div className="flex flex-col gap-3">
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2.5">
               <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
               <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</h1>
-              <p className="mt-1.5 text-sm font-medium text-warmGray">Tạo lúc {formatDate(ticket.created_at)}</p>
+              <h1 className="text-xl font-bold tracking-tight text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</h1>
+              <p className="mt-1 text-sm font-medium text-warmGray">Tạo lúc {formatDate(ticket.created_at)}</p>
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
@@ -84,7 +84,7 @@ export default function TechnicianTicketDetailPage() {
           </div>
         </div>
 
-        <dl className="mt-6 flex flex-wrap gap-x-16 gap-y-6 border-t border-warmGray/10 pt-5 text-sm">
+        <dl className="mt-4 flex flex-wrap gap-x-12 gap-y-4 border-t border-warmGray/10 pt-4 text-sm">
           <InfoItem label="Kỹ thuật viên phụ trách" value={assigneeName(ticket.assigned_to) ?? 'Chưa gán'} />
           {ticket.scheduled_visit_at && <InfoItem label="Ngày hẹn" value={formatDate(ticket.scheduled_visit_at)} />}
           {ticket.sla_resolve_due_at && <InfoItem label="Hạn xử lý (SLA)" value={formatDate(ticket.sla_resolve_due_at)} />}
