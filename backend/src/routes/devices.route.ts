@@ -17,7 +17,8 @@ const trackParams = [param('id').isMongoId(), param('trackId').isMongoId()]
 // Sensor Nodes (ESP32)
 // Đăng ký/kích hoạt thiết bị là việc của Technician (nhân viên công ty) qua Web
 // Console Onboarding — Farm Owner KHÔNG tự đăng ký (SRS §4.1, FARM-FR-003, RACI mục 4.4).
-router.post('/sensor-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').notEmpty(), body('zone_id').isMongoId(), validate, deviceController.registerSensorNode)
+// Flow 1 bước 3–4 — phải kèm secretKey in trên nhãn thiết bị
+router.post('/sensor-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
 router.get ('/sensor-nodes',                 deviceController.listSensorNodes)
 router.get ('/sensor-nodes/:id',             param('id').isMongoId(), validate, deviceController.getSensorNode)
 // Chỉnh thông số vận hành vẫn thuộc Farm Owner (ENV-FR-006); Technician chỉnh khi xử lý sự cố.
@@ -53,7 +54,24 @@ router.delete('/sensor-nodes/:id/audio-tracks/:trackId', requireRole('TECHNICIAN
 router.put ('/sensor-nodes/:id/reassign-zone', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('newZoneId').isMongoId(), validate, deviceController.reassignZone)
 
 // Camera Nodes (RPi)
-router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').notEmpty(), body('zone_id').isMongoId(), validate, deviceController.registerCameraNode)
+// FARM-FR-008 — gỡ/thay thiết bị, giữ nguyên lịch sử telemetry của thiết bị cũ
+router.post('/sensor-nodes/:id/decommission', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.decommission('sensor'))
+router.post('/sensor-nodes/:id/replace',      requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
+  body('new_device_id').trim().notEmpty(), body('secret_key').isString().trim().notEmpty(), body('reason').trim().notEmpty(),
+  validate, deviceController.replaceSensorNode)
+// TICKET-FR-008, Flow 15 — xử lý từ xa: khởi động lại / đẩy lại ngưỡng / OTA firmware
+router.post('/sensor-nodes/:id/commands', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
+  body('command').isIn(['RESTART', 'PUSH_CONFIG', 'OTA']),
+  body('ticket_id').optional().isMongoId(),
+  // Không nhận tiền tố "v": heartbeat so sánh firmware_version bằng === với
+  // FIRMWARE_VERSION của firmware ("1.0.0"), "v1.1.0" sẽ không bao giờ khớp
+  // nên OTA thành công vẫn bị markOtaTimeouts báo thất bại sau 30 phút.
+  body('ota.version').if(body('command').equals('OTA')).isString().trim().matches(/^\d+\.\d+\.\d+$/),
+  body('ota.url').if(body('command').equals('OTA')).isURL({ protocols: ['https'], require_protocol: true, require_tld: false }),
+  body('ota.sha256').if(body('command').equals('OTA')).isHash('sha256'),
+  validate, deviceController.sendCommand)
+router.post('/camera-nodes/:id/decommission', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.decommission('camera'))
+router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerCameraNode)
 router.get ('/camera-nodes',                 deviceController.listCameraNodes)
 
 // OPS-NFR-004 — Admin dashboard trạng thái node toàn hệ thống

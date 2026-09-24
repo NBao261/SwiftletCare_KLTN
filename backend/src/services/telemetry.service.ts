@@ -1,5 +1,5 @@
 import { Telemetry, ITelemetry } from '@/models/telemetry.model'
-import { SensorNode } from '@/models/device.model'
+import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'
 import { emitTelemetryUpdate } from '@/socket'
 import { findThresholdBreaches, raiseThresholdAlert } from '@/services/alert.service'
@@ -71,7 +71,7 @@ function resolveSampleTime(ts: unknown, now: number): number {
 export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong payload telemetry')
 
-  const node = await SensorNode.findOne({ device_id: payload.deviceId })
+  const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
   const now = Date.now()

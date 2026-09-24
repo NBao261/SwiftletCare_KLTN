@@ -1,6 +1,6 @@
 import { Alert, IAlert } from '@/models/alert.model'
 import { Zone, House } from '@/models/houseZone.model'
-import { SensorNode } from '@/models/device.model'
+import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
@@ -113,7 +113,7 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
   const type = message.type as AlertType | undefined
   if (!deviceId || !type) throw NotFoundError('Payload cảnh báo thiếu deviceId hoặc type')
 
-  const node = await SensorNode.findOne({ device_id: deviceId })
+  const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
   const zone = await Zone.findById(node.zone_id)
   const house = zone ? await House.findById(zone.house_id) : null
@@ -249,6 +249,23 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
   alert.acknowledgement_note = note
   await alert.save()
   return alert
+}
+
+/**
+ * FARM-FR-008 — gỡ thiết bị thì cảnh báo của nó phải đóng theo. Cảnh báo còn
+ * `ACTIVE` của thiết bị đã tháo về kho vẫn bị `alertEscalation.job` biến thành
+ * ticket sau 15 phút, gán cho Technician một việc không còn tồn tại để sửa.
+ * Trả về số cảnh báo đã đóng.
+ */
+export async function resolveAlertsForNode(nodeId: string, reason: string): Promise<number> {
+  const open = await Alert.find({ node_id: nodeId, status: { $in: ['ACTIVE', 'ACKNOWLEDGED'] } }).select('_id').lean()
+  if (open.length === 0) return 0
+
+  await Alert.updateMany(
+    { _id: { $in: open.map(a => a._id) } },
+    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: reason },
+  )
+  return open.length
 }
 
 /** Dùng cho job phát hiện thiết bị offline (FARM-FR-005 → THREAT-FR-009) */

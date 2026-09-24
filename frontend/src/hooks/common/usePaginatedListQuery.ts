@@ -10,8 +10,9 @@ export function usePaginatedListQuery<T>(
   queryFn: () => Promise<{ data: ApiResponse<T[]> }>,
   fallbackPage = 1,
   fallbackLimit = 20,
+  queryOptions?: { enabled?: boolean; staleTime?: number; refetchInterval?: number },
 ) {
-  const result = useQuery({ queryKey, queryFn })
+  const result = useQuery({ queryKey, queryFn, ...queryOptions })
   return {
     records: result.data?.data.data ?? [],
     total: result.data?.data.meta?.total ?? 0,

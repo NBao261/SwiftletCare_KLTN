@@ -5,14 +5,19 @@ import { onRelayUpdate, onDeviceStatusChange } from '@/lib/socket'
 import { useSocket } from '@/hooks/common/useSocket'
 import type { RelayName, SpeakerScheduleInput } from '@/types'
 
-/** useSensorNodes – danh sách device + realtime status/relay qua socket (FARM-FR-005, ENV-FR-015) */
-export function useSensorNodes(zoneId?: string) {
+/**
+ * useSensorNodes – danh sách device + realtime status/relay qua socket (FARM-FR-005, ENV-FR-015).
+ * `zoneId` rỗng nghĩa là "tất cả" (TechnicianDevicesPage khi chưa lọc zone) — `enabled: false` cho
+ * nơi gọi nào không muốn fetch-all trong lúc đó (VD Dashboard lúc chưa chọn zone).
+ */
+export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean }) {
   useSocket()
   const queryClient = useQueryClient()
 
   const query = useQuery({
     queryKey: ['sensor-nodes', zoneId],
     queryFn: () => deviceApi.listSensorNodes(zoneId).then(r => r.data.data),
+    enabled: options?.enabled ?? true,
   })
 
   useEffect(() => {
