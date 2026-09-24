@@ -11,6 +11,11 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  // Nơi gọi hay truyền onClose inline (hàm mới mỗi render). Để onClose trong deps
+  // thì mỗi phím gõ vào input → parent render lại → effect chạy lại → focus() giật
+  // focus khỏi input. Giữ bản mới nhất trong ref, effect chỉ chạy lại khi `open` đổi.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   // A11y (mục 6): Esc đóng modal + focus trap giữ Tab/Shift+Tab quanh panel khi
   // đang mở — dùng chung cho mọi Modal/ConfirmModal trong app (ConfirmModal bọc
@@ -20,7 +25,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     panelRef.current?.focus()
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === 'Escape') { onCloseRef.current(); return }
       const panel = panelRef.current
       if (e.key !== 'Tab' || !panel) return
       const focusable = panel.querySelectorAll<HTMLElement>(
@@ -35,7 +40,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
   return (
