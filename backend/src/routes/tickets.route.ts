@@ -8,7 +8,18 @@ const router = Router()
 router.use(authenticate)
 
 /** Module TICKET – SRS §5.9, §9.1 */
-router.post('/',                   requireRole('FARM_OWNER','ADMIN'), body('type').notEmpty(), validate, ticketController.create)
+// TICKET-FR-001 — MAINTENANCE không tạo tay (chỉ sinh từ lịch bảo trì, TICKET-FR-013)
+const CREATABLE_TICKET_TYPES = [
+  'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'ACTUATOR_FAILURE', 'NODE_OFFLINE', 'EDGE_AI_DEGRADED',
+  'POWER_OUTAGE', 'SPEAKER_FAILURE', 'PREDATOR_DETECTED', 'INSTALLATION', 'OTHER',
+]
+router.post('/',                   requireRole('FARM_OWNER','ADMIN'),
+  body('farm_id').isMongoId(),
+  body('zone_id').optional().isMongoId(),
+  body('type').isIn(CREATABLE_TICKET_TYPES).withMessage('Loại ticket không hợp lệ (ticket bảo trì định kỳ không tạo tay)'),
+  body('scheduled_visit_at').optional().isISO8601(),
+  body('description').optional().isString().trim().isLength({ max: 1000 }),
+  validate, ticketController.create)
 router.get ('/',                   ticketController.list)
 router.get ('/kpi',                requireRole('ADMIN'), ticketController.kpi)
 router.get ('/:id',                param('id').isMongoId(), validate, ticketController.getOne)

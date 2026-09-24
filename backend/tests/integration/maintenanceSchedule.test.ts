@@ -16,7 +16,9 @@ import { MaintenanceSchedule } from '@/models/maintenanceSchedule.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { generateDueMaintenanceTickets } from '@/services/maintenanceSchedule.service'
+import { isWithinVisitHours } from '@/utils/visitTime.util'
 import type { Role } from '@/types'
+import { vnAt } from '../helpers/visitTime'
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 
@@ -72,7 +74,7 @@ const create = (token: string, body: object) =>
 describe('CRUD /maintenance-schedules', () => {
   const valid = (farmId: unknown) => ({
     farm_id: String(farmId), description: 'Vệ sinh cảm biến NH3', interval_days: 30,
-    next_due_at: new Date(Date.now() + DAY).toISOString(),
+    next_due_at: vnAt(1).toISOString(),
   })
 
   it('Technician trong vùng tạo được, Farm Owner chỉ xem, Technician ngoài vùng bị chặn', async () => {
@@ -86,9 +88,10 @@ describe('CRUD /maintenance-schedules', () => {
     expect(await AuditLog.countDocuments({ action: 'MAINTENANCE_SCHEDULE_CREATED' })).toBe(1)
   })
 
-  it('từ chối hạn trong quá khứ và zone thuộc farm khác', async () => {
+  it('từ chối hạn trong quá khứ, ngoài khung giờ hẹn 7:00–18:00 và zone thuộc farm khác', async () => {
     const { farm, t, foreignZone } = await seed()
     await create(t.tech, { ...valid(farm._id), next_due_at: new Date(Date.now() - DAY).toISOString() }).expect(400)
+    await create(t.tech, { ...valid(farm._id), next_due_at: vnAt(1, 22).toISOString() }).expect(400)
     await create(t.tech, { ...valid(farm._id), zone_id: String(foreignZone._id) }).expect(400)
     await create(t.tech, { ...valid(farm._id), interval_days: 0 }).expect(422)
   })
@@ -113,8 +116,9 @@ describe('generateDueMaintenanceTickets', () => {
     const [ticket] = await Ticket.find().lean()
     expect(ticket).toMatchObject({ type: 'MAINTENANCE', status: 'NEW' })
     expect(String(ticket.assigned_to)).toBe(String(tech._id))
-    // Hạn đã trôi qua → hẹn sớm nhất 1 giờ nữa, không hẹn ngược về quá khứ
+    // Hạn đã trôi qua → hẹn sớm nhất 1 giờ nữa, không hẹn ngược về quá khứ, và trong khung giờ hẹn
     expect(ticket.scheduled_visit_at!.getTime()).toBeGreaterThan(Date.now())
+    expect(isWithinVisitHours(ticket.scheduled_visit_at!)).toBe(true)
 
     const updated = (await MaintenanceSchedule.findById(schedule._id))!
     expect(updated.next_due_at.getTime()).toBe(dueAt.getTime() + 7 * DAY)
@@ -138,7 +142,7 @@ describe('generateDueMaintenanceTickets', () => {
 
   it('tạo ticket trước hạn (lead time) và không tạo lại ở lượt quét sau', async () => {
     const { farm } = await seed()
-    const dueAt = new Date(Date.now() + 2 * DAY) // trong khoảng lead 3 ngày
+    const dueAt = vnAt(2, 10) // trong khoảng lead 3 ngày, trong khung giờ hẹn
     const schedule = await MaintenanceSchedule.create({ farm_id: farm._id, description: 'Thay lọc', interval_days: 30, next_due_at: dueAt })
 
     expect(await generateDueMaintenanceTickets()).toBe(1)

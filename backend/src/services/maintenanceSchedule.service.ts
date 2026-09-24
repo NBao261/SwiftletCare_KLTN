@@ -5,6 +5,7 @@ import { createMaintenanceTicket } from '@/services/ticket.service'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
 import { NotFoundError, BadRequestError } from '@/utils/appError.util'
+import { assertValidVisitTime, nextVisitSlot } from '@/utils/visitTime.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
@@ -26,11 +27,6 @@ export interface MaintenanceScheduleInput {
   is_active?: boolean
 }
 
-function assertFutureDate(value: string): Date {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) throw BadRequestError('next_due_at phải ở tương lai')
-  return date
-}
 
 /** Zone (nếu có) phải thuộc đúng farm của lịch — tránh ticket trỏ sang zone farm khác */
 async function assertZoneInFarm(zoneId: string, farmId: string, user: CurrentUser): Promise<void> {
@@ -72,7 +68,7 @@ export async function createSchedule(user: CurrentUser, input: MaintenanceSchedu
     zone_id: input.zone_id,
     description: input.description,
     interval_days: input.interval_days,
-    next_due_at: assertFutureDate(String(input.next_due_at)),
+    next_due_at: assertValidVisitTime(String(input.next_due_at)),
     created_by: user._id,
   })
   await logAction(user._id, 'MAINTENANCE_SCHEDULE_CREATED', 'maintenance_schedule', String(schedule._id), {
@@ -91,7 +87,7 @@ export async function updateSchedule(id: string, user: CurrentUser, input: Maint
   }
   if (input.description !== undefined) schedule.description = input.description
   if (input.interval_days !== undefined) schedule.interval_days = input.interval_days
-  if (input.next_due_at !== undefined) schedule.next_due_at = assertFutureDate(input.next_due_at)
+  if (input.next_due_at !== undefined) schedule.next_due_at = assertValidVisitTime(input.next_due_at)
   if (input.is_active !== undefined) schedule.is_active = input.is_active
   await schedule.save()
 
@@ -148,8 +144,9 @@ export async function generateDueMaintenanceTickets(now = new Date()): Promise<n
       const ticket = await createMaintenanceTicket({
         farm_id: String(schedule.farm_id),
         zone_id: schedule.zone_id ? String(schedule.zone_id) : undefined,
-        // Lịch trễ (server tắt lâu) thì hẹn sớm nhất 1 giờ nữa, không hẹn ngược về quá khứ
-        scheduled_visit_at: new Date(Math.max(schedule.next_due_at.getTime(), now.getTime() + HOUR_MS)),
+        // Lịch trễ (server tắt lâu) thì hẹn sớm nhất 1 giờ nữa, không hẹn ngược về quá khứ,
+        // và dời vào khung giờ hẹn 7:00–18:00 nếu mốc đó rơi ra ngoài (TICKET-FR-004b)
+        scheduled_visit_at: nextVisitSlot(new Date(Math.max(schedule.next_due_at.getTime(), now.getTime() + HOUR_MS))),
         description: `Bảo trì định kỳ (mỗi ${schedule.interval_days} ngày): ${schedule.description}`,
       })
       await MaintenanceSchedule.updateOne({ _id: schedule._id }, { last_ticket_id: ticket._id })

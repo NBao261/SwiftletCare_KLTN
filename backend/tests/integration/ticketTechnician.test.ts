@@ -12,6 +12,7 @@ import ticketRoutes from '@/routes/tickets.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
+import { House, Zone } from '@/models/houseZone.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { SystemSetting } from '@/models/systemSetting.model'
@@ -19,6 +20,7 @@ import { createTicket, getKpi, markResponseBreachedTickets } from '@/services/ti
 import { notifyUser } from '@/services/notification.service'
 import { updateTicketRouting } from '@/services/system.service'
 import type { Role } from '@/types'
+import { vnAt } from '../helpers/visitTime'
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 
@@ -48,6 +50,7 @@ afterAll(async () => {
 afterEach(async () => {
   await Promise.all([
     AuditLog.deleteMany({}), Farm.deleteMany({}), Ticket.deleteMany({}), User.deleteMany({}), SystemSetting.deleteMany({}),
+    House.deleteMany({}), Zone.deleteMany({}),
   ])
 })
 
@@ -178,29 +181,107 @@ describe('escalate', () => {
   })
 })
 
-describe('PUT /tickets/:id/scheduled-date', () => {
-  const future = () => new Date(Date.now() + 2 * 86400_000).toISOString()
+describe('PUT /tickets/:id/scheduled-date (TICKET-FR-004b, Flow 9 bước 6b)', () => {
+  const path = (id: unknown) => `/tickets/${id}/scheduled-date`
 
   it('Technician được gán dời lịch ticket lắp đặt, có ghi chú + audit', async () => {
-    const { ticket, assigneeToken } = await seed({ type: 'INSTALLATION', scheduled_visit_at: new Date(Date.now() + 86400_000) })
-    const at = future()
-    await put(`/tickets/${ticket._id}/scheduled-date`, assigneeToken, { scheduled_visit_at: at, reason: 'Kẹt lịch' }).expect(200)
+    const { ticket, assigneeToken } = await seed({ type: 'INSTALLATION', scheduled_visit_at: vnAt(1) })
+    const at = vnAt(2, 14).toISOString()
+    await put(path(ticket._id), assigneeToken, { scheduled_visit_at: at, reason: 'Kẹt lịch' }).expect(200)
 
     const saved = (await Ticket.findById(ticket._id))!
     expect(saved.scheduled_visit_at!.toISOString()).toBe(at)
-    expect(saved.notes.at(-1)!.content).toContain('Kẹt lịch')
+    expect(saved.notes.at(-1)!.content).toMatch(/Dời lịch hẹn.*Kẹt lịch/)
     expect(await AuditLog.countDocuments({ action: 'TICKET_RESCHEDULED' })).toBe(1)
   })
 
-  it('bắt buộc lý do, ngày ở tương lai, đúng loại ticket và đúng người', async () => {
-    const { ticket, assigneeToken, colleagueToken, farm, assignee } = await seed({ type: 'INSTALLATION' })
-    const path = `/tickets/${ticket._id}/scheduled-date`
-    await put(path, assigneeToken, { scheduled_visit_at: future() }).expect(422) // thiếu lý do — validate middleware trả 422
-    await put(path, assigneeToken, { scheduled_visit_at: new Date(Date.now() - 1000).toISOString(), reason: 'x' }).expect(400)
-    await put(path, colleagueToken, { scheduled_visit_at: future(), reason: 'x' }).expect(403)
+  it('bắt buộc lý do, giờ ở tương lai và trong 7:00–18:00, đúng người', async () => {
+    const { ticket, assigneeToken, colleagueToken } = await seed({ type: 'INSTALLATION' })
+    await put(path(ticket._id), assigneeToken, { scheduled_visit_at: vnAt(2).toISOString() }).expect(422) // thiếu lý do
+    await put(path(ticket._id), assigneeToken, { scheduled_visit_at: new Date(Date.now() - 1000).toISOString(), reason: 'x' }).expect(400)
+    await put(path(ticket._id), assigneeToken, { scheduled_visit_at: vnAt(2, 19).toISOString(), reason: 'x' }).expect(400)
+    await put(path(ticket._id), assigneeToken, { scheduled_visit_at: vnAt(2, 6, 30).toISOString(), reason: 'x' }).expect(400)
+    await put(path(ticket._id), colleagueToken, { scheduled_visit_at: vnAt(2).toISOString(), reason: 'x' }).expect(403)
+  })
 
-    const fault = await Ticket.create({ farm_id: farm._id, type: 'SENSOR_FAULT', priority: 'P2', assigned_to: assignee._id })
-    await put(`/tickets/${fault._id}/scheduled-date`, assigneeToken, { scheduled_visit_at: future(), reason: 'x' }).expect(400)
+  it('ticket sự cố chỉ hẹn được sau khi đã tiếp nhận (IN_PROGRESS), Farm Owner được báo', async () => {
+    const { ticket, owner, assigneeToken } = await seed({ type: 'SENSOR_FAULT', priority: 'P2' })
+    await put(path(ticket._id), assigneeToken, { scheduled_visit_at: vnAt(1).toISOString(), reason: 'Cảm biến chết' }).expect(409)
+
+    await Ticket.updateOne({ _id: ticket._id }, { status: 'IN_PROGRESS' })
+    ;(notifyUser as jest.Mock).mockClear()
+    await put(path(ticket._id), assigneeToken, { scheduled_visit_at: vnAt(1).toISOString(), reason: 'Reset từ xa không được' }).expect(200)
+
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.notes.at(-1)!.content).toMatch(/Hẹn đến hiện trường.*Reset từ xa không được/)
+    expect(await AuditLog.countDocuments({ action: 'TICKET_VISIT_SCHEDULED' })).toBe(1)
+    expect((notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))).toContain(String(owner._id))
+  })
+})
+
+describe('SAT khi đóng ticket (TICKET-FR-010, Flow 9 bước 6b)', () => {
+  const ALL_OK = { modbus_addresses_ok: true, camera_rtsp_ok: true, lte_connection_ok: true, relay_test_ok: true }
+
+  it('ticket sự cố đã hẹn xuống hiện trường phải đủ SAT mới đóng được', async () => {
+    const { ticket, assigneeToken } = await seed({ type: 'SENSOR_FAULT', priority: 'P2', status: 'IN_PROGRESS', scheduled_visit_at: vnAt(1) })
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(409)
+
+    await put(`/tickets/${ticket._id}/sat-checklist`, assigneeToken, ALL_OK).expect(200)
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(200)
+  })
+
+  it('ticket sự cố xử lý từ xa (không có lịch hẹn) đóng thẳng, không dùng SAT', async () => {
+    const { ticket, assigneeToken } = await seed({ type: 'SENSOR_FAULT', priority: 'P2', status: 'IN_PROGRESS' })
+    await put(`/tickets/${ticket._id}/sat-checklist`, assigneeToken, ALL_OK).expect(400)
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(200)
+  })
+})
+
+describe('POST /tickets — Farm Owner tạo ticket (TICKET-FR-001)', () => {
+  const ownerCtx = async () => {
+    const ctx = await seed()
+    return { ...ctx, ownerToken: tokenFor(ctx.owner._id, 'FARM_OWNER') }
+  }
+
+  it('yêu cầu lắp đặt bắt buộc giờ hẹn hợp lệ; Technician được gán nhận thông báo kèm giờ hẹn', async () => {
+    const { farm, ownerToken, colleague } = await ownerCtx()
+    const body = { farm_id: String(farm._id), type: 'INSTALLATION' }
+    await post('/tickets', ownerToken, body).expect(400)
+    await post('/tickets', ownerToken, { ...body, scheduled_visit_at: vnAt(1, 20).toISOString() }).expect(400)
+    await post('/tickets', ownerToken, { ...body, scheduled_visit_at: new Date(Date.now() - 60_000).toISOString() }).expect(400)
+
+    ;(notifyUser as jest.Mock).mockClear()
+    const res = await post('/tickets', ownerToken, { ...body, scheduled_visit_at: vnAt(1, 9).toISOString() }).expect(201)
+    // seed() đã gán 1 ticket mở cho assignee → router chọn colleague (ít việc hơn)
+    expect(res.body.data.assigned_to).toBe(String(colleague._id))
+    const [to, message] = (notifyUser as jest.Mock).mock.calls[0]
+    expect(String(to)).toBe(String(colleague._id))
+    expect(message.body).toContain('hẹn')
+  })
+
+  it('ticket sự cố không kèm giờ hẹn khi tạo; ticket bảo trì không tạo tay; zone phải thuộc farm', async () => {
+    const { farm, ownerToken, owner } = await ownerCtx()
+    await post('/tickets', ownerToken, {
+      farm_id: String(farm._id), type: 'SENSOR_FAULT', scheduled_visit_at: vnAt(1).toISOString(),
+    }).expect(400)
+    await post('/tickets', ownerToken, { farm_id: String(farm._id), type: 'MAINTENANCE', scheduled_visit_at: vnAt(1).toISOString() }).expect(422)
+    await post('/tickets', ownerToken, { type: 'OTHER' }).expect(422) // thiếu farm_id
+
+    const otherFarm = await Farm.create({ name: 'F2', address: 'x', region: 'HCMC', owner_id: owner._id })
+    const house = await House.create({ farm_id: otherFarm._id, name: 'H' })
+    const foreignZone = await Zone.create({ house_id: house._id, name: 'Z' })
+    await post('/tickets', ownerToken, { farm_id: String(farm._id), zone_id: String(foreignZone._id), type: 'OTHER' }).expect(400)
+    await post('/tickets', ownerToken, { farm_id: String(farm._id), type: 'SENSOR_FAULT', description: 'Cảm biến NH3 báo 0' }).expect(201)
+  })
+
+  it('huỷ ticket báo Technician đang giữ, kèm lịch hẹn không cần đến nữa', async () => {
+    const { ticket, owner, assignee } = await seed({ type: 'INSTALLATION', scheduled_visit_at: vnAt(2) })
+    ;(notifyUser as jest.Mock).mockClear()
+    await put(`/tickets/${ticket._id}/cancel`, tokenFor(owner._id, 'FARM_OWNER'), { reason: 'Đổi ý' }).expect(200)
+
+    const [to, message] = (notifyUser as jest.Mock).mock.calls[0]
+    expect(String(to)).toBe(String(assignee._id))
+    expect(message.body).toContain('không cần đến hiện trường')
   })
 })
 
@@ -269,12 +350,12 @@ describe('Ticket Router — ngưỡng quá tải (TICKET-FR-005)', () => {
     const admin = await User.create({ email: 'admin2@test.vn', password_hash: 'password123', full_name: 'Admin', role: 'ADMIN' })
     const ticket = await Ticket.create({
       farm_id: farm._id, type: 'INSTALLATION', priority: 'P3', assigned_to: assignee._id,
-      created_by: admin._id, scheduled_visit_at: new Date(Date.now() + 86400_000),
+      created_by: admin._id, scheduled_visit_at: vnAt(1),
     })
     ;(notifyUser as jest.Mock).mockClear()
 
     await put(`/tickets/${ticket._id}/scheduled-date`, assigneeToken, {
-      scheduled_visit_at: new Date(Date.now() + 3 * 86400_000).toISOString(), reason: 'Kẹt lịch',
+      scheduled_visit_at: vnAt(3).toISOString(), reason: 'Kẹt lịch',
     }).expect(200)
 
     const notified = (notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))
