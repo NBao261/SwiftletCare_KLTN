@@ -50,7 +50,13 @@ export default function TechnicianTicketDetailPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link to="/tickets" className="text-sm font-semibold text-charcoal hover:underline">← Quay lại danh sách</Link>
+      <Link 
+        to="/tickets" 
+        className="group inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-warmGray shadow-sm ring-1 ring-inset ring-warmGray/10 transition-all hover:bg-warmGray/5 hover:text-charcoal"
+      >
+        <span className="transition-transform duration-200 group-hover:-translate-x-0.5">←</span>
+        Quay lại danh sách
+      </Link>
 
       <Card size="lg">
         <div className="flex flex-wrap items-start justify-between gap-3">
