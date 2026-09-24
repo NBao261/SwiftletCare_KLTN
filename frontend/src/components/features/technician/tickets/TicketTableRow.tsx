@@ -40,9 +40,7 @@ export const TicketTableRow = memo(function TicketTableRow({
   const dotCls = PRIORITY_DOT_CLS[ticket.priority] ?? PRIORITY_DOT_CLS.P3
   const statusDotCls = STATUS_DOT_CLS[ticket.status] ?? 'bg-warmGray'
 
-  const actionItems: ActionsMenuItem[] = [
-    { label: 'Xem chi tiết', onClick: () => navigate(`/tickets/${ticket._id}`) }
-  ]
+  const actionItems: ActionsMenuItem[] = []
   if (ticket.status === 'NEW') {
     actionItems.push({ label: 'Tiếp nhận', onClick: () => onUpdateStatus(ticket) })
   }
