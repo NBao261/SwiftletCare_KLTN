@@ -6,12 +6,20 @@ export interface Crumb {
   onClick?: () => void
 }
 
+export interface BackLink {
+  to: string
+  label: string
+}
+
 interface BreadcrumbState {
   trail: Crumb[]
   /** Mô tả ngắn dưới breadcrumb, do trang tự đăng ký qua `usePageSubtitle` — rỗng thì AppHeader không render dòng này */
   subtitle: string
+  /** Nút "← Quay lại" phía trên khung trắng nội dung, do trang tự đăng ký qua `usePageBack` — null thì AppShell không render */
+  back: BackLink | null
   setTrail: (trail: Crumb[]) => void
   setSubtitle: (subtitle: string) => void
+  setBack: (back: BackLink | null) => void
 }
 
 /**
@@ -23,6 +31,8 @@ interface BreadcrumbState {
 export const useBreadcrumbStore = create<BreadcrumbState>(set => ({
   trail: [],
   subtitle: '',
+  back: null,
   setTrail: trail => set({ trail }),
   setSubtitle: subtitle => set({ subtitle }),
+  setBack: back => set({ back }),
 }))
