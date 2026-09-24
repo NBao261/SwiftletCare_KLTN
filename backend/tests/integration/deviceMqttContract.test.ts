@@ -18,8 +18,10 @@ import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitTelemetryUpdate } from '@/socket'
-import { createAlert, ingestDeviceAlert, resolveStaleThresholdAlerts } from '@/services/alert.service'
-import { buildDeviceConfig, confirmRelayStatus, markNodeSeen, recordHeartbeat } from '@/services/device.service'
+import {
+  createAlert, ingestDeviceAlert, raiseNodeOfflineAlert, resolveNodeOfflineAlertsOfOnlineNodes, resolveStaleThresholdAlerts,
+} from '@/services/alert.service'
+import { buildDeviceConfig, confirmRelayStatus, markNodeSeen, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
 import { ingestTelemetry } from '@/services/telemetry.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import type { TelemetryPayload } from '@/types'
@@ -101,18 +103,29 @@ describe('ingestTelemetry', () => {
     expect(await Telemetry.countDocuments({ is_anomaly: true })).toBe(1)
   })
 
-  it('throttles a sustained breach like normal readings but records the moment it clears, with one alert', async () => {
+  it('throttles a sustained breach like normal readings, with one alert', async () => {
     const { deviceId, zone } = await seed()
     const t0 = Date.now()
     const hot = { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }
 
     for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, hot))
-    await ingestTelemetry(reading(deviceId, t0 + 5_000))
+    await ingestTelemetry(reading(deviceId, t0 + 5_000)) // hết vượt ngưỡng: chờ mốc 10s
+    await ingestTelemetry(reading(deviceId, t0 + 10_000))
     await new Promise(r => setImmediate(r)) // raiseThresholdAlert chạy fire-and-forget
 
     expect(await Telemetry.countDocuments({ is_anomaly: true })).toBe(1)
     expect(await Telemetry.countDocuments({ is_anomaly: false })).toBe(1)
     expect(await Alert.countDocuments({ zone_id: zone._id, type: 'THRESHOLD_BREACH' })).toBe(1)
+  })
+
+  it('keeps a reading flapping around the threshold every second to ~2 writes per 10s', async () => {
+    const { deviceId } = await seed()
+    const t0 = Date.now()
+    const hot = { temperature: DEFAULT_THRESHOLDS.temp_max + 0.1 }
+
+    for (let i = 0; i < 10; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, i % 2 ? hot : {}))
+
+    expect(await Telemetry.countDocuments()).toBe(2) // mẫu đầu + lần bắt đầu vượt ngưỡng đầu tiên
   })
 
   it('stores flushed offline-buffer readings at their own time without touching the live dashboard', async () => {
@@ -182,6 +195,55 @@ describe('alert dedup per incident (ALERT-FR-008)', () => {
   })
 })
 
+describe('online/offline race (FARM-FR-005)', () => {
+  it('does not flip a node to OFFLINE when a heartbeat lands between the scan and the update', async () => {
+    const { node } = await seed()
+    await SensorNode.updateOne({ _id: node._id }, { last_heartbeat: new Date() }) // heartbeat vừa tới
+    // Lượt quét đã đọc node lúc heartbeat còn cũ
+    jest.spyOn(SensorNode, 'find').mockReturnValueOnce({
+      select: () => ({ lean: async () => [{ _id: node._id, zone_id: node.zone_id }] }),
+    } as never)
+
+    await markStaleDevicesOffline()
+
+    expect((await SensorNode.findById(node._id).lean())!.status).toBe('ONLINE')
+    expect(await Alert.countDocuments({ type: 'NODE_OFFLINE' })).toBe(0)
+  })
+
+  it('does not raise NODE_OFFLINE for a node that is already back ONLINE', async () => {
+    const { node } = await seed('ONLINE')
+    await raiseNodeOfflineAlert(String(node._id))
+    expect(await Alert.countDocuments({ type: 'NODE_OFFLINE' })).toBe(0)
+  })
+
+  it('sweeps open NODE_OFFLINE alerts whose node is ONLINE, leaving offline ones', async () => {
+    const back = await seed('ONLINE')
+    const down = await seed('OFFLINE')
+    const offlineAlert = (s: typeof back) => createAlert({
+      farmId: String(s.farm._id), zoneId: String(s.zone._id), nodeId: String(s.node._id),
+      type: 'NODE_OFFLINE', title: 'Mất kết nối', message: 'x',
+    })
+    const stuck = await offlineAlert(back)
+    const real = await offlineAlert(down)
+
+    expect(await resolveNodeOfflineAlertsOfOnlineNodes()).toBe(1)
+    expect((await Alert.findById(stuck!._id).lean())!.status).toBe('RESOLVED')
+    expect((await Alert.findById(real!._id).lean())!.status).toBe('ACTIVE')
+  })
+
+  it('evaluates threshold alerts only on persisted samples, not every second', async () => {
+    const { deviceId } = await seed()
+    const findOne = jest.spyOn(Alert, 'findOne')
+    const t0 = Date.now()
+
+    for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }))
+    await new Promise(r => setImmediate(r))
+
+    expect(findOne).toHaveBeenCalledTimes(1) // chỉ mẫu bắt đầu vượt ngưỡng
+    findOne.mockRestore()
+  })
+})
+
 describe('ingestDeviceAlert', () => {
   it('creates an alert in the device farm/zone from the ESP32 payload', async () => {
     const { farm, zone, deviceId } = await seed()
@@ -224,8 +286,29 @@ describe('recordHeartbeat', () => {
       expect.objectContaining({ temp_max: DEFAULT_THRESHOLDS.temp_max, speaker_schedule_enabled: true }))
   })
 
+  it('closes the NODE_OFFLINE alert when a heartbeat arrives before any telemetry', async () => {
+    const { farm, zone, node, deviceId, topic } = await seed('OFFLINE')
+    const offline = await createAlert({
+      farmId: String(farm._id), zoneId: String(zone._id), nodeId: String(node._id),
+      type: 'NODE_OFFLINE', title: 'Mất kết nối', message: 'x',
+    })
+
+    await recordHeartbeat(hb(deviceId, true), topic)
+    await ingestTelemetry(reading(deviceId, Date.now())) // node đã ONLINE — markNodeSeen không còn đóng được nữa
+
+    expect((await Alert.findById(offline!._id).lean())!.status).toBe('RESOLVED')
+  })
+
+  // Thiết bị đã nhận cấu hình lần đầu rồi — nếu không, heartbeat nào cũng kích hoạt
+  // pushZoneConfigOnFirstContact và 2 test dưới không đo đúng điều chúng muốn đo.
+  const provisioned = async () => {
+    const ctx = await seed()
+    await SensorNode.updateOne({ _id: ctx.node._id }, { config_pushed_at: new Date() })
+    return ctx
+  }
+
   it('stays quiet on a routine heartbeat', async () => {
-    const { deviceId, topic } = await seed()
+    const { deviceId, topic } = await provisioned()
 
     await recordHeartbeat(hb(deviceId), topic)
 
@@ -233,14 +316,14 @@ describe('recordHeartbeat', () => {
   })
 
   it('only sends config/reassign when the topic is wrong', async () => {
-    const { deviceId, topic } = await seed()
+    const { deviceId, topic } = await provisioned()
     const wrongTopic = ['swiftletcare', 'farm-default', 'house-default', 'zone-default', 'heartbeat']
 
     await recordHeartbeat(hb(deviceId, true), wrongTopic)
 
     expect(publishCommand).toHaveBeenCalledTimes(1)
     expect(publishCommand).toHaveBeenCalledWith('farm-default', 'house-default', 'zone-default', 'config/reassign',
-      { newFarmId: topic[1], newHouseId: topic[2], newZoneId: topic[3] })
+      { deviceId, newFarmId: topic[1], newHouseId: topic[2], newZoneId: topic[3] })
   })
 })
 

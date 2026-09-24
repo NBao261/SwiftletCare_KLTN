@@ -85,7 +85,7 @@ export async function listSensorNodes(zoneId: string | undefined, user: CurrentU
 }
 
 /** Thiết bị đã gỡ vẫn xem được (lịch sử) nhưng không còn nhận lệnh */
-function assertInService(node: { decommissioned_at?: Date }): void {
+export function assertInService(node: { decommissioned_at?: Date }): void {
   if (node.decommissioned_at) throw ConflictError('Thiết bị đã được gỡ bỏ khỏi hệ thống')
 }
 
@@ -139,6 +139,7 @@ export async function controlRelay(
   // Lệnh không tới được broker thì DB vẫn giữ trạng thái mong muốn (ESP32 sẽ
   // đồng bộ khi online lại), nhưng phải nói thật cho UI biết qua `delivered`.
   const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
+    deviceId: node.device_id,
     relayName: input.relayName,
     state: input.state,
     durationMs: overrideMs,
@@ -162,6 +163,7 @@ export async function controlRelay(
 export async function clearRelayOverride(nodeId: string, user: CurrentUser): Promise<ISensorNode> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user)
   if (node.control_mode === 'AUTO') return node
 
@@ -170,7 +172,7 @@ export async function clearRelayOverride(nodeId: string, user: CurrentUser): Pro
   await node.save()
 
   const zoneId = String(chain.zone._id)
-  publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', { action: 'clear_override' })
+  publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', { deviceId: node.device_id, action: 'clear_override' })
   for (const relayName of RELAY_NAMES) {
     emitRelayUpdate(zoneId, { zoneId, relayName, state: node.relay_states[relayName], mode: 'AUTO' })
   }
@@ -204,6 +206,7 @@ export async function reassignZone(
 
   // Publish lên topic CŨ — thiết bị vẫn đang lắng nghe ở đó cho tới khi restart.
   const delivered = publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'config/reassign', {
+    deviceId: node.device_id,
     newFarmId: String(destChain.farm._id),
     newHouseId: String(destChain.house._id),
     newZoneId: String(destChain.zone._id),
@@ -212,6 +215,9 @@ export async function reassignZone(
   // Cập nhật lạc quan — giống pattern controlRelay/updateNodeThresholds ở trên.
   node.zone_id = destChain.zone._id
   await node.save()
+  // Cảnh báo cũ thuộc farm/zone nguồn — để lại thì job leo thang thành ticket ở farm cũ
+  // cho phần cứng đã chuyển đi; sự cố còn thật sẽ được báo lại ở zone mới.
+  await resolveAlertsForNode(String(node._id), 'Thiết bị đã dời sang zone khác')
 
   await logAction(user._id, 'DEVICE_REASSIGNED', 'sensor_node', String(node._id), {
     fromZoneId: String(sourceChain.zone._id), toZoneId: String(destChain.zone._id), delivered,
@@ -313,13 +319,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
   // Lần bắt tay đầu tiên: thiết bị chưa từng nhận cấu hình nào từ backend
   if (needsConfig) await pushZoneConfigOnFirstContact(node)
 
-  if (wasOffline) {
-    emitDeviceStatusChange(String(node.zone_id), {
-      nodeId: String(node._id),
-      status: 'ONLINE',
-      timestamp: new Date().toISOString(),
-    })
-  }
+  if (wasOffline) await announceBackOnline(node)
 
   if (topicParts && topicParts.length >= 4) {
     const [, topicFarmId, topicHouseId, topicZoneId] = topicParts
@@ -333,7 +333,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
         // config/update không retained + PubSubClient clean session → thiết bị
         // offline/restart lúc ngưỡng hay lịch loa bị sửa sẽ giữ mãi giá trị cũ
         // trong NVS. Đẩy lại bộ config hiện hành mỗi lần thiết bị vừa (re)connect.
-        publishCommand(realFarmId, realHouseId, realZoneId, 'config/update', buildDeviceConfig(chain.zone.thresholds, node))
+        publishCommand(realFarmId, realHouseId, realZoneId, 'config/update', { deviceId: node.device_id, ...buildDeviceConfig(chain.zone.thresholds, node) })
       }
       // Topic lệch: chỉ reassign — thiết bị restart, heartbeat `justConnected`
       // kế tiếp (đúng topic) sẽ tự đồng bộ config ở nhánh trên.
@@ -344,6 +344,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
           to: `${realFarmId}/${realHouseId}/${realZoneId}`,
         })
         publishCommand(topicFarmId, topicHouseId, topicZoneId, 'config/reassign', {
+          deviceId: node.device_id,
           newFarmId: realFarmId,
           newHouseId: realHouseId,
           newZoneId: realZoneId,
@@ -364,14 +365,26 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
  */
 export async function markNodeSeen(node: Pick<ISensorNode, '_id' | 'zone_id' | 'status'>): Promise<void> {
   await SensorNode.updateOne({ _id: node._id }, { status: 'ONLINE', last_heartbeat: new Date() })
-  if (node.status !== 'ONLINE') {
-    emitDeviceStatusChange(String(node.zone_id), {
-      nodeId: String(node._id),
-      status: 'ONLINE',
-      timestamp: new Date().toISOString(),
-    })
-    await resolveAlertsForNode(String(node._id), 'Thiết bị đã kết nối lại', 'NODE_OFFLINE')
-  }
+  if (node.status !== 'ONLINE') await announceBackOnline(node)
+}
+
+/**
+ * Thiết bị vừa chuyển sang ONLINE — dùng chung cho recordHeartbeat (heartbeat) và
+ * markNodeSeen (telemetry): 2 topic MQTT độc lập, không đảm bảo cái nào tới trước,
+ * nên cả 2 phải đóng NODE_OFFLINE, nếu không alert treo và sau 1 giờ sinh ticket
+ * "mất kết nối" cho thiết bị đang online (TICKET-FR-002).
+ */
+async function announceBackOnline(node: Pick<ISensorNode, '_id' | 'zone_id'>): Promise<void> {
+  emitDeviceStatusChange(String(node.zone_id), {
+    nodeId: String(node._id),
+    status: 'ONLINE',
+    timestamp: new Date().toISOString(),
+  })
+  // Không để lỗi DB ở đây chặn bước resync config/reassign phía sau trong recordHeartbeat;
+  // cảnh báo sót vẫn được resolveNodeOfflineAlertsOfOnlineNodes dọn trong ≤ 2 phút.
+  await resolveAlertsForNode(String(node._id), 'Thiết bị đã kết nối lại', 'NODE_OFFLINE').catch((err: Error) =>
+    logger.error('Đóng cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
+  )
 }
 
 const hourOf = (hhmm: string) => Number(hhmm.slice(0, 2))
@@ -416,6 +429,7 @@ export interface SpeakerScheduleInput {
 export async function updateSpeakerSchedule(nodeId: string, user: CurrentUser, input: SpeakerScheduleInput): Promise<ISensorNode> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user)
 
   // "HH:00" cùng định dạng 2 chữ số nên so sánh chuỗi = so sánh giờ
@@ -429,7 +443,7 @@ export async function updateSpeakerSchedule(nodeId: string, user: CurrentUser, i
   await node.save()
 
   publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update',
-    buildDeviceConfig(chain.zone.thresholds, node))
+    { deviceId: node.device_id, ...buildDeviceConfig(chain.zone.thresholds, node) })
   await logAction(user._id, 'SPEAKER_SCHEDULE_UPDATED', 'sensor_node', String(node._id), { ...input })
   return node
 }
@@ -447,11 +461,15 @@ export async function markStaleDevicesOffline(): Promise<void> {
     .lean()
   if (staleNodes.length === 0) return
 
-  // 1 updateMany thay vì N lần .save() tuần tự — job này chạy mỗi 10s, N có
-  // thể lớn khi cả nhà mất điện cùng lúc.
-  await SensorNode.updateMany({ _id: { $in: staleNodes.map(n => n._id) } }, { status: 'OFFLINE' })
-
   await Promise.all(staleNodes.map(async node => {
+    // Lặp lại điều kiện "vẫn im lặng" trong chính lệnh ghi: heartbeat tới giữa lúc
+    // find và lúc update thì node không bị đè thành OFFLINE, không có cảnh báo giả.
+    const { modifiedCount } = await SensorNode.updateOne(
+      { _id: node._id, status: 'ONLINE', last_heartbeat: { $lt: staleBefore } },
+      { status: 'OFFLINE' },
+    )
+    if (modifiedCount === 0) return
+
     emitDeviceStatusChange(String(node.zone_id), {
       nodeId: String(node._id),
       status: 'OFFLINE',
@@ -508,6 +526,10 @@ export async function decommissionDevice(
   node.decommissioned_at = new Date()
   node.decommission_reason = reason
   node.status = 'OFFLINE'
+  // Override còn hạn của node cũ không được để job hết hạn bắn clear_override lên
+  // topic Zone mà thiết bị thay thế đang nghe (expireManualOverrides cũng lọc IN_SERVICE)
+  node.control_mode = 'AUTO'
+  node.override_expiry = undefined
   if (replacedBy) node.replaced_by = replacedBy as never
   await node.save()
 
@@ -699,7 +721,7 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
       throw BadRequestError('command phải là RESTART, PUSH_CONFIG hoặc OTA')
   }
 
-  const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', payload)
+  const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', { deviceId: node.device_id, ...payload })
   if (!delivered) {
     // Không ghi ota_pending khi lệnh chưa rời backend: nếu ghi, UI hiện "đang cập
     // nhật" rồi 30 phút sau báo thất bại cho một lệnh chưa từng được gửi đi.
@@ -774,6 +796,7 @@ export async function expireManualOverrides(): Promise<number> {
   const expired = await SensorNode.find({
     control_mode: 'MANUAL',
     override_expiry: { $lt: new Date() },
+    ...IN_SERVICE,
   }).lean()
   if (expired.length === 0) return 0
 
@@ -795,6 +818,7 @@ export async function expireManualOverrides(): Promise<number> {
     const chain = chainByZone.get(String(node.zone_id))
     if (!chain) continue
     publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
+      deviceId: node.device_id,
       action: 'clear_override',
     })
     for (const relayName of Object.keys(node.relay_states) as Array<keyof RelayStates>) {
