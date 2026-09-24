@@ -607,9 +607,11 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   }
 
   if (ticket) {
+    // Chỉ biết lệnh đã tới broker, KHÔNG biết thiết bị đã thực thi — note phải nói
+    // đúng chừng đó, nếu không Technician đọc ticket tưởng việc đã xong.
     ticket.notes.push({
       author_id: user._id as never,
-      content: `Xử lý từ xa trên thiết bị ${node.device_id}: ${summary}`,
+      content: `Xử lý từ xa trên thiết bị ${node.device_id}: đã gửi lệnh ${summary}, chờ thiết bị xác nhận`,
       created_at: new Date(),
     })
     await ticket.save()

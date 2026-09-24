@@ -259,7 +259,9 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     const { techToken, node, a, b, tech } = await onlineNode()
     const ticket = await Ticket.create({ farm_id: a.farm._id, type: 'NODE_OFFLINE', priority: 'P2', assigned_to: tech._id })
     await send(techToken, node._id, { command: 'RESTART', ticket_id: String(ticket._id) }).expect(202)
-    expect((await Ticket.findById(ticket._id))!.notes.at(-1)!.content).toContain('khởi động lại')
+    const note = (await Ticket.findById(ticket._id))!.notes.at(-1)!.content
+    expect(note).toContain('khởi động lại')
+    expect(note).toContain('chờ thiết bị xác nhận') // không khẳng định thiết bị đã thực thi
 
     const other = await Ticket.create({ farm_id: b.farm._id, type: 'OTHER', priority: 'P3', assigned_to: tech._id })
     const notMine = await Ticket.create({ farm_id: a.farm._id, type: 'OTHER', priority: 'P3' })
