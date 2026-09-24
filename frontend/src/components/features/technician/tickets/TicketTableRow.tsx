@@ -3,6 +3,8 @@
 // Bóc tách khỏi TechnicianTicketsPage để tái sử dụng và dễ test riêng.
 import { memo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/Button'
+import { IconSortAsc, IconSortDesc } from '@/components/ui/icons'
 import { isSlaBreached } from './ticketHelpers'
 import { PRIORITY_DOT_CLS, STATUS_DOT_CLS } from './ticketListTypes'
 import { SlaRing } from './SlaRing'
@@ -10,13 +12,12 @@ import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
 import { formatDate } from '@/lib/helpers'
 import type { Ticket, TicketType } from '@/types'
 
-// ── SortIcon — nội bộ, không export (chỉ dùng trong TicketTableRow scope)
+// Sort icon — dùng SVG icon chuẩn thay vì ký tự unicode ↑↓
 function SortIconIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-  return (
-    <span className={`ml-1 inline-block text-xs transition-opacity ${active ? 'opacity-100' : 'opacity-30'}`}>
-      {active && dir === 'asc' ? '↑' : '↓'}
-    </span>
-  )
+  if (!active) return <IconSortDesc width={12} height={12} className="opacity-30" />
+  return dir === 'asc'
+    ? <IconSortAsc width={12} height={12} />
+    : <IconSortDesc width={12} height={12} />
 }
 
 // Export SortIcon để TicketTableView dùng trong header
@@ -92,27 +93,32 @@ export const TicketTableRow = memo(function TicketTableRow({
       <td className="whitespace-nowrap py-3 pr-5" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
           {ticket.status === 'NEW' && (
-            <button
+            <Button
+              size="sm"
               onClick={() => onUpdateStatus(ticket)}
-              className="rounded-full bg-charcoal px-2.5 py-1 text-xs font-medium text-white transition-all hover:bg-charcoal/90 active:scale-95"
+              className="h-7 px-3 text-xs"
             >
               Tiếp nhận
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={() => onUpdateStatus(ticket)}
             disabled={ticket.status === 'CLOSED'}
-            className="rounded-full border border-graphite/15 px-2.5 py-1 text-xs font-medium text-charcoal transition-all hover:border-charcoal/30 hover:bg-graphite/5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-7 px-3 text-xs"
           >
             Cập nhật
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={() => onReassign(ticket)}
             disabled={ticket.status === 'CLOSED'}
-            className="rounded-full border border-graphite/15 px-2.5 py-1 text-xs font-medium text-charcoal transition-all hover:border-charcoal/30 hover:bg-graphite/5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-7 px-3 text-xs"
           >
             Gán lại
-          </button>
+          </Button>
         </div>
       </td>
     </tr>

@@ -2,6 +2,8 @@
 // Pure presentational component — không giữ state, nhận callback từ parent.
 // Wrap bằng memo để tránh re-render khi Page re-render do state modal thay đổi.
 import { memo } from 'react'
+import { Input } from '@/components/ui'
+import { IconSearch, IconSortAsc, IconSortDesc } from '@/components/ui/icons'
 import type { TechTab, SortKey, SortDir, ViewMode } from './ticketListTypes'
 import { TABS, PAGE_SIZE } from './ticketListTypes'
 import type { TicketStatus } from '@/types'
@@ -36,11 +38,10 @@ const SORT_LABELS: Record<SortKey, string> = {
 }
 
 function SortIconInline({ active, dir }: { active: boolean; dir: SortDir }) {
-  return (
-    <span className={`ml-1 inline-block text-xs transition-opacity ${active ? 'opacity-100' : 'opacity-30'}`}>
-      {active && dir === 'asc' ? '↑' : '↓'}
-    </span>
-  )
+  if (!active) return <IconSortDesc width={12} height={12} className="ml-1 opacity-30" />
+  return dir === 'asc'
+    ? <IconSortAsc width={12} height={12} className="ml-1" />
+    : <IconSortDesc width={12} height={12} className="ml-1" />
 }
 
 export const TicketToolbar = memo(function TicketToolbar({
@@ -63,7 +64,7 @@ export const TicketToolbar = memo(function TicketToolbar({
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'bg-charcoal text-white'
-                : 'bg-graphite/10 text-charcoal hover:bg-graphite/20'
+                : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20'
             }`}
           >
             {tab.icon} {tab.label}
@@ -73,26 +74,15 @@ export const TicketToolbar = memo(function TicketToolbar({
 
       {/* Search + Filter + View controls */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Search input */}
-        <div className="relative min-w-[200px] flex-1">
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-warmGray/60">
-            🔍
-          </span>
-          <input
+        {/* Search input — dùng Input component chuẩn thay vì raw input + emoji */}
+        <div className="min-w-[200px] flex-1">
+          <Input
+            icon={<IconSearch width={16} height={16} />}
             type="text"
             value={search}
             onChange={e => onSearchChange(e.target.value)}
             placeholder="Tìm theo loại, ghi chú..."
-            className="w-full rounded-xl border border-graphite/20 bg-white py-2.5 pl-9 pr-4 text-sm text-charcoal placeholder:text-warmGray/50 focus:border-charcoal focus:outline-none"
           />
-          {search && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-warmGray/60 hover:text-charcoal"
-            >
-              ✕
-            </button>
-          )}
         </div>
 
         {/* Status filter */}

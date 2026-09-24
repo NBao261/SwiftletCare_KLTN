@@ -5,10 +5,10 @@
 // UI Tabs + Search + Filter → TicketToolbar
 // Table thead + tbody + pagination → TicketTableView
 // Card list + pagination → TicketCard (từ features/technician/tickets)
-// Pagination bar → PaginationBar (components/ui, reusable)
+// Pagination → Pagination (components/ui, variant="numbered")
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
-import { PaginationBar } from '@/components/ui/PaginationBar'
+import Pagination from '@/components/ui/Pagination'
 import { IconTicket } from '@/components/ui/icons'
 import { TicketStatBar } from '@/components/features/technician/tickets/TicketStatBar'
 import { TicketCard } from '@/components/features/technician/tickets/TicketCard'
@@ -85,8 +85,8 @@ export default function TechnicianTicketsPage() {
       {hasResults && viewMode === 'table' && (
         <TicketTableView
           records={displayRecords}
-          sortKey={sortKey}       sortDir={sortDir}    onSort={handleSort}
-          page={safePage}         totalPages={totalPages}  totalItems={paginTotal}
+          sortKey={sortKey}       sortDir={sortDir}   onSort={handleSort}
+          page={safePage}         totalItems={paginTotal}
           onPage={setPage}
           onUpdateStatus={setStatusModal}
           onReassign={setReassignModal}
@@ -105,13 +105,13 @@ export default function TechnicianTicketsPage() {
             />
           ))}
           {totalPages > 1 && (
-            <div className="overflow-hidden rounded-2xl border border-graphite/15 bg-white shadow-sm">
-              <PaginationBar
+            <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
+              <Pagination
                 page={safePage}
-                totalPages={totalPages}
-                totalItems={paginTotal}
-                pageSize={PAGE_SIZE}
-                onPage={setPage}
+                total={paginTotal}
+                limit={PAGE_SIZE}
+                onChange={setPage}
+                variant="numbered"
               />
             </div>
           )}

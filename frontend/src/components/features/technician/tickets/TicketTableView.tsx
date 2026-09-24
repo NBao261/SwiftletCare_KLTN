@@ -1,6 +1,6 @@
-// TicketTableView.tsx — Khối bảng table hoàn chỉnh (thead + tbody + PaginationBar)
+// TicketTableView.tsx — Khối bảng table hoàn chỉnh (thead + tbody + Pagination)
 // Trách nhiệm: render table view; không giữ state, nhận tất cả data qua props.
-import { PaginationBar } from '@/components/ui/PaginationBar'
+import Pagination from '@/components/ui/Pagination'
 import { TicketTableRow, SortIcon } from './TicketTableRow'
 import type { Ticket } from '@/types'
 import type { SortKey, SortDir } from './ticketListTypes'
@@ -11,7 +11,6 @@ interface Props {
   sortKey: SortKey
   sortDir: SortDir
   page: number
-  totalPages: number
   totalItems: number
   onSort: (key: SortKey) => void
   onPage: (p: number) => void
@@ -20,11 +19,11 @@ interface Props {
 }
 
 export function TicketTableView({
-  records, sortKey, sortDir, page, totalPages, totalItems,
+  records, sortKey, sortDir, page, totalItems,
   onSort, onPage, onUpdateStatus, onReassign,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-graphite/15 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left" role="table">
           <thead>
@@ -78,12 +77,12 @@ export function TicketTableView({
         </table>
       </div>
 
-      <PaginationBar
+      <Pagination
         page={page}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        pageSize={PAGE_SIZE}
-        onPage={onPage}
+        total={totalItems}
+        limit={PAGE_SIZE}
+        onChange={onPage}
+        variant="numbered"
       />
     </div>
   )
