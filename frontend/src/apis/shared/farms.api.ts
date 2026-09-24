@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Farm, House, Zone, Invitation } from '@/types'
+import type { ApiResponse, Farm, House, Zone, Invitation, SalesAssignmentRequest } from '@/types'
 
 export const farmApi = {
   list:   () => api.get<ApiResponse<Farm[]>>('/farms'),
@@ -21,6 +21,11 @@ export const farmApi = {
   listSalesStaff: (id: string) =>
     api.get<ApiResponse<Array<{ _id: string; farm_id: string; sales_staff_id: { _id: string; full_name: string; email: string }; invited_by?: string }>>>(
       `/farms/${id}/sales-staff`,
+    ),
+  // Đề xuất thêm/gỡ Sales Staff chờ Admin duyệt — bản theo farm KHÔNG populate (khác /admin/sales-staff-requests)
+  listSalesStaffRequests: (id: string) =>
+    api.get<ApiResponse<Array<Pick<SalesAssignmentRequest, '_id' | 'status' | 'sales_staff_email' | 'created_at'> & { type?: SalesAssignmentRequest['type'] }>>>(
+      `/farms/${id}/sales-staff-requests`,
     ),
 
   createHouse: (farmId: string, input: { name: string; floors?: number; description?: string }) =>

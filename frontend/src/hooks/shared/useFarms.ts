@@ -128,6 +128,15 @@ export function useSalesStaff(farmId: string | undefined) {
   })
 }
 
+/** Đề xuất Sales Staff còn chờ Admin duyệt — key nằm dưới ['sales-staff', farmId] nên useInviteSalesStaff tự làm mới */
+export function usePendingSalesStaffRequests(farmId: string | undefined) {
+  return useQuery({
+    queryKey: ['sales-staff', farmId, 'requests'],
+    queryFn: () => farmApi.listSalesStaffRequests(farmId!).then(r => r.data.data.filter(req => req.status === 'PENDING')),
+    enabled: !!farmId,
+  })
+}
+
 // ── Zone phẳng của 1 Farm (chọn Farm→Zone gọn trong form, xem ZonePicker) ───
 
 export interface FlatZone extends Zone { houseName: string }

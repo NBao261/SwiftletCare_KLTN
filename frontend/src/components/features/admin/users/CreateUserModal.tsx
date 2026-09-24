@@ -21,8 +21,11 @@ const EMPTY_FORM: FormState = { role: 'TECHNICIAN', full_name: '', email: '', ph
  * - Sales Staff → POST /admin/sales-staff, bắt buộc `farm_ids` (≥1 farm đang tồn tại)
  * Admin tự đặt mật khẩu ban đầu (backend không tự sinh/gửi mail ở 2 endpoint này).
  * Lỗi chỉ hiện sau khi người dùng rời ô (blur) hoặc đã bấm submit — không đỏ cả form lúc mới mở.
+ * `presetFarmId`: mở từ trang chi tiết Farm → KHOÁ vai trò ở Sales Staff + tích sẵn farm đó.
+ * Khoá chứ không chỉ chọn sẵn: Technician gắn với `assigned_regions` chứ không gắn farm nào,
+ * đổi vai trò ở màn này sẽ làm rơi farm đang mở khỏi payload mà không báo gì.
  */
-export default function CreateUserModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function CreateUserModal({ open, onClose, presetFarmId }: { open: boolean; onClose: () => void; presetFarmId?: string }) {
   const createUser = useCreateUser()
   const { data: farms, isLoading: farmsLoading } = useFarms()
   const push = useToastStore(s => s.push)
@@ -33,8 +36,11 @@ export default function CreateUserModal({ open, onClose }: { open: boolean; onCl
 
   // Modal không unmount giữa các lần mở (chỉ toggle `open`) — reset form mỗi lần mở lại.
   useEffect(() => {
-    if (open) { setForm(EMPTY_FORM); setTouched({}); setSubmitted(false) }
-  }, [open])
+    if (!open) return
+    setForm(presetFarmId ? { ...EMPTY_FORM, role: 'SALES_STAFF', farmIds: [presetFarmId] } : EMPTY_FORM)
+    setTouched({})
+    setSubmitted(false)
+  }, [open, presetFarmId])
 
   const errors = validateNewUser(form)
   const isValid = Object.keys(errors).length === 0
@@ -69,13 +75,27 @@ export default function CreateUserModal({ open, onClose }: { open: boolean; onCl
     )
   }
 
+  const presetFarmName = presetFarmId ? farms?.find(f => f._id === presetFarmId)?.name : undefined
+
   return (
-    <Modal open={open} onClose={onClose} title="Tạo tài khoản">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={presetFarmId ? `Tạo Sales Staff${presetFarmName ? ` cho ${presetFarmName}` : ''}` : 'Tạo tài khoản'}
+    >
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <span className="label-caption">
-            Vai trò<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+            Vai trò{!presetFarmId && <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>}
           </span>
+          {presetFarmId ? (
+            <span className="inline-flex w-fit items-center gap-2 rounded-xl border border-charcoal bg-charcoal px-3 py-1.5 text-small font-semibold text-white">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
+                <IconHeadset width={16} height={16} />
+              </span>
+              {ROLE_LABEL.SALES_STAFF}
+            </span>
+          ) : (
           <div className="grid grid-cols-2 gap-2">
             {CREATABLE_ROLES.map(r => {
               const Icon = ROLE_ICON[r]
@@ -104,6 +124,7 @@ export default function CreateUserModal({ open, onClose }: { open: boolean; onCl
               )
             })}
           </div>
+          )}
         </div>
 
         <Input

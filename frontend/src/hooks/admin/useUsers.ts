@@ -121,7 +121,20 @@ export function useCreateUser() {
         ? adminApi.createTechnician({ ...base, assigned_regions: input.assigned_regions })
         : adminApi.createSalesStaff({ ...base, farm_ids: input.farm_ids })
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      // Sales Staff mới được gán thẳng farm_ids — danh sách Sales Staff của farm (card Thành viên) phải làm mới
+      void queryClient.invalidateQueries({ queryKey: ['sales-staff'] })
+    },
+  })
+}
+
+/** Flow 16 case 1e — Admin gỡ thẳng Sales Staff khỏi 1 farm (chỉ xoá bản ghi gán, không đụng tài khoản) */
+export function useUnassignSalesStaff(farmId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (salesStaffId: string) => adminApi.unassignSalesStaff(farmId, salesStaffId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sales-staff', farmId] }),
   })
 }
 
