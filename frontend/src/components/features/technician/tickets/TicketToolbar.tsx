@@ -163,12 +163,7 @@ export const TicketToolbar = memo(function TicketToolbar({
         </div>
       </div>
 
-      {/* Cảnh báo: search/filter chỉ trong trang hiện tại (server-paginated) */}
-      {(search || filterStatus) && !isOverdueActive && (
-        <p className="-mt-2 text-xs text-climateOrange">
-          Tìm kiếm và lọc chỉ áp dụng trong trang hiện tại ({PAGE_SIZE} ticket). Dữ liệu ở các trang khác không được tìm.
-        </p>
-      )}
+
 
       {/* Cảnh báo: overdue > 100 ticket */}
       {isOverdueActive && !isLoading && overdueTotal > 100 && (
