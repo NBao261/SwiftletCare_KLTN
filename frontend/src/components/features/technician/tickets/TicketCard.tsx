@@ -1,14 +1,13 @@
 // TicketCard.tsx — Card hiển thị 1 ticket trong danh sách Technician
 // Visual Elevation: priority dot, SLA ring, hover lift, slide-up animation
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ticketApi } from '@/apis/shared/tickets.api'
-import { Button, Card } from '@/components/ui'
-import { useToastStore } from '@/stores/toastStore'
-import { formatDate, getApiErrorMessage } from '@/lib/helpers'
+import { Card } from '@/components/ui'
+import ActionsMenu, { type ActionsMenuItem } from '@/components/ui/ActionsMenu'
+import { formatDate } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
 import { isSlaBreached } from './ticketHelpers'
 import { SlaRing } from './SlaRing'
+import { STATUS_DOT_CLS } from './ticketListTypes'
 import type { Ticket, TicketStatus } from '@/types'
 
 // ── Priority dot ──────────────────────────────────────────────────────────────
@@ -29,45 +28,15 @@ function PriorityDot({ priority }: { priority: string }) {
 }
 
 // ── Status dot badge ──────────────────────────────────────────────────────────
-const STATUS_DOT_COLOR: Record<string, string> = {
-  NEW: 'bg-charcoal',
-  IN_PROGRESS: 'bg-climateOrange',
-  AWAITING_FIELD_CONFIRMATION: 'bg-limeMist',
-  CLOSED: 'bg-warmGray',
-}
-
 function StatusBadge({ status }: { status: TicketStatus }) {
+  const statusDotCls = STATUS_DOT_CLS[status] ?? 'bg-warmGray'
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border border-graphite/10 bg-white px-2.5 py-1 text-xs font-semibold text-charcoal shadow-icon`}>
-      <span className={`inline-block h-2 w-2 rounded-full ${STATUS_DOT_COLOR[status] ?? 'bg-warmGray'}`} />
+      <span className={`inline-block h-2 w-2 rounded-full ${statusDotCls}`} />
       {STATUS_LABEL[status]}
     </span>
   )
 }
-
-// ── Inline accept mutation (chỉ khi status=NEW) ────────────────────────────────
-function AcceptButton({ ticketId }: { ticketId: string }) {
-  const push = useToastStore(s => s.push)
-  const queryClient = useQueryClient()
-  const mut = useMutation({
-    mutationFn: () => ticketApi.updateStatus(ticketId, 'IN_PROGRESS', 'Kỹ thuật viên đã tiếp nhận ticket.'),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      push('Đã tiếp nhận ticket')
-    },
-    onError: (err) => push(getApiErrorMessage(err, 'Cập nhật thất bại'), 'error'),
-  })
-  return (
-    <Button
-      size="sm"
-      loading={mut.isPending}
-      onClick={e => { e.stopPropagation(); mut.mutate() }}
-    >
-      Tiếp nhận
-    </Button>
-  )
-}
-
 
 // ── Main card ─────────────────────────────────────────────────────────────────
 interface TicketCardProps {
@@ -80,6 +49,18 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
   const navigate = useNavigate()
   const breached = isSlaBreached(ticket)
   const isInstall = ticket.type === 'INSTALLATION' || ticket.type === 'MAINTENANCE'
+
+  const actionItems: ActionsMenuItem[] = []
+  if (ticket.status === 'NEW') {
+    actionItems.push({ label: 'Tiếp nhận', onClick: () => onUpdateStatus(ticket) })
+  }
+  if (ticket.status !== 'CLOSED') {
+    actionItems.push({ label: 'Cập nhật', onClick: () => onUpdateStatus(ticket) })
+    actionItems.push({ label: 'Gán lại', onClick: () => onReassign(ticket) })
+    if (isInstall) {
+      actionItems.push({ label: 'Sửa ngày hẹn', onClick: () => navigate(`/tickets/${ticket._id}?action=reschedule`) })
+    }
+  }
 
   return (
     <Card
@@ -96,59 +77,27 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
         onClick={() => navigate(`/tickets/${ticket._id}`)}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigate(`/tickets/${ticket._id}`) }}
       >
-        {/* Row 1: Priority + Type + Status */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
+        {/* Row 1: Priority + Type + Actions */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
             <PriorityDot priority={ticket.priority} />
             <span className="text-base font-bold text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</span>
           </div>
-          <StatusBadge status={ticket.status} />
+          {actionItems.length > 0 && (
+            <div className="shrink-0 -mr-2 -mt-1" onClick={e => e.stopPropagation()}>
+              <ActionsMenu items={actionItems} />
+            </div>
+          )}
         </div>
 
-        {/* Row 2: SLA Ring + Date */}
-        <div className="mt-3 flex items-center justify-between">
-          <SlaRing ticket={ticket} size={32} />
-          <span className="text-xs text-warmGray">{formatDate(ticket.created_at)}</span>
+        {/* Row 2: Status + SLA + Date */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-graphite/5 pt-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <StatusBadge status={ticket.status} />
+            <SlaRing ticket={ticket} size={28} />
+          </div>
+          <span className="text-sm font-medium text-warmGray">{formatDate(ticket.created_at)}</span>
         </div>
-
-        {/* Row 3: Note preview */}
-        {ticket.notes[0] && (
-          <p className="mt-2.5 truncate rounded-lg bg-graphite/[0.03] px-3 py-2 text-sm text-warmGray">
-            💬 {ticket.notes[0].content}
-          </p>
-        )}
-      </div>
-
-      {/* Action bar — M1: disable Cập nhật + Gán lại khi CLOSED */}
-      <div className="flex flex-wrap gap-2 border-t border-warmGray/10 bg-warmGray/[0.02] px-5 py-3">
-        {ticket.status === 'NEW' && <AcceptButton ticketId={ticket._id} />}
-
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={e => { e.stopPropagation(); onUpdateStatus(ticket) }}
-          disabled={ticket.status === 'CLOSED'}
-        >
-          ✏️ Cập nhật
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={e => { e.stopPropagation(); onReassign(ticket) }}
-          disabled={ticket.status === 'CLOSED'}
-        >
-          🔄 Gán lại
-        </Button>
-        {isInstall && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={e => { e.stopPropagation(); navigate(`/tickets/${ticket._id}?action=reschedule`) }}
-            disabled={ticket.status === 'CLOSED'}
-          >
-            📅 Sửa ngày hẹn
-          </Button>
-        )}
       </div>
     </Card>
   )
