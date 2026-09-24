@@ -1,5 +1,5 @@
 import { IconTemp, IconHumidity, IconLight, IconAlert, IconCloud } from '@/components/ui/icons'
-import type { SystemDefaultThresholds, TicketPriority } from '@/types'
+import type { SystemDefaultThresholds } from '@/types'
 
 export type ThresholdKey = keyof SystemDefaultThresholds
 
@@ -20,10 +20,3 @@ export const THRESHOLD_GROUPS: ThresholdGroup[] = [
   { kind: 'single', label: 'NH3 tối đa', icon: IconAlert, key: 'nh3_max' },
   { kind: 'single', label: 'CO2 tối đa', icon: IconCloud, key: 'co2_max' },
 ]
-
-/** Icon-box theo mức ưu tiên SLA — 3/4 biến thể tông màu mục 2.7 (đỏ=CRITICAL, cam=vừa, xám=neutral) */
-export const PRIORITY_ICON_CLASS: Record<TicketPriority, string> = {
-  P1: 'bg-red-100 text-red-600',
-  P2: 'bg-orange-100 text-orange-600',
-  P3: 'bg-gray-100 text-graphite',
-}

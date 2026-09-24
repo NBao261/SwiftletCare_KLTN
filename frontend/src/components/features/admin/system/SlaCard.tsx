@@ -8,7 +8,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { SLA_PRIORITIES, PRIORITY_LABEL, FACTORY_DEFAULT_SLA } from '@/constants/sla'
-import { PRIORITY_ICON_CLASS } from './system.constants'
+import { PRIORITY_ICON_CLASS } from '@/constants/tickets'
 import SlaEditModal from './SlaEditModal'
 
 /**
