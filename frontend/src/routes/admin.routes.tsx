@@ -17,6 +17,8 @@ const AdminAuditLogPage = lazy(() => import('@/pages/admin/AdminAuditLogPage'))
 const AdminFarmsPage = lazy(() => import('@/pages/admin/AdminFarmsPage'))
 const AdminFarmDetailPage = lazy(() => import('@/pages/admin/AdminFarmDetailPage'))
 const AdminFarmHousePage = lazy(() => import('@/pages/admin/AdminFarmHousePage'))
+// Ticket toàn hệ thống dạng bảng — tách khỏi /tickets (dùng chung Farm Owner/Technician); chi tiết vẫn ở /tickets/:id
+const AdminTicketsPage = lazy(() => import('@/pages/admin/AdminTicketsPage'))
 
 export const adminRoutes = (
   <>
@@ -83,6 +85,14 @@ export const adminRoutes = (
       element={
         <RequireRole allow={ADMIN_ONLY}>
           <AdminFarmHousePage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/tickets"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminTicketsPage />
         </RequireRole>
       }
     />
