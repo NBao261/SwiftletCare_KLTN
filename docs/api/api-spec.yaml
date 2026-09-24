@@ -4841,8 +4841,10 @@ components:
         metadata: { type: object }
         status: { type: string, enum: [ACTIVE, ACKNOWLEDGED, RESOLVED] }
         created_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time, nullable: true, description: "Lần gần nhất sự cố còn được ghi nhận (cập nhật tối đa 1 lần/phút) — ALERT-FR-008" }
+        occurrence_count: { type: integer, minimum: 1, description: "Số lần sự cố được ghi nhận lại trong khi alert còn mở (thay vì tạo alert trùng)" }
         acknowledged_at: { type: string, format: date-time, nullable: true }
-        resolved_at: { type: string, format: date-time, nullable: true, description: "Sự cố hết, hoặc thiết bị đã được gỡ khỏi hệ thống (FARM-FR-008)" }
+        resolved_at: { type: string, format: date-time, nullable: true, description: "Sự cố hết (THRESHOLD_BREACH tự đóng sau 5 phút không vượt ngưỡng, NODE_OFFLINE tự đóng khi thiết bị kết nối lại), hoặc thiết bị đã được gỡ khỏi hệ thống (FARM-FR-008). Alert đã đóng tự xoá sau 180 ngày." }
         acknowledged_by: { type: string, nullable: true }
         acknowledgement_note: { type: string, nullable: true }
 
