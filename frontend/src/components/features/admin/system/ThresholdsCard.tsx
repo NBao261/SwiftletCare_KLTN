@@ -69,7 +69,7 @@ export default function ThresholdsCard() {
           )}
         </div>
         <p className="mb-3 mt-1 text-sm text-white/60">
-          Nguồn cho hành động "Reset về mặc định" của Farm Owner ở cấp Zone (ENV-FR-020) và ngưỡng khởi tạo cho zone mới.
+          Nguồn cho hành động "Reset về mặc định" của Farm Owner ở cấp phòng (ENV-FR-020) và ngưỡng khởi tạo cho phòng mới.
         </p>
 
         {isLoading && <LoadingSkeleton count={4} className="h-10 w-full bg-white/10" />}

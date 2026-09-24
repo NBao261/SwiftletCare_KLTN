@@ -11,7 +11,7 @@ import ThresholdsCard from '@/components/features/admin/system/ThresholdsCard'
 import SlaCard from '@/components/features/admin/system/SlaCard'
 
 export default function AdminSystemSettingsPage() {
-  usePageSubtitle('Áp dụng cho toàn hệ thống khi farm/zone chưa tự cấu hình riêng — ảnh hưởng trực tiếp hành vi tự động và thời hạn xử lý ticket.')
+  usePageSubtitle('Áp dụng cho toàn hệ thống khi farm/phòng chưa tự cấu hình riêng — ảnh hưởng trực tiếp hành vi tự động và thời hạn xử lý ticket.')
 
   return (
     // Không ép chiếm hết chiều cao viewport — card co theo nội dung, khung trắng của

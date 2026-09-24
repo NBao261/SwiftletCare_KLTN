@@ -42,7 +42,7 @@ export default function AdminSystemHealthPage() {
             <p className="label-caption">Trang trại</p>
             <div className="grid grid-cols-2 gap-3">
               <StatCard label="Farm đang hoạt động" value={data.farms.total} />
-              <StatCard label="Zone" value={data.zones.total} />
+              <StatCard label="Phòng" value={data.zones.total} />
             </div>
           </section>
 
