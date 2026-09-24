@@ -2232,6 +2232,11 @@ paths:
         Không xoá document: telemetry/alert cũ tham chiếu `node_id` nên vẫn truy
         vấn được. Thiết bị bị ẩn khỏi danh sách/thống kê, heartbeat/telemetry từ
         `device_id` này bị bỏ qua, lệnh relay/ngưỡng/dời zone trả 409.
+
+        Thiết bị **đang ONLINE/DEGRADED** phải gửi kèm `force: true` (409 nếu
+        thiếu) — gỡ một thiết bị còn sống là mất giám sát cả Zone. Cảnh báo còn mở
+        của nó được đóng theo, ticket liên quan được ghi chú, Farm Owner nhận thông
+        báo, và trong **24 giờ** vẫn khôi phục lại được qua `/restore`.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -2240,7 +2245,9 @@ paths:
             schema:
               type: object
               required: [reason]
-              properties: { reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" } }
+              properties:
+                reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" }
+                force: { type: boolean, description: "Bắt buộc khi thiết bị đang ONLINE/DEGRADED — xác nhận chấp nhận mất giám sát của Zone" }
       responses:
         "200":
           description: "Đã gỡ (decommissioned_at được gán)"
@@ -2252,6 +2259,65 @@ paths:
                   - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /devices/sensor-nodes/{id}/restore:
+    post:
+      tags: [Devices]
+      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
+      description: |
+        Xoá `decommissioned_at`, đưa thiết bị về `OFFLINE` (chờ heartbeat thật mới
+        `ONLINE`) và cho nó xuất hiện lại trong danh sách/thống kê. Cảnh báo đã đóng
+        lúc gỡ **không** mở lại — nếu sự cố còn, `deviceOffline.job` sẽ sinh cảnh báo mới.
+
+        Từ chối 409 khi: thiết bị chưa bị gỡ, đã quá 24 giờ, `device_id` đã được đăng
+        ký lại cho bản ghi khác, hoặc thiết bị thay thế vẫn đang hoạt động.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Gỡ nhầm thiết bị" } }
+      responses:
+        "200":
+          description: Đã khôi phục
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/camera-nodes/{id}/restore:
+    post:
+      tags: [Devices]
+      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string } }
+      responses:
+        "200":
+          description: Đã khôi phục
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/CameraNode" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
 
   /devices/sensor-nodes/{id}/replace:
@@ -4763,7 +4829,6 @@ components:
             running_version: { type: string }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
-        config_pushed_at: { type: string, format: date-time, nullable: true, description: "Backend đã đẩy ngưỡng của Zone xuống thiết bị (heartbeat đầu tiên)" }
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống; cảnh báo còn mở của nó được đóng theo" }
         decommission_reason: { type: string, nullable: true }
         replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }
