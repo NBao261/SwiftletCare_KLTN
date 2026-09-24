@@ -24,7 +24,8 @@ const menuSections: MenuSection[] = [
   {
     title: 'Quản lý',
     items: [
-      { label: 'Trang trại', path: '/farms', icon: IconFarm },
+      // FARM-FR-009 — trang riêng của Admin (mọi farm, không nút tạo), không dùng chung /farms của Farm Owner
+      { label: 'Trang trại', path: '/system/farms', icon: IconFarm },
       { label: 'Ticket', path: '/tickets', icon: IconTicket },
       // AUTH-FR-011 — quản lý tài khoản toàn hệ thống (RACI mục 4.4)
       { label: 'Người dùng', path: '/users', icon: IconUsers },

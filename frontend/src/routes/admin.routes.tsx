@@ -13,6 +13,10 @@ const AdminAccountRequestsPage = lazy(() => import('@/pages/admin/AdminAccountRe
 const AdminSystemHealthPage = lazy(() => import('@/pages/admin/AdminSystemHealthPage'))
 const AdminSystemSettingsPage = lazy(() => import('@/pages/admin/AdminSystemSettingsPage'))
 const AdminAuditLogPage = lazy(() => import('@/pages/admin/AdminAuditLogPage'))
+// FARM-FR-009 — trang trại toàn hệ thống: tách khỏi /farms (dùng chung Farm Owner/Technician) nên đặt dưới /system
+const AdminFarmsPage = lazy(() => import('@/pages/admin/AdminFarmsPage'))
+const AdminFarmDetailPage = lazy(() => import('@/pages/admin/AdminFarmDetailPage'))
+const AdminFarmHousePage = lazy(() => import('@/pages/admin/AdminFarmHousePage'))
 
 export const adminRoutes = (
   <>
@@ -55,6 +59,30 @@ export const adminRoutes = (
       element={
         <RequireRole allow={ADMIN_ONLY}>
           <AdminAuditLogPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/farms"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminFarmsPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/farms/:farmId"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminFarmDetailPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/farms/:farmId/houses/:houseId"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminFarmHousePage />
         </RequireRole>
       }
     />
