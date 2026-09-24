@@ -5,6 +5,7 @@ import { User } from '@/models/user.model'
 import { SalesAssignment } from '@/models/salesAssignment.model'
 import { SalesAssignmentRequest, ISalesAssignmentRequest } from '@/models/salesAssignmentRequest.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
+import { Alert } from '@/models/alert.model'
 import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow, assertZoneAccess } from '@/utils/farmAccess.util'
 import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
@@ -84,6 +85,11 @@ export async function updateFarm(
 ): Promise<IFarm> {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền sửa farm này')
+  // region quyết định Technician nào phụ trách farm và ticket được giao cho ai —
+  // cùng mức nhạy cảm với xoá farm/mời thành viên nên chỉ Primary Owner/Admin được đổi.
+  if (updates.region !== undefined && updates.region !== farm.region && !isPrimaryOwner(farm, user)) {
+    throw ForbiddenError('Chỉ Primary Owner mới được đổi khu vực của farm')
+  }
 
   if (updates.name !== undefined) farm.name = updates.name
   if (updates.address !== undefined) farm.address = updates.address
@@ -99,6 +105,12 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được xóa farm')
   farm.is_deleted = true
   await farm.save()
+  // Cảnh báo còn mở của farm đã xoá sẽ bị alertEscalation biến thành ticket mồ côi
+  // (không ai mở được farm, không Technician nào được gán) — đóng hết.
+  await Alert.updateMany(
+    { farm_id: farm._id, status: { $in: ['ACTIVE', 'ACKNOWLEDGED'] } },
+    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },
+  )
 }
 
 /**
