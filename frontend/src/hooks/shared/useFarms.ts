@@ -54,7 +54,12 @@ export function useCreateZone(houseId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { name: string; floor?: number }) => farmApi.createZone(houseId, input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['zones', houseId] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['zones', houseId] })
+      // 2 danh sách zone phẳng có staleTime 5 phút — không làm mới thì zone mới vắng mặt ở ZonePicker/ZoneSwitcher và số zone ở trang Farm
+      void queryClient.invalidateQueries({ queryKey: ['farm-zones'] })
+      void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
+    },
   })
 }
 
