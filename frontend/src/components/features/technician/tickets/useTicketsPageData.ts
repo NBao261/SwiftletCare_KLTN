@@ -9,12 +9,11 @@ import { isSlaBreached } from '@/components/features/technician/tickets/ticketHe
 import { sortTickets, filterBySearch, filterByStatus } from '@/components/features/technician/tickets/ticketListTypes'
 import { PAGE_SIZE } from '@/components/features/technician/tickets/ticketListTypes'
 import type { Ticket, TicketStatus } from '@/types'
-import type { TechTab, SortKey, SortDir, ViewMode } from '@/components/features/technician/tickets/ticketListTypes'
+import type { TechTab, SortKey, SortDir } from '@/components/features/technician/tickets/ticketListTypes'
 
 export interface TicketsPageState {
   // isOverdueActive thay thế activeTab trong public API — TicketToolbar không cần biết về TechTab
   isOverdueActive: boolean
-  viewMode: ViewMode
   sortKey: SortKey
   sortDir: SortDir
   search: string
@@ -32,7 +31,6 @@ export interface TicketsPageActions {
   handleSearchChange: (val: string) => void
   handleFilterStatusChange: (val: TicketStatus | '') => void
   handleClearFilters: () => void
-  handleViewModeChange: (mode: ViewMode) => void
   setPage: (p: number) => void
   setStatusModal: (t: Ticket | null) => void
   setReassignModal: (t: Ticket | null) => void
@@ -55,7 +53,6 @@ export interface TicketsPageData {
 export function useTicketsPageData(): TicketsPageState & TicketsPageActions & TicketsPageData {
   // ── UI State ──────────────────────────────────────────────────────────────
   const [activeTab,     setActiveTab]     = useState<TechTab>('mine')
-  const [viewMode,      setViewMode]      = useState<ViewMode>('table')
   const [sortKey,       setSortKey]       = useState<SortKey>('created_at')
   const [sortDir,       setSortDir]       = useState<SortDir>('desc')
   const [search,        setSearch]        = useState('')
@@ -156,18 +153,16 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     resetPage()
   }, [resetPage])
 
-  const handleViewModeChange = useCallback((mode: ViewMode) => {
-    setViewMode(mode)
-  }, [])
+
 
   return {
     // State (public)
     isOverdueActive: isOverdue, // alias cho TicketToolbar — mapping từ internal activeTab
-    viewMode, sortKey, sortDir, search, filterStatus, page,
+    sortKey, sortDir, search, filterStatus, page,
     statusModal, reassignModal,
     // Actions
     handleOverdueToggle, handleSort,
-    handleSearchChange, handleFilterStatusChange, handleClearFilters, handleViewModeChange,
+    handleSearchChange, handleFilterStatusChange, handleClearFilters,
     setPage, setStatusModal, setReassignModal,
     // Data
     displayRecords, filteredRecords,

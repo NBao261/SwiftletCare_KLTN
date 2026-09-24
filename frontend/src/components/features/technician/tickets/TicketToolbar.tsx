@@ -3,9 +3,9 @@
 // Thay bằng hàng FilterChip duy nhất bao gồm cả chip "Quá hạn SLA" đặc biệt.
 import { memo } from 'react'
 import { Input, Button, FilterChip } from '@/components/ui'
-import { IconSearch, IconSortAsc, IconSortDesc, IconList, IconGrid } from '@/components/ui/icons'
+import { IconSearch, IconSortAsc, IconSortDesc } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
-import type { SortKey, SortDir, ViewMode } from './ticketListTypes'
+import type { SortKey, SortDir } from './ticketListTypes'
 import { PAGE_SIZE } from './ticketListTypes'
 import type { TicketStatus } from '@/types'
 import { STATUS_LABEL } from '@/constants/tickets'
@@ -38,12 +38,9 @@ interface Props {
   sortDir: SortDir
   onSort: (key: SortKey) => void
   onClearFilters: () => void
-  // View mode
-  viewMode: ViewMode
-  onViewModeChange: (mode: ViewMode) => void
+
   // Meta
   isLoading: boolean
-  resultCount: number
   overdueTotal: number
 }
 
@@ -63,8 +60,7 @@ export const TicketToolbar = memo(function TicketToolbar({
   filterStatus, onFilterStatusChange,
   search, onSearchChange,
   sortKey, sortDir, onSort, onClearFilters,
-  viewMode, onViewModeChange,
-  isLoading, resultCount,
+  isLoading,
   overdueTotal,
 }: Props) {
   const validSortKeys = getValidSortKeys(isOverdueActive, filterStatus)
@@ -92,36 +88,9 @@ export const TicketToolbar = memo(function TicketToolbar({
           />
         </div>
 
-        {/* View mode toggle */}
-        <div className="flex overflow-hidden rounded-xl border border-warmGray/20">
-          <button
-            onClick={() => onViewModeChange('table')}
-            title="Dạng bảng"
-            className={cn(
-              'px-3 py-2 transition-colors',
-              viewMode === 'table' ? 'bg-charcoal text-white' : 'bg-white text-warmGray hover:bg-warmGray/10'
-            )}
-          >
-            <IconList width={16} height={16} />
-          </button>
-          <button
-            onClick={() => onViewModeChange('card')}
-            title="Dạng thẻ"
-            className={cn(
-              'px-3 py-2 transition-colors',
-              viewMode === 'card' ? 'bg-charcoal text-white' : 'bg-white text-warmGray hover:bg-warmGray/10'
-            )}
-          >
-            <IconGrid width={16} height={16} />
-          </button>
-        </div>
 
-        {!isLoading && (
-          <span className="text-sm text-warmGray">
-            {resultCount} kết quả
-            {hasActiveFilters && <span className="ml-1 text-xs text-warmGray/70">(đã lọc)</span>}
-          </span>
-        )}
+
+
       </div>
 
       {/* ── Hàng 2: Unified FilterChips + Sort + Hủy lọc ── */}

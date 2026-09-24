@@ -8,10 +8,8 @@
 // Pagination → Pagination (components/ui, variant="numbered")
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
-import Pagination from '@/components/ui/Pagination'
 import { IconTicket } from '@/components/ui/icons'
 import { TicketStatBar } from '@/components/features/technician/tickets/TicketStatBar'
-import { TicketCard } from '@/components/features/technician/tickets/TicketCard'
 import { TicketToolbar } from '@/components/features/technician/tickets/TicketToolbar'
 import { TicketTableView } from '@/components/features/technician/tickets/TicketTableView'
 import { UpdateStatusModal } from '@/components/features/technician/tickets/UpdateStatusModal'
@@ -22,15 +20,15 @@ import { PAGE_SIZE } from '@/components/features/technician/tickets/ticketListTy
 export default function TechnicianTicketsPage() {
   const {
     // UI state
-    isOverdueActive, viewMode, sortKey, sortDir, search, filterStatus,
+    isOverdueActive, sortKey, sortDir, search, filterStatus,
     statusModal, reassignModal,
     // Actions
     handleOverdueToggle, handleSort,
-    handleSearchChange, handleFilterStatusChange, handleClearFilters, handleViewModeChange,
+    handleSearchChange, handleFilterStatusChange, handleClearFilters,
     setPage, setStatusModal, setReassignModal,
     // Data
     displayRecords, filteredRecords,
-    safePage, totalPages, paginTotal,
+    safePage, paginTotal,
     isLoading, statsRecords, total,
     overdueTotal,
   } = useTicketsPageData()
@@ -59,10 +57,9 @@ export default function TechnicianTicketsPage() {
         isOverdueActive={isOverdueActive}   onOverdueToggle={handleOverdueToggle}
         filterStatus={filterStatus}          onFilterStatusChange={handleFilterStatusChange}
         search={search}                      onSearchChange={handleSearchChange}
-        viewMode={viewMode}                  onViewModeChange={handleViewModeChange}
         sortKey={sortKey}                    sortDir={sortDir}  onSort={handleSort}
         onClearFilters={handleClearFilters}
-        isLoading={isLoading}                resultCount={filteredRecords.length}
+        isLoading={isLoading}
         overdueTotal={overdueTotal}
       />
 
@@ -84,7 +81,7 @@ export default function TechnicianTicketsPage() {
       )}
 
       {/* ── TABLE VIEW ── */}
-      {hasResults && viewMode === 'table' && (
+      {hasResults && (
         <TicketTableView
           records={displayRecords}
           sortKey={sortKey}       sortDir={sortDir}   onSort={handleSort}
@@ -93,31 +90,6 @@ export default function TechnicianTicketsPage() {
           onUpdateStatus={setStatusModal}
           onReassign={setReassignModal}
         />
-      )}
-
-      {/* ── CARD VIEW ── */}
-      {hasResults && viewMode === 'card' && (
-        <div className="flex flex-col gap-3">
-          {displayRecords.map(ticket => (
-            <TicketCard
-              key={ticket._id}
-              ticket={ticket}
-              onUpdateStatus={setStatusModal}
-              onReassign={setReassignModal}
-            />
-          ))}
-          {totalPages > 1 && (
-            <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
-              <Pagination
-                page={safePage}
-                total={paginTotal}
-                limit={PAGE_SIZE}
-                onChange={setPage}
-                variant="numbered"
-              />
-            </div>
-          )}
-        </div>
       )}
 
       {/* ── Modals ── */}

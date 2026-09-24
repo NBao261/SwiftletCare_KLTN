@@ -9,7 +9,7 @@ export const PAGE_SIZE = 12 // số ticket mỗi trang
 export type TechTab  = 'mine' | 'in_progress' | 'overdue'
 export type SortKey  = 'created_at' | 'sla' | 'status'
 export type SortDir  = 'asc' | 'desc'
-export type ViewMode = 'table' | 'card'
+
 
 export const TABS: { id: TechTab; label: string; icon: string }[] = [
   { id: 'mine',        label: 'Tất cả của tôi', icon: '📋' },
