@@ -3,6 +3,7 @@ import { TicketMessage, ITicketMessage } from '@/models/ticketMessage.model'
 import { findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
 import { emitTicketMessage } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
+import { assigneeIdOf } from '@/utils/ticket.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
@@ -38,7 +39,10 @@ function toDto(m: PopulatedMessage): TicketMessageDto {
   }
 }
 
-const currentAssignee = (ticket: Pick<ITicket, 'assigned_to'>) => (ticket.assigned_to ? String(ticket.assigned_to) : null)
+// Dùng chung helper với ticket.service — bản cũ ở đây không xử lý `assigned_to`
+// đã populate, đổi `loadTicketForChat` sang truy vấn có populate là Technician
+// đang phụ trách lập tức bị 403 khi chat.
+const currentAssignee = assigneeIdOf
 
 /** TICKET-FR-017 — mốc Technician này bị chuyển khỏi ticket (null nếu chưa từng phụ trách) */
 function removedAt(ticket: ITicket, userId: string): Date | null {
@@ -88,14 +92,35 @@ export async function assertCanJoin(ticketId: string, user: CurrentUser): Promis
 }
 
 /**
- * TICKET-FR-015 — lịch sử có phân trang, trang 1 là tin mới nhất. Mỗi trang
- * trả theo thứ tự cũ → mới để client nối thẳng vào khung chat.
+ * TICKET-FR-015 — lịch sử chat, mới nhất trước; mỗi trang trả theo thứ tự cũ →
+ * mới để client nối thẳng vào khung chat.
+ *
+ * Cuộn ngược lên nên dùng `before` (cursor = `created_at` của tin cũ nhất đang
+ * hiển thị): tin mới liên tục chèn vào ĐẦU luồng, nên phân trang bằng `page`
+ * (offset) sẽ trả lại những tin đã hiển thị ở trang trước mỗi khi có tin mới
+ * chen vào giữa 2 lần gọi. `page` vẫn dùng được cho client cũ.
  */
-export async function listMessages(ticketId: string, user: CurrentUser, query: { page?: string | number; limit?: string | number }) {
+export async function listMessages(
+  ticketId: string, user: CurrentUser,
+  query: { page?: string | number; limit?: string | number; before?: string },
+) {
   const { limitedUntil } = await loadTicketForChat(ticketId, user)
+
   // Technician cũ chỉ thấy tin tới lúc bị chuyển (TICKET-FR-017)
-  const filter = { ticket_id: ticketId, ...(limitedUntil ? { created_at: { $lte: limitedUntil } } : {}) }
-  const { page, skip, limit } = paginate(query.page, query.limit, { defaultLimit: 50, maxLimit: 100 })
+  const cutoffs: Date[] = []
+  if (limitedUntil) cutoffs.push(limitedUntil)
+  if (query.before) {
+    const before = new Date(query.before)
+    if (Number.isNaN(before.getTime())) throw BadRequestError('before phải là thời điểm ISO-8601 hợp lệ')
+    cutoffs.push(new Date(before.getTime() - 1)) // loại chính tin đang làm mốc
+  }
+  const filter = {
+    ticket_id: ticketId,
+    ...(cutoffs.length ? { created_at: { $lte: new Date(Math.min(...cutoffs.map(d => d.getTime()))) } } : {}),
+  }
+
+  // Có cursor thì luôn lấy từ đầu cửa sổ, không cộng offset nữa
+  const { page, skip, limit } = paginate(query.before ? 1 : query.page, query.limit, { defaultLimit: 50, maxLimit: 100 })
   const [records, total] = await Promise.all([
     TicketMessage.find(filter).sort({ created_at: -1, _id: -1 }).skip(skip).limit(limit)
       .populate('sender_id', 'full_name').lean<PopulatedMessage[]>(),

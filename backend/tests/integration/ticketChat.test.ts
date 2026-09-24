@@ -227,4 +227,19 @@ describe('Socket JOIN_TICKET_CHAT / SEND_TICKET_MESSAGE', () => {
     // Chỉ join room chat đúng 1 lần (lần đầu), lần sau bị từ chối
     expect(socket.join.mock.calls.filter(c => c[0] === `ticket:${ticket._id}`)).toHaveLength(1)
   })
+
+  it('phân trang theo cursor `before` không lặp tin khi có tin mới chen vào', async () => {
+    const { ticket, t } = await seed()
+    for (const c of ['1', '2', '3']) await send(ticket._id, t.owner, { content: c }).expect(201)
+
+    const page1 = await history(ticket._id, t.owner, '?limit=2').expect(200)
+    expect(page1.body.data.map((m: { content: string }) => m.content)).toEqual(['2', '3'])
+
+    // Tin mới chen vào giữa 2 lần tải — phân trang offset sẽ trả lại '2'
+    await send(ticket._id, t.tech, { content: '4' }).expect(201)
+
+    const oldest = page1.body.data[0].created_at as string
+    const older = await history(ticket._id, t.owner, `?limit=2&before=${encodeURIComponent(oldest)}`).expect(200)
+    expect(older.body.data.map((m: { content: string }) => m.content)).toEqual(['1'])
+  })
 })

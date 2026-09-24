@@ -29,6 +29,8 @@ jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnVal
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.vn'
+// Firmware thật chưa xử lý `command`; bật cờ để test đúng phần backend (xem device.service.ts)
+process.env.FIRMWARE_COMMAND_SUPPORT = 'true'
 
 const app = express()
 app.use(express.json())
@@ -311,6 +313,22 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     await SensorNode.updateOne({ _id: node._id }, { status: 'ERROR' })
     await send(techToken, node._id, { command: 'RESTART' }).expect(409)
   })
+  it('chưa bật FIRMWARE_COMMAND_SUPPORT thì RESTART/OTA trả 501, PUSH_CONFIG vẫn chạy', async () => {
+    const { techToken, node, a } = await onlineNode()
+    process.env.FIRMWARE_COMMAND_SUPPORT = 'false'
+    try {
+      const restart = await send(techToken, node._id, { command: 'RESTART' }).expect(501)
+      expect(restart.body.error.message).toContain('chưa xử lý lệnh RESTART')
+      await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(501)
+      expect(publishCommand).not.toHaveBeenCalled()
+
+      // PUSH_CONFIG không phụ thuộc trường `command` nên firmware cũ vẫn hiểu
+      await send(techToken, node._id, { command: 'PUSH_CONFIG' }).expect(202)
+      expect((publishCommand as jest.Mock).mock.calls[0][2]).toBe(String(a.zone._id))
+    } finally {
+      process.env.FIRMWARE_COMMAND_SUPPORT = 'true'
+    }
+  })
 })
 
 describe('heartbeat đầu tiên đẩy ngưỡng của Zone xuống thiết bị (Flow 1 bước 9)', () => {
@@ -357,4 +375,5 @@ describe('gỡ thiết bị thì dọn cảnh báo của nó (FARM-FR-008)', () 
     await Alert.updateOne({ _id: alert._id }, { status: 'ACTIVE' })
     expect(await createTicketsFromStaleAlerts()).toBe(0)
   })
+
 })

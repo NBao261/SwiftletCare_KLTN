@@ -149,4 +149,33 @@ describe('adminOverrideTicket called directly (not through the route)', () => {
     }).expect(200)
     expect((await Ticket.findById(ticket._id))!.status).toBe('IN_PROGRESS')
   })
+
+  it('không mở lại ticket đã đóng khi gán lại mà không nêu status', async () => {
+    const { token, ticket, inRegion } = await seed()
+    await Ticket.updateOne({ _id: ticket._id }, { status: 'CLOSED', closed_at: new Date() })
+
+    const res = await override(token, ticket._id, { assigned_to: String(inRegion._id), reason: 'Điều phối lại' }).expect(409)
+    expect(res.body.error.message).toContain('đã đóng')
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.status).toBe('CLOSED')
+    expect(saved.closed_at).toBeInstanceOf(Date)
+
+    // Admin nói rõ ý định mở lại thì vẫn làm được
+    await override(token, ticket._id, {
+      assigned_to: String(inRegion._id), status: 'IN_PROGRESS', reason: 'Khách báo lỗi lại',
+    }).expect(200)
+  })
+
+  it('gán lại đúng người đang phụ trách thì không dời mốc giao việc', async () => {
+    const { token, ticket, inRegion } = await seed()
+    const assignedAt = new Date(Date.now() - 3600_000)
+    await Ticket.updateOne({ _id: ticket._id }, {
+      assigned_to: inRegion._id, assigned_at: assignedAt, responded_at: new Date(Date.now() - 1800_000), status: 'IN_PROGRESS',
+    })
+
+    await override(token, ticket._id, { assigned_to: String(inRegion._id), reason: 'Xác nhận lại' }).expect(200)
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.assigned_at!.getTime()).toBe(assignedAt.getTime()) // responded_at cũ vẫn sau mốc giao → KPI không ra số âm
+    expect(saved.status).toBe('IN_PROGRESS')
+  })
 })

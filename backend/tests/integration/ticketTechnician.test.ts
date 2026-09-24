@@ -16,10 +16,17 @@ import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { createTicket, getKpi, markResponseBreachedTickets } from '@/services/ticket.service'
+import { notifyUser } from '@/services/notification.service'
 import { updateTicketRouting } from '@/services/system.service'
 import type { Role } from '@/types'
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
+
+jest.mock('@/services/notification.service', () => ({
+  ...jest.requireActual('@/services/notification.service'),
+  notifyUser: jest.fn().mockResolvedValue(undefined),
+  notifyAdmins: jest.fn().mockResolvedValue(undefined),
+}))
 
 const app = express()
 app.use(express.json())
@@ -255,5 +262,23 @@ describe('Ticket Router — ngưỡng quá tải (TICKET-FR-005)', () => {
     const third = await createTicket(current, { farm_id: String(farm._id), type: 'OTHER' })
     expect(third.assigned_to).toBeUndefined()
     expect(assignee).toBeDefined()
+  })
+
+  it('Farm Owner luôn nhận thông báo dời lịch, kể cả ticket do Admin tạo hộ', async () => {
+    const { farm, owner, assignee, assigneeToken } = await seed()
+    const admin = await User.create({ email: 'admin2@test.vn', password_hash: 'password123', full_name: 'Admin', role: 'ADMIN' })
+    const ticket = await Ticket.create({
+      farm_id: farm._id, type: 'INSTALLATION', priority: 'P3', assigned_to: assignee._id,
+      created_by: admin._id, scheduled_visit_at: new Date(Date.now() + 86400_000),
+    })
+    ;(notifyUser as jest.Mock).mockClear()
+
+    await put(`/tickets/${ticket._id}/scheduled-date`, assigneeToken, {
+      scheduled_visit_at: new Date(Date.now() + 3 * 86400_000).toISOString(), reason: 'Kẹt lịch',
+    }).expect(200)
+
+    const notified = (notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))
+    expect(notified).toContain(String(owner._id))  // người phải có mặt ở hiện trường
+    expect(notified).toContain(String(admin._id))  // người tạo hộ cũng được báo
   })
 })

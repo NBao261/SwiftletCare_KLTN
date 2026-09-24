@@ -97,6 +97,7 @@ export const adminOverride = asyncHandler(async (req: Request, res: Response) =>
 export const listMessages = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit } = await ticketChatService.listMessages(req.params.id, req.user, {
     page: req.query.page as string | undefined, limit: req.query.limit as string | undefined,
+    before: req.query.before as string | undefined,
   })
   res.json({ success: true, data: records, meta: { total, page, limit } })
 })

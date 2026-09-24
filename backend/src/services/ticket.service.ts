@@ -10,6 +10,7 @@ import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { postSystemMessage } from '@/services/ticketChat.service'
 import { emitTicketAssigneeChanged, removeUserFromTicketRoom } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
+import { assigneeIdOf } from '@/utils/ticket.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser, AlertType, TicketType, TicketPriority, TicketStatus } from '@/types'
@@ -348,12 +349,6 @@ async function announceAssigneeChange(ticket: ITicket, from: string | null): Pro
   if (from) removeUserFromTicketRoom(from, String(ticket._id))
 }
 
-/** `assigned_to` có thể đã populate (getTicket) hoặc còn là ObjectId — lấy id dạng chuỗi cho cả 2 */
-export function assigneeIdOf(ticket: Pick<ITicket, 'assigned_to'>): string | null {
-  const assignee = ticket.assigned_to as unknown as { _id?: unknown } | undefined
-  return assignee ? String(assignee._id ?? assignee) : null
-}
-
 /**
  * Quyền xem ticket của Technician đi theo khu vực (assigned_regions), nên mọi
  * Technician cùng vùng đều mở được ticket. Nhưng thao tác xử lý (đổi trạng
@@ -429,10 +424,12 @@ export async function rescheduleVisit(
   await ticket.save()
 
   await logAction(user._id, 'TICKET_RESCHEDULED', 'ticket', ticketId, { before, after: next, reason })
+  // Farm Owner là người phải có mặt ở hiện trường (TICKET-FR-004b) nên LUÔN được
+  // báo, kể cả khi ticket do Admin tạo hộ; người tạo (nếu khác) cũng nhận để nắm.
   const farm = await Farm.findById(ticket.farm_id).select('owner_id').lean()
-  const ownerId = ticket.created_by ?? farm?.owner_id
-  if (ownerId) {
-    void notifyUser(String(ownerId), {
+  const recipients = new Set([farm?.owner_id, ticket.created_by].filter(Boolean).map(String))
+  for (const userId of recipients) {
+    void notifyUser(userId, {
       title: 'Lịch hẹn kỹ thuật đã thay đổi',
       body: `Technician dời lịch hẹn sang ${next.toLocaleString('vi-VN')}. Lý do: ${reason}`,
     })
@@ -774,13 +771,24 @@ export async function adminOverrideTicket(
       )
     }
 
+    const assigneeChanged = previousAssignee !== String(technician._id)
+    // Ticket đã đóng mà gán lại không kèm `status` thì nhánh dưới sẽ mở nó về
+    // NEW trong khi `closed_at`/`cancelled_at` vẫn còn — dữ liệu mâu thuẫn và
+    // job SLA lập tức báo vi phạm cho một ticket đã xong. Bắt Admin nói rõ ý định.
+    if (assigneeChanged && ticket.status === 'CLOSED' && updates.status === undefined) {
+      throw ConflictError('Ticket đã đóng — muốn gán lại cho Technician khác thì phải gửi kèm status để mở lại')
+    }
+
     changes.assigned_to = { before: ticket.assigned_to ? String(ticket.assigned_to) : null, after: updates.assigned_to }
     if (!coversRegion) changes.forcedOutOfRegion = true
     ticket.assigned_to = technician._id
-    ticket.assigned_at = new Date()
+    // [5] Chỉ làm mới mốc giao việc khi thật sự đổi người: gán lại đúng người cũ
+    // mà dời `assigned_at` về hiện tại sẽ khiến `responded_at` cũ nằm TRƯỚC mốc
+    // giao, và KPI thời gian phản hồi cộng vào một khoảng âm.
+    if (assigneeChanged) ticket.assigned_at = new Date()
     trackAssigneeChange(ticket, previousAssignee)
     // Người mới phải tự xác nhận tiếp nhận, trừ khi Admin ép luôn trạng thái
-    if (previousAssignee !== String(technician._id) && updates.status === undefined) {
+    if (assigneeChanged && updates.status === undefined) {
       changes.status = { before: ticket.status, after: 'NEW' }
       ticket.status = 'NEW'
       ticket.responded_at = undefined

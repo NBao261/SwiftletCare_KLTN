@@ -12,7 +12,7 @@ import { notifyUser } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
-import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError } from '@/utils/appError.util'
+import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds } from '@/types'
 
@@ -452,6 +452,17 @@ export async function replaceSensorNode(
 
 export type RemoteCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
 
+/**
+ * Firmware hiện tại (`MQTTManager::onConfigUpdate` → `Config::update`) chỉ đọc
+ * các khoá ngưỡng/loa và BỎ QUA `command`; OTA của nó là đẩy file qua ElegantOTA
+ * `/update`, không tự tải từ URL. Nếu vẫn nhận RESTART/OTA thì API báo 202 còn
+ * thiết bị không làm gì, và mọi lệnh OTA chắc chắn bị `markOtaTimeouts` báo thất
+ * bại sau 30 phút — Technician kết luận sai về tình trạng thiết bị.
+ * Bật cờ này khi firmware đã xử lý `command` (xem SRS TICKET-FR-008, Flow 15).
+ */
+const UNSUPPORTED_COMMANDS: RemoteCommand[] = ['RESTART', 'OTA']
+const firmwareHandlesCommands = () => process.env.FIRMWARE_COMMAND_SUPPORT === 'true'
+
 export interface RemoteCommandInput {
   command: RemoteCommand
   /** Ghi kết quả vào ticket đang xử lý (Flow 9 bước 5) */
@@ -537,6 +548,13 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   // cấu hình chính là cách xử lý đầu tiên cho tình trạng đó, không được chặn.
   if (node.status !== 'ONLINE' && node.status !== 'DEGRADED') {
     throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE hoặc DEGRADED`)
+  }
+
+  if (!firmwareHandlesCommands() && UNSUPPORTED_COMMANDS.includes(input.command)) {
+    throw NotImplementedError(
+      `Firmware trên thiết bị chưa xử lý lệnh ${input.command} — hiện chỉ dùng được PUSH_CONFIG. ` +
+      'Bật FIRMWARE_COMMAND_SUPPORT=true sau khi firmware hỗ trợ.',
+    )
   }
 
   const ticket = input.ticket_id ? await Ticket.findById(input.ticket_id) : null

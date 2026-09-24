@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { body, param } from 'express-validator'
+import { body, param, query } from 'express-validator'
 import * as ticketController from '@/controllers/tickets.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
@@ -26,7 +26,8 @@ router.put ('/:id/scheduled-date',   requireRole('TECHNICIAN','ADMIN'), param('i
 router.post('/:id/reassign-request', requireRole('TECHNICIAN'), param('id').isMongoId(),
   body('reason').trim().notEmpty(), validate, ticketController.requestReassign)
 // TICKET-FR-014..017, Flow 23 — chat Farm Owner ↔ Technician phụ trách (realtime qua Socket, REST để tải lịch sử/gửi dự phòng)
-router.get ('/:id/messages', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, ticketController.listMessages)
+router.get ('/:id/messages', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(),
+  query('before').optional().isISO8601(), validate, ticketController.listMessages)
 router.post('/:id/messages', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(),
   body('content').isString().trim().isLength({ min: 1, max: 2000 }),
   body('client_message_id').optional().isString().isLength({ max: 100 }),

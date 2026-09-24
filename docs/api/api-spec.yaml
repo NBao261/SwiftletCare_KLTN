@@ -2063,8 +2063,9 @@ paths:
           `DEVICE_OTA_SUCCEEDED` (Flow 15 bước 5); quá 30 phút chưa xác nhận thì
           chuyển sang `ota_failed` (thiết bị đã rollback) và báo người gửi
 
-        **Firmware hiện tại chưa xử lý `command`** (bỏ qua key lạ nên an toàn) —
-        cần bổ sung phía ESP32. Có `ticket_id` thì hành động được ghi vào note
+        **Firmware hiện tại chưa xử lý `command`**, nên RESTART/OTA trả **501**
+        cho tới khi bật `FIRMWARE_COMMAND_SUPPORT=true`; PUSH_CONFIG dùng được
+        ngay vì firmware đã hiểu payload ngưỡng. Có `ticket_id` thì hành động được ghi vào note
         ticket — Technician phải là người đang được gán ticket đó.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
@@ -2081,7 +2082,7 @@ paths:
                   type: object
                   description: "Bắt buộc khi command=OTA"
                   properties:
-                    version: { type: string, example: "1.3.0" }
+                    version: { type: string, pattern: "^\\d+\\.\\d+\\.\\d+$", example: "1.3.0", description: "Không có tiền tố \"v\" — phải khớp đúng FIRMWARE_VERSION thiết bị báo về" }
                     url: { type: string, example: "https://fw.swiftletcare.vn/esp32-1.3.0.bin" }
                     sha256: { type: string, example: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
       responses:
@@ -2097,6 +2098,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: "Thiết bị PENDING/OFFLINE/ERROR hoặc đã gỡ, ticket đã đóng, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
+        "501": { description: "Firmware chưa xử lý lệnh này (RESTART/OTA khi FIRMWARE_COMMAND_SUPPORT=false)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "503": { description: "Backend chưa kết nối MQTT broker — lệnh chưa rời backend, `ota_pending` KHÔNG được ghi", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
 
   /devices/camera-nodes/{id}/decommission:
@@ -3746,6 +3748,7 @@ paths:
         - { name: id, in: path, required: true, schema: { type: string } }
         - { $ref: "#/components/parameters/Page" }
         - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 100 } }
+        - { name: before, in: query, schema: { type: string, format: date-time }, description: "Cursor cuộn ngược: `created_at` của tin cũ nhất đang hiển thị. Dùng thay `page` để tin mới chen vào giữa 2 lần tải không làm lặp tin" }
       responses:
         "200":
           description: OK
@@ -3866,6 +3869,11 @@ paths:
           quyết định này được ghi `forcedOutOfRegion` vào audit log. `force` chỉ có
           tác dụng khi là boolean `true` (chuỗi `"true"`/`"1"` được ép về `true`,
           `"false"`/`"0"` về `false`).
+        - Đổi `assigned_to` sang người khác mà **không** truyền `status` thì ticket
+          quay về `NEW` để người mới xác nhận tiếp nhận; riêng ticket đang `CLOSED`
+          bị chặn 409 — muốn mở lại phải nói rõ `status`, tránh ticket vừa `NEW`
+          vừa còn `closed_at` và bị job SLA báo vi phạm. `assigned_at` chỉ đổi khi
+          thật sự đổi người.
         - Đổi `priority` thì tính lại `sla_response_due_at`/`sla_resolve_due_at`
           theo SLA của priority mới, mốc là `created_at` của ticket.
         - Mở lại ticket đã `CLOSED` thì gỡ `closed_at`.

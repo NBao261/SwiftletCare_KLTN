@@ -32,7 +32,10 @@ router.post('/sensor-nodes/:id/replace',      requireRole('TECHNICIAN','ADMIN'),
 router.post('/sensor-nodes/:id/commands', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
   body('command').isIn(['RESTART', 'PUSH_CONFIG', 'OTA']),
   body('ticket_id').optional().isMongoId(),
-  body('ota.version').if(body('command').equals('OTA')).isString().trim().matches(/^v?\d+\.\d+\.\d+$/),
+  // Không nhận tiền tố "v": heartbeat so sánh firmware_version bằng === với
+  // FIRMWARE_VERSION của firmware ("1.0.0"), "v1.1.0" sẽ không bao giờ khớp
+  // nên OTA thành công vẫn bị markOtaTimeouts báo thất bại sau 30 phút.
+  body('ota.version').if(body('command').equals('OTA')).isString().trim().matches(/^\d+\.\d+\.\d+$/),
   body('ota.url').if(body('command').equals('OTA')).isURL({ protocols: ['https'], require_protocol: true, require_tld: false }),
   body('ota.sha256').if(body('command').equals('OTA')).isHash('sha256'),
   validate, deviceController.sendCommand)
