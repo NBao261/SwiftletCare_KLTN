@@ -16,7 +16,6 @@ export interface TicketsPageState {
   isOverdueActive: boolean
   sortKey: SortKey
   sortDir: SortDir
-  search: string
   filterStatus: TicketStatus | ''
   page: number
   // Modals
@@ -28,7 +27,7 @@ export interface TicketsPageActions {
   // handleTabChange đã ẩn khỏi public API — dùng handleOverdueToggle thay thế
   handleOverdueToggle: () => void
   handleSort: (key: SortKey) => void
-  handleSearchChange: (val: string) => void
+  // TODO [BE-GAP]: handleSearchChange sẽ được expose lại khi BE hỗ trợ ?search= param
   handleFilterStatusChange: (val: TicketStatus | '') => void
   handleClearFilters: () => void
   setPage: (p: number) => void
@@ -55,7 +54,6 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   const [activeTab,     setActiveTab]     = useState<TechTab>('mine')
   const [sortKey,       setSortKey]       = useState<SortKey>('created_at')
   const [sortDir,       setSortDir]       = useState<SortDir>('desc')
-  const [search,        setSearch]        = useState('')
   const [filterStatus,  setFilterStatus]  = useState<TicketStatus | ''>('')
   const [page,          setPage]          = useState(1)
   const [statusModal,   setStatusModal]   = useState<Ticket | null>(null)
@@ -133,10 +131,6 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     resetPage()
   }, [sortKey, resetPage])
 
-  const handleSearchChange = useCallback((val: string) => {
-    setSearch(val)
-    resetPage()
-  }, [resetPage])
 
   const handleFilterStatusChange = useCallback((val: TicketStatus | '') => {
     // Nếu đang ở overdue, click chip status → switch về mine
@@ -147,7 +141,6 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
 
   const handleClearFilters = useCallback(() => {
     setActiveTab('mine')
-    setSearch('')
     setFilterStatus('')
     setSortKey('created_at')
     setSortDir('desc')
@@ -159,11 +152,11 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   return {
     // State (public)
     isOverdueActive: isOverdue, // alias cho TicketToolbar — mapping từ internal activeTab
-    sortKey, sortDir, search, filterStatus, page,
+    sortKey, sortDir, filterStatus, page,
     statusModal, reassignModal,
     // Actions
     handleOverdueToggle, handleSort,
-    handleSearchChange, handleFilterStatusChange, handleClearFilters,
+    handleFilterStatusChange, handleClearFilters,
     setPage, setStatusModal, setReassignModal,
     // Data
     displayRecords, filteredRecords,
