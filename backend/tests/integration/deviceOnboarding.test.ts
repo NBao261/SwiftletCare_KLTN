@@ -19,6 +19,8 @@ import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { User } from '@/models/user.model'
 import { markOverdueActivations, markOtaTimeouts, recordHeartbeat, ACTIVATION_TIMEOUT_MS, OTA_CONFIRM_TIMEOUT_MS } from '@/services/device.service'
 import { createProvisionedDevice } from '@/services/provisionedDevice.service'
+import { notifyUser } from '@/services/notification.service'
+import { RESTORE_WINDOW_MS } from '@/services/device.service'
 import { Alert } from '@/models/alert.model'
 import { Ticket } from '@/models/ticket.model'
 import { createTicketsFromStaleAlerts } from '@/services/ticket.service'
@@ -26,6 +28,10 @@ import { publishCommand } from '@/mqtt/mqtt.client'
 import type { Role } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/services/notification.service', () => ({
+  ...jest.requireActual('@/services/notification.service'),
+  notifyUser: jest.fn().mockResolvedValue(undefined),
+}))
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.vn'
@@ -215,6 +221,69 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     const res = await register(techToken, { device_id: 'node_100', zone_id: String(b.zone._id), secret_key: secretKey }).expect(201)
     expect(res.body.data._id).not.toBe(nodeId)
     expect((await SensorNode.findById(nodeId))!.device_id).toMatch(/^node_100#retired-/)
+  })
+
+  it('thiết bị đang chạy chỉ gỡ được khi gửi force, và Farm Owner được báo', async () => {
+    const { techToken, nodeId, a } = await installed()
+    await SensorNode.updateOne({ _id: nodeId }, { status: 'ONLINE', last_heartbeat: new Date() })
+    ;(notifyUser as jest.Mock).mockClear()
+
+    const blocked = await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'Thu hồi' }).expect(409)
+    expect(blocked.body.error.message).toContain('force=true')
+    expect((await SensorNode.findById(nodeId))!.decommissioned_at).toBeUndefined() // chưa đụng gì tới document
+    expect(notifyUser).not.toHaveBeenCalled()
+
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'Hết hợp đồng, thu hồi', force: true }).expect(200)
+    expect((await SensorNode.findById(nodeId))!.decommissioned_at).toBeInstanceOf(Date)
+    const audit = await AuditLog.findOne({ action: 'DEVICE_DECOMMISSIONED' }).lean()
+    expect(audit!.metadata).toMatchObject({ forcedWhileOnline: true })
+    expect((notifyUser as jest.Mock).mock.calls[0][0]).toBe(String(a.farm.owner_id))
+  })
+
+  it('khôi phục thiết bị gỡ nhầm trong 24 giờ', async () => {
+    const { techToken, nodeId } = await installed()
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'Bấm nhầm' }).expect(200)
+
+    await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, {}).expect(422) // thiếu lý do
+    await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, { reason: 'Gỡ nhầm thiết bị' }).expect(200)
+
+    const node = (await SensorNode.findById(nodeId))!
+    expect(node.decommissioned_at).toBeUndefined()
+    expect(node.status).toBe('OFFLINE') // chờ heartbeat thật mới ONLINE lại
+    expect(await AuditLog.countDocuments({ action: 'DEVICE_RESTORED' })).toBe(1)
+
+    const list = await request(app).get('/devices/sensor-nodes').set('Authorization', `Bearer ${techToken}`).expect(200)
+    expect(list.body.data.map((n: { device_id: string }) => n.device_id)).toContain('node_100')
+    await recordHeartbeat({ deviceId: 'node_100' } as never) // heartbeat được nhận lại
+    expect((await SensorNode.findById(nodeId))!.status).toBe('ONLINE')
+
+    await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, { reason: 'lần 2' }).expect(409)
+  })
+
+  it('không khôi phục được khi quá 24 giờ hoặc device_id đã dùng lại', async () => {
+    const { techToken, nodeId, secretKey, b } = await installed()
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'Thu hồi' }).expect(200)
+    await SensorNode.updateOne({ _id: nodeId }, { decommissioned_at: new Date(Date.now() - RESTORE_WINDOW_MS - 1000) })
+
+    const late = await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, { reason: 'Muộn' }).expect(409)
+    expect(late.body.error.message).toContain('đăng ký lại')
+
+    // Đăng ký lại device_id cho farm khác → bản ghi cũ đổi tên, không khôi phục được nữa
+    await SensorNode.updateOne({ _id: nodeId }, { decommissioned_at: new Date() })
+    await register(techToken, { device_id: 'node_100', zone_id: String(b.zone._id), secret_key: secretKey }).expect(201)
+    const taken = await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, { reason: 'Thử lại' }).expect(409)
+    expect(taken.body.error.message).toContain('đã được đăng ký lại')
+  })
+
+  it('thay thiết bị đang chạy không cần force riêng', async () => {
+    const { techToken, nodeId, tech } = await installed()
+    await SensorNode.updateOne({ _id: nodeId }, { status: 'ONLINE', last_heartbeat: new Date() })
+    const { secret_key } = await createProvisionedDevice(String(tech._id), { device_id: 'node_300', kind: 'SENSOR' })
+
+    await post(`/devices/sensor-nodes/${nodeId}/replace`, techToken, {
+      new_device_id: 'node_300', secret_key, reason: 'Nâng cấp đời máy',
+    }).expect(201)
+    expect((await SensorNode.findById(nodeId))!.decommissioned_at).toBeInstanceOf(Date)
   })
 })
 

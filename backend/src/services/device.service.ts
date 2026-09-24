@@ -391,13 +391,28 @@ async function noteTicketsOfRemovedDevice(nodeId: string, deviceId: string): Pro
  * device_id này bị bỏ qua).
  */
 export async function decommissionDevice(
-  kind: DeviceKind, nodeId: string, user: CurrentUser, reason: string, replacedBy?: unknown,
+  kind: DeviceKind, nodeId: string, user: CurrentUser, reason: string,
+  opts: { replacedBy?: unknown; force?: boolean } = {},
 ) {
+  const { replacedBy, force } = opts
   const Model = DEVICE_MODELS[kind]
   const node = await Model.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
-  await assertZoneAccess(String(node.zone_id), user)
+  const chain = await assertZoneAccess(String(node.zone_id), user)
   assertInService(node)
+
+  // Gỡ thiết bị hỏng (OFFLINE/ERROR/PENDING) là việc thường ngày nên không hỏi gì
+  // thêm. Nhưng thiết bị đang sống mà gỡ là mất luôn giám sát của cả Zone — bắt
+  // gửi `force` để đó là quyết định có ý thức, không phải một cú bấm nhầm
+  // (cùng cách `adminOverrideTicket` bắt force khi gán Technician ngoài vùng).
+  const isAlive = node.status === 'ONLINE' || node.status === 'DEGRADED'
+  if (isAlive && force !== true) {
+    const lastSeen = node.last_heartbeat ? ` (heartbeat lúc ${node.last_heartbeat.toISOString()})` : ''
+    throw ConflictError(
+      `Thiết bị đang ${node.status}${lastSeen} — gỡ sẽ mất giám sát của Zone này. ` +
+      'Gửi kèm force=true nếu vẫn muốn gỡ.',
+    )
+  }
 
   node.decommissioned_at = new Date()
   node.decommission_reason = reason
@@ -415,6 +430,69 @@ export async function decommissionDevice(
   await logAction(user._id, 'DEVICE_DECOMMISSIONED', TARGET_TYPES[kind], String(node._id), {
     deviceId: node.device_id, zoneId: String(node.zone_id), reason,
     replacedBy: replacedBy ? String(replacedBy) : null, closedAlerts, notedTickets,
+    ...(isAlive ? { forcedWhileOnline: true } : {}),
+  })
+
+  // Farm Owner không tham gia luồng tháo lắp (RACI mục 4.4) nhưng phải biết nhà
+  // yến của mình vừa mất một thiết bị giám sát.
+  void notifyUser(String(chain.farm.owner_id), {
+    title: 'Thiết bị đã được gỡ khỏi nhà yến',
+    body: `Kỹ thuật viên đã gỡ ${node.device_id} khỏi khu vực "${chain.zone.name}". Lý do: ${reason}`,
+  })
+  return node
+}
+
+/** Cửa sổ sửa sai cho thao tác gỡ nhầm — quá hạn thì đăng ký lại như thiết bị mới */
+export const RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000
+const RETIRED_SUFFIX = '#retired-'
+
+/**
+ * FARM-FR-008 — khôi phục thiết bị vừa bị gỡ nhầm. Chỉ trong 24 giờ và chỉ khi
+ * chỗ của nó chưa bị ai chiếm: đăng ký lại `device_id` cũ sẽ đổi tên bản ghi này
+ * thành `<device_id>#retired-…` và tạo node mới, còn `replace` thì trỏ
+ * `replaced_by` sang node thay thế — khôi phục trong 2 trường hợp đó sẽ tạo ra 2
+ * thiết bị "sống" cùng một device_id trong cùng Zone.
+ */
+export async function restoreDevice(kind: DeviceKind, nodeId: string, user: CurrentUser, reason: string) {
+  const Model = DEVICE_MODELS[kind]
+  const node = await Model.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  const chain = await assertZoneAccess(String(node.zone_id), user)
+  if (!node.decommissioned_at) throw ConflictError('Thiết bị này chưa bị gỡ nên không cần khôi phục')
+
+  const elapsed = Date.now() - node.decommissioned_at.getTime()
+  if (elapsed > RESTORE_WINDOW_MS) {
+    throw ConflictError(
+      `Thiết bị đã gỡ quá ${RESTORE_WINDOW_MS / 3600_000} giờ — hãy đăng ký lại như thiết bị mới ` +
+      '(lịch sử dữ liệu cũ vẫn tra cứu được theo bản ghi này).',
+    )
+  }
+  if (node.device_id.includes(RETIRED_SUFFIX)) {
+    throw ConflictError('device_id của thiết bị này đã được đăng ký lại cho một bản ghi khác — không khôi phục được')
+  }
+  if (node.replaced_by) {
+    const replacement = await Model.findOne({ _id: node.replaced_by, ...IN_SERVICE }).select('device_id').lean()
+    if (replacement) {
+      throw ConflictError(`Thiết bị này đã được thay bằng ${replacement.device_id} — gỡ thiết bị thay thế trước nếu muốn khôi phục`)
+    }
+  }
+
+  node.decommissioned_at = undefined
+  node.decommission_reason = undefined
+  node.replaced_by = undefined
+  // Chờ heartbeat thật rồi mới ONLINE trở lại, không tự nhận là đang chạy
+  node.status = 'OFFLINE'
+  await node.save()
+
+  emitDeviceStatusChange(String(node.zone_id), {
+    nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString(),
+  })
+  await logAction(user._id, 'DEVICE_RESTORED', TARGET_TYPES[kind], String(node._id), {
+    deviceId: node.device_id, zoneId: String(node.zone_id), reason, decommissionedForMs: elapsed,
+  })
+  void notifyUser(String(chain.farm.owner_id), {
+    title: 'Thiết bị đã được khôi phục',
+    body: `Kỹ thuật viên đã khôi phục ${node.device_id} tại khu vực "${chain.zone.name}". Lý do: ${reason}`,
   })
   return node
 }
@@ -441,7 +519,8 @@ export async function replaceSensorNode(
   newNode.audio = { ...old.audio, playing: false }
   await newNode.save()
 
-  const oldNode = await decommissionDevice('sensor', nodeId, user, input.reason, newNode._id)
+  // force: thay thiết bị là thao tác đã có chủ đích, thiết bị cũ thường vẫn ONLINE
+  const oldNode = await decommissionDevice('sensor', nodeId, user, input.reason, { replacedBy: newNode._id, force: true })
   await logAction(user._id, 'DEVICE_REPLACED', 'sensor_node', String(old._id), {
     oldDeviceId: old.device_id, newDeviceId: input.new_device_id, newNodeId: String(newNode._id), reason: input.reason,
   })
