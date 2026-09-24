@@ -6,7 +6,6 @@ import { Input, Button, FilterChip } from '@/components/ui'
 import { IconSearch, IconSortAsc, IconSortDesc } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
 import type { SortKey, SortDir } from './ticketListTypes'
-import { PAGE_SIZE } from './ticketListTypes'
 import type { TicketStatus } from '@/types'
 import { STATUS_LABEL } from '@/constants/tickets'
 
