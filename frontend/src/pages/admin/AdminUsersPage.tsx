@@ -101,7 +101,7 @@ export default function AdminUsersPage() {
           ariaLabel="Lọc theo vai trò"
           value={role}
           onChange={v => { setRole(v); setPage(1) }}
-          options={[{ value: '', label: 'Mọi vai trò' }, ...(Object.keys(ROLE_LABEL) as Role[]).map(r => ({ value: r, label: ROLE_LABEL[r] }))]}
+          options={[{ value: '', label: 'Tất cả vai trò' }, ...(Object.keys(ROLE_LABEL) as Role[]).map(r => ({ value: r, label: ROLE_LABEL[r] }))]}
         />
         <div className="flex flex-nowrap gap-2">
           <FilterChip active={status === undefined} label="Tất cả" onClick={() => { setStatus(undefined); setPage(1) }} />

@@ -23,7 +23,7 @@ const ALL = ''
 const SEARCH_DEBOUNCE_MS = 300
 
 const ACTION_OPTIONS: SelectMenuOption<string>[] = [
-  { value: ALL, label: 'Mọi hành động' },
+  { value: ALL, label: 'Tất cả hành động' },
   ...Object.entries(AUDIT_ACTION_LABEL).map(([value, label]) => ({ value, label })),
 ]
 
@@ -98,7 +98,7 @@ export default function AdminAuditLogPage() {
 
   const actors = useUsersPicker()
   const actorOptions: SelectMenuOption<string>[] = [
-    { value: ALL, label: 'Mọi người thực hiện' },
+    { value: ALL, label: 'Tất cả người thực hiện' },
     ...actors.records.map(u => ({ value: u._id, label: `${u.full_name} · ${ROLE_LABEL[u.role]}` })),
   ]
   // Cùng danh sách tài khoản của dropdown trên → tra tên cho đối tượng loại Người dùng
@@ -134,7 +134,7 @@ export default function AdminAuditLogPage() {
   }
 
   const dateOptions: SelectMenuOption<string>[] = [
-    { value: ALL, label: 'Mọi thời gian' },
+    { value: ALL, label: 'Tất cả thời gian' },
     ...DATE_PRESETS.map(({ value, label }) => ({ value, label })),
   ]
 
