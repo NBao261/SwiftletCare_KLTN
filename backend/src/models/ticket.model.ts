@@ -19,6 +19,14 @@ export interface ITicket extends Document {
   status: TicketStatus
   assigned_to?: Types.ObjectId
   /**
+   * TICKET-FR-017 — Technician từng phụ trách. `until` là mốc bị chuyển đi: họ
+   * chỉ còn xem lại lịch sử TỚI mốc đó, không thấy trao đổi sau này giữa Farm
+   * Owner và người mới.
+   */
+  previous_assignees: Array<{ user_id: Types.ObjectId; until: Date }>
+  /** TICKET-FR-015 — sắp xếp danh sách ticket theo hoạt động chat gần nhất */
+  last_message_at?: Date
+  /**
    * Chỉ dùng cho type=INSTALLATION/MAINTENANCE. Farm Owner chọn thẳng ngày giờ
    * hẹn ngay lúc tạo ticket (TICKET-FR-001/004b, Flow 9b bước 1) — không có bước
    * liên hệ qua lại; Technician/Admin chỉ sửa lại khi không sắp xếp được.
@@ -27,6 +35,26 @@ export interface ITicket extends Document {
   sla_response_due_at?: Date
   sla_resolve_due_at?: Date
   is_sla_breached: boolean
+  /**
+   * TICKET-FR-004b, Flow 9 bước 4 — lúc Technician xác nhận tiếp nhận (NEW →
+   * IN_PROGRESS lần đầu). Không có mốc này thì `sla_response_due_at` chỉ là con
+   * số trang trí, không đo được Technician có phản hồi đúng hạn hay không.
+   */
+  responded_at?: Date
+  is_sla_response_breached: boolean
+  /**
+   * Lúc ticket được giao cho Technician hiện tại. KPI thời gian phản hồi đo từ
+   * mốc này chứ không phải `created_at`: ticket chuyền qua người thứ hai thì
+   * người mới không phải chịu thời gian người trước giữ ticket.
+   */
+  assigned_at?: Date
+  /**
+   * TICKET-FR-009 — Technician chủ động xin Admin can thiệp. Tách khỏi
+   * `is_sla_breached` (vượt hạn xử lý) vì escalate đúng lúc là làm đúng quy
+   * trình, không được tính là vi phạm SLA trong KPI.
+   */
+  escalated_at?: Date
+  escalation_reason?: string
   sat_checklist: {
     modbus_addresses_ok: boolean
     camera_rtsp_ok: boolean
@@ -63,10 +91,21 @@ const ticketSchema = new Schema<ITicket>(
     priority: { type: String, enum: ['P1','P2','P3'] as TicketPriority[], required: true },
     status:   { type: String, enum: ['NEW','IN_PROGRESS','AWAITING_FIELD_CONFIRMATION','CLOSED'] as TicketStatus[], default: 'NEW' },
     assigned_to: { type: Schema.Types.ObjectId, ref: 'User' },
+    previous_assignees: [{
+      _id: false,
+      user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      until:   { type: Date, required: true },
+    }],
+    last_message_at: { type: Date },
     scheduled_visit_at:  { type: Date },
     sla_response_due_at: { type: Date },
     sla_resolve_due_at:  { type: Date },
     is_sla_breached:     { type: Boolean, default: false },
+    responded_at:        { type: Date },
+    is_sla_response_breached: { type: Boolean, default: false },
+    assigned_at:         { type: Date },
+    escalated_at:        { type: Date },
+    escalation_reason:   { type: String },
     sat_checklist: {
       modbus_addresses_ok: { type: Boolean, default: false },
       camera_rtsp_ok:      { type: Boolean, default: false },

@@ -8,6 +8,7 @@ import request from 'supertest'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
 import { CameraNode, SensorNode } from '@/models/device.model'
+import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
@@ -17,6 +18,7 @@ import { logAction } from '@/services/auditLog.service'
 import { requestAccountDeletion, resetPassword } from '@/services/auth.service'
 import { registerCameraNode, registerSensorNode } from '@/services/device.service'
 import { notifyAdmins } from '@/services/notification.service'
+import { hashKey } from '@/services/provisionedDevice.service'
 import { getRequestIp } from '@/utils/requestContext.util'
 
 jest.mock('@/services/notification.service', () => ({
@@ -40,7 +42,7 @@ afterEach(async () => {
   jest.clearAllMocks()
   await Promise.all([
     AuditLog.deleteMany({}), User.deleteMany({}), Farm.deleteMany({}), House.deleteMany({}), Zone.deleteMany({}),
-    SensorNode.deleteMany({}), CameraNode.deleteMany({}),
+    SensorNode.deleteMany({}), CameraNode.deleteMany({}), ProvisionedDevice.deleteMany({}),
   ])
 })
 
@@ -136,17 +138,23 @@ describe('DELETION_REQUESTED audit + admin notification', () => {
 })
 
 describe('DEVICE_REGISTERED audit', () => {
+  const KEY = 'TEST-KEY-0001'
   async function seedZone() {
     const admin = await User.create({ email: 'admin@test.vn', password_hash: 'password123', full_name: 'Admin', role: 'ADMIN' })
     const farm = await Farm.create({ name: 'Farm', address: 'HCMC', owner_id: admin._id })
     const house = await House.create({ farm_id: farm._id, name: 'House' })
     const zone = await Zone.create({ house_id: house._id, name: 'Zone' })
+    // Onboarding bắt buộc secretKey trên nhãn (FARM-FR-003) — cấp sẵn trong kho thiết bị
+    await ProvisionedDevice.create([
+      { device_id: 'ESP32-A', kind: 'SENSOR', secret_key_hash: hashKey(KEY) },
+      { device_id: 'RPI-1', kind: 'CAMERA', secret_key_hash: hashKey(KEY) },
+    ])
     return { actor: { _id: String(admin._id), role: 'ADMIN' } as never, zoneId: String(zone._id) }
   }
 
   it('logs sensor node registration', async () => {
     const { actor, zoneId } = await seedZone()
-    const node = await registerSensorNode(actor, { device_id: 'ESP32-A', zone_id: zoneId })
+    const node = await registerSensorNode(actor, { device_id: 'ESP32-A', zone_id: zoneId, secret_key: KEY })
 
     const log = await AuditLog.findOne({ action: 'DEVICE_REGISTERED' })
     expect(log?.target_type).toBe('sensor_node')
@@ -156,7 +164,7 @@ describe('DEVICE_REGISTERED audit', () => {
 
   it('logs camera node registration', async () => {
     const { actor, zoneId } = await seedZone()
-    await registerCameraNode(actor, { device_id: 'RPI-1', zone_id: zoneId })
+    await registerCameraNode(actor, { device_id: 'RPI-1', zone_id: zoneId, secret_key: KEY })
 
     const log = await AuditLog.findOne({ action: 'DEVICE_REGISTERED' })
     expect(log?.target_type).toBe('camera_node')
@@ -164,9 +172,9 @@ describe('DEVICE_REGISTERED audit', () => {
 
   it('does not log a rejected duplicate registration', async () => {
     const { actor, zoneId } = await seedZone()
-    await registerSensorNode(actor, { device_id: 'ESP32-A', zone_id: zoneId })
+    await registerSensorNode(actor, { device_id: 'ESP32-A', zone_id: zoneId, secret_key: KEY })
 
-    await expect(registerSensorNode(actor, { device_id: 'ESP32-A', zone_id: zoneId })).rejects.toMatchObject({ statusCode: 409 })
+    await expect(registerSensorNode(actor, { device_id: 'ESP32-A', zone_id: zoneId, secret_key: KEY })).rejects.toMatchObject({ statusCode: 409 })
     expect(await AuditLog.countDocuments({ action: 'DEVICE_REGISTERED' })).toBe(1)
   })
 })

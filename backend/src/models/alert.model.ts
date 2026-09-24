@@ -16,6 +16,8 @@ export interface IAlert extends Document {
   status: AlertStatus
   created_at: Date
   acknowledged_at?: Date
+  /** Lúc cảnh báo được đóng (sự cố hết, hoặc thiết bị đã gỡ khỏi hệ thống) */
+  resolved_at?: Date
   acknowledged_by?: Types.ObjectId
   acknowledgement_note?: string
 }
@@ -42,6 +44,7 @@ const alertSchema = new Schema<IAlert>(
     status:              { type: String, enum: ['ACTIVE','ACKNOWLEDGED','RESOLVED'] as AlertStatus[], default: 'ACTIVE' },
     created_at:          { type: Date, default: Date.now },
     acknowledged_at:     { type: Date },
+    resolved_at:         { type: Date },
     acknowledged_by:     { type: Schema.Types.ObjectId, ref: 'User' },
     acknowledgement_note:{ type: String },
   },

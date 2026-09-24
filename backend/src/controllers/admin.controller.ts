@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as adminService from '@/services/admin.service'
+import * as provisionedDeviceService from '@/services/provisionedDevice.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 import type { SalesAssignmentRequestStatus, SalesAssignmentRequestType } from '@/models/salesAssignmentRequest.model'
 import type { Role } from '@/types'
@@ -84,4 +85,23 @@ export const decideSalesStaffRequest = asyncHandler(async (req: Request, res: Re
     req.user._id, req.params.id, req.body.decision as 'APPROVED' | 'REJECTED', req.body.reason as string | undefined,
   )
   res.json({ success: true, data: request })
+})
+
+/** POST /admin/provisioned-devices – FARM-FR-003 (secret_key chỉ trả về 1 lần để in nhãn) */
+export const createProvisionedDevice = asyncHandler(async (req: Request, res: Response) => {
+  const device = await provisionedDeviceService.createProvisionedDevice(req.user._id, {
+    device_id: req.body.device_id, kind: req.body.kind,
+  })
+  res.status(201).json({ success: true, data: device })
+})
+
+/** GET /admin/provisioned-devices – FARM-FR-003 */
+export const listProvisionedDevices = asyncHandler(async (req: Request, res: Response) => {
+  const { records, total, page, limit } = await provisionedDeviceService.listProvisionedDevices({
+    kind:    req.query.kind as string | undefined,
+    claimed: req.query.claimed as string | undefined,
+    page:    req.query.page as string | undefined,
+    limit:   req.query.limit as string | undefined,
+  })
+  res.json({ success: true, data: records, meta: { total, page, limit } })
 })

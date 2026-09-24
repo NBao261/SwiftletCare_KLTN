@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as ticketService from '@/services/ticket.service'
+import * as ticketChatService from '@/services/ticketChat.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 import type { TicketStatus } from '@/types'
 
@@ -16,6 +17,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     status:       req.query.status as string | undefined,
     priority:     req.query.priority as string | undefined,
     assignedToMe: req.query.assignedToMe === 'true',
+    unassigned:   req.query.unassigned === 'true',
     page:         req.query.page ? Number(req.query.page) : undefined,
     limit:        req.query.limit ? Number(req.query.limit) : undefined,
   })
@@ -33,6 +35,20 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
   const ticket = await ticketService.updateStatus(
     req.params.id, req.user, req.body.status as TicketStatus, req.body.note as string | undefined,
   )
+  res.json({ success: true, data: ticket })
+})
+
+/** PUT /tickets/:id/scheduled-date – TICKET-FR-004b (Technician tự dời lịch hẹn) */
+export const reschedule = asyncHandler(async (req: Request, res: Response) => {
+  const ticket = await ticketService.rescheduleVisit(
+    req.params.id, req.user, req.body.scheduled_visit_at as string, req.body.reason as string,
+  )
+  res.json({ success: true, data: ticket })
+})
+
+/** POST /tickets/:id/reassign-request – Flow 9 case 4a */
+export const requestReassign = asyncHandler(async (req: Request, res: Response) => {
+  const ticket = await ticketService.requestReassign(req.params.id, req.user, req.body.reason as string)
   res.json({ success: true, data: ticket })
 })
 
@@ -75,4 +91,21 @@ export const kpi = asyncHandler(async (_req: Request, res: Response) => {
 export const adminOverride = asyncHandler(async (req: Request, res: Response) => {
   const ticket = await ticketService.adminOverrideTicket(req.params.id, req.user, req.body)
   res.json({ success: true, data: ticket })
+})
+
+/** GET /tickets/:id/messages – TICKET-FR-015 (lịch sử chat, trang 1 = mới nhất) */
+export const listMessages = asyncHandler(async (req: Request, res: Response) => {
+  const { records, total, page, limit } = await ticketChatService.listMessages(req.params.id, req.user, {
+    page: req.query.page as string | undefined, limit: req.query.limit as string | undefined,
+    before: req.query.before as string | undefined,
+  })
+  res.json({ success: true, data: records, meta: { total, page, limit } })
+})
+
+/** POST /tickets/:id/messages – TICKET-FR-014/016 (dự phòng khi client không giữ WebSocket) */
+export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
+  const message = await ticketChatService.sendMessage(req.params.id, req.user, {
+    content: req.body.content, client_message_id: req.body.client_message_id,
+  })
+  res.status(201).json({ success: true, data: message })
 })

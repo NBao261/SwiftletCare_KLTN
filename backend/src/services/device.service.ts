@@ -1,14 +1,18 @@
-import { SensorNode, CameraNode, ISensorNode } from '@/models/device.model'
+import { SensorNode, CameraNode, ISensorNode, IN_SERVICE } from '@/models/device.model'
+import { Ticket } from '@/models/ticket.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
 import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
-import { raiseNodeOfflineAlert } from '@/services/alert.service'
+import { raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
+import { Alert } from '@/models/alert.model'
 import { logAction } from '@/services/auditLog.service'
+import { notifyUser } from '@/services/notification.service'
+import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
-import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds } from '@/types'
 
@@ -18,19 +22,48 @@ type RelayName = typeof RELAY_NAMES[number]
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
 
+export interface RegisterDeviceInput { device_id: string; zone_id: string; secret_key: string }
+
+/**
+ * Flow 1 case 3a — thiết bị đã có bản ghi: nói rõ là thuộc Farm khác (Technician
+ * cần kiểm tra lại nhãn) hay chỉ là đăng ký trùng trong cùng Farm.
+ */
+async function assertNotRegistered(existingZoneId: unknown, targetFarmId: string): Promise<never> {
+  const chain = await findZoneChainOrThrow(String(existingZoneId)).catch(() => null)
+  if (chain && String(chain.farm._id) !== targetFarmId) {
+    throw ConflictError('Thiết bị đã thuộc về Farm khác')
+  }
+  throw ConflictError('device_id đã được đăng ký')
+}
+
+/**
+ * FARM-FR-008 — thiết bị đã gỡ được lắp lại (ở chỗ khác): `device_id` là unique
+ * nên đổi tên bản ghi cũ để nhường chỗ. Bản ghi cũ giữ nguyên `_id` nên toàn bộ
+ * telemetry/alert lịch sử vẫn trỏ đúng vào nó.
+ */
+async function retireDeviceId(Model: typeof SensorNode, nodeId: unknown, deviceId: string): Promise<void> {
+  await Model.updateOne({ _id: nodeId }, { device_id: `${deviceId}#retired-${Date.now()}` })
+}
+
 /**
  * FARM-FR-003 — chỉ Technician (hoặc Admin) thực hiện, qua Web Console Onboarding.
- * Node được tạo ở trạng thái PENDING và chỉ chuyển ONLINE khi thiết bị gửi
- * heartbeat đầu tiên (Flow 1 bước 4→8), nên Farm Owner nhìn thấy ngay là thiết bị
- * đã khai báo nhưng chưa thật sự kết nối.
+ * Phải nhập đúng cặp {device_id, secretKey} trên nhãn (Flow 1 bước 3–4). Node
+ * được tạo ở trạng thái PENDING và chỉ chuyển ONLINE khi thiết bị gửi heartbeat
+ * đầu tiên (bước 8), nên Farm Owner nhìn thấy ngay là thiết bị đã khai báo nhưng
+ * chưa thật sự kết nối.
  */
-export async function registerSensorNode(user: CurrentUser, input: { device_id: string; zone_id: string }): Promise<ISensorNode> {
-  await assertZoneAccess(input.zone_id, user)
+export async function registerSensorNode(user: CurrentUser, input: RegisterDeviceInput): Promise<ISensorNode> {
+  const { farm } = await assertZoneAccess(input.zone_id, user)
+  await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
 
-  const existing = await SensorNode.findOne({ device_id: input.device_id })
-  if (existing) throw ConflictError('device_id đã được đăng ký')
+  const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
+  if (existing?.decommissioned_at) await retireDeviceId(SensorNode, existing._id, input.device_id)
+  else if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
 
-  const node = await SensorNode.create({ device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING' })
+  const node = await SensorNode.create({
+    device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING', registered_by: user._id,
+  })
+  await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'sensor_node', String(node._id), {
     deviceId: input.device_id, zoneId: input.zone_id,
   })
@@ -45,10 +78,15 @@ export async function registerSensorNode(user: CurrentUser, input: { device_id: 
 export async function listSensorNodes(zoneId: string | undefined, user: CurrentUser): Promise<ISensorNode[]> {
   if (zoneId) {
     await assertZoneAccess(zoneId, user)
-    return SensorNode.find({ zone_id: zoneId }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+    return SensorNode.find({ zone_id: zoneId, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
   }
   const accessibleZoneIds = await listAccessibleZoneIds(user)
-  return SensorNode.find({ zone_id: { $in: accessibleZoneIds } }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+  return SensorNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+}
+
+/** Thiết bị đã gỡ vẫn xem được (lịch sử) nhưng không còn nhận lệnh */
+function assertInService(node: { decommissioned_at?: Date }): void {
+  if (node.decommissioned_at) throw ConflictError('Thiết bị đã được gỡ bỏ khỏi hệ thống')
 }
 
 /** FARM-FR-006 */
@@ -63,6 +101,7 @@ export async function getSensorNode(nodeId: string, user: CurrentUser): Promise<
 export async function updateNodeThresholds(nodeId: string, user: CurrentUser, updates: Partial<Thresholds>) {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user)
 
   const picked = pickThresholds(updates as Record<string, unknown>)
@@ -79,9 +118,10 @@ export async function controlRelay(
   nodeId: string,
   user: CurrentUser,
   input: { relayName: string; state: boolean; durationMs?: number },
-): Promise<ISensorNode> {
+): Promise<{ node: ISensorNode; delivered: boolean }> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user)
 
   if (!RELAY_NAMES.includes(input.relayName as RelayName)) {
@@ -96,7 +136,9 @@ export async function controlRelay(
   node.override_expiry = new Date(Date.now() + overrideMs)
   await node.save()
 
-  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
+  // Lệnh không tới được broker thì DB vẫn giữ trạng thái mong muốn (ESP32 sẽ
+  // đồng bộ khi online lại), nhưng phải nói thật cho UI biết qua `delivered`.
+  const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
     relayName: input.relayName,
     state: input.state,
     durationMs: overrideMs,
@@ -111,9 +153,9 @@ export async function controlRelay(
   })
 
   await logAction(user._id, 'RELAY_OVERRIDE', 'sensor_node', String(node._id), {
-    relayName: input.relayName, state: input.state, durationMs: overrideMs,
+    relayName: input.relayName, state: input.state, durationMs: overrideMs, delivered,
   })
-  return node
+  return { node, delivered }
 }
 
 /**
@@ -127,9 +169,10 @@ export async function reassignZone(
   nodeId: string,
   user: CurrentUser,
   input: { newZoneId: string },
-): Promise<ISensorNode> {
+): Promise<{ node: ISensorNode; delivered: boolean }> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
 
   if (node.status !== 'ONLINE') {
     throw ConflictError('Thiết bị đang OFFLINE — chỉ dời Zone được khi thiết bị ONLINE (nhánh AP-mode chưa được hỗ trợ)')
@@ -140,7 +183,7 @@ export async function reassignZone(
   const destChain = await assertZoneAccess(input.newZoneId, user)
 
   // Publish lên topic CŨ — thiết bị vẫn đang lắng nghe ở đó cho tới khi restart.
-  publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'config/reassign', {
+  const delivered = publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'config/reassign', {
     newFarmId: String(destChain.farm._id),
     newHouseId: String(destChain.house._id),
     newZoneId: String(destChain.zone._id),
@@ -151,19 +194,26 @@ export async function reassignZone(
   await node.save()
 
   await logAction(user._id, 'DEVICE_REASSIGNED', 'sensor_node', String(node._id), {
-    fromZoneId: String(sourceChain.zone._id), toZoneId: String(destChain.zone._id),
+    fromZoneId: String(sourceChain.zone._id), toZoneId: String(destChain.zone._id), delivered,
   })
-  return node
+  return { node, delivered }
 }
 
 /** FARM-FR-004 — chỉ Technician/Admin, cùng Web Console Onboarding với sensor node (Flow 1b) */
-export async function registerCameraNode(user: CurrentUser, input: { device_id: string; zone_id: string; rtsp_url?: string }) {
-  await assertZoneAccess(input.zone_id, user)
+export async function registerCameraNode(user: CurrentUser, input: RegisterDeviceInput & { rtsp_url?: string }) {
+  const { farm } = await assertZoneAccess(input.zone_id, user)
+  await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
 
-  const existing = await CameraNode.findOne({ device_id: input.device_id })
-  if (existing) throw ConflictError('device_id đã được đăng ký')
+  const existing = await CameraNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
+  if (existing?.decommissioned_at) await retireDeviceId(CameraNode as never, existing._id, input.device_id)
+  else if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
 
-  const node = await CameraNode.create({ ...input, status: 'PENDING' })
+  // Chọn field tường minh — trải thẳng body vào create() cho phép client tự đặt status/registered_at
+  const node = await CameraNode.create({
+    device_id: input.device_id, zone_id: input.zone_id, rtsp_url: input.rtsp_url,
+    status: 'PENDING', registered_by: user._id,
+  })
+  await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'camera_node', String(node._id), {
     deviceId: input.device_id, zoneId: input.zone_id,
   })
@@ -173,10 +223,10 @@ export async function registerCameraNode(user: CurrentUser, input: { device_id: 
 export async function listCameraNodes(zoneId: string | undefined, user: CurrentUser) {
   if (zoneId) {
     await assertZoneAccess(zoneId, user)
-    return CameraNode.find({ zone_id: zoneId }).sort({ registered_at: -1 }).lean()
+    return CameraNode.find({ zone_id: zoneId, ...IN_SERVICE }).sort({ registered_at: -1 }).lean()
   }
   const accessibleZoneIds = await listAccessibleZoneIds(user)
-  return CameraNode.find({ zone_id: { $in: accessibleZoneIds } }).sort({ registered_at: -1 }).lean()
+  return CameraNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean()
 }
 
 /** FARM-FR-005 — gọi từ mqtt/handlers/heartbeat.handler.ts. */
@@ -191,18 +241,57 @@ export async function listCameraNodes(zoneId: string | undefined, user: CurrentU
  * lên đúng topic (cũ) mà heartbeat vừa tới, y hệt cơ chế Flow 21 Nhánh A nhưng do backend
  * tự kích hoạt thay vì Technician bấm nút.
  */
+/**
+ * Thiết bị mới lắp (Flow 1) hoặc vừa thay (FARM-FR-008) khởi động bằng ngưỡng gốc
+ * trong firmware, KHÔNG phải ngưỡng Farm Owner đã đặt cho Zone — trước đây phải
+ * đợi ai đó sửa ngưỡng hoặc bấm PUSH_CONFIG thì thiết bị mới chạy đúng, trong khi
+ * dashboard vẫn hiển thị ngưỡng của Zone. Đẩy ngay lần nó lên mạng đầu tiên;
+ * `config_pushed_at` để không lặp lại mỗi lần rớt mạng rồi kết nối lại.
+ */
+async function pushZoneConfigOnFirstContact(node: ISensorNode): Promise<void> {
+  try {
+    const chain = await findZoneChainOrThrow(String(node.zone_id))
+    publishCommand(
+      String(chain.farm._id), String(chain.house._id), String(chain.zone._id),
+      'config/update', chain.zone.thresholds,
+    )
+    node.config_pushed_at = new Date()
+    await node.save()
+    logger.info('Đã đẩy ngưỡng Zone xuống thiết bị mới lên mạng', {
+      deviceId: node.device_id, zoneId: String(node.zone_id),
+    })
+  } catch (err) {
+    // Không chặn xử lý heartbeat chỉ vì bước đồng bộ cấu hình lỗi — lần heartbeat sau thử lại
+    logger.warn('Không đẩy được ngưỡng Zone xuống thiết bị', { deviceId: node.device_id, err: (err as Error).message })
+  }
+}
+
 export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: string[]): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong heartbeat payload')
 
-  const node = await SensorNode.findOne({ device_id: payload.deviceId })
+  const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
   const wasOffline = node.status !== 'ONLINE'
+  const needsConfig = !node.config_pushed_at
   node.status = 'ONLINE'
   node.last_heartbeat = new Date()
   if (payload.rssi !== undefined) node.rssi = payload.rssi
   if (payload.firmwareVersion) node.firmware_version = payload.firmwareVersion
+  // Flow 15 bước 5 — heartbeat đầu tiên chạy đúng bản mới = OTA thành công
+  const otaDone = node.ota_pending && payload.firmwareVersion === node.ota_pending.version ? node.ota_pending : null
+  if (otaDone) node.ota_pending = undefined
+  node.activation_overdue_at = undefined // đã kết nối được thì không còn "kích hoạt quá hạn"
   await node.save()
+
+  if (otaDone) {
+    await logAction(otaDone.requested_by ? String(otaDone.requested_by) : undefined, 'DEVICE_OTA_SUCCEEDED', 'sensor_node', String(node._id), {
+      deviceId: node.device_id, version: otaDone.version,
+    })
+  }
+
+  // Lần bắt tay đầu tiên: thiết bị chưa từng nhận cấu hình nào từ backend
+  if (needsConfig) await pushZoneConfigOnFirstContact(node)
 
   if (wasOffline) {
     emitDeviceStatusChange(String(node.zone_id), {
@@ -270,6 +359,305 @@ export async function markStaleDevicesOffline(): Promise<void> {
   }))
 }
 
+// ── FARM-FR-008: gỡ bỏ / thay thế thiết bị ───────────────────────────────────
+
+export type DeviceKind = 'sensor' | 'camera'
+const DEVICE_MODELS = { sensor: SensorNode, camera: CameraNode as unknown as typeof SensorNode }
+const TARGET_TYPES = { sensor: 'sensor_node', camera: 'camera_node' } as const
+
+/**
+ * Ticket đang mở sinh ra từ cảnh báo của thiết bị vừa gỡ: chỉ thêm ghi chú, KHÔNG
+ * tự đóng — người xử lý vẫn phải xác nhận đã bàn giao xong (TICKET-FR-007).
+ */
+async function noteTicketsOfRemovedDevice(nodeId: string, deviceId: string): Promise<number> {
+  const alertIds = await Alert.find({ node_id: nodeId }).select('_id').lean()
+  if (alertIds.length === 0) return 0
+
+  const tickets = await Ticket.find({ alert_id: { $in: alertIds.map(a => a._id) }, status: { $ne: 'CLOSED' } })
+  for (const ticket of tickets) {
+    ticket.notes.push({
+      content: `Thiết bị ${deviceId} đã được gỡ khỏi hệ thống — kiểm tra lại trước khi đóng ticket này`,
+      created_at: new Date(),
+    } as never)
+    await ticket.save()
+  }
+  return tickets.length
+}
+
+/**
+ * FARM-FR-008 — Technician gỡ thiết bị khỏi hiện trường. Document được giữ lại
+ * (telemetry/alert cũ tham chiếu `node_id`), chỉ đánh dấu `decommissioned_at`
+ * để loại khỏi danh sách, thống kê và mọi luồng MQTT (heartbeat/telemetry từ
+ * device_id này bị bỏ qua).
+ */
+export async function decommissionDevice(
+  kind: DeviceKind, nodeId: string, user: CurrentUser, reason: string, replacedBy?: unknown,
+) {
+  const Model = DEVICE_MODELS[kind]
+  const node = await Model.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  await assertZoneAccess(String(node.zone_id), user)
+  assertInService(node)
+
+  node.decommissioned_at = new Date()
+  node.decommission_reason = reason
+  node.status = 'OFFLINE'
+  if (replacedBy) node.replaced_by = replacedBy as never
+  await node.save()
+
+  emitDeviceStatusChange(String(node.zone_id), {
+    nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString(),
+  })
+
+  const closedAlerts = await resolveAlertsForNode(String(node._id), `Thiết bị đã được gỡ bỏ: ${reason}`)
+  const notedTickets = await noteTicketsOfRemovedDevice(String(node._id), node.device_id)
+
+  await logAction(user._id, 'DEVICE_DECOMMISSIONED', TARGET_TYPES[kind], String(node._id), {
+    deviceId: node.device_id, zoneId: String(node.zone_id), reason,
+    replacedBy: replacedBy ? String(replacedBy) : null, closedAlerts, notedTickets,
+  })
+  return node
+}
+
+/**
+ * FARM-FR-008 — thay thiết bị hỏng bằng thiết bị mới cùng Zone. Thiết bị mới đi
+ * qua đúng luồng onboarding (secretKey trên nhãn, PENDING chờ heartbeat); cấu
+ * hình loa của node cũ được chép sang để Farm Owner không phải cài lại. Ngưỡng
+ * môi trường nằm ở Zone nên tự áp dụng. Tạo node mới TRƯỚC khi gỡ node cũ: nếu
+ * secretKey sai thì node cũ vẫn nguyên, không rơi vào trạng thái mất cả hai.
+ */
+export async function replaceSensorNode(
+  nodeId: string, user: CurrentUser, input: { new_device_id: string; secret_key: string; reason: string },
+): Promise<{ oldNode: ISensorNode; newNode: ISensorNode }> {
+  const old = await SensorNode.findById(nodeId)
+  if (!old) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(old)
+  if (old.device_id === input.new_device_id) throw BadRequestError('Thiết bị mới phải có device_id khác thiết bị cũ')
+
+  const newNode = await registerSensorNode(user, {
+    device_id: input.new_device_id, zone_id: String(old.zone_id), secret_key: input.secret_key,
+  })
+  newNode.speaker_schedule = old.speaker_schedule
+  newNode.audio = { ...old.audio, playing: false }
+  await newNode.save()
+
+  const oldNode = await decommissionDevice('sensor', nodeId, user, input.reason, newNode._id)
+  await logAction(user._id, 'DEVICE_REPLACED', 'sensor_node', String(old._id), {
+    oldDeviceId: old.device_id, newDeviceId: input.new_device_id, newNodeId: String(newNode._id), reason: input.reason,
+  })
+  return { oldNode, newNode }
+}
+
+// ── TICKET-FR-008 / Flow 15: xử lý từ xa ─────────────────────────────────────
+
+export type RemoteCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
+
+/**
+ * Firmware hiện tại (`MQTTManager::onConfigUpdate` → `Config::update`) chỉ đọc
+ * các khoá ngưỡng/loa và BỎ QUA `command`; OTA của nó là đẩy file qua ElegantOTA
+ * `/update`, không tự tải từ URL. Nếu vẫn nhận RESTART/OTA thì API báo 202 còn
+ * thiết bị không làm gì, và mọi lệnh OTA chắc chắn bị `markOtaTimeouts` báo thất
+ * bại sau 30 phút — Technician kết luận sai về tình trạng thiết bị.
+ * Bật cờ này khi firmware đã xử lý `command` (xem SRS TICKET-FR-008, Flow 15).
+ */
+const UNSUPPORTED_COMMANDS: RemoteCommand[] = ['RESTART', 'OTA']
+const firmwareHandlesCommands = () => process.env.FIRMWARE_COMMAND_SUPPORT === 'true'
+
+export interface RemoteCommandInput {
+  command: RemoteCommand
+  /** Ghi kết quả vào ticket đang xử lý (Flow 9 bước 5) */
+  ticket_id?: string
+  ota?: { version: string; url: string; sha256: string }
+}
+
+/**
+ * TICKET-FR-008 — Technician thử xử lý từ xa trước khi quyết định ra hiện
+ * trường. Cả 3 lệnh đi qua topic `config/update` đã có trong §9.2 (Flow 15 bước
+ * 3 chỉ định OTA dùng topic này), phân biệt bằng trường `command`:
+ * - PUSH_CONFIG: đẩy lại toàn bộ ngưỡng hiện hành của Zone (thiết bị lệch cấu hình)
+ * - RESTART: `{ command: 'RESTART' }`
+ * - OTA: `{ command: 'OTA', ota: { version, url, sha256 } }` — ESP32 tự tải, kiểm
+ *   checksum, ghi partition dự phòng, rollback nếu lỗi (Flow 15 bước 4, case 4a–5a)
+ * Firmware cũ bỏ qua key lạ trong `config/update` nên gửi RESTART/OTA tới thiết
+ * bị chưa hỗ trợ không làm hỏng ngưỡng đang chạy.
+ */
+/**
+ * Flow 15 — ESP32 sẽ tải và flash đúng file ở URL này, còn sha256 do chính người
+ * gửi lệnh đặt nên không chống được file độc. Nguồn firmware vì vậy phải bị khoá:
+ * chỉ HTTPS và chỉ các host nội bộ khai báo trong `OTA_ALLOWED_HOSTS` (nơi team
+ * upload bản build, VD MinIO). Chưa cấu hình thì chặn hết — an toàn mặc định.
+ */
+function assertAllowedFirmwareUrl(url: string): void {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw BadRequestError('URL firmware không hợp lệ')
+  }
+  if (parsed.protocol !== 'https:') throw BadRequestError('Firmware phải tải qua HTTPS')
+
+  const allowed = (process.env.OTA_ALLOWED_HOSTS ?? '').split(',').map(h => h.trim().toLowerCase()).filter(Boolean)
+  if (!allowed.includes(parsed.hostname.toLowerCase())) {
+    throw BadRequestError(`Host firmware "${parsed.hostname}" không nằm trong danh sách được phép (OTA_ALLOWED_HOSTS)`)
+  }
+}
+
+/** Flow 15 case 4a–5a — quá thời gian này chưa có heartbeat chạy bản mới thì coi OTA thất bại (đã rollback) */
+export const OTA_CONFIRM_TIMEOUT_MS = 30 * 60 * 1000
+
+/**
+ * Gọi từ jobs/activationOverdue.job.ts. ESP32 tự rollback khi OTA lỗi nên backend
+ * không bao giờ nhận được tin báo lỗi — chỉ biết qua việc heartbeat vẫn báo bản
+ * cũ. Không có bước này `ota_pending` treo mãi, Technician tưởng vẫn đang cập nhật.
+ */
+export async function markOtaTimeouts(): Promise<number> {
+  const cutoff = new Date(Date.now() - OTA_CONFIRM_TIMEOUT_MS)
+  const nodes = await SensorNode.find({ 'ota_pending.requested_at': { $lt: cutoff }, ...IN_SERVICE })
+  for (const node of nodes) {
+    const pending = node.ota_pending!
+    node.ota_failed = { version: pending.version, failed_at: new Date(), running_version: node.firmware_version }
+    node.ota_pending = undefined
+    await node.save()
+
+    const requester = pending.requested_by ? String(pending.requested_by) : undefined
+    await logAction(requester, 'DEVICE_OTA_TIMEOUT', 'sensor_node', String(node._id), {
+      deviceId: node.device_id, version: pending.version, runningVersion: node.firmware_version,
+    })
+    if (requester) {
+      void notifyUser(requester, {
+        title: 'Cập nhật firmware không thành công',
+        body: `Thiết bị ${node.device_id} vẫn chạy ${node.firmware_version} sau 30 phút (mục tiêu ${pending.version}) — có thể đã rollback, kiểm tra log thiết bị.`,
+      })
+    }
+  }
+  return nodes.length
+}
+
+export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input: RemoteCommandInput) {
+  const node = await SensorNode.findById(nodeId)
+  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
+  assertInService(node)
+  const chain = await assertZoneAccess(String(node.zone_id), user)
+  // Validate nội dung lệnh trước trạng thái thiết bị: URL firmware sai thì phải
+  // báo đúng lý do đó, không lẫn với "thiết bị chưa ONLINE".
+  if (input.command === 'OTA') {
+    if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
+    assertAllowedFirmwareUrl(input.ota.url)
+  }
+  // DEGRADED = vẫn online, chỉ hỏng 1 phần (VD 1 cảm biến im) — restart/đẩy lại
+  // cấu hình chính là cách xử lý đầu tiên cho tình trạng đó, không được chặn.
+  if (node.status !== 'ONLINE' && node.status !== 'DEGRADED') {
+    throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE hoặc DEGRADED`)
+  }
+
+  if (!firmwareHandlesCommands() && UNSUPPORTED_COMMANDS.includes(input.command)) {
+    throw NotImplementedError(
+      `Firmware trên thiết bị chưa xử lý lệnh ${input.command} — hiện chỉ dùng được PUSH_CONFIG. ` +
+      'Bật FIRMWARE_COMMAND_SUPPORT=true sau khi firmware hỗ trợ.',
+    )
+  }
+
+  const ticket = input.ticket_id ? await Ticket.findById(input.ticket_id) : null
+  if (input.ticket_id) {
+    if (!ticket) throw NotFoundError('Không tìm thấy ticket')
+    if (String(ticket.farm_id) !== String(chain.farm._id)) throw BadRequestError('Ticket không thuộc farm của thiết bị này')
+    if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
+    // Ghi note vào ticket là thao tác xử lý — cùng quy tắc với đổi trạng thái: chỉ người được gán
+    if (user.role === 'TECHNICIAN' && String(ticket.assigned_to ?? '') !== user._id) {
+      throw ForbiddenError('Chỉ Technician đang được gán ticket này mới ghi lệnh từ xa vào ticket')
+    }
+  }
+
+  let payload: Record<string, unknown>
+  let summary: string
+  switch (input.command) {
+    case 'PUSH_CONFIG':
+      payload = { ...chain.zone.thresholds }
+      summary = 'đẩy lại cấu hình ngưỡng của Zone'
+      break
+    case 'RESTART':
+      payload = { command: 'RESTART' }
+      summary = 'khởi động lại thiết bị'
+      break
+    case 'OTA': {
+      if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
+      if (input.ota.version === node.firmware_version) {
+        throw ConflictError(`Thiết bị đang chạy đúng phiên bản ${input.ota.version}`)
+      }
+      const { version, url, sha256 } = input.ota
+      payload = { command: 'OTA', ota: { version, url, sha256 } }
+      summary = `đẩy OTA ${node.firmware_version} → ${input.ota.version}`
+      break
+    }
+    default:
+      throw BadRequestError('command phải là RESTART, PUSH_CONFIG hoặc OTA')
+  }
+
+  const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', payload)
+  if (!delivered) {
+    // Không ghi ota_pending khi lệnh chưa rời backend: nếu ghi, UI hiện "đang cập
+    // nhật" rồi 30 phút sau báo thất bại cho một lệnh chưa từng được gửi đi.
+    throw ServiceUnavailableError('Không gửi được lệnh: backend chưa kết nối MQTT broker. Thử lại sau ít phút.')
+  }
+
+  if (input.command === 'OTA' && input.ota) {
+    node.ota_pending = { version: input.ota.version, url: input.ota.url, requested_at: new Date(), requested_by: user._id as never }
+    node.ota_failed = undefined
+    await node.save()
+  }
+
+  if (ticket) {
+    // Chỉ biết lệnh đã tới broker, KHÔNG biết thiết bị đã thực thi — note phải nói
+    // đúng chừng đó, nếu không Technician đọc ticket tưởng việc đã xong.
+    ticket.notes.push({
+      author_id: user._id as never,
+      content: `Xử lý từ xa trên thiết bị ${node.device_id}: đã gửi lệnh ${summary}, chờ thiết bị xác nhận`,
+      created_at: new Date(),
+    })
+    await ticket.save()
+  }
+  await logAction(user._id, 'DEVICE_COMMAND_SENT', 'sensor_node', String(node._id), {
+    deviceId: node.device_id, command: input.command, ticketId: input.ticket_id ?? null,
+    ...(input.ota ? { version: input.ota.version, url: input.ota.url } : {}),
+  })
+  return node
+}
+
+/** Flow 1 case 8a — SRS: quá 15 phút từ lúc đăng ký (bước 4) mà chưa có heartbeat đầu tiên */
+export const ACTIVATION_TIMEOUT_MS = 15 * 60 * 1000
+
+/**
+ * Flow 1 case 8a — gọi từ jobs/activationOverdue.job.ts. Node còn PENDING quá
+ * hạn được đánh dấu 1 lần (không đổi status: thiết bị vẫn có thể lên mạng sau
+ * khi Technician kiểm tra lại bước 5–7), ghi audit và báo người đã onboarding.
+ *
+ * CHỈ quét SensorNode: Camera Node (Raspberry Pi) chưa có kênh heartbeat nào —
+ * `ai-pipeline` chưa deploy, mqtt/handlers không xử lý `vision/heartbeat` — nên
+ * camera nào cũng sẽ bị báo "quá hạn" sau 15 phút dù lắp đúng. Mở lại phần
+ * camera khi có handler heartbeat cho nó.
+ */
+export async function markOverdueActivations(): Promise<number> {
+  const cutoff = new Date(Date.now() - ACTIVATION_TIMEOUT_MS)
+  const nodes = await SensorNode.find({
+    status: 'PENDING', registered_at: { $lt: cutoff }, activation_overdue_at: null, ...IN_SERVICE,
+  }).select('device_id zone_id registered_by').lean()
+  if (nodes.length === 0) return 0
+
+  await SensorNode.updateMany({ _id: { $in: nodes.map(n => n._id) } }, { activation_overdue_at: new Date() })
+  for (const node of nodes) {
+    await logAction(undefined, 'DEVICE_ACTIVATION_OVERDUE', 'sensor_node', String(node._id), {
+      deviceId: node.device_id, zoneId: String(node.zone_id),
+    })
+    if (node.registered_by) {
+      void notifyUser(String(node.registered_by), {
+        title: 'Thiết bị kích hoạt quá hạn',
+        body: `Thiết bị ${node.device_id} chưa gửi heartbeat sau 15 phút. Kiểm tra lại AP-mode, WiFi farm và kết nối MQTT tại hiện trường.`,
+      })
+    }
+  }
+  return nodes.length
+}
+
 /**
  * ENV-FR-018 — gọi định kỳ từ jobs/overrideExpiry.job.ts. Firmware cũng tự hết
  * hạn override sau 30 phút, nhưng backend phải tự trả về AUTO độc lập: nếu chỉ
@@ -319,7 +707,7 @@ export async function expireManualOverrides(): Promise<number> {
 export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong relay/status payload')
 
-  const node = await SensorNode.findOne({ device_id: payload.deviceId })
+  const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
   node.relay_states = payload.relay_states
@@ -360,8 +748,8 @@ export function summarizeByStatus(nodes: Array<{ status: DeviceStatus }>): Devic
 export async function getSystemStatus() {
   const activeZoneIds = await listActiveZoneIds()
   const [sensorNodes, cameraNodes] = await Promise.all([
-    SensorNode.find({ zone_id: { $in: activeZoneIds } }).sort({ registered_at: -1 }).lean(),
-    CameraNode.find({ zone_id: { $in: activeZoneIds } }).sort({ registered_at: -1 }).lean(),
+    SensorNode.find({ zone_id: { $in: activeZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean(),
+    CameraNode.find({ zone_id: { $in: activeZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean(),
   ])
 
   const zoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]

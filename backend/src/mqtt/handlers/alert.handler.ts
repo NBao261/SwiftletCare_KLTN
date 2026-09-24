@@ -1,4 +1,4 @@
-import { SensorNode } from '@/models/device.model'
+import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { Zone, House } from '@/models/houseZone.model'
 import { createAlert } from '@/services/alert.service'
 import logger from '@/utils/logger.util'
@@ -23,7 +23,7 @@ export async function handleAlert(topicParts: string[], message: Record<string, 
       return
     }
 
-    const node = await SensorNode.findOne({ device_id: deviceId })
+    const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
     if (!node) {
       logger.warn('alert.handler: không tìm thấy thiết bị', { deviceId })
       return

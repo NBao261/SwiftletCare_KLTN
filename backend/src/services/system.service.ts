@@ -1,13 +1,14 @@
 import { AuditLog } from '@/models/auditLog.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Farm } from '@/models/farm.model'
-import { SensorNode, CameraNode } from '@/models/device.model'
+import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { summarizeByStatus } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
 import { listActiveZoneIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
+import { BadRequestError } from '@/utils/appError.util'
 import { DEFAULT_THRESHOLDS, assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { DEFAULT_SLA, assertValidSla, pickSla } from '@/utils/sla.util'
 import type { SlaConfig, Thresholds, TicketPriority } from '@/types'
@@ -108,6 +109,32 @@ export async function updateSlaHours(adminId: string, input: Record<string, unkn
   return after
 }
 
+// ── TICKET-FR-005: ngưỡng quá tải của Ticket Router ─────────────────────────
+
+/** SRS để trống giá trị N — chọn 10 ticket mở/người làm mặc định, Admin chỉnh được */
+export const DEFAULT_MAX_OPEN_TICKETS = 10
+const MAX_OPEN_TICKETS_LIMIT = 100
+
+export interface TicketRoutingConfig { max_open_tickets_per_technician: number }
+
+export async function getTicketRouting(): Promise<TicketRoutingConfig> {
+  const setting = await SystemSetting.findOne(SINGLETON).lean()
+  return { max_open_tickets_per_technician: setting?.max_open_tickets_per_technician ?? DEFAULT_MAX_OPEN_TICKETS }
+}
+
+export async function updateTicketRouting(adminId: string, input: Record<string, unknown>): Promise<TicketRoutingConfig> {
+  const before = await getTicketRouting()
+  const value = Number(input.max_open_tickets_per_technician)
+  if (!Number.isInteger(value) || value < 1 || value > MAX_OPEN_TICKETS_LIMIT) {
+    throw BadRequestError(`max_open_tickets_per_technician phải là số nguyên 1–${MAX_OPEN_TICKETS_LIMIT}`)
+  }
+  const after = { max_open_tickets_per_technician: value }
+
+  await writeSetting({ ...after, updated_by: adminId })
+  await logAction(adminId, 'TICKET_ROUTING_UPDATED', 'system_settings', undefined, { before, after })
+  return after
+}
+
 // ── SYSTEM-FR-003: tổng quan sức khỏe hệ thống ──────────────────────────────
 
 const PRIORITIES: TicketPriority[] = ['P1', 'P2', 'P3']
@@ -116,8 +143,8 @@ export async function getHealthOverview() {
   const zoneIds = await listActiveZoneIds()
   const [farmCount, sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
     Farm.countDocuments({ is_deleted: false }),
-    SensorNode.find({ zone_id: { $in: zoneIds } }).select('status').lean(),
-    CameraNode.find({ zone_id: { $in: zoneIds } }).select('status').lean(),
+    SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
+    CameraNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
     Ticket.aggregate<{ _id: TicketPriority; count: number }>([
       { $match: { status: { $ne: 'CLOSED' } } },
       { $group: { _id: '$priority', count: { $sum: 1 } } },
