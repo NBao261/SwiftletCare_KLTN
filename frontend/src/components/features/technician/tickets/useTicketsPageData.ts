@@ -30,6 +30,7 @@ export interface TicketsPageActions {
   handleSort: (key: SortKey) => void
   handleSearchChange: (val: string) => void
   handleFilterStatusChange: (val: TicketStatus | '') => void
+  handleClearFilters: () => void
   handleViewModeChange: (mode: ViewMode) => void
   setPage: (p: number) => void
   setStatusModal: (t: Ticket | null) => void
@@ -142,6 +143,14 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     resetPage()
   }, [resetPage])
 
+  const handleClearFilters = useCallback(() => {
+    setSearch('')
+    setFilterStatus('')
+    setSortKey('priority')
+    setSortDir('asc')
+    resetPage()
+  }, [resetPage])
+
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode)
   }, [])
@@ -152,7 +161,7 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     statusModal, reassignModal,
     // Actions
     handleTabChange, handleSort,
-    handleSearchChange, handleFilterStatusChange, handleViewModeChange,
+    handleSearchChange, handleFilterStatusChange, handleClearFilters, handleViewModeChange,
     setPage, setStatusModal, setReassignModal,
     // Data
     displayRecords, filteredRecords,

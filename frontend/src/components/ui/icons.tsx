@@ -167,3 +167,20 @@ export const IconWrench = (p: IconProps) => (
     <path d="M14.5 3.5a3.5 3.5 0 0 1-4.6 4.9L5 13.3a1.5 1.5 0 0 0 2.1 2.1l4.9-4.9a3.5 3.5 0 0 1 4.9-4.6l-2 2 .7.7 1.4 1.4.7.7 2-2Z" />
   </Svg>
 )
+
+/** Dạng bảng (List/Table view) */
+export const IconList = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M8 6h8M8 10h8M8 14h8M4 6h.01M4 10h.01M4 14h.01" />
+  </Svg>
+)
+
+/** Dạng thẻ (Grid/Card view) */
+export const IconGrid = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="4" y="4" width="4" height="4" rx="1" />
+    <rect x="12" y="4" width="4" height="4" rx="1" />
+    <rect x="4" y="12" width="4" height="4" rx="1" />
+    <rect x="12" y="12" width="4" height="4" rx="1" />
+  </Svg>
+)

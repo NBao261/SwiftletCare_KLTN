@@ -26,7 +26,7 @@ export default function TechnicianTicketsPage() {
     statusModal, reassignModal,
     // Actions
     handleTabChange, handleSort,
-    handleSearchChange, handleFilterStatusChange, handleViewModeChange,
+    handleSearchChange, handleFilterStatusChange, handleClearFilters, handleViewModeChange,
     setPage, setStatusModal, setReassignModal,
     // Data
     displayRecords, filteredRecords,
@@ -61,6 +61,7 @@ export default function TechnicianTicketsPage() {
         filterStatus={filterStatus}    onFilterStatusChange={handleFilterStatusChange}
         viewMode={viewMode}            onViewModeChange={handleViewModeChange}
         sortKey={sortKey}              sortDir={sortDir}   onSort={handleSort}
+        onClearFilters={handleClearFilters}
         isLoading={isLoading}          resultCount={filteredRecords.length}
         isOverdue={isOverdue}          overdueTotal={overdueTotal}
       />
