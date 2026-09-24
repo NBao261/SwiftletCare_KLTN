@@ -406,6 +406,15 @@ describe('ticket tự động khi thiết bị mất kết nối (TICKET-FR-002)
     expect((await Ticket.findOne({ alert_id: alert._id }))!.notes[0].content).toContain('mất kết nối liên tục hơn 1 giờ')
   })
 
+  it('không tạo ticket nếu thiết bị đã ONLINE lại mà cảnh báo chưa kịp đóng (heartbeat tới đúng lúc job chạy)', async () => {
+    const { offlineAlert } = await offlineNode()
+    await offlineAlert(minutesAgo(120))
+    await SensorNode.updateOne({ device_id: 'node_200' }, { status: 'ONLINE' })
+
+    expect(await createTicketsFromStaleAlerts()).toBe(0)
+    expect(await Ticket.countDocuments()).toBe(0)
+  })
+
   it('vẫn tạo ticket khi chủ trại đã xác nhận nhưng thiết bị vẫn offline', async () => {
     const { offlineAlert } = await offlineNode()
     await offlineAlert(minutesAgo(120), 'ACKNOWLEDGED')

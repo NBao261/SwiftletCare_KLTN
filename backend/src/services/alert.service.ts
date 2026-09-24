@@ -15,7 +15,8 @@ export const ALERT_SEEN_UPDATE_MS = 60 * 1000
 /** THRESHOLD_BREACH không được ghi nhận lại trong khoảng này = chỉ số đã bình thường → tự đóng */
 export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
 
-const OPEN_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
+/** Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này */
+export const OPEN_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
 
 /**
  * ALERT-FR-001 — mức độ mặc định theo loại sự kiện. Firmware/RPi có thể gửi kèm

@@ -6,6 +6,7 @@ import { SalesAssignment } from '@/models/salesAssignment.model'
 import { SalesAssignmentRequest, ISalesAssignmentRequest } from '@/models/salesAssignmentRequest.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
+import { OPEN_STATUSES } from '@/services/alert.service'
 import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow, assertZoneAccess } from '@/utils/farmAccess.util'
 import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
@@ -108,7 +109,7 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
   // Cảnh báo còn mở của farm đã xoá sẽ bị alertEscalation biến thành ticket mồ côi
   // (không ai mở được farm, không Technician nào được gán) — đóng hết.
   await Alert.updateMany(
-    { farm_id: farm._id, status: { $in: ['ACTIVE', 'ACKNOWLEDGED'] } },
+    { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },
   )
 }
