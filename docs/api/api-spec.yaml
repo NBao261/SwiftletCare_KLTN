@@ -3378,9 +3378,10 @@ paths:
       summary: "Tạo lịch bảo trì định kỳ (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
       description: |
         Job chạy đầu mỗi giờ, tạo ticket MAINTENANCE trước hạn `MAINTENANCE_LEAD_DAYS`
-        ngày (mặc định 3) qua Ticket Router rồi dời hạn sang chu kỳ kế tiếp. Lịch trễ
-        nhiều chu kỳ hẹn sớm nhất 1 giờ sau, không hẹn về quá khứ; lịch của farm đã
-        xoá mềm tự chuyển `is_active=false`.
+        ngày (mặc định 3) qua Ticket Router rồi dời hạn sang chu kỳ kế tiếp.
+        `next_due_at` chính là giờ hẹn của ticket sinh ra nên phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai.
+        Lịch trễ nhiều chu kỳ hẹn sớm nhất 1 giờ sau, rơi ngoài khung giờ thì dời lên
+        07:00 kế tiếp, không hẹn về quá khứ; lịch của farm đã xoá mềm tự chuyển `is_active=false`.
       requestBody:
         required: true
         content:
@@ -3393,7 +3394,7 @@ paths:
                 zone_id: { type: string, description: "Phải thuộc farm_id" }
                 description: { type: string, example: "Vệ sinh đầu dò NH3/CO2" }
                 interval_days: { type: integer, minimum: 1, maximum: 365, example: 30 }
-                next_due_at: { type: string, format: date-time }
+                next_due_at: { type: string, format: date-time, description: "Giờ hẹn của ticket sinh ra — trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai" }
       responses:
         "201":
           description: Đã tạo
@@ -3403,7 +3404,7 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/MaintenanceSchedule" } }
-        "400": { description: "next_due_at không ở tương lai / zone khác farm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "400": { description: "next_due_at không ở tương lai hoặc ngoài khung 7:00–18:00 / zone khác farm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
@@ -3421,7 +3422,7 @@ paths:
                 zone_id: { type: string }
                 description: { type: string }
                 interval_days: { type: integer, minimum: 1, maximum: 365 }
-                next_due_at: { type: string, format: date-time }
+                next_due_at: { type: string, format: date-time, description: "trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai" }
                 is_active: { type: boolean }
       responses:
         "200":
@@ -3446,29 +3447,36 @@ paths:
   /tickets:
     post:
       tags: [Tickets]
-      summary: "Farm Owner tạo ticket báo lỗi hoặc yêu cầu lắp đặt/bảo trì (TICKET-FR-001) — FARM_OWNER/ADMIN"
+      summary: "Farm Owner tạo ticket báo lỗi hoặc yêu cầu lắp đặt (TICKET-FR-001) — FARM_OWNER/ADMIN"
       description: |
         Ticket Router tự động gán Technician ít việc nhất trong `region` của
         farm (TICKET-FR-004); priority/SLA gán tự động theo `type`
-        (TICKET-FR-003/006). Với `type=INSTALLATION`/`MAINTENANCE`, bắt buộc
-        `scheduled_visit_at` ngay lúc tạo (TICKET-FR-004b).
+        (TICKET-FR-003/006); Technician được gán nhận thông báo (kèm giờ hẹn nếu có).
+        - `type=INSTALLATION`: bắt buộc `scheduled_visit_at` ngay lúc tạo, trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai (TICKET-FR-004b).
+        - Ticket sự cố/`OTHER`: **không** gửi `scheduled_visit_at` — Technician chẩn đoán từ xa
+          trước, cần xuống hiện trường thì mới hẹn qua `PUT /tickets/:id/scheduled-date` (Flow 9 bước 6b).
+        - `type=MAINTENANCE` không tạo tay — chỉ sinh từ `/maintenance-schedules` (TICKET-FR-013).
+        - `zone_id` (nếu có) phải thuộc `farm_id`.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [type]
+              required: [farm_id, type]
               properties:
                 farm_id: { type: string }
-                zone_id: { type: string }
-                type: { $ref: "#/components/schemas/TicketType" }
-                description: { type: string }
+                zone_id: { type: string, description: "Phải thuộc farm_id" }
+                type:
+                  type: string
+                  enum: [SENSOR_FAULT, RS485_BUS_FAILURE, ACTUATOR_FAILURE, NODE_OFFLINE, EDGE_AI_DEGRADED, POWER_OUTAGE, SPEAKER_FAILURE, PREDATOR_DETECTED, INSTALLATION, OTHER]
+                  description: "TicketType trừ MAINTENANCE"
+                description: { type: string, maxLength: 1000, description: "Ghi thành note đầu tiên của ticket" }
                 scheduled_visit_at:
                   {
                     type: string,
                     format: date-time,
-                    description: "Bắt buộc khi type=INSTALLATION/MAINTENANCE",
+                    description: "Chỉ và bắt buộc khi type=INSTALLATION — trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai",
                   }
                 alert_id:
                   {
@@ -3501,7 +3509,7 @@ paths:
           }
         "400":
           {
-            description: "Thiếu scheduled_visit_at cho ticket lắp đặt/bảo trì",
+            description: "Yêu cầu lắp đặt thiếu/sai giờ hẹn (quá khứ, ngoài 7:00–18:00); ticket sự cố gửi kèm giờ hẹn; type=MAINTENANCE; zone khác farm",
             content:
               {
                 application/json:
@@ -3509,6 +3517,7 @@ paths:
               },
           }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     get:
       tags: [Tickets]
       summary: "Danh sách ticket (filter farm/status/priority/assignee)"
@@ -3660,9 +3669,11 @@ paths:
       summary: "Technician cập nhật trạng thái ticket (TICKET-FR-007) — TECHNICIAN/ADMIN"
       description: |
         Chỉ cho chuyển đúng thứ tự: `NEW → IN_PROGRESS → AWAITING_FIELD_CONFIRMATION
-        → CLOSED` (không nhảy cóc/lùi tuỳ tiện). Với ticket `INSTALLATION`/
-        `MAINTENANCE`, không cho chuyển `CLOSED` nếu `sat_checklist` chưa đạt
-        đủ 4 mục (TICKET-FR-010).
+        → CLOSED` (không nhảy cóc/lùi tuỳ tiện). Không cho chuyển `CLOSED` nếu
+        `sat_checklist` chưa đạt đủ 4 mục khi ticket có buổi đến hiện trường:
+        `INSTALLATION`/`MAINTENANCE`, hoặc ticket sự cố đã có `scheduled_visit_at`
+        (TICKET-FR-010, Flow 9 bước 6b). Ticket sự cố xử lý từ xa (không có lịch hẹn)
+        đóng thẳng.
 
         Chỉ Technician **đang được gán** (hoặc Admin) mới đổi được — Technician
         khác cùng vùng xem được ticket nhưng nhận 403. Lần đầu chuyển
@@ -3731,7 +3742,7 @@ paths:
     put:
       tags: [Tickets]
       summary: "Farm Owner tự huỷ ticket của mình (Flow 9 case 6c / Flow 9b case 4a) — FARM_OWNER/ADMIN"
-      description: "Khác /status ở chỗ không đòi SAT checklist — dùng khi Farm Owner đã tự khắc phục hoặc đổi ý không cần lắp nữa."
+      description: "Khác /status ở chỗ không đòi SAT checklist — dùng khi Farm Owner đã tự khắc phục hoặc đổi ý không cần lắp nữa. Technician đang được gán nhận thông báo (kèm \"không cần đến hiện trường lúc …\" nếu còn lịch hẹn sắp tới)."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3824,7 +3835,8 @@ paths:
   /tickets/{id}/sat-checklist:
     put:
       tags: [Tickets]
-      summary: "Cập nhật checklist nghiệm thu lắp đặt (TICKET-FR-010) — TECHNICIAN được gán/ADMIN"
+      summary: "Cập nhật checklist nghiệm thu tại hiện trường (TICKET-FR-010) — TECHNICIAN được gán/ADMIN"
+      description: "Chỉ cho ticket `INSTALLATION`/`MAINTENANCE` hoặc ticket sự cố đã hẹn đến hiện trường (có `scheduled_visit_at`); ticket khác → 400. Ticket đã đóng → 409."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3910,10 +3922,15 @@ paths:
   /tickets/{id}/scheduled-date:
     put:
       tags: [Tickets]
-      summary: "Technician tự dời lịch hẹn kèm lý do (TICKET-FR-004b) — TECHNICIAN được gán/ADMIN"
+      summary: "Technician hẹn/dời giờ đến hiện trường kèm lý do (TICKET-FR-004b, Flow 9 bước 6b) — TECHNICIAN được gán/ADMIN"
       description: |
-        Chỉ ticket INSTALLATION/MAINTENANCE chưa đóng; ngày mới phải ở tương lai.
-        Ghi note + audit `TICKET_RESCHEDULED`, Farm Owner nhận thông báo.
+        - `INSTALLATION`/`MAINTENANCE`: dời lịch có sẵn (Farm Owner chọn lúc tạo / sinh từ lịch bảo trì).
+        - Ticket sự cố/`OTHER`: chỉ hẹn được khi ticket đang `IN_PROGRESS` — Technician đã tiếp nhận
+          và chẩn đoán từ xa (TICKET-FR-008), cần xuống hiện trường thì mới hẹn. Từ lúc có lịch hẹn,
+          đóng ticket phải đủ SAT.
+        - Giờ hẹn trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai; ticket đã đóng → 409.
+        Ghi note ("Hẹn đến hiện trường…" / "Dời lịch hẹn…") + audit `TICKET_VISIT_SCHEDULED`
+        (lần đầu) / `TICKET_RESCHEDULED` (dời); Farm Owner và người tạo ticket nhận thông báo.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -3934,9 +3951,9 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/Ticket" } }
-        "400": { description: "Ngày không ở tương lai hoặc ticket không có lịch hẹn", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "400": { description: "Giờ hẹn không ở tương lai hoặc ngoài khung 7:00–18:00", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { description: "Không phải Technician đang được gán", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409": { description: "Ticket đã đóng, hoặc ticket sự cố chưa được tiếp nhận (chưa IN_PROGRESS)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /tickets/{id}/reassign-request:
@@ -4118,6 +4135,8 @@ paths:
         - Đổi `priority` thì tính lại `sla_response_due_at`/`sla_resolve_due_at`
           theo SLA của priority mới, mốc là `created_at` của ticket.
         - Mở lại ticket đã `CLOSED` thì gỡ `closed_at`.
+        - `scheduled_visit_at` đặt được cho mọi loại ticket nhưng vẫn phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai;
+          đổi giờ thì Farm Owner, người tạo và Technician đang giữ ticket nhận thông báo.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -4130,7 +4149,7 @@ paths:
               properties:
                 assigned_to: { type: string, description: "Đổi Technician phụ trách" }
                 priority: { type: string, enum: [P1, P2, P3] }
-                scheduled_visit_at: { type: string, format: date-time }
+                scheduled_visit_at: { type: string, format: date-time, description: "trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai" }
                 status: { $ref: "#/components/schemas/TicketStatus" }
                 reason: { type: string, description: "Lý do can thiệp, ghi vào notes + audit_logs" }
                 force: { type: boolean, default: false, description: "true = vẫn gán Technician ngoài khu vực phụ trách của farm" }
@@ -4144,7 +4163,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/Ticket" } }
         "400":
-          description: "assigned_to không phải Technician đang hoạt động, hoặc không phụ trách khu vực của farm mà chưa gửi force: true"
+          description: "assigned_to không phải Technician đang hoạt động, hoặc không phụ trách khu vực của farm mà chưa gửi force: true; scheduled_visit_at không ở tương lai hoặc ngoài 7:00–18:00"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
@@ -4884,7 +4903,7 @@ components:
             type: string,
             format: date-time,
             nullable: true,
-            description: "Chỉ dùng cho type=INSTALLATION/MAINTENANCE (TICKET-FR-004b)",
+            description: "Giờ đến hiện trường (TICKET-FR-004b), 7:00–18:00 giờ VN. INSTALLATION/MAINTENANCE có từ lúc tạo; ticket sự cố chỉ có khi Technician hẹn xuống sau khi chẩn đoán từ xa (Flow 9 bước 6b)",
           }
         sla_response_due_at: { type: string, format: date-time, nullable: true }
         sla_resolve_due_at: { type: string, format: date-time, nullable: true }
@@ -4905,7 +4924,7 @@ components:
         last_message_at: { type: string, format: date-time, nullable: true }
         sat_checklist:
           type: object
-          description: "TICKET-FR-010 — bắt buộc đủ 4 mục trước khi đóng ticket lắp đặt"
+          description: "TICKET-FR-010 — bắt buộc đủ 4 mục trước khi đóng ticket có buổi đến hiện trường (lắp đặt/bảo trì, hoặc sự cố đã có scheduled_visit_at)"
           properties:
             modbus_addresses_ok: { type: boolean }
             camera_rtsp_ok: { type: boolean }
