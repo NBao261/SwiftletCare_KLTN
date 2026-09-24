@@ -52,7 +52,7 @@ export async function getHistory(zoneId: string, user: CurrentUser, query: Histo
  * — đó chỉ là slug định danh, không phải ObjectId Mongo) dùng để tra
  * SensorNode.zone_id thật đã gán lúc onboarding (FARM-FR-003).
  */
-/** Firmware gửi telemetry mỗi ~1s cho dashboard; DB chỉ cần 1 mẫu/khoảng này (trừ mẫu vượt ngưỡng) */
+/** Firmware gửi telemetry mỗi ~1s cho dashboard; DB chỉ cần 1 mẫu/khoảng này (trừ lúc chuyển bình thường ↔ vượt ngưỡng) */
 export const TELEMETRY_PERSIST_INTERVAL_MS = 10_000
 /** Mẫu cũ hơn mức này là dữ liệu buffer offline (REL-NFR-003) được flush lại, không phải số liệu sống */
 export const STALE_TELEMETRY_MS = 60_000
@@ -61,7 +61,7 @@ const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000
 
 // ponytail: in-memory theo từng process — chạy nhiều instance backend thì mỗi
 // instance tự throttle riêng (ghi dày hơn), chuyển sang Redis nếu scale ngang.
-const lastPersistedAt = new Map<string, number>()
+const lastPersisted = new Map<string, { at: number; anomaly: boolean }>()
 
 /** Thời điểm đo do firmware gửi (epoch ms, cần NTP) — thiếu/vô lý (đồng hồ chưa sync) thì lấy giờ nhận */
 function resolveSampleTime(ts: unknown, now: number): number {
@@ -86,9 +86,12 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
   const breaches = zone ? findThresholdBreaches(payload, zone.thresholds) : []
 
   // Mẫu buffer offline luôn được ghi (mỗi dòng đã cách nhau ~10s ở firmware) và
-  // không tham gia throttle của luồng sống. Mẫu sống: ghi khi vượt ngưỡng hoặc
-  // đã đủ TELEMETRY_PERSIST_INTERVAL_MS kể từ lần ghi trước.
-  const persist = isStale || breaches.length > 0 || sampleTime - (lastPersistedAt.get(nodeId) ?? 0) >= TELEMETRY_PERSIST_INTERVAL_MS
+  // không tham gia throttle của luồng sống. Mẫu sống: ghi ngay lúc chuyển giữa
+  // bình thường ↔ vượt ngưỡng, còn lại tối đa 1 mẫu/TELEMETRY_PERSIST_INTERVAL_MS
+  // — kể cả khi vượt ngưỡng kéo dài (trước đây ghi mọi mẫu → 1 bản ghi/giây).
+  const anomaly = breaches.length > 0
+  const last = lastPersisted.get(nodeId)
+  const persist = isStale || !last || anomaly !== last.anomaly || sampleTime - last.at >= TELEMETRY_PERSIST_INTERVAL_MS
   if (persist) {
     await Telemetry.create({
       node_id: node._id,
@@ -100,9 +103,9 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
       nh3_ppm:     isFiniteNumber(payload.nh3_ppm)     ? payload.nh3_ppm     : undefined,
       co2_ppm:     isFiniteNumber(payload.co2_ppm)     ? payload.co2_ppm     : undefined,
       sound_db:    isFiniteNumber(payload.sound_db)    ? payload.sound_db    : undefined,
-      is_anomaly: breaches.length > 0,
+      is_anomaly: anomaly,
     })
-    if (!isStale) lastPersistedAt.set(nodeId, sampleTime)
+    if (!isStale) lastPersisted.set(nodeId, { at: sampleTime, anomaly })
   }
 
   // Thiết bị đang gửi dữ liệu = đang sống. Chỉ ghi khi cần (≤ 1 lần/10s, dư so
@@ -116,7 +119,7 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
   // Không chặn luồng ghi telemetry nếu Alert Engine lỗi — dữ liệu cảm biến vẫn
   // quan trọng hơn việc gửi được cảnh báo (ALERT-FR-008 tự dedup nên gọi mỗi
   // mẫu không tạo spam).
-  if (breaches.length > 0) {
+  if (anomaly) {
     void raiseThresholdAlert(String(node.zone_id), nodeId, breaches).catch((err: Error) =>
       logger.error('Tạo cảnh báo vượt ngưỡng thất bại', { deviceId: payload.deviceId, err }),
     )
