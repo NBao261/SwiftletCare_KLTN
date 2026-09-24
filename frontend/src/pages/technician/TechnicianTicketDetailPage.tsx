@@ -15,8 +15,8 @@ import EmptyState from '@/components/ui/EmptyState'
 import { useToastStore } from '@/stores/toastStore'
 import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
-import { ChangePriorityModal, ReassignTicketModal } from '@/components/features/admin/tickets/AdminOverrideModals'
-import { RescheduleModal } from '@/components/features/technician/tickets/RescheduleModal'
+// RescheduleModal gated by canAdminIntervene (ADMIN) — owned by admin/tickets/ per rule 12.7
+import { ChangePriorityModal, ReassignTicketModal, RescheduleModal } from '@/components/features/admin/tickets/AdminOverrideModals'
 // ── Technician components ───────────────────────────────────────────────────
 import { SAT_ITEMS } from '@/components/features/technician/tickets/ticketHelpers'
 import { SLABreachBanner } from '@/components/features/technician/tickets/SLABreachBanner'
