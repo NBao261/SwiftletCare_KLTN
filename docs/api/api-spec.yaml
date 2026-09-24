@@ -818,7 +818,8 @@ paths:
         ACCOUNT_LOCKED, ACCOUNT_UNLOCKED, DELETION_REQUESTED, ACCOUNT_DELETED,
         FARM_OWNERSHIP_TRANSFERRED, FARM_SOFT_DELETED, USER_CREATED,
         TECHNICIAN_REGIONS_UPDATED, THRESHOLD_UPDATED, DEFAULT_THRESHOLDS_UPDATED,
-        RELAY_OVERRIDE, DEVICE_REGISTERED, DEVICE_REASSIGNED, TICKET_ADMIN_OVERRIDE,
+        RELAY_OVERRIDE, RELAY_OVERRIDE_CLEARED, SPEAKER_SCHEDULE_UPDATED,
+        AUDIO_TRACK_UPLOADED/SYNC_UPDATED/SELECTED/DELETED, DEVICE_REGISTERED, DEVICE_REASSIGNED, TICKET_ADMIN_OVERRIDE,
         SALES_STAFF_REQUEST_APPROVED/REJECTED, SALES_STAFF_UNASSIGNED.
         Mỗi bản ghi có `ip_address` của request gây ra hành động (rỗng nếu do hệ
         thống tự thực hiện).
@@ -1830,6 +1831,246 @@ paths:
               },
           }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /devices/sensor-nodes/{id}/speaker-schedule:
+    put:
+      tags: [Devices]
+      summary: "Lịch loa ru của thiết bị (ENV-FR-013b), FARM_OWNER/TECHNICIAN/ADMIN — publish MQTT config/update"
+      description: |
+        Cập nhật từng phần `speaker_schedule` / `audio.volume` / `audio.current_track`
+        rồi publish ngay `config/update` (kèm ngưỡng hiện hành của Zone) xuống ESP32;
+        thiết bị lưu NVS. Thiết bị offline lúc này sẽ nhận lại khi reconnect
+        (heartbeat `justConnected`).
+
+        Giới hạn firmware: tối đa **2 khung giờ, theo giờ tròn** (`HH:00`, `end` tối
+        đa `24:00`). Gửi 1 khung thì khung thứ 2 bị xoá. Tắt lịch dùng
+        `enabled: false`. Đổi `volume`/`track` giữa lúc đang phát áp dụng từ khung
+        giờ kế tiếp. Ghi audit `SPEAKER_SCHEDULE_UPDATED`.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                windows:
+                  type: array
+                  minItems: 1
+                  maxItems: 2
+                  items:
+                    type: object
+                    required: [start, end]
+                    properties:
+                      start: { type: string, pattern: "^([01][0-9]|2[0-3]):00$", example: "05:00" }
+                      end: { type: string, pattern: "^(([01][0-9]|2[0-3]):00|24:00)$", example: "07:00" }
+                volume: { type: integer, minimum: 0, maximum: 30 }
+                track: { type: integer, minimum: 1, description: "Số file trên thẻ SD (1 = 0001.mp3)" }
+      responses:
+        "200":
+          {
+            description: "OK — trả SensorNode đã cập nhật",
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/ApiSuccess" } },
+              },
+          }
+        "400": { description: "Khung giờ có giờ bắt đầu không trước giờ kết thúc" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/sensor-nodes/{id}/relay-override:
+    delete:
+      tags: [Devices]
+      summary: "Tắt Manual Override sớm, trả thiết bị về AUTO ngay (ENV-FR-018), FARM_OWNER/TECHNICIAN/ADMIN"
+      description: |
+        Đặt `control_mode=AUTO`, xoá `override_expiry`, publish MQTT `relay/command`
+        `{action:"clear_override"}` để ESP32 trả mọi relay về điều khiển tự động. Gọi
+        khi thiết bị đang AUTO thì không làm gì (idempotent). Ghi audit `RELAY_OVERRIDE_CLEARED`.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } },
+          }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /devices/sensor-nodes/{id}/audio-tracks:
+    get:
+      tags: [Devices]
+      summary: "Danh mục file loa ru của thiết bị (ENV-FR-013c(b)) — mọi role có quyền Zone"
+      description: "`file_url` là URL MinIO ký tạm 1 giờ, chỉ để nghe bản gốc trên web — DFPlayer phát file trên thẻ SD."
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        allOf:
+                          [
+                            { $ref: "#/components/schemas/ApiSuccess" },
+                            { properties: { data: { type: array, items: { $ref: "#/components/schemas/AudioTrack" } } } },
+                          ],
+                      },
+                  },
+              },
+          }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Devices]
+      summary: "Upload file .mp3 vào danh mục loa ru (ENV-FR-013c(a)) — TECHNICIAN/ADMIN"
+      description: |
+        Lưu bản gốc lên MinIO + tạo bản ghi `synced_to_sd=false`. Web KHÔNG ghi được
+        file xuống thẻ SD (DFPlayer không có lệnh ghi) — Technician tự chép file với
+        tên `000N.mp3` (N = `track_number`) rồi đánh dấu qua `sync-status`.
+        Chỉ nhận `.mp3` (`audio/mpeg`), tối đa 10MB (SRS §12.4). Ghi audit `AUDIO_TRACK_UPLOADED`.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, track_number, display_name]
+              properties:
+                file: { type: string, format: binary }
+                track_number: { type: integer, minimum: 1, maximum: 255, description: "2 = 0002.mp3 trên thẻ SD" }
+                display_name: { type: string, maxLength: 100 }
+      responses:
+        "201":
+          {
+            description: Đã upload,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        allOf:
+                          [
+                            { $ref: "#/components/schemas/ApiSuccess" },
+                            { properties: { data: { $ref: "#/components/schemas/AudioTrack" } } },
+                          ],
+                      },
+                  },
+              },
+          }
+        "400": { description: "Không phải .mp3, thiếu file, hoặc vượt 10MB" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/sensor-nodes/{id}/audio-tracks/{trackId}:
+    delete:
+      tags: [Devices]
+      summary: "Xoá bài khỏi danh mục web (không xoá file trên thẻ SD) — TECHNICIAN/ADMIN"
+      parameters: [{ $ref: "#/components/parameters/NodeId" }, { $ref: "#/components/parameters/TrackId" }]
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } },
+          }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /devices/sensor-nodes/{id}/audio-tracks/{trackId}/sync-status:
+    put:
+      tags: [Devices]
+      summary: "Đánh dấu đã/chưa chép file vào thẻ SD (ENV-FR-013c(a)) — TECHNICIAN/ADMIN"
+      parameters: [{ $ref: "#/components/parameters/NodeId" }, { $ref: "#/components/parameters/TrackId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [synced_to_sd], properties: { synced_to_sd: { type: boolean } } }
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        allOf:
+                          [
+                            { $ref: "#/components/schemas/ApiSuccess" },
+                            { properties: { data: { $ref: "#/components/schemas/AudioTrack" } } },
+                          ],
+                      },
+                  },
+              },
+          }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /devices/sensor-nodes/{id}/audio-tracks/{trackId}/select:
+    put:
+      tags: [Devices]
+      summary: "Đặt bài làm speaker_track mặc định cho lịch phát (ENV-FR-013c(b)) — FARM_OWNER"
+      description: "Chặn (400) nếu `synced_to_sd=false`. Publish MQTT `config/update` (kèm ngưỡng + lịch hiện hành). Ghi audit `AUDIO_TRACK_SELECTED`."
+      parameters: [{ $ref: "#/components/parameters/NodeId" }, { $ref: "#/components/parameters/TrackId" }]
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } },
+          }
+        "400": { description: "Bài chưa được chép vào thẻ SD" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /devices/sensor-nodes/{id}/audio-tracks/{trackId}/play-now:
+    post:
+      tags: [Devices]
+      summary: "Phát thử bài ngay trên loa, bỏ qua lịch (ENV-FR-013c(c)) — FARM_OWNER"
+      description: |
+        Publish MQTT `audio/command` `{action:"play", track}`. Firmware bật nguồn amply,
+        phát 1 lần, tự dừng sau tối đa 5 phút (`FORCE_PLAY_MAX_MS`) rồi quay về lịch.
+        Manual Override relay loa (ENV-FR-016) vẫn được ưu tiên cho nguồn amply.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }, { $ref: "#/components/parameters/TrackId" }]
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } },
+          }
+        "400": { description: "Bài chưa được chép vào thẻ SD" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Thiết bị không ONLINE" }
+
+  /devices/sensor-nodes/{id}/audio/stop:
+    post:
+      tags: [Devices]
+      summary: "Dừng phát thử (ENV-FR-013c(c)) — FARM_OWNER"
+      description: "Publish MQTT `audio/command` `{action:'stop'}`; nếu đang trong khung giờ thì thiết bị phát lại bài theo lịch."
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } },
+          }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Thiết bị không ONLINE" }
 
   /devices/sensor-nodes/{id}/relay:
     post:
@@ -4203,6 +4444,8 @@ components:
         schema: { type: string },
         description: SensorNode ObjectId,
       }
+    TrackId:
+      { name: trackId, in: path, required: true, schema: { type: string }, description: AudioTrack ObjectId }
     From: { name: from, in: query, schema: { type: string, format: date-time } }
     To: { name: to, in: query, schema: { type: string, format: date-time } }
     Page: { name: page, in: query, schema: { type: integer, default: 1 } }
@@ -4513,6 +4756,20 @@ components:
         ventilation: { type: boolean }
         heating: { type: boolean }
 
+    AudioTrack:
+      type: object
+      description: "ENV-FR-013c — bài trong danh mục web của 1 thiết bị (SRS §8.2 audio_tracks)"
+      properties:
+        _id: { type: string }
+        node_id: { type: string }
+        track_number: { type: integer, description: "Khớp file trên thẻ SD: 2 = 0002.mp3" }
+        display_name: { type: string }
+        file_url: { type: string, description: "URL MinIO ký tạm 1 giờ, chỉ để nghe trên web" }
+        file_size_bytes: { type: integer }
+        synced_to_sd: { type: boolean, description: "Technician tự đánh dấu sau khi chép tay vào thẻ SD" }
+        uploaded_by: { type: string }
+        uploaded_at: { type: string, format: date-time }
+
     SensorNode:
       type: object
       properties:
@@ -4572,7 +4829,6 @@ components:
             running_version: { type: string }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
-        config_pushed_at: { type: string, format: date-time, nullable: true, description: "Backend đã đẩy ngưỡng của Zone xuống thiết bị (heartbeat đầu tiên)" }
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống; cảnh báo còn mở của nó được đóng theo" }
         decommission_reason: { type: string, nullable: true }
         replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }

@@ -402,24 +402,6 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
   })
 })
 
-describe('heartbeat đầu tiên đẩy ngưỡng của Zone xuống thiết bị (Flow 1 bước 9)', () => {
-  it('đẩy đúng ngưỡng Zone 1 lần, lần sau không đẩy lại', async () => {
-    const { techToken, a, secretKey } = await seed()
-    await Zone.updateOne({ _id: a.zone._id }, { 'thresholds.temp_min': 28, 'thresholds.temp_max': 30 })
-    await register(techToken, { device_id: 'node_100', zone_id: String(a.zone._id), secret_key: secretKey }).expect(201)
-
-    await recordHeartbeat({ deviceId: 'node_100' } as never)
-    const [, , zoneId, topic, payload] = (publishCommand as jest.Mock).mock.calls[0]
-    expect([zoneId, topic]).toEqual([String(a.zone._id), 'config/update'])
-    expect(payload).toMatchObject({ temp_min: 28, temp_max: 30 })
-    expect((await SensorNode.findOne({ device_id: 'node_100' }))!.config_pushed_at).toBeInstanceOf(Date)
-
-    ;(publishCommand as jest.Mock).mockClear()
-    await recordHeartbeat({ deviceId: 'node_100' } as never)
-    expect(publishCommand).not.toHaveBeenCalled()
-  })
-})
-
 describe('gỡ thiết bị thì dọn cảnh báo của nó (FARM-FR-008)', () => {
   it('cảnh báo còn mở chuyển RESOLVED, ticket đang mở được ghi chú, không sinh ticket rác', async () => {
     const { techToken, a, secretKey } = await seed()

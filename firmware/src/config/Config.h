@@ -50,6 +50,18 @@
 #define PID_INTERVAL_MS 10000
 #define MQTT_HEARTBEAT_MS 30000    // 30 seconds (FARM-FR-005)
 #define MANUAL_OVERRIDE_MS 1800000 // 30 minutes (ENV-FR-018)
+// ponytail: nghe thử (ENV-FR-013c) tự dừng sau 5 phút phòng khi lệnh stop bị
+// rơi (MQTT QoS0/mất mạng) — loa không kêu mãi ngoài khung giờ.
+#define FORCE_PLAY_MAX_MS 300000
+
+// ── Offline buffer (REL-NFR-003) ─────────────────────────────────────────────
+// Đọc cảm biến mỗi 1s nhưng khi mất MQTT chỉ buffer 1 dòng/10s (backend cũng
+// chỉ lưu 1 mẫu/10s — TELEMETRY_PERSIST_INTERVAL_MS). ~150 byte/dòng → 256KB
+// ≈ 1700 dòng ≈ 4-5 giờ mất kết nối.
+// ponytail: quá trần thì bỏ mẫu MỚI (giữ đoạn đầu sự cố); cần giữ đoạn mới
+// nhất thì chuyển sang ring buffer nhiều file.
+#define OFFLINE_BUFFER_INTERVAL_MS 10000
+#define OFFLINE_BUFFER_MAX_BYTES (256 * 1024)
 
 // ── Default Thresholds (ENV-FR-006, ENV-FR-007) ─────────────────────────────
 #define DEFAULT_TEMP_MIN 26.0f

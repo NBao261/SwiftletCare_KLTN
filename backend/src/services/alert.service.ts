@@ -1,6 +1,6 @@
 import { Alert, IAlert } from '@/models/alert.model'
 import { Zone, House } from '@/models/houseZone.model'
-import { SensorNode } from '@/models/device.model'
+import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
@@ -96,6 +96,40 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
   )
 
   return alert
+}
+
+/**
+ * Cảnh báo do thiết bị tự phát hiện, gọi từ mqtt/handlers/alert.handler.ts
+ * (ESP32 `{base}/alert`: SENSOR_FAULT, RS485_BUS_FAILURE, SPEAKER_FAILURE,
+ * PUMP_DRY, POWER_OUTAGE — THREAT-FR-006/011/012/013; RPi `vision/alert`:
+ * PREDATOR_DETECTED, BIRD_PANIC — THREAT-FR-001/007).
+ *
+ * Thiết bị được nhận diện qua `deviceId` trong payload, KHÔNG qua slug trong
+ * topic (xem ghi chú ở telemetry.service) — nên cảnh báo vẫn vào đúng farm kể
+ * cả khi firmware chưa trỏ đúng farmId/houseId/zoneId thật.
+ */
+export async function ingestDeviceAlert(message: Record<string, unknown>): Promise<IAlert | null> {
+  const deviceId = message.deviceId as string | undefined
+  const type = message.type as AlertType | undefined
+  if (!deviceId || !type) throw NotFoundError('Payload cảnh báo thiếu deviceId hoặc type')
+
+  const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
+  if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
+  const zone = await Zone.findById(node.zone_id)
+  const house = zone ? await House.findById(zone.house_id) : null
+  if (!zone || !house) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone/House hợp lệ`)
+
+  return createAlert({
+    farmId:      String(house.farm_id),
+    zoneId:      String(zone._id),
+    nodeId:      String(node._id),
+    type,
+    severity:    message.severity as AlertSeverity | undefined,
+    title:       (message.title as string | undefined) ?? `${type} tại ${zone.name}`,
+    message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
+    snapshotUrl: message.snapshotUrl as string | undefined,
+    metadata:    { raw: message },
+  })
 }
 
 /**

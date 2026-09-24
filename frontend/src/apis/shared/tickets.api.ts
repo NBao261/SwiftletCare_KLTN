@@ -62,4 +62,15 @@ export const ticketApi = {
     avgResolveHours: number | null
     slaComplianceRate: number | null
   }>>('/tickets/kpi'),
+
+  // ── Technician endpoints (đón đầu PR #35) ──
+  /** TICKET-FR-004b — đổi lịch hẹn. PR #35 yêu cầu reason bắt buộc. */
+  updateScheduledDate: (id: string, scheduledVisitAt: string, reason: string) =>
+    api.put<ApiResponse<Ticket>>(`/tickets/${id}/scheduled-date`, { scheduled_visit_at: scheduledVisitAt, reason }),
+
+  /** Chat — GET /tickets/:id/messages, POST /tickets/:id/messages */
+  listMessages: (id: string, page = 1) =>
+    api.get<ApiResponse<Array<{ _id: string; author_id: string; author_name: string; role: string; content: string; is_system: boolean; created_at: string }>>>(`/tickets/${id}/messages`, { params: { page } }),
+  sendMessage: (id: string, content: string, clientMessageId?: string) =>
+    api.post<ApiResponse<{ _id: string }>>(`/tickets/${id}/messages`, { content, client_message_id: clientMessageId }),
 }
