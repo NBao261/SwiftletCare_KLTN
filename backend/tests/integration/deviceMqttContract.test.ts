@@ -18,8 +18,8 @@ import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitTelemetryUpdate } from '@/socket'
-import { ingestDeviceAlert } from '@/services/alert.service'
-import { buildDeviceConfig, confirmRelayStatus, recordHeartbeat } from '@/services/device.service'
+import { createAlert, ingestDeviceAlert, resolveStaleThresholdAlerts } from '@/services/alert.service'
+import { buildDeviceConfig, confirmRelayStatus, markNodeSeen, recordHeartbeat } from '@/services/device.service'
 import { ingestTelemetry } from '@/services/telemetry.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import type { TelemetryPayload } from '@/types'
@@ -101,6 +101,20 @@ describe('ingestTelemetry', () => {
     expect(await Telemetry.countDocuments({ is_anomaly: true })).toBe(1)
   })
 
+  it('throttles a sustained breach like normal readings but records the moment it clears, with one alert', async () => {
+    const { deviceId, zone } = await seed()
+    const t0 = Date.now()
+    const hot = { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }
+
+    for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, hot))
+    await ingestTelemetry(reading(deviceId, t0 + 5_000))
+    await new Promise(r => setImmediate(r)) // raiseThresholdAlert chạy fire-and-forget
+
+    expect(await Telemetry.countDocuments({ is_anomaly: true })).toBe(1)
+    expect(await Telemetry.countDocuments({ is_anomaly: false })).toBe(1)
+    expect(await Alert.countDocuments({ zone_id: zone._id, type: 'THRESHOLD_BREACH' })).toBe(1)
+  })
+
   it('stores flushed offline-buffer readings at their own time without touching the live dashboard', async () => {
     const { deviceId, zone } = await seed()
     const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000
@@ -120,6 +134,51 @@ describe('ingestTelemetry', () => {
 
     const [row] = await Telemetry.find().lean()
     expect(Date.now() - row.timestamp.getTime()).toBeLessThan(5_000)
+  })
+})
+
+describe('alert dedup per incident (ALERT-FR-008)', () => {
+  const tenMinAgo = () => new Date(Date.now() - 10 * 60_000)
+  const breachInput = (farm: { _id: unknown }, zone: { _id: unknown }, node: { _id: unknown }) => ({
+    farmId: String(farm._id), zoneId: String(zone._id), nodeId: String(node._id),
+    type: 'THRESHOLD_BREACH' as const, title: 'Vượt ngưỡng', message: 'Nhiệt độ 36',
+  })
+
+  it('folds a repeat into the open alert however old it is, instead of creating a new one', async () => {
+    const { farm, zone, node } = await seed()
+    const first = await createAlert(breachInput(farm, zone, node))
+    await Alert.updateOne({ _id: first!._id }, { created_at: tenMinAgo(), last_seen_at: tenMinAgo(), status: 'ACKNOWLEDGED' })
+
+    expect(await createAlert({ ...breachInput(farm, zone, node), message: 'Nhiệt độ 37' })).toBeNull()
+
+    const [only] = await Alert.find().lean()
+    expect(await Alert.countDocuments()).toBe(1)
+    expect(only.occurrence_count).toBe(2)
+    expect(only.message).toBe('Nhiệt độ 37')
+    expect(Date.now() - only.last_seen_at!.getTime()).toBeLessThan(5_000)
+  })
+
+  it('auto-resolves threshold alerts not seen for 5 minutes and leaves fresh ones open', async () => {
+    const { farm, zone, node } = await seed()
+    const stale = await createAlert(breachInput(farm, zone, node))
+    await Alert.updateOne({ _id: stale!._id }, { last_seen_at: tenMinAgo() })
+    const other = await seed()
+    const fresh = await createAlert(breachInput(other.farm, other.zone, other.node))
+
+    expect(await resolveStaleThresholdAlerts()).toBe(1)
+    expect((await Alert.findById(stale!._id).lean())!.status).toBe('RESOLVED')
+    expect((await Alert.findById(fresh!._id).lean())!.status).toBe('ACTIVE')
+  })
+
+  it('closes the NODE_OFFLINE alert when the device comes back online', async () => {
+    const { farm, zone, node } = await seed('OFFLINE')
+    const offline = await createAlert({ ...breachInput(farm, zone, node), type: 'NODE_OFFLINE' })
+    const breach = await createAlert(breachInput(farm, zone, node))
+
+    await markNodeSeen(node)
+
+    expect((await Alert.findById(offline!._id).lean())!.status).toBe('RESOLVED')
+    expect((await Alert.findById(breach!._id).lean())!.status).toBe('ACTIVE')
   })
 })
 

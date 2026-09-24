@@ -370,6 +370,7 @@ export async function markNodeSeen(node: Pick<ISensorNode, '_id' | 'zone_id' | '
       status: 'ONLINE',
       timestamp: new Date().toISOString(),
     })
+    await resolveAlertsForNode(String(node._id), 'Thiết bị đã kết nối lại', 'NODE_OFFLINE')
   }
 }
 

@@ -47,6 +47,7 @@ npm run test:int     # jest tests/integration
 npx jest path/to/file.test.ts   # single test file
 npm run lint         # eslint src/**/*.ts
 npm run seed         # seed 1 Farm Owner + 1 Technician + Farm/House/Zone/SensorNode
+npm run migrate:retention  # sync TTL/indexes to the schema on an existing DB + merge duplicate open alerts (idempotent; rerun after changing a TTL — Mongoose won't alter an existing TTL index)
 npm run mdns         # publish mDNS "swiftletcare-broker.local" so a real ESP32 can auto-discover the broker (run alongside npm run dev)
 ```
 
@@ -112,13 +113,13 @@ Binding rules when adding/editing backend code:
 |---|---|---|
 | `deviceOffline.job.ts` | every 10s | flips `SensorNode`s with a stale heartbeat (>30s) from ONLINE→OFFLINE, emits `DEVICE_STATUS_CHANGE` |
 | `overrideExpiry.job.ts` | every 1 min | reverts relays whose manual override expired back to AUTO mode |
-| `alertEscalation.job.ts` | every 2 min | auto-creates a ticket for CRITICAL/HIGH alerts left unacknowledged >15 min |
+| `alertEscalation.job.ts` | every 2 min | auto-creates a ticket for CRITICAL/HIGH alerts left unacknowledged >15 min (`NODE_OFFLINE`: device offline >1 h even if acknowledged, one ticket per outage, a repeat outage notes the still-open ticket); auto-resolves `THRESHOLD_BREACH` alerts not seen for 5 min |
 | `slaBreach.job.ts` | every 2 min | `ticket.service#markBreachedTickets()` — flags open tickets past their SLA deadline (TICKET-FR-009, ≤5 min detection) |
 | `invitationExpiry.job.ts` | hourly | marks invitations older than 7 days as EXPIRED |
 
 **Socket.io** (`src/socket/index.ts`): JWT-authenticated in `io.use` (verifies `socket.handshake.auth.token` against `JWT_ACCESS_SECRET`). Clients `JOIN_ZONE`/`LEAVE_ZONE` to join room `zone:${zoneId}`. Services never touch `io` directly — they call exported helpers `emitTelemetryUpdate`, `emitRelayUpdate`, `emitBirdCountUpdate`, `emitAlertNew`, `emitDeviceStatusChange`, each of which does `io.to('zone:'+zoneId).emit(EVENT, data)`.
 
-**Alert Engine** (`alert.service.ts`): `createAlert()` is the single entry point (called from MQTT ingestion, threshold checks, offline detection). It dedups by looking for an existing `ACTIVE` alert with the same `farm_id + zone_id + type` created within a 5-minute window — a hit returns `null` instead of inserting a duplicate. Otherwise it applies a default severity per `AlertType` (unless overridden), saves the alert, emits `ALERT_NEW`, and fires-and-forgets `dispatchAlertNotification()` (push/Zalo/SMS + quiet-hours logic in `notification.service.ts`) so a slow notification channel never blocks the write.
+**Alert Engine** (`alert.service.ts`): `createAlert()` is the single entry point (called from MQTT ingestion, threshold checks, offline detection). It dedups per incident: if an alert with the same `farm_id + zone_id + node_id + type` is still open (`ACTIVE`/`ACKNOWLEDGED`, no time limit) it only bumps `last_seen_at` + `occurrence_count` (at most once a minute) and returns `null` — no new row, no re-notification. Open `THRESHOLD_BREACH` alerts not seen for 5 min are auto-resolved by `resolveStaleThresholdAlerts()` (run from `alertEscalation.job.ts`); `NODE_OFFLINE` is resolved by `markNodeSeen` when the device comes back. Otherwise it applies a default severity per `AlertType` (unless overridden), saves the alert, emits `ALERT_NEW`, and fires-and-forgets `dispatchAlertNotification()` (push/Zalo/SMS + quiet-hours logic in `notification.service.ts`) so a slow notification channel never blocks the write.
 
 **Auth/token handling** (`auth.service.ts` + `auth.route.ts`): endpoints are `register/login/refresh/logout/otp/send/otp/verify/forgot-password/reset-password/notification-preferences/delete-request` (invitation accept/decline lives in `invitations.route.ts`). Access token: short-lived JWT (`JWT_ACCESS_TTL`, default 15m), returned in the JSON body, checked by `authenticate` middleware and by Socket.io's `io.use`. Refresh token (`JWT_REFRESH_TTL`, default 30d): set as an **httpOnly cookie** (`secure` in prod, `sameSite: 'strict'`) *and* persisted in `user.refresh_tokens[]` so it's individually revocable — `/refresh` validates both the JWT and DB presence before issuing a new access token; `resetPassword` wipes the whole array (forces logout everywhere). OTP/reset codes are 6-digit, SHA-256-hashed before storage; in dev they're just `console.log`'d (SMTP/Zalo ZNS integration is a TODO, `notification.service.ts`).
 
