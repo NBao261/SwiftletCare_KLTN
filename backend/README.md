@@ -170,6 +170,7 @@ Lệnh điều khiển (`relay/command`, `config/update`) publish tới `swiftle
 npm run build   # tsc → dist/
 npm run seed    # tạo User/Farm/House/Zone/SensorNode test
 npm run mdns    # phát mDNS "swiftletcare-broker.local" cho ESP32 tự dò broker (chạy song song docker-compose)
+npm run migrate:data-model  # chạy 1 lần TRƯỚC khi deploy SRS v1.23.0: điền zones.farm_id, băm refresh token, gộp tin đăng trùng, tạo index mới (chạy lại vẫn an toàn)
 npm test        # Jest (unit + integration)
 npm run lint
 ```

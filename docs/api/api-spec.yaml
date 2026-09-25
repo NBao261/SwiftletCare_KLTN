@@ -4283,6 +4283,7 @@ components:
       properties:
         _id: { type: string }
         house_id: { type: string }
+        farm_id: { type: string, readOnly: true, description: "Farm của House chứa Zone — server tự điền, không đổi được (SRS v1.23.0)" }
         name: { type: string }
         floor: { type: integer }
         thresholds: { $ref: "#/components/schemas/Thresholds" }

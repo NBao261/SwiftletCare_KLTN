@@ -792,9 +792,14 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
   "deactivated_at": "ISODate (nullable — set khi Admin khoá tài khoản, AUTH-FR-011)",
   "deactivated_reason": "string (nullable, bắt buộc nhập khi khoá)",
   "password_reset_token_hash": "string (nullable, hash của OTP/token đặt lại mật khẩu, AUTH-FR-009)",
-  "password_reset_expires_at": "ISODate (nullable)"
+  "password_reset_expires_at": "ISODate (nullable)",
+  "refresh_tokens": [
+    { "token_hash": "string (sha256 của refresh token — v1.23.0, trước đó lưu token thô)", "expires": "ISODate" }
+  ]
 }
 ```
+
+> **[v1.23.0]** `refresh_tokens` chỉ lưu hash (lộ DB cũng không dùng được để lấy access token mới), mỗi token có `jti` riêng; token hết hạn bị dọn mỗi lần đăng nhập, nên mảng không lớn dần theo số lần đăng nhập (AUTH-FR-003). Đổi mật khẩu vẫn xoá toàn bộ (AUTH-FR-009).
 
 #### `invitations` — [mới v1.12.0, AUTH-FR-010]
 
@@ -871,7 +876,8 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
 ```json
 {
   "_id": "ObjectId",
-  "house_id": "ObjectId (ref: houses)",
+  "house_id": "ObjectId (ref: houses, indexed)",
+  "farm_id": "ObjectId (ref: farms, indexed, bất biến — v1.23.0: lưu kèm farm của House để kiểm tra quyền/lọc theo farm không phải đi qua House)",
   "name": "string",
   "floor": "number",
   "thresholds": {
@@ -890,6 +896,8 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
 > **[Sửa v1.16.0]** Bổ sung field `nh3_max` (trước đó thiếu trong ví dụ schema dù ENV-FR-006 đã cho phép chỉnh từ v1.8.0 — lỗi tài liệu, không phải thay đổi thật).
 
 #### `threshold_history` **[mới v1.16.0 — trước đó chỉ được nhắc tên ở ENV-FR-009, chưa có schema thật]**
+
+> **[v1.23.0]** Không phải collection riêng: là mảng nhúng `zones.threshold_history[]` (không có `_id`/`zone_id` riêng), giữ **100 bản gần nhất**; lịch sử đầy đủ vẫn nằm ở `audit_logs` (action `THRESHOLD_UPDATED`).
 
 ```json
 {
@@ -1075,7 +1083,7 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
 ```json
 {
   "_id": "ObjectId",
-  "harvest_batch_id": "ObjectId (ref: harvest_batches)",
+  "harvest_batch_id": "ObjectId (ref: harvest_batches, unique — 1 mẻ chỉ có 1 tin đăng, chặn ở tầng DB từ v1.23.0)",
   "farm_id": "ObjectId (ref: farms)",
   "title": "string",
   "description": "string",
@@ -2499,6 +2507,6 @@ _Tài liệu SRS này được tạo ngày 07/09/2026. Mọi thay đổi yêu c�
 | 1.21.1 | 25/09/2026 | **Giảm lượng ghi DB + chống ticket rác (đo trên dữ liệu thật: telemetry ~1 bản ghi/giây, 101 cảnh báo vượt ngưỡng trùng đang mở, 114 ticket tự sinh):** (1) §8.2 telemetry lưu tối đa 1 mẫu/10s/thiết bị kể cả khi đang vượt ngưỡng (vẫn ghi ngay lúc chuyển bình thường ↔ vượt ngưỡng; dashboard realtime vẫn 1 mẫu/giây qua socket), TTL 1 năm → 90 ngày; alert đã đóng tự xoá sau 180 ngày; (2) ALERT-FR-008 dedup theo sự cố thay cho cửa sổ 5 phút — mỗi sự cố chỉ 1 cảnh báo đang mở (`last_seen_at`, `occurrence_count`), vượt ngưỡng tự đóng sau 5 phút bình thường, mất kết nối tự đóng khi thiết bị online lại; (3) TICKET-FR-002 với NODE_OFFLINE: chỉ sinh ticket khi mất kết nối liên tục quá 1 giờ (kể cả đã acknowledge), mỗi lần mất kết nối tối đa 1 ticket, mất kết nối lại khi ticket cũ còn mở thì ghi chú vào ticket cũ. |
 | 1.21.2 | 25/09/2026 | **Sửa 2 lỗi phát hiện khi review v1.21.1:** (1) heartbeat tới trước telemetry khi thiết bị kết nối lại giờ cũng đóng cảnh báo NODE_OFFLINE (trước đó cảnh báo treo và sau 1 giờ sinh ticket "mất kết nối" cho thiết bị đang online); (2) §8.2 telemetry chỉ ghi ngay lúc **bắt đầu** vượt ngưỡng, lúc hết vượt ngưỡng chờ mốc 10s kế tiếp — chỉ số dao động quanh ngưỡng mỗi giây không còn làm ghi 1 bản/giây (tối đa ~2 bản/10s). **Rà soát backend mức high (chức năng ↔ role ↔ thiết bị), sửa thêm 10 lỗi:** (3) job offline không còn đè thiết bị vừa gửi heartbeat thành OFFLINE; không tạo NODE_OFFLINE cho thiết bị đã online lại, kèm lượt quét 2 phút đóng NODE_OFFLINE của thiết bị đang ONLINE; (4) thiết bị đã gỡ không còn nhận lệnh lịch loa/relay-override/audio, gỡ thiết bị trả override về AUTO để job hết hạn không bắn `clear_override` sang thiết bị thay thế cùng Zone; (5) dời zone (FARM-FR-007b) đóng cảnh báo còn mở ở farm cũ; (6) FARM-FR-001 chỉ Primary Owner/Admin đổi `region`, xóa farm đóng cảnh báo đang mở và farm đã xóa không sinh cảnh báo/ticket mới; (7) §9.2 lệnh riêng thiết bị mang `deviceId`, firmware lọc — nhiều ESP32 trong 1 Zone không còn nhận lệnh của nhau (**cần nạp lại firmware**); (8) cảnh báo vượt ngưỡng chỉ đánh giá ở mẫu được lưu (bớt ~3 lượt đọc DB/giây/thiết bị). |
 | 1.22.0 | 25/09/2026 | **Lịch hẹn đến hiện trường theo đúng Flow 9/9b (backend + API):** (1) TICKET-FR-001/004b — khung giờ hẹn 7:00–18:00 giờ VN cho mọi đường đặt `scheduled_visit_at` (tạo yêu cầu lắp đặt, Technician hẹn/dời, Admin can thiệp, lịch bảo trì; lịch bảo trì trễ dời sang 07:00 kế tiếp); ticket báo lỗi không chọn giờ lúc tạo, `MAINTENANCE` không tạo tay, `zone_id` phải thuộc farm; (2) Flow 9 bước 6b — Technician hẹn đến hiện trường cho ticket báo lỗi khi đang `ĐANG XỬ LÝ` (trước đây backend chặn, data model ghi "chỉ INSTALLATION/MAINTENANCE" mâu thuẫn với Flow 9); (3) TICKET-FR-010 — SAT bắt buộc cho mọi ticket có buổi đến hiện trường, kể cả ticket báo lỗi đã có lịch hẹn; (4) thông báo: Technician được gán nhận tin khi có ticket mới (tạo tay hoặc tự sinh từ cảnh báo), huỷ ticket báo Technician "không cần đến hiện trường" (Flow 9 case 6c / 9b case 4a), Admin đổi giờ hẹn báo Farm Owner + Technician. Giao diện web cho các luồng này chưa làm. |
-| 1.23.0 | 25/09/2026 | **Đổi mô hình actor: thêm Farm Operator, bỏ Sales Staff + Module SALES.** (1) **Farm Operator** (role `FARM_OPERATOR`) — nhân viên vận hành tại farm do Primary Owner mời, phạm vi cả farm hoặc một số Zone (`farms.members[].role/zone_ids`, `invitations.invited_role/zone_ids`); được giám sát, xác nhận cảnh báo, relay, lịch loa, ngưỡng Zone, ticket + chat, nhập thu hoạch; không xoá/sửa farm, không quản lý thành viên, không tạo House/Zone, không đăng bán — cập nhật mục 1.2, 2.2, 4 (actor, sơ đồ ngữ cảnh, RACI thêm cột Farm Operator), AUTH-FR-004/005/010/012, ENV/VISION/ALERT/MARKET/TICKET FR liên quan, schema `users`/`farms`/`invitations`/`ticket_messages`/`audit_logs`, API §9.1 (thêm `PUT /farms/:id/members/:userId`), viết lại Flow 12, Flow 11/19, glossary; (2) **bỏ Sales Staff và Module SALES** (SALES-FR-001..016, SALES-NFR-001/002, AUTH-FR-005b/005d/008, 8 collection, endpoint `/farms/:id/sales-staff*`, `/admin/sales-staff*`, `/products…/sales-reports`, Flow 10/16/17/18, RISK-08/10) — mục 5.10 và số Flow giữ lại dạng "Đã loại bỏ"; Buyer không còn tài khoản; (3) sửa bảng lịch sử: khôi phục dòng 1.21.2 bị mất khi merge, nối lại bảng bị đứt ở 1.13.0, đưa 1.17.0 về trước 1.18.0. Backend đã code (role, phạm vi Zone ở `farmAccess.util`, migration `npm run migrate:remove-sales`); frontend chưa theo kịp. |
+| 1.23.0 | 25/09/2026 | **Đổi mô hình actor: thêm Farm Operator, bỏ Sales Staff + Module SALES.** (1) **Farm Operator** (role `FARM_OPERATOR`) — nhân viên vận hành tại farm do Primary Owner mời, phạm vi cả farm hoặc một số Zone (`farms.members[].role/zone_ids`, `invitations.invited_role/zone_ids`); được giám sát, xác nhận cảnh báo, relay, lịch loa, ngưỡng Zone, ticket + chat, nhập thu hoạch; không xoá/sửa farm, không quản lý thành viên, không tạo House/Zone, không đăng bán — cập nhật mục 1.2, 2.2, 4 (actor, sơ đồ ngữ cảnh, RACI thêm cột Farm Operator), AUTH-FR-004/005/010/012, ENV/VISION/ALERT/MARKET/TICKET FR liên quan, schema `users`/`farms`/`invitations`/`ticket_messages`/`audit_logs`, API §9.1 (thêm `PUT /farms/:id/members/:userId`), viết lại Flow 12, Flow 11/19, glossary; (2) **bỏ Sales Staff và Module SALES** (SALES-FR-001..016, SALES-NFR-001/002, AUTH-FR-005b/005d/008, 8 collection, endpoint `/farms/:id/sales-staff*`, `/admin/sales-staff*`, `/products…/sales-reports`, Flow 10/16/17/18, RISK-08/10) — mục 5.10 và số Flow giữ lại dạng "Đã loại bỏ"; Buyer không còn tài khoản; (3) sửa bảng lịch sử: khôi phục dòng 1.21.2 bị mất khi merge, nối lại bảng bị đứt ở 1.13.0, đưa 1.17.0 về trước 1.18.0. (4) **rà soát data model** (§8.2): `users.refresh_tokens` lưu hash + dọn token hết hạn; `zones.farm_id` (bất biến); unique `nest_listings.harvest_batch_id`; index khoá ngoại (houses.farm_id, zones.house_id/farm_id, farms.owner_id/members.user_id, contact_inquiries, harvest_batches, nest_listings); soft-delete áp cho mọi truy vấn của `farms`/`harvest_batches`; xoá farm huỷ lời mời còn chờ (tránh tự nhận lời mời vào farm đã xoá); `threshold_history` là mảng nhúng giữ 100 bản — migration `npm run migrate:data-model`. Backend đã code (role, phạm vi Zone ở `farmAccess.util`, migration `npm run migrate:remove-sales` + `migrate:data-model`); frontend chưa theo kịp. |
 
 _Phiên bản hiện tại: 1.23.0 | Ngày cập nhật: 25/09/2026 | Trạng thái: DRAFT — chờ điền tên thành viên phụ trách (mục 14.1). **5 actor:** Farm Owner, Farm Operator, Technician, Buyer, Administrator (v1.23.0 bỏ Sales Staff + Module SALES, thêm Farm Operator theo phạm vi farm/Zone). Toàn bộ linh kiện phần cứng đã mua & chốt BOM thực tế; backend AUTH/FARM/DEVICE/TELEMETRY/ALERT/ANALYTICS/TICKET/MARKET/SYSTEM đã code và chạy thật; bán yến qua Module MARKET (đăng tin + truy xuất nguồn gốc + liên hệ trực tiếp); luồng nghiệp vụ gồm 23 Flow (Flow 10/16/17/18 đã loại bỏ cùng Module SALES)._
