@@ -31,7 +31,7 @@
 
 ## A1. Chuẩn bị & Cấu hình cảm biến (Sprint 1)
 
-- [ ] Đọc kỹ Components Guide v3.3 (mục 1-9) + Sensor Config Guide `[Guide]`
+- [ ] Đọc kỹ Components Guide v3.11 (mục 1-9) + Sensor Config Guide `[Guide]`
 - [ ] Chuẩn bị đồ nghề: VOM, mỏ hàn (nếu cần), dây jumper, thẻ microSD, cáp USB
 - [ ] Cài Arduino IDE + thư viện `ModbusMaster`, `DFRobotDFPlayerMini`
 - [x] Đấu thử ESP32 + module UART-RS485 V2 (GPIO17→TXD, GPIO16→RXD, VCC 5V, GND) `[Guide 5]`

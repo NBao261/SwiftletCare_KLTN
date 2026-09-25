@@ -1,6 +1,6 @@
 # SwiftletCare Firmware (ESP32)
 
-PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `SwiftletCare_Components_Guide_v3.3.md`. Checklist lắp đặt: `SwiftletCare_TASK_DETAIL_Checklist.md` mục A.
+PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `SwiftletCare_Components_Guide_v3.11.md`. Checklist lắp đặt: `SwiftletCare_TASK_DETAIL_Checklist.md` mục A.
 
 ## Build / Nạp firmware
 
