@@ -31,7 +31,7 @@ const nestListingSchema = new Schema<INestListing>(
     description:      { type: String },
     price_vnd:        { type: Number },
     price_unit:       { type: String, default: 'gram' },
-    listing_status:   { type: String, enum: ['AVAILABLE','SOLD','HIDDEN'] as ListingStatus[], default: 'AVAILABLE' },
+    listing_status:   { type: String, enum: ['AVAILABLE','SOLD','HIDDEN'] satisfies ListingStatus[], default: 'AVAILABLE' },
     contact_info: {
       show_phone: { type: Boolean, default: true },
       show_email: { type: Boolean, default: false },
@@ -43,5 +43,10 @@ const nestListingSchema = new Schema<INestListing>(
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
+
+// 1 mẻ thu hoạch chỉ có 1 tin đăng — DB chặn luôn 2 request createListing đồng thời
+nestListingSchema.index({ harvest_batch_id: 1 }, { unique: true })
+// Trang Chợ yến công khai: tin AVAILABLE, mới nhất trước
+nestListingSchema.index({ listing_status: 1, published_at: -1 })
 
 export const NestListing = model<INestListing>('NestListing', nestListingSchema)

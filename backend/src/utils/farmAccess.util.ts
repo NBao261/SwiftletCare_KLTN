@@ -1,3 +1,4 @@
+import { Types } from 'mongoose'
 import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError.util'
@@ -72,9 +73,9 @@ export async function findFarmOrThrow(farmId: string): Promise<IFarm> {
 export async function findZoneChainOrThrow(zoneId: string): Promise<{ zone: IZone; house: IHouse; farm: IFarm }> {
   const zone = await Zone.findById(zoneId)
   if (!zone) throw NotFoundError('Không tìm thấy zone')
-  const house = await House.findById(zone.house_id)
+  // zone.farm_id lưu sẵn → House và Farm lấy song song thay vì Zone→House→Farm nối tiếp
+  const [house, farm] = await Promise.all([House.findById(zone.house_id), Farm.findById(zone.farm_id)])
   if (!house) throw NotFoundError('Không tìm thấy house của zone')
-  const farm = await Farm.findById(house.farm_id)
   if (!farm) throw NotFoundError('Không tìm thấy farm của zone')
   return { zone, house, farm }
 }
@@ -113,8 +114,16 @@ export async function assertRecordAccess(farmId: unknown, zoneId: unknown, user:
  * quyền: caller đã assertFarmAccess(farmId) nên zone cùng farm thì cũng có quyền.
  */
 export async function assertZoneInFarm(zoneId: string, farmId: string): Promise<void> {
-  const chain = await findZoneChainOrThrow(zoneId)
-  if (String(chain.farm._id) !== farmId) throw BadRequestError('zone_id không thuộc farm này')
+  await assertZonesInFarm([zoneId], farmId)
+}
+
+/** assertZoneInFarm cho nhiều Zone (VD phạm vi Farm Operator) — 1 query cho cả danh sách */
+export async function assertZonesInFarm(zoneIds: string[], farmId: string): Promise<void> {
+  const unique = [...new Set(zoneIds.map(String))]
+  if (unique.length === 0) return
+  if (!unique.every(id => Types.ObjectId.isValid(id))) throw BadRequestError('zone_id không hợp lệ')
+  const found = await Zone.countDocuments({ _id: { $in: unique }, farm_id: farmId })
+  if (found !== unique.length) throw BadRequestError('zone_id không thuộc farm này')
 }
 
 /** Farm user được phép xem — dùng chung cho list/scoping theo role (Alert/Analytics/Market/Ticket) */
@@ -131,23 +140,21 @@ export async function listAccessibleFarmIds(user: CurrentUser) {
 }
 
 /**
- * Zone user được phép xem — flatten Farm accessible → House → Zone. Dùng khi
+ * Zone user được phép xem — mọi Zone của các Farm accessible. Dùng khi
  * cần liệt kê tài nguyên theo Zone (VD danh sách thiết bị) mà không có sẵn
  * `zoneId` cụ thể để check — tránh trả về dữ liệu của farm khác (IDOR).
  */
 export async function listAccessibleZoneIds(user: CurrentUser) {
   const farmIds = await listAccessibleFarmIds(user)
-  const houses = await House.find({ farm_id: { $in: farmIds } }).select('_id farm_id').lean()
-  const zones = await Zone.find({ house_id: { $in: houses.map(h => h._id) } }).select('_id house_id').lean()
+  const zones = await Zone.find({ farm_id: { $in: farmIds } }).select('_id farm_id').lean()
   if (user.role !== 'FARM_OPERATOR') return zones.map(z => z._id)
 
   // Farm Operator: chỉ giữ Zone nằm trong phạm vi được gán ở từng farm
   const farms = await Farm.find({ _id: { $in: farmIds } }).select('members')
   const scopeByFarm = new Map(farms.map(f => [String(f._id), operatorZoneScope(f, user)]))
-  const farmOfHouse = new Map(houses.map(h => [String(h._id), String(h.farm_id)]))
   return zones
     .filter(z => {
-      const scope = scopeByFarm.get(farmOfHouse.get(String(z.house_id)) ?? '')
+      const scope = scopeByFarm.get(String(z.farm_id))
       return !scope || scope.has(String(z._id))
     })
     .map(z => z._id)
@@ -174,6 +181,5 @@ export async function applyZoneScope<T extends Record<string, unknown>>(filter: 
  */
 export async function listActiveZoneIds() {
   const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
-  const houseIds = await House.find({ farm_id: { $in: farmIds } }).distinct('_id')
-  return Zone.find({ house_id: { $in: houseIds } }).distinct('_id')
+  return Zone.find({ farm_id: { $in: farmIds } }).distinct('_id')
 }

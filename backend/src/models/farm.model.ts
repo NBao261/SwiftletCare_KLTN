@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { FarmMemberRole } from '@/types'
+import { applySoftDeleteScope } from '@/utils/softDelete.util'
 
 /**
  * Farm + Member Document – SRS §8.2, FARM-FR-001
@@ -55,12 +56,10 @@ const farmSchema = new Schema<IFarm>(
   { timestamps: { createdAt: 'created_at' } }
 )
 
-// Soft-delete scope
-farmSchema.pre('find', function () {
-  this.where({ is_deleted: false })
-})
-farmSchema.pre('findOne', function () {
-  this.where({ is_deleted: false })
-})
+applySoftDeleteScope(farmSchema)
+
+// listFarms / listAccessibleFarmIds / notification.findRecipients tra farm theo chủ và thành viên
+farmSchema.index({ owner_id: 1 })
+farmSchema.index({ 'members.user_id': 1 })
 
 export const Farm = model<IFarm>('Farm', farmSchema)

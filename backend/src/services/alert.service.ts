@@ -1,6 +1,6 @@
 import { Alert, IAlert } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
-import { Zone, House } from '@/models/houseZone.model'
+import { Zone } from '@/models/houseZone.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
@@ -138,12 +138,11 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
 
   const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
-  const zone = await Zone.findById(node.zone_id)
-  const house = zone ? await House.findById(zone.house_id) : null
-  if (!zone || !house) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone/House hợp lệ`)
+  const zone = await Zone.findById(node.zone_id).select('farm_id').lean()
+  if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
 
   return createAlert({
-    farmId:      String(house.farm_id),
+    farmId:      String(zone.farm_id),
     zoneId:      String(zone._id),
     nodeId:      String(node._id),
     type,
@@ -195,15 +194,13 @@ export async function raiseThresholdAlert(zoneId: string, nodeId: string, breach
 
   const zone = await Zone.findById(zoneId).lean()
   if (!zone) return
-  const house = await House.findById(zone.house_id).lean()
-  if (!house) return
 
   const detail = breaches
     .map(b => `${METRIC_LABEL[b.metric] ?? b.metric} ${b.value} (${b.direction === 'above' ? 'vượt' : 'dưới'} ngưỡng ${b.limit})`)
     .join(', ')
 
   await createAlert({
-    farmId:   String(house.farm_id),
+    farmId:   String(zone.farm_id),
     zoneId,
     nodeId,
     type:     'THRESHOLD_BREACH',
@@ -339,11 +336,9 @@ export async function raiseNodeOfflineAlert(nodeId: string): Promise<void> {
   if (!node || node.status !== 'OFFLINE') return
   const zone = await Zone.findById(node.zone_id).lean()
   if (!zone) return
-  const house = await House.findById(zone.house_id).lean()
-  if (!house) return
 
   await createAlert({
-    farmId:  String(house.farm_id),
+    farmId:  String(zone.farm_id),
     zoneId:  String(zone._id),
     nodeId:  String(node._id),
     type:    'NODE_OFFLINE',

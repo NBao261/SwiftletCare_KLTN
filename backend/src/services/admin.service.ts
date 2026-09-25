@@ -4,6 +4,7 @@ import { Farm } from '@/models/farm.model'
 import { Ticket } from '@/models/ticket.model'
 import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
+import { softDeleteFarm } from '@/services/farm.service'
 import { notifyUser } from '@/services/notification.service'
 import { disconnectUser } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
@@ -165,8 +166,7 @@ export async function completeDeletionRequest(
         body: `Chủ farm "${farm.name}" đã xoá tài khoản, quyền chủ sở hữu đã được chuyển cho bạn.`,
       })
     } else {
-      farm.is_deleted = true
-      await farm.save()
+      await softDeleteFarm(farm)
 
       await logAction(adminId, 'FARM_SOFT_DELETED', 'farm', String(farm._id), {
         reason: 'OWNER_ACCOUNT_DELETED', ownerId: userId,

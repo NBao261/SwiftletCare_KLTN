@@ -7,7 +7,7 @@ import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import {
   hasFarmAccess, hasZoneAccess, isPrimaryOwner, operatorZoneScope, findFarmOrThrow, findZoneChainOrThrow,
-  assertZoneAccess, assertZoneInFarm,
+  assertZoneAccess, assertZonesInFarm,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
@@ -114,6 +114,14 @@ export async function updateFarm(
 export async function removeFarm(farmId: string, user: CurrentUser): Promise<void> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được xóa farm')
+  await softDeleteFarm(farm)
+}
+
+/**
+ * Xoá mềm 1 farm và dọn những thứ còn treo theo nó — dùng chung cho chủ farm tự xoá
+ * và cascade khi Admin xoá tài khoản chủ (AUTH-FR-012).
+ */
+export async function softDeleteFarm(farm: IFarm): Promise<void> {
   farm.is_deleted = true
   await farm.save()
   // Cảnh báo còn mở của farm đã xoá sẽ bị alertEscalation biến thành ticket mồ côi
@@ -122,6 +130,9 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
     { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },
   )
+  // Lời mời còn chờ: nếu để nguyên, người được mời đăng ký sau đó vẫn được auto-accept
+  // (registerUser) và thành Farm Owner/Farm Operator không gắn farm nào
+  await Invitation.updateMany({ farm_id: farm._id, status: 'PENDING' }, { $set: { status: 'EXPIRED' } })
 }
 
 export interface InviteMemberInput {
@@ -135,7 +146,7 @@ export interface InviteMemberInput {
 /** Zone gán cho Operator phải thuộc đúng farm; trả danh sách đã bỏ trùng */
 async function validateOperatorZones(farmId: string, zoneIds: string[] = []): Promise<string[]> {
   const unique = [...new Set(zoneIds.map(String))]
-  for (const zoneId of unique) await assertZoneInFarm(zoneId, farmId)
+  await assertZonesInFarm(unique, farmId)
   return unique
 }
 
@@ -317,6 +328,7 @@ export async function createZone(houseId: string, user: CurrentUser, input: { na
   // nguồn với "Reset về mặc định" — không dùng default cứng trong schema.
   return Zone.create({
     house_id: house._id,
+    farm_id: house.farm_id,
     name: input.name,
     floor: input.floor,
     thresholds: await getDefaultThresholds(),
