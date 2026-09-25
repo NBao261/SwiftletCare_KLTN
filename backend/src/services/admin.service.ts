@@ -127,8 +127,9 @@ export async function completeDeletionRequest(
 
   if (!opts.force) {
     // Farm chỉ có mình user sẽ bị xoá mềm → ticket đang mở của farm đó cũng thành mồ côi
+    // Farm chỉ còn Farm Operator (không đồng sở hữu) cũng bị xoá mềm — xem vòng lặp bên dưới
     const soleOwnerFarmIds = ownedFarms
-      .filter(f => f.members.every(m => String(m.user_id) === userId))
+      .filter(f => f.members.every(m => String(m.user_id) === userId || m.role === 'FARM_OPERATOR'))
       .map(f => f._id)
     const openTickets = await Ticket.countDocuments({
       status: { $ne: 'CLOSED' },
@@ -144,7 +145,9 @@ export async function completeDeletionRequest(
   }
 
   for (const farm of ownedFarms) {
-    const otherMembers = farm.members.filter(m => String(m.user_id) !== userId)
+    // Quyền chủ chỉ chuyển cho đồng sở hữu (AUTH-FR-012) — Farm Operator là nhân viên
+    // vận hành, không nhận quyền chủ; farm không còn đồng sở hữu thì bị xoá mềm.
+    const otherMembers = farm.members.filter(m => String(m.user_id) !== userId && m.role !== 'FARM_OPERATOR')
     if (otherMembers.length > 0) {
       const nextOwner = otherMembers.reduce((earliest, m) =>
         m.joined_at < earliest.joined_at ? m : earliest)

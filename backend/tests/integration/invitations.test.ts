@@ -69,7 +69,7 @@ describe('acceptInvitation', () => {
 describe('inviteMember', () => {
   it('still refuses a second pending FARM_OWNER invitation for the same email', async () => {
     const { owner, farm } = await seed('FARM_OWNER')
-    await expect(inviteMember(String(farm._id), { _id: String(owner._id), role: 'FARM_OWNER' } as never, 'invitee@test.vn'))
+    await expect(inviteMember(String(farm._id), { _id: String(owner._id), role: 'FARM_OWNER' } as never, { email: 'invitee@test.vn' }))
       .rejects.toMatchObject({ statusCode: 409 })
   })
 })

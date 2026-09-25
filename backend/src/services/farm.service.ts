@@ -5,12 +5,16 @@ import { User } from '@/models/user.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
-import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow, assertZoneAccess } from '@/utils/farmAccess.util'
+import {
+  hasFarmAccess, hasZoneAccess, isPrimaryOwner, operatorZoneScope, findFarmOrThrow, findZoneChainOrThrow,
+  assertZoneAccess, assertZoneInFarm,
+} from '@/utils/farmAccess.util'
+import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
-import type { Thresholds, CurrentUser } from '@/types'
+import type { Thresholds, CurrentUser, FarmMemberRole } from '@/types'
 
 /** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
 const INVITATION_TTL_MS = 7 * 86400_000
@@ -59,6 +63,14 @@ export interface FarmDetail extends Omit<IFarm, 'members'> {
 export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDetail> {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
+
+  // Farm Operator không quản lý thành viên (AUTH-FR-005) nên không cần — và không
+  // được thấy — danh sách thành viên kèm email; chỉ giữ bản ghi của chính mình.
+  if (user.role === 'FARM_OPERATOR') {
+    const plain = farm.toObject() as unknown as FarmDetail
+    plain.members = plain.members.filter(m => String(m.user_id) === user._id)
+    return plain
+  }
 
   const memberIds = [farm.owner_id, ...farm.members.map(m => m.user_id)]
   const users = await User.find({ _id: { $in: memberIds } }).select('full_name email').lean()
@@ -112,15 +124,38 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
   )
 }
 
+export interface InviteMemberInput {
+  email: string
+  /** FARM_OWNER = đồng sở hữu; FARM_OPERATOR = nhân viên vận hành (mặc định FARM_OWNER như trước v1.23.0) */
+  role?: FarmMemberRole
+  /** Chỉ cho FARM_OPERATOR — rỗng/không gửi = cả farm */
+  zone_ids?: string[]
+}
+
+/** Zone gán cho Operator phải thuộc đúng farm; trả danh sách đã bỏ trùng */
+async function validateOperatorZones(farmId: string, zoneIds: string[] = []): Promise<string[]> {
+  const unique = [...new Set(zoneIds.map(String))]
+  for (const zoneId of unique) await assertZoneInFarm(zoneId, farmId)
+  return unique
+}
+
 /**
  * AUTH-FR-005/AUTH-FR-010, Flow 12 bước 1-2 — tạo Invitation thay vì thêm thẳng
  * vào farm.members. Không còn đòi email đã có tài khoản (khác bản cũ): nếu
  * chưa có, người được mời sẽ đăng ký trước rồi tự động accept (Flow 12 bước 3b,
  * xử lý ở registerUser bên auth.service khi email trùng invitation PENDING).
+ * Mời đồng sở hữu (FARM_OWNER) hoặc Farm Operator kèm phạm vi Zone (v1.23.0).
  */
-export async function inviteMember(farmId: string, user: CurrentUser, email: string): Promise<IInvitation> {
+export async function inviteMember(farmId: string, user: CurrentUser, input: InviteMemberInput): Promise<IInvitation> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được mời thành viên')
+
+  const role: FarmMemberRole = input.role ?? 'FARM_OWNER'
+  if (role === 'FARM_OWNER' && input.zone_ids?.length) {
+    throw BadRequestError('Chỉ Farm Operator mới giới hạn theo Zone — đồng sở hữu luôn có quyền trên cả farm')
+  }
+  const zoneIds = role === 'FARM_OPERATOR' ? await validateOperatorZones(String(farm._id), input.zone_ids) : []
+  const email = input.email
 
   const normalizedEmail = email.toLowerCase().trim()
   const existingMember = await User.findOne({ email: normalizedEmail })
@@ -128,20 +163,29 @@ export async function inviteMember(farmId: string, user: CurrentUser, email: str
     throw ConflictError('Người dùng đã là thành viên farm này')
   }
 
-  const pending = await Invitation.findOne({
-    farm_id: farm._id, invited_email: normalizedEmail, invited_role: 'FARM_OWNER', status: 'PENDING',
-  })
+  // Tài khoản đã có mang 1 role cố định (1 email = 1 role): không mời Technician/Admin,
+  // cũng không mời chéo Farm Owner ↔ Farm Operator — báo ngay thay vì để lời mời chờ vô ích.
+  if (existingMember && existingMember.role !== role) {
+    throw ConflictError(`Email này đã là tài khoản ${existingMember.role} — Farm ${role === 'FARM_OPERATOR' ? 'Operator' : 'Owner'} cần dùng email khác`)
+  }
+
+  const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
   if (pending) throw ConflictError('Đã có lời mời đang chờ phản hồi gửi tới email này')
 
-  return Invitation.create({
+  const invitation = await Invitation.create({
     farm_id: farm._id,
     invited_email: normalizedEmail,
-    invited_role: 'FARM_OWNER',
+    invited_role: role,
+    zone_ids: zoneIds,
     invited_by: user._id,
     token: crypto.randomBytes(24).toString('hex'),
     status: 'PENDING',
     expires_at: new Date(Date.now() + INVITATION_TTL_MS),
   })
+  await logAction(user._id, 'FARM_MEMBER_INVITED', 'farm', String(farm._id), {
+    email: normalizedEmail, role, zone_ids: zoneIds,
+  })
+  return invitation
 }
 
 /**
@@ -161,6 +205,11 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
   if (invitation.invited_email !== user.email?.toLowerCase()) {
     throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
   }
+  // 1 email = 1 role: tài khoản Farm Owner không nhận lời mời Operator (và ngược lại),
+  // Technician/Admin không thành thành viên farm qua lời mời
+  if (user.role !== invitation.invited_role) {
+    throw ConflictError(`Lời mời dành cho ${invitation.invited_role} nhưng tài khoản này là ${user.role} — hãy dùng email khác`)
+  }
 
   invitation.status = 'ACCEPTED'
   invitation.responded_at = new Date()
@@ -168,7 +217,10 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
 
   const farm = await findFarmOrThrow(String(invitation.farm_id))
   if (!farm.members.some(m => String(m.user_id) === user._id)) {
-    farm.members.push({ user_id: user._id, is_primary: false, joined_at: new Date() } as never)
+    farm.members.push({
+      user_id: user._id, is_primary: false, role: invitation.invited_role,
+      zone_ids: invitation.zone_ids, joined_at: new Date(),
+    } as never)
     await farm.save()
   }
   return farm
@@ -218,6 +270,7 @@ export async function removeMember(farmId: string, user: CurrentUser, targetUser
 
   farm.members.splice(memberIndex, 1)
   await farm.save()
+  await logAction(user._id, 'FARM_MEMBER_REMOVED', 'farm', String(farm._id), { user_id: targetUserId })
   return farm
 }
 
@@ -244,7 +297,14 @@ export async function createHouse(
 export async function listHouses(farmId: string, user: CurrentUser) {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  return House.find({ farm_id: farm._id }).sort({ created_at: -1 })
+  const houses = await House.find({ farm_id: farm._id }).sort({ created_at: -1 })
+  // Farm Operator giới hạn theo Zone chỉ thấy House có ít nhất 1 Zone trong phạm vi
+  const scope = operatorZoneScope(farm, user)
+  if (!scope) return houses
+  const visibleHouseIds = new Set(
+    (await Zone.find({ _id: { $in: [...scope] } }).select('house_id').lean()).map(z => String(z.house_id)),
+  )
+  return houses.filter(h => visibleHouseIds.has(String(h._id)))
 }
 
 /** FARM-FR-002 */
@@ -268,14 +328,16 @@ export async function listZones(houseId: string, user: CurrentUser) {
   if (!house) throw NotFoundError('Không tìm thấy house')
   const farm = await findFarmOrThrow(String(house.farm_id))
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
-  return Zone.find({ house_id: house._id }).sort({ created_at: -1 })
+  const zones = await Zone.find({ house_id: house._id }).sort({ created_at: -1 })
+  const scope = operatorZoneScope(farm, user)
+  return scope ? zones.filter(z => scope.has(String(z._id))) : zones
 }
 
 /** ENV-FR-006, ENV-FR-009 (lưu lịch sử thay đổi) */
 /** ENV-FR-006 — GET đơn 1 Zone, chủ yếu để FE lấy `thresholds` hiện tại trước khi mở form sửa. */
 export async function getZone(zoneId: string, user: CurrentUser): Promise<IZone> {
   const { zone, farm } = await findZoneChainOrThrow(zoneId)
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
+  if (!hasZoneAccess(farm, zone._id, user)) throw ForbiddenError('Không có quyền trên zone này')
   return zone
 }
 
@@ -297,4 +359,25 @@ export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Pr
   const defaults = await getDefaultThresholds()
 
   return applyThresholdUpdate(chain, user, { thresholds: { ...defaults }, historyValues: defaults, source: 'RESET_TO_DEFAULT' })
+}
+
+/**
+ * AUTH-FR-005 (v1.23.0), Flow 12 bước 6 — Primary Owner đổi phạm vi Zone của 1
+ * Farm Operator: rỗng = cả farm. Áp dụng ngay ở lần kiểm tra quyền tiếp theo
+ * (assertZoneAccess đọc members mỗi request).
+ */
+export async function updateOperatorScope(farmId: string, user: CurrentUser, targetUserId: string, zoneIds: string[]): Promise<IFarm> {
+  const farm = await findFarmOrThrow(farmId)
+  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được đổi phạm vi của Farm Operator')
+
+  const member = farm.members.find(m => String(m.user_id) === targetUserId)
+  if (!member) throw NotFoundError('Người dùng không phải thành viên farm này')
+  if (member.role !== 'FARM_OPERATOR') throw BadRequestError('Chỉ Farm Operator mới giới hạn theo Zone')
+
+  const before = member.zone_ids.map(String)
+  const after = await validateOperatorZones(String(farm._id), zoneIds)
+  member.zone_ids = after as never
+  await farm.save()
+  await logAction(user._id, 'FARM_OPERATOR_SCOPE_UPDATED', 'farm', String(farm._id), { user_id: targetUserId, before, after })
+  return farm
 }

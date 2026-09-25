@@ -4,9 +4,11 @@
  */
 
 // ── Domain Enums ───────────────────────────────────────────────────────────────
-// SRS AUTH-FR-004: Buyer đăng ký qua OTP nằm cùng collection `users` nhưng
-// role = null vì không tham gia RBAC (không có endpoint nào chặn theo role Buyer).
-export type Role         = 'ADMIN' | 'FARM_OWNER' | 'TECHNICIAN'
+// SRS AUTH-FR-004 (v1.23.0). FARM_OPERATOR = nhân viên vận hành tại farm, do Farm
+// Owner mời; phạm vi farm/zone lưu ở `farms.members[].zone_ids`. Buyer không có tài khoản.
+export type Role         = 'ADMIN' | 'FARM_OWNER' | 'FARM_OPERATOR' | 'TECHNICIAN'
+/** Vai trò phía khách hàng có thể là thành viên farm (`farms.members[].role`, `invitations.invited_role`) */
+export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'FARM_OPERATOR'>
 // PENDING: Technician đã tạo record qua Web Console Onboarding nhưng thiết bị
 // chưa gửi heartbeat đầu tiên (SRS §8.2, Flow 1 bước 4).
 export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'

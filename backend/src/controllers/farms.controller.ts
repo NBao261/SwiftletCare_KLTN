@@ -32,10 +32,20 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: { message: 'Đã xóa farm' } })
 })
 
-/** POST /farms/:id/members – AUTH-FR-005/010, Flow 12 bước 1 */
+/** POST /farms/:id/members – AUTH-FR-005/010, Flow 12 bước 1 (mời Farm Owner hoặc Farm Operator + phạm vi) */
 export const inviteMember = asyncHandler(async (req: Request, res: Response) => {
-  const invitation = await farmService.inviteMember(req.params.id, req.user, req.body.email as string)
+  const invitation = await farmService.inviteMember(req.params.id, req.user, {
+    email:    req.body.email as string,
+    role:     req.body.role,
+    zone_ids: req.body.zone_ids as string[] | undefined,
+  })
   res.status(201).json({ success: true, data: invitation })
+})
+
+/** PUT /farms/:id/members/:userId – AUTH-FR-005, Flow 12 bước 6 (đổi phạm vi Zone của Farm Operator) */
+export const updateMemberScope = asyncHandler(async (req: Request, res: Response) => {
+  const farm = await farmService.updateOperatorScope(req.params.id, req.user, req.params.userId, req.body.zone_ids as string[])
+  res.json({ success: true, data: farm })
 })
 
 /** DELETE /farms/:id/members/:userId – Flow 12 bước 5 */

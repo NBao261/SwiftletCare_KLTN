@@ -19,7 +19,9 @@ info:
     **Trạng thái triển khai (cập nhật sau khi hoàn thành các module nghiệp vụ
     Farm Owner — xem `SwiftletCare_SRS.md` cột "Trạng thái Backend" ở mục 5):**
     Auth, Farms, Devices, Telemetry, Alerts, Analytics, Harvests, Marketplace,
-    Tickets đều có logic thật phía sau. Module SALES (sản phẩm/tồn kho/đơn hàng)
+    Tickets đều có logic thật phía sau. Role FARM_OPERATOR (v1.23.0): Farm Operator theo Zone chỉ thao tác trong Zone được gán (403 ngoài phạm vi);
+    danh sách alert/ticket/mẻ thu hoạch/lịch bảo trì chỉ gồm Zone trong phạm vi +
+    bản ghi cấp farm. Module SALES (sản phẩm/tồn kho/đơn hàng)
     và role Sales Staff đã bị loại khỏi hệ thống ở SRS v1.23.0 — bán yến chỉ đi
     qua Module MARKET (Harvests + Marketplace, liên hệ trực tiếp).
 
@@ -1037,7 +1039,15 @@ paths:
   /farms/{id}/members:
     post:
       tags: [Farms]
-      summary: Mời thành viên Farm Owner khác (AUTH-FR-010, Flow 12) — chỉ Primary Owner. Tạo một Invitation PENDING (hết hạn sau 7 ngày); không còn yêu cầu email đã có tài khoản — nếu chưa có, người được mời đăng ký xong sẽ tự động accept.
+      summary: "Mời đồng sở hữu (FARM_OWNER) hoặc Farm Operator (AUTH-FR-005/010, Flow 12) — chỉ Primary Owner"
+      description: |
+        Tạo một Invitation PENDING (hết hạn sau 7 ngày); email chưa có tài khoản thì
+        đăng ký xong tự động accept và tài khoản mang đúng `role` được mời.
+        - `role` mặc định `FARM_OWNER`. `zone_ids` chỉ đi với `FARM_OPERATOR`
+          (rỗng/không gửi = cả farm); mỗi zone phải thuộc farm (400).
+        - 1 email = 1 role: email đã là tài khoản role khác (Technician, Admin, hoặc
+          Farm Owner ↔ Farm Operator) → 409, cần dùng email khác.
+        - Ghi audit `FARM_MEMBER_INVITED`.
       parameters: [{ $ref: "#/components/parameters/FarmId" }]
       requestBody:
         required: true
@@ -1047,7 +1057,12 @@ paths:
               {
                 type: object,
                 required: [email],
-                properties: { email: { type: string, format: email } },
+                properties:
+                  {
+                    email: { type: string, format: email },
+                    role: { type: string, enum: [FARM_OWNER, FARM_OPERATOR], default: FARM_OWNER },
+                    zone_ids: { type: array, items: { type: string }, description: "Chỉ cho FARM_OPERATOR" },
+                  },
               }
       responses:
         "201":
@@ -1077,8 +1092,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409":
           {
-            description: Đã là thành viên,
-            hoặc đã có lời mời PENDING gửi tới email này,
+            description: "Đã là thành viên, đã có lời mời PENDING gửi tới email này, hoặc email đã là tài khoản role khác",
             content:
               {
                 application/json:
@@ -1087,6 +1101,35 @@ paths:
           }
 
   /farms/{id}/members/{userId}:
+    put:
+      tags: [Farms]
+      summary: "Đổi phạm vi Zone của Farm Operator (AUTH-FR-005, Flow 12 bước 6) — chỉ Primary Owner"
+      description: "`zone_ids` rỗng = cả farm. Member không phải Farm Operator → 400. Ghi audit `FARM_OPERATOR_SCOPE_UPDATED`; áp dụng ngay ở request kế tiếp của Operator."
+      parameters:
+        - { $ref: "#/components/parameters/FarmId" }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [zone_ids]
+              properties:
+                zone_ids: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Farm" } }
+        "400": { description: "Member không phải Farm Operator, hoặc zone không thuộc farm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     delete:
       tags: [Farms]
       summary: Gỡ thành viên khỏi farm (Flow 12 bước 5) — chỉ Primary Owner, không thể tự gỡ chính mình
@@ -1373,7 +1416,7 @@ paths:
   /farms/zones/{zoneId}/thresholds:
     put:
       tags: [Farms]
-      summary: Cập nhật ngưỡng cảnh báo/điều khiển của Zone (ENV-FR-006, lưu lịch sử ENV-FR-009)
+      summary: "Cập nhật ngưỡng cảnh báo/điều khiển của Zone (ENV-FR-006, lưu lịch sử ENV-FR-009) — FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
       description: |
         Kiểm tra từng cặp min<max và khoảng đo của từng cảm biến (nhiệt −40..125°C,
         ẩm 0..100%, ánh sáng ≤ 200.000 lux, NH3 ≤ 500 ppm, CO2 ≤ 5000 ppm) — 400 nếu vi phạm.
@@ -1409,7 +1452,7 @@ paths:
   /farms/zones/{zoneId}/thresholds/reset:
     put:
       tags: [Farms]
-      summary: "Reset ngưỡng của Zone về mặc định hệ thống (ENV-FR-020, Flow 22 nhánh B)"
+      summary: "Reset ngưỡng của Zone về mặc định hệ thống (ENV-FR-020, Flow 22 nhánh B) — FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
       description: |
         Ghi đè cả 7 ngưỡng của Zone bằng `system_settings.default_thresholds` hiện
         hành (chưa cấu hình thì dùng giá trị gốc khớp firmware), thêm 1 bản ghi
@@ -1568,7 +1611,7 @@ paths:
   /devices/sensor-nodes/{id}/thresholds:
     put:
       tags: [Devices]
-      summary: Cập nhật ngưỡng qua device (tương đương PUT /farms/zones/:zoneId/thresholds), publish MQTT config/update
+      summary: "Cập nhật ngưỡng qua device (tương đương PUT /farms/zones/:zoneId/thresholds), publish MQTT config/update — FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         content:
@@ -1589,7 +1632,7 @@ paths:
   /devices/sensor-nodes/{id}/speaker-schedule:
     put:
       tags: [Devices]
-      summary: "Lịch loa ru của thiết bị (ENV-FR-013b), FARM_OWNER/TECHNICIAN/ADMIN — publish MQTT config/update"
+      summary: "Lịch loa ru của thiết bị (ENV-FR-013b), FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN — publish MQTT config/update"
       description: |
         Cập nhật từng phần `speaker_schedule` / `audio.volume` / `audio.current_track`
         rồi publish ngay `config/update` (kèm ngưỡng hiện hành của Zone) xuống ESP32;
@@ -1640,7 +1683,7 @@ paths:
   /devices/sensor-nodes/{id}/relay-override:
     delete:
       tags: [Devices]
-      summary: "Tắt Manual Override sớm, trả thiết bị về AUTO ngay (ENV-FR-018), FARM_OWNER/TECHNICIAN/ADMIN"
+      summary: "Tắt Manual Override sớm, trả thiết bị về AUTO ngay (ENV-FR-018), FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
       description: |
         Đặt `control_mode=AUTO`, xoá `override_expiry`, publish MQTT `relay/command`
         `{action:"clear_override"}` để ESP32 trả mọi relay về điều khiển tự động. Gọi
@@ -1777,7 +1820,7 @@ paths:
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}/select:
     put:
       tags: [Devices]
-      summary: "Đặt bài làm speaker_track mặc định cho lịch phát (ENV-FR-013c(b)) — FARM_OWNER"
+      summary: "Đặt bài làm speaker_track mặc định cho lịch phát (ENV-FR-013c(b)) — FARM_OWNER/FARM_OPERATOR"
       description: "Chặn (400) nếu `synced_to_sd=false`. Publish MQTT `config/update` (kèm ngưỡng + lịch hiện hành). Ghi audit `AUDIO_TRACK_SELECTED`."
       parameters: [{ $ref: "#/components/parameters/NodeId" }, { $ref: "#/components/parameters/TrackId" }]
       responses:
@@ -1795,7 +1838,7 @@ paths:
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}/play-now:
     post:
       tags: [Devices]
-      summary: "Phát thử bài ngay trên loa, bỏ qua lịch (ENV-FR-013c(c)) — FARM_OWNER"
+      summary: "Phát thử bài ngay trên loa, bỏ qua lịch (ENV-FR-013c(c)) — FARM_OWNER/FARM_OPERATOR"
       description: |
         Publish MQTT `audio/command` `{action:"play", track}`. Firmware bật nguồn amply,
         phát 1 lần, tự dừng sau tối đa 5 phút (`FORCE_PLAY_MAX_MS`) rồi quay về lịch.
@@ -1816,7 +1859,7 @@ paths:
   /devices/sensor-nodes/{id}/audio/stop:
     post:
       tags: [Devices]
-      summary: "Dừng phát thử (ENV-FR-013c(c)) — FARM_OWNER"
+      summary: "Dừng phát thử (ENV-FR-013c(c)) — FARM_OWNER/FARM_OPERATOR"
       description: "Publish MQTT `audio/command` `{action:'stop'}`; nếu đang trong khung giờ thì thiết bị phát lại bài theo lịch."
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       responses:
@@ -1832,7 +1875,7 @@ paths:
   /devices/sensor-nodes/{id}/relay:
     post:
       tags: [Devices]
-      summary: "Điều khiển relay — Manual Override (ENV-FR-016..018), FARM_OWNER/TECHNICIAN/ADMIN"
+      summary: "Điều khiển relay — Manual Override (ENV-FR-016..018), FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
       description: |
         Publish MQTT `relay/command` tới ESP32, đặt `control_mode=MANUAL` và
         `override_expiry = now + durationMs`. Farm Owner dùng để vận hành hằng ngày,
@@ -2579,7 +2622,7 @@ paths:
   /harvests:
     post:
       tags: [Harvests]
-      summary: "Tạo Harvest Batch (MARKET-FR-001..004) — FARM_OWNER/ADMIN"
+      summary: "Tạo Harvest Batch (MARKET-FR-001..004) — FARM_OWNER/FARM_OPERATOR/ADMIN"
       description: |
         Tự động gắn `env_snapshot` (trung bình môi trường 7 ngày trước thu
         hoạch — MARKET-FR-002) và `flock_snapshot` (return rate 30 ngày —
@@ -2831,7 +2874,7 @@ paths:
           }
     post:
       tags: [Marketplace]
-      summary: "Tạo Nest Listing từ Harvest Batch (MARKET-FR-006) — FARM_OWNER/ADMIN"
+      summary: "Tạo Nest Listing từ Harvest Batch (MARKET-FR-006) — FARM_OWNER/ADMIN (Farm Operator không được đăng bán)"
       requestBody:
         required: true
         content:
@@ -3115,7 +3158,7 @@ paths:
   /maintenance-schedules:
     get:
       tags: [Tickets]
-      summary: "Danh sách lịch bảo trì định kỳ (TICKET-FR-013) — FARM_OWNER/TECHNICIAN/ADMIN"
+      summary: "Danh sách lịch bảo trì định kỳ (TICKET-FR-013) — FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { $ref: "#/components/parameters/Page" }
@@ -3204,7 +3247,7 @@ paths:
   /tickets:
     post:
       tags: [Tickets]
-      summary: "Farm Owner tạo ticket báo lỗi hoặc yêu cầu lắp đặt (TICKET-FR-001) — FARM_OWNER/ADMIN"
+      summary: "Farm Owner / Farm Operator tạo ticket báo lỗi hoặc yêu cầu lắp đặt (TICKET-FR-001) — FARM_OWNER/FARM_OPERATOR/ADMIN"
       description: |
         Ticket Router tự động gán Technician ít việc nhất trong `region` của
         farm (TICKET-FR-004); priority/SLA gán tự động theo `type`
@@ -3498,7 +3541,7 @@ paths:
   /tickets/{id}/cancel:
     put:
       tags: [Tickets]
-      summary: "Farm Owner tự huỷ ticket của mình (Flow 9 case 6c / Flow 9b case 4a) — FARM_OWNER/ADMIN"
+      summary: "Farm Owner tự huỷ ticket của mình (Flow 9 case 6c / Flow 9b case 4a) — FARM_OWNER/FARM_OPERATOR/ADMIN (Operator chỉ huỷ ticket mình tạo)"
       description: "Khác /status ở chỗ không đòi SAT checklist — dùng khi Farm Owner đã tự khắc phục hoặc đổi ý không cần lắp nữa. Technician đang được gán nhận thông báo (kèm \"không cần đến hiện trường lúc …\" nếu còn lịch hẹn sắp tới)."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -3747,7 +3790,7 @@ paths:
   /tickets/{id}/messages:
     get:
       tags: [Tickets]
-      summary: "Lịch sử chat của ticket (TICKET-FR-015) — FARM_OWNER/TECHNICIAN/ADMIN"
+      summary: "Lịch sử chat của ticket (TICKET-FR-015) — FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
       description: |
         Trang 1 là tin mới nhất; trong mỗi trang tin xếp cũ → mới. Được đọc: Admin,
         Farm Owner/thành viên của farm, Technician đang phụ trách. Technician TỪNG
@@ -3776,7 +3819,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Tickets]
-      summary: "Gửi tin nhắn (TICKET-FR-014/016) — dự phòng khi client không giữ WebSocket"
+      summary: "Gửi tin nhắn (TICKET-FR-014/016) — dự phòng khi client không giữ WebSocket — FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
       description: |
         Chỉ gửi khi ticket chưa đóng (đã đóng → 409, kênh chỉ đọc). Technician chỉ
         gửi được khi đang là `assigned_to` (kiểm lại mỗi lần gửi). Gửi lại cùng
@@ -3808,7 +3851,7 @@ paths:
   /tickets/{id}/rating:
     post:
       tags: [Tickets]
-      summary: "Farm Owner đánh giá mức hài lòng sau khi đóng ticket (TICKET-FR-011) — FARM_OWNER/ADMIN"
+      summary: "Farm Owner đánh giá mức hài lòng sau khi đóng ticket (TICKET-FR-011) — FARM_OWNER/FARM_OPERATOR/ADMIN (Operator chỉ ticket mình tạo)"
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -4061,8 +4104,8 @@ components:
 
     Role:
       type: string
-      enum: [ADMIN, FARM_OWNER, TECHNICIAN]
-      description: "AUTH-FR-004. Buyer không có tài khoản — chỉ xem Marketplace và liên hệ Farm Owner"
+      enum: [ADMIN, FARM_OWNER, FARM_OPERATOR, TECHNICIAN]
+      description: "AUTH-FR-004 (v1.23.0). FARM_OPERATOR = nhân viên vận hành do Farm Owner mời, phạm vi cả farm hoặc một số Zone (farms.members[].zone_ids). Buyer không có tài khoản — chỉ xem Marketplace và liên hệ Farm Owner"
 
     SlaConfig:
       type: object
@@ -4184,11 +4227,14 @@ components:
           properties: { full_name: { type: string }, email: { type: string, format: email } }
         members:
           type: array
+          description: "GET /farms/:id với FARM_OPERATOR chỉ trả bản ghi của chính người đó (không lộ email thành viên khác)"
           items:
             type: object
             properties:
               user_id: { type: string }
               is_primary: { type: boolean }
+              role: { type: string, enum: [FARM_OWNER, FARM_OPERATOR], description: "FARM_OWNER = đồng sở hữu; FARM_OPERATOR = nhân viên vận hành (v1.23.0)" }
+              zone_ids: { type: array, items: { type: string }, description: "Chỉ cho FARM_OPERATOR — rỗng = cả farm" }
               joined_at: { type: string, format: date-time }
               full_name: { type: string, description: "Chỉ có ở GET /farms/:id" }
               email: { type: string, format: email, description: "Chỉ có ở GET /farms/:id" }
@@ -4202,7 +4248,8 @@ components:
         _id: { type: string }
         farm_id: { type: string }
         invited_email: { type: string, format: email }
-        invited_role: { type: string, enum: [FARM_OWNER] }
+        invited_role: { type: string, enum: [FARM_OWNER, FARM_OPERATOR] }
+        zone_ids: { type: array, items: { type: string }, description: "Phạm vi Zone của Farm Operator — rỗng = cả farm" }
         invited_by: { type: string }
         token: { type: string }
         status: { type: string, enum: [PENDING, ACCEPTED, DECLINED, EXPIRED] }

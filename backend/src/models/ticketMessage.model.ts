@@ -23,7 +23,7 @@ const ticketMessageSchema = new Schema<ITicketMessage>(
   {
     ticket_id:   { type: Schema.Types.ObjectId, ref: 'Ticket', required: true },
     sender_id:   { type: Schema.Types.ObjectId, ref: 'User' },
-    sender_role: { type: String, enum: ['ADMIN', 'FARM_OWNER', 'TECHNICIAN'] as Role[] },
+    sender_role: { type: String, enum: ['ADMIN', 'FARM_OWNER', 'FARM_OPERATOR', 'TECHNICIAN'] as Role[] },
     content:     { type: String, required: true, maxlength: 2000 },
     is_system:   { type: Boolean, default: false },
     client_message_id: { type: String },
