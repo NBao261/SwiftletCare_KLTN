@@ -17,8 +17,8 @@ const REFRESH_TTL_MS = 30 * 86400 * 1000
  *  và 'user@test.com' bị coi là 2 tài khoản khác nhau. */
 const normalizeEmail = (email: string) => email.toLowerCase().trim()
 
-/** Hash 1 chiều (sha256) cho mã dùng 1 lần — OTP đăng nhập và token reset mật
- *  khẩu đều dùng chung, để lộ DB đọc cũng không lấy được mã gốc còn hiệu lực. */
+/** Hash 1 chiều (sha256) cho OTP đăng nhập, token reset mật khẩu và refresh
+ *  token — dùng chung, để lộ DB đọc cũng không lấy được mã gốc còn hiệu lực. */
 const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
 
 /** Hash bcrypt (cost=12) hợp lệ bất kỳ — KHÔNG phải mật khẩu thật của ai. Dùng để
@@ -31,7 +31,22 @@ function signAccess(userId: string, role: string): string {
 }
 
 function signRefresh(userId: string): string {
-  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn: REFRESH_TTL } as jwt.SignOptions)
+  // jwtid: 2 lần đăng nhập trong cùng 1 giây không sinh ra cùng 1 token (cùng hash) —
+  // nếu trùng, logout ở máy này sẽ gỡ luôn phiên ở máy kia
+  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn: REFRESH_TTL, jwtid: crypto.randomUUID() } as jwt.SignOptions)
+}
+
+/**
+ * AUTH-FR-003 — cấp refresh token mới cho `user` (caller tự save). Chỉ lưu hash, và
+ * dọn token đã hết hạn ngay lúc này: không có bước này mảng lớn dần theo số lần
+ * đăng nhập vì token chỉ bị gỡ khi logout/đặt lại mật khẩu.
+ */
+function issueRefreshToken(user: IUser): string {
+  const token = signRefresh(String(user._id))
+  const now = Date.now()
+  user.refresh_tokens = user.refresh_tokens.filter(t => t.expires.getTime() > now) as never
+  user.refresh_tokens.push({ token_hash: hashToken(token), expires: new Date(now + REFRESH_TTL_MS) })
+  return token
 }
 
 export interface RegisterInput { email: string; password: string; full_name: string; phone?: string }
@@ -118,9 +133,7 @@ export async function loginUser(input: LoginInput): Promise<{ user: IUser; acces
   await assertLoginAllowed(user)
 
   const accessToken  = signAccess(String(user._id), user.role)
-  const refreshToken = signRefresh(String(user._id))
-
-  user.refresh_tokens.push({ token: refreshToken, expires: new Date(Date.now() + REFRESH_TTL_MS) })
+  const refreshToken = issueRefreshToken(user)
   await user.save()
 
   await logAction(String(user._id), 'LOGIN', 'user', String(user._id))
@@ -141,7 +154,8 @@ export async function refreshAccessToken(refreshToken: string | undefined): Prom
   const user = await User.findById(payload.sub)
   if (!user) throw UnauthorizedError('Không tìm thấy user')
 
-  const isValid = user.refresh_tokens.some(t => t.token === refreshToken && t.expires > new Date())
+  const tokenHash = hashToken(refreshToken)
+  const isValid = user.refresh_tokens.some(t => t.token_hash === tokenHash && t.expires > new Date())
   if (!isValid) throw UnauthorizedError('Refresh token đã bị thu hồi hoặc hết hạn')
 
   return { accessToken: signAccess(String(user._id), user.role) }
@@ -150,7 +164,7 @@ export async function refreshAccessToken(refreshToken: string | undefined): Prom
 /** AUTH-FR-006 */
 export async function logoutUser(userId: string, refreshToken: string | undefined): Promise<void> {
   if (refreshToken) {
-    await User.updateOne({ _id: userId }, { $pull: { refresh_tokens: { token: refreshToken } } })
+    await User.updateOne({ _id: userId }, { $pull: { refresh_tokens: { token_hash: hashToken(refreshToken) } } })
   }
 }
 
@@ -185,8 +199,7 @@ export async function verifyOtp(email: string, otp: string): Promise<{ user: IUs
 
   // Giống loginUser() — phải cấp refresh token ở đây, nếu không phiên đăng nhập
   // qua OTP không có cách nào silent-refresh và hết hạn sau ACCESS_TTL (15 phút).
-  const refreshToken = signRefresh(String(user._id))
-  user.refresh_tokens.push({ token: refreshToken, expires: new Date(Date.now() + REFRESH_TTL_MS) })
+  const refreshToken = issueRefreshToken(user)
   await user.save()
 
   await logAction(String(user._id), 'LOGIN', 'user', String(user._id), { method: 'OTP' })

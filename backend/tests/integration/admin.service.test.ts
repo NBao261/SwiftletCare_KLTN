@@ -67,7 +67,7 @@ const auditActions = async (action: string) => AuditLog.find({ action }).lean()
 describe('setUserStatus', () => {
   it('locks with a trimmed reason, revokes refresh tokens, drops live sockets and audits', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const target = await mkUser('victim@test.vn', 'FARM_OWNER', { refresh_tokens: [{ token: 't', expires: new Date(Date.now() + 1e6) }] })
+    const target = await mkUser('victim@test.vn', 'FARM_OWNER', { refresh_tokens: [{ token_hash: 't', expires: new Date(Date.now() + 1e6) }] })
 
     const { user } = await setUserStatus(String(admin._id), String(target._id), false, '  Spam đơn hàng  ')
 
@@ -194,7 +194,7 @@ describe('completeDeletionRequest', () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', {
       ...requested, phone: '0900000000', avatar_url: 'http://x/y.png',
-      refresh_tokens: [{ token: 't', expires: new Date(Date.now() + 1e6) }],
+      refresh_tokens: [{ token_hash: 't', expires: new Date(Date.now() + 1e6) }],
     })
 
     const user = await completeDeletionRequest(String(admin._id), String(leaver._id))
