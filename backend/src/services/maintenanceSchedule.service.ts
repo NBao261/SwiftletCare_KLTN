@@ -1,10 +1,10 @@
 import { MaintenanceSchedule, IMaintenanceSchedule } from '@/models/maintenanceSchedule.model'
 import { Farm } from '@/models/farm.model'
-import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { assertFarmAccess, assertZoneInFarm, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { createMaintenanceTicket } from '@/services/ticket.service'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
-import { NotFoundError, BadRequestError } from '@/utils/appError.util'
+import { NotFoundError } from '@/utils/appError.util'
 import { assertValidVisitTime, nextVisitSlot } from '@/utils/visitTime.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
@@ -27,12 +27,6 @@ export interface MaintenanceScheduleInput {
   is_active?: boolean
 }
 
-
-/** Zone (nếu có) phải thuộc đúng farm của lịch — tránh ticket trỏ sang zone farm khác */
-async function assertZoneInFarm(zoneId: string, farmId: string, user: CurrentUser): Promise<void> {
-  const chain = await assertZoneAccess(zoneId, user)
-  if (String(chain.farm._id) !== farmId) throw BadRequestError('zone_id không thuộc farm này')
-}
 
 /** TICKET-FR-013 — Farm Owner xem được lịch của farm mình, Technician/Admin theo phạm vi farm */
 export async function listSchedules(user: CurrentUser, query: { farmId?: string; page?: string | number; limit?: string | number }) {
@@ -61,7 +55,7 @@ async function getOwnedSchedule(id: string, user: CurrentUser): Promise<IMainten
 export async function createSchedule(user: CurrentUser, input: MaintenanceScheduleInput): Promise<IMaintenanceSchedule> {
   const farmId = String(input.farm_id)
   await assertFarmAccess(farmId, user)
-  if (input.zone_id) await assertZoneInFarm(input.zone_id, farmId, user)
+  if (input.zone_id) await assertZoneInFarm(input.zone_id, farmId)
 
   const schedule = await MaintenanceSchedule.create({
     farm_id: farmId,
@@ -82,7 +76,7 @@ export async function updateSchedule(id: string, user: CurrentUser, input: Maint
   const before = schedule.toObject()
 
   if (input.zone_id !== undefined) {
-    await assertZoneInFarm(input.zone_id, String(schedule.farm_id), user)
+    await assertZoneInFarm(input.zone_id, String(schedule.farm_id))
     schedule.zone_id = input.zone_id as never
   }
   if (input.description !== undefined) schedule.description = input.description

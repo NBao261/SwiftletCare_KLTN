@@ -3,7 +3,7 @@ import { Alert } from '@/models/alert.model'
 import { SensorNode } from '@/models/device.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
-import { listAccessibleFarmIds, assertFarmAccess, findZoneChainOrThrow } from '@/utils/farmAccess.util'
+import { listAccessibleFarmIds, assertFarmAccess, assertZoneInFarm } from '@/utils/farmAccess.util'
 import { assertValidVisitTime, formatVisitTime } from '@/utils/visitTime.util'
 import { logAction } from '@/services/auditLog.service'
 import { getSlaHours, getTicketRouting } from '@/services/system.service'
@@ -136,7 +136,8 @@ export interface CreateTicketInput {
   zone_id?: string
   type: TicketType
   description?: string
-  scheduled_visit_at?: string // chỉ dùng cho INSTALLATION/MAINTENANCE (TICKET-FR-004b)
+  /** Chỉ và bắt buộc khi type=INSTALLATION (TICKET-FR-004b); loại khác gửi kèm → 400 */
+  scheduled_visit_at?: string
   alert_id?: string
 }
 
@@ -157,10 +158,7 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
     // Flow 9 bước 5–6b: ticket sự cố — Technician chẩn đoán từ xa trước, cần xuống thì mới hẹn
     throw BadRequestError('Chỉ yêu cầu lắp đặt mới chọn giờ hẹn khi tạo; ticket sự cố do Technician hẹn sau khi chẩn đoán')
   }
-  if (input.zone_id) {
-    const chain = await findZoneChainOrThrow(input.zone_id)
-    if (String(chain.farm._id) !== input.farm_id) throw BadRequestError('zone_id không thuộc farm này')
-  }
+  if (input.zone_id) await assertZoneInFarm(input.zone_id, input.farm_id)
 
   const priority = DEFAULT_PRIORITY[input.type]
   const sla = await slaDueDates(priority, new Date())
