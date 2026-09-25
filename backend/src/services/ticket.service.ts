@@ -1,5 +1,6 @@
 import { Ticket, ITicket } from '@/models/ticket.model'
 import { Alert } from '@/models/alert.model'
+import { OPEN_STATUSES } from '@/services/alert.service'
 import { SensorNode } from '@/models/device.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
@@ -271,7 +272,7 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
       },
       {
         type: 'NODE_OFFLINE',
-        status: { $in: ['ACTIVE', 'ACKNOWLEDGED'] },
+        status: { $in: OPEN_STATUSES },
         created_at: { $lt: new Date(now - NODE_OFFLINE_TICKET_AFTER_MS) },
       },
     ],
@@ -283,17 +284,22 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
     (await Ticket.find({ alert_id: { $in: staleAlerts.map(a => a._id) } }).select('alert_id').lean())
       .map(t => String(t.alert_id)),
   )
-  // Cảnh báo cũ của thiết bị đã gỡ (FARM-FR-008) không được biến thành ticket:
-  // không còn gì ở hiện trường để sửa. 1 truy vấn cho cả batch, cùng idiom dedup ở trên.
+  // 1 truy vấn cho cả batch, cùng idiom dedup ở trên:
+  // - thiết bị đã gỡ (FARM-FR-008): không còn gì ở hiện trường để sửa;
+  // - NODE_OFFLINE của thiết bị đã ONLINE lại: cảnh báo chỉ chưa kịp đóng (heartbeat
+  //   tới đúng lúc job chạy) — kiểm tra ngay lúc quyết định nên không phụ thuộc thứ tự
+  //   với resolveNodeOfflineAlertsOfOnlineNodes, lượt quét đó sẽ đóng cảnh báo sau.
   const nodeIds = [...new Set(staleAlerts.map(a => a.node_id).filter(Boolean))]
-  const removedNodeIds = new Set(
-    (await SensorNode.find({ _id: { $in: nodeIds }, decommissioned_at: { $ne: null } }).select('_id').lean())
-      .map(n => String(n._id)),
-  )
+  const nodes = await SensorNode.find({ _id: { $in: nodeIds } }).select('_id status decommissioned_at').lean()
+  const removedNodeIds = new Set(nodes.filter(n => n.decommissioned_at).map(n => String(n._id)))
+  const onlineNodeIds = new Set(nodes.filter(n => n.status === 'ONLINE').map(n => String(n._id)))
 
-  const toProcess = staleAlerts.filter(a =>
-    !alreadyTicketed.has(String(a._id)) && !(a.node_id && removedNodeIds.has(String(a.node_id))),
-  )
+  const toProcess = staleAlerts.filter(a => {
+    const nodeId = a.node_id ? String(a.node_id) : undefined
+    if (alreadyTicketed.has(String(a._id))) return false
+    if (nodeId && removedNodeIds.has(nodeId)) return false
+    return !(a.type === 'NODE_OFFLINE' && nodeId && onlineNodeIds.has(nodeId))
+  })
 
   // Ticket mất kết nối của lần trước còn mở, theo từng thiết bị — cũng 2 truy vấn cho cả batch.
   const offlineNodeIds = [...new Set(toProcess.filter(a => a.type === 'NODE_OFFLINE' && a.node_id).map(a => String(a.node_id)))]

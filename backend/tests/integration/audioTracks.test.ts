@@ -174,8 +174,8 @@ describe('select / play-now / stop', () => {
 
     expect(play.status).toBe(200)
     expect(stop.status).toBe(200)
-    expect(publishCommand).toHaveBeenNthCalledWith(1, ...ctx.chain, 'audio/command', { action: 'play', track: 2 })
-    expect(publishCommand).toHaveBeenNthCalledWith(2, ...ctx.chain, 'audio/command', { action: 'stop' })
+    expect(publishCommand).toHaveBeenNthCalledWith(1, ...ctx.chain, 'audio/command', { deviceId: ctx.node.device_id, action: 'play', track: 2 })
+    expect(publishCommand).toHaveBeenNthCalledWith(2, ...ctx.chain, 'audio/command', { deviceId: ctx.node.device_id, action: 'stop' })
   })
 
   it('refuses to play on an offline device', async () => {
@@ -220,7 +220,7 @@ describe('DELETE /relay-override', () => {
     const after = (await SensorNode.findById(ctx.node._id))!
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
-    expect(publishCommand).toHaveBeenCalledWith(...ctx.chain, 'relay/command', { action: 'clear_override' })
+    expect(publishCommand).toHaveBeenCalledWith(...ctx.chain, 'relay/command', { deviceId: ctx.node.device_id, action: 'clear_override' })
     expect(emitRelayUpdate).toHaveBeenCalledTimes(4)
     expect(await AuditLog.countDocuments({ action: 'RELAY_OVERRIDE_CLEARED' })).toBe(1)
   })

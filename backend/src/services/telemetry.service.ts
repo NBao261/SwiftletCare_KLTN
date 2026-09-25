@@ -86,12 +86,14 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
   const breaches = zone ? findThresholdBreaches(payload, zone.thresholds) : []
 
   // Mẫu buffer offline luôn được ghi (mỗi dòng đã cách nhau ~10s ở firmware) và
-  // không tham gia throttle của luồng sống. Mẫu sống: ghi ngay lúc chuyển giữa
-  // bình thường ↔ vượt ngưỡng, còn lại tối đa 1 mẫu/TELEMETRY_PERSIST_INTERVAL_MS
-  // — kể cả khi vượt ngưỡng kéo dài (trước đây ghi mọi mẫu → 1 bản ghi/giây).
+  // không tham gia throttle của luồng sống. Mẫu sống: tối đa 1 mẫu/TELEMETRY_PERSIST_INTERVAL_MS
+  // kể cả khi vượt ngưỡng kéo dài (trước đây ghi mọi mẫu → 1 bản ghi/giây); chỉ
+  // lúc BẮT ĐẦU vượt ngưỡng mới ghi ngay. Lúc hết vượt ngưỡng chờ mốc 10s kế
+  // tiếp — nếu cả 2 chiều đều ghi ngay, chỉ số dao động quanh ngưỡng mỗi giây
+  // sẽ lại ghi mọi mẫu; như vậy dao động chỉ tốn tối đa ~2 bản ghi/10s.
   const anomaly = breaches.length > 0
   const last = lastPersisted.get(nodeId)
-  const persist = isStale || !last || anomaly !== last.anomaly || sampleTime - last.at >= TELEMETRY_PERSIST_INTERVAL_MS
+  const persist = isStale || !last || (anomaly && !last.anomaly) || sampleTime - last.at >= TELEMETRY_PERSIST_INTERVAL_MS
   if (persist) {
     await Telemetry.create({
       node_id: node._id,
@@ -117,9 +119,10 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
   if (isStale) return
 
   // Không chặn luồng ghi telemetry nếu Alert Engine lỗi — dữ liệu cảm biến vẫn
-  // quan trọng hơn việc gửi được cảnh báo (ALERT-FR-008 tự dedup nên gọi mỗi
-  // mẫu không tạo spam).
-  if (anomaly) {
+  // quan trọng hơn việc gửi được cảnh báo. Chỉ gọi ở mẫu được lưu (lúc bắt đầu
+  // vượt ngưỡng + mỗi 10s): mỗi lần gọi tốn ~3 lượt đọc DB, gọi mỗi giây là thừa
+  // khi last_seen_at chỉ cập nhật 1 lần/phút và tự đóng sau 5 phút (ALERT-FR-008).
+  if (anomaly && persist) {
     void raiseThresholdAlert(String(node.zone_id), nodeId, breaches).catch((err: Error) =>
       logger.error('Tạo cảnh báo vượt ngưỡng thất bại', { deviceId: payload.deviceId, err }),
     )

@@ -1,4 +1,5 @@
 import { Alert, IAlert } from '@/models/alert.model'
+import { Farm } from '@/models/farm.model'
 import { Zone, House } from '@/models/houseZone.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
@@ -14,7 +15,8 @@ export const ALERT_SEEN_UPDATE_MS = 60 * 1000
 /** THRESHOLD_BREACH không được ghi nhận lại trong khoảng này = chỉ số đã bình thường → tự đóng */
 export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
 
-const OPEN_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
+/** Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này */
+export const OPEN_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
 
 /**
  * ALERT-FR-001 — mức độ mặc định theo loại sự kiện. Firmware/RPi có thể gửi kèm
@@ -60,6 +62,10 @@ export interface CreateAlertInput {
 export async function createAlert(input: CreateAlertInput): Promise<IAlert | null> {
   const severity = input.severity ?? DEFAULT_SEVERITY[input.type]
   const now = new Date()
+
+  // Farm đã xoá mềm mà thiết bị vẫn cắm điện: không sinh cảnh báo (và ticket) mà
+  // không ai mở được. Pre-hook findOne của Farm đã loại is_deleted.
+  if (!(await Farm.exists({ _id: input.farmId }))) return null
 
   // ponytail: tìm-rồi-tạo không nguyên tử — 2 mẫu cùng sự cố tới đồng thời có
   // thể ra 1 bản trùng; thêm unique partial index nếu thấy xảy ra thật.
@@ -306,10 +312,29 @@ export async function resolveStaleThresholdAlerts(): Promise<number> {
   return modifiedCount
 }
 
+/**
+ * Lưới an toàn cho NODE_OFFLINE: job offline và heartbeat chạy song song, nên thiết bị
+ * có thể online lại (announceBackOnline không thấy gì để đóng) ngay trước khi
+ * raiseNodeOfflineAlert kịp tạo cảnh báo. Đóng mọi NODE_OFFLINE còn mở mà thiết bị đã
+ * ONLINE — không phụ thuộc thứ tự sự kiện. Gọi định kỳ từ jobs/alertEscalation.job.ts.
+ */
+export async function resolveNodeOfflineAlertsOfOnlineNodes(): Promise<number> {
+  const open = await Alert.find({ type: 'NODE_OFFLINE', status: { $in: OPEN_STATUSES } }).select('node_id').lean()
+  if (open.length === 0) return 0
+  const online = await SensorNode.find({ _id: { $in: open.map(a => a.node_id) }, status: 'ONLINE' }).select('_id').lean()
+  if (online.length === 0) return 0
+  const { modifiedCount } = await Alert.updateMany(
+    { type: 'NODE_OFFLINE', status: { $in: OPEN_STATUSES }, node_id: { $in: online.map(n => n._id) } },
+    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Thiết bị đã kết nối lại' },
+  )
+  return modifiedCount
+}
+
 /** Dùng cho job phát hiện thiết bị offline (FARM-FR-005 → THREAT-FR-009) */
 export async function raiseNodeOfflineAlert(nodeId: string): Promise<void> {
   const node = await SensorNode.findById(nodeId).lean()
-  if (!node) return
+  // Heartbeat có thể đã tới giữa lúc job đổi OFFLINE và lúc tạo cảnh báo
+  if (!node || node.status !== 'OFFLINE') return
   const zone = await Zone.findById(node.zone_id).lean()
   if (!zone) return
   const house = await House.findById(zone.house_id).lean()

@@ -4,11 +4,12 @@
  * bước 7). Chạy nền vì Farm Owner có thể đang ngủ/không mở app — không thể chờ
  * họ bấm mới xử lý sự cố nghiêm trọng.
  *
- * Cùng nhịp này cũng tự đóng THRESHOLD_BREACH đã hết (ALERT-FR-008).
+ * Cùng nhịp này cũng tự đóng THRESHOLD_BREACH đã hết (ALERT-FR-008) và
+ * NODE_OFFLINE của thiết bị đã online lại (lưới an toàn cho race job ↔ heartbeat).
  */
 import cron from 'node-cron'
 import { createTicketsFromStaleAlerts } from '@/services/ticket.service'
-import { resolveStaleThresholdAlerts } from '@/services/alert.service'
+import { resolveNodeOfflineAlertsOfOnlineNodes, resolveStaleThresholdAlerts } from '@/services/alert.service'
 import logger from '@/utils/logger.util'
 
 /** Mỗi 2 phút — đủ dày để không trễ quá ngưỡng 15 phút, không tạo tải đáng kể */
@@ -26,6 +27,11 @@ export function startAlertEscalationJob(): void {
         if (count > 0) logger.info(`Tự đóng ${count} cảnh báo vượt ngưỡng đã trở lại bình thường (ALERT-FR-008)`)
       })
       .catch((err: Error) => logger.error('resolveStaleThresholdAlerts failed', { err }))
+    resolveNodeOfflineAlertsOfOnlineNodes()
+      .then(count => {
+        if (count > 0) logger.info(`Đóng ${count} cảnh báo mất kết nối của thiết bị đã online lại`)
+      })
+      .catch((err: Error) => logger.error('resolveNodeOfflineAlertsOfOnlineNodes failed', { err }))
   })
   logger.info('Alert escalation job scheduled (every 2 min)')
 }

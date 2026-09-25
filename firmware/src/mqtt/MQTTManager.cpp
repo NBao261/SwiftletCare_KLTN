@@ -108,6 +108,22 @@ static void mqttCallback(char *topic, byte *payload, unsigned int length) {
   for (unsigned int i = 0; i < length; i++)
     msg += (char)payload[i];
 
+  // Topic lệnh là theo Zone, mà 1 Zone có thể có nhiều ESP32 (SRS §8: Zone 1─N
+  // SensorNode). Lệnh riêng 1 thiết bị mang `deviceId` → thiết bị khác bỏ qua.
+  // Không có `deviceId` (ngưỡng chung của Zone, hoặc backend cũ) → áp dụng như trước.
+  {
+    JsonDocument filter;
+    filter["deviceId"] = true;
+    JsonDocument target;
+    if (!deserializeJson(target, msg, DeserializationOption::Filter(filter))) {
+      const char *targetId = target["deviceId"] | "";
+      if (strlen(targetId) > 0 && strcmp(targetId, Config::deviceId) != 0) {
+        Serial.println("[MQTT] Bỏ qua lệnh cho thiết bị khác: " + String(targetId));
+        return;
+      }
+    }
+  }
+
   String t(topic);
   if (t.endsWith("/relay/command")) {
     MQTTManager::onRelayCommand(msg.c_str());

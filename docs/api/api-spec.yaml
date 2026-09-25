@@ -1880,6 +1880,7 @@ paths:
         "400": { description: "Khung giờ có giờ bắt đầu không trước giờ kết thúc" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Thiết bị đã được gỡ bỏ khỏi hệ thống (FARM-FR-008) — không nhận lệnh nữa" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}/relay-override:
@@ -1900,6 +1901,7 @@ paths:
           }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Thiết bị đã được gỡ bỏ khỏi hệ thống (FARM-FR-008) — không nhận lệnh nữa" }
 
   /devices/sensor-nodes/{id}/audio-tracks:
     get:
@@ -2034,6 +2036,7 @@ paths:
         "400": { description: "Bài chưa được chép vào thẻ SD" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Thiết bị đã được gỡ bỏ khỏi hệ thống (FARM-FR-008) — không nhận lệnh nữa" }
 
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}/play-now:
     post:
@@ -2054,7 +2057,7 @@ paths:
         "400": { description: "Bài chưa được chép vào thẻ SD" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409": { description: "Thiết bị không ONLINE" }
+        "409": { description: "Thiết bị không ONLINE, hoặc đã được gỡ bỏ khỏi hệ thống (FARM-FR-008)" }
 
   /devices/sensor-nodes/{id}/audio/stop:
     post:
@@ -2070,7 +2073,7 @@ paths:
               { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } },
           }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { description: "Thiết bị không ONLINE" }
+        "409": { description: "Thiết bị không ONLINE, hoặc đã được gỡ bỏ khỏi hệ thống (FARM-FR-008)" }
 
   /devices/sensor-nodes/{id}/relay:
     post:
