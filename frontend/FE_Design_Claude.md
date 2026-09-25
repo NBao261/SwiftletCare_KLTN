@@ -3,11 +3,17 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.4.0 · **Cập nhật:** 24/09/2026 · **Thay thế:** v2.3.1
+**Phiên bản:** 2.5.0 · **Cập nhật:** 25/09/2026 · **Thay thế:** v2.4.0
 
 ---
 
 ## 0. Changelog
+
+### v2.4.0 → v2.5.0
+| # | Thay đổi |
+|---|---|
+| 1 | **Đổi mô hình actor theo SRS v1.23.0: thêm Farm Operator, bỏ Sales Staff + Module SALES.** Farm Operator (role `FARM_OPERATOR`) là nhân viên vận hành do Primary Owner mời, phạm vi cả farm hoặc một số Zone; được giám sát, xác nhận cảnh báo, relay/lịch loa, ngưỡng Zone, ticket + chat, nhập thu hoạch — không sửa/xoá farm, không quản lý thành viên, không tạo House/Zone, không đăng bán. Các mục 7, 8, 12, 13 viết lại theo **trạng thái đích**: bucket `farm-operator/` thay `sales-staff/`, `FarmOperatorLayout` thay `SalesStaffLayout`, thêm nhóm role `FARM_SIDE_ROLES`, bỏ dòng Module SALES. |
+| 2 | **Code frontend chưa theo kịp** — hiện vẫn còn `pages/sales-staff/`, `SalesStaffLayout`, `salesStaffRoutes`, role `SALES_STAFF` trong `types/`, và chưa có layout/route/menu cho Operator. Backend đã xong (SRS §5 AUTH-FR-004/005); việc chuyển code FE là follow-up riêng. |
 
 ### v2.3.1 → v2.4.0
 | # | Thay đổi |
@@ -330,7 +336,6 @@ Thiết kế khi áp dụng: `react-i18next`, namespace theo module (`common`, `
 | Audit Log toàn hệ thống (Admin) | SYSTEM-FR-001 | ✅ Đã code (`GET /system/audit-logs`) | Không |
 | Cấu hình ngưỡng mặc định hệ thống (Admin) | SYSTEM-FR-002 | ✅ Đã code (`GET/PUT /system/settings/default-thresholds`) | Không |
 | Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ✅ Đã code (`GET /system/health-overview`) | Không |
-| Module SALES (sản phẩm/đơn hàng/tồn kho) | SALES-FR-* | ⬜ Stub, GĐ2 | **Có** |
 | Đăng bán/Truy xuất nguồn gốc (Marketplace) | MARKET-FR-* | ✅ Đã code | Không |
 | Push notification FCM/Zalo/SMS thật | ALERT-FR-002/003/004 | 🟡 chưa nối credential | Có (màn cấu hình kênh) |
 
@@ -357,7 +362,7 @@ Trước khi dựng chart: tự hỏi *"chuỗi thời gian, danh mục, tỷ tr
 | Loại màn hình | Component dùng chung | Áp dụng |
 |---|---|---|
 | Bảng dữ liệu | `<DataTable />` (`components/ui/`) | Mọi role |
-| Popup xác nhận | `<ConfirmModal />` (`components/ui/`) | Toàn bộ 4 role |
+| Popup xác nhận | `<ConfirmModal />` (`components/ui/`) | Toàn bộ 4 role đăng nhập |
 | Nhật ký/lịch sử | `<Timeline />` — **chưa tồn tại** | Admin Audit Log, Ticket notes, threshold_history |
 | Cấu hình ngưỡng cảm biến | `<ThresholdConfigCard />` — **chưa tồn tại** (hiện là `features/technician/devices/ThresholdsModal`) | Farm Owner (Zone) + Admin (mặc định hệ thống) — cùng component, khác quyền ghi |
 | Stat card | `<StatCard />` — **chưa dùng chung** (đang là hàm cục bộ trong `AdminSystemHealthPage`) | Dashboard mọi role |
@@ -466,7 +471,7 @@ module.exports = {
 
 ### 12.1. Nguyên tắc
 
-1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `technician/` · `sales-staff/` · `auth/` · `shared/` · `common/`. Không gom theo feature, không để file rải rác cạnh trang dùng nó.
+1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `farm-operator/` · `technician/` · `auth/` · `shared/` · `common/` (`farm-operator/` chỉ xuất hiện khi có file chỉ Operator dùng — phần lớn màn của Operator là trang Farm Owner mở với nhóm role hẹp hơn). Không gom theo feature, không để file rải rác cạnh trang dùng nó.
 2. **Vào `shared/` chỉ khi từ 2 role trở lên thật sự dùng.** Một role dùng thì về thư mục role đó, dù file trông "chung chung" tới đâu. Đây là luật chống `shared/` phình thành bãi rác.
 3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** `TechnicianDevicesPage` vẫn được Farm Owner và Admin mở. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
 4. **Mọi import dùng alias `@/`**, không dùng đường dẫn tương đối `../`. Nhờ vậy dời file chỉ phải sửa đúng đường dẫn của chính nó.
@@ -498,7 +503,7 @@ frontend/src/
 │   │   ├── farm-owner/        dashboard/ · analytics/ · farms/ · harvest/
 │   │   └── technician/        devices/ · alerts/
 │   └── layouts/               Đúng 7 file — 4 của role, 3 dùng chung
-│                              AdminLayout · FarmOwnerLayout · TechnicianLayout · SalesStaffLayout
+│                              AdminLayout · FarmOwnerLayout · FarmOperatorLayout · TechnicianLayout
 │                              AppShell · AppSidebar · AppHeader
 │
 ├── pages/                     CHỈ chứa *Page.tsx
@@ -509,13 +514,12 @@ frontend/src/
 │   │                          FarmOwnerHarvestPage · FarmOwnerLiveStreamPage
 │   ├── technician/            TechnicianDevicesPage · TechnicianAlertsPage
 │   │                          TechnicianTicketsPage · TechnicianTicketDetailPage
-│   ├── sales-staff/           SalesStaffHomePage
 │   ├── auth/                  LoginPage · RegisterPage · ForgotPasswordPage · InvitationPage
 │   └── (gốc)                  SettingsPage · MarketplacePage · ListingDetailPage · ForbiddenPage
 │                              — 4 trang không thuộc nghiệp vụ role nào
 │
 ├── routes/                    1 file cho mỗi thư mục pages/<role>/
-│                              admin · farm-owner · technician · sales-staff · public
+│                              admin · farm-owner · technician · public
 │
 ├── hooks/                     React Query hooks bọc apis/
 │   ├── admin/                 useUsers · useSystem · useAccountRequests
@@ -602,7 +606,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 ### 12.8. Checklist khi thêm một màn hình mới
 
 1. Màn này thuộc nghiệp vụ role nào? → tạo `pages/<role>/<Role><ChứcNăng>Page.tsx`, tên hàm trùng tên file.
-2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts` (`OPS_ROLES`, `FARM_OWNER_ONLY`, `ADMIN_ONLY`, `HARVEST_ROLES`).
+2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts` (`OPS_ROLES`, `FARM_SIDE_ROLES`, `FARM_OWNER_ONLY`, `ADMIN_ONLY`, `HARVEST_ROLES`). Farm Operator nằm trong `OPS_ROLES`/`FARM_SIDE_ROLES`/`HARVEST_ROLES`, không nằm trong `FARM_OWNER_ONLY` (thành viên, cài đặt farm, đăng bán).
 3. Cần lên sidebar? → thêm `{ label, path, icon }` vào `menuSections` trong `<Role>Layout.tsx`, và thêm dòng vào `MENU_ACCESS` (`constants/roles.ts`).
 4. Endpoint mới → `apis/<role>/<resource>.api.ts`; hook bọc React Query → `hooks/<role>/use<Resource>.ts`.
 5. Component riêng của màn → `components/features/<role>/<area>/`. **Không để trong `pages/`.**
@@ -615,7 +619,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 **Nguyên tắc gốc:** file nào *là một thực thể của React* (component, page, layout) → **PascalCase**, viết hoa chữ cái đầu của mọi từ, không gạch nối, không gạch dưới. File nào *là một module hạ tầng* (endpoint, kiểu dữ liệu, store, hằng số, tiện ích) → giữ quy ước đuôi phân loại của hệ sinh thái React/TypeScript. Trộn hai quy ước này là **cố ý**, không phải thiếu nhất quán — xem 12.11.
 
 **Công thức tên:** tiền tố role **chỉ** dùng ở nơi thư mục không tự nói lên role.
-- **Page** trong `pages/<role>/` và **layout** của role → bắt đầu bằng tên role PascalCase: `Admin`, `FarmOwner`, `Technician`, `SalesStaff` (URL không có tiền tố role nên tên file bù lại).
+- **Page** trong `pages/<role>/` và **layout** của role → bắt đầu bằng tên role PascalCase: `Admin`, `FarmOwner`, `FarmOperator`, `Technician` (URL không có tiền tố role nên tên file bù lại).
 - **Component trong `components/features/<role>/<area>/`** → **không** tiền tố role, chỉ tên feature (`ThresholdsModal`, `CreateUserModal`) — đường dẫn `features/<role>/` đã nói role. Đây là quy ước đang chạy ở toàn bộ file trong `features/`; không đổi tên file cũ.
 - File **không thuộc role nào** (`ui/`, `common/`, `auth/`, 4 trang gốc `pages/`) → không tiền tố role.
 - **Tên hàm export trùng đúng tên file**: `AdminUsersPage.tsx` → `export default function AdminUsersPage()`.
@@ -634,7 +638,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `routes/` | `<role>.routes.tsx` | `admin.routes.tsx` · `farm-owner.routes.tsx` |
 | `stores/` | `<tên>Store.ts` — camelCase | `authStore.ts` · `alertStore.ts` |
 | `constants/` · `lib/` · `providers/` | camelCase, tên nói đúng nội dung | `auditActions.ts` · `chartTheme.ts` · `AppProviders.tsx` |
-| Thư mục | **kebab-case** cho tên role nhiều từ | `farm-owner/` · `sales-staff/` |
+| Thư mục | **kebab-case** cho tên role nhiều từ | `farm-owner/` · `farm-operator/` |
 
 **Hằng số riêng của một feature** đi kèm component trong cùng thư mục, đặt `<area>.constants.ts`: `users.constants.ts`, `harvest.constants.ts`. Hằng số dùng chung toàn app thì về `constants/`.
 
