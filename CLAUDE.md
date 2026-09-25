@@ -209,3 +209,9 @@ AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, and Harvest/Marketplace
 ## Conventions
 
 - Commit messages follow Conventional Commits with a project-specific `type`/`scope` enum enforced by commitlint (`.commitlintrc.json`). CI (`.github/workflows/ci.yml`) validates them via `wagoid/commitlint-github-action`, plus runs a gitleaks secret scan; lint/test CI jobs are still commented-out placeholders, not yet active — `npm run lint`/`npm test` must be run locally.
+
+## Working with Claude
+
+- Reply to the user in Vietnamese.
+- Review a PR with `/review-pr <PR number>` (`.claude/commands/review-pr.md`). When reviewing, read code and diffs only — never run `npm install`/`npm ci`, builds or test suites.
+- Commits and PRs carry no Claude attribution (`.claude/settings.json` sets `attribution` to empty) — don't add `Co-Authored-By`, session links or similar lines by hand either.
