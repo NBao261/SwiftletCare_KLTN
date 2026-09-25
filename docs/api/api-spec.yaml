@@ -19,11 +19,9 @@ info:
     **Trạng thái triển khai (cập nhật sau khi hoàn thành các module nghiệp vụ
     Farm Owner — xem `SwiftletCare_SRS.md` cột "Trạng thái Backend" ở mục 5):**
     Auth, Farms, Devices, Telemetry, Alerts, Analytics, Harvests, Marketplace,
-    Tickets đã có logic thật phía sau (không còn stub). Riêng module **Sales**
-    (tag `Sales`, Giai đoạn 2 — SALES-FR-001..016) vẫn là stub, trả
-    `501 { success:false, error:{code:"NOT_IMPLEMENTED"} }`; schema mô tả ở đó
-    là *hợp đồng dự kiến* theo SRS, chưa cài đặt vì không bắt buộc nghiệm thu
-    KLTN (SRS §2.4).
+    Tickets đều có logic thật phía sau. Module SALES (sản phẩm/tồn kho/đơn hàng)
+    và role Sales Staff đã bị loại khỏi hệ thống ở SRS v1.23.0 — bán yến chỉ đi
+    qua Module MARKET (Harvests + Marketplace, liên hệ trực tiếp).
 
 servers:
   - url: http://localhost:3000
@@ -31,13 +29,13 @@ servers:
 
 tags:
   - name: Auth
-    description: AUTH-FR-001..003/004/005/005b/009/010/012 (đăng ký/đăng nhập/JWT/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản)
+    description: AUTH-FR-001..003/004/005/009/010/012 (đăng ký/đăng nhập/JWT/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản)
   - name: Admin
-    description: AUTH-FR-005c/007/011/012, TICKET-FR-005b, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician/Sales Staff, can thiệp ticket toàn quyền, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
+    description: AUTH-FR-005c/007/011/012, TICKET-FR-005b, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician, can thiệp ticket toàn quyền, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
   - name: System
     description: SYSTEM-FR-001..003 (Module SYSTEM §5.11 — xem audit log, ngưỡng mặc định hệ thống, tổng quan sức khỏe hệ thống) — mọi endpoint chỉ ADMIN
   - name: Farms
-    description: FARM-FR-001..002/007, AUTH-FR-005/005b/010 (farm/house/zone/member/sales-staff/invitation)
+    description: FARM-FR-001..002/007, AUTH-FR-005/010 (farm/house/zone/member/invitation)
   - name: Devices
     description: FARM-FR-003..007, ENV-FR-006/015..018 (sensor/camera node, relay control)
   - name: Telemetry
@@ -52,8 +50,6 @@ tags:
     description: MARKET-FR-006..013 (Nest Listing, Traceability Card, truy xuất nguồn gốc, liên hệ)
   - name: Tickets
     description: TICKET-FR-001..004b/006/007/009..012 (tạo/định tuyến/SLA/SAT checklist/KPI)
-  - name: Sales
-    description: SALES-FR-001..016 — Giai đoạn 2, stretch (stub, chưa cài đặt)
 
 security:
   - bearerAuth: []
@@ -499,11 +495,9 @@ paths:
         để vẫn xoá. Mỗi Farm được chuyển chủ/xoá mềm có 1 bản ghi audit riêng
         (`FARM_OWNERSHIP_TRANSFERRED`, `FARM_SOFT_DELETED`) và chủ mới cùng người bị
         xoá nhận thông báo; kết nối Socket.io của user bị ngắt. Cũng dọn các liên
-        kết trỏ tới user: xoá `SalesAssignment` của Sales Staff bị xoá, từ chối
-        (`REJECTED`, kèm lý do) các đề xuất Sales Staff đang chờ do hoặc về user đó,
-        cho hết hạn (`EXPIRED`) các lời mời đang chờ user đã gửi, đặt `deleted_at`
+        kết trỏ tới user: cho hết hạn (`EXPIRED`) các lời mời đang chờ user đã gửi, đặt `deleted_at`
         (tài khoản đã xoá không khoá/mở khoá lại được, 409). Audit `ACCOUNT_DELETED`
-        ghi `farmsTransferred`, `farmsDeleted`, `salesAssignmentsRemoved`, `forced`. Nếu lỗi giữa chừng
+        ghi `farmsTransferred`, `farmsDeleted`, `forced`. Nếu lỗi giữa chừng
         (Mongo standalone, không transaction) thì gọi lại được: farm đã xử lý xong
         không bị xử lý lần nữa.
       parameters:
@@ -616,149 +610,6 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
-  /admin/farms/{farmId}/sales-staff/{salesStaffId}:
-    delete:
-      tags: [Admin]
-      summary: "Gỡ Sales Staff khỏi 1 farm (Flow 16 case 1e) — chỉ ADMIN"
-      description: |
-        Chỉ xoá bản ghi gán (`SalesAssignment`). Tài khoản Sales Staff (có thể
-        còn gán ở farm khác) và Order/Product đã tạo trước đó giữ nguyên.
-      parameters:
-        - { name: farmId, in: path, required: true, schema: { type: string } }
-        - { name: salesStaffId, in: path, required: true, schema: { type: string } }
-      responses:
-        "200":
-          description: Đã gỡ
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiSuccess" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404":
-          description: "Sales Staff này không được gán vào farm"
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /admin/sales-staff:
-    post:
-      tags: [Admin]
-      summary: "Admin tự tạo tài khoản Sales Staff + gán thẳng vào Farm (AUTH-FR-005c, Flow 16 bước 1a) — chỉ ADMIN"
-      description: |
-        Đường chính thức để có Sales Staff (từ SRS v1.16.0, Sales Staff là nhân
-        sự phía công ty). Đường phụ là duyệt đề xuất của Farm Owner qua
-        `/admin/sales-staff-requests`.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password, full_name, farm_ids]
-              properties:
-                email: { type: string, format: email }
-                password: { type: string, minLength: 8 }
-                full_name: { type: string }
-                phone: { type: string }
-                farm_ids: { type: array, items: { type: string } }
-      responses:
-        "201":
-          description: Đã tạo
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/User" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /admin/sales-staff-requests:
-    get:
-      tags: [Admin]
-      summary: "Danh sách đề xuất thêm / yêu cầu gỡ Sales Staff từ Farm Owner (AUTH-FR-005d) — chỉ ADMIN"
-      parameters:
-        - { name: status, in: query, schema: { type: string, enum: [PENDING, APPROVED, REJECTED] } }
-        - name: type
-          in: query
-          description: "ADD gồm cả đề xuất tạo trước khi có field `type`"
-          schema: { type: string, enum: [ADD, REMOVE] }
-        - { $ref: "#/components/parameters/Page" }
-        - { $ref: "#/components/parameters/Limit" }
-      responses:
-        "200":
-          description: OK (populate farm_id, requested_by, sales_staff_id — chỉ với REMOVE —, reviewed_by)
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data: { type: array, items: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /admin/sales-staff-requests/{id}/decision:
-    put:
-      tags: [Admin]
-      summary: "Duyệt hoặc từ chối đề xuất Sales Staff (AUTH-FR-005d, Flow 16) — chỉ ADMIN"
-      description: |
-        - `APPROVED`: email chưa có tài khoản thì tạo tài khoản SALES_STAFF với
-          mật khẩu ngẫu nhiên và gửi mã đặt lại mật khẩu (luồng AUTH-FR-009;
-          dev chỉ log `[DEV RESET]` ra console); sau đó tạo `SalesAssignment`
-          với `requested_via` trỏ về đề xuất này.
-        - `REJECTED`: bắt buộc `reason`, lưu vào `review_note` để Farm Owner xem.
-        - Đề xuất `type=REMOVE` (Farm Owner yêu cầu gỡ, Flow 16 bước 1e):
-          `APPROVED` chỉ xoá `SalesAssignment` của farm đó (không đụng tài khoản
-          Sales Staff), coi như xong nếu đã gỡ từ trước; `REJECTED` giữ nguyên
-          phân công và cũng bắt buộc `reason`.
-
-        Nhận quyền xử lý nguyên tử TRƯỚC khi tạo/xoá bất cứ thứ gì: hai Admin xử
-        lý đồng thời cùng một đề xuất (dù cùng hay khác quyết định) thì chỉ 1
-        người thành công và chạm vào tài khoản/phân công, người còn lại nhận 409
-        mà không để lại tác dụng phụ. Nếu bước thực thi lỗi (VD email thuộc tài
-        khoản không phải Sales Staff, farm đã bị xoá) thì đề xuất được trả về
-        `PENDING` để xử lý lại hoặc từ chối; các điều kiện biết trước (farm còn
-        tồn tại, email không thuộc tài khoản khác role) được kiểm tra TRƯỚC khi
-        nhận quyền xử lý nên không để lại dấu vết. Đề xuất kẹt ở `APPROVED` mà chưa
-        có tác dụng nào (tiến trình chết giữa chừng) được duyệt lại sau 60 giây để
-        làm nốt phần còn thiếu; trong 60 giây đó người thứ hai nhận 409. Farm Owner
-        nhận thông báo kết quả (kèm lý do nếu bị từ chối).
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [decision]
-              properties:
-                decision: { type: string, enum: [APPROVED, REJECTED] }
-                reason: { type: string, description: "Bắt buộc khi REJECTED" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
-        "400":
-          description: "Từ chối mà thiếu reason"
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          description: "Đề xuất đã được xử lý trước đó, hoặc email thuộc tài khoản không phải Sales Staff"
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
   # ── SYSTEM ────────────────────────────────────────────────────────────────
   /admin/provisioned-devices:
     post:
@@ -819,8 +670,7 @@ paths:
         FARM_OWNERSHIP_TRANSFERRED, FARM_SOFT_DELETED, USER_CREATED,
         TECHNICIAN_REGIONS_UPDATED, THRESHOLD_UPDATED, DEFAULT_THRESHOLDS_UPDATED,
         RELAY_OVERRIDE, RELAY_OVERRIDE_CLEARED, SPEAKER_SCHEDULE_UPDATED,
-        AUDIO_TRACK_UPLOADED/SYNC_UPDATED/SELECTED/DELETED, DEVICE_REGISTERED, DEVICE_REASSIGNED, TICKET_ADMIN_OVERRIDE,
-        SALES_STAFF_REQUEST_APPROVED/REJECTED, SALES_STAFF_UNASSIGNED.
+        AUDIO_TRACK_UPLOADED/SYNC_UPDATED/SELECTED/DELETED, DEVICE_REGISTERED, DEVICE_REASSIGNED, TICKET_ADMIN_OVERRIDE.
         Mỗi bản ghi có `ip_address` của request gây ra hành động (rỗng nếu do hệ
         thống tự thực hiện).
       parameters:
@@ -1284,102 +1134,6 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
-
-  /farms/{id}/sales-staff:
-    parameters: [{ $ref: "#/components/parameters/FarmId" }]
-    post:
-      tags: [Farms]
-      summary: "Đề xuất Sales Staff cho farm (AUTH-FR-005b đổi v1.16.0, Flow 16 bước 1b) — chỉ Primary Owner"
-      description: |
-        Chỉ tạo đề xuất `PENDING`, KHÔNG tự kích hoạt — Administrator duyệt/từ
-        chối ở `PUT /admin/sales-staff-requests/{id}/decision` (AUTH-FR-005d).
-        Theo dõi kết quả ở `GET /farms/{id}/sales-staff-requests`.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [email],
-                properties: { email: { type: string, format: email } },
-              }
-      responses:
-        "201":
-          description: Đã tạo đề xuất (status=PENDING)
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          description: "Đã có đề xuất PENDING cho email này / email thuộc tài khoản không phải Sales Staff / đã được gán vào farm"
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
-    get:
-      tags: [Farms]
-      summary: Danh sách Sales Staff của farm
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiSuccess" } },
-              },
-          }
-
-  /farms/{id}/sales-staff-requests:
-    get:
-      tags: [Farms]
-      summary: "Farm Owner xem các đề xuất thêm / yêu cầu gỡ Sales Staff của farm và kết quả duyệt (Flow 16 bước 1b/1d/1e)"
-      parameters: [{ $ref: "#/components/parameters/FarmId" }]
-      responses:
-        "200":
-          description: OK (mới nhất trước; `type` phân biệt ADD/REMOVE; `review_note` là lý do nếu bị từ chối)
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data: { type: array, items: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /farms/{id}/sales-staff/{salesStaffId}/removal-requests:
-    post:
-      tags: [Farms]
-      summary: "Farm Owner yêu cầu gỡ Sales Staff khỏi farm (Flow 16 bước 1e) — chỉ Primary Owner"
-      description: |
-        Chỉ tạo yêu cầu `PENDING` với `type=REMOVE`, KHÔNG gỡ ngay — Administrator
-        duyệt/từ chối ở `PUT /admin/sales-staff-requests/{id}/decision` (hoặc gỡ
-        thẳng bằng `DELETE /admin/farms/{farmId}/sales-staff/{salesStaffId}`).
-        Theo dõi kết quả ở `GET /farms/{id}/sales-staff-requests`. Admin không
-        dùng endpoint này (403) vì đã có quyền gỡ trực tiếp.
-      parameters:
-        - { $ref: "#/components/parameters/FarmId" }
-        - { name: salesStaffId, in: path, required: true, schema: { type: string } }
-      responses:
-        "201":
-          description: Đã tạo yêu cầu gỡ (status=PENDING, type=REMOVE)
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/SalesAssignmentRequest" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          description: "Đã có yêu cầu gỡ Sales Staff này đang chờ Admin xử lý"
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
-        "422": { $ref: "#/components/responses/ValidationError" }
 
   /invitations/{token}:
     parameters:
@@ -4174,183 +3928,6 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
-  # ── SALES (stub, Giai đoạn 2) ─────────────────────────────────────────────
-  /products:
-    get:
-      tags: [Sales]
-      summary: Danh sách Product công khai
-      security: []
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-    post:
-      tags: [Sales]
-      summary: Sales Staff tạo Product từ Harvest Batch
-      requestBody:
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [harvest_batch_id],
-                properties: { harvest_batch_id: { type: string } },
-              }
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /products/{id}:
-    put:
-      tags: [Sales]
-      summary: Chỉnh sửa Product
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /products/{id}/submit-review:
-    post:
-      tags: [Sales]
-      summary: Gửi Product cho Admin duyệt
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /products/{id}/review:
-    put:
-      tags: [Sales]
-      summary: Admin duyệt/từ chối Product
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [review_status],
-                properties:
-                  {
-                    review_status:
-                      {
-                        type: string,
-                        enum: [PENDING_REVIEW, APPROVED, REJECTED],
-                      },
-                  },
-              }
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /inventory/{productId}:
-    get:
-      tags: [Sales]
-      summary: Xem tồn kho hiện tại của 1 Product
-      parameters:
-        [
-          {
-            name: productId,
-            in: path,
-            required: true,
-            schema: { type: string },
-          },
-        ]
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /orders:
-    post:
-      tags: [Sales]
-      summary: Buyer tạo đơn hàng (hỗ trợ guest checkout — AUTH-FR-008)
-      security: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [shipping_address],
-                properties: { shipping_address: { type: string } },
-              }
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-    get:
-      tags: [Sales]
-      summary: Danh sách đơn hàng (Sales Staff/Admin)
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /orders/{orderCode}:
-    get:
-      tags: [Sales]
-      summary: Tra cứu đơn hàng theo mã (guest hoặc JWT)
-      security: []
-      parameters:
-        [
-          {
-            name: orderCode,
-            in: path,
-            required: true,
-            schema: { type: string },
-          },
-        ]
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /orders/{id}/confirm:
-    put:
-      tags: [Sales]
-      summary: Sales Staff xác nhận đơn (kiểm tra tồn kho)
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /orders/{id}/status:
-    put:
-      tags: [Sales]
-      summary: Cập nhật trạng thái đơn (PACKED/SHIPPING/DELIVERED)
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [status],
-                properties: { status: { type: string } },
-              }
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /orders/{id}/return-requests:
-    post:
-      tags: [Sales]
-      summary: Buyer/Sales Staff tạo yêu cầu đổi trả
-      security: []
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [reason],
-                properties: { reason: { type: string } },
-              }
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /return-requests/{id}/verify:
-    put:
-      tags: [Sales]
-      summary: Sales Staff xác minh tình trạng hàng hoàn
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /return-requests/{id}/resolve:
-    put:
-      tags: [Sales]
-      summary: Admin ra quyết định cuối (hoàn tiền/đổi hàng/từ chối)
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
-  /sales-reports:
-    get:
-      tags: [Sales]
-      summary: Báo cáo doanh số theo Farm/khoảng thời gian
-      responses: { "501": { $ref: "#/components/responses/NotImplemented" } }
-
 components:
   securitySchemes:
     bearerAuth:
@@ -4421,20 +3998,6 @@ components:
       }
 
   responses:
-    NotImplemented:
-      description: Endpoint chưa được triển khai
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/ApiError" }
-          example:
-            {
-              success: false,
-              error:
-                {
-                  code: NOT_IMPLEMENTED,
-                  message: "Endpoint chưa được triển khai",
-                },
-            }
     NotFound:
       description: Không tìm thấy
       content:
@@ -4498,8 +4061,8 @@ components:
 
     Role:
       type: string
-      enum: [ADMIN, FARM_OWNER, TECHNICIAN, SALES_STAFF]
-      description: "AUTH-FR-004. Buyer đăng ký qua OTP không mang role nào (role=null) vì không tham gia RBAC"
+      enum: [ADMIN, FARM_OWNER, TECHNICIAN]
+      description: "AUTH-FR-004. Buyer không có tài khoản — chỉ xem Marketplace và liên hệ Farm Owner"
 
     SlaConfig:
       type: object
@@ -4545,22 +4108,6 @@ components:
         target_id: { type: string, nullable: true }
         metadata: { type: object, description: "Chi tiết thay đổi, thường có before/after" }
         ip_address: { type: string, nullable: true, description: "IP client của request; null khi hệ thống tự thực hiện ngoài request (job nền, MQTT). Đặt TRUST_PROXY khi chạy sau proxy để có IP thật" }
-        created_at: { type: string, format: date-time }
-
-    SalesAssignmentRequest:
-      type: object
-      description: "AUTH-FR-005b/005d — collection sales_assignment_requests (SRS §8.2)"
-      properties:
-        _id: { type: string }
-        farm_id: { type: string, description: "Populate { name, region } ở endpoint Admin" }
-        type: { type: string, enum: [ADD, REMOVE], description: "ADD = đề xuất thêm; REMOVE = yêu cầu gỡ (Flow 16 bước 1e). Document cũ không có field này được hiểu là ADD" }
-        requested_by: { type: string, description: "Farm Owner đề xuất; populate { full_name, email } ở endpoint Admin" }
-        sales_staff_id: { type: string, nullable: true, description: "Chỉ có khi type=REMOVE; populate { full_name, email } ở endpoint Admin" }
-        sales_staff_email: { type: string, format: email }
-        status: { type: string, enum: [PENDING, APPROVED, REJECTED] }
-        reviewed_by: { type: string, nullable: true }
-        review_note: { type: string, nullable: true, description: "Lý do khi REJECTED" }
-        reviewed_at: { type: string, format: date-time, nullable: true }
         created_at: { type: string, format: date-time }
 
     User:
@@ -4650,12 +4197,12 @@ components:
 
     Invitation:
       type: object
-      description: AUTH-FR-010, Flow 12 — lời mời thành viên/Sales Staff, hết hạn sau 7 ngày nếu không phản hồi
+      description: AUTH-FR-010, Flow 12 — lời mời thành viên farm, hết hạn sau 7 ngày nếu không phản hồi
       properties:
         _id: { type: string }
         farm_id: { type: string }
         invited_email: { type: string, format: email }
-        invited_role: { type: string, enum: [FARM_OWNER, SALES_STAFF], description: "Chỉ FARM_OWNER còn được tạo mới. SALES_STAFF là dữ liệu cũ (trước v1.16.0): accept trả 409, đăng ký không tiêu thụ, không còn luồng nào tự gán quyền — Sales Staff nay đi qua /farms/{id}/sales-staff + Admin duyệt" }
+        invited_role: { type: string, enum: [FARM_OWNER] }
         invited_by: { type: string }
         token: { type: string }
         status: { type: string, enum: [PENDING, ACCEPTED, DECLINED, EXPIRED] }

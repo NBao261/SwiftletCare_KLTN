@@ -44,9 +44,7 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
   if (existing) throw ConflictError('Email đã được đăng ký')
 
   // Flow 12 bước 3b — nếu email trùng một lời mời Farm Owner PENDING còn hạn, lời
-  // mời tự động được accept ngay khi đăng ký xong, không cần thao tác thêm. Chỉ
-  // lời mời FARM_OWNER: từ v1.16.0 Sales Staff không còn đi qua lời mời (đề xuất +
-  // Admin duyệt, AUTH-FR-005b/005d), nên lời mời SALES_STAFF cũ tồn đọng bị bỏ qua.
+  // mời tự động được accept ngay khi đăng ký xong, không cần thao tác thêm.
   const invitation = await Invitation.findOne({
     invited_email: normalizedEmail,
     invited_role: 'FARM_OWNER',
@@ -257,7 +255,7 @@ export async function updateNotificationPreferences(
 /**
  * AUTH-FR-012 / PRIV-NFR-003 — user tự yêu cầu xoá tài khoản. Chỉ ĐÁNH DẤU,
  * việc xoá thật do Administrator xử lý trong ≤30 ngày (Flow 19) vì còn phải
- * kiểm tra ràng buộc Farm/Order dở dang trước khi xoá.
+ * kiểm tra ràng buộc Farm/ticket dở dang trước khi xoá.
  */
 export async function requestAccountDeletion(userId: string): Promise<IUser> {
   const user = await User.findById(userId)

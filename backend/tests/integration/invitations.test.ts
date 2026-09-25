@@ -1,12 +1,10 @@
 /**
- * Lời mời thành viên (Flow 12) sau khi Sales Staff chuyển sang đề xuất + Admin duyệt (v1.16.0):
- * lời mời FARM_OWNER vẫn hoạt động, lời mời SALES_STAFF kiểu cũ không còn tự gán quyền.
+ * Lời mời thành viên farm (Flow 12, AUTH-FR-005/010).
  */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
-import { SalesAssignment } from '@/models/salesAssignment.model'
 import { User } from '@/models/user.model'
 import { registerUser } from '@/services/auth.service'
 import { acceptInvitation, inviteMember } from '@/services/farm.service'
@@ -24,10 +22,10 @@ afterAll(async () => {
 })
 
 afterEach(async () => {
-  await Promise.all([Farm.deleteMany({}), Invitation.deleteMany({}), SalesAssignment.deleteMany({}), User.deleteMany({})])
+  await Promise.all([Farm.deleteMany({}), Invitation.deleteMany({}), User.deleteMany({})])
 })
 
-async function seed(role: 'FARM_OWNER' | 'SALES_STAFF', email = 'invitee@test.vn') {
+async function seed(role: 'FARM_OWNER', email = 'invitee@test.vn') {
   const owner = await User.create({ email: 'owner@test.vn', password_hash: 'password123', full_name: 'Owner', role: 'FARM_OWNER' })
   const farm = await Farm.create({
     name: 'Farm', address: 'HCMC', owner_id: owner._id,
@@ -52,15 +50,6 @@ describe('registerUser with a pending invitation', () => {
     expect(after.members.some(m => String(m.user_id) === String(user._id))).toBe(true)
   })
 
-  it('ignores a leftover SALES_STAFF invitation: no role change, no assignment, invitation untouched', async () => {
-    const { invitation } = await seed('SALES_STAFF')
-
-    const user = await registerUser({ email: 'invitee@test.vn', password: 'password123', full_name: 'Invitee' })
-
-    expect(user.role).not.toBe('SALES_STAFF')
-    expect(await SalesAssignment.countDocuments()).toBe(0)
-    expect((await Invitation.findById(invitation._id))!.status).toBe('PENDING')
-  })
 })
 
 describe('acceptInvitation', () => {
@@ -75,28 +64,9 @@ describe('acceptInvitation', () => {
     expect((await Invitation.findById(invitation._id))!.status).toBe('ACCEPTED')
   })
 
-  it('refuses a leftover SALES_STAFF invitation without granting anything and keeps it PENDING', async () => {
-    const { invitation } = await seed('SALES_STAFF')
-    const invitee = await User.create({ email: 'invitee@test.vn', password_hash: 'password123', full_name: 'Invitee', role: 'SALES_STAFF' })
-
-    await expect(acceptInvitation(invitation.token, { _id: String(invitee._id), email: invitee.email, role: 'SALES_STAFF' } as never))
-      .rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('không còn được hỗ trợ') })
-
-    expect(await SalesAssignment.countDocuments()).toBe(0)
-    expect((await Invitation.findById(invitation._id))!.status).toBe('PENDING')
-  })
 })
 
 describe('inviteMember', () => {
-  it('is not blocked by a leftover SALES_STAFF invitation for the same email', async () => {
-    const { owner, farm } = await seed('SALES_STAFF')
-
-    const invitation = await inviteMember(String(farm._id), { _id: String(owner._id), role: 'FARM_OWNER' } as never, 'invitee@test.vn')
-
-    expect(invitation.invited_role).toBe('FARM_OWNER')
-    expect(invitation.status).toBe('PENDING')
-  })
-
   it('still refuses a second pending FARM_OWNER invitation for the same email', async () => {
     const { owner, farm } = await seed('FARM_OWNER')
     await expect(inviteMember(String(farm._id), { _id: String(owner._id), role: 'FARM_OWNER' } as never, 'invitee@test.vn'))

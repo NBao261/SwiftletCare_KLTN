@@ -1,20 +1,15 @@
 /**
- * admin.service — khoá tài khoản, xoá tài khoản theo yêu cầu (cascade, ticket dở, chạy lại),
- * tạo Sales Staff, duyệt đề xuất Sales Staff. Chạy trên MongoDB in-memory.
+ * admin.service — khoá tài khoản, xoá tài khoản theo yêu cầu (cascade, ticket dở, chạy lại).
+ * Chạy trên MongoDB in-memory.
  */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
-import { SalesAssignment } from '@/models/salesAssignment.model'
 import { Invitation } from '@/models/invitation.model'
-import { SalesAssignmentRequest } from '@/models/salesAssignmentRequest.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
-import {
-  completeDeletionRequest, createSalesStaff, decideSalesStaffRequest, setUserStatus, unassignSalesStaff,
-} from '@/services/admin.service'
-import { forgotPassword } from '@/services/auth.service'
+import { completeDeletionRequest, setUserStatus } from '@/services/admin.service'
 import { notifyUser } from '@/services/notification.service'
 import { disconnectUser } from '@/socket'
 
@@ -26,10 +21,6 @@ jest.mock('@/socket', () => ({
   ...jest.requireActual('@/socket'),
   disconnectUser: jest.fn(),
 }))
-jest.mock('@/services/auth.service', () => ({
-  ...jest.requireActual('@/services/auth.service'),
-  forgotPassword: jest.fn().mockResolvedValue(undefined),
-}))
 
 let mongod: MongoMemoryServer
 const oid = () => new mongoose.Types.ObjectId()
@@ -37,7 +28,7 @@ const oid = () => new mongoose.Types.ObjectId()
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create()
   await mongoose.connect(mongod.getUri())
-  await Promise.all([User.init(), SalesAssignment.init()])
+  await User.init()
 })
 
 afterAll(async () => {
@@ -49,12 +40,12 @@ afterEach(async () => {
   jest.restoreAllMocks()
   jest.clearAllMocks()
   await Promise.all([
-    AuditLog.deleteMany({}), Farm.deleteMany({}), SalesAssignment.deleteMany({}),
-    Invitation.deleteMany({}), SalesAssignmentRequest.deleteMany({}), Ticket.deleteMany({}), User.deleteMany({}),
+    AuditLog.deleteMany({}), Farm.deleteMany({}),
+    Invitation.deleteMany({}), Ticket.deleteMany({}), User.deleteMany({}),
   ])
 })
 
-const mkUser = (email: string, role: 'ADMIN' | 'FARM_OWNER' | 'TECHNICIAN' | 'SALES_STAFF' = 'FARM_OWNER', extra: object = {}) =>
+const mkUser = (email: string, role: 'ADMIN' | 'FARM_OWNER' | 'TECHNICIAN' = 'FARM_OWNER', extra: object = {}) =>
   User.create({ email, password_hash: 'password123', full_name: email, role, ...extra })
 
 const mkFarm = (owner: { _id: unknown }, others: Array<{ user: { _id: unknown }; joined: string }> = [], extra: object = {}) =>
@@ -279,44 +270,6 @@ describe('completeDeletionRequest', () => {
       expect((await User.findById(leaver._id))!.is_active).toBe(false)
     })
 
-    it('removes the assignments of a deleted Sales Staff and reports how many', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const sales = await mkUser('sales@test.vn', 'SALES_STAFF', requested)
-      const otherSales = await mkUser('other-sales@test.vn', 'SALES_STAFF')
-      await SalesAssignment.create([
-        { farm_id: oid(), sales_staff_id: sales._id, invited_by: admin._id },
-        { farm_id: oid(), sales_staff_id: sales._id, invited_by: admin._id },
-        { farm_id: oid(), sales_staff_id: otherSales._id, invited_by: admin._id },
-      ])
-
-      await completeDeletionRequest(String(admin._id), String(sales._id))
-
-      expect(await SalesAssignment.countDocuments({ sales_staff_id: sales._id })).toBe(0)
-      expect(await SalesAssignment.countDocuments({ sales_staff_id: otherSales._id })).toBe(1)
-      const [done] = await auditActions('ACCOUNT_DELETED')
-      expect(done.metadata).toMatchObject({ salesAssignmentsRemoved: 2 })
-    })
-
-    it('rejects pending Sales Staff requests made by, or about, the deleted user and leaves others alone', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
-      const bystander = await mkUser('bystander@test.vn')
-      const farm = oid()
-      const madeByLeaver = await SalesAssignmentRequest.create({ farm_id: farm, requested_by: leaver._id, sales_staff_email: 'new@test.vn' })
-      const aboutLeaver = await SalesAssignmentRequest.create({ farm_id: farm, requested_by: bystander._id, sales_staff_email: 'leaver@test.vn' })
-      const unrelated = await SalesAssignmentRequest.create({ farm_id: farm, requested_by: bystander._id, sales_staff_email: 'someone@test.vn' })
-
-      await completeDeletionRequest(String(admin._id), String(leaver._id))
-
-      for (const id of [madeByLeaver._id, aboutLeaver._id]) {
-        const r = (await SalesAssignmentRequest.findById(id))!
-        expect(r.status).toBe('REJECTED')
-        expect(String(r.reviewed_by)).toBe(String(admin._id))
-        expect(r.review_note).toContain('đã bị xoá')
-      }
-      expect((await SalesAssignmentRequest.findById(unrelated._id))!.status).toBe('PENDING')
-    })
-
     it('expires the pending invitations the deleted user had sent', async () => {
       const admin = await mkUser('admin@test.vn', 'ADMIN')
       const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
@@ -417,325 +370,5 @@ describe('completeDeletionRequest', () => {
     const [done] = await auditActions('ACCOUNT_DELETED')
     expect(done.metadata).toMatchObject({ farmsTransferred: 2, farmsDeleted: 0 }) // tổng qua cả 2 lần chạy, lấy từ audit từng farm
     expect(await Farm.countDocuments({ owner_id: leaver._id })).toBe(0)
-  })
-})
-
-// ── createSalesStaff ──────────────────────────────────────────────────────────
-describe('createSalesStaff', () => {
-  const input = { email: 'sales@test.vn', password: 'password123', full_name: 'Sales' }
-
-  it('creates the account and one assignment per distinct farm', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const owner = await mkUser('owner@test.vn')
-    const farm = await mkFarm(owner)
-    const farm2 = await mkFarm(owner)
-
-    const user = await createSalesStaff(String(admin._id), {
-      ...input, farm_ids: [String(farm._id), String(farm2._id), String(farm._id)],
-    })
-
-    expect(user.role).toBe('SALES_STAFF')
-    expect(await SalesAssignment.countDocuments({ sales_staff_id: user._id })).toBe(2)
-  })
-
-  it('fails with 404 for a well-formed but unknown farm id and creates nothing', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const owner = await mkUser('owner@test.vn')
-    const farm = await mkFarm(owner)
-    const ghost = String(oid())
-
-    await expect(createSalesStaff(String(admin._id), { ...input, farm_ids: [String(farm._id), ghost] }))
-      .rejects.toMatchObject({ statusCode: 404, message: expect.stringContaining(ghost) })
-
-    expect(await User.countDocuments({ email: 'sales@test.vn' })).toBe(0)
-    expect(await SalesAssignment.countDocuments()).toBe(0)
-  })
-
-  it('rejects a soft-deleted farm', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const owner = await mkUser('owner@test.vn')
-    const deleted = await mkFarm(owner, [], { is_deleted: true })
-
-    await expect(createSalesStaff(String(admin._id), { ...input, farm_ids: [String(deleted._id)] }))
-      .rejects.toMatchObject({ statusCode: 404 })
-    expect(await User.countDocuments({ email: 'sales@test.vn' })).toBe(0)
-  })
-
-  it('rejects an email that is already registered', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    await mkUser('sales@test.vn')
-    await expect(createSalesStaff(String(admin._id), { ...input, farm_ids: [String(oid())] })).rejects.toMatchObject({ statusCode: 409 })
-  })
-})
-
-// ── unassignSalesStaff ────────────────────────────────────────────────────────
-describe('unassignSalesStaff', () => {
-  it('removes only the assignment for that farm and audits it', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const sales = await mkUser('sales@test.vn', 'SALES_STAFF')
-    const farmA = oid()
-    const farmB = oid()
-    await SalesAssignment.create([
-      { farm_id: farmA, sales_staff_id: sales._id, invited_by: admin._id },
-      { farm_id: farmB, sales_staff_id: sales._id, invited_by: admin._id },
-    ])
-
-    await unassignSalesStaff(String(admin._id), String(farmA), String(sales._id))
-
-    expect(await SalesAssignment.countDocuments({ farm_id: farmA })).toBe(0)
-    expect(await SalesAssignment.countDocuments({ farm_id: farmB })).toBe(1)
-    expect(await User.findById(sales._id)).not.toBeNull()
-    expect(await auditActions('SALES_STAFF_UNASSIGNED')).toHaveLength(1)
-  })
-
-  it('answers 404 when there is no such assignment', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    await expect(unassignSalesStaff(String(admin._id), String(oid()), String(oid()))).rejects.toMatchObject({ statusCode: 404 })
-  })
-})
-
-// ── decideSalesStaffRequest ───────────────────────────────────────────────────
-describe('decideSalesStaffRequest', () => {
-  async function seed(email = 'newsales@test.vn') {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const owner = await mkUser('owner@test.vn')
-    const farm = await mkFarm(owner)
-    const request = await SalesAssignmentRequest.create({ farm_id: farm._id, requested_by: owner._id, sales_staff_email: email })
-    return { admin, owner, farm, request }
-  }
-
-  it('approving creates the Sales Staff, the traced assignment, sends a reset code and notifies the requester', async () => {
-    const { admin, owner, farm, request } = await seed()
-
-    const done = await decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')
-
-    expect(done.status).toBe('APPROVED')
-    expect(String(done.reviewed_by)).toBe(String(admin._id))
-    expect(done.reviewed_at).toBeInstanceOf(Date)
-
-    const staff = (await User.findOne({ email: 'newsales@test.vn' }))!
-    expect(staff.role).toBe('SALES_STAFF')
-    expect(forgotPassword).toHaveBeenCalledWith('newsales@test.vn')
-
-    const assignment = (await SalesAssignment.findOne({ farm_id: farm._id, sales_staff_id: staff._id }))!
-    expect(String(assignment.requested_via)).toBe(String(request._id))
-    expect(String(assignment.invited_by)).toBe(String(owner._id))
-
-    expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ title: expect.stringContaining('được duyệt') }))
-    expect(await auditActions('SALES_STAFF_REQUEST_APPROVED')).toHaveLength(1)
-  })
-
-  it('reuses an existing Sales Staff account instead of creating another', async () => {
-    const { admin, request } = await seed('existing@test.vn')
-    const existing = await mkUser('existing@test.vn', 'SALES_STAFF')
-
-    await decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')
-
-    expect(await User.countDocuments({ email: 'existing@test.vn' })).toBe(1)
-    expect(await SalesAssignment.countDocuments({ sales_staff_id: existing._id })).toBe(1)
-    expect(forgotPassword).not.toHaveBeenCalled()
-  })
-
-  it('refuses to turn a Farm Owner or Technician into Sales Staff and leaves the request pending', async () => {
-    const { admin, request } = await seed('techie@test.vn')
-    await mkUser('techie@test.vn', 'TECHNICIAN')
-
-    await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
-    expect((await SalesAssignmentRequest.findById(request._id))!.status).toBe('PENDING')
-  })
-
-  it('refuses to approve when the farm no longer exists', async () => {
-    const { admin, farm, request } = await seed()
-    await Farm.collection.updateOne({ _id: farm._id }, { $set: { is_deleted: true } })
-
-    await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
-    expect(await User.countDocuments({ email: 'newsales@test.vn' })).toBe(0)
-
-    // điều kiện biết trước được kiểm tra TRƯỚC khi nhận quyền xử lý: đề xuất còn nguyên PENDING, chưa ai đứng tên
-    const untouched = (await SalesAssignmentRequest.findById(request._id).lean())!
-    expect(untouched.status).toBe('PENDING')
-    expect(untouched.reviewed_by).toBeUndefined()
-    expect(untouched.reviewed_at).toBeUndefined()
-  })
-
-  it('rejecting requires a reason and tells the farm owner why', async () => {
-    const { admin, owner, request } = await seed()
-
-    await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'REJECTED', '  ')).rejects.toMatchObject({ statusCode: 400 })
-
-    const done = await decideSalesStaffRequest(String(admin._id), String(request._id), 'REJECTED', 'Email không thuộc công ty')
-
-    expect(done.status).toBe('REJECTED')
-    expect(done.review_note).toBe('Email không thuộc công ty')
-    expect(await SalesAssignment.countDocuments()).toBe(0)
-    expect(await User.countDocuments({ email: 'newsales@test.vn' })).toBe(0)
-    expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({
-      title: expect.stringContaining('từ chối'), body: expect.stringContaining('Email không thuộc công ty'),
-    }))
-  })
-
-  it('does not decide the same request twice', async () => {
-    const { admin, request } = await seed()
-    await decideSalesStaffRequest(String(admin._id), String(request._id), 'REJECTED', 'no')
-    await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
-  })
-
-  it('never leaves an approval half-applied when a rejection races it', async () => {
-    const { admin, owner, farm } = await seed('unused@test.vn')
-    for (let i = 0; i < 6; i++) {
-      const email = `racer${i}@test.vn`
-      const req = await SalesAssignmentRequest.create({ farm_id: farm._id, requested_by: owner._id, sales_staff_email: email })
-
-      const results = await Promise.allSettled([
-        decideSalesStaffRequest(String(admin._id), String(req._id), 'APPROVED'),
-        decideSalesStaffRequest(String(admin._id), String(req._id), 'REJECTED', 'no'),
-      ])
-
-      expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1)
-      const finalStatus = (await SalesAssignmentRequest.findById(req._id))!.status
-      const assignments = await SalesAssignment.countDocuments({ requested_via: req._id })
-      const account = await User.findOne({ email })
-      if (finalStatus === 'APPROVED') {
-        expect(assignments).toBe(1)
-        expect(account).not.toBeNull()
-      } else {
-        expect(finalStatus).toBe('REJECTED')
-        expect(assignments).toBe(0)
-        expect(account).toBeNull() // người thua không được để lại tài khoản/phân công mồ côi
-      }
-    }
-  })
-
-  it('never removes an assignment for a removal request that was rejected in the race', async () => {
-    const { admin, owner, sales, farm } = await (async () => {
-      const ctx = await seed('unused@test.vn')
-      const sales = await mkUser('sales@test.vn', 'SALES_STAFF')
-      await SalesAssignment.create({ farm_id: ctx.farm._id, sales_staff_id: sales._id, invited_by: ctx.admin._id })
-      return { ...ctx, sales }
-    })()
-    for (let i = 0; i < 4; i++) {
-      // dựng lại phân công mỗi vòng để vòng sau vẫn có thứ để gỡ
-      await SalesAssignment.updateOne(
-        { farm_id: farm._id, sales_staff_id: sales._id },
-        { $setOnInsert: { invited_by: admin._id } }, { upsert: true },
-      )
-      const req = await SalesAssignmentRequest.create({
-        farm_id: farm._id, type: 'REMOVE', requested_by: owner._id, sales_staff_id: sales._id, sales_staff_email: 'sales@test.vn',
-      })
-
-      await Promise.allSettled([
-        decideSalesStaffRequest(String(admin._id), String(req._id), 'APPROVED'),
-        decideSalesStaffRequest(String(admin._id), String(req._id), 'REJECTED', 'no'),
-      ])
-
-      const finalStatus = (await SalesAssignmentRequest.findById(req._id))!.status
-      const stillAssigned = await SalesAssignment.countDocuments({ farm_id: farm._id, sales_staff_id: sales._id })
-      expect(stillAssigned).toBe(finalStatus === 'APPROVED' ? 0 : 1)
-    }
-  })
-
-  describe('when applying the approval fails after the request was claimed', () => {
-    it('puts the request back to PENDING with the decision fields cleared, and a retry succeeds', async () => {
-      const { admin, request } = await seed()
-      ;(forgotPassword as jest.Mock).mockRejectedValueOnce(new Error('SMTP down'))
-
-      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toThrow('SMTP down')
-
-      const restored = (await SalesAssignmentRequest.findById(request._id).lean())!
-      expect(restored.status).toBe('PENDING')
-      expect(restored.reviewed_by).toBeUndefined()
-      expect(restored.reviewed_at).toBeUndefined()
-      expect(restored.review_note).toBeUndefined()
-
-      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).resolves.toMatchObject({ status: 'APPROVED' })
-      expect(await User.countDocuments({ email: 'newsales@test.vn' })).toBe(1) // tài khoản tạo ở lần lỗi được dùng lại
-      expect(await SalesAssignment.countDocuments({ requested_via: request._id })).toBe(1)
-    })
-
-    it('reports the original error even when the rollback write also fails, and the stuck request heals on a later approval', async () => {
-      const { admin, request } = await seed()
-      ;(forgotPassword as jest.Mock).mockRejectedValueOnce(new Error('SMTP down'))
-      jest.spyOn(SalesAssignmentRequest, 'updateOne').mockRejectedValueOnce(new Error('rollback failed') as never)
-
-      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toThrow('SMTP down')
-      expect((await SalesAssignmentRequest.findById(request._id))!.status).toBe('APPROVED') // kẹt: claim đã ghi, hoàn tác lỗi
-
-      // ngay lập tức: vẫn coi là đang xử lý
-      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
-
-      // sau STUCK_APPROVAL_MS không có tác dụng nào thì duyệt lại sẽ làm nốt
-      await SalesAssignmentRequest.collection.updateOne({ _id: request._id }, { $set: { reviewed_at: new Date(Date.now() - 120_000) } })
-      const other = await mkUser('admin2@test.vn', 'ADMIN')
-      await expect(decideSalesStaffRequest(String(other._id), String(request._id), 'APPROVED')).resolves.toMatchObject({ status: 'APPROVED' })
-
-      expect(await SalesAssignment.countDocuments({ requested_via: request._id })).toBe(1)
-      const [audit] = await auditActions('SALES_STAFF_REQUEST_APPROVED')
-      expect(audit.metadata).toMatchObject({ resumed: true })
-    })
-  })
-
-  describe('resuming an approval whose worker died', () => {
-    const backdate = (id: unknown, ms: number) =>
-      SalesAssignmentRequest.collection.updateOne({ _id: id as never }, { $set: { reviewed_at: new Date(Date.now() - ms) } })
-
-    it('does not touch a fresh approval that has no effect yet: it is still being processed (409)', async () => {
-      const { admin, request } = await seed()
-      await SalesAssignmentRequest.collection.updateOne(
-        { _id: request._id }, { $set: { status: 'APPROVED', reviewed_by: admin._id, reviewed_at: new Date() } })
-
-      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
-      expect(await SalesAssignment.countDocuments()).toBe(0)
-    })
-
-    it('never re-applies an approval that already took effect', async () => {
-      const { admin, request } = await seed()
-      await decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')
-      await backdate(request._id, 120_000)
-      ;(notifyUser as jest.Mock).mockClear()
-
-      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED')).rejects.toMatchObject({ statusCode: 409 })
-      expect(notifyUser).not.toHaveBeenCalled()
-      expect(await auditActions('SALES_STAFF_REQUEST_APPROVED')).toHaveLength(1)
-    })
-
-    it('never resumes a rejection or lets a different decision override an approval', async () => {
-      const { admin, request } = await seed()
-      await SalesAssignmentRequest.collection.updateOne(
-        { _id: request._id }, { $set: { status: 'APPROVED', reviewed_by: admin._id, reviewed_at: new Date(Date.now() - 120_000) } })
-
-      await expect(decideSalesStaffRequest(String(admin._id), String(request._id), 'REJECTED', 'no')).rejects.toMatchObject({ statusCode: 409 })
-      expect((await SalesAssignmentRequest.findById(request._id))!.status).toBe('APPROVED')
-    })
-
-    it('resumes a stuck removal approval by deleting the assignment that is still there', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const owner = await mkUser('owner@test.vn')
-      const sales = await mkUser('sales@test.vn', 'SALES_STAFF')
-      const farm = await mkFarm(owner)
-      await SalesAssignment.create({ farm_id: farm._id, sales_staff_id: sales._id, invited_by: admin._id })
-      const req = await SalesAssignmentRequest.create({
-        farm_id: farm._id, type: 'REMOVE', requested_by: owner._id, sales_staff_id: sales._id, sales_staff_email: 'sales@test.vn',
-        status: 'APPROVED', reviewed_by: admin._id, reviewed_at: new Date(Date.now() - 120_000),
-      })
-
-      await expect(decideSalesStaffRequest(String(admin._id), String(req._id), 'APPROVED')).resolves.toMatchObject({ status: 'APPROVED' })
-      expect(await SalesAssignment.countDocuments({ farm_id: farm._id, sales_staff_id: sales._id })).toBe(0)
-    })
-  })
-
-  it('lets exactly one of two concurrent approvals win', async () => {
-    const { admin, request } = await seed()
-
-    const results = await Promise.allSettled([
-      decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED'),
-      decideSalesStaffRequest(String(admin._id), String(request._id), 'APPROVED'),
-    ])
-
-    expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1)
-    const loser = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')!
-    expect(loser.reason).toMatchObject({ statusCode: 409 })
-    expect(await User.countDocuments({ email: 'newsales@test.vn' })).toBe(1)
-    expect(await SalesAssignment.countDocuments()).toBe(1)
-    expect(await auditActions('SALES_STAFF_REQUEST_APPROVED')).toHaveLength(1)
   })
 })

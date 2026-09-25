@@ -30,12 +30,4 @@ router.put ('/zones/:zoneId/thresholds', requireRole('FARM_OWNER','TECHNICIAN','
 // ENV-FR-020 — reset về ngưỡng mặc định hệ thống do Admin cấu hình (system_settings, SYSTEM-FR-002)
 router.put ('/zones/:zoneId/thresholds/reset', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.resetThresholds)
 
-// Sales Staff (AUTH-FR-005b, Flow 16) — Farm Owner chỉ đề xuất, Admin duyệt ở /admin/sales-staff-requests
-router.post('/:id/sales-staff', requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('email').isEmail(), validate, farmController.requestSalesStaff)
-router.get ('/:id/sales-staff', param('id').isMongoId(), validate, farmController.listSalesStaff)
-// Flow 16 bước 1e — Farm Owner chỉ được yêu cầu gỡ; Admin duyệt hoặc gỡ thẳng ở /admin
-router.post('/:id/sales-staff/:salesStaffId/removal-requests', requireRole('FARM_OWNER'),
-  param('id').isMongoId(), param('salesStaffId').isMongoId(), validate, farmController.requestSalesStaffRemoval)
-router.get ('/:id/sales-staff-requests', param('id').isMongoId(), validate, farmController.listSalesStaffRequests)
-
 export default router
