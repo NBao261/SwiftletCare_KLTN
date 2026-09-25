@@ -43,16 +43,14 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
   const existing = await User.findOne({ email: normalizedEmail })
   if (existing) throw ConflictError('Email đã được đăng ký')
 
-  // Flow 12 bước 3b — nếu email trùng một lời mời Farm Owner PENDING còn hạn, lời
-  // mời tự động được accept ngay khi đăng ký xong, không cần thao tác thêm. Chỉ
-  // lời mời FARM_OWNER: từ v1.16.0 Sales Staff không còn đi qua lời mời (đề xuất +
-  // Admin duyệt, AUTH-FR-005b/005d), nên lời mời SALES_STAFF cũ tồn đọng bị bỏ qua.
+  // Flow 12 bước 3b — nếu email trùng một lời mời PENDING còn hạn (Farm Owner hoặc
+  // Farm Operator), lời mời tự động được accept ngay khi đăng ký xong và tài khoản
+  // mang đúng role được mời. Không có lời mời thì là Farm Owner tự đăng ký (mặc định).
   const invitation = await Invitation.findOne({
     invited_email: normalizedEmail,
-    invited_role: 'FARM_OWNER',
     status: 'PENDING',
     expires_at: { $gt: new Date() },
-  })
+  }).sort({ created_at: 1 })
 
   const user = new User({
     // Lưu dạng đã chuẩn hoá — nếu lưu input.email thô, dup-check ở trên (query
@@ -72,7 +70,12 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
     await invitation.save()
 
     await Farm.findByIdAndUpdate(invitation.farm_id, {
-      $addToSet: { members: { user_id: user._id, is_primary: false, joined_at: new Date() } },
+      $addToSet: {
+        members: {
+          user_id: user._id, is_primary: false, role: invitation.invited_role,
+          zone_ids: invitation.zone_ids, joined_at: new Date(),
+        },
+      },
     })
   }
 
@@ -257,7 +260,7 @@ export async function updateNotificationPreferences(
 /**
  * AUTH-FR-012 / PRIV-NFR-003 — user tự yêu cầu xoá tài khoản. Chỉ ĐÁNH DẤU,
  * việc xoá thật do Administrator xử lý trong ≤30 ngày (Flow 19) vì còn phải
- * kiểm tra ràng buộc Farm/Order dở dang trước khi xoá.
+ * kiểm tra ràng buộc Farm/ticket dở dang trước khi xoá.
  */
 export async function requestAccountDeletion(userId: string): Promise<IUser> {
   const user = await User.findById(userId)

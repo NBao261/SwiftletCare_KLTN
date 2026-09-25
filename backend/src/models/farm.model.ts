@@ -1,11 +1,16 @@
 import { Schema, model, Document, Types } from 'mongoose'
+import type { FarmMemberRole } from '@/types'
 
 /**
  * Farm + Member Document – SRS §8.2, FARM-FR-001
  */
 export interface IFarmMember {
   user_id:    Types.ObjectId
-  is_primary: boolean // true = người tạo Farm (AUTH-FR-005); mọi member đều role FARM_OWNER
+  is_primary: boolean // true = người tạo Farm (AUTH-FR-005)
+  /** FARM_OWNER = đồng sở hữu (quyền vận hành đầy đủ); FARM_OPERATOR = nhân viên vận hành (AUTH-FR-005) */
+  role:       FarmMemberRole
+  /** Chỉ cho FARM_OPERATOR: rỗng = cả farm, có giá trị = chỉ các Zone này */
+  zone_ids:   Types.ObjectId[]
   joined_at:  Date
 }
 
@@ -40,6 +45,9 @@ const farmSchema = new Schema<IFarm>(
     members: [{
       user_id:    { type: Schema.Types.ObjectId, ref: 'User' },
       is_primary: { type: Boolean, default: false },
+      // Member cũ (trước v1.23.0) không có field này — đều là Farm Owner
+      role:       { type: String, enum: ['FARM_OWNER', 'FARM_OPERATOR'] satisfies FarmMemberRole[], default: 'FARM_OWNER' },
+      zone_ids:   { type: [{ type: Schema.Types.ObjectId, ref: 'Zone' }], default: [] },
       joined_at:  { type: Date, default: Date.now },
     }],
     is_deleted: { type: Boolean, default: false },

@@ -1,10 +1,12 @@
 # SwiftletCare — BẢNG TASK CHI TIẾT (Micro-task Checklist) v3
 
-**Bám theo:** SRS v1.12.0 + Components Guide v3.3 + Sensor Config Guide + Camera Guide Nhà Yến | **Phạm vi:** Giai đoạn 1 (MVP)
+**Bám theo:** SRS v1.23.0 + Components Guide v3.11 + Sensor Config Guide + Camera Guide Nhà Yến | **Phạm vi:** Giai đoạn 1 (MVP)
 
 > **[v2 cập nhật]** theo linh kiện thực tế đã mua: ESP32 NodeMCU 38 chân + đế mở rộng, **2 mạch Buck** (tách nguồn PAM8403), Domino TB1504, relay kích H/L (đặt mức High), DFPlayer + PAM8403 6W có volume, camera IR 940nm.
 >
 > **[v3 cập nhật — theo SRS v1.12.0]** Đổi mô hình onboarding thiết bị: **Technician thao tác qua Web Console** (không phải Farm Owner tự quét QR qua Mobile App như bản checklist cũ) — xem Flow 1/1b. Thêm hẳn 9 Flow mới (Flow 11→19: đăng ký/đăng nhập/quên mật khẩu, mời thành viên, điều khiển relay thủ công + auto-revert, offline-detection, OTA, mời Sales Staff, duyệt sản phẩm, cảnh báo tồn kho, quản lý tài khoản Admin) → mục A/C/D/E dưới đây đã bổ sung task tương ứng. Ticket thêm loại `INSTALLATION` (Flow 9b) đi kèm cơ chế tự động định tuyến giống ticket báo lỗi.
+>
+> **[cập nhật theo SRS v1.23.0]** Đổi mô hình actor: **thêm Farm Operator** (nhân viên vận hành do Farm Owner mời, phạm vi cả farm hoặc một số Zone), **bỏ Sales Staff cùng Module SALES** — các task SALES/Sales Staff bên dưới đã xoá; Flow 10/16/17/18 không còn.
 >
 > **[Cập nhật]** Các mục `[x]` dưới đây đã được build và **verify trực tiếp** (build/test/demo E2E thật — ESP32 vật lý, backend chạy thật, MongoDB/MQTT thật) trong phiên làm việc gần nhất. Một số mục ghi chú thêm (*) là code đã hoàn chỉnh nhưng chưa demo E2E đầy đủ với phần cứng thật (ví dụ 4/5 cảm biến RS485 chưa đấu dây) — team vẫn nên tự code review theo đúng quy tắc DoD trước khi tin tưởng hoàn toàn.
 
@@ -29,7 +31,7 @@
 
 ## A1. Chuẩn bị & Cấu hình cảm biến (Sprint 1)
 
-- [ ] Đọc kỹ Components Guide v3.3 (mục 1-9) + Sensor Config Guide `[Guide]`
+- [ ] Đọc kỹ Components Guide v3.11 (mục 1-9) + Sensor Config Guide `[Guide]`
 - [ ] Chuẩn bị đồ nghề: VOM, mỏ hàn (nếu cần), dây jumper, thẻ microSD, cáp USB
 - [ ] Cài Arduino IDE + thư viện `ModbusMaster`, `DFRobotDFPlayerMini`
 - [x] Đấu thử ESP32 + module UART-RS485 V2 (GPIO17→TXD, GPIO16→RXD, VCC 5V, GND) `[Guide 5]`
@@ -212,24 +214,27 @@
 
 # C. M3 — Backend
 
-## C1. Auth & Phân quyền 5 role (Sprint 1)
+## C1. Auth & Phân quyền 4 role (Sprint 1)
 
 - [x] Khởi tạo repo Express + TypeScript `[7.4]`
-- [ ] Schema `users` với enum role: ADMIN/FARM_OWNER/TECHNICIAN/SALES_STAFF `[AUTH-FR-004, 8.2]` ⚠️ 5 role, bỏ OPERATOR — ⚠️ hiện vẫn giữ `OPERATOR` trong enum để tương thích ngược (chưa xóa hẳn theo yêu cầu SRS v1.7.0) — **ưu tiên dọn trước khi thêm role mới**, kiểm tra không còn user nào role này trong DB rồi xoá khỏi enum + `devices.ts` route
+- [x] Schema `users` với enum role: ADMIN/FARM_OWNER/FARM_OPERATOR/TECHNICIAN `[AUTH-FR-004, 8.2]` — v1.23.0 bỏ SALES_STAFF, thêm FARM_OPERATOR
 - [x] API `POST /auth/register` + OTP (email/phone) `[AUTH-FR-001]` — OTP hiện chỉ log console, chưa nối SMTP/Zalo thật
 - [x] API `POST /auth/login` (email/password) `[AUTH-FR-002]` — verify thật qua API
 - [ ] Tích hợp OAuth2 Google `[AUTH-FR-002]`
 - [x] JWT Access (15p) + Refresh (30 ngày), API refresh/logout `[AUTH-FR-003]`
-- [x] Middleware RBAC theo 5 role `[AUTH-FR-004, 12.1]`
-- [x] API mời thành viên Farm Owner khác (Primary Owner) `[AUTH-FR-005]`
-- [x] API Admin tạo Technician (kèm `assigned_regions`) / tạo Sales Staff trực tiếp `[AUTH-FR-005c]` — merge qua PR #16. Riêng luồng Farm Owner **đề xuất** Sales Staff → Admin duyệt `[AUTH-FR-005b đổi v1.16.0, 005d]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
+- [x] Middleware RBAC theo role (`requireRole`) + phạm vi Zone của Farm Operator (`farmAccess.util`) `[AUTH-FR-004, 12.1]`
+- [x] API mời thành viên (Primary Owner): đồng sở hữu hoặc Farm Operator kèm `zone_ids` `[AUTH-FR-005]`
+- [x] API `PUT /farms/:id/members/:userId` đổi phạm vi Zone của Farm Operator + audit `[AUTH-FR-005, Flow 12 bước 6]`
+- [x] Kiểm tra phạm vi Zone cho Farm Operator: relay/ngưỡng/telemetry/thiết bị, danh sách cảnh báo/ticket/thu hoạch/lịch bảo trì, người nhận thông báo `[AUTH-FR-005, ALERT-FR-005]`
+- [x] Migration `npm run migrate:remove-sales` (xoá user/lời mời SALES_STAFF, drop collection SALES, gán role cho member cũ)
+- [x] API Admin tạo Technician (kèm `assigned_regions`) `[AUTH-FR-005c]` — merge qua PR #16
 - [ ] Guest checkout (không cần tài khoản) `[AUTH-FR-008]`
 - [ ] Audit log đăng nhập/thay đổi cấu hình — schema `audit_logs` + middleware ghi log `[AUTH-FR-007, 8.2]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [x] Envelope response chuẩn + pagination + mã lỗi HTTP `[9.0]`
 
 ### C1b. Quên mật khẩu, Lời mời, Khoá/Xoá tài khoản `[mới v1.12.0, Flow 11/12/19]`
 
-- [ ] Schema `invitations` (farm_id, invited_email, invited_role, token, status, expires_at) `[AUTH-FR-010, 8.2]`
+- [ ] Schema `invitations` (farm_id, invited_email, invited_role FARM_OWNER/FARM_OPERATOR, zone_ids, token, status, expires_at) `[AUTH-FR-010, 8.2]`
 - [ ] API `POST /auth/forgot-password` — sinh OTP/token TTL 15p, gửi email/SMS `[AUTH-FR-009]`
 - [ ] API `POST /auth/reset-password` — xác thực OTP, đổi mật khẩu, thu hồi mọi Refresh Token cũ `[AUTH-FR-009]`
 - [ ] API `POST /farms/:id/members` sinh `Invitation` (TTL 7 ngày) thay vì thêm thẳng vào `farms.members` `[AUTH-FR-010]`
@@ -240,20 +245,19 @@
 - [x] API `GET /admin/users`, `PUT /admin/users/:id/status` (khoá/mở khoá kèm lý do bắt buộc) `[AUTH-FR-011]` — merge qua PR #16
 - [x] Middleware JWT kiểm tra `is_active` mỗi request (không chỉ lúc login) — chặn ngay cả khi Access Token còn hạn `[AUTH-FR-011]` — merge qua PR #16
 - [x] API `POST /auth/delete-request`, `GET/PUT /admin/delete-requests/:id/complete` `[AUTH-FR-012]` — merge qua PR #16
-- [x] Logic cascade khi xoá Primary Owner: còn thành viên khác → chuyển `owner_id`; hết thành viên → xoá mềm Farm `[AUTH-FR-012, Flow 19 bước 7a/7b]` — merge qua PR #16
+- [x] Logic cascade khi xoá Primary Owner: còn đồng sở hữu → chuyển `owner_id` (không chuyển cho Farm Operator); hết đồng sở hữu → xoá mềm Farm `[AUTH-FR-012, Flow 19 bước 7a/7b]` — merge qua PR #16
 
-### C1c. Module SYSTEM & duyệt Sales Staff `[mới SRS v1.16.0, §5.11, Flow 16]`
+### C1c. Module SYSTEM `[mới SRS v1.16.0, §5.11]`
 
 - [ ] API `GET /system/audit-logs` lọc theo actor/action/target/thời gian `[SYSTEM-FR-001]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [ ] Collection `system_settings` + API `GET/PUT /system/settings/default-thresholds`; reset ngưỡng Zone đọc từ đây `[SYSTEM-FR-002, ENV-FR-007/020]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [ ] API `GET /system/health-overview` (farm/zone/thiết bị/ticket/tài khoản) `[SYSTEM-FR-003]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
-- [ ] Farm Owner đề xuất Sales Staff → Admin duyệt/từ chối (`sales_assignment_requests`) `[AUTH-FR-005b, 005d]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
-- [ ] UI Admin: audit log, ngưỡng mặc định, tổng quan hệ thống, duyệt đề xuất Sales Staff `[SYSTEM-FR-001..003, AUTH-FR-005d]`
+- [ ] UI Admin: audit log, ngưỡng mặc định, tổng quan hệ thống `[SYSTEM-FR-001..003]`
 - [ ] Chat theo ticket (Farm Owner ↔ Technician, Admin tham gia được) + tin nhắn hệ thống khi Admin reassign `[TICKET-FR-014..017]`
 
 ## C2. Farm & Device (Sprint 2)
 
-- [x] Schema `farms` (owner_id + members với is_primary), `houses`, `zones` `[8.2]`
+- [x] Schema `farms` (owner_id + members với is_primary, role FARM_OWNER/FARM_OPERATOR, zone_ids), `houses`, `zones` `[8.2]`
 - [x] API CRUD Farm/House/Zone `[FARM-FR-001, 002]` — verify thật qua API
 - [ ] Giới hạn `POST /devices/sensor-nodes/register` chỉ role TECHNICIAN gọi được (hiện Farm Owner nào cũng gọi được, sai theo model mới) `[FARM-FR-003, RACI mục 4.4]`
 - [ ] Cấp sẵn cặp `{device_id, secretKey}` trước khi Technician nạp firmware (kho thiết bị nội bộ, đơn giản hoá cho KLTN có thể chỉ cần Admin nhập tay 1 danh sách) `[Flow 1 bước 3]`
@@ -347,13 +351,6 @@
 - [ ] Bug fixing theo báo cáo test M5
 - [ ] Test coverage ≥80% `[13.1]`
 - [ ] Viết phần Backend Architecture cho báo cáo
-- [ ] **(stretch)** Module SALES: products/inventory/orders (COD-only) `[SALES-FR-001~010]` — route/model/controller đã scaffold (501), chưa có logic thật
-- [ ] **(stretch)** API `PUT /products/:id/review` (duyệt/từ chối) + cho gửi lại `submit-review` sau REJECTED `[SALES-FR-002, Flow 17]`
-- [ ] **(stretch)** Admin chuyển APPROVED → REJECTED bất kỳ lúc nào nếu phát hiện vi phạm sau duyệt `[Flow 17 case 4d]`
-- [ ] **(stretch)** Thông báo Sales Staff khi tồn kho dưới ngưỡng tối thiểu; tự tắt khi nhập thêm Harvest Batch `[SALES-FR-004, Flow 18]`
-- [ ] **(stretch)** Soft-reserve atomic ở tầng DB, tránh race condition 2 Buyer cùng mua sản phẩm sắp hết `[SALES-NFR-001, Flow 10 case 4a]`
-- [ ] **(stretch)** Không tạo Order/soft-reserve nếu thanh toán online thất bại giữa chừng `[Flow 10 case 3b]`
-- [ ] **(stretch)** API mời Sales Staff dùng chung `Invitation` với Farm Owner (khác `invited_role`) `[Flow 16]`
 
 ---
 
@@ -386,8 +383,9 @@
 - [x] Socket.io-client subscribe JOIN_ZONE `[9.3]`
 - [x] Badge "Live"/"Mất kết nối" tự chuyển sau 20s không nhận telemetry mới (độc lập với backend 30s) `[Flow 14 bước 6]` — đã code trong `useTelemetry.ts`, verify thật
 - [ ] Dashboard 5 chart realtime: nhiệt/ẩm/lux/NH3/CO2/dB `[ENV-FR-005]` ⚠️ hiện là SensorCard số liệu tức thời, chưa có biểu đồ theo thời gian; 5 cảm biến thật chưa đấu dây đủ
-- [ ] UI mời thành viên Farm Owner / Sales Staff — dùng chung màn Invitation (D1), chỉ khác `invited_role` `[AUTH-FR-005, 005b, Flow 12]`
-- [ ] Màn danh sách thành viên Farm + nút gỡ thành viên (Primary Owner) `[Flow 12 bước 5]`
+- [ ] UI mời thành viên: chọn đồng sở hữu hoặc Farm Operator + chọn Zone (cả farm / từng Zone) `[AUTH-FR-005, Flow 12]`
+- [ ] Màn danh sách thành viên Farm + nút gỡ thành viên + sửa phạm vi Zone của Farm Operator (Primary Owner) `[Flow 12 bước 5-6]`
+- [ ] Frontend role `FARM_OPERATOR`: layout/menu riêng, route guard, ẩn thao tác Farm Owner-only (sửa/xoá farm, thành viên, đăng bán); gỡ thư mục `sales-staff/` `[AUTH-FR-004/005]`
 
 ## D3. Điều khiển Relay & Loa ru UI (Sprint 3)
 
@@ -436,8 +434,6 @@
 - [ ] Traceability Card (biểu đồ nhiệt/ẩm 7 ngày, return rate) `[MARKET-FR-009]`
 - [ ] Form liên hệ Buyer + trang tra cứu Trace Code/QR `[MARKET-FR-010, 011]`
 - [ ] Consent screen đăng ký + chức năng xóa tài khoản `[PRIV-NFR-001, 003]`
-- [ ] **(stretch)** UI Admin duyệt/từ chối Product (kèm lý do) + Sales Staff sửa & gửi lại sau REJECTED `[SALES-FR-002, Flow 17]`
-- [ ] **(stretch)** Badge cảnh báo tồn kho thấp trên trang Product (Sales Staff + Farm Owner đều thấy) `[SALES-FR-004, Flow 18]`
 
 ## D8. Quản trị Tài khoản (Admin) & OTA (Technician) `[mới v1.12.0]`
 
@@ -453,7 +449,6 @@
 - [ ] Test responsive desktop/tablet/mobile `[UX-NFR-001]`
 - [ ] Fix bug UI theo test M5
 - [ ] Viết phần Frontend/UX cho báo cáo
-- [ ] **(stretch)** UI giỏ hàng/checkout + quản lý Sales `[SALES-FR-*]`
 
 ---
 
@@ -484,7 +479,7 @@
 - [ ] 🤝 Test Manual Override + loa ru theo lịch `[13.2]`
 - [ ] Test override auto-expire 30p thật (không chỉ trên giấy) + gia hạn override `[Flow 13]`
 - [ ] Test đăng ký/đăng nhập/quên mật khẩu/refresh token đầy đủ bad case `[Flow 11]`
-- [ ] 🤝 Test mời thành viên Farm/Sales Staff — chấp nhận/từ chối/hết hạn `[Flow 12]`
+- [ ] 🤝 Test mời đồng sở hữu / Farm Operator theo Zone — chấp nhận/từ chối/hết hạn/đổi phạm vi `[Flow 12]`
 - [ ] 🤝 Test ticket INSTALLATION: tạo → tự động gán Technician → Web Console onboarding → SAT → đóng `[Flow 9b]`
 - [ ] Test Admin khoá/mở khoá tài khoản + JWT bị chặn ngay dù token còn hạn `[Flow 19]`
 - [ ] Test OTA + rollback khi firmware lỗi `[Flow 15]`
@@ -512,7 +507,7 @@
 ## E7. Audit & Thesis (Sprint 7-8)
 
 - [ ] Audit DoD toàn bộ FR Giai đoạn 1 `[18]`
-- [ ] Go/No-go stretch (SALES, upload loa ru) `[RISK-10]`
+- [ ] Go/No-go stretch (upload loa ru)
 - [ ] Performance test cuối + regression toàn diện `[13.3]`
 - [ ] Tổng hợp KPI dự án (coverage, FR done/tổng, uptime)
 - [ ] Điều phối viết báo cáo KLTN + dry-run demo ≥2 lần

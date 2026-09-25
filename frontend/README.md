@@ -29,7 +29,7 @@ src/
                (không có features/shared — mỗi component thuộc đúng 1 role)
     layouts/   Đúng 7 file — 4 của role, 3 dùng chung:
                  AdminLayout · FarmOwnerLayout
-                 TechnicianLayout · SalesStaffLayout
+                 FarmOperatorLayout · TechnicianLayout
                    -> menu viết đầy đủ ngay đầu mỗi file
                  AppShell    khung chung (sidebar + header + nội dung)
                  AppSidebar  sidebar desktop + dock mobile
@@ -46,7 +46,6 @@ src/
                  admin/       AdminUsersPage, AdminSystemHealthPage...
                  farm-owner/  FarmOwnerDashboardPage, FarmOwnerHarvestPage...
                  technician/  TechnicianDevicesPage, TechnicianTicketsPage...
-                 sales-staff/ SalesStaffHomePage
                  auth/        LoginPage, RegisterPage, ForgotPasswordPage,
                               InvitationPage (chưa đăng nhập, không gắn role)
                4 trang không thuộc role nào nằm thẳng ở pages/:

@@ -77,10 +77,10 @@ Spec OpenAPI 3.0 ở `docs/api/api-spec.yaml` (gốc repo) — nguồn sự th�
 - Swagger UI: `http://localhost:3000/api-docs`
 - Raw YAML: `http://localhost:3000/api-docs.yaml`
 
-Chỉ còn tag **Sales** (Giai đoạn 2 — `products`/`inventory`/`orders`/`return-requests`/
-`sales-reports`) là stub thật (501); request/response schema ở đó mô tả *hợp đồng dự
-kiến*, chưa có logic. Mọi tag khác (Auth, Farms, Devices, Telemetry, Alerts, Analytics,
-Harvests, Marketplace, Tickets) đã có logic thật phía sau. Trạng thái chi tiết theo từng
+Mọi tag (Auth, Admin, System, Farms, Devices, Telemetry, Alerts, Analytics, Harvests,
+Marketplace, Tickets) đều có logic thật phía sau. Module SALES và role Sales Staff đã bị
+loại bỏ ở SRS v1.23.0 (trước đó chỉ là stub 501); role **Farm Operator** được thêm cùng
+đợt — phạm vi farm/Zone kiểm tra ở `utils/farmAccess.util.ts`. Trạng thái chi tiết theo từng
 FR (kể cả các phần vẫn thiếu/một phần) nằm ở `SwiftletCare_SRS.md` §5, cột **"Trạng thái
 Backend"** — luôn kiểm tra đó trước khi giả định 1 tính năng đã xong hoàn toàn.
 
@@ -99,9 +99,9 @@ Request → routes/*.ts (validate + RBAC) → controllers/*.ts (parse req, gọi
 
 - **Controller không chứa business logic.** Chỉ: lấy `req.params/body/query/user`, gọi đúng 1 hàm service, trả `res.json({success, data, meta?})`, và `catch (err) { next(err) }` — không tự viết try/catch trả lỗi thủ công.
 - **Service throw lỗi bằng `utils/appError.util.ts`** (`NotFoundError`, `ForbiddenError`, `ConflictError`, `BadRequestError`, `UnauthorizedError`) thay vì tự set status code — `middlewares/errorHandler.middleware.ts` tự bắt và format response đúng chuẩn.
-- **Response envelope thống nhất** (SRS §9.0): `{ success: boolean, data?, meta?: {page,limit,total}, error?: {code, message} }`. Mọi endpoint (kể cả stub 501 của module Sales) đều theo format này — dùng `utils/notImplemented.util.ts` cho endpoint chưa code.
+- **Response envelope thống nhất** (SRS §9.0): `{ success: boolean, data?, meta?: {page,limit,total}, error?: {code, message} }`. Mọi endpoint đều theo format này.
 - **MQTT handler cũng theo nguyên tắc tương tự**: `mqtt/handlers/*.ts` chỉ parse `topicParts`/`message` rồi gọi 1 hàm service (`telemetry.handler.ts` → `telemetry.service.ts`'s `ingestTelemetry()` là ví dụ mẫu) — không query DB trực tiếp trong handler.
-- **Quyền truy cập Farm dùng chung** `utils/farmAccess.util.ts` (`hasFarmAccess`, `isPrimaryOwner`) — đừng viết lại logic này ở service khác, import từ đây.
+- **Quyền truy cập Farm dùng chung** `utils/farmAccess.util.ts` (`hasFarmAccess`, `isPrimaryOwner`, `assertZoneAccess`; phạm vi Zone của Farm Operator: `operatorZoneScope`, `hasZoneAccess`, `assertRecordAccess`, `applyZoneScope`) — đừng viết lại logic này ở service khác, import từ đây.
 - **Đặt tên file theo `<resource>.<layer>.ts`**: `farm.service.ts`, `farms.controller.ts`, `farms.route.ts`, `farm.model.ts`. Layer luôn viết đủ (`.service`/`.controller`/`.route`/`.model`/`.middleware`/`.util`/`.handler`/`.job`), không viết tắt kiểu `farmService.ts`.
 
 ### Ví dụ thêm 1 endpoint mới (theo đúng pattern)
@@ -137,7 +137,7 @@ src/
   jobs/        node-cron background jobs (deviceOffline, alertEscalation, overrideExpiry, invitationExpiry)
   mqtt/        mqtt.client.ts (kết nối EMQX, subscribe theo wildcard, route theo topic) + handlers/ (adapter mỏng → service)
   socket/      Socket.io realtime events (§9.3) — emit*() functions dùng từ service
-  utils/       appError.util, farmAccess.util, notImplemented.util, logger.util, helpers.util — helper dùng chung, không đặt logic module cụ thể ở đây
+  utils/       appError.util, farmAccess.util, logger.util, helpers.util — helper dùng chung, không đặt logic module cụ thể ở đây
   types/       Domain enums/interfaces dùng chung (mirror ở frontend/mobile types/index.ts)
   scripts/     seed.script.ts — tạo dữ liệu test (npm run seed), không phải code chạy production
 ```
@@ -151,15 +151,14 @@ src/
 | Module | Trạng thái | Ghi chú |
 | ------ | ---------- | ------- |
 | AUTH | Đã code phần lớn (`auth.service.ts`) | register/login/refresh/logout/OTP/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản. **Chưa có:** 2FA, audit log, Admin khoá/mở khoá tài khoản, Admin tạo tài khoản Technician |
-| FARM (farm/house/zone/member/sales-staff) | Đã code đầy đủ (`farm.service.ts`) | `GET /farms/:id` trả kèm `full_name`/`email` của owner/members (query phụ, không đổi field cũ) |
+| FARM (farm/house/zone/member) | Đã code đầy đủ (`farm.service.ts`) | `GET /farms/:id` trả kèm `full_name`/`email` của owner/members (Farm Operator chỉ nhận bản ghi của chính mình). Mời đồng sở hữu hoặc Farm Operator kèm `zone_ids`, `PUT /farms/:id/members/:userId` đổi phạm vi Operator |
 | Device (sensor/camera node, relay control) | Đã code đầy đủ (`device.service.ts`) | Relay control publish MQTT thật — xem ghi chú topic bên dưới. **Chưa có:** gỡ bỏ/thay thế/dời Zone cho thiết bị đã lắp |
 | ENV/Telemetry (ingest MQTT, REST latest/history) | Đã code đầy đủ (`telemetry.service.ts`) | |
 | Heartbeat, Relay status confirm (MQTT) | Đã code đầy đủ (`device.service.ts`) | Job `node-cron` mỗi 10s (`jobs/deviceOffline.job.ts`) tự chuyển OFFLINE khi mất heartbeat >30s, phát `DEVICE_STATUS_CHANGE` |
 | ALERT (Alert Engine, dedup, quiet hours) | Đã code đầy đủ (`alert.service.ts`) | **Chưa nối thật:** Firebase FCM/Zalo ZNS/SMS chỉ log ở dev (`notification.service.ts`), chưa có credential |
 | ANALYTICS (env summary/compare, bird-count) | Đã code đầy đủ (`analytics.service.ts`) | Nhóm bird-count/return-rate/correlation trả rỗng cho tới khi module VISION (Edge AI, chưa lắp phần cứng) có dữ liệu thật — không phải lỗi |
 | TICKET | Đã code phần lớn (`ticket.service.ts`) | Tạo/định tuyến/SLA/SAT checklist/KPI/huỷ/đánh giá đã xong. **Chưa có:** job tự tạo ticket MAINTENANCE theo lịch, endpoint Admin sửa toàn quyền 1 ticket |
-| MARKET (harvest/marketplace) | Đã code đầy đủ (`market.service.ts`) | Farm Owner: tạo Harvest Batch (tự gắn snapshot), đăng bán, xem thống kê/liên hệ. `HarvestBatch.listing_id` được set khi tạo Listing để tra lại sau |
-| SALES | Scaffold (501) | Giai đoạn 2, stretch — §5.10, chưa bắt buộc nghiệm thu |
+| MARKET (harvest/marketplace) | Đã code đầy đủ (`market.service.ts`) | Farm Owner: tạo Harvest Batch (tự gắn snapshot), đăng bán, xem thống kê/liên hệ. Farm Operator: chỉ nhập/sửa Harvest Batch trong phạm vi Zone, không đăng bán. `HarvestBatch.listing_id` được set khi tạo Listing để tra lại sau |
 
 ### Quan trọng — topic MQTT dùng ObjectId thật
 

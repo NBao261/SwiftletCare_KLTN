@@ -4,7 +4,7 @@ import { Zone, House } from '@/models/houseZone.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
-import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { applyZoneScope, assertRecordAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError, ForbiddenError, ConflictError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
@@ -239,13 +239,15 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   if (query.zoneId) filter.zone_id = query.zoneId
   if (query.status) filter.status = query.status
   if (query.severity) filter.severity = query.severity
+  // Farm Operator chỉ thấy cảnh báo của Zone trong phạm vi + cảnh báo cấp farm
+  const scoped = await applyZoneScope(filter, user)
 
   const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total, unreadCount] = await Promise.all([
-    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
-    Alert.countDocuments(filter),
-    Alert.countDocuments({ ...filter, status: 'ACTIVE' }),
+    Alert.find(scoped).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+    Alert.countDocuments(scoped),
+    Alert.countDocuments({ ...scoped, status: 'ACTIVE' }),
   ])
 
   return { records, total, page, limit, unreadCount }
@@ -254,12 +256,12 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
 export async function getAlert(alertId: string, user: CurrentUser): Promise<IAlert> {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')
-  await assertFarmAccess(String(alert.farm_id), user)
+  await assertRecordAccess(alert.farm_id, alert.zone_id, user)
   return alert
 }
 
 /**
- * ALERT-FR-009 — Farm Owner xác nhận đã xử lý kèm ghi chú. Ghi chú "Báo động giả"
+ * ALERT-FR-009 — Farm Owner / Farm Operator xác nhận đã xử lý kèm ghi chú. Ghi chú "Báo động giả"
  * được giữ lại làm dữ liệu đánh giá chất lượng model AI sau này (Flow 4 case 9a).
  */
 export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?: string): Promise<IAlert> {

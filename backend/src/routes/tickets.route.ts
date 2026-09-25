@@ -13,7 +13,7 @@ const CREATABLE_TICKET_TYPES = [
   'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'ACTUATOR_FAILURE', 'NODE_OFFLINE', 'EDGE_AI_DEGRADED',
   'POWER_OUTAGE', 'SPEAKER_FAILURE', 'PREDATOR_DETECTED', 'INSTALLATION', 'OTHER',
 ]
-router.post('/',                   requireRole('FARM_OWNER','ADMIN'),
+router.post('/',                   requireRole('FARM_OWNER','FARM_OPERATOR','ADMIN'),
   body('farm_id').isMongoId(),
   body('zone_id').optional().isMongoId(),
   body('type').isIn(CREATABLE_TICKET_TYPES).withMessage('Loại ticket không hợp lệ (ticket bảo trì định kỳ không tạo tay)'),
@@ -26,7 +26,7 @@ router.get ('/:id',                param('id').isMongoId(), validate, ticketCont
 router.put ('/:id/status',         requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('status').notEmpty(), validate, ticketController.updateStatus)
 // Farm Owner tự huỷ ticket của mình khi đã tự khắc phục / không cần lắp nữa
 // (Flow 9 case 6c, Flow 9b case 4a) — khác /status ở chỗ không đòi SAT checklist
-router.put ('/:id/cancel',         requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('reason').notEmpty(), validate, ticketController.cancel)
+router.put ('/:id/cancel',         requireRole('FARM_OWNER','FARM_OPERATOR','ADMIN'), param('id').isMongoId(), body('reason').notEmpty(), validate, ticketController.cancel)
 router.post('/:id/notes',          param('id').isMongoId(), body('content').notEmpty(), validate, ticketController.addNote)
 router.put ('/:id/sat-checklist',  requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, ticketController.updateSatChecklist)
 router.post('/:id/escalate',       requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, ticketController.escalate)
@@ -37,13 +37,13 @@ router.put ('/:id/scheduled-date',   requireRole('TECHNICIAN','ADMIN'), param('i
 router.post('/:id/reassign-request', requireRole('TECHNICIAN'), param('id').isMongoId(),
   body('reason').trim().notEmpty(), validate, ticketController.requestReassign)
 // TICKET-FR-014..017, Flow 23 — chat Farm Owner ↔ Technician phụ trách (realtime qua Socket, REST để tải lịch sử/gửi dự phòng)
-router.get ('/:id/messages', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(),
+router.get ('/:id/messages', requireRole('FARM_OWNER','FARM_OPERATOR','TECHNICIAN','ADMIN'), param('id').isMongoId(),
   query('before').optional().isISO8601(), validate, ticketController.listMessages)
-router.post('/:id/messages', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(),
+router.post('/:id/messages', requireRole('FARM_OWNER','FARM_OPERATOR','TECHNICIAN','ADMIN'), param('id').isMongoId(),
   body('content').isString().trim().isLength({ min: 1, max: 2000 }),
   body('client_message_id').optional().isString().isLength({ max: 100 }),
   validate, ticketController.sendMessage)
-router.post('/:id/rating',         requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('satisfaction_rating').isInt({ min: 1, max: 5 }), validate, ticketController.rate)
+router.post('/:id/rating',         requireRole('FARM_OWNER','FARM_OPERATOR','ADMIN'), param('id').isMongoId(), body('satisfaction_rating').isInt({ min: 1, max: 5 }), validate, ticketController.rate)
 // TICKET-FR-005b — Admin toàn quyền can thiệp: đổi Technician/priority/ngày hẹn/status bất kỳ lúc nào
 router.put ('/:id/admin-override', requireRole('ADMIN'),
   param('id').isMongoId(), body('reason').notEmpty(),
