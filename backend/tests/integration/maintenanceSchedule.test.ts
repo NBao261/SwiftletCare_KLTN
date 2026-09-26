@@ -160,4 +160,20 @@ describe('generateDueMaintenanceTickets', () => {
     expect((await MaintenanceSchedule.findById(schedule._id))!.is_active).toBe(false)
     expect(await AuditLog.countDocuments({ action: 'MAINTENANCE_SCHEDULE_DISABLED' })).toBe(1)
   })
+
+  it('Zone của lịch đã bị xoá thì ticket hạ xuống mức farm và ghi rõ', async () => {
+    const { farm, t } = await seed()
+    const house = await House.create({ farm_id: farm._id, name: 'H1' })
+    const zone = await Zone.create({ house_id: house._id, name: 'Tầng 1' })
+    await create(t.tech, {
+      farm_id: String(farm._id), zone_id: String(zone._id), description: 'Vệ sinh cảm biến',
+      interval_days: 30, next_due_at: new Date(Date.now() + DAY).toISOString(),
+    }).expect(201)
+    await Zone.deleteOne({ _id: zone._id })
+
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+    const [ticket] = await Ticket.find().lean()
+    expect(ticket.zone_id).toBeUndefined()
+    expect(ticket.notes[0].content).toContain('Zone trong lịch đã bị xoá')
+  })
 })

@@ -556,8 +556,13 @@ export async function restoreDevice(kind: DeviceKind, nodeId: string, user: Curr
   node.decommissioned_at = undefined
   node.decommission_reason = undefined
   node.replaced_by = undefined
-  // Chờ heartbeat thật rồi mới ONLINE trở lại, không tự nhận là đang chạy
-  node.status = 'OFFLINE'
+  // Cờ "kích hoạt quá hạn" cũ phải xoá: job chỉ quét node có cờ rỗng, để lại thì
+  // thiết bị khôi phục xong mà vẫn không lên mạng sẽ không ai được báo lần nữa.
+  node.activation_overdue_at = undefined
+  // Chờ heartbeat thật rồi mới ONLINE trở lại, không tự nhận là đang chạy.
+  // Thiết bị chưa từng kết nối lần nào quay về PENDING (vẫn đang chờ kích hoạt),
+  // nếu ép OFFLINE thì job "kích hoạt quá hạn" bỏ qua nó vĩnh viễn.
+  node.status = node.last_heartbeat ? 'OFFLINE' : 'PENDING'
   await node.save()
 
   emitDeviceStatusChange(String(node.zone_id), {

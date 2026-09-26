@@ -1,5 +1,6 @@
 import { MaintenanceSchedule, IMaintenanceSchedule } from '@/models/maintenanceSchedule.model'
 import { Farm } from '@/models/farm.model'
+import { Zone } from '@/models/houseZone.model'
 import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { createMaintenanceTicket } from '@/services/ticket.service'
 import { logAction } from '@/services/auditLog.service'
@@ -145,12 +146,19 @@ export async function generateDueMaintenanceTickets(now = new Date()): Promise<n
     if (!claimed) continue
 
     try {
+      // Zone có thể bị xoá sau khi lập lịch — ticket trỏ vào zone không còn khiến
+      // Technician không mở được chi tiết khu vực. Hạ xuống mức farm và nói rõ.
+      const zoneId = schedule.zone_id ? String(schedule.zone_id) : undefined
+      const zone = zoneId ? await Zone.findById(zoneId).select('_id').lean() : null
+      const zoneGone = !!zoneId && !zone
+
       const ticket = await createMaintenanceTicket({
         farm_id: String(schedule.farm_id),
-        zone_id: schedule.zone_id ? String(schedule.zone_id) : undefined,
+        zone_id: zoneGone ? undefined : zoneId,
         // Lịch trễ (server tắt lâu) thì hẹn sớm nhất 1 giờ nữa, không hẹn ngược về quá khứ
         scheduled_visit_at: new Date(Math.max(schedule.next_due_at.getTime(), now.getTime() + HOUR_MS)),
-        description: `Bảo trì định kỳ (mỗi ${schedule.interval_days} ngày): ${schedule.description}`,
+        description: `Bảo trì định kỳ (mỗi ${schedule.interval_days} ngày): ${schedule.description}`
+          + (zoneGone ? ' — Zone trong lịch đã bị xoá, kiểm tra lại phạm vi bảo trì với Farm Owner' : ''),
       })
       await MaintenanceSchedule.updateOne({ _id: schedule._id }, { last_ticket_id: ticket._id })
       created++

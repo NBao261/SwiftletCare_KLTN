@@ -249,7 +249,7 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
 
     const node = (await SensorNode.findById(nodeId))!
     expect(node.decommissioned_at).toBeUndefined()
-    expect(node.status).toBe('OFFLINE') // chờ heartbeat thật mới ONLINE lại
+    expect(node.status).toBe('PENDING') // chưa từng kết nối → vẫn đang chờ kích hoạt
     expect(await AuditLog.countDocuments({ action: 'DEVICE_RESTORED' })).toBe(1)
 
     const list = await request(app).get('/devices/sensor-nodes').set('Authorization', `Bearer ${techToken}`).expect(200)
@@ -258,6 +258,19 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     expect((await SensorNode.findById(nodeId))!.status).toBe('ONLINE')
 
     await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, { reason: 'lần 2' }).expect(409)
+  })
+
+  it('khôi phục xoá cờ kích hoạt quá hạn, job đánh dấu lại được', async () => {
+    const { techToken, nodeId } = await installed()
+    await SensorNode.updateOne({ _id: nodeId }, { registered_at: new Date(Date.now() - ACTIVATION_TIMEOUT_MS - 60_000) })
+    expect(await markOverdueActivations()).toBe(1)
+
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'Bấm nhầm' }).expect(200)
+    await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, { reason: 'Khôi phục' }).expect(200)
+    expect((await SensorNode.findById(nodeId))!.activation_overdue_at).toBeUndefined()
+
+    // Vẫn chưa lên mạng → job phải đánh dấu lại được
+    expect(await markOverdueActivations()).toBe(1)
   })
 
   it('không khôi phục được khi quá 24 giờ hoặc device_id đã dùng lại', async () => {
