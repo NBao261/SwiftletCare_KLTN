@@ -2266,8 +2266,9 @@ paths:
       tags: [Devices]
       summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
       description: |
-        Xoá `decommissioned_at`, đưa thiết bị về `OFFLINE` (chờ heartbeat thật mới
-        `ONLINE`) và cho nó xuất hiện lại trong danh sách/thống kê. Cảnh báo đã đóng
+        Xoá `decommissioned_at` và cờ `activation_overdue_at`, đưa thiết bị về
+        `OFFLINE` — hoặc `PENDING` nếu nó chưa từng gửi heartbeat lần nào (vẫn
+        đang chờ kích hoạt, để job kích hoạt quá hạn tiếp tục theo dõi) và cho nó xuất hiện lại trong danh sách/thống kê. Cảnh báo đã đóng
         lúc gỡ **không** mở lại — nếu sự cố còn, `deviceOffline.job` sẽ sinh cảnh báo mới.
 
         Từ chối 409 khi: thiết bị chưa bị gỡ, đã quá 24 giờ, `device_id` đã được đăng
@@ -3518,6 +3519,10 @@ paths:
         farm (TICKET-FR-004); priority/SLA gán tự động theo `type`
         (TICKET-FR-003/006). Với `type=INSTALLATION`/`MAINTENANCE`, bắt buộc
         `scheduled_visit_at` ngay lúc tạo (TICKET-FR-004b).
+
+        Ràng buộc dữ liệu: `zone_id` (nếu gửi) phải thuộc đúng `farm_id`, và
+        `scheduled_visit_at` phải ở tương lai — cùng ràng buộc với
+        `PUT /tickets/:id/scheduled-date`. Sai một trong hai đều trả 400.
       requestBody:
         required: true
         content:
@@ -3891,6 +3896,7 @@ paths:
     put:
       tags: [Tickets]
       summary: "Cập nhật checklist nghiệm thu lắp đặt (TICKET-FR-010) — TECHNICIAN được gán/ADMIN"
+      description: "Chỉ áp dụng cho ticket `INSTALLATION`/`MAINTENANCE`; loại khác trả 400. Ticket đã đóng trả 409."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
