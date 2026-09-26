@@ -15,6 +15,7 @@ import { Farm } from '@/models/farm.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { SystemSetting } from '@/models/systemSetting.model'
+import { House, Zone } from '@/models/houseZone.model'
 import { createTicket, getKpi, markResponseBreachedTickets } from '@/services/ticket.service'
 import { notifyUser } from '@/services/notification.service'
 import { updateTicketRouting } from '@/services/system.service'
@@ -48,6 +49,7 @@ afterAll(async () => {
 afterEach(async () => {
   await Promise.all([
     AuditLog.deleteMany({}), Farm.deleteMany({}), Ticket.deleteMany({}), User.deleteMany({}), SystemSetting.deleteMany({}),
+    House.deleteMany({}), Zone.deleteMany({}),
   ])
 })
 
@@ -280,5 +282,47 @@ describe('Ticket Router — ngưỡng quá tải (TICKET-FR-005)', () => {
     const notified = (notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))
     expect(notified).toContain(String(owner._id))  // người phải có mặt ở hiện trường
     expect(notified).toContain(String(admin._id))  // người tạo hộ cũng được báo
+  })
+
+  it('không cho gắn ticket vào Zone của farm khác', async () => {
+    const { farm, owner } = await seed()
+    const otherFarm = await Farm.create({ name: 'Farm B', address: 'x', region: 'HCMC', owner_id: owner._id })
+    const house = await House.create({ farm_id: otherFarm._id, name: 'H' })
+    const foreignZone = await Zone.create({ house_id: house._id, name: 'Z' })
+    const ownerToken = tokenFor(owner._id, 'FARM_OWNER')
+
+    const res = await post('/tickets', ownerToken, {
+      farm_id: String(farm._id), zone_id: String(foreignZone._id), type: 'SENSOR_FAULT',
+    }).expect(400)
+    expect(res.body.error.message).toContain('không thuộc farm này')
+    expect(await Ticket.countDocuments({ type: 'SENSOR_FAULT' })).toBe(0)
+  })
+
+  it('không cho đặt ngày hẹn trong quá khứ lúc tạo ticket lắp đặt', async () => {
+    const { farm, owner } = await seed()
+    const ownerToken = tokenFor(owner._id, 'FARM_OWNER')
+
+    const res = await post('/tickets', ownerToken, {
+      farm_id: String(farm._id), type: 'INSTALLATION',
+      scheduled_visit_at: new Date(Date.now() - 86400_000).toISOString(),
+    }).expect(400)
+    expect(res.body.error.message).toContain('tương lai')
+
+    await post('/tickets', ownerToken, {
+      farm_id: String(farm._id), type: 'INSTALLATION',
+      scheduled_visit_at: new Date(Date.now() + 86400_000).toISOString(),
+    }).expect(201)
+  })
+
+  it('checklist nghiệm thu chỉ áp dụng cho ticket lắp đặt/bảo trì', async () => {
+    const { ticket, assigneeToken, farm, assignee } = await seed() // ticket mặc định loại OTHER
+    const res = await put(`/tickets/${ticket._id}/sat-checklist`, assigneeToken, { relay_test_ok: true }).expect(400)
+    expect(res.body.error.message).toContain('lắp đặt/bảo trì')
+
+    const install = await Ticket.create({
+      farm_id: farm._id, type: 'INSTALLATION', priority: 'P3', assigned_to: assignee._id,
+      scheduled_visit_at: new Date(Date.now() + 86400_000),
+    })
+    await put(`/tickets/${install._id}/sat-checklist`, assigneeToken, { relay_test_ok: true }).expect(200)
   })
 })

@@ -8,7 +8,9 @@ const router = Router()
 router.use(authenticate)
 
 /** Module TICKET – SRS §5.9, §9.1 */
-router.post('/',                   requireRole('FARM_OWNER','ADMIN'), body('type').notEmpty(), validate, ticketController.create)
+router.post('/',                   requireRole('FARM_OWNER','ADMIN'), body('type').notEmpty(),
+  body('zone_id').optional().isMongoId(), body('scheduled_visit_at').optional().isISO8601(),
+  validate, ticketController.create)
 router.get ('/',                   ticketController.list)
 router.get ('/kpi',                requireRole('ADMIN'), ticketController.kpi)
 router.get ('/:id',                param('id').isMongoId(), validate, ticketController.getOne)

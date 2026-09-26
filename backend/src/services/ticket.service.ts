@@ -3,7 +3,7 @@ import { Alert } from '@/models/alert.model'
 import { SensorNode } from '@/models/device.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
-import { listAccessibleFarmIds, assertFarmAccess } from '@/utils/farmAccess.util'
+import { listAccessibleFarmIds, assertFarmAccess, findZoneChainOrThrow } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { getSlaHours, getTicketRouting } from '@/services/system.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
@@ -133,9 +133,23 @@ export interface CreateTicketInput {
 export async function createTicket(user: CurrentUser, input: CreateTicketInput): Promise<ITicket> {
   await assertFarmAccess(input.farm_id, user)
 
+  // Zone phải thuộc đúng farm của ticket: `zone_id` lạ làm Technician tới nhầm
+  // khu vực và mọi đối chiếu telemetry/cảnh báo sau đó đều trỏ sai chỗ.
+  if (input.zone_id) {
+    const chain = await findZoneChainOrThrow(input.zone_id)
+    if (String(chain.farm._id) !== input.farm_id) throw BadRequestError('zone_id không thuộc farm này')
+  }
+
   if (INSTALLATION_TYPES.includes(input.type) && !input.scheduled_visit_at) {
     // Flow 9b bước 1: Farm Owner chọn thẳng ngày giờ hẹn, không có bước liên hệ
     throw BadRequestError('Yêu cầu lắp đặt/bảo trì phải chọn ngày giờ hẹn (scheduled_visit_at)')
+  }
+  // Cùng ràng buộc với `rescheduleVisit`: hẹn trong quá khứ thì ticket vừa tạo đã trễ hẹn
+  if (input.scheduled_visit_at) {
+    const visitAt = new Date(input.scheduled_visit_at)
+    if (Number.isNaN(visitAt.getTime()) || visitAt.getTime() <= Date.now()) {
+      throw BadRequestError('Ngày hẹn phải ở tương lai')
+    }
   }
 
   const priority = DEFAULT_PRIORITY[input.type]
@@ -513,6 +527,11 @@ export async function updateSatChecklist(
 ): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user)
   assertAssignee(ticket, user)
+  // Chỉ ticket lắp đặt/bảo trì mới có nghiệm thu (TICKET-FR-010); tick checklist
+  // trên ticket sự cố chỉ tạo dữ liệu vô nghĩa và không ảnh hưởng điều kiện đóng.
+  if (!INSTALLATION_TYPES.includes(ticket.type)) {
+    throw BadRequestError('Chỉ ticket lắp đặt/bảo trì mới có checklist nghiệm thu')
+  }
   if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng, không sửa checklist nghiệm thu được nữa')
   ticket.sat_checklist = { ...ticket.sat_checklist, ...updates }
   await ticket.save()
