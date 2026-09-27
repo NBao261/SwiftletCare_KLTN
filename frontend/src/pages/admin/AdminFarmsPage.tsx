@@ -2,10 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFarms } from "@/hooks/shared/useFarms";
 import { useUsersPicker, getUserStatus } from "@/hooks/admin/useUsers";
-import { usePageSubtitle } from "@/hooks/common/useBreadcrumb";
-import { Button, SearchInput, SelectMenu } from "@/components/ui";
-import { IconSortAsc, IconSortDesc } from "@/components/ui/icons";
-import { cn } from "@/lib/cn";
+import { ClearFiltersButton, SearchInput, SelectMenu, SortChips } from "@/components/ui";
 import DataTable from "@/components/ui/DataTable";
 import FilterChip from "@/components/ui/FilterChip";
 import Pagination from "@/components/ui/Pagination";
@@ -57,8 +54,6 @@ export default function AdminFarmsPage() {
   const [page, setPage] = useState(1);
   const [lockTarget, setLockTarget] = useState<User | null>(null);
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null);
-
-  usePageSubtitle("Toàn bộ trang trại trong hệ thống — farm do Farm Owner tự tạo; Admin xem cấu trúc, người dùng và ticket của từng farm.");
 
   const ownersById = useMemo(() => new Map(owners.map((u) => [u._id, u])), [owners]);
 
@@ -145,22 +140,9 @@ export default function AdminFarmsPage() {
             />
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="label-caption">Sắp xếp:</span>
-          <button
-            type="button"
-            onClick={() => handleSortChange("created_at")}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
-              sortBy === "created_at" ? "bg-charcoal text-white" : "bg-warmGray/10 text-warmGray hover:bg-warmGray/20",
-            )}
-          >
-            Ngày tạo
-            {sortBy === "created_at" && (sortDir === "asc" ? <IconSortAsc width={12} height={12} /> : <IconSortDesc width={12} height={12} />)}
-          </button>
-        </div>
+        <SortChips fields={[{ key: "created_at", label: "Ngày tạo" }]} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
         {hasActiveFilters && (
-          <Button variant="danger" size="sm" className="h-8 px-3.5 text-xs" onClick={clearFilters}>Hủy lọc</Button>
+          <ClearFiltersButton onClick={clearFilters} />
         )}
       </div>
 
