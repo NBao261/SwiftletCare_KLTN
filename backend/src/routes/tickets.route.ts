@@ -33,6 +33,9 @@ router.post('/:id/escalate',       requireRole('TECHNICIAN','ADMIN'), param('id'
 // TICKET-FR-004b — Technician không sắp xếp được đúng giờ Farm Owner chọn thì tự dời, lý do bắt buộc
 router.put ('/:id/scheduled-date',   requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
   body('scheduled_visit_at').isISO8601(), body('reason').trim().notEmpty(), validate, ticketController.reschedule)
+// Flow 9 bước 6a — xử lý được từ xa thì huỷ buổi xuống farm, ticket khỏi vướng nghiệm thu SAT
+router.delete('/:id/scheduled-date', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
+  body('reason').trim().notEmpty(), validate, ticketController.cancelVisit)
 // Flow 9 case 4a — Technician bị gán nhầm xin chuyển cho người khác
 router.post('/:id/reassign-request', requireRole('TECHNICIAN'), param('id').isMongoId(),
   body('reason').trim().notEmpty(), validate, ticketController.requestReassign)

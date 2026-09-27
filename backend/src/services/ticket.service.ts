@@ -498,7 +498,11 @@ export async function scheduleVisit(
   const ticket = await getTicket(ticketId, user)
   assertAssignee(ticket, user)
   if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
-  if (!VISIT_TYPES.includes(ticket.type) && ticket.status !== 'IN_PROGRESS') {
+  // Chặn hẹn khi chưa tiếp nhận (NEW); đang chờ nghiệm thu tại hiện trường
+  // (AWAITING_FIELD_CONFIRMATION) vẫn phải dời lịch được — đó chính là lúc hay
+  // phát sinh dời hẹn nhất (thiếu vật tư, khách bận).
+  const SCHEDULABLE: TicketStatus[] = ['IN_PROGRESS', 'AWAITING_FIELD_CONFIRMATION']
+  if (!VISIT_TYPES.includes(ticket.type) && !SCHEDULABLE.includes(ticket.status)) {
     throw ConflictError('Ticket sự cố chỉ hẹn đến hiện trường được sau khi đã tiếp nhận và chẩn đoán từ xa (trạng thái Đang xử lý)')
   }
   const next = assertValidVisitTime(scheduledVisitAt)
@@ -522,6 +526,38 @@ export async function scheduleVisit(
 }
 
 /**
+ * Flow 9 bước 6a — Technician đã hẹn xuống farm nhưng rồi xử lý được từ xa (hoặc
+ * hẹn nhầm ticket). Không xoá được lịch thì `requiresFieldVisit()` vẫn đòi đủ 4
+ * mục SAT cho một buổi không hề diễn ra, ticket kẹt không đóng nổi.
+ * Ticket lắp đặt/bảo trì luôn phải có buổi đến hiện trường nên chỉ dời, không huỷ.
+ */
+export async function cancelVisit(ticketId: string, user: CurrentUser, reason: string): Promise<ITicket> {
+  const ticket = await getTicket(ticketId, user)
+  assertAssignee(ticket, user)
+  if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
+  if (VISIT_TYPES.includes(ticket.type)) {
+    throw BadRequestError('Ticket lắp đặt/bảo trì bắt buộc có buổi đến hiện trường — chỉ dời lịch, không huỷ')
+  }
+  if (!ticket.scheduled_visit_at) throw ConflictError('Ticket này chưa hẹn đến hiện trường')
+
+  const before = ticket.scheduled_visit_at
+  ticket.scheduled_visit_at = undefined
+  ticket.notes.push({
+    author_id: user._id as never,
+    content: `Huỷ lịch hẹn ${formatVisitTime(before)} — xử lý từ xa, không cần đến hiện trường: ${reason}`,
+    created_at: new Date(),
+  })
+  await ticket.save()
+
+  await logAction(user._id, 'TICKET_VISIT_CANCELLED', 'ticket', ticketId, { before, reason })
+  await notifyVisitChange(ticket, {
+    title: 'Lịch hẹn kỹ thuật đã huỷ',
+    body: `Không cần đến hiện trường lúc ${formatVisitTime(before)} nữa. Lý do: ${reason}`,
+  })
+  return ticket
+}
+
+/**
  * Flow 9 case 4a — Technician bị gán nhầm (ngoài khu vực thật, đang nghỉ...)
  * xin gán lại kèm lý do. Router thử người khác trong vùng (loại người xin);
  * không còn ai thì ticket vào hàng đợi chung và Admin được báo (TICKET-FR-005).
@@ -538,6 +574,13 @@ export async function requestReassign(ticketId: string, user: CurrentUser, reaso
   const declined = [...(from ? [from] : []), ...ticket.previous_assignees.map(p => String(p.user_id))]
   const to = await routeToTechnician(String(ticket.farm_id), { exclude: declined })
 
+  // Lịch hẹn là cam kết của riêng người cũ với Farm Owner — giữ lại thì Technician
+  // mới thừa hưởng một cuộc hẹn chưa từng xác nhận, và ticket sự cố còn bị kẹt
+  // ràng buộc SAT cho buổi mà người mới chưa hề đến (requiresFieldVisit).
+  const droppedVisit = ticket.scheduled_visit_at
+  const visitStillAhead = !!droppedVisit && droppedVisit.getTime() > Date.now()
+  if (droppedVisit && !VISIT_TYPES.includes(ticket.type)) ticket.scheduled_visit_at = undefined
+
   ticket.assigned_to = (to ?? undefined) as never
   ticket.assigned_at = to ? new Date() : undefined
   trackAssigneeChange(ticket, from)
@@ -545,12 +588,22 @@ export async function requestReassign(ticketId: string, user: CurrentUser, reaso
   ticket.responded_at = undefined
   ticket.notes.push({
     author_id: user._id as never,
-    content: `Yêu cầu gán lại: ${reason}. ${to ? 'Đã chuyển cho Technician khác.' : 'Không còn Technician phù hợp — chờ Administrator điều phối.'}`,
+    content: `Yêu cầu gán lại: ${reason}. ${to ? 'Đã chuyển cho Technician khác.' : 'Không còn Technician phù hợp — chờ Administrator điều phối.'}`
+      + (droppedVisit && !VISIT_TYPES.includes(ticket.type)
+        ? ` Lịch hẹn ${formatVisitTime(droppedVisit)} đã huỷ, Technician mới sẽ hẹn lại.` : ''),
     created_at: new Date(),
   })
   await ticket.save()
 
-  await logAction(user._id, 'TICKET_REASSIGN_REQUESTED', 'ticket', ticketId, { from, to, reason })
+  await logAction(user._id, 'TICKET_REASSIGN_REQUESTED', 'ticket', ticketId, {
+    from, to, reason, cancelledVisit: droppedVisit ?? null,
+  })
+  if (visitStillAhead && !VISIT_TYPES.includes(ticket.type)) {
+    await notifyVisitChange(ticket, {
+      title: 'Lịch hẹn kỹ thuật đã huỷ',
+      body: `Ticket được chuyển sang Technician khác nên buổi hẹn lúc ${formatVisitTime(droppedVisit!)} không còn hiệu lực. Technician mới sẽ hẹn lại.`,
+    })
+  }
   await announceAssigneeChange(ticket, from)
   if (to) {
     void notifyUser(to, {
@@ -582,17 +635,17 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
   })
   await ticket.save()
 
-  // Flow 9 case 6c / 9b case 4a — Technician đang giữ ticket phải biết để không xuống farm theo lịch cũ
-  const assignee = assigneeIdOf(ticket)
-  if (assignee && assignee !== user._id) {
-    const visit = ticket.scheduled_visit_at && ticket.scheduled_visit_at.getTime() > Date.now()
-      ? ` — không cần đến hiện trường lúc ${formatVisitTime(ticket.scheduled_visit_at)}`
-      : ''
-    void notifyUser(assignee, {
-      title: 'Ticket đã bị huỷ',
-      body: `Ticket ${ticketId} (${ticket.type}) đã được huỷ${visit}. Lý do: ${reason}`,
-    })
+  // Flow 9 case 6c / 9b case 4a — Technician đang giữ ticket phải biết để không
+  // xuống farm theo lịch cũ; Farm Owner cũng phải biết khi người huỷ là Admin.
+  const visit = ticket.scheduled_visit_at && ticket.scheduled_visit_at.getTime() > Date.now()
+    ? ` — không cần đến hiện trường lúc ${formatVisitTime(ticket.scheduled_visit_at)}`
+    : ''
+  const message = {
+    title: 'Ticket đã bị huỷ',
+    body: `Ticket ${ticketId} (${ticket.type}) đã được huỷ${visit}. Lý do: ${reason}`,
   }
+  const assignee = assigneeIdOf(ticket)
+  await notifyVisitChange(ticket, message, assignee ? [assignee] : [])
   return ticket
 }
 
@@ -717,6 +770,9 @@ export async function markResponseBreachedTickets(): Promise<number> {
 export async function rateTicket(ticketId: string, user: CurrentUser, rating: number): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user) // đã xác nhận user có quyền trên farm của ticket
   if (ticket.status !== 'CLOSED') throw ConflictError('Chỉ đánh giá được ticket đã đóng')
+  // Ticket huỷ cũng chuyển CLOSED nhưng không có việc nào được làm — chấm sao ở
+  // đây chỉ làm nhiễu dữ liệu hài lòng (TICKET-FR-011).
+  if (ticket.cancelled_at) throw ConflictError('Ticket đã huỷ nên không có việc để đánh giá')
 
   const isCreator = !!ticket.created_by && String(ticket.created_by) === user._id
   // Ticket tự tạo từ Alert (TICKET-FR-002, createTicketsFromStaleAlerts) không
@@ -915,8 +971,15 @@ export async function adminOverrideTicket(
     changes.status = { before: ticket.status, after: updates.status }
     ticket.status = updates.status
     // Mở lại ticket đã đóng thì gỡ closed_at, nếu không KPI thời gian xử lý
-    // trung bình (getKpi) sẽ tính theo lần đóng cũ.
-    ticket.closed_at = updates.status === 'CLOSED' ? new Date() : undefined
+    // trung bình (getKpi) sẽ tính theo lần đóng cũ. Gỡ cả `cancelled_at`: ticket
+    // huỷ nhầm rồi mở lại mà vẫn mang dấu huỷ thì KPI loại nó vĩnh viễn khỏi
+    // thời gian xử lý và tỉ lệ đúng SLA, dù sau đó có người làm thật.
+    const reopened = updates.status !== 'CLOSED'
+    ticket.closed_at = reopened ? undefined : new Date()
+    if (reopened && ticket.cancelled_at) {
+      changes.cancelled_at = { before: ticket.cancelled_at, after: null }
+      ticket.cancelled_at = undefined
+    }
   }
 
   ticket.notes.push({

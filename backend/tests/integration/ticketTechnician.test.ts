@@ -79,6 +79,8 @@ const put = (path: string, token: string, body: object) =>
   request(app).put(path).set('Authorization', `Bearer ${token}`).send(body)
 const post = (path: string, token: string, body: object) =>
   request(app).post(path).set('Authorization', `Bearer ${token}`).send(body)
+const del = (path: string, token: string, body: object) =>
+  request(app).delete(path).set('Authorization', `Bearer ${token}`).send(body)
 
 describe('chỉ Technician đang được gán mới xử lý được ticket', () => {
   it('Technician cùng vùng vẫn xem được ticket', async () => {
@@ -279,9 +281,10 @@ describe('POST /tickets — Farm Owner tạo ticket (TICKET-FR-001)', () => {
     ;(notifyUser as jest.Mock).mockClear()
     await put(`/tickets/${ticket._id}/cancel`, tokenFor(owner._id, 'FARM_OWNER'), { reason: 'Đổi ý' }).expect(200)
 
-    const [to, message] = (notifyUser as jest.Mock).mock.calls[0]
-    expect(String(to)).toBe(String(assignee._id))
-    expect(message.body).toContain('không cần đến hiện trường')
+    // Technician đang giữ nằm trong danh sách nhận (Farm Owner/người tạo cũng được báo)
+    const calls = (notifyUser as jest.Mock).mock.calls
+    expect(calls.map(c => String(c[0]))).toContain(String(assignee._id))
+    expect(calls[0][1].body).toContain('không cần đến hiện trường')
   })
 })
 
@@ -403,5 +406,88 @@ describe('Ticket Router — ngưỡng quá tải (TICKET-FR-005)', () => {
       scheduled_visit_at: vnAt(1, 9),
     })
     await put(`/tickets/${install._id}/sat-checklist`, assigneeToken, { relay_test_ok: true }).expect(200)
+  })
+
+})
+
+describe('buổi đến hiện trường (Flow 9 bước 6a–6b)', () => {
+  /** Ticket sự cố đã tiếp nhận + đã hẹn xuống farm */
+  async function scheduledFault() {
+    const ctx = await seed()
+    await put(`/tickets/${ctx.ticket._id}/status`, ctx.assigneeToken, { status: 'IN_PROGRESS' }).expect(200)
+    await put(`/tickets/${ctx.ticket._id}/scheduled-date`, ctx.assigneeToken, {
+      scheduled_visit_at: vnAt(1, 9).toISOString(), reason: 'Cần thay cảm biến',
+    }).expect(200)
+    return ctx
+  }
+
+  it('huỷ lịch hẹn khi xử lý được từ xa → đóng ticket không cần SAT', async () => {
+    const { ticket, assigneeToken, owner } = await scheduledFault()
+    // Còn lịch hẹn thì vẫn bị đòi nghiệm thu
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(409)
+
+    ;(notifyUser as jest.Mock).mockClear()
+    await del(`/tickets/${ticket._id}/scheduled-date`, assigneeToken, { reason: 'Reset từ xa là hết lỗi' }).expect(200)
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.scheduled_visit_at).toBeUndefined()
+    expect(saved.notes.at(-1)!.content).toContain('Huỷ lịch hẹn')
+    expect((notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))).toContain(String(owner._id))
+    expect(await AuditLog.countDocuments({ action: 'TICKET_VISIT_CANCELLED' })).toBe(1)
+
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(200)
+  })
+
+  it('ticket lắp đặt không huỷ lịch được, và không huỷ khi chưa hẹn', async () => {
+    const { farm, assignee, assigneeToken, ticket } = await seed()
+    const install = await Ticket.create({
+      farm_id: farm._id, type: 'INSTALLATION', priority: 'P3', assigned_to: assignee._id,
+      scheduled_visit_at: vnAt(1, 9),
+    })
+    const res = await del(`/tickets/${install._id}/scheduled-date`, assigneeToken, { reason: 'x' }).expect(400)
+    expect(res.body.error.message).toContain('chỉ dời lịch')
+    await del(`/tickets/${ticket._id}/scheduled-date`, assigneeToken, { reason: 'x' }).expect(409) // chưa hẹn
+  })
+
+  it('dời lịch được cả khi đang chờ nghiệm thu tại hiện trường', async () => {
+    const { ticket, assigneeToken } = await scheduledFault()
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'AWAITING_FIELD_CONFIRMATION' }).expect(200)
+    await put(`/tickets/${ticket._id}/scheduled-date`, assigneeToken, {
+      scheduled_visit_at: vnAt(2, 14).toISOString(), reason: 'Thiếu vật tư',
+    }).expect(200)
+  })
+
+  it('xin gán lại thì huỷ luôn lịch hẹn của người cũ và báo Farm Owner', async () => {
+    const { ticket, assigneeToken, colleague, owner } = await scheduledFault()
+    ;(notifyUser as jest.Mock).mockClear()
+
+    await post(`/tickets/${ticket._id}/reassign-request`, assigneeToken, { reason: 'Đang nghỉ phép' }).expect(200)
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.scheduled_visit_at).toBeUndefined()
+    expect(String(saved.assigned_to)).toBe(String(colleague._id))
+    expect(saved.notes.at(-1)!.content).toContain('đã huỷ')
+    expect((notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))).toContain(String(owner._id))
+  })
+})
+
+describe('huỷ ticket và đánh giá', () => {
+  it('Admin huỷ ticket thì Farm Owner cũng được báo', async () => {
+    const { ticket, owner, assignee } = await seed()
+    const admin = await User.create({ email: 'admin3@test.vn', password_hash: 'password123', full_name: 'Admin', role: 'ADMIN' })
+    ;(notifyUser as jest.Mock).mockClear()
+
+    await put(`/tickets/${ticket._id}/cancel`, tokenFor(admin._id, 'ADMIN'), { reason: 'Trùng ticket khác' }).expect(200)
+    const notified = (notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))
+    expect(notified).toContain(String(owner._id))
+    expect(notified).toContain(String(assignee._id))
+  })
+
+  it('không đánh giá được ticket đã huỷ', async () => {
+    const { ticket, owner } = await seed()
+    const ownerToken = tokenFor(owner._id, 'FARM_OWNER')
+    await Ticket.updateOne({ _id: ticket._id }, { created_by: owner._id })
+    await put(`/tickets/${ticket._id}/cancel`, ownerToken, { reason: 'Tự khắc phục được' }).expect(200)
+
+    const res = await post(`/tickets/${ticket._id}/rating`, ownerToken, { satisfaction_rating: 5 }).expect(409)
+    expect(res.body.error.message).toContain('đã huỷ')
   })
 })
