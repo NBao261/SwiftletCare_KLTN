@@ -1,21 +1,21 @@
 // ADMIN — Nhật ký hệ thống (SYSTEM-FR-001): GET /system/audit-logs, lọc theo
-// người thực hiện / hành động / khoảng ngày (server) + ô tìm kiếm (client, trên
-// trang đang xem). Hiển thị 1 bảng DataTable như trang Người dùng.
+// người thực hiện / hành động / khoảng ngày (server) + ô tìm kiếm & sắp xếp (client, trên
+// TOÀN BỘ nhật ký khớp bộ lọc). Hiển thị 1 bảng DataTable như trang Người dùng.
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useAuditLogList } from '@/hooks/admin/useSystem'
+import { useAuditLogList, useAllAuditLogs } from '@/hooks/admin/useSystem'
 import { useUsersPicker } from '@/hooks/admin/useUsers'
-import { usePageSubtitle } from '@/hooks/common/useBreadcrumb'
 import { AUDIT_ACTION_LABEL } from '@/constants/auditActions'
 import { ROLE_LABEL } from '@/constants/roles'
-import { Button, SearchInput } from '@/components/ui'
+import { Button, ClearFiltersButton, SearchInput, SortChips } from '@/components/ui'
 import DataTable from '@/components/ui/DataTable'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
-import { IconSearch, IconSortAsc, IconSortDesc } from '@/components/ui/icons'
+import { IconSearch } from '@/components/ui/icons'
 import { buildAuditLogColumns, targetName } from '@/components/features/admin/audit-log/auditLogColumns'
+import AuditLogStats from '@/components/features/admin/audit-log/AuditLogStats'
 import type { AuditLogEntry } from '@/types'
 
 const PAGE_SIZE = 10
@@ -94,8 +94,6 @@ export default function AdminAuditLogPage() {
     return () => clearTimeout(t)
   }, [search, setSearchParams])
 
-  usePageSubtitle('Mọi hành động quản trị đã ghi lại (khoá tài khoản, đổi ngưỡng/SLA, can thiệp ticket...) — lọc theo người thực hiện, hành động và khoảng ngày.')
-
   const actors = useUsersPicker()
   const actorOptions: SelectMenuOption<string>[] = [
     { value: ALL, label: 'Tất cả người thực hiện' },
@@ -108,23 +106,34 @@ export default function AdminAuditLogPage() {
   const from = preset ? localDay(preset.days - 1) : ''
   const to = preset ? localDay(0) : ''
 
-  const { records, total, limit, isLoading } = useAuditLogList({
+  const serverFilters = {
     actorId: actorId || undefined,
     action: action || undefined,
     from: from ? startOfDayIso(from) : undefined,
     to: to ? endOfDayIso(to) : undefined,
-    page,
-    limit: PAGE_SIZE,
-  })
-
-  // /system/audit-logs không có tham số tìm chữ — lọc trên trang đang xem (cùng cách
-  // AdminUsersPage), AND với các bộ lọc server phía trên.
+  }
   const q = fold(debouncedSearch.trim())
-  const filtered = q ? records.filter(log => matchesSearch(log, q, userNames)) : records
-  // Server luôn trả created_at giảm dần và chưa có tham số sort — "cũ nhất trước" chỉ đảo
-  // thứ tự trong trang đang xem (cùng cách sort của AdminUsersPage).
-  const visible = sortDir === 'asc' ? [...filtered].reverse() : filtered
-  const isPageScoped = (!!q || sortDir === 'asc') && total > limit
+  // /system/audit-logs không có tìm chữ và luôn trả created_at giảm dần. Mặc định dùng phân trang server
+  // (nhẹ); khi tìm chữ hoặc sắp "cũ nhất trước" thì tải TOÀN BỘ nhật ký khớp bộ lọc server rồi lọc/đảo/cắt
+  // trang ở client — tìm ra bao nhiêu thì phân trang đúng bấy nhiêu, không chỉ trong trang đang xem.
+  const clientSide = !!q || sortDir === 'asc'
+  const serverPage = useAuditLogList({ ...serverFilters, page, limit: PAGE_SIZE })
+  const all = useAllAuditLogs(serverFilters, clientSide)
+
+  let visible: AuditLogEntry[]
+  let total: number
+  let isLoading: boolean
+  if (clientSide) {
+    const matched = (all.data ?? []).filter(log => !q || matchesSearch(log, q, userNames))
+    const ordered = sortDir === 'asc' ? [...matched].reverse() : matched
+    visible = ordered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    total = ordered.length
+    isLoading = all.isLoading
+  } else {
+    visible = serverPage.records
+    total = serverPage.total
+    isLoading = serverPage.isLoading
+  }
 
   const hasFilter = !!(actorId || action || datePreset || search.trim()) || sortDir === 'asc'
 
@@ -145,12 +154,16 @@ export default function AdminAuditLogPage() {
   return (
     // Tiêu đề trang do AppHeader (topbar) tự tra từ menu — không lặp lại trong nội dung
     <div className="flex min-w-0 flex-col gap-5">
+      {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Ticket/Người dùng */}
+      <AuditLogStats />
+
       {/* Hàng 1: ô tìm kiếm cỡ mặc định, rộng hết hàng — cùng bố cục trang Người dùng */}
       <SearchInput
         placeholder="Tìm theo hành động, người thực hiện, IP..."
         aria-label="Tìm nhật ký"
         value={search}
-        onChange={setSearch}
+        // Tìm trên toàn bộ nhật ký → gõ từ khoá thì về trang 1
+        onChange={withReset(setSearch)}
       />
 
       {/* Hàng 2: bộ lọc */}
@@ -160,25 +173,17 @@ export default function AdminAuditLogPage() {
           <SelectMenu ariaLabel="Lọc theo hành động" value={action} options={ACTION_OPTIONS} onChange={withReset(setAction)} className="max-w-[16rem]" />
           <span className="label-caption">Thời gian:</span>
           <SelectMenu ariaLabel="Lọc theo khoảng thời gian" value={datePreset} options={dateOptions} onChange={withReset(setDatePreset)} className="max-w-[16rem]" />
-          <span className="label-caption">Sắp xếp:</span>
-          <button
-            type="button"
-            aria-label={sortDir === 'desc' ? 'Đang xếp mới nhất trước — bấm để xếp cũ nhất trước' : 'Đang xếp cũ nhất trước — bấm để xếp mới nhất trước'}
-            onClick={() => setSortDir(d => (d === 'desc' ? 'asc' : 'desc'))}
-            className="inline-flex items-center gap-1 rounded-full bg-charcoal px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-charcoal/90"
-          >
-            Thời gian
-            {sortDir === 'asc' ? <IconSortAsc width={12} height={12} /> : <IconSortDesc width={12} height={12} />}
-          </button>
+          {/* 1 trường duy nhất, luôn đang chọn — bấm chỉ đảo chiều mới nhất/cũ nhất */}
+          <SortChips
+            fields={[{ key: 'time', label: 'Thời gian' }]}
+            sortBy="time"
+            sortDir={sortDir}
+            onChange={() => { setSortDir(d => (d === 'desc' ? 'asc' : 'desc')); setPage(1) }}
+          />
           {hasFilter && (
-            <Button variant="danger" size="sm" className="h-8 px-3.5 text-xs" onClick={clearFilters}>Hủy lọc</Button>
+            <ClearFiltersButton onClick={clearFilters} />
           )}
         </div>
-        {isPageScoped && (
-          <p className="text-xs text-warmGray">
-            Tìm kiếm/sắp xếp chỉ áp dụng trên {records.length} bản ghi của trang {page} — thu hẹp bằng bộ lọc người thực hiện/hành động/ngày để tìm trên toàn bộ {total} bản ghi.
-          </p>
-        )}
         {actors.truncated && (
           <p className="text-xs text-warmGray">
             Ô "người thực hiện" chỉ liệt kê {actors.records.length}/{actors.total} tài khoản đầu tiên (giới hạn 1 trang của /admin/users).
@@ -200,10 +205,11 @@ export default function AdminAuditLogPage() {
       )}
 
       {!isLoading && visible.length > 0 && (
-        <DataTable columns={buildAuditLogColumns((page - 1) * limit, userNames)} rows={visible} getRowKey={log => log._id} />
+        <DataTable columns={buildAuditLogColumns((page - 1) * PAGE_SIZE, userNames)} rows={visible} getRowKey={log => log._id} />
       )}
 
-      <Pagination page={page} limit={limit} total={total} onChange={setPage} />
+      {/* total = số nhật ký SAU khi tìm chữ — tìm ra 3 thì hiện "1–3 trong 3" */}
+      <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} />
     </div>
   )
 }

@@ -13,6 +13,31 @@ export function useAuditLogList(query: ListAuditLogsQuery) {
   )
 }
 
+/** Trần `limit` backend (utils/helpers.util.ts#paginate) */
+const ALL_PAGE_LIMIT = 100
+
+/**
+ * Toàn bộ nhật ký khớp bộ lọc server (người thực hiện/hành động/khoảng ngày) — tải hết các trang, mỗi
+ * request tối đa ALL_PAGE_LIMIT (cùng cách useAllTickets). Chỉ bật (`enabled`) khi trang cần tìm chữ hoặc
+ * sắp "cũ nhất trước": backend không có 2 tham số này, nên phải làm trên toàn bộ ở client.
+ * ponytail: nhật ký chỉ tăng — khi lên hàng chục nghìn dòng thì thêm `q`/`sort` vào /system/audit-logs.
+ */
+export function useAllAuditLogs(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>, enabled: boolean) {
+  return useQuery({
+    queryKey: ['audit-logs', 'all', query],
+    enabled,
+    queryFn: async () => {
+      const first = (await systemApi.listAuditLogs({ ...query, page: 1, limit: ALL_PAGE_LIMIT })).data
+      const pageCount = Math.ceil((first.meta?.total ?? first.data.length) / ALL_PAGE_LIMIT)
+      const rest = await Promise.all(
+        Array.from({ length: Math.max(pageCount - 1, 0) }, (_, i) =>
+          systemApi.listAuditLogs({ ...query, page: i + 2, limit: ALL_PAGE_LIMIT }).then(r => r.data)),
+      )
+      return [first, ...rest].flatMap(r => r.data)
+    },
+  })
+}
+
 /** SYSTEM-FR-002 — GET /system/settings/default-thresholds. */
 export function useDefaultThresholds() {
   return useQuery({
