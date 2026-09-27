@@ -19,6 +19,19 @@ export function formatRelativeTime(iso: string, now = Date.now()) {
   return formatDate(iso)
 }
 
+/**
+ * Độ dài 1 khoảng thời gian, chính xác tới phút, lấy 2 đơn vị lớn nhất cho dễ đọc:
+ * "45 phút", "3 giờ 20 phút", "1 ngày 4 giờ". Bỏ dấu (dùng cho cả "còn …" lẫn "quá hạn …").
+ */
+export function formatDuration(ms: number): string {
+  const minutes = Math.floor(Math.abs(ms) / 60_000)
+  if (minutes < 1) return 'dưới 1 phút'
+  const d = Math.floor(minutes / 1440), h = Math.floor((minutes % 1440) / 60), m = minutes % 60
+  if (d > 0) return h ? `${d} ngày ${h} giờ` : `${d} ngày`
+  if (h > 0) return m ? `${h} giờ ${m} phút` : `${h} giờ`
+  return `${m} phút`
+}
+
 /** Format sensor value with unit */
 export const formatSensor = (value: number | undefined, unit: string, decimals = 1) =>
   value !== undefined ? `${value.toFixed(decimals)} ${unit}` : '--'

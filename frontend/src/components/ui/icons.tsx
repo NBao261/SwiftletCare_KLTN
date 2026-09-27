@@ -84,6 +84,14 @@ export const IconShield = (p: IconProps) => (
   <Svg {...p}><path d="M10 2.5 4 4.8v4.7c0 3.8 2.6 6.4 6 8 3.4-1.6 6-4.2 6-8V4.8Z" /></Svg>
 )
 
+export const IconClock = (p: IconProps) => (
+  <Svg {...p}><circle cx="10" cy="10" r="7.5" /><path d="M10 5.8V10l2.8 1.8" /></Svg>
+)
+
+export const IconCalendar = (p: IconProps) => (
+  <Svg {...p}><rect x="3" y="4.5" width="14" height="12.5" rx="2" /><path d="M3 8.5h14M7 2.8v3.4M13 2.8v3.4" /></Svg>
+)
+
 export const IconActivity = (p: IconProps) => (
   <Svg {...p}><path d="M2.5 10h3l2-5.5 5 11 2-5.5h3" /></Svg>
 )

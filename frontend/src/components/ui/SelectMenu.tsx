@@ -30,6 +30,9 @@ const OPTION_HEIGHT = 36
 const MENU_PADDING = 8
 /** Quá số dòng này thì danh sách có thanh cuộn — khớp `max-h-72` (288px = 8 × 36) bên dưới */
 const MAX_VISIBLE_OPTIONS = 8
+/** Kiểu `field` nằm trong modal: chỉ hiện 4 dòng rồi cuộn, để danh sách không tràn khỏi form */
+// [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Chỉ ảnh hưởng SelectMenu có prop `field` (hiện chỉ popup ticket của Admin dùng). Thêm: `field`/`disabled`/`invalid`, danh sách field cao 4 dòng rồi cuộn, Esc không đóng Modal. Hàng bộ lọc (không `field`) của mọi role giữ nguyên max-h-72.
+const FIELD_VISIBLE_OPTIONS = 4
 
 /**
  * Dropdown chọn 1 giá trị, thay cho <select> native ở các hàng filter: <select>
@@ -41,9 +44,10 @@ const MAX_VISIBLE_OPTIONS = 8
  * viền xanh (accent-600) để thấy ngay bộ lọc nào đang bật.
  */
 export default function SelectMenu<V extends string>({ value, options, onChange, ariaLabel, className, field, disabled, invalid }: SelectMenuProps<V>) {
+  const maxVisible = field ? FIELD_VISIBLE_OPTIONS : MAX_VISIBLE_OPTIONS
   const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
     align: 'left',
-    estimatedHeight: Math.min(options.length, MAX_VISIBLE_OPTIONS) * OPTION_HEIGHT + MENU_PADDING,
+    estimatedHeight: Math.min(options.length, maxVisible) * OPTION_HEIGHT + MENU_PADDING,
     matchTriggerWidth: true,
   })
   const selectedIndex = Math.max(0, options.findIndex(o => o.value === value))
@@ -112,8 +116,12 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
           ref={menuRef}
           role="listbox"
           aria-label={ariaLabel}
-          style={style}
-          className="z-50 max-h-72 animate-fade-in overflow-y-auto overscroll-contain rounded-xl border border-warmGray/15 bg-white py-1 shadow-dock [scrollbar-width:thin]"
+          // field: cao đúng FIELD_VISIBLE_OPTIONS dòng + padding — vừa khít, không lộ nửa dòng kế tiếp; filter giữ max-h-72 như cũ
+          style={field ? { ...style, maxHeight: FIELD_VISIBLE_OPTIONS * OPTION_HEIGHT + MENU_PADDING } : style}
+          className={cn(
+            'z-50 animate-fade-in overflow-y-auto overscroll-contain rounded-xl border border-warmGray/15 bg-white py-1 shadow-dock [scrollbar-width:thin]',
+            !field && 'max-h-72',
+          )}
         >
           {options.map((opt, index) => {
             const isSelected = index === selectedIndex
