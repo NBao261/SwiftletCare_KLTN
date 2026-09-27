@@ -17,7 +17,9 @@ const menuSections: MenuSection[] = [
     title: 'Vận hành',
     items: [
       { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
-      { label: 'Thiết bị & Cảm biến', path: '/devices', icon: IconDevice },
+      // OPS-NFR-004 — bảng chỉ xem toàn hệ thống; không trỏ /devices (màn kích hoạt/điều khiển của Technician,
+      // SRS RACI: Admin chỉ "I (audit)" với thiết bị)
+      { label: 'Thiết bị & Cảm biến', path: '/system/devices', icon: IconDevice },
       { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
     ],
   },

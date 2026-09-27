@@ -21,6 +21,8 @@ const AdminFarmHousePage = lazy(() => import('@/pages/admin/AdminFarmHousePage')
 // để nút quay lại + breadcrumb của Admin về đúng bảng /system/tickets
 const AdminTicketsPage = lazy(() => import('@/pages/admin/AdminTicketsPage'))
 const AdminTicketDetailPage = lazy(() => import('@/pages/admin/AdminTicketDetailPage'))
+// OPS-NFR-004 — thiết bị toàn hệ thống, chỉ xem; thay /devices (màn làm việc của Technician) trong menu Admin
+const AdminDevicesPage = lazy(() => import('@/pages/admin/devices/AdminDevicesPage'))
 
 export const adminRoutes = (
   <>
@@ -37,6 +39,14 @@ export const adminRoutes = (
       element={
         <RequireRole allow={ADMIN_ONLY}>
           <AdminAccountRequestsPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/devices"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminDevicesPage />
         </RequireRole>
       }
     />
