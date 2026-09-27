@@ -1,6 +1,6 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 
-/** Telemetry time-series document – SRS §8.2, ENV-FR-004, TTL: 1 year */
+/** Telemetry time-series document – SRS §8.2, ENV-FR-004, TTL: 90 ngày */
 export interface ITelemetry extends Document {
   _id: Types.ObjectId
   node_id: Types.ObjectId
@@ -31,10 +31,12 @@ const telemetrySchema = new Schema<ITelemetry>(
   { timestamps: false, versionKey: false }
 )
 
-// Compound indexes for time-range queries (ANALYTICS-FR-001)
-telemetrySchema.index({ node_id: 1, timestamp: -1 })
+// Mọi truy vấn (latest/history/analytics/market) lọc theo zone_id + khoảng thời gian (ANALYTICS-FR-001)
 telemetrySchema.index({ zone_id: 1, timestamp: -1 })
-// TTL: auto-delete after 1 year (§8.2)
-telemetrySchema.index({ timestamp: 1 }, { expireAfterSeconds: 31_536_000 })
+// TTL: tự xoá sau 90 ngày (§8.2) — analytics xem tối đa 30 ngày, market lấy 30 ngày
+// trước ngày thu hoạch. Đổi số này phải chạy lại `npm run migrate:retention`
+// (Mongoose không tự sửa TTL của index đã tồn tại).
+export const TELEMETRY_TTL_SECONDS = 90 * 24 * 60 * 60
+telemetrySchema.index({ timestamp: 1 }, { expireAfterSeconds: TELEMETRY_TTL_SECONDS })
 
 export const Telemetry = model<ITelemetry>('Telemetry', telemetrySchema)

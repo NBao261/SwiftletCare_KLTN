@@ -14,9 +14,17 @@ import { Farm } from '@/models/farm.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { adminOverrideTicket } from '@/services/ticket.service'
+import { notifyUser } from '@/services/notification.service'
 import type { Role } from '@/types'
+import { vnAt } from '../helpers/visitTime'
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
+
+jest.mock('@/services/notification.service', () => ({
+  ...jest.requireActual('@/services/notification.service'),
+  notifyUser: jest.fn().mockResolvedValue(undefined),
+  notifyAdmins: jest.fn().mockResolvedValue(undefined),
+}))
 
 const app = express()
 app.use(express.json())
@@ -53,7 +61,7 @@ async function seed() {
     email: 'out@test.vn', password_hash: 'password123', full_name: 'Out', role: 'TECHNICIAN', assigned_regions: ['Long An'],
   })
   const ticket = await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P3' })
-  return { admin, token: tokenFor(admin._id, 'ADMIN'), ticket, inRegion, outOfRegion }
+  return { admin, owner, token: tokenFor(admin._id, 'ADMIN'), ticket, inRegion, outOfRegion }
 }
 
 const override = (token: string, ticketId: unknown, body: object) =>
@@ -177,5 +185,21 @@ describe('adminOverrideTicket called directly (not through the route)', () => {
     const saved = (await Ticket.findById(ticket._id))!
     expect(saved.assigned_at!.getTime()).toBe(assignedAt.getTime()) // responded_at cũ vẫn sau mốc giao → KPI không ra số âm
     expect(saved.status).toBe('IN_PROGRESS')
+  })
+})
+
+describe('admin override — lịch hẹn (TICKET-FR-005b)', () => {
+  it('đổi giờ hẹn theo cùng khung 7:00–18:00, báo Farm Owner và Technician đang giữ', async () => {
+    const { token, ticket, owner, inRegion } = await seed()
+    await Ticket.updateOne({ _id: ticket._id }, { type: 'INSTALLATION', assigned_to: inRegion._id })
+
+    await override(token, ticket._id, { scheduled_visit_at: vnAt(1, 21).toISOString(), reason: 'Farm Owner gọi điện' }).expect(400)
+
+    ;(notifyUser as jest.Mock).mockClear()
+    const at = vnAt(1, 15).toISOString()
+    await override(token, ticket._id, { scheduled_visit_at: at, reason: 'Farm Owner gọi điện' }).expect(200)
+    expect((await Ticket.findById(ticket._id))!.scheduled_visit_at!.toISOString()).toBe(at)
+    const notified = (notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))
+    expect(notified).toEqual(expect.arrayContaining([String(owner._id), String(inRegion._id)]))
   })
 })

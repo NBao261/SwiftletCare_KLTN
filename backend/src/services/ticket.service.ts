@@ -1,9 +1,11 @@
 import { Ticket, ITicket } from '@/models/ticket.model'
 import { Alert } from '@/models/alert.model'
+import { OPEN_STATUSES } from '@/services/alert.service'
 import { SensorNode } from '@/models/device.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
-import { listAccessibleFarmIds, assertFarmAccess, findZoneChainOrThrow } from '@/utils/farmAccess.util'
+import { listAccessibleFarmIds, assertFarmAccess, assertZoneInFarm } from '@/utils/farmAccess.util'
+import { assertValidVisitTime, formatVisitTime } from '@/utils/visitTime.util'
 import { logAction } from '@/services/auditLog.service'
 import { getSlaHours, getTicketRouting } from '@/services/system.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
@@ -51,7 +53,17 @@ const ALLOWED_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   CLOSED:                      [],
 }
 
-const INSTALLATION_TYPES: TicketType[] = ['INSTALLATION', 'MAINTENANCE']
+/**
+ * Loại ticket mà bản chất là 1 buổi đến hiện trường nên có lịch hẹn ngay từ đầu
+ * (TICKET-FR-004b). Ticket sự cố cũng có thể có lịch, nhưng chỉ khi Technician
+ * đã chẩn đoán từ xa và quyết định phải xuống (Flow 9 bước 6b) — xem scheduleVisit.
+ */
+const VISIT_TYPES: TicketType[] = ['INSTALLATION', 'MAINTENANCE']
+
+/** Đã (hoặc sẽ) có buổi đến hiện trường → phải nghiệm thu SAT trước khi đóng (TICKET-FR-010, Flow 9 bước 6b) */
+function requiresFieldVisit(ticket: Pick<ITicket, 'type' | 'scheduled_visit_at'>): boolean {
+  return VISIT_TYPES.includes(ticket.type) || Boolean(ticket.scheduled_visit_at)
+}
 
 /**
  * Alert Engine phát nhiều loại cảnh báo hơn TicketType hỗ trợ — ép kiểu trực
@@ -125,7 +137,8 @@ export interface CreateTicketInput {
   zone_id?: string
   type: TicketType
   description?: string
-  scheduled_visit_at?: string // chỉ dùng cho INSTALLATION/MAINTENANCE (TICKET-FR-004b)
+  /** Chỉ và bắt buộc khi type=INSTALLATION (TICKET-FR-004b); loại khác gửi kèm → 400 */
+  scheduled_visit_at?: string
   alert_id?: string
 }
 
@@ -133,24 +146,20 @@ export interface CreateTicketInput {
 export async function createTicket(user: CurrentUser, input: CreateTicketInput): Promise<ITicket> {
   await assertFarmAccess(input.farm_id, user)
 
-  // Zone phải thuộc đúng farm của ticket: `zone_id` lạ làm Technician tới nhầm
-  // khu vực và mọi đối chiếu telemetry/cảnh báo sau đó đều trỏ sai chỗ.
-  if (input.zone_id) {
-    const chain = await findZoneChainOrThrow(input.zone_id)
-    if (String(chain.farm._id) !== input.farm_id) throw BadRequestError('zone_id không thuộc farm này')
+  if (input.type === 'MAINTENANCE') {
+    // TICKET-FR-013 — bảo trì định kỳ chỉ sinh từ lịch bảo trì, không tạo tay
+    throw BadRequestError('Ticket bảo trì định kỳ được tạo tự động từ lịch bảo trì, không tạo tay')
   }
-
-  if (INSTALLATION_TYPES.includes(input.type) && !input.scheduled_visit_at) {
+  let visitAt: Date | undefined
+  if (input.type === 'INSTALLATION') {
     // Flow 9b bước 1: Farm Owner chọn thẳng ngày giờ hẹn, không có bước liên hệ
-    throw BadRequestError('Yêu cầu lắp đặt/bảo trì phải chọn ngày giờ hẹn (scheduled_visit_at)')
+    if (!input.scheduled_visit_at) throw BadRequestError('Yêu cầu lắp đặt phải chọn ngày giờ hẹn (scheduled_visit_at)')
+    visitAt = assertValidVisitTime(input.scheduled_visit_at)
+  } else if (input.scheduled_visit_at) {
+    // Flow 9 bước 5–6b: ticket sự cố — Technician chẩn đoán từ xa trước, cần xuống thì mới hẹn
+    throw BadRequestError('Chỉ yêu cầu lắp đặt mới chọn giờ hẹn khi tạo; ticket sự cố do Technician hẹn sau khi chẩn đoán')
   }
-  // Cùng ràng buộc với `rescheduleVisit`: hẹn trong quá khứ thì ticket vừa tạo đã trễ hẹn
-  if (input.scheduled_visit_at) {
-    const visitAt = new Date(input.scheduled_visit_at)
-    if (Number.isNaN(visitAt.getTime()) || visitAt.getTime() <= Date.now()) {
-      throw BadRequestError('Ngày hẹn phải ở tương lai')
-    }
-  }
+  if (input.zone_id) await assertZoneInFarm(input.zone_id, input.farm_id)
 
   const priority = DEFAULT_PRIORITY[input.type]
   const sla = await slaDueDates(priority, new Date())
@@ -172,15 +181,34 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
     status:   'NEW',
     assigned_to: assignedTo ?? undefined,
     assigned_at: assignedTo ? new Date() : undefined,
-    scheduled_visit_at: input.scheduled_visit_at ? new Date(input.scheduled_visit_at) : undefined,
+    scheduled_visit_at: visitAt,
     ...sla,
     notes: input.description
       ? [{ author_id: user._id, content: input.description, created_at: new Date() }]
       : [],
   })
 
-  if (!assignedTo) notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
+  if (assignedTo) notifyNewAssignment(assignedTo, ticket)
+  else notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
   return ticket
+}
+
+/** TICKET-FR-004 — Ticket Router gán xong thì Technician phải biết ngay, kèm giờ hẹn nếu có */
+function notifyNewAssignment(assignedTo: string, ticket: Pick<ITicket, '_id' | 'type' | 'priority' | 'scheduled_visit_at'>): void {
+  void notifyUser(assignedTo, {
+    title: `Bạn được gán ticket ${ticket.priority}`,
+    body: `Ticket ${String(ticket._id)} (${ticket.type})${ticket.scheduled_visit_at ? ` — hẹn ${formatVisitTime(ticket.scheduled_visit_at)}` : ''}`,
+  })
+}
+
+/**
+ * Farm Owner là người phải có mặt ở hiện trường nên LUÔN được báo khi lịch hẹn
+ * đổi, kể cả khi ticket do Admin tạo hộ; người tạo (nếu khác) cũng nhận để nắm.
+ */
+async function notifyVisitChange(ticket: ITicket, message: { title: string; body: string }, extra: string[] = []): Promise<void> {
+  const farm = await Farm.findById(ticket.farm_id).select('owner_id').lean()
+  const recipients = new Set([farm?.owner_id, ticket.created_by, ...extra].filter(Boolean).map(String))
+  for (const userId of recipients) void notifyUser(userId, message)
 }
 
 /**
@@ -211,7 +239,7 @@ export async function createMaintenanceTicket(input: {
   if (assignedTo) {
     void notifyUser(assignedTo, {
       title: 'Ticket bảo trì định kỳ mới',
-      body: `${input.description} — hẹn ${input.scheduled_visit_at.toLocaleString('vi-VN')}`,
+      body: `${input.description} — hẹn ${formatVisitTime(input.scheduled_visit_at)}`,
     })
   } else {
     notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
@@ -222,15 +250,32 @@ export async function createMaintenanceTicket(input: {
 /**
  * TICKET-FR-002 — tự tạo ticket từ Alert CRITICAL/HIGH chưa acknowledge sau 15
  * phút. Gọi định kỳ từ jobs/alertEscalation.job.ts.
+ *
+ * Riêng NODE_OFFLINE: chỉ khi thiết bị mất kết nối LIÊN TỤC quá
+ * NODE_OFFLINE_TICKET_AFTER_MS (alert còn mở = vẫn offline, vì markNodeSeen
+ * đóng alert ngay khi thiết bị online lại), kể cả khi chủ trại đã xác nhận —
+ * xác nhận không làm thiết bị kết nối lại. Mỗi lần mất kết nối là 1 alert mới
+ * nên được tối đa 1 ticket; nếu ticket của lần trước còn mở thì chỉ ghi chú vào đó.
  */
 export const UNACKED_ALERT_THRESHOLD_MS = 15 * 60 * 1000
+export const NODE_OFFLINE_TICKET_AFTER_MS = 60 * 60 * 1000
 
 export async function createTicketsFromStaleAlerts(): Promise<number> {
-  const staleBefore = new Date(Date.now() - UNACKED_ALERT_THRESHOLD_MS)
+  const now = Date.now()
   const staleAlerts = await Alert.find({
-    status: 'ACTIVE',
-    severity: { $in: ['CRITICAL', 'HIGH'] },
-    created_at: { $lt: staleBefore },
+    $or: [
+      {
+        type: { $ne: 'NODE_OFFLINE' },
+        status: 'ACTIVE',
+        severity: { $in: ['CRITICAL', 'HIGH'] },
+        created_at: { $lt: new Date(now - UNACKED_ALERT_THRESHOLD_MS) },
+      },
+      {
+        type: 'NODE_OFFLINE',
+        status: { $in: OPEN_STATUSES },
+        created_at: { $lt: new Date(now - NODE_OFFLINE_TICKET_AFTER_MS) },
+      },
+    ],
   })
   if (staleAlerts.length === 0) return 0
 
@@ -239,21 +284,50 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
     (await Ticket.find({ alert_id: { $in: staleAlerts.map(a => a._id) } }).select('alert_id').lean())
       .map(t => String(t.alert_id)),
   )
-  // Cảnh báo cũ của thiết bị đã gỡ (FARM-FR-008) không được biến thành ticket:
-  // không còn gì ở hiện trường để sửa. 1 truy vấn cho cả batch, cùng idiom dedup ở trên.
+  // 1 truy vấn cho cả batch, cùng idiom dedup ở trên:
+  // - thiết bị đã gỡ (FARM-FR-008): không còn gì ở hiện trường để sửa;
+  // - NODE_OFFLINE của thiết bị đã ONLINE lại: cảnh báo chỉ chưa kịp đóng (heartbeat
+  //   tới đúng lúc job chạy) — kiểm tra ngay lúc quyết định nên không phụ thuộc thứ tự
+  //   với resolveNodeOfflineAlertsOfOnlineNodes, lượt quét đó sẽ đóng cảnh báo sau.
   const nodeIds = [...new Set(staleAlerts.map(a => a.node_id).filter(Boolean))]
-  const removedNodeIds = new Set(
-    (await SensorNode.find({ _id: { $in: nodeIds }, decommissioned_at: { $ne: null } }).select('_id').lean())
-      .map(n => String(n._id)),
-  )
+  const nodes = await SensorNode.find({ _id: { $in: nodeIds } }).select('_id status decommissioned_at').lean()
+  const removedNodeIds = new Set(nodes.filter(n => n.decommissioned_at).map(n => String(n._id)))
+  const onlineNodeIds = new Set(nodes.filter(n => n.status === 'ONLINE').map(n => String(n._id)))
 
-  const toProcess = staleAlerts.filter(a =>
-    !alreadyTicketed.has(String(a._id)) && !(a.node_id && removedNodeIds.has(String(a.node_id))),
-  )
+  const toProcess = staleAlerts.filter(a => {
+    const nodeId = a.node_id ? String(a.node_id) : undefined
+    if (alreadyTicketed.has(String(a._id))) return false
+    if (nodeId && removedNodeIds.has(nodeId)) return false
+    return !(a.type === 'NODE_OFFLINE' && nodeId && onlineNodeIds.has(nodeId))
+  })
+
+  // Ticket mất kết nối của lần trước còn mở, theo từng thiết bị — cũng 2 truy vấn cho cả batch.
+  const offlineNodeIds = [...new Set(toProcess.filter(a => a.type === 'NODE_OFFLINE' && a.node_id).map(a => String(a.node_id)))]
+  const openOfflineTicketByNode = new Map<string, InstanceType<typeof Ticket>>()
+  if (offlineNodeIds.length > 0) {
+    const pastAlerts = await Alert.find({ type: 'NODE_OFFLINE', node_id: { $in: offlineNodeIds } }).select('_id node_id').lean()
+    const nodeOfAlert = new Map(pastAlerts.map(a => [String(a._id), String(a.node_id)]))
+    const openTickets = await Ticket.find({ alert_id: { $in: pastAlerts.map(a => a._id) }, status: { $ne: 'CLOSED' } })
+    for (const t of openTickets) openOfflineTicketByNode.set(nodeOfAlert.get(String(t.alert_id))!, t)
+  }
 
   let created = 0
   for (const alert of toProcess) {
     try {
+      const since = alert.created_at.toLocaleString('vi-VN')
+      const openTicket = alert.type === 'NODE_OFFLINE' ? openOfflineTicketByNode.get(String(alert.node_id)) : undefined
+      if (openTicket) {
+        // Trỏ ticket sang alert mới để lần chạy sau `alreadyTicketed` bỏ qua alert
+        // này (không ghi chú lặp mỗi 2 phút); ghi chú giữ lại lịch sử các lần mất kết nối.
+        openTicket.notes.push({
+          content: `Thiết bị mất kết nối lại từ ${since} (hơn 1 giờ) — cảnh báo mới "${alert.title}"`,
+          created_at: new Date(),
+        } as never)
+        openTicket.alert_id = alert._id
+        await openTicket.save()
+        continue
+      }
+
       const ticketType = ALERT_TYPE_TO_TICKET_TYPE[alert.type as AlertType] ?? 'OTHER'
       const priority = DEFAULT_PRIORITY[ticketType]
       const sla = await slaDueDates(priority, new Date())
@@ -272,11 +346,14 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
         assigned_at: assignedTo ? new Date() : undefined,
         ...sla,
         notes: [{
-          content: `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
+          content: alert.type === 'NODE_OFFLINE'
+            ? `Tự tạo vì thiết bị mất kết nối liên tục hơn 1 giờ (từ ${since}) — cảnh báo "${alert.title}" (TICKET-FR-002)`
+            : `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
           created_at: new Date(),
         }],
       })
-      if (!assignedTo) notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
+      if (assignedTo) notifyNewAssignment(assignedTo, ticket)
+      else notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
       created++
     } catch (err) {
       // 1 alert lỗi không được chặn các alert khác trong cùng batch — trước
@@ -377,7 +454,7 @@ function assertAssignee(ticket: ITicket, user: CurrentUser): void {
   }
 }
 
-/** TICKET-FR-007 + TICKET-FR-010 (chặn đóng ticket lắp đặt khi SAT chưa đạt) */
+/** TICKET-FR-007 + TICKET-FR-010 (chặn đóng khi SAT chưa đạt — lắp đặt/bảo trì, hoặc ticket sự cố đã hẹn xuống hiện trường) */
 export async function updateStatus(
   ticketId: string, user: CurrentUser, newStatus: TicketStatus, note?: string,
 ): Promise<ITicket> {
@@ -388,12 +465,12 @@ export async function updateStatus(
     throw BadRequestError(`Không thể chuyển ticket từ ${ticket.status} sang ${newStatus}`)
   }
 
-  if (newStatus === 'CLOSED' && INSTALLATION_TYPES.includes(ticket.type)) {
+  if (newStatus === 'CLOSED' && requiresFieldVisit(ticket)) {
     const sat = ticket.sat_checklist
     const allPassed = sat.modbus_addresses_ok && sat.camera_rtsp_ok && sat.lte_connection_ok && sat.relay_test_ok
     if (!allPassed) {
-      // Flow 9b case 6a — không cho bàn giao khi nghiệm thu chưa đạt
-      throw ConflictError('Chưa thể đóng ticket lắp đặt: checklist nghiệm thu (SAT) chưa đạt đủ 4 mục')
+      // Flow 9b case 6a / Flow 9 bước 6b — không bàn giao khi nghiệm thu tại hiện trường chưa đạt
+      throw ConflictError('Chưa thể đóng ticket: checklist nghiệm thu (SAT) tại hiện trường chưa đạt đủ 4 mục')
     }
   }
 
@@ -409,45 +486,38 @@ export async function updateStatus(
 }
 
 /**
- * TICKET-FR-004b — ngày hẹn do Farm Owner chọn lúc tạo ticket; Technician không
- * sắp xếp được thì tự dời, nhưng bắt buộc nêu lý do và Farm Owner phải được báo
- * (không có bước thương lượng lịch qua lại).
+ * TICKET-FR-004b + Flow 9 bước 6b — Technician được gán đặt hoặc dời giờ đến hiện trường.
+ * - Lắp đặt/bảo trì: giờ hẹn có sẵn từ lúc tạo; Technician không sắp xếp được thì tự dời.
+ * - Ticket sự cố: chỉ hẹn được sau khi đã tiếp nhận (IN_PROGRESS) — Technician chẩn
+ *   đoán/xử lý từ xa trước (TICKET-FR-008), không được thì mới hẹn xuống.
+ * Lý do bắt buộc, không có bước thương lượng lịch qua lại; Farm Owner luôn được báo.
  */
-export async function rescheduleVisit(
+export async function scheduleVisit(
   ticketId: string, user: CurrentUser, scheduledVisitAt: string, reason: string,
 ): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user)
   assertAssignee(ticket, user)
-  if (!INSTALLATION_TYPES.includes(ticket.type)) {
-    throw BadRequestError('Chỉ ticket lắp đặt/bảo trì mới có lịch hẹn')
-  }
   if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
-
-  const next = new Date(scheduledVisitAt)
-  if (Number.isNaN(next.getTime()) || next.getTime() <= Date.now()) {
-    throw BadRequestError('Ngày hẹn mới phải ở tương lai')
+  if (!VISIT_TYPES.includes(ticket.type) && ticket.status !== 'IN_PROGRESS') {
+    throw ConflictError('Ticket sự cố chỉ hẹn đến hiện trường được sau khi đã tiếp nhận và chẩn đoán từ xa (trạng thái Đang xử lý)')
   }
+  const next = assertValidVisitTime(scheduledVisitAt)
 
   const before = ticket.scheduled_visit_at ?? null
   ticket.scheduled_visit_at = next
   ticket.notes.push({
     author_id: user._id as never,
-    content: `Đổi lịch hẹn ${before ? `từ ${before.toISOString()} ` : ''}sang ${next.toISOString()}: ${reason}`,
+    content: before
+      ? `Dời lịch hẹn từ ${formatVisitTime(before)} sang ${formatVisitTime(next)}: ${reason}`
+      : `Hẹn đến hiện trường lúc ${formatVisitTime(next)}: ${reason}`,
     created_at: new Date(),
   })
   await ticket.save()
 
-  await logAction(user._id, 'TICKET_RESCHEDULED', 'ticket', ticketId, { before, after: next, reason })
-  // Farm Owner là người phải có mặt ở hiện trường (TICKET-FR-004b) nên LUÔN được
-  // báo, kể cả khi ticket do Admin tạo hộ; người tạo (nếu khác) cũng nhận để nắm.
-  const farm = await Farm.findById(ticket.farm_id).select('owner_id').lean()
-  const recipients = new Set([farm?.owner_id, ticket.created_by].filter(Boolean).map(String))
-  for (const userId of recipients) {
-    void notifyUser(userId, {
-      title: 'Lịch hẹn kỹ thuật đã thay đổi',
-      body: `Technician dời lịch hẹn sang ${next.toLocaleString('vi-VN')}. Lý do: ${reason}`,
-    })
-  }
+  await logAction(user._id, before ? 'TICKET_RESCHEDULED' : 'TICKET_VISIT_SCHEDULED', 'ticket', ticketId, { before, after: next, reason })
+  await notifyVisitChange(ticket, before
+    ? { title: 'Lịch hẹn kỹ thuật đã thay đổi', body: `Technician dời lịch hẹn sang ${formatVisitTime(next)}. Lý do: ${reason}` }
+    : { title: 'Technician hẹn đến hiện trường', body: `Technician sẽ đến lúc ${formatVisitTime(next)}. Lý do: ${reason}` })
   return ticket
 }
 
@@ -511,6 +581,18 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
     created_at: new Date(),
   })
   await ticket.save()
+
+  // Flow 9 case 6c / 9b case 4a — Technician đang giữ ticket phải biết để không xuống farm theo lịch cũ
+  const assignee = assigneeIdOf(ticket)
+  if (assignee && assignee !== user._id) {
+    const visit = ticket.scheduled_visit_at && ticket.scheduled_visit_at.getTime() > Date.now()
+      ? ` — không cần đến hiện trường lúc ${formatVisitTime(ticket.scheduled_visit_at)}`
+      : ''
+    void notifyUser(assignee, {
+      title: 'Ticket đã bị huỷ',
+      body: `Ticket ${ticketId} (${ticket.type}) đã được huỷ${visit}. Lý do: ${reason}`,
+    })
+  }
   return ticket
 }
 
@@ -527,12 +609,10 @@ export async function updateSatChecklist(
 ): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user)
   assertAssignee(ticket, user)
-  // Chỉ ticket lắp đặt/bảo trì mới có nghiệm thu (TICKET-FR-010); tick checklist
-  // trên ticket sự cố chỉ tạo dữ liệu vô nghĩa và không ảnh hưởng điều kiện đóng.
-  if (!INSTALLATION_TYPES.includes(ticket.type)) {
-    throw BadRequestError('Chỉ ticket lắp đặt/bảo trì mới có checklist nghiệm thu')
-  }
   if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng, không sửa checklist nghiệm thu được nữa')
+  if (!requiresFieldVisit(ticket)) {
+    throw BadRequestError('Checklist nghiệm thu chỉ dùng cho ticket lắp đặt/bảo trì hoặc ticket đã hẹn đến hiện trường')
+  }
   ticket.sat_checklist = { ...ticket.sat_checklist, ...updates }
   await ticket.save()
   return ticket
@@ -823,9 +903,13 @@ export async function adminOverrideTicket(
     ticket.sla_resolve_due_at  = sla.sla_resolve_due_at
     changes.sla_resolve_due_at = ticket.sla_resolve_due_at
   }
+  let visitChanged = false
   if (updates.scheduled_visit_at !== undefined) {
-    ticket.scheduled_visit_at = new Date(updates.scheduled_visit_at)
-    changes.scheduled_visit_at = updates.scheduled_visit_at
+    // Admin toàn quyền đổi lịch (TICKET-FR-005b) nhưng vẫn theo cùng quy tắc giờ hẹn
+    const next = assertValidVisitTime(updates.scheduled_visit_at)
+    changes.scheduled_visit_at = { before: ticket.scheduled_visit_at ?? null, after: next }
+    visitChanged = ticket.scheduled_visit_at?.getTime() !== next.getTime()
+    ticket.scheduled_visit_at = next
   }
   if (updates.status !== undefined) {
     changes.status = { before: ticket.status, after: updates.status }
@@ -844,5 +928,12 @@ export async function adminOverrideTicket(
 
   await logAction(adminUser._id, 'TICKET_ADMIN_OVERRIDE', 'ticket', ticketId, changes)
   await announceAssigneeChange(ticket, previousAssignee)
+  if (visitChanged && ticket.scheduled_visit_at) {
+    const assignee = assigneeIdOf(ticket)
+    await notifyVisitChange(ticket, {
+      title: 'Lịch hẹn kỹ thuật đã thay đổi',
+      body: `Administrator đổi lịch hẹn sang ${formatVisitTime(ticket.scheduled_visit_at)}. Lý do: ${updates.reason}`,
+    }, assignee ? [assignee] : [])
+  }
   return ticket.populate('assigned_to', 'full_name email')
 }

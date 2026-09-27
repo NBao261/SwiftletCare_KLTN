@@ -1,4 +1,5 @@
 import { Alert, IAlert } from '@/models/alert.model'
+import { Farm } from '@/models/farm.model'
 import { Zone, House } from '@/models/houseZone.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
@@ -9,8 +10,13 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { AlertType, AlertSeverity, CurrentUser, Thresholds, TelemetryPayload } from '@/types'
 
-/** ALERT-FR-008 — cùng loại + cùng zone trong cửa sổ này thì không tạo bản ghi mới */
-export const DEDUP_WINDOW_MS = 5 * 60 * 1000
+/** ALERT-FR-008 — sự cố còn đang mở thì chỉ cập nhật `last_seen_at` tối đa 1 lần/khoảng này */
+export const ALERT_SEEN_UPDATE_MS = 60 * 1000
+/** THRESHOLD_BREACH không được ghi nhận lại trong khoảng này = chỉ số đã bình thường → tự đóng */
+export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
+
+/** Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này */
+export const OPEN_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
 
 /**
  * ALERT-FR-001 — mức độ mặc định theo loại sự kiện. Firmware/RPi có thể gửi kèm
@@ -48,25 +54,42 @@ export interface CreateAlertInput {
  * Mọi nguồn (MQTT từ ESP32/RPi, job phát hiện offline, kiểm tra ngưỡng telemetry)
  * đều đi qua đây để đảm bảo dedup + gửi thông báo + phát socket nhất quán.
  *
- * Trả về `null` khi bị dedup (đã có cảnh báo cùng loại/zone còn ACTIVE trong
- * 5 phút) — không phải lỗi, chỉ là không tạo bản ghi trùng.
+ * Trả về `null` khi bị dedup: sự cố cùng farm/zone/thiết bị/loại vẫn còn alert
+ * đang mở (ACTIVE hoặc ACKNOWLEDGED, không giới hạn thời gian) — khi đó chỉ cập
+ * nhật `last_seen_at` + `occurrence_count` của alert đó, không tạo bản ghi và
+ * không gửi thông báo lại.
  */
 export async function createAlert(input: CreateAlertInput): Promise<IAlert | null> {
   const severity = input.severity ?? DEFAULT_SEVERITY[input.type]
+  const now = new Date()
 
-  const duplicate = await Alert.findOne({
+  // Farm đã xoá mềm mà thiết bị vẫn cắm điện: không sinh cảnh báo (và ticket) mà
+  // không ai mở được. Pre-hook findOne của Farm đã loại is_deleted.
+  if (!(await Farm.exists({ _id: input.farmId }))) return null
+
+  // ponytail: tìm-rồi-tạo không nguyên tử — 2 mẫu cùng sự cố tới đồng thời có
+  // thể ra 1 bản trùng; thêm unique partial index nếu thấy xảy ra thật.
+  const open = await Alert.findOne({
     farm_id: input.farmId,
     zone_id: input.zoneId,
+    node_id: input.nodeId,
     type: input.type,
-    status: 'ACTIVE',
-    created_at: { $gte: new Date(Date.now() - DEDUP_WINDOW_MS) },
-  })
-  if (duplicate) {
+    status: { $in: OPEN_STATUSES },
+  }).select('_id created_at last_seen_at').lean()
+  if (open) {
+    const lastSeen = (open.last_seen_at ?? open.created_at).getTime()
+    if (now.getTime() - lastSeen >= ALERT_SEEN_UPDATE_MS) {
+      await Alert.updateOne({ _id: open._id }, {
+        $set: { last_seen_at: now, message: input.message, metadata: input.metadata },
+        $inc: { occurrence_count: 1 },
+      })
+    }
     logger.debug('Alert bị dedup (ALERT-FR-008)', { type: input.type, zoneId: input.zoneId })
     return null
   }
 
   const alert = await Alert.create({
+    last_seen_at: now,
     farm_id:      input.farmId,
     zone_id:      input.zoneId,
     node_id:      input.nodeId,
@@ -257,8 +280,8 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
  * ticket sau 15 phút, gán cho Technician một việc không còn tồn tại để sửa.
  * Trả về số cảnh báo đã đóng.
  */
-export async function resolveAlertsForNode(nodeId: string, reason: string): Promise<number> {
-  const open = await Alert.find({ node_id: nodeId, status: { $in: ['ACTIVE', 'ACKNOWLEDGED'] } }).select('_id').lean()
+export async function resolveAlertsForNode(nodeId: string, reason: string, type?: AlertType): Promise<number> {
+  const open = await Alert.find({ node_id: nodeId, status: { $in: OPEN_STATUSES }, ...(type && { type }) }).select('_id').lean()
   if (open.length === 0) return 0
 
   await Alert.updateMany(
@@ -268,10 +291,50 @@ export async function resolveAlertsForNode(nodeId: string, reason: string): Prom
   return open.length
 }
 
+/**
+ * ALERT-FR-008 — THRESHOLD_BREACH không còn được ghi nhận lại trong
+ * THRESHOLD_CLEAR_MS (chỉ số đã về bình thường, hoặc thiết bị ngừng gửi — khi
+ * đó đã có NODE_OFFLINE riêng) thì tự đóng. Gọi định kỳ từ jobs/alertEscalation.job.ts.
+ */
+export async function resolveStaleThresholdAlerts(): Promise<number> {
+  const clearBefore = new Date(Date.now() - THRESHOLD_CLEAR_MS)
+  const { modifiedCount } = await Alert.updateMany(
+    {
+      type: 'THRESHOLD_BREACH',
+      status: { $in: OPEN_STATUSES },
+      $or: [
+        { last_seen_at: { $lt: clearBefore } },
+        { last_seen_at: { $exists: false }, created_at: { $lt: clearBefore } },
+      ],
+    },
+    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Chỉ số đã trở lại bình thường' },
+  )
+  return modifiedCount
+}
+
+/**
+ * Lưới an toàn cho NODE_OFFLINE: job offline và heartbeat chạy song song, nên thiết bị
+ * có thể online lại (announceBackOnline không thấy gì để đóng) ngay trước khi
+ * raiseNodeOfflineAlert kịp tạo cảnh báo. Đóng mọi NODE_OFFLINE còn mở mà thiết bị đã
+ * ONLINE — không phụ thuộc thứ tự sự kiện. Gọi định kỳ từ jobs/alertEscalation.job.ts.
+ */
+export async function resolveNodeOfflineAlertsOfOnlineNodes(): Promise<number> {
+  const open = await Alert.find({ type: 'NODE_OFFLINE', status: { $in: OPEN_STATUSES } }).select('node_id').lean()
+  if (open.length === 0) return 0
+  const online = await SensorNode.find({ _id: { $in: open.map(a => a.node_id) }, status: 'ONLINE' }).select('_id').lean()
+  if (online.length === 0) return 0
+  const { modifiedCount } = await Alert.updateMany(
+    { type: 'NODE_OFFLINE', status: { $in: OPEN_STATUSES }, node_id: { $in: online.map(n => n._id) } },
+    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Thiết bị đã kết nối lại' },
+  )
+  return modifiedCount
+}
+
 /** Dùng cho job phát hiện thiết bị offline (FARM-FR-005 → THREAT-FR-009) */
 export async function raiseNodeOfflineAlert(nodeId: string): Promise<void> {
   const node = await SensorNode.findById(nodeId).lean()
-  if (!node) return
+  // Heartbeat có thể đã tới giữa lúc job đổi OFFLINE và lúc tạo cảnh báo
+  if (!node || node.status !== 'OFFLINE') return
   const zone = await Zone.findById(node.zone_id).lean()
   if (!zone) return
   const house = await House.findById(zone.house_id).lean()

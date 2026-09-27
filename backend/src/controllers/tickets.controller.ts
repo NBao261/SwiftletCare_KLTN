@@ -38,9 +38,9 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
   res.json({ success: true, data: ticket })
 })
 
-/** PUT /tickets/:id/scheduled-date – TICKET-FR-004b (Technician tự dời lịch hẹn) */
+/** PUT /tickets/:id/scheduled-date – TICKET-FR-004b + Flow 9 bước 6b (Technician hẹn/dời giờ đến hiện trường) */
 export const reschedule = asyncHandler(async (req: Request, res: Response) => {
-  const ticket = await ticketService.rescheduleVisit(
+  const ticket = await ticketService.scheduleVisit(
     req.params.id, req.user, req.body.scheduled_visit_at as string, req.body.reason as string,
   )
   res.json({ success: true, data: ticket })

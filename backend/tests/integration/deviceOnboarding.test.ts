@@ -17,13 +17,15 @@ import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode, CameraNode } from '@/models/device.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { User } from '@/models/user.model'
-import { markOverdueActivations, markOtaTimeouts, recordHeartbeat, ACTIVATION_TIMEOUT_MS, OTA_CONFIRM_TIMEOUT_MS } from '@/services/device.service'
+import { expireManualOverrides, markOverdueActivations, markOtaTimeouts, recordHeartbeat, ACTIVATION_TIMEOUT_MS, OTA_CONFIRM_TIMEOUT_MS } from '@/services/device.service'
 import { createProvisionedDevice } from '@/services/provisionedDevice.service'
 import { notifyUser } from '@/services/notification.service'
 import { RESTORE_WINDOW_MS } from '@/services/device.service'
 import { Alert } from '@/models/alert.model'
 import { Ticket } from '@/models/ticket.model'
 import { createTicketsFromStaleAlerts } from '@/services/ticket.service'
+import { createAlert } from '@/services/alert.service'
+import { removeFarm, updateFarm } from '@/services/farm.service'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import type { Role } from '@/types'
 
@@ -325,7 +327,7 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, version: '1.2.4' } }).expect(409)
 
     await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(202)
-    expect((publishCommand as jest.Mock).mock.calls[0][4]).toEqual({ command: 'OTA', ota: OTA })
+    expect((publishCommand as jest.Mock).mock.calls[0][4]).toEqual({ deviceId: node.device_id, command: 'OTA', ota: OTA })
     expect((await SensorNode.findById(node._id))!.ota_pending!.version).toBe('1.3.0')
 
     await recordHeartbeat({ deviceId: 'node_100', firmwareVersion: '1.2.4' } as never) // chưa lên bản mới
@@ -420,7 +422,7 @@ describe('gỡ thiết bị thì dọn cảnh báo của nó (FARM-FR-008)', () 
     const { techToken, a, secretKey } = await seed()
     const nodeId = (await register(techToken, { device_id: 'node_100', zone_id: String(a.zone._id), secret_key: secretKey }).expect(201)).body.data._id
 
-    const stale = new Date(Date.now() - 20 * 60_000)
+    const stale = new Date(Date.now() - 2 * 60 * 60_000) // quá ngưỡng ticket NODE_OFFLINE (1 giờ)
     const alert = await Alert.create({
       farm_id: a.farm._id, zone_id: a.zone._id, node_id: nodeId, type: 'NODE_OFFLINE', severity: 'HIGH',
       title: 'Mất kết nối', message: 'x', status: 'ACTIVE', created_at: stale,
@@ -442,4 +444,160 @@ describe('gỡ thiết bị thì dọn cảnh báo của nó (FARM-FR-008)', () 
     expect(await createTicketsFromStaleAlerts()).toBe(0)
   })
 
+})
+
+describe('ticket tự động khi thiết bị mất kết nối (TICKET-FR-002)', () => {
+  const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000)
+
+  async function offlineNode() {
+    const { a } = await seed()
+    const node = await SensorNode.create({ device_id: 'node_200', zone_id: a.zone._id, status: 'OFFLINE' })
+    const offlineAlert = (created_at: Date, status: 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED' = 'ACTIVE') => Alert.create({
+      farm_id: a.farm._id, zone_id: a.zone._id, node_id: node._id, type: 'NODE_OFFLINE', severity: 'HIGH',
+      title: 'Mất kết nối', message: 'x', status, created_at,
+    })
+    return { a, offlineAlert }
+  }
+
+  it('chỉ tạo ticket khi mất kết nối liên tục quá 1 giờ, và chỉ 1 lần cho mỗi lần mất kết nối', async () => {
+    const { offlineAlert } = await offlineNode()
+    const alert = await offlineAlert(minutesAgo(30))
+    expect(await createTicketsFromStaleAlerts()).toBe(0)
+
+    await Alert.updateOne({ _id: alert._id }, { created_at: minutesAgo(120) })
+    expect(await createTicketsFromStaleAlerts()).toBe(1)
+    expect(await createTicketsFromStaleAlerts()).toBe(0)
+    expect((await Ticket.findOne({ alert_id: alert._id }))!.notes[0].content).toContain('mất kết nối liên tục hơn 1 giờ')
+  })
+
+  it('không tạo ticket nếu thiết bị đã ONLINE lại mà cảnh báo chưa kịp đóng (heartbeat tới đúng lúc job chạy)', async () => {
+    const { offlineAlert } = await offlineNode()
+    await offlineAlert(minutesAgo(120))
+    await SensorNode.updateOne({ device_id: 'node_200' }, { status: 'ONLINE' })
+
+    expect(await createTicketsFromStaleAlerts()).toBe(0)
+    expect(await Ticket.countDocuments()).toBe(0)
+  })
+
+  it('vẫn tạo ticket khi chủ trại đã xác nhận nhưng thiết bị vẫn offline', async () => {
+    const { offlineAlert } = await offlineNode()
+    await offlineAlert(minutesAgo(120), 'ACKNOWLEDGED')
+    expect(await createTicketsFromStaleAlerts()).toBe(1)
+  })
+
+  it('mất kết nối lại khi ticket cũ còn mở thì ghi chú vào ticket cũ, không tạo ticket mới', async () => {
+    const { a, offlineAlert } = await offlineNode()
+    const first = await offlineAlert(minutesAgo(300), 'RESOLVED')
+    const ticket = await Ticket.create({ farm_id: a.farm._id, alert_id: first._id, type: 'NODE_OFFLINE', priority: 'P2' })
+    const second = await offlineAlert(minutesAgo(90))
+
+    expect(await createTicketsFromStaleAlerts()).toBe(0)
+    const updated = (await Ticket.findById(ticket._id))!
+    expect(String(updated.alert_id)).toBe(String(second._id))
+    expect(updated.notes.at(-1)!.content).toContain('mất kết nối lại')
+
+    expect(await createTicketsFromStaleAlerts()).toBe(0)
+    expect((await Ticket.findById(ticket._id))!.notes).toHaveLength(updated.notes.length)
+    expect(await Ticket.countDocuments()).toBe(1)
+  })
+
+  it('ticket cũ đã đóng thì lần mất kết nối mới được ticket riêng', async () => {
+    const { a, offlineAlert } = await offlineNode()
+    const first = await offlineAlert(minutesAgo(300), 'RESOLVED')
+    await Ticket.create({ farm_id: a.farm._id, alert_id: first._id, type: 'NODE_OFFLINE', priority: 'P2', status: 'CLOSED' })
+    await offlineAlert(minutesAgo(90))
+
+    expect(await createTicketsFromStaleAlerts()).toBe(1)
+    expect(await Ticket.countDocuments()).toBe(2)
+  })
+
+  it('cảnh báo HIGH loại khác vẫn sinh ticket sau 15 phút như cũ', async () => {
+    const { a } = await offlineNode()
+    await Alert.create({
+      farm_id: a.farm._id, zone_id: a.zone._id, type: 'POWER_OUTAGE', severity: 'HIGH',
+      title: 'Mất điện', message: 'x', status: 'ACTIVE', created_at: minutesAgo(20),
+    })
+    expect(await createTicketsFromStaleAlerts()).toBe(1)
+  })
+})
+
+describe('thiết bị đã gỡ không còn nhận lệnh (FARM-FR-008)', () => {
+  it('gỡ thiết bị trả override về AUTO; lịch loa/relay-override bị chặn; job hết hạn override bỏ qua', async () => {
+    const { techToken, a } = await seed()
+    const node = await SensorNode.create({
+      device_id: 'node_300', zone_id: a.zone._id, status: 'ONLINE',
+      control_mode: 'MANUAL', override_expiry: new Date(Date.now() + 10 * 60_000),
+    })
+
+    // Thiết bị đang ONLINE nên phải xác nhận bằng force (xem decommissionDevice)
+    await request(app).post(`/devices/sensor-nodes/${node._id}/decommission`)
+      .set('Authorization', `Bearer ${techToken}`).send({ reason: 'Hỏng nguồn', force: true }).expect(200)
+    const removed = (await SensorNode.findById(node._id))!
+    expect(removed.control_mode).toBe('AUTO')
+    expect(removed.override_expiry).toBeUndefined()
+
+    await request(app).put(`/devices/sensor-nodes/${node._id}/speaker-schedule`)
+      .set('Authorization', `Bearer ${techToken}`).send({ enabled: false }).expect(409)
+    await request(app).delete(`/devices/sensor-nodes/${node._id}/relay-override`)
+      .set('Authorization', `Bearer ${techToken}`).expect(409)
+
+    // Dữ liệu cũ còn MANUAL quá hạn trên node đã gỡ: không được bắn clear_override lên topic Zone
+    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date(Date.now() - 60_000) })
+    jest.clearAllMocks()
+    expect(await expireManualOverrides()).toBe(0)
+    expect(publishCommand).not.toHaveBeenCalled()
+  })
+})
+
+describe('dời zone (FARM-FR-007b)', () => {
+  it('đóng cảnh báo còn mở ở farm cũ và gửi reassign kèm deviceId', async () => {
+    const { techToken, a, b } = await seed()
+    const node = await SensorNode.create({ device_id: 'node_400', zone_id: a.zone._id, status: 'ONLINE' })
+    const alert = await Alert.create({
+      farm_id: a.farm._id, zone_id: a.zone._id, node_id: node._id, type: 'SPEAKER_FAILURE', severity: 'HIGH',
+      title: 'Loa hỏng', message: 'x', status: 'ACTIVE',
+    })
+
+    await request(app).put(`/devices/sensor-nodes/${node._id}/reassign-zone`)
+      .set('Authorization', `Bearer ${techToken}`).send({ newZoneId: String(b.zone._id) }).expect(200)
+
+    expect((await Alert.findById(alert._id))!.status).toBe('RESOLVED')
+    expect((publishCommand as jest.Mock).mock.calls.at(-1)![4]).toMatchObject({ deviceId: 'node_400', newZoneId: String(b.zone._id) })
+  })
+})
+
+describe('farm: quyền đổi region và xoá farm (FARM-FR-001)', () => {
+  async function farmWithCoOwner() {
+    const primary = await User.create({ email: 'p@test.vn', password_hash: 'password123', full_name: 'P', role: 'FARM_OWNER' })
+    const coOwner = await User.create({ email: 'c@test.vn', password_hash: 'password123', full_name: 'C', role: 'FARM_OWNER' })
+    const farm = await Farm.create({
+      name: 'F', address: 'x', region: 'HCMC', owner_id: primary._id,
+      members: [{ user_id: primary._id, is_primary: true }, { user_id: coOwner._id }],
+    })
+    const as = (u: { _id: unknown; email: string }) => ({ _id: String(u._id), email: u.email, role: 'FARM_OWNER' as const })
+    return { farm, primary: as(primary), coOwner: as(coOwner) }
+  }
+
+  it('đồng sở hữu sửa được tên nhưng không đổi được region; Primary Owner thì được', async () => {
+    const { farm, primary, coOwner } = await farmWithCoOwner()
+
+    await updateFarm(String(farm._id), coOwner, { name: 'Tên mới', region: 'HCMC' }) // gửi lại region cũ vẫn OK
+    await expect(updateFarm(String(farm._id), coOwner, { region: 'Hanoi' })).rejects.toThrow('Primary Owner')
+    await updateFarm(String(farm._id), primary, { region: 'Hanoi' })
+
+    const saved = (await Farm.findById(farm._id))!
+    expect([saved.name, saved.region]).toEqual(['Tên mới', 'Hanoi'])
+  })
+
+  it('xoá farm đóng cảnh báo đang mở và không sinh cảnh báo mới cho farm đó', async () => {
+    const { farm, primary } = await farmWithCoOwner()
+    const open = await Alert.create({
+      farm_id: farm._id, type: 'POWER_OUTAGE', severity: 'HIGH', title: 'Mất điện', message: 'x', status: 'ACTIVE',
+    })
+
+    await removeFarm(String(farm._id), primary)
+
+    expect((await Alert.findById(open._id))!.status).toBe('RESOLVED')
+    expect(await createAlert({ farmId: String(farm._id), type: 'NODE_OFFLINE', title: 't', message: 'm' })).toBeNull()
+  })
 })

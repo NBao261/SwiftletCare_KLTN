@@ -8,6 +8,7 @@
     "dev": "tsx watch --include \"./src/**/*\" src/index.ts",
     "seed": "tsx src/scripts/seed.script.ts",
     "mdns": "tsx src/scripts/mdns-responder.script.ts",
+    "migrate:retention": "tsx src/scripts/migrate-retention.script.ts",
     "build": "tsc",
     "build:check": "tsc --noEmit",
     "test": "jest --coverage",
