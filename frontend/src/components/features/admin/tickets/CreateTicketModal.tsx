@@ -1,26 +1,14 @@
-import { useState, useEffect, FormEvent, type ReactNode } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useCreateTicket } from '@/hooks/shared/useTickets'
 import { useFarms, useFarmZones } from '@/hooks/shared/useFarms'
 import { Button, Modal, SelectMenu, Textarea } from '@/components/ui'
+import Field from '@/components/features/admin/tickets/SelectField'
+import DateTimePicker from '@/components/ui/DateTimePicker'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL } from '@/constants/tickets'
 import { SCHEDULED_TYPES, validateNewTicket, type NewTicketForm } from '@/validations/admin/ticket.validation'
 import type { TicketType } from '@/types'
-
-/** Nhãn + ô + lỗi — cùng khuôn Input/Select (label-caption, dấu * đỏ, lỗi đỏ dưới ô) cho SelectMenu dạng field */
-function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="label-caption">
-        {label}
-        {required && <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>}
-      </span>
-      {children}
-      {error && <span className="text-xs text-alertRed">{error}</span>}
-    </div>
-  )
-}
 
 /**
  * POST /tickets cho Admin (backend cho FARM_OWNER + ADMIN) — mở từ bảng AdminTicketsPage.
@@ -116,12 +104,13 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId }: { op
             <label htmlFor="ticket-scheduled-at" className="label-caption">
               Ngày giờ hẹn<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
             </label>
-            <input
+            <DateTimePicker
               id="ticket-scheduled-at"
-              type="datetime-local"
+              ariaLabel="Ngày giờ hẹn"
+              min={new Date()}
               value={form.scheduledAt}
-              onChange={e => setForm(f => ({ ...f, scheduledAt: e.target.value }))}
-              className="input"
+              onChange={scheduledAt => setForm(f => ({ ...f, scheduledAt }))}
+              invalid={submitted && !!errors.scheduledAt}
             />
             {submitted && errors.scheduledAt && <span className="text-xs text-alertRed">{errors.scheduledAt}</span>}
           </div>
