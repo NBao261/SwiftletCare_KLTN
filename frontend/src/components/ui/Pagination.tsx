@@ -11,12 +11,15 @@ interface PaginationProps {
   onChange: (page: number) => void
 }
 
+// [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng MỌI trang có phân trang của mọi role. Đổi: cửa sổ số trang luôn đủ 3 trang (trang 1 → 1 2 3 … n; trang cuối → 1 … n-2 n-1 n), trước đó là trang hiện tại ±1 (trang 1 chỉ hiện 1 2 … n).
 /**
- * Số trang cần hiện: trang đầu, trang cuối, trang hiện tại ±1; khoảng trống giữa
- * thành "…" — trừ khi khoảng trống chỉ có 1 trang thì hiện luôn số đó (1 2 3 thay vì 1 … 3).
+ * Số trang cần hiện: trang đầu, trang cuối, cửa sổ luôn đủ 3 trang quanh trang hiện tại (ở 2 đầu thì dồn
+ * vào trong: trang 1 → 1 2 3, trang cuối → n-2 n-1 n); khoảng trống giữa thành "…" — trừ khi khoảng
+ * trống chỉ có 1 trang thì hiện luôn số đó (1 2 3 thay vì 1 … 3).
  */
 export function pageItems(page: number, pageCount: number): (number | '…')[] {
-  const shown = (p: number) => p === 1 || p === pageCount || Math.abs(p - page) <= 1
+  const start = Math.max(1, Math.min(page - 1, pageCount - 2))
+  const shown = (p: number) => p === 1 || p === pageCount || (p >= start && p <= start + 2)
   const items: (number | '…')[] = []
   for (let p = 1; p <= pageCount; p++) {
     if (shown(p) || (shown(p - 1) && shown(p + 1))) items.push(p)
