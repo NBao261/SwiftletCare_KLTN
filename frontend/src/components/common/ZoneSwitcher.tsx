@@ -155,7 +155,8 @@ export default function ZoneSwitcher() {
           {/* Flyout phụ — zone (tầng) của nhà đang hover/chọn ở panel chính */}
           {farmId && openHouseId && (
             <div className="w-[180px] animate-fade-in overflow-hidden rounded-xl border border-warmGray/15 bg-white p-2 shadow-[0_10px_28px_rgba(39,35,31,0.14)]">
-              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-warmGray">Chọn tầng</p>
+              {/* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng MỌI role (ô chọn tầng trên topbar). Đổi: nhãn "Chọn tầng" bỏ in hoa 10px → .label-caption (FE_Design v2.5.0 §2.8, không in hoa nhãn) */}
+              <p className="label-caption px-2 py-1">Chọn tầng</p>
               {zones?.length
                 ? zones.map(zone => <FloorRow key={zone._id} label={zone.name} active={selectedZoneId === zone._id} onClick={() => handlePick(zone._id, zone.name)} />)
                 : <EmptyRow text="Chưa có zone trong nhà yến này" />}

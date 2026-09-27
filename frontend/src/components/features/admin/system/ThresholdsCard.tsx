@@ -93,7 +93,7 @@ export default function ThresholdsCard() {
                   </span>
                   {/* Tiêu đề + giá trị chung 1 cột — giá trị thẳng hàng với tiêu đề thay vì thẳng hàng với icon */}
                   <div className="min-w-0 flex-1">
-                    <dt className="label-caption normal-case text-sm font-bold text-charcoal">{group.label}</dt>
+                    <dt className="text-sm font-bold text-charcoal">{group.label}</dt>
                     {group.kind === 'range' ? (
                       <dd className="mt-2 flex items-end gap-3">
                         <MinMaxValue label="Tối thiểu" value={data[group.minKey]} unit={THRESHOLD_LIMITS[group.minKey].unit} />

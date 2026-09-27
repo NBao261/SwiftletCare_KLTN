@@ -54,15 +54,14 @@ export default function DataTable<T>({
                 <th
                   key={col.key}
                   scope="col"
-                  className={cn('whitespace-nowrap px-4 py-3 text-caption uppercase text-warmGray', ALIGN_CLASS[col.align ?? 'left'], col.className)}
+                  // [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng MỌI bảng của mọi role. Đổi: tiêu đề cột `text-caption uppercase` → .label-caption (12px, không in hoa — FE_Design v2.5.0 §2.8); nút sort trong <th> cũng bỏ `uppercase tracking-[0.04em]`
+                  className={cn('label-caption whitespace-nowrap px-4 py-3', ALIGN_CLASS[col.align ?? 'left'], col.className)}
                 >
                   {col.sortable && onSortChange ? (
                     <button
                       type="button"
                       onClick={() => onSortChange(col.key)}
-                      // Trình duyệt tự đặt `text-transform: none` mặc định cho <button>, phá mất
-                      // `uppercase` kế thừa từ <th> — phải khai báo lại tường minh ở đây.
-                      className={cn('inline-flex items-center gap-1 uppercase tracking-[0.04em] transition-colors hover:text-charcoal', sortKey === col.key && 'text-charcoal')}
+                      className={cn('inline-flex items-center gap-1 transition-colors hover:text-charcoal', sortKey === col.key && 'text-charcoal')}
                     >
                       {col.header}
                       {sortKey === col.key && (sortDirection === 'asc' ? <IconSortAsc width={12} height={12} /> : <IconSortDesc width={12} height={12} />)}

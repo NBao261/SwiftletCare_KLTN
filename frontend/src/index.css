@@ -26,8 +26,10 @@
   .card-lg    { @apply bg-white border border-warmGray/15 rounded-3xl shadow-card p-6; }
   .card-active{ @apply bg-limeMist rounded-3xl p-6 text-charcoal; }
 
-  /* ── Label caption (mục 4.3) ───────────────────────────────────────────── */
-  .label-caption { @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray; }
+  /* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng MỌI role: .label-caption dùng khắp app (nhãn ô, tiêu đề cột, nhãn section). Đổi: 11px in hoa giãn chữ → 12px sentence case. */
+  /* ── Label caption (FE_Design §2.8) — sentence case: chữ Việt in hoa chồng dấu (Ế, Ữ) khó đọc ở cỡ nhỏ.
+        12px vì chữ thường trông nhỏ hơn chữ hoa cùng cỡ; line-height 16px như bản 11px cũ, không xô layout ── */
+  .label-caption { @apply text-xs font-semibold text-warmGray; }
 
   /* ── Input (mục 2.2.5, khung rounded-xl) ───────────────────────────────── */
   .input {

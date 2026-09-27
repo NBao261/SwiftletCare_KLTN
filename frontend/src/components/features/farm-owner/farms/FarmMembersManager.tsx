@@ -49,7 +49,8 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
     <div className="mt-4 flex flex-col gap-5">
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-warmGray">
+          {/* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng Farm Owner. Đổi: bỏ `uppercase tracking-wide` ở tiêu đề mục (FE_Design v2.5.0 §2.8) */}
+          <h3 className="text-sm font-bold text-warmGray">
             Thành viên Farm Owner
           </h3>
           {isPrimaryOwner && (
@@ -89,7 +90,8 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
 
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-warmGray">
+          {/* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng Farm Owner. Đổi: bỏ `uppercase tracking-wide` ở tiêu đề mục (FE_Design v2.5.0 §2.8) */}
+          <h3 className="text-sm font-bold text-warmGray">
             Sales Staff
           </h3>
           {isPrimaryOwner && (
