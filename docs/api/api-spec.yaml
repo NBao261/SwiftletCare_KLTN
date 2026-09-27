@@ -3995,9 +3995,10 @@ paths:
       summary: "Technician hẹn/dời giờ đến hiện trường kèm lý do (TICKET-FR-004b, Flow 9 bước 6b) — TECHNICIAN được gán/ADMIN"
       description: |
         - `INSTALLATION`/`MAINTENANCE`: dời lịch có sẵn (Farm Owner chọn lúc tạo / sinh từ lịch bảo trì).
-        - Ticket sự cố/`OTHER`: chỉ hẹn được khi ticket đang `IN_PROGRESS` — Technician đã tiếp nhận
-          và chẩn đoán từ xa (TICKET-FR-008), cần xuống hiện trường thì mới hẹn. Từ lúc có lịch hẹn,
-          đóng ticket phải đủ SAT.
+        - Ticket sự cố/`OTHER`: chỉ hẹn được khi ticket đã tiếp nhận (`IN_PROGRESS` hoặc
+          `AWAITING_FIELD_CONFIRMATION`) — Technician chẩn đoán từ xa trước (TICKET-FR-008),
+          cần xuống hiện trường thì mới hẹn. Từ lúc có lịch hẹn, đóng ticket phải đủ SAT;
+          xử lý được từ xa thì huỷ lịch bằng `DELETE` trên chính endpoint này.
         - Giờ hẹn trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai; ticket đã đóng → 409.
         Ghi note ("Hẹn đến hiện trường…" / "Dời lịch hẹn…") + audit `TICKET_VISIT_SCHEDULED`
         (lần đầu) / `TICKET_RESCHEDULED` (dời); Farm Owner và người tạo ticket nhận thông báo.
@@ -4025,12 +4026,43 @@ paths:
         "403": { description: "Không phải Technician đang được gán", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "409": { description: "Ticket đã đóng, hoặc ticket sự cố chưa được tiếp nhận (chưa IN_PROGRESS)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Tickets]
+      summary: "Huỷ buổi đến hiện trường khi xử lý được từ xa (Flow 9 bước 6a) — TECHNICIAN được gán/ADMIN"
+      description: |
+        Xoá `scheduled_visit_at` nên ticket không còn bị đòi checklist nghiệm thu khi đóng.
+        Chỉ áp dụng cho ticket **sự cố**: `INSTALLATION`/`MAINTENANCE` bắt buộc có buổi đến
+        hiện trường nên chỉ dời được lịch (dùng `PUT`). Ghi note + audit `TICKET_VISIT_CANCELLED`,
+        Farm Owner và người tạo ticket được thông báo.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Reset từ xa là hết lỗi, không cần xuống farm" } }
+      responses:
+        "200":
+          description: Đã huỷ lịch hẹn
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
+        "400": { description: "Ticket lắp đặt/bảo trì — chỉ dời lịch, không huỷ", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Ticket đã đóng hoặc chưa hẹn đến hiện trường", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /tickets/{id}/reassign-request:
     post:
       tags: [Tickets]
       summary: "Technician xin gán lại ticket kèm lý do (Flow 9 case 4a) — TECHNICIAN được gán"
       description: |
+        Lịch hẹn của người cũ bị huỷ theo (Farm Owner được báo) — Technician mới tự hẹn lại.
         Ticket Router chọn Technician khác trong vùng (loại người xin và mọi người
         đã từng bị chuyển khỏi ticket này, bỏ qua người quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại; không còn
         ai → `assigned_to` để trống (hàng đợi chung, `GET /tickets?unassigned=true`)
@@ -4122,6 +4154,7 @@ paths:
     post:
       tags: [Tickets]
       summary: "Farm Owner đánh giá mức hài lòng sau khi đóng ticket (TICKET-FR-011) — FARM_OWNER/ADMIN"
+      description: "Ticket **đã huỷ** không đánh giá được (409) — không có việc nào được thực hiện để chấm điểm."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
