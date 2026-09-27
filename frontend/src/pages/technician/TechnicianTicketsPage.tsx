@@ -1,144 +1,99 @@
-// Tickets Page – TICKET-FR-001..004b/006/007
-import { useState, useEffect, FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useZoneStore } from '@/stores/zoneStore'
-import { usePermission } from '@/hooks/common/usePermission'
-import { useTicketsList, useCreateTicket } from '@/hooks/shared/useTickets'
-import { Button, Modal, Select, Textarea, Badge, Card } from '@/components/ui'
-import ZonePicker, { type ZonePickerValue } from '@/components/common/ZonePicker'
-import EmptyState from '@/components/ui/EmptyState'
+// TechnicianTicketsPage — SCR-TC02 / F-TC-02 / Stitch A1 + C2
+//
+// Architecture: Smart Container — chỉ giữ state và điều phối, KHÔNG chứa business logic.
+// Logic phân trang dual-mode và data fetching → useTicketsPageData
+// UI Tabs + Search + Filter → TicketToolbar
+// Table thead + tbody + pagination → TicketTableView
+// Card list + pagination → TicketCard (từ features/technician/tickets)
+// Pagination → Pagination (components/ui, variant="numbered")
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import Pagination from '@/components/ui/Pagination'
-import FilterChip from '@/components/ui/FilterChip'
+import EmptyState from '@/components/ui/EmptyState'
 import { IconTicket } from '@/components/ui/icons'
-import { useToastStore } from '@/stores/toastStore'
-import { formatDate, getApiErrorMessage } from '@/lib/helpers'
-import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
-import type { TicketType, TicketStatus } from '@/types'
-import type { CreateTicketInput } from '@/apis/shared/tickets.api'
-
-const INSTALLATION_TYPES: TicketType[] = ['INSTALLATION', 'MAINTENANCE']
+import { TicketStatBar } from '@/components/features/technician/tickets/TicketStatBar'
+import { TicketToolbar } from '@/components/features/technician/tickets/TicketToolbar'
+import { TicketTableView } from '@/components/features/technician/tickets/TicketTableView'
+import { UpdateStatusModal } from '@/components/features/technician/tickets/UpdateStatusModal'
+import { ReassignModal } from '@/components/features/technician/tickets/ReassignModal'
+import { useTicketsPageData } from '@/components/features/technician/tickets/useTicketsPageData'
+import { PAGE_SIZE } from '@/components/features/technician/tickets/ticketListTypes'
 
 export default function TechnicianTicketsPage() {
-  const [status, setStatus] = useState<TicketStatus | undefined>(undefined)
-  const [page, setPage] = useState(1)
-  const [showCreate, setShowCreate] = useState(false)
-  const navigate = useNavigate()
-  // Backend: POST /tickets chỉ cho FARM_OWNER, ADMIN
-  const canCreate = usePermission('FARM_OWNER', 'ADMIN')
+  const {
+    // UI state
+    isOverdueActive, sortKey, sortDir, filterStatus,
+    statusModal, reassignModal,
+    // Actions
+    handleOverdueToggle, handleSort,
+    handleFilterStatusChange, handleClearFilters,
+    setPage, setStatusModal, setReassignModal,
+    // Data
+    displayRecords, filteredRecords,
+    safePage, paginTotal,
+    isLoading, statsRecords, total,
+    overdueTotal,
+  } = useTicketsPageData()
 
-  const { records, total, limit, isLoading } = useTicketsList({ status, page, limit: 10 })
+  const hasResults = !isLoading && filteredRecords.length > 0
+  const isEmpty    = !isLoading && filteredRecords.length === 0
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          <FilterChip active={status === undefined} label="Tất cả" onClick={() => { setStatus(undefined); setPage(1) }} />
-          {(Object.keys(STATUS_LABEL) as TicketStatus[]).map(s => (
-            <FilterChip key={s} active={status === s} label={STATUS_LABEL[s]} onClick={() => { setStatus(s); setPage(1) }} />
-          ))}
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-charcoal">Ticket của tôi</h1>
+          <p className="mt-0.5 text-sm text-warmGray">Quản lý và xử lý các ticket được gán</p>
         </div>
-        {canCreate && <Button onClick={() => setShowCreate(true)}>+ Tạo ticket</Button>}
+        <span className="rounded-full bg-graphite/10 px-3 py-1 text-sm font-semibold text-charcoal">
+          {total} ticket
+        </span>
       </div>
 
-      {isLoading && <LoadingSkeleton count={3} className="h-20 w-full" />}
+      {/* ── Stat Bar ── */}
+      <TicketStatBar tickets={statsRecords} />
 
-      {!isLoading && records.length === 0 && (
+      {/* ── Search + Unified Filter + Sort + View Mode ── */}
+      <TicketToolbar
+        isOverdueActive={isOverdueActive}   onOverdueToggle={handleOverdueToggle}
+        filterStatus={filterStatus}          onFilterStatusChange={handleFilterStatusChange}
+        sortKey={sortKey}                    sortDir={sortDir}  onSort={handleSort}
+        onClearFilters={handleClearFilters}
+        isLoading={isLoading}
+        overdueTotal={overdueTotal}
+      />
+
+
+      {/* ── Loading skeleton ── */}
+      {isLoading && <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />}
+
+      {/* ── Empty state ── */}
+      {isEmpty && (
         <EmptyState
           icon={<IconTicket width={28} height={28} />}
-          title="Không có ticket nào"
-          description="Tạo ticket khi gặp sự cố kỹ thuật hoặc cần yêu cầu lắp đặt/bảo trì thiết bị."
-          action={canCreate ? <Button onClick={() => setShowCreate(true)}>+ Tạo ticket</Button> : undefined}
+          title={filterStatus ? 'Không tìm thấy ticket nào' : 'Không có ticket nào'}
+          description={
+            filterStatus
+              ? 'Thử thay đổi bộ lọc.'
+              : 'Chưa có ticket nào được gán cho bạn trong mục này.'
+          }
         />
       )}
 
-      <div className="flex flex-col gap-3">
-        {records.map(ticket => (
-          <Card key={ticket._id} className="cursor-pointer transition-shadow hover:shadow-dock" onClick={() => navigate(`/tickets/${ticket._id}`)}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
-                  <p className="font-bold text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</p>
-                </div>
-                {ticket.notes[0] && <p className="mt-1 truncate text-sm text-warmGray">{ticket.notes[0].content}</p>}
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1.5">
-                <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
-                <span className="text-xs text-warmGray">{formatDate(ticket.created_at)}</span>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {/* ── TABLE VIEW ── */}
+      {hasResults && (
+        <TicketTableView
+          records={displayRecords}
+          sortKey={sortKey}       sortDir={sortDir}   onSort={handleSort}
+          page={safePage}         totalItems={paginTotal}
+          onPage={setPage}
+          onUpdateStatus={setStatusModal}
+          onReassign={setReassignModal}
+        />
+      )}
 
-      <Pagination page={page} limit={limit} total={total} onChange={setPage} />
-
-      <CreateTicketModal open={showCreate} onClose={() => setShowCreate(false)} />
+      {/* ── Modals ── */}
+      {statusModal   && <UpdateStatusModal ticket={statusModal}   onClose={() => setStatusModal(null)} />}
+      {reassignModal && <ReassignModal     ticket={reassignModal} onClose={() => setReassignModal(null)} />}
     </div>
-  )
-}
-
-function CreateTicketModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { selectedFarmId, selectedZoneId } = useZoneStore()
-  const createTicket = useCreateTicket()
-  const push = useToastStore(s => s.push)
-
-  const [zone, setZone] = useState<Partial<ZonePickerValue>>({ farmId: selectedFarmId ?? undefined, zoneId: selectedZoneId ?? undefined })
-  const [type, setType] = useState<TicketType>('OTHER')
-  const [description, setDescription] = useState('')
-  const [scheduledAt, setScheduledAt] = useState('')
-
-  // Modal không unmount giữa các lần mở (chỉ toggle `open`) — resync theo
-  // ZoneSwitcher mỗi lần mở lại, tránh prefill nhầm zone cũ đã đổi ở AppHeader.
-  useEffect(() => {
-    if (open) setZone({ farmId: selectedFarmId ?? undefined, zoneId: selectedZoneId ?? undefined })
-  }, [open, selectedFarmId, selectedZoneId])
-
-  const needsSchedule = INSTALLATION_TYPES.includes(type)
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    if (!zone.farmId) return
-    const input: CreateTicketInput = {
-      farm_id: zone.farmId,
-      zone_id: zone.zoneId,
-      type,
-      description: description || undefined,
-      scheduled_visit_at: needsSchedule ? new Date(scheduledAt).toISOString() : undefined,
-    }
-    createTicket.mutate(input, {
-      onSuccess: () => { push('Đã tạo ticket'); onClose() },
-      onError: (err) => push(getApiErrorMessage(err, 'Tạo ticket thất bại'), 'error'),
-    })
-  }
-
-  return (
-    <Modal open={open} onClose={onClose} title="Tạo ticket">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Select label="Loại ticket" value={type} onChange={e => setType(e.target.value as TicketType)}>
-          {Object.entries(TICKET_TYPE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </Select>
-
-        <ZonePicker value={zone} onChange={setZone} zoneRequired={false} />
-
-        {needsSchedule && (
-          <div className="flex flex-col gap-1.5">
-            <label className="label-caption">Ngày giờ hẹn mong muốn</label>
-            <input
-              type="datetime-local" required
-              value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
-              className="input"
-            />
-          </div>
-        )}
-
-        <Textarea label="Mô tả (tùy chọn)" value={description} onChange={e => setDescription(e.target.value)} placeholder="Mô tả tình trạng sự cố hoặc yêu cầu cụ thể..." />
-
-        <Button type="submit" loading={createTicket.isPending} disabled={!zone.farmId} className="w-full">
-          Tạo ticket
-        </Button>
-      </form>
-    </Modal>
   )
 }

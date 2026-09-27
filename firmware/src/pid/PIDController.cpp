@@ -55,8 +55,11 @@ void RelayState::applyRelay(int pin, bool state) {
 // cho cả node — đây là rút gọn hợp lý: MANUAL nếu CÓ BẤT KỲ relay nào đang bị
 // override, AUTO nếu không cái nào. Trạng thái override chi tiết từng relay
 // hiện chưa expose qua API/MQTT riêng.
+bool RelayState::anyOverride() const {
+  return mistingOverride || speakerOverride || ventilationOverride || heatingOverride;
+}
+
 String RelayState::toJson() const {
-  bool anyOverride = mistingOverride || speakerOverride || ventilationOverride || heatingOverride;
 
   String json = "{";
   json += "\"deviceId\":\"" + String(Config::deviceId) + "\",";
@@ -66,7 +69,7 @@ String RelayState::toJson() const {
   json += "\"ventilation\":" + String(ventilation ? "true" : "false") + ",";
   json += "\"heating\":" + String(heating ? "true" : "false");
   json += "},";
-  json += "\"control_mode\":\"" + String(anyOverride ? "MANUAL" : "AUTO") + "\"";
+  json += "\"control_mode\":\"" + String(anyOverride() ? "MANUAL" : "AUTO") + "\"";
   json += "}";
   return json;
 }
@@ -150,18 +153,25 @@ void setManualOverride(const char *relayName, bool state, unsigned long duration
     relay.heatingOverride = true;
     relay.heating = state;
     relay.applyRelay(PIN_RELAY_HEATING, state);
+  } else {
+    Serial.println("[PID] MANUAL OVERRIDE: relayName không hợp lệ: " + name);
+    return; // không động tới hạn override của các relay khác
   }
   relay.overrideExpiryMs = millis() + durationMs;
   Serial.println("[PID] MANUAL OVERRIDE: " + name + " = " + String(state ? "ON" : "OFF") + " for " + String(durationMs / 60000) + " min");
 }
 
+void clearOverrides(RelayState &relay) {
+  relay.mistingOverride = false;
+  relay.speakerOverride = false;
+  relay.ventilationOverride = false;
+  relay.heatingOverride = false;
+  relay.overrideExpiryMs = 0;
+}
+
 void checkOverrideExpiry(RelayState &relay) {
   if (relay.overrideExpiryMs > 0 && millis() > relay.overrideExpiryMs) {
-    relay.mistingOverride = false;
-    relay.speakerOverride = false;
-    relay.ventilationOverride = false;
-    relay.heatingOverride = false;
-    relay.overrideExpiryMs = 0;
+    clearOverrides(relay);
     Serial.println("[PID] Manual override EXPIRED → back to AUTO");
   }
 }
@@ -208,7 +218,9 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
       if (data.humidity <= humidityWhenMistingStarted + 2.0f) {
         flags.pumpDry = true;
         Serial.println("[THREAT] ⚠ PUMP_DRY: misting ON 5' nhưng độ ẩm không tăng!");
-        mistingOnSince = millis(); // tránh báo liên tục
+        // Báo 1 lần cho mỗi đợt phun: chỉ arm lại ở cạnh OFF→ON kế tiếp
+        // (trước đây arm lại ngay → cứ 5 phút lại báo 1 lần suốt đợt phun).
+        mistingOnSince = 0;
       }
     }
   } else if (!relay.misting) {

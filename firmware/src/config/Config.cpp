@@ -78,10 +78,12 @@ void update(const char *jsonPayload) {
     humidityMax = doc["humidity_max"].as<float>();
   if (doc["light_max"].is<float>())
     lightMax = doc["light_max"].as<float>();
-  if (doc["nh3_max"].is<int>())
-    nh3Max = doc["nh3_max"].as<int>();
-  if (doc["co2_max"].is<int>())
-    co2Max = doc["co2_max"].as<int>();
+  // Backend lưu ngưỡng dạng Number (có thể là 25.5) — is<int>() sẽ bỏ qua âm
+  // thầm giá trị lẻ, nên nhận mọi số rồi làm tròn.
+  if (doc["nh3_max"].is<float>())
+    nh3Max = lroundf(doc["nh3_max"].as<float>());
+  if (doc["co2_max"].is<float>())
+    co2Max = lroundf(doc["co2_max"].as<float>());
   if (doc["speaker_schedule_enabled"].is<bool>())
     speakerScheduleEnabled = doc["speaker_schedule_enabled"].as<bool>();
   if (doc["speaker_window1_start_hour"].is<int>())

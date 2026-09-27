@@ -21,6 +21,12 @@ static bool inWindowLastCheck = false;
 // lệnh play/stop/volume/loop bị bỏ qua, không gửi gì xuống module.
 static bool dfReady = false;
 
+// Nghe thử (ENV-FR-013c(c)) — ghi từ mqttTask, đọc/xoá trong pidTask
+static volatile int pendingPlayTrack = 0; // >0 = có yêu cầu phát bài này
+static volatile bool pendingStop = false;
+static bool forcedPlaying = false;
+static unsigned long forcedSince = 0;
+
 namespace AudioManager {
 
 void begin() {
@@ -72,7 +78,37 @@ void loop(bool enable) {
 
 bool isPlaying() { return playing; }
 
+void requestPlay(int track) {
+  if (track > 0) pendingPlayTrack = track;
+}
+
+void requestStop() { pendingStop = true; }
+
 bool updateSchedule() {
+  // ── Nghe thử: ưu tiên hơn lịch và bỏ qua speakerScheduleEnabled ─────────
+  int track = pendingPlayTrack;
+  if (track > 0) {
+    pendingPlayTrack = 0;
+    pendingStop = false;
+    setVolume(Config::speakerVolume);
+    loop(false);
+    play(track);
+    forcedPlaying = true;
+    forcedSince = millis();
+    Serial.println("[Audio] Nghe thử track " + String(track) +
+                   (dfReady ? "" : " — DFPlayer chưa sẵn sàng, chỉ bật nguồn amply"));
+  }
+  if (forcedPlaying) {
+    if (!pendingStop && millis() - forcedSince < FORCE_PLAY_MAX_MS) return true;
+    pendingStop = false;
+    forcedPlaying = false;
+    stop();
+    // Đang trong khung giờ thì phần dưới phát lại bài theo lịch ngay chu kỳ này
+    inWindowLastCheck = false;
+    Serial.println("[Audio] Kết thúc nghe thử → quay về lịch");
+  }
+  pendingStop = false; // lệnh dừng khi không nghe thử gì → bỏ qua
+
   if (!Config::speakerScheduleEnabled) {
     if (playing) { stop(); }
     return false;

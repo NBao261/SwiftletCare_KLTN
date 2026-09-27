@@ -9,6 +9,8 @@ export interface ISystemSetting extends Document {
   default_thresholds: Thresholds
   /** TICKET-FR-006, SLA-NFR-001 — có thể chưa có nếu Admin chưa từng chỉnh SLA */
   sla_hours?: SlaConfig
+  /** TICKET-FR-005 — Technician có ≥ N ticket mở bị coi là quá tải, Router bỏ qua */
+  max_open_tickets_per_technician?: number
   updated_by?: Types.ObjectId
   updated_at: Date
 }
@@ -45,6 +47,7 @@ const systemSettingSchema = new Schema<ISystemSetting>(
       P2: slaLevelSchema,
       P3: slaLevelSchema,
     },
+    max_open_tickets_per_technician: { type: Number },
     updated_by: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: { createdAt: false, updatedAt: 'updated_at' }, versionKey: false },

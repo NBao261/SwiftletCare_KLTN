@@ -201,7 +201,7 @@ export default function AdminTicketsPage() {
       )}
 
       {/* total = số ticket SAU khi lọc + tìm kiếm — tìm ra 2 thì hiện "1–2 trong 2", không phải 113 */}
-      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} />
+      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
 
       <CreateTicketModal open={showCreate} onClose={() => setShowCreate(false)} defaultFarmId={farmId || undefined} />
       {/* Modal nhận `ticket` bắt buộc — chỉ mount khi đã chọn dòng */}

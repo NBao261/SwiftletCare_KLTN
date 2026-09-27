@@ -2,7 +2,7 @@ import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useZoneStore } from "@/stores/zoneStore";
 import { usePermission } from "@/hooks/common/usePermission";
-import { useSensorNodes } from "@/hooks/shared/useDevices";
+import { useSensorNodes, useClearRelayOverride } from "@/hooks/shared/useDevices";
 import { deviceApi } from "@/apis/shared/devices.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Modal, Card, Badge } from "@/components/ui";
@@ -14,9 +14,14 @@ import FarmHouseZonePicker, {
   FarmHouseZonePickerValue,
 } from "@/components/features/technician/devices/FarmHouseZonePicker";
 import ThresholdsModal from "@/components/features/technician/devices/ThresholdsModal";
+import SpeakerScheduleModal from "@/components/features/technician/devices/SpeakerScheduleModal";
+import AudioTracksModal from "@/components/features/technician/devices/AudioTracksModal";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
+
+const timeLabel = (iso: string) =>
+  new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 
 const RELAY_LABELS = {
   misting: "Phun sương",
@@ -25,7 +30,7 @@ const RELAY_LABELS = {
   heating: "Sưởi",
 } as const;
 
-/** Devices Page – FARM-FR-003/005/006, ENV-FR-016..018 */
+/** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018 */
 export default function TechnicianDevicesPage() {
   const { selectedZoneId, selectedZoneName } = useZoneStore();
   // Đăng ký/kích hoạt thiết bị là việc của Technician (SRS §4.1, FARM-FR-003) —
@@ -51,6 +56,13 @@ export default function TechnicianDevicesPage() {
     Partial<FarmHouseZonePickerValue>
   >({});
   const [reassigning, setReassigning] = useState(false);
+
+  // Lưu id (không lưu object) để modal luôn đọc bản mới nhất của thiết bị từ query
+  const [scheduleNodeId, setScheduleNodeId] = useState<string | null>(null);
+  const [audioNodeId, setAudioNodeId] = useState<string | null>(null);
+  const scheduleNode = nodes?.find((n) => n._id === scheduleNodeId);
+  const audioNode = nodes?.find((n) => n._id === audioNodeId);
+  const clearOverride = useClearRelayOverride();
 
   if (!selectedZoneId) {
     return (
@@ -188,6 +200,36 @@ export default function TechnicianDevicesPage() {
               </p>
             ) : (
               <div className="divide-y divide-warmGray/10 border-t border-warmGray/10">
+                {node.control_mode === "MANUAL" && (
+                  <div className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="text-xs font-medium text-climateOrange">
+                      Đang điều khiển thủ công
+                      {node.override_expiry
+                        ? ` — tự về tự động lúc ${timeLabel(node.override_expiry)}`
+                        : ""}
+                    </span>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={
+                        clearOverride.isPending &&
+                        clearOverride.variables === node._id
+                      }
+                      onClick={() =>
+                        clearOverride.mutate(node._id, {
+                          onSuccess: () => push("Đã trả thiết bị về chế độ tự động"),
+                          onError: (err) =>
+                            push(
+                              getApiErrorMessage(err, "Không trả về tự động được"),
+                              "error",
+                            ),
+                        })
+                      }
+                    >
+                      Về tự động
+                    </Button>
+                  </div>
+                )}
                 {(
                   Object.keys(RELAY_LABELS) as Array<keyof typeof RELAY_LABELS>
                 ).map((relayName) => (
@@ -203,15 +245,31 @@ export default function TechnicianDevicesPage() {
               </div>
             )}
 
-            {canOnboard && node.status === "ONLINE" && (
-              <div className="mt-3 border-t border-warmGray/10 pt-3">
+            {node.status !== "PENDING" && (
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-warmGray/10 pt-3">
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setReassignNodeId(node._id)}
+                  onClick={() => setScheduleNodeId(node._id)}
                 >
-                  Dời sang Zone khác
+                  Lịch loa ru
                 </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setAudioNodeId(node._id)}
+                >
+                  File loa ru
+                </Button>
+                {canOnboard && node.status === "ONLINE" && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setReassignNodeId(node._id)}
+                  >
+                    Dời sang Zone khác
+                  </Button>
+                )}
               </div>
             )}
           </Card>
@@ -270,6 +328,20 @@ export default function TechnicianDevicesPage() {
           </Button>
         </form>
       </Modal>
+
+      {scheduleNode && (
+        <SpeakerScheduleModal
+          node={scheduleNode}
+          onClose={() => setScheduleNodeId(null)}
+        />
+      )}
+
+      {audioNode && (
+        <AudioTracksModal
+          node={audioNode}
+          onClose={() => setAudioNodeId(null)}
+        />
+      )}
 
       {showThresholds && (
         <ThresholdsModal

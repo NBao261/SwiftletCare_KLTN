@@ -14,6 +14,8 @@ import { startAlertEscalationJob } from './jobs/alertEscalation.job'
 import { startOverrideExpiryJob } from './jobs/overrideExpiry.job'
 import { startInvitationExpiryJob } from './jobs/invitationExpiry.job'
 import { startSlaBreachJob } from './jobs/slaBreach.job'
+import { startActivationOverdueJob } from './jobs/activationOverdue.job'
+import { startMaintenanceScheduleJob } from './jobs/maintenanceSchedule.job'
 import logger           from './utils/logger.util'
 
 const PORT = Number(process.env.PORT ?? 3000)
@@ -38,6 +40,8 @@ async function bootstrap(): Promise<void> {
   startOverrideExpiryJob()
   startInvitationExpiryJob()
   startSlaBreachJob()
+  startActivationOverdueJob()
+  startMaintenanceScheduleJob()
 
   // 5. Start HTTP server
   httpServer.listen(PORT, () => {

@@ -124,6 +124,10 @@ void saveIdentity(const String &farmId, const String &houseId,
 }
 
 void bufferTelemetry(const SensorData &data) {
+  // Chỉ gọi từ sensorTask → biến static này không cần khoá
+  static unsigned long lastBufferedMs = 0;
+  if (lastBufferedMs != 0 && millis() - lastBufferedMs < OFFLINE_BUFFER_INTERVAL_MS)
+    return;
   if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
     return;
   File f = SPIFFS.open(BUFFER_FILE, FILE_APPEND);
@@ -132,6 +136,12 @@ void bufferTelemetry(const SensorData &data) {
     xSemaphoreGive(bufferMutex);
     return;
   }
+  if (f.size() >= OFFLINE_BUFFER_MAX_BYTES) {
+    f.close();
+    xSemaphoreGive(bufferMutex);
+    return; // đầy — xem OFFLINE_BUFFER_MAX_BYTES (Config.h)
+  }
+  lastBufferedMs = millis();
   f.println(data.toJson());
   f.close();
   xSemaphoreGive(bufferMutex);

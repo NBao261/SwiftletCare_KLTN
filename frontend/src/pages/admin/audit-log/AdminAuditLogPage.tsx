@@ -209,7 +209,7 @@ export default function AdminAuditLogPage() {
       )}
 
       {/* total = số nhật ký SAU khi tìm chữ — tìm ra 3 thì hiện "1–3 trong 3" */}
-      <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} />
+      <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
     </div>
   )
 }

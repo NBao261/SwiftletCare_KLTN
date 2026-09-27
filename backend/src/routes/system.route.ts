@@ -35,6 +35,14 @@ router.put('/settings/sla',
   systemController.updateSlaHours,
 )
 
+// TICKET-FR-005 — ngưỡng quá tải: Technician có từ N ticket mở trở lên không được Router gán thêm
+router.get('/settings/ticket-routing', systemController.getTicketRouting)
+router.put('/settings/ticket-routing',
+  body('max_open_tickets_per_technician').isInt({ min: 1, max: 100 }).toInt(),
+  validate,
+  systemController.updateTicketRouting,
+)
+
 router.get('/health-overview', systemController.getHealthOverview)
 
 export default router

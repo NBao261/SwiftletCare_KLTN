@@ -71,4 +71,15 @@ router.put('/sales-staff-requests/:id/decision',
   adminController.decideSalesStaffRequest,
 )
 
+/** Kho thiết bị xuất xưởng: cấp cặp {device_id, secretKey} để in nhãn – FARM-FR-003, Flow 1 bước 3 */
+router.post('/provisioned-devices',
+  body('device_id').isString().trim().notEmpty(), body('kind').isIn(['SENSOR', 'CAMERA']), validate,
+  adminController.createProvisionedDevice,
+)
+router.get('/provisioned-devices',
+  query('kind').optional().isIn(['SENSOR', 'CAMERA']), query('claimed').optional().isIn(['true', 'false']),
+  ...paginationQuery, validate,
+  adminController.listProvisionedDevices,
+)
+
 export default router

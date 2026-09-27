@@ -22,9 +22,10 @@ bool isBrokerUnreachable();
 
 // Publish (topics §9.2: swiftletcare/{farmId}/{houseId}/{zoneId}/...)
 void publishTelemetry(const SensorData &data, const RelayState &relay);
-void publishHeartbeat();
-void publishRelayState(const RelayState &relay);
-void publishAlert(const char *alertType, const char *severity,
+// publish* trả true khi đã gửi được (false: mất kết nối/buffer đầy) để caller thử lại
+bool publishHeartbeat();
+bool publishRelayState(const RelayState &relay);
+bool publishAlert(const char *alertType, const char *severity,
                   const char *payload);
 // Publish 1 dòng JSON telemetry NGUYÊN VĂN (không build lại từ SensorData
 // sống) — dùng làm callback cho StorageManager::flushBuffer() khi re-publish
@@ -34,6 +35,8 @@ bool publishRawTelemetryLine(const String &jsonLine);
 // Subscribe callbacks
 void onRelayCommand(const char *payload);
 void onConfigUpdate(const char *payload);
+// ENV-FR-013c(c): nghe thử ngay bài trên thẻ SD, bỏ qua lịch
+void onAudioCommand(const char *payload);
 // Flow 21 Nhánh A (FARM-FR-007b): dời thiết bị sang Zone/Farm khác lúc
 // đang ONLINE. Lưu farmId/houseId/zoneId mới vào NVS rồi ESP.restart().
 void onConfigReassign(const char *payload);

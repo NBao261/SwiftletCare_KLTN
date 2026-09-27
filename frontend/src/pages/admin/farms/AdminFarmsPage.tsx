@@ -176,7 +176,7 @@ export default function AdminFarmsPage() {
         />
       )}
 
-      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} />
+      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
 
       <LockUserModal user={lockTarget} onClose={() => setLockTarget(null)} />
       <UnlockUserModal user={unlockTarget} onClose={() => setUnlockTarget(null)} />

@@ -21,6 +21,20 @@ export interface SensorNode {
   registered_at: string
 }
 
+// ENV-FR-013b — PUT /devices/sensor-nodes/:id/speaker-schedule (firmware: ≤2 khung, giờ tròn)
+export interface SpeakerWindow { start: string; end: string }
+export interface SpeakerScheduleInput { enabled?: boolean; windows?: SpeakerWindow[]; volume?: number; track?: number }
+
+// ENV-FR-013c — bài trong danh mục web của 1 thiết bị. File DFPlayer phát thật
+// nằm trên thẻ SD (`000N.mp3`); `file_url` chỉ để nghe lại bản gốc trên web.
+export interface AudioTrack {
+  _id: string; node_id: string
+  track_number: number; display_name: string
+  file_url: string; file_size_bytes: number
+  synced_to_sd: boolean
+  uploaded_by: string; uploaded_at: string
+}
+
 export interface CameraNode {
   _id: string; device_id: string; zone_id: string; rtsp_url?: string
   status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string

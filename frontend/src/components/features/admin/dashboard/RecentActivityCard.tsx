@@ -48,7 +48,7 @@ export default function RecentActivityCard() {
           emptyMessage="Chưa có nhật ký nào."
         />
       )}
-      <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} />
+      <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
     </section>
   )
 }

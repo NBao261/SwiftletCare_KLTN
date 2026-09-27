@@ -1,6 +1,6 @@
 import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
-import { NotFoundError, ForbiddenError } from '@/utils/appError.util'
+import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
 type FarmScope = Pick<IFarm, 'owner_id' | 'members' | 'region'>
@@ -71,6 +71,16 @@ export async function assertZoneAccess(
   const chain = await findZoneChainOrThrow(zoneId)
   if (!hasFarmAccess(chain.farm, user)) throw ForbiddenError('Không có quyền trên zone này')
   return chain
+}
+
+/**
+ * Zone gửi kèm 1 bản ghi thuộc farm (ticket, lịch bảo trì) phải nằm đúng farm đó —
+ * tránh bản ghi farm A trỏ sang zone farm B. Chỉ kiểm tra quan hệ, không kiểm tra
+ * quyền: caller đã assertFarmAccess(farmId) nên zone cùng farm thì cũng có quyền.
+ */
+export async function assertZoneInFarm(zoneId: string, farmId: string): Promise<void> {
+  const chain = await findZoneChainOrThrow(zoneId)
+  if (String(chain.farm._id) !== farmId) throw BadRequestError('zone_id không thuộc farm này')
 }
 
 /** Farm user được phép xem — dùng chung cho list/scoping theo role (Alert/Analytics/Market/Ticket) */

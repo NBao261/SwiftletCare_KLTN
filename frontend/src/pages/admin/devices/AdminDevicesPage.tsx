@@ -132,7 +132,7 @@ export default function AdminDevicesPage() {
       />
 
       {/* total = số thiết bị SAU khi lọc + tìm kiếm */}
-      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} />
+      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
     </div>
   )
 }

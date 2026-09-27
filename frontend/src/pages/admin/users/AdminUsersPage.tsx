@@ -126,7 +126,7 @@ export default function AdminUsersPage() {
         />
       )}
 
-      <Pagination page={page} limit={limit} total={total} onChange={setPage} />
+      <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
 
       <CreateUserModal open={showCreate} onClose={() => setShowCreate(false)} />
       <UserDetailModal user={viewTarget} onClose={() => setViewTarget(null)} />
