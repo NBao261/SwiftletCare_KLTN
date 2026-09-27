@@ -1,18 +1,22 @@
+// THỬ NGHIỆM taste-skill, CHỈ trang này: khu thống kê dạng ô số + bảng KTV (TicketInsights), icon Phosphor.
+// Chốt giữ thì cập nhật FE_Design (§2.5.1/§8 còn nhắc donut, Phosphor chưa có trong tài liệu) trước khi lan sang trang khác.
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useTicketsList } from "@/hooks/shared/useTickets";
+import { PlusIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { useAllTickets } from "@/hooks/admin/useAdminTickets";
 import { useFarms } from "@/hooks/shared/useFarms";
-import { usePageSubtitle } from "@/hooks/common/useBreadcrumb";
-import { Button, SearchInput, SelectMenu } from "@/components/ui";
-import { IconSortAsc, IconSortDesc } from "@/components/ui/icons";
+import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips } from "@/components/ui";
 import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { buildTicketColumns, ticketCode, technicianName } from "@/components/features/admin/tickets/ticketColumns";
-import { ChangePriorityModal, ReassignTicketModal, RescheduleModal } from "@/components/features/admin/tickets/AdminOverrideModals";
+import ChangePriorityModal from "@/components/features/admin/tickets/ChangePriorityModal";
+import ReassignTicketModal from "@/components/features/admin/tickets/ReassignTicketModal";
+import RescheduleModal from "@/components/features/admin/tickets/RescheduleModal";
 import CreateTicketModal from "@/components/features/admin/tickets/CreateTicketModal";
+import TicketInsights from "@/components/features/admin/tickets/TicketInsights";
 import { TICKET_TYPE_LABEL, STATUS_LABEL } from "@/constants/tickets";
-import { cn } from "@/lib/cn";
+import { getApiErrorMessage } from "@/lib/helpers";
 import type { Ticket, TicketStatus, TicketPriority, SortDirection } from "@/types";
 
 const PAGE_SIZE = 10;
@@ -27,7 +31,7 @@ const DEFAULT_SORT_DIR: SortDirection = "desc";
  */
 const SORT_FIELDS: { key: TicketSortKey; label: string }[] = [
   { key: "created_at", label: "Ngày tạo" },
-  { key: "due", label: "Hạn xử lý" },
+  { key: "due", label: "Thời gian SLA" },
   { key: "priority", label: "Ưu tiên" },
 ];
 
@@ -45,9 +49,9 @@ function sortValue(t: Ticket, key: TicketSortKey, farmNames: Map<string, string>
 
 /**
  * Ticket toàn hệ thống cho Admin (/system/tickets) — TICKET-FR-005b/006: dạng bảng như
- * trang Người dùng. Lọc trạng thái/ưu tiên/trang trại + phân trang chạy trên backend;
- * GET /tickets chưa có search/sort nên 2 thao tác này chỉ áp dụng trong trang hiện tại
- * (cùng cách AdminUsersPage làm). Thao tác trên dòng = 3 modal can thiệp của Admin.
+ * trang Người dùng. Lọc trạng thái/ưu tiên/trang trại chạy trên backend; tìm kiếm + sắp xếp +
+ * phân trang chạy trên TOÀN BỘ kết quả đó ở client (useAllTickets) — lọc ra bao nhiêu thì
+ * phân trang đúng bấy nhiêu. Thao tác trên dòng = 3 modal can thiệp của Admin.
  */
 export default function AdminTicketsPage() {
   const navigate = useNavigate();
@@ -65,38 +69,34 @@ export default function AdminTicketsPage() {
   const [priorityTarget, setPriorityTarget] = useState<Ticket | null>(null);
   const [rescheduleTarget, setRescheduleTarget] = useState<Ticket | null>(null);
 
-  usePageSubtitle("Ticket toàn hệ thống — theo dõi SLA, gán lại kỹ thuật viên, đổi ưu tiên và lịch hẹn khi cần can thiệp.");
-
   const { data: farms } = useFarms();
   const farmNames = useMemo(() => new Map((farms ?? []).map((f) => [f._id, f.name])), [farms]);
 
-  const { records, total, limit, isLoading } = useTicketsList({
+  // Lọc server (farm/trạng thái/ưu tiên) → toàn bộ kết quả; search/sort/phân trang làm trên đủ tập này
+  const { data: allTickets, isLoading, isError, error, refetch } = useAllTickets({
     farmId: farmId || undefined,
     status: status || undefined,
     priority: priority || undefined,
-    page,
-    limit: PAGE_SIZE,
   });
 
-  const rows = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = q
-      ? records.filter((t) =>
-          [ticketCode(t), TICKET_TYPE_LABEL[t.type], farmNames.get(t.farm_id), technicianName(t), t.notes[0]?.content]
-            .some((s) => s?.toLowerCase().includes(q)),
-        )
-      : records;
+    const list = (allTickets ?? []).filter((t) =>
+      !q || [ticketCode(t), TICKET_TYPE_LABEL[t.type], farmNames.get(t.farm_id), technicianName(t), t.notes[0]?.content]
+        .some((s) => s?.toLowerCase().includes(q)),
+    );
     const sign = sortDir === "asc" ? 1 : -1;
-    return [...list].sort((a, b) => {
+    return list.sort((a, b) => {
       const va = sortValue(a, sortBy, farmNames), vb = sortValue(b, sortBy, farmNames);
       return (typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb), "vi")) * sign;
     });
-  }, [records, search, sortBy, sortDir, farmNames]);
+  }, [allTickets, search, sortBy, sortDir, farmNames]);
 
+  const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const isSortChanged = sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR;
-  const hasActiveFilters = farmId !== "" || status !== "" || priority !== "" || search !== "" || isSortChanged;
-  // Có hơn 1 trang thì phải nói rõ search/sort chỉ trong trang này — không thì Admin tưởng "không có ticket"
-  const isPageScoped = (search !== "" || isSortChanged) && total > limit;
+  // Sắp xếp không làm mất dòng nào — tách riêng để bảng rỗng biết là "hệ thống chưa có ticket" hay "lọc hết"
+  const isFiltered = farmId !== "" || status !== "" || priority !== "" || search !== "";
+  const hasActiveFilters = isFiltered || isSortChanged;
 
   function handleSortChange(key: string) {
     if (key === sortBy) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -104,6 +104,7 @@ export default function AdminTicketsPage() {
       setSortBy(key as TicketSortKey);
       setSortDir("asc");
     }
+    setPage(1);
   }
 
   function clearFilters() {
@@ -118,28 +119,34 @@ export default function AdminTicketsPage() {
 
   const columns = buildTicketColumns(
     {
-      onView: (t) => navigate(`/tickets/${t._id}`),
+      onView: (t) => navigate(`/system/tickets/${t._id}`),
       onReassign: setReassignTarget,
       onChangePriority: setPriorityTarget,
       onReschedule: setRescheduleTarget,
     },
-    (page - 1) * limit,
+    (page - 1) * PAGE_SIZE,
     farmNames,
   );
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Hàng 0: 5 ô số (SLA + 4 trạng thái, chỉ xem) · bảng KTV (bấm tên để tìm) + card mức ưu tiên & SLA — số liệu toàn hệ thống */}
+      <TicketInsights
+        search={search}
+        onSelectTechnician={(name) => { setSearch(name); setPage(1); }}
+      />
+
       {/* Hàng 1: tìm kiếm + tạo ticket — cùng khuôn trang Người dùng (POST /tickets cho FARM_OWNER, ADMIN).
           Tổng số ticket nằm ở Pagination dưới bảng ("Hiển thị x–y trong z"), không lặp ở đây. */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-[200px] flex-1">
           <SearchInput
-            placeholder="Tìm mã, loại ticket, trang trại, kỹ thuật viên trong trang này..."
+            placeholder="Tìm mã, loại ticket, trang trại, kỹ thuật viên..."
             value={search}
-            onChange={setSearch}
+            onChange={(v) => { setSearch(v); setPage(1); }}
           />
         </div>
-        <Button onClick={() => setShowCreate(true)}>+ Tạo ticket</Button>
+        <Button onClick={() => setShowCreate(true)}><PlusIcon size={16} weight="bold" />Tạo ticket</Button>
       </div>
 
       {/* Hàng 2: toàn bộ bộ lọc + sắp xếp — mọi control cao bằng nhau (h-8, text-xs) như trang Người dùng */}
@@ -162,33 +169,22 @@ export default function AdminTicketsPage() {
           onChange={(v) => { setFarmId(v); setPage(1); }}
           options={[{ value: "", label: "Tất cả trang trại" }, ...(farms ?? []).map((f) => ({ value: f._id, label: f.name }))]}
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="label-caption">Sắp xếp:</span>
-          {SORT_FIELDS.map((f) => {
-            const active = sortBy === f.key;
-            return (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => handleSortChange(f.key)}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                  active ? "bg-charcoal text-white" : "bg-warmGray/10 text-warmGray hover:bg-warmGray/20",
-                )}
-              >
-                {f.label}
-                {active && (sortDir === "asc" ? <IconSortAsc width={12} height={12} /> : <IconSortDesc width={12} height={12} />)}
-              </button>
-            );
-          })}
-        </div>
+        <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
         {hasActiveFilters && (
-          <Button variant="danger" size="sm" className="h-8 px-3.5 text-xs" onClick={clearFilters}>Hủy lọc</Button>
+          <ClearFiltersButton onClick={clearFilters} />
         )}
       </div>
 
       {isLoading ? (
         <LoadingSkeleton count={5} className="h-14 w-full" />
+      ) : isError ? (
+        // FE_Design §13.5 — lỗi tải không được trông như "không có ticket nào"
+        <EmptyState
+          icon={<WarningCircleIcon size={32} />}
+          title="Không tải được danh sách ticket"
+          description={getApiErrorMessage(error, "Kiểm tra kết nối tới máy chủ rồi thử lại.")}
+          action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+        />
       ) : (
         <DataTable
           columns={columns}
@@ -197,20 +193,15 @@ export default function AdminTicketsPage() {
           sortKey={sortBy}
           sortDirection={sortDir}
           onSortChange={handleSortChange}
-          emptyMessage={search && total > limit
-            ? "Không có ticket nào khớp trong trang này — thử lật sang trang khác hoặc đổi bộ lọc."
-            : "Không có ticket nào — thử đổi bộ lọc hoặc từ khoá tìm kiếm."}
+          onRowClick={(t) => navigate(`/system/tickets/${t._id}`)}
+          emptyMessage={isFiltered
+            ? "Không có ticket nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm."
+            : "Hệ thống chưa có ticket nào."}
         />
       )}
 
-      {/* Đặt dưới bảng, sát phân trang — ghi chú này nói về "trang hiện tại", không chen giữa thanh lọc và bảng */}
-      {isPageScoped && (
-        <p className="-mt-2 text-xs text-climateOrange">
-          Tìm kiếm và sắp xếp chỉ áp dụng trong trang hiện tại ({rows.length}/{total} ticket) — dùng bộ lọc trạng thái/ưu tiên/trang trại hoặc lật trang để tìm tiếp.
-        </p>
-      )}
-
-      <Pagination page={page} limit={limit} total={total} onChange={setPage} />
+      {/* total = số ticket SAU khi lọc + tìm kiếm — tìm ra 2 thì hiện "1–2 trong 2", không phải 113 */}
+      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} />
 
       <CreateTicketModal open={showCreate} onClose={() => setShowCreate(false)} defaultFarmId={farmId || undefined} />
       {/* Modal nhận `ticket` bắt buộc — chỉ mount khi đã chọn dòng */}

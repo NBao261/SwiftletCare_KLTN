@@ -7,7 +7,8 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { IconTicket } from "@/components/ui/icons";
 import { formatDate, formatRelativeTime } from "@/lib/helpers";
 import { cn } from "@/lib/cn";
-import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE, PRIORITY_ICON_CLASS } from "@/constants/tickets";
+import { TICKET_TYPE_LABEL, STATUS_LABEL, PRIORITY_TONE, PRIORITY_ICON_CLASS } from "@/constants/tickets";
+import { STATUS_BADGE_CLASS } from "@/components/features/admin/tickets/tickets.constants";
 import type { Ticket } from "@/types";
 
 const RECENT_LIMIT = 5;
@@ -33,7 +34,7 @@ function TicketMeta({ ticket, roomLabel }: { ticket: Ticket; roomLabel: string |
   );
 }
 
-/** "Ticket gần nhất" cuối trang chi tiết Farm của Admin — FARM-FR-009 "ticket liên quan"; xem đủ ở /tickets */
+/** "Ticket gần nhất" cuối trang chi tiết Farm của Admin — FARM-FR-009 "ticket liên quan"; xem đủ ở /system/tickets?farmId= */
 export default function FarmRecentTickets({ farmId }: { farmId: string }) {
   const navigate = useNavigate();
   const { records, total, isLoading } = useTicketsList({ farmId, limit: RECENT_LIMIT });
@@ -81,7 +82,7 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
               <button
                 key={ticket._id}
                 type="button"
-                onClick={() => navigate(`/tickets/${ticket._id}`)}
+                onClick={() => navigate(`/system/tickets/${ticket._id}`)}
                 className={cn(
                   "flex w-full flex-col gap-2 px-5 py-4 text-left transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
                   // Quá hạn SLA: nền trắng như thường, chỉ đỏ nhạt khi hover
@@ -105,7 +106,7 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
 
                 {/* Mobile: xuống dưới, thụt theo icon-box; ≥640px: cột phải, thời gian căn phải để các dòng thẳng hàng */}
                 <div className="flex shrink-0 items-center gap-3 pl-[52px] sm:pl-0">
-                  <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
+                  <Badge className={STATUS_BADGE_CLASS[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
                   <div className="whitespace-nowrap text-xs sm:min-w-32 sm:text-right">
                     <p className="font-semibold text-charcoal" title={formatDate(ticket.created_at)}>
                       {formatRelativeTime(ticket.created_at)}
