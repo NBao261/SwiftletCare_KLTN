@@ -88,9 +88,12 @@ describe('getKpi', () => {
       sla_resolve_due_at: new Date(Date.now() - HOUR), is_sla_breached: true,
     })
 
+    await Ticket.create({ ...baseTicket, assigned_to: techId, status: 'NEW' })
+
     const [row] = (await getKpi()).byTechnician
     expect(row.full_name).toBe('Trần Kỹ Thuật')
-    expect(row.total).toBe(2)
+    expect(row.total).toBe(3)
+    expect(row.unaccepted).toBe(1)
     expect(row.avgResolveHours).toBe(2)
     expect(row.slaComplianceRate).toBe(50)
   })
