@@ -13,7 +13,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
-import { IconSearch } from '@/components/ui/icons'
+import { IconAnalytics, IconSearch } from '@/components/ui/icons'
 import { buildAuditLogColumns, targetName } from '@/components/features/admin/audit-log/auditLogColumns'
 import AuditLogStats from '@/components/features/admin/audit-log/AuditLogStats'
 import type { AuditLogEntry } from '@/types'
@@ -157,59 +157,72 @@ export default function AdminAuditLogPage() {
       {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Ticket/Người dùng */}
       <AuditLogStats />
 
-      {/* Hàng 1: ô tìm kiếm cỡ mặc định, rộng hết hàng — cùng bố cục trang Người dùng */}
-      <SearchInput
-        placeholder="Tìm theo hành động, người thực hiện, IP..."
-        aria-label="Tìm nhật ký"
-        value={search}
-        // Tìm trên toàn bộ nhật ký → gõ từ khoá thì về trang 1
-        onChange={withReset(setSearch)}
-      />
+      {/* Card danh sách: tìm kiếm → bộ lọc → bảng → phân trang — cùng khuôn card "Nhật ký hoạt động gần đây" (RecentActivityCard), icon như mục menu sidebar */}
+      <section className="flex min-w-0 flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
+            <IconAnalytics width={20} height={20} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-h2 text-charcoal">Danh sách nhật ký</h2>
+            <p className="text-small text-graphite">Hành động quản trị và sự kiện hệ thống, mới nhất trước</p>
+          </div>
+        </div>
 
-      {/* Hàng 2: bộ lọc */}
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <SelectMenu ariaLabel="Lọc theo người thực hiện" value={actorId} options={actorOptions} onChange={withReset(setActorId)} className="max-w-[16rem]" />
-          <SelectMenu ariaLabel="Lọc theo hành động" value={action} options={ACTION_OPTIONS} onChange={withReset(setAction)} className="max-w-[16rem]" />
-          <span className="label-caption">Thời gian:</span>
-          <SelectMenu ariaLabel="Lọc theo khoảng thời gian" value={datePreset} options={dateOptions} onChange={withReset(setDatePreset)} className="max-w-[16rem]" />
-          {/* 1 trường duy nhất, luôn đang chọn — bấm chỉ đảo chiều mới nhất/cũ nhất */}
-          <SortChips
-            fields={[{ key: 'time', label: 'Thời gian' }]}
-            sortBy="time"
-            sortDir={sortDir}
-            onChange={() => { setSortDir(d => (d === 'desc' ? 'asc' : 'desc')); setPage(1) }}
-          />
-          {hasFilter && (
-            <ClearFiltersButton onClick={clearFilters} />
+        {/* Hàng 1: ô tìm kiếm cỡ mặc định, rộng hết hàng — cùng bố cục trang Người dùng */}
+        <SearchInput
+          placeholder="Tìm theo hành động, người thực hiện, IP..."
+          aria-label="Tìm nhật ký"
+          value={search}
+          // Tìm trên toàn bộ nhật ký → gõ từ khoá thì về trang 1
+          onChange={withReset(setSearch)}
+        />
+
+        {/* Hàng 2: bộ lọc */}
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <SelectMenu ariaLabel="Lọc theo người thực hiện" value={actorId} options={actorOptions} onChange={withReset(setActorId)} className="max-w-[16rem]" />
+            <SelectMenu ariaLabel="Lọc theo hành động" value={action} options={ACTION_OPTIONS} onChange={withReset(setAction)} className="max-w-[16rem]" />
+            <span className="label-caption">Thời gian:</span>
+            <SelectMenu ariaLabel="Lọc theo khoảng thời gian" value={datePreset} options={dateOptions} onChange={withReset(setDatePreset)} className="max-w-[16rem]" />
+            {/* 1 trường duy nhất, luôn đang chọn — bấm chỉ đảo chiều mới nhất/cũ nhất */}
+            <SortChips
+              fields={[{ key: 'time', label: 'Thời gian' }]}
+              sortBy="time"
+              sortDir={sortDir}
+              onChange={() => { setSortDir(d => (d === 'desc' ? 'asc' : 'desc')); setPage(1) }}
+            />
+            {hasFilter && (
+              <ClearFiltersButton onClick={clearFilters} />
+            )}
+          </div>
+          {actors.truncated && (
+            <p className="text-xs text-warmGray">
+              Ô "người thực hiện" chỉ liệt kê {actors.records.length}/{actors.total} tài khoản đầu tiên (giới hạn 1 trang của /admin/users).
+            </p>
           )}
         </div>
-        {actors.truncated && (
-          <p className="text-xs text-warmGray">
-            Ô "người thực hiện" chỉ liệt kê {actors.records.length}/{actors.total} tài khoản đầu tiên (giới hạn 1 trang của /admin/users).
-          </p>
+
+        {isLoading && <div className="flex flex-col gap-2"><LoadingSkeleton count={6} className="h-14 w-full" /></div>}
+
+        {!isLoading && visible.length === 0 && (
+          <EmptyState
+            icon={<IconSearch width={28} height={28} />}
+            title={hasFilter ? 'Không tìm thấy nhật ký phù hợp' : 'Chưa có nhật ký nào'}
+            description={hasFilter
+              ? 'Thử từ khoá khác, đổi khoảng thời gian hoặc bỏ bớt bộ lọc.'
+              : 'Hành động quản trị (khoá tài khoản, đổi ngưỡng, can thiệp ticket...) sẽ được ghi lại ở đây.'}
+            action={hasFilter ? <Button variant="secondary" size="sm" onClick={clearFilters}>Xoá bộ lọc</Button> : undefined}
+          />
         )}
-      </div>
 
-      {isLoading && <div className="flex flex-col gap-2"><LoadingSkeleton count={6} className="h-14 w-full" /></div>}
+        {!isLoading && visible.length > 0 && (
+          <DataTable columns={buildAuditLogColumns((page - 1) * PAGE_SIZE, userNames)} rows={visible} getRowKey={log => log._id} />
+        )}
 
-      {!isLoading && visible.length === 0 && (
-        <EmptyState
-          icon={<IconSearch width={28} height={28} />}
-          title={hasFilter ? 'Không tìm thấy nhật ký phù hợp' : 'Chưa có nhật ký nào'}
-          description={hasFilter
-            ? 'Thử từ khoá khác, đổi khoảng thời gian hoặc bỏ bớt bộ lọc.'
-            : 'Hành động quản trị (khoá tài khoản, đổi ngưỡng, can thiệp ticket...) sẽ được ghi lại ở đây.'}
-          action={hasFilter ? <Button variant="secondary" size="sm" onClick={clearFilters}>Xoá bộ lọc</Button> : undefined}
-        />
-      )}
-
-      {!isLoading && visible.length > 0 && (
-        <DataTable columns={buildAuditLogColumns((page - 1) * PAGE_SIZE, userNames)} rows={visible} getRowKey={log => log._id} />
-      )}
-
-      {/* total = số nhật ký SAU khi tìm chữ — tìm ra 3 thì hiện "1–3 trong 3" */}
-      <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
+        {/* total = số nhật ký SAU khi tìm chữ — tìm ra 3 thì hiện "1–3 trong 3" */}
+        <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
+      </section>
     </div>
   )
 }

@@ -10,6 +10,7 @@ import Pagination from '@/components/ui/Pagination'
 import FilterChip from '@/components/ui/FilterChip'
 import DataTable from '@/components/ui/DataTable'
 import SelectMenu from '@/components/ui/SelectMenu'
+import { IconUsers } from '@/components/ui/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { STATUS_LABEL, FILTERABLE_STATUSES, ROLE_LABEL, SORT_FIELDS, type FilterableStatus } from '@/components/features/admin/users/users.constants'
 import { buildUserColumns } from '@/components/features/admin/users/userColumns'
@@ -78,55 +79,68 @@ export default function AdminUsersPage() {
       {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Ticket */}
       <UserStats />
 
-      {/* Hàng 1: tìm kiếm + tạo tài khoản. 1 nút duy nhất — Admin chỉ tạo Technician/Sales
-          Staff (AUTH-FR-005c), chọn vai trò ngay trong modal thay vì 2 nút riêng. */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-[200px] flex-1">
-          <SearchInput
-            placeholder="Tìm tên/email..."
-            value={search}
-            onChange={v => { setSearch(v); setPage(1) }}
+      {/* Card danh sách: tìm kiếm → bộ lọc → bảng → phân trang — cùng khuôn card "Nhật ký hoạt động gần đây" (RecentActivityCard), icon như mục menu sidebar */}
+      <section className="flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
+            <IconUsers width={20} height={20} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-h2 text-charcoal">Danh sách tài khoản</h2>
+            <p className="text-small text-graphite">Tài khoản toàn hệ thống — xem chi tiết, gán khu vực, khoá/mở khoá</p>
+          </div>
+        </div>
+
+        {/* Hàng 1: tìm kiếm + tạo tài khoản. 1 nút duy nhất — Admin chỉ tạo Technician/Sales
+            Staff (AUTH-FR-005c), chọn vai trò ngay trong modal thay vì 2 nút riêng. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-[200px] flex-1">
+            <SearchInput
+              placeholder="Tìm tên/email..."
+              value={search}
+              onChange={v => { setSearch(v); setPage(1) }}
+            />
+          </div>
+          <Button onClick={() => setShowCreate(true)}>+ Tạo tài khoản</Button>
+        </div>
+
+        {/* Hàng 2: toàn bộ bộ lọc + sắp xếp */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Mọi control trên hàng này cao bằng nút sắp xếp (h-8, text-xs) cho thẳng hàng */}
+          <SelectMenu
+            ariaLabel="Lọc theo vai trò"
+            value={role}
+            onChange={v => { setRole(v); setPage(1) }}
+            options={[{ value: '', label: 'Tất cả vai trò' }, ...(Object.keys(ROLE_LABEL) as Role[]).map(r => ({ value: r, label: ROLE_LABEL[r] }))]}
           />
+          <div className="flex flex-nowrap gap-2">
+            <FilterChip active={status === undefined} label="Tất cả" onClick={() => { setStatus(undefined); setPage(1) }} />
+            {FILTERABLE_STATUSES.map(s => (
+              <FilterChip key={s} active={status === s} label={STATUS_LABEL[s]} onClick={() => { setStatus(s); setPage(1) }} />
+            ))}
+          </div>
+          <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
+          {hasActiveFilters && (
+            <ClearFiltersButton onClick={clearFilters} />
+          )}
         </div>
-        <Button onClick={() => setShowCreate(true)}>+ Tạo tài khoản</Button>
-      </div>
 
-      {/* Hàng 2: toàn bộ bộ lọc + sắp xếp */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Mọi control trên hàng này cao bằng nút sắp xếp (h-8, text-xs) cho thẳng hàng */}
-        <SelectMenu
-          ariaLabel="Lọc theo vai trò"
-          value={role}
-          onChange={v => { setRole(v); setPage(1) }}
-          options={[{ value: '', label: 'Tất cả vai trò' }, ...(Object.keys(ROLE_LABEL) as Role[]).map(r => ({ value: r, label: ROLE_LABEL[r] }))]}
-        />
-        <div className="flex flex-nowrap gap-2">
-          <FilterChip active={status === undefined} label="Tất cả" onClick={() => { setStatus(undefined); setPage(1) }} />
-          {FILTERABLE_STATUSES.map(s => (
-            <FilterChip key={s} active={status === s} label={STATUS_LABEL[s]} onClick={() => { setStatus(s); setPage(1) }} />
-          ))}
-        </div>
-        <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
-        {hasActiveFilters && (
-          <ClearFiltersButton onClick={clearFilters} />
+        {isLoading ? (
+          <LoadingSkeleton count={4} className="h-14 w-full" />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={records}
+            getRowKey={(u) => u._id}
+            sortKey={sortBy}
+            sortDirection={sortDir}
+            onSortChange={handleSortChange}
+            emptyMessage="Không tìm thấy tài khoản nào — thử đổi bộ lọc hoặc từ khoá tìm kiếm."
+          />
         )}
-      </div>
 
-      {isLoading ? (
-        <LoadingSkeleton count={4} className="h-14 w-full" />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={records}
-          getRowKey={(u) => u._id}
-          sortKey={sortBy}
-          sortDirection={sortDir}
-          onSortChange={handleSortChange}
-          emptyMessage="Không tìm thấy tài khoản nào — thử đổi bộ lọc hoặc từ khoá tìm kiếm."
-        />
-      )}
-
-      <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
+        <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
+      </section>
 
       <CreateUserModal open={showCreate} onClose={() => setShowCreate(false)} />
       <UserDetailModal user={viewTarget} onClose={() => setViewTarget(null)} />

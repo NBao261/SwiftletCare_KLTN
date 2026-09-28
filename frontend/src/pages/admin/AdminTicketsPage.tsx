@@ -7,6 +7,7 @@ import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortCh
 import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { IconTicket } from "@/components/ui/icons";
 import { buildTicketColumns, ticketCode, technicianName } from "@/components/features/admin/tickets/ticketColumns";
 import ChangePriorityModal from "@/components/features/admin/tickets/ChangePriorityModal";
 import ReassignTicketModal from "@/components/features/admin/tickets/ReassignTicketModal";
@@ -134,72 +135,85 @@ export default function AdminTicketsPage() {
         onSelectTechnician={(name) => { setSearch(name); setPage(1); }}
       />
 
-      {/* Hàng 1: tìm kiếm + tạo ticket — cùng khuôn trang Người dùng (POST /tickets cho FARM_OWNER, ADMIN).
-          Tổng số ticket nằm ở Pagination dưới bảng ("Hiển thị x–y trong z"), không lặp ở đây. */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-[200px] flex-1">
-          <SearchInput
-            placeholder="Tìm mã, loại ticket, trang trại, kỹ thuật viên..."
-            value={search}
-            onChange={(v) => { setSearch(v); setPage(1); }}
-          />
+      {/* Card danh sách: tìm kiếm → bộ lọc → bảng → phân trang — cùng khuôn card "Nhật ký hoạt động gần đây" (RecentActivityCard), icon như mục menu sidebar */}
+      <section className="flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
+            <IconTicket width={20} height={20} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-h2 text-charcoal">Danh sách ticket</h2>
+            <p className="text-small text-graphite">Ticket toàn hệ thống — bấm một dòng để xem chi tiết và can thiệp</p>
+          </div>
         </div>
-        <Button onClick={() => setShowCreate(true)}><PlusIcon size={16} weight="bold" />Tạo ticket</Button>
-      </div>
 
-      {/* Hàng 2: toàn bộ bộ lọc + sắp xếp — mọi control cao bằng nhau (h-8, text-xs) như trang Người dùng */}
-      <div className="flex flex-wrap items-center gap-3">
-        <SelectMenu
-          ariaLabel="Lọc theo trạng thái"
-          value={status}
-          onChange={(v) => { setStatus(v); setPage(1); }}
-          options={[{ value: "" as const, label: "Tất cả trạng thái" }, ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABEL[s] }))]}
-        />
-        <SelectMenu
-          ariaLabel="Lọc theo ưu tiên"
-          value={priority}
-          onChange={(v) => { setPriority(v); setPage(1); }}
-          options={[{ value: "" as const, label: "Tất cả ưu tiên" }, ...(["P1", "P2", "P3"] as const).map((p) => ({ value: p, label: p }))]}
-        />
-        <SelectMenu
-          ariaLabel="Lọc theo trang trại"
-          value={farmId}
-          onChange={(v) => { setFarmId(v); setPage(1); }}
-          options={[{ value: "", label: "Tất cả trang trại" }, ...(farms ?? []).map((f) => ({ value: f._id, label: f.name }))]}
-        />
-        <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
-        {hasActiveFilters && (
-          <ClearFiltersButton onClick={clearFilters} />
+        {/* Hàng 1: tìm kiếm + tạo ticket — cùng khuôn trang Người dùng (POST /tickets cho FARM_OWNER, ADMIN).
+            Tổng số ticket nằm ở Pagination dưới bảng ("Hiển thị x–y trong z"), không lặp ở đây. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-[200px] flex-1">
+            <SearchInput
+              placeholder="Tìm mã, loại ticket, trang trại, kỹ thuật viên..."
+              value={search}
+              onChange={(v) => { setSearch(v); setPage(1); }}
+            />
+          </div>
+          <Button onClick={() => setShowCreate(true)}><PlusIcon size={16} weight="bold" />Tạo ticket</Button>
+        </div>
+
+        {/* Hàng 2: toàn bộ bộ lọc + sắp xếp — mọi control cao bằng nhau (h-8, text-xs) như trang Người dùng */}
+        <div className="flex flex-wrap items-center gap-3">
+          <SelectMenu
+            ariaLabel="Lọc theo trạng thái"
+            value={status}
+            onChange={(v) => { setStatus(v); setPage(1); }}
+            options={[{ value: "" as const, label: "Tất cả trạng thái" }, ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABEL[s] }))]}
+          />
+          <SelectMenu
+            ariaLabel="Lọc theo ưu tiên"
+            value={priority}
+            onChange={(v) => { setPriority(v); setPage(1); }}
+            options={[{ value: "" as const, label: "Tất cả ưu tiên" }, ...(["P1", "P2", "P3"] as const).map((p) => ({ value: p, label: p }))]}
+          />
+          <SelectMenu
+            ariaLabel="Lọc theo trang trại"
+            value={farmId}
+            onChange={(v) => { setFarmId(v); setPage(1); }}
+            options={[{ value: "", label: "Tất cả trang trại" }, ...(farms ?? []).map((f) => ({ value: f._id, label: f.name }))]}
+          />
+          <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
+          {hasActiveFilters && (
+            <ClearFiltersButton onClick={clearFilters} />
+          )}
+        </div>
+
+        {isLoading ? (
+          <LoadingSkeleton count={5} className="h-14 w-full" />
+        ) : isError ? (
+          // FE_Design §13.5 — lỗi tải không được trông như "không có ticket nào"
+          <EmptyState
+            icon={<WarningCircleIcon size={32} />}
+            title="Không tải được danh sách ticket"
+            description={getApiErrorMessage(error, "Kiểm tra kết nối tới máy chủ rồi thử lại.")}
+            action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={rows}
+            getRowKey={(t) => t._id}
+            sortKey={sortBy}
+            sortDirection={sortDir}
+            onSortChange={handleSortChange}
+            onRowClick={(t) => navigate(`/system/tickets/${t._id}`)}
+            emptyMessage={isFiltered
+              ? "Không có ticket nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm."
+              : "Hệ thống chưa có ticket nào."}
+          />
         )}
-      </div>
 
-      {isLoading ? (
-        <LoadingSkeleton count={5} className="h-14 w-full" />
-      ) : isError ? (
-        // FE_Design §13.5 — lỗi tải không được trông như "không có ticket nào"
-        <EmptyState
-          icon={<WarningCircleIcon size={32} />}
-          title="Không tải được danh sách ticket"
-          description={getApiErrorMessage(error, "Kiểm tra kết nối tới máy chủ rồi thử lại.")}
-          action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
-        />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          getRowKey={(t) => t._id}
-          sortKey={sortBy}
-          sortDirection={sortDir}
-          onSortChange={handleSortChange}
-          onRowClick={(t) => navigate(`/system/tickets/${t._id}`)}
-          emptyMessage={isFiltered
-            ? "Không có ticket nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm."
-            : "Hệ thống chưa có ticket nào."}
-        />
-      )}
-
-      {/* total = số ticket SAU khi lọc + tìm kiếm — tìm ra 2 thì hiện "1–2 trong 2", không phải 113 */}
-      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
+        {/* total = số ticket SAU khi lọc + tìm kiếm — tìm ra 2 thì hiện "1–2 trong 2", không phải 113 */}
+        <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
+      </section>
 
       <CreateTicketModal open={showCreate} onClose={() => setShowCreate(false)} defaultFarmId={farmId || undefined} />
       {/* Modal nhận `ticket` bắt buộc — chỉ mount khi đã chọn dòng */}
