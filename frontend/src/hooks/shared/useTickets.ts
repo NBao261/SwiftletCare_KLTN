@@ -18,6 +18,14 @@ export function useTicketsList(
   )
 }
 
+/** GET /tickets/kpi — chỉ ADMIN (requireRole ở tickets.route.ts), dùng cho trang cấu hình SLA */
+export function useTicketKpi() {
+  return useQuery({
+    queryKey: ['tickets', 'kpi'],
+    queryFn: () => ticketApi.kpi().then(r => r.data.data),
+  })
+}
+
 export function useTicket(id: string | undefined) {
   return useQuery({
     queryKey: ['tickets', 'detail', id],

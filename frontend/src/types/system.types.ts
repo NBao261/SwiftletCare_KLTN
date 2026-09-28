@@ -3,6 +3,7 @@
 import type { Role } from '@/types/common.types'
 import type { Thresholds } from '@/types/farm.types'
 import type { SystemNodeStatus } from '@/types/device.types'
+import type { TicketPriority } from '@/types/ticket.types'
 
 /**
  * SYSTEM-FR-001 — 1 dòng `audit_logs`, đúng shape `GET /system/audit-logs`
@@ -24,6 +25,10 @@ export interface AuditLogEntry {
 
 /** SYSTEM-FR-002 — nguồn cho ENV-FR-020 "reset về mặc định", cùng shape 7 trường với Zone.thresholds */
 export type SystemDefaultThresholds = Thresholds
+
+/** TICKET-FR-006, SLA-NFR-001 — hạn phản hồi/xử lý (giờ) do Admin cấu hình theo mức ưu tiên */
+export interface SlaLevel { response_hours: number; resolve_hours: number }
+export type SlaConfig = Record<TicketPriority, SlaLevel>
 
 /**
  * SYSTEM-FR-003 — đúng shape `GET /system/health-overview`: chỉ đếm theo trạng

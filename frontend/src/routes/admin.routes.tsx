@@ -13,6 +13,16 @@ const AdminAccountRequestsPage = lazy(() => import('@/pages/admin/AdminAccountRe
 const AdminSystemHealthPage = lazy(() => import('@/pages/admin/AdminSystemHealthPage'))
 const AdminSystemSettingsPage = lazy(() => import('@/pages/admin/AdminSystemSettingsPage'))
 const AdminAuditLogPage = lazy(() => import('@/pages/admin/AdminAuditLogPage'))
+// FARM-FR-009 — trang trại toàn hệ thống: tách khỏi /farms (dùng chung Farm Owner/Technician) nên đặt dưới /system
+const AdminFarmsPage = lazy(() => import('@/pages/admin/AdminFarmsPage'))
+const AdminFarmDetailPage = lazy(() => import('@/pages/admin/AdminFarmDetailPage'))
+const AdminFarmHousePage = lazy(() => import('@/pages/admin/AdminFarmHousePage'))
+// Ticket toàn hệ thống dạng bảng + chi tiết — tách khỏi /tickets, /tickets/:id (dùng chung Farm Owner/Technician)
+// để nút quay lại + breadcrumb của Admin về đúng bảng /system/tickets
+const AdminTicketsPage = lazy(() => import('@/pages/admin/AdminTicketsPage'))
+const AdminTicketDetailPage = lazy(() => import('@/pages/admin/AdminTicketDetailPage'))
+// OPS-NFR-004 — thiết bị toàn hệ thống, chỉ xem; thay /devices (màn làm việc của Technician) trong menu Admin
+const AdminDevicesPage = lazy(() => import('@/pages/admin/AdminDevicesPage'))
 
 export const adminRoutes = (
   <>
@@ -29,6 +39,14 @@ export const adminRoutes = (
       element={
         <RequireRole allow={ADMIN_ONLY}>
           <AdminAccountRequestsPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/devices"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminDevicesPage />
         </RequireRole>
       }
     />
@@ -55,6 +73,46 @@ export const adminRoutes = (
       element={
         <RequireRole allow={ADMIN_ONLY}>
           <AdminAuditLogPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/farms"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminFarmsPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/farms/:farmId"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminFarmDetailPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/farms/:farmId/houses/:houseId"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminFarmHousePage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/tickets"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminTicketsPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/tickets/:id"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminTicketDetailPage />
         </RequireRole>
       }
     />

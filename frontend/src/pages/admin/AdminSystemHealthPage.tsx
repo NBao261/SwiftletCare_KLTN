@@ -1,100 +1,91 @@
-// ADMIN — Tổng quan hệ thống (SYSTEM-FR-003), thay thế /system-status cũ.
-// Chỉ số đếm theo trạng thái, KHÔNG phải BI/xu hướng — không thêm biểu đồ ở đây.
+// ADMIN — Tổng quan hệ thống (SYSTEM-FR-003), thay thế /system-status cũ. Bố cục theo mẫu "Tổng quan nền tảng":
+// 1) hàng 4 ô KPI · 2) card xu hướng ticket & tuân thủ SLA 7 ngày (TicketTrendChart, 2 tab) · 3) nhật ký hoạt động gần
+// đây (RecentActivityCard). Mọi số liệu là dữ liệu thật: health-overview, /tickets (đếm ở client), /tickets/kpi,
+// /alerts, /system/audit-logs — không có số minh hoạ. Không phải BI đầy đủ (SYSTEM-FR-003).
+// Tiêu đề trang lấy từ menu (AppHeader tự tra), không lặp lại trong nội dung.
+import { CpuIcon, HouseIcon, TicketIcon, WarningIcon } from '@phosphor-icons/react'
 import { useSystemHealth } from '@/hooks/admin/useSystem'
-import { Card } from '@/components/ui'
-import DeviceStatusSummary from '@/components/features/admin/system/DeviceStatusSummary'
+import { useAllTickets } from '@/hooks/admin/useAdminTickets'
+import { useAlertsList } from '@/hooks/shared/useAlerts'
+import StatTile from '@/components/ui/StatTile'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
-import { IconAlert } from '@/components/ui/icons'
-import { PRIORITY_TONE } from '@/constants/tickets'
-import { ROLE_LABEL } from '@/constants/roles'
+import TicketTrendChart from '@/components/features/admin/dashboard/TicketTrendChart'
+import RecentActivityCard from '@/components/features/admin/dashboard/RecentActivityCard'
 import { getApiErrorMessage } from '@/lib/helpers'
-import type { Role } from '@/types'
 
-const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'TECHNICIAN', 'SALES_STAFF']
-const PRIORITY_ACCENT_CLASS: Record<'critical' | 'warning' | 'neutral', string> = {
-  critical: 'border-alertRed/40', warning: 'border-climateOrange/40', neutral: 'border-warmGray/15',
-}
+/** Khoá ngày theo giờ VN — để đếm "mới hôm nay" */
+const DAY_KEY = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
 
 export default function AdminSystemHealthPage() {
   const { data, isLoading, error } = useSystemHealth()
+  // Cùng cache với bảng Ticket của Admin và biểu đồ xu hướng bên dưới — không tải thêm lần nữa
+  const { data: tickets } = useAllTickets({})
+  const criticalAlerts = useAlertsList({ status: 'ACTIVE', severity: 'CRITICAL', page: 1, limit: 1 })
+
+  if (isLoading) return <LoadingSkeleton count={4} className="h-28 w-full" />
+  if (error || !data) {
+    return (
+      <EmptyState
+        icon={<WarningIcon size={28} />}
+        title="Không tải được số liệu hệ thống"
+        description={getApiErrorMessage(error, 'Thử tải lại trang.')}
+      />
+    )
+  }
+
+  const { farms, zones, devices, openTickets } = data
+  const onlinePct = devices.total > 0 ? Math.round((devices.online / devices.total) * 1000) / 10 : 0
+  const faulty = devices.error + devices.degraded
+
+  const today = DAY_KEY.format(new Date())
+  const open = (tickets ?? []).filter(t => t.status !== 'CLOSED')
+  const breached = open.filter(t => t.is_sla_breached).length
+  const newToday = (tickets ?? []).filter(t => DAY_KEY.format(new Date(t.created_at)) === today).length
+  const waitingTech = open.filter(t => t.status === 'NEW').length
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <p className="label-caption">Toàn hệ thống</p>
-        <h1 className="text-h1 tracking-tight text-charcoal">Tổng quan hệ thống</h1>
+    <div className="flex flex-col gap-5">
+      {/* ── Hàng 4 ô KPI — mobile 2×2 ── */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          icon={HouseIcon}
+          iconClass="bg-accent-300 text-charcoal"
+          label="Trang trại hoạt động"
+          value={farms.total}
+          sub={`${zones.total} phòng trên toàn hệ thống`}
+        />
+        <StatTile
+          icon={CpuIcon}
+          iconClass={faulty > 0 ? 'bg-alertRed text-white' : 'bg-accent-300 text-charcoal'}
+          alert={faulty > 0}
+          label="Thiết bị online"
+          value={`${onlinePct}%`}
+          chip={`${devices.online}/${devices.total}`}
+          progress={onlinePct}
+          sub={faulty > 0 ? `${faulty} thiết bị lỗi/suy giảm cần xử lý` : `${devices.offline} offline · ${devices.pending} chờ kết nối`}
+        />
+        <StatTile
+          icon={TicketIcon}
+          iconClass="bg-charcoal text-limeMist"
+          label="Ticket đang mở"
+          value={openTickets.total}
+          chip={breached > 0 ? `${breached} vi phạm SLA` : undefined}
+          chipClass="bg-alertRed text-white"
+          sub={`${newToday} mới hôm nay · ${waitingTech} chờ KTV nhận`}
+        />
+        <StatTile
+          icon={WarningIcon}
+          iconClass={criticalAlerts.total > 0 ? 'bg-alertRed text-white' : 'bg-warmGray/10 text-charcoal'}
+          alert={criticalAlerts.total > 0}
+          label="Cảnh báo CRITICAL đang mở"
+          value={String(criticalAlerts.total).padStart(2, '0')}
+          sub={criticalAlerts.total > 0 ? 'Chưa được xác nhận — xem trang Cảnh báo' : 'Không có cảnh báo khẩn cấp'}
+        />
       </div>
 
-      {isLoading && <LoadingSkeleton count={4} className="h-16 w-full" />}
-
-      {!isLoading && error && (
-        <EmptyState
-          icon={<IconAlert width={28} height={28} />}
-          title="Không tải được số liệu hệ thống"
-          description={getApiErrorMessage(error, 'Thử tải lại trang.')}
-        />
-      )}
-
-      {data && (
-        <>
-          <section className="flex flex-col gap-3">
-            <p className="label-caption">Trang trại</p>
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard label="Farm đang hoạt động" value={data.farms.total} />
-              <StatCard label="Zone" value={data.zones.total} />
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <p className="label-caption">Ticket đang mở theo độ ưu tiên</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard label="Tổng đang mở" value={data.openTickets.total} />
-              {(['P1', 'P2', 'P3'] as const).map(p => (
-                <Card key={p} className={`text-center border ${PRIORITY_ACCENT_CLASS[PRIORITY_TONE[p]]}`}>
-                  <p className="text-2xl font-extrabold text-charcoal">{data.openTickets[p]}</p>
-                  <p className="mt-1 text-xs text-warmGray">{p} đang mở</p>
-                </Card>
-              ))}
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <p className="label-caption">Tài khoản</p>
-            <div className="grid grid-cols-3 gap-3">
-              <StatCard label="Tổng số" value={data.users.total} />
-              <StatCard label="Hoạt động" value={data.users.active} />
-              <StatCard label="Đã khoá / đã xoá" value={data.users.inactive} />
-            </div>
-            {/* Hàng đợi chờ xoá không có trong health-overview — xem trang Yêu cầu tài khoản */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {ROLES.map(role => {
-                const byRole = data.users.byRole[role]
-                return (
-                  <StatCard
-                    key={role}
-                    label={ROLE_LABEL[role]}
-                    value={byRole?.active ?? 0}
-                    hint={byRole?.inactive ? `+${byRole.inactive} khoá/đã xoá` : undefined}
-                  />
-                )
-              })}
-            </div>
-          </section>
-
-          <DeviceStatusSummary summary={data.devices} />
-        </>
-      )}
+      <TicketTrendChart />
+      <RecentActivityCard />
     </div>
-  )
-}
-
-function StatCard({ label, value, hint }: { label: string; value: number; hint?: string }) {
-  return (
-    <Card className="text-center">
-      <p className="text-2xl font-extrabold text-charcoal">{value}</p>
-      <p className="mt-1 text-xs text-warmGray">{label}</p>
-      {hint && <p className="text-[11px] text-warmGray/80">{hint}</p>}
-    </Card>
   )
 }

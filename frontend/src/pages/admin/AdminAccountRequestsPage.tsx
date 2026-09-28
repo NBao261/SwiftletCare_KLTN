@@ -137,7 +137,7 @@ function DeleteRequestsTab() {
         )
       })}
 
-      <Pagination page={page} limit={limit} total={total} onChange={setPage} />
+      <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
 
       <ConfirmModal
         open={!!target}
@@ -210,7 +210,7 @@ function SalesStaffRequestsTab() {
         )
       })}
 
-      <Pagination page={page} limit={limit} total={total} onChange={setPage} />
+      <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
 
       <ConfirmModal
         open={!!approveTarget}

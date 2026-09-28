@@ -30,3 +30,5 @@ dist-ssr
 
 # Vite
 .vite/
+# File tạm Vite tạo khi đọc vite.config.ts — tự xoá khi chạy xong, sót lại nếu dev/build bị dừng giữa chừng
+vite.config.ts.timestamp-*

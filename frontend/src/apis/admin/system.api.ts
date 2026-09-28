@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, AuditLogEntry, SystemDefaultThresholds, SystemHealthSummary } from '@/types'
+import type { ApiResponse, AuditLogEntry, SlaConfig, SystemDefaultThresholds, SystemHealthSummary } from '@/types'
 
 /** GET /system/audit-logs — mọi filter đều tuỳ chọn; sort cố định created_at desc. */
 export interface ListAuditLogsQuery {
@@ -33,6 +33,14 @@ export const systemApi = {
   /** SYSTEM-FR-002 — 400 nếu min ≥ max / ngoài khoảng đo cảm biến; ghi DEFAULT_THRESHOLDS_UPDATED vào audit log */
   updateDefaultThresholds: (input: Partial<SystemDefaultThresholds>) =>
     api.put<ApiResponse<SystemDefaultThresholds>>('/system/settings/default-thresholds', input),
+
+  /** TICKET-FR-006, SLA-NFR-001 — chưa cấu hình bao giờ thì backend trả DEFAULT_SLA (sla.util.ts) */
+  getSlaHours: () =>
+    api.get<ApiResponse<SlaConfig>>('/system/settings/sla'),
+
+  /** TICKET-FR-006 — 400 nếu giờ ≤0 hoặc hạn phản hồi muộn hơn hạn xử lý; ghi SLA_UPDATED vào audit log */
+  updateSlaHours: (input: Partial<SlaConfig>) =>
+    api.put<ApiResponse<SlaConfig>>('/system/settings/sla', input),
 
   /** SYSTEM-FR-003 */
   getHealthOverview: () =>

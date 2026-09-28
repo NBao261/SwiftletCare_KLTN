@@ -70,7 +70,8 @@ export default function AppSidebar({
         <nav className="flex-1 overflow-y-auto px-[18px] pb-3 pt-[18px]">
           {menuSections.map(section => (
             <div key={section.title} className="mb-4">
-              <p className="label-caption px-[10px] py-1">{section.title}</p>
+              {/* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng MỌI role. Sidebar đóng băng (FE_Design §4.1): .label-caption đã đổi sang sentence case nên nhãn nhóm menu viết style in hoa cũ trực tiếp ở đây — hiển thị KHÔNG đổi */}
+              <p className="px-[10px] py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{section.title}</p>
               <div className="space-y-1">
                 {section.items.map(item => {
                   const badgeCount = item.path === '/alerts' ? unreadCount : 0

@@ -17,15 +17,19 @@ const menuSections: MenuSection[] = [
     title: 'Vận hành',
     items: [
       { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
-      { label: 'Thiết bị & Cảm biến', path: '/devices', icon: IconDevice },
+      // OPS-NFR-004 — bảng chỉ xem toàn hệ thống; không trỏ /devices (màn kích hoạt/điều khiển của Technician,
+      // SRS RACI: Admin chỉ "I (audit)" với thiết bị)
+      { label: 'Thiết bị & Cảm biến', path: '/system/devices', icon: IconDevice },
       { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
     ],
   },
   {
     title: 'Quản lý',
     items: [
-      { label: 'Trang trại', path: '/farms', icon: IconFarm },
-      { label: 'Ticket', path: '/tickets', icon: IconTicket },
+      // FARM-FR-009 — trang riêng của Admin (mọi farm, không nút tạo), không dùng chung /farms của Farm Owner
+      { label: 'Trang trại', path: '/system/farms', icon: IconFarm },
+      // Bảng ticket riêng của Admin (search/filter/sort/can thiệp) — không dùng chung /tickets
+      { label: 'Ticket', path: '/system/tickets', icon: IconTicket },
       // AUTH-FR-011 — quản lý tài khoản toàn hệ thống (RACI mục 4.4)
       { label: 'Người dùng', path: '/users', icon: IconUsers },
       // AUTH-FR-012 (hàng đợi xoá tài khoản) + AUTH-FR-005d (đề xuất Sales Staff)
@@ -52,7 +56,7 @@ const menuSections: MenuSection[] = [
  */
 const dockItems: MenuItem[] = [
   { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
-  { label: 'Ticket', path: '/tickets', icon: IconTicket },
+  { label: 'Ticket', path: '/system/tickets', icon: IconTicket },
   { label: 'Người dùng', path: '/users', icon: IconUsers },
   { label: 'Yêu cầu tài khoản', path: '/account-requests', icon: IconBell },
 ]
