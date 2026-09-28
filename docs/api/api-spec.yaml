@@ -3447,6 +3447,10 @@ paths:
       tags: [Tickets]
       summary: "Tạo lịch bảo trì định kỳ (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
       description: |
+        Kỳ trước chưa hoàn thành thì **vẫn** sinh ticket kỳ mới (mỗi chu kỳ là một nghĩa vụ
+        riêng) nhưng cả hai ticket được ghi chú rõ và Admin nhận thông báo điều phối.
+        Lịch trùng nội dung đang hoạt động trên cùng farm/zone bị từ chối 409.
+
         Job chạy đầu mỗi giờ, tạo ticket MAINTENANCE trước hạn `MAINTENANCE_LEAD_DAYS`
         ngày (mặc định 3) qua Ticket Router rồi dời hạn sang chu kỳ kế tiếp.
         `next_due_at` chính là giờ hẹn của ticket sinh ra nên phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai.
@@ -4154,7 +4158,9 @@ paths:
     post:
       tags: [Tickets]
       summary: "Farm Owner đánh giá mức hài lòng sau khi đóng ticket (TICKET-FR-011) — FARM_OWNER/ADMIN"
-      description: "Ticket **đã huỷ** không đánh giá được (409) — không có việc nào được thực hiện để chấm điểm."
+      description: |
+        Ticket **đã huỷ** không đánh giá được (409) — không có việc nào được thực hiện để chấm điểm.
+        Mỗi ticket chỉ chấm **một lần**; muốn sửa điểm phải qua Admin (để còn ghi audit).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -4230,6 +4236,8 @@ paths:
           quyết định này được ghi `forcedOutOfRegion` vào audit log. `force` chỉ có
           tác dụng khi là boolean `true` (chuỗi `"true"`/`"1"` được ép về `true`,
           `"false"`/`"0"` về `false`).
+        - Đổi `assigned_to` gửi thông báo cho **cả** Technician mới (nhận việc) lẫn người cũ
+          (biết ticket đã chuyển đi); audit ghi `notifiedAssignee`.
         - Đổi `assigned_to` sang người khác mà **không** truyền `status` thì ticket
           quay về `NEW` để người mới xác nhận tiếp nhận; riêng ticket đang `CLOSED`
           bị chặn 409 — muốn mở lại phải nói rõ `status`, tránh ticket vừa `NEW`
