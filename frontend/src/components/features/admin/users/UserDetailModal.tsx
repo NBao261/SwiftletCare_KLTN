@@ -39,8 +39,12 @@ export default function UserDetailModal({ user, onClose }: { user: User | null; 
               <p className="truncate text-lg font-bold text-charcoal">{user.full_name}</p>
               <p className="truncate text-small text-graphite">{user.email}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <Badge>{ROLE_LABEL[user.role]}</Badge>
-                <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
+                {/* Khối hồ sơ nền lime trùng nền badge positive ("Hoạt động") → nền trắng để 2 nhãn đi cặp, không chìm;
+                    tone khác (đỏ/cam/xám) giữ màu riêng để vẫn đọc được trạng thái bằng màu */}
+                <Badge className="bg-white">{ROLE_LABEL[user.role]}</Badge>
+                <Badge tone={STATUS_TONE[status]} className={STATUS_TONE[status] === 'positive' ? 'bg-white' : undefined}>
+                  {STATUS_LABEL[status]}
+                </Badge>
               </div>
             </div>
           </div>
