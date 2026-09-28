@@ -773,6 +773,11 @@ export async function rateTicket(ticketId: string, user: CurrentUser, rating: nu
   // Ticket huỷ cũng chuyển CLOSED nhưng không có việc nào được làm — chấm sao ở
   // đây chỉ làm nhiễu dữ liệu hài lòng (TICKET-FR-011).
   if (ticket.cancelled_at) throw ConflictError('Ticket đã huỷ nên không có việc để đánh giá')
+  // Chấm lại nhiều lần thì điểm cũ mất không dấu vết, KPI đọc được mỗi con số
+  // cuối — sửa điểm phải qua Admin để còn ghi audit.
+  if (ticket.satisfaction_rating !== undefined) {
+    throw ConflictError(`Ticket này đã được đánh giá ${ticket.satisfaction_rating} sao — liên hệ Administrator nếu cần sửa`)
+  }
 
   const isCreator = !!ticket.created_by && String(ticket.created_by) === user._id
   // Ticket tự tạo từ Alert (TICKET-FR-002, createTicketsFromStaleAlerts) không
@@ -989,8 +994,26 @@ export async function adminOverrideTicket(
   })
   await ticket.save()
 
-  await logAction(adminUser._id, 'TICKET_ADMIN_OVERRIDE', 'ticket', ticketId, changes)
+  const newAssignee = assigneeIdOf(ticket)
+  const assigneeReplaced = newAssignee !== previousAssignee
+
+  await logAction(adminUser._id, 'TICKET_ADMIN_OVERRIDE', 'ticket', ticketId, {
+    ...changes, ...(assigneeReplaced ? { notifiedAssignee: newAssignee } : {}),
+  })
   await announceAssigneeChange(ticket, previousAssignee)
+
+  // Tin hệ thống trong thread chat chỉ tới người đang mở kênh đó — Technician vừa
+  // được gán chưa từng phụ trách ticket này nên không có lý do mở, trong khi đồng
+  // hồ SLA đã chạy từ lúc gán. Phải báo thẳng như createTicket/requestReassign.
+  if (assigneeReplaced) {
+    if (newAssignee) notifyNewAssignment(newAssignee, ticket)
+    if (previousAssignee) {
+      void notifyUser(previousAssignee, {
+        title: 'Ticket đã chuyển cho người khác',
+        body: `Administrator chuyển ticket ${ticketId} (${ticket.type}) sang Technician khác. Lý do: ${updates.reason}`,
+      })
+    }
+  }
   if (visitChanged && ticket.scheduled_visit_at) {
     const assignee = assigneeIdOf(ticket)
     await notifyVisitChange(ticket, {

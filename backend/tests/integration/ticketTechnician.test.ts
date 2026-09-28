@@ -491,3 +491,35 @@ describe('huỷ ticket và đánh giá', () => {
     expect(res.body.error.message).toContain('đã huỷ')
   })
 })
+
+describe('Admin can thiệp ticket (TICKET-FR-005b)', () => {
+  it('gán Technician mới thì cả người mới lẫn người cũ đều được báo', async () => {
+    const { ticket, assignee, colleague } = await seed()
+    const admin = await User.create({ email: 'admin4@test.vn', password_hash: 'password123', full_name: 'Admin', role: 'ADMIN' })
+    ;(notifyUser as jest.Mock).mockClear()
+
+    await put(`/tickets/${ticket._id}/admin-override`, tokenFor(admin._id, 'ADMIN'), {
+      assigned_to: String(colleague._id), reason: 'Điều phối lại cho kịp SLA',
+    }).expect(200)
+
+    const notified = (notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))
+    expect(notified).toContain(String(colleague._id)) // người mới nhận việc
+    expect(notified).toContain(String(assignee._id))  // người cũ biết mình bị chuyển
+    const audit = await AuditLog.findOne({ action: 'TICKET_ADMIN_OVERRIDE' }).lean()
+    expect(audit!.metadata).toMatchObject({ notifiedAssignee: String(colleague._id) })
+  })
+})
+
+describe('đánh giá ticket chỉ một lần (TICKET-FR-011)', () => {
+  it('chấm lần hai bị từ chối', async () => {
+    const { ticket, owner, assigneeToken } = await seed()
+    const ownerToken = tokenFor(owner._id, 'FARM_OWNER')
+    await Ticket.updateOne({ _id: ticket._id }, { created_by: owner._id })
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(200)
+
+    await post(`/tickets/${ticket._id}/rating`, ownerToken, { satisfaction_rating: 5 }).expect(200)
+    const again = await post(`/tickets/${ticket._id}/rating`, ownerToken, { satisfaction_rating: 1 }).expect(409)
+    expect(again.body.error.message).toContain('đã được đánh giá')
+    expect((await Ticket.findById(ticket._id))!.satisfaction_rating).toBe(5)
+  })
+})
