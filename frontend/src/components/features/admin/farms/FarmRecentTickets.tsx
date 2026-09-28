@@ -46,10 +46,14 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    // Card trắng cùng khuôn card danh sách các trang Admin (RecentActivityCard): icon như mục menu sidebar + tiêu đề
+    <section className="flex flex-col gap-4 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <h2 className="font-bold text-charcoal">Ticket gần nhất</h2>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
+            <IconTicket width={20} height={20} />
+          </span>
+          <h2 className="text-h2 text-charcoal">Ticket gần nhất</h2>
           {total > 0 && (
             <span className="shrink-0 rounded-full bg-limeMist px-2.5 py-1 text-[11px] font-semibold tabular-nums text-charcoal/70">
               {records.length}/{total}
@@ -72,9 +76,9 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
         />
       )}
 
-      {/* 1 khung liền khối (cùng bo/viền/bóng với Card mặc định), mỗi ticket là 1 dòng ngăn bằng divide-y */}
+      {/* 1 khung liền khối (viền, không bóng — đã nằm trong card), mỗi ticket là 1 dòng ngăn bằng divide-y */}
       {records.length > 0 && (
-        <div className="divide-y divide-warmGray/15 overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
+        <div className="divide-y divide-warmGray/15 overflow-hidden rounded-2xl border border-warmGray/15 bg-white">
           {records.map((ticket) => {
             const isOpen = ticket.status !== "CLOSED";
             const isBreached = ticket.is_sla_breached && isOpen;
@@ -121,6 +125,6 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
           })}
         </div>
       )}
-    </div>
+    </section>
   );
 }

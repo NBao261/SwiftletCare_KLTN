@@ -4,6 +4,7 @@ import { useFarm, useHouses, useZones } from "@/hooks/shared/useFarms";
 import { usePageBreadcrumb, usePageBack } from "@/hooks/common/useBreadcrumb";
 import { Button, EmptyState } from "@/components/ui";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { IconFarm } from "@/components/ui/icons";
 
 /**
  * Phòng (= Zone ở backend) của 1 nhà yến cho Admin (/system/farms/:farmId/houses/:houseId) —
@@ -53,16 +54,22 @@ export default function AdminFarmHousePage() {
   const devicesUrl = `/system/devices?farm=${encodeURIComponent(farm?.name ?? "")}`;
 
   return (
-    <div className="flex flex-col gap-6">
+    // 1 khung trắng: thông tin nhà + danh sách tầng/phòng — cùng khuôn card các trang Admin (icon như mục menu sidebar)
+    <section className="flex flex-col gap-6 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">{house.name}</p>
-          <p className="text-sm text-warmGray">
-            {house.floors} tầng · {rooms?.length ?? 0} phòng
-            {!zones.isLoading && emptyFloors > 0 && (
-              <span className="font-semibold text-orange-600"> · {emptyFloors} tầng chưa có phòng</span>
-            )}
-          </p>
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
+            <IconFarm width={20} height={20} />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-2xl font-bold tracking-tight text-charcoal">{house.name}</p>
+            <p className="text-sm text-warmGray">
+              {house.floors} tầng · {rooms?.length ?? 0} phòng
+              {!zones.isLoading && emptyFloors > 0 && (
+                <span className="font-semibold text-orange-600"> · {emptyFloors} tầng chưa có phòng</span>
+              )}
+            </p>
+          </div>
         </div>
         <Button variant="secondary" size="sm" onClick={() => navigate(devicesUrl)}>
           Thiết bị & Cảm biến
@@ -75,7 +82,7 @@ export default function AdminFarmHousePage() {
         floors.map((floor) => {
           const floorRooms = rooms?.filter((r) => r.floor === floor) ?? [];
           return (
-            <section key={floor} className="flex flex-col gap-2">
+            <div key={floor} className="flex flex-col gap-2">
               <div className="flex items-center gap-2.5">
                 <h3 className="text-sm font-bold text-charcoal">Tầng {floor}</h3>
                 <span className="text-xs text-warmGray">{floorRooms.length} phòng</span>
@@ -92,9 +99,9 @@ export default function AdminFarmHousePage() {
                   </div>
                 ))
               )}
-            </section>
+            </div>
           );
         })}
-    </div>
+    </section>
   );
 }
