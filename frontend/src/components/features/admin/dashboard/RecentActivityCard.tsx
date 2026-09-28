@@ -6,6 +6,7 @@ import { useUsersPicker } from '@/hooks/admin/useUsers'
 import DataTable from '@/components/ui/DataTable'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import SectionCard from '@/components/ui/SectionCard'
 import { buildAuditLogColumns } from '@/components/features/admin/audit-log/auditLogColumns'
 
 const PAGE_SIZE = 6
@@ -21,23 +22,17 @@ export default function RecentActivityCard() {
   const userNames = useMemo(() => new Map(actors.records.map(u => [u._id, u.full_name])), [actors.records])
 
   return (
-    <section className="rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
-            <ClockCounterClockwiseIcon size={20} weight="bold" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-h2 text-charcoal">Nhật ký hoạt động gần đây</h2>
-            <p className="text-small text-graphite">Hành động quản trị và sự kiện hệ thống mới nhất</p>
-          </div>
-        </div>
+    <SectionCard
+      icon={<ClockCounterClockwiseIcon size={20} weight="bold" />}
+      title="Nhật ký hoạt động gần đây"
+      description="Hành động quản trị và sự kiện hệ thống mới nhất"
+      action={
         <Link to="/system/audit-log" className="group inline-flex items-center gap-1 text-small font-semibold text-charcoal hover:underline">
           Xem tất cả
           <ArrowRightIcon size={14} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
         </Link>
-      </div>
-
+      }
+    >
       {isLoading ? (
         <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />
       ) : (
@@ -49,6 +44,6 @@ export default function RecentActivityCard() {
         />
       )}
       <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
-    </section>
+    </SectionCard>
   )
 }

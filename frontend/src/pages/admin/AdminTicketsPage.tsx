@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { PlusIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { useAllTickets } from "@/hooks/admin/useAdminTickets";
 import { useFarms } from "@/hooks/shared/useFarms";
-import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips } from "@/components/ui";
+import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips, SectionCard } from "@/components/ui";
 import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -135,17 +135,8 @@ export default function AdminTicketsPage() {
         onSelectTechnician={(name) => { setSearch(name); setPage(1); }}
       />
 
-      {/* Card danh sách: tìm kiếm → bộ lọc → bảng → phân trang — cùng khuôn card "Nhật ký hoạt động gần đây" (RecentActivityCard), icon như mục menu sidebar */}
-      <section className="flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
-            <IconTicket width={20} height={20} />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-h2 text-charcoal">Danh sách ticket</h2>
-            <p className="text-small text-graphite">Ticket toàn hệ thống — bấm một dòng để xem chi tiết và can thiệp</p>
-          </div>
-        </div>
+      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
+      <SectionCard icon={<IconTicket width={20} height={20} />} title="Danh sách ticket" description="Ticket toàn hệ thống — bấm một dòng để xem chi tiết và can thiệp">
 
         {/* Hàng 1: tìm kiếm + tạo ticket — cùng khuôn trang Người dùng (POST /tickets cho FARM_OWNER, ADMIN).
             Tổng số ticket nằm ở Pagination dưới bảng ("Hiển thị x–y trong z"), không lặp ở đây. */}
@@ -213,7 +204,7 @@ export default function AdminTicketsPage() {
 
         {/* total = số ticket SAU khi lọc + tìm kiếm — tìm ra 2 thì hiện "1–2 trong 2", không phải 113 */}
         <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
-      </section>
+      </SectionCard>
 
       <CreateTicketModal open={showCreate} onClose={() => setShowCreate(false)} defaultFarmId={farmId || undefined} />
       {/* Modal nhận `ticket` bắt buộc — chỉ mount khi đã chọn dòng */}

@@ -7,7 +7,7 @@ import { useAuditLogList, useAllAuditLogs } from '@/hooks/admin/useSystem'
 import { useUsersPicker } from '@/hooks/admin/useUsers'
 import { AUDIT_ACTION_LABEL } from '@/constants/auditActions'
 import { ROLE_LABEL } from '@/constants/roles'
-import { Button, ClearFiltersButton, SearchInput, SortChips } from '@/components/ui'
+import { Button, ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
 import DataTable from '@/components/ui/DataTable'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -157,17 +157,8 @@ export default function AdminAuditLogPage() {
       {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Ticket/Người dùng */}
       <AuditLogStats />
 
-      {/* Card danh sách: tìm kiếm → bộ lọc → bảng → phân trang — cùng khuôn card "Nhật ký hoạt động gần đây" (RecentActivityCard), icon như mục menu sidebar */}
-      <section className="flex min-w-0 flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
-            <IconAnalytics width={20} height={20} />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-h2 text-charcoal">Danh sách nhật ký</h2>
-            <p className="text-small text-graphite">Hành động quản trị và sự kiện hệ thống, mới nhất trước</p>
-          </div>
-        </div>
+      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
+      <SectionCard icon={<IconAnalytics width={20} height={20} />} title="Danh sách nhật ký" description="Hành động quản trị và sự kiện hệ thống, mới nhất trước" className="min-w-0">
 
         {/* Hàng 1: ô tìm kiếm cỡ mặc định, rộng hết hàng — cùng bố cục trang Người dùng */}
         <SearchInput
@@ -222,7 +213,7 @@ export default function AdminAuditLogPage() {
 
         {/* total = số nhật ký SAU khi tìm chữ — tìm ra 3 thì hiện "1–3 trong 3" */}
         <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
-      </section>
+      </SectionCard>
     </div>
   )
 }

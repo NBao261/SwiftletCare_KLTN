@@ -9,7 +9,7 @@ import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
 import { IconDevice } from '@/components/ui/icons'
 import { useSystemNodeStatus } from '@/hooks/shared/useDevices'
-import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips } from '@/components/ui'
+import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips, SectionCard } from '@/components/ui'
 import DataTable from '@/components/ui/DataTable'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -114,17 +114,8 @@ export default function AdminDevicesPage() {
       {/* Hàng 0: 5 ô số toàn hệ thống — tự làm mới mỗi 30 giây (useSystemNodeStatus) */}
       <DeviceStats status={data} />
 
-      {/* Card danh sách: tìm kiếm → bộ lọc → bảng → phân trang — cùng khuôn card "Nhật ký hoạt động gần đây" (RecentActivityCard), icon như mục menu sidebar */}
-      <section className="flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
-            <IconDevice width={20} height={20} />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-h2 text-charcoal">Danh sách thiết bị</h2>
-            <p className="text-small text-graphite">Cảm biến và camera toàn hệ thống · tự làm mới mỗi 30 giây</p>
-          </div>
-        </div>
+      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
+      <SectionCard icon={<IconDevice width={20} height={20} />} title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống · tự làm mới mỗi 30 giây">
 
         {/* Hàng 1: tìm kiếm — không có nút tạo: kích hoạt thiết bị là việc của Technician */}
         <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, phòng..." value={search} onChange={withReset(setSearch)} />
@@ -149,7 +140,7 @@ export default function AdminDevicesPage() {
 
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}
         <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
-      </section>
+      </SectionCard>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useFarm, useHouses, useFarmZones } from "@/hooks/shared/useFarms";
 import { usePageBreadcrumb, usePageBack } from "@/hooks/common/useBreadcrumb";
-import { Card } from "@/components/ui";
+import { Card, SectionCard } from "@/components/ui";
 import { IconChevronRight, IconFarm } from "@/components/ui/icons";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import EmptyState from "@/components/ui/EmptyState";
@@ -30,27 +30,26 @@ export default function AdminFarmDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 1 khung trắng: thông tin farm + cặp card Nhà yến/Thành viên — cùng khuôn card các trang Admin (icon như mục menu sidebar) */}
-      <section className="flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
-            <IconFarm width={20} height={20} />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-2xl font-bold tracking-tight text-charcoal">{farm.name}</p>
-            <p className="truncate text-sm text-warmGray">
+      {/* 1 khung (SectionCard): thông tin farm + cặp card Nhà yến/Thành viên — icon như mục menu sidebar */}
+      <SectionCard
+        icon={<IconFarm width={20} height={20} />}
+        title={farm.name}
+        description={
+          <>
+            <p className="truncate text-warmGray">
               {farm.address}
               {farm.region ? ` · ${farm.region}` : ""}
             </p>
             {/* GET /farms/:id đã populate owner — không tốn request thêm */}
             {farm.owner?.full_name && (
-              <p className="mt-1 truncate text-sm text-graphite">
+              <p className="mt-0.5 truncate">
                 Chủ sở hữu: <span className="font-semibold text-charcoal">{farm.owner.full_name}</span>
                 {farm.owner.email && <span className="text-warmGray"> ({farm.owner.email})</span>}
               </p>
             )}
-          </div>
-        </div>
+          </>
+        }
+      >
 
         {/* Cặp card lime (trái) / charcoal (phải) — cùng ngôn ngữ với SlaCard/ThresholdsCard ở AdminSystemSettingsPage; grid stretch để 2 card cao bằng nhau.
             Không bóng: đã nằm trong khung trắng */}
@@ -106,7 +105,7 @@ export default function AdminFarmDetailPage() {
           </Card>
           <FarmMembersCard farmId={farmId!} />
         </div>
-      </section>
+      </SectionCard>
 
       <FarmRecentTickets farmId={farmId!} />
     </div>

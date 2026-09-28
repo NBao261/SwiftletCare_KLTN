@@ -4,7 +4,7 @@
 // (constants.ts) và từng modal (*Modal.tsx) nằm ở file riêng trong cùng thư mục.
 import { useState } from 'react'
 import { useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
-import { Button, ClearFiltersButton, SearchInput, SortChips } from '@/components/ui'
+import { Button, ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import FilterChip from '@/components/ui/FilterChip'
@@ -79,17 +79,8 @@ export default function AdminUsersPage() {
       {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Ticket */}
       <UserStats />
 
-      {/* Card danh sách: tìm kiếm → bộ lọc → bảng → phân trang — cùng khuôn card "Nhật ký hoạt động gần đây" (RecentActivityCard), icon như mục menu sidebar */}
-      <section className="flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
-            <IconUsers width={20} height={20} />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-h2 text-charcoal">Danh sách tài khoản</h2>
-            <p className="text-small text-graphite">Tài khoản toàn hệ thống — xem chi tiết, gán khu vực, khoá/mở khoá</p>
-          </div>
-        </div>
+      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
+      <SectionCard icon={<IconUsers width={20} height={20} />} title="Danh sách tài khoản" description="Tài khoản toàn hệ thống — xem chi tiết, gán khu vực, khoá/mở khoá">
 
         {/* Hàng 1: tìm kiếm + tạo tài khoản. 1 nút duy nhất — Admin chỉ tạo Technician/Sales
             Staff (AUTH-FR-005c), chọn vai trò ngay trong modal thay vì 2 nút riêng. */}
@@ -142,7 +133,7 @@ export default function AdminUsersPage() {
         )}
 
         <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
-      </section>
+      </SectionCard>
 
       <CreateUserModal open={showCreate} onClose={() => setShowCreate(false)} />
       <UserDetailModal user={viewTarget} onClose={() => setViewTarget(null)} />
