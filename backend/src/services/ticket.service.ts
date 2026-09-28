@@ -761,6 +761,7 @@ interface TechnicianKpiRow {
   total: number
   closed: number
   cancelled: number
+  unaccepted: number
   resolveMsSum: number
   resolvedCount: number
   due: number
@@ -796,6 +797,8 @@ export async function getKpi() {
           total: { $sum: 1 },
           closed: { $sum: { $cond: [{ $eq: ['$status', 'CLOSED'] }, 1, 0] } },
           cancelled: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$cancelled_at', null] }, null] }, 1, 0] } },
+          // Đã gán nhưng KTV chưa tiếp nhận (còn NEW) — tách khỏi việc đang làm để Admin thấy ai ôm việc mà chưa nhận
+          unaccepted: { $sum: { $cond: [{ $eq: ['$status', 'NEW'] }, 1, 0] } },
           resolveMsSum: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, { $subtract: ['$closed_at', '$created_at'] }, 0] } },
           resolvedCount: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
           due: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }] }, 1, 0] } },
@@ -831,6 +834,7 @@ export async function getKpi() {
       total: row.total,
       closed: row.closed,
       cancelled: row.cancelled,
+      unaccepted: row.unaccepted,
       avgResolveHours: row.resolvedCount ? toHours(row.resolveMsSum / row.resolvedCount) : null,
       avgResponseHours: row.respondedCount ? toHours(row.responseMsSum / row.respondedCount) : null,
       escalated: row.escalated,

@@ -19,5 +19,7 @@ export function usePaginatedListQuery<T>(
     page: result.data?.data.meta?.page ?? fallbackPage,
     limit: result.data?.data.meta?.limit ?? fallbackLimit,
     isLoading: result.isLoading,
+    isError: result.isError,
+    refetch: result.refetch,
   }
 }

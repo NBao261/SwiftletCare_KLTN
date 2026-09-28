@@ -3412,6 +3412,8 @@ paths:
                                 total: { type: integer }
                                 closed: { type: integer }
                                 cancelled: { type: integer }
+                                unaccepted:
+                                  { type: integer, description: "Ticket được gán nhưng KTV chưa tiếp nhận (status NEW)" }
                                 avgResolveHours: { type: number, nullable: true }
                                 avgResponseHours: { type: number, nullable: true, description: "Giao ticket (assigned_at) → Technician xác nhận tiếp nhận (responded_at)" }
                                 escalated: { type: integer, description: "Số ticket Technician chủ động escalate" }

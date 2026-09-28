@@ -25,7 +25,8 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
   return [
     // Width theo % (bảng đang table-fixed) — mọi cột co giãn cùng tỉ lệ ở mọi độ
     // rộng màn hình, thay vì để cột "Người dùng" nuốt hết phần dư làm các cột
-    // còn lại bị đẩy xa nhau. Tổng = 100%, vẫn đủ chỗ ở min-w 960px.
+    // còn lại bị đẩy xa nhau. Tổng = 100% (7+30+18+16+19+10), vẫn đủ chỗ ở min-w 960px.
+    // Không thêm padding trái riêng cho cột nào (từng có `pl-12` ở Trạng thái làm badge lệch khỏi mép cột).
     {
       key: 'stt', header: 'STT', align: 'center', className: 'w-[7%]',
       render: (_user, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
@@ -34,7 +35,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
       // Sort theo tên/email đặt ở nút "Sắp xếp" cùng hàng filter (không phải
       // click header) vì cột này gộp 2 trường — click 1 header không đủ diễn đạt
       // "sort theo tên" hay "sort theo email".
-      key: 'full_name', header: 'Người dùng', className: 'w-[26%]',
+      key: 'full_name', header: 'Người dùng', className: 'w-[30%]',
       render: (user) => (
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="truncate font-semibold text-charcoal">{user.full_name}</p>
@@ -43,7 +44,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
       ),
     },
     {
-      key: 'role', header: 'Vai trò', sortable: true, className: 'w-[16%]',
+      key: 'role', header: 'Vai trò', sortable: true, className: 'w-[18%]',
       render: (user) => (
         <div className="flex min-w-0 flex-col items-start gap-0.5">
           <Badge tone="info" className="whitespace-nowrap">{ROLE_LABEL[user.role]}</Badge>
@@ -55,7 +56,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
       ),
     },
     {
-      key: 'status', header: 'Trạng thái', sortable: true, className: 'w-[22%] pl-12',
+      key: 'status', header: 'Trạng thái', sortable: true, className: 'w-[16%]',
       render: (user) => {
         const status = getUserStatus(user)
         return (
@@ -92,7 +93,12 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
         } else if (status !== 'DELETED' && !isSelf) {
           items.push({ label: 'Khoá tài khoản', danger: true, onClick: () => handlers.onLock(user) })
         }
-        return <ActionsMenu items={items} />
+        return (
+          // stopPropagation — dòng đã bấm-được (onRowClick mở chi tiết), mở menu bằng chuột/bàn phím không được kéo theo
+          <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+            <ActionsMenu items={items} />
+          </div>
+        )
       },
     },
   ]

@@ -47,14 +47,19 @@ export function useFloatingMenu({ align, estimatedHeight, matchTriggerWidth }: O
       if (e.key === 'Escape') setOpen(false)
     }
     function close() { setOpen(false) }
+    // Cuộn TRONG menu (danh sách dài có thanh cuộn) không được tính là cuộn trang
+    function onScroll(e: Event) {
+      if (menuRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('scroll', close, true)
+    window.addEventListener('scroll', onScroll, true)
     window.addEventListener('resize', close)
     return () => {
       document.removeEventListener('mousedown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', close)
     }
   }, [open])

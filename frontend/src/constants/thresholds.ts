@@ -21,10 +21,6 @@ export const FACTORY_DEFAULT_THRESHOLDS: Thresholds = {
 }
 
 /**
- * Khoảng đo của cảm biến thật (SRS §7.1) — khớp `THRESHOLD_LIMITS` backend, dùng
- * để validate trước khi gửi (backend vẫn kiểm lại và trả 400 nếu lệch).
- */
-/**
  * Nhãn + bước nhập cho form 7 ngưỡng. Hiện chỉ AdminSystemSettingsPage dùng; ThresholdsModal (Farm Owner,
  * cùng 7 trường và cùng khoảng đo ở backend) vẫn giữ bản riêng — nên chuyển sang dùng chung với
  * `validateThresholds`/`parseThresholdInput` để cũng hết lỗi `Number('')` → 0.

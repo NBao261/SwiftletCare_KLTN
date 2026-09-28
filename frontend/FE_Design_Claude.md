@@ -14,6 +14,8 @@
 |---|---|
 | 1 | **Đổi mô hình actor theo SRS v1.23.0: thêm Farm Operator, bỏ Sales Staff + Module SALES.** Farm Operator (role `FARM_OPERATOR`) là nhân viên vận hành do Primary Owner mời, phạm vi cả farm hoặc một số Zone; được giám sát, xác nhận cảnh báo, relay/lịch loa, ngưỡng Zone, ticket + chat, nhập thu hoạch — không sửa/xoá farm, không quản lý thành viên, không tạo House/Zone, không đăng bán. Các mục 7, 8, 12, 13 viết lại theo **trạng thái đích**: bucket `farm-operator/` thay `sales-staff/`, `FarmOperatorLayout` thay `SalesStaffLayout`, thêm nhóm role `FARM_SIDE_ROLES`, bỏ dòng Module SALES. |
 | 2 | **Code frontend chưa theo kịp** — hiện vẫn còn `pages/sales-staff/`, `SalesStaffLayout`, `salesStaffRoutes`, role `SALES_STAFF` trong `types/`, và chưa có layout/route/menu cho Operator. Backend đã xong (SRS §5 AUTH-FR-004/005); việc chuyển code FE là follow-up riêng. |
+| 3 | **Bỏ chữ in hoa (`uppercase`) ở nhãn nhỏ, chuyển sang sentence case.** Tiếng Việt in hoa ở 11px chồng dấu (Ế, Ữ, Ặ) nên khó đọc, và nhãn in hoa ở mọi section làm giao diện đơn điệu. `.label-caption` (`index.css`) đổi thành 12px/16px, 600, không `uppercase`, không giãn chữ. Line-height giữ 16px nên layout không xô. Tiêu đề cột `DataTable` dùng chung `.label-caption`. Ngoại lệ giữ in hoa: nhãn nhóm menu sidebar (đóng băng, mục 4.1) và banner chế độ SCADA (nhãn trạng thái, không phải tiêu đề). Xem 2.8. |
+| 4 | **Nút "Hủy lọc" đổi từ Danger sang Secondary** ở 4 trang Admin (Người dùng, Ticket, Trang trại, Audit log). Xoá bộ lọc không phá huỷ dữ liệu, trong khi Danger chỉ dành cho hành động phá huỷ/khẩn cấp (5.1). |
 
 ### v2.3.1 → v2.4.0
 | # | Thay đổi |
@@ -207,8 +209,11 @@ Font duy nhất: **Plus Jakarta Sans** (Google Fonts), weight 400–800.
 | `text-body` | 14px/22px | 400/500 | Nội dung mặc định |
 | `text-small` | 13px/18px | 400 | Label phụ, timestamp |
 | `text-caption` | 11px/16px | 600, spacing 0.04em | Nhãn nhóm nav (sidebar) |
+| `.label-caption` (class trong `index.css`) | 12px/16px | 600, `--gray-500` | Nhãn section, nhãn ô form, tiêu đề cột bảng, nhãn trước nhóm nút ("Sắp xếp:") |
 | `text-metric` | 32px/38px | 700, tabular-nums | Số liệu lớn |
 | `text-mock-notice` | 11px/16px | 500, italic | `--gray-500` — dòng "FAKE data" |
+
+**Không in hoa nhãn/tiêu đề (v2.5.0).** Nhãn nhỏ viết sentence case bằng `.label-caption`, không thêm `uppercase` hay `tracking-[...]` rời. Chỉ 2 chỗ được in hoa: nhãn nhóm menu sidebar (mục 4.1) và banner chế độ SCADA. Số trong cột bảng/số liệu dùng `tabular-nums` để thẳng hàng theo cột.
 
 ---
 
@@ -278,6 +283,8 @@ Card mặc định: `background:#FFFFFF; border-radius:var(--radius-xl); box-sha
 | Ghost | trong suốt | `--gray-700` |
 
 Radius `--radius-md`, height 40px.
+
+Danger chỉ dành cho hành động phá huỷ/khẩn cấp. Nút đặt lại bộ lọc ("Hủy lọc") dùng Secondary.
 
 ### 5.2. Popup xác nhận (CRUD & Đăng xuất) — nền mờ, không nền đen
 

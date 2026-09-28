@@ -22,9 +22,9 @@ export interface ListUsersQuery {
    */
   status?: Extract<UserStatus, 'ACTIVE' | 'LOCKED'>
   role?: Role
-  /** Chỉ lọc CLIENT-SIDE trên trang hiện tại — /admin/users chưa có search */
+  /** Lọc CLIENT-SIDE trên TOÀN BỘ tài khoản khớp status/role — /admin/users chưa có search */
   search?: string
-  /** Chỉ sort CLIENT-SIDE trên trang hiện tại — /admin/users cố định created_at desc */
+  /** Sort CLIENT-SIDE trên toàn bộ — /admin/users cố định created_at desc */
   sortBy?: UsersSortKey
   sortDir?: SortDirection
   page?: number
@@ -51,33 +51,55 @@ function sortUsers(list: User[], sortKey?: UsersSortKey, sortDir: SortDirection 
   })
 }
 
-/** AUTH-FR-011 — GET /admin/users. */
+/** Trần `limit` backend (utils/helpers.util.ts#paginate) — không lấy được nhiều hơn trong 1 request */
+const PICKER_LIMIT = 100
+
+/**
+ * Toàn bộ tài khoản khớp status/role — tải hết các trang, mỗi request tối đa PICKER_LIMIT. Không truyền
+ * gì = mọi tài khoản (hàng chỉ số UserStats dùng chung cache với bảng khi bảng không lọc).
+ */
+export function useAllUsers(status?: ListUsersQuery['status'], role?: Role) {
+  return useQuery({
+    queryKey: ['admin-users', 'all', status, role],
+    queryFn: async (): Promise<User[]> => {
+      const apiStatus = status === 'ACTIVE' ? 'active' as const : status === 'LOCKED' ? 'inactive' as const : undefined
+      const params = { role, status: apiStatus, limit: PICKER_LIMIT }
+      const first = (await adminApi.listUsers({ ...params, page: 1 })).data
+      const pageCount = Math.ceil((first.meta?.total ?? first.data.length) / PICKER_LIMIT)
+      const rest = await Promise.all(
+        Array.from({ length: Math.max(pageCount - 1, 0) }, (_, i) => adminApi.listUsers({ ...params, page: i + 2 }).then(r => r.data)),
+      )
+      return [first, ...rest].flatMap(r => r.data)
+    },
+  })
+}
+
+/**
+ * AUTH-FR-011 — GET /admin/users. Backend chỉ lọc được status/role và không có search/sort, nên tải
+ * HẾT các trang khớp status/role (mỗi request tối đa PICKER_LIMIT, như useAllTickets) rồi tìm kiếm +
+ * sắp xếp + cắt trang ở client — tìm ra bao nhiêu thì `total`/phân trang đúng bấy nhiêu, không chỉ
+ * trong trang đang xem.
+ * ponytail: tải toàn bộ tài khoản mỗi lần đổi status/role — đủ cho quy mô hiện tại; khi lên vài nghìn
+ * tài khoản thì thêm search/sort vào backend và trả về phân trang server-side.
+ */
 export function useUsersList(query: ListUsersQuery) {
   const page = query.page ?? 1
   const limit = query.limit ?? 20
-  const result = useQuery({
-    queryKey: ['admin-users', query.status, query.role, page, limit],
-    queryFn: () => {
-      const status = query.status === 'ACTIVE' ? 'active' : query.status === 'LOCKED' ? 'inactive' : undefined
-      return adminApi.listUsers({ role: query.role, status, page, limit }).then(r => r.data)
-    },
-  })
+  const result = useAllUsers(query.status, query.role)
 
-  let records = result.data?.data ?? []
-  if (query.search) records = records.filter(u => matchesSearch(u, query.search!))
-  records = sortUsers(records, query.sortBy, query.sortDir)
+  let all = result.data ?? []
+  if (query.search) all = all.filter(u => matchesSearch(u, query.search!))
+  all = sortUsers(all, query.sortBy, query.sortDir)
 
   return {
-    records,
-    total: result.data?.meta?.total ?? 0,
-    page: result.data?.meta?.page ?? page,
-    limit: result.data?.meta?.limit ?? limit,
+    records: all.slice((page - 1) * limit, page * limit),
+    /** Số tài khoản SAU khi tìm kiếm — mẫu số của phân trang */
+    total: all.length,
+    page,
+    limit,
     isLoading: result.isLoading,
   }
 }
-
-/** Trần `limit` backend (utils/helpers.util.ts#paginate) — không lấy được nhiều hơn trong 1 request */
-const PICKER_LIMIT = 100
 
 /**
  * Danh sách người dùng cho các ô chọn (gán lại KTV, lọc actor nhật ký) — 1 trang
@@ -121,7 +143,20 @@ export function useCreateUser() {
         ? adminApi.createTechnician({ ...base, assigned_regions: input.assigned_regions })
         : adminApi.createSalesStaff({ ...base, farm_ids: input.farm_ids })
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      // Sales Staff mới được gán thẳng farm_ids — danh sách Sales Staff của farm (card Thành viên) phải làm mới
+      void queryClient.invalidateQueries({ queryKey: ['sales-staff'] })
+    },
+  })
+}
+
+/** Flow 16 case 1e — Admin gỡ thẳng Sales Staff khỏi 1 farm (chỉ xoá bản ghi gán, không đụng tài khoản) */
+export function useUnassignSalesStaff(farmId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (salesStaffId: string) => adminApi.unassignSalesStaff(farmId, salesStaffId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sales-staff', farmId] }),
   })
 }
 

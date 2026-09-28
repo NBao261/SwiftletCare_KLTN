@@ -16,7 +16,10 @@ import { useToastStore } from '@/stores/toastStore'
 import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, PRIORITY_TONE } from '@/constants/tickets'
 // RescheduleModal gated by canAdminIntervene (ADMIN) — owned by admin/tickets/ per rule 12.7
-import { ChangePriorityModal, ReassignTicketModal, RescheduleModal } from '@/components/features/admin/tickets/AdminOverrideModals'
+// [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng Technician: chỉ đổi đường import — file AdminOverrideModals.tsx cũ đã tách thành 3 file modal riêng; giao diện/logic trang không đổi.
+import ChangePriorityModal from '@/components/features/admin/tickets/ChangePriorityModal'
+import ReassignTicketModal from '@/components/features/admin/tickets/ReassignTicketModal'
+import RescheduleModal from '@/components/features/admin/tickets/RescheduleModal'
 // ── Technician components ───────────────────────────────────────────────────
 import { SAT_ITEMS } from '@/components/features/technician/tickets/ticketHelpers'
 import { SLABreachBanner } from '@/components/features/technician/tickets/SLABreachBanner'
@@ -38,7 +41,7 @@ export default function TechnicianTicketDetailPage() {
   const canManageTicket = usePermission('FARM_OWNER', 'ADMIN')
   // TICKET-FR-005b — quyền can thiệp thường trực của Admin trên MỌI ticket, bất
   // kể trạng thái/SLA (không gate theo status !== 'CLOSED' như canCancel).
-  // 3 modal ở AdminOverrideModals.tsx, cùng gọi PUT /tickets/:id/admin-override.
+  // 3 modal ở features/admin/tickets/ (ChangePriority/ReassignTicket/Reschedule), cùng gọi PUT /tickets/:id/admin-override.
   const canAdminIntervene = usePermission('ADMIN')
   // Breadcrumb AppHeader: "Ticket / <loại> #<6 ký tự cuối id>" — dẫn xuất từ chính route :id, không có API riêng trả "tiêu đề" ticket
   usePageBreadcrumb(ticket ? [{ label: `${TICKET_TYPE_LABEL[ticket.type]} #${ticket._id.slice(-6)}` }] : [])
