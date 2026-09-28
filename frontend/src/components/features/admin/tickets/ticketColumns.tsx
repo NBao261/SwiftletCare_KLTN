@@ -118,8 +118,8 @@ export function buildTicketColumns(
     {
       key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[9%]',
       render: (ticket) => (
-        // stopPropagation — dòng đã bấm-được (onRowClick), mở menu không được kéo theo điều hướng
-        <div onClick={e => e.stopPropagation()}>
+        // stopPropagation — dòng đã bấm-được (onRowClick), mở menu bằng chuột/bàn phím không được kéo theo điều hướng
+        <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
           <ActionsMenu
             items={[
               { label: 'Xem chi tiết', onClick: () => handlers.onView(ticket) },

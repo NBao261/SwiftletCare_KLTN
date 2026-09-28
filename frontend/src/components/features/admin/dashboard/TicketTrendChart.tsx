@@ -131,7 +131,7 @@ interface TipState { index: number; x: number; y: number; flip: boolean }
 
 /**
  * Card "Xu hướng Ticket & Tuân thủ SLA (7 ngày qua)" trang Tổng quan hệ thống — dựng theo mẫu thiết kế, 2 tab:
- * - Số lượng Ticket: cột Ticket mới (charcoal) + Ticket đã đóng (lime viền charcoal) + đường đứt đỏ "Vi phạm SLA"
+ * - Số lượng Ticket: cột Ticket mới (lime viền charcoal) + Ticket đã đóng (charcoal) + đường đứt đỏ "Vi phạm SLA"
  *   (ticket tới hạn trong ngày mà trễ). 1 trục duy nhất: số ticket.
  * - Tỷ lệ tuân thủ SLA: đường cong % theo ngày — đoạn/điểm/nhãn trục dưới mục tiêu tô đỏ, nhãn % từng điểm, điểm hôm
  *   nay tô đặc; đường đứt đỏ mục tiêu 90% (mốc 90% trên trục y tô đỏ). Tooltip tự vẽ (nền charcoal, badge đạt/chưa đạt,
@@ -161,12 +161,12 @@ export default function TicketTrendChart() {
     labels: s.labels,
     datasets: [
       {
-        type: 'bar' as const, label: 'Ticket mới', data: s.created, backgroundColor: CHART_COLORS.charcoal,
+        type: 'bar' as const, label: 'Ticket mới', data: s.created, backgroundColor: CHART_COLORS.limeBright,
+        borderColor: CHART_COLORS.charcoal, borderWidth: 1,
         borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: 'bottom' as const, maxBarThickness: 16, order: 2,
       },
       {
-        type: 'bar' as const, label: 'Ticket đã đóng', data: s.closed, backgroundColor: CHART_COLORS.limeBright,
-        borderColor: CHART_COLORS.charcoal, borderWidth: 1,
+        type: 'bar' as const, label: 'Ticket đã đóng', data: s.closed, backgroundColor: CHART_COLORS.charcoal,
         borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: 'bottom' as const, maxBarThickness: 16, order: 2,
       },
       {
@@ -255,8 +255,8 @@ export default function TicketTrendChart() {
 
   const legend = tab === 'volume'
     ? [
-        { label: 'Ticket mới', swatch: 'h-3.5 w-3.5 rounded-sm bg-charcoal', total: sum(s.created) },
-        { label: 'Ticket đã đóng', swatch: 'h-3.5 w-3.5 rounded-sm border border-charcoal bg-limeMist', total: sum(s.closed) },
+        { label: 'Ticket mới', swatch: 'h-3.5 w-3.5 rounded-sm border border-charcoal bg-lime-500', total: sum(s.created) },
+        { label: 'Ticket đã đóng', swatch: 'h-3.5 w-3.5 rounded-sm bg-charcoal', total: sum(s.closed) },
         { label: 'Vi phạm SLA', swatch: 'w-5 border-t-2 border-dashed border-alertRed', total: sum(s.breached) },
       ]
     : [

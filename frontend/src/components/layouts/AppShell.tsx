@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { Outlet, Link } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { useBreadcrumbStore } from '@/stores/breadcrumbStore'
 import AppSidebar, { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar'
 import AppHeader from '@/components/layouts/AppHeader'
@@ -34,10 +35,14 @@ export default function AppShell({
               dung luôn căn giữa vùng nhìn ở màn hình rộng (Full HD/2K/4K), px-6/
               px-8 là lề 2 bên đồng nhất khi viewport hẹp hơn max-width. */}
           <div className="mx-auto flex min-h-full w-full max-w-[1400px] flex-col px-6 lg:px-8">
-            {/* "← Quay lại" của trang drill-down (usePageBack) — self-start để vùng bấm chỉ bằng chữ, không kéo hết hàng */}
+            {/* Nút quay lại của trang drill-down (usePageBack) — nút tròn cùng kiểu Dashboard Farm Owner (FarmOwnerDashboardPage)
+                + chữ tên trang cha; cả cụm là 1 link. self-start để vùng bấm không kéo hết hàng */}
             {back && (
-              <Link to={back.to} className="mb-2 self-start text-sm font-semibold text-graphite hover:text-charcoal hover:underline">
-                ← Quay lại {back.label}
+              <Link to={back.to} className="group mb-3 flex items-center gap-2.5 self-start text-sm font-semibold text-graphite hover:text-charcoal">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-warmGray/15 bg-white text-charcoal shadow-icon transition-colors group-hover:bg-warmGray/10">
+                  <ArrowLeft width={18} height={18} />
+                </span>
+                Quay lại {back.label}
               </Link>
             )}
             {/* Suspense đặt SÁT Outlet (không bọc ở App.tsx cấp cao hơn) — chunk

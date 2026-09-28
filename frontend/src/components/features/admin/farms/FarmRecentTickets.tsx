@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useTicketsList } from "@/hooks/shared/useTickets";
 import { useFarmZones } from "@/hooks/shared/useFarms";
-import { Badge } from "@/components/ui";
+import { Badge, SectionCard } from "@/components/ui";
 import EmptyState from "@/components/ui/EmptyState";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { IconTicket } from "@/components/ui/icons";
@@ -46,22 +46,25 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <h2 className="font-bold text-charcoal">Ticket gần nhất</h2>
+    // SectionCard — cùng khuôn card các trang Admin: icon như mục menu sidebar + tiêu đề
+    <SectionCard
+      icon={<IconTicket width={20} height={20} />}
+      title={
+        <>
+          Ticket gần nhất
           {total > 0 && (
             <span className="shrink-0 rounded-full bg-limeMist px-2.5 py-1 text-[11px] font-semibold tabular-nums text-charcoal/70">
               {records.length}/{total}
             </span>
           )}
-        </div>
-        {total > 0 && (
-          <Link to={`/system/tickets?farmId=${farmId}`} className="shrink-0 text-sm font-semibold text-charcoal hover:underline">
-            Xem tất cả →
-          </Link>
-        )}
-      </div>
+        </>
+      }
+      action={total > 0 && (
+        <Link to={`/system/tickets?farmId=${farmId}`} className="shrink-0 text-sm font-semibold text-charcoal hover:underline">
+          Xem tất cả →
+        </Link>
+      )}
+    >
 
       {isLoading && <LoadingSkeleton count={3} className="h-20 w-full" />}
       {!isLoading && records.length === 0 && (
@@ -72,9 +75,9 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
         />
       )}
 
-      {/* 1 khung liền khối (cùng bo/viền/bóng với Card mặc định), mỗi ticket là 1 dòng ngăn bằng divide-y */}
+      {/* 1 khung liền khối (viền, không bóng — đã nằm trong card), mỗi ticket là 1 dòng ngăn bằng divide-y */}
       {records.length > 0 && (
-        <div className="divide-y divide-warmGray/15 overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
+        <div className="divide-y divide-warmGray/15 overflow-hidden rounded-2xl border border-warmGray/15 bg-white">
           {records.map((ticket) => {
             const isOpen = ticket.status !== "CLOSED";
             const isBreached = ticket.is_sla_breached && isOpen;
@@ -121,6 +124,6 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
           })}
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 }

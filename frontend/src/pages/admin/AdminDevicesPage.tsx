@@ -7,8 +7,9 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
+import { IconDevice } from '@/components/ui/icons'
 import { useSystemNodeStatus } from '@/hooks/shared/useDevices'
-import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips } from '@/components/ui'
+import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips, SectionCard } from '@/components/ui'
 import DataTable from '@/components/ui/DataTable'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -113,29 +114,33 @@ export default function AdminDevicesPage() {
       {/* Hàng 0: 5 ô số toàn hệ thống — tự làm mới mỗi 30 giây (useSystemNodeStatus) */}
       <DeviceStats status={data} />
 
-      {/* Hàng 1: tìm kiếm — không có nút tạo: kích hoạt thiết bị là việc của Technician */}
-      <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, phòng..." value={search} onChange={withReset(setSearch)} />
+      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
+      <SectionCard icon={<IconDevice width={20} height={20} />} title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống · tự làm mới mỗi 30 giây">
 
-      {/* Hàng 2: bộ lọc + sắp xếp */}
-      <div className="flex flex-wrap items-center gap-3">
-        <SelectMenu ariaLabel="Lọc theo trạng thái" value={status} options={STATUS_OPTIONS} onChange={withReset(setStatus)} />
-        <SelectMenu ariaLabel="Lọc theo loại thiết bị" value={type} options={TYPE_OPTIONS} onChange={withReset(setType)} />
-        <SelectMenu ariaLabel="Lọc theo trang trại" value={farm} options={farmOptions} onChange={withReset(setFarm)} className="max-w-[16rem]" />
-        <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
-        {hasActiveFilters && <ClearFiltersButton onClick={clearFilters} />}
-      </div>
+        {/* Hàng 1: tìm kiếm — không có nút tạo: kích hoạt thiết bị là việc của Technician */}
+        <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, phòng..." value={search} onChange={withReset(setSearch)} />
 
-      <DataTable
-        columns={buildDeviceColumns((page - 1) * PAGE_SIZE)}
-        rows={rows}
-        getRowKey={n => `${n.type}-${n._id}`}
-        emptyMessage={hasActiveFilters
-          ? 'Không có thiết bị nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
-          : 'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi Technician kích hoạt qua Web Console Onboarding.'}
-      />
+        {/* Hàng 2: bộ lọc + sắp xếp */}
+        <div className="flex flex-wrap items-center gap-3">
+          <SelectMenu ariaLabel="Lọc theo trạng thái" value={status} options={STATUS_OPTIONS} onChange={withReset(setStatus)} />
+          <SelectMenu ariaLabel="Lọc theo loại thiết bị" value={type} options={TYPE_OPTIONS} onChange={withReset(setType)} />
+          <SelectMenu ariaLabel="Lọc theo trang trại" value={farm} options={farmOptions} onChange={withReset(setFarm)} className="max-w-[16rem]" />
+          <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
+          {hasActiveFilters && <ClearFiltersButton onClick={clearFilters} />}
+        </div>
 
-      {/* total = số thiết bị SAU khi lọc + tìm kiếm */}
-      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
+        <DataTable
+          columns={buildDeviceColumns((page - 1) * PAGE_SIZE)}
+          rows={rows}
+          getRowKey={n => `${n.type}-${n._id}`}
+          emptyMessage={hasActiveFilters
+            ? 'Không có thiết bị nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
+            : 'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi Technician kích hoạt qua Web Console Onboarding.'}
+        />
+
+        {/* total = số thiết bị SAU khi lọc + tìm kiếm */}
+        <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
+      </SectionCard>
     </div>
   )
 }

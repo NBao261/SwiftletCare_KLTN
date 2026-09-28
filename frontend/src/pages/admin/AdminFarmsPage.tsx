@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFarms } from "@/hooks/shared/useFarms";
 import { useUsersPicker, getUserStatus } from "@/hooks/admin/useUsers";
-import { ClearFiltersButton, SearchInput, SelectMenu, SortChips } from "@/components/ui";
+import { ClearFiltersButton, SearchInput, SelectMenu, SortChips, SectionCard } from "@/components/ui";
 import DataTable from "@/components/ui/DataTable";
 import FilterChip from "@/components/ui/FilterChip";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { IconFarm } from "@/components/ui/icons";
 import { buildFarmColumns } from "@/components/features/admin/farms/farmColumns";
 import { FILTERABLE_STATUSES, STATUS_LABEL, type FilterableStatus } from "@/components/features/admin/users/users.constants";
 import LockUserModal from "@/components/features/admin/users/LockUserModal";
@@ -114,69 +115,74 @@ export default function AdminFarmsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Hàng 1: tìm kiếm riêng 1 hàng */}
-      <SearchInput
-        placeholder="Tìm theo tên farm, địa chỉ hoặc chủ sở hữu..."
-        value={search}
-        onChange={(v) => { setSearch(v); setPage(1); }}
-      />
+      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
+      <SectionCard icon={<IconFarm width={20} height={20} />} title="Danh sách trang trại" description="Mọi trang trại trong hệ thống, kèm chủ sở hữu và khu vực">
 
-      {/* Hàng 2: bộ lọc + sắp xếp theo ngày tạo — cùng khuôn trang Người dùng, mọi control cao h-8 */}
-      <div className="flex flex-wrap items-center gap-3">
-        <SelectMenu
-          ariaLabel="Lọc theo khu vực"
-          value={region}
-          options={regionOptions}
-          onChange={(v) => { setRegion(v); setPage(1); }}
+        {/* Hàng 1: tìm kiếm riêng 1 hàng */}
+        <SearchInput
+          placeholder="Tìm theo tên farm, địa chỉ hoặc chủ sở hữu..."
+          value={search}
+          onChange={(v) => { setSearch(v); setPage(1); }}
         />
-        <div className="flex flex-nowrap gap-2">
-          <FilterChip active={ownerStatus === undefined} label="Tất cả chủ farm" onClick={() => { setOwnerStatus(undefined); setPage(1); }} />
-          {FILTERABLE_STATUSES.map((s) => (
-            <FilterChip
-              key={s}
-              active={ownerStatus === s}
-              label={`Chủ ${STATUS_LABEL[s].toLowerCase()}`}
-              onClick={() => { setOwnerStatus(s); setPage(1); }}
-            />
-          ))}
+
+        {/* Hàng 2: bộ lọc + sắp xếp theo ngày tạo — cùng khuôn trang Người dùng, mọi control cao h-8 */}
+        <div className="flex flex-wrap items-center gap-3">
+          <SelectMenu
+            ariaLabel="Lọc theo khu vực"
+            value={region}
+            options={regionOptions}
+            onChange={(v) => { setRegion(v); setPage(1); }}
+          />
+          <div className="flex flex-nowrap gap-2">
+            <FilterChip active={ownerStatus === undefined} label="Tất cả chủ farm" onClick={() => { setOwnerStatus(undefined); setPage(1); }} />
+            {FILTERABLE_STATUSES.map((s) => (
+              <FilterChip
+                key={s}
+                active={ownerStatus === s}
+                label={`Chủ ${STATUS_LABEL[s].toLowerCase()}`}
+                onClick={() => { setOwnerStatus(s); setPage(1); }}
+              />
+            ))}
+          </div>
+          <SortChips fields={[{ key: "created_at", label: "Ngày tạo" }]} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
+          {hasActiveFilters && (
+            <ClearFiltersButton onClick={clearFilters} />
+          )}
         </div>
-        <SortChips fields={[{ key: "created_at", label: "Ngày tạo" }]} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
-        {hasActiveFilters && (
-          <ClearFiltersButton onClick={clearFilters} />
+
+        {!isLoading && (
+          <p className="-mt-2 text-sm text-warmGray">
+            {filtered.length === (farms?.length ?? 0)
+              ? `${filtered.length} trang trại`
+              : `${filtered.length} / ${farms?.length ?? 0} trang trại`}
+          </p>
         )}
-      </div>
 
-      {!isLoading && (
-        <p className="-mt-2 text-sm text-warmGray">
-          {filtered.length === (farms?.length ?? 0)
-            ? `${filtered.length} trang trại`
-            : `${filtered.length} / ${farms?.length ?? 0} trang trại`}
-        </p>
-      )}
+        {ownersTruncated && (
+          <p className="-mt-2 text-xs text-climateOrange">
+            Hệ thống có hơn 100 chủ farm — một số dòng có thể không hiện tên chủ sở hữu (giới hạn 1 lần tải của /admin/users).
+          </p>
+        )}
 
-      {ownersTruncated && (
-        <p className="-mt-2 text-xs text-climateOrange">
-          Hệ thống có hơn 100 chủ farm — một số dòng có thể không hiện tên chủ sở hữu (giới hạn 1 lần tải của /admin/users).
-        </p>
-      )}
+        {isLoading ? (
+          <LoadingSkeleton count={4} className="h-14 w-full" />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={rows}
+            getRowKey={(f) => f._id}
+            sortKey={sortBy}
+            sortDirection={sortDir}
+            onSortChange={handleSortChange}
+            onRowClick={(f) => navigate(`/system/farms/${f._id}`)}
+            emptyMessage={farms?.length
+              ? "Không có trang trại nào khớp — thử từ khoá khác hoặc chọn lại khu vực."
+              : "Chưa có trang trại nào trong hệ thống — farm do Farm Owner tự tạo sau khi đăng ký."}
+          />
+        )}
 
-      {isLoading ? (
-        <LoadingSkeleton count={4} className="h-14 w-full" />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          getRowKey={(f) => f._id}
-          sortKey={sortBy}
-          sortDirection={sortDir}
-          onSortChange={handleSortChange}
-          emptyMessage={farms?.length
-            ? "Không có trang trại nào khớp — thử từ khoá khác hoặc chọn lại khu vực."
-            : "Chưa có trang trại nào trong hệ thống — farm do Farm Owner tự tạo sau khi đăng ký."}
-        />
-      )}
-
-      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
+        <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
+      </SectionCard>
 
       <LockUserModal user={lockTarget} onClose={() => setLockTarget(null)} />
       <UnlockUserModal user={unlockTarget} onClose={() => setUnlockTarget(null)} />

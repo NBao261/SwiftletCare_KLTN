@@ -33,7 +33,8 @@ export function buildFarmColumns(
       key: 'name', header: 'Trang trại', sortable: true, className: 'w-[28%]',
       render: (farm) => (
         <div className="flex min-w-0 flex-col gap-0.5">
-          <Link to={`/system/farms/${farm._id}`} className="truncate font-semibold text-charcoal hover:underline">
+          {/* Giữ Link (mở tab mới bằng chuột giữa/Ctrl) — stopPropagation để không điều hướng 2 lần cùng onRowClick của dòng */}
+          <Link to={`/system/farms/${farm._id}`} onClick={e => e.stopPropagation()} className="truncate font-semibold text-charcoal hover:underline">
             {farm.name}
           </Link>
           <p className="truncate text-xs text-warmGray" title={farm.address}>{farm.address}</p>
@@ -81,7 +82,12 @@ export function buildFarmColumns(
           if (status === 'LOCKED') items.push({ label: 'Mở khoá chủ farm', onClick: () => handlers.onUnlockOwner(owner) })
           else if (status !== 'DELETED') items.push({ label: 'Khoá tài khoản chủ farm', danger: true, onClick: () => handlers.onLockOwner(owner) })
         }
-        return <ActionsMenu items={items} />
+        return (
+          // stopPropagation — dòng đã bấm-được (onRowClick mở chi tiết), mở menu bằng chuột/bàn phím không được kéo theo
+          <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+            <ActionsMenu items={items} />
+          </div>
+        )
       },
     },
   ]

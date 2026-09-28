@@ -70,8 +70,8 @@ export default function AdminSystemHealthPage() {
           iconClass="bg-charcoal text-limeMist"
           label="Ticket đang mở"
           value={openTickets.total}
-          chip={breached > 0 ? `${breached} vi phạm SLA` : undefined}
-          chipClass="bg-alertRed text-white"
+          // Mọi ticket mở đều vi phạm → chỉ ghi "vi phạm", khỏi lặp lại con số; một phần thì ghi rõ bao nhiêu
+          valueBadge={breached === 0 ? undefined : breached === openTickets.total ? 'vi phạm' : `${breached} vi phạm`}
           sub={`${newToday} mới hôm nay · ${waitingTech} chờ KTV nhận`}
         />
         <StatTile
@@ -79,7 +79,7 @@ export default function AdminSystemHealthPage() {
           iconClass={criticalAlerts.total > 0 ? 'bg-alertRed text-white' : 'bg-warmGray/10 text-charcoal'}
           alert={criticalAlerts.total > 0}
           label="Cảnh báo CRITICAL đang mở"
-          value={String(criticalAlerts.total).padStart(2, '0')}
+          value={String(criticalAlerts.total)}
           sub={criticalAlerts.total > 0 ? 'Chưa được xác nhận — xem trang Cảnh báo' : 'Không có cảnh báo khẩn cấp'}
         />
       </div>

@@ -49,7 +49,7 @@ export default function FarmMembersCard({ farmId }: { farmId: string }) {
   }
 
   return (
-    <Card variant="dark" size="lg" className="flex flex-col gap-5 bg-charcoal p-5 shadow-card">
+    <Card variant="dark" size="lg" className="flex flex-col gap-5 bg-charcoal p-5">
       <section>
         <div className="mb-3 flex items-center gap-2.5">
           <h2 className="font-bold text-white">Thành viên Farm Owner</h2>

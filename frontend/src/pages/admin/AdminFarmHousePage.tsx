@@ -2,8 +2,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { WarningCircleIcon } from "@phosphor-icons/react";
 import { useFarm, useHouses, useZones } from "@/hooks/shared/useFarms";
 import { usePageBreadcrumb, usePageBack } from "@/hooks/common/useBreadcrumb";
-import { Button, EmptyState } from "@/components/ui";
+import { Button, EmptyState, SectionCard } from "@/components/ui";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { IconFarm } from "@/components/ui/icons";
 
 /**
  * Phòng (= Zone ở backend) của 1 nhà yến cho Admin (/system/farms/:farmId/houses/:houseId) —
@@ -53,21 +54,24 @@ export default function AdminFarmHousePage() {
   const devicesUrl = `/system/devices?farm=${encodeURIComponent(farm?.name ?? "")}`;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">{house.name}</p>
-          <p className="text-sm text-warmGray">
-            {house.floors} tầng · {rooms?.length ?? 0} phòng
-            {!zones.isLoading && emptyFloors > 0 && (
-              <span className="font-semibold text-orange-600"> · {emptyFloors} tầng chưa có phòng</span>
-            )}
-          </p>
-        </div>
+    // 1 khung (SectionCard): thông tin nhà + danh sách tầng/phòng — icon như mục menu sidebar
+    <SectionCard
+      icon={<IconFarm width={20} height={20} />}
+      title={house.name}
+      description={
+        <span className="text-warmGray">
+          {house.floors} tầng · {rooms?.length ?? 0} phòng
+          {!zones.isLoading && emptyFloors > 0 && (
+            <span className="font-semibold text-orange-600"> · {emptyFloors} tầng chưa có phòng</span>
+          )}
+        </span>
+      }
+      action={
         <Button variant="secondary" size="sm" onClick={() => navigate(devicesUrl)}>
           Thiết bị & Cảm biến
         </Button>
-      </div>
+      }
+    >
 
       {zones.isLoading && <LoadingSkeleton count={2} className="h-16 w-full" />}
 
@@ -75,7 +79,7 @@ export default function AdminFarmHousePage() {
         floors.map((floor) => {
           const floorRooms = rooms?.filter((r) => r.floor === floor) ?? [];
           return (
-            <section key={floor} className="flex flex-col gap-2">
+            <div key={floor} className="flex flex-col gap-2">
               <div className="flex items-center gap-2.5">
                 <h3 className="text-sm font-bold text-charcoal">Tầng {floor}</h3>
                 <span className="text-xs text-warmGray">{floorRooms.length} phòng</span>
@@ -92,9 +96,9 @@ export default function AdminFarmHousePage() {
                   </div>
                 ))
               )}
-            </section>
+            </div>
           );
         })}
-    </div>
+    </SectionCard>
   );
 }
