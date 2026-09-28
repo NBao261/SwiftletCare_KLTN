@@ -1,3 +1,4 @@
+import { Camera } from 'lucide-react'
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
 import {
@@ -11,26 +12,63 @@ import {
  */
 const menuSections: MenuSection[] = [
   {
-    title: 'Vận hành LALALA',
+    title: 'Vận hành',
     items: [
-      { label: 'Tổng quan NÈ', path: '/dashboard', icon: IconDashboard },
-      { label: 'Thiết bị & Cảm biến', path: '/devices', icon: IconDevice },
-      { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
+      {
+        label: 'Tổng quan',
+        path: '/dashboard',
+        icon: IconDashboard
+      },
+      {
+        label: 'Thiết bị & Cảm biến',
+        path: '/devices',
+        icon: IconDevice
+      },
+      {
+        label: 'Cảnh báo',
+        path: '/alerts',
+        icon: IconAlert
+      },
+      {
+        label: 'Giám sát đàn chim',
+        path: '/vision',
+        icon: Camera
+      },
     ],
   },
   {
     title: 'Quản lý',
     items: [
-      { label: 'Trang trại', path: '/farms', icon: IconFarm },
-      { label: 'Ticket', path: '/tickets', icon: IconTicket },
-      { label: 'Thu hoạch & Chợ yến', path: '/harvests', icon: IconHarvest },
+      {
+        label: 'Trang trại',
+        path: '/farms',
+        icon: IconFarm
+      },
+      {
+        label: 'Ticket',
+        path: '/tickets',
+        icon: IconTicket
+      },
+      {
+        label: 'Thu hoạch & Chợ yến',
+        path: '/harvests',
+        icon: IconHarvest
+      },
     ],
   },
   {
     title: 'Khác',
     items: [
-      { label: 'Phân tích', path: '/analytics', icon: IconAnalytics },
-      { label: 'Cài đặt', path: '/settings', icon: IconSettings },
+      {
+        label: 'Phân tích',
+        path: '/analytics',
+        icon: IconAnalytics
+      },
+      {
+        label: 'Cài đặt',
+        path: '/settings',
+        icon: IconSettings
+      },
     ],
   },
 ]
