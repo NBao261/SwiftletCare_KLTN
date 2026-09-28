@@ -27,8 +27,11 @@ export default function AppShell({
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <AppHeader menuSections={menuSections} />
         {/* pb-28 trên mobile để dock nổi không che nội dung cuối trang */}
-        <main className="flex-1 overflow-y-auto bg-stone px-4 pb-28 pt-2 lg:px-6 lg:pb-8 lg:pt-3">
-          <div className="mx-auto flex min-h-full w-full max-w-[1400px] flex-col rounded-[24px] border border-warmGray/20 bg-white p-6 shadow-card lg:p-8">
+        <main className="flex-1 overflow-y-auto bg-stone pb-28 pt-4 lg:pb-8 lg:pt-6">
+          {/* Container duy nhất bọc mọi card nội dung — max-w + mx-auto để nội
+              dung luôn căn giữa vùng nhìn ở màn hình rộng (Full HD/2K/4K), px-6/
+              px-8 là lề 2 bên đồng nhất khi viewport hẹp hơn max-width. */}
+          <div className="mx-auto flex min-h-full w-full max-w-[1400px] flex-col px-6 lg:px-8">
             {/* Suspense đặt SÁT Outlet (không bọc ở App.tsx cấp cao hơn) — chunk
                 lazy-load lần đầu chỉ thay skeleton trong khung nội dung này,
                 sidebar/header/dock không bị unmount nên không còn nháy toàn
