@@ -12,6 +12,7 @@ import { FARM_OWNER_ONLY, HARVEST_ROLES, OPS_ROLES } from '@/constants/roles'
  */
 const FarmOwnerDashboardPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDashboardPage'))
 const FarmOwnerAnalyticsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerAnalyticsPage'))
+const FarmOwnerVisionPage = lazy(() => import('@/pages/farm-owner/FarmOwnerVisionPage'))
 const FarmOwnerFarmsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmsPage'))
 const FarmOwnerFarmHousesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmHousesPage'))
 const FarmOwnerFarmZonesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZonesPage'))
@@ -33,6 +34,14 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={FARM_OWNER_ONLY}>
           <FarmOwnerAnalyticsPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="vision"
+      element={
+        <RequireRole allow={FARM_OWNER_ONLY}>
+          <FarmOwnerVisionPage />
         </RequireRole>
       }
     />
