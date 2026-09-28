@@ -27,4 +27,6 @@ export interface Ticket {
   notes: Array<{ author_id?: string; content: string; created_at: string }>
   satisfaction_rating?: number
   created_at: string; closed_at?: string
+  /** Có khi ticket bị huỷ — status cũng là CLOSED và closed_at cũng được set */
+  cancelled_at?: string
 }

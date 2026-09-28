@@ -38,9 +38,6 @@ const config: Config = {
           400: '#DC5E56', 500: '#D53F35', 600: '#B12E25', 700: '#87231C',
           800: '#611914', 900: '#44110E',
         },
-        // FE_Design v2.4.1 §2.5.1 — CHỈ cho ticket "Mới": badge (100/700), lát biểu đồ/chấm chú thích (300), nền khung
-        // chú thích dưới KPI (100). Khai báo tường minh 3 bậc được phép (hex trùng mặc định Tailwind).
-        amber: { 100: '#FEF3C7', 300: '#FCD34D', 700: '#B45309' },
 
         // ── Alias ngữ nghĩa (giữ tên cũ, hex trỏ đúng thang trên) ─────────
         white:         '#FFFFFF', // = gray-0 — nền mặc định toàn bộ màn hình & card / chữ trên nền tối

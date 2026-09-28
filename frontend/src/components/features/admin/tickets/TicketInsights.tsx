@@ -1,5 +1,6 @@
-import { CheckCircleIcon, ClockIcon, HourglassIcon, TimerIcon, TrayIcon, UsersThreeIcon, WrenchIcon, type Icon } from '@phosphor-icons/react'
+import { CheckCircleIcon, ClockIcon, HourglassIcon, TimerIcon, TrayIcon, UsersThreeIcon, WarningCircleIcon, WrenchIcon, type Icon } from '@phosphor-icons/react'
 import { useTicketKpi } from '@/hooks/shared/useTickets'
+import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import StatTile from '@/components/ui/StatTile'
 import PriorityLegend from '@/components/features/admin/tickets/PriorityLegend'
@@ -36,10 +37,19 @@ interface Props {
  *   ai quá tải mà gán lại (TICKET-FR-005b). Bấm tên → bảng ticket chỉ còn ticket của người đó.
  */
 export default function TicketInsights({ search, onSelectTechnician }: Props) {
-  const { data: kpi, isLoading } = useTicketKpi()
+  const { data: kpi, isLoading, isError, refetch } = useTicketKpi()
 
   if (isLoading) return <LoadingSkeleton count={1} className="h-72 w-full" />
-  if (!kpi) return null
+  if (isError || !kpi) {
+    return (
+      <EmptyState
+        icon={<WarningCircleIcon size={32} />}
+        title="Không tải được thống kê ticket"
+        description="Kiểm tra kết nối tới máy chủ rồi thử lại."
+        action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+      />
+    )
+  }
 
   const counts = Object.fromEntries(STATUS_ORDER.map(s => [s, kpi.byStatus.find(r => r._id === s)?.count ?? 0])) as Record<TicketStatus, number>
   const total = STATUS_ORDER.reduce((sum, s) => sum + counts[s], 0)

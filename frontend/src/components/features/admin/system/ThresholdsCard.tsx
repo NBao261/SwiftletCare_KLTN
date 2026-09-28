@@ -8,8 +8,8 @@ import { getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { THRESHOLD_LIMITS } from '@/validations/common/threshold.validation'
 import { THRESHOLD_KEYS, FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
-import { THRESHOLD_GROUPS } from './system.constants'
-import ThresholdsEditModal from './ThresholdsEditModal'
+import { THRESHOLD_GROUPS } from '@/components/features/admin/system/system.constants'
+import ThresholdsEditModal from '@/components/features/admin/system/ThresholdsEditModal'
 
 /** 1 giá trị trong cặp min/max — nhãn MIN/MAX nhỏ phía trên số để không lẫn 2 bên khi đứng cạnh nhau. Đặt trên panel nền trắng nên dùng màu charcoal thay vì trắng. */
 function MinMaxValue({ label, value, unit }: { label: string; value: number; unit: string }) {

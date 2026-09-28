@@ -1,5 +1,6 @@
-import { HouseIcon, LockIcon, StorefrontIcon, UsersThreeIcon, WrenchIcon } from '@phosphor-icons/react'
+import { HouseIcon, LockIcon, StorefrontIcon, UsersThreeIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
 import { getUserStatus, useAllUsers } from '@/hooks/admin/useUsers'
+import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import StatTile from '@/components/ui/StatTile'
 import type { Role } from '@/types'
@@ -15,10 +16,19 @@ const pct = (n: number, total: number) => `${total > 0 ? Math.round((n / total) 
  * - Đã khoá: kèm số tài khoản đang chờ xoá (xử lý ở trang Yêu cầu tài khoản).
  */
 export default function UserStats() {
-  const { data: users, isLoading } = useAllUsers()
+  const { data: users, isLoading, isError, refetch } = useAllUsers()
 
   if (isLoading) return <LoadingSkeleton count={1} className="h-28 w-full" />
-  if (!users) return null
+  if (isError || !users) {
+    return (
+      <EmptyState
+        icon={<WarningCircleIcon size={32} />}
+        title="Không tải được thống kê tài khoản"
+        description="Kiểm tra kết nối tới máy chủ rồi thử lại."
+        action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+      />
+    )
+  }
 
   const total = users.length
   const byRole = (r: Role) => users.filter(u => u.role === r)

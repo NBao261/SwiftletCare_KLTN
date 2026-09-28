@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { addDays, addMonths, format, isSameDay, isSameMonth, startOfDay, startOfMonth, startOfWeek } from 'date-fns'
 import { IconCalendar, IconChevronRight } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
+import { isWithinVisitHours } from '@/validations/admin/ticket.validation'
 
 /** Cùng định dạng giá trị với <input type="datetime-local"> — giờ máy người dùng, để form cũ không phải đổi */
 const VALUE_FORMAT = "yyyy-MM-dd'T'HH:mm"
@@ -31,7 +32,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
  * (field). Bảng chọn nằm NGAY TRONG luồng bố cục dưới ô (không portal/nổi như SelectMenu) nên mở ra thì
  * khung chứa — thường là Modal — tự cao thêm, không tràn ra ngoài popup; đóng khi bấm ra ngoài hoặc Esc.
  * Lịch tháng (T2 đầu tuần) bên trái, cột giờ + phút (bước 5 phút) bên phải. Chọn: charcoal chữ trắng,
- * hover LIME MIST. Mốc trước `min` bị mờ, không bấm được.
+ * hover LIME MIST. Mốc trước `min` và giờ/phút ngoài khung hẹn 07:00–18:00 giờ VN bị mờ, không bấm được.
  */
 export default function DateTimePicker({ value, onChange, min, id, ariaLabel, placeholder = 'Chọn ngày giờ', invalid }: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
@@ -173,9 +174,11 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
                 <span className="label-caption pb-2 text-center">{label}</span>
                 <div ref={ref} role="listbox" aria-label={label} className="relative flex max-h-[14rem] flex-col gap-0.5 overflow-y-auto overscroll-contain [scrollbar-width:none]">
                   {list.map(n => {
-                    const h = label === 'Giờ' ? n : hour
-                    const m = label === 'Giờ' ? 55 : n // giờ còn phút nào hợp lệ (tới :55) thì chưa mờ
-                    const disabled = isBeforeMin(new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m))
+                    const at = (h: number, m: number) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m)
+                    // Giờ còn phút nào hợp lệ (:00 hoặc :55 — khung 07:00–18:00 tính cả 18:00) thì chưa mờ
+                    const disabled = label === 'Giờ'
+                      ? isBeforeMin(at(n, 55)) || !(isWithinVisitHours(at(n, 0)) || isWithinVisitHours(at(n, 55)))
+                      : isBeforeMin(at(hour, n)) || !isWithinVisitHours(at(hour, n))
                     const isSel = !!selected && n === current
                     return (
                       <button

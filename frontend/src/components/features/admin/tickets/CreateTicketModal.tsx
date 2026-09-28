@@ -3,7 +3,7 @@ import { useCreateTicket } from '@/hooks/shared/useTickets'
 import { useFarms, useFarmZones } from '@/hooks/shared/useFarms'
 import { Button, Modal, SelectMenu, Textarea } from '@/components/ui'
 import Field from '@/components/features/admin/tickets/SelectField'
-import DateTimePicker from '@/components/ui/DateTimePicker'
+import DateTimePicker from '@/components/features/admin/tickets/DateTimePicker'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL } from '@/constants/tickets'
@@ -68,7 +68,8 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId }: { op
             ariaLabel="Loại ticket"
             value={form.type}
             onChange={type => setForm(f => ({ ...f, type }))}
-            options={(Object.keys(TICKET_TYPE_LABEL) as TicketType[]).map(t => ({ value: t, label: TICKET_TYPE_LABEL[t] }))}
+            // MAINTENANCE chỉ sinh từ lịch bảo trì — backend (CREATABLE_TICKET_TYPES) trả 400 nếu tạo tay
+            options={(Object.keys(TICKET_TYPE_LABEL) as TicketType[]).filter(t => t !== 'MAINTENANCE').map(t => ({ value: t, label: TICKET_TYPE_LABEL[t] }))}
           />
         </Field>
 

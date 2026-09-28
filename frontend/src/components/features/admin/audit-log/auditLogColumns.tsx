@@ -9,7 +9,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { cn } from '@/lib/cn'
 import { formatDate, formatRelativeTime } from '@/lib/helpers'
 import type { AuditLogEntry } from '@/types'
-import { CATEGORY_STYLE, actionCategory } from './auditLog.constants'
+import { CATEGORY_STYLE, actionCategory } from '@/components/features/admin/audit-log/auditLog.constants'
 
 const styleOf = (log: AuditLogEntry) => CATEGORY_STYLE[actionCategory(log.action)]
 

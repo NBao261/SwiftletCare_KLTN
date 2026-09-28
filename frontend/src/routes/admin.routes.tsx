@@ -8,21 +8,21 @@ import { ADMIN_ONLY } from '@/constants/roles'
  * tài khoản + đề xuất Sales Staff (AUTH-FR-012, AUTH-FR-005d) và Module SYSTEM
  * (mục 5.11). /system/health gộp luôn OPS-NFR-004 (trạng thái node).
  */
-const AdminUsersPage = lazy(() => import('@/pages/admin/users/AdminUsersPage'))
-const AdminAccountRequestsPage = lazy(() => import('@/pages/admin/users/AdminAccountRequestsPage'))
-const AdminSystemHealthPage = lazy(() => import('@/pages/admin/dashboard/AdminSystemHealthPage'))
-const AdminSystemSettingsPage = lazy(() => import('@/pages/admin/settings/AdminSystemSettingsPage'))
-const AdminAuditLogPage = lazy(() => import('@/pages/admin/audit-log/AdminAuditLogPage'))
+const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
+const AdminAccountRequestsPage = lazy(() => import('@/pages/admin/AdminAccountRequestsPage'))
+const AdminSystemHealthPage = lazy(() => import('@/pages/admin/AdminSystemHealthPage'))
+const AdminSystemSettingsPage = lazy(() => import('@/pages/admin/AdminSystemSettingsPage'))
+const AdminAuditLogPage = lazy(() => import('@/pages/admin/AdminAuditLogPage'))
 // FARM-FR-009 — trang trại toàn hệ thống: tách khỏi /farms (dùng chung Farm Owner/Technician) nên đặt dưới /system
-const AdminFarmsPage = lazy(() => import('@/pages/admin/farms/AdminFarmsPage'))
-const AdminFarmDetailPage = lazy(() => import('@/pages/admin/farms/AdminFarmDetailPage'))
-const AdminFarmHousePage = lazy(() => import('@/pages/admin/farms/AdminFarmHousePage'))
+const AdminFarmsPage = lazy(() => import('@/pages/admin/AdminFarmsPage'))
+const AdminFarmDetailPage = lazy(() => import('@/pages/admin/AdminFarmDetailPage'))
+const AdminFarmHousePage = lazy(() => import('@/pages/admin/AdminFarmHousePage'))
 // Ticket toàn hệ thống dạng bảng + chi tiết — tách khỏi /tickets, /tickets/:id (dùng chung Farm Owner/Technician)
 // để nút quay lại + breadcrumb của Admin về đúng bảng /system/tickets
-const AdminTicketsPage = lazy(() => import('@/pages/admin/tickets/AdminTicketsPage'))
-const AdminTicketDetailPage = lazy(() => import('@/pages/admin/tickets/AdminTicketDetailPage'))
+const AdminTicketsPage = lazy(() => import('@/pages/admin/AdminTicketsPage'))
+const AdminTicketDetailPage = lazy(() => import('@/pages/admin/AdminTicketDetailPage'))
 // OPS-NFR-004 — thiết bị toàn hệ thống, chỉ xem; thay /devices (màn làm việc của Technician) trong menu Admin
-const AdminDevicesPage = lazy(() => import('@/pages/admin/devices/AdminDevicesPage'))
+const AdminDevicesPage = lazy(() => import('@/pages/admin/AdminDevicesPage'))
 
 export const adminRoutes = (
   <>

@@ -161,7 +161,7 @@ export default function AdminTicketDetailPage() {
             <section className="rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
               <div className="mb-2 flex items-start justify-between gap-2">
                 <span className="label-caption">Đánh giá của Farm Owner</span>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-700">
                   <StarIcon size={14} weight="fill" />
                 </span>
               </div>

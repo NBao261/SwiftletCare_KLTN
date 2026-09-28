@@ -5,6 +5,7 @@
 // Cùng khuôn trang Ticket/Người dùng: hàng ô số → tìm kiếm → bộ lọc + sắp xếp → bảng → phân trang (client-side trên
 // toàn bộ node vì API trả hết 1 lần).
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
 import { useSystemNodeStatus } from '@/hooks/shared/useDevices'
 import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips } from '@/components/ui'
@@ -53,7 +54,9 @@ export default function AdminDevicesPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<DeviceStatus | ''>('')
   const [type, setType] = useState<SystemNodeStatusItem['type'] | ''>('')
-  const [farm, setFarm] = useState('')
+  const [searchParams] = useSearchParams()
+  // ?farm=<tên farm> — trang Nhà yến của Admin mở sẵn đúng farm đang xem
+  const [farm, setFarm] = useState(() => searchParams.get('farm') ?? '')
   const [sortBy, setSortBy] = useState<DeviceSortKey>(DEFAULT_SORT_BY)
   const [sortDir, setSortDir] = useState<SortDirection>(DEFAULT_SORT_DIR)
   const [page, setPage] = useState(1)

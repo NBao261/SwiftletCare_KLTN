@@ -3,22 +3,17 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.5.0 · **Cập nhật:** 24/09/2026 · **Thay thế:** v2.4.1
+**Phiên bản:** 2.5.0 · **Cập nhật:** 24/09/2026 · **Thay thế:** v2.4.0
 
 ---
 
 ## 0. Changelog
 
-### v2.4.1 → v2.5.0
+### v2.4.0 → v2.5.0
 | # | Thay đổi |
 |---|---|
 | 1 | **Bỏ chữ in hoa (`uppercase`) ở nhãn nhỏ, chuyển sang sentence case.** Tiếng Việt in hoa ở 11px chồng dấu (Ế, Ữ, Ặ) nên khó đọc, và nhãn in hoa ở mọi section làm giao diện đơn điệu. `.label-caption` (`index.css`) đổi thành 12px/16px, 600, không `uppercase`, không giãn chữ. Line-height giữ 16px nên layout không xô. Tiêu đề cột `DataTable` dùng chung `.label-caption`. Ngoại lệ giữ in hoa: nhãn nhóm menu sidebar (đóng băng, mục 4.1) và banner chế độ SCADA (nhãn trạng thái, không phải tiêu đề). Xem 2.8. |
 | 2 | **Nút "Hủy lọc" đổi từ Danger sang Secondary** ở 4 trang Admin (Người dùng, Ticket, Trang trại, Audit log). Xoá bộ lọc không phá huỷ dữ liệu, trong khi Danger chỉ dành cho hành động phá huỷ/khẩn cấp (5.1). |
-
-### v2.4.0 → v2.4.1
-| # | Thay đổi |
-|---|---|
-| 1 | **Thêm màu neo AMBER (vàng hổ phách) — `--amber-100` `#FEF3C7` / `--amber-300` `#FCD34D` / `--amber-700` `#B45309`**, dùng cho trạng thái ticket "Mới" (chờ xử lý) và nền khung chú thích dưới khung KPI. Lý do: bảng màu cũ không có vàng thật; `lime-400` gần trùng xanh chanh của "Đang xử lý" nên 2 trạng thái khó phân biệt. Thêm mục 2.5.1 (màu 4 trạng thái ticket ở màn Admin). |
 
 ### v2.3.1 → v2.4.0
 | # | Thay đổi |
@@ -178,19 +173,6 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 | Cảnh báo nhẹ / PENDING | `--orange-500` `#ED8F50` |
 | Vượt ngưỡng / ERROR | `--red-500` `#D53F35` |
 | OFFLINE | `--gray-400` `#A5A3A1` |
-
-### 2.5.1. Trạng thái ticket (màn Admin)
-
-Cố ý **khác họ màu** cột Ưu tiên (đỏ/cam/xám) để 2 cột đứng cạnh nhau không lẫn. Nguồn: `STATUS_BADGE_CLASS` (`components/features/admin/tickets/tickets.constants.ts`).
-
-| Trạng thái | Nền | Chữ | Ý nghĩa |
-|---|---|---|---|
-| `NEW` — Mới (chờ xử lý) | `--amber-100` `#FEF3C7` | `--amber-700` `#B45309` | chưa ai xử lý — cần chú ý |
-| `IN_PROGRESS` — Đang xử lý | `--accent-300` `#D5E688` | `--gray-900` | đang chạy |
-| `AWAITING_FIELD_CONFIRMATION` — Chờ xác nhận hiện trường | trắng, viền `--gray-900` 30% | `--gray-700` | đang chờ, chưa xong |
-| `CLOSED` — Đã đóng | `--gray-500` 15% | `--gray-500` | đã kết thúc — chìm |
-
-> **AMBER chỉ có 3 chỗ dùng:** (1) badge trạng thái ticket "Mới" (`--amber-100` / `--amber-700`); (2) lát "Mới" trên biểu đồ cơ cấu trạng thái + chấm chú thích (`--amber-300` `#FCD34D` — tông đặc, nổi trên nền trắng; bậc 100 quá nhạt, 700 ngả nâu); (3) nền khung chú thích ngay dưới các khung KPI (VD dòng chú thích mức ưu tiên P1/P2/P3 ở bảng Ticket của Admin — nền `--amber-100`, nhãn `--amber-700`). Không dùng thay cam cảnh báo (`--orange-*`) hay cho mục đích khác.
 
 ### 2.6. Nguyên tắc màu dữ liệu cảm biến (không đổi so với v2.0.0)
 
@@ -755,7 +737,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 ### 13.7. Style
 
-- **[Bắt buộc]** Màu chỉ lấy từ token trong `tailwind.config.ts`: thang `gray` / `lime` / `accent` / `orange` / `red`, `amber` (chỉ 3 bậc và đúng 3 chỗ dùng ở mục 2.5.1) và alias `charcoal` · `graphite` · `warmGray` · `limeMist` · `success` · `climateOrange` · `alertRed` · `stone` · `white`. **Không** viết hex/`rgb()` trong `className` hay `style` (kể cả arbitrary value `bg-[#...]` — code hiện còn 1 chỗ, xem 13.14), không dùng palette mặc định của Tailwind (`slate`, `zinc`, `neutral`, `blue`, `green`…). Lưu ý `stone` đã bị ghi đè = `#EAEAEA` (canvas), không phải thang stone của Tailwind.
+- **[Bắt buộc]** Màu chỉ lấy từ token trong `tailwind.config.ts`: thang `gray` / `lime` / `accent` / `orange` / `red` và alias `charcoal` · `graphite` · `warmGray` · `limeMist` · `success` · `climateOrange` · `alertRed` · `stone` · `white`. **Không** viết hex/`rgb()` trong `className` hay `style` (kể cả arbitrary value `bg-[#...]` — code hiện còn 1 chỗ, xem 13.14), không dùng palette mặc định của Tailwind (`slate`, `zinc`, `neutral`, `blue`, `green`…). Lưu ý `stone` đã bị ghi đè = `#EAEAEA` (canvas), không phải thang stone của Tailwind.
 - **[Nên]** Chữ dùng thang `text-h1` · `text-h2` · `text-h3` · `text-body` · `text-small` · `text-caption` · `text-metric` (mục 2.8) thay cho `text-sm`/`text-2xl` mặc định. Code cũ còn ~230 chỗ dùng size mặc định (13.14) nên chưa bắt buộc; file mới tạo thì nên dùng thang này ngay từ đầu.
 - **[Bắt buộc]** Modal/popup dùng `Modal` / `ConfirmModal` / `NoteActionModal` trong `components/ui/`, không tự dựng overlay (overlay tự dựng rất dễ dùng `bg-black/…` — trái 5.2).
 - **[Bắt buộc]** Không sửa layout/kích thước sidebar, topbar (4.1).

@@ -7,7 +7,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { THRESHOLD_KEYS, THRESHOLD_FIELDS, FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
 import { parseThresholdInput, validateThresholds } from '@/validations/common/threshold.validation'
-import type { ThresholdKey } from './system.constants'
+import type { ThresholdKey } from '@/components/features/admin/system/system.constants'
 import type { SystemDefaultThresholds } from '@/types'
 
 /** Form giữ CHUỖI người dùng gõ (cho phép ô trống/"-"/"1." giữa chừng), chỉ parse khi submit. */

@@ -1,5 +1,3 @@
-// THỬ NGHIỆM taste-skill, CHỈ trang này: khu thống kê dạng ô số + bảng KTV (TicketInsights), icon Phosphor.
-// Chốt giữ thì cập nhật FE_Design (§2.5.1/§8 còn nhắc donut, Phosphor chưa có trong tài liệu) trước khi lan sang trang khác.
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PlusIcon, WarningCircleIcon } from "@phosphor-icons/react";

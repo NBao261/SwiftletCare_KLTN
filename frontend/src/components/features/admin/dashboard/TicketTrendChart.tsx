@@ -66,8 +66,9 @@ function useDailySeries(tickets: Ticket[] | undefined) {
         const di = at(t.closed_at)
         if (di !== undefined) closed[di]++
       }
-      // SLA tính theo ngày TỚI HẠN xử lý; hạn chưa tới (hôm nay còn giờ) thì chưa tính đúng/trễ
-      if (t.sla_resolve_due_at && new Date(t.sla_resolve_due_at).getTime() <= now) {
+      // SLA tính theo ngày TỚI HẠN xử lý; hạn chưa tới (hôm nay còn giờ) thì chưa tính đúng/trễ.
+      // Ticket huỷ không tính — cùng định nghĩa với backend getKpi() (ô "Tỷ lệ đúng SLA" trong card này)
+      if (!t.cancelled_at && t.sla_resolve_due_at && new Date(t.sla_resolve_due_at).getTime() <= now) {
         const si = at(t.sla_resolve_due_at)
         if (si !== undefined) {
           dueTotal[si]++

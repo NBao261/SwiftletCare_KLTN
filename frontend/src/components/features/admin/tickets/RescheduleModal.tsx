@@ -3,7 +3,7 @@ import { useAdminOverrideTicket } from '@/hooks/shared/useTickets'
 import { Button, Modal } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
-import DateTimePicker from '@/components/ui/DateTimePicker'
+import DateTimePicker from '@/components/features/admin/tickets/DateTimePicker'
 import { validateReschedule } from '@/validations/admin/ticket.validation'
 import OverrideReasonField, { REASON_EMPTY, type OverrideModalProps } from '@/components/features/admin/tickets/OverrideReasonField'
 

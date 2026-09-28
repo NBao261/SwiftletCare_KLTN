@@ -1,5 +1,6 @@
-import { CalendarBlankIcon, ClipboardTextIcon, HandPalmIcon, TimerIcon, WarningIcon } from '@phosphor-icons/react'
+import { CalendarBlankIcon, ClipboardTextIcon, HandPalmIcon, TimerIcon, WarningCircleIcon, WarningIcon } from '@phosphor-icons/react'
 import { useAuditLogList } from '@/hooks/admin/useSystem'
+import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import StatTile from '@/components/ui/StatTile'
 import type { ListAuditLogsQuery } from '@/apis/admin/system.api'
@@ -17,8 +18,8 @@ function startOfDayIso(daysAgo: number) {
  * thay vì tải hết nhật ký về client (bảng nhật ký chỉ tăng). Mỗi ô = 1 request rất nhẹ.
  */
 function useAuditCount(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>) {
-  const { total, isLoading } = useAuditLogList({ ...query, page: 1, limit: 1 })
-  return { total, isLoading }
+  const { total, isLoading, isError, refetch } = useAuditLogList({ ...query, page: 1, limit: 1 })
+  return { total, isLoading, isError, refetch }
 }
 
 /**
@@ -36,8 +37,18 @@ export default function AuditLogStats() {
   const overrides = useAuditCount({ action: 'TICKET_ADMIN_OVERRIDE', from: from7d })
   const slaBreached = useAuditCount({ action: 'TICKET_SLA_BREACHED', from: from7d })
 
-  if ([all, today, week, loginFailed, overrides, slaBreached].some(c => c.isLoading)) {
-    return <LoadingSkeleton count={1} className="h-28 w-full" />
+  const counts = [all, today, week, loginFailed, overrides, slaBreached]
+  if (counts.some(c => c.isLoading)) return <LoadingSkeleton count={1} className="h-28 w-full" />
+  // Lỗi thì không hiện ô nào — "0 đăng nhập thất bại" trông như số thật
+  if (counts.some(c => c.isError)) {
+    return (
+      <EmptyState
+        icon={<WarningCircleIcon size={32} />}
+        title="Không tải được thống kê nhật ký"
+        description="Kiểm tra kết nối tới máy chủ rồi thử lại."
+        action={<Button variant="secondary" size="sm" onClick={() => counts.forEach(c => c.isError && c.refetch())}>Thử lại</Button>}
+      />
+    )
   }
 
   return (

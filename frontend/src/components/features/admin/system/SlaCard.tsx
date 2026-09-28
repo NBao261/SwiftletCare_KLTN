@@ -9,7 +9,7 @@ import { getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { SLA_PRIORITIES, PRIORITY_LABEL, FACTORY_DEFAULT_SLA } from '@/constants/sla'
 import { PRIORITY_ICON_CLASS } from '@/constants/tickets'
-import SlaEditModal from './SlaEditModal'
+import SlaEditModal from '@/components/features/admin/system/SlaEditModal'
 
 /**
  * SLA xử lý ticket theo mức ưu tiên (TICKET-FR-006, SLA-NFR-001) — card lime bên
