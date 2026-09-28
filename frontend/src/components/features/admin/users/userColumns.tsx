@@ -93,7 +93,12 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
         } else if (status !== 'DELETED' && !isSelf) {
           items.push({ label: 'Khoá tài khoản', danger: true, onClick: () => handlers.onLock(user) })
         }
-        return <ActionsMenu items={items} />
+        return (
+          // stopPropagation — dòng đã bấm-được (onRowClick mở chi tiết), mở menu bằng chuột/bàn phím không được kéo theo
+          <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+            <ActionsMenu items={items} />
+          </div>
+        )
       },
     },
   ]

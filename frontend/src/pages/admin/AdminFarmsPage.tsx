@@ -183,6 +183,7 @@ export default function AdminFarmsPage() {
             sortKey={sortBy}
             sortDirection={sortDir}
             onSortChange={handleSortChange}
+            onRowClick={(f) => navigate(`/system/farms/${f._id}`)}
             emptyMessage={farms?.length
               ? "Không có trang trại nào khớp — thử từ khoá khác hoặc chọn lại khu vực."
               : "Chưa có trang trại nào trong hệ thống — farm do Farm Owner tự tạo sau khi đăng ký."}

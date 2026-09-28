@@ -135,6 +135,8 @@ export default function AdminUsersPage() {
             sortKey={sortBy}
             sortDirection={sortDir}
             onSortChange={handleSortChange}
+            // Admin không có trang chi tiết người dùng riêng — bấm dòng mở popup chi tiết (UserDetailModal)
+            onRowClick={setViewTarget}
             emptyMessage="Không tìm thấy tài khoản nào — thử đổi bộ lọc hoặc từ khoá tìm kiếm."
           />
         )}
