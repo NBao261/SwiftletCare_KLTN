@@ -17,7 +17,8 @@ export default function TicketSlaCard({ ticket }: { ticket: Ticket }) {
     <section
       className={cn(
         'rounded-2xl border p-5 shadow-card',
-        overdue ? 'border-alertRed/40 bg-alertRed/[0.06]' : 'border-warmGray/15 bg-white',
+        // Quá hạn: nền trắng đặc + lớp đỏ mờ phủ lên — cùng màu ô cảnh báo StatTile; chỉ đỏ mờ thì lẫn nền xám của trang
+        overdue ? 'border-alertRed/30 bg-white bg-gradient-to-b from-alertRed/[0.04] to-alertRed/[0.04]' : 'border-warmGray/15 bg-white',
       )}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
