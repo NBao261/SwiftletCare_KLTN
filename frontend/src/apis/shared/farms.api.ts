@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Farm, House, Zone, Invitation, SalesAssignmentRequest } from '@/types'
+import type { ApiResponse, Farm, FuzzyTuning, House, Zone, Invitation, SalesAssignmentRequest } from '@/types'
 
 export const farmApi = {
   list:   () => api.get<ApiResponse<Farm[]>>('/farms'),
@@ -42,4 +42,7 @@ export const farmApi = {
   // ENV-FR-020 — reset về mặc định kỹ thuật cố định (xem farm.service.ts)
   resetThresholds: (zoneId: string) =>
     api.put<ApiResponse<Zone>>(`/farms/zones/${zoneId}/thresholds/reset`, {}),
+  // ENV-FR-021 — chỉ gửi các hệ số đã đổi; backend gộp, lưu lịch sử và đẩy config/update xuống ESP32
+  updateFuzzyTuning: (zoneId: string, tuning: Partial<FuzzyTuning>) =>
+    api.put<ApiResponse<Zone>>(`/farms/zones/${zoneId}/fuzzy-tuning`, tuning),
 }

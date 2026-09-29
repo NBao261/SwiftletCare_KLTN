@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Thresholds } from '@/types'
+import type { ApiResponse, FuzzyTuning, Thresholds } from '@/types'
 
 export type AnalyticsRange = '1h' | '6h' | '24h' | '7d' | '30d'
 
@@ -65,8 +65,34 @@ export interface EnvBirdCorrelationResponse {
   note?: string
 }
 
-/** ANALYTICS-FR-001..005, VISION-FR-008..011 */
+/** ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ (chỉ mẫu từ firmware ≥ 1.1.0) */
+export interface ControlPerformancePoint {
+  timestamp: string
+  humidity?: number | null; temperature?: number | null
+  misting_pct?: number | null; ventilation_pct?: number | null
+}
+
+export interface ControlPerformanceStats {
+  sampleCount: number
+  humidityInRangePct: number | null; temperatureInRangePct: number | null
+  mistingAvgPct: number | null; ventilationAvgPct: number | null
+  /** null khi dữ liệu < 15 phút — chưa đủ để quy ra /giờ */
+  mistingSwitchesPerHour: number | null; ventilationSwitchesPerHour: number | null
+}
+
+export interface ControlPerformanceResponse {
+  range: AnalyticsRange; from: string; to: string; bucketMs: number
+  thresholds: Pick<Thresholds, 'humidity_min' | 'humidity_max' | 'temp_min' | 'temp_max'>
+  fuzzy_tuning: FuzzyTuning
+  tuning_changes: Array<{ changed_at: string; new_values: Partial<FuzzyTuning> }>
+  series: ControlPerformancePoint[]
+  stats: ControlPerformanceStats | null
+}
+
+/** ANALYTICS-FR-001..005/008, VISION-FR-008..011 */
 export const analyticsApi = {
+  controlPerformance: (zoneId: string, range: AnalyticsRange) =>
+    api.get<ApiResponse<ControlPerformanceResponse>>('/analytics/control/performance', { params: { zoneId, range } }),
   envSummary: (zoneId: string, range: AnalyticsRange) =>
     api.get<ApiResponse<EnvSummaryResponse>>('/analytics/env/summary', { params: { zoneId, range } }),
   envCompare: (zoneIds: string[], range: AnalyticsRange) =>

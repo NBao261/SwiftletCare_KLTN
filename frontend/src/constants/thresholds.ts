@@ -1,4 +1,4 @@
-import type { Thresholds } from '@/types'
+import type { FuzzyTuning, Thresholds } from '@/types'
 
 export const THRESHOLD_KEYS = [
   'temp_min', 'temp_max', 'humidity_min', 'humidity_max', 'light_max', 'nh3_max', 'co2_max',
@@ -18,6 +18,14 @@ export const FACTORY_DEFAULT_THRESHOLDS: Thresholds = {
   light_max: 0.2,
   nh3_max: 25,
   co2_max: 1500,
+}
+
+/** ENV-FR-021 — hệ số mờ gốc, PHẢI khớp backend `DEFAULT_FUZZY_TUNING` và firmware Config.h (DEFAULT_FUZZY_*) */
+export const DEFAULT_FUZZY_TUNING: FuzzyTuning = {
+  fuzzy_humidity_band: 8,
+  fuzzy_temp_band: 4,
+  fuzzy_fan_dry_level: 40,
+  fuzzy_window_sec: 120,
 }
 
 /**

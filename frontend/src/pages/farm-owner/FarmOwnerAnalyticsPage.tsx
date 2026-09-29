@@ -1,4 +1,4 @@
-// Analytics Page – ANALYTICS-FR-001..003/005, VISION-FR-008..011
+// Analytics Page – ANALYTICS-FR-001..003/005/008, VISION-FR-008..011
 import { useRef, useState } from 'react'
 import '@/lib/chartTheme'
 import { useZoneStore } from '@/stores/zoneStore'
@@ -7,6 +7,7 @@ import { useTelemetry } from '@/hooks/farm-owner/useTelemetry'
 import EmptyState from '@/components/ui/EmptyState'
 import EnvVariationCard from '@/components/features/farm-owner/analytics/EnvVariationCard'
 import ZoneBalanceCard from '@/components/features/farm-owner/analytics/ZoneBalanceCard'
+import ControlPerformanceCard from '@/components/features/farm-owner/analytics/ControlPerformanceCard'
 import BirdFlowCard from '@/components/features/farm-owner/analytics/BirdFlowCard'
 import CorrelationCard from '@/components/features/farm-owner/analytics/CorrelationCard'
 import CompareTab from '@/components/features/farm-owner/analytics/CompareTab'
@@ -46,6 +47,8 @@ export default function FarmOwnerAnalyticsPage() {
         thresholds={zone?.thresholds}
         live={{ isLive: telemetry.isLive, nh3_ppm: telemetry.data.nh3_ppm, co2_ppm: telemetry.data.co2_ppm }}
       />
+
+      <ControlPerformanceCard zoneId={selectedZoneId} zoneName={selectedZoneName ?? ''} />
 
       <ZoneBalanceCard farmId={selectedFarmId ?? undefined} />
 

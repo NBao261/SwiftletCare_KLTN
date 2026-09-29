@@ -21,7 +21,16 @@ export interface Thresholds {
   light_max: number; nh3_max: number; co2_max: number
 }
 
+/** ENV-FR-021 — 4 hệ số bộ điều khiển mờ trên ESP32 (khớp backend `FuzzyTuning`, key MQTT config/update) */
+export interface FuzzyTuning {
+  fuzzy_humidity_band: number  // %RH
+  fuzzy_temp_band: number      // °C
+  fuzzy_fan_dry_level: number  // %
+  fuzzy_window_sec: number     // giây
+}
+
 export interface Zone {
   _id: string; house_id: string; name: string; floor: number
   thresholds: Thresholds
+  fuzzy_tuning?: FuzzyTuning
 }
