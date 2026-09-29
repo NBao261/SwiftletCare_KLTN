@@ -4572,6 +4572,8 @@ components:
         - EDGE_AI_DEGRADED
         - SENSOR_FAULT
         - RS485_BUS_FAILURE
+        - SENSOR_ANOMALY
+        - FORECAST_BREACH
 
     Alert:
       type: object

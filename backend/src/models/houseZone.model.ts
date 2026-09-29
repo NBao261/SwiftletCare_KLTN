@@ -80,6 +80,7 @@ const zoneSchema = new Schema<IZone>(
       fuzzy_temp_band:     { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_temp_band },
       fuzzy_fan_dry_level: { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_fan_dry_level },
       fuzzy_window_sec:    { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_window_sec },
+      fuzzy_input_filter:  { type: Boolean, default: DEFAULT_FUZZY_TUNING.fuzzy_input_filter },
     },
     fuzzy_tuning_history: [{
       changed_by: { type: Schema.Types.ObjectId, ref: 'User' },

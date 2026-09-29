@@ -87,6 +87,8 @@ const ALERT_TYPE_TO_TICKET_TYPE: Record<AlertType, TicketType> = {
   BIRD_PANIC:        'OTHER',
   PUMP_DRY:          'OTHER',
   LOW_RETURN_RATE:   'OTHER',
+  SENSOR_ANOMALY:    'SENSOR_FAULT',
+  FORECAST_BREACH:   'OTHER',
 }
 
 /**

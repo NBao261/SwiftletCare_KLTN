@@ -19,6 +19,7 @@ export type AlertType =
   | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'BIRD_PANIC'
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE' // THREAT-FR-013
+  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'   // v1.24.0 — ALERT-FR-010/011
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 
@@ -105,6 +106,7 @@ export interface FuzzyTuning {
   fuzzy_temp_band: number      // °C — độ rộng vùng "nóng"
   fuzzy_fan_dry_level: number  // % — mức quạt khi nóng mà khô
   fuzzy_window_sec: number     // s — cửa sổ time-proportioning
+  fuzzy_input_filter: boolean  // ENV-FR-022 — lọc median+Kalman đầu vào bộ mờ (tắt để so sánh A/B)
 }
 
 // ── MQTT Message Payloads ──────────────────────────────────────────────────────

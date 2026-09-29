@@ -101,6 +101,20 @@ describe('PUT /farms/zones/:zoneId/fuzzy-tuning', () => {
     expect(await AuditLog.countDocuments({ action: 'FUZZY_TUNING_UPDATED' })).toBe(1)
   })
 
+  it('turns the input filter off for an A/B comparison and records it as a tuning change (ENV-FR-022)', async () => {
+    const { zone, token } = await seed()
+
+    const res = await request(app).put(`/farms/zones/${zone._id}/fuzzy-tuning`).set('Authorization', `Bearer ${token}`)
+      .send({ fuzzy_input_filter: false })
+
+    expect(res.status).toBe(200)
+    const saved = (await Zone.findById(zone._id))!.toObject()
+    expect(saved.fuzzy_tuning.fuzzy_input_filter).toBe(false)
+    expect(saved.fuzzy_tuning_history[0].new_values).toEqual({ fuzzy_input_filter: false })
+    expect(publishCommand).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'config/update',
+      expect.objectContaining({ fuzzy_input_filter: false }))
+  })
+
   it.each([
     ['a humidity band below 2', { fuzzy_humidity_band: 1 }],
     ['a fan level above 100', { fuzzy_fan_dry_level: 150 }],
@@ -108,6 +122,7 @@ describe('PUT /farms/zones/:zoneId/fuzzy-tuning', () => {
     ['a fractional window', { fuzzy_window_sec: 90.5 }],
     ['a non-numeric value', { fuzzy_temp_band: 'abc' }],
     ['a body without any tuning key', { foo: 1 }],
+    ['a non-boolean input filter flag', { fuzzy_input_filter: 'yes' }],
   ])('rejects %s', async (_label, body) => {
     const { zone, token } = await seed()
 
