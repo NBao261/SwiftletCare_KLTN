@@ -41,6 +41,11 @@ volatile int co2Max = DEFAULT_CO2_MAX;
 int sensorIntervalMs = SENSOR_INTERVAL_MS;
 int pidIntervalMs = PID_INTERVAL_MS;
 
+volatile float fuzzyHumidityBand = DEFAULT_FUZZY_HUMIDITY_BAND;
+volatile float fuzzyTempBand = DEFAULT_FUZZY_TEMP_BAND;
+volatile int fuzzyFanDryLevel = DEFAULT_FUZZY_FAN_DRY_LEVEL;
+volatile int fuzzyWindowSec = DEFAULT_FUZZY_WINDOW_SEC;
+
 // Speaker schedule (ENV-FR-013b)
 volatile bool speakerScheduleEnabled = true;
 volatile int speakerWindow1StartHour = SPEAKER_WINDOW_1_START_HOUR;
@@ -84,6 +89,16 @@ void update(const char *jsonPayload) {
     nh3Max = lroundf(doc["nh3_max"].as<float>());
   if (doc["co2_max"].is<float>())
     co2Max = lroundf(doc["co2_max"].as<float>());
+  // Hệ số logic mờ (ENV-FR-021): backend đã validate, vẫn kẹp lại ở đây vì 1
+  // giá trị hỏng (vd band = 0 → chia 0) sẽ làm hỏng điều khiển thật.
+  if (doc["fuzzy_humidity_band"].is<float>())
+    fuzzyHumidityBand = constrain(doc["fuzzy_humidity_band"].as<float>(), 2.0f, 20.0f);
+  if (doc["fuzzy_temp_band"].is<float>())
+    fuzzyTempBand = constrain(doc["fuzzy_temp_band"].as<float>(), 1.0f, 10.0f);
+  if (doc["fuzzy_fan_dry_level"].is<float>())
+    fuzzyFanDryLevel = constrain(lroundf(doc["fuzzy_fan_dry_level"].as<float>()), 0L, 100L);
+  if (doc["fuzzy_window_sec"].is<float>())
+    fuzzyWindowSec = constrain(lroundf(doc["fuzzy_window_sec"].as<float>()), 60L, 600L);
   if (doc["speaker_schedule_enabled"].is<bool>())
     speakerScheduleEnabled = doc["speaker_schedule_enabled"].as<bool>();
   if (doc["speaker_window1_start_hour"].is<int>())

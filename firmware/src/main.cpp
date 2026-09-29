@@ -3,7 +3,8 @@
  *
  * FreeRTOS Tasks:
  *   - SensorTask  : Read 5 RS485 Modbus sensors every 10s (ENV-FR-001..003)
- *   - PIDTask     : Closed-loop control + speaker schedule + threat detect
+ *   - PIDTask     : Closed-loop control (logic mờ phun sương/quạt, ngưỡng
+ *                   sưởi) + speaker schedule + threat detect
  *                   (ENV-FR-010..019, THREAT-FR-006, 011, 013)
  *   - MQTTTask    : Publish telemetry, subscribe commands (ENV-FR-015, §9.2)
  *
@@ -261,8 +262,10 @@ void pidTask(void *pvParameters) {
         // Check manual override expiry (ENV-FR-018)
         PIDController::checkOverrideExpiry(relayState);
 
-        // Run closed-loop control (ENV-FR-010..012)
-        PIDController::runHumidityControl(data.humidity, relayState);
+        // Run closed-loop control (ENV-FR-010..012): phun sương + quạt theo
+        // logic mờ, sưởi theo ngưỡng
+        PIDController::runHumidityControl(data.humidity, data.temperature,
+                                          relayState);
         PIDController::runVentilationControl(data, relayState);
         PIDController::runHeatingControl(data.temperature, relayState);
 

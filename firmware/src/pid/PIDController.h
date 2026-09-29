@@ -1,5 +1,7 @@
 /**
  * PIDController – Closed-loop environmental control + Threat alert flags
+ * Phun sương + quạt: logic mờ Sugeno (FuzzyControl.h) + time-proportioning;
+ * sưởi: ngưỡng bật/tắt (1 biến, logic mờ không thêm được gì).
  * Hardware: Components Guide v3.3 §8-9 (Relay 4 kênh kích mức CAO)
  * SRS: ENV-FR-010..019, THREAT-FR-006, THREAT-FR-011, THREAT-FR-013
  */
@@ -19,6 +21,12 @@ struct RelayState {
   bool heatingOverride = false;
   unsigned long overrideExpiryMs = 0;
 
+  // Đầu ra bộ điều khiển mờ, % công suất 0-100 (= tỉ lệ thời gian BẬT trong
+  // cửa sổ Config::fuzzyWindowSec). Override → 100/0. Gửi lên qua telemetry
+  // control_output (KHÔNG qua toJson/relay-status: số này đổi liên tục).
+  uint8_t mistingPct = 0;
+  uint8_t ventilationPct = 0;
+
   void init();
   void applyRelay(int pin, bool state); // kích mức CAO = bật (Guide §8)
   bool anyOverride() const; // control_mode MANUAL/AUTO gửi lên backend
@@ -26,8 +34,8 @@ struct RelayState {
 };
 
 /**
- * PIDLoop – Generic PID algorithm (dùng nội bộ, chưa gắn vào control loop
- * hiện tại đang dùng on-off theo ENV-FR-010/011; giữ lại để mở rộng).
+ * PIDLoop – Generic PID algorithm (chưa gắn vào control loop — phun sương/quạt
+ * dùng logic mờ, sưởi dùng ngưỡng theo ENV-FR-010..012; giữ lại để mở rộng).
  */
 class PIDLoop {
 public:
@@ -43,8 +51,8 @@ private:
 };
 
 namespace PIDController {
-void runHumidityControl(float humidity, RelayState &relay);   // ENV-FR-010
-void runVentilationControl(const SensorData &data, RelayState &relay); // ENV-FR-011
+void runHumidityControl(float humidity, float temperature, RelayState &relay); // ENV-FR-010 (mờ)
+void runVentilationControl(const SensorData &data, RelayState &relay);        // ENV-FR-011 (mờ)
 void runHeatingControl(float temperature, RelayState &relay); // ENV-FR-012
 
 void setManualOverride(const char *relayName, bool state,
@@ -57,7 +65,7 @@ void clearOverrides(RelayState &relay);
 // Threat detection (THREAT-FR-006, 011, 013) – chỉ tính flags, main.cpp/MQTTManager publish alert
 struct ThreatFlags {
   bool speakerFailure = false; // relay speaker ON + đang play nhưng dB không tăng
-  bool pumpDry = false;        // misting ON >5' nhưng ẩm không tăng
+  bool pumpDry = false;        // đợt phun đã BẬT cộng dồn >5' nhưng ẩm không tăng
   bool sensorFault = false;    // 1 Slave ID lỗi
   bool busFailure = false;     // ≥3/5 Slave ID lỗi, 3 chu kỳ liên tiếp
 };

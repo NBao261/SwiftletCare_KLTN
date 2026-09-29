@@ -19,7 +19,8 @@ Cấu hình WiFi/MQTT/Farm-House-Zone ID: sửa `src/config/Config.cpp` (dev) ho
 src/
   config/   Pin mapping, ngưỡng mặc định, lịch loa ru (Config.h/.cpp)
   sensors/  Đọc 5 cảm biến RS485 Modbus (SensorManager) — Guide §5
-  pid/      Closed-loop on-off control 4 relay + threat flags (PIDController)
+  pid/      Điều khiển 4 relay + threat flags (PIDController); phun sương + quạt
+            dùng logic mờ Sugeno + time-proportioning (FuzzyControl, C++ thuần)
   audio/    DFPlayer Mini — loa ru dẫn dụ theo lịch (AudioManager) — Guide §10-12
   mqtt/     Publish telemetry/heartbeat/relay status, subscribe command (§9.2)
   storage/  NVS (config) + SPIFFS (buffer offline, REL-NFR-003)
@@ -40,5 +41,16 @@ src/
 ## Test
 
 ```bash
-pio test -e native   # unit test host (không cần board thật)
+pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy
 ```
+
+Env `native` chỉ build `src/pid/FuzzyControl.cpp` (không phụ thuộc Arduino) và cần **g++ trên máy** — Windows: cài MinGW-w64 (vd `choco install mingw`) rồi thêm vào PATH.
+
+## Điều khiển mờ (ENV-FR-010/011, firmware 1.1.0)
+
+- **Phun sương** = f(độ ẩm, nhiệt độ), **quạt** = f(nhiệt độ, độ ẩm, NH3, CO2) → % công suất 0-100 (Sugeno bậc 0, luật xem `FuzzyControl.h`). Điểm gãy tập mờ suy ra từ ngưỡng `Config` nên chỉnh ngưỡng qua MQTT `config/update` vẫn có tác dụng.
+- Relay chỉ bật/tắt nên % được áp bằng time-proportioning: BẬT `duty × cửa sổ` đầu mỗi cửa sổ (mặc định 120s); quạt lệch nửa cửa sổ so với phun sương.
+- **4 hệ số chỉnh được lúc chạy** qua `config/update`, lưu NVS, kẹp vào khoảng hợp lệ (ENV-FR-021): `fuzzy_humidity_band` (2–20 %RH, mặc định 8), `fuzzy_temp_band` (1–10 °C, 4), `fuzzy_fan_dry_level` (0–100 %, 40), `fuzzy_window_sec` (60–600 s, 120). Mặc định cho ra đúng hàm thuộc gốc. Chỉnh trên web: trang Analytics → "Hiệu quả điều khiển" → "Chỉnh hệ số".
+- NH3/CO2 vượt max luôn ép quạt 100%. Sưởi vẫn theo ngưỡng `temp_min`.
+- % gửi lên trong telemetry `control_output {misting, ventilation}`; dashboard web hiển thị trên gauge relay.
+- PUMP_DRY: 5 phút relay BẬT **cộng dồn** trong 1 đợt phun mà ẩm không tăng > 2%.
