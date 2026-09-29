@@ -6,7 +6,7 @@ import { Telemetry } from '@/models/telemetry.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
-import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { applyZoneScope, assertFarmAccess, assertRecordAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError, ConflictError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
 import type { CurrentUser, NestType, ListingStatus } from '@/types'
@@ -111,15 +111,17 @@ export async function createHarvest(user: CurrentUser, input: CreateHarvestInput
 }
 
 export async function listHarvests(user: CurrentUser, farmId?: string) {
-  const accessible = await listAccessibleFarmIds(user)
-  const filter: Record<string, unknown> = { farm_id: farmId ?? { $in: accessible } }
-  return HarvestBatch.find(filter).sort({ harvest_date: -1 }).lean()
+  // farmId do client gửi phải qua kiểm quyền — trước đây gán thẳng vào filter nên
+  // đọc được mẻ thu hoạch của farm bất kỳ chỉ bằng cách đoán id (IDOR)
+  if (farmId) await assertFarmAccess(farmId, user)
+  const filter: Record<string, unknown> = { farm_id: farmId ?? { $in: await listAccessibleFarmIds(user) } }
+  return HarvestBatch.find(await applyZoneScope(filter, user)).sort({ harvest_date: -1 }).lean()
 }
 
 export async function getHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {
   const batch = await HarvestBatch.findById(id)
   if (!batch || batch.is_deleted) throw NotFoundError('Không tìm thấy đợt thu hoạch')
-  await assertFarmAccess(String(batch.farm_id), user)
+  await assertRecordAccess(batch.farm_id, batch.zone_id, user)
   return batch
 }
 

@@ -6,7 +6,7 @@ import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
 router.use(authenticate)
-router.use(requireRole('FARM_OWNER', 'ADMIN'))
+router.use(requireRole('FARM_OWNER', 'FARM_OPERATOR', 'ADMIN'))
 
 /** MARKET-FR-001..005 */
 router.post  ('/',    body('zone_id').isMongoId(), body('harvest_date').isISO8601(), validate, harvestController.create)

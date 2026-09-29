@@ -17,8 +17,8 @@ const REFRESH_TTL_MS = 30 * 86400 * 1000
  *  và 'user@test.com' bị coi là 2 tài khoản khác nhau. */
 const normalizeEmail = (email: string) => email.toLowerCase().trim()
 
-/** Hash 1 chiều (sha256) cho mã dùng 1 lần — OTP đăng nhập và token reset mật
- *  khẩu đều dùng chung, để lộ DB đọc cũng không lấy được mã gốc còn hiệu lực. */
+/** Hash 1 chiều (sha256) cho OTP đăng nhập, token reset mật khẩu và refresh
+ *  token — dùng chung, để lộ DB đọc cũng không lấy được mã gốc còn hiệu lực. */
 const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
 
 /** Hash bcrypt (cost=12) hợp lệ bất kỳ — KHÔNG phải mật khẩu thật của ai. Dùng để
@@ -31,7 +31,22 @@ function signAccess(userId: string, role: string): string {
 }
 
 function signRefresh(userId: string): string {
-  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn: REFRESH_TTL } as jwt.SignOptions)
+  // jwtid: 2 lần đăng nhập trong cùng 1 giây không sinh ra cùng 1 token (cùng hash) —
+  // nếu trùng, logout ở máy này sẽ gỡ luôn phiên ở máy kia
+  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn: REFRESH_TTL, jwtid: crypto.randomUUID() } as jwt.SignOptions)
+}
+
+/**
+ * AUTH-FR-003 — cấp refresh token mới cho `user` (caller tự save). Chỉ lưu hash, và
+ * dọn token đã hết hạn ngay lúc này: không có bước này mảng lớn dần theo số lần
+ * đăng nhập vì token chỉ bị gỡ khi logout/đặt lại mật khẩu.
+ */
+function issueRefreshToken(user: IUser): string {
+  const token = signRefresh(String(user._id))
+  const now = Date.now()
+  user.refresh_tokens = user.refresh_tokens.filter(t => t.expires.getTime() > now) as never
+  user.refresh_tokens.push({ token_hash: hashToken(token), expires: new Date(now + REFRESH_TTL_MS) })
+  return token
 }
 
 export interface RegisterInput { email: string; password: string; full_name: string; phone?: string }
@@ -43,16 +58,14 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
   const existing = await User.findOne({ email: normalizedEmail })
   if (existing) throw ConflictError('Email đã được đăng ký')
 
-  // Flow 12 bước 3b — nếu email trùng một lời mời Farm Owner PENDING còn hạn, lời
-  // mời tự động được accept ngay khi đăng ký xong, không cần thao tác thêm. Chỉ
-  // lời mời FARM_OWNER: từ v1.16.0 Sales Staff không còn đi qua lời mời (đề xuất +
-  // Admin duyệt, AUTH-FR-005b/005d), nên lời mời SALES_STAFF cũ tồn đọng bị bỏ qua.
+  // Flow 12 bước 3b — nếu email trùng một lời mời PENDING còn hạn (Farm Owner hoặc
+  // Farm Operator), lời mời tự động được accept ngay khi đăng ký xong và tài khoản
+  // mang đúng role được mời. Không có lời mời thì là Farm Owner tự đăng ký (mặc định).
   const invitation = await Invitation.findOne({
     invited_email: normalizedEmail,
-    invited_role: 'FARM_OWNER',
     status: 'PENDING',
     expires_at: { $gt: new Date() },
-  })
+  }).sort({ created_at: 1 })
 
   const user = new User({
     // Lưu dạng đã chuẩn hoá — nếu lưu input.email thô, dup-check ở trên (query
@@ -72,7 +85,12 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
     await invitation.save()
 
     await Farm.findByIdAndUpdate(invitation.farm_id, {
-      $addToSet: { members: { user_id: user._id, is_primary: false, joined_at: new Date() } },
+      $addToSet: {
+        members: {
+          user_id: user._id, is_primary: false, role: invitation.invited_role,
+          zone_ids: invitation.zone_ids, joined_at: new Date(),
+        },
+      },
     })
   }
 
@@ -115,9 +133,7 @@ export async function loginUser(input: LoginInput): Promise<{ user: IUser; acces
   await assertLoginAllowed(user)
 
   const accessToken  = signAccess(String(user._id), user.role)
-  const refreshToken = signRefresh(String(user._id))
-
-  user.refresh_tokens.push({ token: refreshToken, expires: new Date(Date.now() + REFRESH_TTL_MS) })
+  const refreshToken = issueRefreshToken(user)
   await user.save()
 
   await logAction(String(user._id), 'LOGIN', 'user', String(user._id))
@@ -138,7 +154,8 @@ export async function refreshAccessToken(refreshToken: string | undefined): Prom
   const user = await User.findById(payload.sub)
   if (!user) throw UnauthorizedError('Không tìm thấy user')
 
-  const isValid = user.refresh_tokens.some(t => t.token === refreshToken && t.expires > new Date())
+  const tokenHash = hashToken(refreshToken)
+  const isValid = user.refresh_tokens.some(t => t.token_hash === tokenHash && t.expires > new Date())
   if (!isValid) throw UnauthorizedError('Refresh token đã bị thu hồi hoặc hết hạn')
 
   return { accessToken: signAccess(String(user._id), user.role) }
@@ -147,7 +164,7 @@ export async function refreshAccessToken(refreshToken: string | undefined): Prom
 /** AUTH-FR-006 */
 export async function logoutUser(userId: string, refreshToken: string | undefined): Promise<void> {
   if (refreshToken) {
-    await User.updateOne({ _id: userId }, { $pull: { refresh_tokens: { token: refreshToken } } })
+    await User.updateOne({ _id: userId }, { $pull: { refresh_tokens: { token_hash: hashToken(refreshToken) } } })
   }
 }
 
@@ -182,8 +199,7 @@ export async function verifyOtp(email: string, otp: string): Promise<{ user: IUs
 
   // Giống loginUser() — phải cấp refresh token ở đây, nếu không phiên đăng nhập
   // qua OTP không có cách nào silent-refresh và hết hạn sau ACCESS_TTL (15 phút).
-  const refreshToken = signRefresh(String(user._id))
-  user.refresh_tokens.push({ token: refreshToken, expires: new Date(Date.now() + REFRESH_TTL_MS) })
+  const refreshToken = issueRefreshToken(user)
   await user.save()
 
   await logAction(String(user._id), 'LOGIN', 'user', String(user._id), { method: 'OTP' })
@@ -257,7 +273,7 @@ export async function updateNotificationPreferences(
 /**
  * AUTH-FR-012 / PRIV-NFR-003 — user tự yêu cầu xoá tài khoản. Chỉ ĐÁNH DẤU,
  * việc xoá thật do Administrator xử lý trong ≤30 ngày (Flow 19) vì còn phải
- * kiểm tra ràng buộc Farm/Order dở dang trước khi xoá.
+ * kiểm tra ràng buộc Farm/ticket dở dang trước khi xoá.
  */
 export async function requestAccountDeletion(userId: string): Promise<IUser> {
   const user = await User.findById(userId)
