@@ -74,7 +74,7 @@ Expo app; points at `localhost:3000` by default (`constants/api.ts`). Scripts: `
 pio run -e esp32dev                      # build only, no board needed
 pio run -e esp32dev --target upload      # flash over USB (only needed when firmware code changes)
 pio device monitor -b 115200             # serial log
-pio test -e native                       # host-side unit tests, no board needed (env defined, but no firmware/test/ suite exists yet)
+pio test -e native                       # host-side unit tests (test/test_fuzzy — builds only pid/FuzzyControl.cpp), needs g++/MinGW on PATH
 pio run -e modbus_scan                   # standalone RS485 slave-ID/baudrate scan tool (test_noise_rs485.cpp only, not part of main.cpp build)
 ```
 
@@ -108,7 +108,7 @@ Binding rules when adding/editing backend code:
 
 **Express middleware order** (`config/app.config.ts`): `helmet()` → `cors({origin: CORS_ORIGIN ?? http://localhost:5173, credentials: true})` → `rateLimiter` (`RATE_LIMIT_WINDOW_MS`/`RATE_LIMIT_MAX`, default 100 req/60s) → `morgan('combined')` → `express.json({limit:'10mb'})` → `urlencoded` → `cookieParser()` → `requestContext` (AsyncLocalStorage holding the client IP so `logAction()` can fill `audit_logs.ip_address`; set `TRUST_PROXY=<hops>` when running behind a proxy, never `true`) → `/health` → Swagger (`/api-docs`, spec loaded from `docs/api/api-spec.yaml` inside a try/catch — a missing spec just logs a warning, doesn't crash boot) → 13 domain routers → 404 handler → `errorHandler` (must stay last). `config/db.config.ts#connectDB()` requires `MONGODB_URI` and connects with `maxPoolSize: 10`.
 
-**Models** (`src/models/*.ts`, one per file): `user`, `farm` (+ embedded members; soft-deleted — `utils/softDelete.util.ts#applySoftDeleteScope` hides `is_deleted` docs from every `find*`/`countDocuments` unless the filter names `is_deleted` itself, same for `harvestBatch`; delete a farm via `farm.service#softDeleteFarm`, which also resolves open alerts and expires pending invitations), `houseZone` (House + Zone, with threshold history), `device` (SensorNode + CameraNode), `audioTrack` (lullaby files per device; file on MinIO via `config/minio.config.ts`, the real copy lives on the DFPlayer SD card), `telemetry`, `alert`, `auditLog`, `systemSetting` (singleton, unique `_singleton` key), `invitation`, `ticket`, `harvestBatch`, `nestListing`, `birdCountRecord`, `contactInquiry`, `ticketMessage`, `maintenanceSchedule`, `provisionedDevice`. There is no SALES module any more (removed in SRS v1.23.0 — selling nests is Module MARKET only).
+**Models** (`src/models/*.ts`, one per file): `user`, `farm` (+ embedded members; soft-deleted — `utils/softDelete.util.ts#applySoftDeleteScope` hides `is_deleted` docs from every `find*`/`countDocuments` unless the filter names `is_deleted` itself, same for `harvestBatch`; delete a farm via `farm.service#softDeleteFarm`, which also resolves open alerts and expires pending invitations), `houseZone` (House + Zone, with threshold history and fuzzy-control tuning + its history), `device` (SensorNode + CameraNode), `audioTrack` (lullaby files per device; file on MinIO via `config/minio.config.ts`, the real copy lives on the DFPlayer SD card), `telemetry`, `alert`, `auditLog`, `systemSetting` (singleton, unique `_singleton` key), `invitation`, `ticket`, `harvestBatch`, `nestListing`, `birdCountRecord`, `contactInquiry`, `ticketMessage`, `maintenanceSchedule`, `provisionedDevice`. There is no SALES module any more (removed in SRS v1.23.0 — selling nests is Module MARKET only).
 
 **Background jobs** (`src/jobs/*.ts`, `node-cron`):
 | Job | Schedule | Does |
@@ -191,7 +191,8 @@ Expo Router (file-based routing) under `mobile/app/`: `(auth)` group (login/regi
 
 ```
 sensors/  SensorManager — 5 RS485 Modbus sensors (RX GPIO16 / TX GPIO17, 4800bps, slave IDs 1-5: noise/CO2/NH3/light/temp+humidity)
-pid/      PIDController — closed-loop on/off control for 4 relays (misting/speaker/ventilation/heating) + threat flags
+pid/      PIDController — control for 4 relays (misting/speaker/ventilation/heating) + threat flags;
+          misting + ventilation use FuzzyControl (Sugeno fuzzy logic → % duty, applied by time-proportioning over a tunable window, default 120s), heating stays threshold on/off
 audio/    AudioManager — DFPlayer Mini lullaby playback on schedule
 mqtt/     publish telemetry/heartbeat/relay-status, subscribe to command topics
 storage/  NVS (config) + SPIFFS (offline buffering)
@@ -199,6 +200,8 @@ main.cpp  SensorTask / PIDTask / MQTTTask
 ```
 
 `config/Config.h`/`.cpp` holds default thresholds (temp 26–31°C, humidity 75–95%, light max 0.2, NH3 max 25ppm, CO2 max 1500ppm) and the lullaby schedule (default windows 05–07h/17–19h) — all runtime-overridable via MQTT `config/update` and persisted to NVS, so editing these defaults in code only affects first boot. `platformio.ini` defines three envs: `esp32dev` (default, full firmware), `modbus_scan` (standalone RS485 slave-ID/baudrate scanner, `test_noise_rs485.cpp` only — not part of the `esp32dev` build), `native` (host-side unit tests, no hardware).
+
+Fuzzy control (SRS v1.24.0, firmware 1.1.0): `pid/FuzzyControl.cpp` is plain C++ (no Arduino) so it can be unit-tested on the host; membership breakpoints are offsets around the runtime `Config` thresholds, so `config/update` still retunes it. Four coefficients (`fuzzy_humidity_band`, `fuzzy_temp_band`, `fuzzy_fan_dry_level`, `fuzzy_window_sec` — ENV-FR-021) are runtime-tunable per Zone: `zones.fuzzy_tuning` (+ `fuzzy_tuning_history`), `PUT /farms/zones/:zoneId/fuzzy-tuning` → `config/update`, persisted to NVS and clamped by the firmware; `buildDeviceConfig` takes the zone so every full config push carries them. Telemetry carries `control_output {misting, ventilation}` (0-100 %): the backend forwards it as `TELEMETRY_UPDATE.controlOutput` for the dashboard gauge and stores it with the relay states on each persisted sample (`telemetry.misting_pct/ventilation_pct/misting_on/ventilation_on`), which `GET /analytics/control/performance` (ANALYTICS-FR-008) turns into in-range %, relay switches/hour and tuning-change markers. `PUMP_DRY` counts *cumulative* relay-on time within a spray session, since the pump now cycles.
 
 ### AI pipeline (`ai-pipeline/`) — scaffold, not deployed
 
