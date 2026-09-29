@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import * as analyticsService from '@/services/analytics.service'
 import * as forecastService from '@/services/forecast.service'
+import * as tuningSuggestionService from '@/services/tuningSuggestion.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** GET /analytics/env/summary – ANALYTICS-FR-001 (biểu đồ lịch sử môi trường) */
@@ -18,6 +19,12 @@ export const controlPerformance = asyncHandler(async (req: Request, res: Respons
     zoneId: req.query.zoneId as string,
     range:  (req.query.range as string) ?? '24h',
   })
+  res.json({ success: true, data })
+})
+
+/** GET /analytics/control/suggestion – ANALYTICS-FR-010 (gợi ý hệ số mờ) */
+export const tuningSuggestion = asyncHandler(async (req: Request, res: Response) => {
+  const data = await tuningSuggestionService.getTuningSuggestion(req.user, req.query.zoneId as string)
   res.json({ success: true, data })
 })
 
