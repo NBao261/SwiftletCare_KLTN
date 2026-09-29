@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as analyticsService from '@/services/analytics.service'
+import * as forecastService from '@/services/forecast.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** GET /analytics/env/summary – ANALYTICS-FR-001 (biểu đồ lịch sử môi trường) */
@@ -17,6 +18,12 @@ export const controlPerformance = asyncHandler(async (req: Request, res: Respons
     zoneId: req.query.zoneId as string,
     range:  (req.query.range as string) ?? '24h',
   })
+  res.json({ success: true, data })
+})
+
+/** GET /analytics/forecast – ANALYTICS-FR-009 (dự báo 60 phút tới) */
+export const forecast = asyncHandler(async (req: Request, res: Response) => {
+  const data = await forecastService.getZoneForecast(req.user, req.query.zoneId as string)
   res.json({ success: true, data })
 })
 

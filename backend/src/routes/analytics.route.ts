@@ -12,6 +12,8 @@ router.get('/env/summary',       query('zoneId').isMongoId(), validate, analytic
 router.get('/env/compare',       query('zoneIds').notEmpty(), validate, analyticsController.envCompare)
 // ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ (dữ liệu để chỉnh hệ số ENV-FR-021)
 router.get('/control/performance', query('zoneId').isMongoId(), validate, analyticsController.controlPerformance)
+// ANALYTICS-FR-009 — dự báo độ ẩm/nhiệt độ 60 phút tới (Holt trend tắt dần) + MAE đánh giá lùi
+router.get('/forecast',          query('zoneId').isMongoId(), validate, analyticsController.forecast)
 
 // VISION/ANALYTICS-FR-002/003 — phụ thuộc module VISION, trả rỗng cho tới khi có camera
 router.get('/bird-count/daily',  query('zoneId').isMongoId(), validate, analyticsController.birdCountDaily)

@@ -1,5 +1,7 @@
 import { Types } from 'mongoose'
 import { Telemetry } from '@/models/telemetry.model'
+import { SensorNode, IN_SERVICE } from '@/models/device.model'
+import { RELAY_SERVICE_LIMITS } from '@/services/relayUsage.service'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
 import { BadRequestError } from '@/utils/appError.util'
@@ -91,7 +93,7 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
   const switched = (field: string, prev: string) =>
     ({ $sum: { $cond: [{ $and: [{ $ne: [prev, null] }, { $ne: [prev, field] }] }, 1, 0] } })
 
-  const [series, [agg]] = await Promise.all([
+  const [series, [agg], nodes] = await Promise.all([
     Telemetry.aggregate([
       match,
       {
@@ -135,6 +137,7 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
         },
       },
     ]),
+    SensorNode.find({ zone_id: zone._id, ...IN_SERVICE }).select('device_id relay_usage').lean(),
   ])
 
   const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null)
@@ -149,6 +152,13 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
       .filter(h => h.changed_at >= from)
       .map(h => ({ changed_at: h.changed_at, new_values: h.new_values })),
     series,
+    // TICKET-FR-018 — tiến độ tới mốc bảo trì theo thời gian chạy của từng thiết bị
+    service_limits: RELAY_SERVICE_LIMITS,
+    relay_usage: nodes.map(n => ({
+      device_id: n.device_id,
+      misting: { hours: Math.round(n.relay_usage?.misting?.since_service_hours ?? 0), switches: n.relay_usage?.misting?.since_service_switches ?? 0 },
+      ventilation: { hours: Math.round(n.relay_usage?.ventilation?.since_service_hours ?? 0), switches: n.relay_usage?.ventilation?.since_service_switches ?? 0 },
+    })),
     stats: agg ? {
       sampleCount: agg.total,
       humidityInRangePct:    pct(agg.humidityInRange, agg.humidityCount),

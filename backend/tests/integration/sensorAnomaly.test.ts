@@ -21,6 +21,7 @@ jest.mock('@/socket', () => ({
 }))
 jest.mock('@/services/notification.service', () => ({
   dispatchAlertNotification: jest.fn().mockResolvedValue(undefined), notifyUser: jest.fn().mockResolvedValue(undefined),
+  notifyAdmins: jest.fn().mockResolvedValue(undefined),
 }))
 
 let mongod: MongoMemoryServer
