@@ -3,6 +3,16 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '@/apis/farm-owner/analytics.api'
 import type { AnalyticsRange, EnvCompareZone } from '@/apis/farm-owner/analytics.api'
 
+/** ANALYTICS-FR-010 — gợi ý hệ số mờ; chỉ chạy khi người dùng bấm (mô phỏng 120 bộ hệ số, không cần tự động) */
+export function useTuningSuggestion(zoneId: string) {
+  return useQuery({
+    queryKey: ['analytics', 'tuning-suggestion', zoneId],
+    queryFn: () => analyticsApi.tuningSuggestion(zoneId).then(r => r.data.data),
+    enabled: false,
+    staleTime: 0,
+  })
+}
+
 /** ANALYTICS-FR-009 — dự báo 60 phút tới; tự làm mới 5 phút/lần (bằng 1 bucket dữ liệu) */
 export function useForecast(zoneId: string | undefined) {
   return useQuery({

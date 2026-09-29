@@ -96,6 +96,15 @@ export interface ControlPerformanceResponse {
   }>
 }
 
+/** ANALYTICS-FR-010 — gợi ý hệ số mờ (chỉ đề xuất; `suggestion` null kèm `reason` khi từ chối) */
+export interface TuningSuggestionResponse {
+  current: FuzzyTuning
+  suggestion: Partial<FuzzyTuning> | null
+  reason: string | null
+  predicted?: { inRangeNow: number; inRangeSuggested: number; mistingNow: number; mistingSuggested: number }
+  model: { r2: number; samples: number; days: number } | null
+}
+
 /** ANALYTICS-FR-009 — dự báo 60 phút tới (Holt trend tắt dần), sai số đánh giá lùi */
 export interface MetricForecast {
   history: Array<{ timestamp: string; value: number }>
@@ -112,8 +121,10 @@ export interface ForecastResponse {
   predicted: { metric: 'humidity' | 'temperature'; direction: 'above' | 'below'; limit: number; value: number; minutesAhead: number } | null
 }
 
-/** ANALYTICS-FR-001..005/008/009, VISION-FR-008..011 */
+/** ANALYTICS-FR-001..005/008..010, VISION-FR-008..011 */
 export const analyticsApi = {
+  tuningSuggestion: (zoneId: string) =>
+    api.get<ApiResponse<TuningSuggestionResponse>>('/analytics/control/suggestion', { params: { zoneId } }),
   forecast: (zoneId: string) =>
     api.get<ApiResponse<ForecastResponse>>('/analytics/forecast', { params: { zoneId } }),
   controlPerformance: (zoneId: string, range: AnalyticsRange) =>

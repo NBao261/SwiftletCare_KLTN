@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { useUpdateFuzzyTuning } from '@/hooks/shared/useFarms'
+import { useTuningSuggestion } from '@/hooks/farm-owner/useAnalytics'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { Button, Input, Modal, Toggle } from '@/components/ui'
@@ -43,9 +44,22 @@ export default function FuzzyTuningModal({
   onClose: () => void
 }) {
   const update = useUpdateFuzzyTuning(zoneId)
+  const suggestion = useTuningSuggestion(zoneId)
   const push = useToastStore(s => s.push)
   const [form, setForm] = useState<Form>(() => toForm(current))
   const [errors, setErrors] = useState<Partial<Record<FuzzyNumericKey, string>>>({})
+
+  // ANALYTICS-FR-010 — chỉ điền sẵn vào form; người vận hành vẫn phải bấm "Lưu & áp dụng"
+  async function handleSuggest() {
+    const { data } = await suggestion.refetch()
+    const s = data?.suggestion
+    if (!s) return
+    setForm(prev => ({
+      ...prev,
+      ...Object.fromEntries(FIELDS.filter(f => s[f.key] !== undefined).map(f => [f.key, String(s[f.key])])),
+    }))
+    setErrors({})
+  }
 
   function handleSave(e: FormEvent) {
     e.preventDefault()
@@ -74,6 +88,27 @@ export default function FuzzyTuningModal({
   return (
     <Modal open onClose={onClose} title={`Hệ số logic mờ — ${zoneName}`}>
       <form onSubmit={handleSave} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2 rounded-2xl border border-warmGray/15 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-warmGray">Học mô hình nhà yến từ dữ liệu 14 ngày qua, mô phỏng 120 bộ hệ số, đề xuất bộ tốt nhất.</p>
+            <Button type="button" size="sm" variant="secondary" loading={suggestion.isFetching} onClick={() => void handleSuggest()}>
+              Gợi ý hệ số
+            </Button>
+          </div>
+          {suggestion.isError && <p className="text-xs text-alertRed">{getApiErrorMessage(suggestion.error, 'Không lấy được gợi ý')}</p>}
+          {suggestion.data && (
+            suggestion.data.suggestion ? (
+              <p className="text-xs text-charcoal">
+                Đã điền gợi ý vào form. Theo mô hình (R² {suggestion.data.model?.r2}, {suggestion.data.model?.days} ngày dữ liệu):
+                độ ẩm trong ngưỡng <b>{suggestion.data.predicted?.inRangeNow}% → {suggestion.data.predicted?.inRangeSuggested}%</b>,
+                phun trung bình {suggestion.data.predicted?.mistingNow}% → {suggestion.data.predicted?.mistingSuggested}%.
+                Đây là dự đoán trên mô hình — kiểm tra rồi mới bấm "Lưu & áp dụng".
+              </p>
+            ) : (
+              <p className="text-xs text-warmGray">Chưa có gợi ý: {suggestion.data.reason}</p>
+            )
+          )}
+        </div>
         {FIELDS.map(f => (
           <div key={f.key} className="flex flex-col gap-1">
             <Input
