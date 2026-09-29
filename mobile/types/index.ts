@@ -15,6 +15,7 @@ export type AlertType =
   | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'BIRD_PANIC'
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'
+  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 

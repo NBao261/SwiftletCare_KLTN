@@ -67,6 +67,7 @@ export function useTelemetry(zoneId: string | undefined) {
     },
     relayStates: live?.relayStates,
     controlMode: live?.controlMode,
+    controlOutput: live?.controlOutput,
     isLive: !!live && !isStale,
     hasEverReceived: !!live,
   }

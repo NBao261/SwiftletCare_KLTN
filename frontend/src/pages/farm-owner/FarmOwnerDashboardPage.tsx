@@ -33,7 +33,7 @@ const FALLBACK_THRESHOLDS = {
 /** Dashboard – 6 chỉ số realtime của Zone đang chọn (ENV-FR-005) */
 export default function FarmOwnerDashboardPage() {
   const { selectedZoneId, selectedZoneName, setZone, clearZone } = useZoneStore();
-  const { data, isLoading, isLive, hasEverReceived, relayStates, controlMode } = useTelemetry(
+  const { data, isLoading, isLive, hasEverReceived, relayStates, controlMode, controlOutput } = useTelemetry(
     selectedZoneId ?? undefined,
   );
   const { data: allZones, isLoading: isLoadingAllZones } = useAllZones();
@@ -147,6 +147,7 @@ export default function FarmOwnerDashboardPage() {
           zoneName={selectedZoneName ?? undefined}
           relayStates={effectiveRelayStates}
           controlMode={effectiveControlMode}
+          controlOutput={controlOutput}
           tooHot={tooHot}
           tooCold={tooCold}
         />

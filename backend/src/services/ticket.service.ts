@@ -87,6 +87,8 @@ const ALERT_TYPE_TO_TICKET_TYPE: Record<AlertType, TicketType> = {
   BIRD_PANIC:        'OTHER',
   PUMP_DRY:          'OTHER',
   LOW_RETURN_RATE:   'OTHER',
+  SENSOR_ANOMALY:    'SENSOR_FAULT',
+  FORECAST_BREACH:   'OTHER',
 }
 
 /**
@@ -786,6 +788,7 @@ export async function getKpi() {
   const now = new Date()
   const resolvedMatch = { status: 'CLOSED', closed_at: { $ne: null }, cancelled_at: null }
   const dueMatch = { cancelled_at: null, sla_resolve_due_at: { $ne: null, $lt: now } }
+  const hasDeadline = { $ne: [{ $ifNull: ['$sla_resolve_due_at', null] }, null] }
 
   const [byStatus, byTechnician, resolveStats, slaStats] = await Promise.all([
     Ticket.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
@@ -801,8 +804,10 @@ export async function getKpi() {
           unaccepted: { $sum: { $cond: [{ $eq: ['$status', 'NEW'] }, 1, 0] } },
           resolveMsSum: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, { $subtract: ['$closed_at', '$created_at'] }, 0] } },
           resolvedCount: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
-          due: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }] }, 1, 0] } },
-          dueBreached: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }, '$is_sla_breached'] }, 1, 0] } },
+          // Ticket không có hạn SLA: trong aggregation `null < Date` là true — phải loại
+          // riêng (như dueMatch), nếu không nó bị đếm là "đã đến hạn" và kéo lệch tỉ lệ SLA.
+          due: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, hasDeadline, { $lt: ['$sla_resolve_due_at', now] }] }, 1, 0] } },
+          dueBreached: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, hasDeadline, { $lt: ['$sla_resolve_due_at', now] }, '$is_sla_breached'] }, 1, 0] } },
           // TICKET-FR-004b — từ lúc ticket được giao (không phải lúc tạo) tới lúc Technician xác nhận tiếp nhận
           responseMsSum: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, { $subtract: ['$responded_at', { $ifNull: ['$assigned_at', '$created_at'] }] }, 0] } },
           respondedCount: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, 1, 0] } },

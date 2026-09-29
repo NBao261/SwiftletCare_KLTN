@@ -114,7 +114,7 @@ export async function selectTrack(nodeId: string, trackId: string, user: Current
   node.audio.current_track = track.track_number
   await node.save()
   publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update',
-    { deviceId: node.device_id, ...buildDeviceConfig(chain.zone.thresholds, node) })
+    { deviceId: node.device_id, ...buildDeviceConfig(chain.zone, node) })
   await logAction(user._id, 'AUDIO_TRACK_SELECTED', 'sensor_node', String(node._id), {
     trackId, trackNumber: track.track_number, displayName: track.display_name,
   })

@@ -12,7 +12,9 @@ import {
 import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
-import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
+import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
+import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
+import { publishCommand } from '@/mqtt/mqtt.client'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser, FarmMemberRole } from '@/types'
 
@@ -371,6 +373,31 @@ export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Pr
   const defaults = await getDefaultThresholds()
 
   return applyThresholdUpdate(chain, user, { thresholds: { ...defaults }, historyValues: defaults, source: 'RESET_TO_DEFAULT' })
+}
+
+/**
+ * ENV-FR-021 — chỉnh hệ số bộ điều khiển mờ của 1 Zone: validate khoảng, lưu kèm
+ * lịch sử, publish config/update để mọi ESP32 trong Zone áp dụng ngay (không cần
+ * nạp lại firmware). Cùng quyền với sửa ngưỡng (route) + phạm vi Zone của Operator.
+ */
+export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
+  const { zone, house, farm } = await assertZoneAccess(zoneId, user)
+
+  const picked = pickFuzzyTuning(updates)
+  if (Object.keys(picked).length === 0) throw BadRequestError('Không có hệ số nào để cập nhật')
+  const oldValues = { ...zone.fuzzy_tuning }
+  const merged = { ...oldValues, ...picked }
+  assertValidFuzzyTuning(merged)
+
+  zone.fuzzy_tuning = merged
+  zone.fuzzy_tuning_history.push({ changed_by: user._id as never, changed_at: new Date(), old_values: oldValues, new_values: picked } as never)
+  const overflow = zone.fuzzy_tuning_history.length - THRESHOLD_HISTORY_LIMIT
+  if (overflow > 0) zone.fuzzy_tuning_history.splice(0, overflow)
+  await zone.save()
+
+  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', { ...zone.fuzzy_tuning })
+  await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
+  return zone
 }
 
 /**
