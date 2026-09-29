@@ -1,6 +1,6 @@
 import { SensorNode, CameraNode, ISensorNode, IN_SERVICE } from '@/models/device.model'
 import { Ticket } from '@/models/ticket.model'
-import { House, Zone } from '@/models/houseZone.model'
+import { House, Zone, IZone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
 import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
@@ -279,7 +279,7 @@ async function pushZoneConfigOnFirstContact(node: ISensorNode): Promise<void> {
     const chain = await findZoneChainOrThrow(String(node.zone_id))
     publishCommand(
       String(chain.farm._id), String(chain.house._id), String(chain.zone._id),
-      'config/update', chain.zone.thresholds,
+      'config/update', { ...chain.zone.thresholds, ...chain.zone.fuzzy_tuning },
     )
     node.config_pushed_at = new Date()
     await node.save()
@@ -333,7 +333,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
         // config/update không retained + PubSubClient clean session → thiết bị
         // offline/restart lúc ngưỡng hay lịch loa bị sửa sẽ giữ mãi giá trị cũ
         // trong NVS. Đẩy lại bộ config hiện hành mỗi lần thiết bị vừa (re)connect.
-        publishCommand(realFarmId, realHouseId, realZoneId, 'config/update', { deviceId: node.device_id, ...buildDeviceConfig(chain.zone.thresholds, node) })
+        publishCommand(realFarmId, realHouseId, realZoneId, 'config/update', { deviceId: node.device_id, ...buildDeviceConfig(chain.zone, node) })
       }
       // Topic lệch: chỉ reassign — thiết bị restart, heartbeat `justConnected`
       // kế tiếp (đúng topic) sẽ tự đồng bộ config ở nhánh trên.
@@ -391,12 +391,16 @@ const hourOf = (hhmm: string) => Number(hhmm.slice(0, 2))
 
 /**
  * Payload MQTT `config/update` đầy đủ cho 1 ESP32 — key khớp firmware
- * `Config::update()` (firmware/src/config/Config.cpp). Ngưỡng thuộc Zone, lịch
- * loa ru thuộc từng thiết bị (ENV-FR-006, ENV-FR-013b). Firmware chỉ có 2 khung
+ * `Config::update()` (firmware/src/config/Config.cpp). Ngưỡng + hệ số logic mờ
+ * thuộc Zone, lịch loa ru thuộc từng thiết bị (ENV-FR-006, ENV-FR-021, ENV-FR-013b). Firmware chỉ có 2 khung
  * giờ theo giờ tròn; `windows` rỗng = chưa từng cấu hình → không gửi key khung
  * giờ để firmware giữ mặc định của nó; chỉ 1 khung → khung 2 = 0-0 (không bao giờ khớp).
  */
-export function buildDeviceConfig(t: Thresholds, node: Pick<ISensorNode, 'speaker_schedule' | 'audio'>) {
+export function buildDeviceConfig(
+  zone: Pick<IZone, 'thresholds' | 'fuzzy_tuning'>,
+  node: Pick<ISensorNode, 'speaker_schedule' | 'audio'>,
+) {
+  const t = zone.thresholds
   const [w1, w2] = node.speaker_schedule.windows
   return {
     temp_min: t.temp_min,
@@ -406,6 +410,7 @@ export function buildDeviceConfig(t: Thresholds, node: Pick<ISensorNode, 'speake
     light_max: t.light_max,
     nh3_max: t.nh3_max,
     co2_max: t.co2_max,
+    ...zone.fuzzy_tuning,
     speaker_schedule_enabled: node.speaker_schedule.enabled,
     speaker_volume: node.audio.volume,
     speaker_track: node.audio.current_track,
@@ -443,7 +448,7 @@ export async function updateSpeakerSchedule(nodeId: string, user: CurrentUser, i
   await node.save()
 
   publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update',
-    { deviceId: node.device_id, ...buildDeviceConfig(chain.zone.thresholds, node) })
+    { deviceId: node.device_id, ...buildDeviceConfig(chain.zone, node) })
   await logAction(user._id, 'SPEAKER_SCHEDULE_UPDATED', 'sensor_node', String(node._id), { ...input })
   return node
 }

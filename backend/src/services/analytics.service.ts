@@ -71,6 +71,96 @@ export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; 
   return { range: query.range, from, to, bucketMs, series, stats: stats ?? null }
 }
 
+/**
+ * ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ của 1 Zone (ENV-FR-010/011/021):
+ * chuỗi độ ẩm/nhiệt độ × % phun/quạt theo bucket, % mẫu nằm trong ngưỡng hiện tại
+ * của Zone, số lần relay đóng cắt/giờ, kèm các lần chỉnh hệ số trong khoảng để
+ * người vận hành so trước/sau. Chỉ tính mẫu có `misting_pct` (firmware ≥ 1.1.0).
+ */
+export async function getControlPerformance(user: CurrentUser, query: { zoneId: string; range: string }) {
+  const { zone } = await assertZoneAccess(query.zoneId, user)
+  const { from, to, bucketMs } = resolveRange(query.range)
+  const t = zone.thresholds
+  const match = {
+    $match: { zone_id: new Types.ObjectId(query.zoneId), timestamp: { $gte: from, $lte: to }, misting_pct: { $exists: true } },
+  }
+  const inRange = (field: string, min: number, max: number) =>
+    ({ $sum: { $cond: [{ $and: [{ $gte: [field, min] }, { $lte: [field, max] }] }, 1, 0] } })
+  // Relay chỉ đổi trạng thái ở chu kỳ PID 10s còn mẫu lưu mỗi ~10s, nên đếm lần đổi
+  // giữa 2 mẫu liên tiếp CỦA CÙNG 1 ESP32 (partitionBy node_id) ≈ số lần đóng cắt thật.
+  const switched = (field: string, prev: string) =>
+    ({ $sum: { $cond: [{ $and: [{ $ne: [prev, null] }, { $ne: [prev, field] }] }, 1, 0] } })
+
+  const [series, [agg]] = await Promise.all([
+    Telemetry.aggregate([
+      match,
+      {
+        $group: {
+          _id: { $toDate: { $subtract: [{ $toLong: '$timestamp' }, { $mod: [{ $toLong: '$timestamp' }, bucketMs] }] } },
+          humidity:        { $avg: '$humidity' },
+          temperature:     { $avg: '$temperature' },
+          misting_pct:     { $avg: '$misting_pct' },
+          ventilation_pct: { $avg: '$ventilation_pct' },
+        },
+      },
+      { $sort: { _id: 1 } },
+      { $project: { _id: 0, timestamp: '$_id', humidity: 1, temperature: 1, misting_pct: 1, ventilation_pct: 1 } },
+    ]),
+    Telemetry.aggregate([
+      match,
+      {
+        $setWindowFields: {
+          partitionBy: '$node_id',
+          sortBy: { timestamp: 1 },
+          output: {
+            prevMisting:     { $shift: { output: '$misting_on', by: -1 } },
+            prevVentilation: { $shift: { output: '$ventilation_on', by: -1 } },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total:               { $sum: 1 },
+          humidityCount:       { $sum: { $cond: [{ $isNumber: '$humidity' }, 1, 0] } },
+          humidityInRange:     inRange('$humidity', t.humidity_min, t.humidity_max),
+          temperatureCount:    { $sum: { $cond: [{ $isNumber: '$temperature' }, 1, 0] } },
+          temperatureInRange:  inRange('$temperature', t.temp_min, t.temp_max),
+          mistingAvg:          { $avg: '$misting_pct' },
+          ventilationAvg:      { $avg: '$ventilation_pct' },
+          mistingSwitches:     switched('$misting_on', '$prevMisting'),
+          ventilationSwitches: switched('$ventilation_on', '$prevVentilation'),
+          firstAt:             { $min: '$timestamp' },
+          lastAt:              { $max: '$timestamp' },
+        },
+      },
+    ]),
+  ])
+
+  const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null)
+  const hours = agg ? (agg.lastAt.getTime() - agg.firstAt.getTime()) / 3600_000 : 0
+  const perHour = (n: number) => (hours >= 0.25 ? Math.round((n / hours) * 10) / 10 : null) // < 15' dữ liệu: chưa đủ để quy ra /giờ
+
+  return {
+    range: query.range, from, to, bucketMs,
+    thresholds: { humidity_min: t.humidity_min, humidity_max: t.humidity_max, temp_min: t.temp_min, temp_max: t.temp_max },
+    fuzzy_tuning: zone.fuzzy_tuning,
+    tuning_changes: zone.fuzzy_tuning_history
+      .filter(h => h.changed_at >= from)
+      .map(h => ({ changed_at: h.changed_at, new_values: h.new_values })),
+    series,
+    stats: agg ? {
+      sampleCount: agg.total,
+      humidityInRangePct:    pct(agg.humidityInRange, agg.humidityCount),
+      temperatureInRangePct: pct(agg.temperatureInRange, agg.temperatureCount),
+      mistingAvgPct:     agg.mistingAvg === null ? null : Math.round(agg.mistingAvg),
+      ventilationAvgPct: agg.ventilationAvg === null ? null : Math.round(agg.ventilationAvg),
+      mistingSwitchesPerHour:     perHour(agg.mistingSwitches),
+      ventilationSwitchesPerHour: perHour(agg.ventilationSwitches),
+    } : null,
+  }
+}
+
 /** ANALYTICS-FR-005 — so sánh nhiều Zone cạnh nhau trên cùng khoảng thời gian */
 export async function compareZones(user: CurrentUser, zoneIds: string[], range: string) {
   if (zoneIds.length === 0) throw BadRequestError('Cần ít nhất 1 zoneId')

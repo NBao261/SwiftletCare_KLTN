@@ -12,6 +12,12 @@ export interface ITelemetry extends Document {
   nh3_ppm?: number
   co2_ppm?: number
   sound_db?: number
+  // ENV-FR-010/011 — đầu ra bộ điều khiển mờ + trạng thái relay lúc lấy mẫu,
+  // để đo hiệu quả điều khiển (ANALYTICS-FR-008). Mẫu trước firmware 1.1.0 không có.
+  misting_pct?: number
+  ventilation_pct?: number
+  misting_on?: boolean
+  ventilation_on?: boolean
   is_anomaly: boolean
 }
 
@@ -26,6 +32,10 @@ const telemetrySchema = new Schema<ITelemetry>(
     nh3_ppm:     { type: Number },
     co2_ppm:     { type: Number },
     sound_db:    { type: Number },
+    misting_pct:     { type: Number },
+    ventilation_pct: { type: Number },
+    misting_on:      { type: Boolean },
+    ventilation_on:  { type: Boolean },
     is_anomaly:  { type: Boolean, default: false },
   },
   { timestamps: false, versionKey: false }

@@ -90,6 +90,23 @@ export interface RelayStates {
   heating: boolean
 }
 
+// ENV-FR-010/011 (v1.24.0): % công suất 0-100 do bộ điều khiển mờ trên ESP32
+// tính (= tỉ lệ thời gian BẬT relay trong cửa sổ 2 phút). Chỉ đi kèm telemetry,
+// không lưu DB. Firmware < 1.1.0 không gửi.
+export interface ControlOutput {
+  misting: number
+  ventilation: number
+}
+
+// ENV-FR-021 (v1.24.0): 4 hệ số bộ điều khiển mờ theo Zone, gửi xuống ESP32 qua
+// config/update — tên field = tên key MQTT (firmware Config::update()).
+export interface FuzzyTuning {
+  fuzzy_humidity_band: number  // %RH — độ rộng vùng chuyển tiếp độ ẩm
+  fuzzy_temp_band: number      // °C — độ rộng vùng "nóng"
+  fuzzy_fan_dry_level: number  // % — mức quạt khi nóng mà khô
+  fuzzy_window_sec: number     // s — cửa sổ time-proportioning
+}
+
 // ── MQTT Message Payloads ──────────────────────────────────────────────────────
 export interface TelemetryPayload {
   deviceId: string
@@ -101,6 +118,7 @@ export interface TelemetryPayload {
   sound_db: number
   relay_states: RelayStates
   control_mode: ControlMode
+  control_output?: ControlOutput
   timestamp: number   // Unix ms
 }
 
@@ -153,6 +171,7 @@ export interface WsTelemetryUpdate {
   sound: number
   relayStates: RelayStates
   controlMode: ControlMode
+  controlOutput?: ControlOutput
   timestamp: string
 }
 

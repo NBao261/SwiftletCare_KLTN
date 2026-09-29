@@ -11,6 +11,15 @@ export const envSummary = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data })
 })
 
+/** GET /analytics/control/performance – ANALYTICS-FR-008 (hiệu quả bộ điều khiển mờ) */
+export const controlPerformance = asyncHandler(async (req: Request, res: Response) => {
+  const data = await analyticsService.getControlPerformance(req.user, {
+    zoneId: req.query.zoneId as string,
+    range:  (req.query.range as string) ?? '24h',
+  })
+  res.json({ success: true, data })
+})
+
 /** GET /analytics/env/compare – ANALYTICS-FR-005 (so sánh nhiều Zone) */
 export const envCompare = asyncHandler(async (req: Request, res: Response) => {
   const zoneIds = String(req.query.zoneIds ?? '').split(',').filter(Boolean)

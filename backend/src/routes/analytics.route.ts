@@ -10,6 +10,8 @@ router.use(authenticate)
 // ANALYTICS-FR-001/005 — biểu đồ môi trường + so sánh đa Zone (Farm Owner dùng hằng ngày)
 router.get('/env/summary',       query('zoneId').isMongoId(), validate, analyticsController.envSummary)
 router.get('/env/compare',       query('zoneIds').notEmpty(), validate, analyticsController.envCompare)
+// ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ (dữ liệu để chỉnh hệ số ENV-FR-021)
+router.get('/control/performance', query('zoneId').isMongoId(), validate, analyticsController.controlPerformance)
 
 // VISION/ANALYTICS-FR-002/003 — phụ thuộc module VISION, trả rỗng cho tới khi có camera
 router.get('/bird-count/daily',  query('zoneId').isMongoId(), validate, analyticsController.birdCountDaily)
