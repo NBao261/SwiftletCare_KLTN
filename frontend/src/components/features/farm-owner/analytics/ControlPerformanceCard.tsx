@@ -137,6 +137,20 @@ export default function ControlPerformanceCard({ zoneId, zoneName }: { zoneId: s
         </>
       )}
 
+      {data && data.relay_usage.length > 0 && (
+        <div className="flex flex-col gap-1 border-t border-warmGray/15 pt-4">
+          <p className="label-caption">Tới mốc bảo trì theo thời gian chạy (từ lần bảo trì trước)</p>
+          {data.relay_usage.map(u => (
+            <p key={u.device_id} className="text-xs text-charcoal">
+              {u.device_id} · Bơm {u.misting.hours}/{data.service_limits.misting.hours} giờ,{' '}
+              {u.misting.switches.toLocaleString('vi-VN')}/{data.service_limits.misting.switches.toLocaleString('vi-VN')} lần ·
+              Quạt {u.ventilation.hours}/{data.service_limits.ventilation.hours} giờ,{' '}
+              {u.ventilation.switches.toLocaleString('vi-VN')}/{data.service_limits.ventilation.switches.toLocaleString('vi-VN')} lần
+            </p>
+          ))}
+        </div>
+      )}
+
       {tuning && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-warmGray/15 pt-4">
           <p className="text-xs text-warmGray">

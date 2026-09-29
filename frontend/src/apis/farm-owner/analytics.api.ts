@@ -87,10 +87,35 @@ export interface ControlPerformanceResponse {
   tuning_changes: Array<{ changed_at: string; new_values: Partial<FuzzyTuning> }>
   series: ControlPerformancePoint[]
   stats: ControlPerformanceStats | null
+  /** TICKET-FR-018 — mốc bảo trì theo thời gian chạy + tiến độ từng thiết bị (từ lần bảo trì trước) */
+  service_limits: Record<'misting' | 'ventilation', { hours: number; switches: number }>
+  relay_usage: Array<{
+    device_id: string
+    misting: { hours: number; switches: number }
+    ventilation: { hours: number; switches: number }
+  }>
 }
 
-/** ANALYTICS-FR-001..005/008, VISION-FR-008..011 */
+/** ANALYTICS-FR-009 — dự báo 60 phút tới (Holt trend tắt dần), sai số đánh giá lùi */
+export interface MetricForecast {
+  history: Array<{ timestamp: string; value: number }>
+  forecast: Array<{ timestamp: string; value: number }>
+  alpha: number; beta: number
+  mae30: number | null; mae60: number | null
+}
+
+export interface ForecastResponse {
+  horizonMinutes: number; bucketMinutes: number
+  humidity: MetricForecast | null
+  temperature: MetricForecast | null
+  thresholds: Record<'humidity' | 'temperature', { min: number; max: number }>
+  predicted: { metric: 'humidity' | 'temperature'; direction: 'above' | 'below'; limit: number; value: number; minutesAhead: number } | null
+}
+
+/** ANALYTICS-FR-001..005/008/009, VISION-FR-008..011 */
 export const analyticsApi = {
+  forecast: (zoneId: string) =>
+    api.get<ApiResponse<ForecastResponse>>('/analytics/forecast', { params: { zoneId } }),
   controlPerformance: (zoneId: string, range: AnalyticsRange) =>
     api.get<ApiResponse<ControlPerformanceResponse>>('/analytics/control/performance', { params: { zoneId, range } }),
   envSummary: (zoneId: string, range: AnalyticsRange) =>
