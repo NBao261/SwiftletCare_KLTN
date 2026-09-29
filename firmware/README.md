@@ -18,7 +18,8 @@ Cấu hình WiFi/MQTT/Farm-House-Zone ID: sửa `src/config/Config.cpp` (dev) ho
 ```
 src/
   config/   Pin mapping, ngưỡng mặc định, lịch loa ru (Config.h/.cpp)
-  sensors/  Đọc 5 cảm biến RS485 Modbus (SensorManager) — Guide §5
+  sensors/  Đọc 5 cảm biến RS485 Modbus (SensorManager) — Guide §5; SignalFilter (lọc đầu vào
+            bộ mờ), PanicDetector (BIRD_PANIC theo dB)
   pid/      Điều khiển 4 relay + threat flags (PIDController); phun sương + quạt
             dùng logic mờ Sugeno + time-proportioning (FuzzyControl, C++ thuần)
   audio/    DFPlayer Mini — loa ru dẫn dụ theo lịch (AudioManager) — Guide §10-12
@@ -41,7 +42,7 @@ src/
 ## Test
 
 ```bash
-pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy
+pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy, test_filter, test_panic
 ```
 
 Env `native` chỉ build `src/pid/FuzzyControl.cpp` (không phụ thuộc Arduino) và cần **g++ trên máy** — Windows: cài MinGW-w64 (vd `choco install mingw`) rồi thêm vào PATH.
@@ -54,3 +55,8 @@ Env `native` chỉ build `src/pid/FuzzyControl.cpp` (không phụ thuộc Arduin
 - NH3/CO2 vượt max luôn ép quạt 100%. Sưởi vẫn theo ngưỡng `temp_min`.
 - % gửi lên trong telemetry `control_output {misting, ventilation}`; dashboard web hiển thị trên gauge relay.
 - PUMP_DRY: 5 phút relay BẬT **cộng dồn** trong 1 đợt phun mà ẩm không tăng > 2%.
+
+## Lọc đầu vào + phát hiện chim hoảng (firmware 1.2.0)
+
+- `sensors/SignalFilter`: median 5 mẫu + Kalman vô hướng cho nhiệt/ẩm/NH3/CO2 ở 1 Hz (sensorTask). **Chỉ bộ mờ dùng giá trị lọc**; telemetry vẫn gửi giá trị thô, chốt an toàn NH3/CO2 xét trên giá trị thô. Tắt/bật qua `config/update` key `fuzzy_input_filter` (NVS `fzFilter`) để so sánh A/B (ENV-FR-022).
+- `sensors/PanicDetector`: BIRD_PANIC theo mức dB (ES-NOISE-01 không có dạng sóng) — ồn > nền yên tĩnh + 15 dB trong ≥ 10/15 giây, bỏ qua lúc loa ru phát; gửi mức MEDIUM (THREAT-FR-007). Ngưỡng là hằng số trong `PanicDetector.h`, cần hiệu chỉnh bằng dữ liệu thật.
