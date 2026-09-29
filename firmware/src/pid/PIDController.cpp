@@ -124,10 +124,11 @@ void runHumidityControl(float humidity, float temperature, RelayState &relay) {
 // biến khí lỗi không nên làm dừng điều khiển theo nhiệt độ.
 // data.temperature/humidity không cần guard: caller (main.cpp pidTask) chỉ gọi
 // trong if (data.isValid), validateRange() đã bắt buộc 2 giá trị này không NaN.
-void runVentilationControl(const SensorData &data, RelayState &relay) {
+void runVentilationControl(const SensorData &data, const SensorData &raw, RelayState &relay) {
   if (relay.ventilationOverride) return;
 
-  float duty = FuzzyControl::ventilationDemand(
+  bool rawGasOverMax = (raw.nh3Ok && raw.nh3Ppm > Config::nh3Max) || (raw.co2Ok && raw.co2Ppm > Config::co2Max);
+  float duty = rawGasOverMax ? 1.0f : FuzzyControl::ventilationDemand(
       data.temperature, data.humidity, data.nh3Ppm, data.nh3Ok, data.co2Ppm, data.co2Ok,
       Config::tempMax, Config::humidityMin, Config::nh3Max, Config::co2Max, currentTuning());
   relay.ventilationPct = toPct(duty);

@@ -45,6 +45,7 @@ volatile float fuzzyHumidityBand = DEFAULT_FUZZY_HUMIDITY_BAND;
 volatile float fuzzyTempBand = DEFAULT_FUZZY_TEMP_BAND;
 volatile int fuzzyFanDryLevel = DEFAULT_FUZZY_FAN_DRY_LEVEL;
 volatile int fuzzyWindowSec = DEFAULT_FUZZY_WINDOW_SEC;
+volatile bool fuzzyInputFilter = DEFAULT_FUZZY_INPUT_FILTER;
 
 // Speaker schedule (ENV-FR-013b)
 volatile bool speakerScheduleEnabled = true;
@@ -99,6 +100,8 @@ void update(const char *jsonPayload) {
     fuzzyFanDryLevel = constrain(lroundf(doc["fuzzy_fan_dry_level"].as<float>()), 0L, 100L);
   if (doc["fuzzy_window_sec"].is<float>())
     fuzzyWindowSec = constrain(lroundf(doc["fuzzy_window_sec"].as<float>()), 60L, 600L);
+  if (doc["fuzzy_input_filter"].is<bool>())
+    fuzzyInputFilter = doc["fuzzy_input_filter"].as<bool>();
   if (doc["speaker_schedule_enabled"].is<bool>())
     speakerScheduleEnabled = doc["speaker_schedule_enabled"].as<bool>();
   if (doc["speaker_window1_start_hour"].is<int>())

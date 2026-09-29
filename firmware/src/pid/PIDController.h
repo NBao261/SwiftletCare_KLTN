@@ -52,7 +52,9 @@ private:
 
 namespace PIDController {
 void runHumidityControl(float humidity, float temperature, RelayState &relay); // ENV-FR-010 (mờ)
-void runVentilationControl(const SensorData &data, RelayState &relay);        // ENV-FR-011 (mờ)
+// input = giá trị đưa vào bộ mờ (có thể đã lọc, ENV-FR-022); raw = giá trị đo thô,
+// dùng cho chốt an toàn NH3/CO2 > max để bộ lọc không làm trễ việc bật quạt.
+void runVentilationControl(const SensorData &input, const SensorData &raw, RelayState &relay); // ENV-FR-011 (mờ)
 void runHeatingControl(float temperature, RelayState &relay); // ENV-FR-012
 
 void setManualOverride(const char *relayName, bool state,
@@ -68,6 +70,7 @@ struct ThreatFlags {
   bool pumpDry = false;        // đợt phun đã BẬT cộng dồn >5' nhưng ẩm không tăng
   bool sensorFault = false;    // 1 Slave ID lỗi
   bool busFailure = false;     // ≥3/5 Slave ID lỗi, 3 chu kỳ liên tiếp
+  bool birdPanic = false;      // THREAT-FR-007 — do PanicDetector (sensorTask) báo, main.cpp gộp vào
 };
 ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, bool audioPlaying);
 } // namespace PIDController

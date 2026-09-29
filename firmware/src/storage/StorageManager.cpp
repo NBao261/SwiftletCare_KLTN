@@ -46,6 +46,7 @@ void saveConfig() {
   prefs.putFloat("fzTempBand", Config::fuzzyTempBand);
   prefs.putInt("fzFanDry", Config::fuzzyFanDryLevel);
   prefs.putInt("fzWindowS", Config::fuzzyWindowSec);
+  prefs.putBool("fzFilter", Config::fuzzyInputFilter);
   // Speaker schedule (ENV-FR-013b) — key ≤15 ký tự (giới hạn NVS Preferences)
   prefs.putBool("spkEn", Config::speakerScheduleEnabled);
   prefs.putInt("spkW1Start", Config::speakerWindow1StartHour);
@@ -71,6 +72,7 @@ void loadConfig() {
   Config::fuzzyTempBand = prefs.getFloat("fzTempBand", DEFAULT_FUZZY_TEMP_BAND);
   Config::fuzzyFanDryLevel = prefs.getInt("fzFanDry", DEFAULT_FUZZY_FAN_DRY_LEVEL);
   Config::fuzzyWindowSec = prefs.getInt("fzWindowS", DEFAULT_FUZZY_WINDOW_SEC);
+  Config::fuzzyInputFilter = prefs.getBool("fzFilter", DEFAULT_FUZZY_INPUT_FILTER);
   Config::speakerScheduleEnabled = prefs.getBool("spkEn", true);
   Config::speakerWindow1StartHour =
       prefs.getInt("spkW1Start", SPEAKER_WINDOW_1_START_HOUR);
