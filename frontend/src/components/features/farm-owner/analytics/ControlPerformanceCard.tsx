@@ -141,7 +141,8 @@ export default function ControlPerformanceCard({ zoneId, zoneName }: { zoneId: s
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-warmGray/15 pt-4">
           <p className="text-xs text-warmGray">
             Hệ số hiện tại: vùng ẩm {tuning.fuzzy_humidity_band}%RH · vùng nóng {tuning.fuzzy_temp_band}°C ·
-            quạt khi khô {tuning.fuzzy_fan_dry_level}% · chu kỳ {tuning.fuzzy_window_sec}s
+            quạt khi khô {tuning.fuzzy_fan_dry_level}% · chu kỳ {tuning.fuzzy_window_sec}s ·
+            lọc nhiễu {tuning.fuzzy_input_filter === false ? 'tắt' : 'bật'}
             {stats ? ` · ${stats.sampleCount} mẫu` : ''}
           </p>
           <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>Chỉnh hệ số</Button>

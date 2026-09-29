@@ -1,7 +1,7 @@
-import type { FuzzyTuning } from '@/types'
+import type { FuzzyNumericKey } from '@/types'
 
 /** Khoảng hợp lệ của 4 hệ số mờ — khớp `FUZZY_TUNING_LIMITS` backend và phần kẹp trong firmware `Config::update()` */
-export const FUZZY_TUNING_LIMITS: Record<keyof FuzzyTuning, { min: number; max: number; unit: string }> = {
+export const FUZZY_TUNING_LIMITS: Record<FuzzyNumericKey, { min: number; max: number; unit: string }> = {
   fuzzy_humidity_band: { min: 2,  max: 20,  unit: '%RH' },
   fuzzy_temp_band:     { min: 1,  max: 10,  unit: '°C' },
   fuzzy_fan_dry_level: { min: 0,  max: 100, unit: '%' },
@@ -9,9 +9,9 @@ export const FUZZY_TUNING_LIMITS: Record<keyof FuzzyTuning, { min: number; max: 
 }
 
 /** Cùng luật với `assertValidFuzzyTuning` backend. Trả map lỗi theo field (rỗng = hợp lệ). */
-export function validateFuzzyTuning(values: Record<keyof FuzzyTuning, number>): Partial<Record<keyof FuzzyTuning, string>> {
-  const errors: Partial<Record<keyof FuzzyTuning, string>> = {}
-  for (const key of Object.keys(FUZZY_TUNING_LIMITS) as Array<keyof FuzzyTuning>) {
+export function validateFuzzyTuning(values: Record<FuzzyNumericKey, number>): Partial<Record<FuzzyNumericKey, string>> {
+  const errors: Partial<Record<FuzzyNumericKey, string>> = {}
+  for (const key of Object.keys(FUZZY_TUNING_LIMITS) as FuzzyNumericKey[]) {
     const v = values[key]
     const { min, max, unit } = FUZZY_TUNING_LIMITS[key]
     if (!Number.isFinite(v)) errors[key] = 'Chưa nhập hoặc không phải số'

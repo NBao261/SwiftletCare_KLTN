@@ -27,7 +27,11 @@ export interface FuzzyTuning {
   fuzzy_temp_band: number      // °C
   fuzzy_fan_dry_level: number  // %
   fuzzy_window_sec: number     // giây
+  fuzzy_input_filter: boolean  // ENV-FR-022 — lọc nhiễu đầu vào bộ mờ (tắt để so sánh A/B)
 }
+
+/** 4 hệ số dạng số (nhập bằng ô số, có khoảng hợp lệ) */
+export type FuzzyNumericKey = Exclude<keyof FuzzyTuning, 'fuzzy_input_filter'>
 
 export interface Zone {
   _id: string; house_id: string; name: string; floor: number

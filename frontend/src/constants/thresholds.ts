@@ -26,6 +26,7 @@ export const DEFAULT_FUZZY_TUNING: FuzzyTuning = {
   fuzzy_temp_band: 4,
   fuzzy_fan_dry_level: 40,
   fuzzy_window_sec: 120,
+  fuzzy_input_filter: true,
 }
 
 /**

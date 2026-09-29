@@ -2,13 +2,13 @@ import { useState, FormEvent } from 'react'
 import { useUpdateFuzzyTuning } from '@/hooks/shared/useFarms'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
-import { Button, Input, Modal } from '@/components/ui'
+import { Button, Input, Modal, Toggle } from '@/components/ui'
 import { DEFAULT_FUZZY_TUNING } from '@/constants/thresholds'
 import { parseThresholdInput } from '@/validations/common/threshold.validation'
 import { FUZZY_TUNING_LIMITS, validateFuzzyTuning } from '@/validations/common/fuzzyTuning.validation'
-import type { FuzzyTuning } from '@/types'
+import type { FuzzyNumericKey, FuzzyTuning } from '@/types'
 
-const FIELDS: Array<{ key: keyof FuzzyTuning; label: string; step: string; hint: string }> = [
+const FIELDS: Array<{ key: FuzzyNumericKey; label: string; step: string; hint: string }> = [
   {
     key: 'fuzzy_humidity_band', label: 'Độ rộng vùng độ ẩm (%RH)', step: '0.5',
     hint: 'Lớn hơn → bắt đầu phun sớm hơn và giảm dần mềm hơn quanh ngưỡng ẩm min.',
@@ -27,11 +27,13 @@ const FIELDS: Array<{ key: keyof FuzzyTuning; label: string; step: string; hint:
   },
 ]
 
-type Form = Record<keyof FuzzyTuning, string>
-const toForm = (t: FuzzyTuning): Form =>
-  Object.fromEntries(FIELDS.map(f => [f.key, String(t[f.key])])) as Form
+type Form = Record<FuzzyNumericKey, string> & { fuzzy_input_filter: boolean }
+const toForm = (t: FuzzyTuning): Form => ({
+  ...(Object.fromEntries(FIELDS.map(f => [f.key, String(t[f.key])])) as Record<FuzzyNumericKey, string>),
+  fuzzy_input_filter: t.fuzzy_input_filter,
+})
 
-/** ENV-FR-021 — chỉnh 4 hệ số bộ điều khiển mờ của 1 Zone; lưu xong backend đẩy config/update xuống ESP32 ngay */
+/** ENV-FR-021/022 — chỉnh 4 hệ số + cờ lọc đầu vào của bộ điều khiển mờ; lưu xong backend đẩy config/update xuống ESP32 ngay */
 export default function FuzzyTuningModal({
   zoneId, zoneName, current, onClose,
 }: {
@@ -43,18 +45,19 @@ export default function FuzzyTuningModal({
   const update = useUpdateFuzzyTuning(zoneId)
   const push = useToastStore(s => s.push)
   const [form, setForm] = useState<Form>(() => toForm(current))
-  const [errors, setErrors] = useState<Partial<Record<keyof FuzzyTuning, string>>>({})
+  const [errors, setErrors] = useState<Partial<Record<FuzzyNumericKey, string>>>({})
 
   function handleSave(e: FormEvent) {
     e.preventDefault()
-    const values: FuzzyTuning = { ...current }
+    const values: FuzzyTuning = { ...current, fuzzy_input_filter: form.fuzzy_input_filter }
     for (const f of FIELDS) values[f.key] = parseThresholdInput(form[f.key])
     const found = validateFuzzyTuning(values)
     setErrors(found)
     if (Object.keys(found).length > 0) return
 
     // Chỉ gửi hệ số đã đổi để lịch sử chỉnh (vạch mốc trên biểu đồ) ghi đúng cái đã thay đổi
-    const changed = Object.fromEntries(FIELDS.filter(f => values[f.key] !== current[f.key]).map(f => [f.key, values[f.key]]))
+    const changed: Partial<FuzzyTuning> = Object.fromEntries(FIELDS.filter(f => values[f.key] !== current[f.key]).map(f => [f.key, values[f.key]]))
+    if (values.fuzzy_input_filter !== current.fuzzy_input_filter) changed.fuzzy_input_filter = values.fuzzy_input_filter
     if (Object.keys(changed).length === 0) {
       onClose()
       return
@@ -88,6 +91,20 @@ export default function FuzzyTuningModal({
             </p>
           </div>
         ))}
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-warmGray/15 p-3">
+          <div>
+            <p className="label-caption">Lọc nhiễu đầu vào (median + Kalman)</p>
+            <p className="mt-1 text-xs text-warmGray">
+              Làm mượt nhiệt độ/độ ẩm/khí trước khi đưa vào bộ mờ để relay ít đóng cắt vì nhiễu. Tắt tạm để so sánh
+              "đóng cắt/giờ" trên biểu đồ. An toàn NH3/CO2 luôn xét theo giá trị đo thô. Cần firmware ≥ 1.2.0.
+            </p>
+          </div>
+          <Toggle
+            checked={form.fuzzy_input_filter}
+            onChange={checked => setForm(prev => ({ ...prev, fuzzy_input_filter: checked }))}
+            aria-label="Lọc nhiễu đầu vào"
+          />
+        </div>
         <p className="text-xs text-warmGray">
           Chỉnh từng chút một rồi theo dõi biểu đồ "Hiệu quả điều khiển" vài giờ trước khi chỉnh tiếp.
           Thiết bị firmware cũ hơn 1.1.0 bỏ qua các hệ số này.
