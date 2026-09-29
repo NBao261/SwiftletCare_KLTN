@@ -193,7 +193,7 @@ Expo Router (file-based routing) under `mobile/app/`: `(auth)` group (login/regi
 
 ```
 sensors/  SensorManager — 5 RS485 Modbus sensors (RX GPIO16 / TX GPIO17, 4800bps, slave IDs 1-5: noise/CO2/NH3/light/temp+humidity)
-          SignalFilter (median-5 + Kalman, fuzzy inputs only) · PanicDetector (BIRD_PANIC by dB level) — both run at 1 Hz in sensorTask
+          SignalFilter (median-5 + Kalman, fuzzy inputs only) · PanicDetector (BIRD_PANIC by dB level vs a per-hour-of-day learned p90 baseline, so daily bird exit/return noise is normal; skipped while the speaker actually plays) — both run at 1 Hz in sensorTask
 pid/      PIDController — control for 4 relays (misting/speaker/ventilation/heating) + threat flags;
           misting + ventilation use FuzzyControl (Sugeno fuzzy logic → % duty, applied by time-proportioning over a tunable window, default 120s), heating stays threshold on/off
 audio/    AudioManager — DFPlayer Mini lullaby playback on schedule

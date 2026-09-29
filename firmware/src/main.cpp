@@ -238,7 +238,12 @@ void sensorTask(void *pvParameters) {
       latestFiltered = filtered;
       // Loa ru đang phát (lịch hoặc nghe thử) thì ồn là do loa, không phải chim
       bool speakerActive = AudioManager::isPlaying() || relayState.speaker;
-      birdPanicActive = panic.update(data.noiseOk ? data.soundDb : NAN, speakerActive);
+      // Giờ địa phương (configTime GMT+7) — mỗi giờ trong ngày có mức ồn nền riêng;
+      // NTP chưa đồng bộ → -1, detector không đánh giá
+      time_t nowT = time(nullptr);
+      struct tm lt;
+      int hour = (nowT > 1700000000 && localtime_r(&nowT, &lt)) ? lt.tm_hour : -1;
+      birdPanicActive = panic.update(data.noiseOk ? data.soundDb : NAN, speakerActive, hour);
       xSemaphoreGive(dataMutex);
     }
 
