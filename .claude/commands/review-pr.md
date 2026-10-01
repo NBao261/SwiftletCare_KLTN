@@ -1,6 +1,7 @@
 ---
 description: Review a pull request on NBao261/SwiftletCare_KLTN against per-module rules and post one review
 argument-hint: <PR number>
+model: claude-sonnet-5-5
 ---
 
 Review pull request #$ARGUMENTS on GitHub repo NBao261/SwiftletCare_KLTN on behalf of the repo owner, GitHub user NBao261. Use the gh CLI when `gh auth status` works, otherwise the GitHub MCP tools (mcp__github__*; load them with ToolSearch if needed). If no PR number was given, stop and ask for one.
