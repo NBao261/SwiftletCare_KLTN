@@ -58,8 +58,20 @@ export const ticketApi = {
   adminOverride:      (id: string, input: AdminOverrideInput) => api.put<ApiResponse<Ticket>>(`/tickets/${id}/admin-override`, input),
   kpi: () => api.get<ApiResponse<{
     byStatus: Array<{ _id: TicketStatus; count: number }>
-    byTechnician: Array<{ _id: string; total: number; closed: number }>
+    // [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Dùng chung mọi role nhưng /tickets/kpi chỉ ADMIN gọi. Đổi: mở rộng kiểu trả về cho khớp backend (technician_id, full_name, unaccepted, avgResolveHours, slaComplianceRate, resolvedTickets, ticketsPastDue) — không đổi hàm nào.
+    /** Theo từng Technician được gán (ticket.service.ts#getKpi) — full_name/email null nếu tài khoản đã xoá */
+    byTechnician: Array<{
+      technician_id: string; full_name: string | null; email: string | null
+      total: number; closed: number; cancelled: number
+      /** Được gán nhưng KTV chưa tiếp nhận (status NEW) */
+      unaccepted: number
+      avgResolveHours: number | null; slaComplianceRate: number | null
+    }>
+    /** Ticket đã đóng mà KHÔNG phải huỷ — mẫu của avgResolveHours */
+    resolvedTickets: number
     avgResolveHours: number | null
+    /** Ticket (không huỷ) đã tới hạn SLA — mẫu số của slaComplianceRate */
+    ticketsPastDue: number
     slaComplianceRate: number | null
   }>>('/tickets/kpi'),
 

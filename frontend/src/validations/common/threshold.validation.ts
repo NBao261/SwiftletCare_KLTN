@@ -1,7 +1,8 @@
 import type { Thresholds } from '@/types'
 import { THRESHOLD_KEYS } from '@/constants/thresholds'
 
-const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: number; unit: string }> = {
+/** Khoảng đo của cảm biến thật (SRS §7.1) — khớp `THRESHOLD_LIMITS` backend, dùng để validate trước khi gửi (backend vẫn kiểm lại và trả 400 nếu lệch); cũng là nguồn đơn vị hiển thị cho ThresholdsCard. */
+export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: number; unit: string }> = {
   temp_min:     { min: -40, max: 125,     unit: '°C' },
   temp_max:     { min: -40, max: 125,     unit: '°C' },
   humidity_min: { min: 0,   max: 100,     unit: '%' },

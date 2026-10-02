@@ -83,7 +83,11 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/harvests',         roles: FARM_OWNER_ONLY },
   { path: '/system/settings',  roles: ADMIN_ONLY },
   { path: '/system/audit-log', roles: ADMIN_ONLY },
+  { path: '/system/farms',     roles: ADMIN_ONLY },
+  { path: '/system/tickets',   roles: ADMIN_ONLY },
+  { path: '/system/devices',   roles: ADMIN_ONLY },
   { path: '/analytics',        roles: FARM_OWNER_ONLY },
+  { path: '/vision',           roles: FARM_OWNER_ONLY },
   { path: '/settings',         roles: ALL_ROLES },
 ]
 

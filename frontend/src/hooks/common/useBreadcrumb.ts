@@ -24,3 +24,18 @@ export function usePageBreadcrumb(crumbs: Crumb[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signal, setTrail])
 }
+
+/**
+ * Trang drill-down gọi hook này để hiện "← Quay lại <label>" NGOÀI khung trắng nội
+ * dung (AppShell vẽ, trên nền xám) — trang chỉ render được bên trong khung nên phải
+ * đi qua store như breadcrumb. `to` là path trang cha cố định (không navigate(-1)):
+ * vào thẳng bằng URL vẫn quay lại đúng chỗ.
+ */
+export function usePageBack(to: string, label: string) {
+  const setBack = useBreadcrumbStore(s => s.setBack)
+
+  useEffect(() => {
+    setBack({ to, label })
+    return () => setBack(null)
+  }, [to, label, setBack])
+}

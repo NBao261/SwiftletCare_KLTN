@@ -62,12 +62,50 @@ export const IconBell = (p: IconProps) => (
   <Svg {...p}><path d="M10 2.5A5.25 5.25 0 0 0 4.75 7.75v2.6l-1.2 2.2c-.3.55.1 1.2.72 1.2h11.46c.62 0 1.02-.65.72-1.2l-1.2-2.2v-2.6A5.25 5.25 0 0 0 10 2.5Z" /><path d="M8.2 16a1.8 1.8 0 0 0 3.6 0" /></Svg>
 )
 
+/** Bút chì — nút "Chỉnh sửa" */
+export const IconEdit = (p: IconProps) => (
+  <Svg {...p}><path d="M13.4 3.6a1.8 1.8 0 0 1 2.5 0l.5.5a1.8 1.8 0 0 1 0 2.5L6.5 16.5 3 17.5l1-3.5Z" /><path d="M11.8 5.2 14.8 8.2" /></Svg>
+)
+
+// ── Loại hành động nhật ký hệ thống (auditLog.constants.ts) ─────────────────
+export const IconLogin = (p: IconProps) => (
+  <Svg {...p}><path d="M11.5 3h3A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-3" /><path d="m7.5 6.5 3.5 3.5-3.5 3.5" /><path d="M11 10H3" /></Svg>
+)
+
+export const IconPlusCircle = (p: IconProps) => (
+  <Svg {...p}><circle cx="10" cy="10" r="7.5" /><path d="M10 6.5v7M6.5 10h7" /></Svg>
+)
+
+export const IconTrash = (p: IconProps) => (
+  <Svg {...p}><path d="M3.5 5.5h13" /><path d="M8 5.5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5" /><path d="M5 5.5 5.8 16a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L15 5.5" /></Svg>
+)
+
+export const IconShield = (p: IconProps) => (
+  <Svg {...p}><path d="M10 2.5 4 4.8v4.7c0 3.8 2.6 6.4 6 8 3.4-1.6 6-4.2 6-8V4.8Z" /></Svg>
+)
+
+export const IconCalendar = (p: IconProps) => (
+  <Svg {...p}><rect x="3" y="4.5" width="14" height="12.5" rx="2" /><path d="M3 8.5h14M7 2.8v3.4M13 2.8v3.4" /></Svg>
+)
+
+export const IconActivity = (p: IconProps) => (
+  <Svg {...p}><path d="M2.5 10h3l2-5.5 5 11 2-5.5h3" /></Svg>
+)
+
+export const IconCopy = (p: IconProps) => (
+  <Svg {...p}><rect x="7" y="7" width="10" height="10" rx="2" /><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-7A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13H7" /></Svg>
+)
+
 export const IconChevronDown = (p: IconProps) => (
   <Svg {...p}><path d="m5.5 8 4.5 4.5L14.5 8" /></Svg>
 )
 
 export const IconChevronRight = (p: IconProps) => (
   <Svg {...p}><path d="m8 5.5 4.5 4.5L8 14.5" /></Svg>
+)
+
+export const IconChevronsRight = (p: IconProps) => (
+  <Svg {...p}><path d="m5 5.5 4.5 4.5L5 14.5" /><path d="m10.5 5.5 4.5 4.5-4.5 4.5" /></Svg>
 )
 
 export const IconLogout = (p: IconProps) => (
@@ -102,6 +140,11 @@ export const IconLight = (p: IconProps) => (
 
 export const IconGas = (p: IconProps) => (
   <Svg {...p}><path d="M5 13.5c0-2.5 2-3.2 2-5.5 0-1.4-.6-2.4-.6-2.4s3.4.9 3.4 4.3c0 1 .6 1.6 1.2 1.6.9 0 1.4-.9 1.2-2 1.4 1.1 2.3 2.6 2.3 4a5.5 5.5 0 0 1-11 0Z" /></Svg>
+)
+
+/** CO2 — mây, phân biệt với IconGas (NH3 dùng IconAlert — tam giác cảnh báo) */
+export const IconCloud = (p: IconProps) => (
+  <Svg {...p}><path d="M6 15h8a3 3 0 0 0 .5-5.96 4.5 4.5 0 0 0-8.6-1.66A3.5 3.5 0 0 0 6 15Z" /></Svg>
 )
 
 export const IconSound = (p: IconProps) => (

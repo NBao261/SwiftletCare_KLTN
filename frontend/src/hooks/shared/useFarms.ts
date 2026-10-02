@@ -54,7 +54,12 @@ export function useCreateZone(houseId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { name: string; floor?: number }) => farmApi.createZone(houseId, input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['zones', houseId] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['zones', houseId] })
+      // 2 danh sách zone phẳng có staleTime 5 phút — không làm mới thì zone mới vắng mặt ở ZonePicker/ZoneSwitcher và số zone ở trang Farm
+      void queryClient.invalidateQueries({ queryKey: ['farm-zones'] })
+      void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
+    },
   })
 }
 
@@ -119,6 +124,15 @@ export function useSalesStaff(farmId: string | undefined) {
   return useQuery({
     queryKey: ['sales-staff', farmId],
     queryFn: () => farmApi.listSalesStaff(farmId!).then(r => r.data.data),
+    enabled: !!farmId,
+  })
+}
+
+/** Đề xuất Sales Staff còn chờ Admin duyệt — key nằm dưới ['sales-staff', farmId] nên useInviteSalesStaff tự làm mới */
+export function usePendingSalesStaffRequests(farmId: string | undefined) {
+  return useQuery({
+    queryKey: ['sales-staff', farmId, 'requests'],
+    queryFn: () => farmApi.listSalesStaffRequests(farmId!).then(r => r.data.data.filter(req => req.status === 'PENDING')),
     enabled: !!farmId,
   })
 }
