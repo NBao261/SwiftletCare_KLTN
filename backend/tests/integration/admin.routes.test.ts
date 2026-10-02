@@ -2,6 +2,7 @@
  * Route-level tests cho /admin — validation, phân quyền, ép kiểu boolean.
  * Mount riêng router trên 1 Express app nhỏ (không khởi động MQTT/Socket của server thật).
  */
+import { createHash } from 'crypto'
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -9,6 +10,7 @@ import request from 'supertest'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import adminRoutes from '@/routes/admin.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
+import { forgotPassword, resetPassword } from '@/services/auth.service'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import type { Role } from '@/types'
@@ -82,6 +84,59 @@ describe('GET /admin/users — query validation & pagination', () => {
       .set('Authorization', `Bearer ${token}`).expect(200)
     expect(res.body.data).toHaveLength(1)
     expect(res.body.data[0].email).toBe('tech@test.vn')
+  })
+})
+
+describe('không để lọt mã dùng 1 lần qua API', () => {
+  /**
+   * Mã OTP và mã đặt lại mật khẩu đều là 6 chữ số hash SHA-256 không salt — dò
+   * hết 900.000 khả năng mất dưới 1 giây, nên hash lọt ra ngoài là coi như mã
+   * lọt ra ngoài: ai đọc được response này đổi được mật khẩu của user đó.
+   */
+  const secretKeys = ['password_hash', 'otp_code', 'otp_expires', 'refresh_tokens',
+    'password_reset_token_hash', 'password_reset_expires_at']
+
+  it('GET /admin/users không trả field bí mật nào, kể cả khi user đang trong 15 phút đặt lại mật khẩu', async () => {
+    const { token } = await makeUser('admin@test.vn', 'ADMIN')
+    const { user: target } = await makeUser('victim@test.vn', 'FARM_OWNER')
+    await User.updateOne({ _id: target._id }, {
+      password_reset_token_hash: createHash('sha256').update('483912').digest('hex'),
+      password_reset_expires_at: new Date(Date.now() + 900_000),
+      otp_code: createHash('sha256').update('112233').digest('hex'),
+    })
+
+    const res = await request(app).get('/admin/users').set('Authorization', `Bearer ${token}`).expect(200)
+
+    const victim = (res.body.data as Array<Record<string, unknown>>).find(u => u.email === 'victim@test.vn')!
+    expect(victim.full_name).toBe('victim@test.vn') // vẫn trả dữ liệu bình thường
+    for (const key of secretKeys) expect(victim).not.toHaveProperty(key)
+  })
+
+  it('PUT /admin/users/:id/status cũng không trả field bí mật nào', async () => {
+    const { token } = await makeUser('admin@test.vn', 'ADMIN')
+    const { user: target } = await makeUser('victim@test.vn', 'FARM_OWNER')
+    await User.updateOne({ _id: target._id }, {
+      password_reset_token_hash: createHash('sha256').update('483912').digest('hex'),
+      password_reset_expires_at: new Date(Date.now() + 900_000),
+    })
+
+    const res = await request(app)
+      .put(`/admin/users/${target._id}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false, reason: 'Spam' })
+      .expect(200)
+
+    for (const key of secretKeys) expect(res.body.data).not.toHaveProperty(key)
+  })
+
+  it('luồng đặt lại mật khẩu vẫn đọc được hash dù field đã select:false', async () => {
+    await makeUser('reset@test.vn', 'FARM_OWNER')
+    await forgotPassword('reset@test.vn')
+
+    const stored = await User.findOne({ email: 'reset@test.vn' })
+      .select('+password_reset_token_hash').lean()
+    expect(stored!.password_reset_token_hash).toBeTruthy()
+    await expect(resetPassword('reset@test.vn', '000000', 'newpassword1')).rejects.toThrow()
   })
 })
 
