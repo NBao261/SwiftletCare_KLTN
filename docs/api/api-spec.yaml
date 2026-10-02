@@ -428,8 +428,12 @@ paths:
         Khi khoá: thu hồi mọi refresh token và ngắt các kết nối Socket.io đang
         mở của user (kết nối mới bằng access token còn hạn cũng bị từ chối). Nếu
         user là Technician còn ticket đang giao, response kèm
-        `meta.openTickets` (số ticket chưa đóng) để Admin gán lại bằng
-        `PUT /tickets/{id}/admin-override`.
+        `meta.openTickets` (số ticket chưa đóng) và `meta.openTicketIds` (id của
+        chúng, tối đa 100) để Admin gán lại bằng
+        `PUT /tickets/{id}/admin-override`. Khoá tài khoản KHÔNG tự gán lại
+        ticket: người đó vẫn phụ trách khu vực, việc gán lại là quyết định của
+        Admin (khác với khi gỡ hẳn khu vực — xem
+        `PUT /admin/technicians/{id}/regions`).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -452,7 +456,24 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/User" } }
+                  - properties:
+                      data: { $ref: "#/components/schemas/User" }
+                      meta:
+                        type: object
+                        description: Chỉ có khi việc gỡ khu vực làm ticket phải điều phối lại
+                        properties:
+                          rerouted:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                ticketId: { type: string }
+                                from: { type: string }
+                                to: { type: string }
+                          unassigned:
+                            type: array
+                            description: Ticket về hàng đợi chung vì không còn Technician phù hợp
+                            items: { type: string }
         "400":
           description: "Thiếu reason khi khoá tài khoản, hoặc Admin tự khoá chính mình"
           content:
@@ -583,6 +604,15 @@ paths:
         Thay toàn bộ `assigned_regions` (giá trị được trim + bỏ trùng). Có hiệu
         lực ngay ở request kế tiếp của Technician, không cần đăng nhập lại.
         Lưu ý: phải ghi khớp đúng `farms.region` (VD `HCMC` ≠ `Hồ Chí Minh`).
+
+        Khu vực bị gỡ khỏi danh sách: ticket đang mở ở khu vực đó mà Technician
+        này đang được gán sẽ **tự điều phối lại** — quyền trên ticket đi theo
+        `assigned_regions` nên nếu để nguyên, chính người được gán sẽ bị chặn
+        403 trên việc của mình. Ticket được chuyển cho Technician khác trong
+        khu vực (trả về `NEW` để người mới xác nhận tiếp nhận, lịch hẹn cũ bị
+        huỷ trừ ticket `INSTALLATION`/`MAINTENANCE`), hoặc về hàng đợi chung
+        nếu không còn ai. Response kèm `meta.rerouted`
+        (`[{ticketId, from, to}]`) và `meta.unassigned` (`[ticketId]`).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -992,7 +1022,10 @@ paths:
                           devices: { $ref: "#/components/schemas/DeviceStatusSummary" }
                           openTickets:
                             type: object
-                            description: Ticket chưa CLOSED theo priority
+                            description: >-
+                              Ticket chưa CLOSED theo priority, chỉ tính Farm chưa xoá mềm —
+                              cùng phạm vi với farms/zones/devices ở trên (ticket của Farm đã
+                              xoá được đóng ngay lúc xoá farm nên không còn tồn tại ở đây)
                             properties:
                               total: { type: integer }
                               P1: { type: integer }
@@ -1132,6 +1165,13 @@ paths:
     put:
       tags: [Farms]
       summary: Cập nhật farm (owner/member)
+      description: |
+        `region` chỉ Primary Owner/Admin được đổi (FARM-FR-001) vì nó quyết định
+        Technician nào phụ trách farm và ticket được giao cho ai. Đổi `region`
+        thì ticket đang mở của farm **tự điều phối lại** sang Technician của khu
+        vực mới (hoặc về hàng đợi chung + báo Admin nếu chưa có ai phụ trách khu
+        vực đó) — để nguyên thì người đang được gán bị chặn 403 trên chính
+        ticket của mình.
       requestBody:
         content:
           application/json:
@@ -1140,6 +1180,10 @@ paths:
               properties:
                 name: { type: string }
                 address: { type: string }
+                region:
+                  type: string
+                  description: "Khu vực điều phối, phải khớp đúng `users.assigned_regions` của Technician (VD `HCMC`); chỉ Primary Owner/Admin đổi được"
+
                 coordinates:
                   {
                     type: object,
@@ -1172,6 +1216,14 @@ paths:
     delete:
       tags: [Farms]
       summary: Xóa mềm farm — chỉ Primary Owner
+      description: |
+        Farm chỉ bị ẩn (`is_deleted`), dữ liệu lịch sử giữ nguyên. Kéo theo:
+        mọi cảnh báo đang mở của farm được đóng (`RESOLVED`), và mọi **ticket
+        đang mở cũng bị đóng** kèm `cancelled_at` + ghi chú "farm đã bị xoá",
+        Technician đang giữ ticket được thông báo. Lý do: farm đã xoá thì không
+        ai mở được ticket của nó nữa (kể cả Admin), nhưng nếu để mở, chúng vẫn
+        chiếm suất quá tải của Technician trong Ticket Router và vẫn cộng vào
+        `/system/health-overview` cùng tỉ lệ đúng SLA.
       responses:
         "200":
           {
