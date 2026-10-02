@@ -11,6 +11,7 @@ import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { forgotPassword } from '@/services/auth.service'
 import { notifyUser } from '@/services/notification.service'
+import { closeTicketsOfDeletedFarm } from '@/services/ticket.service'
 import { disconnectUser } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
 import { AppError, NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
@@ -177,6 +178,11 @@ export async function completeDeletionRequest(
       await logAction(adminId, 'FARM_SOFT_DELETED', 'farm', String(farm._id), {
         reason: 'OWNER_ACCOUNT_DELETED', ownerId: userId,
       })
+      // Farm đã xoá thì không ai mở được ticket của nó nữa (kể cả Admin) nhưng
+      // chúng vẫn tính vào ngưỡng quá tải của Router và báo cáo — đóng hẳn,
+      // giống removeFarm. Gọi cả khi force:true vì đó đúng là trường hợp còn
+      // ticket mở (Flow 19 bước 7c).
+      await closeTicketsOfDeletedFarm(String(farm._id), adminId)
     }
   }
 

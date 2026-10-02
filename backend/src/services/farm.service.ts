@@ -9,6 +9,7 @@ import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow, assertZoneAccess } from '@/utils/farmAccess.util'
 import { getDefaultThresholds } from '@/services/system.service'
+import { closeTicketsOfDeletedFarm } from '@/services/ticket.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
@@ -112,6 +113,9 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
     { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },
   )
+  // Ticket đã tồn tại trước đó cũng mồ côi y như vậy — và còn tệ hơn Alert vì
+  // chúng vẫn chiếm suất quá tải của Technician cùng các con số của Admin.
+  await closeTicketsOfDeletedFarm(farmId, user._id)
 }
 
 /**

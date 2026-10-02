@@ -375,6 +375,24 @@ describe('completeDeletionRequest', () => {
       await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).resolves.toBeDefined()
     })
 
+    it('closes the open tickets of a farm it soft-deletes, so nobody is left holding a dead ticket', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+      const tech = await mkUser('tech@test.vn', 'TECHNICIAN')
+      const soleFarm = await mkFarm(leaver)
+      const stranded = await mkTicket(soleFarm._id, { status: 'IN_PROGRESS', assigned_to: tech._id })
+
+      await completeDeletionRequest(String(admin._id), String(leaver._id), { force: true })
+
+      // Farm đã xoá mềm thì không ai mở được ticket của nó nữa (kể cả Admin), mà
+      // nó vẫn chiếm suất quá tải của Technician và vẫn cộng vào báo cáo → phải đóng
+      const closed = (await Ticket.findById(stranded._id))!
+      expect(closed.status).toBe('CLOSED')
+      expect(closed.cancelled_at).toBeInstanceOf(Date)
+      const [audit] = await auditActions('TICKET_CLOSED_FARM_DELETED')
+      expect(audit.metadata).toMatchObject({ farmId: String(soleFarm._id), previousStatus: 'IN_PROGRESS' })
+    })
+
     it('proceeds with force and records it in the audit log', async () => {
       const admin = await mkUser('admin@test.vn', 'ADMIN')
       const tech = await mkUser('tech@test.vn', 'TECHNICIAN', requested)

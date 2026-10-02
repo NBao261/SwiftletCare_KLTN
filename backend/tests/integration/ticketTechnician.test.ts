@@ -16,6 +16,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { SystemSetting } from '@/models/systemSetting.model'
+import { removeFarm } from '@/services/farm.service'
 import { createTicket, getKpi, markResponseBreachedTickets } from '@/services/ticket.service'
 import { notifyUser } from '@/services/notification.service'
 import { updateTicketRouting } from '@/services/system.service'
@@ -521,5 +522,54 @@ describe('đánh giá ticket chỉ một lần (TICKET-FR-011)', () => {
     const again = await post(`/tickets/${ticket._id}/rating`, ownerToken, { satisfaction_rating: 1 }).expect(409)
     expect(again.body.error.message).toContain('đã được đánh giá')
     expect((await Ticket.findById(ticket._id))!.satisfaction_rating).toBe(5)
+  })
+})
+
+describe('farm bị xoá mềm thì ticket đang mở phải được đóng (FARM-FR-001)', () => {
+  it('đóng ticket, đánh dấu huỷ, ghi audit và báo Technician đang giữ việc', async () => {
+    const { farm, owner, assignee, ticket } = await seed({ status: 'IN_PROGRESS', scheduled_visit_at: vnAt(2, 9) })
+    jest.mocked(notifyUser).mockClear()
+
+    await removeFarm(String(farm._id), { _id: String(owner._id), email: owner.email, role: 'FARM_OWNER' })
+
+    const closed = (await Ticket.findById(ticket._id))!
+    expect(closed.status).toBe('CLOSED')
+    expect(closed.closed_at).toBeTruthy()
+    expect(closed.cancelled_at).toBeTruthy() // huỷ, không phải "đã xử lý" — KPI tính riêng
+    expect(closed.notes.at(-1)!.content).toContain('đã bị xoá')
+
+    const audit = await AuditLog.findOne({ action: 'TICKET_CLOSED_FARM_DELETED' }).lean()
+    expect(audit!.metadata).toMatchObject({ farmId: String(farm._id), previousStatus: 'IN_PROGRESS' })
+    expect(jest.mocked(notifyUser).mock.calls.map(c => c[0])).toContain(String(assignee._id))
+  })
+
+  it('trả lại suất quá tải cho Technician nên Router gán được việc mới ngay sau đó', async () => {
+    const { farm, owner, assignee, colleague } = await seed({ status: 'IN_PROGRESS' })
+    await User.deleteOne({ _id: colleague._id }) // chỉ còn 1 Technician trong vùng
+    await updateTicketRouting(String(owner._id), { max_open_tickets_per_technician: 1 })
+    const current = { _id: String(owner._id), email: owner.email, role: 'FARM_OWNER' as const }
+    const otherFarm = await Farm.create({ name: 'Farm 2', address: 'HCMC', region: 'HCMC', owner_id: owner._id })
+
+    // Còn ticket của farm sắp bị xoá → assignee bị coi là quá tải
+    const before = await createTicket(current, { farm_id: String(otherFarm._id), type: 'OTHER' })
+    expect(before.assigned_to).toBeUndefined()
+
+    await removeFarm(String(farm._id), current)
+
+    const after = await createTicket(current, { farm_id: String(otherFarm._id), type: 'OTHER' })
+    expect(String(after.assigned_to)).toBe(String(assignee._id))
+  })
+
+  it('không đụng tới ticket đã đóng và ticket của farm khác', async () => {
+    const { farm, owner, assignee } = await seed({ status: 'CLOSED', closed_at: new Date() })
+    const otherFarm = await Farm.create({ name: 'Farm 2', address: 'HCMC', region: 'HCMC', owner_id: owner._id })
+    const untouched = await Ticket.create({
+      farm_id: otherFarm._id, type: 'OTHER', priority: 'P3', status: 'NEW', assigned_to: assignee._id,
+    })
+
+    await removeFarm(String(farm._id), { _id: String(owner._id), email: owner.email, role: 'FARM_OWNER' })
+
+    expect((await Ticket.findById(untouched._id))!.status).toBe('NEW')
+    expect(await AuditLog.countDocuments({ action: 'TICKET_CLOSED_FARM_DELETED' })).toBe(0)
   })
 })

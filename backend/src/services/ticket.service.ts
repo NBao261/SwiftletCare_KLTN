@@ -649,6 +649,54 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
   return ticket
 }
 
+/**
+ * Farm bị xoá mềm (Primary Owner xoá — FARM-FR-001, hoặc Admin hoàn tất yêu cầu
+ * xoá tài khoản — AUTH-FR-012) thì ticket đang mở của farm đó thành ticket chết:
+ * model Farm lọc sẵn farm đã xoá nên `getTicket` trả 404 cho CẢ Admin và ticket
+ * biến mất khỏi mọi danh sách — không ai đóng được nữa. Nhưng các phép đếm lại
+ * đi thẳng trên collection `tickets`: chúng vẫn chiếm suất trong ngưỡng quá tải
+ * của Router (Technician bị ngừng nhận việc mới), vẫn cộng vào
+ * `/system/health-overview` và vẫn bị `slaBreach.job` gắn cờ vi phạm. Nên đóng
+ * hẳn tại thời điểm xoá farm — đúng cách `removeFarm` đã làm cho Alert đang mở.
+ *
+ * Đánh `cancelled_at` (không phải "đã xử lý"): KPI tính riêng ticket huỷ nên
+ * thời gian xử lý trung bình và tỉ lệ đúng SLA không bị bóp méo.
+ */
+export async function closeTicketsOfDeletedFarm(farmId: string, actorId: string): Promise<number> {
+  const tickets = await Ticket.find({ farm_id: farmId, status: { $ne: 'CLOSED' } })
+
+  for (const ticket of tickets) {
+    const now = new Date()
+    const previousStatus = ticket.status
+    const assignee = assigneeIdOf(ticket)
+    ticket.status = 'CLOSED'
+    ticket.closed_at = now
+    ticket.cancelled_at = now
+    ticket.notes.push({
+      author_id: actorId as never,
+      content: 'Đóng tự động: farm của ticket này đã bị xoá',
+      created_at: now,
+    } as never)
+    await ticket.save()
+
+    await logAction(actorId, 'TICKET_CLOSED_FARM_DELETED', 'ticket', String(ticket._id), {
+      farmId, previousStatus, assignedTo: assignee,
+    })
+
+    // Technician đang giữ ticket có thể đã hẹn xuống hiện trường — phải biết để không đi
+    if (assignee) {
+      const visit = ticket.scheduled_visit_at && ticket.scheduled_visit_at.getTime() > now.getTime()
+        ? ` — không cần đến hiện trường lúc ${formatVisitTime(ticket.scheduled_visit_at)}`
+        : ''
+      void notifyUser(assignee, {
+        title: 'Ticket đã đóng vì farm bị xoá',
+        body: `Ticket ${String(ticket._id)} (${ticket.type}) đã đóng vì farm của nó đã bị xoá${visit}.`,
+      })
+    }
+  }
+  return tickets.length
+}
+
 export async function addNote(ticketId: string, user: CurrentUser, content: string): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user)
   ticket.notes.push({ author_id: user._id as never, content, created_at: new Date() })
