@@ -14,8 +14,6 @@ export interface ISensorNode extends Document {
    * `firmware_version` mới để xác nhận thành công (bước 5).
    */
   ota_pending?: { version: string; url: string; requested_at: Date; requested_by?: Types.ObjectId }
-  /** Lúc backend đẩy ngưỡng của Zone xuống thiết bị (lần đầu nó lên mạng) */
-  config_pushed_at?: Date
   /** Lần OTA gần nhất quá hạn xác nhận — thiết bị vẫn chạy `running_version` (đã rollback) */
   ota_failed?: { version: string; failed_at: Date; running_version: string }
   last_heartbeat?: Date
@@ -122,7 +120,6 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     registered_at:   { type: Date, default: Date.now },
     registered_by:   { type: Schema.Types.ObjectId, ref: 'User' },
     activation_overdue_at: { type: Date },
-    config_pushed_at:    { type: Date },
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },
     replaced_by:         { type: Schema.Types.ObjectId },

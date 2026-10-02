@@ -1,11 +1,14 @@
 import { MaintenanceSchedule, IMaintenanceSchedule } from '@/models/maintenanceSchedule.model'
 import { Farm } from '@/models/farm.model'
+import { Ticket } from '@/models/ticket.model'
+import { Zone } from '@/models/houseZone.model'
 import { assertFarmAccess, assertZoneInFarm, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { createMaintenanceTicket } from '@/services/ticket.service'
 import { logAction } from '@/services/auditLog.service'
+import { notifyAdmins } from '@/services/notification.service'
 import { paginate } from '@/utils/helpers.util'
-import { NotFoundError } from '@/utils/appError.util'
-import { assertValidVisitTime, nextVisitSlot } from '@/utils/visitTime.util'
+import { NotFoundError, ConflictError } from '@/utils/appError.util'
+import { assertValidVisitTime, nextVisitSlot, formatVisitTime } from '@/utils/visitTime.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
@@ -56,6 +59,14 @@ export async function createSchedule(user: CurrentUser, input: MaintenanceSchedu
   const farmId = String(input.farm_id)
   await assertFarmAccess(farmId, user)
   if (input.zone_id) await assertZoneInFarm(input.zone_id, farmId)
+
+  // Hai lịch giống hệt nhau sinh 2 ticket cho cùng một việc mỗi chu kỳ
+  const duplicate = await MaintenanceSchedule.findOne({
+    farm_id: farmId, zone_id: input.zone_id ?? null, description: input.description, is_active: true,
+  }).select('_id next_due_at').lean()
+  if (duplicate) {
+    throw ConflictError(`Farm này đã có lịch bảo trì cùng nội dung đang hoạt động (hạn kế tiếp ${formatVisitTime(duplicate.next_due_at)})`)
+  }
 
   const schedule = await MaintenanceSchedule.create({
     farm_id: farmId,
@@ -134,19 +145,58 @@ export async function generateDueMaintenanceTickets(now = new Date()): Promise<n
     )
     if (!claimed) continue
 
+    // Kỳ trước chưa xong: VẪN sinh ticket kỳ này (mỗi chu kỳ là một nghĩa vụ
+    // riêng — gộp lại sẽ che mất số kỳ đã lỡ) nhưng phải để lại dấu vết ở cả hai
+    // ticket và báo Admin, vì việc đang dồn là chuyện điều phối chứ không phải
+    // chuyện Technician tự xoay.
+    const previous = schedule.last_ticket_id
+      ? await Ticket.findOne({ _id: schedule.last_ticket_id, status: { $ne: 'CLOSED' } })
+      : null
+
     try {
+      // Zone có thể bị xoá sau khi lập lịch — ticket trỏ vào zone không còn khiến
+      // Technician không mở được chi tiết khu vực. Hạ xuống mức farm và nói rõ.
+      const zoneId = schedule.zone_id ? String(schedule.zone_id) : undefined
+      const zone = zoneId ? await Zone.findById(zoneId).select('_id').lean() : null
+      const zoneGone = !!zoneId && !zone
+
       const ticket = await createMaintenanceTicket({
         farm_id: String(schedule.farm_id),
-        zone_id: schedule.zone_id ? String(schedule.zone_id) : undefined,
+        zone_id: zoneGone ? undefined : zoneId,
         // Lịch trễ (server tắt lâu) thì hẹn sớm nhất 1 giờ nữa, không hẹn ngược về quá khứ,
         // và dời vào khung giờ hẹn 7:00–18:00 nếu mốc đó rơi ra ngoài (TICKET-FR-004b)
         scheduled_visit_at: nextVisitSlot(new Date(Math.max(schedule.next_due_at.getTime(), now.getTime() + HOUR_MS))),
-        description: `Bảo trì định kỳ (mỗi ${schedule.interval_days} ngày): ${schedule.description}`,
+        description: `Bảo trì định kỳ (mỗi ${schedule.interval_days} ngày): ${schedule.description}`
+          + (zoneGone ? ' — Zone trong lịch đã bị xoá, kiểm tra lại phạm vi bảo trì với Farm Owner' : '')
+          + (previous
+            ? ` — kỳ trước (hẹn ${previous.scheduled_visit_at ? formatVisitTime(previous.scheduled_visit_at) : 'không rõ'}) chưa hoàn thành`
+            : ''),
       })
       await MaintenanceSchedule.updateOne({ _id: schedule._id }, { last_ticket_id: ticket._id })
+
+      if (previous) {
+        previous.notes.push({
+          content: `Đã tới kỳ bảo trì kế tiếp (ticket ${String(ticket._id)}) trong khi kỳ này chưa hoàn thành`,
+          created_at: new Date(),
+        } as never)
+        await previous.save()
+
+        await logAction(undefined, 'MAINTENANCE_CYCLE_MISSED', 'maintenance_schedule', String(schedule._id), {
+          missedPreviousCycle: true, previousTicketId: String(previous._id), newTicketId: String(ticket._id),
+        })
+        void notifyAdmins({
+          title: 'Bảo trì định kỳ đang bị dồn',
+          body: `Lịch "${schedule.description}" tới kỳ mới nhưng kỳ trước (ticket ${String(previous._id)}) chưa xong — cần điều phối lại.`,
+        })
+      }
       created++
     } catch (err) {
-      logger.error('Tạo ticket bảo trì định kỳ thất bại', { scheduleId: String(schedule._id), err })
+      // Trả hạn về giá trị cũ để lần quét sau thử lại — không thì chu kỳ này mất hẳn
+      await MaintenanceSchedule.updateOne(
+        { _id: schedule._id, next_due_at: next },
+        { next_due_at: schedule.next_due_at },
+      )
+      logger.error('Tạo ticket bảo trì định kỳ thất bại — trả hạn về để thử lại', { scheduleId: String(schedule._id), err })
     }
   }
   return created
