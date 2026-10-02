@@ -201,7 +201,7 @@ describe('PUT /admin/users/:id/status — technician with open tickets', () => {
   it('reports meta.openTickets so the admin knows to reassign', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
     const { user: tech } = await makeUser('tech@test.vn', 'TECHNICIAN')
-    await Ticket.create({ farm_id: new mongoose.Types.ObjectId(), type: 'OTHER', priority: 'P2', assigned_to: tech._id, status: 'IN_PROGRESS' })
+    const ticket = await Ticket.create({ farm_id: new mongoose.Types.ObjectId(), type: 'OTHER', priority: 'P2', assigned_to: tech._id, status: 'IN_PROGRESS' })
 
     const res = await request(app)
       .put(`/admin/users/${tech._id}/status`)
@@ -209,7 +209,8 @@ describe('PUT /admin/users/:id/status — technician with open tickets', () => {
       .send({ is_active: false, reason: 'Nghỉ việc' })
       .expect(200)
 
-    expect(res.body.meta).toEqual({ openTickets: 1 })
+    expect(res.body.meta.openTickets).toBe(1)
+    expect(res.body.meta.openTicketIds).toEqual([String(ticket._id)])
     expect(res.body.data.is_active).toBe(false)
   })
 

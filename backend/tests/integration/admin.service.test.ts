@@ -124,6 +124,11 @@ describe('setUserStatus', () => {
     const result = await setUserStatus(String(admin._id), String(tech._id), false, 'Nghỉ việc')
 
     expect(result.openTickets).toBe(2)
+    expect(result.openTicketIds).toHaveLength(2) // đủ id để Admin bấm gán lại ngay
+    // Khoá tài khoản KHÔNG tự gán lại: người đó vẫn phụ trách vùng, việc gán lại
+    // là quyết định của Admin (AUTH-FR-011) — khác với khi vùng bị gỡ hẳn
+    const stillTheirs = await Ticket.countDocuments({ assigned_to: tech._id, status: { $ne: 'CLOSED' } })
+    expect(stillTheirs).toBe(2)
   })
 
   it('omits openTickets when the technician has none', async () => {

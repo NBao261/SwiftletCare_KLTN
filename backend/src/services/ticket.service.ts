@@ -649,6 +649,106 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
   return ticket
 }
 
+export type CoverageChangeReason = 'REGION_UNASSIGNED' | 'FARM_REGION_CHANGED'
+
+const COVERAGE_NOTE: Record<CoverageChangeReason, string> = {
+  REGION_UNASSIGNED: 'Technician đang phụ trách không còn phụ trách khu vực của farm này.',
+  FARM_REGION_CHANGED: 'Farm đã chuyển sang khu vực khác, Technician cũ không còn phụ trách.',
+}
+
+export interface CoverageRerouteResult {
+  rerouted: Array<{ ticketId: string; from: string; to: string }>
+  /** Không còn ai trong vùng — về hàng đợi chung, Admin phải điều phối tay */
+  unassigned: string[]
+}
+
+/**
+ * Quyền xem ticket của Technician đi theo `assigned_regions` (farmAccess.util),
+ * nên khi Admin gỡ một vùng khỏi Technician (AUTH-FR-005c) hoặc khi `region` của
+ * farm đổi (FARM-FR-001), người đang được gán **mất quyền trên chính ticket của
+ * mình**: mọi endpoint của ticket trả 403 — xem, đổi trạng thái, hẹn lịch, chat —
+ * trong khi ticket vẫn mở và đồng hồ SLA vẫn chạy. `adminOverrideTicket` đã chặn
+ * đúng tình huống này ở đường gán tay (muốn gán người ngoài vùng phải `force`),
+ * nên hai đường đổi vùng cũng không được để ticket mắc kẹt im lặng.
+ *
+ * Xử lý y như Technician xin gán lại (`requestReassign`): tìm người khác trong
+ * vùng, trả ticket về `NEW` để người mới xác nhận tiếp nhận, huỷ lịch hẹn của
+ * người cũ (trừ ticket lắp đặt/bảo trì — giờ hẹn đó là của Farm Owner), không
+ * còn ai thì về hàng đợi chung và báo Admin.
+ *
+ * KHÔNG áp dụng khi tài khoản Technician bị khoá: lúc đó họ vẫn phụ trách vùng,
+ * và SRS giao việc gán lại cho Admin quyết định (AUTH-FR-011 — response của
+ * `PUT /admin/users/:id/status` trả kèm `meta.openTickets`).
+ */
+export async function rerouteTicketsOutOfCoverage(
+  scope: { farmId?: string; technicianId?: string },
+  actorId: string,
+  reason: CoverageChangeReason,
+): Promise<CoverageRerouteResult> {
+  const result: CoverageRerouteResult = { rerouted: [], unassigned: [] }
+  const query: Record<string, unknown> = { status: { $ne: 'CLOSED' }, assigned_to: { $ne: null } }
+  if (scope.farmId) query.farm_id = scope.farmId
+  if (scope.technicianId) query.assigned_to = scope.technicianId
+
+  for (const ticket of await Ticket.find(query)) {
+    const from = assigneeIdOf(ticket)
+    if (!from) continue
+    // Farm đã xoá mềm thì ticket được đóng ở closeTicketsOfDeletedFarm, không gán lại
+    const farm = await Farm.findById(ticket.farm_id).select('region').lean()
+    if (!farm) continue
+
+    // Cùng phép thử với `isAssignedTechnician` của farmAccess.util — người cũ còn
+    // phụ trách vùng thì không có gì phải làm (kể cả khi họ đang bị khoá).
+    const assignee = await User.findById(from).select('role assigned_regions').lean()
+    const stillCovers = assignee?.role === 'TECHNICIAN' && !!farm.region
+      && (assignee.assigned_regions ?? []).includes(farm.region)
+    if (stillCovers) continue
+
+    const to = await routeToTechnician(String(ticket.farm_id), { exclude: [from] })
+    const droppedVisit = ticket.scheduled_visit_at
+    const dropsVisit = !!droppedVisit && !VISIT_TYPES.includes(ticket.type)
+    const visitStillAhead = !!droppedVisit && droppedVisit.getTime() > Date.now()
+    if (dropsVisit) ticket.scheduled_visit_at = undefined
+
+    ticket.assigned_to = (to ?? undefined) as never
+    ticket.assigned_at = to ? new Date() : undefined
+    trackAssigneeChange(ticket, from)
+    ticket.status = 'NEW'
+    ticket.responded_at = undefined
+    ticket.notes.push({
+      author_id: actorId as never,
+      content: `${COVERAGE_NOTE[reason]} ${to ? 'Đã chuyển cho Technician phụ trách vùng.' : 'Không còn Technician phù hợp — chờ Administrator điều phối.'}`
+        + (dropsVisit ? ` Lịch hẹn ${formatVisitTime(droppedVisit!)} đã huỷ, Technician mới sẽ hẹn lại.` : ''),
+      created_at: new Date(),
+    } as never)
+    await ticket.save()
+
+    await logAction(actorId, 'TICKET_REROUTED', 'ticket', String(ticket._id), {
+      from, to, reason, cancelledVisit: dropsVisit ? droppedVisit : null,
+    })
+    if (dropsVisit && visitStillAhead) {
+      await notifyVisitChange(ticket, {
+        title: 'Lịch hẹn kỹ thuật đã huỷ',
+        body: `Ticket ${String(ticket._id)} đã chuyển sang Technician khác nên buổi hẹn lúc ${formatVisitTime(droppedVisit!)} không còn hiệu lực. Technician mới sẽ hẹn lại.`,
+      })
+    }
+    await announceAssigneeChange(ticket, from)
+    void notifyUser(from, {
+      title: 'Ticket đã chuyển khỏi bạn',
+      body: `Ticket ${String(ticket._id)} (${ticket.type}) không còn thuộc khu vực bạn phụ trách nên đã được điều phối lại.`,
+    })
+
+    if (to) {
+      notifyNewAssignment(to, ticket)
+      result.rerouted.push({ ticketId: String(ticket._id), from, to })
+    } else {
+      notifyUnassigned(ticket, COVERAGE_NOTE[reason] + ' Không còn Technician nào rảnh trong vùng')
+      result.unassigned.push(String(ticket._id))
+    }
+  }
+  return result
+}
+
 /**
  * Farm bị xoá mềm (Primary Owner xoá — FARM-FR-001, hoặc Admin hoàn tất yêu cầu
  * xoá tài khoản — AUTH-FR-012) thì ticket đang mở của farm đó thành ticket chết:
@@ -876,6 +976,10 @@ export async function getKpi() {
   const now = new Date()
   const resolvedMatch = { status: 'CLOSED', closed_at: { $ne: null }, cancelled_at: null }
   const dueMatch = { cancelled_at: null, sla_resolve_due_at: { $ne: null, $lt: now } }
+  /** Cùng điều kiện với `dueMatch` nhưng viết dạng biểu thức cho $group */
+  const DUE_NOW = {
+    $and: [{ $ne: [{ $ifNull: ['$sla_resolve_due_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }],
+  }
 
   const [byStatus, byTechnician, resolveStats, slaStats] = await Promise.all([
     Ticket.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
@@ -891,8 +995,11 @@ export async function getKpi() {
           unaccepted: { $sum: { $cond: [{ $eq: ['$status', 'NEW'] }, 1, 0] } },
           resolveMsSum: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, { $subtract: ['$closed_at', '$created_at'] }, 0] } },
           resolvedCount: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
-          due: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }] }, 1, 0] } },
-          dueBreached: { $sum: { $cond: [{ $and: [{ $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }, '$is_sla_breached'] }, 1, 0] } },
+          // `$lt` với field thiếu là TRUE (null đứng trước Date trong thứ tự BSON)
+          // nên phải chặn null tường minh, không thì ticket chưa có hạn SLA cũng
+          // bị tính vào mẫu số và tỉ lệ đúng SLA của người đó bị sai.
+          due: { $sum: { $cond: [{ $and: [DUE_NOW, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
+          dueBreached: { $sum: { $cond: [{ $and: [DUE_NOW, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, '$is_sla_breached'] }, 1, 0] } },
           // TICKET-FR-004b — từ lúc ticket được giao (không phải lúc tạo) tới lúc Technician xác nhận tiếp nhận
           responseMsSum: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, { $subtract: ['$responded_at', { $ifNull: ['$assigned_at', '$created_at'] }] }, 0] } },
           respondedCount: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, 1, 0] } },

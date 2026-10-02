@@ -16,9 +16,10 @@ import { House, Zone } from '@/models/houseZone.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { SystemSetting } from '@/models/systemSetting.model'
-import { removeFarm } from '@/services/farm.service'
+import { updateTechnicianRegions } from '@/services/admin.service'
+import { removeFarm, updateFarm } from '@/services/farm.service'
 import { createTicket, getKpi, markResponseBreachedTickets } from '@/services/ticket.service'
-import { notifyUser } from '@/services/notification.service'
+import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { updateTicketRouting } from '@/services/system.service'
 import type { Role } from '@/types'
 import { vnAt } from '../helpers/visitTime'
@@ -571,5 +572,80 @@ describe('farm bị xoá mềm thì ticket đang mở phải được đóng (FA
 
     expect((await Ticket.findById(untouched._id))!.status).toBe('NEW')
     expect(await AuditLog.countDocuments({ action: 'TICKET_CLOSED_FARM_DELETED' })).toBe(0)
+  })
+})
+
+describe('đổi vùng phụ trách không được bỏ rơi ticket đang mở (AUTH-FR-005c / FARM-FR-001)', () => {
+  const adminUser = () => User.create({ email: 'admin@test.vn', password_hash: 'password123', full_name: 'Admin', role: 'ADMIN' })
+
+  it('gỡ vùng của Technician thì ticket chuyển sang người còn phụ trách vùng đó', async () => {
+    const { farm, assignee, colleague, ticket } = await seed({ status: 'IN_PROGRESS', scheduled_visit_at: vnAt(3, 9) })
+    const admin = await adminUser()
+    jest.mocked(notifyUser).mockClear()
+
+    const res = await updateTechnicianRegions(String(admin._id), String(assignee._id), ['HANOI'])
+
+    expect(res.rerouted).toEqual([{ ticketId: String(ticket._id), from: String(assignee._id), to: String(colleague._id) }])
+    const moved = (await Ticket.findById(ticket._id))!
+    expect(String(moved.assigned_to)).toBe(String(colleague._id))
+    expect(moved.status).toBe('NEW')            // người mới phải xác nhận tiếp nhận
+    expect(moved.responded_at).toBeUndefined()
+    expect(moved.scheduled_visit_at).toBeUndefined() // lịch hẹn là cam kết của người cũ
+    expect(moved.previous_assignees.map(p => String(p.user_id))).toEqual([String(assignee._id)])
+
+    const audit = await AuditLog.findOne({ action: 'TICKET_REROUTED' }).lean()
+    expect(audit!.metadata).toMatchObject({ reason: 'REGION_UNASSIGNED', from: String(assignee._id), to: String(colleague._id) })
+    const notified = jest.mocked(notifyUser).mock.calls.map(c => c[0])
+    expect(notified).toContain(String(colleague._id)) // người mới
+    expect(notified).toContain(String(assignee._id))  // người cũ biết mình không còn giữ
+    expect(String(farm._id)).toBeTruthy()
+  })
+
+  it('không còn ai trong vùng thì ticket về hàng đợi chung và Admin được báo', async () => {
+    const { assignee, colleague, ticket } = await seed({ status: 'IN_PROGRESS' })
+    await User.deleteOne({ _id: colleague._id })
+    const admin = await adminUser()
+    jest.mocked(notifyAdmins).mockClear()
+
+    const res = await updateTechnicianRegions(String(admin._id), String(assignee._id), ['HANOI'])
+
+    expect(res.unassigned).toEqual([String(ticket._id)])
+    expect((await Ticket.findById(ticket._id))!.assigned_to).toBeUndefined()
+    expect(jest.mocked(notifyAdmins)).toHaveBeenCalled()
+  })
+
+  it('thêm vùng mới (không gỡ gì) thì không điều phối lại gì cả', async () => {
+    const { assignee, ticket } = await seed({ status: 'IN_PROGRESS' })
+    const admin = await adminUser()
+
+    const res = await updateTechnicianRegions(String(admin._id), String(assignee._id), ['HCMC', 'HANOI'])
+
+    expect(res).toMatchObject({ rerouted: [], unassigned: [] })
+    expect(String((await Ticket.findById(ticket._id))!.assigned_to)).toBe(String(assignee._id))
+  })
+
+  it('đổi khu vực của farm cũng điều phối lại ticket đang mở của farm đó', async () => {
+    const { farm, owner, assignee, colleague, ticket } = await seed({ status: 'AWAITING_FIELD_CONFIRMATION' })
+    await User.updateOne({ _id: colleague._id }, { assigned_regions: ['HANOI'] })
+
+    await updateFarm(String(farm._id), { _id: String(owner._id), email: owner.email, role: 'FARM_OWNER' }, { region: 'HANOI' })
+
+    const moved = (await Ticket.findById(ticket._id))!
+    expect(String(moved.assigned_to)).toBe(String(colleague._id))
+    const audit = await AuditLog.findOne({ action: 'TICKET_REROUTED' }).lean()
+    expect(audit!.metadata).toMatchObject({ reason: 'FARM_REGION_CHANGED' })
+    expect(String(assignee._id)).toBeTruthy()
+  })
+
+  it('giữ lịch hẹn của ticket lắp đặt vì đó là giờ Farm Owner đã chọn', async () => {
+    const visit = vnAt(4, 10)
+    const { assignee, colleague, ticket } = await seed({ type: 'INSTALLATION', status: 'IN_PROGRESS', scheduled_visit_at: visit })
+    const admin = await adminUser()
+
+    await updateTechnicianRegions(String(admin._id), String(assignee._id), ['HANOI'])
+
+    const moved = (await Ticket.findById(ticket._id))!
+    expect(String(moved.assigned_to)).toBe(String(colleague._id))
+    expect(moved.scheduled_visit_at).toEqual(visit)
   })
 })

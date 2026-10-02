@@ -9,7 +9,7 @@ import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow, assertZoneAccess } from '@/utils/farmAccess.util'
 import { getDefaultThresholds } from '@/services/system.service'
-import { closeTicketsOfDeletedFarm } from '@/services/ticket.service'
+import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage } from '@/services/ticket.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
@@ -93,11 +93,18 @@ export async function updateFarm(
     throw ForbiddenError('Chỉ Primary Owner mới được đổi khu vực của farm')
   }
 
+  const regionChanged = updates.region !== undefined && updates.region !== farm.region
+
   if (updates.name !== undefined) farm.name = updates.name
   if (updates.address !== undefined) farm.address = updates.address
   if (updates.region !== undefined) farm.region = updates.region
   if (updates.coordinates !== undefined) farm.coordinates = updates.coordinates
   await farm.save()
+
+  // Đổi vùng là đổi luôn ai được phép vào ticket của farm này: Technician đang
+  // giữ ticket mà không phụ trách vùng mới sẽ bị chặn 403 trên chính việc của
+  // mình — điều phối lại cho người của vùng mới (hoặc về hàng đợi chung).
+  if (regionChanged) await rerouteTicketsOutOfCoverage({ farmId }, user._id, 'FARM_REGION_CHANGED')
   return farm
 }
 
