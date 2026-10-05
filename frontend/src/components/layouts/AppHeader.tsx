@@ -73,7 +73,7 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
   ]
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 bg-transparent px-4 lg:px-6">
+    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 bg-transparent px-4 lg:px-6">
       {/* Trái: breadcrumb tên trang → thực thể đang xem (desktop) / thương hiệu (mobile, vì sidebar bị ẩn) */}
       <nav aria-label="breadcrumb" className="flex min-w-0 items-baseline gap-1.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-charcoal text-sm font-extrabold text-white lg:hidden">
