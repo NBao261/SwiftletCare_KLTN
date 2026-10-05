@@ -9,6 +9,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { usePermission } from '@/hooks/common/usePermission'
 import { usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { Button, Badge, Card, Textarea } from '@/components/ui'
+import ActionsMenu, { type ActionsMenuItem } from '@/components/ui/ActionsMenu'
+import { IconMessage, IconUser, IconCalendar, IconAlert, IconCheck } from '@/components/ui/icons'
 import StarRating from '@/components/ui/StarRating'
 import NoteActionModal from '@/components/ui/NoteActionModal'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -48,6 +50,7 @@ export default function TechnicianTicketDetailPage() {
   const [showTechReassign, setShowTechReassign] = useState(false)
   const [showEscalate, setShowEscalate] = useState(false)
   const [showScheduleVisit, setShowScheduleVisit] = useState(false)
+  const [showChat, setShowChat] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const pushToast = useToastStore(s => s.push)
   const isTechnician = usePermission('TECHNICIAN')
@@ -81,6 +84,28 @@ export default function TechnicianTicketDetailPage() {
   const canTechAct = isTechnician && isAssignee && ticket.status !== 'CLOSED'
   const canCancel = canManageTicket && ticket.status !== 'CLOSED'
 
+  const menuItems: ActionsMenuItem[] = []
+
+  if (canTechAct) {
+    menuItems.push({ label: 'Xin gán lại', onClick: () => setShowTechReassign(true) })
+    if (canScheduleVisit(ticket)) {
+      menuItems.push({ label: ticket.scheduled_visit_at ? 'Dời lịch hẹn' : 'Hẹn lịch hiện trường', onClick: () => setShowScheduleVisit(true) })
+    }
+    if (!ticket.escalated_at) {
+      menuItems.push({ label: 'Báo Admin', danger: true, onClick: () => setShowEscalate(true) })
+    }
+  }
+
+  if (canAdminIntervene) {
+    menuItems.push({ label: 'Đổi ưu tiên (Admin)', onClick: () => setShowChangePriority(true) })
+    menuItems.push({ label: 'Gán lại KTV (Admin)', onClick: () => setShowReassign(true) })
+    menuItems.push({ label: 'Đổi lịch hẹn (Admin)', onClick: () => setShowReschedule(true) })
+  }
+
+  if (canCancel) {
+    menuItems.push({ label: 'Hủy ticket', danger: true, onClick: () => setShowCancel(true) })
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <Link 
@@ -92,59 +117,89 @@ export default function TechnicianTicketDetailPage() {
       </Link>
 
       <Card>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2.5">
-              <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
-              <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
+        <div className="flex flex-col gap-5">
+          {/* Top Row: Title & Badges (Left) + Buttons (Right) */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
+                <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
+                {ticket.is_sla_breached && <Badge tone="danger">Vượt SLA</Badge>}
+                {ticket.escalated_at && <Badge tone="danger">Đã báo Admin</Badge>}
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</h1>
+                <p className="mt-1 text-sm font-medium text-warmGray">Tạo lúc {formatDate(ticket.created_at)}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</h1>
-              <p className="mt-1 text-sm font-medium text-warmGray">Tạo lúc {formatDate(ticket.created_at)}</p>
+
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {canTechAct && (
+                <>
+                  <Button variant="secondary" onClick={() => setShowChat(true)}>
+                    <IconMessage className="mr-1.5 h-4 w-4" />
+                    Trao đổi
+                  </Button>
+                  <Button onClick={() => setShowUpdateStatus(true)}>
+                    {ticket.status === 'NEW' ? 'Tiếp nhận' : 'Cập nhật trạng thái'}
+                  </Button>
+                </>
+              )}
+              
+              {menuItems.length > 0 && (
+                <div className="ml-1 flex items-center border-l border-warmGray/20 pl-3">
+                  <ActionsMenu items={menuItems} />
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            {canAdminIntervene && (
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button variant="secondary" size="sm" onClick={() => setShowChangePriority(true)}>Đổi ưu tiên</Button>
-                <Button variant="secondary" size="sm" onClick={() => setShowReassign(true)}>Gán lại KTV</Button>
-                <Button variant="secondary" size="sm" onClick={() => setShowReschedule(true)}>Đổi lịch hẹn</Button>
+          
+          {/* Bottom Row: Inline Metadata */}
+          <div className="flex flex-col gap-3 border-t border-warmGray/10 pt-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+              <div className="flex items-center gap-1.5">
+                <IconUser className="h-4 w-4 text-warmGray" />
+                <span className="text-warmGray">Phụ trách:</span>
+                <span className="font-medium text-charcoal">{assigneeName(ticket.assigned_to) ?? 'Chưa gán'}</span>
               </div>
-            )}
-            {canTechAct && (
-              <div className="flex flex-wrap justify-end gap-2">
-                {ticket.status === 'NEW' ? (
-                  <Button size="sm" onClick={() => setShowUpdateStatus(true)}>Tiếp nhận</Button>
-                ) : (
-                  <Button size="sm" onClick={() => setShowUpdateStatus(true)}>Cập nhật trạng thái</Button>
-                )}
-                <Button variant="secondary" size="sm" onClick={() => setShowTechReassign(true)}>Xin gán lại</Button>
-                {canScheduleVisit(ticket) && (
-                  <Button variant="secondary" size="sm" onClick={() => setShowScheduleVisit(true)}>
-                    {ticket.scheduled_visit_at ? 'Dời lịch hẹn' : 'Hẹn lịch hiện trường'}
-                  </Button>
-                )}
-                {!ticket.escalated_at && (
-                  <Button variant="secondary" size="sm" onClick={() => setShowEscalate(true)}>Báo Admin</Button>
-                )}
+              {ticket.scheduled_visit_at && (
+                <div className="flex items-center gap-1.5">
+                  <IconCalendar className="h-4 w-4 text-warmGray" />
+                  <span className="text-warmGray">Lịch hẹn:</span>
+                  <span className="font-medium text-charcoal">{formatDate(ticket.scheduled_visit_at)}</span>
+                </div>
+              )}
+              {ticket.sla_resolve_due_at && (
+                <div className="flex items-center gap-1.5">
+                  <IconCalendar className="h-4 w-4 text-warmGray" />
+                  <span className="text-warmGray">Hạn xử lý (SLA):</span>
+                  <span className={ticket.is_sla_breached ? 'font-semibold text-alertRed' : 'font-medium text-charcoal'}>
+                    {formatDate(ticket.sla_resolve_due_at)}
+                  </span>
+                </div>
+              )}
+              {ticket.is_sla_response_breached && (
+                <div className="flex items-center gap-1.5">
+                  <IconAlert className="h-4 w-4 text-alertRed" />
+                  <span className="font-semibold text-alertRed">Phản hồi trễ</span>
+                </div>
+              )}
+              {ticket.responded_at && (
+                <div className="flex items-center gap-1.5">
+                  <IconCheck className="h-4 w-4 text-warmGray" />
+                  <span className="text-warmGray">Tiếp nhận lúc:</span>
+                  <span className="font-medium text-charcoal">{formatDate(ticket.responded_at)}</span>
+                </div>
+              )}
+            </div>
+            {ticket.escalation_reason && (
+              <div className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm ring-1 ring-inset ring-red-500/20">
+                <IconAlert className="mt-0.5 h-4 w-4 shrink-0 text-alertRed" />
+                <span className="text-alertRed"><span className="font-bold">Lý do báo Admin:</span> {ticket.escalation_reason}</span>
               </div>
-            )}
-            {canCancel && (
-              <Button variant="danger" size="sm" onClick={() => setShowCancel(true)}>Hủy ticket</Button>
             )}
           </div>
         </div>
-
-        <dl className="mt-4 flex flex-wrap gap-x-12 gap-y-4 border-t border-warmGray/10 pt-4 text-sm">
-          <InfoItem label="Kỹ thuật viên phụ trách" value={assigneeName(ticket.assigned_to) ?? 'Chưa gán'} />
-          {ticket.scheduled_visit_at && <InfoItem label="Ngày hẹn" value={formatDate(ticket.scheduled_visit_at)} />}
-          {ticket.sla_resolve_due_at && <InfoItem label="Hạn xử lý (SLA)" value={formatDate(ticket.sla_resolve_due_at)} />}
-          {ticket.is_sla_breached && <InfoItem label="Trạng thái SLA" value="Đã vượt hạn" warn />}
-          {ticket.is_sla_response_breached && <InfoItem label="SLA phản hồi" value="Phản hồi trễ" warn />}
-          {ticket.responded_at && <InfoItem label="Tiếp nhận lúc" value={formatDate(ticket.responded_at)} />}
-          {ticket.escalated_at && <InfoItem label="Đã báo Admin" value={formatDate(ticket.escalated_at)} warn />}
-          {ticket.escalation_reason && <InfoItem label="Lý do báo Admin" value={ticket.escalation_reason} />}
-        </dl>
       </Card>
 
       {/* Technician: SLA Breach Banner */}
@@ -175,11 +230,13 @@ export default function TechnicianTicketDetailPage() {
 
       <NotesTimeline ticketId={ticket._id} notes={ticket.notes} />
 
-      {/* Chat realtime (socket + REST) — hiện cả khi CLOSED để xem lại lịch sử */}
+      {/* Chat realtime (socket + REST) — Drawer trượt từ cạnh phải */}
       <TicketChat
         ticketId={ticket._id}
         closed={ticket.status === 'CLOSED'}
         canSend={!isTechnician || isAssignee}
+        open={showChat}
+        onClose={() => setShowChat(false)}
       />
 
       {ticket.status === 'CLOSED' && (
@@ -224,14 +281,7 @@ function EscalateModal({ open, onClose, ticketId }: { open: boolean; onClose: ()
   )
 }
 
-function InfoItem({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
-  return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{label}</p>
-      <p className={warn ? 'font-semibold text-alertRed' : 'font-medium text-charcoal'}>{value}</p>
-    </div>
-  )
-}
+
 
 function NotesTimeline({ ticketId, notes }: { ticketId: string; notes: Array<{ content: string; created_at: string }> }) {
   const addNote = useAddTicketNote()

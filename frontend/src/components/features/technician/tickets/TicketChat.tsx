@@ -6,7 +6,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ticketApi } from '@/apis/shared/tickets.api'
-import { Button, Card } from '@/components/ui'
+import { Button } from '@/components/ui'
+import { Drawer } from '@/components/ui/Drawer'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage, formatDate } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/authStore'
@@ -19,7 +20,11 @@ interface Props {
   /** Ticket đã CLOSED → BE từ chối gửi (409), chỉ đọc lịch sử */
   closed?: boolean
   /** false → chỉ đọc (VD Technician không phải người phụ trách) */
+  /** false → chỉ đọc (VD Technician không phải người phụ trách) */
   canSend?: boolean
+  /** State quản lý mở đóng Drawer */
+  open: boolean
+  onClose: () => void
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -29,7 +34,7 @@ const ROLE_LABEL: Record<string, string> = {
   SYSTEM: 'Hệ thống',
 }
 
-export function TicketChat({ ticketId, closed = false, canSend = true }: Props) {
+export function TicketChat({ ticketId, closed = false, canSend = true, open, onClose }: Props) {
   const push = useToastStore(s => s.push)
   const queryClient = useQueryClient()
   const user = useAuthStore(s => s.user)
@@ -46,6 +51,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true }: Props) 
     queryKey,
     queryFn: () => ticketApi.listMessages(ticketId).then(r => r.data.data),
     retry: false,
+    enabled: open, // Chỉ fetch khi mở Drawer
     refetchInterval: live ? false : 10_000,
   })
 
@@ -64,6 +70,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true }: Props) 
     let cancelled = false
     let joined = false
 
+    if (!open) return // Chỉ join socket khi đang mở chat
     void joinTicketChat(ticketId).then(ack => {
       if (cancelled) {
         if (ack.ok) leaveTicketChat(ticketId)
@@ -87,7 +94,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true }: Props) 
       offAssignee()
       if (joined) leaveTicketChat(ticketId)
     }
-  }, [ticketId, appendMessage, queryClient])
+  }, [ticketId, appendMessage, queryClient, open])
 
   // Chỉ scroll xuống khi có tin nhắn thực sự — scroll trong container, không cuốn toàn trang
   useEffect(() => {
@@ -123,9 +130,9 @@ export function TicketChat({ ticketId, closed = false, canSend = true }: Props) 
   const forbidden = isError && (error as { response?: { status?: number } })?.response?.status === 403
 
   return (
-    <Card className="!p-5">
+    <Drawer open={open} onClose={onClose} title="Trò chuyện với Farm Owner">
       <div className="mb-3 flex items-center justify-between">
-        <p className="label-caption">CHAT VỚI FARM OWNER</p>
+        <p className="label-caption">TICKET CHAT</p>
         <span className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider ${live ? 'text-emerald-600' : 'text-warmGray'}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${live ? 'bg-emerald-500' : 'bg-warmGray/40'}`} />
           {live ? 'Trực tiếp' : 'Tự làm mới'}
@@ -133,7 +140,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true }: Props) 
       </div>
 
       {/* Message list */}
-      <div ref={containerRef} className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
+      <div ref={containerRef} className="flex flex-1 flex-col gap-2 overflow-y-auto pr-1">
         {isLoading && <p className="py-6 text-center text-sm text-warmGray">Đang tải tin nhắn…</p>}
 
         {isError && (
@@ -205,6 +212,6 @@ export function TicketChat({ ticketId, closed = false, canSend = true }: Props) 
           {closed ? 'Ticket đã đóng — chỉ xem lại lịch sử trò chuyện.' : 'Bạn không phải người phụ trách ticket này — chỉ xem lịch sử trò chuyện.'}
         </p>
       )}
-    </Card>
+    </Drawer>
   )
 }
