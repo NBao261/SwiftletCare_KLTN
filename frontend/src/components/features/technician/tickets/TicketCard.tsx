@@ -5,7 +5,7 @@ import { Card } from '@/components/ui'
 import ActionsMenu, { type ActionsMenuItem } from '@/components/ui/ActionsMenu'
 import { formatDate } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
-import { isSlaBreached } from './ticketHelpers'
+import { isSlaBreached, canScheduleVisit } from './ticketHelpers'
 import { SlaRing } from './SlaRing'
 import { STATUS_DOT_CLS } from './ticketListTypes'
 import type { Ticket, TicketStatus } from '@/types'
@@ -48,7 +48,6 @@ interface TicketCardProps {
 export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardProps) {
   const navigate = useNavigate()
   const breached = isSlaBreached(ticket)
-  const isInstall = ticket.type === 'INSTALLATION' || ticket.type === 'MAINTENANCE'
 
   const actionItems: ActionsMenuItem[] = []
   if (ticket.status === 'NEW') {
@@ -57,8 +56,11 @@ export function TicketCard({ ticket, onUpdateStatus, onReassign }: TicketCardPro
   if (ticket.status !== 'CLOSED') {
     actionItems.push({ label: 'Cập nhật', onClick: () => onUpdateStatus(ticket) })
     actionItems.push({ label: 'Gán lại', onClick: () => onReassign(ticket) })
-    if (isInstall) {
-      actionItems.push({ label: 'Sửa ngày hẹn', onClick: () => navigate(`/tickets/${ticket._id}?action=reschedule`) })
+    if (canScheduleVisit(ticket)) {
+      actionItems.push({
+        label: ticket.scheduled_visit_at ? 'Sửa ngày hẹn' : 'Hẹn lịch hiện trường',
+        onClick: () => navigate(`/tickets/${ticket._id}?action=reschedule`),
+      })
     }
   }
 

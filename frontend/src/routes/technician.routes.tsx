@@ -14,6 +14,7 @@ const TechnicianTicketsPage = lazy(() => import('@/pages/technician/TechnicianTi
 const TechnicianTicketDetailPage = lazy(() => import('@/pages/technician/TechnicianTicketDetailPage'))
 const TechnicianOnboardingPage = lazy(() => import('@/pages/technician/TechnicianOnboardingPage'))
 const TechnicianOtaPage = lazy(() => import('@/pages/technician/TechnicianOtaPage'))
+const TechnicianMaintenancePage = lazy(() => import('@/pages/technician/TechnicianMaintenancePage'))
 
 export const technicianRoutes = (
   <>
@@ -62,6 +63,14 @@ export const technicianRoutes = (
       element={
         <RequireRole allow={OPS_ROLES}>
           <TechnicianOtaPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="maintenance"
+      element={
+        <RequireRole allow={OPS_ROLES}>
+          <TechnicianMaintenancePage />
         </RequireRole>
       }
     />

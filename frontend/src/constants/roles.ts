@@ -78,6 +78,7 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/tickets',          roles: OPS_ROLES },
   { path: '/onboarding',       roles: OPS_ROLES },
   { path: '/ota',              roles: OPS_ROLES },
+  { path: '/maintenance',      roles: OPS_ROLES },
   { path: '/users',            roles: ADMIN_ONLY },
   { path: '/account-requests', roles: ADMIN_ONLY },
   { path: '/harvests',         roles: FARM_OWNER_ONLY },

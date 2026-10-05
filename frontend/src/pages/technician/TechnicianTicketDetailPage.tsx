@@ -2,9 +2,10 @@
 // Trang này dùng chung cho tất cả role — mỗi role nhìn thấy các phần UI khác nhau:
 //   - Farm Owner / Admin: xem thông tin, huỷ, đánh giá, Admin can thiệp
 //   - Technician: xem + cập nhật trạng thái, ghi chú, SAT checklist, chat, SLA breach banner
-import { useState, FormEvent } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket } from '@/hooks/shared/useTickets'
+import { useState, useEffect, FormEvent } from 'react'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
+import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket, useEscalateTicket } from '@/hooks/shared/useTickets'
+import { useAuthStore } from '@/stores/authStore'
 import { usePermission } from '@/hooks/common/usePermission'
 import { usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { Button, Badge, Card, Textarea } from '@/components/ui'
@@ -21,10 +22,15 @@ import ChangePriorityModal from '@/components/features/admin/tickets/ChangePrior
 import ReassignTicketModal from '@/components/features/admin/tickets/ReassignTicketModal'
 import RescheduleModal from '@/components/features/admin/tickets/RescheduleModal'
 // ── Technician components ───────────────────────────────────────────────────
-import { SAT_ITEMS } from '@/components/features/technician/tickets/ticketHelpers'
+import { SATChecklist } from '@/components/features/technician/tickets/SATChecklist'
+import { UpdateStatusModal } from '@/components/features/technician/tickets/UpdateStatusModal'
+import { ReassignModal as TechnicianReassignModal } from '@/components/features/technician/tickets/ReassignModal'
+import { isTicketAssignee, requiresFieldVisit, canScheduleVisit } from '@/components/features/technician/tickets/ticketHelpers'
+import { ScheduleVisitModal } from '@/components/features/technician/tickets/ScheduleVisitModal'
 import { SLABreachBanner } from '@/components/features/technician/tickets/SLABreachBanner'
 import { StatusStepper } from '@/components/features/technician/tickets/StatusStepper'
 import { TicketChat } from '@/components/features/technician/tickets/TicketChat'
+import { RemoteCommandPanel } from '@/components/features/technician/tickets/RemoteCommandPanel'
 
 function assigneeName(assigned: string | { full_name: string; email: string } | undefined): string | undefined {
   return typeof assigned === 'object' ? assigned.full_name : undefined
@@ -37,6 +43,15 @@ export default function TechnicianTicketDetailPage() {
   const [showChangePriority, setShowChangePriority] = useState(false)
   const [showReassign, setShowReassign] = useState(false)
   const [showReschedule, setShowReschedule] = useState(false)
+  // Technician actions (BE assertAssignee: chỉ KTV đang được gán mới được thao tác)
+  const [showUpdateStatus, setShowUpdateStatus] = useState(false)
+  const [showTechReassign, setShowTechReassign] = useState(false)
+  const [showEscalate, setShowEscalate] = useState(false)
+  const [showScheduleVisit, setShowScheduleVisit] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const pushToast = useToastStore(s => s.push)
+  const isTechnician = usePermission('TECHNICIAN')
+  const currentUserId = useAuthStore(s => s.user?._id)
   // Backend: PUT /tickets/:id/cancel và POST /tickets/:id/rating chỉ cho FARM_OWNER, ADMIN
   const canManageTicket = usePermission('FARM_OWNER', 'ADMIN')
   // TICKET-FR-005b — quyền can thiệp thường trực của Admin trên MỌI ticket, bất
@@ -46,10 +61,24 @@ export default function TechnicianTicketDetailPage() {
   // Breadcrumb AppHeader: "Ticket / <loại> #<6 ký tự cuối id>" — dẫn xuất từ chính route :id, không có API riêng trả "tiêu đề" ticket
   usePageBreadcrumb(ticket ? [{ label: `${TICKET_TYPE_LABEL[ticket.type]} #${ticket._id.slice(-6)}` }] : [])
 
+  // Menu "..." của danh sách (TicketCard) dẫn tới `?action=reschedule` — mở sẵn modal rồi xoá param để F5 không mở lại
+  const wantsReschedule = searchParams.get('action') === 'reschedule'
+  useEffect(() => {
+    if (!wantsReschedule || !ticket) return
+    if (isTechnician && isTicketAssignee(ticket, currentUserId) && canScheduleVisit(ticket)) setShowScheduleVisit(true)
+    else if (isTechnician) pushToast('Chỉ kỹ thuật viên đang phụ trách mới hẹn/dời lịch được, và ticket sự cố cần ở trạng thái "Đang xử lý".', 'error')
+    const next = new URLSearchParams(searchParams)
+    next.delete('action')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsReschedule, ticket?._id])
+
   if (isLoading) return <LoadingSkeleton className="h-96 w-full" />
   if (!ticket) return <EmptyState title="Không tìm thấy ticket" description="Ticket có thể đã bị xoá hoặc bạn không có quyền xem." />
 
-  const isInstallation = ticket.type === 'INSTALLATION' || ticket.type === 'MAINTENANCE'
+  const fieldVisit = requiresFieldVisit(ticket)
+  const isAssignee = isTicketAssignee(ticket, currentUserId)
+  const canTechAct = isTechnician && isAssignee && ticket.status !== 'CLOSED'
   const canCancel = canManageTicket && ticket.status !== 'CLOSED'
 
   return (
@@ -82,6 +111,24 @@ export default function TechnicianTicketDetailPage() {
                 <Button variant="secondary" size="sm" onClick={() => setShowReschedule(true)}>Đổi lịch hẹn</Button>
               </div>
             )}
+            {canTechAct && (
+              <div className="flex flex-wrap justify-end gap-2">
+                {ticket.status === 'NEW' ? (
+                  <Button size="sm" onClick={() => setShowUpdateStatus(true)}>Tiếp nhận</Button>
+                ) : (
+                  <Button size="sm" onClick={() => setShowUpdateStatus(true)}>Cập nhật trạng thái</Button>
+                )}
+                <Button variant="secondary" size="sm" onClick={() => setShowTechReassign(true)}>Xin gán lại</Button>
+                {canScheduleVisit(ticket) && (
+                  <Button variant="secondary" size="sm" onClick={() => setShowScheduleVisit(true)}>
+                    {ticket.scheduled_visit_at ? 'Dời lịch hẹn' : 'Hẹn lịch hiện trường'}
+                  </Button>
+                )}
+                {!ticket.escalated_at && (
+                  <Button variant="secondary" size="sm" onClick={() => setShowEscalate(true)}>Báo Admin</Button>
+                )}
+              </div>
+            )}
             {canCancel && (
               <Button variant="danger" size="sm" onClick={() => setShowCancel(true)}>Hủy ticket</Button>
             )}
@@ -93,39 +140,57 @@ export default function TechnicianTicketDetailPage() {
           {ticket.scheduled_visit_at && <InfoItem label="Ngày hẹn" value={formatDate(ticket.scheduled_visit_at)} />}
           {ticket.sla_resolve_due_at && <InfoItem label="Hạn xử lý (SLA)" value={formatDate(ticket.sla_resolve_due_at)} />}
           {ticket.is_sla_breached && <InfoItem label="Trạng thái SLA" value="Đã vượt hạn" warn />}
+          {ticket.is_sla_response_breached && <InfoItem label="SLA phản hồi" value="Phản hồi trễ" warn />}
+          {ticket.responded_at && <InfoItem label="Tiếp nhận lúc" value={formatDate(ticket.responded_at)} />}
+          {ticket.escalated_at && <InfoItem label="Đã báo Admin" value={formatDate(ticket.escalated_at)} warn />}
+          {ticket.escalation_reason && <InfoItem label="Lý do báo Admin" value={ticket.escalation_reason} />}
         </dl>
       </Card>
 
       {/* Technician: SLA Breach Banner */}
-      {ticket.is_sla_breached && <SLABreachBanner />}
+      {ticket.is_sla_breached && (
+        <SLABreachBanner
+          escalated={Boolean(ticket.escalated_at)}
+          onEscalate={canTechAct ? () => setShowEscalate(true) : undefined}
+        />
+      )}
+
+      {isTechnician && !isAssignee && ticket.status !== 'CLOSED' && (
+        <p className="rounded-xl bg-warmGray/10 px-4 py-3 text-sm text-warmGray">
+          {ticket.assigned_to
+            ? 'Ticket này do kỹ thuật viên khác phụ trách — bạn chỉ có thể xem.'
+            : 'Ticket chưa được gán cho ai — bạn chỉ có thể xem. Admin sẽ phân công.'}
+        </p>
+      )}
 
       {/* Technician: Status Stepper */}
       <StatusStepper current={ticket.status} />
 
-      {isInstallation && (
-        <Card>
-          <p className="label-caption mb-3">Checklist nghiệm thu (Technician xác nhận)</p>
-          <div className="flex flex-col gap-2">
-            {SAT_ITEMS.map(item => (
-              <div key={item.key} className="flex items-center gap-2.5 text-sm">
-                <span className={cnDot(ticket.sat_checklist[item.key])} />
-                <span className={ticket.sat_checklist[item.key] ? 'text-charcoal' : 'text-warmGray'}>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+      {/* Technician: Lệnh từ xa */}
+      {canTechAct && <RemoteCommandPanel ticket={ticket} />}
+
+      {fieldVisit && (
+        <SATChecklist ticketId={ticket._id} checklist={ticket.sat_checklist} readOnly={!canTechAct} />
       )}
 
       <NotesTimeline ticketId={ticket._id} notes={ticket.notes} />
 
-      {/* Technician: Real-time chat */}
-      {ticket.status !== 'CLOSED' && <TicketChat ticketId={ticket._id} />}
+      {/* Chat realtime (socket + REST) — hiện cả khi CLOSED để xem lại lịch sử */}
+      <TicketChat
+        ticketId={ticket._id}
+        closed={ticket.status === 'CLOSED'}
+        canSend={!isTechnician || isAssignee}
+      />
 
       {ticket.status === 'CLOSED' && (
         <RatingCard ticketId={ticket._id} existingRating={ticket.satisfaction_rating} />
       )}
 
       <CancelTicketModal open={showCancel} onClose={() => setShowCancel(false)} ticketId={ticket._id} />
+      {showUpdateStatus && <UpdateStatusModal ticket={ticket} onClose={() => setShowUpdateStatus(false)} />}
+      {showTechReassign && <TechnicianReassignModal ticket={ticket} onClose={() => setShowTechReassign(false)} />}
+      {canTechAct && <ScheduleVisitModal open={showScheduleVisit} onClose={() => setShowScheduleVisit(false)} ticket={ticket} />}
+      <EscalateModal open={showEscalate} onClose={() => setShowEscalate(false)} ticketId={ticket._id} />
       {canAdminIntervene && (
         <>
           <ChangePriorityModal open={showChangePriority} onClose={() => setShowChangePriority(false)} ticket={ticket} />
@@ -137,8 +202,26 @@ export default function TechnicianTicketDetailPage() {
   )
 }
 
-function cnDot(ok: boolean): string {
-  return `h-2.5 w-2.5 shrink-0 rounded-full ${ok ? 'bg-limeMist border border-charcoal/20' : 'bg-warmGray/30'}`
+function EscalateModal({ open, onClose, ticketId }: { open: boolean; onClose: () => void; ticketId: string }) {
+  const escalate = useEscalateTicket()
+  const push = useToastStore(s => s.push)
+  return (
+    <NoteActionModal
+      open={open}
+      onClose={onClose}
+      title="Báo Admin hỗ trợ"
+      label="Lý do cần Admin hỗ trợ"
+      placeholder="VD: Cần vật tư, không liên lạc được chủ trại, vượt khả năng xử lý..."
+      submitLabel="Gửi báo cáo"
+      loading={escalate.isPending}
+      onSubmit={(reason) => {
+        escalate.mutate({ id: ticketId, reason: reason || undefined }, {
+          onSuccess: () => { push('Đã báo Admin'); onClose() },
+          onError: (err) => push(getApiErrorMessage(err, 'Báo Admin thất bại'), 'error'),
+        })
+      }}
+    />
+  )
 }
 
 function InfoItem({ label, value, warn }: { label: string; value: string; warn?: boolean }) {

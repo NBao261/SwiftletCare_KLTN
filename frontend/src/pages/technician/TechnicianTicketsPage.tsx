@@ -20,10 +20,10 @@ import { PAGE_SIZE } from '@/components/features/technician/tickets/ticketListTy
 export default function TechnicianTicketsPage() {
   const {
     // UI state
-    isOverdueActive, sortKey, sortDir, filterStatus,
+    isOverdueActive, isQueueActive, sortKey, sortDir, filterStatus,
     statusModal, reassignModal,
     // Actions
-    handleOverdueToggle, handleSort,
+    handleOverdueToggle, handleQueueToggle, handleSort,
     handleFilterStatusChange, handleClearFilters,
     setPage, setStatusModal, setReassignModal,
     // Data
@@ -41,8 +41,10 @@ export default function TechnicianTicketsPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal">Ticket của tôi</h1>
-          <p className="mt-0.5 text-sm text-warmGray">Quản lý và xử lý các ticket được gán</p>
+          <h1 className="text-2xl font-bold text-charcoal">{isQueueActive ? 'Hàng đợi chung' : 'Ticket của tôi'}</h1>
+          <p className="mt-0.5 text-sm text-warmGray">
+            {isQueueActive ? 'Ticket chưa được gán trong khu vực của bạn — chỉ xem, Admin sẽ phân công' : 'Quản lý và xử lý các ticket được gán'}
+          </p>
         </div>
         <span className="rounded-full bg-graphite/10 px-3 py-1 text-sm font-semibold text-charcoal">
           {total} ticket
@@ -55,6 +57,7 @@ export default function TechnicianTicketsPage() {
       {/* ── Search + Unified Filter + Sort + View Mode ── */}
       <TicketToolbar
         isOverdueActive={isOverdueActive}   onOverdueToggle={handleOverdueToggle}
+        isQueueActive={isQueueActive}       onQueueToggle={handleQueueToggle}
         filterStatus={filterStatus}          onFilterStatusChange={handleFilterStatusChange}
         sortKey={sortKey}                    sortDir={sortDir}  onSort={handleSort}
         onClearFilters={handleClearFilters}
@@ -74,7 +77,9 @@ export default function TechnicianTicketsPage() {
           description={
             filterStatus
               ? 'Thử thay đổi bộ lọc.'
-              : 'Chưa có ticket nào được gán cho bạn trong mục này.'
+              : isQueueActive
+                ? 'Hàng đợi đang trống — không có ticket nào chờ phân công.'
+                : 'Chưa có ticket nào được gán cho bạn trong mục này.'
           }
         />
       )}

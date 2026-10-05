@@ -24,6 +24,11 @@ export interface BirdCountUpdateEvent {
   sessionType: SessionType; timestamp: string
 }
 
+/** TICKET-FR-017 — đổi Technician phụ trách giữa cuộc trò chuyện (id người cũ/mới, null = chưa có) */
+export interface TicketChatAssigneeChangedEvent {
+  ticketId: string; from: string | null; to: string | null
+}
+
 export interface AlertNewEvent {
   alertId: string; severity: AlertSeverity; type: AlertType
   title: string; message: string; snapshotUrl?: string

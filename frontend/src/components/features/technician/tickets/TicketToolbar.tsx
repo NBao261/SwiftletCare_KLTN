@@ -3,7 +3,7 @@
 // Thay bằng hàng FilterChip duy nhất bao gồm cả chip "Quá hạn SLA" đặc biệt.
 import { memo } from 'react'
 import { Input, Button, FilterChip } from '@/components/ui'
-import { IconSearch, IconSortAsc, IconSortDesc } from '@/components/ui/icons'
+import { Search, ArrowUpNarrowWide, ArrowDownWideNarrow, AlertCircle, Inbox } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import type { SortKey, SortDir } from './ticketListTypes'
 import type { TicketStatus } from '@/types'
@@ -27,6 +27,8 @@ interface Props {
   // Filter thống nhất
   isOverdueActive: boolean
   onOverdueToggle: () => void
+  isQueueActive: boolean
+  onQueueToggle: () => void
   filterStatus: TicketStatus | ''
   onFilterStatusChange: (val: TicketStatus | '') => void
   // Sort
@@ -47,12 +49,13 @@ const SORT_LABELS: Record<SortKey, string> = {
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return null
   return dir === 'asc'
-    ? <IconSortAsc width={12} height={12} className="ml-1" />
-    : <IconSortDesc width={12} height={12} className="ml-1" />
+    ? <ArrowUpNarrowWide size={12} strokeWidth={1.6} className="ml-1 inline-block" />
+    : <ArrowDownWideNarrow size={12} strokeWidth={1.6} className="ml-1 inline-block" />
 }
 
 export const TicketToolbar = memo(function TicketToolbar({
   isOverdueActive, onOverdueToggle,
+  isQueueActive, onQueueToggle,
   filterStatus, onFilterStatusChange,
   sortKey, sortDir, onSort, onClearFilters,
   isLoading,
@@ -65,6 +68,7 @@ export const TicketToolbar = memo(function TicketToolbar({
   const hasActiveFilters =
     filterStatus !== '' ||
     isOverdueActive ||
+    isQueueActive ||
     sortKey !== 'created_at' ||
     sortDir !== 'desc'
 
@@ -75,7 +79,7 @@ export const TicketToolbar = memo(function TicketToolbar({
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-[200px] flex-1" title="Tìm kiếm toàn bộ đang chờ Backend hỗ trợ (TODO [BE-GAP])">
           <Input
-            icon={<IconSearch width={16} height={16} />}
+            icon={<Search size={16} strokeWidth={1.6} />}
             type="text"
             value={""}
             onChange={() => { /* disabled — chưa có API search từ BE */ }}
@@ -104,7 +108,7 @@ export const TicketToolbar = memo(function TicketToolbar({
           <div className="flex flex-wrap gap-2">
             {/* Chip "Tất cả" — active khi không có filter nào được chọn */}
             <FilterChip
-              active={!isOverdueActive && filterStatus === ''}
+              active={!isOverdueActive && !isQueueActive && filterStatus === ''}
               label="Tất cả"
               onClick={() => {
                 if (isOverdueActive) onOverdueToggle()
@@ -126,8 +130,14 @@ export const TicketToolbar = memo(function TicketToolbar({
             {/* Chip đặc biệt: Quá hạn SLA */}
             <FilterChip
               active={isOverdueActive}
-              label="🔴 Quá hạn SLA"
+              label={<span className="flex items-center gap-1.5"><AlertCircle size={14} strokeWidth={2}/> Quá hạn SLA</span>}
               onClick={onOverdueToggle}
+            />
+            {/* Chip đặc biệt: Hàng đợi chung — ticket chưa gán trong vùng của Technician (chỉ xem) */}
+            <FilterChip
+              active={isQueueActive}
+              label={<span className="flex items-center gap-1.5"><Inbox size={14} strokeWidth={2}/> Hàng đợi chung</span>}
+              onClick={onQueueToggle}
             />
           </div>
 
