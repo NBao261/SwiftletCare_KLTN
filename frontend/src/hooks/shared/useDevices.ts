@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { onRelayUpdate, onDeviceStatusChange } from '@/lib/socket'
 import { useSocket } from '@/hooks/common/useSocket'
-import type { RelayName, SpeakerScheduleInput } from '@/types'
+import type { RelayName, SpeakerScheduleInput, NodeCommandInput } from '@/types'
+import type { ReplaceSensorNodeInput } from '@/apis/shared/devices.api'
 
 /**
  * useSensorNodes – danh sách device + realtime status/relay qua socket (FARM-FR-005, ENV-FR-015).
@@ -63,6 +64,39 @@ export function useUpdateSpeakerSchedule(nodeId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: SpeakerScheduleInput) => deviceApi.updateSpeakerSchedule(nodeId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
+  })
+}
+
+/** TICKET-FR-008 — gửi lệnh từ xa (RESTART / PUSH_CONFIG / OTA) tới 1 sensor node */
+export function useSendNodeCommand() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ nodeId, input }: { nodeId: string; input: NodeCommandInput }) =>
+      deviceApi.sendCommand(nodeId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
+  })
+}
+
+/**
+ * FARM-FR-008 — gỡ sensor node (không hoàn tác). Trang Thiết bị chỉ liệt kê sensor node;
+ * camera node đã có `deviceApi.decommissionCameraNode` khi UI camera được dựng.
+ */
+export function useDecommissionDevice() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ nodeId, reason }: { nodeId: string; reason: string }) =>
+      deviceApi.decommissionSensorNode(nodeId, reason),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
+  })
+}
+
+/** FARM-FR-008 — thay sensor node hỏng bằng node mới cùng Zone (cần secret_key trên nhãn node mới) */
+export function useReplaceSensorNode() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ nodeId, input }: { nodeId: string; input: ReplaceSensorNodeInput }) =>
+      deviceApi.replaceSensorNode(nodeId, input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
   })
 }

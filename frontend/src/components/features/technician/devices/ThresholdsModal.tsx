@@ -7,7 +7,7 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import type { Zone } from "@/types";
 
-/** ENV-FR-006/ENV-FR-020 — sửa/reset 7 ngưỡng tự động của 1 Zone (chỉ Farm Owner, gate ở nơi gọi) */
+/** ENV-FR-006/ENV-FR-020 — sửa/reset 7 ngưỡng tự động của 1 Zone (Farm Owner + Technician khi xử lý sự cố, gate ở nơi gọi) */
 export default function ThresholdsModal({
   zoneId,
   zoneName,

@@ -67,17 +67,22 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
   useEffect(() => {
     if (!data.deviceDbId) return
     let cancelled = false
-    deviceApi.getSensorNode(data.deviceDbId)
-      .then(res => {
+    // _id của CameraNode không tồn tại trong collection sensor → getSensorNode luôn 404; tra đúng danh sách camera của zone
+    const fetchStatus = data.deviceType === 'CAMERA_NODE'
+      ? deviceApi.listCameraNodes(data.location.zoneId)
+          .then(res => res.data.data.find(n => n._id === data.deviceDbId)?.status)
+      : deviceApi.getSensorNode(data.deviceDbId).then(res => res.data.data.status)
+    fetchStatus
+      .then(deviceStatus => {
         if (cancelled) return
-        if (res.data.data.status === 'ONLINE') {
+        if (deviceStatus === 'ONLINE') {
           setMqttOk(true)
           handleSuccess()
         }
       })
       .catch(() => { /* Bỏ qua lỗi mạng — socket vẫn hoạt động song song */ })
     return () => { cancelled = true }
-  }, [data.deviceDbId, handleSuccess])
+  }, [data.deviceDbId, data.deviceType, data.location.zoneId, handleSuccess])
 
   // Countdown timer
   useEffect(() => {

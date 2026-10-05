@@ -1,14 +1,15 @@
-// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID) — B9 + C1
-// Fix: Bỏ secretKey input — endpoint registerSensorNode chỉ nhận { device_id, zone_id },
-// không xác thực secret_key phía backend. Giữ field trong form tạo cảm giác bảo mật ảo.
-// TODO [BE-GAP]: Thêm lại ô secretKey khi backend thêm secret_key vào registerSensorNode payload.
-// Fix: dùng HTTP status code để phân loại lỗi, không string-match message
+// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID + secretKey) — B9 + C1
+// BE (Flow 1 bước 3–4) xác thực cặp {device_id, secret_key} in trên nhãn thiết bị:
+// sensor → POST /devices/sensor-nodes/register, camera → POST /devices/camera-nodes/register.
+// Phân loại lỗi bằng HTTP status code, không string-match message:
+//   400 = sai Device ID / secretKey, 403 = không phụ trách farm này, 409 = đã đăng ký
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
+import { getApiErrorMessage } from '@/lib/helpers'
 import type { OnboardingState, DeviceType } from './onboardingTypes'
 
-type ValidateError  = 'DEVICE_ALREADY_REGISTERED' | 'INVALID_DEVICE' | 'UNKNOWN' | null
+type ValidateError  = 'DEVICE_ALREADY_REGISTERED' | 'INVALID_DEVICE' | 'FORBIDDEN' | 'UNKNOWN' | null
 type ValidateStatus = 'idle' | 'loading' | 'success' | 'error'
 
 interface Props {
@@ -19,32 +20,44 @@ interface Props {
 }
 
 export function Step2Validate({ data, patch, onNext, onBack }: Props) {
-  const [status, setStatus] = useState<ValidateStatus>('idle')
+  // Quay lại bước này sau khi đã đăng ký (deviceDbId có sẵn) → giữ trạng thái thành công,
+  // đăng ký lại cùng device_id sẽ bị BE trả 409
+  const [status, setStatus] = useState<ValidateStatus>(data.deviceDbId ? 'success' : 'idle')
   const [error, setError] = useState<ValidateError>(null)
-  const [validatedModel, setValidatedModel] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [validatedModel, setValidatedModel] = useState(
+    data.deviceDbId ? (data.deviceType === 'SENSOR_NODE' ? 'ESP32-WROOM-32D · SensorNode' : 'Raspberry Pi · CameraNode') : '',
+  )
+
+  const canSubmit = Boolean(data.deviceId.trim() && data.secretKey.trim() && data.location.zoneId)
 
   async function handleValidate() {
-    if (!data.deviceId.trim()) return
+    if (!canSubmit) return
     setStatus('loading')
     setError(null)
+    setErrorMessage('')
     try {
-      const res = await deviceApi.registerSensorNode({
+      const payload = {
         device_id: data.deviceId.trim(),
         zone_id: data.location.zoneId!,
-      })
+        secret_key: data.secretKey.trim(),
+      }
+      // Camera Node (RPi) có endpoint riêng — gọi nhầm sang sensor sẽ bị BE từ chối vì khác loại trong kho thiết bị
+      const res = data.deviceType === 'CAMERA_NODE'
+        ? await deviceApi.registerCameraNode(payload)
+        : await deviceApi.registerSensorNode(payload)
       patch({ deviceDbId: res.data.data._id })
-      setValidatedModel(`ESP32-WROOM-32D · ${data.deviceType === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'}`)
+      setValidatedModel(data.deviceType === 'SENSOR_NODE' ? 'ESP32-WROOM-32D · SensorNode' : 'Raspberry Pi · CameraNode')
       setStatus('success')
     } catch (err: unknown) {
-      // FIX: dùng HTTP status code để phân loại lỗi, không string-match message
-      // 409 Conflict = Device ID đã được đăng ký trên Farm khác
-      // 400/404 = Device ID không tồn tại / không hợp lệ
-      // Các lỗi khác (500, network) → UNKNOWN để không mislead user
       const httpStatus = (err as { response?: { status?: number } })?.response?.status
+      setErrorMessage(getApiErrorMessage(err, ''))
       if (httpStatus === 409) {
         setError('DEVICE_ALREADY_REGISTERED')
       } else if (httpStatus === 400 || httpStatus === 404) {
         setError('INVALID_DEVICE')
+      } else if (httpStatus === 403) {
+        setError('FORBIDDEN')
       } else {
         setError('UNKNOWN')
       }
@@ -56,7 +69,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-lg font-bold text-charcoal">Bước 2 — Xác thực thiết bị</h2>
-        <p className="mt-1 text-sm text-warmGray">Nhập Device ID trên nhãn dán mặt sau thiết bị ESP32.</p>
+        <p className="mt-1 text-sm text-warmGray">Nhập Device ID và secretKey in trên nhãn dán mặt sau thiết bị.</p>
       </div>
 
       {/* Device type selector */}
@@ -66,8 +79,10 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
           {(['SENSOR_NODE', 'CAMERA_NODE'] as DeviceType[]).map(t => (
             <button
               key={t}
-              onClick={() => patch({ deviceType: t })}
-              className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition-colors ${
+              type="button"
+              disabled={status === 'loading' || status === 'success'}
+              onClick={() => { patch({ deviceType: t }); setStatus('idle'); setError(null) }}
+              className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                 data.deviceType === t
                   ? 'border-charcoal bg-charcoal/5 text-charcoal'
                   : 'border-graphite/20 text-warmGray hover:border-graphite/40'
@@ -81,10 +96,12 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       {/* Device ID */}
       <div className="flex flex-col gap-1.5">
-        <label className="label-caption">Device ID</label>
+        <label className="label-caption" htmlFor="onboarding-device-id">Device ID</label>
         <div className="flex gap-2">
           <input
+            id="onboarding-device-id"
             value={data.deviceId}
+            disabled={status === 'success'}
             onChange={e => { patch({ deviceId: e.target.value }); setStatus('idle') }}
             placeholder="VD: ESP32-A7F3-001"
             className={`input flex-1 font-mono ${
@@ -96,14 +113,29 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
           </button>
         </div>
         {error === 'DEVICE_ALREADY_REGISTERED' && (
-          <p className="text-sm text-climateOrange">⚠️ Thiết bị đã được đăng ký thuộc Farm khác</p>
+          <p className="text-sm text-climateOrange">⚠️ {errorMessage || 'Thiết bị đã được đăng ký'}</p>
         )}
+      </div>
+
+      {/* secretKey — BE xác thực cặp {device_id, secret_key} (kho provisioned_devices) */}
+      <div className="flex flex-col gap-1.5">
+        <label className="label-caption" htmlFor="onboarding-secret-key">secretKey</label>
+        <input
+          id="onboarding-secret-key"
+          value={data.secretKey}
+          disabled={status === 'success'}
+          onChange={e => { patch({ secretKey: e.target.value }); setStatus('idle') }}
+          placeholder="VD: ABCD-EFGH-JKMN (in trên nhãn)"
+          autoComplete="off"
+          spellCheck={false}
+          className="input w-full font-mono uppercase"
+        />
       </div>
 
       <Button
         onClick={handleValidate}
         loading={status === 'loading'}
-        disabled={!data.deviceId.trim() || status === 'loading'}
+        disabled={!canSubmit || status === 'loading' || status === 'success'}
         className="w-full justify-center"
       >
         Xác thực thiết bị
@@ -134,8 +166,19 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       {error === 'INVALID_DEVICE' && (
         <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
-          <p className="font-semibold text-alertRed">✗ Device ID không hợp lệ</p>
-          <p className="mt-1 text-sm text-alertRed/80">Kiểm tra lại Device ID trên nhãn dán mặt sau thiết bị.</p>
+          <p className="font-semibold text-alertRed">✗ Device ID hoặc secretKey không đúng</p>
+          <p className="mt-1 text-sm text-alertRed/80">
+            {errorMessage || 'Kiểm tra lại Device ID và secretKey trên nhãn dán mặt sau thiết bị.'}
+          </p>
+        </div>
+      )}
+
+      {error === 'FORBIDDEN' && (
+        <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
+          <p className="font-semibold text-alertRed">✗ Bạn không phụ trách khu vực này</p>
+          <p className="mt-1 text-sm text-alertRed/80">
+            {errorMessage || 'Chỉ Technician được phân công cho farm này mới kích hoạt được thiết bị. Quay lại bước 1 chọn Zone khác.'}
+          </p>
         </div>
       )}
 

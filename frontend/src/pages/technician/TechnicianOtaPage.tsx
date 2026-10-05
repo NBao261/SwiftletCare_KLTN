@@ -2,110 +2,120 @@
 // OTA Firmware Management: layout + state management
 // Logic hiển thị được tách sang ./components/
 //
-// TODO [BE-GAP]: Toàn bộ trang này là UI DEMO — chưa kết nối thiết bị thật.
-// - startOTA() dùng setInterval/setTimeout giả lập tiến trình, KHÔNG gọi API nào.
-// - Danh sách firmware và changelog trong otaTypes.ts là dữ liệu giả (mock data).
-// - Backend cần endpoint: POST /devices/sensor-nodes/:id/ota để kích hoạt OTA thật.
-// Khi backend có endpoint, thay startOTA() bằng mutation gọi API và listen socket
-// event OTA_PROGRESS để cập nhật tiến trình thực tế.
-import { useState, useRef, useEffect } from 'react'
+// Kết nối BE thật: POST /devices/sensor-nodes/:id/commands { command: 'OTA', ota: { version, url, sha256 } }.
+// - BE không có catalog firmware / % tiến trình → Technician nhập version + url + sha256 của bản build.
+// - Trạng thái chạy lấy từ SensorNode: `ota_pending` (đang chờ, trang tự làm mới 5s) / `ota_failed`
+//   (job BE đánh dấu thất bại sau 30 phút) / `firmware_version` khớp bản yêu cầu → thành công.
+// - Lỗi BE: 400 (host không được phép / dữ liệu sai), 409 (node không ONLINE / trùng version),
+//   501 (firmware chưa hỗ trợ lệnh từ xa — FIRMWARE_COMMAND_SUPPORT tắt), 503 (mất MQTT).
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { deviceApi } from '@/apis/shared/devices.api'
-import DemoBanner from '@/components/ui/DemoBanner'
+import { useSendNodeCommand } from '@/hooks/shared/useDevices'
+import { getApiErrorMessage } from '@/lib/helpers'
+import { useToastStore } from '@/stores/toastStore'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import { IconOTA } from '@/components/ui/icons'
 import { DeviceTable }     from '@/components/features/technician/ota/DeviceTable'
 import { OTASidePanel }   from '@/components/features/technician/ota/OTASidePanel'
 import { OTAConfirmModal } from '@/components/features/technician/ota/OTAConfirmModal'
-import { FIRMWARE_VERSIONS } from '@/components/features/technician/ota/otaTypes'
-import type { FirmwareVersion, OTAError, OTARunState, OTAStepState } from '@/components/features/technician/ota/otaTypes'
+import { EMPTY_OTA_FORM, validateOtaForm } from '@/components/features/technician/ota/otaTypes'
+import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/technician/ota/otaTypes'
 import type { SensorNode } from '@/types'
 
+function otaErrorMessage(err: unknown): string {
+  const status = (err as { response?: { status?: number } })?.response?.status
+  if (status === 501) return 'Máy chủ chưa bật lệnh từ xa cho firmware hiện tại (501). Cần firmware hỗ trợ lệnh trước khi dùng OTA.'
+  if (status === 503) return 'Mất kết nối MQTT broker — chưa thể gửi lệnh tới thiết bị. Thử lại sau.'
+  if (status === 403) return 'Bạn không có quyền gửi lệnh cho thiết bị này (ngoài khu vực phụ trách).'
+  return getApiErrorMessage(err, 'Gửi lệnh OTA thất bại')
+}
+
 export default function OTAPage() {
+  const push = useToastStore(s => s.push)
+  const sendCommand = useSendNodeCommand()
+
   const { data: nodes, isLoading } = useQuery({
-    queryKey: ['sensor-nodes-ota'],
+    // Prefix 'sensor-nodes' → useSendNodeCommand().invalidateQueries làm mới luôn bảng này
+    queryKey: ['sensor-nodes', 'ota'],
     queryFn: () => deviceApi.listSensorNodes().then(r => r.data.data),
+    // Còn node đang chờ OTA → polling để thấy kết quả (BE chưa có socket OTA_PROGRESS)
+    refetchInterval: query => (query.state.data?.some(n => n.ota_pending) ? 5_000 : false),
   })
 
-  const [selectedNode, setSelectedNode] = useState<SensorNode | null>(null)
-  const [selectedFw, setSelectedFw] = useState<FirmwareVersion>(FIRMWARE_VERSIONS[0])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [form, setForm] = useState<OtaFormValues>(EMPTY_OTA_FORM)
+  const [errors, setErrors] = useState<OtaFormErrors>({})
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [otaState, setOtaState] = useState<OTARunState>('idle')
-  const [otaError, setOtaError] = useState<OTAError>(null)
-  const [otaSteps, setOtaSteps] = useState<OTAStepState[]>([])
+  const [apiError, setApiError] = useState<string | null>(null)
+  // Phiên bản vừa gửi thành công — dùng nhận diện pending/done trước khi BE phản ánh ota_pending
+  const [sentVersion, setSentVersion] = useState('')
+  // failed_at của lỗi đã được Technician bấm "Thử lại" (ẩn panel lỗi, không xoá dữ liệu BE)
+  const [dismissedFailedAt, setDismissedFailedAt] = useState<string | null>(null)
 
-  // Refs to track timers for cleanup on unmount (prevent memory leak)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  // Luôn lấy node mới nhất từ cache để thấy ota_pending / firmware_version cập nhật
+  const selectedNode: SensorNode | null = nodes?.find(n => n._id === selectedId) ?? null
 
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      timeoutsRef.current.forEach(clearTimeout)
-    }
-  }, [])
+  function deriveState(node: SensorNode): OTARunState {
+    const failedForSent = node.ota_failed && node.ota_failed.version === sentVersion
+    if (node.ota_pending) return 'pending'
+    if (sentVersion && node.firmware_version === sentVersion) return 'done'
+    if (sentVersion && !failedForSent) return 'pending'
+    if (node.ota_failed && node.ota_failed.failed_at !== dismissedFailedAt) return 'failed'
+    return 'idle'
+  }
 
   function openPanel(node: SensorNode) {
-    setSelectedNode(node)
-    setOtaState('idle')
-    setOtaError(null)
-    setOtaSteps([])
+    setSelectedId(node._id)
+    setForm(EMPTY_OTA_FORM)
+    setErrors({})
+    setApiError(null)
+    setSentVersion('')
+    setDismissedFailedAt(null)
+  }
+
+  function handleFormChange(patch: Partial<OtaFormValues>) {
+    setForm(prev => ({ ...prev, ...patch }))
+    setApiError(null)
+  }
+
+  function handlePush() {
+    const errs = validateOtaForm(form)
+    setErrors(errs)
+    if (Object.keys(errs).length === 0) setConfirmOpen(true)
   }
 
   function startOTA() {
-    setConfirmOpen(false)
-    setOtaState('progress')
-
-    const steps: OTAStepState[] = [
-      { label: 'Gửi lệnh tải firmware',    status: 'done' },
-      { label: 'Đang tải firmware…',        status: 'active', progress: 0 },
-      { label: 'Đang ghi vào thiết bị',    status: 'pending' },
-      { label: 'Khởi động lại',            status: 'pending' },
-      { label: 'Xác nhận thành công',      status: 'pending' },
-    ]
-    setOtaSteps(steps)
-
-    // Simulate OTA progress — production sẽ dùng socket OTA_STATUS event
-    let prog = 0
-    intervalRef.current = setInterval(() => {
-      prog += 10
-      setOtaSteps(prev => prev.map((s, i) =>
-        i === 1 ? { ...s, progress: Math.min(prog, 100) } : s,
-      ))
-      if (prog >= 100) {
-        if (intervalRef.current) clearInterval(intervalRef.current)
-        const advance = (fromIdx: number, toIdx: number, delay: number) => {
-          const t = setTimeout(() => {
-            setOtaSteps(prev => prev.map((s, i) => {
-              if (i === fromIdx) return { ...s, status: 'done' as const, progress: undefined }
-              if (i === toIdx)   return { ...s, status: 'active' as const }
-              return s
-            }))
-          }, delay)
-          timeoutsRef.current.push(t)
-        }
-
-        advance(1, 2, 500)
-        const t2 = setTimeout(() => advance(2, 3, 0), 2000)
-        const t3 = setTimeout(() => advance(3, 4, 0), 3500)
-        const t4 = setTimeout(() => {
-          setOtaSteps(prev => prev.map(s => ({ ...s, status: 'done' as const })))
-          setOtaState('done')
-        }, 5000)
-        timeoutsRef.current.push(t2, t3, t4)
-      }
-    }, 200)
+    if (!selectedNode) return
+    const payload = { version: form.version.trim(), url: form.url.trim(), sha256: form.sha256.trim().toLowerCase() }
+    sendCommand.mutate(
+      { nodeId: selectedNode._id, input: { command: 'OTA', ota: payload } },
+      {
+        onSuccess: () => {
+          setConfirmOpen(false)
+          setSentVersion(payload.version)
+          setApiError(null)
+          push('Đã gửi lệnh OTA tới thiết bị')
+        },
+        onError: err => {
+          setConfirmOpen(false)
+          setApiError(otaErrorMessage(err))
+        },
+      },
+    )
   }
+
+  function handleRetry() {
+    if (selectedNode?.ota_failed) setDismissedFailedAt(selectedNode.ota_failed.failed_at)
+    setSentVersion('')
+    setApiError(null)
+  }
+
+  const runState: OTARunState = selectedNode ? deriveState(selectedNode) : 'idle'
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Demo banner — toàn bộ tiến trình OTA là giả lập, chưa gọi backend API */}
-      <DemoBanner
-        title="Giao diện Demo — OTA chưa kết nối backend"
-        description="Tiến trình cập nhật firmware trên trang này là giả lập (setInterval). Backend cần endpoint POST /devices/sensor-nodes/:id/ota để kích hoạt OTA thật. Danh sách firmware bên dưới là dữ liệu mẫu."
-      />
-
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-charcoal">OTA Firmware</h1>
@@ -140,14 +150,14 @@ export default function OTAPage() {
           <div className="w-80 shrink-0 animate-[slideInRight_0.2s_ease-out]">
             <OTASidePanel
               node={selectedNode}
-              selectedFw={selectedFw}
-              onFwChange={setSelectedFw}
-              onPush={() => setConfirmOpen(true)}
-              otaState={otaState}
-              otaSteps={otaSteps}
-              otaError={otaError}
-              onRetry={() => { setOtaState('idle'); setOtaError(null) }}
-              onSimulateError={(err) => { setOtaState('error'); setOtaError(err) }}
+              state={runState}
+              form={form}
+              errors={errors}
+              onFormChange={handleFormChange}
+              onPush={handlePush}
+              apiError={apiError}
+              targetVersion={sentVersion}
+              onRetry={handleRetry}
             />
           </div>
         )}
@@ -157,7 +167,8 @@ export default function OTAPage() {
       {confirmOpen && selectedNode && (
         <OTAConfirmModal
           node={selectedNode}
-          firmware={selectedFw}
+          firmware={form}
+          loading={sendCommand.isPending}
           onClose={() => setConfirmOpen(false)}
           onConfirm={startOTA}
         />

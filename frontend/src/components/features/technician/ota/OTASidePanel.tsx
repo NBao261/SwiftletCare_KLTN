@@ -1,27 +1,35 @@
-// OTASidePanel.tsx — Slide-in panel: firmware select, changelog, progress, error states
+// OTASidePanel.tsx — Slide-in panel: form thông tin firmware, trạng thái chờ, thành công, thất bại
 import { Card, Button } from '@/components/ui'
 import { OTAProgressPanel } from './OTAProgressPanel'
 import { OTAErrorPanel } from './OTAErrorPanel'
-import { FIRMWARE_VERSIONS } from '@/components/features/technician/ota/otaTypes'
-import type { FirmwareVersion, OTAError, OTARunState, OTAStepState } from '@/components/features/technician/ota/otaTypes'
+import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/technician/ota/otaTypes'
 import type { SensorNode } from '@/types'
 
 interface Props {
   node: SensorNode
-  selectedFw: FirmwareVersion
-  onFwChange: (fw: FirmwareVersion) => void
+  state: OTARunState
+  form: OtaFormValues
+  errors: OtaFormErrors
+  onFormChange: (patch: Partial<OtaFormValues>) => void
   onPush: () => void
-  otaState: OTARunState
-  otaSteps: OTAStepState[]
-  otaError: OTAError
+  /** Lỗi từ API gửi lệnh (400/409/501/503…) */
+  apiError: string | null
+  /** Phiên bản vừa yêu cầu — dùng cho trạng thái pending/done */
+  targetVersion: string
   onRetry: () => void
-  onSimulateError: (err: OTAError) => void
 }
 
-export function OTASidePanel({
-  node, selectedFw, onFwChange, onPush,
-  otaState, otaSteps, otaError, onRetry, onSimulateError,
-}: Props) {
+function Field({ id, label, hint, error, children }: { id: string; label: string; hint?: string; error?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="label-caption">{label}</label>
+      {children}
+      {error ? <p className="text-xs text-alertRed">{error}</p> : hint ? <p className="text-xs text-warmGray">{hint}</p> : null}
+    </div>
+  )
+}
+
+export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, apiError, targetVersion, onRetry }: Props) {
   return (
     <Card className="sticky top-6 flex flex-col gap-4 !p-5">
       {/* Device info */}
@@ -31,73 +39,62 @@ export function OTASidePanel({
         <p className="text-sm text-warmGray">Firmware hiện tại: {node.firmware_version ?? '—'}</p>
       </div>
 
-      {/* Idle state: firmware select + changelog + push button */}
-      {otaState === 'idle' && (
+      {state === 'idle' && (
         <>
-          <div className="flex flex-col gap-1.5">
-            <label className="label-caption">Chọn phiên bản firmware</label>
-            <select
-              value={selectedFw.version}
-              onChange={e => {
-                const fw = FIRMWARE_VERSIONS.find(f => f.version === e.target.value)
-                if (fw) onFwChange(fw)
-              }}
-              className="input text-sm"
-            >
-              {FIRMWARE_VERSIONS.map(fw => (
-                <option key={fw.version} value={fw.version}>
-                  {fw.version} — {fw.date}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Field id="ota-version" label="Phiên bản firmware" hint="Dạng x.y.z, VD 1.3.0" error={errors.version}>
+            <input
+              id="ota-version"
+              value={form.version}
+              onChange={e => onFormChange({ version: e.target.value })}
+              placeholder="1.3.0"
+              className="input font-mono text-sm"
+              autoComplete="off"
+            />
+          </Field>
+          <Field id="ota-url" label="URL file firmware (https)" hint="Host phải nằm trong danh sách cho phép của hệ thống" error={errors.url}>
+            <input
+              id="ota-url"
+              value={form.url}
+              onChange={e => onFormChange({ url: e.target.value })}
+              placeholder="https://…/firmware-1.3.0.bin"
+              className="input font-mono text-xs"
+              autoComplete="off"
+            />
+          </Field>
+          <Field id="ota-sha256" label="SHA-256 của file" hint="64 ký tự hex — thiết bị dùng để kiểm tra toàn vẹn" error={errors.sha256}>
+            <input
+              id="ota-sha256"
+              value={form.sha256}
+              onChange={e => onFormChange({ sha256: e.target.value })}
+              placeholder="e3b0c442…"
+              className="input font-mono text-xs"
+              autoComplete="off"
+            />
+          </Field>
 
-          <div className="rounded-xl bg-graphite/5 px-3.5 py-3">
-            <p className="label-caption mb-2">CHANGELOG</p>
-            <ul className="flex flex-col gap-1">
-              {selectedFw.changelog.map((c, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-charcoal">
-                  <span className="mt-0.5 shrink-0 text-warmGray">•</span>{c}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {apiError && (
+            <p className="rounded-xl border border-alertRed/20 bg-alertRed/[0.08] px-3.5 py-2.5 text-sm text-alertRed">{apiError}</p>
+          )}
 
           <Button onClick={onPush} className="w-full justify-center">
             Đẩy OTA cho thiết bị này
           </Button>
-
-          {/* DEV-only: simulate errors — guarded by env flag */}
-          {import.meta.env.DEV && (
-            <div className="border-t border-graphite/10 pt-3">
-              <p className="label-caption mb-2">[ DEV ] Giả lập lỗi OTA</p>
-              <div className="flex flex-col gap-1">
-                {(['DOWNLOAD_TIMEOUT', 'CHECKSUM_MISMATCH', 'ROLLBACK'] as OTAError[]).map(err => (
-                  <button
-                    key={err!}
-                    onClick={() => onSimulateError(err)}
-                    className="rounded-lg border border-graphite/15 px-2 py-1 text-[10px] text-warmGray hover:bg-graphite/5"
-                  >
-                    {err}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </>
       )}
 
-      {/* Progress state */}
-      {(otaState === 'progress' || otaState === 'done') && (
-        <OTAProgressPanel steps={otaSteps} done={otaState === 'done'} firmware={selectedFw.version} />
+      {(state === 'pending' || state === 'done') && (
+        <OTAProgressPanel
+          done={state === 'done'}
+          version={targetVersion || node.ota_pending?.version || ''}
+          requestedAt={node.ota_pending?.requested_at}
+        />
       )}
 
-      {/* Error state */}
-      {otaState === 'error' && otaError && (
+      {state === 'failed' && node.ota_failed && (
         <OTAErrorPanel
-          error={otaError}
-          currentFw={node.firmware_version ?? 'v1.2.0'}
-          targetFw={selectedFw.version}
+          failedVersion={node.ota_failed.version}
+          failedAt={node.ota_failed.failed_at}
+          runningVersion={node.ota_failed.running_version ?? node.firmware_version}
           onRetry={onRetry}
         />
       )}
