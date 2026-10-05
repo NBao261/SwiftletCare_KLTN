@@ -83,11 +83,9 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
           const isRoot = i === 0
           const isLast = i === trail.length - 1
           const clickable = !!crumb.onClick && !isLast
-          const textClass = isRoot
-            ? 'truncate text-2xl font-extrabold tracking-tight text-charcoal'
-            : isLast
-              ? 'truncate text-sm font-medium text-warmGray'
-              : 'truncate text-sm font-semibold text-charcoal'
+          const textClass = isLast
+            ? 'truncate text-sm font-medium text-warmGray'
+            : 'truncate text-sm font-semibold text-charcoal'
           return (
             <span key={i} className="flex min-w-0 items-baseline gap-1.5">
               {!isRoot && <span aria-hidden="true" className="shrink-0 text-lg font-medium text-warmGray/40">/</span>}
