@@ -4,7 +4,7 @@
 //   - Technician: xem + cập nhật trạng thái, ghi chú, SAT checklist, chat, SLA breach banner
 import { useState, useEffect, FormEvent } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket, useEscalateTicket } from '@/hooks/shared/useTickets'
+import { useTicket, useAddTicketNote, useCancelTicket, useRateTicket } from '@/hooks/shared/useTickets'
 import { useAuthStore } from '@/stores/authStore'
 import { usePermission } from '@/hooks/common/usePermission'
 import { usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
@@ -29,6 +29,7 @@ import { UpdateStatusModal } from '@/components/features/technician/tickets/Upda
 import { ReassignModal as TechnicianReassignModal } from '@/components/features/technician/tickets/ReassignModal'
 import { isTicketAssignee, requiresFieldVisit, canScheduleVisit } from '@/components/features/technician/tickets/ticketHelpers'
 import { ScheduleVisitModal } from '@/components/features/technician/tickets/ScheduleVisitModal'
+import { EscalateModal } from '@/components/features/technician/tickets/EscalateModal'
 import { SLABreachBanner } from '@/components/features/technician/tickets/SLABreachBanner'
 import { StatusStepper } from '@/components/features/technician/tickets/StatusStepper'
 import { TicketChat } from '@/components/features/technician/tickets/TicketChat'
@@ -257,30 +258,6 @@ export default function TechnicianTicketDetailPage() {
     </div>
   )
 }
-
-function EscalateModal({ open, onClose, ticketId }: { open: boolean; onClose: () => void; ticketId: string }) {
-  const escalate = useEscalateTicket()
-  const push = useToastStore(s => s.push)
-  return (
-    <NoteActionModal
-      open={open}
-      onClose={onClose}
-      title="Báo Admin hỗ trợ"
-      label="Lý do cần Admin hỗ trợ"
-      placeholder="VD: Cần vật tư, không liên lạc được chủ trại, vượt khả năng xử lý..."
-      submitLabel="Gửi báo cáo"
-      loading={escalate.isPending}
-      onSubmit={(reason) => {
-        escalate.mutate({ id: ticketId, reason: reason || undefined }, {
-          onSuccess: () => { push('Đã báo Admin'); onClose() },
-          onError: (err) => push(getApiErrorMessage(err, 'Báo Admin thất bại'), 'error'),
-        })
-      }}
-    />
-  )
-}
-
-
 
 function NotesTimeline({ ticketId, notes }: { ticketId: string; notes: Array<{ content: string; created_at: string }> }) {
   const addNote = useAddTicketNote()

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateNewTicket, validateReschedule } from '@/validations/admin/ticket.validation'
+import { validateNewTicket, validateReschedule } from '@/validations/common/schedule.validation'
 
 // 10:00 giờ VN; các mốc dưới đây ghi rõ +07:00 để test không phụ thuộc múi giờ máy chạy
 const NOW = new Date('2026-09-24T10:00+07:00').getTime()

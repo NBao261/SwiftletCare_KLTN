@@ -47,3 +47,10 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
   const message = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
   return message ?? fallback
 }
+
+/** ISO (UTC) → giá trị cho input datetime-local theo giờ máy người dùng */
+export function toLocalDateTimeInput(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}

@@ -2,19 +2,15 @@ import { useState, useEffect, FormEvent } from 'react'
 import { useAdminOverrideTicket } from '@/hooks/shared/useTickets'
 import { Button, Modal } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
-import DateTimePicker from '@/components/features/admin/tickets/DateTimePicker'
-import { validateReschedule } from '@/validations/admin/ticket.validation'
+import { getApiErrorMessage, toLocalDateTimeInput } from '@/lib/helpers'
+import DateTimePicker from '@/components/common/DateTimePicker'
+import { validateReschedule } from '@/validations/common/schedule.validation'
 import OverrideReasonField, { REASON_EMPTY, type OverrideModalProps } from '@/components/features/admin/tickets/OverrideReasonField'
 
 /**
  * ISO (UTC) → giá trị cho <input type="datetime-local"> theo giờ máy người dùng.
  * `iso.slice(0, 16)` cắt thẳng chuỗi UTC nên lệch 7 tiếng ở VN.
  */
-function toLocalDateTimeInput(iso: string): string {
-  const d = new Date(iso)
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
-}
 
 /** TICKET-FR-005b — Admin đổi ngày giờ hẹn của ticket */
 export default function RescheduleModal({ open, onClose, ticket }: OverrideModalProps) {

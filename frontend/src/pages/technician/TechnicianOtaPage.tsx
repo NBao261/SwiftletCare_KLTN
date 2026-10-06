@@ -9,9 +9,7 @@
 // - Lỗi BE: 400 (host không được phép / dữ liệu sai), 409 (node không ONLINE / trùng version),
 //   501 (firmware chưa hỗ trợ lệnh từ xa — FIRMWARE_COMMAND_SUPPORT tắt), 503 (mất MQTT).
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { deviceApi } from '@/apis/shared/devices.api'
-import { useSendNodeCommand } from '@/hooks/shared/useDevices'
+import { useSensorNodes, useSendNodeCommand } from '@/hooks/shared/useDevices'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { useToastStore } from '@/stores/toastStore'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -36,12 +34,10 @@ export default function OTAPage() {
   const push = useToastStore(s => s.push)
   const sendCommand = useSendNodeCommand()
 
-  const { data: nodes, isLoading } = useQuery({
-    // Prefix 'sensor-nodes' → useSendNodeCommand().invalidateQueries làm mới luôn bảng này
-    queryKey: ['sensor-nodes', 'ota'],
-    queryFn: () => deviceApi.listSensorNodes().then(r => r.data.data),
+  const { data: nodes, isLoading } = useSensorNodes(undefined, {
     // Còn node đang chờ OTA → polling để thấy kết quả (BE chưa có socket OTA_PROGRESS)
-    refetchInterval: query => (query.state.data?.some(n => n.ota_pending) ? 5_000 : false),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    refetchInterval: (query: any) => (query.state.data?.some((n: any) => n.ota_pending) ? 5_000 : false),
   })
 
   const [selectedId, setSelectedId] = useState<string | null>(null)

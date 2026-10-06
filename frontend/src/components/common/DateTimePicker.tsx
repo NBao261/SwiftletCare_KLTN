@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { addDays, addMonths, format, isSameDay, isSameMonth, startOfDay, startOfMonth, startOfWeek } from 'date-fns'
 import { IconCalendar, IconChevronRight } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
-import { isWithinVisitHours } from '@/validations/admin/ticket.validation'
+import { isWithinVisitHours } from '@/validations/common/schedule.validation'
 
 /** Cùng định dạng giá trị với <input type="datetime-local"> — giờ máy người dùng, để form cũ không phải đổi */
 const VALUE_FORMAT = "yyyy-MM-dd'T'HH:mm"

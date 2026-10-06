@@ -19,8 +19,10 @@ export function RemoteCommandPanel({ ticket }: { ticket: Ticket }) {
   const handleCommand = (cmd: 'RESTART' | 'PUSH_CONFIG') => {
     if (!selectedNodeId) return pushToast('Vui lòng chọn thiết bị', 'error')
     
+    if (cmd === 'RESTART' && !window.confirm('Xác nhận khởi động lại thiết bị?')) return
+    
     sendCommand.mutate(
-      { nodeId: selectedNodeId, input: { command: cmd } },
+      { nodeId: selectedNodeId, input: { command: cmd, ticket_id: ticket._id } },
       {
         onSuccess: () => pushToast(`Đã gửi lệnh ${cmd} tới thiết bị thành công`),
         onError: (err) => pushToast(getApiErrorMessage(err, 'Lỗi gửi lệnh'), 'error')
@@ -51,7 +53,9 @@ export function RemoteCommandPanel({ ticket }: { ticket: Ticket }) {
             ariaLabel="Chọn thiết bị trong Zone"
             options={[
               { value: '', label: '-- Chọn thiết bị trong Zone --' },
-              ...nodes.map(n => ({ value: n._id, label: `${n.device_id} (Trạng thái: ${n.status})` }))
+              ...nodes
+                .filter(n => n.status !== 'OFFLINE')
+                .map(n => ({ value: n._id, label: `${n.device_id} (Trạng thái: ${n.status})` }))
             ]}
             onChange={setSelectedNodeId}
           />

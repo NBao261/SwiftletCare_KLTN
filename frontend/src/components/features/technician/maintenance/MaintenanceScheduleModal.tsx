@@ -4,22 +4,17 @@
 // sửa mô tả của lịch có `next_due_at` đã trôi qua không bị BE từ chối vì "giờ hẹn phải ở tương lai".
 import { useState, useEffect, useMemo, FormEvent } from 'react'
 import { Button, Input, Modal, Textarea, SelectMenu } from '@/components/ui'
-import DateTimePicker from '@/components/features/admin/tickets/DateTimePicker'
-import { validateReschedule } from '@/validations/admin/ticket.validation'
+import DateTimePicker from '@/components/common/DateTimePicker'
+import { validateReschedule } from '@/validations/common/schedule.validation'
 import { useFarms, useFarmZones } from '@/hooks/shared/useFarms'
 import { useCreateMaintenanceSchedule, useUpdateMaintenanceSchedule } from '@/hooks/shared/useMaintenanceSchedules'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
+import { getApiErrorMessage, toLocalDateTimeInput } from '@/lib/helpers'
 import type { MaintenanceSchedule, UpdateMaintenanceScheduleInput } from '@/types'
 
 const MAX_DESCRIPTION = 500
 const WHOLE_FARM = '' // option "Toàn trang trại" — không gắn zone
 
-/** ISO (UTC) → giá trị DateTimePicker theo giờ máy người dùng */
-function toLocalDateTimeInput(iso: string): string {
-  const d = new Date(iso)
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
-}
 
 interface Props {
   open: boolean

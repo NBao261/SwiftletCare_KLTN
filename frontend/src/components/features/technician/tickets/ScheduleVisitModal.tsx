@@ -5,16 +5,11 @@ import { useState, useEffect, FormEvent } from 'react'
 import { useScheduleVisit } from '@/hooks/shared/useTickets'
 import { Button, Modal, Textarea } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
-import DateTimePicker from '@/components/features/admin/tickets/DateTimePicker'
-import { validateReschedule } from '@/validations/admin/ticket.validation'
+import { getApiErrorMessage, toLocalDateTimeInput } from '@/lib/helpers'
+import DateTimePicker from '@/components/common/DateTimePicker'
+import { validateReschedule } from '@/validations/common/schedule.validation'
 import type { Ticket } from '@/types'
 
-/** ISO (UTC) → giá trị cho DateTimePicker theo giờ máy người dùng */
-function toLocalDateTimeInput(iso: string): string {
-  const d = new Date(iso)
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
-}
 
 interface Props { open: boolean; onClose: () => void; ticket: Ticket }
 

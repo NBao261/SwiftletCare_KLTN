@@ -11,7 +11,8 @@ import type { ReplaceSensorNodeInput } from '@/apis/shared/devices.api'
  * `zoneId` rỗng nghĩa là "tất cả" (TechnicianDevicesPage khi chưa lọc zone) — `enabled: false` cho
  * nơi gọi nào không muốn fetch-all trong lúc đó (VD Dashboard lúc chưa chọn zone).
  */
-export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean; refetchInterval?: number | ((query: any) => number | false) }) {
   useSocket()
   const queryClient = useQueryClient()
 
@@ -19,6 +20,7 @@ export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean })
     queryKey: ['sensor-nodes', zoneId],
     queryFn: () => deviceApi.listSensorNodes(zoneId).then(r => r.data.data),
     enabled: options?.enabled ?? true,
+    refetchInterval: options?.refetchInterval,
   })
 
   useEffect(() => {
