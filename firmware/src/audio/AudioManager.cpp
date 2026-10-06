@@ -17,9 +17,18 @@ static HardwareSerial dfSerial(1); // UART1, tách riêng khỏi UART2 (RS485)
 static DFRobotDFPlayerMini dfPlayer;
 static bool playing = false;
 static bool inWindowLastCheck = false;
-// true chỉ khi DFPlayer báo có thẻ SD/USB lúc khởi động. Chưa sẵn sàng thì mọi
-// lệnh play/stop/volume/loop bị bỏ qua, không gửi gì xuống module.
+// true khi DFPlayer báo có thẻ SD/USB (lúc khởi động hoặc cắm sau đó — xem
+// pollModule()). Chưa sẵn sàng thì mọi lệnh play/stop/volume/loop bị bỏ qua.
 static bool dfReady = false;
+
+// Thư viện chỉ chờ 2s sau reset cho thông báo "online", nhưng thẻ lớn (32GB) có
+// thể cần 3-4s để module đọc xong hệ thống file → chờ thêm trước khi kết luận.
+static const unsigned long DF_EXTRA_WAIT_MS = 4000;
+
+static bool isStorageOnline(uint8_t type) {
+  return type == DFPlayerCardOnline || type == DFPlayerUSBOnline || type == DFPlayerCardUSBOnline ||
+         type == DFPlayerCardInserted || type == DFPlayerUSBInserted;
+}
 
 // Nghe thử (ENV-FR-013c(c)) — ghi từ mqttTask, đọc/xoá trong pidTask
 static volatile int pendingPlayTrack = 0; // >0 = có yêu cầu phát bài này
@@ -43,37 +52,96 @@ void begin() {
   // begin() với isACK=false luôn trả true nên không dùng để biết module có sẵn
   // sàng không — đọc loại thông báo cuối cùng module gửi (TimeOut nếu im lặng).
   uint8_t type = dfPlayer.readType();
-  dfReady = (type == DFPlayerCardOnline || type == DFPlayerUSBOnline);
+  int param = dfPlayer.read();
+  unsigned long deadline = millis() + DF_EXTRA_WAIT_MS;
+  while (!isStorageOnline(type) && millis() < deadline) {
+    if (dfPlayer.available()) {
+      type = dfPlayer.readType();
+      param = dfPlayer.read();
+    } else {
+      delay(50);
+    }
+  }
+  // Luôn hỏi số file: (1) một số module clone không tự gửi thông báo "online";
+  // (2) thông báo "online" chỉ chứng minh chiều DFPlayer → ESP32 — có câu trả lời
+  // cho câu hỏi này mới chứng minh module NHẬN được lệnh (dây GPIO33 → RX).
+  int files = dfPlayer.readFileCounts();
+  if (files < 0) files = dfPlayer.readFileCounts(); // thử lại 1 lần, module vừa reset có thể còn bận
+  dfReady = isStorageOnline(type) || files > 0;
 
   if (dfReady) {
     dfPlayer.volume(Config::speakerVolume);
-    Serial.println("[Audio] DFPlayer Mini initialized");
+    Serial.println("[Audio] DFPlayer Mini initialized (type=" + String(type) + " files=" + String(files) + ")");
+    if (files < 0) {
+      Serial.println("[Audio] ⚠ Module báo có thẻ nhưng KHÔNG trả lời câu hỏi của ESP32 — nhiều khả năng dây "
+                     "GPIO33 → RX của DFPlayer (qua trở 1kΩ) hở hoặc sai chân: lệnh phát sẽ không tới module, "
+                     "amply chỉ kêu è. (Một số module clone không hỗ trợ câu hỏi này — khi đó bỏ qua cảnh báo.)");
+    } else if (files == 0) {
+      Serial.println("[Audio] ⚠ Thẻ không có file nhạc nào module đọc được (cần 0001.mp3 ở thư mục gốc, FAT32)");
+    }
   } else {
-    Serial.println("[Audio] ✗ DFPlayer Mini chưa sẵn sàng (thiếu thẻ SD / sai dây) "
-                   "— bỏ qua phát nhạc, relay amply vẫn chạy theo lịch");
+    // type: 0 = module im lặng hoàn toàn (dây TX/RX, nguồn 5V, module hỏng);
+    //       6 = module trả lỗi, param = mã lỗi (vd 1 = đang bận/không thấy thẻ);
+    //       khác = có phản hồi nhưng không báo có thẻ.
+    Serial.println("[Audio] ✗ DFPlayer Mini chưa sẵn sàng — type=" + String(type) + " param=" + String(param) +
+                   " files=" + String(files) +
+                   (type == TimeOut ? " → module KHÔNG phản hồi: kiểm tra dây GPIO32/33 và nguồn 5V"
+                                    : " → module có phản hồi nhưng không thấy thẻ: kiểm tra thẻ SD (FAT32, cắm sát)") +
+                   ". Bỏ qua phát nhạc, relay amply vẫn chạy theo lịch; sẽ tự nhận khi cắm thẻ.");
   }
 }
 
-void play(int track) {
+// Module tự gửi thông báo khi cắm/rút thẻ lúc đang chạy — đọc không chặn (gọi
+// mỗi chu kỳ từ updateSchedule) để không phải khởi động lại board mới nhận thẻ.
+static void pollModule() {
+  if (!dfPlayer.available()) return;
+  uint8_t type = dfPlayer.readType();
+  dfPlayer.read();
+  if (isStorageOnline(type) && !dfReady) {
+    dfReady = true;
+    dfPlayer.volume(Config::speakerVolume);
+    inWindowLastCheck = false; // đang trong khung giờ thì phát ngay ở chu kỳ này
+    Serial.println("[Audio] DFPlayer Mini đã nhận thẻ → sẵn sàng phát");
+  } else if ((type == DFPlayerCardRemoved || type == DFPlayerUSBRemoved) && dfReady) {
+    dfReady = false;
+    playing = false;
+    Serial.println("[Audio] ✗ Thẻ SD bị rút — dừng phát nhạc");
+  }
+}
+
+// Thư viện chỉ chờ 10ms giữa 2 lệnh, nhưng nhiều đời chip MP3-TF-16P bỏ lệnh thứ
+// hai nếu tới quá sát (đã gặp thật: module trả lời truy vấn nhưng không chịu phát).
+// ponytail: chạy trong pidTask đang giữ dataMutex — 150ms mỗi lần BẮT ĐẦU phát là
+// chấp nhận được; nếu cần gửi lệnh dày hơn thì chuyển sang hàng đợi không chặn.
+static const unsigned long DF_CMD_GAP_MS = 150;
+
+/**
+ * Đặt âm lượng rồi phát. looped = phát lặp bài đó bằng MỘT lệnh (0x08) — không
+ * dùng enableLoop()/disableLoop() (0x19): lệnh đó chỉ có nghĩa khi đang phát, gửi
+ * trước lệnh play làm một số module bỏ luôn lệnh play.
+ */
+static void startPlayback(int track, bool looped) {
   if (!dfReady) return;
-  dfPlayer.play(track);
+  dfPlayer.volume(constrain((int)Config::speakerVolume, 0, 30));
+  delay(DF_CMD_GAP_MS);
+  if (looped) dfPlayer.loop(track);
+  else dfPlayer.play(track);
   playing = true;
 }
 
+void play(int track) { startPlayback(track, false); }
+
 void stop() {
-  if (dfReady) dfPlayer.stop();
+  if (dfReady) {
+    dfPlayer.stop();
+    delay(DF_CMD_GAP_MS); // để lệnh phát ngay sau đó (hết nghe thử → về lịch) không bị bỏ
+  }
   playing = false;
 }
 
 void setVolume(int volume0to30) {
   if (!dfReady) return;
   dfPlayer.volume(constrain(volume0to30, 0, 30));
-}
-
-void loop(bool enable) {
-  if (!dfReady) return;
-  if (enable) dfPlayer.enableLoop();
-  else dfPlayer.disableLoop();
 }
 
 bool isPlaying() { return playing; }
@@ -85,14 +153,14 @@ void requestPlay(int track) {
 void requestStop() { pendingStop = true; }
 
 bool updateSchedule() {
+  pollModule();
+
   // ── Nghe thử: ưu tiên hơn lịch và bỏ qua speakerScheduleEnabled ─────────
   int track = pendingPlayTrack;
   if (track > 0) {
     pendingPlayTrack = 0;
     pendingStop = false;
-    setVolume(Config::speakerVolume);
-    loop(false);
-    play(track);
+    startPlayback(track, false);
     forcedPlaying = true;
     forcedSince = millis();
     Serial.println("[Audio] Nghe thử track " + String(track) +
@@ -126,9 +194,7 @@ bool updateSchedule() {
       (hour >= Config::speakerWindow2StartHour && hour < Config::speakerWindow2EndHour);
 
   if (inWindow && !inWindowLastCheck) {
-    setVolume(Config::speakerVolume);
-    loop(true);
-    play(Config::speakerTrack);
+    startPlayback(Config::speakerTrack, true);
     Serial.println(dfReady ? "[Audio] Speaker schedule window START → play track " + String(Config::speakerTrack)
                            : "[Audio] Speaker schedule window START — DFPlayer chưa sẵn sàng, không phát nhạc");
   } else if (!inWindow && inWindowLastCheck) {

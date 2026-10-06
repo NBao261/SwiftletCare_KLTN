@@ -1413,6 +1413,41 @@ paths:
               },
           }
 
+  /farms/zones/{zoneId}/fuzzy-tuning:
+    put:
+      tags: [Farms]
+      summary: "Chỉnh hệ số bộ điều khiển mờ của Zone (ENV-FR-021) — FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
+      description: |
+        Gửi 1 hoặc nhiều trong 4 hệ số; server gộp với giá trị hiện tại, kiểm tra khoảng
+        (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `fuzzy_tuning_history`, ghi audit
+        `FUZZY_TUNING_UPDATED` rồi publish MQTT `config/update` (4 key `fuzzy_*`) để mọi ESP32
+        trong Zone áp dụng ngay — không cần nạp lại firmware. Khoá lạ bị bỏ qua.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FuzzyTuning" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Zone" }
+        "400":
+          description: "Hệ số ngoài khoảng hợp lệ / không phải số / body không có hệ số nào"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403":
+          description: "Không có quyền trên Zone này"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
   /farms/zones/{zoneId}/thresholds:
     put:
       tags: [Farms]
@@ -2466,6 +2501,168 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
+
+  /analytics/control/performance:
+    get:
+      tags: [Analytics]
+      summary: "Hiệu quả bộ điều khiển mờ của Zone (ANALYTICS-FR-008)"
+      description: |
+        Chỉ tính mẫu telemetry có `misting_pct` (firmware ≥ 1.1.0). `series`: độ ẩm, nhiệt độ,
+        % phun, % quạt trung bình theo bucket (tối đa 120 điểm). `stats` (null khi chưa có dữ
+        liệu): % mẫu nằm trong ngưỡng hiện tại của Zone, % phun/quạt trung bình, số lần relay
+        đóng cắt/giờ (null khi dữ liệu < 15 phút). `tuning_changes`: các lần chỉnh hệ số trong khoảng.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: range, in: query, schema: { type: string, enum: [1h, 6h, 24h, 7d, 30d], default: 24h } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          range: { type: string }
+                          from: { type: string, format: date-time }
+                          to: { type: string, format: date-time }
+                          bucketMs: { type: integer }
+                          thresholds:
+                            type: object
+                            properties:
+                              humidity_min: { type: number }
+                              humidity_max: { type: number }
+                              temp_min: { type: number }
+                              temp_max: { type: number }
+                          fuzzy_tuning: { $ref: "#/components/schemas/FuzzyTuning" }
+                          tuning_changes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                changed_at: { type: string, format: date-time }
+                                new_values: { $ref: "#/components/schemas/FuzzyTuning" }
+                          series:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                timestamp: { type: string, format: date-time }
+                                humidity: { type: number, nullable: true }
+                                temperature: { type: number, nullable: true }
+                                misting_pct: { type: number, nullable: true }
+                                ventilation_pct: { type: number, nullable: true }
+                          stats:
+                            type: object
+                            nullable: true
+                            properties:
+                              sampleCount: { type: integer }
+                              humidityInRangePct: { type: number, nullable: true }
+                              temperatureInRangePct: { type: number, nullable: true }
+                              mistingAvgPct: { type: number, nullable: true }
+                              ventilationAvgPct: { type: number, nullable: true }
+                              mistingSwitchesPerHour: { type: number, nullable: true }
+                              ventilationSwitchesPerHour: { type: number, nullable: true }
+                          service_limits:
+                            type: object
+                            description: "TICKET-FR-018 — mốc bảo trì theo thời gian chạy"
+                            properties:
+                              misting: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
+                              ventilation: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
+                          relay_usage:
+                            type: array
+                            description: "Giờ chạy / số lần đóng cắt từ lần bảo trì trước, theo thiết bị"
+                            items:
+                              type: object
+                              properties:
+                                device_id: { type: string }
+                                misting: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
+                                ventilation: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
+        "400":
+          description: "range không hợp lệ"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /analytics/forecast:
+    get:
+      tags: [Analytics]
+      summary: "Dự báo độ ẩm/nhiệt độ 60 phút tới (ANALYTICS-FR-009)"
+      description: |
+        Holt trend tắt dần trên 6 giờ gần nhất gom 5 phút; α, β chọn bằng tìm lưới; `mae30`/`mae60`
+        = sai số tuyệt đối trung bình đánh giá lùi. Mỗi chỉ số là null khi < 2 giờ dữ liệu hoặc mẫu mới
+        nhất cũ hơn 15 phút. `predicted` = chỉ số hiện còn trong ngưỡng nhưng dự báo vượt trong 60 phút.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          horizonMinutes: { type: integer, example: 60 }
+                          bucketMinutes: { type: integer, example: 5 }
+                          humidity: { $ref: "#/components/schemas/MetricForecast" }
+                          temperature: { $ref: "#/components/schemas/MetricForecast" }
+                          thresholds: { type: object }
+                          predicted:
+                            type: object
+                            nullable: true
+                            properties:
+                              metric: { type: string, enum: [humidity, temperature] }
+                              direction: { type: string, enum: [above, below] }
+                              limit: { type: number }
+                              value: { type: number }
+                              minutesAhead: { type: integer }
+
+  /analytics/control/suggestion:
+    get:
+      tags: [Analytics]
+      summary: "Gợi ý hệ số logic mờ từ mô hình học trên dữ liệu thật (ANALYTICS-FR-010)"
+      description: |
+        Hồi quy Δh(10') = a·%phun + b·%quạt + c·(T−T̄) + d trên ≤ 14 ngày, mô phỏng 24 giờ gần nhất với
+        120 bộ hệ số. CHỈ đề xuất, không ghi gì. `suggestion` null kèm `reason` khi < 3 ngày dữ liệu,
+        R² < 0.3, phun sương không làm tăng ẩm, hoặc hệ số hiện tại đã gần tốt nhất.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          current: { $ref: "#/components/schemas/FuzzyTuning" }
+                          suggestion: { allOf: [{ $ref: "#/components/schemas/FuzzyTuning" }], nullable: true }
+                          reason: { type: string, nullable: true }
+                          predicted:
+                            type: object
+                            properties:
+                              inRangeNow: { type: number }
+                              inRangeSuggested: { type: number }
+                              mistingNow: { type: number }
+                              mistingSuggested: { type: number }
+                          model:
+                            type: object
+                            nullable: true
+                            properties:
+                              r2: { type: number }
+                              samples: { type: integer }
+                              days: { type: number }
 
   /analytics/env/compare:
     get:
@@ -4280,6 +4477,27 @@ components:
         nh3_max: { type: number, example: 25 }
         co2_max: { type: number, example: 1500 }
 
+    FuzzyTuning:
+      type: object
+      description: "ENV-FR-021 — hệ số bộ điều khiển mờ trên ESP32; tên field = key MQTT config/update"
+      properties:
+        fuzzy_humidity_band: { type: number, minimum: 2, maximum: 20, example: 8, description: "%RH — độ rộng vùng chuyển tiếp độ ẩm" }
+        fuzzy_temp_band: { type: number, minimum: 1, maximum: 10, example: 4, description: "°C — độ rộng vùng nóng" }
+        fuzzy_fan_dry_level: { type: number, minimum: 0, maximum: 100, example: 40, description: "% — mức quạt khi nóng mà khô" }
+        fuzzy_window_sec: { type: integer, minimum: 60, maximum: 600, example: 120, description: "giây — cửa sổ time-proportioning" }
+        fuzzy_input_filter: { type: boolean, example: true, description: "ENV-FR-022 — lọc median+Kalman đầu vào bộ mờ (tắt để so sánh A/B)" }
+
+    MetricForecast:
+      type: object
+      nullable: true
+      properties:
+        history: { type: array, items: { type: object, properties: { timestamp: { type: string, format: date-time }, value: { type: number } } } }
+        forecast: { type: array, items: { type: object, properties: { timestamp: { type: string, format: date-time }, value: { type: number } } } }
+        alpha: { type: number }
+        beta: { type: number }
+        mae30: { type: number, nullable: true }
+        mae60: { type: number, nullable: true }
+
     Zone:
       type: object
       properties:
@@ -4298,7 +4516,26 @@ components:
               changed_at: { type: string, format: date-time }
               old_values: { type: object }
               new_values: { type: object }
+        fuzzy_tuning: { $ref: "#/components/schemas/FuzzyTuning" }
+        fuzzy_tuning_history:
+          type: array
+          items:
+            type: object
+            properties:
+              changed_by: { type: string }
+              changed_at: { type: string, format: date-time }
+              old_values: { type: object }
+              new_values: { type: object }
         created_at: { type: string, format: date-time }
+
+    RelayUsage:
+      type: object
+      properties:
+        on_hours: { type: number }
+        switches: { type: integer }
+        since_service_hours: { type: number }
+        since_service_switches: { type: integer }
+        last_ticket_id: { type: string }
 
     RelayStates:
       type: object
@@ -4326,6 +4563,13 @@ components:
     SensorNode:
       type: object
       properties:
+        relay_usage:
+          type: object
+          description: "TICKET-FR-018 (v1.24.0) — giờ chạy + số lần đóng cắt thật của bơm/quạt"
+          properties:
+            misting: { $ref: "#/components/schemas/RelayUsage" }
+            ventilation: { $ref: "#/components/schemas/RelayUsage" }
+            counted_until: { type: string, format: date-time }
         _id: { type: string }
         device_id: { type: string, example: node_001 }
         zone_id: { type: string }
@@ -4428,6 +4672,10 @@ components:
           { type: number, nullable: true, description: "ppm, từ ES-CO2-01" }
         sound_db:
           { type: number, nullable: true, description: "dB, từ ES-NOISE-01" }
+        misting_pct: { type: number, nullable: true, description: "% phun do bộ điều khiển mờ tính (firmware ≥ 1.1.0)" }
+        ventilation_pct: { type: number, nullable: true, description: "% quạt do bộ điều khiển mờ tính (firmware ≥ 1.1.0)" }
+        misting_on: { type: boolean, nullable: true, description: "Relay phun sương lúc lấy mẫu" }
+        ventilation_on: { type: boolean, nullable: true, description: "Relay quạt lúc lấy mẫu" }
         is_anomaly: { type: boolean }
 
     AlertType:
@@ -4444,6 +4692,8 @@ components:
         - EDGE_AI_DEGRADED
         - SENSOR_FAULT
         - RS485_BUS_FAILURE
+        - SENSOR_ANOMALY
+        - FORECAST_BREACH
 
     Alert:
       type: object

@@ -19,6 +19,7 @@ export type AlertType =
   | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'BIRD_PANIC'
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE' // THREAT-FR-013
+  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'   // v1.24.0 — ALERT-FR-010/011
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 
@@ -90,6 +91,24 @@ export interface RelayStates {
   heating: boolean
 }
 
+// ENV-FR-010/011 (v1.24.0): % công suất 0-100 do bộ điều khiển mờ trên ESP32
+// tính (= tỉ lệ thời gian BẬT relay trong cửa sổ 2 phút). Chỉ đi kèm telemetry,
+// không lưu DB. Firmware < 1.1.0 không gửi.
+export interface ControlOutput {
+  misting: number
+  ventilation: number
+}
+
+// ENV-FR-021 (v1.24.0): 4 hệ số bộ điều khiển mờ theo Zone, gửi xuống ESP32 qua
+// config/update — tên field = tên key MQTT (firmware Config::update()).
+export interface FuzzyTuning {
+  fuzzy_humidity_band: number  // %RH — độ rộng vùng chuyển tiếp độ ẩm
+  fuzzy_temp_band: number      // °C — độ rộng vùng "nóng"
+  fuzzy_fan_dry_level: number  // % — mức quạt khi nóng mà khô
+  fuzzy_window_sec: number     // s — cửa sổ time-proportioning
+  fuzzy_input_filter: boolean  // ENV-FR-022 — lọc median+Kalman đầu vào bộ mờ (tắt để so sánh A/B)
+}
+
 // ── MQTT Message Payloads ──────────────────────────────────────────────────────
 export interface TelemetryPayload {
   deviceId: string
@@ -101,6 +120,7 @@ export interface TelemetryPayload {
   sound_db: number
   relay_states: RelayStates
   control_mode: ControlMode
+  control_output?: ControlOutput
   timestamp: number   // Unix ms
 }
 
@@ -153,6 +173,7 @@ export interface WsTelemetryUpdate {
   sound: number
   relayStates: RelayStates
   controlMode: ControlMode
+  controlOutput?: ControlOutput
   timestamp: string
 }
 

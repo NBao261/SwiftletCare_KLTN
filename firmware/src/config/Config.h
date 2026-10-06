@@ -37,7 +37,7 @@
 #define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
 
 // ── Firmware version (báo lên backend qua heartbeat — FARM-FR-006) ──────────
-#define FIRMWARE_VERSION "1.0.0"
+#define FIRMWARE_VERSION "1.2.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào + BIRD_PANIC
 
 // ── Timing ────────────────────────────────────────────────────────────────
 #define WATCHDOG_TIMEOUT_SEC 30
@@ -48,6 +48,18 @@
 // — không phải lỗi.
 #define SENSOR_INTERVAL_MS 1000
 #define PID_INTERVAL_MS 10000
+
+// ── Hệ số bộ điều khiển mờ (ENV-FR-010/011/021) ─────────────────────────────
+// Chỉnh lúc chạy qua MQTT config/update (fuzzy_*), lưu NVS; ngoài khoảng MIN/MAX
+// bị kẹp lại. Mặc định cho ra đúng hàm thuộc gốc (xem pid/FuzzyControl.h).
+// Cửa sổ time-proportioning: relay BẬT duty×cửa sổ đầu mỗi cửa sổ; ≥60s để
+// relay cơ/bơm không đóng cắt quá dày, độ phân giải = PID_INTERVAL_MS/cửa sổ.
+#define DEFAULT_FUZZY_HUMIDITY_BAND 8.0f // %RH, 2..20
+#define DEFAULT_FUZZY_TEMP_BAND 4.0f     // °C, 1..10
+#define DEFAULT_FUZZY_FAN_DRY_LEVEL 40   // %, 0..100
+#define DEFAULT_FUZZY_WINDOW_SEC 120     // s, 60..600
+// ENV-FR-022: lọc median+Kalman giá trị đưa vào bộ mờ (tắt được để so sánh A/B)
+#define DEFAULT_FUZZY_INPUT_FILTER true
 #define MQTT_HEARTBEAT_MS 30000    // 30 seconds (FARM-FR-005)
 #define MANUAL_OVERRIDE_MS 1800000 // 30 minutes (ENV-FR-018)
 // ponytail: nghe thử (ENV-FR-013c) tự dừng sau 5 phút phòng khi lệnh stop bị
@@ -160,6 +172,13 @@ extern volatile int nh3Max;
 extern volatile int co2Max;
 extern int sensorIntervalMs;
 extern int pidIntervalMs;
+
+// Hệ số bộ điều khiển mờ (ENV-FR-021) — cùng lý do volatile như ngưỡng ở trên
+extern volatile float fuzzyHumidityBand;
+extern volatile float fuzzyTempBand;
+extern volatile int fuzzyFanDryLevel; // %
+extern volatile int fuzzyWindowSec;
+extern volatile bool fuzzyInputFilter; // ENV-FR-022
 
 // Speaker schedule (ENV-FR-013b) – overridable via MQTT config/update
 extern volatile bool speakerScheduleEnabled;

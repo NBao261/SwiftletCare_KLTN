@@ -105,6 +105,10 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
       nh3_ppm:     isFiniteNumber(payload.nh3_ppm)     ? payload.nh3_ppm     : undefined,
       co2_ppm:     isFiniteNumber(payload.co2_ppm)     ? payload.co2_ppm     : undefined,
       sound_db:    isFiniteNumber(payload.sound_db)    ? payload.sound_db    : undefined,
+      misting_pct:     isFiniteNumber(payload.control_output?.misting)     ? payload.control_output?.misting     : undefined,
+      ventilation_pct: isFiniteNumber(payload.control_output?.ventilation) ? payload.control_output?.ventilation : undefined,
+      misting_on:      payload.relay_states?.misting,
+      ventilation_on:  payload.relay_states?.ventilation,
       is_anomaly: anomaly,
     })
     if (!isStale) lastPersisted.set(nodeId, { at: sampleTime, anomaly })
@@ -139,6 +143,7 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
     sound:       payload.sound_db,
     relayStates: payload.relay_states,
     controlMode: payload.control_mode ?? 'AUTO',
+    controlOutput: payload.control_output,
     timestamp:   new Date(sampleTime).toISOString(),
   })
 }

@@ -7,6 +7,7 @@ export type AlertType =
   | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'BIRD_PANIC'
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'
+  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'
 
 export interface Alert {
   _id: string; farm_id: string; zone_id?: string; node_id?: string

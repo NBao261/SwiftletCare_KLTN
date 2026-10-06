@@ -115,3 +115,6 @@ dist
 .vscode/
 *.swp
 *.swo
+
+# Local file storage for dev (no MinIO yet)
+storage/

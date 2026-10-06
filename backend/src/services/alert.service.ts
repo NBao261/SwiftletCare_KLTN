@@ -29,12 +29,17 @@ const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   POWER_OUTAGE:      'HIGH',
   SPEAKER_FAILURE:   'HIGH',
   NODE_OFFLINE:      'HIGH',
-  BIRD_PANIC:        'HIGH',
+  // MEDIUM: phát hiện theo dB (THREAT-FR-007), chưa hiệu chỉnh bằng dữ liệu thật —
+  // HIGH sẽ bị alertEscalation.job tự sinh ticket sau 15 phút nếu báo nhầm.
+  BIRD_PANIC:        'MEDIUM',
   THRESHOLD_BREACH:  'MEDIUM',
   SENSOR_FAULT:      'MEDIUM',
   PUMP_DRY:          'MEDIUM',
   EDGE_AI_DEGRADED:  'MEDIUM',
   LOW_RETURN_RATE:   'LOW',
+  // v1.24.0 — suy luận thống kê, có thể báo nhầm → không để mức tự sinh ticket
+  SENSOR_ANOMALY:    'MEDIUM',
+  FORECAST_BREACH:   'LOW',
 }
 
 export interface CreateAlertInput {
