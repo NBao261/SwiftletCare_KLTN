@@ -73,7 +73,7 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
   ]
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 bg-transparent px-4 lg:px-6">
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 bg-transparent px-4 lg:px-6">
       {/* Trái: breadcrumb tên trang → thực thể đang xem (desktop) / thương hiệu (mobile, vì sidebar bị ẩn) */}
       <nav aria-label="breadcrumb" className="flex min-w-0 items-baseline gap-1.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-charcoal text-sm font-extrabold text-white lg:hidden">
@@ -83,9 +83,11 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
           const isRoot = i === 0
           const isLast = i === trail.length - 1
           const clickable = !!crumb.onClick && !isLast
-          const textClass = isLast
-            ? 'truncate text-sm font-medium text-warmGray'
-            : 'truncate text-sm font-semibold text-charcoal'
+          const textClass = isRoot
+            ? 'truncate text-2xl font-extrabold tracking-tight text-charcoal'
+            : isLast
+              ? 'truncate text-sm font-medium text-warmGray'
+              : 'truncate text-sm font-semibold text-charcoal'
           return (
             <span key={i} className="flex min-w-0 items-baseline gap-1.5">
               {!isRoot && <span aria-hidden="true" className="shrink-0 text-lg font-medium text-warmGray/40">/</span>}
