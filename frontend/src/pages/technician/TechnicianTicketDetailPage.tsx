@@ -124,8 +124,8 @@ export default function TechnicianTicketDetailPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
                 <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABEL[ticket.status]}</Badge>
-                {ticket.is_sla_breached && <Badge tone="danger">Vượt SLA</Badge>}
-                {ticket.escalated_at && <Badge tone="danger">Đã báo Admin</Badge>}
+                {ticket.is_sla_breached && <Badge tone="critical">Vượt SLA</Badge>}
+                {ticket.escalated_at && <Badge tone="critical">Đã báo Admin</Badge>}
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-charcoal">{TICKET_TYPE_LABEL[ticket.type]}</h1>
@@ -134,16 +134,15 @@ export default function TechnicianTicketDetailPage() {
             </div>
 
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {/* Chat: mọi role có quyền xem ticket đều mở được (KTV không phụ trách chỉ xem — canSend gate trong TicketChat) */}
+              <Button variant="secondary" onClick={() => setShowChat(true)}>
+                <IconMessage className="mr-1.5 h-4 w-4" />
+                Trao đổi
+              </Button>
               {canTechAct && (
-                <>
-                  <Button variant="secondary" onClick={() => setShowChat(true)}>
-                    <IconMessage className="mr-1.5 h-4 w-4" />
-                    Trao đổi
-                  </Button>
-                  <Button onClick={() => setShowUpdateStatus(true)}>
-                    {ticket.status === 'NEW' ? 'Tiếp nhận' : 'Cập nhật trạng thái'}
-                  </Button>
-                </>
+                <Button onClick={() => setShowUpdateStatus(true)}>
+                  {ticket.status === 'NEW' ? 'Tiếp nhận' : 'Cập nhật trạng thái'}
+                </Button>
               )}
               
               {menuItems.length > 0 && (
