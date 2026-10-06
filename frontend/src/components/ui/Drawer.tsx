@@ -58,7 +58,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
             <CloseIcon />
           </Button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 flex flex-col overflow-hidden px-6 py-5">
           {children}
         </div>
       </div>

@@ -1,6 +1,6 @@
 // Alerts Page – ALERT-FR-001/002/006/007/008/009
 import { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useAlertsList, useAcknowledgeAlert } from "@/hooks/shared/useAlerts";
 import { Card, Button } from "@/components/ui";
 import AlertBadge from "@/components/features/technician/alerts/AlertBadge";
@@ -41,7 +41,6 @@ export default function TechnicianAlertsPage() {
   );
   const [page, setPage] = useState(1);
   const [ackTargetId, setAckTargetId] = useState<string | null>(null);
-  const navigate = useNavigate();
   // Bấm 1 thông báo ở NotificationPopover (AppHeader) điều hướng sang đây kèm
   // ?highlight=<id> — cuộn tới & làm nổi đúng dòng đó nếu đang nằm trong trang/filter hiện tại.
   const [searchParams] = useSearchParams();
@@ -141,19 +140,24 @@ export default function TechnicianAlertsPage() {
             <div className="flex items-center gap-2 mt-2 pt-2 border-t border-warmGray/10">
               <span className="text-xs text-warmGray/80 flex-1">
                 {(alert.zone_id || alert.node_id) ? (
-                  <>Vị trí: {alert.zone_id ? `Khu vực ${alert.zone_id.slice(-6)}` : ''} {alert.node_id ? `/ Thiết bị ${alert.node_id.slice(-6)}` : ''}</>
+                  <>
+                    Vị trí:{' '}
+                    {alert.zone_id && (
+                      <Link to={`/devices?zone_id=${alert.zone_id}`} className="text-forest hover:underline">
+                        Khu vực {alert.zone_id.slice(-6)}
+                      </Link>
+                    )}
+                    {alert.zone_id && alert.node_id && ' / '}
+                    {alert.node_id && (
+                      <Link to={`/devices?node_id=${alert.node_id}`} className="text-forest hover:underline">
+                        Thiết bị {alert.node_id.slice(-6)}
+                      </Link>
+                    )}
+                  </>
                 ) : (
                   'Chung toàn nhà yến'
                 )}
               </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="text-xs py-1 h-auto"
-                onClick={() => navigate('/tickets')}
-              >
-                Xem Ticket
-              </Button>
             </div>
             
             {alert.acknowledgement_note && (

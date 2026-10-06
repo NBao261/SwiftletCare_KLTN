@@ -68,7 +68,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true, open, onC
 
   return (
     <Drawer open={open} onClose={onClose} title="Trao đổi về ticket">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between shrink-0">
         <p className="label-caption">TICKET CHAT</p>
         <span className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider ${live ? 'text-accent-800' : 'text-warmGray'}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${live ? 'bg-success' : 'bg-warmGray/40'}`} />
@@ -129,7 +129,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true, open, onC
 
       {/* Input */}
       {!isError && !readOnly && (
-        <div className="mt-3 flex gap-2 border-t border-graphite/10 pt-3">
+        <div className="mt-3 flex gap-2 border-t border-graphite/10 pt-3 shrink-0">
           <textarea
             value={text}
             onChange={e => setText(e.target.value)}
@@ -145,7 +145,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true, open, onC
         </div>
       )}
       {!isError && readOnly && (
-        <p className="mt-3 border-t border-graphite/10 pt-3 text-xs text-warmGray">
+        <p className="mt-3 border-t border-graphite/10 pt-3 text-xs text-warmGray shrink-0">
           {closed ? 'Ticket đã đóng — chỉ xem lại lịch sử trò chuyện.' : 'Bạn không phải người phụ trách ticket này — chỉ xem lịch sử trò chuyện.'}
         </p>
       )}
