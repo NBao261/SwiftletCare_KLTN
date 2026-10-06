@@ -30,9 +30,7 @@ export default function TechnicianMaintenancePage() {
   const [page, setPage] = useState(1)
   const { data: farms } = useFarms()
   const { data: zones } = useAllZones()
-  const { data, isLoading, isError } = useMaintenanceSchedules(farmId || undefined, page, PAGE_SIZE)
-  const schedules = data?.items
-  const total = data?.total ?? 0
+  const { records: schedules, total, isLoading, isError } = useMaintenanceSchedules(farmId || undefined, page, PAGE_SIZE)
   const updateSchedule = useUpdateMaintenanceSchedule()
   const deleteSchedule = useDeleteMaintenanceSchedule()
 
@@ -60,7 +58,14 @@ export default function TechnicianMaintenancePage() {
   function confirmDelete() {
     if (!deleting) return
     deleteSchedule.mutate(deleting._id, {
-      onSuccess: () => { push('Đã xoá lịch bảo trì'); setDeleting(undefined) },
+      onSuccess: () => { 
+        push('Đã xoá lịch bảo trì')
+        setDeleting(undefined)
+        // Nếu xóa phần tử cuối cùng của trang hiện tại (và không phải trang 1), thì lùi trang
+        if (schedules.length === 1 && page > 1) {
+          setPage(p => p - 1)
+        }
+      },
       onError: (err) => push(getApiErrorMessage(err, 'Xoá lịch bảo trì thất bại'), 'error'),
     })
   }

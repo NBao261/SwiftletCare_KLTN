@@ -1,6 +1,6 @@
 // Alerts Page – ALERT-FR-001/002/006/007/008/009
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAlertsList, useAcknowledgeAlert } from "@/hooks/shared/useAlerts";
 import { Card, Button } from "@/components/ui";
 import AlertBadge from "@/components/features/technician/alerts/AlertBadge";
@@ -41,6 +41,7 @@ export default function TechnicianAlertsPage() {
   );
   const [page, setPage] = useState(1);
   const [ackTargetId, setAckTargetId] = useState<string | null>(null);
+  const navigate = useNavigate();
   // Bấm 1 thông báo ở NotificationPopover (AppHeader) điều hướng sang đây kèm
   // ?highlight=<id> — cuộn tới & làm nổi đúng dòng đó nếu đang nằm trong trang/filter hiện tại.
   const [searchParams] = useSearchParams();
