@@ -1,14 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { maintenanceScheduleApi } from '@/apis/shared/maintenanceSchedules.api'
 import type { CreateMaintenanceScheduleInput, UpdateMaintenanceScheduleInput } from '@/types'
 
 const KEY = ['maintenance-schedules'] as const
 
-/** TICKET-FR-013 — `farmId` rỗng = mọi farm user được phép xem */
-export function useMaintenanceSchedules(farmId?: string) {
+/** TICKET-FR-013 — `farmId` rỗng = mọi farm user được phép xem. BE phân trang (mặc định 20) → trả kèm total. */
+export function useMaintenanceSchedules(farmId: string | undefined, page: number, limit: number) {
   return useQuery({
-    queryKey: [...KEY, farmId ?? 'all'],
-    queryFn: () => maintenanceScheduleApi.list(farmId).then(r => r.data.data),
+    queryKey: [...KEY, farmId ?? 'all', page, limit],
+    queryFn: () =>
+      maintenanceScheduleApi.list({ farmId, page, limit }).then(r => ({
+        items: r.data.data,
+        total: r.data.meta?.total ?? r.data.data.length,
+      })),
+    placeholderData: keepPreviousData,
   })
 }
 

@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { Button, Badge, DataTable, EmptyState, SelectMenu, ConfirmModal, ActionsMenu, type DataTableColumn, type ActionsMenuItem } from '@/components/ui'
 import { Plus } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import Pagination from '@/components/ui/Pagination'
 import MaintenanceScheduleModal from '@/components/features/technician/maintenance/MaintenanceScheduleModal'
 import { usePermission } from '@/hooks/common/usePermission'
 import { useFarms, useAllZones } from '@/hooks/shared/useFarms'
@@ -17,6 +18,8 @@ import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import type { MaintenanceSchedule } from '@/types'
 
 const ALL_FARMS = ''
+// Khớp mặc định BE (limit 20) — gửi tường minh để không phụ thuộc default phía server
+const PAGE_SIZE = 20
 
 export default function TechnicianMaintenancePage() {
   // BE: GET cho FARM_OWNER/TECHNICIAN/ADMIN; POST/PUT/DELETE chỉ TECHNICIAN/ADMIN
@@ -24,9 +27,12 @@ export default function TechnicianMaintenancePage() {
   const push = useToastStore(s => s.push)
 
   const [farmId, setFarmId] = useState(ALL_FARMS)
+  const [page, setPage] = useState(1)
   const { data: farms } = useFarms()
   const { data: zones } = useAllZones()
-  const { data: schedules, isLoading, isError } = useMaintenanceSchedules(farmId || undefined)
+  const { data, isLoading, isError } = useMaintenanceSchedules(farmId || undefined, page, PAGE_SIZE)
+  const schedules = data?.items
+  const total = data?.total ?? 0
   const updateSchedule = useUpdateMaintenanceSchedule()
   const deleteSchedule = useDeleteMaintenanceSchedule()
 
@@ -104,7 +110,7 @@ export default function TechnicianMaintenancePage() {
           <h1 className="truncate text-2xl font-bold tracking-tight text-charcoal">Lịch bảo trì</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <SelectMenu ariaLabel="Lọc theo trang trại" value={farmId} options={farmOptions} onChange={setFarmId} />
+          <SelectMenu ariaLabel="Lọc theo trang trại" value={farmId} options={farmOptions} onChange={v => { setFarmId(v); setPage(1) }} />
           {canManage && <Button onClick={() => setShowCreate(true)}><Plus size={18} strokeWidth={2} /> Tạo lịch bảo trì</Button>}
         </div>
       </div>
@@ -126,12 +132,15 @@ export default function TechnicianMaintenancePage() {
       )}
 
       {!isLoading && !isError && !!schedules?.length && (
-        <DataTable
-          columns={columns}
-          rows={schedules}
-          getRowKey={s => s._id}
-          emptyMessage="Chưa có lịch bảo trì nào"
-        />
+        <>
+          <DataTable
+            columns={columns}
+            rows={schedules}
+            getRowKey={s => s._id}
+            emptyMessage="Chưa có lịch bảo trì nào"
+          />
+          <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
+        </>
       )}
 
       {canManage && (

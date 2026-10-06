@@ -5,8 +5,10 @@ import type {
 
 /** TICKET-FR-013 — Technician/Admin CRUD, Farm Owner chỉ xem (BE requireRole) */
 export const maintenanceScheduleApi = {
-  list:   (farmId?: string) =>
-    api.get<ApiResponse<MaintenanceSchedule[]>>('/maintenance-schedules', { params: farmId ? { farmId } : undefined }),
+  list:   (params: { farmId?: string; page?: number; limit?: number } = {}) =>
+    api.get<ApiResponse<MaintenanceSchedule[]>>('/maintenance-schedules', {
+      params: { ...(params.farmId ? { farmId: params.farmId } : {}), page: params.page, limit: params.limit },
+    }),
   create: (input: CreateMaintenanceScheduleInput) =>
     api.post<ApiResponse<MaintenanceSchedule>>('/maintenance-schedules', input),
   update: (id: string, input: UpdateMaintenanceScheduleInput) =>
