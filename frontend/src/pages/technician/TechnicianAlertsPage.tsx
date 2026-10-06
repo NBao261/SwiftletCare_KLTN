@@ -149,7 +149,7 @@ export default function TechnicianAlertsPage() {
                 variant="secondary"
                 size="sm"
                 className="text-xs py-1 h-auto"
-                onClick={() => window.location.href = '/tickets'}
+                onClick={() => navigate('/tickets')}
               >
                 Xem Ticket
               </Button>
