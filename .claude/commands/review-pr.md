@@ -39,6 +39,20 @@ STEP 3 - find issues.
 - If /code-review is unavailable, review manually (correctness, security, API contract, error handling, module rules) and re-verify each candidate.
 - No lint-level style nitpicks, no praise padding.
 
+STEP 3b - frontend <-> backend API check (only when the PR changes files under frontend/src/; for a FOLLOW-UP REVIEW only the screens changed since the marker).
+- For each screen/component/hook the PR adds or changes, list the data it shows or the actions it performs, and where that data comes from: an `@/apis/*` function (through its hook), or hardcoded/mock data (literal arrays or objects, `mock*`/`fake*` constants, the "This data is FAKE" notice).
+- For each of those needs, find the matching backend endpoint as it exists on the base branch plus anything this same PR adds: the route in `backend/src/routes/*.route.ts`, its `requireRole(...)`, the controller/service behind it, and its path in `docs/api/api-spec.yaml`. Classify it:
+  - DONE: the route exists and calls a real service (not `notImplemented`).
+  - STUB: the route exists but returns 501 via `utils/notImplemented.util.ts` (the Sales module).
+  - MISSING: no route.
+  Use `SwiftletCare_SRS.md` §5, column "Trạng thái Backend", and FE_Design_Claude.md section 7 only to confirm; when they disagree with the code, trust the code and mention the mismatch.
+- Then flag, citing FE_Design_Claude.md 13.9 / 13.8 (all [Bắt buộc], blocking):
+  - Mock/hardcoded data on a screen whose endpoint is DONE: must switch to the real API. Name the endpoint and the existing `apis/` function or hook to use, or say one has to be added in the right `apis/<role|shared>/` file.
+  - A call to an endpoint that is STUB or MISSING: must not ship as if real. Ask for mock data with the FAKE notice (section 5.4) or `ComingSoon`, and name the missing endpoint so backend can build it.
+  - Mock data shown without the FAKE notice: add the notice.
+  - A call to a DONE endpoint whose method, path, params, request body or response fields do not match the backend/spec, or whose `requireRole` does not allow the roles the screen's `<RequireRole allow>` / `usePermission` lets in: contract or permission break.
+- Add a short section to the review body titled "Đối chiếu API backend" with one line per data need: endpoint (or "chưa có endpoint"), DONE/STUB/MISSING, what the FE uses now (API thật / mock), and what to do ("OK", "chuyển sang API thật", "mock + nhãn FAKE", "thiếu endpoint, báo backend"). Put the blocking items as inline comments on the lines that fetch or hardcode the data.
+
 FOLLOW-UP extra step. For every earlier inline comment by NBao261 on this PR (all rounds), decide from the new code whether it is fixed / not fixed / partially fixed and reply briefly in its thread ('Đã sửa, ok.' or exactly what is still missing). Skip threads already answered 'fixed'.
 
 STEP 4 - review event. Base branches require NBao261's approval; COMMENT does not clear an earlier CHANGES_REQUESTED.
@@ -53,4 +67,4 @@ POSTING.
 - Body must contain `<!-- auto-review sha=<head sha> -->`.
 - Write every finding in natural, concise Vietnamese, first person as a teammate: what is wrong, why it matters (concrete scenario), how to fix. For rule violations cite document + section (e.g. 'theo mục 13.5 trong frontend/FE_Design_Claude.md') and say whether it blocks merge ('chặn merge') or not ('góp ý, không chặn merge'). No signatures, no emoji, no tool severity labels.
 
-Finish with a short report in Vietnamese: full or follow-up review, review level used (low/medium/high/xhigh) and why, modules and rule files read, event used, number of comments, and a link to the PR.
+Finish with a short report in Vietnamese: full or follow-up review, review level used (low/medium/high/xhigh) and why, modules and rule files read, event used, number of comments, for frontend PRs the API check result (how many data needs are DONE/STUB/MISSING and how many still use mock data), and a link to the PR.
