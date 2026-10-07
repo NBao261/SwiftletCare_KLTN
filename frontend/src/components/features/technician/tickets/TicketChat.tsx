@@ -45,7 +45,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true, open, onC
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight
     }
-  }, [messages])
+  }, [messages, open])
 
   function handleSend() {
     const trimmed = text.trim()

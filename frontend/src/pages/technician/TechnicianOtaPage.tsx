@@ -36,8 +36,7 @@ export default function OTAPage() {
 
   const { data: nodes, isLoading } = useSensorNodes(undefined, {
     // Còn node đang chờ OTA → polling để thấy kết quả (BE chưa có socket OTA_PROGRESS)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    refetchInterval: (query: any) => (query.state.data?.some((n: any) => n.ota_pending) ? 5_000 : false),
+    refetchInterval: query => (query.state.data?.some(n => n.ota_pending) ? 5_000 : false),
   })
 
   const [selectedId, setSelectedId] = useState<string | null>(null)

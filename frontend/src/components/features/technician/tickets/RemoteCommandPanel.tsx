@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, Button, Badge, SelectMenu } from '@/components/ui'
+import { Card, Button, Badge, SelectMenu, ConfirmModal } from '@/components/ui'
 import { useSensorNodes, useSendNodeCommand } from '@/hooks/shared/useDevices'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
@@ -13,19 +13,32 @@ export function RemoteCommandPanel({ ticket }: { ticket: Ticket }) {
   const sendCommand = useSendNodeCommand()
   const pushToast = useToastStore(s => s.push)
   const [selectedNodeId, setSelectedNodeId] = useState<string>('')
+  const [showConfirmRestart, setShowConfirmRestart] = useState(false)
 
   if (!ticket.zone_id) return null
 
   const handleCommand = (cmd: 'RESTART' | 'PUSH_CONFIG') => {
     if (!selectedNodeId) return pushToast('Vui lòng chọn thiết bị', 'error')
     
-    if (cmd === 'RESTART' && !window.confirm('Xác nhận khởi động lại thiết bị?')) return
-    
+    if (cmd === 'RESTART') {
+      setShowConfirmRestart(true)
+      return
+    }
+    executeCommand(cmd)
+  }
+
+  const executeCommand = (cmd: 'RESTART' | 'PUSH_CONFIG') => {
     sendCommand.mutate(
       { nodeId: selectedNodeId, input: { command: cmd, ticket_id: ticket._id } },
       {
-        onSuccess: () => pushToast(`Đã gửi lệnh ${cmd} tới thiết bị thành công`),
-        onError: (err) => pushToast(getApiErrorMessage(err, 'Lỗi gửi lệnh'), 'error')
+        onSuccess: () => {
+          pushToast(`Đã gửi lệnh ${cmd} tới thiết bị thành công`)
+          setShowConfirmRestart(false)
+        },
+        onError: (err) => {
+          pushToast(getApiErrorMessage(err, 'Lỗi gửi lệnh'), 'error')
+          setShowConfirmRestart(false)
+        }
       }
     )
   }
@@ -54,7 +67,7 @@ export function RemoteCommandPanel({ ticket }: { ticket: Ticket }) {
             options={[
               { value: '', label: '-- Chọn thiết bị trong Zone --' },
               ...nodes
-                .filter(n => n.status !== 'OFFLINE')
+                .filter(n => n.status === 'ONLINE' || n.status === 'DEGRADED')
                 .map(n => ({ value: n._id, label: `${n.device_id} (Trạng thái: ${n.status})` }))
             ]}
             onChange={setSelectedNodeId}
@@ -81,6 +94,18 @@ export function RemoteCommandPanel({ ticket }: { ticket: Ticket }) {
             </Button>
           </div>
         </div>
+      )}
+
+      {showConfirmRestart && (
+        <ConfirmModal
+          open={true}
+          title="Xác nhận khởi động lại"
+          description="Bạn có chắc chắn muốn gửi lệnh khởi động lại (RESTART) thiết bị này không? Thiết bị sẽ tạm thời mất kết nối trong vài phút."
+          confirmLabel="Khởi động lại"
+          onConfirm={() => executeCommand('RESTART')}
+          onCancel={() => setShowConfirmRestart(false)}
+          loading={sendCommand.isPending}
+        />
       )}
     </Card>
   )

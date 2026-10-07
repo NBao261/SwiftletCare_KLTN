@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type Query } from '@tanstack/react-query'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { onRelayUpdate, onDeviceStatusChange } from '@/lib/socket'
 import { useSocket } from '@/hooks/common/useSocket'
-import type { RelayName, SpeakerScheduleInput, NodeCommandInput } from '@/types'
+import type { RelayName, SpeakerScheduleInput, NodeCommandInput, SensorNode } from '@/types'
 import type { ReplaceSensorNodeInput } from '@/apis/shared/devices.api'
 
 /**
@@ -11,8 +11,7 @@ import type { ReplaceSensorNodeInput } from '@/apis/shared/devices.api'
  * `zoneId` rỗng nghĩa là "tất cả" (TechnicianDevicesPage khi chưa lọc zone) — `enabled: false` cho
  * nơi gọi nào không muốn fetch-all trong lúc đó (VD Dashboard lúc chưa chọn zone).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean; refetchInterval?: number | ((query: any) => number | false) }) {
+export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean; refetchInterval?: number | false | ((query: Query<SensorNode[], Error, SensorNode[], (string | undefined)[]>) => number | false | undefined) }) {
   useSocket()
   const queryClient = useQueryClient()
 
