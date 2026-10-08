@@ -17,7 +17,7 @@ function DeviceRow({ node, selected, onSelect }: DeviceRowProps) {
     <tr className={`border-b border-graphite/[0.08] transition-colors hover:bg-graphite/[0.03] ${selected ? 'bg-charcoal/5' : ''}`}>
       <td className="px-4 py-3"><StatusDot status={node.status as DeviceStatus} /></td>
       <td className="px-4 py-3 font-mono text-sm font-semibold text-charcoal">{node.device_id}</td>
-      <td className="px-4 py-3 text-warmGray">—</td>
+      <td className="px-4 py-3 text-warmGray">{node.zone_id ? `KV ${node.zone_id.slice(-6).toUpperCase()}` : '—'}</td>
       <td className="px-4 py-3 font-mono text-sm">
         {node.firmware_version ?? '—'}
         {node.ota_pending && <span className="ml-2 rounded-full bg-climateOrange/15 px-2 py-0.5 font-sans text-[10px] font-semibold text-climateOrange">OTA đang chờ</span>}

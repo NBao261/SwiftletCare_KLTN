@@ -144,13 +144,13 @@ export default function TechnicianAlertsPage() {
                     Vị trí:{' '}
                     {alert.zone_id && (
                       <Link to="/devices" className="text-accent-800 hover:underline">
-                        Khu vực {alert.zone_id.slice(-6)}
+                        {String(alert.metadata?.zone_name || `Khu vực ${alert.zone_id.slice(-6)}`)}
                       </Link>
                     )}
                     {alert.zone_id && alert.node_id && ' / '}
                     {alert.node_id && (
                       <Link to="/devices" className="text-accent-800 hover:underline">
-                        Thiết bị {alert.node_id.slice(-6)}
+                        {String(alert.metadata?.device_id || `Thiết bị ${alert.node_id.slice(-6)}`)}
                       </Link>
                     )}
                   </>

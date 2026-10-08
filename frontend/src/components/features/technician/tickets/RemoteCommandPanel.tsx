@@ -36,7 +36,12 @@ export function RemoteCommandPanel({ ticket }: { ticket: Ticket }) {
           setShowConfirmRestart(false)
         },
         onError: (err) => {
-          pushToast(getApiErrorMessage(err, 'Lỗi gửi lệnh'), 'error')
+          const status = (err as { response?: { status?: number } })?.response?.status
+          if (status === 501) {
+            pushToast('Thiết bị hiện chưa hỗ trợ lệnh này (501)', 'error')
+          } else {
+            pushToast(getApiErrorMessage(err, 'Lỗi gửi lệnh'), 'error')
+          }
           setShowConfirmRestart(false)
         }
       }

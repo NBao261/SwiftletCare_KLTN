@@ -26,7 +26,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
   const [error, setError] = useState<ValidateError>(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [validatedModel, setValidatedModel] = useState(
-    data.deviceDbId ? (data.deviceType === 'SENSOR_NODE' ? 'ESP32-WROOM-32D · SensorNode' : 'Raspberry Pi · CameraNode') : '',
+    data.deviceDbId ? `${data.deviceType === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'} (Đã xác thực)` : '',
   )
 
   const canSubmit = Boolean(data.deviceId.trim() && data.secretKey.trim() && data.location.zoneId)
@@ -47,7 +47,11 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         ? await deviceApi.registerCameraNode(payload)
         : await deviceApi.registerSensorNode(payload)
       patch({ deviceDbId: res.data.data._id })
-      setValidatedModel(data.deviceType === 'SENSOR_NODE' ? 'ESP32-WROOM-32D · SensorNode' : 'Raspberry Pi · CameraNode')
+      
+      const modelFromBe = (res.data.data as { model?: string }).model
+      const modelLabel = modelFromBe ? `${modelFromBe} · ` : ''
+      setValidatedModel(`${modelLabel}${data.deviceType === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'}`)
+      
       setStatus('success')
     } catch (err: unknown) {
       const httpStatus = (err as { response?: { status?: number } })?.response?.status
