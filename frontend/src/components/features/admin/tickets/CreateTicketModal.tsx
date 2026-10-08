@@ -3,11 +3,11 @@ import { useCreateTicket } from '@/hooks/shared/useTickets'
 import { useFarms, useFarmZones } from '@/hooks/shared/useFarms'
 import { Button, Modal, SelectMenu, Textarea } from '@/components/ui'
 import Field from '@/components/features/admin/tickets/SelectField'
-import DateTimePicker from '@/components/features/admin/tickets/DateTimePicker'
+import DateTimePicker from '@/components/common/DateTimePicker'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { TICKET_TYPE_LABEL } from '@/constants/tickets'
-import { SCHEDULED_TYPES, validateNewTicket, type NewTicketForm } from '@/validations/admin/ticket.validation'
+import { SCHEDULED_TYPES, validateNewTicket, type NewTicketForm } from '@/validations/common/schedule.validation'
 import type { TicketType } from '@/types'
 
 /**

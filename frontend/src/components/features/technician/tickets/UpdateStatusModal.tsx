@@ -8,12 +8,14 @@ import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { STATUS_LABEL } from '@/constants/tickets'
 import type { Ticket, TicketStatus } from '@/types'
+import { requiresFieldVisit } from './ticketHelpers'
 
-// Trạng thái hợp lệ có thể chuyển tới từ trạng thái hiện tại (State Machine)
+// Trạng thái hợp lệ có thể chuyển tới từ trạng thái hiện tại — PHẢI khớp ALLOWED_TRANSITIONS của BE
+// (ticket.service.ts): NEW→CLOSED = sự cố tự hết (Flow 9 case 5a); AWAITING→IN_PROGRESS = quay lại xử lý.
 const ALLOWED_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
-  NEW:                        ['IN_PROGRESS'],
+  NEW:                        ['IN_PROGRESS', 'CLOSED'],
   IN_PROGRESS:               ['AWAITING_FIELD_CONFIRMATION', 'CLOSED'],
-  AWAITING_FIELD_CONFIRMATION: ['CLOSED'],
+  AWAITING_FIELD_CONFIRMATION: ['CLOSED', 'IN_PROGRESS'],
   CLOSED:                    [], // Không cho cập nhật tiếp
 }
 
@@ -21,12 +23,12 @@ const ALL_STATUS_OPTIONS: { value: TicketStatus; label: string; desc: string }[]
   {
     value: 'IN_PROGRESS',
     label: 'Đang xử lý',
-    desc: 'Bắt đầu xử lý sự cố tại hiện trường',
+    desc: 'Tiếp nhận / tiếp tục xử lý sự cố',
   },
   {
     value: 'AWAITING_FIELD_CONFIRMATION',
     label: 'Chờ xác nhận hiện trường',
-    desc: 'Đã hoàn thành, chờ Farm Owner xác nhận',
+    desc: 'Đã xử lý xong, chờ Farm Owner xác nhận',
   },
   {
     value: 'CLOSED',
@@ -68,6 +70,12 @@ export function UpdateStatusModal({ ticket, onClose }: Props) {
   })
 
   const needNote = selected === 'CLOSED'
+
+  // BE (TICKET-FR-010): ticket lắp đặt/bảo trì hoặc sự cố đã hẹn xuống hiện trường chỉ đóng được
+  // khi SAT đạt đủ 4 mục — chặn sớm để không phải chờ BE trả 409.
+  const sat = ticket.sat_checklist
+  const satIncomplete = !(sat.modbus_addresses_ok && sat.camera_rtsp_ok && sat.lte_connection_ok && sat.relay_test_ok)
+  const closeBlockedBySat = needNote && requiresFieldVisit(ticket) && satIncomplete
 
   // Ticket đã đóng — không thể cập nhật
   if (isClosed) {
@@ -114,6 +122,12 @@ export function UpdateStatusModal({ ticket, onClose }: Props) {
           ))
         )}
 
+        {closeBlockedBySat && (
+          <div className="rounded-xl border border-climateOrange/30 bg-climateOrange/[0.08] px-4 py-3 text-sm text-climateOrange">
+            Chưa thể đóng: checklist nghiệm thu (SAT) chưa đạt đủ 4 mục. Mở chi tiết ticket để hoàn tất SAT trước.
+          </div>
+        )}
+
         <Textarea
           label={needNote ? 'Ghi chú (bắt buộc khi đóng ticket)' : 'Ghi chú (tùy chọn)'}
           value={note}
@@ -127,7 +141,7 @@ export function UpdateStatusModal({ ticket, onClose }: Props) {
           <Button
             onClick={() => mut.mutate()}
             loading={mut.isPending}
-            disabled={(needNote && !note.trim()) || STATUS_OPTIONS.length === 0}
+            disabled={(needNote && !note.trim()) || STATUS_OPTIONS.length === 0 || closeBlockedBySat}
             className="flex-1"
           >
             Xác nhận cập nhật

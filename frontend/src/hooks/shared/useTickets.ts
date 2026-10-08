@@ -121,3 +121,33 @@ export function useEscalateTicket() {
     onSuccess: (_data, { id }) => invalidateTicket(queryClient, id),
   })
 }
+
+/**
+ * Flow 9 case 4a — Technician xin gán lại cho người khác (POST /tickets/:id/reassign-request).
+ * Sau khi gọi, ticket không còn thuộc Technician này nữa nên cả list lẫn detail đều phải tải lại.
+ */
+export function useRequestReassign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      ticketApi.requestReassign(id, reason),
+    onSuccess: (_data, { id }) => invalidateTicket(queryClient, id),
+  })
+}
+
+/**
+ * TICKET-FR-004b + Flow 9 bước 6b — Technician được gán hẹn/dời giờ đến hiện trường
+ * (PUT /tickets/:id/scheduled-date, `reason` bắt buộc). BE trả ticket mới nên ghi thẳng
+ * vào cache detail trước khi invalidate danh sách.
+ */
+export function useScheduleVisit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, scheduledVisitAt, reason }: { id: string; scheduledVisitAt: string; reason: string }) =>
+      ticketApi.updateScheduledDate(id, scheduledVisitAt, reason).then(r => r.data.data),
+    onSuccess: (ticket, { id }) => {
+      queryClient.setQueryData(['tickets', 'detail', id], ticket)
+      invalidateTicket(queryClient, id)
+    },
+  })
+}

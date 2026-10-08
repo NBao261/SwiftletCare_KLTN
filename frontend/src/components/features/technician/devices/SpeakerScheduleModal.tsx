@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react'
 import { useUpdateSpeakerSchedule } from '@/hooks/shared/useDevices'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
-import { Button, Input, Modal, Select, Toggle } from '@/components/ui'
+import { Button, Input, Modal, SelectMenu, Toggle } from '@/components/ui'
 import { MAX_SPEAKER_WINDOWS, hourLabel, validateSpeakerWindows } from '@/validations/common/speakerSchedule.validation'
 import type { SensorNode, SpeakerWindow } from '@/types'
 
@@ -52,15 +52,27 @@ export default function SpeakerScheduleModal({ node, onClose }: { node: SensorNo
 
         {windows.map((w, i) => (
           <div key={i} className="flex items-end gap-2">
-            <div className="flex-1">
-              <Select label={`Khung ${i + 1} — bắt đầu`} value={w.start} disabled={!enabled} onChange={e => setWindow(i, 'start', e.target.value)}>
-                {START_HOURS.map(h => <option key={h} value={h}>{h}</option>)}
-              </Select>
+            <div className="flex flex-1 flex-col gap-1.5">
+              <label className="label-caption">Khung {i + 1} — bắt đầu</label>
+              <SelectMenu
+                field
+                disabled={!enabled}
+                value={w.start}
+                ariaLabel={`Khung ${i + 1} — bắt đầu`}
+                options={START_HOURS.map(h => ({ value: h, label: h }))}
+                onChange={val => setWindow(i, 'start', val)}
+              />
             </div>
-            <div className="flex-1">
-              <Select label="Kết thúc" value={w.end} disabled={!enabled} onChange={e => setWindow(i, 'end', e.target.value)}>
-                {END_HOURS.map(h => <option key={h} value={h}>{h}</option>)}
-              </Select>
+            <div className="flex flex-1 flex-col gap-1.5">
+              <label className="label-caption">Kết thúc</label>
+              <SelectMenu
+                field
+                disabled={!enabled}
+                value={w.end}
+                ariaLabel="Kết thúc"
+                options={END_HOURS.map(h => ({ value: h, label: h }))}
+                onChange={val => setWindow(i, 'end', val)}
+              />
             </div>
             {windows.length > 1 && (
               <Button type="button" variant="secondary" size="sm" disabled={!enabled} onClick={() => setWindows(ws => ws.filter((_, j) => j !== i))}>

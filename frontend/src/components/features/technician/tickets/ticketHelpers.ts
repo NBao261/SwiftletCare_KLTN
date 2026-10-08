@@ -39,6 +39,38 @@ export function assigneeName(assigned: Ticket['assigned_to']): string {
   return typeof assigned === 'object' && assigned ? assigned.full_name : 'Chưa gán'
 }
 
+/** `assigned_to` có thể là id (chưa populate) hoặc object (list/detail đều populate) — luôn trả về id */
+export function ticketAssigneeId(ticket: Pick<Ticket, 'assigned_to'>): string | null {
+  const a = ticket.assigned_to
+  if (!a) return null
+  return typeof a === 'object' ? a._id : a
+}
+
+/**
+ * BE `assertAssignee`: chỉ Technician đang được gán (hoặc Admin) mới đổi trạng thái / SAT /
+ * escalate / hẹn lịch / xin gán lại. Technician khác cùng vùng chỉ xem — ẩn nút thay vì để BE trả 403.
+ */
+export function isTicketAssignee(ticket: Pick<Ticket, 'assigned_to'>, userId: string | undefined): boolean {
+  return Boolean(userId) && ticketAssigneeId(ticket) === userId
+}
+
+/**
+ * Mirror `requiresFieldVisit` của BE (ticket.service.ts): lắp đặt/bảo trì, hoặc ticket sự cố đã có
+ * lịch hẹn xuống hiện trường (Flow 9 bước 6b) → phải nghiệm thu SAT đủ 4 mục trước khi đóng.
+ */
+export function requiresFieldVisit(ticket: Pick<Ticket, 'type' | 'scheduled_visit_at'>): boolean {
+  return ticket.type === 'INSTALLATION' || ticket.type === 'MAINTENANCE' || Boolean(ticket.scheduled_visit_at)
+}
+
+/**
+ * Mirror `scheduleVisit` của BE: lắp đặt/bảo trì hẹn/dời được bất kỳ lúc nào (trừ khi đã đóng);
+ * ticket sự cố chỉ hẹn được sau khi đã tiếp nhận và đang xử lý (IN_PROGRESS) — Flow 9 bước 6b.
+ */
+export function canScheduleVisit(ticket: Pick<Ticket, 'type' | 'status'>): boolean {
+  if (ticket.status === 'CLOSED') return false
+  return ticket.type === 'INSTALLATION' || ticket.type === 'MAINTENANCE' || ticket.status === 'IN_PROGRESS'
+}
+
 /** Trả về mức độ urgent của SLA — dùng để xác định màu sắc hiển thị */
 export type SlaUrgency = 'ok' | 'warning' | 'critical' | 'breached' | 'closed'
 
@@ -66,13 +98,16 @@ export interface SatItem {
   key: keyof TicketSatChecklist
   label: string
   subLabel: string
-  /** Chỉ hiển thị khi thiết bị là CAMERA_NODE */
+  /**
+   * Chỉ hiển thị khi thiết bị là CAMERA_NODE. Hiện KHÔNG mục nào dùng — BE (updateStatus) luôn đòi đủ
+   * 4 mục kể cả `camera_rtsp_ok`, ẩn mục camera với SensorNode sẽ không bao giờ đóng được ticket.
+   */
   cameraOnly?: boolean
 }
 
 export const SAT_ITEMS: SatItem[] = [
   { key: 'modbus_addresses_ok', label: 'Modbus RS485',    subLabel: '5 địa chỉ phản hồi OK' },
-  { key: 'camera_rtsp_ok',      label: 'Camera RTSP',     subLabel: 'Stream ổn định ≥ 30 giây', cameraOnly: true },
+  { key: 'camera_rtsp_ok',      label: 'Camera RTSP',     subLabel: 'Stream ổn định ≥ 30 giây · Không lắp camera: tick = “không áp dụng”' },
   { key: 'lte_connection_ok',   label: 'Kết nối 4G/LTE',  subLabel: 'MQTT broker OK, latency < 200ms' },
   { key: 'relay_test_ok',       label: 'Relay đóng/ngắt', subLabel: 'Tất cả IN1–IN4 đáp ứng lệnh' },
 ]
