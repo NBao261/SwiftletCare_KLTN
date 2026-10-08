@@ -11,6 +11,7 @@ import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { forgotPassword } from '@/services/auth.service'
 import { notifyUser } from '@/services/notification.service'
+import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage, type CoverageRerouteResult } from '@/services/ticket.service'
 import { disconnectUser } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
 import { AppError, NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
@@ -18,6 +19,8 @@ import logger from '@/utils/logger.util'
 import type { Role } from '@/types'
 
 const DUPLICATE_KEY = 11000
+/** Trả đủ id để Admin bấm gán lại, nhưng không bơm cả nghìn id vào 1 response */
+const OPEN_TICKET_IDS_LIMIT = 100
 
 // ── Quản lý tài khoản — AUTH-FR-011, AUTH-FR-012, Flow 19 ──────────────────────
 
@@ -46,6 +49,8 @@ export interface SetUserStatusResult {
   user: IUser
   /** Chỉ có khi khoá Technician còn ticket đang giao — Admin cần gán lại (TICKET-FR-005b) */
   openTickets?: number
+  /** Id của chính các ticket đó, để Admin gán lại được ngay mà không phải tự đi tìm */
+  openTicketIds?: string[]
 }
 
 /**
@@ -88,8 +93,12 @@ export async function setUserStatus(
 
   disconnectUser(userId)
   if (user.role === 'TECHNICIAN') {
+    // Không tự gán lại: tài khoản bị khoá vẫn phụ trách vùng đó, và AUTH-FR-011
+    // giao việc gán lại cho Admin quyết định — ở đây chỉ đưa đủ thông tin.
+    const open = await Ticket.find({ assigned_to: user._id, status: { $ne: 'CLOSED' } })
+      .select('_id').sort({ created_at: 1 }).limit(OPEN_TICKET_IDS_LIMIT).lean()
     const openTickets = await Ticket.countDocuments({ assigned_to: user._id, status: { $ne: 'CLOSED' } })
-    if (openTickets > 0) return { user, openTickets }
+    if (openTickets > 0) return { user, openTickets, openTicketIds: open.map(t => String(t._id)) }
   }
   return { user }
 }
@@ -177,6 +186,11 @@ export async function completeDeletionRequest(
       await logAction(adminId, 'FARM_SOFT_DELETED', 'farm', String(farm._id), {
         reason: 'OWNER_ACCOUNT_DELETED', ownerId: userId,
       })
+      // Farm đã xoá thì không ai mở được ticket của nó nữa (kể cả Admin) nhưng
+      // chúng vẫn tính vào ngưỡng quá tải của Router và báo cáo — đóng hẳn,
+      // giống removeFarm. Gọi cả khi force:true vì đó đúng là trường hợp còn
+      // ticket mở (Flow 19 bước 7c).
+      await closeTicketsOfDeletedFarm(String(farm._id), adminId)
     }
   }
 
@@ -236,6 +250,11 @@ export async function completeDeletionRequest(
 
 // ── Admin tự tạo tài khoản Technician / Sales Staff — AUTH-FR-005c, Flow 16 ────
 
+/** Ticket được điều phối lại kèm theo, để màn hình Admin hiện ngay (TICKET-FR-005b) */
+export interface UpdateTechnicianRegionsResult extends CoverageRerouteResult {
+  technician: IUser
+}
+
 export interface CreateTechnicianInput {
   email: string; password: string; full_name: string; phone?: string; assigned_regions: string[]
 }
@@ -264,7 +283,7 @@ export async function createTechnician(adminId: string, input: CreateTechnicianI
  */
 export async function updateTechnicianRegions(
   adminId: string, technicianId: string, regions: string[],
-): Promise<IUser> {
+): Promise<UpdateTechnicianRegionsResult> {
   const technician = await User.findById(technicianId)
   if (!technician) throw NotFoundError('Không tìm thấy người dùng')
   if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ gán khu vực được cho tài khoản Technician')
@@ -275,7 +294,14 @@ export async function updateTechnicianRegions(
   await technician.save()
 
   await logAction(adminId, 'TECHNICIAN_REGIONS_UPDATED', 'user', technicianId, { before, after })
-  return technician
+
+  // Vùng bị gỡ: ticket đang mở ở đó không còn người xử lý được (họ mất quyền trên
+  // chính ticket của mình) — điều phối lại ngay thay vì để kẹt im lặng.
+  const removedRegions = before.filter(r => !after.includes(r))
+  const reroute = removedRegions.length > 0
+    ? await rerouteTicketsOutOfCoverage({ technicianId }, adminId, 'REGION_UNASSIGNED')
+    : { rerouted: [], unassigned: [] }
+  return { technician, ...reroute }
 }
 
 export interface CreateSalesStaffInput {

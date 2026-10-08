@@ -140,13 +140,18 @@ export async function updateTicketRouting(adminId: string, input: Record<string,
 const PRIORITIES: TicketPriority[] = ['P1', 'P2', 'P3']
 
 export async function getHealthOverview() {
-  const zoneIds = await listActiveZoneIds()
-  const [farmCount, sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
-    Farm.countDocuments({ is_deleted: false }),
+  // Ticket cũng phải bó theo Farm chưa xoá mềm như Farm/Zone/thiết bị: ticket của
+  // farm đã xoá không ai mở hay đóng được nữa (xem closeTicketsOfDeletedFarm), đếm
+  // chúng vào đây là bày ra con số Admin bấm vào không tìm thấy gì.
+  const [activeFarmIds, zoneIds] = await Promise.all([
+    Farm.find({ is_deleted: false }).distinct('_id'),
+    listActiveZoneIds(),
+  ])
+  const [sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
     SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
     CameraNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
     Ticket.aggregate<{ _id: TicketPriority; count: number }>([
-      { $match: { status: { $ne: 'CLOSED' } } },
+      { $match: { status: { $ne: 'CLOSED' }, farm_id: { $in: activeFarmIds } } },
       { $group: { _id: '$priority', count: { $sum: 1 } } },
     ]),
     User.aggregate<{ _id: { role: string | null; is_active: boolean }; count: number }>([
@@ -175,7 +180,7 @@ export async function getHealthOverview() {
   }
 
   return {
-    farms: { total: farmCount },
+    farms: { total: activeFarmIds.length },
     zones: { total: zoneIds.length },
     devices: summarizeByStatus([...sensorStatuses, ...cameraStatuses]),
     openTickets,

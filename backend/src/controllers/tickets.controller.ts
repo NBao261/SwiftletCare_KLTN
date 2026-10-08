@@ -46,6 +46,12 @@ export const reschedule = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: ticket })
 })
 
+/** DELETE /tickets/:id/scheduled-date – Flow 9 bước 6a (xử lý được từ xa, huỷ buổi xuống farm) */
+export const cancelVisit = asyncHandler(async (req: Request, res: Response) => {
+  const ticket = await ticketService.cancelVisit(req.params.id, req.user, req.body.reason as string)
+  res.json({ success: true, data: ticket })
+})
+
 /** POST /tickets/:id/reassign-request – Flow 9 case 4a */
 export const requestReassign = asyncHandler(async (req: Request, res: Response) => {
   const ticket = await ticketService.requestReassign(req.params.id, req.user, req.body.reason as string)

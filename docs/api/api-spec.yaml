@@ -428,8 +428,12 @@ paths:
         Khi khoá: thu hồi mọi refresh token và ngắt các kết nối Socket.io đang
         mở của user (kết nối mới bằng access token còn hạn cũng bị từ chối). Nếu
         user là Technician còn ticket đang giao, response kèm
-        `meta.openTickets` (số ticket chưa đóng) để Admin gán lại bằng
-        `PUT /tickets/{id}/admin-override`.
+        `meta.openTickets` (số ticket chưa đóng) và `meta.openTicketIds` (id của
+        chúng, tối đa 100) để Admin gán lại bằng
+        `PUT /tickets/{id}/admin-override`. Khoá tài khoản KHÔNG tự gán lại
+        ticket: người đó vẫn phụ trách khu vực, việc gán lại là quyết định của
+        Admin (khác với khi gỡ hẳn khu vực — xem
+        `PUT /admin/technicians/{id}/regions`).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -452,7 +456,24 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/User" } }
+                  - properties:
+                      data: { $ref: "#/components/schemas/User" }
+                      meta:
+                        type: object
+                        description: Chỉ có khi việc gỡ khu vực làm ticket phải điều phối lại
+                        properties:
+                          rerouted:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                ticketId: { type: string }
+                                from: { type: string }
+                                to: { type: string }
+                          unassigned:
+                            type: array
+                            description: Ticket về hàng đợi chung vì không còn Technician phù hợp
+                            items: { type: string }
         "400":
           description: "Thiếu reason khi khoá tài khoản, hoặc Admin tự khoá chính mình"
           content:
@@ -583,6 +604,15 @@ paths:
         Thay toàn bộ `assigned_regions` (giá trị được trim + bỏ trùng). Có hiệu
         lực ngay ở request kế tiếp của Technician, không cần đăng nhập lại.
         Lưu ý: phải ghi khớp đúng `farms.region` (VD `HCMC` ≠ `Hồ Chí Minh`).
+
+        Khu vực bị gỡ khỏi danh sách: ticket đang mở ở khu vực đó mà Technician
+        này đang được gán sẽ **tự điều phối lại** — quyền trên ticket đi theo
+        `assigned_regions` nên nếu để nguyên, chính người được gán sẽ bị chặn
+        403 trên việc của mình. Ticket được chuyển cho Technician khác trong
+        khu vực (trả về `NEW` để người mới xác nhận tiếp nhận, lịch hẹn cũ bị
+        huỷ trừ ticket `INSTALLATION`/`MAINTENANCE`), hoặc về hàng đợi chung
+        nếu không còn ai. Response kèm `meta.rerouted`
+        (`[{ticketId, from, to}]`) và `meta.unassigned` (`[ticketId]`).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -992,7 +1022,10 @@ paths:
                           devices: { $ref: "#/components/schemas/DeviceStatusSummary" }
                           openTickets:
                             type: object
-                            description: Ticket chưa CLOSED theo priority
+                            description: >-
+                              Ticket chưa CLOSED theo priority, chỉ tính Farm chưa xoá mềm —
+                              cùng phạm vi với farms/zones/devices ở trên (ticket của Farm đã
+                              xoá được đóng ngay lúc xoá farm nên không còn tồn tại ở đây)
                             properties:
                               total: { type: integer }
                               P1: { type: integer }
@@ -1132,6 +1165,13 @@ paths:
     put:
       tags: [Farms]
       summary: Cập nhật farm (owner/member)
+      description: |
+        `region` chỉ Primary Owner/Admin được đổi (FARM-FR-001) vì nó quyết định
+        Technician nào phụ trách farm và ticket được giao cho ai. Đổi `region`
+        thì ticket đang mở của farm **tự điều phối lại** sang Technician của khu
+        vực mới (hoặc về hàng đợi chung + báo Admin nếu chưa có ai phụ trách khu
+        vực đó) — để nguyên thì người đang được gán bị chặn 403 trên chính
+        ticket của mình.
       requestBody:
         content:
           application/json:
@@ -1140,6 +1180,10 @@ paths:
               properties:
                 name: { type: string }
                 address: { type: string }
+                region:
+                  type: string
+                  description: "Khu vực điều phối, phải khớp đúng `users.assigned_regions` của Technician (VD `HCMC`); chỉ Primary Owner/Admin đổi được"
+
                 coordinates:
                   {
                     type: object,
@@ -1172,6 +1216,14 @@ paths:
     delete:
       tags: [Farms]
       summary: Xóa mềm farm — chỉ Primary Owner
+      description: |
+        Farm chỉ bị ẩn (`is_deleted`), dữ liệu lịch sử giữ nguyên. Kéo theo:
+        mọi cảnh báo đang mở của farm được đóng (`RESOLVED`), và mọi **ticket
+        đang mở cũng bị đóng** kèm `cancelled_at` + ghi chú "farm đã bị xoá",
+        Technician đang giữ ticket được thông báo. Lý do: farm đã xoá thì không
+        ai mở được ticket của nó nữa (kể cả Admin), nhưng nếu để mở, chúng vẫn
+        chiếm suất quá tải của Technician trong Ticket Router và vẫn cộng vào
+        `/system/health-overview` cùng tỉ lệ đúng SLA.
       responses:
         "200":
           {
@@ -2235,6 +2287,11 @@ paths:
         Không xoá document: telemetry/alert cũ tham chiếu `node_id` nên vẫn truy
         vấn được. Thiết bị bị ẩn khỏi danh sách/thống kê, heartbeat/telemetry từ
         `device_id` này bị bỏ qua, lệnh relay/ngưỡng/dời zone trả 409.
+
+        Thiết bị **đang ONLINE/DEGRADED** phải gửi kèm `force: true` (409 nếu
+        thiếu) — gỡ một thiết bị còn sống là mất giám sát cả Zone. Cảnh báo còn mở
+        của nó được đóng theo, ticket liên quan được ghi chú, Farm Owner nhận thông
+        báo, và trong **24 giờ** vẫn khôi phục lại được qua `/restore`.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -2243,7 +2300,9 @@ paths:
             schema:
               type: object
               required: [reason]
-              properties: { reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" } }
+              properties:
+                reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" }
+                force: { type: boolean, description: "Bắt buộc khi thiết bị đang ONLINE/DEGRADED — xác nhận chấp nhận mất giám sát của Zone" }
       responses:
         "200":
           description: "Đã gỡ (decommissioned_at được gán)"
@@ -2255,6 +2314,66 @@ paths:
                   - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /devices/sensor-nodes/{id}/restore:
+    post:
+      tags: [Devices]
+      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
+      description: |
+        Xoá `decommissioned_at` và cờ `activation_overdue_at`, đưa thiết bị về
+        `OFFLINE` — hoặc `PENDING` nếu nó chưa từng gửi heartbeat lần nào (vẫn
+        đang chờ kích hoạt, để job kích hoạt quá hạn tiếp tục theo dõi) và cho nó xuất hiện lại trong danh sách/thống kê. Cảnh báo đã đóng
+        lúc gỡ **không** mở lại — nếu sự cố còn, `deviceOffline.job` sẽ sinh cảnh báo mới.
+
+        Từ chối 409 khi: thiết bị chưa bị gỡ, đã quá 24 giờ, `device_id` đã được đăng
+        ký lại cho bản ghi khác, hoặc thiết bị thay thế vẫn đang hoạt động.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Gỡ nhầm thiết bị" } }
+      responses:
+        "200":
+          description: Đã khôi phục
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/camera-nodes/{id}/restore:
+    post:
+      tags: [Devices]
+      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string } }
+      responses:
+        "200":
+          description: Đã khôi phục
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/CameraNode" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
 
   /devices/sensor-nodes/{id}/replace:
@@ -3380,6 +3499,10 @@ paths:
       tags: [Tickets]
       summary: "Tạo lịch bảo trì định kỳ (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
       description: |
+        Kỳ trước chưa hoàn thành thì **vẫn** sinh ticket kỳ mới (mỗi chu kỳ là một nghĩa vụ
+        riêng) nhưng cả hai ticket được ghi chú rõ và Admin nhận thông báo điều phối.
+        Lịch trùng nội dung đang hoạt động trên cùng farm/zone bị từ chối 409.
+
         Job chạy đầu mỗi giờ, tạo ticket MAINTENANCE trước hạn `MAINTENANCE_LEAD_DAYS`
         ngày (mặc định 3) qua Ticket Router rồi dời hạn sang chu kỳ kế tiếp.
         `next_due_at` chính là giờ hẹn của ticket sinh ra nên phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai.
@@ -3930,9 +4053,10 @@ paths:
       summary: "Technician hẹn/dời giờ đến hiện trường kèm lý do (TICKET-FR-004b, Flow 9 bước 6b) — TECHNICIAN được gán/ADMIN"
       description: |
         - `INSTALLATION`/`MAINTENANCE`: dời lịch có sẵn (Farm Owner chọn lúc tạo / sinh từ lịch bảo trì).
-        - Ticket sự cố/`OTHER`: chỉ hẹn được khi ticket đang `IN_PROGRESS` — Technician đã tiếp nhận
-          và chẩn đoán từ xa (TICKET-FR-008), cần xuống hiện trường thì mới hẹn. Từ lúc có lịch hẹn,
-          đóng ticket phải đủ SAT.
+        - Ticket sự cố/`OTHER`: chỉ hẹn được khi ticket đã tiếp nhận (`IN_PROGRESS` hoặc
+          `AWAITING_FIELD_CONFIRMATION`) — Technician chẩn đoán từ xa trước (TICKET-FR-008),
+          cần xuống hiện trường thì mới hẹn. Từ lúc có lịch hẹn, đóng ticket phải đủ SAT;
+          xử lý được từ xa thì huỷ lịch bằng `DELETE` trên chính endpoint này.
         - Giờ hẹn trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai; ticket đã đóng → 409.
         Ghi note ("Hẹn đến hiện trường…" / "Dời lịch hẹn…") + audit `TICKET_VISIT_SCHEDULED`
         (lần đầu) / `TICKET_RESCHEDULED` (dời); Farm Owner và người tạo ticket nhận thông báo.
@@ -3960,12 +4084,43 @@ paths:
         "403": { description: "Không phải Technician đang được gán", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "409": { description: "Ticket đã đóng, hoặc ticket sự cố chưa được tiếp nhận (chưa IN_PROGRESS)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Tickets]
+      summary: "Huỷ buổi đến hiện trường khi xử lý được từ xa (Flow 9 bước 6a) — TECHNICIAN được gán/ADMIN"
+      description: |
+        Xoá `scheduled_visit_at` nên ticket không còn bị đòi checklist nghiệm thu khi đóng.
+        Chỉ áp dụng cho ticket **sự cố**: `INSTALLATION`/`MAINTENANCE` bắt buộc có buổi đến
+        hiện trường nên chỉ dời được lịch (dùng `PUT`). Ghi note + audit `TICKET_VISIT_CANCELLED`,
+        Farm Owner và người tạo ticket được thông báo.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Reset từ xa là hết lỗi, không cần xuống farm" } }
+      responses:
+        "200":
+          description: Đã huỷ lịch hẹn
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
+        "400": { description: "Ticket lắp đặt/bảo trì — chỉ dời lịch, không huỷ", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Ticket đã đóng hoặc chưa hẹn đến hiện trường", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /tickets/{id}/reassign-request:
     post:
       tags: [Tickets]
       summary: "Technician xin gán lại ticket kèm lý do (Flow 9 case 4a) — TECHNICIAN được gán"
       description: |
+        Lịch hẹn của người cũ bị huỷ theo (Farm Owner được báo) — Technician mới tự hẹn lại.
         Ticket Router chọn Technician khác trong vùng (loại người xin và mọi người
         đã từng bị chuyển khỏi ticket này, bỏ qua người quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại; không còn
         ai → `assigned_to` để trống (hàng đợi chung, `GET /tickets?unassigned=true`)
@@ -4057,6 +4212,9 @@ paths:
     post:
       tags: [Tickets]
       summary: "Farm Owner đánh giá mức hài lòng sau khi đóng ticket (TICKET-FR-011) — FARM_OWNER/ADMIN"
+      description: |
+        Ticket **đã huỷ** không đánh giá được (409) — không có việc nào được thực hiện để chấm điểm.
+        Mỗi ticket chỉ chấm **một lần**; muốn sửa điểm phải qua Admin (để còn ghi audit).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -4132,6 +4290,8 @@ paths:
           quyết định này được ghi `forcedOutOfRegion` vào audit log. `force` chỉ có
           tác dụng khi là boolean `true` (chuỗi `"true"`/`"1"` được ép về `true`,
           `"false"`/`"0"` về `false`).
+        - Đổi `assigned_to` gửi thông báo cho **cả** Technician mới (nhận việc) lẫn người cũ
+          (biết ticket đã chuyển đi); audit ghi `notifiedAssignee`.
         - Đổi `assigned_to` sang người khác mà **không** truyền `status` thì ticket
           quay về `NEW` để người mới xác nhận tiếp nhận; riêng ticket đang `CLOSED`
           bị chặn 409 — muốn mở lại phải nói rõ `status`, tránh ticket vừa `NEW`
@@ -4787,7 +4947,6 @@ components:
             running_version: { type: string }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
-        config_pushed_at: { type: string, format: date-time, nullable: true, description: "Backend đã đẩy ngưỡng của Zone xuống thiết bị (heartbeat đầu tiên)" }
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống; cảnh báo còn mở của nó được đóng theo" }
         decommission_reason: { type: string, nullable: true }
         replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }

@@ -63,8 +63,11 @@ const userSchema = new Schema<IUser>(
     },
     otp_code:      { type: String },
     otp_expires:   { type: Date },
-    password_reset_token_hash: { type: String },
-    password_reset_expires_at: { type: Date },
+    // select: false — cùng lý do với `provisioned_devices.secret_key_hash`: chỉ
+    // luồng đặt lại mật khẩu cần đọc, mọi query khác (kể cả `.lean()` vốn bỏ qua
+    // toJSON) không được mang hash này ra ngoài. resetPassword xin lại bằng `+`.
+    password_reset_token_hash: { type: String, select: false },
+    password_reset_expires_at: { type: Date, select: false },
     deletion_requested_at:     { type: Date },
     deleted_at:                { type: Date },
     refresh_tokens: [{ token: String, expires: Date }],
@@ -90,6 +93,12 @@ userSchema.methods.toJSON = function () {
   delete obj.otp_code
   delete obj.otp_expires
   delete obj.refresh_tokens
+  // Mã OTP và mã đặt lại mật khẩu đều là 6 chữ số hash SHA-256 không salt: dò hết
+  // 900.000 khả năng mất dưới 1 giây, nên để lọt hash ra API coi như để lọt mã.
+  // Ai đọc được response của GET /admin/users là đổi được mật khẩu của user đang
+  // trong 15 phút reset — phải ẩn cùng nhóm với otp_code.
+  delete obj.password_reset_token_hash
+  delete obj.password_reset_expires_at
   return obj
 }
 
