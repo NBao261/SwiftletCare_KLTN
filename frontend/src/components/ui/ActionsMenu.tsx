@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useFloatingMenu } from '@/components/ui/useFloatingMenu'
 import { cn } from '@/lib/cn'
@@ -30,12 +30,11 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
   })
   const [activeIndex, setActiveIndex] = useState(-1)
 
-  // Mỗi lần mở lại, con trỏ bàn phím đứng ở mục đầu tiên còn bấm được. Chỉ phụ
-  // thuộc `open`: `items` được tạo mới mỗi render (columns.tsx build inline) nên
-  // nếu đưa vào deps thì mỗi lần ↑/↓ re-render lại nhảy về mục đầu.
+  // Mỗi lần mở lại, CHƯA có mục nào được tô — nền chỉ hiện khi thật sự hover/di
+  // chuyển bằng bàn phím (Floating Inset Menu, không "dính sẵn" nền xám mục đầu
+  // như bản cũ). Mũi tên ↓ lần đầu sẽ nhảy vào mục bấm-được đầu tiên (xem move()).
   useEffect(() => {
-    if (open) setActiveIndex(items.findIndex(i => !i.disabled))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (open) setActiveIndex(-1)
   }, [open])
 
   function close() {
@@ -74,6 +73,9 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
     else if (e.key === 'Tab') setOpen(false)
   }
 
+  // Không có mục nào thì không hiện nút "..." — tránh mở ra 1 menu rỗng không nội dung
+  if (items.length === 0) return null
+
   return (
     <>
       <button
@@ -85,8 +87,8 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
         aria-expanded={open}
         aria-label="Thao tác khác"
         className={cn(
-          'inline-flex h-8 w-8 items-center justify-center rounded-full text-warmGray transition-colors hover:bg-warmGray/10 hover:text-charcoal',
-          open && 'bg-warmGray/10 text-charcoal',
+          'inline-flex h-8 w-8 items-center justify-center rounded-full text-warmGray transition-all duration-200 ease-in-out hover:bg-charcoal/5 hover:text-charcoal',
+          open && 'bg-charcoal/5 text-charcoal',
         )}
       >
         <IconMore width={18} height={18} />
@@ -97,28 +99,32 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
           ref={menuRef}
           role="menu"
           style={style}
-          className="z-50 w-48 animate-fade-in overflow-hidden rounded-xl border border-warmGray/15 bg-white py-1 shadow-dock"
+          className="z-50 w-48 animate-fade-in space-y-0.5 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-dropdown"
         >
           {items.map((item, index) => {
             const isActive = index === activeIndex
+            // Ngăn cách nhóm thao tác thường với mục nguy hiểm (Xóa) — chỉ khi mục
+            // ngay trước đó KHÔNG phải danger, tránh 2 đường kẻ dính liền nhau.
+            const showDivider = item.danger && index > 0 && !items[index - 1].danger
             return (
-              <button
-                key={item.label}
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                disabled={item.disabled}
-                onMouseEnter={() => { if (!item.disabled) setActiveIndex(index) }}
-                onClick={() => run(index)}
-                className={cn(
-                  'block w-full px-3.5 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:text-warmGray/40',
-                  item.danger
-                    ? cn('text-alertRed', isActive && 'bg-alertRed/10')
-                    : cn('text-charcoal', isActive && 'bg-limeMist'),
-                )}
-              >
-                {item.label}
-              </button>
+              <Fragment key={item.label}>
+                {showDivider && <div className="mx-1.5 my-1 h-px bg-gray-200" />}
+                <button
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  disabled={item.disabled}
+                  onMouseEnter={() => { if (!item.disabled) setActiveIndex(index) }}
+                  onClick={() => run(index)}
+                  className={cn(
+                    'block w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:text-warmGray/40',
+                    item.danger ? 'text-[#A8583B]' : 'text-charcoal',
+                    isActive ? 'bg-gray-100' : 'bg-transparent',
+                  )}
+                >
+                  {item.label}
+                </button>
+              </Fragment>
             )
           })}
         </div>,
