@@ -119,7 +119,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
           // field: cao đúng FIELD_VISIBLE_OPTIONS dòng + padding — vừa khít, không lộ nửa dòng kế tiếp; filter giữ max-h-72 như cũ
           style={field ? { ...style, maxHeight: FIELD_VISIBLE_OPTIONS * OPTION_HEIGHT + MENU_PADDING } : style}
           className={cn(
-            'z-50 animate-fade-in overflow-y-auto overscroll-contain rounded-xl border border-warmGray/15 bg-white py-1 shadow-dock [scrollbar-width:thin]',
+            'z-50 animate-fade-in space-y-0.5 overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 bg-white p-1.5 shadow-dropdown [scrollbar-width:thin]',
             !field && 'max-h-72',
           )}
         >
@@ -135,8 +135,8 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => select(index)}
                 className={cn(
-                  'flex w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-sm transition-colors',
-                  isActive ? 'bg-limeMist text-charcoal' : 'text-charcoal',
+                  'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-charcoal transition-colors duration-150',
+                  isActive ? 'bg-gray-100' : 'bg-transparent',
                   isSelected && 'font-semibold',
                 )}
               >
