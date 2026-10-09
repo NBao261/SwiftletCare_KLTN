@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { marketplaceApi } from '@/apis/farm-owner/marketplace.api'
 import type { CreateListingInput } from '@/apis/farm-owner/marketplace.api'
 import type { ListingStatus } from '@/types'
@@ -39,5 +39,25 @@ export function useListingStats(listingId: string | undefined) {
     queryKey: ['listing-stats', listingId],
     queryFn: () => marketplaceApi.getListingStats(listingId!).then(r => r.data.data),
     enabled: !!listingId,
+  })
+}
+
+/**
+ * MARKET-FR-012 (biến thể) — lượt xem/liên hệ của NHIỀU tin đăng cùng lúc, dùng
+ * cho bảng ListingsTab (mỗi dòng 1 listing). Cùng queryKey ['listing-stats', id]
+ * với `useListingStats` nên chia sẻ cache với ListingPanel (modal chi tiết) —
+ * tránh phải gọi `useListingStats` lặp lại trong từng ô (status/lượt xem/lượt
+ * liên hệ) của cùng 1 dòng bảng.
+ */
+export function useListingStatsMany(listingIds: string[]) {
+  return useQueries({
+    queries: listingIds.map(id => ({
+      queryKey: ['listing-stats', id],
+      queryFn: () => marketplaceApi.getListingStats(id).then(r => r.data.data),
+    })),
+    combine: results => ({
+      isLoading: results.some(r => r.isLoading),
+      statsById: new Map(listingIds.map((id, i) => [id, results[i].data])),
+    }),
   })
 }
