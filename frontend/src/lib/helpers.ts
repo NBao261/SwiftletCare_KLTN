@@ -4,6 +4,12 @@
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 
+/** Chỉ phần ngày/giờ riêng — dùng cho ô bảng 2 tầng (ngày đậm phía trên, giờ xám phía dưới) */
+export const formatDateOnly = (iso: string) =>
+  new Date(iso).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+export const formatTimeOnly = (iso: string) =>
+  new Date(iso).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+
 const RELATIVE = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' })
 const RELATIVE_STEPS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ['second', 60], ['minute', 60], ['hour', 24], ['day', 7], ['week', 4.35], ['month', 12], ['year', Infinity],
