@@ -93,7 +93,10 @@ export default function ListingsTab({ batches, zones, onOpenDetail }: ListingsTa
     return matched.sort((a, b) => (getSortValue(a, sortKey, statsById) - getSortValue(b, sortKey, statsById)) * dir)
   }, [listed, zoneFilter, listingStatusFilter, sortKey, sortDir, statsById])
 
-  const pageRows = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  // Kẹp trang theo số trang còn lại (tin bị lọc ra khi stats tải xong / đổi trạng thái) — cùng lý do HarvestTable
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pageRows = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
   const displayRows = useMemo(() => padRows(pageRows), [pageRows])
   const zoneById = useMemo(() => new Map(zones?.map(z => [z._id, z])), [zones])
 
@@ -220,7 +223,7 @@ export default function ListingsTab({ batches, zones, onOpenDetail }: ListingsTa
         onRowClick={row => { if (!isPlaceholder(row)) onOpenDetail(row) }}
         rowHeight={68}
       />
-      <Pagination page={page} limit={PAGE_SIZE} total={sorted.length} onChange={setPage} variant="numbered" />
+      <Pagination page={safePage} limit={PAGE_SIZE} total={sorted.length} onChange={setPage} variant="numbered" />
     </Card>
   )
 }
