@@ -1,10 +1,10 @@
 import { Alert, IAlert } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
-import { Zone, House } from '@/models/houseZone.model'
+import { Zone } from '@/models/houseZone.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
-import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { applyZoneScope, assertRecordAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError, ForbiddenError, ConflictError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
@@ -138,12 +138,11 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
 
   const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
-  const zone = await Zone.findById(node.zone_id)
-  const house = zone ? await House.findById(zone.house_id) : null
-  if (!zone || !house) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone/House hợp lệ`)
+  const zone = await Zone.findById(node.zone_id).select('farm_id').lean()
+  if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
 
   return createAlert({
-    farmId:      String(house.farm_id),
+    farmId:      String(zone.farm_id),
     zoneId:      String(zone._id),
     nodeId:      String(node._id),
     type,
@@ -195,15 +194,13 @@ export async function raiseThresholdAlert(zoneId: string, nodeId: string, breach
 
   const zone = await Zone.findById(zoneId).lean()
   if (!zone) return
-  const house = await House.findById(zone.house_id).lean()
-  if (!house) return
 
   const detail = breaches
     .map(b => `${METRIC_LABEL[b.metric] ?? b.metric} ${b.value} (${b.direction === 'above' ? 'vượt' : 'dưới'} ngưỡng ${b.limit})`)
     .join(', ')
 
   await createAlert({
-    farmId:   String(house.farm_id),
+    farmId:   String(zone.farm_id),
     zoneId,
     nodeId,
     type:     'THRESHOLD_BREACH',
@@ -239,13 +236,15 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   if (query.zoneId) filter.zone_id = query.zoneId
   if (query.status) filter.status = query.status
   if (query.severity) filter.severity = query.severity
+  // Farm Operator chỉ thấy cảnh báo của Zone trong phạm vi + cảnh báo cấp farm
+  const scoped = await applyZoneScope(filter, user)
 
   const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total, unreadCount] = await Promise.all([
-    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
-    Alert.countDocuments(filter),
-    Alert.countDocuments({ ...filter, status: 'ACTIVE' }),
+    Alert.find(scoped).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+    Alert.countDocuments(scoped),
+    Alert.countDocuments({ ...scoped, status: 'ACTIVE' }),
   ])
 
   return { records, total, page, limit, unreadCount }
@@ -254,12 +253,12 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
 export async function getAlert(alertId: string, user: CurrentUser): Promise<IAlert> {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')
-  await assertFarmAccess(String(alert.farm_id), user)
+  await assertRecordAccess(alert.farm_id, alert.zone_id, user)
   return alert
 }
 
 /**
- * ALERT-FR-009 — Farm Owner xác nhận đã xử lý kèm ghi chú. Ghi chú "Báo động giả"
+ * ALERT-FR-009 — Farm Owner / Farm Operator xác nhận đã xử lý kèm ghi chú. Ghi chú "Báo động giả"
  * được giữ lại làm dữ liệu đánh giá chất lượng model AI sau này (Flow 4 case 9a).
  */
 export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?: string): Promise<IAlert> {
@@ -337,11 +336,9 @@ export async function raiseNodeOfflineAlert(nodeId: string): Promise<void> {
   if (!node || node.status !== 'OFFLINE') return
   const zone = await Zone.findById(node.zone_id).lean()
   if (!zone) return
-  const house = await House.findById(zone.house_id).lean()
-  if (!house) return
 
   await createAlert({
-    farmId:  String(house.farm_id),
+    farmId:  String(zone.farm_id),
     zoneId:  String(zone._id),
     nodeId:  String(node._id),
     type:    'NODE_OFFLINE',

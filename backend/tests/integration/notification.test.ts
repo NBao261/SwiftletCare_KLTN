@@ -32,7 +32,7 @@ afterEach(async () => {
   await User.deleteMany({})
 })
 
-const message = { title: 'Đề xuất đã được duyệt', body: 'Sales Staff đã được gán vào farm.' }
+const message = { title: 'Lịch hẹn kỹ thuật đã thay đổi', body: 'Technician dời lịch hẹn sang ngày mai.' }
 
 describe('notifyUser', () => {
   it('sends push and email by default', async () => {

@@ -33,7 +33,8 @@ export interface IUser extends Document {
    * "đã xoá theo yêu cầu" với "đang bị khoá kỷ luật" (cả hai đều is_active=false).
    */
   deleted_at?: Date
-  refresh_tokens: Array<{ token: string; expires: Date }>
+  /** sha256 của refresh token (như OTP/token reset) — lộ DB cũng không dùng được để lấy access token */
+  refresh_tokens: Array<{ token_hash: string; expires: Date }>
   created_at: Date
   updated_at: Date
   // Methods
@@ -46,7 +47,7 @@ const userSchema = new Schema<IUser>(
     phone:         { type: String, trim: true },
     password_hash: { type: String, required: true },
     full_name:     { type: String, required: true, trim: true },
-    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'TECHNICIAN', 'SALES_STAFF'] satisfies Role[], default: 'FARM_OWNER' },
+    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'FARM_OPERATOR', 'TECHNICIAN'] satisfies Role[], default: 'FARM_OWNER' },
     assigned_regions: [{ type: String }],
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
@@ -67,7 +68,7 @@ const userSchema = new Schema<IUser>(
     password_reset_expires_at: { type: Date },
     deletion_requested_at:     { type: Date },
     deleted_at:                { type: Date },
-    refresh_tokens: [{ token: String, expires: Date }],
+    refresh_tokens: [{ token_hash: String, expires: Date }],
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )

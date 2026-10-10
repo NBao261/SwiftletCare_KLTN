@@ -53,7 +53,7 @@ frontend/
 │   │   ├── Public/          # Trang không cần đăng nhập (Landing, Login...)
 │   │   ├── FarmOwner/       # Dashboard chủ trại
 │   │   ├── Admin/           # Dashboard quản trị hệ thống
-│   │   ├── SalesStaff/      # Dashboard nhân viên sales
+│   │   ├── FarmOperator/    # Màn vận hành của Farm Operator (phạm vi farm/Zone)
 │   │   └── Shared/          # Pages dùng chung nhiều role (Alerts, Tickets...)
 │   │
 │   ├── services/            # Tầng gọi API và kết nối realtime
@@ -128,7 +128,7 @@ frontend/
 | `Public/` | Guest, chưa đăng nhập | Landing, Login, Register |
 | `FarmOwner/` | Chủ trại | Dashboard, Analytics |
 | `Admin/` | Admin hệ thống | AdminNodeStatus |
-| `SalesStaff/` | Nhân viên sales | (tương lai) |
+| `FarmOperator/` | Nhân viên vận hành do Farm Owner mời | (tương lai) |
 | `Shared/` | Nhiều role dùng chung | Alerts, Devices, Farms, Harvest, Tickets, Settings, LiveStream |
 
 **Quy tắc:** Pages chỉ compose. Không viết inline UI logic phức tạp. Kéo data qua hooks.

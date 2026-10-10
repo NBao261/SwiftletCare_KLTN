@@ -17,6 +17,8 @@ import type { Thresholds, CurrentUser } from '@/types'
  * require lại `houseZone.model.ts`) nằm chung file, sẽ tạo circular require khiến
  * `DEFAULT_THRESHOLDS` đọc được `undefined` lúc model đang khởi tạo.
  */
+export const THRESHOLD_HISTORY_LIMIT = 100
+
 export async function applyThresholdUpdate(
   chain: { zone: IZone; house: IHouse; farm: IFarm },
   user: CurrentUser,
@@ -41,6 +43,10 @@ export async function applyThresholdUpdate(
     new_values: params.historyValues,
     source: params.source,
   } as never)
+  // Mảng nhúng trong document zone — giữ bản gần nhất để document không lớn mãi
+  // (audit_logs vẫn giữ đủ lịch sử thay đổi)
+  const overflow = zone.threshold_history.length - THRESHOLD_HISTORY_LIMIT
+  if (overflow > 0) zone.threshold_history.splice(0, overflow)
   await zone.save()
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)

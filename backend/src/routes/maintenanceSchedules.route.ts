@@ -8,7 +8,7 @@ const router = Router()
 router.use(authenticate)
 
 /** TICKET-FR-013 — Admin/Technician lên lịch bảo trì định kỳ theo Farm; Farm Owner chỉ xem */
-router.get('/', requireRole('FARM_OWNER', 'TECHNICIAN', 'ADMIN'), query('farmId').optional().isMongoId(), validate, scheduleController.list)
+router.get('/', requireRole('FARM_OWNER', 'FARM_OPERATOR', 'TECHNICIAN', 'ADMIN'), query('farmId').optional().isMongoId(), validate, scheduleController.list)
 router.post('/', requireRole('TECHNICIAN', 'ADMIN'),
   body('farm_id').isMongoId(), body('zone_id').optional().isMongoId(),
   body('description').isString().trim().isLength({ min: 1, max: 500 }),

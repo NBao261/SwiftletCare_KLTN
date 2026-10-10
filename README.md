@@ -16,7 +16,7 @@ SwiftletCare_KLTN/
 ├── docs/              # Tài liệu kỹ thuật (docs/api/api-spec.yaml = OpenAPI spec)
 ├── docker-compose.yml # Dev environment (MongoDB, EMQX, MinIO, Redis)
 ├── SwiftletCare_SRS.md
-├── SwiftletCare_Components_Guide_v3.3.md
+├── SwiftletCare_Components_Guide_v3.11.md
 ├── SwiftletCare_TASK_DETAIL_Checklist.md
 └── GITHUB_SETUP.md
 ```
@@ -76,7 +76,7 @@ python src/stream.py
 ## Tài liệu
 
 - [SRS](./SwiftletCare_SRS.md) – Software Requirements Specification v1.11.0
-- [Components Guide](./SwiftletCare_Components_Guide_v3.3.md) – BOM & đấu nối phần cứng
+- [Components Guide](./SwiftletCare_Components_Guide_v3.11.md) – BOM & đấu nối phần cứng
 - [Task Checklist](./SwiftletCare_TASK_DETAIL_Checklist.md) – Việc theo sprint, đánh dấu tiến độ
 - [GITHUB_SETUP](./GITHUB_SETUP.md) – Git workflow cho team
 - [API Docs](./docs/api/README.md) – OpenAPI spec (`docs/api/api-spec.yaml`) + Swagger UI
