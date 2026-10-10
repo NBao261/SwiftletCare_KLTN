@@ -1,5 +1,5 @@
 import { Card } from '@/components/ui'
-import { formatDate } from '@/lib/helpers'
+import { formatDate, vnYearMonth } from '@/lib/helpers'
 import type { HarvestBatch } from '@/types'
 
 interface HarvestStatsCardsProps {
@@ -8,10 +8,10 @@ interface HarvestStatsCardsProps {
 
 /** HarvestStatsCards – 3 chỉ số tính trực tiếp từ danh sách Harvest Batch đã fetch, không số liệu giả */
 export default function HarvestStatsCards({ batches }: HarvestStatsCardsProps) {
-  const now = new Date()
+  const now = vnYearMonth(new Date())
   const thisMonthBatches = batches.filter(b => {
-    const d = new Date(b.harvest_date)
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    const d = vnYearMonth(b.harvest_date)
+    return d.month === now.month && d.year === now.year
   })
   const monthKg = thisMonthBatches.reduce((sum, b) => sum + b.weight_grams, 0) / 1000
 
@@ -24,7 +24,7 @@ export default function HarvestStatsCards({ batches }: HarvestStatsCardsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <Card className="flex flex-col gap-1">
-        <p className="label-caption">Sản lượng tháng {now.getMonth() + 1}/{now.getFullYear()}</p>
+        <p className="label-caption">Sản lượng tháng {now.month}/{now.year}</p>
         <p className="leading-none">
           <span className="text-3xl font-extrabold tracking-tight text-charcoal">{monthKg.toFixed(2)}</span>
           <span className="ml-2 text-sm font-medium text-warmGray">kg</span>
