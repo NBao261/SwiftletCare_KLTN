@@ -2585,7 +2585,7 @@ paths:
     put:
       tags: [Alerts]
       summary: Xác nhận cảnh báo (ALERT-FR-009)
-      description: Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả").
+      description: Chỉ `FARM_OWNER`/`TECHNICIAN` (Admin chỉ xem cảnh báo → 403, vì xác nhận thay sẽ chặn việc tự tạo ticket TICKET-FR-002). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả").
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
