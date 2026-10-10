@@ -41,10 +41,14 @@ export default function TechnicianTicketsPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal">{isQueueActive ? 'Hàng đợi chung' : 'Ticket của tôi'}</h1>
-          <p className="mt-0.5 text-sm text-warmGray">
-            {isQueueActive ? 'Ticket chưa được gán trong khu vực của bạn — chỉ xem, Admin sẽ phân công' : 'Quản lý và xử lý các ticket được gán'}
-          </p>
+          {isQueueActive && (
+            <>
+              <h1 className="text-2xl font-bold text-charcoal">Hàng đợi chung</h1>
+              <p className="mt-0.5 text-sm text-warmGray">
+                Ticket chưa được gán trong khu vực của bạn — chỉ xem, Admin sẽ phân công
+              </p>
+            </>
+          )}
         </div>
         <span className="rounded-full bg-graphite/10 px-3 py-1 text-sm font-semibold text-charcoal">
           {total} ticket
