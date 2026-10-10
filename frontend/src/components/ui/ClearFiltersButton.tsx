@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/Button'
+import { IconX } from '@/components/ui/icons'
 
 /**
  * Nút "Hủy lọc" cuối hàng bộ lọc các trang Admin (Người dùng, Trang trại, Ticket, Audit log) — Secondary
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 export default function ClearFiltersButton({ onClick, label = 'Hủy lọc' }: { onClick: () => void; label?: string }) {
   return (
     <Button variant="secondary" size="sm" className="h-8 px-3.5 text-xs" onClick={onClick}>
+      <IconX width={14} height={14} />
       {label}
     </Button>
   )

@@ -1,39 +1,116 @@
 // Harvest & Marketplace Page (Farm Owner) – MARKET-FR-001..013 (trừ Buyer công khai)
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { useZoneStore } from "@/stores/zoneStore";
-import { useFarmZones } from "@/hooks/shared/useFarms";
-import { useHarvests, useDeleteHarvest } from "@/hooks/farm-owner/useHarvests";
-import { Button, Card, Badge } from "@/components/ui";
-import EmptyState from "@/components/ui/EmptyState";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import ConfirmModal from "@/components/ui/ConfirmModal";
-import { IconHarvest } from "@/components/ui/icons";
-import { useToastStore } from "@/stores/toastStore";
-import { formatDate, getApiErrorMessage } from "@/lib/helpers";
-import {
-  NEST_TYPE_LABEL,
-  HARVEST_STATUS_TONE,
-  HARVEST_STATUS_LABEL,
-} from "@/components/features/farm-owner/harvest/harvest.constants";
-import TraceCodeRow from "@/components/features/farm-owner/harvest/TraceCodeRow";
-import SnapshotSection from "@/components/features/farm-owner/harvest/SnapshotSection";
-import ListingPanel from "@/components/features/farm-owner/harvest/ListingPanel";
-import CreateHarvestModal from "@/components/features/farm-owner/harvest/CreateHarvestModal";
-import EditHarvestModal from "@/components/features/farm-owner/harvest/EditHarvestModal";
-import CreateListingModal from "@/components/features/farm-owner/harvest/CreateListingModal";
-import type { HarvestBatch } from "@/types";
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useZoneStore } from '@/stores/zoneStore'
+import { useFarmZones } from '@/hooks/shared/useFarms'
+import { useHarvests, useDeleteHarvest } from '@/hooks/farm-owner/useHarvests'
+import { Button } from '@/components/ui'
+import ConfirmModal from '@/components/ui/ConfirmModal'
+import EmptyState from '@/components/ui/EmptyState'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import { useToastStore } from '@/stores/toastStore'
+import { formatDateOnly, getApiErrorMessage } from '@/lib/helpers'
+import { cn } from '@/lib/cn'
+import HarvestStatsCards from '@/components/features/farm-owner/harvest/HarvestStatsCards'
+import HarvestTable from '@/components/features/farm-owner/harvest/HarvestTable'
+import HarvestYearChart from '@/components/features/farm-owner/harvest/HarvestYearChart'
+import ListingsTab from '@/components/features/farm-owner/harvest/ListingsTab'
+import HarvestDetailModal from '@/components/features/farm-owner/harvest/HarvestDetailModal'
+import CreateHarvestModal from '@/components/features/farm-owner/harvest/CreateHarvestModal'
+import EditHarvestModal from '@/components/features/farm-owner/harvest/EditHarvestModal'
+import CreateListingModal from '@/components/features/farm-owner/harvest/CreateListingModal'
+import { NEST_TYPE_LABEL, HARVEST_STATUS_LABEL } from '@/components/features/farm-owner/harvest/harvest.constants'
+import type { HarvestBatch } from '@/types'
+
+const SECTIONS = [
+  { id: 'section-harvest', label: 'Đợt thu hoạch' },
+  { id: 'section-marketplace', label: 'Tin đăng bán' },
+  { id: 'section-analytics', label: 'Biểu đồ & Thống kê' },
+] as const
+
+function exportCsv(batches: HarvestBatch[], zoneNameById: Map<string, string>) {
+  const header = ['Ngày thu hoạch', 'Khu vực', 'Loại tổ', 'Số tổ', 'Khối lượng (g)', 'Trạng thái']
+  const rows = batches.map(b => [
+    formatDateOnly(b.harvest_date),
+    zoneNameById.get(b.zone_id) ?? '',
+    NEST_TYPE_LABEL[b.nest_type],
+    String(b.nest_count),
+    String(b.weight_grams),
+    HARVEST_STATUS_LABEL[b.status],
+  ])
+  const csv = [header, ...rows].map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob([String.fromCharCode(0xfeff) + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `thu-hoach-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 export default function FarmOwnerHarvestPage() {
-  const { selectedFarmId, selectedFarmName } = useZoneStore();
-  const { data: batches, isLoading } = useHarvests(selectedFarmId ?? undefined);
-  const { data: zones } = useFarmZones(selectedFarmId ?? undefined);
-  const [showCreate, setShowCreate] = useState(false);
+  const { selectedFarmId } = useZoneStore()
+  const { data: batches, isLoading, isError, refetch } = useHarvests(selectedFarmId ?? undefined)
+  const { data: zones } = useFarmZones(selectedFarmId ?? undefined)
+  const deleteHarvest = useDeleteHarvest(selectedFarmId ?? undefined)
+  const push = useToastStore(s => s.push)
+
+  const [showCreate, setShowCreate] = useState(false)
+  const [detailBatchId, setDetailBatchId] = useState<string | null>(null)
+  const [editBatchId, setEditBatchId] = useState<string | null>(null)
+  const [listingBatchId, setListingBatchId] = useState<string | null>(null)
+  const [deleteBatchId, setDeleteBatchId] = useState<string | null>(null)
+
+  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id)
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  // 3 section chỉ được render sau khi qua 2 nhánh return sớm (chưa chọn farm /
+  // đang tải / lỗi) — effect phải chạy lại khi chúng thật sự có mặt, nếu không
+  // lần mở đầu (chưa có cache) mọi ref còn null và scrollspy không gắn gì cả.
+  const sectionsMounted = !!selectedFarmId && !isLoading && !isError
+
+  // Scrollspy: section nào nằm ở dải giữa màn hình (35%-65%) nhiều nhất thì tab
+  // tương ứng sáng lên.
+  useEffect(() => {
+    if (!sectionsMounted) return
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
+        if (visible[0]) setActiveSection(visible[0].target.id)
+      },
+      { rootMargin: '-35% 0px -35% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] },
+    )
+    SECTIONS.forEach(s => {
+      const el = sectionRefs.current[s.id]
+      if (el) observer.observe(el)
+    })
+
+    // Section cuối (biểu đồ) có thể thấp hơn vùng quan sát 45% phía trên nên
+    // IntersectionObserver không bao giờ kích hoạt nó — cuộn chạm đáy khung cuộn
+    // (<main> của AppShell) thì ép active luôn section cuối cùng.
+    const scrollEl = sectionRefs.current[SECTIONS[0].id]?.closest('main')
+    function handleScroll() {
+      if (!scrollEl) return
+      if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 4) {
+        setActiveSection(SECTIONS[SECTIONS.length - 1].id)
+      }
+    }
+    scrollEl?.addEventListener('scroll', handleScroll, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      scrollEl?.removeEventListener('scroll', handleScroll)
+    }
+  }, [sectionsMounted])
+
+  function scrollToSection(id: string) {
+    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const zoneNameById = useMemo(
-    () => new Map(zones?.map((z) => [z._id, `${z.houseName} / ${z.name}`])),
+    () => new Map(zones?.map(z => [z._id, `${z.houseName} / ${z.name}`])),
     [zones],
-  );
+  )
 
   if (!selectedFarmId) {
     return (
@@ -46,167 +123,123 @@ export default function FarmOwnerHarvestPage() {
           </Link>
         }
       />
-    );
+    )
+  }
+
+  if (isLoading) {
+    return <LoadingSkeleton count={3} className="h-28 w-full" />
+  }
+
+  if (isError) {
+    return (
+      <EmptyState
+        title="Không tải được nhật ký thu hoạch"
+        description="Kiểm tra kết nối tới máy chủ rồi thử lại."
+        action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+      />
+    )
+  }
+
+  const allBatches = batches ?? []
+  const findBatch = (id: string | null) => (id ? allBatches.find(b => b._id === id) ?? null : null)
+  const detailBatch = findBatch(detailBatchId)
+  const editBatch = findBatch(editBatchId)
+  const listingBatch = findBatch(listingBatchId)
+
+  function handleDelete() {
+    if (!deleteBatchId) return
+    deleteHarvest.mutate(deleteBatchId, {
+      onSuccess: () => { push('Đã xoá đợt thu hoạch'); setDeleteBatchId(null); setDetailBatchId(null) },
+      onError: (err) => push(getApiErrorMessage(err, 'Xoá thất bại'), 'error'),
+    })
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="label-caption">Trang trại</p>
-          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">
-            {selectedFarmName}
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal">Nhật ký thu hoạch tổ yến</h1>
+          <p className="mt-1 text-sm text-warmGray">Theo dõi sản lượng, phân hạng và truy xuất nguồn gốc</p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>+ Tạo đợt thu hoạch</Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="secondary" onClick={() => exportCsv(allBatches, zoneNameById)} disabled={allBatches.length === 0}>
+            Xuất dữ liệu
+          </Button>
+          <Button onClick={() => setShowCreate(true)}>+ Ghi đợt thu hoạch</Button>
+        </div>
       </div>
 
-      {isLoading && <LoadingSkeleton count={2} className="h-32 w-full" />}
+      <HarvestStatsCards batches={allBatches} />
 
-      {!isLoading && batches?.length === 0 && (
-        <EmptyState
-          icon={<IconHarvest width={28} height={28} />}
-          title="Chưa có đợt thu hoạch nào"
-          description="Ghi nhận đợt thu hoạch đầu tiên để hệ thống tự gắn dữ liệu môi trường/đàn chim làm truy xuất nguồn gốc."
-          action={
-            <Button onClick={() => setShowCreate(true)}>
-              + Tạo đợt thu hoạch
-            </Button>
-          }
-        />
-      )}
-
-      <div className="flex flex-col gap-3">
-        {batches?.map((batch) => (
-          <HarvestCard
-            key={batch._id}
-            batch={batch}
-            farmId={selectedFarmId}
-            zoneLabel={zoneNameById.get(batch.zone_id) ?? "—"}
-          />
+      <div className="sticky top-0 z-10 -my-3 flex flex-wrap gap-2 rounded-2xl border border-warmGray/15 bg-white/80 p-[15px] shadow-card backdrop-blur-md">
+        {SECTIONS.map(s => (
+          <button
+            key={s.id}
+            type="button"
+            aria-current={activeSection === s.id}
+            onClick={() => scrollToSection(s.id)}
+            className={cn(
+              'rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+              activeSection === s.id ? 'bg-charcoal text-white' : 'bg-warmGray/10 text-charcoal hover:bg-warmGray/20',
+            )}
+          >
+            {s.label}
+            {s.id === 'section-marketplace' && ` (${allBatches.filter(b => b.status === 'LISTED').length})`}
+          </button>
         ))}
       </div>
 
-      <CreateHarvestModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        farmId={selectedFarmId}
-      />
-    </div>
-  );
-}
+      <div id="section-harvest" ref={el => { sectionRefs.current['section-harvest'] = el }} className="scroll-mt-20">
+        <HarvestTable
+          batches={allBatches}
+          zones={zones}
+          zoneNameById={zoneNameById}
+          onOpenDetail={batch => setDetailBatchId(batch._id)}
+          onEdit={batch => setEditBatchId(batch._id)}
+          onDelete={batch => setDeleteBatchId(batch._id)}
+          onCreateListing={batch => setListingBatchId(batch._id)}
+        />
+      </div>
 
-// ── Thẻ 1 Harvest Batch (accordion) ──────────────────────────────────────────
+      <div id="section-marketplace" ref={el => { sectionRefs.current['section-marketplace'] = el }} className="scroll-mt-20">
+        <ListingsTab batches={allBatches} zones={zones} onOpenDetail={batch => setDetailBatchId(batch._id)} />
+      </div>
 
-function HarvestCard({
-  batch,
-  farmId,
-  zoneLabel,
-}: {
-  batch: HarvestBatch;
-  farmId: string;
-  zoneLabel: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [showListingCreate, setShowListingCreate] = useState(false);
-  const deleteHarvest = useDeleteHarvest(farmId);
-  const push = useToastStore((s) => s.push);
+      <div id="section-analytics" ref={el => { sectionRefs.current['section-analytics'] = el }} className="scroll-mt-20">
+        <HarvestYearChart batches={allBatches} />
+      </div>
 
-  function handleDelete() {
-    deleteHarvest.mutate(batch._id, {
-      onSuccess: () => {
-        push("Đã xoá đợt thu hoạch");
-        setShowDelete(false);
-      },
-      onError: (err) => push(getApiErrorMessage(err, "Xoá thất bại"), "error"),
-    });
-  }
+      <CreateHarvestModal open={showCreate} onClose={() => setShowCreate(false)} farmId={selectedFarmId} />
 
-  return (
-    <Card>
-      <button
-        className="flex w-full items-start justify-between gap-3 text-left"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-charcoal">
-              {formatDate(batch.harvest_date)}
-            </p>
-            <Badge tone={HARVEST_STATUS_TONE[batch.status]}>
-              {HARVEST_STATUS_LABEL[batch.status]}
-            </Badge>
-          </div>
-          <p className="mt-1 text-sm text-warmGray">
-            {zoneLabel} · {batch.nest_count} tổ · {batch.weight_grams}g ·{" "}
-            {NEST_TYPE_LABEL[batch.nest_type]}
-          </p>
-        </div>
-        <span className="shrink-0 text-sm font-semibold text-charcoal">
-          {expanded ? "Thu gọn" : "Chi tiết"}
-        </span>
-      </button>
-
-      {expanded && (
-        <div className="mt-4 flex flex-col gap-4 border-t border-warmGray/10 pt-4">
-          <TraceCodeRow traceCode={batch.trace_code} />
-          <SnapshotSection batch={batch} />
-
-          {batch.status === "DRAFT" && (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowEdit(true)}
-              >
-                Sửa
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setShowDelete(true)}
-              >
-                Xóa
-              </Button>
-              <Button
-                variant="accent"
-                size="sm"
-                onClick={() => setShowListingCreate(true)}
-              >
-                Đăng bán
-              </Button>
-            </div>
-          )}
-
-          {batch.status === "LISTED" && batch.listing_id && (
-            <ListingPanel farmId={farmId} listingId={batch.listing_id} />
-          )}
-        </div>
+      {detailBatch && (
+        <HarvestDetailModal
+          batch={detailBatch}
+          farmId={selectedFarmId}
+          zoneLabel={zoneNameById.get(detailBatch.zone_id) ?? '—'}
+          onClose={() => setDetailBatchId(null)}
+          onEdit={batch => { setDetailBatchId(null); setEditBatchId(batch._id) }}
+          onDelete={batch => setDeleteBatchId(batch._id)}
+          onCreateListing={batch => { setDetailBatchId(null); setListingBatchId(batch._id) }}
+        />
       )}
 
-      <EditHarvestModal
-        open={showEdit}
-        onClose={() => setShowEdit(false)}
-        batch={batch}
-        farmId={farmId}
-      />
+      {editBatch && (
+        <EditHarvestModal open onClose={() => setEditBatchId(null)} batch={editBatch} farmId={selectedFarmId} />
+      )}
+
+      {listingBatch && (
+        <CreateListingModal open onClose={() => setListingBatchId(null)} batch={listingBatch} farmId={selectedFarmId} />
+      )}
+
       <ConfirmModal
-        open={showDelete}
+        open={!!deleteBatchId}
         title="Xóa đợt thu hoạch?"
         danger
         description="Chỉ xóa được khi chưa đăng bán. Hành động này không thể hoàn tác."
         loading={deleteHarvest.isPending}
         onConfirm={handleDelete}
-        onCancel={() => setShowDelete(false)}
+        onCancel={() => setDeleteBatchId(null)}
       />
-      <CreateListingModal
-        open={showListingCreate}
-        onClose={() => setShowListingCreate(false)}
-        batch={batch}
-        farmId={farmId}
-      />
-    </Card>
-  );
+    </div>
+  )
 }
