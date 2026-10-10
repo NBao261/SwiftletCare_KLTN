@@ -31,7 +31,7 @@ export function formatSlaCountdown(ticket: Ticket): { text: string; breached: bo
   const abs = Math.abs(diff)
   const h = Math.floor(abs / 3_600_000)
   const m = Math.floor((abs % 3_600_000) / 60_000)
-  const text = breached ? `+${h}h ${m}m vi phạm` : `Còn ${h}h ${m}m`
+  const text = breached ? `Trễ ${h}h ${m}m` : `Còn ${h}h ${m}m`
   return { text, breached }
 }
 
