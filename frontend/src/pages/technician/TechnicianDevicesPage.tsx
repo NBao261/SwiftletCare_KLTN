@@ -2,14 +2,14 @@ import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useZoneStore } from "@/stores/zoneStore";
 import { usePermission } from "@/hooks/common/usePermission";
-import { useSensorNodes, useClearRelayOverride } from "@/hooks/shared/useDevices";
+import { useSensorNodes } from "@/hooks/shared/useDevices";
 import { deviceApi } from "@/apis/shared/devices.api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Input, Modal, Card, Badge } from "@/components/ui";
-import { IconDevice } from "@/components/ui/icons";
-import StatusDot from "@/components/common/StatusDot";
-import RelayToggle from "@/components/features/technician/devices/RelayToggle";
+import { Button, Input, Modal } from "@/components/ui";
 import EmptyState from "@/components/ui/EmptyState";
+import SystemHealthBar from "@/components/features/technician/devices/SystemHealthBar";
+import DeviceFilterToolbar from "@/components/features/technician/devices/DeviceFilterToolbar";
+import DeviceListRow from "@/components/features/technician/devices/DeviceListRow";
 import FarmHouseZonePicker, {
   FarmHouseZonePickerValue,
 } from "@/components/features/technician/devices/FarmHouseZonePicker";
@@ -21,16 +21,7 @@ import ReplaceDeviceModal from "@/components/features/technician/devices/Replace
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
-
-const timeLabel = (iso: string) =>
-  new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-
-const RELAY_LABELS = {
-  misting: "Phun sương",
-  speaker: "Loa ru",
-  ventilation: "Quạt thông gió",
-  heating: "Sưởi",
-} as const;
+import { useTelemetry } from "@/hooks/farm-owner/useTelemetry";
 
 /** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018 */
 export default function TechnicianDevicesPage() {
@@ -44,6 +35,7 @@ export default function TechnicianDevicesPage() {
   const { data: nodes, isLoading } = useSensorNodes(
     selectedZoneId ?? undefined,
   );
+  const telemetry = useTelemetry(selectedZoneId ?? undefined);
   const queryClient = useQueryClient();
   const push = useToastStore((s) => s.push);
 
@@ -52,6 +44,27 @@ export default function TechnicianDevicesPage() {
   const [secretKey, setSecretKey] = useState("");
   const [registering, setRegistering] = useState(false);
   const [showThresholds, setShowThresholds] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  const filteredNodes = nodes?.filter(node => {
+    const searchLower = searchQuery.toLowerCase();
+    const matchSearch = !searchQuery || 
+      node.device_id.toLowerCase().includes(searchLower) ||
+      (node.mac_address && node.mac_address.toLowerCase().includes(searchLower)) ||
+      (node.ip_address && node.ip_address.toLowerCase().includes(searchLower));
+
+    let matchStatus = true;
+    if (statusFilter !== "ALL") {
+      if (statusFilter === "WARNING") {
+        matchStatus = node.control_mode === "MANUAL" || !!node.ota_failed;
+      } else {
+        matchStatus = node.status === statusFilter;
+      }
+    }
+    return matchSearch && matchStatus;
+  });
 
   const [reassignNodeId, setReassignNodeId] = useState<string | null>(null);
   const [reassignTarget, setReassignTarget] = useState<
@@ -69,7 +82,8 @@ export default function TechnicianDevicesPage() {
   const [replaceNodeId, setReplaceNodeId] = useState<string | null>(null);
   const decommissionNode = nodes?.find((n) => n._id === decommissionNodeId) ?? null;
   const replaceNode = nodes?.find((n) => n._id === replaceNodeId) ?? null;
-  const clearOverride = useClearRelayOverride();
+
+  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
 
   if (!selectedZoneId) {
     return (
@@ -128,14 +142,8 @@ export default function TechnicianDevicesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="label-caption">Khu vực đang xem</p>
-          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">
-            {selectedZoneName}
-          </p>
-        </div>
+    <div className="flex flex-col gap-6 h-[calc(100vh-80px)] relative overflow-hidden">
+      <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
         <div className="flex flex-wrap items-center gap-2">
           {canEditThresholds && (
             <Button
@@ -152,6 +160,8 @@ export default function TechnicianDevicesPage() {
           )}
         </div>
       </div>
+
+      <div className="flex-1 overflow-y-auto pb-10 pr-2">
 
       {isLoading && <LoadingSkeleton count={2} className="h-40 w-full" />}
 
@@ -173,138 +183,47 @@ export default function TechnicianDevicesPage() {
         />
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {nodes?.map((node) => (
-          <Card key={node._id} className="transition-shadow hover:shadow-dock">
-            <div className="flex items-start justify-between gap-3 pb-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warmGray/10 text-charcoal">
-                  <IconDevice />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-charcoal">
-                    {node.device_id}
-                  </p>
-                  <p className="truncate text-xs text-warmGray">
-                    Firmware {node.firmware_version} · RSSI {node.rssi ?? "--"}{" "}
-                    dBm
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1.5">
-                <StatusDot status={node.status} />
-                <Badge
-                  tone={node.control_mode === "MANUAL" ? "warning" : "neutral"}
-                >
-                  {node.control_mode === "MANUAL" ? "Thủ công" : "Tự động"}
-                </Badge>
-              </div>
+      {!isLoading && nodes?.length > 0 && (
+        <div className="flex flex-col mb-4 animate-fade-in">
+          <SystemHealthBar nodes={nodes} />
+          <DeviceFilterToolbar 
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+          />
+        </div>
+      )}
+
+      <div className="flex flex-col pb-8">
+        <div className="bg-white border border-warmGray/15 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+          {filteredNodes?.map((node) => (
+            <DeviceListRow 
+              key={node._id} 
+              node={node}
+              zoneId={selectedZoneId!}
+              isExpanded={expandedNodeId === node._id}
+              onToggleExpand={() => setExpandedNodeId(prev => prev === node._id ? null : node._id)}
+              onOpenSchedule={() => setScheduleNodeId(node._id)}
+              onOpenAudio={() => setAudioNodeId(node._id)}
+              onOpenReassign={() => setReassignNodeId(node._id)}
+              onOpenReplace={() => setReplaceNodeId(node._id)}
+              onOpenDecommission={() => setDecommissionNodeId(node._id)}
+              canOnboard={canOnboard}
+              onPing={() => push(`Đang gửi gói tin ping ICMP tới ${node.device_id}...`, "success")}
+              onReboot={() => {
+                deviceApi.sendCommand(node._id, { command: "RESTART" })
+                  .then(() => push(`Đã gửi lệnh Reboot tới ${node.device_id}`))
+                  .catch(err => push(getApiErrorMessage(err, "Reboot thất bại"), "error"));
+              }}
+            />
+          ))}
+          {filteredNodes?.length === 0 && !isLoading && nodes?.length > 0 && (
+            <div className="text-center p-8 text-warmGray">
+              Không tìm thấy thiết bị nào khớp với bộ lọc.
             </div>
-
-            {node.status === "PENDING" ? (
-              <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
-                Thiết bị đã khai báo nhưng chưa kết nối lần nào — cấp nguồn và
-                cấu hình WiFi để hoàn tất. Điều khiển relay sẽ bật khi thiết bị
-                online.
-              </p>
-            ) : (
-              <div className="divide-y divide-warmGray/10 border-t border-warmGray/10">
-                {node.control_mode === "MANUAL" && (
-                  <div className="flex items-center justify-between gap-3 py-2.5">
-                    <span className="text-xs font-medium text-climateOrange">
-                      Đang điều khiển thủ công
-                      {node.override_expiry
-                        ? ` — tự về tự động lúc ${timeLabel(node.override_expiry)}`
-                        : ""}
-                    </span>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      loading={
-                        clearOverride.isPending &&
-                        clearOverride.variables === node._id
-                      }
-                      onClick={() =>
-                        clearOverride.mutate(node._id, {
-                          onSuccess: () => push("Đã trả thiết bị về chế độ tự động"),
-                          onError: (err) =>
-                            push(
-                              getApiErrorMessage(err, "Không trả về tự động được"),
-                              "error",
-                            ),
-                        })
-                      }
-                    >
-                      Về tự động
-                    </Button>
-                  </div>
-                )}
-                {(
-                  Object.keys(RELAY_LABELS) as Array<keyof typeof RELAY_LABELS>
-                ).map((relayName) => (
-                  <RelayToggle
-                    key={relayName}
-                    nodeId={node._id}
-                    relayName={relayName}
-                    label={RELAY_LABELS[relayName]}
-                    checked={node.relay_states[relayName]}
-                    mode={node.control_mode}
-                  />
-                ))}
-              </div>
-            )}
-
-            {(node.status !== "PENDING" || canOnboard) && (
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-warmGray/10 pt-3">
-                {node.status !== "PENDING" && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setScheduleNodeId(node._id)}
-                    >
-                      Lịch loa ru
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setAudioNodeId(node._id)}
-                    >
-                      File loa ru
-                    </Button>
-                  </>
-                )}
-                {canOnboard && node.status === "ONLINE" && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setReassignNodeId(node._id)}
-                  >
-                    Dời sang Zone khác
-                  </Button>
-                )}
-                {canOnboard && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setReplaceNodeId(node._id)}
-                    >
-                      Thay thiết bị
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setDecommissionNodeId(node._id)}
-                    >
-                      Gỡ thiết bị
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-          </Card>
-        ))}
+          )}
+        </div>
       </div>
 
       <Modal
@@ -404,6 +323,8 @@ export default function TechnicianDevicesPage() {
           onClose={() => setShowThresholds(false)}
         />
       )}
+
+      </div>
     </div>
   );
 }
