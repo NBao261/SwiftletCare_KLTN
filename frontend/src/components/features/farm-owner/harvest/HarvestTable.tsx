@@ -87,7 +87,8 @@ export default function HarvestTable({
       if (zoneFilter && b.zone_id !== zoneFilter) return false
       if (statusFilter && b.status !== statusFilter) return false
       if (nestTypeFilter && b.nest_type !== nestTypeFilter) return false
-      if (q && !b.trace_code.toLowerCase().includes(q) && !(zoneNameById.get(b.zone_id) ?? '').toLowerCase().includes(q)) return false
+      // Không tìm theo trace_code: mã đã bị ẩn khỏi UI, dò từng ký tự rồi xem có dòng khớp sẽ lộ mã gián tiếp
+      if (q && !(zoneNameById.get(b.zone_id) ?? '').toLowerCase().includes(q)) return false
       return true
     })
     const dir = sortDir === 'asc' ? 1 : -1
@@ -95,7 +96,11 @@ export default function HarvestTable({
     return matched.sort((a, b) => (value(a) - value(b)) * dir)
   }, [batches, zoneFilter, statusFilter, nestTypeFilter, search, zoneNameById, sortKey, sortDir])
 
-  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  // Kẹp trang theo số trang còn lại — xoá bản ghi cuối của trang cuối (refetch) không
+  // làm bảng rơi vào trang không tồn tại rồi hiện rỗng dù trang trước vẫn có dữ liệu.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
   const displayRows = useMemo(() => padRows(pageRows), [pageRows])
   const zoneById = useMemo(() => new Map(zones?.map(z => [z._id, z])), [zones])
 
@@ -182,7 +187,7 @@ export default function HarvestTable({
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-[200px] flex-1">
-          <SearchInput placeholder="Mã truy xuất, khu vực..." value={search} onChange={v => { setSearch(v); setPage(1) }} />
+          <SearchInput placeholder="Tìm theo khu vực..." value={search} onChange={v => { setSearch(v); setPage(1) }} />
         </div>
       </div>
 
@@ -221,7 +226,7 @@ export default function HarvestTable({
         onRowClick={row => { if (!isPlaceholder(row)) onOpenDetail(row) }}
         rowHeight={68}
       />
-      <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="numbered" />
+      <Pagination page={safePage} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="numbered" />
     </Card>
   )
 }
