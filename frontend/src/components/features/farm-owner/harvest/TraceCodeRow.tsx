@@ -10,12 +10,18 @@ import { Button } from "@/components/ui";
  */
 export default function TraceCodeRow({ traceCode }: { traceCode: string }) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrFailed, setQrFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    QRCode.toDataURL(traceCode, { width: 160, margin: 1 }).then((url) => {
-      if (!cancelled) setQrDataUrl(url);
-    });
+    setQrFailed(false);
+    QRCode.toDataURL(traceCode, { width: 160, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrFailed(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -40,12 +46,16 @@ export default function TraceCodeRow({ traceCode }: { traceCode: string }) {
             height={64}
             className="rounded-lg border border-warmGray/15 bg-white p-1"
           />
+        ) : qrFailed ? (
+          <div className="h-16 w-16 rounded-lg border border-warmGray/15 bg-warmGray/5" />
         ) : (
           <div className="h-16 w-16 animate-pulse rounded-lg bg-warmGray/15" />
         )}
         <div>
           <p className="label-caption">Mã QR truy xuất nguồn gốc</p>
-          <p className="text-xs text-warmGray">In lên bao bì để khách quét tra cứu</p>
+          <p className="text-xs text-warmGray">
+            {qrFailed ? "Không tạo được mã QR, thử mở lại chi tiết" : "In lên bao bì để khách quét tra cứu"}
+          </p>
         </div>
       </div>
       <Button variant="secondary" size="sm" onClick={download} disabled={!qrDataUrl}>
