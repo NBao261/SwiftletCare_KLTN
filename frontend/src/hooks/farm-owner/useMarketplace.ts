@@ -1,4 +1,5 @@
-import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { useQuery, useQueries, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { marketplaceApi } from '@/apis/farm-owner/marketplace.api'
 import type { CreateListingInput } from '@/apis/farm-owner/marketplace.api'
 import type { ListingStatus } from '@/types'
@@ -42,6 +43,8 @@ export function useListingStats(listingId: string | undefined) {
   })
 }
 
+type ListingStats = Awaited<ReturnType<typeof marketplaceApi.getListingStats>>['data']['data']
+
 /**
  * MARKET-FR-012 (biến thể) — lượt xem/liên hệ của NHIỀU tin đăng cùng lúc, dùng
  * cho bảng ListingsTab (mỗi dòng 1 listing). Cùng queryKey ['listing-stats', id]
@@ -50,14 +53,20 @@ export function useListingStats(listingId: string | undefined) {
  * liên hệ) của cùng 1 dòng bảng.
  */
 export function useListingStatsMany(listingIds: string[]) {
+  // combine phải giữ identity ổn định (useCallback) — closure inline bị React Query chạy lại
+  // mỗi render, tạo Map mới liên tục làm mọi useMemo phụ thuộc statsById vô tác dụng.
+  const combine = useCallback(
+    (results: UseQueryResult<ListingStats>[]) => ({
+      isLoading: results.some(r => r.isLoading),
+      statsById: new Map(listingIds.map((id, i) => [id, results[i]?.data])),
+    }),
+    [listingIds],
+  )
   return useQueries({
     queries: listingIds.map(id => ({
       queryKey: ['listing-stats', id],
       queryFn: () => marketplaceApi.getListingStats(id).then(r => r.data.data),
     })),
-    combine: results => ({
-      isLoading: results.some(r => r.isLoading),
-      statsById: new Map(listingIds.map((id, i) => [id, results[i].data])),
-    }),
+    combine,
   })
 }
