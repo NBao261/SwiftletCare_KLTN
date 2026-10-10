@@ -4,6 +4,7 @@ import type { ChartOptions } from 'chart.js'
 import { Card } from '@/components/ui'
 import EmptyState from '@/components/ui/EmptyState'
 import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme'
+import { vnYearMonth } from '@/lib/helpers'
 import type { HarvestBatch } from '@/types'
 
 const MONTH_LABELS = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12']
@@ -14,13 +15,13 @@ interface HarvestYearChartProps {
 
 /** HarvestYearChart – sản lượng (kg) theo tháng trong năm hiện tại, tính từ Harvest Batch thật */
 export default function HarvestYearChart({ batches }: HarvestYearChartProps) {
-  const year = new Date().getFullYear()
+  const { year } = vnYearMonth(new Date())
 
   const monthlyKg = useMemo(() => {
     const totals = new Array(12).fill(0)
     for (const b of batches) {
-      const d = new Date(b.harvest_date)
-      if (d.getFullYear() === year) totals[d.getMonth()] += b.weight_grams / 1000
+      const d = vnYearMonth(b.harvest_date)
+      if (d.year === year) totals[d.month - 1] += b.weight_grams / 1000
     }
     return totals.map(kg => +kg.toFixed(2))
   }, [batches, year])
