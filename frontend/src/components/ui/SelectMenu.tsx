@@ -27,9 +27,15 @@ interface SelectMenuProps<V extends string> {
 }
 
 const OPTION_HEIGHT = 36
-const MENU_PADDING = 8
-/** Quá số dòng này thì danh sách có thanh cuộn — khớp `max-h-72` (288px = 8 × 36) bên dưới */
+const OPTION_GAP = 2 // space-y-0.5
+const MENU_CHROME = 14 // p-1.5 trên + dưới (12) + border (2)
+/** Quá số dòng này thì danh sách có thanh cuộn */
 const MAX_VISIBLE_OPTIONS = 8
+
+/** Chiều cao khung vừa khít `count` dòng — không lộ nửa dòng kế tiếp */
+function listHeight(count: number): number {
+  return count * OPTION_HEIGHT + Math.max(0, count - 1) * OPTION_GAP + MENU_CHROME
+}
 /** Kiểu `field` nằm trong modal: chỉ hiện 4 dòng rồi cuộn, để danh sách không tràn khỏi form */
 // [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Chỉ ảnh hưởng SelectMenu có prop `field` (hiện chỉ popup ticket của Admin dùng). Thêm: `field`/`disabled`/`invalid`, danh sách field cao 4 dòng rồi cuộn, Esc không đóng Modal. Hàng bộ lọc (không `field`) của mọi role giữ nguyên max-h-72.
 const FIELD_VISIBLE_OPTIONS = 4
@@ -47,7 +53,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
   const maxVisible = field ? FIELD_VISIBLE_OPTIONS : MAX_VISIBLE_OPTIONS
   const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
     align: 'left',
-    estimatedHeight: Math.min(options.length, maxVisible) * OPTION_HEIGHT + MENU_PADDING,
+    estimatedHeight: listHeight(Math.min(options.length, maxVisible)),
     matchTriggerWidth: true,
   })
   const selectedIndex = Math.max(0, options.findIndex(o => o.value === value))
@@ -116,12 +122,9 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
           ref={menuRef}
           role="listbox"
           aria-label={ariaLabel}
-          // field: cao đúng FIELD_VISIBLE_OPTIONS dòng + padding — vừa khít, không lộ nửa dòng kế tiếp; filter giữ max-h-72 như cũ
-          style={field ? { ...style, maxHeight: FIELD_VISIBLE_OPTIONS * OPTION_HEIGHT + MENU_PADDING } : style}
-          className={cn(
-            'z-50 animate-fade-in space-y-0.5 overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 bg-white p-1.5 shadow-dropdown [scrollbar-width:thin]',
-            !field && 'max-h-72',
-          )}
+          // Cao đúng maxVisible dòng (field 4, filter 8) kể cả padding/gap/border — vừa khít, không lộ nửa dòng kế tiếp
+          style={{ ...style, maxHeight: listHeight(maxVisible) }}
+          className="z-50 animate-fade-in space-y-0.5 overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 bg-white p-1.5 shadow-dropdown [scrollbar-width:thin]"
         >
           {options.map((opt, index) => {
             const isSelected = index === selectedIndex
