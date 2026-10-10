@@ -14,6 +14,8 @@ import type { TechTab, SortKey, SortDir } from '@/components/features/technician
 export interface TicketsPageState {
   // isOverdueActive thay thế activeTab trong public API — TicketToolbar không cần biết về TechTab
   isOverdueActive: boolean
+  /** Tab "Hàng đợi chung": ticket chưa gán (GET /tickets?unassigned=true) — chỉ xem */
+  isQueueActive: boolean
   sortKey: SortKey
   sortDir: SortDir
   filterStatus: TicketStatus | ''
@@ -26,6 +28,7 @@ export interface TicketsPageState {
 export interface TicketsPageActions {
   // handleTabChange đã ẩn khỏi public API — dùng handleOverdueToggle thay thế
   handleOverdueToggle: () => void
+  handleQueueToggle: () => void
   handleSort: (key: SortKey) => void
   // TODO [BE-GAP]: handleSearchChange sẽ được expose lại khi BE hỗ trợ ?search= param
   handleFilterStatusChange: (val: TicketStatus | '') => void
@@ -62,13 +65,16 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   // ── Data Fetch — Chế độ 1: server pagination (mine + in_progress) ─────────
   // FIX (round 5): filterStatus đưa lên server để pagination không sai
   const serverQuery = useTicketsList(
-    {
-      assignedToMe: true,
-      ...(activeTab === 'in_progress' ? { status: 'IN_PROGRESS' } : {}),
-      ...(filterStatus && activeTab !== 'overdue' ? { status: filterStatus as TicketStatus } : {}),
-      page,
-      limit: PAGE_SIZE,
-    },
+    activeTab === 'unassigned'
+      // Hàng đợi chung: BE bỏ qua `unassigned` nếu có assignedToMe → KHÔNG gửi assignedToMe
+      ? { unassigned: true, ...(filterStatus ? { status: filterStatus as TicketStatus } : {}), page, limit: PAGE_SIZE }
+      : {
+          assignedToMe: true,
+          ...(activeTab === 'in_progress' ? { status: 'IN_PROGRESS' } : {}),
+          ...(filterStatus && activeTab !== 'overdue' ? { status: filterStatus as TicketStatus } : {}),
+          page,
+          limit: PAGE_SIZE,
+        },
     { enabled: activeTab !== 'overdue' },
   )
 
@@ -87,6 +93,7 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
 
   // ── Derived state ─────────────────────────────────────────────────────────
   const isOverdue = activeTab === 'overdue'
+  const isQueue   = activeTab === 'unassigned'
   const records   = isOverdue ? overdueQuery.records : serverQuery.records
   const total     = isOverdue ? overdueQuery.total : serverQuery.total
   const isLoading = isOverdue ? overdueQuery.isLoading : serverQuery.isLoading
@@ -125,6 +132,17 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     resetPage()
   }, [activeTab, resetPage])
 
+  /** Toggle "Hàng đợi chung" — clear filter status để tránh conflict */
+  const handleQueueToggle = useCallback(() => {
+    if (activeTab === 'unassigned') {
+      setActiveTab('mine')
+    } else {
+      setActiveTab('unassigned')
+      setFilterStatus('')
+    }
+    resetPage()
+  }, [activeTab, resetPage])
+
   const handleSort = useCallback((key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortKey(key); setSortDir('desc') } // Default to desc for new keys
@@ -133,8 +151,8 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
 
 
   const handleFilterStatusChange = useCallback((val: TicketStatus | '') => {
-    // Nếu đang ở overdue, click chip status → switch về mine
-    if (activeTab === 'overdue') setActiveTab('mine')
+    // Nếu đang ở overdue / hàng đợi chung, click chip status → switch về mine
+    if (activeTab === 'overdue' || activeTab === 'unassigned') setActiveTab('mine')
     setFilterStatus(val)
     resetPage()
   }, [activeTab, resetPage])
@@ -152,10 +170,11 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   return {
     // State (public)
     isOverdueActive: isOverdue, // alias cho TicketToolbar — mapping từ internal activeTab
+    isQueueActive: isQueue,
     sortKey, sortDir, filterStatus, page,
     statusModal, reassignModal,
     // Actions
-    handleOverdueToggle, handleSort,
+    handleOverdueToggle, handleQueueToggle, handleSort,
     handleFilterStatusChange, handleClearFilters,
     setPage, setStatusModal, setReassignModal,
     // Data

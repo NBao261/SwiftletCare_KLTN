@@ -1,6 +1,6 @@
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
-import { IconAlert, IconDevice, IconFarm, IconOnboarding, IconOTA, IconSettings, IconTicket } from '@/components/ui/icons'
+import { IconAlert, IconCalendar, IconDevice, IconFarm, IconOnboarding, IconOTA, IconSettings, IconTicket } from '@/components/ui/icons'
 
 /**
  * Khung ứng dụng cho Technician — nghiệp vụ kỹ thuật: theo dõi tín hiệu thiết
@@ -31,6 +31,7 @@ const menuSections: MenuSection[] = [
     items: [
       { label: 'Lắp đặt thiết bị', path: '/onboarding', icon: IconOnboarding },
       { label: 'OTA Firmware', path: '/ota', icon: IconOTA },
+      { label: 'Lịch bảo trì', path: '/maintenance', icon: IconCalendar },
     ],
   },
   {

@@ -4,6 +4,7 @@
 // Tính stats từ tickets[] đã fetch (chấp nhận capped ở limit stats query).
 import type { Ticket } from '@/types'
 import { isSlaBreached } from './ticketHelpers'
+import { ClipboardList, AlertCircle, Hourglass } from 'lucide-react'
 
 interface Props {
   tickets: Ticket[]
@@ -12,7 +13,7 @@ interface Props {
 interface StatCardProps {
   label: string
   value: number
-  icon: string
+  icon: React.ReactNode
   accent?: 'red' | 'orange' | 'default'
   total?: number
 }
@@ -63,9 +64,9 @@ export function TicketStatBar({ tickets }: Props) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <StatCard label="Đang mở"      value={statsOpen}     icon="📋" total={tickets.length} />
-      <StatCard label="Quá hạn SLA"  value={statsBreached} icon="🔴" accent="red" />
-      <StatCard label="Chờ xác nhận" value={statsAwaiting} icon="⏳" accent="orange" />
+      <StatCard label="Đang mở"      value={statsOpen}     icon={<ClipboardList size={20} strokeWidth={1.6} />} total={tickets.length} />
+      <StatCard label="Quá hạn SLA"  value={statsBreached} icon={<AlertCircle size={20} strokeWidth={1.6} />} accent="red" />
+      <StatCard label="Chờ xác nhận" value={statsAwaiting} icon={<Hourglass size={20} strokeWidth={1.6} />} accent="orange" />
     </div>
   )
 }

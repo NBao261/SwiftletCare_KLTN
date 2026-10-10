@@ -53,3 +53,4 @@ docker-compose.override.yml
 # Test coverage
 coverage/
 .coverage
+*.tsbuildinfo

@@ -24,7 +24,7 @@ import { formatDate } from "@/lib/helpers";
 import { cn } from "@/lib/cn";
 import { TICKET_TYPE_LABEL, STATUS_LABEL, PRIORITY_TONE } from "@/constants/tickets";
 import { PRIORITY_LABEL } from "@/constants/sla";
-import { SCHEDULED_TYPES } from "@/validations/admin/ticket.validation";
+import { SCHEDULED_TYPES } from "@/validations/common/schedule.validation";
 
 /**
  * Chi tiết 1 ticket cho Admin (/system/tickets/:id) — tách khỏi /tickets/:id dùng chung để

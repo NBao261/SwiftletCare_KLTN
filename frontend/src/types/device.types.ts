@@ -19,6 +19,23 @@ export interface SensorNode {
   speaker_schedule: { enabled: boolean; windows: Array<{ start: string; end: string }> }
   audio: { current_track: number; volume: number; playing: boolean; loop: boolean }
   registered_at: string
+  /** TICKET-FR-008 — lệnh OTA đã gửi, chờ heartbeat báo đúng firmware_version mới */
+  ota_pending?: { version: string; url: string; requested_at: string; requested_by?: string }
+  /** OTA quá hạn xác nhận — thiết bị vẫn chạy `running_version` (đã rollback) */
+  ota_failed?: { version: string; failed_at: string; running_version?: string }
+  config_pushed_at?: string
+  /** Quá 15 phút kể từ lúc đăng ký mà chưa có heartbeat đầu tiên */
+  activation_overdue_at?: string
+  decommissioned_at?: string; decommission_reason?: string
+}
+
+/** POST /devices/sensor-nodes/:id/commands (TICKET-FR-008) */
+export type NodeCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
+export interface NodeCommandInput {
+  command: NodeCommand
+  ticket_id?: string
+  /** Chỉ khi command=OTA. version dạng x.y.z (không có tiền tố "v"), url https, sha256 hex 64 ký tự */
+  ota?: { version: string; url: string; sha256: string }
 }
 
 // ENV-FR-013b — PUT /devices/sensor-nodes/:id/speaker-schedule (firmware: ≤2 khung, giờ tròn)
@@ -38,6 +55,8 @@ export interface AudioTrack {
 export interface CameraNode {
   _id: string; device_id: string; zone_id: string; rtsp_url?: string
   status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string
+  activation_overdue_at?: string
+  decommissioned_at?: string; decommission_reason?: string
 }
 
 // OPS-NFR-004 — GET /devices/system-status (chỉ Admin)

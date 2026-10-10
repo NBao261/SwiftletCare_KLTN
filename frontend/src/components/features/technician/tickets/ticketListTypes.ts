@@ -6,7 +6,7 @@ import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
 
 export const PAGE_SIZE = 12 // số ticket mỗi trang
 
-export type TechTab  = 'mine' | 'in_progress' | 'overdue'
+export type TechTab  = 'mine' | 'in_progress' | 'overdue' | 'unassigned'
 export type SortKey  = 'created_at' | 'sla' | 'status'
 export type SortDir  = 'asc' | 'desc'
 
@@ -15,6 +15,7 @@ export const TABS: { id: TechTab; label: string; icon: string }[] = [
   { id: 'mine',        label: 'Tất cả của tôi', icon: '📋' },
   { id: 'in_progress', label: 'Đang xử lý',     icon: '⚙️' },
   { id: 'overdue',     label: 'Quá hạn SLA',    icon: '🔴' },
+  { id: 'unassigned',  label: 'Hàng đợi chung', icon: '📥' },
 ]
 
 export const PRIORITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2 }

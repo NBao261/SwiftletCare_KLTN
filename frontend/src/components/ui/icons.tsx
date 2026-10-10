@@ -227,3 +227,8 @@ export const IconGrid = (p: IconProps) => (
     <rect x="12" y="12" width="4" height="4" rx="1" />
   </Svg>
 )
+
+/** Icon Chat / Tin nhắn */
+export const IconMessage = (p: IconProps) => (
+  <Svg {...p}><path d="M16 10c0 3.3-2.7 6-6 6-1 0-2-.3-2.9-.7L3 17l1.7-4.1C4.3 12 4 11 4 10c0-3.3 2.7-6 6-6s6 2.7 6 6Z" /></Svg>
+)
