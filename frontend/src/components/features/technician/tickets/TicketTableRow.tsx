@@ -11,7 +11,13 @@ import { PRIORITY_DOT_CLS, STATUS_DOT_CLS } from './ticketListTypes'
 import { SlaRing } from './SlaRing'
 import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
 import { formatDate } from '@/lib/helpers'
-import type { Ticket, TicketType } from '@/types'
+import type { Ticket, TicketType, TicketPriority } from '@/types'
+
+const PRIORITY_LABEL: Record<TicketPriority, string> = {
+  P1: 'Khẩn cấp',
+  P2: 'Cao',
+  P3: 'Bình thường',
+}
 
 // Sort icon — dùng SVG icon chuẩn thay vì ký tự unicode ↑↓
 function SortIconIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
@@ -68,7 +74,9 @@ export const TicketTableRow = memo(function TicketTableRow({
             className={`inline-block h-3 w-3 rounded-full ring-4 ${dotCls} ${ticket.priority === 'P1' ? 'animate-pulse-sla' : ''
               }`}
           />
-          <span className="text-xs font-bold text-charcoal">{ticket.priority}</span>
+          <span className="text-xs font-bold text-charcoal">
+            {PRIORITY_LABEL[ticket.priority as TicketPriority] || ticket.priority}
+          </span>
         </div>
       </td>
 
