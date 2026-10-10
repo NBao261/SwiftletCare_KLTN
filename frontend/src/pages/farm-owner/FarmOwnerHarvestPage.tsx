@@ -9,7 +9,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
+import { formatDateOnly, getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import HarvestStatsCards from '@/components/features/farm-owner/harvest/HarvestStatsCards'
 import HarvestTable from '@/components/features/farm-owner/harvest/HarvestTable'
@@ -31,7 +31,7 @@ const SECTIONS = [
 function exportCsv(batches: HarvestBatch[], zoneNameById: Map<string, string>) {
   const header = ['Ngày thu hoạch', 'Khu vực', 'Loại tổ', 'Số tổ', 'Khối lượng (g)', 'Trạng thái']
   const rows = batches.map(b => [
-    b.harvest_date.slice(0, 10),
+    formatDateOnly(b.harvest_date),
     zoneNameById.get(b.zone_id) ?? '',
     NEST_TYPE_LABEL[b.nest_type],
     String(b.nest_count),
@@ -50,7 +50,7 @@ function exportCsv(batches: HarvestBatch[], zoneNameById: Map<string, string>) {
 
 export default function FarmOwnerHarvestPage() {
   const { selectedFarmId } = useZoneStore()
-  const { data: batches, isLoading } = useHarvests(selectedFarmId ?? undefined)
+  const { data: batches, isLoading, isError, refetch } = useHarvests(selectedFarmId ?? undefined)
   const { data: zones } = useFarmZones(selectedFarmId ?? undefined)
   const deleteHarvest = useDeleteHarvest(selectedFarmId ?? undefined)
   const push = useToastStore(s => s.push)
@@ -64,11 +64,15 @@ export default function FarmOwnerHarvestPage() {
   const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id)
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
-  // Scrollspy: section nào nằm giữa màn hình nhiều nhất thì tab tương ứng sáng
-  // lên — khớp với hành vi snap-center (lăn chuột dừng ở đâu, section đó tự
-  // trượt vào giữa viewport), nên vùng dò cũng lấy dải giữa màn hình (35%-65%)
-  // thay vì dải trên cùng.
+  // 3 section chỉ được render sau khi qua 2 nhánh return sớm (chưa chọn farm /
+  // đang tải / lỗi) — effect phải chạy lại khi chúng thật sự có mặt, nếu không
+  // lần mở đầu (chưa có cache) mọi ref còn null và scrollspy không gắn gì cả.
+  const sectionsMounted = !!selectedFarmId && !isLoading && !isError
+
+  // Scrollspy: section nào nằm ở dải giữa màn hình (35%-65%) nhiều nhất thì tab
+  // tương ứng sáng lên.
   useEffect(() => {
+    if (!sectionsMounted) return
     const observer = new IntersectionObserver(
       entries => {
         const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
@@ -97,10 +101,10 @@ export default function FarmOwnerHarvestPage() {
       observer.disconnect()
       scrollEl?.removeEventListener('scroll', handleScroll)
     }
-  }, [])
+  }, [sectionsMounted])
 
   function scrollToSection(id: string) {
-    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const zoneNameById = useMemo(
@@ -124,6 +128,16 @@ export default function FarmOwnerHarvestPage() {
 
   if (isLoading) {
     return <LoadingSkeleton count={3} className="h-28 w-full" />
+  }
+
+  if (isError) {
+    return (
+      <EmptyState
+        title="Không tải được nhật ký thu hoạch"
+        description="Kiểm tra kết nối tới máy chủ rồi thử lại."
+        action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+      />
+    )
   }
 
   const allBatches = batches ?? []
@@ -175,7 +189,7 @@ export default function FarmOwnerHarvestPage() {
         ))}
       </div>
 
-      <div id="section-harvest" ref={el => { sectionRefs.current['section-harvest'] = el }} className="scroll-mt-16 snap-center">
+      <div id="section-harvest" ref={el => { sectionRefs.current['section-harvest'] = el }} className="scroll-mt-20">
         <HarvestTable
           batches={allBatches}
           zones={zones}
@@ -187,11 +201,11 @@ export default function FarmOwnerHarvestPage() {
         />
       </div>
 
-      <div id="section-marketplace" ref={el => { sectionRefs.current['section-marketplace'] = el }} className="scroll-mt-16 snap-center">
+      <div id="section-marketplace" ref={el => { sectionRefs.current['section-marketplace'] = el }} className="scroll-mt-20">
         <ListingsTab batches={allBatches} zones={zones} onOpenDetail={batch => setDetailBatchId(batch._id)} />
       </div>
 
-      <div id="section-analytics" ref={el => { sectionRefs.current['section-analytics'] = el }} className="scroll-mt-16 snap-center">
+      <div id="section-analytics" ref={el => { sectionRefs.current['section-analytics'] = el }} className="scroll-mt-20">
         <HarvestYearChart batches={allBatches} />
       </div>
 
