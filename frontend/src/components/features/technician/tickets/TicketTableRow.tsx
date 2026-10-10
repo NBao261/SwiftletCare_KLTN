@@ -7,7 +7,7 @@ import ActionsMenu, { type ActionsMenuItem } from '@/components/ui/ActionsMenu'
 import { ArrowUpNarrowWide, ArrowDownWideNarrow } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { isSlaBreached, isTicketAssignee } from './ticketHelpers'
-import { PRIORITY_DOT_CLS, STATUS_DOT_CLS } from './ticketListTypes'
+import { PRIORITY_DOT_CLS, STATUS_BADGE_CLS } from './ticketListTypes'
 import { SlaRing } from './SlaRing'
 import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
 import { formatDate } from '@/lib/helpers'
@@ -45,7 +45,7 @@ export const TicketTableRow = memo(function TicketTableRow({
 
   const rowBg = breached ? 'bg-alertRed/[0.03]' : index % 2 === 0 ? 'bg-white' : 'bg-graphite/[0.02]'
   const dotCls = PRIORITY_DOT_CLS[ticket.priority] ?? PRIORITY_DOT_CLS.P3
-  const statusDotCls = STATUS_DOT_CLS[ticket.status] ?? 'bg-warmGray'
+  const statusBadgeCls = STATUS_BADGE_CLS[ticket.status] ?? 'bg-warmGray/10 text-charcoal border-warmGray/20'
 
   const userId = useAuthStore(s => s.user?._id)
   // BE assertAssignee: chỉ Technician đang được gán mới xử lý được — ticket ở hàng đợi chung / của người khác chỉ xem
@@ -87,8 +87,7 @@ export const TicketTableRow = memo(function TicketTableRow({
 
       {/* Status */}
       <td className="whitespace-nowrap py-3 pr-3">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-graphite/10 bg-white px-2.5 py-1 text-xs font-semibold text-charcoal shadow-icon">
-          <span className={`inline-block h-2 w-2 rounded-full ${statusDotCls}`} />
+        <span className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeCls}`}>
           {STATUS_LABEL[ticket.status]}
         </span>
       </td>
