@@ -44,14 +44,14 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/30 p-4 backdrop-blur-sm animate-fade-in">
       <div
         ref={panelRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-3xl bg-white p-6 shadow-dock outline-none"
+        className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none"
       >
         <div className="mb-4 flex items-center justify-between">
           {title && <h2 className="text-lg font-bold text-charcoal">{title}</h2>}

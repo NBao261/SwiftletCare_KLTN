@@ -4,6 +4,21 @@
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 
+/** Chỉ phần ngày/giờ riêng — dùng cho ô bảng 2 tầng (ngày đậm phía trên, giờ xám phía dưới) */
+export const formatDateOnly = (iso: string) =>
+  new Date(iso).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+export const formatTimeOnly = (iso: string) =>
+  new Date(iso).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+
+const VN_YEAR_MONTH = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: 'numeric' })
+
+/** Năm + tháng (1-12) theo giờ VN — gom số liệu theo tháng khớp với ngày hiển thị, không lệch theo múi giờ máy người dùng */
+export function vnYearMonth(date: string | Date): { year: number; month: number } {
+  const parts = VN_YEAR_MONTH.formatToParts(new Date(date))
+  const get = (type: 'year' | 'month') => Number(parts.find(p => p.type === type)?.value)
+  return { year: get('year'), month: get('month') }
+}
+
 const RELATIVE = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' })
 const RELATIVE_STEPS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ['second', 60], ['minute', 60], ['hour', 24], ['day', 7], ['week', 4.35], ['month', 12], ['year', Infinity],
