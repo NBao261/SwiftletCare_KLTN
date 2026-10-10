@@ -10,7 +10,6 @@ import Pagination from '@/components/ui/Pagination'
 import FilterChip from '@/components/ui/FilterChip'
 import DataTable from '@/components/ui/DataTable'
 import SelectMenu from '@/components/ui/SelectMenu'
-import { IconUsers } from '@/components/ui/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { STATUS_LABEL, FILTERABLE_STATUSES, ROLE_LABEL, SORT_FIELDS, type FilterableStatus } from '@/components/features/admin/users/users.constants'
 import { buildUserColumns } from '@/components/features/admin/users/userColumns'
@@ -80,7 +79,7 @@ export default function AdminUsersPage() {
       <UserStats />
 
       {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
-      <SectionCard icon={<IconUsers width={20} height={20} />} title="Danh sách tài khoản" description="Tài khoản toàn hệ thống — xem chi tiết, gán khu vực, khoá/mở khoá">
+      <SectionCard title="Danh sách tài khoản" description="Tài khoản toàn hệ thống — xem chi tiết, gán khu vực, khoá/mở khoá">
 
         {/* Hàng 1: tìm kiếm + tạo tài khoản. 1 nút duy nhất — Admin chỉ tạo Technician/Sales
             Staff (AUTH-FR-005c), chọn vai trò ngay trong modal thay vì 2 nút riêng. */}

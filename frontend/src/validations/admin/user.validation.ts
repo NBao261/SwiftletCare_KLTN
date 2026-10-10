@@ -26,35 +26,34 @@ export function parseRegions(raw: string): string[] {
 
 /**
  * Trả về map lỗi theo field — rỗng nghĩa là form hợp lệ. Tách khỏi component để
- * dễ đọc/kiểm thử. Thông báo phân biệt "chưa nhập" và "nhập sai", kèm ví dụ để
- * người dùng biết phải sửa thành gì thay vì chỉ báo "không hợp lệ".
+ * dễ đọc/kiểm thử. Thông báo phân biệt "chưa nhập" và "nhập sai", kèm ví dụ khi cần.
+ * Mọi thông báo phải vừa 1 dòng: CreateUserModal chỉ chừa sẵn 1 dòng lỗi dưới mỗi ô
+ * (reserveError) — lỗi 2 dòng làm popup canh giữa đổi chiều cao và giật lên/xuống.
  */
 export function validateNewUser(form: FormState): Partial<Record<Field, string>> {
   const errors: Partial<Record<Field, string>> = {}
 
   const fullName = form.full_name.trim()
-  if (!fullName) errors.full_name = 'Chưa nhập họ tên — nhập tên đầy đủ.'
-  else if (fullName.length < 2) errors.full_name = 'Họ tên quá ngắn — cần ít nhất 2 ký tự'
+  if (!fullName) errors.full_name = 'Hãy nhập họ tên'
+  else if (fullName.length < 2) errors.full_name = 'Họ tên cần ít nhất 2 ký tự'
 
   const email = form.email.trim()
-  if (!email) errors.email = 'Chưa nhập email — đây sẽ là tên đăng nhập của tài khoản'
-  else if (!EMAIL_RE.test(email)) errors.email = 'Email sai định dạng — cần dạng ten@tenmien.'
+  if (!email) errors.email = 'Hãy nhập email (dùng làm tên đăng nhập)'
+  else if (!EMAIL_RE.test(email)) errors.email = 'Email sai định dạng, VD: ten@tenmien.vn'
 
   const phone = form.phone.replace(/[\s.-]/g, '')
-  if (phone && !PHONE_RE.test(phone)) {
-    errors.phone = 'SĐT phải là 10 số bắt đầu bằng 0 (VD: 0912345678) hoặc +84 rồi 9 số (VD: +84912345678)'
-  }
+  if (phone && !PHONE_RE.test(phone)) errors.phone = 'SĐT cần dạng 0912345678 hoặc +84912345678'
 
-  if (!form.password) errors.password = `Chưa nhập mật khẩu — đặt mật khẩu ban đầu ít nhất ${PASSWORD_MIN} ký tự rồi gửi riêng cho nhân viên`
+  if (!form.password) errors.password = `Hãy nhập mật khẩu ban đầu (ít nhất ${PASSWORD_MIN} ký tự)`
   else if (form.password.length < PASSWORD_MIN) {
     errors.password = `Mật khẩu cần ít nhất ${PASSWORD_MIN} ký tự (đang có ${form.password.length})`
   }
 
   if (form.role === 'TECHNICIAN' && parseRegions(form.regions).length === 0) {
-    errors.regions = 'Chưa có vùng phụ trách — nhập tên khu vực, nhiều vùng cách nhau bằng dấu phẩy.'
+    errors.regions = 'Hãy nhập ít nhất 1 vùng phụ trách'
   }
   if (form.role === 'SALES_STAFF' && form.farmIds.length === 0) {
-    errors.farmIds = 'Chưa chọn farm — tích ít nhất 1 farm trong danh sách để Sales Staff này phụ trách'
+    errors.farmIds = 'Hãy chọn ít nhất 1 farm phụ trách'
   }
   return errors
 }

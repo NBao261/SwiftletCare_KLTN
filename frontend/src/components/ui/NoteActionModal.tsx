@@ -9,6 +9,8 @@ interface NoteActionModalProps {
   title: string
   label: string
   placeholder?: string
+  /** Dòng ghi chú nhỏ dưới ô nhập — nói hệ quả của hành động */
+  hint?: string
   submitLabel: string
   required?: boolean
   /** Số ký tự tối thiểu (sau khi trim) — chặn lý do kiểu "ok"/"abc" */
@@ -28,7 +30,7 @@ interface NoteActionModalProps {
  * duyệt; giá trị gửi đi đã được trim.
  */
 export default function NoteActionModal({
-  open, onClose, title, label, placeholder, submitLabel, required, minLength, emptyMessage, danger, loading, onSubmit,
+  open, onClose, title, label, placeholder, hint, submitLabel, required, minLength, emptyMessage, danger, loading, onSubmit,
 }: NoteActionModalProps) {
   const [note, setNote] = useState('')
   const [error, setError] = useState<string>()
@@ -61,9 +63,12 @@ export default function NoteActionModal({
           required={required}
           value={note}
           error={error}
+          // Popup canh giữa: chừa sẵn dòng lỗi để lỗi hiện/ẩn không làm popup trượt lên/xuống
+          reserveError
           onChange={e => { setNote(e.target.value); if (error) setError(validate(e.target.value)) }}
           onBlur={() => setError(validate(note))}
         />
+        {hint && <p className="text-xs text-warmGray">{hint}</p>}
         <Button type="submit" variant={danger ? 'danger' : 'primary'} loading={loading} className="w-full">
           {submitLabel}
         </Button>

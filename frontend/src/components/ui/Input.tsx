@@ -6,10 +6,15 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string
   /** Icon trái trong ô input (VD kính lúp cho ô tìm kiếm) — không truyền thì input giữ nguyên như cũ. */
   icon?: ReactNode
+  /**
+   * Luôn chừa sẵn 1 dòng cho thông báo lỗi kể cả khi chưa có lỗi — dùng trong popup canh giữa: lỗi hiện/ẩn
+   * làm popup đổi chiều cao thì cả popup trượt lên/xuống.
+   */
+  reserveError?: boolean
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, icon, className, id, ...props }, ref) => {
+  ({ label, error, icon, reserveError, className, id, ...props }, ref) => {
     const inputId = id ?? props.name
     return (
       <div className="flex flex-col gap-1.5">
@@ -32,7 +37,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
         </div>
-        {error && <span className="text-xs text-alertRed">{error}</span>}
+        {/* reserveError: đúng 1 dòng cố định (h-4 + truncate) — lỗi dài cũng không đẩy popup cao lên */}
+        {reserveError
+          ? <span className="h-4 truncate text-xs text-alertRed" title={error}>{error}</span>
+          : error && <span className="text-xs text-alertRed">{error}</span>}
       </div>
     )
   },

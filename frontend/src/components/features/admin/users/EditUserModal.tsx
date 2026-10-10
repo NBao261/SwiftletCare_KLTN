@@ -31,17 +31,18 @@ export default function EditUserModal({ user, onClose }: { user: User | null; on
   }
 
   return (
-    <Modal open={!!user} onClose={onClose} title={`Vùng phụ trách — ${user?.full_name ?? ''}`}>
+    <Modal open={!!user} onClose={onClose} title={`Vùng phụ trách · ${user?.full_name ?? ''}`}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
-          label="Vùng phụ trách (phân cách bằng dấu phẩy)"
+          label="Vùng phụ trách"
           placeholder="VD: HCMC, Long An"
           required
           value={regions}
           onChange={e => setRegions(e.target.value)}
         />
+        {/* Nói hệ quả nghiệp vụ (TICKET-FR-004, FARM-FR-009) thay vì chi tiết kỹ thuật "đọc lại từ DB, không lấy từ JWT" */}
         <p className="text-xs text-warmGray">
-          Có hiệu lực ngay ở request kế tiếp của kỹ thuật viên (vùng được đọc lại từ DB mỗi request, không lấy từ JWT).
+          Nhiều vùng cách nhau bằng dấu phẩy. Kỹ thuật viên chỉ nhận ticket và quản lý trang trại thuộc các vùng này — áp dụng ngay sau khi lưu.
         </p>
         <Button type="submit" loading={updateRegions.isPending} disabled={regionList.length === 0} className="w-full">Lưu</Button>
       </form>

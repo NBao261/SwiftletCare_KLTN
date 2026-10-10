@@ -12,8 +12,8 @@ export default function UnlockUserModal({ user, onClose }: { user: User | null; 
   return (
     <ConfirmModal
       open={!!user}
-      title={`Mở khoá tài khoản — ${user?.full_name ?? ''}`}
-      description="Tài khoản sẽ có thể đăng nhập lại bình thường."
+      title={`Mở khoá tài khoản · ${user?.full_name ?? ''}`}
+      description="Người dùng sẽ đăng nhập và sử dụng lại bình thường."
       confirmLabel="Mở khoá"
       loading={setStatus.isPending}
       onConfirm={() => {

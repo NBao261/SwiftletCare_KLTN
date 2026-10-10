@@ -83,7 +83,8 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
       onClose={onClose}
       title={presetFarmId ? `Tạo Sales Staff${presetFarmName ? ` cho ${presetFarmName}` : ''}` : 'Tạo tài khoản'}
     >
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+      {/* gap-2 (không gap-4): mỗi ô đã chừa sẵn 1 dòng lỗi (reserveError) — gap-4 cộng dòng trống đó làm form thưa */}
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-2">
         <div className="flex flex-col gap-1.5">
           <span className="label-caption">
             Vai trò{!presetFarmId && <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>}
@@ -135,6 +136,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           onChange={e => set('full_name', e.target.value)}
           onBlur={() => touch('full_name')}
           error={showError('full_name')}
+          reserveError
         />
         <Input
           label="Email"
@@ -146,6 +148,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           onChange={e => set('email', e.target.value)}
           onBlur={() => touch('email')}
           error={showError('email')}
+          reserveError
         />
         <Input
           label="Số điện thoại (tùy chọn)"
@@ -156,6 +159,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           onChange={e => set('phone', e.target.value)}
           onBlur={() => touch('phone')}
           error={showError('phone')}
+          reserveError
         />
         <Input
           label={`Mật khẩu ban đầu (≥ ${PASSWORD_MIN} ký tự)`}
@@ -167,6 +171,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           onChange={e => set('password', e.target.value)}
           onBlur={() => touch('password')}
           error={showError('password')}
+          reserveError
         />
 
         {form.role === 'TECHNICIAN' && (
@@ -178,6 +183,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
             onChange={e => set('regions', e.target.value)}
             onBlur={() => touch('regions')}
             error={showError('regions')}
+            reserveError
           />
         )}
 
@@ -204,7 +210,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
                 ))}
               </div>
             )}
-            {showError('farmIds') && <span className="text-xs text-alertRed">{errors.farmIds}</span>}
+            <span className="h-4 truncate text-xs text-alertRed">{showError('farmIds') && errors.farmIds}</span>
           </div>
         )}
 
