@@ -49,7 +49,7 @@ export default function TicketNotesCard({ ticketId, notes }: { ticketId: string;
                 <span className={last ? 'mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full bg-accent-300 ring-2 ring-charcoal' : 'mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full bg-warmGray/30'} />
                 <div className="min-w-0 flex-1 rounded-xl bg-warmGray/5 px-3.5 py-2.5">
                   <p className="whitespace-pre-line text-body text-charcoal">{note.content}</p>
-                  <p className="mt-1 text-small tabular-nums text-warmGray">{formatDate(note.created_at)}</p>
+                  <p className="mt-1 text-small text-warmGray">{formatDate(note.created_at)}</p>
                 </div>
               </li>
             )

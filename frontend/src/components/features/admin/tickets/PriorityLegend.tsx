@@ -48,7 +48,7 @@ export default function PriorityLegend({ className }: { className?: string }) {
               {([['Phản hồi', 'response_hours'], ['Xử lý', 'resolve_hours']] as const).map(([label, key]) => (
                 <div key={key} className="w-16 whitespace-nowrap">
                   <p className="label-caption">{label}</p>
-                  <p className="text-body font-semibold tabular-nums text-charcoal">{sla ? formatDuration(sla[p][key] * HOUR_MS) : '--'}</p>
+                  <p className="text-body font-semibold text-charcoal">{sla ? formatDuration(sla[p][key] * HOUR_MS) : '--'}</p>
                 </div>
               ))}
             </div>

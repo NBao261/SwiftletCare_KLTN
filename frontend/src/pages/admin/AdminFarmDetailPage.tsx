@@ -58,7 +58,7 @@ export default function AdminFarmDetailPage() {
             <div className="flex min-w-0 items-center gap-2.5">
               <h2 className="font-bold text-charcoal">Nhà yến</h2>
               {!!houses?.length && (
-                <span className="shrink-0 rounded-full bg-charcoal/10 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-charcoal/70">
+                <span className="shrink-0 rounded-full bg-charcoal/10 px-2.5 py-1 text-[11px] font-semibold text-charcoal/70">
                   {houses.length} nhà
                 </span>
               )}

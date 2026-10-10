@@ -53,7 +53,7 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
         <>
           Ticket gần nhất
           {total > 0 && (
-            <span className="shrink-0 rounded-full bg-limeMist px-2.5 py-1 text-[11px] font-semibold tabular-nums text-charcoal/70">
+            <span className="shrink-0 rounded-full bg-limeMist px-2.5 py-1 text-[11px] font-semibold text-charcoal/70">
               {records.length}/{total}
             </span>
           )}

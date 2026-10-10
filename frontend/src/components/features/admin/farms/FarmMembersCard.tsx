@@ -129,7 +129,7 @@ export default function FarmMembersCard({ farmId }: { farmId: string }) {
 
 function CountPill({ children }: { children: ReactNode }) {
   return (
-    <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-white/70">
+    <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/70">
       {children}
     </span>
   );

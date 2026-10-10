@@ -39,7 +39,7 @@ export function buildTicketColumns(
   return [
     {
       key: 'stt', header: 'STT', align: 'center', className: 'w-[5%]',
-      render: (_t, index) => <span className="tabular-nums text-warmGray">{startIndex + index + 1}</span>,
+      render: (_t, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
     },
     {
       // Ngay sau STT: quét mức khẩn cấp trước khi đọc tên ticket.
@@ -96,7 +96,7 @@ export function buildTicketColumns(
         return (
           <div className="flex flex-col" title={`Hạn: ${formatDate(ticket.sla_resolve_due_at)}`}>
             <span className={cn('text-small', overdue ? 'text-red-600' : 'text-warmGray')}>{overdue ? 'Quá hạn' : 'Còn'}</span>
-            <span className={cn('font-semibold tabular-nums', overdue ? 'text-red-600' : leftMs < 3_600_000 ? 'text-orange-600' : 'text-charcoal')}>
+            <span className={cn('font-semibold', overdue ? 'text-red-600' : leftMs < 3_600_000 ? 'text-orange-600' : 'text-charcoal')}>
               {formatDuration(leftMs)}
             </span>
           </div>
@@ -108,7 +108,7 @@ export function buildTicketColumns(
       render: (ticket) => {
         const created = new Date(ticket.created_at)
         return (
-          <div className="flex flex-col tabular-nums" title={formatRelativeTime(ticket.created_at)}>
+          <div className="flex flex-col" title={formatRelativeTime(ticket.created_at)}>
             <span className="text-charcoal">{TIME_FORMAT.format(created)}</span>
             <span className="text-small text-warmGray">{DAY_FORMAT.format(created)}</span>
           </div>

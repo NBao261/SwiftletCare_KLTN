@@ -27,7 +27,7 @@ export default function TicketSlaCard({ ticket }: { ticket: Ticket }) {
           <TimerIcon size={14} weight="bold" />
         </span>
       </div>
-      <p className={cn('text-h1 font-extrabold leading-none tracking-tight tabular-nums', overdue ? 'text-alertRed' : 'text-charcoal')}>
+      <p className={cn('text-h1 font-extrabold leading-none tracking-tight', overdue ? 'text-alertRed' : 'text-charcoal')}>
         {leftMs != null ? formatDuration(leftMs) : '--'}
       </p>
       <p className={cn('mt-1.5 text-caption font-medium', overdue ? 'text-alertRed' : 'text-warmGray')}>
@@ -38,7 +38,7 @@ export default function TicketSlaCard({ ticket }: { ticket: Ticket }) {
         {([['Hạn phản hồi', ticket.sla_response_due_at], ['Hạn xử lý', ticket.sla_resolve_due_at]] as const).map(([label, at]) => (
           <div key={label} className="flex items-center justify-between gap-3">
             <dt className="text-warmGray">{label}</dt>
-            <dd className="font-medium tabular-nums text-charcoal">{at ? formatDate(at) : '—'}</dd>
+            <dd className="font-medium text-charcoal">{at ? formatDate(at) : '—'}</dd>
           </div>
         ))}
       </dl>

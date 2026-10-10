@@ -19,7 +19,7 @@ export function buildDeviceColumns(startIndex: number): DataTableColumn<SystemNo
   return [
     {
       key: 'stt', header: 'STT', align: 'center', className: 'w-[5%]',
-      render: (_n, index) => <span className="tabular-nums text-warmGray">{startIndex + index + 1}</span>,
+      render: (_n, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
     },
     {
       key: 'device_id', header: 'Thiết bị', className: 'w-[22%]',
@@ -42,7 +42,7 @@ export function buildDeviceColumns(startIndex: number): DataTableColumn<SystemNo
       key: 'rssi', header: 'Tín hiệu', className: 'w-[12%] whitespace-nowrap',
       // RSSI chỉ có ở cảm biến ESP32 (camera không gửi)
       render: n => n.rssi !== undefined
-        ? <span className="tabular-nums text-charcoal">{n.rssi} dBm</span>
+        ? <span className="text-charcoal">{n.rssi} dBm</span>
         : <span className="text-warmGray">—</span>,
     },
     {
@@ -51,7 +51,7 @@ export function buildDeviceColumns(startIndex: number): DataTableColumn<SystemNo
         if (!n.last_heartbeat) return <span className="text-small text-warmGray">Chưa từng kết nối</span>
         const at = new Date(n.last_heartbeat)
         return (
-          <div className="flex flex-col tabular-nums" title={formatRelativeTime(n.last_heartbeat)}>
+          <div className="flex flex-col" title={formatRelativeTime(n.last_heartbeat)}>
             <span className="text-charcoal">{TIME_FORMAT.format(at)}</span>
             <span className="text-small text-warmGray">{DAY_FORMAT.format(at)}</span>
           </div>
