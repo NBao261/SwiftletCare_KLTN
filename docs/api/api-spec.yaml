@@ -4545,6 +4545,7 @@ components:
         action: { type: string, example: ACCOUNT_LOCKED }
         target_type: { type: string, example: user }
         target_id: { type: string, nullable: true }
+        target_name: { type: string, nullable: true, description: "Chỉ GET /system/audit-logs — tên tài khoản khi target_type=user (để UI không hiện ObjectId); null với loại khác hoặc tài khoản không còn" }
         metadata: { type: object, description: "Chi tiết thay đổi, thường có before/after" }
         ip_address: { type: string, nullable: true, description: "IP client của request; null khi hệ thống tự thực hiện ngoài request (job nền, MQTT). Đặt TRUST_PROXY khi chạy sau proxy để có IP thật" }
         created_at: { type: string, format: date-time }

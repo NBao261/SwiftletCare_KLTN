@@ -26,7 +26,10 @@ export interface ListAuditLogsQuery {
   limit?: string | number
 }
 
-export async function listAuditLogs(query: ListAuditLogsQuery) {
+export async function listAuditLogs(query: ListAuditLogsQuery): Promise<{
+  records: Array<Record<string, unknown> & { target_name: string | null }>
+  total: number; page: number; limit: number
+}> {
   const filter: Record<string, unknown> = {}
   if (query.actorId) filter.actor_id = query.actorId
   if (query.action) filter.action = query.action
@@ -45,7 +48,15 @@ export async function listAuditLogs(query: ListAuditLogsQuery) {
       .populate('actor_id', 'full_name email role').lean(),
     AuditLog.countDocuments(filter),
   ])
-  return { records, total, page, limit }
+
+  // Đối tượng loại `user` → kèm tên (`target_name`) để UI không phải hiện ObjectId. 1 query gộp cho cả trang.
+  const userIds = records.filter(r => r.target_type === 'user' && r.target_id).map(r => String(r.target_id))
+  const users = userIds.length ? await User.find({ _id: { $in: userIds } }).select('full_name').lean() : []
+  const names = new Map(users.map(u => [String(u._id), u.full_name]))
+  return {
+    records: records.map(r => ({ ...r, target_name: r.target_type === 'user' && r.target_id ? names.get(String(r.target_id)) ?? null : null })),
+    total, page, limit,
+  }
 }
 
 // ── SYSTEM-FR-002: ngưỡng mặc định hệ thống ─────────────────────────────────
