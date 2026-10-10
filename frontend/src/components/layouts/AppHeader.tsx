@@ -60,12 +60,15 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
   const registeredTrail = useBreadcrumbStore(s => s.trail)
   // Khớp RequireRole của route /alerts — Sales Staff không có trang này nên không hiện nút
   const canViewAlerts = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
+  // Admin không có trang nào đọc zone đang chọn (zoneStore) — Admin quản lý toàn hệ thống, không xem theo 1 nhà/tầng
+  // (FARM-FR-009) — nên ẩn ô chọn trang trại/tầng và không chèn tên tầng vào breadcrumb
+  const usesZone = !usePermission('ADMIN')
 
   // Trang tự đăng ký breadcrumb (VD Ticket/Farms drill-down) được ưu tiên; không
   // có thì fallback về zone đang chọn (Dashboard/Thiết bị/Phân tích/Cảnh báo).
   const extraCrumbs: Crumb[] = registeredTrail.length > 0
     ? registeredTrail
-    : selectedZoneName ? [{ label: selectedZoneName }] : []
+    : usesZone && selectedZoneName ? [{ label: selectedZoneName }] : []
 
   const trail: Crumb[] = [
     { label: page.label, onClick: pathname !== page.to ? () => navigate(page.to) : undefined },
@@ -106,7 +109,7 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
       </nav>
 
       <div className="flex shrink-0 items-center gap-3">
-        <ZoneSwitcher />
+        {usesZone && <ZoneSwitcher />}
         <LanguageToggle />
 
         {canViewAlerts && <NotificationPopover />}

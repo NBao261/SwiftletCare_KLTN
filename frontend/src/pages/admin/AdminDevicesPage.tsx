@@ -7,7 +7,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
-import { IconDevice } from '@/components/ui/icons'
 import { useSystemNodeStatus } from '@/hooks/shared/useDevices'
 import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips, SectionCard } from '@/components/ui'
 import DataTable from '@/components/ui/DataTable'
@@ -114,8 +113,8 @@ export default function AdminDevicesPage() {
       {/* Hàng 0: 5 ô số toàn hệ thống — tự làm mới mỗi 30 giây (useSystemNodeStatus) */}
       <DeviceStats status={data} />
 
-      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
-      <SectionCard icon={<IconDevice width={20} height={20} />} title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống · tự làm mới mỗi 30 giây">
+      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang */}
+      <SectionCard title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống · tự làm mới mỗi 30 giây">
 
         {/* Hàng 1: tìm kiếm — không có nút tạo: kích hoạt thiết bị là việc của Technician */}
         <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, phòng..." value={search} onChange={withReset(setSearch)} />
