@@ -4,9 +4,12 @@ import {
   Chart as ChartJS, BarController, LineController,
   type ChartData, type ChartOptions, type Plugin, type ScriptableLineSegmentContext, type TooltipModel,
 } from 'chart.js'
+import { CalendarCheckIcon, ClockIcon, PercentIcon, ShieldCheckIcon, UsersThreeIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { useAllTickets } from '@/hooks/admin/useAdminTickets'
 import { useTicketKpi } from '@/hooks/shared/useTickets'
+import { useTicketRouting } from '@/hooks/admin/useSystem'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import StatTile from '@/components/ui/StatTile'
 import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme'
 import { formatDuration } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
@@ -22,11 +25,9 @@ const HOUR_MS = 3_600_000
  * trang Ticket/Cấu hình vẫn cảnh báo ở 80% (SLA_WARN_RATE) — chốt 1 con số thì đổi cả 2 chỗ.
  */
 const SLA_TARGET = 90
-/**
- * Technician "quá tải" = đang giữ từ ngần này ticket chưa đóng trở lên (chưa nhận + đang làm).
- * ponytail: SRS TICKET-FR-005 nói "> N ticket mở" nhưng chưa chốt N — hằng số tạm, chuyển sang cấu hình hệ thống khi SRS chốt.
- */
-const OVERLOAD_OPEN_TICKETS = 10
+
+/** Màu vòng icon ô tóm tắt — xám nhạt như ReadingTile (Dashboard Farm Owner), không đổi màu theo trạng thái */
+const ICON_NORMAL = 'bg-warmGray/10 text-charcoal'
 
 const DAY_LABEL = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
 /** Khoá ngày theo giờ VN — ticket tạo 23:30 ngày 1 không bị tính sang ngày 2 */
@@ -146,13 +147,18 @@ export default function TicketTrendChart() {
   const s = useDailySeries(tickets)
 
   const rate = kpi?.slaComplianceRate ?? null
-  const overloaded = (kpi?.byTechnician ?? []).filter(t => t.total - t.closed >= OVERLOAD_OPEN_TICKETS)
+  // Technician "quá tải" = giữ ≥ N ticket chưa đóng — đúng điều kiện Ticket Router bỏ qua người đó khi gán
+  // (ticket.service#routeToTechnician), N lấy từ cấu hình hệ thống TICKET-FR-005 chứ không hard-code
+  const maxOpen = useTicketRouting().data?.max_open_tickets_per_technician
+  const overloaded = maxOpen == null ? [] : (kpi?.byTechnician ?? []).filter(t => t.total - t.closed >= maxOpen)
 
   const dueSum = sum(s.dueTotal)
   const weekRate = dueSum > 0 ? pct1(sum(s.dueOnTime), dueSum) : null
   const daysWithData = s.rate.filter(v => v != null).length
   const daysMet = s.rate.filter(v => v != null && v >= SLA_TARGET).length
   const worstPriority = (Object.entries(s.breachedByPriority) as [TicketPriority, number][]).sort((a, b) => b[1] - a[1])[0]
+  const rateLow = rate != null && rate < SLA_TARGET
+  const weekLow = weekRate != null && weekRate < SLA_TARGET
 
   const tickFont = baseChartOptions.scales.y.ticks
   // data/options giữ ổn định (useMemo): đổi `tip` (tooltip HTML) chỉ render lại khung tooltip — nếu mỗi lần render tạo
@@ -272,7 +278,7 @@ export default function TicketTrendChart() {
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-warmGray/10 pb-3">
         <div className="min-w-0">
           <h2 className="text-h2 text-charcoal">Xu hướng Ticket & Tuân thủ SLA ({DAYS} ngày qua)</h2>
-          <p className="text-small text-warmGray">Biểu đồ giám sát hiệu năng giải quyết sự cố và tỷ lệ cam kết chất lượng dịch vụ</p>
+          <p className="mt-1 text-sm text-warmGray">Biểu đồ giám sát hiệu năng giải quyết sự cố và tỷ lệ cam kết chất lượng dịch vụ</p>
         </div>
         <div className="flex gap-1 rounded-xl border border-warmGray/10 bg-warmGray/10 p-1" role="tablist">
           {TABS.map(t => (
@@ -296,7 +302,7 @@ export default function TicketTrendChart() {
           <li key={l.label} className="flex items-center gap-2 text-small font-medium text-charcoal">
             <span className={l.swatch} />
             {l.label}
-            {l.total !== null && <span className="font-bold tabular-nums">{l.total}</span>}
+            {l.total !== null && <span className="font-bold">{l.total}</span>}
           </li>
         ))}
       </ul>
@@ -333,7 +339,7 @@ export default function TicketTrendChart() {
               </div>
               <div className="mt-2.5 flex items-baseline justify-between gap-3">
                 <span className="text-small text-white/80">Tỷ lệ tuân thủ SLA:</span>
-                <span className={cn('text-h3 font-bold tabular-nums', tipDiff < 0 ? 'text-orange-400' : 'text-limeMist')}>{tipValue}%</span>
+                <span className={cn('text-h3 font-bold', tipDiff < 0 ? 'text-orange-400' : 'text-limeMist')}>{tipValue}%</span>
               </div>
               <p className="mt-1 text-caption font-medium text-white/50">
                 {tipDiff >= 0 ? '+' : ''}{tipDiff}% so với cam kết {SLA_TARGET}% · {s.dueOnTime[tip.index]}/{s.dueTotal[tip.index]} ticket đúng hạn
@@ -343,55 +349,41 @@ export default function TicketTrendChart() {
         </div>
       )}
 
-      {/* 3 ô tóm tắt dưới biểu đồ — đổi theo tab */}
+      {/* 3 ô tóm tắt dưới biểu đồ — đổi theo tab. Dùng chung StatTile với hàng KPI đầu trang (cùng kiểu ReadingTile
+          Dashboard Farm Owner): nằm trong card nên bỏ shadow riêng; khung trắng, không tô đỏ/cam theo trạng thái */}
       <div className="mt-4 grid gap-4 border-t border-warmGray/10 pt-4 sm:grid-cols-3">
         {tab === 'volume' ? (
           <>
-            <SummaryBox label="Thời gian xử lý TB" value={kpi?.avgResolveHours != null ? formatDuration(kpi.avgResolveHours * HOUR_MS) : '--'}
-              sub={kpi ? `Trên ${kpi.resolvedTickets} ticket đã xử lý xong` : ''} />
-            <SummaryBox label="Tỷ lệ đúng SLA" value={rate != null ? `${rate}%` : '--'} danger={rate != null && rate < SLA_TARGET}
-              sub={rate != null ? `${rate >= SLA_TARGET ? '↑ Vượt' : '↓ Dưới'} chỉ tiêu sàn ${SLA_TARGET}%` : 'Chưa có ticket nào tới hạn'}
-              subTone={rate == null ? undefined : rate >= SLA_TARGET ? 'good' : 'bad'} />
-            {/* Quá tải = cần điều phối lại, chưa phải lỗi — tô cam (cảnh báo) thay vì đỏ */}
-            <SummaryBox label="Technician quá tải" value={`${overloaded.length} người`} warning={overloaded.length > 0}
+            {/* 2 ô đầu lấy /tickets/kpi = TOÀN BỘ lịch sử, không phải 7 ngày như biểu đồ — dòng phụ ghi rõ để không
+                nhầm với "Tỷ lệ đúng SLA 7 ngày" ở tab bên cạnh (2 con số khác nhau là đúng) */}
+            <StatTile className="shadow-none" icon={ClockIcon} iconClass={ICON_NORMAL}
+              label="Thời gian xử lý TB" value={kpi?.avgResolveHours != null ? formatDuration(kpi.avgResolveHours * HOUR_MS) : '--'}
+              sub={kpi ? `Từ lúc tạo tới lúc đóng · ${kpi.resolvedTickets} ticket` : ''} />
+            <StatTile className="shadow-none" icon={ShieldCheckIcon} iconClass={ICON_NORMAL}
+              label="Tỷ lệ đúng SLA" value={rate != null ? `${rate}%` : '--'}
+              sub={rate != null ? `Toàn thời gian · ${rateLow ? 'dưới' : 'đạt'} chỉ tiêu ${SLA_TARGET}%` : 'Chưa có ticket nào tới hạn'} />
+            <StatTile className="shadow-none" icon={UsersThreeIcon} iconClass={ICON_NORMAL}
+              label="Technician quá tải" value={`${overloaded.length} người`}
               sub={overloaded.length > 0
                 ? overloaded.map(t => t.full_name ?? t.email ?? '—').join(', ')
-                : `Không ai giữ từ ${OVERLOAD_OPEN_TICKETS} ticket mở trở lên`} />
+                : maxOpen != null ? `Không ai giữ từ ${maxOpen} ticket mở` : ''} />
           </>
         ) : (
           <>
-            <SummaryBox label="Tỷ lệ trung bình 7 ngày" value={weekRate != null ? `${weekRate}%` : '--'} danger={weekRate != null && weekRate < SLA_TARGET}
-              sub={weekRate != null ? `${weekRate >= SLA_TARGET ? '↑ Vượt' : '↓ Dưới'} chỉ tiêu sàn ${SLA_TARGET}%` : 'Chưa có ticket nào tới hạn'}
-              subTone={weekRate == null ? undefined : weekRate >= SLA_TARGET ? 'good' : 'bad'} />
-            <SummaryBox label="Ngày đạt mục tiêu" value={daysWithData > 0 ? `${daysMet}/${daysWithData} ngày` : '--'}
+            {/* Gộp mọi ticket tới hạn trong 7 ngày (đúng hạn / tới hạn), không phải trung bình cộng 7 tỷ lệ ngày */}
+            <StatTile className="shadow-none" icon={PercentIcon} iconClass={ICON_NORMAL}
+              label="Tỷ lệ đúng SLA 7 ngày" value={weekRate != null ? `${weekRate}%` : '--'}
+              sub={weekRate != null ? `${weekLow ? 'Dưới' : 'Đạt'} chỉ tiêu ${SLA_TARGET}%` : 'Chưa có ticket nào tới hạn'} />
+            <StatTile className="shadow-none" icon={CalendarCheckIcon} iconClass={ICON_NORMAL}
+              label="Ngày đạt mục tiêu" value={daysWithData > 0 ? `${daysMet}/${daysWithData} ngày` : '--'}
               sub={daysWithData === 0 ? 'Chưa có ticket nào tới hạn'
-                : daysMet < daysWithData ? `${daysWithData - daysMet} ngày dưới mục tiêu ${SLA_TARGET}%` : 'Mọi ngày đều đạt mục tiêu'} />
-            <SummaryBox label="Mức ưu tiên vi phạm nhiều nhất" value={worstPriority[1] > 0 ? `${worstPriority[0]} (${worstPriority[1]} ca)` : 'Không có'}
-              danger={worstPriority[1] > 0}
-              sub={`P1: ${s.breachedByPriority.P1} · P2: ${s.breachedByPriority.P2} · P3: ${s.breachedByPriority.P3} ca trễ hạn`} />
+                : daysMet < daysWithData ? `${daysWithData - daysMet} ngày dưới ${SLA_TARGET}%` : 'Mọi ngày đều đạt'} />
+            <StatTile className="shadow-none" icon={WarningCircleIcon} iconClass={ICON_NORMAL}
+              label="Ưu tiên trễ hạn nhiều nhất" value={worstPriority[1] > 0 ? `${worstPriority[0]} (${worstPriority[1]} ca)` : 'Không có'}
+              sub={`P1: ${s.breachedByPriority.P1} · P2: ${s.breachedByPriority.P2} · P3: ${s.breachedByPriority.P3} ca trễ`} />
           </>
         )}
       </div>
     </section>
-  )
-}
-
-/** Ô tóm tắt dưới biểu đồ — `danger` = đỏ (vi phạm, dưới mục tiêu) · `warning` = cam (cần chú ý/điều phối) */
-function SummaryBox({ label, value, sub, danger, warning, subTone }: {
-  label: string; value: string; sub: string; danger?: boolean; warning?: boolean; subTone?: 'good' | 'bad'
-}) {
-  return (
-    <div className={cn('rounded-2xl border p-4',
-      danger ? 'border-alertRed/30 bg-alertRed/[0.04]' : warning ? 'border-orange-200 bg-orange-50' : 'border-warmGray/15 bg-warmGray/5')}
-    >
-      <p className={cn('text-[11px] font-bold uppercase tracking-wider', danger ? 'text-alertRed' : warning ? 'text-orange-700' : 'text-warmGray')}>{label}</p>
-      <p className={cn('my-1 text-[28px] font-extrabold leading-tight tabular-nums', danger ? 'text-alertRed' : warning ? 'text-orange-600' : 'text-charcoal')}>{value}</p>
-      <p
-        className={cn('truncate text-small', subTone === 'good' ? 'font-semibold text-accent-800' : subTone === 'bad' ? 'font-semibold text-alertRed' : 'text-graphite')}
-        title={sub}
-      >
-        {sub}
-      </p>
-    </div>
   )
 }

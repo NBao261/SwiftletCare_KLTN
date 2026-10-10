@@ -89,6 +89,14 @@ export function useUpdateSlaHours() {
   })
 }
 
+/** TICKET-FR-005 — GET /system/settings/ticket-routing (ngưỡng quá tải N do Admin cấu hình). */
+export function useTicketRouting() {
+  return useQuery({
+    queryKey: ['system-ticket-routing'],
+    queryFn: () => systemApi.getTicketRouting().then(r => r.data.data),
+  })
+}
+
 /** SYSTEM-FR-003 — GET /system/health-overview. */
 export function useSystemHealth() {
   return useQuery({

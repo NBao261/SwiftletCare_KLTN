@@ -1,10 +1,9 @@
 import { CheckCircleIcon, ClockIcon, HourglassIcon, TimerIcon, TrayIcon, UsersThreeIcon, WarningCircleIcon, WrenchIcon, type Icon } from '@phosphor-icons/react'
 import { useTicketKpi } from '@/hooks/shared/useTickets'
-import { Button, EmptyState } from '@/components/ui'
+import { Button, Card, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import StatTile from '@/components/ui/StatTile'
 import PriorityLegend from '@/components/features/admin/tickets/PriorityLegend'
-import { STATUS_BADGE_CLASS } from '@/components/features/admin/tickets/tickets.constants'
 import { formatDuration } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { STATUS_LABEL } from '@/constants/tickets'
@@ -18,6 +17,16 @@ const STATUS_ICON: Record<TicketStatus, Icon> = {
 }
 
 const STATUS_ORDER = Object.keys(STATUS_LABEL) as TicketStatus[]
+/** Vòng icon xám như các ô trang Tổng quan/Người dùng/Thiết bị (theo ReadingTile Dashboard Farm Owner) */
+const ICON = 'bg-warmGray/10 text-charcoal'
+/** Nhãn ô ngắn hơn nhãn trạng thái chung — "Chờ xác nhận hiện trường" dài, xuống 2 dòng trong ô */
+const STATUS_TILE_LABEL: Partial<Record<TicketStatus, string>> = { AWAITING_FIELD_CONFIRMATION: 'Chờ xác nhận' }
+/** Dòng phụ: trạng thái đó nghĩa là ticket đang ở bước nào (TICKET-FR-007) */
+const STATUS_SUB: Record<Exclude<TicketStatus, 'CLOSED'>, string> = {
+  NEW: 'Chờ kỹ thuật viên tiếp nhận',
+  IN_PROGRESS: 'Kỹ thuật viên đang xử lý',
+  AWAITING_FIELD_CONFIRMATION: 'Xong tại farm, chờ nghiệm thu',
+}
 /** Dưới mức này tỉ lệ đúng hạn tô đỏ — cùng ngưỡng SlaCard ở Cài đặt hệ thống */
 const SLA_WARN_RATE = 80
 const HOUR_MS = 3_600_000
@@ -32,7 +41,8 @@ interface Props {
 /**
  * Khu thống kê trên bảng Ticket của Admin — TICKET-FR-012, GET /tickets/kpi (chỉ ADMIN), số
  * liệu toàn hệ thống (không theo bộ lọc bảng). Đọc từ trên xuống theo mức cần hành động:
- * - Hàng 5 ô số chỉ để xem: % đúng hạn SLA (cả ô đỏ nhạt khi dưới mục tiêu) rồi 4 trạng thái, icon tròn theo màu trạng thái.
+ * - Hàng 5 ô số chỉ để xem (bọc Card "Thống kê ticket"): % đúng hạn SLA (cả ô đỏ nhạt khi dưới mục tiêu) rồi 4
+ *   trạng thái, icon xám, dòng phụ nói trạng thái đó là bước nào.
  * - Bảng Kỹ thuật viên: sắp theo số ticket đang giữ (nhiều nhất lên đầu), để Admin thấy
  *   ai quá tải mà gán lại (TICKET-FR-005b). Bấm tên → bảng ticket chỉ còn ticket của người đó.
  */
@@ -52,7 +62,8 @@ export default function TicketInsights({ search, onSelectTechnician }: Props) {
   }
 
   const counts = Object.fromEntries(STATUS_ORDER.map(s => [s, kpi.byStatus.find(r => r._id === s)?.count ?? 0])) as Record<TicketStatus, number>
-  const total = STATUS_ORDER.reduce((sum, s) => sum + counts[s], 0)
+  // Huỷ = status CLOSED + cancelled_at; resolvedTickets của backend chỉ đếm CLOSED không huỷ (ticket.service#getKpi)
+  const cancelled = Math.max(0, counts.CLOSED - kpi.resolvedTickets)
   const rate = kpi.slaComplianceRate
   const slaBad = rate != null && rate < SLA_WARN_RATE
 
@@ -64,33 +75,41 @@ export default function TicketInsights({ search, onSelectTechnician }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 5 ô bằng nhau trên desktop; mobile: ô SLA chiếm trọn hàng đầu, 4 ô trạng thái xếp 2×2 */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatTile
-          className="col-span-2 lg:col-span-1"
-          icon={TimerIcon}
-          iconClass={rate == null ? 'bg-warmGray/10 text-charcoal' : slaBad ? 'bg-alertRed text-white' : 'bg-accent-300 text-charcoal'}
-          alert={slaBad}
-          label="Đúng hạn SLA"
-          value={rate != null ? `${rate}%` : '--'}
-          // Trạng thái không chỉ bằng màu (FE_Design §13.11): dòng phụ ghi rõ "Dưới/Đạt mục tiêu"
-          sub={rate != null
-            ? `${slaBad ? 'Dưới' : 'Đạt'} mục tiêu ${SLA_WARN_RATE}% · ${kpi.ticketsPastDue} ticket tới hạn`
-            : 'Chưa có ticket nào tới hạn'}
-        />
+      {/* Cùng kiểu card "Chỉ số vận hành toàn hệ thống" (Tổng quan): bọc Card + tiêu đề, ô bỏ shadow riêng, icon xám */}
+      <Card className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-h2 text-charcoal">Thống kê ticket</h2>
+          <p className="mt-1 text-sm text-warmGray">Tình trạng xử lý và mức đúng hạn SLA trên toàn hệ thống</p>
+        </div>
 
-        {/* Chỉ để xem — lọc theo trạng thái dùng SelectMenu ở thanh công cụ của bảng */}
-        {STATUS_ORDER.map(s => (
+        {/* 5 ô bằng nhau trên desktop; mobile: ô SLA chiếm trọn hàng đầu, 4 ô trạng thái xếp 2×2 */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           <StatTile
-            key={s}
-            icon={STATUS_ICON[s]}
-            iconClass={STATUS_BADGE_CLASS[s]}
-            label={STATUS_LABEL[s]}
-            value={counts[s]}
-            sub={`${total > 0 ? Math.round((counts[s] / total) * 100) : 0}% tổng số`}
+            className="col-span-2 shadow-none lg:col-span-1"
+            icon={TimerIcon}
+            iconClass={ICON}
+            label="Đúng hạn SLA"
+            value={rate != null ? `${rate}%` : '--'}
+            // Trạng thái không chỉ bằng màu (FE_Design §13.11): dòng phụ ghi rõ "Dưới/Đạt mục tiêu"; số ticket tới
+            // hạn xem ở title (giữ dòng phụ 1 dòng)
+            sub={rate != null ? `${slaBad ? 'Dưới' : 'Đạt'} mục tiêu ${SLA_WARN_RATE}%` : 'Chưa có ticket nào tới hạn'}
           />
-        ))}
-      </div>
+
+          {/* Chỉ để xem — lọc theo trạng thái dùng SelectMenu ở thanh công cụ của bảng. Dòng phụ nói trạng thái đó
+              nghĩa là gì (thay cho "% tổng số" — tỉ lệ không giúp Admin làm gì) */}
+          {STATUS_ORDER.map(s => (
+            <StatTile
+              key={s}
+              className="shadow-none"
+              icon={STATUS_ICON[s]}
+              iconClass={ICON}
+              label={STATUS_TILE_LABEL[s] ?? STATUS_LABEL[s]}
+              value={counts[s]}
+              sub={s === 'CLOSED' ? `${kpi.resolvedTickets} hoàn thành · ${cancelled} đã huỷ` : STATUS_SUB[s]}
+            />
+          ))}
+        </div>
+      </Card>
 
       {/* ── Hàng 2: Kỹ thuật viên (phần còn lại) + Mức ưu tiên & hạn SLA (rộng cố định 21rem, đủ cho
           "Khẩn cấp" không xuống dòng) — 2 card cao bằng nhau ── */}
@@ -156,28 +175,28 @@ export default function TicketInsights({ search, onSelectTechnician }: Props) {
                           </span>
                           <span className="min-w-0">
                             <span className={cn('block truncate text-body font-semibold text-charcoal', t.full_name && 'group-hover:underline')}>{name}</span>
-                            <span className="block text-small tabular-nums text-warmGray">{t.total} ticket</span>
+                            <span className="block text-small text-warmGray">{t.total} ticket</span>
                           </span>
                         </button>
                       </td>
                       {/* Chưa nhận > 0 tô cam — cùng màu ô "Mới" ở hàng trên, là việc Admin cần nhắc/gán lại */}
                       <td className={cn(
-                        'px-2 py-2 text-center text-body font-bold tabular-nums',
+                        'px-2 py-2 text-center text-body font-bold',
                         t.unaccepted > 0 ? 'text-orange-600' : 'text-graphite',
                       )}>
                         {t.unaccepted}
                       </td>
-                      <td className="px-2 py-2 text-center text-body font-bold tabular-nums text-charcoal">{t.working}</td>
-                      <td className="px-2 py-2 text-center font-semibold tabular-nums text-accent-700">{t.completed}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-graphite">{t.cancelled}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-charcoal">
+                      <td className="px-2 py-2 text-center text-body font-bold text-charcoal">{t.working}</td>
+                      <td className="px-2 py-2 text-center font-semibold text-accent-700">{t.completed}</td>
+                      <td className="px-2 py-2 text-center text-graphite">{t.cancelled}</td>
+                      <td className="px-2 py-2 text-center text-charcoal">
                         {t.avgResolveHours != null ? formatDuration(t.avgResolveHours * HOUR_MS) : '--'}
                       </td>
                       <td className="px-2 py-2 text-center">
                         {/* Pill màu thay chữ màu: đỏ dưới mục tiêu, lime đạt — nổi hơn khi quét dọc cột */}
                         {t.slaComplianceRate != null ? (
                           <span className={cn(
-                            'inline-block rounded-full px-2.5 py-0.5 font-semibold tabular-nums',
+                            'inline-block rounded-full px-2.5 py-0.5 font-semibold',
                             techSlaBad ? 'bg-red-100 text-red-600' : 'bg-lime-200 text-accent-800',
                           )}>
                             {t.slaComplianceRate}%
