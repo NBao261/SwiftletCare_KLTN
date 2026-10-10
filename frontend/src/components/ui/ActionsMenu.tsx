@@ -16,7 +16,14 @@ interface ActionsMenuProps {
 }
 
 const MENU_ITEM_HEIGHT = 36
-const MENU_PADDING = 8
+const ITEM_GAP = 2 // space-y-0.5
+const MENU_CHROME = 14 // p-1.5 trên + dưới (12) + border (2)
+const DIVIDER_HEIGHT = 11 // my-1 + h-px (9) + 1 gap space-y-0.5 (2)
+
+function estimateMenuHeight(items: ActionsMenuItem[]): number {
+  const dividers = items.filter((item, i) => item.danger && i > 0 && !items[i - 1].danger).length
+  return items.length * MENU_ITEM_HEIGHT + Math.max(0, items.length - 1) * ITEM_GAP + dividers * DIVIDER_HEIGHT + MENU_CHROME
+}
 
 /**
  * Menu "..." theo dòng bảng (DataTable) — cơ chế portal/lật/đóng xem useFloatingMenu.
@@ -26,7 +33,7 @@ const MENU_PADDING = 8
 export default function ActionsMenu({ items }: ActionsMenuProps) {
   const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
     align: 'right',
-    estimatedHeight: items.length * MENU_ITEM_HEIGHT + MENU_PADDING,
+    estimatedHeight: estimateMenuHeight(items),
   })
   const [activeIndex, setActiveIndex] = useState(-1)
 
@@ -68,7 +75,8 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
     }
     if (e.key === 'ArrowDown') { e.preventDefault(); move(1) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1) }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); run(activeIndex) }
+    // Chưa trỏ mục nào (vừa mở menu) thì Enter/Space chạy mục bấm-được đầu tiên
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); run(activeIndex >= 0 ? activeIndex : items.findIndex(i => !i.disabled)) }
     else if (e.key === 'Escape') { e.preventDefault(); close() }
     else if (e.key === 'Tab') setOpen(false)
   }
@@ -118,7 +126,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
                   onClick={() => run(index)}
                   className={cn(
                     'block w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:text-warmGray/40',
-                    item.danger ? 'text-[#A8583B]' : 'text-charcoal',
+                    item.danger ? 'text-alertRed' : 'text-charcoal',
                     isActive ? 'bg-gray-100' : 'bg-transparent',
                   )}
                 >
