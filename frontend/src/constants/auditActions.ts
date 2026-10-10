@@ -43,6 +43,19 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   SLA_UPDATED: 'Cập nhật SLA ticket',
 }
 
+/**
+ * Trang Nhật ký hệ thống + card "Nhật ký hoạt động gần đây" chỉ hiện nhật ký TÀI KHOẢN (target_type='user',
+ * lọc ở server) — không hiện log thiết bị/ticket/cấu hình. Đây là các mã backend ghi với target_type 'user'
+ * (auth.service.ts, admin.service.ts) — dùng cho dropdown lọc hành động.
+ */
+export const AUDIT_TARGET_TYPE = 'user'
+export const USER_AUDIT_ACTIONS = [
+  'LOGIN', 'LOGIN_FAILED', 'PASSWORD_RESET',
+  'USER_CREATED', 'TECHNICIAN_REGIONS_UPDATED',
+  'ACCOUNT_LOCKED', 'ACCOUNT_UNLOCKED',
+  'DELETION_REQUESTED', 'ACCOUNT_DELETED',
+] as const
+
 /** Nhãn cho `target_type` (chuỗi backend, snake_case) — thiếu thì hiện nguyên mã */
 export const AUDIT_TARGET_LABEL: Record<string, string> = {
   user: 'Người dùng',

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useDefaultThresholds } from '@/hooks/admin/useSystem'
 import { Button, Card } from '@/components/ui'
 import { IconEdit } from '@/components/ui/icons'
@@ -16,7 +15,7 @@ function MinMaxValue({ label, value, unit }: { label: string; value: number; uni
   return (
     <div>
       <span className="label-caption block text-charcoal/50">{label}</span>
-      <span className="text-xl font-bold tabular-nums text-charcoal">
+      <span className="text-xl font-bold text-charcoal">
         {value}<span className="ml-1 text-xs font-semibold text-charcoal/50">{unit}</span>
       </span>
     </div>
@@ -101,7 +100,7 @@ export default function ThresholdsCard() {
                         <MinMaxValue label="Tối đa" value={data[group.maxKey]} unit={THRESHOLD_LIMITS[group.maxKey].unit} />
                       </dd>
                     ) : (
-                      <dd className="mt-2 items-baseline text-xl font-bold tabular-nums text-charcoal">
+                      <dd className="mt-2 items-baseline text-xl font-bold text-charcoal">
                         {data[group.key]} <span className="text-xs font-semibold text-charcoal/50">{THRESHOLD_LIMITS[group.key].unit}</span>
                       </dd>
                     )}
@@ -110,16 +109,6 @@ export default function ThresholdsCard() {
               )
             })}
           </dl>
-        )}
-
-        {/* Audit log phân biệt 2 khối cấu hình bằng `action`, không phải target_id (backend log target_type='system_settings', target_id để trống) */}
-        {data && !isDefault && (
-          <Link
-            to="/system/audit-log?action=DEFAULT_THRESHOLDS_UPDATED"
-            className="mt-3 self-end text-xs font-semibold text-white/50 underline underline-offset-2 hover:text-white"
-          >
-            Xem lịch sử thay đổi
-          </Link>
         )}
       </Card>
 

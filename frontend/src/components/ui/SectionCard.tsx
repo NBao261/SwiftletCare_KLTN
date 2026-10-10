@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
 interface SectionCardProps {
-  /** Icon trong ô vuông bo góc nền charcoal — ở các trang Admin là icon của mục menu sidebar tương ứng */
-  icon: ReactNode
+  /** Icon trong ô vuông bo góc nền charcoal — ở các trang Admin là icon của mục menu sidebar tương ứng. Bỏ trống = không có ô icon */
+  icon?: ReactNode
   title: ReactNode
   /** Dòng mô tả dưới tiêu đề — có thể nhiều dòng (VD địa chỉ + chủ sở hữu farm) */
   description?: ReactNode
@@ -22,12 +22,15 @@ export default function SectionCard({ icon, title, description, action, classNam
     <section className={cn('flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
-            {icon}
-          </span>
+          {icon && (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-charcoal text-limeMist">
+              {icon}
+            </span>
+          )}
           <div className="min-w-0">
             <h2 className="flex flex-wrap items-center gap-2 text-h2 text-charcoal">{title}</h2>
-            {description && <div className="text-small text-graphite">{description}</div>}
+            {/* Cùng kiểu tiêu đề card "Chỉ số vận hành toàn hệ thống" (Tổng quan) và EnvSensorPanel (Dashboard Farm Owner) */}
+            {description && <div className="mt-1 text-sm text-warmGray">{description}</div>}
           </div>
         </div>
         {action}

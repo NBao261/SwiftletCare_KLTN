@@ -1,9 +1,12 @@
-import { CalendarBlankIcon, ClipboardTextIcon, HandPalmIcon, TimerIcon, WarningCircleIcon, WarningIcon } from '@phosphor-icons/react'
+import { CalendarBlankIcon, ClipboardTextIcon, LockSimpleIcon, UserPlusIcon, WarningCircleIcon, WarningIcon } from '@phosphor-icons/react'
 import { useAuditLogList } from '@/hooks/admin/useSystem'
-import { Button, EmptyState } from '@/components/ui'
+import { AUDIT_TARGET_TYPE } from '@/constants/auditActions'
+import { Button, Card, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import StatTile from '@/components/ui/StatTile'
 import type { ListAuditLogsQuery } from '@/apis/admin/system.api'
+
+const ICON = 'bg-warmGray/10 text-charcoal'
 
 /** Nửa đêm (giờ máy người dùng) `daysAgo` ngày trước, dạng ISO cho tham số `from` */
 function startOfDayIso(daysAgo: number) {
@@ -18,15 +21,16 @@ function startOfDayIso(daysAgo: number) {
  * thay vì tải hết nhật ký về client (bảng nhật ký chỉ tăng). Mỗi ô = 1 request rất nhẹ.
  */
 function useAuditCount(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>) {
-  const { total, isLoading, isError, refetch } = useAuditLogList({ ...query, page: 1, limit: 1 })
+  // Cùng phạm vi bảng bên dưới: chỉ nhật ký tài khoản
+  const { total, isLoading, isError, refetch } = useAuditLogList({ ...query, targetType: AUDIT_TARGET_TYPE, page: 1, limit: 1 })
   return { total, isLoading, isError, refetch }
 }
 
 /**
  * Hàng 5 ô chỉ số đầu trang Nhật ký hệ thống — cùng khuôn hàng KPI trang Ticket/Người dùng (StatTile).
- * Số liệu toàn hệ thống, không theo bộ lọc bảng. Tổng + hôm nay cho biết nhịp ghi nhật ký; 3 ô sau đếm
- * trong 7 ngày gần nhất các hành động Admin cần để mắt: đăng nhập thất bại (dấu hiệu dò mật khẩu),
- * Admin can thiệp ticket (TICKET-FR-005b), ticket vi phạm SLA (TICKET-FR-009) — đỏ khi có.
+ * Chỉ nhật ký tài khoản, không theo bộ lọc bảng. Tổng + hôm nay cho biết nhịp ghi nhật ký; 3 ô sau đếm
+ * trong 7 ngày gần nhất việc Admin cần để mắt: đăng nhập thất bại (dấu hiệu dò mật khẩu), tài khoản bị
+ * khoá (AUTH-FR-011), tài khoản nhân viên mới tạo (AUTH-FR-005c). Icon xám như ReadingTile Dashboard Farm Owner.
  */
 export default function AuditLogStats() {
   const from7d = startOfDayIso(6)
@@ -34,10 +38,10 @@ export default function AuditLogStats() {
   const today = useAuditCount({ from: startOfDayIso(0) })
   const week = useAuditCount({ from: from7d })
   const loginFailed = useAuditCount({ action: 'LOGIN_FAILED', from: from7d })
-  const overrides = useAuditCount({ action: 'TICKET_ADMIN_OVERRIDE', from: from7d })
-  const slaBreached = useAuditCount({ action: 'TICKET_SLA_BREACHED', from: from7d })
+  const locked = useAuditCount({ action: 'ACCOUNT_LOCKED', from: from7d })
+  const created = useAuditCount({ action: 'USER_CREATED', from: from7d })
 
-  const counts = [all, today, week, loginFailed, overrides, slaBreached]
+  const counts = [all, today, week, loginFailed, locked, created]
   if (counts.some(c => c.isLoading)) return <LoadingSkeleton count={1} className="h-28 w-full" />
   // Lỗi thì không hiện ô nào — "0 đăng nhập thất bại" trông như số thật
   if (counts.some(c => c.isError)) {
@@ -52,45 +56,59 @@ export default function AuditLogStats() {
   }
 
   return (
-    // 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 — như trang Ticket
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-      <StatTile
-        className="col-span-2 lg:col-span-1"
-        icon={ClipboardTextIcon}
-        iconClass="bg-charcoal text-limeMist"
-        label="Tổng nhật ký"
-        value={all.total}
-        sub={`${today.total} bản ghi hôm nay`}
-      />
-      <StatTile
-        icon={CalendarBlankIcon}
-        iconClass="bg-accent-300 text-charcoal"
-        label="7 ngày qua"
-        value={week.total}
-        sub={`TB ${Math.round(week.total / 7)} bản ghi / ngày`}
-      />
-      <StatTile
-        icon={WarningIcon}
-        iconClass={loginFailed.total > 0 ? 'bg-orange-100 text-orange-600' : 'bg-warmGray/10 text-charcoal'}
-        label="Đăng nhập thất bại"
-        value={loginFailed.total}
-        sub="trong 7 ngày qua"
-      />
-      <StatTile
-        icon={HandPalmIcon}
-        iconClass="bg-warmGray/10 text-charcoal"
-        label="Can thiệp ticket"
-        value={overrides.total}
-        sub="Admin can thiệp · 7 ngày qua"
-      />
-      <StatTile
-        icon={TimerIcon}
-        iconClass={slaBreached.total > 0 ? 'bg-alertRed text-white' : 'bg-accent-300 text-charcoal'}
-        alert={slaBreached.total > 0}
-        label="Ticket vi phạm SLA"
-        value={slaBreached.total}
-        sub={slaBreached.total > 0 ? 'trong 7 ngày qua' : 'Không có trong 7 ngày qua'}
-      />
-    </div>
+    // Cùng kiểu card "Chỉ số vận hành toàn hệ thống" (Tổng quan) và "Thống kê tài khoản" (Người dùng):
+    // bọc Card + tiêu đề, ô bên trong bỏ shadow riêng
+    <Card className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-h2 text-charcoal">Thống kê nhật ký</h2>
+        <p className="mt-1 text-sm text-warmGray">Hoạt động tài khoản trên toàn hệ thống, phần lớn tính trong 7 ngày qua</p>
+      </div>
+
+      {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <StatTile
+          className="col-span-2 shadow-none lg:col-span-1"
+          icon={ClipboardTextIcon}
+          iconClass={ICON}
+          label="Tổng nhật ký"
+          value={all.total}
+          sub={`Hôm nay thêm ${today.total} bản ghi`}
+        />
+        <StatTile
+          className="shadow-none"
+          icon={CalendarBlankIcon}
+          iconClass={ICON}
+          label="Nhật ký 7 ngày qua"
+          value={week.total}
+          sub={`Trung bình ${Math.round(week.total / 7)} bản ghi/ngày`}
+        />
+        <StatTile
+          className="shadow-none"
+          icon={WarningIcon}
+          iconClass={ICON}
+          label="Đăng nhập thất bại"
+          value={loginFailed.total}
+          sub="Trong 7 ngày qua"
+        />
+        {/* Đếm LƯỢT Admin khoá (ACCOUNT_LOCKED), không phải số tài khoản đang bị khoá — nhãn nói rõ để khỏi nhầm */}
+        <StatTile
+          className="shadow-none"
+          icon={LockSimpleIcon}
+          iconClass={ICON}
+          label="Lượt khoá tài khoản"
+          value={locked.total}
+          sub="Trong 7 ngày qua"
+        />
+        {/* USER_CREATED chỉ ghi khi Admin tạo Technician/Sales Staff — Farm Owner tự đăng ký không ghi log này */}
+        <StatTile
+          className="shadow-none"
+          icon={UserPlusIcon}
+          iconClass={ICON}
+          label="Nhân viên mới"
+          value={created.total}
+          sub="Trong 7 ngày qua"
+        />
+      </div>
+    </Card>
   )
 }

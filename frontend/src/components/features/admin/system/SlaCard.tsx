@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useSlaHours } from '@/hooks/admin/useSystem'
 import { useTicketKpi } from '@/hooks/shared/useTickets'
 import { Button, Card } from '@/components/ui'
@@ -88,13 +87,13 @@ export default function SlaCard() {
                 <div className="flex gap-6">
                   <div>
                     <p className="label-caption text-charcoal/50">Phản hồi</p>
-                    <p className="mt-1 text-xl font-bold tabular-nums text-charcoal">
+                    <p className="mt-1 text-xl font-bold text-charcoal">
                       {data[p].response_hours}<span className="ml-1 text-xs font-semibold text-charcoal/50">giờ</span>
                     </p>
                   </div>
                   <div>
                     <p className="label-caption text-charcoal/50">Xử lý</p>
-                    <p className="mt-1 text-xl font-bold tabular-nums text-charcoal">
+                    <p className="mt-1 text-xl font-bold text-charcoal">
                       {data[p].resolve_hours}<span className="ml-1 text-xs font-semibold text-charcoal/50">giờ</span>
                     </p>
                   </div>
@@ -109,23 +108,13 @@ export default function SlaCard() {
           <p className="mt-3 flex items-baseline justify-between gap-3 rounded-2xl bg-charcoal px-4 py-2.5 text-sm font-bold text-white">
             Tỉ lệ tuân thủ SLA hiện tại
             <span className={cn(
-              'text-base font-bold tabular-nums',
+              'text-base font-bold',
               kpi?.slaComplianceRate == null ? 'text-white/40'
                 : kpi.slaComplianceRate < 80 ? 'text-red-400' : 'text-limeMist',
             )}>
               {kpi?.slaComplianceRate != null ? `${kpi.slaComplianceRate}%` : '--'}
             </span>
           </p>
-        )}
-
-        {/* Audit log phân biệt 2 khối cấu hình bằng `action`, không phải target_id (backend log target_type='system_settings', target_id để trống) */}
-        {data && !isDefault && (
-          <Link
-            to="/system/audit-log?action=SLA_UPDATED"
-            className="mt-3 self-end text-xs font-semibold text-charcoal/60 underline underline-offset-2 hover:text-charcoal"
-          >
-            Xem lịch sử thay đổi
-          </Link>
         )}
       </Card>
 
