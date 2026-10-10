@@ -18,17 +18,19 @@ export default function RelayToggle({ nodeId, relayName, label, checked, mode }:
   const canControl = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
 
   return (
-    <div className="flex items-center justify-between py-3">
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-charcoal">{label}</span>
-        <Badge tone={mode === 'MANUAL' ? 'warning' : 'neutral'}>{mode}</Badge>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-stone/30 rounded-xl border border-warmGray/10 hover:border-primary/20 transition-colors">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-charcoal whitespace-nowrap">{label}</span>
+        <Badge tone={mode === 'MANUAL' ? 'warning' : 'neutral'} className="text-[10px] scale-90 origin-left">{mode}</Badge>
       </div>
-      <Toggle
-        checked={checked}
-        disabled={!canControl || controlRelay.isPending}
-        onChange={state => controlRelay.mutate({ nodeId, relayName, state })}
-        aria-label={label}
-      />
+      <div className="flex justify-end">
+        <Toggle
+          checked={checked}
+          disabled={!canControl || controlRelay.isPending}
+          onChange={state => controlRelay.mutate({ nodeId, relayName, state })}
+          aria-label={label}
+        />
+      </div>
     </div>
   )
 }
