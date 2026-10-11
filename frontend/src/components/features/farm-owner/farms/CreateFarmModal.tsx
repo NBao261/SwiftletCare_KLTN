@@ -6,7 +6,7 @@ import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { getApiErrorMessage } from '@/lib/helpers'
 
-/** Tạo trang trại đầu tiên (FARM-FR-001) — chuyển từ trang Farms cũ sang đây, tạo xong danh sách nhà yến tự làm mới */
+/** Tạo trang trại mới (FARM-FR-001) — mở từ màn trống lẫn nút "Tạo trang trại" ở danh sách nhà yến; tạo xong danh sách tự làm mới */
 export default function CreateFarmModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useT(farmDict)
   const push = useToastStore(s => s.push)
