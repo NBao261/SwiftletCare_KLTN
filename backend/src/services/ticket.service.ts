@@ -1,3 +1,4 @@
+import { Types } from 'mongoose'
 import { Ticket, ITicket } from '@/models/ticket.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
@@ -11,7 +12,7 @@ import { getSlaHours, getTicketRouting } from '@/services/system.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { postSystemMessage } from '@/services/ticketChat.service'
 import { emitTicketAssigneeChanged, removeUserFromTicketRoom } from '@/socket'
-import { paginate } from '@/utils/helpers.util'
+import { escapeRegex, paginate } from '@/utils/helpers.util'
 import { assigneeIdOf } from '@/utils/ticket.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -366,37 +367,135 @@ export async function createTicketsFromStaleAlerts(): Promise<number> {
 
 // ── Truy vấn / cập nhật ──────────────────────────────────────────────────────
 
+/** Cột sắp xếp của GET /tickets — `sla` là hạn xử lý `sla_resolve_due_at` */
+export const TICKET_SORT_KEYS = ['created_at', 'sla', 'status', 'priority'] as const
+export type TicketSortKey = typeof TICKET_SORT_KEYS[number]
+
 export interface ListTicketsQuery {
   farmId?: string; status?: string; priority?: string; assignedToMe?: boolean
   /** TICKET-FR-005 — hàng đợi chung: ticket chưa ai nhận */
   unassigned?: boolean
+  /** TICKET-FR-009 — chỉ ticket vượt hạn xử lý SLA (xem `slaBreachedCondition`) */
+  slaBreached?: boolean
+  /** Tìm trong ghi chú (mô tả lúc tạo là ghi chú đầu tiên) và tên farm */
+  search?: string
+  sort?: TicketSortKey; order?: 'asc' | 'desc'
   page?: number; limit?: number
 }
 
-export async function listTickets(user: CurrentUser, query: ListTicketsQuery) {
+/**
+ * TICKET-FR-009 — ticket vượt hạn xử lý: đã bị job slaBreach đánh dấu, hoặc
+ * còn mở mà đã qua hạn (job quét 2 phút/lần nên ticket vừa quá hạn chưa kịp
+ * được đánh dấu). Ticket đã đóng chỉ tính theo cờ — đóng trước hạn thì không.
+ * Cùng quy tắc với `isSlaBreached()` của frontend để số đếm và danh sách khớp.
+ */
+function slaBreachedCondition(now: Date) {
+  return {
+    $or: [
+      { is_sla_breached: true },
+      { status: { $ne: 'CLOSED' }, sla_resolve_due_at: { $lt: now } },
+    ],
+  }
+}
+
+/**
+ * Bộ lọc chung của danh sách ticket và thống kê — luôn giới hạn trong farm
+ * user được quyền xem. Id được ép sẵn sang ObjectId vì `$match` của aggregate
+ * (dùng khi sắp xếp theo trạng thái) không tự cast như `find()`.
+ */
+async function buildTicketFilter(user: CurrentUser, query: ListTicketsQuery) {
   const accessibleFarms = await listAccessibleFarmIds(user)
   const filter: Record<string, unknown> = { farm_id: { $in: accessibleFarms } }
+  const conditions: Record<string, unknown>[] = []
 
   // Lọc theo 1 farm cụ thể phải kiểm quyền riêng: gán thẳng query.farmId vào
   // filter sẽ ghi đè danh sách farm được phép ở trên, cho phép đọc ticket của
   // farm bất kỳ chỉ bằng cách đoán id.
   if (query.farmId) {
     await assertFarmAccess(query.farmId, user)
-    filter.farm_id = query.farmId
+    filter.farm_id = new Types.ObjectId(query.farmId)
   }
   if (query.status) filter.status = query.status
   if (query.priority) filter.priority = query.priority
-  if (query.assignedToMe) filter.assigned_to = user._id
+  if (query.assignedToMe) filter.assigned_to = new Types.ObjectId(user._id)
   else if (query.unassigned) filter.assigned_to = null
+  if (query.slaBreached) conditions.push(slaBreachedCondition(new Date()))
 
+  const term = query.search?.trim()
+  if (term) {
+    const pattern = new RegExp(escapeRegex(term), 'i')
+    // Chỉ tìm tên trong các farm đã lọc ở trên — không lộ farm ngoài quyền
+    const farmIds = await Farm.find({ _id: filter.farm_id, name: pattern }).distinct('_id')
+    conditions.push({ $or: [{ 'notes.content': pattern }, { farm_id: { $in: farmIds } }] })
+  }
+
+  if (conditions.length) filter.$and = conditions
+  return filter
+}
+
+/** Thứ tự nghiệp vụ của trạng thái — sắp theo chữ cái sẽ đưa AWAITING lên trước NEW */
+const STATUS_RANK = { $switch: {
+  branches: [
+    { case: { $eq: ['$status', 'NEW'] }, then: 0 },
+    { case: { $eq: ['$status', 'IN_PROGRESS'] }, then: 1 },
+    { case: { $eq: ['$status', 'AWAITING_FIELD_CONFIRMATION'] }, then: 2 },
+  ],
+  default: 3,
+} }
+
+export async function listTickets(user: CurrentUser, query: ListTicketsQuery) {
+  const filter = await buildTicketFilter(user, query)
   const { page, skip, limit } = paginate(query.page, query.limit)
 
-  const [records, total] = await Promise.all([
-    Ticket.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit)
-      .populate('assigned_to', 'full_name email').lean(),
+  const dir = query.order === 'asc' ? 1 : -1
+  const sortField = {
+    created_at: 'created_at', sla: 'sla_resolve_due_at', status: '_status_rank', priority: 'priority',
+  }[query.sort ?? 'created_at']
+  // Thêm created_at + _id làm khoá phụ để thứ tự ổn định giữa các trang
+  const sort: Record<string, 1 | -1> = { [sortField]: dir, created_at: -1, _id: -1 }
+
+  const [rows, total] = await Promise.all([
+    Ticket.aggregate([
+      { $match: filter },
+      ...(query.sort === 'status' ? [{ $addFields: { _status_rank: STATUS_RANK } }] : []),
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: limit },
+      ...(query.sort === 'status' ? [{ $project: { _status_rank: 0 } }] : []),
+    ]),
     Ticket.countDocuments(filter),
   ])
+  const records = await Ticket.populate(rows, { path: 'assigned_to', select: 'full_name email' })
   return { records, total, page, limit }
+}
+
+/**
+ * GET /tickets/stats/me — số liệu tổng quan cho Technician đang đăng nhập, đếm
+ * thẳng trên DB thay vì frontend tự đếm trên vài chục ticket đã tải về. Cùng
+ * phạm vi với `GET /tickets?assignedToMe=true` nên con số khớp với danh sách.
+ */
+export async function getMyTicketStats(user: CurrentUser) {
+  const filter = await buildTicketFilter(user, { assignedToMe: true })
+  const now = new Date()
+  const count = (extra: Record<string, unknown>) => Ticket.countDocuments({ $and: [filter, extra] })
+
+  const [total, newCount, inProgress, awaiting, closed, slaBreached, slaBreachedOpen] = await Promise.all([
+    Ticket.countDocuments(filter),
+    count({ status: 'NEW' }),
+    count({ status: 'IN_PROGRESS' }),
+    count({ status: 'AWAITING_FIELD_CONFIRMATION' }),
+    count({ status: 'CLOSED' }),
+    count(slaBreachedCondition(now)),
+    count({ ...slaBreachedCondition(now), status: { $ne: 'CLOSED' } }),
+  ])
+
+  return {
+    total,
+    open: total - closed,
+    by_status: { NEW: newCount, IN_PROGRESS: inProgress, AWAITING_FIELD_CONFIRMATION: awaiting, CLOSED: closed },
+    sla_breached: slaBreached,
+    sla_breached_open: slaBreachedOpen,
+  }
 }
 
 export async function getTicket(ticketId: string, user: CurrentUser): Promise<ITicket> {

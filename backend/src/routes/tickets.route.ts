@@ -3,6 +3,7 @@ import { body, param, query } from 'express-validator'
 import * as ticketController from '@/controllers/tickets.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { TICKET_SORT_KEYS } from '@/services/ticket.service'
 
 const router = Router()
 router.use(authenticate)
@@ -20,8 +21,14 @@ router.post('/',                   requireRole('FARM_OWNER','ADMIN'),
   body('scheduled_visit_at').optional().isISO8601(),
   body('description').optional().isString().trim().isLength({ max: 1000 }),
   validate, ticketController.create)
-router.get ('/',                   ticketController.list)
+router.get ('/',
+  query('search').optional().isString().trim().isLength({ max: 100 }),
+  query('sort').optional().isIn(TICKET_SORT_KEYS),
+  query('order').optional().isIn(['asc', 'desc']),
+  query('slaBreached').optional().isIn(['true', 'false']),
+  validate, ticketController.list)
 router.get ('/kpi',                requireRole('ADMIN'), ticketController.kpi)
+router.get ('/stats/me',           requireRole('TECHNICIAN'), ticketController.myStats)
 router.get ('/:id',                param('id').isMongoId(), validate, ticketController.getOne)
 router.put ('/:id/status',         requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('status').notEmpty(), validate, ticketController.updateStatus)
 // Farm Owner tự huỷ ticket của mình khi đã tự khắc phục / không cần lắp nữa
