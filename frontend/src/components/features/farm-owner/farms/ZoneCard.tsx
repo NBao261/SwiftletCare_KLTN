@@ -3,7 +3,7 @@ import { Button } from '@/components/ui'
 import StatusDot from '@/components/common/StatusDot'
 import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
-import { METRIC_BY_KEY } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { METRIC_BY_KEY, CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { cn } from '@/lib/cn'
 import type { MetricKey, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 
@@ -62,7 +62,7 @@ export default function ZoneCard({ node, loadingMetrics, onOpen }: ZoneCardProps
           <StatusDot status={counts.total > 0 && counts.online === counts.total ? 'ONLINE' : counts.offline > 0 ? 'OFFLINE' : 'PENDING'} showLabel={false} />
           {t('card.devicesOnline', { online: counts.online, total: counts.total })}
         </span>
-        <Button variant="secondary" size="sm" className="h-8 px-3.5 text-xs" onClick={onOpen}>
+        <Button variant="secondary" size="sm" className={cn('h-8 px-3.5 text-xs', CAPSULE_ACTION_CLASS)} onClick={onOpen}>
           {t('zone.open')}
           <ArrowRightIcon size={12} weight="bold" />
         </Button>
