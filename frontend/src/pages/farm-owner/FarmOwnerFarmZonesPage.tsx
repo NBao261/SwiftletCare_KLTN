@@ -1,107 +1,162 @@
-import { useState, FormEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useFarm, useHouses, useZones, useCreateZone } from "@/hooks/shared/useFarms";
-import { useZoneStore } from "@/stores/zoneStore";
-import { usePermission } from "@/hooks/common/usePermission";
-import { usePageBreadcrumb } from "@/hooks/common/useBreadcrumb";
-import { Button, Input, Modal } from "@/components/ui";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import EmptyState from "@/components/ui/EmptyState";
+import { useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { MapPinIcon, PlusIcon, UserIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { Button, EmptyState, FilterChip } from '@/components/ui'
+import StableHeight from '@/components/ui/StableHeight'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
+import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
+import ZoneCard from '@/components/features/farm-owner/farms/ZoneCard'
+import HouseProductionCard from '@/components/features/farm-owner/farms/HouseProductionCard'
+import AttentionDevicesCard from '@/components/features/farm-owner/farms/AttentionDevicesCard'
+import AiAdviceCard from '@/components/features/farm-owner/farms/AiAdviceCard'
+import DeviceListTable from '@/components/features/farm-owner/farms/DeviceListTable'
+import DeviceDetailDrawer from '@/components/features/farm-owner/farms/DeviceDetailDrawer'
+import FarmMembersManager from '@/components/features/farm-owner/farms/FarmMembersManager'
+import AddZoneModal from '@/components/features/farm-owner/farms/AddZoneModal'
+import { useFarmStructure, useHouseZoneIds, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
+import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
+import { usePermission } from '@/hooks/common/usePermission'
+import { useT } from '@/hooks/common/useT'
+import { farmDict } from '@/constants/farmStructure.i18n'
+import type { DeviceRow, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 
-/** Danh sách Zone của 1 House (/farms/:farmId/houses/:houseId) — FARM-FR-002 */
+/** Khung nội dung cao CỨNG (px) cho mọi tab — tab Tổng quan (cột phải ~880px) là cao nhất, tải lại hay đổi tab trang không đổi chiều cao */
+const TAB_MIN_HEIGHT = 880
+
+type Tab = 'overview' | 'devices' | 'members'
+
+/**
+ * Chi tiết 1 nhà yến (/farms/:farmId/houses/:houseId): danh sách Zone realtime (join socket đúng các zone của nhà này),
+ * sản lượng tháng, thiết bị cần chú ý. Bấm Zone → chi tiết Zone; bấm thiết bị → drawer bên phải.
+ */
 export default function FarmOwnerFarmZonesPage() {
-  const { farmId, houseId } = useParams<{ farmId: string; houseId: string }>();
-  const navigate = useNavigate();
-  const { data: farm } = useFarm(farmId);
-  // Không có API lấy 1 house theo id — tra trong danh sách house của farm (đã fetch sẵn ở trang cha, cache lại nhờ react-query)
-  const { data: houses } = useHouses(farmId);
-  const house = houses?.find((h) => h._id === houseId);
-  const { data: zones, isLoading } = useZones(houseId);
-  const createZone = useCreateZone(houseId!);
-  // Backend: POST /farms/houses/:houseId/zones chỉ cho FARM_OWNER, TECHNICIAN, ADMIN
-  const canManage = usePermission("FARM_OWNER", "TECHNICIAN", "ADMIN");
-  // Route /dashboard chỉ cho FARM_OWNER (RequireRole trong App.tsx) — nút này chỉ hiện cho role được vào
-  const isFarmOwner = usePermission("FARM_OWNER");
-  const setZone = useZoneStore((s) => s.setZone);
-  const [showCreate, setShowCreate] = useState(false);
-  const [zoneName, setZoneName] = useState("");
+  const { farmId, houseId } = useParams<{ farmId: string; houseId: string }>()
+  const navigate = useNavigate()
+  const { t } = useT(farmDict)
+  const liveZoneIds = useHouseZoneIds(houseId)
+  const { structure, isLoading, isError, metricsLoading, refetch } = useFarmStructure({ liveZoneIds })
+  const node = houseId ? structure.houseById.get(houseId) : undefined
+  const { data: extras } = useStructureExtras(houseId ? [houseId] : [])
+  const canManage = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
 
-  usePageBreadcrumb(
-    farm && house
-      ? [{ label: farm.name, onClick: () => navigate(`/farms/${farmId}`) }, { label: house.name }]
-      : [],
-  );
+  const [tab, setTab] = useState<Tab>('overview')
+  const [showAddZone, setShowAddZone] = useState(false)
+  const [selected, setSelected] = useState<DeviceRow | null>(null)
 
-  function handleCreate(e: FormEvent) {
-    e.preventDefault();
-    createZone.mutate(
-      { name: zoneName },
-      {
-        onSuccess: () => {
-          setShowCreate(false);
-          setZoneName("");
-        },
-      },
-    );
+  usePageBack('/farms', t('page.farms'))
+  usePageBreadcrumb(node ? [{ label: node.house.name }] : [])
+
+  // Gom thiết bị của nhà trong 1 lượt duyệt: tất cả / không online / camera đầu tiên
+  const { devices, problems, camera, zoneNameById, zoneById } = useMemo(() => {
+    const devices: DeviceRow[] = []
+    const problems: DeviceRow[] = []
+    const zoneNameById = new Map<string, string>()
+    const zoneById = new Map<string, ZoneNode>()
+    let camera: DeviceRow | undefined
+    for (const z of node?.zones ?? []) {
+      zoneNameById.set(z.zone._id, z.zone.name)
+      zoneById.set(z.zone._id, z)
+      for (const d of z.devices) {
+        devices.push(d)
+        if (d.status !== 'ONLINE') problems.push(d)
+        if (!camera && d.type === 'camera') camera = d
+      }
+    }
+    return { devices, problems, camera, zoneNameById, zoneById }
+  }, [node])
+
+  if (isError) {
+    return (
+      <EmptyState
+        icon={<WarningCircleIcon size={32} />}
+        title={t('state.errorTitle')}
+        description={t('state.errorDesc')}
+        action={<Button variant="secondary" size="sm" onClick={refetch}>{t('state.retry')}</Button>}
+      />
+    )
   }
+  if (isLoading) return <LoadingSkeleton count={3} className="h-40 w-full" />
+  if (!node) return <EmptyState title={t('house.notFound')} description={t('house.notFoundDesc')} />
 
-  function goTo(zoneId: string, zoneName: string, path: string) {
-    setZone(farmId!, farm?.name ?? "", zoneId, zoneName);
-    navigate(path);
-  }
-
-  if (!house) return <LoadingSkeleton className="h-28 w-full" />;
+  const { house, farm } = node
+  const staff = extras?.houseStaff[house._id]
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="truncate text-2xl font-bold tracking-tight text-charcoal">{house.name}</p>
+      <FarmFrame
+        title={<>{house.name}<HealthBadge health={node.health} /></>}
+        description={
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-warmGray">
+            <span className="flex items-center gap-1"><MapPinIcon size={14} />{farm.address}{farm.region ? ` · ${farm.region}` : ''}</span>
+            <span className="flex items-center gap-1">
+              <UserIcon size={14} />
+              {t('house.staff')}: {staff ? <strong className="text-charcoal">{staff.name}</strong> : <span>{t('card.noStaff')}</span>}
+            </span>
+          </div>
+        }
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" className="h-9 text-xs" onClick={() => navigate('/tickets')}>
+              <PlusIcon size={14} weight="bold" />
+              {t('house.requestInstall')}
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex gap-2">
+          <FilterChip active={tab === 'overview'} label={t('tab.overview')} onClick={() => setTab('overview')} />
+          <FilterChip active={tab === 'devices'} label={`${t('tab.devices')} ${node.counts.online}/${node.counts.total}`} onClick={() => setTab('devices')} />
+          <FilterChip active={tab === 'members'} label={t('house.members')} onClick={() => setTab('members')} />
+        </div>
+      </FarmFrame>
 
-      <div className="flex items-center justify-between">
-        <span className="label-caption">Zone</span>
-        {canManage && (
-          <Button variant="secondary" size="sm" onClick={() => setShowCreate(true)}>
-            + Thêm zone
-          </Button>
-        )}
-      </div>
-
-      {isLoading && <LoadingSkeleton className="h-10 w-full" />}
-      {!isLoading && zones?.length === 0 && (
-        <EmptyState title="Chưa có zone nào" description="Thêm zone đầu tiên để gắn thiết bị và theo dõi môi trường." />
-      )}
-
-      <div className="flex flex-col gap-2">
-        {zones?.map((zone) => (
-          <div key={zone._id} className="flex items-center justify-between rounded-xl bg-warmGray/5 px-4 py-2.5">
-            <span className="text-sm font-medium text-charcoal">{zone.name}</span>
-            <div className="flex gap-2">
-              {isFarmOwner && (
-                <Button variant="secondary" size="sm" onClick={() => goTo(zone._id, zone.name, "/dashboard")}>
-                  Dashboard
+      <StableHeight minHeight={TAB_MIN_HEIGHT}>
+        {tab === 'overview' ? (
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <FarmFrame
+              title={t('house.zoneList', { n: node.zones.length })}
+              description={t('house.zoneListDesc')}
+              action={canManage && (
+                <Button variant="secondary" size="sm" className="h-9 text-xs" onClick={() => setShowAddZone(true)}>
+                  <PlusIcon size={12} weight="bold" />
+                  {t('house.addZone')}
                 </Button>
               )}
-              <Button variant="secondary" size="sm" onClick={() => goTo(zone._id, zone.name, "/devices")}>
-                Thiết bị & Cảm biến
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+            >
+              {node.zones.length === 0 ? (
+                <EmptyState title={t('house.noZone')} description={t('house.noZoneDesc')} />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {node.zones.map(z => (
+                    <ZoneCard
+                      key={z.zone._id}
+                      node={z}
+                      loadingMetrics={metricsLoading}
+                      onOpen={() => navigate(`/farms/${farmId}/houses/${houseId}/zones/${z.zone._id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+              <AiAdviceCard houseId={house._id} camera={camera} />
+            </FarmFrame>
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Thêm Zone">
-        <form onSubmit={handleCreate} className="flex flex-col gap-4">
-          <Input
-            label="Tên zone"
-            required
-            value={zoneName}
-            onChange={(e) => setZoneName(e.target.value)}
-            placeholder="VD: Tầng 1"
-          />
-          <Button type="submit" loading={createZone.isPending} className="w-full">
-            Tạo
-          </Button>
-        </form>
-      </Modal>
+            <aside className="flex flex-col gap-6">
+              <HouseProductionCard node={node} recent={node.recent} nextHarvestAt={extras?.nextHarvest[house._id]} />
+              <AttentionDevicesCard counts={node.counts} problems={problems} zoneNameById={zoneNameById} onSelect={setSelected} />
+            </aside>
+          </div>
+        ) : tab === 'members' ? (
+          <FarmMembersManager farmId={farm._id} />
+        ) : (
+          <FarmFrame title={t('house.devicesTitle', { n: devices.length })} description={t('zone.devicesDesc')}>
+            <DeviceListTable devices={devices} zoneNameById={zoneNameById} onSelect={setSelected} />
+          </FarmFrame>
+        )}
+      </StableHeight>
+
+      <AddZoneModal open={showAddZone} onClose={() => setShowAddZone(false)} houseId={house._id} />
+      <DeviceDetailDrawer device={selected} zoneNode={selected ? zoneById.get(selected.zoneId) : undefined} onClose={() => setSelected(null)} />
     </div>
-  );
+  )
 }
