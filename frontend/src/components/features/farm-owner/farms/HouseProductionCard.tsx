@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Badge, Button } from '@/components/ui'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
 import { HARVEST_STATUS_LABEL, HARVEST_STATUS_TONE } from '@/components/features/farm-owner/harvest/harvest.constants'
+import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { cn } from '@/lib/cn'
 import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { vnYearMonth } from '@/lib/helpers'
@@ -60,7 +62,7 @@ export default function HouseProductionCard({ node, recent, nextHarvestAt }: Hou
         ))}
       </div>
 
-      <Button variant="secondary" size="sm" className="h-9 w-full text-xs" onClick={() => navigate('/harvests')}>
+      <Button variant="secondary" size="sm" className={cn('h-9 w-full text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/harvests')}>
         {t('prod.viewAll')}
         <ArrowRightIcon size={12} weight="bold" />
       </Button>
