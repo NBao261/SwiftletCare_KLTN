@@ -1,7 +1,7 @@
-import { ArrowRightIcon, CheckCircleIcon, HouseIcon, UserIcon, WarningIcon } from '@phosphor-icons/react'
-import { Button } from '@/components/ui'
-import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
-import { METRIC_BY_KEY } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { ArrowRightIcon, CheckCircleIcon, HouseIcon, InfoIcon, UserIcon, WarningIcon } from '@phosphor-icons/react'
+import PinButton from '@/components/features/farm-owner/farms/PinButton'
+import HealthBadge, { HEALTH_STYLE } from '@/components/features/farm-owner/farms/HealthBadge'
+import { CAPSULE_ACTION_CLASS, METRIC_BY_KEY } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
@@ -10,27 +10,46 @@ import type { HouseNode } from '@/components/features/farm-owner/farms/farmStruc
 interface HouseCardProps {
   node: HouseNode
   staff?: { name: string; initials: string }
+  pinned: boolean
+  onTogglePin: () => void
   onOpen: () => void
 }
 
 /** Card 1 nhà yến trong lưới "Cấu trúc Farm": cảnh báo nổi bật, thống kê số cảm biến/camera/online (số đo chỉ hiện ở cấp Zone), sản lượng tháng */
-export default function HouseCard({ node, staff, onOpen }: HouseCardProps) {
+export default function HouseCard({ node, staff, pinned, onTogglePin, onOpen }: HouseCardProps) {
   const { t, num } = useT(farmDict)
   const { house, farm, headline, counts } = node
+  const style = HEALTH_STYLE[node.health]
+  const isEmpty = node.health === 'EMPTY'
   const issues = node.zones.reduce((sum, z) => sum + z.breaches.length + z.alerts.length, 0)
   const offline = counts.total - counts.online
+  const zoneLabel = headline?.zone.name || t('card.unknownZone')
 
+  // Số liệu trống thì hiện "—" mờ thay vì 0 để không nhầm với "đo được bằng 0"
   const stats = [
-    { label: t('stat.sensors'), value: num(node.sensors), warn: false },
-    { label: t('stat.cameras'), value: num(node.cameras), warn: false },
-    { label: t('stat.online'), value: `${num(counts.online)}/${num(counts.total)}`, warn: offline > 0 },
+    { label: t('stat.sensors'), value: isEmpty ? '—' : num(node.sensors), warn: false },
+    { label: t('stat.cameras'), value: isEmpty ? '—' : num(node.cameras), warn: false },
+    { label: t('stat.online'), value: isEmpty ? '—' : `${num(counts.online)}/${num(counts.total)}`, warn: offline > 0 },
   ]
 
+  const bannerText = headline
+    ? headline.breach
+      ? t(headline.breach.direction === 'high' ? 'banner.high' : 'banner.low', {
+          metric: t(METRIC_BY_KEY[headline.breach.metric].labelKey),
+          zone: zoneLabel,
+          value: `${num(headline.breach.value, METRIC_BY_KEY[headline.breach.metric].decimals)} ${METRIC_BY_KEY[headline.breach.metric].unit}`,
+        })
+      : headline.alert
+        // Tên cảnh báo lấy theo loại (type), không dùng title của server vì có thể chứa "undefined"
+        ? t('banner.alert', { title: t(`alert.${headline.alert.type}`), zone: zoneLabel })
+        : t('banner.offline', { n: headline.offlineDevices ?? 0, zone: zoneLabel })
+    : ''
+
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-warmGray/15 bg-white p-5">
+    <article className={cn('flex flex-col gap-4 rounded-2xl border-2 bg-white p-5', style.card)}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warmGray/10 text-charcoal">
+          <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', style.iconBox)}>
             <HouseIcon size={20} />
           </span>
           <div className="min-w-0">
@@ -38,37 +57,25 @@ export default function HouseCard({ node, staff, onOpen }: HouseCardProps) {
             <p className="truncate text-small text-warmGray">{farm.address}{farm.region ? ` · ${farm.region}` : ''}</p>
           </div>
         </div>
-        <HealthBadge health={node.health} />
+        <div className="flex shrink-0 items-center gap-1">
+          <HealthBadge health={node.health} />
+          <PinButton pinned={pinned} onToggle={onTogglePin} />
+        </div>
       </div>
 
-      {headline ? (
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-climateOrange/30 bg-climateOrange/[0.06] px-3 py-2 text-small text-climateOrange">
-          <span className="flex min-w-0 items-center gap-2">
-            <WarningIcon size={16} className="shrink-0" />
-            <span className="truncate">
-              {headline.breach
-                ? t(headline.breach.direction === 'high' ? 'banner.high' : 'banner.low', {
-                    metric: t(METRIC_BY_KEY[headline.breach.metric].labelKey),
-                    zone: headline.zone.name,
-                    value: `${num(headline.breach.value, METRIC_BY_KEY[headline.breach.metric].decimals)} ${METRIC_BY_KEY[headline.breach.metric].unit}`,
-                  })
-                : t('banner.alert', { title: headline.alert?.title ?? '', zone: headline.zone.name })}
-            </span>
-          </span>
-          {issues > 1 && <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-caption">{t('banner.more', { n: issues - 1 })}</span>}
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 rounded-xl border border-warmGray/15 bg-warmGray/5 px-3 py-2 text-small text-graphite">
-          <CheckCircleIcon size={16} className="shrink-0 text-warmGray" />
-          {t('banner.ok')}
-        </div>
-      )}
+      <div className={cn('flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-small', style.banner)}>
+        <span className="flex min-w-0 items-center gap-2">
+          {node.health === 'ALERT' ? <WarningIcon size={16} className="shrink-0" /> : isEmpty ? <InfoIcon size={16} className="shrink-0" /> : <CheckCircleIcon size={16} className="shrink-0" />}
+          <span className="truncate">{isEmpty ? t('banner.empty') : headline ? bannerText : t('banner.ok')}</span>
+        </span>
+        {issues > 1 && headline && <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-caption">{t('banner.more', { n: issues - 1 })}</span>}
+      </div>
 
       <div className="grid grid-cols-3 divide-x divide-warmGray/15 rounded-xl border border-warmGray/15">
         {stats.map(s => (
           <div key={s.label} className="px-3 py-2.5">
             <p className="label-caption truncate">{s.label}</p>
-            <p className={cn('mt-0.5 text-h3', s.warn ? 'text-climateOrange' : 'text-charcoal')}>{s.value}</p>
+            <p className={cn('mt-0.5 text-h3', isEmpty ? 'text-warmGray/60' : s.warn ? 'text-climateOrange' : 'text-charcoal')}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -99,10 +106,14 @@ export default function HouseCard({ node, staff, onOpen }: HouseCardProps) {
             </div>
           </div>
         )}
-        <Button variant="secondary" size="sm" className="h-8 shrink-0 px-3.5 text-xs" onClick={onOpen}>
+        <button
+          type="button"
+          onClick={onOpen}
+          className={cn('inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs text-charcoal', CAPSULE_ACTION_CLASS)}
+        >
           {t('card.open')}
           <ArrowRightIcon size={12} weight="bold" />
-        </Button>
+        </button>
       </div>
     </article>
   )
