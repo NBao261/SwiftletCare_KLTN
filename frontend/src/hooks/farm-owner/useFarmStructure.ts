@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { farmApi } from '@/apis/shared/farms.api'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { alertApi } from '@/apis/shared/alerts.api'
@@ -9,6 +9,8 @@ import { useFarms } from '@/hooks/shared/useFarms'
 import { useSensorNodes } from '@/hooks/shared/useDevices'
 import { useEnvCompareBatched } from '@/hooks/farm-owner/useAnalytics'
 import { useZonesLive } from '@/hooks/farm-owner/useZonesLive'
+import { usePermission } from '@/hooks/common/usePermission'
+import { HARVEST_ROLES } from '@/constants/roles'
 import { buildFarmStructure, mergeMetrics, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import type { House, Zone } from '@/types'
 
@@ -25,6 +27,9 @@ const STRUCTURE_STALE_MS = 5 * 60 * 1000
  * quan không join hàng loạt zone, chỉ trang nhà/zone mới theo dõi realtime.
  */
 export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
+  const queryClient = useQueryClient()
+  // GET /harvests chỉ cho FARM_OWNER/ADMIN — Technician cũng mở được màn này nên không gọi, tránh 403 rồi hiện 0 kg sai
+  const canViewHarvest = usePermission(...HARVEST_ROLES)
   const farmsQ = useFarms()
   const farms = farmsQ.data
 
@@ -81,6 +86,7 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
   const harvestsQ = useQuery({
     queryKey: ['harvests', 'all'],
     queryFn: () => harvestApi.list().then(r => r.data.data),
+    enabled: canViewHarvest,
   })
 
   const zoneIds = useMemo(() => [...zonesByHouse.values()].flat().map(z => z._id), [zonesByHouse])
@@ -122,13 +128,21 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
 
   const isLoading = farmsQ.isLoading || housesQ.pending || zonesQ.pending
     || sensorsQ.isLoading || camerasQ.isLoading || alertsQ.isLoading || harvestsQ.isLoading
+  // Cảnh báo/camera/thu hoạch lỗi mà vẫn dựng cây thì màn báo sai "0 cảnh báo, Bình thường" — coi là lỗi cả trang (FE_Design 13.5)
   const isError = farmsQ.isError || housesQ.error || zonesQ.error || sensorsQ.isError
+    || camerasQ.isError || alertsQ.isError || (canViewHarvest && harvestsQ.isError)
 
   return {
     structure, isLoading, isError,
     /** Số đo trung bình đang tải — card hiện "--" thay vì chặn cả trang */
     metricsLoading: envQ.isLoading,
-    refetch: () => { void farmsQ.refetch(); void sensorsQ.refetch(); void camerasQ.refetch(); void alertsQ.refetch(); void harvestsQ.refetch() },
+    /** Có quyền xem thu hoạch không — role không có quyền thì UI ẩn mọi khối sản lượng thay vì hiện 0 */
+    canViewHarvest,
+    /** Tải lại mọi nguồn của cây, kể cả houses/zones (useQueries không có refetch chung) */
+    refetch: () => {
+      for (const key of ['farms', 'houses', 'zones', 'sensor-nodes', 'camera-nodes', 'alerts']) void queryClient.refetchQueries({ queryKey: [key] })
+      if (canViewHarvest) void harvestsQ.refetch()
+    },
   }
 }
 
