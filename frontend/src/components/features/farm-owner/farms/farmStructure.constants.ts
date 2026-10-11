@@ -24,6 +24,9 @@ export const ZONE_METRICS: MetricMeta[] = [
   { key: 'sound', labelKey: 'metric.sound', unit: 'dB', decimals: 0, icon: SpeakerHighIcon },
 ]
 
+/** Nút phụ dạng capsule của màn Cấu trúc Farm ("Chi tiết nhà", "Mở Zone"…): nền xám nhạt, rê chuột đổi sang đen chữ trắng */
+export const CAPSULE_ACTION_CLASS = 'border-warmGray/15 bg-warmGray/5 font-semibold transition-all hover:bg-charcoal hover:text-white'
+
 /** Khoảng an toàn của 1 chỉ số để hiện dưới số đo; âm thanh chưa có ngưỡng trong Zone.thresholds nên trả undefined */
 export function thresholdRange(key: MetricMeta['key'], t: Thresholds): string | undefined {
   switch (key) {
