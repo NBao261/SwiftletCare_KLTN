@@ -1,18 +1,25 @@
 import type { Icon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
+type KpiTone = 'neutral' | 'orange'
+
+const TONE_CLASS: Record<KpiTone, string> = {
+  neutral: 'bg-warmGray/10 text-charcoal',
+  orange: 'bg-orange-100 text-orange-800',
+}
+
 interface KpiTileProps {
   icon: Icon
   label: string
   value: string | number
   unit?: string
   sub: string
-  /** Chỉ tô cam vòng tròn icon (không tô cả ô) — dùng cho ô cảnh báo đang mở */
-  accent?: boolean
+  /** Màu vòng tròn icon (không tô cả ô): neutral xám · orange = có cảnh báo */
+  tone?: KpiTone
 }
 
 /** Ô chỉ số cùng kích thước ReadingTile ở EnvSensorPanel (Dashboard): p-4, icon tròn 28px, số text-2xl, dòng phụ cao 16px */
-export default function KpiTile({ icon: TileIcon, label, value, unit, sub, accent }: KpiTileProps) {
+export default function KpiTile({ icon: TileIcon, label, value, unit, sub, tone = 'neutral' }: KpiTileProps) {
   return (
     <div className="rounded-2xl border border-warmGray/15 bg-white p-4">
       <div className="mb-2 flex items-start justify-between gap-2">
@@ -20,7 +27,7 @@ export default function KpiTile({ icon: TileIcon, label, value, unit, sub, accen
         <span
           className={cn(
             'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
-            accent ? 'bg-climateOrange/15 text-climateOrange' : 'bg-warmGray/10 text-charcoal',
+            TONE_CLASS[tone],
           )}
         >
           <TileIcon size={14} weight="bold" />
