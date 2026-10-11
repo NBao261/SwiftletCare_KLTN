@@ -8,11 +8,12 @@ import ThresholdMetricCard from '@/components/features/farm-owner/farms/Threshol
 import DeviceListTable from '@/components/features/farm-owner/farms/DeviceListTable'
 import DeviceDetailDrawer from '@/components/features/farm-owner/farms/DeviceDetailDrawer'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
-import { ZONE_METRICS, thresholdRange, type MetricMeta } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { ZONE_METRICS, thresholdRange, type MetricMeta, CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { detectBreaches, type DeviceRow, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
 import { useTelemetry } from '@/hooks/farm-owner/useTelemetry'
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
+import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
 import { useT } from '@/hooks/common/useT'
 import { useZoneStore } from '@/stores/zoneStore'
@@ -27,6 +28,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
   const { t, ago } = useT(farmDict)
+  useScrollToTop(zoneId)
   const { structure, isLoading, isError, refetch } = useFarmStructure()
   const node = zoneId ? structure.zoneById.get(zoneId) : undefined
   const live = useTelemetry(zoneId)
@@ -63,7 +65,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
   if (!node) return <EmptyState title={t('zone.notFound')} description={t('zone.notFoundDesc')} />
 
   const { zone, farm } = node
-  const health = breaches.length > 0 || node.alerts.length > 0 ? 'ALERT' : 'NORMAL'
+  const health = breaches.length > 0 || node.alerts.length > 0 || node.counts.offline > 0 ? 'ALERT' : 'NORMAL'
   const zoneNameById = new Map([[zone._id, zone.name]])
   const lastBatch = node.lastBatch
 
@@ -98,7 +100,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" className="h-9 text-xs" onClick={() => goTo('/devices')}>
+            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => goTo('/devices')}>
               <SlidersHorizontalIcon size={14} />
               {t('zone.thresholds')}
             </Button>
@@ -127,7 +129,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         title={t('zone.devicesTitle', { n: node.devices.length })}
         description={t('zone.devicesDesc')}
         action={
-          <Button variant="secondary" size="sm" className="h-9 text-xs" onClick={() => navigate('/tickets')}>
+          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/tickets')}>
             <PlusIcon size={14} weight="bold" />
             {t('zone.requestInstall')}
           </Button>
@@ -142,7 +144,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
           ? t('zone.lastHarvest', { zone: zone.name, nests: lastBatch.nest_count, grams: lastBatch.weight_grams })
           : t('zone.noHarvest', { zone: zone.name })}
         action={
-          <Button variant="secondary" size="sm" className="h-9 text-xs" onClick={() => navigate('/harvests')}>
+          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/harvests')}>
             {t('zone.viewHarvest')}
             <ArrowRightIcon size={12} weight="bold" />
           </Button>
