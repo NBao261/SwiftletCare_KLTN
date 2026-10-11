@@ -20,7 +20,7 @@ export const HEALTH_STYLE: Record<HouseHealth, { badge: string; card: string; ic
   },
   ALERT: {
     badge: 'border-orange-600/40 bg-orange-100 text-orange-800',
-    card: 'border-orange-600/30 shadow-[0_2px_10px_rgba(232,113,33,0.12)]',
+    card: 'border-orange-600/30 shadow-sm',
     iconBox: 'bg-orange-100 text-orange-800',
     banner: 'border-orange-600/50 bg-orange-100 text-orange-800',
   },
