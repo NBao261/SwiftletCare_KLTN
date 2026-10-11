@@ -2,6 +2,8 @@ import { CheckCircleIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
+import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { cn } from '@/lib/cn'
 import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceCounts, DeviceRow } from '@/components/features/farm-owner/farms/farmStructure'
@@ -30,7 +32,7 @@ export default function AttentionDevicesCard({ counts, problems, zoneNameById, o
           <span className="font-semibold text-charcoal">{num(readiness, 0)}%</span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-warmGray/15" role="presentation">
-          <div className="h-full rounded-full bg-charcoal" style={{ width: `${readiness}%` }} />
+          <div className="h-full rounded-full bg-success" style={{ width: `${readiness}%` }} />
         </div>
       </div>
 
@@ -51,7 +53,7 @@ export default function AttentionDevicesCard({ counts, problems, zoneNameById, o
                 </span>
               </span>
             </button>
-            <Button variant="secondary" size="sm" className="h-8 self-start px-3.5 text-xs" onClick={() => navigate('/tickets')}>
+            <Button variant="secondary" size="sm" className={cn('h-8 self-start px-3.5 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/tickets')}>
               {t('attn.report')}
             </Button>
           </div>
