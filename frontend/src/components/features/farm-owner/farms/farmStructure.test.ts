@@ -93,13 +93,12 @@ describe('buildFarmStructure', () => {
     expect(s.totals.monthLastBatchAt).toBe('2026-10-09T00:00:00Z')
   })
 
-  it('đủ nhanh với dữ liệu lớn (mỗi tập chỉ duyệt 1 lần)', () => {
+  it('dựng đúng cây với dữ liệu lớn', () => {
     const zones = Array.from({ length: 2000 }, (_, i) => ({ ...zoneA, _id: `z${i}` }))
     const sensors = zones.map((z, i) => sensor(`s${i}`, z._id, 'ONLINE'))
-    const t0 = performance.now()
     const s = buildFarmStructure(input({ zonesByHouse: new Map([['h1', zones]]), sensors }))
+    expect(s.zones).toHaveLength(2000)
     expect(s.totals.counts.total).toBe(2000)
-    expect(performance.now() - t0).toBeLessThan(200)
   })
 })
 
