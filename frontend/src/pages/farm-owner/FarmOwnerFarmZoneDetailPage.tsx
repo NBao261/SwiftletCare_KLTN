@@ -29,7 +29,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
   const navigate = useNavigate()
   const { t, ago } = useT(farmDict)
   useScrollToTop(zoneId)
-  const { structure, isLoading, isError, refetch } = useFarmStructure()
+  const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
   const node = zoneId ? structure.zoneById.get(zoneId) : undefined
   const live = useTelemetry(zoneId)
   const isFarmOwner = usePermission('FARM_OWNER')
@@ -138,18 +138,20 @@ export default function FarmOwnerFarmZoneDetailPage() {
         <DeviceListTable devices={node.devices} zoneNameById={zoneNameById} onSelect={setSelected} />
       </FarmFrame>
 
-      <FarmFrame
-        title={t('zone.harvestTitle')}
-        description={lastBatch
-          ? t('zone.lastHarvest', { zone: zone.name, nests: lastBatch.nest_count, grams: lastBatch.weight_grams })
-          : t('zone.noHarvest', { zone: zone.name })}
-        action={
-          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/harvests')}>
-            {t('zone.viewHarvest')}
-            <ArrowRightIcon size={12} weight="bold" />
-          </Button>
-        }
-      />
+      {canViewHarvest && (
+        <FarmFrame
+          title={t('zone.harvestTitle')}
+          description={lastBatch
+            ? t('zone.lastHarvest', { zone: zone.name, nests: lastBatch.nest_count, grams: lastBatch.weight_grams })
+            : t('zone.noHarvest', { zone: zone.name })}
+          action={
+            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/harvests')}>
+              {t('zone.viewHarvest')}
+              <ArrowRightIcon size={12} weight="bold" />
+            </Button>
+          }
+        />
+      )}
 
       <DeviceDetailDrawer device={selected} zoneNode={{ ...node, metrics, breaches }} onClose={() => setSelected(null)} />
     </div>
