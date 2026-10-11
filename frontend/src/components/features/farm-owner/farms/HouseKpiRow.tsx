@@ -43,7 +43,7 @@ export default function HouseKpiRow({ totals, monthLabel }: { totals: StructureT
           icon={BellRingingIcon}
           label={t('kpi.openAlerts')}
           value={alerts.total}
-          accent={alerts.total > 0}
+          tone={alerts.total > 0 ? 'orange' : 'neutral'}
           sub={alerts.total === 0 ? t('kpi.noAlerts') : t('kpi.alertSplit', { high: alerts.high, medium: alerts.medium, low: alerts.low })}
         />
         <KpiTile
