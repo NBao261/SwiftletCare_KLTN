@@ -14,6 +14,7 @@ import CreateFarmModal from '@/components/features/farm-owner/farms/CreateFarmMo
 import { useFarms } from '@/hooks/shared/useFarms'
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
 import { useFarmStructure, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
+import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
 import { useT } from '@/hooks/common/useT'
@@ -40,7 +41,7 @@ export default function FarmOwnerFarmsPage() {
   useScrollToTop()
   const navigate = useNavigate()
   const { data: farms } = useFarms()
-  const { structure, isLoading, isError, refetch } = useFarmStructure()
+  const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
   const houseIds = useMemo(() => structure.houses.map(h => h.house._id), [structure.houses])
   const { data: extras } = useStructureExtras(houseIds)
   const { pinned, toggle: togglePin } = usePinnedHouses()
@@ -128,16 +129,26 @@ export default function FarmOwnerFarmsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <HouseKpiRow totals={structure.totals} monthLabel={monthLabel} />
+      <HouseKpiRow totals={structure.totals} monthLabel={monthLabel} showYield={canViewHarvest} />
 
       <FarmFrame
         title={t('list.title')}
         description={t('list.desc', { n: structure.totals.houses })}
-        action={canAddHouse && (
-          <Button size="sm" className="h-9 text-xs" onClick={() => setShowAddHouse(true)}>
-            <PlusIcon size={14} weight="bold" />
-            {t('toolbar.addHouse')}
-          </Button>
+        action={(canCreateFarm || canAddHouse) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {canCreateFarm && (
+              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setShowCreateFarm(true)}>
+                <PlusIcon size={14} weight="bold" />
+                {t('empty.createFarm')}
+              </Button>
+            )}
+            {canAddHouse && (
+              <Button size="sm" className="h-9 text-xs" onClick={() => setShowAddHouse(true)}>
+                <PlusIcon size={14} weight="bold" />
+                {t('toolbar.addHouse')}
+              </Button>
+            )}
+          </div>
         )}
       >
         <div className="flex flex-wrap items-center gap-3">
@@ -181,6 +192,7 @@ export default function FarmOwnerFarmsPage() {
                     node={n}
                     staff={extras?.houseStaff[n.house._id]}
                     pinned={pinned.has(n.house._id)}
+                    showYield={canViewHarvest}
                     onTogglePin={() => togglePin(n.house._id)}
                     onOpen={() => openHouse(n)}
                   />
@@ -189,12 +201,13 @@ export default function FarmOwnerFarmsPage() {
               <Pagination page={safeGridPage} limit={GRID_PAGE_SIZE} total={visible.length} onChange={setGridPage} variant="full" />
             </div>
           ) : (
-            <HouseTable houses={visible} staffByHouse={extras?.houseStaff} pinned={pinned} onTogglePin={togglePin} onOpen={openHouse} />
+            <HouseTable houses={visible} staffByHouse={extras?.houseStaff} pinned={pinned} showYield={canViewHarvest} onTogglePin={togglePin} onOpen={openHouse} />
           )}
         </StableHeight>
       </FarmFrame>
 
       <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} />
+      <CreateFarmModal open={showCreateFarm} onClose={() => setShowCreateFarm(false)} />
     </div>
   )
 }
