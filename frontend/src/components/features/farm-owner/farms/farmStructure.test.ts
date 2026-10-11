@@ -52,7 +52,17 @@ describe('buildFarmStructure', () => {
     expect(h.health).toBe('ALERT')
     expect(h.headline?.breach?.metric).toBe('nh3')
     expect(h.sensors + h.cameras).toBe(h.counts.total)
-    expect(s.zoneById.get('zB')?.health).toBe('NORMAL')
+    expect(s.zoneById.get('zA')?.health).toBe('ALERT')
+    expect(s.zoneById.get('zB')?.health).toBe('ALERT') // zone B có 1 cảm biến OFFLINE
+  })
+
+  it('nhà chưa có thiết bị là EMPTY, có thiết bị và không cảnh báo là NORMAL', () => {
+    expect(buildFarmStructure(input({ sensors: [], cameras: [] })).houseById.get('h1')?.health).toBe('EMPTY')
+    expect(buildFarmStructure(input({ sensors: [sensor('s1', 'zA', 'ONLINE')] })).houseById.get('h1')?.health).toBe('NORMAL')
+    // thiết bị mất kết nối cũng là sự cố, dù chưa có cảnh báo
+    const offline = buildFarmStructure(input()).houseById.get('h1')
+    expect(offline?.health).toBe('ALERT')
+    expect(offline?.headline?.offlineDevices).toBe(1)
   })
 
   it('cảnh báo ACTIVE gán đúng zone và chia mức cao/trung bình/thấp', () => {
