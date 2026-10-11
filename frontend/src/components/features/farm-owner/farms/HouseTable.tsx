@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { type DataTableColumn } from '@/components/ui'
 import FixedRowsTable from '@/components/ui/FixedRowsTable'
 import ActionsMenu from '@/components/ui/ActionsMenu'
+import PinButton from '@/components/features/farm-owner/farms/PinButton'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
 import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
@@ -9,18 +10,24 @@ import type { HouseNode } from '@/components/features/farm-owner/farms/farmStruc
 
 interface HouseTableProps {
   houses: HouseNode[]
+  pinned: Set<string>
+  onTogglePin: (houseId: string) => void
   staffByHouse: Record<string, { name: string; initials: string }> | undefined
   onOpen: (node: HouseNode) => void
 }
 
 /** Chế độ "Danh sách" của màn Cấu trúc Farm — cùng dữ liệu với lưới card, dựng bằng DataTable dùng chung */
-export default function HouseTable({ houses, staffByHouse, onOpen }: HouseTableProps) {
+export default function HouseTable({ houses, staffByHouse, pinned, onTogglePin, onOpen }: HouseTableProps) {
   const { t, num } = useT(farmDict)
 
   const columns = useMemo<DataTableColumn<HouseNode>[]>(() => {
     return [
       {
-        key: 'house', header: t('table.house'), className: 'w-[22%]',
+        key: 'pin', header: t('table.pin'), className: 'w-[5%]',
+        render: n => <PinButton pinned={pinned.has(n.house._id)} onToggle={() => onTogglePin(n.house._id)} />,
+      },
+      {
+        key: 'house', header: t('table.house'), className: 'w-[20%]',
         render: n => (
           <div className="min-w-0">
             <p className="truncate font-bold text-charcoal">{n.house.name}</p>
@@ -40,11 +47,11 @@ export default function HouseTable({ houses, staffByHouse, onOpen }: HouseTableP
         render: n => <span className="text-charcoal">{num(n.monthKg, 2)} kg</span>,
       },
       {
-        key: 'staff', header: t('card.staff'), className: 'w-[14%]',
+        key: 'staff', header: t('card.staff'), className: 'w-[12%]',
         render: n => <span className="truncate text-small text-graphite">{staffByHouse?.[n.house._id]?.name ?? '—'}</span>,
       },
       {
-        key: 'actions', header: t('table.actions'), align: 'center', className: 'w-[8%]',
+        key: 'actions', header: t('table.actions'), align: 'center', className: 'w-[7%]',
         render: n => (
           // stopPropagation — hàng đã bấm-được (onRowClick), mở menu không được kích hoạt luôn điều hướng
           <div onClick={e => e.stopPropagation()}>
@@ -53,7 +60,7 @@ export default function HouseTable({ houses, staffByHouse, onOpen }: HouseTableP
         ),
       },
     ]
-  }, [t, num, staffByHouse, onOpen])
+  }, [t, num, staffByHouse, pinned, onTogglePin, onOpen])
 
   return <FixedRowsTable columns={columns} rows={houses} getRowKey={n => n.house._id} onRowClick={onOpen} rowHeight={68} emptyNotice={t('empty.noMatchTitle')} />
 }
