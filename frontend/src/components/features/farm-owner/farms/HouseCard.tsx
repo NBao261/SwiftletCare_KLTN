@@ -11,12 +11,14 @@ interface HouseCardProps {
   node: HouseNode
   staff?: { name: string; initials: string }
   pinned: boolean
+  /** false = role không xem được thu hoạch → ẩn sản lượng tháng */
+  showYield: boolean
   onTogglePin: () => void
   onOpen: () => void
 }
 
 /** Card 1 nhà yến trong lưới "Cấu trúc Farm": cảnh báo nổi bật, thống kê số cảm biến/camera/online (số đo chỉ hiện ở cấp Zone), sản lượng tháng */
-export default function HouseCard({ node, staff, pinned, onTogglePin, onOpen }: HouseCardProps) {
+export default function HouseCard({ node, staff, pinned, showYield, onTogglePin, onOpen }: HouseCardProps) {
   const { t, num } = useT(farmDict)
   const { house, farm, headline, counts } = node
   const style = HEALTH_STYLE[node.health]
@@ -82,8 +84,12 @@ export default function HouseCard({ node, staff, pinned, onTogglePin, onOpen }: 
 
       <p className="flex flex-wrap items-center gap-x-2 text-small text-warmGray">
         <span>{t('card.zones', { n: node.zones.length })}</span>
-        <span aria-hidden="true">•</span>
-        <span>{t('card.yield', { kg: num(node.monthKg, 2) })}</span>
+        {showYield && (
+          <>
+            <span aria-hidden="true">•</span>
+            <span>{t('card.yield', { kg: num(node.monthKg, 2) })}</span>
+          </>
+        )}
       </p>
 
       <div className="flex items-center justify-between gap-3 border-t border-warmGray/10 pt-3">
