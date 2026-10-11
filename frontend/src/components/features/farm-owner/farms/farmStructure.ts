@@ -9,6 +9,8 @@ import type { Alert, CameraNode, DeviceStatus, Farm, HarvestBatch, House, Sensor
  */
 
 export type Health = 'ALERT' | 'NORMAL'
+/** Nhà thêm trạng thái EMPTY: chưa có zone/thiết bị nào để theo dõi (khác "bình thường") */
+export type HouseHealth = Health | 'EMPTY'
 export type MetricKey = 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2'
 
 /** Số đo của 1 zone (trung bình 1h từ /analytics/env/compare, hoặc giá trị realtime qua socket) */
@@ -37,14 +39,14 @@ export interface ZoneNode {
 
 export interface HouseNode {
   house: House; farm: Farm; zones: ZoneNode[]
-  counts: DeviceCounts; alerts: Alert[]; health: Health
+  counts: DeviceCounts; alerts: Alert[]; health: HouseHealth
   /** Số cảm biến / camera của cả nhà (số đo chỉ hiện ở cấp Zone) */
   sensors: number; cameras: number
   monthKg: number; monthNests: number; monthBatches: number
   /** 3 đợt thu gần nhất của cả nhà, mới → cũ */
   recent: HarvestBatch[]
-  /** Cảnh báo/vi phạm nổi bật nhất để hiện banner trên card (vi phạm ngưỡng trước, cảnh báo thật sau) */
-  headline?: { zone: Zone; breach?: Breach; alert?: Alert }
+  /** Sự cố nổi bật nhất để hiện banner trên card: vi phạm ngưỡng → cảnh báo thật → thiết bị mất kết nối */
+  headline?: { zone: Zone; breach?: Breach; alert?: Alert; offlineDevices?: number }
 }
 
 export interface StructureTotals {
@@ -211,7 +213,7 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
         const zoneCounts = countDevices(devices)
         const node: ZoneNode = {
           zone, house, farm, devices, counts: zoneCounts, alerts: zoneAlerts, metrics, breaches,
-          health: breaches.length > 0 || zoneAlerts.length > 0 ? 'ALERT' : 'NORMAL',
+          health: breaches.length > 0 || zoneAlerts.length > 0 || zoneCounts.offline > 0 ? 'ALERT' : 'NORMAL',
           monthKg: harvest?.kg ?? 0, lastBatch: harvest?.last, recent: harvest?.recent ?? [],
         }
         zoneNodes.push(node)
@@ -230,11 +232,12 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
         }
         if (!headline && breaches.length > 0) headline = { zone, breach: breaches[0] }
         else if (!headline && zoneAlerts.length > 0) headline = { zone, alert: zoneAlerts[0] }
+        else if (!headline && zoneCounts.offline > 0) headline = { zone, offlineDevices: zoneCounts.offline }
       }
 
       const houseNode: HouseNode = {
         house, farm, zones: zoneNodes, counts, alerts: houseAlerts,
-        health: headline ? 'ALERT' : 'NORMAL',
+        health: headline ? 'ALERT' : counts.total === 0 ? 'EMPTY' : 'NORMAL',
         sensors: sensorCount, cameras: cameraCount,
         monthKg: kg, monthNests: nests, monthBatches: batches, recent: houseRecent, headline,
       }
