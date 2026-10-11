@@ -39,7 +39,7 @@ export default function FarmOwnerFarmZonesPage() {
   const { t } = useT(farmDict)
   useScrollToTop(houseId)
   const liveZoneIds = useHouseZoneIds(houseId)
-  const { structure, isLoading, isError, metricsLoading, refetch } = useFarmStructure({ liveZoneIds })
+  const { structure, isLoading, isError, metricsLoading, canViewHarvest, refetch } = useFarmStructure({ liveZoneIds })
   const node = houseId ? structure.houseById.get(houseId) : undefined
   const { data: extras } = useStructureExtras(houseId ? [houseId] : [])
   const canManage = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
@@ -146,7 +146,7 @@ export default function FarmOwnerFarmZonesPage() {
             </FarmFrame>
 
             <aside className="flex flex-col gap-6">
-              <HouseProductionCard node={node} recent={node.recent} nextHarvestAt={extras?.nextHarvest[house._id]} />
+              {canViewHarvest && <HouseProductionCard node={node} recent={node.recent} nextHarvestAt={extras?.nextHarvest[house._id]} />}
               <AttentionDevicesCard counts={node.counts} problems={problems} zoneNameById={zoneNameById} onSelect={setSelected} />
             </aside>
           </div>
