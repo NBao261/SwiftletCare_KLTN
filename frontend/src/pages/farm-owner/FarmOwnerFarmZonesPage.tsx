@@ -16,7 +16,10 @@ import FarmMembersManager from '@/components/features/farm-owner/farms/FarmMembe
 import AddZoneModal from '@/components/features/farm-owner/farms/AddZoneModal'
 import { useFarmStructure, useHouseZoneIds, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
+import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
+import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { cn } from '@/lib/cn'
 import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceRow, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
@@ -34,6 +37,7 @@ export default function FarmOwnerFarmZonesPage() {
   const { farmId, houseId } = useParams<{ farmId: string; houseId: string }>()
   const navigate = useNavigate()
   const { t } = useT(farmDict)
+  useScrollToTop(houseId)
   const liveZoneIds = useHouseZoneIds(houseId)
   const { structure, isLoading, isError, metricsLoading, refetch } = useFarmStructure({ liveZoneIds })
   const node = houseId ? structure.houseById.get(houseId) : undefined
@@ -118,7 +122,7 @@ export default function FarmOwnerFarmZonesPage() {
               title={t('house.zoneList', { n: node.zones.length })}
               description={t('house.zoneListDesc')}
               action={canManage && (
-                <Button variant="secondary" size="sm" className="h-9 text-xs" onClick={() => setShowAddZone(true)}>
+                <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setShowAddZone(true)}>
                   <PlusIcon size={12} weight="bold" />
                   {t('house.addZone')}
                 </Button>
