@@ -11,17 +11,19 @@ import type { HouseNode } from '@/components/features/farm-owner/farms/farmStruc
 interface HouseTableProps {
   houses: HouseNode[]
   pinned: Set<string>
+  /** false = role không xem được thu hoạch → bỏ cột sản lượng */
+  showYield: boolean
   onTogglePin: (houseId: string) => void
   staffByHouse: Record<string, { name: string; initials: string }> | undefined
   onOpen: (node: HouseNode) => void
 }
 
 /** Chế độ "Danh sách" của màn Cấu trúc Farm — cùng dữ liệu với lưới card, dựng bằng DataTable dùng chung */
-export default function HouseTable({ houses, staffByHouse, pinned, onTogglePin, onOpen }: HouseTableProps) {
+export default function HouseTable({ houses, staffByHouse, pinned, showYield, onTogglePin, onOpen }: HouseTableProps) {
   const { t, num } = useT(farmDict)
 
   const columns = useMemo<DataTableColumn<HouseNode>[]>(() => {
-    return [
+    const cols: DataTableColumn<HouseNode>[] = [
       {
         key: 'pin', header: t('table.pin'), className: 'w-[5%]',
         render: n => <PinButton pinned={pinned.has(n.house._id)} onToggle={() => onTogglePin(n.house._id)} />,
@@ -60,7 +62,8 @@ export default function HouseTable({ houses, staffByHouse, pinned, onTogglePin, 
         ),
       },
     ]
-  }, [t, num, staffByHouse, pinned, onTogglePin, onOpen])
+    return showYield ? cols : cols.filter(c => c.key !== 'yield')
+  }, [t, num, staffByHouse, pinned, showYield, onTogglePin, onOpen])
 
   return <FixedRowsTable columns={columns} rows={houses} getRowKey={n => n.house._id} onRowClick={onOpen} rowHeight={68} emptyNotice={t('empty.noMatchTitle')} />
 }
