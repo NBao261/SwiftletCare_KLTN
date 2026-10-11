@@ -12,20 +12,22 @@ import HouseTable from '@/components/features/farm-owner/farms/HouseTable'
 import AddHouseModal from '@/components/features/farm-owner/farms/AddHouseModal'
 import CreateFarmModal from '@/components/features/farm-owner/farms/CreateFarmModal'
 import { useFarms } from '@/hooks/shared/useFarms'
+import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
 import { useFarmStructure, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
+import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
 import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { vnYearMonth } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
-import type { Health, HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
+import type { HouseHealth, HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 
 /** Khung kết quả cao CỨNG (px) = bảng 10 dòng × 68px + header — lưới/danh sách/trống đều chiếm đúng chừng này, tải lại hay đổi chế độ trang không đổi chiều cao */
 const RESULTS_MIN_HEIGHT = 740
 /** Lưới 2 cột × 2 hàng card — vừa trong RESULTS_MIN_HEIGHT; nhiều hơn thì phân trang thay vì kéo dài khung */
 const GRID_PAGE_SIZE = 4
 
-type Filter = 'all' | Health
+type Filter = 'all' | HouseHealth
 type View = 'grid' | 'list'
 
 /**
@@ -35,11 +37,13 @@ type View = 'grid' | 'list'
  */
 export default function FarmOwnerFarmsPage() {
   const { t, num } = useT(farmDict)
+  useScrollToTop()
   const navigate = useNavigate()
   const { data: farms } = useFarms()
   const { structure, isLoading, isError, refetch } = useFarmStructure()
   const houseIds = useMemo(() => structure.houses.map(h => h.house._id), [structure.houses])
   const { data: extras } = useStructureExtras(houseIds)
+  const { pinned, toggle: togglePin } = usePinnedHouses()
 
   // Backend: POST /farms chỉ cho FARM_OWNER, ADMIN; POST /farms/:id/houses cho cả TECHNICIAN
   const canCreateFarm = usePermission('FARM_OWNER', 'ADMIN')
@@ -55,7 +59,7 @@ export default function FarmOwnerFarmsPage() {
   // Đếm theo tình trạng + lọc/tìm kiếm trong cùng 1 lượt duyệt
   const { visible, counts } = useMemo(() => {
     const q = search.trim().toLowerCase()
-    const counts = { all: 0, ALERT: 0, NORMAL: 0 }
+    const counts = { all: 0, ALERT: 0, NORMAL: 0, EMPTY: 0 }
     const visible: HouseNode[] = []
     for (const n of structure.houses) {
       counts.all += 1
@@ -68,8 +72,10 @@ export default function FarmOwnerFarmsPage() {
       }
       visible.push(n)
     }
-    return { visible, counts }
-  }, [structure.houses, search, filter, extras])
+    // Nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm) — chia 2 nhóm bằng 2 lượt lọc, vẫn O(n)
+    const pinnedFirst = [...visible.filter(n => pinned.has(n.house._id)), ...visible.filter(n => !pinned.has(n.house._id))]
+    return { visible: pinnedFirst, counts }
+  }, [structure.houses, search, filter, extras, pinned])
 
   const openHouse = useCallback(
     (n: HouseNode) => navigate(`/farms/${n.farm._id}/houses/${n.house._id}`),
@@ -142,6 +148,7 @@ export default function FarmOwnerFarmsPage() {
             <FilterChip active={filter === 'all'} label={`${t('filter.all')} ${num(counts.all)}`} onClick={() => setFilter('all')} />
             <FilterChip active={filter === 'ALERT'} label={`${t('health.alert')} ${num(counts.ALERT)}`} onClick={() => setFilter('ALERT')} />
             <FilterChip active={filter === 'NORMAL'} label={`${t('health.normal')} ${num(counts.NORMAL)}`} onClick={() => setFilter('NORMAL')} />
+            <FilterChip active={filter === 'EMPTY'} label={`${t('health.empty')} ${num(counts.EMPTY)}`} onClick={() => setFilter('EMPTY')} />
           </div>
           <div className="ml-auto flex items-center gap-1 rounded-full bg-warmGray/10 p-1" role="group" aria-label={t('toolbar.view')}>
             {([['grid', SquaresFourIcon, 'toolbar.grid'], ['list', ListIcon, 'toolbar.list']] as const).map(([key, ViewIcon, label]) => (
@@ -173,6 +180,8 @@ export default function FarmOwnerFarmsPage() {
                     key={n.house._id}
                     node={n}
                     staff={extras?.houseStaff[n.house._id]}
+                    pinned={pinned.has(n.house._id)}
+                    onTogglePin={() => togglePin(n.house._id)}
                     onOpen={() => openHouse(n)}
                   />
                 ))}
@@ -180,7 +189,7 @@ export default function FarmOwnerFarmsPage() {
               <Pagination page={safeGridPage} limit={GRID_PAGE_SIZE} total={visible.length} onChange={setGridPage} variant="full" />
             </div>
           ) : (
-            <HouseTable houses={visible} staffByHouse={extras?.houseStaff} onOpen={openHouse} />
+            <HouseTable houses={visible} staffByHouse={extras?.houseStaff} pinned={pinned} onTogglePin={togglePin} onOpen={openHouse} />
           )}
         </StableHeight>
       </FarmFrame>
