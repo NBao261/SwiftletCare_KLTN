@@ -53,7 +53,7 @@ frontend/
 │   │   ├── Public/          # Trang không cần đăng nhập (Landing, Login...)
 │   │   ├── FarmOwner/       # Dashboard chủ trại
 │   │   ├── Admin/           # Dashboard quản trị hệ thống
-│   │   ├── FarmOperator/    # Màn vận hành của Farm Operator (phạm vi farm/Zone)
+│   │   ├── DomainExpert/    # Màn của Domain Expert — thay FarmOperator (SRS v2.0.0)
 │   │   └── Shared/          # Pages dùng chung nhiều role (Alerts, Tickets...)
 │   │
 │   ├── services/            # Tầng gọi API và kết nối realtime
@@ -128,7 +128,7 @@ frontend/
 | `Public/` | Guest, chưa đăng nhập | Landing, Login, Register |
 | `FarmOwner/` | Chủ trại | Dashboard, Analytics |
 | `Admin/` | Admin hệ thống | AdminNodeStatus |
-| `FarmOperator/` | Nhân viên vận hành do Farm Owner mời | (tương lai) |
+| `DomainExpert/` | Chuyên gia nuôi yến do Farm Owner mời (SRS v2.0.0, thay `FarmOperator/`) | (tương lai) |
 | `Shared/` | Nhiều role dùng chung | Alerts, Devices, Farms, Harvest, Tickets, Settings, LiveStream |
 
 **Quy tắc:** Pages chỉ compose. Không viết inline UI logic phức tạp. Kéo data qua hooks.

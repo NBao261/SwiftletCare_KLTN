@@ -10,10 +10,18 @@ SwiftletCare — IoT monitoring + automation system for swiftlet (yến) houses 
 - `backend/` — Node.js + Express + TypeScript + MongoDB + MQTT (EMQX) + Socket.io.
 - `frontend/` — React 18 + Vite + TailwindCSS web dashboard/PWA.
 - `mobile/` — Expo (Router, file-based routes) + React Native app, talks to the same backend API.
-- `ai-pipeline/` — Raspberry Pi 4, YOLOv8 (ONNX Runtime) + ByteTrack. **Scaffold only, not implemented/deployed** — there is no `models/` folder; ONNX weights are never committed.
+- `ai-pipeline/` — YOLOv8 (ONNX Runtime) + ByteTrack bird counting on a PC/cloud AI node (no longer a Raspberry Pi — plan in `docs/bird-counting-plan.md`). **Scaffold only, not implemented/deployed** — there is no `models/` folder; ONNX weights are never committed.
 - `docs/` — `docs/api/api-spec.yaml` is the OpenAPI 3.0 **source of truth** for the API contract; the backend reads it at boot and serves Swagger UI at `/api-docs`. Routes are unprefixed (no `/api/v1`, despite what the SRS narrative implies).
 
 **`SwiftletCare_SRS.md` §5, column "Trạng thái Backend"** is the single source of truth for per-requirement (FR) completion status — check it before assuming any feature is fully done. Module-level status tables in `backend/README.md`/`frontend/README.md` go stale faster.
+
+**Scope after council Review 1 — SRS v2.0.0 (`SwiftletCare_SRS.md` §0).** The capstone register was revised (`FA26_SE_Capstone_Project_Register_SwiftletCare_v2.docx`) and later reviews judge the system against it; SRS §0 wins over any older text. The code — and therefore most of this file, which describes the code as it is — still follows the v1.24.0 scope. SRS §0.5 lists the pending changes per module; rows marked `🔄 Cần sửa code (v2.0.0)` in §5 are the same list at FR level. In short:
+
+- **Main flow is the automated system**, not the business platform: fuzzy microclimate control, bird in/out counting with an annotated live stream, multi-modal health monitoring with an expert in the loop. Technician/tickets/Admin are a side flow — keep them working, don't extend them.
+- **Domain Expert replaces Farm Operator** (role `DOMAIN_EXPERT`, whole farm, no `zone_ids`): read-only on operations, confirms/rejects inferred alerts, approves thresholds and fuzzy coefficients, writes conclusions for the Farm Owner (SRS §5.12). No relay control, tickets or harvest writes. Since SRS v2.1.0 the expert also tunes six per-Zone detection parameters (abnormal-noise margin/duration, pump-dry time/rise, speaker drop, return-rate drop — EXPERT-FR-008) that are still hard-coded constants in the firmware and backend today.
+- **Removed:** Buyer + Marketplace (harvest recording stays), predator detection, heating, Zalo/SMS (the committed out-of-app channel is a Telegram bot or FCM push — one of the two must really send; ALERT-FR-013). Vision is one class (`swiftlet`) on a PC/cloud AI node, not a Raspberry Pi.
+- **NH3/CO2 are monitor-and-alert only** — they no longer drive the fan (no established limit for swiftlet houses was found). `BIRD_PANIC` becomes `NOISE_ANOMALY`, a supporting signal shown with bird counts and confirmed by the expert.
+- **Never invent a threshold or behaviour without a source**; if none is found, downgrade the claim (alert-only, "set by the Domain Expert") rather than make one up.
 
 Known repo quirks worth knowing before you go looking for something:
 - `docs/db/` does not exist in the repo, yet `docker-compose.yml` bind-mounts `./docs/db/mongo-init.js` as Mongo's `/docker-entrypoint-initdb.d/init.js` — Docker creates an empty directory there on first `up`, so the DB init hook is a silent no-op.
@@ -211,6 +219,8 @@ Fuzzy control (SRS v1.24.0, firmware 1.1.0; 1.2.0 adds input filtering + bird-pa
 `src/stream.py` (RTSP loop) → `inference.py` (YOLOv8 via ONNX Runtime) → `tracker.py` (ByteTrack) → `counting.py` (line-crossing entry/exit) → `alert_publisher.py` (MQTT). `config/config.yaml` covers RTSP source, model thresholds, 4 detection classes (swiftlet/rat/snake/owl) with a separate predator confidence floor, MQTT (TLS 8883), MinIO snapshot upload, and morning/evening session windows. There is no `models/` folder — ONNX weights are not committed.
 
 ### Module completion status (see SRS §5 for FR-level detail)
+
+This paragraph describes the code, which predates SRS v2.0.0 — Marketplace, the Farm Operator role, heating and the NH3/CO2 fan rule are all still in it and are scheduled for removal/replacement (SRS §0.5).
 
 AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, System and Harvest/Marketplace all have real backend logic behind them. The SALES module and the Sales Staff role were **removed** in SRS v1.23.0 (they were only 501 stubs); the Farm Operator role was added the same release — the frontend has not caught up yet (still has `sales-staff/` code and no operator layout). **Vision/AI (bird-count)** is likewise not wired up end-to-end: the backend side exists (`mqtt/handlers/birdCount.handler.ts` → `birdCountRecord`, `GET /analytics/bird-count/daily|trends`, consumed by `useBirdCountTrends` on the Analytics page), but `ai-pipeline` isn't deployed, so nothing real publishes bird counts.
 

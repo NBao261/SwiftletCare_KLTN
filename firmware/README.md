@@ -1,5 +1,15 @@
 # SwiftletCare Firmware (ESP32)
 
+> **Phạm vi v2.0.0 (sau Review 1).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; `SwiftletCare_SRS.md` mục 0 là căn cứ. Firmware còn theo phạm vi v1.24.0 và các mô tả bên dưới phản ánh code hiện tại. Việc phải sửa (chi tiết ở SRS mục 0.5):
+>
+> - ENV-FR-011: quạt chỉ theo nhiệt độ + độ ẩm — bỏ NH3/CO2 khỏi bộ mờ và bỏ chốt "khí vượt max thì ép quạt 100%" (`pid/FuzzyControl.cpp`, `rawGasOverMax` trong `pid/PIDController.cpp`); sửa `test/test_fuzzy`. `backend/src/utils/fuzzyModel.util.ts` phải sửa cùng lúc.
+> - ENV-FR-012: bỏ sưởi — gỡ `runHeatingControl` và override `heating`; kênh IN4 (GPIO14) để dự phòng.
+> - THREAT-FR-011: khi `PUMP_DRY` thì ngừng phun sương tới hết đợt (hiện chỉ báo).
+> - THREAT-FR-013: xác nhận và viết test cho trạng thái an toàn khi cảm biến nhiệt-ẩm mất hoặc sai.
+> - THREAT-FR-007: đổi loại cảnh báo `BIRD_PANIC` thành `NOISE_ANOMALY`.
+> - ENV-FR-023 (phần cứng): công tắc 3 vị trí Auto/Off/Hand cho bơm và quạt.
+> - EXPERT-FR-008: nhận 5 tham số phát hiện qua `config/update` (`noise_margin_db`, `noise_min_sec`, `pump_dry_on_sec`, `pump_dry_min_rise_pct`, `speaker_drop_pct`), lưu NVS và tự kẹp khoảng — thay cho hằng số trong code.
+
 PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `SwiftletCare_Components_Guide_v3.11.md`. Checklist lắp đặt: `SwiftletCare_TASK_DETAIL_Checklist.md` mục A.
 
 ## Build / Nạp firmware

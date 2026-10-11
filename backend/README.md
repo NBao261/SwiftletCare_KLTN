@@ -2,6 +2,17 @@
 
 Node.js 20 LTS + Express 4 + TypeScript + MongoDB + EMQX (MQTT) + Socket.io. Xem `SwiftletCare_SRS.md` §3.2, §7-9.
 
+> **Phạm vi v2.0.0 (sau Review 1).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; `SwiftletCare_SRS.md` mục 0 là căn cứ. Code backend còn theo phạm vi v1.24.0 và các mô tả bên dưới phản ánh code hiện tại. Việc phải sửa (chi tiết ở SRS mục 0.5):
+>
+> - Role `FARM_OPERATOR` thành `DOMAIN_EXPERT`; bỏ phạm vi Zone (`zone_ids`, `operatorZoneScope`, `applyZoneScope`) và `PUT /farms/:id/members/:userId`. Chuyên gia chỉ đọc dữ liệu vận hành, sửa ngưỡng/hệ số, kiểm chứng cảnh báo, viết kết luận.
+> - Gỡ Marketplace (`/marketplace/*`, `nestListing`, `contactInquiry`); giữ ghi nhận thu hoạch.
+> - Bỏ relay `heating`. NH3/CO2 chỉ cảnh báo: đồng bộ `utils/fuzzyModel.util.ts` với firmware, breach NH3/CO2 ở mức MEDIUM và không sinh ticket.
+> - `BIRD_PANIC` thành `NOISE_ANOMALY`; thêm `alerts.expert_verdict` và `PUT /alerts/:id/verdict`.
+> - Mới: `relay_override_logs` (lịch sử can thiệp tay), `GET /analytics/autonomy`, `zone_health_reports` và `/health-reports`.
+> - EXPERT-FR-008: `zones.detection_tuning` + lịch sử, `PUT /farms/zones/:zoneId/detection-tuning`; gửi 5 tham số phát hiện xuống ESP32, job tỷ lệ chim về đọc ngưỡng của Zone.
+> - Nối ít nhất một kênh ngoài ứng dụng chạy thật: Telegram bot (ALERT-FR-013) hoặc Firebase FCM; Zalo và SMS không làm.
+> - Sửa `docs/api/api-spec.yaml` trong cùng PR với từng thay đổi route.
+
 ## Chạy local
 
 ```bash

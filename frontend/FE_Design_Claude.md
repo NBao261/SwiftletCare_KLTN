@@ -9,6 +9,15 @@
 
 ## 0. Changelog
 
+### Chờ cập nhật theo SRS v2.0.0 (sau Review 1)
+
+> File này **chưa** được viết lại theo phạm vi mới; khi mâu thuẫn, `SwiftletCare_SRS.md` mục 0 thắng. Những điểm ảnh hưởng tới thiết kế FE:
+>
+> - **Domain Expert thay Farm Operator** (role `DOMAIN_EXPERT`, phạm vi cả farm): bucket `domain-expert/`, tiền tố trang/layout `DomainExpert` (`DomainExpertLayout` thay `FarmOperatorLayout`). Chuyên gia chỉ đọc dashboard/analytics và có 3 màn riêng: báo cáo sức khỏe Zone, kiểm chứng cảnh báo suy luận, duyệt gợi ý hệ số.
+> - **Bỏ Marketplace và Buyer**: gỡ `MarketplacePage`, `ListingDetailPage`, `useMarketplace`, `marketplace.api`; trang Thu hoạch chỉ còn ghi nhận.
+> - **Bỏ**: cảnh báo thiên địch, relay sưởi, kênh Zalo/SMS trong màn cấu hình thông báo.
+> - **Mới cho Farm Owner**: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, kết luận của chuyên gia, live stream có khung + số đếm trực tiếp. `NOISE_ANOMALY` thay `BIRD_PANIC` và hiển thị kèm số đếm chim.
+
 ### v2.4.0 → v2.5.0
 | # | Thay đổi |
 |---|---|
@@ -337,14 +346,17 @@ Thiết kế khi áp dụng: `react-i18next`, namespace theo module (`common`, `
 |---|---|---|---|
 | AI Giám sát đàn — đếm chim, return rate | VISION-FR-006/008/009/010/011 | 🟡 chờ dữ liệu thật từ Edge AI | **Có** |
 | Phân tích tương quan môi trường ↔ return rate | ANALYTICS-FR-002/003 | 🟡 chờ dữ liệu VISION thật | **Có** |
-| Cảnh báo thiên địch từ camera | THREAT-FR-001/002/003 | 🟡/⬜ | **Có** |
+| ~~Cảnh báo thiên địch từ camera~~ | THREAT-FR-001/002/003 | ❌ Bỏ ở SRS v2.0.0 — không làm màn này | — |
 | Chat trực tiếp trong Ticket | TICKET-FR-014→017 | ⬜ Chưa cài | **Có** |
 | Reset ngưỡng Zone về mặc định | ENV-FR-020 | ✅ Đã code (v1.18.0) | Không |
 | Audit Log toàn hệ thống (Admin) | SYSTEM-FR-001 | ✅ Đã code (`GET /system/audit-logs`) | Không |
 | Cấu hình ngưỡng mặc định hệ thống (Admin) | SYSTEM-FR-002 | ✅ Đã code (`GET/PUT /system/settings/default-thresholds`) | Không |
 | Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ✅ Đã code (`GET /system/health-overview`) | Không |
-| Đăng bán/Truy xuất nguồn gốc (Marketplace) | MARKET-FR-* | ✅ Đã code | Không |
-| Push notification FCM/Zalo/SMS thật | ALERT-FR-002/003/004 | 🟡 chưa nối credential | Có (màn cấu hình kênh) |
+| ~~Đăng bán/Truy xuất nguồn gốc (Marketplace)~~ | MARKET-FR-006..013 | ❌ Bỏ ở SRS v2.0.0 — gỡ các trang này; chỉ giữ ghi nhận thu hoạch (MARKET-FR-001..005) | — |
+| Thông báo ngoài ứng dụng: Telegram bot hoặc push (SRS v2.0.0 bỏ Zalo/SMS) | ALERT-FR-002/013 | 🟡 chưa nối kênh nào | Có (màn cấu hình kênh) |
+| Báo cáo sức khỏe Zone, kiểm chứng cảnh báo, kết luận của chuyên gia | EXPERT-FR-003..006 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
+| Lịch sử can thiệp tay, tỷ lệ thời gian tự động | ENV-FR-019, ANALYTICS-FR-011 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
+| Live stream có khung trên từng con chim | VISION-FR-013/014 | ⬜ Chưa cài | **Có** |
 
 *Giới hạn:* bảng này là ảnh chụp tại v2.4.0 (SRS v1.21.0). Nguồn sự thật luôn là cột "Trạng thái Backend" trong `SwiftletCare_SRS.md` §5 — lệch nhau thì tin SRS và sửa bảng này.
 
@@ -613,7 +625,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 ### 12.8. Checklist khi thêm một màn hình mới
 
 1. Màn này thuộc nghiệp vụ role nào? → tạo `pages/<role>/<Role><ChứcNăng>Page.tsx`, tên hàm trùng tên file.
-2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts` (`OPS_ROLES`, `FARM_SIDE_ROLES`, `FARM_OWNER_ONLY`, `ADMIN_ONLY`, `HARVEST_ROLES`). Farm Operator nằm trong `OPS_ROLES`/`FARM_SIDE_ROLES`/`HARVEST_ROLES`, không nằm trong `FARM_OWNER_ONLY` (thành viên, cài đặt farm, đăng bán).
+2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts` (`OPS_ROLES`, `FARM_SIDE_ROLES`, `FARM_OWNER_ONLY`, `ADMIN_ONLY`, `HARVEST_ROLES`). Farm Operator nằm trong `OPS_ROLES`/`FARM_SIDE_ROLES`/`HARVEST_ROLES`, không nằm trong `FARM_OWNER_ONLY` (thành viên, cài đặt farm, đăng bán). **SRS v2.0.0:** khi đổi sang Domain Expert, chuyên gia chỉ thuộc nhóm đọc dashboard/analytics/thu hoạch và nhóm sửa ngưỡng/hệ số; không thuộc nhóm điều khiển relay, ticket hay ghi thu hoạch — định nghĩa lại các nhóm role cho khớp bảng phân quyền SRS mục 4.4.
 3. Cần lên sidebar? → thêm `{ label, path, icon }` vào `menuSections` trong `<Role>Layout.tsx`, và thêm dòng vào `MENU_ACCESS` (`constants/roles.ts`).
 4. Endpoint mới → `apis/<role>/<resource>.api.ts`; hook bọc React Query → `hooks/<role>/use<Resource>.ts`.
 5. Component riêng của màn → `components/features/<role>/<area>/`. **Không để trong `pages/`.**
@@ -626,7 +638,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 **Nguyên tắc gốc:** file nào *là một thực thể của React* (component, page, layout) → **PascalCase**, viết hoa chữ cái đầu của mọi từ, không gạch nối, không gạch dưới. File nào *là một module hạ tầng* (endpoint, kiểu dữ liệu, store, hằng số, tiện ích) → giữ quy ước đuôi phân loại của hệ sinh thái React/TypeScript. Trộn hai quy ước này là **cố ý**, không phải thiếu nhất quán — xem 12.11.
 
 **Công thức tên:** tiền tố role **chỉ** dùng ở nơi thư mục không tự nói lên role.
-- **Page** trong `pages/<role>/` và **layout** của role → bắt đầu bằng tên role PascalCase: `Admin`, `FarmOwner`, `FarmOperator`, `Technician` (URL không có tiền tố role nên tên file bù lại).
+- **Page** trong `pages/<role>/` và **layout** của role → bắt đầu bằng tên role PascalCase: `Admin`, `FarmOwner`, `FarmOperator` (SRS v2.0.0: `DomainExpert`), `Technician` (URL không có tiền tố role nên tên file bù lại).
 - **Component trong `components/features/<role>/<area>/`** → **không** tiền tố role, chỉ tên feature (`ThresholdsModal`, `CreateUserModal`) — đường dẫn `features/<role>/` đã nói role. Đây là quy ước đang chạy ở toàn bộ file trong `features/`; không đổi tên file cũ.
 - File **không thuộc role nào** (`ui/`, `common/`, `auth/`, 4 trang gốc `pages/`) → không tiền tố role.
 - **Tên hàm export trùng đúng tên file**: `AdminUsersPage.tsx` → `export default function AdminUsersPage()`.
@@ -645,7 +657,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `routes/` | `<role>.routes.tsx` | `admin.routes.tsx` · `farm-owner.routes.tsx` |
 | `stores/` | `<tên>Store.ts` — camelCase | `authStore.ts` · `alertStore.ts` |
 | `constants/` · `lib/` · `providers/` | camelCase, tên nói đúng nội dung | `auditActions.ts` · `chartTheme.ts` · `AppProviders.tsx` |
-| Thư mục | **kebab-case** cho tên role nhiều từ | `farm-owner/` · `farm-operator/` |
+| Thư mục | **kebab-case** cho tên role nhiều từ | `farm-owner/` · `farm-operator/` (SRS v2.0.0: `domain-expert/`) |
 
 **Hằng số riêng của một feature** đi kèm component trong cùng thư mục, đặt `<area>.constants.ts`: `users.constants.ts`, `harvest.constants.ts`. Hằng số dùng chung toàn app thì về `constants/`.
 

@@ -81,7 +81,7 @@ ESP32 ── Wi-Fi ──> Router 4G ──> Cloud (MQTT)
 | 14 | **Module 4 Relay 5V opto cách ly kích H/L** | Relay **TONGLING JQC-3FF-S-Z**, cuộn dây 5VDC, tiếp điểm **10A/250VAC** (15A/125VAC), chọn mức kích High/Low bằng jumper, ~200mA/relay | — | Đã mua — đúng board trong ảnh thực tế |
 | 15 | **Mạch phun sương siêu âm 108-110KHz** | 5V qua cổng **Micro-USB**, ~300mA (<2W), kèm 1 đĩa siêu âm Ø20/Ø12mm (jack cắm sẵn, không hàn) + 1 bông tạo ẩm 10cm + 2 khung giá đỡ bông | IN1 · GPIO25 | Tăng ẩm — nguồn 5V lấy từ **Buck#1**, cấp vào board qua dây cắt từ cáp Micro-USB |
 | 16 | **Quạt tản nhiệt 12V 5x5cm** | 12V-0.09A (~1.08W), tốc độ 4000±10% RPM, độ ồn 18dB, lưu lượng 18.17-25.97 CFM, 2 dây (Đỏ=12V+/Đen=GND, không có dây tín hiệu) | IN3 · GPIO27 | Giảm nhiệt/xả khí — nguồn **12V lấy trực tiếp từ Domino/Adapter**, KHÔNG qua Buck (quy mô demo KLTN) |
-| 17 | (dự phòng: sưởi/đèn/tải lớn hơn) | — | IN4 · GPIO14 | Mở rộng — có thể dùng tới 10A/250VAC nếu cần |
+| 17 | (dự phòng — SRS v2.0.0: không dùng sưởi) | — | IN4 · GPIO14 | Mở rộng — có thể dùng tới 10A/250VAC nếu cần |
 
 ### 2.4. Hệ thống âm thanh Loa ru
 
@@ -370,6 +370,20 @@ Hết giờ (7:00): stop() → ngắt Relay IN2 (GPIO26=LOW) → cắt điện a
 - [ ] Đấu PAM8403: khối nguồn "+/−"→Relay K2/GND, Output (hàn 1 cặp L+/L- hoặc R+/R-)→loa (qua đầu cốt hoặc hàn trực tiếp)
 - [ ] Nạp firmware, test: đọc 5 cảm biến, bật/tắt 3 relay, phát loa ru
 - [ ] Kiểm tra dB tăng khi loa kêu (verify SPEAKER_FAILURE logic)
+
+---
+
+## Bổ sung theo SRS v2.0.0 — Công tắc bypass (chưa lắp)
+
+> Phiếu đăng ký bản sửa cam kết công tắc bypass vật lý (SRS ENV-FR-023, REL-NFR-005, Flow 28): khi ESP32 hỏng, người tại nhà yến vẫn chạy được bơm phun sương và quạt bằng tay.
+
+- **Linh kiện:** 2 công tắc xoay 3 vị trí (Auto / Off / Hand), dòng định mức lớn hơn dòng của tải; nên chọn loại có tiếp điểm phụ.
+- **Auto:** nguồn của tải đi qua tiếp điểm NO-COM của relay (K1 phun sương, K3 quạt) như hiện nay.
+- **Hand:** nguồn cấp thẳng cho tải, bỏ qua relay.
+- **Off:** ngắt hẳn tải khi sửa chữa.
+- **Tùy chọn:** nối tiếp điểm phụ về 1 GPIO còn trống để firmware báo "đang bypass tại tủ".
+- **Kênh IN4 (GPIO14):** để dự phòng, không gắn sưởi.
+- ⚠️ Nếu sau này dùng bơm/quạt 220V: ngắt nguồn khi đấu, dùng dây và đầu cốt đúng cỡ, tủ kín vì nhà yến ẩm.
 
 ---
 

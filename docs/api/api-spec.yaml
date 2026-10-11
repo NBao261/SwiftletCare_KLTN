@@ -25,6 +25,15 @@ info:
     và role Sales Staff đã bị loại khỏi hệ thống ở SRS v1.23.0 — bán yến chỉ đi
     qua Module MARKET (Harvests + Marketplace, liên hệ trực tiếp).
 
+    **Phạm vi SRS v2.0.0 (sau Review 1):** file này vẫn mô tả đúng API ĐANG CHẠY.
+    Các thay đổi sắp tới theo SRS mục 0.5 — sửa file này trong cùng PR với code:
+    gỡ toàn bộ `/marketplace/*`; role `FARM_OPERATOR` thành `DOMAIN_EXPERT` (bỏ
+    `zone_ids` và `PUT /farms/{id}/members/{userId}`); bỏ relay `heating`; bỏ kênh
+    Zalo/SMS, thêm Telegram; loại cảnh báo `BIRD_PANIC` thành `NOISE_ANOMALY`;
+    endpoint mới `PUT /alerts/{id}/verdict`, `GET /analytics/autonomy`,
+    `GET /devices/sensor-nodes/{id}/relay-overrides`, `GET /health-reports`,
+    `PUT /health-reports/{id}/conclusion`.
+
 servers:
   - url: http://localhost:3000
     description: Local dev (docker-compose mongodb + emqx)
