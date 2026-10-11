@@ -559,6 +559,8 @@
 - [ ] Gán nhãn 1 class `swiftlet`, train YOLOv8n, export ONNX `[VISION-FR-002/003]`
 - [ ] Pipeline chạy trên video quay sẵn: YOLO → ByteTrack → đếm qua vạch ảo `[VISION-FR-004/005]`
 - [ ] **Báo cáo độ chính xác:** Precision, Recall và sai số đếm so với đếm tay, tách ban ngày / thiếu sáng; lưu `docs/test-reports/` `[VISION-FR-016]`
+- [ ] Gửi số đếm theo khoảng 5 phút cả ngày, kể cả ngoài phiên (`kind: "BUCKET"`) `[VISION-FR-017]`
+- [ ] Kiểm tra camera trước khi dùng lâu dài: chim không phản ứng với đèn hồng ngoại; modem chỉ cho IP của VPS vào cổng camera `[docs/bird-counting-plan.md 19.5, cổng 3c và 6]`
 - [ ] Publish số đếm qua MQTT mỗi 30 giây; backend tính tỷ lệ quay về `[VISION-FR-006, Flow 3]`
 - [ ] Vẽ khung trên từng con chim + vạch đếm lên frame, phát stream tới máy chủ video `[VISION-FR-013/014]`
 - [ ] Tiến trình tự khởi động lại khi crash `[REL-NFR-004]`
@@ -574,6 +576,7 @@
 - [ ] `THRESHOLD_BREACH` của NH3/CO2 ở mức MEDIUM, không leo thang thành ticket `[ALERT-FR-012]`
 - [ ] `relay_override_logs` + `GET /devices/sensor-nodes/:id/relay-overrides` `[ENV-FR-019]`
 - [ ] `GET /analytics/autonomy` — tỷ lệ thời gian tự động `[ANALYTICS-FR-011]`
+- [ ] Đếm chim ở backend: `ingestBirdCount` (upsert theo phiên, tỷ lệ chim về trên số ròng), `bird_count_buckets` + `GET /analytics/bird-count/buckets`, job `returnRate` tạo `LOW_RETURN_RATE`, trạng thái ONLINE/OFFLINE của camera, token xem stream `[VISION-FR-006/008/009/011/013/017]`
 - [ ] `zone_health_reports` + job tổng hợp hàng tuần + `GET /health-reports`, `PUT /health-reports/:id/conclusion` `[EXPERT-FR-005/006]`
 - [ ] Thông báo trong ứng dụng cho Domain Expert (cảnh báo chờ kiểm chứng, báo cáo mới) `[EXPERT-FR-007]`
 - [ ] `zones.detection_tuning` + lịch sử, `PUT /farms/zones/:zoneId/detection-tuning` (kiểm tra khoảng, audit), gửi 5 tham số xuống ESP32 qua `buildDeviceConfig`; job tỷ lệ chim về đọc `return_rate_drop_pct` của Zone `[EXPERT-FR-008]`

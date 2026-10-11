@@ -7,7 +7,7 @@
 | Trường thông tin        | Nội dung                            |
 | ----------------------- | ----------------------------------- |
 | **Tên dự án**           | SwiftletCare                        |
-| **Phiên bản SRS**       | 2.1.0                               |
+| **Phiên bản SRS**       | 2.1.1                               |
 | **Ngày tạo**            | 07/09/2026                          |
 | **Thời gian thực hiện** | Tháng 7/2026 – Tháng 12/2026 (FA26) |
 | **Chuyên ngành**        | Software Engineering (SE)           |
@@ -501,17 +501,17 @@ flowchart TB
 | VISION-FR-003 | **[v2.0.0]** Hệ thống phát hiện **1 class: `swiftlet`**. Các class `rat`, `snake`, `owl` bị bỏ cùng phát hiện thiên địch (mục 5.5.1) | Bắt buộc | ⬜ Chưa cài (chưa có dataset/model) |
 | VISION-FR-004 | Thuật toán ByteTrack theo dõi ID object qua các frame để tránh đếm trùng                                      | Bắt buộc | ⬜ Chưa cài |
 | VISION-FR-005 | Logic đếm dựa trên vector di chuyển: chim vượt qua line ảo theo hướng ra → counted as EXIT; ngược lại → ENTRY | Bắt buộc | ⬜ Chưa cài |
-| VISION-FR-006 | Nút AI publish số đếm cộng dồn qua MQTT mỗi 30 giây: `{entry_count, exit_count, timestamp, confidence}`       | Bắt buộc | 🟡 Backend đã có handler `birdCount.handler.ts` chờ dữ liệu MQTT thật |
+| VISION-FR-006 | Nút AI publish số đếm cộng dồn qua MQTT mỗi 30 giây: `{entry_count, exit_count, timestamp, confidence}`       | Bắt buộc | ⬜ Chưa cài — handler `birdCount.handler.ts` mới chỉ ghi log, chưa lưu DB (thiết kế ở `docs/bird-counting-plan.md` mục 8) |
 | VISION-FR-007 | Camera có hồng ngoại nhìn đêm (IR) để đếm chim lúc bình minh/hoàng hôn; độ chính xác báo cáo riêng cho phiên ban ngày và phiên thiếu sáng | Bắt buộc | ⬜ Phần cứng camera + đánh giá |
 
 #### 5.4.2. Theo dõi & Thống kê Đàn Chim
 
 | ID            | Yêu cầu                                                                                               | Mức độ   | Trạng thái Backend                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------- |
-| VISION-FR-008 | Backend tổng hợp entry/exit count theo phiên (session): Phiên Sáng (ra), Phiên Tối (về)               | Bắt buộc | ✅ Xong (code tổng hợp entry/exit theo phiên; chờ dữ liệu thật từ Edge AI) |
-| VISION-FR-009 | Tính toán Return Rate hàng ngày: `return_rate = (evening_entry / morning_exit) × 100%`                | Bắt buộc | ✅ Xong (tính `return_rate`; chờ dữ liệu thật từ Edge AI)                  |
+| VISION-FR-008 | Backend tổng hợp entry/exit count theo phiên (session): Phiên Sáng (ra), Phiên Tối (về)               | Bắt buộc | 🟡 Chỉ có phần đọc (`GET /analytics/bird-count/*`); chưa có code nào ghi `BirdCountRecord` |
+| VISION-FR-009 | **[Sửa v2.1.1]** Tính tỷ lệ chim về hàng ngày trên **số ròng**: `return_rate = (vào − ra của phiên chiều) / (ra − vào của phiên sáng) × 100%`. Chim lượn qua lại vạch đếm làm cả hai chiều phồng lên; phép trừ triệt tiêu phần đó. Số thô của cả hai chiều vẫn được lưu, và báo cáo đánh giá so sai số của hai cách (VISION-FR-016). Bản cũ dùng `evening_entry / morning_exit`                | Bắt buộc | ⬜ Chưa cài — chưa có chỗ nào tính và lưu `return_rate` |
 | VISION-FR-010 | Lưu lịch sử đếm chim theo ngày, tuần, tháng; hiển thị biểu đồ xu hướng                                | Bắt buộc | ✅ Xong (endpoint `bird-count/trends`; chờ dữ liệu thật)                   |
-| VISION-FR-011 | Cảnh báo khi return_rate giảm > 20% so với trung bình 7 ngày trước (**[v2.1.0]** mức 20% chỉnh được theo Zone — EXPERT-FR-008)                                    | Bắt buộc | ✅ Xong (cảnh báo giảm >20%; chờ dữ liệu thật)                             |
+| VISION-FR-011 | Cảnh báo khi return_rate giảm > 20% so với trung bình 7 ngày trước (**[v2.1.0]** mức 20% chỉnh được theo Zone — EXPERT-FR-008)                                    | Bắt buộc | ⬜ Chưa cài — không có code nào tạo cảnh báo `LOW_RETURN_RATE`. Thiết kế: job chạy sau khi phiên chiều kết thúc, không phụ thuộc tin kết thúc phiên của pipeline (`docs/bird-counting-plan.md` mục 8.3) |
 | VISION-FR-012 | Dashboard hiển thị live count thời gian thực trong giờ cao điểm (5:30–7:00 sáng và 17:30–19:00 chiều) | Bắt buộc | ⬜ Chưa cài (frontend; socket `BIRD_COUNT_UPDATE` đã có) |
 
 #### 5.4.3. Live Stream Camera
@@ -522,6 +522,7 @@ flowchart TB
 | VISION-FR-014 | **[v2.0.0 — đổi từ Tùy chọn sang Bắt buộc]** Live stream có **khung bao vẽ trên từng con chim đang được theo vết** và vạch đếm, để kiểm chứng số đếm bằng mắt. Khung được vẽ thẳng lên frame tại nút AI trước khi phát (không gửi toạ độ cho frontend tự vẽ) | Bắt buộc | ⬜ Chưa cài |
 | VISION-FR-015 | Xem video recording của các sự kiện đã qua (lưu trữ 7 ngày mặc định, cấu hình được) | Tùy chọn (không thuộc cam kết phiếu v2) | ⬜ Chưa cài (chưa có endpoint video recording)              |
 | VISION-FR-016 **[mới v2.0.0]** | **Đánh giá độ chính xác đếm:** so số đếm của hệ thống với số đếm tay trên các đoạn video quay sẵn, báo cáo Precision, Recall của phát hiện và **sai số đếm** theo từng chiều (ra/vào), tách riêng điều kiện ban ngày và thiếu sáng. Kết quả lưu ở `docs/test-reports/` và là một phần sản phẩm "mô hình AI kèm kết quả đánh giá" của phiếu v2 | Bắt buộc | ⬜ Chưa làm |
+| VISION-FR-017 **[mới v2.1.1]** | **Số đếm theo khoảng 5 phút, cả ngày:** ngoài bản ghi cộng dồn của mỗi phiên, nút AI gửi số chim ra/vào của từng khoảng 5 phút, kể cả ngoài hai phiên sáng và chiều; backend lưu `bird_count_buckets` (giữ 90 ngày) và cung cấp `GET /analytics/bird-count/buckets`. Đây là dữ liệu để đối chiếu cảnh báo ồn bất thường với chuyển động của đàn tại đúng thời điểm (Flow 25, EXPERT-FR-003), và để xem giờ chim bay thực tế có lệch khung giờ phiên không | Bắt buộc | ⬜ Chưa cài |
 
 ### 5.5. Module THREAT – Phát hiện Mối đe dọa
 
@@ -681,7 +682,7 @@ flowchart TB
 | ------------- | --- | -------- | --- |
 | EXPERT-FR-001 | Primary Owner mời **Domain Expert** vào farm bằng cơ chế lời mời sẵn có (AUTH-FR-005/010) với `invited_role: DOMAIN_EXPERT`; phạm vi luôn là cả farm. Một chuyên gia có thể được nhiều farm mời | Bắt buộc | 🔄 Tái dùng luồng mời của Farm Operator — cần đổi role và bỏ phạm vi Zone |
 | EXPERT-FR-002 | Domain Expert xem (chỉ đọc) Dashboard, Analytics, số đếm chim, live stream, lịch sử cảnh báo, lịch sử ngưỡng/hệ số/can thiệp tay và các mẻ thu hoạch của farm được mời | Bắt buộc | 🔄 Cần phân quyền theo mục 4.4 |
-| EXPERT-FR-003 | **Kiểm chứng cảnh báo suy luận:** với `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE`, Domain Expert ghi kết quả `CONFIRMED` hoặc `REJECTED` kèm ghi chú (lưu `alerts.expert_verdict`). Trang kiểm chứng hiển thị bối cảnh quanh thời điểm cảnh báo: số đo cảm biến và số đếm chim ±30 phút. Hệ thống thống kê tỷ lệ được xác nhận theo từng loại cảnh báo để làm căn cứ hiệu chỉnh ngưỡng phát hiện | Bắt buộc | ⬜ Chưa cài (`PUT /alerts/:id/verdict`) |
+| EXPERT-FR-003 | **Kiểm chứng cảnh báo suy luận:** với `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE`, Domain Expert ghi kết quả `CONFIRMED` hoặc `REJECTED` kèm ghi chú (lưu `alerts.expert_verdict`). Trang kiểm chứng hiển thị bối cảnh quanh thời điểm cảnh báo: số đo cảm biến và số đếm chim ±30 phút (lấy từ số đếm theo khoảng 5 phút — VISION-FR-017). Hệ thống thống kê tỷ lệ được xác nhận theo từng loại cảnh báo để làm căn cứ hiệu chỉnh ngưỡng phát hiện | Bắt buộc | ⬜ Chưa cài (`PUT /alerts/:id/verdict`) |
 | EXPERT-FR-004 | **Duyệt và tinh chỉnh thông số:** Domain Expert sửa ngưỡng Zone (ENV-FR-006, gồm ngưỡng cảnh báo NH3/CO2) và hệ số logic mờ (ENV-FR-021), áp dụng hoặc bỏ qua gợi ý của hệ thống (ANALYTICS-FR-010). Mọi thay đổi lưu lịch sử kèm người sửa, role và thời điểm; biểu đồ hiệu quả điều khiển (ANALYTICS-FR-008) có vạch mốc tại lần sửa để so trước/sau | Bắt buộc | 🔄 API và lịch sử đã có; cần mở quyền cho `DOMAIN_EXPERT` và lưu role |
 | EXPERT-FR-005 | **Báo cáo sức khỏe Zone** do hệ thống tự tổng hợp hàng tuần (chu kỳ cấu hình được) và xem được theo khoảng bất kỳ: % thời gian nhiệt độ/độ ẩm trong ngưỡng, % thời gian chạy tự động (ANALYTICS-FR-011), số lần đóng cắt relay, số cảnh báo theo loại, lỗi thiết bị, xu hướng tỷ lệ chim về, NH3/CO2 trung bình và cực đại | Bắt buộc | ⬜ Chưa cài (`zone_health_reports`, job tổng hợp, `GET /health-reports`) |
 | EXPERT-FR-006 | Domain Expert viết **kết luận và khuyến nghị** gắn vào một báo cáo sức khỏe; Farm Owner nhận thông báo và đọc được trên web/mobile. Người viết sửa được kết luận của mình; có lưu thời điểm | Bắt buộc | ⬜ Chưa cài (`PUT /health-reports/:id/conclusion`) |
@@ -1204,6 +1205,19 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
 }
 ```
 
+#### `bird_count_buckets` **[mới v2.1.1, VISION-FR-017]**
+
+```json
+{
+  "_id": "ObjectId",
+  "camera_node_id": "ObjectId (ref: camera_nodes)",
+  "zone_id": "ObjectId",
+  "bucket_start": "ISODate (đầu khoảng 5 phút; unique cùng camera_node_id; TTL 90 ngày)",
+  "entry_count": "number (số chim vào trong khoảng)",
+  "exit_count": "number (số chim ra trong khoảng)"
+}
+```
+
 #### `bird_count_records`
 
 ```json
@@ -1476,6 +1490,7 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
 | GET    | `/telemetry/zones/:id/history` | Lịch sử (query: from, to, interval)  | JWT  |
 | GET    | `/analytics/bird-count/daily`  | Thống kê đếm chim hàng ngày          | JWT  |
 | GET    | `/analytics/bird-count/trends` | Xu hướng đàn chim                    | JWT  |
+| GET    | `/analytics/bird-count/buckets` **[mới v2.1.1]** | Số chim ra/vào theo khoảng 5 phút của Zone (VISION-FR-017; query `zoneId`, `from`, `to`) | JWT (OWNER/EXPERT) |
 | GET    | `/analytics/correlation`       | Tương quan môi trường vs return rate | JWT  |
 | GET    | `/analytics/control/performance` **[mới v1.24.0]** | Hiệu quả bộ điều khiển mờ: chuỗi độ ẩm × % phun/quạt, % trong ngưỡng, số lần đóng cắt/giờ, các lần chỉnh hệ số (ANALYTICS-FR-008; query `zoneId`, `range`) | JWT  |
 | GET    | `/analytics/forecast` **[mới v1.24.0]** | Dự báo độ ẩm/nhiệt độ 60 phút tới + MAE 30/60 phút + vượt ngưỡng dự kiến (ANALYTICS-FR-009; query `zoneId`) | JWT  |
@@ -1589,7 +1604,7 @@ swiftletcare/{farmId}/{houseId}/{zoneId}/config/reassign   # mới v1.13.0, FARM
 # Từ nút AI đếm chim (PC tại nhà yến hoặc máy chủ cloud — v2.0.0).
 # vision/alert chỉ còn dùng cho EDGE_AI_DEGRADED; không còn cảnh báo thiên địch.
 # Topic `alert` của ESP32 đổi loại BIRD_PANIC thành NOISE_ANOMALY (THREAT-FR-007).
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count
+swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count   # số đếm của phiên (30 giây/lần) và, với kind:"BUCKET", số đếm từng khoảng 5 phút cả ngày (VISION-FR-017)
 swiftletcare/{farmId}/{houseId}/{zoneId}/vision/alert
 swiftletcare/{farmId}/{houseId}/{zoneId}/vision/heartbeat
 
@@ -1769,7 +1784,7 @@ TICKET_CHAT_ASSIGNEE_CHANGED: { ticketId, oldAssigneeId, newAssigneeId }
 5. Frame t+1: track_id=15 vượt qua crossing line → direction: INWARD
 6. Increment entry_count: 1547
 7. Mỗi 30 giây publish MQTT: {sessionType: "EVENING_ENTRY", entryCount: 1547, exitCount: 0}
-8. 19:00 - Nút AI kết thúc session → Backend truy vấn exit_count = 1823 của MORNING_EXIT session cùng ngày, cùng zone → compute return_rate = 1547/1823 = 84.8% (theo công thức VISION-FR-009)
+8. 19:00 - Nút AI kết thúc session → Backend truy vấn exit_count = 1823 của MORNING_EXIT session cùng ngày, cùng zone → compute return_rate = 1547/1823 = 84.8% (ví dụ đơn giản hoá; [v2.1.1] công thức thật dùng số ròng của mỗi phiên — VISION-FR-009)
 9. Publish summary → Backend lưu BirdCountRecord
 10. Dashboard cập nhật biểu đồ xu hướng
 11. Trong suốt phiên, nút AI vẽ khung trên từng con chim đang được theo vết + vạch đếm
@@ -2571,7 +2586,7 @@ flowchart LR
 | Precision (swiftlet)                | ≥ 80%                   |
 | Recall (swiftlet)                   | ≥ 80%                   |
 | Sai số đếm theo điều kiện           | Báo cáo riêng phiên ban ngày và phiên thiếu sáng |
-| Counting Accuracy (controlled test) | ≤ 5% error trên 100 con |
+| Sai số đếm so với đếm tay (VISION-FR-016) | Báo cáo số đo, tách đủ sáng / thiếu sáng; ngưỡng nội bộ đề xuất ≤ 10% (bản cũ ghi ≤ 5%, chưa có căn cứ đo) |
 
 ---
 
@@ -2804,5 +2819,6 @@ _Tài liệu SRS này được tạo ngày 07/09/2026. Mọi thay đổi yêu c�
 | 1.24.0 | 29/09/2026 | **Điều khiển môi trường bằng logic mờ (firmware 1.1.0):** (1) ENV-FR-010/011 — phun sương và quạt đổi từ ngưỡng cứng bật/tắt sang **bộ điều khiển mờ Sugeno bậc 0** (`firmware/src/pid/FuzzyControl.cpp`): phun sương theo độ ẩm + nhiệt độ, quạt theo nhiệt độ + độ ẩm + NH3 + CO2, điểm gãy tập mờ suy ra từ ngưỡng Zone (vẫn chỉnh qua `config/update`); đầu ra % áp lên relay bằng time-proportioning (cửa sổ 2 phút, quạt lệch nửa cửa sổ); giữ chốt an toàn NH3/CO2 vượt max → quạt 100%. Hết hiện tượng relay đóng/cắt liên tục quanh ngưỡng. ENV-FR-012 (sưởi) giữ ngưỡng. (2) THREAT-FR-011 — PUMP_DRY tính theo 5 phút relay BẬT **cộng dồn** trong đợt phun (bơm không còn BẬT liên tục). (3) Telemetry MQTT thêm `control_output {misting, ventilation}` (% 0-100, không lưu DB); backend chuyển tiếp thành `controlOutput` trong `TELEMETRY_UPDATE` (§9.3, bổ sung luôn `relayStates`/`controlMode` còn thiếu ở mô tả event); dashboard web hiển thị % trên gauge phun sương/quạt. (4) Viết lại Flow 2 theo logic mờ kèm ví dụ tính tay. (5) **Hiệu chỉnh bán tự động:** telemetry lưu thêm `misting_pct/ventilation_pct/misting_on/ventilation_on` (hệ thống tự thu thập dữ liệu "lệnh → phản ứng môi trường"); **ENV-FR-021** (mới) — 4 hệ số mờ chỉnh theo Zone qua web, đẩy xuống ESP32 bằng `config/update`, không cần nạp lại firmware, có lịch sử; **ANALYTICS-FR-008** (mới) — biểu đồ "Hiệu quả điều khiển" (% thời gian trong ngưỡng, số lần đóng cắt/giờ, vạch mốc các lần chỉnh). Tự động dò hệ số (adaptive fuzzy/ANFIS) để ở hướng phát triển — dữ liệu đã thu thập được dùng lại cho bước đó. (6) **Mở rộng kỹ thuật (firmware 1.2.0):** ENV-FR-022 lọc median + Kalman đầu vào bộ mờ (bật/tắt để so sánh A/B); THREAT-FR-007 phát hiện chim hoảng theo mức dB so với mức nền riêng từng giờ trong ngày (MEDIUM, bỏ qua lúc loa phát); ALERT-FR-010 `SENSOR_ANOMALY` (cảm biến kẹt / nhảy phi vật lý / lệch giữa thiết bị); ALERT-FR-011 + ANALYTICS-FR-009 dự báo 60 phút (Holt trend tắt dần, MAE đánh giá lùi) và cảnh báo sớm `FORECAST_BREACH` (LOW); TICKET-FR-018 bảo trì theo giờ chạy/số lần đóng cắt thật; ANALYTICS-FR-010 gợi ý hệ số mờ bằng hồi quy + mô phỏng + tìm lưới (chỉ đề xuất, phần "tự dò hệ số" ở trên nay đã có dạng bán tự động). Mọi cảnh báo mới ≤ MEDIUM để không tự sinh ticket; `BIRD_PANIC` mặc định hạ HIGH → MEDIUM. (7) Sửa lỗi: KPI tỉ lệ SLA theo Technician đếm cả ticket không có hạn SLA (trong aggregation `null < Date` là true). |
 | 2.0.0 | 10/10/2026 | **Chỉnh phạm vi theo phiếu đăng ký v2 sau Review 1 (hội đồng: "giống platform hơn là system").** (1) Thêm **mục 0** — quyết định phạm vi, vai trò, đối chiếu luồng chính, danh sách việc cần sửa code theo module. (2) **Bỏ Buyer + Marketplace** (MARKET-FR-006..013, Flow 7 phần bán, `nest_listings`, `contact_inquiries`, `/marketplace/*`); mục 5.8 thành ghi nhận thu hoạch. (3) **Domain Expert thay Farm Operator** (role `DOMAIN_EXPERT`, cả farm, bỏ `zone_ids`): mục 2.2, 4, RACI 4.4, AUTH-FR-004/005, Flow 12; thêm **Module EXPERT (5.12)** — kiểm chứng cảnh báo suy luận, duyệt thông số, báo cáo sức khỏe Zone, kết luận. (4) **Bỏ phát hiện thiên địch** (THREAT-FR-001..004, Flow 4); VISION còn 1 class, live stream có khung thành bắt buộc, nút AI là PC/máy chủ thay Raspberry Pi, thêm VISION-FR-016 (đánh giá độ chính xác). (5) **Âm thanh chỉ ở mức ồn**: `BIRD_PANIC` → `NOISE_ANOMALY`, không kết luận một mình (Flow 25). (6) **Bỏ sưởi** (ENV-FR-012). (7) **NH3/CO2 chỉ cảnh báo**, quạt chỉ theo nhiệt-ẩm (ENV-FR-011, ALERT-FR-012, Flow 24). (8) **Bỏ Zalo/SMS**; thêm kênh Telegram bot (ALERT-FR-013), phiếu cam kết "Telegram bot hoặc push". (9) Can thiệp tay là đường ngoại lệ: lịch sử override (ENV-FR-019), tỷ lệ tự động (ANALYTICS-FR-011), công tắc bypass (ENV-FR-023, Flow 28). (10) Tự bảo vệ: bơm khô tự ngừng phun (Flow 27), cảm biến lỗi về trạng thái an toàn. (11) Technician/ticket/Admin thành luồng phụ. (12) Bằng chứng: mục 6.8, 13.6; RISK-10..12. Cột trạng thái đánh dấu `🔄 Cần sửa code (v2.0.0)` ở những chỗ code còn theo phạm vi cũ |
 | 2.1.0 | 12/10/2026 | **Tham số phát hiện chỉnh được theo Zone (EXPERT-FR-008).** Sáu ngưỡng phát hiện trước đây là hằng số trong code (ồn bất thường: +15 dB / 10 giây; bơm chạy khô: 5 phút / 2%; hỏng loa: giảm 70%; tỷ lệ chim về giảm 20%) nay do Domain Expert chỉnh theo Zone: `zones.detection_tuning` + lịch sử, `PUT /farms/zones/:zoneId/detection-tuning`, 5 tham số gửi xuống ESP32 qua `config/update`. Cập nhật THREAT-FR-006/007/011, VISION-FR-011, RACI 4.4, Flow 25/26, mục 0.2 (quyết định 13) và 0.5. Phiếu đăng ký v2 bổ sung ý này ở phần Tuning của Domain Expert. Cùng đợt (10–12/10): thêm kênh Telegram (ALERT-FR-013), sửa ENV-FR-002/013 và các chỗ lệch phiếu khác |
+| 2.1.1 | 12/10/2026 | **Rà soát kế hoạch đếm chim (`docs/bird-counting-plan.md`).** (1) Sửa cột trạng thái VISION-FR-006/008/009/011 cho đúng code: backend mới có phần đọc, handler chỉ ghi log. (2) VISION-FR-009: tỷ lệ chim về tính trên số ròng. (3) **VISION-FR-017 mới:** số đếm theo khoảng 5 phút cả ngày (`bird_count_buckets`, `GET /analytics/bird-count/buckets`) làm dữ liệu đối chiếu cho cảnh báo ồn bất thường. (4) VISION-FR-011: cảnh báo do job chạy sau phiên chiều. (5) Mục 13.5: bỏ mục tiêu sai số ≤ 5% không có căn cứ, thay bằng báo cáo số đo |
 
-_Phiên bản hiện tại: 2.1.0 | Ngày cập nhật: 12/10/2026 | Trạng thái: DRAFT — phạm vi theo phiếu đăng ký v2 sau Review 1 (mục 0). **4 actor:** Farm Owner, Domain Expert (luồng chính); Technician, Administrator (luồng phụ). Code hiện tại còn theo phạm vi v1.24.0 ở nhiều chỗ — danh sách việc cần sửa ở mục 0.5 và các dòng `🔄 Cần sửa code (v2.0.0)`._
+_Phiên bản hiện tại: 2.1.1 | Ngày cập nhật: 12/10/2026 | Trạng thái: DRAFT — phạm vi theo phiếu đăng ký v2 sau Review 1 (mục 0). **4 actor:** Farm Owner, Domain Expert (luồng chính); Technician, Administrator (luồng phụ). Code hiện tại còn theo phạm vi v1.24.0 ở nhiều chỗ — danh sách việc cần sửa ở mục 0.5 và các dòng `🔄 Cần sửa code (v2.0.0)`._

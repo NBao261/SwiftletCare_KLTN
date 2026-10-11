@@ -1,8 +1,8 @@
 # Kế hoạch triển khai đếm chim yến real-time (Module VISION)
 
-> Phạm vi: VISION-FR-001…014 (đếm chim + live stream có khung nhận diện).
+> Phạm vi: VISION-FR-001…014, 016, 017 (đếm chim, live stream có khung nhận diện, báo cáo độ chính xác, số đếm theo khoảng 5 phút).
 > **[SRS v2.0.0]** Phiếu đăng ký bản sửa đã chính thức bỏ phát hiện thiên địch và lấy đếm chim làm phần AI duy nhất: live stream có khung (VISION-FR-014) là **bắt buộc**, thêm **VISION-FR-016** (báo cáo Precision/Recall và sai số đếm trên video quay sẵn, tách ban ngày / thiếu sáng). Người xem stream là Farm Owner và Domain Expert (role thay cho Farm Operator).
-> Không dùng Raspberry Pi — Edge AI node là một PC x86 đặt tại nhà yến, cùng LAN với camera.
+> **Kiến trúc đã chốt:** không dùng Raspberry Pi và không đặt máy tính tại nhà yến. Model chạy trong một container trên VPS; VPS kéo hình thẳng từ camera qua Internet của nhà yến (mục 1, 18, 19). Đặt một PC tại nhà yến chỉ còn là phương án lùi.
 > **Triển khai trên cloud** (đã chốt): backend, MQTT broker và máy chủ video chạy trên một VPS công khai, vì hội đồng xem demo từ xa. Chi tiết ở [mục 15](#15-gđ-c--triển-khai-cloud).
 > Trạng thái: **kế hoạch**. Toàn bộ code trong tài liệu này là bản thiết kế, **chưa được chạy thử** — phải kiểm tra lại ở từng giai đoạn theo tiêu chí "Xong khi".
 
@@ -28,53 +28,59 @@
 18. [Phương án ưu tiên: chạy model trên cloud, không đặt máy tại nhà yến](#18-phương-án-ưu-tiên-chạy-model-trên-cloud-không-đặt-máy-tại-nhà-yến)
 19. [Cấu hình đã chốt: Internet VNPT có IP public + camera VNPT tặng kèm](#19-cấu-hình-đã-chốt-internet-vnpt-có-ip-public--camera-vnpt-tặng-kèm)
 
-> **Đọc theo thứ tự nào:** cấu hình hiện hành là mục 19 (VNPT) + mục 18 (model chạy trên VPS) + mục 15 (hạ tầng cloud). Mục 17 (4G, máy tại chỗ) là phương án lùi.
+> **Đọc theo thứ tự nào:** mục 1 mô tả kiến trúc hiện hành. Mục 5–11 là code và quy trình dùng chung cho mọi phương án. Mục 15 (hạ tầng cloud), 18 (model chạy trên VPS) và 19 (Internet VNPT + camera) là chi tiết của kiến trúc hiện hành. Mục 17 (4G) và mọi chỗ nhắc "PC nhà yến" là phương án lùi, chỉ đọc khi trượt cổng kiểm tra ở mục 19.5.
 
 ---
 
 ## 1. Tổng quan giải pháp
 
 ```
-NHÀ YẾN (LAN)                                         CLOUD (VPS, có tên miền + HTTPS)
-─────────────                                         ────────────────────────────────
-Camera IP (RTSP, H.264 1080p 25 fps)
-   │
-   ▼  PC x86 — 1 tiến trình Python
-[Grabber: chỉ giữ frame mới nhất]
-   │
+NHÀ YẾN                                          CLOUD (VPS, có tên miền + HTTPS)
+───────                                          ────────────────────────────────
+Camera IP (RTSP, H.264, 20 fps)
+   │ Wi-Fi/LAN
    ▼
-[crop ROI → YOLOv8n (ONNX) → ByteTrack → vạch đếm → vẽ ô xanh]
-   │                         │
-   │ mỗi 30 giây             │ mỗi frame
-   │ MQTT qua TLS (8883)     │ ffmpeg → H.264 720p → RTSP qua TLS (8322)
-   ▼                         ▼
-───────────── Internet (chỉ kết nối đi RA từ nhà yến) ─────────────
-   │                         │
-   ▼                         ▼
- EMQX ──► backend           MediaMTX ──(hỏi quyền)──► backend
-          │ upsert BirdCountRecord        │
-          │ emit BIRD_COUNT_UPDATE        │ WebRTC (WHEP)
-          ▼                               ▼
-        frontend (HTTPS): <video> có ô xanh + số vào/ra live  ◄── hội đồng xem từ xa
+Modem VNPT (IP public, mở 1 cổng về camera) ──Internet──► MediaMTX kéo hình gốc  "cam-<id>-raw"
+                                                              │
+ESP32 các Zone ──MQTT qua TLS (8883)──► EMQX                  ▼
+                                                    pipeline (container `vision`)
+                                                    [crop ROI → YOLOv8n (ONNX) → ByteTrack → vạch đếm → vẽ ô xanh]
+                                                       │ MQTT nội bộ                 │ đẩy lại MediaMTX "cam-<id>"
+                                                       │  • số đếm của phiên, 30 giây/lần
+                                                       │  • số đếm theo khoảng 5 phút, cả ngày
+                                                       ▼                             ▼
+                                                    backend ──(MediaMTX hỏi quyền)── MediaMTX ── WebRTC (WHEP)
+                                                       │ upsert BirdCountRecord                     │
+                                                       │ lưu BirdCountBucket                        ▼
+                                                       │ emit BIRD_COUNT_UPDATE       frontend (HTTPS): <video> có ô xanh
+                                                       ▼                              + số vào/ra live ◄── hội đồng xem từ xa
+                                                    MongoDB
 ```
 
-Sơ đồ trên là chế độ **deploy**. Ở chế độ **dev**, mọi khối bên phải chạy ngay trên laptop bằng Docker và không có TLS; code giống hệt, chỉ khác cấu hình (xem [mục 16](#16-hai-chế-độ-chạy-dev-và-deploy)).
+Sơ đồ trên là chế độ **deploy** theo kiến trúc đã chốt. Ở chế độ **dev**, mọi khối bên phải chạy ngay trên laptop bằng Docker, nguồn hình là file clip và không có TLS; code giống hệt, chỉ khác cấu hình (xem [mục 16](#16-hai-chế-độ-chạy-dev-và-deploy)).
 
-Mọi kết nối đều đi **từ nhà yến ra ngoài**, nên không cần mở cổng trên router nhà yến. MJPEG `:8090` vẫn giữ, chỉ dùng tại chỗ để hiệu chỉnh ROI và vạch đếm.
+Tại nhà yến chỉ có camera, modem và các ESP32. Nếu trượt cổng kiểm tra ở mục 19.5 thì quay về phương án đặt một máy tính tại nhà yến chạy đúng pipeline này (mục 18.7); khi đó kết nối đi từ nhà yến ra và không phải mở cổng nào trên modem.
+
+Hệ quả phải chấp nhận của kiến trúc đã chốt, cần ghi vào phần hạn chế của báo cáo:
+
+- **Việc đếm phụ thuộc Internet của nhà yến.** Mất mạng hoặc rớt hình lúc nào thì số đếm thiếu lúc đó (điều khiển môi trường trên ESP32 không bị ảnh hưởng).
+- **Hình gốc từ camera tới VPS không mã hóa** và đi qua một cổng mở trên modem (mục 19.4).
+- **VPS xử lý video cả ngày**, vì số đếm theo khoảng 5 phút cần cả ngoài hai phiên sáng, chiều.
 
 Các quyết định thiết kế:
 
 | Quyết định | Lý do |
 |---|---|
-| Chạy trên PC x86 thay Pi | Pipeline chỉ là Python + ONNX Runtime, không có gì gắn với Pi. Dev trên laptop sẵn có; chạy thật cần một PC bật liên tục tại nhà yến. |
-| Runtime dùng `onnxruntime` + `supervision`, **không cài torch** | `supervision` có sẵn ByteTrack và đếm qua vạch bất kỳ; không phải build ByteTrack từ source (rất dễ lỗi trên Windows). `ultralytics`/torch chỉ dùng trên Colab để train. |
-| Vẽ ô xanh thẳng lên frame rồi mới phát | Khung luôn khớp hình. Gửi tọa độ qua socket cho frontend tự vẽ sẽ lệch pha với video. |
-| Xem từ xa bằng WebRTC qua MediaMTX | Server trên cloud không gọi ngược vào LAN nhà yến được, nên pipeline phải đẩy video lên. H.264 tốn băng thông ít hơn MJPEG nhiều lần, độ trễ dưới khoảng 1 giây. |
-| MJPEG qua HTTP chỉ dùng tại chỗ | Mở `http://127.0.0.1:8090/stream` trên PC nhà yến để hiệu chỉnh, không cần cloud. |
-| Một tên miền, Caddy làm reverse proxy | Caddy tự cấp HTTPS và lặp lại đúng proxy của Vite (`/api`, `/socket.io`), nên frontend không cần đổi cấu hình và cookie refresh `sameSite: strict` vẫn hoạt động. |
-| Nguồn vào là RTSP **hoặc** file video | Dev, gán nhãn và đo độ chính xác đều làm được khi chưa có camera. |
-| Một class `swiftlet` | Chưa có dữ liệu chuột/rắn/cú. Thiên địch (THREAT-FR-001) để ngoài phạm vi đợt này. |
-| Backend lưu 1 bản ghi cho mỗi (camera, phiên, ngày) | Số đếm cộng dồn được upsert mỗi 30 giây; collection nhỏ, `return_rate` tính đúng. |
+| Model chạy trên VPS, không đặt máy tại nhà yến | Nhóm không có máy dư; nhà yến có Internet cố định và IP public nên VPS kéo hình trực tiếp được. Có 6 cổng kiểm tra có/không (mục 19.5) |
+| Runtime dùng `onnxruntime` + `supervision`, **không cài torch** | `supervision` có sẵn ByteTrack và đếm qua vạch bất kỳ; không phải build ByteTrack từ source. `ultralytics`/torch chỉ dùng trên Colab để train |
+| Vẽ ô xanh thẳng lên frame rồi mới phát | Khung luôn khớp hình. Gửi tọa độ qua socket cho frontend tự vẽ sẽ lệch pha với video |
+| Xem bằng WebRTC qua MediaMTX | Độ trễ dưới khoảng 1–2 giây, H.264 tốn băng thông ít hơn MJPEG nhiều lần |
+| MJPEG qua HTTP chỉ dùng khi dev | Mở `http://127.0.0.1:8090/stream` trên máy đang chạy pipeline để hiệu chỉnh ROI và vạch đếm |
+| Một tên miền, Caddy làm reverse proxy | Caddy tự cấp HTTPS và lặp lại đúng proxy của Vite (`/api`, `/socket.io`), nên frontend không cần đổi cấu hình và cookie refresh `sameSite: strict` vẫn hoạt động |
+| Nguồn vào là RTSP **hoặc** file video | Dev, gán nhãn và đo độ chính xác đều làm được khi chưa có camera |
+| Một class `swiftlet` | SRS v2.1 đã bỏ phát hiện thiên địch |
+| Lưu 1 bản ghi cho mỗi (camera, phiên, ngày) **và** 1 bản ghi cho mỗi khoảng 5 phút | Bản ghi theo phiên cho tỷ lệ chim về. Bản ghi 5 phút (VISION-FR-017) là dữ liệu để đối chiếu với cảnh báo ồn bất thường, kể cả ngoài phiên (SRS Flow 25, EXPERT-FR-003) |
+| Tỷ lệ chim về tính trên **số ròng** | Chim lượn qua lại vạch đếm làm cả hai chiều phồng lên; số ròng (ra trừ vào buổi sáng, vào trừ ra buổi chiều) triệt tiêu phần đó. Số thô vẫn được lưu để so hai cách khi đánh giá (mục 7.7) |
 
 ---
 
@@ -96,7 +102,7 @@ Các quyết định thiết kế:
 | `frontend/src/lib/socket.ts` | Chưa có subscriber `BIRD_COUNT_UPDATE` | Thêm `onBirdCountUpdate` |
 | `frontend/.../FarmOwnerLiveStreamPage.tsx` | `ComingSoon` | Dùng lại `LiveCameraCard` hoặc bỏ trang |
 
-SRS §5 đang ghi VISION-FR-008/009/011 là "✅ Xong", nhưng thực tế chỉ có phần đọc; chưa có đoạn nào ghi `BirdCountRecord` hay tạo alert `LOW_RETURN_RATE`. Cần sửa cột trạng thái ở GĐ6.
+SRS trước v2.1 ghi VISION-FR-008/009/011 là "✅ Xong", nhưng thực tế chỉ có phần đọc; chưa có đoạn nào ghi `BirdCountRecord` hay tạo alert `LOW_RETURN_RATE`. SRS v2.1 đã sửa cột trạng thái cho đúng (12/10/2026); ở GĐ6 chỉ cần cập nhật lại khi làm xong.
 
 ---
 
@@ -107,8 +113,8 @@ SRS §5 đang ghi VISION-FR-008/009/011 là "✅ Xong", nhưng thực tế chỉ
 | Thành phần | Lựa chọn | Chi phí ước lượng | Ghi chú |
 |---|---|---|---|
 | Máy xử lý (dev) | Laptop của nhóm | 0đ | CPU 4 nhân trở lên, RAM 8 GB |
-| Máy xử lý (đặt tại nhà yến) | Laptop cũ sẵn có; nếu phải mua thì PC văn phòng cũ, i5 đời 6–8, RAM 8 GB | 0đ – khoảng 2,5 triệu | Chỉ cần khi chạy camera thật trực tiếp; KLTN có thể chỉ đặt tạm vài ngày (mục 17.2) |
-| Máy chủ cloud | VPS Ubuntu, 2 vCPU, 4 GB RAM, IP công khai, khu vực Singapore | 0đ nếu dùng tín dụng sinh viên; nếu trả tiền thì cần kiểm tra giá | Chạy backend, MongoDB, EMQX, MediaMTX, Caddy. Chỉ cần 1–2 tháng quanh ngày bảo vệ (mục 15.2) |
+| Máy xử lý đặt tại nhà yến — **phương án lùi** | Laptop cũ sẵn có; nếu phải mua thì PC văn phòng cũ, i5 đời 6–8, RAM 8 GB | 0đ – khoảng 2,5 triệu | Chỉ cần khi trượt cổng kiểm tra ở mục 19.5 (mục 17.2, 18.7) |
+| Máy chủ cloud | VPS Ubuntu, **4 vCPU loại dedicated, 8 GB RAM**, IP công khai, khu vực Singapore | Cần kiểm tra giá: cỡ máy này đắt hơn rõ rệt và có thể dùng gần hết tín dụng sinh viên trong 1–2 tháng | Chạy backend, MongoDB, EMQX, MediaMTX, Caddy **và model đếm chim** (mục 18.4). Cỡ 2 vCPU / 4 GB chỉ đủ khi model chạy trên máy tại nhà yến |
 | Tên miền | Tên miền thật | 0đ nếu lấy qua gói sinh viên | Cần để có HTTPS và chứng chỉ cho MQTT/video |
 | Internet tại nhà yến | Cáp quang VNPT, IP public; upload từ khoảng 10 Mbps | Cước hằng tháng theo gói | VPS kéo hình thẳng từ camera qua cổng mở trên modem (mục 19) |
 | Camera (đã có) | Camera trong nhà 2K của VNPT, tặng kèm gói mạng | 0đ | Dùng được nếu lấy được RTSP; 20 khung hình/giây, góc rộng (mục 19.3) |
@@ -124,7 +130,7 @@ Giá là ước lượng, cần kiểm tra lại khi mua. Cập nhật `docs/har
 - Có **RTSP** (kiểm tra trước khi mua; một số camera Wi-Fi giá rẻ phải bật trong app).
 - Codec **H.264** (H.265 giải mã bằng CPU tốn hơn nhiều).
 - 1080p, 25–30 fps, ống kính cố định (không xoay, không zoom tự động).
-- Có IR để dùng lúc chạng vạng (VISION-FR-007).
+- Có IR để dùng lúc chạng vạng (VISION-FR-007). Ưu tiên IR **940 nm** (không phát ánh đỏ): SRS mục 7.1 chọn loại này để không làm chim sợ. Camera IR 850 nm phát ánh đỏ mờ nhìn thấy được, phải qua cổng kiểm tra 6 ở mục 19.5 trước khi dùng lâu dài.
 - Nếu chỉnh được: giảm thời gian phơi sáng (shutter nhanh) để chim bớt nhòe.
 
 ### 3.3. Cách lắp — quyết định độ chính xác nhiều hơn model
@@ -276,7 +282,7 @@ tracking:
   lost_track_buffer: 15
   minimum_matching_threshold: 0.8
 
-sessions:
+sessions:                                   # giờ chim bay đổi theo mùa: xem lại khung giờ bằng biểu đồ số đếm 5 phút
   MORNING_EXIT:  ["05:30", "07:00"]
   EVENING_ENTRY: ["17:30", "19:00"]
 
@@ -285,6 +291,7 @@ mqtt:
   port: 1883                                # cloud: 8883
   tls: false                                # cloud: true
   publish_interval_sec: 30
+  bucket_minutes: 5                         # số đếm theo khoảng thời gian, gửi cả ngoài phiên (VISION-FR-017)
 
 push:                                       # đẩy video lên MediaMTX; chỉ chạy khi có STREAM_PUSH_URL trong .env
   width: 1280
@@ -594,6 +601,15 @@ class Publisher:
             "timestamp": int(time.time() * 1000),
         }), qos=1)
 
+    def bucket(self, start_ts: float, minutes: int, entry: int, exit_: int):
+        """VISION-FR-017 — số chim qua vạch trong một khoảng thời gian, gửi cả ngoài phiên."""
+        self.client.publish(self.topic_count, json.dumps({
+            "deviceId": self.device_id, "kind": "BUCKET",
+            "bucket_start": int(start_ts * 1000), "bucket_minutes": minutes,
+            "entry_count": entry, "exit_count": exit_,
+            "timestamp": int(time.time() * 1000),
+        }), qos=1)
+
     def heartbeat(self):
         self.client.publish(self.topic_heartbeat, json.dumps({
             "deviceId": self.device_id, "firmwareVersion": self.model_version,
@@ -623,7 +639,15 @@ def main():
     server = MjpegServer(cfg["stream"]["host"], cfg["stream"]["port"], cfg["stream"]["jpeg_quality"])
     pub = None if args.no_mqtt else Publisher(cfg["mqtt"], m["version"])
 
-    session = tracker = counter = None
+    # Tracker sống suốt chương trình (không tạo lại khi đổi phiên) để ID không lặp lại:
+    # bộ đếm cả ngày bên dưới nhớ trạng thái theo ID.
+    tracker = sv.ByteTrack(frame_rate=cfg["camera"]["fps"],
+                           lost_track_buffer=t["lost_track_buffer"],
+                           minimum_matching_threshold=t["minimum_matching_threshold"])
+    session = counter = day_counter = None     # day_counter: đếm liên tục, làm nguồn cho số đếm 5 phút
+    bucket_len = cfg["mqtt"]["bucket_minutes"] * 60
+    bucket_start = time.time() // bucket_len * bucket_len
+    bucket_base = (0, 0)
     started = False
     conf_sum = conf_n = 0.0
     last_pub = last_log = time.time()
@@ -638,10 +662,9 @@ def main():
                 pub.bird_count(session, counter, conf_sum / max(conf_n, 1), final=True)
             session, started = now_session, True
             base = load_state(session) if session and live else (0, 0)
-            tracker = sv.ByteTrack(frame_rate=cfg["camera"]["fps"],
-                                   lost_track_buffer=t["lost_track_buffer"],
-                                   minimum_matching_threshold=t["minimum_matching_threshold"])
             counter = LineCounter(t["line"], w, h, t["in_is_entry"], *base)
+            if day_counter is None:
+                day_counter = LineCounter(t["line"], w, h, t["in_is_entry"])
             conf_sum = conf_n = 0.0
             logger.info(f"Phiên: {session or 'ngoài phiên'}")
 
@@ -654,6 +677,7 @@ def main():
             det.xyxy = scale_boxes(det.xyxy, t["box_pad"])
         tracks = tracker.update_with_detections(det)
         counter.update(tracks)
+        day_counter.update(tracks)
         if len(tracks):
             tracks.xyxy = scale_boxes(tracks.xyxy, 1 / t["box_pad"])   # vẽ box kích thước thật
 
@@ -673,6 +697,12 @@ def main():
                     pub.bird_count(session, counter, conf_sum / max(conf_n, 1))
             if session and live:
                 save_state(session, counter)
+        if live and now >= bucket_start + bucket_len:           # hết một khoảng 5 phút
+            total = (day_counter.entry_count, day_counter.exit_count)
+            if pub:
+                pub.bucket(bucket_start, cfg["mqtt"]["bucket_minutes"],
+                           total[0] - bucket_base[0], total[1] - bucket_base[1])
+            bucket_base, bucket_start = total, now // bucket_len * bucket_len
 
     # chỉ tới đây khi chạy trên file
     logger.info(f"KẾT QUẢ: vào {counter.entry_count} | ra {counter.exit_count}")
@@ -746,7 +776,7 @@ Trình tự hiệu chỉnh (sửa `config.yaml` rồi chạy lại):
 **Xong khi:**
 - `pytest` qua.
 - Thấy ô xanh bám theo chim và số đếm tăng khi chim qua vạch.
-- Log FPS đạt mục tiêu ≥ 25 của SRS (PERF-NFR-004) trên máy sẽ dùng thật. Nếu không đạt, xem mục 13.
+- FPS xử lý trong log ≥ tốc độ khung hình của camera (20 với camera đã chốt), đo trên máy sẽ chạy thật — với kiến trúc đã chốt là VPS (cổng 1, mục 19.5). SRS v2.1 (PERF-NFR-004) chỉ yêu cầu kịp luồng camera, không còn con số 25 cố định. Nếu không đạt, xem mục 13 và 18.4.
 
 ---
 
@@ -1039,7 +1069,7 @@ Vòng lặp cải thiện (mỗi vòng 1–2 ngày):
 
 mAP chỉ là chỉ số trung gian. Thứ cần báo cáo là sai số đếm.
 
-1. Chọn 5 clip × 5 phút từ **ngày test** (đủ sáng, chiều, đông, thưa).
+1. Chọn ít nhất 6 clip × 5 phút từ **ngày test**: tối thiểu 3 clip **đủ sáng** và 3 clip **thiếu sáng** (đầu phiên sáng, cuối phiên chiều), có cả lúc đông và lúc thưa.
 2. Hai người đếm tay độc lập số chim ra và vào, lấy trung bình.
 3. Chạy pipeline trên từng clip, đọc dòng `KẾT QUẢ`:
 
@@ -1047,9 +1077,10 @@ mAP chỉ là chỉ số trung gian. Thứ cần báo cáo là sai số đếm.
 python src/stream.py --source clips/20261011_morning_02.mp4 --session MORNING_EXIT --no-mqtt
 ```
 
-4. Tính sai số = `|hệ thống − đếm tay| / đếm tay × 100%` cho từng chiều.
+4. Tính sai số = `|hệ thống − đếm tay| / đếm tay × 100%` cho từng chiều, và cho **số ròng** (ra trừ vào ở clip sáng, vào trừ ra ở clip chiều).
+5. Báo cáo **riêng** nhóm đủ sáng và nhóm thiếu sáng (VISION-FR-016), kèm Precision/Recall của model trên tập test. So sai số của số thô với số ròng: cách nào sát đếm tay hơn thì dùng cho tỷ lệ chim về (mặc định trong backend là số ròng, mục 8.3).
 
-**Xong khi:** đủ điều kiện Done của SRS cho VISION-FR-005 (demo đếm đúng trên clip test 5 phút). Ngưỡng đề xuất: sai số ≤ 10% trên các clip của ngày test.
+**Xong khi:** đủ điều kiện Done của SRS cho VISION-FR-005 và VISION-FR-016 (có bảng sai số tách theo điều kiện sáng). Ngưỡng nội bộ đề xuất: sai số ≤ 10% trên các clip của ngày test. Phiếu đăng ký không cam kết con số; nếu không đạt 10% thì vẫn báo cáo số đo thật kèm điều kiện đo.
 
 ### 7.8. Nguồn dữ liệu có sẵn (bổ sung, không thay thế)
 
@@ -1155,9 +1186,23 @@ birdCountSchema.index({ camera_node_id: 1, session_type: 1, session_date: 1 }, {
 
 Collection đang rỗng nên không cần migration.
 
+Model mới `birdCountBucket.model.ts` (VISION-FR-017) — số chim qua vạch theo khoảng 5 phút, cả ngoài phiên:
+
+```ts
+camera_node_id: { type: Schema.Types.ObjectId, ref: 'CameraNode', required: true },
+zone_id:        { type: Schema.Types.ObjectId, ref: 'Zone', required: true },
+bucket_start:   { type: Date, required: true },          // đầu khoảng, đã làm tròn xuống theo bucket_minutes
+entry_count:    { type: Number, required: true, min: 0 },
+exit_count:     { type: Number, required: true, min: 0 },
+...
+birdCountBucketSchema.index({ camera_node_id: 1, bucket_start: 1 }, { unique: true })
+birdCountBucketSchema.index({ zone_id: 1, bucket_start: -1 })
+birdCountBucketSchema.index({ bucket_start: 1 }, { expireAfterSeconds: 90 * 24 * 3600 })   // giữ 90 ngày như telemetry
+```
+
 ### 8.2. Type `BirdCountPayload` (`types/domain.types.ts`)
 
-Thêm `final?: boolean`. `return_rate` chuyển thành tùy chọn vì backend tự tính.
+Thêm `final?: boolean`, `kind?: 'BUCKET'`, `bucket_start?: number` (epoch ms), `bucket_minutes?: number`. `return_rate` chuyển thành tùy chọn vì backend tự tính; `session_type` chỉ bắt buộc với tin của phiên (không có `kind`).
 
 ### 8.3. `services/birdCount.service.ts` (mới)
 
@@ -1165,6 +1210,7 @@ Thêm `final?: boolean`. `return_rate` chuyển thành tùy chọn vì backend t
 import { CameraNode, IN_SERVICE } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
+import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { emitBirdCountUpdate } from '@/socket'
 import { createAlert } from '@/services/alert.service'
 import { BadRequestError, NotFoundError } from '@/utils/appError.util'
@@ -1173,34 +1219,52 @@ import type { BirdCountPayload, SessionType } from '@/types'
 const SESSION_TYPES: SessionType[] = ['MORNING_EXIT', 'EVENING_ENTRY']
 const VN_OFFSET_MS = 7 * 3600_000
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
+const vnDate = (d: Date) => new Date(d.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)
+/** Số ròng: chim lượn qua lại vạch đếm làm cả hai chiều phồng lên, phép trừ triệt tiêu phần đó */
+const net = (main: number, opposite: number) => Math.max(main - opposite, 0)
 
-/** VISION-FR-006/008/009/011 — gọi từ mqtt/handlers/birdCount.handler.ts */
+/** VISION-FR-006/008/009/017 — gọi từ mqtt/handlers/birdCount.handler.ts */
 export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> {
-  const { deviceId, session_type, entry_count, exit_count } = payload
-  if (!deviceId || !SESSION_TYPES.includes(session_type) || !isCount(entry_count) || !isCount(exit_count)) {
+  const { deviceId, entry_count, exit_count } = payload
+  if (!deviceId || !isCount(entry_count) || !isCount(exit_count)) {
     throw BadRequestError('Payload bird-count không hợp lệ')
   }
 
   const node = await CameraNode.findOne({ device_id: deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy CameraNode với device_id="${deviceId}"`)
 
-  const timestamp = new Date(payload.timestamp || Date.now())
-  const session_date = new Date(timestamp.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)
+  // VISION-FR-017: số đếm theo khoảng 5 phút, có cả ngoài phiên
+  if (payload.kind === 'BUCKET') {
+    if (!Number.isFinite(payload.bucket_start)) throw BadRequestError('Thiếu bucket_start')
+    await BirdCountBucket.updateOne(
+      { camera_node_id: node._id, bucket_start: new Date(payload.bucket_start as number) },
+      { $set: { zone_id: node.zone_id, entry_count, exit_count } },
+      { upsert: true },
+    )
+    return
+  }
 
-  // VISION-FR-009: return_rate = chim về buổi chiều / chim ra buổi sáng cùng ngày
+  const { session_type } = payload
+  if (!SESSION_TYPES.includes(session_type)) throw BadRequestError('session_type không hợp lệ')
+
+  const timestamp = new Date(payload.timestamp || Date.now())
+  const session_date = vnDate(timestamp)
+
+  // VISION-FR-009: tỷ lệ chim về = số ròng về buổi chiều / số ròng ra buổi sáng cùng ngày
   let return_rate: number | undefined
   if (session_type === 'EVENING_ENTRY') {
     const morning = await BirdCountRecord.findOne({
       camera_node_id: node._id, session_type: 'MORNING_EXIT', session_date,
-    }).select('exit_count').lean()
-    if (morning?.exit_count) return_rate = +((entry_count / morning.exit_count) * 100).toFixed(2)
+    }).select('entry_count exit_count').lean()
+    const left = morning ? net(morning.exit_count, morning.entry_count) : 0
+    if (left > 0) return_rate = +((net(entry_count, exit_count) / left) * 100).toFixed(2)
   }
 
   await BirdCountRecord.updateOne(
     { camera_node_id: node._id, session_type, session_date },
     {
       $set: {
-        zone_id: node.zone_id, timestamp, entry_count, exit_count,
+        zone_id: node.zone_id, timestamp, entry_count, exit_count,   // số thô của cả hai chiều vẫn được lưu
         confidence_avg: payload.confidence_avg,
         ...(return_rate !== undefined && { return_rate }),
       },
@@ -1212,36 +1276,49 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> 
     zoneId: String(node.zone_id), entryCount: entry_count, exitCount: exit_count,
     returnRate: return_rate ?? 0, sessionType: session_type, timestamp: timestamp.toISOString(),
   })
-
-  if (payload.final && return_rate !== undefined) {
-    await checkReturnRateDrop(String(node._id), String(node.zone_id), session_date, return_rate)
-  }
 }
 
-/** VISION-FR-011 — return_rate giảm > 20% so với trung bình 7 ngày trước */
-async function checkReturnRateDrop(nodeId: string, zoneId: string, sessionDate: string, rate: number) {
-  const previous = await BirdCountRecord.find({
-    camera_node_id: nodeId, session_type: 'EVENING_ENTRY',
-    session_date: { $lt: sessionDate }, return_rate: { $exists: true },
-  }).sort({ session_date: -1 }).limit(7).select('return_rate').lean()
-  if (previous.length < 3) return                    // chưa đủ dữ liệu nền để so sánh
+/**
+ * VISION-FR-011 — tỷ lệ chim về giảm quá ngưỡng so với trung bình 7 ngày trước.
+ * Gọi từ jobs/returnRate.job.ts sau khi phiên chiều kết thúc, không dựa vào tin `final` của
+ * pipeline (pipeline khởi động lại đúng lúc đổi phiên thì tin đó không bao giờ tới).
+ * Chạy lại nhiều lần vẫn an toàn: `createAlert` gộp cảnh báo còn mở của cùng sự cố.
+ */
+export async function checkReturnRateDrops(sessionDate = vnDate(new Date())): Promise<void> {
+  const today = await BirdCountRecord.find({
+    session_type: 'EVENING_ENTRY', session_date: sessionDate, return_rate: { $exists: true },
+  }).select('camera_node_id zone_id return_rate').lean()
 
-  const avg = previous.reduce((sum, r) => sum + r.return_rate, 0) / previous.length
-  const dropPct = avg > 0 ? ((avg - rate) / avg) * 100 : 0
-  if (dropPct <= 20) return
+  for (const rec of today) {
+    const previous = await BirdCountRecord.find({
+      camera_node_id: rec.camera_node_id, session_type: 'EVENING_ENTRY',
+      session_date: { $lt: sessionDate }, return_rate: { $exists: true },
+    }).sort({ session_date: -1 }).limit(7).select('return_rate').lean()
+    if (previous.length < 3) continue                // chưa đủ dữ liệu nền để so sánh
 
-  const zone = await Zone.findById(zoneId).select('farm_id name').lean()
-  if (!zone) return
-  await createAlert({
-    farmId: String(zone.farm_id), zoneId, nodeId, type: 'LOW_RETURN_RATE',
-    title: `Tỉ lệ chim về giảm tại ${zone.name}`,
-    message: `Tỉ lệ chim về ${rate.toFixed(1)}%, giảm ${dropPct.toFixed(1)}% so với trung bình ${previous.length} ngày trước (${avg.toFixed(1)}%)`,
-    metadata: { returnRate: rate, avg, dropPct },
-  })
+    const avg = previous.reduce((sum, r) => sum + r.return_rate, 0) / previous.length
+    const dropPct = avg > 0 ? ((avg - rec.return_rate) / avg) * 100 : 0
+
+    const zone = await Zone.findById(rec.zone_id).select('farm_id name detection_tuning').lean()
+    if (!zone) continue
+    const limit = zone.detection_tuning?.return_rate_drop_pct ?? 20   // EXPERT-FR-008: chuyên gia chỉnh theo Zone
+    if (dropPct <= limit) continue
+
+    await createAlert({
+      farmId: String(zone.farm_id), zoneId: String(rec.zone_id), nodeId: String(rec.camera_node_id),
+      type: 'LOW_RETURN_RATE',
+      title: `Tỉ lệ chim về giảm tại ${zone.name}`,
+      message: `Tỉ lệ chim về ${rec.return_rate.toFixed(1)}%, giảm ${dropPct.toFixed(1)}% so với trung bình ${previous.length} ngày trước (${avg.toFixed(1)}%)`,
+      metadata: { returnRate: rec.return_rate, avg, dropPct, limit },
+    })
+  }
 }
 ```
 
-Tên import (`Zone`, `IN_SERVICE`, đường dẫn `@/socket`) cần đối chiếu lại với code thật khi viết.
+- `jobs/returnRate.job.ts` (mới): `node-cron` chạy `checkReturnRateDrops()` lúc 19:15 giờ Việt Nam mỗi ngày (sau khi phiên chiều kết thúc; đổi giờ nếu đổi khung giờ phiên ở mục 6.2).
+- `GET /analytics/bird-count/buckets?zoneId=&from=&to=` (mới): trả các bản ghi 5 phút của Zone trong khoảng thời gian, dùng cho biểu đồ theo giờ và cho màn kiểm chứng cảnh báo của Domain Expert (số chim ra/vào ±30 phút quanh một cảnh báo — EXPERT-FR-003).
+- Tỷ lệ chim về có thể vượt 100% (chim về nhiều hơn số đã đếm ra): không kẹp lại, để nguyên cho người xem thấy.
+- Tên import (`Zone`, `IN_SERVICE`, đường dẫn `@/socket`) và trường `zones.detection_tuning` (SRS EXPERT-FR-008, chưa có trong code) cần đối chiếu lại với code thật khi viết.
 
 ### 8.4. `mqtt/handlers/birdCount.handler.ts`
 
@@ -1274,7 +1351,7 @@ Hai endpoint mới:
 
 | Endpoint | Ai gọi | Việc làm |
 |---|---|---|
-| `GET /devices/camera-nodes/:id/stream-token` | Frontend (đã đăng nhập) | `assertZoneAccess`, trả `{ path, token }` — token sống 60 giây, chỉ dùng cho đúng camera đó |
+| `GET /devices/camera-nodes/:id/stream-token` | Frontend (đã đăng nhập) | Kiểm quyền theo farm của Zone, trả `{ path, token }` — token sống 60 giây, chỉ dùng cho đúng camera đó |
 | `POST /internal/stream-auth?key=…` | MediaMTX (mạng nội bộ Docker) | Trả 200 nếu được phép, 401 nếu không |
 
 `services/stream.service.ts` (mới):
@@ -1320,6 +1397,7 @@ export function authorizeStream(key: unknown, body: MediaMtxAuthRequest): void {
 }
 ```
 
+- **Ai được xem:** Farm Owner và Domain Expert của farm chứa camera (SRS v2.1, VISION-FR-013). Code mẫu gọi `assertZoneAccess` vì đó là hàm hiện có; khi backend đổi role theo SRS mục 0.5 (bỏ phạm vi Zone, `FARM_OPERATOR` thành `DOMAIN_EXPERT`) thì route này mở cho cả hai role và hàm kiểm quyền chỉ còn xét thành viên farm.
 - Controller chỉ gọi service rồi trả `res.json({ success: true })`; `errorHandler` tự trả 401.
 - Route `/internal` không gắn `authenticate` (MediaMTX không có JWT người dùng). Nó được bảo vệ bằng `STREAM_AUTH_KEY` và bị Caddy chặn từ bên ngoài (mục 15.4).
 - Tên trường trong body (`action`, `path`, `password`, `query`) lấy theo tài liệu HTTP authentication của MediaMTX; cần đối chiếu với đúng phiên bản đang dùng.
@@ -1328,11 +1406,13 @@ export function authorizeStream(key: unknown, body: MediaMtxAuthRequest): void {
 ### 8.7. Việc kèm theo
 
 - `listCameraNodes`: loại `rtsp_url` khỏi response (chứa mật khẩu camera).
-- `docs/api/api-spec.yaml`: thêm endpoint `stream-token`, field `session_date`.
+- `docs/api/api-spec.yaml`: thêm endpoint `stream-token`, `GET /analytics/bird-count/buckets`, field `session_date`.
 - Test đơn vị cho `authorizeStream`: sai khóa, sai mật khẩu publish, token hết hạn, token của camera khác → đều bị từ chối.
 - Test tích hợp `tests/integration/birdCount.test.ts`:
   - payload hợp lệ → có 1 bản ghi; gửi lần 2 cùng phiên → vẫn 1 bản ghi, số được cập nhật;
-  - sáng `exit_count = 100`, chiều `entry_count = 85` → `return_rate = 85`;
+  - sáng `exit_count = 110`, `entry_count = 10`; chiều `entry_count = 95`, `exit_count = 10` → số ròng 85/100, `return_rate = 85`;
+  - tin `kind: "BUCKET"` → có 1 bản ghi trong `BirdCountBucket`; gửi lại cùng `bucket_start` → vẫn 1 bản ghi; không tạo `BirdCountRecord`;
+  - `checkReturnRateDrops`: 3 ngày trước 90%, hôm nay 60% → có cảnh báo `LOW_RETURN_RATE`; chạy lại lần 2 → không thêm cảnh báo mới;
   - `deviceId` không tồn tại, số âm, `session_type` lạ → bị từ chối, không ghi DB.
 
 Kiểm tra tay:
@@ -1358,6 +1438,7 @@ Thời gian: 1,5 ngày. Tuân theo `frontend/FE_Design_Claude.md` và quy tắc 
 | Thay mock bằng stream thật | `components/features/farm-owner/vision/LiveCameraCard.tsx` |
 | Nối số live | `components/features/farm-owner/vision/BirdStatsCards.tsx` |
 | Dùng lại `LiveCameraCard`, hoặc bỏ trang và trỏ menu về trang Vision | `pages/farm-owner/FarmOwnerLiveStreamPage.tsx` |
+| Biểu đồ số chim ra/vào theo khoảng 5 phút (`GET /analytics/bird-count/buckets`); dùng lại trong màn kiểm chứng cảnh báo của Domain Expert | `src/apis/` + `src/hooks/` (đặt ở `shared/` vì cả Farm Owner và Domain Expert dùng) |
 
 Thay đổi chính trong `LiveCameraCard`:
 
@@ -1412,7 +1493,7 @@ export function useWhepStream(videoRef: RefObject<HTMLVideoElement>, cameraNodeI
 - Thêm trạng thái "Camera ngoại tuyến" khi kết nối thất bại hoặc `connectionState` chuyển sang `failed`/`disconnected`, kèm nút thử lại.
 - Thêm `VITE_STREAM_URL` vào file env của frontend.
 
-Mobile (`mobile/app/livestream/[zoneId].tsx`): làm sau, bằng WebView trỏ cùng URL. Phần này chưa được khảo sát.
+Mobile (`mobile/app/livestream/[zoneId].tsx`): **thuộc cam kết của phiếu đăng ký** (ứng dụng mobile xem được live stream có khung), không phải phần tùy chọn. Cách làm chưa được khảo sát, cần thử theo thứ tự: (1) `react-native-webview` mở một trang xem tối giản của web (kèm token) — kiểm tra WebRTC chạy được trong WebView trên Android và iOS; (2) nếu không được thì dùng `react-native-webrtc` với cùng giao thức WHEP. Dành nửa ngày để thử cách 1 ngay khi web xem được.
 
 **Xong khi:** mở trang Vision **bằng 4G, ngoài mạng nhà yến**, thấy hình có ô xanh và số vào/ra nhảy theo thời gian thực; `npm run lint` và `npm run build` sạch.
 
@@ -1423,7 +1504,7 @@ Mobile (`mobile/app/livestream/[zoneId].tsx`): làm sau, bằng WebView trỏ c�
 Thời gian: 2 ngày.
 
 1. Đổi `model.path` sang model đã train, chạy `python src/stream.py` với camera thật.
-2. Tự chạy khi bật máy (Windows Task Scheduler, trigger "At startup", chạy lại khi lỗi):
+2. Tự chạy lại khi lỗi. Với kiến trúc đã chốt, pipeline là container `vision` trên VPS và `restart: unless-stopped` đã lo việc này (mục 18.3). Lệnh Task Scheduler dưới đây chỉ dùng cho **phương án lùi** (PC Windows tại nhà yến):
 
 ```powershell
 $action = New-ScheduledTaskAction -Execute "C:\path\ai-pipeline\.venv\Scripts\python.exe" -Argument "src\stream.py" -WorkingDirectory "C:\path\ai-pipeline"
@@ -1432,14 +1513,14 @@ $settings = New-ScheduledTaskSettingsSet -RestartCount 99 -RestartInterval (New-
 Register-ScheduledTask -TaskName "SwiftletCare-Vision" -Action $action -Trigger $trigger -Settings $settings
 ```
 
-3. Tắt chế độ ngủ của máy.
+3. (Phương án lùi) Tắt chế độ ngủ của máy.
 4. Thử các tình huống lỗi:
 
 | Tình huống | Kết quả mong đợi |
 |---|---|
 | Rút cáp camera 30 giây | Log báo mất luồng, tự nối lại, đếm tiếp |
 | Tắt EMQX 1 phút | Pipeline vẫn chạy, tin QoS 1 được gửi bù khi broker lên |
-| Rút cáp Internet của nhà yến 2 phút | Pipeline **vẫn đếm** tại chỗ; có mạng lại thì video và số đếm tự nối lại, không mất số |
+| Rút cáp Internet của nhà yến 2 phút | Kiến trúc đã chốt: VPS mất hình, **số đếm của 2 phút đó bị thiếu**; có mạng lại thì MediaMTX tự kéo lại và đếm tiếp, số đã đếm không mất. Ghi nhận là hạn chế. (Phương án lùi: pipeline tại chỗ vẫn đếm đủ) |
 | Tắt pipeline giữa phiên rồi bật lại | Số đếm tiếp tục từ `state.json`, không về 0 |
 | Chạy qua ranh giới 07:00 | Gửi tin `final: true`, số đếm về 0 cho giai đoạn ngoài phiên |
 | Tắt pipeline 2 phút | Camera chuyển OFFLINE trên dashboard |
@@ -1456,16 +1537,18 @@ Thời gian: 1,5 ngày.
 
 Báo cáo `docs/test-reports/vision-counting.md`:
 
-| Clip | Phiên | Đếm tay (ra / vào) | Hệ thống (ra / vào) | Sai số ra | Sai số vào | FPS |
-|---|---|---|---|---|---|---|
-| 20261011_morning_01 | Sáng | | | | | |
-| … | | | | | | |
+| Clip | Phiên | Điều kiện sáng | Đếm tay (ra / vào) | Hệ thống (ra / vào) | Sai số ra | Sai số vào | Sai số ròng | FPS |
+|---|---|---|---|---|---|---|---|---|
+| 20261011_morning_01 | Sáng | Thiếu sáng | | | | | | |
+| … | | | | | | | | |
+| **Trung bình — đủ sáng** | | | | | | | | |
+| **Trung bình — thiếu sáng** | | | | | | | | |
 
 Kèm theo: cấu hình máy, phiên bản model, mAP50/precision/recall trên tập test, số ảnh train/val/test, ảnh chụp màn hình stream có ô xanh.
 
 Tài liệu cần sửa:
 
-- `SwiftletCare_SRS.md`: VISION-FR-001/002 đổi "Raspberry Pi" thành "Edge AI node (PC x86)"; cập nhật cột trạng thái VISION-FR-001…014 (VISION-FR-013 dùng WebRTC qua MediaMTX, đúng với mô tả trong SRS).
+- `SwiftletCare_SRS.md`: phần mô tả đã được cập nhật ở v2.1 (nút AI là PC hoặc máy chủ, 1 class, stream có khung là bắt buộc, VISION-FR-016/017). Còn lại: cập nhật cột trạng thái VISION-FR-001…017 khi từng phần chạy được.
 - Ghi rõ các giới hạn bảo mật còn lại của bản demo (mục 15.7) vào phần hạn chế của báo cáo.
 - `CLAUDE.md`: mục AI pipeline và mục trạng thái module.
 - `ai-pipeline/README.md`: cách cài, cấu hình ROI và vạch đếm, cách train lại.
@@ -1495,7 +1578,11 @@ Chỉ làm khi thật sự cần.
 | Chim bay thành đàn dày, che nhau | Đếm thiếu ở giờ cao điểm | Thu hẹp khung vào lỗ, đặt vạch ở chỗ chim tách hàng |
 | Dơi, côn trùng bị đếm nhầm | Đếm thừa lúc chạng vạng | Ảnh âm trong tập train, tăng ngưỡng confidence |
 | Không kịp gán nhãn | Hết thời gian GĐ2 | Đếm bằng background subtraction (vẫn có ô xanh, không cần train) — không phân biệt được chim với vật khác |
-| CPU không đủ FPS | Log dưới 25 FPS | Xem dòng "Tăng tốc suy luận" ở mục 12 |
+| CPU không đủ FPS | FPS trong log thấp hơn tốc độ khung hình của camera | Xem mục 18.4 và dòng "Tăng tốc suy luận" ở mục 12 |
+| Đèn hồng ngoại 850 nm của camera làm chim khó chịu | Chim né cửa, số chim về giảm sau khi lắp camera | Cổng kiểm tra 6 (mục 19.5); hỏi người nuôi yến; tắt IR hoặc đổi camera IR 940 nm |
+| Cổng camera mở ra Internet mà modem không lọc được IP nguồn | Người lạ xem được hình, dò mật khẩu camera | Cổng kiểm tra 3c (mục 19.5); không đạt thì dùng router có WireGuard (mục 18.2) hoặc đặt máy tại chỗ |
+| Internet nhà yến rớt trong phiên đếm | Số đếm phiên đó thấp bất thường, thiếu vài bản ghi 5 phút | Đếm lại phiên đó từ file thẻ nhớ của camera; ghi nhận là hạn chế của kiến trúc đếm trên cloud |
+| Giờ chim bay lệch khỏi khung giờ phiên theo mùa | Biểu đồ 5 phút cho thấy nhiều chim trước/sau khung giờ | Chỉnh `sessions` trong config và giờ chạy của `returnRate.job` |
 | Camera bị xê dịch | Vạch và ROI lệch khỏi lỗ | Gắn chặt; kiểm tra stream mỗi tuần |
 | Chim lượn qua lại quanh vạch | Một con bị đếm nhiều lần | Dời vạch sâu vào trong lỗ, nơi chim chỉ bay một chiều |
 | **Giờ bảo vệ không trùng giờ chim bay** (chim chỉ ra/vào lúc 05:30–07:00 và 17:30–19:00) | Hội đồng mở stream chỉ thấy lỗ trống | Chuẩn bị "camera demo" phát lại clip đã quay (mục 15.8) |
@@ -1526,12 +1613,15 @@ Checklist:
 - [ ] `inference.py` đã sửa 4 chỗ (RGB, NMS, class, số luồng)
 - [ ] `pytest` qua
 - [ ] Stream có ô xanh, ROI và vạch đếm đã hiệu chỉnh
-- [ ] FPS đạt mục tiêu trên máy thật
+- [ ] FPS xử lý ≥ tốc độ khung hình của camera trên máy chạy thật (VPS)
 - [ ] Clip của ít nhất 4 ngày
 - [ ] 1.500+ ảnh đã gán nhãn, chia tập theo ngày
 - [ ] Model v1 đã train, export ONNX, có số liệu trên tập test
-- [ ] Sai số đếm trên 5 clip test đạt ngưỡng
-- [ ] Backend: bản ghi được upsert, `return_rate` đúng, alert `LOW_RETURN_RATE` hoạt động, test tích hợp qua
+- [ ] Sai số đếm trên các clip test đạt ngưỡng, có bảng tách đủ sáng / thiếu sáng
+- [ ] Backend: bản ghi được upsert, `return_rate` tính trên số ròng, `returnRate.job` tạo alert `LOW_RETURN_RATE`, test tích hợp qua
+- [ ] Số đếm 5 phút: pipeline gửi cả ngoài phiên, backend lưu `BirdCountBucket`, có API và biểu đồ
+- [ ] Camera: chim không phản ứng với đèn hồng ngoại (cổng 6); modem chỉ cho IP của VPS vào cổng camera (cổng 3c)
+- [ ] Mobile xem được live stream có khung
 - [ ] Camera chuyển ONLINE/OFFLINE đúng
 - [ ] Frontend: stream thật, số live, hết mock
 - [ ] Chạy 24 giờ ổn định, 6 tình huống lỗi đạt
@@ -1588,7 +1678,7 @@ Tên miền: `<tên miền>` cho ứng dụng, MQTT và đẩy video; `stream.<t
 
 Ưu đãi sinh viên thay đổi theo thời gian — kiểm tra tại `education.github.com/pack` trước khi lên kế hoạch. Việc xét duyệt gói có thể mất vài ngày, nên **đăng ký ngay từ tuần 1**.
 
-1. Tạo VPS Ubuntu 22.04/24.04, 2 vCPU, 4 GB RAM, có IP công khai.
+1. Tạo VPS Ubuntu 22.04/24.04 có IP công khai. Cỡ máy: **4 vCPU dedicated, 8 GB RAM** vì model đếm chim chạy trên chính VPS này (mục 18.4). Các dòng "2 vCPU / 4 GB" trong bảng trên chỉ đúng cho phương án lùi (model chạy tại nhà yến). Kiểm tra giá trước: cỡ máy này có thể dùng gần hết tín dụng sinh viên trong 1–2 tháng, nên chỉ nâng lên khi cần chạy thật và hạ xuống sau bảo vệ.
 2. Trỏ hai bản ghi DNS loại A (`<tên miền>` và `stream.<tên miền>`) về IP đó.
 3. Cài Docker:
 
@@ -2532,7 +2622,7 @@ Camera tặng kèm nhiều khả năng là **VNPT Smart Camera IS310P** (suy ra 
 | Độ phân giải | 2304 × 1296, hai luồng | Tốt |
 | Tốc độ khung hình | 20 khung hình/giây | Thấp hơn mức 25–30 mong muốn; chim di chuyển xa hơn giữa hai khung. Bù lại nhẹ cho VPS |
 | Ống kính | Cố định 3,2 mm, góc ngang khoảng 77° | Góc rộng → chim nhỏ; đặt camera cách lỗ ra vào khoảng 1–2 m |
-| Hồng ngoại | Tầm 10 m, 850 nm | Đủ cho chạng vạng |
+| Hồng ngoại | Tầm 10 m, 850 nm | Đủ cho chạng vạng. **Lưu ý:** đèn 850 nm phát ánh đỏ mờ nhìn thấy được, trong khi SRS mục 7.1 chọn camera IR 940 nm để không làm chim sợ → phải qua cổng 6 (mục 19.5) |
 | Thẻ nhớ | microSD tới 256 GB, ghi liên tục | Dùng thu dữ liệu train và làm chuẩn so sánh (cổng 4) |
 | Mạng | Wi-Fi 2,4 GHz | Phụ thuộc chất lượng sóng |
 | Môi trường | 0–45°C, độ ẩm tới 95% không ngưng tụ | Sát giới hạn nhà yến; đặt xa vòi phun sương |
@@ -2604,6 +2694,8 @@ paths:
   all_others:
 ```
 
+Pipeline đọc đường `-raw` liên tục cả ngày (để có số đếm 5 phút ngoài phiên), nên trên thực tế MediaMTX kéo hình 24/7; `sourceOnDemand` chỉ giúp ngừng kéo khi container `vision` dừng.
+
 Tài khoản và mật khẩu camera nằm trong file này, nên **không commit file thật**; commit bản mẫu `mediamtx.yml.example` và thêm `deploy/mediamtx.yml` vào `.gitignore`. Tên khóa `source*` cần đối chiếu với phiên bản MediaMTX đang dùng.
 
 Kiểm tra từ VPS trước khi nối pipeline:
@@ -2627,9 +2719,11 @@ ffprobe -rtsp_transport tcp "rtsp://TAIKHOAN:MATKHAU@<địa chỉ nhà yến>:1
 | 3a. Camera có RTSP | Mục 19.3 | Xem được hình bằng `ffplay` trong LAN | Mua camera có RTSP |
 | 3b. VPS kéo được hình | `ffprobe` từ VPS (mục 19.4), rồi để MediaMTX kéo liên tục | 24 giờ không rớt quá vài lần, tự nối lại | Kiểm tra IP public, DDNS, NAT port; không được → thiết bị chuyển tiếp |
 | 4. Ảnh hưởng đường truyền tới số đếm | So số đếm cloud với số đếm chạy trên file thẻ nhớ của cùng phiên | Chênh ≤ 5% trong ít nhất 3 phiên | Kiểm tra sóng Wi-Fi của camera, hạ bitrate; vẫn trượt → đặt máy tại chỗ |
+| 3c. Modem lọc được IP nguồn | Tạo luật chỉ cho IP của VPS vào cổng camera, rồi thử `ffprobe` từ một mạng khác | Từ VPS vào được, từ mạng khác **không** vào được | Dùng router có WireGuard (mục 18.2) hoặc đặt máy tại chỗ; nếu vẫn mở cổng cho mọi nơi thì phải ghi rõ là hạn chế bảo mật trong báo cáo |
 | 5. Chất lượng hình cho việc đếm | Xem clip thử: kích thước chim trong ROI | Chim ≥ khoảng 15 px mỗi chiều, không nhòe thành vệt dài | Đưa camera lại gần lỗ; hoặc đổi camera |
+| 6. Chim không phản ứng với đèn hồng ngoại | Hỏi người nuôi yến trước khi lắp; sau khi lắp, quan sát vài phiên chiều lúc đèn IR bật (chim có né cửa, lượn lâu hơn không) và so số chim về với các ngày trước khi lắp nếu có | Người nuôi yến đồng ý và không thấy thay đổi hành vi | Tắt IR (chấp nhận đếm kém lúc tối), hoặc đổi camera IR 940 nm |
 
-Cổng 3a, 5 làm ngay ngày lắp mạng. Cổng 1, 2 làm khi có VPS và model tạm. Cổng 3b, 4 làm sau khi mở cổng modem.
+Cổng 3a, 5, 6 làm ngay ngày lắp mạng và các ngày đầu sau khi lắp. Cổng 1, 2 làm khi có VPS và model tạm. Cổng 3b, 3c, 4 làm sau khi mở cổng modem.
 
 ### 19.6. Những gì không còn áp dụng
 
