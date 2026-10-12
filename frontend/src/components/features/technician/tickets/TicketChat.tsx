@@ -108,7 +108,7 @@ export function TicketChat({ ticketId, closed = false, canSend = true, open, onC
           return (
             <div key={msg._id} className={`flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
               {!isMine && (
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-warmGray">
+                <span className="label-caption">
                   {msg.author_name ?? 'Người dùng'} · {ROLE_LABEL[msg.role] ?? msg.role}
                 </span>
               )}
