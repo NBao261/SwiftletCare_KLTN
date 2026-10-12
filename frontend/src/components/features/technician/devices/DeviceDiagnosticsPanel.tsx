@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui"
+import { Badge, Button } from "@/components/ui"
 import RelayToggle from "@/components/features/technician/devices/RelayToggle"
 import { useTelemetry } from "@/hooks/farm-owner/useTelemetry"
-import type { ISensorNode } from "@/types"
+import type { SensorNode } from "@/types"
 import { useClearRelayOverride } from "@/hooks/shared/useDevices"
 import { useToastStore } from "@/stores/toastStore"
 import { getApiErrorMessage } from "@/lib/helpers"
-import { Music, Play, Pause, Repeat, Clock, ListMusic, Thermometer, Droplets, Wind } from "lucide-react"
+import { cn } from "@/lib/cn"
+import { Music, Clock, ListMusic } from "lucide-react"
 
 const timeLabel = (iso: string) =>
   new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
@@ -19,7 +20,7 @@ const RELAY_LABELS = {
 } as const;
 
 interface DeviceDiagnosticsPanelProps {
-  node: ISensorNode
+  node: SensorNode
   zoneId: string
   onOpenSchedule: () => void
   onOpenAudio: () => void
@@ -57,17 +58,20 @@ export default function DeviceDiagnosticsPanel({
   const clearOverride = useClearRelayOverride()
   const push = useToastStore((s) => s.push)
 
-  const renderGauge = (IconComponent: any, label: string, value: string | number | undefined, unit: string, colorClass: string) => (
-    <div className="flex flex-col items-center justify-center py-5 px-3 bg-white border border-warmGray/10 rounded-2xl shadow-sm relative overflow-hidden group hover:border-primary/20 transition-colors">
-      <div className={`absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity ${colorClass}`}>
-         <IconComponent size={90} />
+  // Giá trị đọc gần nhất của node — phục vụ chẩn đoán, không phải dashboard môi trường (FARM-FR-009)
+  const renderReading = (label: string, value: string | number | undefined, unit: string) => {
+    const hasValue = value !== undefined && !Number.isNaN(value)
+    const display = hasValue ? value : '--'
+    return (
+      <div className="flex flex-col gap-1 rounded-2xl border border-warmGray/15 bg-white px-4 py-3">
+        <span className="label-caption">{label}</span>
+        <div className={cn('mt-1 text-2xl font-extrabold leading-none tracking-tight', !hasValue ? 'text-warmGray' : 'text-charcoal')}>
+          {display}
+          <span className="ml-1 text-xs font-medium text-warmGray">{unit}</span>
+        </div>
       </div>
-      <div className={`mb-1 ${colorClass}`}><IconComponent size={24} /></div>
-      <div className={`text-3xl font-bold ${colorClass} mt-1 tabular-nums`}>{value ?? "--"}</div>
-      <div className="text-sm font-bold text-charcoal uppercase mt-2 tracking-wide">{label}</div>
-      <div className="text-xs font-semibold text-warmGray bg-stone px-2 py-0.5 rounded mt-1">{unit}</div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="flex flex-col">
@@ -103,14 +107,14 @@ export default function DeviceDiagnosticsPanel({
       {/* Tab Content */}
       {activeTab === "telemetry" && (
         <div className="flex flex-col gap-6 animate-fade-in">
-          <div className="grid grid-cols-3 gap-4">
-            {renderGauge(Thermometer, "Nhiệt độ", telemetry.data.temperature, "°C", "text-climateOrange")}
-            {renderGauge(Droplets, "Độ ẩm", telemetry.data.humidity, "%", "text-success")}
-            {renderGauge(Wind, "Khí độc", telemetry.data.nh3_ppm, "PPM", "text-alertRed")}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {renderReading("Nhiệt độ", telemetry.data.temperature, "°C")}
+            {renderReading("Độ ẩm", telemetry.data.humidity, "%")}
+            {renderReading("Khí NH₃", telemetry.data.nh3_ppm, "ppm")}
           </div>
 
           <div>
-            <h3 className="text-small font-bold text-charcoal mb-3 uppercase tracking-wider">Manual Overrides</h3>
+            <h3 className="label-caption mb-3">Điều khiển thủ công</h3>
             {node.status === "PENDING" ? (
               <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
                 Thiết bị chưa kết nối. Điều khiển sẽ bật khi online.
@@ -159,39 +163,41 @@ export default function DeviceDiagnosticsPanel({
         <div className="flex flex-col lg:flex-row gap-6 animate-fade-in">
           <div className="flex-1">
             {node.audio ? (
-              <div className="bg-charcoal text-white rounded-2xl p-5 shadow-dock relative overflow-hidden h-full flex flex-col justify-center">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-3xl rounded-full"></div>
-                <div className="relative z-10 flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                      <Music size={24} className="text-secondary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-white truncate text-lg">Track {node.audio.current_track.toString().padStart(3, '0')}.mp3</p>
-                      <p className="text-xs text-white/60">Đang phát tại thiết bị</p>
-                    </div>
+              /* Chỉ hiển thị dữ liệu thật từ node: bài mặc định, âm lượng (0–30), lịch phát */
+              <div className="flex h-full flex-col gap-4 rounded-2xl border border-warmGray/15 bg-white p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="label-caption">Cấu hình loa hiện tại</p>
+                  <Badge tone={node.speaker_schedule?.enabled ? "positive" : "neutral"}>
+                    {node.speaker_schedule?.enabled ? "Đang bật lịch" : "Lịch đang tắt"}
+                  </Badge>
+                </div>
+                <dl className="grid grid-cols-3 gap-3">
+                  <div>
+                    <dt className="label-caption">Bài mặc định</dt>
+                    <dd className="mt-1 font-bold text-charcoal tabular-nums">{String(node.audio.current_track).padStart(4, "0")}.mp3</dd>
                   </div>
-                  
-                  <div className="flex items-center gap-4 mt-2">
-                    <button className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
-                      {node.audio.playing ? <Pause fill="currentColor" size={24} /> : <Play fill="currentColor" size={24} />}
-                    </button>
-                    <div className="flex-1">
-                      <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary w-[75%] rounded-full relative">
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full shadow-sm"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <button className={`p-2 rounded-full transition-colors ${node.audio.loop ? 'text-primary hover:bg-primary/10' : 'text-white/60 hover:bg-white/10'}`}>
-                      <Repeat size={20} />
-                    </button>
+                  <div>
+                    <dt className="label-caption">Âm lượng</dt>
+                    <dd className="mt-1 font-bold text-charcoal tabular-nums">{node.audio.volume}/30</dd>
                   </div>
-                  
-                  <div className="flex justify-between items-center text-xs text-white/60 pt-3 border-t border-white/10 mt-2">
-                    <span>Âm lượng: {node.audio.volume}%</span>
-                    <span>Lịch: {node.speaker_schedule?.enabled ? `${node.speaker_schedule.windows[0]?.start} - ${node.speaker_schedule.windows[0]?.end}` : "Tắt"}</span>
+                  <div>
+                    <dt className="label-caption">Lặp lại</dt>
+                    <dd className="mt-1 font-bold text-charcoal">{node.audio.loop ? "Bật" : "Tắt"}</dd>
                   </div>
+                </dl>
+                <div className="border-t border-warmGray/15 pt-3">
+                  <p className="label-caption mb-2">Khung giờ phát</p>
+                  {node.speaker_schedule?.windows?.length ? (
+                    <ul className="flex flex-wrap gap-2">
+                      {node.speaker_schedule.windows.map((w, i) => (
+                        <li key={i} className="flex items-center gap-1.5 rounded-full bg-warmGray/10 px-3 py-1 text-xs font-semibold text-charcoal tabular-nums">
+                          <Clock size={12} className="text-warmGray" /> {w.start} – {w.end}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-warmGray">Chưa cài khung giờ nào.</p>
+                  )}
                 </div>
               </div>
             ) : (
@@ -229,14 +235,14 @@ export default function DeviceDiagnosticsPanel({
         <div className="flex flex-col md:flex-row gap-4 animate-fade-in">
           {canOnboard && node.status === "ONLINE" && (
             <div className="flex-1 p-5 bg-white border border-warmGray/10 rounded-2xl shadow-sm">
-              <h4 className="text-small font-bold text-charcoal mb-4 uppercase">Điều chuyển Zone</h4>
+              <h4 className="text-small font-bold text-charcoal mb-4">Điều chuyển Zone</h4>
               <p className="text-xs text-warmGray mb-4">Dời thiết bị này sang Zone khác. Yêu cầu thiết bị đang online để nhận cấu hình mới.</p>
               <Button variant="secondary" onClick={onOpenReassign} className="w-full">Dời sang Zone khác</Button>
             </div>
           )}
           {canOnboard && (
             <div className="flex-1 p-5 border border-alertRed/30 rounded-2xl bg-alertRed/5 shadow-sm">
-              <h4 className="text-small font-bold text-alertRed mb-4 uppercase">Khu vực nguy hiểm</h4>
+              <h4 className="text-small font-bold text-alertRed mb-4">Khu vực nguy hiểm</h4>
               <p className="text-xs text-alertRed/80 mb-4">Thao tác không thể hoàn tác. Việc thay thế sẽ giữ lại ID nhưng trỏ phần cứng mới.</p>
               <div className="flex flex-col gap-3">
                 <Button variant="secondary" onClick={onOpenReplace} className="w-full">Thay thế phần cứng</Button>
