@@ -8,6 +8,7 @@
 // Pagination → Pagination (components/ui, variant="numbered")
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
+import { Card } from '@/components/ui'
 import { IconTicket } from '@/components/ui/icons'
 import { TicketStatBar } from '@/components/features/technician/tickets/TicketStatBar'
 import { TicketToolbar } from '@/components/features/technician/tickets/TicketToolbar'
@@ -58,47 +59,49 @@ export default function TechnicianTicketsPage() {
       {/* ── Stat Bar ── */}
       <TicketStatBar tickets={statsRecords} />
 
-      {/* ── Search + Unified Filter + Sort + View Mode ── */}
-      <TicketToolbar
-        isOverdueActive={isOverdueActive}   onOverdueToggle={handleOverdueToggle}
-        isQueueActive={isQueueActive}       onQueueToggle={handleQueueToggle}
-        filterStatus={filterStatus}          onFilterStatusChange={handleFilterStatusChange}
-        sortKey={sortKey}                    sortDir={sortDir}  onSort={handleSort}
-        onClearFilters={handleClearFilters}
-        isLoading={isLoading}
-        overdueTotal={overdueTotal}
-      />
-
-
-      {/* ── Loading skeleton ── */}
-      {isLoading && <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />}
-
-      {/* ── Empty state ── */}
-      {isEmpty && (
-        <EmptyState
-          icon={<IconTicket width={28} height={28} />}
-          title={filterStatus ? 'Không tìm thấy ticket nào' : 'Không có ticket nào'}
-          description={
-            filterStatus
-              ? 'Thử thay đổi bộ lọc.'
-              : isQueueActive
-                ? 'Hàng đợi đang trống — không có ticket nào chờ phân công.'
-                : 'Chưa có ticket nào được gán cho bạn trong mục này.'
-          }
+      {/* ── Main Content (bọc Card để đồng nhất khung với các role khác) ── */}
+      <Card size="lg" className="flex flex-col gap-4">
+        {/* ── Search + Unified Filter + Sort + View Mode ── */}
+        <TicketToolbar
+          isOverdueActive={isOverdueActive}   onOverdueToggle={handleOverdueToggle}
+          isQueueActive={isQueueActive}       onQueueToggle={handleQueueToggle}
+          filterStatus={filterStatus}          onFilterStatusChange={handleFilterStatusChange}
+          sortKey={sortKey}                    sortDir={sortDir}  onSort={handleSort}
+          onClearFilters={handleClearFilters}
+          isLoading={isLoading}
+          overdueTotal={overdueTotal}
         />
-      )}
 
-      {/* ── TABLE VIEW ── */}
-      {hasResults && (
-        <TicketTableView
-          records={displayRecords}
-          sortKey={sortKey}       sortDir={sortDir}   onSort={handleSort}
-          page={safePage}         totalItems={paginTotal}
-          onPage={setPage}
-          onUpdateStatus={setStatusModal}
-          onReassign={setReassignModal}
-        />
-      )}
+        {/* ── Loading skeleton ── */}
+        {isLoading && <LoadingSkeleton count={PAGE_SIZE} className="h-12 w-full" />}
+
+        {/* ── Empty state ── */}
+        {isEmpty && (
+          <EmptyState
+            icon={<IconTicket width={28} height={28} />}
+            title={filterStatus ? 'Không tìm thấy ticket nào' : 'Không có ticket nào'}
+            description={
+              filterStatus
+                ? 'Thử thay đổi bộ lọc.'
+                : isQueueActive
+                  ? 'Hàng đợi đang trống — không có ticket nào chờ phân công.'
+                  : 'Chưa có ticket nào được gán cho bạn trong mục này.'
+            }
+          />
+        )}
+
+        {/* ── TABLE VIEW ── */}
+        {hasResults && (
+          <TicketTableView
+            records={displayRecords}
+            sortKey={sortKey}       sortDir={sortDir}   onSort={handleSort}
+            page={safePage}         totalItems={paginTotal}
+            onPage={setPage}
+            onUpdateStatus={setStatusModal}
+            onReassign={setReassignModal}
+          />
+        )}
+      </Card>
 
       {/* ── Modals ── */}
       {statusModal   && <UpdateStatusModal ticket={statusModal}   onClose={() => setStatusModal(null)} />}

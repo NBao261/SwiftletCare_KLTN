@@ -5,7 +5,7 @@ import { usePermission } from "@/hooks/common/usePermission";
 import { useSensorNodes } from "@/hooks/shared/useDevices";
 import { deviceApi } from "@/apis/shared/devices.api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Input, Modal } from "@/components/ui";
+import { Button, Input, Modal, Card } from "@/components/ui";
 import EmptyState from "@/components/ui/EmptyState";
 import SystemHealthBar, { needsAttention } from "@/components/features/technician/devices/SystemHealthBar";
 import DeviceFilterToolbar, { type DeviceSortKey } from "@/components/features/technician/devices/DeviceFilterToolbar";
@@ -177,7 +177,7 @@ export default function TechnicianDevicesPage() {
         </div>
       </div>
 
-      <div className="pb-10">
+      <Card size="lg" className="pb-10 flex flex-col gap-5">
 
         {isLoading && <LoadingSkeleton count={2} className="h-40 w-full" />}
 
@@ -353,7 +353,7 @@ export default function TechnicianDevicesPage() {
           />
         )}
 
-      </div>
+      </Card>
     </div>
   );
 }
