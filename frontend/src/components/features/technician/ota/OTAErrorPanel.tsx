@@ -19,9 +19,9 @@ export function OTAErrorPanel({ failedVersion, failedAt, runningVersion, onRetry
         <div>
           <p className="font-semibold text-alertRed">Cập nhật firmware thất bại</p>
           <p className="text-sm text-alertRed/80">
-            Thiết bị không xác nhận được bản <span className="font-mono">{failedVersion}</span>
+            Thiết bị không xác nhận được bản <span className="tabular-nums">{failedVersion}</span>
             {failedAt ? ` (lúc ${formatDate(failedAt)})` : ''}
-            {runningVersion ? <> — đang chạy <span className="font-mono">{runningVersion}</span>, dữ liệu an toàn.</> : '.'}
+            {runningVersion ? <> — đang chạy <span className="tabular-nums">{runningVersion}</span>, dữ liệu an toàn.</> : '.'}
           </p>
         </div>
       </div>
