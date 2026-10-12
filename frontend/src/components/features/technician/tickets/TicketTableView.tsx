@@ -31,7 +31,7 @@ export function TicketTableView({
               <th className="w-[12%] whitespace-nowrap py-3 pl-5 pr-3 label-caption text-left">
                 Ưu tiên
               </th>
-              <th className="w-[24%] whitespace-nowrap py-3 pr-3 label-caption text-left">
+              <th className="w-[22%] whitespace-nowrap py-3 pr-3 label-caption text-left">
                 Loại ticket
               </th>
               <th className="w-[20%] whitespace-nowrap py-3 pr-3 label-caption text-left">
@@ -49,7 +49,7 @@ export function TicketTableView({
                   Ngày tạo<SortIcon active={sortKey === 'created_at'} dir={sortDir} />
                 </button>
               </th>
-              <th className="w-[10%] py-3 pr-5 label-caption text-center">
+              <th className="w-[12%] py-3 pr-5 label-caption text-center">
                 Thao tác
               </th>
             </tr>
@@ -68,13 +68,15 @@ export function TicketTableView({
         </table>
       </div>
 
-      <Pagination
-        page={page}
-        total={totalItems}
-        limit={PAGE_SIZE}
-        onChange={onPage}
-        variant="numbered"
-      />
+      <div className="border-t border-warmGray/10 px-5 pb-4 pt-1">
+        <Pagination
+          page={page}
+          total={totalItems}
+          limit={PAGE_SIZE}
+          onChange={onPage}
+          variant="full"
+        />
+      </div>
     </div>
   )
 }

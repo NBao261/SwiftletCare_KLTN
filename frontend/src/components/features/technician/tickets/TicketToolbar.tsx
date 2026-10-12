@@ -69,8 +69,8 @@ export const TicketToolbar = memo(function TicketToolbar({
     filterStatus !== '' ||
     isOverdueActive ||
     isQueueActive ||
-    sortKey !== 'created_at' ||
-    sortDir !== 'desc'
+    sortKey !== 'status' ||
+    sortDir !== 'asc'
 
   return (
     <div className="flex flex-col gap-3">
@@ -96,7 +96,7 @@ export const TicketToolbar = memo(function TicketToolbar({
 
       {/* ── Hàng 2: Unified FilterChips + Hủy lọc (Trái) & Sort (Phải) ── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        
+
         <div className="flex flex-wrap items-center gap-3">
           {/*
             FilterChips thống nhất — thay thế hoàn toàn 3 tab cũ:
@@ -130,13 +130,13 @@ export const TicketToolbar = memo(function TicketToolbar({
             {/* Chip đặc biệt: Quá hạn SLA */}
             <FilterChip
               active={isOverdueActive}
-              label={<span className="flex items-center gap-1.5"><AlertCircle size={14} strokeWidth={2}/> Quá hạn SLA</span>}
+              label={<span className="flex items-center gap-1.5"><AlertCircle size={14} strokeWidth={2} /> Quá hạn SLA</span>}
               onClick={onOverdueToggle}
             />
             {/* Chip đặc biệt: Hàng đợi chung — ticket chưa gán trong vùng của Technician (chỉ xem) */}
             <FilterChip
               active={isQueueActive}
-              label={<span className="flex items-center gap-1.5"><Inbox size={14} strokeWidth={2}/> Hàng đợi chung</span>}
+              label={<span className="flex items-center gap-1.5"><Inbox size={14} strokeWidth={2} /> Hàng đợi chung</span>}
               onClick={onQueueToggle}
             />
           </div>

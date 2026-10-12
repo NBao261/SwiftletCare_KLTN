@@ -88,6 +88,15 @@ export function getSlaUrgency(ticket: Ticket): SlaUrgency {
   return 'ok'
 }
 
+/** Tỉ lệ thời gian SLA xử lý đã tiêu hao 0–1 (từ lúc tạo → hạn). null khi không có SLA hoặc ticket đã đóng. */
+export function getSlaProgress(ticket: Ticket): number | null {
+  if (!ticket.sla_resolve_due_at || ticket.status === 'CLOSED') return null
+  const start = new Date(ticket.created_at).getTime()
+  const due = new Date(ticket.sla_resolve_due_at).getTime()
+  if (!(due > start)) return null
+  return Math.min(1, Math.max(0, (Date.now() - start) / (due - start)))
+}
+
 // ── SAT Checklist ───────────────────────────────────────────────────────────────────────
 // Nguồn sự thật duy nhất cho cả SATChecklist (Ticket detail) và Step6SAT (Onboarding
 // wizard). Trước đây khai báo trùng ở cả 2 file; đưa về đây để business thay

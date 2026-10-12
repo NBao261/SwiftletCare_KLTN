@@ -54,12 +54,12 @@ export interface TicketsPageData {
 
 export function useTicketsPageData(): TicketsPageState & TicketsPageActions & TicketsPageData {
   // ── UI State ──────────────────────────────────────────────────────────────
-  const [activeTab,     setActiveTab]     = useState<TechTab>('mine')
-  const [sortKey,       setSortKey]       = useState<SortKey>('created_at')
-  const [sortDir,       setSortDir]       = useState<SortDir>('desc')
-  const [filterStatus,  setFilterStatus]  = useState<TicketStatus | ''>('')
-  const [page,          setPage]          = useState(1)
-  const [statusModal,   setStatusModal]   = useState<Ticket | null>(null)
+  const [activeTab, setActiveTab] = useState<TechTab>('mine')
+  const [sortKey, setSortKey] = useState<SortKey>('status')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [filterStatus, setFilterStatus] = useState<TicketStatus | ''>('')
+  const [page, setPage] = useState(1)
+  const [statusModal, setStatusModal] = useState<Ticket | null>(null)
   const [reassignModal, setReassignModal] = useState<Ticket | null>(null)
 
   // ── Data Fetch — Chế độ 1: server pagination (mine + in_progress) ─────────
@@ -69,12 +69,12 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
       // Hàng đợi chung: BE bỏ qua `unassigned` nếu có assignedToMe → KHÔNG gửi assignedToMe
       ? { unassigned: true, ...(filterStatus ? { status: filterStatus as TicketStatus } : {}), page, limit: PAGE_SIZE }
       : {
-          assignedToMe: true,
-          ...(activeTab === 'in_progress' ? { status: 'IN_PROGRESS' } : {}),
-          ...(filterStatus && activeTab !== 'overdue' ? { status: filterStatus as TicketStatus } : {}),
-          page,
-          limit: PAGE_SIZE,
-        },
+        assignedToMe: true,
+        ...(activeTab === 'in_progress' ? { status: 'IN_PROGRESS' } : {}),
+        ...(filterStatus && activeTab !== 'overdue' ? { status: filterStatus as TicketStatus } : {}),
+        page,
+        limit: PAGE_SIZE,
+      },
     { enabled: activeTab !== 'overdue' },
   )
 
@@ -93,9 +93,9 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
 
   // ── Derived state ─────────────────────────────────────────────────────────
   const isOverdue = activeTab === 'overdue'
-  const isQueue   = activeTab === 'unassigned'
-  const records   = isOverdue ? overdueQuery.records : serverQuery.records
-  const total     = isOverdue ? overdueQuery.total : serverQuery.total
+  const isQueue = activeTab === 'unassigned'
+  const records = isOverdue ? overdueQuery.records : serverQuery.records
+  const total = isOverdue ? overdueQuery.total : serverQuery.total
   const isLoading = isOverdue ? overdueQuery.isLoading : serverQuery.isLoading
 
   // Pipeline: overdue filter → status filter (overdue tab only, client-side bulk) → sort
@@ -108,10 +108,10 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     return sortTickets(list, sortKey, sortDir)
   }, [records, isOverdue, filterStatus, sortKey, sortDir])
 
-  const clientTotal    = filteredRecords.length
-  const paginTotal     = isOverdue ? clientTotal : total
-  const totalPages     = Math.max(1, Math.ceil(paginTotal / PAGE_SIZE))
-  const safePage       = Math.min(page, totalPages)
+  const clientTotal = filteredRecords.length
+  const paginTotal = isOverdue ? clientTotal : total
+  const totalPages = Math.max(1, Math.ceil(paginTotal / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
   const displayRecords = isOverdue
     ? filteredRecords.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
     : filteredRecords
@@ -160,8 +160,8 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   const handleClearFilters = useCallback(() => {
     setActiveTab('mine')
     setFilterStatus('')
-    setSortKey('created_at')
-    setSortDir('desc')
+    setSortKey('status')
+    setSortDir('asc')
     resetPage()
   }, [resetPage])
 
