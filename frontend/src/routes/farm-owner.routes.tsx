@@ -14,8 +14,8 @@ const FarmOwnerDashboardPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDa
 const FarmOwnerAnalyticsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerAnalyticsPage'))
 const FarmOwnerVisionPage = lazy(() => import('@/pages/farm-owner/FarmOwnerVisionPage'))
 const FarmOwnerFarmsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmsPage'))
-const FarmOwnerFarmHousesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmHousesPage'))
 const FarmOwnerFarmZonesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZonesPage'))
+const FarmOwnerFarmZoneDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZoneDetailPage'))
 const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarvestPage'))
 const FarmOwnerLiveStreamPage = lazy(() => import('@/pages/farm-owner/FarmOwnerLiveStreamPage'))
 
@@ -54,18 +54,18 @@ export const farmOwnerRoutes = (
       }
     />
     <Route
-      path="farms/:farmId"
-      element={
-        <RequireRole allow={OPS_ROLES}>
-          <FarmOwnerFarmHousesPage />
-        </RequireRole>
-      }
-    />
-    <Route
       path="farms/:farmId/houses/:houseId"
       element={
         <RequireRole allow={OPS_ROLES}>
           <FarmOwnerFarmZonesPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="farms/:farmId/houses/:houseId/zones/:zoneId"
+      element={
+        <RequireRole allow={OPS_ROLES}>
+          <FarmOwnerFarmZoneDetailPage />
         </RequireRole>
       }
     />

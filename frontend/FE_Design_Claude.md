@@ -321,9 +321,7 @@ This data is FAKE and has not been MOCKAPI     ← text-mock-notice, --gray-500,
 
 ## 6. i18n — Đa ngôn ngữ (VI/EN)
 
-**Trạng thái: định hướng, CHƯA áp dụng.** `react-i18next` chưa được cài; toàn bộ UI hiện viết thẳng tiếng Việt. Khi review PR **không** yêu cầu `t('...')` cho tới khi có PR riêng cài i18n.
-
-Thiết kế khi áp dụng: `react-i18next`, namespace theo module (`common`, `sidebar`, `dashboard`, `alerts`, `tickets`, `farm`, `sensors`, `roles`), không hardcode chuỗi hiển thị, đơn vị đo (°C/%/ppm/lux/dB) không dịch. Trong lúc chờ: chuỗi hiển thị viết tiếng Việt có dấu, nhất quán thuật ngữ với màn đã có (VD "Zone", "Farm", "Ticket" giữ tiếng Anh như UI hiện tại).
+**Trạng thái: áp dụng từng module, chưa phải toàn app.** Chưa cài `react-i18next`; nút VI/EN ở `AppHeader` ghi vào `stores/languageStore.ts`, màn nào có từ điển thì đổi theo, màn khác vẫn tiếng Việt như cũ. Hạ tầng tối thiểu: `lib/i18n.ts` (`Dictionary<K>` — `en` bắt buộc đủ đúng key của `vi`, thiếu là lỗi biên dịch; `translate`, định dạng số/ngày/"x giây trước" theo locale) + `hooks/common/useT.ts` (`const { t, num, day, ago } = useT(dict)`). Từ điển mỗi module đặt ở `constants/<module>.i18n.ts`; hiện có `farmStructure.i18n.ts` (màn Cấu trúc Farm của Farm Owner). Đơn vị đo (°C/%/ppm/lux/dB) không dịch. Màn chưa có từ điển: khi review **không** bắt buộc `t('...')`; viết tiếng Việt có dấu, giữ thuật ngữ ("Zone", "Farm", "Ticket") nhất quán với màn đã có. Khi cài `react-i18next` sau này, chuyển các `*.i18n.ts` thành namespace tương ứng.
 
 ---
 
@@ -342,6 +340,7 @@ Thiết kế khi áp dụng: `react-i18next`, namespace theo module (`common`, `
 | Cấu hình ngưỡng mặc định hệ thống (Admin) | SYSTEM-FR-002 | ✅ Đã code (`GET/PUT /system/settings/default-thresholds`) | Không |
 | Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ✅ Đã code (`GET /system/health-overview`) | Không |
 | Module SALES (sản phẩm/đơn hàng/tồn kho) | SALES-FR-* | ⬜ Stub, GĐ2 | **Có** |
+| Cấu trúc Farm — người phụ trách nhà, lịch thu dự kiến, khuyến nghị AI, KTV lắp đặt/firmware mới nhất của thiết bị | FARM-FR-* (phần mở rộng UI) | ⬜ Chưa có endpoint — `apis/farm-owner/farmMock.api.ts` trả RỖNG, UI hiện khung trống | Không (không có số liệu giả); farm/house/zone/thiết bị/số đo/cảnh báo/thu hoạch là API thật |
 | Đăng bán/Truy xuất nguồn gốc (Marketplace) | MARKET-FR-* | ✅ Đã code | Không |
 | Push notification FCM/Zalo/SMS thật | ALERT-FR-002/003/004 | 🟡 chưa nối credential | Có (màn cấu hình kênh) |
 

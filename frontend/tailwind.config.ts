@@ -76,6 +76,14 @@ const config: Config = {
         card: '0 8px 24px rgba(39,35,31,0.06)',
         dock: '0 12px 32px rgba(39,35,31,0.12)',
         icon: '0 2px 8px rgba(39,35,31,0.06)',
+        // Soft Elevated Shadow #56 — bóng tán mờ đa tầng dùng cho MỌI lớp phủ nổi
+        // trên nền trang (Modal, Dropdown/Popover, Confirm Dialog): tán rộng, mềm,
+        // không có cạnh cứng như shadow-dock/shadow-lg mặc định.
+        popover: '0 20px 40px -15px rgba(0,0,0,0.08), 0 0 1px 1px rgba(39,35,31,0.04)',
+        // Biến thể tán hẹp hơn của `popover`, dùng cho menu nhỏ sát theo nút mở
+        // (ActionsMenu "...") — cùng công thức Shadow #56 nhưng tán ngắn hơn vì
+        // khung menu nhỏ, đặt bóng lan rộng như Modal sẽ trông quá nặng.
+        dropdown: '0 16px 36px -10px rgba(0,0,0,0.08), 0 0 1px 1px rgba(39,35,31,0.04)',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',
