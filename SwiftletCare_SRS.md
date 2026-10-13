@@ -7,7 +7,7 @@
 | Trường thông tin        | Nội dung                            |
 | ----------------------- | ----------------------------------- |
 | **Tên dự án**           | SwiftletCare                        |
-| **Phiên bản SRS**       | 2.1.1                               |
+| **Phiên bản SRS**       | 2.1.2                               |
 | **Ngày tạo**            | 07/09/2026                          |
 | **Thời gian thực hiện** | Tháng 7/2026 – Tháng 12/2026 (FA26) |
 | **Chuyên ngành**        | Software Engineering (SE)           |
@@ -174,12 +174,12 @@ Tài liệu này là Đặc tả Yêu cầu Phần mềm (Software Requirements 
 - `FA26_SE_Capstone_Project_Register_SwiftletCare.docx` – Phiếu đăng ký đề tài KLTN
 - `FA26_SE_Capstone_Project_Register_SwiftletCare_v2.docx` – **[v2.0.0]** Phiếu đăng ký bản sửa sau Review 1 — căn cứ đánh giá hiện hành (mục 0)
 - `docs/bird-counting-plan.md` – **[v2.0.0]** Kế hoạch triển khai đếm chim thời gian thực (Module VISION)
-- `KLTN_2026_SwiftletCare_FA26.docx` – Đặc tả kỹ thuật phần cứng và Edge AI Vision
+- `KLTN_2026_SwiftletCare_FA26.docx` – Đặc tả kỹ thuật phần cứng và Edge AI Vision (tài liệu ban đầu, không lưu trong repo)
 - YOLOv8 Documentation – Ultralytics
 - ByteTrack: Multi-Object Tracking by Associating Every Detection Box
 - EMQX MQTT Broker Documentation
 - Express.js Framework Documentation
-- `BA_Review_ActivityFlow_SwiftletCare.md` – Đánh giá BA & thiết kế luồng nghiệp vụ **5 actor (Farmer, Buyer, Technician, Sales Staff, Admin)** — nội dung đã được hợp nhất vào SRS này. **[v1.23.0]** Mô hình actor hiện tại khác tài liệu gốc: không còn Sales Staff, có thêm Farm Operator (xem mục 2.2, 4.1). **[v2.0.0]** Farm Operator và Buyer cũng đã bị thay/bỏ — xem mục 0
+- `BA_Review_ActivityFlow_SwiftletCare.md` (không lưu trong repo) – Đánh giá BA & thiết kế luồng nghiệp vụ **5 actor (Farmer, Buyer, Technician, Sales Staff, Admin)** — nội dung đã được hợp nhất vào SRS này. **[v1.23.0]** Mô hình actor hiện tại khác tài liệu gốc: không còn Sales Staff, có thêm Farm Operator (xem mục 2.2, 4.1). **[v2.0.0]** Farm Operator và Buyer cũng đã bị thay/bỏ — xem mục 0
 
 ### 1.4. Tổng quan Tài liệu
 
@@ -245,10 +245,10 @@ Sản phẩm đầu ra theo phiếu v2 (phiếu gộp P1 và P2 thành một s�
 │  Express API ──── MongoDB ──── Redis ──── S3/MinIO          │
 │  EMQX MQTT Broker ─── Alert Service (in-app/Telegram/FCM)  │
 └────────────────────────┬───────────────────────────────────┘
-                         │ 4G LTE (JSON/MQTT + Snapshots)
+                         │ Internet cáp quang (MQTT, RTSP)
 ┌────────────────────────▼───────────────────────────────────┐
-│              TIER 2: EDGE GATEWAY (Router 4G)              │
-│  Router 4G / Internet nhà yến ─── Local LAN/Wi-Fi          │
+│              TIER 2: EDGE GATEWAY (Modem)                  │
+│  Modem cáp quang, IP tĩnh ─── Local LAN/Wi-Fi              │
 └────────┬───────────────────────────────────────┬───────────┘
          │ Wi-Fi (MQTT)                          │ LAN (RTSP)
 ┌────────▼───────────────────┐    ┌─────────────▼───────────┐
@@ -471,8 +471,8 @@ flowchart TB
 | ENV-FR-011  | **[Cập nhật v2.0.0]** ESP32 điều khiển Relay quạt thông gió (kênh IN3, GPIO27) bằng **logic mờ** theo **nhiệt độ + độ ẩm**; luật: NÓNG ∧ ¬KHÔ → 100% · NÓNG ∧ KHÔ → `fuzzy_fan_dry_level` (mặc định 40%, để phun sương làm mát mà không hút hết hơi ẩm) · ¬NÓNG → 0%. Time-proportioning như ENV-FR-010 nhưng lệch nửa cửa sổ để quạt không chạy cùng lúc với phun sương; % gửi qua `control_output.ventilation`. **NH3 và CO2 không còn là đầu vào của bộ điều khiển và không còn chốt "khí vượt ngưỡng thì ép quạt 100%"** (v1.24.0) — chưa có giới hạn NH3/CO2 nào được xác lập cho nhà yến trong tài liệu, và NH3 chủ yếu từ phân chim, thứ người nuôi còn dùng để dẫn dụ; hai chỉ số này chỉ theo dõi và cảnh báo (ALERT-FR-012, Flow 24) | Bắt buộc | 🔄 Cần sửa code (v2.0.0): bỏ luật KHÍ_CAO và `rawGasOverMax` ở `pid/FuzzyControl.cpp`/`PIDController.cpp`, đồng bộ `backend/src/utils/fuzzyModel.util.ts`, sửa `test/test_fuzzy` |
 | ENV-FR-012  | **[Đã loại bỏ v2.0.0]** Không dùng sưởi. Kênh relay IN4 (GPIO14) để dự phòng, không gắn tải. Nhiệt độ < `temp_min` chỉ sinh cảnh báo `THRESHOLD_BREACH`; hệ thống không có cơ cấu chống lạnh (ghi ở phần giới hạn của đề tài) | ❌ Ngoài phạm vi v2.0.0 | 🔄 Cần gỡ: `runHeatingControl` và override `heating` ở firmware, `relay_states.heating` ở backend, nút sưởi ở web/mobile |
 | ENV-FR-013  | **[Sửa v2.0.0]** Hệ thống **không có cơ cấu che/tắt sáng**: ánh sáng chỉ được đo; vượt `light_max` sinh cảnh báo `THRESHOLD_BREACH` để Farm Owner xử lý tại chỗ (ghi ở phần giới hạn của đề tài). Bản cũ ghi "ESP32 tắt ánh sáng" — bỏ vì không có thiết bị tương ứng | ❌ Điều khiển ánh sáng: ngoài phạm vi | ✅ Cảnh báo vượt ngưỡng đã có ở backend |
-| ENV-FR-013b | **[Cập nhật v1.10.0]** ESP32 điều khiển hệ thống loa ru dẫn dụ: (a) Relay kênh IN2 (GPIO26) đóng/ngắt NGUỒN cấp cho amply/loa; (b) Module phát nhạc **DFPlayer Mini** (giao tiếp UART qua GPIO32/33) đọc file âm thanh (MP3/WAV) từ thẻ microSD, ESP32 gửi lệnh `play/stop/volume/loop` qua UART; (c) tín hiệu audio qua amply **PAM8403** (nếu loa >3W) rồi ra loa. Điều khiển theo **lịch cố định** (mặc định 5:00-7:00 và 17:00-19:00) hoặc thủ công. File âm thanh nạp sẵn vào thẻ SD (Mức 1); upload file từ xa qua cloud → ESP32 ghi SD là **Mức 2 (stretch, không bắt buộc MVP)**. Liên kết THREAT-FR-006: khi relay loa ON + DFPlayer đang play mà cảm biến dB (ES-NOISE-01) không tăng → cảnh báo SPEAKER_FAILURE. Chi tiết: xem phụ lục `SwiftletCare_Relay_Audio_Guide.md` | Bắt buộc | ✅ Xong — `PUT /devices/sensor-nodes/:id/speaker-schedule` + MQTT `config/update` (tối đa 2 khung giờ tròn), web: modal "Lịch loa ru" ở trang Thiết bị; phát nhạc thuộc Firmware         |
-| ENV-FR-013c **[mới v1.20.0]** | Quản lý & phát file âm thanh loa ru từ xa qua Web (mở rộng ENV-FR-013b Mức 2): **(a) Upload** — Technician/Admin upload file `.mp3` mới qua Web Console cho 1 SensorNode cụ thể (validate MIME/dung lượng theo mục 12.4, ≤10MB), đặt tên thân thiện + nhập `track_number` (số thứ tự file sẽ tương ứng trên thẻ SD, VD `2` = `0002.mp3`), đánh dấu `synced_to_sd` sau khi **tự tay chép file đó vào thẻ SD bằng laptop** (quy trình thủ công không đổi — xem `SwiftletCare_Components_Guide_v3.9.md` §10); **(b) Chọn bài mặc định** — Farm Owner xem danh mục các bài đã `synced_to_sd=true` của thiết bị mình, chọn 1 bài làm `speaker_track` cho lịch phát cố định (5-7h/17-19h) — publish MQTT `config/update` tái dùng đúng field `speaker_track` **đã có sẵn ở firmware** (`Config::update()`, không cần sửa ESP32); **(c) Nghe thử ngay** — Farm Owner phát thử 1 bài bất kể giờ/lịch để kiểm tra — **cần bổ sung firmware**: topic mới `audio/command` (`{action:"play" hoặc "stop", track}`) + `AudioManager::forcePlay()/forceStop()` bỏ qua điều kiện `speakerScheduleEnabled`/khung giờ (khác Manual Override relay hiện tại ở ENV-FR-016, vốn chỉ đóng nguồn amply chứ KHÔNG tự gọi `dfPlayer.play()`); **(d) Ràng buộc phần cứng cứng (không thể tự động hoá thêm)** — DFPlayer Mini **không có lệnh ghi file qua UART** (thư viện `DFRobotDFPlayerMini` chỉ có `play/stop/volume/loop/next/previous/EQ/outputDevice/sleep/reset`, xác nhận từ chính thư viện đang dùng trong `firmware/`), nên catalog trên web **không tự đẩy được file xuống thẻ SD vật lý** — mọi bài mới bắt buộc qua bước (a) chép tay 1 lần; hệ thống chỉ tự động hoá phần chọn/phát giữa các bài **đã có sẵn** trên thẻ, không thay thế được bước chép file. Nếu `synced_to_sd=false`, hệ thống chặn (b)/(c) và báo rõ lý do thay vì phát nhầm/im lặng. Xem thêm mục 8.2 (`audio_tracks`), mục 9.1 (API), mục 9.2 (topic `audio/command`) | Tùy chọn | ✅ Xong — model `audio_tracks` + 7 route `/devices/sensor-nodes/:id/audio-tracks*` & `audio/stop` (MinIO qua `aws-sdk`), firmware `audio/command` (nghe thử tự dừng sau 5 phút), web: modal "File loa ru" ở trang Thiết bị |
+| ENV-FR-013b | **[Cập nhật v1.10.0]** ESP32 điều khiển hệ thống loa ru dẫn dụ: (a) Relay kênh IN2 (GPIO26) đóng/ngắt NGUỒN cấp cho amply/loa; (b) Module phát nhạc **DFPlayer Mini** (giao tiếp UART qua GPIO32/33) đọc file âm thanh (MP3/WAV) từ thẻ microSD, ESP32 gửi lệnh `play/stop/volume/loop` qua UART; (c) tín hiệu audio qua amply **PAM8403** (nếu loa >3W) rồi ra loa. Điều khiển theo **lịch cố định** (mặc định 5:00-7:00 và 17:00-19:00) hoặc thủ công. File âm thanh nạp sẵn vào thẻ SD (Mức 1); upload file từ xa qua cloud → ESP32 ghi SD là **Mức 2 (stretch, không bắt buộc MVP)**. Liên kết THREAT-FR-006: khi relay loa ON + DFPlayer đang play mà cảm biến dB (ES-NOISE-01) không tăng → cảnh báo SPEAKER_FAILURE. Chi tiết: xem phụ lục `SwiftletCare_Components_Guide_v3.11.md` mục 10–12 | Bắt buộc | ✅ Xong — `PUT /devices/sensor-nodes/:id/speaker-schedule` + MQTT `config/update` (tối đa 2 khung giờ tròn), web: modal "Lịch loa ru" ở trang Thiết bị; phát nhạc thuộc Firmware         |
+| ENV-FR-013c **[mới v1.20.0]** | Quản lý & phát file âm thanh loa ru từ xa qua Web (mở rộng ENV-FR-013b Mức 2): **(a) Upload** — Technician/Admin upload file `.mp3` mới qua Web Console cho 1 SensorNode cụ thể (validate MIME/dung lượng theo mục 12.4, ≤10MB), đặt tên thân thiện + nhập `track_number` (số thứ tự file sẽ tương ứng trên thẻ SD, VD `2` = `0002.mp3`), đánh dấu `synced_to_sd` sau khi **tự tay chép file đó vào thẻ SD bằng laptop** (quy trình thủ công không đổi — xem `SwiftletCare_Components_Guide_v3.11.md` mục 10); **(b) Chọn bài mặc định** — Farm Owner xem danh mục các bài đã `synced_to_sd=true` của thiết bị mình, chọn 1 bài làm `speaker_track` cho lịch phát cố định (5-7h/17-19h) — publish MQTT `config/update` tái dùng đúng field `speaker_track` **đã có sẵn ở firmware** (`Config::update()`, không cần sửa ESP32); **(c) Nghe thử ngay** — Farm Owner phát thử 1 bài bất kể giờ/lịch để kiểm tra — **cần bổ sung firmware**: topic mới `audio/command` (`{action:"play" hoặc "stop", track}`) + `AudioManager::forcePlay()/forceStop()` bỏ qua điều kiện `speakerScheduleEnabled`/khung giờ (khác Manual Override relay hiện tại ở ENV-FR-016, vốn chỉ đóng nguồn amply chứ KHÔNG tự gọi `dfPlayer.play()`); **(d) Ràng buộc phần cứng cứng (không thể tự động hoá thêm)** — DFPlayer Mini **không có lệnh ghi file qua UART** (thư viện `DFRobotDFPlayerMini` chỉ có `play/stop/volume/loop/next/previous/EQ/outputDevice/sleep/reset`, xác nhận từ chính thư viện đang dùng trong `firmware/`), nên catalog trên web **không tự đẩy được file xuống thẻ SD vật lý** — mọi bài mới bắt buộc qua bước (a) chép tay 1 lần; hệ thống chỉ tự động hoá phần chọn/phát giữa các bài **đã có sẵn** trên thẻ, không thay thế được bước chép file. Nếu `synced_to_sd=false`, hệ thống chặn (b)/(c) và báo rõ lý do thay vì phát nhầm/im lặng. Xem thêm mục 8.2 (`audio_tracks`), mục 9.1 (API), mục 9.2 (topic `audio/command`) | Tùy chọn | ✅ Xong — model `audio_tracks` + 7 route `/devices/sensor-nodes/:id/audio-tracks*` & `audio/stop` (MinIO qua `aws-sdk`), firmware `audio/command` (nghe thử tự dừng sau 5 phút), web: modal "File loa ru" ở trang Thiết bị |
 | ENV-FR-014  | Hệ thống tiếp tục thực thi Closed-loop Control cục bộ khi mất kết nối Internet (Offline Resilience)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Bắt buộc | ⬜ Thuộc Firmware (ESP32 offline resilience), ngoài phạm vi backend |
 | ENV-FR-015  | Trạng thái relay (ON/OFF) được publish lên MQTT và đồng bộ lên Cloud mỗi khi thay đổi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Bắt buộc | ✅ Xong (đồng bộ `relay_states` qua MQTT `relay/status`)            |
 
@@ -636,7 +636,7 @@ flowchart TB
 | TICKET-FR-007 | Technician cập nhật trạng thái ticket theo đúng luồng đầy đủ cho **mọi loại ticket** (kể cả `INSTALLATION` — xem Flow 9b): `MỚI` (chờ tiếp nhận) → `ĐANG XỬ LÝ` (đã tiếp nhận, đang xử lý/chuẩn bị lắp đặt) → `CHỜ XÁC NHẬN HIỆN TRƯỜNG` (đã làm xong tại farm, chờ checklist/xác nhận) → `ĐÃ ĐÓNG`; mỗi lần đổi trạng thái ghi log kèm ghi chú | Bắt buộc | ✅ Xong                                                                    |
 | TICKET-FR-008 | Technician có thể xử lý từ xa (restart thiết bị, đẩy OTA, cập nhật cấu hình qua MQTT command) trước khi quyết định cần đến hiện trường — luồng OTA đầy đủ kể cả rollback khi lỗi xem Flow 15                                                                                                                                                    | Bắt buộc | 🟡 Backend xong (`POST /devices/sensor-nodes/:id/commands`: RESTART / PUSH_CONFIG / OTA qua `config/update`, cho cả thiết bị `DEGRADED`; firmware chỉ tải từ HTTPS + host trong `OTA_ALLOWED_HOSTS`; broker chưa kết nối thì trả 503 thay vì báo đã gửi; quá 30 phút chưa xác nhận qua heartbeat thì đánh dấu `ota_failed`); firmware ESP32 chưa xử lý trường `command` |
 | TICKET-FR-009 | Nếu ticket vượt SLA xử lý mà chưa đóng, hệ thống tự động **escalate**: gửi thông báo cho Administrator và Technician dự phòng                                                                                                                                                                                                                   | Bắt buộc | ✅ Xong (`jobs/slaBreach.job.ts` quét mỗi 2 phút, bật `is_sla_breached` + audit `TICKET_SLA_BREACHED` + báo Admin. Escalate tay ghi `escalated_at`, KHÔNG tính là vượt SLA. Lưu ý `alertEscalation.job` KHÔNG phải job này — nó thuộc TICKET-FR-002. Danh sách ticket quá hạn lọc trên DB qua `GET /tickets?slaBreached=true` — gồm ticket đã đánh dấu và ticket còn mở đã qua hạn mà job chưa kịp quét) |
-| TICKET-FR-010 | Với ticket "Lắp đặt mới", Technician bắt buộc hoàn thành **checklist nghiệm thu (Site Acceptance Test)** trước khi đóng ticket: kiểm tra 5 địa chỉ Modbus phản hồi đúng, camera RTSP ổn định, kết nối 4G, relay đóng/ngắt đúng. **[v1.22.0]** Áp cho mọi ticket có buổi đến hiện trường: `INSTALLATION`, `MAINTENANCE`, và ticket báo lỗi đã có `scheduled_visit_at` (Flow 9 bước 6b "chạy lại checklist SAT"); ticket báo lỗi xử lý xong từ xa (không có lịch hẹn) đóng thẳng, không dùng SAT                                                                                                                  | Bắt buộc | ✅ Xong                                                                    |
+| TICKET-FR-010 | Với ticket "Lắp đặt mới", Technician bắt buộc hoàn thành **checklist nghiệm thu (Site Acceptance Test)** trước khi đóng ticket: kiểm tra 5 địa chỉ Modbus phản hồi đúng, camera RTSP ổn định, kết nối Internet, relay đóng/ngắt đúng. **[v1.22.0]** Áp cho mọi ticket có buổi đến hiện trường: `INSTALLATION`, `MAINTENANCE`, và ticket báo lỗi đã có `scheduled_visit_at` (Flow 9 bước 6b "chạy lại checklist SAT"); ticket báo lỗi xử lý xong từ xa (không có lịch hẹn) đóng thẳng, không dùng SAT                                                                                                                  | Bắt buộc | ✅ Xong                                                                    |
 | TICKET-FR-011 | Farm Owner đánh giá mức độ hài lòng (1–5 sao) sau khi ticket đóng                                                                                                                                                                                                                                                                               | Tùy chọn | ✅ Xong                                                                    |
 | TICKET-FR-012 | Administrator xem dashboard KPI: số ticket mở/đóng theo Technician, thời gian xử lý trung bình, tỉ lệ đúng SLA                                                                                                                                                                                                                                  | Bắt buộc | ✅ Xong (`GET /tickets/kpi`: loại ticket bị huỷ khỏi thời gian xử lý; tỉ lệ SLA tính trên mọi ticket đã tới hạn gồm cả ticket còn treo; theo từng Technician có tên, thời gian xử lý và tỉ lệ SLA riêng. Technician xem số liệu của riêng mình qua `GET /tickets/stats/me` — đếm trên toàn DB thay vì trên vài chục ticket frontend đã tải) |
 | TICKET-FR-013 | Hệ thống hỗ trợ bảo trì định kỳ: Administrator/Technician lên lịch bảo trì theo Farm, tự tạo ticket loại `MAINTENANCE` khi đến hạn                                                                                                                                                                                                              | Tùy chọn | ✅ Xong (`/maintenance-schedules` CRUD + job mỗi giờ tạo ticket MAINTENANCE trước hạn `MAINTENANCE_LEAD_DAYS` ngày qua Ticket Router, chống tạo trùng, tự tắt lịch của farm đã xoá; tạo ticket lỗi thì trả hạn về để lượt sau thử lại, còn lỗi ở bước ghi dấu vết sau khi ticket đã tạo thì chỉ ghi log để không sinh ticket trùng cho cùng kỳ) |
@@ -784,7 +784,7 @@ flowchart TB
 
 ### 7.1. Hardware Bill of Materials (BOM v3.1 — Linh kiện Thực tế)
 
-> **[Cập nhật v1.8.0]** BOM được viết lại theo **linh kiện thật đã mua** (nhà cung cấp EPCB IoT Services). Chi tiết đầy đủ (register map, màu dây từng cảm biến, hướng dẫn đấu nối) xem file phụ lục `SwiftletCare_Components_Guide_v3.1.md` và sơ đồ tương tác `SwiftletCare_Wiring_Detailed_v3.html`.
+> **[Cập nhật v1.8.0]** BOM được viết lại theo **linh kiện thật đã mua** (nhà cung cấp EPCB IoT Services). Chi tiết đầy đủ (register map, màu dây từng cảm biến, hướng dẫn đấu nối) xem file phụ lục `SwiftletCare_Components_Guide_v3.11.md`.
 
 **Cụm IoT Controller hiện tại (5 cảm biến giám sát, chưa có Relay):**
 
@@ -803,7 +803,7 @@ flowchart TB
 | 11  | **Mạch hạ áp #2**                                    | **Buck LM2596 3A** (thứ 2)                                                                       |    —     | —     | 12V→5V cho PAM8403 + DFPlayer + relay (tải nặng) |
 | 12  | **Domino phân phối**                                 | **TB1504 (4 mối, 15A/600V)**                                                                     |    —     | —     | Chia nguồn 12V                                   |
 | 13  | Dây điện nhiều lõi (mỏng)                            | —                                                                                                |    —     | —     | Đấu nối                                          |
-| 14  | Router 4G LTE                                        | (giữ nguyên)                                                                                     |    —     | —     | Phát Wi-Fi/Internet cho ESP32                    |
+| 14  | Modem cáp quang (nhà mạng cấp) | IP tĩnh; mở một cổng chuyển tiếp RTSP cho nút AI (Flow 1b) |    —     | —     | Phát Wi-Fi/Internet cho ESP32; đường kéo luồng camera |
 | 15  | **Module 4 Relay 5V opto cách ly kích H/L (Jumper)** | 250VAC-10A/30VDC-10A, ~200mA/relay, chọn mức kích High/Low                                       |    —     | 5V    | Điều khiển 3 actuator + 1 dự phòng               |
 | 16  | Máy phun sương                                       | Bơm/vỉ phun (12V DC hoặc 220VAC)                                                                 |    —     | tải   | Tăng ẩm — kênh Relay IN1 (GPIO25)                |
 | 17  | Loa ru (dẫn dụ chim yến)                             | Loa + amply (thường 220VAC)                                                                      |    —     | tải   | Dẫn dụ chim — kênh Relay IN2 (GPIO26), theo lịch |
@@ -813,6 +813,8 @@ flowchart TB
 | 21  | **Thẻ microSD**                                      | ≤32GB FAT32                                                                                      |    —     | —     | Chứa file âm thanh loa ru                        |
 | 22  | Điện trở 1kΩ                                         | —                                                                                                |    —     | —     | Bảo vệ chân RX DFPlayer                          |
 | 23  | **Công tắc xoay 3 vị trí (Auto/Off/Hand)** ×2        | Loại gắn mặt tủ, dòng định mức lớn hơn dòng của bơm và quạt; nên có tiếp điểm phụ               |    —     | tải   | **[v2.0.0]** Bypass vật lý cho bơm và quạt (ENV-FR-023) — chưa mua |
+| 24  | **Camera IP đếm chim** | **TP-Link VIGI C320I ống kính 6 mm** (2MP, IR 850 nm, IP66, RTSP) |    —     | PoE   | **[v2.1.2]** Quay cửa chim ra vào cho nút AI (Module VISION) — đã mua |
+| 25  | **Bộ cấp nguồn PoE** | **TP-Link TL-POE150S** |    —     | 220V  | **[v2.1.2]** Cấp nguồn + dữ liệu cho camera qua một dây mạng — đã mua |
 
 > **Ghi chú BOM v3.3 (linh kiện thực tế):**
 >
@@ -824,8 +826,8 @@ flowchart TB
 > - **Domino TB1504 (4 mối, 15A/600V)** phân phối nguồn 12V — dư sức tải.
 > - **Module RS485 V2 là loại tự động**, đấu THẲNG TX/RX (không đấu chéo).
 > - **Relay: module 4 kênh 5V opto cách ly kích H/L chọn bằng Jumper** — **đặt Jumper ở kích mức CAO (High)**: `digitalWrite(pin, HIGH)` = bật (logic trực quan). Tiếp điểm 250VAC-10A đóng được tải 220V. 3 kênh: phun sương (IN1/GPIO25)/loa ru (IN2/GPIO26)/quạt (IN3/GPIO27), 1 dự phòng (IN4/GPIO14).
-> - **Loa ru:** **DFPlayer Mini** (đọc MP3/WAV/WMA từ microSD ≤32GB, hỗ trợ thư mục ≤100×255 bài) → **PAM8403 6W có núm volume** khuếch đại → loa. Relay IN2 đóng/ngắt nguồn amply. Điều khiển play/stop/volume theo lịch (5-7h, 17-19h). Chi tiết: xem phụ lục `SwiftletCare_Components_Guide_v3.3.md`.
-> - **Camera (nhánh Vision):** camera nhà yến IP 2MP **IR 940nm không phát sáng** (không làm chim sợ), ống kính 2.8mm góc rộng, IP66+, RTSP — xem `SwiftletCare_Camera_Guide_NhaYen_Full.md`. Chạy AI trên laptop (không cần RPi/PoE ngay).
+> - **Loa ru:** **DFPlayer Mini** (đọc MP3/WAV/WMA từ microSD ≤32GB, hỗ trợ thư mục ≤100×255 bài) → **PAM8403 6W có núm volume** khuếch đại → loa. Relay IN2 đóng/ngắt nguồn amply. Điều khiển play/stop/volume theo lịch (5-7h, 17-19h). Chi tiết: xem phụ lục `SwiftletCare_Components_Guide_v3.11.md`.
+> - **Camera (nhánh Vision) — đã mua (v2.1.2):** **TP-Link VIGI C320I ống kính 6 mm** — camera IP 2MP, hồng ngoại **850 nm**, IP66, RTSP; nguồn và dữ liệu đi chung một dây mạng qua bộ cấp PoE **TP-Link TL-POE150S**, cắm vào modem nhà yến. Nút AI kéo luồng RTSP qua Internet (Flow 1b). Đèn 850 nm phát ánh đỏ mờ nhìn thấy được → phải kiểm chứng chim không bị ảnh hưởng trước khi dùng lâu dài (`docs/bird-counting-plan.md` mục 19.5, cổng kiểm tra 6). Camera không có sấy kính chống đọng sương: đặt tránh hướng vòi phun và kiểm tra hình ở hai khung giờ chim ra vào trước khi thu dữ liệu.
 > - **Đã bỏ so với thiết kế cũ:** cảm biến H2S + TVOC + nhiệt-ẩm ngoài trời, cầu chì rời, điện trở terminator rời, nguồn tổ ong, relay Modbus RS485, Camera PoE 4MP Starlight, Switch PoE.
 > - **⚠️ Ngân sách nguồn:** nhánh Buck #2 có thể chạm 2.1A khi loa phát hết công suất + 3 relay đóng. **Nếu loa ru công suất lớn → cấp nguồn 220VAC riêng cho amply/loa** (relay IN2 đóng/ngắt 220V), hoặc nâng adapter lên 12V/3A-5A.
 > - **Cần bổ sung:** đầu jack DC cái để đấu adapter vào domino.
@@ -1730,32 +1732,36 @@ TICKET_CHAT_ASSIGNEE_CHANGED: { ticketId, oldAssigneeId, newAssigneeId }
     toàn bộ các bước 5-7 tại hiện trường trước khi báo hỏng thiết bị
 ```
 
-### Flow 1b: Onboarding AI Camera Node (Raspberry Pi) — Technician thực hiện
+### Flow 1b: Onboarding Camera đếm chim & Nút AI — Technician thực hiện
 
-> **[v2.0.0]** Nút AI không còn là Raspberry Pi mà là PC tại nhà yến hoặc máy chủ cloud; "RPi" trong các bước dưới đọc là "nút AI". Cách cài đặt và cấu hình thực tế theo `docs/bird-counting-plan.md`.
+> **[Viết lại v2.1.2]** Theo phương án hiện hành trong `docs/bird-counting-plan.md`: camera IP đặt tại cửa chim ra vào, nút AI là máy chủ kéo luồng RTSP của camera qua Internet (không còn Raspberry Pi, không đặt máy tính tại nhà yến). Nếu về sau đặt nút AI là PC cùng LAN với camera thì bỏ bước 2.
 
 ```
-1. Technician lắp đặt Camera IP PoE + Raspberry Pi tại Zone, đấu nối PoE Switch.
-2. Technician mở Web Console Onboarding → chọn Farm → House → Zone → loại thiết bị
-   "AI Camera Node" → quét/nhập Node ID + secretKey (dán sẵn trên vỏ RPi).
-3. Web Console gửi POST /devices/camera-nodes/register {nodeId, secretKey, zoneId, rtspUrl}
-4. Backend tạo camera_node record, trả về {mqttCredentials, streamConfig}
-5. Technician cấu hình RTSP URL của Camera IP PoE vào RPi (qua màn hình HDMI tạm thời
-   hoặc SSH) và nhập WiFi/LAN nếu cần
-6. RPi khởi động service AI (PM2) → kết nối MQTT Broker → publish heartbeat đầu tiên
-7. RPi chạy self-test: đọc thử 10 frame từ RTSP, xác nhận FPS ≥ 25 trước khi báo ONLINE
+1. Technician lắp Camera IP tại cửa chim ra vào, cấp nguồn qua PoE, nối LAN vào modem
+   nhà yến; đặt IP LAN cố định cho camera và tạo tài khoản RTSP riêng (không dùng tài
+   khoản quản trị mặc định).
+2. Technician mở MỘT cổng trên modem chuyển tiếp tới cổng RTSP của camera (nhà yến
+   dùng Internet cáp quang có IP tĩnh); nếu modem hỗ trợ thì chỉ cho phép IP của nút AI.
+3. Technician mở Web Console Onboarding → chọn Farm → House → Zone → loại thiết bị
+   "AI Camera Node" → nhập Node ID + secretKey (cấp kèm nút AI).
+4. Web Console gửi POST /devices/camera-nodes/register {nodeId, secretKey, zoneId, rtspUrl}
+5. Backend tạo camera_node record, trả về {mqttCredentials, streamConfig}
+6. Đưa RTSP URL và MQTT credentials vào cấu hình của nút AI rồi khởi động service AI
+   (tự khởi động lại khi crash — REL-NFR-004) → kết nối MQTT Broker → publish heartbeat
+   đầu tiên
+7. Nút AI chạy self-test: đọc thử luồng RTSP, xác nhận nhận đủ khung hình theo tốc độ
+   cấu hình của camera trước khi báo ONLINE
 8. Backend cập nhật status ONLINE → Web Console hiển thị "Camera đã kết nối thành công"
    kèm ảnh preview 1 frame → Technician xác nhận bàn giao
-9. Nếu self-test thất bại (FPS thấp hoặc RTSP timeout) → Web Console hiển thị lỗi cụ thể
-   và gợi ý khắc phục (kiểm tra dây LAN, nguồn PoE) ngay tại hiện trường
+9. Nếu self-test thất bại (thiếu khung hình hoặc RTSP timeout) → Web Console hiển thị lỗi
+   cụ thể và gợi ý khắc phục (dây LAN, nguồn PoE, cổng mở trên modem, tài khoản RTSP)
 
 --- Trường hợp lỗi/ngoại lệ ---
-3a. secretKey sai hoặc nodeId đã đăng ký cho Farm khác → giống Flow 1 bước 3a, không
+4a. secretKey sai hoặc nodeId đã đăng ký cho Farm khác → giống Flow 1 bước 3a, không
     tạo camera_node record
-9a. Self-test thất bại lặp lại > 3 lần liên tiếp (đã kiểm tra dây/nguồn) → Technician
+9a. Self-test thất bại lặp lại > 3 lần liên tiếp (đã kiểm tra dây/nguồn/cổng) → Technician
     tạo Ticket loại `SENSOR_FAULT` ngay tại chỗ (không cần rời farm rồi Farm Owner
-    phải tạo lại) để theo dõi lịch sử xử lý, nghi ngờ lỗi phần cứng Camera/RPi cần
-    đổi máy
+    phải tạo lại) để theo dõi lịch sử xử lý, nghi ngờ lỗi camera hoặc đường truyền
 ```
 
 ### Flow 2: Closed-loop Environmental Control
@@ -1780,7 +1786,7 @@ TICKET_CHAT_ASSIGNEE_CHANGED: { ticketId, oldAssigneeId, newAssigneeId }
 ```
 0. (Bối cảnh) 5:30–7:00 sáng cùng ngày, Nút AI đã chạy "Morning Session" (session_type: MORNING_EXIT) tương tự các bước 1–7 bên dưới nhưng đếm theo chiều ra → kết thúc lưu exit_count = 1823 vào `bird_count_records`
 1. 17:30 - Nút AI bắt đầu "Evening Session" mode (tăng độ nhạy detection)
-2. Camera stream RTSP → Nút AI decode frame @ 30FPS
+2. Camera stream RTSP → Nút AI decode frame theo tốc độ của camera (25 fps)
 3. YOLOv8 detect: [{class: "swiftlet", bbox: [x,y,w,h], conf: 0.92}]
 4. ByteTrack assign Track ID: track_id=15
 5. Frame t+1: track_id=15 vượt qua crossing line → direction: INWARD
@@ -1910,7 +1916,7 @@ TICKET_CHAT_ASSIGNEE_CHANGED: { ticketId, oldAssigneeId, newAssigneeId }
    rồi thực hiện Flow 1 (Onboarding Thiết bị qua Web Console) để kích hoạt thiết bị
    vào đúng Zone — ticket vẫn ở status `ĐANG XỬ LÝ` trong suốt quá trình này
 6. **Chờ xác nhận hiện trường:** Technician hoàn thành checklist nghiệm thu SAT
-   (TICKET-FR-010: 5 địa chỉ Modbus, camera RTSP, kết nối 4G, relay đóng/ngắt) →
+   (TICKET-FR-010: 5 địa chỉ Modbus, camera RTSP, kết nối Internet, relay đóng/ngắt) →
    cập nhật ticket status: `ĐANG XỬ LÝ` → `CHỜ XÁC NHẬN HIỆN TRƯỜNG`
 7. **Đóng ticket:** sau khi checklist đạt, Technician đóng ticket → status:
    `CHỜ XÁC NHẬN HIỆN TRƯỜNG` → `ĐÃ ĐÓNG` (mỗi bước đổi trạng thái đều ghi log kèm
@@ -1962,7 +1968,7 @@ TICKET_CHAT_ASSIGNEE_CHANGED: { ticketId, oldAssigneeId, newAssigneeId }
 1a. Email/SĐT đã tồn tại → hệ thống báo lỗi, gợi ý "Quên mật khẩu" (Flow 11 bước
     dưới) thay vì tạo trùng tài khoản
 2a. OTP sai quá 5 lần hoặc hết hạn (TTL mặc định 5 phút) → yêu cầu gửi lại OTP mới,
-    khoá tạm gửi OTP 60 giây/lần để chống spam SMS/email
+    khoá tạm gửi OTP 60 giây/lần để chống spam email
 3a. Sai mật khẩu quá 5 lần liên tiếp trong 15 phút → khoá đăng nhập tạm thời 15 phút
     cho tài khoản đó (không phải khoá vĩnh viễn như AUTH-FR-011 do Admin) — chống
     brute-force, không cần code CAPTCHA riêng cho phạm vi KLTN
@@ -2664,7 +2670,7 @@ flowchart LR
 
 ### 16.1. Giả định (Assumptions)
 
-- Trang trại thử nghiệm có sẵn nguồn điện 220V ổn định và kết nối 4G khả dụng tại vị trí lắp đặt.
+- Trang trại thử nghiệm có sẵn nguồn điện 220V ổn định và kết nối Internet cố định (cáp quang) khả dụng tại vị trí lắp đặt.
 - Chủ nhà yến hợp tác đồng ý cho lắp thiết bị thử nghiệm ít nhất 1 tháng để thu thập dữ liệu thực tế.
 - Nhóm có quyền truy cập GPU (Google Colab/Kaggle) đủ để train YOLOv8 trong thời gian Phase 3.
 - Các thư viện/framework mã nguồn mở (YOLOv8, ByteTrack, EMQX, v.v.) giữ nguyên license miễn phí trong suốt thời gian dự án.
@@ -2827,5 +2833,6 @@ _Tài liệu SRS này được tạo ngày 07/09/2026. Mọi thay đổi yêu c�
 | 2.0.0 | 10/10/2026 | **Chỉnh phạm vi theo phiếu đăng ký v2 sau Review 1 (hội đồng: "giống platform hơn là system").** (1) Thêm **mục 0** — quyết định phạm vi, vai trò, đối chiếu luồng chính, danh sách việc cần sửa code theo module. (2) **Bỏ Buyer + Marketplace** (MARKET-FR-006..013, Flow 7 phần bán, `nest_listings`, `contact_inquiries`, `/marketplace/*`); mục 5.8 thành ghi nhận thu hoạch. (3) **Domain Expert thay Farm Operator** (role `DOMAIN_EXPERT`, cả farm, bỏ `zone_ids`): mục 2.2, 4, RACI 4.4, AUTH-FR-004/005, Flow 12; thêm **Module EXPERT (5.12)** — kiểm chứng cảnh báo suy luận, duyệt thông số, báo cáo sức khỏe Zone, kết luận. (4) **Bỏ phát hiện thiên địch** (THREAT-FR-001..004, Flow 4); VISION còn 1 class, live stream có khung thành bắt buộc, nút AI là PC/máy chủ thay Raspberry Pi, thêm VISION-FR-016 (đánh giá độ chính xác). (5) **Âm thanh chỉ ở mức ồn**: `BIRD_PANIC` → `NOISE_ANOMALY`, không kết luận một mình (Flow 25). (6) **Bỏ sưởi** (ENV-FR-012). (7) **NH3/CO2 chỉ cảnh báo**, quạt chỉ theo nhiệt-ẩm (ENV-FR-011, ALERT-FR-012, Flow 24). (8) **Bỏ Zalo/SMS**; thêm kênh Telegram bot (ALERT-FR-013), phiếu cam kết "Telegram bot hoặc push". (9) Can thiệp tay là đường ngoại lệ: lịch sử override (ENV-FR-019), tỷ lệ tự động (ANALYTICS-FR-011), công tắc bypass (ENV-FR-023, Flow 28). (10) Tự bảo vệ: bơm khô tự ngừng phun (Flow 27), cảm biến lỗi về trạng thái an toàn. (11) Technician/ticket/Admin thành luồng phụ. (12) Bằng chứng: mục 6.8, 13.6; RISK-10..12. Cột trạng thái đánh dấu `🔄 Cần sửa code (v2.0.0)` ở những chỗ code còn theo phạm vi cũ |
 | 2.1.0 | 12/10/2026 | **Tham số phát hiện chỉnh được theo Zone (EXPERT-FR-008).** Sáu ngưỡng phát hiện trước đây là hằng số trong code (ồn bất thường: +15 dB / 10 giây; bơm chạy khô: 5 phút / 2%; hỏng loa: giảm 70%; tỷ lệ chim về giảm 20%) nay do Domain Expert chỉnh theo Zone: `zones.detection_tuning` + lịch sử, `PUT /farms/zones/:zoneId/detection-tuning`, 5 tham số gửi xuống ESP32 qua `config/update`. Cập nhật THREAT-FR-006/007/011, VISION-FR-011, RACI 4.4, Flow 25/26, mục 0.2 (quyết định 13) và 0.5. Phiếu đăng ký v2 bổ sung ý này ở phần Tuning của Domain Expert. Cùng đợt (10–12/10): thêm kênh Telegram (ALERT-FR-013), sửa ENV-FR-002/013 và các chỗ lệch phiếu khác |
 | 2.1.1 | 12/10/2026 | **Rà soát kế hoạch đếm chim (`docs/bird-counting-plan.md`).** (1) Sửa cột trạng thái VISION-FR-006/008/009/011 cho đúng code: backend mới có phần đọc, handler chỉ ghi log. (2) VISION-FR-009: tỷ lệ chim về tính trên số ròng. (3) **VISION-FR-017 mới:** số đếm theo khoảng 5 phút cả ngày (`bird_count_buckets`, `GET /analytics/bird-count/buckets`) làm dữ liệu đối chiếu cho cảnh báo ồn bất thường. (4) VISION-FR-011: cảnh báo do job chạy sau phiên chiều. (5) Mục 13.5: bỏ mục tiêu sai số ≤ 5% không có căn cứ, thay bằng báo cáo số đo |
+| 2.1.2 | 13/10/2026 | **Rà soát sau khi gộp `develop`, sửa chi tiết triển khai (không đổi phạm vi).** (1) **Flow 1b viết lại** theo phương án hiện hành: camera IP cấp nguồn PoE tại cửa chim, nút AI là máy chủ kéo RTSP qua một cổng chuyển tiếp trên modem — bỏ các bước thao tác trên Raspberry Pi. (2) Mạng nhà yến là **Internet cáp quang có IP tĩnh** thay cho router 4G: sơ đồ mục 3.1, BOM dòng 14, giả định mục 16.1, mục kiểm tra kết nối trong checklist nghiệm thu (TICKET-FR-010, Flow 9b). (3) Flow 3 dùng cùng tốc độ khung hình 25 fps như các mục khác. (4) Flow 11: OTP gửi qua email, bỏ chữ SMS. (5) Sửa tên file phụ lục về `SwiftletCare_Components_Guide_v3.11.md`; ghi rõ hai tài liệu tham chiếu không lưu trong repo. (6) **Camera đã mua:** TP-Link VIGI C320I ống kính 6 mm (2MP, IR 850 nm) + bộ cấp PoE TP-Link TL-POE150S — thêm BOM dòng 24–25, viết lại ghi chú camera mục 7.1 (bản cũ ghi IR 940 nm, ống 2.8 mm); đèn 850 nm phải qua cổng kiểm tra 6 của kế hoạch đếm chim. |
 
-_Phiên bản hiện tại: 2.1.1 | Ngày cập nhật: 12/10/2026 | Trạng thái: DRAFT — phạm vi theo phiếu đăng ký v2 sau Review 1 (mục 0). **4 actor:** Farm Owner, Domain Expert (luồng chính); Technician, Administrator (luồng phụ). Code hiện tại còn theo phạm vi v1.24.0 ở nhiều chỗ — danh sách việc cần sửa ở mục 0.5 và các dòng `🔄 Cần sửa code (v2.0.0)`._
+_Phiên bản hiện tại: 2.1.2 | Ngày cập nhật: 13/10/2026 | Trạng thái: DRAFT — phạm vi theo phiếu đăng ký v2 sau Review 1 (mục 0). **4 actor:** Farm Owner, Domain Expert (luồng chính); Technician, Administrator (luồng phụ). Code hiện tại còn theo phạm vi v1.24.0 ở nhiều chỗ — danh sách việc cần sửa ở mục 0.5 và các dòng `🔄 Cần sửa code (v2.0.0)`._

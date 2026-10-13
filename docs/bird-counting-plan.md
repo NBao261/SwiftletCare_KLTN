@@ -37,7 +37,7 @@
 ```
 NHÀ YẾN                                          CLOUD (VPS, có tên miền + HTTPS)
 ───────                                          ────────────────────────────────
-Camera IP (RTSP, H.264, 20 fps)
+Camera IP (RTSP, H.264, 25 fps)
    │ Wi-Fi/LAN
    ▼
 Modem VNPT (IP public, mở 1 cổng về camera) ──Internet──► MediaMTX kéo hình gốc  "cam-<id>-raw"
@@ -118,7 +118,7 @@ SRS trước v2.1 ghi VISION-FR-008/009/011 là "✅ Xong", nhưng thực tế c
 | Tên miền | Tên miền thật | 0đ nếu lấy qua gói sinh viên | Cần để có HTTPS và chứng chỉ cho MQTT/video |
 | Internet tại nhà yến | Cáp quang VNPT, IP public; upload từ khoảng 10 Mbps | Cước hằng tháng theo gói | VPS kéo hình thẳng từ camera qua cổng mở trên modem (mục 19) |
 | Camera (đã có) | Camera trong nhà 2K của VNPT, tặng kèm gói mạng | 0đ | Dùng được nếu lấy được RTSP; 20 khung hình/giây, góc rộng (mục 19.3) |
-| Camera | Camera IP có RTSP, H.264, 25–30 fps, có IR | vài trăm nghìn – khoảng 1 triệu | Ưu tiên có cổng LAN; Wi-Fi dễ rớt frame |
+| Camera (đã mua) | TP-Link VIGI C320I ống kính 6 mm (2MP, IR 850 nm, RTSP) + bộ cấp PoE TP-Link TL-POE150S | đã mua | Camera chính cho đếm chim; nối dây LAN vào modem, không phụ thuộc Wi-Fi |
 | Camera tạm | Điện thoại Android cũ + app IP Webcam | 0đ | Đủ để thu dữ liệu và demo |
 | Mạng | Router/switch sẵn có, cáp LAN | — | PC và camera cùng một LAN |
 | Lưu clip | Ổ cứng còn trống khoảng 20 GB | — | 1 giờ H.264 1080p ≈ 1–2 GB |
@@ -130,7 +130,7 @@ Giá là ước lượng, cần kiểm tra lại khi mua. Cập nhật `docs/har
 - Có **RTSP** (kiểm tra trước khi mua; một số camera Wi-Fi giá rẻ phải bật trong app).
 - Codec **H.264** (H.265 giải mã bằng CPU tốn hơn nhiều).
 - 1080p, 25–30 fps, ống kính cố định (không xoay, không zoom tự động).
-- Có IR để dùng lúc chạng vạng (VISION-FR-007). Ưu tiên IR **940 nm** (không phát ánh đỏ): SRS mục 7.1 chọn loại này để không làm chim sợ. Camera IR 850 nm phát ánh đỏ mờ nhìn thấy được, phải qua cổng kiểm tra 6 ở mục 19.5 trước khi dùng lâu dài.
+- Có IR để dùng lúc chạng vạng (VISION-FR-007). IR **940 nm** không phát ánh đỏ nên an toàn hơn với chim. Camera đã mua (TP-Link VIGI C320I ống kính 6 mm) dùng IR **850 nm**, phát ánh đỏ mờ nhìn thấy được, phải qua cổng kiểm tra 6 ở mục 19.5 trước khi dùng lâu dài.
 - Nếu chỉnh được: giảm thời gian phơi sáng (shutter nhanh) để chim bớt nhòe.
 
 ### 3.3. Cách lắp — quyết định độ chính xác nhiều hơn model
@@ -2614,6 +2614,8 @@ Camera ──Wi-Fi──► modem VNPT (IP public, mở 1 cổng về camera) �
 
 ### 19.3. Camera VNPT: kiểm tra và cài đặt
 
+> **Cập nhật 13/10/2026:** nhóm đã mua **TP-Link VIGI C320I ống kính 6 mm** (2MP, IR 850 nm) kèm bộ cấp PoE TP-Link TL-POE150S và dùng nó làm camera chính, nối dây LAN vào modem. Camera VNPT mô tả dưới đây chỉ còn là phương án dự phòng; các bước liên quan tới Wi-Fi của camera (mục 19.2 việc 5) không áp dụng cho camera nối dây. Các cổng kiểm tra ở mục 19.5 vẫn áp dụng nguyên cho camera mới.
+
 Camera tặng kèm nhiều khả năng là **VNPT Smart Camera IS310P** (suy ra từ mô tả; kiểm tra mã trên nhãn). Thông số theo trang của VNPT Technology:
 
 | Thông số | Giá trị | Ảnh hưởng |
@@ -2622,7 +2624,7 @@ Camera tặng kèm nhiều khả năng là **VNPT Smart Camera IS310P** (suy ra 
 | Độ phân giải | 2304 × 1296, hai luồng | Tốt |
 | Tốc độ khung hình | 20 khung hình/giây | Thấp hơn mức 25–30 mong muốn; chim di chuyển xa hơn giữa hai khung. Bù lại nhẹ cho VPS |
 | Ống kính | Cố định 3,2 mm, góc ngang khoảng 77° | Góc rộng → chim nhỏ; đặt camera cách lỗ ra vào khoảng 1–2 m |
-| Hồng ngoại | Tầm 10 m, 850 nm | Đủ cho chạng vạng. **Lưu ý:** đèn 850 nm phát ánh đỏ mờ nhìn thấy được, trong khi SRS mục 7.1 chọn camera IR 940 nm để không làm chim sợ → phải qua cổng 6 (mục 19.5) |
+| Hồng ngoại | Tầm 10 m, 850 nm | Đủ cho chạng vạng. **Lưu ý:** đèn 850 nm phát ánh đỏ mờ nhìn thấy được → phải qua cổng 6 (mục 19.5) |
 | Thẻ nhớ | microSD tới 256 GB, ghi liên tục | Dùng thu dữ liệu train và làm chuẩn so sánh (cổng 4) |
 | Mạng | Wi-Fi 2,4 GHz | Phụ thuộc chất lượng sóng |
 | Môi trường | 0–45°C, độ ẩm tới 95% không ngưng tụ | Sát giới hạn nhà yến; đặt xa vòi phun sương |
