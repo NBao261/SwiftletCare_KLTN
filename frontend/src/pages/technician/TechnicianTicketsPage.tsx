@@ -99,6 +99,7 @@ export default function TechnicianTicketsPage() {
             onPage={setPage}
             onUpdateStatus={setStatusModal}
             onReassign={setReassignModal}
+            sortable={isOverdueActive}
           />
         )}
       </Card>

@@ -60,8 +60,10 @@ export const TicketTableRow = memo(function TicketTableRow({
   const canAct = isTicketAssignee(ticket, userId)
 
   const actionItems: ActionsMenuItem[] = []
-  if (canAct && ticket.status !== 'CLOSED' && ticket.status !== 'NEW') {
-    actionItems.push({ label: 'Cập nhật', onClick: () => onUpdateStatus(ticket) })
+  if (canAct && !isClosed) {
+    // NEW: "Tiếp nhận" là nút chính bên ngoài; các trạng thái khác có "Cập nhật" trong menu
+    if (ticket.status !== 'NEW') actionItems.push({ label: 'Cập nhật', onClick: () => onUpdateStatus(ticket) })
+    // Giữ như bản develop: mọi ticket chưa đóng (kể cả NEW) đều gán lại được
     actionItems.push({ label: 'Gán lại', onClick: () => onReassign(ticket) })
   }
 
@@ -108,8 +110,8 @@ export const TicketTableRow = memo(function TicketTableRow({
 
       {/* Actions — chặn click không lan ra row */}
       <td className="py-3 pr-5 text-center" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-center">
-          {canAct && ticket.status === 'NEW' ? (
+        <div className="flex items-center justify-center gap-1">
+          {canAct && ticket.status === 'NEW' && (
             <button
               type="button"
               onClick={() => onUpdateStatus(ticket)}
@@ -117,7 +119,8 @@ export const TicketTableRow = memo(function TicketTableRow({
             >
               Tiếp nhận
             </button>
-          ) : actionItems.length > 0 ? (
+          )}
+          {actionItems.length > 0 ? (
             <ActionsMenu items={actionItems} />
           ) : (
             <button

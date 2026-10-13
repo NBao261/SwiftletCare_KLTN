@@ -13,14 +13,11 @@ import { STATUS_LABEL } from '@/constants/tickets'
 const FILTERABLE_STATUSES: TicketStatus[] = ['NEW', 'IN_PROGRESS', 'AWAITING_FIELD_CONFIRMATION', 'CLOSED']
 
 /**
- * Sort keys hợp lệ theo context:
- * - Khi overdue active: sort Trạng thái ít nghĩa (tập trung vào SLA/Priority)
- * - Khi filterStatus = IN_PROGRESS: tất cả cùng status → ẩn sort Trạng thái
- * - Còn lại: hiển thị đủ 4 keys
+ * Sort keys hợp lệ — chỉ có ở tab Quá hạn SLA (đã tải toàn bộ, sort client đúng trên mọi trang).
+ * Các tab phân trang server giữ thứ tự backend (created_at desc) vì GET /tickets chưa có tham số sort.
  */
-function getValidSortKeys(isOverdueActive: boolean, filterStatus: TicketStatus | ''): SortKey[] {
-  if (isOverdueActive || filterStatus === 'IN_PROGRESS') return ['sla', 'created_at']
-  return ['sla', 'created_at', 'status']
+function getValidSortKeys(isOverdueActive: boolean): SortKey[] {
+  return isOverdueActive ? ['sla', 'created_at'] : []
 }
 
 interface Props {
@@ -61,7 +58,7 @@ export const TicketToolbar = memo(function TicketToolbar({
   isLoading,
   overdueTotal,
 }: Props) {
-  const validSortKeys = getValidSortKeys(isOverdueActive, filterStatus)
+  const validSortKeys = getValidSortKeys(isOverdueActive)
 
   // Có đang áp dụng bộ lọc nào không (để hiển thị nút "Hủy lọc")
   // Lưu ý: `search` không được đưa vào hasActiveFilters vì search đang disabled (chưa có BE hỗ trợ)
@@ -69,8 +66,8 @@ export const TicketToolbar = memo(function TicketToolbar({
     filterStatus !== '' ||
     isOverdueActive ||
     isQueueActive ||
-    sortKey !== 'status' ||
-    sortDir !== 'asc'
+    sortKey !== 'created_at' ||
+    sortDir !== 'desc'
 
   return (
     <div className="flex flex-col gap-3">
@@ -88,9 +85,6 @@ export const TicketToolbar = memo(function TicketToolbar({
             className="cursor-not-allowed opacity-50"
           />
         </div>
-
-
-
 
       </div>
 
@@ -148,14 +142,18 @@ export const TicketToolbar = memo(function TicketToolbar({
           )}
         </div>
 
-        {/* Sort buttons — keys hợp lệ thay đổi theo context */}
+        {/* Sort — chỉ bật ở tab Quá hạn SLA; tab khác hiển thị thứ tự cố định của backend */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="label-caption">Sắp xếp:</span>
+          {validSortKeys.length === 0 && (
+            <span className="text-xs font-semibold text-warmGray">Mới nhất trước</span>
+          )}
           {validSortKeys.map(k => {
             const active = sortKey === k
             return (
               <button
                 key={k}
+                type="button"
                 onClick={() => onSort(k)}
                 className={cn(
                   'inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
@@ -169,8 +167,6 @@ export const TicketToolbar = memo(function TicketToolbar({
           })}
         </div>
       </div>
-
-
 
       {/* Cảnh báo: overdue > 100 ticket */}
       {isOverdueActive && !isLoading && overdueTotal > 100 && (

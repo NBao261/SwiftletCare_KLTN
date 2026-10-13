@@ -11,6 +11,9 @@ import { PAGE_SIZE } from '@/components/features/technician/tickets/ticketListTy
 import type { Ticket, TicketStatus } from '@/types'
 import type { TechTab, SortKey, SortDir } from '@/components/features/technician/tickets/ticketListTypes'
 
+const DEFAULT_SORT_KEY: SortKey = 'created_at'
+const DEFAULT_SORT_DIR: SortDir = 'desc'
+
 export interface TicketsPageState {
   // isOverdueActive thay thế activeTab trong public API — TicketToolbar không cần biết về TechTab
   isOverdueActive: boolean
@@ -55,8 +58,9 @@ export interface TicketsPageData {
 export function useTicketsPageData(): TicketsPageState & TicketsPageActions & TicketsPageData {
   // ── UI State ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TechTab>('mine')
-  const [sortKey, setSortKey] = useState<SortKey>('status')
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  // Mặc định khớp thứ tự backend (GET /tickets luôn trả created_at desc, chưa có tham số sort)
+  const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY)
+  const [sortDir, setSortDir] = useState<SortDir>(DEFAULT_SORT_DIR)
   const [filterStatus, setFilterStatus] = useState<TicketStatus | ''>('')
   const [page, setPage] = useState(1)
   const [statusModal, setStatusModal] = useState<Ticket | null>(null)
@@ -98,13 +102,12 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
   const total = isOverdue ? overdueQuery.total : serverQuery.total
   const isLoading = isOverdue ? overdueQuery.isLoading : serverQuery.isLoading
 
-  // Pipeline: overdue filter → status filter (overdue tab only, client-side bulk) → sort
-  // Lưu ý: filterBySearch đã được GỤ Bỏ — search đang disabled ở TicketToolbar (chưa có BE hỗ trợ).
-  // filterStatus được gửi xuống server (đã fix từ round 5), nên không cần client-filter ở tab mine/in_progress.
+  // Pipeline: overdue filter → status filter → sort — CHỈ áp dụng ở tab Quá hạn SLA (đã tải toàn bộ).
+  // Tab phân trang server giữ nguyên thứ tự backend: sort trên 1 trang 12 dòng sẽ làm lệch thứ tự giữa các trang.
+  // TODO [BE-GAP]: khi GET /tickets hỗ trợ ?sort=, gửi sortKey/sortDir xuống server.
   const filteredRecords = useMemo(() => {
-    let list = isOverdue ? records.filter(isSlaBreached) : records
-    // filterStatus trên overdue tab vẫn client-side (bulk data)
-    if (isOverdue) list = filterByStatus(list, filterStatus)
+    if (!isOverdue) return records
+    const list = filterByStatus(records.filter(isSlaBreached), filterStatus)
     return sortTickets(list, sortKey, sortDir)
   }, [records, isOverdue, filterStatus, sortKey, sortDir])
 
@@ -118,19 +121,21 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const resetPage = useCallback(() => setPage(1), [])
+  const resetSort = useCallback(() => { setSortKey(DEFAULT_SORT_KEY); setSortDir(DEFAULT_SORT_DIR) }, [])
 
   /** Toggle chế độ Quá hạn SLA — thay thế handleTabChange trong public API */
   const handleOverdueToggle = useCallback(() => {
     if (activeTab === 'overdue') {
-      // Tắt overdue → về tab 'mine' (tất cả)
+      // Tắt overdue → về tab 'mine' (tất cả), trả sort về thứ tự server
       setActiveTab('mine')
+      resetSort()
     } else {
       // Bật overdue → clear filter status để tránh conflict
       setActiveTab('overdue')
       setFilterStatus('')
     }
     resetPage()
-  }, [activeTab, resetPage])
+  }, [activeTab, resetPage, resetSort])
 
   /** Toggle "Hàng đợi chung" — clear filter status để tránh conflict */
   const handleQueueToggle = useCallback(() => {
@@ -140,8 +145,9 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
       setActiveTab('unassigned')
       setFilterStatus('')
     }
+    resetSort()
     resetPage()
-  }, [activeTab, resetPage])
+  }, [activeTab, resetPage, resetSort])
 
   const handleSort = useCallback((key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -149,23 +155,20 @@ export function useTicketsPageData(): TicketsPageState & TicketsPageActions & Ti
     resetPage()
   }, [sortKey, resetPage])
 
-
   const handleFilterStatusChange = useCallback((val: TicketStatus | '') => {
     // Nếu đang ở overdue / hàng đợi chung, click chip status → switch về mine
     if (activeTab === 'overdue' || activeTab === 'unassigned') setActiveTab('mine')
     setFilterStatus(val)
+    resetSort()
     resetPage()
-  }, [activeTab, resetPage])
+  }, [activeTab, resetPage, resetSort])
 
   const handleClearFilters = useCallback(() => {
     setActiveTab('mine')
     setFilterStatus('')
-    setSortKey('status')
-    setSortDir('asc')
+    resetSort()
     resetPage()
-  }, [resetPage])
-
-
+  }, [resetPage, resetSort])
 
   return {
     // State (public)

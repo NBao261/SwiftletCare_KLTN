@@ -16,12 +16,20 @@ interface Props {
   onPage: (p: number) => void
   onUpdateStatus: (t: Ticket) => void
   onReassign: (t: Ticket) => void
+  /** Chỉ true khi dữ liệu đã tải toàn bộ (tab Quá hạn SLA) — sort 1 trang server sẽ sai thứ tự giữa các trang */
+  sortable: boolean
 }
 
 export function TicketTableView({
   records, sortKey, sortDir, page, totalItems,
-  onSort, onPage, onUpdateStatus, onReassign,
+  onSort, onPage, onUpdateStatus, onReassign, sortable,
 }: Props) {
+  const sortHeader = (key: SortKey, label: string) => sortable ? (
+    <button type="button" className={`inline-flex items-center gap-1 transition-colors hover:text-charcoal ${sortKey === key ? 'text-charcoal' : ''}`} onClick={() => onSort(key)}>
+      {label}<SortIcon active={sortKey === key} dir={sortDir} />
+    </button>
+  ) : label
+
   return (
     <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
       <div className="overflow-x-auto">
@@ -35,19 +43,13 @@ export function TicketTableView({
                 Loại ticket
               </th>
               <th className="w-[20%] whitespace-nowrap py-3 pr-3 label-caption text-left">
-                <button type="button" className={`inline-flex items-center gap-1 transition-colors hover:text-charcoal ${sortKey === 'status' ? 'text-charcoal' : ''}`} onClick={() => onSort('status')}>
-                  Trạng thái<SortIcon active={sortKey === 'status'} dir={sortDir} />
-                </button>
+                {sortHeader('status', 'Trạng thái')}
               </th>
               <th className="w-[20%] whitespace-nowrap py-3 pr-3 label-caption text-left">
-                <button type="button" className={`inline-flex items-center gap-1 transition-colors hover:text-charcoal ${sortKey === 'sla' ? 'text-charcoal' : ''}`} onClick={() => onSort('sla')}>
-                  Thời hạn SLA<SortIcon active={sortKey === 'sla'} dir={sortDir} />
-                </button>
+                {sortHeader('sla', 'Thời hạn SLA')}
               </th>
               <th className="w-[14%] whitespace-nowrap py-3 pr-3 label-caption text-left">
-                <button type="button" className={`inline-flex items-center gap-1 transition-colors hover:text-charcoal ${sortKey === 'created_at' ? 'text-charcoal' : ''}`} onClick={() => onSort('created_at')}>
-                  Ngày tạo<SortIcon active={sortKey === 'created_at'} dir={sortDir} />
-                </button>
+                {sortHeader('created_at', 'Ngày tạo')}
               </th>
               <th className="w-[12%] py-3 pr-5 label-caption text-center">
                 Thao tác
