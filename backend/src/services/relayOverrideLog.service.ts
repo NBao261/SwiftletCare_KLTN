@@ -131,7 +131,9 @@ export async function listOverrideLogs(nodeId: string, user: CurrentUser, query:
   const filter = { node_id: node._id }
   const [records, total] = await Promise.all([
     RelayOverrideLog.find(filter).sort({ started_at: -1 }).skip(skip).limit(limit)
-      .populate('started_by', 'full_name email').lean(),
+      // Chỉ tên: Domain Expert đọc được route này, mà email thành viên thì cố ý giấu khỏi
+      // chuyên gia ở GET /farms (onlyOwnMembership)
+      .populate('started_by', 'full_name').lean(),
     RelayOverrideLog.countDocuments(filter),
   ])
   return { records, total, page, limit }

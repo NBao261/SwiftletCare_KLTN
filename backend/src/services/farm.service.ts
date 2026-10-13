@@ -6,7 +6,7 @@ import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import {
-  hasFarmAccess, hasZoneAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
+  hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
   assertZoneAccess,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
@@ -347,7 +347,7 @@ export async function listZones(houseId: string, user: CurrentUser) {
 /** ENV-FR-006 — GET đơn 1 Zone, chủ yếu để FE lấy `thresholds` hiện tại trước khi mở form sửa. */
 export async function getZone(zoneId: string, user: CurrentUser): Promise<IZone> {
   const { zone, farm } = await findZoneChainOrThrow(zoneId)
-  if (!hasZoneAccess(farm, zone._id, user)) throw ForbiddenError('Không có quyền trên zone này')
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
   return zone
 }
 

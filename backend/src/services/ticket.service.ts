@@ -6,7 +6,7 @@ import { SensorNode } from '@/models/device.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import {
-  listAccessibleFarmIds, assertFarmAccess, assertZoneInFarm, assertRecordAccess,
+  listAccessibleFarmIds, assertFarmAccess, assertZoneInFarm,
 } from '@/utils/farmAccess.util'
 import { assertValidVisitTime, formatVisitTime } from '@/utils/visitTime.util'
 import { logAction } from '@/services/auditLog.service'
@@ -513,7 +513,7 @@ export async function getMyTicketStats(user: CurrentUser) {
 export async function getTicket(ticketId: string, user: CurrentUser): Promise<ITicket> {
   const ticket = await Ticket.findById(ticketId).populate('assigned_to', 'full_name email')
   if (!ticket) throw NotFoundError('Không tìm thấy ticket')
-  await assertRecordAccess(ticket.farm_id, ticket.zone_id, user)
+  await assertFarmAccess(String(ticket.farm_id), user)
   return ticket
 }
 

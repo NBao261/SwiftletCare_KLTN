@@ -354,7 +354,7 @@ void pidTask(void *pvParameters) {
                        ? "Bơm phun sương chạy nhưng độ ẩm không tăng — bơm đang "
                          "được BẬT TAY nên VẪN CHẠY, hãy tắt bơm và kiểm tra nước"
                        : "Bơm phun sương chạy nhưng độ ẩm không tăng — đã tự ngừng "
-                         "phun để bảo vệ bơm, sẽ thử lại sau 30 phút",
+                         "phun để bảo vệ bơm, sẽ thử lại sau " SC_STR(PUMP_DRY_RETRY_MIN) " phút",
                    EPISODE_ALERT_RESEND_MS);
       reportOnRise(threats.sensorFault, sensorReported, "SENSOR_FAULT",
                    "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");

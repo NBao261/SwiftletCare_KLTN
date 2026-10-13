@@ -3,7 +3,7 @@ import { Types } from 'mongoose'
 import { HarvestBatch, IHarvestBatch } from '@/models/harvestBatch.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
-import { assertFarmAccess, assertRecordAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, NestType } from '@/types'
 
@@ -118,7 +118,7 @@ export async function listHarvests(user: CurrentUser, farmId?: string) {
 export async function getHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {
   const batch = await HarvestBatch.findById(id)
   if (!batch || batch.is_deleted) throw NotFoundError('Không tìm thấy đợt thu hoạch')
-  await assertRecordAccess(batch.farm_id, batch.zone_id, user)
+  await assertFarmAccess(String(batch.farm_id), user)
   return batch
 }
 

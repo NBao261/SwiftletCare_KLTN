@@ -5,7 +5,7 @@ import { Zone } from '@/models/houseZone.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
-import { assertRecordAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
@@ -320,7 +320,7 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
 export async function getAlert(alertId: string, user: CurrentUser): Promise<IAlert> {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')
-  await assertRecordAccess(alert.farm_id, alert.zone_id, user)
+  await assertFarmAccess(String(alert.farm_id), user)
   return alert
 }
 

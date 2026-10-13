@@ -74,7 +74,11 @@
 // Hằng số kỹ thuật chọn tay (bằng thời hạn can thiệp tay mặc định), KHÔNG có nguồn
 // nuôi yến và chưa chỉnh được qua MQTT — đủ dài để bơm khô thật không chạy liên
 // tục, đủ ngắn để một lần báo nhầm không làm nhà yến mất phun sương cả ngày.
-#define PUMP_DRY_RETRY_MS 1800000UL
+#define PUMP_DRY_RETRY_MIN 30
+#define PUMP_DRY_RETRY_MS (PUMP_DRY_RETRY_MIN * 60000UL)
+// Chuỗi hoá số phút cho câu cảnh báo — đổi PUMP_DRY_RETRY_MIN là nội dung đổi theo
+#define SC_STR_(x) #x
+#define SC_STR(x) SC_STR_(x)
 // Cảnh báo "theo đợt" (NOISE_ANOMALY, PUMP_DRY) được gửi LẠI mỗi khoảng này chừng nào
 // sự cố còn tiếp diễn. Backend gộp vào cảnh báo đang mở (không thông báo lại) và tự
 // đóng cảnh báo sau 60 phút không được ghi nhận lại — nếu firmware chỉ gửi 1 lần lúc

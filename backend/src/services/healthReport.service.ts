@@ -18,7 +18,7 @@ const DAY_MS = 86400_000
 /** EXPERT-FR-005 — độ dài kỳ báo cáo tự động; lịch chạy đặt ở jobs/healthReport.job.ts */
 export const REPORT_PERIOD_DAYS = Number(process.env.HEALTH_REPORT_DAYS) > 0 ? Number(process.env.HEALTH_REPORT_DAYS) : 7
 /** Xem theo khoảng bất kỳ: chặn khoảng quá dài để 1 request không quét cả năm telemetry */
-const MAX_PREVIEW_DAYS = 92
+const MAX_PREVIEW_DAYS = 30
 
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null)
 const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.round(v * 10) / 10 : null)

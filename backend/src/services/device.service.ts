@@ -25,6 +25,12 @@ const RELAY_NAMES = ['misting', 'speaker', 'ventilation'] as const
 type RelayName = typeof RELAY_NAMES[number]
 /** ENV-FR-018 — thời hạn can thiệp tay mặc định */
 const DEFAULT_OVERRIDE_MS = 30 * 60 * 1000
+/**
+ * Giới hạn `durationMs` của 1 lần can thiệp tay. ponytail: 24 giờ là trần kỹ thuật chọn tay
+ * (SRS chỉ ghi mặc định 30 phút) — can thiệp tay là ngoại lệ có thời hạn, cần lâu hơn thì bật lại.
+ */
+export const MIN_OVERRIDE_MS = 1000
+export const MAX_OVERRIDE_MS = 24 * 60 * 60 * 1000
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
@@ -226,9 +232,21 @@ export async function reassignZone(
     newZoneId: String(destChain.zone._id),
   })
 
+  // Override đang chạy thuộc về Zone cũ: dời đi mà để nguyên thì Zone cũ tiếp tục bị tính
+  // thời gian can thiệp tay của một thiết bị không còn ở đó (như decommissionDevice).
+  const hadOverride = node.control_mode === 'MANUAL'
+  if (hadOverride) {
+    publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'relay/command', {
+      deviceId: node.device_id, action: 'clear_override',
+    })
+  }
+
   // Cập nhật lạc quan — giống pattern controlRelay/updateNodeThresholds ở trên.
   node.zone_id = destChain.zone._id
+  node.control_mode = 'AUTO'
+  node.override_expiry = undefined
   await node.save()
+  await closeOverrideLogs([node._id], 'CLEARED_EARLY')
   // Cảnh báo cũ thuộc farm/zone nguồn — để lại thì job leo thang thành ticket ở farm cũ
   // cho phần cứng đã chuyển đi; sự cố còn thật sẽ được báo lại ở zone mới.
   await resolveAlertsForNode(String(node._id), 'Thiết bị đã dời sang zone khác')

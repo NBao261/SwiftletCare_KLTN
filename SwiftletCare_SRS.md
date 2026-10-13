@@ -126,6 +126,21 @@ Mỗi dòng là một việc; mã FR trỏ tới yêu cầu chi tiết ở mục
 - [x] EXPERT-FR-008 — `zones.detection_tuning` + `detection_tuning_history`, `PUT /farms/zones/:zoneId/detection-tuning` (kiểm tra khoảng, audit `DETECTION_TUNING_UPDATED`), đưa 5 tham số của firmware vào `buildDeviceConfig`; xu hướng tỷ lệ chim về đọc `return_rate_drop_pct` của Zone thay cho hằng số 20% (job sinh cảnh báo `LOW_RETURN_RATE` thuộc đợt đếm chim, chưa làm).
 - [x] ALERT-FR-013 / ALERT-FR-002 — nối **ít nhất một** kênh ngoài ứng dụng chạy thật: Telegram bot (nhanh nhất — thêm `sendTelegram` cạnh `sendPush` trong `services/notification.service.ts`, lưu `telegram_chat_id` của user) hoặc Firebase FCM (hiện chỉ ghi log). Adapter Zalo/SMS để nguyên, không nối. Đã chọn Telegram; cần đặt `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME` để gửi thật.
 
+**Giả định kỹ thuật chưa có nguồn — cần nhóm xác nhận hoặc đo thực tế**
+
+Các mốc dưới đây do người viết code chọn để hệ thống chạy được, **không** lấy từ tài liệu nuôi yến và chưa đo ở nhà yến thật. Chúng là hằng số trong code (chưa chỉnh được từ giao diện); khi có số đo thì sửa, hoặc đưa vào tham số của Domain Expert (EXPERT-FR-008) nếu nhóm thấy cần.
+
+| Mốc | Giá trị | Ở đâu | Dùng để |
+| --- | --- | --- | --- |
+| Tự thử phun lại sau khi chốt bơm khô | 30 phút | firmware `PUMP_DRY_RETRY_MIN` | Một lần báo nhầm không làm mất phun sương vô thời hạn (THREAT-FR-011) |
+| Độ ẩm còn tính là hợp lệ | tới 101 % | firmware `HUMIDITY_SATURATION_MAX`, backend `fuzzyModel.util.ts` | Dung sai cảm biến khi bão hoà lúc đang phun (THREAT-FR-013) |
+| Gửi lại cảnh báo theo đợt khi còn tiếp diễn | 15 phút | firmware `EPISODE_ALERT_RESEND_MS` | Backend biết đợt `NOISE_ANOMALY`/`PUMP_DRY` chưa hết |
+| Tự đóng cảnh báo theo đợt không còn ghi nhận lại | 60 phút | backend `EPISODE_CLEAR_MS` | Lần tái phát sau đó là cảnh báo mới (ALERT-FR-008). Phải lớn hơn mốc 15 phút ở trên — hai hằng số ở hai module, giữ khớp bằng tay |
+| Bỏ qua bản tin AUTO sau khi vừa bật tay | 30 giây | backend `DEVICE_CONFIRM_GRACE_MS` | Bản tin phát trước lệnh mà tới sau không huỷ override vừa đặt |
+| Thời hạn tối đa của 1 lần can thiệp tay | 24 giờ | backend `MAX_OVERRIDE_MS` | Chặn override vô hạn làm sai tỷ lệ thời gian tự động (ENV-FR-018/019) |
+
+Việc nên làm về sau (đổi giao thức MQTT giữa firmware và backend, không thuộc đợt này): gắn mã lệnh vào `relay/command` và `relay/status` thay cho cửa sổ 30 giây; firmware gửi tín hiệu "hết đợt" thay cho cặp mốc 15/60 phút (thiết bị chạy firmware < 1.3.0 chỉ báo một lần nên đợt dài hơn 60 phút bị đóng sớm).
+
 **Web (`frontend/`)**
 
 - [ ] Gỡ `MarketplacePage`, `ListingDetailPage`, route công khai của marketplace, `useMarketplace` và API tương ứng; gỡ nốt code `sales-staff/` cũ.

@@ -28,7 +28,7 @@ import { User } from '@/models/user.model'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { completeDeletionRequest } from '@/services/admin.service'
 import { EPISODE_CLEAR_MS, createAlert, ingestDeviceAlert, resolveStaleEpisodeAlerts } from '@/services/alert.service'
-import { expireManualOverrides } from '@/services/device.service'
+import { expireManualOverrides, reassignZone } from '@/services/device.service'
 import { createHarvest } from '@/services/harvest.service'
 import type { CurrentUser } from '@/types'
 
@@ -254,5 +254,55 @@ describe('vòng review 2', () => {
     await expect(ingestDeviceAlert({ deviceId: node.device_id, type: 'constructor' })).rejects.toMatchObject({ statusCode: 400 })
     await expect(ingestDeviceAlert({ deviceId: node.device_id, type: { $ne: 1 } })).rejects.toMatchObject({ statusCode: 404 })
     expect(await Alert.countDocuments()).toBe(0)
+  })
+})
+
+describe('vòng review 4', () => {
+  it('lịch sử can thiệp tay không trả email của người thao tác', async () => {
+    const { relay, token } = await seed()
+    await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
+    const res = await request(app).get(`${relay}/relay-overrides`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res.body.data[0].started_by).toMatchObject({ full_name: 'O' })
+    expect(res.body.data[0].started_by).not.toHaveProperty('email')
+  })
+
+  it('durationMs của lệnh relay phải là số nguyên trong khoảng cho phép', async () => {
+    const { node, relay, token } = await seed()
+    const post = (durationMs: unknown) =>
+      request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true, durationMs })
+
+    await post(10 * 365 * 24 * 3600_000).expect(422) // 10 năm
+    await post(-5000).expect(422)
+    await post('abc').expect(422)
+    expect(await RelayOverrideLog.countDocuments()).toBe(0)
+    expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')
+    await post(600_000).expect(200)
+  })
+
+  it('tham số lặp trên GET /alerts bị từ chối thay vì gây lỗi 500', async () => {
+    const { token } = await seed()
+    const get = (qs: string) => request(app).get(`/alerts?${qs}`).set('Authorization', `Bearer ${token}`)
+    await get('verdict=confirmed&verdict=confirmed').expect(422)
+    await get('type=NOISE_ANOMALY&type=PUMP_DRY').expect(422)
+    await get('status=ACTIVE&status=RESOLVED').expect(422)
+    await get('severity=LOW&severity=HIGH').expect(422)
+  })
+
+  it('dời thiết bị sang Zone khác: override đang chạy kết thúc ở Zone cũ', async () => {
+    const { farm, node, relay, token } = await seed()
+    const house2 = await House.create({ farm_id: farm._id, name: 'H2' })
+    const zone2 = await Zone.create({ house_id: house2._id, name: 'Z2' })
+    await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
+    jest.clearAllMocks()
+
+    await reassignZone(String(node._id), { _id: String(new mongoose.Types.ObjectId()), email: 'admin@test.vn', role: 'ADMIN' }, { newZoneId: String(zone2._id) })
+
+    const after = (await SensorNode.findById(node._id))!
+    expect(String(after.zone_id)).toBe(String(zone2._id))
+    expect(after.control_mode).toBe('AUTO')
+    expect(after.override_expiry).toBeUndefined()
+    expect((await RelayOverrideLog.findOne().lean())!).toMatchObject({ end_reason: 'CLEARED_EARLY' })
+    expect(publishCommand).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'relay/command',
+      expect.objectContaining({ action: 'clear_override' }))
   })
 })

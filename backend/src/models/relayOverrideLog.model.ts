@@ -48,5 +48,7 @@ const relayOverrideLogSchema = new Schema<IRelayOverrideLog>(
 relayOverrideLogSchema.index({ node_id: 1, started_at: -1 })
 // Tỷ lệ thời gian tự động theo Zone trong 1 khoảng
 relayOverrideLogSchema.index({ zone_id: 1, started_at: -1 })
+// Job hết hạn chạy mỗi phút tìm bản ghi còn mở đã quá hạn (closeOrphanedOverrideLogs)
+relayOverrideLogSchema.index({ ended_at: 1, expires_at: 1 })
 
 export const RelayOverrideLog = model<IRelayOverrideLog>('RelayOverrideLog', relayOverrideLogSchema)

@@ -26,15 +26,6 @@ export function hasFarmAccess(farm: FarmScope, user: CurrentUser): boolean {
 }
 
 /**
- * Quyền trên 1 Zone = quyền trên farm chứa nó. SRS v2.0.0 bỏ phạm vi theo Zone của
- * Farm Operator: Domain Expert được mời vào farm nào thì thấy cả farm đó. Giữ hàm
- * này (và tham số zoneId) để các chỗ kiểm tra theo Zone không phải đổi khi gọi.
- */
-export function hasZoneAccess(farm: FarmScope, _zoneId: unknown, user: CurrentUser): boolean {
-  return hasFarmAccess(farm, user)
-}
-
-/**
  * true nếu user là Primary Owner của farm, hoặc ADMIN.
  * Technician KHÔNG nằm trong nhóm này: các thao tác quản trị Farm (xóa farm,
  * mời/gỡ thành viên) thuộc về phía khách hàng, không phải nhân viên lắp đặt.
@@ -79,16 +70,9 @@ export async function assertZoneAccess(
   user: CurrentUser,
 ): Promise<{ zone: IZone; house: IHouse; farm: IFarm }> {
   const chain = await findZoneChainOrThrow(zoneId)
-  if (!hasZoneAccess(chain.farm, chain.zone._id, user)) throw ForbiddenError('Không có quyền trên zone này')
+  // Quyền trên 1 Zone = quyền trên farm chứa nó (SRS v2.0.0 bỏ phạm vi theo Zone)
+  if (!hasFarmAccess(chain.farm, user)) throw ForbiddenError('Không có quyền trên zone này')
   return chain
-}
-
-/**
- * Bản ghi thuộc 1 farm và có thể gắn 1 zone (alert, ticket, mẻ thu hoạch): quyền theo
- * farm — thành viên farm xem được mọi bản ghi của farm đó (SRS v2.0.0 bỏ phạm vi Zone).
- */
-export async function assertRecordAccess(farmId: unknown, _zoneId: unknown, user: CurrentUser): Promise<IFarm> {
-  return assertFarmAccess(String(farmId), user)
 }
 
 /**

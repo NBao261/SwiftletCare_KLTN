@@ -10,16 +10,18 @@ router.use(authenticate)
 
 // Mọi bộ lọc đều phải là chuỗi thuộc tập cho phép: `?type[$ne]=X` mà không chặn thì
 // thành toán tử Mongo trong filter (và làm lẫn cảnh báo thường vào hàng chờ kiểm chứng)
+// .isString() trước: express-validator kiểm isIn/isMongoId trên TỪNG phần tử nên tham số lặp
+// (?verdict=a&verdict=b) qua được và tới service dưới dạng mảng
 router.get('/',
-  query('farmId').optional().isMongoId(),
-  query('zoneId').optional().isMongoId(),
-  query('status').optional().isIn(['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED']),
-  query('severity').optional().isIn(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
-  query('type').optional().isIn(ALERT_TYPES),
-  query('verdict').optional().isIn(['pending', 'confirmed', 'rejected']), validate, alertController.list)
+  query('farmId').optional().isString().isMongoId(),
+  query('zoneId').optional().isString().isMongoId(),
+  query('status').optional().isString().isIn(['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED']),
+  query('severity').optional().isString().isIn(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
+  query('type').optional().isString().isIn(ALERT_TYPES),
+  query('verdict').optional().isString().isIn(['pending', 'confirmed', 'rejected']), validate, alertController.list)
 // EXPERT-FR-003 — đặt trước '/:id' để "verdict-stats" không bị hiểu là một id
 router.get('/verdict-stats',
-  query('farmId').optional().isMongoId(), query('zoneId').optional().isMongoId(), validate, alertController.verdictStats)
+  query('farmId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(), validate, alertController.verdictStats)
 router.get('/:id', param('id').isMongoId(), validate, alertController.getOne)
 // ALERT-FR-009 — xác nhận đã xử lý là việc của người vận hành; Domain Expert chỉ đọc
 // và kiểm chứng (mục 4.4)
