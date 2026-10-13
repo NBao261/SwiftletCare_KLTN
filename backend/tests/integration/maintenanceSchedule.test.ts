@@ -229,6 +229,47 @@ describe('kỳ bảo trì bị lỡ (TICKET-FR-013)', () => {
     expect(notifyAdmins).not.toHaveBeenCalled()
   })
 
+  it('lỗi sau khi đã tạo ticket thì không trả hạn về, lần quét sau không sinh ticket trùng', async () => {
+    const { farm } = await seed()
+    const dueAt = new Date(Date.now() - 1000)
+    const schedule = await MaintenanceSchedule.create({ farm_id: farm._id, description: 'Kiểm tra relay', interval_days: 7, next_due_at: dueAt })
+    // updateOne đầu tiên trong luồng là bước ghi last_ticket_id, chạy sau khi ticket đã tạo
+    const spy = jest.spyOn(MaintenanceSchedule, 'updateOne').mockRejectedValueOnce(new Error('DB chập chờn'))
+
+    try {
+      expect(await generateDueMaintenanceTickets()).toBe(1)
+    } finally {
+      spy.mockRestore()
+    }
+
+    const updated = (await MaintenanceSchedule.findById(schedule._id))!
+    expect(updated.next_due_at.getTime()).toBe(dueAt.getTime() + 7 * DAY)
+    expect(await generateDueMaintenanceTickets()).toBe(0)
+    expect(await Ticket.countDocuments()).toBe(1)
+  })
+
+  it('lỗi trước khi tạo ticket thì trả hạn về để thử lại, các lịch khác vẫn được xử lý', async () => {
+    const { farm } = await seed()
+    const dueAt = new Date(Date.now() - 1000)
+    const oldTicket = await Ticket.create({ farm_id: farm._id, type: 'MAINTENANCE', priority: 'P3' })
+    const failing = await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Lịch lỗi', interval_days: 7, next_due_at: dueAt, last_ticket_id: oldTicket._id,
+    })
+    const healthy = await MaintenanceSchedule.create({ farm_id: farm._id, description: 'Lịch ổn', interval_days: 7, next_due_at: dueAt })
+    // findOne chỉ được gọi để tra ticket kỳ trước — tức là của lịch có last_ticket_id
+    const spy = jest.spyOn(Ticket, 'findOne').mockRejectedValueOnce(new Error('DB chập chờn'))
+
+    try {
+      expect(await generateDueMaintenanceTickets()).toBe(1)
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect((await MaintenanceSchedule.findById(failing._id))!.next_due_at.getTime()).toBe(dueAt.getTime())
+    expect((await MaintenanceSchedule.findById(healthy._id))!.next_due_at.getTime()).toBe(dueAt.getTime() + 7 * DAY)
+    expect(await Ticket.countDocuments({ _id: { $ne: oldTicket._id } })).toBe(1)
+  })
+
   it('không lập được hai lịch trùng nội dung trên cùng farm', async () => {
     const { farm, t } = await seed()
     const body = {
