@@ -1,6 +1,6 @@
 // Alerts Page – ALERT-FR-001/002/006/007/008/009
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useAlertsList, useAcknowledgeAlert } from "@/hooks/shared/useAlerts";
 import { Card, Button } from "@/components/ui";
 import AlertBadge from "@/components/features/technician/alerts/AlertBadge";
@@ -126,7 +126,7 @@ export default function TechnicianAlertsPage() {
                     ? "Đã xác nhận"
                     : "Đã xử lý"}
               </span>
-              {alert.status === "ACTIVE" && (
+              {alert.status === 'ACTIVE' && (
                 <Button
                   variant="secondary"
                   size="sm"
@@ -136,8 +136,32 @@ export default function TechnicianAlertsPage() {
                 </Button>
               )}
             </div>
+            
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-warmGray/10">
+              <span className="text-xs text-warmGray/80 flex-1">
+                {(alert.zone_id || alert.node_id) ? (
+                  <>
+                    Vị trí:{' '}
+                    {alert.zone_id && (
+                      <Link to="/devices" className="text-accent-800 hover:underline">
+                        {String(alert.metadata?.zone_name || `Khu vực ${alert.zone_id.slice(-6)}`)}
+                      </Link>
+                    )}
+                    {alert.zone_id && alert.node_id && ' / '}
+                    {alert.node_id && (
+                      <Link to="/devices" className="text-accent-800 hover:underline">
+                        {String(alert.metadata?.device_id || `Thiết bị ${alert.node_id.slice(-6)}`)}
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  'Chung toàn nhà yến'
+                )}
+              </span>
+            </div>
+            
             {alert.acknowledgement_note && (
-              <p className="rounded-xl bg-warmGray/5 px-3 py-2 text-xs text-warmGray">
+              <p className="rounded-xl bg-warmGray/5 px-3 py-2 text-xs text-warmGray mt-2">
                 Ghi chú: {alert.acknowledgement_note}
               </p>
             )}

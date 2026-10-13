@@ -16,6 +16,8 @@ import FarmHouseZonePicker, {
 import ThresholdsModal from "@/components/features/technician/devices/ThresholdsModal";
 import SpeakerScheduleModal from "@/components/features/technician/devices/SpeakerScheduleModal";
 import AudioTracksModal from "@/components/features/technician/devices/AudioTracksModal";
+import DecommissionDeviceModal from "@/components/features/technician/devices/DecommissionDeviceModal";
+import ReplaceDeviceModal from "@/components/features/technician/devices/ReplaceDeviceModal";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
@@ -36,10 +38,9 @@ export default function TechnicianDevicesPage() {
   // Đăng ký/kích hoạt thiết bị là việc của Technician (SRS §4.1, FARM-FR-003) —
   // Farm Owner chỉ xem và điều khiển relay, muốn lắp thêm thì tạo ticket lắp đặt.
   const canOnboard = usePermission("TECHNICIAN", "ADMIN");
-  // Chỉnh ngưỡng tự động (ENV-FR-006) chỉ thuộc Farm Owner theo RACI — đặt
-  // ngay trong trang Thiết bị & Cảm biến cho tiện (trước ở trang Trang trại,
-  // ẩn sâu trong House→Zone, khó thấy).
-  const isFarmOwner = usePermission("FARM_OWNER");
+  // Chỉnh ngưỡng tự động (ENV-FR-006): Farm Owner vận hành hằng ngày, Technician chỉnh khi
+  // xử lý sự cố (RACI mục 4.4) — PUT /farms/zones/:zoneId/thresholds cho cả hai vai trò.
+  const canEditThresholds = usePermission("FARM_OWNER", "TECHNICIAN");
   const { data: nodes, isLoading } = useSensorNodes(
     selectedZoneId ?? undefined,
   );
@@ -48,6 +49,7 @@ export default function TechnicianDevicesPage() {
 
   const [showRegister, setShowRegister] = useState(false);
   const [deviceId, setDeviceId] = useState("");
+  const [secretKey, setSecretKey] = useState("");
   const [registering, setRegistering] = useState(false);
   const [showThresholds, setShowThresholds] = useState(false);
 
@@ -62,6 +64,11 @@ export default function TechnicianDevicesPage() {
   const [audioNodeId, setAudioNodeId] = useState<string | null>(null);
   const scheduleNode = nodes?.find((n) => n._id === scheduleNodeId);
   const audioNode = nodes?.find((n) => n._id === audioNodeId);
+  // FARM-FR-008 — gỡ / thay thiết bị (BE: TECHNICIAN, ADMIN)
+  const [decommissionNodeId, setDecommissionNodeId] = useState<string | null>(null);
+  const [replaceNodeId, setReplaceNodeId] = useState<string | null>(null);
+  const decommissionNode = nodes?.find((n) => n._id === decommissionNodeId) ?? null;
+  const replaceNode = nodes?.find((n) => n._id === replaceNodeId) ?? null;
   const clearOverride = useClearRelayOverride();
 
   if (!selectedZoneId) {
@@ -83,8 +90,9 @@ export default function TechnicianDevicesPage() {
     setRegistering(true);
     try {
       await deviceApi.registerSensorNode({
-        device_id: deviceId,
+        device_id: deviceId.trim(),
         zone_id: selectedZoneId!,
+        secret_key: secretKey.trim(),
       });
       await queryClient.invalidateQueries({ queryKey: ["sensor-nodes"] });
       push(
@@ -92,6 +100,7 @@ export default function TechnicianDevicesPage() {
       );
       setShowRegister(false);
       setDeviceId("");
+      setSecretKey("");
     } catch (err) {
       push(getApiErrorMessage(err, "Kích hoạt thiết bị thất bại"), "error");
     } finally {
@@ -128,7 +137,7 @@ export default function TechnicianDevicesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isFarmOwner && (
+          {canEditThresholds && (
             <Button
               variant="secondary"
               onClick={() => setShowThresholds(true)}
@@ -245,22 +254,26 @@ export default function TechnicianDevicesPage() {
               </div>
             )}
 
-            {node.status !== "PENDING" && (
+            {(node.status !== "PENDING" || canOnboard) && (
               <div className="mt-3 flex flex-wrap gap-2 border-t border-warmGray/10 pt-3">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setScheduleNodeId(node._id)}
-                >
-                  Lịch loa ru
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setAudioNodeId(node._id)}
-                >
-                  File loa ru
-                </Button>
+                {node.status !== "PENDING" && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setScheduleNodeId(node._id)}
+                    >
+                      Lịch loa ru
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setAudioNodeId(node._id)}
+                    >
+                      File loa ru
+                    </Button>
+                  </>
+                )}
                 {canOnboard && node.status === "ONLINE" && (
                   <Button
                     variant="secondary"
@@ -269,6 +282,24 @@ export default function TechnicianDevicesPage() {
                   >
                     Dời sang Zone khác
                   </Button>
+                )}
+                {canOnboard && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setReplaceNodeId(node._id)}
+                    >
+                      Thay thiết bị
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => setDecommissionNodeId(node._id)}
+                    >
+                      Gỡ thiết bị
+                    </Button>
+                  </>
                 )}
               </div>
             )}
@@ -289,13 +320,27 @@ export default function TechnicianDevicesPage() {
             onChange={(e) => setDeviceId(e.target.value)}
             placeholder="VD: node_001 (in trên vỏ ESP32)"
           />
+          <Input
+            label="secretKey"
+            required
+            value={secretKey}
+            onChange={(e) => setSecretKey(e.target.value)}
+            placeholder="VD: ABCD-EFGH-JKMN (in trên nhãn thiết bị)"
+            autoComplete="off"
+            spellCheck={false}
+          />
           <p className="text-xs text-warmGray">
             Sau khi kích hoạt, thiết bị ở trạng thái “Chờ kết nối” cho tới khi
             gửi heartbeat đầu tiên. Cấp nguồn ESP32 và cấu hình WiFi của farm
             cho thiết bị qua AP-mode để hoàn tất — hệ thống tự nhận đúng Zone,
             không cần thao tác gì thêm.
           </p>
-          <Button type="submit" loading={registering} className="w-full">
+          <Button
+            type="submit"
+            loading={registering}
+            disabled={!deviceId.trim() || !secretKey.trim()}
+            className="w-full"
+          >
             Kích hoạt
           </Button>
         </form>
@@ -342,6 +387,15 @@ export default function TechnicianDevicesPage() {
           onClose={() => setAudioNodeId(null)}
         />
       )}
+
+      <ReplaceDeviceModal
+        node={replaceNode}
+        onClose={() => setReplaceNodeId(null)}
+      />
+      <DecommissionDeviceModal
+        node={decommissionNode}
+        onClose={() => setDecommissionNodeId(null)}
+      />
 
       {showThresholds && (
         <ThresholdsModal

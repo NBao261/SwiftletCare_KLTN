@@ -1,6 +1,6 @@
 // SATChecklist.tsx — Nghiệm thu SAT Checklist với interactive checkbox cards
 // Dùng trong: TechnicianTicketDetailPage (ticket loại INSTALLATION/MAINTENANCE)
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ticketApi } from '@/apis/shared/tickets.api'
 import { Button, Card } from '@/components/ui'
@@ -13,12 +13,17 @@ import { SAT_ITEMS } from './ticketHelpers'
 interface Props {
   ticketId: string
   checklist: TicketSatChecklist
+  /** true → chỉ xem (không phải người phụ trách / ticket đã đóng): không toggle, không có nút đóng */
+  readOnly?: boolean
 }
 
-export function SATChecklist({ ticketId, checklist }: Props) {
+export function SATChecklist({ ticketId, checklist, readOnly = false }: Props) {
   const push = useToastStore(s => s.push)
   const queryClient = useQueryClient()
   const [local, setLocal] = useState<TicketSatChecklist>({ ...checklist })
+
+  // Đồng bộ lại khi dữ liệu server đổi (refetch / thao tác ở nơi khác)
+  useEffect(() => { setLocal({ ...checklist }) }, [checklist])
 
   const toggleMut = useMutation({
     mutationFn: (updates: Partial<TicketSatChecklist>) =>
@@ -32,12 +37,13 @@ export function SATChecklist({ ticketId, checklist }: Props) {
       ticketApi.updateStatus(ticketId, 'CLOSED', 'Kỹ thuật viên hoàn tất SAT checklist.'),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      push('Đã đóng ticket thành công. Vui lòng thông báo cho Farm Owner.')
+      push('Đã đóng ticket thành công.')
     },
     onError: (err) => push(getApiErrorMessage(err, 'Hoàn thành thất bại'), 'error'),
   })
 
   function toggle(key: keyof TicketSatChecklist) {
+    if (readOnly) return
     const prevState = local[key]           // lưu state cũ trước khi optimistic update
     const next = { ...local, [key]: !local[key] }
     setLocal(next)                         // optimistic update ngay
@@ -49,7 +55,7 @@ export function SATChecklist({ ticketId, checklist }: Props) {
     })
   }
 
-  const checkedCount = Object.values(local).filter(Boolean).length
+  const checkedCount = SAT_ITEMS.filter(item => local[item.key]).length
   const allDone = checkedCount === SAT_ITEMS.length
 
   return (
@@ -65,6 +71,8 @@ export function SATChecklist({ ticketId, checklist }: Props) {
         {SAT_ITEMS.map(item => (
           <button
             key={item.key}
+            type="button"
+            disabled={readOnly}
             onClick={() => toggle(item.key)}
             className={`flex items-center gap-3.5 rounded-xl border-2 p-3.5 text-left transition-colors ${
               local[item.key]
@@ -85,15 +93,17 @@ export function SATChecklist({ ticketId, checklist }: Props) {
         ))}
       </div>
 
-      <Button
-        onClick={() => completeMut.mutate()}
-        loading={completeMut.isPending}
-        disabled={!allDone}
-        className="mt-4 w-full justify-center"
-        title={allDone ? '' : 'Cần xác nhận đủ 4/4 mục trước khi hoàn thành'}
-      >
-        Hoàn thành & Đóng ticket
-      </Button>
+      {!readOnly && (
+        <Button
+          onClick={() => completeMut.mutate()}
+          loading={completeMut.isPending}
+          disabled={!allDone}
+          className="mt-4 w-full justify-center"
+          title={allDone ? '' : 'Cần xác nhận đủ 4/4 mục trước khi hoàn thành'}
+        >
+          Hoàn thành & Đóng ticket
+        </Button>
+      )}
     </Card>
   )
 }

@@ -75,7 +75,15 @@ export const getSystemStatus = asyncHandler(async (_req: Request, res: Response)
 
 /** POST /devices/{sensor|camera}-nodes/:id/decommission – FARM-FR-008 */
 export const decommission = (kind: deviceService.DeviceKind) => asyncHandler(async (req: Request, res: Response) => {
-  const node = await deviceService.decommissionDevice(kind, req.params.id, req.user, req.body.reason as string)
+  const node = await deviceService.decommissionDevice(kind, req.params.id, req.user, req.body.reason as string, {
+    force: req.body.force as boolean | undefined,
+  })
+  res.json({ success: true, data: node })
+})
+
+/** POST /devices/{sensor|camera}-nodes/:id/restore – FARM-FR-008 (sửa thao tác gỡ nhầm) */
+export const restore = (kind: deviceService.DeviceKind) => asyncHandler(async (req: Request, res: Response) => {
+  const node = await deviceService.restoreDevice(kind, req.params.id, req.user, req.body.reason as string)
   res.json({ success: true, data: node })
 })
 

@@ -3,6 +3,7 @@ import * as ticketService from '@/services/ticket.service'
 import * as ticketChatService from '@/services/ticketChat.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 import type { TicketStatus } from '@/types'
+import type { TicketSortKey } from '@/services/ticket.service'
 
 /** POST /tickets – TICKET-FR-001 (báo lỗi + yêu cầu lắp đặt, Flow 9/9b) */
 export const create = asyncHandler(async (req: Request, res: Response) => {
@@ -18,10 +19,19 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     priority:     req.query.priority as string | undefined,
     assignedToMe: req.query.assignedToMe === 'true',
     unassigned:   req.query.unassigned === 'true',
+    slaBreached:  req.query.slaBreached === 'true',
+    search:       req.query.search as string | undefined,
+    sort:         req.query.sort as TicketSortKey | undefined,
+    order:        req.query.order as 'asc' | 'desc' | undefined,
     page:         req.query.page ? Number(req.query.page) : undefined,
     limit:        req.query.limit ? Number(req.query.limit) : undefined,
   })
   res.json({ success: true, data: records, meta: { total, page, limit } })
+})
+
+/** GET /tickets/stats/me – thống kê ticket của Technician đang đăng nhập */
+export const myStats = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await ticketService.getMyTicketStats(req.user) })
 })
 
 /** GET /tickets/:id */
@@ -43,6 +53,12 @@ export const reschedule = asyncHandler(async (req: Request, res: Response) => {
   const ticket = await ticketService.scheduleVisit(
     req.params.id, req.user, req.body.scheduled_visit_at as string, req.body.reason as string,
   )
+  res.json({ success: true, data: ticket })
+})
+
+/** DELETE /tickets/:id/scheduled-date – Flow 9 bước 6a (xử lý được từ xa, huỷ buổi xuống farm) */
+export const cancelVisit = asyncHandler(async (req: Request, res: Response) => {
+  const ticket = await ticketService.cancelVisit(req.params.id, req.user, req.body.reason as string)
   res.json({ success: true, data: ticket })
 })
 

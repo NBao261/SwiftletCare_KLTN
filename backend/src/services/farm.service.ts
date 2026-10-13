@@ -11,6 +11,7 @@ import {
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
+import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage } from '@/services/ticket.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
@@ -104,11 +105,18 @@ export async function updateFarm(
     throw ForbiddenError('Chỉ Primary Owner mới được đổi khu vực của farm')
   }
 
+  const regionChanged = updates.region !== undefined && updates.region !== farm.region
+
   if (updates.name !== undefined) farm.name = updates.name
   if (updates.address !== undefined) farm.address = updates.address
   if (updates.region !== undefined) farm.region = updates.region
   if (updates.coordinates !== undefined) farm.coordinates = updates.coordinates
   await farm.save()
+
+  // Đổi vùng là đổi luôn ai được phép vào ticket của farm này: Technician đang
+  // giữ ticket mà không phụ trách vùng mới sẽ bị chặn 403 trên chính việc của
+  // mình — điều phối lại cho người của vùng mới (hoặc về hàng đợi chung).
+  if (regionChanged) await rerouteTicketsOutOfCoverage({ farmId }, user._id, 'FARM_REGION_CHANGED')
   return farm
 }
 
@@ -117,6 +125,9 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được xóa farm')
   await softDeleteFarm(farm)
+  // Ticket đã tồn tại trước đó cũng mồ côi y như cảnh báo — và còn tệ hơn vì
+  // chúng vẫn chiếm suất quá tải của Technician cùng các con số của Admin.
+  await closeTicketsOfDeletedFarm(farmId, user._id)
 }
 
 /**

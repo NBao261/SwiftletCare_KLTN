@@ -1,8 +1,9 @@
+import { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
 interface FilterChipProps {
   active: boolean
-  label: string
+  label: ReactNode
   onClick: () => void
   size?: 'sm' | 'lg'
 }

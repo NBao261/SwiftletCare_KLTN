@@ -7,7 +7,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '@/components/ui'
-import DemoBanner from '@/components/ui/DemoBanner'
 import { Step1Location }   from '@/components/features/technician/onboarding/Step1Location'
 import { Step2Validate }   from '@/components/features/technician/onboarding/Step2Validate'
 import { Step3ConnectAP }  from '@/components/features/technician/onboarding/Step3ConnectAP'
@@ -61,7 +60,7 @@ const INITIAL_STATE: OnboardingState = {
   location:   {},
   deviceType: 'SENSOR_NODE',
   deviceId:   '',
-  // secretKey bị bỏ — xem TODO [BE-GAP] trong onboardingTypes.ts và Step2Validate.tsx
+  secretKey:  '',
   deviceDbId: '',
   ticketId:   undefined,
   ssid:       '',
@@ -88,12 +87,6 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Demo banner — Step4 WiFi config và một số bước chưa có backend endpoint */}
-      <DemoBanner
-        title="Một số bước chưa kết nối backend thật"
-        description="Bước 4 (cấu hình WiFi) đang dùng endpoint demo. Các bước còn lại (đăng ký thiết bị, chờ MQTT, nghiệm thu) hoạt động với backend thật khi endpoint đã sẵn sàng."
-      />
-
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-charcoal">Onboarding thiết bị mới</h1>
@@ -110,7 +103,7 @@ export default function OnboardingPage() {
         {step === 0 && <Step1Location data={data} patch={patch} onNext={next} />}
         {step === 1 && <Step2Validate data={data} patch={patch} onNext={next} onBack={back} />}
         {step === 2 && <Step3ConnectAP data={data} onNext={next} onBack={back} />}
-        {step === 3 && <Step4WiFi data={data} patch={patch} onNext={next} onBack={back} />}
+        {step === 3 && <Step4WiFi data={data} onNext={next} onBack={back} />}
         {step === 4 && (
           <Step5WaitOnline
             data={data}

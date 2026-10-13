@@ -26,6 +26,9 @@ function Svg({ children, ...props }: IconProps) {
   )
 }
 
+// Icon mới từ nay lấy thẳng từ lucide-react, re-export ở đây để components/ui/ chỉ import qua 1 chỗ
+export { X as IconX } from 'lucide-react'
+
 export const IconDashboard = (p: IconProps) => (
   <Svg {...p}><rect x="2.5" y="2.5" width="6" height="7.5" rx="2" /><rect x="11.5" y="2.5" width="6" height="4.5" rx="2" /><rect x="11.5" y="10" width="6" height="7.5" rx="2" /><rect x="2.5" y="12.5" width="6" height="5" rx="2" /></Svg>
 )
@@ -226,4 +229,9 @@ export const IconGrid = (p: IconProps) => (
     <rect x="4" y="12" width="4" height="4" rx="1" />
     <rect x="12" y="12" width="4" height="4" rx="1" />
   </Svg>
+)
+
+/** Icon Chat / Tin nhắn */
+export const IconMessage = (p: IconProps) => (
+  <Svg {...p}><path d="M16 10c0 3.3-2.7 6-6 6-1 0-2-.3-2.9-.7L3 17l1.7-4.1C4.3 12 4 11 4 10c0-3.3 2.7-6 6-6s6 2.7 6 6Z" /></Svg>
 )

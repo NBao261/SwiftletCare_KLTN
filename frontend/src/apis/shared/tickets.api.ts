@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Ticket, TicketType, TicketStatus, TicketPriority, TicketSatChecklist } from '@/types'
+import type { ApiResponse, Ticket, TicketType, TicketStatus, TicketPriority, TicketSatChecklist, TicketChatMessage } from '@/types'
 
 export interface CreateTicketInput {
   farm_id: string
@@ -32,6 +32,8 @@ export interface AdminOverrideInput {
 
 export interface ListTicketsQuery {
   farmId?: string; status?: TicketStatus; priority?: 'P1' | 'P2' | 'P3'; assignedToMe?: boolean
+  /** Hàng đợi chung (TICKET-FR-005) — ticket chưa có Technician; BE chỉ trả trong khu vực phụ trách */
+  unassigned?: boolean
   page?: number; limit?: number
 }
 
@@ -54,6 +56,12 @@ export const ticketApi = {
   updateStatus:       (id: string, status: TicketStatus, note?: string) => api.put<ApiResponse<Ticket>>(`/tickets/${id}/status`, { status, note }),
   updateSatChecklist: (id: string, updates: Partial<TicketSatChecklist>) => api.put<ApiResponse<Ticket>>(`/tickets/${id}/sat-checklist`, updates),
   escalate:           (id: string, reason?: string) => api.post<ApiResponse<Ticket>>(`/tickets/${id}/escalate`, { reason }),
+  /**
+   * Flow 9 case 4a — xin gán lại (`reason` bắt buộc). Khác `escalate` (báo Admin, vẫn giữ ticket):
+   * router chọn Technician khác, ticket về NEW; không còn ai thì vào hàng đợi chung.
+   * Chỉ Technician đang được gán (BE không cho ADMIN gọi route này).
+   */
+  requestReassign:    (id: string, reason: string) => api.post<ApiResponse<Ticket>>(`/tickets/${id}/reassign-request`, { reason }),
   /** Admin — quyền can thiệp thường trực, bất kể trạng thái/SLA (TICKET-FR-005b) */
   adminOverride:      (id: string, input: AdminOverrideInput) => api.put<ApiResponse<Ticket>>(`/tickets/${id}/admin-override`, input),
   kpi: () => api.get<ApiResponse<{
@@ -82,7 +90,7 @@ export const ticketApi = {
 
   /** Chat — GET /tickets/:id/messages, POST /tickets/:id/messages */
   listMessages: (id: string, page = 1) =>
-    api.get<ApiResponse<Array<{ _id: string; author_id: string; author_name: string; role: string; content: string; is_system: boolean; created_at: string }>>>(`/tickets/${id}/messages`, { params: { page } }),
+    api.get<ApiResponse<TicketChatMessage[]>>(`/tickets/${id}/messages`, { params: { page } }),
   sendMessage: (id: string, content: string, clientMessageId?: string) =>
-    api.post<ApiResponse<{ _id: string }>>(`/tickets/${id}/messages`, { content, client_message_id: clientMessageId }),
+    api.post<ApiResponse<TicketChatMessage>>(`/tickets/${id}/messages`, { content, client_message_id: clientMessageId }),
 }

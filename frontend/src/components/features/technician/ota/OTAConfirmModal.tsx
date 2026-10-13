@@ -1,16 +1,17 @@
 // OTAConfirmModal.tsx — B4: Xác nhận trước khi đẩy OTA
 import { Button, Modal } from '@/components/ui'
-import type { FirmwareVersion } from '@/components/features/technician/ota/otaTypes'
+import type { OtaFormValues } from '@/components/features/technician/ota/otaTypes'
 import type { SensorNode } from '@/types'
 
 interface Props {
   node: SensorNode
-  firmware: FirmwareVersion
+  firmware: OtaFormValues
+  loading?: boolean
   onClose: () => void
   onConfirm: () => void
 }
 
-export function OTAConfirmModal({ node, firmware, onClose, onConfirm }: Props) {
+export function OTAConfirmModal({ node, firmware, loading, onClose, onConfirm }: Props) {
   return (
     <Modal open onClose={onClose} title="Xác nhận đẩy OTA Firmware">
       <div className="flex flex-col gap-4">
@@ -31,24 +32,17 @@ export function OTAConfirmModal({ node, firmware, onClose, onConfirm }: Props) {
             <div>
               <dt className="text-[10px] font-semibold uppercase tracking-wider text-warmGray">Cập nhật lên</dt>
               <dd className="font-bold text-charcoal">
-                <span className="font-mono text-xs text-warmGray line-through">{node.firmware_version}</span>
+                <span className="font-mono text-xs text-warmGray line-through">{node.firmware_version ?? '—'}</span>
                 {' → '}
-                <span className="font-mono">{firmware.version}</span>
+                <span className="font-mono">{firmware.version.trim()}</span>
               </dd>
             </div>
+            <div className="col-span-2 min-w-0">
+              <dt className="text-[10px] font-semibold uppercase tracking-wider text-warmGray">Nguồn firmware</dt>
+              <dd className="truncate font-mono text-xs text-charcoal" title={firmware.url.trim()}>{firmware.url.trim()}</dd>
+              <dd className="mt-1 truncate font-mono text-[10px] text-warmGray" title={firmware.sha256.trim()}>SHA-256: {firmware.sha256.trim()}</dd>
+            </div>
           </dl>
-        </div>
-
-        {/* Changelog */}
-        <div className="rounded-xl bg-graphite/5 px-4 py-3">
-          <p className="label-caption mb-2">CHANGELOG</p>
-          <ul className="flex flex-col gap-1">
-            {firmware.changelog.map((c, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-charcoal">
-                <span className="shrink-0 text-warmGray">•</span>{c}
-              </li>
-            ))}
-          </ul>
         </div>
 
         {/* Warning */}
@@ -62,7 +56,7 @@ export function OTAConfirmModal({ node, firmware, onClose, onConfirm }: Props) {
 
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1">Huỷ</Button>
-          <Button onClick={onConfirm} className="flex-1 bg-charcoal text-white hover:bg-charcoal/90">
+          <Button onClick={onConfirm} loading={loading} className="flex-1 bg-charcoal text-white hover:bg-charcoal/90">
             Đẩy OTA ngay
           </Button>
         </div>

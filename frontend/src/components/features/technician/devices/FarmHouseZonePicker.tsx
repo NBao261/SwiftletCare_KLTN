@@ -1,5 +1,5 @@
 import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
-import { Select } from '@/components/ui'
+import { SelectMenu } from '@/components/ui'
 
 export interface FarmHouseZonePickerValue { farmId: string; houseId: string; zoneId: string }
 
@@ -21,44 +21,56 @@ export default function FarmHouseZonePicker({ value, onChange }: FarmHouseZonePi
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <Select
-        label="Trang trại"
-        required
-        disabled={loadingFarms}
-        value={value.farmId ?? ''}
-        onChange={e => onChange({ farmId: e.target.value || undefined, houseId: undefined, zoneId: undefined })}
-      >
-        <option value="">-- Chọn trang trại --</option>
-        {farms?.map(farm => (
-          <option key={farm._id} value={farm._id}>{farm.name}</option>
-        ))}
-      </Select>
+      <div className="flex flex-col gap-1.5">
+        <label className="label-caption">
+          Trang trại <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+        </label>
+        <SelectMenu
+          field
+          disabled={loadingFarms}
+          value={value.farmId ?? ''}
+          ariaLabel="Chọn trang trại"
+          options={[
+            { value: '', label: '-- Chọn trang trại --' },
+            ...(farms?.map(f => ({ value: f._id, label: f.name })) ?? [])
+          ]}
+          onChange={val => onChange({ farmId: val || undefined, houseId: undefined, zoneId: undefined })}
+        />
+      </div>
 
-      <Select
-        label="Nhà"
-        required
-        disabled={!value.farmId || loadingHouses}
-        value={value.houseId ?? ''}
-        onChange={e => onChange({ ...value, houseId: e.target.value || undefined, zoneId: undefined })}
-      >
-        <option value="">{value.farmId ? '-- Chọn nhà --' : 'Chọn trang trại trước'}</option>
-        {houses?.map(house => (
-          <option key={house._id} value={house._id}>{house.name}</option>
-        ))}
-      </Select>
+      <div className="flex flex-col gap-1.5">
+        <label className="label-caption">
+          Nhà <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+        </label>
+        <SelectMenu
+          field
+          disabled={!value.farmId || loadingHouses}
+          value={value.houseId ?? ''}
+          ariaLabel="Chọn nhà"
+          options={[
+            { value: '', label: value.farmId ? '-- Chọn nhà --' : 'Chọn trang trại trước' },
+            ...(houses?.map(h => ({ value: h._id, label: h.name })) ?? [])
+          ]}
+          onChange={val => onChange({ ...value, houseId: val || undefined, zoneId: undefined })}
+        />
+      </div>
 
-      <Select
-        label="Zone"
-        required
-        disabled={!value.houseId || loadingZones}
-        value={value.zoneId ?? ''}
-        onChange={e => onChange({ ...value, zoneId: e.target.value || undefined })}
-      >
-        <option value="">{value.houseId ? '-- Chọn zone --' : 'Chọn nhà trước'}</option>
-        {zones?.map(zone => (
-          <option key={zone._id} value={zone._id}>{zone.name}</option>
-        ))}
-      </Select>
+      <div className="flex flex-col gap-1.5">
+        <label className="label-caption">
+          Zone <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+        </label>
+        <SelectMenu
+          field
+          disabled={!value.houseId || loadingZones}
+          value={value.zoneId ?? ''}
+          ariaLabel="Chọn zone"
+          options={[
+            { value: '', label: value.houseId ? '-- Chọn zone --' : 'Chọn nhà trước' },
+            ...(zones?.map(z => ({ value: z._id, label: z.name })) ?? [])
+          ]}
+          onChange={val => onChange({ ...value, zoneId: val || undefined })}
+        />
+      </div>
     </div>
   )
 }
