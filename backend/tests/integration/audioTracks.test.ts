@@ -221,7 +221,7 @@ describe('DELETE /relay-override', () => {
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
     expect(publishCommand).toHaveBeenCalledWith(...ctx.chain, 'relay/command', { deviceId: ctx.node.device_id, action: 'clear_override' })
-    expect(emitRelayUpdate).toHaveBeenCalledTimes(4)
+    expect(emitRelayUpdate).toHaveBeenCalledTimes(3) // misting, speaker, ventilation
     expect(await AuditLog.countDocuments({ action: 'RELAY_OVERRIDE_CLEARED' })).toBe(1)
   })
 
