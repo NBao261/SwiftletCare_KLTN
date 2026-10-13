@@ -1,5 +1,5 @@
 ---
-description: Review a pull request on NBao261/SwiftletCare_KLTN against per-module rules and post one review (your own PRs are reviewed in the session only)
+description: Review a pull request on NBao261/SwiftletCare_KLTN against per-module rules and post one review (a COMMENT-only review on your own PRs)
 argument-hint: <PR number>
 model: claude-sonnet-5-5
 ---
@@ -14,7 +14,7 @@ STEP 0 - identity guard. Check the authenticated GitHub user (`gh api user --jq 
 
 STEP 1 - check the PR.
 - FIRST check its state (state, merged, draft). If it is MERGED or CLOSED, stop immediately: do not check out code, do not run /code-review, post nothing; report that it is already merged/closed.
-- If its author is NBao261, switch to SELF-REVIEW mode (see the SELF-REVIEW section below) and skip the marker logic in this step.
+- If its author is NBao261, switch to SELF-REVIEW mode (see the SELF-REVIEW section below).
 - If it is a draft, or its title contains WIP, stop and report why.
 - Get its head SHA and NBao261's reviews. The last NBao261 review whose body contains `<!-- auto-review sha=XXXX -->` gives the last reviewed commit:
   - no marker -> FULL REVIEW;
@@ -68,11 +68,12 @@ POSTING.
 - Body must contain `<!-- auto-review sha=<head sha> -->`.
 - Write every finding in natural, concise Vietnamese, first person as a teammate: what is wrong, why it matters (concrete scenario), how to fix. For rule violations cite document + section (e.g. 'theo mục 13.5 trong frontend/FE_Design_Claude.md') and say whether it blocks merge ('chặn merge') or not ('góp ý, không chặn merge'). No signatures, no emoji, no tool severity labels.
 
-SELF-REVIEW mode (the PR's author is NBao261, i.e. the repo owner's own PR). GitHub does not let an author approve or request changes on their own PR, so this mode posts nothing at all; it is a check the owner runs before asking teammates to review.
-- Always a FULL REVIEW of the PR against its base branch (no marker, no follow-up step, no thread replies).
+SELF-REVIEW mode (the PR's author is NBao261, i.e. the repo owner's own PR). GitHub does not let an author approve or request changes on their own PR, so this mode posts a COMMENT review instead; it is a check the owner runs before asking teammates to review.
+- Use the marker logic of STEP 1 as for any other PR: no marker -> FULL REVIEW; marker sha != head sha -> FOLLOW-UP REVIEW (including the FOLLOW-UP extra step: reply in each earlier thread whether it is fixed); marker sha == head sha -> nothing new, stop.
 - Run STEP 2, STEP 3 and STEP 3b exactly as for any other PR (same per-module rules, same review level choice, same frontend <-> backend API check).
-- Skip STEP 4 and POSTING entirely: no review, no comments, no replies on GitHub.
-- Instead, write the result in this session, in Vietnamese: first a one-line verdict ('Sẵn sàng nhờ review' if nothing blocking is left, otherwise 'Cần sửa trước khi nhờ review'), then the findings grouped as 'Chặn merge' and 'Góp ý', each with `path:line`, what is wrong, why it matters and how to fix, then the "Đối chiếu API backend" table when STEP 3b applied.
-- If the owner later asks in the same session to fix the findings, that is a separate task; this command itself never edits or pushes code.
+- STEP 4 does not apply: the event is ALWAYS `COMMENT`, never APPROVE or REQUEST_CHANGES.
+- POSTING applies unchanged (race guard, one review with inline comments, the `<!-- auto-review sha=<head sha> -->` marker, Vietnamese wording), except that the body starts with a one-line verdict: 'Sẵn sàng nhờ review' if nothing blocking is left, otherwise 'Cần sửa trước khi nhờ review', and does not ask anyone to click "Re-request review". Mark each inline comment as 'chặn merge' or 'góp ý, không chặn merge' as usual, and include the "Đối chiếu API backend" section when STEP 3b applied.
+- If nothing at all was found, still post the COMMENT review (verdict plus what was checked) so the marker records the reviewed commit.
+- This command never edits or pushes code; fixing the findings is a separate task.
 
-Finish with a short report in Vietnamese: full or follow-up review, review level used (low/medium/high/xhigh) and why, modules and rule files read, event used (or "SELF-REVIEW, không đăng gì" for your own PR), number of comments, for frontend PRs the API check result (how many data needs are DONE/STUB/MISSING and how many still use mock data), and a link to the PR.
+Finish with a short report in Vietnamese: full or follow-up review, review level used (low/medium/high/xhigh) and why, modules and rule files read, event used (COMMENT for a SELF-REVIEW of your own PR), number of comments, for frontend PRs the API check result (how many data needs are DONE/STUB/MISSING and how many still use mock data), and a link to the PR.
