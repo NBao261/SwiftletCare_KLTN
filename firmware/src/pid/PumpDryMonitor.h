@@ -8,6 +8,11 @@
  * mỗi `onMs` BẬT cộng dồn thì so độ ẩm với đầu khối đó: không tăng quá `minRise`
  * điểm %RH → bơm khô. Báo và CHỐT (blocked) để bảo vệ bơm.
  *
+ * CHỈ xét khi độ ẩm còn DƯỚI mục tiêu (`belowTarget`, tức < humidityMin): lúc đó bộ
+ * mờ phun mạnh và độ ẩm lẽ ra phải lên, "không lên" mới có nghĩa. Quanh mục tiêu bộ
+ * mờ chạy ~25 % và giữ độ ẩm ĐỨNG YÊN là đúng thiết kế — xét ở đó thì bơm tốt cũng bị
+ * báo khô và phun sương bị tắt oan lặp đi lặp lại.
+ *
  * Chốt nhả khi:
  * - nhu cầu phun về 0 (hết đợt), hoặc
  * - chuyển giữa tự động và can thiệp tay (người dùng bật tay sau khi châm nước), hoặc
@@ -32,11 +37,12 @@ public:
    * @param manual   relay phun đang bị can thiệp tay
    * @param relayOn  relay phun thực sự BẬT trong chu kỳ vừa qua
    * @param humidity %RH đo thô
+   * @param belowTarget độ ẩm còn dưới ngưỡng dưới của Zone — chỉ khi đó mới cộng dồn và xét
    * @param retryMs  chốt bao lâu thì tự thử phun lại
    * @return true đúng 1 lần mỗi lần phát hiện bơm khô
    */
-  bool update(bool sensorOk, bool demand, bool manual, bool relayOn, float humidity, uint32_t nowMs,
-              uint32_t onMs, float minRise, uint32_t retryMs);
+  bool update(bool sensorOk, bool demand, bool manual, bool relayOn, float humidity, bool belowTarget,
+              uint32_t nowMs, uint32_t onMs, float minRise, uint32_t retryMs);
   /** Đang chốt ngừng phun (chỉ áp cho chế độ tự động — can thiệp tay vẫn bật được bơm). */
   bool blocked() const { return _blocked; }
 

@@ -10,6 +10,7 @@ static const uint32_t STEP = 10000;     // chu kỳ điều khiển 10 s
 static const uint32_t ON_MS = 300000;   // mặc định 5 phút BẬT cộng dồn
 static const float RISE = 2.0f;         // mặc định +2 điểm %RH
 static const uint32_t RETRY = 1800000;  // mặc định chốt 30 phút rồi thử lại
+static const float H_MIN = 75.0f;       // ngưỡng dưới độ ẩm mặc định của Zone
 
 /**
  * Mô phỏng đúng đường gọi của PIDController: số đo hỏng → bộ mờ cho nhu cầu 0 (demand
@@ -26,7 +27,8 @@ struct Sim {
       bool sensorOk = !isnan(humidity);
       bool demand = manual ? wantSpray : (wantSpray && sensorOk);
       bool on = relayOn && demand && (manual || !m.blocked());
-      fired += m.update(sensorOk, demand, manual, on, humidity, now, onMs, rise, retry) ? 1 : 0;
+      bool belowTarget = sensorOk && humidity < H_MIN;
+      fired += m.update(sensorOk, demand, manual, on, humidity, belowTarget, now, onMs, rise, retry) ? 1 : 0;
     }
     return fired;
   }
@@ -102,6 +104,17 @@ void test_retry_that_is_still_dry_latches_and_reports_again() {
   TEST_ASSERT_TRUE(s.m.blocked());
 }
 
+// Bơm tốt, bộ mờ giữ độ ẩm đứng yên quanh mục tiêu (≥ hMin): KHÔNG phải bơm khô
+void test_steady_humidity_at_target_is_not_dry() {
+  Sim s;
+  TEST_ASSERT_EQUAL(0, s.run(600, 80)); // 100 phút phun mà ẩm đứng ở 80 %
+  TEST_ASSERT_FALSE(s.m.blocked());
+  // Rơi xuống dưới mục tiêu rồi không lên: lúc này mới tính, và tính từ lúc rơi xuống
+  TEST_ASSERT_EQUAL(0, s.run(30, 72)); // đúng 5 phút BẬT dưới mục tiêu — chưa quá
+  TEST_ASSERT_EQUAL(1, s.run(2, 72));
+  TEST_ASSERT_TRUE(s.m.blocked());
+}
+
 void test_parameters_are_tunable() {
   Sim fast;
   fast.run(1, 70);
@@ -147,6 +160,7 @@ int main() {
   RUN_TEST(test_manual_override_is_not_blocked_and_starts_a_new_session);
   RUN_TEST(test_latch_retries_after_the_lockout);
   RUN_TEST(test_retry_that_is_still_dry_latches_and_reports_again);
+  RUN_TEST(test_steady_humidity_at_target_is_not_dry);
   RUN_TEST(test_parameters_are_tunable);
   RUN_TEST(test_sensor_dropouts_keep_the_accumulated_time_and_the_latch);
   RUN_TEST(test_long_sensor_outage_is_not_evaluated);

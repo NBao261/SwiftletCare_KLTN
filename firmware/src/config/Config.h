@@ -75,6 +75,11 @@
 // nuôi yến và chưa chỉnh được qua MQTT — đủ dài để bơm khô thật không chạy liên
 // tục, đủ ngắn để một lần báo nhầm không làm nhà yến mất phun sương cả ngày.
 #define PUMP_DRY_RETRY_MS 1800000UL
+// Cảnh báo "theo đợt" (NOISE_ANOMALY, PUMP_DRY) được gửi LẠI mỗi khoảng này chừng nào
+// sự cố còn tiếp diễn. Backend gộp vào cảnh báo đang mở (không thông báo lại) và tự
+// đóng cảnh báo sau 60 phút không được ghi nhận lại — nếu firmware chỉ gửi 1 lần lúc
+// bắt đầu thì một đợt dài hơn 60 phút bị đóng khi vẫn đang diễn ra. Phải < 60 phút.
+#define EPISODE_ALERT_RESEND_MS 900000UL
 #define MQTT_HEARTBEAT_MS 30000    // 30 seconds (FARM-FR-005)
 #define MANUAL_OVERRIDE_MS 1800000 // 30 minutes (ENV-FR-018)
 // ponytail: nghe thử (ENV-FR-013c) tự dừng sau 5 phút phòng khi lệnh stop bị

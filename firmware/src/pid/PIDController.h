@@ -64,6 +64,7 @@ void clearOverrides(RelayState &relay);
 struct ThreatFlags {
   bool speakerFailure = false; // relay speaker ON + đang play nhưng dB không tăng
   bool pumpDry = false;        // đang chốt ngừng phun vì bơm khô (PumpDryMonitor::blocked — theo mức)
+  bool pumpDryWhileManual = false; // bơm khô phát hiện lúc đang bật tay — bơm KHÔNG bị ngắt
   bool sensorFault = false;    // 1 Slave ID lỗi
   bool busFailure = false;     // ≥3/5 Slave ID lỗi, 3 chu kỳ liên tiếp
   bool noiseAnomaly = false;   // THREAT-FR-007 — do NoiseAnomalyDetector (sensorTask) báo, main.cpp gộp vào

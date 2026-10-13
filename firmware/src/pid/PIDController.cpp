@@ -205,12 +205,14 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
 
   // THREAT-FR-011: PUMP_DRY — bơm BẬT cộng dồn đủ lâu trong 1 đợt phun mà độ ẩm
   // không tăng → chốt ngừng phun (runHumidityControl đọc pumpMonitor.blocked()),
-  // tự thử lại sau PUMP_DRY_RETRY_MS. Thời gian + mức tăng chỉnh theo Zone
+  // tự thử lại sau PUMP_DRY_RETRY_MS. Chỉ xét khi độ ẩm còn dưới humidityMin (quanh
+  // mục tiêu độ ẩm đứng yên là bình thường). Thời gian + mức tăng chỉnh theo Zone
   // (EXPERT-FR-008). Đợt phun: AUTO = bộ mờ muốn phun; override = relay được ép BẬT.
   bool humidityOk = data.tempHumidOk && isfinite(data.humidity);
   bool sensorOk = humidityOk && (relay.mistingOverride || autoDemandKnown);
   bool demand = relay.mistingOverride ? relay.misting : autoMistingDemand;
-  bool fired = pumpMonitor.update(sensorOk, demand, relay.mistingOverride, relay.misting, data.humidity, millis(),
+  bool fired = pumpMonitor.update(sensorOk, demand, relay.mistingOverride, relay.misting, data.humidity,
+                                  data.humidity < Config::humidityMin, millis(),
                                   (uint32_t)Config::pumpDryOnSec * 1000UL, Config::pumpDryMinRisePct,
                                   PUMP_DRY_RETRY_MS);
   if (fired) {
@@ -221,6 +223,9 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
   // hiện thì main.cpp gửi lại ở chu kỳ sau cho tới khi gửi được — phun sương đang
   // bị ngắt thì Farm Owner phải được báo.
   flags.pumpDry = pumpMonitor.blocked();
+  // Chốt chỉ ngắt được phun TỰ ĐỘNG: đang can thiệp tay thì bơm vẫn chạy (ENV-FR-016) —
+  // cảnh báo phải nói đúng điều đó thay vì "đã tự ngừng phun".
+  flags.pumpDryWhileManual = flags.pumpDry && relay.mistingOverride;
 
   return flags;
 }

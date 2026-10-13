@@ -77,11 +77,28 @@ static bool wasUnexpectedReset = false;
 // báo/ngày (dedup backend chỉ chặn 5 phút). Gửi thất bại (mất MQTT) thì giữ
 // reported=false để thử lại chu kỳ sau; sự cố hết thì reset để lần sau báo lại.
 static void reportOnRise(bool active, bool &reported, const char *type,
-                         const char *severity, const char *message) {
+                         const char *severity, const char *message,
+                         unsigned long resendMs = 0) {
+  // resendMs > 0: gửi lại định kỳ chừng nào sự cố còn tiếp diễn (xem
+  // EPISODE_ALERT_RESEND_MS). Mỗi loại cảnh báo gọi hàm này từ đúng 1 chỗ nên
+  // dùng địa chỉ cờ `reported` làm khoá cho mốc gửi gần nhất là đủ.
+  static const bool *keys[8] = {nullptr};
+  static unsigned long sentAt[8] = {0};
+  int slot = -1;
+  for (int i = 0; i < 8 && slot < 0; i++) {
+    if (keys[i] == &reported || keys[i] == nullptr) {
+      keys[i] = &reported;
+      slot = i;
+    }
+  }
+  unsigned long now = millis();
   if (!active) {
     reported = false;
-  } else if (!reported) {
-    reported = MQTTManager::publishAlert(type, severity, message);
+  } else if (!reported || (resendMs > 0 && slot >= 0 && now - sentAt[slot] >= resendMs)) {
+    if (MQTTManager::publishAlert(type, severity, message)) {
+      reported = true;
+      if (slot >= 0) sentAt[slot] = now;
+    }
   }
 }
 
@@ -339,8 +356,12 @@ void pidTask(void *pvParameters) {
       // pumpDry giữ true suốt lúc đang chốt ngừng phun: gửi thất bại (MQTT
       // rớt) thì reportOnRise thử lại ở chu kỳ sau; gửi được rồi thì không lặp.
       reportOnRise(threats.pumpDry, pumpReported, "PUMP_DRY", "MEDIUM",
-                   "Bơm phun sương chạy nhưng độ ẩm không tăng — đã tự ngừng "
-                   "phun để bảo vệ bơm, sẽ thử lại sau 30 phút");
+                   threats.pumpDryWhileManual
+                       ? "Bơm phun sương chạy nhưng độ ẩm không tăng — bơm đang "
+                         "được BẬT TAY nên VẪN CHẠY, hãy tắt bơm và kiểm tra nước"
+                       : "Bơm phun sương chạy nhưng độ ẩm không tăng — đã tự ngừng "
+                         "phun để bảo vệ bơm, sẽ thử lại sau 30 phút",
+                   EPISODE_ALERT_RESEND_MS);
       reportOnRise(threats.sensorFault, sensorReported, "SENSOR_FAULT",
                    "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");
       // MEDIUM (không phải HIGH): phát hiện chỉ theo dB, ngưỡng chưa hiệu chỉnh
@@ -350,7 +371,8 @@ void pidTask(void *pvParameters) {
       reportOnRise(threats.noiseAnomaly, noiseReported, "NOISE_ANOMALY",
                    "MEDIUM",
                    "Mức ồn cao bất thường kéo dài so với mức nền của giờ này "
-                   "khi loa không phát");
+                   "khi loa không phát",
+                   EPISODE_ALERT_RESEND_MS);
       reportOnRise(threats.busFailure, busReported, "RS485_BUS_FAILURE",
                    "CRITICAL",
                    "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");

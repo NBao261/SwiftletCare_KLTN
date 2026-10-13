@@ -7,7 +7,8 @@ void PumpDryMonitor::startBlock(float humidity) {
 }
 
 bool PumpDryMonitor::update(bool sensorOk, bool demand, bool manual, bool relayOn, float humidity,
-                            uint32_t nowMs, uint32_t onMs, float minRise, uint32_t retryMs) {
+                            bool belowTarget, uint32_t nowMs, uint32_t onMs, float minRise,
+                            uint32_t retryMs) {
   bool fired = false;
 
   if (!sensorOk) {
@@ -21,6 +22,9 @@ bool PumpDryMonitor::update(bool sensorOk, bool demand, bool manual, bool relayO
   } else if (_blocked) {
     // Thử lại sau retryMs: báo nhầm thì phun sương tự hồi phục, khô thật thì bị chốt lại
     if (nowMs - _blockedSinceMs >= retryMs) startBlock(humidity);
+  } else if (!belowTarget) {
+    // Độ ẩm đã tới vùng mục tiêu: đứng yên ở đây là bộ mờ đang giữ ẩm, không phải bơm khô
+    startBlock(humidity);
   } else {
     // Relay giữ nguyên trạng thái giữa 2 chu kỳ: khoảng vừa qua tính là BẬT nếu chu kỳ trước BẬT
     if (_wasOn) _onMs += nowMs - _lastMs;
