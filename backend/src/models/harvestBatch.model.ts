@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { HarvestStatus, NestType } from '@/types'
+import { applySoftDeleteScope } from '@/utils/softDelete.util'
 
 /** HarvestBatch – SRS §8.2, MARKET-FR-001..003 */
 export interface IHarvestBatch extends Document {
@@ -43,7 +44,7 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
     harvest_date:{ type: Date, required: true },
     nest_count:  { type: Number, required: true },
     weight_grams:{ type: Number, required: true },
-    nest_type:   { type: String, enum: ['RAW','CLEANED','PREMIUM'] as NestType[], required: true },
+    nest_type:   { type: String, enum: ['RAW','CLEANED','PREMIUM'] satisfies NestType[], required: true },
     product_images: [{ type: String }],
     env_snapshot: {
       avg_temperature: { type: Number },
@@ -57,13 +58,14 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
       avg_return_rate_30d: { type: Number },
       estimated_population: { type: Number },
     },
-    status: { type: String, enum: ['DRAFT','LISTED','ARCHIVED'] as HarvestStatus[], default: 'DRAFT' },
+    status: { type: String, enum: ['DRAFT','LISTED','ARCHIVED'] satisfies HarvestStatus[], default: 'DRAFT' },
     listing_id: { type: Schema.Types.ObjectId, ref: 'NestListing' },
     is_deleted: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
 
-harvestBatchSchema.pre('find', function () { this.where({ is_deleted: false }) })
+applySoftDeleteScope(harvestBatchSchema)
+harvestBatchSchema.index({ farm_id: 1, harvest_date: -1 })
 
 export const HarvestBatch = model<IHarvestBatch>('HarvestBatch', harvestBatchSchema)

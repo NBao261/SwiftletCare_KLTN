@@ -2,7 +2,7 @@ import { MaintenanceSchedule, IMaintenanceSchedule } from '@/models/maintenanceS
 import { Farm } from '@/models/farm.model'
 import { Ticket, ITicket } from '@/models/ticket.model'
 import { Zone } from '@/models/houseZone.model'
-import { assertFarmAccess, assertZoneInFarm, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { applyZoneScope, assertFarmAccess, assertZoneInFarm, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { createMaintenanceTicket } from '@/services/ticket.service'
 import { logAction } from '@/services/auditLog.service'
 import { notifyAdmins } from '@/services/notification.service'
@@ -40,10 +40,11 @@ export async function listSchedules(user: CurrentUser, query: { farmId?: string;
   } else {
     filter.farm_id = { $in: await listAccessibleFarmIds(user) }
   }
+  const scoped = await applyZoneScope(filter, user) // Farm Operator: Zone trong phạm vi + lịch cấp farm
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [records, total] = await Promise.all([
-    MaintenanceSchedule.find(filter).sort({ next_due_at: 1 }).skip(skip).limit(limit).lean(),
-    MaintenanceSchedule.countDocuments(filter),
+    MaintenanceSchedule.find(scoped).sort({ next_due_at: 1 }).skip(skip).limit(limit).lean(),
+    MaintenanceSchedule.countDocuments(scoped),
   ])
   return { records, total, page, limit }
 }

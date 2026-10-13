@@ -27,6 +27,8 @@ const vi = {
   'alert.EDGE_AI_DEGRADED': 'Edge AI suy giảm',
   'alert.SENSOR_FAULT': 'Lỗi cảm biến',
   'alert.RS485_BUS_FAILURE': 'Lỗi bus RS485',
+  'alert.SENSOR_ANOMALY': 'Cảm biến bất thường',
+  'alert.FORECAST_BREACH': 'Dự báo vượt ngưỡng',
   'filter.all': 'Tất cả',
   // KPI
   'kpi.houses': 'Nhà yến',
@@ -240,6 +242,8 @@ const en: Record<Key, string> = {
   'alert.EDGE_AI_DEGRADED': 'Edge AI degraded',
   'alert.SENSOR_FAULT': 'Sensor fault',
   'alert.RS485_BUS_FAILURE': 'RS485 bus failure',
+  'alert.SENSOR_ANOMALY': 'Sensor anomaly',
+  'alert.FORECAST_BREACH': 'Forecast threshold breach',
   'filter.all': 'All',
   'kpi.houses': 'Swiftlet houses',
   'kpi.title': 'System overview',

@@ -1,3 +1,5 @@
+import fs from 'fs/promises'
+import path from 'path'
 import type S3 from 'aws-sdk/clients/s3'
 
 /**
@@ -6,6 +8,23 @@ import type S3 from 'aws-sdk/clients/s3'
  * và thông báo "maintenance mode" của SDK v2 không in ra mỗi lần khởi động.
  * ponytail: aws-sdk v2 đã hết hỗ trợ — chuyển sang @aws-sdk/client-s3 (v3) nếu cần vá bảo mật.
  */
+/**
+ * STORAGE_DRIVER=local — lưu file thẳng vào thư mục trên máy thay cho MinIO, để
+ * chạy dev khi chưa dựng MinIO. File được phục vụ qua GET /files/<key> (xem
+ * app.config.ts) KHÔNG cần đăng nhập và không hết hạn như URL ký của MinIO —
+ * chỉ dùng trên máy dev, không dùng khi triển khai thật.
+ */
+export const isLocalStorage = () => process.env.STORAGE_DRIVER === 'local'
+export const localStorageDir = () => path.resolve(process.env.LOCAL_STORAGE_DIR ?? 'storage')
+
+/** Đường dẫn file của 1 key, từ chối key thoát ra ngoài thư mục lưu trữ (../) */
+function localPath(key: string): string {
+  const root = localStorageDir()
+  const full = path.resolve(root, key)
+  if (!full.startsWith(root + path.sep)) throw new Error(`Storage key không hợp lệ: ${key}`)
+  return full
+}
+
 let client: S3 | null = null
 let bucketReady = false
 
@@ -39,18 +58,32 @@ async function ensureBucket(c: S3): Promise<void> {
 }
 
 export async function putObject(key: string, body: Buffer, contentType: string): Promise<void> {
+  if (isLocalStorage()) {
+    const file = localPath(key)
+    await fs.mkdir(path.dirname(file), { recursive: true })
+    await fs.writeFile(file, body)
+    return
+  }
   const c = await s3()
   await ensureBucket(c)
   await c.putObject({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType }).promise()
 }
 
 export async function removeObject(key: string): Promise<void> {
+  if (isLocalStorage()) {
+    await fs.rm(localPath(key), { force: true })
+    return
+  }
   const c = await s3()
   await c.deleteObject({ Bucket: bucket(), Key: key }).promise()
 }
 
 /** URL tạm để trình duyệt tải/nghe trực tiếp — bucket để private */
 export async function presignedGetUrl(key: string, expiresSec = 3600): Promise<string> {
+  if (isLocalStorage()) {
+    const base = process.env.PUBLIC_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`
+    return `${base}/files/${key}`
+  }
   const c = await s3()
   return c.getSignedUrlPromise('getObject', { Bucket: bucket(), Key: key, Expires: expiresSec })
 }

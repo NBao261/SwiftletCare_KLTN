@@ -19,7 +19,7 @@ const birdCountSchema = new Schema<IBirdCountRecord>(
     camera_node_id: { type: Schema.Types.ObjectId, ref: 'CameraNode', required: true },
     zone_id:        { type: Schema.Types.ObjectId, ref: 'Zone', required: true },
     timestamp:      { type: Date, required: true },
-    session_type:   { type: String, enum: ['MORNING_EXIT','EVENING_ENTRY'] as SessionType[], required: true },
+    session_type:   { type: String, enum: ['MORNING_EXIT','EVENING_ENTRY'] satisfies SessionType[], required: true },
     entry_count:    { type: Number, default: 0 },
     exit_count:     { type: Number, default: 0 },
     return_rate:    { type: Number },

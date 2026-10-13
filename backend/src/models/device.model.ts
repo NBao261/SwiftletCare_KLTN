@@ -46,6 +46,26 @@ export interface ISensorNode extends Document {
   decommission_reason?: string
   /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
+  /**
+   * TICKET-FR-018 (v1.24.0) — thời gian chạy + số lần đóng cắt thật của bơm/quạt,
+   * cộng dồn mỗi giờ từ telemetry (relayUsage.service). `since_service_*` về 0 mỗi
+   * lần sinh ticket bảo trì theo thời gian chạy.
+   */
+  relay_usage: {
+    misting: IRelayUsage
+    ventilation: IRelayUsage
+    counted_until?: Date
+    last_misting_on?: boolean
+    last_ventilation_on?: boolean
+  }
+}
+
+export interface IRelayUsage {
+  on_hours: number
+  switches: number
+  since_service_hours: number
+  since_service_switches: number
+  last_ticket_id?: Types.ObjectId
 }
 
 export interface ICameraNode extends Document {
@@ -69,6 +89,14 @@ export interface ICameraNode extends Document {
   decommission_reason?: string
   /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
+}
+
+const relayUsageSchema = {
+  on_hours:               { type: Number, default: 0 },
+  switches:               { type: Number, default: 0 },
+  since_service_hours:    { type: Number, default: 0 },
+  since_service_switches: { type: Number, default: 0 },
+  last_ticket_id:         { type: Schema.Types.ObjectId, ref: 'Ticket' },
 }
 
 const sensorNodeSchema = new Schema<ISensorNode>(
@@ -97,7 +125,7 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     // PENDING = Technician vừa tạo qua Web Console Onboarding, chờ heartbeat đầu
     // tiên (Flow 1 bước 4→8). cron job `deviceOffline.job` chỉ quét node ONLINE nên node
     // PENDING không bị nhầm thành OFFLINE khi chưa từng kết nối.
-    status:           { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] as DeviceStatus[], default: 'PENDING' },
+    status:           { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] satisfies DeviceStatus[], default: 'PENDING' },
     rssi:             { type: Number },
     relay_states: {
       misting:     { type: Boolean, default: false },
@@ -105,7 +133,7 @@ const sensorNodeSchema = new Schema<ISensorNode>(
       ventilation: { type: Boolean, default: false },
       heating:     { type: Boolean, default: false },
     },
-    control_mode:    { type: String, enum: ['AUTO','MANUAL'] as ControlMode[], default: 'AUTO' },
+    control_mode:    { type: String, enum: ['AUTO','MANUAL'] satisfies ControlMode[], default: 'AUTO' },
     override_expiry: { type: Date },
     speaker_schedule: {
       enabled: { type: Boolean, default: true },
@@ -123,6 +151,13 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },
     replaced_by:         { type: Schema.Types.ObjectId },
+    relay_usage: {
+      misting:             relayUsageSchema,
+      ventilation:         relayUsageSchema,
+      counted_until:       { type: Date },
+      last_misting_on:     { type: Boolean },
+      last_ventilation_on: { type: Boolean },
+    },
   },
   { timestamps: false }
 )
@@ -132,7 +167,7 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     device_id:      { type: String, required: true, unique: true },
     zone_id:        { type: Schema.Types.ObjectId, ref: 'Zone', required: true },
     rtsp_url:       { type: String },
-    status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] as DeviceStatus[], default: 'PENDING' },
+    status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] satisfies DeviceStatus[], default: 'PENDING' },
     last_heartbeat: { type: Date },
     model_version:  { type: String },
     registered_at:  { type: Date, default: Date.now },

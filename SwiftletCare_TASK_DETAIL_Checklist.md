@@ -1,10 +1,14 @@
 # SwiftletCare — BẢNG TASK CHI TIẾT (Micro-task Checklist) v3
 
-**Bám theo:** SRS v1.12.0 + Components Guide v3.3 + Sensor Config Guide + Camera Guide Nhà Yến | **Phạm vi:** Giai đoạn 1 (MVP)
+**Bám theo:** SRS **v2.0.0** (phiếu đăng ký bản sửa sau Review 1) + Components Guide v3.11 + Sensor Config Guide + `docs/bird-counting-plan.md` | **Phạm vi:** theo phiếu v2 (SRS mục 0)
 
 > **[v2 cập nhật]** theo linh kiện thực tế đã mua: ESP32 NodeMCU 38 chân + đế mở rộng, **2 mạch Buck** (tách nguồn PAM8403), Domino TB1504, relay kích H/L (đặt mức High), DFPlayer + PAM8403 6W có volume, camera IR 940nm.
 >
 > **[v3 cập nhật — theo SRS v1.12.0]** Đổi mô hình onboarding thiết bị: **Technician thao tác qua Web Console** (không phải Farm Owner tự quét QR qua Mobile App như bản checklist cũ) — xem Flow 1/1b. Thêm hẳn 9 Flow mới (Flow 11→19: đăng ký/đăng nhập/quên mật khẩu, mời thành viên, điều khiển relay thủ công + auto-revert, offline-detection, OTA, mời Sales Staff, duyệt sản phẩm, cảnh báo tồn kho, quản lý tài khoản Admin) → mục A/C/D/E dưới đây đã bổ sung task tương ứng. Ticket thêm loại `INSTALLATION` (Flow 9b) đi kèm cơ chế tự động định tuyến giống ticket báo lỗi.
+>
+> **[cập nhật theo SRS v1.23.0]** Đổi mô hình actor: **thêm Farm Operator** (nhân viên vận hành do Farm Owner mời, phạm vi cả farm hoặc một số Zone), **bỏ Sales Staff cùng Module SALES** — các task SALES/Sales Staff bên dưới đã xoá; Flow 10/16/17/18 không còn.
+>
+> **[cập nhật theo SRS v2.0.0 — sau Review 1]** Phạm vi đổi theo phiếu đăng ký bản sửa: hệ thống tự động là luồng chính; **bỏ** Buyer/Marketplace (chỉ còn ghi nhận thu hoạch), phát hiện thiên địch, sưởi, Zalo/SMS; **Domain Expert thay Farm Operator**; NH3/CO2 chỉ cảnh báo; nút AI là PC/máy chủ thay Raspberry Pi; thông báo ngoài ứng dụng qua Telegram bot hoặc push. Các task không còn thuộc phạm vi được ~~gạch~~ kèm `❌`; **việc mới nằm ở mục G** và là ưu tiên cao nhất. Technician/ticket/Admin (C7, D6, D8) là luồng phụ — giữ hiện trạng, không làm thêm.
 >
 > **[Cập nhật]** Các mục `[x]` dưới đây đã được build và **verify trực tiếp** (build/test/demo E2E thật — ESP32 vật lý, backend chạy thật, MongoDB/MQTT thật) trong phiên làm việc gần nhất. Một số mục ghi chú thêm (*) là code đã hoàn chỉnh nhưng chưa demo E2E đầy đủ với phần cứng thật (ví dụ 4/5 cảm biến RS485 chưa đấu dây) — team vẫn nên tự code review theo đúng quy tắc DoD trước khi tin tưởng hoàn toàn.
 
@@ -22,6 +26,7 @@
 - [D. M4 — Frontend / PWA](#d-m4--frontend--pwa)
 - [E. M5 — QA / DevOps / Thesis](#e-m5--qa--devops--thesis)
 - [F. Các mốc phối hợp liên-role (Integration)](#f-các-mốc-phối-hợp-liên-role-integration)
+- [G. Việc theo SRS v2.0.0 (ưu tiên)](#g-việc-theo-srs-v200-sau-review-1--ưu-tiên)
 
 ---
 
@@ -29,7 +34,7 @@
 
 ## A1. Chuẩn bị & Cấu hình cảm biến (Sprint 1)
 
-- [ ] Đọc kỹ Components Guide v3.3 (mục 1-9) + Sensor Config Guide `[Guide]`
+- [ ] Đọc kỹ Components Guide v3.11 (mục 1-9) + Sensor Config Guide `[Guide]`
 - [ ] Chuẩn bị đồ nghề: VOM, mỏ hàn (nếu cần), dây jumper, thẻ microSD, cáp USB
 - [ ] Cài Arduino IDE + thư viện `ModbusMaster`, `DFRobotDFPlayerMini`
 - [x] Đấu thử ESP32 + module UART-RS485 V2 (GPIO17→TXD, GPIO16→RXD, VCC 5V, GND) `[Guide 5]`
@@ -64,7 +69,7 @@
 - [x] Task đọc ES-NH3-01 (reg 0x0000), giá trị **trực tiếp = ppm** (bản 500ppm) `[Guide 9.3]` (*)
 - [x] Task đọc ES-ALS-02 (reg 0x0002, 2 reg 32-bit), **×100 = Lux** (bản 200k) `[Guide 9.4]` (*)
 - [x] Task đọc ES35-SW (reg 0+1, 2 reg), **÷10 = °C và %RH** `[Guide 9.5]` (*)
-- [x] Gộp 5 giá trị thành 1 JSON telemetry, chu kỳ 10s (cấu hình 5-60s) `[ENV-FR-002]`
+- [x] Gộp 5 giá trị thành 1 JSON telemetry, đọc và gửi mỗi giây (v2.0.0: `SENSOR_INTERVAL_MS` = 1000; DB lưu 1 mẫu/10s) `[ENV-FR-002]`
 - [x] In ra Serial Monitor để verify giá trị đúng đơn vị & hợp lý
 
 ## A4. Firmware MQTT & Onboarding (Sprint 2)
@@ -102,9 +107,9 @@
 - [ ] Đấu module Relay 4 kênh: VCC 5V (Buck #2), GND, IN1=GPIO25, IN2=GPIO26, IN3=GPIO27, IN4=GPIO14 `[Guide 9.1]`
 - [ ] **Đặt Jumper mỗi relay ở kích mức CAO (High)** → firmware `digitalWrite(pin, HIGH)`=bật `[Guide 8]`
 - [ ] Đấu tải: IN1→phun sương, IN3→quạt qua NO-COM `[Guide 12.2]`
-- [x] Logic phun sương: bật IN1 khi độ ẩm < humidity_min `[ENV-FR-010]` (*)
-- [x] Logic quạt: bật IN3 khi nhiệt độ > temp_max HOẶC CO2 > co2_max HOẶC NH3 > nh3_max `[ENV-FR-011]` (*)
-- [x] Logic sưởi (dự phòng): bật IN4 khi nhiệt độ < temp_min `[ENV-FR-012]` (*)
+- [x] Logic phun sương: bật IN1 khi độ ẩm < humidity_min `[ENV-FR-010]` (*) — đã thay bằng logic mờ ở firmware 1.1.0
+- [x] Logic quạt: bật IN3 khi nhiệt độ > temp_max HOẶC CO2 > co2_max HOẶC NH3 > nh3_max `[ENV-FR-011]` (*) — đã thay bằng logic mờ; ⚠️ v2.0.0: phải bỏ CO2/NH3 khỏi điều khiển quạt (mục G1)
+- ~~Logic sưởi (dự phòng): bật IN4 khi nhiệt độ < temp_min `[ENV-FR-012]` (*)~~ — ❌ bỏ sưởi ở SRS v2.0.0 — phải gỡ code (mục G1)
 - [x] Publish relay state lên MQTT mỗi khi thay đổi `[ENV-FR-015]`
 - [x] Nhận lệnh Manual Override từ cloud, tạm dừng auto cho relay đó `[ENV-FR-016, 017]` (*)
 
@@ -156,10 +161,10 @@
 
 ## B1. Dataset (Sprint 1-3)
 
-- [ ] Setup Roboflow project, định nghĩa 4 class: swiftlet, rat, snake, owl `[11.1]`
+- [ ] Setup Roboflow project, định nghĩa 1 class: swiftlet (v2.0.0) `[11.1]`
 - [ ] Thu thập video/ảnh nguồn từ camera hoặc dataset public `[RISK-01]`
 - [ ] Annotate batch 1 (~20% mục tiêu 5.000 ảnh) `[11.1]`
-- [ ] Annotate batch 2 (~50%), ưu tiên class hiếm owl/snake `[RISK-01]`
+- [ ] Annotate batch 2 (~50%), ưu tiên cảnh thiếu sáng lúc bình minh/hoàng hôn `[RISK-01]`
 - [ ] Annotate hoàn thành 100% (≥5.000 ảnh sau augmentation) `[11.1]`
 - [ ] Setup augmentation: flip H/V, brightness ±30%, blur, noise, crop `[11.1]`
 - [ ] Split train 70% / val 15% / test 15% `[11.1]`
@@ -170,33 +175,33 @@
 - [ ] Train YOLOv8n baseline v0, đánh giá sơ bộ `[11.2]`
 - [ ] Train model v1, mục tiêu mAP@0.5 ≥75% `[11.2]`
 - [ ] Export ONNX `[11.2]`
-- [ ] Quantize INT8, kiểm tra model ≤20MB `[11.2]`
-- [ ] Benchmark FPS trên RPi thật (mục tiêu ≥25) `[PERF-NFR-004, RISK-03]`
-- [ ] Nếu FPS<25: thử NCNN hoặc giảm resolution xuống 480×480 `[11.4]`
+- [ ] (tùy chọn) Quantize INT8, kiểm tra model ≤20MB `[11.2]`
+- [ ] Đo tốc độ xử lý trên nút AI (PC/máy chủ), phải kịp luồng 25 fps `[PERF-NFR-004, RISK-03]`
+- [ ] Nếu không kịp thời gian thực: crop vùng quanh cửa ra vào hoặc giảm resolution `[11.4]`
 
 ## B3. Tracking & Counting (Sprint 2-4)
 
 - [ ] Test ByteTrack trên video mẫu (máy tính) `[VISION-FR-004]`
 - [ ] Thiết kế logic line-crossing (virtual line) tính hướng ENTRY/EXIT `[VISION-FR-005]`
-- [ ] Tích hợp full pipeline: RTSP→YOLO→ByteTrack→counting (chạy máy tính/RPi để bàn) `[VISION-FR-001~006]`
+- [ ] Tích hợp full pipeline: RTSP→YOLO→ByteTrack→counting (chạy trên nút AI) `[VISION-FR-001~006]`
 - [ ] Publish kết quả đếm qua MQTT `{entry, exit, timestamp, confidence}` `[VISION-FR-006]`
 - [ ] Test đếm với video 5p, so với đếm tay (error ≤5%) `[13.5]`
 - [ ] Setup PM2/Supervisor auto-restart process AI `[REL-NFR-004]`
 
-## B4. Predator Detection (Sprint 5)
+## B4. ~~Predator Detection~~ — ❌ bỏ ở SRS v2.0.0 (giữ 2 task cuối)
 
-- [ ] Logic capture frame khi detect rat/snake/owl confidence ≥0.7 `[THREAT-FR-001]`
-- [ ] Non-Maximum Suppression + Temporal Filtering (≥2 frame) `[THREAT-FR-003]`
-- [ ] 🤝 Upload snapshot lên S3 + nhận presigned URL (phối hợp M3) `[THREAT-FR-002]`
-- [ ] Phân severity: CRITICAL (snake/owl), HIGH (rat) `[THREAT-FR-004]`
-- [ ] Test Flow 4 E2E: giả lập predator → alert kèm ảnh <5s `[Flow 4]`
+- ~~Logic capture frame khi detect rat/snake/owl confidence ≥0.7 `[THREAT-FR-001]`~~ — ❌ bỏ ở SRS v2.0.0
+- ~~Non-Maximum Suppression + Temporal Filtering (≥2 frame) `[THREAT-FR-003]`~~ — ❌ bỏ ở SRS v2.0.0
+- ~~🤝 Upload snapshot lên S3 + nhận presigned URL (phối hợp M3) `[THREAT-FR-002]`~~ — ❌ bỏ ở SRS v2.0.0
+- ~~Phân severity: CRITICAL (snake/owl), HIGH (rat) `[THREAT-FR-004]`~~ — ❌ bỏ ở SRS v2.0.0
+- ~~Test Flow 4 E2E: giả lập predator → alert kèm ảnh <5s `[Flow 4]`~~ — ❌ bỏ ở SRS v2.0.0
 - [ ] Night Vision (IR) test đếm ánh sáng yếu `[VISION-FR-007]`
 - [ ] Cảnh báo EDGE_AI_DEGRADED khi FPS<10 `[THREAT-FR-010]`
 
 ## B5. Lắp Camera Node thật (Sprint 5)
 
-- [ ] Lắp Camera IP PoE 4MP + Raspberry Pi `[Flow 1b]`
-- [ ] Cấu hình RTSP URL vào RPi `[Flow 1b]`
+- [ ] Lắp camera IP (có hồng ngoại) tại cửa chim ra vào + nút AI (PC tại nhà yến hoặc máy chủ) `[Flow 1b, docs/bird-counting-plan.md]`
+- [ ] Cấu hình RTSP URL vào nút AI `[Flow 1b]`
 - [ ] 🤝 Onboarding Camera Node (Flow 1b) — phối hợp M3/M4 `[FARM-FR-004]`
 - [ ] Self-test: đọc 10 frame RTSP, xác nhận FPS≥25 trước khi báo ONLINE `[Flow 1b]`
 
@@ -204,7 +209,7 @@
 
 - [ ] Model Evaluation: mAP, Precision, Recall, Confusion Matrix `[13.5]`
 - [ ] Counting Accuracy test 100 con (error ≤5%) `[13.5]`
-- [ ] False Positive Rate predator ≤5% `[13.5]`
+- ~~False Positive Rate predator ≤5% `[13.5]`~~ — ❌ bỏ ở SRS v2.0.0
 - [ ] Fine-tune với dữ liệu thật từ farm nếu cần `[11.4]`
 - [ ] Viết phần AI/CV cho báo cáo KLTN
 
@@ -212,24 +217,27 @@
 
 # C. M3 — Backend
 
-## C1. Auth & Phân quyền 5 role (Sprint 1)
+## C1. Auth & Phân quyền 4 role (Sprint 1)
 
 - [x] Khởi tạo repo Express + TypeScript `[7.4]`
-- [ ] Schema `users` với enum role: ADMIN/FARM_OWNER/TECHNICIAN/SALES_STAFF `[AUTH-FR-004, 8.2]` ⚠️ 5 role, bỏ OPERATOR — ⚠️ hiện vẫn giữ `OPERATOR` trong enum để tương thích ngược (chưa xóa hẳn theo yêu cầu SRS v1.7.0) — **ưu tiên dọn trước khi thêm role mới**, kiểm tra không còn user nào role này trong DB rồi xoá khỏi enum + `devices.ts` route
+- [x] Schema `users` với enum role: ADMIN/FARM_OWNER/FARM_OPERATOR/TECHNICIAN `[AUTH-FR-004, 8.2]` — v1.23.0 bỏ SALES_STAFF, thêm FARM_OPERATOR; ⚠️ v2.0.0: đổi `FARM_OPERATOR` thành `DOMAIN_EXPERT` (mục G3)
 - [x] API `POST /auth/register` + OTP (email/phone) `[AUTH-FR-001]` — OTP hiện chỉ log console, chưa nối SMTP/Zalo thật
 - [x] API `POST /auth/login` (email/password) `[AUTH-FR-002]` — verify thật qua API
 - [ ] Tích hợp OAuth2 Google `[AUTH-FR-002]`
 - [x] JWT Access (15p) + Refresh (30 ngày), API refresh/logout `[AUTH-FR-003]`
-- [x] Middleware RBAC theo 5 role `[AUTH-FR-004, 12.1]`
-- [x] API mời thành viên Farm Owner khác (Primary Owner) `[AUTH-FR-005]`
-- [x] API Admin tạo Technician (kèm `assigned_regions`) / tạo Sales Staff trực tiếp `[AUTH-FR-005c]` — merge qua PR #16. Riêng luồng Farm Owner **đề xuất** Sales Staff → Admin duyệt `[AUTH-FR-005b đổi v1.16.0, 005d]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
-- [ ] Guest checkout (không cần tài khoản) `[AUTH-FR-008]`
+- [x] Middleware RBAC theo role (`requireRole`) + phạm vi Zone của Farm Operator (`farmAccess.util`) `[AUTH-FR-004, 12.1]` — ⚠️ v2.0.0: gỡ phạm vi Zone, role thành Domain Expert (mục G3)
+- [x] API mời thành viên (Primary Owner): đồng sở hữu hoặc Farm Operator kèm `zone_ids` `[AUTH-FR-005]` — ⚠️ v2.0.0: gỡ phạm vi Zone, role thành Domain Expert (mục G3)
+- ~~API `PUT /farms/:id/members/:userId` đổi phạm vi Zone của Farm Operator + audit `[AUTH-FR-005, Flow 12 bước 6]`~~ — ❌ endpoint bị bỏ ở SRS v2.0.0 (mục G3)
+- [x] Kiểm tra phạm vi Zone cho Farm Operator: relay/ngưỡng/telemetry/thiết bị, danh sách cảnh báo/ticket/thu hoạch/lịch bảo trì, người nhận thông báo `[AUTH-FR-005, ALERT-FR-005]` — ⚠️ v2.0.0: gỡ phạm vi Zone, role thành Domain Expert (mục G3)
+- [x] Migration `npm run migrate:remove-sales` (xoá user/lời mời SALES_STAFF, drop collection SALES, gán role cho member cũ)
+- [x] API Admin tạo Technician (kèm `assigned_regions`) `[AUTH-FR-005c]` — merge qua PR #16
+- ~~Guest checkout (không cần tài khoản) `[AUTH-FR-008]`~~ — ❌ không còn bán hàng trong hệ thống
 - [ ] Audit log đăng nhập/thay đổi cấu hình — schema `audit_logs` + middleware ghi log `[AUTH-FR-007, 8.2]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [x] Envelope response chuẩn + pagination + mã lỗi HTTP `[9.0]`
 
 ### C1b. Quên mật khẩu, Lời mời, Khoá/Xoá tài khoản `[mới v1.12.0, Flow 11/12/19]`
 
-- [ ] Schema `invitations` (farm_id, invited_email, invited_role, token, status, expires_at) `[AUTH-FR-010, 8.2]`
+- [ ] Schema `invitations` (farm_id, invited_email, invited_role FARM_OWNER/DOMAIN_EXPERT — v2.0.0 bỏ zone_ids, token, status, expires_at) `[AUTH-FR-010, 8.2]`
 - [ ] API `POST /auth/forgot-password` — sinh OTP/token TTL 15p, gửi email/SMS `[AUTH-FR-009]`
 - [ ] API `POST /auth/reset-password` — xác thực OTP, đổi mật khẩu, thu hồi mọi Refresh Token cũ `[AUTH-FR-009]`
 - [ ] API `POST /farms/:id/members` sinh `Invitation` (TTL 7 ngày) thay vì thêm thẳng vào `farms.members` `[AUTH-FR-010]`
@@ -240,20 +248,19 @@
 - [x] API `GET /admin/users`, `PUT /admin/users/:id/status` (khoá/mở khoá kèm lý do bắt buộc) `[AUTH-FR-011]` — merge qua PR #16
 - [x] Middleware JWT kiểm tra `is_active` mỗi request (không chỉ lúc login) — chặn ngay cả khi Access Token còn hạn `[AUTH-FR-011]` — merge qua PR #16
 - [x] API `POST /auth/delete-request`, `GET/PUT /admin/delete-requests/:id/complete` `[AUTH-FR-012]` — merge qua PR #16
-- [x] Logic cascade khi xoá Primary Owner: còn thành viên khác → chuyển `owner_id`; hết thành viên → xoá mềm Farm `[AUTH-FR-012, Flow 19 bước 7a/7b]` — merge qua PR #16
+- [x] Logic cascade khi xoá Primary Owner: còn đồng sở hữu → chuyển `owner_id` (không chuyển cho Domain Expert); hết đồng sở hữu → xoá mềm Farm `[AUTH-FR-012, Flow 19 bước 7a/7b]` — merge qua PR #16
 
-### C1c. Module SYSTEM & duyệt Sales Staff `[mới SRS v1.16.0, §5.11, Flow 16]`
+### C1c. Module SYSTEM `[mới SRS v1.16.0, §5.11]`
 
 - [ ] API `GET /system/audit-logs` lọc theo actor/action/target/thời gian `[SYSTEM-FR-001]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [ ] Collection `system_settings` + API `GET/PUT /system/settings/default-thresholds`; reset ngưỡng Zone đọc từ đây `[SYSTEM-FR-002, ENV-FR-007/020]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [ ] API `GET /system/health-overview` (farm/zone/thiết bị/ticket/tài khoản) `[SYSTEM-FR-003]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
-- [ ] Farm Owner đề xuất Sales Staff → Admin duyệt/từ chối (`sales_assignment_requests`) `[AUTH-FR-005b, 005d]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
-- [ ] UI Admin: audit log, ngưỡng mặc định, tổng quan hệ thống, duyệt đề xuất Sales Staff `[SYSTEM-FR-001..003, AUTH-FR-005d]`
+- [ ] UI Admin: audit log, ngưỡng mặc định, tổng quan hệ thống `[SYSTEM-FR-001..003]`
 - [ ] Chat theo ticket (Farm Owner ↔ Technician, Admin tham gia được) + tin nhắn hệ thống khi Admin reassign `[TICKET-FR-014..017]`
 
 ## C2. Farm & Device (Sprint 2)
 
-- [x] Schema `farms` (owner_id + members với is_primary), `houses`, `zones` `[8.2]`
+- [x] Schema `farms` (owner_id + members với is_primary, role FARM_OWNER/DOMAIN_EXPERT — v2.0.0 bỏ zone_ids), `houses`, `zones` `[8.2]`
 - [x] API CRUD Farm/House/Zone `[FARM-FR-001, 002]` — verify thật qua API
 - [ ] Giới hạn `POST /devices/sensor-nodes/register` chỉ role TECHNICIAN gọi được (hiện Farm Owner nào cũng gọi được, sai theo model mới) `[FARM-FR-003, RACI mục 4.4]`
 - [ ] Cấp sẵn cặp `{device_id, secretKey}` trước khi Technician nạp firmware (kho thiết bị nội bộ, đơn giản hoá cho KLTN có thể chỉ cần Admin nhập tay 1 danh sách) `[Flow 1 bước 3]`
@@ -276,7 +283,7 @@
 
 ## C4. Điều khiển Relay & Loa ru (Sprint 3)
 
-- [ ] Schema `sensor_nodes` với relay_states (misting/speaker/ventilation/heating) + relay_type='GPIO' `[8.2]` — relay_states đã đúng, còn thiếu field `relay_type`
+- [ ] Schema `sensor_nodes` với relay_states (misting/speaker/ventilation — v2.0.0 bỏ heating) + relay_type='GPIO' `[8.2]` — relay_states đã đúng, còn thiếu field `relay_type`
 - [x] Schema thêm speaker_schedule + audio (track/volume/playing/loop) `[8.2]`
 - [x] API cấu hình ngưỡng Zone (bỏ h2s_max/tvoc_max) `[ENV-FR-006]`
 - [x] API điều khiển relay → publish MQTT command `[ENV-FR-016]` — verify thật: API→MQTT publish đúng topic
@@ -294,7 +301,7 @@
 - [ ] Alert Engine phân 4 mức CRITICAL/HIGH/MEDIUM/LOW `[ALERT-FR-001]`
 - [ ] Deduplication window 5p/loại/zone `[ALERT-FR-008]`
 - [ ] Setup Firebase FCM push `[ALERT-FR-002]`
-- [ ] Setup Zalo ZNS cho CRITICAL/HIGH `[ALERT-FR-003]`
+- ~~Setup Zalo ZNS cho CRITICAL/HIGH `[ALERT-FR-003]`~~ — ❌ bỏ ở SRS v2.0.0
 - [ ] API cấu hình kênh nhận + giờ im lặng `[ALERT-FR-005, 006]`
 - [ ] API alerts list + acknowledge + ghi chú `[ALERT-FR-007, 009]` — hỗ trợ ghi chú "Báo động giả" (false positive) tách biệt "Đã xử lý" `[Flow 4 case 9a]`
 - [ ] Event ALERT_NEW qua socket.io `[9.3]`
@@ -324,16 +331,16 @@
 - [ ] API Farm Owner tự huỷ ticket giữa chừng `[Flow 9 case 6c, Flow 9b case 4a]`
 - [ ] API Technician "Yêu cầu gán lại" ticket bị gán nhầm khu vực `[Flow 9 case 4a]`
 
-## C8. Marketplace (Sprint 6)
+## C8. Thu hoạch (trước là Marketplace — phần đăng bán ❌ bỏ ở SRS v2.0.0)
 
-- [ ] Schema `harvest_batches`, `nest_listings`, `contact_inquiries` `[8.2]` — model đã có, chưa có logic
+- [ ] Schema `harvest_batches` (v2.0.0: gỡ `nest_listings`, `contact_inquiries`) `[8.2]` — model đã có, chưa có logic
 - [ ] API tạo Harvest Batch + auto-attach env_snapshot (5 cảm biến, 7 ngày) `[MARKET-FR-001, 002]`
 - [ ] Bad case: Zone chưa đủ 7 ngày dữ liệu → đánh dấu `insufficient_data: true` thay vì hiện số liệu sai/rỗng `[Flow 7 case 3a]`
 - [ ] Auto-attach flock_snapshot (bird_count 30 ngày) `[MARKET-FR-003]`
-- [ ] Sinh trace_code UUID + QR `[MARKET-FR-004]`
-- [ ] Chặn sửa/xoá Harvest Batch sau khi đã đăng bán (status khác DRAFT), chỉ cho đổi status Listing `[MARKET-FR-005, Flow 7 case 5a]`
-- [ ] API Listing CRUD + public list/detail/trace/inquiry/profile `[MARKET-FR-006~013]`
-- [ ] Bad case: `GET /marketplace/trace/:traceCode` với mã không tồn tại → thông báo rõ ràng, không lộ lỗi hệ thống; thêm rate limit riêng cho endpoint public này `[Flow 7 case 11a, SEC-NFR-004]`
+- [ ] Sinh trace_code UUID làm mã mẻ (v2.0.0: bỏ QR) `[MARKET-FR-004]`
+- ~~Chặn sửa/xoá Harvest Batch sau khi đã đăng bán (status khác DRAFT), chỉ cho đổi status Listing `[MARKET-FR-005, Flow 7 case 5a]`~~ — ❌ bỏ ở SRS v2.0.0
+- ~~API Listing CRUD + public list/detail/trace/inquiry/profile `[MARKET-FR-006~013]`~~ — ❌ bỏ ở SRS v2.0.0 — phải gỡ route `/marketplace/*` (mục G3)
+- ~~Bad case: `GET /marketplace/trace/:traceCode` với mã không tồn tại → thông báo rõ ràng, không lộ lỗi hệ thống; thêm rate limit riêng cho endpoint public này `[Flow 7 case 11a, SEC-NFR-004]`~~ — ❌ bỏ ở SRS v2.0.0
 
 ## C9. Security & Privacy (Sprint 6)
 
@@ -347,13 +354,6 @@
 - [ ] Bug fixing theo báo cáo test M5
 - [ ] Test coverage ≥80% `[13.1]`
 - [ ] Viết phần Backend Architecture cho báo cáo
-- [ ] **(stretch)** Module SALES: products/inventory/orders (COD-only) `[SALES-FR-001~010]` — route/model/controller đã scaffold (501), chưa có logic thật
-- [ ] **(stretch)** API `PUT /products/:id/review` (duyệt/từ chối) + cho gửi lại `submit-review` sau REJECTED `[SALES-FR-002, Flow 17]`
-- [ ] **(stretch)** Admin chuyển APPROVED → REJECTED bất kỳ lúc nào nếu phát hiện vi phạm sau duyệt `[Flow 17 case 4d]`
-- [ ] **(stretch)** Thông báo Sales Staff khi tồn kho dưới ngưỡng tối thiểu; tự tắt khi nhập thêm Harvest Batch `[SALES-FR-004, Flow 18]`
-- [ ] **(stretch)** Soft-reserve atomic ở tầng DB, tránh race condition 2 Buyer cùng mua sản phẩm sắp hết `[SALES-NFR-001, Flow 10 case 4a]`
-- [ ] **(stretch)** Không tạo Order/soft-reserve nếu thanh toán online thất bại giữa chừng `[Flow 10 case 3b]`
-- [ ] **(stretch)** API mời Sales Staff dùng chung `Invitation` với Farm Owner (khác `invited_role`) `[Flow 16]`
 
 ---
 
@@ -386,8 +386,9 @@
 - [x] Socket.io-client subscribe JOIN_ZONE `[9.3]`
 - [x] Badge "Live"/"Mất kết nối" tự chuyển sau 20s không nhận telemetry mới (độc lập với backend 30s) `[Flow 14 bước 6]` — đã code trong `useTelemetry.ts`, verify thật
 - [ ] Dashboard 5 chart realtime: nhiệt/ẩm/lux/NH3/CO2/dB `[ENV-FR-005]` ⚠️ hiện là SensorCard số liệu tức thời, chưa có biểu đồ theo thời gian; 5 cảm biến thật chưa đấu dây đủ
-- [ ] UI mời thành viên Farm Owner / Sales Staff — dùng chung màn Invitation (D1), chỉ khác `invited_role` `[AUTH-FR-005, 005b, Flow 12]`
+- [ ] UI mời thành viên: chọn đồng sở hữu hoặc Domain Expert (không chọn Zone) `[AUTH-FR-005, Flow 12]`
 - [ ] Màn danh sách thành viên Farm + nút gỡ thành viên (Primary Owner) `[Flow 12 bước 5]`
+- [ ] Frontend role `DOMAIN_EXPERT`: `DomainExpertLayout`, menu, route guard, `MENU_ACCESS`; gỡ thư mục `sales-staff/` `[AUTH-FR-004/005, mục G4]`
 
 ## D3. Điều khiển Relay & Loa ru UI (Sprint 3)
 
@@ -403,7 +404,7 @@
 
 - [ ] Notification Center (list alert, đã đọc/chưa đọc) `[ALERT-FR-007]`
 - [ ] UI acknowledge alert + ghi chú `[ALERT-FR-009]`
-- [ ] Cài đặt kênh nhận (Push/Zalo/SMS) + giờ im lặng `[ALERT-FR-005, 006]`
+- [ ] Cài đặt kênh nhận (trong ứng dụng/Telegram/push — v2.0.0 bỏ Zalo/SMS) + giờ im lặng `[ALERT-FR-005, 006]`
 - [ ] Setup Firebase Web Push (Service Worker) `[ALERT-FR-002]`
 - [ ] Xử lý event ALERT_NEW realtime `[9.3]`
 - [ ] Trang Analytics: chart lịch sử + multi-zone comparison + correlation `[ANALYTICS-FR-001/003/005]`
@@ -412,9 +413,9 @@
 
 - [ ] Dashboard đếm chim live giờ cao điểm `[VISION-FR-012]`
 - [ ] Biểu đồ xu hướng return rate `[VISION-FR-010, ANALYTICS-FR-002]`
-- [ ] Trang live stream camera (HLS/WebRTC) `[VISION-FR-013]`
+- [ ] Trang live stream camera có khung trên từng con chim (WebRTC) `[VISION-FR-013/014]`
 - [ ] Xử lý event BIRD_COUNT_UPDATE realtime `[9.3]`
-- [ ] Trang xem video recording sự kiện `[VISION-FR-015]`
+- [ ] (tùy chọn, không thuộc phiếu v2) Trang xem video recording sự kiện `[VISION-FR-015]`
 
 ## D6. Ticket UI (Sprint 5)
 
@@ -427,17 +428,15 @@
 - [ ] UI Admin can thiệp toàn quyền: đổi Technician/ngày hẹn/priority, đóng-huỷ bất kỳ ticket nào `[TICKET-FR-005b]`
 - [ ] UI đánh giá 1-5 sao + Dashboard KPI (Admin) `[TICKET-FR-011, 012]`
 
-## D7. Marketplace UI (Sprint 6)
+## D7. Thu hoạch UI (trước là Marketplace UI — phần đăng bán ❌ bỏ ở SRS v2.0.0)
 
 - [ ] Form tạo Harvest Batch + hiển thị snapshot tự động `[MARKET-FR-001~003]`
-- [ ] Hiển thị Trace Code + QR `[MARKET-FR-004]`
-- [ ] Form đăng bán Nest Listing `[MARKET-FR-006]`
-- [ ] Trang Marketplace công khai + filter `[MARKET-FR-008]`
-- [ ] Traceability Card (biểu đồ nhiệt/ẩm 7 ngày, return rate) `[MARKET-FR-009]`
-- [ ] Form liên hệ Buyer + trang tra cứu Trace Code/QR `[MARKET-FR-010, 011]`
+- ~~Hiển thị Trace Code + QR `[MARKET-FR-004]`~~ — ❌ bỏ ở SRS v2.0.0
+- ~~Form đăng bán Nest Listing `[MARKET-FR-006]`~~ — ❌ bỏ ở SRS v2.0.0
+- ~~Trang Marketplace công khai + filter `[MARKET-FR-008]`~~ — ❌ bỏ ở SRS v2.0.0 — phải gỡ `MarketplacePage`/`ListingDetailPage` (mục G4)
+- ~~Traceability Card (biểu đồ nhiệt/ẩm 7 ngày, return rate) `[MARKET-FR-009]`~~ — ❌ bỏ ở SRS v2.0.0
+- ~~Form liên hệ Buyer + trang tra cứu Trace Code/QR `[MARKET-FR-010, 011]`~~ — ❌ bỏ ở SRS v2.0.0
 - [ ] Consent screen đăng ký + chức năng xóa tài khoản `[PRIV-NFR-001, 003]`
-- [ ] **(stretch)** UI Admin duyệt/từ chối Product (kèm lý do) + Sales Staff sửa & gửi lại sau REJECTED `[SALES-FR-002, Flow 17]`
-- [ ] **(stretch)** Badge cảnh báo tồn kho thấp trên trang Product (Sales Staff + Farm Owner đều thấy) `[SALES-FR-004, Flow 18]`
 
 ## D8. Quản trị Tài khoản (Admin) & OTA (Technician) `[mới v1.12.0]`
 
@@ -453,7 +452,6 @@
 - [ ] Test responsive desktop/tablet/mobile `[UX-NFR-001]`
 - [ ] Fix bug UI theo test M5
 - [ ] Viết phần Frontend/UX cho báo cáo
-- [ ] **(stretch)** UI giỏ hàng/checkout + quản lý Sales `[SALES-FR-*]`
 
 ---
 
@@ -484,13 +482,13 @@
 - [ ] 🤝 Test Manual Override + loa ru theo lịch `[13.2]`
 - [ ] Test override auto-expire 30p thật (không chỉ trên giấy) + gia hạn override `[Flow 13]`
 - [ ] Test đăng ký/đăng nhập/quên mật khẩu/refresh token đầy đủ bad case `[Flow 11]`
-- [ ] 🤝 Test mời thành viên Farm/Sales Staff — chấp nhận/từ chối/hết hạn `[Flow 12]`
+- [ ] 🤝 Test mời đồng sở hữu / Domain Expert — chấp nhận/từ chối/hết hạn; chuyên gia bị 403 khi gọi API relay/ticket/ghi thu hoạch `[Flow 12]`
 - [ ] 🤝 Test ticket INSTALLATION: tạo → tự động gán Technician → Web Console onboarding → SAT → đóng `[Flow 9b]`
 - [ ] Test Admin khoá/mở khoá tài khoản + JWT bị chặn ngay dù token còn hạn `[Flow 19]`
 - [ ] Test OTA + rollback khi firmware lỗi `[Flow 15]`
 - [ ] 🤝 Test Bird Count E2E `[13.2]`
 - [ ] 🤝 Test Alert Pipeline đa kênh `[13.2]`
-- [ ] 🤝 Test Flow 7 (Harvest→Listing→Trace) + bad case Trace Code không tồn tại `[13.2, Flow 7]`
+- [ ] 🤝 Test Flow 7 (ghi nhận thu hoạch) + bad case Zone chưa đủ 7 ngày dữ liệu `[13.2, Flow 7]`
 
 ## E4. Performance Testing (Sprint 4, 7)
 
@@ -504,15 +502,15 @@
 - [ ] Review consent/privacy screens `[17.4]`
 - [ ] Test backup telemetry hàng ngày + restore `[REL-NFR-007]`
 
-## E6. FCM/Zalo & Demo Setup (Sprint 5)
+## E6. Telegram/FCM & Demo Setup (Sprint 5)
 
-- [ ] Setup Firebase FCM + Zalo ZNS thật, test push `[13.2]`
+- [ ] Nối ít nhất 1 kênh ngoài ứng dụng chạy thật: Telegram bot hoặc Firebase FCM; test cảnh báo tới điện thoại ≤ 3–5 giây `[ALERT-FR-002/013, 13.2]`
 - [ ] Viết kịch bản demo đóng vai Technician `[RISK-09]`
 
 ## E7. Audit & Thesis (Sprint 7-8)
 
-- [ ] Audit DoD toàn bộ FR Giai đoạn 1 `[18]`
-- [ ] Go/No-go stretch (SALES, upload loa ru) `[RISK-10]`
+- [ ] Audit DoD toàn bộ FR thuộc phạm vi v2.0.0 `[18]`
+- [ ] Go/No-go stretch (upload loa ru)
 - [ ] Performance test cuối + regression toàn diện `[13.3]`
 - [ ] Tổng hợp KPI dự án (coverage, FR done/tổng, uptime)
 - [ ] Điều phối viết báo cáo KLTN + dry-run demo ≥2 lần
@@ -527,15 +525,83 @@
 - [ ] **M1+M3+M4** — Onboarding thiết bị end-to-end qua Web Console: Technician chọn Zone → nhập secretKey → AP-mode WiFi → ESP32 kết nối → dashboard (Sprint 2) `[Flow 1]` — **đổi khỏi model "Farm Owner quét QR" cũ, xem SRS v1.12.0 §4.1**
 - [x] **M1+M3+M4** — Offline-detection: rút nguồn ESP32 → StatusDot + badge Live tự chuyển Offline không cần F5 (Sprint 2-3) `[Flow 14]` — verify thật, đã hoàn thành trong buổi làm việc
 - [ ] **M1+M3+M4** — Điều khiển relay/loa ru: bấm UI → API → MQTT → ESP32 phản hồi (Sprint 3) `[Flow 2, 13]` — mới có API→MQTT (chưa có UI, chưa demo ESP32 phản hồi thật do Secrets.h ESP32 hiện chưa trỏ đúng farmId/houseId/zoneId thật)
-- [ ] **M2+M3** — RPi publish bird-count ↔ Backend tính return rate (Sprint 4) `[Flow 3]`
-- [ ] **M2+M3** — Predator detection: RPi → S3 upload → Alert đa kênh (Sprint 5) `[Flow 4]`
+- [ ] **M2+M3** — Nút AI publish bird-count ↔ Backend tính return rate (Sprint 4) `[Flow 3]`
+- ~~**M2+M3** — Predator detection: RPi → S3 upload → Alert đa kênh (Sprint 5) `[Flow 4]`~~ — ❌ bỏ ở SRS v2.0.0
 - [ ] **M1+M2** — Lắp Camera Node thật + onboarding qua Web Console (Sprint 5) `[Flow 1b]`
 - [ ] **M3+M4** — Ticket lifecycle báo lỗi: tạo → gán tự động → xử lý → đóng (Sprint 5) `[Flow 9]`
 - [ ] **M3+M4** — Ticket INSTALLATION: Farm Owner yêu cầu → Ticket Router tự gán Technician → onboarding Flow 1 → SAT → đóng (Sprint 5) `[Flow 9b]`
 - [ ] **M3+M4** — Đăng ký/đăng nhập/quên mật khẩu/mời thành viên end-to-end (Sprint 1-2) `[Flow 11, 12]`
 - [ ] **M3+M4** — Admin khoá/mở khoá + xử lý yêu cầu xoá tài khoản end-to-end (Sprint 6) `[Flow 19]`
-- [ ] **M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`
-- [ ] **Cả nhóm** — Master Flow demo tổng: onboarding + giám sát + điều khiển + loa ru + cảnh báo + ticket (báo lỗi & lắp đặt) + quản lý tài khoản (Sprint 8)
+- ~~**M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`~~ — ❌ bỏ ở SRS v2.0.0
+- [ ] **Cả nhóm** — Demo tổng theo 9 luồng của phiếu v2 (SRS mục 0.4): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay + bypass (Sprint 8)
+
+---
+
+# G. Việc theo SRS v2.0.0 (sau Review 1) — ưu tiên
+
+> Danh sách này là SRS mục 0.5 viết lại thành đầu việc tick được. Hội đồng đánh giá theo phiếu đăng ký bản sửa, nên các việc dưới đây đi trước mọi task còn mở ở mục A–F. Thứ tự ưu tiên: **G2 (đếm chim) → G1 → G3/G4 → G5**.
+
+## G1. M1 — Firmware / Hardware
+
+- [ ] Quạt chỉ theo nhiệt độ + độ ẩm: bỏ NH3/CO2 khỏi bộ mờ và bỏ chốt "khí vượt max thì ép quạt 100%" (`pid/FuzzyControl.cpp`, `rawGasOverMax` trong `pid/PIDController.cpp`); sửa `test/test_fuzzy` `[ENV-FR-011]`
+- [ ] Gỡ sưởi: `runHeatingControl`, override `heating`; kênh IN4 để dự phòng `[ENV-FR-012]`
+- [ ] Bơm chạy khô thì ngừng phun sương tới hết đợt, đợt sau thử lại; can thiệp tay vẫn bật được `[THREAT-FR-011, Flow 27]`
+- [ ] Cảm biến nhiệt-ẩm mất hoặc sai thì relay phun sương và quạt về TẮT cho tới khi có số đo hợp lệ; viết unit test `[THREAT-FR-013]`
+- [ ] Đổi loại cảnh báo `BIRD_PANIC` thành `NOISE_ANOMALY` `[THREAT-FR-007]`
+- [ ] Nhận 5 tham số phát hiện qua `config/update` (`noise_margin_db`, `noise_min_sec`, `pump_dry_on_sec`, `pump_dry_min_rise_pct`, `speaker_drop_pct`), lưu NVS, tự kẹp khoảng; bỏ các hằng số tương ứng; unit test `[EXPERT-FR-008]`
+- [ ] Lắp 2 công tắc xoay 3 vị trí Auto/Off/Hand cho bơm và quạt, thử chạy tay khi rút nguồn ESP32 `[ENV-FR-023, Flow 28]`
+- [ ] (tùy chọn) Nối tiếp điểm phụ của công tắc về GPIO, báo "đang bypass tại tủ" `[ENV-FR-023]`
+- [ ] 🤝 Chạy liên tục nhiều ngày tại nhà yến/mô hình để lấy số liệu cho mục 13.6 (phối hợp M5)
+
+## G2. M2 — AI đếm chim (theo `docs/bird-counting-plan.md`)
+
+- [ ] Thu video thật tại cửa chim ra vào, cả phiên sáng và chiều tối `[VISION-FR-001/007]`
+- [ ] Gán nhãn 1 class `swiftlet`, train YOLOv8n, export ONNX `[VISION-FR-002/003]`
+- [ ] Pipeline chạy trên video quay sẵn: YOLO → ByteTrack → đếm qua vạch ảo `[VISION-FR-004/005]`
+- [ ] **Báo cáo độ chính xác:** Precision, Recall và sai số đếm so với đếm tay, tách ban ngày / thiếu sáng; lưu `docs/test-reports/` `[VISION-FR-016]`
+- [ ] Gửi số đếm theo khoảng 5 phút cả ngày, kể cả ngoài phiên (`kind: "BUCKET"`) `[VISION-FR-017]`
+- [ ] Kiểm tra camera trước khi dùng lâu dài: chim không phản ứng với đèn hồng ngoại; modem chỉ cho IP của VPS vào cổng camera `[docs/bird-counting-plan.md 19.5, cổng 3c và 6]`
+- [ ] Publish số đếm qua MQTT mỗi 30 giây; backend tính tỷ lệ quay về `[VISION-FR-006, Flow 3]`
+- [ ] Vẽ khung trên từng con chim + vạch đếm lên frame, phát stream tới máy chủ video `[VISION-FR-013/014]`
+- [ ] Tiến trình tự khởi động lại khi crash `[REL-NFR-004]`
+
+## G3. M3 — Backend
+
+- [ ] Role `FARM_OPERATOR` thành `DOMAIN_EXPERT`; gỡ `zone_ids` và phạm vi Zone trong `utils/farmAccess.util.ts`; bỏ `PUT /farms/:id/members/:userId`; migration dữ liệu cũ `[AUTH-FR-004/005]`
+- [ ] Phân quyền Domain Expert theo RACI: chỉ đọc dashboard/analytics/cảnh báo/thu hoạch; được sửa ngưỡng và hệ số mờ; 403 với relay, ticket, ghi thu hoạch `[SRS 4.4, EXPERT-FR-002]`
+- [ ] Gỡ Marketplace: route `/marketplace/*`, model `nestListing`, `contactInquiry`, service liên quan; `harvestBatch` bỏ trạng thái `LISTED` `[SRS 5.8]`
+- [ ] Đồng bộ `utils/fuzzyModel.util.ts` với firmware (bỏ luật khí), chạy lại test dùng chung case `[ENV-FR-011]`
+- [ ] Bỏ `heating` khỏi `relay_states`, validator và lệnh relay `[ENV-FR-012]`
+- [ ] `NOISE_ANOMALY` thay `BIRD_PANIC` (migration); `alerts.expert_verdict` + `PUT /alerts/:id/verdict` `[THREAT-FR-007, EXPERT-FR-003]`
+- [ ] `THRESHOLD_BREACH` của NH3/CO2 ở mức MEDIUM, không leo thang thành ticket `[ALERT-FR-012]`
+- [ ] `relay_override_logs` + `GET /devices/sensor-nodes/:id/relay-overrides` `[ENV-FR-019]`
+- [ ] `GET /analytics/autonomy` — tỷ lệ thời gian tự động `[ANALYTICS-FR-011]`
+- [ ] Đếm chim ở backend: `ingestBirdCount` (upsert theo phiên, tỷ lệ chim về trên số ròng), `bird_count_buckets` + `GET /analytics/bird-count/buckets`, job `returnRate` tạo `LOW_RETURN_RATE`, trạng thái ONLINE/OFFLINE của camera, token xem stream `[VISION-FR-006/008/009/011/013/017]`
+- [ ] `zone_health_reports` + job tổng hợp hàng tuần + `GET /health-reports`, `PUT /health-reports/:id/conclusion` `[EXPERT-FR-005/006]`
+- [ ] Thông báo trong ứng dụng cho Domain Expert (cảnh báo chờ kiểm chứng, báo cáo mới) `[EXPERT-FR-007]`
+- [ ] `zones.detection_tuning` + lịch sử, `PUT /farms/zones/:zoneId/detection-tuning` (kiểm tra khoảng, audit), gửi 5 tham số xuống ESP32 qua `buildDeviceConfig`; job tỷ lệ chim về đọc `return_rate_drop_pct` của Zone `[EXPERT-FR-008]`
+- [ ] Kênh ngoài ứng dụng chạy thật: Telegram bot (`sendTelegram`, liên kết `telegram_chat_id`) hoặc Firebase FCM `[ALERT-FR-013/002]`
+- [ ] Sửa `docs/api/api-spec.yaml` trong cùng PR với từng thay đổi route
+
+## G4. M4 — Web / Mobile
+
+- [ ] Gỡ `MarketplacePage`, `ListingDetailPage`, route công khai, `useMarketplace`, `marketplace.api`; gỡ code `sales-staff/` cũ
+- [ ] Domain Expert trên web: layout + menu, trang báo cáo sức khỏe Zone, trang kiểm chứng cảnh báo (kèm số đo cảm biến và số đếm chim ±30 phút), duyệt gợi ý hệ số, viết kết luận `[EXPERT-FR-002..006]`
+- [ ] Màn chỉnh tham số phát hiện của Zone cho Domain Expert: 6 tham số kèm khoảng hợp lệ, nút về mặc định, lịch sử, đặt cạnh tỷ lệ cảnh báo được xác nhận theo loại; Farm Owner chỉ xem `[EXPERT-FR-008]`
+- [ ] Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận của chuyên gia `[ENV-FR-019, ANALYTICS-FR-011, EXPERT-FR-006]`
+- [ ] Live stream có khung + số đếm trực tiếp `[VISION-FR-012..014]`
+- [ ] Bỏ relay sưởi; NH3/CO2 ghi rõ là ngưỡng cảnh báo do chuyên gia đặt; nhãn `NOISE_ANOMALY` hiển thị kèm số đếm chim
+- [ ] Cài đặt thông báo: bỏ Zalo/SMS, thêm "Kết nối Telegram" `[ALERT-FR-005/013]`
+- [ ] Mobile: đồng bộ enum role và loại cảnh báo, live stream, kết luận của chuyên gia; chuyên gia tối thiểu xem được dashboard và báo cáo
+
+## G5. M5 — Thực nghiệm, bằng chứng, báo cáo
+
+- [ ] Chạy đủ 12 kịch bản ở SRS mục 13.6, mỗi kịch bản có số liệu lưu trong `docs/test-reports/`
+- [ ] Đo tỷ lệ thời gian tự động và % thời gian trong ngưỡng trên đợt chạy thật `[AUTO-NFR-001]`
+- [ ] So sánh logic mờ với bật/tắt theo ngưỡng hoặc hẹn giờ nếu chạy được chế độ đối chứng
+- [ ] Tìm nguồn trích dẫn cho từng ngưỡng mặc định (nhiệt độ, độ ẩm, ánh sáng); ghi rõ NH3/CO2 chưa có nguồn `[EVID-NFR-003]`
+- [ ] Mời một người nuôi yến có kinh nghiệm xem bộ ngưỡng, việc dùng quạt và cách xử lý NH3; dùng thử vai trò Domain Expert; lập biên bản `[RISK-10, RISK-11]`
+- [ ] Cập nhật 4 sơ đồ trong `docs/architecture/` cho các phần mới (use case và luồng của Domain Expert, bảng `relay_override_logs`, `zone_health_reports`)
 
 ---
 
@@ -548,4 +614,4 @@
 
 ---
 
-_Bảng task chi tiết v3 đi kèm WORKPLAN v2 + SRS v1.12.0 + Components Guide v3.3. Dùng file này để làm việc hàng ngày; dùng WORKPLAN v2 để nhìn tổng thể theo sprint._
+_Bảng task chi tiết v3, cập nhật theo SRS v2.0.0 (phiếu đăng ký bản sửa sau Review 1). Dùng file này để làm việc hàng ngày; mục G là ưu tiên._

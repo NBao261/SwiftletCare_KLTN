@@ -1,6 +1,6 @@
 import { Ticket, ITicket } from '@/models/ticket.model'
 import { TicketMessage, ITicketMessage } from '@/models/ticketMessage.model'
-import { findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
+import { findFarmOrThrow, hasFarmAccess, hasZoneAccess } from '@/utils/farmAccess.util'
 import { emitTicketMessage } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
 import { assigneeIdOf } from '@/utils/ticket.util'
@@ -52,7 +52,8 @@ function removedAt(ticket: ITicket, userId: string): Date | null {
 /**
  * TICKET-FR-014 — ai được đọc kênh chat:
  * - Admin: luôn được (TICKET-FR-005b)
- * - Farm Owner/thành viên của farm sở hữu ticket (không tính Technician/Sales cùng farm)
+ * - Phía khách hàng: Farm Owner/thành viên của farm sở hữu ticket, Farm Operator trong
+ *   phạm vi Zone của ticket (không tính Technician cùng vùng)
  * - Technician đang phụ trách; người TỪNG phụ trách chỉ đọc lịch sử cũ (`limitedUntil`)
  * Technician khác cùng vùng thì KHÔNG — khác quyền xem ticket (Flow 23 case 6a).
  */
@@ -63,9 +64,9 @@ async function readScope(ticket: ITicket, user: CurrentUser): Promise<{ allowed:
     const until = removedAt(ticket, user._id)
     return until ? { allowed: true, limitedUntil: until } : { allowed: false }
   }
-  if (user.role === 'FARM_OWNER') {
+  if (user.role === 'FARM_OWNER' || user.role === 'FARM_OPERATOR') {
     const farm = await findFarmOrThrow(String(ticket.farm_id))
-    return { allowed: hasFarmAccess(farm, user) }
+    return { allowed: ticket.zone_id ? hasZoneAccess(farm, ticket.zone_id, user) : hasFarmAccess(farm, user) }
   }
   return { allowed: false }
 }
