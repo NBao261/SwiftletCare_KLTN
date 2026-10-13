@@ -25,6 +25,7 @@ import type { Role } from '@/types'
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitAlertNew: jest.fn(), emitRelayUpdate: jest.fn(), emitTelemetryUpdate: jest.fn(), emitDeviceStatusChange: jest.fn() }))
 jest.mock('@/services/notification.service', () => ({
+  ...jest.requireActual('@/services/notification.service'), // findRecipients thật: chọn người nhận báo cáo
   dispatchAlertNotification: jest.fn().mockResolvedValue(undefined),
   notifyUser: jest.fn().mockResolvedValue(undefined),
   notifyAdmins: jest.fn().mockResolvedValue(undefined),
@@ -125,6 +126,18 @@ describe('tổng hợp báo cáo (EXPERT-FR-005/007)', () => {
 
     expect(await generateWeeklyReports()).toBe(0)
     expect(await ZoneHealthReport.countDocuments()).toBe(1)
+  })
+})
+
+describe('một Zone lỗi không làm các Zone khác mất báo cáo', () => {
+  it('Zone đầu ném lỗi lúc tổng hợp, Zone sau vẫn có báo cáo', async () => {
+    await seed()
+    await seed()
+    jest.spyOn(ZoneHealthReport, 'exists').mockRejectedValueOnce(new Error('aggregate quá tải') as never)
+
+    expect(await generateWeeklyReports()).toBe(1)
+    expect(await ZoneHealthReport.countDocuments()).toBe(1)
+    jest.restoreAllMocks()
   })
 })
 

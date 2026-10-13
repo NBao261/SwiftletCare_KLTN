@@ -4,7 +4,14 @@ import { SensorNode } from '@/models/device.model'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
 import { NotFoundError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
+import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
+
+/**
+ * Các hàm GHI ở đây không throw (cùng triết lý với `logAction`): lịch sử hỏng không
+ * được làm hỏng lệnh điều khiển. Caller ghi lịch sử SAU khi đã publish lệnh — nếu ghi
+ * trước mà lỗi thì DB đã đổi trạng thái nhưng thiết bị không bao giờ nhận lệnh.
+ */
 
 /**
  * ENV-FR-019 — mở 1 bản ghi can thiệp tay. Relay đó đang có bản ghi mở (người dùng
@@ -13,28 +20,38 @@ import type { CurrentUser } from '@/types'
 export async function openOverrideLog(input: {
   nodeId: unknown; zoneId: unknown; farmId: unknown
   relay: OverrideRelay; state: boolean; user: CurrentUser; expiresAt: Date
-}): Promise<IRelayOverrideLog> {
-  const now = new Date()
-  await RelayOverrideLog.updateMany(
-    { node_id: input.nodeId, relay: input.relay, ended_at: null },
-    { ended_at: now, end_reason: 'REPLACED' satisfies OverrideEndReason },
-  )
-  return RelayOverrideLog.create({
-    node_id: input.nodeId, zone_id: input.zoneId, farm_id: input.farmId,
-    relay: input.relay, state: input.state,
-    started_by: input.user._id, started_by_role: input.user.role,
-    started_at: now, expires_at: input.expiresAt,
-  })
+}): Promise<IRelayOverrideLog | null> {
+  try {
+    const now = new Date()
+    await RelayOverrideLog.updateMany(
+      { node_id: input.nodeId, relay: input.relay, ended_at: null },
+      { ended_at: now, end_reason: 'REPLACED' satisfies OverrideEndReason },
+    )
+    return await RelayOverrideLog.create({
+      node_id: input.nodeId, zone_id: input.zoneId, farm_id: input.farmId,
+      relay: input.relay, state: input.state,
+      started_by: input.user._id, started_by_role: input.user.role,
+      started_at: now, expires_at: input.expiresAt,
+    })
+  } catch (err) {
+    logger.warn('Ghi lịch sử can thiệp tay thất bại (ENV-FR-019)', { err, nodeId: String(input.nodeId), relay: input.relay })
+    return null
+  }
 }
 
 /** Đóng mọi bản ghi còn mở của các thiết bị (thiết bị về AUTO thì mọi relay cùng về AUTO) */
 export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndReason, at = new Date()): Promise<number> {
   if (nodeIds.length === 0) return 0
-  const { modifiedCount } = await RelayOverrideLog.updateMany(
-    { node_id: { $in: nodeIds }, ended_at: null },
-    { ended_at: at, end_reason: reason },
-  )
-  return modifiedCount
+  try {
+    const { modifiedCount } = await RelayOverrideLog.updateMany(
+      { node_id: { $in: nodeIds }, ended_at: null },
+      { ended_at: at, end_reason: reason },
+    )
+    return modifiedCount
+  } catch (err) {
+    logger.warn('Đóng lịch sử can thiệp tay thất bại (ENV-FR-019)', { err, reason })
+    return 0
+  }
 }
 
 /**
@@ -42,10 +59,14 @@ export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndR
  * EXPIRED, chưa tới hạn (thiết bị khởi động lại, mất override) thì là CLEARED_EARLY.
  */
 export async function closeOverrideLogsFromDevice(nodeId: unknown, at = new Date()): Promise<void> {
-  await RelayOverrideLog.updateMany(
-    { node_id: nodeId, ended_at: null, expires_at: { $lte: at } },
-    { ended_at: at, end_reason: 'EXPIRED' satisfies OverrideEndReason },
-  )
+  try {
+    await RelayOverrideLog.updateMany(
+      { node_id: nodeId, ended_at: null, expires_at: { $lte: at } },
+      { ended_at: at, end_reason: 'EXPIRED' satisfies OverrideEndReason },
+    )
+  } catch (err) {
+    logger.warn('Đóng lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
+  }
   await closeOverrideLogs([nodeId], 'CLEARED_EARLY', at)
 }
 

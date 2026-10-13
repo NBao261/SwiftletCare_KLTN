@@ -70,6 +70,8 @@ describe('liên kết bot Telegram', () => {
     expect((await User.findById(user._id))!.telegram_chat_id).toBe('777')
     expect(sent().at(-1)).toMatchObject({ chat_id: '777', text: expect.stringContaining(user.email) })
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.telegram.org/botTEST_TOKEN/sendMessage')
+    // Có hạn chờ: Telegram treo không được giữ request mãi
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
 
     // Người khác gửi lại đúng mã đó: không chiếm được liên kết
     await start(code, 999)
@@ -148,6 +150,18 @@ describe('gửi cảnh báo qua Telegram', () => {
     expect(sent()).toHaveLength(0)
     await dispatchAlertNotification(alert('CRITICAL'))
     expect(sent()).toHaveLength(1)
+  })
+
+  it('Telegram treo với 1 người không chặn người nhận khác', async () => {
+    const { alert } = await farmWith(DAY)
+    await User.updateMany({ role: 'FARM_OWNER', telegram_chat_id: { $exists: false } }, { telegram_chat_id: '200' }) // đồng sở hữu cũng liên kết
+    fetchMock.mockImplementation((_url: string, init: { body: string }) =>
+      (JSON.parse(init.body) as { chat_id: string }).chat_id === '100'
+        ? Promise.reject(new Error('timeout'))
+        : Promise.resolve({ ok: true, json: async () => ({ ok: true, result: {} }) }))
+
+    await expect(dispatchAlertNotification(alert('CRITICAL'))).resolves.toBeUndefined()
+    expect(sent().map(m => m.chat_id).sort()).toEqual(['100', '200'])
   })
 
   it('tắt kênh Telegram trong tuỳ chọn thì không gửi', async () => {

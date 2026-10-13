@@ -7,10 +7,11 @@ import { Zone, IZone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { autonomyBetween, inRangeSum, switchedSum } from '@/services/analytics.service'
 import { logAction } from '@/services/auditLog.service'
-import { notifyUser } from '@/services/notification.service'
+import { findRecipients, notifyUser } from '@/services/notification.service'
 import { assertFarmAccess, assertZoneAccess, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { BadRequestError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
+import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
 const DAY_MS = 86400_000
@@ -34,6 +35,9 @@ export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'thresholds'>, 
   const [[tele], alertRows, [birds], autonomy] = await Promise.all([
     Telemetry.aggregate([
       { $match: { zone_id: zoneId, timestamp: { $gte: from, $lte: to } } },
+      // Chỉ mang các trường cần dùng qua $setWindowFields — stage này giữ cả partition
+      // trong bộ nhớ (giới hạn 100 MB); kỳ dài thì cho phép tràn ra đĩa.
+      { $project: { node_id: 1, timestamp: 1, humidity: 1, temperature: 1, nh3_ppm: 1, co2_ppm: 1, misting_on: 1, ventilation_on: 1 } },
       {
         $setWindowFields: {
           partitionBy: '$node_id',
@@ -58,7 +62,7 @@ export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'thresholds'>, 
           co2Avg: { $avg: '$co2_ppm' }, co2Max: { $max: '$co2_ppm' },
         },
       },
-    ]),
+    ]).allowDiskUse(true),
     Alert.aggregate<{ _id: string; count: number }>([
       { $match: { zone_id: zoneId, created_at: { $gte: from, $lte: to } } },
       { $group: { _id: '$type', count: { $sum: 1 } } },
@@ -84,12 +88,9 @@ export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'thresholds'>, 
   }
 }
 
-/** Chủ farm + đồng sở hữu (không gồm Domain Expert) */
+/** Chủ farm + đồng sở hữu — cùng luật người nhận với cảnh báo vận hành (notification.findRecipients) */
 async function ownerIdsOf(farmId: unknown): Promise<string[]> {
-  const farm = await Farm.findById(farmId).select('owner_id members').lean()
-  if (!farm) return []
-  const owners = farm.members.filter(m => m.role !== 'DOMAIN_EXPERT').map(m => String(m.user_id))
-  return [...new Set([String(farm.owner_id), ...owners])]
+  return (await findRecipients(String(farmId))).map(u => String(u._id))
 }
 
 async function expertIdsOf(farmId: unknown): Promise<string[]> {
@@ -109,25 +110,36 @@ export async function generateWeeklyReports(now = new Date()): Promise<number> {
 
   let created = 0
   for (const zone of zones) {
-    // Đã có báo cáo phủ phần lớn kỳ này (job chạy 2 lần, hoặc khởi động lại) → bỏ qua
-    const recent = await ZoneHealthReport.exists({ zone_id: zone._id, period_end: { $gt: new Date(now.getTime() - (REPORT_PERIOD_DAYS - 0.5) * DAY_MS) } })
-    if (recent) continue
-
-    const metrics = await buildZoneMetrics(zone, periodStart, now)
-    if (metrics.sample_count === 0) continue
-
-    const report = await ZoneHealthReport.create({
-      farm_id: zone.farm_id, zone_id: zone._id, period_start: periodStart, period_end: now, metrics, generated_at: now,
-    })
-    created++
-
-    const recipients = [...await ownerIdsOf(zone.farm_id), ...await expertIdsOf(zone.farm_id)]
-    await Promise.all(recipients.map(id => notifyUser(id, {
-      title: `Báo cáo sức khỏe ${zone.name}`,
-      body: `Báo cáo ${REPORT_PERIOD_DAYS} ngày của ${zone.name} đã sẵn sàng: ${metrics.humidity_in_range_pct ?? '—'}% thời gian độ ẩm trong ngưỡng, ${metrics.auto_mode_pct ?? '—'}% thời gian tự động. (Mã báo cáo ${report._id})`,
-    })))
+    // Một Zone lỗi (dữ liệu hỏng, aggregate quá tải) không được làm các Zone sau mất báo cáo kỳ này
+    try {
+      if (await generateZoneReport(zone, periodStart, now)) created++
+    } catch (err) {
+      logger.error('Tạo báo cáo sức khỏe Zone thất bại', { err, zoneId: String(zone._id) })
+    }
   }
   return created
+}
+
+async function generateZoneReport(
+  zone: Pick<IZone, '_id' | 'name' | 'farm_id' | 'thresholds'>, periodStart: Date, now: Date,
+): Promise<boolean> {
+  // Đã có báo cáo phủ phần lớn kỳ này (job chạy 2 lần, hoặc khởi động lại) → bỏ qua
+  const recent = await ZoneHealthReport.exists({ zone_id: zone._id, period_end: { $gt: new Date(now.getTime() - (REPORT_PERIOD_DAYS - 0.5) * DAY_MS) } })
+  if (recent) return false
+
+  const metrics = await buildZoneMetrics(zone, periodStart, now)
+  if (metrics.sample_count === 0) return false
+
+  const report = await ZoneHealthReport.create({
+    farm_id: zone.farm_id, zone_id: zone._id, period_start: periodStart, period_end: now, metrics, generated_at: now,
+  })
+
+  const recipients = [...await ownerIdsOf(zone.farm_id), ...await expertIdsOf(zone.farm_id)]
+  await Promise.all(recipients.map(id => notifyUser(id, {
+    title: `Báo cáo sức khỏe ${zone.name}`,
+    body: `Báo cáo ${REPORT_PERIOD_DAYS} ngày của ${zone.name} đã sẵn sàng: ${metrics.humidity_in_range_pct ?? '—'}% thời gian độ ẩm trong ngưỡng, ${metrics.auto_mode_pct ?? '—'}% thời gian tự động. (Mã báo cáo ${report._id})`,
+  })))
+  return true
 }
 
 /** EXPERT-FR-005 — danh sách báo cáo của 1 Zone, mới nhất trước */

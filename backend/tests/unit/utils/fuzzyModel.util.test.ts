@@ -31,6 +31,9 @@ describe('TS port matches the ESP32 fuzzy controller', () => {
     expect(inputsValid(NaN, 80)).toBe(false)
     expect(inputsValid(30, 120)).toBe(false)
     expect(inputsValid(30, 80)).toBe(true)
+    expect(inputsValid(33, 100.4)).toBe(true) // bão hoà lúc đang phun, không phải cảm biến hỏng
+    expect(mistingDemand(100.4, 33, 75, 95, 31)).toBe(0)
+    expect(ventilationDemand(33, 100.4, 31, 75)).toBeCloseTo(1)
     expect(mistingDemand(NaN, 33, 75, 95, 31)).toBe(0)
     expect(mistingDemand(65, NaN, 75, 95, 31)).toBe(0)
     expect(mistingDemand(-5, 33, 75, 95, 31)).toBe(0)

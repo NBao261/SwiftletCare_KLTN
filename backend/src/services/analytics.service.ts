@@ -98,8 +98,6 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
   const match = {
     $match: { zone_id: new Types.ObjectId(query.zoneId), timestamp: { $gte: from, $lte: to }, misting_pct: { $exists: true } },
   }
-  const inRange = inRangeSum
-  const switched = switchedSum
 
   const [series, [agg], nodes] = await Promise.all([
     Telemetry.aggregate([
@@ -133,13 +131,13 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
           _id: null,
           total:               { $sum: 1 },
           humidityCount:       { $sum: { $cond: [{ $isNumber: '$humidity' }, 1, 0] } },
-          humidityInRange:     inRange('$humidity', t.humidity_min, t.humidity_max),
+          humidityInRange:     inRangeSum('$humidity', t.humidity_min, t.humidity_max),
           temperatureCount:    { $sum: { $cond: [{ $isNumber: '$temperature' }, 1, 0] } },
-          temperatureInRange:  inRange('$temperature', t.temp_min, t.temp_max),
+          temperatureInRange:  inRangeSum('$temperature', t.temp_min, t.temp_max),
           mistingAvg:          { $avg: '$misting_pct' },
           ventilationAvg:      { $avg: '$ventilation_pct' },
-          mistingSwitches:     switched('$misting_on', '$prevMisting'),
-          ventilationSwitches: switched('$ventilation_on', '$prevVentilation'),
+          mistingSwitches:     switchedSum('$misting_on', '$prevMisting'),
+          ventilationSwitches: switchedSum('$ventilation_on', '$prevVentilation'),
           firstAt:             { $min: '$timestamp' },
           lastAt:              { $max: '$timestamp' },
         },
@@ -221,6 +219,11 @@ export async function getBirdCountDaily(
   user: CurrentUser, zoneId: string, query: { from?: string; to?: string },
 ) {
   await assertZoneAccess(zoneId, user)
+  return dailyBirdCounts(zoneId, query)
+}
+
+/** Phần truy vấn của getBirdCountDaily — caller đã kiểm tra quyền trên Zone */
+async function dailyBirdCounts(zoneId: string, query: { from?: string; to?: string }) {
   const to = query.to ? new Date(query.to) : new Date()
   const from = query.from ? new Date(query.from) : new Date(to.getTime() - 30 * 86400_000)
 
@@ -272,7 +275,7 @@ export async function autonomyBetween(zoneId: string, from: Date, to: Date) {
 export async function getBirdCountTrends(user: CurrentUser, zoneId: string, query: { days: number }) {
   const { zone } = await assertZoneAccess(zoneId, user)
   const dropThreshold = resolveDetectionTuning(zone.detection_tuning).return_rate_drop_pct
-  const { records } = await getBirdCountDaily(user, zoneId, {
+  const { records } = await dailyBirdCounts(zoneId, {
     from: new Date(Date.now() - query.days * 86400_000).toISOString(),
   })
 

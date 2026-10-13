@@ -21,6 +21,8 @@ export interface IHarvestBatch extends Document {
     avg_nh3_ppm?: number
     avg_co2_ppm?: number
     telemetry_range?: { from: Date; to: Date }
+    /** Flow 7 case 3a — Zone chưa đủ 7 ngày telemetry: số liệu (nếu có) chưa đủ tin cậy */
+    insufficient_data?: boolean
   }
   flock_snapshot: {
     avg_return_rate_30d?: number
@@ -50,6 +52,8 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
       avg_nh3_ppm:     { type: Number },
       avg_co2_ppm:     { type: Number },
       telemetry_range: { from: Date, to: Date },
+      // Thiếu khai báo thì strict mode âm thầm bỏ cờ này khi lưu
+      insufficient_data: { type: Boolean },
     },
     flock_snapshot: {
       avg_return_rate_30d: { type: Number },

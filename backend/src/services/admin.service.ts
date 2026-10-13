@@ -212,6 +212,10 @@ export async function completeDeletionRequest(
   user.phone = undefined
   user.full_name = 'Tài khoản đã xoá'
   user.avatar_url = undefined
+  // Chat id Telegram là dữ liệu cá nhân và còn là đường gửi tin tới người thật (PRIV-NFR-003)
+  user.telegram_chat_id = undefined
+  user.telegram_link_code_hash = undefined
+  user.telegram_link_expires_at = undefined
   user.is_active = false
   user.refresh_tokens = [] as never
   // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và

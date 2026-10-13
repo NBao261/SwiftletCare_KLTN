@@ -54,14 +54,16 @@ export async function dispatchAlertNotification(alert: IAlert): Promise<void> {
     return
   }
 
-  for (const user of recipients) {
+  // Mỗi người nhận gửi độc lập và song song: kênh của 1 người chậm/lỗi không được
+  // chặn cảnh báo (nhất là CRITICAL) của những người còn lại.
+  const results = await Promise.allSettled(recipients.map(async user => {
     const prefs = user.notification_preferences
     const muted = isWithinQuietHours(prefs) && alert.severity !== 'CRITICAL'
     if (muted) {
       logger.debug('Bỏ qua thông báo do giờ im lặng (ALERT-FR-006)', {
         alertId: String(alert._id), userId: String(user._id), severity: alert.severity,
       })
-      continue
+      return
     }
 
     const body = `[${alert.severity}] ${alert.title} — ${alert.message}`
@@ -69,13 +71,15 @@ export async function dispatchAlertNotification(alert: IAlert): Promise<void> {
     // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
     // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot;
     // ALERT-FR-003: Zalo ZNS chỉ CRITICAL/HIGH; ALERT-FR-004: SMS chỉ cho CRITICAL.
-    if (prefs?.push) await sendPush(String(user._id), alert.title, body)
-    if (prefs?.telegram !== false && user.telegram_chat_id) await sendTelegram(user.telegram_chat_id, body)
-    if (prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH')) {
-      await sendZalo(user.phone, body)
-    }
-    if (prefs?.sms && alert.severity === 'CRITICAL') await sendSms(user.phone, body)
-  }
+    await Promise.allSettled([
+      prefs?.push ? sendPush(String(user._id), alert.title, body) : undefined,
+      prefs?.telegram !== false && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined,
+      prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH') ? sendZalo(user.phone, body) : undefined,
+      prefs?.sms && alert.severity === 'CRITICAL' ? sendSms(user.phone, body) : undefined,
+    ])
+  }))
+  const failed = results.filter(r => r.status === 'rejected').length
+  if (failed > 0) logger.warn('Một số người nhận không gửi được thông báo', { alertId: String(alert._id), failed })
 }
 
 // ── Adapter tới nhà cung cấp ngoài (chưa nối credential thật) ───────────────

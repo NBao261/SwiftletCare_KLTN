@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { Types } from 'mongoose'
 import { HarvestBatch, IHarvestBatch } from '@/models/harvestBatch.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
@@ -20,7 +21,8 @@ async function buildEnvSnapshot(zoneId: string, harvestDate: Date) {
   const from = new Date(harvestDate.getTime() - ENV_SNAPSHOT_DAYS * 86400_000)
 
   const [agg] = await Telemetry.aggregate([
-    { $match: { zone_id: zoneId, timestamp: { $gte: from, $lte: harvestDate } } },
+    // aggregate() không ép kiểu như find(): để chuỗi thì không bản ghi nào khớp
+    { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from, $lte: harvestDate } } },
     {
       $group: {
         _id: null,
@@ -58,7 +60,7 @@ async function buildEnvSnapshot(zoneId: string, harvestDate: Date) {
 async function buildFlockSnapshot(zoneId: string, harvestDate: Date) {
   const from = new Date(harvestDate.getTime() - FLOCK_SNAPSHOT_DAYS * 86400_000)
   const [agg] = await BirdCountRecord.aggregate([
-    { $match: { zone_id: zoneId, timestamp: { $gte: from, $lte: harvestDate } } },
+    { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from, $lte: harvestDate } } },
     { $group: { _id: null, avg_return_rate_30d: { $avg: '$return_rate' }, maxEntry: { $max: '$entry_count' } } },
   ])
   if (!agg) return {}

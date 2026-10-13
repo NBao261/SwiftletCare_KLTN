@@ -40,11 +40,10 @@ export async function listSchedules(user: CurrentUser, query: { farmId?: string;
   } else {
     filter.farm_id = { $in: await listAccessibleFarmIds(user) }
   }
-  const scoped = filter
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [records, total] = await Promise.all([
-    MaintenanceSchedule.find(scoped).sort({ next_due_at: 1 }).skip(skip).limit(limit).lean(),
-    MaintenanceSchedule.countDocuments(scoped),
+    MaintenanceSchedule.find(filter).sort({ next_due_at: 1 }).skip(skip).limit(limit).lean(),
+    MaintenanceSchedule.countDocuments(filter),
   ])
   return { records, total, page, limit }
 }

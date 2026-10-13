@@ -12,6 +12,10 @@ import logger from '@/utils/logger.util'
  * (tạo bot qua @BotFather), không commit. Dùng `fetch` có sẵn của Node 20.
  */
 const API_BASE = 'https://api.telegram.org'
+/** Telegram treo thì bỏ sau 10 giây — không để 1 request chặn thông báo của người khác */
+const SEND_TIMEOUT_MS = 10_000
+/** getUpdates chờ tối đa 25 giây phía Telegram (long polling) nên hạn phải dài hơn */
+const POLL_TIMEOUT_MS = 35_000
 /** Mã liên kết sống 10 phút — đủ để mở Telegram, ngắn để mã lộ ra cũng hết hạn nhanh */
 export const LINK_CODE_TTL_MS = 10 * 60_000
 
@@ -21,12 +25,12 @@ export const isTelegramConfigured = () => botToken() !== ''
 
 const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
 
-async function callTelegram<T = unknown>(method: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+async function callTelegram<T = unknown>(method: string, body: Record<string, unknown>, timeoutMs = SEND_TIMEOUT_MS): Promise<T> {
   const res = await fetch(`${API_BASE}/bot${botToken()}/${method}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    signal,
+    signal: AbortSignal.timeout(timeoutMs),
   })
   const json = (await res.json()) as { ok: boolean; result?: T; description?: string }
   if (!res.ok || !json.ok) throw new Error(`Telegram ${method} thất bại: ${json.description ?? res.status}`)
@@ -117,7 +121,7 @@ export function startTelegramPolling(): void {
   const loop = async (): Promise<void> => {
     for (;;) {
       try {
-        const updates = await callTelegram<TelegramUpdate[]>('getUpdates', { offset, timeout: 25, allowed_updates: ['message'] })
+        const updates = await callTelegram<TelegramUpdate[]>('getUpdates', { offset, timeout: 25, allowed_updates: ['message'] }, POLL_TIMEOUT_MS)
         for (const update of updates) {
           offset = update.update_id + 1
           await handleTelegramUpdate(update).catch((err: Error) => logger.warn('Xử lý update Telegram lỗi', { err: err.message }))

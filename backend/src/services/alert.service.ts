@@ -17,6 +17,19 @@ export const ALERT_SEEN_UPDATE_MS = 60 * 1000
 /** THRESHOLD_BREACH không được ghi nhận lại trong khoảng này = chỉ số đã bình thường → tự đóng */
 export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
 
+/**
+ * Cảnh báo "theo đợt" do firmware phát 1 lần khi sự cố BẮT ĐẦU và không có tín hiệu
+ * hết: không được ghi nhận lại trong khoảng này thì coi đợt đó đã qua và tự đóng. Nếu
+ * không đóng, dedup "còn mở thì không tạo mới" nuốt mọi lần tái phát về sau: mỗi thiết
+ * bị chỉ còn đúng 1 bản ghi, Farm Owner không được báo lần nào nữa và thống kê tỷ lệ
+ * xác nhận (EXPERT-FR-003) không còn là căn cứ chỉnh tham số.
+ * ponytail: 60 phút là mốc kỹ thuật chọn tay (dài hơn 30 phút tự thử lại của PUMP_DRY
+ * trên firmware để thử lại vẫn khô thì gộp vào cùng 1 cảnh báo), không có nguồn nuôi
+ * yến — chỉnh khi có dữ liệu thật về độ dài một đợt ồn bất thường.
+ */
+export const EPISODE_CLEAR_MS = 60 * 60 * 1000
+export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'PUMP_DRY']
+
 /** Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này */
 export const OPEN_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
 
@@ -206,11 +219,12 @@ export function findThresholdBreaches(
 
 /**
  * ALERT-FR-012 (SRS v2.0.0) — NH3/CO2 chỉ theo dõi và cảnh báo: chưa có giới hạn nào
- * được xác lập cho nhà yến, ngưỡng của Zone là ngưỡng cảnh báo do Domain Expert đặt,
- * và hệ thống không điều khiển quạt theo hai chỉ số này.
+ * được xác lập cho nhà yến, ngưỡng của Zone là ngưỡng cảnh báo (mặc định hệ thống cho
+ * tới khi Domain Expert chỉnh), và hệ thống không điều khiển quạt theo hai chỉ số này.
  */
 const AIR_QUALITY_METRICS = new Set(['nh3_ppm', 'co2_ppm'])
-const AIR_QUALITY_NOTE = 'NH3/CO2 là ngưỡng cảnh báo do chuyên gia đặt — hệ thống không tự chạy quạt theo chỉ số này'
+// Không ghi "do chuyên gia đặt": ngưỡng mặc định chưa ai chỉnh thì câu đó sai sự thật
+const AIR_QUALITY_NOTE = 'NH3/CO2 chỉ theo dõi và cảnh báo theo ngưỡng của Zone (chưa có giới hạn chuẩn cho nhà yến) — hệ thống không tự chạy quạt theo chỉ số này'
 
 const METRIC_LABEL: Record<string, string> = {
   temperature: 'Nhiệt độ',
@@ -279,14 +293,13 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   } else if (query.verdict) {
     filter['expert_verdict.result'] = query.verdict.toUpperCase()
   }
-  const scoped = filter
 
   const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total, unreadCount] = await Promise.all([
-    Alert.find(scoped).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
-    Alert.countDocuments(scoped),
-    Alert.countDocuments({ ...scoped, status: 'ACTIVE' }),
+    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+    Alert.countDocuments(filter),
+    Alert.countDocuments({ ...filter, status: 'ACTIVE' }),
   ])
 
   return { records, total, page, limit, unreadCount }
@@ -391,6 +404,27 @@ export async function resolveStaleThresholdAlerts(): Promise<number> {
       ],
     },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Chỉ số đã trở lại bình thường' },
+  )
+  return modifiedCount
+}
+
+/**
+ * Tự đóng cảnh báo theo đợt (EPISODE_ALERT_TYPES) không còn được ghi nhận lại trong
+ * EPISODE_CLEAR_MS — lần tái phát sau đó là 1 cảnh báo mới, được thông báo và kiểm
+ * chứng riêng. Gọi định kỳ từ jobs/alertEscalation.job.ts.
+ */
+export async function resolveStaleEpisodeAlerts(now = new Date()): Promise<number> {
+  const clearBefore = new Date(now.getTime() - EPISODE_CLEAR_MS)
+  const { modifiedCount } = await Alert.updateMany(
+    {
+      type: { $in: EPISODE_ALERT_TYPES },
+      status: { $in: OPEN_STATUSES },
+      $or: [
+        { last_seen_at: { $lt: clearBefore } },
+        { last_seen_at: { $exists: false }, created_at: { $lt: clearBefore } },
+      ],
+    },
+    { status: 'RESOLVED', resolved_at: now, acknowledgement_note: 'Không còn ghi nhận lại — đợt sự cố đã qua' },
   )
   return modifiedCount
 }

@@ -18,9 +18,11 @@ export const rampUp = (x: number, a: number, b: number) => 1 - rampDown(x, a, b)
 export const tri = (x: number, a: number, b: number, c: number) =>
   x <= a || x >= c ? 0 : x <= b ? (x - a) / (b - a) : (c - x) / (c - b)
 
+/** Bão hoà lúc đang phun có thể báo 100,x % — vẫn hợp lệ (khớp FuzzyControl.h) */
+export const HUMIDITY_SATURATION_MAX = 101
 /** THREAT-FR-013 — số đo không hợp lệ thì nhu cầu = 0 (khớp FuzzyControl::inputsValid) */
 export const inputsValid = (t: number, h: number) =>
-  Number.isFinite(t) && Number.isFinite(h) && t >= -40 && t <= 80 && h >= 0 && h <= 100
+  Number.isFinite(t) && Number.isFinite(h) && t >= -40 && t <= 80 && h >= 0 && h <= HUMIDITY_SATURATION_MAX
 
 const humidityLow = (h: number, hMin: number, s: number) => rampDown(h, hMin - 5 * s, hMin + 3 * s)
 const isHot = (t: number, tMax: number, k: number) => rampUp(t, tMax - 3 * k, tMax + k)

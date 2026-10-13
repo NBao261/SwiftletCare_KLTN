@@ -138,11 +138,6 @@ export async function controlRelay(
   node.relay_states[input.relayName as RelayName] = input.state
   node.override_expiry = new Date(Date.now() + overrideMs)
   await node.save()
-  // ENV-FR-019 — lịch sử can thiệp tay (nguồn tính tỷ lệ thời gian tự động)
-  await openOverrideLog({
-    nodeId: node._id, zoneId: chain.zone._id, farmId: chain.farm._id,
-    relay: input.relayName as RelayName, state: input.state, user, expiresAt: node.override_expiry,
-  })
 
   // Lệnh không tới được broker thì DB vẫn giữ trạng thái mong muốn (ESP32 sẽ
   // đồng bộ khi online lại), nhưng phải nói thật cho UI biết qua `delivered`.
@@ -161,6 +156,12 @@ export async function controlRelay(
     overrideExpiry: node.override_expiry.toISOString(),
   })
 
+  // ENV-FR-019 — lịch sử can thiệp tay (nguồn tính tỷ lệ thời gian tự động). Ghi SAU khi
+  // lệnh đã publish và không throw: lịch sử hỏng không được chặn lệnh điều khiển.
+  await openOverrideLog({
+    nodeId: node._id, zoneId: chain.zone._id, farmId: chain.farm._id,
+    relay: input.relayName as RelayName, state: input.state, user, expiresAt: node.override_expiry,
+  })
   await logAction(user._id, 'RELAY_OVERRIDE', 'sensor_node', String(node._id), {
     relayName: input.relayName, state: input.state, durationMs: overrideMs, delivered,
   })
@@ -178,13 +179,13 @@ export async function clearRelayOverride(nodeId: string, user: CurrentUser): Pro
   node.control_mode = 'AUTO'
   node.override_expiry = undefined
   await node.save()
-  await closeOverrideLogs([node._id], 'CLEARED_EARLY')
 
   const zoneId = String(chain.zone._id)
   publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', { deviceId: node.device_id, action: 'clear_override' })
   for (const relayName of RELAY_NAMES) {
     emitRelayUpdate(zoneId, { zoneId, relayName, state: node.relay_states[relayName], mode: 'AUTO' })
   }
+  await closeOverrideLogs([node._id], 'CLEARED_EARLY')
   await logAction(user._id, 'RELAY_OVERRIDE_CLEARED', 'sensor_node', String(node._id), {})
   return node
 }
@@ -876,7 +877,6 @@ export async function expireManualOverrides(): Promise<number> {
     { _id: { $in: expired.map(n => n._id) } },
     { control_mode: 'AUTO', $unset: { override_expiry: 1 } },
   )
-  await closeOverrideLogs(expired.map(n => n._id), 'EXPIRED')
 
   // Nhiều node có thể cùng zone — dedupe zoneId trước khi tra chain, tránh
   // lặp lại 3 lượt findById (Zone→House→Farm) cho cùng 1 zone nhiều lần.
@@ -903,6 +903,9 @@ export async function expireManualOverrides(): Promise<number> {
       })
     }
   }
+  // Lịch sử đóng tại đúng hạn override, không phải giờ job chạy (trễ tới ~1 phút mỗi
+  // lần sẽ làm lệch tỷ lệ thời gian tự động — ANALYTICS-FR-011)
+  await Promise.all(expired.map(n => closeOverrideLogs([n._id], 'EXPIRED', n.override_expiry ?? new Date())))
   return expired.length
 }
 
