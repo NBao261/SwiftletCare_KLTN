@@ -12,6 +12,8 @@ router.get('/env/summary',       query('zoneId').isMongoId(), validate, analytic
 router.get('/env/compare',       query('zoneIds').notEmpty(), validate, analyticsController.envCompare)
 // ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ (dữ liệu để chỉnh hệ số ENV-FR-021)
 router.get('/control/performance', query('zoneId').isMongoId(), validate, analyticsController.controlPerformance)
+// ANALYTICS-FR-011 — tỷ lệ thời gian tự động, tính từ lịch sử can thiệp tay (ENV-FR-019)
+router.get('/autonomy',            query('zoneId').isMongoId(), validate, analyticsController.autonomy)
 // ANALYTICS-FR-009 — dự báo độ ẩm/nhiệt độ 60 phút tới (Holt trend tắt dần) + MAE đánh giá lùi
 // ANALYTICS-FR-010 — gợi ý hệ số mờ từ mô hình học trên dữ liệu thật (chỉ đề xuất, không tự áp dụng)
 router.get('/control/suggestion', query('zoneId').isMongoId(), validate, analyticsController.tuningSuggestion)

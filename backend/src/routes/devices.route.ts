@@ -36,6 +36,8 @@ router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER','TECH
 // Domain Expert không vận hành thiết bị (mục 4.4): không relay, loa hay lịch loa
 router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(), validate, deviceController.controlRelay)
 router.delete('/sensor-nodes/:id/relay-override', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, deviceController.clearRelayOverride)
+// ENV-FR-019 — lịch sử can thiệp tay; Domain Expert xem được (chỉ đọc)
+router.get   ('/sensor-nodes/:id/relay-overrides', requireRole('FARM_OWNER','DOMAIN_EXPERT','TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, deviceController.listRelayOverrides)
 
 // File loa ru (ENV-FR-013c) — RACI SRS ⁹: upload/chép thẻ SD là việc phần cứng của
 // Technician; chọn bài/nghe thử là vận hành của Farm Owner.

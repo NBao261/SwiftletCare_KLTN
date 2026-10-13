@@ -5,6 +5,7 @@ import { RELAY_SERVICE_LIMITS } from '@/services/relayUsage.service'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
 import { resolveDetectionTuning } from '@/utils/detectionTuning.util'
+import { manualTimeInZone } from '@/services/relayOverrideLog.service'
 import { BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
@@ -232,6 +233,30 @@ export async function getBirdCountDaily(
   ])
 
   return { from, to, records, note: records.length === 0 ? 'Chưa có dữ liệu đếm chim — module VISION chưa triển khai' : undefined }
+}
+
+/**
+ * ANALYTICS-FR-011 — tỷ lệ thời gian tự động của 1 Zone: % thời gian trong khoảng mà
+ * không relay nào của Zone bị can thiệp tay, tính từ lịch sử override (ENV-FR-019).
+ * Trả lời câu hỏi "hệ thống tự động đến mức nào". Override bắt đầu trước khi có lịch
+ * sử (trước bản này) không được tính.
+ */
+export async function getAutonomy(user: CurrentUser, query: { zoneId: string; range: string }) {
+  await assertZoneAccess(query.zoneId, user)
+  const { from, to } = resolveRange(query.range)
+  return { range: query.range, ...(await autonomyBetween(query.zoneId, from, to)) }
+}
+
+/** Dùng chung cho API trên và báo cáo sức khỏe Zone (EXPERT-FR-005) */
+export async function autonomyBetween(zoneId: string, from: Date, to: Date) {
+  const { manualMs, overrideCount } = await manualTimeInZone(zoneId, from, to)
+  const totalMs = to.getTime() - from.getTime()
+  return {
+    from, to,
+    auto_mode_pct: totalMs > 0 ? +(100 * (1 - manualMs / totalMs)).toFixed(1) : null,
+    manual_minutes: Math.round(manualMs / 60_000),
+    override_count: overrideCount,
+  }
 }
 
 /**

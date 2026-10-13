@@ -1969,6 +1969,34 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: "Thiết bị không ONLINE, hoặc đã được gỡ bỏ khỏi hệ thống (FARM-FR-008)" }
 
+  /devices/sensor-nodes/{id}/relay-overrides:
+    get:
+      tags: [Devices]
+      summary: "Lịch sử can thiệp tay của thiết bị (ENV-FR-019) — FARM_OWNER/DOMAIN_EXPERT/TECHNICIAN/ADMIN"
+      description: |
+        Mỗi lần ép 1 relay là 1 bản ghi, mới nhất trước. `ended_at = null` là đang override.
+        `end_reason`: `EXPIRED` (hết hạn), `CLEARED_EARLY` (tắt sớm, gỡ thiết bị, hoặc thiết
+        bị khởi động lại), `REPLACED` (bấm lại cùng relay trước khi hết hạn).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/RelayOverrideLog" } }
+                      meta:
+                        type: object
+                        properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /devices/sensor-nodes/{id}/relay:
     post:
       tags: [Devices]
@@ -2713,6 +2741,38 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
+
+  /analytics/autonomy:
+    get:
+      tags: [Analytics]
+      summary: "Tỷ lệ thời gian tự động của Zone (ANALYTICS-FR-011)"
+      description: |
+        % thời gian trong khoảng mà không relay nào của Zone bị can thiệp tay, tính từ lịch
+        sử override (ENV-FR-019): các khoảng chồng nhau chỉ tính một lần, override đang mở
+        tính tới hiện tại. Override diễn ra trước khi có lịch sử không được tính.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: range, in: query, schema: { type: string, enum: [1h, 6h, 24h, 7d, 30d], default: 24h } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          range: { type: string }
+                          from: { type: string, format: date-time }
+                          to: { type: string, format: date-time }
+                          auto_mode_pct: { type: number, nullable: true, example: 94.8 }
+                          manual_minutes: { type: integer }
+                          override_count: { type: integer }
+        "400": { description: "range không hợp lệ", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /analytics/control/performance:
     get:
@@ -4516,6 +4576,25 @@ components:
         since_service_hours: { type: number }
         since_service_switches: { type: integer }
         last_ticket_id: { type: string }
+
+    RelayOverrideLog:
+      type: object
+      description: "ENV-FR-019 — một lần can thiệp tay 1 relay"
+      properties:
+        _id: { type: string }
+        node_id: { type: string }
+        zone_id: { type: string }
+        farm_id: { type: string }
+        relay: { type: string, enum: [misting, ventilation, speaker] }
+        state: { type: boolean, description: "Trạng thái được ép" }
+        started_by:
+          type: object
+          properties: { _id: { type: string }, full_name: { type: string }, email: { type: string } }
+        started_by_role: { $ref: "#/components/schemas/Role" }
+        started_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time, nullable: true }
+        end_reason: { type: string, enum: [EXPIRED, CLEARED_EARLY, REPLACED], nullable: true }
 
     RelayStates:
       type: object
