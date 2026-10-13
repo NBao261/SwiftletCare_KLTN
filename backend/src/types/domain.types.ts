@@ -110,6 +110,18 @@ export interface FuzzyTuning {
   fuzzy_input_filter: boolean  // ENV-FR-022 — lọc median+Kalman đầu vào bộ mờ (tắt để so sánh A/B)
 }
 
+// EXPERT-FR-008 (v2.1.0): tham số phát hiện theo Zone do Domain Expert chỉnh. Năm
+// tham số đầu gửi xuống ESP32 qua config/update (tên field = tên key MQTT); tham số
+// cuối do backend dùng. Mặc định + khoảng hợp lệ: utils/detectionTuning.util.ts.
+export interface DetectionTuning {
+  noise_margin_db: number        // dB — ồn cao hơn mức nền của giờ đó bao nhiêu thì tính
+  noise_min_sec: number          // s — số giây ồn trong cửa sổ 15 giây
+  pump_dry_on_sec: number        // s — thời gian bơm BẬT cộng dồn trước khi xét
+  pump_dry_min_rise_pct: number  // %RH — độ ẩm phải tăng tối thiểu
+  speaker_drop_pct: number       // % — mức âm giảm so với nền thì coi là hỏng loa
+  return_rate_drop_pct: number   // % — tỷ lệ chim về giảm so với trung bình kỳ trước
+}
+
 // ── MQTT Message Payloads ──────────────────────────────────────────────────────
 export interface TelemetryPayload {
   deviceId: string

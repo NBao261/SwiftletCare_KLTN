@@ -12,6 +12,7 @@ import { notifyUser } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
+import { firmwareDetectionConfig, resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds } from '@/types'
@@ -369,7 +370,7 @@ const hourOf = (hhmm: string) => Number(hhmm.slice(0, 2))
  * giờ để firmware giữ mặc định của nó; chỉ 1 khung → khung 2 = 0-0 (không bao giờ khớp).
  */
 export function buildDeviceConfig(
-  zone: Pick<IZone, 'thresholds' | 'fuzzy_tuning'>,
+  zone: Pick<IZone, 'thresholds' | 'fuzzy_tuning'> & { detection_tuning?: Partial<IZone['detection_tuning']> },
   node: Pick<ISensorNode, 'speaker_schedule' | 'audio'>,
 ) {
   const t = zone.thresholds
@@ -383,6 +384,8 @@ export function buildDeviceConfig(
     nh3_max: t.nh3_max,
     co2_max: t.co2_max,
     ...zone.fuzzy_tuning,
+    // EXPERT-FR-008 — 5 tham số phát hiện chạy trên ESP32 (Zone cũ chưa có thì gửi mặc định)
+    ...firmwareDetectionConfig(resolveDetectionTuning(zone.detection_tuning)),
     speaker_schedule_enabled: node.speaker_schedule.enabled,
     speaker_volume: node.audio.volume,
     speaker_track: node.audio.current_track,

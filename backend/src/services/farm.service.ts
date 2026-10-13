@@ -14,6 +14,9 @@ import { getDefaultThresholds } from '@/services/system.service'
 import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage } from '@/services/ticket.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
+import {
+  assertValidDetectionTuning, firmwareDetectionConfig, pickDetectionTuning, resolveDetectionTuning,
+} from '@/utils/detectionTuning.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
@@ -386,5 +389,32 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', { ...zone.fuzzy_tuning })
   await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
+  return zone
+}
+
+/**
+ * EXPERT-FR-008 — Domain Expert chỉnh tham số phát hiện của 1 Zone: kiểm tra khoảng,
+ * lưu lịch sử (người sửa, role, thời điểm, cũ/mới), gửi 5 tham số chạy trên ESP32
+ * qua config/update (firmware kẹp lại rồi lưu NVS); `return_rate_drop_pct` backend tự dùng.
+ */
+export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
+  const { zone, house, farm } = await assertZoneAccess(zoneId, user)
+
+  const picked = pickDetectionTuning(updates)
+  if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
+  const oldValues = resolveDetectionTuning(zone.detection_tuning)
+  const merged = { ...oldValues, ...picked }
+  assertValidDetectionTuning(merged)
+
+  zone.detection_tuning = merged
+  zone.detection_tuning_history.push({
+    changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_values: oldValues, new_values: picked,
+  } as never)
+  const overflow = zone.detection_tuning_history.length - THRESHOLD_HISTORY_LIMIT
+  if (overflow > 0) zone.detection_tuning_history.splice(0, overflow)
+  await zone.save()
+
+  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', firmwareDetectionConfig(merged))
+  await logAction(user._id, 'DETECTION_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
   return zone
 }

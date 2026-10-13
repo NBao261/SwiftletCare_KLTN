@@ -107,6 +107,12 @@ export const updateFuzzyTuning = asyncHandler(async (req: Request, res: Response
   res.json({ success: true, data: zone })
 })
 
+/** PUT /farms/zones/:zoneId/detection-tuning – EXPERT-FR-008 */
+export const updateDetectionTuning = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await farmService.updateZoneDetectionTuning(req.params.zoneId, req.user, req.body)
+  res.json({ success: true, data: zone })
+})
+
 /** PUT /farms/zones/:zoneId/thresholds/reset – ENV-FR-020 */
 export const resetThresholds = asyncHandler(async (req: Request, res: Response) => {
   const zone = await farmService.resetZoneThresholds(req.params.zoneId, req.user)

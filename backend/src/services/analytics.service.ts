@@ -4,6 +4,7 @@ import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { RELAY_SERVICE_LIMITS } from '@/services/relayUsage.service'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
+import { resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import { BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
@@ -233,8 +234,13 @@ export async function getBirdCountDaily(
   return { from, to, records, note: records.length === 0 ? 'Chưa có dữ liệu đếm chim — module VISION chưa triển khai' : undefined }
 }
 
-/** VISION-FR-009/011, ANALYTICS-FR-002 — xu hướng return rate + cảnh báo giảm >20% */
+/**
+ * VISION-FR-009/011, ANALYTICS-FR-002 — xu hướng return rate + cờ "giảm đáng kể". Mức
+ * giảm là `return_rate_drop_pct` của Zone (mặc định 20%), Domain Expert chỉnh (EXPERT-FR-008).
+ */
 export async function getBirdCountTrends(user: CurrentUser, zoneId: string, query: { days: number }) {
+  const { zone } = await assertZoneAccess(zoneId, user)
+  const dropThreshold = resolveDetectionTuning(zone.detection_tuning).return_rate_drop_pct
   const { records } = await getBirdCountDaily(user, zoneId, {
     from: new Date(Date.now() - query.days * 86400_000).toISOString(),
   })
@@ -243,7 +249,7 @@ export async function getBirdCountTrends(user: CurrentUser, zoneId: string, quer
   const avg = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null
   const latest = rates.at(-1) ?? null
 
-  // VISION-FR-011: giảm >20% so với trung bình kỳ trước là dấu hiệu đàn bỏ tổ
+  // VISION-FR-011: giảm quá ngưỡng của Zone so với trung bình kỳ trước là tín hiệu cần xem xét
   const dropPercent = avg && latest !== null ? +(((avg - latest) / avg) * 100).toFixed(1) : null
 
   return {
@@ -252,7 +258,8 @@ export async function getBirdCountTrends(user: CurrentUser, zoneId: string, quer
     avg_return_rate: avg ? +avg.toFixed(1) : null,
     latest_return_rate: latest,
     drop_percent: dropPercent,
-    is_significant_drop: dropPercent !== null && dropPercent > 20,
+    drop_threshold_pct: dropThreshold,
+    is_significant_drop: dropPercent !== null && dropPercent > dropThreshold,
   }
 }
 
