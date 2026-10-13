@@ -61,34 +61,46 @@ export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndR
 export const DEVICE_CONFIRM_GRACE_MS = 30_000
 
 /**
+ * Trạng thái các bản ghi còn mở của 1 thiết bị — cho confirmRelayStatus quyết định:
+ * `fresh` = có override vừa mở trong DEVICE_CONFIRM_GRACE_MS (bản tin AUTO lúc này nhiều
+ * khả năng là bản tin cũ đang trên đường tới); `latestExpiry` = hạn muộn nhất còn hiệu lực.
+ * Không throw: đọc lỗi thì coi như không có gì đặc biệt.
+ */
+export async function openOverrideState(nodeId: unknown, now = new Date()): Promise<{ fresh: boolean; latestExpiry: Date | null }> {
+  try {
+    const open = await RelayOverrideLog.find({ node_id: nodeId, ended_at: null }).select('started_at expires_at').lean()
+    const freshAfter = now.getTime() - DEVICE_CONFIRM_GRACE_MS
+    const latest = open.reduce((max, l) => Math.max(max, l.expires_at.getTime()), 0)
+    return { fresh: open.some(l => l.started_at.getTime() > freshAfter), latestExpiry: latest > 0 ? new Date(latest) : null }
+  } catch (err) {
+    logger.warn('Đọc lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
+    return { fresh: false, latestExpiry: null }
+  }
+}
+
+/**
  * Thiết bị tự báo đã về AUTO (relay/status): đóng bản ghi còn mở — quá hạn thì là
  * EXPIRED, chưa tới hạn (thiết bị khởi động lại, mất override) thì là CLEARED_EARLY.
+ * Caller (confirmRelayStatus) đã loại trường hợp bản tin AUTO cũ tới ngay sau khi bật tay.
  */
 export async function closeOverrideLogsFromDevice(nodeId: unknown, at = new Date()): Promise<void> {
-  // DB chuyển MANUAL ngay khi API nhận lệnh (lạc quan), trước khi thiết bị thực thi: một
-  // bản tin relay/status AUTO đang trên đường tới không được đóng nhầm override vừa mở.
-  // Bản ghi còn quá mới thì để yên — nếu thiết bị thật sự đã về AUTO, job hết hạn sẽ đóng.
-  const settledBefore = new Date(at.getTime() - DEVICE_CONFIRM_GRACE_MS)
   try {
     await RelayOverrideLog.updateMany(
       { node_id: nodeId, ended_at: null, expires_at: { $lte: at } },
       { ended_at: at, end_reason: 'EXPIRED' satisfies OverrideEndReason },
     )
-    await RelayOverrideLog.updateMany(
-      { node_id: nodeId, ended_at: null, started_at: { $lte: settledBefore } },
-      { ended_at: at, end_reason: 'CLEARED_EARLY' satisfies OverrideEndReason },
-    )
   } catch (err) {
     logger.warn('Đóng lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
   }
+  await closeOverrideLogs([nodeId], 'CLEARED_EARLY', at)
 }
 
 /**
  * Lưới an toàn: đóng mọi bản ghi còn mở đã QUÁ HẠN mà thiết bị của nó không còn đang
- * được can thiệp tay. Các đường đóng thông thường đều dựa vào trạng thái node; khi một
- * bản tin relay/status AUTO tới ngay sau lúc mở override, node về AUTO (mất
- * override_expiry) trong khi bản ghi còn quá mới nên bị bỏ qua — không đường nào đóng
- * nó nữa và tỷ lệ thời gian tự động sai mãi. Đóng tại đúng `expires_at` của bản ghi.
+ * được can thiệp tay. Các đường đóng thông thường đều dựa vào trạng thái node; nếu node
+ * về AUTO bằng đường nào đó mà bản ghi không được đóng theo (ghi lịch sử là best-effort,
+ * có thể lỗi đúng lúc đóng), nó sẽ mở mãi và tỷ lệ thời gian tự động sai mãi. Đóng tại
+ * đúng `expires_at` của bản ghi.
  * Node vẫn MANUAL và còn hạn (relay khác vừa gia hạn chung) thì để job hết hạn lo.
  */
 export async function closeOrphanedOverrideLogs(now = new Date()): Promise<number> {

@@ -14,7 +14,7 @@ import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { firmwareDetectionConfig, resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import {
-  closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogsFromDevice, openOverrideLog,
+  closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogsFromDevice, openOverrideLog, openOverrideState,
 } from '@/services/relayOverrideLog.service'
 import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -23,6 +23,8 @@ import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, De
 // SRS v2.0.0 bỏ sưởi (ENV-FR-012): kênh IN4 để dự phòng, không còn là relay điều khiển được
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation'] as const
 type RelayName = typeof RELAY_NAMES[number]
+/** ENV-FR-018 — thời hạn can thiệp tay mặc định */
+const DEFAULT_OVERRIDE_MS = 30 * 60 * 1000
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
@@ -132,7 +134,7 @@ export async function controlRelay(
   if (!RELAY_NAMES.includes(input.relayName as RelayName)) {
     throw BadRequestError(`relayName phải là 1 trong: ${RELAY_NAMES.join(', ')}`)
   }
-  const overrideMs = input.durationMs ?? 30 * 60 * 1000 // mặc định 30 phút (ENV-FR-018)
+  const overrideMs = input.durationMs ?? DEFAULT_OVERRIDE_MS
 
   // Cập nhật lạc quan trong DB — trạng thái thật sẽ được ESP32 xác nhận lại
   // qua topic relay/status (relayStatus.handler.ts) khi lệnh được thực thi.
@@ -928,9 +930,30 @@ export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<v
   // Chỉ nhận relay hệ thống còn dùng — firmware < 1.3.0 vẫn gửi kèm `heating`
   const states = Object.fromEntries(RELAY_NAMES.map(name => [name, !!payload.relay_states[name]])) as unknown as RelayStates
   const leftManual = node.control_mode === 'MANUAL' && payload.control_mode === 'AUTO'
+  const manualWithoutExpiry = payload.control_mode === 'MANUAL' && !node.override_expiry
+  const open = leftManual || manualWithoutExpiry ? await openOverrideState(node._id) : null
+
+  // DB chuyển MANUAL ngay khi API nhận lệnh (lạc quan), trước khi thiết bị thực thi. Một
+  // bản tin AUTO phát ra TRƯỚC lệnh mà tới SAU nó là bản tin cũ: nghe theo thì node về
+  // AUTO và mất override_expiry, rồi khi thiết bị thực thi lệnh và báo MANUAL, node kẹt ở
+  // MANUAL không có hạn — job backend không bao giờ trả được nó về AUTO. Bỏ qua bản tin
+  // đó; trạng thái thật sẽ tới ở bản tin kế tiếp. (Thiết bị về AUTO thật trong vài giây
+  // đầu — khởi động lại — thì job hết hạn sẽ trả node về AUTO đúng hạn.)
+  if (leftManual && open?.fresh) {
+    logger.debug('Bỏ qua relay/status AUTO tới ngay sau khi vừa can thiệp tay', { deviceId: payload.deviceId })
+    return
+  }
+
   node.relay_states = states
   node.control_mode = payload.control_mode
   if (payload.control_mode === 'AUTO') node.override_expiry = undefined
+  // Thiết bị báo MANUAL mà DB không có hạn (dữ liệu cũ, hoặc override bật từ phía thiết
+  // bị): luôn đặt hạn để job hết hạn có cái mà làm — lấy hạn của lịch sử còn mở, không có
+  // thì thời hạn mặc định tính từ bây giờ.
+  if (manualWithoutExpiry) {
+    const fromLog = open?.latestExpiry && open.latestExpiry.getTime() > Date.now() ? open.latestExpiry : null
+    node.override_expiry = fromLog ?? new Date(Date.now() + DEFAULT_OVERRIDE_MS)
+  }
   await node.save()
   // Thiết bị tự hết hạn override (hoặc khởi động lại) trước khi job backend kịp chạy
   if (leftManual) await closeOverrideLogsFromDevice(node._id)

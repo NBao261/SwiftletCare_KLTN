@@ -119,39 +119,74 @@ describe('lịch sử can thiệp tay (ENV-FR-019)', () => {
     expect((await RelayOverrideLog.findOne().lean())!.ended_at).toBeInstanceOf(Date)
   })
 
-  it('thiết bị tự báo về AUTO: quá hạn là EXPIRED, chưa tới hạn (khởi động lại) là CLEARED_EARLY', async () => {
+  const settle = (relay: string) => RelayOverrideLog.updateOne({ relay, ended_at: null }, { started_at: new Date(Date.now() - 60_000) })
+
+  it('bản tin AUTO tới ngay sau khi bật tay là bản tin cũ: không đổi chế độ, không mất hạn, không đóng lịch sử', async () => {
+    const { node, relay, t } = await seed()
+    await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true }).expect(200)
+
+    await confirmRelayStatus({ deviceId: node.device_id, relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO' })
+
+    const after = (await SensorNode.findById(node._id))!
+    expect(after.control_mode).toBe('MANUAL')
+    expect(after.override_expiry).toBeInstanceOf(Date)
+    expect(after.relay_states.misting).toBe(true) // vẫn là trạng thái đã yêu cầu
+    expect((await RelayOverrideLog.findOne().lean())!.ended_at).toBeNull()
+  })
+
+  it('thiết bị tự báo về AUTO sau khi override đã ổn định: quá hạn là EXPIRED, chưa tới hạn (khởi động lại) là CLEARED_EARLY', async () => {
     const { node, relay, t } = await seed()
     const auto = () => confirmRelayStatus({
       deviceId: node.device_id, relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO',
     })
 
     await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true }).expect(200)
-    // Bản tin AUTO đã trên đường tới từ trước khi thiết bị kịp thực thi lệnh: không được đóng override vừa mở
-    await auto()
-    expect((await RelayOverrideLog.findOne({ relay: 'misting' }).lean())!.ended_at).toBeNull()
-
-    // Override đã chạy được 1 phút rồi thiết bị mới báo AUTO (khởi động lại) → kết thúc sớm thật
-    await RelayOverrideLog.updateOne({ relay: 'misting' }, { started_at: new Date(Date.now() - 60_000) })
-    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL' })
+    await settle('misting')
     await auto()
     expect((await RelayOverrideLog.findOne({ relay: 'misting' }).lean())!.end_reason).toBe('CLEARED_EARLY')
+    expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')
 
     await call('post', `${relay}/relay`, t.owner, { relayName: 'ventilation', state: true }).expect(200)
+    await settle('ventilation')
     await RelayOverrideLog.updateOne({ relay: 'ventilation' }, { expires_at: new Date(Date.now() - 1000) })
     await auto()
     expect((await RelayOverrideLog.findOne({ relay: 'ventilation' }).lean())!.end_reason).toBe('EXPIRED')
   })
+
+  it('thiết bị báo MANUAL mà DB không có hạn: luôn có hạn để job trả được về AUTO', async () => {
+    const { node, relay, t } = await seed()
+    const manual = () => confirmRelayStatus({
+      deviceId: node.device_id, relay_states: { misting: true, speaker: false, ventilation: false }, control_mode: 'MANUAL',
+    })
+
+    // Có lịch sử còn mở → lấy hạn của nó
+    await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true, durationMs: 600_000 }).expect(200)
+    const logExpiry = (await RelayOverrideLog.findOne().lean())!.expires_at
+    await SensorNode.updateOne({ _id: node._id }, { $unset: { override_expiry: 1 } })
+    await manual()
+    expect((await SensorNode.findById(node._id))!.override_expiry!.getTime()).toBe(logExpiry.getTime())
+
+    // Không có lịch sử (override bật từ phía thiết bị) → thời hạn mặc định 30 phút từ bây giờ
+    await RelayOverrideLog.deleteMany({})
+    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'AUTO', $unset: { override_expiry: 1 } })
+    await manual()
+    const expiry = (await SensorNode.findById(node._id))!.override_expiry!.getTime()
+    expect(expiry - Date.now()).toBeGreaterThan(29 * 60_000)
+    expect(expiry - Date.now()).toBeLessThanOrEqual(30 * 60_000)
+
+    // Và job hết hạn trả được node đó về AUTO
+    await SensorNode.updateOne({ _id: node._id }, { override_expiry: new Date(Date.now() - 1000) })
+    expect(await expireManualOverrides()).toBe(1)
+    expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')
+  })
 })
 
 describe('bản ghi không bao giờ mở quá hạn của chính nó', () => {
-  it('AUTO tới ngay sau khi bật tay rồi thiết bị im lặng: job vẫn đóng bản ghi tại đúng hạn', async () => {
+  it('node đã về AUTO mà bản ghi không được đóng theo: job vẫn đóng tại đúng hạn', async () => {
     const { node, relay, t } = await seed()
     await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true, durationMs: 600_000 }).expect(200)
-    // Bản tin AUTO đang trên đường: node về AUTO, mất override_expiry, bản ghi còn mới nên bị bỏ qua
-    await confirmRelayStatus({ deviceId: node.device_id, relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO' })
-    const after = (await SensorNode.findById(node._id))!
-    expect(after.control_mode).toBe('AUTO')
-    expect((await RelayOverrideLog.findOne().lean())!.ended_at).toBeNull()
+    // Node về AUTO nhưng lần đóng lịch sử bị lỗi (ghi lịch sử là best-effort)
+    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'AUTO', $unset: { override_expiry: 1 } })
 
     // Chưa tới hạn: job không đụng tới
     expect(await expireManualOverrides()).toBe(0)
