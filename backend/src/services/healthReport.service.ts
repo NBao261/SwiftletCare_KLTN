@@ -195,5 +195,6 @@ export async function setReportConclusion(id: string, user: CurrentUser, text: s
     title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho ${zone?.name ?? 'Zone'}`,
     body: text.length > 300 ? `${text.slice(0, 300)}…` : text,
   })))
-  return report
+  // Cùng hình dạng với GET /health-reports/:id (`by` = {_id, full_name}) để client thay cache được
+  return report.populate('expert_conclusion.by', 'full_name')
 }

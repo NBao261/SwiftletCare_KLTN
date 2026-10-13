@@ -83,6 +83,32 @@ export async function closeOverrideLogsFromDevice(nodeId: unknown, at = new Date
   }
 }
 
+/**
+ * Lưới an toàn: đóng mọi bản ghi còn mở đã QUÁ HẠN mà thiết bị của nó không còn đang
+ * được can thiệp tay. Các đường đóng thông thường đều dựa vào trạng thái node; khi một
+ * bản tin relay/status AUTO tới ngay sau lúc mở override, node về AUTO (mất
+ * override_expiry) trong khi bản ghi còn quá mới nên bị bỏ qua — không đường nào đóng
+ * nó nữa và tỷ lệ thời gian tự động sai mãi. Đóng tại đúng `expires_at` của bản ghi.
+ * Node vẫn MANUAL và còn hạn (relay khác vừa gia hạn chung) thì để job hết hạn lo.
+ */
+export async function closeOrphanedOverrideLogs(now = new Date()): Promise<number> {
+  try {
+    const overdueNodeIds = await RelayOverrideLog.distinct('node_id', { ended_at: null, expires_at: { $lt: now } })
+    if (overdueNodeIds.length === 0) return 0
+    const stillManual = await SensorNode.distinct('_id', {
+      _id: { $in: overdueNodeIds }, control_mode: 'MANUAL', override_expiry: { $gt: now },
+    })
+    const { modifiedCount } = await RelayOverrideLog.updateMany(
+      { ended_at: null, expires_at: { $lt: now }, node_id: { $nin: stillManual } },
+      [{ $set: { ended_at: '$expires_at', end_reason: 'EXPIRED' satisfies OverrideEndReason } }],
+    )
+    return modifiedCount
+  } catch (err) {
+    logger.warn('Dọn lịch sử can thiệp tay quá hạn thất bại (ENV-FR-019)', { err })
+    return 0
+  }
+}
+
 /** ENV-FR-019 — lịch sử can thiệp tay của 1 thiết bị, mới nhất trước */
 export async function listOverrideLogs(nodeId: string, user: CurrentUser, query: { page?: number; limit?: number }) {
   const node = await SensorNode.findById(nodeId).select('zone_id').lean()

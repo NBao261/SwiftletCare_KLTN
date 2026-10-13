@@ -60,7 +60,7 @@ it('đổi dữ liệu cũ về phạm vi v2 và chạy lại lần 2 không đ�
   await db.collection('contactinquiries').insertOne({ message: 'hi' })
 
   expect(await migrateScopeV2()).toEqual({
-    users: 1, farms: 1, invitations: 1, ticketMessages: 1, zoneScopesRemoved: 2,
+    users: 1, scopedOperatorsWidened: 1, farms: 1, invitations: 1, ticketMessages: 1, zoneScopesRemoved: 2,
     alerts: 1, heatingRemoved: 1, harvests: 1, collectionsDropped: 2,
   })
 
@@ -90,7 +90,7 @@ it('đổi dữ liệu cũ về phạm vi v2 và chạy lại lần 2 không đ�
   expect(collections).not.toEqual(expect.arrayContaining(['contactinquiries']))
 
   expect(await migrateScopeV2()).toEqual({
-    users: 0, farms: 0, invitations: 0, ticketMessages: 0, zoneScopesRemoved: 0,
+    users: 0, scopedOperatorsWidened: 0, farms: 0, invitations: 0, ticketMessages: 0, zoneScopesRemoved: 0,
     alerts: 0, heatingRemoved: 0, harvests: 0, collectionsDropped: 0,
   })
 })

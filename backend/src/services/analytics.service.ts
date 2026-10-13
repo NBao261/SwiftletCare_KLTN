@@ -26,7 +26,8 @@ const RANGE_MS: Record<string, number> = {
 const MAX_BUCKETS = 120
 
 function resolveRange(range: string) {
-  const ms = RANGE_MS[range]
+  // Object.hasOwn: `RANGE_MS['constructor']` trả hàm của Object.prototype → ngày NaN → 500
+  const ms = Object.hasOwn(RANGE_MS, range) ? RANGE_MS[range] : undefined
   if (!ms) throw BadRequestError(`range phải là 1 trong: ${Object.keys(RANGE_MS).join(', ')}`)
   const to = new Date()
   const from = new Date(to.getTime() - ms)
@@ -75,22 +76,25 @@ export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; 
   return { range: query.range, from, to, bucketMs, series, stats: stats ?? null }
 }
 
+/** Biểu thức $group đếm mẫu có `field` nằm trong [min, max] — dùng chung với báo cáo sức khỏe Zone */
+export const inRangeSum = (field: string, min: number, max: number) =>
+  ({ $sum: { $cond: [{ $and: [{ $gte: [field, min] }, { $lte: [field, max] }] }, 1, 0] } })
+/**
+ * Relay chỉ đổi trạng thái ở chu kỳ PID 10s còn mẫu lưu mỗi ~10s, nên đếm lần đổi giữa
+ * 2 mẫu liên tiếp CỦA CÙNG 1 ESP32 (partitionBy node_id) ≈ số lần đóng cắt thật. Cả hai
+ * mẫu phải CÓ trạng thái relay: mẫu xả từ bộ đệm offline chỉ mang số đo cảm biến, nếu
+ * tính "bật → thiếu" là một lần đổi thì sau mỗi lần mất mạng số đóng cắt bị phồng lên.
+ */
+const isBool = (expr: string) => ({ $eq: [{ $type: expr }, 'bool'] })
+export const switchedSum = (field: string, prev: string) =>
+  ({ $sum: { $cond: [{ $and: [isBool(prev), isBool(field), { $ne: [prev, field] }] }, 1, 0] } })
+
 /**
  * ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ của 1 Zone (ENV-FR-010/011/021):
  * chuỗi độ ẩm/nhiệt độ × % phun/quạt theo bucket, % mẫu nằm trong ngưỡng hiện tại
  * của Zone, số lần relay đóng cắt/giờ, kèm các lần chỉnh hệ số trong khoảng để
  * người vận hành so trước/sau. Chỉ tính mẫu có `misting_pct` (firmware ≥ 1.1.0).
  */
-/** Biểu thức $group đếm mẫu có `field` nằm trong [min, max] — dùng chung với báo cáo sức khỏe Zone */
-export const inRangeSum = (field: string, min: number, max: number) =>
-  ({ $sum: { $cond: [{ $and: [{ $gte: [field, min] }, { $lte: [field, max] }] }, 1, 0] } })
-/**
- * Relay chỉ đổi trạng thái ở chu kỳ PID 10s còn mẫu lưu mỗi ~10s, nên đếm lần đổi giữa
- * 2 mẫu liên tiếp CỦA CÙNG 1 ESP32 (partitionBy node_id) ≈ số lần đóng cắt thật.
- */
-export const switchedSum = (field: string, prev: string) =>
-  ({ $sum: { $cond: [{ $and: [{ $ne: [prev, null] }, { $ne: [prev, field] }] }, 1, 0] } })
-
 export async function getControlPerformance(user: CurrentUser, query: { zoneId: string; range: string }) {
   const { zone } = await assertZoneAccess(query.zoneId, user)
   const { from, to, bucketMs } = resolveRange(query.range)

@@ -13,7 +13,9 @@ import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.s
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { firmwareDetectionConfig, resolveDetectionTuning } from '@/utils/detectionTuning.util'
-import { closeOverrideLogs, closeOverrideLogsFromDevice, openOverrideLog } from '@/services/relayOverrideLog.service'
+import {
+  closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogsFromDevice, openOverrideLog,
+} from '@/services/relayOverrideLog.service'
 import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds } from '@/types'
@@ -871,7 +873,10 @@ export async function expireManualOverrides(): Promise<number> {
     override_expiry: { $lt: new Date() },
     ...IN_SERVICE,
   }).lean()
-  if (expired.length === 0) return 0
+  if (expired.length === 0) {
+    await closeOrphanedOverrideLogs()
+    return 0
+  }
 
   await SensorNode.updateMany(
     { _id: { $in: expired.map(n => n._id) } },
@@ -906,6 +911,8 @@ export async function expireManualOverrides(): Promise<number> {
   // Lịch sử đóng tại đúng hạn override, không phải giờ job chạy (trễ tới ~1 phút mỗi
   // lần sẽ làm lệch tỷ lệ thời gian tự động — ANALYTICS-FR-011)
   await Promise.all(expired.map(n => closeOverrideLogs([n._id], 'EXPIRED', n.override_expiry ?? new Date())))
+  // Bản ghi quá hạn mà node đã về AUTO từ trước (không nằm trong `expired`) — xem closeOrphanedOverrideLogs
+  await closeOrphanedOverrideLogs()
   return expired.length
 }
 

@@ -207,6 +207,10 @@ describe('vòng review 2', () => {
     await get('status[$ne]=RESOLVED').expect(422)
     await get('severity[$in][]=LOW').expect(422)
     await get('type=KHONG_CO').expect(422)
+    // Hàng chờ và hành động phải khớp: loại không kiểm chứng được thì không lọc theo verdict
+    await get('verdict=pending&type=NODE_OFFLINE').expect(400)
+    await get('verdict=confirmed&type=THRESHOLD_BREACH').expect(400)
+    expect((await get('verdict=pending&type=NOISE_ANOMALY').expect(200)).body.meta.total).toBe(1)
     // Hàng chờ kiểm chứng chỉ gồm cảnh báo suy luận
     const pending = await get('verdict=pending').expect(200)
     expect(pending.body.data.map((a: { type: string }) => a.type)).toEqual(['NOISE_ANOMALY'])

@@ -170,6 +170,11 @@ describe('gửi cảnh báo qua Telegram', () => {
     await notifyUser(String(linked._id), { title: 'Báo cáo sức khỏe Zone A', body: 'Đã sẵn sàng' })
     await notifyUser(String(unlinked._id), { title: 'x', body: 'y' })
     expect(sent()).toEqual([{ chat_id: '555', text: 'Báo cáo sức khỏe Zone A\nĐã sẵn sàng' }])
+
+    // Tài khoản bị khoá vẫn còn chat id nhưng không được nhận tiếp
+    await User.updateOne({ _id: linked._id }, { is_active: false })
+    await notifyUser(String(linked._id), { title: 'Báo cáo tuần sau', body: 'x' })
+    expect(sent()).toHaveLength(1)
   })
 
   it('tắt kênh Telegram trong tuỳ chọn thì không gửi', async () => {

@@ -141,15 +141,18 @@ export interface NotifyUserOptions {
  */
 export async function notifyUser(userId: string, message: UserNotification, opts: NotifyUserOptions = {}): Promise<void> {
   try {
-    const user = await User.findById(userId).select('email notification_preferences telegram_chat_id').lean()
+    const user = await User.findById(userId).select('email is_active notification_preferences telegram_chat_id').lean()
     if (!user) return
 
-    if (!opts.emailOnly && user.notification_preferences?.push !== false) {
+    // Tài khoản bị khoá/đã xoá không nhận push hay Telegram (chat id vẫn còn sau khi khoá);
+    // email thì vẫn gửi — đó là đường báo cho chính họ việc bị khoá/xoá.
+    const emailOnly = opts.emailOnly || user.is_active === false
+    if (!emailOnly && user.notification_preferences?.push !== false) {
       await sendPush(String(user._id), message.title, message.body)
     }
     // Telegram là kênh duy nhất gửi thật (push/email mới ghi log): không đi qua đây thì
     // báo cáo sức khỏe Zone, kết luận của chuyên gia… không tới được ai.
-    if (!opts.emailOnly && user.notification_preferences?.telegram !== false && user.telegram_chat_id) {
+    if (!emailOnly && user.notification_preferences?.telegram !== false && user.telegram_chat_id) {
       await sendTelegram(user.telegram_chat_id, `${message.title}\n${message.body}`)
     }
     await sendEmail(opts.email ?? user.email, message.title, message.body)

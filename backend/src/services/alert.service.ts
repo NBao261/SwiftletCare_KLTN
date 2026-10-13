@@ -62,14 +62,14 @@ const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
 /** Mọi loại cảnh báo hợp lệ — lấy từ bảng mức mặc định nên luôn đủ theo `AlertType` */
 export const ALERT_TYPES = Object.keys(DEFAULT_SEVERITY) as AlertType[]
 
-/** Cảnh báo không bao giờ được ở mức tự sinh ticket (HIGH/CRITICAL), kể cả khi thiết bị gửi lên */
-const NEVER_ESCALATE = new Set<AlertType>(['THRESHOLD_BREACH', 'NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'])
-
 /**
  * EXPERT-FR-003 — cảnh báo SUY LUẬN (thống kê/dB, có thể báo nhầm): Domain Expert xác
  * nhận hoặc bác bỏ. Cảnh báo đo trực tiếp (vượt ngưỡng, mất kết nối…) không cần kiểm chứng.
  */
 export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
+
+/** Cảnh báo không bao giờ được ở mức tự sinh ticket: mọi loại suy luận + vượt ngưỡng (ALERT-FR-012) */
+const NEVER_ESCALATE = new Set<AlertType>([...INFERRED_ALERT_TYPES, 'THRESHOLD_BREACH'])
 
 /** Tên loại cảnh báo firmware cũ còn gửi → tên hiện hành */
 const ALERT_TYPE_ALIAS: Record<string, AlertType> = { BIRD_PANIC: 'NOISE_ANOMALY' } // firmware < 1.3.0
@@ -295,11 +295,15 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   if (query.status) filter.status = query.status
   if (query.severity) filter.severity = query.severity
   if (query.type) filter.type = query.type
-  if (query.verdict === 'pending') {
-    filter.expert_verdict = { $exists: false }
+  if (query.verdict) {
+    // Lọc theo kiểm chứng chỉ có nghĩa với cảnh báo suy luận: loại khác mà hiện trong hàng
+    // chờ thì PUT /alerts/:id/verdict sẽ từ chối (400) — hàng chờ và hành động phải khớp nhau
+    if (query.type && !INFERRED_ALERT_TYPES.includes(query.type as AlertType)) {
+      throw BadRequestError(`Chỉ lọc theo kiểm chứng cho cảnh báo suy luận (${INFERRED_ALERT_TYPES.join(', ')})`)
+    }
     if (!query.type) filter.type = { $in: INFERRED_ALERT_TYPES }
-  } else if (query.verdict) {
-    filter['expert_verdict.result'] = query.verdict.toUpperCase()
+    if (query.verdict === 'pending') filter.expert_verdict = { $exists: false }
+    else filter['expert_verdict.result'] = query.verdict.toUpperCase()
   }
 
   const { page, skip, limit } = paginate(query.page, query.limit)

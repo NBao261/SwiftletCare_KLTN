@@ -9,7 +9,8 @@
  *    `ticketmessages.sender_role`.
  *    LƯU Ý: đây là đổi TÊN role theo SRS — quyền thì khác hẳn (chuyên gia chỉ đọc + tinh
  *    chỉnh, không vận hành). Người vận hành cũ không phải chuyên gia thì nên gỡ khỏi farm
- *    sau khi chạy (DELETE /farms/:id/members/:userId); script in ra danh sách email.
+ *    sau khi chạy (DELETE /farms/:id/members/:userId); script in ra danh sách email, và
+ *    in riêng những người trước đây bị giới hạn theo Zone (nay xem được cả farm).
  * 2. Bỏ `zone_ids` khỏi `farms.members[]` và `invitations` (không còn phạm vi theo Zone).
  * 3. `alerts.type` `BIRD_PANIC` → `NOISE_ANOMALY`.
  * 4. Bỏ `relay_states.heating` ở `sensornodes` (không còn relay sưởi).
@@ -30,6 +31,19 @@ export async function migrateScopeV2() {
 
   const operatorEmails = (await db.collection('users').find({ role: 'FARM_OPERATOR' }, { projection: { email: 1 } }).toArray())
     .map(u => u.email as string)
+  // Operator từng bị giới hạn theo Zone sẽ thành chuyên gia xem được CẢ farm — phải nói rõ
+  // là ai, trước khi bước 2 xoá mất dấu vết zone_ids.
+  const scoped = await db.collection('farms').aggregate<{ _id: unknown; name?: string; user_id: unknown; zones: number }>([
+    { $unwind: '$members' },
+    { $match: { 'members.role': 'FARM_OPERATOR', 'members.zone_ids.0': { $exists: true } } },
+    { $project: { name: 1, user_id: '$members.user_id', zones: { $size: '$members.zone_ids' } } },
+  ]).toArray()
+  if (scoped.length > 0) {
+    const emails = new Map((await db.collection('users').find({ _id: { $in: scoped.map(s => s.user_id) } } as never, { projection: { email: 1 } }).toArray())
+      .map(u => [String(u._id), u.email as string]))
+    logger.warn('[migrate] Các Operator sau trước đây chỉ được xem một số Zone, nay thành Domain Expert xem được CẢ farm: ' +
+      scoped.map(s => `${emails.get(String(s.user_id)) ?? String(s.user_id)} (farm "${s.name ?? String(s._id)}", ${s.zones} Zone)`).join('; '))
+  }
   const users = await db.collection('users').updateMany({ role: 'FARM_OPERATOR' }, { $set: { role: 'DOMAIN_EXPERT' } })
   const members = await db.collection('farms').updateMany(
     { 'members.role': 'FARM_OPERATOR' },
@@ -76,6 +90,7 @@ export async function migrateScopeV2() {
 
   return {
     users: users.modifiedCount,
+    scopedOperatorsWidened: scoped.length,
     farms: members.modifiedCount,
     invitations: invitations.modifiedCount,
     ticketMessages: messages.modifiedCount,

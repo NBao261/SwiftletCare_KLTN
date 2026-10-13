@@ -76,28 +76,23 @@ static bool wasUnexpectedReset = false;
 // PID (10s) chừng nào sự cố còn đó — trước đây 1 cảm biến hỏng sinh ~288 cảnh
 // báo/ngày (dedup backend chỉ chặn 5 phút). Gửi thất bại (mất MQTT) thì giữ
 // reported=false để thử lại chu kỳ sau; sự cố hết thì reset để lần sau báo lại.
-static void reportOnRise(bool active, bool &reported, const char *type,
+struct AlertReport {
+  bool reported = false;
+  unsigned long sentAt = 0;
+};
+
+static void reportOnRise(bool active, AlertReport &state, const char *type,
                          const char *severity, const char *message,
                          unsigned long resendMs = 0) {
   // resendMs > 0: gửi lại định kỳ chừng nào sự cố còn tiếp diễn (xem
-  // EPISODE_ALERT_RESEND_MS). Mỗi loại cảnh báo gọi hàm này từ đúng 1 chỗ nên
-  // dùng địa chỉ cờ `reported` làm khoá cho mốc gửi gần nhất là đủ.
-  static const bool *keys[8] = {nullptr};
-  static unsigned long sentAt[8] = {0};
-  int slot = -1;
-  for (int i = 0; i < 8 && slot < 0; i++) {
-    if (keys[i] == &reported || keys[i] == nullptr) {
-      keys[i] = &reported;
-      slot = i;
-    }
-  }
+  // EPISODE_ALERT_RESEND_MS).
   unsigned long now = millis();
   if (!active) {
-    reported = false;
-  } else if (!reported || (resendMs > 0 && slot >= 0 && now - sentAt[slot] >= resendMs)) {
+    state.reported = false;
+  } else if (!state.reported || (resendMs > 0 && now - state.sentAt >= resendMs)) {
     if (MQTTManager::publishAlert(type, severity, message)) {
-      reported = true;
-      if (slot >= 0) sentAt[slot] = now;
+      state.reported = true;
+      state.sentAt = now;
     }
   }
 }
@@ -348,9 +343,8 @@ void pidTask(void *pvParameters) {
     }
 
     if (haveThreats) {
-      static bool speakerReported = false, pumpReported = false,
-                  sensorReported = false, busReported = false,
-                  noiseReported = false;
+      static AlertReport speakerReported, pumpReported, sensorReported,
+          busReported, noiseReported;
       reportOnRise(threats.speakerFailure, speakerReported, "SPEAKER_FAILURE",
                    "CRITICAL", "Amplitude dB không tăng khi loa ru đang phát");
       // pumpDry giữ true suốt lúc đang chốt ngừng phun: gửi thất bại (MQTT

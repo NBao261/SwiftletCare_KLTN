@@ -18,6 +18,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { User } from '@/models/user.model'
 import { confirmRelayStatus, expireManualOverrides } from '@/services/device.service'
+import { closeOrphanedOverrideLogs } from '@/services/relayOverrideLog.service'
 import type { Role } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
@@ -142,6 +143,40 @@ describe('lịch sử can thiệp tay (ENV-FR-019)', () => {
   })
 })
 
+describe('bản ghi không bao giờ mở quá hạn của chính nó', () => {
+  it('AUTO tới ngay sau khi bật tay rồi thiết bị im lặng: job vẫn đóng bản ghi tại đúng hạn', async () => {
+    const { node, relay, t } = await seed()
+    await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true, durationMs: 600_000 }).expect(200)
+    // Bản tin AUTO đang trên đường: node về AUTO, mất override_expiry, bản ghi còn mới nên bị bỏ qua
+    await confirmRelayStatus({ deviceId: node.device_id, relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO' })
+    const after = (await SensorNode.findById(node._id))!
+    expect(after.control_mode).toBe('AUTO')
+    expect((await RelayOverrideLog.findOne().lean())!.ended_at).toBeNull()
+
+    // Chưa tới hạn: job không đụng tới
+    expect(await expireManualOverrides()).toBe(0)
+    expect((await RelayOverrideLog.findOne().lean())!.ended_at).toBeNull()
+
+    // Quá hạn mà node không còn MANUAL: phải đóng, tại đúng expires_at
+    const expiry = new Date(Date.now() - 120_000)
+    await RelayOverrideLog.updateOne({}, { expires_at: expiry })
+    expect(await expireManualOverrides()).toBe(0)
+    const log = (await RelayOverrideLog.findOne().lean())!
+    expect(log.end_reason).toBe('EXPIRED')
+    expect(log.ended_at!.getTime()).toBe(expiry.getTime())
+  })
+
+  it('không đóng bản ghi quá hạn của relay A khi relay B vừa gia hạn chung cho thiết bị', async () => {
+    const { node, relay, t } = await seed()
+    await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true }).expect(200)
+    await RelayOverrideLog.updateOne({ relay: 'misting' }, { expires_at: new Date(Date.now() - 1000) })
+    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date(Date.now() + 600_000) })
+
+    expect(await closeOrphanedOverrideLogs()).toBe(0)
+    expect((await RelayOverrideLog.findOne({ relay: 'misting' }).lean())!.ended_at).toBeNull()
+  })
+})
+
 describe('tỷ lệ thời gian tự động (ANALYTICS-FR-011)', () => {
   it('hợp các khoảng override chồng nhau, cắt theo cửa sổ, tính cả override đang mở', async () => {
     const { owner, farm, zone, node, t } = await seed()
@@ -171,5 +206,6 @@ describe('tỷ lệ thời gian tự động (ANALYTICS-FR-011)', () => {
     const res = await call('get', `/analytics/autonomy?zoneId=${zone._id}`, t.expert).expect(200)
     expect(res.body.data).toMatchObject({ auto_mode_pct: 100, manual_minutes: 0, override_count: 0 })
     await call('get', `/analytics/autonomy?zoneId=${zone._id}&range=2y`, t.owner).expect(400)
+    await call('get', `/analytics/autonomy?zoneId=${zone._id}&range=constructor`, t.owner).expect(400)
   })
 })

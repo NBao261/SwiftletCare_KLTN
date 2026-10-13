@@ -18,7 +18,7 @@ import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
-import { generateWeeklyReports } from '@/services/healthReport.service'
+import { buildZoneMetrics, generateWeeklyReports } from '@/services/healthReport.service'
 import { notifyUser } from '@/services/notification.service'
 import type { Role } from '@/types'
 
@@ -141,6 +141,22 @@ describe('một Zone lỗi không làm các Zone khác mất báo cáo', () => {
   })
 })
 
+describe('số lần đóng cắt relay không bị phồng sau khi mất mạng', () => {
+  it('mẫu xả từ bộ đệm offline (không có trạng thái relay) không được tính là một lần đổi', async () => {
+    const { zone, node } = await seed(false)
+    const now = Date.now()
+    // bật, bật, [2 mẫu offline không có misting_on], bật, tắt → đúng 1 lần đổi (bật → tắt)
+    const rows: Array<boolean | undefined> = [true, true, undefined, undefined, true, false]
+    await Telemetry.insertMany(rows.map((on, i) => ({
+      node_id: node._id, zone_id: zone._id, timestamp: new Date(now - (rows.length - i) * 60_000), humidity: 80, temperature: 28,
+      ...(on === undefined ? {} : { misting_on: on, ventilation_on: false }),
+    })))
+
+    const metrics = await buildZoneMetrics((await Zone.findById(zone._id))!, new Date(now - HOUR), new Date(now))
+    expect(metrics).toMatchObject({ sample_count: 6, misting_switches: 1, ventilation_switches: 0 })
+  })
+})
+
 describe('đọc báo cáo', () => {
   it('Farm Owner và Domain Expert xem danh sách, chi tiết và khoảng bất kỳ; farm khác thì 403', async () => {
     const { zone, t } = await seed()
@@ -176,7 +192,10 @@ describe('kết luận của chuyên gia (EXPERT-FR-006)', () => {
     await call('put', `/health-reports/${id}/conclusion`, t.expert, { text: '  ' }).expect(422)
 
     const res = await call('put', `/health-reports/${id}/conclusion`, t.expert, { text: 'Độ ẩm ổn; nên giảm biên độ ồn xuống 12 dB.' }).expect(200)
-    expect(res.body.data.expert_conclusion).toMatchObject({ text: 'Độ ẩm ổn; nên giảm biên độ ồn xuống 12 dB.', by: String(expert._id) })
+    // PUT trả cùng hình dạng với GET: `by` là {_id, full_name}
+    expect(res.body.data.expert_conclusion).toMatchObject({
+      text: 'Độ ẩm ổn; nên giảm biên độ ồn xuống 12 dB.', by: { _id: String(expert._id), full_name: expert.full_name },
+    })
     expect((notifyUser as jest.Mock).mock.calls.map(c => c[0])).toEqual([String(owner._id)])
     expect(await AuditLog.countDocuments({ action: 'HEALTH_REPORT_CONCLUDED' })).toBe(1)
 
