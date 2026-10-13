@@ -1,9 +1,9 @@
 import {
-  fitPlantModel, mistingDemand, rampDown, rampUp, searchTuning, simulate, tri, ventilationDemand,
+  fitPlantModel, inputsValid, mistingDemand, rampDown, rampUp, searchTuning, simulate, tri, ventilationDemand,
   type Limits, type PlantModel, type Step,
 } from '@/utils/fuzzyModel.util'
 
-const LIMITS: Limits = { hMin: 75, hMax: 95, tMax: 31, nh3Max: 25, co2Max: 1500 }
+const LIMITS: Limits = { hMin: 75, hMax: 95, tMax: 31 }
 
 // Cùng các ca với firmware/test/test_fuzzy/test_main.cpp — bản TS phải khớp C++
 describe('TS port matches the ESP32 fuzzy controller', () => {
@@ -21,19 +21,28 @@ describe('TS port matches the ESP32 fuzzy controller', () => {
     expect(mistingDemand(80, 26, 75, 95, 31)).toBeCloseTo(0)
   })
 
-  it('ventilation rules and toxic-gas safety', () => {
-    expect(ventilationDemand(33, 80, 5, 600, 31, 75, 25, 1500)).toBeCloseTo(1)
-    expect(ventilationDemand(33, 65, 5, 600, 31, 75, 25, 1500)).toBeCloseTo(0.4)
-    expect(ventilationDemand(26, 80, 5, 600, 31, 75, 25, 1500)).toBeCloseTo(0)
-    expect(ventilationDemand(26, 80, 20, 600, 31, 75, 25, 1500)).toBeCloseTo(0.5)
-    expect(ventilationDemand(33, 65, 30, 600, 31, 75, 25, 1500)).toBeCloseTo(1)
-    expect(ventilationDemand(26, 80, null, 600, 31, 75, 25, 1500)).toBeCloseTo(0)
+  it('ventilation rules — temperature and humidity only (SRS v2.0.0, no gas input)', () => {
+    expect(ventilationDemand(33, 80, 31, 75)).toBeCloseTo(1)
+    expect(ventilationDemand(33, 65, 31, 75)).toBeCloseTo(0.4)
+    expect(ventilationDemand(26, 80, 31, 75)).toBeCloseTo(0)
+  })
+
+  it('invalid inputs give the safe state (THREAT-FR-013)', () => {
+    expect(inputsValid(NaN, 80)).toBe(false)
+    expect(inputsValid(30, 120)).toBe(false)
+    expect(inputsValid(30, 80)).toBe(true)
+    expect(mistingDemand(NaN, 33, 75, 95, 31)).toBe(0)
+    expect(mistingDemand(65, NaN, 75, 95, 31)).toBe(0)
+    expect(mistingDemand(-5, 33, 75, 95, 31)).toBe(0)
+    expect(ventilationDemand(NaN, 80, 31, 75)).toBe(0)
+    expect(ventilationDemand(33, NaN, 31, 75)).toBe(0)
+    expect(ventilationDemand(200, 80, 31, 75)).toBe(0)
   })
 
   it('tuning: wider humidity band mists earlier, fan dry level is honoured', () => {
     expect(mistingDemand(79, 26, 75, 95, 31, { humidityBand: 16, tempBand: 4, fanDryLevel: 0.4 }))
       .toBeGreaterThan(mistingDemand(79, 26, 75, 95, 31))
-    expect(ventilationDemand(33, 65, 5, 600, 31, 75, 25, 1500, { humidityBand: 8, tempBand: 4, fanDryLevel: 0.2 })).toBeCloseTo(0.2)
+    expect(ventilationDemand(33, 65, 31, 75, { humidityBand: 8, tempBand: 4, fanDryLevel: 0.2 })).toBeCloseTo(0.2)
   })
 })
 
@@ -48,7 +57,7 @@ function syntheticRun(n: number, seed = 1): Step[] {
     const temperature = 28 + 3 * Math.sin(i / 24) + rand() * 0.2
     const misting = Math.round(rand() * 100)
     const ventilation = Math.round(rand() * 60)
-    steps.push({ humidity: h, temperature, misting, ventilation, nh3: 5, co2: 800 })
+    steps.push({ humidity: h, temperature, misting, ventilation })
     h += TRUE_MODEL.a * misting + TRUE_MODEL.b * ventilation + TRUE_MODEL.c * (temperature - 28) + TRUE_MODEL.d + (rand() - 0.5) * 0.1
   }
   return steps
@@ -64,7 +73,7 @@ describe('plant model identification', () => {
 
   it('refuses when there is too little or degenerate data', () => {
     expect(fitPlantModel([syntheticRun(5)])).toBeNull()
-    const flat = Array.from({ length: 50 }, () => ({ humidity: 80, temperature: 28, misting: 0, ventilation: 0, nh3: 5, co2: 800 }))
+    const flat = Array.from({ length: 50 }, () => ({ humidity: 80, temperature: 28, misting: 0, ventilation: 0 }))
     expect(fitPlantModel([flat])).toBeNull()
   })
 })
@@ -80,7 +89,7 @@ describe('grid search', () => {
 
   it('a house that dries fast needs earlier misting (wider humidity band)', () => {
     const dryHouse: PlantModel = { a: 0.04, b: -0.02, c: 0, d: -2.5, tMean: 28, r2: 0.9, samples: 500 }
-    const day = Array.from({ length: 144 }, () => ({ humidity: 80, temperature: 28, misting: 0, ventilation: 0, nh3: 5, co2: 800 }))
+    const day = Array.from({ length: 144 }, () => ({ humidity: 80, temperature: 28, misting: 0, ventilation: 0 }))
     expect(searchTuning(dryHouse, day, LIMITS).tuning.humidityBand).toBeGreaterThan(8)
   })
 })

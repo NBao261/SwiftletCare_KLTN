@@ -42,6 +42,9 @@ const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   FORECAST_BREACH:   'LOW',
 }
 
+/** Cảnh báo không bao giờ được ở mức tự sinh ticket (HIGH/CRITICAL), kể cả khi thiết bị gửi lên */
+const NEVER_ESCALATE = new Set<AlertType>(['THRESHOLD_BREACH', 'BIRD_PANIC', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'])
+
 export interface CreateAlertInput {
   farmId: string
   zoneId?: string
@@ -140,6 +143,10 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
   const deviceId = message.deviceId as string | undefined
   const type = message.type as AlertType | undefined
   if (!deviceId || !type) throw NotFoundError('Payload cảnh báo thiếu deviceId hoặc type')
+  // Loại không được leo thang thành ticket (ALERT-FR-012 + cảnh báo suy luận) giữ tối
+  // đa MEDIUM dù thiết bị gửi mức cao hơn — một firmware cấu hình sai không được tự sinh ticket.
+  const sent = message.severity as AlertSeverity | undefined
+  const severity = NEVER_ESCALATE.has(type) && (sent === 'CRITICAL' || sent === 'HIGH') ? 'MEDIUM' : sent
 
   const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
@@ -151,7 +158,7 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     zoneId:      String(zone._id),
     nodeId:      String(node._id),
     type,
-    severity:    message.severity as AlertSeverity | undefined,
+    severity,
     title:       (message.title as string | undefined) ?? `${type} tại ${zone.name}`,
     message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
     snapshotUrl: message.snapshotUrl as string | undefined,
@@ -185,6 +192,14 @@ export function findThresholdBreaches(
   return breaches
 }
 
+/**
+ * ALERT-FR-012 (SRS v2.0.0) — NH3/CO2 chỉ theo dõi và cảnh báo: chưa có giới hạn nào
+ * được xác lập cho nhà yến, ngưỡng của Zone là ngưỡng cảnh báo do Domain Expert đặt,
+ * và hệ thống không điều khiển quạt theo hai chỉ số này.
+ */
+const AIR_QUALITY_METRICS = new Set(['nh3_ppm', 'co2_ppm'])
+const AIR_QUALITY_NOTE = 'NH3/CO2 là ngưỡng cảnh báo do chuyên gia đặt — hệ thống không tự chạy quạt theo chỉ số này'
+
 const METRIC_LABEL: Record<string, string> = {
   temperature: 'Nhiệt độ',
   humidity:    'Độ ẩm',
@@ -203,6 +218,7 @@ export async function raiseThresholdAlert(zoneId: string, nodeId: string, breach
   const detail = breaches
     .map(b => `${METRIC_LABEL[b.metric] ?? b.metric} ${b.value} (${b.direction === 'above' ? 'vượt' : 'dưới'} ngưỡng ${b.limit})`)
     .join(', ')
+  const airQuality = breaches.some(b => AIR_QUALITY_METRICS.has(b.metric))
 
   await createAlert({
     farmId:   String(zone.farm_id),
@@ -210,7 +226,7 @@ export async function raiseThresholdAlert(zoneId: string, nodeId: string, breach
     nodeId,
     type:     'THRESHOLD_BREACH',
     title:    `Vượt ngưỡng tại ${zone.name}`,
-    message:  detail,
+    message:  airQuality ? `${detail}. ${AIR_QUALITY_NOTE}` : detail,
     metadata: { breaches },
   })
 }
