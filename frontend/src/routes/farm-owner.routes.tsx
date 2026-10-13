@@ -2,7 +2,7 @@ import { lazy } from 'react'
 import { Route } from 'react-router-dom'
 import RequireRole from '@/components/auth/RequireRole'
 import { FARM_OWNER_ONLY, HARVEST_ROLES, OPS_ROLES } from '@/constants/roles'
-import { useAuthStore } from '@/stores/authStore'
+import { usePermission } from '@/hooks/common/usePermission'
 
 /**
  * Nghiệp vụ nuôi yến — Farm Owner là role sở hữu các màn hình này, nhưng
@@ -23,8 +23,8 @@ const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarm
 
 /** /farms dùng chung URL nhưng Technician có trang riêng (chỉ cấu trúc + thiết bị trong vùng, không sản lượng) */
 function FarmsIndexRoute() {
-  const role = useAuthStore(s => s.user?.role)
-  return role === 'TECHNICIAN' ? <TechnicianFarmsPage /> : <FarmOwnerFarmsPage />
+  const isTechnician = usePermission('TECHNICIAN')
+  return isTechnician ? <TechnicianFarmsPage /> : <FarmOwnerFarmsPage />
 }
 
 export const farmOwnerRoutes = (

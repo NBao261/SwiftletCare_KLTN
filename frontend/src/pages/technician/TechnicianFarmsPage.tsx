@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPinIcon, PlusIcon, WarningCircleIcon } from '@phosphor-icons/react'
-import { Button, EmptyState, FilterChip, SearchInput } from '@/components/ui'
+import { HouseIcon, MapPinIcon, PlusIcon, WarningCircleIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from '@phosphor-icons/react'
+import { Button, EmptyState, FilterChip, SearchInput, StatTile } from '@/components/ui'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import AddHouseModal from '@/components/features/farm-owner/farms/AddHouseModal'
@@ -13,7 +13,6 @@ import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { useT } from '@/hooks/common/useT'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { useAuthStore } from '@/stores/authStore'
-import { cn } from '@/lib/cn'
 import type { HouseHealth, HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 
 const PAGE_SIZE = 8
@@ -93,10 +92,10 @@ export default function TechnicianFarmsPage() {
 
   const { counts: dev, alerts } = structure.totals
   const kpis = [
-    { label: 'Nhà yến phụ trách', value: num(structure.totals.houses), sub: `${num(structure.totals.zones)} zone`, warn: false },
-    { label: 'Nhà cần xử lý', value: num(counts.ALERT), sub: alerts.total > 0 ? `${num(alerts.total)} cảnh báo đang mở` : 'Không có cảnh báo', warn: counts.ALERT > 0 },
-    { label: 'Thiết bị online', value: `${num(dev.online)}/${num(dev.total)}`, sub: dev.total > 0 ? `${Math.round((dev.online / dev.total) * 100)}% hoạt động` : 'Chưa có thiết bị', warn: false },
-    { label: 'Mất kết nối', value: num(dev.offline), sub: dev.offline > 0 ? 'Cần kiểm tra hiện trường' : 'Ổn định', warn: dev.offline > 0 },
+    { icon: HouseIcon, label: 'Nhà yến phụ trách', value: num(structure.totals.houses), sub: `${num(structure.totals.zones)} zone`, alert: false },
+    { icon: WarningIcon, label: 'Nhà cần xử lý', value: num(counts.ALERT), sub: alerts.total > 0 ? `${num(alerts.total)} cảnh báo đang mở` : 'Không có cảnh báo', alert: counts.ALERT > 0 },
+    { icon: WifiHighIcon, label: 'Thiết bị online', value: `${num(dev.online)}/${num(dev.total)}`, sub: dev.total > 0 ? `${Math.round((dev.online / dev.total) * 100)}% hoạt động` : 'Chưa có thiết bị', alert: false },
+    { icon: WifiSlashIcon, label: 'Mất kết nối', value: num(dev.offline), sub: dev.offline > 0 ? 'Cần kiểm tra hiện trường' : 'Ổn định', alert: dev.offline > 0 },
   ]
 
   return (
@@ -114,11 +113,15 @@ export default function TechnicianFarmsPage() {
       <FarmFrame title="Tổng quan thiết bị" description="Trạng thái hệ thống trong khu vực bạn phụ trách">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpis.map(k => (
-            <div key={k.label} className={cn('rounded-2xl border bg-white px-5 py-4', k.warn ? 'border-orange-600/40 bg-orange-50' : 'border-warmGray/20')}>
-              <p className="label-caption">{k.label}</p>
-              <p className={cn('mt-1 text-h2', k.warn ? 'text-orange-800' : 'text-charcoal')}>{k.value}</p>
-              <p className="mt-0.5 truncate text-caption text-warmGray">{k.sub}</p>
-            </div>
+            <StatTile
+              key={k.label}
+              icon={k.icon}
+              iconClass={k.alert ? 'bg-alertRed/10 text-alertRed' : 'bg-limeMist text-charcoal'}
+              alert={k.alert}
+              label={k.label}
+              value={k.value}
+              sub={k.sub}
+            />
           ))}
         </div>
       </FarmFrame>
