@@ -24,6 +24,7 @@ import telemetryRoutes from '@/routes/telemetry.route'
 import alertRoutes     from '@/routes/alerts.route'
 import analyticsRoutes from '@/routes/analytics.route'
 import harvestRoutes        from '@/routes/harvests.route'
+import healthReportRoutes   from '@/routes/healthReports.route'
 import ticketRoutes         from '@/routes/tickets.route'
 import maintenanceScheduleRoutes from '@/routes/maintenanceSchedules.route'
 
@@ -86,6 +87,9 @@ app.use('/analytics', analyticsRoutes)
 
 // Module HARVEST (§5.8) — chỉ ghi nhận thu hoạch; Marketplace đã bỏ ở SRS v2.0.0
 app.use('/harvests',    harvestRoutes)
+
+// Module EXPERT (§5.12) — báo cáo sức khỏe Zone + kết luận của chuyên gia
+app.use('/health-reports', healthReportRoutes)
 
 // Module TICKET (§5.9) — thuộc phạm vi MVP
 app.use('/tickets', ticketRoutes)

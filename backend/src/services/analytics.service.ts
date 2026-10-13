@@ -81,6 +81,16 @@ export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; 
  * của Zone, số lần relay đóng cắt/giờ, kèm các lần chỉnh hệ số trong khoảng để
  * người vận hành so trước/sau. Chỉ tính mẫu có `misting_pct` (firmware ≥ 1.1.0).
  */
+/** Biểu thức $group đếm mẫu có `field` nằm trong [min, max] — dùng chung với báo cáo sức khỏe Zone */
+export const inRangeSum = (field: string, min: number, max: number) =>
+  ({ $sum: { $cond: [{ $and: [{ $gte: [field, min] }, { $lte: [field, max] }] }, 1, 0] } })
+/**
+ * Relay chỉ đổi trạng thái ở chu kỳ PID 10s còn mẫu lưu mỗi ~10s, nên đếm lần đổi giữa
+ * 2 mẫu liên tiếp CỦA CÙNG 1 ESP32 (partitionBy node_id) ≈ số lần đóng cắt thật.
+ */
+export const switchedSum = (field: string, prev: string) =>
+  ({ $sum: { $cond: [{ $and: [{ $ne: [prev, null] }, { $ne: [prev, field] }] }, 1, 0] } })
+
 export async function getControlPerformance(user: CurrentUser, query: { zoneId: string; range: string }) {
   const { zone } = await assertZoneAccess(query.zoneId, user)
   const { from, to, bucketMs } = resolveRange(query.range)
@@ -88,12 +98,8 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
   const match = {
     $match: { zone_id: new Types.ObjectId(query.zoneId), timestamp: { $gte: from, $lte: to }, misting_pct: { $exists: true } },
   }
-  const inRange = (field: string, min: number, max: number) =>
-    ({ $sum: { $cond: [{ $and: [{ $gte: [field, min] }, { $lte: [field, max] }] }, 1, 0] } })
-  // Relay chỉ đổi trạng thái ở chu kỳ PID 10s còn mẫu lưu mỗi ~10s, nên đếm lần đổi
-  // giữa 2 mẫu liên tiếp CỦA CÙNG 1 ESP32 (partitionBy node_id) ≈ số lần đóng cắt thật.
-  const switched = (field: string, prev: string) =>
-    ({ $sum: { $cond: [{ $and: [{ $ne: [prev, null] }, { $ne: [prev, field] }] }, 1, 0] } })
+  const inRange = inRangeSum
+  const switched = switchedSum
 
   const [series, [agg], nodes] = await Promise.all([
     Telemetry.aggregate([

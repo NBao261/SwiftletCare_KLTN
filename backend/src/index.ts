@@ -18,6 +18,7 @@ import { startActivationOverdueJob } from './jobs/activationOverdue.job'
 import { startMaintenanceScheduleJob } from './jobs/maintenanceSchedule.job'
 import { startSensorAnomalyJob } from './jobs/sensorAnomaly.job'
 import { startForecastJob } from './jobs/forecast.job'
+import { startHealthReportJob } from './jobs/healthReport.job'
 import logger           from './utils/logger.util'
 
 const PORT = Number(process.env.PORT ?? 3000)
@@ -46,6 +47,7 @@ async function bootstrap(): Promise<void> {
   startMaintenanceScheduleJob()
   startSensorAnomalyJob()
   startForecastJob()
+  startHealthReportJob()
 
   // 5. Start HTTP server
   httpServer.listen(PORT, () => {

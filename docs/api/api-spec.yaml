@@ -57,6 +57,8 @@ tags:
     description: ANALYTICS-FR-001..005, VISION-FR-008..011 (biểu đồ môi trường, so sánh đa Zone, đếm chim/return-rate — chờ dữ liệu thật từ module VISION)
   - name: Harvests
     description: MARKET-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0)
+  - name: HealthReports
+    description: EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert)
   - name: Tickets
     description: TICKET-FR-001..004b/006/007/009..012 (tạo/định tuyến/SLA/SAT checklist/KPI)
 
@@ -3277,6 +3279,104 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
 
   # ── TICKETS ───────────────────────────────────────────────────────────────
+  /health-reports:
+    get:
+      tags: [HealthReports]
+      summary: "Danh sách báo cáo sức khỏe của Zone (EXPERT-FR-005) — FARM_OWNER/DOMAIN_EXPERT/ADMIN"
+      description: |
+        Báo cáo do job tổng hợp theo chu kỳ (mặc định 06:00 thứ Hai, kỳ 7 ngày —
+        `HEALTH_REPORT_CRON`, `HEALTH_REPORT_DAYS`), mới nhất trước. Zone không có mẫu
+        telemetry nào trong kỳ thì không có báo cáo cho kỳ đó.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/ZoneHealthReport" } }
+                      meta:
+                        type: object
+                        properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /health-reports/preview:
+    get:
+      tags: [HealthReports]
+      summary: "Số liệu sức khỏe Zone theo khoảng bất kỳ, không lưu (EXPERT-FR-005)"
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định là hiện tại; khoảng tối đa 92 ngày" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ZoneHealthReport" }
+        "400": { description: "from không trước to, hoặc khoảng quá 92 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /health-reports/{id}:
+    get:
+      tags: [HealthReports]
+      summary: "Chi tiết 1 báo cáo kèm kết luận của chuyên gia"
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ZoneHealthReport" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /health-reports/{id}/conclusion:
+    put:
+      tags: [HealthReports]
+      summary: "Domain Expert viết/sửa kết luận và khuyến nghị (EXPERT-FR-006) — DOMAIN_EXPERT"
+      description: |
+        Người viết sửa được kết luận của mình (cập nhật `at`); chuyên gia khác không ghi đè
+        (403). Farm Owner của farm nhận thông báo. Ghi audit `HEALTH_REPORT_CONCLUDED`.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        "200":
+          description: Đã lưu kết luận
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ZoneHealthReport" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /maintenance-schedules:
     get:
       tags: [Tickets]
@@ -4576,6 +4676,39 @@ components:
         since_service_hours: { type: number }
         since_service_switches: { type: integer }
         last_ticket_id: { type: string }
+
+    ZoneHealthReport:
+      type: object
+      description: "EXPERT-FR-005/006 — số liệu sức khỏe của 1 Zone trong 1 kỳ + kết luận của Domain Expert"
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        zone_id: { type: string }
+        period_start: { type: string, format: date-time }
+        period_end: { type: string, format: date-time }
+        generated_at: { type: string, format: date-time }
+        metrics:
+          type: object
+          properties:
+            sample_count: { type: integer }
+            temp_in_range_pct: { type: number, nullable: true }
+            humidity_in_range_pct: { type: number, nullable: true }
+            auto_mode_pct: { type: number, nullable: true, description: "ANALYTICS-FR-011" }
+            misting_switches: { type: integer }
+            ventilation_switches: { type: integer }
+            alerts_by_type: { type: object, additionalProperties: { type: integer }, description: "{ <AlertType>: số cảnh báo phát sinh trong kỳ }" }
+            avg_return_rate: { type: number, nullable: true, description: "null khi chưa có dữ liệu đếm chim" }
+            nh3_avg: { type: number, nullable: true }
+            nh3_max: { type: number, nullable: true }
+            co2_avg: { type: number, nullable: true }
+            co2_max: { type: number, nullable: true }
+        expert_conclusion:
+          type: object
+          nullable: true
+          properties:
+            text: { type: string }
+            by: { type: object, properties: { _id: { type: string }, full_name: { type: string } } }
+            at: { type: string, format: date-time }
 
     RelayOverrideLog:
       type: object
