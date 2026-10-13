@@ -49,6 +49,10 @@ void test_invalid_inputs_give_safe_state() {
   TEST_ASSERT_FALSE(inputsValid(NAN, 80));
   TEST_ASSERT_FALSE(inputsValid(30, 120));
   TEST_ASSERT_TRUE(inputsValid(30, 80));
+  // Bão hoà lúc đang phun (100,x %) vẫn hợp lệ: ẩm cao → không phun, nóng → quạt vẫn chạy
+  TEST_ASSERT_TRUE(inputsValid(33, 100.4f));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, mistingDemand(100.4f, 33, H_MIN, H_MAX, T_MAX));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0f, ventilationDemand(33, 100.4f, T_MAX, H_MIN));
   // 65% ẩm + 33°C bình thường cho phun 100% và quạt 40% — số đo hỏng thì về 0
   TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, mistingDemand(NAN, 33, H_MIN, H_MAX, T_MAX));
   TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, mistingDemand(65, NAN, H_MIN, H_MAX, T_MAX));

@@ -39,7 +39,7 @@ static float defuzzify(const float *w, const float *z, int n) {
 
 bool inputsValid(float temperature, float humidity) {
   return isfinite(temperature) && isfinite(humidity) && temperature >= -40.0f && temperature <= 80.0f &&
-         humidity >= 0.0f && humidity <= 100.0f;
+         humidity >= 0.0f && humidity <= HUMIDITY_SATURATION_MAX;
 }
 
 float mistingDemand(float humidity, float temperature, float hMin, float hMax, float tMax,

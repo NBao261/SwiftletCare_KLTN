@@ -171,7 +171,8 @@ bool validateRange(const SensorData &data) {
     return false;
   if (data.temperature < -40 || data.temperature > 80)
     return false;
-  if (data.humidity < 0 || data.humidity > 100)
+  // Cùng biên với FuzzyControl::inputsValid — 100,x % lúc đang phun là bão hoà, không phải lỗi
+  if (data.humidity < 0 || data.humidity > 101)
     return false;
   return true;
 }

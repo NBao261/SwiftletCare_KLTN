@@ -336,11 +336,11 @@ void pidTask(void *pvParameters) {
                   noiseReported = false;
       reportOnRise(threats.speakerFailure, speakerReported, "SPEAKER_FAILURE",
                    "CRITICAL", "Amplitude dB không tăng khi loa ru đang phát");
-      // pumpDry chỉ true đúng 1 chu kỳ mỗi đợt phun (PIDController) — nếu gửi
-      // thất bại thì mất cảnh báo đợt đó, chấp nhận được (không lặp spam).
+      // pumpDry giữ true suốt lúc đang chốt ngừng phun: gửi thất bại (MQTT
+      // rớt) thì reportOnRise thử lại ở chu kỳ sau; gửi được rồi thì không lặp.
       reportOnRise(threats.pumpDry, pumpReported, "PUMP_DRY", "MEDIUM",
                    "Bơm phun sương chạy nhưng độ ẩm không tăng — đã tự ngừng "
-                   "phun tới hết đợt để bảo vệ bơm");
+                   "phun để bảo vệ bơm, sẽ thử lại sau 30 phút");
       reportOnRise(threats.sensorFault, sensorReported, "SENSOR_FAULT",
                    "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");
       // MEDIUM (không phải HIGH): phát hiện chỉ theo dB, ngưỡng chưa hiệu chỉnh

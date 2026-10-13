@@ -80,9 +80,12 @@ namespace PIDController {
 // THREAT-FR-011: phát hiện bơm khô + chốt ngừng phun tới hết đợt (PumpDryMonitor.h).
 // Cập nhật trong handleThreatAlerts() — chạy mỗi chu kỳ bất kể relay.misting do
 // AUTO hay Manual Override đặt. autoMistingDemand = bộ mờ đang muốn phun, lưu
-// riêng vì khi đang chốt thì relay.mistingPct bị ép về 0.
+// riêng vì khi đang chốt thì relay.mistingPct bị ép về 0. autoDemandKnown = chu kỳ
+// này có số đo hợp lệ để tính nhu cầu; số đo hỏng cho nhu cầu 0 nhưng KHÔNG có
+// nghĩa là hết đợt phun (xem PumpDryMonitor.h).
 static PumpDryMonitor pumpMonitor;
 static bool autoMistingDemand = false;
+static bool autoDemandKnown = false;
 
 static uint8_t toPct(float duty) { return (uint8_t)lroundf(duty * 100.0f); }
 
@@ -105,6 +108,7 @@ void runHumidityControl(float humidity, float temperature, RelayState &relay) {
   float duty = FuzzyControl::mistingDemand(humidity, temperature, Config::humidityMin,
                                            Config::humidityMax, Config::tempMax, currentTuning());
   autoMistingDemand = duty > 0.0f;
+  autoDemandKnown = FuzzyControl::inputsValid(temperature, humidity);
   // Bơm khô đã phát hiện ở đợt này → ngừng phun tới hết đợt để bảo vệ bơm
   if (pumpMonitor.blocked()) duty = 0.0f;
   relay.mistingPct = toPct(duty);
@@ -200,17 +204,23 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
   }
 
   // THREAT-FR-011: PUMP_DRY — bơm BẬT cộng dồn đủ lâu trong 1 đợt phun mà độ ẩm
-  // không tăng → báo 1 lần/đợt và chốt ngừng phun (runHumidityControl đọc
-  // pumpMonitor.blocked()). Thời gian + mức tăng chỉnh theo Zone (EXPERT-FR-008).
-  // Đợt phun: AUTO = bộ mờ muốn phun; override = relay đang được ép BẬT.
+  // không tăng → chốt ngừng phun (runHumidityControl đọc pumpMonitor.blocked()),
+  // tự thử lại sau PUMP_DRY_RETRY_MS. Thời gian + mức tăng chỉnh theo Zone
+  // (EXPERT-FR-008). Đợt phun: AUTO = bộ mờ muốn phun; override = relay được ép BẬT.
+  bool humidityOk = data.tempHumidOk && isfinite(data.humidity);
+  bool sensorOk = humidityOk && (relay.mistingOverride || autoDemandKnown);
   bool demand = relay.mistingOverride ? relay.misting : autoMistingDemand;
-  flags.pumpDry = pumpMonitor.update(demand, relay.mistingOverride, relay.misting,
-                                     data.tempHumidOk ? data.humidity : NAN, millis(),
-                                     (uint32_t)Config::pumpDryOnSec * 1000UL, Config::pumpDryMinRisePct);
-  if (flags.pumpDry) {
+  bool fired = pumpMonitor.update(sensorOk, demand, relay.mistingOverride, relay.misting, data.humidity, millis(),
+                                  (uint32_t)Config::pumpDryOnSec * 1000UL, Config::pumpDryMinRisePct,
+                                  PUMP_DRY_RETRY_MS);
+  if (fired) {
     Serial.println("[THREAT] ⚠ PUMP_DRY: bơm BẬT " + String(Config::pumpDryOnSec) +
-                   "s nhưng độ ẩm không tăng → ngừng phun tới hết đợt");
+                   "s nhưng độ ẩm không tăng → ngừng phun, thử lại sau " + String(PUMP_DRY_RETRY_MS / 60000UL) + " phút");
   }
+  // Cờ theo MỨC (đang chốt), không theo xung 1 chu kỳ: nếu MQTT rớt đúng lúc phát
+  // hiện thì main.cpp gửi lại ở chu kỳ sau cho tới khi gửi được — phun sương đang
+  // bị ngắt thì Farm Owner phải được báo.
+  flags.pumpDry = pumpMonitor.blocked();
 
   return flags;
 }

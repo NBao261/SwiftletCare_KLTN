@@ -70,6 +70,11 @@
 #define DEFAULT_PUMP_DRY_ON_SEC 300       // s bơm BẬT cộng dồn trước khi xét, 120..900
 #define DEFAULT_PUMP_DRY_MIN_RISE_PCT 2.0f // điểm %RH phải tăng, 0.5..10
 #define DEFAULT_SPEAKER_DROP_PCT 70       // % mức âm giảm so với nền, 30..90
+// Sau khi chốt ngừng phun vì PUMP_DRY, bao lâu thì tự thử phun lại (PumpDryMonitor).
+// Hằng số kỹ thuật chọn tay (bằng thời hạn can thiệp tay mặc định), KHÔNG có nguồn
+// nuôi yến và chưa chỉnh được qua MQTT — đủ dài để bơm khô thật không chạy liên
+// tục, đủ ngắn để một lần báo nhầm không làm nhà yến mất phun sương cả ngày.
+#define PUMP_DRY_RETRY_MS 1800000UL
 #define MQTT_HEARTBEAT_MS 30000    // 30 seconds (FARM-FR-005)
 #define MANUAL_OVERRIDE_MS 1800000 // 30 minutes (ENV-FR-018)
 // ponytail: nghe thử (ENV-FR-013c) tự dừng sau 5 phút phòng khi lệnh stop bị

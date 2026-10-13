@@ -63,7 +63,7 @@ void clearOverrides(RelayState &relay);
 // Threat detection (THREAT-FR-006, 011, 013) – chỉ tính flags, main.cpp/MQTTManager publish alert
 struct ThreatFlags {
   bool speakerFailure = false; // relay speaker ON + đang play nhưng dB không tăng
-  bool pumpDry = false;        // đợt phun đã BẬT cộng dồn đủ lâu nhưng ẩm không tăng (PumpDryMonitor)
+  bool pumpDry = false;        // đang chốt ngừng phun vì bơm khô (PumpDryMonitor::blocked — theo mức)
   bool sensorFault = false;    // 1 Slave ID lỗi
   bool busFailure = false;     // ≥3/5 Slave ID lỗi, 3 chu kỳ liên tiếp
   bool noiseAnomaly = false;   // THREAT-FR-007 — do NoiseAnomalyDetector (sensorTask) báo, main.cpp gộp vào

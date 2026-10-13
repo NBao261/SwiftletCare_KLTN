@@ -32,11 +32,18 @@ float tri(float x, float a, float b, float c); // tam giác: 0 tại a, đỉnh 
 
 /**
  * THREAT-FR-013 — trạng thái an toàn: nhiệt độ/độ ẩm phải là số hữu hạn trong
- * dải vật lý của cảm biến (−40..80 °C, 0..100 %RH). Không hợp lệ (cảm biến
+ * dải vật lý của cảm biến (−40..80 °C, 0..HUMIDITY_SATURATION_MAX %RH). Không hợp lệ (cảm biến
  * timeout → NAN, giá trị rác) thì mistingDemand()/ventilationDemand() trả 0
  * → relay phun sương và quạt TẮT cho tới khi có số đo hợp lệ trở lại.
  */
 bool inputsValid(float temperature, float humidity);
+/**
+ * Cảm biến độ ẩm bão hoà khi đang phun có thể báo nhỉnh hơn 100 % (100,x) — đó là
+ * "ẩm tối đa", không phải cảm biến hỏng, nên vẫn hợp lệ (các hàm thuộc đã bão hoà ở
+ * hMax nên không cần kẹp). Trên mức này mới coi là giá trị rác.
+ * ponytail: biên 1 điểm là dung sai chọn tay, chưa đo trên ES35-SW thật.
+ */
+const float HUMIDITY_SATURATION_MAX = 101.0f;
 
 /**
  * Nhu cầu phun sương theo độ ẩm + nhiệt độ (s = humidityBand/8, k = tempBand/4;
