@@ -37,7 +37,7 @@
 ```
 NHÀ YẾN                                          CLOUD (VPS, có tên miền + HTTPS)
 ───────                                          ────────────────────────────────
-Camera IP (RTSP, H.264, 20 fps)
+Camera IP (RTSP, H.264, 25 fps)
    │ Wi-Fi/LAN
    ▼
 Modem VNPT (IP public, mở 1 cổng về camera) ──Internet──► MediaMTX kéo hình gốc  "cam-<id>-raw"
