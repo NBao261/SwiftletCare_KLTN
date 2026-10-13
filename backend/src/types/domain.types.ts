@@ -62,6 +62,8 @@ export interface CurrentUser {
 // ── Sub-document interfaces ────────────────────────────────────────────────────
 export interface NotificationPreferences {
   push: boolean
+  /** ALERT-FR-013 — chỉ có tác dụng khi tài khoản đã liên kết bot Telegram */
+  telegram: boolean
   zalo: boolean
   sms: boolean
   quiet_hours: { start: string; end: string }

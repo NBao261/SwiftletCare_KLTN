@@ -1,5 +1,6 @@
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
+import { sendTelegram } from '@/services/telegram.service'
 import logger from '@/utils/logger.util'
 import type { IAlert } from '@/models/alert.model'
 import type { NotificationPreferences } from '@/types'
@@ -8,10 +9,10 @@ import type { NotificationPreferences } from '@/types'
  * Notification Service — ALERT-FR-002..006.
  *
  * PHẠM VI HIỆN TẠI: toàn bộ logic định tuyến (chọn người nhận, chọn kênh, giờ
- * im lặng, ngoại lệ CRITICAL) đã cài đặt thật và test được. Riêng bước GỬI cuối
- * cùng tới Firebase FCM / Zalo ZNS / SMS mới dừng ở mức ghi log, vì chưa có
- * credential thật của 3 dịch vụ này (RISK-07, checklist E6). Khi có key, chỉ cần
- * thay phần thân 3 hàm `sendPush/sendZalo/sendSms` — không phải sửa logic định tuyến.
+ * im lặng, ngoại lệ CRITICAL) đã cài đặt thật và test được. Kênh ngoài ứng dụng
+ * CHẠY THẬT là Telegram bot (ALERT-FR-013, services/telegram.service.ts) — phiếu v2
+ * cam kết "Telegram bot hoặc push", chỉ cần một trong hai. Firebase FCM vẫn dừng ở
+ * mức ghi log; Zalo ZNS và SMS nằm ngoài phạm vi SRS v2.0.0, adapter để nguyên không nối.
  */
 
 /** ALERT-FR-006 — giờ im lặng chỉ chặn được cảnh báo dưới mức CRITICAL */
@@ -65,9 +66,11 @@ export async function dispatchAlertNotification(alert: IAlert): Promise<void> {
 
     const body = `[${alert.severity}] ${alert.title} — ${alert.message}`
 
-    // ALERT-FR-002: Push cho mọi mức; ALERT-FR-003: Zalo ZNS chỉ CRITICAL/HIGH;
-    // ALERT-FR-004: SMS là kênh dự phòng, chỉ dùng cho CRITICAL.
+    // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
+    // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot;
+    // ALERT-FR-003: Zalo ZNS chỉ CRITICAL/HIGH; ALERT-FR-004: SMS chỉ cho CRITICAL.
     if (prefs?.push) await sendPush(String(user._id), alert.title, body)
+    if (prefs?.telegram !== false && user.telegram_chat_id) await sendTelegram(user.telegram_chat_id, body)
     if (prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH')) {
       await sendZalo(user.phone, body)
     }

@@ -329,7 +329,11 @@ paths:
   /auth/notification-preferences:
     put:
       tags: [Auth]
-      summary: "Cấu hình kênh nhận thông báo + giờ im lặng (ALERT-FR-005/006)"
+      summary: "Cấu hình kênh nhận thông báo + giờ im lặng (ALERT-FR-005/006/013)"
+      description: |
+        `telegram` chỉ có tác dụng khi tài khoản đã liên kết bot (`POST /auth/telegram/link`).
+        `zalo`/`sms` còn trong schema nhưng nằm ngoài phạm vi SRS v2.0.0 — không có kênh
+        thật phía sau.
       requestBody:
         content:
           application/json:
@@ -337,8 +341,9 @@ paths:
               type: object
               properties:
                 push: { type: boolean }
-                zalo: { type: boolean }
-                sms: { type: boolean }
+                telegram: { type: boolean }
+                zalo: { type: boolean, deprecated: true }
+                sms: { type: boolean, deprecated: true }
                 quiet_hours:
                   type: object
                   properties:
@@ -368,6 +373,38 @@ paths:
                   },
               },
           }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/telegram/link:
+    post:
+      tags: [Auth]
+      summary: "Tạo mã liên kết bot Telegram (ALERT-FR-013)"
+      description: |
+        Trả deep link `https://t.me/<bot>?start=<mã>`; mã dùng một lần, sống 10 phút. Người
+        dùng mở link, Telegram gửi `/start <mã>` cho bot, backend lưu chat id và từ đó gửi
+        cảnh báo qua Telegram theo cùng luật với push (người nhận, mức độ, giờ im lặng).
+        503 khi máy chủ chưa cấu hình `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          deep_link: { type: string, example: "https://t.me/swiftletcare_bot?start=4f1c…" }
+                          expires_at: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { description: "Chưa cấu hình bot Telegram", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+    delete:
+      tags: [Auth]
+      summary: "Hủy liên kết Telegram (ALERT-FR-013)"
+      responses:
+        "200": { description: Đã hủy liên kết, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /auth/delete-request:
@@ -4500,10 +4537,12 @@ components:
             nullable: true,
             description: "AUTH-FR-011 — lý do bắt buộc khi khoá tài khoản, ghi cùng audit_logs",
           }
+        telegram_linked: { type: boolean, description: "ALERT-FR-013 — tài khoản đã liên kết bot Telegram (chat id không trả ra API)" }
         notification_preferences:
           type: object
           properties:
             push: { type: boolean }
+            telegram: { type: boolean }
             zalo: { type: boolean }
             sms: { type: boolean }
             quiet_hours:
