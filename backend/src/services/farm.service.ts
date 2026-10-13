@@ -6,8 +6,8 @@ import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import {
-  hasFarmAccess, hasZoneAccess, isPrimaryOwner, operatorZoneScope, findFarmOrThrow, findZoneChainOrThrow,
-  assertZoneAccess, assertZonesInFarm,
+  hasFarmAccess, hasZoneAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
+  assertZoneAccess,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
@@ -67,9 +67,9 @@ export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDe
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
 
-  // Farm Operator không quản lý thành viên (AUTH-FR-005) nên không cần — và không
+  // Domain Expert không quản lý thành viên (AUTH-FR-005) nên không cần — và không
   // được thấy — danh sách thành viên kèm email; chỉ giữ bản ghi của chính mình.
-  if (user.role === 'FARM_OPERATOR') {
+  if (user.role === 'DOMAIN_EXPERT') {
     const plain = farm.toObject() as unknown as FarmDetail
     plain.members = plain.members.filter(m => String(m.user_id) === user._id)
     return plain
@@ -144,23 +144,14 @@ export async function softDeleteFarm(farm: IFarm): Promise<void> {
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },
   )
   // Lời mời còn chờ: nếu để nguyên, người được mời đăng ký sau đó vẫn được auto-accept
-  // (registerUser) và thành Farm Owner/Farm Operator không gắn farm nào
+  // (registerUser) và thành Farm Owner/Domain Expert không gắn farm nào
   await Invitation.updateMany({ farm_id: farm._id, status: 'PENDING' }, { $set: { status: 'EXPIRED' } })
 }
 
 export interface InviteMemberInput {
   email: string
-  /** FARM_OWNER = đồng sở hữu; FARM_OPERATOR = nhân viên vận hành (mặc định FARM_OWNER như trước v1.23.0) */
+  /** FARM_OWNER = đồng sở hữu (mặc định); DOMAIN_EXPERT = chuyên gia nuôi yến, phạm vi cả farm */
   role?: FarmMemberRole
-  /** Chỉ cho FARM_OPERATOR — rỗng/không gửi = cả farm */
-  zone_ids?: string[]
-}
-
-/** Zone gán cho Operator phải thuộc đúng farm; trả danh sách đã bỏ trùng */
-async function validateOperatorZones(farmId: string, zoneIds: string[] = []): Promise<string[]> {
-  const unique = [...new Set(zoneIds.map(String))]
-  await assertZonesInFarm(unique, farmId)
-  return unique
 }
 
 /**
@@ -168,17 +159,13 @@ async function validateOperatorZones(farmId: string, zoneIds: string[] = []): Pr
  * vào farm.members. Không còn đòi email đã có tài khoản (khác bản cũ): nếu
  * chưa có, người được mời sẽ đăng ký trước rồi tự động accept (Flow 12 bước 3b,
  * xử lý ở registerUser bên auth.service khi email trùng invitation PENDING).
- * Mời đồng sở hữu (FARM_OWNER) hoặc Farm Operator kèm phạm vi Zone (v1.23.0).
+ * Mời đồng sở hữu (FARM_OWNER) hoặc Domain Expert (v2.0.0) — cả hai đều theo cả farm.
  */
 export async function inviteMember(farmId: string, user: CurrentUser, input: InviteMemberInput): Promise<IInvitation> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được mời thành viên')
 
   const role: FarmMemberRole = input.role ?? 'FARM_OWNER'
-  if (role === 'FARM_OWNER' && input.zone_ids?.length) {
-    throw BadRequestError('Chỉ Farm Operator mới giới hạn theo Zone — đồng sở hữu luôn có quyền trên cả farm')
-  }
-  const zoneIds = role === 'FARM_OPERATOR' ? await validateOperatorZones(String(farm._id), input.zone_ids) : []
   const email = input.email
 
   const normalizedEmail = email.toLowerCase().trim()
@@ -188,9 +175,9 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
   }
 
   // Tài khoản đã có mang 1 role cố định (1 email = 1 role): không mời Technician/Admin,
-  // cũng không mời chéo Farm Owner ↔ Farm Operator — báo ngay thay vì để lời mời chờ vô ích.
+  // cũng không mời chéo Farm Owner ↔ Domain Expert — báo ngay thay vì để lời mời chờ vô ích.
   if (existingMember && existingMember.role !== role) {
-    throw ConflictError(`Email này đã là tài khoản ${existingMember.role} — Farm ${role === 'FARM_OPERATOR' ? 'Operator' : 'Owner'} cần dùng email khác`)
+    throw ConflictError(`Email này đã là tài khoản ${existingMember.role} — ${role === 'DOMAIN_EXPERT' ? 'Domain Expert' : 'Farm Owner'} cần dùng email khác`)
   }
 
   const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
@@ -200,14 +187,13 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
     farm_id: farm._id,
     invited_email: normalizedEmail,
     invited_role: role,
-    zone_ids: zoneIds,
     invited_by: user._id,
     token: crypto.randomBytes(24).toString('hex'),
     status: 'PENDING',
     expires_at: new Date(Date.now() + INVITATION_TTL_MS),
   })
   await logAction(user._id, 'FARM_MEMBER_INVITED', 'farm', String(farm._id), {
-    email: normalizedEmail, role, zone_ids: zoneIds,
+    email: normalizedEmail, role,
   })
   return invitation
 }
@@ -229,7 +215,7 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
   if (invitation.invited_email !== user.email?.toLowerCase()) {
     throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
   }
-  // 1 email = 1 role: tài khoản Farm Owner không nhận lời mời Operator (và ngược lại),
+  // 1 email = 1 role: tài khoản Farm Owner không nhận lời mời Domain Expert (và ngược lại),
   // Technician/Admin không thành thành viên farm qua lời mời
   if (user.role !== invitation.invited_role) {
     throw ConflictError(`Lời mời dành cho ${invitation.invited_role} nhưng tài khoản này là ${user.role} — hãy dùng email khác`)
@@ -242,8 +228,7 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
   const farm = await findFarmOrThrow(String(invitation.farm_id))
   if (!farm.members.some(m => String(m.user_id) === user._id)) {
     farm.members.push({
-      user_id: user._id, is_primary: false, role: invitation.invited_role,
-      zone_ids: invitation.zone_ids, joined_at: new Date(),
+      user_id: user._id, is_primary: false, role: invitation.invited_role, joined_at: new Date(),
     } as never)
     await farm.save()
   }
@@ -321,14 +306,7 @@ export async function createHouse(
 export async function listHouses(farmId: string, user: CurrentUser) {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  const houses = await House.find({ farm_id: farm._id }).sort({ created_at: -1 })
-  // Farm Operator giới hạn theo Zone chỉ thấy House có ít nhất 1 Zone trong phạm vi
-  const scope = operatorZoneScope(farm, user)
-  if (!scope) return houses
-  const visibleHouseIds = new Set(
-    (await Zone.find({ _id: { $in: [...scope] } }).select('house_id').lean()).map(z => String(z.house_id)),
-  )
-  return houses.filter(h => visibleHouseIds.has(String(h._id)))
+  return House.find({ farm_id: farm._id }).sort({ created_at: -1 })
 }
 
 /** FARM-FR-002 */
@@ -353,9 +331,7 @@ export async function listZones(houseId: string, user: CurrentUser) {
   if (!house) throw NotFoundError('Không tìm thấy house')
   const farm = await findFarmOrThrow(String(house.farm_id))
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
-  const zones = await Zone.find({ house_id: house._id }).sort({ created_at: -1 })
-  const scope = operatorZoneScope(farm, user)
-  return scope ? zones.filter(z => scope.has(String(z._id))) : zones
+  return Zone.find({ house_id: house._id }).sort({ created_at: -1 })
 }
 
 /** ENV-FR-006, ENV-FR-009 (lưu lịch sử thay đổi) */
@@ -389,7 +365,7 @@ export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Pr
 /**
  * ENV-FR-021 — chỉnh hệ số bộ điều khiển mờ của 1 Zone: validate khoảng, lưu kèm
  * lịch sử, publish config/update để mọi ESP32 trong Zone áp dụng ngay (không cần
- * nạp lại firmware). Cùng quyền với sửa ngưỡng (route) + phạm vi Zone của Operator.
+ * nạp lại firmware). Cùng quyền với sửa ngưỡng (route).
  */
 export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
   const { zone, house, farm } = await assertZoneAccess(zoneId, user)
@@ -401,7 +377,9 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
   assertValidFuzzyTuning(merged)
 
   zone.fuzzy_tuning = merged
-  zone.fuzzy_tuning_history.push({ changed_by: user._id as never, changed_at: new Date(), old_values: oldValues, new_values: picked } as never)
+  zone.fuzzy_tuning_history.push({
+    changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_values: oldValues, new_values: picked,
+  } as never)
   const overflow = zone.fuzzy_tuning_history.length - THRESHOLD_HISTORY_LIMIT
   if (overflow > 0) zone.fuzzy_tuning_history.splice(0, overflow)
   await zone.save()
@@ -409,25 +387,4 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', { ...zone.fuzzy_tuning })
   await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
   return zone
-}
-
-/**
- * AUTH-FR-005 (v1.23.0), Flow 12 bước 6 — Primary Owner đổi phạm vi Zone của 1
- * Farm Operator: rỗng = cả farm. Áp dụng ngay ở lần kiểm tra quyền tiếp theo
- * (assertZoneAccess đọc members mỗi request).
- */
-export async function updateOperatorScope(farmId: string, user: CurrentUser, targetUserId: string, zoneIds: string[]): Promise<IFarm> {
-  const farm = await findFarmOrThrow(farmId)
-  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được đổi phạm vi của Farm Operator')
-
-  const member = farm.members.find(m => String(m.user_id) === targetUserId)
-  if (!member) throw NotFoundError('Người dùng không phải thành viên farm này')
-  if (member.role !== 'FARM_OPERATOR') throw BadRequestError('Chỉ Farm Operator mới giới hạn theo Zone')
-
-  const before = member.zone_ids.map(String)
-  const after = await validateOperatorZones(String(farm._id), zoneIds)
-  member.zone_ids = after as never
-  await farm.save()
-  await logAction(user._id, 'FARM_OPERATOR_SCOPE_UPDATED', 'farm', String(farm._id), { user_id: targetUserId, before, after })
-  return farm
 }

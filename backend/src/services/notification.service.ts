@@ -33,22 +33,21 @@ function isWithinQuietHours(prefs: NotificationPreferences, now = new Date()): b
 }
 
 /**
- * Người cần nhận cảnh báo của 1 farm (AUTH-FR-005, ALERT-FR-005): chủ farm, mọi đồng
- * sở hữu, và Farm Operator có Zone của cảnh báo trong phạm vi — Operator giới hạn theo
- * Zone không nhận cảnh báo của Zone khác; cảnh báo cấp farm (không zone) thì ai cũng nhận.
+ * Người nhận cảnh báo vận hành của 1 farm (ALERT-FR-005): chủ farm và mọi đồng sở hữu.
+ * Domain Expert KHÔNG nhận cảnh báo vận hành ngoài ứng dụng (EXPERT-FR-007) — đó là
+ * việc của Farm Owner; chuyên gia thấy cảnh báo trong ứng dụng và nhận báo cáo sức khỏe.
  */
-export async function findRecipients(farmId: string, zoneId?: unknown) {
+export async function findRecipients(farmId: string) {
   const farm = await Farm.findById(farmId)
   if (!farm) return []
 
-  const members = farm.members.filter(m =>
-    m.role !== 'FARM_OPERATOR' || !zoneId || !m.zone_ids?.length || m.zone_ids.some(z => String(z) === String(zoneId)))
+  const members = farm.members.filter(m => m.role !== 'DOMAIN_EXPERT')
   const userIds = [farm.owner_id, ...members.map(m => m.user_id)]
   return User.find({ _id: { $in: userIds }, is_active: true }).lean()
 }
 
 export async function dispatchAlertNotification(alert: IAlert): Promise<void> {
-  const recipients = await findRecipients(String(alert.farm_id), alert.zone_id)
+  const recipients = await findRecipients(String(alert.farm_id))
   if (recipients.length === 0) {
     logger.warn('Cảnh báo không có người nhận', { alertId: String(alert._id), farmId: String(alert.farm_id) })
     return

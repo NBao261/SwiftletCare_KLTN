@@ -1,7 +1,7 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
-import type { FuzzyTuning, Thresholds } from '@/types'
+import type { FuzzyTuning, Thresholds, Role } from '@/types'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
@@ -16,6 +16,8 @@ export interface IHouse extends Document {
 
 export interface IThresholdHistoryEntry {
   changed_by: Types.ObjectId
+  /** Role của người sửa lúc sửa (EXPERT-FR-004) — để phân biệt chủ farm với chuyên gia */
+  changed_by_role?: Role
   changed_at: Date
   old_values: Partial<Thresholds>
   new_values: Partial<Thresholds>
@@ -24,6 +26,7 @@ export interface IThresholdHistoryEntry {
 
 export interface IFuzzyTuningHistoryEntry {
   changed_by: Types.ObjectId
+  changed_by_role?: Role
   changed_at: Date
   old_values: Partial<FuzzyTuning>
   new_values: Partial<FuzzyTuning>
@@ -74,6 +77,7 @@ const zoneSchema = new Schema<IZone>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
       source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT'] },
+      changed_by_role: { type: String },
     }],
     fuzzy_tuning: {
       fuzzy_humidity_band: { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_humidity_band },
@@ -84,6 +88,7 @@ const zoneSchema = new Schema<IZone>(
     },
     fuzzy_tuning_history: [{
       changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
       changed_at: { type: Date },
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },

@@ -102,10 +102,10 @@ describe('schema', () => {
 })
 
 describe('xoá farm', () => {
-  it('huỷ lời mời còn chờ — người được mời đăng ký sau không thành Operator', async () => {
+  it('huỷ lời mời còn chờ — người được mời đăng ký sau không thành Domain Expert', async () => {
     const { farm, owner } = await mkFarm()
     await Invitation.create({
-      farm_id: farm._id, invited_email: 'op@test.vn', invited_role: 'FARM_OPERATOR', invited_by: owner._id,
+      farm_id: farm._id, invited_email: 'op@test.vn', invited_role: 'DOMAIN_EXPERT', invited_by: owner._id,
       token: 'tok', expires_at: new Date(Date.now() + 86400_000),
     })
     await removeFarm(String(farm._id), asUser(owner))

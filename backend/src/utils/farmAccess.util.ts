@@ -26,26 +26,12 @@ export function hasFarmAccess(farm: FarmScope, user: CurrentUser): boolean {
 }
 
 /**
- * Phạm vi Zone của Farm Operator trên 1 farm (AUTH-FR-005, v1.23.0): `null` = không
- * giới hạn (không phải Operator, hoặc Operator được gán cả farm); Set = chỉ các Zone
- * này. Mọi kiểm tra theo Zone đi qua đây để không service nào tự đọc `zone_ids`.
+ * Quyền trên 1 Zone = quyền trên farm chứa nó. SRS v2.0.0 bỏ phạm vi theo Zone của
+ * Farm Operator: Domain Expert được mời vào farm nào thì thấy cả farm đó. Giữ hàm
+ * này (và tham số zoneId) để các chỗ kiểm tra theo Zone không phải đổi khi gọi.
  */
-export function operatorZoneScope(
-  // Kiểu cấu trúc tối thiểu để nhận cả document lẫn kết quả .lean()
-  farm: { members: Array<{ user_id: unknown; zone_ids?: unknown[] }> },
-  user: CurrentUser,
-): Set<string> | null {
-  if (user.role !== 'FARM_OPERATOR') return null
-  const member = farm.members.find(m => String(m.user_id) === user._id)
-  if (!member?.zone_ids?.length) return null
-  return new Set(member.zone_ids.map(String))
-}
-
-/** hasFarmAccess + Zone nằm trong phạm vi của Farm Operator */
-export function hasZoneAccess(farm: FarmScope, zoneId: unknown, user: CurrentUser): boolean {
-  if (!hasFarmAccess(farm, user)) return false
-  const scope = operatorZoneScope(farm, user)
-  return !scope || scope.has(String(zoneId))
+export function hasZoneAccess(farm: FarmScope, _zoneId: unknown, user: CurrentUser): boolean {
+  return hasFarmAccess(farm, user)
 }
 
 /**
@@ -98,14 +84,11 @@ export async function assertZoneAccess(
 }
 
 /**
- * Bản ghi thuộc 1 farm và có thể gắn 1 zone (alert, ticket, mẻ thu hoạch): có zone thì
- * kiểm tra theo zone (Farm Operator giới hạn phạm vi), không có zone thì theo farm —
- * bản ghi cấp farm (VD mất điện cả trại) mọi thành viên farm đều xem được.
+ * Bản ghi thuộc 1 farm và có thể gắn 1 zone (alert, ticket, mẻ thu hoạch): quyền theo
+ * farm — thành viên farm xem được mọi bản ghi của farm đó (SRS v2.0.0 bỏ phạm vi Zone).
  */
-export async function assertRecordAccess(farmId: unknown, zoneId: unknown, user: CurrentUser): Promise<IFarm> {
-  const farm = await assertFarmAccess(String(farmId), user)
-  if (zoneId && !hasZoneAccess(farm, zoneId, user)) throw ForbiddenError('Không có quyền trên zone này')
-  return farm
+export async function assertRecordAccess(farmId: unknown, _zoneId: unknown, user: CurrentUser): Promise<IFarm> {
+  return assertFarmAccess(String(farmId), user)
 }
 
 /**
@@ -117,8 +100,7 @@ export async function assertZoneInFarm(zoneId: string, farmId: string): Promise<
   await assertZonesInFarm([zoneId], farmId)
 }
 
-/** assertZoneInFarm cho nhiều Zone (VD phạm vi Farm Operator) — 1 query cho cả danh sách */
-export async function assertZonesInFarm(zoneIds: string[], farmId: string): Promise<void> {
+async function assertZonesInFarm(zoneIds: string[], farmId: string): Promise<void> {
   const unique = [...new Set(zoneIds.map(String))]
   if (unique.length === 0) return
   if (!unique.every(id => Types.ObjectId.isValid(id))) throw BadRequestError('zone_id không hợp lệ')
@@ -146,32 +128,7 @@ export async function listAccessibleFarmIds(user: CurrentUser) {
  */
 export async function listAccessibleZoneIds(user: CurrentUser) {
   const farmIds = await listAccessibleFarmIds(user)
-  const zones = await Zone.find({ farm_id: { $in: farmIds } }).select('_id farm_id').lean()
-  if (user.role !== 'FARM_OPERATOR') return zones.map(z => z._id)
-
-  // Farm Operator: chỉ giữ Zone nằm trong phạm vi được gán ở từng farm
-  const farms = await Farm.find({ _id: { $in: farmIds } }).select('members')
-  const scopeByFarm = new Map(farms.map(f => [String(f._id), operatorZoneScope(f, user)]))
-  return zones
-    .filter(z => {
-      const scope = scopeByFarm.get(String(z.farm_id))
-      return !scope || scope.has(String(z._id))
-    })
-    .map(z => z._id)
-}
-
-/**
- * Thu hẹp 1 filter danh sách theo farm (alert/ticket/mẻ thu hoạch/lịch bảo trì) về
- * phạm vi Zone của Farm Operator: bản ghi của Zone trong phạm vi, hoặc bản ghi cấp
- * farm (không gắn zone). Role khác giữ nguyên filter. Thêm vào `$and` để không đè
- * `$or` sẵn có của caller.
- */
-export async function applyZoneScope<T extends Record<string, unknown>>(filter: T, user: CurrentUser): Promise<T> {
-  if (user.role !== 'FARM_OPERATOR') return filter
-  const zoneIds = await listAccessibleZoneIds(user)
-  const clause = { $or: [{ zone_id: { $in: zoneIds } }, { zone_id: null }] }
-  const and = Array.isArray(filter.$and) ? [...(filter.$and as unknown[]), clause] : [clause]
-  return { ...filter, $and: and }
+  return Zone.find({ farm_id: { $in: farmIds } }).distinct('_id')
 }
 
 /**

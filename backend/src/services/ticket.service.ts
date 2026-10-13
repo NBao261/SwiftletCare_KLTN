@@ -6,8 +6,7 @@ import { SensorNode } from '@/models/device.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import {
-  listAccessibleFarmIds, assertFarmAccess, assertZoneInFarm, assertZoneAccess, assertRecordAccess,
-  applyZoneScope, operatorZoneScope,
+  listAccessibleFarmIds, assertFarmAccess, assertZoneInFarm, assertRecordAccess,
 } from '@/utils/farmAccess.util'
 import { assertValidVisitTime, formatVisitTime } from '@/utils/visitTime.util'
 import { logAction } from '@/services/auditLog.service'
@@ -150,7 +149,7 @@ export interface CreateTicketInput {
 
 /** TICKET-FR-001 — Farm Owner tạo ticket báo lỗi hoặc yêu cầu lắp đặt (Flow 9/9b) */
 export async function createTicket(user: CurrentUser, input: CreateTicketInput): Promise<ITicket> {
-  const farm = await assertFarmAccess(input.farm_id, user)
+  await assertFarmAccess(input.farm_id, user)
 
   if (input.type === 'MAINTENANCE') {
     // TICKET-FR-013 — bảo trì định kỳ chỉ sinh từ lịch bảo trì, không tạo tay
@@ -165,12 +164,7 @@ export async function createTicket(user: CurrentUser, input: CreateTicketInput):
     // Flow 9 bước 5–6b: ticket sự cố — Technician chẩn đoán từ xa trước, cần xuống thì mới hẹn
     throw BadRequestError('Chỉ yêu cầu lắp đặt mới chọn giờ hẹn khi tạo; ticket sự cố do Technician hẹn sau khi chẩn đoán')
   }
-  if (input.zone_id) {
-    await assertZoneInFarm(input.zone_id, input.farm_id)
-    await assertZoneAccess(input.zone_id, user) // Farm Operator chỉ báo sự cố trong phạm vi Zone của mình
-  } else if (operatorZoneScope(farm, user)) {
-    throw BadRequestError('Farm Operator được gán theo Zone phải chọn Zone khi tạo ticket')
-  }
+  if (input.zone_id) await assertZoneInFarm(input.zone_id, input.farm_id)
 
   const priority = DEFAULT_PRIORITY[input.type]
   const sla = await slaDueDates(priority, new Date())
@@ -444,8 +438,7 @@ async function buildTicketFilter(user: CurrentUser, query: ListTicketsQuery) {
   }
 
   if (conditions.length) filter.$and = conditions
-  // Farm Operator chỉ thấy ticket của Zone trong phạm vi + ticket cấp farm
-  return applyZoneScope(filter, user)
+  return filter
 }
 
 /** Thứ tự nghiệp vụ của trạng thái — sắp theo chữ cái sẽ đưa AWAITING lên trước NEW */
@@ -742,10 +735,6 @@ export async function requestReassign(ticketId: string, user: CurrentUser, reaso
 export async function cancelTicket(ticketId: string, user: CurrentUser, reason: string): Promise<ITicket> {
   const ticket = await getTicket(ticketId, user)
   if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
-  // Farm Operator chỉ huỷ được ticket do chính mình tạo — huỷ yêu cầu của người khác là quyết định của Farm Owner
-  if (user.role === 'FARM_OPERATOR' && String(ticket.created_by) !== user._id) {
-    throw ForbiddenError('Farm Operator chỉ huỷ được ticket do chính mình tạo')
-  }
 
   ticket.status = 'CLOSED'
   ticket.closed_at = new Date()
@@ -1056,7 +1045,6 @@ export async function rateTicket(ticketId: string, user: CurrentUser, rating: nu
   // thay vì chỉ giới hạn cho ADMIN.
   const isSystemGeneratedRatableByOwner = !ticket.created_by && user.role === 'FARM_OWNER'
   if (!isCreator && !isSystemGeneratedRatableByOwner && user.role !== 'ADMIN') {
-    // Farm Operator chỉ đánh giá ticket mình tạo (không có nhánh ticket hệ thống như Farm Owner)
     throw ForbiddenError('Chỉ người tạo ticket hoặc Farm Owner mới được đánh giá')
   }
 
@@ -1066,7 +1054,7 @@ export async function rateTicket(ticketId: string, user: CurrentUser, rating: nu
 }
 
 const CANCELLED_BY_LABEL: Partial<Record<CurrentUser['role'], string>> = {
-  FARM_OWNER: 'Farm Owner', FARM_OPERATOR: 'Farm Operator', ADMIN: 'Administrator',
+  FARM_OWNER: 'Farm Owner', ADMIN: 'Administrator',
 }
 
 /** TICKET-FR-012 — KPI cho Administrator */

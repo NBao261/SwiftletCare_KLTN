@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 import { HarvestBatch, IHarvestBatch } from '@/models/harvestBatch.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
-import { applyZoneScope, assertFarmAccess, assertRecordAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { assertFarmAccess, assertRecordAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, NestType } from '@/types'
 
@@ -110,7 +110,7 @@ export async function listHarvests(user: CurrentUser, farmId?: string) {
   // đọc được mẻ thu hoạch của farm bất kỳ chỉ bằng cách đoán id (IDOR)
   if (farmId) await assertFarmAccess(farmId, user)
   const filter: Record<string, unknown> = { farm_id: farmId ?? { $in: await listAccessibleFarmIds(user) } }
-  return HarvestBatch.find(await applyZoneScope(filter, user)).sort({ harvest_date: -1 }).lean()
+  return HarvestBatch.find(filter).sort({ harvest_date: -1 }).lean()
 }
 
 export async function getHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {
