@@ -97,7 +97,7 @@ ESP32 ── Wi-Fi ──> Router 4G ──> Cloud (MQTT)
 
 | STT | Thiết bị | Ghi chú |
 |---|---|---|
-| 23 | Camera nhà yến IP 2MP **IR 940nm** (không phát sáng), 2.8mm góc rộng, IP66+, RTSP | Xem `Camera_Guide_NhaYen_Full.md` |
+| 23 | **TP-Link VIGI C320I ống kính 6 mm** — camera IP 2MP, IR 850 nm, IP66, RTSP; cấp nguồn qua bộ PoE **TP-Link TL-POE150S** (đã mua) | Xem SRS mục 7.1 và `docs/bird-counting-plan.md` mục 19 |
 
 ---
 
