@@ -131,7 +131,6 @@ const sensorNodeSchema = new Schema<ISensorNode>(
       misting:     { type: Boolean, default: false },
       speaker:     { type: Boolean, default: false },
       ventilation: { type: Boolean, default: false },
-      heating:     { type: Boolean, default: false },
     },
     control_mode:    { type: String, enum: ['AUTO','MANUAL'] satisfies ControlMode[], default: 'AUTO' },
     override_expiry: { type: Date },

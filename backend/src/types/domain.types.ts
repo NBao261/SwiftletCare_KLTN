@@ -82,13 +82,12 @@ export interface Thresholds {
   co2_max: number
 }
 
-// Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation,
-// IN4=heating (dự phòng). Không có kênh "light" trên phần cứng thật.
+// Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation.
+// IN4 để dự phòng — SRS v2.0.0 bỏ sưởi (ENV-FR-012). Không có kênh "light".
 export interface RelayStates {
   misting: boolean
   speaker: boolean
   ventilation: boolean
-  heating: boolean
 }
 
 // ENV-FR-010/011 (v1.24.0): % công suất 0-100 do bộ điều khiển mờ trên ESP32

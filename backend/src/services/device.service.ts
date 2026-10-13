@@ -16,7 +16,8 @@ import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceU
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds } from '@/types'
 
-const RELAY_NAMES = ['misting', 'speaker', 'ventilation', 'heating'] as const
+// SRS v2.0.0 bỏ sưởi (ENV-FR-012): kênh IN4 để dự phòng, không còn là relay điều khiển được
+const RELAY_NAMES = ['misting', 'speaker', 'ventilation'] as const
 type RelayName = typeof RELAY_NAMES[number]
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
@@ -881,7 +882,7 @@ export async function expireManualOverrides(): Promise<number> {
       deviceId: node.device_id,
       action: 'clear_override',
     })
-    for (const relayName of Object.keys(node.relay_states) as Array<keyof RelayStates>) {
+    for (const relayName of RELAY_NAMES) {
       emitRelayUpdate(String(chain.zone._id), {
         zoneId: String(chain.zone._id),
         relayName,
@@ -902,17 +903,19 @@ export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<v
 
   // Không đụng status/last_heartbeat: liveness chỉ do heartbeat/telemetry quyết
   // định (message relay/status retained cũ từng làm "hồi sinh" thiết bị đã chết).
-  node.relay_states = payload.relay_states
+  // Chỉ nhận relay hệ thống còn dùng — firmware < 1.3.0 vẫn gửi kèm `heating`
+  const states = Object.fromEntries(RELAY_NAMES.map(name => [name, !!payload.relay_states[name]])) as unknown as RelayStates
+  node.relay_states = states
   node.control_mode = payload.control_mode
   if (payload.control_mode === 'AUTO') node.override_expiry = undefined
   await node.save()
 
   const zoneId = String(node.zone_id)
-  for (const relayName of Object.keys(payload.relay_states) as Array<keyof RelayStates>) {
+  for (const relayName of RELAY_NAMES) {
     emitRelayUpdate(zoneId, {
       zoneId,
       relayName,
-      state: payload.relay_states[relayName],
+      state: states[relayName],
       mode: node.control_mode,
       overrideExpiry: node.override_expiry?.toISOString(),
     })

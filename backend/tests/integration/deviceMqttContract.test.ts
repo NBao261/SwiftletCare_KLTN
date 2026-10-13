@@ -77,7 +77,7 @@ async function seed(status: 'ONLINE' | 'OFFLINE' = 'ONLINE') {
 
 const reading = (deviceId: string, timestamp: number, over: Partial<TelemetryPayload> = {}) => ({
   deviceId, timestamp, temperature: 28, humidity: 85, light_lux: 0.1, nh3_ppm: 5, co2_ppm: 800, sound_db: 40,
-  relay_states: { misting: false, speaker: false, ventilation: false, heating: false }, control_mode: 'AUTO' as const,
+  relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO' as const,
   ...over,
 })
 
@@ -275,11 +275,13 @@ describe('confirmRelayStatus', () => {
     const { node, deviceId } = await seed('OFFLINE')
     await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date() })
 
-    await confirmRelayStatus({ deviceId, relay_states: { misting: true, speaker: false, ventilation: false, heating: false }, control_mode: 'AUTO' })
+    // firmware < 1.3.0 còn gửi `heating` — phải bị bỏ, không lưu và không phát socket
+    await confirmRelayStatus({ deviceId, relay_states: { misting: true, speaker: false, ventilation: false, heating: true } as never, control_mode: 'AUTO' })
 
     const after = (await SensorNode.findById(node._id))!
     expect(after.status).toBe('OFFLINE')
     expect(after.relay_states.misting).toBe(true)
+    expect(Object.keys(after.toObject().relay_states)).toEqual(['misting', 'speaker', 'ventilation'])
     expect(after.override_expiry).toBeUndefined()
   })
 })

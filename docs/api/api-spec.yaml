@@ -1957,7 +1957,7 @@ paths:
                 relayName:
                   {
                     type: string,
-                    enum: [misting, speaker, ventilation, heating],
+                    enum: [misting, speaker, ventilation],
                   }
                 state: { type: boolean }
                 durationMs:
@@ -4391,12 +4391,11 @@ components:
 
     RelayStates:
       type: object
-      description: "Guide v3.3 §8-9: IN1=misting, IN2=speaker (loa ru), IN3=ventilation, IN4=heating"
+      description: "Guide v3.3 §8-9: IN1=misting, IN2=speaker (loa ru), IN3=ventilation. IN4 để dự phòng (SRS v2.0.0 bỏ sưởi)"
       properties:
         misting: { type: boolean }
         speaker: { type: boolean }
         ventilation: { type: boolean }
-        heating: { type: boolean }
 
     AudioTrack:
       type: object
