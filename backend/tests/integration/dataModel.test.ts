@@ -1,18 +1,16 @@
 /**
  * Data model sau đợt rà soát DB (SRS v1.23.0 §8.2): refresh token lưu hash + dọn token
- * hết hạn, 1 tin đăng / mẻ thu hoạch, Zone.farm_id, soft-delete phủ mọi truy vấn,
+ * hết hạn, Zone.farm_id, soft-delete phủ mọi truy vấn,
  * xoá farm huỷ lời mời còn chờ, threshold_history có giới hạn, migration chạy lại an toàn.
  */
 import crypto from 'crypto'
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
-import { ContactInquiry } from '@/models/contactInquiry.model'
 import { Farm } from '@/models/farm.model'
 import { HarvestBatch } from '@/models/harvestBatch.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Invitation } from '@/models/invitation.model'
-import { NestListing } from '@/models/nestListing.model'
 import { User } from '@/models/user.model'
 import { loginUser, logoutUser, refreshAccessToken, registerUser } from '@/services/auth.service'
 import { removeFarm, updateZoneThresholds } from '@/services/farm.service'
@@ -34,7 +32,6 @@ let mongod: MongoMemoryServer
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create()
   await mongoose.connect(mongod.getUri())
-  await NestListing.init() // chờ unique index tạo xong
 })
 afterAll(async () => {
   await mongoose.disconnect()
@@ -42,7 +39,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   await Promise.all([
-    AuditLog, ContactInquiry, Farm, HarvestBatch, House, Zone, Invitation, NestListing, User,
+    AuditLog, Farm, HarvestBatch, House, Zone, Invitation, User,
   ].map(m => (m as typeof User).deleteMany({ is_deleted: { $in: [true, false, null] } })))
 })
 
@@ -79,14 +76,6 @@ describe('refresh token', () => {
 })
 
 describe('schema', () => {
-  it('1 mẻ thu hoạch chỉ có 1 tin đăng (unique index)', async () => {
-    const { farm } = await mkFarm()
-    const batchId = new mongoose.Types.ObjectId()
-    await NestListing.create({ harvest_batch_id: batchId, farm_id: farm._id, title: 'A' })
-    await expect(NestListing.create({ harvest_batch_id: batchId, farm_id: farm._id, title: 'B' }))
-      .rejects.toMatchObject({ code: 11000 })
-  })
-
   it('Zone tự lấy farm_id từ House và không đổi được', async () => {
     const { farm, zone } = await mkFarm()
     expect(String(zone.farm_id)).toBe(String(farm._id))
@@ -144,31 +133,20 @@ describe('migrate:data-model', () => {
   it('sửa dữ liệu cũ và chạy lại lần 2 không đổi gì', async () => {
     const { farm, house, owner } = await mkFarm()
     const db = mongoose.connection.db!
-    await db.collection('nestlistings').dropIndex('harvest_batch_id_1') // như DB cũ chưa có unique index
     const oldZone = await db.collection('zones').insertOne({ house_id: house._id, name: 'cũ' })
     const future = new Date(Date.now() + 86400_000)
     await db.collection('users').updateOne({ _id: owner._id }, {
       $set: { refresh_tokens: [{ token: 'raw.jwt.token', expires: future }, { token: 'x.y.z', expires: new Date(0) }] },
     })
-    const batch = await db.collection('harvestbatches').insertOne({ farm_id: farm._id, trace_code: 'M1', is_deleted: false })
-    const [first, second] = [new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId()]
-    await db.collection('nestlistings').insertMany([
-      { _id: first, harvest_batch_id: batch.insertedId, created_at: new Date(1) },
-      { _id: second, harvest_batch_id: batch.insertedId, created_at: new Date(2) },
-    ])
-    await db.collection('harvestbatches').updateOne({ _id: batch.insertedId }, { $set: { listing_id: second } })
-    await db.collection('contactinquiries').insertOne({ listing_id: first, message: 'hi' })
     await Farm.updateOne({ _id: farm._id }, { is_deleted: true })
     await db.collection('invitations').insertOne({ farm_id: farm._id, status: 'PENDING', token: 'mig' })
 
     const first1 = await migrateDataModel()
-    expect(first1).toMatchObject({ zones: 1, tokenUsers: 1, listingsRemoved: 1, invitationsExpired: 1 })
+    expect(first1).toMatchObject({ zones: 1, tokenUsers: 1, invitationsExpired: 1 })
     expect(String((await db.collection('zones').findOne({ _id: oldZone.insertedId }))!.farm_id)).toBe(String(farm._id))
     expect((await db.collection('users').findOne({ _id: owner._id }))!.refresh_tokens)
       .toEqual([{ token_hash: sha256('raw.jwt.token'), expires: future }])
-    expect(await db.collection('nestlistings').distinct('_id')).toEqual([second])
-    expect(String((await db.collection('contactinquiries').findOne({}))!.listing_id)).toBe(String(second))
 
-    expect(await migrateDataModel()).toEqual({ zones: 0, tokenUsers: 0, tokensPruned: 0, listingsRemoved: 0, invitationsExpired: 0 })
+    expect(await migrateDataModel()).toEqual({ zones: 0, tokenUsers: 0, tokensPruned: 0, invitationsExpired: 0 })
   })
 })

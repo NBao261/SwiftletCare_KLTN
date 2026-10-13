@@ -12,7 +12,6 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import farmRoutes from '@/routes/farms.route'
 import deviceRoutes from '@/routes/devices.route'
 import harvestRoutes from '@/routes/harvests.route'
-import marketplaceRoutes from '@/routes/marketplace.route'
 import ticketRoutes from '@/routes/tickets.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
@@ -52,7 +51,6 @@ app.use(express.json())
 app.use('/farms', farmRoutes)
 app.use('/devices', deviceRoutes)
 app.use('/harvests', harvestRoutes)
-app.use('/marketplace', marketplaceRoutes)
 app.use('/tickets', ticketRoutes)
 app.use(errorHandler)
 
@@ -197,7 +195,6 @@ describe('việc Operator không được làm', () => {
     await call('delete', `/farms/${farm._id}`, t.scoped).expect(403)
     await call('post', `/farms/${farm._id}/members`, t.scoped, { email: 'z@test.vn' }).expect(403)
     await call('post', `/farms/${farm._id}/houses`, t.scoped, { name: 'H9' }).expect(403)
-    await call('post', '/marketplace/listings', t.scoped, { harvest_batch_id: String(farm._id), title: 'x' }).expect(403)
     const detail = await getFarm(String(farm._id), asUser(scoped))
     expect(detail.members.map(m => String(m.user_id))).toEqual([String(scoped._id)])
   })

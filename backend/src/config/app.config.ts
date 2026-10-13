@@ -24,7 +24,6 @@ import telemetryRoutes from '@/routes/telemetry.route'
 import alertRoutes     from '@/routes/alerts.route'
 import analyticsRoutes from '@/routes/analytics.route'
 import harvestRoutes        from '@/routes/harvests.route'
-import marketplaceRoutes    from '@/routes/marketplace.route'
 import ticketRoutes         from '@/routes/tickets.route'
 import maintenanceScheduleRoutes from '@/routes/maintenanceSchedules.route'
 
@@ -85,9 +84,8 @@ app.use('/telemetry', telemetryRoutes)
 app.use('/alerts',    alertRoutes)
 app.use('/analytics', analyticsRoutes)
 
-// Module MARKET (§5.8) — thuộc phạm vi MVP (landing page + form liên hệ)
+// Module HARVEST (§5.8) — chỉ ghi nhận thu hoạch; Marketplace đã bỏ ở SRS v2.0.0
 app.use('/harvests',    harvestRoutes)
-app.use('/marketplace', marketplaceRoutes)
 
 // Module TICKET (§5.9) — thuộc phạm vi MVP
 app.use('/tickets', ticketRoutes)

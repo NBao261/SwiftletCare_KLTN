@@ -56,9 +56,7 @@ tags:
   - name: Analytics
     description: ANALYTICS-FR-001..005, VISION-FR-008..011 (biểu đồ môi trường, so sánh đa Zone, đếm chim/return-rate — chờ dữ liệu thật từ module VISION)
   - name: Harvests
-    description: MARKET-FR-001..005 (Harvest Batch — tự gắn env/flock snapshot + trace code)
-  - name: Marketplace
-    description: MARKET-FR-006..013 (Nest Listing, Traceability Card, truy xuất nguồn gốc, liên hệ)
+    description: MARKET-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0)
   - name: Tickets
     description: TICKET-FR-001..004b/006/007/009..012 (tạo/định tuyến/SLA/SAT checklist/KPI)
 
@@ -2963,7 +2961,7 @@ paths:
       description: |
         Tự động gắn `env_snapshot` (trung bình môi trường 7 ngày trước thu
         hoạch — MARKET-FR-002) và `flock_snapshot` (return rate 30 ngày —
-        MARKET-FR-003), sinh `trace_code` (UUID) để tra cứu nguồn gốc. Nếu
+        MARKET-FR-003), sinh `trace_code` (UUID) làm mã định danh mẻ. Nếu
         Zone chưa đủ dữ liệu telemetry/bird-count, snapshot trả về
         `insufficient_data: true` thay vì số liệu sai lệch.
       requestBody:
@@ -3088,8 +3086,8 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [Harvests]
-      summary: "Cập nhật Harvest Batch (MARKET-FR-005) — chỉ khi còn DRAFT"
-      description: "Sau khi đã đăng bán (status khác DRAFT), env/flock snapshot bất biến — API trả 409 để bảo toàn ý nghĩa truy xuất nguồn gốc."
+      summary: "Cập nhật Harvest Batch (MARKET-FR-005)"
+      description: "Sửa số liệu ghi nhận của mẻ; env/flock snapshot chỉ chụp một lần lúc tạo, không sửa qua đây."
       requestBody:
         content:
           application/json:
@@ -3128,18 +3126,9 @@ paths:
               },
           }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          {
-            description: Đã đăng bán — chỉ cập nhật trạng thái tin đăng,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
     delete:
       tags: [Harvests]
-      summary: "Xóa mềm Harvest Batch — chỉ khi còn DRAFT"
+      summary: "Xóa mềm Harvest Batch"
       responses:
         "200":
           {
@@ -3150,345 +3139,6 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiSuccess" } },
               },
           }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          {
-            description: Không xoá được đợt thu hoạch đã đăng bán,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
-
-  # ── MARKETPLACE ───────────────────────────────────────────────────────────
-  /marketplace/listings:
-    get:
-      tags: [Marketplace]
-      summary: "Danh sách Nest Listing công khai (MARKET-FR-008)"
-      security: []
-      parameters:
-        - {
-            name: nestType,
-            in: query,
-            schema: { type: string, enum: [RAW, CLEANED, PREMIUM] },
-          }
-        - { name: region, in: query, schema: { type: string } }
-        - { name: minPrice, in: query, schema: { type: number } }
-        - { name: maxPrice, in: query, schema: { type: number } }
-        - { $ref: "#/components/parameters/Page" }
-        - { $ref: "#/components/parameters/Limit" }
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data:
-                                    {
-                                      type: array,
-                                      items:
-                                        {
-                                          $ref: "#/components/schemas/NestListing",
-                                        },
-                                    },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-    post:
-      tags: [Marketplace]
-      summary: "Tạo Nest Listing từ Harvest Batch (MARKET-FR-006) — FARM_OWNER/ADMIN (Farm Operator không được đăng bán)"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [harvest_batch_id, title]
-              properties:
-                harvest_batch_id: { type: string }
-                title: { type: string }
-                description: { type: string }
-                price_vnd: { type: number }
-                contact_info:
-                  type: object
-                  properties:
-                    {
-                      show_phone: { type: boolean },
-                      show_email: { type: boolean },
-                      show_zalo: { type: boolean },
-                    }
-      responses:
-        "201":
-          {
-            description: "Đã tạo (listing_status=AVAILABLE, Harvest Batch chuyển LISTED)",
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data:
-                                    {
-                                      $ref: "#/components/schemas/NestListing",
-                                    },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          {
-            description: Đợt thu hoạch này đã có tin đăng,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
-
-  /marketplace/listings/{id}:
-    parameters:
-      [{ name: id, in: path, required: true, schema: { type: string } }]
-    get:
-      tags: [Marketplace]
-      summary: "Chi tiết Listing + Traceability Card (MARKET-FR-009) — tăng view_count"
-      security: []
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          listing: { $ref: "#/components/schemas/NestListing" }
-                          farm:
-                            {
-                              type: object,
-                              properties:
-                                {
-                                  name: { type: string },
-                                  address: { type: string },
-                                  region: { type: string },
-                                },
-                            }
-        "404": { $ref: "#/components/responses/NotFound" }
-    put:
-      tags: [Marketplace]
-      summary: "Cập nhật Listing (Farm Owner/Admin)"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title: { type: string }
-                description: { type: string }
-                price_vnd: { type: number }
-                listing_status:
-                  { type: string, enum: [AVAILABLE, SOLD, HIDDEN] }
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data:
-                                    {
-                                      $ref: "#/components/schemas/NestListing",
-                                    },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /marketplace/trace/{traceCode}:
-    get:
-      tags: [Marketplace]
-      summary: "Tra cứu nguồn gốc lô yến qua Trace Code/QR (MARKET-FR-011)"
-      description: "Mã sai chỉ trả 404 chung, không lộ chi tiết hệ thống, tránh bị dò mã hàng loạt."
-      security: []
-      parameters:
-        [
-          {
-            name: traceCode,
-            in: path,
-            required: true,
-            schema: { type: string },
-          },
-        ]
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          batch: { $ref: "#/components/schemas/HarvestBatch" }
-                          farm:
-                            {
-                              type: object,
-                              properties:
-                                {
-                                  name: { type: string },
-                                  address: { type: string },
-                                  region: { type: string },
-                                },
-                            }
-                          zone:
-                            {
-                              type: object,
-                              properties: { name: { type: string } },
-                            }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /marketplace/listings/{id}/inquiries:
-    parameters:
-      [{ name: id, in: path, required: true, schema: { type: string } }]
-    post:
-      tags: [Marketplace]
-      summary: "Buyer gửi form liên hệ (MARKET-FR-010) — không cần tài khoản"
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [buyer_name, message]
-              properties:
-                {
-                  buyer_name: { type: string },
-                  buyer_phone: { type: string },
-                  buyer_email: { type: string },
-                  message: { type: string },
-                }
-      responses:
-        "201":
-          {
-            description: Đã gửi liên hệ,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiSuccess" } },
-              },
-          }
-        "404": { $ref: "#/components/responses/NotFound" }
-    get:
-      tags: [Marketplace]
-      summary: "Owner xem danh sách liên hệ (Farm Owner/Admin)"
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiSuccess" } },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /marketplace/listings/{id}/stats:
-    get:
-      tags: [Marketplace]
-      summary: "Thống kê lượt xem/liên hệ (MARKET-FR-012) — Farm Owner/Admin"
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          {
-                            view_count: { type: integer },
-                            inquiry_count: { type: integer },
-                            published_at: { type: string, format: date-time },
-                            listing_status: { type: string },
-                          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /marketplace/farms/{id}/profile:
-    get:
-      tags: [Marketplace]
-      summary: "Farm Profile công khai (MARKET-FR-013)"
-      security: []
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          {
-                            name: { type: string },
-                            region: { type: string },
-                            years_active: { type: integer },
-                            available_listings: { type: integer },
-                            total_harvests: { type: integer },
-                          }
         "404": { $ref: "#/components/responses/NotFound" }
 
   # ── TICKETS ───────────────────────────────────────────────────────────────
@@ -5077,7 +4727,7 @@ components:
 
     HarvestStatus:
       type: string
-      enum: [DRAFT, LISTED, ARCHIVED]
+      enum: [DRAFT, ARCHIVED]
 
     HarvestBatch:
       type: object
@@ -5127,37 +4777,7 @@ components:
             avg_return_rate_30d: { type: number, nullable: true }
             estimated_population: { type: integer, nullable: true }
         status: { $ref: "#/components/schemas/HarvestStatus" }
-        listing_id: { type: string, nullable: true, description: "Set khi đã tạo Nest Listing từ batch này (MARKET-FR-006) — dùng để tra GET /marketplace/listings/:id/stats,inquiries" }
         is_deleted: { type: boolean }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
-    NestListing:
-      type: object
-      description: MARKET-FR-006..013 — Nest Listing (tin đăng bán), tạo từ 1 Harvest Batch
-      properties:
-        _id: { type: string }
-        harvest_batch_id:
-          {
-            type: string,
-            description: "Populate sang HarvestBatch khi trả về từ /marketplace/listings",
-          }
-        farm_id: { type: string }
-        title: { type: string }
-        description: { type: string, nullable: true }
-        price_vnd: { type: number, nullable: true }
-        price_unit: { type: string, default: gram }
-        listing_status: { type: string, enum: [AVAILABLE, SOLD, HIDDEN] }
-        contact_info:
-          type: object
-          properties:
-            {
-              show_phone: { type: boolean },
-              show_email: { type: boolean },
-              show_zalo: { type: boolean },
-            }
-        view_count: { type: integer }
-        inquiry_count: { type: integer }
-        published_at: { type: string, format: date-time, nullable: true }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }

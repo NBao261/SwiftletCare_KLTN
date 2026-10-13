@@ -33,8 +33,7 @@ export type TicketStatus = 'NEW' | 'IN_PROGRESS' | 'AWAITING_FIELD_CONFIRMATION'
 
 // ── Module MARKET (§5.8, §8.2) ───────────────────────────────────────────────
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-export type HarvestStatus = 'DRAFT' | 'LISTED' | 'ARCHIVED'
-export type ListingStatus = 'AVAILABLE' | 'SOLD' | 'HIDDEN'
+export type HarvestStatus = 'DRAFT' | 'ARCHIVED'
 
 // ── JWT Payload ────────────────────────────────────────────────────────────────
 export interface JwtAccessPayload {
