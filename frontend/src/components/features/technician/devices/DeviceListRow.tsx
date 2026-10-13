@@ -12,6 +12,7 @@ interface DeviceListRowProps {
   index?: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  /** Không truyền → ẩn nút (role không có quyền gửi lệnh, VD Farm Owner) */
   onReboot?: () => void;
   /** Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích */
   rebootUnsupported?: boolean;
@@ -77,8 +78,8 @@ export default function DeviceListRow({
             <IconDevice />
           </div>
           <div className="min-w-0 flex flex-col">
-            <p className="truncate font-bold text-charcoal tabular-nums">{node.device_id}</p>
-            <p className="mt-0.5 truncate text-xs text-warmGray tabular-nums">
+            <p className="truncate font-mono font-bold text-charcoal">{node.device_id}</p>
+            <p className="mt-0.5 truncate font-mono text-xs text-warmGray">
               Firmware {node.firmware_version || "—"}
             </p>
           </div>
@@ -113,7 +114,7 @@ export default function DeviceListRow({
           )}
           {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển thủ công</Badge>}
           {node.ota_pending && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-limeMist px-2.5 py-1 text-xs font-semibold text-charcoal">
               <DownloadCloud size={12} /> Đang cập nhật
             </span>
           )}
@@ -126,17 +127,21 @@ export default function DeviceListRow({
 
         {/* Cột 4: Thao tác */}
         <div className="flex items-center gap-2 w-full md:w-2/12 md:justify-end border-t md:border-t-0 border-warmGray/10 pt-3 md:pt-0">
-          <button
-            type="button"
-            disabled={rebootUnsupported}
-            onClick={(e) => { e.stopPropagation(); onReboot && onReboot(); }}
-            className="relative z-10 rounded-lg border border-transparent bg-stone p-2 text-charcoal opacity-70 transition-all group-hover:opacity-100 hover:bg-white hover:text-alertRed hover:border-alertRed/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-stone disabled:hover:text-charcoal disabled:hover:border-transparent"
-            title={rebootUnsupported ? "Firmware chưa hỗ trợ lệnh này" : "Khởi động lại thiết bị từ xa"}
-            aria-label="Khởi động lại thiết bị"
-          >
-            <RotateCw size={16} />
-          </button>
-          <span className="mx-1 hidden h-6 w-px bg-warmGray/20 md:block" />
+          {onReboot && (
+            <>
+              <button
+                type="button"
+                disabled={rebootUnsupported}
+                onClick={(e) => { e.stopPropagation(); onReboot(); }}
+                className="relative z-10 rounded-lg border border-transparent bg-stone p-2 text-charcoal opacity-70 transition-all group-hover:opacity-100 hover:bg-white hover:text-alertRed hover:border-alertRed/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-stone disabled:hover:text-charcoal disabled:hover:border-transparent"
+                title={rebootUnsupported ? "Firmware chưa hỗ trợ lệnh này" : "Khởi động lại thiết bị từ xa"}
+                aria-label="Khởi động lại thiết bị"
+              >
+                <RotateCw size={16} />
+              </button>
+              <span className="mx-1 hidden h-6 w-px bg-warmGray/20 md:block" />
+            </>
+          )}
           <button
             type="button"
             className={`relative z-10 flex items-center justify-center rounded-lg border border-transparent p-2 transition-colors ${isExpanded ? 'bg-charcoal text-white' : 'bg-stone text-charcoal hover:bg-warmGray/20'}`}

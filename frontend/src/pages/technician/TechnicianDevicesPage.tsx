@@ -2,10 +2,11 @@ import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useZoneStore } from "@/stores/zoneStore";
 import { usePermission } from "@/hooks/common/usePermission";
-import { useSensorNodes } from "@/hooks/shared/useDevices";
+import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
 import { deviceApi } from "@/apis/shared/devices.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Modal, Card } from "@/components/ui";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
 import SystemHealthBar, { needsAttention } from "@/components/features/technician/devices/SystemHealthBar";
 import DeviceFilterToolbar, { type DeviceSortKey } from "@/components/features/technician/devices/DeviceFilterToolbar";
@@ -50,6 +51,9 @@ export default function TechnicianDevicesPage() {
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
   // BE trả 501 khi firmware chưa hỗ trợ RESTART → khoá nút thay vì để kỹ thuật viên thử lại
   const [rebootUnsupported, setRebootUnsupported] = useState(false);
+  // POST /devices/sensor-nodes/:id/commands chỉ cho TECHNICIAN/ADMIN (TICKET-FR-008)
+  const sendCommand = useSendNodeCommand();
+  const [rebootNodeId, setRebootNodeId] = useState<string | null>(null);
 
   const hasActiveFilters = !!searchQuery || statusFilter !== "ALL" || sortBy !== "last_heartbeat" || sortDir !== "desc";
   function clearFilters() {
@@ -98,6 +102,7 @@ export default function TechnicianDevicesPage() {
   const [replaceNodeId, setReplaceNodeId] = useState<string | null>(null);
   const decommissionNode = nodes?.find((n) => n._id === decommissionNodeId) ?? null;
   const replaceNode = nodes?.find((n) => n._id === replaceNodeId) ?? null;
+  const rebootNode = nodes?.find((n) => n._id === rebootNodeId) ?? null;
 
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
 
@@ -155,6 +160,29 @@ export default function TechnicianDevicesPage() {
     } finally {
       setReassigning(false);
     }
+  }
+
+  function handleReboot() {
+    if (!rebootNode) return;
+    const deviceLabel = rebootNode.device_id;
+    sendCommand.mutate(
+      { nodeId: rebootNode._id, input: { command: "RESTART" } },
+      {
+        onSuccess: () => {
+          push(`Đã gửi lệnh khởi động lại tới ${deviceLabel}`);
+          setRebootNodeId(null);
+        },
+        onError: (err) => {
+          if ((err as { response?: { status?: number } })?.response?.status === 501) {
+            setRebootUnsupported(true);
+            push("Firmware chưa hỗ trợ lệnh khởi động lại từ xa (501)", "error");
+          } else {
+            push(getApiErrorMessage(err, "Khởi động lại thất bại"), "error");
+          }
+          setRebootNodeId(null);
+        },
+      },
+    );
   }
 
   return (
@@ -233,18 +261,7 @@ export default function TechnicianDevicesPage() {
                 onOpenDecommission={() => setDecommissionNodeId(node._id)}
                 canOnboard={canOnboard}
                 rebootUnsupported={rebootUnsupported}
-                onReboot={() => {
-                  deviceApi.sendCommand(node._id, { command: "RESTART" })
-                    .then(() => push(`Đã gửi lệnh khởi động lại tới ${node.device_id}`))
-                    .catch(err => {
-                      if ((err as { response?: { status?: number } })?.response?.status === 501) {
-                        setRebootUnsupported(true);
-                        push("Firmware chưa hỗ trợ lệnh khởi động lại từ xa (501)", "error");
-                      } else {
-                        push(getApiErrorMessage(err, "Khởi động lại thất bại"), "error");
-                      }
-                    });
-                }}
+                onReboot={canOnboard ? () => setRebootNodeId(node._id) : undefined}
               />
             ))}
             {filteredNodes?.length === 0 && !isLoading && (nodes?.length ?? 0) > 0 && (
@@ -343,6 +360,17 @@ export default function TechnicianDevicesPage() {
         <DecommissionDeviceModal
           node={decommissionNode}
           onClose={() => setDecommissionNodeId(null)}
+        />
+
+        <ConfirmModal
+          open={rebootNode !== null}
+          title="Khởi động lại thiết bị?"
+          description={rebootNode ? `Thiết bị ${rebootNode.device_id} sẽ mất kết nối trong vài giây rồi tự kết nối lại. Rơ-le đang chạy có thể bị ngắt tạm thời.` : undefined}
+          confirmLabel="Khởi động lại"
+          danger
+          loading={sendCommand.isPending}
+          onConfirm={handleReboot}
+          onCancel={() => setRebootNodeId(null)}
         />
 
         {showThresholds && (
