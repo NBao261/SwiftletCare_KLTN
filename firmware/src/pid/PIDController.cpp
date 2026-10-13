@@ -4,6 +4,7 @@
  */
 #include "PIDController.h"
 #include "FuzzyControl.h"
+#include "PumpDryMonitor.h"
 #include "config/Config.h"
 #include <Arduino.h>
 
@@ -36,11 +37,11 @@ void RelayState::init() {
   pinMode(PIN_RELAY_MISTING, OUTPUT);
   pinMode(PIN_RELAY_SPEAKER, OUTPUT);
   pinMode(PIN_RELAY_VENTILATION, OUTPUT);
-  pinMode(PIN_RELAY_HEATING, OUTPUT);
+  pinMode(PIN_RELAY_SPARE, OUTPUT);
   digitalWrite(PIN_RELAY_MISTING, LOW);
   digitalWrite(PIN_RELAY_SPEAKER, LOW);
   digitalWrite(PIN_RELAY_VENTILATION, LOW);
-  digitalWrite(PIN_RELAY_HEATING, LOW);
+  digitalWrite(PIN_RELAY_SPARE, LOW); // IN4 dự phòng — luôn TẮT
 }
 
 void RelayState::applyRelay(int pin, bool state) {
@@ -57,7 +58,7 @@ void RelayState::applyRelay(int pin, bool state) {
 // override, AUTO nếu không cái nào. Trạng thái override chi tiết từng relay
 // hiện chưa expose qua API/MQTT riêng.
 bool RelayState::anyOverride() const {
-  return mistingOverride || speakerOverride || ventilationOverride || heatingOverride;
+  return mistingOverride || speakerOverride || ventilationOverride;
 }
 
 String RelayState::toJson() const {
@@ -67,8 +68,7 @@ String RelayState::toJson() const {
   json += "\"relay_states\":{";
   json += "\"misting\":" + String(misting ? "true" : "false") + ",";
   json += "\"speaker\":" + String(speaker ? "true" : "false") + ",";
-  json += "\"ventilation\":" + String(ventilation ? "true" : "false") + ",";
-  json += "\"heating\":" + String(heating ? "true" : "false");
+  json += "\"ventilation\":" + String(ventilation ? "true" : "false");
   json += "},";
   json += "\"control_mode\":\"" + String(anyOverride() ? "MANUAL" : "AUTO") + "\"";
   json += "}";
@@ -77,14 +77,12 @@ String RelayState::toJson() const {
 
 namespace PIDController {
 
-// Pump dry detection state (THREAT-FR-011) — cập nhật trong handleThreatAlerts()
-// (chạy mỗi chu kỳ bất kể relay.misting được set bởi AUTO hay Manual Override).
-static const unsigned long PUMP_DRY_ON_MS = 300000; // 5 phút BẬT cộng dồn
-static bool sprayActive = false;
-static bool pumpDryReported = false;
-static unsigned long sprayOnMs = 0;
-static unsigned long lastThreatCheckMs = 0;
-static float humidityAtBlockStart = 0;
+// THREAT-FR-011: phát hiện bơm khô + chốt ngừng phun tới hết đợt (PumpDryMonitor.h).
+// Cập nhật trong handleThreatAlerts() — chạy mỗi chu kỳ bất kể relay.misting do
+// AUTO hay Manual Override đặt. autoMistingDemand = bộ mờ đang muốn phun, lưu
+// riêng vì khi đang chốt thì relay.mistingPct bị ép về 0.
+static PumpDryMonitor pumpMonitor;
+static bool autoMistingDemand = false;
 
 static uint8_t toPct(float duty) { return (uint8_t)lroundf(duty * 100.0f); }
 
@@ -106,6 +104,9 @@ void runHumidityControl(float humidity, float temperature, RelayState &relay) {
 
   float duty = FuzzyControl::mistingDemand(humidity, temperature, Config::humidityMin,
                                            Config::humidityMax, Config::tempMax, currentTuning());
+  autoMistingDemand = duty > 0.0f;
+  // Bơm khô đã phát hiện ở đợt này → ngừng phun tới hết đợt để bảo vệ bơm
+  if (pumpMonitor.blocked()) duty = 0.0f;
   relay.mistingPct = toPct(duty);
   relay.misting = FuzzyControl::timeProportionalOn(duty, millis(), windowMs(), 0);
   relay.applyRelay(PIN_RELAY_MISTING, relay.misting);
@@ -116,21 +117,15 @@ void runHumidityControl(float humidity, float temperature, RelayState &relay) {
   }
 }
 
-// ENV-FR-011 (v1.24.0): logic mờ nhiệt độ + độ ẩm + NH3 + CO2 → % quạt; NH3/CO2
-// vượt max luôn ép 100% (chốt an toàn trong FuzzyControl::ventilationDemand).
-// Nhận cả SensorData để dùng nh3Ok/co2Ok — cảm biến timeout ở chu kỳ này trả
-// NAN cho nh3Ppm/co2Ppm (SensorManager.cpp readAll()), phải loại khỏi quyết
-// định thay vì so sánh NAN. Không gate CẢ HÀM theo nh3Ok/co2Ok vì riêng 1 cảm
-// biến khí lỗi không nên làm dừng điều khiển theo nhiệt độ.
-// data.temperature/humidity không cần guard: caller (main.cpp pidTask) chỉ gọi
-// trong if (data.isValid), validateRange() đã bắt buộc 2 giá trị này không NaN.
-void runVentilationControl(const SensorData &data, const SensorData &raw, RelayState &relay) {
+// ENV-FR-011 (SRS v2.0.0): logic mờ nhiệt độ + độ ẩm → % quạt. NH3/CO2 không
+// còn là đầu vào và không còn chốt "khí vượt ngưỡng thì ép quạt 100%" — hai chỉ
+// số này chỉ theo dõi + cảnh báo ở backend. Số đo không hợp lệ → nhu cầu 0
+// (FuzzyControl::inputsValid, THREAT-FR-013).
+void runVentilationControl(float temperature, float humidity, RelayState &relay) {
   if (relay.ventilationOverride) return;
 
-  bool rawGasOverMax = (raw.nh3Ok && raw.nh3Ppm > Config::nh3Max) || (raw.co2Ok && raw.co2Ppm > Config::co2Max);
-  float duty = rawGasOverMax ? 1.0f : FuzzyControl::ventilationDemand(
-      data.temperature, data.humidity, data.nh3Ppm, data.nh3Ok, data.co2Ppm, data.co2Ok,
-      Config::tempMax, Config::humidityMin, Config::nh3Max, Config::co2Max, currentTuning());
+  float duty = FuzzyControl::ventilationDemand(temperature, humidity, Config::tempMax, Config::humidityMin,
+                                               currentTuning());
   relay.ventilationPct = toPct(duty);
   // Lệch nửa cửa sổ so với phun sương: tránh vừa phun vừa hút hơi ẩm ra ngoài.
   relay.ventilation = FuzzyControl::timeProportionalOn(duty, millis(), windowMs(), windowMs() / 2);
@@ -138,18 +133,7 @@ void runVentilationControl(const SensorData &data, const SensorData &raw, RelayS
 
   if (relay.ventilationPct > 0) {
     Serial.println("[FUZZY] FAN " + String(relay.ventilationPct) + "% → " + (relay.ventilation ? "ON" : "OFF") +
-                   " (temp=" + String(data.temperature, 1) + " nh3=" + String(data.nh3Ppm, 1) +
-                   " co2=" + String(data.co2Ppm, 0) + ")");
-  }
-}
-
-// ENV-FR-012: temp < min → sưởi ON (chỉ khi có gắn thiết bị sưởi ở IN4)
-void runHeatingControl(float temperature, RelayState &relay) {
-  if (relay.heatingOverride) return;
-  relay.heating = (temperature < Config::tempMin);
-  relay.applyRelay(PIN_RELAY_HEATING, relay.heating);
-  if (relay.heating) {
-    Serial.println("[PID] HEATER ON (temp=" + String(temperature, 1) + "°C < min=" + String(Config::tempMin, 1) + "°C)");
+                   " (temp=" + String(temperature, 1) + "°C humidity=" + String(humidity, 1) + "%)");
   }
 }
 
@@ -171,10 +155,6 @@ void setManualOverride(const char *relayName, bool state, unsigned long duration
     relay.ventilation = state;
     relay.ventilationPct = state ? 100 : 0;
     relay.applyRelay(PIN_RELAY_VENTILATION, state);
-  } else if (name == "heating") {
-    relay.heatingOverride = true;
-    relay.heating = state;
-    relay.applyRelay(PIN_RELAY_HEATING, state);
   } else {
     Serial.println("[PID] MANUAL OVERRIDE: relayName không hợp lệ: " + name);
     return; // không động tới hạn override của các relay khác
@@ -187,7 +167,6 @@ void clearOverrides(RelayState &relay) {
   relay.mistingOverride = false;
   relay.speakerOverride = false;
   relay.ventilationOverride = false;
-  relay.heatingOverride = false;
   relay.overrideExpiryMs = 0;
 }
 
@@ -202,12 +181,6 @@ void checkOverrideExpiry(RelayState &relay) {
 
 ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, bool audioPlaying) {
   ThreatFlags flags;
-  // Trạng thái relay misting ở CHU KỲ TRƯỚC — relay giữ nguyên trạng thái giữa
-  // 2 chu kỳ nên khoảng thời gian từ lần gọi trước được tính là "đã BẬT" nếu
-  // cờ này true. Theo dõi ở đây (không trong runHumidityControl(), hàm đó
-  // return sớm khi override) để PUMP_DRY chạy cả khi bật bằng Manual Override.
-  static bool mistingWasOn = false;
-
   // THREAT-FR-013: cảm biến đơn lẻ lỗi / toàn bus lỗi
   flags.sensorFault = (data.failedCount > 0 && data.failedCount < 3);
   flags.busFailure = SensorManager::isBusFailure();
@@ -219,40 +192,25 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
   // như fix runVentilationControl(), thêm cho nhất quán).
   if (relay.speaker && audioPlaying && data.noiseOk && SensorManager::isAudioBaselineReady()) {
     float baseline = SensorManager::getAudioBaseline();
-    if (baseline > 0 && data.soundDb < baseline * (1.0f - AUDIO_DROP_THRESHOLD)) {
+    // speakerDropPct chỉnh theo Zone (EXPERT-FR-008), mặc định 70
+    if (baseline > 0 && data.soundDb < baseline * (1.0f - Config::speakerDropPct / 100.0f)) {
       flags.speakerFailure = true;
       Serial.println("[THREAT] ⚠ SPEAKER_FAILURE: dB=" + String(data.soundDb, 1) + " baseline=" + String(baseline, 1));
     }
   }
 
-  // THREAT-FR-011: PUMP_DRY — bơm đã BẬT cộng dồn > 5 phút nhưng ẩm không tăng.
-  // Logic mờ bật/tắt bơm theo chu kỳ (time-proportioning) nên không còn "ON
-  // liên tục 5 phút": 1 ĐỢT PHUN = liên tục có nhu cầu phun (AUTO: mistingPct
-  // > 0; override: relay.misting), trong đợt cộng dồn thời gian relay thực sự
-  // BẬT. Cứ mỗi 5 phút BẬT so độ ẩm với đầu khối 5 phút đó; báo 1 lần/đợt.
-  unsigned long now = millis();
-  bool spraying = relay.misting || relay.mistingPct > 0;
-  if (!spraying) {
-    sprayActive = false;
-  } else if (!sprayActive) {
-    sprayActive = true;
-    pumpDryReported = false;
-    sprayOnMs = 0;
-    humidityAtBlockStart = data.humidity;
-  } else if (mistingWasOn) {
-    sprayOnMs += now - lastThreatCheckMs;
+  // THREAT-FR-011: PUMP_DRY — bơm BẬT cộng dồn đủ lâu trong 1 đợt phun mà độ ẩm
+  // không tăng → báo 1 lần/đợt và chốt ngừng phun (runHumidityControl đọc
+  // pumpMonitor.blocked()). Thời gian + mức tăng chỉnh theo Zone (EXPERT-FR-008).
+  // Đợt phun: AUTO = bộ mờ muốn phun; override = relay đang được ép BẬT.
+  bool demand = relay.mistingOverride ? relay.misting : autoMistingDemand;
+  flags.pumpDry = pumpMonitor.update(demand, relay.mistingOverride, relay.misting,
+                                     data.tempHumidOk ? data.humidity : NAN, millis(),
+                                     (uint32_t)Config::pumpDryOnSec * 1000UL, Config::pumpDryMinRisePct);
+  if (flags.pumpDry) {
+    Serial.println("[THREAT] ⚠ PUMP_DRY: bơm BẬT " + String(Config::pumpDryOnSec) +
+                   "s nhưng độ ẩm không tăng → ngừng phun tới hết đợt");
   }
-  if (sprayActive && sprayOnMs > PUMP_DRY_ON_MS) {
-    if (!pumpDryReported && data.humidity <= humidityAtBlockStart + 2.0f) {
-      flags.pumpDry = true;
-      pumpDryReported = true;
-      Serial.println("[THREAT] ⚠ PUMP_DRY: bơm đã BẬT 5' nhưng độ ẩm không tăng!");
-    }
-    sprayOnMs = 0;
-    humidityAtBlockStart = data.humidity;
-  }
-  lastThreatCheckMs = now;
-  mistingWasOn = relay.misting;
 
   return flags;
 }

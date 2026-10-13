@@ -6,7 +6,7 @@
 using namespace FuzzyControl;
 
 // Ngưỡng mặc định Config.h
-static const float H_MIN = 75, H_MAX = 95, T_MAX = 31, NH3_MAX = 25, CO2_MAX = 1500;
+static const float H_MIN = 75, H_MAX = 95, T_MAX = 31;
 
 void setUp() {}
 void tearDown() {}
@@ -37,21 +37,25 @@ void test_misting_hotter_mists_more() {
 
 void test_ventilation_rules() {
   // Nóng, ẩm đủ → quạt 100%
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0f, ventilationDemand(33, 80, 5, true, 600, true, T_MAX, H_MIN, NH3_MAX, CO2_MAX));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0f, ventilationDemand(33, 80, T_MAX, H_MIN));
   // Nóng nhưng khô → quạt 40% (để phun sương làm mát, đừng hút hết hơi ẩm)
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.4f, ventilationDemand(33, 65, 5, true, 600, true, T_MAX, H_MIN, NH3_MAX, CO2_MAX));
-  // Mát, không khí sạch → tắt
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, ventilationDemand(26, 80, 5, true, 600, true, T_MAX, H_MIN, NH3_MAX, CO2_MAX));
-  // NH3 20ppm (KHÍ_CAO=0.5), mát → 50%
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.5f, ventilationDemand(26, 80, 20, true, 600, true, T_MAX, H_MIN, NH3_MAX, CO2_MAX));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.4f, ventilationDemand(33, 65, T_MAX, H_MIN));
+  // Mát → tắt (NH3/CO2 không còn là đầu vào — SRS v2.0.0, ENV-FR-011)
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, ventilationDemand(26, 80, T_MAX, H_MIN));
 }
 
-void test_ventilation_toxic_gas_safety() {
-  // NH3 vượt max: luôn 100% kể cả khi nhà đang khô + nóng
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0f, ventilationDemand(33, 65, 30, true, 600, true, T_MAX, H_MIN, NH3_MAX, CO2_MAX));
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0f, ventilationDemand(26, 80, 5, true, 2000, true, T_MAX, H_MIN, NH3_MAX, CO2_MAX));
-  // Cảm biến NH3 lỗi (NAN) bị loại khỏi quyết định
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, ventilationDemand(26, 80, NAN, false, 600, true, T_MAX, H_MIN, NH3_MAX, CO2_MAX));
+// THREAT-FR-013: mất nhiệt độ/độ ẩm hoặc giá trị rác → phun sương và quạt TẮT
+void test_invalid_inputs_give_safe_state() {
+  TEST_ASSERT_FALSE(inputsValid(NAN, 80));
+  TEST_ASSERT_FALSE(inputsValid(30, 120));
+  TEST_ASSERT_TRUE(inputsValid(30, 80));
+  // 65% ẩm + 33°C bình thường cho phun 100% và quạt 40% — số đo hỏng thì về 0
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, mistingDemand(NAN, 33, H_MIN, H_MAX, T_MAX));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, mistingDemand(65, NAN, H_MIN, H_MAX, T_MAX));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, mistingDemand(-5, 33, H_MIN, H_MAX, T_MAX));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, ventilationDemand(NAN, 80, T_MAX, H_MIN));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, ventilationDemand(33, NAN, T_MAX, H_MIN));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.0f, ventilationDemand(200, 80, T_MAX, H_MIN));
 }
 
 // ENV-FR-021: hệ số chỉnh qua config/update
@@ -70,7 +74,7 @@ void test_wider_humidity_band_mists_earlier() {
 void test_fan_dry_level_is_tunable() {
   Tuning t;
   t.fanDryLevel = 0.2f;
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.2f, ventilationDemand(33, 65, 5, true, 600, true, T_MAX, H_MIN, NH3_MAX, CO2_MAX, t));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.2f, ventilationDemand(33, 65, T_MAX, H_MIN, t));
 }
 
 void test_time_proportioning() {
@@ -89,7 +93,7 @@ int main() {
   RUN_TEST(test_misting_extremes);
   RUN_TEST(test_misting_hotter_mists_more);
   RUN_TEST(test_ventilation_rules);
-  RUN_TEST(test_ventilation_toxic_gas_safety);
+  RUN_TEST(test_invalid_inputs_give_safe_state);
   RUN_TEST(test_tuning_defaults_match_original_breakpoints);
   RUN_TEST(test_wider_humidity_band_mists_earlier);
   RUN_TEST(test_fan_dry_level_is_tunable);

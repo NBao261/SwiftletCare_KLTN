@@ -1,8 +1,12 @@
 /**
- * PanicDetector – phát hiện chim hoảng loạn theo mức ồn (THREAT-FR-007, BIRD_PANIC)
+ * NoiseAnomalyDetector – phát hiện mức ồn bất thường (THREAT-FR-007, NOISE_ANOMALY)
+ *
+ * Đây là TÍN HIỆU THAM KHẢO, không phải kết luận "chim hoảng loạn": backend hiển
+ * thị kèm số đếm chim cùng khoảng thời gian và chờ Domain Expert xác nhận/bác bỏ
+ * (SRS v2.0.0, EXPERT-FR-003).
  *
  * ES-NOISE-01 chỉ trả về mức dB (không có dạng sóng) nên KHÔNG phân loại được
- * tiếng chim bằng FFT/ML — chỉ phát hiện theo mẫu dB: ồn vượt mức nền ≥ RISE_DB
+ * tiếng chim bằng FFT/ML — chỉ phát hiện theo mẫu dB: ồn vượt mức nền ≥ marginDb
  * trong phần lớn cửa sổ ~15 giây. C++ thuần, gọi 1 lần/mẫu (1 Hz).
  *
  * Mức nền RIÊNG CHO TỪNG GIỜ TRONG NGÀY (24 mức): nhà yến có giờ vốn ồn tự nhiên
@@ -14,12 +18,12 @@
  * vẫn đúng khi đổi lịch loa ru.
  *
  * Chống báo nhầm:
- * - Nền chỉ học khi loa tắt → loa ru không kéo nền lên; lúc chim hoảng thật
+ * - Nền chỉ học khi loa tắt → loa ru không kéo nền lên; lúc ồn bất thường thật
  *   nền chỉ nhích lên chậm (bước nhỏ) nên vẫn kịp báo.
  * - Giờ chưa học đủ (≥ READY_SAMPLES mẫu ≈ 1 giờ quan sát) hoặc chưa biết giờ
  *   (NTP chưa đồng bộ) → không đánh giá.
  * - Loa đang phát (lịch ru, nghe thử, bật tay) → không đánh giá, xoá đếm.
- * - Cần ≥ 10/15 mẫu ồn mới báo (1 tiếng động ngắn không đủ), thoát khi ≤ 3/15.
+ * - Cần ≥ minLoud/15 mẫu ồn mới báo (1 tiếng động ngắn không đủ), thoát khi ≤ 3/15.
  *
  * ponytail: mức nền nằm trong RAM — khởi động lại (mất điện/OTA) phải học lại
  * ~1 ngày; nếu thấy mất điện thường xuyên thì lưu 24 mức vào NVS mỗi giờ.
@@ -27,25 +31,32 @@
 #pragma once
 #include <stdint.h>
 
-class PanicDetector {
+class NoiseAnomalyDetector {
 public:
-  /** Thêm 1 mẫu dB; hour = giờ địa phương 0..23, -1 nếu chưa biết giờ. Trả về đang-hoảng hay không. */
-  bool update(float db, bool speakerActive, int hour);
+  /**
+   * Hai tham số Domain Expert chỉnh theo Zone (EXPERT-FR-008), nhận qua MQTT
+   * config/update (noise_margin_db, noise_min_sec — xem Config.h). Mặc định là
+   * giá trị chọn theo cảm quan (+15 dB ≈ ồn gấp ~5 lần), chưa có số đo thật.
+   */
+  struct Tuning {
+    float marginDb = 15.0f; // ồn cao hơn mức nền của giờ đó bao nhiêu dB thì tính là "ồn"
+    int minLoud = 10;       // số mẫu ồn trong cửa sổ WINDOW giây để báo (5..WINDOW)
+  };
+
+  /** Thêm 1 mẫu dB; hour = giờ địa phương 0..23, -1 nếu chưa biết giờ. Trả về đang-bất-thường hay không. */
+  bool update(float db, bool speakerActive, int hour, const Tuning &tuning);
+  bool update(float db, bool speakerActive, int hour) { return update(db, speakerActive, hour, Tuning()); }
   bool active() const { return _active; }
   bool ready(int hour) const { return validHour(hour) && _samples[hour] >= READY_SAMPLES; }
   float baseline(int hour) const { return validHour(hour) ? _baseline[hour] : 0.0f; }
 
-  // ponytail: ngưỡng chọn theo cảm quan (+15 dB ≈ ồn gấp ~5 lần); cần ghi âm/đo
-  // lúc chim hoảng thật để chỉnh — đổi ở đây, không cần đụng logic.
-  static constexpr float RISE_DB = 15.0f;
   static constexpr float QUANTILE = 0.9f;
   /** Bước ước lượng phân vị (dB/mẫu): lên 0,027 · xuống 0,003. Cả giờ yên tĩnh chỉ kéo
-   *  mức xuống ~11 dB < RISE_DB → tiếng chim về tổ đã học không bị báo nhầm; ~15 phút
+   *  mức xuống ~11 dB < 15 dB mặc định → tiếng chim về tổ đã học không bị báo nhầm; ~15 phút
    *  chim ra/vào trong ngày đầu đủ nâng mức lên ~24 dB. */
   static constexpr float STEP_DB = 0.03f;
   static const uint32_t READY_SAMPLES = 3600; // ≈ 1 giờ quan sát của giờ đó
   static const int WINDOW = 15;
-  static const int ENTER_LOUD = 10;
   static const int EXIT_LOUD = 3;
 
 private:
