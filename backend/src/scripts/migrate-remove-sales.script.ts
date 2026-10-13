@@ -45,7 +45,7 @@ async function migrate(): Promise<void> {
 
   const members = await db.collection('farms').updateMany(
     { 'members.role': { $exists: false }, members: { $ne: [] } },
-    { $set: { 'members.$[m].role': 'FARM_OWNER', 'members.$[m].zone_ids': [] } },
+    { $set: { 'members.$[m].role': 'FARM_OWNER' } }, // zone_ids đã bỏ ở SRS v2.0.0
     { arrayFilters: [{ 'm.role': { $exists: false } }] },
   )
   logger.info(`[migrate] Gán role FARM_OWNER cho member cũ ở ${members.modifiedCount} farm`)
