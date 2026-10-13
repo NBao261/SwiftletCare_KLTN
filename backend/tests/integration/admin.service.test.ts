@@ -124,6 +124,11 @@ describe('setUserStatus', () => {
     const result = await setUserStatus(String(admin._id), String(tech._id), false, 'Nghỉ việc')
 
     expect(result.openTickets).toBe(2)
+    expect(result.openTicketIds).toHaveLength(2) // đủ id để Admin bấm gán lại ngay
+    // Khoá tài khoản KHÔNG tự gán lại: người đó vẫn phụ trách vùng, việc gán lại
+    // là quyết định của Admin (AUTH-FR-011) — khác với khi vùng bị gỡ hẳn
+    const stillTheirs = await Ticket.countDocuments({ assigned_to: tech._id, status: { $ne: 'CLOSED' } })
+    expect(stillTheirs).toBe(2)
   })
 
   it('omits openTickets when the technician has none', async () => {
@@ -373,6 +378,24 @@ describe('completeDeletionRequest', () => {
       await mkTicket(oid(), { created_by: leaver._id, status: 'CLOSED' })
 
       await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).resolves.toBeDefined()
+    })
+
+    it('closes the open tickets of a farm it soft-deletes, so nobody is left holding a dead ticket', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+      const tech = await mkUser('tech@test.vn', 'TECHNICIAN')
+      const soleFarm = await mkFarm(leaver)
+      const stranded = await mkTicket(soleFarm._id, { status: 'IN_PROGRESS', assigned_to: tech._id })
+
+      await completeDeletionRequest(String(admin._id), String(leaver._id), { force: true })
+
+      // Farm đã xoá mềm thì không ai mở được ticket của nó nữa (kể cả Admin), mà
+      // nó vẫn chiếm suất quá tải của Technician và vẫn cộng vào báo cáo → phải đóng
+      const closed = (await Ticket.findById(stranded._id))!
+      expect(closed.status).toBe('CLOSED')
+      expect(closed.cancelled_at).toBeInstanceOf(Date)
+      const [audit] = await auditActions('TICKET_CLOSED_FARM_DELETED')
+      expect(audit.metadata).toMatchObject({ farmId: String(soleFarm._id), previousStatus: 'IN_PROGRESS' })
     })
 
     it('proceeds with force and records it in the audit log', async () => {

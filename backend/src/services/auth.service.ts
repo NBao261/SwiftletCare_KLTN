@@ -217,7 +217,9 @@ export async function forgotPassword(email: string): Promise<void> {
  * chặn đăng nhập mới (Flow 11 bước 7).
  */
 export async function resetPassword(email: string, token: string, newPassword: string): Promise<void> {
+  // 2 field này `select: false` trong schema nên phải xin lại tường minh ở đây
   const user = await User.findOne({ email: normalizeEmail(email) })
+    .select('+password_reset_token_hash +password_reset_expires_at')
   if (
     !user ||
     !user.password_reset_token_hash ||
