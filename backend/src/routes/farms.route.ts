@@ -34,5 +34,7 @@ router.get ('/zones/:zoneId',            param('zoneId').isMongoId(), validate, 
 router.put ('/zones/:zoneId/thresholds', requireRole('FARM_OWNER','FARM_OPERATOR','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.updateThresholds)
 // ENV-FR-020 — reset về ngưỡng mặc định hệ thống do Admin cấu hình (system_settings, SYSTEM-FR-002)
 router.put ('/zones/:zoneId/thresholds/reset', requireRole('FARM_OWNER','FARM_OPERATOR','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.resetThresholds)
+// ENV-FR-021 — hệ số bộ điều khiển mờ (gửi xuống ESP32 qua config/update), cùng quyền với ngưỡng
+router.put ('/zones/:zoneId/fuzzy-tuning', requireRole('FARM_OWNER','FARM_OPERATOR','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.updateFuzzyTuning)
 
 export default router

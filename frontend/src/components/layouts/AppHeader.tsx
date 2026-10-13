@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useZoneStore } from '@/stores/zoneStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { usePermission } from '@/hooks/common/usePermission'
@@ -19,9 +19,11 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
   return { label: match?.label ?? 'SwiftletCare', to: match?.path ?? pathname }
 }
 
-/** Toggle ngôn ngữ hiển thị — UI tĩnh, chưa gắn i18n thật (chưa có hệ thống dịch đa ngôn ngữ trong app). */
+/** Toggle ngôn ngữ hiển thị — ghi vào languageStore; màn nào có từ điển (useT) sẽ đổi theo, màn khác giữ tiếng Việt. */
 function LanguageToggle() {
-  const [lang, setLang] = useState<'VI' | 'EN'>('VI')
+  const lang = useLanguageStore(s => s.lang === 'vi' ? 'VI' : 'EN')
+  const setStoreLang = useLanguageStore(s => s.setLang)
+  const setLang = (l: 'VI' | 'EN') => setStoreLang(l === 'VI' ? 'vi' : 'en')
 
   return (
     <div className="group/lang relative">

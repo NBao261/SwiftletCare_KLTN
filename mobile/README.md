@@ -1,6 +1,12 @@
 # SwiftletCare Mobile
 
-Expo Router (React Native) app cho Farm Owner/Technician. **Lưu ý kiến trúc:** SRS §3.2 mô tả "Mobile Web (PWA)" dùng ReactJS/Vite (cùng codebase `frontend/`), trong khi thư mục này là app Expo/React Native riêng biệt. Đây là sai khác giữa SRS và code thực tế — nhóm cần thống nhất lại: hoặc cập nhật SRS để phản ánh app native, hoặc chuyển hướng sang PWA responsive từ `frontend/` và deprecate thư mục này.
+> **Phạm vi v2.0.0 (sau Review 1).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; `SwiftletCare_SRS.md` mục 0 là căn cứ. Việc phải sửa ở mobile (chi tiết ở SRS mục 0.5):
+>
+> - Đồng bộ enum: role `DOMAIN_EXPERT` thay `FARM_OPERATOR`, loại cảnh báo `NOISE_ANOMALY` thay `BIRD_PANIC`; bỏ tùy chọn kênh Zalo/SMS và relay sưởi.
+> - Đăng ký FCM token và nhận push; màn hình live stream có khung; Farm Owner đọc kết luận của chuyên gia.
+> - Domain Expert: tối thiểu xem dashboard và báo cáo sức khỏe Zone; thao tác kiểm chứng/tinh chỉnh ưu tiên làm trên web.
+
+Expo Router (React Native) app cho Farm Owner, Domain Expert và Technician. Đây là "Mobile App" trong phiếu đăng ký bản sửa; SRS v2.0.0 mục 3.2 và 7.6 đã ghi nhận app React Native này (web vẫn là PWA riêng trong `frontend/`).
 
 ## Chạy local
 

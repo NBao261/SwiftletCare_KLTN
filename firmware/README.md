@@ -1,5 +1,15 @@
 # SwiftletCare Firmware (ESP32)
 
+> **Phạm vi v2.0.0 (sau Review 1).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; `SwiftletCare_SRS.md` mục 0 là căn cứ. Firmware còn theo phạm vi v1.24.0 và các mô tả bên dưới phản ánh code hiện tại. Việc phải sửa (chi tiết ở SRS mục 0.5):
+>
+> - ENV-FR-011: quạt chỉ theo nhiệt độ + độ ẩm — bỏ NH3/CO2 khỏi bộ mờ và bỏ chốt "khí vượt max thì ép quạt 100%" (`pid/FuzzyControl.cpp`, `rawGasOverMax` trong `pid/PIDController.cpp`); sửa `test/test_fuzzy`. `backend/src/utils/fuzzyModel.util.ts` phải sửa cùng lúc.
+> - ENV-FR-012: bỏ sưởi — gỡ `runHeatingControl` và override `heating`; kênh IN4 (GPIO14) để dự phòng.
+> - THREAT-FR-011: khi `PUMP_DRY` thì ngừng phun sương tới hết đợt (hiện chỉ báo).
+> - THREAT-FR-013: xác nhận và viết test cho trạng thái an toàn khi cảm biến nhiệt-ẩm mất hoặc sai.
+> - THREAT-FR-007: đổi loại cảnh báo `BIRD_PANIC` thành `NOISE_ANOMALY`.
+> - ENV-FR-023 (phần cứng): công tắc 3 vị trí Auto/Off/Hand cho bơm và quạt.
+> - EXPERT-FR-008: nhận 5 tham số phát hiện qua `config/update` (`noise_margin_db`, `noise_min_sec`, `pump_dry_on_sec`, `pump_dry_min_rise_pct`, `speaker_drop_pct`), lưu NVS và tự kẹp khoảng — thay cho hằng số trong code.
+
 PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `SwiftletCare_Components_Guide_v3.11.md`. Checklist lắp đặt: `SwiftletCare_TASK_DETAIL_Checklist.md` mục A.
 
 ## Build / Nạp firmware
@@ -18,8 +28,10 @@ Cấu hình WiFi/MQTT/Farm-House-Zone ID: sửa `src/config/Config.cpp` (dev) ho
 ```
 src/
   config/   Pin mapping, ngưỡng mặc định, lịch loa ru (Config.h/.cpp)
-  sensors/  Đọc 5 cảm biến RS485 Modbus (SensorManager) — Guide §5
-  pid/      Closed-loop on-off control 4 relay + threat flags (PIDController)
+  sensors/  Đọc 5 cảm biến RS485 Modbus (SensorManager) — Guide §5; SignalFilter (lọc đầu vào
+            bộ mờ), PanicDetector (BIRD_PANIC theo dB)
+  pid/      Điều khiển 4 relay + threat flags (PIDController); phun sương + quạt
+            dùng logic mờ Sugeno + time-proportioning (FuzzyControl, C++ thuần)
   audio/    DFPlayer Mini — loa ru dẫn dụ theo lịch (AudioManager) — Guide §10-12
   mqtt/     Publish telemetry/heartbeat/relay status, subscribe command (§9.2)
   storage/  NVS (config) + SPIFFS (buffer offline, REL-NFR-003)
@@ -40,5 +52,21 @@ src/
 ## Test
 
 ```bash
-pio test -e native   # unit test host (không cần board thật)
+pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy, test_filter, test_panic
 ```
+
+Env `native` chỉ build `src/pid/FuzzyControl.cpp` (không phụ thuộc Arduino) và cần **g++ trên máy** — Windows: cài MinGW-w64 (vd `choco install mingw`) rồi thêm vào PATH.
+
+## Điều khiển mờ (ENV-FR-010/011, firmware 1.1.0)
+
+- **Phun sương** = f(độ ẩm, nhiệt độ), **quạt** = f(nhiệt độ, độ ẩm, NH3, CO2) → % công suất 0-100 (Sugeno bậc 0, luật xem `FuzzyControl.h`). Điểm gãy tập mờ suy ra từ ngưỡng `Config` nên chỉnh ngưỡng qua MQTT `config/update` vẫn có tác dụng.
+- Relay chỉ bật/tắt nên % được áp bằng time-proportioning: BẬT `duty × cửa sổ` đầu mỗi cửa sổ (mặc định 120s); quạt lệch nửa cửa sổ so với phun sương.
+- **4 hệ số chỉnh được lúc chạy** qua `config/update`, lưu NVS, kẹp vào khoảng hợp lệ (ENV-FR-021): `fuzzy_humidity_band` (2–20 %RH, mặc định 8), `fuzzy_temp_band` (1–10 °C, 4), `fuzzy_fan_dry_level` (0–100 %, 40), `fuzzy_window_sec` (60–600 s, 120). Mặc định cho ra đúng hàm thuộc gốc. Chỉnh trên web: trang Analytics → "Hiệu quả điều khiển" → "Chỉnh hệ số".
+- NH3/CO2 vượt max luôn ép quạt 100%. Sưởi vẫn theo ngưỡng `temp_min`.
+- % gửi lên trong telemetry `control_output {misting, ventilation}`; dashboard web hiển thị trên gauge relay.
+- PUMP_DRY: 5 phút relay BẬT **cộng dồn** trong 1 đợt phun mà ẩm không tăng > 2%.
+
+## Lọc đầu vào + phát hiện chim hoảng (firmware 1.2.0)
+
+- `sensors/SignalFilter`: median 5 mẫu + Kalman vô hướng cho nhiệt/ẩm/NH3/CO2 ở 1 Hz (sensorTask). **Chỉ bộ mờ dùng giá trị lọc**; telemetry vẫn gửi giá trị thô, chốt an toàn NH3/CO2 xét trên giá trị thô. Tắt/bật qua `config/update` key `fuzzy_input_filter` (NVS `fzFilter`) để so sánh A/B (ENV-FR-022).
+- `sensors/PanicDetector`: BIRD_PANIC theo mức dB (ES-NOISE-01 không có dạng sóng) — **24 mức nền, mỗi giờ trong ngày một mức** (phân vị 90 tự học khi loa tắt, nên giờ chim ra/vào tổ vốn ồn không bị báo nhầm); ồn > mức của giờ đó + 15 dB trong ≥ 10/15 giây → MEDIUM (THREAT-FR-007). Bỏ qua khi loa đang phát (theo trạng thái loa thật: lịch đổi giờ, nghe thử, bật tay). Giờ chưa học đủ ~1 giờ dữ liệu hoặc chưa có NTP thì chưa đánh giá; mức nền nằm trong RAM nên khởi động lại phải học lại ~1 ngày. Ngưỡng là hằng số trong `PanicDetector.h`, cần hiệu chỉnh bằng dữ liệu thật.

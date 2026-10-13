@@ -1,6 +1,6 @@
 // Payload sự kiện WebSocket (§9.3) — khớp các emit*() bên backend socket/index.ts.
 
-import type { ControlMode, DeviceStatus, RelayName, RelayStates } from '@/types/device.types'
+import type { ControlMode, ControlOutput, DeviceStatus, RelayName, RelayStates } from '@/types/device.types'
 import type { AlertSeverity, AlertType } from '@/types/alert.types'
 import type { SessionType } from '@/types/vision.types'
 
@@ -8,7 +8,7 @@ import type { SessionType } from '@/types/vision.types'
 export interface TelemetryUpdateEvent {
   zoneId: string; temperature: number; humidity: number
   light: number; nh3: number; co2: number; sound: number
-  relayStates: RelayStates; controlMode: ControlMode; timestamp: string
+  relayStates: RelayStates; controlMode: ControlMode; controlOutput?: ControlOutput; timestamp: string
 }
 
 export interface RelayUpdateEvent {
@@ -22,6 +22,11 @@ export interface DeviceStatusChangeEvent {
 export interface BirdCountUpdateEvent {
   zoneId: string; entryCount: number; exitCount: number
   sessionType: SessionType; timestamp: string
+}
+
+/** TICKET-FR-017 — đổi Technician phụ trách giữa cuộc trò chuyện (id người cũ/mới, null = chưa có) */
+export interface TicketChatAssigneeChangedEvent {
+  ticketId: string; from: string | null; to: string | null
 }
 
 export interface AlertNewEvent {

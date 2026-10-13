@@ -3,7 +3,8 @@
  *
  * FreeRTOS Tasks:
  *   - SensorTask  : Read 5 RS485 Modbus sensors every 10s (ENV-FR-001..003)
- *   - PIDTask     : Closed-loop control + speaker schedule + threat detect
+ *   - PIDTask     : Closed-loop control (logic mờ phun sương/quạt, ngưỡng
+ *                   sưởi) + speaker schedule + threat detect
  *                   (ENV-FR-010..019, THREAT-FR-006, 011, 013)
  *   - MQTTTask    : Publish telemetry, subscribe commands (ENV-FR-015, §9.2)
  *
@@ -19,7 +20,9 @@
 #include "config/Secrets.h"
 #include "mqtt/MQTTManager.h"
 #include "pid/PIDController.h"
+#include "sensors/PanicDetector.h"
 #include "sensors/SensorManager.h"
+#include "sensors/SignalFilter.h"
 #include "storage/StorageManager.h"
 #include "wifi/WiFiProvisioner.h"
 #include <Arduino.h>
@@ -44,6 +47,16 @@ TaskHandle_t mqttTaskHandle = NULL;
 SemaphoreHandle_t dataMutex;
 SensorData latestSensorData;
 RelayState relayState;
+
+// ENV-FR-022: giá trị đã lọc (median+Kalman) CHỈ dùng làm đầu vào bộ điều khiển
+// mờ; telemetry/dashboard/phát hiện bất thường vẫn dùng latestSensorData thô.
+struct FilteredEnv {
+  float temperature, humidity, nh3Ppm, co2Ppm;
+  bool ready = false;
+};
+FilteredEnv latestFiltered;
+// THREAT-FR-007: trạng thái PanicDetector (tính mỗi mẫu 1 Hz trong sensorTask)
+bool birdPanicActive = false;
 
 // MQTT topic base "swiftletcare/{farmId}/{houseId}/{zoneId}" — tính 1 lần
 // trong setup() (đơn luồng, trước khi tạo task nào), SAU KHI đã nạp
@@ -209,8 +222,28 @@ void sensorTask(void *pvParameters) {
 
     SensorData data = SensorManager::readAll();
 
+    // Bộ lọc + PanicDetector chạy ở nhịp đọc cảm biến (1 Hz) — pidTask 10s sẽ
+    // bỏ lỡ phần lớn mẫu. static: chỉ task này dùng.
+    static SignalFilter fTemp, fHum, fNh3, fCo2;
+    static PanicDetector panic;
+    FilteredEnv filtered;
+    filtered.temperature = fTemp.update(data.temperature);
+    filtered.humidity = fHum.update(data.humidity);
+    filtered.nh3Ppm = fNh3.update(data.nh3Ppm);
+    filtered.co2Ppm = fCo2.update(data.co2Ppm);
+    filtered.ready = fTemp.ready() && fHum.ready();
+
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       latestSensorData = data;
+      latestFiltered = filtered;
+      // Loa ru đang phát (lịch hoặc nghe thử) thì ồn là do loa, không phải chim
+      bool speakerActive = AudioManager::isPlaying() || relayState.speaker;
+      // Giờ địa phương (configTime GMT+7) — mỗi giờ trong ngày có mức ồn nền riêng;
+      // NTP chưa đồng bộ → -1, detector không đánh giá
+      time_t nowT = time(nullptr);
+      struct tm lt;
+      int hour = (nowT > 1700000000 && localtime_r(&nowT, &lt)) ? lt.tm_hour : -1;
+      birdPanicActive = panic.update(data.noiseOk ? data.soundDb : NAN, speakerActive, hour);
       xSemaphoreGive(dataMutex);
     }
 
@@ -233,9 +266,23 @@ void pidTask(void *pvParameters) {
     esp_task_wdt_reset();
 
     SensorData data;
+    FilteredEnv filtered;
+    bool birdPanic = false;
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       data = latestSensorData;
+      filtered = latestFiltered;
+      birdPanic = birdPanicActive;
       xSemaphoreGive(dataMutex);
+    }
+
+    // ENV-FR-022: đầu vào bộ mờ = giá trị lọc (nếu bật và bộ lọc đã có dữ liệu),
+    // cờ *Ok vẫn theo lần đọc thô — cảm biến lỗi vẫn bị loại khỏi quyết định.
+    SensorData control = data;
+    if (Config::fuzzyInputFilter && filtered.ready) {
+      control.temperature = filtered.temperature;
+      control.humidity = filtered.humidity;
+      control.nh3Ppm = filtered.nh3Ppm;
+      control.co2Ppm = filtered.co2Ppm;
     }
 
     // relayState bị đọc/ghi đồng thời bởi mqttTask (onRelayCommand, publish
@@ -261,14 +308,17 @@ void pidTask(void *pvParameters) {
         // Check manual override expiry (ENV-FR-018)
         PIDController::checkOverrideExpiry(relayState);
 
-        // Run closed-loop control (ENV-FR-010..012)
-        PIDController::runHumidityControl(data.humidity, relayState);
-        PIDController::runVentilationControl(data, relayState);
+        // Run closed-loop control (ENV-FR-010..012): phun sương + quạt theo
+        // logic mờ, sưởi theo ngưỡng
+        PIDController::runHumidityControl(control.humidity,
+                                          control.temperature, relayState);
+        PIDController::runVentilationControl(control, data, relayState);
         PIDController::runHeatingControl(data.temperature, relayState);
 
         // Threat detection (THREAT-FR-006, 011, 013)
         threats = PIDController::handleThreatAlerts(
             data, relayState, AudioManager::isPlaying());
+        threats.birdPanic = birdPanic;
         haveThreats = true;
       }
 
@@ -277,7 +327,8 @@ void pidTask(void *pvParameters) {
 
     if (haveThreats) {
       static bool speakerReported = false, pumpReported = false,
-                  sensorReported = false, busReported = false;
+                  sensorReported = false, busReported = false,
+                  panicReported = false;
       reportOnRise(threats.speakerFailure, speakerReported, "SPEAKER_FAILURE",
                    "CRITICAL", "Amplitude dB không tăng khi loa ru đang phát");
       // pumpDry chỉ true đúng 1 chu kỳ mỗi đợt phun (PIDController) — nếu gửi
@@ -286,6 +337,11 @@ void pidTask(void *pvParameters) {
                    "Misting ON 5 phút nhưng độ ẩm không tăng");
       reportOnRise(threats.sensorFault, sensorReported, "SENSOR_FAULT",
                    "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");
+      // MEDIUM (không phải HIGH): phát hiện chỉ theo dB, ngưỡng chưa hiệu chỉnh
+      // bằng dữ liệu thật — HIGH sẽ bị alertEscalation tự tạo ticket sau 15'.
+      reportOnRise(threats.birdPanic, panicReported, "BIRD_PANIC", "MEDIUM",
+                   "Tiếng ồn tăng đột biến kéo dài khi loa không phát — "
+                   "nghi chim hoảng loạn");
       reportOnRise(threats.busFailure, busReported, "RS485_BUS_FAILURE",
                    "CRITICAL",
                    "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");

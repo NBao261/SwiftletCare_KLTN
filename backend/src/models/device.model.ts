@@ -14,8 +14,6 @@ export interface ISensorNode extends Document {
    * `firmware_version` mới để xác nhận thành công (bước 5).
    */
   ota_pending?: { version: string; url: string; requested_at: Date; requested_by?: Types.ObjectId }
-  /** Lúc backend đẩy ngưỡng của Zone xuống thiết bị (lần đầu nó lên mạng) */
-  config_pushed_at?: Date
   /** Lần OTA gần nhất quá hạn xác nhận — thiết bị vẫn chạy `running_version` (đã rollback) */
   ota_failed?: { version: string; failed_at: Date; running_version: string }
   last_heartbeat?: Date
@@ -48,6 +46,26 @@ export interface ISensorNode extends Document {
   decommission_reason?: string
   /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
+  /**
+   * TICKET-FR-018 (v1.24.0) — thời gian chạy + số lần đóng cắt thật của bơm/quạt,
+   * cộng dồn mỗi giờ từ telemetry (relayUsage.service). `since_service_*` về 0 mỗi
+   * lần sinh ticket bảo trì theo thời gian chạy.
+   */
+  relay_usage: {
+    misting: IRelayUsage
+    ventilation: IRelayUsage
+    counted_until?: Date
+    last_misting_on?: boolean
+    last_ventilation_on?: boolean
+  }
+}
+
+export interface IRelayUsage {
+  on_hours: number
+  switches: number
+  since_service_hours: number
+  since_service_switches: number
+  last_ticket_id?: Types.ObjectId
 }
 
 export interface ICameraNode extends Document {
@@ -71,6 +89,14 @@ export interface ICameraNode extends Document {
   decommission_reason?: string
   /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
+}
+
+const relayUsageSchema = {
+  on_hours:               { type: Number, default: 0 },
+  switches:               { type: Number, default: 0 },
+  since_service_hours:    { type: Number, default: 0 },
+  since_service_switches: { type: Number, default: 0 },
+  last_ticket_id:         { type: Schema.Types.ObjectId, ref: 'Ticket' },
 }
 
 const sensorNodeSchema = new Schema<ISensorNode>(
@@ -122,10 +148,16 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     registered_at:   { type: Date, default: Date.now },
     registered_by:   { type: Schema.Types.ObjectId, ref: 'User' },
     activation_overdue_at: { type: Date },
-    config_pushed_at:    { type: Date },
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },
     replaced_by:         { type: Schema.Types.ObjectId },
+    relay_usage: {
+      misting:             relayUsageSchema,
+      ventilation:         relayUsageSchema,
+      counted_until:       { type: Date },
+      last_misting_on:     { type: Boolean },
+      last_ventilation_on: { type: Boolean },
+    },
   },
   { timestamps: false }
 )

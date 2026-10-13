@@ -183,7 +183,7 @@ function buildColumns(onOpenAlert: (row: LogRow) => void): DataTableColumn<Table
 }
 
 function buildActionItems(row: LogRow, onOpenAlert: (row: LogRow) => void): ActionsMenuItem[] {
-  return [{ label: 'Xem trên trang Cảnh báo', onClick: () => onOpenAlert(row) }]
+  return [{ label: 'Chi tiết', onClick: () => onOpenAlert(row) }]
 }
 
 /** "Nhật Ký Cảnh Báo & Giám Sát Cảm Biến Realtime" — bảng full-width cuối Dashboard (screenshot mục 5). */

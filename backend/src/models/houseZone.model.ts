@@ -1,6 +1,7 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
-import type { Thresholds } from '@/types'
+import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
+import type { FuzzyTuning, Thresholds } from '@/types'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
@@ -21,6 +22,13 @@ export interface IThresholdHistoryEntry {
   source: 'MANUAL' | 'RESET_TO_DEFAULT'
 }
 
+export interface IFuzzyTuningHistoryEntry {
+  changed_by: Types.ObjectId
+  changed_at: Date
+  old_values: Partial<FuzzyTuning>
+  new_values: Partial<FuzzyTuning>
+}
+
 export interface IZone extends Document {
   _id: Types.ObjectId
   house_id: Types.ObjectId
@@ -30,6 +38,9 @@ export interface IZone extends Document {
   floor: number
   thresholds: Thresholds
   threshold_history: IThresholdHistoryEntry[]
+  /** ENV-FR-021 — hệ số bộ điều khiển mờ của mọi ESP32 trong Zone, gửi qua config/update */
+  fuzzy_tuning: FuzzyTuning
+  fuzzy_tuning_history: IFuzzyTuningHistoryEntry[]
 }
 
 const houseSchema = new Schema<IHouse>(
@@ -63,6 +74,19 @@ const zoneSchema = new Schema<IZone>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
       source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT'] },
+    }],
+    fuzzy_tuning: {
+      fuzzy_humidity_band: { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_humidity_band },
+      fuzzy_temp_band:     { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_temp_band },
+      fuzzy_fan_dry_level: { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_fan_dry_level },
+      fuzzy_window_sec:    { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_window_sec },
+      fuzzy_input_filter:  { type: Boolean, default: DEFAULT_FUZZY_TUNING.fuzzy_input_filter },
+    },
+    fuzzy_tuning_history: [{
+      changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_at: { type: Date },
+      old_values: { type: Schema.Types.Mixed },
+      new_values: { type: Schema.Types.Mixed },
     }],
   },
   { timestamps: { createdAt: 'created_at' } }

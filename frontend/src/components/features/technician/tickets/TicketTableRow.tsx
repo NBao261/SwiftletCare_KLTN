@@ -4,8 +4,9 @@
 import { memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ActionsMenu, { type ActionsMenuItem } from '@/components/ui/ActionsMenu'
-import { IconSortAsc, IconSortDesc } from '@/components/ui/icons'
-import { isSlaBreached } from './ticketHelpers'
+import { ArrowUpNarrowWide, ArrowDownWideNarrow } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
+import { isSlaBreached, isTicketAssignee } from './ticketHelpers'
 import { PRIORITY_DOT_CLS, STATUS_DOT_CLS } from './ticketListTypes'
 import { SlaRing } from './SlaRing'
 import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
@@ -16,8 +17,8 @@ import type { Ticket, TicketType } from '@/types'
 function SortIconIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
   if (!active) return null
   return dir === 'asc'
-    ? <IconSortAsc width={12} height={12} className="ml-1 inline-block" />
-    : <IconSortDesc width={12} height={12} className="ml-1 inline-block" />
+    ? <ArrowUpNarrowWide size={12} strokeWidth={1.6} className="ml-1 inline-block" />
+    : <ArrowDownWideNarrow size={12} strokeWidth={1.6} className="ml-1 inline-block" />
 }
 
 // Export SortIcon để TicketTableView dùng trong header
@@ -40,11 +41,15 @@ export const TicketTableRow = memo(function TicketTableRow({
   const dotCls = PRIORITY_DOT_CLS[ticket.priority] ?? PRIORITY_DOT_CLS.P3
   const statusDotCls = STATUS_DOT_CLS[ticket.status] ?? 'bg-warmGray'
 
+  const userId = useAuthStore(s => s.user?._id)
+  // BE assertAssignee: chỉ Technician đang được gán mới xử lý được — ticket ở hàng đợi chung / của người khác chỉ xem
+  const canAct = isTicketAssignee(ticket, userId)
+
   const actionItems: ActionsMenuItem[] = []
-  if (ticket.status === 'NEW') {
+  if (canAct && ticket.status === 'NEW') {
     actionItems.push({ label: 'Tiếp nhận', onClick: () => onUpdateStatus(ticket) })
   }
-  if (ticket.status !== 'CLOSED') {
+  if (canAct && ticket.status !== 'CLOSED') {
     actionItems.push({ label: 'Cập nhật', onClick: () => onUpdateStatus(ticket) })
     actionItems.push({ label: 'Gán lại', onClick: () => onReassign(ticket) })
   }
@@ -92,7 +97,7 @@ export const TicketTableRow = memo(function TicketTableRow({
 
       {/* Actions — chặn click không lan ra row */}
       <td className="py-3 pr-5 text-center" onClick={e => e.stopPropagation()}>
-        <ActionsMenu items={actionItems} />
+        {actionItems.length > 0 ? <ActionsMenu items={actionItems} /> : <span className="text-xs text-warmGray/60">—</span>}
       </td>
     </tr>
   )

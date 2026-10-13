@@ -17,11 +17,11 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
 
 /** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
 export const setUserStatus = asyncHandler(async (req: Request, res: Response) => {
-  const { user, openTickets } = await adminService.setUserStatus(
+  const { user, openTickets, openTicketIds } = await adminService.setUserStatus(
     req.user._id, req.params.id, req.body.is_active as boolean, req.body.reason as string | undefined,
   )
-  // Khoá Technician còn ticket đang giao: báo số ticket để Admin gán lại
-  res.json({ success: true, data: user, ...(openTickets ? { meta: { openTickets } } : {}) })
+  // Khoá Technician còn ticket đang giao: báo số ticket + id để Admin gán lại
+  res.json({ success: true, data: user, ...(openTickets ? { meta: { openTickets, openTicketIds } } : {}) })
 })
 
 /** GET /admin/delete-requests – AUTH-FR-012 */
@@ -49,10 +49,16 @@ export const createTechnician = asyncHandler(async (req: Request, res: Response)
 
 /** PUT /admin/technicians/:id/regions – AUTH-FR-005c, Flow 21 case 4a-x */
 export const updateTechnicianRegions = asyncHandler(async (req: Request, res: Response) => {
-  const technician = await adminService.updateTechnicianRegions(
+  const { technician, rerouted, unassigned } = await adminService.updateTechnicianRegions(
     req.user._id, req.params.id, req.body.assigned_regions as string[],
   )
-  res.json({ success: true, data: technician })
+  // Gỡ vùng làm ticket đang mở ở vùng đó mất người xử lý — báo lại Admin những
+  // ticket đã được điều phối sang người khác và những ticket không còn ai nhận
+  res.json({
+    success: true,
+    data: technician,
+    ...(rerouted.length || unassigned.length ? { meta: { rerouted, unassigned } } : {}),
+  })
 })
 
 /** POST /admin/provisioned-devices – FARM-FR-003 (secret_key chỉ trả về 1 lần để in nhãn) */

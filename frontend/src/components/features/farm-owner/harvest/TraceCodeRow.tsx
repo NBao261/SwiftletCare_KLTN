@@ -1,23 +1,65 @@
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui";
-import { useToastStore } from "@/stores/toastStore";
 
+/**
+ * TraceCodeRow – mã QR truy xuất nguồn gốc (MARKET-FR-004), dùng để in lên bao
+ * bì cho khách quét. Sinh QR hoàn toàn phía client (thư viện `qrcode`, không
+ * gọi dịch vụ ngoài) — không hiện chuỗi UUID thô ra màn hình, tránh trông như
+ * mã hệ thống/debug bị lộ.
+ */
 export default function TraceCodeRow({ traceCode }: { traceCode: string }) {
-  const push = useToastStore((s) => s.push);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrFailed, setQrFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setQrFailed(false);
+    QRCode.toDataURL(traceCode, { width: 160, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [traceCode]);
+
+  function download() {
+    if (!qrDataUrl) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = "ma-qr-truy-xuat-nguon-goc.png";
+    a.click();
+  }
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-warmGray/5 px-4 py-2.5">
-      <div className="min-w-0">
-        <p className="label-caption">Mã truy xuất nguồn gốc</p>
-        <p className="truncate font-mono text-sm text-charcoal">{traceCode}</p>
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-warmGray/5 px-4 py-3">
+      <div className="flex items-center gap-3">
+        {qrDataUrl ? (
+          <img
+            src={qrDataUrl}
+            alt="Mã QR truy xuất nguồn gốc"
+            width={64}
+            height={64}
+            className="rounded-lg border border-warmGray/15 bg-white p-1"
+          />
+        ) : qrFailed ? (
+          <div className="h-16 w-16 rounded-lg border border-warmGray/15 bg-warmGray/5" />
+        ) : (
+          <div className="h-16 w-16 animate-pulse rounded-lg bg-warmGray/15" />
+        )}
+        <div>
+          <p className="label-caption">Mã QR truy xuất nguồn gốc</p>
+          <p className="text-xs text-warmGray">
+            {qrFailed ? "Không tạo được mã QR, thử mở lại chi tiết" : "In lên bao bì để khách quét tra cứu"}
+          </p>
+        </div>
       </div>
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => {
-          void navigator.clipboard.writeText(traceCode);
-          push("Đã sao chép mã truy xuất");
-        }}
-      >
-        Sao chép
+      <Button variant="secondary" size="sm" onClick={download} disabled={!qrDataUrl}>
+        Tải mã QR
       </Button>
     </div>
   );

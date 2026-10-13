@@ -136,6 +136,18 @@ describe('getHealthOverview', () => {
     expect(overview.users).toMatchObject({ total: 2, active: 1, inactive: 1 })
   })
 
+  it('leaves out tickets of soft-deleted farms, like it already does for farms, zones and devices', async () => {
+    const live = await seedFarm('live')
+    const gone = await seedFarm('gone', true)
+    await Ticket.create({ farm_id: live.farm._id, type: 'OTHER', priority: 'P2', status: 'NEW' })
+    // Ticket của farm đã xoá: không ai mở hay đóng được nữa nên không được tính
+    await Ticket.create({ farm_id: gone.farm._id, type: 'OTHER', priority: 'P1', status: 'IN_PROGRESS' })
+
+    const overview = await getHealthOverview()
+
+    expect(overview.openTickets).toEqual({ total: 1, P1: 0, P2: 1, P3: 0 })
+  })
+
   it('returns zeros on an empty system', async () => {
     const overview = await getHealthOverview()
     expect(overview.farms.total).toBe(0)

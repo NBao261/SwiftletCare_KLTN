@@ -12,6 +12,7 @@ import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { requestContext } from '@/middlewares/requestContext.middleware'
 import logger from '@/utils/logger.util'
 import { parseTrustProxy } from '@/utils/trustProxy.util'
+import { isLocalStorage, localStorageDir } from '@/config/minio.config'
 
 import authRoutes     from '@/routes/auth.route'
 import adminRoutes     from '@/routes/admin.route'
@@ -53,6 +54,15 @@ app.use(requestContext) // IP client cho audit_logs — phải đứng trước 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
+
+// ── File lưu cục bộ (chỉ khi STORAGE_DRIVER=local, thay MinIO lúc dev) ────────
+// helmet mặc định chặn tài nguyên khác origin; <audio> ở frontend :5173 cần đọc được.
+if (isLocalStorage()) {
+  app.use('/files', express.static(localStorageDir(), {
+    setHeaders: res => res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'),
+  }))
+  logger.warn(`STORAGE_DRIVER=local — file lưu tại ${localStorageDir()}, phục vụ công khai ở /files (chỉ dùng cho dev)`)
+}
 
 // ── API Docs (Swagger UI đọc trực tiếp docs/api/api-spec.yaml) ───────────────
 try {

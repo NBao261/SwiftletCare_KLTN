@@ -3,7 +3,7 @@
 // không thông báo sai "đã báo Farm Owner" khi chưa có API nào được gọi.
 // Fix SAT_ITEMS: import từ ticketHelpers thay vì khai báo trùng.
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ticketApi } from '@/apis/shared/tickets.api'
 import { Button } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
@@ -20,6 +20,7 @@ interface Props {
 
 export function Step6SAT({ data, onDone }: Props) {
   const push = useToastStore(s => s.push)
+  const queryClient = useQueryClient()
   const [sat, setSat] = useState<TicketSatChecklist>({
     modbus_addresses_ok: false,
     camera_rtsp_ok:      false,
@@ -39,16 +40,19 @@ export function Step6SAT({ data, onDone }: Props) {
       // Nếu không có (onboard thủ công từ nav, không từ ticket), bỏ qua API call.
       //
       // FIX: dùng data.ticketId (ticket _id) — KHÔNG phải data.deviceDbId (SensorNode _id).
-      // ticketApi.updateSatChecklist(ticketId, sat) cần ticket ID để patch SAT fields trên ticket.
       if (!data.ticketId) return
+      // 1) Lưu SAT đủ 4 mục — BE (TICKET-FR-010) đòi cả 4 mục kể cả camera_rtsp_ok trước khi cho đóng.
       await ticketApi.updateSatChecklist(data.ticketId, sat)
+      // 2) Đóng ticket thật — trước đây nút ghi "Đóng ticket" nhưng chỉ lưu SAT, ticket vẫn mở.
+      await ticketApi.updateStatus(data.ticketId, 'CLOSED', 'Nghiệm thu SAT đạt tại hiện trường qua Onboarding.')
     },
     onSuccess: () => {
-      // Fix: không nói "Đã báo Farm Owner" nếu không có ticketId — Farm Owner chưa được thông báo gì
+      void queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] })
       if (data.ticketId) {
-        push('🎉 Lắp đặt hoàn tất! Vui lòng liên hệ Farm Owner để xác nhận bàn giao.')
+        push('🎉 Lắp đặt hoàn tất — đã đóng ticket. Farm Owner có thể đánh giá trong chi tiết ticket.')
       } else {
-        push('Onboarding hoàn tất. Vào ticket INSTALLATION để cập nhật SAT checklist.')
+        push('Onboarding hoàn tất. Không gắn ticket nên chưa cập nhật SAT — mở ticket INSTALLATION liên quan để nghiệm thu.')
       }
       onDone(data.ticketId || undefined)
     },

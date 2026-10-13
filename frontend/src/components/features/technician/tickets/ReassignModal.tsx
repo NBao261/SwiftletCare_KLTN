@@ -1,11 +1,11 @@
-// ReassignModal.tsx — B2: Yêu cầu gán lại Ticket
+// ReassignModal.tsx — B2: Yêu cầu gán lại Ticket (Flow 9 case 4a, TICKET-FR-005)
 // Fix: Disable khi ticket CLOSED
-// Fix: Gắn nhãn TODO [BE-GAP] — API escalate KHÔNG gán lại ai, chỉ set is_sla_breached=true.
-//      Chức năng reassign thật chưa có endpoint, dùng tạm escalate để ghi nhận yêu cầu.
+// Gọi POST /tickets/:id/reassign-request — router chọn Technician khác trong vùng (loại người xin và những
+// người đã từng bị chuyển khỏi ticket), ticket về NEW; không còn ai phù hợp thì vào hàng đợi chung
+// và Admin được báo. KHÁC `escalate` (chỉ báo Admin, vẫn giữ ticket, không tính vi phạm SLA).
 // Dùng chung: TechnicianTicketsPage + TechnicianTicketDetailPage
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ticketApi } from '@/apis/shared/tickets.api'
+import { useRequestReassign } from '@/hooks/shared/useTickets'
 import { Button, Modal, Textarea } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
@@ -18,25 +18,24 @@ interface Props {
 
 export function ReassignModal({ ticket, onClose }: Props) {
   const push = useToastStore(s => s.push)
-  const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
 
   const isClosed = ticket.status === 'CLOSED'
 
-  // TODO [BE-GAP]: ticketApi.escalate đặt is_sla_breached=true + thêm note,
-  // KHÔNG gán lại Technician. Cần endpoint riêng POST /tickets/:id/reassign-request
-  // khi backend có. Hiện tại: ghi nhận yêu cầu qua note, Admin/Dispatcher xử lý thủ công.
-  //
-  // ⚠️  Tác động thật: gọi API này sẽ đánh dấu ticket này vi phạm SLA trên hệ thống.
-  const mut = useMutation({
-    mutationFn: () => ticketApi.escalate(ticket._id, reason),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      push('Đã báo cáo — Admin sẽ phân công lại thủ công')
-      onClose()
-    },
-    onError: (err) => push(getApiErrorMessage(err, 'Gửi báo cáo thất bại'), 'error'),
-  })
+  const mut = useRequestReassign()
+
+  function handleSubmit() {
+    mut.mutate(
+      { id: ticket._id, reason: reason.trim() },
+      {
+        onSuccess: () => {
+          push('Đã gửi yêu cầu — ticket được chuyển cho Technician khác hoặc vào hàng đợi chung')
+          onClose()
+        },
+        onError: (err) => push(getApiErrorMessage(err, 'Gửi yêu cầu gán lại thất bại'), 'error'),
+      },
+    )
+  }
 
   const isValid = reason.trim().length >= 10
 
@@ -60,36 +59,33 @@ export function ReassignModal({ ticket, onClose }: Props) {
           rows={4}
           disabled={isClosed}
         />
-        <p className={`-mt-2 text-right text-xs ${reason.length < 10 ? 'text-climateOrange' : 'text-warmGray'}`}>
-          {reason.length}/200
+        <p className={`-mt-2 text-right text-xs ${reason.trim().length < 10 ? 'text-climateOrange' : 'text-warmGray'}`}>
+          {reason.trim().length < 10 ? `Còn thiếu ${10 - reason.trim().length} ký tự (tối thiểu 10)` : 'Sẵn sàng gửi'}
         </p>
 
         {!isClosed && (
-          <div className="rounded-xl border border-alertRed/30 bg-alertRed/[0.06] px-4 py-3">
-            <p className="text-sm font-semibold text-alertRed">
-              ⚠️ Lưu ý quan trọng — Tác động thật đến hệ thống
+          <div className="rounded-xl border border-limeMist/40 bg-limeMist/10 px-4 py-3">
+            <p className="text-sm font-semibold text-charcoal">
+              ℹ️ Điều gì sẽ xảy ra sau khi gửi
             </p>
-            <ul className="mt-1.5 flex flex-col gap-1 text-xs text-alertRed/80">
-              <li>• Hành động này sẽ <strong>đánh dấu ticket vi phạm SLA</strong> trên hệ thống ngay lập tức</li>
-              <li>• Admin hoặc Dispatcher sẽ phân công lại thủ công sau khi nhận yêu cầu</li>
-              <li>• Chỉ dùng khi thật sự không thể xử lý ticket này</li>
+            <ul className="mt-1.5 flex flex-col gap-1 text-xs text-charcoal/80">
+              <li>• Hệ thống tự chọn một Technician khác trong khu vực; bạn không còn phụ trách ticket này</li>
+              <li>• Ticket quay về trạng thái “Mới” — người nhận phải tiếp nhận lại từ đầu</li>
+              <li>• Không còn ai phù hợp: ticket vào hàng đợi chung và Admin được báo để điều phối</li>
+              <li>• Không tính là vi phạm SLA. Nếu chỉ cần Admin hỗ trợ mà vẫn giữ ticket, hãy dùng “Báo Admin (Escalate)”</li>
             </ul>
-            <p className="mt-2 text-[11px] text-warmGray">
-              {/* TODO [BE-GAP]: Khi có endpoint reassign thật, thay bằng phân công tự động */}
-              Phân công tự động sẽ khả dụng khi backend có endpoint reassign.
-            </p>
           </div>
         )}
 
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1">Huỷ</Button>
           <Button
-            onClick={() => mut.mutate()}
+            onClick={handleSubmit}
             loading={mut.isPending}
             disabled={!isValid || isClosed}
             className="flex-1"
           >
-            Báo cáo không thể xử lý
+            Gửi yêu cầu gán lại
           </Button>
         </div>
       </div>

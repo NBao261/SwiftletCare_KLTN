@@ -212,6 +212,9 @@ void publishTelemetry(const SensorData &data, const RelayState &relay) {
   doc["relay_states"]["ventilation"] = relay.ventilation;
   doc["relay_states"]["heating"] = relay.heating;
   doc["control_mode"] = relay.anyOverride() ? "MANUAL" : "AUTO";
+  // % công suất bộ điều khiển mờ (ENV-FR-010/011) — dashboard hiển thị live
+  doc["control_output"]["misting"] = relay.mistingPct;
+  doc["control_output"]["ventilation"] = relay.ventilationPct;
 
   String payload;
   serializeJson(doc, payload);

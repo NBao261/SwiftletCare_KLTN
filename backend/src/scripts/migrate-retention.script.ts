@@ -10,12 +10,19 @@
  *    (node_id_1_timestamp_-1, index dedup cũ của alert), tạo index mới.
  * 3. Mỗi sự cố {farm, zone, node, type} chỉ giữ 1 alert đang mở (bản mới nhất,
  *    occurrence_count = số bản trùng), các bản còn lại → RESOLVED.
+ * 4. Đóng ticket đang mở của Farm đã xoá mềm — dữ liệu sinh ra trước khi
+ *    `removeFarm`/xoá tài khoản biết đóng ticket. Không ai mở được chúng nữa
+ *    (kể cả Admin) nhưng chúng vẫn chiếm suất quá tải của Technician và vẫn
+ *    cộng vào báo cáo.
  */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'
 import { Telemetry, TELEMETRY_TTL_SECONDS } from '@/models/telemetry.model'
 import { Alert } from '@/models/alert.model'
+import { Farm } from '@/models/farm.model'
+import { Ticket } from '@/models/ticket.model'
+import { logAction } from '@/services/auditLog.service'
 import logger from '@/utils/logger.util'
 
 async function migrate(): Promise<void> {
@@ -47,6 +54,29 @@ async function migrate(): Promise<void> {
     resolved += res.modifiedCount
   }
   logger.info(`[migrate] Gộp ${groups.length} sự cố, đóng ${resolved} alert trùng`)
+
+  // `.collection` để đi vòng qua hook `pre('find')` của Farm — hook đó luôn ép
+  // is_deleted: false nên không query được chính các farm đã xoá.
+  const deletedFarmIds = await Farm.collection.distinct('_id', { is_deleted: true })
+  const now = new Date()
+  let closedTickets = 0
+  for (const farmId of deletedFarmIds) {
+    const res = await Ticket.updateMany(
+      { farm_id: farmId, status: { $ne: 'CLOSED' } },
+      {
+        $set: { status: 'CLOSED', closed_at: now, cancelled_at: now },
+        $push: { notes: { content: 'Đóng khi dọn dữ liệu: farm của ticket này đã bị xoá', created_at: now } },
+      },
+    )
+    if (res.modifiedCount === 0) continue
+    // 1 bản ghi audit cho mỗi farm (không phải mỗi ticket) để không làm ngập
+    // audit log; cũng không gửi thông báo vì đây là dữ liệu tồn đã cũ.
+    await logAction(undefined, 'TICKET_CLOSED_FARM_DELETED', 'farm', String(farmId), {
+      closedTickets: res.modifiedCount, via: 'migrate:retention',
+    })
+    closedTickets += res.modifiedCount
+  }
+  logger.info(`[migrate] Đóng ${closedTickets} ticket của ${deletedFarmIds.length} farm đã xoá mềm`)
 
   await mongoose.disconnect()
 }

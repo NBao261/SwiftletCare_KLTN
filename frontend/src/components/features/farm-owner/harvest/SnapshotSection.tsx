@@ -2,14 +2,17 @@ import { formatSensor, formatReturnRate } from "@/lib/helpers";
 import type { HarvestBatch } from "@/types";
 
 export default function SnapshotSection({ batch }: { batch: HarvestBatch }) {
-  const { env_snapshot: env, flock_snapshot: flock } = batch;
+  // Dữ liệu cũ (seed/import thủ công, không qua POST /harvests) có thể thiếu
+  // hẳn 2 field này — fallback object rỗng để không crash khi đọc thuộc tính con.
+  const env = batch.env_snapshot ?? {};
+  const flock = batch.flock_snapshot ?? {};
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="rounded-xl border border-warmGray/15 p-4">
         <p className="label-caption mb-2">
           Môi trường TB 7 ngày trước thu hoạch
         </p>
-        {env.insufficient_data ? (
+        {env.insufficient_data || env.avg_temperature === undefined ? (
           <p className="text-sm text-warmGray">
             Chưa đủ dữ liệu (zone mới lắp thiết bị gần đây)
           </p>

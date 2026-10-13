@@ -25,6 +25,15 @@ info:
     và role Sales Staff đã bị loại khỏi hệ thống ở SRS v1.23.0 — bán yến chỉ đi
     qua Module MARKET (Harvests + Marketplace, liên hệ trực tiếp).
 
+    **Phạm vi SRS v2.0.0 (sau Review 1):** file này vẫn mô tả đúng API ĐANG CHẠY.
+    Các thay đổi sắp tới theo SRS mục 0.5 — sửa file này trong cùng PR với code:
+    gỡ toàn bộ `/marketplace/*`; role `FARM_OPERATOR` thành `DOMAIN_EXPERT` (bỏ
+    `zone_ids` và `PUT /farms/{id}/members/{userId}`); bỏ relay `heating`; bỏ kênh
+    Zalo/SMS, thêm Telegram; loại cảnh báo `BIRD_PANIC` thành `NOISE_ANOMALY`;
+    endpoint mới `PUT /alerts/{id}/verdict`, `GET /analytics/autonomy`,
+    `GET /devices/sensor-nodes/{id}/relay-overrides`, `GET /health-reports`,
+    `PUT /health-reports/{id}/conclusion`.
+
 servers:
   - url: http://localhost:3000
     description: Local dev (docker-compose mongodb + emqx)
@@ -426,8 +435,12 @@ paths:
         Khi khoá: thu hồi mọi refresh token và ngắt các kết nối Socket.io đang
         mở của user (kết nối mới bằng access token còn hạn cũng bị từ chối). Nếu
         user là Technician còn ticket đang giao, response kèm
-        `meta.openTickets` (số ticket chưa đóng) để Admin gán lại bằng
-        `PUT /tickets/{id}/admin-override`.
+        `meta.openTickets` (số ticket chưa đóng) và `meta.openTicketIds` (id của
+        chúng, tối đa 100) để Admin gán lại bằng
+        `PUT /tickets/{id}/admin-override`. Khoá tài khoản KHÔNG tự gán lại
+        ticket: người đó vẫn phụ trách khu vực, việc gán lại là quyết định của
+        Admin (khác với khi gỡ hẳn khu vực — xem
+        `PUT /admin/technicians/{id}/regions`).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -450,7 +463,24 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/User" } }
+                  - properties:
+                      data: { $ref: "#/components/schemas/User" }
+                      meta:
+                        type: object
+                        description: Chỉ có khi việc gỡ khu vực làm ticket phải điều phối lại
+                        properties:
+                          rerouted:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                ticketId: { type: string }
+                                from: { type: string }
+                                to: { type: string }
+                          unassigned:
+                            type: array
+                            description: Ticket về hàng đợi chung vì không còn Technician phù hợp
+                            items: { type: string }
         "400":
           description: "Thiếu reason khi khoá tài khoản, hoặc Admin tự khoá chính mình"
           content:
@@ -579,6 +609,15 @@ paths:
         Thay toàn bộ `assigned_regions` (giá trị được trim + bỏ trùng). Có hiệu
         lực ngay ở request kế tiếp của Technician, không cần đăng nhập lại.
         Lưu ý: phải ghi khớp đúng `farms.region` (VD `HCMC` ≠ `Hồ Chí Minh`).
+
+        Khu vực bị gỡ khỏi danh sách: ticket đang mở ở khu vực đó mà Technician
+        này đang được gán sẽ **tự điều phối lại** — quyền trên ticket đi theo
+        `assigned_regions` nên nếu để nguyên, chính người được gán sẽ bị chặn
+        403 trên việc của mình. Ticket được chuyển cho Technician khác trong
+        khu vực (trả về `NEW` để người mới xác nhận tiếp nhận, lịch hẹn cũ bị
+        huỷ trừ ticket `INSTALLATION`/`MAINTENANCE`), hoặc về hàng đợi chung
+        nếu không còn ai. Response kèm `meta.rerouted`
+        (`[{ticketId, from, to}]`) và `meta.unassigned` (`[ticketId]`).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -844,7 +883,10 @@ paths:
                           devices: { $ref: "#/components/schemas/DeviceStatusSummary" }
                           openTickets:
                             type: object
-                            description: Ticket chưa CLOSED theo priority
+                            description: >-
+                              Ticket chưa CLOSED theo priority, chỉ tính Farm chưa xoá mềm —
+                              cùng phạm vi với farms/zones/devices ở trên (ticket của Farm đã
+                              xoá được đóng ngay lúc xoá farm nên không còn tồn tại ở đây)
                             properties:
                               total: { type: integer }
                               P1: { type: integer }
@@ -984,6 +1026,13 @@ paths:
     put:
       tags: [Farms]
       summary: Cập nhật farm (owner/member)
+      description: |
+        `region` chỉ Primary Owner/Admin được đổi (FARM-FR-001) vì nó quyết định
+        Technician nào phụ trách farm và ticket được giao cho ai. Đổi `region`
+        thì ticket đang mở của farm **tự điều phối lại** sang Technician của khu
+        vực mới (hoặc về hàng đợi chung + báo Admin nếu chưa có ai phụ trách khu
+        vực đó) — để nguyên thì người đang được gán bị chặn 403 trên chính
+        ticket của mình.
       requestBody:
         content:
           application/json:
@@ -992,6 +1041,10 @@ paths:
               properties:
                 name: { type: string }
                 address: { type: string }
+                region:
+                  type: string
+                  description: "Khu vực điều phối, phải khớp đúng `users.assigned_regions` của Technician (VD `HCMC`); chỉ Primary Owner/Admin đổi được"
+
                 coordinates:
                   {
                     type: object,
@@ -1024,6 +1077,14 @@ paths:
     delete:
       tags: [Farms]
       summary: Xóa mềm farm — chỉ Primary Owner
+      description: |
+        Farm chỉ bị ẩn (`is_deleted`), dữ liệu lịch sử giữ nguyên. Kéo theo:
+        mọi cảnh báo đang mở của farm được đóng (`RESOLVED`), và mọi **ticket
+        đang mở cũng bị đóng** kèm `cancelled_at` + ghi chú "farm đã bị xoá",
+        Technician đang giữ ticket được thông báo. Lý do: farm đã xoá thì không
+        ai mở được ticket của nó nữa (kể cả Admin), nhưng nếu để mở, chúng vẫn
+        chiếm suất quá tải của Technician trong Ticket Router và vẫn cộng vào
+        `/system/health-overview` cùng tỉ lệ đúng SLA.
       responses:
         "200":
           {
@@ -1412,6 +1473,41 @@ paths:
                   },
               },
           }
+
+  /farms/zones/{zoneId}/fuzzy-tuning:
+    put:
+      tags: [Farms]
+      summary: "Chỉnh hệ số bộ điều khiển mờ của Zone (ENV-FR-021) — FARM_OWNER/FARM_OPERATOR/TECHNICIAN/ADMIN"
+      description: |
+        Gửi 1 hoặc nhiều trong 4 hệ số; server gộp với giá trị hiện tại, kiểm tra khoảng
+        (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `fuzzy_tuning_history`, ghi audit
+        `FUZZY_TUNING_UPDATED` rồi publish MQTT `config/update` (4 key `fuzzy_*`) để mọi ESP32
+        trong Zone áp dụng ngay — không cần nạp lại firmware. Khoá lạ bị bỏ qua.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FuzzyTuning" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Zone" }
+        "400":
+          description: "Hệ số ngoài khoảng hợp lệ / không phải số / body không có hệ số nào"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403":
+          description: "Không có quyền trên Zone này"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
 
   /farms/zones/{zoneId}/thresholds:
     put:
@@ -2032,6 +2128,11 @@ paths:
         Không xoá document: telemetry/alert cũ tham chiếu `node_id` nên vẫn truy
         vấn được. Thiết bị bị ẩn khỏi danh sách/thống kê, heartbeat/telemetry từ
         `device_id` này bị bỏ qua, lệnh relay/ngưỡng/dời zone trả 409.
+
+        Thiết bị **đang ONLINE/DEGRADED** phải gửi kèm `force: true` (409 nếu
+        thiếu) — gỡ một thiết bị còn sống là mất giám sát cả Zone. Cảnh báo còn mở
+        của nó được đóng theo, ticket liên quan được ghi chú, Farm Owner nhận thông
+        báo, và trong **24 giờ** vẫn khôi phục lại được qua `/restore`.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -2040,7 +2141,9 @@ paths:
             schema:
               type: object
               required: [reason]
-              properties: { reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" } }
+              properties:
+                reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" }
+                force: { type: boolean, description: "Bắt buộc khi thiết bị đang ONLINE/DEGRADED — xác nhận chấp nhận mất giám sát của Zone" }
       responses:
         "200":
           description: "Đã gỡ (decommissioned_at được gán)"
@@ -2052,6 +2155,66 @@ paths:
                   - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /devices/sensor-nodes/{id}/restore:
+    post:
+      tags: [Devices]
+      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
+      description: |
+        Xoá `decommissioned_at` và cờ `activation_overdue_at`, đưa thiết bị về
+        `OFFLINE` — hoặc `PENDING` nếu nó chưa từng gửi heartbeat lần nào (vẫn
+        đang chờ kích hoạt, để job kích hoạt quá hạn tiếp tục theo dõi) và cho nó xuất hiện lại trong danh sách/thống kê. Cảnh báo đã đóng
+        lúc gỡ **không** mở lại — nếu sự cố còn, `deviceOffline.job` sẽ sinh cảnh báo mới.
+
+        Từ chối 409 khi: thiết bị chưa bị gỡ, đã quá 24 giờ, `device_id` đã được đăng
+        ký lại cho bản ghi khác, hoặc thiết bị thay thế vẫn đang hoạt động.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Gỡ nhầm thiết bị" } }
+      responses:
+        "200":
+          description: Đã khôi phục
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/camera-nodes/{id}/restore:
+    post:
+      tags: [Devices]
+      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string } }
+      responses:
+        "200":
+          description: Đã khôi phục
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/CameraNode" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
 
   /devices/sensor-nodes/{id}/replace:
@@ -2146,6 +2309,15 @@ paths:
     post:
       tags: [Devices]
       summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — TECHNICIAN/ADMIN"
+      description: |
+        Cùng quy tắc với `POST /devices/sensor-nodes/{id}/decommission`: không xoá
+        document nên dữ liệu cũ tham chiếu `node_id` vẫn truy vấn được, thiết bị
+        bị ẩn khỏi danh sách/thống kê.
+
+        Camera **đang ONLINE/DEGRADED** phải gửi kèm `force: true` (409 nếu
+        thiếu) — gỡ một camera còn sống là mất giám sát hình ảnh của Zone. Cảnh báo
+        còn mở của nó được đóng theo, ticket liên quan được ghi chú, Farm Owner nhận
+        thông báo, và trong **24 giờ** vẫn khôi phục lại được qua `/restore`.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -2154,10 +2326,12 @@ paths:
             schema:
               type: object
               required: [reason]
-              properties: { reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" } }
+              properties:
+                reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" }
+                force: { type: boolean, description: "Bắt buộc khi camera đang ONLINE/DEGRADED — xác nhận chấp nhận mất giám sát của Zone" }
       responses:
         "200":
-          description: Đã gỡ
+          description: "Đã gỡ (decommissioned_at được gán)"
           content:
             application/json:
               schema:
@@ -2165,6 +2339,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/CameraNode" } }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
   /devices/system-status:
@@ -2466,6 +2641,168 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
+
+  /analytics/control/performance:
+    get:
+      tags: [Analytics]
+      summary: "Hiệu quả bộ điều khiển mờ của Zone (ANALYTICS-FR-008)"
+      description: |
+        Chỉ tính mẫu telemetry có `misting_pct` (firmware ≥ 1.1.0). `series`: độ ẩm, nhiệt độ,
+        % phun, % quạt trung bình theo bucket (tối đa 120 điểm). `stats` (null khi chưa có dữ
+        liệu): % mẫu nằm trong ngưỡng hiện tại của Zone, % phun/quạt trung bình, số lần relay
+        đóng cắt/giờ (null khi dữ liệu < 15 phút). `tuning_changes`: các lần chỉnh hệ số trong khoảng.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: range, in: query, schema: { type: string, enum: [1h, 6h, 24h, 7d, 30d], default: 24h } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          range: { type: string }
+                          from: { type: string, format: date-time }
+                          to: { type: string, format: date-time }
+                          bucketMs: { type: integer }
+                          thresholds:
+                            type: object
+                            properties:
+                              humidity_min: { type: number }
+                              humidity_max: { type: number }
+                              temp_min: { type: number }
+                              temp_max: { type: number }
+                          fuzzy_tuning: { $ref: "#/components/schemas/FuzzyTuning" }
+                          tuning_changes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                changed_at: { type: string, format: date-time }
+                                new_values: { $ref: "#/components/schemas/FuzzyTuning" }
+                          series:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                timestamp: { type: string, format: date-time }
+                                humidity: { type: number, nullable: true }
+                                temperature: { type: number, nullable: true }
+                                misting_pct: { type: number, nullable: true }
+                                ventilation_pct: { type: number, nullable: true }
+                          stats:
+                            type: object
+                            nullable: true
+                            properties:
+                              sampleCount: { type: integer }
+                              humidityInRangePct: { type: number, nullable: true }
+                              temperatureInRangePct: { type: number, nullable: true }
+                              mistingAvgPct: { type: number, nullable: true }
+                              ventilationAvgPct: { type: number, nullable: true }
+                              mistingSwitchesPerHour: { type: number, nullable: true }
+                              ventilationSwitchesPerHour: { type: number, nullable: true }
+                          service_limits:
+                            type: object
+                            description: "TICKET-FR-018 — mốc bảo trì theo thời gian chạy"
+                            properties:
+                              misting: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
+                              ventilation: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
+                          relay_usage:
+                            type: array
+                            description: "Giờ chạy / số lần đóng cắt từ lần bảo trì trước, theo thiết bị"
+                            items:
+                              type: object
+                              properties:
+                                device_id: { type: string }
+                                misting: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
+                                ventilation: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
+        "400":
+          description: "range không hợp lệ"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /analytics/forecast:
+    get:
+      tags: [Analytics]
+      summary: "Dự báo độ ẩm/nhiệt độ 60 phút tới (ANALYTICS-FR-009)"
+      description: |
+        Holt trend tắt dần trên 6 giờ gần nhất gom 5 phút; α, β chọn bằng tìm lưới; `mae30`/`mae60`
+        = sai số tuyệt đối trung bình đánh giá lùi. Mỗi chỉ số là null khi < 2 giờ dữ liệu hoặc mẫu mới
+        nhất cũ hơn 15 phút. `predicted` = chỉ số hiện còn trong ngưỡng nhưng dự báo vượt trong 60 phút.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          horizonMinutes: { type: integer, example: 60 }
+                          bucketMinutes: { type: integer, example: 5 }
+                          humidity: { $ref: "#/components/schemas/MetricForecast" }
+                          temperature: { $ref: "#/components/schemas/MetricForecast" }
+                          thresholds: { type: object }
+                          predicted:
+                            type: object
+                            nullable: true
+                            properties:
+                              metric: { type: string, enum: [humidity, temperature] }
+                              direction: { type: string, enum: [above, below] }
+                              limit: { type: number }
+                              value: { type: number }
+                              minutesAhead: { type: integer }
+
+  /analytics/control/suggestion:
+    get:
+      tags: [Analytics]
+      summary: "Gợi ý hệ số logic mờ từ mô hình học trên dữ liệu thật (ANALYTICS-FR-010)"
+      description: |
+        Hồi quy Δh(10') = a·%phun + b·%quạt + c·(T−T̄) + d trên ≤ 14 ngày, mô phỏng 24 giờ gần nhất với
+        120 bộ hệ số. CHỈ đề xuất, không ghi gì. `suggestion` null kèm `reason` khi < 3 ngày dữ liệu,
+        R² < 0.3, phun sương không làm tăng ẩm, hoặc hệ số hiện tại đã gần tốt nhất.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          current: { $ref: "#/components/schemas/FuzzyTuning" }
+                          suggestion: { allOf: [{ $ref: "#/components/schemas/FuzzyTuning" }], nullable: true }
+                          reason: { type: string, nullable: true }
+                          predicted:
+                            type: object
+                            properties:
+                              inRangeNow: { type: number }
+                              inRangeSuggested: { type: number }
+                              mistingNow: { type: number }
+                              mistingSuggested: { type: number }
+                          model:
+                            type: object
+                            nullable: true
+                            properties:
+                              r2: { type: number }
+                              samples: { type: integer }
+                              days: { type: number }
 
   /analytics/env/compare:
     get:
@@ -3177,6 +3514,10 @@ paths:
       tags: [Tickets]
       summary: "Tạo lịch bảo trì định kỳ (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
       description: |
+        Kỳ trước chưa hoàn thành thì **vẫn** sinh ticket kỳ mới (mỗi chu kỳ là một nghĩa vụ
+        riêng) nhưng cả hai ticket được ghi chú rõ và Admin nhận thông báo điều phối.
+        Lịch trùng nội dung đang hoạt động trên cùng farm/zone bị từ chối 409.
+
         Job chạy đầu mỗi giờ, tạo ticket MAINTENANCE trước hạn `MAINTENANCE_LEAD_DAYS`
         ngày (mặc định 3) qua Ticket Router rồi dời hạn sang chu kỳ kế tiếp.
         `next_due_at` chính là giờ hẹn của ticket sinh ra nên phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai.
@@ -3340,6 +3681,25 @@ paths:
           }
         - { name: assignedToMe, in: query, schema: { type: boolean } }
         - { name: unassigned, in: query, schema: { type: boolean }, description: "TICKET-FR-005 — hàng đợi chung: ticket chưa có Technician" }
+        - {
+            name: slaBreached,
+            in: query,
+            schema: { type: boolean },
+            description: "TICKET-FR-009 — chỉ ticket vượt hạn xử lý: đã bị đánh dấu `is_sla_breached`, hoặc còn mở mà đã qua `sla_resolve_due_at` (job đánh dấu chạy 2 phút/lần). Ticket đã đóng chỉ tính theo cờ",
+          }
+        - {
+            name: search,
+            in: query,
+            schema: { type: string, maxLength: 100 },
+            description: "Tìm không phân biệt hoa thường trong ghi chú ticket (mô tả lúc tạo là ghi chú đầu tiên) và tên farm. Ký tự đặc biệt được hiểu là chữ thường, không phải regex",
+          }
+        - {
+            name: sort,
+            in: query,
+            schema: { type: string, enum: [created_at, sla, status, priority], default: created_at },
+            description: "`sla` = hạn xử lý `sla_resolve_due_at`; `status` theo thứ tự nghiệp vụ NEW → IN_PROGRESS → AWAITING_FIELD_CONFIRMATION → CLOSED",
+          }
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
       responses:
@@ -3371,6 +3731,7 @@ paths:
                   },
               },
           }
+        "422": { description: "search dài quá 100 ký tự, sort/order/slaBreached không hợp lệ" }
 
   /tickets/kpi:
     get:
@@ -3430,6 +3791,39 @@ paths:
                               nullable: true,
                               description: "% ticket đúng SLA trên tổng ticket đã tới hạn (gồm cả ticket quá hạn còn treo), bỏ qua ticket bị huỷ",
                             }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /tickets/stats/me:
+    get:
+      tags: [Tickets]
+      summary: "Thống kê ticket của Technician đang đăng nhập — chỉ TECHNICIAN"
+      description: |
+        Đếm trên toàn bộ DB (không giới hạn theo trang), cùng phạm vi với
+        `GET /tickets?assignedToMe=true` nên `total` khớp `meta.total` của danh
+        sách đó. Quá hạn SLA dùng cùng quy tắc với `slaBreached=true`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          total: { type: integer }
+                          open: { type: integer, description: "Ticket chưa CLOSED" }
+                          by_status:
+                            type: object
+                            properties:
+                              NEW: { type: integer }
+                              IN_PROGRESS: { type: integer }
+                              AWAITING_FIELD_CONFIRMATION: { type: integer }
+                              CLOSED: { type: integer }
+                          sla_breached: { type: integer, description: "Vượt hạn xử lý, kể cả ticket đã đóng" }
+                          sla_breached_open: { type: integer, description: "Vượt hạn xử lý và còn mở — việc cần làm ngay" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /tickets/{id}:
@@ -3727,9 +4121,10 @@ paths:
       summary: "Technician hẹn/dời giờ đến hiện trường kèm lý do (TICKET-FR-004b, Flow 9 bước 6b) — TECHNICIAN được gán/ADMIN"
       description: |
         - `INSTALLATION`/`MAINTENANCE`: dời lịch có sẵn (Farm Owner chọn lúc tạo / sinh từ lịch bảo trì).
-        - Ticket sự cố/`OTHER`: chỉ hẹn được khi ticket đang `IN_PROGRESS` — Technician đã tiếp nhận
-          và chẩn đoán từ xa (TICKET-FR-008), cần xuống hiện trường thì mới hẹn. Từ lúc có lịch hẹn,
-          đóng ticket phải đủ SAT.
+        - Ticket sự cố/`OTHER`: chỉ hẹn được khi ticket đã tiếp nhận (`IN_PROGRESS` hoặc
+          `AWAITING_FIELD_CONFIRMATION`) — Technician chẩn đoán từ xa trước (TICKET-FR-008),
+          cần xuống hiện trường thì mới hẹn. Từ lúc có lịch hẹn, đóng ticket phải đủ SAT;
+          xử lý được từ xa thì huỷ lịch bằng `DELETE` trên chính endpoint này.
         - Giờ hẹn trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai; ticket đã đóng → 409.
         Ghi note ("Hẹn đến hiện trường…" / "Dời lịch hẹn…") + audit `TICKET_VISIT_SCHEDULED`
         (lần đầu) / `TICKET_RESCHEDULED` (dời); Farm Owner và người tạo ticket nhận thông báo.
@@ -3757,12 +4152,43 @@ paths:
         "403": { description: "Không phải Technician đang được gán", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "409": { description: "Ticket đã đóng, hoặc ticket sự cố chưa được tiếp nhận (chưa IN_PROGRESS)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Tickets]
+      summary: "Huỷ buổi đến hiện trường khi xử lý được từ xa (Flow 9 bước 6a) — TECHNICIAN được gán/ADMIN"
+      description: |
+        Xoá `scheduled_visit_at` nên ticket không còn bị đòi checklist nghiệm thu khi đóng.
+        Chỉ áp dụng cho ticket **sự cố**: `INSTALLATION`/`MAINTENANCE` bắt buộc có buổi đến
+        hiện trường nên chỉ dời được lịch (dùng `PUT`). Ghi note + audit `TICKET_VISIT_CANCELLED`,
+        Farm Owner và người tạo ticket được thông báo.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, example: "Reset từ xa là hết lỗi, không cần xuống farm" } }
+      responses:
+        "200":
+          description: Đã huỷ lịch hẹn
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
+        "400": { description: "Ticket lắp đặt/bảo trì — chỉ dời lịch, không huỷ", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Ticket đã đóng hoặc chưa hẹn đến hiện trường", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /tickets/{id}/reassign-request:
     post:
       tags: [Tickets]
       summary: "Technician xin gán lại ticket kèm lý do (Flow 9 case 4a) — TECHNICIAN được gán"
       description: |
+        Lịch hẹn của người cũ bị huỷ theo (Farm Owner được báo) — Technician mới tự hẹn lại.
         Ticket Router chọn Technician khác trong vùng (loại người xin và mọi người
         đã từng bị chuyển khỏi ticket này, bỏ qua người quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại; không còn
         ai → `assigned_to` để trống (hàng đợi chung, `GET /tickets?unassigned=true`)
@@ -3854,6 +4280,9 @@ paths:
     post:
       tags: [Tickets]
       summary: "Farm Owner đánh giá mức hài lòng sau khi đóng ticket (TICKET-FR-011) — FARM_OWNER/FARM_OPERATOR/ADMIN (Operator chỉ ticket mình tạo)"
+      description: |
+        Ticket **đã huỷ** không đánh giá được (409) — không có việc nào được thực hiện để chấm điểm.
+        Mỗi ticket chỉ chấm **một lần**; muốn sửa điểm phải qua Admin (để còn ghi audit).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3929,6 +4358,8 @@ paths:
           quyết định này được ghi `forcedOutOfRegion` vào audit log. `force` chỉ có
           tác dụng khi là boolean `true` (chuỗi `"true"`/`"1"` được ép về `true`,
           `"false"`/`"0"` về `false`).
+        - Đổi `assigned_to` gửi thông báo cho **cả** Technician mới (nhận việc) lẫn người cũ
+          (biết ticket đã chuyển đi); audit ghi `notifiedAssignee`.
         - Đổi `assigned_to` sang người khác mà **không** truyền `status` thì ticket
           quay về `NEW` để người mới xác nhận tiếp nhận; riêng ticket đang `CLOSED`
           bị chặn 409 — muốn mở lại phải nói rõ `status`, tránh ticket vừa `NEW`
@@ -4280,6 +4711,27 @@ components:
         nh3_max: { type: number, example: 25 }
         co2_max: { type: number, example: 1500 }
 
+    FuzzyTuning:
+      type: object
+      description: "ENV-FR-021 — hệ số bộ điều khiển mờ trên ESP32; tên field = key MQTT config/update"
+      properties:
+        fuzzy_humidity_band: { type: number, minimum: 2, maximum: 20, example: 8, description: "%RH — độ rộng vùng chuyển tiếp độ ẩm" }
+        fuzzy_temp_band: { type: number, minimum: 1, maximum: 10, example: 4, description: "°C — độ rộng vùng nóng" }
+        fuzzy_fan_dry_level: { type: number, minimum: 0, maximum: 100, example: 40, description: "% — mức quạt khi nóng mà khô" }
+        fuzzy_window_sec: { type: integer, minimum: 60, maximum: 600, example: 120, description: "giây — cửa sổ time-proportioning" }
+        fuzzy_input_filter: { type: boolean, example: true, description: "ENV-FR-022 — lọc median+Kalman đầu vào bộ mờ (tắt để so sánh A/B)" }
+
+    MetricForecast:
+      type: object
+      nullable: true
+      properties:
+        history: { type: array, items: { type: object, properties: { timestamp: { type: string, format: date-time }, value: { type: number } } } }
+        forecast: { type: array, items: { type: object, properties: { timestamp: { type: string, format: date-time }, value: { type: number } } } }
+        alpha: { type: number }
+        beta: { type: number }
+        mae30: { type: number, nullable: true }
+        mae60: { type: number, nullable: true }
+
     Zone:
       type: object
       properties:
@@ -4298,7 +4750,26 @@ components:
               changed_at: { type: string, format: date-time }
               old_values: { type: object }
               new_values: { type: object }
+        fuzzy_tuning: { $ref: "#/components/schemas/FuzzyTuning" }
+        fuzzy_tuning_history:
+          type: array
+          items:
+            type: object
+            properties:
+              changed_by: { type: string }
+              changed_at: { type: string, format: date-time }
+              old_values: { type: object }
+              new_values: { type: object }
         created_at: { type: string, format: date-time }
+
+    RelayUsage:
+      type: object
+      properties:
+        on_hours: { type: number }
+        switches: { type: integer }
+        since_service_hours: { type: number }
+        since_service_switches: { type: integer }
+        last_ticket_id: { type: string }
 
     RelayStates:
       type: object
@@ -4326,6 +4797,13 @@ components:
     SensorNode:
       type: object
       properties:
+        relay_usage:
+          type: object
+          description: "TICKET-FR-018 (v1.24.0) — giờ chạy + số lần đóng cắt thật của bơm/quạt"
+          properties:
+            misting: { $ref: "#/components/schemas/RelayUsage" }
+            ventilation: { $ref: "#/components/schemas/RelayUsage" }
+            counted_until: { type: string, format: date-time }
         _id: { type: string }
         device_id: { type: string, example: node_001 }
         zone_id: { type: string }
@@ -4382,7 +4860,6 @@ components:
             running_version: { type: string }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
-        config_pushed_at: { type: string, format: date-time, nullable: true, description: "Backend đã đẩy ngưỡng của Zone xuống thiết bị (heartbeat đầu tiên)" }
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống; cảnh báo còn mở của nó được đóng theo" }
         decommission_reason: { type: string, nullable: true }
         replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }
@@ -4428,6 +4905,10 @@ components:
           { type: number, nullable: true, description: "ppm, từ ES-CO2-01" }
         sound_db:
           { type: number, nullable: true, description: "dB, từ ES-NOISE-01" }
+        misting_pct: { type: number, nullable: true, description: "% phun do bộ điều khiển mờ tính (firmware ≥ 1.1.0)" }
+        ventilation_pct: { type: number, nullable: true, description: "% quạt do bộ điều khiển mờ tính (firmware ≥ 1.1.0)" }
+        misting_on: { type: boolean, nullable: true, description: "Relay phun sương lúc lấy mẫu" }
+        ventilation_on: { type: boolean, nullable: true, description: "Relay quạt lúc lấy mẫu" }
         is_anomaly: { type: boolean }
 
     AlertType:
@@ -4444,6 +4925,8 @@ components:
         - EDGE_AI_DEGRADED
         - SENSOR_FAULT
         - RS485_BUS_FAILURE
+        - SENSOR_ANOMALY
+        - FORECAST_BREACH
 
     Alert:
       type: object

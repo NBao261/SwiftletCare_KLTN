@@ -1,6 +1,8 @@
 # SwiftletCare – KLTN FA26
 
 > **Hệ thống tự động hóa và giám sát nhà yến** sử dụng IoT + Edge AI + Cloud
+>
+> **Phạm vi hiện hành:** SRS v2.0.0, theo phiếu đăng ký bản sửa sau Review 1 (`SwiftletCare_SRS.md` mục 0). Code còn theo phạm vi cũ ở nhiều chỗ — danh sách việc cần sửa theo module ở SRS mục 0.5.
 
 [![CI](https://github.com/NBao261/SwiftletCare_KLTN/actions/workflows/ci.yml/badge.svg)](https://github.com/NBao261/SwiftletCare_KLTN/actions)
 
@@ -9,7 +11,7 @@
 ```
 SwiftletCare_KLTN/
 ├── firmware/          # ESP32 PlatformIO – RS485 sensor, PID, MQTT, loa ru
-├── ai-pipeline/       # Raspberry Pi 4 – YOLOv8 + ByteTrack (chưa triển khai)
+├── ai-pipeline/       # Đếm chim yến – YOLOv8 + ByteTrack trên PC/máy chủ (chưa triển khai)
 ├── backend/           # Node.js Express API + MQTT + Socket.io
 ├── frontend/          # React web dashboard (Vite + Tailwind)
 ├── mobile/            # Expo/React Native app
@@ -64,7 +66,7 @@ cd firmware
 "$USERPROFILE/.platformio/penv/Scripts/platformio.exe" run -e esp32dev -t upload
 ```
 
-### 5. AI Pipeline (trên Raspberry Pi, chưa triển khai)
+### 5. AI Pipeline (PC tại nhà yến hoặc máy chủ, chưa triển khai)
 
 ```bash
 cd ai-pipeline
