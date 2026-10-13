@@ -86,7 +86,7 @@ async function seed(withData = true) {
       humidity: h, temperature: temperature[i], nh3_ppm: 4 + i, co2_ppm: 700 + i * 20,
       misting_pct: mistingOn[i] ? 60 : 0, ventilation_pct: 0, misting_on: mistingOn[i], ventilation_on: i === 9,
     })))
-    const alert = (type: string) => ({ farm_id: farm._id, zone_id: zone._id, node_id: node._id, type, severity: 'MEDIUM', title: 't', message: 'm' })
+    const alert = (type: string) => ({ farm_id: farm._id, zone_id: zone._id, node_id: node._id, type, severity: 'MEDIUM', title: 't', message: 'm', created_at: new Date(now - 5 * 60_000) }) // trước mốc kỳ (làm tròn xuống phút)
     await Alert.create([alert('PUMP_DRY'), alert('NOISE_ANOMALY')])
     await Alert.create({ ...alert('PUMP_DRY'), status: 'RESOLVED' }) // cùng loại, đã đóng — vẫn tính là đã phát sinh trong kỳ
     await RelayOverrideLog.create({
@@ -126,6 +126,19 @@ describe('tổng hợp báo cáo (EXPERT-FR-005/007)', () => {
 
     expect(await generateWeeklyReports()).toBe(0)
     expect(await ZoneHealthReport.countDocuments()).toBe(1)
+  })
+})
+
+describe('hai lần chạy chồng nhau không tạo báo cáo trùng', () => {
+  it('cùng một nhịp cron trên 2 instance: chỉ 1 báo cáo và 1 lượt thông báo', async () => {
+    await ZoneHealthReport.init() // chờ unique index tạo xong
+    await seed()
+    const tick = new Date()
+
+    const [a, b] = await Promise.all([generateWeeklyReports(tick), generateWeeklyReports(new Date(tick.getTime() + 500))])
+    expect(a + b).toBe(1)
+    expect(await ZoneHealthReport.countDocuments()).toBe(1)
+    expect((notifyUser as jest.Mock).mock.calls).toHaveLength(2) // chủ farm + chuyên gia, đúng 1 lượt
   })
 })
 

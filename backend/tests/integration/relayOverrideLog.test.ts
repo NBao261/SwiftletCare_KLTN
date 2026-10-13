@@ -212,6 +212,24 @@ describe('bản ghi không bao giờ mở quá hạn của chính nó', () => {
   })
 })
 
+describe('gia hạn override đúng lúc job hết hạn chạy', () => {
+  it('node vừa được gia hạn không bị trả về AUTO và lịch sử mới không bị đóng', async () => {
+    const { node, relay, t } = await seed()
+    await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true }).expect(200)
+    // Job đã ĐỌC node lúc nó còn quá hạn…
+    const stale = { ...(await SensorNode.findById(node._id).lean())!, override_expiry: new Date(Date.now() - 1000) }
+    jest.spyOn(SensorNode, 'find').mockReturnValueOnce({ lean: async () => [stale] } as never)
+    // …nhưng trước khi job GHI, Owner đã gia hạn (DB đang có hạn mới ở tương lai)
+
+    expect(await expireManualOverrides()).toBe(0)
+    const after = (await SensorNode.findById(node._id))!
+    expect(after.control_mode).toBe('MANUAL')
+    expect(after.override_expiry!.getTime()).toBeGreaterThan(Date.now())
+    expect((await RelayOverrideLog.findOne().lean())!.ended_at).toBeNull()
+    jest.restoreAllMocks()
+  })
+})
+
 describe('tỷ lệ thời gian tự động (ANALYTICS-FR-011)', () => {
   it('hợp các khoảng override chồng nhau, cắt theo cửa sổ, tính cả override đang mở', async () => {
     const { owner, farm, zone, node, t } = await seed()

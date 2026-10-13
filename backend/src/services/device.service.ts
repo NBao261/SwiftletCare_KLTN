@@ -898,21 +898,29 @@ export async function expireManualOverrides(): Promise<number> {
     return 0
   }
 
-  await SensorNode.updateMany(
-    { _id: { $in: expired.map(n => n._id) } },
-    { control_mode: 'AUTO', $unset: { override_expiry: 1 } },
-  )
+  // Kiểm lại điều kiện ngay trong lệnh ghi: Owner có thể vừa gia hạn override giữa lúc
+  // đọc và lúc ghi — node đó phải được để yên (không về AUTO, không clear_override, không
+  // đóng lịch sử của override vừa gia hạn).
+  const now = new Date()
+  const results = await Promise.all(expired.map(async n => {
+    const { modifiedCount } = await SensorNode.updateOne(
+      { _id: n._id, control_mode: 'MANUAL', override_expiry: { $lt: now } },
+      { control_mode: 'AUTO', $unset: { override_expiry: 1 } },
+    )
+    return modifiedCount === 1 ? n : null
+  }))
+  const reverted = results.filter((n): n is typeof expired[number] => n !== null)
 
   // Nhiều node có thể cùng zone — dedupe zoneId trước khi tra chain, tránh
   // lặp lại 3 lượt findById (Zone→House→Farm) cho cùng 1 zone nhiều lần.
-  const uniqueZoneIds = [...new Set(expired.map(n => String(n.zone_id)))]
+  const uniqueZoneIds = [...new Set(reverted.map(n => String(n.zone_id)))]
   const chainByZone = new Map(
     await Promise.all(
       uniqueZoneIds.map(async zid => [zid, await findZoneChainOrThrow(zid).catch(() => null)] as const),
     ),
   )
 
-  for (const node of expired) {
+  for (const node of reverted) {
     const chain = chainByZone.get(String(node.zone_id))
     if (!chain) continue
     publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', {
@@ -930,10 +938,10 @@ export async function expireManualOverrides(): Promise<number> {
   }
   // Lịch sử đóng tại đúng hạn override, không phải giờ job chạy (trễ tới ~1 phút mỗi
   // lần sẽ làm lệch tỷ lệ thời gian tự động — ANALYTICS-FR-011)
-  await Promise.all(expired.map(n => closeOverrideLogs([n._id], 'EXPIRED', n.override_expiry ?? new Date())))
+  await Promise.all(reverted.map(n => closeOverrideLogs([n._id], 'EXPIRED', n.override_expiry ?? new Date())))
   // Bản ghi quá hạn mà node đã về AUTO từ trước (không nằm trong `expired`) — xem closeOrphanedOverrideLogs
   await closeOrphanedOverrideLogs()
-  return expired.length
+  return reverted.length
 }
 
 /** ENV-FR-015 — xác nhận trạng thái relay thật từ ESP32 (gọi từ mqtt/handlers/relayStatus.handler.ts) */

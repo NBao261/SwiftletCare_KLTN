@@ -74,6 +74,11 @@
 // Hằng số kỹ thuật chọn tay (bằng thời hạn can thiệp tay mặc định), KHÔNG có nguồn
 // nuôi yến và chưa chỉnh được qua MQTT — đủ dài để bơm khô thật không chạy liên
 // tục, đủ ngắn để một lần báo nhầm không làm nhà yến mất phun sương cả ngày.
+// Vòng điều khiển dùng số đo nhiệt-ẩm hợp lệ gần nhất nếu nó chưa cũ quá số chu kỳ
+// này; cũ hơn mới vào trạng thái an toàn (relay TẮT — THREAT-FR-013). 1 lần đọc RS485
+// lỗi là chuyện thường: nếu tắt relay ngay thì bus chập chờn làm bơm/quạt đóng cắt
+// liên tục. ponytail: 2 chu kỳ (20 s với chu kỳ 10 s) là mốc chọn tay, chưa đo.
+#define CONTROL_INPUT_MAX_AGE_CYCLES 2
 #define PUMP_DRY_RETRY_MIN 30
 #define PUMP_DRY_RETRY_MS (PUMP_DRY_RETRY_MIN * 60000UL)
 // Chuỗi hoá số phút cho câu cảnh báo — đổi PUMP_DRY_RETRY_MIN là nội dung đổi theo

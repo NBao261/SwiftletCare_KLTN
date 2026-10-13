@@ -76,6 +76,8 @@ export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; 
   return { range: query.range, from, to, bucketMs, series, stats: stats ?? null }
 }
 
+/** Phần trăm làm tròn 1 chữ số; null khi không có mẫu nào */
+export const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null)
 /** Biểu thức $group đếm mẫu có `field` nằm trong [min, max] — dùng chung với báo cáo sức khỏe Zone */
 export const inRangeSum = (field: string, min: number, max: number) =>
   ({ $sum: { $cond: [{ $and: [{ $gte: [field, min] }, { $lte: [field, max] }] }, 1, 0] } })
@@ -150,7 +152,6 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
     SensorNode.find({ zone_id: zone._id, ...IN_SERVICE }).select('device_id relay_usage').lean(),
   ])
 
-  const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null)
   const hours = agg ? (agg.lastAt.getTime() - agg.firstAt.getTime()) / 3600_000 : 0
   const perHour = (n: number) => (hours >= 0.25 ? Math.round((n / hours) * 10) / 10 : null) // < 15' dữ liệu: chưa đủ để quy ra /giờ
 

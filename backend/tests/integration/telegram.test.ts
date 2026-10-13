@@ -49,7 +49,8 @@ let seq = 0
 const mkUser = (over: Record<string, unknown> = {}) =>
   User.create({ email: `u${++seq}@test.vn`, password_hash: 'password123', full_name: 'U', role: 'FARM_OWNER', ...over })
 const tokenOf = (u: { _id: unknown }) => jwt.sign({ sub: String(u._id), role: 'FARM_OWNER' }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
-const start = (code: string, chatId = 777) => handleTelegramUpdate({ update_id: 1, message: { text: `/start ${code}`, chat: { id: chatId } } })
+const start = (code: string, chatId = 777, type = 'private') =>
+  handleTelegramUpdate({ update_id: 1, message: { text: `/start ${code}`, chat: { id: chatId, type } } })
 /** Các tin bot đã gửi: [chat_id, text] */
 const sent = () => fetchMock.mock.calls
   .filter(c => String(c[0]).endsWith('/sendMessage'))
@@ -85,12 +86,35 @@ describe('liên kết bot Telegram', () => {
     await User.updateOne({ _id: user._id }, { telegram_link_expires_at: new Date(Date.now() - 1000) })
     await start(code)
     await start('0'.repeat(32))
-    await handleTelegramUpdate({ update_id: 2, message: { text: 'xin chào', chat: { id: 5 } } })
+    await handleTelegramUpdate({ update_id: 2, message: { text: 'xin chào', chat: { id: 5, type: 'private' } } })
 
     expect((await User.findById(user._id))!.telegram_chat_id).toBeUndefined()
     expect(sent().map(m => m.text)).toEqual([
       expect.stringContaining('hết hạn'), expect.stringContaining('hết hạn'), expect.stringContaining('Kết nối Telegram'),
     ])
+  })
+
+  it('/start trong nhóm không liên kết: không gắn chat id của nhóm, không tiêu mã, không lộ email', async () => {
+    const user = await mkUser()
+    const { code } = await link(user)
+
+    await start(code, -100123, 'group')
+    await start(code, -100456, 'supergroup')
+    expect((await User.findById(user._id))!.telegram_chat_id).toBeUndefined()
+    expect(sent().every(m => !m.text.includes(user.email) && m.text.includes('chat riêng'))).toBe(true)
+
+    await start(code) // mã vẫn dùng được trong chat riêng
+    expect((await User.findById(user._id))!.telegram_chat_id).toBe('777')
+  })
+
+  it('một chat chỉ thuộc về một tài khoản: liên kết bằng tài khoản khác thì gỡ khỏi tài khoản cũ', async () => {
+    const first = await mkUser()
+    const second = await mkUser()
+    await start((await link(first)).code)
+    await start((await link(second)).code)
+
+    expect((await User.findById(first._id))!.telegram_chat_id).toBeUndefined()
+    expect((await User.findById(second._id))!.telegram_chat_id).toBe('777')
   })
 
   it('API không lộ chat id hay mã liên kết, chỉ báo đã liên kết; hủy liên kết được', async () => {

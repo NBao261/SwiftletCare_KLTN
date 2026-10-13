@@ -50,9 +50,13 @@ RelayState relayState;
 
 // ENV-FR-022: giá trị đã lọc (median+Kalman) CHỈ dùng làm đầu vào bộ điều khiển
 // mờ; telemetry/dashboard/phát hiện bất thường vẫn dùng latestSensorData thô.
+// Giữ lần đọc HỢP LỆ gần nhất (thô + đã lọc) kèm mốc thời gian: pidTask dùng nó chừng
+// nào còn đủ mới (CONTROL_INPUT_MAX_AGE_CYCLES), quá hạn mới vào trạng thái an toàn.
 struct FilteredEnv {
-  float temperature = NAN, humidity = NAN;
-  bool ready = false;
+  float temperature = NAN, humidity = NAN;       // đã lọc
+  float rawTemperature = NAN, rawHumidity = NAN; // thô
+  bool ready = false;                            // bộ lọc đã có dữ liệu
+  unsigned long validAtMs = 0;                   // 0 = chưa có lần đọc hợp lệ nào
 };
 FilteredEnv latestFiltered;
 // THREAT-FR-007: trạng thái NoiseAnomalyDetector (tính mỗi mẫu 1 Hz trong sensorTask)
@@ -239,10 +243,19 @@ void sensorTask(void *pvParameters) {
     // NH3/CO2 không còn vào bộ điều khiển (SRS v2.0.0, ENV-FR-022).
     static SignalFilter fTemp, fHum;
     static NoiseAnomalyDetector noiseDetector;
-    FilteredEnv filtered;
-    filtered.temperature = fTemp.update(data.temperature);
-    filtered.humidity = fHum.update(data.humidity);
-    filtered.ready = fTemp.ready() && fHum.ready();
+    // static: lần đọc lỗi không ghi đè lần hợp lệ gần nhất (bộ lọc vẫn được gọi mỗi
+    // mẫu để giữ nhịp — nhận NAN thì nó giữ nguyên trạng thái)
+    static FilteredEnv filtered;
+    float filteredTemp = fTemp.update(data.temperature);
+    float filteredHum = fHum.update(data.humidity);
+    if (data.isValid) {
+      filtered.temperature = filteredTemp;
+      filtered.humidity = filteredHum;
+      filtered.rawTemperature = data.temperature;
+      filtered.rawHumidity = data.humidity;
+      filtered.ready = fTemp.ready() && fHum.ready();
+      filtered.validAtMs = millis();
+    }
 
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       latestSensorData = data;
@@ -281,9 +294,11 @@ void pidTask(void *pvParameters) {
   while (true) {
     esp_task_wdt_reset();
 
-    SensorData data;
-    FilteredEnv filtered;
-    bool noiseAnomaly = false;
+    // static: không lấy được mutex ở chu kỳ này thì dùng lại bản chụp chu kỳ trước
+    // (tuổi của số đo vẫn được kiểm bên dưới) thay vì coi như mất cảm biến.
+    static SensorData data;
+    static FilteredEnv filtered;
+    static bool noiseAnomaly = false;
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       data = latestSensorData;
       filtered = latestFiltered;
@@ -292,14 +307,16 @@ void pidTask(void *pvParameters) {
     }
 
     // ENV-FR-022: đầu vào bộ mờ = giá trị lọc (nếu bật và bộ lọc đã có dữ liệu).
-    // THREAT-FR-013: chỉ dùng giá trị lọc khi lần đọc thô này hợp lệ — bộ lọc giữ
-    // giá trị cũ khi nhận NAN, dùng nó lúc cảm biến mất sẽ điều khiển theo số đo
-    // đã chết. Không hợp lệ → NAN → FuzzyControl trả nhu cầu 0 (relay TẮT).
+    // THREAT-FR-013: dùng lần đọc HỢP LỆ gần nhất chừng nào nó còn đủ mới; một lần
+    // đọc lỗi lẻ không tắt relay. Quá CONTROL_INPUT_MAX_AGE_CYCLES chu kỳ không có
+    // số đo hợp lệ → NAN → FuzzyControl trả nhu cầu 0 (relay TẮT), không điều
+    // khiển theo số đo đã chết.
     float controlTemp = NAN, controlHum = NAN;
-    if (data.isValid) {
+    unsigned long maxAgeMs = (unsigned long)CONTROL_INPUT_MAX_AGE_CYCLES * Config::pidIntervalMs;
+    if (filtered.validAtMs != 0 && millis() - filtered.validAtMs <= maxAgeMs) {
       bool useFiltered = Config::fuzzyInputFilter && filtered.ready;
-      controlTemp = useFiltered ? filtered.temperature : data.temperature;
-      controlHum = useFiltered ? filtered.humidity : data.humidity;
+      controlTemp = useFiltered ? filtered.temperature : filtered.rawTemperature;
+      controlHum = useFiltered ? filtered.humidity : filtered.rawHumidity;
     }
 
     // relayState bị đọc/ghi đồng thời bởi mqttTask (onRelayCommand, publish

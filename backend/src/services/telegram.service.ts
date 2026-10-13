@@ -78,7 +78,7 @@ export async function unlinkTelegram(userId: string): Promise<void> {
 
 interface TelegramUpdate {
   update_id: number
-  message?: { text?: string; chat?: { id: number | string } }
+  message?: { text?: string; chat?: { id: number | string; type?: string } }
 }
 
 /**
@@ -90,6 +90,14 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
   const text = update.message?.text?.trim()
   if (chatId === undefined || !text) return
 
+  // Chỉ liên kết với chat RIÊNG. Gửi /start <mã> trong một nhóm có bot sẽ gắn tài khoản
+  // với cả nhóm: mọi cảnh báo của farm đổ vào nhóm và tin xác nhận in email ra đó. Không
+  // tiêu mã, không nhắc gì tới tài khoản — chỉ hướng dẫn nhắn riêng cho bot.
+  if (update.message?.chat?.type !== 'private') {
+    await sendTelegram(String(chatId), 'Bot SwiftletCare chỉ kết nối trong chat riêng. Hãy mở chat riêng với bot rồi bấm lại "Kết nối Telegram" trong ứng dụng.')
+    return
+  }
+
   const code = /^\/start\s+([0-9a-f]{32})$/i.exec(text)?.[1]
   if (!code) {
     await sendTelegram(String(chatId), 'Đây là bot thông báo của SwiftletCare. Để nhận cảnh báo, mở Cài đặt trong ứng dụng và bấm "Kết nối Telegram".')
@@ -100,6 +108,10 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     { telegram_link_code_hash: sha256(code.toLowerCase()), telegram_link_expires_at: { $gt: new Date() } },
     { telegram_chat_id: String(chatId), $unset: { telegram_link_code_hash: 1, telegram_link_expires_at: 1 } },
   )
+  // Một chat chỉ thuộc về một tài khoản: liên kết lại bằng tài khoản khác thì gỡ khỏi tài khoản cũ
+  if (user) {
+    await User.updateMany({ _id: { $ne: user._id }, telegram_chat_id: String(chatId) }, { $unset: { telegram_chat_id: 1 } })
+  }
   await sendTelegram(String(chatId), user
     ? `Đã kết nối với tài khoản ${user.email}. Bạn sẽ nhận cảnh báo của nhà yến tại đây.`
     : 'Mã kết nối không đúng hoặc đã hết hạn. Hãy bấm "Kết nối Telegram" trong ứng dụng để lấy mã mới.')

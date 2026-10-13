@@ -5,7 +5,7 @@ import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { Farm } from '@/models/farm.model'
 import { Zone, IZone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
-import { autonomyBetween, inRangeSum, switchedSum } from '@/services/analytics.service'
+import { autonomyBetween, inRangeSum, pct, switchedSum } from '@/services/analytics.service'
 import { logAction } from '@/services/auditLog.service'
 import { findRecipients, notifyUser } from '@/services/notification.service'
 import { assertFarmAccess, assertZoneAccess, listActiveZoneIds } from '@/utils/farmAccess.util'
@@ -20,7 +20,6 @@ export const REPORT_PERIOD_DAYS = Number(process.env.HEALTH_REPORT_DAYS) > 0 ? N
 /** Xem theo khoảng bất kỳ: chặn khoảng quá dài để 1 request không quét cả năm telemetry */
 const MAX_PREVIEW_DAYS = 30
 
-const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null)
 const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.round(v * 10) / 10 : null)
 
 /**
@@ -104,7 +103,10 @@ async function expertIdsOf(farmId: unknown): Promise<string[]> {
  * không có mẫu telemetry nào trong kỳ thì bỏ qua (chưa lắp thiết bị/đã ngừng). Báo cho
  * Farm Owner và Domain Expert của farm. Trả số báo cáo đã tạo.
  */
-export async function generateWeeklyReports(now = new Date()): Promise<number> {
+export async function generateWeeklyReports(at = new Date()): Promise<number> {
+  // Làm tròn xuống phút: hai lần chạy do cùng một nhịp cron cho cùng `period_end`, để
+  // unique index (zone_id, period_end) chặn được báo cáo trùng
+  const now = new Date(Math.floor(at.getTime() / 60_000) * 60_000)
   const periodStart = new Date(now.getTime() - REPORT_PERIOD_DAYS * DAY_MS)
   const zones = await Zone.find({ _id: { $in: await listActiveZoneIds() } }).select('name farm_id thresholds').lean()
 
@@ -130,9 +132,16 @@ async function generateZoneReport(
   const metrics = await buildZoneMetrics(zone, periodStart, now)
   if (metrics.sample_count === 0) return false
 
-  const report = await ZoneHealthReport.create({
-    farm_id: zone.farm_id, zone_id: zone._id, period_start: periodStart, period_end: now, metrics, generated_at: now,
-  })
+  let report
+  try {
+    report = await ZoneHealthReport.create({
+      farm_id: zone.farm_id, zone_id: zone._id, period_start: periodStart, period_end: now, metrics, generated_at: now,
+    })
+  } catch (err) {
+    // Lần chạy song song đã tạo báo cáo của đúng kỳ này — nó cũng lo phần thông báo
+    if ((err as { code?: number }).code === 11000) return false
+    throw err
+  }
 
   const recipients = [...await ownerIdsOf(zone.farm_id), ...await expertIdsOf(zone.farm_id)]
   await Promise.all(recipients.map(id => notifyUser(id, {

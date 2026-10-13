@@ -54,6 +54,7 @@ const zoneHealthReportSchema = new Schema<IZoneHealthReport>(
   { versionKey: false },
 )
 
-zoneHealthReportSchema.index({ zone_id: 1, period_end: -1 })
+// unique: 2 lần chạy chồng nhau (2 instance lúc deploy) cùng mốc phút không tạo 2 báo cáo + 2 thông báo
+zoneHealthReportSchema.index({ zone_id: 1, period_end: -1 }, { unique: true })
 
 export const ZoneHealthReport = model<IZoneHealthReport>('ZoneHealthReport', zoneHealthReportSchema)

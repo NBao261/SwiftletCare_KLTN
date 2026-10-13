@@ -70,7 +70,8 @@ const userSchema = new Schema<IUser>(
     },
     telegram_chat_id: { type: String },
     // select: false — mã liên kết chỉ luồng /start của bot cần so, không query nào khác được mang ra
-    telegram_link_code_hash:  { type: String, select: false },
+    // index sparse: bot công khai, ai cũng nhắn được /start <mã bất kỳ> — mỗi tin không được quét cả bảng users
+    telegram_link_code_hash:  { type: String, select: false, index: true, sparse: true },
     telegram_link_expires_at: { type: Date, select: false },
     otp_code:      { type: String },
     otp_expires:   { type: Date },

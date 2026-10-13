@@ -6,8 +6,9 @@ import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
 router.use(authenticate)
-// EXPERT-FR-005/006 (SRS mục 4.4) — Farm Owner và Domain Expert đọc; chỉ Domain Expert viết kết luận
-router.use(requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'ADMIN'))
+// EXPERT-FR-005/006 (SRS mục 4.4: Farm Owner R, Domain Expert R, Technician/Admin không liên quan) —
+// Farm Owner và Domain Expert đọc; chỉ Domain Expert viết kết luận
+router.use(requireRole('FARM_OWNER', 'DOMAIN_EXPERT'))
 
 router.get('/', query('zoneId').isMongoId(), validate, healthReportController.list)
 // Đặt trước '/:id' để "preview" không bị hiểu là một id

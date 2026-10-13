@@ -388,6 +388,8 @@ paths:
         Trả deep link `https://t.me/<bot>?start=<mã>`; mã dùng một lần, sống 10 phút. Người
         dùng mở link, Telegram gửi `/start <mã>` cho bot, backend lưu chat id và từ đó gửi
         cảnh báo qua Telegram theo cùng luật với push (người nhận, mức độ, giờ im lặng).
+        Chỉ liên kết được trong chat riêng với bot (gửi mã trong nhóm bị từ chối); một chat chỉ
+        gắn với một tài khoản.
         503 khi máy chủ chưa cấu hình `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`.
       responses:
         "200":
@@ -3324,7 +3326,7 @@ paths:
   /health-reports:
     get:
       tags: [HealthReports]
-      summary: "Danh sách báo cáo sức khỏe của Zone (EXPERT-FR-005) — FARM_OWNER/DOMAIN_EXPERT/ADMIN"
+      summary: "Danh sách báo cáo sức khỏe của Zone (EXPERT-FR-005) — FARM_OWNER/DOMAIN_EXPERT (mọi route /health-reports)"
       description: |
         Báo cáo do job tổng hợp theo chu kỳ (mặc định 06:00 thứ Hai, kỳ 7 ngày —
         `HEALTH_REPORT_CRON`, `HEALTH_REPORT_DAYS`), mới nhất trước. Zone không có mẫu
