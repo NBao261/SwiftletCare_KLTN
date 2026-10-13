@@ -3,8 +3,8 @@
 // Technician/Admin: tạo · sửa · tạm dừng · xoá. Farm Owner chỉ xem (BE requireRole).
 // Cùng khuôn với các trang danh sách của Admin: DataTable + Badge + ActionsMenu + ConfirmModal.
 import { useMemo, useState } from 'react'
-import { Button, Badge, DataTable, EmptyState, SelectMenu, ConfirmModal, ActionsMenu, SectionCard, type DataTableColumn, type ActionsMenuItem } from '@/components/ui'
-import { Plus, Search } from 'lucide-react'
+import { Button, Badge, DataTable, EmptyState, SelectMenu, ConfirmModal, ActionsMenu, SectionCard, SearchInput, type DataTableColumn, type ActionsMenuItem } from '@/components/ui'
+import { Plus } from 'lucide-react'
 import ClearFiltersButton from '@/components/ui/ClearFiltersButton'
 import FilterChip from '@/components/ui/FilterChip'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -20,8 +20,11 @@ import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import type { MaintenanceSchedule } from '@/types'
 
 const ALL_FARMS = ''
-// Khớp mặc định BE (limit 20) — gửi tường minh để không phụ thuộc default phía server
 const PAGE_SIZE = 20
+// GET /maintenance-schedules chưa có tham số tìm kiếm/trạng thái/sắp xếp → tải 1 lần tối đa
+// FETCH_LIMIT (= maxLimit của paginate() phía BE) rồi lọc + phân trang ở client để kết quả đúng trên mọi trang.
+// TODO [BE-GAP]: khi BE hỗ trợ ?q=&status=&sort=, chuyển về phân trang server.
+const FETCH_LIMIT = 100
 
 type StatusFilter = '' | 'due' | 'soon' | 'later' | 'paused'
 type SortKey = 'next_asc' | 'next_desc' | 'interval_asc' | 'interval_desc' | 'name_asc'
@@ -83,7 +86,7 @@ export default function TechnicianMaintenancePage() {
   const [sortKey, setSortKey] = useState<SortKey>('next_asc')
   const { data: farms } = useFarms()
   const { data: zones } = useAllZones()
-  const { records: schedules, total, isLoading, isError } = useMaintenanceSchedules(farmId || undefined, page, PAGE_SIZE)
+  const { records: schedules, total: fetchedTotal, isLoading, isError } = useMaintenanceSchedules(farmId || undefined, 1, FETCH_LIMIT)
   const updateSchedule = useUpdateMaintenanceSchedule()
   const deleteSchedule = useDeleteMaintenanceSchedule()
 
@@ -108,6 +111,8 @@ export default function TechnicianMaintenancePage() {
       }
     })
   }, [schedules, search, statusFilter, sortKey])
+  const safePage = Math.min(page, Math.max(1, Math.ceil(visibleSchedules.length / PAGE_SIZE)))
+  const pageRows = visibleSchedules.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
   const dueCounts = useMemo(() => {
     const c = { due: 0, soon: 0, later: 0, paused: 0 }
     for (const s of schedules ?? []) c[scheduleStatus(s)]++
@@ -142,13 +147,10 @@ export default function TechnicianMaintenancePage() {
   function confirmDelete() {
     if (!deleting) return
     deleteSchedule.mutate(deleting._id, {
-      onSuccess: () => { 
+      onSuccess: () => {
         push('Đã xoá lịch bảo trì')
         setDeleting(undefined)
-        // Nếu xóa phần tử cuối cùng của trang hiện tại (và không phải trang 1), thì lùi trang
-        if (schedules.length === 1 && page > 1) {
-          setPage(p => p - 1)
-        }
+        // safePage tự kẹp về trang cuối hợp lệ khi trang hiện tại hết dòng
       },
       onError: (err) => push(getApiErrorMessage(err, 'Xoá lịch bảo trì thất bại'), 'error'),
     })
@@ -161,7 +163,7 @@ export default function TechnicianMaintenancePage() {
         <>
           {/* Viền trái theo hạn: đến hạn = cam, sắp tới (≤7 ngày) = xanh, còn lại/tạm dừng = không viền */}
           <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${ACCENT_CLS[scheduleStatus(s)]}`} />
-          <span className="text-warmGray">{(page - 1) * PAGE_SIZE + index + 1}</span>
+          <span className="text-warmGray">{(safePage - 1) * PAGE_SIZE + index + 1}</span>
         </>
       ),
     },
@@ -217,25 +219,17 @@ export default function TechnicianMaintenancePage() {
       <SectionCard title="Danh sách lịch bảo trì" description="Lịch bảo trì định kỳ theo trang trại — đến hạn hệ thống tự tạo ticket">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-            <label className="relative w-full max-w-xs">
-              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-warmGray" />
-              <input
-                type="search"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Tìm theo nội dung…"
-                aria-label="Tìm lịch bảo trì"
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-charcoal outline-none focus:border-gray-400"
-              />
-            </label>
+            <div className="w-full max-w-xs">
+              <SearchInput placeholder="Tìm theo nội dung…" value={search} onChange={v => { setSearch(v); setPage(1) }} />
+            </div>
             <SelectMenu ariaLabel="Lọc theo trang trại" value={farmId} options={farmOptions} onChange={v => { setFarmId(v); setPage(1) }} />
-            <SelectMenu ariaLabel="Sắp xếp" value={sortKey} options={SORT_OPTIONS} onChange={v => setSortKey(v as SortKey)} />
+            <SelectMenu ariaLabel="Sắp xếp" value={sortKey} options={SORT_OPTIONS} onChange={v => { setSortKey(v as SortKey); setPage(1) }} />
             {hasFilter && <ClearFiltersButton onClick={clearFilters} />}
           </div>
           {canManage && <Button onClick={() => setShowCreate(true)}><Plus size={18} strokeWidth={2} /> Tạo lịch bảo trì</Button>}
         </div>
 
-        {/* Nhóm theo hạn — chip có số đếm (tính trên các lịch của trang đang xem) */}
+        {/* Nhóm theo hạn — chip có số đếm trên toàn bộ lịch đã tải */}
         {!isLoading && !isError && !!schedules?.length && (
           <div className="flex flex-wrap items-center gap-2">
             {DUE_CHIPS.map(c => (
@@ -243,10 +237,16 @@ export default function TechnicianMaintenancePage() {
                 key={c.value || 'all'}
                 active={statusFilter === c.value}
                 label={<span className="tabular-nums">{c.label} · {c.value ? dueCounts[c.value] : schedules.length}</span>}
-                onClick={() => setStatusFilter(c.value)}
+                onClick={() => { setStatusFilter(c.value); setPage(1) }}
               />
             ))}
           </div>
+        )}
+
+        {!isLoading && !isError && fetchedTotal > FETCH_LIMIT && (
+          <p className="text-xs text-climateOrange">
+            Đang hiển thị {FETCH_LIMIT}/{fetchedTotal} lịch có hạn sớm nhất. Chọn một trang trại để thu hẹp danh sách.
+          </p>
         )}
 
         {isLoading && <LoadingSkeleton count={3} className="h-14 w-full" />}
@@ -266,18 +266,18 @@ export default function TechnicianMaintenancePage() {
         )}
 
         {!isLoading && !isError && !!schedules?.length && hasFilter && visibleSchedules.length === 0 && (
-          <EmptyState title="Không có lịch phù hợp" description="Thử đổi từ khóa hoặc bộ lọc (chỉ lọc trong trang hiện tại)." />
+          <EmptyState title="Không có lịch phù hợp" description="Thử đổi từ khóa hoặc bộ lọc." />
         )}
 
-        {!isLoading && !isError && !!schedules?.length && visibleSchedules.length > 0 && (
+        {!isLoading && !isError && visibleSchedules.length > 0 && (
           <>
             <DataTable
               columns={columns}
-              rows={visibleSchedules}
+              rows={pageRows}
               getRowKey={s => s._id}
               emptyMessage="Chưa có lịch bảo trì nào"
             />
-            <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
+            <Pagination page={safePage} limit={PAGE_SIZE} total={visibleSchedules.length} onChange={setPage} variant="full" />
           </>
         )}
       </SectionCard>
