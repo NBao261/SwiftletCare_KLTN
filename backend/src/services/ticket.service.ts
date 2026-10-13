@@ -205,10 +205,14 @@ function notifyNewAssignment(assignedTo: string, ticket: Pick<ITicket, '_id' | '
 /**
  * Farm Owner là người phải có mặt ở hiện trường nên LUÔN được báo khi lịch hẹn
  * đổi, kể cả khi ticket do Admin tạo hộ; người tạo (nếu khác) cũng nhận để nắm.
+ * `exclude` là người vừa thao tác — họ không cần push cho việc chính mình bấm.
  */
-async function notifyVisitChange(ticket: ITicket, message: { title: string; body: string }, extra: string[] = []): Promise<void> {
+async function notifyVisitChange(
+  ticket: ITicket, message: { title: string; body: string }, extra: string[] = [], exclude?: string,
+): Promise<void> {
   const farm = await Farm.findById(ticket.farm_id).select('owner_id').lean()
   const recipients = new Set([farm?.owner_id, ticket.created_by, ...extra].filter(Boolean).map(String))
+  if (exclude) recipients.delete(String(exclude))
   for (const userId of recipients) void notifyUser(userId, message)
 }
 
@@ -748,7 +752,7 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
     body: `Ticket ${ticketId} (${ticket.type}) đã được huỷ${visit}. Lý do: ${reason}`,
   }
   const assignee = assigneeIdOf(ticket)
-  await notifyVisitChange(ticket, message, assignee ? [assignee] : [])
+  await notifyVisitChange(ticket, message, assignee ? [assignee] : [], user._id)
   return ticket
 }
 

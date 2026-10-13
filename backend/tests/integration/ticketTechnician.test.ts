@@ -483,6 +483,17 @@ describe('huỷ ticket và đánh giá', () => {
     expect(notified).toContain(String(assignee._id))
   })
 
+  it('Farm Owner tự huỷ ticket mình tạo thì không nhận thông báo cho chính thao tác đó', async () => {
+    const { ticket, owner, assignee } = await seed()
+    await Ticket.updateOne({ _id: ticket._id }, { created_by: owner._id })
+    ;(notifyUser as jest.Mock).mockClear()
+
+    await put(`/tickets/${ticket._id}/cancel`, tokenFor(owner._id, 'FARM_OWNER'), { reason: 'Tự khắc phục được' }).expect(200)
+    const notified = (notifyUser as jest.Mock).mock.calls.map(c => String(c[0]))
+    expect(notified).not.toContain(String(owner._id))
+    expect(notified).toEqual([String(assignee._id)])
+  })
+
   it('không đánh giá được ticket đã huỷ', async () => {
     const { ticket, owner } = await seed()
     const ownerToken = tokenFor(owner._id, 'FARM_OWNER')
