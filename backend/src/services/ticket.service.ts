@@ -451,8 +451,12 @@ export async function listTickets(user: CurrentUser, query: ListTicketsQuery) {
   const sortField = {
     created_at: 'created_at', sla: 'sla_resolve_due_at', status: '_status_rank', priority: 'priority',
   }[query.sort ?? 'created_at']
-  // Thêm created_at + _id làm khoá phụ để thứ tự ổn định giữa các trang
-  const sort: Record<string, 1 | -1> = { [sortField]: dir, created_at: -1, _id: -1 }
+  // Thêm created_at + _id làm khoá phụ để thứ tự ổn định giữa các trang. Khi
+  // cột chính đã là created_at thì không thêm lại: key trùng trong object literal
+  // lấy giá trị viết sau, `order=asc` sẽ bị ghi đè thành -1.
+  const sort: Record<string, 1 | -1> = sortField === 'created_at'
+    ? { created_at: dir, _id: dir }
+    : { [sortField]: dir, created_at: -1, _id: -1 }
 
   const [rows, total] = await Promise.all([
     Ticket.aggregate([

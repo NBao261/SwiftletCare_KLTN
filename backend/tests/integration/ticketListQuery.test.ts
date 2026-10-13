@@ -110,6 +110,20 @@ describe('GET /tickets — sort', () => {
     expect(page2.body.data.map((t: { priority: string }) => t.priority)).toEqual(['P3', 'P1'])
   })
 
+  it('order=asc theo ngày tạo đưa ticket cũ nhất lên đầu, kể cả khi không truyền sort', async () => {
+    const { tech, farm, techToken } = await seed()
+    const base = { farm_id: farm._id, type: 'OTHER', priority: 'P3', assigned_to: tech._id }
+    const oldest = await Ticket.create({ ...base, created_at: new Date(Date.now() - 3 * HOUR) })
+    await Ticket.create({ ...base, created_at: new Date(Date.now() - 2 * HOUR) })
+    const newest = await Ticket.create({ ...base, created_at: new Date(Date.now() - 1 * HOUR) })
+    const firstId = (res: request.Response) => res.body.data[0]._id
+
+    expect(firstId(await list(techToken, 'order=asc'))).toBe(String(oldest._id))
+    expect(firstId(await list(techToken, 'sort=created_at&order=asc'))).toBe(String(oldest._id))
+    expect(firstId(await list(techToken, 'sort=created_at&order=desc'))).toBe(String(newest._id))
+    expect(firstId(await list(techToken, 'assignedToMe=true'))).toBe(String(newest._id)) // mặc định
+  })
+
   it('từ chối cột sắp xếp lạ', async () => {
     const { techToken } = await seed()
     const res = await list(techToken, 'sort=password_hash')
