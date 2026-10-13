@@ -75,6 +75,19 @@ async function seed(status: 'ONLINE' | 'OFFLINE' = 'ONLINE') {
   return { farm, house, zone, node, deviceId, token, topic }
 }
 
+/**
+ * ingestTelemetry gọi raiseThresholdAlert kiểu fire-and-forget (vài lượt đọc/ghi DB). Chờ
+ * tới khi cảnh báo thật sự được ghi: 1 nhịp setImmediate không đủ khi máy đang tải nặng —
+ * test tự nó lúc qua lúc không, và lần ghi tới trễ còn rơi vào test kế tiếp.
+ */
+async function thresholdAlertRaised() {
+  for (let i = 0; i < 100; i++) {
+    if (await Alert.collection.countDocuments({ type: 'THRESHOLD_BREACH' })) return
+    await new Promise(r => setTimeout(r, 20))
+  }
+  throw new Error('Không thấy cảnh báo THRESHOLD_BREACH sau 2 giây')
+}
+
 const reading = (deviceId: string, timestamp: number, over: Partial<TelemetryPayload> = {}) => ({
   deviceId, timestamp, temperature: 28, humidity: 85, light_lux: 0.1, nh3_ppm: 5, co2_ppm: 800, sound_db: 40,
   relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO' as const,
@@ -122,7 +135,7 @@ describe('ingestTelemetry', () => {
     for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, hot))
     await ingestTelemetry(reading(deviceId, t0 + 5_000)) // hết vượt ngưỡng: chờ mốc 10s
     await ingestTelemetry(reading(deviceId, t0 + 10_000))
-    await new Promise(r => setImmediate(r)) // raiseThresholdAlert chạy fire-and-forget
+    await thresholdAlertRaised() // raiseThresholdAlert chạy fire-and-forget
 
     expect(await Telemetry.countDocuments({ is_anomaly: true })).toBe(1)
     expect(await Telemetry.countDocuments({ is_anomaly: false })).toBe(1)
@@ -248,7 +261,7 @@ describe('online/offline race (FARM-FR-005)', () => {
     const t0 = Date.now()
 
     for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }))
-    await new Promise(r => setImmediate(r))
+    await thresholdAlertRaised()
 
     expect(findOne).toHaveBeenCalledTimes(1) // chỉ mẫu bắt đầu vượt ngưỡng
     findOne.mockRestore()
@@ -261,7 +274,7 @@ describe('ingestDeviceAlert', () => {
 
     await ingestDeviceAlert({ type: 'SENSOR_FAULT', severity: 'MEDIUM', message: 'timeout', deviceId })
 
-    const alert = await Alert.findOne().lean()
+    const alert = await Alert.findOne({ type: 'SENSOR_FAULT' }).lean()
     expect(alert).toMatchObject({ type: 'SENSOR_FAULT', severity: 'MEDIUM', farm_id: farm._id, zone_id: zone._id })
   })
 
