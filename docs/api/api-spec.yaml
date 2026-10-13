@@ -2468,6 +2468,15 @@ paths:
     post:
       tags: [Devices]
       summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — TECHNICIAN/ADMIN"
+      description: |
+        Cùng quy tắc với `POST /devices/sensor-nodes/{id}/decommission`: không xoá
+        document nên dữ liệu cũ tham chiếu `node_id` vẫn truy vấn được, thiết bị
+        bị ẩn khỏi danh sách/thống kê.
+
+        Camera **đang ONLINE/DEGRADED** phải gửi kèm `force: true` (409 nếu
+        thiếu) — gỡ một camera còn sống là mất giám sát hình ảnh của Zone. Cảnh báo
+        còn mở của nó được đóng theo, ticket liên quan được ghi chú, Farm Owner nhận
+        thông báo, và trong **24 giờ** vẫn khôi phục lại được qua `/restore`.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -2476,10 +2485,12 @@ paths:
             schema:
               type: object
               required: [reason]
-              properties: { reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" } }
+              properties:
+                reason: { type: string, example: "Hỏng nguồn, thu hồi về kho" }
+                force: { type: boolean, description: "Bắt buộc khi camera đang ONLINE/DEGRADED — xác nhận chấp nhận mất giám sát của Zone" }
       responses:
         "200":
-          description: Đã gỡ
+          description: "Đã gỡ (decommissioned_at được gán)"
           content:
             application/json:
               schema:
@@ -2487,6 +2498,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/CameraNode" } }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
   /devices/system-status:
