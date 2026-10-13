@@ -1,3 +1,4 @@
+import { Types } from 'mongoose'
 import { Alert, IAlert } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { Zone } from '@/models/houseZone.model'
@@ -5,10 +6,11 @@ import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import { assertRecordAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
-import { NotFoundError, ForbiddenError, ConflictError } from '@/utils/appError.util'
+import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
-import type { AlertType, AlertSeverity, CurrentUser, Thresholds, TelemetryPayload } from '@/types'
+import type { AlertType, AlertSeverity, AlertVerdictResult, CurrentUser, Thresholds, TelemetryPayload } from '@/types'
 
 /** ALERT-FR-008 — sự cố còn đang mở thì chỉ cập nhật `last_seen_at` tối đa 1 lần/khoảng này */
 export const ALERT_SEEN_UPDATE_MS = 60 * 1000
@@ -29,9 +31,9 @@ const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   POWER_OUTAGE:      'HIGH',
   SPEAKER_FAILURE:   'HIGH',
   NODE_OFFLINE:      'HIGH',
-  // MEDIUM: phát hiện theo dB (THREAT-FR-007), chưa hiệu chỉnh bằng dữ liệu thật —
+  // MEDIUM: tín hiệu tham khảo theo dB (THREAT-FR-007), chờ Domain Expert kiểm chứng —
   // HIGH sẽ bị alertEscalation.job tự sinh ticket sau 15 phút nếu báo nhầm.
-  BIRD_PANIC:        'MEDIUM',
+  NOISE_ANOMALY:     'MEDIUM',
   THRESHOLD_BREACH:  'MEDIUM',
   SENSOR_FAULT:      'MEDIUM',
   PUMP_DRY:          'MEDIUM',
@@ -43,7 +45,16 @@ const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
 }
 
 /** Cảnh báo không bao giờ được ở mức tự sinh ticket (HIGH/CRITICAL), kể cả khi thiết bị gửi lên */
-const NEVER_ESCALATE = new Set<AlertType>(['THRESHOLD_BREACH', 'BIRD_PANIC', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'])
+const NEVER_ESCALATE = new Set<AlertType>(['THRESHOLD_BREACH', 'NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'])
+
+/**
+ * EXPERT-FR-003 — cảnh báo SUY LUẬN (thống kê/dB, có thể báo nhầm): Domain Expert xác
+ * nhận hoặc bác bỏ. Cảnh báo đo trực tiếp (vượt ngưỡng, mất kết nối…) không cần kiểm chứng.
+ */
+export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
+
+/** Tên loại cảnh báo firmware cũ còn gửi → tên hiện hành */
+const ALERT_TYPE_ALIAS: Record<string, AlertType> = { BIRD_PANIC: 'NOISE_ANOMALY' } // firmware < 1.3.0
 
 export interface CreateAlertInput {
   farmId: string
@@ -132,8 +143,8 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
 /**
  * Cảnh báo do thiết bị tự phát hiện, gọi từ mqtt/handlers/alert.handler.ts
  * (ESP32 `{base}/alert`: SENSOR_FAULT, RS485_BUS_FAILURE, SPEAKER_FAILURE,
- * PUMP_DRY, POWER_OUTAGE — THREAT-FR-006/011/012/013; RPi `vision/alert`:
- * PREDATOR_DETECTED, BIRD_PANIC — THREAT-FR-001/007).
+ * PUMP_DRY, POWER_OUTAGE, NOISE_ANOMALY — THREAT-FR-006/007/011/012/013; nút AI
+ * `vision/alert`: EDGE_AI_DEGRADED).
  *
  * Thiết bị được nhận diện qua `deviceId` trong payload, KHÔNG qua slug trong
  * topic (xem ghi chú ở telemetry.service) — nên cảnh báo vẫn vào đúng farm kể
@@ -141,7 +152,8 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
  */
 export async function ingestDeviceAlert(message: Record<string, unknown>): Promise<IAlert | null> {
   const deviceId = message.deviceId as string | undefined
-  const type = message.type as AlertType | undefined
+  const rawType = message.type as string | undefined
+  const type = rawType && (ALERT_TYPE_ALIAS[rawType] ?? (rawType as AlertType))
   if (!deviceId || !type) throw NotFoundError('Payload cảnh báo thiếu deviceId hoặc type')
   // Loại không được leo thang thành ticket (ALERT-FR-012 + cảnh báo suy luận) giữ tối
   // đa MEDIUM dù thiết bị gửi mức cao hơn — một firmware cấu hình sai không được tự sinh ticket.
@@ -238,6 +250,9 @@ export interface ListAlertsQuery {
   zoneId?: string
   status?: string
   severity?: string
+  type?: string
+  /** EXPERT-FR-003 — pending = cảnh báo suy luận chưa được kiểm chứng */
+  verdict?: 'pending' | 'confirmed' | 'rejected'
   page?: number
   limit?: number
 }
@@ -257,6 +272,13 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   if (query.zoneId) filter.zone_id = query.zoneId
   if (query.status) filter.status = query.status
   if (query.severity) filter.severity = query.severity
+  if (query.type) filter.type = query.type
+  if (query.verdict === 'pending') {
+    filter.expert_verdict = { $exists: false }
+    if (!query.type) filter.type = { $in: INFERRED_ALERT_TYPES }
+  } else if (query.verdict) {
+    filter['expert_verdict.result'] = query.verdict.toUpperCase()
+  }
   const scoped = filter
 
   const { page, skip, limit } = paginate(query.page, query.limit)
@@ -291,6 +313,48 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
   alert.acknowledgement_note = note
   await alert.save()
   return alert
+}
+
+/**
+ * EXPERT-FR-003 — Domain Expert ghi kết quả kiểm chứng 1 cảnh báo suy luận. Ghi lại
+ * được (chuyên gia đổi ý sau khi xem thêm dữ liệu); không đổi trạng thái xử lý của
+ * cảnh báo — xác nhận đã xử lý vẫn là việc của Farm Owner (ALERT-FR-009).
+ */
+export async function setAlertVerdict(
+  alertId: string, user: CurrentUser, result: AlertVerdictResult, note?: string,
+): Promise<IAlert> {
+  const alert = await getAlert(alertId, user)
+  if (!INFERRED_ALERT_TYPES.includes(alert.type)) {
+    throw BadRequestError(`Chỉ kiểm chứng cảnh báo suy luận (${INFERRED_ALERT_TYPES.join(', ')})`)
+  }
+  alert.expert_verdict = { result, note, by: user._id as never, at: new Date() }
+  await alert.save()
+  await logAction(user._id, 'ALERT_VERDICT_SET', 'alert', String(alert._id), { type: alert.type, result })
+  return alert
+}
+
+/**
+ * EXPERT-FR-003 — số cảnh báo suy luận được xác nhận / bác bỏ / còn chờ theo từng loại,
+ * làm căn cứ chỉnh tham số phát hiện (EXPERT-FR-008). `confirmedPct` tính trên số đã
+ * kiểm chứng; null khi chưa kiểm chứng cái nào.
+ */
+export async function getVerdictStats(user: CurrentUser, query: { farmId?: string; zoneId?: string }) {
+  const accessibleFarms = await listAccessibleFarmIds(user)
+  if (query.farmId && !accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
+  const farmIds = query.farmId ? accessibleFarms.filter(id => String(id) === query.farmId) : accessibleFarms
+
+  const rows = await Alert.aggregate<{ _id: { type: AlertType; result: AlertVerdictResult | null }; count: number }>([
+    { $match: { farm_id: { $in: farmIds }, type: { $in: INFERRED_ALERT_TYPES }, ...(query.zoneId && { zone_id: new Types.ObjectId(query.zoneId) }) } },
+    { $group: { _id: { type: '$type', result: { $ifNull: ['$expert_verdict.result', null] } }, count: { $sum: 1 } } },
+  ])
+
+  return INFERRED_ALERT_TYPES.map(type => {
+    const of = (result: AlertVerdictResult | null) => rows.find(r => r._id.type === type && r._id.result === result)?.count ?? 0
+    const confirmed = of('CONFIRMED')
+    const rejected = of('REJECTED')
+    const reviewed = confirmed + rejected
+    return { type, confirmed, rejected, pending: of(null), confirmedPct: reviewed ? Math.round((100 * confirmed) / reviewed) : null }
+  })
 }
 
 /**

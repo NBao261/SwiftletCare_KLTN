@@ -2444,10 +2444,16 @@ paths:
       summary: "Danh sách cảnh báo (ALERT-FR-007) — phân trang, filter"
       description: |
         Farm Owner chỉ thấy cảnh báo của farm mình (owner/member); Technician
-        thấy farm trong `assigned_regions`; Admin thấy tất cả.
+        thấy farm trong `assigned_regions`; Admin thấy tất cả. Domain Expert thấy
+        cảnh báo của farm được mời (chỉ đọc + kiểm chứng).
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/AlertType" } }
+        - name: verdict
+          in: query
+          description: "EXPERT-FR-003 — `pending` = cảnh báo suy luận (NOISE_ANOMALY, SENSOR_ANOMALY, FORECAST_BREACH, LOW_RETURN_RATE) chưa được kiểm chứng"
+          schema: { type: string, enum: [pending, confirmed, rejected] }
         - {
             name: status,
             in: query,
@@ -2488,6 +2494,37 @@ paths:
                               },
                           }
 
+  /alerts/verdict-stats:
+    get:
+      tags: [Alerts]
+      summary: "Tỷ lệ cảnh báo suy luận được xác nhận theo từng loại (EXPERT-FR-003)"
+      description: |
+        Căn cứ để Domain Expert chỉnh tham số phát hiện (EXPERT-FR-008). `confirmedPct`
+        tính trên số đã kiểm chứng; `null` khi chưa kiểm chứng cảnh báo nào của loại đó.
+      parameters:
+        - { name: farmId, in: query, schema: { type: string } }
+        - { name: zoneId, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            type: { $ref: "#/components/schemas/AlertType" }
+                            confirmed: { type: integer }
+                            rejected: { type: integer }
+                            pending: { type: integer }
+                            confirmedPct: { type: integer, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /alerts/{id}:
     get:
       tags: [Alerts]
@@ -2524,7 +2561,7 @@ paths:
   /alerts/{id}/acknowledge:
     put:
       tags: [Alerts]
-      summary: Xác nhận cảnh báo (ALERT-FR-009)
+      summary: "Xác nhận cảnh báo (ALERT-FR-009) — FARM_OWNER/TECHNICIAN/ADMIN (Domain Expert chỉ đọc và kiểm chứng)"
       description: Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả").
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -2567,6 +2604,40 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
+
+  /alerts/{id}/verdict:
+    put:
+      tags: [Alerts]
+      summary: "Domain Expert xác nhận/bác bỏ một cảnh báo suy luận (EXPERT-FR-003) — DOMAIN_EXPERT"
+      description: |
+        Chỉ áp cho `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE`
+        (loại khác → 400). Ghi lại được. Không đổi `status` của cảnh báo — xác nhận đã
+        xử lý vẫn là việc của Farm Owner. Ghi audit `ALERT_VERDICT_SET`.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              properties:
+                result: { type: string, enum: [CONFIRMED, REJECTED] }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: Đã ghi kết quả kiểm chứng
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Alert" }
+        "400": { description: "Cảnh báo không thuộc loại suy luận", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   # ── ANALYTICS ─────────────────────────────────────────────────────────────
   /analytics/env/summary:
@@ -4536,7 +4607,7 @@ components:
         - NODE_OFFLINE
         - SPEAKER_FAILURE
         - PUMP_DRY
-        - BIRD_PANIC
+        - NOISE_ANOMALY
         - POWER_OUTAGE
         - LOW_RETURN_RATE
         - EDGE_AI_DEGRADED
@@ -4566,6 +4637,15 @@ components:
         resolved_at: { type: string, format: date-time, nullable: true, description: "Sự cố hết (THRESHOLD_BREACH tự đóng sau 5 phút không vượt ngưỡng, NODE_OFFLINE tự đóng khi thiết bị kết nối lại), hoặc thiết bị đã được gỡ khỏi hệ thống (FARM-FR-008). Alert đã đóng tự xoá sau 180 ngày." }
         acknowledged_by: { type: string, nullable: true }
         acknowledgement_note: { type: string, nullable: true }
+        expert_verdict:
+          type: object
+          nullable: true
+          description: "EXPERT-FR-003 — kết quả kiểm chứng của Domain Expert; không có = chờ kiểm chứng"
+          properties:
+            result: { type: string, enum: [CONFIRMED, REJECTED] }
+            note: { type: string, nullable: true }
+            by: { type: string }
+            at: { type: string, format: date-time }
 
     TicketType:
       type: string

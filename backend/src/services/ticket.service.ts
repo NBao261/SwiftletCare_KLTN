@@ -71,7 +71,7 @@ function requiresFieldVisit(ticket: Pick<ITicket, 'type' | 'scheduled_visit_at'>
 /**
  * Alert Engine phát nhiều loại cảnh báo hơn TicketType hỗ trợ — ép kiểu trực
  * tiếp (`alert.type as TicketType`) tạo ra giá trị enum không hợp lệ cho
- * BIRD_PANIC/THRESHOLD_BREACH/PUMP_DRY/LOW_RETURN_RATE, làm `Ticket.create`
+ * NOISE_ANOMALY/THRESHOLD_BREACH/PUMP_DRY/LOW_RETURN_RATE, làm `Ticket.create`
  * throw ValidationError và crash cả batch xử lý stale alert. Map rõ ràng
  * từng giá trị, loại không có ticket type tương ứng thì dùng OTHER.
  */
@@ -84,7 +84,7 @@ const ALERT_TYPE_TO_TICKET_TYPE: Record<AlertType, TicketType> = {
   PREDATOR_DETECTED: 'PREDATOR_DETECTED',
   EDGE_AI_DEGRADED:  'EDGE_AI_DEGRADED',
   THRESHOLD_BREACH:  'OTHER',
-  BIRD_PANIC:        'OTHER',
+  NOISE_ANOMALY:     'OTHER',
   PUMP_DRY:          'OTHER',
   LOW_RETURN_RATE:   'OTHER',
   SENSOR_ANOMALY:    'SENSOR_FAULT',

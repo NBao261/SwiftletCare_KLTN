@@ -17,10 +17,12 @@ export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'
 export type AlertType =
   | 'THRESHOLD_BREACH' | 'PREDATOR_DETECTED' | 'NODE_OFFLINE'
-  | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'BIRD_PANIC'
+  | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'NOISE_ANOMALY' // THREAT-FR-007 (v2.0.0, trước là BIRD_PANIC)
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE' // THREAT-FR-013
   | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'   // v1.24.0 — ALERT-FR-010/011
+/** EXPERT-FR-003 — kết quả Domain Expert kiểm chứng 1 cảnh báo suy luận */
+export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 
