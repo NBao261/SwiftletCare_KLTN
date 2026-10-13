@@ -48,7 +48,7 @@ export const PRIORITY_DOT_CLS: Record<string, string> = {
 export const STATUS_BADGE_CLS: Record<string, string> = {
   NEW: 'bg-alertRed/10 text-alertRed',
   IN_PROGRESS: 'bg-climateOrange/10 text-climateOrange',
-  AWAITING_FIELD_CONFIRMATION: 'bg-sky-500/10 text-sky-600',
+  AWAITING_FIELD_CONFIRMATION: 'bg-accent-100 text-accent-800',
   CLOSED: 'bg-warmGray/10 text-warmGray',
 }
 

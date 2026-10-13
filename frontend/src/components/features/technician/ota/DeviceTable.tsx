@@ -45,9 +45,9 @@ function DeviceRow({ node, selected, onSelect }: DeviceRowProps) {
         <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] transition-colors duration-200 ${accent}`} />
         <StatusDot status={node.status as DeviceStatus} />
       </td>
-      <td className="px-4 py-3 tabular-nums text-sm font-semibold text-charcoal">{node.device_id}</td>
+      <td className="px-4 py-3 font-mono text-sm font-semibold text-charcoal">{node.device_id}</td>
       <td className="px-4 py-3 text-warmGray">{node.zone_id ? `KV ${node.zone_id.slice(-6).toUpperCase()}` : '—'}</td>
-      <td className="px-4 py-3 tabular-nums text-sm">{node.firmware_version ?? '—'}</td>
+      <td className="px-4 py-3 font-mono text-sm">{node.firmware_version ?? '—'}</td>
       <td className="px-4 py-3 text-sm"><OtaChip node={node} /></td>
       <td className="px-4 py-3 text-xs text-warmGray">
         {node.last_heartbeat ? formatDate(node.last_heartbeat) : '—'}

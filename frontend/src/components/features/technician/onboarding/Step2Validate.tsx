@@ -151,7 +151,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       {status === 'success' && (
         <div className="flex items-start gap-3 rounded-xl border border-limeMist/30 bg-limeMist/10 px-4 py-3">
-          <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />
+          <CheckCircle2 className="h-6 w-6 text-success shrink-0" />
           <div>
             <p className="font-semibold text-charcoal">Thiết bị hợp lệ!</p>
             <p className="text-sm text-charcoal/70">Model: {validatedModel}</p>

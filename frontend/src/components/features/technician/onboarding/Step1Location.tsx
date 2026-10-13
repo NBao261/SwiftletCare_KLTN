@@ -36,7 +36,7 @@ export function Step1Location({ data, patch, onNext }: Props) {
 
       {isComplete && (
         <div className="flex items-center gap-3 rounded-xl border border-limeMist/30 bg-limeMist/15 px-4 py-3">
-          <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />
+          <CheckCircle2 className="h-6 w-6 text-success shrink-0" />
           <div>
             <p className="font-semibold text-charcoal">Vị trí đã chọn</p>
             <p className="text-sm text-charcoal/70">{farmName} › {houseName} › {zoneName}</p>
