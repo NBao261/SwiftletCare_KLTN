@@ -27,9 +27,16 @@ STEP 2 - per-module rules. A changed file is judged ONLY by the rules of the mod
 - A rule file inside the touched module on the base branch (<module>/CLAUDE.md, AGENTS.md, CONTRIBUTING.md, *RULES*.md, *CONVENTION*.md) overrides root CLAUDE.md for that module.
 - Repo-wide: commit messages vs .commitlintrc.json; PR description vs .github/pull_request_template.md (flag only an empty/unfilled template, as non-blocking).
 - Severity: [Bắt buộc] = blocking; [Nên] = advisory. Known debt (e.g. FE_Design_Claude.md 13.14) is flagged only if the PR adds new code repeating or worsening it. Rules marked not yet applied (e.g. i18n in FE section 6) are never flagged. Judge only lines the PR adds or changes.
+- Product scope (every module): `SwiftletCare_SRS.md` §0 on the base branch (scope v2.0.0 after Review 1, plus later additions such as v2.1.0) wins over older text in the SRS, CLAUDE.md, READMEs and FE_Design_Claude.md; much of the code and those docs still describe the older v1.24.0 scope. Read §0.2 (scope decisions), §0.3 (roles) and the §0.5 checklist rows of the modules the PR touches, then flag:
+  - [blocking] New features, endpoints, screens or enum values that extend something §0.2 removes (Marketplace/Buyer listings and inquiries, the Farm Operator role and its zone scope, predator detection, the heating relay, Zalo/SMS channels, NH3/CO2 driving the fan). Removing or migrating them, and keeping existing code working, is fine.
+  - [blocking] A threshold, limit or behaviour introduced without a source (SRS, the Domain Expert, a cited reference): CLAUDE.md says never invent one; ask for the source or a downgrade to alert-only / "set by the Domain Expert".
+  - [blocking] A change that implements a §0.5 item but changes routes without updating `docs/api/api-spec.yaml` in the same PR, or changes a shared enum (`Role`, `AlertType`…) on only one of backend/frontend/mobile.
+  - [non-blocking] New work on a side flow (Technician, Admin, tickets) beyond keeping it working, since §0.2 #11 says not to extend it.
+  - When the PR implements a §0.5 item, say which one (FR code) in the summary.
+- Cross-module sync rules (CLAUDE.md): `firmware/src/pid/FuzzyControl.cpp` and `backend/src/utils/fuzzyModel.util.ts` must change together; a command for one device on a zone topic must carry `deviceId`; firmware runtime parameters go through `config/update`, are persisted to NVS and clamped. A PR that breaks one of these is blocking.
 
 STEP 3 - find issues.
-- Choose depth from the diff itself (count changed lines excluding lockfiles/generated files; for a FOLLOW-UP REVIEW count only `git diff <marker sha>..<head sha>`). A file is SENSITIVE if it touches auth/JWT/permissions (auth.*, farmAccess.util.ts, *.middleware.ts, requireRole), MQTT handlers or firmware control logic, DB models/schemas, docs/api/api-spec.yaml, or payment/order code. Pick the first level that matches:
+- Choose depth from the diff itself (count changed lines excluding lockfiles/generated files; for a FOLLOW-UP REVIEW count only `git diff <marker sha>..<head sha>`). A file is SENSITIVE if it touches auth/JWT/permissions (auth.*, farmAccess.util.ts, *.middleware.ts, requireRole), MQTT handlers or firmware control logic, DB models/schemas, docs/api/api-spec.yaml, or fuzzy/relay control (`pid/FuzzyControl.cpp`, `pid/PIDController.cpp`, `utils/fuzzyModel.util.ts`, relay/override services). Pick the first level that matches:
   - `xhigh`: SENSITIVE files AND > 400 changed lines (a large change to a sensitive area, e.g. a role or permission refactor).
   - `high`: SENSITIVE files, OR > 400 changed lines.
   - `low`: only docs/Markdown, comments, config or styling with no logic change, OR < 30 changed lines that touch no SENSITIVE file.
@@ -43,16 +50,18 @@ STEP 3 - find issues.
 STEP 3b - frontend <-> backend API check (only when the PR changes files under frontend/src/; for a FOLLOW-UP REVIEW only the screens changed since the marker).
 - For each screen/component/hook the PR adds or changes, list the data it shows or the actions it performs, and where that data comes from: an `@/apis/*` function (through its hook), or hardcoded/mock data (literal arrays or objects, `mock*`/`fake*` constants, the "This data is FAKE" notice).
 - For each of those needs, find the matching backend endpoint as it exists on the base branch plus anything this same PR adds: the route in `backend/src/routes/*.route.ts`, its `requireRole(...)`, the controller/service behind it, and its path in `docs/api/api-spec.yaml`. Classify it:
-  - DONE: the route exists and calls a real service (not `notImplemented`).
-  - STUB: the route exists but returns 501 via `utils/notImplemented.util.ts` (the Sales module).
+  - DONE: the route exists and calls a real service.
+  - STUB: the route exists but its service only throws `NotImplementedError` (501, `utils/appError.util.ts`) or returns placeholder data.
   - MISSING: no route.
-  Use `SwiftletCare_SRS.md` §5, column "Trạng thái Backend", and FE_Design_Claude.md section 7 only to confirm; when they disagree with the code, trust the code and mention the mismatch.
+  - REMOVING: the endpoint belongs to something SRS §0.2 removes (e.g. `/marketplace/*`) or a §0.5 row says it is being replaced.
+  Use `SwiftletCare_SRS.md` §5, column "Trạng thái Backend" (rows marked `🔄 Cần sửa code (v2.0.0)` or `❌ Ngoài phạm vi v2.0.0` matter here), and FE_Design_Claude.md section 7 only to confirm; when they disagree with the code, trust the code and mention the mismatch.
 - Then flag, citing FE_Design_Claude.md 13.9 / 13.8 (all [Bắt buộc], blocking):
   - Mock/hardcoded data on a screen whose endpoint is DONE: must switch to the real API. Name the endpoint and the existing `apis/` function or hook to use, or say one has to be added in the right `apis/<role|shared>/` file.
+  - New UI built on a REMOVING endpoint: must not be added (see the product-scope rule in STEP 2); point to the §0.5 replacement if there is one.
   - A call to an endpoint that is STUB or MISSING: must not ship as if real. Ask for mock data with the FAKE notice (section 5.4) or `ComingSoon`, and name the missing endpoint so backend can build it.
   - Mock data shown without the FAKE notice: add the notice.
   - A call to a DONE endpoint whose method, path, params, request body or response fields do not match the backend/spec, or whose `requireRole` does not allow the roles the screen's `<RequireRole allow>` / `usePermission` lets in: contract or permission break.
-- Add a short section to the review body titled "Đối chiếu API backend" with one line per data need: endpoint (or "chưa có endpoint"), DONE/STUB/MISSING, what the FE uses now (API thật / mock), and what to do ("OK", "chuyển sang API thật", "mock + nhãn FAKE", "thiếu endpoint, báo backend"). Put the blocking items as inline comments on the lines that fetch or hardcode the data.
+- Add a short section to the review body titled "Đối chiếu API backend" with one line per data need: endpoint (or "chưa có endpoint"), DONE/STUB/MISSING/REMOVING, what the FE uses now (API thật / mock), and what to do ("OK", "chuyển sang API thật", "mock + nhãn FAKE", "thiếu endpoint, báo backend", "tính năng bị bỏ theo SRS §0"). Put the blocking items as inline comments on the lines that fetch or hardcode the data.
 
 FOLLOW-UP extra step. For every earlier inline comment by NBao261 on this PR (all rounds), decide from the new code whether it is fixed / not fixed / partially fixed and reply briefly in its thread ('Đã sửa, ok.' or exactly what is still missing). Skip threads already answered 'fixed'.
 
@@ -76,4 +85,4 @@ SELF-REVIEW mode (the PR's author is NBao261, i.e. the repo owner's own PR). Git
 - If nothing at all was found, still post the COMMENT review (verdict plus what was checked) so the marker records the reviewed commit.
 - This command never edits or pushes code; fixing the findings is a separate task.
 
-Finish with a short report in Vietnamese: full or follow-up review, review level used (low/medium/high/xhigh) and why, modules and rule files read, event used (COMMENT for a SELF-REVIEW of your own PR), number of comments, for frontend PRs the API check result (how many data needs are DONE/STUB/MISSING and how many still use mock data), and a link to the PR.
+Finish with a short report in Vietnamese: full or follow-up review, review level used (low/medium/high/xhigh) and why, modules and rule files read, event used (COMMENT for a SELF-REVIEW of your own PR), number of comments, for frontend PRs the API check result (how many data needs are DONE/STUB/MISSING/REMOVING and how many still use mock data), any SRS §0 scope findings, and a link to the PR.

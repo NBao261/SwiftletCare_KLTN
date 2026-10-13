@@ -231,5 +231,5 @@ AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, System and Harvest/Mark
 ## Working with Claude
 
 - Reply to the user in Vietnamese.
-- Review a PR with `/review-pr <PR number>` (`.claude/commands/review-pr.md`). When reviewing, read code and diffs only — never run `npm install`/`npm ci`, builds or test suites.
+- Review a PR with `/review-pr <PR number>` (`.claude/commands/review-pr.md`). That file is the single review procedure: the "PR auto-review" routine on claude.ai reads it too, so change review behaviour there, not in the routine. It judges each module by its own rules plus SRS §0 scope, and posts a COMMENT-only review on the owner's own PRs. When reviewing, read code and diffs only — never run `npm install`/`npm ci`, builds or test suites.
 - Commits and PRs carry no Claude attribution (`.claude/settings.json` sets `attribution` to empty) — don't add `Co-Authored-By`, session links or similar lines by hand either.
