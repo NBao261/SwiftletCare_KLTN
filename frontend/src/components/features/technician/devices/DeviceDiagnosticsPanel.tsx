@@ -58,7 +58,7 @@ export default function DeviceDiagnosticsPanel({
   const clearOverride = useClearRelayOverride()
   const push = useToastStore((s) => s.push)
 
-  // Giá trị đọc gần nhất của node — phục vụ chẩn đoán, không phải dashboard môi trường (FARM-FR-009)
+  // Số đo gần nhất của ZONE (useTelemetry theo zoneId) — không phải riêng thiết bị này; phục vụ chẩn đoán (FARM-FR-009)
   const renderReading = (label: string, value: string | number | undefined, unit: string) => {
     const hasValue = value !== undefined && !Number.isNaN(value)
     const display = hasValue ? value : '--'
@@ -107,10 +107,13 @@ export default function DeviceDiagnosticsPanel({
       {/* Tab Content */}
       {activeTab === "telemetry" && (
         <div className="flex flex-col gap-6 animate-fade-in">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {renderReading("Nhiệt độ", telemetry.data.temperature, "°C")}
-            {renderReading("Độ ẩm", telemetry.data.humidity, "%")}
-            {renderReading("Khí NH₃", telemetry.data.nh3_ppm, "ppm")}
+          <div>
+            <h3 className="label-caption mb-3">Số đo gần nhất của zone</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {renderReading("Nhiệt độ", telemetry.data.temperature, "°C")}
+              {renderReading("Độ ẩm", telemetry.data.humidity, "%")}
+              {renderReading("Khí NH₃", telemetry.data.nh3_ppm, "ppm")}
+            </div>
           </div>
 
           <div>
@@ -209,24 +212,33 @@ export default function DeviceDiagnosticsPanel({
           </div>
 
           <div className="flex flex-col gap-3 flex-1">
-            <Button variant="secondary" className="w-full justify-start h-[76px] bg-white border border-warmGray/10 shadow-sm" onClick={onOpenSchedule}>
-              <div className="w-10 h-10 rounded-full bg-stone shrink-0 flex items-center justify-center mr-3">
-                <Clock size={20} className="text-charcoal" />
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-charcoal">Lịch phát loa ru</p>
-                <p className="text-xs text-warmGray mt-0.5">Cài đặt giờ bật/tắt tự động</p>
-              </div>
-            </Button>
-            <Button variant="secondary" className="w-full justify-start h-[76px] bg-white border border-warmGray/10 shadow-sm" onClick={onOpenAudio}>
-              <div className="w-10 h-10 rounded-full bg-stone shrink-0 flex items-center justify-center mr-3">
-                <ListMusic size={20} className="text-charcoal" />
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-charcoal">Quản lý File Audio</p>
-                <p className="text-xs text-warmGray mt-0.5">Danh sách file mp3 trên thẻ SD</p>
-              </div>
-            </Button>
+            {/* Giữ guard như bản develop: thiết bị PENDING chưa nhận cấu hình nên chưa cho chỉnh lịch/file loa */}
+            {node.status === "PENDING" ? (
+              <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
+                Thiết bị chưa kết nối. Lịch phát và file loa ru sẽ chỉnh được khi thiết bị online.
+              </p>
+            ) : (
+              <>
+                <Button variant="secondary" className="w-full justify-start h-[76px] bg-white border border-warmGray/10 shadow-sm" onClick={onOpenSchedule}>
+                  <div className="w-10 h-10 rounded-full bg-stone shrink-0 flex items-center justify-center mr-3">
+                    <Clock size={20} className="text-charcoal" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-charcoal">Lịch phát loa ru</p>
+                    <p className="text-xs text-warmGray mt-0.5">Cài đặt giờ bật/tắt tự động</p>
+                  </div>
+                </Button>
+                <Button variant="secondary" className="w-full justify-start h-[76px] bg-white border border-warmGray/10 shadow-sm" onClick={onOpenAudio}>
+                  <div className="w-10 h-10 rounded-full bg-stone shrink-0 flex items-center justify-center mr-3">
+                    <ListMusic size={20} className="text-charcoal" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-charcoal">Quản lý File Audio</p>
+                    <p className="text-xs text-warmGray mt-0.5">Danh sách file mp3 trên thẻ SD</p>
+                  </div>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
