@@ -23,9 +23,11 @@ export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
  * không đóng, dedup "còn mở thì không tạo mới" nuốt mọi lần tái phát về sau: mỗi thiết
  * bị chỉ còn đúng 1 bản ghi, Farm Owner không được báo lần nào nữa và thống kê tỷ lệ
  * xác nhận (EXPERT-FR-003) không còn là căn cứ chỉnh tham số.
+ * Firmware ≥ 1.3.0 gửi LẠI cảnh báo mỗi 15 phút chừng nào sự cố còn tiếp diễn
+ * (EPISODE_ALERT_RESEND_MS) nên đợt dài không bị đóng giữa chừng; mốc này phải dài hơn
+ * khoảng gửi lại đó.
  * ponytail: 60 phút là mốc kỹ thuật chọn tay (dài hơn 30 phút tự thử lại của PUMP_DRY
- * trên firmware để thử lại vẫn khô thì gộp vào cùng 1 cảnh báo), không có nguồn nuôi
- * yến — chỉnh khi có dữ liệu thật về độ dài một đợt ồn bất thường.
+ * trên firmware để thử lại vẫn khô thì gộp vào cùng 1 cảnh báo), không có nguồn nuôi yến.
  */
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
 export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'PUMP_DRY']
@@ -56,6 +58,9 @@ const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   SENSOR_ANOMALY:    'MEDIUM',
   FORECAST_BREACH:   'LOW',
 }
+
+/** Mọi loại cảnh báo hợp lệ — lấy từ bảng mức mặc định nên luôn đủ theo `AlertType` */
+export const ALERT_TYPES = Object.keys(DEFAULT_SEVERITY) as AlertType[]
 
 /** Cảnh báo không bao giờ được ở mức tự sinh ticket (HIGH/CRITICAL), kể cả khi thiết bị gửi lên */
 const NEVER_ESCALATE = new Set<AlertType>(['THRESHOLD_BREACH', 'NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'])
@@ -92,7 +97,12 @@ export interface CreateAlertInput {
  * không gửi thông báo lại.
  */
 export async function createAlert(input: CreateAlertInput): Promise<IAlert | null> {
-  const severity = input.severity ?? DEFAULT_SEVERITY[input.type]
+  // Loại không được leo thang thành ticket (ALERT-FR-012 + cảnh báo suy luận) giữ tối đa
+  // MEDIUM dù nguồn nào gửi mức cao hơn — đặt ở điểm vào duy nhất để không producer nào
+  // (firmware cấu hình sai, job mới) tự sinh ticket cho cảnh báo có thể báo nhầm.
+  const requested = input.severity ?? DEFAULT_SEVERITY[input.type]
+  const severity: AlertSeverity =
+    NEVER_ESCALATE.has(input.type) && (requested === 'CRITICAL' || requested === 'HIGH') ? 'MEDIUM' : requested
   const now = new Date()
 
   // Farm đã xoá mềm mà thiết bị vẫn cắm điện: không sinh cảnh báo (và ticket) mà
@@ -165,13 +175,11 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
  */
 export async function ingestDeviceAlert(message: Record<string, unknown>): Promise<IAlert | null> {
   const deviceId = message.deviceId as string | undefined
-  const rawType = message.type as string | undefined
-  const type = rawType && (ALERT_TYPE_ALIAS[rawType] ?? (rawType as AlertType))
+  const rawType = typeof message.type === 'string' ? message.type : undefined
+  // Object.hasOwn: tra thẳng `ALERT_TYPE_ALIAS[rawType]` sẽ trả hàm của Object.prototype cho 'constructor'
+  const type = rawType && (Object.hasOwn(ALERT_TYPE_ALIAS, rawType) ? ALERT_TYPE_ALIAS[rawType] : rawType)
   if (!deviceId || !type) throw NotFoundError('Payload cảnh báo thiếu deviceId hoặc type')
-  // Loại không được leo thang thành ticket (ALERT-FR-012 + cảnh báo suy luận) giữ tối
-  // đa MEDIUM dù thiết bị gửi mức cao hơn — một firmware cấu hình sai không được tự sinh ticket.
-  const sent = message.severity as AlertSeverity | undefined
-  const severity = NEVER_ESCALATE.has(type) && (sent === 'CRITICAL' || sent === 'HIGH') ? 'MEDIUM' : sent
+  if (!ALERT_TYPES.includes(type as AlertType)) throw BadRequestError(`Loại cảnh báo không hợp lệ: "${type}"`)
 
   const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
@@ -182,8 +190,8 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     farmId:      String(zone.farm_id),
     zoneId:      String(zone._id),
     nodeId:      String(node._id),
-    type,
-    severity,
+    type:        type as AlertType,
+    severity:    message.severity as AlertSeverity | undefined, // createAlert giới hạn mức cho loại không leo thang
     title:       (message.title as string | undefined) ?? `${type} tại ${zone.name}`,
     message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
     snapshotUrl: message.snapshotUrl as string | undefined,
@@ -424,7 +432,14 @@ export async function resolveStaleEpisodeAlerts(now = new Date()): Promise<numbe
         { last_seen_at: { $exists: false }, created_at: { $lt: clearBefore } },
       ],
     },
-    { status: 'RESOLVED', resolved_at: now, acknowledgement_note: 'Không còn ghi nhận lại — đợt sự cố đã qua' },
+    // Pipeline update: giữ ghi chú xác nhận của Farm Owner nếu đã có (ALERT-FR-009)
+    [{
+      $set: {
+        status: 'RESOLVED',
+        resolved_at: now,
+        acknowledgement_note: { $ifNull: ['$acknowledgement_note', 'Không còn ghi nhận lại — đợt sự cố đã qua'] },
+      },
+    }],
   )
   return modifiedCount
 }

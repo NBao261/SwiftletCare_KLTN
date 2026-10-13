@@ -55,19 +55,32 @@ export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndR
 }
 
 /**
+ * Lệnh relay tới thiết bị và trạng thái báo ngược lại mất vài giây (chu kỳ điều khiển
+ * của ESP32 là 10 giây). ponytail: 30 giây là biên chọn tay cho độ trễ đó.
+ */
+export const DEVICE_CONFIRM_GRACE_MS = 30_000
+
+/**
  * Thiết bị tự báo đã về AUTO (relay/status): đóng bản ghi còn mở — quá hạn thì là
  * EXPIRED, chưa tới hạn (thiết bị khởi động lại, mất override) thì là CLEARED_EARLY.
  */
 export async function closeOverrideLogsFromDevice(nodeId: unknown, at = new Date()): Promise<void> {
+  // DB chuyển MANUAL ngay khi API nhận lệnh (lạc quan), trước khi thiết bị thực thi: một
+  // bản tin relay/status AUTO đang trên đường tới không được đóng nhầm override vừa mở.
+  // Bản ghi còn quá mới thì để yên — nếu thiết bị thật sự đã về AUTO, job hết hạn sẽ đóng.
+  const settledBefore = new Date(at.getTime() - DEVICE_CONFIRM_GRACE_MS)
   try {
     await RelayOverrideLog.updateMany(
       { node_id: nodeId, ended_at: null, expires_at: { $lte: at } },
       { ended_at: at, end_reason: 'EXPIRED' satisfies OverrideEndReason },
     )
+    await RelayOverrideLog.updateMany(
+      { node_id: nodeId, ended_at: null, started_at: { $lte: settledBefore } },
+      { ended_at: at, end_reason: 'CLEARED_EARLY' satisfies OverrideEndReason },
+    )
   } catch (err) {
     logger.warn('Đóng lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
   }
-  await closeOverrideLogs([nodeId], 'CLEARED_EARLY', at)
 }
 
 /** ENV-FR-019 — lịch sử can thiệp tay của 1 thiết bị, mới nhất trước */

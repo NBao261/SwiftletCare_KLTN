@@ -3,11 +3,19 @@ import { param, body, query } from 'express-validator'
 import * as alertController from '@/controllers/alerts.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { ALERT_TYPES } from '@/services/alert.service'
 
 const router = Router()
 router.use(authenticate)
 
+// Mọi bộ lọc đều phải là chuỗi thuộc tập cho phép: `?type[$ne]=X` mà không chặn thì
+// thành toán tử Mongo trong filter (và làm lẫn cảnh báo thường vào hàng chờ kiểm chứng)
 router.get('/',
+  query('farmId').optional().isMongoId(),
+  query('zoneId').optional().isMongoId(),
+  query('status').optional().isIn(['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED']),
+  query('severity').optional().isIn(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
+  query('type').optional().isIn(ALERT_TYPES),
   query('verdict').optional().isIn(['pending', 'confirmed', 'rejected']), validate, alertController.list)
 // EXPERT-FR-003 — đặt trước '/:id' để "verdict-stats" không bị hiểu là một id
 router.get('/verdict-stats',

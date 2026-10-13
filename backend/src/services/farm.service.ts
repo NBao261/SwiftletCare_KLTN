@@ -29,12 +29,24 @@ const INVITATION_TTL_MS = 7 * 86400_000
  * FARM-FR-001. Technician thấy các Farm thuộc `assigned_regions` của mình để còn
  * chọn Farm→House→Zone khi onboarding thiết bị (Flow 1 bước 2), không phải mọi Farm.
  */
-export async function listFarms(user: CurrentUser): Promise<IFarm[]> {
+export async function listFarms(user: CurrentUser): Promise<Array<IFarm | FarmDetail>> {
   let filter: object = { $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] }
   if (user.role === 'ADMIN') filter = {}
   else if (user.role === 'TECHNICIAN') filter = { region: { $in: user.assigned_regions ?? [] } }
 
-  return Farm.find(filter).sort({ created_at: -1 })
+  const farms = await Farm.find(filter).sort({ created_at: -1 })
+  return user.role === 'DOMAIN_EXPERT' ? farms.map(farm => onlyOwnMembership(farm, user)) : farms
+}
+
+/**
+ * Domain Expert không quản lý thành viên (AUTH-FR-005) nên không cần — và không được
+ * thấy — danh sách thành viên của farm; chỉ giữ bản ghi của chính mình. Dùng chung cho
+ * danh sách và chi tiết farm để hai đường không lệch nhau.
+ */
+function onlyOwnMembership(farm: IFarm, user: CurrentUser): FarmDetail {
+  const plain = farm.toObject() as unknown as FarmDetail
+  plain.members = plain.members.filter(m => String(m.user_id) === user._id)
+  return plain
 }
 
 /** FARM-FR-001 — người tạo trở thành Primary Owner */
@@ -70,13 +82,7 @@ export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDe
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
 
-  // Domain Expert không quản lý thành viên (AUTH-FR-005) nên không cần — và không
-  // được thấy — danh sách thành viên kèm email; chỉ giữ bản ghi của chính mình.
-  if (user.role === 'DOMAIN_EXPERT') {
-    const plain = farm.toObject() as unknown as FarmDetail
-    plain.members = plain.members.filter(m => String(m.user_id) === user._id)
-    return plain
-  }
+  if (user.role === 'DOMAIN_EXPERT') return onlyOwnMembership(farm, user)
 
   const memberIds = [farm.owner_id, ...farm.members.map(m => m.user_id)]
   const users = await User.find({ _id: { $in: memberIds } }).select('full_name email').lean()

@@ -18,7 +18,7 @@ export const rampUp = (x: number, a: number, b: number) => 1 - rampDown(x, a, b)
 export const tri = (x: number, a: number, b: number, c: number) =>
   x <= a || x >= c ? 0 : x <= b ? (x - a) / (b - a) : (c - x) / (c - b)
 
-/** Bão hoà lúc đang phun có thể báo 100,x % — vẫn hợp lệ (khớp FuzzyControl.h) */
+/** Bão hoà lúc đang phun có thể báo 100,x % — vẫn hợp lệ. Phải bằng FuzzyControl::HUMIDITY_SATURATION_MAX (firmware/src/pid/FuzzyControl.h) */
 export const HUMIDITY_SATURATION_MAX = 101
 /** THREAT-FR-013 — số đo không hợp lệ thì nhu cầu = 0 (khớp FuzzyControl::inputsValid) */
 export const inputsValid = (t: number, h: number) =>

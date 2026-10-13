@@ -71,15 +71,25 @@ export async function dispatchAlertNotification(alert: IAlert): Promise<void> {
     // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
     // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot;
     // ALERT-FR-003: Zalo ZNS chỉ CRITICAL/HIGH; ALERT-FR-004: SMS chỉ cho CRITICAL.
-    await Promise.allSettled([
-      prefs?.push ? sendPush(String(user._id), alert.title, body) : undefined,
-      prefs?.telegram !== false && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined,
-      prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH') ? sendZalo(user.phone, body) : undefined,
-      prefs?.sms && alert.severity === 'CRITICAL' ? sendSms(user.phone, body) : undefined,
-    ])
+    // Các kênh của 1 người cũng chạy song song; kênh nào ném lỗi thì ghi log riêng,
+    // không kéo theo kênh còn lại.
+    const channels: Array<[string, Promise<unknown> | undefined]> = [
+      ['push', prefs?.push ? sendPush(String(user._id), alert.title, body) : undefined],
+      ['telegram', prefs?.telegram !== false && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
+      ['zalo', prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH') ? sendZalo(user.phone, body) : undefined],
+      ['sms', prefs?.sms && alert.severity === 'CRITICAL' ? sendSms(user.phone, body) : undefined],
+    ]
+    const outcomes = await Promise.allSettled(channels.map(([, sending]) => sending))
+    outcomes.forEach((outcome, i) => {
+      if (outcome.status === 'rejected') {
+        logger.warn('Gửi thông báo cảnh báo thất bại', { alertId: String(alert._id), userId: String(user._id), channel: channels[i][0], err: outcome.reason })
+      }
+    })
   }))
-  const failed = results.filter(r => r.status === 'rejected').length
-  if (failed > 0) logger.warn('Một số người nhận không gửi được thông báo', { alertId: String(alert._id), failed })
+  // Lỗi ngoài các kênh (đọc tuỳ chọn, tính giờ im lặng) — không được nuốt im lặng
+  results.forEach(result => {
+    if (result.status === 'rejected') logger.warn('Xử lý thông báo cho 1 người nhận thất bại', { alertId: String(alert._id), err: result.reason })
+  })
 }
 
 // ── Adapter tới nhà cung cấp ngoài (chưa nối credential thật) ───────────────
@@ -131,11 +141,16 @@ export interface NotifyUserOptions {
  */
 export async function notifyUser(userId: string, message: UserNotification, opts: NotifyUserOptions = {}): Promise<void> {
   try {
-    const user = await User.findById(userId).select('email notification_preferences').lean()
+    const user = await User.findById(userId).select('email notification_preferences telegram_chat_id').lean()
     if (!user) return
 
     if (!opts.emailOnly && user.notification_preferences?.push !== false) {
       await sendPush(String(user._id), message.title, message.body)
+    }
+    // Telegram là kênh duy nhất gửi thật (push/email mới ghi log): không đi qua đây thì
+    // báo cáo sức khỏe Zone, kết luận của chuyên gia… không tới được ai.
+    if (!opts.emailOnly && user.notification_preferences?.telegram !== false && user.telegram_chat_id) {
+      await sendTelegram(user.telegram_chat_id, `${message.title}\n${message.body}`)
     }
     await sendEmail(opts.email ?? user.email, message.title, message.body)
   } catch (err) {

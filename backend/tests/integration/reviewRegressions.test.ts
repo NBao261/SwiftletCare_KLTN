@@ -11,7 +11,9 @@ import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 import request from 'supertest'
 import { MongoMemoryServer } from 'mongodb-memory-server'
+import alertRoutes from '@/routes/alerts.route'
 import deviceRoutes from '@/routes/devices.route'
+import farmRoutes from '@/routes/farms.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
 import { AuditLog } from '@/models/auditLog.model'
@@ -25,7 +27,7 @@ import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { completeDeletionRequest } from '@/services/admin.service'
-import { EPISODE_CLEAR_MS, ingestDeviceAlert, resolveStaleEpisodeAlerts } from '@/services/alert.service'
+import { EPISODE_CLEAR_MS, createAlert, ingestDeviceAlert, resolveStaleEpisodeAlerts } from '@/services/alert.service'
 import { expireManualOverrides } from '@/services/device.service'
 import { createHarvest } from '@/services/harvest.service'
 import type { CurrentUser } from '@/types'
@@ -46,7 +48,9 @@ process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 
 const app = express()
 app.use(express.json())
+app.use('/alerts', alertRoutes)
 app.use('/devices', deviceRoutes)
+app.use('/farms', farmRoutes)
 app.use(errorHandler)
 
 let mongod: MongoMemoryServer
@@ -188,5 +192,63 @@ describe('cảnh báo theo đợt tự đóng để lần tái phát không bị
     const after = (await Alert.findById(alert._id).lean())!
     expect(after.status).toBe('RESOLVED')
     expect(after.expert_verdict!.result).toBe('REJECTED')
+  })
+})
+
+describe('vòng review 2', () => {
+  it('bộ lọc GET /alerts chỉ nhận giá trị hợp lệ — toán tử Mongo trong query bị từ chối', async () => {
+    const { farm, zone, node, token } = await seed()
+    const base = { farm_id: farm._id, zone_id: zone._id, node_id: node._id, severity: 'MEDIUM', title: 't', message: 'm' }
+    await Alert.create([{ ...base, type: 'NODE_OFFLINE' }, { ...base, type: 'NOISE_ANOMALY' }])
+    const get = (qs: string) => request(app).get(`/alerts?${qs}`).set('Authorization', `Bearer ${token}`)
+
+    await get('type[$ne]=NODE_OFFLINE').expect(422)
+    await get('verdict=pending&type[$ne]=x').expect(422)
+    await get('status[$ne]=RESOLVED').expect(422)
+    await get('severity[$in][]=LOW').expect(422)
+    await get('type=KHONG_CO').expect(422)
+    // Hàng chờ kiểm chứng chỉ gồm cảnh báo suy luận
+    const pending = await get('verdict=pending').expect(200)
+    expect(pending.body.data.map((a: { type: string }) => a.type)).toEqual(['NOISE_ANOMALY'])
+  })
+
+  it('GET /farms không lộ danh sách thành viên cho Domain Expert (như GET /farms/:id)', async () => {
+    const { owner, farm } = await seed()
+    const expert = await User.create({ email: 'ex@test.vn', password_hash: 'password123', full_name: 'E', role: 'DOMAIN_EXPERT' })
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: expert._id, role: 'DOMAIN_EXPERT' } } })
+    const as = (id: unknown, role: string) =>
+      request(app).get('/farms').set('Authorization', `Bearer ${jwt.sign({ sub: String(id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })}`)
+
+    const forExpert = await as(expert._id, 'DOMAIN_EXPERT').expect(200)
+    expect(forExpert.body.data).toHaveLength(1)
+    expect(forExpert.body.data[0].members.map((m: { user_id: string }) => m.user_id)).toEqual([String(expert._id)])
+    const forOwner = await as(owner._id, 'FARM_OWNER').expect(200)
+    expect(forOwner.body.data[0].members).toHaveLength(2)
+  })
+
+  it('tự đóng cảnh báo theo đợt giữ nguyên ghi chú xác nhận của Farm Owner', async () => {
+    const { node } = await seed()
+    const acked = (await ingestDeviceAlert({ deviceId: node.device_id, type: 'PUMP_DRY', message: 'khô' }))!
+    await Alert.updateOne({ _id: acked._id }, { status: 'ACKNOWLEDGED', acknowledgement_note: 'Đã châm nước lúc 7h' })
+    const plain = (await ingestDeviceAlert({ deviceId: node.device_id, type: 'NOISE_ANOMALY', message: 'ồn' }))!
+
+    expect(await resolveStaleEpisodeAlerts(new Date(Date.now() + EPISODE_CLEAR_MS + 60_000))).toBe(2)
+    expect((await Alert.findById(acked._id).lean())!).toMatchObject({ status: 'RESOLVED', acknowledgement_note: 'Đã châm nước lúc 7h' })
+    expect((await Alert.findById(plain._id).lean())!.acknowledgement_note).toContain('đợt sự cố đã qua')
+  })
+
+  it('giới hạn mức độ nằm ở createAlert: nguồn nào cũng không đẩy được cảnh báo suy luận lên HIGH', async () => {
+    const { farm, zone, node } = await seed()
+    const input = { farmId: String(farm._id), zoneId: String(zone._id), nodeId: String(node._id), title: 't', message: 'm' }
+    expect((await createAlert({ ...input, type: 'LOW_RETURN_RATE', severity: 'CRITICAL' }))!.severity).toBe('MEDIUM')
+    expect((await createAlert({ ...input, type: 'FORECAST_BREACH' }))!.severity).toBe('LOW') // mặc định thấp hơn thì giữ nguyên
+    expect((await createAlert({ ...input, type: 'POWER_OUTAGE', severity: 'CRITICAL' }))!.severity).toBe('CRITICAL')
+  })
+
+  it('thiết bị gửi loại cảnh báo không hợp lệ (kể cả tên thuộc tính của Object) bị từ chối', async () => {
+    const { node } = await seed()
+    await expect(ingestDeviceAlert({ deviceId: node.device_id, type: 'constructor' })).rejects.toMatchObject({ statusCode: 400 })
+    await expect(ingestDeviceAlert({ deviceId: node.device_id, type: { $ne: 1 } })).rejects.toMatchObject({ statusCode: 404 })
+    expect(await Alert.countDocuments()).toBe(0)
   })
 })

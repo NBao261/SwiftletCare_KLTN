@@ -125,6 +125,13 @@ describe('lịch sử can thiệp tay (ENV-FR-019)', () => {
     })
 
     await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true }).expect(200)
+    // Bản tin AUTO đã trên đường tới từ trước khi thiết bị kịp thực thi lệnh: không được đóng override vừa mở
+    await auto()
+    expect((await RelayOverrideLog.findOne({ relay: 'misting' }).lean())!.ended_at).toBeNull()
+
+    // Override đã chạy được 1 phút rồi thiết bị mới báo AUTO (khởi động lại) → kết thúc sớm thật
+    await RelayOverrideLog.updateOne({ relay: 'misting' }, { started_at: new Date(Date.now() - 60_000) })
+    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL' })
     await auto()
     expect((await RelayOverrideLog.findOne({ relay: 'misting' }).lean())!.end_reason).toBe('CLEARED_EARLY')
 

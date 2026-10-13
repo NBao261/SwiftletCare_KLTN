@@ -13,7 +13,7 @@ import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert, IAlert } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { User } from '@/models/user.model'
-import { dispatchAlertNotification } from '@/services/notification.service'
+import { dispatchAlertNotification, notifyUser } from '@/services/notification.service'
 import { handleTelegramUpdate, sendTelegram } from '@/services/telegram.service'
 import type { AlertSeverity } from '@/types'
 
@@ -162,6 +162,14 @@ describe('gửi cảnh báo qua Telegram', () => {
 
     await expect(dispatchAlertNotification(alert('CRITICAL'))).resolves.toBeUndefined()
     expect(sent().map(m => m.chat_id).sort()).toEqual(['100', '200'])
+  })
+
+  it('thông báo nghiệp vụ (báo cáo sức khỏe, kết luận của chuyên gia) cũng đi qua Telegram', async () => {
+    const linked = await mkUser({ telegram_chat_id: '555' })
+    const unlinked = await mkUser()
+    await notifyUser(String(linked._id), { title: 'Báo cáo sức khỏe Zone A', body: 'Đã sẵn sàng' })
+    await notifyUser(String(unlinked._id), { title: 'x', body: 'y' })
+    expect(sent()).toEqual([{ chat_id: '555', text: 'Báo cáo sức khỏe Zone A\nĐã sẵn sàng' }])
   })
 
   it('tắt kênh Telegram trong tuỳ chọn thì không gửi', async () => {
