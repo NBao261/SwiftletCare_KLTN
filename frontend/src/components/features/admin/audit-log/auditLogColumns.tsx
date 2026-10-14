@@ -3,7 +3,7 @@
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { AUDIT_ACTION_LABEL } from '@/constants/auditActions'
 import { ROLE_LABEL } from '@/constants/roles'
-import { formatDate, formatHM, formatRelativeTime, vnDayLabel } from '@/lib/helpers'
+import { formatDateOnly, formatRelativeTime, formatTimeOnly } from '@/lib/helpers'
 import type { AuditLogEntry } from '@/types'
 import { t, translated } from '@/i18n'
 
@@ -42,33 +42,33 @@ export function reasonOf(log: AuditLogEntry): string | undefined {
 /**
  * Cùng bố cục bảng Người dùng (userColumns.tsx): STT liên tục qua các
  * trang (`startIndex` = (page-1)*limit), người thực hiện, vai trò cột riêng,
- * width % tổng 100 cho table-fixed (5+27+18+13+19+18 — mỗi cột = chữ dài nhất thường gặp + 1 khoảng trống gần bằng nhau giữa các cột). Không có cột thao tác — nhật ký chỉ đọc.
+ * width % tổng 100 cho table-fixed (6+20+19+18+21+16). Không có cột thao tác — nhật ký chỉ đọc.
  */
 export function buildAuditLogColumns(startIndex: number): DataTableColumn<AuditLogEntry>[] {
   return [
     {
-      key: 'stt', header: 'STT', align: 'center', className: 'w-[5%]',
+      key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]',
       render: (_log, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
     },
     // Căn đều: width = độ dài nội dung thường gặp + 1 khoảng trống như nhau, để khe giữa chữ cột này và cột sau
-    // đều nhau (6/21/21/17/17/18 = 100%). Mọi cột cùng cỡ chữ, cùng padding. Độ đậm theo thứ bậc:
+    // đều nhau (6/20/19/18/21/16 = 100%). Hành động thường ngắn ("Đăng nhập") nên không chiếm rộng — nhãn dài
+    // (VD "Cập nhật vùng phụ trách Technician") mờ dần ở đuôi. Độ đậm theo thứ bậc:
     // Người thực hiện đậm (ai làm) > Hành động vừa (làm gì) > Thời gian thường > Vai trò xám.
-    // Nhãn hành động dài: cắt "…", rê chuột (title) xem đủ.
     {
-      key: 'action', header: 'Hành động', className: 'w-[27%]',
+      key: 'action', header: 'Hành động', className: 'w-[20%]',
       render: log => {
         const label = AUDIT_ACTION_LABEL[log.action] ?? log.action
         // Dài thì mờ dần ở đuôi (text-fade) thay vì "…" — chỉ riêng cột này; rê chuột xem đủ
         return <p className="text-fade font-medium text-charcoal" title={label}>{label}</p>
       },
     },
-    { key: 'person', header: 'Người thực hiện', className: 'w-[18%]', render: log => <PersonCell log={log} /> },
+    { key: 'person', header: 'Người thực hiện', className: 'w-[19%]', render: log => <PersonCell log={log} /> },
     {
-      key: 'role', header: 'Vai trò', className: 'w-[13%]',
+      key: 'role', header: 'Vai trò', className: 'w-[18%]',
       render: log => <p className="truncate text-graphite">{log.actor_id ? ROLE_LABEL[log.actor_id.role] : '—'}</p>,
     },
     {
-      key: 'reason', header: 'Lý do', className: 'w-[19%]',
+      key: 'reason', header: 'Lý do', className: 'w-[21%]',
       render: log => {
         const reason = reasonOf(log)
         return reason
@@ -77,16 +77,16 @@ export function buildAuditLogColumns(startIndex: number): DataTableColumn<AuditL
       },
     },
     {
-      key: 'created_at', header: 'Thời gian', className: 'w-[18%] whitespace-nowrap',
-      // "Hôm nay · 07:48" / "Hôm qua · 13:44" / "05/10/2026 · 09:12" — rê chuột hiện đủ ngày giờ + tương đối
-      render: log => {
-        return (
-          <span title={`${formatDate(log.created_at)} · ${formatRelativeTime(log.created_at)}`}>
-            <span className="text-charcoal">{vnDayLabel(log.created_at)}</span>
-            <span className="text-warmGray"> · {formatHM(log.created_at)}</span>
-          </span>
-        )
-      },
+      key: 'created_at', header: 'Thời gian', className: 'w-[16%] whitespace-nowrap',
+      // 2 tầng như bảng nhật ký cảnh báo Farm Owner: giờ "20:35:10" trên, ngày "7/10/2026" xám dưới — rê chuột
+      // xem thêm thời gian tương đối. leading-tight + -my-1 (ăn bớt py-3 của ô): 2 dòng vẫn vừa hàng 52px như cũ,
+      // bảng không cao thêm
+      render: log => (
+        <div className="-my-1 flex flex-col leading-tight" title={formatRelativeTime(log.created_at)}>
+          <span className="font-semibold text-charcoal">{formatTimeOnly(log.created_at)}</span>
+          <span className="text-small text-warmGray">{formatDateOnly(log.created_at)}</span>
+        </div>
+      ),
     },
   ]
 }
