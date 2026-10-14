@@ -40,13 +40,24 @@ const DEFAULT_PRIORITY: Record<TicketType, TicketPriority> = {
  * TICKET-FR-006, SLA-NFR-001 — SLA do Admin cấu hình (system_settings), không
  * hard-code. Chưa cấu hình thì rơi về DEFAULT_SLA trong sla.util.
  */
-async function slaDueDates(priority: TicketPriority, from: Date) {
+async function slaDueDates(priority: TicketPriority, from: Date, resolveFrom: Date = from) {
   const sla = await getSlaHours()
-  const base = from.getTime()
   return {
-    sla_response_due_at: new Date(base + sla[priority].response_hours * 3600_000),
-    sla_resolve_due_at:  new Date(base + sla[priority].resolve_hours * 3600_000),
+    sla_response_due_at: new Date(from.getTime() + sla[priority].response_hours * 3600_000),
+    sla_resolve_due_at:  new Date(resolveFrom.getTime() + sla[priority].resolve_hours * 3600_000),
   }
+}
+
+/**
+ * TICKET-FR-013 — ticket bảo trì được sinh TRƯỚC giờ hẹn (`MAINTENANCE_LEAD_DAYS`, mặc
+ * định 3 ngày ≈ đúng 72h của SLA P3). Tính hạn xử lý từ lúc tạo thì hạn rơi ngay sau giờ
+ * hẹn chưa tới 1 tiếng (job chạy mỗi giờ), Technician đến đúng hẹn vẫn gần như chắc chắn
+ * bị tính vượt SLA. Nên hạn xử lý tính từ giờ hẹn — việc chỉ bắt đầu được từ đó; hạn phản
+ * hồi (xác nhận tiếp nhận) vẫn tính từ lúc tạo. Dùng giờ hẹn lúc tạo ticket: Technician
+ * tự dời lịch về sau không kéo dài được hạn của mình.
+ */
+function maintenanceResolveFrom(ticket: Pick<ITicket, 'type' | 'created_at' | 'scheduled_visit_at'>): Date {
+  return ticket.type === 'MAINTENANCE' && ticket.scheduled_visit_at ? ticket.scheduled_visit_at : ticket.created_at
 }
 
 /**
@@ -260,7 +271,8 @@ export async function createMaintenanceTicket(input: {
   farm_id: string; zone_id?: string; scheduled_visit_at: Date; description: string
 }): Promise<ITicket> {
   const priority = DEFAULT_PRIORITY.MAINTENANCE
-  const sla = await slaDueDates(priority, new Date())
+  // Hạn xử lý tính từ giờ hẹn, không phải lúc tạo — xem maintenanceResolveFrom
+  const sla = await slaDueDates(priority, new Date(), input.scheduled_visit_at)
   const assignedTo = await routeToTechnician(input.farm_id)
 
   const ticket = await Ticket.create({
@@ -1284,7 +1296,7 @@ export async function adminOverrideTicket(
   if (updates.priority !== undefined && updates.priority !== ticket.priority) {
     // SLA tính theo priority (TICKET-FR-006) và mốc là lúc tạo ticket, không
     // phải lúc Admin sửa — nếu không, nâng P3→P1 vẫn giữ hạn 72h cũ.
-    const sla = await slaDueDates(updates.priority, ticket.created_at)
+    const sla = await slaDueDates(updates.priority, ticket.created_at, maintenanceResolveFrom(ticket))
     changes.priority = { before: ticket.priority, after: updates.priority }
     ticket.priority = updates.priority
     // Vừa đổi người ở trên thì hạn phản hồi tính từ lúc giao, theo priority mới
