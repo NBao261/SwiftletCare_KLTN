@@ -24,8 +24,8 @@ SwiftletCare — IoT monitoring + automation system for swiftlet (yến) houses 
 - **Never invent a threshold or behaviour without a source**; if none is found, downgrade the claim (alert-only, "set by the Domain Expert"). Engineering constants that had to be picked anyway are listed as unconfirmed assumptions at the end of SRS §0.5 — add any new one there.
 
 Known repo quirks:
-- `docs/db/` does not exist, yet `docker-compose.yml` bind-mounts `./docs/db/mongo-init.js` as Mongo's `/docker-entrypoint-initdb.d/init.js` — Docker creates an empty directory there on first `up`, so the DB init hook is a silent no-op.
-- `docs/hardware/` only has `BOM.md` (no circuit diagram or prototype photos); `docs/test-reports/` only has a `.gitkeep`.
+- Mongo has no init script: the backend logs in as the root user from `docker-compose.yml`, and collections/indexes come from Mongoose, `npm run seed` and `npm run migrate:*`. A machine that ran an older compose file may hold an empty `docs/db/` folder (untracked) — safe to delete.
+- Docs live under `docs/` (map: `docs/FOLDER_STRUCTURE.md`); only the SRS stays at the repo root. `docs/hardware/` has `BOM.md` and `components-guide.md` but no circuit diagram or prototype photos; `docs/test-reports/` only has a `.gitkeep`.
 
 ### Per-module rules
 

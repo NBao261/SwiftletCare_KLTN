@@ -31,4 +31,4 @@ types/          Mirror backend/src/types/domain.ts (§8.2)
 
 ## Trạng thái màn hình
 
-Phần lớn màn hình là stub — implement theo `SwiftletCare_TASK_DETAIL_Checklist.md` mục D (sprint tương ứng). Tab `Tickets` là scaffold mới thêm để khớp Module TICKET trong SRS §5.9.
+Phần lớn màn hình là stub — implement theo `docs/task-checklist.md` mục D (sprint tương ứng). Tab `Tickets` là scaffold mới thêm để khớp Module TICKET trong SRS §5.9.

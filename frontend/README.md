@@ -89,7 +89,7 @@ dùng alias `@/`, không dùng đường dẫn tương đối.
 
 ## Trạng thái trang
 
-Phần lớn trang là stub "Coming soon" — implement theo `SwiftletCare_TASK_DETAIL_Checklist.md` mục D (sprint tương ứng). `Tickets`, `Harvest`, `Marketplace` là scaffold mới thêm để khớp Module TICKET/MARKET trong SRS.
+Phần lớn trang là stub "Coming soon" — implement theo `docs/task-checklist.md` mục D (sprint tương ứng). `Tickets`, `Harvest`, `Marketplace` là scaffold mới thêm để khớp Module TICKET/MARKET trong SRS.
 
 ## Lệnh hữu ích
 

@@ -15,12 +15,9 @@ SwiftletCare_KLTN/
 ├── backend/           # Node.js Express API + MQTT + Socket.io
 ├── frontend/          # React web dashboard (Vite + Tailwind)
 ├── mobile/            # Expo/React Native app
-├── docs/              # Tài liệu kỹ thuật (docs/api/api-spec.yaml = OpenAPI spec)
+├── docs/              # Tài liệu: api/ (OpenAPI spec), hardware/, diagrams/, task-checklist, github-setup — xem docs/FOLDER_STRUCTURE.md
 ├── docker-compose.yml # Dev environment (MongoDB, EMQX, MinIO, Redis)
-├── SwiftletCare_SRS.md
-├── SwiftletCare_Components_Guide_v3.11.md
-├── SwiftletCare_TASK_DETAIL_Checklist.md
-└── GITHUB_SETUP.md
+└── SwiftletCare_SRS.md
 ```
 
 ## Chạy local (sau khi restart máy)
@@ -77,10 +74,12 @@ python src/stream.py
 
 ## Tài liệu
 
-- [SRS](./SwiftletCare_SRS.md) – Software Requirements Specification v1.11.0
-- [Components Guide](./SwiftletCare_Components_Guide_v3.11.md) – BOM & đấu nối phần cứng
-- [Task Checklist](./SwiftletCare_TASK_DETAIL_Checklist.md) – Việc theo sprint, đánh dấu tiến độ
-- [GITHUB_SETUP](./GITHUB_SETUP.md) – Git workflow cho team
+- [SRS](./SwiftletCare_SRS.md) – Software Requirements Specification (phạm vi hiện hành: mục 0)
+- [Cấu trúc thư mục](./docs/FOLDER_STRUCTURE.md) – file nào đặt ở đâu, quy tắc từng module
+- [Components Guide](./docs/hardware/components-guide.md) – BOM & đấu nối phần cứng
+- [Task Checklist](./docs/task-checklist.md) – Việc theo sprint, đánh dấu tiến độ
+- [GitHub setup](./docs/github-setup.md) – Git workflow cho team
+- [Sơ đồ](./docs/diagrams/) – context diagram, kiến trúc hệ thống (draw.io)
 - [API Docs](./docs/api/README.md) – OpenAPI spec (`docs/api/api-spec.yaml`) + Swagger UI
 - Từng module có README riêng: `backend/README.md`, `frontend/README.md`, `firmware/README.md`, `mobile/README.md`, `ai-pipeline/README.md`
 
