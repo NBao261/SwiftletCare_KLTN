@@ -10,8 +10,8 @@ const ICON = 'bg-warmGray/10 text-charcoal'
 /**
  * Hàng 5 ô số đầu trang Thiết bị của Admin — cùng kiểu card "Chỉ số vận hành toàn hệ thống" (Tổng quan): bọc Card
  * + tiêu đề, ô bên trong bỏ shadow riêng, icon xám. Đếm từ `summary` của GET /devices/system-status (OPS-NFR-004),
- * toàn hệ thống, không theo bộ lọc bảng. Lỗi + Suy giảm gộp 1 ô "Cần xử lý" — ô đỏ khi có (giống ô Thiết bị ở
- * Tổng quan), vì đây là thiết bị cần Technician đến xem. Dòng phụ mỗi ô vừa 1 dòng, không dùng từ kỹ thuật
+ * toàn hệ thống, không theo bộ lọc bảng. Lỗi + Suy giảm gộp 1 ô "Cần xử lý". Chỉ ô báo vấn đề mới nổi, và chỉ khi
+ * số > 0: Cần xử lý đỏ, Offline cam; Tổng/Online/Chờ kết nối luôn trắng. Dòng phụ mỗi ô vừa 1 dòng, không dùng từ kỹ thuật
  * "heartbeat".
  */
 export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
@@ -51,6 +51,8 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           iconClass={ICON}
           label="Offline"
           value={summary.offline}
+          // Có thiết bị offline → ô nổi cam (mất dữ liệu nhà yến, cần kiểm tra nguồn/mạng)
+          tone={summary.offline > 0 ? 'warning' : undefined}
           // Flow 14: không nhận heartbeat > 30s → OFFLINE
           sub={summary.offline > 0 ? 'Mất tín hiệu quá 30 giây' : 'Tất cả đều kết nối'}
         />
@@ -60,6 +62,8 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           iconClass={ICON}
           label="Cần xử lý"
           value={faulty}
+          // Có thiết bị lỗi/suy giảm → ô nổi đỏ (nghiêm trọng nhất, cần tạo ticket)
+          tone={faulty > 0 ? 'critical' : undefined}
           sub={faulty > 0 ? t('{{error}} lỗi · {{degraded}} suy giảm', { error: summary.error, degraded: summary.degraded }) : 'Không có thiết bị lỗi'}
         />
         <StatTile

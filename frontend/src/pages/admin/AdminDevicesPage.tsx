@@ -14,6 +14,7 @@ import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import DeviceStats from '@/components/features/admin/devices/DeviceStats'
 import { buildDeviceColumns, nodeLocation } from '@/components/features/admin/devices/deviceColumns'
+import DeviceDetailDrawer from '@/components/features/admin/devices/DeviceDetailDrawer'
 import type { DeviceStatus, SortDirection, SystemNodeStatusItem } from '@/types'
 
 const PAGE_SIZE = 10
@@ -62,6 +63,7 @@ export default function AdminDevicesPage() {
   const [sortBy, setSortBy] = useState<DeviceSortKey>(DEFAULT_SORT_BY)
   const [sortDir, setSortDir] = useState<SortDirection>(DEFAULT_SORT_DIR)
   const [page, setPage] = useState(1)
+  const [viewTarget, setViewTarget] = useState<SystemNodeStatusItem | null>(null)
 
   const nodes = useMemo(() => data?.nodes ?? [], [data])
   const farmOptions = useMemo(
@@ -131,9 +133,11 @@ export default function AdminDevicesPage() {
         </div>
 
         <DataTable
-          columns={buildDeviceColumns((page - 1) * PAGE_SIZE)}
+          columns={buildDeviceColumns((page - 1) * PAGE_SIZE, setViewTarget)}
           rows={rows}
           getRowKey={n => `${n.type}-${n._id}`}
+          // Bấm dòng hoặc nút "Chi tiết" mở drawer chi tiết (Admin chỉ xem thiết bị)
+          onRowClick={setViewTarget}
           // Cố định khung 10 dòng — ít thiết bị/trang cuối vẫn giữ chiều cao, lọc không làm card co giãn
           rowHeight={ROW_HEIGHT}
           minRows={PAGE_SIZE}
@@ -145,6 +149,8 @@ export default function AdminDevicesPage() {
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}
         <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
       </SectionCard>
+
+      <DeviceDetailDrawer node={viewTarget} onClose={() => setViewTarget(null)} />
     </div>
   )
 }

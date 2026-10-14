@@ -1,6 +1,15 @@
 // SwiftletCare utility functions
 import { intlLocale, t } from '@/i18n'
 
+/** Mức tín hiệu Wi-Fi theo RSSI (dBm) — chung cho bảng thiết bị Farm Owner (key i18n `wifi.*`) và Admin */
+export function wifiQuality(rssi: number | undefined): 'excellent' | 'good' | 'fair' | 'weak' | undefined {
+  if (rssi === undefined) return undefined
+  if (rssi >= -55) return 'excellent'
+  if (rssi >= -67) return 'good'
+  if (rssi >= -75) return 'fair'
+  return 'weak'
+}
+
 /** Format date to Vietnamese locale */
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })

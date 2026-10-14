@@ -266,14 +266,8 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
   }
 }
 
-/** Mức tín hiệu Wi-Fi theo RSSI (dBm) → key i18n */
-export function wifiQuality(rssi: number | undefined): 'excellent' | 'good' | 'fair' | 'weak' | undefined {
-  if (rssi === undefined) return undefined
-  if (rssi >= -55) return 'excellent'
-  if (rssi >= -67) return 'good'
-  if (rssi >= -75) return 'fair'
-  return 'weak'
-}
+/** Mức tín hiệu Wi-Fi theo RSSI — dời sang lib/helpers để bảng Thiết bị của Admin dùng chung ngưỡng */
+export { wifiQuality } from '@/lib/helpers'
 
 /** Giá trị cuối cùng của mỗi chỉ số theo thứ tự ưu tiên: realtime → trung bình 1h */
 export function mergeMetrics(live: ZoneMetrics | undefined, avg: ZoneMetrics | undefined): ZoneMetrics | undefined {
