@@ -21,12 +21,12 @@ export default function TicketStatusSteps({ status }: { status: TicketStatus }) 
         const active = !closed && i === current
         return (
           <li key={s} className="flex min-w-0 flex-col gap-2" aria-current={active ? 'step' : undefined}>
-            <div className={cn('h-1.5 rounded-full', done ? 'bg-charcoal' : active ? 'bg-accent-300' : 'bg-warmGray/15')} />
+            <div className={cn('h-1.5 rounded-full', done ? 'bg-charcoal' : active ? 'bg-limeMist' : 'bg-warmGray/15')} />
             <div className="flex min-w-0 items-center gap-1.5">
               <span
                 className={cn(
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-caption',
-                  done ? 'bg-charcoal text-limeMist' : active ? 'bg-accent-300 text-charcoal' : 'bg-warmGray/15 text-warmGray',
+                  done ? 'bg-charcoal text-limeMist' : active ? 'bg-limeMist text-charcoal' : 'bg-warmGray/15 text-warmGray',
                 )}
               >
                 {done ? <CheckIcon size={11} weight="bold" /> : i + 1}
