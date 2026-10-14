@@ -133,6 +133,24 @@ describe('generateDueMaintenanceTickets', () => {
     expect(await generateDueMaintenanceTickets()).toBe(0)
   })
 
+  it('hạn xử lý SLA tính từ giờ hẹn, không phải lúc tạo (ticket sinh trước hạn 3 ngày)', async () => {
+    const { farm } = await seed()
+    // Hẹn 3 ngày nữa — đúng tình huống job tạo ticket sớm LEAD_DAYS ngày
+    await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Kiểm tra relay', interval_days: 30, next_due_at: vnAt(3, 9),
+    })
+    const before = Date.now()
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+
+    const ticket = (await Ticket.findOne().lean())!
+    const HOUR = 3600_000
+    // P3: xử lý 72h kể từ giờ hẹn — Technician đến đúng hẹn còn đủ 3 ngày để xong việc
+    expect(ticket.sla_resolve_due_at!.getTime()).toBe(ticket.scheduled_visit_at!.getTime() + 72 * HOUR)
+    // Xác nhận tiếp nhận vẫn tính từ lúc tạo (24h với P3)
+    expect(ticket.sla_response_due_at!.getTime()).toBeGreaterThanOrEqual(before + 24 * HOUR)
+    expect(ticket.sla_response_due_at!.getTime()).toBeLessThan(ticket.scheduled_visit_at!.getTime())
+  })
+
   it('trễ nhiều chu kỳ chỉ tạo 1 ticket; 2 lượt chạy song song không tạo trùng; lịch tạm dừng bị bỏ qua', async () => {
     const { farm } = await seed()
     await MaintenanceSchedule.create({ farm_id: farm._id, description: 'A', interval_days: 1, next_due_at: new Date(Date.now() - 5.5 * DAY) })
