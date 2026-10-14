@@ -35,9 +35,9 @@ Each module has its own lead and its own rules. Judge a change only against the 
 |---|---|
 | `backend/` | `backend/CLAUDE.md` · `backend/README.md` · `backend/.eslintrc.cjs` · `docs/api/api-spec.yaml` (API contract) |
 | `frontend/` | `frontend/FE_Design_Claude.md` (design tokens, components, i18n, mock data, §12 folders + naming, §13 code rules, target structure) · `frontend/CLAUDE.md` (structure as the code is today) · `frontend/README.md` · `frontend/.eslintrc.cjs` |
-| `mobile/` | "Mobile" section below · `mobile/README.md` |
+| `mobile/` | `mobile/CLAUDE.md` when present · "Mobile" section below · `mobile/README.md` |
 | `firmware/` | `firmware/CLAUDE.md` · `firmware/README.md` |
-| `ai-pipeline/` | "AI pipeline" section below · `ai-pipeline/README.md` · `docs/bird-counting-plan.md` |
+| `ai-pipeline/` | `ai-pipeline/CLAUDE.md` when present · "AI pipeline" section below · `ai-pipeline/README.md` · `docs/bird-counting-plan.md` |
 
 Repo-wide: commit messages (`.commitlintrc.json`), the PR template (`.github/pull_request_template.md`) and the cross-module rules below.
 
