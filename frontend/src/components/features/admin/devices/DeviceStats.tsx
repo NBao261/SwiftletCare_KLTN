@@ -1,6 +1,7 @@
 import { CpuIcon, HourglassIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from '@phosphor-icons/react'
 import { Card } from '@/components/ui'
 import StatTile from '@/components/ui/StatTile'
+import { t } from '@/i18n'
 import type { SystemNodeStatus } from '@/types'
 
 /** Vòng icon xám như các ô trang Tổng quan/Người dùng/Nhật ký (theo ReadingTile Dashboard Farm Owner) */
@@ -21,8 +22,8 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
   return (
     <Card className="flex flex-col gap-4">
       <div>
-        <h2 className="text-h2 text-charcoal">Thống kê thiết bị</h2>
-        <p className="mt-1 text-sm text-warmGray">Cảm biến và camera đang lắp trên mọi trang trại</p>
+        <h2 className="text-h2 text-charcoal">{t('Thống kê thiết bị')}</h2>
+        <p className="mt-1 text-sm text-warmGray">{t('Cảm biến và camera trên mọi trang trại')}</p>
       </div>
 
       {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
@@ -33,7 +34,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           iconClass={ICON}
           label="Tổng thiết bị"
           value={summary.total}
-          sub={`${sensors} cảm biến · ${nodes.length - sensors} camera`}
+          sub={t('{{sensors}} cảm biến · {{cameras}} camera', { sensors, cameras: nodes.length - sensors })}
         />
         <StatTile
           className="shadow-none"
@@ -41,7 +42,8 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           iconClass={ICON}
           label="Online"
           value={summary.online}
-          sub={summary.total === 0 ? 'Chưa có thiết bị' : summary.online === summary.total ? 'Tất cả đang hoạt động' : 'Đang gửi dữ liệu bình thường'}
+          // Dòng phụ ngắn (vừa 1 dòng trong ô) và theo đúng số: 0 thì nói không có, không ghi "đang gửi dữ liệu" khi chẳng thiết bị nào gửi
+          sub={summary.total === 0 ? 'Chưa có thiết bị' : summary.online === 0 ? 'Chưa có thiết bị online' : summary.online === summary.total ? 'Tất cả đang hoạt động' : 'Đang gửi dữ liệu'}
         />
         <StatTile
           className="shadow-none"
@@ -50,7 +52,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           label="Offline"
           value={summary.offline}
           // Flow 14: không nhận heartbeat > 30s → OFFLINE
-          sub="Mất kết nối quá 30 giây"
+          sub={summary.offline > 0 ? 'Mất tín hiệu quá 30 giây' : 'Tất cả đều kết nối'}
         />
         <StatTile
           className="shadow-none"
@@ -58,7 +60,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           iconClass={ICON}
           label="Cần xử lý"
           value={faulty}
-          sub={faulty > 0 ? `${summary.error} lỗi · ${summary.degraded} suy giảm` : 'Không có thiết bị lỗi'}
+          sub={faulty > 0 ? t('{{error}} lỗi · {{degraded}} suy giảm', { error: summary.error, degraded: summary.degraded }) : 'Không có thiết bị lỗi'}
         />
         <StatTile
           className="shadow-none"
@@ -66,8 +68,8 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           iconClass={ICON}
           label="Chờ kết nối"
           value={summary.pending}
-          // PENDING: đã đăng ký/kích hoạt nhưng chưa từng gửi heartbeat (FARM-FR-003)
-          sub="Đã lắp, chưa kết nối lần nào"
+          // PENDING: đã đăng ký/kích hoạt nhưng chưa từng gửi heartbeat (FARM-FR-003) — chưa chắc đã lắp xong
+          sub={summary.pending > 0 ? 'Chưa kết nối lần nào' : 'Không có thiết bị chờ'}
         />
       </div>
     </Card>

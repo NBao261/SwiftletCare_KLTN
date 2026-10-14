@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui'
 import { type DataTableColumn } from '@/components/ui/DataTable'
 import StatusDot from '@/components/common/StatusDot'
 import { formatRelativeTime } from '@/lib/helpers'
+import { t } from '@/i18n'
 import type { SystemNodeStatusItem } from '@/types'
 
 // Cột heartbeat: 2 dòng giờ:phút / ngày theo giờ VN — cùng kiểu cột Ngày tạo ở bảng Ticket
@@ -48,7 +49,7 @@ export function buildDeviceColumns(startIndex: number): DataTableColumn<SystemNo
     {
       key: 'last_heartbeat', header: 'Heartbeat gần nhất', className: 'w-[17%] whitespace-nowrap',
       render: n => {
-        if (!n.last_heartbeat) return <span className="text-small text-warmGray">Chưa từng kết nối</span>
+        if (!n.last_heartbeat) return <span className="text-small text-warmGray">{t('Chưa từng kết nối')}</span>
         const at = new Date(n.last_heartbeat)
         return (
           <div className="flex flex-col" title={formatRelativeTime(n.last_heartbeat)}>

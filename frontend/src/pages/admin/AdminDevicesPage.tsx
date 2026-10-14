@@ -17,6 +17,8 @@ import { buildDeviceColumns, nodeLocation } from '@/components/features/admin/de
 import type { DeviceStatus, SortDirection, SystemNodeStatusItem } from '@/types'
 
 const PAGE_SIZE = 10
+/** px — vừa dòng 2 tầng chữ (cột Heartbeat giờ/ngày); mọi dòng kể cả dòng trống bù cao bằng nhau */
+const ROW_HEIGHT = 64
 
 const STATUS_OPTIONS: { value: DeviceStatus | ''; label: string }[] = [
   { value: '', label: 'Tất cả trạng thái' },
@@ -114,7 +116,7 @@ export default function AdminDevicesPage() {
       <DeviceStats status={data} />
 
       {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang */}
-      <SectionCard title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống · tự làm mới mỗi 30 giây">
+      <SectionCard title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống">
 
         {/* Hàng 1: tìm kiếm — không có nút tạo: kích hoạt thiết bị là việc của Technician */}
         <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, phòng..." value={search} onChange={withReset(setSearch)} />
@@ -132,6 +134,9 @@ export default function AdminDevicesPage() {
           columns={buildDeviceColumns((page - 1) * PAGE_SIZE)}
           rows={rows}
           getRowKey={n => `${n.type}-${n._id}`}
+          // Cố định khung 10 dòng — ít thiết bị/trang cuối vẫn giữ chiều cao, lọc không làm card co giãn
+          rowHeight={ROW_HEIGHT}
+          minRows={PAGE_SIZE}
           emptyMessage={hasActiveFilters
             ? 'Không có thiết bị nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
             : 'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi Technician kích hoạt qua Web Console Onboarding.'}
