@@ -21,6 +21,18 @@ export function assertValidSla(sla: SlaConfig): void {
       throw BadRequestError(`SLA ${priority}: hạn phản hồi không được muộn hơn hạn xử lý`)
     }
   }
+
+  // P1 gấp nhất (TICKET-FR-003): mức gấp hơn mà hạn dài hơn thì priority mất nghĩa — sự cố
+  // P1 được chờ lâu hơn P3, còn Router/escalate vẫn đối xử như việc khẩn
+  for (let i = 1; i < PRIORITIES.length; i++) {
+    const [higher, lower] = [PRIORITIES[i - 1], PRIORITIES[i]]
+    for (const field of ['response_hours', 'resolve_hours'] as const) {
+      if (sla[higher][field] > sla[lower][field]) {
+        const label = field === 'response_hours' ? 'phản hồi' : 'xử lý'
+        throw BadRequestError(`SLA ${higher}: hạn ${label} không được dài hơn mức ${lower} (mức gấp hơn phải có hạn ngắn hơn hoặc bằng)`)
+      }
+    }
+  }
 }
 
 /** Chỉ giữ đúng 3 mức ưu tiên và 2 trường giờ — chặn body chèn field lạ */
