@@ -45,7 +45,6 @@ export const systemApi = {
   /** TICKET-FR-005 — ngưỡng N: Technician giữ ≥ N ticket chưa đóng thì Ticket Router bỏ qua (ticket.service#routeToTechnician) */
   getTicketRouting: () =>
     api.get<ApiResponse<{ max_open_tickets_per_technician: number }>>('/system/settings/ticket-routing'),
-
   /** SYSTEM-FR-003 */
   getHealthOverview: () =>
     api.get<ApiResponse<SystemHealthSummary>>('/system/health-overview'),
