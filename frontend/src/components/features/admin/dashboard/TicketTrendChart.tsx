@@ -328,7 +328,7 @@ export default function TicketTrendChart() {
           {/* Tooltip tab SLA — nền charcoal, badge đạt/chưa đạt, chênh lệch so với cam kết */}
           {tab === 'sla' && tip && tipValue != null && (
             <div
-              className="pointer-events-none absolute z-10 w-64 rounded-xl bg-charcoal p-3.5 text-white shadow-dock"
+              className="pointer-events-none absolute z-10 w-64 rounded-2xl bg-charcoal p-3.5 text-white shadow-popover"
               style={{ left: tip.x, top: tip.y, transform: tip.flip ? 'translate(calc(-100% - 16px), -30%)' : 'translate(16px, -30%)' }}
             >
               <div className="flex items-start justify-between gap-3">

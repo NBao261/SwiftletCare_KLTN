@@ -7,6 +7,7 @@ import SectionCard from '@/components/ui/SectionCard'
 import { buildAuditLogColumns } from '@/components/features/admin/audit-log/auditLogColumns'
 import AuditLogFilters from '@/components/features/admin/audit-log/AuditLogFilters'
 import { useAuditLogTable } from '@/components/features/admin/audit-log/useAuditLogTable'
+import { t } from '@/i18n'
 
 const PAGE_SIZE = 6
 /** px — mọi dòng (kể cả dòng trống bù) cao bằng nhau, để khung 6 dòng cố định */
@@ -26,7 +27,7 @@ export default function RecentActivityCard() {
       description="Đăng nhập và thay đổi tài khoản mới nhất"
       action={
         <Link to="/system/audit-log" className="group inline-flex items-center gap-1 text-small font-semibold text-charcoal hover:underline">
-          Xem tất cả
+          {t('Xem tất cả')}
           <ArrowRightIcon size={14} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
         </Link>
       }

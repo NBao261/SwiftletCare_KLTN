@@ -1,7 +1,7 @@
 // ADMIN — Tổng quan hệ thống (SYSTEM-FR-003), thay thế /system-status cũ. Bố cục theo mẫu "Tổng quan nền tảng":
-// 1) hàng 4 ô KPI · 2) card xu hướng ticket & tuân thủ SLA 7 ngày (TicketTrendChart, 2 tab) · 3) nhật ký hoạt động gần
-// đây (RecentActivityCard). Mọi số liệu là dữ liệu thật: health-overview, /tickets (đếm ở client), /tickets/kpi,
-// /alerts, /system/audit-logs — không có số minh hoạ. Không phải BI đầy đủ (SYSTEM-FR-003).
+// 1) hàng 4 ô KPI · 2) card xu hướng ticket & tuân thủ SLA (TicketTrendsCard — ĐANG DÙNG DỮ LIỆU GIẢ) · 3) nhật ký
+// hoạt động gần đây (RecentActivityCard). Ngoài card 2, số liệu là dữ liệu thật: health-overview, /tickets (đếm ở
+// client), /tickets/kpi, /alerts, /system/audit-logs. Không phải BI đầy đủ (SYSTEM-FR-003).
 // Tiêu đề trang lấy từ menu (AppHeader tự tra), không lặp lại trong nội dung.
 import { CpuIcon, HouseIcon, TicketIcon, WarningIcon } from '@phosphor-icons/react'
 import { useSystemHealth } from '@/hooks/admin/useSystem'
@@ -11,9 +11,11 @@ import { Card } from '@/components/ui'
 import StatTile from '@/components/ui/StatTile'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
-import TicketTrendChart from '@/components/features/admin/dashboard/TicketTrendChart'
+import TicketTrendsCard from '@/components/features/admin/dashboard/TicketTrendsCard'
 import RecentActivityCard from '@/components/features/admin/dashboard/RecentActivityCard'
 import { getApiErrorMessage } from '@/lib/helpers'
+// `t` là biến lặp ticket trong file này — hàm dịch đặt tên khác
+import { t as i18nT } from '@/i18n'
 
 /** Khoá ngày theo giờ VN — để đếm "mới hôm nay" */
 const DAY_KEY = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
@@ -46,7 +48,7 @@ export default function AdminSystemHealthPage() {
     [devices.degraded, 'suy giảm'],
     [devices.offline, 'offline'],
     [devices.pending, 'chờ kết nối'],
-  ] as const).filter(([n]) => n > 0).map(([n, label]) => `${n} ${label}`)
+  ] as const).filter(([n]) => n > 0).map(([n, label]) => `${n} ${i18nT(label)}`)
   const deviceSub = !hasDevices
     ? 'Chưa có thiết bị'
     : deviceIssues.length ? deviceIssues.join(' · ') : 'Tất cả đang online'
@@ -63,8 +65,8 @@ export default function AdminSystemHealthPage() {
           nên bỏ shadow riêng (shadow-none), như ReadingTile ── */}
       <Card className="flex flex-col gap-4">
         <div>
-          <h2 className="text-h2 text-charcoal">Chỉ số vận hành toàn hệ thống</h2>
-          <p className="mt-1 text-sm text-warmGray">Trang trại, thiết bị, ticket và cảnh báo khẩn cấp trên mọi Farm</p>
+          <h2 className="text-h2 text-charcoal">{i18nT('Chỉ số vận hành toàn hệ thống')}</h2>
+          <p className="mt-1 text-sm text-warmGray">{i18nT('Trang trại, thiết bị, ticket và cảnh báo khẩn cấp trên mọi Farm')}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -74,7 +76,7 @@ export default function AdminSystemHealthPage() {
             iconClass={ICON_NORMAL}
             label="Trang trại hoạt động"
             value={farms.total}
-            sub={`Gồm ${zones.total} phòng`}
+            sub={i18nT('Gồm {{n}} phòng', { n: zones.total })}
           />
           <StatTile
             className="shadow-none"
@@ -92,8 +94,8 @@ export default function AdminSystemHealthPage() {
             value={openTickets.total}
             // is_sla_breached = quá hạn XỬ LÝ (TICKET-FR-009, job slaBreach) — ghi rõ thay vì "vi phạm" chung chung.
             // Mọi ticket mở đều quá hạn → khỏi lặp lại con số; một phần thì ghi rõ bao nhiêu
-            valueBadge={breached === 0 ? undefined : breached === openTickets.total ? 'đều quá hạn' : `${breached} quá hạn`}
-            sub={`${newToday} mới hôm nay · ${waitingTech} chờ nhận`}
+            valueBadge={breached === 0 ? undefined : breached === openTickets.total ? 'đều quá hạn' : i18nT('{{n}} quá hạn', { n: breached })}
+            sub={i18nT('{{today}} mới hôm nay · {{waiting}} chờ nhận', { today: newToday, waiting: waitingTech })}
           />
           <StatTile
             className="shadow-none"
@@ -109,7 +111,8 @@ export default function AdminSystemHealthPage() {
         </div>
       </Card>
 
-      <TicketTrendChart />
+      {/* Biểu đồ xu hướng ticket & tuân thủ SLA — đang dùng DỮ LIỆU GIẢ để xem giao diện (TicketTrendsCard) */}
+      <TicketTrendsCard />
       <RecentActivityCard />
     </div>
   )
