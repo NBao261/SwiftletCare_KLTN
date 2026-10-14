@@ -68,6 +68,9 @@ export const ALERT_TYPES = Object.keys(DEFAULT_SEVERITY) as AlertType[]
  */
 export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
 
+/** Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, mở ticket giả) */
+const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH']
+
 /** Cảnh báo không bao giờ được ở mức tự sinh ticket: mọi loại suy luận + vượt ngưỡng (ALERT-FR-012) */
 const NEVER_ESCALATE = new Set<AlertType>([...INFERRED_ALERT_TYPES, 'THRESHOLD_BREACH'])
 
@@ -179,11 +182,14 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
   // Object.hasOwn: tra thẳng `ALERT_TYPE_ALIAS[rawType]` sẽ trả hàm của Object.prototype cho 'constructor'
   const type = rawType && (Object.hasOwn(ALERT_TYPE_ALIAS, rawType) ? ALERT_TYPE_ALIAS[rawType] : rawType)
   if (!deviceId || !type) throw NotFoundError('Payload cảnh báo thiếu deviceId hoặc type')
-  if (!ALERT_TYPES.includes(type as AlertType)) throw BadRequestError(`Loại cảnh báo không hợp lệ: "${type}"`)
+  if (!ALERT_TYPES.includes(type as AlertType) || BACKEND_ONLY_ALERT_TYPES.includes(type as AlertType)) {
+    throw BadRequestError(`Loại cảnh báo không hợp lệ: "${type}"`)
+  }
 
   const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
-  const zone = await Zone.findById(node.zone_id).select('farm_id').lean()
+  // `name` cho tiêu đề mặc định — firmware không gửi kèm title
+  const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
   if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
 
   return createAlert({

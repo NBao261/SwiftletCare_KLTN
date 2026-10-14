@@ -154,6 +154,8 @@ describe('lịch sử can thiệp tay không được chặn lệnh điều khi�
     await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
     const expiry = new Date(Date.now() - 45_000) // job chạy trễ 45 giây sau hạn
     await SensorNode.updateOne({ _id: node._id }, { override_expiry: expiry })
+    // Override bật trước hạn của nó (như thật) — ended_at không bao giờ sớm hơn started_at
+    await RelayOverrideLog.updateOne({}, { started_at: new Date(expiry.getTime() - 60_000) })
 
     expect(await expireManualOverrides()).toBe(1)
     const log = (await RelayOverrideLog.findOne().lean())!
@@ -273,6 +275,7 @@ describe('vòng review 4', () => {
 
     await post(10 * 365 * 24 * 3600_000).expect(422) // 10 năm
     await post(-5000).expect(422)
+    await post(5000).expect(422) // ngắn hơn cửa sổ bỏ qua bản tin AUTO cũ
     await post('abc').expect(422)
     expect(await RelayOverrideLog.countDocuments()).toBe(0)
     expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')
@@ -302,7 +305,7 @@ describe('vòng review 4', () => {
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
     expect((await RelayOverrideLog.findOne().lean())!).toMatchObject({ end_reason: 'CLEARED_EARLY' })
-    expect(publishCommand).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'relay/command',
-      expect.objectContaining({ action: 'clear_override' }))
+    expect(publishCommand).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'config/reassign',
+      expect.objectContaining({ newZoneId: String(zone2._id) }))
   })
 })

@@ -139,6 +139,7 @@ Các mốc dưới đây do người viết code chọn để hệ thống chạ
 | Số đo nhiệt-ẩm hợp lệ gần nhất còn dùng được | 2 chu kỳ điều khiển (20 giây) | firmware `CONTROL_INPUT_MAX_AGE_CYCLES` | Một lần đọc RS485 lỗi không tắt relay; quá mốc này mới vào trạng thái an toàn (THREAT-FR-013) |
 | Bỏ qua bản tin AUTO sau khi vừa bật tay | 30 giây | backend `DEVICE_CONFIRM_GRACE_MS` | Bản tin phát trước lệnh mà tới sau không huỷ override vừa đặt |
 | Thời hạn tối đa của 1 lần can thiệp tay | 24 giờ | backend `MAX_OVERRIDE_MS` | Chặn override vô hạn làm sai tỷ lệ thời gian tự động (ENV-FR-018/019) |
+| Thời hạn tối thiểu của 1 lần can thiệp tay | 1 phút (2 × cửa sổ 30 giây ở trên) | backend `MIN_OVERRIDE_MS` | Override ngắn hơn cửa sổ bỏ qua bản tin AUTO thì lúc thiết bị tự hết hạn, bản tin AUTO bị coi là cũ |
 
 Việc nên làm về sau (đổi giao thức MQTT giữa firmware và backend, không thuộc đợt này): gắn mã lệnh vào `relay/command` và `relay/status` thay cho cửa sổ 30 giây; firmware gửi tín hiệu "hết đợt" thay cho cặp mốc 15/60 phút (thiết bị chạy firmware < 1.3.0 chỉ báo một lần nên đợt dài hơn 60 phút bị đóng sớm).
 

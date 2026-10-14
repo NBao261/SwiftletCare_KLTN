@@ -92,11 +92,8 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
 
   // Chỉ liên kết với chat RIÊNG. Gửi /start <mã> trong một nhóm có bot sẽ gắn tài khoản
   // với cả nhóm: mọi cảnh báo của farm đổ vào nhóm và tin xác nhận in email ra đó. Không
-  // tiêu mã, không nhắc gì tới tài khoản — chỉ hướng dẫn nhắn riêng cho bot.
-  if (update.message?.chat?.type !== 'private') {
-    await sendTelegram(String(chatId), 'Bot SwiftletCare chỉ kết nối trong chat riêng. Hãy mở chat riêng với bot rồi bấm lại "Kết nối Telegram" trong ứng dụng.')
-    return
-  }
+  // tiêu mã và im lặng — bot không trả lời gì ngoài chat riêng (deep link luôn mở chat riêng).
+  if (update.message?.chat?.type !== 'private') return
 
   const code = /^\/start\s+([0-9a-f]{32})$/i.exec(text)?.[1]
   if (!code) {
