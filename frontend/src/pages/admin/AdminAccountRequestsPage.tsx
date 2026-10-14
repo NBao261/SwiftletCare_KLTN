@@ -6,28 +6,41 @@ import {
   useSalesAssignmentRequestsList, useDecideSalesAssignmentRequest,
 } from '@/hooks/admin/useAccountRequests'
 import { Button, Badge, SectionCard } from '@/components/ui'
-import EmptyState from '@/components/ui/EmptyState'
+import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import NoteActionModal from '@/components/ui/NoteActionModal'
 import Pagination from '@/components/ui/Pagination'
 import { useToastStore } from '@/stores/toastStore'
-import { formatDayTime, getApiErrorMessage } from '@/lib/helpers'
+import { formatRelativeTime, getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 // `t` là biến lặp TABS trong file này — hàm dịch đặt tên khác
 import { t as i18nT, tr } from '@/i18n'
 import type { User, SalesAssignmentRequest } from '@/types'
 
 const DELETE_SLA_DAYS = 30
-/** Lưới card — cùng kiểu card nhà yến ở chi tiết Farm (viền + bóng như StatTile); nút luôn ở đáy card */
-const GRID = 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3'
-/** Card gọn: hàng cuối gộp thông tin + nút (không để nút 1 hàng riêng) — h-40 vừa card đề xuất (4 hàng) */
-const CARD = 'flex h-40 flex-col gap-2 rounded-2xl border border-warmGray/15 bg-white p-4 shadow-card'
-/** Khung cố định: 3 hàng card h-40 (+2 khoảng gap-4) + hàng phân trang + dòng ghi chú — trống/đang tải/ít card vẫn giữ cỡ */
-const FRAME_MIN_H = 'min-h-[37rem]'
-const FRAME = `flex ${FRAME_MIN_H} flex-col gap-3`
-/** 9 = 3 hàng × 3 card (màn lớn) — khung cố định vừa đủ 3 hàng + 1 hàng phân trang */
-const PAGE_SIZE = 9
+/**
+ * Dạng log như bảng Nhật ký hệ thống: DataTable cố định 10 dòng (dòng trống bù cao bằng dòng thật) + phân trang,
+ * mỗi yêu cầu 1 dòng, nút xử lý ở cột Thao tác. 64px vừa ô Thời gian 2 dòng (giờ/ngày)
+ */
+const PAGE_SIZE = 10
+const ROW_HEIGHT = 64
+const FRAME = 'flex flex-col gap-3'
+
+const DAY = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
+const TIME = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
+
+/** Ô thời gian 2 dòng — giờ:phút:giây đậm trên, ngày xám dưới (cùng kiểu cột Thời gian Nhật ký hệ thống) */
+function TimeCell({ at }: { at?: string }) {
+  if (!at) return <span className="text-warmGray">—</span>
+  const d = new Date(at)
+  return (
+    <div className="flex flex-col" title={formatRelativeTime(at)}>
+      <span className="font-semibold text-charcoal">{TIME.format(d)}</span>
+      <span className="text-small text-warmGray">{DAY.format(d)}</span>
+    </div>
+  )
+}
 
 type Tab = 'DELETE' | 'SALES_STAFF'
 
@@ -37,7 +50,7 @@ type Tab = 'DELETE' | 'SALES_STAFF'
 // trước khi nộp/demo thật — FE_Design §13.9 cấm để dữ liệu giả ở màn đã có API.
 const SHOW_FAKE_PREVIEW = true
 const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString()
-// 11 + 11 mục giả = 2 trang mỗi tab (9 + 2) — để thấy cả lưới đầy 3 hàng lẫn thanh phân trang
+// 11 + 11 mục giả = 2 trang mỗi tab (10 + 1) — để thấy cả bảng đầy 10 dòng lẫn thanh phân trang
 const FAKE_DELETE_REQUESTS = ([
   ['Nguyễn Văn Bình', 'binh.nguyen', 26], ['Trần Thị Mai', 'mai.tran', 24], ['Lê Hoàng Phúc', 'phuc.le', 21],
   ['Phạm Thu Hà', 'ha.pham', 18], ['Võ Minh Tuấn', 'tuan.vo', 15], ['Đặng Ngọc Lan', 'lan.dang', 12],
@@ -161,50 +174,47 @@ function DeleteRequestsTab() {
     })
   }
 
-  if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={3} className="h-40 w-full" /></div>
+  if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={5} className="h-14 w-full" /></div>
   // FAKE: danh sách thật trống → hiện dữ liệu mẫu (nút khoá)
   const isFake = !requests.length && SHOW_FAKE_PREVIEW
-  if (!requests.length && !isFake) {
-    return (
-      <div className={`grid ${FRAME_MIN_H}`}>
-      <EmptyState
-        title="Không có yêu cầu xoá tài khoản nào"
-        description="Yêu cầu xoá tài khoản (quyền được xoá dữ liệu — Nghị định 13/2023/NĐ-CP) sẽ xuất hiện ở đây."
-      />
-      </div>
-    )
-  }
+  const rows = isFake ? FAKE_DELETE_REQUESTS.slice((fakePage - 1) * PAGE_SIZE, fakePage * PAGE_SIZE) : requests
+  const startIndex = ((isFake ? fakePage : page) - 1) * PAGE_SIZE
+
+  // STT · Người dùng · Email · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác — tổng 6+20+28+16+16+14 = 100
+  const columns: DataTableColumn<User>[] = [
+    { key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]', render: (_u, i) => <span className="text-warmGray">{startIndex + i + 1}</span> },
+    { key: 'name', header: 'Người dùng', className: 'w-[20%]', render: u => <p className="text-fade font-semibold text-charcoal" title={u.full_name}>{u.full_name}</p> },
+    { key: 'email', header: 'Email', className: 'w-[28%]', render: u => <p className="truncate text-graphite" title={u.email}>{u.email}</p> },
+    { key: 'requested', header: 'Thời gian yêu cầu', className: 'w-[16%] whitespace-nowrap', render: u => <TimeCell at={u.deletion_requested_at} /> },
+    {
+      key: 'deadline', header: 'Hạn xử lý', className: 'w-[16%]',
+      render: u => {
+        const remaining = u.deletion_requested_at ? daysRemaining(u.deletion_requested_at) : null
+        return remaining === null
+          ? <span className="text-warmGray">—</span>
+          : <Badge tone={remaining <= 7 ? 'critical' : 'warning'} className="whitespace-nowrap">{i18nT('Còn {{n}} ngày', { n: remaining })}</Badge>
+      },
+    },
+    {
+      key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[14%]',
+      render: u => <Button size="sm" disabled={isFake} onClick={() => setTarget(u)}>Xử lý</Button>,
+    },
+  ]
 
   return (
     <div className={FRAME}>
       {isFake && <FakeNotice />}
-      <div className={GRID}>
-      {(isFake ? FAKE_DELETE_REQUESTS.slice((fakePage - 1) * PAGE_SIZE, fakePage * PAGE_SIZE) : requests).map(user => {
-        const remaining = user.deletion_requested_at ? daysRemaining(user.deletion_requested_at) : null
-        return (
-          <div key={user._id} className={CARD}>
-            {/* Hạn 30 ngày đã ghi ở mô tả card — nhãn chỉ còn số ngày còn lại */}
-            <div className="flex items-start justify-between gap-2">
-              <p className="truncate font-bold text-charcoal" title={user.full_name}>{user.full_name}</p>
-              {remaining !== null && (
-                <Badge tone={remaining <= 7 ? 'critical' : 'warning'} className="shrink-0">{i18nT('Còn {{n}} ngày', { n: remaining })}</Badge>
-              )}
-            </div>
-            <p className="truncate text-sm text-warmGray" title={user.email}>{user.email}</p>
-            {/* Hàng cuối: thời gian yêu cầu + nút — gộp 1 hàng cho card gọn */}
-            <div className="mt-auto flex items-center justify-between gap-2">
-              <p className="truncate text-xs text-warmGray">
-                {user.deletion_requested_at && i18nT('Yêu cầu {{date}}', { date: formatDayTime(user.deletion_requested_at) })}
-              </p>
-              <Button size="sm" className="shrink-0" disabled={isFake} onClick={() => setTarget(user)}>Xử lý</Button>
-            </div>
-          </div>
-        )
-      })}
-      </div>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getRowKey={u => u._id}
+        rowHeight={ROW_HEIGHT}
+        minRows={PAGE_SIZE}
+        emptyMessage="Không có yêu cầu xoá tài khoản nào — yêu cầu (quyền được xoá dữ liệu, Nghị định 13/2023/NĐ-CP) sẽ hiện ở đây."
+      />
 
-      {/* Hàng phân trang luôn chiếm chỗ ở đáy khung (Pagination tự ẩn khi chỉ 1 trang) */}
-      <div className="mt-auto min-h-11">
+      {/* Hàng phân trang (Pagination tự ẩn khi chỉ 1 trang) */}
+      <div className="min-h-11">
         {isFake
           ? <Pagination page={fakePage} limit={PAGE_SIZE} total={FAKE_DELETE_REQUESTS.length} onChange={setFakePage} variant="full" />
           : <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />}
@@ -247,51 +257,49 @@ function SalesStaffRequestsTab() {
   const [approveTarget, setApproveTarget] = useState<SalesAssignmentRequest | null>(null)
   const [rejectTarget, setRejectTarget] = useState<SalesAssignmentRequest | null>(null)
 
-  if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={3} className="h-40 w-full" /></div>
+  if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={5} className="h-14 w-full" /></div>
   // FAKE: danh sách thật trống → hiện dữ liệu mẫu (nút khoá)
   const isFake = !requests.length && SHOW_FAKE_PREVIEW
-  if (!requests.length && !isFake) {
-    return (
-      <div className={`grid ${FRAME_MIN_H}`}>
-      <EmptyState
-        title="Không có đề xuất chuyên viên nào chờ duyệt"
-        description="Đề xuất thêm hoặc gỡ chuyên viên của Farm Owner sẽ hiện ở đây."
-      />
-      </div>
-    )
-  }
+  const rows = isFake ? FAKE_SALES_REQUESTS.slice((fakePage - 1) * PAGE_SIZE, fakePage * PAGE_SIZE) : requests
+  const startIndex = ((isFake ? fakePage : page) - 1) * PAGE_SIZE
+
+  // STT · Loại · Email chuyên viên · Trang trại · Người đề xuất · Thời gian · Thao tác — tổng 5+13+19+15+15+13+20 = 100
+  const columns: DataTableColumn<SalesAssignmentRequest>[] = [
+    { key: 'stt', header: 'STT', align: 'center', className: 'w-[5%]', render: (_r, i) => <span className="text-warmGray">{startIndex + i + 1}</span> },
+    {
+      key: 'type', header: 'Loại', className: 'w-[13%]',
+      render: r => <Badge tone={r.type === 'REMOVE' ? 'warning' : 'info'} className="whitespace-nowrap">{i18nT(r.type === 'REMOVE' ? 'Gỡ chuyên viên' : 'Thêm chuyên viên')}</Badge>,
+    },
+    { key: 'email', header: 'Email chuyên viên', className: 'w-[19%]', render: r => <p className="text-fade font-semibold text-charcoal" title={r.sales_staff_email}>{r.sales_staff_email}</p> },
+    { key: 'farm', header: 'Trang trại', className: 'w-[15%]', render: r => <p className="truncate text-charcoal" title={r.farm_id?.name}>{r.farm_id?.name ?? '—'}</p> },
+    { key: 'by', header: 'Người đề xuất', className: 'w-[15%]', render: r => <p className="truncate text-graphite" title={r.requested_by?.email}>{r.requested_by?.full_name ?? '—'}</p> },
+    { key: 'created', header: 'Thời gian', className: 'w-[13%] whitespace-nowrap', render: r => <TimeCell at={r.created_at} /> },
+    {
+      // whitespace-nowrap: 2 nút luôn 1 hàng, chữ "Từ chối" không xuống dòng
+      key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[20%] whitespace-nowrap',
+      render: r => (
+        <div className="flex justify-center gap-2">
+          <Button variant="secondary" size="sm" className="shrink-0 whitespace-nowrap" disabled={isFake} onClick={() => setRejectTarget(r)}>Từ chối</Button>
+          <Button size="sm" className="shrink-0 whitespace-nowrap" disabled={isFake} onClick={() => setApproveTarget(r)}>Duyệt</Button>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className={FRAME}>
       {isFake && <FakeNotice />}
-      <div className={GRID}>
-      {(isFake ? FAKE_SALES_REQUESTS.slice((fakePage - 1) * PAGE_SIZE, fakePage * PAGE_SIZE) : requests).map(req => {
-        const isRemoval = req.type === 'REMOVE'
-        return (
-          <div key={req._id} className={CARD}>
-            <div className="flex items-center justify-between gap-2">
-              <Badge tone={isRemoval ? 'warning' : 'info'}>{i18nT(isRemoval ? 'Gỡ chuyên viên' : 'Thêm chuyên viên')}</Badge>
-              <span className="shrink-0 text-xs text-warmGray">{formatDayTime(req.created_at)}</span>
-            </div>
-            <p className="truncate font-bold text-charcoal" title={req.sales_staff_email}>{req.sales_staff_email}</p>
-            <p className="truncate text-sm"><span className="text-warmGray">{i18nT('Trang trại')}: </span><span className="text-charcoal">{req.farm_id?.name ?? '—'}</span></p>
-            {/* Hàng cuối: người đề xuất + 2 nút — gộp 1 hàng cho card gọn */}
-            <div className="mt-auto flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-sm" title={req.requested_by?.email}>
-                <span className="text-warmGray">{i18nT('Bởi')} </span><span className="text-charcoal">{req.requested_by?.full_name ?? '—'}</span>
-              </p>
-              <div className="flex shrink-0 gap-2">
-                <Button variant="secondary" size="sm" disabled={isFake} onClick={() => setRejectTarget(req)}>Từ chối</Button>
-                <Button size="sm" disabled={isFake} onClick={() => setApproveTarget(req)}>Duyệt</Button>
-              </div>
-            </div>
-          </div>
-        )
-      })}
-      </div>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getRowKey={r => r._id}
+        rowHeight={ROW_HEIGHT}
+        minRows={PAGE_SIZE}
+        emptyMessage="Không có đề xuất chuyên viên nào chờ duyệt — đề xuất thêm/gỡ chuyên viên của Farm Owner sẽ hiện ở đây."
+      />
 
-      {/* Hàng phân trang luôn chiếm chỗ ở đáy khung (Pagination tự ẩn khi chỉ 1 trang) */}
-      <div className="mt-auto min-h-11">
+      {/* Hàng phân trang (Pagination tự ẩn khi chỉ 1 trang) */}
+      <div className="min-h-11">
         {isFake
           ? <Pagination page={fakePage} limit={PAGE_SIZE} total={FAKE_SALES_REQUESTS.length} onChange={setFakePage} variant="full" />
           : <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />}
