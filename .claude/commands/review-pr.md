@@ -44,7 +44,11 @@ STEP 3 - find issues.
   Run `/code-review <level> $ARGUMENTS`, always WITHOUT --comment and WITHOUT --fix, and say in the final report which level you picked and why.
 - For a FOLLOW-UP REVIEW, keep only findings on lines changed in `git diff <marker sha>..<head sha>`.
 - Verify every finding yourself against the code; drop anything you cannot confirm. Then check changed files against their module rules (STEP 2) and add confirmed violations. Also check the API contract: backend route/response changes must match docs/api/api-spec.yaml, and frontend/mobile calls must match it.
-- If /code-review is unavailable, review manually (correctness, security, API contract, error handling, module rules) and re-verify each candidate.
+- If /code-review is unavailable (routine runs only get skills committed to the repo, so the built-in /code-review is usually missing there), run the same find-then-verify review yourself with the Agent tool instead of a single manual pass:
+  1. Split the diff into areas (by module, then by feature folder or service). Spawn finder subagents in parallel, one per area: `low` 1, `medium` 2, `high` 3-4, `xhigh` 5. Give each the PR number, base and head sha, its file list, the module rules from STEP 2 that apply, and the bug classes to hunt (logic and edge cases, security and permissions, API contract vs docs/api/api-spec.yaml, error handling, race conditions, regressions in code that calls the changed code). Each returns candidate findings as `path:line`, claim, concrete failing scenario.
+  2. Merge duplicates, then spawn one verifier subagent per batch of about 5 candidates. It must read the code at the PR head and answer CONFIRMED (with the evidence) or REJECTED (why) for each; it never sees the finder's confidence, only the claim.
+  3. Keep only CONFIRMED findings, then do the module-rule and API checks as usual. If the Agent tool is also unavailable, do the two passes yourself: list candidates first, then re-read the code to verify each before keeping it.
+  Say in the final report that the review used subagents instead of /code-review.
 - No lint-level style nitpicks, no praise padding.
 
 STEP 3b - frontend <-> backend API check (only when the PR changes files under frontend/src/; for a FOLLOW-UP REVIEW only the screens changed since the marker).
