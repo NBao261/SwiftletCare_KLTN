@@ -572,8 +572,12 @@ paths:
         (`FARM_OWNERSHIP_TRANSFERRED`, `FARM_SOFT_DELETED`) và chủ mới cùng người bị
         xoá nhận thông báo; kết nối Socket.io của user bị ngắt. Cũng dọn các liên
         kết trỏ tới user: cho hết hạn (`EXPIRED`) các lời mời đang chờ user đã gửi, đặt `deleted_at`
-        (tài khoản đã xoá không khoá/mở khoá lại được, 409). Audit `ACCOUNT_DELETED`
-        ghi `farmsTransferred`, `farmsDeleted`, `forced`. Nếu lỗi giữa chừng
+        (tài khoản đã xoá không khoá/mở khoá lại được, 409). User là **Technician**:
+        gỡ hết `assigned_regions` rồi điều phối lại ticket đang giao cho họ như khi gỡ
+        khu vực (người khác trong vùng, về `NEW`; không còn ai thì hàng đợi chung + báo
+        Admin; audit `TICKET_REROUTED` với `reason: ACCOUNT_DELETED`) — không để ticket
+        nằm lại với tài khoản đã ẩn danh. Audit `ACCOUNT_DELETED`
+        ghi `farmsTransferred`, `farmsDeleted`, `ticketsRerouted`, `forced`. Nếu lỗi giữa chừng
         (Mongo standalone, không transaction) thì gọi lại được: farm đã xử lý xong
         không bị xử lý lần nữa.
       parameters:
@@ -847,6 +851,8 @@ paths:
       description: |
         Gửi 1 phần hoặc cả 3 mức, phần còn lại giữ nguyên. Áp dụng cho ticket
         tạo MỚI và cho ticket được Admin đổi priority; ticket cũ giữ hạn đã tính.
+        Sau khi gộp phải giữ đúng thứ tự ưu tiên: hạn phản hồi và hạn xử lý của P1 ≤ P2
+        ≤ P3 (được bằng nhau) — mức gấp hơn mà hạn dài hơn thì trả 400.
         Job nền so `sla_resolve_due_at` mỗi 2 phút để đánh dấu vượt hạn
         (TICKET-FR-009, SLA-NFR-002).
       requestBody:
@@ -1910,13 +1916,17 @@ paths:
           }
         "400": { description: "Không phải .mp3, thiếu file, hoặc vượt 10MB" }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409": { description: "Trùng `track_number` trên thiết bị, hoặc thiết bị đã gỡ (không còn ở hiện trường để chép file)" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}:
     delete:
       tags: [Devices]
       summary: "Xoá bài khỏi danh mục web (không xoá file trên thẻ SD) — TECHNICIAN/ADMIN"
+      description: |
+        Bài đã chép vào thẻ SD và đang là `speaker_track` của thiết bị (còn hoạt động) thì
+        trả 409 — thiết bị vẫn phát số đó mà web mất dấu là bài nào; chọn bài khác hoặc
+        đánh dấu chưa chép trước. Thiết bị đã gỡ thì xoá tự do (dọn danh mục).
       parameters: [{ $ref: "#/components/parameters/NodeId" }, { $ref: "#/components/parameters/TrackId" }]
       responses:
         "200":
@@ -1927,6 +1937,7 @@ paths:
           }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Bài đang được phát theo lịch (đã chép SD và là bài được chọn)" }
 
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}/sync-status:
     put:
@@ -1959,6 +1970,7 @@ paths:
           }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Thiết bị đã gỡ khỏi hệ thống" }
 
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}/select:
     put:
@@ -2325,6 +2337,42 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /devices/sensor-nodes/{id}/reassign-zone:
+    put:
+      tags: [Devices]
+      summary: "Dời thiết bị đang kết nối sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — TECHNICIAN/ADMIN"
+      description: |
+        Publish `config/reassign` (kèm `deviceId`) lên topic của Zone CŨ — thiết bị
+        lưu identity mới rồi kết nối lại theo topic mới. Kiểm quyền trên cả Zone
+        nguồn lẫn Zone đích; cảnh báo còn mở của thiết bị ở Zone cũ được đóng; audit
+        `DEVICE_REASSIGNED`. Chỉ khi thiết bị `ONLINE` hoặc `DEGRADED` (vẫn kết nối) —
+        mất kết nối thì cần nhánh AP-mode (chưa hỗ trợ) nên trả 409. Dời về chính
+        Zone đang ở trả 400. `meta.commandDelivered=false` khi backend chưa kết nối broker.
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newZoneId]
+              properties: { newZoneId: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/SensorNode" }
+                      meta: { type: object, properties: { commandDelivered: { type: boolean } } }
+        "400": { description: "Zone đích trùng Zone hiện tại" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Thiết bị đã gỡ, hoặc không kết nối (không phải ONLINE/DEGRADED)" }
+
   /devices/sensor-nodes/{id}/commands:
     post:
       tags: [Devices]
@@ -2333,7 +2381,9 @@ paths:
         Chỉ gửi được khi thiết bị `ONLINE` hoặc `DEGRADED` (hỏng một phần nhưng
         vẫn kết nối — restart/đẩy lại cấu hình chính là cách xử lý cho tình trạng đó). Cả 3 lệnh publish lên topic
         `swiftletcare/{farmId}/{houseId}/{zoneId}/config/update` (§9.2):
-        - `PUSH_CONFIG`: toàn bộ ngưỡng hiện hành của Zone
+        - `PUSH_CONFIG`: toàn bộ cấu hình hiện hành — ngưỡng, hệ số mờ, tham số phát
+          hiện của Zone và lịch/âm lượng/bài loa của thiết bị (cùng gói thiết bị nhận
+          khi vừa kết nối lại), kèm `deviceId`
         - `RESTART`: `{ "command": "RESTART" }`
         - `OTA`: `{ "command": "OTA", "ota": { version, url, sha256 } }` — URL phải
           là HTTPS và host nằm trong `OTA_ALLOWED_HOSTS` (sha256 do chính người gửi
@@ -3505,6 +3555,7 @@ paths:
                   - properties: { data: { $ref: "#/components/schemas/MaintenanceSchedule" } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Đổi zone_id/description hoặc bật lại (is_active=true) làm lịch trùng một lịch đang chạy của farm (cùng zone + nội dung) — giống khi tạo" }
     delete:
       tags: [Tickets]
       summary: "Xoá lịch bảo trì (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
@@ -3795,9 +3846,11 @@ paths:
       description: |
         Chỉ cho chuyển đúng thứ tự: `NEW → IN_PROGRESS → AWAITING_FIELD_CONFIRMATION
         → CLOSED` (không nhảy cóc/lùi tuỳ tiện). Không cho chuyển `CLOSED` nếu
-        `sat_checklist` chưa đạt đủ 4 mục khi ticket có buổi đến hiện trường:
+        `sat_checklist` chưa đạt đủ các mục bắt buộc khi ticket có buổi đến hiện trường:
         `INSTALLATION`/`MAINTENANCE`, hoặc ticket sự cố đã có `scheduled_visit_at`
-        (TICKET-FR-010, Flow 9 bước 6b). Ticket sự cố xử lý từ xa (không có lịch hẹn)
+        (TICKET-FR-010, Flow 9 bước 6b). Mục bắt buộc: Modbus, kết nối mạng, relay;
+        `camera_rtsp_ok` chỉ bắt buộc khi Zone của ticket (hoặc cả farm, nếu ticket cấp
+        farm) có Camera Node đang hoạt động. Ticket sự cố xử lý từ xa (không có lịch hẹn)
         đóng thẳng.
 
         Chỉ Technician **đang được gán** (hoặc Admin) mới đổi được — Technician
@@ -4119,7 +4172,8 @@ paths:
       description: |
         Lịch hẹn của người cũ bị huỷ theo (Farm Owner được báo) — Technician mới tự hẹn lại.
         Ticket Router chọn Technician khác trong vùng (loại người xin và mọi người
-        đã từng bị chuyển khỏi ticket này, bỏ qua người quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại; không còn
+        đã từng bị chuyển khỏi ticket này, bỏ qua người quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại
+        (hạn phản hồi tính lại từ lúc giao cho người mới, hạn xử lý giữ nguyên); không còn
         ai → `assigned_to` để trống (hàng đợi chung, `GET /tickets?unassigned=true`)
         và Admin được thông báo. Thread chat nhận tin hệ thống (TICKET-FR-017).
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -4294,6 +4348,12 @@ paths:
           bị chặn 409 — muốn mở lại phải nói rõ `status`, tránh ticket vừa `NEW`
           vừa còn `closed_at` và bị job SLA báo vi phạm. `assigned_at` chỉ đổi khi
           thật sự đổi người.
+        - Khi thật sự đổi người: mốc tiếp nhận của người cũ bị bỏ — hạn phản hồi
+          (`sla_response_due_at`) tính lại từ lúc giao cho người mới (hạn xử lý giữ
+          nguyên); nếu Admin truyền luôn `status` đã tiếp nhận thì `responded_at` là lúc
+          gán. Lịch hẹn của ticket sự cố (không phải `INSTALLATION`/`MAINTENANCE`) là cam
+          kết của người cũ nên bị bỏ, trừ khi gửi kèm `scheduled_visit_at`; Farm Owner
+          được báo nếu buổi hẹn đó còn ở tương lai.
         - Đổi `priority` thì tính lại `sla_response_due_at`/`sla_resolve_due_at`
           theo SLA của priority mới, mốc là `created_at` của ticket.
         - Mở lại ticket đã `CLOSED` thì gỡ `closed_at`.
