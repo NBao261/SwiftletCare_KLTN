@@ -15,6 +15,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { ROLE_LABEL } from '@/constants/roles'
+import { t } from '@/i18n'
 
 /** Settings Page — hồ sơ, thông báo (ALERT-FR-005/006), bảo mật (AUTH-FR-009), xoá tài khoản (AUTH-FR-012) */
 export default function SettingsPage() {
@@ -69,7 +70,7 @@ function InfoItem({ icon: ItemIcon, label, value }: { icon: Icon; label: string;
         <ItemIcon size={16} weight="bold" />
       </span>
       <div className="min-w-0">
-        <dt className="label-caption">{label}</dt>
+        <dt className="label-caption">{t(label)}</dt>
         <dd className="truncate text-body font-medium text-charcoal">{value}</dd>
       </div>
     </div>
@@ -87,8 +88,8 @@ function SettingsCard({ icon: HeaderIcon, title, subtitle, danger, children }: {
           <HeaderIcon size={20} weight="bold" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-h2 text-charcoal">{title}</h2>
-          <p className="text-small text-graphite">{subtitle}</p>
+          <h2 className="text-h2 text-charcoal">{t(title)}</h2>
+          <p className="text-small text-graphite">{t(subtitle)}</p>
         </div>
       </div>
       {children}
@@ -141,8 +142,8 @@ function NotificationPreferencesCard() {
       <div className="mt-4 border-t border-warmGray/10 pt-4">
         <p className="mb-2 flex items-center gap-1.5 text-body font-semibold text-charcoal">
           <MoonIcon size={16} weight="bold" />
-          Giờ im lặng
-          <span className="text-small font-normal text-warmGray">— không nhận thông báo, trừ CRITICAL</span>
+          {t('Giờ im lặng')}
+          <span className="text-small font-normal text-warmGray">{t('— không nhận thông báo, trừ CRITICAL')}</span>
         </p>
         <div className="grid grid-cols-2 gap-3">
           <Input label="Từ" type="time" value={quietStart} onChange={e => setQuietStart(e.target.value)} />
@@ -166,10 +167,10 @@ function ToggleRow({ icon: RowIcon, label, description, checked, onChange }: {
         <RowIcon size={16} weight="bold" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-body font-semibold text-charcoal">{label}</p>
-        <p className="text-small text-warmGray">{description}</p>
+        <p className="text-body font-semibold text-charcoal">{t(label)}</p>
+        <p className="text-small text-warmGray">{t(description)}</p>
       </div>
-      <Toggle checked={checked} onChange={onChange} aria-label={label} />
+      <Toggle checked={checked} onChange={onChange} aria-label={t(label)} />
     </div>
   )
 }
@@ -209,7 +210,7 @@ function SecurityCard() {
       ) : (
         <form onSubmit={handleReset} className="flex flex-col gap-3">
           <p className="rounded-xl bg-limeMist/60 px-3.5 py-2.5 text-small text-charcoal">
-            Đã gửi mã 6 số tới <span className="font-semibold">{user?.email}</span>.
+            {t('Đã gửi mã 6 số tới')} <span className="font-semibold">{user?.email}</span>.
           </p>
           <Input label="Mã đặt lại (6 số)" required value={token} onChange={e => setToken(e.target.value)} maxLength={6} />
           <Input label="Mật khẩu mới" type="password" required minLength={8} value={newPassword} onChange={e => setNewPassword(e.target.value)} />
@@ -240,10 +241,11 @@ function DeletionCard() {
     <SettingsCard icon={TrashIcon} title="Dữ liệu tài khoản" subtitle="Yêu cầu xoá tài khoản theo Nghị định 13/2023/NĐ-CP" danger>
       {user?.deletion_requested_at ? (
         <p className="rounded-xl bg-warmGray/10 px-4 py-3 text-body text-charcoal">
-          Đã gửi yêu cầu xoá tài khoản ngày {formatDate(user.deletion_requested_at)} — Administrator sẽ xử lý trong tối đa 30 ngày.
+          {t('Đã gửi yêu cầu xoá tài khoản ngày {{date}} — Administrator sẽ xử lý trong tối đa 30 ngày.', { date: formatDate(user.deletion_requested_at) })}
         </p>
       ) : (
-        <Button variant="danger" className="w-full" onClick={() => setShowConfirm(true)}>Yêu cầu xoá tài khoản</Button>
+        // context 'button': EN dịch dạng động từ ("Request…"), khác nhãn tab "Yêu cầu xoá tài khoản" ở trang Admin
+        <Button variant="danger" className="w-full" onClick={() => setShowConfirm(true)}>{t('Yêu cầu xoá tài khoản', { context: 'button' })}</Button>
       )}
 
       <ConfirmModal

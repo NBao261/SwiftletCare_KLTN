@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
+import { tr } from '@/i18n'
 
 interface FilterChipProps {
   active: boolean
@@ -24,7 +25,7 @@ export default function FilterChip({ active, label, onClick, size = 'sm' }: Filt
         active ? 'bg-charcoal text-white' : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20',
       )}
     >
-      {label}
+      {tr(label)}
     </button>
   )
 }

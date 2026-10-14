@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button'
 import { IconChevronRight, IconChevronsRight } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 
 interface PaginationProps {
   page: number
@@ -60,13 +61,13 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <p className="text-sm text-warmGray">
-          Hiển thị {from}–{to} trong {total}
+          {t('Hiển thị {{from}}–{{to}} trong {{total}}', { from, to, total })}
         </p>
-        <nav aria-label="Phân trang" className="flex flex-wrap items-center gap-1">
-          <button type="button" className={ITEM_CLASS} aria-label="Trang đầu" disabled={!hasPrev} onClick={() => onChange(1)}>
+        <nav aria-label={t('Phân trang')} className="flex flex-wrap items-center gap-1">
+          <button type="button" className={ITEM_CLASS} aria-label={t('Trang đầu')} disabled={!hasPrev} onClick={() => onChange(1)}>
             <IconChevronsRight width={16} height={16} className="rotate-180" />
           </button>
-          <button type="button" className={ITEM_CLASS} aria-label="Trang trước" disabled={!hasPrev} onClick={() => onChange(page - 1)}>
+          <button type="button" className={ITEM_CLASS} aria-label={t('Trang trước')} disabled={!hasPrev} onClick={() => onChange(page - 1)}>
             <IconChevronRight width={16} height={16} className="rotate-180" />
           </button>
           {pageItems(page, totalPages).map((item, i) =>
@@ -77,7 +78,7 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
                 key={item}
                 type="button"
                 aria-current={item === page ? 'page' : undefined}
-                aria-label={`Trang ${item}`}
+                aria-label={t('Trang {{n}}', { n: item })}
                 onClick={() => item !== page && onChange(item)}
                 className={cn(ITEM_CLASS, item === page && 'bg-charcoal font-semibold text-white hover:bg-charcoal')}
               >
@@ -85,10 +86,10 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
               </button>
             ),
           )}
-          <button type="button" className={ITEM_CLASS} aria-label="Trang sau" disabled={!hasNext} onClick={() => onChange(page + 1)}>
+          <button type="button" className={ITEM_CLASS} aria-label={t('Trang sau')} disabled={!hasNext} onClick={() => onChange(page + 1)}>
             <IconChevronRight width={16} height={16} />
           </button>
-          <button type="button" className={ITEM_CLASS} aria-label="Trang cuối" disabled={!hasNext} onClick={() => onChange(totalPages)}>
+          <button type="button" className={ITEM_CLASS} aria-label={t('Trang cuối')} disabled={!hasNext} onClick={() => onChange(totalPages)}>
             <IconChevronsRight width={16} height={16} />
           </button>
         </nav>
@@ -158,14 +159,14 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
   return (
     <div className="flex items-center justify-between gap-3 pt-2">
       <p className="text-sm text-warmGray">
-        Hiển thị {from}–{to} trong {total}
+        {t('Hiển thị {{from}}–{{to}} trong {{total}}', { from, to, total })}
       </p>
       <div className="flex gap-2">
         <Button variant="secondary" size="sm" disabled={!hasPrev} onClick={() => onChange(page - 1)}>
-          Trước
+          {t('Trước')}
         </Button>
         <Button variant="secondary" size="sm" disabled={!hasNext} onClick={() => onChange(page + 1)}>
-          Sau
+          {t('Sau')}
         </Button>
       </div>
     </div>

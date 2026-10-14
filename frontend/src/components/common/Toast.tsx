@@ -1,5 +1,6 @@
 import { useToastStore } from '@/stores/toastStore'
 import { cn } from '@/lib/cn'
+import { tr } from '@/i18n'
 
 /** Toast – container hiển thị toàn bộ thông báo, mount 1 lần ở MainLayout */
 export default function Toast() {
@@ -19,7 +20,8 @@ export default function Toast() {
             t.tone === 'success' ? 'bg-charcoal text-white' : 'bg-alertRed text-white',
           )}
         >
-          {t.message}
+          {/* Câu thông báo tự dịch theo VI/EN (câu lỗi do backend trả về không có bản dịch nên giữ nguyên) */}
+          {tr(t.message)}
         </button>
       ))}
     </div>

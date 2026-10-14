@@ -1,4 +1,5 @@
 import type { ComponentType, SVGProps } from 'react'
+import { t } from '@/i18n'
 import { NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useAlertStore } from '@/stores/alertStore'
@@ -55,11 +56,11 @@ export default function AppSidebar({
 
         <div className="px-[18px]">
           <div className="mt-6">
-            <p className="text-[13px] text-warmGray">Xin chào,</p>
+            <p className="text-[13px] text-warmGray">{t('Xin chào,')}</p>
             <p className="truncate text-xl font-bold text-charcoal">{user?.full_name}</p>
             <p className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-warmGray">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
-              Role: {user?.role ? ROLE_LABEL[user.role] : ''}
+              {t('Vai trò')}: {user?.role ? ROLE_LABEL[user.role] : ''}
             </p>
           </div>
 
@@ -71,7 +72,7 @@ export default function AppSidebar({
           {menuSections.map(section => (
             <div key={section.title} className="mb-4">
               {/* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng MỌI role. Sidebar đóng băng (FE_Design §4.1): .label-caption đã đổi sang sentence case nên nhãn nhóm menu viết style in hoa cũ trực tiếp ở đây — hiển thị KHÔNG đổi */}
-              <p className="px-[10px] py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{section.title}</p>
+              <p className="px-[10px] py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{t(section.title)}</p>
               <div className="space-y-1">
                 {section.items.map(item => {
                   const badgeCount = item.path === '/alerts' ? unreadCount : 0
@@ -97,7 +98,7 @@ export default function AppSidebar({
                           ) : (
                             <item.icon width={16} height={16} className="shrink-0 text-warmGray" />
                           )}
-                          <span className="flex-1 truncate">{item.label}</span>
+                          <span className="flex-1 truncate">{t(item.label)}</span>
                           {badgeCount > 0 && (
                             <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-alertRed px-1 text-[11px] font-bold text-white">
                               {badgeCount > 9 ? '9+' : badgeCount}
@@ -120,14 +121,14 @@ export default function AppSidebar({
             className="flex h-[42px] w-full items-center justify-center gap-2 rounded-full border border-warmGray/15 px-4 text-[12.5px] font-medium text-graphite transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <IconLogout width={15} height={15} />
-            Đăng xuất
+            {t('Đăng xuất')}
           </button>
         </div>
       </aside>
 
       {/* Dock nổi cho mobile/tablet — khung `rounded-full` nền trắng, shadow dock (FE_Design_Claude.md §2) */}
       <nav
-        aria-label="Điều hướng chính"
+        aria-label={t('Điều hướng chính')}
         className="fixed inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:hidden"
       >
         <div className="flex items-center gap-1 rounded-full border border-warmGray/15 bg-white p-2 shadow-dock">
@@ -135,7 +136,7 @@ export default function AppSidebar({
             <NavLink
               key={item.path}
               to={item.path}
-              aria-label={item.label}
+              aria-label={t(item.label)}
               className={({ isActive }) =>
                 cn(
                   'flex h-12 items-center gap-2 rounded-full px-3.5 transition-colors',
@@ -147,7 +148,7 @@ export default function AppSidebar({
                 <>
                   <item.icon width={20} height={20} className="shrink-0" />
                   {/* Chỉ mục đang mở mới hiện nhãn — dock gọn, vẫn biết mình đang ở đâu */}
-                  {isActive && <span className="text-sm font-semibold">{item.label}</span>}
+                  {isActive && <span className="text-sm font-semibold">{t(item.label)}</span>}
                 </>
               )}
             </NavLink>

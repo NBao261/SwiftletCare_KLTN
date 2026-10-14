@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { setLang, t, type Lang } from '@/i18n'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useZoneStore } from '@/stores/zoneStore'
@@ -19,9 +20,10 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
   return { label: match?.label ?? 'SwiftletCare', to: match?.path ?? pathname }
 }
 
-/** Toggle ngôn ngữ hiển thị — UI tĩnh, chưa gắn i18n thật (chưa có hệ thống dịch đa ngôn ngữ trong app). */
+/** Toggle ngôn ngữ hiển thị (FE_Design §6) — đổi i18n thật, nhớ lựa chọn ở localStorage */
 function LanguageToggle() {
-  const [lang, setLang] = useState<'VI' | 'EN'>('VI')
+  const { i18n } = useTranslation()
+  const lang = i18n.language.toUpperCase() as 'VI' | 'EN'
 
   return (
     <div className="group/lang relative">
@@ -30,7 +32,7 @@ function LanguageToggle() {
         {(['VI', 'EN'] as const).map(l => (
           <button
             key={l}
-            onClick={() => setLang(l)}
+            onClick={() => setLang(l.toLowerCase() as Lang)}
             className={cn(
               'rounded-full px-2 py-1 text-xs font-bold transition-colors',
               lang === l ? 'bg-charcoal text-white' : 'text-warmGray hover:bg-warmGray/10',
@@ -42,8 +44,9 @@ function LanguageToggle() {
       </div>
 
       {/* Hover preview */}
-      <div className="pointer-events-none absolute right-0 z-20 mt-2 w-48 origin-top-right scale-95 rounded-xl border border-warmGray/20 bg-white p-3 opacity-0 shadow-card transition-all duration-150 group-hover/lang:scale-100 group-hover/lang:opacity-100">
-        <p className="label-caption">Ngôn ngữ hiển thị</p>
+      {/* Hover preview — style lớp nổi nhỏ như ActionsMenu: bo 2xl, viền gray-200, shadow-dropdown */}
+      <div className="pointer-events-none absolute right-0 z-20 mt-2 w-48 origin-top-right scale-95 rounded-2xl border border-gray-200 bg-white p-3 opacity-0 shadow-dropdown transition-all duration-150 group-hover/lang:scale-100 group-hover/lang:opacity-100">
+        <p className="label-caption">{t('Ngôn ngữ hiển thị')}</p>
         <p className="mt-1 truncate text-sm font-semibold text-charcoal">{lang === 'VI' ? 'Tiếng Việt' : 'English'}</p>
       </div>
     </div>
@@ -96,11 +99,11 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
               {!isRoot && <span aria-hidden="true" className="shrink-0 text-lg font-medium text-warmGray/40">/</span>}
               {clickable ? (
                 <button onClick={crumb.onClick} className={cn(textClass, 'transition-opacity hover:opacity-70')}>
-                  {crumb.label}
+                  {t(crumb.label)}
                 </button>
               ) : (
                 <span className={textClass} aria-current={isLast ? 'page' : undefined}>
-                  {crumb.label}
+                  {t(crumb.label)}
                 </span>
               )}
             </span>
@@ -125,8 +128,8 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
         <button
           onClick={() => logout.mutate()}
           disabled={logout.isPending}
-          aria-label="Đăng xuất"
-          title={user?.full_name ? `Đăng xuất ${user.full_name}` : 'Đăng xuất'}
+          aria-label={t('Đăng xuất')}
+          title={user?.full_name ? `${t('Đăng xuất')} ${user.full_name}` : t('Đăng xuất')}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
         >
           <IconLogout />

@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
+import { tr } from '@/i18n'
 import { IconSortAsc, IconSortDesc } from '@/components/ui/icons'
 import type { SortDirection } from '@/types'
 
@@ -67,10 +68,10 @@ export default function DataTable<T>({
                       onClick={() => onSortChange(col.key)}
                       className={cn('inline-flex items-center gap-1 transition-colors hover:text-charcoal', sortKey === col.key && 'text-charcoal')}
                     >
-                      {col.header}
+                      {tr(col.header)}
                       {sortKey === col.key && (sortDirection === 'asc' ? <IconSortAsc width={12} height={12} /> : <IconSortDesc width={12} height={12} />)}
                     </button>
-                  ) : col.header}
+                  ) : tr(col.header)}
                 </th>
               ))}
             </tr>
@@ -79,7 +80,7 @@ export default function DataTable<T>({
             {rows.length === 0 && (
               <tr style={rowHeight ? { height: rowHeight } : undefined}>
                 <td colSpan={columns.length} className={cn('px-4 text-center text-small text-warmGray', rowHeight ? 'py-0' : 'py-10')}>
-                  {emptyMessage}
+                  {tr(emptyMessage)}
                 </td>
               </tr>
             )}

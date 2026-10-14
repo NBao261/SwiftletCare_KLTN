@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn'
 import type { DeviceStatus } from '@/types'
+import { translated } from '@/i18n'
 
 const STATUS_CLASS: Record<DeviceStatus, string> = {
   PENDING:  'bg-orange-300', // chờ kết nối lần đầu — nhạt hơn DEGRADED để phân biệt 2 mức "chưa ổn"
@@ -9,10 +10,10 @@ const STATUS_CLASS: Record<DeviceStatus, string> = {
   DEGRADED: 'bg-climateOrange',
 }
 
-const STATUS_LABEL: Record<DeviceStatus, string> = {
+const STATUS_LABEL: Record<DeviceStatus, string> = translated({
   // PENDING = đã khai báo nhưng chưa từng gửi heartbeat (Flow 1 bước 4→8)
   PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Offline', ERROR: 'Lỗi', DEGRADED: 'Suy giảm',
-}
+})
 
 interface StatusDotProps {
   status: DeviceStatus

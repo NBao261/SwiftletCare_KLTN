@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { addDays, addMonths, format, isSameDay, isSameMonth, startOfDay, startOfMonth, startOfWeek } from 'date-fns'
 import { IconCalendar, IconChevronRight } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 import { isWithinVisitHours } from '@/validations/common/schedule.validation'
 
 /** Cùng định dạng giá trị với <input type="datetime-local"> — giờ máy người dùng, để form cũ không phải đổi */
@@ -110,7 +111,7 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
         className={cn('input flex items-center justify-between gap-2 text-left', open ? 'border-charcoal' : invalid && 'border-alertRed')}
       >
         <span className={cn('truncate tabular-nums', !selected && 'text-warmGray')}>
-          {selected ? format(selected, 'dd/MM/yyyy · HH:mm') : placeholder}
+          {selected ? format(selected, 'dd/MM/yyyy · HH:mm') : t(placeholder)}
         </span>
         <IconCalendar width={16} height={16} className="shrink-0 text-warmGray" />
       </button>
@@ -127,21 +128,21 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
             <div className="mb-2 flex items-center justify-between">
               <button
                 type="button"
-                aria-label="Tháng trước"
+                aria-label={t('Tháng trước')}
                 disabled={!!minDay && month <= startOfMonth(minDay)}
                 onClick={() => setMonth(m => addMonths(m, -1))}
                 className={cn(cellBase, 'h-7 w-7 hover:bg-warmGray/10')}
               >
                 <IconChevronRight width={16} height={16} className="rotate-180" />
               </button>
-              <span className="text-sm font-semibold text-charcoal">Tháng {format(month, 'M, yyyy')}</span>
-              <button type="button" aria-label="Tháng sau" onClick={() => setMonth(m => addMonths(m, 1))} className={cn(cellBase, 'h-7 w-7 hover:bg-warmGray/10')}>
+              <span className="text-sm font-semibold text-charcoal">{t('Tháng {{m}}', { m: format(month, 'M, yyyy') })}</span>
+              <button type="button" aria-label={t('Tháng sau')} onClick={() => setMonth(m => addMonths(m, 1))} className={cn(cellBase, 'h-7 w-7 hover:bg-warmGray/10')}>
                 <IconChevronRight width={16} height={16} />
               </button>
             </div>
 
             <div className="grid grid-cols-7 gap-0.5">
-              {WEEKDAYS.map(w => <span key={w} className="label-caption py-1 text-center">{w}</span>)}
+              {WEEKDAYS.map(w => <span key={w} className="label-caption py-1 text-center">{t(w)}</span>)}
               {days.map(d => {
                 const isSel = !!selected && isSameDay(d, selected)
                 const disabled = !!minDay && d < minDay
@@ -171,8 +172,8 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
           <div className="flex gap-0.5 border-l border-warmGray/10 pl-2">
             {([['Giờ', HOURS, hour, hourListRef], ['Phút', MINUTES, minute, minuteListRef]] as const).map(([label, list, current, ref]) => (
               <div key={label} className="flex w-10 flex-col">
-                <span className="label-caption pb-2 text-center">{label}</span>
-                <div ref={ref} role="listbox" aria-label={label} className="relative flex max-h-[14rem] flex-col gap-0.5 overflow-y-auto overscroll-contain [scrollbar-width:none]">
+                <span className="label-caption pb-2 text-center">{t(label)}</span>
+                <div ref={ref} role="listbox" aria-label={t(label)} className="relative flex max-h-[14rem] flex-col gap-0.5 overflow-y-auto overscroll-contain [scrollbar-width:none]">
                   {list.map(n => {
                     const at = (h: number, m: number) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m)
                     // Giờ còn phút nào hợp lệ (:00 hoặc :55 — khung 07:00–18:00 tính cả 18:00) thì chưa mờ

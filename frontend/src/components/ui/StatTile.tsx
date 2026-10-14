@@ -1,5 +1,6 @@
 import type { Icon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
+import { tr } from '@/i18n'
 
 interface StatTileProps {
   icon: Icon
@@ -24,7 +25,7 @@ export default function StatTile({ icon: TileIcon, iconClass, label, value, sub,
     <div className={cn('flex flex-col rounded-2xl border border-warmGray/15 bg-white p-3.5 shadow-card', className)}>
       <div className="mb-1.5 flex items-start justify-between gap-2">
         {/* Xuống dòng thay vì cắt "…" — ô hẹp (mobile 2×2) vẫn đọc đủ nhãn */}
-        <span className="min-w-0 text-small font-semibold text-warmGray">{label}</span>
+        <span className="min-w-0 text-small font-semibold text-warmGray">{tr(label)}</span>
         <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', iconClass)}>
           {/* Nét regular cho gần nét mảnh (stroke 1.6) của icon ReadingTile ở Dashboard Farm Owner */}
           <TileIcon size={14} weight="regular" />
@@ -34,16 +35,16 @@ export default function StatTile({ icon: TileIcon, iconClass, label, value, sub,
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         {/* Cỡ chữ gọn: nhãn 13px · số 24px · dòng phụ 12px */}
         <p className="text-2xl font-extrabold leading-none tracking-tight text-charcoal">
-          {value}
+          {tr(value)}
         </p>
         {valueBadge && (
           <span className="whitespace-nowrap rounded-full bg-alertRed px-2 py-0.5 text-xs font-semibold text-white">
-            {valueBadge}
+            {tr(valueBadge)}
           </span>
         )}
       </div>
       {/* Dòng phụ xuống dòng khi ô hẹp thay vì cắt "…" — grid kéo các ô cùng hàng cao bằng nhau */}
-      <p className="mt-1.5 text-xs font-medium text-warmGray">{sub}</p>
+      <p className="mt-1.5 text-xs font-medium text-warmGray">{tr(sub)}</p>
     </div>
   )
 }

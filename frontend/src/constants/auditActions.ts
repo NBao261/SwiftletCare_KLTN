@@ -1,11 +1,13 @@
+import { translated } from '@/i18n'
+
 /**
- * SYSTEM-FR-001 — nhãn tiếng Việt cho mã `action` trong `audit_logs`. Mã phải
+ * SYSTEM-FR-001 — nhãn tiếng Việt (translated(): đọc ra theo VI/EN) cho mã `action` trong `audit_logs`. Mã phải
  * khớp NGUYÊN VĂN chuỗi backend truyền vào `logAction()` (grep "logAction(" trong
  * backend/src/services + jobs) — không phải enum, backend ghi string tự do nên
  * mã lạ vẫn có thể xuất hiện; UI hiện thẳng mã đó khi không có nhãn.
  * Dùng chung cho dropdown lọc + danh sách AdminAuditLogPage.
  */
-export const AUDIT_ACTION_LABEL: Record<string, string> = {
+export const AUDIT_ACTION_LABEL: Record<string, string> = translated({
   // ── Tài khoản (admin.service.ts / auth.service.ts) ─────────────────────────
   ACCOUNT_LOCKED: 'Khoá tài khoản',
   ACCOUNT_UNLOCKED: 'Mở khoá tài khoản',
@@ -13,9 +15,9 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   DELETION_REQUESTED: 'Yêu cầu xoá tài khoản',
   USER_CREATED: 'Tạo tài khoản nhân viên',
   TECHNICIAN_REGIONS_UPDATED: 'Cập nhật vùng phụ trách Technician',
-  SALES_STAFF_UNASSIGNED: 'Gỡ Sales Staff khỏi farm',
-  SALES_STAFF_REQUEST_APPROVED: 'Duyệt đề xuất Sales Staff',
-  SALES_STAFF_REQUEST_REJECTED: 'Từ chối đề xuất Sales Staff',
+  SALES_STAFF_UNASSIGNED: 'Gỡ chuyên viên khỏi farm',
+  SALES_STAFF_REQUEST_APPROVED: 'Duyệt đề xuất chuyên viên',
+  SALES_STAFF_REQUEST_REJECTED: 'Từ chối đề xuất chuyên viên',
   PASSWORD_RESET: 'Đặt lại mật khẩu',
   LOGIN: 'Đăng nhập',
   LOGIN_FAILED: 'Đăng nhập thất bại',
@@ -41,7 +43,7 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   // ── Cấu hình hệ thống (system.service.ts) ──────────────────────────────────
   DEFAULT_THRESHOLDS_UPDATED: 'Cập nhật ngưỡng mặc định hệ thống',
   SLA_UPDATED: 'Cập nhật SLA ticket',
-}
+})
 
 /**
  * Trang Nhật ký hệ thống + card "Nhật ký hoạt động gần đây" chỉ hiện nhật ký TÀI KHOẢN (target_type='user',
@@ -57,7 +59,7 @@ export const USER_AUDIT_ACTIONS = [
 ] as const
 
 /** Nhãn cho `target_type` (chuỗi backend, snake_case) — thiếu thì hiện nguyên mã */
-export const AUDIT_TARGET_LABEL: Record<string, string> = {
+export const AUDIT_TARGET_LABEL: Record<string, string> = translated({
   user: 'Người dùng',
   farm: 'Farm',
   zone: 'Phòng',
@@ -65,6 +67,6 @@ export const AUDIT_TARGET_LABEL: Record<string, string> = {
   camera_node: 'Camera node',
   ticket: 'Ticket',
   system_settings: 'Cấu hình hệ thống',
-  sales_assignment: 'Gán Sales Staff',
-  sales_assignment_request: 'Đề xuất Sales Staff',
-}
+  sales_assignment: 'Gán chuyên viên',
+  sales_assignment_request: 'Đề xuất chuyên viên',
+})

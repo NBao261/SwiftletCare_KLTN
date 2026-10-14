@@ -2,6 +2,7 @@ import { useState, useEffect, FormEvent } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
+import { t, tr } from '@/i18n'
 
 interface NoteActionModalProps {
   open: boolean
@@ -40,9 +41,9 @@ export default function NoteActionModal({
 
   function validate(value: string): string | undefined {
     const trimmed = value.trim()
-    if (required && !trimmed) return emptyMessage ?? `Chưa nhập ${label.toLowerCase()}`
+    if (required && !trimmed) return emptyMessage ? tr(emptyMessage) : t('Chưa nhập {{field}}', { field: tr(label).toLowerCase() })
     if (minLength && trimmed.length < minLength) {
-      return `${label} cần ít nhất ${minLength} ký tự (đang có ${trimmed.length})`
+      return t('{{field}} cần ít nhất {{min}} ký tự (đang có {{count}})', { field: tr(label), min: minLength, count: trimmed.length })
     }
     return undefined
   }
@@ -59,18 +60,18 @@ export default function NoteActionModal({
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <Textarea
           label={label}
-          placeholder={placeholder}
+          placeholder={placeholder /* Textarea tự dịch label/placeholder */}
           required={required}
           value={note}
           error={error}
-          // Popup canh giữa: chừa sẵn dòng lỗi để lỗi hiện/ẩn không làm popup trượt lên/xuống
-          reserveError
+          // Popup canh giữa: lỗi cùng hàng nhãn để lỗi hiện/ẩn không làm popup trượt lên/xuống
+          errorInLabel
           onChange={e => { setNote(e.target.value); if (error) setError(validate(e.target.value)) }}
           onBlur={() => setError(validate(note))}
         />
-        {hint && <p className="text-xs text-warmGray">{hint}</p>}
+        {hint && <p className="text-xs text-warmGray">{tr(hint)}</p>}
         <Button type="submit" variant={danger ? 'danger' : 'primary'} loading={loading} className="w-full">
-          {submitLabel}
+          {tr(submitLabel)}
         </Button>
       </form>
     </Modal>

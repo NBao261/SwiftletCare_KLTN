@@ -1,12 +1,14 @@
 import type { Role } from '@/types'
+import { translated } from '@/i18n'
 
-/** Nhãn vai trò dùng chung — Sidebar (hiển thị role user hiện tại), Settings, v.v. */
-export const ROLE_LABEL: Record<Role, string> = {
+/** Nhãn vai trò dùng chung — Sidebar (hiển thị role user hiện tại), Settings, v.v. translated(): đọc ra theo VI/EN đang chọn */
+export const ROLE_LABEL: Record<Role, string> = translated({
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',
   TECHNICIAN: 'Kỹ thuật viên',
-  SALES_STAFF: 'Nhân viên kinh doanh',
-}
+  // Hiển thị "Chuyên viên" — vai trò Sales Staff đã đổi thành Staff/chuyên viên; mã SALES_STAFF giữ tới khi backend đổi enum
+  SALES_STAFF: 'Chuyên viên',
+})
 
 /**
  * Nhãn vai trò trong ngữ cảnh lời mời (InvitationPage) — chỉ 2 role mời được

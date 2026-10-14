@@ -6,6 +6,7 @@ import { useAlertStore } from '@/stores/alertStore'
 import { formatDate } from '@/lib/helpers'
 import { IconBell } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 import type { Alert, ApiResponse } from '@/types'
 
 /** Query giống hệt tham số truyền cho `useAlertsList` bên dưới — dùng lại làm key để patch cache lạc quan khi ack. */
@@ -74,7 +75,7 @@ export default function NotificationPopover() {
           'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-white hover:shadow-icon',
           open && 'bg-white shadow-icon',
         )}
-        aria-label={unreadCount > 0 ? `Thông báo (${unreadCount} chưa đọc)` : 'Thông báo'}
+        aria-label={unreadCount > 0 ? t('Thông báo ({{n}} chưa đọc)', { n: unreadCount }) : t('Thông báo')}
       >
         <IconBell />
         {unreadCount > 0 && (
@@ -87,23 +88,24 @@ export default function NotificationPopover() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-30 mt-2 flex max-h-[440px] w-[360px] animate-fade-in flex-col overflow-hidden rounded-2xl border border-warmGray/20 bg-white shadow-[0_12px_32px_rgba(39,35,31,0.16)]"
+          // Cùng style lớp nổi mới (Modal/ActionsMenu/SelectMenu): viền gray-200 + shadow-popover thay bóng tự định nghĩa
+          className="absolute right-0 z-30 mt-2 flex max-h-[440px] w-[360px] animate-fade-in flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-popover"
         >
-          <div className="flex shrink-0 items-center justify-between border-b border-warmGray/15 px-4 py-3">
+          <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
             <span className="flex items-center gap-2">
-              <span className="text-[15px] font-bold text-charcoal">Thông báo</span>
+              <span className="text-[15px] font-bold text-charcoal">{t('Thông báo')}</span>
               {unreadCount > 0 && (
                 <span className="rounded-full bg-alertRed px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount} mới
+                  {t('{{n}} mới', { n: unreadCount > 9 ? '9+' : unreadCount })}
                 </span>
               )}
             </span>
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {isLoading && <p className="px-4 py-8 text-center text-sm text-warmGray">Đang tải...</p>}
+            {isLoading && <p className="px-4 py-8 text-center text-sm text-warmGray">{t('Đang tải...')}</p>}
             {!isLoading && records.length === 0 && (
-              <p className="px-4 py-8 text-center text-sm text-warmGray">Chưa có thông báo nào</p>
+              <p className="px-4 py-8 text-center text-sm text-warmGray">{t('Chưa có thông báo nào')}</p>
             )}
             {records.map(alert => {
               const unread = alert.status === 'ACTIVE'
@@ -112,8 +114,9 @@ export default function NotificationPopover() {
                   key={alert._id}
                   onClick={() => handleNotificationClick(alert)}
                   className={cn(
-                    'flex w-full flex-col gap-0.5 border-b border-warmGray/10 px-4 py-3 text-left transition-colors last:border-b-0',
-                    unread ? 'bg-warmGray/10 hover:bg-warmGray/15' : 'bg-white hover:bg-warmGray/5',
+                    'flex w-full flex-col gap-0.5 border-b border-gray-100 px-4 py-3 text-left transition-colors duration-150 last:border-b-0',
+                    // Hover nền gray-100 như mục ActionsMenu/SelectMenu; chưa đọc giữ nền nhạt để phân biệt
+                    unread ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-100',
                   )}
                 >
                   <span className="flex items-center gap-2">
@@ -135,9 +138,9 @@ export default function NotificationPopover() {
 
           <button
             onClick={() => { setOpen(false); navigate('/alerts') }}
-            className="shrink-0 border-t border-warmGray/15 px-4 py-3 text-center text-sm font-bold text-charcoal hover:bg-warmGray/10"
+            className="shrink-0 border-t border-gray-200 px-4 py-3 text-center text-sm font-bold text-charcoal transition-colors duration-150 hover:bg-gray-100"
           >
-            Xem tất cả thông báo lớn →
+            {t('Xem tất cả thông báo lớn →')}
           </button>
         </div>
       )}

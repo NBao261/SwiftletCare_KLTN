@@ -2,6 +2,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useFloatingMenu } from '@/components/ui/useFloatingMenu'
 import { cn } from '@/lib/cn'
+import { tr } from '@/i18n'
 import { IconChevronDown, IconCheck } from '@/components/ui/icons'
 
 export interface SelectMenuOption<V extends string> {
@@ -101,7 +102,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={ariaLabel}
+        aria-label={tr(ariaLabel)}
         aria-invalid={invalid || undefined}
         className={cn(
           field
@@ -113,7 +114,8 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
           className,
         )}
       >
-        <span className="truncate">{selected?.label}</span>
+        {/* Nhãn option tự dịch theo VI/EN (tên trại/người dùng không có bản dịch nên giữ nguyên) */}
+        <span className="truncate">{tr(selected?.label)}</span>
         <IconChevronDown width={field ? 16 : 14} height={field ? 16 : 14} className={cn('shrink-0 text-warmGray transition-transform', open && 'rotate-180')} />
       </button>
 
@@ -121,7 +123,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
         <div
           ref={menuRef}
           role="listbox"
-          aria-label={ariaLabel}
+          aria-label={tr(ariaLabel)}
           // Cao đúng maxVisible dòng (field 4, filter 8) kể cả padding/gap/border — vừa khít, không lộ nửa dòng kế tiếp
           style={{ ...style, maxHeight: listHeight(maxVisible) }}
           className="z-50 animate-fade-in space-y-0.5 overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 bg-white p-1.5 shadow-dropdown [scrollbar-width:thin]"
@@ -143,7 +145,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
                   isSelected && 'font-semibold',
                 )}
               >
-                <span className="truncate">{opt.label}</span>
+                <span className="truncate">{tr(opt.label)}</span>
                 {isSelected && <IconCheck width={14} height={14} className="shrink-0" />}
               </button>
             )
