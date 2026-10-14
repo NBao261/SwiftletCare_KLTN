@@ -42,9 +42,10 @@ function visitTimeError(scheduledAt: string, now: number): string | undefined {
 /** Map lỗi theo field — rỗng nghĩa là hợp lệ. `now` truyền vào để test được. */
 export function validateNewTicket(form: NewTicketForm, now = Date.now()): Partial<Record<NewTicketField, string>> {
   const errors: Partial<Record<NewTicketField, string>> = {}
-  if (!form.farmId) errors.farmId = 'Chưa chọn trang trại — ticket luôn gắn với 1 farm.'
+  // Câu ngắn — popup Tạo ticket hiện lỗi cùng hàng nhãn
+  if (!form.farmId) errors.farmId = 'Chưa chọn trang trại'
   if (SCHEDULED_TYPES.includes(form.type)) {
-    const err = form.scheduledAt ? visitTimeError(form.scheduledAt, now) : 'Lắp đặt cần ngày giờ hẹn để phân lịch kỹ thuật viên.'
+    const err = form.scheduledAt ? visitTimeError(form.scheduledAt, now) : 'Chưa chọn ngày giờ hẹn'
     if (err) errors.scheduledAt = err
   }
   return errors

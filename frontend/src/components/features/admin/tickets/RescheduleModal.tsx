@@ -1,16 +1,11 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useAdminOverrideTicket } from '@/hooks/shared/useTickets'
-import { Button, Modal } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage, toLocalDateTimeInput } from '@/lib/helpers'
 import DateTimePicker from '@/components/common/DateTimePicker'
+import { t } from '@/i18n'
 import { validateReschedule } from '@/validations/common/schedule.validation'
-import OverrideReasonField, { REASON_EMPTY, type OverrideModalProps } from '@/components/features/admin/tickets/OverrideReasonField'
-
-/**
- * ISO (UTC) → giá trị cho <input type="datetime-local"> theo giờ máy người dùng.
- * `iso.slice(0, 16)` cắt thẳng chuỗi UTC nên lệch 7 tiếng ở VN.
- */
+import { OverrideModalLayout, REASON_EMPTY, type OverrideModalProps } from '@/components/features/admin/tickets/OverrideReasonField'
 
 /** TICKET-FR-005b — Admin đổi ngày giờ hẹn của ticket */
 export default function RescheduleModal({ open, onClose, ticket }: OverrideModalProps) {
@@ -22,6 +17,7 @@ export default function RescheduleModal({ open, onClose, ticket }: OverrideModal
 
   useEffect(() => {
     if (open) {
+      // ISO (UTC) → giá trị datetime-local theo giờ máy người dùng (cắt thẳng chuỗi UTC sẽ lệch 7 tiếng ở VN)
       setScheduledAt(ticket.scheduled_visit_at ? toLocalDateTimeInput(ticket.scheduled_visit_at) : '')
       setReason(''); setSubmitted(false)
     }
@@ -41,26 +37,35 @@ export default function RescheduleModal({ open, onClose, ticket }: OverrideModal
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Đổi lịch hẹn">
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="reschedule-at" className="label-caption">
-            Ngày giờ hẹn mới<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+    <OverrideModalLayout
+      open={open}
+      onClose={onClose}
+      ticket={ticket}
+      title="Đổi lịch hẹn"
+      description="Giờ hẹn trong khung 7:00–18:00 (giờ Việt Nam)"
+      onSubmit={handleSubmit}
+      submitLabel="Lưu"
+      loading={override.isPending}
+      reason={{ value: reason, onChange: setReason, error: reasonError }}
+    >
+      <div className="flex flex-col gap-1.5">
+        {/* Lỗi cùng hàng nhãn — hiện lỗi không làm popup cao thêm */}
+        <div className="flex items-baseline justify-between gap-3">
+          <label htmlFor="reschedule-at" className="label-caption shrink-0">
+            {t('Ngày giờ hẹn mới')}<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
           </label>
-          {/* min: bảng chọn làm mờ mốc đã qua; popup mở lâu thì "bây giờ" trôi đi nên validateReschedule chặn lần nữa khi lưu */}
-          <DateTimePicker
-            id="reschedule-at"
-            ariaLabel="Ngày giờ hẹn mới"
-            min={new Date()}
-            value={scheduledAt}
-            onChange={setScheduledAt}
-            invalid={!!scheduleError}
-          />
-          {scheduleError && <span className="text-xs text-alertRed">{scheduleError}</span>}
+          {scheduleError && <span className="min-w-0 truncate text-xs text-alertRed" title={t(scheduleError)}>{t(scheduleError)}</span>}
         </div>
-        <OverrideReasonField value={reason} onChange={setReason} error={reasonError} />
-        <Button type="submit" loading={override.isPending} className="w-full">Lưu</Button>
-      </form>
-    </Modal>
+        {/* min: bảng chọn làm mờ mốc đã qua; popup mở lâu thì "bây giờ" trôi đi nên validateReschedule chặn lần nữa khi lưu */}
+        <DateTimePicker
+          id="reschedule-at"
+          ariaLabel={t('Ngày giờ hẹn mới')}
+          min={new Date()}
+          value={scheduledAt}
+          onChange={setScheduledAt}
+          invalid={!!scheduleError}
+        />
+      </div>
+    </OverrideModalLayout>
   )
 }

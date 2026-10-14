@@ -9,7 +9,7 @@ describe('validateNewTicket', () => {
     expect(validateNewTicket({ farmId: '', type: 'OTHER', scheduledAt: '' }, NOW).farmId).toMatch(/Chưa chọn/)
   })
   it('lắp đặt bắt buộc ngày hẹn, không ở quá khứ, trong khung 7:00–18:00 giờ VN', () => {
-    expect(validateNewTicket({ farmId: 'f', type: 'INSTALLATION', scheduledAt: '' }, NOW).scheduledAt).toMatch(/cần ngày giờ hẹn/)
+    expect(validateNewTicket({ farmId: 'f', type: 'INSTALLATION', scheduledAt: '' }, NOW).scheduledAt).toMatch(/Chưa chọn ngày giờ hẹn/)
     expect(validateNewTicket({ farmId: 'f', type: 'INSTALLATION', scheduledAt: '2026-09-23T10:00+07:00' }, NOW).scheduledAt).toMatch(/đã qua/)
     expect(validateNewTicket({ farmId: 'f', type: 'INSTALLATION', scheduledAt: '2026-09-25T20:00+07:00' }, NOW).scheduledAt).toMatch(/7:00–18:00/)
   })
