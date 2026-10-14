@@ -115,7 +115,7 @@ routes/*.route.ts (express-validator + requireRole)
 | `package.json` `jest.coverageThreshold.global.lines: 80` | Line coverage is ~78%, so `npm test` and the CI Backend job fail on coverage although all tests pass | Owner decides: add tests, lower the threshold to the current level and raise it over time, or report coverage without failing |
 | `notification.service.ts` FCM | Push only logs; Telegram is the one channel that really sends (ALERT-FR-013 is met by Telegram) | Wire FCM when mobile registers tokens |
 | Low coverage areas (`jobs/` 0%, `analytics.service.ts`, `notification.service.ts`) | Little or no test coverage | Add tests when touching them |
-| Bird counting (VISION) | Backend side exists but nothing real publishes bird counts (`ai-pipeline/` not deployed) | — |
+| Bird counting (VISION) | Only the read side exists (`GET /analytics/bird-count/daily\|trends`). `mqtt/handlers/birdCount.handler.ts` is a stub that only logs, so nothing writes `birdCountRecord` or raises `LOW_RETURN_RATE`; `device.service#recordHeartbeat` only looks up `SensorNode`, so a CameraNode never goes ONLINE; `listCameraNodes` returns `rtsp_url` (carries the camera password) | `docs/bird-counting-plan.md` §8: `birdCount.service.ts`, CameraNode heartbeat branch, strip `rtsp_url` |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse.
 
