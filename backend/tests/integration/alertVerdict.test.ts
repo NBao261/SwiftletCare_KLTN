@@ -111,6 +111,20 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
     expect(await ticketsAfterEscalation()).toBe(0)
   })
 
+  it('firmware không gửi title: tiêu đề mặc định mang tên Zone', async () => {
+    const { zone, node } = await seed()
+    await ingestDeviceAlert({ deviceId: node.device_id, type: 'PUMP_DRY', severity: 'MEDIUM', message: 'khô' })
+    expect((await Alert.findOne().lean())!.title).toBe(`PUMP_DRY tại ${zone.name}`)
+  })
+
+  it('thiết bị không được gửi loại cảnh báo chỉ backend suy ra', async () => {
+    const { node } = await seed()
+    for (const type of ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH']) {
+      await expect(ingestDeviceAlert({ deviceId: node.device_id, type, message: 'x' })).rejects.toThrow('không hợp lệ')
+    }
+    expect(await Alert.countDocuments()).toBe(0)
+  })
+
   it('loại cảnh báo phần cứng vẫn giữ mức thiết bị gửi và vẫn leo thang', async () => {
     const { node } = await seed()
     await ingestDeviceAlert({ deviceId: node.device_id, type: 'SPEAKER_FAILURE', severity: 'CRITICAL', message: 'x' })

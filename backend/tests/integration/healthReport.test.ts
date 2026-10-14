@@ -185,6 +185,11 @@ describe('đọc báo cáo', () => {
     expect(preview.body.data.metrics).toMatchObject({ sample_count: 5, humidity_in_range_pct: 80 })
     expect(await ZoneHealthReport.countDocuments()).toBe(1) // preview không lưu
 
+    // `to` ở tương lai bị kẹp về hiện tại
+    const future = new Date(Date.now() + 24 * HOUR).toISOString()
+    const clamped = await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${from}&to=${future}`, t.owner).expect(200)
+    expect(new Date(clamped.body.data.period_end).getTime()).toBeLessThanOrEqual(Date.now())
+
     const tooLong = new Date(Date.now() - 200 * 24 * HOUR).toISOString()
     await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${tooLong}`, t.owner).expect(400)
 

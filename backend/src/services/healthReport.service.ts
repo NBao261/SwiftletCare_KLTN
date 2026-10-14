@@ -174,7 +174,9 @@ export async function getHealthReport(id: string, user: CurrentUser): Promise<IZ
 /** EXPERT-FR-005 — xem số liệu theo khoảng bất kỳ, không lưu */
 export async function previewHealthReport(user: CurrentUser, query: { zoneId: string; from: string; to?: string }) {
   const { zone } = await assertZoneAccess(query.zoneId, user)
-  const to = query.to ? new Date(query.to) : new Date()
+  // `to` ở tương lai thì phần chưa xảy ra bị tính vào mẫu số của tỷ lệ thời gian tự động
+  const now = new Date()
+  const to = query.to && new Date(query.to) < now ? new Date(query.to) : now
   const from = new Date(query.from)
   if (!(from < to)) throw BadRequestError('from phải trước to')
   if (to.getTime() - from.getTime() > MAX_PREVIEW_DAYS * DAY_MS) throw BadRequestError(`Khoảng xem tối đa ${MAX_PREVIEW_DAYS} ngày`)

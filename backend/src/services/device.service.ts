@@ -15,6 +15,7 @@ import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { firmwareDetectionConfig, resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogsFromDevice, openOverrideLog, openOverrideState,
+  DEVICE_CONFIRM_GRACE_MS,
 } from '@/services/relayOverrideLog.service'
 import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -28,8 +29,10 @@ const DEFAULT_OVERRIDE_MS = 30 * 60 * 1000
 /**
  * Giới hạn `durationMs` của 1 lần can thiệp tay. ponytail: 24 giờ là trần kỹ thuật chọn tay
  * (SRS chỉ ghi mặc định 30 phút) — can thiệp tay là ngoại lệ có thời hạn, cần lâu hơn thì bật lại.
+ * Tối thiểu 1 phút = 2 × DEVICE_CONFIRM_GRACE_MS: override ngắn hơn cửa sổ đó thì bản tin AUTO
+ * lúc thiết bị tự hết hạn bị coi là bản tin cũ và bỏ qua.
  */
-export const MIN_OVERRIDE_MS = 1000
+export const MIN_OVERRIDE_MS = 2 * DEVICE_CONFIRM_GRACE_MS
 export const MAX_OVERRIDE_MS = 24 * 60 * 60 * 1000
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */

@@ -273,6 +273,7 @@ describe('vòng review 4', () => {
 
     await post(10 * 365 * 24 * 3600_000).expect(422) // 10 năm
     await post(-5000).expect(422)
+    await post(5000).expect(422) // ngắn hơn cửa sổ bỏ qua bản tin AUTO cũ
     await post('abc').expect(422)
     expect(await RelayOverrideLog.countDocuments()).toBe(0)
     expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')

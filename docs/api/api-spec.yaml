@@ -2070,10 +2070,10 @@ paths:
                 durationMs:
                   {
                     type: integer,
-                    minimum: 1000,
+                    minimum: 60000,
                     maximum: 86400000,
                     default: 1800000,
-                    description: "Thời gian override trước khi tự trả về AUTO (mặc định 30 phút, tối đa 24 giờ)",
+                    description: "Thời gian override trước khi tự trả về AUTO (mặc định 30 phút, từ 1 phút tới 24 giờ)",
                   }
       responses:
         "200":
