@@ -4,6 +4,7 @@ import { AUDIT_TARGET_TYPE } from '@/constants/auditActions'
 import { Button, Card, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import StatTile from '@/components/ui/StatTile'
+import { t } from '@/i18n'
 import type { ListAuditLogsQuery } from '@/apis/admin/system.api'
 
 const ICON = 'bg-warmGray/10 text-charcoal'
@@ -60,8 +61,8 @@ export default function AuditLogStats() {
     // bọc Card + tiêu đề, ô bên trong bỏ shadow riêng
     <Card className="flex flex-col gap-4">
       <div>
-        <h2 className="text-h2 text-charcoal">Thống kê nhật ký</h2>
-        <p className="mt-1 text-sm text-warmGray">Hoạt động tài khoản trên toàn hệ thống, phần lớn tính trong 7 ngày qua</p>
+        <h2 className="text-h2 text-charcoal">{t('Thống kê nhật ký')}</h2>
+        <p className="mt-1 text-sm text-warmGray">{t('Hoạt động tài khoản trên toàn hệ thống')}</p>
       </div>
 
       {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
@@ -72,7 +73,7 @@ export default function AuditLogStats() {
           iconClass={ICON}
           label="Tổng nhật ký"
           value={all.total}
-          sub={`Hôm nay thêm ${today.total} bản ghi`}
+          sub={t('Hôm nay thêm {{n}} bản ghi', { n: today.total })}
         />
         <StatTile
           className="shadow-none"
@@ -80,7 +81,7 @@ export default function AuditLogStats() {
           iconClass={ICON}
           label="Nhật ký 7 ngày qua"
           value={week.total}
-          sub={`Trung bình ${Math.round(week.total / 7)} bản ghi/ngày`}
+          sub={t('Trung bình {{n}} bản ghi/ngày', { n: Math.round(week.total / 7) })}
         />
         <StatTile
           className="shadow-none"

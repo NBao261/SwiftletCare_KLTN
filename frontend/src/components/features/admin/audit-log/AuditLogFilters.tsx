@@ -1,6 +1,7 @@
 import { useUsersPicker } from '@/hooks/admin/useUsers'
 import { AUDIT_ACTION_LABEL, USER_AUDIT_ACTIONS } from '@/constants/auditActions'
 import { ROLE_LABEL } from '@/constants/roles'
+import { t } from '@/i18n'
 import { ClearFiltersButton, SortChips } from '@/components/ui'
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
 import { ALL, DATE_PRESETS, type AuditLogTableState } from '@/components/features/admin/audit-log/useAuditLogTable'
@@ -30,7 +31,7 @@ export default function AuditLogFilters({ table }: { table: AuditLogTableState }
       <div className="flex flex-wrap items-center gap-2">
         <SelectMenu ariaLabel="Lọc theo người thực hiện" value={table.actorId} options={actorOptions} onChange={table.setActorId} className="max-w-[16rem]" />
         <SelectMenu ariaLabel="Lọc theo hành động" value={table.action} options={ACTION_OPTIONS} onChange={table.setAction} className="max-w-[16rem]" />
-        <span className="label-caption">Thời gian:</span>
+        <span className="label-caption">{t('Thời gian:')}</span>
         <SelectMenu ariaLabel="Lọc theo khoảng thời gian" value={table.datePreset} options={DATE_OPTIONS} onChange={table.setDatePreset} className="max-w-[16rem]" />
         {/* 1 trường duy nhất, luôn đang chọn — bấm chỉ đảo chiều mới nhất/cũ nhất */}
         <SortChips fields={[{ key: 'time', label: 'Thời gian' }]} sortBy="time" sortDir={table.sortDir} onChange={table.toggleSort} />
@@ -38,7 +39,7 @@ export default function AuditLogFilters({ table }: { table: AuditLogTableState }
       </div>
       {actors.truncated && (
         <p className="text-xs text-warmGray">
-          Ô "người thực hiện" chỉ liệt kê {actors.records.length}/{actors.total} tài khoản đầu tiên (giới hạn 1 trang của /admin/users).
+          {t('Ô "người thực hiện" chỉ liệt kê {{shown}}/{{total}} tài khoản đầu tiên (giới hạn 1 trang của /admin/users).', { shown: actors.records.length, total: actors.total })}
         </p>
       )}
     </div>
