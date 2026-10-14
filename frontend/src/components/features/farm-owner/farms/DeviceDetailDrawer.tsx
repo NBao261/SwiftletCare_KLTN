@@ -5,7 +5,7 @@ import { Drawer } from '@/components/ui/Drawer'
 import { ZONE_METRICS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { wifiQuality, type DeviceRow, type ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 import { useDeviceProfile } from '@/hooks/farm-owner/useFarmStructure'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import type { DeviceStatus } from '@/types'
@@ -22,7 +22,7 @@ interface DeviceDetailDrawerProps { device: DeviceRow | null; zoneNode?: ZoneNod
  * Kỹ thuật viên lắp đặt / firmware mới nhất chưa có API (farmMock.api.ts trả rỗng) → hiện "—", không bịa số liệu.
  */
 export default function DeviceDetailDrawer({ device, zoneNode, onClose }: DeviceDetailDrawerProps) {
-  const { t, num, day, ago } = useT(farmDict)
+  const { t, num, day, ago } = useTranslation(farmDict)
   const navigate = useNavigate()
   const { data: profile } = useDeviceProfile(device?.deviceId)
 
