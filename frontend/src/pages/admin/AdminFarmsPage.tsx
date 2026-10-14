@@ -4,19 +4,20 @@ import { useFarms } from "@/hooks/shared/useFarms";
 import { useUsersPicker, getUserStatus } from "@/hooks/admin/useUsers";
 import { ClearFiltersButton, SearchInput, SelectMenu, SortChips, SectionCard } from "@/components/ui";
 import DataTable from "@/components/ui/DataTable";
-import FilterChip from "@/components/ui/FilterChip";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import { IconFarm } from "@/components/ui/icons";
 import { buildFarmColumns } from "@/components/features/admin/farms/farmColumns";
 import { FILTERABLE_STATUSES, STATUS_LABEL, type FilterableStatus } from "@/components/features/admin/users/users.constants";
 import LockUserModal from "@/components/features/admin/users/LockUserModal";
 import UnlockUserModal from "@/components/features/admin/users/UnlockUserModal";
 import type { Farm, User, SortDirection } from "@/types";
+import { t } from "@/i18n";
 
 const ALL_REGIONS = "__all__";
 const NO_REGION = "__none__";
 const PAGE_SIZE = 10;
+/** px — các cột giờ 1 dòng chữ (địa chỉ, email đã tách cột riêng); mọi dòng kể cả dòng trống bù cao bằng nhau */
+const ROW_HEIGHT = 52;
 type FarmSortKey = "name" | "owner" | "region" | "created_at";
 const DEFAULT_SORT_BY: FarmSortKey = "created_at";
 const DEFAULT_SORT_DIR: SortDirection = "desc";
@@ -115,8 +116,8 @@ export default function AdminFarmsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
-      <SectionCard icon={<IconFarm width={20} height={20} />} title="Danh sách trang trại" description="Mọi trang trại trong hệ thống, kèm chủ sở hữu và khu vực">
+      {/* Card danh sách (SectionCard, không icon): tìm kiếm → bộ lọc → bảng → phân trang */}
+      <SectionCard title="Danh sách trang trại" description="Mọi trang trại trong hệ thống, kèm chủ sở hữu và khu vực">
 
         {/* Hàng 1: tìm kiếm riêng 1 hàng */}
         <SearchInput
@@ -133,17 +134,15 @@ export default function AdminFarmsPage() {
             options={regionOptions}
             onChange={(v) => { setRegion(v); setPage(1); }}
           />
-          <div className="flex flex-nowrap gap-2">
-            <FilterChip active={ownerStatus === undefined} label="Tất cả chủ farm" onClick={() => { setOwnerStatus(undefined); setPage(1); }} />
-            {FILTERABLE_STATUSES.map((s) => (
-              <FilterChip
-                key={s}
-                active={ownerStatus === s}
-                label={`Chủ ${STATUS_LABEL[s].toLowerCase()}`}
-                onClick={() => { setOwnerStatus(s); setPage(1); }}
-              />
-            ))}
-          </div>
+          <SelectMenu
+            ariaLabel="Lọc theo trạng thái chủ farm"
+            value={ownerStatus ?? ""}
+            options={[
+              { value: "" as const, label: "Tất cả chủ farm" },
+              ...FILTERABLE_STATUSES.map((s) => ({ value: s, label: t("Chủ {{status}}", { status: STATUS_LABEL[s].toLowerCase() }) })),
+            ]}
+            onChange={(v) => { setOwnerStatus(v || undefined); setPage(1); }}
+          />
           <SortChips fields={[{ key: "created_at", label: "Ngày tạo" }]} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
           {hasActiveFilters && (
             <ClearFiltersButton onClick={clearFilters} />
@@ -153,19 +152,19 @@ export default function AdminFarmsPage() {
         {!isLoading && (
           <p className="-mt-2 text-sm text-warmGray">
             {filtered.length === (farms?.length ?? 0)
-              ? `${filtered.length} trang trại`
-              : `${filtered.length} / ${farms?.length ?? 0} trang trại`}
+              ? t("{{n}} trang trại", { n: filtered.length })
+              : t("{{n}} / {{total}} trang trại", { n: filtered.length, total: farms?.length ?? 0 })}
           </p>
         )}
 
         {ownersTruncated && (
           <p className="-mt-2 text-xs text-climateOrange">
-            Hệ thống có hơn 100 chủ farm — một số dòng có thể không hiện tên chủ sở hữu (giới hạn 1 lần tải của /admin/users).
+            {t("Hệ thống có hơn 100 chủ farm — một số dòng có thể không hiện tên chủ sở hữu (giới hạn 1 lần tải của /admin/users).")}
           </p>
         )}
 
         {isLoading ? (
-          <LoadingSkeleton count={4} className="h-14 w-full" />
+          <LoadingSkeleton count={PAGE_SIZE} className="h-[52px] w-full" />
         ) : (
           <DataTable
             columns={columns}
@@ -178,6 +177,9 @@ export default function AdminFarmsPage() {
             emptyMessage={farms?.length
               ? "Không có trang trại nào khớp — thử từ khoá khác hoặc chọn lại khu vực."
               : "Chưa có trang trại nào trong hệ thống — farm do Farm Owner tự tạo sau khi đăng ký."}
+            // Cố định khung 10 dòng (như Nhật ký hệ thống) — ít farm/trang cuối vẫn giữ chiều cao, không co giãn khi lọc
+            rowHeight={ROW_HEIGHT}
+            minRows={PAGE_SIZE}
           />
         )}
 
