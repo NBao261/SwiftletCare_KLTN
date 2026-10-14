@@ -64,7 +64,7 @@ function buildColumns(startIndex: number): DataTableColumn<TechRow>[] {
       render: t => t.regions.length
         ? <p className="truncate text-charcoal" title={t.regions.join(', ')}>{t.regions.join(', ')}</p>
         // tr (không phải t): trong file này `t` là tham số dòng của render
-        : <span className="text-warmGray">{tr('Chưa gán')}</span>,
+        : <span className="italic text-warmGray">{tr('Chưa gán')}</span>,
     },
     // Chưa nhận = đã gán nhưng KTV chưa bấm tiếp nhận (Mới) · Đang làm = Đang xử lý + Chờ xác nhận hiện trường
     { key: 'unaccepted', header: 'Chưa nhận', align: 'center', className: 'w-[9%]', render: t => <Num n={t.unaccepted} /> },
@@ -88,7 +88,7 @@ function buildColumns(startIndex: number): DataTableColumn<TechRow>[] {
 }
 
 /**
- * Tab "Theo kỹ thuật viên" trang Ticket của Admin — thống kê số lượng ticket + khu vực quản lý của từng kỹ thuật viên
+ * Tab "Hiệu suất kỹ thuật viên" trang Ticket của Admin — thống kê số lượng ticket + khu vực quản lý của từng kỹ thuật viên
  * (TICKET-FR-012, GET /tickets/kpi; khu vực từ /admin/users — AUTH-FR-005c). Gồm MỌI kỹ thuật viên, kể cả người
  * chưa từng được giao (kpi chỉ trả người đã có ticket → bù dòng 0). Tìm theo tên/email/khu vực + lọc khu vực, tình
  * trạng việc, mức SLA. Sắp người nhiều việc dở nhất lên đầu để thấy ai quá tải mà gán lại (TICKET-FR-005b).

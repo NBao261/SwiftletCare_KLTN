@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { PlusIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { useAllTickets } from "@/hooks/admin/useAdminTickets";
 import { useFarms } from "@/hooks/shared/useFarms";
-import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips, SectionCard } from "@/components/ui";
+import { Button, ClearFiltersButton, EmptyState, FilterChip, SearchInput, SelectMenu, SortChips, SectionCard } from "@/components/ui";
 import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -28,7 +28,7 @@ const PAGE_SIZE = 10;
 type TicketTab = "tickets" | "technicians";
 const TABS: { key: TicketTab; label: string }[] = [
   { key: "tickets", label: "Danh sách ticket" },
-  { key: "technicians", label: "Theo kỹ thuật viên" },
+  { key: "technicians", label: "Hiệu suất kỹ thuật viên" },
 ];
 const STATUS_ORDER = Object.keys(STATUS_LABEL) as TicketStatus[];
 // Mặc định / nút "Sắp xếp:" / comparator dùng chung với Ticket gần nhất ở trang chi tiết Farm — xem ticketColumns.tsx
@@ -45,6 +45,11 @@ export default function AdminTicketsPage() {
   const [params] = useSearchParams();
   // ?farmId= — link "Xem tất cả" ở trang chi tiết Farm mở thẳng bảng đã lọc theo farm đó
   const [farmId, setFarmId] = useState(params.get("farmId") ?? "");
+  // ?nodeId=&device= — mở từ drawer chi tiết thiết bị: chỉ ticket sinh từ cảnh báo của thiết bị đó (device = mã hiển thị)
+  const [node, setNode] = useState(() => {
+    const id = params.get("nodeId");
+    return id ? { id, label: params.get("device") ?? id } : null;
+  });
   const [status, setStatus] = useState<TicketStatus | "">("");
   const [priority, setPriority] = useState<TicketPriority | "">("");
   const [search, setSearch] = useState("");
@@ -63,6 +68,7 @@ export default function AdminTicketsPage() {
   // Lọc server (farm/trạng thái/ưu tiên) → toàn bộ kết quả; search/sort/phân trang làm trên đủ tập này
   const { data: allTickets, isLoading, isError, error, refetch } = useAllTickets({
     farmId: farmId || undefined,
+    nodeId: node?.id,
     status: status || undefined,
     priority: priority || undefined,
   });
@@ -79,7 +85,7 @@ export default function AdminTicketsPage() {
   const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const isSortChanged = sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR;
   // Sắp xếp không làm mất dòng nào — tách riêng để bảng rỗng biết là "hệ thống chưa có ticket" hay "lọc hết"
-  const isFiltered = farmId !== "" || status !== "" || priority !== "" || search !== "";
+  const isFiltered = farmId !== "" || !!node || status !== "" || priority !== "" || search !== "";
   const hasActiveFilters = isFiltered || isSortChanged;
 
   function handleSortChange(key: string) {
@@ -93,6 +99,7 @@ export default function AdminTicketsPage() {
 
   function clearFilters() {
     setFarmId("");
+    setNode(null);
     setStatus("");
     setPriority("");
     setSearch("");
@@ -120,7 +127,7 @@ export default function AdminTicketsPage() {
       {/* 1 card, 2 tab: "Danh sách ticket" (tìm kiếm → bộ lọc → bảng → phân trang) | "Kỹ thuật viên" (khối lượng việc
           theo người — bấm tên → về tab ticket đã lọc theo người đó) */}
       <SectionCard
-        title={tab === "tickets" ? "Danh sách ticket" : "Thống kê theo kỹ thuật viên"}
+        title={tab === "tickets" ? "Danh sách ticket" : "Thống kê tỉ lệ ticket của kỹ thuật viên"}
         description={tab === "tickets"
           ? "Ticket trên toàn hệ thống"
           : "Số ticket đang giữ, đã xử lý và khu vực phụ trách của từng kỹ thuật viên"}
@@ -183,6 +190,10 @@ export default function AdminTicketsPage() {
             onChange={(v) => { setFarmId(v); setPage(1); }}
             options={[{ value: "", label: "Tất cả trang trại" }, ...(farms ?? []).map((f) => ({ value: f._id, label: f.name }))]}
           />
+          {/* Lọc theo thiết bị chỉ đến từ drawer Thiết bị — chip đen, bấm để bỏ lọc */}
+          {node && (
+            <FilterChip active label={`${tr("Thiết bị")}: ${node.label} ✕`} onClick={() => { setNode(null); setPage(1); }} />
+          )}
           <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
           {hasActiveFilters && (
             <ClearFiltersButton onClick={clearFilters} />

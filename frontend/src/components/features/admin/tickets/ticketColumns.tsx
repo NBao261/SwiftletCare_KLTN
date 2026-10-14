@@ -144,7 +144,7 @@ export function buildTicketColumns(
         return name
           ? <span className="block truncate text-charcoal" title={name}>{name}</span>
           // Chưa ai nhận = cần Admin gán — tô cam cho nổi giữa bảng
-          : <span className="font-semibold text-orange-600">{t('Chưa phân công')}</span>
+          : <span className="font-semibold text-climateOrange">{t('Chưa phân công')}</span>
       },
     },
     {
@@ -171,7 +171,7 @@ export function buildTicketColumns(
         const created = new Date(ticket.created_at)
         return (
           <div className="flex flex-col" title={formatRelativeTime(ticket.created_at)}>
-            <span className="text-charcoal">{TIME_FORMAT.format(created)}</span>
+            <span className="font-semibold text-charcoal">{TIME_FORMAT.format(created)}</span>
             <span className="text-small text-warmGray">{DAY_FORMAT.format(created)}</span>
           </div>
         )

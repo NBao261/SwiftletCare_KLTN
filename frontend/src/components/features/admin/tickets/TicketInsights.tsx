@@ -71,6 +71,8 @@ export default function TicketInsights() {
             label="Đúng hạn SLA"
             // Làm tròn số nguyên — "1.7%" khó đọc hơn "2%"
             value={rate != null ? `${Math.round(rate)}%` : '--'}
+            // Dưới mục tiêu → cả ô nổi đỏ (cùng kiểu ô Cần xử lý ở trang Thiết bị); đạt thì ô trắng bình thường
+            tone={rate != null && slaBad ? 'critical' : undefined}
             // Trạng thái không chỉ bằng màu (FE_Design §13.11): dòng phụ ghi rõ đạt hay chưa đạt mục tiêu
             sub={rate != null ? t(slaBad ? 'Chưa đạt mục tiêu {{n}}%' : 'Đạt mục tiêu {{n}}%', { n: SLA_WARN_RATE }) : 'Chưa có ticket tới hạn'}
           />
