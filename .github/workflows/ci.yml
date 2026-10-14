@@ -33,24 +33,102 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Job 3: Lint (thêm khi có code) ───────────────────────────────────────
-  # lint:
-  #   name: Lint Code
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #     - run: npm ci
-  #     - run: npm run lint
+  # ── Job 3: Xác định module nào bị sửa ──────────────────────────────────
+  # Job của module không bị đụng sẽ bị bỏ qua (skipped = không chặn merge).
+  changes:
+    name: Detect Changed Modules
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      firmware: ${{ steps.filter.outputs.firmware }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'docs/api/api-spec.yaml'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            firmware:
+              - 'firmware/**'
+              - '.github/workflows/ci.yml'
 
-  # ── Job 4: Tests (thêm khi có test) ──────────────────────────────────────
-  # test:
-  #   name: Run Tests
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - run: npm ci
-  #     - run: npm test
+  # ── Job 4: Backend — lint, type-check, test ─────────────────────────────
+  backend:
+    name: Backend (lint · type-check · test)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      # Binary MongoDB cho mongodb-memory-server (test integration) — tải 1 lần rồi cache
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('backend/package-lock.json') }}
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build:check
+      - run: npm test
+
+  # ── Job 5: Frontend — lint, type-check, test, build ─────────────────────
+  frontend:
+    name: Frontend (lint · type-check · test · build)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npx vitest run
+      - run: npm run build
+
+  # ── Job 6: Firmware — unit test trên host (env native) ──────────────────
+  firmware:
+    name: Firmware (native unit tests)
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: platformio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+      - run: pip install platformio
+      - run: pio test -e native
+
+  # Mobile chưa có package-lock.json nên chưa thêm job (npm ci cần lockfile).
