@@ -1,5 +1,5 @@
 import { StarIcon } from '@phosphor-icons/react'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 
@@ -10,7 +10,7 @@ interface PinButtonProps {
 
 /** Nút sao ghim nhà yến lên đầu danh sách — không kích hoạt thao tác của hàng/card chứa nó */
 export default function PinButton({ pinned, onToggle }: PinButtonProps) {
-  const { t } = useT(farmDict)
+  const { t } = useTranslation(farmDict)
   const label = t(pinned ? 'pin.unpin' : 'pin.pin')
   return (
     <button
