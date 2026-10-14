@@ -7,45 +7,33 @@ import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortCh
 import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import { IconTicket } from "@/components/ui/icons";
-import { buildTicketColumns, ticketCode, technicianName } from "@/components/features/admin/tickets/ticketColumns";
+import {
+  buildTicketColumns, ticketCode, technicianName, sortTickets, TICKET_SORT_FIELDS as SORT_FIELDS,
+  DEFAULT_TICKET_SORT_BY, DEFAULT_TICKET_SORT_DIR, type TicketSortKey,
+} from "@/components/features/admin/tickets/ticketColumns";
 import ChangePriorityModal from "@/components/features/admin/tickets/ChangePriorityModal";
 import ReassignTicketModal from "@/components/features/admin/tickets/ReassignTicketModal";
 import RescheduleModal from "@/components/features/admin/tickets/RescheduleModal";
 import CreateTicketModal from "@/components/features/admin/tickets/CreateTicketModal";
 import TicketInsights from "@/components/features/admin/tickets/TicketInsights";
+import TechnicianWorkloadTable from "@/components/features/admin/tickets/TechnicianWorkloadTable";
 import { TICKET_TYPE_LABEL, STATUS_LABEL } from "@/constants/tickets";
+import { PRIORITY_LABEL } from "@/constants/sla";
 import { getApiErrorMessage } from "@/lib/helpers";
+import { cn } from "@/lib/cn";
+import { tr } from "@/i18n";
 import type { Ticket, TicketStatus, TicketPriority, SortDirection } from "@/types";
 
 const PAGE_SIZE = 10;
-const STATUS_ORDER = Object.keys(STATUS_LABEL) as TicketStatus[];
-type TicketSortKey = "type" | "farm" | "priority" | "status" | "technician" | "due" | "created_at";
-// Trùng thứ tự backend trả về (created_at giảm dần) — mặc định không cần sắp lại
-const DEFAULT_SORT_BY: TicketSortKey = "created_at";
-const DEFAULT_SORT_DIR: SortDirection = "desc";
-/**
- * Nút "Sắp xếp:" cạnh bộ lọc — như trang Người dùng. 3 trường thời gian/khẩn cấp Admin
- * hay sắp nhất; các cột còn lại (loại, trang trại, trạng thái, KTV) sắp bằng tiêu đề bảng.
- */
-const SORT_FIELDS: { key: TicketSortKey; label: string }[] = [
-  { key: "created_at", label: "Ngày tạo" },
-  { key: "due", label: "Thời gian SLA" },
-  { key: "priority", label: "Ưu tiên" },
+type TicketTab = "tickets" | "technicians";
+const TABS: { key: TicketTab; label: string }[] = [
+  { key: "tickets", label: "Danh sách ticket" },
+  { key: "technicians", label: "Theo kỹ thuật viên" },
 ];
-
-function sortValue(t: Ticket, key: TicketSortKey, farmNames: Map<string, string>): string | number {
-  switch (key) {
-    case "type": return TICKET_TYPE_LABEL[t.type];
-    case "farm": return farmNames.get(t.farm_id) ?? "";
-    case "priority": return t.priority; // "P1" < "P2" < "P3" đúng thứ tự khẩn cấp
-    case "status": return STATUS_ORDER.indexOf(t.status);
-    case "technician": return technicianName(t) ?? "\uffff"; // chưa phân công xếp cuối khi tăng dần
-    case "due": return t.status === "CLOSED" || !t.sla_resolve_due_at ? "\uffff" : t.sla_resolve_due_at;
-    case "created_at": return t.created_at;
-  }
-}
-
+const STATUS_ORDER = Object.keys(STATUS_LABEL) as TicketStatus[];
+// Mặc định / nút "Sắp xếp:" / comparator dùng chung với Ticket gần nhất ở trang chi tiết Farm — xem ticketColumns.tsx
+const DEFAULT_SORT_BY = DEFAULT_TICKET_SORT_BY;
+const DEFAULT_SORT_DIR = DEFAULT_TICKET_SORT_DIR;
 /**
  * Ticket toàn hệ thống cho Admin (/system/tickets) — TICKET-FR-005b/006: dạng bảng như
  * trang Người dùng. Lọc trạng thái/ưu tiên/trang trại chạy trên backend; tìm kiếm + sắp xếp +
@@ -63,6 +51,7 @@ export default function AdminTicketsPage() {
   const [sortBy, setSortBy] = useState<TicketSortKey>(DEFAULT_SORT_BY);
   const [sortDir, setSortDir] = useState<SortDirection>(DEFAULT_SORT_DIR);
   const [page, setPage] = useState(1);
+  const [tab, setTab] = useState<TicketTab>("tickets");
   const [showCreate, setShowCreate] = useState(false);
   const [reassignTarget, setReassignTarget] = useState<Ticket | null>(null);
   const [priorityTarget, setPriorityTarget] = useState<Ticket | null>(null);
@@ -84,11 +73,7 @@ export default function AdminTicketsPage() {
       !q || [ticketCode(t), TICKET_TYPE_LABEL[t.type], farmNames.get(t.farm_id), technicianName(t), t.notes[0]?.content]
         .some((s) => s?.toLowerCase().includes(q)),
     );
-    const sign = sortDir === "asc" ? 1 : -1;
-    return list.sort((a, b) => {
-      const va = sortValue(a, sortBy, farmNames), vb = sortValue(b, sortBy, farmNames);
-      return (typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb), "vi")) * sign;
-    });
+    return sortTickets(list, sortBy, sortDir, farmNames);
   }, [allTickets, search, sortBy, sortDir, farmNames]);
 
   const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -129,14 +114,41 @@ export default function AdminTicketsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Hàng 0: 5 ô số (SLA + 4 trạng thái, chỉ xem) · bảng KTV (bấm tên để tìm) + card mức ưu tiên & SLA — số liệu toàn hệ thống */}
-      <TicketInsights
-        search={search}
-        onSelectTechnician={(name) => { setSearch(name); setPage(1); }}
-      />
+      {/* Hàng 0: 5 ô số (SLA + 4 trạng thái, chỉ xem) — số liệu toàn hệ thống */}
+      <TicketInsights />
 
-      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
-      <SectionCard icon={<IconTicket width={20} height={20} />} title="Danh sách ticket" description="Ticket toàn hệ thống — bấm một dòng để xem chi tiết và can thiệp">
+      {/* 1 card, 2 tab: "Danh sách ticket" (tìm kiếm → bộ lọc → bảng → phân trang) | "Kỹ thuật viên" (khối lượng việc
+          theo người — bấm tên → về tab ticket đã lọc theo người đó) */}
+      <SectionCard
+        title={tab === "tickets" ? "Danh sách ticket" : "Thống kê theo kỹ thuật viên"}
+        description={tab === "tickets"
+          ? "Ticket trên toàn hệ thống"
+          : "Số ticket đang giữ, đã xử lý và khu vực phụ trách của từng kỹ thuật viên"}
+        action={
+          // Thanh chuyển dạng viên thuốc — cùng kiểu chọn vai trò ở popup Tạo tài khoản
+          <div className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={tr("Chế độ xem")}>
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150",
+                  tab === t.key ? "bg-white text-charcoal shadow-card" : "text-warmGray hover:text-charcoal",
+                )}
+              >
+                {tr(t.label)}
+              </button>
+            ))}
+          </div>
+        }
+      >
+        {tab === "technicians" ? (
+          <TechnicianWorkloadTable onSelectTechnician={(name) => { setSearch(name); setPage(1); setTab("tickets"); }} />
+        ) : (
+        <>
 
         {/* Hàng 1: tìm kiếm + tạo ticket — cùng khuôn trang Người dùng (POST /tickets cho FARM_OWNER, ADMIN).
             Tổng số ticket nằm ở Pagination dưới bảng ("Hiển thị x–y trong z"), không lặp ở đây. */}
@@ -163,7 +175,7 @@ export default function AdminTicketsPage() {
             ariaLabel="Lọc theo ưu tiên"
             value={priority}
             onChange={(v) => { setPriority(v); setPage(1); }}
-            options={[{ value: "" as const, label: "Tất cả ưu tiên" }, ...(["P1", "P2", "P3"] as const).map((p) => ({ value: p, label: p }))]}
+            options={[{ value: "" as const, label: "Tất cả ưu tiên" }, ...(["P1", "P2", "P3"] as const).map((p) => ({ value: p, label: PRIORITY_LABEL[p] }))]}
           />
           <SelectMenu
             ariaLabel="Lọc theo trang trại"
@@ -192,9 +204,6 @@ export default function AdminTicketsPage() {
             columns={columns}
             rows={rows}
             getRowKey={(t) => t._id}
-            sortKey={sortBy}
-            sortDirection={sortDir}
-            onSortChange={handleSortChange}
             onRowClick={(t) => navigate(`/system/tickets/${t._id}`)}
             emptyMessage={isFiltered
               ? "Không có ticket nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm."
@@ -204,6 +213,8 @@ export default function AdminTicketsPage() {
 
         {/* total = số ticket SAU khi lọc + tìm kiếm — tìm ra 2 thì hiện "1–2 trong 2", không phải 113 */}
         <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
+        </>
+        )}
       </SectionCard>
 
       <CreateTicketModal open={showCreate} onClose={() => setShowCreate(false)} defaultFarmId={farmId || undefined} />
