@@ -19,9 +19,12 @@ const TYPE_OPTIONS =(Object.keys(TICKET_TYPE_LABEL) as TicketType[]).filter(t =>
  * POST /tickets cho Admin (backend cho FARM_OWNER + ADMIN) — mở từ bảng AdminTicketsPage.
  * Tự dựng 2 ô Trang trại → Phòng thay vì dùng ZonePicker chung: giao diện Admin gọi Zone
  * là "phòng", ZonePicker (dùng cho mọi role) vẫn ghi "Zone". `defaultFarmId` = farm đang
- * lọc trên bảng, để tạo ticket cho đúng farm đang xem khỏi chọn lại.
+ * lọc trên bảng, để tạo ticket cho đúng farm đang xem khỏi chọn lại; `defaultZoneId` = phòng chọn sẵn (mở từ
+ * chi tiết thiết bị).
  */
-export default function CreateTicketModal({ open, onClose, defaultFarmId }: { open: boolean; onClose: () => void; defaultFarmId?: string }) {
+export default function CreateTicketModal({ open, onClose, defaultFarmId, defaultZoneId }: {
+  open: boolean; onClose: () => void; defaultFarmId?: string; defaultZoneId?: string
+}) {
   const createTicket = useCreateTicket()
   const push = useToastStore(s => s.push)
   const { data: farms, isLoading: loadingFarms } = useFarms()
@@ -35,10 +38,10 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId }: { op
   useEffect(() => {
     if (!open) return
     setForm({ farmId: defaultFarmId ?? '', type: 'OTHER', scheduledAt: '' })
-    setZoneId('')
+    setZoneId(defaultZoneId ?? '')
     setDescription('')
     setSubmitted(false)
-  }, [open, defaultFarmId])
+  }, [open, defaultFarmId, defaultZoneId])
 
   const errors = validateNewTicket(form)
   const needsSchedule = SCHEDULED_TYPES.includes(form.type)
@@ -64,14 +67,14 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId }: { op
 
   return (
     // Bố cục: tiêu đề trải ngang + thanh ngăn, dưới là 2 cột (trái = loại ticket, phải = các nhóm nền xám + nút).
-    // Không đặt chiều cao cố định mà giữ nội dung luôn cùng cỡ: lỗi hiện cùng hàng nhãn (errorInLabel), khối Lịch hẹn
-    // cao bằng nhau dù có/không ô chọn giờ — đổi loại, hiện lỗi không làm popup co giãn, không cần cuộn.
+    // Thân cao cố định, cột phải cuộn trong khung: lỗi hiện dưới ô, lịch chọn giờ chèn vào form — popup không co giãn.
     <Modal open={open} onClose={onClose} size="xl" ariaLabel="Tạo ticket">
       {/* noValidate: lỗi tiếng Việt qua validateNewTicket, không dùng tooltip native */}
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         <ModalHeader title="Tạo ticket" description="Chọn loại ticket và điền thông tin" />
 
-        <div className="flex gap-6">
+        {/* Thân cao cố định: mở lịch / hiện lỗi không làm popup giãn — cột phải cuộn trong khung */}
+        <div className="flex h-[31rem] gap-6">
           {/* Trái: loại ticket. MAINTENANCE chỉ sinh từ lịch bảo trì — backend (CREATABLE_TICKET_TYPES) trả 400 nếu tạo tay */}
           <div className="flex w-56 shrink-0 flex-col border-r border-gray-200 pr-5">
             <h3 className={MODAL_SECTION_TITLE}>{t('Loại ticket')}</h3>
@@ -94,12 +97,13 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId }: { op
             </div>
           </div>
 
-          {/* Phải: Vị trí → Lịch hẹn → Mô tả, nút Tạo ở đáy */}
-          <div className="flex min-w-0 flex-1 flex-col gap-5">
+          {/* Phải: Vị trí → Lịch hẹn → Mô tả cuộn trong khung (pr-4: thanh cuộn cách khối nội dung), nút Tạo cố định ở đáy */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pr-4">
             <section>
               <h3 className={MODAL_SECTION_TITLE}>{t('Vị trí')}</h3>
               <div className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <Field label="Trang trại" required errorInLabel error={submitted ? errors.farmId : undefined}>
+                <Field label="Trang trại" required error={submitted ? errors.farmId : undefined}>
                   <SelectMenu
                     field
                     ariaLabel="Trang trại"
@@ -126,21 +130,16 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId }: { op
               </div>
             </section>
 
-            {/* Lịch hẹn luôn có nhóm, cao bằng nhau (min-h = nhãn + ô chọn giờ): lắp đặt mới chọn giờ ngay
-                (TICKET-FR-001), ticket báo lỗi thì kỹ thuật viên hẹn sau khi tiếp nhận (TICKET-FR-004b) */}
+            {/* Lịch hẹn: lắp đặt mới chọn giờ ngay (TICKET-FR-001); ticket báo lỗi chỉ 1 dòng ghi chú gọn — kỹ thuật viên
+                hẹn sau khi tiếp nhận (TICKET-FR-004b). Cột phải cuộn trong khung nên khối co giãn theo nội dung cũng được */}
             <section>
               <h3 className={MODAL_SECTION_TITLE}>{t('Lịch hẹn')}</h3>
-              <div className="flex min-h-[6.5rem] flex-col justify-center rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 {needsSchedule ? (
                   <div className="flex flex-col gap-1.5">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <label htmlFor="ticket-scheduled-at" className="label-caption shrink-0">
-                        {t('Ngày giờ hẹn')}<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
-                      </label>
-                      {submitted && errors.scheduledAt && (
-                        <span className="min-w-0 truncate text-xs text-alertRed" title={t(errors.scheduledAt)}>{t(errors.scheduledAt)}</span>
-                      )}
-                    </div>
+                    <label htmlFor="ticket-scheduled-at" className="label-caption">
+                      {t('Ngày giờ hẹn')}<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+                    </label>
                     <DateTimePicker
                       id="ticket-scheduled-at"
                       ariaLabel={t('Ngày giờ hẹn')}
@@ -148,10 +147,13 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId }: { op
                       value={form.scheduledAt}
                       onChange={scheduledAt => setForm(f => ({ ...f, scheduledAt }))}
                       invalid={submitted && !!errors.scheduledAt}
+                      inline
                     />
+                    {/* Lỗi dưới ô — cùng kiểu Input/SelectField */}
+                    {submitted && errors.scheduledAt && <span className="text-xs text-alertRed">{t(errors.scheduledAt)}</span>}
                   </div>
                 ) : (
-                  <p className="text-body text-warmGray">{t('Không cần chọn — kỹ thuật viên hẹn giờ sau khi tiếp nhận ticket.')}</p>
+                  <p className="text-small text-warmGray">{t('Không cần chọn — kỹ thuật viên hẹn giờ sau khi tiếp nhận ticket.')}</p>
                 )}
               </div>
             </section>
@@ -168,8 +170,9 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId }: { op
                 />
               </div>
             </section>
+          </div>
 
-            <div className="mt-auto flex justify-end">
+            <div className="flex shrink-0 justify-end">
               <Button type="submit" loading={createTicket.isPending}>Tạo ticket</Button>
             </div>
           </div>

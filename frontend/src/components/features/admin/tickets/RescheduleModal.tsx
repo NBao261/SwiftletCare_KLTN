@@ -47,6 +47,8 @@ export default function RescheduleModal({ open, onClose, ticket }: OverrideModal
       submitLabel="Lưu"
       loading={override.isPending}
       reason={{ value: reason, onChange: setReason, error: reasonError }}
+      // Ô lý do cao hơn → popup dài ra, bảng chọn ngày giờ (nổi đè) không còn sát chân popup
+      reasonRows={6}
     >
       <div className="flex flex-col gap-1.5">
         {/* Lỗi cùng hàng nhãn — hiện lỗi không làm popup cao thêm */}

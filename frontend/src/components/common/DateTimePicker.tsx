@@ -5,6 +5,9 @@ import { cn } from '@/lib/cn'
 import { t } from '@/i18n'
 import { isWithinVisitHours } from '@/validations/common/schedule.validation'
 
+/** px — chiều cao xấp xỉ bảng chọn (lịch 6 hàng + 2 cột giờ/phút) để quyết định mở lên hay xuống */
+const PANEL_HEIGHT = 340
+
 /** Cùng định dạng giá trị với <input type="datetime-local"> — giờ máy người dùng, để form cũ không phải đổi */
 const VALUE_FORMAT = "yyyy-MM-dd'T'HH:mm"
 const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
@@ -23,6 +26,11 @@ interface DateTimePickerProps {
   ariaLabel: string
   placeholder?: string
   invalid?: boolean
+  /**
+   * Bảng chọn chèn ngay dưới ô (đẩy nội dung xuống) thay vì nổi đè — dùng trong form có khung cuộn (popup Tạo ticket)
+   * để bảng không che các phần khác
+   */
+  inline?: boolean
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -35,7 +43,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
  * Lịch tháng (T2 đầu tuần) bên trái, cột giờ + phút (bước 5 phút) bên phải. Chọn: charcoal chữ trắng,
  * hover LIME MIST. Mốc trước `min` và giờ/phút ngoài khung hẹn 07:00–18:00 giờ VN bị mờ, không bấm được.
  */
-export default function DateTimePicker({ value, onChange, min, id, ariaLabel, placeholder = 'Chọn ngày giờ', invalid }: DateTimePickerProps) {
+export default function DateTimePicker({ value, onChange, min, id, ariaLabel, placeholder = 'Chọn ngày giờ', invalid, inline = false }: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -43,11 +51,15 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
   const [month, setMonth] = useState(() => startOfMonth(selected ?? min ?? new Date()))
   const hourListRef = useRef<HTMLDivElement>(null)
   const minuteListRef = useRef<HTMLDivElement>(null)
+  // Bảng chọn nổi đè (không chèn vào luồng — trước đây đẩy popup cao vượt màn hình); dưới không đủ chỗ thì mở lên trên
+  const [dropUp, setDropUp] = useState(false)
 
   // Mở lại thì nhảy về tháng đang chọn, cuộn 2 cột giờ/phút tới giá trị đang chọn
   useEffect(() => {
     if (!open) return
     setMonth(startOfMonth(selected ?? min ?? new Date()))
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (rect) setDropUp(window.innerHeight - rect.bottom < PANEL_HEIGHT && rect.top > window.innerHeight - rect.bottom)
     // Đặt scrollTop của riêng cột (không dùng scrollIntoView — nó cuộn luôn cả Modal/trang chứa bảng chọn)
     requestAnimationFrame(() => {
       for (const list of [hourListRef.current, minuteListRef.current]) {
@@ -97,7 +109,7 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
   const cellBase = 'flex items-center justify-center rounded-full text-small tabular-nums transition-colors disabled:cursor-not-allowed disabled:text-warmGray/35 disabled:hover:bg-transparent'
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-2">
+    <div ref={rootRef} className={inline ? 'flex flex-col gap-2' : 'relative'}>
       <button
         ref={triggerRef}
         id={id}
@@ -121,7 +133,11 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
           role="dialog"
           aria-label={ariaLabel}
           onKeyDown={onKeyDown}
-          className="flex animate-fade-in gap-2 rounded-2xl border border-warmGray/15 bg-white p-3"
+          className={cn(
+            'flex animate-fade-in gap-2 rounded-2xl border border-gray-200 bg-white p-3',
+            !inline && 'absolute inset-x-0 z-30 shadow-popover',
+            !inline && (dropUp ? 'bottom-full mb-2' : 'top-full mt-2'),
+          )}
         >
           {/* ── Lịch tháng ── */}
           <div className="min-w-0 flex-1">

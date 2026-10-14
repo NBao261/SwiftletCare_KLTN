@@ -18,12 +18,12 @@ export const REASON_EMPTY = 'Chưa nhập lý do'
 const REASON_PLACEHOLDER = 'VD: Farm Owner báo mất điện toàn khu, cần xử lý trong hôm nay...'
 
 /** Ô lý do dùng chung 3 modal — required, lỗi hiện cùng hàng nhãn (không làm popup cao thêm) */
-export default function OverrideReasonField({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
+export default function OverrideReasonField({ value, onChange, error, rows = 3 }: { value: string; onChange: (v: string) => void; error?: string; rows?: number }) {
   return (
     <Textarea
       label="Lý do can thiệp"
       required
-      rows={3}
+      rows={rows}
       placeholder={REASON_PLACEHOLDER}
       value={value}
       onChange={e => onChange(e.target.value)}
@@ -38,7 +38,7 @@ export default function OverrideReasonField({ value, onChange, error }: { value:
  * 2 cột: trái = tình trạng HIỆN TẠI của ticket (để so trước khi đổi), phải = phần thay đổi (`children`) + lý do + nút.
  */
 export function OverrideModalLayout({
-  open, onClose, ticket, title, description, onSubmit, submitLabel, loading, disabled, reason,
+  open, onClose, ticket, title, description, onSubmit, submitLabel, loading, disabled, reason, reasonRows,
   children,
 }: OverrideModalProps & {
   title: string
@@ -48,6 +48,8 @@ export function OverrideModalLayout({
   loading?: boolean
   disabled?: boolean
   reason: { value: string; onChange: (v: string) => void; error?: string }
+  /** Số dòng ô lý do (mặc định 3) — popup có bảng chọn ngày giờ nổi đè tăng lên để bảng nằm gọn, không sát đáy */
+  reasonRows?: number
   children: ReactNode
 }) {
   return (
@@ -76,7 +78,7 @@ export function OverrideModalLayout({
             <section>
               <h3 className={MODAL_SECTION_TITLE}>{t('Lý do')}</h3>
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <OverrideReasonField {...reason} />
+                <OverrideReasonField {...reason} rows={reasonRows} />
               </div>
             </section>
             <div className="mt-auto flex justify-end">
