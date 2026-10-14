@@ -39,6 +39,11 @@ export function formatNumber(value: number, lang: Lang, digits = 0): string {
   return value.toLocaleString(LOCALE[lang], { minimumFractionDigits: digits, maximumFractionDigits: digits })
 }
 
+/** Giờ theo múi giờ VN, định dạng 24h theo ngôn ngữ đang chọn */
+export function formatTime(iso: string, lang: Lang): string {
+  return new Date(iso).toLocaleTimeString(LOCALE[lang], { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
+}
+
 /** Ngày theo giờ VN (nhất quán với phần còn lại của app) nhưng định dạng theo ngôn ngữ đang chọn */
 export function formatDay(iso: string, lang: Lang): string {
   return new Date(iso).toLocaleDateString(LOCALE[lang], { timeZone: 'Asia/Ho_Chi_Minh' })
