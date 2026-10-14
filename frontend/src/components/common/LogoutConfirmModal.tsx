@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
@@ -10,6 +11,9 @@ export default function LogoutConfirmModal() {
   const close = useLogoutConfirmStore(s => s.close)
   const { logout } = useAuth()
   const { t } = useTranslation(shellDict)
+
+  // Đăng xuất chuyển sang /login và gỡ khung app trước khi API trả về (callback onSettled của mutate không chạy) → đóng popup khi bị gỡ
+  useEffect(() => close, [close])
 
   return (
     <Modal open={open} onClose={close} title={t('logout.title')} className="max-w-sm">
