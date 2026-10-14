@@ -516,5 +516,5 @@ Quy tắc vàng:
 
 ---
 
-_Tài liệu này được lưu tại `GITHUB_SETUP.md` trong repo SwiftletCare._  
+_Tài liệu này được lưu tại `docs/github-setup.md` trong repo SwiftletCare._  
 _Cập nhật lần cuối: 2026-09-07_
