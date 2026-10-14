@@ -3500,6 +3500,8 @@ paths:
         Job chạy đầu mỗi giờ, tạo ticket MAINTENANCE trước hạn `MAINTENANCE_LEAD_DAYS`
         ngày (mặc định 3) qua Ticket Router rồi dời hạn sang chu kỳ kế tiếp.
         `next_due_at` chính là giờ hẹn của ticket sinh ra nên phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai.
+        Ticket sinh ra có hạn **xử lý** SLA tính từ giờ hẹn (không phải lúc tạo — ticket tạo sớm
+        3 ngày nên tính từ lúc tạo sẽ hết hạn ngay sau giờ hẹn); hạn phản hồi tính từ lúc tạo.
         Lịch trễ nhiều chu kỳ hẹn sớm nhất 1 giờ sau, rơi ngoài khung giờ thì dời lên
         07:00 kế tiếp, không hẹn về quá khứ; lịch của farm đã xoá mềm tự chuyển `is_active=false`.
       requestBody:
@@ -4355,7 +4357,8 @@ paths:
           kết của người cũ nên bị bỏ, trừ khi gửi kèm `scheduled_visit_at`; Farm Owner
           được báo nếu buổi hẹn đó còn ở tương lai.
         - Đổi `priority` thì tính lại `sla_response_due_at`/`sla_resolve_due_at`
-          theo SLA của priority mới, mốc là `created_at` của ticket.
+          theo SLA của priority mới, mốc là `created_at` của ticket — riêng ticket
+          `MAINTENANCE` có giờ hẹn thì hạn xử lý tính từ `scheduled_visit_at` (TICKET-FR-013).
         - Mở lại ticket đã `CLOSED` thì gỡ `closed_at`.
         - `scheduled_visit_at` đặt được cho mọi loại ticket nhưng vẫn phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai;
           đổi giờ thì Farm Owner, người tạo và Technician đang giữ ticket nhận thông báo.
