@@ -232,16 +232,9 @@ export async function reassignZone(
     newZoneId: String(destChain.zone._id),
   })
 
-  // Override đang chạy thuộc về Zone cũ: dời đi mà để nguyên thì Zone cũ tiếp tục bị tính
-  // thời gian can thiệp tay của một thiết bị không còn ở đó (như decommissionDevice).
-  const hadOverride = node.control_mode === 'MANUAL'
-  if (hadOverride) {
-    publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'relay/command', {
-      deviceId: node.device_id, action: 'clear_override',
-    })
-  }
-
-  // Cập nhật lạc quan — giống pattern controlRelay/updateNodeThresholds ở trên.
+  // Cập nhật lạc quan — giống pattern controlRelay/updateNodeThresholds ở trên. Override đang
+  // chạy thuộc về Zone cũ nên kết thúc ở đây (như decommissionDevice); không cần gửi
+  // clear_override: override chỉ nằm trong RAM và thiết bị restart ngay sau config/reassign.
   node.zone_id = destChain.zone._id
   node.control_mode = 'AUTO'
   node.override_expiry = undefined

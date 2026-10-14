@@ -2070,8 +2070,10 @@ paths:
                 durationMs:
                   {
                     type: integer,
+                    minimum: 1000,
+                    maximum: 86400000,
                     default: 1800000,
-                    description: "Thời gian override trước khi tự trả về AUTO (mặc định 30 phút)",
+                    description: "Thời gian override trước khi tự trả về AUTO (mặc định 30 phút, tối đa 24 giờ)",
                   }
       responses:
         "200":
@@ -2108,6 +2110,7 @@ paths:
               },
           }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/camera-nodes/register:
     post:
@@ -3322,7 +3325,7 @@ paths:
           }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── TICKETS ───────────────────────────────────────────────────────────────
+  # ── HEALTH REPORTS ────────────────────────────────────────────────────────
   /health-reports:
     get:
       tags: [HealthReports]
