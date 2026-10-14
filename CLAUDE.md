@@ -226,7 +226,7 @@ AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, System and Harvest/Mark
 
 ## Conventions
 
-- Commit messages follow Conventional Commits with a project-specific `type`/`scope` enum enforced by commitlint (`.commitlintrc.json`). CI (`.github/workflows/ci.yml`) validates them via `wagoid/commitlint-github-action`, plus runs a gitleaks secret scan; lint/test CI jobs are still commented-out placeholders, not yet active — `npm run lint`/`npm test` must be run locally.
+- Commit messages follow Conventional Commits with a project-specific `type`/`scope` enum enforced by commitlint (`.commitlintrc.json`). CI (`.github/workflows/ci.yml`) validates them via `wagoid/commitlint-github-action`, plus runs a gitleaks secret scan. It also runs, only for the modules a PR touches (`dorny/paths-filter`): **backend** `npm run lint` · `build:check` · `npm test` (integration tests use `mongodb-memory-server`), **frontend** `npm run lint` · `tsc --noEmit` · `vitest run` · `npm run build`, **firmware** `pio test -e native`. Mobile has no lockfile yet, so it has no CI job. Run the same commands locally before pushing.
 
 ## Working with Claude
 
