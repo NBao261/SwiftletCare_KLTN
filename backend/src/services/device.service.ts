@@ -216,12 +216,18 @@ export async function reassignZone(
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
 
-  if (node.status !== 'ONLINE') {
-    throw ConflictError('Thiết bị đang OFFLINE — chỉ dời Zone được khi thiết bị ONLINE (nhánh AP-mode chưa được hỗ trợ)')
+  // DEGRADED vẫn đang kết nối (chỉ hỏng 1 phần) nên nhận được lệnh dời — cùng quy tắc
+  // với lệnh từ xa (sendRemoteCommand). Mất kết nối thì cần nhánh AP-mode, chưa hỗ trợ.
+  if (node.status !== 'ONLINE' && node.status !== 'DEGRADED') {
+    throw ConflictError(`Thiết bị đang ${node.status} — chỉ dời Zone được khi thiết bị đang kết nối (nhánh AP-mode chưa được hỗ trợ)`)
   }
 
   // Check quyền trên CẢ Farm nguồn lẫn Farm đích (SRS Flow 21 bước 4a).
   const sourceChain = await assertZoneAccess(String(node.zone_id), user)
+  // Dời về chính Zone đang ở chỉ làm thiết bị khởi động lại vô ích và ghi audit sai
+  if (String(sourceChain.zone._id) === input.newZoneId) {
+    throw BadRequestError('Thiết bị đã ở Zone này — chọn Zone khác để dời')
+  }
   const destChain = await assertZoneAccess(input.newZoneId, user)
 
   // Publish lên topic CŨ — thiết bị vẫn đang lắng nghe ở đó cho tới khi restart.
@@ -628,8 +634,10 @@ export async function restoreDevice(kind: DeviceKind, nodeId: string, user: Curr
   node.status = node.last_heartbeat ? 'OFFLINE' : 'PENDING'
   await node.save()
 
+  // Phát đúng trạng thái vừa lưu — thiết bị chưa từng kết nối về PENDING, báo OFFLINE
+  // thì màn hình Onboarding/Thiết bị hiện sai cho tới lần tải lại
   emitDeviceStatusChange(String(node.zone_id), {
-    nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString(),
+    nodeId: String(node._id), status: node.status, timestamp: new Date().toISOString(),
   })
   await logAction(user._id, 'DEVICE_RESTORED', TARGET_TYPES[kind], String(node._id), {
     deviceId: node.device_id, zoneId: String(node.zone_id), reason, decommissionedForMs: elapsed,
@@ -697,7 +705,9 @@ export interface RemoteCommandInput {
  * TICKET-FR-008 — Technician thử xử lý từ xa trước khi quyết định ra hiện
  * trường. Cả 3 lệnh đi qua topic `config/update` đã có trong §9.2 (Flow 15 bước
  * 3 chỉ định OTA dùng topic này), phân biệt bằng trường `command`:
- * - PUSH_CONFIG: đẩy lại toàn bộ ngưỡng hiện hành của Zone (thiết bị lệch cấu hình)
+ * - PUSH_CONFIG: đẩy lại toàn bộ cấu hình hiện hành (thiết bị lệch cấu hình) — ngưỡng,
+ *   hệ số mờ, tham số phát hiện của Zone và lịch loa của thiết bị, đúng gói
+ *   `buildDeviceConfig` mà thiết bị nhận khi vừa kết nối lại
  * - RESTART: `{ command: 'RESTART' }`
  * - OTA: `{ command: 'OTA', ota: { version, url, sha256 } }` — ESP32 tự tải, kiểm
  *   checksum, ghi partition dự phòng, rollback nếu lỗi (Flow 15 bước 4, case 4a–5a)
@@ -795,8 +805,9 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   let summary: string
   switch (input.command) {
     case 'PUSH_CONFIG':
-      payload = { ...chain.zone.thresholds }
-      summary = 'đẩy lại cấu hình ngưỡng của Zone'
+      // Chỉ đẩy ngưỡng thì hệ số mờ/lịch loa lệch vẫn lệch — đúng thứ lệnh này phải sửa
+      payload = buildDeviceConfig(chain.zone, node)
+      summary = 'đẩy lại toàn bộ cấu hình của thiết bị'
       break
     case 'RESTART':
       payload = { command: 'RESTART' }
