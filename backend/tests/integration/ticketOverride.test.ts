@@ -214,6 +214,17 @@ describe('adminOverrideTicket called directly (not through the route)', () => {
     expect(saved.assigned_at!.getTime()).toBe(assignedAt.getTime()) // responded_at cũ vẫn sau mốc giao → KPI không ra số âm
     expect(saved.status).toBe('IN_PROGRESS')
   })
+
+  it('đổi priority của ticket bảo trì vẫn tính hạn xử lý từ giờ hẹn', async () => {
+    const { token, ticket } = await seed()
+    const visit = vnAt(3)
+    await Ticket.updateOne({ _id: ticket._id }, { type: 'MAINTENANCE', scheduled_visit_at: visit })
+
+    await override(token, ticket._id, { priority: 'P2', reason: 'Relay chập chờn, cần làm sớm' }).expect(200)
+    const saved = (await Ticket.findById(ticket._id))!
+    // P2: xử lý 24h — tính từ giờ hẹn, không kéo về mốc tạo ticket (sẽ quá hạn trước cả giờ hẹn)
+    expect(saved.sla_resolve_due_at!.getTime()).toBe(visit.getTime() + 24 * 3600_000)
+  })
 })
 
 describe('admin override — lịch hẹn (TICKET-FR-005b)', () => {
