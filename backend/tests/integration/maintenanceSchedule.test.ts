@@ -135,9 +135,10 @@ describe('generateDueMaintenanceTickets', () => {
 
   it('hạn xử lý SLA tính từ giờ hẹn, không phải lúc tạo (ticket sinh trước hạn 3 ngày)', async () => {
     const { farm } = await seed()
-    // Hẹn 3 ngày nữa — đúng tình huống job tạo ticket sớm LEAD_DAYS ngày
+    // Hẹn 2 ngày nữa lúc 9:00 — job tạo ticket trước giờ hẹn (trong LEAD_DAYS = 3 ngày). Không
+    // dùng vnAt(3, 9): chạy trước 9:00 giờ VN thì hẹn đó còn hơn 3 ngày, job chưa tạo ticket.
     await MaintenanceSchedule.create({
-      farm_id: farm._id, description: 'Kiểm tra relay', interval_days: 30, next_due_at: vnAt(3, 9),
+      farm_id: farm._id, description: 'Kiểm tra relay', interval_days: 30, next_due_at: vnAt(2, 9),
     })
     const before = Date.now()
     expect(await generateDueMaintenanceTickets()).toBe(1)
