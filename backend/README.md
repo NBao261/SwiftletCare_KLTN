@@ -115,7 +115,7 @@ Request → routes/*.ts (validate + RBAC) → controllers/*.ts (parse req, gọi
 - **Service throw lỗi bằng `utils/appError.util.ts`** (`NotFoundError`, `ForbiddenError`, `ConflictError`, `BadRequestError`, `UnauthorizedError`) thay vì tự set status code — `middlewares/errorHandler.middleware.ts` tự bắt và format response đúng chuẩn.
 - **Response envelope thống nhất** (SRS §9.0): `{ success: boolean, data?, meta?: {page,limit,total}, error?: {code, message} }`. Mọi endpoint đều theo format này.
 - **MQTT handler cũng theo nguyên tắc tương tự**: `mqtt/handlers/*.ts` chỉ parse `topicParts`/`message` rồi gọi 1 hàm service (`telemetry.handler.ts` → `telemetry.service.ts`'s `ingestTelemetry()` là ví dụ mẫu) — không query DB trực tiếp trong handler.
-- **Quyền truy cập Farm dùng chung** `utils/farmAccess.util.ts` (`hasFarmAccess`, `isPrimaryOwner`, `assertFarmAccess`, `assertZoneAccess`, `assertRecordAccess`, `listAccessibleFarmIds`/`listAccessibleZoneIds`) — đừng viết lại logic này ở service khác, import từ đây.
+- **Quyền truy cập Farm dùng chung** `utils/farmAccess.util.ts` (`hasFarmAccess`, `isPrimaryOwner`, `assertFarmAccess`, `assertZoneAccess`, `assertZoneInFarm`, `findFarmOrThrow`, `findZoneChainOrThrow`, `listAccessibleFarmIds`/`listAccessibleZoneIds`) — đừng viết lại logic này ở service khác, import từ đây.
 - **Đặt tên file theo `<resource>.<layer>.ts`**: `farm.service.ts`, `farms.controller.ts`, `farms.route.ts`, `farm.model.ts`. Layer luôn viết đủ (`.service`/`.controller`/`.route`/`.model`/`.middleware`/`.util`/`.handler`/`.job`), không viết tắt kiểu `farmService.ts`.
 
 ### Ví dụ thêm 1 endpoint mới (theo đúng pattern)

@@ -202,10 +202,13 @@ export async function setReportConclusion(id: string, user: CurrentUser, text: s
   await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'zone_health_report', String(report._id), { zone_id: String(report.zone_id), isEdit })
 
   const zone = await Zone.findById(report.zone_id).select('name').lean()
-  await Promise.all((await ownerIdsOf(report.farm_id)).map(ownerId => notifyUser(ownerId, {
-    title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho ${zone?.name ?? 'Zone'}`,
-    body: text.length > 300 ? `${text.slice(0, 300)}…` : text,
-  })))
+  // Không chờ gửi: kết luận đã lưu, Telegram chậm không được giữ response (như ticket.service)
+  for (const ownerId of await ownerIdsOf(report.farm_id)) {
+    void notifyUser(ownerId, {
+      title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho ${zone?.name ?? 'Zone'}`,
+      body: text.length > 300 ? `${text.slice(0, 300)}…` : text,
+    })
+  }
   // Cùng hình dạng với GET /health-reports/:id (`by` = {_id, full_name}) để client thay cache được
   return report.populate('expert_conclusion.by', 'full_name')
 }

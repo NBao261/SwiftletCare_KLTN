@@ -154,6 +154,8 @@ describe('lịch sử can thiệp tay không được chặn lệnh điều khi�
     await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
     const expiry = new Date(Date.now() - 45_000) // job chạy trễ 45 giây sau hạn
     await SensorNode.updateOne({ _id: node._id }, { override_expiry: expiry })
+    // Override bật trước hạn của nó (như thật) — ended_at không bao giờ sớm hơn started_at
+    await RelayOverrideLog.updateOne({}, { started_at: new Date(expiry.getTime() - 60_000) })
 
     expect(await expireManualOverrides()).toBe(1)
     const log = (await RelayOverrideLog.findOne().lean())!

@@ -287,9 +287,13 @@ export async function getBirdCountTrends(user: CurrentUser, zoneId: string, quer
   const rates = records.map(r => r.return_rate).filter((v): v is number => typeof v === 'number')
   const avg = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null
   const latest = rates.at(-1) ?? null
+  // VISION-FR-011/EXPERT-FR-008: so với trung bình 7 ngày TRƯỚC ngày mới nhất (không gồm chính
+  // nó). Khoảng xem ngắn hơn 8 ngày thì mốc là các ngày có trong khoảng.
+  const prev = rates.slice(-8, -1)
+  const baseline = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : null
 
-  // VISION-FR-011: giảm quá ngưỡng của Zone so với trung bình kỳ trước là tín hiệu cần xem xét
-  const dropPercent = avg && latest !== null ? +(((avg - latest) / avg) * 100).toFixed(1) : null
+  // VISION-FR-011: giảm quá ngưỡng của Zone so với mốc là tín hiệu cần xem xét
+  const dropPercent = baseline && latest !== null ? +(((baseline - latest) / baseline) * 100).toFixed(1) : null
 
   return {
     days: query.days,
