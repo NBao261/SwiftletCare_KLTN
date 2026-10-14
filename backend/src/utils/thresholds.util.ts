@@ -41,7 +41,7 @@ export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: numb
  * sẽ cho null/''/[]/false lọt qua thành 0, còn so sánh 2 chuỗi số ("30" >= "4")
  * theo thứ tự chữ cái làm đảo kết quả min<max.
  */
-function toNumber(value: unknown): number {
+export function toNumber(value: unknown): number {
   if (typeof value === 'number') return value
   if (typeof value === 'string' && value.trim() !== '') return Number(value)
   return NaN

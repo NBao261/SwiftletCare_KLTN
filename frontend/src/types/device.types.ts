@@ -10,6 +10,10 @@ export type ControlMode = 'AUTO' | 'MANUAL'
 export interface RelayStates { misting: boolean; speaker: boolean; ventilation: boolean; heating: boolean }
 export type RelayName = keyof RelayStates
 
+// ENV-FR-010/011: % công suất 0-100 do bộ điều khiển mờ trên ESP32 tính (tỉ lệ
+// thời gian BẬT relay trong cửa sổ 2 phút). Chỉ có qua socket telemetry, firmware < 1.1.0 không gửi.
+export interface ControlOutput { misting: number; ventilation: number }
+
 export interface SensorNode {
   _id: string; device_id: string; zone_id: string
   firmware_version: string; last_heartbeat?: string

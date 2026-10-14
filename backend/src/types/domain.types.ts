@@ -4,9 +4,11 @@
  */
 
 // ── Domain Enums ───────────────────────────────────────────────────────────────
-// SRS AUTH-FR-004: Buyer đăng ký qua OTP nằm cùng collection `users` nhưng
-// role = null vì không tham gia RBAC (không có endpoint nào chặn theo role Buyer).
-export type Role         = 'ADMIN' | 'FARM_OWNER' | 'TECHNICIAN' | 'SALES_STAFF'
+// SRS AUTH-FR-004 (v1.23.0). FARM_OPERATOR = nhân viên vận hành tại farm, do Farm
+// Owner mời; phạm vi farm/zone lưu ở `farms.members[].zone_ids`. Buyer không có tài khoản.
+export type Role         = 'ADMIN' | 'FARM_OWNER' | 'FARM_OPERATOR' | 'TECHNICIAN'
+/** Vai trò phía khách hàng có thể là thành viên farm (`farms.members[].role`, `invitations.invited_role`) */
+export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'FARM_OPERATOR'>
 // PENDING: Technician đã tạo record qua Web Console Onboarding nhưng thiết bị
 // chưa gửi heartbeat đầu tiên (SRS §8.2, Flow 1 bước 4).
 export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
@@ -17,6 +19,7 @@ export type AlertType =
   | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'BIRD_PANIC'
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE' // THREAT-FR-013
+  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'   // v1.24.0 — ALERT-FR-010/011
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 
@@ -32,18 +35,6 @@ export type TicketStatus = 'NEW' | 'IN_PROGRESS' | 'AWAITING_FIELD_CONFIRMATION'
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
 export type HarvestStatus = 'DRAFT' | 'LISTED' | 'ARCHIVED'
 export type ListingStatus = 'AVAILABLE' | 'SOLD' | 'HIDDEN'
-
-// ── Module SALES — Giai đoạn 2 (§5.10, §8.2) ─────────────────────────────────
-export type ProductReviewStatus = 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED'
-export type ProductListingStatus = 'ACTIVE' | 'OUT_OF_STOCK' | 'HIDDEN'
-export type OrderStatus =
-  | 'PENDING_CONFIRMATION' | 'CONFIRMED' | 'PACKED' | 'SHIPPING'
-  | 'DELIVERED' | 'DELIVERY_FAILED' | 'CANCELLED'
-export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO' | 'ZALOPAY'
-export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED'
-export type ReturnStatus =
-  | 'SUBMITTED' | 'UNDER_VERIFICATION' | 'APPROVED_REFUND'
-  | 'APPROVED_EXCHANGE' | 'REJECTED'
 
 // ── JWT Payload ────────────────────────────────────────────────────────────────
 export interface JwtAccessPayload {
@@ -100,6 +91,24 @@ export interface RelayStates {
   heating: boolean
 }
 
+// ENV-FR-010/011 (v1.24.0): % công suất 0-100 do bộ điều khiển mờ trên ESP32
+// tính (= tỉ lệ thời gian BẬT relay trong cửa sổ 2 phút). Chỉ đi kèm telemetry,
+// không lưu DB. Firmware < 1.1.0 không gửi.
+export interface ControlOutput {
+  misting: number
+  ventilation: number
+}
+
+// ENV-FR-021 (v1.24.0): 4 hệ số bộ điều khiển mờ theo Zone, gửi xuống ESP32 qua
+// config/update — tên field = tên key MQTT (firmware Config::update()).
+export interface FuzzyTuning {
+  fuzzy_humidity_band: number  // %RH — độ rộng vùng chuyển tiếp độ ẩm
+  fuzzy_temp_band: number      // °C — độ rộng vùng "nóng"
+  fuzzy_fan_dry_level: number  // % — mức quạt khi nóng mà khô
+  fuzzy_window_sec: number     // s — cửa sổ time-proportioning
+  fuzzy_input_filter: boolean  // ENV-FR-022 — lọc median+Kalman đầu vào bộ mờ (tắt để so sánh A/B)
+}
+
 // ── MQTT Message Payloads ──────────────────────────────────────────────────────
 export interface TelemetryPayload {
   deviceId: string
@@ -111,6 +120,7 @@ export interface TelemetryPayload {
   sound_db: number
   relay_states: RelayStates
   control_mode: ControlMode
+  control_output?: ControlOutput
   timestamp: number   // Unix ms
 }
 
@@ -163,6 +173,7 @@ export interface WsTelemetryUpdate {
   sound: number
   relayStates: RelayStates
   controlMode: ControlMode
+  controlOutput?: ControlOutput
   timestamp: string
 }
 

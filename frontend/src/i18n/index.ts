@@ -7,17 +7,15 @@ import { Children, type ReactNode } from 'react'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import en from '@/i18n/en'
+import { useLanguageStore, type Lang } from '@/stores/languageStore'
 
-export type Lang = 'vi' | 'en'
-const STORAGE_KEY = 'lang'
+export type { Lang }
 
-function savedLang(): Lang {
-  try { return localStorage.getItem(STORAGE_KEY) === 'en' ? 'en' : 'vi' } catch { return 'vi' }
-}
-
+// Ngôn ngữ đang chọn lưu ở languageStore (dùng chung với useT của các màn Farm Owner) — i18next chỉ đi theo store,
+// để 1 nút VI/EN đổi cả 2 hệ dịch
 void i18n.use(initReactI18next).init({
   resources: { en: { translation: en } },
-  lng: savedLang(),
+  lng: useLanguageStore.getState().lang,
   fallbackLng: false, // thiếu bản dịch → trả khoá (= câu tiếng Việt), không rơi sang ngôn ngữ khác
   keySeparator: false, // khoá là câu tự nhiên, có dấu "." ":" — không tách thành đường dẫn
   nsSeparator: false,
@@ -28,15 +26,16 @@ function syncHtmlLang(lang: string) {
   if (typeof document !== 'undefined') document.documentElement.lang = lang
 }
 syncHtmlLang(i18n.language)
+useLanguageStore.subscribe(({ lang }) => {
+  if (lang === i18n.language) return
+  void i18n.changeLanguage(lang)
+  syncHtmlLang(lang)
+})
 
 /** Dịch 1 câu (khoá tiếng Việt); biến dạng {{n}}: t('Còn {{n}} ngày', { n: 3 }) */
 export const t = (key: string, vars?: Record<string, unknown>): string => i18n.t(key, vars ?? {}) as string
 
-export function setLang(lang: Lang) {
-  void i18n.changeLanguage(lang)
-  syncHtmlLang(lang)
-  try { localStorage.setItem(STORAGE_KEY, lang) } catch { /* private mode — chỉ không nhớ được lần sau */ }
-}
+export const setLang = (lang: Lang) => useLanguageStore.getState().setLang(lang)
 
 /** Locale cho Intl (RelativeTimeFormat...) theo ngôn ngữ đang chọn */
 export const intlLocale = () => (i18n.language === 'en' ? 'en-US' : 'vi-VN')

@@ -23,7 +23,7 @@ export interface IProvisionedDevice extends Document {
 const provisionedDeviceSchema = new Schema<IProvisionedDevice>(
   {
     device_id:       { type: String, required: true, unique: true, trim: true },
-    kind:            { type: String, enum: ['SENSOR', 'CAMERA'] as ProvisionedDeviceKind[], required: true },
+    kind:            { type: String, enum: ['SENSOR', 'CAMERA'] satisfies ProvisionedDeviceKind[], required: true },
     secret_key_hash: { type: String, required: true, select: false },
     claimed_at:      { type: Date },
     created_by:      { type: Schema.Types.ObjectId, ref: 'User' },

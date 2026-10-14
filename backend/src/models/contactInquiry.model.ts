@@ -24,4 +24,6 @@ const contactInquirySchema = new Schema<IContactInquiry>(
   { timestamps: { createdAt: 'created_at', updatedAt: false } }
 )
 
+contactInquirySchema.index({ listing_id: 1, created_at: -1 })
+
 export const ContactInquiry = model<IContactInquiry>('ContactInquiry', contactInquirySchema)

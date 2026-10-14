@@ -8,7 +8,7 @@ import type { Role } from '@/types'
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
 
-const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'TECHNICIAN', 'SALES_STAFF']
+const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'TECHNICIAN']
 // Không chặn cứng limit > 100 — paginate() tự kẹp về mức tối đa như mọi list khác
 const paginationQuery = [
   query('page').optional().isInt({ min: 1 }),
@@ -36,41 +36,19 @@ router.put('/delete-requests/:id/complete',
   adminController.completeDeletionRequest,
 )
 
-/** Admin tự tạo tài khoản Technician/Sales Staff – AUTH-FR-005c, Flow 16 */
+/** Admin tự tạo tài khoản Technician – AUTH-FR-005c */
 router.post('/technicians',
   body('email').isEmail(), body('password').isLength({ min: 8 }), body('full_name').trim().notEmpty(),
   body('assigned_regions').isArray({ min: 1 }), body('assigned_regions.*').isString().trim().notEmpty(), validate,
   adminController.createTechnician,
 )
-router.post('/sales-staff',
-  body('email').isEmail(), body('password').isLength({ min: 8 }), body('full_name').trim().notEmpty(),
-  body('farm_ids').isArray({ min: 1 }), body('farm_ids.*').isMongoId(), validate,
-  adminController.createSalesStaff,
-)
-
-/** Điều chỉnh khu vực Technician / gỡ Sales Staff khỏi farm – AUTH-FR-005c, Flow 21 4a-x, Flow 16 1e */
+/** Điều chỉnh khu vực Technician – AUTH-FR-005c, Flow 21 4a-x */
 router.put('/technicians/:id/regions',
   param('id').isMongoId(),
   body('assigned_regions').isArray({ min: 1 }), body('assigned_regions.*').isString().trim().notEmpty(),
   validate,
   adminController.updateTechnicianRegions,
 )
-router.delete('/farms/:farmId/sales-staff/:salesStaffId',
-  param('farmId').isMongoId(), param('salesStaffId').isMongoId(), validate,
-  adminController.unassignSalesStaff,
-)
-
-/** Duyệt đề xuất Sales Staff của Farm Owner – AUTH-FR-005d, Flow 16 bước 1b */
-router.get('/sales-staff-requests',
-  query('status').optional().isIn(['PENDING', 'APPROVED', 'REJECTED']),
-  query('type').optional().isIn(['ADD', 'REMOVE']), ...paginationQuery, validate,
-  adminController.listSalesStaffRequests,
-)
-router.put('/sales-staff-requests/:id/decision',
-  param('id').isMongoId(), body('decision').isIn(['APPROVED', 'REJECTED']), validate,
-  adminController.decideSalesStaffRequest,
-)
-
 /** Kho thiết bị xuất xưởng: cấp cặp {device_id, secretKey} để in nhãn – FARM-FR-003, Flow 1 bước 3 */
 router.post('/provisioned-devices',
   body('device_id').isString().trim().notEmpty(), body('kind').isIn(['SENSOR', 'CAMERA']), validate,

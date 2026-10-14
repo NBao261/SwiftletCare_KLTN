@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next'
 import { setLang, t, type Lang } from '@/i18n'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useZoneStore } from '@/stores/zoneStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { usePermission } from '@/hooks/common/usePermission'
@@ -20,10 +20,12 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
   return { label: match?.label ?? 'SwiftletCare', to: match?.path ?? pathname }
 }
 
-/** Toggle ngôn ngữ hiển thị (FE_Design §6) — đổi i18n thật, nhớ lựa chọn ở localStorage */
+/**
+ * Toggle ngôn ngữ hiển thị — ghi vào languageStore: màn có từ điển useT (Farm Owner) và màn dùng `t` của @/i18n
+ * (Admin, khung chung) cùng đổi theo; màn chưa có bản dịch giữ tiếng Việt.
+ */
 function LanguageToggle() {
-  const { i18n } = useTranslation()
-  const lang = i18n.language.toUpperCase() as 'VI' | 'EN'
+  const lang = useLanguageStore(s => s.lang === 'vi' ? 'VI' : 'EN')
 
   return (
     <div className="group/lang relative">
@@ -43,7 +45,6 @@ function LanguageToggle() {
         ))}
       </div>
 
-      {/* Hover preview */}
       {/* Hover preview — style lớp nổi nhỏ như ActionsMenu: bo 2xl, viền gray-200, shadow-dropdown */}
       <div className="pointer-events-none absolute right-0 z-20 mt-2 w-48 origin-top-right scale-95 rounded-2xl border border-gray-200 bg-white p-3 opacity-0 shadow-dropdown transition-all duration-150 group-hover/lang:scale-100 group-hover/lang:opacity-100">
         <p className="label-caption">{t('Ngôn ngữ hiển thị')}</p>

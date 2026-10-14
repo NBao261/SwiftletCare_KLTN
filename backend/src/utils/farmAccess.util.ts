@@ -1,3 +1,4 @@
+import { Types } from 'mongoose'
 import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError.util'
@@ -25,6 +26,29 @@ export function hasFarmAccess(farm: FarmScope, user: CurrentUser): boolean {
 }
 
 /**
+ * Phạm vi Zone của Farm Operator trên 1 farm (AUTH-FR-005, v1.23.0): `null` = không
+ * giới hạn (không phải Operator, hoặc Operator được gán cả farm); Set = chỉ các Zone
+ * này. Mọi kiểm tra theo Zone đi qua đây để không service nào tự đọc `zone_ids`.
+ */
+export function operatorZoneScope(
+  // Kiểu cấu trúc tối thiểu để nhận cả document lẫn kết quả .lean()
+  farm: { members: Array<{ user_id: unknown; zone_ids?: unknown[] }> },
+  user: CurrentUser,
+): Set<string> | null {
+  if (user.role !== 'FARM_OPERATOR') return null
+  const member = farm.members.find(m => String(m.user_id) === user._id)
+  if (!member?.zone_ids?.length) return null
+  return new Set(member.zone_ids.map(String))
+}
+
+/** hasFarmAccess + Zone nằm trong phạm vi của Farm Operator */
+export function hasZoneAccess(farm: FarmScope, zoneId: unknown, user: CurrentUser): boolean {
+  if (!hasFarmAccess(farm, user)) return false
+  const scope = operatorZoneScope(farm, user)
+  return !scope || scope.has(String(zoneId))
+}
+
+/**
  * true nếu user là Primary Owner của farm, hoặc ADMIN.
  * Technician KHÔNG nằm trong nhóm này: các thao tác quản trị Farm (xóa farm,
  * mời/gỡ thành viên) thuộc về phía khách hàng, không phải nhân viên lắp đặt.
@@ -49,9 +73,9 @@ export async function findFarmOrThrow(farmId: string): Promise<IFarm> {
 export async function findZoneChainOrThrow(zoneId: string): Promise<{ zone: IZone; house: IHouse; farm: IFarm }> {
   const zone = await Zone.findById(zoneId)
   if (!zone) throw NotFoundError('Không tìm thấy zone')
-  const house = await House.findById(zone.house_id)
+  // zone.farm_id lưu sẵn → House và Farm lấy song song thay vì Zone→House→Farm nối tiếp
+  const [house, farm] = await Promise.all([House.findById(zone.house_id), Farm.findById(zone.farm_id)])
   if (!house) throw NotFoundError('Không tìm thấy house của zone')
-  const farm = await Farm.findById(house.farm_id)
   if (!farm) throw NotFoundError('Không tìm thấy farm của zone')
   return { zone, house, farm }
 }
@@ -69,8 +93,19 @@ export async function assertZoneAccess(
   user: CurrentUser,
 ): Promise<{ zone: IZone; house: IHouse; farm: IFarm }> {
   const chain = await findZoneChainOrThrow(zoneId)
-  if (!hasFarmAccess(chain.farm, user)) throw ForbiddenError('Không có quyền trên zone này')
+  if (!hasZoneAccess(chain.farm, chain.zone._id, user)) throw ForbiddenError('Không có quyền trên zone này')
   return chain
+}
+
+/**
+ * Bản ghi thuộc 1 farm và có thể gắn 1 zone (alert, ticket, mẻ thu hoạch): có zone thì
+ * kiểm tra theo zone (Farm Operator giới hạn phạm vi), không có zone thì theo farm —
+ * bản ghi cấp farm (VD mất điện cả trại) mọi thành viên farm đều xem được.
+ */
+export async function assertRecordAccess(farmId: unknown, zoneId: unknown, user: CurrentUser): Promise<IFarm> {
+  const farm = await assertFarmAccess(String(farmId), user)
+  if (zoneId && !hasZoneAccess(farm, zoneId, user)) throw ForbiddenError('Không có quyền trên zone này')
+  return farm
 }
 
 /**
@@ -79,8 +114,16 @@ export async function assertZoneAccess(
  * quyền: caller đã assertFarmAccess(farmId) nên zone cùng farm thì cũng có quyền.
  */
 export async function assertZoneInFarm(zoneId: string, farmId: string): Promise<void> {
-  const chain = await findZoneChainOrThrow(zoneId)
-  if (String(chain.farm._id) !== farmId) throw BadRequestError('zone_id không thuộc farm này')
+  await assertZonesInFarm([zoneId], farmId)
+}
+
+/** assertZoneInFarm cho nhiều Zone (VD phạm vi Farm Operator) — 1 query cho cả danh sách */
+export async function assertZonesInFarm(zoneIds: string[], farmId: string): Promise<void> {
+  const unique = [...new Set(zoneIds.map(String))]
+  if (unique.length === 0) return
+  if (!unique.every(id => Types.ObjectId.isValid(id))) throw BadRequestError('zone_id không hợp lệ')
+  const found = await Zone.countDocuments({ _id: { $in: unique }, farm_id: farmId })
+  if (found !== unique.length) throw BadRequestError('zone_id không thuộc farm này')
 }
 
 /** Farm user được phép xem — dùng chung cho list/scoping theo role (Alert/Analytics/Market/Ticket) */
@@ -97,15 +140,38 @@ export async function listAccessibleFarmIds(user: CurrentUser) {
 }
 
 /**
- * Zone user được phép xem — flatten Farm accessible → House → Zone. Dùng khi
+ * Zone user được phép xem — mọi Zone của các Farm accessible. Dùng khi
  * cần liệt kê tài nguyên theo Zone (VD danh sách thiết bị) mà không có sẵn
  * `zoneId` cụ thể để check — tránh trả về dữ liệu của farm khác (IDOR).
  */
 export async function listAccessibleZoneIds(user: CurrentUser) {
   const farmIds = await listAccessibleFarmIds(user)
-  const houses = await House.find({ farm_id: { $in: farmIds } }).select('_id').lean()
-  const zones = await Zone.find({ house_id: { $in: houses.map(h => h._id) } }).select('_id').lean()
-  return zones.map(z => z._id)
+  const zones = await Zone.find({ farm_id: { $in: farmIds } }).select('_id farm_id').lean()
+  if (user.role !== 'FARM_OPERATOR') return zones.map(z => z._id)
+
+  // Farm Operator: chỉ giữ Zone nằm trong phạm vi được gán ở từng farm
+  const farms = await Farm.find({ _id: { $in: farmIds } }).select('members')
+  const scopeByFarm = new Map(farms.map(f => [String(f._id), operatorZoneScope(f, user)]))
+  return zones
+    .filter(z => {
+      const scope = scopeByFarm.get(String(z.farm_id))
+      return !scope || scope.has(String(z._id))
+    })
+    .map(z => z._id)
+}
+
+/**
+ * Thu hẹp 1 filter danh sách theo farm (alert/ticket/mẻ thu hoạch/lịch bảo trì) về
+ * phạm vi Zone của Farm Operator: bản ghi của Zone trong phạm vi, hoặc bản ghi cấp
+ * farm (không gắn zone). Role khác giữ nguyên filter. Thêm vào `$and` để không đè
+ * `$or` sẵn có của caller.
+ */
+export async function applyZoneScope<T extends Record<string, unknown>>(filter: T, user: CurrentUser): Promise<T> {
+  if (user.role !== 'FARM_OPERATOR') return filter
+  const zoneIds = await listAccessibleZoneIds(user)
+  const clause = { $or: [{ zone_id: { $in: zoneIds } }, { zone_id: null }] }
+  const and = Array.isArray(filter.$and) ? [...(filter.$and as unknown[]), clause] : [clause]
+  return { ...filter, $and: and }
 }
 
 /**
@@ -115,6 +181,5 @@ export async function listAccessibleZoneIds(user: CurrentUser) {
  */
 export async function listActiveZoneIds() {
   const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
-  const houseIds = await House.find({ farm_id: { $in: farmIds } }).distinct('_id')
-  return Zone.find({ house_id: { $in: houseIds } }).distinct('_id')
+  return Zone.find({ farm_id: { $in: farmIds } }).distinct('_id')
 }

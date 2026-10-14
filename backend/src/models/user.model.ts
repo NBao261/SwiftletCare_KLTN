@@ -33,7 +33,8 @@ export interface IUser extends Document {
    * "đã xoá theo yêu cầu" với "đang bị khoá kỷ luật" (cả hai đều is_active=false).
    */
   deleted_at?: Date
-  refresh_tokens: Array<{ token: string; expires: Date }>
+  /** sha256 của refresh token (như OTP/token reset) — lộ DB cũng không dùng được để lấy access token */
+  refresh_tokens: Array<{ token_hash: string; expires: Date }>
   created_at: Date
   updated_at: Date
   // Methods
@@ -46,7 +47,7 @@ const userSchema = new Schema<IUser>(
     phone:         { type: String, trim: true },
     password_hash: { type: String, required: true },
     full_name:     { type: String, required: true, trim: true },
-    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'TECHNICIAN', 'SALES_STAFF'] satisfies Role[], default: 'FARM_OWNER' },
+    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'FARM_OPERATOR', 'TECHNICIAN'] satisfies Role[], default: 'FARM_OWNER' },
     assigned_regions: [{ type: String }],
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
@@ -63,11 +64,14 @@ const userSchema = new Schema<IUser>(
     },
     otp_code:      { type: String },
     otp_expires:   { type: Date },
-    password_reset_token_hash: { type: String },
-    password_reset_expires_at: { type: Date },
+    // select: false — cùng lý do với `provisioned_devices.secret_key_hash`: chỉ
+    // luồng đặt lại mật khẩu cần đọc, mọi query khác (kể cả `.lean()` vốn bỏ qua
+    // toJSON) không được mang hash này ra ngoài. resetPassword xin lại bằng `+`.
+    password_reset_token_hash: { type: String, select: false },
+    password_reset_expires_at: { type: Date, select: false },
     deletion_requested_at:     { type: Date },
     deleted_at:                { type: Date },
-    refresh_tokens: [{ token: String, expires: Date }],
+    refresh_tokens: [{ token_hash: String, expires: Date }],
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
@@ -90,6 +94,12 @@ userSchema.methods.toJSON = function () {
   delete obj.otp_code
   delete obj.otp_expires
   delete obj.refresh_tokens
+  // Mã OTP và mã đặt lại mật khẩu đều là 6 chữ số hash SHA-256 không salt: dò hết
+  // 900.000 khả năng mất dưới 1 giây, nên để lọt hash ra API coi như để lọt mã.
+  // Ai đọc được response của GET /admin/users là đổi được mật khẩu của user đang
+  // trong 15 phút reset — phải ẩn cùng nhóm với otp_code.
+  delete obj.password_reset_token_hash
+  delete obj.password_reset_expires_at
   return obj
 }
 

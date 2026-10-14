@@ -28,6 +28,7 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = translated({
   DEVICE_REGISTERED: 'Đăng ký thiết bị',
   DEVICE_REASSIGNED: 'Chuyển thiết bị sang phòng khác',
   THRESHOLD_UPDATED: 'Cập nhật ngưỡng phòng',
+  FUZZY_TUNING_UPDATED: 'Chỉnh hệ số logic mờ',
   RELAY_OVERRIDE: 'Điều khiển relay thủ công',
   RELAY_OVERRIDE_CLEARED: 'Trả relay về tự động',
   SPEAKER_SCHEDULE_UPDATED: 'Cập nhật lịch loa ru',

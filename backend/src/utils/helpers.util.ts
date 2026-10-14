@@ -5,6 +5,15 @@ export function isValidObjectId(id: string): boolean {
   return Types.ObjectId.isValid(id)
 }
 
+/**
+ * Escape ký tự đặc biệt để đưa chuỗi người dùng nhập vào RegExp như văn bản
+ * thường — không escape thì `.*` khớp mọi thứ, còn mẫu lồng nhau như `(a+)+`
+ * làm Mongo quét rất lâu.
+ */
+export function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 /** Safe JSON parse – returns null on failure */
 export function safeParse<T>(json: string): T | null {
   try {

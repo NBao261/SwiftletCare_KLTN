@@ -24,6 +24,7 @@ import {
 import { buildDeviceConfig, confirmRelayStatus, markNodeSeen, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
 import { ingestTelemetry } from '@/services/telemetry.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
+import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
 import type { TelemetryPayload } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
@@ -91,6 +92,16 @@ describe('ingestTelemetry', () => {
 
     expect(await Telemetry.countDocuments()).toBe(2)
     expect(emitTelemetryUpdate).toHaveBeenCalledTimes(3)
+  })
+
+  it('forwards the fuzzy controller output to the dashboard (ENV-FR-010/011)', async () => {
+    const { deviceId, zone } = await seed()
+
+    await ingestTelemetry(reading(deviceId, Date.now(), { control_output: { misting: 40, ventilation: 0 } }))
+
+    expect(emitTelemetryUpdate).toHaveBeenCalledWith(String(zone._id), expect.objectContaining({
+      controlOutput: { misting: 40, ventilation: 0 },
+    }))
   })
 
   it('always persists a reading that breaches a threshold', async () => {
@@ -328,23 +339,24 @@ describe('recordHeartbeat', () => {
 })
 
 describe('buildDeviceConfig', () => {
+  const zone = { thresholds: DEFAULT_THRESHOLDS, fuzzy_tuning: DEFAULT_FUZZY_TUNING }
   const node = (windows: Array<{ start: string; end: string }>) =>
     ({ speaker_schedule: { enabled: true, windows }, audio: { volume: 20, current_track: 3, playing: false, loop: true } })
 
   it('leaves window keys out when no schedule was ever set, so the firmware keeps its defaults', () => {
-    const cfg = buildDeviceConfig(DEFAULT_THRESHOLDS, node([]))
+    const cfg = buildDeviceConfig(zone, node([]))
     expect(cfg).not.toHaveProperty('speaker_window1_start_hour')
-    expect(cfg).toMatchObject({ ...DEFAULT_THRESHOLDS, speaker_volume: 20, speaker_track: 3 })
+    expect(cfg).toMatchObject({ ...DEFAULT_THRESHOLDS, ...DEFAULT_FUZZY_TUNING, speaker_volume: 20, speaker_track: 3 })
   })
 
   it('maps one window and blanks the second', () => {
-    expect(buildDeviceConfig(DEFAULT_THRESHOLDS, node([{ start: '05:00', end: '07:00' }]))).toMatchObject({
+    expect(buildDeviceConfig(zone, node([{ start: '05:00', end: '07:00' }]))).toMatchObject({
       speaker_window1_start_hour: 5, speaker_window1_end_hour: 7, speaker_window2_start_hour: 0, speaker_window2_end_hour: 0,
     })
   })
 
   it('maps two windows, including one ending at midnight', () => {
-    expect(buildDeviceConfig(DEFAULT_THRESHOLDS, node([{ start: '05:00', end: '07:00' }, { start: '17:00', end: '24:00' }]))).toMatchObject({
+    expect(buildDeviceConfig(zone, node([{ start: '05:00', end: '07:00' }, { start: '17:00', end: '24:00' }]))).toMatchObject({
       speaker_window2_start_hour: 17, speaker_window2_end_hour: 24,
     })
   })

@@ -77,6 +77,23 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Farm already exists: ${farm._id}`)
   }
 
+  // ── User (Farm Operator) — nhân viên vận hành, phạm vi cả farm (AUTH-FR-005, v1.23.0) ──
+  let operator = await User.findOne({ email: 'operator@swiftletcare.dev' })
+  if (!operator) {
+    operator = await User.create({
+      email: 'operator@swiftletcare.dev',
+      password_hash: 'Test1234!',
+      full_name: 'Demo Farm Operator',
+      role: 'FARM_OPERATOR',
+    })
+    logger.info(`[seed] Created farm operator: ${operator.email} (password: Test1234!)`)
+  }
+  if (!farm.members.some(m => String(m.user_id) === String(operator!._id))) {
+    farm.members.push({ user_id: operator._id, is_primary: false, role: 'FARM_OPERATOR', zone_ids: [] } as never)
+    await farm.save()
+    logger.info(`[seed] Added ${operator.email} to farm ${farm._id} as FARM_OPERATOR (cả farm)`)
+  }
+
   // ── House ─────────────────────────────────────────────────────────────────
   let house = await House.findOne({ farm_id: farm._id })
   if (!house) {
