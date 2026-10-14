@@ -112,9 +112,8 @@ routes/*.route.ts (express-validator + requireRole)
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| `package.json` `jest.coverageThreshold.global.lines: 80` | Line coverage is ~78%, so `npm test` and the CI Backend job fail on coverage although all tests pass | Owner decides: add tests, lower the threshold to the current level and raise it over time, or report coverage without failing |
 | `notification.service.ts` FCM | Push only logs; Telegram is the one channel that really sends (ALERT-FR-013 is met by Telegram) | Wire FCM when mobile registers tokens |
-| Low coverage areas (`jobs/` 0%, `analytics.service.ts`, `notification.service.ts`) | Little or no test coverage | Add tests when touching them |
+| Low coverage areas (`jobs/` 0%, `mqtt/` ~30%, `analytics.service.ts` ~70%, `farm.service.ts` ~74%, `auth.controller.ts` ~39%) | Little test coverage; total line coverage is ~83% against the 80% `coverageThreshold` in `package.json`, so a PR that adds untested code can tip CI red | Add tests when touching them |
 | `auth.service.ts` OTP/reset codes | Only `console.log`'d in dev (`eslint-disable`); no email/SMS is sent (TODO SMTP) | Send by email (SMTP) and drop the prints |
 | EXPERT-FR-007 | No notification when an inferred alert is waiting for the expert's verdict (experts see them via `GET /alerts?verdict=pending`) — SRS §0.5 | Notify the farm's experts on new inferred alerts |
 | Bird counting (VISION) | Only the read side exists (`GET /analytics/bird-count/daily\|trends`). `mqtt/handlers/birdCount.handler.ts` is a stub that only logs, so nothing writes `birdCountRecord` or raises `LOW_RETURN_RATE`; `device.service#recordHeartbeat` only looks up `SensorNode`, so a CameraNode never goes ONLINE; `listCameraNodes` returns `rtsp_url` (carries the camera password) | `docs/bird-counting-plan.md` §8: `birdCount.service.ts`, CameraNode heartbeat branch, strip `rtsp_url` |
@@ -123,6 +122,6 @@ A PR that touches a file in this table **should** pay the debt; it **must** when
 
 ## Before opening a PR
 
-- **[Bắt buộc]** In `backend/`: `npm run lint`, `npm run build:check` and `npm test` pass (the coverage threshold aside, while it is in Known debt).
+- **[Bắt buộc]** In `backend/`: `npm run lint`, `npm run build:check` and `npm test` pass, including the 80% line-coverage threshold.
 - **[Bắt buộc]** `docs/api/api-spec.yaml` updated for any route change; `.env.example` for any new env var; SRS §0.5 assumptions list for any new hand-picked constant.
 - **[Bắt buộc]** PR fills `.github/pull_request_template.md`; commits follow `.commitlintrc.json` (backend scopes are usually `api`, `db`, `mqtt`, `auth`, `alert`, `env`).
