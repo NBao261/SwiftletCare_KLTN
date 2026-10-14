@@ -24,7 +24,7 @@ import { hashKey } from '@/services/provisionedDevice.service'
 import logger from '@/utils/logger.util'
 
 /** Khu vực của farm demo — Technician phải có region này trong assigned_regions */
-const DEMO_REGION = 'HCMC'
+const DEMO_REGION = 'TP. Hồ Chí Minh'
 
 async function seed(): Promise<void> {
   await connectDB()
@@ -63,7 +63,7 @@ async function seed(): Promise<void> {
   if (!farm) {
     farm = await Farm.create({
       name: 'Nhà Yến Demo',
-      address: 'Test address',
+      address: '12 Nguyễn Huệ, Quận 1',
       region: DEMO_REGION,
       owner_id: user._id,
     })
