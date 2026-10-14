@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { MapPinIcon, PlusIcon, UserIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState, FilterChip } from '@/components/ui'
 import StableHeight from '@/components/ui/StableHeight'
@@ -20,7 +20,7 @@ import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { cn } from '@/lib/cn'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceRow, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 
@@ -36,7 +36,7 @@ type Tab = 'overview' | 'devices' | 'members'
 export default function FarmOwnerFarmZonesPage() {
   const { farmId, houseId } = useParams<{ farmId: string; houseId: string }>()
   const navigate = useNavigate()
-  const { t } = useT(farmDict)
+  const { t } = useTranslation(farmDict)
   useScrollToTop(houseId)
   const liveZoneIds = useHouseZoneIds(houseId)
   const { structure, isLoading, isError, metricsLoading, canViewHarvest, refetch } = useFarmStructure({ liveZoneIds })
@@ -44,7 +44,8 @@ export default function FarmOwnerFarmZonesPage() {
   const { data: extras } = useStructureExtras(houseId ? [houseId] : [])
   const canManage = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
 
-  const [tab, setTab] = useState<Tab>('overview')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'devices' ? 'devices' : 'overview')
   const [showAddZone, setShowAddZone] = useState(false)
   const [selected, setSelected] = useState<DeviceRow | null>(null)
 
