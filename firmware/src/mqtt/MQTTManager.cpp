@@ -210,7 +210,6 @@ void publishTelemetry(const SensorData &data, const RelayState &relay) {
   doc["relay_states"]["misting"] = relay.misting;
   doc["relay_states"]["speaker"] = relay.speaker;
   doc["relay_states"]["ventilation"] = relay.ventilation;
-  doc["relay_states"]["heating"] = relay.heating;
   doc["control_mode"] = relay.anyOverride() ? "MANUAL" : "AUTO";
   // % công suất bộ điều khiển mờ (ENV-FR-010/011) — dashboard hiển thị live
   doc["control_output"]["misting"] = relay.mistingPct;
@@ -299,7 +298,7 @@ void onRelayCommand(const char *payload) {
   }
 
   // ENV-FR-016..018: bật Manual Override, tạm dừng PID cho relay này.
-  // relayState là struct nhiều field (4 relay bool + 4 override bool + 1
+  // relayState là struct nhiều field (3 relay bool + 3 override bool + 1
   // expiry) đọc/ghi đồng thời bởi pidTask (Core 1) — khoá dataMutex để tránh
   // torn read/write xuyên struct.
   if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {

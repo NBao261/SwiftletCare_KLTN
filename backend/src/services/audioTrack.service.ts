@@ -60,6 +60,8 @@ export async function uploadTrack(
     throw BadRequestError('Chỉ nhận file .mp3 — DFPlayer Mini đọc file 000N.mp3 trên thẻ SD')
   }
   const { node } = await loadNode(nodeId, user)
+  // Thiết bị đã gỡ không còn ở hiện trường để chép file vào thẻ SD
+  assertInService(node)
 
   const duplicate = () => ConflictError(`Số thứ tự ${input.track_number} (${sdName(input.track_number)}) đã có trong danh mục của thiết bị này`)
   if (await AudioTrack.exists({ node_id: node._id, track_number: input.track_number })) throw duplicate()
@@ -98,7 +100,8 @@ export async function listTracks(nodeId: string, user: CurrentUser) {
 
 /** ENV-FR-013c(a) — Technician tự đánh dấu đã/chưa chép file thật vào thẻ SD */
 export async function setSyncStatus(nodeId: string, trackId: string, user: CurrentUser, synced: boolean) {
-  const { track } = await loadTrack(nodeId, trackId, user)
+  const { node, track } = await loadTrack(nodeId, trackId, user)
+  assertInService(node)
   track.synced_to_sd = synced
   await track.save()
   await logAction(user._id, 'AUDIO_TRACK_SYNC_UPDATED', 'audio_track', String(track._id), { nodeId, synced })
@@ -143,7 +146,15 @@ export async function stopPlayback(nodeId: string, user: CurrentUser) {
 
 /** Xoá khỏi danh mục web — KHÔNG xoá được file vật lý trên thẻ SD */
 export async function deleteTrack(nodeId: string, trackId: string, user: CurrentUser) {
-  const { track } = await loadTrack(nodeId, trackId, user)
+  const { node, track } = await loadTrack(nodeId, trackId, user)
+  // Bài đang được chọn cho lịch phát và đã nằm trên thẻ SD: xoá khỏi danh mục thì thiết bị
+  // vẫn phát số đó mà web không còn biết là bài nào. Chưa chép vào thẻ thì thiết bị không
+  // phát được nó (VD upload nhầm) nên xoá an toàn; thiết bị đã gỡ thì chỉ là dọn danh mục.
+  if (!node.decommissioned_at && track.synced_to_sd && node.audio.current_track === track.track_number) {
+    throw ConflictError(
+      `Bài "${track.display_name}" đang được phát theo lịch — chọn bài khác, hoặc đánh dấu chưa chép vào thẻ SD, rồi mới xoá`,
+    )
+  }
   await track.deleteOne()
   // Bản ghi đã xoá là đủ với người dùng; file MinIO sót lại chỉ tốn dung lượng
   await removeObject(track.file_key).catch((err: Error) =>

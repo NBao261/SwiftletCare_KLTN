@@ -37,8 +37,14 @@ static float defuzzify(const float *w, const float *z, int n) {
   return den > 0 ? num / den : 0.0f;
 }
 
+bool inputsValid(float temperature, float humidity) {
+  return isfinite(temperature) && isfinite(humidity) && temperature >= -40.0f && temperature <= 80.0f &&
+         humidity >= 0.0f && humidity <= HUMIDITY_SATURATION_MAX;
+}
+
 float mistingDemand(float humidity, float temperature, float hMin, float hMax, float tMax,
                     const Tuning &tuning) {
+  if (!inputsValid(temperature, humidity)) return 0.0f;
   float s = tuning.humidityBand / 8.0f;
   float low = humidityLow(humidity, hMin, s);
   float mid = tri(humidity, hMin - 3.0f * s, hMin + 5.0f * s, hMin + 13.0f * s);
@@ -50,21 +56,15 @@ float mistingDemand(float humidity, float temperature, float hMin, float hMax, f
   return defuzzify(w, z, 4);
 }
 
-float ventilationDemand(float temperature, float humidity,
-                        float nh3, bool nh3Ok, float co2, bool co2Ok,
-                        float tMax, float hMin, float nh3Max, float co2Max,
+float ventilationDemand(float temperature, float humidity, float tMax, float hMin,
                         const Tuning &tuning) {
-  // Cảm biến lỗi ở chu kỳ này → NAN; loại khỏi quyết định thay vì so sánh NAN.
-  if ((nh3Ok && nh3 > nh3Max) || (co2Ok && co2 > co2Max)) return 1.0f;
-
-  float gas = fmaxf(nh3Ok ? rampUp(nh3, 0.6f * nh3Max, nh3Max) : 0.0f,
-                    co2Ok ? rampUp(co2, 0.7f * co2Max, co2Max) : 0.0f);
+  if (!inputsValid(temperature, humidity)) return 0.0f;
   float hot = isHot(temperature, tMax, tuning.tempBand / 4.0f);
   float dry = humidityLow(humidity, hMin, tuning.humidityBand / 8.0f);
 
-  const float w[] = {gas, fminf(hot, 1.0f - dry), fminf(hot, dry), fminf(1.0f - hot, 1.0f - gas)};
-  const float z[] = {1.0f, 1.0f, tuning.fanDryLevel, 0.0f};
-  return defuzzify(w, z, 4);
+  const float w[] = {fminf(hot, 1.0f - dry), fminf(hot, dry), 1.0f - hot};
+  const float z[] = {1.0f, tuning.fanDryLevel, 0.0f};
+  return defuzzify(w, z, 3);
 }
 
 bool timeProportionalOn(float duty, uint32_t nowMs, uint32_t windowMs, uint32_t phaseMs) {

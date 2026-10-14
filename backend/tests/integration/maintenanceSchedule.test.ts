@@ -133,6 +133,24 @@ describe('generateDueMaintenanceTickets', () => {
     expect(await generateDueMaintenanceTickets()).toBe(0)
   })
 
+  it('hạn xử lý SLA tính từ giờ hẹn, không phải lúc tạo (ticket sinh trước hạn 3 ngày)', async () => {
+    const { farm } = await seed()
+    // Hẹn 3 ngày nữa — đúng tình huống job tạo ticket sớm LEAD_DAYS ngày
+    await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Kiểm tra relay', interval_days: 30, next_due_at: vnAt(3, 9),
+    })
+    const before = Date.now()
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+
+    const ticket = (await Ticket.findOne().lean())!
+    const HOUR = 3600_000
+    // P3: xử lý 72h kể từ giờ hẹn — Technician đến đúng hẹn còn đủ 3 ngày để xong việc
+    expect(ticket.sla_resolve_due_at!.getTime()).toBe(ticket.scheduled_visit_at!.getTime() + 72 * HOUR)
+    // Xác nhận tiếp nhận vẫn tính từ lúc tạo (24h với P3)
+    expect(ticket.sla_response_due_at!.getTime()).toBeGreaterThanOrEqual(before + 24 * HOUR)
+    expect(ticket.sla_response_due_at!.getTime()).toBeLessThan(ticket.scheduled_visit_at!.getTime())
+  })
+
   it('trễ nhiều chu kỳ chỉ tạo 1 ticket; 2 lượt chạy song song không tạo trùng; lịch tạm dừng bị bỏ qua', async () => {
     const { farm } = await seed()
     await MaintenanceSchedule.create({ farm_id: farm._id, description: 'A', interval_days: 1, next_due_at: new Date(Date.now() - 5.5 * DAY) })
@@ -198,7 +216,8 @@ describe('kỳ bảo trì bị lỡ (TICKET-FR-013)', () => {
     expect(await generateDueMaintenanceTickets()).toBe(1)
     const first = (await Ticket.findOne().lean())!
 
-    // Kỳ kế tiếp tới khi ticket cũ vẫn đang mở
+    // Kỳ kế tiếp tới khi ticket cũ vẫn đang mở mà giờ hẹn của nó đã qua (thật sự bị lỡ)
+    await Ticket.updateOne({ _id: first._id }, { scheduled_visit_at: new Date(Date.now() - 3600_000) })
     await MaintenanceSchedule.updateOne({ _id: schedule._id }, { next_due_at: vnAt(1, 10) })
     ;(notifyAdmins as jest.Mock).mockClear()
     expect(await generateDueMaintenanceTickets()).toBe(1)
@@ -210,6 +229,22 @@ describe('kỳ bảo trì bị lỡ (TICKET-FR-013)', () => {
     expect(notifyAdmins).toHaveBeenCalled()
     expect(await AuditLog.countDocuments({ action: 'MAINTENANCE_CYCLE_MISSED' })).toBe(1)
     expect(first._id).toBeDefined()
+  })
+
+  it('lịch hằng ngày (chu kỳ ngắn hơn lead time) không bị báo nhầm là đang dồn', async () => {
+    const { farm } = await seed()
+    await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Kiểm tra bơm', interval_days: 1, next_due_at: vnAt(1, 9),
+    })
+    ;(notifyAdmins as jest.Mock).mockClear()
+
+    // Tạo trước 3 ngày nên các kỳ sắp tới lần lượt có ticket — kỳ trước chưa tới giờ hẹn là bình thường
+    await generateDueMaintenanceTickets()
+    await generateDueMaintenanceTickets(new Date(Date.now() + 3600_000))
+
+    expect(await Ticket.countDocuments()).toBeGreaterThan(1)
+    expect(await AuditLog.countDocuments({ action: 'MAINTENANCE_CYCLE_MISSED' })).toBe(0)
+    expect(notifyAdmins).not.toHaveBeenCalled()
   })
 
   it('kỳ trước đã đóng thì sinh ticket mới không kèm cảnh báo', async () => {
@@ -279,5 +314,21 @@ describe('kỳ bảo trì bị lỡ (TICKET-FR-013)', () => {
     await create(t.tech, body).expect(201)
     const dup = await create(t.tech, body).expect(409)
     expect(dup.body.error.message).toContain('đã có lịch bảo trì cùng nội dung')
+  })
+
+  it('sửa lịch thành trùng (đổi nội dung hoặc bật lại) cũng bị chặn như khi tạo', async () => {
+    const { farm, t } = await seed()
+    const base = { farm_id: String(farm._id), interval_days: 30, next_due_at: vnAt(1, 9).toISOString() }
+    await create(t.tech, { ...base, description: 'Vệ sinh cảm biến NH3' }).expect(201)
+    const otherId = (await create(t.tech, { ...base, description: 'Kiểm tra relay' }).expect(201)).body.data._id
+    const update = (body: object) =>
+      request(app).put(`/maintenance-schedules/${otherId}`).set('Authorization', `Bearer ${t.tech}`).send(body)
+
+    await update({ description: 'Vệ sinh cảm biến NH3' }).expect(409)
+    // Tạm dừng rồi đổi nội dung thì được (lịch dừng không sinh ticket), nhưng bật lại thì không
+    await update({ is_active: false, description: 'Vệ sinh cảm biến NH3' }).expect(200)
+    await update({ is_active: true }).expect(409)
+    // Sửa chu kỳ của lịch không trùng vẫn bình thường
+    expect(await MaintenanceSchedule.countDocuments({ is_active: true })).toBe(1)
   })
 })

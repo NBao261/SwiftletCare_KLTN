@@ -26,7 +26,7 @@
 #define PIN_RELAY_MISTING 25     // IN1 – phun sương
 #define PIN_RELAY_SPEAKER 26     // IN2 – nguồn amply loa ru
 #define PIN_RELAY_VENTILATION 27 // IN3 – quạt thông gió
-#define PIN_RELAY_HEATING 14     // IN4 – dự phòng (sưởi)
+#define PIN_RELAY_SPARE 14       // IN4 – dự phòng (SRS v2.0.0 bỏ sưởi)
 #define RELAY_ACTIVE_HIGH true   // Jumper đặt ở High-level trigger
 
 // ── DFPlayer Mini (loa ru, Guide §10) ────────────────────────────────────────
@@ -37,7 +37,7 @@
 #define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
 
 // ── Firmware version (báo lên backend qua heartbeat — FARM-FR-006) ──────────
-#define FIRMWARE_VERSION "1.2.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào + BIRD_PANIC
+#define FIRMWARE_VERSION "1.3.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện)
 
 // ── Timing ────────────────────────────────────────────────────────────────
 #define WATCHDOG_TIMEOUT_SEC 30
@@ -60,6 +60,35 @@
 #define DEFAULT_FUZZY_WINDOW_SEC 120     // s, 60..600
 // ENV-FR-022: lọc median+Kalman giá trị đưa vào bộ mờ (tắt được để so sánh A/B)
 #define DEFAULT_FUZZY_INPUT_FILTER true
+
+// ── Tham số phát hiện chỉnh theo Zone (EXPERT-FR-008) ────────────────────────
+// Domain Expert chỉnh qua web → MQTT config/update → lưu NVS. Mặc định là các
+// hằng số dùng trước v1.3.0; khoảng hợp lệ (kẹp trong Config::update) là giới
+// hạn kỹ thuật, không phải khuyến nghị nuôi yến.
+#define DEFAULT_NOISE_MARGIN_DB 15.0f     // dB trên mức nền của giờ đó, 5..30
+#define DEFAULT_NOISE_MIN_SEC 10          // số giây ồn trong cửa sổ 15 s, 5..15
+#define DEFAULT_PUMP_DRY_ON_SEC 300       // s bơm BẬT cộng dồn trước khi xét, 120..900
+#define DEFAULT_PUMP_DRY_MIN_RISE_PCT 2.0f // điểm %RH phải tăng, 0.5..10
+#define DEFAULT_SPEAKER_DROP_PCT 70       // % mức âm giảm so với nền, 30..90
+// Sau khi chốt ngừng phun vì PUMP_DRY, bao lâu thì tự thử phun lại (PumpDryMonitor).
+// Hằng số kỹ thuật chọn tay (bằng thời hạn can thiệp tay mặc định), KHÔNG có nguồn
+// nuôi yến và chưa chỉnh được qua MQTT — đủ dài để bơm khô thật không chạy liên
+// tục, đủ ngắn để một lần báo nhầm không làm nhà yến mất phun sương cả ngày.
+// Vòng điều khiển dùng số đo nhiệt-ẩm hợp lệ gần nhất nếu nó chưa cũ quá số chu kỳ
+// này; cũ hơn mới vào trạng thái an toàn (relay TẮT — THREAT-FR-013). 1 lần đọc RS485
+// lỗi là chuyện thường: nếu tắt relay ngay thì bus chập chờn làm bơm/quạt đóng cắt
+// liên tục. ponytail: 2 chu kỳ (20 s với chu kỳ 10 s) là mốc chọn tay, chưa đo.
+#define CONTROL_INPUT_MAX_AGE_CYCLES 2
+#define PUMP_DRY_RETRY_MIN 30
+#define PUMP_DRY_RETRY_MS (PUMP_DRY_RETRY_MIN * 60000UL)
+// Chuỗi hoá số phút cho câu cảnh báo — đổi PUMP_DRY_RETRY_MIN là nội dung đổi theo
+#define SC_STR_(x) #x
+#define SC_STR(x) SC_STR_(x)
+// Cảnh báo "theo đợt" (NOISE_ANOMALY, PUMP_DRY) được gửi LẠI mỗi khoảng này chừng nào
+// sự cố còn tiếp diễn. Backend gộp vào cảnh báo đang mở (không thông báo lại) và tự
+// đóng cảnh báo sau 60 phút không được ghi nhận lại — nếu firmware chỉ gửi 1 lần lúc
+// bắt đầu thì một đợt dài hơn 60 phút bị đóng khi vẫn đang diễn ra. Phải < 60 phút.
+#define EPISODE_ALERT_RESEND_MS 900000UL
 #define MQTT_HEARTBEAT_MS 30000    // 30 seconds (FARM-FR-005)
 #define MANUAL_OVERRIDE_MS 1800000 // 30 minutes (ENV-FR-018)
 // ponytail: nghe thử (ENV-FR-013c) tự dừng sau 5 phút phòng khi lệnh stop bị
@@ -81,8 +110,6 @@
 #define DEFAULT_HUMIDITY_MIN 75.0f
 #define DEFAULT_HUMIDITY_MAX 95.0f
 #define DEFAULT_LIGHT_MAX 0.2f
-#define DEFAULT_NH3_MAX 25 // ppm (ES-NH3-01, bản 0-500ppm)
-#define DEFAULT_CO2_MAX 1500
 
 // ── Speaker Schedule (ENV-FR-013b) – mặc định 5-7h & 17-19h ─────────────────
 #define SPEAKER_WINDOW_1_START_HOUR 5
@@ -99,7 +126,6 @@
 // kỳ đọc là 1s nên 30 mẫu chỉ ≈ 30s, làm cửa sổ baseline ngắn hơn dự định 10
 // lần). RAM: 300 float = 1200 byte, không đáng kể trên ESP32 320KB.
 #define AUDIO_BASELINE_WINDOW_SAMPLES 300
-#define AUDIO_DROP_THRESHOLD 0.70f // 70% drop = SPEAKER_FAILURE
 
 // ── MQTT Broker (§9.2) ───────────────────────────────────────────────────────
 // Dev: cổng 1883 non-TLS — khớp cách backend đang kết nối EMQX (xem
@@ -168,8 +194,6 @@ extern volatile float tempMax;
 extern volatile float humidityMin;
 extern volatile float humidityMax;
 extern volatile float lightMax;
-extern volatile int nh3Max;
-extern volatile int co2Max;
 extern int sensorIntervalMs;
 extern int pidIntervalMs;
 
@@ -179,6 +203,13 @@ extern volatile float fuzzyTempBand;
 extern volatile int fuzzyFanDryLevel; // %
 extern volatile int fuzzyWindowSec;
 extern volatile bool fuzzyInputFilter; // ENV-FR-022
+
+// Tham số phát hiện (EXPERT-FR-008) — ghi ở mqttTask, đọc ở sensorTask/pidTask
+extern volatile float noiseMarginDb;
+extern volatile int noiseMinSec;
+extern volatile int pumpDryOnSec;
+extern volatile float pumpDryMinRisePct;
+extern volatile int speakerDropPct;
 
 // Speaker schedule (ENV-FR-013b) – overridable via MQTT config/update
 extern volatile bool speakerScheduleEnabled;

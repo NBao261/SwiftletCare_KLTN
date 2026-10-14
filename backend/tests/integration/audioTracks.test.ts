@@ -207,6 +207,32 @@ describe('delete', () => {
     expect(await AudioTrack.countDocuments()).toBe(0)
     expect(removeObject).toHaveBeenCalledWith(expect.stringMatching(/^audio-tracks\//))
   })
+
+  it('refuses to delete the synced track the device is scheduled to play', async () => {
+    const ctx = await seed()
+    const trackId = await uploadSynced(ctx)
+    await request(app).put(`${base(ctx.node._id)}/audio-tracks/${trackId}/select`).set('Authorization', `Bearer ${ctx.ownerToken}`).expect(200)
+
+    const res = await request(app).delete(`${base(ctx.node._id)}/audio-tracks/${trackId}`).set('Authorization', `Bearer ${ctx.techToken}`)
+
+    expect(res.status).toBe(409)
+    expect(await AudioTrack.countDocuments()).toBe(1)
+  })
+})
+
+describe('decommissioned device', () => {
+  it('refuses upload and SD-sync changes (nobody is on site to copy the file)', async () => {
+    const ctx = await seed()
+    const { body } = await upload(ctx.node._id, ctx.techToken)
+    await SensorNode.updateOne({ _id: ctx.node._id }, { decommissioned_at: new Date() })
+
+    expect((await upload(ctx.node._id, ctx.techToken, { track_number: '3' })).status).toBe(409)
+    const sync = await request(app).put(`${base(ctx.node._id)}/audio-tracks/${body.data._id}/sync-status`)
+      .set('Authorization', `Bearer ${ctx.techToken}`).send({ synced_to_sd: true })
+    expect(sync.status).toBe(409)
+    // Dọn danh mục của thiết bị đã gỡ vẫn được
+    await request(app).delete(`${base(ctx.node._id)}/audio-tracks/${body.data._id}`).set('Authorization', `Bearer ${ctx.techToken}`).expect(200)
+  })
 })
 
 describe('DELETE /relay-override', () => {
@@ -221,7 +247,7 @@ describe('DELETE /relay-override', () => {
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
     expect(publishCommand).toHaveBeenCalledWith(...ctx.chain, 'relay/command', { deviceId: ctx.node.device_id, action: 'clear_override' })
-    expect(emitRelayUpdate).toHaveBeenCalledTimes(4)
+    expect(emitRelayUpdate).toHaveBeenCalledTimes(3) // misting, speaker, ventilation
     expect(await AuditLog.countDocuments({ action: 'RELAY_OVERRIDE_CLEARED' })).toBe(1)
   })
 

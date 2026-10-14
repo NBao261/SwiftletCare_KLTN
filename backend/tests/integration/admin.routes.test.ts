@@ -85,6 +85,15 @@ describe('GET /admin/users — query validation & pagination', () => {
     expect(res.body.data).toHaveLength(1)
     expect(res.body.data[0].email).toBe('tech@test.vn')
   })
+
+  it('lọc được tài khoản Domain Expert (role có trong users.role phải lọc được)', async () => {
+    const { token } = await makeUser('admin@test.vn', 'ADMIN')
+    await User.create({ email: 'expert@test.vn', password_hash: 'password123', full_name: 'Expert', role: 'DOMAIN_EXPERT' })
+    const res = await request(app)
+      .get('/admin/users?role=DOMAIN_EXPERT')
+      .set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res.body.data.map((u: { email: string }) => u.email)).toEqual(['expert@test.vn'])
+  })
 })
 
 describe('không để lọt mã dùng 1 lần qua API', () => {

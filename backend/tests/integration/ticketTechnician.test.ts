@@ -11,6 +11,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import ticketRoutes from '@/routes/tickets.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { AuditLog } from '@/models/auditLog.model'
+import { CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Ticket } from '@/models/ticket.model'
@@ -239,6 +240,29 @@ describe('SAT khi đóng ticket (TICKET-FR-010, Flow 9 bước 6b)', () => {
     await put(`/tickets/${ticket._id}/sat-checklist`, assigneeToken, ALL_OK).expect(400)
     await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(200)
   })
+
+  const WITHOUT_CAMERA = { modbus_addresses_ok: true, camera_rtsp_ok: false, lte_connection_ok: true, relay_test_ok: true }
+
+  it('nơi không lắp camera thì đóng được mà không phải tick mục camera', async () => {
+    const { ticket, assigneeToken } = await seed({ type: 'INSTALLATION', status: 'IN_PROGRESS', scheduled_visit_at: vnAt(1) })
+    await put(`/tickets/${ticket._id}/sat-checklist`, assigneeToken, WITHOUT_CAMERA).expect(200)
+    await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(200)
+  })
+
+  it('Zone có camera đang hoạt động thì vẫn bắt buộc mục camera', async () => {
+    const { ticket, farm, assigneeToken } = await seed({ type: 'INSTALLATION', status: 'IN_PROGRESS', scheduled_visit_at: vnAt(1) })
+    const house = await House.create({ farm_id: farm._id, name: 'H' })
+    const zone = await Zone.create({ house_id: house._id, name: 'Z' })
+    await Ticket.updateOne({ _id: ticket._id }, { zone_id: zone._id })
+    await CameraNode.create({ device_id: 'cam_9', zone_id: zone._id, status: 'ONLINE' })
+    try {
+      await put(`/tickets/${ticket._id}/sat-checklist`, assigneeToken, WITHOUT_CAMERA).expect(200)
+      const res = await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(409)
+      expect(res.body.error.message).toContain('4 mục')
+    } finally {
+      await CameraNode.deleteMany({})
+    }
+  })
 })
 
 describe('POST /tickets — Farm Owner tạo ticket (TICKET-FR-001)', () => {
@@ -300,6 +324,23 @@ describe('POST /tickets/:id/reassign-request', () => {
     expect(saved.status).toBe('NEW')
     expect(saved.responded_at).toBeUndefined()
     expect(await AuditLog.countDocuments({ action: 'TICKET_REASSIGN_REQUESTED' })).toBe(1)
+  })
+
+  it('người mới nhận được tính hạn phản hồi từ lúc giao, không bị đánh dấu trễ ngay', async () => {
+    // Ticket tạo 2 ngày trước: hạn phản hồi gốc (tính từ lúc tạo) đã qua từ lâu
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400_000)
+    const { ticket, assigneeToken } = await seed({
+      status: 'IN_PROGRESS', responded_at: twoDaysAgo, priority: 'P2',
+      sla_response_due_at: new Date(twoDaysAgo.getTime() + 4 * 3600_000),
+      sla_resolve_due_at: new Date(Date.now() + 86400_000),
+    })
+    await post(`/tickets/${ticket._id}/reassign-request`, assigneeToken, { reason: 'Đang nghỉ phép' }).expect(200)
+
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.sla_response_due_at!.getTime()).toBeGreaterThan(Date.now())
+    // Hạn xử lý là cam kết với khách — đổi người không được kéo dài
+    expect(saved.sla_resolve_due_at!.getTime()).toBe(ticket.sla_resolve_due_at!.getTime())
+    expect(await markResponseBreachedTickets()).toBe(0)
   })
 
   it('không còn ai thì vào hàng đợi chung (không gán lại cho chính người xin)', async () => {

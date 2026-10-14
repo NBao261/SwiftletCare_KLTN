@@ -8,17 +8,19 @@
 #include <ArduinoJson.h>
 
 struct SensorData {
-  float temperature; // °C   (ES35-SW, reg0 ÷10)
-  float humidity;    // %RH  (ES35-SW, reg1 ÷10)
-  float lightLux;    // lux  (ES-ALS-02, reg2-3 ×100)
-  float nh3Ppm;      // ppm  (ES-NH3-01, reg0)
-  float co2Ppm;      // ppm  (ES-CO2-01, reg0)
-  float soundDb;     // dB   (ES-NOISE-01, reg0 ÷10)
+  // Mặc định NAN/false: bản chưa đọc lần nào (hoặc không lấy được mutex) phải
+  // được coi là "không có số đo" để vòng điều khiển về trạng thái an toàn.
+  float temperature = NAN; // °C   (ES35-SW, reg0 ÷10)
+  float humidity = NAN;    // %RH  (ES35-SW, reg1 ÷10)
+  float lightLux = NAN;    // lux  (ES-ALS-02, reg2-3 ×100)
+  float nh3Ppm = NAN;      // ppm  (ES-NH3-01, reg0)
+  float co2Ppm = NAN;      // ppm  (ES-CO2-01, reg0)
+  float soundDb = NAN;     // dB   (ES-NOISE-01, reg0 ÷10)
   unsigned long timestamp = 0; // millis() lúc đọc — 0 = chưa đọc lần nào
   // Epoch ms (NTP) lúc đọc — 0 nếu đồng hồ chưa sync. Backend dùng làm thời
   // điểm đo thật, nhất là cho dữ liệu buffer offline flush lại (REL-NFR-003).
   uint64_t epochMs = 0;
-  bool isValid;
+  bool isValid = false;
 
   // Per-slave read status (THREAT-FR-013: SENSOR_FAULT / RS485_BUS_FAILURE)
   bool noiseOk = false;

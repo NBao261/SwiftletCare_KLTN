@@ -138,9 +138,9 @@ export async function completeDeletionRequest(
 
   if (!opts.force) {
     // Farm chỉ có mình user sẽ bị xoá mềm → ticket đang mở của farm đó cũng thành mồ côi
-    // Farm chỉ còn Farm Operator (không đồng sở hữu) cũng bị xoá mềm — xem vòng lặp bên dưới
+    // Farm chỉ còn Domain Expert (không đồng sở hữu) cũng bị xoá mềm — xem vòng lặp bên dưới
     const soleOwnerFarmIds = ownedFarms
-      .filter(f => f.members.every(m => String(m.user_id) === userId || m.role === 'FARM_OPERATOR'))
+      .filter(f => f.members.every(m => String(m.user_id) === userId || m.role === 'DOMAIN_EXPERT'))
       .map(f => f._id)
     const openTickets = await Ticket.countDocuments({
       status: { $ne: 'CLOSED' },
@@ -156,9 +156,9 @@ export async function completeDeletionRequest(
   }
 
   for (const farm of ownedFarms) {
-    // Quyền chủ chỉ chuyển cho đồng sở hữu (AUTH-FR-012) — Farm Operator là nhân viên
+    // Quyền chủ chỉ chuyển cho đồng sở hữu (AUTH-FR-012) — Domain Expert là người được mời
     // vận hành, không nhận quyền chủ; farm không còn đồng sở hữu thì bị xoá mềm.
-    const otherMembers = farm.members.filter(m => String(m.user_id) !== userId && m.role !== 'FARM_OPERATOR')
+    const otherMembers = farm.members.filter(m => String(m.user_id) !== userId && m.role !== 'DOMAIN_EXPERT')
     if (otherMembers.length > 0) {
       const nextOwner = otherMembers.reduce((earliest, m) =>
         m.joined_at < earliest.joined_at ? m : earliest)
@@ -195,12 +195,25 @@ export async function completeDeletionRequest(
     { $pull: { members: { user_id: user._id } } },
   )
 
+  // Technician bị xoá (kể cả khi Admin gửi force vì họ còn ticket mở): ticket đang giao
+  // không được ở lại với một tài khoản đã ẩn danh — không ai xử lý, SLA vẫn chạy. Gỡ vùng
+  // phụ trách TRƯỚC, nếu không rerouteTicketsOutOfCoverage coi họ "vẫn phụ trách" và bỏ qua.
+  // Chạy trước bước ẩn danh để lỗi giữa chừng vẫn chạy lại được (gỡ vùng là idempotent).
+  if (user.role === 'TECHNICIAN') {
+    if (user.assigned_regions?.length) {
+      user.assigned_regions = []
+      await user.save()
+    }
+    await rerouteTicketsOutOfCoverage({ technicianId: userId }, adminId, 'ACCOUNT_DELETED')
+  }
+
   // Tổng qua MỌI lần chạy (kể cả lần lỗi giữa chừng trước đó), đọc từ audit từng farm — tính TRƯỚC bước
   // ẩn danh không thể đảo ngược để một lỗi đọc DB ở đây vẫn cho phép chạy lại. Đây là số liệu theo audit
   // (ghi audit là best-effort, xem logAction), không phải nguồn sự thật về dữ liệu farm.
-  const [farmsTransferred, farmsDeleted] = await Promise.all([
+  const [farmsTransferred, farmsDeleted, ticketsRerouted] = await Promise.all([
     AuditLog.countDocuments({ action: 'FARM_OWNERSHIP_TRANSFERRED', 'metadata.fromUserId': userId }),
     AuditLog.countDocuments({ action: 'FARM_SOFT_DELETED', 'metadata.ownerId': userId }),
+    AuditLog.countDocuments({ action: 'TICKET_REROUTED', 'metadata.from': userId, 'metadata.reason': 'ACCOUNT_DELETED' }),
   ])
 
   const contactEmail = user.email // giữ lại để gửi thông báo cuối sau khi ẩn danh
@@ -212,6 +225,10 @@ export async function completeDeletionRequest(
   user.phone = undefined
   user.full_name = 'Tài khoản đã xoá'
   user.avatar_url = undefined
+  // Chat id Telegram là dữ liệu cá nhân và còn là đường gửi tin tới người thật (PRIV-NFR-003)
+  user.telegram_chat_id = undefined
+  user.telegram_link_code_hash = undefined
+  user.telegram_link_expires_at = undefined
   user.is_active = false
   user.refresh_tokens = [] as never
   // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và
@@ -229,7 +246,7 @@ export async function completeDeletionRequest(
   }, { email: contactEmail, emailOnly: true })
 
   await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, {
-    farmsTransferred, farmsDeleted, forced: opts.force === true,
+    farmsTransferred, farmsDeleted, ticketsRerouted, forced: opts.force === true,
   })
   return user
 }

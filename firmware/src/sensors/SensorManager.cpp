@@ -13,6 +13,7 @@
  */
 #include "SensorManager.h"
 #include "config/Config.h"
+#include "pid/FuzzyControl.h"
 #include <ModbusMaster.h>
 #include <cmath>
 #include <time.h>
@@ -171,7 +172,8 @@ bool validateRange(const SensorData &data) {
     return false;
   if (data.temperature < -40 || data.temperature > 80)
     return false;
-  if (data.humidity < 0 || data.humidity > 100)
+  // Cùng biên với FuzzyControl::inputsValid — 100,x % lúc đang phun là bão hoà, không phải lỗi
+  if (data.humidity < 0 || data.humidity > FuzzyControl::HUMIDITY_SATURATION_MAX)
     return false;
   return true;
 }

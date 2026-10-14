@@ -1,5 +1,5 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
-import type { AlertType, AlertSeverity, AlertStatus } from '@/types'
+import type { AlertType, AlertSeverity, AlertStatus, AlertVerdictResult } from '@/types'
 
 /** Alert document – SRS §8.2, ALERT-FR-001 */
 export interface IAlert extends Document {
@@ -24,6 +24,8 @@ export interface IAlert extends Document {
   resolved_at?: Date
   acknowledged_by?: Types.ObjectId
   acknowledgement_note?: string
+  /** EXPERT-FR-003 — Domain Expert xác nhận/bác bỏ cảnh báo suy luận; không có = chờ kiểm chứng */
+  expert_verdict?: { result: AlertVerdictResult; note?: string; by: Types.ObjectId; at: Date }
 }
 
 const alertSchema = new Schema<IAlert>(
@@ -35,7 +37,7 @@ const alertSchema = new Schema<IAlert>(
       type: String,
       enum: [
         'THRESHOLD_BREACH','PREDATOR_DETECTED','NODE_OFFLINE','SPEAKER_FAILURE',
-        'PUMP_DRY','BIRD_PANIC','POWER_OUTAGE','LOW_RETURN_RATE','EDGE_AI_DEGRADED',
+        'PUMP_DRY','NOISE_ANOMALY','POWER_OUTAGE','LOW_RETURN_RATE','EDGE_AI_DEGRADED',
         'SENSOR_FAULT','RS485_BUS_FAILURE','SENSOR_ANOMALY','FORECAST_BREACH',
       ] satisfies AlertType[],
       required: true,
@@ -53,6 +55,15 @@ const alertSchema = new Schema<IAlert>(
     resolved_at:         { type: Date },
     acknowledged_by:     { type: Schema.Types.ObjectId, ref: 'User' },
     acknowledgement_note:{ type: String },
+    expert_verdict: {
+      type: {
+        result: { type: String, enum: ['CONFIRMED', 'REJECTED'] satisfies AlertVerdictResult[], required: true },
+        note:   { type: String },
+        by:     { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        at:     { type: Date, required: true },
+        _id: false,
+      },
+    },
   },
   { versionKey: false }
 )

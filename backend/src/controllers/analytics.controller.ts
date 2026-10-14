@@ -22,6 +22,15 @@ export const controlPerformance = asyncHandler(async (req: Request, res: Respons
   res.json({ success: true, data })
 })
 
+/** GET /analytics/autonomy – ANALYTICS-FR-011 (tỷ lệ thời gian tự động) */
+export const autonomy = asyncHandler(async (req: Request, res: Response) => {
+  const data = await analyticsService.getAutonomy(req.user, {
+    zoneId: req.query.zoneId as string,
+    range:  (req.query.range as string) ?? '24h',
+  })
+  res.json({ success: true, data })
+})
+
 /** GET /analytics/control/suggestion – ANALYTICS-FR-010 (gợi ý hệ số mờ) */
 export const tuningSuggestion = asyncHandler(async (req: Request, res: Response) => {
   const data = await tuningSuggestionService.getTuningSuggestion(req.user, req.query.zoneId as string)

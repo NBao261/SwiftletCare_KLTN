@@ -32,7 +32,6 @@ export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now
 
   const rows = await Telemetry.aggregate<{
     _id: Date; humidity: number | null; temperature: number | null; misting: number | null; ventilation: number | null
-    nh3: number | null; co2: number | null
   }>([
     { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: new Date(now.getTime() - LOOKBACK_MS), $lte: now }, misting_pct: { $exists: true } } },
     {
@@ -40,7 +39,6 @@ export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now
         _id: { $toDate: { $subtract: [{ $toLong: '$timestamp' }, { $mod: [{ $toLong: '$timestamp' }, STEP_MS] }] } },
         humidity: { $avg: '$humidity' }, temperature: { $avg: '$temperature' },
         misting: { $avg: '$misting_pct' }, ventilation: { $avg: '$ventilation_pct' },
-        nh3: { $avg: '$nh3_ppm' }, co2: { $avg: '$co2_ppm' },
       },
     },
     { $sort: { _id: 1 } },
@@ -56,7 +54,7 @@ export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now
       if (run.length > 1) runs.push(run)
       run = []
     }
-    if (ok) run.push({ humidity: r.humidity!, temperature: r.temperature!, misting: r.misting!, ventilation: r.ventilation!, nh3: r.nh3, co2: r.co2 })
+    if (ok) run.push({ humidity: r.humidity!, temperature: r.temperature!, misting: r.misting!, ventilation: r.ventilation! })
     prevAt = r._id.getTime()
   }
   if (run.length > 1) runs.push(run)
@@ -76,7 +74,7 @@ export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now
   }
 
   const day = runs.flat().slice(-SIM_STEPS)
-  const limits = { hMin: t.humidity_min, hMax: t.humidity_max, tMax: t.temp_max, nh3Max: t.nh3_max, co2Max: t.co2_max }
+  const limits = { hMin: t.humidity_min, hMax: t.humidity_max, tMax: t.temp_max }
   const currentSim = simulate(model, day, limits, toTuning(current))
   const best = searchTuning(model, day, limits)
   const predicted = {

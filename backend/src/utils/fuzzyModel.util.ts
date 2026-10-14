@@ -1,5 +1,5 @@
 /**
- * ANALYTICS-FR-010 (v1.24.0) — gợi ý hệ số mờ bằng mô hình học từ dữ liệu thật.
+ * ANALYTICS-FR-010 — gợi ý hệ số mờ bằng mô hình học từ dữ liệu thật.
  * Hàm thuần — test không cần DB.
  *
  * 1. Bản TS của bộ điều khiển mờ trên ESP32 (firmware/src/pid/FuzzyControl.cpp).
@@ -18,6 +18,12 @@ export const rampUp = (x: number, a: number, b: number) => 1 - rampDown(x, a, b)
 export const tri = (x: number, a: number, b: number, c: number) =>
   x <= a || x >= c ? 0 : x <= b ? (x - a) / (b - a) : (c - x) / (c - b)
 
+/** Bão hoà lúc đang phun có thể báo 100,x % — vẫn hợp lệ. Phải bằng FuzzyControl::HUMIDITY_SATURATION_MAX (firmware/src/pid/FuzzyControl.h) */
+export const HUMIDITY_SATURATION_MAX = 101
+/** THREAT-FR-013 — số đo không hợp lệ thì nhu cầu = 0 (khớp FuzzyControl::inputsValid) */
+export const inputsValid = (t: number, h: number) =>
+  Number.isFinite(t) && Number.isFinite(h) && t >= -40 && t <= 80 && h >= 0 && h <= HUMIDITY_SATURATION_MAX
+
 const humidityLow = (h: number, hMin: number, s: number) => rampDown(h, hMin - 5 * s, hMin + 3 * s)
 const isHot = (t: number, tMax: number, k: number) => rampUp(t, tMax - 3 * k, tMax + k)
 function defuzzify(w: number[], z: number[]) {
@@ -28,6 +34,7 @@ function defuzzify(w: number[], z: number[]) {
 }
 
 export function mistingDemand(h: number, t: number, hMin: number, hMax: number, tMax: number, tuning: Tuning = DEFAULT_TUNING) {
+  if (!inputsValid(t, h)) return 0
   const s = tuning.humidityBand / 8
   const low = humidityLow(h, hMin, s)
   const mid = tri(h, hMin - 3 * s, hMin + 5 * s, hMin + 13 * s)
@@ -36,19 +43,16 @@ export function mistingDemand(h: number, t: number, hMin: number, hMax: number, 
   return defuzzify([low, Math.min(mid, hot), Math.min(mid, 1 - hot), high], [1, 0.5, 0, 0])
 }
 
-export function ventilationDemand(
-  t: number, h: number, nh3: number | null, co2: number | null,
-  tMax: number, hMin: number, nh3Max: number, co2Max: number, tuning: Tuning = DEFAULT_TUNING,
-) {
-  if ((nh3 !== null && nh3 > nh3Max) || (co2 !== null && co2 > co2Max)) return 1
-  const gas = Math.max(nh3 !== null ? rampUp(nh3, 0.6 * nh3Max, nh3Max) : 0, co2 !== null ? rampUp(co2, 0.7 * co2Max, co2Max) : 0)
+/** ENV-FR-011 (SRS v2.0.0): quạt chỉ theo nhiệt độ + độ ẩm — NH3/CO2 không còn là đầu vào. */
+export function ventilationDemand(t: number, h: number, tMax: number, hMin: number, tuning: Tuning = DEFAULT_TUNING) {
+  if (!inputsValid(t, h)) return 0
   const hot = isHot(t, tMax, tuning.tempBand / 4)
   const dry = humidityLow(h, hMin, tuning.humidityBand / 8)
-  return defuzzify([gas, Math.min(hot, 1 - dry), Math.min(hot, dry), Math.min(1 - hot, 1 - gas)], [1, 1, tuning.fanDryLevel, 0])
+  return defuzzify([Math.min(hot, 1 - dry), Math.min(hot, dry), 1 - hot], [1, tuning.fanDryLevel, 0])
 }
 
 // ── 2. Nhận dạng mô hình ─────────────────────────────────────────────────────
-export interface Step { humidity: number; temperature: number; misting: number; ventilation: number; nh3: number | null; co2: number | null }
+export interface Step { humidity: number; temperature: number; misting: number; ventilation: number }
 export interface PlantModel { a: number; b: number; c: number; d: number; tMean: number; r2: number; samples: number }
 
 /** Giải hệ n×n bằng khử Gauss có chọn trụ; null nếu suy biến (dữ liệu không đủ đa dạng). */
@@ -94,7 +98,7 @@ export function fitPlantModel(steps: Step[][]): PlantModel | null {
 }
 
 // ── 3. Mô phỏng + tìm lưới ───────────────────────────────────────────────────
-export interface Limits { hMin: number; hMax: number; tMax: number; nh3Max: number; co2Max: number }
+export interface Limits { hMin: number; hMax: number; tMax: number }
 export interface SimResult { inRangePct: number; mistingAvgPct: number; score: number }
 
 /** Điểm càng thấp càng tốt: % thời gian độ ẩm ngoài ngưỡng + phạt nhẹ lượng nước phun. */
@@ -107,7 +111,7 @@ export function simulate(model: PlantModel, day: Step[], limits: Limits, tuning:
   for (const s of day) {
     if (h >= limits.hMin && h <= limits.hMax) inRange++
     const mist = 100 * mistingDemand(h, s.temperature, limits.hMin, limits.hMax, limits.tMax, tuning)
-    const vent = 100 * ventilationDemand(s.temperature, h, s.nh3, s.co2, limits.tMax, limits.hMin, limits.nh3Max, limits.co2Max, tuning)
+    const vent = 100 * ventilationDemand(s.temperature, h, limits.tMax, limits.hMin, tuning)
     mistSum += mist
     h = Math.min(100, Math.max(0, h + model.a * mist + model.b * vent + model.c * (s.temperature - model.tMean) + model.d))
   }

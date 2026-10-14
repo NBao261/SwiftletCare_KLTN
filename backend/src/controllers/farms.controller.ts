@@ -32,20 +32,13 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: { message: 'Đã xóa farm' } })
 })
 
-/** POST /farms/:id/members – AUTH-FR-005/010, Flow 12 bước 1 (mời Farm Owner hoặc Farm Operator + phạm vi) */
+/** POST /farms/:id/members – AUTH-FR-005/010, Flow 12 bước 1 (mời đồng sở hữu hoặc Domain Expert) */
 export const inviteMember = asyncHandler(async (req: Request, res: Response) => {
   const invitation = await farmService.inviteMember(req.params.id, req.user, {
     email:    req.body.email as string,
     role:     req.body.role,
-    zone_ids: req.body.zone_ids as string[] | undefined,
   })
   res.status(201).json({ success: true, data: invitation })
-})
-
-/** PUT /farms/:id/members/:userId – AUTH-FR-005, Flow 12 bước 6 (đổi phạm vi Zone của Farm Operator) */
-export const updateMemberScope = asyncHandler(async (req: Request, res: Response) => {
-  const farm = await farmService.updateOperatorScope(req.params.id, req.user, req.params.userId, req.body.zone_ids as string[])
-  res.json({ success: true, data: farm })
 })
 
 /** DELETE /farms/:id/members/:userId – Flow 12 bước 5 */
@@ -111,6 +104,12 @@ export const updateThresholds = asyncHandler(async (req: Request, res: Response)
 /** PUT /farms/zones/:zoneId/fuzzy-tuning – ENV-FR-021 */
 export const updateFuzzyTuning = asyncHandler(async (req: Request, res: Response) => {
   const zone = await farmService.updateZoneFuzzyTuning(req.params.zoneId, req.user, req.body)
+  res.json({ success: true, data: zone })
+})
+
+/** PUT /farms/zones/:zoneId/detection-tuning – EXPERT-FR-008 */
+export const updateDetectionTuning = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await farmService.updateZoneDetectionTuning(req.params.zoneId, req.user, req.body)
   res.json({ success: true, data: zone })
 })
 

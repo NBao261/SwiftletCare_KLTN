@@ -1,7 +1,8 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
-import type { FuzzyTuning, Thresholds } from '@/types'
+import type { DetectionTuning, FuzzyTuning, Thresholds, Role } from '@/types'
+import { DEFAULT_DETECTION_TUNING } from '@/utils/detectionTuning.util'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
@@ -16,6 +17,8 @@ export interface IHouse extends Document {
 
 export interface IThresholdHistoryEntry {
   changed_by: Types.ObjectId
+  /** Role của người sửa lúc sửa (EXPERT-FR-004) — để phân biệt chủ farm với chuyên gia */
+  changed_by_role?: Role
   changed_at: Date
   old_values: Partial<Thresholds>
   new_values: Partial<Thresholds>
@@ -24,9 +27,18 @@ export interface IThresholdHistoryEntry {
 
 export interface IFuzzyTuningHistoryEntry {
   changed_by: Types.ObjectId
+  changed_by_role?: Role
   changed_at: Date
   old_values: Partial<FuzzyTuning>
   new_values: Partial<FuzzyTuning>
+}
+
+export interface IDetectionTuningHistoryEntry {
+  changed_by: Types.ObjectId
+  changed_by_role?: Role
+  changed_at: Date
+  old_values: Partial<DetectionTuning>
+  new_values: Partial<DetectionTuning>
 }
 
 export interface IZone extends Document {
@@ -41,6 +53,9 @@ export interface IZone extends Document {
   /** ENV-FR-021 — hệ số bộ điều khiển mờ của mọi ESP32 trong Zone, gửi qua config/update */
   fuzzy_tuning: FuzzyTuning
   fuzzy_tuning_history: IFuzzyTuningHistoryEntry[]
+  /** EXPERT-FR-008 — tham số phát hiện do Domain Expert chỉnh; thiếu trường nào thì dùng mặc định */
+  detection_tuning: DetectionTuning
+  detection_tuning_history: IDetectionTuningHistoryEntry[]
 }
 
 const houseSchema = new Schema<IHouse>(
@@ -74,6 +89,7 @@ const zoneSchema = new Schema<IZone>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
       source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT'] },
+      changed_by_role: { type: String },
     }],
     fuzzy_tuning: {
       fuzzy_humidity_band: { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_humidity_band },
@@ -84,6 +100,22 @@ const zoneSchema = new Schema<IZone>(
     },
     fuzzy_tuning_history: [{
       changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
+      changed_at: { type: Date },
+      old_values: { type: Schema.Types.Mixed },
+      new_values: { type: Schema.Types.Mixed },
+    }],
+    detection_tuning: {
+      noise_margin_db:       { type: Number, default: DEFAULT_DETECTION_TUNING.noise_margin_db },
+      noise_min_sec:         { type: Number, default: DEFAULT_DETECTION_TUNING.noise_min_sec },
+      pump_dry_on_sec:       { type: Number, default: DEFAULT_DETECTION_TUNING.pump_dry_on_sec },
+      pump_dry_min_rise_pct: { type: Number, default: DEFAULT_DETECTION_TUNING.pump_dry_min_rise_pct },
+      speaker_drop_pct:      { type: Number, default: DEFAULT_DETECTION_TUNING.speaker_drop_pct },
+      return_rate_drop_pct:  { type: Number, default: DEFAULT_DETECTION_TUNING.return_rate_drop_pct },
+    },
+    detection_tuning_history: [{
+      changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
       changed_at: { type: Date },
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },

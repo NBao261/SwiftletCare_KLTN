@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as authService from '@/services/auth.service'
+import * as telegramService from '@/services/telegram.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 const REFRESH_COOKIE_MAX_AGE = 30 * 86400 * 1000
@@ -95,6 +96,18 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
 export const updateNotificationPreferences = asyncHandler(async (req: Request, res: Response) => {
   const user = await authService.updateNotificationPreferences(req.user._id, req.body)
   res.json({ success: true, data: user })
+})
+
+/** POST /auth/telegram/link – ALERT-FR-013 (mã liên kết một lần + deep link mở bot) */
+export const createTelegramLink = asyncHandler(async (req: Request, res: Response) => {
+  const link = await telegramService.createTelegramLink(req.user._id)
+  res.json({ success: true, data: link })
+})
+
+/** DELETE /auth/telegram/link – ALERT-FR-013 (hủy liên kết) */
+export const unlinkTelegram = asyncHandler(async (req: Request, res: Response) => {
+  await telegramService.unlinkTelegram(req.user._id)
+  res.json({ success: true, data: { message: 'Đã hủy liên kết Telegram' } })
 })
 
 /** POST /auth/delete-request – AUTH-FR-012, PRIV-NFR-003 */
