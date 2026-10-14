@@ -174,7 +174,9 @@ export async function getHealthReport(id: string, user: CurrentUser): Promise<IZ
 /** EXPERT-FR-005 — xem số liệu theo khoảng bất kỳ, không lưu */
 export async function previewHealthReport(user: CurrentUser, query: { zoneId: string; from: string; to?: string }) {
   const { zone } = await assertZoneAccess(query.zoneId, user)
-  const to = query.to ? new Date(query.to) : new Date()
+  // `to` ở tương lai thì phần chưa xảy ra bị tính vào mẫu số của tỷ lệ thời gian tự động
+  const now = new Date()
+  const to = query.to && new Date(query.to) < now ? new Date(query.to) : now
   const from = new Date(query.from)
   if (!(from < to)) throw BadRequestError('from phải trước to')
   if (to.getTime() - from.getTime() > MAX_PREVIEW_DAYS * DAY_MS) throw BadRequestError(`Khoảng xem tối đa ${MAX_PREVIEW_DAYS} ngày`)
@@ -200,10 +202,13 @@ export async function setReportConclusion(id: string, user: CurrentUser, text: s
   await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'zone_health_report', String(report._id), { zone_id: String(report.zone_id), isEdit })
 
   const zone = await Zone.findById(report.zone_id).select('name').lean()
-  await Promise.all((await ownerIdsOf(report.farm_id)).map(ownerId => notifyUser(ownerId, {
-    title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho ${zone?.name ?? 'Zone'}`,
-    body: text.length > 300 ? `${text.slice(0, 300)}…` : text,
-  })))
+  // Không chờ gửi: kết luận đã lưu, Telegram chậm không được giữ response (như ticket.service)
+  for (const ownerId of await ownerIdsOf(report.farm_id)) {
+    void notifyUser(ownerId, {
+      title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho ${zone?.name ?? 'Zone'}`,
+      body: text.length > 300 ? `${text.slice(0, 300)}…` : text,
+    })
+  }
   // Cùng hình dạng với GET /health-reports/:id (`by` = {_id, full_name}) để client thay cache được
   return report.populate('expert_conclusion.by', 'full_name')
 }

@@ -140,17 +140,18 @@ describe('đưa tham số vào cấu hình thiết bị và xu hướng chim v�
     const { owner, zone } = await seed()
     const user: CurrentUser = { _id: String(owner._id), email: owner.email, role: 'FARM_OWNER' }
     const day = (n: number) => new Date(Date.now() - n * 86400_000)
-    // Trung bình (90+90+90+60)/4 = 82,5; mới nhất 60 → giảm 27,3%
-    await BirdCountRecord.create([3, 2, 1, 0].map((n, i) => ({
+    // Mốc = trung bình 7 ngày trước ngày mới nhất = 90 (không gồm chính nó); mới nhất 60 → giảm 33,3%.
+    // 9 ngày: ngày xa nhất (30) nằm ngoài mốc 7 ngày nên không kéo mốc xuống.
+    await BirdCountRecord.create([8, 7, 6, 5, 4, 3, 2, 1, 0].map((n, i) => ({
       camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: day(n),
-      session_type: 'EVENING_ENTRY', entry_count: 100, exit_count: 100, return_rate: i === 3 ? 60 : 90,
+      session_type: 'EVENING_ENTRY', entry_count: 100, exit_count: 100, return_rate: i === 8 ? 60 : i === 0 ? 30 : 90,
     })))
 
-    const byDefault = await getBirdCountTrends(user, String(zone._id), { days: 7 })
-    expect(byDefault).toMatchObject({ drop_percent: 27.3, drop_threshold_pct: 20, is_significant_drop: true })
+    const byDefault = await getBirdCountTrends(user, String(zone._id), { days: 10 })
+    expect(byDefault).toMatchObject({ drop_percent: 33.3, drop_threshold_pct: 20, is_significant_drop: true })
 
-    await Zone.updateOne({ _id: zone._id }, { 'detection_tuning.return_rate_drop_pct': 30 })
-    const tuned = await getBirdCountTrends(user, String(zone._id), { days: 7 })
-    expect(tuned).toMatchObject({ drop_percent: 27.3, drop_threshold_pct: 30, is_significant_drop: false })
+    await Zone.updateOne({ _id: zone._id }, { 'detection_tuning.return_rate_drop_pct': 40 })
+    const tuned = await getBirdCountTrends(user, String(zone._id), { days: 10 })
+    expect(tuned).toMatchObject({ drop_percent: 33.3, drop_threshold_pct: 40, is_significant_drop: false })
   })
 })

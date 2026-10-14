@@ -44,7 +44,8 @@ export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndR
   if (nodeIds.length === 0) return 0
   try {
     const { modifiedCount } = await RelayOverrideLog.updateMany(
-      { node_id: { $in: nodeIds }, ended_at: null },
+      // started_at ≤ at: override mới bật sau thời điểm đóng (job hết hạn đang chạy dở) không bị đóng theo
+      { node_id: { $in: nodeIds }, ended_at: null, started_at: { $lte: at } },
       { ended_at: at, end_reason: reason },
     )
     return modifiedCount

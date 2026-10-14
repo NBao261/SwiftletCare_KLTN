@@ -18,7 +18,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { User } from '@/models/user.model'
 import { confirmRelayStatus, expireManualOverrides } from '@/services/device.service'
-import { closeOrphanedOverrideLogs } from '@/services/relayOverrideLog.service'
+import { closeOrphanedOverrideLogs, closeOverrideLogs } from '@/services/relayOverrideLog.service'
 import type { Role } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
@@ -113,6 +113,7 @@ describe('lịch sử can thiệp tay (ENV-FR-019)', () => {
     const { node, relay, t } = await seed()
     await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true }).expect(200)
     await SensorNode.updateOne({ _id: node._id }, { override_expiry: new Date(Date.now() - 1000) })
+    await RelayOverrideLog.updateOne({}, { started_at: new Date(Date.now() - 61_000) })
 
     expect(await expireManualOverrides()).toBe(1)
     expect((await RelayOverrideLog.findOne().lean())!).toMatchObject({ end_reason: 'EXPIRED' })
@@ -227,6 +228,14 @@ describe('gia hạn override đúng lúc job hết hạn chạy', () => {
     expect(after.override_expiry!.getTime()).toBeGreaterThan(Date.now())
     expect((await RelayOverrideLog.findOne().lean())!.ended_at).toBeNull()
     jest.restoreAllMocks()
+  })
+
+  it('đóng lịch sử tại hạn cũ không đóng override vừa bật sau hạn đó', async () => {
+    const { node, relay, t } = await seed()
+    await call('post', `${relay}/relay`, t.owner, { relayName: 'misting', state: true }).expect(200)
+    // Job đóng tại hạn của override trước (đã qua) trong khi bản ghi mới mở sau hạn đó
+    expect(await closeOverrideLogs([node._id], 'EXPIRED', new Date(Date.now() - 60_000))).toBe(0)
+    expect((await RelayOverrideLog.findOne().lean())!.ended_at).toBeNull()
   })
 })
 

@@ -243,14 +243,13 @@ void sensorTask(void *pvParameters) {
     // NH3/CO2 không còn vào bộ điều khiển (SRS v2.0.0, ENV-FR-022).
     static SignalFilter fTemp, fHum;
     static NoiseAnomalyDetector noiseDetector;
-    // static: lần đọc lỗi không ghi đè lần hợp lệ gần nhất (bộ lọc vẫn được gọi mỗi
-    // mẫu để giữ nhịp — nhận NAN thì nó giữ nguyên trạng thái)
+    // static: lần đọc lỗi không ghi đè lần hợp lệ gần nhất. Chỉ mẫu hợp lệ vào bộ lọc:
+    // mẫu hữu hạn ngoài dải (VD ẩm 150%) làm bẩn cửa sổ median + Kalman, cảm biến hồi
+    // phục rồi mà giá trị lọc vẫn ngoài dải → relay tắt thêm vài chu kỳ.
     static FilteredEnv filtered;
-    float filteredTemp = fTemp.update(data.temperature);
-    float filteredHum = fHum.update(data.humidity);
     if (data.isValid) {
-      filtered.temperature = filteredTemp;
-      filtered.humidity = filteredHum;
+      filtered.temperature = fTemp.update(data.temperature);
+      filtered.humidity = fHum.update(data.humidity);
       filtered.rawTemperature = data.temperature;
       filtered.rawHumidity = data.humidity;
       filtered.ready = fTemp.ready() && fHum.ready();

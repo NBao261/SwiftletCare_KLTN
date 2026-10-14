@@ -101,7 +101,7 @@ describe('liên kết bot Telegram', () => {
     await start(code, -100123, 'group')
     await start(code, -100456, 'supergroup')
     expect((await User.findById(user._id))!.telegram_chat_id).toBeUndefined()
-    expect(sent().every(m => !m.text.includes(user.email) && m.text.includes('chat riêng'))).toBe(true)
+    expect(sent()).toEqual([])
 
     await start(code) // mã vẫn dùng được trong chat riêng
     expect((await User.findById(user._id))!.telegram_chat_id).toBe('777')

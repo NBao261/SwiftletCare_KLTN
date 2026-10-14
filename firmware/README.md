@@ -64,7 +64,7 @@ Env `native` chỉ build các file C++ thuần (`pid/FuzzyControl`, `pid/PumpDry
 
 ## Lọc đầu vào + phát hiện ồn bất thường
 
-- `sensors/SignalFilter`: median 5 mẫu + Kalman vô hướng cho nhiệt độ và độ ẩm ở 1 Hz (sensorTask). **Chỉ bộ mờ dùng giá trị lọc**; telemetry vẫn gửi giá trị thô. Lần đọc thô không hợp lệ thì không dùng giá trị lọc cũ (xem trạng thái an toàn). Tắt/bật qua `config/update` key `fuzzy_input_filter` (NVS `fzFilter`) để so sánh A/B (ENV-FR-022).
+- `sensors/SignalFilter`: median 5 mẫu + Kalman vô hướng cho nhiệt độ và độ ẩm ở 1 Hz (sensorTask). **Chỉ bộ mờ dùng giá trị lọc**; telemetry vẫn gửi giá trị thô. Mẫu thô không hợp lệ (NaN hoặc ngoài dải vật lý) không được đưa vào bộ lọc; bộ mờ dùng giá trị lọc hợp lệ gần nhất tối đa `CONTROL_INPUT_MAX_AGE_CYCLES` chu kỳ (xem trạng thái an toàn). Tắt/bật qua `config/update` key `fuzzy_input_filter` (NVS `fzFilter`) để so sánh A/B (ENV-FR-022).
 - `sensors/NoiseAnomalyDetector`: `NOISE_ANOMALY` theo mức dB (ES-NOISE-01 không có dạng sóng) — **24 mức nền, mỗi giờ trong ngày một mức** (phân vị 90 tự học khi loa tắt, nên giờ chim ra/vào tổ vốn ồn không bị báo nhầm); ồn > mức của giờ đó + `noise_margin_db` (mặc định 15 dB) trong ≥ `noise_min_sec` (mặc định 10) trên 15 giây → MEDIUM (THREAT-FR-007). Đây là tín hiệu tham khảo chờ Domain Expert kiểm chứng, không phải kết luận về hành vi chim. Bỏ qua khi loa đang phát (theo trạng thái loa thật: lịch đổi giờ, nghe thử, bật tay). Giờ chưa học đủ ~1 giờ dữ liệu hoặc chưa có NTP thì chưa đánh giá; mức nền nằm trong RAM nên khởi động lại phải học lại ~1 ngày. Hai ngưỡng chỉnh được theo Zone (bảng dưới), cần hiệu chỉnh bằng dữ liệu thật.
 
 ## Tham số phát hiện chỉnh theo Zone (EXPERT-FR-008, firmware 1.3.0)
