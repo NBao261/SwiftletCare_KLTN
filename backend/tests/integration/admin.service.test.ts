@@ -362,6 +362,38 @@ describe('completeDeletionRequest', () => {
       const [done] = await auditActions('ACCOUNT_DELETED')
       expect(done.metadata).toMatchObject({ forced: true })
     })
+
+    it('hands a deleted technician\'s open tickets to a colleague of the region instead of stranding them', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { ...requested, assigned_regions: ['HCMC'] })
+      const colleague = await mkUser('colleague@test.vn', 'TECHNICIAN', { assigned_regions: ['HCMC'] })
+      const owner = await mkUser('owner@test.vn')
+      const farm = await mkFarm(owner, [], { region: 'HCMC' })
+      const ticket = await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS', responded_at: new Date() })
+
+      await completeDeletionRequest(String(admin._id), String(tech._id), { force: true })
+
+      const moved = (await Ticket.findById(ticket._id))!
+      expect(String(moved.assigned_to)).toBe(String(colleague._id))
+      expect(moved.status).toBe('NEW') // người mới phải tự xác nhận tiếp nhận
+      expect((await User.findById(tech._id))!.assigned_regions).toEqual([])
+      const [done] = await auditActions('ACCOUNT_DELETED')
+      expect(done.metadata).toMatchObject({ ticketsRerouted: 1 })
+    })
+
+    it('puts a deleted technician\'s ticket in the shared queue when nobody else covers the region', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { ...requested, assigned_regions: ['HCMC'] })
+      const owner = await mkUser('owner@test.vn')
+      const farm = await mkFarm(owner, [], { region: 'HCMC' })
+      const ticket = await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS' })
+
+      await completeDeletionRequest(String(admin._id), String(tech._id), { force: true })
+
+      const queued = (await Ticket.findById(ticket._id))!
+      expect(queued.assigned_to).toBeFalsy()
+      expect(queued.notes.at(-1)!.content).toContain('đã bị xoá')
+    })
   })
 
   it('can be re-run after failing midway without repeating finished farms', async () => {
