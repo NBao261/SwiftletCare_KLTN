@@ -24,10 +24,10 @@ export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean; r
 
   useEffect(() => {
     const offRelay = onRelayUpdate(() => {
-      void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] })
+      void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }, { cancelRefetch: false })
     })
     const offStatus = onDeviceStatusChange(() => {
-      void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] })
+      void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }, { cancelRefetch: false })
     })
     return () => { offRelay(); offStatus() }
   }, [queryClient])
