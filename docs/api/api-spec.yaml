@@ -3693,6 +3693,12 @@ paths:
             description: "TICKET-FR-009 — chỉ ticket vượt hạn xử lý: đã bị đánh dấu `is_sla_breached`, hoặc còn mở mà đã qua `sla_resolve_due_at` (job đánh dấu chạy 2 phút/lần). Ticket đã đóng chỉ tính theo cờ",
           }
         - {
+            name: nodeId,
+            in: query,
+            schema: { type: string },
+            description: "Chỉ ticket của 1 thiết bị (_id SensorNode/CameraNode) — ticket có `alert_id` trỏ tới cảnh báo của thiết bị đó. Ticket bảo trì/lắp đặt/tự tạo (gắn phòng, không gắn thiết bị) không có trong kết quả",
+          }
+        - {
             name: search,
             in: query,
             schema: { type: string, maxLength: 100 },
