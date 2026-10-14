@@ -4,7 +4,7 @@ import FixedRowsTable from '@/components/ui/FixedRowsTable'
 import ActionsMenu from '@/components/ui/ActionsMenu'
 import PinButton from '@/components/features/farm-owner/farms/PinButton'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 
@@ -20,7 +20,7 @@ interface HouseTableProps {
 
 /** Chế độ "Danh sách" của màn Cấu trúc Farm — cùng dữ liệu với lưới card, dựng bằng DataTable dùng chung */
 export default function HouseTable({ houses, staffByHouse, pinned, showYield, onTogglePin, onOpen }: HouseTableProps) {
-  const { t, num } = useT(farmDict)
+  const { t, num } = useTranslation(farmDict)
 
   const columns = useMemo<DataTableColumn<HouseNode>[]>(() => {
     const cols: DataTableColumn<HouseNode>[] = [
