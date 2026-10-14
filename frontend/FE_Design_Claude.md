@@ -3,20 +3,23 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.5.0 · **Cập nhật:** 25/09/2026 · **Thay thế:** v2.4.0
+**Phiên bản:** 2.6.0 · **Cập nhật:** 14/10/2026 · **Thay thế:** v2.5.0 · **Theo:** SRS v2.0.0 (mục 0)
 
 ---
 
 ## 0. Changelog
 
-### Chờ cập nhật theo SRS v2.0.0 (sau Review 1)
+### v2.5.0 → v2.6.0 (theo SRS v2.0.0, sau Review 1)
 
-> File này **chưa** được viết lại theo phạm vi mới; khi mâu thuẫn, `SwiftletCare_SRS.md` mục 0 thắng. Những điểm ảnh hưởng tới thiết kế FE:
->
-> - **Domain Expert thay Farm Operator** (role `DOMAIN_EXPERT`, phạm vi cả farm): bucket `domain-expert/`, tiền tố trang/layout `DomainExpert` (`DomainExpertLayout` thay `FarmOperatorLayout`). Chuyên gia chỉ đọc dashboard/analytics và có 3 màn riêng: báo cáo sức khỏe Zone, kiểm chứng cảnh báo suy luận, duyệt gợi ý hệ số.
-> - **Bỏ Marketplace và Buyer**: gỡ `MarketplacePage`, `ListingDetailPage`, `useMarketplace`, `marketplace.api`; trang Thu hoạch chỉ còn ghi nhận.
-> - **Bỏ**: cảnh báo thiên địch, relay sưởi, kênh Zalo/SMS trong màn cấu hình thông báo.
-> - **Mới cho Farm Owner**: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, kết luận của chuyên gia, live stream có khung + số đếm trực tiếp. `NOISE_ANOMALY` thay `BIRD_PANIC` và hiển thị kèm số đếm chim.
+> Khi file này mâu thuẫn với `SwiftletCare_SRS.md` mục 0, mục 0 thắng và file này phải sửa theo.
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Mô hình actor đích: Admin · Farm Owner · Domain Expert · Technician.** Domain Expert (role `DOMAIN_EXPERT`, cả farm, không có `zone_ids`) thay Farm Operator — Farm Operator chưa từng có code FE nên mọi chỗ nhắc `farm-operator/`/`FarmOperatorLayout` được thay bằng `domain-expert/`/`DomainExpertLayout`. Quyền theo SRS 4.4: chuyên gia **đọc** dashboard/analytics/live stream/thu hoạch, **kiểm chứng** cảnh báo suy luận, **viết kết luận**, **chỉnh** ngưỡng, hệ số mờ và tham số phát hiện (EXPERT-FR-008); **không** relay, không ticket, không ghi thu hoạch, không xác nhận (acknowledge) cảnh báo. Mục 12.1, 12.2, 12.4, 12.8, 12.9 viết lại theo trạng thái đích; nhóm role mới ở 12.8. |
+| 2 | **Bỏ Marketplace/Buyer** (chỉ giữ ghi nhận thu hoạch), **bỏ** cảnh báo thiên địch, relay sưởi, kênh Zalo/SMS. Cây 12.2 không còn `MarketplacePage`, `ListingDetailPage`, `marketplace.api`, `useMarketplace`; `pages/` gốc còn 2 trang. |
+| 3 | **Màn mới (đích, chưa có code):** Farm Owner — lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận của chuyên gia, live stream có khung + số đếm trực tiếp; Domain Expert — báo cáo sức khỏe Zone, kiểm chứng cảnh báo, duyệt gợi ý hệ số, chỉnh tham số phát hiện. `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim cùng khoảng thời gian. NH3/CO2 chỉ cảnh báo: UI ghi rõ là ngưỡng cảnh báo do chuyên gia đặt, không gắn với quạt. Mục 7 đã có các dòng tương ứng. |
+| 4 | **Code hiện tại chưa theo kịp** — còn `sales-staff/`, role `SALES_STAFF`, trang Marketplace, chưa có `DOMAIN_EXPERT`. Ghi vào nợ 13.14: PR mới **không** được mở rộng các phần này, chỉ gỡ/thay. |
+| 5 | **CI đã chạy lint + test + build** cho `frontend/` (`.github/workflows/ci.yml`); 13.13 và 12.8 sửa theo. Repo đã có test vitest (5 file), bỏ câu "chưa có test FE". |
 
 ### v2.4.0 → v2.5.0
 | # | Thay đổi |
@@ -382,7 +385,7 @@ Trước khi dựng chart: tự hỏi *"chuỗi thời gian, danh mục, tỷ tr
 | Bảng dữ liệu | `<DataTable />` (`components/ui/`) | Mọi role |
 | Popup xác nhận | `<ConfirmModal />` (`components/ui/`) | Toàn bộ 4 role đăng nhập |
 | Nhật ký/lịch sử | `<Timeline />` — **chưa tồn tại** | Admin Audit Log, Ticket notes, threshold_history |
-| Cấu hình ngưỡng cảm biến | `<ThresholdConfigCard />` — **chưa tồn tại** (hiện là `features/technician/devices/ThresholdsModal`) | Farm Owner (Zone) + Admin (mặc định hệ thống) — cùng component, khác quyền ghi |
+| Cấu hình ngưỡng cảm biến | `<ThresholdConfigCard />` — **chưa tồn tại** (hiện là `features/technician/devices/ThresholdsModal`) | Farm Owner + Domain Expert (Zone) + Admin (mặc định hệ thống) — cùng component, khác quyền ghi |
 | Stat card | `<StatCard />` — **chưa dùng chung** (đang là hàm cục bộ trong `AdminSystemHealthPage`) | Dashboard mọi role |
 
 Component "chưa tồn tại" là định hướng: PR **không** bị yêu cầu dùng chúng. Khi màn thứ hai cần đúng giao diện đó thì tách ra theo bảng 12.3 thay vì viết bản thứ hai.
@@ -489,7 +492,7 @@ module.exports = {
 
 ### 12.1. Nguyên tắc
 
-1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `farm-operator/` · `technician/` · `auth/` · `shared/` · `common/` (`farm-operator/` chỉ xuất hiện khi có file chỉ Operator dùng — phần lớn màn của Operator là trang Farm Owner mở với nhóm role hẹp hơn). Không gom theo feature, không để file rải rác cạnh trang dùng nó.
+1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `domain-expert/` · `technician/` · `auth/` · `shared/` · `common/`. `domain-expert/` chứa các màn **chỉ** chuyên gia dùng (kiểm chứng cảnh báo, viết kết luận, chỉnh tham số phát hiện); màn chuyên gia chỉ xem (dashboard, analytics, live stream, thu hoạch) là trang Farm Owner mở với nhóm role rộng hơn, không nhân bản sang `domain-expert/`. Không gom theo feature, không để file rải rác cạnh trang dùng nó.
 2. **Vào `shared/` chỉ khi từ 2 role trở lên thật sự dùng.** Một role dùng thì về thư mục role đó, dù file trông "chung chung" tới đâu. Đây là luật chống `shared/` phình thành bãi rác.
 3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** `TechnicianDevicesPage` vẫn được Farm Owner và Admin mở. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
 4. **Mọi import dùng alias `@/`**, không dùng đường dẫn tương đối `../`. Nhờ vậy dời file chỉ phải sửa đúng đường dẫn của chính nó.
@@ -502,7 +505,8 @@ frontend/src/
 ├── apis/                      Tầng HTTP — 1 file <resource>.api.ts mỗi tài nguyên
 │   ├── admin/                 users.api · system.api
 │   ├── auth/                  auth.api · invitations.api
-│   ├── farm-owner/            analytics.api · telemetry.api · harvests.api · marketplace.api
+│   ├── farm-owner/            analytics.api · telemetry.api · harvests.api
+│   ├── domain-expert/         (đích) endpoint chỉ chuyên gia gọi: kiểm chứng cảnh báo, kết luận, tham số phát hiện
 │   └── shared/                farms.api · alerts.api · devices.api · tickets.api
 │                              audioTracks.api (⚠ chỉ Technician dùng — nợ, xem 13.14)
 │
@@ -519,9 +523,10 @@ frontend/src/
 │   ├── features/              Component riêng của từng tính năng
 │   │   ├── admin/             users/ · system/ · tickets/
 │   │   ├── farm-owner/        dashboard/ · analytics/ · farms/ · harvest/
+│   │   ├── domain-expert/     (đích) alert-verdicts/ · health-reports/ · detection-tuning/
 │   │   └── technician/        devices/ · alerts/
 │   └── layouts/               Đúng 7 file — 4 của role, 3 dùng chung
-│                              AdminLayout · FarmOwnerLayout · FarmOperatorLayout · TechnicianLayout
+│                              AdminLayout · FarmOwnerLayout · DomainExpertLayout · TechnicianLayout
 │                              AppShell · AppSidebar · AppHeader
 │
 ├── pages/                     CHỈ chứa *Page.tsx
@@ -530,19 +535,21 @@ frontend/src/
 │   ├── farm-owner/            FarmOwnerDashboardPage · FarmOwnerAnalyticsPage · FarmOwnerFarmsPage
 │   │                          FarmOwnerFarmHousesPage · FarmOwnerFarmZonesPage
 │   │                          FarmOwnerHarvestPage · FarmOwnerLiveStreamPage
+│   ├── domain-expert/         (đích) DomainExpert<ChứcNăng>Page — kiểm chứng cảnh báo, báo cáo
+│   │                          sức khỏe Zone, duyệt gợi ý hệ số, tham số phát hiện
 │   ├── technician/            TechnicianDevicesPage · TechnicianAlertsPage
 │   │                          TechnicianTicketsPage · TechnicianTicketDetailPage
 │   ├── auth/                  LoginPage · RegisterPage · ForgotPasswordPage · InvitationPage
-│   └── (gốc)                  SettingsPage · MarketplacePage · ListingDetailPage · ForbiddenPage
-│                              — 4 trang không thuộc nghiệp vụ role nào
+│   └── (gốc)                  SettingsPage · ForbiddenPage
+│                              — 2 trang không thuộc nghiệp vụ role nào
 │
 ├── routes/                    1 file cho mỗi thư mục pages/<role>/
-│                              admin · farm-owner · technician · public
+│                              admin · farm-owner · domain-expert · technician · public
 │
 ├── hooks/                     React Query hooks bọc apis/
 │   ├── admin/                 useUsers · useSystem · useAccountRequests
 │   ├── auth/                  useAuth · useInvitations
-│   ├── farm-owner/            useAnalytics · useTelemetry · useHarvests · useMarketplace
+│   ├── farm-owner/            useAnalytics · useTelemetry · useHarvests
 │   ├── shared/                useFarms · useAlerts · useDevices · useTickets
 │   │                          useAlertNotifications (listener socket AppShell mount)
 │   │                          useAudioTracks (⚠ chỉ Technician dùng — nợ, xem 13.14)
@@ -590,7 +597,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
 - Tên file **mang luôn tên role sở hữu**: `AdminUsersPage.tsx`, `FarmOwnerHarvestPage.tsx`, `TechnicianDevicesPage.tsx`.
 - **Tên hàm component trùng tên file** — `export default function TechnicianDevicesPage()`.
-- `pages/` **không có** thư mục `shared/` hay `public/`. Trang nhiều role dùng chung đặt ở thư mục role sở hữu nghiệp vụ chính (Thiết bị/Cảnh báo/Ticket → `technician/`; Trang trại/Thu hoạch/Camera → `farm-owner/`).
+- `pages/` **không có** thư mục `shared/` hay `public/`. Trang nhiều role dùng chung đặt ở thư mục role sở hữu nghiệp vụ chính (Thiết bị/Cảnh báo/Ticket → `technician/`; Trang trại/Dashboard/Analytics/Thu hoạch/Camera → `farm-owner/`; kiểm chứng/kết luận/tham số phát hiện → `domain-expert/`).
 - Trang không thuộc nghiệp vụ role nào để thẳng ở gốc `pages/`; màn đăng nhập/đăng ký/nhận lời mời ở `pages/auth/`.
 - **Trong `pages/` không được có gì ngoài `*Page.tsx`.** Modal, tab, cột bảng, hằng số riêng của trang đều nằm ở `components/features/<role>/<area>/`.
 
@@ -624,20 +631,31 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 ### 12.8. Checklist khi thêm một màn hình mới
 
 1. Màn này thuộc nghiệp vụ role nào? → tạo `pages/<role>/<Role><ChứcNăng>Page.tsx`, tên hàm trùng tên file.
-2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts` (`OPS_ROLES`, `FARM_SIDE_ROLES`, `FARM_OWNER_ONLY`, `ADMIN_ONLY`, `HARVEST_ROLES`). Farm Operator nằm trong `OPS_ROLES`/`FARM_SIDE_ROLES`/`HARVEST_ROLES`, không nằm trong `FARM_OWNER_ONLY` (thành viên, cài đặt farm, đăng bán). **SRS v2.0.0:** khi đổi sang Domain Expert, chuyên gia chỉ thuộc nhóm đọc dashboard/analytics/thu hoạch và nhóm sửa ngưỡng/hệ số; không thuộc nhóm điều khiển relay, ticket hay ghi thu hoạch — định nghĩa lại các nhóm role cho khớp bảng phân quyền SRS mục 4.4.
+2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts`, chọn theo bảng phân quyền SRS 4.4:
+
+   | Nhóm | Gồm | Dùng cho | Trạng thái |
+   |---|---|---|---|
+   | `OPS_ROLES` | Farm Owner · Technician · Admin | Thiết bị/relay, xác nhận cảnh báo, ticket | Có |
+   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone | Tạo khi thêm `DOMAIN_EXPERT` |
+   | `EXPERT_ONLY` | Domain Expert | Kiểm chứng cảnh báo suy luận, viết kết luận, tham số phát hiện | Tạo khi thêm `DOMAIN_EXPERT` |
+   | `FARM_OWNER_ONLY` | Farm Owner | Thành viên, cài đặt farm | Có |
+   | `HARVEST_ROLES` | Farm Owner · Admin | Ghi nhận thu hoạch | Có |
+   | `ADMIN_ONLY` | Admin | Quản trị hệ thống | Có |
+
+   Domain Expert **không bao giờ** thuộc nhóm có hành động ghi vận hành (relay, ticket, ghi thu hoạch, acknowledge cảnh báo). Trang dùng chung có nút ghi (VD Thu hoạch mà chuyên gia chỉ xem) thì thêm chuyên gia vào `allow` và ẩn nút bằng `usePermission` (13.8).
 3. Cần lên sidebar? → thêm `{ label, path, icon }` vào `menuSections` trong `<Role>Layout.tsx`, và thêm dòng vào `MENU_ACCESS` (`constants/roles.ts`).
 4. Endpoint mới → `apis/<role>/<resource>.api.ts`; hook bọc React Query → `hooks/<role>/use<Resource>.ts`.
 5. Component riêng của màn → `components/features/<role>/<area>/`. **Không để trong `pages/`.**
 6. Kiểu dữ liệu mới → `types/<module>.types.ts` (theo module backend), barrel `types/index.ts` tự re-export.
 7. Form có kiểm tra hợp lệ → hàm thuần trong `validations/<role|common>/<tên>.validation.ts`, component chỉ gọi.
-8. Chạy `npm run lint`, `npx tsc --noEmit` và `npm run build` trước khi commit (xem 13.13). Repo chưa có test FE nào dù `npm test` (vitest) đã cấu hình.
+8. Chạy `npm run lint`, `npx tsc --noEmit`, `npx vitest run` và `npm run build` trước khi commit (xem 13.13) — CI chạy lại đúng các lệnh này.
 
 ### 12.9. Quy tắc đặt tên file
 
 **Nguyên tắc gốc:** file nào *là một thực thể của React* (component, page, layout) → **PascalCase**, viết hoa chữ cái đầu của mọi từ, không gạch nối, không gạch dưới. File nào *là một module hạ tầng* (endpoint, kiểu dữ liệu, store, hằng số, tiện ích) → giữ quy ước đuôi phân loại của hệ sinh thái React/TypeScript. Trộn hai quy ước này là **cố ý**, không phải thiếu nhất quán — xem 12.11.
 
 **Công thức tên:** tiền tố role **chỉ** dùng ở nơi thư mục không tự nói lên role.
-- **Page** trong `pages/<role>/` và **layout** của role → bắt đầu bằng tên role PascalCase: `Admin`, `FarmOwner`, `FarmOperator` (SRS v2.0.0: `DomainExpert`), `Technician` (URL không có tiền tố role nên tên file bù lại).
+- **Page** trong `pages/<role>/` và **layout** của role → bắt đầu bằng tên role PascalCase: `Admin`, `FarmOwner`, `DomainExpert`, `Technician` (URL không có tiền tố role nên tên file bù lại).
 - **Component trong `components/features/<role>/<area>/`** → **không** tiền tố role, chỉ tên feature (`ThresholdsModal`, `CreateUserModal`) — đường dẫn `features/<role>/` đã nói role. Đây là quy ước đang chạy ở toàn bộ file trong `features/`; không đổi tên file cũ.
 - File **không thuộc role nào** (`ui/`, `common/`, `auth/`, 4 trang gốc `pages/`) → không tiền tố role.
 - **Tên hàm export trùng đúng tên file**: `AdminUsersPage.tsx` → `export default function AdminUsersPage()`.
@@ -645,8 +663,8 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | Lớp | Quy tắc tên | Ví dụ |
 |---|---|---|
 | `pages/<role>/` | `[Role][ChứcNăng]Page.tsx` | `AdminUsersPage.tsx` · `FarmOwnerHarvestPage.tsx` · `TechnicianDevicesPage.tsx` |
-| `pages/auth/` + 4 trang gốc `pages/` | `[ChứcNăng]Page.tsx` — không role | `LoginPage.tsx` · `SettingsPage.tsx` · `ForbiddenPage.tsx` |
-| `components/features/<role>/<area>/` | `[TênFeature].tsx` — không tiền tố role; cột bảng `<area>Columns.tsx` (camelCase, vì là hàm build cột chứ không phải component) | `CreateUserModal.tsx` · `ListingPanel.tsx` · `RelayToggle.tsx` · `userColumns.tsx` |
+| `pages/auth/` + 2 trang gốc `pages/` | `[ChứcNăng]Page.tsx` — không role | `LoginPage.tsx` · `SettingsPage.tsx` · `ForbiddenPage.tsx` |
+| `components/features/<role>/<area>/` | `[TênFeature].tsx` — không tiền tố role; cột bảng `<area>Columns.tsx` (camelCase, vì là hàm build cột chứ không phải component) | `CreateUserModal.tsx` · `CreateHarvestModal.tsx` · `RelayToggle.tsx` · `userColumns.tsx` |
 | `components/layouts/` | `[Role]Layout.tsx` cho layout của role · `App[Phần].tsx` cho khung dùng chung | `AdminLayout.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` |
 | `components/ui/` · `components/common/` | `[TênFeature].tsx` — **không** tiền tố role | `DataTable.tsx` · `ConfirmModal.tsx` · `ZoneSwitcher.tsx` |
 | `hooks/<bucket>/` | `use[Resource].ts` — camelCase, **bắt buộc** bắt đầu bằng `use` | `useUsers.ts` · `useFarms.ts` · `usePermission.ts` |
@@ -656,7 +674,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `routes/` | `<role>.routes.tsx` | `admin.routes.tsx` · `farm-owner.routes.tsx` |
 | `stores/` | `<tên>Store.ts` — camelCase | `authStore.ts` · `alertStore.ts` |
 | `constants/` · `lib/` · `providers/` | camelCase, tên nói đúng nội dung | `auditActions.ts` · `chartTheme.ts` · `AppProviders.tsx` |
-| Thư mục | **kebab-case** cho tên role nhiều từ | `farm-owner/` · `farm-operator/` (SRS v2.0.0: `domain-expert/`) |
+| Thư mục | **kebab-case** cho tên role nhiều từ | `farm-owner/` · `domain-expert/` |
 
 **Hằng số riêng của một feature** đi kèm component trong cùng thư mục, đặt `<area>.constants.ts`: `users.constants.ts`, `harvest.constants.ts`. Hằng số dùng chung toàn app thì về `constants/`.
 
@@ -787,10 +805,10 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 ### 13.13. Trước khi mở PR
 
-- **[Bắt buộc]** Cả ba lệnh pass trong `frontend/`: `npm run lint` · `npx tsc --noEmit` · `npm run build`. CI chưa chạy lint/test nên người mở PR tự chịu trách nhiệm.
+- **[Bắt buộc]** Các lệnh sau pass trong `frontend/`: `npm run lint` (không lỗi; warning không chặn) · `npx tsc --noEmit` · `npx vitest run` · `npm run build`. CI (`.github/workflows/ci.yml`, job Frontend) chạy lại đúng các lệnh này trên mỗi PR sửa `frontend/`; PR có job đỏ thì chưa merge.
 - **[Bắt buộc]** PR điền đủ `.github/pull_request_template.md`; commit theo `.commitlintrc.json` (scope FE thường dùng: `web`, `pwa`).
 - **[Bắt buộc]** PR đổi giao diện đính kèm ảnh chụp màn hình (desktop + mobile width) vào mô tả PR.
-- **[Nên]** Logic thuần (validation, helper, format) mới thêm có test vitest `*.test.ts` cạnh file — repo chưa có test FE, mỗi PR thêm được một ít là tốt.
+- **[Nên]** Logic thuần (validation, helper, format) mới thêm có test vitest `*.test.ts` cạnh file (đã có 5 file mẫu, VD `validations/common/fuzzyTuning.validation.test.ts`).
 
 ### 13.14. Nợ đã biết — không tính vào PR không đụng tới
 
@@ -802,8 +820,12 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | `StatCard` cục bộ trong `AdminSystemHealthPage` | Mục 9 muốn dùng chung | Tách ra khi màn thứ hai cần |
 | `features/farm-owner/dashboard/BirdVisionCard.tsx` — `bg-[#D2F93A]` | Hex hardcode (13.7) | Đổi sang token `bg-lime-500` (cùng giá trị) |
 | ~230 chỗ `text-xs`/`text-sm`/`text-lg`/`text-2xl`… | Lệch thang chữ 2.8 (13.7 [Nên]) | Đổi dần khi sửa file đó |
+| `pages/sales-staff/` · `routes/sales-staff.routes.tsx` · `SalesStaffLayout` · role `SALES_STAFF` trong `types/common.types.ts`, `types/ticket.types.ts`, `INVITE_ROLE_LABEL` | Role đã bỏ từ SRS v1.23.0 | Gỡ trong PR thêm `DOMAIN_EXPERT` (SRS §0.5 Web) |
+| `MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · `features/farm-owner/harvest/` phần đăng bán (`CreateListingModal`, `ListingPanel`, `ListingsTab`, `TraceCodeRow`) | Bỏ ở SRS v2.0.0 (§0.2 #1) | Gỡ cùng lúc backend gỡ `/marketplace/*`; trang Thu hoạch chỉ còn ghi nhận |
+| Chưa có role `DOMAIN_EXPERT`, `DomainExpertLayout`, `FARM_SIDE_ROLES`/`EXPERT_ONLY` | Mục 12 mô tả trạng thái đích | PR thêm role theo checklist "Thêm role mới" ở 12.10 |
+| Nhãn `BIRD_PANIC`, relay sưởi, tùy chọn kênh Zalo/SMS trên giao diện | Bỏ/đổi tên ở SRS v2.0.0 | Đổi sang `NOISE_ANOMALY`, gỡ sưởi và Zalo/SMS khi backend đổi enum |
 
-PR đụng vào file trong bảng thì **nên** trả nợ luôn; bắt buộc chỉ khi PR làm nợ nặng thêm (VD thêm consumer thứ hai vẫn chỉ của Technician vào `shared/`).
+PR đụng vào file trong bảng thì **nên** trả nợ luôn; bắt buộc chỉ khi PR làm nợ nặng thêm (VD thêm consumer thứ hai vẫn chỉ của Technician vào `shared/`, hoặc thêm màn/tính năng mới cho Sales Staff, Marketplace, sưởi, Zalo/SMS — các phần này chỉ được gỡ, không được mở rộng).
 
 ---
 
