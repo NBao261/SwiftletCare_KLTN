@@ -158,6 +158,34 @@ describe('adminOverrideTicket called directly (not through the route)', () => {
     expect((await Ticket.findById(ticket._id))!.status).toBe('IN_PROGRESS')
   })
 
+  it('ép trạng thái khi đổi người thì mốc tiếp nhận là lúc gán, không mượn mốc của người cũ', async () => {
+    const { token, ticket, inRegion } = await seed()
+    // Người cũ tiếp nhận từ hôm qua — giữ mốc đó thì responded_at < assigned_at, KPI phản hồi âm
+    await Ticket.updateOne({ _id: ticket._id }, {
+      assigned_to: new mongoose.Types.ObjectId(), status: 'IN_PROGRESS', responded_at: new Date(Date.now() - 86400_000),
+    })
+
+    await override(token, ticket._id, {
+      assigned_to: String(inRegion._id), status: 'IN_PROGRESS', reason: 'Đang xử lý tiếp',
+    }).expect(200)
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.responded_at!.getTime()).toBeGreaterThanOrEqual(saved.assigned_at!.getTime())
+  })
+
+  it('đổi người trên ticket sự cố thì bỏ lịch hẹn của người cũ và báo Farm Owner', async () => {
+    const { token, ticket, inRegion, owner } = await seed()
+    await Ticket.updateOne({ _id: ticket._id }, {
+      type: 'SENSOR_FAULT', assigned_to: new mongoose.Types.ObjectId(), status: 'IN_PROGRESS', scheduled_visit_at: vnAt(1),
+    })
+    ;(notifyUser as jest.Mock).mockClear()
+
+    await override(token, ticket._id, { assigned_to: String(inRegion._id), reason: 'Người cũ nghỉ ốm' }).expect(200)
+    const saved = (await Ticket.findById(ticket._id))!
+    expect(saved.scheduled_visit_at).toBeUndefined()
+    const notified = (notifyUser as jest.Mock).mock.calls.filter(c => String(c[0]) === String(owner._id))
+    expect(notified.some(c => c[1].title === 'Lịch hẹn kỹ thuật đã huỷ')).toBe(true)
+  })
+
   it('không mở lại ticket đã đóng khi gán lại mà không nêu status', async () => {
     const { token, ticket, inRegion } = await seed()
     await Ticket.updateOne({ _id: ticket._id }, { status: 'CLOSED', closed_at: new Date() })
