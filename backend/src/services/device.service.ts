@@ -898,7 +898,8 @@ export async function getSystemStatus() {
     const zone  = zoneById.get(zoneId)
     const house = zone ? houseById.get(String(zone.house_id)) : undefined
     const farm  = house ? farmById.get(String(house.farm_id)) : undefined
-    return { farm_name: farm?.name ?? '', house_name: house?.name ?? '', zone_name: zone?.name ?? '' }
+    // zone_id: trang nhà yến của Admin gom thiết bị theo phòng (tên phòng có thể trùng giữa các nhà)
+    return { zone_id: zoneId, farm_name: farm?.name ?? '', house_name: house?.name ?? '', zone_name: zone?.name ?? '' }
   }
 
   return {

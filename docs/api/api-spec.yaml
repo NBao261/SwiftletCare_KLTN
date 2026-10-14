@@ -2409,6 +2409,7 @@ paths:
                                   }
                                 last_heartbeat: { type: string, format: date-time, nullable: true }
                                 rssi: { type: number, nullable: true, description: "Chỉ có với sensor" }
+                                zone_id: { type: string }
                                 farm_name: { type: string }
                                 house_name: { type: string }
                                 zone_name: { type: string }
