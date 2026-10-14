@@ -31,6 +31,14 @@
         12px vì chữ thường trông nhỏ hơn chữ hoa cùng cỡ; line-height 16px như bản 11px cũ, không xô layout ── */
   .label-caption { @apply text-xs font-semibold text-warmGray; }
 
+  /* ── Chữ dài 1 dòng mờ dần thay vì cắt "…" — cùng cách bảng SensorAlertLogTable (Dashboard Farm Owner): không tràn
+        sang cột sau, pr-3 chừa khe trước cột kế. Đặt title ở phần tử để rê chuột vẫn đọc đủ. ── */
+  .text-fade {
+    @apply block overflow-hidden whitespace-nowrap pr-3;
+    mask-image: linear-gradient(to right, black 82%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 82%, transparent 100%);
+  }
+
   /* ── Input (mục 2.2.5, khung rounded-xl) ───────────────────────────────── */
   .input {
     @apply bg-white border border-warmGray/25 rounded-xl px-4 py-2.5 text-charcoal
