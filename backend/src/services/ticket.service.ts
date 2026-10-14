@@ -2,7 +2,8 @@ import { Types } from 'mongoose'
 import { Ticket, ITicket } from '@/models/ticket.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
-import { SensorNode } from '@/models/device.model'
+import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
+import { Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import {
@@ -39,13 +40,37 @@ const DEFAULT_PRIORITY: Record<TicketType, TicketPriority> = {
  * TICKET-FR-006, SLA-NFR-001 — SLA do Admin cấu hình (system_settings), không
  * hard-code. Chưa cấu hình thì rơi về DEFAULT_SLA trong sla.util.
  */
-async function slaDueDates(priority: TicketPriority, from: Date) {
+async function slaDueDates(priority: TicketPriority, from: Date, resolveFrom: Date = from) {
   const sla = await getSlaHours()
-  const base = from.getTime()
   return {
-    sla_response_due_at: new Date(base + sla[priority].response_hours * 3600_000),
-    sla_resolve_due_at:  new Date(base + sla[priority].resolve_hours * 3600_000),
+    sla_response_due_at: new Date(from.getTime() + sla[priority].response_hours * 3600_000),
+    sla_resolve_due_at:  new Date(resolveFrom.getTime() + sla[priority].resolve_hours * 3600_000),
   }
+}
+
+/**
+ * TICKET-FR-013 — ticket bảo trì được sinh TRƯỚC giờ hẹn (`MAINTENANCE_LEAD_DAYS`, mặc
+ * định 3 ngày ≈ đúng 72h của SLA P3). Tính hạn xử lý từ lúc tạo thì hạn rơi ngay sau giờ
+ * hẹn chưa tới 1 tiếng (job chạy mỗi giờ), Technician đến đúng hẹn vẫn gần như chắc chắn
+ * bị tính vượt SLA. Nên hạn xử lý tính từ giờ hẹn — việc chỉ bắt đầu được từ đó; hạn phản
+ * hồi (xác nhận tiếp nhận) vẫn tính từ lúc tạo. Dùng giờ hẹn lúc tạo ticket: Technician
+ * tự dời lịch về sau không kéo dài được hạn của mình.
+ */
+function maintenanceResolveFrom(ticket: Pick<ITicket, 'type' | 'created_at' | 'scheduled_visit_at'>): Date {
+  return ticket.type === 'MAINTENANCE' && ticket.scheduled_visit_at ? ticket.scheduled_visit_at : ticket.created_at
+}
+
+/**
+ * Ticket chuyển sang người khác thì quay về NEW để người mới xác nhận tiếp nhận — hạn
+ * phản hồi phải tính lại từ lúc giao cho họ. Giữ hạn cũ (tính từ lúc tạo) thì ticket tạo
+ * từ hôm trước bị đánh dấu trễ phản hồi ngay khi vừa chuyển, và Admin nhận cảnh báo
+ * "chưa được tiếp nhận" cho người vừa nhận việc. Hạn xử lý giữ nguyên: đó là cam kết với
+ * khách, đổi người không làm khách phải đợi thêm.
+ */
+async function restartResponseSla(ticket: ITicket): Promise<void> {
+  const { sla_response_due_at } = await slaDueDates(ticket.priority, ticket.assigned_at ?? new Date())
+  ticket.sla_response_due_at = sla_response_due_at
+  ticket.is_sla_response_breached = false
 }
 
 /** TICKET-FR-007 — chỉ cho đi tiến theo thứ tự, không nhảy cóc/lùi tuỳ tiện */
@@ -66,6 +91,23 @@ const VISIT_TYPES: TicketType[] = ['INSTALLATION', 'MAINTENANCE']
 /** Đã (hoặc sẽ) có buổi đến hiện trường → phải nghiệm thu SAT trước khi đóng (TICKET-FR-010, Flow 9 bước 6b) */
 function requiresFieldVisit(ticket: Pick<ITicket, 'type' | 'scheduled_visit_at'>): boolean {
   return VISIT_TYPES.includes(ticket.type) || Boolean(ticket.scheduled_visit_at)
+}
+
+type SatItem = 'modbus_addresses_ok' | 'camera_rtsp_ok' | 'lte_connection_ok' | 'relay_test_ok'
+const SAT_ITEMS_ALWAYS: SatItem[] = ['modbus_addresses_ok', 'lte_connection_ok', 'relay_test_ok']
+
+/**
+ * TICKET-FR-010 — mục camera chỉ bắt buộc khi nơi của ticket thật sự có camera: Zone
+ * của ticket, hoặc cả farm nếu ticket cấp farm. Nhà yến chỉ lắp cảm biến mà vẫn đòi
+ * "camera RTSP ổn định" thì Technician buộc phải tick một mục không có thật để đóng
+ * ticket, và dữ liệu nghiệm thu nói sai về hiện trường.
+ */
+async function requiredSatItems(ticket: Pick<ITicket, 'farm_id' | 'zone_id'>): Promise<SatItem[]> {
+  const zoneIds = ticket.zone_id
+    ? [ticket.zone_id]
+    : await Zone.find({ farm_id: ticket.farm_id }).distinct('_id')
+  const hasCamera = await CameraNode.exists({ zone_id: { $in: zoneIds }, ...IN_SERVICE })
+  return hasCamera ? [...SAT_ITEMS_ALWAYS, 'camera_rtsp_ok'] : SAT_ITEMS_ALWAYS
 }
 
 /**
@@ -229,7 +271,8 @@ export async function createMaintenanceTicket(input: {
   farm_id: string; zone_id?: string; scheduled_visit_at: Date; description: string
 }): Promise<ITicket> {
   const priority = DEFAULT_PRIORITY.MAINTENANCE
-  const sla = await slaDueDates(priority, new Date())
+  // Hạn xử lý tính từ giờ hẹn, không phải lúc tạo — xem maintenanceResolveFrom
+  const sla = await slaDueDates(priority, new Date(), input.scheduled_visit_at)
   const assignedTo = await routeToTechnician(input.farm_id)
 
   const ticket = await Ticket.create({
@@ -577,11 +620,10 @@ export async function updateStatus(
   }
 
   if (newStatus === 'CLOSED' && requiresFieldVisit(ticket)) {
-    const sat = ticket.sat_checklist
-    const allPassed = sat.modbus_addresses_ok && sat.camera_rtsp_ok && sat.lte_connection_ok && sat.relay_test_ok
-    if (!allPassed) {
+    const required = await requiredSatItems(ticket)
+    if (!required.every(item => ticket.sat_checklist[item])) {
       // Flow 9b case 6a / Flow 9 bước 6b — không bàn giao khi nghiệm thu tại hiện trường chưa đạt
-      throw ConflictError('Chưa thể đóng ticket: checklist nghiệm thu (SAT) tại hiện trường chưa đạt đủ 4 mục')
+      throw ConflictError(`Chưa thể đóng ticket: checklist nghiệm thu (SAT) tại hiện trường chưa đạt đủ ${required.length} mục`)
     }
   }
 
@@ -697,6 +739,7 @@ export async function requestReassign(ticketId: string, user: CurrentUser, reaso
   trackAssigneeChange(ticket, from)
   ticket.status = 'NEW'
   ticket.responded_at = undefined
+  await restartResponseSla(ticket)
   ticket.notes.push({
     author_id: user._id as never,
     content: `Yêu cầu gán lại: ${reason}. ${to ? 'Đã chuyển cho Technician khác.' : 'Không còn Technician phù hợp — chờ Administrator điều phối.'}`
@@ -760,11 +803,12 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
   return ticket
 }
 
-export type CoverageChangeReason = 'REGION_UNASSIGNED' | 'FARM_REGION_CHANGED'
+export type CoverageChangeReason = 'REGION_UNASSIGNED' | 'FARM_REGION_CHANGED' | 'ACCOUNT_DELETED'
 
 const COVERAGE_NOTE: Record<CoverageChangeReason, string> = {
   REGION_UNASSIGNED: 'Technician đang phụ trách không còn phụ trách khu vực của farm này.',
   FARM_REGION_CHANGED: 'Farm đã chuyển sang khu vực khác, Technician cũ không còn phụ trách.',
+  ACCOUNT_DELETED: 'Tài khoản Technician đang phụ trách đã bị xoá theo yêu cầu.',
 }
 
 export interface CoverageRerouteResult {
@@ -826,6 +870,7 @@ export async function rerouteTicketsOutOfCoverage(
     trackAssigneeChange(ticket, from)
     ticket.status = 'NEW'
     ticket.responded_at = undefined
+    await restartResponseSla(ticket)
     ticket.notes.push({
       author_id: actorId as never,
       content: `${COVERAGE_NOTE[reason]} ${to ? 'Đã chuyển cho Technician phụ trách vùng.' : 'Không còn Technician phù hợp — chờ Administrator điều phối.'}`
@@ -1184,6 +1229,8 @@ export async function adminOverrideTicket(
   const previousAssignee = assigneeIdOf(ticket)
 
   const changes: Record<string, unknown> = {}
+  let droppedVisit: Date | undefined
+  let responseSlaRestarted = false
   if (updates.assigned_to !== undefined) {
     const technician = await User.findById(updates.assigned_to).select('role is_active assigned_regions').lean()
     if (!technician || technician.role !== 'TECHNICIAN' || !technician.is_active) {
@@ -1219,22 +1266,42 @@ export async function adminOverrideTicket(
     // [5] Chỉ làm mới mốc giao việc khi thật sự đổi người: gán lại đúng người cũ
     // mà dời `assigned_at` về hiện tại sẽ khiến `responded_at` cũ nằm TRƯỚC mốc
     // giao, và KPI thời gian phản hồi cộng vào một khoảng âm.
-    if (assigneeChanged) ticket.assigned_at = new Date()
+    if (assigneeChanged) {
+      ticket.assigned_at = new Date()
+      // Lịch hẹn của ticket sự cố là cam kết của người cũ — bỏ như requestReassign/
+      // reroute, nếu không người mới thừa hưởng buổi hẹn chưa từng nhận và bị ràng
+      // buộc SAT cho buổi đó. Admin muốn giữ lịch thì gửi kèm scheduled_visit_at.
+      if (ticket.scheduled_visit_at && !VISIT_TYPES.includes(ticket.type) && updates.scheduled_visit_at === undefined) {
+        droppedVisit = ticket.scheduled_visit_at
+        changes.scheduled_visit_at = { before: droppedVisit, after: null }
+        ticket.scheduled_visit_at = undefined
+      }
+      // Mốc tiếp nhận của người cũ không thuộc về người mới. Admin ép luôn trạng thái
+      // đã tiếp nhận thì coi như tiếp nhận ngay lúc gán; còn lại người mới tự xác nhận
+      // và hạn phản hồi tính từ lúc giao cho họ.
+      const acceptedByAdmin = updates.status !== undefined && updates.status !== 'NEW'
+      ticket.responded_at = acceptedByAdmin ? new Date() : undefined
+      if (!acceptedByAdmin) {
+        await restartResponseSla(ticket)
+        responseSlaRestarted = true
+      }
+    }
     trackAssigneeChange(ticket, previousAssignee)
     // Người mới phải tự xác nhận tiếp nhận, trừ khi Admin ép luôn trạng thái
     if (assigneeChanged && updates.status === undefined) {
       changes.status = { before: ticket.status, after: 'NEW' }
       ticket.status = 'NEW'
-      ticket.responded_at = undefined
     }
   }
   if (updates.priority !== undefined && updates.priority !== ticket.priority) {
     // SLA tính theo priority (TICKET-FR-006) và mốc là lúc tạo ticket, không
     // phải lúc Admin sửa — nếu không, nâng P3→P1 vẫn giữ hạn 72h cũ.
-    const sla = await slaDueDates(updates.priority, ticket.created_at)
+    const sla = await slaDueDates(updates.priority, ticket.created_at, maintenanceResolveFrom(ticket))
     changes.priority = { before: ticket.priority, after: updates.priority }
     ticket.priority = updates.priority
-    ticket.sla_response_due_at = sla.sla_response_due_at
+    // Vừa đổi người ở trên thì hạn phản hồi tính từ lúc giao, theo priority mới
+    if (responseSlaRestarted) await restartResponseSla(ticket)
+    else ticket.sla_response_due_at = sla.sla_response_due_at
     ticket.sla_resolve_due_at  = sla.sla_resolve_due_at
     changes.sla_resolve_due_at = ticket.sla_resolve_due_at
   }
@@ -1294,6 +1361,13 @@ export async function adminOverrideTicket(
       title: 'Lịch hẹn kỹ thuật đã thay đổi',
       body: `Administrator đổi lịch hẹn sang ${formatVisitTime(ticket.scheduled_visit_at)}. Lý do: ${updates.reason}`,
     }, assignee ? [assignee] : [])
+  }
+  // Farm Owner đang chờ buổi hẹn đó — phải biết nó không còn hiệu lực (như requestReassign)
+  if (droppedVisit && droppedVisit.getTime() > Date.now()) {
+    await notifyVisitChange(ticket, {
+      title: 'Lịch hẹn kỹ thuật đã huỷ',
+      body: `Ticket được chuyển sang Technician khác nên buổi hẹn lúc ${formatVisitTime(droppedVisit)} không còn hiệu lực. Technician mới sẽ hẹn lại.`,
+    })
   }
   return ticket.populate('assigned_to', 'full_name email')
 }

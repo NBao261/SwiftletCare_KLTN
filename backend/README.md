@@ -111,7 +111,7 @@ Request → routes/*.ts (validate + RBAC) → controllers/*.ts (parse req, gọi
 
 **Nguyên tắc bắt buộc khi thêm/sửa code:**
 
-- **Controller không chứa business logic.** Chỉ: lấy `req.params/body/query/user`, gọi đúng 1 hàm service, trả `res.json({success, data, meta?})`, và `catch (err) { next(err) }` — không tự viết try/catch trả lỗi thủ công.
+- **Controller không chứa business logic.** Chỉ: lấy `req.params/body/query/user`, gọi đúng 1 hàm service, trả `res.json({success, data, meta?})`. Mọi handler bọc trong `asyncHandler` (`utils/asyncHandler.util.ts`, tự chuyển lỗi sang `next`) — không tự viết `try { … } catch (err) { next(err) }`, không tự format lỗi trong controller.
 - **Service throw lỗi bằng `utils/appError.util.ts`** (`NotFoundError`, `ForbiddenError`, `ConflictError`, `BadRequestError`, `UnauthorizedError`) thay vì tự set status code — `middlewares/errorHandler.middleware.ts` tự bắt và format response đúng chuẩn.
 - **Response envelope thống nhất** (SRS §9.0): `{ success: boolean, data?, meta?: {page,limit,total}, error?: {code, message} }`. Mọi endpoint đều theo format này.
 - **MQTT handler cũng theo nguyên tắc tương tự**: `mqtt/handlers/*.ts` chỉ parse `topicParts`/`message` rồi gọi 1 hàm service (`telemetry.handler.ts` → `telemetry.service.ts`'s `ingestTelemetry()` là ví dụ mẫu) — không query DB trực tiếp trong handler.
@@ -130,12 +130,10 @@ export async function getThing(id: string, user: CurrentUser) {
 }
 
 // controllers/things.controller.ts
-export async function getOne(req: Request, res: Response, next: NextFunction) {
-  try {
-    const thing = await thingService.getThing(req.params.id, req.user)
-    res.json({ success: true, data: thing })
-  } catch (err) { next(err) }
-}
+export const getOne = asyncHandler(async (req: Request, res: Response) => {
+  const thing = await thingService.getThing(req.params.id, req.user)
+  res.json({ success: true, data: thing })
+})
 ```
 
 ## Cấu trúc thư mục

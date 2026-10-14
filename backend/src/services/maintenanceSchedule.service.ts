@@ -55,18 +55,24 @@ async function getOwnedSchedule(id: string, user: CurrentUser): Promise<IMainten
   return schedule
 }
 
-export async function createSchedule(user: CurrentUser, input: MaintenanceScheduleInput): Promise<IMaintenanceSchedule> {
-  const farmId = String(input.farm_id)
-  await assertFarmAccess(farmId, user)
-  if (input.zone_id) await assertZoneInFarm(input.zone_id, farmId)
-
-  // Hai lịch giống hệt nhau sinh 2 ticket cho cùng một việc mỗi chu kỳ
+/** Hai lịch đang chạy giống hệt nhau sinh 2 ticket cho cùng một việc mỗi chu kỳ */
+async function assertNoDuplicateSchedule(
+  farmId: unknown, zoneId: unknown, description: string | undefined, excludeId?: unknown,
+): Promise<void> {
   const duplicate = await MaintenanceSchedule.findOne({
-    farm_id: farmId, zone_id: input.zone_id ?? null, description: input.description, is_active: true,
+    farm_id: farmId, zone_id: zoneId ?? null, description, is_active: true,
+    ...(excludeId ? { _id: { $ne: excludeId } } : {}),
   }).select('_id next_due_at').lean()
   if (duplicate) {
     throw ConflictError(`Farm này đã có lịch bảo trì cùng nội dung đang hoạt động (hạn kế tiếp ${formatVisitTime(duplicate.next_due_at)})`)
   }
+}
+
+export async function createSchedule(user: CurrentUser, input: MaintenanceScheduleInput): Promise<IMaintenanceSchedule> {
+  const farmId = String(input.farm_id)
+  await assertFarmAccess(farmId, user)
+  if (input.zone_id) await assertZoneInFarm(input.zone_id, farmId)
+  await assertNoDuplicateSchedule(farmId, input.zone_id, input.description)
 
   const schedule = await MaintenanceSchedule.create({
     farm_id: farmId,
@@ -94,6 +100,12 @@ export async function updateSchedule(id: string, user: CurrentUser, input: Maint
   if (input.interval_days !== undefined) schedule.interval_days = input.interval_days
   if (input.next_due_at !== undefined) schedule.next_due_at = assertValidVisitTime(input.next_due_at)
   if (input.is_active !== undefined) schedule.is_active = input.is_active
+  // Đổi zone/nội dung hoặc bật lại lịch đã tạm dừng có thể trùng một lịch đang chạy —
+  // createSchedule chặn được thì sửa cũng phải chặn, không thì vẫn ra ticket đôi mỗi kỳ
+  const identityChanged = input.zone_id !== undefined || input.description !== undefined || input.is_active === true
+  if (identityChanged && schedule.is_active) {
+    await assertNoDuplicateSchedule(schedule.farm_id, schedule.zone_id, schedule.description, schedule._id)
+  }
   await schedule.save()
 
   await logAction(user._id, 'MAINTENANCE_SCHEDULE_UPDATED', 'maintenance_schedule', id, {
@@ -152,8 +164,13 @@ export async function generateDueMaintenanceTickets(now = new Date()): Promise<n
     let previous: ITicket | null = null
     let ticket: ITicket
     try {
+      // Chỉ là "lỡ" khi giờ hẹn của kỳ trước đã qua. Chu kỳ ngắn hơn LEAD_DAYS (VD bảo
+      // trì hằng ngày, tạo trước 3 ngày) thì ticket kỳ trước vẫn đang chờ tới lịch —
+      // còn mở là đúng, coi là dồn việc sẽ ghi chú sai và báo Admin nhầm mỗi kỳ.
       previous = schedule.last_ticket_id
-        ? await Ticket.findOne({ _id: schedule.last_ticket_id, status: { $ne: 'CLOSED' } })
+        ? await Ticket.findOne({
+          _id: schedule.last_ticket_id, status: { $ne: 'CLOSED' }, scheduled_visit_at: { $lt: now },
+        })
         : null
 
       // Zone có thể bị xoá sau khi lập lịch — ticket trỏ vào zone không còn khiến

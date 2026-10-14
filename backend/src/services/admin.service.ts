@@ -195,12 +195,25 @@ export async function completeDeletionRequest(
     { $pull: { members: { user_id: user._id } } },
   )
 
+  // Technician bị xoá (kể cả khi Admin gửi force vì họ còn ticket mở): ticket đang giao
+  // không được ở lại với một tài khoản đã ẩn danh — không ai xử lý, SLA vẫn chạy. Gỡ vùng
+  // phụ trách TRƯỚC, nếu không rerouteTicketsOutOfCoverage coi họ "vẫn phụ trách" và bỏ qua.
+  // Chạy trước bước ẩn danh để lỗi giữa chừng vẫn chạy lại được (gỡ vùng là idempotent).
+  if (user.role === 'TECHNICIAN') {
+    if (user.assigned_regions?.length) {
+      user.assigned_regions = []
+      await user.save()
+    }
+    await rerouteTicketsOutOfCoverage({ technicianId: userId }, adminId, 'ACCOUNT_DELETED')
+  }
+
   // Tổng qua MỌI lần chạy (kể cả lần lỗi giữa chừng trước đó), đọc từ audit từng farm — tính TRƯỚC bước
   // ẩn danh không thể đảo ngược để một lỗi đọc DB ở đây vẫn cho phép chạy lại. Đây là số liệu theo audit
   // (ghi audit là best-effort, xem logAction), không phải nguồn sự thật về dữ liệu farm.
-  const [farmsTransferred, farmsDeleted] = await Promise.all([
+  const [farmsTransferred, farmsDeleted, ticketsRerouted] = await Promise.all([
     AuditLog.countDocuments({ action: 'FARM_OWNERSHIP_TRANSFERRED', 'metadata.fromUserId': userId }),
     AuditLog.countDocuments({ action: 'FARM_SOFT_DELETED', 'metadata.ownerId': userId }),
+    AuditLog.countDocuments({ action: 'TICKET_REROUTED', 'metadata.from': userId, 'metadata.reason': 'ACCOUNT_DELETED' }),
   ])
 
   const contactEmail = user.email // giữ lại để gửi thông báo cuối sau khi ẩn danh
@@ -233,7 +246,7 @@ export async function completeDeletionRequest(
   }, { email: contactEmail, emailOnly: true })
 
   await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, {
-    farmsTransferred, farmsDeleted, forced: opts.force === true,
+    farmsTransferred, farmsDeleted, ticketsRerouted, forced: opts.force === true,
   })
   return user
 }

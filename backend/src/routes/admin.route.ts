@@ -8,6 +8,7 @@ import type { Role } from '@/types'
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
 
+// Đủ mọi role của users.role — thiếu 1 role thì Admin không lọc được loại tài khoản đó (422)
 const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN']
 // Không chặn cứng limit > 100 — paginate() tự kẹp về mức tối đa như mọi list khác
 const paginationQuery = [

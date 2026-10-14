@@ -227,10 +227,10 @@ Backend and firmware match SRS v2 (§0.5 backend/firmware lists are done except 
 
 ## Conventions
 
-- Commit messages follow Conventional Commits with a project-specific `type`/`scope` enum enforced by commitlint (`.commitlintrc.json`). CI (`.github/workflows/ci.yml`) validates them via `wagoid/commitlint-github-action`, plus runs a gitleaks secret scan; lint/test CI jobs are still commented-out placeholders, not yet active — `npm run lint`/`npm test` must be run locally.
+- Commit messages follow Conventional Commits with a project-specific `type`/`scope` enum enforced by commitlint (`.commitlintrc.json`). CI (`.github/workflows/ci.yml`) validates them via `wagoid/commitlint-github-action`, plus runs a gitleaks secret scan. It also runs, only for the modules a PR touches (`dorny/paths-filter`): **backend** `npm run lint` · `build:check` · `npm test` (integration tests use `mongodb-memory-server`), **frontend** `npm run lint` · `tsc --noEmit` · `vitest run` · `npm run build`, **firmware** `pio test -e native`. Mobile has no lockfile yet, so it has no CI job. Run the same commands locally before pushing.
 
 ## Working with Claude
 
 - Reply to the user in Vietnamese.
-- Review a PR with `/review-pr <PR number>` (`.claude/commands/review-pr.md`). When reviewing, read code and diffs only — never run `npm install`/`npm ci`, builds or test suites.
+- Review a PR with `/review-pr <PR number>` (`.claude/commands/review-pr.md`). That file is the single review procedure: the "PR auto-review" routine on claude.ai reads it too, so change review behaviour there, not in the routine. It judges each module by its own rules plus SRS §0 scope, and posts a COMMENT-only review on the owner's own PRs. A PR-triggered routine run is checked out at the PR's head, so the routine must read `review-pr.md` from the PR's base branch (`git show origin/<base>:.claude/commands/review-pr.md`), never from the checkout — otherwise a PR could change the rules it is reviewed by. Routine runs have no built-in `/code-review`; the command then falls back to a find-then-verify review with `Agent` subagents. When reviewing, read code and diffs only — never run `npm install`/`npm ci`, builds or test suites.
 - Commits and PRs carry no Claude attribution (`.claude/settings.json` sets `attribution` to empty) — don't add `Co-Authored-By`, session links or similar lines by hand either.

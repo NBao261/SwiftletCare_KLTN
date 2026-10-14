@@ -27,6 +27,7 @@ import { createTicketsFromStaleAlerts } from '@/services/ticket.service'
 import { createAlert } from '@/services/alert.service'
 import { removeFarm, updateFarm } from '@/services/farm.service'
 import { publishCommand } from '@/mqtt/mqtt.client'
+import * as socket from '@/socket'
 import type { Role } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
@@ -262,6 +263,18 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, { reason: 'lần 2' }).expect(409)
   })
 
+  it('khôi phục phát đúng trạng thái đã lưu qua socket (PENDING, không phải OFFLINE)', async () => {
+    const { techToken, nodeId } = await installed()
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, techToken, { reason: 'Bấm nhầm' }).expect(200)
+    const emit = jest.spyOn(socket, 'emitDeviceStatusChange')
+    try {
+      await post(`/devices/sensor-nodes/${nodeId}/restore`, techToken, { reason: 'Gỡ nhầm' }).expect(200)
+      expect(emit).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ status: 'PENDING' }))
+    } finally {
+      emit.mockRestore()
+    }
+  })
+
   it('khôi phục xoá cờ kích hoạt quá hạn, job đánh dấu lại được', async () => {
     const { techToken, nodeId } = await installed()
     await SensorNode.updateOne({ _id: nodeId }, { registered_at: new Date(Date.now() - ACTIVATION_TIMEOUT_MS - 60_000) })
@@ -313,12 +326,19 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     return { ...ctx, node }
   }
 
-  it('PUSH_CONFIG đẩy ngưỡng hiện hành của Zone qua config/update', async () => {
+  it('PUSH_CONFIG đẩy toàn bộ cấu hình: ngưỡng, hệ số mờ, tham số phát hiện và lịch loa', async () => {
     const { techToken, node, a } = await onlineNode()
     await send(techToken, node._id, { command: 'PUSH_CONFIG' }).expect(202)
     const [, , zoneId, topic, payload] = (publishCommand as jest.Mock).mock.calls[0]
     expect([zoneId, topic]).toEqual([String(a.zone._id), 'config/update'])
-    expect(payload).toMatchObject({ temp_min: expect.any(Number), co2_max: expect.any(Number) })
+    // Thiết bị lệch hệ số mờ/lịch loa thì lệnh "đẩy lại cấu hình" phải sửa được cả phần đó
+    expect(payload).toMatchObject({
+      deviceId: 'node_100',
+      temp_min: expect.any(Number), co2_max: expect.any(Number),
+      fuzzy_humidity_band: expect.any(Number), fuzzy_window_sec: expect.any(Number),
+      noise_margin_db: expect.any(Number), pump_dry_on_sec: expect.any(Number),
+      speaker_schedule_enabled: expect.any(Boolean), speaker_volume: expect.any(Number),
+    })
   })
 
   it('OTA: validate đầu vào, lưu ota_pending, heartbeat đúng version thì xác nhận thành công', async () => {
@@ -563,6 +583,27 @@ describe('dời zone (FARM-FR-007b)', () => {
 
     expect((await Alert.findById(alert._id))!.status).toBe('RESOLVED')
     expect((publishCommand as jest.Mock).mock.calls.at(-1)![4]).toMatchObject({ deviceId: 'node_400', newZoneId: String(b.zone._id) })
+  })
+
+  const reassign = (token: string, nodeId: unknown, newZoneId: unknown) =>
+    request(app).put(`/devices/sensor-nodes/${nodeId}/reassign-zone`)
+      .set('Authorization', `Bearer ${token}`).send({ newZoneId: String(newZoneId) })
+
+  it('không cho dời về chính Zone đang ở (thiết bị sẽ khởi động lại vô ích)', async () => {
+    const { techToken, a } = await seed()
+    const node = await SensorNode.create({ device_id: 'node_401', zone_id: a.zone._id, status: 'ONLINE' })
+    await reassign(techToken, node._id, a.zone._id).expect(400)
+    expect(publishCommand).not.toHaveBeenCalled()
+  })
+
+  it('thiết bị DEGRADED (vẫn kết nối) dời được như lệnh từ xa, OFFLINE thì không', async () => {
+    const { techToken, a, b } = await seed()
+    const degraded = await SensorNode.create({ device_id: 'node_402', zone_id: a.zone._id, status: 'DEGRADED' })
+    await reassign(techToken, degraded._id, b.zone._id).expect(200)
+
+    const offline = await SensorNode.create({ device_id: 'node_403', zone_id: a.zone._id, status: 'OFFLINE' })
+    const res = await reassign(techToken, offline._id, b.zone._id).expect(409)
+    expect(res.body.error.message).toContain('OFFLINE')
   })
 })
 
