@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
+import { cn } from '@/lib/cn'
 
 /** Modal Bottom Sheet cơ bản — mục 2.1 (rounded-3xl) */
 interface ModalProps {
@@ -7,9 +8,11 @@ interface ModalProps {
   onClose: () => void
   title?: string
   children: ReactNode
+  /** Ghi đè class của khung (VD `max-w-sm` cho popup xác nhận ngắn) — mặc định max-w-md */
+  className?: string
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, className }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   // Nơi gọi hay truyền onClose inline (hàm mới mỗi render). Để onClose trong deps
   // thì mỗi phím gõ vào input → parent render lại → effect chạy lại → focus() giật
@@ -51,7 +54,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none"
+        className={cn('w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none', className)}
       >
         <div className="mb-4 flex items-center justify-between">
           {title && <h2 className="text-lg font-bold text-charcoal">{title}</h2>}
