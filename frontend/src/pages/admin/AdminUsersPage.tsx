@@ -22,6 +22,9 @@ import CreateUserModal from '@/components/features/admin/users/CreateUserModal'
 import UserStats from '@/components/features/admin/users/UserStats'
 import type { Role, User, SortDirection } from '@/types'
 
+const PAGE_SIZE = 10
+/** px — vừa ô Ngày tạo 2 dòng (giờ/ngày); mọi dòng kể cả dòng trống bù cao bằng nhau → khung bảng cố định 10 dòng */
+const ROW_HEIGHT = 64
 const DEFAULT_SORT_BY: UsersSortKey = 'created_at'
 const DEFAULT_SORT_DIR: SortDirection = 'desc'
 
@@ -52,7 +55,7 @@ export default function AdminUsersPage() {
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null)
 
   const { records, total, limit, isLoading } = useUsersList({
-    status, role: role || undefined, roles: currentTab.roles, search: search || undefined, sortBy, sortDir, page, limit: 10,
+    status, role: role || undefined, roles: currentTab.roles, search: search || undefined, sortBy, sortDir, page, limit: PAGE_SIZE,
   })
 
   // Đổi tab → bỏ lọc vai trò của tab cũ (không còn trong tab mới) và về trang 1
@@ -172,6 +175,9 @@ export default function AdminUsersPage() {
             sortKey={sortBy}
             sortDirection={sortDir}
             onSortChange={handleSortChange}
+            // Cố định khung 10 dòng như bảng Trang trại/Thiết bị — ít tài khoản/trang cuối vẫn giữ chiều cao
+            rowHeight={ROW_HEIGHT}
+            minRows={PAGE_SIZE}
             // Admin không có trang chi tiết người dùng riêng — bấm dòng mở popup chi tiết (UserDetailModal)
             onRowClick={setViewTarget}
             emptyMessage="Không tìm thấy tài khoản nào — thử đổi bộ lọc hoặc từ khoá tìm kiếm."

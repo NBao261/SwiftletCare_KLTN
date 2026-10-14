@@ -37,8 +37,8 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   )
 }
 
-/** Giá trị trống — chữ xám nhạt */
-const Empty = ({ children }: { children: ReactNode }) => <span className="text-warmGray">{trChildren(children)}</span>
+/** Giá trị trống — chữ xám nghiêng (cùng kiểu "Không có" ở Nhật ký hệ thống) */
+const Empty = ({ children }: { children: ReactNode }) => <span className="italic text-warmGray">{trChildren(children)}</span>
 
 /**
  * Popup chi tiết tài khoản (AUTH-FR-011) — bố cục ngang 2 cột: trái = tên + danh mục (Thông tin / Phân công / Lịch sử),
@@ -56,8 +56,8 @@ export default function UserDetailModal({ user, onClose }: { user: User | null; 
     <Modal open={!!user} onClose={onClose} size="xl" ariaLabel="Chi tiết tài khoản">
       {user && status && (
         <div className="flex flex-col gap-5">
-        {/* Tiêu đề chung "Thông tin người dùng" (như các popup khác: tên popup), dòng dưới là người đang xem · vai trò */}
-        <ModalHeader title="Thông tin người dùng" description={`${user.full_name} · ${ROLE_LABEL[user.role]}`} />
+        {/* Tiêu đề chung "Thông tin người dùng" + dòng mô tả popup (tên, vai trò đã có ở mục Thông tin) */}
+        <ModalHeader title="Thông tin người dùng" description="Liên hệ, phân công và lịch sử của tài khoản" />
 
         {/* 22rem: vừa mục dài nhất ("Thông tin": 2 nhóm, 5 dòng) — không hiện thanh cuộn */}
         <div className="flex h-[22rem] gap-6">

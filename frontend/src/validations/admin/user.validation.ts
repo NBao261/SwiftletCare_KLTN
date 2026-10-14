@@ -28,34 +28,33 @@ export function parseRegions(raw: string): string[] {
 /**
  * Trả về map lỗi theo field — rỗng nghĩa là form hợp lệ. Tách khỏi component để
  * dễ đọc/kiểm thử. Thông báo phân biệt "chưa nhập" và "nhập sai", kèm ví dụ khi cần.
- * Thông báo nên ngắn: CreateUserModal hiện lỗi cùng hàng với nhãn ô (errorInLabel, 1 dòng
- * cắt "…") để popup canh giữa không đổi chiều cao — lỗi dài sẽ bị cắt.
+ * Thông báo ngắn gọn (vài chữ): CreateUserModal hiện lỗi ngay dưới ô nhập.
  */
 export function validateNewUser(form: FormState): Partial<Record<Field, string>> {
   const errors: Partial<Record<Field, string>> = {}
 
   const fullName = form.full_name.trim()
-  if (!fullName) errors.full_name = 'Hãy nhập họ tên'
-  else if (fullName.length < 2) errors.full_name = 'Họ tên cần ít nhất 2 ký tự'
+  if (!fullName) errors.full_name = 'Chưa nhập họ tên'
+  else if (fullName.length < 2) errors.full_name = 'Tối thiểu 2 ký tự'
 
   const email = form.email.trim()
-  if (!email) errors.email = 'Hãy nhập email (dùng làm tên đăng nhập)'
-  else if (!EMAIL_RE.test(email)) errors.email = 'Email sai định dạng, VD: ten@tenmien.vn'
+  if (!email) errors.email = 'Chưa nhập email'
+  else if (!EMAIL_RE.test(email)) errors.email = 'Email không hợp lệ'
 
   const phone = form.phone.replace(/[\s.-]/g, '')
-  if (phone && !PHONE_RE.test(phone)) errors.phone = 'SĐT cần dạng 0912345678 hoặc +84912345678'
+  if (phone && !PHONE_RE.test(phone)) errors.phone = 'Số điện thoại không hợp lệ'
 
   // Câu có số dịch tại đây (t + biến); câu cố định để Input tự dịch khi hiển thị
-  if (!form.password) errors.password = t('Hãy nhập mật khẩu (ít nhất {{min}} ký tự)', { min: PASSWORD_MIN })
+  if (!form.password) errors.password = 'Chưa nhập mật khẩu'
   else if (form.password.length < PASSWORD_MIN) {
-    errors.password = t('Mật khẩu cần ít nhất {{min}} ký tự (đang có {{count}})', { min: PASSWORD_MIN, count: form.password.length })
+    errors.password = t('Tối thiểu {{min}} ký tự', { min: PASSWORD_MIN })
   }
 
   if (form.role === 'TECHNICIAN' && parseRegions(form.regions).length === 0) {
-    errors.regions = 'Hãy nhập ít nhất 1 vùng phụ trách'
+    errors.regions = 'Chưa nhập vùng phụ trách'
   }
   if (form.role === 'SALES_STAFF' && form.farmIds.length === 0) {
-    errors.farmIds = t('Hãy chọn ít nhất 1 farm phụ trách')
+    errors.farmIds = t('Chưa chọn farm')
   }
   return errors
 }

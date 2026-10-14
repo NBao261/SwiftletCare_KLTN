@@ -86,6 +86,8 @@ export default function UserStats() {
           iconClass={ICON}
           label="Kỹ thuật viên"
           value={technicians.length}
+          // Có kỹ thuật viên chưa gán khu vực → ô nổi cam: Ticket Router không giao ticket cho họ được, việc của Admin
+          tone={noRegion > 0 ? 'warning' : undefined}
           sub={technicians.length === 0 ? 'Chưa có tài khoản nào' : noRegion > 0 ? t('{{n}} chưa gán khu vực', { n: noRegion }) : 'Tất cả đã gán khu vực'}
         />
         <StatTile className="shadow-none" icon={StorefrontIcon} iconClass={ICON} label={ROLE_LABEL.SALES_STAFF} value={byRole('SALES_STAFF').length} sub={roleSub(byRole('SALES_STAFF'))} />

@@ -130,8 +130,9 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
             </div>
           ) : (
           <>
-          {/* Lỗi nằm cùng hàng nhãn ô (errorInLabel) — không có dòng lỗi riêng */}
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+          {/* Lỗi ngắn hiện ngay dưới ô nhập */}
+          {/* pr-4: thanh cuộn cách khối nội dung 1 khoảng, không dính sát viền ô */}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-4">
           <section>
             <h4 className={MODAL_SECTION_TITLE}>{t('Đăng nhập & liên hệ')}</h4>
             <div className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2">
@@ -143,7 +144,6 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           onChange={e => set('full_name', e.target.value)}
           onBlur={() => touch('full_name')}
           error={showError('full_name')}
-          errorInLabel
         />
         <Input
           label="Email"
@@ -155,7 +155,6 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           onChange={e => set('email', e.target.value)}
           onBlur={() => touch('email')}
           error={showError('email')}
-          errorInLabel
         />
         <Input
           label="Số điện thoại"
@@ -166,7 +165,6 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           onChange={e => set('phone', e.target.value)}
           onBlur={() => touch('phone')}
           error={showError('phone')}
-          errorInLabel
         />
         <Input
           // Nhãn gọn; yêu cầu độ dài đã nằm ở placeholder và thông báo lỗi
@@ -179,7 +177,6 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           onChange={e => set('password', e.target.value)}
           onBlur={() => touch('password')}
           error={showError('password')}
-          errorInLabel
         />
             </div>
           </section>
@@ -196,19 +193,14 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
             onChange={e => set('regions', e.target.value)}
             onBlur={() => touch('regions')}
             error={showError('regions')}
-            errorInLabel
-          />
+            />
         )}
 
         {form.role === 'SALES_STAFF' && (
           <div className="flex flex-col gap-1.5">
-            {/* Lỗi cùng hàng nhãn — như Input errorInLabel */}
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="label-caption shrink-0">
-                {t('Farm phụ trách')}<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
-              </span>
-              {showError('farmIds') && <span className="min-w-0 truncate text-xs text-alertRed" title={errors.farmIds}>{errors.farmIds}</span>}
-            </div>
+            <span className="label-caption">
+              {t('Farm phụ trách')}<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+            </span>
             {farmsLoading && <p className="text-sm text-warmGray">{t('Đang tải danh sách farm...')}</p>}
             {!farmsLoading && !farms?.length && (
               <p className="text-sm text-warmGray">{t('Chưa có farm nào trong hệ thống để gán.')}</p>
@@ -227,6 +219,8 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
                 ))}
               </div>
             )}
+            {/* Lỗi ngắn dưới danh sách — như Input */}
+            {showError('farmIds') && <span className="text-xs text-alertRed">{errors.farmIds}</span>}
           </div>
         )}
 
