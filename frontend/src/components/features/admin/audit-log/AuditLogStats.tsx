@@ -89,6 +89,9 @@ export default function AuditLogStats() {
           iconClass={ICON}
           label="Đăng nhập thất bại"
           value={loginFailed.total}
+          // Tín hiệu bảo mật duy nhất của hàng → nổi cam khi có ≥ 1 lần (SRS/backend không có ngưỡng khoá N lần nên
+          // không tự đặt số; có ngưỡng có nguồn thì đổi điều kiện ở đây)
+          tone={loginFailed.total > 0 ? 'warning' : undefined}
           sub="Trong 7 ngày qua"
         />
         {/* Đếm LƯỢT Admin khoá (ACCOUNT_LOCKED), không phải số tài khoản đang bị khoá — nhãn nói rõ để khỏi nhầm */}
