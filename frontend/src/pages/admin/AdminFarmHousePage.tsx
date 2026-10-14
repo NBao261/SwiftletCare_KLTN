@@ -1,26 +1,69 @@
+import { useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { WarningCircleIcon } from "@phosphor-icons/react";
 import { useFarm, useHouses, useZones } from "@/hooks/shared/useFarms";
+import { useSystemNodeStatus } from "@/hooks/shared/useDevices";
 import { usePageBreadcrumb, usePageBack } from "@/hooks/common/useBreadcrumb";
-import { Button, EmptyState, SectionCard } from "@/components/ui";
+import { Badge, Button, EmptyState } from "@/components/ui";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import { IconFarm } from "@/components/ui/icons";
+import StatusDot from "@/components/common/StatusDot";
+import { formatDate, formatRelativeTime } from "@/lib/helpers";
+import { cn } from "@/lib/cn";
+import { t, tr, trChildren } from "@/i18n";
+import type { SystemNodeStatusItem } from "@/types";
+
+/** Nhóm nền xám chia dòng — cùng kiểu Group của popup Chi tiết tài khoản */
+function Group({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section>
+      {title && <h4 className="mb-2 text-small font-semibold text-graphite">{tr(title)}</h4>}
+      <div className="divide-y divide-gray-200 rounded-2xl bg-gray-50 px-4">{children}</div>
+    </section>
+  );
+}
+
+/** 1 thiết bị: mã (+ "Camera" — cảm biến là mặc định) + tín hiệu · heartbeat bên trái, trạng thái bên phải */
+function DeviceRow({ node }: { node: SystemNodeStatusItem }) {
+  const meta = [
+    node.rssi !== undefined && t("Tín hiệu {{rssi}} dBm", { rssi: node.rssi }),
+    node.last_heartbeat && t("Kết nối lần cuối {{time}}", { time: formatRelativeTime(node.last_heartbeat) }),
+  ].filter(Boolean).join(" · ");
+  return (
+    <div className="flex items-center justify-between gap-4 py-3">
+      <div className="min-w-0">
+        <p className="flex min-w-0 items-center gap-2 text-body font-medium text-charcoal">
+          <span className="truncate" title={node.device_id}>{node.device_id}</span>
+          {node.type === "camera" && <Badge tone="neutral" className="shrink-0">Camera</Badge>}
+        </p>
+        {meta && <p className="truncate text-xs text-warmGray" title={node.last_heartbeat && formatDate(node.last_heartbeat)}>{meta}</p>}
+      </div>
+      <StatusDot status={node.status} />
+    </div>
+  );
+}
+
+const Empty = ({ children }: { children: ReactNode }) => <p className="py-3 text-body text-warmGray">{trChildren(children)}</p>;
 
 /**
- * Phòng (= Zone ở backend) của 1 nhà yến cho Admin (/system/farms/:farmId/houses/:houseId) —
- * FARM-FR-002/009, nhóm theo tầng (1..house.floors) để thấy ngay tầng nào chưa có phòng,
- * tức chưa được giám sát. Chỉ xem như trang farm cha — tạo phòng là việc của Farm Owner/Technician.
- * Không có nút Dashboard: route /dashboard chỉ cho Farm Owner.
+ * Phòng (= Zone ở backend) của 1 nhà yến cho Admin (/system/farms/:farmId/houses/:houseId) — FARM-FR-002/009.
+ * Bố cục ngang 2 cột như các popup Admin (Chi tiết tài khoản), nhưng hiển thị ngay trên trang: trái = tên nhà + danh
+ * sách tầng (1..house.floors, tầng trống ghi "Chưa có phòng" = chưa được giám sát), phải = từng phòng của tầng đang
+ * chọn là 1 nhóm nền xám (phòng có thiết bị lên trước), mỗi thiết bị 1 dòng (trạng thái, tín hiệu, lần kết nối cuối).
+ * Chỉ xem như trang farm cha — tạo phòng/gán thiết bị là việc của Farm Owner/Technician. Không có nút Dashboard:
+ * route /dashboard chỉ cho Farm Owner.
  */
 export default function AdminFarmHousePage() {
   const { farmId, houseId } = useParams<{ farmId: string; houseId: string }>();
   const navigate = useNavigate();
+  const [selectedFloor, setSelectedFloor] = useState(1);
   const { data: farm } = useFarm(farmId);
   // Không có API lấy 1 house theo id — tra trong danh sách house của farm (đã fetch sẵn ở trang cha, cache lại nhờ react-query)
   const houses = useHouses(farmId);
   const house = houses.data?.find((h) => h._id === houseId);
   const zones = useZones(houseId);
   const rooms = zones.data;
+  // Cùng nguồn với trang Thiết bị của Admin (GET /devices/system-status, có zone_id) — lọc theo phòng của nhà này
+  const nodeStatus = useSystemNodeStatus();
 
   usePageBreadcrumb(
     farm && house
@@ -49,56 +92,69 @@ export default function AdminFarmHousePage() {
   // Phòng cũ có thể nằm ở tầng > house.floors (dữ liệu seed) — mở rộng để không phòng nào bị ẩn
   const floorCount = Math.max(house.floors, ...(rooms ?? []).map((r) => r.floor));
   const floors = Array.from({ length: floorCount }, (_, i) => i + 1);
-  const emptyFloors = floors.filter((f) => !rooms?.some((r) => r.floor === f)).length;
+  const floor = Math.min(selectedFloor, floorCount);
+  const nodes = (nodeStatus.data?.nodes ?? []).filter((n) => rooms?.some((r) => r._id === n.zone_id));
+  const roomNodes = (zoneId: string) => nodes.filter((n) => n.zone_id === zoneId);
+  // Phòng có thiết bị lên trước, phòng "Chưa có thiết bị" xuống cuối (sort ổn định — giữ thứ tự gốc trong mỗi nhóm)
+  const floorRooms = (rooms?.filter((r) => r.floor === floor) ?? [])
+    .sort((a, b) => Number(roomNodes(b._id).length > 0) - Number(roomNodes(a._id).length > 0));
   // Trang thiết bị Admin (chỉ xem) lọc theo tên farm — mở sẵn đúng farm này
   const devicesUrl = `/system/devices?farm=${encodeURIComponent(farm?.name ?? "")}`;
 
   return (
-    // 1 khung (SectionCard): thông tin nhà + danh sách tầng/phòng — icon như mục menu sidebar
-    <SectionCard
-      icon={<IconFarm width={20} height={20} />}
-      title={house.name}
-      description={
-        <span className="text-warmGray">
-          {house.floors} tầng · {rooms?.length ?? 0} phòng
-          {!zones.isLoading && emptyFloors > 0 && (
-            <span className="font-semibold text-orange-600"> · {emptyFloors} tầng chưa có phòng</span>
-          )}
-        </span>
-      }
-      action={
-        <Button variant="secondary" size="sm" onClick={() => navigate(devicesUrl)}>
-          Thiết bị & Cảm biến
-        </Button>
-      }
-    >
-
-      {zones.isLoading && <LoadingSkeleton count={2} className="h-16 w-full" />}
-
-      {!zones.isLoading &&
-        floors.map((floor) => {
-          const floorRooms = rooms?.filter((r) => r.floor === floor) ?? [];
+    // Cùng khung SectionCard (viền + bóng), bên trong là bố cục 2 cột kiểu popup. min-h: đổi tầng không làm card co giãn nhiều
+    <section className="flex min-h-[24rem] flex-col gap-6 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card md:flex-row">
+      {/* Cột trái: tên nhà + tầng */}
+      <nav className="flex shrink-0 flex-col gap-1 border-b border-gray-200 pb-4 md:w-56 md:border-b-0 md:border-r md:pb-0 md:pr-4" aria-label={t("Tầng")}>
+        <div className="mb-3 min-w-0">
+          <p className="truncate text-lg font-bold text-charcoal" title={house.name}>{house.name}</p>
+          <p className="truncate text-small text-warmGray">
+            {t("{{floors}} tầng · {{rooms}} phòng · {{devices}} thiết bị", { floors: house.floors, rooms: rooms?.length ?? 0, devices: nodes.length })}
+          </p>
+        </div>
+        {floors.map((f) => {
+          const count = rooms?.filter((r) => r.floor === f).length ?? 0;
           return (
-            <div key={floor} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2.5">
-                <h3 className="text-sm font-bold text-charcoal">Tầng {floor}</h3>
-                <span className="text-xs text-warmGray">{floorRooms.length} phòng</span>
-              </div>
-
-              {floorRooms.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-warmGray/30 px-4 py-3">
-                  <span className="text-sm text-warmGray">Chưa có phòng — tầng này chưa được giám sát.</span>
-                </div>
-              ) : (
-                floorRooms.map((room) => (
-                  <div key={room._id} className="rounded-xl bg-warmGray/5 px-4 py-2.5">
-                    <span className="text-sm font-medium text-charcoal">{room.name}</span>
-                  </div>
-                ))
+            <button
+              key={f}
+              type="button"
+              aria-current={floor === f ? "page" : undefined}
+              onClick={() => setSelectedFloor(f)}
+              className={cn(
+                "flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-body transition-colors duration-150",
+                floor === f ? "bg-gray-100 font-semibold text-charcoal" : "text-graphite hover:bg-gray-100",
               )}
-            </div>
+            >
+              {t("Tầng {{n}}", { n: f })}
+              <span className="text-xs font-normal text-warmGray">{count ? t("{{n}} phòng", { n: count }) : t("Chưa có phòng")}</span>
+            </button>
           );
         })}
-    </SectionCard>
+      </nav>
+
+      {/* Cột phải: mỗi phòng 1 nhóm thiết bị — không lặp tiêu đề tầng (đã sáng ở menu trái) */}
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <div className="flex min-h-9 justify-end">
+          <Button variant="secondary" size="sm" onClick={() => navigate(devicesUrl)}>
+            Thiết bị & Cảm biến
+          </Button>
+        </div>
+
+        {zones.isLoading || nodeStatus.isLoading ? (
+          <LoadingSkeleton count={2} className="h-20 w-full" />
+        ) : floorRooms.length === 0 ? (
+          <Group><Empty>Chưa có phòng — tầng này chưa được giám sát.</Empty></Group>
+        ) : (
+          floorRooms.map((room) => {
+            const list = roomNodes(room._id);
+            return (
+              <Group key={room._id} title={t("Khu {{name}}", { name: room.name })}>
+                {list.length ? list.map((n) => <DeviceRow key={n._id} node={n} />) : <Empty>Chưa có thiết bị</Empty>}
+              </Group>
+            );
+          })
+        )}
+      </div>
+    </section>
   );
 }
