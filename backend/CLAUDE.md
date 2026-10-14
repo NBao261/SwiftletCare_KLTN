@@ -106,6 +106,7 @@ routes/*.route.ts (express-validator + requireRole)
 - **[Bắt buộc]** Migrations in `src/scripts/migrate-*.script.ts` are idempotent (safe to run twice) and get an `npm run migrate:*` script plus a line in this file's Commands.
 - **[Bắt buộc]** A new env var is added to `.env.example` with a comment, and read with a safe default or a clear startup error.
 - **[Bắt buộc]** File naming `<resource>.<layer>.ts` with the layer spelled out (`.service`, `.controller`, `.route`, `.model`, `.middleware`, `.util`, `.handler`, `.job`, `.script`) — never `farmService.ts`.
+- **[Nên]** Test files: a unit test mirrors its source file (`tests/unit/<src folder>/<file>.test.ts`, e.g. `tests/unit/utils/visitTime.util.test.ts`); an integration test is named after the feature it covers in camelCase (`tests/integration/<feature>.test.ts`, e.g. `alertLifecycle.test.ts`) — never after a PR or review round. Shared fixtures go in `tests/helpers/` (`ownerFarm.ts`: in-memory DB + a seeded farm); `jest.mock` calls stay in each test file.
 - **[Nên]** Comments explain *why* (business reason, SRS FR code), not what the code does.
 
 ## Known debt — not held against PRs that don't touch it
