@@ -31,7 +31,8 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
 
 export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, apiError, targetVersion, onRetry }: Props) {
   return (
-    <Card className="sticky top-6 flex flex-col gap-4 !p-5">
+    // top-[88px] = header h-16 (nổi đè lên vùng cuộn) + 24px khoảng cách cũ
+    <Card className="sticky top-[88px] flex flex-col gap-4 !p-5">
       {/* Device info */}
       <div>
         <p className="label-caption mb-1">THIẾT BỊ ĐÃ CHỌN</p>
