@@ -20,6 +20,9 @@
 | 3 | **Màn mới (đích, chưa có code):** Farm Owner — lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận của chuyên gia, live stream có khung + số đếm trực tiếp; Domain Expert — báo cáo sức khỏe Zone, kiểm chứng cảnh báo, duyệt gợi ý hệ số, chỉnh tham số phát hiện. `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim cùng khoảng thời gian. NH3/CO2 chỉ cảnh báo: UI ghi rõ là ngưỡng cảnh báo do chuyên gia đặt, không gắn với quạt. Mục 7 đã có các dòng tương ứng. |
 | 4 | **Code hiện tại chưa theo kịp** — còn `sales-staff/`, role `SALES_STAFF`, trang Marketplace, chưa có `DOMAIN_EXPERT`. Ghi vào nợ 13.14: PR mới **không** được mở rộng các phần này, chỉ gỡ/thay. |
 | 5 | **CI đã chạy lint + test + build** cho `frontend/` (`.github/workflows/ci.yml`); 13.13 và 12.8 sửa theo. Repo đã có test vitest (5 file), bỏ câu "chưa có test FE". |
+| 6 | **Thêm 3 token màu trạng thái** cho Dashboard Farm Owner: `safetyOrange` `#FF7426` (lỗi thiết bị, mức HIGH, giá trị vượt ngưỡng), `infoBlue` `#4A89EB` (cảnh báo "Mới"), `statusYellow` `#FFE033` (PLC "Đang chờ kết nối"). Xem 2.3 và 2.6.1. |
+| 7 | **Ghi lại bảng màu trạng thái đang áp dụng ở Dashboard**: 6 ô cảm biến (icon + 3 trạng thái màu), 3 trạng thái xử lý cảnh báo, mức độ cảnh báo, PLC. Xem 2.6.1. |
+| 8 | **Kính mờ (glassmorphism)**: AppHeader kính trong; `SelectMenu`, `ActionsMenu`, popup thông báo và khung xem trước ngôn ngữ dùng kính mờ nền trắng theo thông số glass-card (class `.glass-panel`). Thêm token bóng `shadow-glass`. Xem 5.2.1. |
 
 ### v2.4.0 → v2.5.0
 | # | Thay đổi |
@@ -165,6 +168,11 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 --danger:   var(--red-500);
 --badge-default: var(--red-500);
 
+/* v2.6.0 — trạng thái ở Dashboard Farm Owner (xem 2.6.1). Tên Tailwind trong ngoặc */
+--safety-orange: #FF7426;  /* (safetyOrange) lỗi thiết bị, mức HIGH, giá trị vượt ngưỡng */
+--status-new:    #4A89EB;  /* (infoBlue) trạng thái cảnh báo "Mới" */
+--status-wait:   #FFE033;  /* (statusYellow) PLC "Đang chờ kết nối", dùng nền 70% + chữ charcoal */
+
 --focus-ring: rgba(213, 230, 136, 0.55);  /* accent-300 mờ */
 ```
 
@@ -191,6 +199,62 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 ### 2.6. Nguyên tắc màu dữ liệu cảm biến (không đổi so với v2.0.0)
 
 Màu **không** gắn với loại cảm biến — gắn với **trạng thái an toàn hiện tại**: an toàn → `accent-600`, gần ngưỡng → `orange-500`, vượt ngưỡng → `red-500`. Loại cảm biến nhận diện bằng icon + label: Nhiệt độ `Thermometer`, Độ ẩm `Droplets`, Ánh sáng `Sun`, CO2 `Wind`, NH3 `FlaskConical`, Âm thanh `Volume2`. Series so sánh/ngữ cảnh trong chart đa-đường dùng thang `gray-300 → gray-700` (giờ đã là xám ấm, không còn ám xanh).
+
+> **Ngoại lệ:** Dashboard Farm Owner đang áp dụng bảng icon và màu ở 2.6.1 (CO2 dùng đám mây, âm thanh dùng sóng âm, vượt ngưỡng dùng cam thay vì đỏ, thêm trạng thái "thiết bị không hoạt động").
+
+### 2.6.1. Dashboard Farm Owner — màu trạng thái đang áp dụng (v2.6.0)
+
+**Màu cam và màu trạng thái dùng trên Dashboard**
+
+| Token Tailwind | Hex | Dùng ở |
+|---|---|---|
+| `safetyOrange` | `#FF7426` | Khung *Trạng thái nhà yến*: chữ + chấm "Lỗi N thiết bị", dòng ghi chú lỗi. *Nhật ký cảnh báo*: nhãn mức HIGH, giá trị vượt ngưỡng (in đậm) |
+| `climateOrange` (= `orange-500`) | `#ED8F50` | Ô cảm biến vượt ngưỡng; relay "Quá nóng / Quá lạnh"; thanh tỉ lệ chim về 65–79% |
+| `orange-100` / `orange-800` | `#FAE1D1` / `#8B400E` | Nhãn mức MEDIUM ở *Nhật ký cảnh báo* |
+| `infoBlue` | `#4A89EB` | Trạng thái cảnh báo "Mới" |
+| `statusYellow` | `#FFE033` | Nhãn "PLC: Đang chờ kết nối" (nền 70%, chữ charcoal) |
+
+**a) 6 chỉ số cảm biến — icon**
+
+| Chỉ số | Icon | Đơn vị | Ngưỡng an toàn (từ Zone) |
+|---|---|---|---|
+| Nhiệt độ | `IconTemp` (nhiệt kế, `ui/icons.tsx`) | °C | `temp_min`–`temp_max` |
+| Độ ẩm | `Droplets` (lucide, hai giọt nước — cùng icon relay Phun sương) | % | `humidity_min`–`humidity_max` |
+| Ánh sáng | `IconLight` (mặt trời) | lux | < `light_max` |
+| NH3 | `FlaskConical` (lucide, bình thí nghiệm) | ppm | < `nh3_max` |
+| CO2 | `IconCloud` (đám mây) | ppm | < `co2_max` |
+| Âm thanh | `IconSound` (sóng âm) | dB | Không có ngưỡng |
+
+**b) 3 trạng thái màu của ô cảm biến** — "thiết bị hoạt động" = có ít nhất 1 SensorNode `ONLINE` trong phạm vi đang chọn.
+
+| Trạng thái | Điều kiện | Ô | Icon | Số đo | Dòng dưới |
+|---|---|---|---|---|---|
+| **Cam** — vượt ngưỡng | Thiết bị hoạt động **và** giá trị ngoài ngưỡng | Nền `climateOrange/[0.06]`, viền `climateOrange/40` | Nền `climateOrange` đặc, icon trắng | `climateOrange` | "Ngoài ngưỡng an toàn" |
+| **Xanh** — trong ngưỡng | Thiết bị hoạt động **và** giá trị trong ngưỡng | Nền trắng, viền `warmGray/15` | Nền `warmGray/10`, icon `success` (`#B5D32C`) | charcoal | "An toàn …" |
+| **Xám đen** — thiết bị không hoạt động | Không có SensorNode `ONLINE` (offline / chưa kết nối) | Nền trắng | Nền `warmGray/10`, icon charcoal | charcoal (số đo cuối, chỉ để tham khảo) | "An toàn …" |
+| Không có dữ liệu | Chưa có số đo, đang tải, hoặc chọn "Tất cả nhà yến" | Nền trắng | Icon charcoal | `_` màu `warmGray` | Trống khi chọn "Tất cả" |
+
+Âm thanh không có ngưỡng nên icon luôn charcoal. Relay ở khung *Phân hệ điều khiển*: BẬT `success`, TẮT `warmGray`, "Quá nóng" (thông gió) / "Quá lạnh" (sưởi) `climateOrange`, không có dữ liệu hoặc chọn "Tất cả" hiện `_`.
+
+**c) Trạng thái xử lý cảnh báo** (cột *Trạng thái* ở Nhật ký cảnh báo — `status` từ BE)
+
+| `status` | Nhãn VI / EN | Nền | Chữ | Ý nghĩa |
+|---|---|---|---|---|
+| `ACTIVE` | Mới / New | `infoBlue/10` | `infoBlue` | Chưa ai xác nhận. CRITICAL/HIGH để quá 15 phút thì BE tự tạo Ticket |
+| `ACKNOWLEDGED` | Tiếp nhận / Received | `limeMist` | charcoal | Đã có người xác nhận — **chưa** có nghĩa là đã sửa |
+| `RESOLVED` | Đã xử lý / Resolved | `warmGray/15` | `warmGray` | Sự cố đã hết (vượt ngưỡng không lặp lại 5 phút, thiết bị online lại, hoặc thiết bị bị gỡ) |
+
+Mức độ (cột *Mức độ*, khác bảng 2.4 ở HIGH): CRITICAL `alertRed/15` + `alertRed` · HIGH `safetyOrange/10` + `safetyOrange` · MEDIUM `orange-100` + `orange-800` · LOW `warmGray/15` + `warmGray`.
+
+**d) Trạng thái PLC** (thanh *Giám sát vận hành SCADA*)
+
+| Trạng thái | Điều kiện | Nhãn VI / EN | Nền | Chữ |
+|---|---|---|---|---|
+| Online | Bản đo mới nhất cách hiện tại ≤ 20 giây | PLC: Online | `limeMist` (Badge `positive`) | charcoal |
+| Mất kết nối | Có bản đo nhưng cũ hơn 20 giây | PLC: Mất kết nối / Disconnected | `alertRed/15` (Badge `critical`) | `alertRed` |
+| Đang chờ kết nối | Chưa có bản đo nào | PLC: Đang chờ kết nối / Awaiting connection | `statusYellow/70` | charcoal |
+
+Chấm tròn đầu thanh: `success` khi Online, `warmGray` khi không. Nhãn PLC rộng cố định 190px để đổi trạng thái không làm thanh nhảy.
 
 ### 2.7. Icon-box content area — 4 biến thể tông màu
 
@@ -314,6 +378,29 @@ Danger chỉ dành cho hành động phá huỷ/khẩn cấp. Nút đặt lại 
 ```
 Icon-box cảnh báo trên cùng (biến thể Orange/Red mục 2.7) → tiêu đề → mô tả hậu quả → 2 nút: Secondary "Huỷ" / Danger hoặc Primary "Xác nhận". Đóng bằng `Esc`/click-outside, trừ hành động CRITICAL không thể hoàn tác bắt buộc bấm nút.
 
+### 5.2.1. Kính mờ (Glassmorphism) — AppHeader & lớp nổi
+
+Lớp nằm đè lên nội dung dùng nền trong suốt + blur thay cho nền đặc, để nội dung bên dưới hiện thành mảng màu nhòe. Có 2 biến thể:
+
+| Biến thể | Dùng cho | Class |
+|---|---|---|
+| Kính trong | AppHeader (nổi đè vùng cuộn, phủ hết bề ngang cột) | Lớp nền `absolute inset-0 -z-10` bên trong header (`relative isolate`): `bg-white/10 backdrop-blur-lg backdrop-saturate-150`; khi cuộn thêm `border-white/60 shadow-glass`. Không làm tối (`backdrop-brightness`) |
+| Kính mờ lớp nổi | `SelectMenu`, `ActionsMenu`, popup thông báo (chuông), khung xem trước ngôn ngữ | `.glass-panel` (`src/index.css`) + bo góc của từng component (`rounded-2xl` = 20px, khung ngôn ngữ `rounded-xl`) |
+
+`.glass-panel` theo thông số glass-card:
+- **Nền:** phủ trắng 5%, lót dưới cùng trắng 30%, `backdrop-filter: blur(24px) saturate(150%)` — mờ hơn AppHeader (16px) một bậc (mẫu glass-card là blur 10px). Lớp lót khác mẫu: chỉ phủ trắng 5% (hoặc 10% như header) thì nút/khối tối phía sau hiện thành vệt xám đậm ngay dưới chữ menu cỡ nhỏ; 30% vẫn thấy mảng màu nhòe phía sau mà chữ đọc rõ.
+- **Viền:** `1px` trắng 30%.
+- **Bóng:** `0 8px 32px` đen 10% · `inset 0 1px 0` trắng 50% · `inset 0 -1px 0` trắng 10% · `inset 0 0 2px 1px` trắng 10% (viền sáng mảnh phía trong mép).
+- **Vệt sáng mảnh:** mép trên gradient 90° (trong suốt → trắng 80% → trong suốt), mép trái gradient 180° (trắng 80% → trong suốt → trắng 30%). Vẽ bằng lớp nền thay cho `::before`/`::after` để không trôi khi danh sách `SelectMenu` tự cuộn.
+
+Chữ trên kính trắng: chính `text-charcoal`, phụ `text-warmGray`, mục đang trỏ/đang chọn `bg-charcoal/5`, vạch ngăn `border-charcoal/10` hoặc `bg-charcoal/10`, mục nguy hiểm (Xóa) `text-alertRed`. Nền của từng mục dùng màu có độ trong (`/5`, `/10`, `limeMist/50`) thay cho nền đặc (`bg-white`, `bg-gray-100`) để không che mất lớp kính.
+
+Popup thông báo: tin chưa đọc nền `bg-charcoal/5` + chấm cam, tin đã đọc trong suốt + `opacity-80`, tin đang xổ chi tiết nền `bg-limeMist/50` với nút mũi tên đen.
+
+**[Bắt buộc]** Không đặt `backdrop-filter` (hay `filter`, `opacity` < 1, `mask`, `clip-path`, `mix-blend-mode`) lên phần tử **chứa** popup kính: phần tử đó thành *backdrop root*, kính của popup con chỉ làm nhòe được nội dung bên trong nó — phần popup thò ra ngoài nhìn xuyên thấy nội dung trang sắc nét. Vì vậy kính của AppHeader nằm ở lớp nền riêng, còn `SelectMenu`/`ActionsMenu` render qua portal ra `document.body`.
+
+Màu trong `.glass-panel` lấy bằng `theme(colors.… / x%)` trong CSS, không viết hex/`rgba()` thẳng trong className (13.7). Bóng kính của header là token `glass` trong `tailwind.config.ts`. Modal/ConfirmModal (5.2) vẫn nền trắng.
+
 ### 5.3–5.9. Card, Table, Tabs, Form, Alert, Gauge...
 
 Hành vi giữ nguyên theo v2.0.0 — chỉ đổi giá trị màu: mọi chỗ trước đây ghi `--ink-850`/`#111728` nay đọc `--gray-900`. Vạch ngưỡng trên Gauge dùng `--gray-700` (Graphite, tự động cập nhật qua token).
@@ -335,7 +422,7 @@ This data is FAKE and has not been MOCKAPI     ← text-mock-notice, --gray-500,
 
 ## 6. i18n — Đa ngôn ngữ (VI/EN)
 
-**Trạng thái: áp dụng từng module, chưa phải toàn app.** Chưa cài `react-i18next`; nút VI/EN ở `AppHeader` ghi vào `stores/languageStore.ts`, màn nào có từ điển thì đổi theo, màn khác vẫn tiếng Việt như cũ. Hạ tầng tối thiểu: `lib/i18n.ts` (`Dictionary<K>` — `en` bắt buộc đủ đúng key của `vi`, thiếu là lỗi biên dịch; `translate`, định dạng số/ngày/"x giây trước" theo locale) + `hooks/common/useT.ts` (`const { t, num, day, ago } = useT(dict)`). Từ điển mỗi module đặt ở `constants/<module>.i18n.ts`; hiện có `farmStructure.i18n.ts` (màn Cấu trúc Farm của Farm Owner). Đơn vị đo (°C/%/ppm/lux/dB) không dịch. Màn chưa có từ điển: khi review **không** bắt buộc `t('...')`; viết tiếng Việt có dấu, giữ thuật ngữ ("Zone", "Farm", "Ticket") nhất quán với màn đã có. Khi cài `react-i18next` sau này, chuyển các `*.i18n.ts` thành namespace tương ứng.
+**Trạng thái: áp dụng từng module, chưa phải toàn app.** Chưa cài `react-i18next`; nút VI/EN ở `AppHeader` ghi vào `stores/languageStore.ts`, màn nào có từ điển thì đổi theo, màn khác vẫn tiếng Việt như cũ. Hạ tầng tối thiểu: `lib/i18n.ts` (`Dictionary<K>` — `en` bắt buộc đủ đúng key của `vi`, thiếu là lỗi biên dịch; `translate`, định dạng số/ngày/"x giây trước" theo locale) + `hooks/common/useTranslation.ts` (`const { t, num, day, ago } = useTranslation(dict)`). Từ điển mỗi module đặt ở `constants/<module>.i18n.ts`; hiện có `farmStructure.i18n.ts` (màn Cấu trúc Farm) và `dashboard.i18n.ts` (Dashboard) của Farm Owner, `navigation.i18n.ts` (nhãn sidebar/dock/tiêu đề trang — tra qua `hooks/common/useNavigationLabel.ts`) và `shell.i18n.ts` (popup thông báo, tài khoản, đăng xuất, nút ngôn ngữ). Tên file/hook viết đầy đủ, không viết tắt (VD `useTranslation`, không `useT`). Đơn vị đo (°C/%/ppm/lux/dB) không dịch. Màn chưa có từ điển: khi review **không** bắt buộc `t('...')`; viết tiếng Việt có dấu, giữ thuật ngữ ("Zone", "Farm", "Ticket") nhất quán với màn đã có. Khi cài `react-i18next` sau này, chuyển các `*.i18n.ts` thành namespace tương ứng.
 
 ---
 
@@ -359,6 +446,9 @@ This data is FAKE and has not been MOCKAPI     ← text-mock-notice, --gray-500,
 | Lịch sử can thiệp tay, tỷ lệ thời gian tự động | ENV-FR-019, ANALYTICS-FR-011 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
 | Live stream có khung trên từng con chim | VISION-FR-013/014 | ⬜ Chưa cài | **Có** |
 | Cấu trúc Farm — người phụ trách nhà, lịch thu dự kiến, khuyến nghị AI, KTV lắp đặt/firmware mới nhất của thiết bị | FARM-FR-* (phần mở rộng UI) | ⬜ Chưa có endpoint — `apis/farm-owner/farmMock.api.ts` trả RỖNG, UI hiện khung trống | Không (không có số liệu giả); farm/house/zone/thiết bị/số đo/cảnh báo/thu hoạch là API thật |
+| Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
+| Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
+| Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
 
 *Giới hạn:* bảng này là ảnh chụp tại v2.4.0 (SRS v1.21.0). Nguồn sự thật luôn là cột "Trạng thái Backend" trong `SwiftletCare_SRS.md` §5 — lệch nhau thì tin SRS và sửa bảng này.
 
@@ -766,7 +856,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 ### 13.7. Style
 
-- **[Bắt buộc]** Màu chỉ lấy từ token trong `tailwind.config.ts`: thang `gray` / `lime` / `accent` / `orange` / `red` và alias `charcoal` · `graphite` · `warmGray` · `limeMist` · `success` · `climateOrange` · `alertRed` · `stone` · `white`. **Không** viết hex/`rgb()` trong `className` hay `style` (kể cả arbitrary value `bg-[#...]` — code hiện còn 1 chỗ, xem 13.14), không dùng palette mặc định của Tailwind (`slate`, `zinc`, `neutral`, `blue`, `green`…). Lưu ý `stone` đã bị ghi đè = `#EAEAEA` (canvas), không phải thang stone của Tailwind.
+- **[Bắt buộc]** Màu chỉ lấy từ token trong `tailwind.config.ts`: thang `gray` / `lime` / `accent` / `orange` / `red` và alias `charcoal` · `graphite` · `warmGray` · `limeMist` · `success` · `climateOrange` · `safetyOrange` (`#FF7426`, lỗi thiết bị ở widget Trạng thái nhà yến) · `infoBlue` (`#4A89EB`) · `statusYellow` (`#FFE033`, nhãn "PLC: Đang chờ kết nối") (nhãn trạng thái cảnh báo "Mới" ở bảng nhật ký Dashboard) · `alertRed` · `stone` · `white`. **Không** viết hex/`rgb()` trong `className` hay `style` (kể cả arbitrary value `bg-[#...]` — code hiện còn 1 chỗ, xem 13.14), không dùng palette mặc định của Tailwind (`slate`, `zinc`, `neutral`, `blue`, `green`…). Lưu ý `stone` đã bị ghi đè = `#EAEAEA` (canvas), không phải thang stone của Tailwind.
 - **[Nên]** Chữ dùng thang `text-h1` · `text-h2` · `text-h3` · `text-body` · `text-small` · `text-caption` · `text-metric` (mục 2.8) thay cho `text-sm`/`text-2xl` mặc định. Code cũ còn ~230 chỗ dùng size mặc định (13.14) nên chưa bắt buộc; file mới tạo thì nên dùng thang này ngay từ đầu.
 - **[Bắt buộc]** Modal/popup dùng `Modal` / `ConfirmModal` / `NoteActionModal` trong `components/ui/`, không tự dựng overlay (overlay tự dựng rất dễ dùng `bg-black/…` — trái 5.2).
 - **[Bắt buộc]** Không sửa layout/kích thước sidebar, topbar (4.1).
@@ -818,7 +908,6 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | `pages/technician/TechnicianDevicesPage.tsx` | Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên]) | Chuyển vào `onSuccess` của mutation trong `useDevices` |
 | Mục 6 i18n | Chưa cài `react-i18next`, UI hardcode tiếng Việt | PR riêng cài i18n, sau đó 13.x mới yêu cầu `t('...')` |
 | `StatCard` cục bộ trong `AdminSystemHealthPage` | Mục 9 muốn dùng chung | Tách ra khi màn thứ hai cần |
-| `features/farm-owner/dashboard/BirdVisionCard.tsx` — `bg-[#D2F93A]` | Hex hardcode (13.7) | Đổi sang token `bg-lime-500` (cùng giá trị) |
 | ~230 chỗ `text-xs`/`text-sm`/`text-lg`/`text-2xl`… | Lệch thang chữ 2.8 (13.7 [Nên]) | Đổi dần khi sửa file đó |
 | `pages/sales-staff/` · `routes/sales-staff.routes.tsx` · `SalesStaffLayout` · role `SALES_STAFF` trong `types/common.types.ts`, `types/ticket.types.ts`, `INVITE_ROLE_LABEL` | Role đã bỏ từ SRS v1.23.0 | Gỡ trong PR thêm `DOMAIN_EXPERT` (SRS §0.5 Web) |
 | `MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · `features/farm-owner/harvest/` phần đăng bán (`CreateListingModal`, `ListingPanel`, `ListingsTab`, `TraceCodeRow`) | Bỏ ở SRS v2.0.0 (§0.2 #1) | Gỡ cùng lúc backend gỡ `/marketplace/*`; trang Thu hoạch chỉ còn ghi nhận |
