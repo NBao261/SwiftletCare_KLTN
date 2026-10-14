@@ -5,7 +5,7 @@ export default function SalesStaffHomePage() {
   return (
     <ComingSoon
       title="Tính năng Bán hàng đang được phát triển"
-      note="Module quản lý đơn hàng, tồn kho và sản phẩm dành cho Sales Staff thuộc Giai đoạn 2 của SwiftletCare, hiện chưa triển khai. Vào Cài đặt để cập nhật thông tin tài khoản."
+      note="Module quản lý đơn hàng, tồn kho và sản phẩm dành cho chuyên viên thuộc Giai đoạn 2 của SwiftletCare, hiện chưa triển khai. Vào Cài đặt để cập nhật thông tin tài khoản."
     />
   );
 }
