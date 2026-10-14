@@ -1,4 +1,5 @@
 import type { AdminCreatableRole } from '@/hooks/admin/useUsers'
+import { t } from '@/i18n'
 
 /** Khớp validator backend admin.route.ts: isEmail / isLength({min:8}) / notEmpty / isArray({min:1}) */
 export const PASSWORD_MIN = 8
@@ -27,8 +28,8 @@ export function parseRegions(raw: string): string[] {
 /**
  * Trả về map lỗi theo field — rỗng nghĩa là form hợp lệ. Tách khỏi component để
  * dễ đọc/kiểm thử. Thông báo phân biệt "chưa nhập" và "nhập sai", kèm ví dụ khi cần.
- * Mọi thông báo phải vừa 1 dòng: CreateUserModal chỉ chừa sẵn 1 dòng lỗi dưới mỗi ô
- * (reserveError) — lỗi 2 dòng làm popup canh giữa đổi chiều cao và giật lên/xuống.
+ * Thông báo nên ngắn: CreateUserModal hiện lỗi cùng hàng với nhãn ô (errorInLabel, 1 dòng
+ * cắt "…") để popup canh giữa không đổi chiều cao — lỗi dài sẽ bị cắt.
  */
 export function validateNewUser(form: FormState): Partial<Record<Field, string>> {
   const errors: Partial<Record<Field, string>> = {}
@@ -44,16 +45,17 @@ export function validateNewUser(form: FormState): Partial<Record<Field, string>>
   const phone = form.phone.replace(/[\s.-]/g, '')
   if (phone && !PHONE_RE.test(phone)) errors.phone = 'SĐT cần dạng 0912345678 hoặc +84912345678'
 
-  if (!form.password) errors.password = `Hãy nhập mật khẩu ban đầu (ít nhất ${PASSWORD_MIN} ký tự)`
+  // Câu có số dịch tại đây (t + biến); câu cố định để Input tự dịch khi hiển thị
+  if (!form.password) errors.password = t('Hãy nhập mật khẩu (ít nhất {{min}} ký tự)', { min: PASSWORD_MIN })
   else if (form.password.length < PASSWORD_MIN) {
-    errors.password = `Mật khẩu cần ít nhất ${PASSWORD_MIN} ký tự (đang có ${form.password.length})`
+    errors.password = t('Mật khẩu cần ít nhất {{min}} ký tự (đang có {{count}})', { min: PASSWORD_MIN, count: form.password.length })
   }
 
   if (form.role === 'TECHNICIAN' && parseRegions(form.regions).length === 0) {
     errors.regions = 'Hãy nhập ít nhất 1 vùng phụ trách'
   }
   if (form.role === 'SALES_STAFF' && form.farmIds.length === 0) {
-    errors.farmIds = 'Hãy chọn ít nhất 1 farm phụ trách'
+    errors.farmIds = t('Hãy chọn ít nhất 1 farm phụ trách')
   }
   return errors
 }

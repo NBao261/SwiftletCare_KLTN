@@ -1,9 +1,10 @@
-import { HouseIcon, LockIcon, StorefrontIcon, UsersThreeIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
+import { HouseIcon, LockIcon, StorefrontIcon, UsersIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
 import { getUserStatus, useAllUsers } from '@/hooks/admin/useUsers'
 import { Button, Card, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import StatTile from '@/components/ui/StatTile'
 import { ROLE_LABEL } from '@/constants/roles'
+import { t } from '@/i18n'
 import type { Role, User } from '@/types'
 
 /** Vòng icon xám như các ô trang Tổng quan (theo ReadingTile Dashboard Farm Owner) */
@@ -15,7 +16,7 @@ const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'SALES_STAFF', 'ADMI
 function roleSub(list: User[]) {
   if (list.length === 0) return 'Chưa có tài khoản nào'
   const locked = list.filter(u => getUserStatus(u) === 'LOCKED').length
-  return locked > 0 ? `${list.length - locked} hoạt động · ${locked} đã khoá` : 'Tất cả đang hoạt động'
+  return locked > 0 ? t('{{active}} hoạt động · {{locked}} đã khoá', { active: list.length - locked, locked }) : 'Tất cả đang hoạt động'
 }
 
 /**
@@ -46,7 +47,7 @@ export default function UserStats() {
   const byRole = (r: Role) => users.filter(u => u.role === r)
   const statusCount = (s: ReturnType<typeof getUserStatus>) => users.filter(u => getUserStatus(u) === s).length
   const technicians = byRole('TECHNICIAN')
-  const noRegion = technicians.filter(t => !t.assigned_regions?.length).length
+  const noRegion = technicians.filter(u => !u.assigned_regions?.length).length
   const pendingDeletion = statusCount('PENDING_DELETION')
   const lockedUsers = users.filter(u => getUserStatus(u) === 'LOCKED')
   const lockedByRole = ROLES_IN_TILES
@@ -54,9 +55,9 @@ export default function UserStats() {
     .filter(([, n]) => n > 0)
     .map(([r, n]) => `${n} ${ROLE_LABEL[r].toLowerCase()}`)
   const totalSub = [
-    `${statusCount('ACTIVE')} hoạt động`,
-    `${byRole('ADMIN').length} quản trị viên`,
-    pendingDeletion > 0 && `${pendingDeletion} chờ xoá`,
+    t('{{n}} hoạt động', { n: statusCount('ACTIVE') }),
+    t('{{n}} quản trị viên', { n: byRole('ADMIN').length }),
+    pendingDeletion > 0 && t('{{n}} chờ xoá', { n: pendingDeletion }),
   ].filter(Boolean).join(' · ')
 
   return (
@@ -64,15 +65,15 @@ export default function UserStats() {
     // riêng, icon xám đồng nhất
     <Card className="flex flex-col gap-4">
       <div>
-        <h2 className="text-h2 text-charcoal">Thống kê tài khoản</h2>
-        <p className="mt-1 text-sm text-warmGray">Số tài khoản theo vai trò và trạng thái trên toàn hệ thống</p>
+        <h2 className="text-h2 text-charcoal">{t('Thống kê tài khoản')}</h2>
+        <p className="mt-1 text-sm text-warmGray">{t('Số tài khoản theo vai trò và trạng thái trên toàn hệ thống')}</p>
       </div>
 
       {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatTile
           className="col-span-2 shadow-none lg:col-span-1"
-          icon={UsersThreeIcon}
+          icon={UsersIcon}
           iconClass={ICON}
           label="Tổng tài khoản"
           value={total}
@@ -85,9 +86,9 @@ export default function UserStats() {
           iconClass={ICON}
           label="Kỹ thuật viên"
           value={technicians.length}
-          sub={technicians.length === 0 ? 'Chưa có tài khoản nào' : noRegion > 0 ? `${noRegion} chưa gán khu vực` : 'Tất cả đã gán khu vực'}
+          sub={technicians.length === 0 ? 'Chưa có tài khoản nào' : noRegion > 0 ? t('{{n}} chưa gán khu vực', { n: noRegion }) : 'Tất cả đã gán khu vực'}
         />
-        <StatTile className="shadow-none" icon={StorefrontIcon} iconClass={ICON} label="Nhân viên kinh doanh" value={byRole('SALES_STAFF').length} sub={roleSub(byRole('SALES_STAFF'))} />
+        <StatTile className="shadow-none" icon={StorefrontIcon} iconClass={ICON} label={ROLE_LABEL.SALES_STAFF} value={byRole('SALES_STAFF').length} sub={roleSub(byRole('SALES_STAFF'))} />
         <StatTile
           className="shadow-none"
           icon={LockIcon}

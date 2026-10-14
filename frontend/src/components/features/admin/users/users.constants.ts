@@ -1,10 +1,11 @@
 import type { BadgeTone } from '@/components/ui'
 import type { UsersSortKey } from '@/hooks/admin/useUsers'
 import type { UserStatus } from '@/types'
+import { translated } from '@/i18n'
 
-export const STATUS_LABEL: Record<UserStatus, string> = {
+export const STATUS_LABEL: Record<UserStatus, string> = translated({
   ACTIVE: 'Hoạt động', LOCKED: 'Đã khoá', PENDING_DELETION: 'Chờ xoá', DELETED: 'Đã xoá',
-}
+})
 export const STATUS_TONE: Record<UserStatus, BadgeTone> = {
   ACTIVE: 'positive', LOCKED: 'critical', PENDING_DELETION: 'warning', DELETED: 'neutral',
 }

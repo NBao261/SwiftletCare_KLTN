@@ -1,8 +1,9 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useUpdateTechnicianRegions } from '@/hooks/admin/useUsers'
-import { Button, Input, Modal } from '@/components/ui'
+import { Button, Input, Modal, ModalHeader, ModalSection, ModalSummaryRow } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
+import { t } from '@/i18n'
 import type { User } from '@/types'
 
 /**
@@ -31,20 +32,41 @@ export default function EditUserModal({ user, onClose }: { user: User | null; on
   }
 
   return (
-    <Modal open={!!user} onClose={onClose} title={`Vùng phụ trách · ${user?.full_name ?? ''}`}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input
-          label="Vùng phụ trách"
-          placeholder="VD: HCMC, Long An"
-          required
-          value={regions}
-          onChange={e => setRegions(e.target.value)}
-        />
+    // Popup ngang: tiêu đề + thanh ngăn; trái = tài khoản + vùng hiện tại, phải = ô vùng mới + Lưu
+    <Modal open={!!user} onClose={onClose} size="xl" ariaLabel="Vùng phụ trách">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Nói hệ quả nghiệp vụ (TICKET-FR-004, FARM-FR-009) thay vì chi tiết kỹ thuật "đọc lại từ DB, không lấy từ JWT" */}
-        <p className="text-xs text-warmGray">
-          Nhiều vùng cách nhau bằng dấu phẩy. Kỹ thuật viên chỉ nhận ticket và quản lý trang trại thuộc các vùng này — áp dụng ngay sau khi lưu.
-        </p>
-        <Button type="submit" loading={updateRegions.isPending} disabled={regionList.length === 0} className="w-full">Lưu</Button>
+        <ModalHeader title="Vùng phụ trách" description="Kỹ thuật viên chỉ nhận ticket và quản lý trang trại thuộc các vùng này — áp dụng ngay sau khi lưu" />
+
+        <div className="flex gap-6">
+          <div className="w-60 shrink-0 border-r border-gray-200 pr-5">
+            <ModalSection title="Hiện tại" padded={false}>
+              <dl className="divide-y divide-gray-200">
+                <ModalSummaryRow label="Kỹ thuật viên">{user?.full_name ?? '—'}</ModalSummaryRow>
+                <ModalSummaryRow label="Email">{user?.email ?? '—'}</ModalSummaryRow>
+                <ModalSummaryRow label="Vùng phụ trách">{user?.assigned_regions?.length ? user.assigned_regions.join(', ') : 'Chưa gán'}</ModalSummaryRow>
+              </dl>
+            </ModalSection>
+          </div>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-5">
+            <ModalSection title="Thay đổi">
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  label="Vùng phụ trách mới"
+                  placeholder="VD: HCMC, Long An"
+                  required
+                  value={regions}
+                  onChange={e => setRegions(e.target.value)}
+                />
+                <p className="text-xs text-warmGray">{t('Nhiều vùng cách nhau bằng dấu phẩy')}</p>
+              </div>
+            </ModalSection>
+            <div className="mt-auto flex justify-end">
+              <Button type="submit" loading={updateRegions.isPending} disabled={regionList.length === 0}>Lưu</Button>
+            </div>
+          </div>
+        </div>
       </form>
     </Modal>
   )

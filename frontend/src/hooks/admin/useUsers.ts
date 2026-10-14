@@ -22,6 +22,8 @@ export interface ListUsersQuery {
    */
   status?: Extract<UserStatus, 'ACTIVE' | 'LOCKED'>
   role?: Role
+  /** Nhóm vai trò (VD tab Nhân viên hệ thống) — lọc CLIENT-SIDE vì backend chỉ nhận 1 role; bỏ qua khi đã có `role` */
+  roles?: Role[]
   /** Lọc CLIENT-SIDE trên TOÀN BỘ tài khoản khớp status/role — /admin/users chưa có search */
   search?: string
   /** Sort CLIENT-SIDE trên toàn bộ — /admin/users cố định created_at desc */
@@ -88,6 +90,7 @@ export function useUsersList(query: ListUsersQuery) {
   const result = useAllUsers(query.status, query.role)
 
   let all = result.data ?? []
+  if (!query.role && query.roles) all = all.filter(u => query.roles!.includes(u.role))
   if (query.search) all = all.filter(u => matchesSearch(u, query.search!))
   all = sortUsers(all, query.sortBy, query.sortDir)
 

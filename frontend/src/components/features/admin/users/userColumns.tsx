@@ -2,12 +2,9 @@ import { Badge } from '@/components/ui'
 import { type DataTableColumn } from '@/components/ui/DataTable'
 import ActionsMenu, { type ActionsMenuItem } from '@/components/ui/ActionsMenu'
 import { getUserStatus } from '@/hooks/admin/useUsers'
-import { formatDate } from '@/lib/helpers'
+import { formatDate, formatDateOnly } from '@/lib/helpers'
 import { STATUS_LABEL, STATUS_TONE, ROLE_LABEL } from '@/components/features/admin/users/users.constants'
 import type { User } from '@/types'
-
-/** "22/09/2026" theo giờ VN */
-const DAY = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })
 
 export interface UserColumnHandlers {
   onView: (user: User) => void
@@ -59,7 +56,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
       // Chỉ ngày (không giờ:phút:giây) — rê chuột xem đủ giờ tạo
       key: 'created_at', header: 'Ngày tạo', className: 'w-[16%] whitespace-nowrap',
       render: (user) => user.created_at
-        ? <span className="text-graphite" title={formatDate(user.created_at)}>{DAY.format(new Date(user.created_at))}</span>
+        ? <span className="text-graphite" title={formatDate(user.created_at)}>{formatDateOnly(user.created_at)}</span>
         : <span className="text-warmGray">—</span>,
     },
     {

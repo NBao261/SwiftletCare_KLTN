@@ -2,6 +2,7 @@ import { useSetUserStatus } from '@/hooks/admin/useUsers'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
+import { t } from '@/i18n'
 import type { User } from '@/types'
 
 /** AUTH-FR-011 — PUT /admin/users/:id/status {is_active:true}; không cần lý do. */
@@ -12,7 +13,7 @@ export default function UnlockUserModal({ user, onClose }: { user: User | null; 
   return (
     <ConfirmModal
       open={!!user}
-      title={`Mở khoá tài khoản · ${user?.full_name ?? ''}`}
+      title={`${t('Mở khoá tài khoản')} · ${user?.full_name ?? ''}`}
       description="Người dùng sẽ đăng nhập và sử dụng lại bình thường."
       confirmLabel="Mở khoá"
       loading={setStatus.isPending}

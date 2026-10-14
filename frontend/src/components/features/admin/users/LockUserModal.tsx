@@ -2,6 +2,7 @@ import { useSetUserStatus } from '@/hooks/admin/useUsers'
 import NoteActionModal from '@/components/ui/NoteActionModal'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
+import { t } from '@/i18n'
 import type { User } from '@/types'
 
 /** AUTH-FR-011 — PUT /admin/users/:id/status {is_active:false, reason}; lý do bắt buộc. */
@@ -13,7 +14,7 @@ export default function LockUserModal({ user, onClose }: { user: User | null; on
     <NoteActionModal
       open={!!user}
       onClose={onClose}
-      title={`Khoá tài khoản · ${user?.full_name ?? ''}`}
+      title={`${t('Khoá tài khoản')} · ${user?.full_name ?? ''}`}
       label="Lý do khoá"
       placeholder="VD: Vi phạm điều khoản sử dụng"
       // AUTH-FR-011: authenticate đọc lại is_active mỗi request + Socket.io ngắt kết nối → bị chặn ngay; lý do hiện
@@ -33,7 +34,7 @@ export default function LockUserModal({ user, onClose }: { user: User | null; on
           onSuccess: ({ openTickets }) => {
             // Khoá Technician còn ticket đang giao — backend báo số lượng để Admin gán lại (TICKET-FR-005b)
             push(openTickets
-              ? `Đã khoá tài khoản. Còn ${openTickets} ticket đang giao cho người này — cần gán lại kỹ thuật viên.`
+              ? t('Đã khoá tài khoản. Còn {{n}} ticket đang giao cho người này — cần gán lại kỹ thuật viên.', { n: openTickets })
               : 'Đã khoá tài khoản')
             onClose()
           },
