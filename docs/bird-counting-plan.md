@@ -808,7 +808,7 @@ Có thể đặt Task Scheduler chạy lệnh `ffmpeg` trên lúc 05:25 và 17:2
 
 | Cách | Khi nào dùng | Lưu ý |
 |---|---|---|
-| Ghi qua RTSP bằng lệnh `ffmpeg` ở trên | Có laptop tại nhà yến trong giờ chim bay | Tốt nhất: clip giống hệt luồng hình pipeline sẽ nhận khi chạy thật |
+| Ghi qua RTSP bằng lệnh `ffmpeg` ở trên | Laptop kéo được luồng RTSP trong giờ chim bay: tại nhà yến qua LAN, hoặc từ xa qua IP public (mục 16.6) | Tốt nhất: clip giống hệt luồng hình pipeline sẽ nhận khi chạy thật |
 | Camera tự ghi vào thẻ microSD | Không có máy tính tại chỗ | Đặt ghi **liên tục** (không phải chỉ khi có chuyển động) và chất lượng cao nhất. File có thể là H.265 hoặc định dạng riêng của hãng; chuyển về MP4 bằng `ffmpeg -i <file gốc> -c:v libx264 -crf 18 <YYYYMMDD_phiên_số>.mp4`. Kiểm tra độ phân giải có trùng luồng RTSP không; nếu khác thì ưu tiên cách trên |
 | Tải clip về từ app của hãng trên điện thoại | Chỉ để bổ sung, khi hai cách trên không làm được | Chỉ dùng clip **tải bản gốc** từ thẻ nhớ qua app, không dùng clip quay màn hình hay clip xem lại chất lượng thấp. Kiểm tra bằng `ffprobe <file>`: độ phân giải và fps phải trùng luồng RTSP. Clip sự kiện ngắn (10–30 giây) dùng được để train nhưng không dùng được để đo sai số đếm. Tải khi điện thoại đang ở Wi-Fi nhà yến, vì tải từ xa sẽ kéo video qua 4G |
 
@@ -2166,7 +2166,7 @@ Quy trình: làm và thử mọi thứ ở **dev** trước (nhanh, không tốn
 | Mục đích | Viết code, hiệu chỉnh, train, kiểm thử | Chạy thật, hội đồng xem từ xa |
 | Chi phí | 0đ | VPS + tên miền (0đ nếu có gói sinh viên) |
 | Ai xem được | Máy của bạn; thiết bị cùng Wi-Fi nếu cấu hình IP LAN | Bất kỳ đâu có Internet |
-| Nguồn hình | File clip hoặc camera trong LAN | Camera tại nhà yến + camera demo |
+| Nguồn hình | File clip, camera trong LAN, hoặc camera tại nhà yến kéo từ xa qua IP public (mục 16.6) | Camera tại nhà yến + camera demo |
 | Hạ tầng | `docker-compose.yml` ở gốc repo + `npm run dev` | `deploy/docker-compose.prod.yml` |
 | Frontend | Vite `http://localhost:5173` | Caddy `https://<tên miền>` |
 | Backend | `npm run dev` trên máy, cổng 3000 | Container, sau Caddy |
@@ -2269,6 +2269,40 @@ Chỉ đưa lên cloud khi mức 2 ở dev đã đạt đủ:
 - [ ] Mở WHEP không kèm token bị từ chối (401).
 
 Lỗi xuất hiện trên cloud mà không có ở dev gần như chắc chắn nằm ở hạ tầng (DNS, chứng chỉ, tường lửa, biến môi trường), không nằm ở code — kiểm tra theo bảng 10 bước ở mục 15.9.
+
+### 16.6. Dev từ xa: kéo hình camera nhà yến về laptop
+
+Nhà yến ở xa nên thu clip và chạy thử pipeline đều làm từ laptop ở nhà, không đặt máy nào tại nhà yến. Laptop đóng đúng vai trò VPS sau này: kéo RTSP qua IP public của modem (mục 19.4). Train vẫn trên Colab (mục 7.5), không phụ thuộc chỗ ngồi.
+
+**Phải làm tại nhà yến (một lần, lúc lắp):** lắp và ngắm camera (mục 3.3), các việc ở mục 19.2, mở cổng RTSP và DDNS ở mục 19.4. Không mở cổng quản trị modem hay camera ra Internet để chỉnh từ xa. Sau đó chỉ phải quay lại khi camera bị lệch, cần chỉnh góc hoặc mất kết nối không tự hồi phục.
+
+**Cho laptop vào được cổng camera:** nếu modem lọc IP nguồn (cổng 3c), thêm IP mạng nhà bạn vào luật. IP nhà thường là IP động; khi đổi thì phải sửa luật, và sửa luật cần vào trang quản trị modem tại chỗ. Nếu tạm mở cổng cho mọi nơi trong giai đoạn dev: mật khẩu camera mạnh, cổng ngoài không mặc định, cập nhật firmware camera, và ghi là hạn chế trong báo cáo. Hình trên đường này không mã hóa.
+
+**Giữ mật khẩu ngoài repo:** lưu địa chỉ RTSP vào biến môi trường của Windows, không ghi vào file trong repo:
+
+```powershell
+setx CAM_URL "rtsp://USER:PASS@<IP public hoặc tên DDNS>:18554/<đường dẫn rtsp>"   # mở cửa sổ PowerShell mới để có biến
+ffplay -rtsp_transport tcp $env:CAM_URL                                              # kiểm tra: thấy hình, góc đúng
+python src/stream.py --source $env:CAM_URL --session MORNING_EXIT --no-mqtt          # chạy pipeline với hình thật
+```
+
+**Thu clip theo lịch:** đường truyền qua Internet có thể rớt giữa phiên; `ffmpeg` dừng khi rớt, nên ghi bằng vòng lặp ghi tiếp sang file mới cho tới hết giờ. `-timeout` (micro giây) để `ffmpeg` thoát thay vì treo khi luồng đứng hình. Lưu file này ngoài repo hoặc trong `ai-pipeline/tools/`, chạy trong thư mục `ai-pipeline`:
+
+```powershell
+# record_session.ps1 — ghi 90 phút, tên file theo quy ước ở mục 7.1
+$end = (Get-Date).AddMinutes(90); $i = 1
+$session = if ((Get-Date).Hour -lt 12) { 'morning' } else { 'evening' }
+while ((Get-Date) -lt $end) {
+  $left = [int]($end - (Get-Date)).TotalSeconds
+  $out  = "clips/{0:yyyyMMdd}_{1}_{2:d2}.mp4" -f (Get-Date), $session, $i
+  ffmpeg -n -rtsp_transport tcp -timeout 10000000 -i $env:CAM_URL -c copy -t $left $out
+  $i++; Start-Sleep -Seconds 10
+}
+```
+
+Đặt Task Scheduler chạy script lúc 05:25 và 17:25, tick "Wake the computer to run this task" và tắt chế độ ngủ khi cắm sạc; laptop phải bật và có mạng trong giờ chim bay. Sau mỗi phiên kiểm tra nhanh bằng `ffprobe`: tổng thời lượng các file gần đủ 90 phút. Nhiều file ngắn liền nhau nghĩa là đường truyền chập chờn — cùng dấu hiệu sẽ gặp ở cổng 3b khi lên VPS.
+
+Nếu camera có thẻ nhớ ghi liên tục, đó là bản dự phòng khi đường truyền rớt; nhưng lấy file thẻ nhớ phải tới nhà yến hoặc tải qua app.
 
 ---
 
