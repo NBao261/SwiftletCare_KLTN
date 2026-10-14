@@ -2381,9 +2381,13 @@ paths:
                                   }
                                 last_heartbeat: { type: string, format: date-time, nullable: true }
                                 rssi: { type: number, nullable: true, description: "Chỉ có với sensor" }
+                                firmware_version: { type: string, nullable: true, example: "1.2.0", description: "Chỉ có với sensor" }
+                                registered_at: { type: string, format: date-time }
                                 zone_id: { type: string }
+                                farm_id: { type: string }
                                 farm_name: { type: string }
                                 house_name: { type: string }
+                                floor: { type: integer, example: 1 }
                                 zone_name: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
 
