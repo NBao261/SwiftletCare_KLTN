@@ -2,13 +2,13 @@ import { useState, type FormEvent } from 'react'
 import { Button, Input, Modal } from '@/components/ui'
 import { useCreateFarm } from '@/hooks/shared/useFarms'
 import { useToastStore } from '@/stores/toastStore'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { getApiErrorMessage } from '@/lib/helpers'
 
 /** Tạo trang trại mới (FARM-FR-001) — mở từ màn trống lẫn nút "Tạo trang trại" ở danh sách nhà yến; tạo xong danh sách tự làm mới */
 export default function CreateFarmModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t } = useT(farmDict)
+  const { t } = useTranslation(farmDict)
   const push = useToastStore(s => s.push)
   const createFarm = useCreateFarm()
   const [form, setForm] = useState({ name: '', address: '', region: '' })
