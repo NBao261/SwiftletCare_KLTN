@@ -47,12 +47,12 @@ export default function FarmRecentTickets({ farmId }: { farmId: string }) {
     status: status || undefined,
     priority: priority || undefined,
   });
-  // Ticket chỉ có zone_id thô — tra tên "Nhà · Phòng" từ danh sách phòng phẳng đã cache (tab Nhà yến cũng dùng)
+  // Ticket chỉ có zone_id thô — tra tên "Nhà | Phòng" từ danh sách phòng phẳng đã cache (tab Nhà yến cũng dùng)
   const { data: farmZones } = useFarmZones(farmId);
   const roomLabel = (ticket: Ticket) => {
     if (!ticket.zone_id) return t("Toàn farm");
     const zone = farmZones?.find((z) => z._id === ticket.zone_id);
-    return zone ? `${zone.houseName} · ${zone.name}` : "—";
+    return zone ? `${zone.houseName} | ${zone.name}` : "—";
   };
 
   // Không có ô tìm kiếm (tìm đủ ở trang Ticket qua "Xem tất cả") — chỉ sắp xếp; copy mảng vì sortTickets sắp tại chỗ

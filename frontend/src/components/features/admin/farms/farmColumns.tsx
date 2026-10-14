@@ -3,9 +3,11 @@ import { Badge } from '@/components/ui'
 import { type DataTableColumn } from '@/components/ui/DataTable'
 import ActionsMenu, { type ActionsMenuItem } from '@/components/ui/ActionsMenu'
 import { getUserStatus } from '@/hooks/admin/useUsers'
-import { formatDate, formatDayTime } from '@/lib/helpers'
+import { formatDate, formatHM } from '@/lib/helpers'
 import { STATUS_LABEL, STATUS_TONE } from '@/components/features/admin/users/users.constants'
 import type { Farm, User } from '@/types'
+
+const DAY_FORMAT = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
 
 export interface FarmColumnHandlers {
   onView: (farm: Farm) => void
@@ -25,7 +27,7 @@ export function buildFarmColumns(
   ownersById: Map<string, User>,
 ): DataTableColumn<Farm>[] {
   return [
-    // Width % (table-fixed), tổng 100: 5+15+15+16+18+9+14+8 — Ngày tạo 14% vừa "16/09/2026 · 22:42" (12% bị tràn),
+    // Width % (table-fixed), tổng 100: 5+15+16+18+15+9+14+8 (Trang trại | Chủ sở hữu | Email | Địa chỉ …) — Ngày tạo 14% vừa "16/09/2026 · 22:42" (12% bị tràn),
     // Chủ sở hữu 16% vừa tên như "Demo Farm Owner", Địa chỉ/Khu vực bớt phần trống
     {
       key: 'stt', header: 'STT', align: 'center', className: 'w-[5%]',
@@ -39,13 +41,6 @@ export function buildFarmColumns(
           {farm.name}
         </Link>
       ),
-    },
-    {
-      // Tách riêng khỏi cột Trang trại
-      key: 'address', header: 'Địa chỉ', className: 'w-[15%]',
-      render: (farm) => farm.address
-        ? <span className="block truncate text-charcoal" title={farm.address}>{farm.address}</span>
-        : <span className="text-warmGray">—</span>,
     },
     {
       key: 'owner', header: 'Chủ sở hữu', sortable: true, className: 'w-[16%]',
@@ -73,6 +68,13 @@ export function buildFarmColumns(
       },
     },
     {
+      // Tách riêng khỏi cột Trang trại
+      key: 'address', header: 'Địa chỉ', className: 'w-[15%]',
+      render: (farm) => farm.address
+        ? <span className="block truncate text-charcoal" title={farm.address}>{farm.address}</span>
+        : <span className="text-warmGray">—</span>,
+    },
+    {
       key: 'region', header: 'Khu vực', sortable: true, className: 'w-[9%]',
       render: (farm) => farm.region
         ? <span className="text-charcoal">{farm.region}</span>
@@ -81,9 +83,15 @@ export function buildFarmColumns(
     },
     {
       // Sắp theo ngày tạo bằng nút "Sắp xếp:" ở hàng bộ lọc (như trang Người dùng) — không lặp ở tiêu đề
-      // Đến phút, cùng kiểu cột Thời gian Nhật ký hệ thống ("16/09/2026 · 22:42"); đủ giây ở tooltip
+      // 2 tầng như cột Heartbeat bảng Thiết bị: giờ:phút đậm trên, ngày xám dưới; đủ giây ở tooltip.
+      // leading-tight + -my-1 (ăn bớt py-3 của ô) để 2 dòng vừa hàng 52px, bảng không cao thêm
       key: 'created_at', header: 'Ngày tạo', className: 'w-[14%] whitespace-nowrap',
-      render: (farm) => <span className="text-warmGray" title={formatDate(farm.created_at)}>{formatDayTime(farm.created_at)}</span>,
+      render: (farm) => (
+        <div className="-my-1 flex flex-col leading-tight" title={formatDate(farm.created_at)}>
+          <span className="font-semibold text-charcoal">{formatHM(farm.created_at)}</span>
+          <span className="text-small text-warmGray">{DAY_FORMAT.format(new Date(farm.created_at))}</span>
+        </div>
+      ),
     },
     {
       key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[8%]',
@@ -93,8 +101,8 @@ export function buildFarmColumns(
         if (owner) {
           const status = getUserStatus(owner)
           // Đã xoá theo yêu cầu thì backend từ chối khoá/mở khoá (409) — không hiện nút
-          if (status === 'LOCKED') items.push({ label: 'Mở khoá chủ farm', onClick: () => handlers.onUnlockOwner(owner) })
-          else if (status !== 'DELETED') items.push({ label: 'Khoá tài khoản chủ farm', danger: true, onClick: () => handlers.onLockOwner(owner) })
+          if (status === 'LOCKED') items.push({ label: 'Mở khoá tài khoản', onClick: () => handlers.onUnlockOwner(owner) })
+          else if (status !== 'DELETED') items.push({ label: 'Khoá tài khoản', danger: true, onClick: () => handlers.onLockOwner(owner) })
         }
         return (
           // stopPropagation — dòng đã bấm-được (onRowClick mở chi tiết), mở menu bằng chuột/bàn phím không được kéo theo

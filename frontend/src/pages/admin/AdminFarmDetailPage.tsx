@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useFarm, useHouses, useFarmZones } from "@/hooks/shared/useFarms";
 import { usePageBreadcrumb, usePageBack } from "@/hooks/common/useBreadcrumb";
@@ -7,27 +6,19 @@ import { useAlertsList } from "@/hooks/shared/useAlerts";
 import { SectionCard } from "@/components/ui";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import EmptyState from "@/components/ui/EmptyState";
-import FarmMembersCard from "@/components/features/admin/farms/FarmMembersCard";
 import FarmRecentTickets from "@/components/features/admin/farms/FarmRecentTickets";
 import HouseCard from "@/components/features/admin/farms/HouseCard";
-import { cn } from "@/lib/cn";
 import { tr } from "@/i18n";
-
-type FarmTab = "houses" | "members";
-const TABS: { key: FarmTab; label: string }[] = [
-  { key: "houses", label: "Nhà yến" },
-  { key: "members", label: "Thành viên" },
-];
 
 /**
  * Chi tiết 1 Farm cho Admin (/system/farms/:farmId) — FARM-FR-009: cấu trúc (nhà/phòng) + người dùng + ticket liên
- * quan. Cùng ngôn ngữ các trang Admin khác: card trắng không icon, nội dung trong khung viền chia dòng (như StatTile),
- * màu trung tính. Card trên 2 tab: Nhà yến | Thành viên (Farm Owner + Chuyên viên); card dưới: ticket gần nhất. Chỉ xem cấu trúc — tạo nhà là việc của Farm Owner/Technician lúc lắp đặt; Admin không sửa/xoá farm.
+ * quan. Cùng ngôn ngữ các trang Admin khác: card trắng không icon, màu trung tính. Card trên: các nhà yến (HouseCard);
+ * card dưới: ticket gần nhất. Chỉ xem cấu trúc — tạo nhà là việc của Farm Owner/Technician lúc lắp đặt; Admin không
+ * sửa/xoá farm.
  */
 export default function AdminFarmDetailPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<FarmTab>("houses");
   const { data: farm, isLoading: isLoadingFarm } = useFarm(farmId);
   const { data: houses, isLoading: isLoadingHouses } = useHouses(farmId);
   // Không có API đếm phòng theo nhà — dùng lại danh sách zone phẳng của farm (đã cache, ZonePicker cũng gọi)
@@ -42,39 +33,14 @@ export default function AdminFarmDetailPage() {
   if (isLoadingFarm) return <LoadingSkeleton className="h-28 w-full" />;
   if (!farm) return <EmptyState title="Không tìm thấy trang trại" description="Trang trại có thể đã bị xoá." />;
 
-
   return (
     <div className="flex flex-col gap-5">
       <SectionCard
         title={farm.name}
-        // Chủ sở hữu không lặp ở đây — đã là dòng "Chủ chính" trong tab Thành viên
         description={<p className="truncate">{farm.address}{farm.region ? ` · ${farm.region}` : ""}</p>}
-        // Tab pill cùng kiểu trang Ticket
-        action={
-          <div className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={tr("Nội dung trang trại")}>
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                role="tab"
-                aria-selected={tab === t.key}
-                onClick={() => setTab(t.key)}
-                className={cn(
-                  "h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150",
-                  tab === t.key ? "bg-white text-charcoal shadow-card" : "text-warmGray hover:text-charcoal",
-                )}
-              >
-                {tr(t.label)}
-              </button>
-            ))}
-          </div>
-        }
       >
-        {tab === "members" ? (
-          <FarmMembersCard farmId={farmId!} />
-        ) : (
-          // Lưới card 2 cột — mỗi nhà 1 HouseCard (trạng thái cảnh báo, thiết bị, sản lượng, kỹ thuật viên)
-          <div className="grid gap-4 md:grid-cols-2">
+        {/* Lưới card 2 cột — mỗi nhà 1 HouseCard (trạng thái cảnh báo, thiết bị) */}
+        <div className="grid gap-4 md:grid-cols-2">
             {isLoadingHouses && <LoadingSkeleton count={2} className="h-64 w-full" />}
             {!isLoadingHouses && houses?.length === 0 && (
               <p className="col-span-full rounded-2xl border border-warmGray/15 py-6 text-center text-sm text-warmGray">
@@ -96,8 +62,7 @@ export default function AdminFarmDetailPage() {
                 />
               );
             })}
-          </div>
-        )}
+        </div>
       </SectionCard>
 
       <FarmRecentTickets farmId={farmId!} />
