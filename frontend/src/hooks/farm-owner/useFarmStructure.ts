@@ -8,7 +8,7 @@ import { farmMockApi } from '@/apis/farm-owner/farmMock.api'
 import { useFarms } from '@/hooks/shared/useFarms'
 import { useSensorNodes } from '@/hooks/shared/useDevices'
 import { useEnvCompareBatched } from '@/hooks/farm-owner/useAnalytics'
-import { useZonesLive } from '@/hooks/farm-owner/useZonesLive'
+import { useLiveZoneTelemetry } from '@/hooks/farm-owner/useLiveZoneTelemetry'
 import { usePermission } from '@/hooks/common/usePermission'
 import { HARVEST_ROLES } from '@/constants/roles'
 import { buildFarmStructure, mergeMetrics, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
@@ -91,7 +91,7 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
 
   const zoneIds = useMemo(() => [...zonesByHouse.values()].flat().map(z => z._id), [zonesByHouse])
   const envQ = useEnvCompareBatched(zoneIds, '1h')
-  const live = useZonesLive(options?.liveZoneIds ?? [])
+  const live = useLiveZoneTelemetry(options?.liveZoneIds ?? [])
 
   const metricsByZone = useMemo(() => {
     const avg = new Map<string, ZoneMetrics>()
