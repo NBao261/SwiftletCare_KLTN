@@ -29,13 +29,14 @@ const DEFAULT_SORT_BY: UsersSortKey = 'created_at'
 const DEFAULT_SORT_DIR: SortDirection = 'desc'
 
 /**
- * 2 tab tách nhân viên vận hành hệ thống (Admin tạo/quản lý) khỏi người dùng là khách hàng (Farm Owner tự đăng ký).
- * `roles` = nhóm vai trò của tab, lọc ở client (backend /admin/users chỉ nhận 1 role).
+ * 2 tab tách nhân viên vận hành hệ thống (Quản trị viên, Kỹ thuật viên) khỏi người dùng phía khách hàng (Chủ nhà yến +
+ * Chuyên gia — mã SALES_STAFF, chỉ đổi tên hiển thị). `roles` = nhóm vai trò của tab, lọc ở client vì backend
+ * /admin/users chỉ nhận 1 role.
  */
 type UserTab = 'staff' | 'customers'
 const TABS: { key: UserTab; label: string; description: string; roles: Role[] }[] = [
-  { key: 'staff', label: 'Nhân viên hệ thống', description: 'Quản trị viên, kỹ thuật viên và chuyên viên', roles: ['ADMIN', 'TECHNICIAN', 'SALES_STAFF'] },
-  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến đăng ký sử dụng hệ thống', roles: ['FARM_OWNER'] },
+  { key: 'staff', label: 'Nhân viên hệ thống', description: 'Quản trị viên và kỹ thuật viên', roles: ['ADMIN', 'TECHNICIAN'] },
+  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến và chuyên gia', roles: ['FARM_OWNER', 'SALES_STAFF'] },
 ]
 
 export default function AdminUsersPage() {
@@ -55,7 +56,8 @@ export default function AdminUsersPage() {
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null)
 
   const { records, total, limit, isLoading } = useUsersList({
-    status, role: role || undefined, roles: currentTab.roles, search: search || undefined, sortBy, sortDir, page, limit: PAGE_SIZE,
+    // Lọc vai trò ở client (cùng cách lọc nhóm vai trò của tab)
+    status, roles: role ? [role] : currentTab.roles, search: search || undefined, sortBy, sortDir, page, limit: PAGE_SIZE,
   })
 
   // Đổi tab → bỏ lọc vai trò của tab cũ (không còn trong tab mới) và về trang 1
@@ -127,7 +129,7 @@ export default function AdminUsersPage() {
         }
       >
 
-        {/* Hàng 1: tìm kiếm + tạo tài khoản. Nút tạo chỉ ở tab Nhân viên — Admin chỉ tạo Technician/chuyên viên
+        {/* Hàng 1: tìm kiếm + tạo tài khoản. Nút tạo chỉ ở tab Nhân viên — Admin chỉ tạo Technician/chuyên gia
             (AUTH-FR-005c), Farm Owner tự đăng ký. Chọn vai trò ngay trong modal thay vì 2 nút riêng. */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[200px] flex-1">
