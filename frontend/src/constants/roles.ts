@@ -6,8 +6,9 @@ export const ROLE_LABEL: Record<Role, string> = translated({
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',
   TECHNICIAN: 'Kỹ thuật viên',
-  // Hiển thị "Chuyên viên" — vai trò Sales Staff đã đổi thành Staff/chuyên viên; mã SALES_STAFF giữ tới khi backend đổi enum
-  SALES_STAFF: 'Chuyên viên',
+  // Hiển thị "Chuyên gia" — luồng mới đổi Sales Staff thành chuyên gia (người dùng phía khách hàng, cùng nhóm chủ nhà
+  // yến); chỉ đổi chữ ở giao diện, mã SALES_STAFF giữ nguyên như backend
+  SALES_STAFF: 'Chuyên gia',
 })
 
 /**

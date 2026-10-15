@@ -1,4 +1,4 @@
-import { HouseIcon, LockIcon, StorefrontIcon, UsersIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
+import { GraduationCapIcon, HouseIcon, LockIcon, UsersIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
 import { getUserStatus, useAllUsers } from '@/hooks/admin/useUsers'
 import { Button, Card, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -10,7 +10,7 @@ import type { Role, User } from '@/types'
 /** Vòng icon xám như các ô trang Tổng quan (theo ReadingTile Dashboard Farm Owner) */
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'SALES_STAFF', 'ADMIN']
+const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'SALES_STAFF', 'TECHNICIAN', 'ADMIN']
 
 /** Dòng phụ ô vai trò: tình trạng hoạt động của nhóm đó (thay cho "% tổng số" — tỉ lệ không giúp Admin làm gì) */
 function roleSub(list: User[]) {
@@ -90,7 +90,8 @@ export default function UserStats() {
           tone={noRegion > 0 ? 'warning' : undefined}
           sub={technicians.length === 0 ? 'Chưa có tài khoản nào' : noRegion > 0 ? t('{{n}} chưa gán khu vực', { n: noRegion }) : 'Tất cả đã gán khu vực'}
         />
-        <StatTile className="shadow-none" icon={StorefrontIcon} iconClass={ICON} label={ROLE_LABEL.SALES_STAFF} value={byRole('SALES_STAFF').length} sub={roleSub(byRole('SALES_STAFF'))} />
+        {/* Chuyên gia = SALES_STAFF (chỉ đổi tên hiển thị) */}
+        <StatTile className="shadow-none" icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.SALES_STAFF} value={byRole('SALES_STAFF').length} sub={roleSub(byRole('SALES_STAFF'))} />
         <StatTile
           className="shadow-none"
           icon={LockIcon}

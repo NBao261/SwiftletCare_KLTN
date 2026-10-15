@@ -12,8 +12,8 @@ import { ROLE_LABEL } from '@/components/features/admin/users/users.constants'
 
 const CREATABLE_ROLES: AdminCreatableRole[] = ['TECHNICIAN', 'SALES_STAFF']
 /**
- * Vai trò Sales Staff đã đổi thành chuyên viên (Staff) nhưng backend chưa đổi role/endpoint — tạm hiện "Sắp ra mắt"
- * thay cho form. Bật lại (true) khi backend xong; phần form chuyên viên bên dưới vẫn giữ nguyên.
+ * Vai trò Sales Staff đã đổi thành chuyên gia (Staff) nhưng backend chưa đổi role/endpoint — tạm hiện "Sắp ra mắt"
+ * thay cho form. Bật lại (true) khi backend xong; phần form chuyên gia bên dưới vẫn giữ nguyên.
  */
 const STAFF_FORM_READY = false
 const EMPTY_FORM: FormState ={ role: 'TECHNICIAN', full_name: '', email: '', phone: '', password: '', regions: '', farmIds: [] }
@@ -83,9 +83,9 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
   const presetFarmName = presetFarmId ? farms?.find(f => f._id === presetFarmId)?.name : undefined
   const staffSoon = form.role === 'SALES_STAFF' && !STAFF_FORM_READY
   const title = presetFarmId
-    ? (presetFarmName ? t('Tạo chuyên viên cho {{farm}}', { farm: presetFarmName }) : t('Tạo chuyên viên'))
+    ? (presetFarmName ? t('Tạo chuyên gia cho {{farm}}', { farm: presetFarmName }) : t('Tạo chuyên gia'))
     : t('Tạo tài khoản')
-  // Mở từ chi tiết Farm → khoá vai trò ở chuyên viên (xem JSDoc): chỉ hiện đúng 1 mục
+  // Mở từ chi tiết Farm → khoá vai trò ở chuyên gia (xem JSDoc): chỉ hiện đúng 1 mục
   const roles = presetFarmId ? (['SALES_STAFF'] as AdminCreatableRole[]) : CREATABLE_ROLES
 
   return (
@@ -125,7 +125,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
             <div className="min-h-0 flex-1 [&>div]:h-full">
               <ComingSoon
                 title="Sắp ra mắt"
-                note="Tạo tài khoản chuyên viên đang chờ backend cập nhật vai trò mới. Hiện chỉ tạo được kỹ thuật viên."
+                note="Tạo tài khoản chuyên gia đang chờ backend cập nhật vai trò mới. Hiện chỉ tạo được kỹ thuật viên."
               />
             </div>
           ) : (

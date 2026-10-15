@@ -95,7 +95,7 @@ function useClampedPage(page: number, setPage: (page: number) => void, total: nu
 
 const TABS: { key: Tab; label: string; description: string }[] = [
   { key: 'DELETE', label: 'Yêu cầu xoá tài khoản', description: `Người dùng xin xoá tài khoản — xử lý trong ${DELETE_SLA_DAYS} ngày` },
-  { key: 'SALES_STAFF', label: 'Đề xuất chuyên viên', description: 'Farm Owner đề xuất thêm hoặc gỡ chuyên viên cho trang trại' },
+  { key: 'SALES_STAFF', label: 'Đề xuất chuyên gia', description: 'Farm Owner đề xuất thêm hoặc gỡ chuyên gia cho trang trại' },
 ]
 
 /**
@@ -263,14 +263,14 @@ function SalesStaffRequestsTab() {
   const rows = isFake ? FAKE_SALES_REQUESTS.slice((fakePage - 1) * PAGE_SIZE, fakePage * PAGE_SIZE) : requests
   const startIndex = ((isFake ? fakePage : page) - 1) * PAGE_SIZE
 
-  // STT · Loại · Email chuyên viên · Trang trại · Người đề xuất · Thời gian · Thao tác — tổng 5+13+19+15+15+13+20 = 100
+  // STT · Loại · Email chuyên gia · Trang trại · Người đề xuất · Thời gian · Thao tác — tổng 5+13+19+15+15+13+20 = 100
   const columns: DataTableColumn<SalesAssignmentRequest>[] = [
     { key: 'stt', header: 'STT', align: 'center', className: 'w-[5%]', render: (_r, i) => <span className="text-warmGray">{startIndex + i + 1}</span> },
     {
       key: 'type', header: 'Loại', className: 'w-[13%]',
-      render: r => <Badge tone={r.type === 'REMOVE' ? 'warning' : 'info'} className="whitespace-nowrap">{i18nT(r.type === 'REMOVE' ? 'Gỡ chuyên viên' : 'Thêm chuyên viên')}</Badge>,
+      render: r => <Badge tone={r.type === 'REMOVE' ? 'warning' : 'info'} className="whitespace-nowrap">{i18nT(r.type === 'REMOVE' ? 'Gỡ chuyên gia' : 'Thêm chuyên gia')}</Badge>,
     },
-    { key: 'email', header: 'Email chuyên viên', className: 'w-[19%]', render: r => <p className="text-fade font-semibold text-charcoal" title={r.sales_staff_email}>{r.sales_staff_email}</p> },
+    { key: 'email', header: 'Email chuyên gia', className: 'w-[19%]', render: r => <p className="text-fade font-semibold text-charcoal" title={r.sales_staff_email}>{r.sales_staff_email}</p> },
     { key: 'farm', header: 'Trang trại', className: 'w-[15%]', render: r => <p className="truncate text-charcoal" title={r.farm_id?.name}>{r.farm_id?.name ?? '—'}</p> },
     { key: 'by', header: 'Người đề xuất', className: 'w-[15%]', render: r => <p className="truncate text-graphite" title={r.requested_by?.email}>{r.requested_by?.full_name ?? '—'}</p> },
     { key: 'created', header: 'Thời gian', className: 'w-[13%] whitespace-nowrap', render: r => <TimeCell at={r.created_at} /> },
@@ -295,7 +295,7 @@ function SalesStaffRequestsTab() {
         getRowKey={r => r._id}
         rowHeight={ROW_HEIGHT}
         minRows={PAGE_SIZE}
-        emptyMessage="Không có đề xuất chuyên viên nào chờ duyệt — đề xuất thêm/gỡ chuyên viên của Farm Owner sẽ hiện ở đây."
+        emptyMessage="Không có đề xuất chuyên gia nào chờ duyệt — đề xuất thêm/gỡ chuyên gia của Farm Owner sẽ hiện ở đây."
       />
 
       {/* Hàng phân trang (Pagination tự ẩn khi chỉ 1 trang) */}
@@ -307,7 +307,7 @@ function SalesStaffRequestsTab() {
 
       <ConfirmModal
         open={!!approveTarget}
-        title={approveTarget?.type === 'REMOVE' ? 'Duyệt gỡ chuyên viên?' : 'Duyệt đề xuất chuyên viên?'}
+        title={approveTarget?.type === 'REMOVE' ? 'Duyệt gỡ chuyên gia?' : 'Duyệt đề xuất chuyên gia?'}
         description={approveTarget?.type === 'REMOVE'
           ? i18nT('Gỡ {{email}} khỏi farm {{farm}}. Đơn hàng/sản phẩm đã tạo vẫn giữ nguyên lịch sử.', { email: approveTarget.sales_staff_email, farm: approveTarget.farm_id?.name ?? '' })
           : i18nT('Gán {{email}} vào farm {{farm}}. Nếu email chưa có tài khoản, hệ thống tự tạo và gửi mã đặt lại mật khẩu cho người đó.', { email: approveTarget?.sales_staff_email ?? '', farm: approveTarget?.farm_id?.name ?? '' })}
@@ -328,7 +328,7 @@ function SalesStaffRequestsTab() {
         onClose={() => setRejectTarget(null)}
         title="Từ chối đề xuất"
         label="Lý do từ chối"
-        placeholder="VD: Email không hợp lệ, đã có chuyên viên phụ trách farm này..."
+        placeholder="VD: Email không hợp lệ, đã có chuyên gia phụ trách farm này..."
         submitLabel="Từ chối"
         required
         danger
