@@ -3,8 +3,10 @@
 // Technician/Admin: tạo · sửa · tạm dừng · xoá. Farm Owner chỉ xem (BE requireRole).
 // Cùng khuôn với các trang danh sách của Admin: DataTable + Badge + ActionsMenu + ConfirmModal.
 import { useMemo, useState } from 'react'
-import { Button, Badge, DataTable, EmptyState, SelectMenu, ConfirmModal, ActionsMenu, type DataTableColumn, type ActionsMenuItem } from '@/components/ui'
+import { Button, Badge, DataTable, EmptyState, SelectMenu, ConfirmModal, ActionsMenu, SectionCard, SearchInput, type DataTableColumn, type ActionsMenuItem } from '@/components/ui'
 import { Plus } from 'lucide-react'
+import ClearFiltersButton from '@/components/ui/ClearFiltersButton'
+import FilterChip from '@/components/ui/FilterChip'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import MaintenanceScheduleModal from '@/components/features/technician/maintenance/MaintenanceScheduleModal'
@@ -18,8 +20,59 @@ import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import type { MaintenanceSchedule } from '@/types'
 
 const ALL_FARMS = ''
-// Khớp mặc định BE (limit 20) — gửi tường minh để không phụ thuộc default phía server
 const PAGE_SIZE = 20
+// GET /maintenance-schedules chưa có tham số tìm kiếm/trạng thái/sắp xếp → tải 1 lần tối đa
+// FETCH_LIMIT (= maxLimit của paginate() phía BE) rồi lọc + phân trang ở client để kết quả đúng trên mọi trang.
+// TODO [BE-GAP]: khi BE hỗ trợ ?q=&status=&sort=, chuyển về phân trang server.
+const FETCH_LIMIT = 100
+
+type StatusFilter = '' | 'due' | 'soon' | 'later' | 'paused'
+type SortKey = 'next_asc' | 'next_desc' | 'interval_asc' | 'interval_desc' | 'name_asc'
+
+const DUE_CHIPS: { value: StatusFilter; label: string }[] = [
+  { value: '', label: 'Tất cả' },
+  { value: 'due', label: 'Đến hạn' },
+  { value: 'soon', label: 'Sắp đến hạn' },
+  { value: 'later', label: 'Chưa đến hạn' },
+  { value: 'paused', label: 'Tạm dừng' },
+]
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'next_asc', label: 'Lần kế tiếp: sớm nhất' },
+  { value: 'next_desc', label: 'Lần kế tiếp: muộn nhất' },
+  { value: 'interval_asc', label: 'Chu kỳ: ngắn → dài' },
+  { value: 'interval_desc', label: 'Chu kỳ: dài → ngắn' },
+  { value: 'name_asc', label: 'Nội dung: A → Z' },
+]
+
+const DEFAULT_SORT: SortKey = 'next_asc'
+const DAY_MS = 86_400_000
+
+const ACCENT_CLS: Record<Exclude<StatusFilter, ''>, string> = {
+  due: 'bg-climateOrange',
+  soon: 'bg-success',
+  later: 'bg-transparent',
+  paused: 'bg-transparent',
+}
+
+/** Nhóm theo hạn: tạm dừng → đến hạn (next_due_at ≤ now) → trong 7 ngày → sau đó */
+function scheduleStatus(s: MaintenanceSchedule): Exclude<StatusFilter, ''> {
+  if (!s.is_active) return 'paused'
+  const diff = new Date(s.next_due_at).getTime() - Date.now()
+  if (diff <= 0) return 'due'
+  return diff <= 7 * DAY_MS ? 'soon' : 'later'
+}
+
+/** Chữ tương đối "Còn N ngày / Quá hạn N ngày" từ next_due_at thật — không suy diễn lịch lặp */
+function dueInfo(s: MaintenanceSchedule): { text: string; cls: string } {
+  const diff = new Date(s.next_due_at).getTime() - Date.now()
+  if (!s.is_active) return { text: 'Tạm dừng', cls: 'font-medium text-warmGray' }
+  if (diff <= 0) {
+    const days = Math.floor(-diff / DAY_MS)
+    return { text: days === 0 ? 'Đến hạn hôm nay' : `Quá hạn ${days} ngày`, cls: 'font-semibold text-climateOrange' }
+  }
+  const days = Math.ceil(diff / DAY_MS)
+  return { text: `Còn ${days} ngày`, cls: days <= 7 ? 'font-semibold text-charcoal' : 'font-medium text-warmGray' }
+}
 
 export default function TechnicianMaintenancePage() {
   // BE: GET cho FARM_OWNER/TECHNICIAN/ADMIN; POST/PUT/DELETE chỉ TECHNICIAN/ADMIN
@@ -28,15 +81,51 @@ export default function TechnicianMaintenancePage() {
 
   const [farmId, setFarmId] = useState(ALL_FARMS)
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('')
+  const [sortKey, setSortKey] = useState<SortKey>('next_asc')
   const { data: farms } = useFarms()
   const { data: zones } = useAllZones()
-  const { records: schedules, total, isLoading, isError } = useMaintenanceSchedules(farmId || undefined, page, PAGE_SIZE)
+  const { records: schedules, total: fetchedTotal, isLoading, isError } = useMaintenanceSchedules(farmId || undefined, 1, FETCH_LIMIT)
   const updateSchedule = useUpdateMaintenanceSchedule()
   const deleteSchedule = useDeleteMaintenanceSchedule()
 
   const [showCreate, setShowCreate] = useState(false)
   const [editing, setEditing] = useState<MaintenanceSchedule | undefined>()
   const [deleting, setDeleting] = useState<MaintenanceSchedule | undefined>()
+
+  const visibleSchedules = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const list = (schedules ?? []).filter(s =>
+      (!statusFilter || scheduleStatus(s) === statusFilter) &&
+      (!q || s.description.toLowerCase().includes(q)),
+    )
+    const time = (s: MaintenanceSchedule) => new Date(s.next_due_at).getTime()
+    return [...list].sort((a, b) => {
+      switch (sortKey) {
+        case 'next_desc': return time(b) - time(a)
+        case 'interval_asc': return a.interval_days - b.interval_days
+        case 'interval_desc': return b.interval_days - a.interval_days
+        case 'name_asc': return a.description.localeCompare(b.description, 'vi')
+        default: return time(a) - time(b)
+      }
+    })
+  }, [schedules, search, statusFilter, sortKey])
+  const safePage = Math.min(page, Math.max(1, Math.ceil(visibleSchedules.length / PAGE_SIZE)))
+  const pageRows = visibleSchedules.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const dueCounts = useMemo(() => {
+    const c = { due: 0, soon: 0, later: 0, paused: 0 }
+    for (const s of schedules ?? []) c[scheduleStatus(s)]++
+    return c
+  }, [schedules])
+  const hasFilter = !!search || !!statusFilter || !!farmId || sortKey !== DEFAULT_SORT
+  function clearFilters() {
+    setSearch('')
+    setStatusFilter('')
+    setFarmId(ALL_FARMS)
+    setSortKey(DEFAULT_SORT)
+    setPage(1)
+  }
 
   const farmName = useMemo(() => new Map((farms ?? []).map(f => [f._id, f.name])), [farms])
   const zoneName = useMemo(
@@ -58,13 +147,10 @@ export default function TechnicianMaintenancePage() {
   function confirmDelete() {
     if (!deleting) return
     deleteSchedule.mutate(deleting._id, {
-      onSuccess: () => { 
+      onSuccess: () => {
         push('Đã xoá lịch bảo trì')
         setDeleting(undefined)
-        // Nếu xóa phần tử cuối cùng của trang hiện tại (và không phải trang 1), thì lùi trang
-        if (schedules.length === 1 && page > 1) {
-          setPage(p => p - 1)
-        }
+        // safePage tự kẹp về trang cuối hợp lệ khi trang hiện tại hết dòng
       },
       onError: (err) => push(getApiErrorMessage(err, 'Xoá lịch bảo trì thất bại'), 'error'),
     })
@@ -72,30 +158,51 @@ export default function TechnicianMaintenancePage() {
 
   const columns: DataTableColumn<MaintenanceSchedule>[] = [
     {
-      key: 'description', header: 'Nội dung', className: 'w-[32%]',
-      render: s => <p className="line-clamp-2 font-medium text-charcoal" title={s.description}>{s.description}</p>,
+      key: 'stt', header: 'STT', align: 'center', className: 'relative w-[6%]',
+      render: (s, index) => (
+        <>
+          {/* Viền trái theo hạn: đến hạn = cam, sắp tới (≤7 ngày) = xanh, còn lại/tạm dừng = không viền */}
+          <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${ACCENT_CLS[scheduleStatus(s)]}`} />
+          <span className="text-warmGray">{(safePage - 1) * PAGE_SIZE + index + 1}</span>
+        </>
+      ),
     },
     {
-      key: 'farm', header: 'Trang trại · Zone', className: 'w-[22%]',
+      key: 'description', header: 'Nội dung', className: 'w-[28%]',
+      render: s => <p className="line-clamp-2 font-semibold text-charcoal" title={s.description}>{s.description}</p>,
+    },
+    {
+      key: 'farm', header: 'Trang trại · Zone', className: 'w-[20%]',
       render: s => (
         <div className="min-w-0">
-          <p className="truncate font-medium text-charcoal">{farmName.get(s.farm_id) ?? '—'}</p>
+          <p className="truncate font-semibold text-charcoal">{farmName.get(s.farm_id) ?? '—'}</p>
           <p className="truncate text-xs text-warmGray">{s.zone_id ? (zoneName.get(s.zone_id) ?? 'Zone') : 'Toàn trang trại'}</p>
         </div>
       ),
     },
-    { key: 'interval', header: 'Chu kỳ', className: 'w-[10%]', render: s => <span className="tabular-nums">{s.interval_days} ngày</span> },
-    { key: 'next', header: 'Lần kế tiếp', className: 'w-[16%]', render: s => <span className="tabular-nums">{formatDate(s.next_due_at)}</span> },
+    { key: 'interval', header: 'Chu kỳ', className: 'w-[10%] whitespace-nowrap', render: s => <span className="tabular-nums text-charcoal">{s.interval_days} ngày</span> },
     {
-      key: 'status', header: 'Trạng thái', className: 'w-[10%]',
+      key: 'next', header: 'Lần kế tiếp', className: 'w-[16%] whitespace-nowrap',
+      render: s => {
+        const info = dueInfo(s)
+        return (
+          <div className="leading-tight">
+            <p className={`tabular-nums ${info.cls}`}>{info.text}</p>
+            <p className="mt-0.5 text-xs tabular-nums text-warmGray">{formatDate(s.next_due_at)}</p>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'status', header: 'Trạng thái', className: 'w-[12%]',
       render: s => !s.is_active
-        ? <Badge tone="neutral">Tạm dừng</Badge>
+        ? <Badge tone="neutral" className="whitespace-nowrap">Tạm dừng</Badge>
         : new Date(s.next_due_at).getTime() <= Date.now()
-          ? <Badge tone="warning">Đến hạn</Badge>
-          : <Badge tone="positive">Đang chạy</Badge>,
+          ? <Badge tone="warning" className="whitespace-nowrap">Đến hạn</Badge>
+          : <Badge tone="positive" className="whitespace-nowrap">Đang chạy</Badge>,
     },
     ...(canManage ? [{
-      key: 'actions', header: 'Thao tác', align: 'right' as const, className: 'w-[10%]',
+      key: 'actions', header: 'Thao tác', align: 'center' as const, className: 'w-[8%]',
       render: (s: MaintenanceSchedule) => {
         const items: ActionsMenuItem[] = [
           { label: 'Sửa', onClick: () => setEditing(s) },
@@ -108,45 +215,72 @@ export default function TechnicianMaintenancePage() {
   ]
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="label-caption">Bảo trì định kỳ</p>
-          <h1 className="truncate text-2xl font-bold tracking-tight text-charcoal">Lịch bảo trì</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <SelectMenu ariaLabel="Lọc theo trang trại" value={farmId} options={farmOptions} onChange={v => { setFarmId(v); setPage(1) }} />
+    <div className="flex flex-col gap-5">
+      <SectionCard title="Danh sách lịch bảo trì" description="Lịch bảo trì định kỳ theo trang trại — đến hạn hệ thống tự tạo ticket">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+            <div className="w-full max-w-xs">
+              <SearchInput placeholder="Tìm theo nội dung…" value={search} onChange={v => { setSearch(v); setPage(1) }} />
+            </div>
+            <SelectMenu ariaLabel="Lọc theo trang trại" value={farmId} options={farmOptions} onChange={v => { setFarmId(v); setPage(1) }} />
+            <SelectMenu ariaLabel="Sắp xếp" value={sortKey} options={SORT_OPTIONS} onChange={v => { setSortKey(v as SortKey); setPage(1) }} />
+            {hasFilter && <ClearFiltersButton onClick={clearFilters} />}
+          </div>
           {canManage && <Button onClick={() => setShowCreate(true)}><Plus size={18} strokeWidth={2} /> Tạo lịch bảo trì</Button>}
         </div>
-      </div>
 
-      {isLoading && <LoadingSkeleton count={3} className="h-14 w-full" />}
+        {/* Nhóm theo hạn — chip có số đếm trên toàn bộ lịch đã tải */}
+        {!isLoading && !isError && !!schedules?.length && (
+          <div className="flex flex-wrap items-center gap-2">
+            {DUE_CHIPS.map(c => (
+              <FilterChip
+                key={c.value || 'all'}
+                active={statusFilter === c.value}
+                label={<span className="tabular-nums">{c.label} · {c.value ? dueCounts[c.value] : schedules.length}</span>}
+                onClick={() => { setStatusFilter(c.value); setPage(1) }}
+              />
+            ))}
+          </div>
+        )}
 
-      {isError && (
-        <EmptyState title="Không tải được lịch bảo trì" description="Kiểm tra kết nối rồi tải lại trang." />
-      )}
+        {!isLoading && !isError && fetchedTotal > FETCH_LIMIT && (
+          <p className="text-xs text-climateOrange">
+            Đang hiển thị {FETCH_LIMIT}/{fetchedTotal} lịch có hạn sớm nhất. Chọn một trang trại để thu hẹp danh sách.
+          </p>
+        )}
 
-      {!isLoading && !isError && schedules?.length === 0 && (
-        <EmptyState
-          title="Chưa có lịch bảo trì nào"
-          description={canManage
-            ? 'Tạo lịch để hệ thống tự sinh ticket bảo trì đúng chu kỳ cho trang trại.'
-            : 'Kỹ thuật viên SwiftletCare sẽ lên lịch bảo trì định kỳ cho trang trại của bạn.'}
-          action={canManage ? <Button onClick={() => setShowCreate(true)}><Plus size={18} strokeWidth={2} /> Tạo lịch bảo trì</Button> : undefined}
-        />
-      )}
+        {isLoading && <LoadingSkeleton count={3} className="h-14 w-full" />}
 
-      {!isLoading && !isError && !!schedules?.length && (
-        <>
-          <DataTable
-            columns={columns}
-            rows={schedules}
-            getRowKey={s => s._id}
-            emptyMessage="Chưa có lịch bảo trì nào"
+        {isError && (
+          <EmptyState title="Không tải được lịch bảo trì" description="Kiểm tra kết nối rồi tải lại trang." />
+        )}
+
+        {!isLoading && !isError && schedules?.length === 0 && (
+          <EmptyState
+            title="Chưa có lịch bảo trì nào"
+            description={canManage
+              ? 'Tạo lịch để hệ thống tự sinh ticket bảo trì đúng chu kỳ cho trang trại.'
+              : 'Kỹ thuật viên SwiftletCare sẽ lên lịch bảo trì định kỳ cho trang trại của bạn.'}
+            action={canManage ? <Button onClick={() => setShowCreate(true)}><Plus size={18} strokeWidth={2} /> Tạo lịch bảo trì</Button> : undefined}
           />
-          <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} variant="full" />
-        </>
-      )}
+        )}
+
+        {!isLoading && !isError && !!schedules?.length && hasFilter && visibleSchedules.length === 0 && (
+          <EmptyState title="Không có lịch phù hợp" description="Thử đổi từ khóa hoặc bộ lọc." />
+        )}
+
+        {!isLoading && !isError && visibleSchedules.length > 0 && (
+          <>
+            <DataTable
+              columns={columns}
+              rows={pageRows}
+              getRowKey={s => s._id}
+              emptyMessage="Chưa có lịch bảo trì nào"
+            />
+            <Pagination page={safePage} limit={PAGE_SIZE} total={visibleSchedules.length} onChange={setPage} variant="full" />
+          </>
+        )}
+      </SectionCard>
 
       {canManage && (
         <>

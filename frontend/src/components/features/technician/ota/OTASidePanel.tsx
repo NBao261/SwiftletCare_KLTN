@@ -35,7 +35,7 @@ export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, 
       {/* Device info */}
       <div>
         <p className="label-caption mb-1">THIẾT BỊ ĐÃ CHỌN</p>
-        <p className="font-mono font-bold text-charcoal">{node.device_id}</p>
+        <p className="tabular-nums font-bold text-charcoal">{node.device_id}</p>
         <p className="text-sm text-warmGray">Firmware hiện tại: {node.firmware_version ?? '—'}</p>
       </div>
 
@@ -47,7 +47,7 @@ export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, 
               value={form.version}
               onChange={e => onFormChange({ version: e.target.value })}
               placeholder="1.3.0"
-              className="input font-mono text-sm"
+              className="input tabular-nums text-sm"
               autoComplete="off"
             />
           </Field>
@@ -57,7 +57,7 @@ export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, 
               value={form.url}
               onChange={e => onFormChange({ url: e.target.value })}
               placeholder="https://…/firmware-1.3.0.bin"
-              className="input font-mono text-xs"
+              className="input tabular-nums text-xs"
               autoComplete="off"
             />
           </Field>
@@ -67,7 +67,7 @@ export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, 
               value={form.sha256}
               onChange={e => onFormChange({ sha256: e.target.value })}
               placeholder="e3b0c442…"
-              className="input font-mono text-xs"
+              className="input tabular-nums text-xs"
               autoComplete="off"
             />
           </Field>

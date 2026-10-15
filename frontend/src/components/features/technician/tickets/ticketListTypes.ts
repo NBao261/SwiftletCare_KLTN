@@ -3,6 +3,7 @@
 // tránh khai báo lặp ở mỗi file.
 import type { Ticket, TicketStatus, TicketType } from '@/types'
 import { TICKET_TYPE_LABEL, STATUS_LABEL } from '@/constants/tickets'
+import { ChevronsUp, ChevronUp, Minus, type LucideIcon } from 'lucide-react'
 
 export const PAGE_SIZE = 12 // số ticket mỗi trang
 
@@ -23,31 +24,55 @@ export const STATUS_ORDER: Record<string, number>   = {
   NEW: 0, IN_PROGRESS: 1, AWAITING_FIELD_CONFIRMATION: 2, CLOSED: 3,
 }
 
-export const PRIORITY_DOT_CLS: Record<string, string> = {
-  P1: 'bg-alertRed ring-alertRed/20',
-  P2: 'bg-climateOrange ring-climateOrange/20',
-  P3: 'bg-warmGray ring-warmGray/20',
+// Priority: dùng HÌNH KHỐI (icon) thay vì chấm màu → không trùng ngôn ngữ thị giác với badge Status
+export const PRIORITY_ICON: Record<string, LucideIcon> = {
+  P1: ChevronsUp,
+  P2: ChevronUp,
+  P3: Minus,
 }
 
-export const STATUS_DOT_CLS: Record<string, string> = {
-  NEW: 'bg-blue-500',
-  IN_PROGRESS: 'bg-climateOrange',
-  AWAITING_FIELD_CONFIRMATION: 'bg-purple-500',
-  CLOSED: 'bg-emerald-500',
+export const PRIORITY_TEXT_CLS: Record<string, string> = {
+  P1: 'text-alertRed',
+  P2: 'text-climateOrange',
+  P3: 'text-warmGray',
+}
+
+// Chấm màu phân biệt mức ưu tiên (P1 đỏ, P2 cam, P3 xám)
+export const PRIORITY_DOT_CLS: Record<string, string> = {
+  P1: 'bg-alertRed',
+  P2: 'bg-climateOrange',
+  P3: 'bg-warmGray',
+}
+
+// Badge trạng thái: nền pastel + chữ đậm cùng tông, KHÔNG viền — khớp STATUS_TONE (constants/tickets)
+export const STATUS_BADGE_CLS: Record<string, string> = {
+  NEW: 'bg-alertRed/10 text-alertRed',
+  IN_PROGRESS: 'bg-climateOrange/10 text-climateOrange',
+  AWAITING_FIELD_CONFIRMATION: 'bg-accent-100 text-accent-800',
+  CLOSED: 'bg-warmGray/10 text-warmGray',
 }
 
 /** Sort danh sách ticket theo key + direction */
 export function sortTickets(tickets: Ticket[], key: SortKey, dir: SortDir): Ticket[] {
   return [...tickets].sort((a, b) => {
+    const timeA = new Date(a.created_at).getTime()
+    const timeB = new Date(b.created_at).getTime()
+    const slaA = a.sla_resolve_due_at ? new Date(a.sla_resolve_due_at).getTime() : Infinity
+    const slaB = b.sla_resolve_due_at ? new Date(b.sla_resolve_due_at).getTime() : Infinity
+
     let cmp = 0
     if (key === 'status') {
       cmp = (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)
+      if (cmp === 0) {
+        cmp = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9) // Tie-breaker 1: P1 trước
+        if (cmp === 0) cmp = slaA - slaB // Tie-breaker 2: Urgent SLA first
+        if (cmp === 0) cmp = timeA - timeB // Tie-breaker 3: Oldest first
+      }
     } else if (key === 'sla') {
-      const ta = a.sla_resolve_due_at ? new Date(a.sla_resolve_due_at).getTime() : Infinity
-      const tb = b.sla_resolve_due_at ? new Date(b.sla_resolve_due_at).getTime() : Infinity
-      cmp = ta - tb
+      cmp = slaA - slaB
+      if (cmp === 0) cmp = timeA - timeB
     } else {
-      cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      cmp = timeA - timeB
     }
     return dir === 'asc' ? cmp : -cmp
   })

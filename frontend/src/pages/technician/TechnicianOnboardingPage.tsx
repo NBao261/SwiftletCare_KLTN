@@ -7,6 +7,7 @@
 import { useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '@/components/ui'
+import Stepper from '@/components/ui/Stepper'
 import { Step1Location }   from '@/components/features/technician/onboarding/Step1Location'
 import { Step2Validate }   from '@/components/features/technician/onboarding/Step2Validate'
 import { Step3ConnectAP }  from '@/components/features/technician/onboarding/Step3ConnectAP'
@@ -17,43 +18,6 @@ import type { OnboardingState } from '@/components/features/technician/onboardin
 
 // ── Wizard Stepper ─────────────────────────────────────────────────────────────
 const STEP_LABELS = ['Vị trí', 'Thiết bị', 'Kết nối AP', 'WiFi farm', 'Đợi MQTT', 'Nghiệm thu']
-
-function WizardStepper({ current }: { current: number }) {
-  return (
-    <div className="relative flex w-full items-start justify-between py-2 sm:px-2">
-      {/* Background line */}
-      <div 
-        className="absolute top-6 h-0.5 -translate-y-1/2 rounded-full bg-graphite/15" 
-        style={{ left: '8.33%', right: '8.33%' }}
-      />
-      
-      {/* Active line */}
-      <div 
-        className="absolute top-6 h-0.5 -translate-y-1/2 rounded-full bg-charcoal transition-all duration-500 ease-in-out"
-        style={{ left: '8.33%', width: `${(current / (STEP_LABELS.length - 1)) * 83.33}%` }}
-      />
-
-      {STEP_LABELS.map((label, i) => {
-        const done   = i < current
-        const active = i === current
-        return (
-          <div key={label} className="relative z-10 flex w-1/6 flex-col items-center gap-2">
-            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-all duration-300 ${
-              done   ? 'bg-charcoal text-white shadow-sm ring-4 ring-white' :
-              active ? 'bg-limeMist text-charcoal shadow-sm ring-4 ring-white' :
-                       'bg-white text-warmGray ring-2 ring-graphite/15 ring-offset-2 ring-offset-white'
-            }`}>
-              {done ? '✓' : i + 1}
-            </div>
-            <span className={`text-center text-[10px] sm:text-[11px] font-semibold tracking-wide ${active ? 'text-charcoal' : 'text-warmGray'}`}>
-              {label}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 const INITIAL_STATE: OnboardingState = {
@@ -95,28 +59,30 @@ export default function OnboardingPage() {
 
       {/* Stepper */}
       <Card className="!p-5">
-        <WizardStepper current={step} />
+        <Stepper steps={STEP_LABELS} current={step} />
       </Card>
 
       {/* Step content */}
       <Card className="!p-6">
-        {step === 0 && <Step1Location data={data} patch={patch} onNext={next} />}
-        {step === 1 && <Step2Validate data={data} patch={patch} onNext={next} onBack={back} />}
-        {step === 2 && <Step3ConnectAP data={data} onNext={next} onBack={back} />}
-        {step === 3 && <Step4WiFi data={data} onNext={next} onBack={back} />}
-        {step === 4 && (
-          <Step5WaitOnline
-            data={data}
-            onSuccess={next}
-            onRetry={() => setStep(2)} // Retry từ bước 3 (index 2)
-          />
-        )}
-        {step === 5 && (
-          <Step6SAT
-            data={data}
-            onDone={(ticketId) => navigate(ticketId ? `/tickets/${ticketId}` : '/tickets')}
-          />
-        )}
+        <div key={step} className="animate-step-in motion-reduce:animate-none">
+          {step === 0 && <Step1Location data={data} patch={patch} onNext={next} />}
+          {step === 1 && <Step2Validate data={data} patch={patch} onNext={next} onBack={back} />}
+          {step === 2 && <Step3ConnectAP data={data} onNext={next} onBack={back} />}
+          {step === 3 && <Step4WiFi data={data} onNext={next} onBack={back} />}
+          {step === 4 && (
+            <Step5WaitOnline
+              data={data}
+              onSuccess={next}
+              onRetry={() => setStep(2)} // Retry từ bước 3 (index 2)
+            />
+          )}
+          {step === 5 && (
+            <Step6SAT
+              data={data}
+              onDone={(ticketId) => navigate(ticketId ? `/tickets/${ticketId}` : '/tickets')}
+            />
+          )}
+        </div>
       </Card>
     </div>
   )

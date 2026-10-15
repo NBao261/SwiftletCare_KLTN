@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/helpers'
+import { Thermometer, Camera, QrCode, CheckCircle2 } from 'lucide-react'
 import type { OnboardingState, DeviceType } from './onboardingTypes'
 
 type ValidateError  = 'DEVICE_ALREADY_REGISTERED' | 'INVALID_DEVICE' | 'FORBIDDEN' | 'UNKNOWN' | null
@@ -92,7 +93,10 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
                   : 'border-graphite/20 text-warmGray hover:border-graphite/40'
               }`}
             >
-              {t === 'SENSOR_NODE' ? '🌡 SensorNode' : '📷 CameraNode'}
+              <span className="flex items-center justify-center gap-1.5">
+                {t === 'SENSOR_NODE' ? <Thermometer className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                {t === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'}
+              </span>
             </button>
           ))}
         </div>
@@ -108,12 +112,12 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             disabled={status === 'success'}
             onChange={e => { patch({ deviceId: e.target.value }); setStatus('idle') }}
             placeholder="VD: ESP32-A7F3-001"
-            className={`input flex-1 font-mono ${
+            className={`input flex-1 tabular-nums ${
               error === 'DEVICE_ALREADY_REGISTERED' ? 'border-2 border-climateOrange focus:border-climateOrange' : ''
             }`}
           />
-          <button className="rounded-xl border border-graphite/20 px-3 text-warmGray hover:bg-graphite/10" title="Quét QR">
-            📷
+          <button className="flex items-center justify-center rounded-xl border border-graphite/20 px-3 text-warmGray hover:bg-graphite/10" title="Quét QR">
+            <QrCode className="h-5 w-5" />
           </button>
         </div>
         {error === 'DEVICE_ALREADY_REGISTERED' && (
@@ -132,7 +136,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
           placeholder="VD: ABCD-EFGH-JKMN (in trên nhãn)"
           autoComplete="off"
           spellCheck={false}
-          className="input w-full font-mono uppercase"
+          className="input w-full tabular-nums uppercase"
         />
       </div>
 
@@ -147,7 +151,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       {status === 'success' && (
         <div className="flex items-start gap-3 rounded-xl border border-limeMist/30 bg-limeMist/10 px-4 py-3">
-          <span className="text-xl">✅</span>
+          <CheckCircle2 className="h-6 w-6 text-success shrink-0" />
           <div>
             <p className="font-semibold text-charcoal">Thiết bị hợp lệ!</p>
             <p className="text-sm text-charcoal/70">Model: {validatedModel}</p>

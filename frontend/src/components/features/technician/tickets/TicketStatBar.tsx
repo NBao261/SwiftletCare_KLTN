@@ -1,58 +1,47 @@
-// TicketStatBar.tsx — 3 stat cards hiển thị tổng quan tickets của Technician
-// Visual Elevation: icon, accent ring, trend arrow, hover scale
-// Revert round-3: KPI endpoint là requireRole('ADMIN') → Technician nhận 403.
-// Tính stats từ tickets[] đã fetch (chấp nhận capped ở limit stats query).
+// TicketStatBar.tsx — 3 ô KPI tổng quan ticket của Technician.
+// KPI endpoint là requireRole('ADMIN') → Technician nhận 403, nên tính từ tickets[] đã fetch
+// (tối đa số bản ghi của stats query) — sub ghi rõ phạm vi để số liệu trung thực.
+import { ClipboardTextIcon, HourglassIcon, WarningIcon } from '@phosphor-icons/react'
+import type { Icon } from '@phosphor-icons/react'
 import type { Ticket } from '@/types'
 import { isSlaBreached } from './ticketHelpers'
-import { ClipboardList, AlertCircle, Hourglass } from 'lucide-react'
+import { cn } from '@/lib/cn'
 
 interface Props {
   tickets: Ticket[]
 }
 
-interface StatCardProps {
+interface CustomStatCardProps {
+  icon: Icon
+  iconColorClass: string
+  alert?: boolean
   label: string
-  value: number
-  icon: React.ReactNode
-  accent?: 'red' | 'orange' | 'default'
-  total?: number
+  value: string | number
+  sub: string
 }
 
-function StatCard({ label, value, icon, accent = 'default', total }: StatCardProps) {
-  const ringClass =
-    accent === 'red'    && value > 0 ? 'ring-2 ring-alertRed/25' :
-    accent === 'orange' && value > 0 ? 'ring-2 ring-climateOrange/25' :
-    ''
-
-  const iconBg =
-    accent === 'red'    ? 'bg-alertRed/10 text-alertRed' :
-    accent === 'orange' ? 'bg-climateOrange/10 text-climateOrange' :
-    'bg-limeMist/40 text-charcoal'
-
-  const valueColor =
-    accent === 'red'    && value > 0 ? 'text-alertRed'       :
-    accent === 'orange' && value > 0 ? 'text-climateOrange'  :
-    'text-charcoal'
-
+function CustomTicketStatCard({ icon: TileIcon, iconColorClass, alert, label, value, sub }: CustomStatCardProps) {
   return (
-    <div className={`group flex items-center gap-4 rounded-2xl bg-white p-5 shadow-card transition-all duration-300 hover:shadow-dock hover:-translate-y-0.5 ${ringClass}`}>
-      {/* Icon circle */}
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg transition-transform duration-300 group-hover:scale-110 ${iconBg}`}>
-        {icon}
-      </div>
-
-      {/* Content */}
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-warmGray">{label}</span>
-        <div className="flex items-baseline gap-2">
-          <span className={`text-2xl font-bold tabular-nums ${valueColor} ${accent === 'red' && value > 0 ? 'animate-pulse-sla' : ''}`}>
-            {value}
-          </span>
-          {total !== undefined && total > 0 && (
-            <span className="text-xs text-warmGray">/ {total}</span>
-          )}
+    <div
+      className={cn(
+        'flex flex-col rounded-2xl border p-4 transition-all hover:shadow-md',
+        alert ? 'border-alertRed/30 bg-white bg-gradient-to-b from-alertRed/[0.04] to-alertRed/[0.04]' : 'border-warmGray/15 bg-white',
+      )}
+    >
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <span className="text-sm font-semibold text-warmGray uppercase tracking-wider truncate">{label}</span>
+        <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-warmGray/10', iconColorClass)}>
+          <TileIcon size={16} weight="regular" />
         </div>
       </div>
+      
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <p className={cn('text-[32px] font-extrabold leading-none tracking-tight', alert ? 'text-alertRed' : 'text-charcoal')}>
+          {value}
+        </p>
+      </div>
+      
+      <p className="mt-1.5 truncate text-xs font-medium text-warmGray" title={sub}>{sub}</p>
     </div>
   )
 }
@@ -63,10 +52,31 @@ export function TicketStatBar({ tickets }: Props) {
   const statsAwaiting = tickets.filter(t => t.status === 'AWAITING_FIELD_CONFIRMATION').length
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <StatCard label="Đang mở"      value={statsOpen}     icon={<ClipboardList size={20} strokeWidth={1.6} />} total={tickets.length} />
-      <StatCard label="Quá hạn SLA"  value={statsBreached} icon={<AlertCircle size={20} strokeWidth={1.6} />} accent="red" />
-      <StatCard label="Chờ xác nhận" value={statsAwaiting} icon={<Hourglass size={20} strokeWidth={1.6} />} accent="orange" />
-    </div>
+    <section className="w-full rounded-[24px] border border-warmGray/15 bg-white p-4 shadow-sm">
+      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
+        <CustomTicketStatCard
+          icon={ClipboardTextIcon}
+          iconColorClass="text-charcoal"
+          label="Đang mở"
+          value={statsOpen}
+          sub={`Trong ${tickets.length} ticket gần nhất`}
+        />
+        <CustomTicketStatCard
+          icon={WarningIcon}
+          iconColorClass={statsBreached > 0 ? 'text-alertRed' : 'text-charcoal'}
+          alert={statsBreached > 0}
+          label="Quá hạn SLA"
+          value={statsBreached}
+          sub="Cần xử lý ngay"
+        />
+        <CustomTicketStatCard
+          icon={HourglassIcon}
+          iconColorClass={statsAwaiting > 0 ? 'text-orange-600' : 'text-charcoal'}
+          label="Chờ xác nhận"
+          value={statsAwaiting}
+          sub="Chờ chủ trại xác nhận"
+        />
+      </div>
+    </section>
   )
 }
