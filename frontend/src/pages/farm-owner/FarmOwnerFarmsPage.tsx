@@ -17,7 +17,7 @@ import { useFarmStructure, useStructureExtras } from '@/hooks/farm-owner/useFarm
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { vnYearMonth } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
@@ -37,7 +37,7 @@ type View = 'grid' | 'list'
  * "người phụ trách" chưa có API → farmMock.api.ts trả rỗng, card hiện "Chưa phân công". Bấm 1 nhà → chi tiết nhà → zone → thiết bị.
  */
 export default function FarmOwnerFarmsPage() {
-  const { t, num } = useT(farmDict)
+  const { t, num } = useTranslation(farmDict)
   useScrollToTop()
   const navigate = useNavigate()
   const { data: farms } = useFarms()

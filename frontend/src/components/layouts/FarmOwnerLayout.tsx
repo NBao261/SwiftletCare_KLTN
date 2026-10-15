@@ -25,11 +25,6 @@ const menuSections: MenuSection[] = [
         icon: IconDevice
       },
       {
-        label: 'Cảnh báo',
-        path: '/alerts',
-        icon: IconAlert
-      },
-      {
         label: 'Giám sát đàn chim',
         path: '/vision',
         icon: Camera
@@ -63,6 +58,11 @@ const menuSections: MenuSection[] = [
         label: 'Phân tích',
         path: '/analytics',
         icon: IconAnalytics
+      },
+      {
+        label: 'Thông báo',
+        path: '/alerts',
+        icon: IconAlert
       },
       {
         label: 'Cài đặt',

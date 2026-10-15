@@ -1,178 +1,104 @@
-import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { useZoneStore } from "@/stores/zoneStore";
-import { useTelemetry } from "@/hooks/farm-owner/useTelemetry";
-import { useAllZones, useZone } from "@/hooks/shared/useFarms";
-import { useSensorNodes } from "@/hooks/shared/useDevices";
-import { Button } from "@/components/ui";
-import EmptyState from "@/components/ui/EmptyState";
-import ZoneOverviewCard from "@/components/features/farm-owner/dashboard/ZoneOverviewCard";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import ScadaModeBanner from "@/components/features/farm-owner/dashboard/ScadaModeBanner";
-import EcoHealthCard from "@/components/features/farm-owner/dashboard/EcoHealthCard";
-import ControlSubsystemPanel from "@/components/features/farm-owner/dashboard/ControlSubsystemPanel";
-import EnvSensorPanel from "@/components/features/farm-owner/dashboard/EnvSensorPanel";
-import BirdVisionCard from "@/components/features/farm-owner/dashboard/BirdVisionCard";
-import NestingDensityCard from "@/components/features/farm-owner/dashboard/NestingDensityCard";
-import SensorAlertLogTable from "@/components/features/farm-owner/dashboard/SensorAlertLogTable";
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useZoneStore } from '@/stores/zoneStore'
+import { useFarms, useHouses } from '@/hooks/shared/useFarms'
+import { useScopeZones, useZonesEnvironment } from '@/hooks/farm-owner/useFarmOwnerDashboard'
+import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { dashboardDict } from '@/constants/dashboard.i18n'
+import { Button } from '@/components/ui'
+import EmptyState from '@/components/ui/EmptyState'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import ScadaModeBanner from '@/components/features/farm-owner/dashboard/ScadaModeBanner'
+import EcoHealthCard from '@/components/features/farm-owner/dashboard/EcoHealthCard'
+import ControlSubsystemPanel from '@/components/features/farm-owner/dashboard/ControlSubsystemPanel'
+import EnvSensorPanel from '@/components/features/farm-owner/dashboard/EnvSensorPanel'
+import BirdVisionCard from '@/components/features/farm-owner/dashboard/BirdVisionCard'
+import NestingDensityCard from '@/components/features/farm-owner/dashboard/NestingDensityCard'
+import SensorAlertLogTable from '@/components/features/farm-owner/dashboard/SensorAlertLogTable'
+import { getAnomalies, sortPinnedFirst } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 
-// Chỉ dùng khi useZone() chưa tải xong (F5 lần đầu) — khớp default trong
-// backend/src/models/houseZone.model.ts, KHÔNG phải nguồn thật. Ngưỡng thật
-// lấy từ zone.thresholds bên dưới, phản ánh đúng giá trị Farm Owner đã chỉnh
-// qua trang Trang trại → Ngưỡng (ENV-FR-006), kể cả sau khi reset (ENV-FR-020).
-const FALLBACK_THRESHOLDS = {
-  temp_min: 26,
-  temp_max: 31,
-  humidity_min: 75,
-  humidity_max: 95,
-  light_max: 0.2,
-  nh3_max: 25,
-  co2_max: 1500,
-};
-
-/** Dashboard – 6 chỉ số realtime của Zone đang chọn (ENV-FR-005) */
+// Dashboard Farm Owner
 export default function FarmOwnerDashboardPage() {
-  const { selectedZoneId, selectedZoneName, setZone, clearZone } = useZoneStore();
-  const { data, isLoading, isLive, hasEverReceived, relayStates, controlMode, controlOutput } = useTelemetry(
-    selectedZoneId ?? undefined,
-  );
-  const { data: allZones, isLoading: isLoadingAllZones } = useAllZones();
-  const { data: zone } = useZone(selectedZoneId ?? undefined);
-  const T = zone?.thresholds ?? FALLBACK_THRESHOLDS;
-  // useTelemetry chỉ có relayStates/controlMode SAU khi nhận event TELEMETRY_UPDATE đầu tiên qua
-  // socket, và không nghe RELAY_UPDATE — nên override thủ công (controlRelay) hay hết hạn override
-  // (expireManualOverrides) không hiện ngay trên panel. useSensorNodes đã tự invalidate theo
-  // RELAY_UPDATE/DEVICE_STATUS_CHANGE (hooks/shared/useDevices.ts).
-  const { data: sensorNodes } = useSensorNodes(selectedZoneId ?? undefined, { enabled: !!selectedZoneId });
-  const restNode = sensorNodes?.[0];
-  // relayStates: ưu tiên socket — telemetry payload (MQTTManager.cpp publishTelemetry) có
-  // relay_states thật từ firmware, nên khi đang live nó mới hơn REST.
-  const effectiveRelayStates = relayStates ?? restNode?.relay_states;
-  // controlMode: ƯU TIÊN REST, ngược với relayStates ở trên. Firmware KHÔNG gửi control_mode trong
-  // telemetry (chỉ có relay_states — publishTelemetry, MQTTManager.cpp:178-191; control_mode chỉ có
-  // trong payload relay/status, PIDController.cpp:69), nên backend luôn điền mặc định
-  // `payload.control_mode ?? 'AUTO'` (telemetry.service.ts:102). Vì vậy controlMode từ useTelemetry
-  // LUÔN LÀ 'AUTO' bất kể zone đang MANUAL hay không — ưu tiên nó sẽ đè mất MANUAL suốt thời gian
-  // override, đúng lúc người dùng cần biết panel đang ở chế độ gì. REST mới là nguồn được ghi bởi
-  // controlRelay/confirmRelayStatus/expireManualOverrides và tự invalidate theo RELAY_UPDATE.
-  const effectiveControlMode = restNode?.control_mode ?? controlMode;
+  const { t } = useTranslation(dashboardDict)
+  const selectedFarmId = useZoneStore(s => s.selectedFarmId)
+  const { data: farms, isLoading: isLoadingFarms, isError: isFarmsError, refetch: refetchFarms } = useFarms()
+  const farmId = selectedFarmId ?? farms?.[0]?._id ?? ''
+  const { data: houses, isLoading: isLoadingHouses, isError: isHousesError, refetch: refetchHouses } = useHouses(farmId || undefined)
+  const { pinned } = usePinnedHouses()
+  const [choice, setChoice] = useState('')
 
-  if (!selectedZoneId) {
-    if (isLoadingAllZones) {
-      return <LoadingSkeleton count={4} className="h-32 w-full" />;
-    }
+  const houseOptions = [
+    { value: '', label: t('page.allHouses') },
+    ...sortPinnedFirst(houses ?? [], pinned).map(house => ({ value: house._id, label: house.name })),
+  ]
+  const houseId = houseOptions.some(option => option.value === choice) ? choice : ''
+  const houseName = houseOptions.find(option => option.value === houseId)?.label ?? ''
 
-    if (!allZones?.length) {
-      return (
-        <EmptyState
-          title="Chưa có khu vực nào"
-          description="Tạo trang trại, nhà yến và zone để bắt đầu xem số liệu môi trường thời gian thực."
-          action={
-            <Link to="/farms">
-              <Button>Đi tới Trang trại</Button>
-            </Link>
-          }
-        />
-      );
-    }
+  const { zones } = useScopeZones(farmId, houseId)
+  const { readings, thresholds, lastSyncedAt, controlMode, overrideExpiry, relayStates, controlOutput, deviceNames } = useZonesEnvironment(zones)
 
+  if (isLoadingFarms || isLoadingHouses) {
+    return <LoadingSkeleton count={4} className="h-32 w-full" />
+  }
+
+  if (isFarmsError || isHousesError) {
     return (
-      <div className="flex flex-col gap-5">
-        <div className="min-w-0">
-          <p className="label-caption">Khu vực đang xem</p>
-          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">
-            Tất cả nhà yến
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          {allZones.map((zone) => (
-            <ZoneOverviewCard
-              key={zone._id}
-              zone={zone}
-              onClick={() => setZone(zone.farmId, zone.farmName, zone._id, zone.name)}
-            />
-          ))}
-        </div>
-      </div>
-    );
+      <EmptyState
+        title={t('page.zoneErrorTitle')}
+        description={t('page.zoneErrorDesc')}
+        action={<Button variant="secondary" onClick={() => { void refetchFarms(); void refetchHouses() }}>{t('log.retry')}</Button>}
+      />
+    )
   }
 
-  const tooCold = data.temperature !== undefined && data.temperature < T.temp_min;
-  const tooHot = data.temperature !== undefined && data.temperature > T.temp_max;
-  const tempAnomaly = tooCold || tooHot;
-  const humidityAnomaly =
-    data.humidity !== undefined &&
-    (data.humidity < T.humidity_min || data.humidity > T.humidity_max);
-  const nh3Anomaly =
-    data.nh3_ppm !== undefined && data.nh3_ppm > T.nh3_max;
-  const co2Anomaly =
-    data.co2_ppm !== undefined && data.co2_ppm > T.co2_max;
-
-  if (isLoading) {
-    return <LoadingSkeleton count={4} className="h-40 w-full" />;
+  if (!houses?.length) {
+    return (
+      <EmptyState
+        title={t('page.noZoneTitle')}
+        description={t('page.noZoneDesc')}
+        action={
+          <Link to="/farms">
+            <Button>{t('page.goFarms')}</Button>
+          </Link>
+        }
+      />
+    )
   }
+
+  const anomalies = houseId && thresholds ? getAnomalies(readings, thresholds) : undefined
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-[5px]">
-        {/* Quay lại trong phạm vi trang Dashboard (về lưới "Tất cả nhà yến"), không phải lịch sử trình duyệt */}
-        <button
-          onClick={() => clearZone()}
-          aria-label="Quay lại Tất cả nhà yến"
-          title="Quay lại Tất cả nhà yến"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-warmGray/15 bg-white text-charcoal shadow-icon transition-colors hover:bg-warmGray/10"
-        >
-          <ArrowLeft width={18} height={18} />
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <ScadaModeBanner
-            isLive={isLive}
-            hasEverReceived={hasEverReceived}
-            lastSyncedAt={data.timestamp}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <EcoHealthCard
-          humidity={data.humidity}
-          temperature={data.temperature}
-          nh3={data.nh3_ppm}
-          humidityAnomaly={humidityAnomaly}
-          temperatureAnomaly={tempAnomaly}
-          nh3Anomaly={nh3Anomaly}
-        />
-        <ControlSubsystemPanel
-          zoneName={selectedZoneName ?? undefined}
-          relayStates={effectiveRelayStates}
-          controlMode={effectiveControlMode}
-          controlOutput={controlOutput}
-          tooHot={tooHot}
-          tooCold={tooCold}
-        />
-      </div>
-
-      <EnvSensorPanel
-        temperature={data.temperature}
-        humidity={data.humidity}
-        lightLux={data.light_lux}
-        nh3={data.nh3_ppm}
-        co2={data.co2_ppm}
-        soundDb={data.sound_db}
-        temperatureAnomaly={tempAnomaly}
-        humidityAnomaly={humidityAnomaly}
-        nh3Anomaly={nh3Anomaly}
-        co2Anomaly={co2Anomaly}
-        thresholds={T}
+      <ScadaModeBanner
+        lastSyncedAt={lastSyncedAt}
+        controlMode={controlMode}
+        overrideExpiry={overrideExpiry}
+        houseId={houseId}
+        houseOptions={houseOptions}
+        onHouseChange={setChoice}
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <BirdVisionCard />
-        <NestingDensityCard />
+      <div className="grid grid-cols-1 gap-5 lg:h-[272px] lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:[&>*]:overflow-hidden">
+        <EcoHealthCard farmId={farmId} />
+        <ControlSubsystemPanel
+          zoneName={houseName}
+          relayStates={houseId ? relayStates : undefined}
+          controlMode={houseId ? controlMode : undefined}
+          controlOutput={houseId ? controlOutput : undefined}
+          tooHot={anomalies?.tooHot ?? false}
+          tooCold={anomalies?.tooCold ?? false}
+        />
       </div>
 
-      <SensorAlertLogTable />
+      <EnvSensorPanel farmId={farmId} houseOptions={houseOptions} globalHouseId={houseId} />
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <BirdVisionCard farmId={farmId} houseOptions={houseOptions} globalHouseId={houseId} />
+        <NestingDensityCard zones={zones} houseId={houseId} />
+      </div>
+
+      <SensorAlertLogTable farmId={farmId} houseId={houseId} zones={zones} deviceNames={deviceNames} />
     </div>
-  );
+  )
 }

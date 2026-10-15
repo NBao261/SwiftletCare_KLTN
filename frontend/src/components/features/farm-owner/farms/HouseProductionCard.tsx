@@ -5,7 +5,7 @@ import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
 import { HARVEST_STATUS_LABEL, HARVEST_STATUS_TONE } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { cn } from '@/lib/cn'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { vnYearMonth } from '@/lib/helpers'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
@@ -20,7 +20,7 @@ interface HouseProductionCardProps {
 
 /** Sản lượng nhà yến trong tháng — số liệu tính từ /harvests thật; "dự kiến thu tiếp" là mock. Không hiện mã truy xuất (ẩn khỏi UI theo quyết định bảo mật). */
 export default function HouseProductionCard({ node, recent, nextHarvestAt }: HouseProductionCardProps) {
-  const { t, num, day } = useT(farmDict)
+  const { t, num, day } = useTranslation(farmDict)
   const navigate = useNavigate()
   const { month, year } = vnYearMonth(new Date())
   const avgPerNest = node.monthNests > 0 ? (node.monthKg * 1000) / node.monthNests : undefined

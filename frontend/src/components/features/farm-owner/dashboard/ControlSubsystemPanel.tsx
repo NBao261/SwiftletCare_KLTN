@@ -1,88 +1,120 @@
 import { Droplets, Wind, Volume2, Flame } from 'lucide-react'
 import { Button, Card, RadialGauge } from '@/components/ui'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { dashboardDict } from '@/constants/dashboard.i18n'
 import { cn } from '@/lib/cn'
-import type { ControlMode, ControlOutput, RelayName, RelayStates } from '@/types'
+import type { ControlMode, ControlOutput, RelayStates } from '@/types'
 
-const RELAY_ITEMS: Array<{ key: RelayName; label: string; icon: typeof Droplets }> = [
-  { key: 'misting', label: 'Phun sương siêu âm', icon: Droplets },
-  { key: 'ventilation', label: 'Thông gió đối lưu', icon: Wind },
-  { key: 'speaker', label: 'Hệ âm thanh dẫn dụ', icon: Volume2 },
-  { key: 'heating', label: 'Sưởi ấm', icon: Flame },
-]
+const RELAY_ITEMS = [
+  { key: 'misting', labelKey: 'relay.misting', icon: Droplets },
+  { key: 'ventilation', labelKey: 'relay.ventilation', icon: Wind },
+  { key: 'speaker', labelKey: 'relay.speaker', icon: Volume2 },
+  { key: 'heating', labelKey: 'relay.heating', icon: Flame },
+] as const
+
+type RelayItem = (typeof RELAY_ITEMS)[number]
+type RelayTone = 'unknown' | 'anomaly' | 'on' | 'off'
+
+const GAUGE_CLASS: Record<RelayTone, string> = {
+  unknown: 'stroke-warmGray/20',
+  anomaly: 'stroke-climateOrange',
+  on: 'stroke-success',
+  off: 'stroke-warmGray/25',
+}
+
+const ICON_CLASS: Record<RelayTone, string> = {
+  unknown: 'text-warmGray',
+  anomaly: 'text-climateOrange',
+  on: 'text-success',
+  off: 'text-warmGray',
+}
 
 interface ControlSubsystemPanelProps {
   zoneName?: string
   relayStates?: RelayStates
   controlMode?: ControlMode
-  /** % công suất bộ điều khiển mờ (phun sương/quạt) — chỉ có khi đang nhận telemetry live từ firmware ≥ 1.1.0 */
   controlOutput?: ControlOutput
-  /** Nhiệt độ đang VƯỢT trần ngưỡng — tô cảnh báo relay thoát nhiệt/thông gió (ENV-FR-004) */
   tooHot?: boolean
-  /** Nhiệt độ đang DƯỚI sàn ngưỡng — tô cảnh báo relay sưởi (ENV-FR-004) */
   tooCold?: boolean
 }
 
-/**
- * "Trạng thái phân hệ điều khiển" — 4 relay thật (RelayStates, xem
- * firmware/README §pid). Phun sương + quạt chạy logic mờ trên ESP32 (ENV-FR-010/011):
- * gauge hiện % công suất thật firmware gửi qua telemetry `control_output` (tỉ lệ
- * thời gian BẬT trong cửa sổ 2 phút). Sưởi/loa, hoặc chưa có dữ liệu live, giữ
- * gauge nhị phân BẬT/TẮT. Không có số liệu giả: mọi con số bám relay_states/
- * control_mode/control_output thật.
- */
-export default function ControlSubsystemPanel({
-  zoneName, relayStates, controlMode, controlOutput, tooHot, tooCold,
-}: ControlSubsystemPanelProps) {
+// Trạng thái relay phân hệ điều khiển, phun sương/quạt hiện % công suất logic mờ khi có telemetry live
+export default function ControlSubsystemPanel({ zoneName, relayStates, controlMode, controlOutput, tooHot, tooCold }: ControlSubsystemPanelProps) {
+  const { t } = useTranslation(dashboardDict)
+
   return (
     <Card size="lg" className="flex h-full flex-col gap-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-h2 text-charcoal">Trạng thái phân hệ điều khiển</h2>
+          <h2 className="text-h2 text-charcoal">{t('control.title')}</h2>
           <p className="mt-1 text-sm text-warmGray">
-            Relay thời gian thực{zoneName ? ` tại ${zoneName}` : ''}
+            {zoneName ? t('control.subtitleZone', { zone: zoneName }) : t('control.subtitle')}
           </p>
         </div>
-        <Button variant="secondary" size="sm" disabled title="Chưa có trang chi tiết SCADA">
-          Chi tiết SCADA ↗
+        <Button variant="secondary" size="sm" disabled title={t('control.detailHint')}>
+          {t('control.detail')}
         </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {RELAY_ITEMS.map(item => {
-          const isOn = relayStates?.[item.key]
-          // heating chống LẠNH (bật khi tooCold) — ventilation thoát nhiệt/chống NÓNG (bật khi tooHot).
-          // Đảo ngược 2 cờ này từng khiến relay sưởi báo "Quá nhiệt" đúng lúc nhà yến đang quá lạnh.
-          const anomalyLabel = item.key === 'heating' && tooCold ? 'Quá lạnh' : item.key === 'ventilation' && tooHot ? 'Quá nhiệt' : null
-          const Icon = item.icon
-          const fuzzyPct = item.key === 'misting' || item.key === 'ventilation' ? controlOutput?.[item.key] : undefined
-          const hasFuzzy = relayStates !== undefined && fuzzyPct !== undefined
-          const stateLabel = isOn ? 'BẬT' : 'TẮT'
-          return (
-            <div key={item.key} className="flex flex-col items-center gap-2 rounded-2xl border border-warmGray/15 p-3 text-center">
-              <RadialGauge
-                percent={relayStates === undefined ? 0 : hasFuzzy ? fuzzyPct : isOn ? 100 : 0}
-                size={76}
-                strokeWidth={7}
-                trackClassName="stroke-warmGray/10"
-                className={cn(
-                  relayStates === undefined ? 'stroke-warmGray/20' : anomalyLabel ? 'stroke-climateOrange' : isOn ? 'stroke-success' : 'stroke-warmGray/25',
-                )}
-              >
-                <div className="flex flex-col items-center gap-0.5">
-                  <Icon width={16} height={16} className={cn(relayStates === undefined ? 'text-warmGray' : anomalyLabel ? 'text-climateOrange' : isOn ? 'text-success' : 'text-warmGray')} />
-                  <span className="text-[11px] font-extrabold text-charcoal">
-                    {relayStates === undefined ? '--' : hasFuzzy ? `${fuzzyPct}%` : stateLabel}
-                  </span>
-                </div>
-              </RadialGauge>
-              <p className="label-caption leading-tight">{item.label}</p>
-              <p className={cn('text-xs font-semibold', anomalyLabel ? 'text-climateOrange' : 'text-warmGray')}>
-                {anomalyLabel ?? (hasFuzzy && controlMode === 'AUTO' ? `Logic mờ · ${stateLabel}` : controlMode ? `Chế độ ${controlMode}` : '--')}
-              </p>
-            </div>
-          )
-        })}
+        {RELAY_ITEMS.map(item => (
+          <RelayTile
+            key={item.key}
+            item={item}
+            relayStates={relayStates}
+            controlMode={controlMode}
+            fuzzyPercent={item.key === 'misting' || item.key === 'ventilation' ? controlOutput?.[item.key] : undefined}
+            isAnomaly={(item.key === 'heating' && !!tooCold) || (item.key === 'ventilation' && !!tooHot)}
+          />
+        ))}
       </div>
     </Card>
+  )
+}
+
+interface RelayTileProps {
+  item: RelayItem
+  relayStates?: RelayStates
+  controlMode?: ControlMode
+  fuzzyPercent?: number
+  isAnomaly: boolean
+}
+
+// 1 ô relay: gauge BẬT/TẮT hoặc % logic mờ, dòng dưới là cảnh báo nhiệt hoặc chế độ chạy
+function RelayTile({ item, relayStates, controlMode, fuzzyPercent, isAnomaly }: RelayTileProps) {
+  const { t } = useTranslation(dashboardDict)
+  const Icon = item.icon
+  const hasData = relayStates !== undefined
+  const isOn = relayStates?.[item.key] ?? false
+  const hasFuzzy = hasData && fuzzyPercent !== undefined
+  const stateLabel = isOn ? t('relay.on') : t('relay.off')
+
+  let tone: RelayTone = 'unknown'
+  if (hasData) tone = isAnomaly ? 'anomaly' : isOn ? 'on' : 'off'
+
+  let gaugePercent = 0
+  if (hasFuzzy) gaugePercent = fuzzyPercent
+  else if (isOn) gaugePercent = 100
+
+  let gaugeLabel = '_'
+  if (hasFuzzy) gaugeLabel = `${fuzzyPercent}%`
+  else if (hasData) gaugeLabel = stateLabel
+
+  let footer = '_'
+  if (isAnomaly) footer = item.key === 'heating' ? t('control.tooCold') : t('control.tooHot')
+  else if (hasFuzzy && controlMode === 'AUTO') footer = t('control.fuzzy', { state: stateLabel })
+  else if (controlMode) footer = t('control.mode', { mode: controlMode })
+
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-warmGray/15 p-3 text-center">
+      <RadialGauge percent={gaugePercent} size={76} strokeWidth={7} trackClassName="stroke-warmGray/10" className={GAUGE_CLASS[tone]}>
+        <div className="flex flex-col items-center gap-0.5">
+          <Icon width={16} height={16} className={ICON_CLASS[tone]} />
+          <span className="text-[11px] font-extrabold text-charcoal">{gaugeLabel}</span>
+        </div>
+      </RadialGauge>
+      <p className="label-caption leading-tight">{t(item.labelKey)}</p>
+      <p className={cn('text-xs font-semibold', isAnomaly ? 'text-climateOrange' : 'text-warmGray')}>{footer}</p>
+    </div>
   )
 }

@@ -1,73 +1,86 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { useZoneStore } from '@/stores/zoneStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
-import { useAuth } from '@/hooks/auth/useAuth'
+import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
 import { usePermission } from '@/hooks/common/usePermission'
 import { cn } from '@/lib/cn'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { shellDict } from '@/constants/shell.i18n'
+import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
 import type { MenuSection } from '@/components/layouts/AppSidebar'
-import ZoneSwitcher from '@/components/common/ZoneSwitcher'
 import NotificationPopover from '@/components/common/NotificationPopover'
-import { IconGlobe, IconLogout } from '@/components/ui/icons'
+import ProfilePopover from '@/components/common/ProfilePopover'
+import { IconLogout } from '@/components/ui/icons'
 
 /** Tên trang + base path theo route hiện tại, tra trong chính menu của role đang đăng nhập. */
 function usePageTitle(menuSections: MenuSection[]): { label: string; to: string } {
   const { pathname } = useLocation()
+  const navigationLabel = useNavigationLabel()
   const items = menuSections.flatMap(s => s.items)
   const match = items.find(i => pathname === i.path || pathname.startsWith(`${i.path}/`))
-  return { label: match?.label ?? 'SwiftletCare', to: match?.path ?? pathname }
+  return { label: match ? navigationLabel(match.label) : 'SwiftletCare', to: match?.path ?? pathname }
 }
 
-/** Toggle ngôn ngữ hiển thị — ghi vào languageStore; màn nào có từ điển (useT) sẽ đổi theo, màn khác giữ tiếng Việt. */
+/** Toggle ngôn ngữ hiển thị — ghi vào languageStore; màn nào có từ điển (useTranslation) sẽ đổi theo, màn khác giữ tiếng Việt. */
 function LanguageToggle() {
+  const { t } = useTranslation(shellDict)
   const lang = useLanguageStore(s => s.lang === 'vi' ? 'VI' : 'EN')
   const setStoreLang = useLanguageStore(s => s.setLang)
   const setLang = (l: 'VI' | 'EN') => setStoreLang(l === 'VI' ? 'vi' : 'en')
 
   return (
     <div className="group/lang relative">
-      <div className="flex h-10 shrink-0 items-center gap-1 rounded-full border border-warmGray/20 bg-white px-1.5 shadow-icon">
-        <IconGlobe width={16} height={16} className="mr-0.5 shrink-0 text-warmGray" />
+      {/* Công tắc gạt VI/EN — bấm vào bất kỳ đâu trên khung để đổi, nút đen trượt sang ngôn ngữ đang chọn */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={lang === 'EN'}
+        aria-label={t('lang.switch')}
+        onClick={() => setLang(lang === 'VI' ? 'EN' : 'VI')}
+        className="relative flex h-10 w-[88px] shrink-0 items-center rounded-full border border-warmGray/20 bg-white p-1 shadow-icon"
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-charcoal transition-transform duration-300 ease-out',
+            lang === 'EN' && 'translate-x-full',
+          )}
+        />
         {(['VI', 'EN'] as const).map(l => (
-          <button
+          <span
             key={l}
-            onClick={() => setLang(l)}
-            className={cn(
-              'rounded-full px-2 py-1 text-xs font-bold transition-colors',
-              lang === l ? 'bg-charcoal text-white' : 'text-warmGray hover:bg-warmGray/10',
-            )}
+            className={cn('relative flex-1 text-center text-xs font-bold transition-colors duration-300', lang === l ? 'text-white' : 'text-warmGray')}
           >
             {l}
-          </button>
+          </span>
         ))}
-      </div>
+      </button>
 
       {/* Hover preview */}
-      <div className="pointer-events-none absolute right-0 z-20 mt-2 w-48 origin-top-right scale-95 rounded-xl border border-warmGray/20 bg-white p-3 opacity-0 shadow-card transition-all duration-150 group-hover/lang:scale-100 group-hover/lang:opacity-100">
-        <p className="label-caption">Ngôn ngữ hiển thị</p>
-        <p className="mt-1 truncate text-sm font-semibold text-charcoal">{lang === 'VI' ? 'Tiếng Việt' : 'English'}</p>
+      <div className="pointer-events-none absolute right-0 z-20 mt-2 w-48 origin-top-right scale-95 rounded-xl glass-panel p-3 opacity-0 transition-all duration-150 group-hover/lang:scale-100 group-hover/lang:opacity-100">
+        <p className="label-caption">{t('lang.label')}</p>
+        <p className="mt-1 truncate text-sm font-semibold text-charcoal">{t('lang.current')}</p>
       </div>
     </div>
   )
 }
 
-export default function AppHeader({ menuSections }: { menuSections: MenuSection[] }) {
+/** `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung */
+export default function AppHeader({ menuSections, elevated = false }: { menuSections: MenuSection[]; elevated?: boolean }) {
   const user = useAuthStore(s => s.user)
-  const { logout } = useAuth()
+  const askLogout = useLogoutConfirmStore(s => s.ask)
+  const { t } = useTranslation(shellDict)
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const page = usePageTitle(menuSections)
-  const selectedZoneName = useZoneStore(s => s.selectedZoneName)
   const registeredTrail = useBreadcrumbStore(s => s.trail)
   // Khớp RequireRole của route /alerts — Sales Staff không có trang này nên không hiện nút
   const canViewAlerts = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
 
-  // Trang tự đăng ký breadcrumb (VD Ticket/Farms drill-down) được ưu tiên; không
-  // có thì fallback về zone đang chọn (Dashboard/Thiết bị/Phân tích/Cảnh báo).
-  const extraCrumbs: Crumb[] = registeredTrail.length > 0
-    ? registeredTrail
-    : selectedZoneName ? [{ label: selectedZoneName }] : []
+  // Chỉ trang tự đăng ký breadcrumb (VD Ticket/Farms drill-down) mới có cấp con —
+  // header không còn ô chọn Zone nên không gắn tên Zone đang lưu vào đây nữa.
+  const extraCrumbs: Crumb[] = registeredTrail
 
   const trail: Crumb[] = [
     { label: page.label, onClick: pathname !== page.to ? () => navigate(page.to) : undefined },
@@ -75,7 +88,18 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
   ]
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 bg-transparent px-4 lg:px-6">
+    // Header không mang backdrop-filter: phần tử có backdrop-filter khiến kính của popup con (thông báo, khung ngôn ngữ)
+    // chỉ làm nhòe được nội dung bên trong header, phần popup thò xuống trang thì không nhòe. Kính header vẽ ở lớp nền -z-10.
+    <header className="relative isolate flex h-16 items-center justify-between gap-3 px-4 lg:px-6">
+      {/* Kính trong (glassmorphism): chỉ phủ 10% trắng + blur, không làm tối nên nội dung cuộn bên dưới hiện thành mảng màu nhòe, không bị xám; khi cuộn thêm viền sáng */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          'absolute inset-0 -z-10 border-b bg-white/10 backdrop-blur-lg backdrop-saturate-150 transition-[border-color,box-shadow] duration-300',
+          elevated ? 'border-white/60 shadow-glass' : 'border-transparent',
+        )}
+      />
+
       {/* Trái: breadcrumb tên trang → thực thể đang xem (desktop) / thương hiệu (mobile, vì sidebar bị ẩn) */}
       <nav aria-label="breadcrumb" className="flex min-w-0 items-baseline gap-1.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-charcoal text-sm font-extrabold text-white lg:hidden">
@@ -108,24 +132,18 @@ export default function AppHeader({ menuSections }: { menuSections: MenuSection[
       </nav>
 
       <div className="flex shrink-0 items-center gap-3">
-        <ZoneSwitcher />
         <LanguageToggle />
 
         {canViewAlerts && <NotificationPopover />}
 
-        <span
-          className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-charcoal text-sm font-bold text-white lg:flex"
-          aria-hidden="true"
-        >
-          {user?.full_name?.[0]?.toUpperCase() ?? 'U'}
-        </span>
+        {/* Avatar (desktop) — bấm mở popup hồ sơ */}
+        <ProfilePopover />
 
         {/* Mobile: sidebar (chứa nút đăng xuất) bị ẩn nên đưa ra đây */}
         <button
-          onClick={() => logout.mutate()}
-          disabled={logout.isPending}
-          aria-label="Đăng xuất"
-          title={user?.full_name ? `Đăng xuất ${user.full_name}` : 'Đăng xuất'}
+          onClick={askLogout}
+          aria-label={t('logout.action')}
+          title={user?.full_name ? t('logout.actionUser', { name: user.full_name }) : t('logout.action')}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
         >
           <IconLogout />

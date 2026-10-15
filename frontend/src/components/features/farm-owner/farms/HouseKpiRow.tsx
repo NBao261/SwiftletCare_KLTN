@@ -2,7 +2,7 @@ import { BellRingingIcon, HouseIcon, PackageIcon, WifiHighIcon } from '@phosphor
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
 import KpiTile from '@/components/features/farm-owner/farms/KpiTile'
 import { cn } from '@/lib/cn'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { StructureTotals } from '@/components/features/farm-owner/farms/farmStructure'
 
@@ -15,7 +15,7 @@ interface HouseKpiRowProps {
 }
 
 export default function HouseKpiRow({ totals, monthLabel, showYield }: HouseKpiRowProps) {
-  const { t, num, day } = useT(farmDict)
+  const { t, num, day } = useTranslation(farmDict)
   const { counts, alerts } = totals
   const onlinePct = counts.total > 0 ? (counts.online / counts.total) * 100 : 0
   // Thiết bị chưa online = mất kết nối (OFFLINE/ERROR) + đang chờ kết nối (PENDING/DEGRADED)

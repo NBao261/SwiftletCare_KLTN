@@ -1,246 +1,159 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Badge, Card, DataTable, FilterChip, type BadgeTone, type DataTableColumn } from '@/components/ui'
-import ActionsMenu, { type ActionsMenuItem } from '@/components/ui/ActionsMenu'
+import { Badge, Button, Card, FilterChip, type DataTableColumn } from '@/components/ui'
+import FixedRowsTable from '@/components/ui/FixedRowsTable'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import { buildAlertRow, SEVERITY_BADGE_CLASS, STATUS_BADGE_CLASS, type AlertLogRow, type SeverityGroup } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants'
+import { useHouseAlerts } from '@/hooks/farm-owner/useFarmOwnerDashboard'
+import type { AllZone } from '@/hooks/shared/useFarms'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { dashboardDict } from '@/constants/dashboard.i18n'
 import { cn } from '@/lib/cn'
 
-type SeverityGroup = 'CRITICAL' | 'HIGH_MED' | 'NORMAL'
+const ROW_COUNT = 6
+const ROW_HEIGHT = 64
 
-interface LogRow {
-  id: string
-  time: string
-  nodeId: string
-  nodeLocation: string
-  metricType: string
-  reading: string
-  readingWarn?: boolean
-  threshold: string
-  severityGroup: SeverityGroup
-  statusLabel: string
-  statusTone: BadgeTone
-  action: string
-  actionStyle: 'critical' | 'dark' | 'passive'
+const FILTERS = [
+  { group: undefined, labelKey: 'log.all' },
+  { group: 'CRITICAL', labelKey: 'log.critical' },
+  { group: 'HIGH_MED', labelKey: 'log.highMed' },
+  { group: 'NORMAL', labelKey: 'log.normal' },
+] as const
+
+interface SensorAlertLogTableProps {
+  farmId: string
+  houseId: string
+  zones: AllZone[]
+  deviceNames: Map<string, string>
 }
 
-/** Dòng đệm khi lọc còn ít hơn FIXED_ROW_COUNT bản ghi — giữ khung bảng cao cố định thay vì co ngắn lại. */
-interface PlaceholderRow {
-  id: string
-  placeholder: true
-  /** Chỉ dòng đệm đầu tiên hiện chữ thông báo, các dòng đệm còn lại để trống hoàn toàn */
-  showNotice?: boolean
-}
-
-type TableRow = LogRow | PlaceholderRow
-
-function isPlaceholder(row: TableRow): row is PlaceholderRow {
-  return 'placeholder' in row
-}
-
-const FIXED_ROW_COUNT = 6
-
-/**
- * Luôn trả đủ FIXED_ROW_COUNT dòng — thiếu thì bù dòng trống, không rút ngắn
- * khung bảng theo bộ lọc. Chữ thông báo "không có bản ghi" chỉ hiện khi TOÀN
- * BẢNG rỗng (0 dòng thật); còn lọc ra được dù chỉ 1 dòng thì các dòng đệm còn
- * lại để trống hoàn toàn, không lặp lại chữ thông báo.
- */
-function padRows(rows: LogRow[]): TableRow[] {
-  if (rows.length >= FIXED_ROW_COUNT) return rows
-  const missing = FIXED_ROW_COUNT - rows.length
-  const isTableEmpty = rows.length === 0
-  return [
-    ...rows,
-    ...Array.from({ length: missing }, (_, i): PlaceholderRow => ({ id: `placeholder-${i}`, placeholder: true, showNotice: isTableEmpty && i === 0 })),
-  ]
-}
-
-/**
- * "Nhật Ký Cảnh Báo & Giám Sát Cảm Biến Realtime" — bảng lai giữa Alert
- * (`alerts.api.ts`, thật) và log thiết bị theo node, kèm cột "Hành động SCADA"
- * (relay tự động phản ứng) mà backend không ghi lại thành bản ghi riêng nào —
- * PID controller chỉ áp dụng ngưỡng, không log "đã làm gì" theo từng sự kiện.
- * Vì cột đó không tồn tại ở bất kỳ endpoint nào, toàn bảng dùng dữ liệu minh
- * hoạ cố định thay vì trộn nửa thật nửa giả gây hiểu nhầm.
- */
-const MOCK_ROWS: LogRow[] = [
-  {
-    id: '1', time: '14:28:10', nodeId: 'Cam-AI-02 (Cửa thu)', nodeLocation: 'Tầng 2 · Zone Đông',
-    metricType: 'Phát hiện Cú Mèo (Thiên địch)', reading: 'Confidence 94%', readingWarn: true, threshold: '0 cá thể',
-    severityGroup: 'CRITICAL', statusLabel: 'CRITICAL', statusTone: 'critical',
-    action: 'Kích còi đuổi', actionStyle: 'critical',
-  },
-  {
-    id: '2', time: '14:15:22', nodeId: 'Sensor-TH-09', nodeLocation: 'Áp mái Zone D',
-    metricType: 'Nhiệt độ phòng lượn', reading: '31.4 °C', readingWarn: true, threshold: '26.0 - 29.5 °C',
-    severityGroup: 'HIGH_MED', statusLabel: 'MEDIUM', statusTone: 'warning',
-    action: 'Bật quạt cấp tốc', actionStyle: 'dark',
-  },
-  {
-    id: '3', time: '14:08:47', nodeId: 'Gas-NH3-05', nodeLocation: 'Zone C',
-    metricType: 'Nồng độ khí NH3', reading: '27.8 ppm', readingWarn: true, threshold: '< 25 ppm',
-    severityGroup: 'HIGH_MED', statusLabel: 'HIGH', statusTone: 'critical',
-    action: 'Tăng chu kỳ thông gió', actionStyle: 'dark',
-  },
-  {
-    id: '4', time: '14:02:45', nodeId: 'Humid-Pump-01', nodeLocation: 'Trạm bơm trung tâm',
-    metricType: 'Độ ẩm tương đối RH', reading: '86.2 %', threshold: '82 - 90 %',
-    severityGroup: 'NORMAL', statusLabel: 'CHUẨN', statusTone: 'positive',
-    action: 'Tự động duy trì', actionStyle: 'passive',
-  },
-  {
-    id: '5', time: '13:40:00', nodeId: 'Audio-Amp-3', nodeLocation: 'Loa ru tầng 2',
-    metricType: 'Cường độ âm thanh loa ru', reading: '64 dB', threshold: '60 - 68 dB',
-    severityGroup: 'NORMAL', statusLabel: 'CHUẨN', statusTone: 'positive',
-    action: 'Auto timer: On', actionStyle: 'passive',
-  },
-  {
-    id: '6', time: '13:22:18', nodeId: 'Sensor-CO2-04', nodeLocation: 'Tầng 1 · Zone B',
-    metricType: 'Nồng độ CO2', reading: '1,120 ppm', threshold: '< 1500 ppm',
-    severityGroup: 'NORMAL', statusLabel: 'CHUẨN', statusTone: 'positive',
-    action: 'Ổn định', actionStyle: 'passive',
-  },
-]
-
-const FILTERS: Array<{ value: SeverityGroup | undefined; label: string }> = [
-  { value: undefined, label: 'Tất cả' },
-  { value: 'CRITICAL', label: 'Critical' },
-  { value: 'HIGH_MED', label: 'High/Med' },
-  { value: 'NORMAL', label: 'Normal' },
-]
-
-const ACTION_STYLE_CLASS: Record<LogRow['actionStyle'], string> = {
-  critical: 'inline-flex whitespace-nowrap rounded-full bg-alertRed px-2.5 py-1 text-xs font-bold text-white',
-  dark: 'inline-flex whitespace-nowrap rounded-full bg-charcoal px-2.5 py-1 text-xs font-bold text-white',
-  passive: 'text-xs italic text-warmGray',
-}
-
-/**
- * Chữ dài trong 1 cột cố định width: thay vì cắt cụt bằng "…" (truncate), làm
- * mờ dần bằng mask-image rồi chừa khoảng trắng (pr-3) trước khi sang cột kế —
- * đỡ đột ngột hơn ellipsis, vẫn không tràn/đẩy layout cột sau.
- */
-const FADE_TRUNCATE =
-  'block overflow-hidden whitespace-nowrap pr-3 [mask-image:linear-gradient(to_right,black_82%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,black_82%,transparent_100%)]'
-
-/**
- * Width cố định theo % (bảng `table-fixed`, xem DataTable.tsx) — mỗi cột giữ
- * đúng tỉ lệ ở mọi độ rộng màn hình thay vì co giãn tự do, tránh badge "Mức độ"
- * bị đẩy hẹp rồi wrap xuống 2 dòng. Tổng = 100%, cùng quy ước với userColumns.tsx.
- */
-function buildColumns(onOpenAlert: (row: LogRow) => void): DataTableColumn<TableRow>[] {
-  return [
-    {
-      key: 'time', header: 'Thời gian', className: 'w-[8%] whitespace-nowrap',
-      render: row => (isPlaceholder(row) ? null : <span className="font-medium text-warmGray">{row.time}</span>),
-    },
-    {
-      key: 'node', header: 'Node / Thiết bị', className: 'w-[16%]',
-      render: row => {
-        if (isPlaceholder(row)) {
-          return row.showNotice ? <span className="text-xs italic text-warmGray">Không có thêm bản ghi ở mức lọc này</span> : null
-        }
-        return (
-          <div className="min-w-0">
-            <p className={cn(FADE_TRUNCATE, 'font-bold text-charcoal')}>{row.nodeId}</p>
-            <p className={cn(FADE_TRUNCATE, 'text-xs text-warmGray')}>{row.nodeLocation}</p>
-          </div>
-        )
-      },
-    },
-    {
-      key: 'metricType', header: 'Loại thông số', className: 'w-[16%]',
-      render: row => (isPlaceholder(row) ? null : <span className={FADE_TRUNCATE}>{row.metricType}</span>),
-    },
-    {
-      key: 'reading', header: 'Giá trị đọc', className: 'w-[11%]',
-      render: row => (isPlaceholder(row) ? null : <span className={cn('font-bold', row.readingWarn ? 'text-alertRed' : 'text-charcoal')}>{row.reading}</span>),
-    },
-    {
-      key: 'threshold', header: 'Ngưỡng an toàn', className: 'w-[13%] whitespace-nowrap',
-      render: row => (isPlaceholder(row) ? null : <span className="text-warmGray">{row.threshold}</span>),
-    },
-    {
-      key: 'status', header: 'Mức độ', className: 'w-[11%]',
-      render: row => (isPlaceholder(row) ? null : <Badge tone={row.statusTone} className="whitespace-nowrap px-2 py-0.5 text-[11px]">{row.statusLabel}</Badge>),
-    },
-    {
-      key: 'action', header: 'Hành động SCADA', className: 'w-[15%]',
-      render: row => (isPlaceholder(row) ? null : <span className={ACTION_STYLE_CLASS[row.actionStyle]}>{row.action}</span>),
-    },
-    {
-      key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[10%] whitespace-nowrap',
-      render: row => {
-        if (isPlaceholder(row)) return null
-        return (
-          // stopPropagation — hàng đã bấm-được (onRowClick), không cho mở menu kích hoạt luôn điều hướng
-          <div onClick={e => e.stopPropagation()}>
-            <ActionsMenu items={buildActionItems(row, onOpenAlert)} />
-          </div>
-        )
-      },
-    },
-  ]
-}
-
-function buildActionItems(row: LogRow, onOpenAlert: (row: LogRow) => void): ActionsMenuItem[] {
-  return [{ label: 'Chi tiết', onClick: () => onOpenAlert(row) }]
-}
-
-/** "Nhật Ký Cảnh Báo & Giám Sát Cảm Biến Realtime" — bảng full-width cuối Dashboard (screenshot mục 5). */
-export default function SensorAlertLogTable() {
+// Bảng nhật ký cảnh báo
+export default function SensorAlertLogTable({ farmId, houseId, zones, deviceNames }: SensorAlertLogTableProps) {
+  const { t, num, time, day } = useTranslation(dashboardDict)
   const navigate = useNavigate()
   const [filter, setFilter] = useState<SeverityGroup | undefined>(undefined)
+  const zoneIds = useMemo(() => zones.map(zone => zone._id), [zones])
+  const locationNames = useMemo(() => new Map(zones.map(zone => [zone._id, `${zone.houseName} | ${zone.name}`])), [zones])
+  const { records, isLoading, isError, refetch } = useHouseAlerts(farmId, zoneIds, !houseId)
 
-  const rows = useMemo(
-    () => padRows(filter ? MOCK_ROWS.filter(r => r.severityGroup === filter) : MOCK_ROWS),
-    [filter],
+  const allRows = useMemo(
+    () => records.map(alert => buildAlertRow(
+      alert,
+      alert.node_id ? deviceNames.get(alert.node_id) ?? '—' : '—',
+      alert.zone_id ? locationNames.get(alert.zone_id) ?? '—' : '—',
+    )),
+    [records, deviceNames, locationNames],
   )
+  const rows = filter ? allRows.filter(row => row.group === filter) : allRows
+
+  const paginationLabels = useMemo(() => ({
+    summary: (from: number, to: number, total: number) => t('pager.summary', { from, to, total }),
+    nav: t('pager.nav'),
+    first: t('pager.first'),
+    prev: t('pager.prev'),
+    page: (n: number) => t('pager.page', { n }),
+    next: t('pager.next'),
+    last: t('pager.last'),
+  }), [t])
+
   const counts = useMemo(() => {
-    const base: Record<'all' | SeverityGroup, number> = { all: MOCK_ROWS.length, CRITICAL: 0, HIGH_MED: 0, NORMAL: 0 }
-    for (const row of MOCK_ROWS) base[row.severityGroup] += 1
-    return base
-  }, [])
+    const result: Record<SeverityGroup, number> = { CRITICAL: 0, HIGH_MED: 0, NORMAL: 0 }
+    allRows.forEach(row => { result[row.group] += 1 })
+    return result
+  }, [allRows])
 
-  // Dữ liệu bảng là minh hoạ (xem comment MOCK_ROWS) nên id không khớp Alert._id thật —
-  // điều hướng sang /alerts?highlight=<id> để đúng luồng UX (TechnicianAlertsPage đã đọc
-  // sẵn query "highlight"), id không tìm thấy thì trang đó chỉ đơn giản không cuộn-tới đâu cả.
-  function openAlert(row: LogRow) {
-    navigate(`/alerts?highlight=${row.id}`)
-  }
+  const formatValue = useCallback((value: number) => num(value, Number.isInteger(value) ? 0 : 1), [num])
 
-  const columns = useMemo(() => buildColumns(openAlert), [])
+  const columns = useMemo<DataTableColumn<AlertLogRow>[]>(() => [
+    {
+      key: 'severity', header: t('log.colSeverity'), className: 'w-[100px]',
+      render: row => <Badge className={cn('whitespace-nowrap px-2.5 py-0.5 text-[11px]', SEVERITY_BADGE_CLASS[row.severity])}>{row.severity}</Badge>,
+    },
+    {
+      key: 'time', header: t('log.colTime'), className: 'w-[110px] whitespace-nowrap',
+      render: row => (
+        <div>
+          <p className="font-medium text-charcoal">{time(row.createdAt)}</p>
+          <p className="text-xs text-warmGray">{day(row.createdAt)}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'location', header: t('log.colLocation'), className: 'w-[220px]',
+      render: row => (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-charcoal">{row.locationName}</p>
+          <p className="mt-0.5 truncate text-xs text-warmGray">{row.deviceName} - {t(`sensorKind.${row.sensorKind}`)}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'type', header: t('log.colType'),
+      render: row => <span className="block">{t(`alertType.${row.type}`)}</span>,
+    },
+    {
+      key: 'value', header: t('log.colValue'), className: 'w-[150px] whitespace-nowrap',
+      render: row => row.breach ? (
+        <p>
+          <span className="font-bold text-safetyOrange">{formatValue(row.breach.value)} {row.breach.unit}</span>{' '}
+          <span className="text-xs text-warmGray">/ {row.breach.sign} {formatValue(row.breach.limit)} {row.breach.unit}</span>
+        </p>
+      ) : <span className="text-warmGray">—</span>,
+    },
+    {
+      key: 'status', header: t('log.colStatus'), className: 'w-[120px]',
+      render: row => <Badge className={cn('whitespace-nowrap px-2.5 py-0.5 text-[11px] font-medium', STATUS_BADGE_CLASS[row.status])}>{t(`alertStatus.${row.status}`)}</Badge>,
+    },
+    {
+      key: 'actions', header: t('log.colActions'), align: 'center', className: 'w-[120px] whitespace-nowrap',
+      render: row => (
+        <button
+          type="button"
+          onClick={event => { event.stopPropagation(); navigate(`/alerts?highlight=${row.id}`) }}
+          className={DETAIL_BUTTON_CLASS}
+        >
+          {t('log.detail')}
+        </button>
+      ),
+    },
+  ], [t, time, day, navigate, formatValue])
 
   return (
     <Card size="lg" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-h2 text-charcoal">Nhật ký cảnh báo &amp; giám sát cảm biến realtime</h2>
-          <p className="mt-1 text-sm text-warmGray">Tự động tổng hợp từ mạng lưới node IoT Mesh Zigbee + PLC</p>
-        </div>
-        <p className="text-[11px] font-medium italic text-warmGray">
-          Cột "Hành động SCADA" là minh hoạ — PID controller không ghi log theo sự kiện
-        </p>
-      </div>
+      <h2 className="text-h2 text-charcoal">{t('log.title')}</h2>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-warmGray">Lọc theo mức độ:</span>
-        {FILTERS.map(f => (
+        <span className="text-xs font-semibold text-warmGray">{t('log.filter')}</span>
+        {FILTERS.map(item => (
           <FilterChip
-            key={f.label}
-            active={filter === f.value}
-            label={`${f.label} (${f.value ? counts[f.value] : counts.all})`}
-            onClick={() => setFilter(f.value)}
+            key={item.labelKey}
+            active={filter === item.group}
+            label={`${t(item.labelKey)} (${item.group ? counts[item.group] : allRows.length})`}
+            onClick={() => setFilter(item.group)}
           />
         ))}
       </div>
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        getRowKey={row => row.id}
-        onRowClick={row => { if (!isPlaceholder(row)) openAlert(row) }}
-        rowHeight={64}
-      />
+      {isLoading ? (
+        <LoadingSkeleton count={3} className="h-16 w-full" />
+      ) : isError ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-warmGray/30 px-6 py-10 text-center">
+          <p className="text-sm font-semibold text-charcoal">{t('log.error')}</p>
+          <Button variant="secondary" size="sm" onClick={refetch}>{t('log.retry')}</Button>
+        </div>
+      ) : (
+        <FixedRowsTable
+          columns={columns}
+          rows={rows}
+          getRowKey={row => row.id}
+          onRowClick={row => navigate(`/alerts?highlight=${row.id}`)}
+          rowHeight={ROW_HEIGHT}
+          pageSize={ROW_COUNT}
+          emptyNotice={t('log.empty')}
+          paginationLabels={paginationLabels}
+        />
+      )}
     </Card>
   )
 }

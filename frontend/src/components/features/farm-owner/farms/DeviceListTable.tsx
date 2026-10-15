@@ -3,7 +3,7 @@ import { CpuIcon, VideoCameraIcon } from '@phosphor-icons/react'
 import { type DataTableColumn } from '@/components/ui'
 import FixedRowsTable from '@/components/ui/FixedRowsTable'
 import StatusDot from '@/components/common/StatusDot'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { wifiQuality, type DeviceRow } from '@/components/features/farm-owner/farms/farmStructure'
@@ -17,7 +17,7 @@ interface DeviceListTableProps {
 
 /** Bảng thiết bị (sensor + camera) của 1 zone hoặc 1 nhà — bấm "Chi tiết" mở drawer bên phải */
 export default function DeviceListTable({ devices, zoneNameById, onSelect }: DeviceListTableProps) {
-  const { t, ago } = useT(farmDict)
+  const { t, ago } = useTranslation(farmDict)
 
   const columns = useMemo<DataTableColumn<DeviceRow>[]>(() => {
     const cols: DataTableColumn<DeviceRow>[] = [

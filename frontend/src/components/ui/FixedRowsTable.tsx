@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
-import Pagination from '@/components/ui/Pagination'
+import Pagination, { type PaginationLabels } from '@/components/ui/Pagination'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -27,13 +27,15 @@ interface FixedRowsTableProps<T> {
   pageSize?: number
   /** Chữ nghiêng ở dòng đệm đầu tiên khi bảng không có dữ liệu */
   emptyNotice: string
+  /** Chữ của thanh phân trang theo ngôn ngữ màn gọi — bỏ trống thì tiếng Việt */
+  paginationLabels?: PaginationLabels
 }
 
 /**
  * DataTable có khung cố định `pageSize` dòng (mặc định 10) × `rowHeight` px: thiếu dữ liệu thì bù dòng trống,
  * nhiều hơn thì phân trang — bảng không co/giãn theo lượng dữ liệu (cùng cách HarvestTable).
  */
-export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice }: FixedRowsTableProps<T>) {
+export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, paginationLabels }: FixedRowsTableProps<T>) {
   const [page, setPage] = useState(1)
   // Kẹp trang theo số trang còn lại — lọc/xoá làm ít đi thì không rơi vào trang không tồn tại
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
@@ -68,7 +70,7 @@ export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick
         onRowClick={onRowClick ? row => { if (!isPlaceholder(row)) onRowClick(row) } : undefined}
         rowHeight={rowHeight}
       />
-      <Pagination page={safePage} limit={pageSize} total={rows.length} onChange={setPage} variant="full" />
+      <Pagination page={safePage} limit={pageSize} total={rows.length} onChange={setPage} variant="full" labels={paginationLabels} />
     </div>
   )
 }

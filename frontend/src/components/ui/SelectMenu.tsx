@@ -122,9 +122,10 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
           ref={menuRef}
           role="listbox"
           aria-label={ariaLabel}
-          // Cao đúng maxVisible dòng (field 4, filter 8) kể cả padding/gap/border — vừa khít, không lộ nửa dòng kế tiếp
+          // Cao đúng maxVisible dòng (field 4, filter 8) kể cả padding/gap/border — vừa khít, không lộ nửa dòng kế tiếp.
+          // Kính mờ nền trắng — công thức chung .glass-panel trong index.css
           style={{ ...style, maxHeight: listHeight(maxVisible) }}
-          className="z-50 animate-fade-in space-y-0.5 overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 bg-white p-1.5 shadow-dropdown [scrollbar-width:thin]"
+          className="z-50 animate-fade-in space-y-0.5 overflow-y-auto overscroll-contain rounded-2xl glass-panel p-1.5 [scrollbar-width:thin]"
         >
           {options.map((opt, index) => {
             const isSelected = index === selectedIndex
@@ -139,7 +140,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
                 onClick={() => select(index)}
                 className={cn(
                   'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-charcoal transition-colors duration-150',
-                  isActive ? 'bg-gray-100' : 'bg-transparent',
+                  isActive ? 'bg-charcoal/5' : 'bg-transparent',
                   isSelected && 'font-semibold',
                 )}
               >

@@ -13,6 +13,28 @@ interface PaginationProps {
    * full     — « ‹ 1 2 3 … N › » cửa sổ luôn đủ 3 trang (các trang Admin: Ticket, Người dùng, Trang trại, Nhật ký…)
    */
   variant?: 'simple' | 'numbered' | 'full'
+  /** Chỉ variant `full`: chữ hiển thị theo ngôn ngữ của màn gọi — bỏ trống thì dùng tiếng Việt */
+  labels?: PaginationLabels
+}
+
+export interface PaginationLabels {
+  summary: (from: number, to: number, total: number) => string
+  nav: string
+  first: string
+  prev: string
+  page: (page: number) => string
+  next: string
+  last: string
+}
+
+const DEFAULT_LABELS: PaginationLabels = {
+  summary: (from, to, total) => `Hiển thị ${from}–${to} trong ${total}`,
+  nav: 'Phân trang',
+  first: 'Trang đầu',
+  prev: 'Trang trước',
+  page: page => `Trang ${page}`,
+  next: 'Trang sau',
+  last: 'Trang cuối',
 }
 
 function getPageNumbers(page: number, totalPages: number): (number | '…')[] {
@@ -47,7 +69,7 @@ export function pageItems(page: number, pageCount: number): (number | '…')[] {
 }
 
 /** Pager dùng chung — simple: Trước/Sau, numbered: số trang 1-2-…-N (Technician), full: « ‹ 1 2 3 … N › » (Admin) */
-export default function Pagination({ page, limit, total, onChange, variant = 'simple' }: PaginationProps) {
+export default function Pagination({ page, limit, total, onChange, variant = 'simple', labels = DEFAULT_LABELS }: PaginationProps) {
   if (total <= limit) return null
 
   const from       = (page - 1) * limit + 1
@@ -60,13 +82,13 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <p className="text-sm text-warmGray">
-          Hiển thị {from}–{to} trong {total}
+          {labels.summary(from, to, total)}
         </p>
-        <nav aria-label="Phân trang" className="flex flex-wrap items-center gap-1">
-          <button type="button" className={ITEM_CLASS} aria-label="Trang đầu" disabled={!hasPrev} onClick={() => onChange(1)}>
+        <nav aria-label={labels.nav} className="flex flex-wrap items-center gap-1">
+          <button type="button" className={ITEM_CLASS} aria-label={labels.first} disabled={!hasPrev} onClick={() => onChange(1)}>
             <IconChevronsRight width={16} height={16} className="rotate-180" />
           </button>
-          <button type="button" className={ITEM_CLASS} aria-label="Trang trước" disabled={!hasPrev} onClick={() => onChange(page - 1)}>
+          <button type="button" className={ITEM_CLASS} aria-label={labels.prev} disabled={!hasPrev} onClick={() => onChange(page - 1)}>
             <IconChevronRight width={16} height={16} className="rotate-180" />
           </button>
           {pageItems(page, totalPages).map((item, i) =>
@@ -77,7 +99,7 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
                 key={item}
                 type="button"
                 aria-current={item === page ? 'page' : undefined}
-                aria-label={`Trang ${item}`}
+                aria-label={labels.page(item)}
                 onClick={() => item !== page && onChange(item)}
                 className={cn(ITEM_CLASS, item === page && 'bg-charcoal font-semibold text-white hover:bg-charcoal')}
               >
@@ -85,10 +107,10 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
               </button>
             ),
           )}
-          <button type="button" className={ITEM_CLASS} aria-label="Trang sau" disabled={!hasNext} onClick={() => onChange(page + 1)}>
+          <button type="button" className={ITEM_CLASS} aria-label={labels.next} disabled={!hasNext} onClick={() => onChange(page + 1)}>
             <IconChevronRight width={16} height={16} />
           </button>
-          <button type="button" className={ITEM_CLASS} aria-label="Trang cuối" disabled={!hasNext} onClick={() => onChange(totalPages)}>
+          <button type="button" className={ITEM_CLASS} aria-label={labels.last} disabled={!hasNext} onClick={() => onChange(totalPages)}>
             <IconChevronsRight width={16} height={16} />
           </button>
         </nav>

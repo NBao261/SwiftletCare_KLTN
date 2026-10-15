@@ -47,6 +47,9 @@ const config: Config = {
         limeMist:      '#ECFFA9', // = lime-300 — Bề mặt nhạt: nền icon-box/chip/active pill icon
         success:       '#B5D32C', // = accent-600 — Trạng thái an toàn/ONLINE/đã kết nối (status dot)
         climateOrange: '#ED8F50', // = orange-500 — Cảnh báo vi khí hậu / quá nhiệt
+        infoBlue:      '#4A89EB', // Trạng thái cảnh báo "Mới" (bảng nhật ký Dashboard)
+        statusYellow:  '#FFE033', // Nhãn "PLC: Đang chờ kết nối" trên thanh SCADA (nền, chữ charcoal)
+        safetyOrange:  '#FF7426', // Safety Orange — lỗi thiết bị (khung Trạng thái nhà yến), mức HIGH và giá trị vượt ngưỡng (Nhật ký cảnh báo) ở Dashboard
         alertRed:      '#D53F35', // = red-500 — Cảnh báo khẩn cấp / badge mặc định
         stone:         '#EAEAEA', // = gray-200 — Canvas nền app shell (MainLayout)
       },
@@ -84,6 +87,8 @@ const config: Config = {
         // (ActionsMenu "...") — cùng công thức Shadow #56 nhưng tán ngắn hơn vì
         // khung menu nhỏ, đặt bóng lan rộng như Modal sẽ trông quá nặng.
         dropdown: '0 16px 36px -10px rgba(0,0,0,0.08), 0 0 1px 1px rgba(39,35,31,0.04)',
+        // Header kính mờ khi nội dung cuộn bên dưới: vệt sáng mảnh ở mép trên + bóng tán nhẹ ở mép dưới
+        glass: 'inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 20px -14px rgba(39,35,31,0.3)',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

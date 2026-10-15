@@ -1,10 +1,11 @@
-import { Suspense } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { Outlet, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useBreadcrumbStore } from '@/stores/breadcrumbStore'
 import AppSidebar, { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar'
 import AppHeader from '@/components/layouts/AppHeader'
 import Toast from '@/components/common/Toast'
+import LogoutConfirmModal from '@/components/common/LogoutConfirmModal'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useAlertNotifications } from '@/hooks/shared/useAlertNotifications'
 
@@ -23,18 +24,28 @@ export default function AppShell({
 }) {
   useAlertNotifications()
   const back = useBreadcrumbStore(s => s.back)
+  const [scrolled, setScrolled] = useState(false)
+  const mainRef = useRef<HTMLElement>(null)
 
   return (
     <div className="flex h-screen overflow-hidden bg-stone">
       <AppSidebar menuSections={menuSections} dockItems={dockItems} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <AppHeader menuSections={menuSections} />
-        {/* pb-28 trên mobile để dock nổi không che nội dung cuối trang */}
-        <main className="flex-1 overflow-y-auto bg-stone pb-28 pt-4 lg:pb-8 lg:pt-6">
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Header nổi đè lên vùng cuộn và phủ hết bề ngang cột (cả phần thanh cuộn) — nội dung trượt bên dưới
+            bị blur. Không nằm trong <main> nên lăn chuột trên header phải chuyển tiếp sang <main> */}
+        <div onWheel={e => mainRef.current?.scrollBy({ top: e.deltaY })} className="absolute inset-x-0 top-0 z-20">
+          <AppHeader menuSections={menuSections} elevated={scrolled} />
+        </div>
+        {/* pt-16 chừa đúng chiều cao header; pb-28 trên mobile để dock nổi không che nội dung cuối trang */}
+        <main
+          ref={mainRef}
+          onScroll={e => setScrolled(e.currentTarget.scrollTop > 0)}
+          className="flex flex-1 flex-col overflow-y-auto bg-stone pb-28 pt-16 lg:pb-8"
+        >
           {/* Container duy nhất bọc mọi card nội dung — max-w + mx-auto để nội
               dung luôn căn giữa vùng nhìn ở màn hình rộng (Full HD/2K/4K), px-6/
               px-8 là lề 2 bên đồng nhất khi viewport hẹp hơn max-width. */}
-          <div className="mx-auto flex min-h-full w-full max-w-[1400px] flex-col px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-6 pt-4 lg:px-8 lg:pt-6">
             {/* Nút quay lại của trang drill-down (usePageBack) — nút tròn cùng kiểu Dashboard Farm Owner (FarmOwnerDashboardPage)
                 + chữ tên trang cha; cả cụm là 1 link. self-start để vùng bấm không kéo hết hàng */}
             {back && (
@@ -56,6 +67,7 @@ export default function AppShell({
         </main>
       </div>
       <Toast />
+      <LogoutConfirmModal />
     </div>
   )
 }

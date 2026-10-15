@@ -2,7 +2,7 @@ import { ArrowRightIcon, CheckCircleIcon, HouseIcon, InfoIcon, UserIcon, Warning
 import PinButton from '@/components/features/farm-owner/farms/PinButton'
 import HealthBadge, { HEALTH_STYLE } from '@/components/features/farm-owner/farms/HealthBadge'
 import { CAPSULE_ACTION_CLASS, METRIC_BY_KEY } from '@/components/features/farm-owner/farms/farmStructure.constants'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
@@ -19,7 +19,7 @@ interface HouseCardProps {
 
 /** Card 1 nhà yến trong lưới "Cấu trúc Farm": cảnh báo nổi bật, thống kê số cảm biến/camera/online (số đo chỉ hiện ở cấp Zone), sản lượng tháng */
 export default function HouseCard({ node, staff, pinned, showYield, onTogglePin, onOpen }: HouseCardProps) {
-  const { t, num } = useT(farmDict)
+  const { t, num } = useTranslation(farmDict)
   const { house, farm, headline, counts } = node
   const style = HEALTH_STYLE[node.health]
   const isEmpty = node.health === 'EMPTY'

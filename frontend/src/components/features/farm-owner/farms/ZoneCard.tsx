@@ -1,7 +1,7 @@
 import { ArrowRightIcon } from '@phosphor-icons/react'
 import { Button } from '@/components/ui'
 import StatusDot from '@/components/common/StatusDot'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { METRIC_BY_KEY, CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { cn } from '@/lib/cn'
@@ -14,7 +14,7 @@ interface ZoneCardProps { node: ZoneNode; loadingMetrics: boolean; onOpen: () =>
 
 /** 1 zone trong trang chi tiết nhà: tình trạng, 3 chỉ số chính (realtime qua socket, chưa có thì trung bình 1 giờ), số thiết bị online */
 export default function ZoneCard({ node, loadingMetrics, onOpen }: ZoneCardProps) {
-  const { t, num } = useT(farmDict)
+  const { t, num } = useTranslation(farmDict)
   const { zone, metrics, breaches, counts } = node
   const over = new Set(breaches.map(b => b.metric))
   const worst = breaches[0]
