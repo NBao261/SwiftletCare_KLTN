@@ -183,11 +183,14 @@ export function buildTicketColumns(
         // stopPropagation — dòng đã bấm-được (onRowClick), mở menu bằng chuột/bàn phím không được kéo theo điều hướng
         <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
           <ActionsMenu
+            // Ticket đã đóng: chỉ "Xem chi tiết" — 3 thao tác can thiệp chỉ dành cho ticket còn mở (xem AdminTicketDetailPage)
             items={[
               { label: 'Xem chi tiết', onClick: () => handlers.onView(ticket) },
-              { label: 'Gán lại kỹ thuật viên', onClick: () => handlers.onReassign(ticket) },
-              { label: 'Đổi độ ưu tiên', onClick: () => handlers.onChangePriority(ticket) },
-              { label: 'Đổi lịch hẹn', onClick: () => handlers.onReschedule(ticket) },
+              ...(ticket.status === 'CLOSED' ? [] : [
+                { label: 'Gán lại kỹ thuật viên', onClick: () => handlers.onReassign(ticket) },
+                { label: 'Đổi độ ưu tiên', onClick: () => handlers.onChangePriority(ticket) },
+                { label: 'Đổi lịch hẹn', onClick: () => handlers.onReschedule(ticket) },
+              ]),
             ]}
           />
         </div>

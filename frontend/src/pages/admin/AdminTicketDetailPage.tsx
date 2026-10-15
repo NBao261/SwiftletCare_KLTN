@@ -18,7 +18,7 @@ import TicketStatusSteps from "@/components/features/admin/tickets/TicketStatusS
 import TicketSlaCard from "@/components/features/admin/tickets/TicketSlaCard";
 import Info from "@/components/features/admin/tickets/TicketInfoItem";
 import { SAT_LABEL, STATUS_BADGE_CLASS } from "@/components/features/admin/tickets/tickets.constants";
-import { ticketCode, technicianName } from "@/components/features/admin/tickets/ticketColumns";
+import { technicianName } from "@/components/features/admin/tickets/ticketColumns";
 import { formatDayTime } from "@/lib/helpers";
 import { cn } from "@/lib/cn";
 import { t } from "@/i18n";
@@ -49,7 +49,8 @@ export default function AdminTicketDetailPage() {
   const [showReassign, setShowReassign] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
 
-  usePageBreadcrumb(ticket ? [{ label: `${TICKET_TYPE_LABEL[ticket.type]} ${ticketCode(ticket)}` }] : []);
+  // Breadcrumb chỉ tên loại ticket — mã ticket đã bỏ khỏi trang chi tiết, không hiện lại ở header
+  usePageBreadcrumb(ticket ? [{ label: TICKET_TYPE_LABEL[ticket.type] }] : []);
   usePageBack("/system/tickets", "danh sách ticket");
 
   if (isLoading) return <LoadingSkeleton className="h-96 w-full" />;
@@ -81,19 +82,20 @@ export default function AdminTicketDetailPage() {
             </div>
           </div>
 
-          {/* Can thiệp không gate theo trạng thái — quyền thường trực của Admin (TICKET-FR-005b); huỷ chỉ khi còn mở */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button variant="secondary" size="sm" className={ACTION_BUTTON} onClick={() => setShowChangePriority(true)}>Đổi ưu tiên</Button>
-            <Button variant="secondary" size="sm" className={ACTION_BUTTON} onClick={() => setShowReassign(true)}>Gán lại kỹ thuật viên</Button>
-            <Button variant="secondary" size="sm" className={ACTION_BUTTON} onClick={() => setShowReschedule(true)}>Đổi lịch hẹn</Button>
-            {/* Nút viền + icon X như nút "Hủy lọc", không tô đỏ — popup xác nhận hủy mới là bước nguy hiểm */}
-            {isOpen && (
+          {/* Chỉ hiện khi ticket còn mở: backend cho Admin can thiệp cả ticket đã đóng (TICKET-FR-005b) nhưng chỉ để MỞ LẠI
+              — 3 popup không có lựa chọn mở lại, nên gán lại bị 409, đổi ưu tiên/lịch hẹn của việc đã xong là vô nghĩa */}
+          {isOpen && (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button variant="secondary" size="sm" className={ACTION_BUTTON} onClick={() => setShowChangePriority(true)}>Đổi ưu tiên</Button>
+              <Button variant="secondary" size="sm" className={ACTION_BUTTON} onClick={() => setShowReassign(true)}>Gán lại kỹ thuật viên</Button>
+              <Button variant="secondary" size="sm" className={ACTION_BUTTON} onClick={() => setShowReschedule(true)}>Đổi lịch hẹn</Button>
+              {/* Nút viền + icon X như nút "Hủy lọc", không tô đỏ — popup xác nhận hủy mới là bước nguy hiểm */}
               <Button variant="secondary" size="sm" className={ACTION_BUTTON} onClick={() => setShowCancel(true)}>
                 <IconX width={14} height={14} />
                 Hủy ticket
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-5 border-t border-warmGray/10 pt-4">
@@ -101,10 +103,12 @@ export default function AdminTicketDetailPage() {
         </div>
       </section>
 
-      {/* ── 2 cột: nội dung chính | SLA + thông tin (rộng cố định 21rem) ── */}
-      {/* Không items-start: 2 cột kéo cao bằng nhau — card cuối mỗi cột flex-1 lấp phần còn lại */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-        <div className="flex min-w-0 flex-col gap-4">
+      {/* ── 2 cột: nội dung chính | SLA + thông tin (rộng cố định 18rem — cột Lịch sử xử lý rộng hơn) ── */}
+      {/* Màn lớn: cột trái đặt absolute trong ô lưới → chiều cao hàng do cột phải quyết định, khung Lịch sử xử lý cao
+          bằng đúng tổng các khung bên phải (danh sách ghi chú tự cuộn bên trong) */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="relative min-w-0">
+        <div className="flex flex-col gap-4 lg:absolute lg:inset-0">
           {SCHEDULED_TYPES.includes(ticket.type) && (
             <section className="rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
               <div className="mb-4">
@@ -138,20 +142,21 @@ export default function AdminTicketDetailPage() {
             </section>
           )}
 
-          <TicketNotesCard ticketId={ticket._id} notes={ticket.notes} className="flex-1" />
+          <TicketNotesCard ticketId={ticket._id} notes={ticket.notes} className="min-h-0 flex-1" />
+        </div>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 self-start">
           <TicketSlaCard ticket={ticket} />
 
-          {/* Card Thông tin luôn kéo dài lấp chỗ trống (cột cao bằng cột trái) — card Đánh giá bên dưới giữ cao vừa nội dung */}
-          <section className="flex-1 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
+          {/* Card Thông tin cao vừa nội dung */}
+          <section className="rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
             <h2 className="text-h3 text-charcoal">{t('Thông tin')}</h2>
             <dl className="mt-1 divide-y divide-warmGray/10">
               <Info label="Trang trại">{farm?.name ?? "—"}</Info>
               <Info label="Phòng">{room ? `${room.houseName} / ${room.name}` : ticket.zone_id ? "—" : "Toàn farm"}</Info>
               <Info label="Kỹ thuật viên phụ trách">
-                {technician ?? <span className="font-semibold text-orange-600">{t('Chưa phân công')}</span>}
+                {technician ?? <span className="font-semibold text-climateOrange">{t('Chưa phân công')}</span>}
               </Info>
               {ticket.scheduled_visit_at && (
                 <Info label="Ngày hẹn">{formatDayTime(ticket.scheduled_visit_at)}</Info>
@@ -165,7 +170,7 @@ export default function AdminTicketDetailPage() {
               <p className="label-caption mb-2">{t('Đánh giá của Farm Owner')}</p>
               {ticket.satisfaction_rating
                 ? <StarRating value={ticket.satisfaction_rating} readOnly />
-                : <p className="text-body text-warmGray">{t('Farm Owner chưa đánh giá ticket này.')}</p>}
+                : <p className="text-body italic text-warmGray">{t('Farm Owner chưa đánh giá ticket này.')}</p>}
             </section>
           )}
         </div>

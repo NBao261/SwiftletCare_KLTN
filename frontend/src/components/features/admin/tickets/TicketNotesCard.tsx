@@ -35,15 +35,16 @@ export default function TicketNotesCard({ ticketId, notes, className }: { ticket
     <section className={cn('flex flex-col rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card', className)}>
       <div className="mb-4">
         <h2 className="text-h2 text-charcoal">{t('Lịch sử xử lý')}</h2>
-        <p className="mt-1 text-sm text-warmGray">{t('{{n}} ghi chú · mới nhất ở cuối', { n: notes.length })}</p>
+        <p className="mt-1 text-sm text-warmGray">{t('Trao đổi và cập nhật trong quá trình xử lý ticket · {{n}} ghi chú', { n: notes.length })}</p>
       </div>
 
       {notes.length === 0 ? (
-        <p className="mb-4 flex h-[21rem] items-center justify-center rounded-xl border border-dashed border-warmGray/30 text-body text-warmGray">{t('Chưa có ghi chú nào.')}</p>
+        <p className="mb-4 flex h-[21rem] items-center justify-center rounded-xl border border-dashed border-warmGray/30 text-body italic text-warmGray lg:h-auto lg:min-h-0 lg:flex-1">{t('Chưa có ghi chú nào.')}</p>
       ) : (
-        // Khung cố định 21rem = vừa 4 ghi chú 1 dòng (~86px/ghi chú) — ít hơn vẫn giữ cỡ, nhiều hơn thì cuộn (pr-2 chừa thanh cuộn; pl-1/py-0.5 để viền ring của chấm mới nhất không bị khung cuộn cắt);
+        // Màn lớn: danh sách lấp phần còn lại của card (card cao bằng cột phải), nhiều ghi chú thì cuộn; màn nhỏ: khung
+        // cố định 21rem. pr-2 chừa thanh cuộn; pl-1/py-0.5 để viền ring của chấm mới nhất không bị khung cuộn cắt;
         // mở trang/thêm ghi chú tự cuộn xuống ghi chú mới nhất
-        <ol ref={listRef} className="mb-4 flex h-[21rem] flex-col overflow-y-auto py-0.5 pl-1 pr-2">
+        <ol ref={listRef} className="mb-4 flex h-[21rem] flex-col overflow-y-auto py-0.5 pl-1 pr-2 lg:h-auto lg:min-h-0 lg:flex-1">
           {notes.map((note, i) => {
             const last = i === notes.length - 1
             return (
