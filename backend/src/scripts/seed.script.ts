@@ -77,6 +77,23 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Farm already exists: ${farm._id}`)
   }
 
+  // ── User (Domain Expert) — chuyên gia nuôi yến được mời vào farm (AUTH-FR-005, v2.0.0) ──
+  let expert = await User.findOne({ email: 'expert@swiftletcare.dev' })
+  if (!expert) {
+    expert = await User.create({
+      email: 'expert@swiftletcare.dev',
+      password_hash: 'Test1234!',
+      full_name: 'Demo Domain Expert',
+      role: 'DOMAIN_EXPERT',
+    })
+    logger.info(`[seed] Created domain expert: ${expert.email} (password: Test1234!)`)
+  }
+  if (!farm.members.some(m => String(m.user_id) === String(expert!._id))) {
+    farm.members.push({ user_id: expert._id, is_primary: false, role: 'DOMAIN_EXPERT' } as never)
+    await farm.save()
+    logger.info(`[seed] Added ${expert.email} to farm ${farm._id} as DOMAIN_EXPERT`)
+  }
+
   // ── House ─────────────────────────────────────────────────────────────────
   let house = await House.findOne({ farm_id: farm._id })
   if (!house) {

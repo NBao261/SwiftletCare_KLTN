@@ -2,6 +2,14 @@
 
 React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Xem `SwiftletCare_SRS.md` §3.2, §9.3.
 
+> **Phạm vi v2.0.0 (sau Review 1).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; `SwiftletCare_SRS.md` mục 0 là căn cứ. Việc phải sửa ở web (chi tiết ở SRS mục 0.5):
+>
+> - Gỡ `MarketplacePage`, `ListingDetailPage`, route công khai của marketplace, `useMarketplace`, `marketplace.api`; gỡ nốt code `sales-staff/` cũ.
+> - Role `DOMAIN_EXPERT` thay `FARM_OPERATOR`: nhóm role và `MENU_ACCESS` trong `constants/roles.ts`, `DomainExpertLayout` thay `FarmOperatorLayout`, bucket `domain-expert/` cho các trang báo cáo sức khỏe Zone, kiểm chứng cảnh báo, duyệt gợi ý hệ số.
+> - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận của chuyên gia, live stream có khung và số đếm trực tiếp.
+> - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận; Farm Owner chỉ xem.
+> - Bỏ relay sưởi; NH3/CO2 ghi rõ là ngưỡng cảnh báo do chuyên gia đặt; nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
+
 ## Chạy local
 
 ```bash
@@ -29,7 +37,7 @@ src/
                (không có features/shared — mỗi component thuộc đúng 1 role)
     layouts/   Đúng 7 file — 4 của role, 3 dùng chung:
                  AdminLayout · FarmOwnerLayout
-                 TechnicianLayout · SalesStaffLayout
+                 FarmOperatorLayout · TechnicianLayout
                    -> menu viết đầy đủ ngay đầu mỗi file
                  AppShell    khung chung (sidebar + header + nội dung)
                  AppSidebar  sidebar desktop + dock mobile
@@ -46,7 +54,6 @@ src/
                  admin/       AdminUsersPage, AdminSystemHealthPage...
                  farm-owner/  FarmOwnerDashboardPage, FarmOwnerHarvestPage...
                  technician/  TechnicianDevicesPage, TechnicianTicketsPage...
-                 sales-staff/ SalesStaffHomePage
                  auth/        LoginPage, RegisterPage, ForgotPasswordPage,
                               InvitationPage (chưa đăng nhập, không gắn role)
                4 trang không thuộc role nào nằm thẳng ở pages/:
@@ -82,7 +89,7 @@ dùng alias `@/`, không dùng đường dẫn tương đối.
 
 ## Trạng thái trang
 
-Phần lớn trang là stub "Coming soon" — implement theo `SwiftletCare_TASK_DETAIL_Checklist.md` mục D (sprint tương ứng). `Tickets`, `Harvest`, `Marketplace` là scaffold mới thêm để khớp Module TICKET/MARKET trong SRS.
+Phần lớn trang là stub "Coming soon" — implement theo `docs/task-checklist.md` mục D (sprint tương ứng). `Tickets`, `Harvest`, `Marketplace` là scaffold mới thêm để khớp Module TICKET/MARKET trong SRS.
 
 ## Lệnh hữu ích
 

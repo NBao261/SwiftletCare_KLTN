@@ -36,10 +36,19 @@ volatile float tempMax = DEFAULT_TEMP_MAX;
 volatile float humidityMin = DEFAULT_HUMIDITY_MIN;
 volatile float humidityMax = DEFAULT_HUMIDITY_MAX;
 volatile float lightMax = DEFAULT_LIGHT_MAX;
-volatile int nh3Max = DEFAULT_NH3_MAX;
-volatile int co2Max = DEFAULT_CO2_MAX;
 int sensorIntervalMs = SENSOR_INTERVAL_MS;
 int pidIntervalMs = PID_INTERVAL_MS;
+
+volatile float fuzzyHumidityBand = DEFAULT_FUZZY_HUMIDITY_BAND;
+volatile float fuzzyTempBand = DEFAULT_FUZZY_TEMP_BAND;
+volatile int fuzzyFanDryLevel = DEFAULT_FUZZY_FAN_DRY_LEVEL;
+volatile int fuzzyWindowSec = DEFAULT_FUZZY_WINDOW_SEC;
+volatile bool fuzzyInputFilter = DEFAULT_FUZZY_INPUT_FILTER;
+volatile float noiseMarginDb = DEFAULT_NOISE_MARGIN_DB;
+volatile int noiseMinSec = DEFAULT_NOISE_MIN_SEC;
+volatile int pumpDryOnSec = DEFAULT_PUMP_DRY_ON_SEC;
+volatile float pumpDryMinRisePct = DEFAULT_PUMP_DRY_MIN_RISE_PCT;
+volatile int speakerDropPct = DEFAULT_SPEAKER_DROP_PCT;
 
 // Speaker schedule (ENV-FR-013b)
 volatile bool speakerScheduleEnabled = true;
@@ -78,12 +87,33 @@ void update(const char *jsonPayload) {
     humidityMax = doc["humidity_max"].as<float>();
   if (doc["light_max"].is<float>())
     lightMax = doc["light_max"].as<float>();
-  // Backend lưu ngưỡng dạng Number (có thể là 25.5) — is<int>() sẽ bỏ qua âm
-  // thầm giá trị lẻ, nên nhận mọi số rồi làm tròn.
-  if (doc["nh3_max"].is<float>())
-    nh3Max = lroundf(doc["nh3_max"].as<float>());
-  if (doc["co2_max"].is<float>())
-    co2Max = lroundf(doc["co2_max"].as<float>());
+  // nh3_max/co2_max không còn được đọc (SRS v2.0.0): NH3/CO2 chỉ cảnh báo, do
+  // backend tính từ telemetry — firmware không điều khiển theo hai chỉ số này.
+  // Hệ số logic mờ (ENV-FR-021): backend đã validate, vẫn kẹp lại ở đây vì 1
+  // giá trị hỏng (vd band = 0 → chia 0) sẽ làm hỏng điều khiển thật.
+  if (doc["fuzzy_humidity_band"].is<float>())
+    fuzzyHumidityBand = constrain(doc["fuzzy_humidity_band"].as<float>(), 2.0f, 20.0f);
+  if (doc["fuzzy_temp_band"].is<float>())
+    fuzzyTempBand = constrain(doc["fuzzy_temp_band"].as<float>(), 1.0f, 10.0f);
+  if (doc["fuzzy_fan_dry_level"].is<float>())
+    fuzzyFanDryLevel = constrain(lroundf(doc["fuzzy_fan_dry_level"].as<float>()), 0L, 100L);
+  if (doc["fuzzy_window_sec"].is<float>())
+    fuzzyWindowSec = constrain(lroundf(doc["fuzzy_window_sec"].as<float>()), 60L, 600L);
+  if (doc["fuzzy_input_filter"].is<bool>())
+    fuzzyInputFilter = doc["fuzzy_input_filter"].as<bool>();
+  // Tham số phát hiện (EXPERT-FR-008): backend đã kiểm tra khoảng, vẫn kẹp lại
+  // ở đây. Số nguyên nhận mọi số rồi làm tròn — is<int>() bỏ qua âm thầm giá
+  // trị lẻ mà backend (Number) có thể gửi.
+  if (doc["noise_margin_db"].is<float>())
+    noiseMarginDb = constrain(doc["noise_margin_db"].as<float>(), 5.0f, 30.0f);
+  if (doc["noise_min_sec"].is<float>())
+    noiseMinSec = constrain(lroundf(doc["noise_min_sec"].as<float>()), 5L, 15L);
+  if (doc["pump_dry_on_sec"].is<float>())
+    pumpDryOnSec = constrain(lroundf(doc["pump_dry_on_sec"].as<float>()), 120L, 900L);
+  if (doc["pump_dry_min_rise_pct"].is<float>())
+    pumpDryMinRisePct = constrain(doc["pump_dry_min_rise_pct"].as<float>(), 0.5f, 10.0f);
+  if (doc["speaker_drop_pct"].is<float>())
+    speakerDropPct = constrain(lroundf(doc["speaker_drop_pct"].as<float>()), 30L, 90L);
   if (doc["speaker_schedule_enabled"].is<bool>())
     speakerScheduleEnabled = doc["speaker_schedule_enabled"].as<bool>();
   if (doc["speaker_window1_start_hour"].is<int>())

@@ -1,13 +1,12 @@
 import { Schema, model, Document, Types } from 'mongoose'
-import type { Role } from '@/types'
+import type { FarmMemberRole } from '@/types'
 
 /** Invitation – SRS §8.2, AUTH-FR-010, Flow 12 */
 export interface IInvitation extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   invited_email: string
-  /** Chỉ FARM_OWNER còn được tạo mới; SALES_STAFF giữ lại làm dữ liệu cũ (trước v1.16.0), không còn luồng nào chấp nhận */
-  invited_role: Extract<Role, 'FARM_OWNER' | 'SALES_STAFF'>
+  invited_role: FarmMemberRole
   invited_by: Types.ObjectId
   token: string
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
@@ -20,7 +19,7 @@ const invitationSchema = new Schema<IInvitation>(
   {
     farm_id:       { type: Schema.Types.ObjectId, ref: 'Farm', required: true },
     invited_email: { type: String, required: true, lowercase: true, trim: true },
-    invited_role:  { type: String, enum: ['FARM_OWNER', 'SALES_STAFF'], required: true },
+    invited_role:  { type: String, enum: ['FARM_OWNER', 'DOMAIN_EXPERT'] satisfies FarmMemberRole[], required: true },
     invited_by:    { type: Schema.Types.ObjectId, ref: 'User', required: true },
     token:         { type: String, required: true, unique: true },
     status:        { type: String, enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED'], default: 'PENDING' },

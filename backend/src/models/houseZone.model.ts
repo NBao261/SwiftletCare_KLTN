@@ -1,6 +1,8 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
-import type { Thresholds } from '@/types'
+import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
+import type { DetectionTuning, FuzzyTuning, Thresholds, Role } from '@/types'
+import { DEFAULT_DETECTION_TUNING } from '@/utils/detectionTuning.util'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
@@ -15,19 +17,45 @@ export interface IHouse extends Document {
 
 export interface IThresholdHistoryEntry {
   changed_by: Types.ObjectId
+  /** Role của người sửa lúc sửa (EXPERT-FR-004) — để phân biệt chủ farm với chuyên gia */
+  changed_by_role?: Role
   changed_at: Date
   old_values: Partial<Thresholds>
   new_values: Partial<Thresholds>
   source: 'MANUAL' | 'RESET_TO_DEFAULT'
 }
 
+export interface IFuzzyTuningHistoryEntry {
+  changed_by: Types.ObjectId
+  changed_by_role?: Role
+  changed_at: Date
+  old_values: Partial<FuzzyTuning>
+  new_values: Partial<FuzzyTuning>
+}
+
+export interface IDetectionTuningHistoryEntry {
+  changed_by: Types.ObjectId
+  changed_by_role?: Role
+  changed_at: Date
+  old_values: Partial<DetectionTuning>
+  new_values: Partial<DetectionTuning>
+}
+
 export interface IZone extends Document {
   _id: Types.ObjectId
   house_id: Types.ObjectId
+  /** Lưu kèm farm của House (Zone không bao giờ đổi farm) — kiểm tra quyền/lọc theo farm không phải đi qua House */
+  farm_id: Types.ObjectId
   name: string
   floor: number
   thresholds: Thresholds
   threshold_history: IThresholdHistoryEntry[]
+  /** ENV-FR-021 — hệ số bộ điều khiển mờ của mọi ESP32 trong Zone, gửi qua config/update */
+  fuzzy_tuning: FuzzyTuning
+  fuzzy_tuning_history: IFuzzyTuningHistoryEntry[]
+  /** EXPERT-FR-008 — tham số phát hiện do Domain Expert chỉnh; thiếu trường nào thì dùng mặc định */
+  detection_tuning: DetectionTuning
+  detection_tuning_history: IDetectionTuningHistoryEntry[]
 }
 
 const houseSchema = new Schema<IHouse>(
@@ -43,6 +71,7 @@ const houseSchema = new Schema<IHouse>(
 const zoneSchema = new Schema<IZone>(
   {
     house_id: { type: Schema.Types.ObjectId, ref: 'House', required: true },
+    farm_id:  { type: Schema.Types.ObjectId, ref: 'Farm', required: true, immutable: true },
     name:     { type: String, required: true },
     floor:    { type: Number, default: 1 },
     thresholds: {
@@ -60,10 +89,51 @@ const zoneSchema = new Schema<IZone>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
       source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT'] },
+      changed_by_role: { type: String },
+    }],
+    fuzzy_tuning: {
+      fuzzy_humidity_band: { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_humidity_band },
+      fuzzy_temp_band:     { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_temp_band },
+      fuzzy_fan_dry_level: { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_fan_dry_level },
+      fuzzy_window_sec:    { type: Number, default: DEFAULT_FUZZY_TUNING.fuzzy_window_sec },
+      fuzzy_input_filter:  { type: Boolean, default: DEFAULT_FUZZY_TUNING.fuzzy_input_filter },
+    },
+    fuzzy_tuning_history: [{
+      changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
+      changed_at: { type: Date },
+      old_values: { type: Schema.Types.Mixed },
+      new_values: { type: Schema.Types.Mixed },
+    }],
+    detection_tuning: {
+      noise_margin_db:       { type: Number, default: DEFAULT_DETECTION_TUNING.noise_margin_db },
+      noise_min_sec:         { type: Number, default: DEFAULT_DETECTION_TUNING.noise_min_sec },
+      pump_dry_on_sec:       { type: Number, default: DEFAULT_DETECTION_TUNING.pump_dry_on_sec },
+      pump_dry_min_rise_pct: { type: Number, default: DEFAULT_DETECTION_TUNING.pump_dry_min_rise_pct },
+      speaker_drop_pct:      { type: Number, default: DEFAULT_DETECTION_TUNING.speaker_drop_pct },
+      return_rate_drop_pct:  { type: Number, default: DEFAULT_DETECTION_TUNING.return_rate_drop_pct },
+    },
+    detection_tuning_history: [{
+      changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
+      changed_at: { type: Date },
+      old_values: { type: Schema.Types.Mixed },
+      new_values: { type: Schema.Types.Mixed },
     }],
   },
   { timestamps: { createdAt: 'created_at' } }
 )
+
+houseSchema.index({ farm_id: 1 })
+zoneSchema.index({ house_id: 1 })
+zoneSchema.index({ farm_id: 1 })
+
+// Nơi tạo Zone không truyền farm_id (seed, fixture test) thì lấy từ House
+zoneSchema.pre('validate', async function () {
+  if (this.farm_id || !this.house_id) return
+  const house = await House.findById(this.house_id).select('farm_id').lean()
+  if (house) this.farm_id = house.farm_id
+})
 
 export const House = model<IHouse>('House', houseSchema)
 export const Zone  = model<IZone>('Zone', zoneSchema)

@@ -12,7 +12,6 @@ void begin();
 void play(int track);
 void stop();
 void setVolume(int volume0to30);
-void loop(bool enable); // phát lặp bài hiện tại
 bool isPlaying();
 
 /**

@@ -14,7 +14,9 @@ router.post  ('/',             requireRole('FARM_OWNER','ADMIN'), body('name').t
 router.get   ('/:id',          param('id').isMongoId(), validate, farmController.getOne)
 router.put   ('/:id',          requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, farmController.update)
 router.delete('/:id',          requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, farmController.remove)
-router.post  ('/:id/members',  requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('email').isEmail(), validate, farmController.inviteMember)
+// AUTH-FR-005 (v2.0.0) — mời đồng sở hữu hoặc Domain Expert; cả hai đều theo cả farm (không còn zone_ids)
+router.post  ('/:id/members',  requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('email').isEmail(),
+  body('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT']), validate, farmController.inviteMember)
 router.delete('/:id/members/:userId', requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
 
 // Houses — Technician được tạo hộ House/Zone khi xuống lắp đặt mà Farm Owner
@@ -26,16 +28,14 @@ router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.l
 router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('houseId').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createZone)
 router.get ('/houses/:houseId/zones',    param('houseId').isMongoId(), validate, farmController.listZones)
 router.get ('/zones/:zoneId',            param('zoneId').isMongoId(), validate, farmController.getZone)
-router.put ('/zones/:zoneId/thresholds', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.updateThresholds)
+// Domain Expert duyệt/điều chỉnh ngưỡng và hệ số mờ (EXPERT-FR-004, mục 4.4)
+router.put ('/zones/:zoneId/thresholds', requireRole('FARM_OWNER','DOMAIN_EXPERT','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.updateThresholds)
 // ENV-FR-020 — reset về ngưỡng mặc định hệ thống do Admin cấu hình (system_settings, SYSTEM-FR-002)
-router.put ('/zones/:zoneId/thresholds/reset', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.resetThresholds)
-
-// Sales Staff (AUTH-FR-005b, Flow 16) — Farm Owner chỉ đề xuất, Admin duyệt ở /admin/sales-staff-requests
-router.post('/:id/sales-staff', requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), body('email').isEmail(), validate, farmController.requestSalesStaff)
-router.get ('/:id/sales-staff', param('id').isMongoId(), validate, farmController.listSalesStaff)
-// Flow 16 bước 1e — Farm Owner chỉ được yêu cầu gỡ; Admin duyệt hoặc gỡ thẳng ở /admin
-router.post('/:id/sales-staff/:salesStaffId/removal-requests', requireRole('FARM_OWNER'),
-  param('id').isMongoId(), param('salesStaffId').isMongoId(), validate, farmController.requestSalesStaffRemoval)
-router.get ('/:id/sales-staff-requests', param('id').isMongoId(), validate, farmController.listSalesStaffRequests)
+router.put ('/zones/:zoneId/thresholds/reset', requireRole('FARM_OWNER','DOMAIN_EXPERT','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.resetThresholds)
+// ENV-FR-021 — hệ số bộ điều khiển mờ (gửi xuống ESP32 qua config/update), cùng quyền với ngưỡng
+router.put ('/zones/:zoneId/fuzzy-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT','TECHNICIAN','ADMIN'), param('zoneId').isMongoId(), validate, farmController.updateFuzzyTuning)
+// EXPERT-FR-008 — tham số phát hiện (ồn bất thường, bơm khô, hỏng loa, tỷ lệ chim về): chỉ Domain
+// Expert sửa (mục 4.4); Farm Owner xem qua GET /farms/zones/:zoneId
+router.put ('/zones/:zoneId/detection-tuning', requireRole('DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.updateDetectionTuning)
 
 export default router

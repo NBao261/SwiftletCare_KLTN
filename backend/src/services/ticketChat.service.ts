@@ -52,7 +52,8 @@ function removedAt(ticket: ITicket, userId: string): Date | null {
 /**
  * TICKET-FR-014 — ai được đọc kênh chat:
  * - Admin: luôn được (TICKET-FR-005b)
- * - Farm Owner/thành viên của farm sở hữu ticket (không tính Technician/Sales cùng farm)
+ * - Phía khách hàng: Farm Owner (chủ hoặc đồng sở hữu) của farm sở hữu ticket — không
+ *   tính Technician cùng vùng, không tính Domain Expert (mục 4.4)
  * - Technician đang phụ trách; người TỪNG phụ trách chỉ đọc lịch sử cũ (`limitedUntil`)
  * Technician khác cùng vùng thì KHÔNG — khác quyền xem ticket (Flow 23 case 6a).
  */

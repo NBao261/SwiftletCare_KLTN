@@ -32,9 +32,12 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: { message: 'Đã xóa farm' } })
 })
 
-/** POST /farms/:id/members – AUTH-FR-005/010, Flow 12 bước 1 */
+/** POST /farms/:id/members – AUTH-FR-005/010, Flow 12 bước 1 (mời đồng sở hữu hoặc Domain Expert) */
 export const inviteMember = asyncHandler(async (req: Request, res: Response) => {
-  const invitation = await farmService.inviteMember(req.params.id, req.user, req.body.email as string)
+  const invitation = await farmService.inviteMember(req.params.id, req.user, {
+    email:    req.body.email as string,
+    role:     req.body.role,
+  })
   res.status(201).json({ success: true, data: invitation })
 })
 
@@ -98,32 +101,20 @@ export const updateThresholds = asyncHandler(async (req: Request, res: Response)
   res.json({ success: true, data: zone })
 })
 
+/** PUT /farms/zones/:zoneId/fuzzy-tuning – ENV-FR-021 */
+export const updateFuzzyTuning = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await farmService.updateZoneFuzzyTuning(req.params.zoneId, req.user, req.body)
+  res.json({ success: true, data: zone })
+})
+
+/** PUT /farms/zones/:zoneId/detection-tuning – EXPERT-FR-008 */
+export const updateDetectionTuning = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await farmService.updateZoneDetectionTuning(req.params.zoneId, req.user, req.body)
+  res.json({ success: true, data: zone })
+})
+
 /** PUT /farms/zones/:zoneId/thresholds/reset – ENV-FR-020 */
 export const resetThresholds = asyncHandler(async (req: Request, res: Response) => {
   const zone = await farmService.resetZoneThresholds(req.params.zoneId, req.user)
   res.json({ success: true, data: zone })
-})
-
-/** POST /farms/:id/sales-staff – AUTH-FR-005b (đề xuất, chờ Admin duyệt) */
-export const requestSalesStaff = asyncHandler(async (req: Request, res: Response) => {
-  const request = await farmService.requestSalesStaff(req.params.id, req.user, req.body.email as string)
-  res.status(201).json({ success: true, data: request })
-})
-
-/** POST /farms/:id/sales-staff/:salesStaffId/removal-requests – Flow 16 bước 1e (yêu cầu gỡ, chờ Admin duyệt) */
-export const requestSalesStaffRemoval = asyncHandler(async (req: Request, res: Response) => {
-  const request = await farmService.requestSalesStaffRemoval(req.params.id, req.user, req.params.salesStaffId)
-  res.status(201).json({ success: true, data: request })
-})
-
-/** GET /farms/:id/sales-staff-requests – Flow 16 bước 1b/1d */
-export const listSalesStaffRequests = asyncHandler(async (req: Request, res: Response) => {
-  const requests = await farmService.listSalesStaffRequests(req.params.id, req.user)
-  res.json({ success: true, data: requests })
-})
-
-/** GET /farms/:id/sales-staff */
-export const listSalesStaff = asyncHandler(async (req: Request, res: Response) => {
-  const assignments = await farmService.listSalesStaff(req.params.id, req.user)
-  res.json({ success: true, data: assignments })
 })

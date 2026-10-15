@@ -3,7 +3,8 @@
  *
  * FreeRTOS Tasks:
  *   - SensorTask  : Read 5 RS485 Modbus sensors every 10s (ENV-FR-001..003)
- *   - PIDTask     : Closed-loop control + speaker schedule + threat detect
+ *   - PIDTask     : Closed-loop control (logic mờ phun sương/quạt) + speaker
+ *                   schedule + threat detect
  *                   (ENV-FR-010..019, THREAT-FR-006, 011, 013)
  *   - MQTTTask    : Publish telemetry, subscribe commands (ENV-FR-015, §9.2)
  *
@@ -19,7 +20,9 @@
 #include "config/Secrets.h"
 #include "mqtt/MQTTManager.h"
 #include "pid/PIDController.h"
+#include "sensors/NoiseAnomalyDetector.h"
 #include "sensors/SensorManager.h"
+#include "sensors/SignalFilter.h"
 #include "storage/StorageManager.h"
 #include "wifi/WiFiProvisioner.h"
 #include <Arduino.h>
@@ -45,6 +48,20 @@ SemaphoreHandle_t dataMutex;
 SensorData latestSensorData;
 RelayState relayState;
 
+// ENV-FR-022: giá trị đã lọc (median+Kalman) CHỈ dùng làm đầu vào bộ điều khiển
+// mờ; telemetry/dashboard/phát hiện bất thường vẫn dùng latestSensorData thô.
+// Giữ lần đọc HỢP LỆ gần nhất (thô + đã lọc) kèm mốc thời gian: pidTask dùng nó chừng
+// nào còn đủ mới (CONTROL_INPUT_MAX_AGE_CYCLES), quá hạn mới vào trạng thái an toàn.
+struct FilteredEnv {
+  float temperature = NAN, humidity = NAN;       // đã lọc
+  float rawTemperature = NAN, rawHumidity = NAN; // thô
+  bool ready = false;                            // bộ lọc đã có dữ liệu
+  unsigned long validAtMs = 0;                   // 0 = chưa có lần đọc hợp lệ nào
+};
+FilteredEnv latestFiltered;
+// THREAT-FR-007: trạng thái NoiseAnomalyDetector (tính mỗi mẫu 1 Hz trong sensorTask)
+bool noiseAnomalyActive = false;
+
 // MQTT topic base "swiftletcare/{farmId}/{houseId}/{zoneId}" — tính 1 lần
 // trong setup() (đơn luồng, trước khi tạo task nào), SAU KHI đã nạp
 // farmId/houseId/zoneId từ NVS (nếu có, xem StorageManager::loadIdentity()
@@ -63,12 +80,24 @@ static bool wasUnexpectedReset = false;
 // PID (10s) chừng nào sự cố còn đó — trước đây 1 cảm biến hỏng sinh ~288 cảnh
 // báo/ngày (dedup backend chỉ chặn 5 phút). Gửi thất bại (mất MQTT) thì giữ
 // reported=false để thử lại chu kỳ sau; sự cố hết thì reset để lần sau báo lại.
-static void reportOnRise(bool active, bool &reported, const char *type,
-                         const char *severity, const char *message) {
+struct AlertReport {
+  bool reported = false;
+  unsigned long sentAt = 0;
+};
+
+static void reportOnRise(bool active, AlertReport &state, const char *type,
+                         const char *severity, const char *message,
+                         unsigned long resendMs = 0) {
+  // resendMs > 0: gửi lại định kỳ chừng nào sự cố còn tiếp diễn (xem
+  // EPISODE_ALERT_RESEND_MS).
+  unsigned long now = millis();
   if (!active) {
-    reported = false;
-  } else if (!reported) {
-    reported = MQTTManager::publishAlert(type, severity, message);
+    state.reported = false;
+  } else if (!state.reported || (resendMs > 0 && now - state.sentAt >= resendMs)) {
+    if (MQTTManager::publishAlert(type, severity, message)) {
+      state.reported = true;
+      state.sentAt = now;
+    }
   }
 }
 
@@ -83,7 +112,7 @@ void setup() {
   delay(500);
   Serial.println();
   Serial.println("╔══════════════════════════════════════════╗");
-  Serial.println("║     SwiftletCare ESP32 Firmware v1.0     ║");
+  Serial.println("║   SwiftletCare ESP32 Firmware v" FIRMWARE_VERSION "     ║");
   Serial.println("║     SRS: ENV + THREAT + FARM modules     ║");
   Serial.println("╚══════════════════════════════════════════╝");
 
@@ -154,7 +183,7 @@ void setup() {
 
   // ── Initialize relays (all OFF) ──────────────────────────────────────────
   relayState.init();
-  Serial.println("[Relay] 4-channel relay initialized (all OFF, active-HIGH)");
+  Serial.println("[Relay] 4-channel relay initialized (all OFF, active-HIGH; IN4 dự phòng)");
 
   // ── Initialize DFPlayer loa ru (Guide v3.3 §10-12) ────────────────────────
   AudioManager::begin();
@@ -209,8 +238,40 @@ void sensorTask(void *pvParameters) {
 
     SensorData data = SensorManager::readAll();
 
+    // Bộ lọc + NoiseAnomalyDetector chạy ở nhịp đọc cảm biến (1 Hz) — pidTask 10s
+    // sẽ bỏ lỡ phần lớn mẫu. static: chỉ task này dùng. Chỉ lọc nhiệt độ + độ ẩm:
+    // NH3/CO2 không còn vào bộ điều khiển (SRS v2.0.0, ENV-FR-022).
+    static SignalFilter fTemp, fHum;
+    static NoiseAnomalyDetector noiseDetector;
+    // static: lần đọc lỗi không ghi đè lần hợp lệ gần nhất. Chỉ mẫu hợp lệ vào bộ lọc:
+    // mẫu hữu hạn ngoài dải (VD ẩm 150%) làm bẩn cửa sổ median + Kalman, cảm biến hồi
+    // phục rồi mà giá trị lọc vẫn ngoài dải → relay tắt thêm vài chu kỳ.
+    static FilteredEnv filtered;
+    if (data.isValid) {
+      filtered.temperature = fTemp.update(data.temperature);
+      filtered.humidity = fHum.update(data.humidity);
+      filtered.rawTemperature = data.temperature;
+      filtered.rawHumidity = data.humidity;
+      filtered.ready = fTemp.ready() && fHum.ready();
+      filtered.validAtMs = millis();
+    }
+
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       latestSensorData = data;
+      latestFiltered = filtered;
+      // Loa ru đang phát (lịch hoặc nghe thử) thì ồn là do loa, không phải chim
+      bool speakerActive = AudioManager::isPlaying() || relayState.speaker;
+      // Giờ địa phương (configTime GMT+7) — mỗi giờ trong ngày có mức ồn nền riêng;
+      // NTP chưa đồng bộ → -1, detector không đánh giá
+      time_t nowT = time(nullptr);
+      struct tm lt;
+      int hour = (nowT > 1700000000 && localtime_r(&nowT, &lt)) ? lt.tm_hour : -1;
+      // Biên độ + số giây chỉnh theo Zone (EXPERT-FR-008)
+      NoiseAnomalyDetector::Tuning noiseTuning;
+      noiseTuning.marginDb = Config::noiseMarginDb;
+      noiseTuning.minLoud = Config::noiseMinSec;
+      noiseAnomalyActive =
+          noiseDetector.update(data.noiseOk ? data.soundDb : NAN, speakerActive, hour, noiseTuning);
       xSemaphoreGive(dataMutex);
     }
 
@@ -232,15 +293,34 @@ void pidTask(void *pvParameters) {
   while (true) {
     esp_task_wdt_reset();
 
-    SensorData data;
+    // static: không lấy được mutex ở chu kỳ này thì dùng lại bản chụp chu kỳ trước
+    // (tuổi của số đo vẫn được kiểm bên dưới) thay vì coi như mất cảm biến.
+    static SensorData data;
+    static FilteredEnv filtered;
+    static bool noiseAnomaly = false;
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       data = latestSensorData;
+      filtered = latestFiltered;
+      noiseAnomaly = noiseAnomalyActive;
       xSemaphoreGive(dataMutex);
+    }
+
+    // ENV-FR-022: đầu vào bộ mờ = giá trị lọc (nếu bật và bộ lọc đã có dữ liệu).
+    // THREAT-FR-013: dùng lần đọc HỢP LỆ gần nhất chừng nào nó còn đủ mới; một lần
+    // đọc lỗi lẻ không tắt relay. Quá CONTROL_INPUT_MAX_AGE_CYCLES chu kỳ không có
+    // số đo hợp lệ → NAN → FuzzyControl trả nhu cầu 0 (relay TẮT), không điều
+    // khiển theo số đo đã chết.
+    float controlTemp = NAN, controlHum = NAN;
+    unsigned long maxAgeMs = (unsigned long)CONTROL_INPUT_MAX_AGE_CYCLES * Config::pidIntervalMs;
+    if (filtered.validAtMs != 0 && millis() - filtered.validAtMs <= maxAgeMs) {
+      bool useFiltered = Config::fuzzyInputFilter && filtered.ready;
+      controlTemp = useFiltered ? filtered.temperature : filtered.rawTemperature;
+      controlHum = useFiltered ? filtered.humidity : filtered.rawHumidity;
     }
 
     // relayState bị đọc/ghi đồng thời bởi mqttTask (onRelayCommand, publish
     // telemetry/relay-status) — khoá dataMutex quanh TOÀN BỘ đoạn động tới
-    // relayState (kể cả nhánh loa lịch ngoài if (data.isValid)). KHÔNG giữ
+    // relayState. KHÔNG giữ
     // khoá qua các publishAlert() bên dưới: publishAlert() làm I/O mạng
     // (mqtt.publish(), có thể block vài giây) và không đụng relayState/
     // latestSensorData nữa (threats đã là bản copy cục bộ) — giữ khoá qua đó
@@ -257,35 +337,52 @@ void pidTask(void *pvParameters) {
         relayState.applyRelay(PIN_RELAY_SPEAKER, shouldPlay);
       }
 
-      if (data.isValid) {
-        // Check manual override expiry (ENV-FR-018)
-        PIDController::checkOverrideExpiry(relayState);
+      // Chạy MỌI chu kỳ, kể cả khi mất nhiệt độ/độ ẩm (THREAT-FR-013): trước đây
+      // cả khối nằm trong if (data.isValid) nên cảm biến chết thì relay kẹt ở
+      // trạng thái cũ, override không hết hạn và chính cảnh báo lỗi cảm biến
+      // cũng không được phát.
+      // Check manual override expiry (ENV-FR-018)
+      PIDController::checkOverrideExpiry(relayState);
 
-        // Run closed-loop control (ENV-FR-010..012)
-        PIDController::runHumidityControl(data.humidity, relayState);
-        PIDController::runVentilationControl(data, relayState);
-        PIDController::runHeatingControl(data.temperature, relayState);
+      // Closed-loop control (ENV-FR-010/011): phun sương + quạt theo logic mờ;
+      // đầu vào NAN → nhu cầu 0 → relay TẮT (trạng thái an toàn)
+      PIDController::runHumidityControl(controlHum, controlTemp, relayState);
+      PIDController::runVentilationControl(controlTemp, controlHum, relayState);
 
-        // Threat detection (THREAT-FR-006, 011, 013)
-        threats = PIDController::handleThreatAlerts(
-            data, relayState, AudioManager::isPlaying());
-        haveThreats = true;
-      }
+      // Threat detection (THREAT-FR-006, 011, 013)
+      threats = PIDController::handleThreatAlerts(
+          data, relayState, AudioManager::isPlaying());
+      threats.noiseAnomaly = noiseAnomaly;
+      haveThreats = true;
 
       xSemaphoreGive(dataMutex);
     }
 
     if (haveThreats) {
-      static bool speakerReported = false, pumpReported = false,
-                  sensorReported = false, busReported = false;
+      static AlertReport speakerReported, pumpReported, sensorReported,
+          busReported, noiseReported;
       reportOnRise(threats.speakerFailure, speakerReported, "SPEAKER_FAILURE",
                    "CRITICAL", "Amplitude dB không tăng khi loa ru đang phát");
-      // pumpDry chỉ true đúng 1 chu kỳ mỗi đợt phun (PIDController) — nếu gửi
-      // thất bại thì mất cảnh báo đợt đó, chấp nhận được (không lặp spam).
+      // pumpDry giữ true suốt lúc đang chốt ngừng phun: gửi thất bại (MQTT
+      // rớt) thì reportOnRise thử lại ở chu kỳ sau; gửi được rồi thì không lặp.
       reportOnRise(threats.pumpDry, pumpReported, "PUMP_DRY", "MEDIUM",
-                   "Misting ON 5 phút nhưng độ ẩm không tăng");
+                   threats.pumpDryWhileManual
+                       ? "Bơm phun sương chạy nhưng độ ẩm không tăng — bơm đang "
+                         "được BẬT TAY nên VẪN CHẠY, hãy tắt bơm và kiểm tra nước"
+                       : "Bơm phun sương chạy nhưng độ ẩm không tăng — đã tự ngừng "
+                         "phun để bảo vệ bơm, sẽ thử lại sau " SC_STR(PUMP_DRY_RETRY_MIN) " phút",
+                   EPISODE_ALERT_RESEND_MS);
       reportOnRise(threats.sensorFault, sensorReported, "SENSOR_FAULT",
                    "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");
+      // MEDIUM (không phải HIGH): phát hiện chỉ theo dB, ngưỡng chưa hiệu chỉnh
+      // bằng dữ liệu thật — HIGH sẽ bị alertEscalation tự tạo ticket sau 15'.
+      // Tín hiệu tham khảo: backend hiển thị kèm số đếm chim và chờ Domain
+      // Expert kiểm chứng (THREAT-FR-007) — không kết luận gì về hành vi chim.
+      reportOnRise(threats.noiseAnomaly, noiseReported, "NOISE_ANOMALY",
+                   "MEDIUM",
+                   "Mức ồn cao bất thường kéo dài so với mức nền của giờ này "
+                   "khi loa không phát",
+                   EPISODE_ALERT_RESEND_MS);
       reportOnRise(threats.busFailure, busReported, "RS485_BUS_FAILURE",
                    "CRITICAL",
                    "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");

@@ -24,6 +24,7 @@ import {
 import { buildDeviceConfig, confirmRelayStatus, markNodeSeen, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
 import { ingestTelemetry } from '@/services/telemetry.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
+import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
 import type { TelemetryPayload } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
@@ -74,9 +75,22 @@ async function seed(status: 'ONLINE' | 'OFFLINE' = 'ONLINE') {
   return { farm, house, zone, node, deviceId, token, topic }
 }
 
+/**
+ * ingestTelemetry gọi raiseThresholdAlert kiểu fire-and-forget (vài lượt đọc/ghi DB). Chờ
+ * tới khi cảnh báo thật sự được ghi: 1 nhịp setImmediate không đủ khi máy đang tải nặng —
+ * test tự nó lúc qua lúc không, và lần ghi tới trễ còn rơi vào test kế tiếp.
+ */
+async function thresholdAlertRaised() {
+  for (let i = 0; i < 100; i++) {
+    if (await Alert.collection.countDocuments({ type: 'THRESHOLD_BREACH' })) return
+    await new Promise(r => setTimeout(r, 20))
+  }
+  throw new Error('Không thấy cảnh báo THRESHOLD_BREACH sau 2 giây')
+}
+
 const reading = (deviceId: string, timestamp: number, over: Partial<TelemetryPayload> = {}) => ({
   deviceId, timestamp, temperature: 28, humidity: 85, light_lux: 0.1, nh3_ppm: 5, co2_ppm: 800, sound_db: 40,
-  relay_states: { misting: false, speaker: false, ventilation: false, heating: false }, control_mode: 'AUTO' as const,
+  relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO' as const,
   ...over,
 })
 
@@ -91,6 +105,16 @@ describe('ingestTelemetry', () => {
 
     expect(await Telemetry.countDocuments()).toBe(2)
     expect(emitTelemetryUpdate).toHaveBeenCalledTimes(3)
+  })
+
+  it('forwards the fuzzy controller output to the dashboard (ENV-FR-010/011)', async () => {
+    const { deviceId, zone } = await seed()
+
+    await ingestTelemetry(reading(deviceId, Date.now(), { control_output: { misting: 40, ventilation: 0 } }))
+
+    expect(emitTelemetryUpdate).toHaveBeenCalledWith(String(zone._id), expect.objectContaining({
+      controlOutput: { misting: 40, ventilation: 0 },
+    }))
   })
 
   it('always persists a reading that breaches a threshold', async () => {
@@ -111,7 +135,7 @@ describe('ingestTelemetry', () => {
     for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, hot))
     await ingestTelemetry(reading(deviceId, t0 + 5_000)) // hết vượt ngưỡng: chờ mốc 10s
     await ingestTelemetry(reading(deviceId, t0 + 10_000))
-    await new Promise(r => setImmediate(r)) // raiseThresholdAlert chạy fire-and-forget
+    await thresholdAlertRaised() // raiseThresholdAlert chạy fire-and-forget
 
     expect(await Telemetry.countDocuments({ is_anomaly: true })).toBe(1)
     expect(await Telemetry.countDocuments({ is_anomaly: false })).toBe(1)
@@ -237,7 +261,7 @@ describe('online/offline race (FARM-FR-005)', () => {
     const t0 = Date.now()
 
     for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }))
-    await new Promise(r => setImmediate(r))
+    await thresholdAlertRaised()
 
     expect(findOne).toHaveBeenCalledTimes(1) // chỉ mẫu bắt đầu vượt ngưỡng
     findOne.mockRestore()
@@ -250,7 +274,7 @@ describe('ingestDeviceAlert', () => {
 
     await ingestDeviceAlert({ type: 'SENSOR_FAULT', severity: 'MEDIUM', message: 'timeout', deviceId })
 
-    const alert = await Alert.findOne().lean()
+    const alert = await Alert.findOne({ type: 'SENSOR_FAULT' }).lean()
     expect(alert).toMatchObject({ type: 'SENSOR_FAULT', severity: 'MEDIUM', farm_id: farm._id, zone_id: zone._id })
   })
 
@@ -264,11 +288,13 @@ describe('confirmRelayStatus', () => {
     const { node, deviceId } = await seed('OFFLINE')
     await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date() })
 
-    await confirmRelayStatus({ deviceId, relay_states: { misting: true, speaker: false, ventilation: false, heating: false }, control_mode: 'AUTO' })
+    // firmware < 1.3.0 còn gửi `heating` — phải bị bỏ, không lưu và không phát socket
+    await confirmRelayStatus({ deviceId, relay_states: { misting: true, speaker: false, ventilation: false, heating: true } as never, control_mode: 'AUTO' })
 
     const after = (await SensorNode.findById(node._id))!
     expect(after.status).toBe('OFFLINE')
     expect(after.relay_states.misting).toBe(true)
+    expect(Object.keys(after.toObject().relay_states)).toEqual(['misting', 'speaker', 'ventilation'])
     expect(after.override_expiry).toBeUndefined()
   })
 })
@@ -328,23 +354,24 @@ describe('recordHeartbeat', () => {
 })
 
 describe('buildDeviceConfig', () => {
+  const zone = { thresholds: DEFAULT_THRESHOLDS, fuzzy_tuning: DEFAULT_FUZZY_TUNING }
   const node = (windows: Array<{ start: string; end: string }>) =>
     ({ speaker_schedule: { enabled: true, windows }, audio: { volume: 20, current_track: 3, playing: false, loop: true } })
 
   it('leaves window keys out when no schedule was ever set, so the firmware keeps its defaults', () => {
-    const cfg = buildDeviceConfig(DEFAULT_THRESHOLDS, node([]))
+    const cfg = buildDeviceConfig(zone, node([]))
     expect(cfg).not.toHaveProperty('speaker_window1_start_hour')
-    expect(cfg).toMatchObject({ ...DEFAULT_THRESHOLDS, speaker_volume: 20, speaker_track: 3 })
+    expect(cfg).toMatchObject({ ...DEFAULT_THRESHOLDS, ...DEFAULT_FUZZY_TUNING, speaker_volume: 20, speaker_track: 3 })
   })
 
   it('maps one window and blanks the second', () => {
-    expect(buildDeviceConfig(DEFAULT_THRESHOLDS, node([{ start: '05:00', end: '07:00' }]))).toMatchObject({
+    expect(buildDeviceConfig(zone, node([{ start: '05:00', end: '07:00' }]))).toMatchObject({
       speaker_window1_start_hour: 5, speaker_window1_end_hour: 7, speaker_window2_start_hour: 0, speaker_window2_end_hour: 0,
     })
   })
 
   it('maps two windows, including one ending at midnight', () => {
-    expect(buildDeviceConfig(DEFAULT_THRESHOLDS, node([{ start: '05:00', end: '07:00' }, { start: '17:00', end: '24:00' }]))).toMatchObject({
+    expect(buildDeviceConfig(zone, node([{ start: '05:00', end: '07:00' }, { start: '17:00', end: '24:00' }]))).toMatchObject({
       speaker_window2_start_hour: 17, speaker_window2_end_hour: 24,
     })
   })

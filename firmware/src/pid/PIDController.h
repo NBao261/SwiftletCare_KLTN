@@ -1,5 +1,7 @@
 /**
  * PIDController – Closed-loop environmental control + Threat alert flags
+ * Phun sương + quạt: logic mờ Sugeno (FuzzyControl.h) + time-proportioning.
+ * Kênh relay IN4 (GPIO14) để dự phòng — SRS v2.0.0 bỏ sưởi (ENV-FR-012).
  * Hardware: Components Guide v3.3 §8-9 (Relay 4 kênh kích mức CAO)
  * SRS: ENV-FR-010..019, THREAT-FR-006, THREAT-FR-011, THREAT-FR-013
  */
@@ -10,14 +12,18 @@ struct RelayState {
   bool misting = false;     // IN1 GPIO25 – phun sương
   bool speaker = false;     // IN2 GPIO26 – nguồn amply loa ru
   bool ventilation = false; // IN3 GPIO27 – quạt thông gió
-  bool heating = false;     // IN4 GPIO14 – sưởi (dự phòng)
 
   // Manual override flags (ENV-FR-016..018)
   bool mistingOverride = false;
   bool speakerOverride = false;
   bool ventilationOverride = false;
-  bool heatingOverride = false;
   unsigned long overrideExpiryMs = 0;
+
+  // Đầu ra bộ điều khiển mờ, % công suất 0-100 (= tỉ lệ thời gian BẬT trong
+  // cửa sổ Config::fuzzyWindowSec). Override → 100/0. Gửi lên qua telemetry
+  // control_output (KHÔNG qua toJson/relay-status: số này đổi liên tục).
+  uint8_t mistingPct = 0;
+  uint8_t ventilationPct = 0;
 
   void init();
   void applyRelay(int pin, bool state); // kích mức CAO = bật (Guide §8)
@@ -26,8 +32,8 @@ struct RelayState {
 };
 
 /**
- * PIDLoop – Generic PID algorithm (dùng nội bộ, chưa gắn vào control loop
- * hiện tại đang dùng on-off theo ENV-FR-010/011; giữ lại để mở rộng).
+ * PIDLoop – Generic PID algorithm (chưa gắn vào control loop — phun sương/quạt
+ * dùng logic mờ theo ENV-FR-010/011; giữ lại để mở rộng).
  */
 class PIDLoop {
 public:
@@ -43,9 +49,9 @@ private:
 };
 
 namespace PIDController {
-void runHumidityControl(float humidity, RelayState &relay);   // ENV-FR-010
-void runVentilationControl(const SensorData &data, RelayState &relay); // ENV-FR-011
-void runHeatingControl(float temperature, RelayState &relay); // ENV-FR-012
+void runHumidityControl(float humidity, float temperature, RelayState &relay); // ENV-FR-010 (mờ)
+// Quạt chỉ theo nhiệt độ + độ ẩm (SRS v2.0.0) — NH3/CO2 không còn là đầu vào.
+void runVentilationControl(float temperature, float humidity, RelayState &relay); // ENV-FR-011 (mờ)
 
 void setManualOverride(const char *relayName, bool state,
                        unsigned long durationMs, RelayState &relay);
@@ -57,9 +63,11 @@ void clearOverrides(RelayState &relay);
 // Threat detection (THREAT-FR-006, 011, 013) – chỉ tính flags, main.cpp/MQTTManager publish alert
 struct ThreatFlags {
   bool speakerFailure = false; // relay speaker ON + đang play nhưng dB không tăng
-  bool pumpDry = false;        // misting ON >5' nhưng ẩm không tăng
+  bool pumpDry = false;        // đang chốt ngừng phun vì bơm khô (PumpDryMonitor::blocked — theo mức)
+  bool pumpDryWhileManual = false; // bơm khô phát hiện lúc đang bật tay — bơm KHÔNG bị ngắt
   bool sensorFault = false;    // 1 Slave ID lỗi
   bool busFailure = false;     // ≥3/5 Slave ID lỗi, 3 chu kỳ liên tiếp
+  bool noiseAnomaly = false;   // THREAT-FR-007 — do NoiseAnomalyDetector (sensorTask) báo, main.cpp gộp vào
 };
 ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, bool audioPlaying);
 } // namespace PIDController

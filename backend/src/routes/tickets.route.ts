@@ -3,9 +3,13 @@ import { body, param, query } from 'express-validator'
 import * as ticketController from '@/controllers/tickets.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { TICKET_SORT_KEYS } from '@/services/ticket.service'
 
 const router = Router()
 router.use(authenticate)
+// Ticket là luồng phụ giữa Farm Owner ↔ Technician ↔ Admin. Domain Expert không tạo,
+// không xem và không chat ticket (SRS mục 4.4) — chặn cả các route đọc vốn không có guard.
+router.use(requireRole('FARM_OWNER', 'TECHNICIAN', 'ADMIN'))
 
 /** Module TICKET – SRS §5.9, §9.1 */
 // TICKET-FR-001 — MAINTENANCE không tạo tay (chỉ sinh từ lịch bảo trì, TICKET-FR-013)
@@ -20,8 +24,14 @@ router.post('/',                   requireRole('FARM_OWNER','ADMIN'),
   body('scheduled_visit_at').optional().isISO8601(),
   body('description').optional().isString().trim().isLength({ max: 1000 }),
   validate, ticketController.create)
-router.get ('/',                   ticketController.list)
+router.get ('/',
+  query('search').optional().isString().trim().isLength({ max: 100 }),
+  query('sort').optional().isIn(TICKET_SORT_KEYS),
+  query('order').optional().isIn(['asc', 'desc']),
+  query('slaBreached').optional().isIn(['true', 'false']),
+  validate, ticketController.list)
 router.get ('/kpi',                requireRole('ADMIN'), ticketController.kpi)
+router.get ('/stats/me',           requireRole('TECHNICIAN'), ticketController.myStats)
 router.get ('/:id',                param('id').isMongoId(), validate, ticketController.getOne)
 router.put ('/:id/status',         requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('status').notEmpty(), validate, ticketController.updateStatus)
 // Farm Owner tự huỷ ticket của mình khi đã tự khắc phục / không cần lắp nữa
@@ -33,6 +43,9 @@ router.post('/:id/escalate',       requireRole('TECHNICIAN','ADMIN'), param('id'
 // TICKET-FR-004b — Technician không sắp xếp được đúng giờ Farm Owner chọn thì tự dời, lý do bắt buộc
 router.put ('/:id/scheduled-date',   requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
   body('scheduled_visit_at').isISO8601(), body('reason').trim().notEmpty(), validate, ticketController.reschedule)
+// Flow 9 bước 6a — xử lý được từ xa thì huỷ buổi xuống farm, ticket khỏi vướng nghiệm thu SAT
+router.delete('/:id/scheduled-date', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
+  body('reason').trim().notEmpty(), validate, ticketController.cancelVisit)
 // Flow 9 case 4a — Technician bị gán nhầm xin chuyển cho người khác
 router.post('/:id/reassign-request', requireRole('TECHNICIAN'), param('id').isMongoId(),
   body('reason').trim().notEmpty(), validate, ticketController.requestReassign)

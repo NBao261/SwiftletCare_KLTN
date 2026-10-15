@@ -17,10 +17,17 @@ import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { generateDueMaintenanceTickets } from '@/services/maintenanceSchedule.service'
 import { isWithinVisitHours } from '@/utils/visitTime.util'
+import { notifyAdmins } from '@/services/notification.service'
 import type { Role } from '@/types'
 import { vnAt } from '../helpers/visitTime'
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
+
+jest.mock('@/services/notification.service', () => ({
+  ...jest.requireActual('@/services/notification.service'),
+  notifyAdmins: jest.fn().mockResolvedValue(undefined),
+  notifyUser: jest.fn().mockResolvedValue(undefined),
+}))
 
 const app = express()
 app.use(express.json())
@@ -126,6 +133,25 @@ describe('generateDueMaintenanceTickets', () => {
     expect(await generateDueMaintenanceTickets()).toBe(0)
   })
 
+  it('hạn xử lý SLA tính từ giờ hẹn, không phải lúc tạo (ticket sinh trước hạn 3 ngày)', async () => {
+    const { farm } = await seed()
+    // Hẹn 2 ngày nữa lúc 9:00 — job tạo ticket trước giờ hẹn (trong LEAD_DAYS = 3 ngày). Không
+    // dùng vnAt(3, 9): chạy trước 9:00 giờ VN thì hẹn đó còn hơn 3 ngày, job chưa tạo ticket.
+    await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Kiểm tra relay', interval_days: 30, next_due_at: vnAt(2, 9),
+    })
+    const before = Date.now()
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+
+    const ticket = (await Ticket.findOne().lean())!
+    const HOUR = 3600_000
+    // P3: xử lý 72h kể từ giờ hẹn — Technician đến đúng hẹn còn đủ 3 ngày để xong việc
+    expect(ticket.sla_resolve_due_at!.getTime()).toBe(ticket.scheduled_visit_at!.getTime() + 72 * HOUR)
+    // Xác nhận tiếp nhận vẫn tính từ lúc tạo (24h với P3)
+    expect(ticket.sla_response_due_at!.getTime()).toBeGreaterThanOrEqual(before + 24 * HOUR)
+    expect(ticket.sla_response_due_at!.getTime()).toBeLessThan(ticket.scheduled_visit_at!.getTime())
+  })
+
   it('trễ nhiều chu kỳ chỉ tạo 1 ticket; 2 lượt chạy song song không tạo trùng; lịch tạm dừng bị bỏ qua', async () => {
     const { farm } = await seed()
     await MaintenanceSchedule.create({ farm_id: farm._id, description: 'A', interval_days: 1, next_due_at: new Date(Date.now() - 5.5 * DAY) })
@@ -163,5 +189,147 @@ describe('generateDueMaintenanceTickets', () => {
     expect(await Ticket.countDocuments()).toBe(0)
     expect((await MaintenanceSchedule.findById(schedule._id))!.is_active).toBe(false)
     expect(await AuditLog.countDocuments({ action: 'MAINTENANCE_SCHEDULE_DISABLED' })).toBe(1)
+  })
+
+  it('Zone của lịch đã bị xoá thì ticket hạ xuống mức farm và ghi rõ', async () => {
+    const { farm, t } = await seed()
+    const house = await House.create({ farm_id: farm._id, name: 'H1' })
+    const zone = await Zone.create({ house_id: house._id, name: 'Tầng 1' })
+    await create(t.tech, {
+      farm_id: String(farm._id), zone_id: String(zone._id), description: 'Vệ sinh cảm biến',
+      interval_days: 30, next_due_at: vnAt(1, 9).toISOString(),
+    }).expect(201)
+    await Zone.deleteOne({ _id: zone._id })
+
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+    const [ticket] = await Ticket.find().lean()
+    expect(ticket.zone_id).toBeUndefined()
+    expect(ticket.notes[0].content).toContain('Zone trong lịch đã bị xoá')
+  })
+})
+
+describe('kỳ bảo trì bị lỡ (TICKET-FR-013)', () => {
+  it('kỳ trước chưa xong thì vẫn sinh ticket mới, đánh dấu ở cả hai và báo Admin', async () => {
+    const { farm } = await seed()
+    const schedule = await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Vệ sinh đầu dò', interval_days: 7, next_due_at: vnAt(1, 9),
+    })
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+    const first = (await Ticket.findOne().lean())!
+
+    // Kỳ kế tiếp tới khi ticket cũ vẫn đang mở mà giờ hẹn của nó đã qua (thật sự bị lỡ)
+    await Ticket.updateOne({ _id: first._id }, { scheduled_visit_at: new Date(Date.now() - 3600_000) })
+    await MaintenanceSchedule.updateOne({ _id: schedule._id }, { next_due_at: vnAt(1, 10) })
+    ;(notifyAdmins as jest.Mock).mockClear()
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+
+    const tickets = await Ticket.find().sort({ created_at: 1 }).lean()
+    expect(tickets).toHaveLength(2) // mỗi chu kỳ là một nghĩa vụ riêng, không gộp
+    expect(tickets[1].notes[0].content).toContain('kỳ trước')
+    expect(tickets[0].notes.at(-1)!.content).toContain('kỳ bảo trì kế tiếp')
+    expect(notifyAdmins).toHaveBeenCalled()
+    expect(await AuditLog.countDocuments({ action: 'MAINTENANCE_CYCLE_MISSED' })).toBe(1)
+    expect(first._id).toBeDefined()
+  })
+
+  it('lịch hằng ngày (chu kỳ ngắn hơn lead time) không bị báo nhầm là đang dồn', async () => {
+    const { farm } = await seed()
+    await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Kiểm tra bơm', interval_days: 1, next_due_at: vnAt(1, 9),
+    })
+    ;(notifyAdmins as jest.Mock).mockClear()
+
+    // Tạo trước 3 ngày nên các kỳ sắp tới lần lượt có ticket — kỳ trước chưa tới giờ hẹn là bình thường
+    await generateDueMaintenanceTickets()
+    await generateDueMaintenanceTickets(new Date(Date.now() + 3600_000))
+
+    expect(await Ticket.countDocuments()).toBeGreaterThan(1)
+    expect(await AuditLog.countDocuments({ action: 'MAINTENANCE_CYCLE_MISSED' })).toBe(0)
+    expect(notifyAdmins).not.toHaveBeenCalled()
+  })
+
+  it('kỳ trước đã đóng thì sinh ticket mới không kèm cảnh báo', async () => {
+    const { farm } = await seed()
+    const schedule = await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Kiểm tra relay', interval_days: 7, next_due_at: vnAt(1, 9),
+    })
+    await generateDueMaintenanceTickets()
+    await Ticket.updateMany({}, { status: 'CLOSED', closed_at: new Date() })
+
+    await MaintenanceSchedule.updateOne({ _id: schedule._id }, { next_due_at: vnAt(1, 10) })
+    ;(notifyAdmins as jest.Mock).mockClear()
+    expect(await generateDueMaintenanceTickets()).toBe(1)
+
+    const latest = (await Ticket.find().sort({ created_at: -1 }).limit(1).lean())[0]
+    expect(latest.notes[0].content).not.toContain('kỳ trước')
+    expect(notifyAdmins).not.toHaveBeenCalled()
+  })
+
+  it('lỗi sau khi đã tạo ticket thì không trả hạn về, lần quét sau không sinh ticket trùng', async () => {
+    const { farm } = await seed()
+    const dueAt = new Date(Date.now() - 1000)
+    const schedule = await MaintenanceSchedule.create({ farm_id: farm._id, description: 'Kiểm tra relay', interval_days: 7, next_due_at: dueAt })
+    // updateOne đầu tiên trong luồng là bước ghi last_ticket_id, chạy sau khi ticket đã tạo
+    const spy = jest.spyOn(MaintenanceSchedule, 'updateOne').mockRejectedValueOnce(new Error('DB chập chờn'))
+
+    try {
+      expect(await generateDueMaintenanceTickets()).toBe(1)
+    } finally {
+      spy.mockRestore()
+    }
+
+    const updated = (await MaintenanceSchedule.findById(schedule._id))!
+    expect(updated.next_due_at.getTime()).toBe(dueAt.getTime() + 7 * DAY)
+    expect(await generateDueMaintenanceTickets()).toBe(0)
+    expect(await Ticket.countDocuments()).toBe(1)
+  })
+
+  it('lỗi trước khi tạo ticket thì trả hạn về để thử lại, các lịch khác vẫn được xử lý', async () => {
+    const { farm } = await seed()
+    const dueAt = new Date(Date.now() - 1000)
+    const oldTicket = await Ticket.create({ farm_id: farm._id, type: 'MAINTENANCE', priority: 'P3' })
+    const failing = await MaintenanceSchedule.create({
+      farm_id: farm._id, description: 'Lịch lỗi', interval_days: 7, next_due_at: dueAt, last_ticket_id: oldTicket._id,
+    })
+    const healthy = await MaintenanceSchedule.create({ farm_id: farm._id, description: 'Lịch ổn', interval_days: 7, next_due_at: dueAt })
+    // findOne chỉ được gọi để tra ticket kỳ trước — tức là của lịch có last_ticket_id
+    const spy = jest.spyOn(Ticket, 'findOne').mockRejectedValueOnce(new Error('DB chập chờn'))
+
+    try {
+      expect(await generateDueMaintenanceTickets()).toBe(1)
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect((await MaintenanceSchedule.findById(failing._id))!.next_due_at.getTime()).toBe(dueAt.getTime())
+    expect((await MaintenanceSchedule.findById(healthy._id))!.next_due_at.getTime()).toBe(dueAt.getTime() + 7 * DAY)
+    expect(await Ticket.countDocuments({ _id: { $ne: oldTicket._id } })).toBe(1)
+  })
+
+  it('không lập được hai lịch trùng nội dung trên cùng farm', async () => {
+    const { farm, t } = await seed()
+    const body = {
+      farm_id: String(farm._id), description: 'Vệ sinh cảm biến NH3', interval_days: 30,
+      next_due_at: vnAt(1, 9).toISOString(),
+    }
+    await create(t.tech, body).expect(201)
+    const dup = await create(t.tech, body).expect(409)
+    expect(dup.body.error.message).toContain('đã có lịch bảo trì cùng nội dung')
+  })
+
+  it('sửa lịch thành trùng (đổi nội dung hoặc bật lại) cũng bị chặn như khi tạo', async () => {
+    const { farm, t } = await seed()
+    const base = { farm_id: String(farm._id), interval_days: 30, next_due_at: vnAt(1, 9).toISOString() }
+    await create(t.tech, { ...base, description: 'Vệ sinh cảm biến NH3' }).expect(201)
+    const otherId = (await create(t.tech, { ...base, description: 'Kiểm tra relay' }).expect(201)).body.data._id
+    const update = (body: object) =>
+      request(app).put(`/maintenance-schedules/${otherId}`).set('Authorization', `Bearer ${t.tech}`).send(body)
+
+    await update({ description: 'Vệ sinh cảm biến NH3' }).expect(409)
+    // Tạm dừng rồi đổi nội dung thì được (lịch dừng không sinh ticket), nhưng bật lại thì không
+    await update({ is_active: false, description: 'Vệ sinh cảm biến NH3' }).expect(200)
+    await update({ is_active: true }).expect(409)
+    // Sửa chu kỳ của lịch không trùng vẫn bình thường
+    expect(await MaintenanceSchedule.countDocuments({ is_active: true })).toBe(1)
   })
 })

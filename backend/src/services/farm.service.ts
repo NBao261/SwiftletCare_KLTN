@@ -2,17 +2,25 @@ import crypto from 'crypto'
 import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
 import { House, Zone, IZone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
-import { SalesAssignment } from '@/models/salesAssignment.model'
-import { SalesAssignmentRequest, ISalesAssignmentRequest } from '@/models/salesAssignmentRequest.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
-import { hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow, assertZoneAccess } from '@/utils/farmAccess.util'
+import {
+  hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
+  assertZoneAccess,
+} from '@/utils/farmAccess.util'
+import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
+import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage } from '@/services/ticket.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
-import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
+import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
+import {
+  assertValidDetectionTuning, firmwareDetectionConfig, pickDetectionTuning, resolveDetectionTuning,
+} from '@/utils/detectionTuning.util'
+import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
+import { publishCommand } from '@/mqtt/mqtt.client'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
-import type { Thresholds, CurrentUser } from '@/types'
+import type { Thresholds, CurrentUser, FarmMemberRole } from '@/types'
 
 /** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
 const INVITATION_TTL_MS = 7 * 86400_000
@@ -21,12 +29,24 @@ const INVITATION_TTL_MS = 7 * 86400_000
  * FARM-FR-001. Technician thấy các Farm thuộc `assigned_regions` của mình để còn
  * chọn Farm→House→Zone khi onboarding thiết bị (Flow 1 bước 2), không phải mọi Farm.
  */
-export async function listFarms(user: CurrentUser): Promise<IFarm[]> {
+export async function listFarms(user: CurrentUser): Promise<Array<IFarm | FarmDetail>> {
   let filter: object = { $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] }
   if (user.role === 'ADMIN') filter = {}
   else if (user.role === 'TECHNICIAN') filter = { region: { $in: user.assigned_regions ?? [] } }
 
-  return Farm.find(filter).sort({ created_at: -1 })
+  const farms = await Farm.find(filter).sort({ created_at: -1 })
+  return user.role === 'DOMAIN_EXPERT' ? farms.map(farm => onlyOwnMembership(farm, user)) : farms
+}
+
+/**
+ * Domain Expert không quản lý thành viên (AUTH-FR-005) nên không cần — và không được
+ * thấy — danh sách thành viên của farm; chỉ giữ bản ghi của chính mình. Dùng chung cho
+ * danh sách và chi tiết farm để hai đường không lệch nhau.
+ */
+function onlyOwnMembership(farm: IFarm, user: CurrentUser): FarmDetail {
+  const plain = farm.toObject() as unknown as FarmDetail
+  plain.members = plain.members.filter(m => String(m.user_id) === user._id)
+  return plain
 }
 
 /** FARM-FR-001 — người tạo trở thành Primary Owner */
@@ -62,6 +82,8 @@ export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDe
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
 
+  if (user.role === 'DOMAIN_EXPERT') return onlyOwnMembership(farm, user)
+
   const memberIds = [farm.owner_id, ...farm.members.map(m => m.user_id)]
   const users = await User.find({ _id: { $in: memberIds } }).select('full_name email').lean()
   const userMap = new Map(users.map(u => [String(u._id), u]))
@@ -92,11 +114,18 @@ export async function updateFarm(
     throw ForbiddenError('Chỉ Primary Owner mới được đổi khu vực của farm')
   }
 
+  const regionChanged = updates.region !== undefined && updates.region !== farm.region
+
   if (updates.name !== undefined) farm.name = updates.name
   if (updates.address !== undefined) farm.address = updates.address
   if (updates.region !== undefined) farm.region = updates.region
   if (updates.coordinates !== undefined) farm.coordinates = updates.coordinates
   await farm.save()
+
+  // Đổi vùng là đổi luôn ai được phép vào ticket của farm này: Technician đang
+  // giữ ticket mà không phụ trách vùng mới sẽ bị chặn 403 trên chính việc của
+  // mình — điều phối lại cho người của vùng mới (hoặc về hàng đợi chung).
+  if (regionChanged) await rerouteTicketsOutOfCoverage({ farmId }, user._id, 'FARM_REGION_CHANGED')
   return farm
 }
 
@@ -104,6 +133,17 @@ export async function updateFarm(
 export async function removeFarm(farmId: string, user: CurrentUser): Promise<void> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được xóa farm')
+  await softDeleteFarm(farm)
+  // Ticket đã tồn tại trước đó cũng mồ côi y như cảnh báo — và còn tệ hơn vì
+  // chúng vẫn chiếm suất quá tải của Technician cùng các con số của Admin.
+  await closeTicketsOfDeletedFarm(farmId, user._id)
+}
+
+/**
+ * Xoá mềm 1 farm và dọn những thứ còn treo theo nó — dùng chung cho chủ farm tự xoá
+ * và cascade khi Admin xoá tài khoản chủ (AUTH-FR-012).
+ */
+export async function softDeleteFarm(farm: IFarm): Promise<void> {
   farm.is_deleted = true
   await farm.save()
   // Cảnh báo còn mở của farm đã xoá sẽ bị alertEscalation biến thành ticket mồ côi
@@ -112,6 +152,15 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
     { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },
   )
+  // Lời mời còn chờ: nếu để nguyên, người được mời đăng ký sau đó vẫn được auto-accept
+  // (registerUser) và thành Farm Owner/Domain Expert không gắn farm nào
+  await Invitation.updateMany({ farm_id: farm._id, status: 'PENDING' }, { $set: { status: 'EXPIRED' } })
+}
+
+export interface InviteMemberInput {
+  email: string
+  /** FARM_OWNER = đồng sở hữu (mặc định); DOMAIN_EXPERT = chuyên gia nuôi yến, phạm vi cả farm */
+  role?: FarmMemberRole
 }
 
 /**
@@ -119,10 +168,14 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
  * vào farm.members. Không còn đòi email đã có tài khoản (khác bản cũ): nếu
  * chưa có, người được mời sẽ đăng ký trước rồi tự động accept (Flow 12 bước 3b,
  * xử lý ở registerUser bên auth.service khi email trùng invitation PENDING).
+ * Mời đồng sở hữu (FARM_OWNER) hoặc Domain Expert (v2.0.0) — cả hai đều theo cả farm.
  */
-export async function inviteMember(farmId: string, user: CurrentUser, email: string): Promise<IInvitation> {
+export async function inviteMember(farmId: string, user: CurrentUser, input: InviteMemberInput): Promise<IInvitation> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được mời thành viên')
+
+  const role: FarmMemberRole = input.role ?? 'FARM_OWNER'
+  const email = input.email
 
   const normalizedEmail = email.toLowerCase().trim()
   const existingMember = await User.findOne({ email: normalizedEmail })
@@ -130,22 +183,28 @@ export async function inviteMember(farmId: string, user: CurrentUser, email: str
     throw ConflictError('Người dùng đã là thành viên farm này')
   }
 
-  // Chỉ tính lời mời Farm Owner: lời mời SALES_STAFF kiểu cũ còn tồn đọng không còn chấp nhận được
-  // (xem acceptInvitation) nên không được chặn việc mời lại email đó làm Farm Owner.
-  const pending = await Invitation.findOne({
-    farm_id: farm._id, invited_email: normalizedEmail, invited_role: 'FARM_OWNER', status: 'PENDING',
-  })
+  // Tài khoản đã có mang 1 role cố định (1 email = 1 role): không mời Technician/Admin,
+  // cũng không mời chéo Farm Owner ↔ Domain Expert — báo ngay thay vì để lời mời chờ vô ích.
+  if (existingMember && existingMember.role !== role) {
+    throw ConflictError(`Email này đã là tài khoản ${existingMember.role} — ${role === 'DOMAIN_EXPERT' ? 'Domain Expert' : 'Farm Owner'} cần dùng email khác`)
+  }
+
+  const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
   if (pending) throw ConflictError('Đã có lời mời đang chờ phản hồi gửi tới email này')
 
-  return Invitation.create({
+  const invitation = await Invitation.create({
     farm_id: farm._id,
     invited_email: normalizedEmail,
-    invited_role: 'FARM_OWNER',
+    invited_role: role,
     invited_by: user._id,
     token: crypto.randomBytes(24).toString('hex'),
     status: 'PENDING',
     expires_at: new Date(Date.now() + INVITATION_TTL_MS),
   })
+  await logAction(user._id, 'FARM_MEMBER_INVITED', 'farm', String(farm._id), {
+    email: normalizedEmail, role,
+  })
+  return invitation
 }
 
 /**
@@ -165,12 +224,10 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
   if (invitation.invited_email !== user.email?.toLowerCase()) {
     throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
   }
-
-  // Từ v1.16.0 Sales Staff không còn đi qua lời mời mà qua đề xuất + Admin duyệt
-  // (AUTH-FR-005b/005d). Lời mời SALES_STAFF cũ còn tồn đọng thì từ chối rõ ràng,
-  // không tự gán quyền; lời mời vẫn PENDING để tự hết hạn.
-  if (invitation.invited_role !== 'FARM_OWNER') {
-    throw ConflictError('Lời mời Sales Staff kiểu cũ không còn được hỗ trợ — nhờ Farm Owner gửi đề xuất Sales Staff mới để Admin duyệt')
+  // 1 email = 1 role: tài khoản Farm Owner không nhận lời mời Domain Expert (và ngược lại),
+  // Technician/Admin không thành thành viên farm qua lời mời
+  if (user.role !== invitation.invited_role) {
+    throw ConflictError(`Lời mời dành cho ${invitation.invited_role} nhưng tài khoản này là ${user.role} — hãy dùng email khác`)
   }
 
   invitation.status = 'ACCEPTED'
@@ -179,7 +236,9 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
 
   const farm = await findFarmOrThrow(String(invitation.farm_id))
   if (!farm.members.some(m => String(m.user_id) === user._id)) {
-    farm.members.push({ user_id: user._id, is_primary: false, joined_at: new Date() } as never)
+    farm.members.push({
+      user_id: user._id, is_primary: false, role: invitation.invited_role, joined_at: new Date(),
+    } as never)
     await farm.save()
   }
   return farm
@@ -229,6 +288,7 @@ export async function removeMember(farmId: string, user: CurrentUser, targetUser
 
   farm.members.splice(memberIndex, 1)
   await farm.save()
+  await logAction(user._id, 'FARM_MEMBER_REMOVED', 'farm', String(farm._id), { user_id: targetUserId })
   return farm
 }
 
@@ -268,6 +328,7 @@ export async function createZone(houseId: string, user: CurrentUser, input: { na
   // nguồn với "Reset về mặc định" — không dùng default cứng trong schema.
   return Zone.create({
     house_id: house._id,
+    farm_id: house.farm_id,
     name: input.name,
     floor: input.floor,
     thresholds: await getDefaultThresholds(),
@@ -311,76 +372,55 @@ export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Pr
 }
 
 /**
- * AUTH-FR-005b (đổi v1.16.0), Flow 16 bước 1b — Farm Owner chỉ ĐỀ XUẤT Sales
- * Staff, không tự kích hoạt: Sales Staff là nhân sự phía công ty nên phải qua
- * Admin duyệt (AUTH-FR-005d, admin.service#decideSalesStaffRequest).
+ * ENV-FR-021 — chỉnh hệ số bộ điều khiển mờ của 1 Zone: validate khoảng, lưu kèm
+ * lịch sử, publish config/update để mọi ESP32 trong Zone áp dụng ngay (không cần
+ * nạp lại firmware). Cùng quyền với sửa ngưỡng (route).
  */
-export async function requestSalesStaff(farmId: string, user: CurrentUser, email: string): Promise<ISalesAssignmentRequest> {
-  const farm = await findFarmOrThrow(farmId)
-  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được đề xuất Sales Staff')
+export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
+  const { zone, house, farm } = await assertZoneAccess(zoneId, user)
 
-  const normalizedEmail = email.toLowerCase().trim()
-  // `$ne: 'REMOVE'` thay vì `'ADD'`: request tạo trước khi có field `type` không mang giá trị nào
-  const pending = await SalesAssignmentRequest.findOne({
-    farm_id: farm._id, type: { $ne: 'REMOVE' }, sales_staff_email: normalizedEmail, status: 'PENDING',
-  })
-  if (pending) throw ConflictError('Đã có đề xuất đang chờ Admin duyệt cho email này')
+  const picked = pickFuzzyTuning(updates)
+  if (Object.keys(picked).length === 0) throw BadRequestError('Không có hệ số nào để cập nhật')
+  const oldValues = { ...zone.fuzzy_tuning }
+  const merged = { ...oldValues, ...picked }
+  assertValidFuzzyTuning(merged)
 
-  const existingUser = await User.findOne({ email: normalizedEmail }).select('role').lean()
-  if (existingUser && existingUser.role !== 'SALES_STAFF') {
-    throw ConflictError('Email này đang thuộc 1 tài khoản không phải Sales Staff')
-  }
-  if (existingUser && await SalesAssignment.exists({ farm_id: farm._id, sales_staff_id: existingUser._id })) {
-    throw ConflictError('Sales Staff này đã được gán vào farm')
-  }
+  zone.fuzzy_tuning = merged
+  zone.fuzzy_tuning_history.push({
+    changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_values: oldValues, new_values: picked,
+  } as never)
+  const overflow = zone.fuzzy_tuning_history.length - THRESHOLD_HISTORY_LIMIT
+  if (overflow > 0) zone.fuzzy_tuning_history.splice(0, overflow)
+  await zone.save()
 
-  return SalesAssignmentRequest.create({
-    farm_id: farm._id,
-    requested_by: user._id,
-    sales_staff_email: normalizedEmail,
-  })
+  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', { ...zone.fuzzy_tuning })
+  await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
+  return zone
 }
 
 /**
- * Flow 16 bước 1e — Farm Owner muốn gỡ Sales Staff khỏi farm chỉ được YÊU CẦU
- * (đối xứng với việc gán); Admin duyệt ở /admin/sales-staff-requests thì mới xoá
- * SalesAssignment. Cùng bảng với đề xuất thêm nhưng `type: 'REMOVE'`.
+ * EXPERT-FR-008 — Domain Expert chỉnh tham số phát hiện của 1 Zone: kiểm tra khoảng,
+ * lưu lịch sử (người sửa, role, thời điểm, cũ/mới), gửi 5 tham số chạy trên ESP32
+ * qua config/update (firmware kẹp lại rồi lưu NVS); `return_rate_drop_pct` backend tự dùng.
  */
-export async function requestSalesStaffRemoval(
-  farmId: string, user: CurrentUser, salesStaffId: string,
-): Promise<ISalesAssignmentRequest> {
-  const farm = await findFarmOrThrow(farmId)
-  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được yêu cầu gỡ Sales Staff')
+export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
+  const { zone, house, farm } = await assertZoneAccess(zoneId, user)
 
-  const assignment = await SalesAssignment.exists({ farm_id: farm._id, sales_staff_id: salesStaffId })
-  if (!assignment) throw NotFoundError('Sales Staff này không được gán vào farm')
+  const picked = pickDetectionTuning(updates)
+  if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
+  const oldValues = resolveDetectionTuning(zone.detection_tuning)
+  const merged = { ...oldValues, ...picked }
+  assertValidDetectionTuning(merged)
 
-  const salesStaff = await User.findById(salesStaffId).select('email').lean()
-  if (!salesStaff) throw NotFoundError('Không tìm thấy Sales Staff')
+  zone.detection_tuning = merged
+  zone.detection_tuning_history.push({
+    changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_values: oldValues, new_values: picked,
+  } as never)
+  const overflow = zone.detection_tuning_history.length - THRESHOLD_HISTORY_LIMIT
+  if (overflow > 0) zone.detection_tuning_history.splice(0, overflow)
+  await zone.save()
 
-  const pending = await SalesAssignmentRequest.findOne({
-    farm_id: farm._id, type: 'REMOVE', sales_staff_id: salesStaff._id, status: 'PENDING',
-  })
-  if (pending) throw ConflictError('Đã có yêu cầu gỡ Sales Staff này đang chờ Admin xử lý')
-
-  return SalesAssignmentRequest.create({
-    farm_id: farm._id,
-    type: 'REMOVE',
-    requested_by: user._id,
-    sales_staff_id: salesStaff._id,
-    sales_staff_email: salesStaff.email,
-  })
-}
-
-/** Flow 16 bước 1b/1d — Farm Owner xem kết quả duyệt (kèm lý do nếu bị từ chối) */
-export async function listSalesStaffRequests(farmId: string, user: CurrentUser) {
-  const farm = await findFarmOrThrow(farmId)
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  return SalesAssignmentRequest.find({ farm_id: farm._id }).sort({ created_at: -1 }).lean()
-}
-
-export async function listSalesStaff(farmId: string, user: CurrentUser) {
-  const farm = await findFarmOrThrow(farmId)
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  return SalesAssignment.find({ farm_id: farm._id }).populate('sales_staff_id', 'full_name email')
+  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', firmwareDetectionConfig(merged))
+  await logAction(user._id, 'DETECTION_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
+  return zone
 }

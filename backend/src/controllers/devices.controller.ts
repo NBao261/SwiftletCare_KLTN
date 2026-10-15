@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as deviceService from '@/services/device.service'
+import * as relayOverrideLogService from '@/services/relayOverrideLog.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** POST /devices/sensor-nodes/register – FARM-FR-003 */
@@ -48,6 +49,15 @@ export const clearRelayOverride = asyncHandler(async (req: Request, res: Respons
   res.json({ success: true, data: node })
 })
 
+/** GET /devices/sensor-nodes/:id/relay-overrides – ENV-FR-019 (lịch sử can thiệp tay) */
+export const listRelayOverrides = asyncHandler(async (req: Request, res: Response) => {
+  const { records, total, page, limit } = await relayOverrideLogService.listOverrideLogs(req.params.id, req.user, {
+    page:  req.query.page ? Number(req.query.page) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+  })
+  res.json({ success: true, data: records, meta: { total, page, limit } })
+})
+
 /** PUT /devices/sensor-nodes/:id/reassign-zone – FARM-FR-007b, Flow 21 Nhánh A */
 export const reassignZone = asyncHandler(async (req: Request, res: Response) => {
   const { node, delivered } = await deviceService.reassignZone(req.params.id, req.user, req.body)
@@ -75,7 +85,15 @@ export const getSystemStatus = asyncHandler(async (_req: Request, res: Response)
 
 /** POST /devices/{sensor|camera}-nodes/:id/decommission – FARM-FR-008 */
 export const decommission = (kind: deviceService.DeviceKind) => asyncHandler(async (req: Request, res: Response) => {
-  const node = await deviceService.decommissionDevice(kind, req.params.id, req.user, req.body.reason as string)
+  const node = await deviceService.decommissionDevice(kind, req.params.id, req.user, req.body.reason as string, {
+    force: req.body.force as boolean | undefined,
+  })
+  res.json({ success: true, data: node })
+})
+
+/** POST /devices/{sensor|camera}-nodes/:id/restore – FARM-FR-008 (sửa thao tác gỡ nhầm) */
+export const restore = (kind: deviceService.DeviceKind) => asyncHandler(async (req: Request, res: Response) => {
+  const node = await deviceService.restoreDevice(kind, req.params.id, req.user, req.body.reason as string)
   res.json({ success: true, data: node })
 })
 

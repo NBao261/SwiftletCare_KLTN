@@ -57,6 +57,10 @@ router.post(
 /** PUT /auth/notification-preferences – ALERT-FR-005/006 */
 router.put('/notification-preferences', authenticate, authController.updateNotificationPreferences)
 
+/** ALERT-FR-013 — liên kết / hủy liên kết bot Telegram để nhận cảnh báo ngoài ứng dụng */
+router.post('/telegram/link', authenticate, authController.createTelegramLink)
+router.delete('/telegram/link', authenticate, authController.unlinkTelegram)
+
 /** POST /auth/delete-request – AUTH-FR-012 */
 router.post('/delete-request', authenticate, authController.requestDeletion)
 

@@ -2,7 +2,7 @@
 **Version:** 1.0.0 | **Dev base URL:** `http://localhost:3000` (production TBD, chưa deploy)
 
 ## Authentication
-Hầu hết endpoint (trừ `/auth/*`, `/marketplace/*` public, `/orders` guest checkout...) yêu cầu `Authorization: Bearer <access_token>`
+Hầu hết endpoint (trừ `/auth/*` — Marketplace đã gỡ theo SRS v2.0.0) yêu cầu `Authorization: Bearer <access_token>`
 
 ## Xem API
 

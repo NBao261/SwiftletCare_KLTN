@@ -2,7 +2,6 @@ import { Request, Response } from 'express'
 import * as adminService from '@/services/admin.service'
 import * as provisionedDeviceService from '@/services/provisionedDevice.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
-import type { SalesAssignmentRequestStatus, SalesAssignmentRequestType } from '@/models/salesAssignmentRequest.model'
 import type { Role } from '@/types'
 
 /** GET /admin/users – AUTH-FR-011 */
@@ -18,11 +17,11 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
 
 /** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
 export const setUserStatus = asyncHandler(async (req: Request, res: Response) => {
-  const { user, openTickets } = await adminService.setUserStatus(
+  const { user, openTickets, openTicketIds } = await adminService.setUserStatus(
     req.user._id, req.params.id, req.body.is_active as boolean, req.body.reason as string | undefined,
   )
-  // Khoá Technician còn ticket đang giao: báo số ticket để Admin gán lại
-  res.json({ success: true, data: user, ...(openTickets ? { meta: { openTickets } } : {}) })
+  // Khoá Technician còn ticket đang giao: báo số ticket + id để Admin gán lại
+  res.json({ success: true, data: user, ...(openTickets ? { meta: { openTickets, openTicketIds } } : {}) })
 })
 
 /** GET /admin/delete-requests – AUTH-FR-012 */
@@ -48,43 +47,18 @@ export const createTechnician = asyncHandler(async (req: Request, res: Response)
   res.status(201).json({ success: true, data: user })
 })
 
-/** POST /admin/sales-staff – AUTH-FR-005c, Flow 16 path 1b */
-export const createSalesStaff = asyncHandler(async (req: Request, res: Response) => {
-  const user = await adminService.createSalesStaff(req.user._id, req.body)
-  res.status(201).json({ success: true, data: user })
-})
-
 /** PUT /admin/technicians/:id/regions – AUTH-FR-005c, Flow 21 case 4a-x */
 export const updateTechnicianRegions = asyncHandler(async (req: Request, res: Response) => {
-  const technician = await adminService.updateTechnicianRegions(
+  const { technician, rerouted, unassigned } = await adminService.updateTechnicianRegions(
     req.user._id, req.params.id, req.body.assigned_regions as string[],
   )
-  res.json({ success: true, data: technician })
-})
-
-/** DELETE /admin/farms/:farmId/sales-staff/:salesStaffId – Flow 16 case 1e */
-export const unassignSalesStaff = asyncHandler(async (req: Request, res: Response) => {
-  await adminService.unassignSalesStaff(req.user._id, req.params.farmId, req.params.salesStaffId)
-  res.json({ success: true, data: { message: 'Đã gỡ Sales Staff khỏi farm' } })
-})
-
-/** GET /admin/sales-staff-requests – AUTH-FR-005d */
-export const listSalesStaffRequests = asyncHandler(async (req: Request, res: Response) => {
-  const { records, total, page, limit } = await adminService.listSalesStaffRequests({
-    status: req.query.status as SalesAssignmentRequestStatus | undefined,
-    type:   req.query.type as SalesAssignmentRequestType | undefined,
-    page:   req.query.page as string | undefined,
-    limit:  req.query.limit as string | undefined,
+  // Gỡ vùng làm ticket đang mở ở vùng đó mất người xử lý — báo lại Admin những
+  // ticket đã được điều phối sang người khác và những ticket không còn ai nhận
+  res.json({
+    success: true,
+    data: technician,
+    ...(rerouted.length || unassigned.length ? { meta: { rerouted, unassigned } } : {}),
   })
-  res.json({ success: true, data: records, meta: { total, page, limit } })
-})
-
-/** PUT /admin/sales-staff-requests/:id/decision – AUTH-FR-005d */
-export const decideSalesStaffRequest = asyncHandler(async (req: Request, res: Response) => {
-  const request = await adminService.decideSalesStaffRequest(
-    req.user._id, req.params.id, req.body.decision as 'APPROVED' | 'REJECTED', req.body.reason as string | undefined,
-  )
-  res.json({ success: true, data: request })
 })
 
 /** POST /admin/provisioned-devices – FARM-FR-003 (secret_key chỉ trả về 1 lần để in nhãn) */

@@ -38,10 +38,19 @@ void saveConfig() {
   prefs.putFloat("humMin", Config::humidityMin);
   prefs.putFloat("humMax", Config::humidityMax);
   prefs.putFloat("lightMax", Config::lightMax);
-  prefs.putInt("nh3Max", Config::nh3Max);
-  prefs.putInt("co2Max", Config::co2Max);
   prefs.putInt("sensorMs", Config::sensorIntervalMs);
   prefs.putInt("pidMs", Config::pidIntervalMs);
+  prefs.putFloat("fzHumBand", Config::fuzzyHumidityBand);
+  prefs.putFloat("fzTempBand", Config::fuzzyTempBand);
+  prefs.putInt("fzFanDry", Config::fuzzyFanDryLevel);
+  prefs.putInt("fzWindowS", Config::fuzzyWindowSec);
+  prefs.putBool("fzFilter", Config::fuzzyInputFilter);
+  // Tham số phát hiện (EXPERT-FR-008)
+  prefs.putFloat("dtNoiseDb", Config::noiseMarginDb);
+  prefs.putInt("dtNoiseSec", Config::noiseMinSec);
+  prefs.putInt("dtPumpSec", Config::pumpDryOnSec);
+  prefs.putFloat("dtPumpRise", Config::pumpDryMinRisePct);
+  prefs.putInt("dtSpkDrop", Config::speakerDropPct);
   // Speaker schedule (ENV-FR-013b) — key ≤15 ký tự (giới hạn NVS Preferences)
   prefs.putBool("spkEn", Config::speakerScheduleEnabled);
   prefs.putInt("spkW1Start", Config::speakerWindow1StartHour);
@@ -59,10 +68,18 @@ void loadConfig() {
   Config::humidityMin = prefs.getFloat("humMin", DEFAULT_HUMIDITY_MIN);
   Config::humidityMax = prefs.getFloat("humMax", DEFAULT_HUMIDITY_MAX);
   Config::lightMax = prefs.getFloat("lightMax", DEFAULT_LIGHT_MAX);
-  Config::nh3Max = prefs.getInt("nh3Max", DEFAULT_NH3_MAX);
-  Config::co2Max = prefs.getInt("co2Max", DEFAULT_CO2_MAX);
   Config::sensorIntervalMs = prefs.getInt("sensorMs", SENSOR_INTERVAL_MS);
   Config::pidIntervalMs = prefs.getInt("pidMs", PID_INTERVAL_MS);
+  Config::fuzzyHumidityBand = prefs.getFloat("fzHumBand", DEFAULT_FUZZY_HUMIDITY_BAND);
+  Config::fuzzyTempBand = prefs.getFloat("fzTempBand", DEFAULT_FUZZY_TEMP_BAND);
+  Config::fuzzyFanDryLevel = prefs.getInt("fzFanDry", DEFAULT_FUZZY_FAN_DRY_LEVEL);
+  Config::fuzzyWindowSec = prefs.getInt("fzWindowS", DEFAULT_FUZZY_WINDOW_SEC);
+  Config::fuzzyInputFilter = prefs.getBool("fzFilter", DEFAULT_FUZZY_INPUT_FILTER);
+  Config::noiseMarginDb = prefs.getFloat("dtNoiseDb", DEFAULT_NOISE_MARGIN_DB);
+  Config::noiseMinSec = prefs.getInt("dtNoiseSec", DEFAULT_NOISE_MIN_SEC);
+  Config::pumpDryOnSec = prefs.getInt("dtPumpSec", DEFAULT_PUMP_DRY_ON_SEC);
+  Config::pumpDryMinRisePct = prefs.getFloat("dtPumpRise", DEFAULT_PUMP_DRY_MIN_RISE_PCT);
+  Config::speakerDropPct = prefs.getInt("dtSpkDrop", DEFAULT_SPEAKER_DROP_PCT);
   Config::speakerScheduleEnabled = prefs.getBool("spkEn", true);
   Config::speakerWindow1StartHour =
       prefs.getInt("spkW1Start", SPEAKER_WINDOW_1_START_HOUR);

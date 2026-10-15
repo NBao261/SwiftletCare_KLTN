@@ -12,6 +12,7 @@ import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { requestContext } from '@/middlewares/requestContext.middleware'
 import logger from '@/utils/logger.util'
 import { parseTrustProxy } from '@/utils/trustProxy.util'
+import { isLocalStorage, localStorageDir } from '@/config/minio.config'
 
 import authRoutes     from '@/routes/auth.route'
 import adminRoutes     from '@/routes/admin.route'
@@ -23,14 +24,9 @@ import telemetryRoutes from '@/routes/telemetry.route'
 import alertRoutes     from '@/routes/alerts.route'
 import analyticsRoutes from '@/routes/analytics.route'
 import harvestRoutes        from '@/routes/harvests.route'
-import marketplaceRoutes    from '@/routes/marketplace.route'
+import healthReportRoutes   from '@/routes/healthReports.route'
 import ticketRoutes         from '@/routes/tickets.route'
 import maintenanceScheduleRoutes from '@/routes/maintenanceSchedules.route'
-import productRoutes        from '@/routes/products.route'
-import inventoryRoutes      from '@/routes/inventory.route'
-import orderRoutes          from '@/routes/orders.route'
-import returnRequestRoutes  from '@/routes/returnRequests.route'
-import salesReportsRoutes   from '@/routes/salesReports.route'
 
 const app: Application = express()
 
@@ -59,6 +55,15 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// ── File lưu cục bộ (chỉ khi STORAGE_DRIVER=local, thay MinIO lúc dev) ────────
+// helmet mặc định chặn tài nguyên khác origin; <audio> ở frontend :5173 cần đọc được.
+if (isLocalStorage()) {
+  app.use('/files', express.static(localStorageDir(), {
+    setHeaders: res => res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'),
+  }))
+  logger.warn(`STORAGE_DRIVER=local — file lưu tại ${localStorageDir()}, phục vụ công khai ở /files (chỉ dùng cho dev)`)
+}
+
 // ── API Docs (Swagger UI đọc trực tiếp docs/api/api-spec.yaml) ───────────────
 try {
   const specPath = path.resolve(__dirname, '../../../docs/api/api-spec.yaml')
@@ -80,20 +85,15 @@ app.use('/telemetry', telemetryRoutes)
 app.use('/alerts',    alertRoutes)
 app.use('/analytics', analyticsRoutes)
 
-// Module MARKET (§5.8) — thuộc phạm vi MVP (landing page + form liên hệ)
+// Module HARVEST (§5.8) — chỉ ghi nhận thu hoạch; Marketplace đã bỏ ở SRS v2.0.0
 app.use('/harvests',    harvestRoutes)
-app.use('/marketplace', marketplaceRoutes)
+
+// Module EXPERT (§5.12) — báo cáo sức khỏe Zone + kết luận của chuyên gia
+app.use('/health-reports', healthReportRoutes)
 
 // Module TICKET (§5.9) — thuộc phạm vi MVP
 app.use('/tickets', ticketRoutes)
 app.use('/maintenance-schedules', maintenanceScheduleRoutes)
-
-// Module SALES (§5.10) — Giai đoạn 2, stretch (không bắt buộc nghiệm thu KLTN)
-app.use('/products',        productRoutes)
-app.use('/inventory',       inventoryRoutes)
-app.use('/orders',          orderRoutes)
-app.use('/return-requests', returnRequestRoutes)
-app.use('/sales-reports',   salesReportsRoutes)
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {

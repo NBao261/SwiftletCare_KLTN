@@ -1,11 +1,15 @@
 import { Schema, model, Document, Types } from 'mongoose'
+import type { FarmMemberRole } from '@/types'
+import { applySoftDeleteScope } from '@/utils/softDelete.util'
 
 /**
  * Farm + Member Document – SRS §8.2, FARM-FR-001
  */
 export interface IFarmMember {
   user_id:    Types.ObjectId
-  is_primary: boolean // true = người tạo Farm (AUTH-FR-005); mọi member đều role FARM_OWNER
+  is_primary: boolean // true = người tạo Farm (AUTH-FR-005)
+  /** FARM_OWNER = đồng sở hữu (quyền vận hành đầy đủ); DOMAIN_EXPERT = chuyên gia nuôi yến, cả farm (AUTH-FR-005) */
+  role:       FarmMemberRole
   joined_at:  Date
 }
 
@@ -40,6 +44,8 @@ const farmSchema = new Schema<IFarm>(
     members: [{
       user_id:    { type: Schema.Types.ObjectId, ref: 'User' },
       is_primary: { type: Boolean, default: false },
+      // Member cũ (trước v1.23.0) không có field này — đều là Farm Owner
+      role:       { type: String, enum: ['FARM_OWNER', 'DOMAIN_EXPERT'] satisfies FarmMemberRole[], default: 'FARM_OWNER' },
       joined_at:  { type: Date, default: Date.now },
     }],
     is_deleted: { type: Boolean, default: false },
@@ -47,12 +53,10 @@ const farmSchema = new Schema<IFarm>(
   { timestamps: { createdAt: 'created_at' } }
 )
 
-// Soft-delete scope
-farmSchema.pre('find', function () {
-  this.where({ is_deleted: false })
-})
-farmSchema.pre('findOne', function () {
-  this.where({ is_deleted: false })
-})
+applySoftDeleteScope(farmSchema)
+
+// listFarms / listAccessibleFarmIds / notification.findRecipients tra farm theo chủ và thành viên
+farmSchema.index({ owner_id: 1 })
+farmSchema.index({ 'members.user_id': 1 })
 
 export const Farm = model<IFarm>('Farm', farmSchema)

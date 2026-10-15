@@ -2,6 +2,7 @@
 import { body, param } from 'express-validator'
 import multer from 'multer'
 import * as deviceController from '@/controllers/devices.controller'
+import { MAX_OVERRIDE_MS, MIN_OVERRIDE_MS } from '@/services/device.service'
 import * as audioTrackController from '@/controllers/audioTracks.controller'
 import { MAX_AUDIO_BYTES } from '@/services/audioTrack.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
@@ -22,7 +23,7 @@ router.post('/sensor-nodes/register',        requireRole('TECHNICIAN','ADMIN'), 
 router.get ('/sensor-nodes',                 deviceController.listSensorNodes)
 router.get ('/sensor-nodes/:id',             param('id').isMongoId(), validate, deviceController.getSensorNode)
 // Chỉnh thông số vận hành vẫn thuộc Farm Owner (ENV-FR-006); Technician chỉnh khi xử lý sự cố.
-router.put ('/sensor-nodes/:id/thresholds',  requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, deviceController.updateThresholds)
+router.put ('/sensor-nodes/:id/thresholds',  requireRole('FARM_OWNER','DOMAIN_EXPERT','TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, deviceController.updateThresholds)
 // Lịch loa ru (ENV-FR-013b) — firmware chỉ có 2 khung giờ, theo giờ tròn; tắt lịch dùng enabled=false.
 router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(),
   body('enabled').optional().isBoolean(),
@@ -33,8 +34,13 @@ router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER','TECH
   body('track').optional().isInt({ min: 1 }).toInt(),
   validate, deviceController.updateSpeakerSchedule)
 // Điều khiển relay: Farm Owner (vận hành hằng ngày) + Technician (khắc phục sự cố) — RACI mục 4.4.
-router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(), validate, deviceController.controlRelay)
+// Domain Expert không vận hành thiết bị (mục 4.4): không relay, loa hay lịch loa
+router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(),
+  // Không chặn thì 1 giá trị cực lớn tạo override hàng chục năm: Zone bị tính 0% tự động mãi (ANALYTICS-FR-011)
+  body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(), validate, deviceController.controlRelay)
 router.delete('/sensor-nodes/:id/relay-override', requireRole('FARM_OWNER','TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, deviceController.clearRelayOverride)
+// ENV-FR-019 — lịch sử can thiệp tay; Domain Expert xem được (chỉ đọc)
+router.get   ('/sensor-nodes/:id/relay-overrides', requireRole('FARM_OWNER','DOMAIN_EXPERT','TECHNICIAN','ADMIN'), param('id').isMongoId(), validate, deviceController.listRelayOverrides)
 
 // File loa ru (ENV-FR-013c) — RACI SRS ⁹: upload/chép thẻ SD là việc phần cứng của
 // Technician; chọn bài/nghe thử là vận hành của Farm Owner.
@@ -55,7 +61,12 @@ router.put ('/sensor-nodes/:id/reassign-zone', requireRole('TECHNICIAN','ADMIN')
 
 // Camera Nodes (RPi)
 // FARM-FR-008 — gỡ/thay thiết bị, giữ nguyên lịch sử telemetry của thiết bị cũ
-router.post('/sensor-nodes/:id/decommission', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.decommission('sensor'))
+router.post('/sensor-nodes/:id/decommission', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
+  body('reason').trim().notEmpty(),
+  // toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false" lọt xuống service là truthy
+  body('force').optional().isBoolean().toBoolean(),
+  validate, deviceController.decommission('sensor'))
+router.post('/sensor-nodes/:id/restore', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('sensor'))
 router.post('/sensor-nodes/:id/replace',      requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
   body('new_device_id').trim().notEmpty(), body('secret_key').isString().trim().notEmpty(), body('reason').trim().notEmpty(),
   validate, deviceController.replaceSensorNode)
@@ -70,7 +81,12 @@ router.post('/sensor-nodes/:id/commands', requireRole('TECHNICIAN','ADMIN'), par
   body('ota.url').if(body('command').equals('OTA')).isURL({ protocols: ['https'], require_protocol: true, require_tld: false }),
   body('ota.sha256').if(body('command').equals('OTA')).isHash('sha256'),
   validate, deviceController.sendCommand)
-router.post('/camera-nodes/:id/decommission', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.decommission('camera'))
+router.post('/camera-nodes/:id/decommission', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(),
+  body('reason').trim().notEmpty(),
+  // toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false" lọt xuống service là truthy
+  body('force').optional().isBoolean().toBoolean(),
+  validate, deviceController.decommission('camera'))
+router.post('/camera-nodes/:id/restore', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('camera'))
 router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerCameraNode)
 router.get ('/camera-nodes',                 deviceController.listCameraNodes)
 

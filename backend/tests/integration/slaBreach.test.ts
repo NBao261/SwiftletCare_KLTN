@@ -78,11 +78,11 @@ describe('SLA cấu hình được (TICKET-FR-006)', () => {
   })
 
   it('lưu giá trị Admin đặt và giữ nguyên các mức không gửi lên', async () => {
-    const saved = await updateSlaHours(adminId, { P3: { response_hours: 0.5, resolve_hours: 1 } })
+    const saved = await updateSlaHours(adminId, { P3: { response_hours: 12, resolve_hours: 48 } })
 
-    expect(saved.P3).toEqual({ response_hours: 0.5, resolve_hours: 1 })
+    expect(saved.P3).toEqual({ response_hours: 12, resolve_hours: 48 })
     expect(saved.P1.resolve_hours).toBe(4)
-    expect((await getSlaHours()).P3.resolve_hours).toBe(1)
+    expect((await getSlaHours()).P3.resolve_hours).toBe(48)
   })
 
   it('gửi thiếu 1 trường thì giữ nguyên trường còn lại của mức đó', async () => {
@@ -98,5 +98,19 @@ describe('SLA cấu hình được (TICKET-FR-006)', () => {
 
   it('từ chối giá trị không dương', async () => {
     await expect(updateSlaHours(adminId, { P1: { resolve_hours: 0 } })).rejects.toThrow('lớn hơn 0')
+  })
+
+  it('từ chối mức gấp hơn có hạn dài hơn mức thấp hơn (P3 nhanh hơn P2)', async () => {
+    await expect(updateSlaHours(adminId, { P3: { response_hours: 0.5, resolve_hours: 1 } }))
+      .rejects.toThrow('SLA P2: hạn phản hồi không được dài hơn mức P3')
+    await expect(updateSlaHours(adminId, { P1: { resolve_hours: 30 } }))
+      .rejects.toThrow('SLA P1: hạn xử lý không được dài hơn mức P2')
+    // Bị từ chối thì không ghi gì
+    expect(await getSlaHours()).toMatchObject({ P1: { resolve_hours: 4 }, P3: { resolve_hours: 72 } })
+  })
+
+  it('cho phép hai mức có hạn bằng nhau', async () => {
+    const saved = await updateSlaHours(adminId, { P2: { response_hours: 24, resolve_hours: 72 } })
+    expect(saved.P2).toEqual(saved.P3)
   })
 })
