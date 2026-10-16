@@ -10,7 +10,7 @@ import TechnicianHouseRow from '@/components/features/technician/farms/Technicia
 import { useFarms } from '@/hooks/shared/useFarms'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { useAuthStore } from '@/stores/authStore'
 import type { HouseHealth, HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
@@ -28,7 +28,7 @@ const HEALTH_ORDER: Record<HouseHealth, number> = { ALERT: 0, NORMAL: 1, EMPTY: 
  * "nhà nào đang có sự cố, ở zone nào, bao nhiêu thiết bị mất kết nối?" → bấm vào để xử lý.
  */
 export default function TechnicianFarmsPage() {
-  const { t, num } = useT(farmDict)
+  const { t, num } = useTranslation(farmDict)
   useScrollToTop()
   const navigate = useNavigate()
   const regions = useAuthStore(s => s.user?.assigned_regions)
