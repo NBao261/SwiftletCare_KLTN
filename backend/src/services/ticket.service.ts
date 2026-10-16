@@ -478,7 +478,10 @@ async function buildTicketFilter(user: CurrentUser, query: ListTicketsQuery) {
   else if (query.unassigned) filter.assigned_to = null
   if (query.slaBreached) conditions.push(slaBreachedCondition(new Date()))
   if (query.nodeId) {
-    const alertIds = await Alert.find({ node_id: new Types.ObjectId(query.nodeId) }).distinct('_id')
+    // Chỉ xét cảnh báo ĐÃ có ticket trỏ tới (trong các farm user được xem) — số ticket nhỏ và chặn trên, còn toàn bộ
+    // cảnh báo của 1 thiết bị chạy lâu thì tăng mãi; tra ngược sang alerts bằng _id (có index) để lọc đúng thiết bị
+    const linkedAlertIds = await Ticket.distinct('alert_id', { farm_id: filter.farm_id, alert_id: { $ne: null } })
+    const alertIds = await Alert.find({ _id: { $in: linkedAlertIds }, node_id: new Types.ObjectId(query.nodeId) }).distinct('_id')
     conditions.push({ alert_id: { $in: alertIds } })
   }
 
