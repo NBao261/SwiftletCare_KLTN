@@ -3,11 +3,18 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.6.0 · **Cập nhật:** 14/10/2026 · **Thay thế:** v2.5.0 · **Theo:** SRS v2.0.0 (mục 0)
+**Phiên bản:** 2.6.1 · **Cập nhật:** 17/10/2026 · **Thay thế:** v2.6.0 · **Theo:** SRS v2.0.0 (mục 0)
 
 ---
 
 ## 0. Changelog
+
+### v2.6.0 → v2.6.1
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Thêm lớp `src/i18n/` (i18next + react-i18next), chạy song song với hệ từ điển `useTranslation`.** Khoá là chính câu tiếng Việt; bản dịch ở `i18n/en.ts`. Cả 2 hệ đọc chung `languageStore` nên 1 nút VI/EN đổi cả hai. Mục 6 ghi lại trạng thái và quy tắc chọn hệ. |
+| 2 | **`components/ui/` được import `@/i18n`** (chỉ để dịch chữ, không biết domain). Sửa 12.2, 12.6, 12.11, 12.12; 12.10 bỏ `i18n/` khỏi ví dụ "lớp mới" vì đã có. |
 
 ### v2.5.0 → v2.6.0 (theo SRS v2.0.0, sau Review 1)
 
@@ -422,7 +429,13 @@ This data is FAKE and has not been MOCKAPI     ← text-mock-notice, --gray-500,
 
 ## 6. i18n — Đa ngôn ngữ (VI/EN)
 
-**Trạng thái: áp dụng từng module, chưa phải toàn app.** Chưa cài `react-i18next`; nút VI/EN ở `AppHeader` ghi vào `stores/languageStore.ts`, màn nào có từ điển thì đổi theo, màn khác vẫn tiếng Việt như cũ. Hạ tầng tối thiểu: `lib/i18n.ts` (`Dictionary<K>` — `en` bắt buộc đủ đúng key của `vi`, thiếu là lỗi biên dịch; `translate`, định dạng số/ngày/"x giây trước" theo locale) + `hooks/common/useTranslation.ts` (`const { t, num, day, ago } = useTranslation(dict)`). Từ điển mỗi module đặt ở `constants/<module>.i18n.ts`; hiện có `farmStructure.i18n.ts` (màn Cấu trúc Farm) và `dashboard.i18n.ts` (Dashboard) của Farm Owner, `navigation.i18n.ts` (nhãn sidebar/dock/tiêu đề trang — tra qua `hooks/common/useNavigationLabel.ts`) và `shell.i18n.ts` (popup thông báo, tài khoản, đăng xuất, nút ngôn ngữ). Tên file/hook viết đầy đủ, không viết tắt (VD `useTranslation`, không `useT`). Đơn vị đo (°C/%/ppm/lux/dB) không dịch. Màn chưa có từ điển: khi review **không** bắt buộc `t('...')`; viết tiếng Việt có dấu, giữ thuật ngữ ("Zone", "Farm", "Ticket") nhất quán với màn đã có. Khi cài `react-i18next` sau này, chuyển các `*.i18n.ts` thành namespace tương ứng.
+**Trạng thái: hai hệ dịch chạy song song, chưa phủ toàn app.** Nút VI/EN ở `AppHeader` ghi vào `stores/languageStore.ts`; cả hai hệ dưới đây đọc chung store này nên một nút đổi cả hai. Màn chưa dùng hệ nào vẫn tiếng Việt như cũ.
+
+**Hệ 1 — `src/i18n/` (i18next + react-i18next), khoá là câu tiếng Việt.** `t('Danh sách trang trại')` → VI trả nguyên câu, EN tra `i18n/en.ts`, thiếu bản dịch thì vẫn hiện tiếng Việt (không lỗi). Biến dạng `t('Còn {{n}} ngày', { n: 3 })`. Các helper trong `i18n/index.ts`: `t` (gọi được cả ngoài component — column builder, helper định dạng), `tr`/`trChildren` (dịch prop chữ/children của component dùng chung, bỏ qua ReactNode), `translated(labels)` (bọc bảng nhãn constants để đọc ra bản dịch hiện tại), `intlLocale()`, `setLang()`. `AppShell` remount vùng nội dung theo `key = ngôn ngữ` để mọi chỗ gọi `t` ra đúng ngôn ngữ. **Không** tính nhãn bằng `t` ở cấp module (hằng số top-level) — giá trị đóng băng theo ngôn ngữ lúc nạp; dùng `translated(...)`, getter, hoặc dựng trong component. Đang dùng ở các màn Admin và các component `ui/`. Thêm câu mới = thêm 1 dòng vào `en.ts`.
+
+**Hệ 2 — từ điển theo module.** Hạ tầng tối thiểu: `lib/i18n.ts` (`Dictionary<K>` — `en` bắt buộc đủ đúng key của `vi`, thiếu là lỗi biên dịch; `translate`, định dạng số/ngày/"x giây trước" theo locale) + `hooks/common/useTranslation.ts` (`const { t, num, day, ago } = useTranslation(dict)`). Từ điển mỗi module đặt ở `constants/<module>.i18n.ts`; hiện có `farmStructure.i18n.ts` (màn Cấu trúc Farm) và `dashboard.i18n.ts` (Dashboard) của Farm Owner, `navigation.i18n.ts` (nhãn sidebar/dock/tiêu đề trang — tra qua `hooks/common/useNavigationLabel.ts`) và `shell.i18n.ts` (popup thông báo, tài khoản, đăng xuất, nút ngôn ngữ). Tên file/hook viết đầy đủ, không viết tắt (VD `useTranslation`, không `useT`). Đơn vị đo (°C/%/ppm/lux/dB) không dịch. Màn chưa có từ điển: khi review **không** bắt buộc `t('...')`; viết tiếng Việt có dấu, giữ thuật ngữ ("Zone", "Farm", "Ticket") nhất quán với màn đã có. Đang dùng ở các màn Farm Owner, màn Trang trại của Technician và khung app (sidebar, popup thông báo/tài khoản).
+
+**Chọn hệ nào:** sửa màn đang dùng hệ nào thì giữ hệ đó, không trộn hai hệ trong một file. Màn mới theo hệ mà role đó đang dùng (Admin → Hệ 1; Farm Owner, Technician → Hệ 2). Gộp về một hệ (chuyển các `*.i18n.ts` thành namespace i18next) là PR riêng — xem nợ 13.14.
 
 ---
 
@@ -602,7 +615,7 @@ frontend/src/
 │
 ├── components/
 │   ├── auth/                  RequireRole
-│   ├── ui/                    Design system — KHÔNG biết domain (chỉ phụ thuộc lib/cn)
+│   ├── ui/                    Design system — KHÔNG biết domain (chỉ phụ thuộc lib/cn + i18n)
 │   │                          primitive: Button Card Badge Input Select Textarea Toggle Modal
 │   │                          tổ hợp:    DataTable Pagination FilterChip EmptyState
 │   │                                     LoadingSkeleton StarRating ActionsMenu SelectMenu
@@ -663,7 +676,10 @@ frontend/src/
 │                              zoneStore · breadcrumbStore
 │
 ├── lib/                       axios · queryClient · socket · cn
-│                              helpers · navigation · chartTheme
+│                              helpers · navigation · chartTheme · i18n (Hệ 2, mục 6)
+│
+├── i18n/                      Hệ dịch 1 (mục 6): index.ts (t · tr · trChildren · translated
+│                              intlLocale · setLang) · en.ts (khoá tiếng Việt → tiếng Anh)
 │
 ├── providers/                 AppProviders.tsx — mọi provider bọc cây React
 │
@@ -707,7 +723,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `common/` | Có | >= 2 | `ZoneSwitcher` · `ZonePicker` · `StatusDot` |
 | `features/<role>/<area>/` | Có | 1 | `ThresholdsModal` · `SensorCard` · `CreateUserModal` |
 
-`ui/` là design system **tự chứa**: phụ thuộc duy nhất `@/lib/cn`. Không file nào trong `ui/` được import barrel `@/components/ui` của chính nó — import thẳng module anh em để tránh vòng lặp.
+`ui/` là design system **tự chứa**: chỉ phụ thuộc `@/lib/cn` và `@/i18n` (dịch nhãn mặc định/prop chữ — không mang kiến thức domain). Không file nào trong `ui/` được import barrel `@/components/ui` của chính nó — import thẳng module anh em để tránh vòng lặp.
 
 ### 12.7. Ngoại lệ đã thống nhất — đừng "sửa lại cho đúng"
 
@@ -777,7 +793,7 @@ Không tự sinh thư mục tuỳ ý. Chỉ 4 trường hợp dưới đây đư
 | Thêm một **nhóm màn hình mới** cho role đã có | `components/features/<role>/<area-mới>/` | `<area>` đặt theo danh từ nghiệp vụ số nhiều, kebab-case nếu nhiều từ: `harvest/`, `account-requests/` |
 | Thêm **role mới** vào hệ thống | Đồng thời 5 chỗ: `pages/<role>/` · `routes/<role>.routes.tsx` · `components/layouts/<Role>Layout.tsx` · `apis/<role>/` và `hooks/<role>/` (chỉ khi có endpoint riêng) | Phải cập nhật luôn `Role` trong `types/common.types.ts`, `ROLE_LABEL` + `ROLE_HOME` + `MENU_ACCESS` trong `constants/roles.ts`, và nhánh `switch` trong `RoleLayout` (`App.tsx`) |
 | Một file trong `shared/` chuyển thành **chỉ 1 role dùng** (hoặc ngược lại) | Dời sang bucket đúng, tạo thư mục đích nếu chưa có | Kiểm bằng đồ thị import thật, không đoán. Một role dùng → về thư mục role; >= 2 role → `shared/` |
-| Thêm một **lớp quan tâm mới** (VD `workers/`, `i18n/`) | Cấp 1 trong `src/` | Chỉ khi thật sự là một lớp mới, và phải bổ sung vào cây ở mục 12.2 trước khi code |
+| Thêm một **lớp quan tâm mới** (VD `workers/`) | Cấp 1 trong `src/` | Chỉ khi thật sự là một lớp mới, và phải bổ sung vào cây ở mục 12.2 trước khi code |
 
 **Không tạo:** `components/features/shared/` · thư mục con trong `pages/<role>/` · thư mục `components/` hay `utils/` riêng bên trong một feature · thư mục chỉ chứa đúng 1 file mà lớp cha đã đủ rõ.
 
@@ -790,7 +806,7 @@ Cấu trúc này theo mô hình **phân lớp + cắt lát theo role** (layered 
 | Component PascalCase, tên file trùng tên component | Đạt — mọi file component và page |
 | Hook `useXxx` camelCase | Đạt — đổi sang PascalCase sẽ làm quy tắc `react-hooks` của ESLint không nhận diện được, nên **không** áp PascalCase cho `hooks/` |
 | Module hạ tầng dùng đuôi phân loại (`.api`, `.types`, `.validation`, `.routes`) | Đạt — giống Angular style guide (`*.service.ts`) và NestJS (`*.module.ts`); đây là lý do `apis/`, `types/`, `validations/`, `routes/` **không** PascalCase |
-| Tầng UI không phụ thuộc domain | Đạt — `components/ui/` chỉ phụ thuộc `lib/cn` |
+| Tầng UI không phụ thuộc domain | Đạt — `components/ui/` chỉ phụ thuộc `lib/cn` và `i18n` |
 | Không có "thư mục rác" dùng chung phình to | Đạt — `common/` giữ ở mức nhỏ, không có `features/shared/`, `utils/` đã gộp vào `lib/` |
 | Quyền truy cập khai tập trung | Đạt — toàn bộ `allow={...}` nằm trong `routes/`, nhóm role khai một chỗ ở `constants/roles.ts` |
 
@@ -800,7 +816,7 @@ Cấu trúc này theo mô hình **phân lớp + cắt lát theo role** (layered 
 
 **Nên:** đặt file theo bảng 12.3 · đặt tên theo bảng 12.9 · tên trang mang tên role · giữ `pages/` chỉ có `*Page.tsx` · dùng alias `@/` · dời file sang bucket khác ngay khi số role dùng nó thay đổi · đọc `routes/` khi cần biết ai vào được trang nào.
 
-**Không nên:** không tạo `components/features/shared/` · không để file một role dùng nằm trong `shared/` "để dành sau này" · không nhét component/modal vào `pages/` · không import `@/types`/`@/hooks`/`@/apis`/`@/stores` từ trong `components/ui/` · không suy quyền truy cập từ tên thư mục · không tách file chỉ vì nguyên tắc — số file ít và tên file tự nói lên chủ sở hữu quan trọng hơn.
+**Không nên:** không tạo `components/features/shared/` · không để file một role dùng nằm trong `shared/` "để dành sau này" · không nhét component/modal vào `pages/` · không import `@/types`/`@/hooks`/`@/apis`/`@/stores` từ trong `components/ui/` (`@/i18n` thì được) · không suy quyền truy cập từ tên thư mục · không tách file chỉ vì nguyên tắc — số file ít và tên file tự nói lên chủ sở hữu quan trọng hơn.
 
 ---
 
@@ -906,7 +922,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 |---|---|---|
 | `apis/shared/audioTracks.api.ts` + `hooks/shared/useAudioTracks.ts` | Chỉ Technician dùng (`features/technician/devices/AudioTracksModal`) → sai 12.1 nguyên tắc 2 | Dời về `apis/technician/` + `hooks/technician/` |
 | `pages/technician/TechnicianDevicesPage.tsx` | Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên]) | Chuyển vào `onSuccess` của mutation trong `useDevices` |
-| Mục 6 i18n | Chưa cài `react-i18next`, UI hardcode tiếng Việt | PR riêng cài i18n, sau đó 13.x mới yêu cầu `t('...')` |
+| Mục 6 i18n | Hai hệ dịch song song (`src/i18n/` và `useTranslation` + `*.i18n.ts`); nhiều màn vẫn hardcode tiếng Việt | PR riêng gộp về một hệ, sau đó 13.x mới yêu cầu `t('...')` |
 | `StatCard` cục bộ trong `AdminSystemHealthPage` | Mục 9 muốn dùng chung | Tách ra khi màn thứ hai cần |
 | ~230 chỗ `text-xs`/`text-sm`/`text-lg`/`text-2xl`… | Lệch thang chữ 2.8 (13.7 [Nên]) | Đổi dần khi sửa file đó |
 | `pages/sales-staff/` · `routes/sales-staff.routes.tsx` · `SalesStaffLayout` · role `SALES_STAFF` trong `types/common.types.ts`, `types/ticket.types.ts`, `INVITE_ROLE_LABEL` | Role đã bỏ từ SRS v1.23.0 | Gỡ trong PR thêm `DOMAIN_EXPERT` (SRS §0.5 Web) |
