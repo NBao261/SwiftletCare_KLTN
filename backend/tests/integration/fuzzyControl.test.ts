@@ -74,7 +74,7 @@ describe('ingestTelemetry — lưu đầu ra bộ điều khiển mờ', () => {
 
     await ingestTelemetry({
       deviceId: node.device_id, timestamp: Date.now(), temperature: 30, humidity: 76, light_lux: 0.1, nh3_ppm: 5, co2_ppm: 800, sound_db: 40,
-      relay_states: { misting: true, speaker: false, ventilation: false, heating: false }, control_mode: 'AUTO',
+      relay_states: { misting: true, speaker: false, ventilation: false }, control_mode: 'AUTO',
       control_output: { misting: 40, ventilation: 0 },
     })
 

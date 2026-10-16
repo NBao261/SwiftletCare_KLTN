@@ -15,7 +15,7 @@ import { useTelemetry } from '@/hooks/farm-owner/useTelemetry'
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { useZoneStore } from '@/stores/zoneStore'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
@@ -27,7 +27,7 @@ import { cn } from '@/lib/cn'
 export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
-  const { t, ago } = useT(farmDict)
+  const { t, ago } = useTranslation(farmDict)
   useScrollToTop(zoneId)
   const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
   const node = zoneId ? structure.zoneById.get(zoneId) : undefined

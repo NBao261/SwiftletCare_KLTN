@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui'
 import FarmHouseZonePicker from '@/components/features/technician/devices/FarmHouseZonePicker'
 import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
+import { CheckCircle2 } from 'lucide-react'
 import type { OnboardingState } from './onboardingTypes'
 
 interface Props {
@@ -34,8 +35,8 @@ export function Step1Location({ data, patch, onNext }: Props) {
       />
 
       {isComplete && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-limeMist/30 bg-limeMist/15 px-4 py-3">
-          <span className="text-xl">✅</span>
+        <div className="flex items-center gap-3 rounded-xl border border-limeMist/30 bg-limeMist/15 px-4 py-3">
+          <CheckCircle2 className="h-6 w-6 text-success shrink-0" />
           <div>
             <p className="font-semibold text-charcoal">Vị trí đã chọn</p>
             <p className="text-sm text-charcoal/70">{farmName} › {houseName} › {zoneName}</p>

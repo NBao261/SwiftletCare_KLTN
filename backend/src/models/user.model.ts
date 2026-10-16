@@ -20,6 +20,11 @@ export interface IUser extends Document {
   deactivated_at?: Date
   deactivated_reason?: string
   notification_preferences: NotificationPreferences
+  /** ALERT-FR-013 — chat id của bot Telegram, có sau khi người dùng gửi `/start <mã>` cho bot */
+  telegram_chat_id?: string
+  /** sha256 của mã liên kết một lần + hạn dùng (10 phút) */
+  telegram_link_code_hash?: string
+  telegram_link_expires_at?: Date
   otp_code?: string
   otp_expires?: Date
   /** AUTH-FR-009 — lưu hash chứ không phải OTP thô, để lộ DB cũng không đặt lại được mật khẩu người khác */
@@ -47,7 +52,7 @@ const userSchema = new Schema<IUser>(
     phone:         { type: String, trim: true },
     password_hash: { type: String, required: true },
     full_name:     { type: String, required: true, trim: true },
-    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'FARM_OPERATOR', 'TECHNICIAN'] satisfies Role[], default: 'FARM_OWNER' },
+    role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN'] satisfies Role[], default: 'FARM_OWNER' },
     assigned_regions: [{ type: String }],
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
@@ -55,6 +60,7 @@ const userSchema = new Schema<IUser>(
     deactivated_reason: { type: String },
     notification_preferences: {
       push:  { type: Boolean, default: true },
+      telegram: { type: Boolean, default: true },
       zalo:  { type: Boolean, default: true },
       sms:   { type: Boolean, default: false },
       quiet_hours: {
@@ -62,6 +68,11 @@ const userSchema = new Schema<IUser>(
         end:   { type: String, default: '06:00' },
       },
     },
+    telegram_chat_id: { type: String },
+    // select: false — mã liên kết chỉ luồng /start của bot cần so, không query nào khác được mang ra
+    // index sparse: bot công khai, ai cũng nhắn được /start <mã bất kỳ> — mỗi tin không được quét cả bảng users
+    telegram_link_code_hash:  { type: String, select: false, index: true, sparse: true },
+    telegram_link_expires_at: { type: Date, select: false },
     otp_code:      { type: String },
     otp_expires:   { type: Date },
     // select: false — cùng lý do với `provisioned_devices.secret_key_hash`: chỉ
@@ -100,6 +111,11 @@ userSchema.methods.toJSON = function () {
   // trong 15 phút reset — phải ẩn cùng nhóm với otp_code.
   delete obj.password_reset_token_hash
   delete obj.password_reset_expires_at
+  // Client chỉ cần biết đã liên kết Telegram hay chưa, không cần chat id
+  obj.telegram_linked = !!obj.telegram_chat_id
+  delete obj.telegram_chat_id
+  delete obj.telegram_link_code_hash
+  delete obj.telegram_link_expires_at
   return obj
 }
 

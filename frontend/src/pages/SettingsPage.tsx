@@ -9,7 +9,8 @@ import {
 } from '@phosphor-icons/react'
 import { useAuthStore } from '@/stores/authStore'
 import { useAuth } from '@/hooks/auth/useAuth'
-import { Button, Input, Toggle } from '@/components/ui'
+import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
+import { Avatar, Button, Input, Toggle } from '@/components/ui'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
 import { formatDate, getApiErrorMessage } from '@/lib/helpers'
@@ -20,7 +21,7 @@ import { t } from '@/i18n'
 /** Settings Page — hồ sơ, thông báo (ALERT-FR-005/006), bảo mật (AUTH-FR-009), xoá tài khoản (AUTH-FR-012) */
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
-  const { logout } = useAuth()
+  const askLogout = useLogoutConfirmStore(s => s.ask)
 
   if (!user) return null
 
@@ -29,9 +30,7 @@ export default function SettingsPage() {
       {/* ── Hồ sơ: avatar + tên + vai trò, email/SĐT, đăng xuất ── */}
       <section className="flex flex-wrap items-center gap-x-8 gap-y-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
         <div className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-charcoal text-2xl font-bold text-limeMist">
-            {user.full_name?.[0]?.toUpperCase() ?? 'U'}
-          </div>
+          <Avatar name={user.full_name} size="lg" />
           <div className="min-w-0">
             <p className="truncate text-h2 text-charcoal">{user.full_name}</p>
             <span className="mt-1 inline-block rounded-full bg-accent-300 px-2.5 py-0.5 text-caption text-charcoal">
@@ -45,7 +44,7 @@ export default function SettingsPage() {
           <InfoItem icon={PhoneIcon} label="Số điện thoại" value={user.phone || '--'} />
         </dl>
 
-        <Button variant="danger" size="sm" loading={logout.isPending} onClick={() => logout.mutate()}>
+        <Button variant="danger" size="sm" onClick={askLogout}>
           <SignOutIcon size={14} weight="bold" />
           Đăng xuất
         </Button>

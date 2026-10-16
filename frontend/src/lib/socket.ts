@@ -8,6 +8,7 @@ import type { TelemetryUpdateEvent, RelayUpdateEvent, AlertNewEvent, DeviceStatu
 const SOCKET_URL = import.meta.env.VITE_WS_URL || ''
 
 let socket: Socket | null = null
+const joinedZones = new Map<string, number>()
 
 /** Lazy-tạo 1 socket duy nhất cho cả app — connect/disconnect do useSocket() hook quản lý */
 export function getSocket(): Socket {
@@ -19,16 +20,27 @@ export function getSocket(): Socket {
       transports: ['websocket'],
       autoConnect: false,
     })
+    socket.on('connect', () => {
+      joinedZones.forEach((_count, zoneId) => socket?.emit('JOIN_ZONE', { zoneId }))
+    })
   }
   return socket
 }
 
 export function joinZone(zoneId: string) {
-  getSocket().emit('JOIN_ZONE', { zoneId })
+  const count = joinedZones.get(zoneId) ?? 0
+  joinedZones.set(zoneId, count + 1)
+  if (count === 0) getSocket().emit('JOIN_ZONE', { zoneId })
 }
 
 export function leaveZone(zoneId: string) {
-  getSocket().emit('LEAVE_ZONE', { zoneId })
+  const count = joinedZones.get(zoneId) ?? 0
+  if (count <= 1) {
+    joinedZones.delete(zoneId)
+    getSocket().emit('LEAVE_ZONE', { zoneId })
+    return
+  }
+  joinedZones.set(zoneId, count - 1)
 }
 
 export function onTelemetryUpdate(cb: (data: TelemetryUpdateEvent) => void) {

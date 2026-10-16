@@ -7,8 +7,6 @@ export interface IInvitation extends Document {
   farm_id: Types.ObjectId
   invited_email: string
   invited_role: FarmMemberRole
-  /** Phạm vi của Farm Operator — rỗng = cả farm (AUTH-FR-005/010) */
-  zone_ids: Types.ObjectId[]
   invited_by: Types.ObjectId
   token: string
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
@@ -21,8 +19,7 @@ const invitationSchema = new Schema<IInvitation>(
   {
     farm_id:       { type: Schema.Types.ObjectId, ref: 'Farm', required: true },
     invited_email: { type: String, required: true, lowercase: true, trim: true },
-    invited_role:  { type: String, enum: ['FARM_OWNER', 'FARM_OPERATOR'] satisfies FarmMemberRole[], required: true },
-    zone_ids:      { type: [{ type: Schema.Types.ObjectId, ref: 'Zone' }], default: [] },
+    invited_role:  { type: String, enum: ['FARM_OWNER', 'DOMAIN_EXPERT'] satisfies FarmMemberRole[], required: true },
     invited_by:    { type: Schema.Types.ObjectId, ref: 'User', required: true },
     token:         { type: String, required: true, unique: true },
     status:        { type: String, enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED'], default: 'PENDING' },

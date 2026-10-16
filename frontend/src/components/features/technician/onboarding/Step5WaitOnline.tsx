@@ -8,22 +8,53 @@
 // Fix: useRef cho successTimer để clear khi unmount → tránh memory leak.
 // Fix: Kiểm tra trạng thái thiết bị ngay khi mount (polling dự phòng) để handle
 //      trường hợp thiết bị đã ONLINE trước khi vào Step 5.
+//
+// Giao diện: vòng đếm ngược 15 phút (SVG) + 3 mốc kết nối có đường nối — 100% từ socket/countdown thật.
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Check, Loader2, AlertTriangle } from 'lucide-react'
 import { useSocket } from '@/hooks/common/useSocket'
 import { joinZone, leaveZone, onDeviceStatusChange } from '@/lib/socket'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
+import { cn } from '@/lib/cn'
 import type { DeviceStatusChangeEvent } from '@/types'
 import type { OnboardingState } from './onboardingTypes'
 
 const TIMEOUT_MS = 15 * 60 * 1000 // 15 phút
 
-function StatusCheck({ label, done, loading }: { label: string; done: boolean; loading?: boolean }) {
+// Vòng đếm ngược: bán kính 52 trong viewBox 120 → chu vi để tính stroke-dashoffset
+const RING_R = 52
+const RING_C = 2 * Math.PI * RING_R
+
+interface Milestone { label: string; done: boolean }
+
+/** 3 mốc nối bằng đường dọc; mốc đầu tiên chưa xong là "đang chờ" (spinner), các mốc sau là "chưa tới" */
+function MilestoneList({ items }: { items: Milestone[] }) {
+  const currentIdx = items.findIndex(m => !m.done)
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-base">{done ? '✅' : loading ? '⏳' : '○'}</span>
-      <span className={done ? 'font-medium text-charcoal' : 'text-warmGray'}>{label}</span>
-    </div>
+    <ol className="flex w-full max-w-xs flex-col text-left">
+      {items.map((m, i) => {
+        const waiting = i === currentIdx
+        return (
+          <li key={m.label} className="relative flex items-center gap-3 pb-4 last:pb-0">
+            {i < items.length - 1 && (
+              <span aria-hidden className={cn('absolute left-[11px] top-6 h-[calc(100%-12px)] w-0.5 rounded-full transition-colors duration-500', m.done ? 'bg-charcoal' : 'bg-graphite/15')} />
+            )}
+            <span
+              className={cn(
+                'relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors duration-300',
+                m.done && 'bg-charcoal text-white',
+                waiting && 'bg-limeMist text-charcoal ring-1 ring-charcoal',
+                !m.done && !waiting && 'bg-white text-warmGray ring-2 ring-graphite/15',
+              )}
+            >
+              {m.done ? <Check size={14} strokeWidth={2.5} /> : waiting ? <Loader2 size={14} strokeWidth={2.5} className="animate-spin motion-reduce:animate-none" /> : <span className="h-1.5 w-1.5 rounded-full bg-graphite/30" />}
+            </span>
+            <span className={cn('text-sm', m.done ? 'font-medium text-charcoal' : waiting ? 'font-semibold text-charcoal' : 'text-warmGray')}>{m.label}</span>
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 
@@ -116,7 +147,9 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
   if (timedOut) {
     return (
       <div className="flex flex-col items-center gap-5 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-alertRed/10 text-4xl">❌</div>
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-alertRed/10 text-alertRed">
+          <AlertTriangle size={30} strokeWidth={1.8} />
+        </div>
         <div>
           <h2 className="text-lg font-bold text-charcoal">Kích hoạt quá hạn</h2>
           <p className="mt-1 text-sm text-warmGray">Thiết bị không gửi tín hiệu trong 15 phút.</p>
@@ -139,27 +172,42 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
     )
   }
 
+  const progress = Math.min(1, elapsed / TIMEOUT_MS)
+
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      <div className="relative flex h-20 w-20 items-center justify-center">
-        <div className="absolute inset-0 animate-spin rounded-full border-4 border-graphite/10 border-t-charcoal" />
-        <span className="text-2xl">📡</span>
+      {/* Vòng đếm ngược 15' — chạy ngược theo thời gian còn lại; chấm "radar" lan ra khi chưa online */}
+      <div className="relative flex h-36 w-36 items-center justify-center">
+        {!mqttOk && <span aria-hidden className="absolute inset-3 animate-ping-soft rounded-full bg-limeMist motion-reduce:animate-none" />}
+        <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden>
+          <circle cx="60" cy="60" r={RING_R} fill="none" strokeWidth="6" className="stroke-graphite/10" />
+          <circle
+            cx="60" cy="60" r={RING_R} fill="none" strokeWidth="6" strokeLinecap="round"
+            className={cn('transition-[stroke-dashoffset] duration-1000 ease-linear motion-reduce:transition-none', mqttOk ? 'stroke-success' : 'stroke-charcoal')}
+            strokeDasharray={RING_C}
+            strokeDashoffset={RING_C * progress}
+          />
+        </svg>
+        <div className="relative z-10 flex flex-col items-center">
+          <span className="text-metric tabular-nums text-charcoal" role="timer" aria-label="Thời gian còn lại">
+            {String(remainMins).padStart(2, '0')}:{String(remainSecs).padStart(2, '0')}
+          </span>
+          <span className="text-xs text-warmGray">còn lại / 15:00</span>
+        </div>
       </div>
 
       <div>
-        <h2 className="text-lg font-bold text-charcoal">Đang chờ thiết bị kết nối…</h2>
-        <p className="mt-1 font-mono text-2xl font-bold text-charcoal">
-          {String(remainMins).padStart(2, '0')}:{String(remainSecs).padStart(2, '0')} / 15:00
-        </p>
+        <h2 className="text-lg font-bold text-charcoal">{mqttOk ? 'Thiết bị đã kết nối' : 'Đang chờ thiết bị kết nối…'}</h2>
+        <p className="mt-1 text-xs text-warmGray">Tự động chuyển bước khi thiết bị online</p>
       </div>
 
-      <div className="flex flex-col gap-2 text-sm">
-        <StatusCheck label="Đã nhận cấu hình WiFi" done />
-        <StatusCheck label="Đang kết nối WiFi nhà yến" done={wifiConnecting} loading />
-        <StatusCheck label="Chờ kết nối MQTT broker" done={mqttOk} loading={!mqttOk} />
-      </div>
-
-      <p className="text-xs text-warmGray">Tự động chuyển bước khi thiết bị online</p>
+      <MilestoneList
+        items={[
+          { label: 'Đã nhận cấu hình WiFi', done: true },
+          { label: 'Kết nối WiFi nhà yến', done: wifiConnecting || mqttOk },
+          { label: 'Kết nối MQTT broker', done: mqttOk },
+        ]}
+      />
     </div>
   )
 }

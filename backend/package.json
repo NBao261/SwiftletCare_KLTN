@@ -11,6 +11,7 @@
     "migrate:retention": "tsx src/scripts/migrate-retention.script.ts",
     "migrate:remove-sales": "tsx src/scripts/migrate-remove-sales.script.ts",
     "migrate:data-model": "tsx src/scripts/migrate-data-model.script.ts",
+    "migrate:scope-v2": "tsx src/scripts/migrate-scope-v2.script.ts",
     "build": "tsc",
     "build:check": "tsc --noEmit",
     "test": "jest --coverage",

@@ -2,14 +2,16 @@ import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useZoneStore } from "@/stores/zoneStore";
 import { usePermission } from "@/hooks/common/usePermission";
-import { useSensorNodes, useClearRelayOverride } from "@/hooks/shared/useDevices";
+import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
 import { deviceApi } from "@/apis/shared/devices.api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Input, Modal, Card, Badge } from "@/components/ui";
-import { IconDevice } from "@/components/ui/icons";
-import StatusDot from "@/components/common/StatusDot";
-import RelayToggle from "@/components/features/technician/devices/RelayToggle";
+import { Button, Input, Modal, Card } from "@/components/ui";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
+import SystemHealthBar, { needsAttention } from "@/components/features/technician/devices/SystemHealthBar";
+import DeviceFilterToolbar, { type DeviceSortKey } from "@/components/features/technician/devices/DeviceFilterToolbar";
+import type { SortDirection } from "@/types";
+import DeviceListRow from "@/components/features/technician/devices/DeviceListRow";
 import FarmHouseZonePicker, {
   FarmHouseZonePickerValue,
 } from "@/components/features/technician/devices/FarmHouseZonePicker";
@@ -21,16 +23,6 @@ import ReplaceDeviceModal from "@/components/features/technician/devices/Replace
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
-
-const timeLabel = (iso: string) =>
-  new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-
-const RELAY_LABELS = {
-  misting: "Phun sương",
-  speaker: "Loa ru",
-  ventilation: "Quạt thông gió",
-  heating: "Sưởi",
-} as const;
 
 /** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018 */
 export default function TechnicianDevicesPage() {
@@ -53,6 +45,47 @@ export default function TechnicianDevicesPage() {
   const [registering, setRegistering] = useState(false);
   const [showThresholds, setShowThresholds] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortBy, setSortBy] = useState<DeviceSortKey>("last_heartbeat");
+  const [sortDir, setSortDir] = useState<SortDirection>("desc");
+  // BE trả 501 khi firmware chưa hỗ trợ RESTART → khoá nút thay vì để kỹ thuật viên thử lại
+  const [rebootUnsupported, setRebootUnsupported] = useState(false);
+  // POST /devices/sensor-nodes/:id/commands chỉ cho TECHNICIAN/ADMIN (TICKET-FR-008)
+  const sendCommand = useSendNodeCommand();
+  const [rebootNodeId, setRebootNodeId] = useState<string | null>(null);
+
+  const hasActiveFilters = !!searchQuery || statusFilter !== "ALL" || sortBy !== "last_heartbeat" || sortDir !== "desc";
+  function clearFilters() {
+    setSearchQuery(""); setStatusFilter("ALL"); setSortBy("last_heartbeat"); setSortDir("desc");
+  }
+  function handleSortChange(key: DeviceSortKey) {
+    if (key === sortBy) setSortDir(d => (d === "asc" ? "desc" : "asc"));
+    else { setSortBy(key); setSortDir(key === "device_id" ? "asc" : "desc"); }
+  }
+
+  const filteredNodes = nodes
+    ?.filter(node => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchSearch = !q ||
+        node.device_id.toLowerCase().includes(q) ||
+        (node.firmware_version ?? "").toLowerCase().includes(q);
+
+      let matchStatus = true;
+      if (statusFilter !== "ALL") {
+        matchStatus = statusFilter === "WARNING" ? needsAttention(node) : node.status === statusFilter;
+      }
+      return matchSearch && matchStatus;
+    })
+    .sort((a, b) => {
+      const dir = sortDir === "asc" ? 1 : -1;
+      if (sortBy === "device_id") return a.device_id.localeCompare(b.device_id) * dir;
+      if (sortBy === "rssi") return ((a.rssi ?? -999) - (b.rssi ?? -999)) * dir;
+      const ta = a.last_heartbeat ? new Date(a.last_heartbeat).getTime() : 0;
+      const tb = b.last_heartbeat ? new Date(b.last_heartbeat).getTime() : 0;
+      return (ta - tb) * dir;
+    });
+
   const [reassignNodeId, setReassignNodeId] = useState<string | null>(null);
   const [reassignTarget, setReassignTarget] = useState<
     Partial<FarmHouseZonePickerValue>
@@ -69,7 +102,9 @@ export default function TechnicianDevicesPage() {
   const [replaceNodeId, setReplaceNodeId] = useState<string | null>(null);
   const decommissionNode = nodes?.find((n) => n._id === decommissionNodeId) ?? null;
   const replaceNode = nodes?.find((n) => n._id === replaceNodeId) ?? null;
-  const clearOverride = useClearRelayOverride();
+  const rebootNode = nodes?.find((n) => n._id === rebootNodeId) ?? null;
+
+  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
 
   if (!selectedZoneId) {
     return (
@@ -127,15 +162,32 @@ export default function TechnicianDevicesPage() {
     }
   }
 
+  function handleReboot() {
+    if (!rebootNode) return;
+    const deviceLabel = rebootNode.device_id;
+    sendCommand.mutate(
+      { nodeId: rebootNode._id, input: { command: "RESTART" } },
+      {
+        onSuccess: () => {
+          push(`Đã gửi lệnh khởi động lại tới ${deviceLabel}`);
+          setRebootNodeId(null);
+        },
+        onError: (err) => {
+          if ((err as { response?: { status?: number } })?.response?.status === 501) {
+            setRebootUnsupported(true);
+            push("Firmware chưa hỗ trợ lệnh khởi động lại từ xa (501)", "error");
+          } else {
+            push(getApiErrorMessage(err, "Khởi động lại thất bại"), "error");
+          }
+          setRebootNodeId(null);
+        },
+      },
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="label-caption">Khu vực đang xem</p>
-          <p className="truncate text-2xl font-bold tracking-tight text-charcoal">
-            {selectedZoneName}
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
         <div className="flex flex-wrap items-center gap-2">
           {canEditThresholds && (
             <Button
@@ -153,257 +205,183 @@ export default function TechnicianDevicesPage() {
         </div>
       </div>
 
-      {isLoading && <LoadingSkeleton count={2} className="h-40 w-full" />}
+      <Card size="lg" className="pb-10 flex flex-col gap-5">
 
-      {!isLoading && nodes?.length === 0 && (
-        <EmptyState
-          title="Zone này chưa có thiết bị"
-          description={
-            canOnboard
-              ? "Kích hoạt ESP32 vào zone này: nhập device_id in trên vỏ máy, sau đó cấu hình WiFi cho thiết bị qua AP-mode."
-              : "Thiết bị do kỹ thuật viên SwiftletCare lắp đặt và kích hoạt. Tạo yêu cầu lắp đặt để được hỗ trợ."
-          }
-          action={
-            canOnboard ? (
-              <Button onClick={() => setShowRegister(true)}>
-                + Kích hoạt thiết bị
-              </Button>
-            ) : undefined
-          }
-        />
-      )}
+        {isLoading && <LoadingSkeleton count={2} className="h-40 w-full" />}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {nodes?.map((node) => (
-          <Card key={node._id} className="transition-shadow hover:shadow-dock">
-            <div className="flex items-start justify-between gap-3 pb-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warmGray/10 text-charcoal">
-                  <IconDevice />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-charcoal">
-                    {node.device_id}
-                  </p>
-                  <p className="truncate text-xs text-warmGray">
-                    Firmware {node.firmware_version} · RSSI {node.rssi ?? "--"}{" "}
-                    dBm
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1.5">
-                <StatusDot status={node.status} />
-                <Badge
-                  tone={node.control_mode === "MANUAL" ? "warning" : "neutral"}
-                >
-                  {node.control_mode === "MANUAL" ? "Thủ công" : "Tự động"}
-                </Badge>
-              </div>
-            </div>
+        {!isLoading && nodes?.length === 0 && (
+          <EmptyState
+            title="Zone này chưa có thiết bị"
+            description={
+              canOnboard
+                ? "Kích hoạt ESP32 vào zone này: nhập device_id in trên vỏ máy, sau đó cấu hình WiFi cho thiết bị qua AP-mode."
+                : "Thiết bị do kỹ thuật viên SwiftletCare lắp đặt và kích hoạt. Tạo yêu cầu lắp đặt để được hỗ trợ."
+            }
+            action={
+              canOnboard ? (
+                <Button onClick={() => setShowRegister(true)}>
+                  + Kích hoạt thiết bị
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
 
-            {node.status === "PENDING" ? (
-              <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
-                Thiết bị đã khai báo nhưng chưa kết nối lần nào — cấp nguồn và
-                cấu hình WiFi để hoàn tất. Điều khiển relay sẽ bật khi thiết bị
-                online.
-              </p>
-            ) : (
-              <div className="divide-y divide-warmGray/10 border-t border-warmGray/10">
-                {node.control_mode === "MANUAL" && (
-                  <div className="flex items-center justify-between gap-3 py-2.5">
-                    <span className="text-xs font-medium text-climateOrange">
-                      Đang điều khiển thủ công
-                      {node.override_expiry
-                        ? ` — tự về tự động lúc ${timeLabel(node.override_expiry)}`
-                        : ""}
-                    </span>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      loading={
-                        clearOverride.isPending &&
-                        clearOverride.variables === node._id
-                      }
-                      onClick={() =>
-                        clearOverride.mutate(node._id, {
-                          onSuccess: () => push("Đã trả thiết bị về chế độ tự động"),
-                          onError: (err) =>
-                            push(
-                              getApiErrorMessage(err, "Không trả về tự động được"),
-                              "error",
-                            ),
-                        })
-                      }
-                    >
-                      Về tự động
-                    </Button>
-                  </div>
-                )}
-                {(
-                  Object.keys(RELAY_LABELS) as Array<keyof typeof RELAY_LABELS>
-                ).map((relayName) => (
-                  <RelayToggle
-                    key={relayName}
-                    nodeId={node._id}
-                    relayName={relayName}
-                    label={RELAY_LABELS[relayName]}
-                    checked={node.relay_states[relayName]}
-                    mode={node.control_mode}
-                  />
-                ))}
+        {!isLoading && (nodes?.length ?? 0) > 0 && (
+          <div className="flex w-full flex-col gap-5 mb-4 animate-fade-in">
+            <SystemHealthBar nodes={nodes} />
+            <DeviceFilterToolbar
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSortChange={handleSortChange}
+              hasActiveFilters={hasActiveFilters}
+              onClear={clearFilters}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col pb-8">
+          <div className="bg-white border border-warmGray/15 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            {filteredNodes?.map((node, i) => (
+              <DeviceListRow
+                key={node._id}
+                index={i}
+                node={node}
+                zoneId={selectedZoneId!}
+                isExpanded={expandedNodeId === node._id}
+                onToggleExpand={() => setExpandedNodeId(prev => prev === node._id ? null : node._id)}
+                onOpenSchedule={() => setScheduleNodeId(node._id)}
+                onOpenAudio={() => setAudioNodeId(node._id)}
+                onOpenReassign={() => setReassignNodeId(node._id)}
+                onOpenReplace={() => setReplaceNodeId(node._id)}
+                onOpenDecommission={() => setDecommissionNodeId(node._id)}
+                canOnboard={canOnboard}
+                rebootUnsupported={rebootUnsupported}
+                onReboot={canOnboard ? () => setRebootNodeId(node._id) : undefined}
+              />
+            ))}
+            {filteredNodes?.length === 0 && !isLoading && (nodes?.length ?? 0) > 0 && (
+              <div className="text-center p-8 text-warmGray">
+                Không tìm thấy thiết bị nào khớp với bộ lọc.
               </div>
             )}
+          </div>
+        </div>
 
-            {(node.status !== "PENDING" || canOnboard) && (
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-warmGray/10 pt-3">
-                {node.status !== "PENDING" && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setScheduleNodeId(node._id)}
-                    >
-                      Lịch loa ru
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setAudioNodeId(node._id)}
-                    >
-                      File loa ru
-                    </Button>
-                  </>
-                )}
-                {canOnboard && node.status === "ONLINE" && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setReassignNodeId(node._id)}
-                  >
-                    Dời sang Zone khác
-                  </Button>
-                )}
-                {canOnboard && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setReplaceNodeId(node._id)}
-                    >
-                      Thay thiết bị
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setDecommissionNodeId(node._id)}
-                    >
-                      Gỡ thiết bị
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
+        <Modal
+          open={showRegister}
+          onClose={() => setShowRegister(false)}
+          title="Kích hoạt thiết bị"
+        >
+          <form onSubmit={handleRegister} className="flex flex-col gap-4">
+            <Input
+              label="Device ID"
+              required
+              value={deviceId}
+              onChange={(e) => setDeviceId(e.target.value)}
+              placeholder="VD: node_001 (in trên vỏ ESP32)"
+            />
+            <Input
+              label="secretKey"
+              required
+              value={secretKey}
+              onChange={(e) => setSecretKey(e.target.value)}
+              placeholder="VD: ABCD-EFGH-JKMN (in trên nhãn thiết bị)"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <p className="text-xs text-warmGray">
+              Sau khi kích hoạt, thiết bị ở trạng thái “Chờ kết nối” cho tới khi
+              gửi heartbeat đầu tiên. Cấp nguồn ESP32 và cấu hình WiFi của farm
+              cho thiết bị qua AP-mode để hoàn tất — hệ thống tự nhận đúng Zone,
+              không cần thao tác gì thêm.
+            </p>
+            <Button
+              type="submit"
+              loading={registering}
+              disabled={!deviceId.trim() || !secretKey.trim()}
+              className="w-full"
+            >
+              Kích hoạt
+            </Button>
+          </form>
+        </Modal>
 
-      <Modal
-        open={showRegister}
-        onClose={() => setShowRegister(false)}
-        title="Kích hoạt thiết bị"
-      >
-        <form onSubmit={handleRegister} className="flex flex-col gap-4">
-          <Input
-            label="Device ID"
-            required
-            value={deviceId}
-            onChange={(e) => setDeviceId(e.target.value)}
-            placeholder="VD: node_001 (in trên vỏ ESP32)"
+        <Modal
+          open={reassignNodeId !== null}
+          onClose={() => {
+            setReassignNodeId(null);
+            setReassignTarget({});
+          }}
+          title="Dời thiết bị sang Zone khác"
+        >
+          <form onSubmit={handleReassign} className="flex flex-col gap-4">
+            <FarmHouseZonePicker
+              value={reassignTarget}
+              onChange={setReassignTarget}
+            />
+            <p className="text-xs text-warmGray">
+              Thiết bị sẽ khởi động lại và kết nối lại theo Zone mới (~5-10
+              giây). Chỉ thực hiện được khi thiết bị đang online.
+            </p>
+            <Button
+              type="submit"
+              loading={reassigning}
+              disabled={!reassignTarget.zoneId}
+              className="w-full"
+            >
+              Xác nhận dời Zone
+            </Button>
+          </form>
+        </Modal>
+
+        {scheduleNode && (
+          <SpeakerScheduleModal
+            node={scheduleNode}
+            onClose={() => setScheduleNodeId(null)}
           />
-          <Input
-            label="secretKey"
-            required
-            value={secretKey}
-            onChange={(e) => setSecretKey(e.target.value)}
-            placeholder="VD: ABCD-EFGH-JKMN (in trên nhãn thiết bị)"
-            autoComplete="off"
-            spellCheck={false}
+        )}
+
+        {audioNode && (
+          <AudioTracksModal
+            node={audioNode}
+            onClose={() => setAudioNodeId(null)}
           />
-          <p className="text-xs text-warmGray">
-            Sau khi kích hoạt, thiết bị ở trạng thái “Chờ kết nối” cho tới khi
-            gửi heartbeat đầu tiên. Cấp nguồn ESP32 và cấu hình WiFi của farm
-            cho thiết bị qua AP-mode để hoàn tất — hệ thống tự nhận đúng Zone,
-            không cần thao tác gì thêm.
-          </p>
-          <Button
-            type="submit"
-            loading={registering}
-            disabled={!deviceId.trim() || !secretKey.trim()}
-            className="w-full"
-          >
-            Kích hoạt
-          </Button>
-        </form>
-      </Modal>
+        )}
 
-      <Modal
-        open={reassignNodeId !== null}
-        onClose={() => {
-          setReassignNodeId(null);
-          setReassignTarget({});
-        }}
-        title="Dời thiết bị sang Zone khác"
-      >
-        <form onSubmit={handleReassign} className="flex flex-col gap-4">
-          <FarmHouseZonePicker
-            value={reassignTarget}
-            onChange={setReassignTarget}
+        <ReplaceDeviceModal
+          node={replaceNode}
+          onClose={() => setReplaceNodeId(null)}
+        />
+        <DecommissionDeviceModal
+          node={decommissionNode}
+          onClose={() => setDecommissionNodeId(null)}
+        />
+
+        <ConfirmModal
+          open={rebootNode !== null}
+          title="Khởi động lại thiết bị?"
+          description={rebootNode ? `Thiết bị ${rebootNode.device_id} sẽ mất kết nối trong vài giây rồi tự kết nối lại. Rơ-le đang chạy có thể bị ngắt tạm thời.` : undefined}
+          confirmLabel="Khởi động lại"
+          danger
+          loading={sendCommand.isPending}
+          onConfirm={handleReboot}
+          onCancel={() => setRebootNodeId(null)}
+        />
+
+        {showThresholds && (
+          <ThresholdsModal
+            zoneId={selectedZoneId}
+            zoneName={selectedZoneName ?? ""}
+            onClose={() => setShowThresholds(false)}
           />
-          <p className="text-xs text-warmGray">
-            Thiết bị sẽ khởi động lại và kết nối lại theo Zone mới (~5-10
-            giây). Chỉ thực hiện được khi thiết bị đang online.
-          </p>
-          <Button
-            type="submit"
-            loading={reassigning}
-            disabled={!reassignTarget.zoneId}
-            className="w-full"
-          >
-            Xác nhận dời Zone
-          </Button>
-        </form>
-      </Modal>
+        )}
 
-      {scheduleNode && (
-        <SpeakerScheduleModal
-          node={scheduleNode}
-          onClose={() => setScheduleNodeId(null)}
-        />
-      )}
-
-      {audioNode && (
-        <AudioTracksModal
-          node={audioNode}
-          onClose={() => setAudioNodeId(null)}
-        />
-      )}
-
-      <ReplaceDeviceModal
-        node={replaceNode}
-        onClose={() => setReplaceNodeId(null)}
-      />
-      <DecommissionDeviceModal
-        node={decommissionNode}
-        onClose={() => setDecommissionNodeId(null)}
-      />
-
-      {showThresholds && (
-        <ThresholdsModal
-          zoneId={selectedZoneId}
-          zoneName={selectedZoneName ?? ""}
-          onClose={() => setShowThresholds(false)}
-        />
-      )}
+      </Card>
     </div>
   );
 }

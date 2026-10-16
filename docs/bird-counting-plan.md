@@ -26,7 +26,7 @@
 16. [Hai chế độ chạy: dev và deploy](#16-hai-chế-độ-chạy-dev-và-deploy)
 17. [Nhà yến dùng 4G và máy tính tại chỗ](#17-nhà-yến-dùng-4g-và-máy-tính-tại-chỗ)
 18. [Phương án ưu tiên: chạy model trên cloud, không đặt máy tại nhà yến](#18-phương-án-ưu-tiên-chạy-model-trên-cloud-không-đặt-máy-tại-nhà-yến)
-19. [Cấu hình đã chốt: Internet VNPT có IP public + camera VNPT tặng kèm](#19-cấu-hình-đã-chốt-internet-vnpt-có-ip-public--camera-vnpt-tặng-kèm)
+19. [Cấu hình đã chốt: Internet VNPT có IP public + camera IP nối dây](#19-cấu-hình-đã-chốt-internet-vnpt-có-ip-public--camera-ip-nối-dây)
 
 > **Đọc theo thứ tự nào:** mục 1 mô tả kiến trúc hiện hành. Mục 5–11 là code và quy trình dùng chung cho mọi phương án. Mục 15 (hạ tầng cloud), 18 (model chạy trên VPS) và 19 (Internet VNPT + camera) là chi tiết của kiến trúc hiện hành. Mục 17 (4G) và mọi chỗ nhắc "PC nhà yến" là phương án lùi, chỉ đọc khi trượt cổng kiểm tra ở mục 19.5.
 
@@ -38,7 +38,7 @@
 NHÀ YẾN                                          CLOUD (VPS, có tên miền + HTTPS)
 ───────                                          ────────────────────────────────
 Camera IP (RTSP, H.264, 25 fps)
-   │ Wi-Fi/LAN
+   │ LAN (PoE)
    ▼
 Modem VNPT (IP public, mở 1 cổng về camera) ──Internet──► MediaMTX kéo hình gốc  "cam-<id>-raw"
                                                               │
@@ -117,7 +117,6 @@ SRS trước v2.1 ghi VISION-FR-008/009/011 là "✅ Xong", nhưng thực tế c
 | Máy chủ cloud | VPS Ubuntu, **4 vCPU loại dedicated, 8 GB RAM**, IP công khai, khu vực Singapore | Cần kiểm tra giá: cỡ máy này đắt hơn rõ rệt và có thể dùng gần hết tín dụng sinh viên trong 1–2 tháng | Chạy backend, MongoDB, EMQX, MediaMTX, Caddy **và model đếm chim** (mục 18.4). Cỡ 2 vCPU / 4 GB chỉ đủ khi model chạy trên máy tại nhà yến |
 | Tên miền | Tên miền thật | 0đ nếu lấy qua gói sinh viên | Cần để có HTTPS và chứng chỉ cho MQTT/video |
 | Internet tại nhà yến | Cáp quang VNPT, IP public; upload từ khoảng 10 Mbps | Cước hằng tháng theo gói | VPS kéo hình thẳng từ camera qua cổng mở trên modem (mục 19) |
-| Camera (đã có) | Camera trong nhà 2K của VNPT, tặng kèm gói mạng | 0đ | Dùng được nếu lấy được RTSP; 20 khung hình/giây, góc rộng (mục 19.3) |
 | Camera (đã mua) | TP-Link VIGI C320I ống kính 6 mm (2MP, IR 850 nm, RTSP) + bộ cấp PoE TP-Link TL-POE150S | đã mua | Camera chính cho đếm chim; nối dây LAN vào modem, không phụ thuộc Wi-Fi |
 | Camera tạm | Điện thoại Android cũ + app IP Webcam | 0đ | Đủ để thu dữ liệu và demo |
 | Mạng | Router/switch sẵn có, cáp LAN | — | PC và camera cùng một LAN |
@@ -809,7 +808,7 @@ Có thể đặt Task Scheduler chạy lệnh `ffmpeg` trên lúc 05:25 và 17:2
 
 | Cách | Khi nào dùng | Lưu ý |
 |---|---|---|
-| Ghi qua RTSP bằng lệnh `ffmpeg` ở trên | Có laptop tại nhà yến trong giờ chim bay | Tốt nhất: clip giống hệt luồng hình pipeline sẽ nhận khi chạy thật |
+| Ghi qua RTSP bằng lệnh `ffmpeg` ở trên | Laptop kéo được luồng RTSP trong giờ chim bay: tại nhà yến qua LAN, hoặc từ xa qua IP public (mục 16.6) | Tốt nhất: clip giống hệt luồng hình pipeline sẽ nhận khi chạy thật |
 | Camera tự ghi vào thẻ microSD | Không có máy tính tại chỗ | Đặt ghi **liên tục** (không phải chỉ khi có chuyển động) và chất lượng cao nhất. File có thể là H.265 hoặc định dạng riêng của hãng; chuyển về MP4 bằng `ffmpeg -i <file gốc> -c:v libx264 -crf 18 <YYYYMMDD_phiên_số>.mp4`. Kiểm tra độ phân giải có trùng luồng RTSP không; nếu khác thì ưu tiên cách trên |
 | Tải clip về từ app của hãng trên điện thoại | Chỉ để bổ sung, khi hai cách trên không làm được | Chỉ dùng clip **tải bản gốc** từ thẻ nhớ qua app, không dùng clip quay màn hình hay clip xem lại chất lượng thấp. Kiểm tra bằng `ffprobe <file>`: độ phân giải và fps phải trùng luồng RTSP. Clip sự kiện ngắn (10–30 giây) dùng được để train nhưng không dùng được để đo sai số đếm. Tải khi điện thoại đang ở Wi-Fi nhà yến, vì tải từ xa sẽ kéo video qua 4G |
 
@@ -1640,7 +1639,7 @@ Checklist:
 - Tên miền: tên miền thật, lấy miễn phí qua gói sinh viên nếu còn ưu đãi.
 - Mọi kết nối từ ngoài vào đều mã hóa: HTTPS (443), MQTT qua TLS (8883), đẩy video qua TLS (8322). Không mở cổng 1883 hay 8554 ra Internet.
 - ESP32: cài TLS, có giới hạn thời gian và phương án lùi (mục 15.7).
-- Nhà yến lắp cáp quang VNPT có IP public, dùng camera VNPT tặng kèm nếu lấy được RTSP; VPS kéo hình thẳng từ camera (mục 19). Phương án 4G ở mục 17 không còn dùng.
+- Nhà yến lắp cáp quang VNPT có IP public, camera IP có RTSP mua riêng và nối dây vào modem; VPS kéo hình thẳng từ camera (mục 19). Phương án 4G ở mục 17 không còn dùng.
 - Không có máy dư để đặt tại nhà yến → thử chạy model trên cloud trước (mục 18), có 5 cổng kiểm tra; trượt thì quay về đặt máy tại chỗ.
 
 ---
@@ -2167,7 +2166,7 @@ Quy trình: làm và thử mọi thứ ở **dev** trước (nhanh, không tốn
 | Mục đích | Viết code, hiệu chỉnh, train, kiểm thử | Chạy thật, hội đồng xem từ xa |
 | Chi phí | 0đ | VPS + tên miền (0đ nếu có gói sinh viên) |
 | Ai xem được | Máy của bạn; thiết bị cùng Wi-Fi nếu cấu hình IP LAN | Bất kỳ đâu có Internet |
-| Nguồn hình | File clip hoặc camera trong LAN | Camera tại nhà yến + camera demo |
+| Nguồn hình | File clip, camera trong LAN, hoặc camera tại nhà yến kéo từ xa qua IP public (mục 16.6) | Camera tại nhà yến + camera demo |
 | Hạ tầng | `docker-compose.yml` ở gốc repo + `npm run dev` | `deploy/docker-compose.prod.yml` |
 | Frontend | Vite `http://localhost:5173` | Caddy `https://<tên miền>` |
 | Backend | `npm run dev` trên máy, cổng 3000 | Container, sau Caddy |
@@ -2270,6 +2269,40 @@ Chỉ đưa lên cloud khi mức 2 ở dev đã đạt đủ:
 - [ ] Mở WHEP không kèm token bị từ chối (401).
 
 Lỗi xuất hiện trên cloud mà không có ở dev gần như chắc chắn nằm ở hạ tầng (DNS, chứng chỉ, tường lửa, biến môi trường), không nằm ở code — kiểm tra theo bảng 10 bước ở mục 15.9.
+
+### 16.6. Dev từ xa: kéo hình camera nhà yến về laptop
+
+Nhà yến ở xa nên thu clip và chạy thử pipeline đều làm từ laptop ở nhà, không đặt máy nào tại nhà yến. Laptop đóng đúng vai trò VPS sau này: kéo RTSP qua IP public của modem (mục 19.4). Train vẫn trên Colab (mục 7.5), không phụ thuộc chỗ ngồi.
+
+**Phải làm tại nhà yến (một lần, lúc lắp):** lắp và ngắm camera (mục 3.3), các việc ở mục 19.2, mở cổng RTSP và DDNS ở mục 19.4. Không mở cổng quản trị modem hay camera ra Internet để chỉnh từ xa. Sau đó chỉ phải quay lại khi camera bị lệch, cần chỉnh góc hoặc mất kết nối không tự hồi phục.
+
+**Cho laptop vào được cổng camera:** nếu modem lọc IP nguồn (cổng 3c), thêm IP mạng nhà bạn vào luật. IP nhà thường là IP động; khi đổi thì phải sửa luật, và sửa luật cần vào trang quản trị modem tại chỗ. Nếu tạm mở cổng cho mọi nơi trong giai đoạn dev: mật khẩu camera mạnh, cổng ngoài không mặc định, cập nhật firmware camera, và ghi là hạn chế trong báo cáo. Hình trên đường này không mã hóa.
+
+**Giữ mật khẩu ngoài repo:** lưu địa chỉ RTSP vào biến môi trường của Windows, không ghi vào file trong repo:
+
+```powershell
+setx CAM_URL "rtsp://USER:PASS@<IP public hoặc tên DDNS>:18554/<đường dẫn rtsp>"   # mở cửa sổ PowerShell mới để có biến
+ffplay -rtsp_transport tcp $env:CAM_URL                                              # kiểm tra: thấy hình, góc đúng
+python src/stream.py --source $env:CAM_URL --session MORNING_EXIT --no-mqtt          # chạy pipeline với hình thật
+```
+
+**Thu clip theo lịch:** đường truyền qua Internet có thể rớt giữa phiên; `ffmpeg` dừng khi rớt, nên ghi bằng vòng lặp ghi tiếp sang file mới cho tới hết giờ. `-timeout` (micro giây) để `ffmpeg` thoát thay vì treo khi luồng đứng hình. Lưu file này ngoài repo hoặc trong `ai-pipeline/tools/`, chạy trong thư mục `ai-pipeline`:
+
+```powershell
+# record_session.ps1 — ghi 90 phút, tên file theo quy ước ở mục 7.1
+$end = (Get-Date).AddMinutes(90); $i = 1
+$session = if ((Get-Date).Hour -lt 12) { 'morning' } else { 'evening' }
+while ((Get-Date) -lt $end) {
+  $left = [int]($end - (Get-Date)).TotalSeconds
+  $out  = "clips/{0:yyyyMMdd}_{1}_{2:d2}.mp4" -f (Get-Date), $session, $i
+  ffmpeg -n -rtsp_transport tcp -timeout 10000000 -i $env:CAM_URL -c copy -t $left $out
+  $i++; Start-Sleep -Seconds 10
+}
+```
+
+Đặt Task Scheduler chạy script lúc 05:25 và 17:25, tick "Wake the computer to run this task" và tắt chế độ ngủ khi cắm sạc; laptop phải bật và có mạng trong giờ chim bay. Sau mỗi phiên kiểm tra nhanh bằng `ffprobe`: tổng thời lượng các file gần đủ 90 phút. Nhiều file ngắn liền nhau nghĩa là đường truyền chập chờn — cùng dấu hiệu sẽ gặp ở cổng 3b khi lên VPS.
+
+Nếu camera có thẻ nhớ ghi liên tục, đó là bản dự phòng khi đường truyền rớt; nhưng lấy file thẻ nhớ phải tới nhà yến hoặc tải qua app.
 
 ---
 
@@ -2579,9 +2612,9 @@ Nếu trượt bất kỳ cổng nào: đặt một máy tính cũ tại nhà y�
 
 ---
 
-## 19. Cấu hình đã chốt: Internet VNPT có IP public + camera VNPT tặng kèm
+## 19. Cấu hình đã chốt: Internet VNPT có IP public + camera IP nối dây
 
-Đã chốt (08/10/2026): nhà yến lắp cáp quang **VNPT**, nhà mạng xác nhận cấp được **IP public**, kèm một camera trong nhà 2K dùng app ONE Home. Mục này thay cho phần 4G ở mục 17 và thay cho thiết bị chuyển tiếp ở mục 18.2.
+Đã chốt (08/10/2026): nhà yến lắp cáp quang **VNPT**, nhà mạng xác nhận cấp được **IP public**. VNPT không tặng kèm camera, nên camera mua riêng (mục 3.2, 19.3). Mục này thay cho phần 4G ở mục 17 và thay cho thiết bị chuyển tiếp ở mục 18.2.
 
 ### 19.1. Thay đổi so với các mục trước
 
@@ -2590,13 +2623,13 @@ Nếu trượt bất kỳ cổng nào: đặt một máy tính cũ tại nhà y�
 | Internet nhà yến | Router 4G | Cáp quang VNPT, IP public |
 | Đưa video lên VPS | Thiết bị chuyển tiếp (router WireGuard / điện thoại) | **VPS kéo thẳng RTSP từ camera** qua cổng mở trên modem — không cần thiết bị nào thêm |
 | Dung lượng | Khoảng 80 GB/tháng là vấn đề | Không giới hạn |
-| Camera | Chưa chọn | Camera VNPT tặng kèm, **nếu lấy được RTSP** (mục 19.3) |
+| Camera | Chưa chọn | Camera IP có RTSP, mua riêng, cấp nguồn PoE và nối dây LAN vào modem (mục 3.2, 19.3) |
 | Máy tính tại nhà yến | Cần, hoặc thử cloud | Không có; model chạy trên VPS (mục 18) |
 
 Tại nhà yến chỉ còn: modem VNPT, camera, các ESP32.
 
 ```
-Camera ──Wi-Fi──► modem VNPT (IP public, mở 1 cổng về camera) ──Internet──► VPS
+Camera ──LAN──► modem VNPT (IP public, mở 1 cổng về camera) ──Internet──► VPS
                                                                  MediaMTX kéo RTSP ─► pipeline ─► web
 ```
 
@@ -2608,31 +2641,17 @@ Camera ──Wi-Fi──► modem VNPT (IP public, mở 1 cổng về camera) �
 | 2 | So sánh **WAN IP** trong modem với IP hiện trên trang "what is my IP" | Hai địa chỉ giống nhau. Nếu WAN IP bắt đầu bằng `100.64`–`100.127`, `10.` hoặc `192.168.` thì chưa phải IP public → gọi tổng đài yêu cầu chuyển, lý do "mở port camera" |
 | 3 | Hỏi IP là động hay tĩnh | Biết để chọn cách ở mục 19.4 |
 | 4 | Đo tốc độ upload ngay tại vị trí đặt camera | Từ khoảng 10 Mbps |
-| 5 | Kiểm tra sóng Wi-Fi tại vị trí camera (camera chỉ dùng Wi-Fi 2,4 GHz) | Sóng mạnh, ổn định; nếu yếu thì dời modem hoặc thêm bộ phát |
+| 5 | Đi dây LAN từ modem qua bộ cấp PoE tới vị trí camera | Camera lên nguồn và hiện trong danh sách thiết bị của modem |
 | 6 | Trong modem, gán IP LAN cố định cho camera (DHCP reservation) | Camera luôn nhận cùng một IP |
 | 7 | Cho các ESP32 vào Wi-Fi mới qua captive portal | ESP32 lên ONLINE |
 
-### 19.3. Camera VNPT: kiểm tra và cài đặt
+### 19.3. Camera: kiểm tra và cài đặt
 
-> **Cập nhật 13/10/2026:** nhóm đã mua **TP-Link VIGI C320I ống kính 6 mm** (2MP, IR 850 nm) kèm bộ cấp PoE TP-Link TL-POE150S và dùng nó làm camera chính, nối dây LAN vào modem. Camera VNPT mô tả dưới đây chỉ còn là phương án dự phòng; các bước liên quan tới Wi-Fi của camera (mục 19.2 việc 5) không áp dụng cho camera nối dây. Các cổng kiểm tra ở mục 19.5 vẫn áp dụng nguyên cho camera mới.
+Camera là loại camera IP mua riêng, đạt các yêu cầu ở mục 3.2, cấp nguồn PoE và nối dây LAN vào modem (không dùng Wi-Fi).
 
-Camera tặng kèm nhiều khả năng là **VNPT Smart Camera IS310P** (suy ra từ mô tả; kiểm tra mã trên nhãn). Thông số theo trang của VNPT Technology:
+Các bước kiểm tra (khoảng 30 phút, laptop cắm cùng modem với camera):
 
-| Thông số | Giá trị | Ảnh hưởng |
-|---|---|---|
-| ONVIF | Có ("kết nối với đầu ghi NVR") | Hầu như luôn kèm RTSP, nhưng trang **không ghi chữ RTSP** → phải thử |
-| Độ phân giải | 2304 × 1296, hai luồng | Tốt |
-| Tốc độ khung hình | 20 khung hình/giây | Thấp hơn mức 25–30 mong muốn; chim di chuyển xa hơn giữa hai khung. Bù lại nhẹ cho VPS |
-| Ống kính | Cố định 3,2 mm, góc ngang khoảng 77° | Góc rộng → chim nhỏ; đặt camera cách lỗ ra vào khoảng 1–2 m |
-| Hồng ngoại | Tầm 10 m, 850 nm | Đủ cho chạng vạng. **Lưu ý:** đèn 850 nm phát ánh đỏ mờ nhìn thấy được → phải qua cổng 6 (mục 19.5) |
-| Thẻ nhớ | microSD tới 256 GB, ghi liên tục | Dùng thu dữ liệu train và làm chuẩn so sánh (cổng 4) |
-| Mạng | Wi-Fi 2,4 GHz | Phụ thuộc chất lượng sóng |
-| Môi trường | 0–45°C, độ ẩm tới 95% không ngưng tụ | Sát giới hạn nhà yến; đặt xa vòi phun sương |
-| Màn trập | Không thấy mục chỉnh | Không giảm được nhòe chuyển động |
-
-Các bước kiểm tra (khoảng 30 phút, laptop vào cùng Wi-Fi với camera):
-
-1. Trong app ONE Home, tìm mục ONVIF; bật và đặt mật khẩu riêng, mạnh.
+1. Tìm IP của camera trong danh sách thiết bị của modem (hoặc bằng công cụ của hãng). Vào trang quản trị của camera, đổi mật khẩu thành mật khẩu riêng, mạnh; bật RTSP và ONVIF nếu đang tắt.
 2. Chạy **ONVIF Device Manager** (miễn phí, Windows). Nếu thấy camera và hiện địa chỉ `rtsp://…` thì dùng được.
 3. Xem hình và đọc thông số:
 
@@ -2645,13 +2664,12 @@ ffprobe -rtsp_transport tcp "<địa chỉ rtsp>"     # ghi lại: H.264 hay H.2
 
 Cài đặt bắt buộc:
 
-- **Tắt "quay quét bám theo chuyển động".** Camera tự xoay thì ROI và vạch đếm sai hết.
+- **Tắt mọi chế độ tự xoay/bám theo chuyển động nếu có.** Camera tự xoay thì ROI và vạch đếm sai hết.
 - **Tắt báo động khi phát hiện chuyển động, đàm thoại và mọi âm báo.** Tiếng động trong nhà yến làm chim hoảng.
-- Chọn luồng chính, độ phân giải cao nhất, bitrate cố định (CBR) khoảng 2 Mbps nếu có mục chọn; chọn H.264 nếu có.
-- Bật ghi **liên tục** vào thẻ microSD.
-- Rút điện rồi cắm lại, kiểm tra camera có trở về đúng góc cũ không. Nếu lệch, phải chỉnh lại ROI sau mỗi lần mất điện — ghi nhận là hạn chế, hoặc đổi camera ống kính cố định.
+- Chọn luồng chính, độ phân giải cao nhất, **H.264**, 25 khung hình/giây, bitrate cố định (CBR) khoảng 2 Mbps.
+- Nếu có khe thẻ nhớ: bật ghi **liên tục** vào thẻ microSD (dùng cho cổng 4).
 
-Cấu hình pipeline cho camera này (`config.vps.yaml`):
+Cấu hình pipeline (`config.vps.yaml`): `camera.fps` phải bằng tốc độ khung hình thật của camera (đọc bằng `ffprobe` ở bước 3). Nếu camera chỉ chạy được khoảng 20 khung hình/giây thì nới box tracking:
 
 ```yaml
 camera:
@@ -2659,10 +2677,6 @@ camera:
 tracking:
   box_pad: 3.0            # 20 khung hình/giây → nới box nhiều hơn mặc định 2.5
 ```
-
-Nếu **không lấy được RTSP**: mua riêng một camera có RTSP (Tapo hoặc Imou, vài trăm nghìn đồng) cho việc đếm; camera VNPT dùng để quan sát chung.
-
-Gói cloud 7 ngày của camera (trang bán hàng ghi 40.000đ, có vẻ tính theo tháng) không cần cho hệ thống này; hỏi VNPT xem gói tặng kèm có tự gia hạn tính phí không.
 
 ### 19.4. Cho VPS kéo hình từ camera
 
@@ -2716,11 +2730,11 @@ ffprobe -rtsp_transport tcp "rtsp://TAIKHOAN:MATKHAU@<địa chỉ nhà yến>:1
 
 | Cổng | Cách kiểm tra | Đạt khi | Trượt thì |
 |---|---|---|---|
-| 1. Tốc độ VPS | Như mục 18.6, với video 20 khung hình/giây | FPS xử lý ≥ 20, ổn định 10 phút | Áp dụng lần lượt các bước ở mục 18.4; vẫn trượt → đặt máy tại chỗ |
-| 2. Sai số ở cấu hình giảm | Như mục 18.6, đo với clip 20 khung hình/giây của chính camera này | Sai số ≤ 10% | Thử camera 25–30 khung hình/giây; vẫn trượt → xem lại cách lắp |
+| 1. Tốc độ VPS | Như mục 18.6, với video đúng tốc độ khung hình của camera | FPS xử lý ≥ tốc độ khung hình của camera, ổn định 10 phút | Áp dụng lần lượt các bước ở mục 18.4; vẫn trượt → đặt máy tại chỗ |
+| 2. Sai số ở cấu hình giảm | Như mục 18.6, đo với clip của chính camera này | Sai số ≤ 10% | Tăng tốc độ khung hình của camera lên 25–30; vẫn trượt → xem lại cách lắp |
 | 3a. Camera có RTSP | Mục 19.3 | Xem được hình bằng `ffplay` trong LAN | Mua camera có RTSP |
 | 3b. VPS kéo được hình | `ffprobe` từ VPS (mục 19.4), rồi để MediaMTX kéo liên tục | 24 giờ không rớt quá vài lần, tự nối lại | Kiểm tra IP public, DDNS, NAT port; không được → thiết bị chuyển tiếp |
-| 4. Ảnh hưởng đường truyền tới số đếm | So số đếm cloud với số đếm chạy trên file thẻ nhớ của cùng phiên | Chênh ≤ 5% trong ít nhất 3 phiên | Kiểm tra sóng Wi-Fi của camera, hạ bitrate; vẫn trượt → đặt máy tại chỗ |
+| 4. Ảnh hưởng đường truyền tới số đếm | So số đếm cloud với số đếm chạy trên file thẻ nhớ của cùng phiên | Chênh ≤ 5% trong ít nhất 3 phiên | Kiểm tra tốc độ upload của đường mạng, hạ bitrate; vẫn trượt → đặt máy tại chỗ |
 | 3c. Modem lọc được IP nguồn | Tạo luật chỉ cho IP của VPS vào cổng camera, rồi thử `ffprobe` từ một mạng khác | Từ VPS vào được, từ mạng khác **không** vào được | Dùng router có WireGuard (mục 18.2) hoặc đặt máy tại chỗ; nếu vẫn mở cổng cho mọi nơi thì phải ghi rõ là hạn chế bảo mật trong báo cáo |
 | 5. Chất lượng hình cho việc đếm | Xem clip thử: kích thước chim trong ROI | Chim ≥ khoảng 15 px mỗi chiều, không nhòe thành vệt dài | Đưa camera lại gần lỗ; hoặc đổi camera |
 | 6. Chim không phản ứng với đèn hồng ngoại | Hỏi người nuôi yến trước khi lắp; sau khi lắp, quan sát vài phiên chiều lúc đèn IR bật (chim có né cửa, lượn lâu hơn không) và so số chim về với các ngày trước khi lắp nếu có | Người nuôi yến đồng ý và không thấy thay đổi hành vi | Tắt IR (chấp nhận đếm kém lúc tối), hoặc đổi camera IR 940 nm |

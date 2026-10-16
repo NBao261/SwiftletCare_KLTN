@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { t, tr } from '@/i18n'
+import { cn } from '@/lib/cn'
 
 /** Modal Bottom Sheet cơ bản — mục 2.1 (rounded-3xl) */
 interface ModalProps {
@@ -15,11 +16,13 @@ interface ModalProps {
    * `xl` (max-w-3xl) — popup bố cục ngang 2 cột (danh mục trái + nội dung phải), VD chi tiết tài khoản
    */
   size?: 'md' | 'lg' | 'xl'
+  /** Ghi đè class của khung (VD `max-w-sm` cho popup xác nhận ngắn) — thắng `size` nhờ tailwind-merge */
+  className?: string
 }
 
 const SIZE_CLASS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-3xl' } as const
 
-export function Modal({ open, onClose, title, ariaLabel, children, size = 'md' }: ModalProps) {
+export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', className }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   // Nơi gọi hay truyền onClose inline (hàm mới mỗi render). Để onClose trong deps
   // thì mỗi phím gõ vào input → parent render lại → effect chạy lại → focus() giật
@@ -61,7 +64,7 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md' }
         role="dialog"
         aria-modal="true"
         aria-label={tr(title ?? ariaLabel)}
-        className={`relative w-full ${SIZE_CLASS[size]} rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none`}
+        className={cn('relative w-full rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none', SIZE_CLASS[size], className)}
       >
         {title ? (
           <div className="mb-4 flex items-center justify-between">

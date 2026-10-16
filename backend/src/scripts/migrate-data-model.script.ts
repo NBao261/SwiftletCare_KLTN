@@ -8,11 +8,11 @@
  * 1. `zones.farm_id` — điền từ House (Zone không bao giờ đổi farm).
  * 2. Refresh token cũ lưu dạng thô → `token_hash` (sha256), bỏ token đã hết hạn.
  *    Người dùng không bị đăng xuất.
- * 3. Mẻ thu hoạch có >1 tin đăng (trước khi có unique index): giữ tin mà mẻ trỏ tới
- *    (`listing_id`, không có thì tin cũ nhất), chuyển liên hệ của tin thừa sang, xoá
- *    tin thừa. Phải làm trước bước 5, nếu không unique index không tạo được.
- * 4. Lời mời PENDING của farm đã xoá mềm → EXPIRED (tránh auto-accept vào farm đã xoá).
- * 5. Tạo index mới trong schema (không xoá index nào).
+ * 3. Lời mời PENDING của farm đã xoá mềm → EXPIRED (tránh auto-accept vào farm đã xoá).
+ * 4. Tạo index mới trong schema (không xoá index nào).
+ *
+ * (Bước gộp tin đăng trùng của Marketplace đã bỏ cùng Marketplace ở SRS v2.0.0 —
+ * dữ liệu tin đăng cũ do `npm run migrate:scope-v2` dọn.)
  */
 import 'dotenv/config'
 import crypto from 'crypto'
@@ -21,8 +21,6 @@ import { connectDB } from '@/config/db.config'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { HarvestBatch } from '@/models/harvestBatch.model'
-import { NestListing } from '@/models/nestListing.model'
-import { ContactInquiry } from '@/models/contactInquiry.model'
 import logger from '@/utils/logger.util'
 
 type RawToken = { token?: string; token_hash?: string; expires: Date }
@@ -61,22 +59,6 @@ export async function migrateDataModel() {
   )
   logger.info(`[migrate] Băm refresh token của ${tokenUsers} user, dọn token hết hạn ở ${pruned.modifiedCount} user`)
 
-  const dupes = await db.collection('nestlistings').aggregate<{ _id: mongoose.Types.ObjectId; ids: mongoose.Types.ObjectId[] }>([
-    { $sort: { created_at: 1 } },
-    { $group: { _id: '$harvest_batch_id', ids: { $push: '$_id' } } },
-    { $match: { 'ids.1': { $exists: true } } },
-  ]).toArray()
-  let listingsRemoved = 0
-  for (const { _id: batchId, ids } of dupes) {
-    const batch = await db.collection('harvestbatches').findOne({ _id: batchId }, { projection: { listing_id: 1 } })
-    const keep = ids.find(id => batch?.listing_id && id.equals(batch.listing_id)) ?? ids[0]
-    const extra = ids.filter(id => !id.equals(keep))
-    await db.collection('contactinquiries').updateMany({ listing_id: { $in: extra } }, { $set: { listing_id: keep } })
-    listingsRemoved += (await db.collection('nestlistings').deleteMany({ _id: { $in: extra } })).deletedCount
-    await db.collection('harvestbatches').updateOne({ _id: batchId }, { $set: { listing_id: keep } })
-  }
-  logger.info(`[migrate] Gộp tin đăng trùng ở ${dupes.length} mẻ, xoá ${listingsRemoved} tin thừa`)
-
   const deletedFarmIds = await db.collection('farms').distinct('_id', { is_deleted: true })
   const invitations = await db.collection('invitations').updateMany(
     { farm_id: { $in: deletedFarmIds }, status: 'PENDING' },
@@ -84,10 +66,10 @@ export async function migrateDataModel() {
   )
   logger.info(`[migrate] Huỷ ${invitations.modifiedCount} lời mời của farm đã xoá`)
 
-  await Promise.all([Farm, House, Zone, HarvestBatch, NestListing, ContactInquiry].map(m => m.createIndexes()))
+  await Promise.all([Farm, House, Zone, HarvestBatch].map(m => m.createIndexes()))
   logger.info('[migrate] Đã tạo index mới')
 
-  return { zones, tokenUsers, tokensPruned: pruned.modifiedCount, listingsRemoved, invitationsExpired: invitations.modifiedCount }
+  return { zones, tokenUsers, tokensPruned: pruned.modifiedCount, invitationsExpired: invitations.modifiedCount }
 }
 
 if (require.main === module) {

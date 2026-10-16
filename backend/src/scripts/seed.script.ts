@@ -77,21 +77,21 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Farm already exists: ${farm._id}`)
   }
 
-  // ── User (Farm Operator) — nhân viên vận hành, phạm vi cả farm (AUTH-FR-005, v1.23.0) ──
-  let operator = await User.findOne({ email: 'operator@swiftletcare.dev' })
-  if (!operator) {
-    operator = await User.create({
-      email: 'operator@swiftletcare.dev',
+  // ── User (Domain Expert) — chuyên gia nuôi yến được mời vào farm (AUTH-FR-005, v2.0.0) ──
+  let expert = await User.findOne({ email: 'expert@swiftletcare.dev' })
+  if (!expert) {
+    expert = await User.create({
+      email: 'expert@swiftletcare.dev',
       password_hash: 'Test1234!',
-      full_name: 'Demo Farm Operator',
-      role: 'FARM_OPERATOR',
+      full_name: 'Demo Domain Expert',
+      role: 'DOMAIN_EXPERT',
     })
-    logger.info(`[seed] Created farm operator: ${operator.email} (password: Test1234!)`)
+    logger.info(`[seed] Created domain expert: ${expert.email} (password: Test1234!)`)
   }
-  if (!farm.members.some(m => String(m.user_id) === String(operator!._id))) {
-    farm.members.push({ user_id: operator._id, is_primary: false, role: 'FARM_OPERATOR', zone_ids: [] } as never)
+  if (!farm.members.some(m => String(m.user_id) === String(expert!._id))) {
+    farm.members.push({ user_id: expert._id, is_primary: false, role: 'DOMAIN_EXPERT' } as never)
     await farm.save()
-    logger.info(`[seed] Added ${operator.email} to farm ${farm._id} as FARM_OPERATOR (cả farm)`)
+    logger.info(`[seed] Added ${expert.email} to farm ${farm._id} as DOMAIN_EXPERT`)
   }
 
   // ── House ─────────────────────────────────────────────────────────────────

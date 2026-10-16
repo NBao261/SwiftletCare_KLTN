@@ -16,6 +16,7 @@ export type MetricKey = 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2'
 /** Số đo của 1 zone (trung bình 1h từ /analytics/env/compare, hoặc giá trị realtime qua socket) */
 export interface ZoneMetrics {
   temperature?: number; humidity?: number; light?: number; nh3?: number; co2?: number; sound?: number
+  timestamp?: string
 }
 
 export interface Breach { metric: MetricKey; value: number; limit: number; direction: 'high' | 'low' }

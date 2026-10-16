@@ -58,8 +58,8 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
   const existing = await User.findOne({ email: normalizedEmail })
   if (existing) throw ConflictError('Email đã được đăng ký')
 
-  // Flow 12 bước 3b — nếu email trùng một lời mời PENDING còn hạn (Farm Owner hoặc
-  // Farm Operator), lời mời tự động được accept ngay khi đăng ký xong và tài khoản
+  // Flow 12 bước 3b — nếu email trùng một lời mời PENDING còn hạn (đồng sở hữu hoặc
+  // Domain Expert), lời mời tự động được accept ngay khi đăng ký xong và tài khoản
   // mang đúng role được mời. Không có lời mời thì là Farm Owner tự đăng ký (mặc định).
   const invitation = await Invitation.findOne({
     invited_email: normalizedEmail,
@@ -87,8 +87,7 @@ export async function registerUser(input: RegisterInput): Promise<IUser> {
     await Farm.findByIdAndUpdate(invitation.farm_id, {
       $addToSet: {
         members: {
-          user_id: user._id, is_primary: false, role: invitation.invited_role,
-          zone_ids: invitation.zone_ids, joined_at: new Date(),
+          user_id: user._id, is_primary: false, role: invitation.invited_role, joined_at: new Date(),
         },
       },
     })
@@ -258,7 +257,7 @@ export async function resetPassword(email: string, token: string, newPassword: s
 /** ALERT-FR-005/006 — Farm Owner chọn kênh nhận thông báo + giờ im lặng */
 export async function updateNotificationPreferences(
   userId: string,
-  prefs: Partial<{ push: boolean; zalo: boolean; sms: boolean; quiet_hours: { start: string; end: string } }>,
+  prefs: Partial<{ push: boolean; telegram: boolean; zalo: boolean; sms: boolean; quiet_hours: { start: string; end: string } }>,
 ): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')

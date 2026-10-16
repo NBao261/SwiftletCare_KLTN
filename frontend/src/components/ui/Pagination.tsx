@@ -14,7 +14,33 @@ interface PaginationProps {
    * full     — « ‹ 1 2 3 … N › » cửa sổ luôn đủ 3 trang (các trang Admin: Ticket, Người dùng, Trang trại, Nhật ký…)
    */
   variant?: 'simple' | 'numbered' | 'full'
+  /** Chỉ variant `full`: chữ hiển thị theo ngôn ngữ của màn gọi — bỏ trống thì dùng tiếng Việt */
+  labels?: PaginationLabels
 }
+
+export interface PaginationLabels {
+  summary: (from: number, to: number, total: number) => string
+  nav: string
+  first: string
+  prev: string
+  page: (page: number) => string
+  next: string
+  last: string
+}
+
+/**
+ * Nhãn mặc định khi màn gọi không truyền `labels` — đi qua bản dịch i18n (`t`, VI/EN theo languageStore) nên các trang
+ * Admin (không truyền labels) vẫn đổi ngôn ngữ. Hàm, không phải hằng: đọc lại ngôn ngữ mỗi lần render
+ */
+const defaultLabels = (): PaginationLabels => ({
+  summary: (from, to, total) => t('Hiển thị {{from}}–{{to}} trong {{total}}', { from, to, total }),
+  nav: t('Phân trang'),
+  first: t('Trang đầu'),
+  prev: t('Trang trước'),
+  page: page => t('Trang {{n}}', { n: page }),
+  next: t('Trang sau'),
+  last: t('Trang cuối'),
+})
 
 function getPageNumbers(page: number, totalPages: number): (number | '…')[] {
   if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -48,8 +74,9 @@ export function pageItems(page: number, pageCount: number): (number | '…')[] {
 }
 
 /** Pager dùng chung — simple: Trước/Sau, numbered: số trang 1-2-…-N (Technician), full: « ‹ 1 2 3 … N › » (Admin) */
-export default function Pagination({ page, limit, total, onChange, variant = 'simple' }: PaginationProps) {
+export default function Pagination({ page, limit, total, onChange, variant = 'simple', labels: customLabels }: PaginationProps) {
   if (total <= limit) return null
+  const labels = customLabels ?? defaultLabels()
 
   const from       = (page - 1) * limit + 1
   const to         = Math.min(page * limit, total)
@@ -61,13 +88,13 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <p className="text-sm text-warmGray">
-          {t('Hiển thị {{from}}–{{to}} trong {{total}}', { from, to, total })}
+          {labels.summary(from, to, total)}
         </p>
-        <nav aria-label={t('Phân trang')} className="flex flex-wrap items-center gap-1">
-          <button type="button" className={ITEM_CLASS} aria-label={t('Trang đầu')} disabled={!hasPrev} onClick={() => onChange(1)}>
+        <nav aria-label={labels.nav} className="flex flex-wrap items-center gap-1">
+          <button type="button" className={ITEM_CLASS} aria-label={labels.first} disabled={!hasPrev} onClick={() => onChange(1)}>
             <IconChevronsRight width={16} height={16} className="rotate-180" />
           </button>
-          <button type="button" className={ITEM_CLASS} aria-label={t('Trang trước')} disabled={!hasPrev} onClick={() => onChange(page - 1)}>
+          <button type="button" className={ITEM_CLASS} aria-label={labels.prev} disabled={!hasPrev} onClick={() => onChange(page - 1)}>
             <IconChevronRight width={16} height={16} className="rotate-180" />
           </button>
           {pageItems(page, totalPages).map((item, i) =>
@@ -78,7 +105,7 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
                 key={item}
                 type="button"
                 aria-current={item === page ? 'page' : undefined}
-                aria-label={t('Trang {{n}}', { n: item })}
+                aria-label={labels.page(item)}
                 onClick={() => item !== page && onChange(item)}
                 className={cn(ITEM_CLASS, item === page && 'bg-charcoal font-semibold text-white hover:bg-charcoal')}
               >
@@ -86,10 +113,10 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
               </button>
             ),
           )}
-          <button type="button" className={ITEM_CLASS} aria-label={t('Trang sau')} disabled={!hasNext} onClick={() => onChange(page + 1)}>
+          <button type="button" className={ITEM_CLASS} aria-label={labels.next} disabled={!hasNext} onClick={() => onChange(page + 1)}>
             <IconChevronRight width={16} height={16} />
           </button>
-          <button type="button" className={ITEM_CLASS} aria-label={t('Trang cuối')} disabled={!hasNext} onClick={() => onChange(totalPages)}>
+          <button type="button" className={ITEM_CLASS} aria-label={labels.last} disabled={!hasNext} onClick={() => onChange(totalPages)}>
             <IconChevronsRight width={16} height={16} />
           </button>
         </nav>

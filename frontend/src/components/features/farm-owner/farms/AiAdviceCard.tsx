@@ -1,6 +1,6 @@
 import { RobotIcon, VideoCameraIcon } from '@phosphor-icons/react'
 import { useHouseAdvice } from '@/hooks/farm-owner/useFarmStructure'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceRow } from '@/components/features/farm-owner/farms/farmStructure'
 
@@ -9,7 +9,7 @@ import type { DeviceRow } from '@/components/features/farm-owner/farms/farmStruc
  * khi backend có endpoint, `useHouseAdvice` trả dữ liệu là khung tự đầy. Khối camera chỉ dùng mã camera node THẬT của nhà.
  */
 export default function AiAdviceCard({ houseId, camera }: { houseId: string; camera?: DeviceRow }) {
-  const { t } = useT(farmDict)
+  const { t } = useTranslation(farmDict)
   const { data: advice } = useHouseAdvice(houseId)
 
   return (

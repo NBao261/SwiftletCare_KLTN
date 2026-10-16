@@ -31,7 +31,7 @@ export function formatSlaCountdown(ticket: Ticket): { text: string; breached: bo
   const abs = Math.abs(diff)
   const h = Math.floor(abs / 3_600_000)
   const m = Math.floor((abs % 3_600_000) / 60_000)
-  const text = breached ? `+${h}h ${m}m vi phạm` : `Còn ${h}h ${m}m`
+  const text = breached ? `Trễ ${h}h ${m}m` : `Còn ${h}h ${m}m`
   return { text, breached }
 }
 
@@ -86,6 +86,15 @@ export function getSlaUrgency(ticket: Ticket): SlaUrgency {
   if (diff < 3_600_000)   return 'critical'  // < 1 giờ
   if (diff < 7_200_000)   return 'warning'   // < 2 giờ
   return 'ok'
+}
+
+/** Tỉ lệ thời gian SLA xử lý đã tiêu hao 0–1 (từ lúc tạo → hạn). null khi không có SLA hoặc ticket đã đóng. */
+export function getSlaProgress(ticket: Ticket): number | null {
+  if (!ticket.sla_resolve_due_at || ticket.status === 'CLOSED') return null
+  const start = new Date(ticket.created_at).getTime()
+  const due = new Date(ticket.sla_resolve_due_at).getTime()
+  if (!(due > start)) return null
+  return Math.min(1, Math.max(0, (Date.now() - start) / (due - start)))
 }
 
 // ── SAT Checklist ───────────────────────────────────────────────────────────────────────

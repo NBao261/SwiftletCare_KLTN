@@ -17,6 +17,8 @@ interface StatTileProps {
    * số + icon mang màu. Cùng kiểu ô "vượt ngưỡng" ReadingTile của Farm Owner. Không truyền = ô trắng bình thường
    */
   tone?: 'warning' | 'critical'
+  /** Cách gọi cũ của các trang Technician (develop) — `alert` = `tone="critical"` */
+  alert?: boolean
 }
 
 const TONE_CLASS = {
@@ -29,7 +31,8 @@ const TONE_CLASS = {
  * nền trắng, nhãn trái + icon tròn phải, số lớn, 1 dòng phụ. Mọi ô cùng tầng nên các tầng thẳng hàng
  * ngang giữa các ô.
  */
-export default function StatTile({ icon: TileIcon, iconClass, label, value, sub, className, valueBadge, tone }: StatTileProps) {
+export default function StatTile({ icon: TileIcon, iconClass, label, value, sub, className, valueBadge, tone: toneProp, alert }: StatTileProps) {
+  const tone = toneProp ?? (alert ? 'critical' : undefined)
   // Mặc định không tô màu ô — tốt/xấu ghi bằng chữ ở dòng phụ; chỉ tô khi nơi gọi truyền `tone`
   const toneClass = tone ? TONE_CLASS[tone] : undefined
   return (

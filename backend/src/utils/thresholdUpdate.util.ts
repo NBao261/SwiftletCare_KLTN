@@ -38,6 +38,7 @@ export async function applyThresholdUpdate(
   zone.thresholds = params.thresholds
   zone.threshold_history.push({
     changed_by: user._id as never,
+    changed_by_role: user.role,
     changed_at: new Date(),
     old_values: oldValues,
     new_values: params.historyValues,

@@ -1,5 +1,6 @@
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
+import { sendTelegram } from '@/services/telegram.service'
 import logger from '@/utils/logger.util'
 import type { IAlert } from '@/models/alert.model'
 import type { NotificationPreferences } from '@/types'
@@ -8,10 +9,10 @@ import type { NotificationPreferences } from '@/types'
  * Notification Service — ALERT-FR-002..006.
  *
  * PHẠM VI HIỆN TẠI: toàn bộ logic định tuyến (chọn người nhận, chọn kênh, giờ
- * im lặng, ngoại lệ CRITICAL) đã cài đặt thật và test được. Riêng bước GỬI cuối
- * cùng tới Firebase FCM / Zalo ZNS / SMS mới dừng ở mức ghi log, vì chưa có
- * credential thật của 3 dịch vụ này (RISK-07, checklist E6). Khi có key, chỉ cần
- * thay phần thân 3 hàm `sendPush/sendZalo/sendSms` — không phải sửa logic định tuyến.
+ * im lặng, ngoại lệ CRITICAL) đã cài đặt thật và test được. Kênh ngoài ứng dụng
+ * CHẠY THẬT là Telegram bot (ALERT-FR-013, services/telegram.service.ts) — phiếu v2
+ * cam kết "Telegram bot hoặc push", chỉ cần một trong hai. Firebase FCM vẫn dừng ở
+ * mức ghi log; Zalo ZNS và SMS nằm ngoài phạm vi SRS v2.0.0, adapter để nguyên không nối.
  */
 
 /** ALERT-FR-006 — giờ im lặng chỉ chặn được cảnh báo dưới mức CRITICAL */
@@ -33,47 +34,62 @@ function isWithinQuietHours(prefs: NotificationPreferences, now = new Date()): b
 }
 
 /**
- * Người cần nhận cảnh báo của 1 farm (AUTH-FR-005, ALERT-FR-005): chủ farm, mọi đồng
- * sở hữu, và Farm Operator có Zone của cảnh báo trong phạm vi — Operator giới hạn theo
- * Zone không nhận cảnh báo của Zone khác; cảnh báo cấp farm (không zone) thì ai cũng nhận.
+ * Người nhận cảnh báo vận hành của 1 farm (ALERT-FR-005): chủ farm và mọi đồng sở hữu.
+ * Domain Expert KHÔNG nhận cảnh báo vận hành ngoài ứng dụng (EXPERT-FR-007) — đó là
+ * việc của Farm Owner; chuyên gia thấy cảnh báo trong ứng dụng và nhận báo cáo sức khỏe.
  */
-export async function findRecipients(farmId: string, zoneId?: unknown) {
+export async function findRecipients(farmId: string) {
   const farm = await Farm.findById(farmId)
   if (!farm) return []
 
-  const members = farm.members.filter(m =>
-    m.role !== 'FARM_OPERATOR' || !zoneId || !m.zone_ids?.length || m.zone_ids.some(z => String(z) === String(zoneId)))
+  const members = farm.members.filter(m => m.role !== 'DOMAIN_EXPERT')
   const userIds = [farm.owner_id, ...members.map(m => m.user_id)]
   return User.find({ _id: { $in: userIds }, is_active: true }).lean()
 }
 
 export async function dispatchAlertNotification(alert: IAlert): Promise<void> {
-  const recipients = await findRecipients(String(alert.farm_id), alert.zone_id)
+  const recipients = await findRecipients(String(alert.farm_id))
   if (recipients.length === 0) {
     logger.warn('Cảnh báo không có người nhận', { alertId: String(alert._id), farmId: String(alert.farm_id) })
     return
   }
 
-  for (const user of recipients) {
+  // Mỗi người nhận gửi độc lập và song song: kênh của 1 người chậm/lỗi không được
+  // chặn cảnh báo (nhất là CRITICAL) của những người còn lại.
+  const results = await Promise.allSettled(recipients.map(async user => {
     const prefs = user.notification_preferences
     const muted = isWithinQuietHours(prefs) && alert.severity !== 'CRITICAL'
     if (muted) {
       logger.debug('Bỏ qua thông báo do giờ im lặng (ALERT-FR-006)', {
         alertId: String(alert._id), userId: String(user._id), severity: alert.severity,
       })
-      continue
+      return
     }
 
     const body = `[${alert.severity}] ${alert.title} — ${alert.message}`
 
-    // ALERT-FR-002: Push cho mọi mức; ALERT-FR-003: Zalo ZNS chỉ CRITICAL/HIGH;
-    // ALERT-FR-004: SMS là kênh dự phòng, chỉ dùng cho CRITICAL.
-    if (prefs?.push) await sendPush(String(user._id), alert.title, body)
-    if (prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH')) {
-      await sendZalo(user.phone, body)
-    }
-    if (prefs?.sms && alert.severity === 'CRITICAL') await sendSms(user.phone, body)
-  }
+    // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
+    // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot;
+    // ALERT-FR-003: Zalo ZNS chỉ CRITICAL/HIGH; ALERT-FR-004: SMS chỉ cho CRITICAL.
+    // Các kênh của 1 người cũng chạy song song; kênh nào ném lỗi thì ghi log riêng,
+    // không kéo theo kênh còn lại.
+    const channels: Array<[string, Promise<unknown> | undefined]> = [
+      ['push', prefs?.push ? sendPush(String(user._id), alert.title, body) : undefined],
+      ['telegram', prefs?.telegram !== false && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
+      ['zalo', prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH') ? sendZalo(user.phone, body) : undefined],
+      ['sms', prefs?.sms && alert.severity === 'CRITICAL' ? sendSms(user.phone, body) : undefined],
+    ]
+    const outcomes = await Promise.allSettled(channels.map(([, sending]) => sending))
+    outcomes.forEach((outcome, i) => {
+      if (outcome.status === 'rejected') {
+        logger.warn('Gửi thông báo cảnh báo thất bại', { alertId: String(alert._id), userId: String(user._id), channel: channels[i][0], err: outcome.reason })
+      }
+    })
+  }))
+  // Lỗi ngoài các kênh (đọc tuỳ chọn, tính giờ im lặng) — không được nuốt im lặng
+  results.forEach(result => {
+    if (result.status === 'rejected') logger.warn('Xử lý thông báo cho 1 người nhận thất bại', { alertId: String(alert._id), err: result.reason })
+  })
 }
 
 // ── Adapter tới nhà cung cấp ngoài (chưa nối credential thật) ───────────────
@@ -125,11 +141,19 @@ export interface NotifyUserOptions {
  */
 export async function notifyUser(userId: string, message: UserNotification, opts: NotifyUserOptions = {}): Promise<void> {
   try {
-    const user = await User.findById(userId).select('email notification_preferences').lean()
+    const user = await User.findById(userId).select('email is_active notification_preferences telegram_chat_id').lean()
     if (!user) return
 
-    if (!opts.emailOnly && user.notification_preferences?.push !== false) {
+    // Tài khoản bị khoá/đã xoá không nhận push hay Telegram (chat id vẫn còn sau khi khoá);
+    // email thì vẫn gửi — đó là đường báo cho chính họ việc bị khoá/xoá.
+    const emailOnly = opts.emailOnly || user.is_active === false
+    if (!emailOnly && user.notification_preferences?.push !== false) {
       await sendPush(String(user._id), message.title, message.body)
+    }
+    // Telegram là kênh duy nhất gửi thật (push/email mới ghi log): không đi qua đây thì
+    // báo cáo sức khỏe Zone, kết luận của chuyên gia… không tới được ai.
+    if (!emailOnly && user.notification_preferences?.telegram !== false && user.telegram_chat_id) {
+      await sendTelegram(user.telegram_chat_id, `${message.title}\n${message.body}`)
     }
     await sendEmail(opts.email ?? user.email, message.title, message.body)
   } catch (err) {

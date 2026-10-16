@@ -26,21 +26,21 @@ export function OTAConfirmModal({ node, firmware, loading, onClose, onConfirm }:
         <div className="rounded-xl border border-graphite/15 bg-graphite/[0.03] px-4 py-3">
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-warmGray">Thiết bị</dt>
-              <dd className="font-mono font-semibold text-charcoal">{node.device_id}</dd>
+              <dt className="label-caption">Thiết bị</dt>
+              <dd className="tabular-nums font-semibold text-charcoal">{node.device_id}</dd>
             </div>
             <div>
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-warmGray">Cập nhật lên</dt>
+              <dt className="label-caption">Cập nhật lên</dt>
               <dd className="font-bold text-charcoal">
-                <span className="font-mono text-xs text-warmGray line-through">{node.firmware_version ?? '—'}</span>
+                <span className="tabular-nums text-xs text-warmGray line-through">{node.firmware_version ?? '—'}</span>
                 {' → '}
-                <span className="font-mono">{firmware.version.trim()}</span>
+                <span className="tabular-nums">{firmware.version.trim()}</span>
               </dd>
             </div>
             <div className="col-span-2 min-w-0">
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-warmGray">Nguồn firmware</dt>
-              <dd className="truncate font-mono text-xs text-charcoal" title={firmware.url.trim()}>{firmware.url.trim()}</dd>
-              <dd className="mt-1 truncate font-mono text-[10px] text-warmGray" title={firmware.sha256.trim()}>SHA-256: {firmware.sha256.trim()}</dd>
+              <dt className="label-caption">Nguồn firmware</dt>
+              <dd className="truncate tabular-nums text-xs text-charcoal" title={firmware.url.trim()}>{firmware.url.trim()}</dd>
+              <dd className="mt-1 truncate tabular-nums text-[10px] text-warmGray" title={firmware.sha256.trim()}>SHA-256: {firmware.sha256.trim()}</dd>
             </div>
           </dl>
         </div>

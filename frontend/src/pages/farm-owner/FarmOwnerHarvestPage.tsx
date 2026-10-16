@@ -171,7 +171,8 @@ export default function FarmOwnerHarvestPage() {
 
       <HarvestStatsCards batches={allBatches} />
 
-      <div className="sticky top-0 z-10 -my-3 flex flex-wrap gap-2 rounded-2xl border border-warmGray/15 bg-white/80 p-[15px] shadow-card backdrop-blur-md">
+      {/* top-16: dính ngay dưới header kính (header nổi đè lên vùng cuộn, cao h-16) */}
+      <div className="sticky top-16 z-10 -my-3 flex flex-wrap gap-2 rounded-2xl border border-warmGray/15 bg-white/80 p-[15px] shadow-card backdrop-blur-md">
         {SECTIONS.map(s => (
           <button
             key={s.id}

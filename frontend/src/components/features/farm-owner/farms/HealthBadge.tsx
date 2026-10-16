@@ -1,5 +1,5 @@
 import { CircleIcon, WarningIcon } from '@phosphor-icons/react'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import type { HouseHealth } from '@/components/features/farm-owner/farms/farmStructure'
@@ -30,7 +30,7 @@ const LABEL_KEY = { EMPTY: 'health.empty', NORMAL: 'health.normal', ALERT: 'heal
 
 /** Nhãn trạng thái nhà/zone — luôn kèm chữ và ký hiệu, không chỉ truyền bằng màu (FE_Design 13.11) */
 export default function HealthBadge({ health }: { health: HouseHealth }) {
-  const { t } = useT(farmDict)
+  const { t } = useTranslation(farmDict)
   return (
     <span className={cn('inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-caption', HEALTH_STYLE[health].badge)}>
       {health === 'ALERT' ? <WarningIcon size={12} weight="bold" /> : <CircleIcon size={8} weight={health === 'NORMAL' ? 'fill' : 'bold'} />}

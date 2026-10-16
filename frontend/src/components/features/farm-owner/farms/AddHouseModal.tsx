@@ -3,7 +3,7 @@ import { Button, Input, Modal } from '@/components/ui'
 import SelectMenu from '@/components/ui/SelectMenu'
 import { useCreateHouse } from '@/hooks/shared/useFarms'
 import { useToastStore } from '@/stores/toastStore'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { getApiErrorMessage } from '@/lib/helpers'
 import type { Farm } from '@/types'
@@ -12,7 +12,7 @@ interface AddHouseModalProps { open: boolean; onClose: () => void; farms: Farm[]
 
 /** Thêm nhà yến (POST /farms/:id/houses) — chọn farm ngay trong form vì màn tổng quan gộp nhà của mọi farm */
 export default function AddHouseModal({ open, onClose, farms }: AddHouseModalProps) {
-  const { t } = useT(farmDict)
+  const { t } = useTranslation(farmDict)
   const push = useToastStore(s => s.push)
   const [farmId, setFarmId] = useState('')
   const [name, setName] = useState('')

@@ -1,94 +1,73 @@
-import { TrendingUp } from 'lucide-react'
 import { Badge, Card } from '@/components/ui'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import { useHouseStability } from '@/hooks/farm-owner/useFarmOwnerDashboard'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { dashboardDict } from '@/constants/dashboard.i18n'
+import { summarizeStability, type HouseStability, type StabilityStatus } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import { cn } from '@/lib/cn'
 
-/**
- * Điểm tổng hợp "sức khỏe môi trường" — không có công thức backend nào cộng
- * gộp 6 chỉ số môi trường thành 1 điểm /100 (ENV-FR-* chỉ có ngưỡng từng chỉ
- * số riêng lẻ). Giữ hằng số minh hoạ, khai rõ bằng dòng ghi chú italic bên dưới —
- * không suy diễn công thức thật khi chưa có yêu cầu nghiệp vụ cho nó.
- */
-const MOCK_ECO_SCORE = 94
-const MOCK_TREND_PERCENT = 4.2
+const DOT_CLASS: Record<StabilityStatus, string> = { FAULT: 'bg-safetyOrange', STABLE: 'bg-success', EMPTY: 'bg-warmGray/40' }
+const LABEL_CLASS: Record<StabilityStatus, string> = { FAULT: 'text-safetyOrange', STABLE: 'text-charcoal', EMPTY: 'text-warmGray' }
 
-function scoreBadge(score: number): { label: string; tone: 'positive' | 'warning' | 'critical' } {
-  if (score >= 90) return { label: 'Rất tối ưu', tone: 'positive' }
-  if (score >= 75) return { label: 'Tối ưu', tone: 'positive' }
-  if (score >= 60) return { label: 'Cần chú ý', tone: 'warning' }
-  return { label: 'Cảnh báo', tone: 'critical' }
-}
+// Trạng thái các nhà yến của farm
+export default function EcoHealthCard({ farmId }: { farmId: string }) {
+  const { t } = useTranslation(dashboardDict)
+  const { items, isLoading } = useHouseStability(farmId)
+  const { faultHouses, stableCount, hasDevices } = summarizeStability(items)
+  const hasFault = faultHouses.length > 0
 
-interface EcoHealthCardProps {
-  humidity?: number
-  temperature?: number
-  nh3?: number
-  humidityAnomaly?: boolean
-  temperatureAnomaly?: boolean
-  nh3Anomaly?: boolean
-}
-
-/** "Chỉ số sinh thái tổ" — card trái Dashboard (screenshot mục 1). */
-export default function EcoHealthCard({
-  humidity, temperature, nh3, humidityAnomaly, temperatureAnomaly, nh3Anomaly,
-}: EcoHealthCardProps) {
-  const badge = scoreBadge(MOCK_ECO_SCORE)
+  let note = t('stability.noDevicesNote')
+  if (hasFault) note = faultHouses.map(house => t('stability.faultLine', { name: house.name, n: house.faultyDevices })).join('; ')
+  else if (hasDevices) note = t('stability.allNormal')
 
   return (
     <Card size="lg" className="flex h-full flex-col gap-5">
-      <p className="label-caption">Chỉ số sinh thái tổ</p>
+      <p className="label-caption">{t('stability.caption')}</p>
 
       <div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-h2 text-charcoal">Sức khỏe môi trường</h2>
-          <Badge tone={badge.tone}>{badge.label}</Badge>
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
+        <div className="flex flex-wrap items-end justify-between gap-2">
           <p className="leading-none">
-            <span className="text-[44px] font-extrabold tracking-tight text-charcoal">{MOCK_ECO_SCORE}</span>
-            <span className="ml-1 text-base font-semibold text-warmGray">/100</span>
+            <span className="text-[44px] font-extrabold tracking-tight text-charcoal">{isLoading ? '--' : stableCount}</span>
+            <span className="ml-1 text-base font-semibold text-warmGray">/{isLoading ? '--' : items.length}</span>
           </p>
-          <Badge tone="positive">
-            <TrendingUp width={12} height={12} />
-            +{MOCK_TREND_PERCENT}% tuần này
-          </Badge>
+          <Badge tone="positive">{t('stability.stable')}</Badge>
         </div>
-        <p className="mt-2 text-[11px] font-medium italic text-warmGray">
-          Điểm tổng hợp minh hoạ — chưa có công thức backend
-        </p>
+        {!isLoading && (
+          <p className={cn('mt-2 truncate text-xs font-medium', hasFault ? 'text-safetyOrange' : 'text-warmGray')} title={note}>{note}</p>
+        )}
       </div>
 
-      <div className="flex flex-col gap-2.5 border-t border-warmGray/10 pt-4">
-        <MetricRow label="Độ ẩm duy trì" value={humidity} unit="%" isAnomaly={humidityAnomaly} />
-        <MetricRow label="Nhiệt độ trung bình" value={temperature} unit="°C" isAnomaly={temperatureAnomaly} />
-        <MetricRow label="Nồng độ khí NH3" value={nh3} unit="ppm" isAnomaly={nh3Anomaly} flagWhenAnomaly="Cảnh giác" />
+      <div className="relative min-h-0 flex-1 border-t border-warmGray/10 pt-4">
+        {isLoading ? (
+          <LoadingSkeleton count={3} className="h-5 w-full" />
+        ) : (
+          <ul className="absolute inset-x-0 bottom-0 top-4 flex flex-col gap-2.5 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {items.map(house => (
+              <HouseRow key={house.houseId} house={house} />
+            ))}
+          </ul>
+        )}
       </div>
     </Card>
   )
 }
 
-function MetricRow({
-  label, value, unit, isAnomaly, flagWhenAnomaly,
-}: {
-  label: string
-  value?: number
-  unit: string
-  isAnomaly?: boolean
-  flagWhenAnomaly?: string
-}) {
-  const hasValue = value !== undefined && !Number.isNaN(value)
+// 1 dòng nhà yến: chấm màu + tên + số thiết bị lỗi hoặc trạng thái
+function HouseRow({ house }: { house: HouseStability }) {
+  const { t } = useTranslation(dashboardDict)
+  const labels: Record<StabilityStatus, string> = {
+    FAULT: t('stability.rowFault', { n: house.faultyDevices }),
+    STABLE: t('stability.rowStable'),
+    EMPTY: t('stability.rowEmpty'),
+  }
+
   return (
-    <div className="flex items-center justify-between gap-2 text-sm">
-      <span className="flex items-center gap-2 text-warmGray">
-        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', isAnomaly ? 'bg-climateOrange' : 'bg-success')} />
-        {label}
+    <li className="flex items-center justify-between gap-2 text-sm">
+      <span className="flex min-w-0 items-center gap-2 text-warmGray">
+        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', DOT_CLASS[house.status])} />
+        <span className="truncate">{house.name}</span>
       </span>
-      <span className="flex items-center gap-1.5 font-bold text-charcoal">
-        {hasValue ? `${value.toFixed(1)} ${unit}` : '--'}
-        {isAnomaly && flagWhenAnomaly && (
-          <span className="text-xs font-semibold text-climateOrange">{flagWhenAnomaly}</span>
-        )}
-      </span>
-    </div>
+      <span className={cn('shrink-0 font-bold', LABEL_CLASS[house.status])}>{labels[house.status]}</span>
+    </li>
   )
 }

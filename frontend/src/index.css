@@ -46,4 +46,30 @@
            transition-colors w-full text-sm
            disabled:cursor-not-allowed disabled:border-warmGray/10 disabled:bg-gray-50 disabled:text-warmGray/80;
   }
+
+  /* ── Kính mờ cho lớp nổi (mục 5.2.1): SelectMenu, ActionsMenu, popup thông báo, khung xem trước ngôn ngữ.
+        Theo thông số glass-card: phủ trắng 5%, viền trắng 30%, 4 lớp bóng (bóng ngoài + 2 vệt sáng mép trên/dưới
+        + viền sáng mảnh phía trong mép), 2 vệt sáng mảnh ở mép trên và mép trái.
+        Blur 24px + saturate 150% (mẫu glass-card là blur 10px; tăng cho nền mờ hơn header 16px).
+        Lót thêm nền trắng 30%: header chỉ phủ 10% nhưng chữ menu nhỏ hơn, mỏng như header thì nút/khối tối
+        phía sau hiện thành vệt xám đậm ngay dưới chữ. 2 vệt sáng vẽ bằng lớp nền thay cho ::before/::after
+        để không trôi theo khi danh sách SelectMenu tự cuộn ── */
+  .glass-panel {
+    background-color: theme(colors.white / 30%);
+    background-image:
+      linear-gradient(90deg, transparent, theme(colors.white / 80%), transparent),
+      linear-gradient(180deg, theme(colors.white / 80%), transparent, theme(colors.white / 30%)),
+      linear-gradient(theme(colors.white / 5%), theme(colors.white / 5%));
+    background-size: 100% 1px, 1px 100%, auto;
+    background-position: top left, top left, center;
+    background-repeat: no-repeat;
+    border: 1px solid theme(colors.white / 30%);
+    box-shadow:
+      0 8px 32px theme(colors.gray.950 / 10%),
+      inset 0 1px 0 theme(colors.white / 50%),
+      inset 0 -1px 0 theme(colors.white / 10%),
+      inset 0 0 2px 1px theme(colors.white / 10%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    backdrop-filter: blur(24px) saturate(150%);
+  }
 }

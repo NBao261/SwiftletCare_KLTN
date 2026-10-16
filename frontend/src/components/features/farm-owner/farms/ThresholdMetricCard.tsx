@@ -1,4 +1,4 @@
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { MetricMeta } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { cn } from '@/lib/cn'
@@ -14,7 +14,7 @@ interface ThresholdMetricCardProps {
 
 /** 1 chỉ số của Zone — cùng kiểu ReadingTile ở EnvSensorPanel (Dashboard): nhãn trái + icon tròn phải, số lớn, dòng "An toàn …" */
 export default function ThresholdMetricCard({ meta, value, range, isAnomaly }: ThresholdMetricCardProps) {
-  const { t, num } = useT(farmDict)
+  const { t, num } = useTranslation(farmDict)
   const Icon = meta.icon
   const hasValue = value !== undefined && !Number.isNaN(value)
 

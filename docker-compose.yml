@@ -18,7 +18,8 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-      - ./docs/db/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+      # Không cần script khởi tạo: backend đăng nhập bằng user root ở trên (authSource=admin),
+      # còn collection/index do Mongoose và `npm run seed` / `npm run migrate:*` tạo.
     healthcheck:
       test: mongosh --eval "db.adminCommand('ping')" --quiet
       interval: 10s

@@ -108,7 +108,8 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
           ref={menuRef}
           role="menu"
           style={style}
-          className="z-50 w-48 animate-fade-in space-y-0.5 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-dropdown"
+          // Kính mờ nền trắng — công thức chung .glass-panel trong index.css
+          className="z-50 w-48 animate-fade-in space-y-0.5 rounded-2xl glass-panel p-1.5"
         >
           {items.map((item, index) => {
             const isActive = index === activeIndex
@@ -117,7 +118,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
             const showDivider = item.danger && index > 0 && !items[index - 1].danger
             return (
               <Fragment key={item.label}>
-                {showDivider && <div className="mx-1.5 my-1 h-px bg-gray-200" />}
+                {showDivider && <div className="mx-1.5 my-1 h-px bg-charcoal/10" />}
                 <button
                   type="button"
                   role="menuitem"
@@ -128,7 +129,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
                   className={cn(
                     'block w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:text-warmGray/40',
                     item.danger ? 'text-alertRed' : 'text-charcoal',
-                    isActive ? 'bg-gray-100' : 'bg-transparent',
+                    isActive ? 'bg-charcoal/5' : 'bg-transparent',
                   )}
                 >
                   {t(item.label)}

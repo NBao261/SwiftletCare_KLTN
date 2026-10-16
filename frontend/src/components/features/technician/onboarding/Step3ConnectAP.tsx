@@ -31,9 +31,9 @@ export function Step3ConnectAP({ data, onNext, onBack }: Props) {
       {/* SSID display */}
       <div className="flex items-center gap-3 rounded-xl bg-graphite/[0.08] p-4">
         <div className="flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-warmGray">Tên WiFi cần kết nối</p>
-          <p className="mt-1 font-mono text-lg font-bold text-charcoal">{ssidAP}</p>
-          <p className="mt-0.5 text-sm text-warmGray">Mật khẩu: <span className="font-mono font-semibold">swiftlet2025</span></p>
+          <p className="label-caption">Tên WiFi cần kết nối</p>
+          <p className="mt-1 tabular-nums text-lg font-bold text-charcoal">{ssidAP}</p>
+          <p className="mt-0.5 text-sm text-warmGray">Mật khẩu: <span className="tabular-nums font-semibold">swiftlet2025</span></p>
         </div>
         <button
           onClick={copySSID}

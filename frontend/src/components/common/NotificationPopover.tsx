@@ -1,61 +1,82 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { useAlertsList, useAcknowledgeAlert } from '@/hooks/shared/useAlerts'
+import { ArrowRight, ChevronDown } from 'lucide-react'
+import { useAlertsInfinite } from '@/hooks/shared/useAlerts'
+import { useReadAlerts } from '@/hooks/shared/useReadAlerts'
 import { useAlertStore } from '@/stores/alertStore'
 import { formatDate } from '@/lib/helpers'
 import { IconBell } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
-import { t } from '@/i18n'
-import type { Alert, ApiResponse } from '@/types'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { shellDict } from '@/constants/shell.i18n'
+import type { Alert } from '@/types'
 
-/** Query giống hệt tham số truyền cho `useAlertsList` bên dưới — dùng lại làm key để patch cache lạc quan khi ack. */
-const RECENT_ALERTS_QUERY = { limit: 6 }
+const PAGE_SIZE = 10
 
-/**
- * Dropdown chuông thông báo trên AppHeader — 6 cảnh báo gần nhất (ALERT-FR-007),
- * không filter status để thấy cả cái vừa xử lý. Badge/`unreadCount` lấy từ
- * `useAlertStore` (đồng bộ realtime qua `useAlertNotifications`, mount ở
- * MainLayout) chứ không tự đếm lại ở đây để tránh lệch số với chuông.
- */
+// Popup chuông thông báo: cuộn tải thêm, xổ chi tiết tại chỗ là đã đọc; xác nhận kèm ghi chú làm ở trang Thông báo
 export default function NotificationPopover() {
+  const { t } = useTranslation(shellDict)
   const [open, setOpen] = useState(false)
+  const [unreadFirst, setUnreadFirst] = useState(false)
+  const [justRead, setJustRead] = useState<Map<string, Alert>>(() => new Map())
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const unreadCount = useAlertStore(s => s.unreadCount)
-  const decrementUnread = useAlertStore(s => s.decrementUnread)
-  const acknowledge = useAcknowledgeAlert()
-  const { records, isLoading } = useAlertsList(RECENT_ALERTS_QUERY)
+  const { readIds, markRead } = useReadAlerts()
+  const all = useAlertsInfinite(PAGE_SIZE, undefined, open)
+  const unreadOnly = useAlertsInfinite(PAGE_SIZE, 'ACTIVE', open && unreadFirst)
+  const isLoading = all.isLoading || (unreadFirst && unreadOnly.isLoading)
+  const pager = unreadFirst && unreadOnly.hasNextPage ? unreadOnly : all
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = pager
 
-  /**
-   * Bấm 1 thông báo: nếu đang ACTIVE (chưa đọc) thì đánh dấu đã đọc — patch cache
-   * + trừ badge NGAY (UI phản hồi tức thì), rồi mới gọi API acknowledge thật ở nền
-   * (invalidate ['alerts'] khi xong để đồng bộ lại số liệu chính xác từ server).
-   * Luôn đóng dropdown và điều hướng sang trang Cảnh báo, kèm `highlight` để
-   * TechnicianAlertsPage cuộn tới đúng dòng đó (xem TechnicianAlertsPage.tsx).
-   */
-  function handleNotificationClick(alert: Alert) {
-    if (alert.status === 'ACTIVE') {
-      decrementUnread()
-      queryClient.setQueryData<{ data: ApiResponse<Alert[]> }>(['alerts', RECENT_ALERTS_QUERY], old =>
-        old
-          ? { ...old, data: { ...old.data, data: old.data.data.map(a => (a._id === alert._id ? { ...a, status: 'ACKNOWLEDGED' } : a)) } }
-          : old,
-      )
-      acknowledge.mutate({ id: alert._id })
+  const isUnread = (alert: Alert) => alert.status === 'ACTIVE' && !readIds.has(alert._id)
+
+  // Gộp các trang bỏ trùng; chế độ chưa đọc lên đầu thì tin ACTIVE đứng trước
+  const alerts = useMemo(() => {
+    const byId = new Map<string, Alert>()
+    if (unreadFirst) {
+      const top = new Map<string, Alert>(justRead)
+      for (const page of unreadOnly.data?.pages ?? []) for (const alert of page.data) if (!readIds.has(alert._id)) top.set(alert._id, alert)
+      const sortedTop = [...top.values()].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      for (const alert of sortedTop) byId.set(alert._id, alert)
     }
+    for (const page of all.data?.pages ?? []) for (const alert of page.data) if (!byId.has(alert._id)) byId.set(alert._id, alert)
+    return [...byId.values()]
+  }, [all.data, unreadOnly.data, unreadFirst, justRead, readIds])
+
+  // Xổ/thu chi tiết 1 tin; tin chưa đọc thì đánh dấu đã đọc (badge tự giảm), giữ chỗ trong danh sách tới khi đóng popup
+  function toggleNotification(alert: Alert) {
+    const willExpand = expandedId !== alert._id
+    setExpandedId(willExpand ? alert._id : null)
+    if (willExpand && isUnread(alert)) {
+      markRead(alert._id)
+      setJustRead(prev => new Map(prev).set(alert._id, alert))
+    }
+  }
+
+  // Đóng popup, thu gọn tin đang xổ và xếp lại danh sách
+  function closePopover() {
     setOpen(false)
+    setExpandedId(null)
+    setJustRead(new Map())
+  }
+
+  // Sang trang Cảnh báo, cuộn tới đúng dòng qua highlight
+  function openAlertPage(alert: Alert) {
+    closePopover()
     navigate(`/alerts?highlight=${alert._id}`)
   }
 
   useEffect(() => {
     if (!open) return
     function onPointerDown(e: MouseEvent) {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+      if (!containerRef.current?.contains(e.target as Node)) closePopover()
     }
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') closePopover()
     }
     document.addEventListener('mousedown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
@@ -65,17 +86,32 @@ export default function NotificationPopover() {
     }
   }, [open])
 
+  // Cuộn gần đáy danh sách thì tải trang kế tiếp
+  useEffect(() => {
+    const root = listRef.current
+    const sentinel = sentinelRef.current
+    if (!open || !root || !sentinel || !hasNextPage) return
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) void fetchNextPage()
+      },
+      { root, rootMargin: '0px 0px 80px 0px' },
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [open, hasNextPage, isFetchingNextPage, fetchNextPage])
+
   return (
     <div ref={containerRef} className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => (open ? closePopover() : setOpen(true))}
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
           'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-white hover:shadow-icon',
           open && 'bg-white shadow-icon',
         )}
-        aria-label={unreadCount > 0 ? t('Thông báo ({{n}} chưa đọc)', { n: unreadCount }) : t('Thông báo')}
+        aria-label={unreadCount > 0 ? t('notif.ariaUnread', { count: unreadCount }) : t('notif.title')}
       >
         <IconBell />
         {unreadCount > 0 && (
@@ -88,59 +124,105 @@ export default function NotificationPopover() {
       {open && (
         <div
           role="menu"
-          // Cùng style lớp nổi mới (Modal/ActionsMenu/SelectMenu): viền gray-200 + shadow-popover thay bóng tự định nghĩa
-          className="absolute right-0 z-30 mt-2 flex max-h-[440px] w-[360px] animate-fade-in flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-popover"
+          onWheel={e => e.stopPropagation()}
+          className="absolute right-0 z-30 mt-2 flex w-[360px] animate-fade-in flex-col overflow-hidden rounded-2xl glass-panel"
         >
-          <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-            <span className="flex items-center gap-2">
-              <span className="text-[15px] font-bold text-charcoal">{t('Thông báo')}</span>
-              {unreadCount > 0 && (
-                <span className="rounded-full bg-alertRed px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {t('{{n}} mới', { n: unreadCount > 9 ? '9+' : unreadCount })}
-                </span>
-              )}
-            </span>
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-charcoal/10 px-4 py-3">
+            <span className="text-base font-bold text-charcoal">{t('notif.title')}</span>
+            <button
+              type="button"
+              aria-pressed={unreadFirst}
+              onClick={() => setUnreadFirst(on => !on)}
+              className="shrink-0 text-xs text-warmGray underline transition-colors hover:text-charcoal"
+            >
+              {unreadFirst ? t('notif.sortByTime') : t('notif.unreadFirst')}
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            {isLoading && <p className="px-4 py-8 text-center text-sm text-warmGray">{t('Đang tải...')}</p>}
-            {!isLoading && records.length === 0 && (
-              <p className="px-4 py-8 text-center text-sm text-warmGray">{t('Chưa có thông báo nào')}</p>
+          <div ref={listRef} className="max-h-[380px] overflow-y-auto [scrollbar-color:theme(colors.gray.300)_transparent] [scrollbar-width:thin]">
+            {isLoading && <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.loading')}</p>}
+            {!isLoading && alerts.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.empty')}</p>
             )}
-            {records.map(alert => {
-              const unread = alert.status === 'ACTIVE'
+            {alerts.map(alert => {
+              const unread = isUnread(alert)
+              const expanded = expandedId === alert._id
               return (
-                <button
+                <div
                   key={alert._id}
-                  onClick={() => handleNotificationClick(alert)}
                   className={cn(
-                    'flex w-full flex-col gap-0.5 border-b border-gray-100 px-4 py-3 text-left transition-colors duration-150 last:border-b-0',
-                    // Hover nền gray-100 như mục ActionsMenu/SelectMenu; chưa đọc giữ nền nhạt để phân biệt
-                    unread ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-100',
+                    'border-b transition-colors',
+                    expanded ? 'border-charcoal/10 bg-limeMist/50' : unread ? 'border-charcoal/10 bg-charcoal/5' : 'border-charcoal/5 bg-transparent',
                   )}
                 >
-                  <span className="flex items-center gap-2">
-                    {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-alertRed" />}
-                    <span className="truncate text-sm font-semibold text-charcoal">
-                      {alert.title}
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => toggleNotification(alert)}
+                    className={cn(
+                      'flex w-full items-start gap-3 p-3.5 text-left transition-colors',
+                      !expanded && (unread ? 'hover:bg-charcoal/10' : 'hover:bg-charcoal/5'),
+                      !unread && !expanded && 'opacity-80',
+                    )}
+                  >
+                    <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', unread ? 'bg-safetyOrange' : 'bg-transparent')} />
+                    <span className="min-w-0 flex-1">
+                      <span className={cn('block text-sm', expanded ? 'whitespace-normal break-words' : 'truncate', unread ? 'font-bold text-charcoal' : 'font-medium text-graphite')}>
+                        {alert.title}
+                      </span>
+                      <span className={cn('mt-1 block text-xs', expanded ? 'whitespace-normal break-words' : 'truncate', unread ? 'text-gray-600' : 'text-warmGray')}>
+                        {alert.message}
+                      </span>
+                      <span className={cn('mt-1 block text-xs', unread ? 'text-gray-600' : 'text-warmGray')}>
+                        {formatDate(alert.created_at)}
+                      </span>
                     </span>
-                  </span>
-                  <span className="truncate text-xs text-warmGray">
-                    {alert.message}
-                  </span>
-                  <span className="text-[11px] text-warmGray">
-                    {formatDate(alert.created_at)}
-                  </span>
-                </button>
+                    <ChevronDown width={16} height={16} className={cn('mt-0.5 shrink-0 text-warmGray transition-transform duration-200', expanded && 'rotate-180')} />
+                  </button>
+
+                  {expanded && (
+                    <div className="flex items-end justify-between gap-3 px-3.5 pb-3.5 pl-[34px]">
+                      <dl className="grid min-w-0 flex-1 grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                        <dt className="text-warmGray">{t('notif.severity')}</dt>
+                        <dd className="font-semibold text-charcoal">{t(`severity.${alert.severity}`)}</dd>
+                        <dt className="text-warmGray">{t('notif.status')}</dt>
+                        <dd className="font-semibold text-charcoal">{t(`status.${alert.status}`)}</dd>
+                        {alert.acknowledged_at && (
+                          <>
+                            <dt className="text-warmGray">{t('notif.acknowledgedAt')}</dt>
+                            <dd className="font-semibold text-charcoal">{formatDate(alert.acknowledged_at)}</dd>
+                          </>
+                        )}
+                        {alert.acknowledgement_note && (
+                          <>
+                            <dt className="text-warmGray">{t('notif.note')}</dt>
+                            <dd className="break-words text-charcoal">{alert.acknowledgement_note}</dd>
+                          </>
+                        )}
+                      </dl>
+                      <button
+                        type="button"
+                        onClick={() => openAlertPage(alert)}
+                        aria-label={t('notif.openDetail')}
+                        title={t('notif.openDetail')}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-charcoal text-white transition-colors hover:bg-charcoal/85"
+                      >
+                        <ArrowRight width={16} height={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               )
             })}
+            <div ref={sentinelRef} aria-hidden="true" />
+            {isFetchingNextPage && <p className="px-4 py-3 text-center text-xs text-warmGray">{t('notif.loadingMore')}</p>}
           </div>
 
           <button
-            onClick={() => { setOpen(false); navigate('/alerts') }}
-            className="shrink-0 border-t border-gray-200 px-4 py-3 text-center text-sm font-bold text-charcoal transition-colors duration-150 hover:bg-gray-100"
+            onClick={() => { closePopover(); navigate('/alerts') }}
+            className="block w-full shrink-0 rounded-b-2xl border-t border-charcoal/10 py-3 text-center text-xs font-bold text-charcoal transition-colors hover:bg-charcoal/5"
           >
-            {t('Xem tất cả thông báo lớn →')}
+            {t('notif.viewAll')}
           </button>
         </div>
       )}
