@@ -11,7 +11,7 @@ Expo Router (React Native) app cho Farm Owner, Domain Expert và Technician. Đ�
 ## Chạy local
 
 ```bash
-npm install
+npm ci
 npx expo start
 ```
 

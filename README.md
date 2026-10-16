@@ -205,8 +205,9 @@ Chưa triển khai — xem [`ai-pipeline/README.md`](./ai-pipeline/README.md) v�
 | Backend | `npm run lint` · `npm run build:check` · `npm test` (Jest + mongodb-memory-server, ngưỡng coverage 80% số dòng) |
 | Frontend | `npm run lint` · `npx tsc --noEmit` · `npx vitest run` · `npm run build` |
 | Firmware | `pio test -e native` (unit test chạy trên máy tính) |
+| Mobile | `npm run lint` · `npm run typecheck` · `npx jest` (chưa có test) |
 
-GitHub Actions ([`ci.yml`](./.github/workflows/ci.yml)) chạy trên mọi PR: kiểm tra commit message (commitlint), quét secret (gitleaks), rồi chạy bộ kiểm tra của **những module mà PR thay đổi**. Mobile và AI pipeline chưa có job CI.
+GitHub Actions ([`ci.yml`](./.github/workflows/ci.yml)) chạy trên mọi PR: kiểm tra commit message (commitlint), quét secret (gitleaks), rồi chạy bộ kiểm tra của **những module mà PR thay đổi**. AI pipeline chưa có job CI.
 
 ## Quy trình đóng góp
 
