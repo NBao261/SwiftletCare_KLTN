@@ -2,7 +2,7 @@ import { Types } from 'mongoose'
 import { Alert, IAlert } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { Zone } from '@/models/houseZone.model'
-import { SensorNode, IN_SERVICE } from '@/models/device.model'
+import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
@@ -68,8 +68,14 @@ export const ALERT_TYPES = Object.keys(DEFAULT_SEVERITY) as AlertType[]
  */
 export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
 
-/** Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, mở ticket giả) */
-const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH']
+/**
+ * Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, mở ticket giả).
+ * LOW_RETURN_RATE do job của backend tính từ số đếm (VISION-FR-011), nút AI không tự báo.
+ */
+const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
+
+/** Loại nút AI đếm chim được tự báo qua `vision/alert` (THREAT-FR-010: tốc độ xử lý < 10 FPS) */
+const CAMERA_ALERT_TYPES: AlertType[] = ['EDGE_AI_DEGRADED']
 
 /** Cảnh báo không bao giờ được ở mức tự sinh ticket: mọi loại suy luận + vượt ngưỡng (ALERT-FR-012) */
 const NEVER_ESCALATE = new Set<AlertType>([...INFERRED_ALERT_TYPES, 'THRESHOLD_BREACH'])
@@ -186,8 +192,12 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     throw BadRequestError(`Loại cảnh báo không hợp lệ: "${type}"`)
   }
 
-  const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
-  if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
+  // Nút AI (`vision/alert`) dùng chung handler; nó chỉ được báo các loại của mình
+  const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('zone_id').lean()
+    ?? (CAMERA_ALERT_TYPES.includes(type as AlertType)
+      ? await CameraNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('zone_id').lean()
+      : null)
+  if (!node) throw NotFoundError(`Không tìm thấy thiết bị với device_id="${deviceId}" cho loại "${type}"`)
   // `name` cho tiêu đề mặc định — firmware không gửi kèm title
   const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
   if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
@@ -470,6 +480,23 @@ export async function resolveNodeOfflineAlertsOfOnlineNodes(): Promise<number> {
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Thiết bị đã kết nối lại' },
   )
   return modifiedCount
+}
+
+/** THREAT-FR-010 — nút AI đếm chim mất heartbeat (deviceOffline.job) */
+export async function raiseCameraOfflineAlert(cameraId: string): Promise<void> {
+  const camera = await CameraNode.findById(cameraId).lean()
+  if (!camera || camera.status !== 'OFFLINE') return
+  const zone = await Zone.findById(camera.zone_id).lean()
+  if (!zone) return
+
+  await createAlert({
+    farmId:  String(zone.farm_id),
+    zoneId:  String(zone._id),
+    nodeId:  String(camera._id),
+    type:    'EDGE_AI_DEGRADED',
+    title:   `Nút AI đếm chim ${camera.device_id} mất kết nối`,
+    message: `Không nhận được heartbeat từ nút AI ${camera.device_id} tại ${zone.name}; số đếm chim đang gián đoạn.`,
+  })
 }
 
 /** Dùng cho job phát hiện thiết bị offline (FARM-FR-005 → THREAT-FR-009) */

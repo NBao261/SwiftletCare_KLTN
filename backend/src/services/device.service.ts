@@ -5,7 +5,7 @@ import { Farm } from '@/models/farm.model'
 import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
-import { raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
+import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { Alert } from '@/models/alert.model'
 import { logAction } from '@/services/auditLog.service'
 import { notifyUser } from '@/services/notification.service'
@@ -37,6 +37,11 @@ export const MAX_OVERRIDE_MS = 24 * 60 * 60 * 1000
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
+/**
+ * THREAT-FR-010 — nút AI đếm chim gửi heartbeat mỗi 30 giây (docs/bird-counting-plan.md §6.6).
+ * ponytail: 90 giây = 3 nhịp liền mất, chọn tay không có nguồn (SRS §0.5 bảng giả định).
+ */
+export const CAMERA_OFFLINE_THRESHOLD_MS = 90_000
 
 export interface RegisterDeviceInput { device_id: string; zone_id: string; secret_key: string }
 
@@ -280,13 +285,16 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterDevic
   return node
 }
 
+/** `rtsp_url` chứa mật khẩu camera — chỉ nút AI cần, không trả ra API (plan §8.7) */
+const CAMERA_PUBLIC_FIELDS = '-rtsp_url'
+
 export async function listCameraNodes(zoneId: string | undefined, user: CurrentUser) {
   if (zoneId) {
     await assertZoneAccess(zoneId, user)
-    return CameraNode.find({ zone_id: zoneId, ...IN_SERVICE }).sort({ registered_at: -1 }).lean()
+    return CameraNode.find({ zone_id: zoneId, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
   }
   const accessibleZoneIds = await listAccessibleZoneIds(user)
-  return CameraNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean()
+  return CameraNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
 }
 
 /** FARM-FR-005 — gọi từ mqtt/handlers/heartbeat.handler.ts. */
@@ -305,7 +313,8 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong heartbeat payload')
 
   const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
-  if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
+  // Nút AI đếm chim dùng chung topic heartbeat (plan §8.5)
+  if (!node) return recordCameraHeartbeat(payload)
 
   const wasOffline = node.status !== 'ONLINE'
   node.status = 'ONLINE'
@@ -361,6 +370,32 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
       logger.warn('Không tự sửa được topic lệch cho heartbeat', { deviceId: payload.deviceId, err: (err as Error).message })
     }
   }
+}
+
+/**
+ * THREAT-FR-010 — heartbeat của nút AI: chỉ cập nhật trạng thái. Không đẩy config như ESP32
+ * (pipeline đọc cấu hình của nó từ config.yaml). `firmwareVersion` của nút AI là phiên bản model.
+ */
+async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
+  const camera = await CameraNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
+  if (!camera) throw NotFoundError(`Không tìm thấy thiết bị với device_id="${payload.deviceId}"`)
+
+  const wasOnline = camera.status === 'ONLINE'
+  camera.status = 'ONLINE'
+  camera.last_heartbeat = new Date()
+  if (payload.firmwareVersion) camera.model_version = payload.firmwareVersion
+  camera.activation_overdue_at = undefined
+  await camera.save()
+  if (wasOnline) return
+
+  emitDeviceStatusChange(String(camera.zone_id), {
+    nodeId: String(camera._id),
+    status: 'ONLINE',
+    timestamp: new Date().toISOString(),
+  })
+  await resolveAlertsForNode(String(camera._id), 'Nút AI đã kết nối lại', 'EDGE_AI_DEGRADED').catch((err: Error) =>
+    logger.error('Đóng cảnh báo EDGE_AI_DEGRADED thất bại', { nodeId: String(camera._id), err }),
+  )
 }
 
 /**
@@ -471,7 +506,6 @@ export async function markStaleDevicesOffline(): Promise<void> {
   const staleNodes = await SensorNode.find({ status: 'ONLINE', last_heartbeat: { $lt: staleBefore } })
     .select('_id zone_id')
     .lean()
-  if (staleNodes.length === 0) return
 
   await Promise.all(staleNodes.map(async node => {
     // Lặp lại điều kiện "vẫn im lặng" trong chính lệnh ghi: heartbeat tới giữa lúc
@@ -491,6 +525,32 @@ export async function markStaleDevicesOffline(): Promise<void> {
     // nên NODE_OFFLINE không bao giờ xuất hiện trong danh sách cảnh báo.
     await raiseNodeOfflineAlert(String(node._id)).catch((err: Error) =>
       logger.error('Tạo cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
+    )
+  }))
+
+  await markStaleCamerasOffline()
+}
+
+/** THREAT-FR-010 — nút AI im lặng quá CAMERA_OFFLINE_THRESHOLD_MS → OFFLINE + EDGE_AI_DEGRADED */
+async function markStaleCamerasOffline(): Promise<void> {
+  const staleBefore = new Date(Date.now() - CAMERA_OFFLINE_THRESHOLD_MS)
+  const stale = await CameraNode.find({ status: 'ONLINE', last_heartbeat: { $lt: staleBefore } }).select('_id zone_id').lean()
+
+  await Promise.all(stale.map(async camera => {
+    // Cùng điều kiện trong lệnh ghi như SensorNode: heartbeat tới giữa chừng thì không đè OFFLINE
+    const { modifiedCount } = await CameraNode.updateOne(
+      { _id: camera._id, status: 'ONLINE', last_heartbeat: { $lt: staleBefore } },
+      { status: 'OFFLINE' },
+    )
+    if (modifiedCount === 0) return
+
+    emitDeviceStatusChange(String(camera.zone_id), {
+      nodeId: String(camera._id),
+      status: 'OFFLINE',
+      timestamp: new Date().toISOString(),
+    })
+    await raiseCameraOfflineAlert(String(camera._id)).catch((err: Error) =>
+      logger.error('Tạo cảnh báo EDGE_AI_DEGRADED thất bại', { nodeId: String(camera._id), err }),
     )
   }))
 }

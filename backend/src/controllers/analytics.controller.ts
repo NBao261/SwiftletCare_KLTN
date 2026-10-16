@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as analyticsService from '@/services/analytics.service'
+import * as birdCountService from '@/services/birdCount.service'
 import * as forecastService from '@/services/forecast.service'
 import * as tuningSuggestionService from '@/services/tuningSuggestion.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
@@ -63,6 +64,15 @@ export const birdCountDaily = asyncHandler(async (req: Request, res: Response) =
 export const birdCountTrends = asyncHandler(async (req: Request, res: Response) => {
   const data = await analyticsService.getBirdCountTrends(req.user, req.query.zoneId as string, {
     days: req.query.days ? Number(req.query.days) : 30,
+  })
+  res.json({ success: true, data })
+})
+
+/** GET /analytics/bird-count/buckets – VISION-FR-017 (số đếm theo khoảng 5 phút) */
+export const birdCountBuckets = asyncHandler(async (req: Request, res: Response) => {
+  const data = await birdCountService.getBirdCountBuckets(req.user, req.query.zoneId as string, {
+    from: req.query.from as string | undefined,
+    to:   req.query.to as string | undefined,
   })
   res.json({ success: true, data })
 })

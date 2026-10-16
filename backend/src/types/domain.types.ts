@@ -157,14 +157,26 @@ export interface RelayStatusPayload {
   override_expiry?: number
 }
 
+/**
+ * `vision/bird-count` của nút AI (docs/bird-counting-plan.md §6.6). Hai loại tin trên cùng topic:
+ * tin của phiên (có `session_type`, số cộng dồn của phiên, gửi mỗi 30 giây) và tin `kind: 'BUCKET'`
+ * (số của 1 khoảng 5 phút, VISION-FR-017). `return_rate` do backend tự tính (VISION-FR-009).
+ */
 export interface BirdCountPayload {
   deviceId: string
-  session_type: SessionType
+  kind?: 'BUCKET'
+  session_type?: SessionType
   entry_count: number
   exit_count: number
-  return_rate: number
-  confidence_avg: number
-  timestamp: number
+  /** Bỏ qua nếu nút AI gửi — backend tính trên số ròng */
+  return_rate?: number
+  confidence_avg?: number
+  /** Tin cuối của phiên — chỉ để tham khảo, job LOW_RETURN_RATE không dựa vào nó */
+  final?: boolean
+  /** epoch ms, đầu khoảng của tin BUCKET */
+  bucket_start?: number
+  bucket_minutes?: number
+  timestamp?: number
 }
 
 export interface VisionAlertPayload {

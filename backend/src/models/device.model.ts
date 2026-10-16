@@ -182,6 +182,8 @@ const cameraNodeSchema = new Schema<ICameraNode>(
 // `deviceOffline.job.ts` quét đúng cặp field này mỗi 10s — không có index thì
 // full collection scan lặp lại liên tục khi số thiết bị tăng lên.
 sensorNodeSchema.index({ status: 1, last_heartbeat: 1 })
+// Cùng job quét nút AI đếm chim mất heartbeat (THREAT-FR-010)
+cameraNodeSchema.index({ status: 1, last_heartbeat: 1 })
 // zone_id là filter chính của mọi danh sách thiết bị theo zone (dashboard).
 sensorNodeSchema.index({ zone_id: 1 })
 cameraNodeSchema.index({ zone_id: 1 })
