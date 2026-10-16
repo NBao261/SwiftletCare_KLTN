@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom'
-import { ArrowRightIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { Button } from '@/components/ui/Button'
+import EmptyState from '@/components/ui/EmptyState'
+import { getApiErrorMessage } from '@/lib/helpers'
 import DataTable from '@/components/ui/DataTable'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -35,6 +38,14 @@ export default function RecentActivityCard() {
       <AuditLogFilters table={table} />
       {table.isLoading ? (
         <LoadingSkeleton count={PAGE_SIZE} className="h-[52px] w-full" />
+      ) : table.isError ? (
+        // Lỗi tải tách khỏi "chưa có nhật ký" — kèm nút thử lại (FE_Design §13.5)
+        <EmptyState
+          icon={<WarningCircleIcon size={28} />}
+          title="Không tải được nhật ký"
+          description={getApiErrorMessage(table.error, 'Kiểm tra kết nối tới máy chủ rồi thử lại.')}
+          action={<Button variant="secondary" size="sm" onClick={() => table.refetch()}>Thử lại</Button>}
+        />
       ) : (
         <DataTable
           columns={buildAuditLogColumns((table.page - 1) * PAGE_SIZE)}

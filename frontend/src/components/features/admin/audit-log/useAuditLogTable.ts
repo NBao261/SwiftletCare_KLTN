@@ -81,16 +81,26 @@ export function useAuditLogTable(pageSize: number, initial: { action?: string; s
   let visible: AuditLogEntry[]
   let total: number
   let isLoading: boolean
+  // Lỗi API phải tách khỏi "rỗng" (FE_Design §13.5) — trước đây 500 hiện thành "Chưa có nhật ký nào"
+  let isError: boolean
+  let error: unknown
+  let refetch: () => unknown
   if (clientSide) {
     const matched = (all.data ?? []).filter(log => !q || matchesSearch(log, q))
     const ordered = sortDir === 'asc' ? [...matched].reverse() : matched
     visible = ordered.slice((page - 1) * pageSize, page * pageSize)
     total = ordered.length
     isLoading = all.isLoading
+    isError = all.isError
+    error = all.error
+    refetch = all.refetch
   } else {
     visible = serverPage.records
     total = serverPage.total
     isLoading = serverPage.isLoading
+    isError = serverPage.isError
+    error = serverPage.error
+    refetch = serverPage.refetch
   }
 
   /** Đổi bất kỳ bộ lọc nào thì quay về trang 1 — trang N của bộ lọc cũ có thể không tồn tại ở bộ lọc mới */
@@ -105,7 +115,7 @@ export function useAuditLogTable(pageSize: number, initial: { action?: string; s
     search, setSearch: withReset(setSearch), debouncedSearch,
     sortDir, toggleSort: () => { setSortDir(d => (d === 'desc' ? 'asc' : 'desc')); setPage(1) },
     page, setPage,
-    visible, total, isLoading,
+    visible, total, isLoading, isError, error, refetch,
     hasFilter: !!(actorId || action || datePreset || search.trim()) || sortDir === 'asc',
     clearFilters: () => {
       setActorId(ALL); setAction(ALL); setDatePreset(ALL); setSearch(''); setSortDir('desc'); setPage(1)
