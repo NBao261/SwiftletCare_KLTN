@@ -165,7 +165,8 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
   }
 
   // Không await: gửi thông báo chậm/lỗi không được chặn luồng ghi cảnh báo
-  void dispatchAlertNotification(alert).catch((err: Error) =>
+  // EXPERT-FR-007 — cảnh báo suy luận còn báo Domain Expert trong ứng dụng để kiểm chứng
+  void dispatchAlertNotification(alert, { awaitsVerdict: INFERRED_ALERT_TYPES.includes(input.type) }).catch((err: Error) =>
     logger.error('Gửi thông báo cảnh báo thất bại', { alertId: String(alert._id), err }),
   )
 
