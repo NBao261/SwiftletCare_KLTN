@@ -15,10 +15,10 @@ import { t } from '@/i18n'
  * nên luôn kèm chú thích + số tổng ở đầu biểu đồ (không để màu là cách đọc duy nhất).
  */
 
-// ── FAKE DATA — CHỈ ĐỂ XEM GIAO DIỆN ──────────────────────────────────────────────────────────────────────────────
-// Backend chưa có endpoint xu hướng ticket theo ngày. Số liệu dưới đây sinh giả (cố định theo ngày, không đổi khi
-// tải lại), kèm dòng "This data is FAKE…" (FE_Design §5.4). Thay bằng API thật trước khi nộp/demo thật.
-const SHOW_FAKE_PREVIEW = true
+// ── FAKE DATA (endpoint MISSING) ─────────────────────────────────────────────────────────────────────────────────
+// Backend chưa có endpoint xu hướng ticket theo ngày / tỉ lệ đúng hạn SLA theo ngày (đã báo backend). Không có cờ bật
+// tay: số liệu giả LUÔN kèm dòng "This data is FAKE…" (FE_Design §5.4) nên không thể lọt lên như dữ liệu thật. Có
+// endpoint thì thay fakeSeries() bằng hook gọi API và xoá cả khối này cùng FakeNotice.
 /** Số giả nhưng ổn định: cùng ngày + cùng hạt giống luôn ra cùng số */
 const pseudo = (seed: number) => { const x = Math.sin(seed * 9301 + 49297) * 233280; return x - Math.floor(x) }
 function fakeSeries(days: number) {
@@ -143,7 +143,7 @@ export default function TicketTrendsCard() {
         </div>
       }
     >
-      {SHOW_FAKE_PREVIEW && <FakeNotice />}
+      <FakeNotice />
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Biểu đồ 1: ticket mới vs đã đóng */}
         <section className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 p-4">
