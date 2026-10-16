@@ -1,7 +1,7 @@
 import { ArrowRightIcon, CheckCircleIcon, HouseIcon, InfoIcon, WarningIcon } from '@phosphor-icons/react'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
 import { METRIC_BY_KEY } from '@/components/features/farm-owner/farms/farmStructure.constants'
-import { useT } from '@/hooks/common/useT'
+import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
@@ -23,7 +23,7 @@ const ACCENT: Record<HouseNode['health'], string> = {
  * tình trạng, sự cố nổi bật (kèm zone), tỉ lệ thiết bị online, số zone. KHÔNG có sản lượng/thu hoạch/ghim.
  */
 export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowProps) {
-  const { t, num } = useT(farmDict)
+  const { t, num } = useTranslation(farmDict)
   const { house, farm, headline, counts } = node
   const isEmpty = node.health === 'EMPTY'
   const offline = counts.total - counts.online
