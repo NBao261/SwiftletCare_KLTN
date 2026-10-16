@@ -1,9 +1,13 @@
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
+import { Notification, type NotificationRefKind } from '@/models/notification.model'
 import { sendTelegram } from '@/services/telegram.service'
+import { emitNotificationNew } from '@/socket'
+import { NotFoundError } from '@/utils/appError.util'
+import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { IAlert } from '@/models/alert.model'
-import type { NotificationPreferences } from '@/types'
+import type { CurrentUser, NotificationPreferences } from '@/types'
 
 /**
  * Notification Service — ALERT-FR-002..006.
@@ -47,7 +51,33 @@ export async function findRecipients(farmId: string) {
   return User.find({ _id: { $in: userIds }, is_active: true }).lean()
 }
 
-export async function dispatchAlertNotification(alert: IAlert): Promise<void> {
+/** Domain Expert của 1 farm (EXPERT-FR-001: phạm vi cả farm, theo `members`) */
+export async function findFarmExperts(farmId: unknown): Promise<string[]> {
+  const farm = await Farm.findById(farmId).select('members').lean()
+  return (farm?.members ?? []).filter(m => m.role === 'DOMAIN_EXPERT').map(m => String(m.user_id))
+}
+
+/**
+ * EXPERT-FR-007 — cảnh báo suy luận mới chờ kiểm chứng. Chỉ báo trong ứng dụng: ALERT-FR-005
+ * ghi Domain Expert "chỉ nhận thông báo trong ứng dụng" cho loại sự kiện này, không Telegram/push.
+ */
+async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
+  const experts = await findFarmExperts(alert.farm_id)
+  const active = await User.find({ _id: { $in: experts }, is_active: true }).select('_id').lean()
+  await Promise.all(active.map(u => createInAppNotification(String(u._id), {
+    title: `Cảnh báo chờ kiểm chứng: ${alert.title}`,
+    body: alert.message,
+    ref: { kind: 'alert', id: String(alert._id) },
+  })))
+}
+
+export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVerdict?: boolean } = {}): Promise<void> {
+  if (opts.awaitsVerdict) {
+    // Không chặn kênh của Farm Owner: lỗi ở đây chỉ ghi log
+    void notifyExpertsPendingVerdict(alert).catch((err: Error) =>
+      logger.warn('Báo chuyên gia có cảnh báo chờ kiểm chứng thất bại', { alertId: String(alert._id), err }),
+    )
+  }
   const recipients = await findRecipients(String(alert.farm_id))
   if (recipients.length === 0) {
     logger.warn('Cảnh báo không có người nhận', { alertId: String(alert._id), farmId: String(alert.farm_id) })
@@ -120,6 +150,8 @@ async function sendEmail(email: string | undefined, subject: string, body: strin
 export interface UserNotification {
   title: string
   body: string
+  /** Đối tượng để client mở tới từ hộp thông báo */
+  ref?: { kind: NotificationRefKind; id: string }
 }
 
 export interface NotifyUserOptions {
@@ -147,6 +179,11 @@ export async function notifyUser(userId: string, message: UserNotification, opts
     // Tài khoản bị khoá/đã xoá không nhận push hay Telegram (chat id vẫn còn sau khi khoá);
     // email thì vẫn gửi — đó là đường báo cho chính họ việc bị khoá/xoá.
     const emailOnly = opts.emailOnly || user.is_active === false
+    // Hộp thông báo lỗi không được làm mất Telegram/email phía sau
+    if (!emailOnly) {
+      await createInAppNotification(String(user._id), message).catch((err: Error) =>
+        logger.warn('Ghi thông báo trong ứng dụng thất bại', { err, userId, title: message.title }))
+    }
     if (!emailOnly && user.notification_preferences?.push !== false) {
       await sendPush(String(user._id), message.title, message.body)
     }
@@ -169,4 +206,54 @@ export async function notifyAdmins(message: UserNotification): Promise<void> {
   } catch (err) {
     logger.warn('Gửi thông báo tới Admin thất bại', { err, title: message.title })
   }
+}
+
+// ── Hộp thông báo trong ứng dụng (EXPERT-FR-006/007) ─────────────────────────
+
+export interface NotificationDto {
+  _id: string
+  title: string
+  body: string
+  ref?: { kind: NotificationRefKind; id: string }
+  read_at: Date | null
+  created_at: Date
+}
+
+/** Lưu trước rồi mới phát socket: người đang offline vẫn thấy khi mở app */
+export async function createInAppNotification(userId: string, message: UserNotification): Promise<void> {
+  const doc = await Notification.create({ user_id: userId, title: message.title, body: message.body, ref: message.ref })
+  emitNotificationNew(userId, {
+    _id: String(doc._id), title: doc.title, body: doc.body,
+    ref: message.ref, read_at: null, created_at: doc.created_at,
+  })
+}
+
+/** GET /notifications — chỉ của chính người gọi, mới nhất trước */
+export async function listNotifications(user: CurrentUser, query: { page?: number; limit?: number; unread?: boolean }) {
+  const { page, skip, limit } = paginate(query.page, query.limit)
+  const filter = { user_id: user._id, ...(query.unread && { read_at: null }) }
+  const [records, total, unreadCount] = await Promise.all([
+    Notification.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).select('-user_id').lean(),
+    Notification.countDocuments(filter),
+    Notification.countDocuments({ user_id: user._id, read_at: null }),
+  ])
+  return { records, total, page, limit, unreadCount }
+}
+
+/** Thông báo của người khác trả 404 như không tồn tại — không lộ id có thật */
+export async function markNotificationRead(id: string, user: CurrentUser) {
+  const doc = await Notification.findOneAndUpdate(
+    { _id: id, user_id: user._id, read_at: null },
+    { read_at: new Date() },
+    { new: true },
+  ).select('-user_id').lean()
+    // Đã đọc từ trước: giữ nguyên thời điểm đọc đầu tiên
+    ?? await Notification.findOne({ _id: id, user_id: user._id }).select('-user_id').lean()
+  if (!doc) throw NotFoundError('Không tìm thấy thông báo')
+  return doc
+}
+
+export async function markAllNotificationsRead(user: CurrentUser): Promise<{ modified: number }> {
+  const { modifiedCount } = await Notification.updateMany({ user_id: user._id, read_at: null }, { read_at: new Date() })
+  return { modified: modifiedCount }
 }

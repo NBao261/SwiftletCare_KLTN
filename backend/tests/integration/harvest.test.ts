@@ -37,8 +37,8 @@ describe('ảnh chụp của mẻ thu hoạch (MARKET-FR-002/003)', () => {
       sample(other.zone._id, other.node._id, DAY, 40, 10), // Zone khác — không được lẫn vào
     ])
     await BirdCountRecord.create([
-      { camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: new Date(now - 2 * DAY), session_type: 'EVENING_ENTRY', entry_count: 120, return_rate: 90 },
-      { camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: new Date(now - DAY), session_type: 'EVENING_ENTRY', entry_count: 100, return_rate: 80 },
+      { camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: new Date(now - 2 * DAY), session_date: '2026-01-01', session_type: 'EVENING_ENTRY', entry_count: 120, return_rate: 90 },
+      { camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: new Date(now - DAY), session_date: '2026-01-02', session_type: 'EVENING_ENTRY', entry_count: 100, return_rate: 80 },
     ])
 
     const batch = await createHarvest(user, {

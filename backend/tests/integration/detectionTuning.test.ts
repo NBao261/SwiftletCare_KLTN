@@ -17,6 +17,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { getBirdCountTrends } from '@/services/analytics.service'
+import { vnDate } from '@/services/birdCount.service'
 import { buildDeviceConfig } from '@/services/device.service'
 import { DEFAULT_DETECTION_TUNING, resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
@@ -143,7 +144,7 @@ describe('đưa tham số vào cấu hình thiết bị và xu hướng chim v�
     // Mốc = trung bình 7 ngày trước ngày mới nhất = 90 (không gồm chính nó); mới nhất 60 → giảm 33,3%.
     // 9 ngày: ngày xa nhất (30) nằm ngoài mốc 7 ngày nên không kéo mốc xuống.
     await BirdCountRecord.create([8, 7, 6, 5, 4, 3, 2, 1, 0].map((n, i) => ({
-      camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: day(n),
+      camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: day(n), session_date: vnDate(day(n)),
       session_type: 'EVENING_ENTRY', entry_count: 100, exit_count: 100, return_rate: i === 8 ? 60 : i === 0 ? 30 : 90,
     })))
 

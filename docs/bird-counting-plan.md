@@ -1173,6 +1173,13 @@ Lợi ích của dữ liệu ngoài thường rõ nhất khi ảnh tự gán nh�
 
 Thời gian: 2 ngày. Tuân theo quy tắc Route → Controller → Service → Model của module `backend/`.
 
+> **Trạng thái (SRS v2.1.3):** §8.1–8.5 và §8.7 **đã làm** (`backend/src/services/birdCount.service.ts`, `jobs/returnRate.job.ts`, `tests/integration/birdCount.test.ts`); **§8.6 (stream token/MediaMTX) chưa làm**. Chỗ code thật khác code mẫu dưới đây:
+> - `checkReturnRateDrops` còn **đóng** `LOW_RETURN_RATE` đang mở khi tỷ lệ đã hồi lại; không có bước này thì dedup nuốt mọi lần giảm của những ngày sau. `LOW_RETURN_RATE` thành loại chỉ backend được tạo (thiết bị gửi lên bị từ chối).
+> - `/daily` và `/correlation` gom theo `session_date` (ngày giờ VN), không gom theo ngày UTC của `timestamp`: phiên sáng 05:30 VN là 22:30 UTC hôm trước.
+> - Nút AI mất heartbeat quá 90 giây sinh `EDGE_AI_DEGRADED` (THREAT-FR-010), không phải `NODE_OFFLINE`; `vision/alert` của camera chỉ nhận `EDGE_AI_DEGRADED`.
+> - Mức giảm lấy qua `resolveDetectionTuning(zone.detection_tuning)`, không viết `?? 20`.
+> - Job dùng `{ timezone: 'Asia/Ho_Chi_Minh' }` của node-cron, không phụ thuộc giờ máy chủ.
+
 ### 8.1. Model `birdCountRecord.model.ts`
 
 Thêm `session_date` và unique index để upsert:

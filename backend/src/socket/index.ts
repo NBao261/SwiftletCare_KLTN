@@ -3,6 +3,7 @@ import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
 import { User } from '@/models/user.model'
 import { assertCanJoin, sendMessage, type TicketMessageDto } from '@/services/ticketChat.service'
+import type { NotificationDto } from '@/services/notification.service'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser, JwtAccessPayload, WsTelemetryUpdate, WsRelayUpdate, WsBirdCountUpdate, WsAlertNew, WsDeviceStatusChange } from '@/types'
@@ -63,6 +64,7 @@ export type ServerEvents = {
   DEVICE_STATUS_CHANGE: (data: WsDeviceStatusChange) => void
   TICKET_MESSAGE_NEW:   (data: TicketMessageDto) => void
   TICKET_CHAT_ASSIGNEE_CHANGED: (data: { ticketId: string; from: string | null; to: string | null }) => void
+  NOTIFICATION_NEW:     (data: NotificationDto) => void
 }
 
 /** Socket event types received from clients */
@@ -172,6 +174,11 @@ export function emitAlertNew(zoneId: string, data: WsAlertNew): void {
 /** Emit DEVICE_STATUS_CHANGE to all clients in a zone (FARM-FR-005) */
 export function emitDeviceStatusChange(zoneId: string, data: WsDeviceStatusChange): void {
   io?.to(`zone:${zoneId}`).emit('DEVICE_STATUS_CHANGE', data)
+}
+
+/** EXPERT-FR-006/007 — thông báo trong ứng dụng mới, tới mọi phiên đang mở của chính người nhận */
+export function emitNotificationNew(userId: string, data: NotificationDto): void {
+  io?.to(userRoom(userId)).emit('NOTIFICATION_NEW', data)
 }
 
 /** TICKET-FR-015 — tin mới tới mọi người đang mở kênh chat của ticket */

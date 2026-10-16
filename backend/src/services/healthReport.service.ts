@@ -2,12 +2,11 @@ import { Types } from 'mongoose'
 import { ZoneHealthReport, IZoneHealthReport, ZoneHealthMetrics } from '@/models/zoneHealthReport.model'
 import { Alert } from '@/models/alert.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
-import { Farm } from '@/models/farm.model'
 import { Zone, IZone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { autonomyBetween, inRangeSum, pct, switchedSum } from '@/services/analytics.service'
 import { logAction } from '@/services/auditLog.service'
-import { findRecipients, notifyUser } from '@/services/notification.service'
+import { findFarmExperts, findRecipients, notifyUser } from '@/services/notification.service'
 import { assertFarmAccess, assertZoneAccess, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { BadRequestError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
@@ -92,11 +91,6 @@ async function ownerIdsOf(farmId: unknown): Promise<string[]> {
   return (await findRecipients(String(farmId))).map(u => String(u._id))
 }
 
-async function expertIdsOf(farmId: unknown): Promise<string[]> {
-  const farm = await Farm.findById(farmId).select('members').lean()
-  return (farm?.members ?? []).filter(m => m.role === 'DOMAIN_EXPERT').map(m => String(m.user_id))
-}
-
 /**
  * EXPERT-FR-005/007 — tổng hợp báo cáo cho mọi Zone của farm còn hoạt động, kỳ là
  * REPORT_PERIOD_DAYS ngày tính tới `now`. Chạy lại trong cùng kỳ không tạo trùng; Zone
@@ -143,10 +137,11 @@ async function generateZoneReport(
     throw err
   }
 
-  const recipients = [...await ownerIdsOf(zone.farm_id), ...await expertIdsOf(zone.farm_id)]
+  const recipients = [...await ownerIdsOf(zone.farm_id), ...await findFarmExperts(zone.farm_id)]
   await Promise.all(recipients.map(id => notifyUser(id, {
     title: `Báo cáo sức khỏe ${zone.name}`,
     body: `Báo cáo ${REPORT_PERIOD_DAYS} ngày của ${zone.name} đã sẵn sàng: ${metrics.humidity_in_range_pct ?? '—'}% thời gian độ ẩm trong ngưỡng, ${metrics.auto_mode_pct ?? '—'}% thời gian tự động. (Mã báo cáo ${report._id})`,
+    ref: { kind: 'health_report', id: String(report._id) },
   })))
   return true
 }
@@ -207,6 +202,7 @@ export async function setReportConclusion(id: string, user: CurrentUser, text: s
     void notifyUser(ownerId, {
       title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho ${zone?.name ?? 'Zone'}`,
       body: text.length > 300 ? `${text.slice(0, 300)}…` : text,
+      ref: { kind: 'health_report', id: String(report._id) },
     })
   }
   // Cùng hình dạng với GET /health-reports/:id (`by` = {_id, full_name}) để client thay cache được
