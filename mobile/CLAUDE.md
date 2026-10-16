@@ -1,6 +1,6 @@
 # mobile/CLAUDE.md
 
-Rules and map for `mobile/` (Expo SDK 53 + Expo Router + React Native). This file wins over the root `CLAUDE.md` for mobile code; `/review-pr` judges mobile changes by it together with `mobile/README.md`. Rule tags: **[Bắt buộc]** = blocking (review requests changes), **[Nên]** = advisory. Only lines a PR adds or changes are judged; "Known debt" lists what is already out of line.
+Rules and map for `mobile/` (Expo SDK 53 + Expo Router 5 + React Native 0.79 + React 19). This file wins over the root `CLAUDE.md` for mobile code; `/review-pr` judges mobile changes by it together with `mobile/README.md`. Rule tags: **[Bắt buộc]** = blocking (review requests changes), **[Nên]** = advisory. Only lines a PR adds or changes are judged; "Known debt" lists what is already out of line.
 
 ## Where mobile stands
 
@@ -11,15 +11,17 @@ Rules and map for `mobile/` (Expo SDK 53 + Expo Router + React Native). This fil
 ## Commands
 
 ```bash
-npm install                 # no package-lock.json is committed yet
+npm ci                      # install from the committed package-lock.json
 npx expo start              # or: npm start / npm run android / npm run ios
-npm run lint                # eslint . --ext .ts,.tsx (no ESLint config committed yet — see Known debt)
-npm test                    # jest (jest-expo preset) — no tests yet
+npm run lint                # eslint . (flat config: eslint.config.js, eslint-config-expo)
 npm run typecheck           # tsc --noEmit
+npm test                    # jest (jest-expo preset) — no tests yet; CI runs `npx jest --passWithNoTests`
+npx expo install <pkg>      # add or upgrade a package at the version matching the Expo SDK
+npx expo install --check    # list packages whose version does not match the SDK
 npm run build:dev|build:preview|build:prod   # EAS profiles in eas.json
 ```
 
-Configure `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` in `.env` (template `.env.example`); defaults point at `localhost:3000`. Mobile has no CI job yet (CI needs a lockfile).
+Configure `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` in `.env` (template `.env.example`); defaults point at `localhost:3000`. CI (`.github/workflows/ci.yml`, job Mobile) runs `npm ci`, `lint`, `typecheck` and `jest --passWithNoTests` on every PR that touches `mobile/`.
 
 ## Structure
 
@@ -94,14 +96,15 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 | `types/index.ts` | `Role` still has `OPERATOR`/`SALES_STAFF` and no `DOMAIN_EXPERT`; `AlertType` has `BIRD_PANIC`, `PREDATOR_DETECTED` and lacks `NOISE_ANOMALY`; `FarmMember.role: 'OPERATOR'`; `NotificationPreferences` has `zalo`/`sms` | Align with `backend/src/types/domain.types.ts` in one PR (SRS §0.5 Mobile) |
 | `services/socket/index.ts` | `on*` helpers have no matching `off*`, so screens cannot clean up | Add `off*` helpers before the first screen subscribes |
 | `services/notification/index.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-013) |
-| Tooling | No ESLint config for ESLint 9, no tests, no `package-lock.json`, so no CI job | Add `eslint.config.js` (eslint-config-expo), commit the lockfile, then add a CI job |
+| Tooling | No tests yet; `npm run lint` passes with ~44 warnings (UTF-8 BOM at the top of files, `Array<T>` instead of `T[]`) | Write tests with the features; `npx eslint . --fix` clears most warnings |
+| `package.json` | Libraries declared for planned screens but not imported yet (`expo-camera`, `expo-av`, `react-native-maps`, `victory-native` + Skia, `react-native-mmkv`, `burnt`); `@shopify/react-native-skia` is pinned to `~2.0.7` and excluded from `expo install --check` because the SDK's `v2.0.0-next.4` prerelease does not satisfy `victory-native`'s peer range | Drop what the screens end up not using |
 | `app/**` screens | Stubs with `TODO` comments | Implement per SRS §0.5 Mobile |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. using `BIRD_PANIC` or `SALES_STAFF` in new code).
 
 ## Before opening a PR
 
-- **[Bắt buộc]** `npm run typecheck` passes; `npm run lint` and `npm test` pass once their configs exist.
+- **[Bắt buộc]** `npm run lint`, `npm run typecheck` and `npx jest --passWithNoTests` pass (CI job Mobile runs them). Add or upgrade packages with `npx expo install`, so versions stay on the Expo SDK, and commit the updated `package-lock.json`.
 - **[Bắt buộc]** Tested on at least one real device or emulator; PR shows screenshots of changed screens (Android and/or iOS).
 - **[Bắt buộc]** Endpoint or enum changes checked against `docs/api/api-spec.yaml` and `backend/src/types/domain.types.ts`.
 - **[Bắt buộc]** PR fills `.github/pull_request_template.md`; commits follow `.commitlintrc.json` (there is no `mobile` scope; use the closest feature scope such as `alert`, `farm`, `auth`, `analytics`).

@@ -9,7 +9,9 @@ import Constants from 'expo-constants'
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // SDK 53: shouldShowAlert was split into banner (heads-up) and list (notification centre)
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),

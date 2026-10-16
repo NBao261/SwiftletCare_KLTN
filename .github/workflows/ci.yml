@@ -45,6 +45,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
       firmware: ${{ steps.filter.outputs.firmware }}
+      mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -60,6 +61,9 @@ jobs:
               - '.github/workflows/ci.yml'
             firmware:
               - 'firmware/**'
+              - '.github/workflows/ci.yml'
+            mobile:
+              - 'mobile/**'
               - '.github/workflows/ci.yml'
 
   # ── Job 4: Backend — lint, type-check, test ─────────────────────────────
@@ -131,4 +135,24 @@ jobs:
       - run: pip install platformio
       - run: pio test -e native
 
-  # Mobile chưa có package-lock.json nên chưa thêm job (npm ci cần lockfile).
+  # ── Job 7: Mobile — lint, type-check, test ──────────────────────────────
+  # Chưa có test nào nên jest chạy với --passWithNoTests; test thêm vào sẽ tự được chạy.
+  mobile:
+    name: Mobile (lint · type-check · test)
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npx jest --passWithNoTests
