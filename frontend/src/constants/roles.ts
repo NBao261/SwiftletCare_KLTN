@@ -1,5 +1,5 @@
 import type { Role } from '@/types'
-import { translated } from '@/i18n'
+import { t, translated } from '@/i18n'
 
 /** Nhãn vai trò dùng chung — Sidebar (hiển thị role user hiện tại), Settings, v.v. translated(): đọc ra theo VI/EN đang chọn */
 export const ROLE_LABEL: Record<Role, string> = translated({
@@ -19,8 +19,9 @@ export const ROLE_LABEL: Record<Role, string> = translated({
  * để tránh nhầm lẫn về quyền sở hữu farm.
  */
 export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'SALES_STAFF'>, string> = {
-  FARM_OWNER: `${ROLE_LABEL.FARM_OWNER} (thành viên)`,
-  SALES_STAFF: ROLE_LABEL.SALES_STAFF,
+  // getter: đọc ROLE_LABEL (dịch lúc đọc) mỗi lần dùng — gán giá trị thẳng thì nhãn đóng băng theo ngôn ngữ lúc import
+  get FARM_OWNER() { return `${ROLE_LABEL.FARM_OWNER} (${t('thành viên')})` },
+  get SALES_STAFF() { return ROLE_LABEL.SALES_STAFF },
 }
 
 /**
