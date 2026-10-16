@@ -107,6 +107,8 @@ const en: Record<string, string> = {
   'Chủ nhà yến': 'Farm Owner',
   'Kỹ thuật viên': 'Technician',
   'Chuyên gia': 'Expert',
+  'thành viên': 'member',
+  'Không tải được nhật ký': 'Could not load the logs',
   'Chưa có API cho đề xuất chuyên gia — luồng đang chuyển sang chuyên gia do chủ nhà yến mời (Domain Expert).': 'No API for expert proposals yet — the flow is moving to experts invited by farm owners (Domain Expert).',
   'Sắp ra mắt — chưa có API danh sách chuyên gia (luồng đang chuyển sang chuyên gia do chủ nhà yến mời)': 'Coming soon — no expert list API yet (the flow is moving to experts invited by farm owners)',
   'Chưa cập nhật số điện thoại': 'No phone number yet',
