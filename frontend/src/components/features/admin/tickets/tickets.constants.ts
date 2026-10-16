@@ -8,7 +8,7 @@ import { translated } from '@/i18n'
  * Không sửa STATUS_TONE dùng chung vì màn Technician/Farm Owner vẫn dùng.
  */
 export const STATUS_BADGE_CLASS: Record<TicketStatus, string> = {
-  NEW: 'bg-blue-100 text-blue-700',                                       // mới, chờ tiếp nhận — xanh dương, khác hẳn đỏ/cam của Ưu tiên
+  NEW: 'bg-infoBlue/15 text-infoBlue',                                   // mới, chờ tiếp nhận — token infoBlue (cùng màu "Mới" bảng nhật ký Dashboard), khác đỏ/cam của Ưu tiên
   IN_PROGRESS: 'bg-limeMist text-charcoal',                             // đang chạy — xanh LIME MIST như Badge positive, menu đang chọn
   AWAITING_FIELD_CONFIRMATION: 'border border-charcoal/30 bg-white text-graphite', // đang chờ — viền, chưa "đặc"
   CLOSED: 'bg-warmGray/15 text-warmGray',                                 // đã kết thúc — chìm
