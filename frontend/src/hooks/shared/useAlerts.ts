@@ -15,12 +15,13 @@ export interface AlertsListQuery {
 /** Danh sách cảnh báo theo filter của trang Alerts (ALERT-FR-007) — KHÔNG đồng bộ badge chuông,
  *  vì `total`/`meta.unreadCount` ở đây bị chính severity/status filter của trang thu hẹp. Badge
  *  chuông toàn cục lấy từ `useUnreadAlertCount()` (không filter) thay vì từ đây. */
-export function useAlertsList(query: AlertsListQuery) {
+export function useAlertsList(query: AlertsListQuery, options?: { enabled?: boolean }) {
   return usePaginatedListQuery<Alert>(
     ['alerts', query],
     () => alertApi.list(query as Record<string, string>),
     query.page ?? 1,
     query.limit ?? 20,
+    options,
   )
 }
 

@@ -60,7 +60,8 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
   const farmId = node?.farm_id || undefined
   const { data: farm } = useFarm(farmId)
   // Cảnh báo đang mở của phòng → lọc đúng thiết bị (alert.node_id = _id của node); 1 phòng ít cảnh báo nên 100 là đủ
-  const alerts = useAlertsList({ farmId, zoneId: node?.zone_id, status: 'ACTIVE', limit: 100 })
+  // Chỉ gọi khi drawer đang mở (node có giá trị) — đóng drawer không tải cảnh báo
+  const alerts = useAlertsList({ farmId, zoneId: node?.zone_id, status: 'ACTIVE', limit: 100 }, { enabled: !!node })
   // Ticket của chính thiết bị: backend lọc theo nodeId qua cảnh báo (alert_id → alert.node_id); không gọi khi drawer đóng
   const { data: nodeTickets } = useAllTickets({ nodeId: node?._id }, { enabled: !!node })
 
@@ -86,7 +87,8 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
               <div className="min-w-0">
                 <p className="truncate text-h3 text-charcoal">{node.device_id}</p>
                 <p className="truncate text-small text-warmGray">
-                  {t(isSensor ? 'ESP32 · 5 cảm biến RS485' : 'Raspberry Pi · RTSP Stream')}
+                  {/* SRS v2.0.0: camera là camera IP phát RTSP, AI đếm chim chạy trên nút PC/cloud — không còn Raspberry Pi */}
+                  {t(isSensor ? 'ESP32 · 5 cảm biến RS485' : 'Camera IP · RTSP Stream')}
                 </p>
               </div>
             </div>
