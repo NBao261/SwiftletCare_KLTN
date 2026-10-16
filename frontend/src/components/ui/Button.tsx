@@ -1,5 +1,6 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/lib/cn'
+import { trChildren } from '@/i18n'
 
 /**
  * Button — bám đúng "Bảng Phân Loại Màu Nút Bấm Mặc Định" (FE_Design_Claude.md §5.1)
@@ -58,7 +59,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : children}
+        {/* trChildren: chữ trong nút tự dịch theo VI/EN, icon giữ nguyên */}
+        {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : trChildren(children)}
       </button>
     )
   },

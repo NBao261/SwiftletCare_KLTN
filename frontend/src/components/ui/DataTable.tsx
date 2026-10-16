@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
+import { tr } from '@/i18n'
 import { IconSortAsc, IconSortDesc } from '@/components/ui/icons'
 import type { SortDirection } from '@/types'
 
@@ -25,6 +26,8 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void
   /** px — ép mọi dòng cao bằng nhau bất kể 1 hay nhiều dòng nội dung, để khung bảng không đổi theo dữ liệu */
   rowHeight?: number
+  /** Ít dòng hơn số này (VD trang cuối) thì chèn dòng trống cho đủ — khung bảng giữ nguyên chiều cao. Đi kèm `rowHeight` */
+  minRows?: number
 }
 
 const ALIGN_CLASS: Record<NonNullable<DataTableColumn<unknown>['align']>, string> = {
@@ -40,8 +43,10 @@ const ALIGN_CLASS: Record<NonNullable<DataTableColumn<unknown>['align']>, string
  * phát sinh màu/bo góc mới.
  */
 export default function DataTable<T>({
-  columns, rows, getRowKey, sortKey, sortDirection = 'asc', onSortChange, emptyMessage = 'Không có dữ liệu', onRowClick, rowHeight,
+  columns, rows, getRowKey, sortKey, sortDirection = 'asc', onSortChange, emptyMessage = 'Không có dữ liệu', onRowClick, rowHeight, minRows = 0,
 }: DataTableProps<T>) {
+  // Dòng "không có dữ liệu" cũng chiếm 1 chỗ trong minRows
+  const fillerCount = Math.max(0, minRows - Math.max(rows.length, 1))
   return (
     <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
       <div className="overflow-x-auto">
@@ -63,19 +68,19 @@ export default function DataTable<T>({
                       onClick={() => onSortChange(col.key)}
                       className={cn('inline-flex items-center gap-1 transition-colors hover:text-charcoal', sortKey === col.key && 'text-charcoal')}
                     >
-                      {col.header}
+                      {tr(col.header)}
                       {sortKey === col.key && (sortDirection === 'asc' ? <IconSortAsc width={12} height={12} /> : <IconSortDesc width={12} height={12} />)}
                     </button>
-                  ) : col.header}
+                  ) : tr(col.header)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-warmGray/10">
             {rows.length === 0 && (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center text-small text-warmGray">
-                  {emptyMessage}
+              <tr style={rowHeight ? { height: rowHeight } : undefined}>
+                <td colSpan={columns.length} className={cn('px-4 text-center text-small text-warmGray', rowHeight ? 'py-0' : 'py-10')}>
+                  {tr(emptyMessage)}
                 </td>
               </tr>
             )}
@@ -96,6 +101,11 @@ export default function DataTable<T>({
                     {col.render(row, index)}
                   </td>
                 ))}
+              </tr>
+            ))}
+            {Array.from({ length: fillerCount }, (_, i) => (
+              <tr key={`filler-${i}`} aria-hidden="true" style={rowHeight ? { height: rowHeight } : undefined}>
+                <td colSpan={columns.length} />
               </tr>
             ))}
           </tbody>

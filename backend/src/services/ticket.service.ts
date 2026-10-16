@@ -428,6 +428,12 @@ export interface ListTicketsQuery {
   unassigned?: boolean
   /** TICKET-FR-009 — chỉ ticket vượt hạn xử lý SLA (xem `slaBreachedCondition`) */
   slaBreached?: boolean
+  /**
+   * Ticket của 1 thiết bị (_id SensorNode/CameraNode): ticket không lưu node, nên lấy qua cảnh báo — ticket có
+   * `alert_id` trỏ tới cảnh báo mà `node_id` là thiết bị này (VD NODE_OFFLINE leo thang). Ticket bảo trì/lắp đặt/tự
+   * tạo gắn với phòng, không có trong danh sách này
+   */
+  nodeId?: string
   /** Tìm trong ghi chú (mô tả lúc tạo là ghi chú đầu tiên) và tên farm */
   search?: string
   sort?: TicketSortKey; order?: 'asc' | 'desc'
@@ -471,6 +477,13 @@ async function buildTicketFilter(user: CurrentUser, query: ListTicketsQuery) {
   if (query.assignedToMe) filter.assigned_to = new Types.ObjectId(user._id)
   else if (query.unassigned) filter.assigned_to = null
   if (query.slaBreached) conditions.push(slaBreachedCondition(new Date()))
+  if (query.nodeId) {
+    // Chỉ xét cảnh báo ĐÃ có ticket trỏ tới (trong các farm user được xem) — số ticket nhỏ và chặn trên, còn toàn bộ
+    // cảnh báo của 1 thiết bị chạy lâu thì tăng mãi; tra ngược sang alerts bằng _id (có index) để lọc đúng thiết bị
+    const linkedAlertIds = await Ticket.distinct('alert_id', { farm_id: filter.farm_id, alert_id: { $ne: null } })
+    const alertIds = await Alert.find({ _id: { $in: linkedAlertIds }, node_id: new Types.ObjectId(query.nodeId) }).distinct('_id')
+    conditions.push({ alert_id: { $in: alertIds } })
+  }
 
   const term = query.search?.trim()
   if (term) {

@@ -27,7 +27,8 @@ router.get('/:id', param('id').isMongoId(), validate, alertController.getOne)
 // và kiểm chứng (mục 4.4)
 router.put(
   '/:id/acknowledge',
-  requireRole('FARM_OWNER', 'TECHNICIAN', 'ADMIN'),
+  // ALERT-FR-009 — Admin chỉ xem: xác nhận thay sẽ chặn alertEscalation tự tạo ticket (TICKET-FR-002)
+  requireRole('FARM_OWNER', 'TECHNICIAN'),
   [param('id').isMongoId(), body('note').optional().isString()],
   validate,
   alertController.acknowledge,

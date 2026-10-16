@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useFloatingMenu } from '@/components/ui/useFloatingMenu'
 import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 import { IconMore } from '@/components/ui/icons'
 
 export interface ActionsMenuItem {
@@ -93,7 +94,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
         onKeyDown={onKeyDown}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Thao tác khác"
+        aria-label={t('Thao tác khác')}
         className={cn(
           'inline-flex h-8 w-8 items-center justify-center rounded-full text-warmGray transition-all duration-200 ease-in-out hover:bg-charcoal/5 hover:text-charcoal',
           open && 'bg-charcoal/5 text-charcoal',
@@ -131,7 +132,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
                     isActive ? 'bg-charcoal/5' : 'bg-transparent',
                   )}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </button>
               </Fragment>
             )

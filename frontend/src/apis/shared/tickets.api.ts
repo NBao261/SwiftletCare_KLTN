@@ -34,6 +34,8 @@ export interface ListTicketsQuery {
   farmId?: string; status?: TicketStatus; priority?: 'P1' | 'P2' | 'P3'; assignedToMe?: boolean
   /** Hàng đợi chung (TICKET-FR-005) — ticket chưa có Technician; BE chỉ trả trong khu vực phụ trách */
   unassigned?: boolean
+  /** Ticket của 1 thiết bị (_id node) — sinh từ cảnh báo của thiết bị đó (backend tra qua alert_id) */
+  nodeId?: string
   page?: number; limit?: number
 }
 

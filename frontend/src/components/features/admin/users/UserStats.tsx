@@ -1,19 +1,32 @@
-import { HouseIcon, LockIcon, StorefrontIcon, UsersThreeIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
+import { GraduationCapIcon, HouseIcon, LockIcon, UsersIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
 import { getUserStatus, useAllUsers } from '@/hooks/admin/useUsers'
-import { Button, EmptyState } from '@/components/ui'
+import { Button, Card, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import StatTile from '@/components/ui/StatTile'
-import type { Role } from '@/types'
+import { ROLE_LABEL } from '@/constants/roles'
+import { t } from '@/i18n'
+import type { Role, User } from '@/types'
 
-const pct = (n: number, total: number) => `${total > 0 ? Math.round((n / total) * 100) : 0}% tổng số`
+/** Vòng icon xám như các ô trang Tổng quan (theo ReadingTile Dashboard Farm Owner) */
+const ICON = 'bg-warmGray/10 text-charcoal'
+
+const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'SALES_STAFF', 'TECHNICIAN', 'ADMIN']
+
+/** Dòng phụ ô vai trò: tình trạng hoạt động của nhóm đó (thay cho "% tổng số" — tỉ lệ không giúp Admin làm gì) */
+function roleSub(list: User[]) {
+  if (list.length === 0) return 'Chưa có tài khoản nào'
+  const locked = list.filter(u => getUserStatus(u) === 'LOCKED').length
+  return locked > 0 ? t('{{active}} hoạt động · {{locked}} đã khoá', { active: list.length - locked, locked }) : 'Tất cả đang hoạt động'
+}
 
 /**
  * Hàng 5 ô chỉ số đầu trang Người dùng — cùng khuôn hàng KPI trang Ticket (StatTile). Số liệu TOÀN HỆ
  * THỐNG (không theo bộ lọc bảng), đếm ở client từ useAllUsers() vì backend không có endpoint thống kê
  * tài khoản. Chỉ để xem — lọc theo vai trò/trạng thái dùng thanh công cụ của bảng.
+ * - Tổng: kèm số Quản trị viên (không có ô riêng) để cộng các ô vai trò khớp tổng, + số chờ xoá nếu có.
  * - Kỹ thuật viên: dòng phụ đếm người CHƯA gán khu vực — Ticket Router không gán ticket được cho họ
  *   (TICKET-FR-004), là việc Admin cần làm (AUTH-FR-005c).
- * - Đã khoá: kèm số tài khoản đang chờ xoá (xử lý ở trang Yêu cầu tài khoản).
+ * - Đã khoá: bị khoá thuộc vai trò nào.
  */
 export default function UserStats() {
   const { data: users, isLoading, isError, refetch } = useAllUsers()
@@ -34,36 +47,60 @@ export default function UserStats() {
   const byRole = (r: Role) => users.filter(u => u.role === r)
   const statusCount = (s: ReturnType<typeof getUserStatus>) => users.filter(u => getUserStatus(u) === s).length
   const technicians = byRole('TECHNICIAN')
-  const noRegion = technicians.filter(t => !t.assigned_regions?.length).length
+  const noRegion = technicians.filter(u => !u.assigned_regions?.length).length
   const pendingDeletion = statusCount('PENDING_DELETION')
+  const lockedUsers = users.filter(u => getUserStatus(u) === 'LOCKED')
+  const lockedByRole = ROLES_IN_TILES
+    .map(r => [r, lockedUsers.filter(u => u.role === r).length] as const)
+    .filter(([, n]) => n > 0)
+    .map(([r, n]) => `${n} ${ROLE_LABEL[r].toLowerCase()}`)
+  const totalSub = [
+    t('{{n}} hoạt động', { n: statusCount('ACTIVE') }),
+    t('{{n}} quản trị viên', { n: byRole('ADMIN').length }),
+    pendingDeletion > 0 && t('{{n}} chờ xoá', { n: pendingDeletion }),
+  ].filter(Boolean).join(' · ')
 
   return (
-    // 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 — như trang Ticket
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-      <StatTile
-        className="col-span-2 lg:col-span-1"
-        icon={UsersThreeIcon}
-        iconClass="bg-charcoal text-limeMist"
-        label="Tổng tài khoản"
-        value={total}
-        sub={`${statusCount('ACTIVE')} hoạt động · ${statusCount('LOCKED')} đã khoá`}
-      />
-      <StatTile icon={HouseIcon} iconClass="bg-accent-300 text-charcoal" label="Chủ nhà yến" value={byRole('FARM_OWNER').length} sub={pct(byRole('FARM_OWNER').length, total)} />
-      <StatTile
-        icon={WrenchIcon}
-        iconClass="bg-accent-300 text-charcoal"
-        label="Kỹ thuật viên"
-        value={technicians.length}
-        sub={noRegion > 0 ? `${noRegion} chưa gán khu vực` : 'Đều đã gán khu vực'}
-      />
-      <StatTile icon={StorefrontIcon} iconClass="bg-warmGray/10 text-charcoal" label="Nhân viên kinh doanh" value={byRole('SALES_STAFF').length} sub={pct(byRole('SALES_STAFF').length, total)} />
-      <StatTile
-        icon={LockIcon}
-        iconClass="bg-red-100 text-red-600"
-        label="Đã khoá"
-        value={statusCount('LOCKED')}
-        sub={pendingDeletion > 0 ? `${pendingDeletion} tài khoản chờ xoá` : 'Không có yêu cầu xoá'}
-      />
-    </div>
+    // Cùng kiểu card "Chỉ số vận hành toàn hệ thống" (trang Tổng quan): bọc Card + tiêu đề, ô bên trong bỏ shadow
+    // riêng, icon xám đồng nhất
+    <Card className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-h2 text-charcoal">{t('Thống kê tài khoản')}</h2>
+        <p className="mt-1 text-sm text-warmGray">{t('Số tài khoản theo vai trò và trạng thái trên toàn hệ thống')}</p>
+      </div>
+
+      {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <StatTile
+          className="col-span-2 shadow-none lg:col-span-1"
+          icon={UsersIcon}
+          iconClass={ICON}
+          label="Tổng tài khoản"
+          value={total}
+          sub={totalSub}
+        />
+        <StatTile className="shadow-none" icon={HouseIcon} iconClass={ICON} label="Chủ nhà yến" value={byRole('FARM_OWNER').length} sub={roleSub(byRole('FARM_OWNER'))} />
+        <StatTile
+          className="shadow-none"
+          icon={WrenchIcon}
+          iconClass={ICON}
+          label="Kỹ thuật viên"
+          value={technicians.length}
+          // Có kỹ thuật viên chưa gán khu vực → ô nổi cam: Ticket Router không giao ticket cho họ được, việc của Admin
+          tone={noRegion > 0 ? 'warning' : undefined}
+          sub={technicians.length === 0 ? 'Chưa có tài khoản nào' : noRegion > 0 ? t('{{n}} chưa gán khu vực', { n: noRegion }) : 'Tất cả đã gán khu vực'}
+        />
+        {/* Chuyên gia = SALES_STAFF (chỉ đổi tên hiển thị) */}
+        <StatTile className="shadow-none" icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.SALES_STAFF} value={byRole('SALES_STAFF').length} sub={roleSub(byRole('SALES_STAFF'))} />
+        <StatTile
+          className="shadow-none"
+          icon={LockIcon}
+          iconClass={ICON}
+          label="Đã khoá"
+          value={lockedUsers.length}
+          sub={lockedByRole.length ? lockedByRole.join(' · ') : 'Không có tài khoản bị khoá'}
+        />
+      </div>
+    </Card>
   )
 }

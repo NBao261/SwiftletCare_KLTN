@@ -1,11 +1,12 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useAdminOverrideTicket } from '@/hooks/shared/useTickets'
-import { Button, Modal, SelectMenu } from '@/components/ui'
+import { SelectMenu } from '@/components/ui'
 import Field from '@/components/features/admin/tickets/SelectField'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { PRIORITY_LABEL } from '@/constants/sla'
-import OverrideReasonField, { REASON_EMPTY, type OverrideModalProps } from '@/components/features/admin/tickets/OverrideReasonField'
+import { t } from '@/i18n'
+import { OverrideModalLayout, REASON_EMPTY, type OverrideModalProps } from '@/components/features/admin/tickets/OverrideReasonField'
 import type { TicketPriority } from '@/types'
 
 const PRIORITIES: TicketPriority[] = ['P1', 'P2', 'P3']
@@ -37,20 +38,27 @@ export default function ChangePriorityModal({ open, onClose, ticket }: OverrideM
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Đổi độ ưu tiên">
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-        <Field label="Độ ưu tiên">
-          <SelectMenu
-            field
-            ariaLabel="Độ ưu tiên"
-            value={priority}
-            onChange={setPriority}
-            options={PRIORITIES.map(p => ({ value: p, label: `${p} · ${PRIORITY_LABEL[p]}${p === ticket.priority ? ' (hiện tại)' : ''}` }))}
-          />
-        </Field>
-        <OverrideReasonField value={reason} onChange={setReason} error={reasonError} />
-        <Button type="submit" loading={override.isPending} disabled={unchanged} className="w-full">Lưu</Button>
-      </form>
-    </Modal>
+    <OverrideModalLayout
+      open={open}
+      onClose={onClose}
+      ticket={ticket}
+      title="Đổi độ ưu tiên"
+      description="Hạn SLA sẽ tính lại theo mức mới"
+      onSubmit={handleSubmit}
+      submitLabel="Lưu"
+      loading={override.isPending}
+      disabled={unchanged}
+      reason={{ value: reason, onChange: setReason, error: reasonError }}
+    >
+      <Field label="Độ ưu tiên mới">
+        <SelectMenu
+          field
+          ariaLabel="Độ ưu tiên mới"
+          value={priority}
+          onChange={setPriority}
+          options={PRIORITIES.map(p => ({ value: p, label: `${PRIORITY_LABEL[p]}${p === ticket.priority ? ` ${t('(hiện tại)')}` : ''}` }))}
+        />
+      </Field>
+    </OverrideModalLayout>
   )
 }

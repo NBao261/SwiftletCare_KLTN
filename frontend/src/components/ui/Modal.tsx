@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
+import { t, tr } from '@/i18n'
 import { cn } from '@/lib/cn'
 
 /** Modal Bottom Sheet cơ bản — mục 2.1 (rounded-3xl) */
@@ -7,12 +8,21 @@ interface ModalProps {
   open: boolean
   onClose: () => void
   title?: string
+  /** Tên cho trình đọc màn hình khi không có `title` (popup tự dựng đầu) */
+  ariaLabel?: string
   children: ReactNode
-  /** Ghi đè class của khung (VD `max-w-sm` cho popup xác nhận ngắn) — mặc định max-w-md */
+  /**
+   * `md` (mặc định, max-w-md) · `lg` (max-w-lg) — form cần hàng nhãn rộng hơn, VD lỗi nằm cùng hàng nhãn ·
+   * `xl` (max-w-3xl) — popup bố cục ngang 2 cột (danh mục trái + nội dung phải), VD chi tiết tài khoản
+   */
+  size?: 'md' | 'lg' | 'xl'
+  /** Ghi đè class của khung (VD `max-w-sm` cho popup xác nhận ngắn) — thắng `size` nhờ tailwind-merge */
   className?: string
 }
 
-export function Modal({ open, onClose, title, children, className }: ModalProps) {
+const SIZE_CLASS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-3xl' } as const
+
+export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', className }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   // Nơi gọi hay truyền onClose inline (hàm mới mỗi render). Để onClose trong deps
   // thì mỗi phím gõ vào input → parent render lại → effect chạy lại → focus() giật
@@ -53,15 +63,23 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
-        className={cn('w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none', className)}
+        aria-label={tr(title ?? ariaLabel)}
+        className={cn('relative w-full rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none', SIZE_CLASS[size], className)}
       >
-        <div className="mb-4 flex items-center justify-between">
-          {title && <h2 className="text-lg font-bold text-charcoal">{title}</h2>}
-          <Button variant="icon" size="sm" onClick={onClose} aria-label="Đóng">
+        {title ? (
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-charcoal">{tr(title)}</h2>
+            <Button variant="icon" size="sm" onClick={onClose} aria-label={t('Đóng')}>
+              <CloseIcon />
+            </Button>
+          </div>
+        ) : (
+          // Không tiêu đề (popup tự dựng đầu, VD 2 cột): nút đóng neo góc trên phải, không chiếm 1 hàng riêng — trước
+          // đây hàng chỉ có nút + justify-between đẩy nút sang TRÁI. Nội dung tự chừa chỗ bên phải hàng đầu.
+          <Button variant="icon" size="sm" onClick={onClose} aria-label={t('Đóng')} className="absolute right-6 top-6 z-10">
             <CloseIcon />
           </Button>
-        </div>
+        )}
         {children}
       </div>
     </div>

@@ -2,12 +2,13 @@ import { useState, useEffect, FormEvent } from 'react'
 import { useAdminOverrideTicket } from '@/hooks/shared/useTickets'
 import { useTechniciansList } from '@/hooks/admin/useUsers'
 import { useFarm } from '@/hooks/shared/useFarms'
-import { Button, Modal, SelectMenu } from '@/components/ui'
+import { SelectMenu } from '@/components/ui'
 import Field from '@/components/features/admin/tickets/SelectField'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
-import OverrideReasonField, { REASON_EMPTY, type OverrideModalProps } from '@/components/features/admin/tickets/OverrideReasonField'
+import { t } from '@/i18n'
+import { OverrideModalLayout, REASON_EMPTY, type OverrideModalProps } from '@/components/features/admin/tickets/OverrideReasonField'
 import type { User } from '@/types'
 
 /** Backend từ chối gán ngoài vùng bằng 400 + câu gợi ý cố định "Gửi kèm force=true..." (ticket.service.ts) */
@@ -38,7 +39,6 @@ export default function ReassignTicketModal({ open, onClose, ticket }: OverrideM
   }, [open])
 
   const currentAssigneeId = typeof ticket.assigned_to === 'object' ? ticket.assigned_to._id : ticket.assigned_to
-  const currentAssignee = technicians.find(t => t._id === currentAssigneeId)?.full_name
   const selected = technicians.find(t => t._id === technicianId)
   const reasonError = submitted && !reason.trim() ? REASON_EMPTY : undefined
 
@@ -47,7 +47,7 @@ export default function ReassignTicketModal({ open, onClose, ticket }: OverrideM
       onSuccess: () => { push('Đã gán lại kỹ thuật viên'); onClose() },
       onError: (err) => {
         // Chưa force mà backend chặn vì ngoài vùng → hỏi lại thay vì chỉ báo lỗi
-        if (!force && isOutOfRegionError(err)) setForceConfirm(`${selected?.full_name ?? 'Kỹ thuật viên này'} không phụ trách khu vực của farm (hoặc farm chưa được gán khu vực). Nếu vẫn gán, kỹ thuật viên này sẽ không tự mở được ticket cho đến khi được thêm vùng phụ trách.`)
+        if (!force && isOutOfRegionError(err)) setForceConfirm(t('{{name}} không phụ trách khu vực của farm (hoặc farm chưa được gán khu vực). Nếu vẫn gán, kỹ thuật viên này sẽ không tự mở được ticket cho đến khi được thêm vùng phụ trách.', { name: selected?.full_name ?? t('Kỹ thuật viên này') }))
         else push(getApiErrorMessage(err, 'Gán lại kỹ thuật viên thất bại'), 'error')
       },
     })
@@ -59,8 +59,8 @@ export default function ReassignTicketModal({ open, onClose, ticket }: OverrideM
     if (!selected || !reason.trim()) return
     // Biết trước là ngoài vùng (đã có region của farm) thì hỏi luôn, khỏi mất 1 vòng 400
     if (coversRegion(selected, farm?.region) === false) {
-      const regions = selected.assigned_regions?.join(', ') || 'chưa gán vùng nào'
-      setForceConfirm(`${selected.full_name} phụ trách ${regions}, không khớp khu vực "${farm?.region}" của farm. Nếu vẫn gán, kỹ thuật viên này sẽ không tự mở được ticket cho đến khi được thêm vùng phụ trách.`)
+      const regions = selected.assigned_regions?.join(', ') || t('chưa gán vùng nào')
+      setForceConfirm(t('{{name}} phụ trách {{regions}}, không khớp khu vực "{{region}}" của farm. Nếu vẫn gán, kỹ thuật viên này sẽ không tự mở được ticket cho đến khi được thêm vùng phụ trách.', { name: selected.full_name, regions, region: farm?.region }))
       return
     }
     send(false)
@@ -68,48 +68,44 @@ export default function ReassignTicketModal({ open, onClose, ticket }: OverrideM
 
   return (
     <>
-      <Modal open={open && !forceConfirm} onClose={onClose} title="Gán lại kỹ thuật viên">
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-          {/* SelectMenu thay <select> native — cùng dropdown với popup Tạo ticket. SelectMenu không có option
-              disabled nên người đang phụ trách bị loại khỏi danh sách, tên hiện ở dòng gợi ý bên dưới */}
-          <Field
-            label="Kỹ thuật viên"
-            required
-            error={submitted && !technicianId ? 'Chưa chọn kỹ thuật viên' : undefined}
-            hint={(farm?.region || currentAssignee) && (
-              <p className="text-small text-warmGray">
-                {[farm?.region && `Khu vực của farm: ${farm.region}`, currentAssignee && `Đang phụ trách: ${currentAssignee}`].filter(Boolean).join(' · ')}
-              </p>
-            )}
-          >
-            <SelectMenu
-              field
-              ariaLabel="Kỹ thuật viên"
-              disabled={isLoading}
-              invalid={submitted && !technicianId}
-              value={technicianId}
-              onChange={setTechnicianId}
-              options={[
-                { value: '', label: isLoading ? 'Đang tải...' : '-- Chọn kỹ thuật viên --' },
-                ...technicians
-                  .filter(t => t._id !== currentAssigneeId)
-                  .map(t => {
-                    const outOfRegion = coversRegion(t, farm?.region) === false
-                    const regions = t.assigned_regions?.length ? ` (${t.assigned_regions.join(', ')})` : ''
-                    return { value: t._id, label: `${t.full_name}${regions}${outOfRegion ? ' — ngoài vùng' : ''}` }
-                  }),
-              ]}
-            />
-          </Field>
-          {truncated && (
-            <p className="-mt-2 text-small text-climateOrange">
-              Chỉ liệt kê {technicians.length}/{total} kỹ thuật viên đầu tiên (giới hạn 1 trang của /admin/users).
-            </p>
-          )}
-          <OverrideReasonField value={reason} onChange={setReason} error={reasonError} />
-          <Button type="submit" loading={override.isPending} className="w-full">Gán lại</Button>
-        </form>
-      </Modal>
+      <OverrideModalLayout
+        open={open && !forceConfirm}
+        onClose={onClose}
+        ticket={ticket}
+        title="Gán lại kỹ thuật viên"
+        description={farm?.region ? t('Khu vực của farm: {{region}}', { region: farm.region }) : 'Farm chưa được gán khu vực'}
+        onSubmit={handleSubmit}
+        submitLabel="Gán lại"
+        loading={override.isPending}
+        reason={{ value: reason, onChange: setReason, error: reasonError }}
+      >
+        {/* SelectMenu không có option disabled nên người đang phụ trách bị loại khỏi danh sách (tên ở cột Hiện tại) */}
+        <Field label="Kỹ thuật viên mới" required errorInLabel error={submitted && !technicianId ? 'Chưa chọn kỹ thuật viên' : undefined}>
+          <SelectMenu
+            field
+            ariaLabel="Kỹ thuật viên mới"
+            disabled={isLoading}
+            invalid={submitted && !technicianId}
+            value={technicianId}
+            onChange={setTechnicianId}
+            options={[
+              { value: '', label: isLoading ? 'Đang tải...' : '-- Chọn kỹ thuật viên --' },
+              ...technicians
+                .filter(u => u._id !== currentAssigneeId)
+                .map(u => {
+                  const outOfRegion = coversRegion(u, farm?.region) === false
+                  const regions = u.assigned_regions?.length ? ` (${u.assigned_regions.join(', ')})` : ''
+                  return { value: u._id, label: `${u.full_name}${regions}${outOfRegion ? ` — ${t('ngoài vùng')}` : ''}` }
+                }),
+            ]}
+          />
+        </Field>
+        {truncated && (
+          <p className="mt-2 text-small text-warmGray">
+            {t('Chỉ liệt kê {{shown}}/{{total}} kỹ thuật viên đầu tiên.', { shown: technicians.length, total })}
+          </p>
+        )}
+      </OverrideModalLayout>
 
       <ConfirmModal
         open={open && !!forceConfirm}

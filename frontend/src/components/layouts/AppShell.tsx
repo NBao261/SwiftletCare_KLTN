@@ -8,6 +8,8 @@ import Toast from '@/components/common/Toast'
 import LogoutConfirmModal from '@/components/common/LogoutConfirmModal'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useAlertNotifications } from '@/hooks/shared/useAlertNotifications'
+import { useTranslation as useI18next } from 'react-i18next'
+import { t } from '@/i18n'
 
 /**
  * Khung ứng dụng dùng chung — sidebar (desktop) / dock nổi (mobile) + header +
@@ -24,6 +26,9 @@ export default function AppShell({
 }) {
   useAlertNotifications()
   const back = useBreadcrumbStore(s => s.back)
+  // Đổi VI/EN → AppShell render lại (sidebar/header theo), vùng nội dung remount (key) để mọi t() gọi trong hàm thường
+  // (cột bảng, helper ngày, bảng nhãn) ra đúng ngôn ngữ mới. Mất state tạm của trang (bộ lọc đang chọn) — chấp nhận được
+  const { i18n } = useI18next()
   const [scrolled, setScrolled] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
 
@@ -53,14 +58,14 @@ export default function AppShell({
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-warmGray/15 bg-white text-charcoal shadow-icon transition-colors group-hover:bg-warmGray/10">
                   <ArrowLeft width={18} height={18} />
                 </span>
-                Quay lại {back.label}
+                {t('Quay lại {{page}}', { page: t(back.label) })}
               </Link>
             )}
             {/* Suspense đặt SÁT Outlet (không bọc ở App.tsx cấp cao hơn) — chunk
                 lazy-load lần đầu chỉ thay skeleton trong khung nội dung này,
                 sidebar/header/dock không bị unmount nên không còn nháy toàn
                 màn hình khi chuyển tab lần đầu. */}
-            <Suspense fallback={<LoadingSkeleton className="h-40 w-full" />}>
+            <Suspense key={i18n.language} fallback={<LoadingSkeleton className="h-40 w-full" />}>
               <Outlet />
             </Suspense>
           </div>

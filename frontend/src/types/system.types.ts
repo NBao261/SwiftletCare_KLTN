@@ -18,6 +18,8 @@ export interface AuditLogEntry {
   /** 'user' | 'ticket' | 'farm' | 'zone' | 'sensor_node' | 'camera_node' | 'system_settings' | 'sales_assignment_request' | ... */
   target_type: string
   target_id?: string
+  /** Tên tài khoản khi target_type='user' (backend tra sẵn); null với loại khác/tài khoản không còn */
+  target_name?: string | null
   metadata?: Record<string, unknown>
   ip_address?: string
   created_at: string

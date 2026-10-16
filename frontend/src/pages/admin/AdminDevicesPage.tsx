@@ -7,7 +7,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
-import { IconDevice } from '@/components/ui/icons'
 import { useSystemNodeStatus } from '@/hooks/shared/useDevices'
 import { Button, ClearFiltersButton, EmptyState, SearchInput, SelectMenu, SortChips, SectionCard } from '@/components/ui'
 import DataTable from '@/components/ui/DataTable'
@@ -15,9 +14,12 @@ import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import DeviceStats from '@/components/features/admin/devices/DeviceStats'
 import { buildDeviceColumns, nodeLocation } from '@/components/features/admin/devices/deviceColumns'
+import DeviceDetailDrawer from '@/components/features/admin/devices/DeviceDetailDrawer'
 import type { DeviceStatus, SortDirection, SystemNodeStatusItem } from '@/types'
 
 const PAGE_SIZE = 10
+/** px — vừa dòng 2 tầng chữ (cột Heartbeat giờ/ngày); mọi dòng kể cả dòng trống bù cao bằng nhau */
+const ROW_HEIGHT = 64
 
 const STATUS_OPTIONS: { value: DeviceStatus | ''; label: string }[] = [
   { value: '', label: 'Tất cả trạng thái' },
@@ -61,6 +63,7 @@ export default function AdminDevicesPage() {
   const [sortBy, setSortBy] = useState<DeviceSortKey>(DEFAULT_SORT_BY)
   const [sortDir, setSortDir] = useState<SortDirection>(DEFAULT_SORT_DIR)
   const [page, setPage] = useState(1)
+  const [viewTarget, setViewTarget] = useState<SystemNodeStatusItem | null>(null)
 
   const nodes = useMemo(() => data?.nodes ?? [], [data])
   const farmOptions = useMemo(
@@ -114,8 +117,8 @@ export default function AdminDevicesPage() {
       {/* Hàng 0: 5 ô số toàn hệ thống — tự làm mới mỗi 30 giây (useSystemNodeStatus) */}
       <DeviceStats status={data} />
 
-      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
-      <SectionCard icon={<IconDevice width={20} height={20} />} title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống · tự làm mới mỗi 30 giây">
+      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang */}
+      <SectionCard title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống">
 
         {/* Hàng 1: tìm kiếm — không có nút tạo: kích hoạt thiết bị là việc của Technician */}
         <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, phòng..." value={search} onChange={withReset(setSearch)} />
@@ -130,9 +133,14 @@ export default function AdminDevicesPage() {
         </div>
 
         <DataTable
-          columns={buildDeviceColumns((page - 1) * PAGE_SIZE)}
+          columns={buildDeviceColumns((page - 1) * PAGE_SIZE, setViewTarget)}
           rows={rows}
           getRowKey={n => `${n.type}-${n._id}`}
+          // Bấm dòng hoặc nút "Chi tiết" mở drawer chi tiết (Admin chỉ xem thiết bị)
+          onRowClick={setViewTarget}
+          // Cố định khung 10 dòng — ít thiết bị/trang cuối vẫn giữ chiều cao, lọc không làm card co giãn
+          rowHeight={ROW_HEIGHT}
+          minRows={PAGE_SIZE}
           emptyMessage={hasActiveFilters
             ? 'Không có thiết bị nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
             : 'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi Technician kích hoạt qua Web Console Onboarding.'}
@@ -141,6 +149,8 @@ export default function AdminDevicesPage() {
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}
         <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
       </SectionCard>
+
+      <DeviceDetailDrawer node={viewTarget} onClose={() => setViewTarget(null)} />
     </div>
   )
 }

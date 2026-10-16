@@ -1,4 +1,5 @@
 import type { AdminCreatableRole } from '@/hooks/admin/useUsers'
+import { t } from '@/i18n'
 
 /** Khớp validator backend admin.route.ts: isEmail / isLength({min:8}) / notEmpty / isArray({min:1}) */
 export const PASSWORD_MIN = 8
@@ -26,35 +27,34 @@ export function parseRegions(raw: string): string[] {
 
 /**
  * Trả về map lỗi theo field — rỗng nghĩa là form hợp lệ. Tách khỏi component để
- * dễ đọc/kiểm thử. Thông báo phân biệt "chưa nhập" và "nhập sai", kèm ví dụ để
- * người dùng biết phải sửa thành gì thay vì chỉ báo "không hợp lệ".
+ * dễ đọc/kiểm thử. Thông báo phân biệt "chưa nhập" và "nhập sai", kèm ví dụ khi cần.
+ * Thông báo ngắn gọn (vài chữ): CreateUserModal hiện lỗi ngay dưới ô nhập.
  */
 export function validateNewUser(form: FormState): Partial<Record<Field, string>> {
   const errors: Partial<Record<Field, string>> = {}
 
   const fullName = form.full_name.trim()
-  if (!fullName) errors.full_name = 'Chưa nhập họ tên — nhập tên đầy đủ.'
-  else if (fullName.length < 2) errors.full_name = 'Họ tên quá ngắn — cần ít nhất 2 ký tự'
+  if (!fullName) errors.full_name = 'Chưa nhập họ tên'
+  else if (fullName.length < 2) errors.full_name = 'Tối thiểu 2 ký tự'
 
   const email = form.email.trim()
-  if (!email) errors.email = 'Chưa nhập email — đây sẽ là tên đăng nhập của tài khoản'
-  else if (!EMAIL_RE.test(email)) errors.email = 'Email sai định dạng — cần dạng ten@tenmien.'
+  if (!email) errors.email = 'Chưa nhập email'
+  else if (!EMAIL_RE.test(email)) errors.email = 'Email không hợp lệ'
 
   const phone = form.phone.replace(/[\s.-]/g, '')
-  if (phone && !PHONE_RE.test(phone)) {
-    errors.phone = 'SĐT phải là 10 số bắt đầu bằng 0 (VD: 0912345678) hoặc +84 rồi 9 số (VD: +84912345678)'
-  }
+  if (phone && !PHONE_RE.test(phone)) errors.phone = 'Số điện thoại không hợp lệ'
 
-  if (!form.password) errors.password = `Chưa nhập mật khẩu — đặt mật khẩu ban đầu ít nhất ${PASSWORD_MIN} ký tự rồi gửi riêng cho nhân viên`
+  // Câu có số dịch tại đây (t + biến); câu cố định để Input tự dịch khi hiển thị
+  if (!form.password) errors.password = 'Chưa nhập mật khẩu'
   else if (form.password.length < PASSWORD_MIN) {
-    errors.password = `Mật khẩu cần ít nhất ${PASSWORD_MIN} ký tự (đang có ${form.password.length})`
+    errors.password = t('Tối thiểu {{min}} ký tự', { min: PASSWORD_MIN })
   }
 
   if (form.role === 'TECHNICIAN' && parseRegions(form.regions).length === 0) {
-    errors.regions = 'Chưa có vùng phụ trách — nhập tên khu vực, nhiều vùng cách nhau bằng dấu phẩy.'
+    errors.regions = 'Chưa nhập vùng phụ trách'
   }
   if (form.role === 'SALES_STAFF' && form.farmIds.length === 0) {
-    errors.farmIds = 'Chưa chọn farm — tích ít nhất 1 farm trong danh sách để Sales Staff này phụ trách'
+    errors.farmIds = t('Chưa chọn farm')
   }
   return errors
 }

@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button'
 import { IconChevronRight, IconChevronsRight } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 
 interface PaginationProps {
   page: number
@@ -27,15 +28,19 @@ export interface PaginationLabels {
   last: string
 }
 
-const DEFAULT_LABELS: PaginationLabels = {
-  summary: (from, to, total) => `Hiển thị ${from}–${to} trong ${total}`,
-  nav: 'Phân trang',
-  first: 'Trang đầu',
-  prev: 'Trang trước',
-  page: page => `Trang ${page}`,
-  next: 'Trang sau',
-  last: 'Trang cuối',
-}
+/**
+ * Nhãn mặc định khi màn gọi không truyền `labels` — đi qua bản dịch i18n (`t`, VI/EN theo languageStore) nên các trang
+ * Admin (không truyền labels) vẫn đổi ngôn ngữ. Hàm, không phải hằng: đọc lại ngôn ngữ mỗi lần render
+ */
+const defaultLabels = (): PaginationLabels => ({
+  summary: (from, to, total) => t('Hiển thị {{from}}–{{to}} trong {{total}}', { from, to, total }),
+  nav: t('Phân trang'),
+  first: t('Trang đầu'),
+  prev: t('Trang trước'),
+  page: page => t('Trang {{n}}', { n: page }),
+  next: t('Trang sau'),
+  last: t('Trang cuối'),
+})
 
 function getPageNumbers(page: number, totalPages: number): (number | '…')[] {
   if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -69,8 +74,9 @@ export function pageItems(page: number, pageCount: number): (number | '…')[] {
 }
 
 /** Pager dùng chung — simple: Trước/Sau, numbered: số trang 1-2-…-N (Technician), full: « ‹ 1 2 3 … N › » (Admin) */
-export default function Pagination({ page, limit, total, onChange, variant = 'simple', labels = DEFAULT_LABELS }: PaginationProps) {
+export default function Pagination({ page, limit, total, onChange, variant = 'simple', labels: customLabels }: PaginationProps) {
   if (total <= limit) return null
+  const labels = customLabels ?? defaultLabels()
 
   const from       = (page - 1) * limit + 1
   const to         = Math.min(page * limit, total)
@@ -180,14 +186,14 @@ export default function Pagination({ page, limit, total, onChange, variant = 'si
   return (
     <div className="flex items-center justify-between gap-3 pt-2">
       <p className="text-sm text-warmGray">
-        Hiển thị {from}–{to} trong {total}
+        {t('Hiển thị {{from}}–{{to}} trong {{total}}', { from, to, total })}
       </p>
       <div className="flex gap-2">
         <Button variant="secondary" size="sm" disabled={!hasPrev} onClick={() => onChange(page - 1)}>
-          Trước
+          {t('Trước')}
         </Button>
         <Button variant="secondary" size="sm" disabled={!hasNext} onClick={() => onChange(page + 1)}>
-          Sau
+          {t('Sau')}
         </Button>
       </div>
     </div>

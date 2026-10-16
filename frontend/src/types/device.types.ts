@@ -67,7 +67,9 @@ export interface CameraNode {
 export interface SystemNodeStatusItem {
   _id: string; device_id: string; type: 'sensor' | 'camera'; status: DeviceStatus
   last_heartbeat?: string; rssi?: number
-  farm_name: string; house_name: string; zone_name: string
+  /** Chỉ sensor — camera không có */
+  firmware_version?: string; registered_at?: string
+  zone_id: string; farm_id: string; farm_name: string; house_name: string; floor?: number; zone_name: string
 }
 export interface SystemNodeStatus {
   summary: { total: number; online: number; offline: number; pending: number; error: number; degraded: number }

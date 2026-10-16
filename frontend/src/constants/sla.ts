@@ -1,14 +1,15 @@
 import type { SlaConfig, TicketPriority } from '@/types'
+import { t, translated } from '@/i18n'
 
 /** Thứ tự hiển thị P1 (khẩn cấp nhất) → P3 (thấp nhất), khớp backend `PRIORITIES` (sla.util.ts) */
 export const SLA_PRIORITIES: TicketPriority[] = ['P1', 'P2', 'P3']
 
 /** Nhãn ý nghĩa mức ưu tiên — SRS §Thuật ngữ "P1 khẩn cấp nhất → P3 thấp nhất" */
-export const PRIORITY_LABEL: Record<TicketPriority, string> = {
+export const PRIORITY_LABEL: Record<TicketPriority, string> = translated({
   P1: 'Khẩn cấp',
   P2: 'Cao',
   P3: 'Thường',
-}
+})
 
 /**
  * Giá trị đề xuất trong SRS (TICKET-FR-006) — PHẢI khớp backend/src/utils/sla.util.ts
@@ -35,10 +36,10 @@ export function validateSla(sla: SlaConfig): Record<string, string> {
   const errors: Record<string, string> = {}
   for (const p of SLA_PRIORITIES) {
     const { response_hours, resolve_hours } = sla[p]
-    if (!Number.isFinite(response_hours) || response_hours <= 0) errors[`${p}.response_hours`] = 'Chưa nhập hoặc phải lớn hơn 0'
-    if (!Number.isFinite(resolve_hours) || resolve_hours <= 0) errors[`${p}.resolve_hours`] = 'Chưa nhập hoặc phải lớn hơn 0'
+    if (!Number.isFinite(response_hours) || response_hours <= 0) errors[`${p}.response_hours`] = t('Chưa nhập hoặc phải lớn hơn 0')
+    if (!Number.isFinite(resolve_hours) || resolve_hours <= 0) errors[`${p}.resolve_hours`] = t('Chưa nhập hoặc phải lớn hơn 0')
     if (!errors[`${p}.response_hours`] && !errors[`${p}.resolve_hours`] && response_hours > resolve_hours) {
-      errors[`${p}.resolve_hours`] = 'Hạn xử lý phải ≥ hạn phản hồi'
+      errors[`${p}.resolve_hours`] = t('Hạn xử lý phải ≥ hạn phản hồi')
     }
   }
   return errors

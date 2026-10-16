@@ -29,6 +29,7 @@ router.get ('/',
   query('sort').optional().isIn(TICKET_SORT_KEYS),
   query('order').optional().isIn(['asc', 'desc']),
   query('slaBreached').optional().isIn(['true', 'false']),
+  query('nodeId').optional().isMongoId(),
   validate, ticketController.list)
 router.get ('/kpi',                requireRole('ADMIN'), ticketController.kpi)
 router.get ('/stats/me',           requireRole('TECHNICIAN'), ticketController.myStats)

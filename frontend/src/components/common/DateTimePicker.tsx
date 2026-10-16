@@ -2,7 +2,11 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { addDays, addMonths, format, isSameDay, isSameMonth, startOfDay, startOfMonth, startOfWeek } from 'date-fns'
 import { IconCalendar, IconChevronRight } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 import { isWithinVisitHours } from '@/validations/common/schedule.validation'
+
+/** px — chiều cao xấp xỉ bảng chọn (lịch 6 hàng + 2 cột giờ/phút) để quyết định mở lên hay xuống */
+const PANEL_HEIGHT = 340
 
 /** Cùng định dạng giá trị với <input type="datetime-local"> — giờ máy người dùng, để form cũ không phải đổi */
 const VALUE_FORMAT = "yyyy-MM-dd'T'HH:mm"
@@ -22,6 +26,11 @@ interface DateTimePickerProps {
   ariaLabel: string
   placeholder?: string
   invalid?: boolean
+  /**
+   * Bảng chọn NỔI ĐÈ ngay dưới ô (tự mở lên trên khi dưới không đủ chỗ) thay vì chèn vào form — mặc định là chèn
+   * (như trước) để các popup cũ (Technician) không đổi; chỉ bật ở popup đủ chỗ cho bảng nổi (Đổi lịch hẹn của Admin)
+   */
+  floating?: boolean
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -34,7 +43,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
  * Lịch tháng (T2 đầu tuần) bên trái, cột giờ + phút (bước 5 phút) bên phải. Chọn: charcoal chữ trắng,
  * hover LIME MIST. Mốc trước `min` và giờ/phút ngoài khung hẹn 07:00–18:00 giờ VN bị mờ, không bấm được.
  */
-export default function DateTimePicker({ value, onChange, min, id, ariaLabel, placeholder = 'Chọn ngày giờ', invalid }: DateTimePickerProps) {
+export default function DateTimePicker({ value, onChange, min, id, ariaLabel, placeholder = 'Chọn ngày giờ', invalid, floating = false }: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -42,11 +51,15 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
   const [month, setMonth] = useState(() => startOfMonth(selected ?? min ?? new Date()))
   const hourListRef = useRef<HTMLDivElement>(null)
   const minuteListRef = useRef<HTMLDivElement>(null)
+  // Bảng chọn nổi đè (không chèn vào luồng — trước đây đẩy popup cao vượt màn hình); dưới không đủ chỗ thì mở lên trên
+  const [dropUp, setDropUp] = useState(false)
 
   // Mở lại thì nhảy về tháng đang chọn, cuộn 2 cột giờ/phút tới giá trị đang chọn
   useEffect(() => {
     if (!open) return
     setMonth(startOfMonth(selected ?? min ?? new Date()))
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (rect) setDropUp(window.innerHeight - rect.bottom < PANEL_HEIGHT && rect.top > window.innerHeight - rect.bottom)
     // Đặt scrollTop của riêng cột (không dùng scrollIntoView — nó cuộn luôn cả Modal/trang chứa bảng chọn)
     requestAnimationFrame(() => {
       for (const list of [hourListRef.current, minuteListRef.current]) {
@@ -96,7 +109,7 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
   const cellBase = 'flex items-center justify-center rounded-full text-small tabular-nums transition-colors disabled:cursor-not-allowed disabled:text-warmGray/35 disabled:hover:bg-transparent'
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-2">
+    <div ref={rootRef} className={floating ? 'relative' : 'flex flex-col gap-2'}>
       <button
         ref={triggerRef}
         id={id}
@@ -110,7 +123,7 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
         className={cn('input flex items-center justify-between gap-2 text-left', open ? 'border-charcoal' : invalid && 'border-alertRed')}
       >
         <span className={cn('truncate tabular-nums', !selected && 'text-warmGray')}>
-          {selected ? format(selected, 'dd/MM/yyyy · HH:mm') : placeholder}
+          {selected ? format(selected, 'dd/MM/yyyy · HH:mm') : t(placeholder)}
         </span>
         <IconCalendar width={16} height={16} className="shrink-0 text-warmGray" />
       </button>
@@ -120,28 +133,32 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
           role="dialog"
           aria-label={ariaLabel}
           onKeyDown={onKeyDown}
-          className="flex animate-fade-in gap-2 rounded-2xl border border-warmGray/15 bg-white p-3"
+          className={cn(
+            'flex animate-fade-in gap-2 rounded-2xl border border-gray-200 bg-white p-3',
+            floating && 'absolute inset-x-0 z-30 shadow-popover',
+            floating && (dropUp ? 'bottom-full mb-2' : 'top-full mt-2'),
+          )}
         >
           {/* ── Lịch tháng ── */}
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex items-center justify-between">
               <button
                 type="button"
-                aria-label="Tháng trước"
+                aria-label={t('Tháng trước')}
                 disabled={!!minDay && month <= startOfMonth(minDay)}
                 onClick={() => setMonth(m => addMonths(m, -1))}
                 className={cn(cellBase, 'h-7 w-7 hover:bg-warmGray/10')}
               >
                 <IconChevronRight width={16} height={16} className="rotate-180" />
               </button>
-              <span className="text-sm font-semibold text-charcoal">Tháng {format(month, 'M, yyyy')}</span>
-              <button type="button" aria-label="Tháng sau" onClick={() => setMonth(m => addMonths(m, 1))} className={cn(cellBase, 'h-7 w-7 hover:bg-warmGray/10')}>
+              <span className="text-sm font-semibold text-charcoal">{t('Tháng {{m}}', { m: format(month, 'M, yyyy') })}</span>
+              <button type="button" aria-label={t('Tháng sau')} onClick={() => setMonth(m => addMonths(m, 1))} className={cn(cellBase, 'h-7 w-7 hover:bg-warmGray/10')}>
                 <IconChevronRight width={16} height={16} />
               </button>
             </div>
 
             <div className="grid grid-cols-7 gap-0.5">
-              {WEEKDAYS.map(w => <span key={w} className="label-caption py-1 text-center">{w}</span>)}
+              {WEEKDAYS.map(w => <span key={w} className="label-caption py-1 text-center">{t(w)}</span>)}
               {days.map(d => {
                 const isSel = !!selected && isSameDay(d, selected)
                 const disabled = !!minDay && d < minDay
@@ -171,8 +188,8 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
           <div className="flex gap-0.5 border-l border-warmGray/10 pl-2">
             {([['Giờ', HOURS, hour, hourListRef], ['Phút', MINUTES, minute, minuteListRef]] as const).map(([label, list, current, ref]) => (
               <div key={label} className="flex w-10 flex-col">
-                <span className="label-caption pb-2 text-center">{label}</span>
-                <div ref={ref} role="listbox" aria-label={label} className="relative flex max-h-[14rem] flex-col gap-0.5 overflow-y-auto overscroll-contain [scrollbar-width:none]">
+                <span className="label-caption pb-2 text-center">{t(label)}</span>
+                <div ref={ref} role="listbox" aria-label={t(label)} className="relative flex max-h-[14rem] flex-col gap-0.5 overflow-y-auto overscroll-contain [scrollbar-width:none]">
                   {list.map(n => {
                     const at = (h: number, m: number) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m)
                     // Giờ còn phút nào hợp lệ (:00 hoặc :55 — khung 07:00–18:00 tính cả 18:00) thì chưa mờ

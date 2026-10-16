@@ -1028,7 +1028,7 @@ export async function getSystemStatus() {
   ])
 
   const zoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]
-  const zones = await Zone.find({ _id: { $in: zoneIds } }).select('name house_id').lean()
+  const zones = await Zone.find({ _id: { $in: zoneIds } }).select('name floor house_id').lean()
   const houseIds = [...new Set(zones.map(z => String(z.house_id)))]
   const houses = await House.find({ _id: { $in: houseIds } }).select('name farm_id').lean()
   const farmIds = [...new Set(houses.map(h => String(h.farm_id)))]
@@ -1042,7 +1042,10 @@ export async function getSystemStatus() {
     const zone  = zoneById.get(zoneId)
     const house = zone ? houseById.get(String(zone.house_id)) : undefined
     const farm  = house ? farmById.get(String(house.farm_id)) : undefined
-    return { farm_name: farm?.name ?? '', house_name: house?.name ?? '', zone_name: zone?.name ?? '' }
+    // zone_id: trang nhà yến của Admin gom thiết bị theo phòng (tên phòng có thể trùng giữa các nhà)
+    return {
+      zone_id: zoneId, farm_id: house ? String(house.farm_id) : '', farm_name: farm?.name ?? '', house_name: house?.name ?? '', floor: zone?.floor, zone_name: zone?.name ?? '',
+    }
   }
 
   return {
@@ -1050,11 +1053,13 @@ export async function getSystemStatus() {
     nodes: [
       ...sensorNodes.map(n => ({
         _id: String(n._id), device_id: n.device_id, type: 'sensor' as const, status: n.status,
-        last_heartbeat: n.last_heartbeat, rssi: n.rssi, ...resolveLocation(String(n.zone_id)),
+        last_heartbeat: n.last_heartbeat, rssi: n.rssi, firmware_version: n.firmware_version,
+        registered_at: n.registered_at, ...resolveLocation(String(n.zone_id)),
       })),
+      // Camera không có firmware_version/rssi trên model
       ...cameraNodes.map(n => ({
         _id: String(n._id), device_id: n.device_id, type: 'camera' as const, status: n.status,
-        last_heartbeat: n.last_heartbeat, ...resolveLocation(String(n.zone_id)),
+        last_heartbeat: n.last_heartbeat, registered_at: n.registered_at, ...resolveLocation(String(n.zone_id)),
       })),
     ],
   }

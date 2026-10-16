@@ -2509,8 +2509,13 @@ paths:
                                   }
                                 last_heartbeat: { type: string, format: date-time, nullable: true }
                                 rssi: { type: number, nullable: true, description: "Chỉ có với sensor" }
+                                firmware_version: { type: string, nullable: true, example: "1.2.0", description: "Chỉ có với sensor" }
+                                registered_at: { type: string, format: date-time }
+                                zone_id: { type: string }
+                                farm_id: { type: string }
                                 farm_name: { type: string }
                                 house_name: { type: string }
+                                floor: { type: integer, example: 1 }
                                 zone_name: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -2721,8 +2726,8 @@ paths:
   /alerts/{id}/acknowledge:
     put:
       tags: [Alerts]
-      summary: "Xác nhận cảnh báo (ALERT-FR-009) — FARM_OWNER/TECHNICIAN/ADMIN (Domain Expert chỉ đọc và kiểm chứng)"
-      description: Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả").
+      summary: "Xác nhận cảnh báo (ALERT-FR-009) — FARM_OWNER/TECHNICIAN (Domain Expert chỉ đọc và kiểm chứng)"
+      description: Chỉ `FARM_OWNER`/`TECHNICIAN` (Admin chỉ xem cảnh báo → 403, vì xác nhận thay sẽ chặn việc tự tạo ticket TICKET-FR-002). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả").
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3673,6 +3678,12 @@ paths:
             description: "TICKET-FR-009 — chỉ ticket vượt hạn xử lý: đã bị đánh dấu `is_sla_breached`, hoặc còn mở mà đã qua `sla_resolve_due_at` (job đánh dấu chạy 2 phút/lần). Ticket đã đóng chỉ tính theo cờ",
           }
         - {
+            name: nodeId,
+            in: query,
+            schema: { type: string },
+            description: "Chỉ ticket của 1 thiết bị (_id SensorNode/CameraNode) — ticket có `alert_id` trỏ tới cảnh báo của thiết bị đó. Ticket bảo trì/lắp đặt/tự tạo (gắn phòng, không gắn thiết bị) không có trong kết quả",
+          }
+        - {
             name: search,
             in: query,
             schema: { type: string, maxLength: 100 },
@@ -4577,6 +4588,7 @@ components:
         action: { type: string, example: ACCOUNT_LOCKED }
         target_type: { type: string, example: user }
         target_id: { type: string, nullable: true }
+        target_name: { type: string, nullable: true, description: "Chỉ GET /system/audit-logs — tên tài khoản khi target_type=user (để UI không hiện ObjectId); null với loại khác hoặc tài khoản không còn" }
         metadata: { type: object, description: "Chi tiết thay đổi, thường có before/after" }
         ip_address: { type: string, nullable: true, description: "IP client của request; null khi hệ thống tự thực hiện ngoài request (job nền, MQTT). Đặt TRUST_PROXY khi chạy sau proxy để có IP thật" }
         created_at: { type: string, format: date-time }

@@ -92,7 +92,7 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
         <div className="mb-2 flex items-center justify-between">
           {/* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng Farm Owner. Đổi: bỏ `uppercase tracking-wide` ở tiêu đề mục (FE_Design v2.5.0 §2.8) */}
           <h3 className="text-sm font-bold text-warmGray">
-            Sales Staff
+            Chuyên gia
           </h3>
           {isPrimaryOwner && (
             <Button
@@ -100,7 +100,7 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
               size="sm"
               onClick={() => setShowInviteSales(true)}
             >
-              + Mời Sales Staff
+              + Mời chuyên gia
             </Button>
           )}
         </div>
@@ -112,13 +112,13 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
                 key={s._id}
                 name={s.sales_staff_id.full_name}
                 email={s.sales_staff_id.email}
-                badge="Sales Staff"
+                badge="Chuyên gia"
               />
             ))}
           </div>
         ) : (
           <p className="text-sm text-warmGray">
-            Chưa có Sales Staff — Farm Owner tự động có toàn bộ quyền quản lý
+            Chưa có chuyên gia — Farm Owner tự động có toàn bộ quyền quản lý
             bán hàng.
           </p>
         )}
@@ -134,7 +134,7 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
       <InviteModal
         open={showInviteSales}
         onClose={() => setShowInviteSales(false)}
-        title="Mời Sales Staff"
+        title="Mời chuyên gia"
         farmId={farmId}
         kind="sales"
       />

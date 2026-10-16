@@ -14,9 +14,10 @@ const PAGE_LIMIT = 100
  * ponytail: tải hết về client — ổn ở quy mô KLTN (vài trăm ticket = vài request 100 dòng).
  * Khi số ticket lên hàng nghìn thì thêm ?search=&sortBy= vào GET /tickets và phân trang server.
  */
-export function useAllTickets(query: Omit<ListTicketsQuery, 'page' | 'limit'>) {
+export function useAllTickets(query: Omit<ListTicketsQuery, 'page' | 'limit'>, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['tickets', 'all', query],
+    enabled: options?.enabled,
     queryFn: async (): Promise<Ticket[]> => {
       const first = await ticketApi.list({ ...query, page: 1, limit: PAGE_LIMIT })
       const total = first.data.meta?.total ?? first.data.data.length

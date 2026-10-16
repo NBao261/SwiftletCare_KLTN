@@ -20,6 +20,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     assignedToMe: req.query.assignedToMe === 'true',
     unassigned:   req.query.unassigned === 'true',
     slaBreached:  req.query.slaBreached === 'true',
+    nodeId:       req.query.nodeId as string | undefined,
     search:       req.query.search as string | undefined,
     sort:         req.query.sort as TicketSortKey | undefined,
     order:        req.query.order as 'asc' | 'desc' | undefined,

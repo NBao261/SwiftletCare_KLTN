@@ -10,6 +10,7 @@ export * from '@/components/ui/Input'
 export * from '@/components/ui/Select'
 export * from '@/components/ui/Textarea'
 export * from '@/components/ui/Modal'
+export * from '@/components/ui/ModalParts'
 
 // Widget tổ hợp — vẫn thuộc ui/ vì không biết gì về domain
 export { default as ActionsMenu, type ActionsMenuItem } from '@/components/ui/ActionsMenu'

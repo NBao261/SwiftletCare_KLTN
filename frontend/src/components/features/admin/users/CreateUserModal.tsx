@@ -2,17 +2,21 @@ import { useState, useEffect, FormEvent } from 'react'
 import { useCreateUser, type AdminCreatableRole } from '@/hooks/admin/useUsers'
 import { PASSWORD_MIN, parseRegions, validateNewUser, type Field, type FormState } from '@/validations/admin/user.validation'
 import { useFarms } from '@/hooks/shared/useFarms'
-import { Button, Input, Modal } from '@/components/ui'
-import { IconUser, IconHeadset } from '@/components/ui/icons'
+import { Button, Input, Modal, ModalHeader, MODAL_SECTION_TITLE } from '@/components/ui'
+import ComingSoon from '@/components/ui/ComingSoon'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 import { ROLE_LABEL } from '@/components/features/admin/users/users.constants'
 
 const CREATABLE_ROLES: AdminCreatableRole[] = ['TECHNICIAN', 'SALES_STAFF']
-/** Icon nhận diện nhanh 2 loại tài khoản: Technician = người (kỹ thuật viên hiện trường), Sales Staff = tai nghe (kinh doanh/chăm sóc khách) */
-const ROLE_ICON: Record<AdminCreatableRole, typeof IconUser> = { TECHNICIAN: IconUser, SALES_STAFF: IconHeadset }
-const EMPTY_FORM: FormState = { role: 'TECHNICIAN', full_name: '', email: '', phone: '', password: '', regions: '', farmIds: [] }
+/**
+ * Vai trò Sales Staff đã đổi thành chuyên gia (Staff) nhưng backend chưa đổi role/endpoint — tạm hiện "Sắp ra mắt"
+ * thay cho form. Bật lại (true) khi backend xong; phần form chuyên gia bên dưới vẫn giữ nguyên.
+ */
+const STAFF_FORM_READY = false
+const EMPTY_FORM: FormState ={ role: 'TECHNICIAN', full_name: '', email: '', phone: '', password: '', regions: '', farmIds: [] }
 
 /**
  * AUTH-FR-005c, Flow 16 bước 1a — 1 modal cho cả 2 loại tài khoản Admin được
@@ -55,6 +59,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (form.role === 'SALES_STAFF' && !STAFF_FORM_READY) return
     setSubmitted(true)
     if (!isValid) return
     const base = {
@@ -68,7 +73,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
         ? { role: form.role, ...base, assigned_regions: parseRegions(form.regions) }
         : { role: form.role, ...base, farm_ids: form.farmIds },
       {
-        onSuccess: () => { push(`Đã tạo tài khoản ${ROLE_LABEL[form.role]}`); onClose() },
+        onSuccess: () => { push(t('Đã tạo tài khoản {{role}}', { role: ROLE_LABEL[form.role] })); onClose() },
         // 409 "Email đã được đăng ký" / 404 farm không tồn tại... — backend trả message tiếng Việt sẵn
         onError: (err) => push(getApiErrorMessage(err, 'Tạo tài khoản thất bại'), 'error'),
       },
@@ -76,57 +81,61 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
   }
 
   const presetFarmName = presetFarmId ? farms?.find(f => f._id === presetFarmId)?.name : undefined
+  const staffSoon = form.role === 'SALES_STAFF' && !STAFF_FORM_READY
+  const title = presetFarmId
+    ? (presetFarmName ? t('Tạo chuyên gia cho {{farm}}', { farm: presetFarmName }) : t('Tạo chuyên gia'))
+    : t('Tạo tài khoản')
+  // Mở từ chi tiết Farm → khoá vai trò ở chuyên gia (xem JSDoc): chỉ hiện đúng 1 mục
+  const roles = presetFarmId ? (['SALES_STAFF'] as AdminCreatableRole[]) : CREATABLE_ROLES
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={presetFarmId ? `Tạo Sales Staff${presetFarmName ? ` cho ${presetFarmName}` : ''}` : 'Tạo tài khoản'}
-    >
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <span className="label-caption">
-            Vai trò{!presetFarmId && <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>}
-          </span>
-          {presetFarmId ? (
-            <span className="inline-flex w-fit items-center gap-2 rounded-xl border border-charcoal bg-charcoal px-3 py-1.5 text-small font-semibold text-white">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
-                <IconHeadset width={16} height={16} />
-              </span>
-              {ROLE_LABEL.SALES_STAFF}
-            </span>
-          ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {CREATABLE_ROLES.map(r => {
-              const Icon = ROLE_ICON[r]
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => set('role', r)}
-                  className={cn(
-                    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-3 py-1.5 text-small font-semibold transition-colors',
-                    form.role === r
-                      ? 'border-charcoal bg-charcoal text-white'
-                      : 'border-warmGray/25 bg-white text-charcoal hover:bg-warmGray/10',
-                  )}
-                >
-                  {/* Cùng kiểu icon nav active ở SideBar: vòng tròn Lime Mist khi đang chọn, icon trần khi không */}
-                  {form.role === r ? (
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
-                      <Icon width={16} height={16} />
-                    </span>
-                  ) : (
-                    <Icon width={16} height={16} className="shrink-0 text-warmGray" />
-                  )}
-                  {ROLE_LABEL[r]}
-                </button>
-              )
-            })}
+    // Bố cục ngang như các popup Admin: tiêu đề + thanh ngăn, dưới là 2 cột (trái = vai trò, phải = form theo nhóm).
+    // Thân cao cố định (h-[27rem]) nên đổi vai trò / lỗi hiện-ẩn không làm popup co giãn; form dài thì cuộn trong khung.
+    <Modal open={open} onClose={onClose} size="xl" ariaLabel={title}>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+        <ModalHeader title={title} description="Chọn vai trò và điền thông tin tài khoản" />
+
+        <div className="flex h-[27rem] gap-6">
+        {/* Cột trái: vai trò — đang chọn nền đen chữ trắng như popup Tạo ticket */}
+        <div className="flex w-52 shrink-0 flex-col border-r border-gray-200 pr-5">
+          <h3 className={MODAL_SECTION_TITLE}>{t('Vai trò')}</h3>
+          <div className="flex flex-col gap-0.5" role="radiogroup" aria-label={t('Vai trò')}>
+            {roles.map(r => (
+              <button
+                key={r}
+                type="button"
+                role="radio"
+                aria-checked={form.role === r}
+                onClick={() => set('role', r)}
+                className={cn(
+                  'rounded-xl px-3 py-2 text-left text-body transition-colors duration-150',
+                  form.role === r ? 'bg-charcoal font-semibold text-white' : 'text-graphite hover:bg-gray-100',
+                )}
+              >
+                {ROLE_LABEL[r]}
+              </button>
+            ))}
           </div>
-          )}
         </div>
 
+        {/* Cột phải: nội dung cuộn (nếu dài) + nút */}
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+
+          {staffSoon ? (
+            <div className="min-h-0 flex-1 [&>div]:h-full">
+              <ComingSoon
+                title="Sắp ra mắt"
+                note="Tạo tài khoản chuyên gia đang chờ backend cập nhật vai trò mới. Hiện chỉ tạo được kỹ thuật viên."
+              />
+            </div>
+          ) : (
+          <>
+          {/* Lỗi ngắn hiện ngay dưới ô nhập */}
+          {/* pr-4: thanh cuộn cách khối nội dung 1 khoảng, không dính sát viền ô */}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-4">
+          <section>
+            <h4 className={MODAL_SECTION_TITLE}>{t('Đăng nhập & liên hệ')}</h4>
+            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2">
         <Input
           label="Họ tên"
           required
@@ -148,7 +157,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           error={showError('email')}
         />
         <Input
-          label="Số điện thoại (tùy chọn)"
+          label="Số điện thoại"
           type="tel"
           inputMode="tel"
           placeholder="VD: 0912345678"
@@ -158,37 +167,43 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
           error={showError('phone')}
         />
         <Input
-          label={`Mật khẩu ban đầu (≥ ${PASSWORD_MIN} ký tự)`}
+          // Nhãn gọn; yêu cầu độ dài đã nằm ở placeholder và thông báo lỗi
+          label="Mật khẩu"
           type="password"
           required
           autoComplete="new-password"
-          placeholder={`Ít nhất ${PASSWORD_MIN} ký tự, nên có chữ hoa, số và ký tự đặc biệt`}
+          placeholder={t('Ít nhất {{n}} ký tự', { n: PASSWORD_MIN })}
           value={form.password}
           onChange={e => set('password', e.target.value)}
           onBlur={() => touch('password')}
           error={showError('password')}
         />
+            </div>
+          </section>
 
+          <section>
+            <h4 className={MODAL_SECTION_TITLE}>{t('Phân công')}</h4>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
         {form.role === 'TECHNICIAN' && (
           <Input
-            label="Vùng phụ trách (phân cách bằng dấu phẩy)"
+            label="Vùng phụ trách"
             required
             placeholder="VD: HCMC, Long An"
             value={form.regions}
             onChange={e => set('regions', e.target.value)}
             onBlur={() => touch('regions')}
             error={showError('regions')}
-          />
+            />
         )}
 
         {form.role === 'SALES_STAFF' && (
           <div className="flex flex-col gap-1.5">
             <span className="label-caption">
-              Farm phụ trách (chọn ít nhất 1)<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+              {t('Farm phụ trách')}<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
             </span>
-            {farmsLoading && <p className="text-sm text-warmGray">Đang tải danh sách farm...</p>}
+            {farmsLoading && <p className="text-sm text-warmGray">{t('Đang tải danh sách farm...')}</p>}
             {!farmsLoading && !farms?.length && (
-              <p className="text-sm text-warmGray">Chưa có farm nào trong hệ thống để gán.</p>
+              <p className="text-sm text-warmGray">{t('Chưa có farm nào trong hệ thống để gán.')}</p>
             )}
             {!!farms?.length && (
               <div className={cn(
@@ -204,13 +219,22 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
                 ))}
               </div>
             )}
+            {/* Lỗi ngắn dưới danh sách — như Input */}
             {showError('farmIds') && <span className="text-xs text-alertRed">{errors.farmIds}</span>}
           </div>
         )}
 
-        <Button type="submit" loading={createUser.isPending} className="w-full">
-          Tạo tài khoản
-        </Button>
+            </div>
+          </section>
+          </div>
+
+          <div className="flex shrink-0 justify-end">
+            <Button type="submit" loading={createUser.isPending}>Tạo tài khoản</Button>
+          </div>
+          </>
+          )}
+        </div>
+        </div>
       </form>
     </Modal>
   )

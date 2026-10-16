@@ -1,12 +1,15 @@
 import type { Role } from '@/types'
+import { t, translated } from '@/i18n'
 
-/** Nhãn vai trò dùng chung — Sidebar (hiển thị role user hiện tại), Settings, v.v. */
-export const ROLE_LABEL: Record<Role, string> = {
+/** Nhãn vai trò dùng chung — Sidebar (hiển thị role user hiện tại), Settings, v.v. translated(): đọc ra theo VI/EN đang chọn */
+export const ROLE_LABEL: Record<Role, string> = translated({
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',
   TECHNICIAN: 'Kỹ thuật viên',
-  SALES_STAFF: 'Nhân viên kinh doanh',
-}
+  // Hiển thị "Chuyên gia" — luồng mới đổi Sales Staff thành chuyên gia (người dùng phía khách hàng, cùng nhóm chủ nhà
+  // yến); chỉ đổi chữ ở giao diện, mã SALES_STAFF giữ nguyên như backend
+  SALES_STAFF: 'Chuyên gia',
+})
 
 /**
  * Nhãn vai trò trong ngữ cảnh lời mời (InvitationPage) — chỉ 2 role mời được
@@ -16,8 +19,9 @@ export const ROLE_LABEL: Record<Role, string> = {
  * để tránh nhầm lẫn về quyền sở hữu farm.
  */
 export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'SALES_STAFF'>, string> = {
-  FARM_OWNER: `${ROLE_LABEL.FARM_OWNER} (thành viên)`,
-  SALES_STAFF: ROLE_LABEL.SALES_STAFF,
+  // getter: đọc ROLE_LABEL (dịch lúc đọc) mỗi lần dùng — gán giá trị thẳng thì nhãn đóng băng theo ngôn ngữ lúc import
+  get FARM_OWNER() { return `${ROLE_LABEL.FARM_OWNER} (${t('thành viên')})` },
+  get SALES_STAFF() { return ROLE_LABEL.SALES_STAFF },
 }
 
 /**

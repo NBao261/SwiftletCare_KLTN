@@ -1,131 +1,77 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { ClockIcon, TimerIcon } from '@phosphor-icons/react'
 import { useSlaHours } from '@/hooks/admin/useSystem'
 import { useTicketKpi } from '@/hooks/shared/useTickets'
-import { Button, Card } from '@/components/ui'
-import { IconTicket, IconEdit } from '@/components/ui/icons'
+import { Card } from '@/components/ui'
+import StatTile from '@/components/ui/StatTile'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { getApiErrorMessage } from '@/lib/helpers'
-import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 import { SLA_PRIORITIES, PRIORITY_LABEL, FACTORY_DEFAULT_SLA } from '@/constants/sla'
-import { PRIORITY_ICON_CLASS } from '@/constants/tickets'
+import SettingsCardHeader from '@/components/features/admin/system/SettingsCardHeader'
 import SlaEditModal from '@/components/features/admin/system/SlaEditModal'
 
+const ICON = 'bg-warmGray/10 text-charcoal'
+/** Cùng ngưỡng cảnh báo với ô "Đúng hạn SLA" trang Ticket (TicketInsights SLA_WARN_RATE) */
+const SLA_WARN_RATE = 80
+
 /**
- * SLA xử lý ticket theo mức ưu tiên (TICKET-FR-006, SLA-NFR-001) — card lime bên
- * phải. Chỉ ĐỌC — bấm "Chỉnh sửa" mới mở SlaEditModal (popup trắng/đen).
+ * SLA xử lý ticket theo mức ưu tiên (TICKET-FR-006, SLA-NFR-001). Cùng kiểu card "Chỉ số vận hành toàn hệ thống":
+ * card trắng + 3 ô mức ưu tiên (số lớn = hạn xử lý, dòng phụ = hạn phản hồi) + 1 ô tỉ lệ tuân thủ hiện tại
+ * (snapshot GET /tickets/kpi, ghi rõ dưới/đạt mục tiêu bằng chữ, không tô đỏ). Chỉ ĐỌC — "Chỉnh sửa" mở SlaEditModal.
  */
 export default function SlaCard() {
   const { data, isLoading, error } = useSlaHours()
   const { data: kpi } = useTicketKpi()
   const [isEditing, setIsEditing] = useState(false)
-  const isDefault = data && SLA_PRIORITIES.every(p =>
-    data[p].response_hours === FACTORY_DEFAULT_SLA[p].response_hours
-    && data[p].resolve_hours === FACTORY_DEFAULT_SLA[p].resolve_hours,
-  )
+  const isDefault = data
+    ? SLA_PRIORITIES.every(p =>
+      data[p].response_hours === FACTORY_DEFAULT_SLA[p].response_hours
+      && data[p].resolve_hours === FACTORY_DEFAULT_SLA[p].resolve_hours)
+    : undefined
+  const rate = kpi?.slaComplianceRate ?? null
 
   return (
     <>
-      {/* variant="active" = bg-limeMist text-charcoal, đúng cặp màu pill nav active (SideBar.tsx).
-          flex h-full: card giờ cao bằng hàng grid (auto-rows-fr) — 3 mức SLA canh giữa
-          theo chiều dọc (flex-1 justify-center) và đổi thành khối rộng để lấp khoảng trống
-          thay vì dồn lên đầu như danh sách gọn trước đây.
-          shadow-card + hover:shadow-dock: gợi ý có thể tương tác dù chỉ nút Chỉnh sửa mới clickable. */}
-      <Card variant="active" size="lg" className="flex h-full flex-col p-5 shadow-card transition-shadow duration-200 hover:shadow-dock">
-        <div className="flex items-start justify-between gap-6">
-          <div className="mt-2 flex min-w-0 items-center gap-2.5">
-            <h2 className="font-bold text-charcoal">SLA xử lý ticket</h2>
-            {data && (
-              <span
-                title={isDefault ? undefined : 'Khác với mặc định kỹ thuật gốc'}
-                className={cn(
-                  'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
-                  isDefault ? 'bg-charcoal/10 text-charcoal/70' : 'bg-charcoal text-white',
-                )}
-              >
-                {isDefault ? 'Mặc định gốc' : 'Đã tuỳ chỉnh'}
-              </span>
-            )}
-          </div>
-          {data && (
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              className="shrink-0"
-              aria-label="Chỉnh sửa cấu hình SLA xử lý ticket"
-              onClick={() => setIsEditing(true)}
-            >
-              <IconEdit width={16} height={16} />
-              Chỉnh sửa
-            </Button>
-          )}
-        </div>
-        <p className="mb-3 mt-1 text-sm text-charcoal/70">
-          Hạn phản hồi/xử lý theo mức ưu tiên — áp dụng cho ticket tạo mới hoặc đổi ưu tiên sau khi lưu, không hồi tố ticket đang mở.
-        </p>
+      <Card className="flex flex-col gap-4">
+        <SettingsCardHeader
+          title="SLA xử lý ticket"
+          description="Hạn phản hồi và xử lý theo mức ưu tiên — áp dụng cho ticket tạo mới hoặc đổi ưu tiên sau khi lưu."
+          isDefault={isDefault}
+          onEdit={() => setIsEditing(true)}
+          editLabel="Chỉnh sửa cấu hình SLA xử lý ticket"
+        />
 
-        {isLoading && <LoadingSkeleton count={3} className="h-20 w-full bg-charcoal/10" />}
+        {isLoading && <LoadingSkeleton count={1} className="h-24 w-full" />}
 
         {!isLoading && error && (
-          <p className="rounded-2xl border border-dashed border-charcoal/20 px-4 py-6 text-center text-sm text-charcoal/70">
-            Không tải được cấu hình SLA — {getApiErrorMessage(error, 'thử tải lại trang.')}
+          <p className="rounded-2xl border border-dashed border-warmGray/30 px-4 py-6 text-center text-sm text-warmGray">
+            {t('Không tải được cấu hình SLA')} — {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
           </p>
         )}
 
         {data && (
-          <div className="flex flex-1 flex-col justify-center gap-3">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {SLA_PRIORITIES.map(p => (
-              <div key={p} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl bg-white px-4 py-3">
-                <div className="flex items-center gap-2.5">
-                  <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', PRIORITY_ICON_CLASS[p])}>
-                    <IconTicket width={16} height={16} />
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-charcoal">{PRIORITY_LABEL[p]}</span>
-                  </div>
-                </div>
-                <div className="flex gap-6">
-                  <div>
-                    <p className="label-caption text-charcoal/50">Phản hồi</p>
-                    <p className="mt-1 text-xl font-bold tabular-nums text-charcoal">
-                      {data[p].response_hours}<span className="ml-1 text-xs font-semibold text-charcoal/50">giờ</span>
-                    </p>
-                  </div>
-                  <div>
-                    <p className="label-caption text-charcoal/50">Xử lý</p>
-                    <p className="mt-1 text-xl font-bold tabular-nums text-charcoal">
-                      {data[p].resolve_hours}<span className="ml-1 text-xs font-semibold text-charcoal/50">giờ</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <StatTile
+                key={p}
+                className="shadow-none"
+                icon={ClockIcon}
+                iconClass={ICON}
+                label={`${p} · ${PRIORITY_LABEL[p]}`}
+                value={t('{{h}} giờ', { h: data[p].resolve_hours })}
+                sub={t('Xử lý xong · phản hồi trong {{h}} giờ', { h: data[p].response_hours })}
+              />
             ))}
+            <StatTile
+              className="shadow-none"
+              icon={TimerIcon}
+              iconClass={ICON}
+              label="Tuân thủ SLA hiện tại"
+              value={rate != null ? `${rate}%` : '--'}
+              sub={rate != null ? t(rate < SLA_WARN_RATE ? 'Dưới mục tiêu {{n}}%' : 'Đạt mục tiêu {{n}}%', { n: SLA_WARN_RATE }) : 'Chưa có ticket nào tới hạn'}
+            />
           </div>
-        )}
-
-        {/* Snapshot lúc tải trang (GET /tickets/kpi) — null khi chưa ticket nào tới hạn. Tô đỏ khi tụt dưới 80% để thấy ngay cấu hình đang quá chặt so với thực tế xử lý */}
-        {data && (
-          <p className="mt-3 flex items-baseline justify-between gap-3 rounded-2xl bg-charcoal px-4 py-2.5 text-sm font-bold text-white">
-            Tỉ lệ tuân thủ SLA hiện tại
-            <span className={cn(
-              'text-base font-bold tabular-nums',
-              kpi?.slaComplianceRate == null ? 'text-white/40'
-                : kpi.slaComplianceRate < 80 ? 'text-red-400' : 'text-limeMist',
-            )}>
-              {kpi?.slaComplianceRate != null ? `${kpi.slaComplianceRate}%` : '--'}
-            </span>
-          </p>
-        )}
-
-        {/* Audit log phân biệt 2 khối cấu hình bằng `action`, không phải target_id (backend log target_type='system_settings', target_id để trống) */}
-        {data && !isDefault && (
-          <Link
-            to="/system/audit-log?action=SLA_UPDATED"
-            className="mt-3 self-end text-xs font-semibold text-charcoal/60 underline underline-offset-2 hover:text-charcoal"
-          >
-            Xem lịch sử thay đổi
-          </Link>
         )}
       </Card>
 

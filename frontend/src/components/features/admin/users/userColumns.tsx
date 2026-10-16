@@ -6,6 +6,9 @@ import { formatDate } from '@/lib/helpers'
 import { STATUS_LABEL, STATUS_TONE, ROLE_LABEL } from '@/components/features/admin/users/users.constants'
 import type { User } from '@/types'
 
+const DAY_FORMAT = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
+const TIME_FORMAT = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
+
 export interface UserColumnHandlers {
   onView: (user: User) => void
   /** Chỉ Technician — backend chỉ có PUT /admin/technicians/:id/regions, không sửa được full_name/phone */
@@ -23,60 +26,47 @@ export interface UserColumnHandlers {
  */
 export function buildUserColumns(handlers: UserColumnHandlers, startIndex: number, currentUserId?: string): DataTableColumn<User>[] {
   return [
-    // Width theo % (bảng đang table-fixed) — mọi cột co giãn cùng tỉ lệ ở mọi độ
-    // rộng màn hình, thay vì để cột "Người dùng" nuốt hết phần dư làm các cột
-    // còn lại bị đẩy xa nhau. Tổng = 100% (7+30+18+16+19+10), vẫn đủ chỗ ở min-w 960px.
+    // Width theo % (bảng đang table-fixed) = độ dài nội dung thường gặp + 1 khoảng trống như nhau, để khe giữa
+    // chữ cột này và cột sau đều nhau. Tổng = 100% (6+15+25+17+15+12+10), vẫn đủ chỗ ở min-w 960px.
     // Không thêm padding trái riêng cho cột nào (từng có `pl-12` ở Trạng thái làm badge lệch khỏi mép cột).
+    // Mỗi ô 1 dòng (tên và email tách 2 cột): vùng phụ trách / lý do khoá xem ở modal chi tiết.
     {
-      key: 'stt', header: 'STT', align: 'center', className: 'w-[7%]',
+      key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]',
       render: (_user, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
     },
     {
-      // Sort theo tên/email đặt ở nút "Sắp xếp" cùng hàng filter (không phải
-      // click header) vì cột này gộp 2 trường — click 1 header không đủ diễn đạt
-      // "sort theo tên" hay "sort theo email".
-      key: 'full_name', header: 'Người dùng', className: 'w-[30%]',
-      render: (user) => (
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <p className="truncate font-semibold text-charcoal">{user.full_name}</p>
-          <p className="truncate text-xs text-warmGray">{user.email}</p>
-        </div>
-      ),
+      // Sort theo tên/email đặt ở nút "Sắp xếp" cùng hàng filter (không phải click header), như trước khi tách cột
+      key: 'full_name', header: 'Họ tên', className: 'w-[15%]',
+      // Tên dài mờ dần ở đuôi (text-fade) thay vì "…"; rê chuột xem đủ
+      render: (user) => <p className="text-fade font-semibold text-charcoal" title={user.full_name}>{user.full_name}</p>,
     },
     {
-      key: 'role', header: 'Vai trò', sortable: true, className: 'w-[18%]',
-      render: (user) => (
-        <div className="flex min-w-0 flex-col items-start gap-0.5">
-          <Badge tone="info" className="whitespace-nowrap">{ROLE_LABEL[user.role]}</Badge>
-          {/* Farm của Sales Staff nằm ở sales_assignments, /admin/users không trả về → chỉ hiện vùng của Technician */}
-          {!!user.assigned_regions?.length && (
-            <p className="max-w-full truncate text-xs text-warmGray">{user.assigned_regions.join(', ')}</p>
-          )}
-        </div>
-      ),
+      key: 'email', header: 'Email', className: 'w-[25%]',
+      render: (user) => <p className="truncate text-graphite" title={user.email}>{user.email}</p>,
     },
     {
-      key: 'status', header: 'Trạng thái', sortable: true, className: 'w-[16%]',
+      key: 'role', header: 'Vai trò', sortable: true, className: 'w-[17%]',
+      render: (user) => <Badge tone="info" className="whitespace-nowrap">{ROLE_LABEL[user.role]}</Badge>,
+    },
+    {
+      key: 'status', header: 'Trạng thái', sortable: true, className: 'w-[15%]',
       render: (user) => {
         const status = getUserStatus(user)
-        return (
-          <div className="flex min-w-0 flex-col items-start gap-0.5">
-            <Badge tone={STATUS_TONE[status]} className="whitespace-nowrap">{STATUS_LABEL[status]}</Badge>
-            {status === 'LOCKED' && user.deactivated_reason && (
-              // truncate 1 dòng (không line-clamp 2 dòng) để mọi row cao bằng nhau,
-              // nội dung đầy đủ xem ở tooltip title / modal chi tiết.
-              <p className="max-w-full truncate text-xs text-red-600" title={user.deactivated_reason}>
-                {user.deactivated_reason}
-              </p>
-            )}
-          </div>
-        )
+        return <Badge tone={STATUS_TONE[status]} className="whitespace-nowrap">{STATUS_LABEL[status]}</Badge>
       },
     },
     {
       // Sort ngày tạo cũng đặt ở nút "Sắp xếp" cùng hàng filter, xem full_name ở trên.
-      key: 'created_at', header: 'Ngày tạo', className: 'w-[19%] whitespace-nowrap',
-      render: (user) => <span className="text-warmGray">{user.created_at ? formatDate(user.created_at) : '—'}</span>,
+      // 2 tầng như cột Ngày tạo bảng Trang trại/Ticket: giờ:phút:giây đậm trên, ngày xám dưới
+      key: 'created_at', header: 'Ngày tạo', className: 'w-[12%] whitespace-nowrap',
+      render: (user) => user.created_at
+        ? (
+          <div className="flex flex-col" title={formatDate(user.created_at)}>
+            <span className="font-semibold text-charcoal">{TIME_FORMAT.format(new Date(user.created_at))}</span>
+            <span className="text-small text-warmGray">{DAY_FORMAT.format(new Date(user.created_at))}</span>
+          </div>
+        )
+        : <span className="text-warmGray">—</span>,
     },
     {
       key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[10%]',
