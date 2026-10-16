@@ -152,8 +152,10 @@ export default function AdminTicketsPage() {
           </div>
         }
       >
+        {/* Bấm 1 kỹ thuật viên → bảng ticket chỉ lọc theo tên người đó: xoá các bộ lọc khác trước (trạng thái/ưu tiên/
+            farm đang chọn có thể làm ra 0 kết quả), rồi đặt ô tìm kiếm = tên */}
         {tab === "technicians" ? (
-          <TechnicianWorkloadTable onSelectTechnician={(name) => { setSearch(name); setPage(1); setTab("tickets"); }} />
+          <TechnicianWorkloadTable onSelectTechnician={(name) => { clearFilters(); setSearch(name); setTab("tickets"); }} />
         ) : (
         <>
 

@@ -120,8 +120,10 @@ export default function TechnicianWorkloadTable({ onSelectTechnician }: { onSele
       avgResolveHours: t.avgResolveHours,
       slaComplianceRate: t.slaComplianceRate,
     }))
-    // KTV chưa từng được giao ticket — /tickets/kpi không trả, bù dòng toàn 0 để Admin thấy cả người đang rảnh
-    const idle: TechRow[] = techUsers.records.filter(u => !byId.has(u._id)).map(u => ({
+    // KTV chưa từng được giao ticket — /tickets/kpi không trả, bù dòng toàn 0 để Admin thấy cả người đang rảnh. Chỉ
+    // tài khoản đang hoạt động: KTV bị khoá không nhận được việc, không phải "đang rảnh". (techUsers vẫn lấy cả người bị
+    // khoá để tra khu vực cho các dòng KPI cũ của họ)
+    const idle: TechRow[] = techUsers.records.filter(u => u.is_active && !byId.has(u._id)).map(u => ({
       id: u._id, name: u.full_name, fullName: u.full_name, regions: u.assigned_regions ?? [],
       unaccepted: 0, working: 0, completed: 0, cancelled: 0, avgResolveHours: null, slaComplianceRate: null,
     }))
