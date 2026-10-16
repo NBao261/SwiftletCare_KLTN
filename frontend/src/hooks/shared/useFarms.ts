@@ -132,23 +132,11 @@ export function useInviteSalesStaff(farmId: string) {
   })
 }
 
-/**
- * Chuyên gia (mã SALES_STAFF) của 1 farm. Backend hiện không còn endpoint này (404) — coi 404 là "chưa có chuyên gia"
- * (trả mảng rỗng) thay vì lỗi, không thử lại (404 không tự hết, retry chỉ làm khung tải lâu gấp đôi) và giữ cache 5 phút
- * để đổi tab Nhà yến ↔ Thành viên không gọi lại.
- */
 export function useSalesStaff(farmId: string | undefined) {
   return useQuery({
     queryKey: ['sales-staff', farmId],
-    queryFn: () => farmApi.listSalesStaff(farmId!)
-      .then(r => r.data.data)
-      .catch((err: { response?: { status?: number } }) => {
-        if (err.response?.status === 404) return []
-        throw err
-      }),
+    queryFn: () => farmApi.listSalesStaff(farmId!).then(r => r.data.data),
     enabled: !!farmId,
-    retry: false,
-    staleTime: 5 * 60 * 1000,
   })
 }
 

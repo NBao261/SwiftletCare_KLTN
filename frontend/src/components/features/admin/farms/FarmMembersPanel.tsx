@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
-import { GraduationCapIcon, HouseIcon, WarningCircleIcon } from "@phosphor-icons/react";
-import { useSalesStaff } from "@/hooks/shared/useFarms";
+import { GraduationCapIcon, HouseIcon } from "@phosphor-icons/react";
 import { useAllUsers } from "@/hooks/admin/useUsers";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { formatDateOnly } from "@/lib/helpers";
 import { cn } from "@/lib/cn";
 import { t, tr } from "@/i18n";
@@ -12,7 +10,6 @@ import type { Farm } from "@/types";
 const TONE = {
   primary: { badge: "bg-limeMist text-charcoal" },
   owner: { badge: "bg-limeMist/60 text-charcoal" },
-  expert: { badge: "bg-accent-100 text-accent-900" },
 } as const;
 type Tone = keyof typeof TONE;
 
@@ -77,11 +74,10 @@ function Note({ icon, children }: { icon: ReactNode; children: ReactNode }) {
 /**
  * Tab "Thành viên" ở chi tiết Farm của Admin — CHỈ XEM (SRS RACI: mời/gỡ thành viên là việc của Primary Owner, Admin
  * "I (audit)"). 2 nhóm xếp chồng, thẻ người trải hết chiều ngang; cùng nguồn với trang Thành viên của Farm Owner
- * (FarmMembersManager): Chủ nhà yến = chủ chính + đồng sở hữu; Chuyên gia = danh sách SALES_STAFF của farm (useSalesStaff
- * — chỉ đổi tên hiển thị; endpoint chưa có thì coi là chưa có chuyên gia).
+ * (FarmMembersManager): Chủ nhà yến = chủ chính + đồng sở hữu; Chuyên gia = "Sắp ra mắt" tới khi backend có API chuyên
+ * gia (Domain Expert, SRS v2.0.0) — không gọi /farms/:id/sales-staff đã bị bỏ.
  */
 export default function FarmMembersPanel({ farm }: { farm: Farm }) {
-  const experts = useSalesStaff(farm._id);
   // Thành viên farm không kèm SĐT — tra từ danh sách tài khoản Admin đã tải (cùng cache trang Người dùng), không gọi thêm
   const { data: users } = useAllUsers();
   const phoneOf = (userId?: string) => users?.find((u) => u._id === userId)?.phone;
@@ -96,19 +92,12 @@ export default function FarmMembersPanel({ farm }: { farm: Farm }) {
         ))}
       </Column>
 
-      <Column icon={<GraduationCapIcon size={14} />} title="Chuyên gia" count={experts.data?.length}>
-        {experts.isLoading ? (
-          // 1 ô cỡ thẻ người — đang tải không đẩy layout cao hơn kết quả
-          <LoadingSkeleton count={1} className="h-[4.25rem] w-full rounded-2xl" />
-        ) : experts.isError ? (
-          <Note icon={<WarningCircleIcon size={18} />}>{t("Không tải được danh sách chuyên gia")}</Note>
-        ) : !experts.data?.length ? (
-          <Note icon={<GraduationCapIcon size={18} />}>{t("Chưa có chuyên gia")}</Note>
-        ) : (
-          experts.data.map((e) => (
-            <MemberCard key={e._id} name={e.sales_staff_id.full_name} email={e.sales_staff_id.email} phone={phoneOf(e.sales_staff_id._id)} badge="Chuyên gia" tone="expert" />
-          ))
-        )}
+      {/* Chưa có API danh sách chuyên gia: backend đã bỏ /farms/:id/sales-staff, SRS v2.0.0 chuyển sang Domain Expert do
+          Primary Owner mời — ghi rõ trên UI thay vì gọi endpoint thiếu rồi hiện "trống" như dữ liệu thật (FE_Design §13.8) */}
+      <Column icon={<GraduationCapIcon size={14} />} title="Chuyên gia">
+        <Note icon={<GraduationCapIcon size={18} />}>
+          {t("Sắp ra mắt — chưa có API danh sách chuyên gia (luồng đang chuyển sang chuyên gia do chủ nhà yến mời)")}
+        </Note>
       </Column>
     </div>
   );
