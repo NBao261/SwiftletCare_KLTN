@@ -1,22 +1,20 @@
-// ADMIN — Yêu cầu tài khoản: xoá tài khoản (AUTH-FR-012, Flow 19) + đề xuất/gỡ Sales Staff (AUTH-FR-005d, Flow 16 bước 1b/1e)
-// Gọi API thật qua hooks/useAccountRequests.ts (/admin/delete-requests, /admin/sales-staff-requests).
+// ADMIN — Yêu cầu tài khoản: xoá tài khoản (AUTH-FR-012, Flow 19) — API thật /admin/delete-requests.
+// Tab "Đề xuất chuyên gia": backend đã bỏ /admin/sales-staff-requests (SRS v2.0.0 chuyển sang Domain Expert do
+// Primary Owner mời) nên hiện ComingSoon, không gọi endpoint thiếu (FE_Design §13.8/13.9).
 import { useState, useEffect } from 'react'
-import {
-  useDeleteRequestsList, useCompleteDeleteRequest,
-  useSalesAssignmentRequestsList, useDecideSalesAssignmentRequest,
-} from '@/hooks/admin/useAccountRequests'
+import { useDeleteRequestsList, useCompleteDeleteRequest } from '@/hooks/admin/useAccountRequests'
 import { Button, Badge, SectionCard } from '@/components/ui'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import NoteActionModal from '@/components/ui/NoteActionModal'
+import ComingSoon from '@/components/ui/ComingSoon'
 import Pagination from '@/components/ui/Pagination'
 import { useToastStore } from '@/stores/toastStore'
 import { formatRelativeTime, getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 // `t` là biến lặp TABS trong file này — hàm dịch đặt tên khác
 import { t as i18nT, tr } from '@/i18n'
-import type { User, SalesAssignmentRequest } from '@/types'
+import type { User } from '@/types'
 
 const DELETE_SLA_DAYS = 30
 /**
@@ -44,40 +42,6 @@ function TimeCell({ at }: { at?: string }) {
 
 type Tab = 'DELETE' | 'SALES_STAFF'
 
-// ── FAKE DATA — CHỈ ĐỂ XEM GIAO DIỆN ──────────────────────────────────────────────────────────────────────────────
-// Trang này ĐÃ có API thật; dữ liệu giả dưới đây chỉ hiện khi danh sách thật TRỐNG, kèm dòng "This data is FAKE…"
-// (FE_Design §5.4) và khoá mọi nút (không gọi API với id giả). Đặt SHOW_FAKE_PREVIEW = false (hoặc xoá khối này)
-// trước khi nộp/demo thật — FE_Design §13.9 cấm để dữ liệu giả ở màn đã có API.
-const SHOW_FAKE_PREVIEW = true
-const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString()
-// 11 + 11 mục giả = 2 trang mỗi tab (10 + 1) — để thấy cả bảng đầy 10 dòng lẫn thanh phân trang
-const FAKE_DELETE_REQUESTS = ([
-  ['Nguyễn Văn Bình', 'binh.nguyen', 26], ['Trần Thị Mai', 'mai.tran', 24], ['Lê Hoàng Phúc', 'phuc.le', 21],
-  ['Phạm Thu Hà', 'ha.pham', 18], ['Võ Minh Tuấn', 'tuan.vo', 15], ['Đặng Ngọc Lan', 'lan.dang', 12],
-  ['Bùi Quang Huy', 'huy.bui', 9], ['Hồ Thị Thanh', 'thanh.ho', 6], ['Ngô Đức Anh', 'anh.ngo', 4],
-  ['Dương Bảo Ngọc', 'ngoc.duong', 2], ['Lý Gia Khang', 'khang.ly', 0],
-] as const).map(([full_name, mail, days], i) => ({
-  _id: `fake-del-${i + 1}`, full_name, email: `${mail}@example.com`, deletion_requested_at: daysAgo(days),
-})) as unknown as User[]
-const FAKE_FARMS = ['Trại Yến Demo', 'Trại Yến Cần Giờ', 'Trại Yến Long An', 'Trại Yến Bình Thuận']
-const FAKE_OWNERS = [
-  { _id: 'fake-owner-1', full_name: 'Demo Farm Owner', email: 'owner@swiftletcare.dev' },
-  { _id: 'fake-owner-2', full_name: 'Phạm Quốc Huy', email: 'huy.pham@example.com' },
-  { _id: 'fake-owner-3', full_name: 'Trương Mỹ Linh', email: 'linh.truong@example.com' },
-]
-const FAKE_SALES_EMAILS = [
-  'chuyenvien.an', 'linh.sales', 'cu.chuyenvien', 'minh.banhang', 'thao.kinhdoanh', 'nam.sales',
-  'hoa.chuyenvien', 'khoa.banhang', 'vy.sales', 'tam.kinhdoanh', 'son.chuyenvien',
-]
-const FAKE_SALES_REQUESTS: SalesAssignmentRequest[] = FAKE_SALES_EMAILS.map((mail, i) => ({
-  _id: `fake-sales-${i + 1}`, type: i % 3 === 2 ? 'REMOVE' : 'ADD', status: 'PENDING', created_at: daysAgo(i),
-  farm_id: { _id: `fake-farm-${i % FAKE_FARMS.length}`, name: FAKE_FARMS[i % FAKE_FARMS.length] },
-  sales_staff_email: `${mail}@example.com`,
-  requested_by: FAKE_OWNERS[i % FAKE_OWNERS.length],
-}))
-/** Dòng công khai dữ liệu giả — đúng câu chữ FE_Design §5.4 */
-const FakeNotice = () => <p className="text-[11px] font-medium italic text-warmGray">This data is FAKE and has not been MOCKAPI</p>
-// ── HẾT FAKE DATA ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**
  * Xử lý xong mục cuối của trang N (N > 1) thì trang đó trống trong khi các trang trước
@@ -149,8 +113,6 @@ function readOpenTickets(err: unknown): number | null {
 
 function DeleteRequestsTab() {
   const [page, setPage] = useState(1)
-  /** FAKE: trang riêng của dữ liệu giả — không dùng page thật vì useClampedPage kéo về 1 khi total thật = 0 */
-  const [fakePage, setFakePage] = useState(1)
   const { records: requests, total, limit, isLoading } = useDeleteRequestsList({ page, limit: PAGE_SIZE })
   const clamping = useClampedPage(page, setPage, total, limit, isLoading)
   const completeDeleteRequest = useCompleteDeleteRequest()
@@ -175,10 +137,7 @@ function DeleteRequestsTab() {
   }
 
   if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={5} className="h-14 w-full" /></div>
-  // FAKE: danh sách thật trống → hiện dữ liệu mẫu (nút khoá)
-  const isFake = !requests.length && SHOW_FAKE_PREVIEW
-  const rows = isFake ? FAKE_DELETE_REQUESTS.slice((fakePage - 1) * PAGE_SIZE, fakePage * PAGE_SIZE) : requests
-  const startIndex = ((isFake ? fakePage : page) - 1) * PAGE_SIZE
+  const startIndex = (page - 1) * PAGE_SIZE
 
   // STT · Người dùng · Email · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác — tổng 6+20+28+16+16+14 = 100
   const columns: DataTableColumn<User>[] = [
@@ -197,16 +156,15 @@ function DeleteRequestsTab() {
     },
     {
       key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[14%]',
-      render: u => <Button size="sm" disabled={isFake} onClick={() => setTarget(u)}>Xử lý</Button>,
+      render: u => <Button size="sm" onClick={() => setTarget(u)}>Xử lý</Button>,
     },
   ]
 
   return (
     <div className={FRAME}>
-      {isFake && <FakeNotice />}
       <DataTable
         columns={columns}
-        rows={rows}
+        rows={requests}
         getRowKey={u => u._id}
         rowHeight={ROW_HEIGHT}
         minRows={PAGE_SIZE}
@@ -215,9 +173,7 @@ function DeleteRequestsTab() {
 
       {/* Hàng phân trang (Pagination tự ẩn khi chỉ 1 trang) */}
       <div className="min-h-11">
-        {isFake
-          ? <Pagination page={fakePage} limit={PAGE_SIZE} total={FAKE_DELETE_REQUESTS.length} onChange={setFakePage} variant="full" />
-          : <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />}
+        <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
       </div>
 
       <ConfirmModal
@@ -246,101 +202,16 @@ function DeleteRequestsTab() {
 }
 
 
+/**
+ * Đề xuất thêm/gỡ chuyên gia: backend đã bỏ /admin/sales-staff-requests (module Sales gỡ ở SRS v1.23.0, v2.0.0 thay bằng
+ * Domain Expert do Primary Owner mời — Admin chỉ "I (audit)"). Không gọi endpoint thiếu như thể đã có (FE_Design §13.8/
+ * 13.9) — hiện ComingSoon tới khi backend chốt luồng chuyên gia.
+ */
 function SalesStaffRequestsTab() {
-  const [page, setPage] = useState(1)
-  /** FAKE: trang riêng của dữ liệu giả — không dùng page thật vì useClampedPage kéo về 1 khi total thật = 0 */
-  const [fakePage, setFakePage] = useState(1)
-  const { records: requests, total, limit, isLoading } = useSalesAssignmentRequestsList({ page, limit: PAGE_SIZE })
-  const clamping = useClampedPage(page, setPage, total, limit, isLoading)
-  const decide = useDecideSalesAssignmentRequest()
-  const push = useToastStore(s => s.push)
-  const [approveTarget, setApproveTarget] = useState<SalesAssignmentRequest | null>(null)
-  const [rejectTarget, setRejectTarget] = useState<SalesAssignmentRequest | null>(null)
-
-  if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={5} className="h-14 w-full" /></div>
-  // FAKE: danh sách thật trống → hiện dữ liệu mẫu (nút khoá)
-  const isFake = !requests.length && SHOW_FAKE_PREVIEW
-  const rows = isFake ? FAKE_SALES_REQUESTS.slice((fakePage - 1) * PAGE_SIZE, fakePage * PAGE_SIZE) : requests
-  const startIndex = ((isFake ? fakePage : page) - 1) * PAGE_SIZE
-
-  // STT · Loại · Email chuyên gia · Trang trại · Người đề xuất · Thời gian · Thao tác — tổng 5+13+19+15+15+13+20 = 100
-  const columns: DataTableColumn<SalesAssignmentRequest>[] = [
-    { key: 'stt', header: 'STT', align: 'center', className: 'w-[5%]', render: (_r, i) => <span className="text-warmGray">{startIndex + i + 1}</span> },
-    {
-      key: 'type', header: 'Loại', className: 'w-[13%]',
-      render: r => <Badge tone={r.type === 'REMOVE' ? 'warning' : 'info'} className="whitespace-nowrap">{i18nT(r.type === 'REMOVE' ? 'Gỡ chuyên gia' : 'Thêm chuyên gia')}</Badge>,
-    },
-    { key: 'email', header: 'Email chuyên gia', className: 'w-[19%]', render: r => <p className="text-fade font-semibold text-charcoal" title={r.sales_staff_email}>{r.sales_staff_email}</p> },
-    { key: 'farm', header: 'Trang trại', className: 'w-[15%]', render: r => <p className="truncate text-charcoal" title={r.farm_id?.name}>{r.farm_id?.name ?? '—'}</p> },
-    { key: 'by', header: 'Người đề xuất', className: 'w-[15%]', render: r => <p className="truncate text-graphite" title={r.requested_by?.email}>{r.requested_by?.full_name ?? '—'}</p> },
-    { key: 'created', header: 'Thời gian', className: 'w-[13%] whitespace-nowrap', render: r => <TimeCell at={r.created_at} /> },
-    {
-      // whitespace-nowrap: 2 nút luôn 1 hàng, chữ "Từ chối" không xuống dòng
-      key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[20%] whitespace-nowrap',
-      render: r => (
-        <div className="flex justify-center gap-2">
-          <Button variant="secondary" size="sm" className="shrink-0 whitespace-nowrap" disabled={isFake} onClick={() => setRejectTarget(r)}>Từ chối</Button>
-          <Button size="sm" className="shrink-0 whitespace-nowrap" disabled={isFake} onClick={() => setApproveTarget(r)}>Duyệt</Button>
-        </div>
-      ),
-    },
-  ]
-
   return (
-    <div className={FRAME}>
-      {isFake && <FakeNotice />}
-      <DataTable
-        columns={columns}
-        rows={rows}
-        getRowKey={r => r._id}
-        rowHeight={ROW_HEIGHT}
-        minRows={PAGE_SIZE}
-        emptyMessage="Không có đề xuất chuyên gia nào chờ duyệt — đề xuất thêm/gỡ chuyên gia của Farm Owner sẽ hiện ở đây."
-      />
-
-      {/* Hàng phân trang (Pagination tự ẩn khi chỉ 1 trang) */}
-      <div className="min-h-11">
-        {isFake
-          ? <Pagination page={fakePage} limit={PAGE_SIZE} total={FAKE_SALES_REQUESTS.length} onChange={setFakePage} variant="full" />
-          : <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />}
-      </div>
-
-      <ConfirmModal
-        open={!!approveTarget}
-        title={approveTarget?.type === 'REMOVE' ? 'Duyệt gỡ chuyên gia?' : 'Duyệt đề xuất chuyên gia?'}
-        description={approveTarget?.type === 'REMOVE'
-          ? i18nT('Gỡ {{email}} khỏi farm {{farm}}. Đơn hàng/sản phẩm đã tạo vẫn giữ nguyên lịch sử.', { email: approveTarget.sales_staff_email, farm: approveTarget.farm_id?.name ?? '' })
-          : i18nT('Gán {{email}} vào farm {{farm}}. Nếu email chưa có tài khoản, hệ thống tự tạo và gửi mã đặt lại mật khẩu cho người đó.', { email: approveTarget?.sales_staff_email ?? '', farm: approveTarget?.farm_id?.name ?? '' })}
-        confirmLabel="Duyệt"
-        loading={decide.isPending}
-        onConfirm={() => {
-          if (!approveTarget) return
-          decide.mutate({ id: approveTarget._id, decision: 'APPROVED' }, {
-            onSuccess: () => { push('Đã duyệt đề xuất'); setApproveTarget(null) },
-            onError: (err) => push(getApiErrorMessage(err, 'Duyệt thất bại'), 'error'),
-          })
-        }}
-        onCancel={() => setApproveTarget(null)}
-      />
-
-      <NoteActionModal
-        open={!!rejectTarget}
-        onClose={() => setRejectTarget(null)}
-        title="Từ chối đề xuất"
-        label="Lý do từ chối"
-        placeholder="VD: Email không hợp lệ, đã có chuyên gia phụ trách farm này..."
-        submitLabel="Từ chối"
-        required
-        danger
-        loading={decide.isPending}
-        onSubmit={(reason) => {
-          if (!rejectTarget) return
-          decide.mutate({ id: rejectTarget._id, decision: 'REJECTED', reason }, {
-            onSuccess: () => { push('Đã từ chối đề xuất'); setRejectTarget(null) },
-            onError: (err) => push(getApiErrorMessage(err, 'Từ chối thất bại'), 'error'),
-          })
-        }}
-      />
-    </div>
+    <ComingSoon
+      title="Sắp ra mắt"
+      note="Chưa có API cho đề xuất chuyên gia — luồng đang chuyển sang chuyên gia do chủ nhà yến mời (Domain Expert)."
+    />
   )
 }
