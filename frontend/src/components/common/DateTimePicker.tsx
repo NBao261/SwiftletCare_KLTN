@@ -27,10 +27,10 @@ interface DateTimePickerProps {
   placeholder?: string
   invalid?: boolean
   /**
-   * Bảng chọn chèn ngay dưới ô (đẩy nội dung xuống) thay vì nổi đè — dùng trong form có khung cuộn (popup Tạo ticket)
-   * để bảng không che các phần khác
+   * Bảng chọn NỔI ĐÈ ngay dưới ô (tự mở lên trên khi dưới không đủ chỗ) thay vì chèn vào form — mặc định là chèn
+   * (như trước) để các popup cũ (Technician) không đổi; chỉ bật ở popup đủ chỗ cho bảng nổi (Đổi lịch hẹn của Admin)
    */
-  inline?: boolean
+  floating?: boolean
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -43,7 +43,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
  * Lịch tháng (T2 đầu tuần) bên trái, cột giờ + phút (bước 5 phút) bên phải. Chọn: charcoal chữ trắng,
  * hover LIME MIST. Mốc trước `min` và giờ/phút ngoài khung hẹn 07:00–18:00 giờ VN bị mờ, không bấm được.
  */
-export default function DateTimePicker({ value, onChange, min, id, ariaLabel, placeholder = 'Chọn ngày giờ', invalid, inline = false }: DateTimePickerProps) {
+export default function DateTimePicker({ value, onChange, min, id, ariaLabel, placeholder = 'Chọn ngày giờ', invalid, floating = false }: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -109,7 +109,7 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
   const cellBase = 'flex items-center justify-center rounded-full text-small tabular-nums transition-colors disabled:cursor-not-allowed disabled:text-warmGray/35 disabled:hover:bg-transparent'
 
   return (
-    <div ref={rootRef} className={inline ? 'flex flex-col gap-2' : 'relative'}>
+    <div ref={rootRef} className={floating ? 'relative' : 'flex flex-col gap-2'}>
       <button
         ref={triggerRef}
         id={id}
@@ -135,8 +135,8 @@ export default function DateTimePicker({ value, onChange, min, id, ariaLabel, pl
           onKeyDown={onKeyDown}
           className={cn(
             'flex animate-fade-in gap-2 rounded-2xl border border-gray-200 bg-white p-3',
-            !inline && 'absolute inset-x-0 z-30 shadow-popover',
-            !inline && (dropUp ? 'bottom-full mb-2' : 'top-full mt-2'),
+            floating && 'absolute inset-x-0 z-30 shadow-popover',
+            floating && (dropUp ? 'bottom-full mb-2' : 'top-full mt-2'),
           )}
         >
           {/* ── Lịch tháng ── */}

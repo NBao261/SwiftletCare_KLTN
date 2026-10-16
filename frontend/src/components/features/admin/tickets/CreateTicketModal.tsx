@@ -147,7 +147,6 @@ export default function CreateTicketModal({ open, onClose, defaultFarmId, defaul
                       value={form.scheduledAt}
                       onChange={scheduledAt => setForm(f => ({ ...f, scheduledAt }))}
                       invalid={submitted && !!errors.scheduledAt}
-                      inline
                     />
                     {/* Lỗi dưới ô — cùng kiểu Input/SelectField */}
                     {submitted && errors.scheduledAt && <span className="text-xs text-alertRed">{t(errors.scheduledAt)}</span>}

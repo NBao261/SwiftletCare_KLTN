@@ -66,6 +66,8 @@ export default function RescheduleModal({ open, onClose, ticket }: OverrideModal
           value={scheduledAt}
           onChange={setScheduledAt}
           invalid={!!scheduleError}
+          // Bảng chọn nổi đè (popup có reasonRows=6 chừa đủ chỗ phía dưới) — đã duyệt bằng mắt trên giao diện
+          floating
         />
       </div>
     </OverrideModalLayout>
