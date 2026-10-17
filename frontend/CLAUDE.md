@@ -30,6 +30,7 @@ src/
                (farm-owner/farmMock.api.ts returns EMPTY data for parts the backend has no endpoint for)
   components/  auth/ (RequireRole) · common/ · features/<role>/<area>/ · layouts/ · ui/ (design system)
   constants/   roles (role groups, ROLE_HOME, MENU_ACCESS, getRoleHomePath/canAccessPath) · thresholds · tickets · sla · auditActions · *.i18n.ts dictionaries
+  data/        (create when needed) <name>.data.ts — the ONLY place fake data may live (FE_Design §7)
   hooks/       admin/ auth/ common/ farm-owner/ shared/ — React Query wrappers over apis/
   i18n/        index.ts (t · tr · trChildren · translated · intlLocale · setLang) · en.ts — i18next, keys are the Vietnamese sentences
   lib/         axios · queryClient · socket · cn · helpers · i18n · navigation · chartTheme
@@ -49,6 +50,18 @@ src/
 - **Component tiers**: no domain knowledge → `components/ui/` (self-contained design system, only imports `@/lib/cn` and `@/i18n`; `ui/index.ts` is the only barrel in `src/`, `icons.tsx` left out; nothing inside `ui/` imports the barrel). Knows the domain, one feature → `components/features/<role>/<area>/`. Knows the domain, two or more features → `components/common/` (kept small: `ZoneSwitcher`, `ZonePicker`, `NotificationPopover`, `Toast`, `StatusDot`, `DateTimePicker`).
 - **Placement exception**: `components/features/admin/tickets/AdminOverrideModals.tsx` is imported by a Technician page but stays under `admin/` — it is Admin-only UI gated by `usePermission('ADMIN')`.
 - **Imports** always use the `@/` alias (`@/*` → `src/*`), never `../`.
+
+## Rules to apply on every change
+
+Full text in FE_Design (top section "Quy tắc viết code TypeScript/TSX", 1.1, 2.4, 7, 12.0, 13.12–13.13). In short:
+
+- **Farm Owner UI is the template** for Admin, Technician, Domain Expert and any later role (frames, radius, `DataTable`, buttons, badges — FE_Design 1.1). Only the Landing Page and `mobile/` are designed separately.
+- **Alert severity and ticket priority are 3 levels** (FE_Design 2.4). ⏳ The shared files (`constants/severity.ts`, `severity.i18n.ts`, `priority.ts`, `common/SeverityBadge`, `common/PriorityBadge`) are **not on develop yet** — they live on branch `feat/fe-farmowner-ticket`. Until it merges, do not import them; keep using `SEVERITY_BADGE_CLASS` (`dashboardMetrics.ts`) and `PRIORITY_TONE` (`constants/tickets.ts`). After it merges: never redeclare level colours or labels.
+- **No invented data.** No API or no data yet → empty frame. Fake data only when the prompt asks for it, in `src/data/<name>.data.ts`, imported — never inline.
+- One-line comments only (`// <name or feature>`); full names, no abbreviations; ≤ O(n) per render (build `Map`s once); junior-readable logic.
+- **Never show internal data**: no `_id`, id-derived codes or raw enums in UI/URL (detail pages take ids via history state); API errors shown as one grouped sentence per group (session/permission · not found · invalid · system/network), never the HTTP code or raw backend message (FE_Design 13.16).
+- Icons: Phosphor, Lucide or `ui/icons.tsx`, but only the size scale in FE_Design 2.9 and token colours; one library per group. Breakpoints, z-index layers, motion durations, date/number formats, glossary and i18n keys: FE_Design 4.4–4.6, 6.1–6.3. Branch names `<type>/<module>-<role>-<feature>` (13.13).
+- **After every prompt that changes code**, re-read the whole flow of the touched role (route `allow` → page → hook → api → backend) against the role map in FE_Design 12.0, then run lint · tsc · vitest and report the real result.
 
 ## Plumbing
 
