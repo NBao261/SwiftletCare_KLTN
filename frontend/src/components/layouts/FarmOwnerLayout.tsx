@@ -40,8 +40,8 @@ const menuSections: MenuSection[] = [
         icon: IconFarm
       },
       {
-        label: 'Ticket',
-        path: '/tickets',
+        label: 'Yêu cầu hỗ trợ',
+        path: '/support',
         icon: IconTicket
       },
       {

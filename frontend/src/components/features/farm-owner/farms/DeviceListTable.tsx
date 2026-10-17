@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { CpuIcon, VideoCameraIcon } from '@phosphor-icons/react'
 import { type DataTableColumn } from '@/components/ui'
 import FixedRowsTable from '@/components/ui/FixedRowsTable'
+import TableEmptyState from '@/components/common/TableEmptyState'
 import StatusDot from '@/components/common/StatusDot'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
@@ -72,5 +73,5 @@ export default function DeviceListTable({ devices, zoneNameById, onSelect }: Dev
     return cols
   }, [t, ago, zoneNameById, onSelect])
 
-  return <FixedRowsTable columns={columns} rows={devices} getRowKey={d => d.id} onRowClick={onSelect} emptyNotice={t(zoneNameById ? 'house.noDevice' : 'device.empty')} rowHeight={64} />
+  return <FixedRowsTable columns={columns} rows={devices} getRowKey={device => device.id} onRowClick={onSelect} emptyNotice={t(zoneNameById ? 'house.noDevice' : 'device.empty')} emptyContent={<TableEmptyState title={t(zoneNameById ? 'house.noDevice' : 'device.empty')} />} rowHeight={64} />
 }

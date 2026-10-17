@@ -1,4 +1,6 @@
 import type { Dictionary } from '@/lib/i18n'
+import { prefixLabels, alertStatusDict } from '@/constants/enumLabels.i18n'
+import { levelDict, severityLabels } from '@/constants/severity.i18n'
 
 // Từ điển popup thông báo, tài khoản, đăng xuất và nút ngôn ngữ
 const vi = {
@@ -15,13 +17,8 @@ const vi = {
   'notif.note': 'Ghi chú',
   'notif.openDetail': 'Mở trang chi tiết cảnh báo',
   'notif.viewAll': 'Xem tất cả thông báo →',
-  'status.ACTIVE': 'Mới',
-  'status.ACKNOWLEDGED': 'Tiếp nhận',
-  'status.RESOLVED': 'Đã xử lý',
-  'severity.CRITICAL': 'Nghiêm trọng',
-  'severity.HIGH': 'Cao',
-  'severity.MEDIUM': 'Trung bình',
-  'severity.LOW': 'Thấp',
+  ...prefixLabels('status.', alertStatusDict.vi),
+  ...prefixLabels('severity.', severityLabels(levelDict.vi)),
 
   'profile.aria': 'Tài khoản',
   'profile.ariaUser': 'Tài khoản {name}',
@@ -58,13 +55,8 @@ const en: Record<ShellKey, string> = {
   'notif.note': 'Note',
   'notif.openDetail': 'Open alert details',
   'notif.viewAll': 'View all notifications →',
-  'status.ACTIVE': 'New',
-  'status.ACKNOWLEDGED': 'Acknowledged',
-  'status.RESOLVED': 'Resolved',
-  'severity.CRITICAL': 'Critical',
-  'severity.HIGH': 'High',
-  'severity.MEDIUM': 'Medium',
-  'severity.LOW': 'Low',
+  ...prefixLabels('status.', alertStatusDict.en),
+  ...prefixLabels('severity.', severityLabels(levelDict.en)),
 
   'profile.aria': 'Account',
   'profile.ariaUser': 'Account {name}',
