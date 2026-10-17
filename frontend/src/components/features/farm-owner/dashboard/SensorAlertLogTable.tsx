@@ -2,24 +2,22 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge, Button, Card, FilterChip, type DataTableColumn } from '@/components/ui'
 import FixedRowsTable from '@/components/ui/FixedRowsTable'
+import TableEmptyState from '@/components/common/TableEmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { buildAlertRow, SEVERITY_BADGE_CLASS, STATUS_BADGE_CLASS, type AlertLogRow, type SeverityGroup } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { buildAlertRow, STATUS_BADGE_CLASS, type AlertLogRow, type SeverityGroup } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import SeverityBadge from '@/components/common/SeverityBadge'
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { useHouseAlerts } from '@/hooks/farm-owner/useFarmOwnerDashboard'
 import type { AllZone } from '@/hooks/shared/useFarms'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
+import { LEVELS } from '@/constants/severity'
+import { levelDict } from '@/constants/severity.i18n'
 import { cn } from '@/lib/cn'
 
 const ROW_COUNT = 6
 const ROW_HEIGHT = 64
 
-const FILTERS = [
-  { group: undefined, labelKey: 'log.all' },
-  { group: 'CRITICAL', labelKey: 'log.critical' },
-  { group: 'HIGH_MED', labelKey: 'log.highMed' },
-  { group: 'NORMAL', labelKey: 'log.normal' },
-] as const
 
 interface SensorAlertLogTableProps {
   farmId: string
@@ -31,6 +29,7 @@ interface SensorAlertLogTableProps {
 // Bảng nhật ký cảnh báo
 export default function SensorAlertLogTable({ farmId, houseId, zones, deviceNames }: SensorAlertLogTableProps) {
   const { t, num, time, day } = useTranslation(dashboardDict)
+  const { t: tLevel } = useTranslation(levelDict)
   const navigate = useNavigate()
   const [filter, setFilter] = useState<SeverityGroup | undefined>(undefined)
   const zoneIds = useMemo(() => zones.map(zone => zone._id), [zones])
@@ -58,7 +57,7 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
   }), [t])
 
   const counts = useMemo(() => {
-    const result: Record<SeverityGroup, number> = { CRITICAL: 0, HIGH_MED: 0, NORMAL: 0 }
+    const result: Record<SeverityGroup, number> = { P1: 0, P2: 0, P3: 0 }
     allRows.forEach(row => { result[row.group] += 1 })
     return result
   }, [allRows])
@@ -68,7 +67,7 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
   const columns = useMemo<DataTableColumn<AlertLogRow>[]>(() => [
     {
       key: 'severity', header: t('log.colSeverity'), className: 'w-[100px]',
-      render: row => <Badge className={cn('whitespace-nowrap px-2.5 py-0.5 text-[11px]', SEVERITY_BADGE_CLASS[row.severity])}>{row.severity}</Badge>,
+      render: row => <SeverityBadge severity={row.severity} />,
     },
     {
       key: 'time', header: t('log.colTime'), className: 'w-[110px] whitespace-nowrap',
@@ -125,12 +124,17 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-warmGray">{t('log.filter')}</span>
-        {FILTERS.map(item => (
+        <FilterChip
+          active={filter === undefined}
+          label={`${t('log.all')} (${allRows.length})`}
+          onClick={() => setFilter(undefined)}
+        />
+        {LEVELS.map(level => (
           <FilterChip
-            key={item.labelKey}
-            active={filter === item.group}
-            label={`${t(item.labelKey)} (${item.group ? counts[item.group] : allRows.length})`}
-            onClick={() => setFilter(item.group)}
+            key={level}
+            active={filter === level}
+            label={`${tLevel(level)} (${counts[level]})`}
+            onClick={() => setFilter(level)}
           />
         ))}
       </div>
@@ -151,6 +155,7 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
           rowHeight={ROW_HEIGHT}
           pageSize={ROW_COUNT}
           emptyNotice={t('log.empty')}
+          emptyContent={<TableEmptyState title={t('log.empty')} />}
           paginationLabels={paginationLabels}
         />
       )}
