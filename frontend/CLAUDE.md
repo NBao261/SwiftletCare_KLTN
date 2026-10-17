@@ -33,7 +33,7 @@ src/
   data/        (create when needed) <name>.data.ts — the ONLY place fake data may live (FE_Design §7)
   hooks/       admin/ auth/ common/ farm-owner/ shared/ — React Query wrappers over apis/
   i18n/        index.ts (t · tr · trChildren · translated · intlLocale · setLang) · en.ts — i18next, keys are the Vietnamese sentences
-  lib/         axios · queryClient · socket · cn · helpers · i18n · navigation · chartTheme
+  lib/         axios · queryClient · socket · cn · helpers · i18n · navigation · chartTheme · apiError (⏳)
   pages/       admin/ auth/ farm-owner/ sales-staff/ technician/ + 4 root pages (SettingsPage, MarketplacePage, ListingDetailPage, ForbiddenPage) — ONLY *Page.tsx
   providers/   AppProviders.tsx
   routes/      admin · farm-owner · technician · sales-staff · public (.routes.tsx)
@@ -53,13 +53,15 @@ src/
 
 ## Rules to apply on every change
 
-Full text in FE_Design (top section "Quy tắc viết code TypeScript/TSX", 1.1, 2.4, 7, 12.0, 13.12–13.13). In short:
+**Before writing any component, colour, label, formatter or hook, check FE_Design Appendix D (Phụ lục D) — the full list of shared items with paths.** Full text in FE_Design (top section "Quy tắc viết code TypeScript/TSX", 1.1, 2.4, 7, 12.0, 13.12–13.13). In short:
 
 - **Farm Owner UI is the template** for Admin, Technician, Domain Expert and any later role (frames, radius, `DataTable`, buttons, badges — FE_Design 1.1). Only the Landing Page and `mobile/` are designed separately.
+- **Backend enum labels** (alert type/status, ticket type/status, device status, role) are declared once in `constants/enumLabels.i18n.ts` (⏳ branch `feat/fe-farmowner-ticket`); screen dictionaries reuse them with `...prefixLabels('status.', ticketStatusDict.vi)` — never retype a label (FE_Design 6.3).
+- **Ticket status + progress steps** come from `constants/ticketStatus.ts` + `common/TicketStatusBadge` + `common/TicketProgressStepper` (⏳); a page adds its own step with `<TicketProgressStepper extraSteps={[{ afterKey, step }]} />` (FE_Design 2.10). Dates: `formatStandardDate` / `formatHourMinute` / `formatDateTime` in `lib/i18n.ts` (DD/MM/YYYY, HH:mm, Vietnam time).
 - **Alert severity and ticket priority are 3 levels** (FE_Design 2.4). ⏳ The shared files (`constants/severity.ts`, `severity.i18n.ts`, `priority.ts`, `common/SeverityBadge`, `common/PriorityBadge`) are **not on develop yet** — they live on branch `feat/fe-farmowner-ticket`. Until it merges, do not import them; keep using `SEVERITY_BADGE_CLASS` (`dashboardMetrics.ts`) and `PRIORITY_TONE` (`constants/tickets.ts`). After it merges: never redeclare level colours or labels.
 - **No invented data.** No API or no data yet → empty frame. Fake data only when the prompt asks for it, in `src/data/<name>.data.ts`, imported — never inline.
 - One-line comments only (`// <name or feature>`); full names, no abbreviations; ≤ O(n) per render (build `Map`s once); junior-readable logic.
-- **Never show internal data**: no `_id`, id-derived codes or raw enums in UI/URL (detail pages take ids via history state); API errors shown as one grouped sentence per group (session/permission · not found · invalid · system/network), never the HTTP code or raw backend message (FE_Design 13.16).
+- **Never show internal data**: no `_id`, id-derived codes or raw enums in UI/URL (detail pages take ids via history state); API errors shown as one grouped sentence per group (session/permission · not found · invalid · system/network), never the HTTP code or raw backend message — call `useApiErrorMessage()` (`hooks/common/`, ⏳ branch `feat/fe-farmowner-ticket`) instead of `getApiErrorMessage` (FE_Design 13.16).
 - Icons: Phosphor, Lucide or `ui/icons.tsx`, but only the size scale in FE_Design 2.9 and token colours; one library per group. Breakpoints, z-index layers, motion durations, date/number formats, glossary and i18n keys: FE_Design 4.4–4.6, 6.1–6.3. Branch names `<type>/<module>-<role>-<feature>` (13.13).
 - **After every prompt that changes code**, re-read the whole flow of the touched role (route `allow` → page → hook → api → backend) against the role map in FE_Design 12.0, then run lint · tsc · vitest and report the real result.
 
