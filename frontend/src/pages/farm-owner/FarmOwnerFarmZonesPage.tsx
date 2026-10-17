@@ -19,6 +19,7 @@ import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { SUPPORT_PATH, supportCreateState } from '@/components/features/farm-owner/tickets/tickets.constants'
 import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
@@ -43,6 +44,8 @@ export default function FarmOwnerFarmZonesPage() {
   const node = houseId ? structure.houseById.get(houseId) : undefined
   const { data: extras } = useStructureExtras(houseId ? [houseId] : [])
   const canManage = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
+  // Ticket của Farm Owner ở /support (mở sẵn form lắp đặt); Technician/Admin vẫn dùng màn /tickets
+  const isFarmOwner = usePermission('FARM_OWNER')
 
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'devices' ? 'devices' : 'overview')
@@ -102,7 +105,7 @@ export default function FarmOwnerFarmZonesPage() {
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" className="h-9 text-xs" onClick={() => navigate('/tickets')}>
+            <Button size="sm" className="h-9 text-xs" onClick={() => (isFarmOwner ? navigate(SUPPORT_PATH, { state: supportCreateState('install', { farmId }) }) : navigate('/tickets'))}>
               <PlusIcon size={14} weight="bold" />
               {t('house.requestInstall')}
             </Button>

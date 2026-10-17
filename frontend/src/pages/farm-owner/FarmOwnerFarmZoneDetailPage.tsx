@@ -11,6 +11,7 @@ import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
 import { ZONE_METRICS, thresholdRange, type MetricMeta, CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { detectBreaches, type DeviceRow, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
+import { SUPPORT_PATH, supportCreateState } from '@/components/features/farm-owner/tickets/tickets.constants'
 import { useTelemetry } from '@/hooks/farm-owner/useTelemetry'
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
@@ -129,7 +130,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         title={t('zone.devicesTitle', { n: node.devices.length })}
         description={t('zone.devicesDesc')}
         action={
-          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/tickets')}>
+          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => (isFarmOwner ? navigate(SUPPORT_PATH, { state: supportCreateState('install', { farmId, zoneId }) }) : navigate('/tickets'))}>
             <PlusIcon size={14} weight="bold" />
             {t('zone.requestInstall')}
           </Button>
