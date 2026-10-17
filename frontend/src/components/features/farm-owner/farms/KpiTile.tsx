@@ -5,7 +5,7 @@ type KpiTone = 'neutral' | 'orange'
 
 const TONE_CLASS: Record<KpiTone, string> = {
   neutral: 'bg-warmGray/10 text-charcoal',
-  orange: 'bg-orange-100 text-orange-800',
+  orange: 'bg-safetyOrange/15 text-safetyOrange',
 }
 
 interface KpiTileProps {
