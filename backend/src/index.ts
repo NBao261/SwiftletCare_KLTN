@@ -19,6 +19,7 @@ import { startMaintenanceScheduleJob } from './jobs/maintenanceSchedule.job'
 import { startSensorAnomalyJob } from './jobs/sensorAnomaly.job'
 import { startForecastJob } from './jobs/forecast.job'
 import { startHealthReportJob } from './jobs/healthReport.job'
+import { startDeletionRequestReminderJob } from './jobs/deletionRequestReminder.job'
 import { startTelegramPolling } from './services/telegram.service'
 import logger           from './utils/logger.util'
 
@@ -49,6 +50,7 @@ async function bootstrap(): Promise<void> {
   startSensorAnomalyJob()
   startForecastJob()
   startHealthReportJob()
+  startDeletionRequestReminderJob()
   // ALERT-FR-013 — nhận `/start <mã>` của bot Telegram (chỉ chạy khi có TELEGRAM_BOT_TOKEN)
   startTelegramPolling()
 

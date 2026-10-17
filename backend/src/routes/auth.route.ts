@@ -63,5 +63,7 @@ router.delete('/telegram/link', authenticate, authController.unlinkTelegram)
 
 /** POST /auth/delete-request – AUTH-FR-012 */
 router.post('/delete-request', authenticate, authController.requestDeletion)
+/** DELETE /auth/delete-request – AUTH-FR-012, đổi ý trước khi Admin xử lý */
+router.delete('/delete-request', authenticate, authController.cancelDeletion)
 
 export default router

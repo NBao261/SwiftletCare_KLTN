@@ -115,3 +115,9 @@ export const requestDeletion = asyncHandler(async (req: Request, res: Response) 
   await authService.requestAccountDeletion(req.user._id)
   res.json({ success: true, data: { message: 'Đã ghi nhận yêu cầu xoá tài khoản, sẽ xử lý trong tối đa 30 ngày' } })
 })
+
+/** DELETE /auth/delete-request – AUTH-FR-012 */
+export const cancelDeletion = asyncHandler(async (req: Request, res: Response) => {
+  await authService.cancelAccountDeletion(req.user._id)
+  res.json({ success: true, data: { message: 'Đã huỷ yêu cầu xoá tài khoản' } })
+})

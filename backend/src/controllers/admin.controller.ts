@@ -17,11 +17,16 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
 
 /** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
 export const setUserStatus = asyncHandler(async (req: Request, res: Response) => {
-  const { user, openTickets, openTicketIds } = await adminService.setUserStatus(
+  const { user, reroute, openTickets, openTicketIds } = await adminService.setUserStatus(
     req.user._id, req.params.id, req.body.is_active as boolean, req.body.reason as string | undefined,
   )
-  // Khoá Technician còn ticket đang giao: báo số ticket + id để Admin gán lại
-  res.json({ success: true, data: user, ...(openTickets ? { meta: { openTickets, openTicketIds } } : {}) })
+  // Khoá Technician còn ticket đang giao: báo ticket đã chuyển cho ai, và số ticket + id
+  // không ai nhận được để Admin gán tay
+  res.json({
+    success: true,
+    data: user,
+    ...(reroute ? { meta: { rerouted: reroute.rerouted, unassigned: reroute.unassigned, openTickets, openTicketIds } } : {}),
+  })
 })
 
 /** GET /admin/delete-requests – AUTH-FR-012 */
@@ -38,6 +43,12 @@ export const completeDeletionRequest = asyncHandler(async (req: Request, res: Re
   const user = await adminService.completeDeletionRequest(req.user._id, req.params.id, {
     force: req.body?.force === true,
   })
+  res.json({ success: true, data: user })
+})
+
+/** PUT /admin/delete-requests/:id/reject – AUTH-FR-012 */
+export const rejectDeletionRequest = asyncHandler(async (req: Request, res: Response) => {
+  const user = await adminService.rejectDeletionRequest(req.user._id, req.params.id, req.body.reason as string)
   res.json({ success: true, data: user })
 })
 

@@ -32,6 +32,8 @@ export interface IUser extends Document {
   password_reset_expires_at?: Date
   /** AUTH-FR-012 — user tự yêu cầu xoá, Admin xử lý trong ≤30 ngày (PRIV-NFR-003) */
   deletion_requested_at?: Date
+  /** Lúc đã nhắc Admin yêu cầu xoá sắp quá hạn 30 ngày — nhắc đúng 1 lần cho mỗi yêu cầu */
+  deletion_reminder_sent_at?: Date
   /**
    * AUTH-FR-012 — thời điểm Admin đã xoá/ẩn danh hoá xong. Document vẫn ở lại
    * để ticket/farm lịch sử không vỡ tham chiếu, nên cần cờ này để phân biệt
@@ -81,6 +83,7 @@ const userSchema = new Schema<IUser>(
     password_reset_token_hash: { type: String, select: false },
     password_reset_expires_at: { type: Date, select: false },
     deletion_requested_at:     { type: Date },
+    deletion_reminder_sent_at: { type: Date },
     deleted_at:                { type: Date },
     refresh_tokens: [{ token_hash: String, expires: Date }],
   },

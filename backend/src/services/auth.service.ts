@@ -294,3 +294,27 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
   })
   return user
 }
+
+/**
+ * AUTH-FR-012 — user đổi ý trước khi Admin xử lý. Yêu cầu đã hoàn tất thì tài
+ * khoản đã bị ẩn danh và khoá, không còn đăng nhập để gọi tới đây được.
+ */
+export async function cancelAccountDeletion(userId: string): Promise<IUser> {
+  const user = await User.findById(userId)
+  if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
+  if (!user.deletion_requested_at) {
+    throw new AppError(409, 'CONFLICT', 'Bạn chưa gửi yêu cầu xoá tài khoản nào')
+  }
+
+  user.deletion_requested_at = undefined
+  user.deletion_reminder_sent_at = undefined
+  await user.save()
+
+  await logAction(userId, 'DELETION_CANCELLED', 'user', userId)
+  // Admin có thể đang mở hàng đợi — báo để không ai xử lý nhầm yêu cầu vừa rút lại
+  await notifyAdmins({
+    title: 'Yêu cầu xoá tài khoản đã được huỷ',
+    body: `${user.full_name} (${user.role ?? 'Buyer'}) đã huỷ yêu cầu xoá tài khoản.`,
+  })
+  return user
+}

@@ -5,7 +5,7 @@ import { Ticket } from '@/models/ticket.model'
 import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { softDeleteFarm } from '@/services/farm.service'
-import { notifyUser } from '@/services/notification.service'
+import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage, type CoverageRerouteResult } from '@/services/ticket.service'
 import { disconnectUser } from '@/socket'
 import { paginate } from '@/utils/helpers.util'
@@ -40,7 +40,9 @@ export async function listUsers(query: ListUsersQuery) {
 
 export interface SetUserStatusResult {
   user: IUser
-  /** Chỉ có khi khoá Technician còn ticket đang giao — Admin cần gán lại (TICKET-FR-005b) */
+  /** Chỉ có khi khoá Technician còn ticket đang giao — đã điều phối lại (TICKET-FR-005b) */
+  reroute?: CoverageRerouteResult
+  /** Số ticket không ai trong vùng nhận được, về hàng đợi chung — Admin cần gán tay */
   openTickets?: number
   /** Id của chính các ticket đó, để Admin gán lại được ngay mà không phải tự đi tìm */
   openTicketIds?: string[]
@@ -86,12 +88,19 @@ export async function setUserStatus(
 
   disconnectUser(userId)
   if (user.role === 'TECHNICIAN') {
-    // Không tự gán lại: tài khoản bị khoá vẫn phụ trách vùng đó, và AUTH-FR-011
-    // giao việc gán lại cho Admin quyết định — ở đây chỉ đưa đủ thông tin.
-    const open = await Ticket.find({ assigned_to: user._id, status: { $ne: 'CLOSED' } })
-      .select('_id').sort({ created_at: 1 }).limit(OPEN_TICKET_IDS_LIMIT).lean()
-    const openTickets = await Ticket.countDocuments({ assigned_to: user._id, status: { $ne: 'CLOSED' } })
-    if (openTickets > 0) return { user, openTickets, openTicketIds: open.map(t => String(t._id)) }
+    // Người bị khoá không đăng nhập được, thông báo SLA cũng bỏ qua họ — để ticket
+    // lại thì không ai xử lý. Điều phối lại như khi xoá tài khoản; ai không nhận
+    // được thì về hàng đợi chung và trả id để Admin gán tay.
+    const reroute = await rerouteTicketsOutOfCoverage({ technicianId: userId }, adminId, 'ACCOUNT_LOCKED')
+    if (reroute.rerouted.length || reroute.unassigned.length) {
+      return {
+        user,
+        reroute,
+        ...(reroute.unassigned.length
+          ? { openTickets: reroute.unassigned.length, openTicketIds: reroute.unassigned.slice(0, OPEN_TICKET_IDS_LIMIT) }
+          : {}),
+      }
+    }
   }
   return { user }
 }
@@ -234,6 +243,7 @@ export async function completeDeletionRequest(
   // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và
   // không bị xử lý (chạy lại cascade) lần 2
   user.deletion_requested_at = undefined
+  user.deletion_reminder_sent_at = undefined
   user.deleted_at = new Date()
   await user.save()
   disconnectUser(userId)
@@ -251,11 +261,72 @@ export async function completeDeletionRequest(
   return user
 }
 
+/**
+ * AUTH-FR-012 — Admin từ chối yêu cầu xoá (VD còn nghĩa vụ lưu hồ sơ). Lý do bắt
+ * buộc và được gửi lại cho người yêu cầu; tài khoản giữ nguyên, rời hàng đợi.
+ */
+export async function rejectDeletionRequest(adminId: string, userId: string, reason: string): Promise<IUser> {
+  if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
+  const trimmedReason = reason.trim()
+  if (!trimmedReason) throw BadRequestError('Phải nhập lý do khi từ chối yêu cầu xoá')
+
+  const user = await User.findById(userId)
+  if (!user) throw NotFoundError('Không tìm thấy người dùng')
+  if (!user.deletion_requested_at) throw BadRequestError('Người dùng này chưa gửi yêu cầu xoá tài khoản')
+
+  const requestedAt = user.deletion_requested_at
+  user.deletion_requested_at = undefined
+  user.deletion_reminder_sent_at = undefined
+  await user.save()
+
+  await logAction(adminId, 'DELETION_REJECTED', 'user', userId, { reason: trimmedReason, requestedAt })
+  await notifyUser(userId, {
+    title: 'Yêu cầu xoá tài khoản bị từ chối',
+    body: `Yêu cầu xoá tài khoản của bạn chưa được thực hiện. Lý do: ${trimmedReason}`,
+  })
+  return user
+}
+
+/** Hạn xử lý yêu cầu xoá (PRIV-NFR-003) và số ngày còn lại thì bắt đầu nhắc Admin */
+const DELETION_DEADLINE_DAYS = 30
+const DELETION_REMIND_DAYS_BEFORE = 7
+const DAY_MS = 86_400_000
+
+/**
+ * AUTH-FR-012 — yêu cầu xoá đã chờ tới ngày thứ 23 mà Admin chưa xử lý: nhắc 1
+ * lần, kèm số ngày còn lại. `deletion_reminder_sent_at` chặn nhắc lặp mỗi lần
+ * job chạy; huỷ / từ chối / hoàn tất đều gỡ cờ này. Trả số yêu cầu đã nhắc.
+ */
+export async function remindPendingDeletionRequests(now = new Date()): Promise<number> {
+  const remindBefore = new Date(now.getTime() - (DELETION_DEADLINE_DAYS - DELETION_REMIND_DAYS_BEFORE) * DAY_MS)
+  const due = await User.find({
+    deletion_requested_at: { $ne: null, $lte: remindBefore },
+    deletion_reminder_sent_at: null,
+  }).select('full_name role deletion_requested_at').lean()
+
+  for (const user of due) {
+    const deadline = new Date(user.deletion_requested_at!.getTime() + DELETION_DEADLINE_DAYS * DAY_MS)
+    const daysLeft = Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / DAY_MS))
+    // Ghi cờ trước khi gửi: gửi lỗi thì mất 1 lần nhắc, còn ngược lại thì lỗi ghi sẽ nhắc lặp mãi
+    await User.updateOne({ _id: user._id }, { $set: { deletion_reminder_sent_at: now } })
+    await notifyAdmins({
+      title: 'Yêu cầu xoá tài khoản sắp quá hạn',
+      body: `${user.full_name} (${user.role}) đã chờ xoá tài khoản từ ${user.deletion_requested_at!.toLocaleDateString('vi-VN')} — còn ${daysLeft} ngày trước hạn 30 ngày.`,
+    })
+  }
+  return due.length
+}
+
 // ── Admin tự tạo tài khoản Technician — AUTH-FR-005c ─────────────────────────
 
 /** Ticket được điều phối lại kèm theo, để màn hình Admin hiện ngay (TICKET-FR-005b) */
 export interface UpdateTechnicianRegionsResult extends CoverageRerouteResult {
   technician: IUser
+}
+
+/** Bỏ khoảng trắng thừa, mục rỗng và mục trùng — dùng chung cho tạo và sửa vùng */
+function normalizeRegions(regions: string[]): string[] {
+  return [...new Set(regions.map(r => r.trim()).filter(Boolean))]
 }
 
 export interface CreateTechnicianInput {
@@ -270,9 +341,9 @@ export async function createTechnician(adminId: string, input: CreateTechnicianI
     email: normalizedEmail,
     password_hash: input.password, // pre-save hook tự hash
     full_name: input.full_name,
-    phone: input.phone,
+    phone: input.phone || undefined,
     role: 'TECHNICIAN',
-    assigned_regions: input.assigned_regions,
+    assigned_regions: normalizeRegions(input.assigned_regions),
   })
 
   await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'TECHNICIAN' })
@@ -292,7 +363,7 @@ export async function updateTechnicianRegions(
   if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ gán khu vực được cho tài khoản Technician')
 
   const before = [...(technician.assigned_regions ?? [])]
-  const after = [...new Set(regions.map(r => r.trim()).filter(Boolean))]
+  const after = normalizeRegions(regions)
   technician.assigned_regions = after
   await technician.save()
 

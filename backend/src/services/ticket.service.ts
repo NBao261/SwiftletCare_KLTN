@@ -816,12 +816,13 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
   return ticket
 }
 
-export type CoverageChangeReason = 'REGION_UNASSIGNED' | 'FARM_REGION_CHANGED' | 'ACCOUNT_DELETED'
+export type CoverageChangeReason = 'REGION_UNASSIGNED' | 'FARM_REGION_CHANGED' | 'ACCOUNT_DELETED' | 'ACCOUNT_LOCKED'
 
 const COVERAGE_NOTE: Record<CoverageChangeReason, string> = {
   REGION_UNASSIGNED: 'Technician đang phụ trách không còn phụ trách khu vực của farm này.',
   FARM_REGION_CHANGED: 'Farm đã chuyển sang khu vực khác, Technician cũ không còn phụ trách.',
   ACCOUNT_DELETED: 'Tài khoản Technician đang phụ trách đã bị xoá theo yêu cầu.',
+  ACCOUNT_LOCKED: 'Tài khoản Technician đang phụ trách đã bị khoá.',
 }
 
 export interface CoverageRerouteResult {
@@ -844,9 +845,9 @@ export interface CoverageRerouteResult {
  * người cũ (trừ ticket lắp đặt/bảo trì — giờ hẹn đó là của Farm Owner), không
  * còn ai thì về hàng đợi chung và báo Admin.
  *
- * KHÔNG áp dụng khi tài khoản Technician bị khoá: lúc đó họ vẫn phụ trách vùng,
- * và SRS giao việc gán lại cho Admin quyết định (AUTH-FR-011 — response của
- * `PUT /admin/users/:id/status` trả kèm `meta.openTickets`).
+ * Tài khoản Technician bị khoá (AUTH-FR-011) cũng tính là không còn phụ trách:
+ * họ vẫn giữ `assigned_regions` nhưng không đăng nhập được, còn thông báo bỏ qua
+ * user bị khoá — để nguyên thì ticket nằm im tới khi Admin nhớ ra mà gán lại.
  */
 export async function rerouteTicketsOutOfCoverage(
   scope: { farmId?: string; technicianId?: string },
@@ -865,10 +866,11 @@ export async function rerouteTicketsOutOfCoverage(
     const farm = await Farm.findById(ticket.farm_id).select('region').lean()
     if (!farm) continue
 
-    // Cùng phép thử với `isAssignedTechnician` của farmAccess.util — người cũ còn
-    // phụ trách vùng thì không có gì phải làm (kể cả khi họ đang bị khoá).
-    const assignee = await User.findById(from).select('role assigned_regions').lean()
-    const stillCovers = assignee?.role === 'TECHNICIAN' && !!farm.region
+    // Cùng phép thử với `isAssignedTechnician` của farmAccess.util, thêm điều kiện
+    // tài khoản còn hoạt động — người cũ còn phụ trách vùng thì không có gì phải làm.
+    const assignee = await User.findById(from).select('role assigned_regions is_active').lean()
+    const isActive = assignee?.is_active !== false
+    const stillCovers = assignee?.role === 'TECHNICIAN' && isActive && !!farm.region
       && (assignee.assigned_regions ?? []).includes(farm.region)
     if (stillCovers) continue
 
@@ -902,10 +904,13 @@ export async function rerouteTicketsOutOfCoverage(
       })
     }
     await announceAssigneeChange(ticket, from)
-    void notifyUser(from, {
-      title: 'Ticket đã chuyển khỏi bạn',
-      body: `Ticket ${String(ticket._id)} (${ticket.type}) không còn thuộc khu vực bạn phụ trách nên đã được điều phối lại.`,
-    })
+    // Người bị khoá không đăng nhập được để làm gì với tin này
+    if (isActive) {
+      void notifyUser(from, {
+        title: 'Ticket đã chuyển khỏi bạn',
+        body: `Ticket ${String(ticket._id)} (${ticket.type}) không còn thuộc khu vực bạn phụ trách nên đã được điều phối lại.`,
+      })
+    }
 
     if (to) {
       notifyNewAssignment(to, ticket)

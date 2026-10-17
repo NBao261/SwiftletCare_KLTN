@@ -10,6 +10,7 @@ router.use(authenticate, requireRole('ADMIN'))
 
 // Đủ mọi role của users.role — thiếu 1 role thì Admin không lọc được loại tài khoản đó (422)
 const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN']
+const PHONE_RE = /^(0|\+84)\d{9}$/
 // Không chặn cứng limit > 100 — paginate() tự kẹp về mức tối đa như mọi list khác
 const paginationQuery = [
   query('page').optional().isInt({ min: 1 }),
@@ -36,10 +37,18 @@ router.put('/delete-requests/:id/complete',
   param('id').isMongoId(), body('force').optional().isBoolean().toBoolean(), validate,
   adminController.completeDeletionRequest,
 )
+// Từ chối phải có lý do — người yêu cầu được báo lại lý do đó (AUTH-FR-012)
+router.put('/delete-requests/:id/reject',
+  param('id').isMongoId(), body('reason').isString().trim().notEmpty(), validate,
+  adminController.rejectDeletionRequest,
+)
 
 /** Admin tự tạo tài khoản Technician – AUTH-FR-005c */
 router.post('/technicians',
   body('email').isEmail(), body('password').isLength({ min: 8 }), body('full_name').trim().notEmpty(),
+  // Cùng quy tắc với form tạo user ở frontend (validations/admin/user.validation.ts) — gọi API thẳng cũng không lưu được SĐT sai
+  body('phone').optional({ values: 'falsy' }).isString().customSanitizer((v: string) => v.replace(/[\s.-]/g, ''))
+    .matches(PHONE_RE).withMessage('SĐT phải là 10 số bắt đầu bằng 0 hoặc +84 rồi 9 số'),
   body('assigned_regions').isArray({ min: 1 }), body('assigned_regions.*').isString().trim().notEmpty(), validate,
   adminController.createTechnician,
 )
