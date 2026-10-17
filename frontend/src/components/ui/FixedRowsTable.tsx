@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import Pagination, { type PaginationLabels } from '@/components/ui/Pagination'
 
@@ -7,8 +7,6 @@ const DEFAULT_PAGE_SIZE = 10
 interface PlaceholderRow {
   placeholder: true
   id: string
-  /** Chỉ dòng đệm đầu tiên hiện chữ thông báo, và chỉ khi hoàn toàn không có bản ghi nào */
-  showNotice: boolean
 }
 type PaddedRow<T> = T | PlaceholderRow
 
@@ -25,52 +23,73 @@ interface FixedRowsTableProps<T> {
   rowHeight: number
   /** Số dòng mỗi trang = số dòng khung bảng luôn hiển thị */
   pageSize?: number
-  /** Chữ nghiêng ở dòng đệm đầu tiên khi bảng không có dữ liệu */
+  // Chữ hiện giữa khung bảng khi trống và không truyền emptyContent
   emptyNotice: string
+  // Nội dung trạng thái rỗng thay cho chữ (VD common/TableEmptyState), đặt giữa khung bảng
+  emptyContent?: ReactNode
   /** Chữ của thanh phân trang theo ngôn ngữ màn gọi — bỏ trống thì tiếng Việt */
   paginationLabels?: PaginationLabels
+  // Phân trang ở server: rows đã là dữ liệu của trang hiện tại, tổng số và đổi trang do màn gọi quản lý
+  serverPagination?: { page: number; total: number; onChange: (page: number) => void }
 }
 
 /**
  * DataTable có khung cố định `pageSize` dòng (mặc định 10) × `rowHeight` px: thiếu dữ liệu thì bù dòng trống,
  * nhiều hơn thì phân trang — bảng không co/giãn theo lượng dữ liệu (cùng cách HarvestTable).
  */
-export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, paginationLabels }: FixedRowsTableProps<T>) {
+export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, emptyContent, paginationLabels, serverPagination }: FixedRowsTableProps<T>) {
   const [page, setPage] = useState(1)
   // Kẹp trang theo số trang còn lại — lọc/xoá làm ít đi thì không rơi vào trang không tồn tại
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
   const safePage = Math.min(page, totalPages)
 
   const displayRows = useMemo<PaddedRow<T>[]>(() => {
-    const slice = rows.slice((safePage - 1) * pageSize, safePage * pageSize)
-    const out: PaddedRow<T>[] = slice
+    const slice = serverPagination ? rows.slice(0, pageSize) : rows.slice((safePage - 1) * pageSize, safePage * pageSize)
+    const out: PaddedRow<T>[] = [...slice]
+    // Bảng rỗng: 1 dòng đệm cao bằng cả trang — không kẻ vạch chia, chỉ hiện trạng thái rỗng ở giữa
+    if (slice.length === 0) return [{ placeholder: true, id: 'placeholder-empty' }]
     for (let i = slice.length; i < pageSize; i += 1) {
-      out.push({ placeholder: true, id: `placeholder-${i}`, showNotice: rows.length === 0 && i === 0 })
+      out.push({ placeholder: true, id: `placeholder-${i}` })
     }
     return out
-  }, [rows, safePage, pageSize])
+  }, [rows, safePage, pageSize, serverPagination])
 
   const paddedColumns = useMemo<DataTableColumn<PaddedRow<T>>[]>(
-    () => columns.map((col, colIndex) => ({
+    () => columns.map(col => ({
       ...col,
       render: (row, index) => {
         if (!isPlaceholder(row)) return col.render(row, index)
-        return colIndex === 0 && row.showNotice ? <span className="text-small italic text-warmGray">{emptyNotice}</span> : null
+        return null
       },
     })),
-    [columns, emptyNotice],
+    [columns],
   )
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Bảng rỗng: thông báo nằm giữa khung bảng, không nhét vào ô cột đầu */}
+      <div className="relative">
       <DataTable
         columns={paddedColumns}
         rows={displayRows}
         getRowKey={row => (isPlaceholder(row) ? row.id : getRowKey(row))}
         onRowClick={onRowClick ? row => { if (!isPlaceholder(row)) onRowClick(row) } : undefined}
-        rowHeight={rowHeight}
+        rowHeight={rows.length === 0 ? rowHeight * pageSize : rowHeight}
       />
-      <Pagination page={safePage} limit={pageSize} total={rows.length} onChange={setPage} variant="full" labels={paginationLabels} />
+      {rows.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+          {emptyContent ?? <p className="text-small italic text-warmGray">{emptyNotice}</p>}
+        </div>
+      )}
+      </div>
+      <Pagination
+        page={serverPagination?.page ?? safePage}
+        limit={pageSize}
+        total={serverPagination?.total ?? rows.length}
+        onChange={serverPagination?.onChange ?? setPage}
+        variant="full"
+        labels={paginationLabels}
+      />
     </div>
   )
 }
