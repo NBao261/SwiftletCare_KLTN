@@ -7,7 +7,7 @@ import swaggerUi from 'swagger-ui-express'
 import YAML from 'yaml'
 import fs from 'fs'
 import path from 'path'
-import { rateLimiter } from '@/middlewares/rateLimiter.middleware'
+import { apiLimiter } from '@/middlewares/rateLimiter.middleware'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { requestContext } from '@/middlewares/requestContext.middleware'
 import logger from '@/utils/logger.util'
@@ -41,7 +41,8 @@ app.use(helmet())
 // credentials:true bắt buộc để trình duyệt lưu/gửi cookie refreshToken (AUTH-FR-003)
 // cross-origin (frontend :5173 -> backend :3000) — không dùng được origin '*' khi bật credentials.
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173', credentials: true }))
-app.use(rateLimiter)
+// Đếm theo tài khoản; đăng nhập/OTP/refresh có suất riêng trong auth.route.ts (SEC-NFR-004)
+app.use(apiLimiter)
 
 // ── Logging & Parsing ──────────────────────────────────────────────────────────
 app.use(morgan('combined'))
