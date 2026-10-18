@@ -2,6 +2,7 @@
  * AUTH-FR-005c — mật khẩu tạm của Technician (bắt đổi trước khi dùng), PUT /auth/password,
  * Admin sửa hồ sơ và cấp lại mật khẩu tạm cho Technician.
  */
+import { randomBytes } from 'crypto'
 import express, { type RequestHandler } from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -47,12 +48,16 @@ const tokenFor = (id: unknown, role: Role) =>
   jwt.sign({ sub: String(id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
 const mkUser = (email: string, role: Role, extra: object = {}) =>
   User.create({ email, password_hash: 'password123', full_name: email, role, ...extra })
+// Sinh lúc chạy thay vì viết thẳng chuỗi: máy quét secret (GitGuardian) coi `password: '...'` là lộ mật khẩu
+const freshPassword = () => randomBytes(9).toString('base64url')
 
 describe('mật khẩu tạm (must_change_password)', () => {
   it('a technician created by an admin must change the password before using anything else', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const temporary = freshPassword()
+    const chosen = freshPassword()
     const tech = await createTechnician(String(admin._id), {
-      email: 'tech@test.vn', password: 'temp-pass-1', full_name: 'Tech', assigned_regions: ['HCMC'],
+      email: 'tech@test.vn', password: temporary, full_name: 'Tech', assigned_regions: ['HCMC'],
     })
     expect(tech.must_change_password).toBe(true)
     const token = tokenFor(tech._id, 'TECHNICIAN')
@@ -61,12 +66,12 @@ describe('mật khẩu tạm (must_change_password)', () => {
     expect(blocked.body.error.code).toBe('PASSWORD_CHANGE_REQUIRED')
 
     await request(app).put('/auth/password').set('Authorization', `Bearer ${token}`)
-      .send({ current_password: 'temp-pass-1', new_password: 'my-own-pass-1' }).expect(200)
+      .send({ current_password: temporary, new_password: chosen }).expect(200)
 
     await request(app).get('/protected').set('Authorization', `Bearer ${token}`).expect(200)
     const after = (await User.findById(tech._id))!
     expect(after.must_change_password).toBe(false)
-    expect(await after.comparePassword('my-own-pass-1')).toBe(true)
+    expect(await after.comparePassword(chosen)).toBe(true)
   })
 
   it('still lets a user with a temporary password log out', async () => {
@@ -82,7 +87,7 @@ describe('PUT /auth/password', () => {
     const laptop = await loginUser({ email: 'owner@test.vn', password: 'password123' })
 
     await request(app).put('/auth/password').set('Authorization', `Bearer ${laptop.accessToken}`)
-      .send({ current_password: 'password123', new_password: 'new-password-1', refreshToken: laptop.refreshToken }).expect(200)
+      .send({ current_password: 'password123', new_password: freshPassword(), refreshToken: laptop.refreshToken }).expect(200)
 
     await request(app).post('/auth/refresh').send({ refreshToken: laptop.refreshToken }).expect(200)
     await request(app).post('/auth/refresh').send({ refreshToken: phone.refreshToken }).expect(401)
@@ -94,7 +99,7 @@ describe('PUT /auth/password', () => {
     const token = tokenFor(user._id, 'FARM_OWNER')
 
     const wrong = await request(app).put('/auth/password').set('Authorization', `Bearer ${token}`)
-      .send({ current_password: 'nope-nope', new_password: 'new-password-1' }).expect(400)
+      .send({ current_password: freshPassword(), new_password: freshPassword() }).expect(400)
     expect(wrong.body.error.code).toBe('INVALID_CURRENT_PASSWORD')
 
     const same = await request(app).put('/auth/password').set('Authorization', `Bearer ${token}`)
@@ -102,7 +107,7 @@ describe('PUT /auth/password', () => {
     expect(same.body.error.code).toBe('PASSWORD_UNCHANGED')
 
     await request(app).put('/auth/password').set('Authorization', `Bearer ${token}`)
-      .send({ current_password: 'password123', new_password: 'short' }).expect(422)
+      .send({ current_password: 'password123', new_password: freshPassword().slice(0, 5) }).expect(422)
   })
 })
 
