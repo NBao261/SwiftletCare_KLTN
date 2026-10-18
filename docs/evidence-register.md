@@ -24,7 +24,7 @@ Bảng ở mục 5 đã liệt kê sẵn những khẳng định đang có trong
 3. **Ghi đúng phạm vi của nguồn.** Nguồn đo ở loài khác, nước khác, hay cho gà/lợn chứ không phải chim yến thì ghi rõ ở cột "Phạm vi áp dụng". Đừng nói nguồn chứng minh nhiều hơn những gì nó viết.
 4. **Không có nguồn thì nói không có.** Đặt trạng thái `⛔ Không có nguồn` và ghi cách xử lý (hạ thành giả định, chỉ cảnh báo, hoặc để Domain Expert đặt) — đúng quy tắc ở SRS §0 và §0.5.
 5. **Người khác kiểm lại.** Một dòng chỉ lên `✅ Đã kiểm chứng` khi một thành viên **khác** người tìm đã mở nguồn và thấy đúng con số.
-6. **File gốc.** Không commit PDF/ảnh có bản quyền vào repo. Ghi link + DOI ở đây; bản lưu trữ đặt trong thư mục chung của nhóm (ghi đường dẫn ở cột "Bản lưu"). Ảnh/biên bản do nhóm tự làm (mục 7, 8) thì ghi đường dẫn nơi lưu.
+6. **File gốc.** Không commit PDF/ảnh có bản quyền vào repo. Ghi link + DOI ở đây; bản lưu trữ đặt trong thư mục chung của nhóm (ghi đường dẫn ở cột "Bản lưu"). Ảnh/biên bản do nhóm tự làm (mục 6, 7) thì ghi đường dẫn nơi lưu.
 7. **Không xoá dòng.** Nguồn bị loại thì đổi trạng thái thành `🗑 Loại` và ghi lý do, để người sau không tìm lại đúng nguồn đó.
 
 ## 3. Quy ước
@@ -35,8 +35,7 @@ Bảng ở mục 5 đã liệt kê sẵn những khẳng định đang có trong
 | --- | --- | --- |
 | `TL-xx` | Tài liệu bên ngoài (bài báo, sách, datasheet, văn bản pháp luật, trang tài liệu chính thức) — mục 4 | `TL-07` |
 | `KD-xx` | Khẳng định / con số cần minh chứng — mục 5 | `KD-01` |
-| `TB-xx` | Thiết bị — mục 6 | `TB-03` |
-| `MC-xx` | Minh chứng do nhóm tự tạo (ảnh, số đo, log, video, biên bản) — mục 7, 8 | `MC-02` |
+| `MC-xx` | Minh chứng do nhóm tự tạo (ảnh, số đo, log, video, biên bản) — mục 6, 7 | `MC-02` |
 
 ### 3.2. Mức tin cậy của nguồn
 
@@ -45,7 +44,7 @@ Bảng ở mục 5 đã liệt kê sẵn những khẳng định đang có trong
 | **A** | Bài báo có bình duyệt, sách chuyên khảo, tiêu chuẩn (TCVN/ISO/IEEE), văn bản pháp luật, datasheet của chính hãng sản xuất chip/thiết bị |
 | **B** | Tài liệu chính thức của tổ chức hoặc dự án (trang docs, đặc tả giao thức), luận văn/luận án, báo cáo của cơ quan nhà nước, viện, trường |
 | **C** | Tài liệu của nhà cung cấp/đại lý, tài liệu kỹ thuật ngành không bình duyệt, báo chí |
-| **D** | Xác nhận của người nuôi yến / Domain Expert (phải có biên bản ở mục 8), số đo của nhóm (mục 7) |
+| **D** | Xác nhận của người nuôi yến / Domain Expert (phải có biên bản ở mục 7), số đo của nhóm (mục 6) |
 
 Một con số dùng làm **ngưỡng mặc định** nên có ít nhất một nguồn mức A hoặc B, hoặc một xác nhận mức D có biên bản.
 
@@ -96,7 +95,7 @@ Mỗi tài liệu một dòng. Thêm dòng vào đúng nhóm; số `TL` tăng d�
 
 ### 4.4. Datasheet & tài liệu thiết bị
 
-| Mã | Trích dẫn (IEEE) | Link | Mức | Thiết bị (`TB-xx`) | Thông số dùng trong hệ thống | Bản lưu | Người thêm | Ngày truy cập |
+| Mã | Trích dẫn (IEEE) | Link | Mức | Thiết bị | Thông số dùng trong hệ thống | Bản lưu | Người thêm | Ngày truy cập |
 | --- | --- | --- | :---: | --- | --- | --- | --- | --- |
 | | | | | | | | | |
 
@@ -215,7 +214,7 @@ SRS ghi các số này là mặc định kỹ thuật, Domain Expert chỉnh đ�
 
 ### 5.7. Giả định kỹ thuật đã biết là chưa có nguồn (SRS §0.5)
 
-Những mốc này SRS đã ghi là do người viết code chọn. Không cần tìm tài liệu nuôi yến cho chúng; cần **số đo thực tế** (mục 7) hoặc xác nhận của nhóm/Domain Expert. Khi có, điền mã `MC-xx` và cập nhật SRS §0.5 bằng PR riêng.
+Những mốc này SRS đã ghi là do người viết code chọn. Không cần tìm tài liệu nuôi yến cho chúng; cần **số đo thực tế** (mục 6) hoặc xác nhận của nhóm/Domain Expert. Khi có, điền mã `MC-xx` và cập nhật SRS §0.5 bằng PR riêng.
 
 | Mã | Mốc | Giá trị | Ở đâu | Minh chứng (`MC-xx`) | Kết luận | Trạng thái |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -229,37 +228,11 @@ Những mốc này SRS đã ghi là do người viết code chọn. Không cần
 
 ---
 
-## 6. Thiết bị (`TB-xx`)
-
-Mỗi thiết bị trong BOM (SRS §7.1, `docs/hardware/BOM.md`) cần: datasheet, các thông số hệ thống đang dựa vào, và bằng chứng nhóm đã có thiết bị thật (ảnh, hoá đơn).
-
-| Mã | Thiết bị | Model | Thông số hệ thống dựa vào (cần datasheet xác nhận) | Datasheet (`TL-xx`) | Ảnh thật (`MC-xx`) | Hoá đơn / nguồn mua | Trạng thái |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| TB-01 | Vi điều khiển | ESP32 NodeMCU 38 chân (ESP32-WROOM-32, CP2102) | Wi-Fi, dual-core 240 MHz, NVS, watchdog | | | | ⬜ Chưa tìm |
-| TB-02 | Module UART TTL ↔ RS485 | V2, tự đảo chiều | Auto-direction, đấu thẳng TX/RX | | | | ⬜ Chưa tìm |
-| TB-03 | Cảm biến nhiệt-ẩm | ES35-SW (chip SHT35) | Modbus RTU, reg 0+1 ÷ 10, mặc định 9600 bps, trở 120 Ω qua DIP 5; độ chính xác của SHT35 | | | | ⬜ Chưa tìm |
-| TB-04 | Cảm biến ánh sáng | ES-ALS-02 | 0–200 000 lux, reg 0x0002 (32-bit) × 100 → **độ phân giải ở mức < 0.2 lux có đủ không?** | | | | ⬜ Chưa tìm |
-| TB-05 | Cảm biến NH3 | ES-NH3-01 | 0–500 ppm, điện hoá, reg 0x0000 | | | | ⬜ Chưa tìm |
-| TB-06 | Cảm biến CO2 | ES-CO2-01 | 0–5000 ppm, reg 0x0000 | | | | ⬜ Chưa tìm |
-| TB-07 | Cảm biến tiếng ồn | ES-NOISE-01 | 30–130 dB, reg 0x0000 ÷ 10; chỉ trả mức dB, không trả dạng sóng | | | | ⬜ Chưa tìm |
-| TB-08 | Module relay 4 kênh | 5 V opto, kích H/L (JQC-3FF-S-Z) | 250 VAC / 10 A, ~200 mA/relay | | | | ⬜ Chưa tìm |
-| TB-09 | Mạch hạ áp ×2 | LM2596 3 A | in 3–30 V, out 1.5–30 V | | | | ⬜ Chưa tìm |
-| TB-10 | Domino phân phối | TB1504 | 4 mối, 15 A / 600 V | | | | ⬜ Chưa tìm |
-| TB-11 | Module phát MP3 | DFPlayer Mini | microSD ≤ 32 GB FAT16/32, UART, volume 0–30 | | | | ⬜ Chưa tìm |
-| TB-12 | Amply | PAM8403 6 W có volume | Class-D 2 × 3 W, 5 V | | | | ⬜ Chưa tìm |
-| TB-13 | Nguồn | Adapter 12 V / 2 A | Ngân sách nguồn (components-guide §13) | | | | ⬜ Chưa tìm |
-| TB-14 | Camera IP | TP-Link VIGI C320I ống kính 6 mm | 2 MP, IR 850 nm, IP66, RTSP, tốc độ khung hình | | | | ⬜ Chưa tìm |
-| TB-15 | Bộ cấp nguồn PoE | TP-Link TL-POE150S | Chuẩn PoE, công suất cấp | | | | ⬜ Chưa tìm |
-| TB-16 | Phun sương, quạt, loa | (ghi model thật) | Điện áp, công suất | | | | ⬜ Chưa tìm |
-| TB-17 | Công tắc bypass Auto/Off/Hand | chưa mua | Dòng định mức > dòng bơm/quạt (ENV-FR-023) | | | | ⬜ Chưa tìm |
-
----
-
-## 7. Minh chứng do nhóm tạo (`MC-xx`)
+## 6. Minh chứng do nhóm tạo (`MC-xx`)
 
 Ảnh lắp đặt, số đo, log, video, kết quả test. Đây là bằng chứng mạnh nhất cho phần "hệ thống chạy thật" (SRS §0.2 #12, §6.8, §13.6).
 
-| Mã | Loại | Mô tả (cái gì, đo ở đâu, điều kiện) | Thời gian | Người tạo | Nơi lưu (link thư mục chung / file trong `docs/test-reports/`) | Chứng minh cho (`KD-xx` / `TB-xx` / FR) |
+| Mã | Loại | Mô tả (cái gì, đo ở đâu, điều kiện) | Thời gian | Người tạo | Nơi lưu (link thư mục chung / file trong `docs/test-reports/`) | Chứng minh cho (`KD-xx` / FR) |
 | --- | --- | --- | --- | --- | --- | --- |
 | MC-01 | | | | | | |
 
@@ -275,17 +248,17 @@ Gợi ý những minh chứng còn thiếu (theo SRS §0.2 #12 và §6.8):
 
 ---
 
-## 8. Biên bản xác nhận của người nuôi yến / Domain Expert
+## 7. Biên bản xác nhận của người nuôi yến / Domain Expert
 
 EVID-NFR-003 chấp nhận "xác nhận của người nuôi yến" là nguồn cho ngưỡng mặc định, và SRS §5.12 yêu cầu biên bản ý kiến của một người nuôi yến có kinh nghiệm được đưa vào báo cáo (§13.6). Để xác nhận đó dùng được làm minh chứng, mỗi lần phỏng vấn/xác nhận lập một biên bản theo mẫu dưới, lưu bản có chữ ký (ảnh/scan) ở thư mục chung và ghi vào bảng.
 
-### 8.1. Danh sách biên bản
+### 7.1. Danh sách biên bản
 
 | Mã | Người xác nhận | Kinh nghiệm (số năm, số nhà yến) | Ngày | Hình thức (gặp trực tiếp / gọi / văn bản) | Xác nhận cho (`KD-xx`) | Nơi lưu bản ký |
 | --- | --- | --- | --- | --- | --- | --- |
 | MC-xx | | | | | | |
 
-### 8.2. Mẫu biên bản
+### 7.2. Mẫu biên bản
 
 ```text
 BIÊN BẢN XÁC NHẬN THÔNG SỐ — SwiftletCare            Mã: MC-__
@@ -312,16 +285,16 @@ Người xác nhận (ký, ghi rõ họ tên)        Người phỏng vấn (ký
 
 ---
 
-## 9. Khoảng trống & việc cần làm
+## 8. Khoảng trống & việc cần làm
 
 Tổng hợp những gì chưa có minh chứng sau mỗi đợt rà soát; sắp theo mức quan trọng với hội đồng.
 
-| # | Khẳng định / thiết bị chưa có minh chứng | Ảnh hưởng nếu không có | Hướng xử lý | Người nhận | Hạn |
+| # | Khẳng định chưa có minh chứng | Ảnh hưởng nếu không có | Hướng xử lý | Người nhận | Hạn |
 | --- | --- | --- | --- | --- | --- |
 | 1 | | | | | |
 
-## 10. Lịch sử thay đổi
+## 9. Lịch sử thay đổi
 
 | Phiên bản | Ngày | Người sửa | Nội dung |
 | --- | --- | --- | --- |
-| 0.1 | 18/10/2026 | | Tạo khung: quy ước, danh mục tài liệu trống, bảng truy vết các khẳng định đang có trong SRS/code, bảng thiết bị, mẫu biên bản xác nhận |
+| 0.1 | 18/10/2026 | | Tạo khung: quy ước, danh mục tài liệu trống, bảng truy vết các khẳng định đang có trong SRS/code, mẫu biên bản xác nhận |
