@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as systemService from '@/services/system.service'
+import { drainUnassignedQueueSafely } from '@/services/ticket.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** GET /system/audit-logs – SYSTEM-FR-001 */
@@ -45,7 +46,14 @@ export const getTicketRouting = asyncHandler(async (_req: Request, res: Response
 
 /** PUT /system/settings/ticket-routing – TICKET-FR-005 */
 export const updateTicketRouting = asyncHandler(async (req: Request, res: Response) => {
-  res.json({ success: true, data: await systemService.updateTicketRouting(req.user._id, req.body) })
+  const before = await systemService.getTicketRouting()
+  const after = await systemService.updateTicketRouting(req.user._id, req.body)
+  // Nâng ngưỡng quá tải = Technician có thêm suất → chia ticket đang chờ. Gọi từ
+  // controller vì ticket.service đã import system.service (tránh vòng import).
+  if (after.max_open_tickets_per_technician > before.max_open_tickets_per_technician) {
+    await drainUnassignedQueueSafely()
+  }
+  res.json({ success: true, data: after })
 })
 
 /** GET /system/health-overview – SYSTEM-FR-003 */

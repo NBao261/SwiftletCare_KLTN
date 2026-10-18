@@ -73,6 +73,37 @@ async function restartResponseSla(ticket: ITicket): Promise<void> {
   ticket.is_sla_response_breached = false
 }
 
+/**
+ * TICKET-FR-005b — Admin đổi ưu tiên: tính lại cả hai hạn theo ưu tiên mới, mỗi hạn đúng
+ * mốc của nó — phản hồi từ lúc giao cho người đang giữ (như restartResponseSla), xử lý từ
+ * lúc tạo (bảo trì: từ giờ hẹn). Trước đây hạn phản hồi tính từ lúc tạo: ticket đã chuyển
+ * người mà nâng P3→P1 thì người vừa nhận bị gắn trễ ngay.
+ *
+ * Cờ vi phạm: việc đã xong (đã tiếp nhận / đã đóng) thì tính lại đúng theo hạn mới; việc
+ * còn dở thì hạn mới chưa tới → gỡ cờ (hạ ưu tiên sau khi đã trễ — job chỉ bật cờ, không
+ * bao giờ gỡ), đã qua → để job bật như mọi ticket khác (kèm ghi chú và báo Admin).
+ */
+async function recomputeSlaForPriority(ticket: ITicket): Promise<void> {
+  const responseDue = (await slaDueDates(ticket.priority, ticket.assigned_at ?? ticket.created_at)).sla_response_due_at
+  const resolveDue = (await slaDueDates(ticket.priority, ticket.created_at, maintenanceResolveFrom(ticket))).sla_resolve_due_at
+  ticket.sla_response_due_at = responseDue
+  ticket.sla_resolve_due_at = resolveDue
+  const now = Date.now()
+
+  if (ticket.responded_at) ticket.is_sla_response_breached = ticket.responded_at.getTime() > responseDue.getTime()
+  else if (responseDue.getTime() > now) ticket.is_sla_response_breached = false
+
+  if (ticket.closed_at) {
+    const breached = ticket.closed_at.getTime() > resolveDue.getTime()
+    if (breached && !ticket.is_sla_breached) ticket.sla_breached_by = ticket.assigned_to ?? undefined
+    if (!breached) ticket.sla_breached_by = undefined
+    ticket.is_sla_breached = breached
+  } else if (resolveDue.getTime() > now) {
+    ticket.is_sla_breached = false
+    ticket.sla_breached_by = undefined
+  }
+}
+
 /** TICKET-FR-007 — chỉ cho đi tiến theo thứ tự, không nhảy cóc/lùi tuỳ tiện */
 const ALLOWED_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   NEW:                         ['IN_PROGRESS', 'CLOSED'],
@@ -139,6 +170,11 @@ const ALERT_TYPE_TO_TICKET_TYPE: Record<AlertType, TicketType> = {
  * điều phối tay). Chọn người ít việc nhất, bỏ qua người đã quá tải (≥ ngưỡng
  * Admin cấu hình) và người trong `exclude` (Technician vừa xin gán lại — Flow 9
  * case 4a). Trả về null nếu không còn ai → ticket vào hàng đợi chung, Admin can thiệp.
+ *
+ * Bằng số ticket mở thì ưu tiên người LÂU CHƯA ĐƯỢC GIAO nhất (rồi tới `_id` để
+ * thứ tự luôn xác định). Trước đây hoà điểm rơi vào thứ tự MongoDB trả về —
+ * gần như luôn là tài khoản tạo sớm nhất, người đóng việc nhanh lại nhận thêm
+ * mãi trong khi người tạo sau ngồi chờ.
  */
 async function routeToTechnician(farmId: string, opts: { exclude?: string[] } = {}): Promise<string | null> {
   const farm = await Farm.findById(farmId)
@@ -158,16 +194,25 @@ async function routeToTechnician(farmId: string, opts: { exclude?: string[] } = 
   // cho cả batch thay vì 1 countDocuments/candidate (N+1) — cùng idiom "$in theo
   // batch" mà createTicketsFromStaleAlerts bên dưới đã dùng cho bước dedup.
   const candidateIds = candidates.map(c => c._id)
-  const counts = await Ticket.aggregate([
-    { $match: { assigned_to: { $in: candidateIds }, status: { $ne: 'CLOSED' } } },
-    { $group: { _id: '$assigned_to', count: { $sum: 1 } } },
+  const loads = await Ticket.aggregate<{ _id: Types.ObjectId; open: number; lastAssignedAt: Date | null }>([
+    { $match: { assigned_to: { $in: candidateIds } } },
+    {
+      $group: {
+        _id: '$assigned_to',
+        open: { $sum: { $cond: [{ $ne: ['$status', 'CLOSED'] }, 1, 0] } },
+        lastAssignedAt: { $max: '$assigned_at' },
+      },
+    },
   ])
-  const countMap = new Map(counts.map(c => [String(c._id), c.count as number]))
+  const loadMap = new Map(loads.map(l => [String(l._id), l]))
 
   const available = candidates
-    .map(c => ({ id: String(c._id), open: countMap.get(String(c._id)) ?? 0 }))
+    .map(c => {
+      const load = loadMap.get(String(c._id))
+      return { id: String(c._id), open: load?.open ?? 0, lastAssignedMs: load?.lastAssignedAt?.getTime() ?? 0 }
+    })
     .filter(c => c.open < maxOpen)
-    .sort((a, b) => a.open - b.open)
+    .sort((a, b) => a.open - b.open || a.lastAssignedMs - b.lastAssignedMs || a.id.localeCompare(b.id))
   return available[0]?.id ?? null
 }
 
@@ -246,6 +291,65 @@ function notifyNewAssignment(assignedTo: string, ticket: Pick<ITicket, '_id' | '
     title: `Bạn được gán ticket ${ticket.priority}`,
     body: `Ticket ${String(ticket._id)} (${ticket.type})${ticket.scheduled_visit_at ? ` — hẹn ${formatVisitTime(ticket.scheduled_visit_at)}` : ''}`,
   })
+}
+
+/**
+ * TICKET-FR-005 — chia lại ticket đang ở hàng đợi chung. Trước đây ticket chỉ được
+ * gán đúng 1 lần lúc tạo/chuyển; người mới vào vùng, người được mở khoá, người vừa
+ * đóng bớt việc hay Admin nâng ngưỡng quá tải đều không kéo được ticket đang chờ,
+ * chỉ Admin gán tay. Thứ tự: khẩn trước (P1 → P3), cùng mức thì chờ lâu trước.
+ * Người từng phụ trách ticket bị loại như `requestReassign` — kể cả người Admin vừa
+ * trả ticket về hàng đợi, nếu không ticket quay lại ngay tay họ.
+ * `regions` giới hạn theo vùng (VD vùng của Technician vừa có suất); bỏ trống = mọi vùng.
+ */
+export async function drainUnassignedQueue(opts: { regions?: string[] } = {}): Promise<string[]> {
+  if (opts.regions && opts.regions.length === 0) return []
+  const farmFilter = opts.regions ? { region: { $in: opts.regions } } : { region: { $nin: [null, ''] } }
+  // Model Farm đã tự lọc farm xoá mềm — ticket của farm đã xoá không chia lại
+  const farmIds = await Farm.find(farmFilter).distinct('_id')
+  if (farmIds.length === 0) return []
+
+  const queued = await Ticket.find({ farm_id: { $in: farmIds }, assigned_to: null, status: { $ne: 'CLOSED' } })
+    .sort({ priority: 1, created_at: 1 })
+  const assigned: string[] = []
+  for (const ticket of queued) {
+    const declined = ticket.previous_assignees.map(p => String(p.user_id))
+    const to = await routeToTechnician(String(ticket.farm_id), { exclude: declined })
+    if (!to) continue
+
+    const now = new Date()
+    const { sla_response_due_at } = await slaDueDates(ticket.priority, now)
+    // Gán có điều kiện: 2 lượt chia chạy cùng lúc (job + thao tác Admin) chỉ 1 bên giành được
+    const claimed = await Ticket.findOneAndUpdate(
+      { _id: ticket._id, assigned_to: null, status: { $ne: 'CLOSED' } },
+      {
+        $set: { assigned_to: to, assigned_at: now, status: 'NEW', sla_response_due_at, is_sla_response_breached: false },
+        $unset: { responded_at: 1 },
+        $push: { notes: { content: 'Hệ thống tự phân công Technician từ hàng đợi chung', created_at: now } },
+      },
+      { new: true },
+    )
+    if (!claimed) continue
+
+    await logAction(undefined, 'TICKET_AUTO_ASSIGNED', 'ticket', String(claimed._id), { to, from: 'QUEUE' })
+    await announceAssigneeChange(claimed, null)
+    notifyNewAssignment(to, claimed)
+    assigned.push(String(claimed._id))
+  }
+  return assigned
+}
+
+/**
+ * Gọi `drainUnassignedQueue` sau một thao tác khác (tạo Technician, đóng ticket...):
+ * lỗi chia lại chỉ ghi log, không làm hỏng thao tác chính — job định kỳ sẽ thử lại.
+ */
+export async function drainUnassignedQueueSafely(opts: { regions?: string[] } = {}): Promise<string[]> {
+  try {
+    return await drainUnassignedQueue(opts)
+  } catch (err) {
+    logger.error('drainUnassignedQueue failed', { err, regions: opts.regions })
+    return []
+  }
 }
 
 /**
@@ -573,6 +677,28 @@ export async function getTicket(ticketId: string, user: CurrentUser): Promise<IT
   return ticket
 }
 
+export type StintEndReason =
+  | 'REASSIGN_REQUESTED' | 'ADMIN_REASSIGNED' | 'ADMIN_UNASSIGNED' | 'REOPENED'
+  | `REROUTED_${CoverageChangeReason}`
+
+/**
+ * TICKET-FR-012 — chốt lượt phụ trách của người đang giữ ticket vào `assignment_history`.
+ * Phải gọi TRƯỚC khi đổi assigned_to / assigned_at / responded_at: lượt cũ cần đúng các
+ * mốc của chính nó, còn KPI của người mới bắt đầu từ lượt mới.
+ */
+function endCurrentStint(ticket: ITicket, reason: StintEndReason): void {
+  const holder = assigneeIdOf(ticket)
+  if (!holder) return
+  ticket.assignment_history.push({
+    user_id: holder as never,
+    assigned_at: ticket.assigned_at ?? ticket.created_at,
+    responded_at: ticket.responded_at,
+    ended_at: new Date(),
+    end_reason: reason,
+    response_breached: ticket.is_sla_response_breached,
+  })
+}
+
 /**
  * TICKET-FR-017 — sau khi đổi người phụ trách: người cũ vào `previous_assignees`
  * kèm mốc bị chuyển — chỉ xem lại lịch sử tới mốc đó, mất quyền gửi — và thread
@@ -648,7 +774,14 @@ export async function updateStatus(
   if (!ticket.responded_at && (newStatus === 'IN_PROGRESS' || newStatus === 'CLOSED')) ticket.responded_at = new Date()
   if (note) ticket.notes.push({ author_id: user._id as never, content: note, created_at: new Date() })
   await ticket.save()
+  if (newStatus === 'CLOSED') await drainQueueOfFarmRegion(ticket.farm_id)
   return ticket
+}
+
+/** Đóng/huỷ ticket làm người phụ trách có thêm suất — chia ticket đang chờ của vùng đó */
+async function drainQueueOfFarmRegion(farmId: unknown): Promise<void> {
+  const farm = await Farm.findById(farmId).select('region').lean()
+  if (farm?.region) await drainUnassignedQueueSafely({ regions: [farm.region] })
 }
 
 /**
@@ -747,6 +880,7 @@ export async function requestReassign(ticketId: string, user: CurrentUser, reaso
   const visitStillAhead = !!droppedVisit && droppedVisit.getTime() > Date.now()
   if (droppedVisit && !VISIT_TYPES.includes(ticket.type)) ticket.scheduled_visit_at = undefined
 
+  endCurrentStint(ticket, 'REASSIGN_REQUESTED')
   ticket.assigned_to = (to ?? undefined) as never
   ticket.assigned_at = to ? new Date() : undefined
   trackAssigneeChange(ticket, from)
@@ -813,6 +947,7 @@ export async function cancelTicket(ticketId: string, user: CurrentUser, reason: 
   }
   const assignee = assigneeIdOf(ticket)
   await notifyVisitChange(ticket, message, assignee ? [assignee] : [], user._id)
+  if (assignee) await drainQueueOfFarmRegion(ticket.farm_id)
   return ticket
 }
 
@@ -880,6 +1015,7 @@ export async function rerouteTicketsOutOfCoverage(
     const visitStillAhead = !!droppedVisit && droppedVisit.getTime() > Date.now()
     if (dropsVisit) ticket.scheduled_visit_at = undefined
 
+    endCurrentStint(ticket, `REROUTED_${reason}`)
     ticket.assigned_to = (to ?? undefined) as never
     ticket.assigned_at = to ? new Date() : undefined
     trackAssigneeChange(ticket, from)
@@ -1034,6 +1170,8 @@ export async function markBreachedTickets(): Promise<number> {
 
   for (const ticket of overdue) {
     ticket.is_sla_breached = true
+    // KPI tính vi phạm cho người đang giữ ticket lúc trễ, không phải người được gán cuối cùng
+    ticket.sla_breached_by = ticket.assigned_to ?? undefined
     ticket.notes.push({
       content: `Tự động đánh dấu vượt hạn xử lý SLA (hạn ${ticket.sla_resolve_due_at?.toISOString()})`,
       created_at: new Date(),
@@ -1124,106 +1262,176 @@ const CANCELLED_BY_LABEL: Partial<Record<CurrentUser['role'], string>> = {
 const percent = (part: number, whole: number) => (whole ? +((part / whole) * 100).toFixed(1) : null)
 const toHours = (ms?: number | null) => (ms ? +(ms / 3600_000).toFixed(1) : null)
 
-interface TechnicianKpiRow {
-  _id: unknown
-  total: number
-  closed: number
-  cancelled: number
-  unaccepted: number
-  resolveMsSum: number
-  resolvedCount: number
-  due: number
-  dueBreached: number
-  responseMsSum: number
-  respondedCount: number
-  escalated: number
-  technician?: { full_name?: string; email?: string }
+export interface KpiRange { from?: string; to?: string }
+const KPI_DEFAULT_DAYS = 30
+const KPI_MAX_DAYS = 366
+const DAY_MS = 86_400_000
+
+function resolveKpiRange(range: KpiRange): { from: Date; to: Date } {
+  const to = range.to ? new Date(range.to) : new Date()
+  const from = range.from ? new Date(range.from) : new Date(to.getTime() - KPI_DEFAULT_DAYS * DAY_MS)
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) throw BadRequestError('from/to phải là thời điểm ISO-8601 hợp lệ')
+  if (from >= to) throw BadRequestError('from phải trước to')
+  if (to.getTime() - from.getTime() > KPI_MAX_DAYS * DAY_MS) throw BadRequestError(`Khoảng thời gian tối đa ${KPI_MAX_DAYS} ngày`)
+  return { from, to }
+}
+
+interface TechnicianStats {
+  stints: number; respondedCount: number; responseMsSum: number; responseBreaches: number; reassignRequests: number
+  closed: number; cancelled: number; resolvedCount: number; resolveMsSum: number
+  due: number; dueBreached: number; escalated: number; reopened: number; open: number; unaccepted: number
 }
 
 /**
- * TICKET-FR-012 — KPI cho Administrator.
+ * TICKET-FR-012 — KPI cho Administrator, trong khoảng `from`–`to` (mặc định 30 ngày).
  *
- * Hai điểm quan trọng về cách tính, vì bản trước cho ra số liệu đẹp giả tạo:
- * - Ticket bị huỷ (`cancelled_at`) không phải việc đã xử lý, nên loại khỏi
- *   thời gian xử lý trung bình và khỏi tỉ lệ SLA.
- * - Tỉ lệ đúng SLA tính trên MỌI ticket đã tới hạn, gồm cả ticket đang treo
- *   quá hạn — nếu chỉ đếm ticket đã đóng thì ticket trễ nhất (chưa ai đóng)
- *   lại bị loại khỏi mẫu số, làm tỉ lệ luôn gần 100%.
+ * - Ticket bị huỷ (`cancelled_at`) không phải việc đã xử lý: loại khỏi thời gian xử lý
+ *   và tỉ lệ SLA.
+ * - Tỉ lệ đúng SLA tính trên MỌI ticket đã tới hạn trong kỳ, gồm cả ticket đang treo
+ *   quá hạn — chỉ đếm ticket đã đóng thì ticket trễ nhất lại bị loại khỏi mẫu số.
+ * - Theo Technician, trách nhiệm đi theo NGƯỜI ĐANG GIỮ ticket lúc sự việc xảy ra:
+ *   phản hồi / trễ phản hồi / xin gán lại tính theo từng lượt phụ trách (lượt hiện tại +
+ *   `assignment_history`); xử lý tính cho người giữ ticket lúc đóng, từ lúc HỌ nhận
+ *   việc; vi phạm hạn xử lý tính cho `sla_breached_by`. Trước đây mọi thứ dồn cho người
+ *   được gán cuối và thời gian xử lý tính từ lúc tạo — người nhận lại ticket đã trễ bị phạt oan.
+ * - Hệ thống (cam kết với khách) vẫn tính theo ticket: tạo → đóng.
+ * Ticket cũ chưa có `assigned_at` / `sla_breached_by` dùng `created_at` / `assigned_to` thay.
  */
-export async function getKpi() {
+export async function getKpi(range: KpiRange = {}) {
   const now = new Date()
-  const resolvedMatch = { status: 'CLOSED', closed_at: { $ne: null }, cancelled_at: null }
-  const dueMatch = { cancelled_at: null, sla_resolve_due_at: { $ne: null, $lt: now } }
-  /** Cùng điều kiện với `dueMatch` nhưng viết dạng biểu thức cho $group */
-  const DUE_NOW = {
-    $and: [{ $ne: [{ $ifNull: ['$sla_resolve_due_at', null] }, null] }, { $lt: ['$sla_resolve_due_at', now] }],
+  const { from, to } = resolveKpiRange(range)
+  const inRange = { $gte: from, $lte: to }
+  const dueEnd = to < now ? to : now
+
+  const stats = new Map<string, TechnicianStats>()
+  const statsOf = (id: unknown): TechnicianStats => {
+    const key = String(id)
+    let row = stats.get(key)
+    if (!row) {
+      row = {
+        stints: 0, respondedCount: 0, responseMsSum: 0, responseBreaches: 0, reassignRequests: 0,
+        closed: 0, cancelled: 0, resolvedCount: 0, resolveMsSum: 0,
+        due: 0, dueBreached: 0, escalated: 0, reopened: 0, open: 0, unaccepted: 0,
+      }
+      stats.set(key, row)
+    }
+    return row
+  }
+  type Stint = { user_id: unknown; assigned_at: Date; responded_at?: Date; response_breached?: boolean; end_reason?: string }
+  const countStint = (s: Stint) => {
+    const row = statsOf(s.user_id)
+    row.stints += 1
+    if (s.responded_at) {
+      row.respondedCount += 1
+      row.responseMsSum += s.responded_at.getTime() - s.assigned_at.getTime()
+    }
+    if (s.response_breached) row.responseBreaches += 1
+    if (s.end_reason === 'REASSIGN_REQUESTED') row.reassignRequests += 1
   }
 
-  const [byStatus, byTechnician, resolveStats, slaStats] = await Promise.all([
-    Ticket.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
-    Ticket.aggregate<TechnicianKpiRow>([
-      { $match: { assigned_to: { $ne: null } } },
-      {
-        $group: {
-          _id: '$assigned_to',
-          total: { $sum: 1 },
-          closed: { $sum: { $cond: [{ $eq: ['$status', 'CLOSED'] }, 1, 0] } },
-          cancelled: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$cancelled_at', null] }, null] }, 1, 0] } },
-          // Đã gán nhưng KTV chưa tiếp nhận (còn NEW) — tách khỏi việc đang làm để Admin thấy ai ôm việc mà chưa nhận
-          unaccepted: { $sum: { $cond: [{ $eq: ['$status', 'NEW'] }, 1, 0] } },
-          resolveMsSum: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, { $subtract: ['$closed_at', '$created_at'] }, 0] } },
-          resolvedCount: { $sum: { $cond: [{ $and: [{ $eq: ['$status', 'CLOSED'] }, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
-          // `$lt` với field thiếu là TRUE (null đứng trước Date trong thứ tự BSON)
-          // nên phải chặn null tường minh, không thì ticket chưa có hạn SLA cũng
-          // bị tính vào mẫu số và tỉ lệ đúng SLA của người đó bị sai.
-          due: { $sum: { $cond: [{ $and: [DUE_NOW, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }] }, 1, 0] } },
-          dueBreached: { $sum: { $cond: [{ $and: [DUE_NOW, { $eq: [{ $ifNull: ['$cancelled_at', null] }, null] }, '$is_sla_breached'] }, 1, 0] } },
-          // TICKET-FR-004b — từ lúc ticket được giao (không phải lúc tạo) tới lúc Technician xác nhận tiếp nhận
-          responseMsSum: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, { $subtract: ['$responded_at', { $ifNull: ['$assigned_at', '$created_at'] }] }, 0] } },
-          respondedCount: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$responded_at', null] }, null] }, 1, 0] } },
-          escalated: { $sum: { $cond: [{ $ne: [{ $ifNull: ['$escalated_at', null] }, null] }, 1, 0] } },
-        },
-      },
-      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'technician' } },
-      { $unwind: { path: '$technician', preserveNullAndEmptyArrays: true } },
+  const [byStatus, currentStints, pastStints, closedTickets, dueTickets, escalatedTickets, reopens, openLoads] = await Promise.all([
+    Ticket.aggregate([{ $match: { created_at: inRange } }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+    Ticket.find({ assigned_to: { $ne: null }, $or: [{ assigned_at: inRange }, { assigned_at: null, created_at: inRange }] })
+      .select('assigned_to assigned_at created_at responded_at is_sla_response_breached').lean(),
+    Ticket.aggregate<Stint>([
+      { $match: { 'assignment_history.assigned_at': inRange } },
+      { $unwind: '$assignment_history' },
+      { $match: { 'assignment_history.assigned_at': inRange } },
+      { $replaceRoot: { newRoot: '$assignment_history' } },
     ]),
-    Ticket.aggregate([
-      { $match: resolvedMatch },
-      { $group: { _id: null, avgResolveMs: { $avg: { $subtract: ['$closed_at', '$created_at'] } }, total: { $sum: 1 } } },
+    Ticket.find({ status: 'CLOSED', closed_at: inRange }).select('assigned_to assigned_at created_at closed_at cancelled_at').lean(),
+    Ticket.find({ cancelled_at: null, sla_resolve_due_at: { $gte: from, $lte: dueEnd } })
+      .select('assigned_to sla_breached_by is_sla_breached').lean(),
+    Ticket.find({ escalated_at: inRange, assigned_to: { $ne: null } }).select('assigned_to').lean(),
+    Ticket.aggregate<{ holder_at_close?: unknown }>([
+      { $match: { 'reopen_history.reopened_at': inRange } },
+      { $unwind: '$reopen_history' },
+      { $match: { 'reopen_history.reopened_at': inRange } },
+      { $replaceRoot: { newRoot: '$reopen_history' } },
     ]),
-    Ticket.aggregate([
-      { $match: dueMatch },
-      { $group: { _id: null, total: { $sum: 1 }, breached: { $sum: { $cond: ['$is_sla_breached', 1, 0] } } } },
+    // Ảnh chụp hiện tại, không theo kỳ — Admin cần biết ai đang ôm việc mà chưa nhận
+    Ticket.aggregate<{ _id: unknown; open: number; unaccepted: number }>([
+      { $match: { assigned_to: { $ne: null }, status: { $ne: 'CLOSED' } } },
+      { $group: { _id: '$assigned_to', open: { $sum: 1 }, unaccepted: { $sum: { $cond: [{ $eq: ['$status', 'NEW'] }, 1, 0] } } } },
     ]),
   ])
 
-  const resolved = resolveStats[0] as { avgResolveMs?: number; total?: number } | undefined
-  const sla = slaStats[0] as { total?: number; breached?: number } | undefined
+  for (const t of currentStints) {
+    countStint({
+      user_id: t.assigned_to, assigned_at: t.assigned_at ?? t.created_at,
+      responded_at: t.responded_at, response_breached: t.is_sla_response_breached,
+    })
+  }
+  for (const s of pastStints) countStint(s)
+
+  let resolvedTickets = 0
+  let resolveMsSum = 0
+  for (const t of closedTickets) {
+    if (!t.cancelled_at) {
+      resolvedTickets += 1
+      resolveMsSum += t.closed_at!.getTime() - t.created_at.getTime()
+    }
+    if (!t.assigned_to) continue
+    const row = statsOf(t.assigned_to)
+    row.closed += 1
+    if (t.cancelled_at) {
+      row.cancelled += 1
+    } else {
+      row.resolvedCount += 1
+      row.resolveMsSum += t.closed_at!.getTime() - (t.assigned_at ?? t.created_at).getTime()
+    }
+  }
+
+  let breachedTickets = 0
+  for (const t of dueTickets) {
+    if (t.is_sla_breached) breachedTickets += 1
+    const responsible = t.is_sla_breached ? (t.sla_breached_by ?? t.assigned_to) : t.assigned_to
+    if (!responsible) continue
+    const row = statsOf(responsible)
+    row.due += 1
+    if (t.is_sla_breached) row.dueBreached += 1
+  }
+  for (const t of escalatedTickets) statsOf(t.assigned_to).escalated += 1
+  for (const r of reopens) if (r.holder_at_close) statsOf(r.holder_at_close).reopened += 1
+  for (const l of openLoads) Object.assign(statsOf(l._id), { open: l.open, unaccepted: l.unaccepted })
+
+  const users = await User.find({ _id: { $in: [...stats.keys()] } }).select('full_name email').lean()
+  const userById = new Map(users.map(u => [String(u._id), u]))
 
   return {
+    period: { from, to },
     byStatus,
-    byTechnician: byTechnician.map(row => ({
-      technician_id: String(row._id),
-      full_name: row.technician?.full_name ?? null,
-      email: row.technician?.email ?? null,
-      total: row.total,
+    byTechnician: [...stats.entries()].map(([id, row]) => ({
+      technician_id: id,
+      full_name: userById.get(id)?.full_name ?? null,
+      email: userById.get(id)?.email ?? null,
+      /** Số lượt nhận việc trong kỳ (một ticket chuyển qua lại có thể là nhiều lượt) */
+      total: row.stints,
       closed: row.closed,
       cancelled: row.cancelled,
+      open: row.open,
       unaccepted: row.unaccepted,
       avgResolveHours: row.resolvedCount ? toHours(row.resolveMsSum / row.resolvedCount) : null,
       avgResponseHours: row.respondedCount ? toHours(row.responseMsSum / row.respondedCount) : null,
+      responseBreaches: row.responseBreaches,
+      reassignRequests: row.reassignRequests,
       escalated: row.escalated,
+      reopened: row.reopened,
+      reopenRate: percent(row.reopened, row.resolvedCount),
       slaComplianceRate: percent(row.due - row.dueBreached, row.due),
     })),
-    resolvedTickets: resolved?.total ?? 0,
-    avgResolveHours: toHours(resolved?.avgResolveMs),
-    ticketsPastDue: sla?.total ?? 0,
-    slaComplianceRate: percent((sla?.total ?? 0) - (sla?.breached ?? 0), sla?.total ?? 0),
+    resolvedTickets,
+    avgResolveHours: resolvedTickets ? toHours(resolveMsSum / resolvedTickets) : null,
+    ticketsPastDue: dueTickets.length,
+    slaComplianceRate: percent(dueTickets.length - breachedTickets, dueTickets.length),
+    reopenedTickets: reopens.length,
+    reopenRate: percent(reopens.length, resolvedTickets),
   }
 }
 
 export interface AdminOverrideInput {
-  assigned_to?: string
+  /** `null` = trả ticket về hàng đợi chung */
+  assigned_to?: string | null
   priority?: TicketPriority
   scheduled_visit_at?: string
   status?: TicketStatus
@@ -1247,9 +1455,30 @@ export async function adminOverrideTicket(
   const previousAssignee = assigneeIdOf(ticket)
 
   const changes: Record<string, unknown> = {}
+  const wasClosed = ticket.status === 'CLOSED'
   let droppedVisit: Date | undefined
-  let responseSlaRestarted = false
-  if (updates.assigned_to !== undefined) {
+  if (updates.assigned_to === null) {
+    // Trả về hàng đợi chung: y như nhánh "không còn ai nhận" của requestReassign.
+    // Người cũ vào previous_assignees nên lượt chia hàng đợi sau không giao lại cho họ.
+    if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng — không trả về hàng đợi được')
+    if (!previousAssignee) throw BadRequestError('Ticket đang ở hàng đợi chung, chưa gán cho ai')
+    if (updates.status !== undefined && updates.status !== 'NEW') {
+      throw BadRequestError('Ticket trả về hàng đợi chỉ ở trạng thái NEW — chưa có ai để tiếp nhận')
+    }
+    changes.assigned_to = { before: previousAssignee, after: null }
+    endCurrentStint(ticket, 'ADMIN_UNASSIGNED')
+    ticket.assigned_to = undefined as never
+    ticket.assigned_at = undefined
+    ticket.responded_at = undefined
+    if (ticket.scheduled_visit_at && !VISIT_TYPES.includes(ticket.type) && updates.scheduled_visit_at === undefined) {
+      droppedVisit = ticket.scheduled_visit_at
+      changes.scheduled_visit_at = { before: droppedVisit, after: null }
+      ticket.scheduled_visit_at = undefined
+    }
+    trackAssigneeChange(ticket, previousAssignee)
+    if (ticket.status !== 'NEW') changes.status = { before: ticket.status, after: 'NEW' }
+    ticket.status = 'NEW'
+  } else if (updates.assigned_to !== undefined) {
     const technician = await User.findById(updates.assigned_to).select('role is_active assigned_regions').lean()
     if (!technician || technician.role !== 'TECHNICIAN' || !technician.is_active) {
       throw BadRequestError('Chỉ gán được cho Technician đang hoạt động')
@@ -1280,6 +1509,7 @@ export async function adminOverrideTicket(
 
     changes.assigned_to = { before: ticket.assigned_to ? String(ticket.assigned_to) : null, after: updates.assigned_to }
     if (!coversRegion) changes.forcedOutOfRegion = true
+    if (assigneeChanged) endCurrentStint(ticket, 'ADMIN_REASSIGNED')
     ticket.assigned_to = technician._id
     // [5] Chỉ làm mới mốc giao việc khi thật sự đổi người: gán lại đúng người cũ
     // mà dời `assigned_at` về hiện tại sẽ khiến `responded_at` cũ nằm TRƯỚC mốc
@@ -1299,10 +1529,7 @@ export async function adminOverrideTicket(
       // và hạn phản hồi tính từ lúc giao cho họ.
       const acceptedByAdmin = updates.status !== undefined && updates.status !== 'NEW'
       ticket.responded_at = acceptedByAdmin ? new Date() : undefined
-      if (!acceptedByAdmin) {
-        await restartResponseSla(ticket)
-        responseSlaRestarted = true
-      }
+      if (!acceptedByAdmin) await restartResponseSla(ticket)
     }
     trackAssigneeChange(ticket, previousAssignee)
     // Người mới phải tự xác nhận tiếp nhận, trừ khi Admin ép luôn trạng thái
@@ -1311,17 +1538,19 @@ export async function adminOverrideTicket(
       ticket.status = 'NEW'
     }
   }
+  // Admin ép rời NEW (tiếp nhận / đóng hộ) mà người đang giữ chưa từng tiếp nhận: coi như
+  // tiếp nhận lúc Admin ép — giống nhánh đổi người ở trên. Không ghi thì ticket "đang xử lý"
+  // mà "chưa phản hồi", và KPI thời gian phản hồi bỏ sót nó.
+  if (updates.status !== undefined && updates.status !== 'NEW' && !ticket.responded_at && assigneeIdOf(ticket)) {
+    ticket.responded_at = new Date()
+    changes.responded_at = { before: null, after: ticket.responded_at }
+  }
   if (updates.priority !== undefined && updates.priority !== ticket.priority) {
-    // SLA tính theo priority (TICKET-FR-006) và mốc là lúc tạo ticket, không
-    // phải lúc Admin sửa — nếu không, nâng P3→P1 vẫn giữ hạn 72h cũ.
-    const sla = await slaDueDates(updates.priority, ticket.created_at, maintenanceResolveFrom(ticket))
     changes.priority = { before: ticket.priority, after: updates.priority }
     ticket.priority = updates.priority
-    // Vừa đổi người ở trên thì hạn phản hồi tính từ lúc giao, theo priority mới
-    if (responseSlaRestarted) await restartResponseSla(ticket)
-    else ticket.sla_response_due_at = sla.sla_response_due_at
-    ticket.sla_resolve_due_at  = sla.sla_resolve_due_at
+    await recomputeSlaForPriority(ticket)
     changes.sla_resolve_due_at = ticket.sla_resolve_due_at
+    changes.sla_response_due_at = ticket.sla_response_due_at
   }
   let visitChanged = false
   if (updates.scheduled_visit_at !== undefined) {
@@ -1331,6 +1560,7 @@ export async function adminOverrideTicket(
     visitChanged = ticket.scheduled_visit_at?.getTime() !== next.getTime()
     ticket.scheduled_visit_at = next
   }
+  const reopening = wasClosed && updates.status !== undefined && updates.status !== 'CLOSED'
   if (updates.status !== undefined) {
     changes.status = { before: ticket.status, after: updates.status }
     ticket.status = updates.status
@@ -1339,10 +1569,29 @@ export async function adminOverrideTicket(
     // huỷ nhầm rồi mở lại mà vẫn mang dấu huỷ thì KPI loại nó vĩnh viễn khỏi
     // thời gian xử lý và tỉ lệ đúng SLA, dù sau đó có người làm thật.
     const reopened = updates.status !== 'CLOSED'
-    ticket.closed_at = reopened ? undefined : new Date()
+    // Ép CLOSED cho ticket đã đóng sẵn thì giữ mốc đóng cũ — ghi đè làm thời gian xử lý
+    // trong KPI đổi theo lần bấm sau, dù việc đã xong từ trước
+    if (reopened) ticket.closed_at = undefined
+    else if (!wasClosed) ticket.closed_at = new Date()
     if (reopened && ticket.cancelled_at) {
       changes.cancelled_at = { before: ticket.cancelled_at, after: null }
       ticket.cancelled_at = undefined
+    }
+  }
+  if (reopening) {
+    // Mở lại = tiếp tục CÙNG yêu cầu (khách chưa được xử lý xong), không phải việc mới:
+    // giữ cờ vi phạm cũ (khách đã chịu ảnh hưởng thật) nhưng đặt hạn xử lý mới từ lúc
+    // mở lại — giữ hạn cũ thì job gắn vi phạm ngay cho phần việc vừa mở.
+    const now = new Date()
+    ticket.reopen_history.push({ reopened_at: now, holder_at_close: (previousAssignee ?? undefined) as never, reason: updates.reason })
+    ticket.sla_resolve_due_at = (await slaDueDates(ticket.priority, now)).sla_resolve_due_at
+    changes.reopened = { holderAtClose: previousAssignee, sla_resolve_due_at: ticket.sla_resolve_due_at }
+    // Cùng người mà Admin đưa về NEW: người đó phải tiếp nhận lại — mở lượt phụ trách mới
+    if (updates.status === 'NEW' && assigneeIdOf(ticket) === previousAssignee && previousAssignee) {
+      endCurrentStint(ticket, 'REOPENED')
+      ticket.assigned_at = now
+      ticket.responded_at = undefined
+      await restartResponseSla(ticket)
     }
   }
 
@@ -1361,16 +1610,29 @@ export async function adminOverrideTicket(
   })
   await announceAssigneeChange(ticket, previousAssignee)
 
+  if (reopening) {
+    const holder = assigneeIdOf(ticket)
+    await notifyVisitChange(ticket, {
+      title: 'Ticket được mở lại',
+      body: `Administrator mở lại ticket ${ticketId} (${ticket.type}). Lý do: ${updates.reason}`,
+    }, holder ? [holder] : [], adminUser._id)
+  }
+
   // Tin hệ thống trong thread chat chỉ tới người đang mở kênh đó — Technician vừa
   // được gán chưa từng phụ trách ticket này nên không có lý do mở, trong khi đồng
   // hồ SLA đã chạy từ lúc gán. Phải báo thẳng như createTicket/requestReassign.
   if (assigneeReplaced) {
     if (newAssignee) notifyNewAssignment(newAssignee, ticket)
     if (previousAssignee) {
-      void notifyUser(previousAssignee, {
-        title: 'Ticket đã chuyển cho người khác',
-        body: `Administrator chuyển ticket ${ticketId} (${ticket.type}) sang Technician khác. Lý do: ${updates.reason}`,
-      })
+      void notifyUser(previousAssignee, newAssignee
+        ? {
+          title: 'Ticket đã chuyển cho người khác',
+          body: `Administrator chuyển ticket ${ticketId} (${ticket.type}) sang Technician khác. Lý do: ${updates.reason}`,
+        }
+        : {
+          title: 'Ticket đã được gỡ khỏi bạn',
+          body: `Administrator trả ticket ${ticketId} (${ticket.type}) về hàng đợi chung. Lý do: ${updates.reason}`,
+        })
     }
   }
   if (visitChanged && ticket.scheduled_visit_at) {
@@ -1387,5 +1649,8 @@ export async function adminOverrideTicket(
       body: `Ticket được chuyển sang Technician khác nên buổi hẹn lúc ${formatVisitTime(droppedVisit)} không còn hiệu lực. Technician mới sẽ hẹn lại.`,
     })
   }
+  // Admin đóng hộ → người phụ trách có thêm suất; trả về hàng đợi → chia ngay cho người
+  // khác trong vùng nếu có ai rảnh (người vừa bị gỡ đã bị loại), không thì chờ ở hàng đợi
+  if (updates.status === 'CLOSED' || (previousAssignee && !newAssignee)) await drainQueueOfFarmRegion(ticket.farm_id)
   return ticket.populate('assigned_to', 'full_name email')
 }

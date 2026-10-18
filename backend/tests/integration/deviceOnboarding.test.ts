@@ -627,7 +627,7 @@ describe('farm: quyền đổi region và xoá farm (FARM-FR-001)', () => {
     await updateFarm(String(farm._id), primary, { region: 'Hanoi' })
 
     const saved = (await Farm.findById(farm._id))!
-    expect([saved.name, saved.region]).toEqual(['Tên mới', 'Hanoi'])
+    expect([saved.name, saved.region]).toEqual(['Tên mới', 'HA_NOI'])
   })
 
   it('xoá farm đóng cảnh báo đang mở và không sinh cảnh báo mới cho farm đó', async () => {

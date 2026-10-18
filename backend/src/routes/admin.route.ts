@@ -19,7 +19,10 @@ const paginationQuery = [
 
 /** Quản lý tài khoản – AUTH-FR-011, AUTH-FR-012, Flow 19 */
 router.get('/users',
-  query('role').optional().isIn(ROLES), query('status').optional().isIn(['active', 'inactive']),
+  query('role').optional().isIn(ROLES), query('status').optional().isIn(['active', 'inactive', 'deleted']),
+  // Tìm theo tên/email/SĐT; region chỉ có nghĩa với Technician (assigned_regions)
+  query('q').optional().isString().trim().isLength({ max: 100 }),
+  query('region').optional().isString().trim().notEmpty(),
   ...paginationQuery, validate,
   adminController.listUsers,
 )
@@ -59,6 +62,17 @@ router.put('/technicians/:id/regions',
   validate,
   adminController.updateTechnicianRegions,
 )
+/** Sửa tên/SĐT Technician – AUTH-FR-005c. phone rỗng = xoá SĐT */
+router.put('/technicians/:id/profile',
+  param('id').isMongoId(),
+  body('full_name').optional().isString().trim().notEmpty(),
+  body('phone').optional().isString().customSanitizer((v: string) => v.replace(/[\s.-]/g, ''))
+    .custom((v: string) => v === '' || PHONE_RE.test(v)).withMessage('SĐT phải là 10 số bắt đầu bằng 0 hoặc +84 rồi 9 số'),
+  validate,
+  adminController.updateTechnicianProfile,
+)
+/** Cấp mật khẩu tạm cho Technician (trả 1 lần, bắt đổi ở lần đăng nhập sau) – AUTH-FR-005c */
+router.put('/technicians/:id/password', param('id').isMongoId(), validate, adminController.resetTechnicianPassword)
 /** Kho thiết bị xuất xưởng: cấp cặp {device_id, secretKey} để in nhãn – FARM-FR-003, Flow 1 bước 3 */
 router.post('/provisioned-devices',
   body('device_id').isString().trim().notEmpty(), body('kind').isIn(['SENSOR', 'CAMERA']), validate,
@@ -66,8 +80,16 @@ router.post('/provisioned-devices',
 )
 router.get('/provisioned-devices',
   query('kind').optional().isIn(['SENSOR', 'CAMERA']), query('claimed').optional().isIn(['true', 'false']),
+  query('revoked').optional().isIn(['true', 'false']),
   ...paginationQuery, validate,
   adminController.listProvisionedDevices,
 )
+/** Thu hồi thiết bị trong kho (mất/lộ nhãn, hàng lỗi) — không kích hoạt được nữa */
+router.put('/provisioned-devices/:id/revoke',
+  param('id').isMongoId(), body('reason').isString().trim().notEmpty(), validate,
+  adminController.revokeProvisionedDevice,
+)
+/** Cấp secretKey mới để in lại nhãn — chỉ thiết bị chưa kích hoạt (key mới trả 1 lần) */
+router.post('/provisioned-devices/:id/rotate-key', param('id').isMongoId(), validate, adminController.rotateProvisionedKey)
 
 export default router

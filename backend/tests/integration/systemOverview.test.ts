@@ -127,13 +127,18 @@ describe('getHealthOverview', () => {
     await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P3', status: 'AWAITING_FIELD_CONFIRMATION' })
     await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P2', status: 'CLOSED' })
     await User.create({ email: 'locked@test.vn', password_hash: 'password123', full_name: 'L', role: 'TECHNICIAN', is_active: false })
+    // Đã xoá theo yêu cầu: cũng is_active=false nhưng không được tính là "bị khoá"
+    await User.create({
+      email: 'deleted-x@swiftletcare.local', password_hash: 'password123', full_name: 'Tài khoản đã xoá',
+      role: 'TECHNICIAN', is_active: false, deleted_at: new Date(),
+    })
 
     const overview = await getHealthOverview()
 
     expect(overview.openTickets).toEqual({ total: 3, P1: 2, P2: 0, P3: 1 })
-    expect(overview.users.byRole.FARM_OWNER).toEqual({ active: 1, inactive: 0 })
-    expect(overview.users.byRole.TECHNICIAN).toEqual({ active: 0, inactive: 1 })
-    expect(overview.users).toMatchObject({ total: 2, active: 1, inactive: 1 })
+    expect(overview.users.byRole.FARM_OWNER).toEqual({ active: 1, inactive: 0, deleted: 0 })
+    expect(overview.users.byRole.TECHNICIAN).toEqual({ active: 0, inactive: 1, deleted: 1 })
+    expect(overview.users).toMatchObject({ total: 3, active: 1, inactive: 1, deleted: 1 })
   })
 
   it('leaves out tickets of soft-deleted farms, like it already does for farms, zones and devices', async () => {

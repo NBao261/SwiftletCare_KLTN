@@ -10,7 +10,10 @@ router.use(authenticate)
 router.get   ('/',             farmController.list)
 // `region` (VD: 'HCMC') quyết định Technician nào phụ trách farm này — xem
 // utils/farmAccess.util.ts + AUTH-FR-005c. Không bắt buộc để không chặn farm cũ.
-router.post  ('/',             requireRole('FARM_OWNER','ADMIN'), body('name').trim().notEmpty(), body('address').trim().notEmpty(), body('region').optional().trim().notEmpty(), validate, farmController.create)
+// Danh mục 34 tỉnh/thành cho dropdown — đặt trước '/:id' để "regions" không bị hiểu là id
+router.get   ('/regions',      farmController.listRegions)
+// region bắt buộc: nhận mã, tên hoặc tên tỉnh cũ, service quy về mã danh mục (regions.util)
+router.post  ('/',             requireRole('FARM_OWNER','ADMIN'), body('name').trim().notEmpty(), body('address').trim().notEmpty(), body('region').isString().trim().notEmpty(), body('owner_email').optional().isEmail(), validate, farmController.create)
 router.get   ('/:id',          param('id').isMongoId(), validate, farmController.getOne)
 router.put   ('/:id',          requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, farmController.update)
 router.delete('/:id',          requireRole('FARM_OWNER','ADMIN'), param('id').isMongoId(), validate, farmController.remove)

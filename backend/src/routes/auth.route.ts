@@ -35,6 +35,20 @@ router.post(
 /** POST /auth/refresh – AUTH-FR-003 */
 router.post('/refresh', refreshLimiter, authController.refresh)
 
+/**
+ * PUT /auth/password — đổi mật khẩu khi đang đăng nhập; route duy nhất (cùng logout)
+ * còn dùng được khi đang giữ mật khẩu tạm Admin cấp. loginLimiter: chỉ đếm lần nhập
+ * sai mật khẩu hiện tại, chống dò mật khẩu bằng một phiên bị chiếm.
+ */
+router.put(
+  '/password',
+  authenticate,
+  loginLimiter,
+  [body('current_password').isString().notEmpty(), body('new_password').isString().isLength({ min: 8 }).withMessage('Password must be at least 8 characters')],
+  validate,
+  authController.changePassword,
+)
+
 /** POST /auth/logout – AUTH-FR-006 */
 router.post('/logout', authenticate, authController.logout)
 

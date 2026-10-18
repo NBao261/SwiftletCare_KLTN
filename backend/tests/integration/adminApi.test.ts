@@ -288,7 +288,7 @@ describe('POST /admin/technicians — phone & regions', () => {
     const res = await request(app).post('/admin/technicians').set('Authorization', `Bearer ${token}`)
       .send({ ...base, phone: '', assigned_regions: [' HCMC ', 'HCMC', 'Long An'] }).expect(201)
     expect(res.body.data.phone).toBeUndefined()
-    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'Long An'])
+    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'TAY_NINH']) // tên tỉnh cũ Long An quy về mã Tây Ninh
   })
 })
 
@@ -350,6 +350,6 @@ describe('POST /admin/technicians — assigned_regions validation', () => {
       .post('/admin/technicians').set('Authorization', `Bearer ${token}`)
       .send({ ...base, assigned_regions: ['HCMC', 'Long An'] })
       .expect(201)
-    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'Long An'])
+    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'TAY_NINH'])
   })
 })

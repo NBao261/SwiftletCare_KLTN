@@ -8,7 +8,9 @@ import type { Role } from '@/types'
 export const listUsers = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit } = await adminService.listUsers({
     role:   req.query.role as Role | undefined,
-    status: req.query.status as 'active' | 'inactive' | undefined,
+    status: req.query.status as 'active' | 'inactive' | 'deleted' | undefined,
+    q:      req.query.q as string | undefined,
+    region: req.query.region as string | undefined,
     page:   req.query.page as string | undefined,
     limit:  req.query.limit as string | undefined,
   })
@@ -72,6 +74,21 @@ export const updateTechnicianRegions = asyncHandler(async (req: Request, res: Re
   })
 })
 
+/** PUT /admin/technicians/:id/profile – AUTH-FR-005c */
+export const updateTechnicianProfile = asyncHandler(async (req: Request, res: Response) => {
+  const technician = await adminService.updateTechnicianProfile(req.user._id, req.params.id, {
+    full_name: req.body.full_name as string | undefined,
+    phone:     req.body.phone as string | undefined,
+  })
+  res.json({ success: true, data: technician })
+})
+
+/** PUT /admin/technicians/:id/password – AUTH-FR-005c (mật khẩu tạm chỉ trả về 1 lần) */
+export const resetTechnicianPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { technician, temporaryPassword } = await adminService.resetTechnicianPassword(req.user._id, req.params.id)
+  res.json({ success: true, data: { technician, temporary_password: temporaryPassword } })
+})
+
 /** POST /admin/provisioned-devices – FARM-FR-003 (secret_key chỉ trả về 1 lần để in nhãn) */
 export const createProvisionedDevice = asyncHandler(async (req: Request, res: Response) => {
   const device = await provisionedDeviceService.createProvisionedDevice(req.user._id, {
@@ -85,8 +102,20 @@ export const listProvisionedDevices = asyncHandler(async (req: Request, res: Res
   const { records, total, page, limit } = await provisionedDeviceService.listProvisionedDevices({
     kind:    req.query.kind as string | undefined,
     claimed: req.query.claimed as string | undefined,
+    revoked: req.query.revoked as string | undefined,
     page:    req.query.page as string | undefined,
     limit:   req.query.limit as string | undefined,
   })
   res.json({ success: true, data: records, meta: { total, page, limit } })
+})
+
+/** PUT /admin/provisioned-devices/:id/revoke – FARM-FR-003 */
+export const revokeProvisionedDevice = asyncHandler(async (req: Request, res: Response) => {
+  const device = await provisionedDeviceService.revokeProvisionedDevice(req.user._id, req.params.id, req.body.reason as string)
+  res.json({ success: true, data: device })
+})
+
+/** POST /admin/provisioned-devices/:id/rotate-key – FARM-FR-003 (secret_key mới chỉ trả về 1 lần) */
+export const rotateProvisionedKey = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await provisionedDeviceService.rotateProvisionedKey(req.user._id, req.params.id) })
 })

@@ -16,6 +16,11 @@ export interface IUser extends Document {
   assigned_regions?: string[] // chỉ dùng khi role=TECHNICIAN (AUTH-FR-005c)
   avatar_url?: string
   is_active: boolean
+  /**
+   * AUTH-FR-005c — mật khẩu do Admin đặt (tạo Technician / đặt lại mật khẩu) là mật khẩu
+   * tạm: người dùng phải tự đổi trước khi dùng hệ thống (`authenticate` chặn mọi route khác).
+   */
+  must_change_password?: boolean
   /** AUTH-FR-011 — bắt buộc có lý do khi Admin khoá tài khoản, ghi cùng lúc với is_active=false (Flow 19) */
   deactivated_at?: Date
   deactivated_reason?: string
@@ -58,6 +63,7 @@ const userSchema = new Schema<IUser>(
     assigned_regions: [{ type: String }],
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
+    must_change_password: { type: Boolean, default: false },
     deactivated_at:     { type: Date },
     deactivated_reason: { type: String },
     notification_preferences: {

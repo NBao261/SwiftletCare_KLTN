@@ -248,10 +248,39 @@ export async function resetPassword(email: string, token: string, newPassword: s
   user.password_hash = newPassword // pre-save hook tự hash (SEC-NFR-003)
   user.password_reset_token_hash = undefined
   user.password_reset_expires_at = undefined
+  // Tự đặt mật khẩu qua email là mật khẩu của chính họ — hết là mật khẩu tạm
+  user.must_change_password = false
   user.refresh_tokens = [] as never
   await user.save()
 
   await logAction(String(user._id), 'PASSWORD_RESET', 'user', String(user._id))
+}
+
+/**
+ * PUT /auth/password — người đang đăng nhập đổi mật khẩu (mọi role), và là cách duy
+ * nhất để bỏ mật khẩu tạm Admin cấp. Thu hồi refresh token của các thiết bị khác như
+ * resetPassword, nhưng giữ phiên đang dùng để người đổi không bị đá ra ngay.
+ * Sai mật khẩu hiện tại trả 400 (không phải 401 — 401 làm frontend tưởng token hết hạn).
+ */
+export async function changePassword(
+  userId: string, currentPassword: string, newPassword: string, currentRefreshToken?: string,
+): Promise<void> {
+  const user = await User.findById(userId)
+  if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
+  if (!(await user.comparePassword(currentPassword))) {
+    throw new AppError(400, 'INVALID_CURRENT_PASSWORD', 'Mật khẩu hiện tại không đúng')
+  }
+  if (await user.comparePassword(newPassword)) {
+    throw new AppError(400, 'PASSWORD_UNCHANGED', 'Mật khẩu mới phải khác mật khẩu hiện tại')
+  }
+
+  user.password_hash = newPassword // pre-save hook tự hash (SEC-NFR-003)
+  user.must_change_password = false
+  const keep = currentRefreshToken ? hashToken(currentRefreshToken) : null
+  user.refresh_tokens = user.refresh_tokens.filter(t => t.token_hash === keep) as never
+  await user.save()
+
+  await logAction(userId, 'PASSWORD_CHANGED', 'user', userId)
 }
 
 /** ALERT-FR-005/006 — Farm Owner chọn kênh nhận thông báo + giờ im lặng */

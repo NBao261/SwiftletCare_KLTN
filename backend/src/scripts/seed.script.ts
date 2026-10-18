@@ -23,8 +23,8 @@ import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisio
 import { hashKey } from '@/services/provisionedDevice.service'
 import logger from '@/utils/logger.util'
 
-/** Khu vực của farm demo — Technician phải có region này trong assigned_regions */
-const DEMO_REGION = 'TP. Hồ Chí Minh'
+/** Khu vực của farm demo (mã trong utils/regions.util) — Technician phải có mã này trong assigned_regions */
+const DEMO_REGION = 'HCMC'
 
 async function seed(): Promise<void> {
   await connectDB()

@@ -100,8 +100,11 @@ export const rate = asyncHandler(async (req: Request, res: Response) => {
 })
 
 /** GET /tickets/kpi – TICKET-FR-012 */
-export const kpi = asyncHandler(async (_req: Request, res: Response) => {
-  res.json({ success: true, data: await ticketService.getKpi() })
+export const kpi = asyncHandler(async (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: await ticketService.getKpi({ from: req.query.from as string | undefined, to: req.query.to as string | undefined }),
+  })
 })
 
 /** PUT /tickets/:id/admin-override – TICKET-FR-005b */
