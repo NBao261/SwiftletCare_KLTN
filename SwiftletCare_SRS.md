@@ -191,6 +191,7 @@ Tài liệu này là Đặc tả Yêu cầu Phần mềm (Software Requirements 
 - `FA26_SE_Capstone_Project_Register_SwiftletCare.docx` – Phiếu đăng ký đề tài KLTN
 - `FA26_SE_Capstone_Project_Register_SwiftletCare_v2.docx` – **[v2.0.0]** Phiếu đăng ký bản sửa sau Review 1 — căn cứ đánh giá hiện hành (mục 0)
 - `docs/bird-counting-plan.md` – **[v2.0.0]** Kế hoạch triển khai đếm chim thời gian thực (Module VISION)
+- `docs/evidence-register.md` – Sổ tài liệu tham khảo & minh chứng: nguồn của từng ngưỡng, thông số thiết bị và biên bản xác nhận của người nuôi yến (EVID-NFR-003)
 - `KLTN_2026_SwiftletCare_FA26.docx` – Đặc tả kỹ thuật phần cứng và Edge AI Vision (tài liệu ban đầu, không lưu trong repo)
 - YOLOv8 Documentation – Ultralytics
 - ByteTrack: Multi-Object Tracking by Associating Every Detection Box
