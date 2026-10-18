@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { type DataTableColumn } from '@/components/ui'
 import FixedRowsTable from '@/components/ui/FixedRowsTable'
+import TableEmptyState from '@/components/common/TableEmptyState'
 import ActionsMenu from '@/components/ui/ActionsMenu'
 import PinButton from '@/components/features/farm-owner/farms/PinButton'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
@@ -65,5 +66,5 @@ export default function HouseTable({ houses, staffByHouse, pinned, showYield, on
     return showYield ? cols : cols.filter(c => c.key !== 'yield')
   }, [t, num, staffByHouse, pinned, showYield, onTogglePin, onOpen])
 
-  return <FixedRowsTable columns={columns} rows={houses} getRowKey={n => n.house._id} onRowClick={onOpen} rowHeight={68} emptyNotice={t('empty.noMatchTitle')} />
+  return <FixedRowsTable columns={columns} rows={houses} getRowKey={houseNode => houseNode.house._id} onRowClick={onOpen} rowHeight={68} emptyNotice={t('empty.noMatchTitle')} emptyContent={<TableEmptyState title={t('empty.noMatchTitle')} />} />
 }

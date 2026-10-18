@@ -161,12 +161,12 @@ describe('alert log row', () => {
 
   it('groups severity', () => {
     expect([getSeverityGroup('CRITICAL'), getSeverityGroup('HIGH'), getSeverityGroup('MEDIUM'), getSeverityGroup('LOW')])
-      .toEqual(['CRITICAL', 'HIGH_MED', 'HIGH_MED', 'NORMAL'])
+      .toEqual(['P1', 'P1', 'P2', 'P3'])
   })
 
   it('reads value and limit from the breach metadata', () => {
     const row = buildAlertRow({ ...base, metadata: { breaches: [{ metric: 'temperature', value: 33.5, limit: 31, direction: 'above' }] } }, 'node_001', 'Nhà chính | Tầng 1')
-    expect(row).toMatchObject({ deviceName: 'node_001', locationName: 'Nhà chính | Tầng 1', sensorKind: 'temperature', breach: { value: 33.5, limit: 31, unit: '°C', sign: '<' }, group: 'HIGH_MED' })
+    expect(row).toMatchObject({ deviceName: 'node_001', locationName: 'Nhà chính | Tầng 1', sensorKind: 'temperature', breach: { value: 33.5, limit: 31, unit: '°C', sign: '<' }, group: 'P1' })
   })
 
   it('shows a dash when the alert has no breach data', () => {

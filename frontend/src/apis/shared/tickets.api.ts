@@ -36,6 +36,10 @@ export interface ListTicketsQuery {
   unassigned?: boolean
   /** Ticket của 1 thiết bị (_id node) — sinh từ cảnh báo của thiết bị đó (backend tra qua alert_id) */
   nodeId?: string
+  // Ticket quá hạn SLA (TICKET-FR-009)
+  slaBreached?: boolean
+  // Tìm theo ghi chú ticket và tên farm
+  search?: string
   page?: number; limit?: number
 }
 
