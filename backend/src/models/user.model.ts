@@ -16,6 +16,11 @@ export interface IUser extends Document {
   assigned_regions?: string[] // chỉ dùng khi role=TECHNICIAN (AUTH-FR-005c)
   avatar_url?: string
   is_active: boolean
+  /**
+   * AUTH-FR-005c — mật khẩu do Admin đặt (tạo Technician / đặt lại mật khẩu) là mật khẩu
+   * tạm: người dùng phải tự đổi trước khi dùng hệ thống (`authenticate` chặn mọi route khác).
+   */
+  must_change_password?: boolean
   /** AUTH-FR-011 — bắt buộc có lý do khi Admin khoá tài khoản, ghi cùng lúc với is_active=false (Flow 19) */
   deactivated_at?: Date
   deactivated_reason?: string
@@ -32,6 +37,8 @@ export interface IUser extends Document {
   password_reset_expires_at?: Date
   /** AUTH-FR-012 — user tự yêu cầu xoá, Admin xử lý trong ≤30 ngày (PRIV-NFR-003) */
   deletion_requested_at?: Date
+  /** Lúc đã nhắc Admin yêu cầu xoá sắp quá hạn 30 ngày — nhắc đúng 1 lần cho mỗi yêu cầu */
+  deletion_reminder_sent_at?: Date
   /**
    * AUTH-FR-012 — thời điểm Admin đã xoá/ẩn danh hoá xong. Document vẫn ở lại
    * để ticket/farm lịch sử không vỡ tham chiếu, nên cần cờ này để phân biệt
@@ -56,6 +63,7 @@ const userSchema = new Schema<IUser>(
     assigned_regions: [{ type: String }],
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
+    must_change_password: { type: Boolean, default: false },
     deactivated_at:     { type: Date },
     deactivated_reason: { type: String },
     notification_preferences: {
@@ -81,6 +89,7 @@ const userSchema = new Schema<IUser>(
     password_reset_token_hash: { type: String, select: false },
     password_reset_expires_at: { type: Date, select: false },
     deletion_requested_at:     { type: Date },
+    deletion_reminder_sent_at: { type: Date },
     deleted_at:                { type: Date },
     refresh_tokens: [{ token_hash: String, expires: Date }],
   },

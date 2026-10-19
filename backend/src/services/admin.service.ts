@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { User, IUser } from '@/models/user.model'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
@@ -5,10 +6,13 @@ import { Ticket } from '@/models/ticket.model'
 import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { softDeleteFarm } from '@/services/farm.service'
-import { notifyUser } from '@/services/notification.service'
-import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage, type CoverageRerouteResult } from '@/services/ticket.service'
+import { notifyAdmins, notifyUser } from '@/services/notification.service'
+import {
+  closeTicketsOfDeletedFarm, drainUnassignedQueueSafely, rerouteTicketsOutOfCoverage, type CoverageRerouteResult,
+} from '@/services/ticket.service'
 import { disconnectUser } from '@/socket'
-import { paginate } from '@/utils/helpers.util'
+import { escapeRegex, paginate } from '@/utils/helpers.util'
+import { assertRegionCode, toRegionCode } from '@/utils/regions.util'
 import { AppError, NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Role } from '@/types'
 
@@ -21,13 +25,26 @@ export interface ListQuery { page?: string | number; limit?: string | number }
 
 export interface ListUsersQuery extends ListQuery {
   role?: Role
-  status?: 'active' | 'inactive'
+  /** inactive = đang bị khoá; deleted = đã xoá theo yêu cầu (cũng is_active=false nhưng không mở khoá được) */
+  status?: 'active' | 'inactive' | 'deleted'
+  /** Tìm theo tên, email hoặc SĐT (không phân biệt hoa/thường) */
+  q?: string
+  /** Technician phụ trách vùng này */
+  region?: string
 }
 
 export async function listUsers(query: ListUsersQuery) {
   const filter: Record<string, unknown> = {}
   if (query.role) filter.role = query.role
-  if (query.status) filter.is_active = query.status === 'active'
+  if (query.status === 'active') filter.is_active = true
+  if (query.status === 'inactive') Object.assign(filter, { is_active: false, deleted_at: null })
+  if (query.status === 'deleted') filter.deleted_at = { $ne: null }
+  if (query.region) filter.assigned_regions = toRegionCode(query.region) ?? query.region
+  const term = query.q?.trim()
+  if (term) {
+    const pattern = new RegExp(escapeRegex(term), 'i')
+    filter.$or = [{ full_name: pattern }, { email: pattern }, { phone: pattern }]
+  }
 
   const { page, skip, limit } = paginate(query.page, query.limit)
 
@@ -40,7 +57,9 @@ export async function listUsers(query: ListUsersQuery) {
 
 export interface SetUserStatusResult {
   user: IUser
-  /** Chỉ có khi khoá Technician còn ticket đang giao — Admin cần gán lại (TICKET-FR-005b) */
+  /** Chỉ có khi khoá Technician còn ticket đang giao — đã điều phối lại (TICKET-FR-005b) */
+  reroute?: CoverageRerouteResult
+  /** Số ticket không ai trong vùng nhận được, về hàng đợi chung — Admin cần gán tay */
   openTickets?: number
   /** Id của chính các ticket đó, để Admin gán lại được ngay mà không phải tự đi tìm */
   openTicketIds?: string[]
@@ -82,16 +101,27 @@ export async function setUserStatus(
   await user.save()
 
   await logAction(adminId, isActive ? 'ACCOUNT_UNLOCKED' : 'ACCOUNT_LOCKED', 'user', userId, { reason: trimmedReason })
-  if (isActive) return { user }
+  if (isActive) {
+    // Technician mở khoá lại có suất trống — nhận ticket đang chờ của vùng mình
+    if (user.role === 'TECHNICIAN') await drainUnassignedQueueSafely({ regions: user.assigned_regions ?? [] })
+    return { user }
+  }
 
   disconnectUser(userId)
   if (user.role === 'TECHNICIAN') {
-    // Không tự gán lại: tài khoản bị khoá vẫn phụ trách vùng đó, và AUTH-FR-011
-    // giao việc gán lại cho Admin quyết định — ở đây chỉ đưa đủ thông tin.
-    const open = await Ticket.find({ assigned_to: user._id, status: { $ne: 'CLOSED' } })
-      .select('_id').sort({ created_at: 1 }).limit(OPEN_TICKET_IDS_LIMIT).lean()
-    const openTickets = await Ticket.countDocuments({ assigned_to: user._id, status: { $ne: 'CLOSED' } })
-    if (openTickets > 0) return { user, openTickets, openTicketIds: open.map(t => String(t._id)) }
+    // Người bị khoá không đăng nhập được, thông báo SLA cũng bỏ qua họ — để ticket
+    // lại thì không ai xử lý. Điều phối lại như khi xoá tài khoản; ai không nhận
+    // được thì về hàng đợi chung và trả id để Admin gán tay.
+    const reroute = await rerouteTicketsOutOfCoverage({ technicianId: userId }, adminId, 'ACCOUNT_LOCKED')
+    if (reroute.rerouted.length || reroute.unassigned.length) {
+      return {
+        user,
+        reroute,
+        ...(reroute.unassigned.length
+          ? { openTickets: reroute.unassigned.length, openTicketIds: reroute.unassigned.slice(0, OPEN_TICKET_IDS_LIMIT) }
+          : {}),
+      }
+    }
   }
   return { user }
 }
@@ -234,6 +264,7 @@ export async function completeDeletionRequest(
   // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và
   // không bị xử lý (chạy lại cascade) lần 2
   user.deletion_requested_at = undefined
+  user.deletion_reminder_sent_at = undefined
   user.deleted_at = new Date()
   await user.save()
   disconnectUser(userId)
@@ -251,11 +282,77 @@ export async function completeDeletionRequest(
   return user
 }
 
+/**
+ * AUTH-FR-012 — Admin từ chối yêu cầu xoá (VD còn nghĩa vụ lưu hồ sơ). Lý do bắt
+ * buộc và được gửi lại cho người yêu cầu; tài khoản giữ nguyên, rời hàng đợi.
+ */
+export async function rejectDeletionRequest(adminId: string, userId: string, reason: string): Promise<IUser> {
+  if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
+  const trimmedReason = reason.trim()
+  if (!trimmedReason) throw BadRequestError('Phải nhập lý do khi từ chối yêu cầu xoá')
+
+  const user = await User.findById(userId)
+  if (!user) throw NotFoundError('Không tìm thấy người dùng')
+  if (!user.deletion_requested_at) throw BadRequestError('Người dùng này chưa gửi yêu cầu xoá tài khoản')
+
+  const requestedAt = user.deletion_requested_at
+  user.deletion_requested_at = undefined
+  user.deletion_reminder_sent_at = undefined
+  await user.save()
+
+  await logAction(adminId, 'DELETION_REJECTED', 'user', userId, { reason: trimmedReason, requestedAt })
+  await notifyUser(userId, {
+    title: 'Yêu cầu xoá tài khoản bị từ chối',
+    body: `Yêu cầu xoá tài khoản của bạn chưa được thực hiện. Lý do: ${trimmedReason}`,
+  })
+  return user
+}
+
+/** Hạn xử lý yêu cầu xoá (PRIV-NFR-003) và số ngày còn lại thì bắt đầu nhắc Admin */
+const DELETION_DEADLINE_DAYS = 30
+const DELETION_REMIND_DAYS_BEFORE = 7
+const DAY_MS = 86_400_000
+
+/**
+ * AUTH-FR-012 — yêu cầu xoá đã chờ tới ngày thứ 23 mà Admin chưa xử lý: nhắc 1
+ * lần, kèm số ngày còn lại. `deletion_reminder_sent_at` chặn nhắc lặp mỗi lần
+ * job chạy; huỷ / từ chối / hoàn tất đều gỡ cờ này. Trả số yêu cầu đã nhắc.
+ */
+export async function remindPendingDeletionRequests(now = new Date()): Promise<number> {
+  const remindBefore = new Date(now.getTime() - (DELETION_DEADLINE_DAYS - DELETION_REMIND_DAYS_BEFORE) * DAY_MS)
+  const due = await User.find({
+    deletion_requested_at: { $ne: null, $lte: remindBefore },
+    deletion_reminder_sent_at: null,
+  }).select('full_name role deletion_requested_at').lean()
+
+  for (const user of due) {
+    const deadline = new Date(user.deletion_requested_at!.getTime() + DELETION_DEADLINE_DAYS * DAY_MS)
+    const daysLeft = Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / DAY_MS))
+    // Ghi cờ trước khi gửi: gửi lỗi thì mất 1 lần nhắc, còn ngược lại thì lỗi ghi sẽ nhắc lặp mãi
+    await User.updateOne({ _id: user._id }, { $set: { deletion_reminder_sent_at: now } })
+    await notifyAdmins({
+      title: 'Yêu cầu xoá tài khoản sắp quá hạn',
+      body: `${user.full_name} (${user.role}) đã chờ xoá tài khoản từ ${user.deletion_requested_at!.toLocaleDateString('vi-VN')} — còn ${daysLeft} ngày trước hạn 30 ngày.`,
+    })
+  }
+  return due.length
+}
+
 // ── Admin tự tạo tài khoản Technician — AUTH-FR-005c ─────────────────────────
 
 /** Ticket được điều phối lại kèm theo, để màn hình Admin hiện ngay (TICKET-FR-005b) */
 export interface UpdateTechnicianRegionsResult extends CoverageRerouteResult {
   technician: IUser
+}
+
+/**
+ * Quy mỗi vùng về mã danh mục (nhận cả tên/tên tỉnh cũ), bỏ mục rỗng và trùng — dùng
+ * chung cho tạo và sửa vùng. Vùng lạ ném 400: lưu chuỗi tự do thì không khớp được farm nào.
+ */
+function normalizeRegions(regions: string[]): string[] {
+  const codes = [...new Set(regions.filter(r => r.trim()).map(assertRegionCode))]
+  if (codes.length === 0) throw BadRequestError('Technician phải phụ trách ít nhất 1 khu vực')
+  return codes
 }
 
 export interface CreateTechnicianInput {
@@ -270,12 +367,16 @@ export async function createTechnician(adminId: string, input: CreateTechnicianI
     email: normalizedEmail,
     password_hash: input.password, // pre-save hook tự hash
     full_name: input.full_name,
-    phone: input.phone,
+    phone: input.phone || undefined,
     role: 'TECHNICIAN',
-    assigned_regions: input.assigned_regions,
+    assigned_regions: normalizeRegions(input.assigned_regions),
+    // Admin biết mật khẩu này — Technician phải tự đổi ở lần đăng nhập đầu
+    must_change_password: true,
   })
 
   await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'TECHNICIAN' })
+  // Vùng vừa có thêm người — ticket đang chờ vì thiếu người phụ trách được chia ngay
+  await drainUnassignedQueueSafely({ regions: user.assigned_regions ?? [] })
   return user
 }
 
@@ -292,7 +393,7 @@ export async function updateTechnicianRegions(
   if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ gán khu vực được cho tài khoản Technician')
 
   const before = [...(technician.assigned_regions ?? [])]
-  const after = [...new Set(regions.map(r => r.trim()).filter(Boolean))]
+  const after = normalizeRegions(regions)
   technician.assigned_regions = after
   await technician.save()
 
@@ -304,5 +405,63 @@ export async function updateTechnicianRegions(
   const reroute = removedRegions.length > 0
     ? await rerouteTicketsOutOfCoverage({ technicianId }, adminId, 'REGION_UNASSIGNED')
     : { rerouted: [], unassigned: [] }
+  // Vùng mới thêm: nhận ticket đang chờ ở đó vì trước giờ không ai phụ trách
+  const addedRegions = after.filter(r => !before.includes(r))
+  if (addedRegions.length > 0) await drainUnassignedQueueSafely({ regions: addedRegions })
   return { technician, ...reroute }
+}
+
+/** Technician còn dùng được (chưa xoá theo yêu cầu) — dùng chung cho sửa hồ sơ / đặt lại mật khẩu */
+async function findManageableTechnician(technicianId: string): Promise<IUser> {
+  const technician = await User.findById(technicianId)
+  if (!technician) throw NotFoundError('Không tìm thấy người dùng')
+  if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ áp dụng cho tài khoản Technician')
+  if (technician.deleted_at) throw ConflictError('Tài khoản đã bị xoá theo yêu cầu')
+  return technician
+}
+
+export interface TechnicianProfileInput { full_name?: string; phone?: string }
+
+/**
+ * AUTH-FR-005c — Admin sửa tên/SĐT của Technician (nhân sự nội bộ do Admin tạo).
+ * Không sửa email vì đó là tên đăng nhập. `phone: ''` = xoá SĐT.
+ */
+export async function updateTechnicianProfile(
+  adminId: string, technicianId: string, input: TechnicianProfileInput,
+): Promise<IUser> {
+  if (input.full_name === undefined && input.phone === undefined) {
+    throw BadRequestError('Cần ít nhất full_name hoặc phone')
+  }
+  const technician = await findManageableTechnician(technicianId)
+  const before = { full_name: technician.full_name, phone: technician.phone ?? null }
+
+  if (input.full_name !== undefined) technician.full_name = input.full_name
+  if (input.phone !== undefined) technician.phone = input.phone || undefined
+  await technician.save()
+
+  await logAction(adminId, 'TECHNICIAN_PROFILE_UPDATED', 'user', technicianId, {
+    before, after: { full_name: technician.full_name, phone: technician.phone ?? null },
+  })
+  return technician
+}
+
+/**
+ * AUTH-FR-005c — Technician quên mật khẩu mà email chưa nối SMTP thật, hoặc tài khoản
+ * nghi bị lộ: Admin cấp mật khẩu tạm (sinh ngẫu nhiên, trả ĐÚNG 1 lần). Mọi phiên cũ bị
+ * thu hồi và Technician phải đổi mật khẩu ở lần đăng nhập kế tiếp.
+ */
+export async function resetTechnicianPassword(
+  adminId: string, technicianId: string,
+): Promise<{ technician: IUser; temporaryPassword: string }> {
+  const technician = await findManageableTechnician(technicianId)
+  const temporaryPassword = crypto.randomBytes(9).toString('base64url') // 12 ký tự
+
+  technician.password_hash = temporaryPassword // pre-save hook tự hash (SEC-NFR-003)
+  technician.must_change_password = true
+  technician.refresh_tokens = [] as never
+  await technician.save()
+  disconnectUser(technicianId)
+
+  await logAction(adminId, 'TECHNICIAN_PASSWORD_RESET', 'user', technicianId)
+  return { technician, temporaryPassword }
 }

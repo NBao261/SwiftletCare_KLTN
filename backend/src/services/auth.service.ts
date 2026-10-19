@@ -248,10 +248,39 @@ export async function resetPassword(email: string, token: string, newPassword: s
   user.password_hash = newPassword // pre-save hook tự hash (SEC-NFR-003)
   user.password_reset_token_hash = undefined
   user.password_reset_expires_at = undefined
+  // Tự đặt mật khẩu qua email là mật khẩu của chính họ — hết là mật khẩu tạm
+  user.must_change_password = false
   user.refresh_tokens = [] as never
   await user.save()
 
   await logAction(String(user._id), 'PASSWORD_RESET', 'user', String(user._id))
+}
+
+/**
+ * PUT /auth/password — người đang đăng nhập đổi mật khẩu (mọi role), và là cách duy
+ * nhất để bỏ mật khẩu tạm Admin cấp. Thu hồi refresh token của các thiết bị khác như
+ * resetPassword, nhưng giữ phiên đang dùng để người đổi không bị đá ra ngay.
+ * Sai mật khẩu hiện tại trả 400 (không phải 401 — 401 làm frontend tưởng token hết hạn).
+ */
+export async function changePassword(
+  userId: string, currentPassword: string, newPassword: string, currentRefreshToken?: string,
+): Promise<void> {
+  const user = await User.findById(userId)
+  if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
+  if (!(await user.comparePassword(currentPassword))) {
+    throw new AppError(400, 'INVALID_CURRENT_PASSWORD', 'Mật khẩu hiện tại không đúng')
+  }
+  if (await user.comparePassword(newPassword)) {
+    throw new AppError(400, 'PASSWORD_UNCHANGED', 'Mật khẩu mới phải khác mật khẩu hiện tại')
+  }
+
+  user.password_hash = newPassword // pre-save hook tự hash (SEC-NFR-003)
+  user.must_change_password = false
+  const keep = currentRefreshToken ? hashToken(currentRefreshToken) : null
+  user.refresh_tokens = user.refresh_tokens.filter(t => t.token_hash === keep) as never
+  await user.save()
+
+  await logAction(userId, 'PASSWORD_CHANGED', 'user', userId)
 }
 
 /** ALERT-FR-005/006 — Farm Owner chọn kênh nhận thông báo + giờ im lặng */
@@ -291,6 +320,30 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
   await notifyAdmins({
     title: 'Yêu cầu xoá tài khoản mới',
     body: `${user.full_name} (${user.role ?? 'Buyer'}) vừa gửi yêu cầu xoá tài khoản — cần xử lý trong ≤ 30 ngày.`,
+  })
+  return user
+}
+
+/**
+ * AUTH-FR-012 — user đổi ý trước khi Admin xử lý. Yêu cầu đã hoàn tất thì tài
+ * khoản đã bị ẩn danh và khoá, không còn đăng nhập để gọi tới đây được.
+ */
+export async function cancelAccountDeletion(userId: string): Promise<IUser> {
+  const user = await User.findById(userId)
+  if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
+  if (!user.deletion_requested_at) {
+    throw new AppError(409, 'CONFLICT', 'Bạn chưa gửi yêu cầu xoá tài khoản nào')
+  }
+
+  user.deletion_requested_at = undefined
+  user.deletion_reminder_sent_at = undefined
+  await user.save()
+
+  await logAction(userId, 'DELETION_CANCELLED', 'user', userId)
+  // Admin có thể đang mở hàng đợi — báo để không ai xử lý nhầm yêu cầu vừa rút lại
+  await notifyAdmins({
+    title: 'Yêu cầu xoá tài khoản đã được huỷ',
+    body: `${user.full_name} (${user.role ?? 'Buyer'}) đã huỷ yêu cầu xoá tài khoản.`,
   })
   return user
 }

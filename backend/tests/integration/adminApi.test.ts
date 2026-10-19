@@ -11,6 +11,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import adminRoutes from '@/routes/admin.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { forgotPassword, resetPassword } from '@/services/auth.service'
+import { Farm } from '@/models/farm.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import type { Role } from '@/types'
@@ -43,7 +44,7 @@ afterAll(async () => {
 })
 
 afterEach(async () => {
-  await Promise.all([User.deleteMany({}), Ticket.deleteMany({})])
+  await Promise.all([User.deleteMany({}), Ticket.deleteMany({}), Farm.deleteMany({})])
 })
 
 describe('access control', () => {
@@ -207,10 +208,12 @@ describe('PUT /admin/users/:id/status — boolean coercion', () => {
 })
 
 describe('PUT /admin/users/:id/status — technician with open tickets', () => {
-  it('reports meta.openTickets so the admin knows to reassign', async () => {
+  it('reroutes the tickets and reports the ones left for the admin in meta', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
     const { user: tech } = await makeUser('tech@test.vn', 'TECHNICIAN')
-    const ticket = await Ticket.create({ farm_id: new mongoose.Types.ObjectId(), type: 'OTHER', priority: 'P2', assigned_to: tech._id, status: 'IN_PROGRESS' })
+    const { user: owner } = await makeUser('owner@test.vn', 'FARM_OWNER')
+    const farm = await Farm.create({ name: 'Farm', address: 'HCMC', region: 'HCMC', owner_id: owner._id, members: [] })
+    const ticket = await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P2', assigned_to: tech._id, status: 'IN_PROGRESS' })
 
     const res = await request(app)
       .put(`/admin/users/${tech._id}/status`)
@@ -218,9 +221,11 @@ describe('PUT /admin/users/:id/status — technician with open tickets', () => {
       .send({ is_active: false, reason: 'Nghỉ việc' })
       .expect(200)
 
-    expect(res.body.meta.openTickets).toBe(1)
+    // Không ai khác trong vùng → về hàng đợi chung, Admin gán tay
+    expect(res.body.meta).toMatchObject({ rerouted: [], unassigned: [String(ticket._id)], openTickets: 1 })
     expect(res.body.meta.openTicketIds).toEqual([String(ticket._id)])
     expect(res.body.data.is_active).toBe(false)
+    expect((await Ticket.findById(ticket._id))!.assigned_to).toBeFalsy()
   })
 
   it('has no meta when there is nothing to reassign', async () => {
@@ -232,6 +237,58 @@ describe('PUT /admin/users/:id/status — technician with open tickets', () => {
       .send({ is_active: false, reason: 'Spam' })
       .expect(200)
     expect(res.body.meta).toBeUndefined()
+  })
+})
+
+describe('PUT /admin/delete-requests/:id/reject', () => {
+  it('returns 422 without a reason and leaves the request pending', async () => {
+    const { token } = await makeUser('admin@test.vn', 'ADMIN')
+    const { user } = await makeUser('user@test.vn', 'FARM_OWNER')
+    user.deletion_requested_at = new Date()
+    await user.save()
+
+    await request(app).put(`/admin/delete-requests/${user._id}/reject`).set('Authorization', `Bearer ${token}`)
+      .send({ reason: '  ' }).expect(422)
+    expect((await User.findById(user._id))!.deletion_requested_at).toBeInstanceOf(Date)
+  })
+
+  it('takes the request off GET /admin/delete-requests', async () => {
+    const { token } = await makeUser('admin@test.vn', 'ADMIN')
+    const { user } = await makeUser('user@test.vn', 'FARM_OWNER')
+    user.deletion_requested_at = new Date()
+    await user.save()
+
+    await request(app).put(`/admin/delete-requests/${user._id}/reject`).set('Authorization', `Bearer ${token}`)
+      .send({ reason: 'Còn hồ sơ phải lưu' }).expect(200)
+
+    const res = await request(app).get('/admin/delete-requests').set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res.body.data).toHaveLength(0)
+  })
+})
+
+describe('POST /admin/technicians — phone & regions', () => {
+  const base = { email: 'newtech@test.vn', password: 'password123', full_name: 'Tech mới', assigned_regions: ['HCMC'] }
+
+  it.each(['12345', '09123456789', 'abc0912345678'])('returns 422 for phone %p', async phone => {
+    const { token } = await makeUser('admin@test.vn', 'ADMIN')
+    await request(app).post('/admin/technicians').set('Authorization', `Bearer ${token}`)
+      .send({ ...base, phone }).expect(422)
+    expect(await User.countDocuments({ email: base.email })).toBe(0)
+  })
+
+  it('accepts a phone with separators or +84 and stores it without them', async () => {
+    const { token } = await makeUser('admin@test.vn', 'ADMIN')
+    const res = await request(app).post('/admin/technicians').set('Authorization', `Bearer ${token}`)
+      .send({ ...base, phone: '+84 912.345-678' }).expect(201)
+    expect(res.body.data.phone).toBe('+84912345678')
+  })
+
+  it('works without a phone and de-duplicates the regions', async () => {
+    const { token } = await makeUser('admin@test.vn', 'ADMIN')
+    const res = await request(app).post('/admin/technicians').set('Authorization', `Bearer ${token}`)
+      .send({ ...base, phone: '', assigned_regions: [' HCMC ', 'HCMC', 'Long An'] }).expect(201)
+    expect(res.body.data.phone).toBeUndefined()
+    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'TAY_NINH']) // tên tỉnh cũ Long An quy về mã Tây Ninh
   })
 })
 
@@ -293,6 +350,6 @@ describe('POST /admin/technicians — assigned_regions validation', () => {
       .post('/admin/technicians').set('Authorization', `Bearer ${token}`)
       .send({ ...base, assigned_regions: ['HCMC', 'Long An'] })
       .expect(201)
-    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'Long An'])
+    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'TAY_NINH'])
   })
 })

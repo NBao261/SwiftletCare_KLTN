@@ -14,6 +14,9 @@ import logger from '@/utils/logger.util'
  * frontend check `err.response.data.error.code` (kỳ vọng `error` là object) — 2 bên
  * không khớp nên luồng tự refresh access token khi hết hạn chưa từng hoạt động.
  */
+/** Route vẫn dùng được khi tài khoản đang giữ mật khẩu tạm (`must_change_password`) */
+const PASSWORD_CHANGE_ALLOWED = new Set(['PUT /auth/password', 'POST /auth/logout'])
+
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -27,6 +30,12 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const user = await User.findById(payload.sub).lean()
     if (!user || !user.is_active) {
       next(UnauthorizedError('User not found or inactive'))
+      return
+    }
+    // Mật khẩu tạm do Admin cấp: chỉ cho đổi mật khẩu hoặc đăng xuất (AUTH-FR-005c).
+    // 403 chứ không phải 401 — 401 làm frontend tưởng token hết hạn và refresh vòng lặp.
+    if (user.must_change_password && !PASSWORD_CHANGE_ALLOWED.has(`${req.method} ${req.baseUrl}${req.path}`)) {
+      next(new AppError(403, 'PASSWORD_CHANGE_REQUIRED', 'Bạn cần đổi mật khẩu tạm trước khi tiếp tục'))
       return
     }
     req.user = {

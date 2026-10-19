@@ -678,7 +678,7 @@ describe('đổi vùng phụ trách không được bỏ rơi ticket đang mở 
 
   it('đổi khu vực của farm cũng điều phối lại ticket đang mở của farm đó', async () => {
     const { farm, owner, assignee, colleague, ticket } = await seed({ status: 'AWAITING_FIELD_CONFIRMATION' })
-    await User.updateOne({ _id: colleague._id }, { assigned_regions: ['HANOI'] })
+    await User.updateOne({ _id: colleague._id }, { assigned_regions: ['HA_NOI'] })
 
     await updateFarm(String(farm._id), { _id: String(owner._id), email: owner.email, role: 'FARM_OWNER' }, { region: 'HANOI' })
 

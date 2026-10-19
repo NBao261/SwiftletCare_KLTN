@@ -16,6 +16,9 @@ export interface IProvisionedDevice extends Document {
   secret_key_hash: string
   /** Lần đầu kích hoạt thành công qua Web Console Onboarding */
   claimed_at?: Date
+  /** Admin thu hồi (mất/lộ nhãn, hàng lỗi) — từ đó không kích hoạt được nữa */
+  revoked_at?: Date
+  revoke_reason?: string
   created_by?: Types.ObjectId
   created_at: Date
 }
@@ -26,6 +29,8 @@ const provisionedDeviceSchema = new Schema<IProvisionedDevice>(
     kind:            { type: String, enum: ['SENSOR', 'CAMERA'] satisfies ProvisionedDeviceKind[], required: true },
     secret_key_hash: { type: String, required: true, select: false },
     claimed_at:      { type: Date },
+    revoked_at:      { type: Date },
+    revoke_reason:   { type: String, trim: true },
     created_by:      { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: false }, versionKey: false },
