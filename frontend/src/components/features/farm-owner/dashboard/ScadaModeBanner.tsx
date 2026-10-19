@@ -1,65 +1,69 @@
-import { useEffect, useState } from 'react'
-import { Radio } from 'lucide-react'
-import { Badge } from '@/components/ui'
-import SelectMenu from '@/components/ui/SelectMenu'
-import { useTranslation } from '@/hooks/common/useTranslation'
-import { dashboardDict } from '@/constants/dashboard.i18n'
-import { LIVE_MAX_AGE_MS } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
-import { cn } from '@/lib/cn'
-import type { ControlMode } from '@/types'
+import { useEffect, useState } from 'react';
+import { WarningIcon } from '@phosphor-icons/react';
 
-interface HouseOption {
-  value: string
-  label: string
-}
+import { LIVE_MAX_AGE_MS } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
+import { dashboardDict } from '@/constants/dashboard.i18n';
+import { useTranslation } from '@/hooks/common/useTranslation';
+import { cn } from '@/lib/cn';
+import type { ControlMode } from '@/types';
+
+type PlcState = 'live' | 'lost' | 'waiting';
+
+// Màu chấm và chữ trạng thái PLC: online xanh, mất kết nối đỏ, chưa từng kết nối xám
+const PLC_DOT_CLASS: Record<PlcState, string> = { live: 'bg-success', lost: 'bg-alertRed', waiting: 'bg-warmGray' };
+const PLC_TEXT_CLASS: Record<PlcState, string> = { live: 'text-success', lost: 'text-alertRed', waiting: 'text-warmGray' };
 
 interface ScadaModeBannerProps {
-  lastSyncedAt?: string
-  controlMode?: ControlMode
-  overrideExpiry?: string
-  houseId: string
-  houseOptions: HouseOption[]
-  onHouseChange: (houseId: string) => void
+  lastSyncedAt?: string;
+  controlMode?: ControlMode;
+  overrideExpiry?: string;
+  // Sự cố nổi bật nhất trong phạm vi đang chọn; không có thì bỏ phần cảnh báo
+  issueText?: string;
 }
 
-// Thanh giám sát SCADA và chọn nhà yến
-export default function ScadaModeBanner({ lastSyncedAt, controlMode, overrideExpiry, houseId, houseOptions, onHouseChange }: ScadaModeBannerProps) {
-  const { t, ago, time } = useTranslation(dashboardDict)
-  const [, setTick] = useState(0)
+// Capsule SCADA góc trên trái ảnh đầu trang: trạng thái PLC + sự cố nổi bật; chế độ và lần đồng bộ hiện khi rê chuột
+export default function ScadaModeBanner({ lastSyncedAt, controlMode, overrideExpiry, issueText }: ScadaModeBannerProps): JSX.Element {
+  const { t, ago, time } = useTranslation(dashboardDict);
+  const [, setTick] = useState(0);
 
+  // Đếm lại mỗi giây để trạng thái PLC tự chuyển "mất kết nối" khi quá hạn
   useEffect(() => {
-    const timer = setInterval(() => setTick(tick => tick + 1), 1000)
-    return () => clearInterval(timer)
-  }, [])
+    const timer = setInterval(() => setTick(tick => tick + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const hasEverReceived = lastSyncedAt !== undefined
-  const isLive = hasEverReceived && Date.now() - new Date(lastSyncedAt).getTime() <= LIVE_MAX_AGE_MS
-  const modeLabel = controlMode ? t(`banner.mode.${controlMode}`) : ''
-  const modeUntil = controlMode === 'MANUAL' && overrideExpiry ? ` · ${t('banner.modeUntil', { time: time(overrideExpiry) })}` : ''
-  const plcLabel = isLive ? t('banner.plc.online') : hasEverReceived ? t('banner.plc.lost') : t('banner.plc.waiting')
+  let plcState: PlcState = 'waiting';
+  if (lastSyncedAt !== undefined) {
+    plcState = Date.now() - new Date(lastSyncedAt).getTime() <= LIVE_MAX_AGE_MS ? 'live' : 'lost';
+  }
+  const plcLabel = { live: t('banner.plc.online'), lost: t('banner.plc.lost'), waiting: t('banner.plc.waiting') }[plcState];
+
+  const modeLabel = controlMode ? t(`banner.mode.${controlMode}`) : '';
+  const modeUntil = controlMode === 'MANUAL' && overrideExpiry ? ` · ${t('banner.modeUntil', { time: time(overrideExpiry) })}` : '';
+  const syncedLabel = lastSyncedAt ? t('banner.synced', { ago: ago(lastSyncedAt) }) : t('banner.notSynced');
+  const tooltip = modeLabel ? `${modeLabel}${modeUntil} · ${syncedLabel}` : syncedLabel;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warmGray/15 bg-white px-4 py-3 shadow-card lg:flex-nowrap">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className={cn('h-2 w-2 shrink-0 rounded-full', isLive ? 'bg-success' : 'bg-warmGray')} />
-        <span className="shrink-0 whitespace-nowrap text-xs font-bold uppercase tracking-[0.06em] text-charcoal">{t('banner.title')}</span>
-        {modeLabel && <span className="shrink-0 text-warmGray/50">—</span>}
-        {modeLabel && <p className="min-w-0 truncate text-[11px] font-medium text-warmGray" title={`${modeLabel}${modeUntil}`}>{modeLabel}{modeUntil}</p>}
-      </div>
+    <div
+      className="flex max-w-full items-center gap-3 self-start rounded-full border border-white/50 bg-white/85 px-4 py-2 text-xs shadow-sm backdrop-blur-md"
+      title={tooltip}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <span className={cn('h-2 w-2 shrink-0 rounded-full', PLC_DOT_CLASS[plcState])} />
+        <span className="shrink-0 whitespace-nowrap font-bold uppercase tracking-[0.06em] text-charcoal">{t('banner.title')}</span>
+        <span className="shrink-0 text-warmGray" aria-hidden>•</span>
+        <span className={cn('shrink-0 whitespace-nowrap font-semibold', PLC_TEXT_CLASS[plcState])}>{plcLabel}</span>
+      </span>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <SelectMenu ariaLabel={t('page.houseLabel')} value={houseId} options={houseOptions} onChange={onHouseChange} className="w-40 justify-between" />
-        <Badge
-          tone={isLive ? 'positive' : 'critical'}
-          className={cn('w-[190px] justify-center whitespace-nowrap', !isLive && !hasEverReceived && 'bg-statusYellow/70 text-charcoal')}
-        >
-          <Radio width={12} height={12} />
-          {plcLabel}
-        </Badge>
-        <span className="w-[160px] whitespace-nowrap pl-1 text-left text-xs text-warmGray">
-          {lastSyncedAt ? t('banner.synced', { ago: ago(lastSyncedAt) }) : t('banner.notSynced')}
-        </span>
-      </div>
+      {issueText && (
+        <>
+          <span className="h-4 w-px shrink-0 bg-warmGray/30" aria-hidden />
+          <span className="flex min-w-0 items-center gap-1.5 font-medium text-safetyOrange">
+            <WarningIcon size={14} weight="bold" className="shrink-0" />
+            <span className="truncate">{issueText}</span>
+          </span>
+        </>
+      )}
     </div>
-  )
+  );
 }

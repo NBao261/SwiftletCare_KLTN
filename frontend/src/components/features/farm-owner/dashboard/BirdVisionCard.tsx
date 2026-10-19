@@ -4,10 +4,8 @@ import type { ChartOptions } from 'chart.js'
 import { Camera } from 'lucide-react'
 import { Badge, Card } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
 import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme'
 import { useBirdCount, useScopeZones } from '@/hooks/farm-owner/useFarmOwnerDashboard'
-import { useSyncedState } from '@/hooks/common/useSyncedState'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { LOCALE } from '@/lib/i18n'
@@ -27,16 +25,14 @@ const chartOptions = {
 
 interface BirdVisionCardProps {
   farmId: string
-  houseOptions: SelectMenuOption<string>[]
-  globalHouseId: string
+  // Nhà yến đang chọn ở bộ lọc chung trên header; rỗng = tất cả nhà yến
+  houseId: string
 }
 
 // Chart thống kê chim
-export default function BirdVisionCard({ farmId, houseOptions, globalHouseId }: BirdVisionCardProps) {
+export default function BirdVisionCard({ farmId, houseId }: BirdVisionCardProps) {
   const { t, num, lang } = useTranslation(dashboardDict)
   const [days, setDays] = useState<number>(7)
-  const [choice, setChoice] = useSyncedState(globalHouseId)
-  const houseId = houseOptions.some(option => option.value === choice) ? choice : ''
   const { zones } = useScopeZones(farmId, houseId)
   const zoneIds = useMemo(() => zones.map(zone => zone._id), [zones])
 
@@ -53,12 +49,9 @@ export default function BirdVisionCard({ farmId, houseOptions, globalHouseId }: 
 
   return (
     <Card size="lg" className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-charcoal" />
-          <p className="label-caption">{t('bird.caption')}</p>
-        </div>
-        <SelectMenu ariaLabel={t('bird.scopeLabel')} value={houseId} options={houseOptions} onChange={setChoice} className="w-40 justify-between" />
+      <div className="flex items-center gap-2">
+        <span className="h-1.5 w-1.5 rounded-full bg-charcoal" />
+        <p className="label-caption">{t('bird.caption')}</p>
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-2">

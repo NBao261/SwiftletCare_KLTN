@@ -1,15 +1,16 @@
-import { Droplets, Wind, Volume2, Flame } from 'lucide-react'
+import { Droplets, Wind, Volume2 } from 'lucide-react'
 import { Button, Card, RadialGauge } from '@/components/ui'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { cn } from '@/lib/cn'
-import type { ControlMode, ControlOutput, RelayStates } from '@/types'
+import type { DashboardRelayStates } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import type { ControlMode, ControlOutput } from '@/types'
 
+// SRS v2.0.0 đã bỏ sưởi (ENV-FR-012) nên chỉ còn 3 relay
 const RELAY_ITEMS = [
   { key: 'misting', labelKey: 'relay.misting', icon: Droplets },
   { key: 'ventilation', labelKey: 'relay.ventilation', icon: Wind },
   { key: 'speaker', labelKey: 'relay.speaker', icon: Volume2 },
-  { key: 'heating', labelKey: 'relay.heating', icon: Flame },
 ] as const
 
 type RelayItem = (typeof RELAY_ITEMS)[number]
@@ -31,15 +32,14 @@ const ICON_CLASS: Record<RelayTone, string> = {
 
 interface ControlSubsystemPanelProps {
   zoneName?: string
-  relayStates?: RelayStates
+  relayStates?: DashboardRelayStates
   controlMode?: ControlMode
   controlOutput?: ControlOutput
   tooHot?: boolean
-  tooCold?: boolean
 }
 
 // Trạng thái relay phân hệ điều khiển, phun sương/quạt hiện % công suất logic mờ khi có telemetry live
-export default function ControlSubsystemPanel({ zoneName, relayStates, controlMode, controlOutput, tooHot, tooCold }: ControlSubsystemPanelProps) {
+export default function ControlSubsystemPanel({ zoneName, relayStates, controlMode, controlOutput, tooHot }: ControlSubsystemPanelProps) {
   const { t } = useTranslation(dashboardDict)
 
   return (
@@ -56,7 +56,7 @@ export default function ControlSubsystemPanel({ zoneName, relayStates, controlMo
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-3">
         {RELAY_ITEMS.map(item => (
           <RelayTile
             key={item.key}
@@ -64,7 +64,7 @@ export default function ControlSubsystemPanel({ zoneName, relayStates, controlMo
             relayStates={relayStates}
             controlMode={controlMode}
             fuzzyPercent={item.key === 'misting' || item.key === 'ventilation' ? controlOutput?.[item.key] : undefined}
-            isAnomaly={(item.key === 'heating' && !!tooCold) || (item.key === 'ventilation' && !!tooHot)}
+            isAnomaly={item.key === 'ventilation' && !!tooHot}
           />
         ))}
       </div>
@@ -74,7 +74,7 @@ export default function ControlSubsystemPanel({ zoneName, relayStates, controlMo
 
 interface RelayTileProps {
   item: RelayItem
-  relayStates?: RelayStates
+  relayStates?: DashboardRelayStates
   controlMode?: ControlMode
   fuzzyPercent?: number
   isAnomaly: boolean
@@ -84,7 +84,8 @@ interface RelayTileProps {
 function RelayTile({ item, relayStates, controlMode, fuzzyPercent, isAnomaly }: RelayTileProps) {
   const { t } = useTranslation(dashboardDict)
   const Icon = item.icon
-  const hasData = relayStates !== undefined
+  // Relay thiếu trong dữ liệu (VD heating — backend SRS v2 đã bỏ) thì xem như chưa có dữ liệu, không báo TẮT sai
+  const hasData = relayStates?.[item.key] !== undefined
   const isOn = relayStates?.[item.key] ?? false
   const hasFuzzy = hasData && fuzzyPercent !== undefined
   const stateLabel = isOn ? t('relay.on') : t('relay.off')
@@ -101,16 +102,16 @@ function RelayTile({ item, relayStates, controlMode, fuzzyPercent, isAnomaly }: 
   else if (hasData) gaugeLabel = stateLabel
 
   let footer = '_'
-  if (isAnomaly) footer = item.key === 'heating' ? t('control.tooCold') : t('control.tooHot')
+  if (isAnomaly) footer = t('control.tooHot')
   else if (hasFuzzy && controlMode === 'AUTO') footer = t('control.fuzzy', { state: stateLabel })
   else if (controlMode) footer = t('control.mode', { mode: controlMode })
 
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-warmGray/15 p-3 text-center">
-      <RadialGauge percent={gaugePercent} size={76} strokeWidth={7} trackClassName="stroke-warmGray/10" className={GAUGE_CLASS[tone]}>
+    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-warmGray/15 p-4 text-center">
+      <RadialGauge percent={gaugePercent} size={88} strokeWidth={7} trackClassName="stroke-warmGray/10" className={GAUGE_CLASS[tone]}>
         <div className="flex flex-col items-center gap-0.5">
-          <Icon width={16} height={16} className={ICON_CLASS[tone]} />
-          <span className="text-[11px] font-extrabold text-charcoal">{gaugeLabel}</span>
+          <Icon width={18} height={18} className={ICON_CLASS[tone]} />
+          <span className="text-xs font-extrabold text-charcoal">{gaugeLabel}</span>
         </div>
       </RadialGauge>
       <p className="label-caption leading-tight">{t(item.labelKey)}</p>

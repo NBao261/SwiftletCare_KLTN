@@ -1,11 +1,8 @@
 import type { ComponentType, SVGProps } from 'react'
 import { Droplets, FlaskConical } from 'lucide-react'
-import { Card } from '@/components/ui'
-import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
 import { IconTemp, IconLight, IconCloud, IconSound } from '@/components/ui/icons'
 import { useScopeZones, useZonesEnvironment } from '@/hooks/farm-owner/useFarmOwnerDashboard'
 import type { AllZone } from '@/hooks/shared/useFarms'
-import { useSyncedState } from '@/hooks/common/useSyncedState'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict, type DashboardKey } from '@/constants/dashboard.i18n'
 import { getAnomalies } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
@@ -26,16 +23,14 @@ interface Reading {
 
 interface EnvSensorPanelProps {
   farmId: string
-  houseOptions: SelectMenuOption<string>[]
-  globalHouseId: string
+  // Nhà yến đang chọn ở bộ lọc chung trên header; rỗng = tất cả nhà yến
+  houseId: string
 }
 
-// 6 chỉ số cảm biến môi trường
-export default function EnvSensorPanel({ farmId, houseOptions, globalHouseId }: EnvSensorPanelProps) {
+// Khung card chứa 6 chỉ số cảm biến môi trường, đặt ngay dưới ảnh đầu trang
+export default function EnvSensorPanel({ farmId, houseId }: EnvSensorPanelProps) {
   const { t, num } = useTranslation(dashboardDict)
   const format = (value: number) => num(value, Number.isInteger(value) ? 0 : 1)
-  const [choice, setChoice] = useSyncedState(globalHouseId)
-  const houseId = houseOptions.some(option => option.value === choice) ? choice : ''
   const { zones } = useScopeZones(farmId, houseId)
   const { readings: env, thresholds, isActive, isLoading } = useZonesEnvironment(houseId ? zones : NO_ZONES)
   const anomalies = thresholds ? getAnomalies(env, thresholds) : undefined
@@ -50,13 +45,15 @@ export default function EnvSensorPanel({ farmId, houseOptions, globalHouseId }: 
   ]
 
   return (
-    <Card size="lg" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-h2 text-charcoal">{t('env.title')}</h2>
-          <p className="mt-1 text-sm text-warmGray">{t('env.subtitle')}</p>
-        </div>
-        <SelectMenu ariaLabel={t('env.houseLabel')} value={houseId} options={houseOptions} onChange={setChoice} className="w-40 justify-between" />
+    // Khung ngoài kính mờ (glass-panel, mẫu 5.2.1) để thấy ảnh đầu trang phía sau; 6 thẻ bên trong giữ nền trắng
+    <section
+      aria-label={t('env.title')}
+      className="glass-panel flex flex-col gap-4 rounded-3xl border border-white/60 p-6 shadow-glass backdrop-blur-xl"
+    >
+      <div>
+        <h2 className="text-h2 text-charcoal">{t('env.title')}</h2>
+        {/* Tất cả nhà yến: mỗi nhà có ngưỡng riêng nên không gộp số liệu, nhắc chọn 1 nhà ở bộ lọc trên header */}
+        {!houseId && <p className="mt-1 text-sm text-warmGray">{t('env.pickHouse')}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -64,7 +61,7 @@ export default function EnvSensorPanel({ farmId, houseOptions, globalHouseId }: 
           <ReadingTile key={reading.key} reading={reading} isLoading={isLoading} isActive={isActive} />
         ))}
       </div>
-    </Card>
+    </section>
   )
 }
 
