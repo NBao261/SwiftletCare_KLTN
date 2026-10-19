@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '@/apis/auth/auth.api'
 import { useAuthStore } from '@/stores/authStore'
+import { useLoginSplashStore } from '@/stores/loginSplashStore'
 import { queryClient } from '@/lib/queryClient'
 import { getRoleHomePath, canAccessPath } from '@/constants/roles'
 import type { User } from '@/types'
@@ -26,6 +27,8 @@ export function useAuth() {
       const target = variables.returnTo && canAccessPath(role, variables.returnTo)
         ? variables.returnTo
         : getRoleHomePath(role)
+      // Màn chuyển cảnh đọc vị trí logo trước khi rời trang đăng nhập; trang trong tải phía dưới trong lúc chạy
+      useLoginSplashStore.getState().start()
       navigate(target)
     },
   })
