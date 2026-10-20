@@ -40,6 +40,12 @@ mqtt:
   publish_interval_sec: 30                  # số đếm của phiên + heartbeat (VISION-FR-006); backend coi im 90 giây là mất kết nối
   bucket_minutes: 5                         # số đếm theo khoảng, gửi cả ngoài phiên (VISION-FR-017)
 
+push:                                       # đẩy hình đã vẽ khung lên MediaMTX; chỉ chạy khi có STREAM_PUSH_URL trong .env (plan 6.2, 15.6)
+  width: 1280                               # thu từ 1080p để nén nhẹ CPU và băng thông người xem
+  height: 720
+  fps: 15                                   # chỉ là tốc độ phát cho người xem; việc đếm vẫn chạy đủ camera.fps
+  bitrate: "1500k"
+
 stream:                                     # MJPEG để hiệu chỉnh ROI/vạch đếm; chỉ nén ảnh khi có người đang xem
   host: "127.0.0.1"                         # chỉ máy này xem được; người xem từ xa đi qua MediaMTX
   port: 8090

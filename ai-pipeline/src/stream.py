@@ -28,6 +28,7 @@ from loguru import logger
 from counting import SESSION_TYPES, BucketClock, LineCounter, current_session
 from inference import Detection, InferenceEngine
 from mjpeg_server import MjpegServer
+from stream_pusher import StreamPusher
 
 STATE_FILE = Path("state.json")
 GREEN = (0, 255, 0)
@@ -215,7 +216,13 @@ def main() -> None:
                              class_names=m["classes"], providers=m["providers"])
     server = MjpegServer(cfg["stream"]["host"], cfg["stream"]["port"], cfg["stream"]["jpeg_quality"])
     pub = None if args.no_mqtt else Publisher(cfg["mqtt"], m["version"])
-    logger.info(f"Nguồn: {'camera RTSP' if live else source} | xem http://{cfg['stream']['host']}:{cfg['stream']['port']}/stream")
+    pusher = None
+    if os.getenv("STREAM_PUSH_URL"):                          # có máy chủ video (MediaMTX): đẩy hình đã vẽ khung
+        p = cfg["push"]
+        pusher = StreamPusher(os.environ["STREAM_PUSH_URL"], p["width"], p["height"], p["fps"], p["bitrate"])
+        pusher.start()
+    logger.info(f"Nguồn: {'camera RTSP' if live else source} | xem http://{cfg['stream']['host']}:{cfg['stream']['port']}/stream"
+                f" | đẩy lên máy chủ video: {'có' if pusher else 'không'}")
 
     # Tracker sống suốt chương trình (không tạo lại khi đổi phiên) để ID không lặp lại:
     # bộ đếm cả ngày bên dưới nhớ trạng thái theo ID.
@@ -262,8 +269,10 @@ def main() -> None:
             tracks.xyxy = scale_boxes(tracks.xyxy, 1 / t["box_pad"])   # vẽ box kích thước thật
 
         annotated = draw(frame.copy(), tracks, counter, (rx1, ry1, rx2, ry2), fps, session) \
-            if server.watching_boxes else None
+            if server.watching_boxes or pusher else None
         server.publish(annotated, frame)
+        if pusher:
+            pusher.update(annotated)
 
         n_frames += 1
         now = time.time()
