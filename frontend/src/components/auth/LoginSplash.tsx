@@ -72,7 +72,7 @@ function LoginSplashScreen(): JSX.Element {
   return (
     <div
       className={cn(
-        'fixed inset-0 z-[60] flex items-center justify-center bg-white transition-opacity duration-500 ease-out',
+        'fixed inset-0 z-50 flex items-center justify-center bg-white transition-opacity duration-500 ease-out',
         phase === 'fading' && 'pointer-events-none opacity-0',
       )}
       role="status"

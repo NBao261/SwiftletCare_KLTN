@@ -73,11 +73,11 @@ export default function AuthLayout(): JSX.Element {
               </p>
             </div>
 
-            {/* Thẻ kính mờ chứa 3 chỉ số */}
+            {/* Thẻ kính mờ nêu 3 chỉ số được giám sát — không ghi số vì ngưỡng do Domain Expert đặt riêng từng nhà */}
             <div className="glass-panel grid w-full max-w-md grid-cols-3 gap-3 rounded-2xl p-3 shadow-glass backdrop-blur-xl">
-              <StatChip icon={<IconTemp width={16} height={16} />} label="Nhiệt độ" value="26–31" unit="°C" />
-              <StatChip icon={<IconHumidity width={16} height={16} />} label="Độ ẩm" value="75–95" unit="%" />
-              <StatChip icon={<IconSound width={16} height={16} />} label="Âm thanh" value="24/7" />
+              <StatChip icon={<IconTemp width={16} height={16} />} label="Nhiệt độ" />
+              <StatChip icon={<IconHumidity width={16} height={16} />} label="Độ ẩm" />
+              <StatChip icon={<IconSound width={16} height={16} />} label="Âm thanh" />
             </div>
           </div>
         </div>
@@ -89,24 +89,16 @@ export default function AuthLayout(): JSX.Element {
 interface StatChipProps {
   icon: ReactNode;
   label: string;
-  value: string;
-  unit?: string;
 }
 
-// Ô chỉ số trong thẻ kính mờ: icon + tên chỉ số ở trên, giá trị kèm đơn vị cùng dòng ở dưới
-function StatChip({ icon, label, value, unit }: StatChipProps): JSX.Element {
+// Ô chỉ số trong thẻ kính mờ: icon + tên chỉ số, không kèm số liệu
+function StatChip({ icon, label }: StatChipProps): JSX.Element {
   return (
-    <div className="flex flex-col gap-3 rounded-xl bg-white/80 p-3 text-left">
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
-          {icon}
-        </span>
-        <span className="truncate text-xs font-medium text-graphite">{label}</span>
-      </div>
-      <p className="flex items-baseline gap-1 whitespace-nowrap">
-        <span className="text-xl font-extrabold leading-none tabular-nums text-charcoal">{value}</span>
-        {unit && <span className="text-sm font-semibold text-warmGray">{unit}</span>}
-      </p>
+    <div className="flex flex-col items-start gap-2 rounded-xl bg-white/80 p-3 text-left">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
+        {icon}
+      </span>
+      <span className="truncate text-sm font-semibold text-charcoal">{label}</span>
     </div>
   );
 }
