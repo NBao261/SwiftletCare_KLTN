@@ -15,3 +15,9 @@ def test_state_missing_or_broken_file(tmp_path):
     assert load_state("EVENING_ENTRY", "2026-10-20", path) == (0, 0)
     path.write_text("{not json", encoding="utf-8")
     assert load_state("EVENING_ENTRY", "2026-10-20", path) == (0, 0)
+
+
+def test_topic_base_is_per_house_without_zone():
+    from stream import topic_base
+    # Backend SRS v2.1.8: nút AI publish theo nhà yến — swiftletcare/{farm}/{house}/heartbeat|vision/...
+    assert topic_base({"FARM_ID": "f1", "HOUSE_ID": "h1", "ZONE_ID": "z1"}) == "swiftletcare/f1/h1"

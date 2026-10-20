@@ -147,13 +147,19 @@ def draw(frame: np.ndarray, tracks: sv.Detections, counter: LineCounter, roi: Tu
 
 
 # ── MQTT ─────────────────────────────────────────────────────────────────────
+def topic_base(env) -> str:
+    """SRS v2.1.8 — camera ở cửa ra vào của cả nhà yến nên topic theo House, không có đoạn zone:
+    swiftletcare/{farmId}/{houseId}/heartbeat | vision/bird-count | vision/alert (khớp backend mqtt.client.ts)."""
+    return f"swiftletcare/{env['FARM_ID']}/{env['HOUSE_ID']}"
+
+
 class Publisher:
     """Payload theo BirdCountPayload của backend (backend/src/types/domain.types.ts)."""
 
     def __init__(self, cfg: dict, model_version: str):
         self.device_id = os.environ["CAMERA_DEVICE_ID"]
         self.model_version = model_version
-        base = f"swiftletcare/{os.environ['FARM_ID']}/{os.environ['HOUSE_ID']}/{os.environ['ZONE_ID']}"
+        base = topic_base(os.environ)
         self.topic_count = f"{base}/vision/bird-count"
         self.topic_heartbeat = f"{base}/heartbeat"
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=self.device_id)

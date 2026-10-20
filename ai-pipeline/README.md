@@ -11,7 +11,7 @@ cd ai-pipeline
 py -3.12 -m venv .venv              # Python 3.11–3.12
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env              # điền CAMERA_RTSP_URL, CAMERA_DEVICE_ID, FARM_ID/HOUSE_ID/ZONE_ID
+copy .env.example .env              # điền CAMERA_RTSP_URL, CAMERA_DEVICE_ID, FARM_ID/HOUSE_ID
 ```
 
 Model không nằm trong repo. Chưa có model tự train thì export YOLO26n pretrained (COCO, class `bird` = 14) một lần trên Colab hoặc một venv riêng có `ultralytics==8.4.170`, rồi đặt file vào `models/yolo26n.onnx` (plan 6.1):
@@ -73,7 +73,7 @@ Hiệu chỉnh ROI, vạch đếm và chiều đếm bằng cách sửa `config/
 
 ```
 config/config.yaml     camera, model, tracking, phiên, MQTT, MJPEG, log (không chứa bí mật)
-.env                   RTSP URL, MQTT, ID farm/house/zone/device — không commit (.env.example là mẫu)
+.env                   RTSP URL, MQTT, ID farm/house/device — không commit (.env.example là mẫu)
 models/  clips/        không commit
 src/
   stream.py            vòng lặp chính: đọc frame mới nhất → suy luận → ByteTrack → đếm → MJPEG + MQTT
@@ -87,7 +87,7 @@ tests/                 pytest, không cần camera/model/broker
 
 ## MQTT
 
-Topic dưới `swiftletcare/{farmId}/{houseId}/{zoneId}/`, payload theo `BirdCountPayload` của backend:
+Topic dưới `swiftletcare/{farmId}/{houseId}/` — camera ở cửa ra vào của cả nhà yến nên theo House, không có Zone (backend SRS v2.1.8). Payload theo `BirdCountPayload` của backend:
 
 | Topic | Khi nào | Payload |
 |---|---|---|

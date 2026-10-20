@@ -26,7 +26,7 @@ MJPEG preview at `http://127.0.0.1:8090/stream` (`?boxes=0` = raw) for tuning RO
 
 ```
 config/config.yaml    camera, model, classes, tracking, sessions (UTC+7), MQTT, MJPEG, logging — no secrets
-.env.example          template for .env (RTSP URL, MQTT, farm/house/zone/device IDs)
+.env.example          template for .env (RTSP URL, MQTT, farm/house/device IDs)
 requirements.txt      pinned per plan §4
 pytest.ini
 src/
@@ -55,12 +55,12 @@ Measured facts the code depends on (20/10/2026):
 - **[Bắt buộc]** Runtime targets the plan's stack: `onnxruntime` + `supervision` (ByteTrack, `LineZone`) — no `torch`/`ultralytics` in `requirements.txt` (they are for training on Colab only). New dependencies are pinned with a lower bound like the existing ones.
 
 ### Secrets, data and models
-- **[Bắt buộc]** Camera RTSP URL (it carries the camera password), MQTT credentials, `STREAM_PUSH_URL` and the farm/house/zone/device IDs come from `.env` (`CAMERA_RTSP_URL`, `MQTT_USERNAME`/`MQTT_PASSWORD`, `STREAM_PUSH_URL`, `CAMERA_DEVICE_ID`, `FARM_ID`, `HOUSE_ID`, `ZONE_ID`), never from `config.yaml` or code. A new variable is added to an `.env.example` with a placeholder.
+- **[Bắt buộc]** Camera RTSP URL (it carries the camera password), MQTT credentials, `STREAM_PUSH_URL` and the farm/house/device IDs come from `.env` (`CAMERA_RTSP_URL`, `MQTT_USERNAME`/`MQTT_PASSWORD`, `STREAM_PUSH_URL`, `CAMERA_DEVICE_ID`, `FARM_ID`, `HOUSE_ID`), never from `config.yaml` or code. A new variable is added to an `.env.example` with a placeholder.
 - **[Bắt buộc]** Never commit model weights (`*.onnx`, `*.pt`), clips, frames, datasets, `.env`, logs or `state.json`; extend `.gitignore` when a new artifact folder appears. Record which model version runs (`model.version` in the config, sent as `firmwareVersion` in the heartbeat).
 - **[Bắt buộc]** Anything leaving the machine uses TLS in deploy mode (MQTT 8883, `rtsps://` push). The MJPEG preview binds to `127.0.0.1` only; remote viewers go through MediaMTX with backend-checked access.
 
 ### MQTT contract with the backend
-- **[Bắt buộc]** Topics are `swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count` and `swiftletcare/{farmId}/{houseId}/{zoneId}/heartbeat` (what `backend/src/mqtt/mqtt.client.ts` subscribes to), using the real MongoDB ObjectIds.
+- **[Bắt buộc]** Topics are per **house** (backend SRS v2.1.8: the camera watches the entrance of the whole swiftlet house, so cameras and bird counts belong to the House, not a Zone): `swiftletcare/{farmId}/{houseId}/vision/bird-count`, `swiftletcare/{farmId}/{houseId}/heartbeat`, `swiftletcare/{farmId}/{houseId}/vision/alert` (what `backend/src/mqtt/mqtt.client.ts` subscribes to; built by `stream.py#topic_base`), using the real MongoDB ObjectIds.
 - **[Bắt buộc]** Every payload carries `deviceId` = the CameraNode `device_id` registered in the backend; the backend looks the device up by it, not by the topic segments.
 - **[Bắt buộc]** Payload shapes follow the plan (§6.6) and the backend's `BirdCountPayload` (`backend/src/types/domain.types.ts`, extended per plan §8.2): session message `{deviceId, session_type, entry_count, exit_count, confidence_avg, final, timestamp}`; bucket message `{deviceId, kind: "BUCKET", bucket_start, bucket_minutes, entry_count, exit_count, timestamp}`; heartbeat `{deviceId, firmwareVersion}`. Timestamps are epoch milliseconds. Counts are non-negative integers. A field change lands together with the backend type, the handler and `docs/api/api-spec.yaml` (or names the PR that does).
 - **[Bắt buộc]** The pipeline sends raw entry/exit counts; the backend computes the return rate on **net** counts (VISION-FR-009). Do not compute or send `return_rate` from the pipeline.
