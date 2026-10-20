@@ -2035,6 +2035,8 @@ Tên khóa cấu hình của MediaMTX thay đổi giữa các phiên bản. Sau 
 
 ### 15.6. Pipeline: đẩy video và MQTT lên cloud
 
+> **Trạng thái (20/10/2026):** `src/stream_pusher.py` **đã làm**, chạy thử ở dev mức 2 (mục 16.3) với camera thật: MediaMTX 1.21.1 nhận hình, trình duyệt xem qua WebRTC bằng token của backend (thấy vạch đếm và số VAO/RA), không token thì 401, pipeline vẫn đếm 25 FPS trong lúc đẩy; tắt bật lại MediaMTX thì 3 giây sau đẩy lại được. Khác code mẫu dưới đây: (1) đọc stderr của ffmpeg ở luồng riêng và **che mật khẩu trong URL** trước khi ghi log (lỗi của ffmpeg có thể in nguyên `rtsp://pipeline:<mật khẩu>@…`; để stderr không ai đọc thì pipe đầy làm ffmpeg đứng); (2) thử lại chờ tăng dần 1 → 30 giây thay cho 3 giây cố định, để bị từ chối (401) không gọi backend liên tục; (3) không có ffmpeg cũng chỉ ghi log rồi thử lại, không làm chết luồng; (4) chỉ vẽ khung khi có người xem MJPEG hoặc có đẩy video. Chưa làm `on_demand` (mục 17.4): nhà yến dùng cáp quang nên đẩy liên tục.
+
 `src/stream_pusher.py` (mới):
 
 ```python

@@ -46,6 +46,19 @@ pytest
 | `--no-mqtt` | Không gửi gì lên broker |
 | `--config` | File cấu hình khác (`config/config.yaml` mặc định) |
 
+### Xem live stream qua MediaMTX (plan 16.3, mức dev 2)
+
+Có `STREAM_PUSH_URL` trong `.env` thì pipeline đẩy hình đã vẽ khung (ô xanh, vạch đếm, số VAO/RA) lên MediaMTX, ở luồng riêng: máy chủ video sập hay mạng chậm thì việc đếm vẫn chạy, video tự đẩy lại khi máy chủ lên.
+
+```powershell
+docker compose up -d mongodb emqx mediamtx        # ở gốc repo
+cd backend; npm run dev                            # backend/.env có STREAM_TOKEN_SECRET, STREAM_AUTH_KEY=dev-auth-key, STREAM_PUBLISH_SECRET=dev-publish
+# ai-pipeline/.env: STREAM_PUSH_URL=rtsp://pipeline:dev-publish@localhost:8554/cam-<CAMERA_DEVICE_ID>
+python src/stream.py
+```
+
+Người xem lấy token bằng `GET /devices/camera-nodes/:id/stream-token` (Farm Owner/Domain Expert, sống 60 giây), rồi mở `http://localhost:8889/cam-<device_id>/?token=<token>` (trang xem có sẵn của MediaMTX), hoặc gửi WHEP với header `Authorization: Bearer <token>`. Không có token thì MediaMTX trả 401.
+
 Clip nặng khoảng 0,9 GB/giờ. Ổ chứa repo đầy thì để `clips/` ở ổ khác bằng junction (mọi lệnh vẫn dùng `clips/...`):
 
 ```powershell
@@ -67,6 +80,7 @@ src/
   inference.py         ONNX Runtime; đọc cả đầu ra YOLO26n (nms=False) lẫn YOLOv8n/YOLO11n (có NMS)
   counting.py          LineCounter (sv.LineZone), phiên theo giờ, cắt khoảng 5 phút
   mjpeg_server.py      xem trước MJPEG chỉ cho máy này (127.0.0.1), nén ảnh khi có người xem
+  stream_pusher.py     đẩy hình đã vẽ khung lên MediaMTX bằng ffmpeg (H.264, không B-frame cho WebRTC), che mật khẩu trong log
 tools/record_session.ps1  ghi clip RTSP theo lịch
 tests/                 pytest, không cần camera/model/broker
 ```
@@ -85,4 +99,4 @@ Pipeline gửi số thô; backend tự tính tỷ lệ chim về trên số ròn
 
 ## Trạng thái
 
-Pipeline chạy được trên clip và RTSP với model tạm YOLO26n COCO; **chưa có model tự train** (GĐ2), chưa đẩy video lên MediaMTX (plan 15.6) và chưa có Dockerfile cho VPS (plan 18.3). Tiến trình tự nối lại khi rớt camera hoặc broker; khi chạy thật phải có trình giám sát khởi động lại lúc crash (REL-NFR-004).
+Pipeline chạy được trên clip và RTSP với model tạm YOLO26n COCO; **chưa có model tự train** (GĐ2), chưa có Dockerfile cho VPS (plan 18.3). Đẩy video lên MediaMTX và xem qua WebRTC đã chạy thử với camera thật ở dev (20/10/2026). Tiến trình tự nối lại khi rớt camera hoặc broker; khi chạy thật phải có trình giám sát khởi động lại lúc crash (REL-NFR-004).

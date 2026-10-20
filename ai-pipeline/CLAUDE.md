@@ -6,7 +6,7 @@ Rules and map for `ai-pipeline/` (Python: OpenCV + YOLO26n on ONNX Runtime + Byt
 
 - **Design source:** `docs/bird-counting-plan.md` is the implementation plan (architecture, config, MQTT payloads, training, accuracy measurement, backend and frontend work). Requirements: SRS §5.4 (Module VISION) and §0 scope. When the plan and this file disagree on *what to build*, the plan wins; this file wins on *how code must be written and checked*.
 - **Scope (SRS v2.0.0 §0):** one class, `swiftlet`. Predator detection is removed. The AI node is a PC or cloud VPS (container `vision`), **not** a Raspberry Pi. An annotated live stream (boxes drawn on the frame, viewed over WebRTC via MediaMTX) and a counting-accuracy report split by lighting (VISION-FR-014/016) are required.
-- **State:** GĐ1 of the plan (§6) is built: the pipeline runs on clips and on the real camera (VIGI C320I, 25 fps reached on a Ryzen 7 6800H laptop on 20/10/2026) with the temporary YOLO26n COCO model, and publishes the plan's MQTT payloads. Not done: a self-trained model (GĐ2), ROI and counting line (placeholders until birds are seen on a clip, plan §19.7), pushing video to MediaMTX (§15.6), the VPS Dockerfile (§18.3), dataset tools (§7.2, §7.4).
+- **State:** GĐ1 of the plan (§6) is built: the pipeline runs on clips and on the real camera (VIGI C320I, 25 fps reached on a Ryzen 7 6800H laptop on 20/10/2026) with the temporary YOLO26n COCO model, and publishes the plan's MQTT payloads. With `STREAM_PUSH_URL` it pushes the annotated frames to MediaMTX (§15.6), checked end to end in dev with the real camera, the backend's stream token and a browser over WebRTC. Not done: a self-trained model (GĐ2), ROI and counting line (placeholders until birds are seen on a clip, plan §19.7), the VPS Dockerfile (§18.3), dataset tools (§7.2, §7.4).
 
 ## Commands
 
@@ -34,11 +34,12 @@ src/
   inference.py        ONNX Runtime; decode() reads YOLO26n nms=False (1,300,6) and YOLOv8n/YOLO11n (1,4+nc,N) + NMS
   counting.py         LineCounter (sv.LineZone), current_session, BucketClock (5-minute buckets)
   mjpeg_server.py     dev preview on 127.0.0.1, encodes JPEG only while someone watches
+  stream_pusher.py    pushes annotated frames to MediaMTX via ffmpeg in its own thread; back-off retry; masks the URL password in logs
 tools/record_session.ps1  record RTSP clips named per plan §7.1
 tests/                test_counting.py, test_inference.py, test_state.py — no camera, model or broker needed
 ```
 
-Still to add (plan): `src/stream_pusher.py` (§15.6), `Dockerfile` + `config/config.vps.yaml` (§18.3), `tools/extract_frames.py` and `tools/split_by_day.py` (§7.2, §7.4). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`.
+Still to add (plan): `Dockerfile` + `config/config.vps.yaml` (§18.3), `tools/extract_frames.py` and `tools/split_by_day.py` (§7.2, §7.4). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`.
 
 Measured facts the code depends on (20/10/2026):
 - Do not set ONNX Runtime `intra_op_num_threads` to `os.cpu_count()`: logical cores double inference time (45 ms vs 21 ms on a Ryzen 7 6800H). Leave the ORT default.
