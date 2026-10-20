@@ -134,11 +134,14 @@ Giá là ước lượng, cần kiểm tra lại khi mua. Cập nhật `docs/har
 
 ### 3.3. Cách lắp — quyết định độ chính xác nhiều hơn model
 
-1. Đặt camera **bên trong nhà yến, nhìn thẳng ra lỗ ra vào**. Chim hiện thành bóng tối trên nền trời sáng, dễ phát hiện nhất.
-2. Khung hình chỉ rộng hơn lỗ một chút. Mỗi con chim nên chiếm **ít nhất 15–20 px** mỗi chiều trong ảnh đưa vào model.
-3. Gắn chặt, không rung. Camera xê dịch là phải chỉnh lại ROI và vạch đếm.
-4. Không để đèn, vật đung đưa (dây, lá) trong khung hình.
-5. Vạch đếm đặt ở chỗ chim đã tách hàng, vuông góc với hướng bay.
+1. Đặt camera ở **lỗ ra vào thông ra ngoài trời**, không đặt ở lỗ thông tầng bên trong. Trong một phiên chim lượn lên xuống giữa các tầng nhiều lần, nên đếm ở lỗ thông tầng sẽ tính một con nhiều lần.
+2. Camera nằm **bên trong nhà yến, lệch sang một bên, nhìn chéo vào lỗ** (khoảng 30–60° so với hướng chim bay qua lỗ). Phía lỗ, chim hiện thành bóng tối trên nền trời sáng nên dễ phát hiện nhất. Không nhìn dọc theo hướng bay: khi đó chim chỉ to dần hoặc nhỏ dần ở giữa hình, không cắt qua vạch đếm nào. Khung hình phải có cả phía ngoài (lỗ) lẫn một khoảng phía trong, để tracker thấy chim vài khung trước và sau khi qua vạch.
+3. Khung hình chỉ rộng hơn vùng lỗ và vùng chim tỏa ra một chút. Mỗi con chim nên chiếm **ít nhất 15–20 px** mỗi chiều trong ảnh đưa vào model.
+4. Gắn chặt, không rung. Camera xê dịch là phải chỉnh lại ROI và vạch đếm.
+5. Không để đèn, loa treo, vật đung đưa (dây, lá) trong khung hình.
+6. Vạch đếm đặt sát miệng lỗ, ở chỗ chim đã tách hàng, vuông góc với hướng bay. Nếu clip thật cho thấy chim không cắt vạch rõ ràng, phương án dự phòng là đếm theo vùng: coi miệng lỗ là một vùng; track xuất hiện từ vùng đó là vào, track đi vào vùng đó rồi mất là ra. Phương án này chưa có trong code ở mục 6.4.
+
+Vị trí đã lắp thực tế ở nhà yến thử nghiệm: mục 19.7.
 
 ### 3.4. Kiểm tra camera trước khi làm tiếp
 
@@ -2876,3 +2879,42 @@ Cổng 3a, 5, 6 làm ngay ngày lắp mạng và các ngày đầu sau khi lắp
 - Mục 18.2, các cách A/B/C (thiết bị chuyển tiếp): chỉ còn là phương án lùi khi không dùng được IP public hoặc không chấp nhận mở cổng.
 - Mục 18.5, dòng "Dung lượng 4G": không còn.
 - Mục 15.7: ESP32 nối Wi-Fi của modem VNPT; phần TLS giữ nguyên.
+
+### 19.7. Kết quả lắp đặt ngày 20/10/2026
+
+Lắp camera và cấu hình modem tại nhà yến thử nghiệm, làm bằng điện thoại và laptop. Repo **không ghi** IP public của modem, mật khẩu camera hay tài khoản modem. Các giá trị đó để ngoài repo, giống địa chỉ RTSP ở mục 16.6.
+
+**Vị trí camera.** Nhà có phòng lượn ở tầng trên cùng. Lỗ ra vào nằm trên tường phòng lượn, có một ống dẫn ngắn; chim từ phòng lượn xuống các tầng làm tổ qua lỗ thông tầng. Camera VIGI C320I gắn trong phòng lượn, nhìn chéo vào miệng ống dẫn. Miệng lỗ nằm về phía phải khung hình, phần còn lại của khung là tường phòng lượn. Tường có rất nhiều vết phân đen, nên lúc gán nhãn cần nhiều ảnh âm của nền tường (mục 7.3). Chưa xem được chim bay qua với góc này, nên vạch đếm và ROI chốt sau khi có clip phiên chiều.
+
+**Modem VNPT.** Giao diện web tại `192.168.1.1` (menu Device / WAN / LAN / Wireless / Advance / Tools / Management). Model chưa ghi lại.
+
+| Hạng mục | Kết quả | Chỗ cài trong modem |
+|---|---|---|
+| WAN | Hai đường: `veip0.4000` (TR069, IPoE, IP `10.x`, là đường quản lý của VNPT, bỏ qua) và **`veip0.10` (Internet, PPPoE)** | Device → WAN Info |
+| IP public | **Có.** IPv4 của `veip0.10` trùng IP trên trang "What Is My IP" | Device → WAN Info |
+| IP tĩnh hay động | **Chưa biết.** PPPoE thường cấp IP động. Kiểm tra bằng cách rút điện modem rồi so WAN IP; nếu đổi thì cài DDNS (mục 19.4 bước 2) | — |
+| DHCP | Dải `192.168.1.2`–`192.168.1.254`, thời hạn 24 giờ. Giữ nguyên | LAN → IPv4 → IPv4 Setup |
+| IP cố định cho camera | MAC `5c:62:8b:5c:d1:b9` → **`192.168.1.163`**. Đã thêm; xác nhận lại sau lần rút điện thử | LAN → IPv4 → Static IP lease |
+| Mở cổng | `cam-rtsp`: cổng ngoài **18554**, TCP → `192.168.1.163:554`, WAN `veip0.10`. Không dùng DMZ Host | Advance → NAT Forwarding → Virtual Servers Setup |
+| Lọc IP nguồn | Màn hình Virtual Servers **không có** ô IP nguồn. Cổng đang mở cho mọi nơi, chỉ mật khẩu camera bảo vệ. Còn phải xem mục Advance → Security khi có IP của VPS | — |
+
+**Camera.** Cài theo bảng ở mục 19.3: luồng chính 1920×1080, 25 fps, CBR 2048 Kbps, H.264; 50 Hz; các mục Phát hiện tắt. App báo "Không có thiết bị lưu trữ nội bộ": camera chưa có thẻ microSD, nên chưa có bản ghi dự phòng cho cổng 4.
+
+**Đã kiểm tra:**
+
+| Kiểm tra | Cách làm | Kết quả |
+|---|---|---|
+| RTSP trong LAN (cổng 3a) | App VIGI và VLC qua Wi-Fi modem | Đạt |
+| Cổng mở từ ngoài Internet | Laptop dùng điểm phát 4G của điện thoại (IP nguồn `172.20.10.x`, không đi qua modem), chạy `Test-NetConnection <WAN IP> -Port 18554` | `TcpTestSucceeded : True` |
+| Xem hình từ ngoài Internet | Cũng laptop đó, VLC mở `rtsp://admin:<mật khẩu>@<WAN IP>:18554/stream1` | Có hình, xem liên tục khoảng 40 giây không giật |
+
+Kéo hình qua Internet đã chạy, nhưng mới thử ngắn. **Cổng 3b** (kéo liên tục 24 giờ, tự nối lại) chưa làm.
+
+**Còn lại:**
+
+- [ ] Rút điện modem và bộ PoE: camera lên lại đúng `192.168.1.163`, xem qua 4G vẫn được, ghi WAN IP có đổi không
+- [ ] IP động thì cài DDNS (mục 19.4)
+- [ ] Clip phiên chiều: hướng bay của chim sau khi qua lỗ, cỡ chim trong hình (cổng 5); chốt ROI và vạch đếm, hoặc chuyển sang đếm theo vùng (mục 3.3)
+- [ ] Đèn hồng ngoại lúc chạng vạng: hình có trắng xóa không, chim có né lỗ không (cổng 6)
+- [ ] Lắp thẻ microSD nếu camera có khe, bật ghi liên tục (cổng 4)
+- [ ] Có VPS: giới hạn cổng 18554 chỉ cho IP của VPS nếu modem hỗ trợ (cổng 3c), rồi cho MediaMTX kéo liên tục 24 giờ (cổng 3b)
