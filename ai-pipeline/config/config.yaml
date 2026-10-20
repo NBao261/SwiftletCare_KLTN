@@ -1,60 +1,50 @@
-﻿# SwiftletCare AI Pipeline Configuration
-# SRS: §9.2, §11.2, §11.3
+﻿# SwiftletCare AI pipeline — cấu hình dev (docs/bird-counting-plan.md mục 6.2).
+# Bí mật (RTSP URL có mật khẩu camera, MQTT, ID farm/house/zone/device) nằm trong .env, không ghi ở đây.
+# Chạy từ thư mục ai-pipeline: mọi đường dẫn tương đối tính từ đó.
 
 camera:
-  rtsp_url: "rtsp://admin:password@192.168.1.64:554/stream1"
-  target_fps: 30
-  resolution: [2560, 1440]   # 2K
+  source: "clips/sample.mp4"                # bị --source hoặc CAMERA_RTSP_URL trong .env ghi đè
+  fps: 25                                   # phải bằng tốc độ thật của luồng: VIGI C320I đặt 25 fps (plan 19.3). ByteTrack dùng số này
+  # TẠM, CHƯA CHỐT: cả khung hình. Chốt quanh miệng lỗ sau khi có clip phiên chiều (plan 19.7).
+  roi: [0.0, 0.0, 1.0, 1.0]                 # x1,y1,x2,y2 theo tỉ lệ khung hình
 
 model:
-  path: "models/swiftletcare_v1.onnx"
-  input_size: 640            # YOLO input resolution
-  confidence_threshold: 0.5
-  nms_iou_threshold: 0.45
+  path: "models/yolo26n.onnx"               # đổi thành models/swiftlet_v1.onnx sau GĐ2
+  version: "yolo26n-coco"                   # gửi lên backend làm firmwareVersion trong heartbeat
+  input_size: 640                           # phải bằng imgsz lúc export; hạ 480/416 nếu thiếu FPS (plan 18.4)
+  confidence_threshold: 0.30                # hạ nếu sót nhiều, tăng nếu bắt nhầm (plan 6.8)
+  nms_iou_threshold: 0.45                   # chỉ dùng với đầu ra kiểu YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
+  providers: ["CPUExecutionProvider"]       # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
   classes:
-    0: swiftlet
-    1: rat
-    2: snake
-    3: owl
-  predator_classes: [1, 2, 3]
-  predator_confidence_min: 0.70    # THREAT-FR-001
+    14: swiftlet                            # COCO bird. Model tự train: đổi thành  0: swiftlet
 
 tracking:
-  algorithm: bytetrack           # primary (§11.3)
-  track_confirmation_frames: 3   # min frames to confirm (THREAT-FR-003)
-  max_active_tracks: 50
-  counting_line_y_ratio: 0.5     # vertical position of counting line (0.0-1.0)
-
-mqtt:
-  broker: "localhost"
-  port: 8883                     # TLS (SEC-NFR-001)
-  username: "rpi-node-01"
-  password: ""                   # loaded from env
-  tls_ca_cert: "config/ca.crt"
-  farm_id: ""                    # loaded from env
-  house_id: ""
-  zone_id: ""
-  publish_interval_sec: 30       # VISION-FR-006
+  # TẠM, CHƯA CHỐT: chốt cùng ROI. Vạch cắt ngang đường bay, sát miệng lỗ (plan 3.3).
+  line: [0.20, 0.45, 0.85, 0.45]            # 2 điểm của vạch đếm, theo tỉ lệ khung hình
+  in_is_entry: true                         # chim bay ra mà số VAO tăng thì đổi thành false
+  box_pad: 2.5                              # nới box trước khi track (chim nhỏ bay nhanh); camera 20 fps thì 3.0 (plan 19.3)
+  lost_track_buffer: 15                     # số frame giữ dấu một con đã mất
+  minimum_matching_threshold: 0.8
 
 sessions:
-  morning_exit:
-    start: "05:30"
-    end:   "07:00"
-  evening_entry:
-    start: "17:30"
-    end:   "19:00"
+  # Giờ Việt Nam cố định UTC+7 (không đổi giờ mùa hè), không dùng giờ máy: VPS thường chạy UTC.
+  utc_offset_hours: 7
+  windows:                                  # giờ chim bay đổi theo mùa: xem lại bằng biểu đồ số đếm 5 phút
+    MORNING_EXIT:  ["05:30", "07:00"]
+    EVENING_ENTRY: ["17:30", "19:00"]
 
-storage:
-  minio_endpoint: "localhost:9000"
-  minio_bucket: "swiftletcare-snapshots"
-  snapshot_dir: "/tmp/snapshots"
+mqtt:
+  broker: "localhost"                       # cloud: tên miền của VPS; trong Docker trên VPS: emqx
+  port: 1883                                # cloud: 8883
+  tls: false                                # cloud: true
+  publish_interval_sec: 30                  # số đếm của phiên + heartbeat (VISION-FR-006); backend coi im 90 giây là mất kết nối
+  bucket_minutes: 5                         # số đếm theo khoảng, gửi cả ngoài phiên (VISION-FR-017)
 
-alerts:
-  predator_temporal_filter_frames: 2   # THREAT-FR-003
-  return_rate_drop_threshold: 0.20     # 20% drop triggers alert (VISION-FR-011)
-  return_rate_window_days: 7
+stream:                                     # MJPEG để hiệu chỉnh ROI/vạch đếm; chỉ nén ảnh khi có người đang xem
+  host: "127.0.0.1"                         # chỉ máy này xem được; người xem từ xa đi qua MediaMTX
+  port: 8090
+  jpeg_quality: 70
 
 logging:
-  level: INFO
   file: "logs/pipeline.log"
   rotation: "10 MB"

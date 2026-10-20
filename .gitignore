@@ -33,7 +33,10 @@ __pycache__/
 .pytest_cache/
 venv/
 .venv/
-ai-pipeline/models/*.onnx
+ai-pipeline/models/
+ai-pipeline/clips/
+ai-pipeline/dataset/
+ai-pipeline/state.json
 
 # PlatformIO
 firmware/.pio/

@@ -1,122 +1,86 @@
-﻿"""
-SwiftletCare - YOLOv8 ONNX Inference Engine
-Raspberry Pi 4 optimized for >= 25 FPS (PERF-NFR-004)
+﻿"""SwiftletCare – suy luận YOLO bằng ONNX Runtime (VISION-FR-001..003).
 
-SRS: VISION-FR-001, VISION-FR-002, VISION-FR-003
+Đọc được hai kiểu đầu ra, nhận theo shape (plan mục 6.3), nên đổi model để so sánh (plan 7.9)
+chỉ cần sửa model.path trong config:
+- YOLO26n export nms=False: (1, 300, 6), mỗi dòng [x1, y1, x2, y2, confidence, class_id], không cần NMS.
+- YOLOv8n/YOLO11n:          (1, 4 + số class, 8400), mỗi cột [cx, cy, w, h, điểm từng class], phải chạy NMS.
 """
+import time
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Sequence, Tuple
+
 import cv2
 import numpy as np
 import onnxruntime as ort
-import time
-from typing import List, Tuple
 from loguru import logger
 
 
+@dataclass
 class Detection:
-    """Single object detection result."""
-    def __init__(self, class_id: int, class_name: str, confidence: float, bbox: Tuple[int, int, int, int]):
-        self.class_id   = class_id
-        self.class_name = class_name
-        self.confidence = confidence
-        self.bbox       = bbox  # (x1, y1, x2, y2)
+    class_id: int
+    class_name: str
+    confidence: float
+    bbox: Tuple[int, int, int, int]  # x1, y1, x2, y2 theo tọa độ ảnh đưa vào infer()
 
-    def __repr__(self):
-        return f"Detection({self.class_name}, conf={self.confidence:.2f}, bbox={self.bbox})"
+
+def decode(output: np.ndarray, class_names: Dict[int, str], conf_thresh: float, iou_thresh: float,
+           scale: float, pad_x: int, pad_y: int) -> List[Detection]:
+    """Đầu ra thô của model → Detection theo tọa độ ảnh gốc (đã bỏ viền letterbox)."""
+    out = output[0]
+    end2end = out.shape[1] == 6
+    if end2end:
+        xyxy, conf, cls = out[:, :4], out[:, 4], out[:, 5].astype(int)
+    else:
+        out = out.T
+        cls = out[:, 4:].argmax(axis=1)
+        conf = out[np.arange(len(out)), 4 + cls]
+        cx, cy, w, h = out[:, 0], out[:, 1], out[:, 2], out[:, 3]
+        xyxy = np.stack([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], axis=1)
+
+    keep = (conf >= conf_thresh) & np.isin(cls, list(class_names))
+    xyxy, conf, cls = xyxy[keep], conf[keep], cls[keep]
+    if not end2end and len(xyxy):
+        xywh = np.concatenate([xyxy[:, :2], xyxy[:, 2:] - xyxy[:, :2]], axis=1)  # NMSBoxes nhận x, y, w, h
+        idx = np.array(cv2.dnn.NMSBoxes(xywh.tolist(), conf.tolist(), conf_thresh, iou_thresh), dtype=int).reshape(-1)
+        xyxy, conf, cls = xyxy[idx], conf[idx], cls[idx]
+
+    xyxy = (xyxy - [pad_x, pad_y, pad_x, pad_y]) / scale
+    return [Detection(int(c), class_names[int(c)], float(p), tuple(int(v) for v in b))
+            for b, p, c in zip(xyxy, conf, cls)]
 
 
 class InferenceEngine:
-    """
-    ONNX Runtime inference engine for YOLOv8.
-    Targets >= 25 FPS on Raspberry Pi 4 (PERF-NFR-004).
-    """
+    def __init__(self, model_path: str, input_size: int = 640, conf_threshold: float = 0.3,
+                 iou_threshold: float = 0.45, class_names: Optional[Dict[int, str]] = None,
+                 providers: Optional[Sequence[str]] = None):
+        self.input_size = input_size
+        self.conf_thresh = conf_threshold
+        self.iou_thresh = iou_threshold
+        self.class_names = {int(k): v for k, v in (class_names or {0: "swiftlet"}).items()}
 
-    CLASS_NAMES = {0: "swiftlet", 1: "rat", 2: "snake", 3: "owl"}
-    PREDATOR_IDS = {1, 2, 3}
+        opts = ort.SessionOptions()
+        # Không đặt intra_op_num_threads: mặc định ORT dùng số nhân thật. Đặt bằng os.cpu_count() (luồng logic,
+        # gấp đôi số nhân khi có SMT) làm suy luận chậm gấp đôi (đo 20/10/2026: 45 ms so với 21 ms, Ryzen 7 6800H)
+        opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        self.session = ort.InferenceSession(model_path, opts, providers=list(providers or ["CPUExecutionProvider"]))
+        self.input_name = self.session.get_inputs()[0].name
+        logger.info(f"Model: {model_path} | providers: {self.session.get_providers()}")
 
-    def __init__(self, model_path: str, input_size: int = 640,
-                 conf_threshold: float = 0.5, iou_threshold: float = 0.45):
-        self.input_size    = input_size
-        self.conf_thresh   = conf_threshold
-        self.iou_thresh    = iou_threshold
-
-        # Load ONNX model (INT8 quantized for RPi speed)
-        providers = ["CPUExecutionProvider"]
-        sess_opts = ort.SessionOptions()
-        sess_opts.intra_op_num_threads = 4   # Use all 4 RPi cores
-        sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-
-        self.session = ort.InferenceSession(model_path, sess_opts, providers=providers)
-        self.input_name  = self.session.get_inputs()[0].name
-        self.output_name = self.session.get_outputs()[0].name
-
-        logger.info(f"Model loaded: {model_path}")
-
-    def preprocess(self, frame: np.ndarray) -> Tuple[np.ndarray, float, float, int, int]:
-        """Resize + normalize frame for YOLO input."""
-        orig_h, orig_w = frame.shape[:2]
-        scale = min(self.input_size / orig_w, self.input_size / orig_h)
-        new_w, new_h = int(orig_w * scale), int(orig_h * scale)
-
-        resized = cv2.resize(frame, (new_w, new_h))
-        padded  = np.full((self.input_size, self.input_size, 3), 114, dtype=np.uint8)
-        pad_x   = (self.input_size - new_w) // 2
-        pad_y   = (self.input_size - new_h) // 2
-        padded[pad_y:pad_y+new_h, pad_x:pad_x+new_w] = resized
-
-        blob = padded.astype(np.float32) / 255.0
-        blob = np.transpose(blob, (2, 0, 1))[np.newaxis]  # HWC -> NCHW
-
-        return blob, scale, scale, pad_x, pad_y
-
-    def postprocess(self, outputs: np.ndarray, scale_x: float, scale_y: float,
-                    pad_x: int, pad_y: int) -> List[Detection]:
-        """Apply NMS and convert to Detection objects."""
-        predictions = outputs[0]  # shape: (1, 84, num_anchors)
-        predictions = np.squeeze(predictions).T  # (num_anchors, 84)
-
-        boxes   = predictions[:, :4]
-        scores  = predictions[:, 4:]
-        class_ids = np.argmax(scores, axis=1)
-        confidences = scores[np.arange(len(scores)), class_ids]
-
-        # Filter by confidence threshold
-        mask = confidences >= self.conf_thresh
-        boxes, confidences, class_ids = boxes[mask], confidences[mask], class_ids[mask]
-
-        if len(boxes) == 0:
-            return []
-
-        # Convert cx,cy,w,h → x1,y1,x2,y2 and unscale to original coords
-        x1 = ((boxes[:, 0] - boxes[:, 2] / 2) - pad_x) / scale_x
-        y1 = ((boxes[:, 1] - boxes[:, 3] / 2) - pad_y) / scale_y
-        x2 = ((boxes[:, 0] + boxes[:, 2] / 2) - pad_x) / scale_x
-        y2 = ((boxes[:, 1] + boxes[:, 3] / 2) - pad_y) / scale_y
-        xyxy = np.stack([x1, y1, x2, y2], axis=1)
-
-        # NMS
-        indices = cv2.dnn.NMSBoxes(
-            xyxy.tolist(), confidences.tolist(),
-            self.conf_thresh, self.iou_thresh
-        )
-        if len(indices) == 0:
-            return []
-
-        detections = []
-        for i in indices.flatten():
-            bbox = tuple(map(int, xyxy[i]))
-            detections.append(Detection(
-                class_id   = int(class_ids[i]),
-                class_name = self.CLASS_NAMES.get(int(class_ids[i]), "unknown"),
-                confidence = float(confidences[i]),
-                bbox       = bbox,
-            ))
-        return detections
+    def preprocess(self, frame: np.ndarray) -> Tuple[np.ndarray, float, int, int]:
+        """Letterbox về input_size, BGR → RGB (model train bằng ảnh RGB), NCHW float 0–1."""
+        h, w = frame.shape[:2]
+        scale = min(self.input_size / w, self.input_size / h)
+        new_w, new_h = int(round(w * scale)), int(round(h * scale))
+        pad_x, pad_y = (self.input_size - new_w) // 2, (self.input_size - new_h) // 2
+        padded = np.full((self.input_size, self.input_size, 3), 114, dtype=np.uint8)
+        padded[pad_y:pad_y + new_h, pad_x:pad_x + new_w] = cv2.resize(frame, (new_w, new_h))
+        blob = padded[:, :, ::-1].transpose(2, 0, 1)[np.newaxis].astype(np.float32) / 255.0
+        return np.ascontiguousarray(blob), scale, pad_x, pad_y
 
     def infer(self, frame: np.ndarray) -> Tuple[List[Detection], float]:
-        """Run inference on one frame. Returns (detections, fps)."""
+        """Trả về (detections, thời gian suy luận tính bằng ms)."""
         t0 = time.perf_counter()
-        blob, sx, sy, px, py = self.preprocess(frame)
-        outputs = self.session.run([self.output_name], {self.input_name: blob})
-        detections = self.postprocess(outputs, sx, sy, px, py)
-        fps = 1.0 / (time.perf_counter() - t0)
-        return detections, fps
+        blob, scale, pad_x, pad_y = self.preprocess(frame)
+        output = self.session.run(None, {self.input_name: blob})[0]
+        dets = decode(output, self.class_names, self.conf_thresh, self.iou_thresh, scale, pad_x, pad_y)
+        return dets, (time.perf_counter() - t0) * 1000

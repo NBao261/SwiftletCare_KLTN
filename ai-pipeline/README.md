@@ -1,40 +1,88 @@
 # SwiftletCare AI Pipeline (đếm chim yến)
 
-Python + OpenCV + YOLO26n (ONNX Runtime) + ByteTrack. Nhận RTSP từ camera IP tại cửa chim ra vào, đếm chim ra/vào qua vạch ảo, publish số đếm qua MQTT và phát video đã vẽ khung. Xem `SwiftletCare_SRS.md` §5.4 (Module VISION), §11 và kế hoạch chi tiết ở `docs/bird-counting-plan.md`.
+Python + OpenCV + YOLO26n (ONNX Runtime) + ByteTrack (`supervision`). Nhận RTSP từ camera IP tại cửa chim ra vào, đếm chim ra/vào qua vạch ảo, publish số đếm qua MQTT và phát hình đã vẽ khung. Yêu cầu: `SwiftletCare_SRS.md` §5.4 (Module VISION); kế hoạch chi tiết: `docs/bird-counting-plan.md`.
 
-> **Phạm vi v2.0.0 (sau Review 1):** chỉ còn **1 class `swiftlet`** — phát hiện thiên địch (rat/snake/owl) đã bị bỏ. Nút AI là **PC tại nhà yến hoặc máy chủ cloud**, không dùng Raspberry Pi. Live stream có vẽ khung và báo cáo độ chính xác đếm (VISION-FR-014/016) là bắt buộc.
+> **Phạm vi v2.0.0:** chỉ **1 class `swiftlet`** (đã bỏ phát hiện thiên địch). Nút AI là máy chủ cloud (hoặc PC tại nhà yến ở phương án lùi), không dùng Raspberry Pi.
 
-## Chạy local
+## Cài đặt
 
-```bash
+```powershell
 cd ai-pipeline
-python -m venv .venv && source .venv/bin/activate   # hoặc .venv\Scripts\activate trên Windows
+py -3.12 -m venv .venv              # Python 3.11–3.12
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python src/stream.py --config config/config.yaml
+copy .env.example .env              # điền CAMERA_RTSP_URL, CAMERA_DEVICE_ID, FARM_ID/HOUSE_ID/ZONE_ID
 ```
+
+Model không nằm trong repo. Chưa có model tự train thì export YOLO26n pretrained (COCO, class `bird` = 14) một lần trên Colab hoặc một venv riêng có `ultralytics==8.4.170`, rồi đặt file vào `models/yolo26n.onnx` (plan 6.1):
+
+```python
+from ultralytics import YOLO
+YOLO("yolo26n.pt").export(format="onnx", imgsz=640, nms=False, simplify=True)
+```
+
+## Chạy
+
+Mọi lệnh chạy trong thư mục `ai-pipeline`.
+
+```powershell
+# Ghi clip từ camera để train và đo sai số (plan 7.1, 16.6) — 90 phút, vào clips/
+powershell -ExecutionPolicy Bypass -File tools/record_session.ps1
+
+# Chạy trên clip, không gửi MQTT; xem ô xanh ở http://127.0.0.1:8090/stream
+python src/stream.py --source clips/20261020_evening_01.mp4 --session EVENING_ENTRY --no-mqtt
+
+# Chạy với camera thật (CAMERA_RTSP_URL trong .env) và gửi số đếm về backend
+python src/stream.py
+
+pytest
+```
+
+| Cờ | Tác dụng |
+|---|---|
+| `--source` | File clip hoặc `rtsp://…`; mặc định lấy `CAMERA_RTSP_URL` trong `.env`, rồi `camera.source` trong config |
+| `--session MORNING_EXIT\|EVENING_ENTRY` | Ép phiên khi chạy trên clip; chạy thật thì phiên tính theo giờ Việt Nam (`sessions` trong config) |
+| `--realtime` | Phát file đúng tốc độ thật (camera demo, plan 15.8) |
+| `--no-mqtt` | Không gửi gì lên broker |
+| `--config` | File cấu hình khác (`config/config.yaml` mặc định) |
+
+Clip nặng khoảng 0,9 GB/giờ. Ổ chứa repo đầy thì để `clips/` ở ổ khác bằng junction (mọi lệnh vẫn dùng `clips/...`):
+
+```powershell
+New-Item -ItemType Directory -Force D:\SwiftletCare\clips
+Move-Item clips\* D:\SwiftletCare\clips\       # khi không có ffmpeg nào đang ghi
+Remove-Item clips; New-Item -ItemType Junction -Path clips -Target D:\SwiftletCare\clips
+```
+
+Hiệu chỉnh ROI, vạch đếm và chiều đếm bằng cách sửa `config/config.yaml` rồi chạy lại, xem hình ở `/stream` (`/stream?boxes=0` là hình gốc) — trình tự ở plan 6.8. **ROI và vạch đếm hiện là giá trị tạm**, chốt sau khi có clip phiên chiều (plan 19.7).
 
 ## Cấu trúc
 
 ```
-config/config.yaml   RTSP URL, model path, ngưỡng confidence, MQTT broker
-models/               Model ONNX/NCNN quantized (không commit file .onnx lớn — dùng Git LFS/release asset)
+config/config.yaml     camera, model, tracking, phiên, MQTT, MJPEG, log (không chứa bí mật)
+.env                   RTSP URL, MQTT, ID farm/house/zone/device — không commit (.env.example là mẫu)
+models/  clips/        không commit
 src/
-  stream.py           Nhận RTSP, vòng lặp chính
-  inference.py         YOLO inference (1 class: swiftlet)
-  tracker.py            ByteTrack — tránh đếm trùng qua các frame
-  counting.py            Logic line-crossing → entry/exit (VISION-FR-005)
-  alert_publisher.py     Publish MQTT vision/bird-count (§9.2); vision/alert không còn dùng cho thiên địch
-tests/                Unit test cho counting/tracker
+  stream.py            vòng lặp chính: đọc frame mới nhất → suy luận → ByteTrack → đếm → MJPEG + MQTT
+  inference.py         ONNX Runtime; đọc cả đầu ra YOLO26n (nms=False) lẫn YOLOv8n/YOLO11n (có NMS)
+  counting.py          LineCounter (sv.LineZone), phiên theo giờ, cắt khoảng 5 phút
+  mjpeg_server.py      xem trước MJPEG chỉ cho máy này (127.0.0.1), nén ảnh khi có người xem
+tools/record_session.ps1  ghi clip RTSP theo lịch
+tests/                 pytest, không cần camera/model/broker
 ```
 
-## MQTT Topics (§9.2)
+## MQTT
 
-```
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/alert
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/heartbeat
-```
+Topic dưới `swiftletcare/{farmId}/{houseId}/{zoneId}/`, payload theo `BirdCountPayload` của backend:
+
+| Topic | Khi nào | Payload |
+|---|---|---|
+| `vision/bird-count` | 30 giây/lần trong phiên, và khi hết phiên (`final: true`) | `{deviceId, session_type, entry_count, exit_count, confidence_avg, final, timestamp}` |
+| `vision/bird-count` | Hết mỗi khoảng 5 phút, cả ngoài phiên (chỉ khi chạy với camera) | `{deviceId, kind: "BUCKET", bucket_start, bucket_minutes, entry_count, exit_count, timestamp}` |
+| `heartbeat` | 30 giây/lần khi còn nhận được hình | `{deviceId, firmwareVersion}` (= `model.version`) |
+
+Pipeline gửi số thô; backend tự tính tỷ lệ chim về trên số ròng. Mất hình thì ngừng heartbeat, backend báo `EDGE_AI_DEGRADED` sau 90 giây.
 
 ## Trạng thái
 
-Scaffold module (`src/*.py`), chưa có model và chưa chạy thật — implement theo `docs/bird-counting-plan.md`. Tiến trình phải tự khởi động lại khi crash (REL-NFR-004).
+Pipeline chạy được trên clip và RTSP với model tạm YOLO26n COCO; **chưa có model tự train** (GĐ2), chưa đẩy video lên MediaMTX (plan 15.6) và chưa có Dockerfile cho VPS (plan 18.3). Tiến trình tự nối lại khi rớt camera hoặc broker; khi chạy thật phải có trình giám sát khởi động lại lúc crash (REL-NFR-004).
