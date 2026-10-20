@@ -122,35 +122,42 @@ describe('ingestBirdCount — tin của phiên (VISION-FR-006/008/009)', () => {
 })
 
 describe('số đếm 5 phút (VISION-FR-017)', () => {
-  const bucket = (deviceId: string, at: string, entry_count: number, exit_count: number): BirdCountPayload =>
-    ({ deviceId, kind: 'BUCKET', bucket_start: new Date(at).getTime(), bucket_minutes: 5, entry_count, exit_count })
+  // Mốc tương đối với hiện tại: bird_count_buckets có TTL 90 ngày, ngày cố định sẽ quá hạn ngay khi ghi
+  const FIVE_MIN = 5 * 60_000
+  const t0 = Math.floor((Date.now() - 3600_000) / FIVE_MIN) * FIVE_MIN
+  const iso = (ms: number) => new Date(ms).toISOString()
+  const bucket = (deviceId: string, at: number, entry_count: number, exit_count: number): BirdCountPayload =>
+    ({ deviceId, kind: 'BUCKET', bucket_start: at, bucket_minutes: 5, entry_count, exit_count })
 
   it('upsert theo bucket_start, không tạo bản ghi phiên', async () => {
     const { camera } = await seed()
-    await ingestBirdCount(bucket(camera.device_id, '2026-10-15T10:00:00Z', 3, 1))
-    await ingestBirdCount(bucket(camera.device_id, '2026-10-15T10:00:00Z', 4, 2))
+    await ingestBirdCount(bucket(camera.device_id, t0, 3, 1))
+    await ingestBirdCount(bucket(camera.device_id, t0, 4, 2))
     expect(await BirdCountBucket.find().lean()).toEqual([expect.objectContaining({ entry_count: 4, exit_count: 2 })])
     expect(await BirdCountRecord.countDocuments()).toBe(0)
-    await expect(ingestBirdCount({ ...bucket(camera.device_id, '2026-10-15T10:00:00Z', 1, 1), bucket_start: undefined })).rejects.toThrow()
+    await expect(ingestBirdCount({ ...bucket(camera.device_id, t0, 1, 1), bucket_start: undefined })).rejects.toThrow()
   })
 
   it('/buckets cộng các camera của Zone; khoảng quá 7 ngày → 400; farm khác → 403', async () => {
     const { camera, zone, token } = await seed()
     const second = await CameraNode.create({ device_id: `cam-${seq}-b`, zone_id: zone._id })
-    await ingestBirdCount(bucket(camera.device_id, '2026-10-15T10:00:00Z', 3, 1))
-    await ingestBirdCount(bucket(second.device_id, '2026-10-15T10:00:00Z', 2, 2))
-    await ingestBirdCount(bucket(camera.device_id, '2026-10-15T10:05:00Z', 1, 0))
+    await ingestBirdCount(bucket(camera.device_id, t0, 3, 1))
+    await ingestBirdCount(bucket(second.device_id, t0, 2, 2))
+    await ingestBirdCount(bucket(camera.device_id, t0 + FIVE_MIN, 1, 0))
 
     const get = (t: string, q: object) => request(app).get('/analytics/bird-count/buckets').query({ zoneId: String(zone._id), ...q }).set('Authorization', `Bearer ${t}`)
-    const res = await get(token, { from: '2026-10-15T09:00:00Z', to: '2026-10-15T11:00:00Z' }).expect(200)
+    const window = { from: iso(t0 - 3600_000), to: iso(t0 + 3600_000) }
+    const res = await get(token, window).expect(200)
     expect(res.body.data.buckets).toEqual([
-      { bucket_start: '2026-10-15T10:00:00.000Z', entry_count: 5, exit_count: 3 },
-      { bucket_start: '2026-10-15T10:05:00.000Z', entry_count: 1, exit_count: 0 },
+      { bucket_start: iso(t0), entry_count: 5, exit_count: 3 },
+      { bucket_start: iso(t0 + FIVE_MIN), entry_count: 1, exit_count: 0 },
     ])
+    // Không truyền from/to → mặc định 24 giờ gần nhất, vẫn thấy 2 khoảng vừa ghi
+    expect((await get(token, {}).expect(200)).body.data.buckets).toHaveLength(2)
 
-    await get(token, { from: '2026-10-01T00:00:00Z', to: '2026-10-15T00:00:00Z' }).expect(400)
+    await get(token, { from: iso(t0 - 14 * 86_400_000), to: iso(t0) }).expect(400)
     const stranger = await seed()
-    await get(stranger.token, { from: '2026-10-15T09:00:00Z', to: '2026-10-15T11:00:00Z' }).expect(403)
+    await get(stranger.token, window).expect(403)
   })
 })
 
