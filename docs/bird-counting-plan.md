@@ -1283,7 +1283,7 @@ Chỉ model được chọn mới đi tiếp vào GĐ5 (chạy 24 giờ, mục 1
 
 Thời gian: 2 ngày. Tuân theo quy tắc Route → Controller → Service → Model của module `backend/`.
 
-> **Trạng thái (SRS v2.1.6):** §8.1–8.5 và §8.7 **đã làm** (`backend/src/services/birdCount.service.ts`, `jobs/returnRate.job.ts`, `tests/integration/birdCount.test.ts`); **§8.6 (stream token/MediaMTX) chưa làm**. Chỗ code thật khác code mẫu dưới đây:
+> **Trạng thái (SRS v2.1.6):** §8.1–8.5 và §8.7 **đã làm** (`backend/src/services/birdCount.service.ts`, `jobs/returnRate.job.ts`, `tests/integration/birdCount.test.ts`); **§8.6 đã làm ở SRS v2.1.7** (`stream.service.ts`, `routes/internal.route.ts`, `tests/integration/streamAuth.test.ts`, MediaMTX 1.21.1 trong `docker-compose.yml` + `deploy/mediamtx.yml`), khác code mẫu ở chỗ: token người xem nhận qua header Bearer (trường `token`), `?token=` hoặc ô mật khẩu, không chỉ `query`; pipeline đọc hình gốc bằng mật khẩu dịch vụ (§18.3) nhưng token người xem không đọc được đường `-raw`; `device_id` kết thúc bằng `-raw` không được cấp token. Chỗ code thật khác code mẫu của §8.1–8.5:
 > - `checkReturnRateDrops` còn **đóng** `LOW_RETURN_RATE` đang mở khi tỷ lệ đã hồi lại; không có bước này thì dedup nuốt mọi lần giảm của những ngày sau. `LOW_RETURN_RATE` thành loại chỉ backend được tạo (thiết bị gửi lên bị từ chối).
 > - `/daily` và `/correlation` gom theo `session_date` (ngày giờ VN), không gom theo ngày UTC của `timestamp`: phiên sáng 05:30 VN là 22:30 UTC hôm trước.
 > - Nút AI mất heartbeat quá 90 giây sinh `EDGE_AI_DEGRADED` (THREAT-FR-010), không phải `NODE_OFFLINE`; `vision/alert` của camera chỉ nhận `EDGE_AI_DEGRADED`.
