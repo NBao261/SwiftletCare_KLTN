@@ -10,7 +10,7 @@ SwiftletCare — IoT monitoring + automation system for swiftlet (yến) houses 
 - `backend/` — Node.js + Express + TypeScript + MongoDB + MQTT (EMQX) + Socket.io. → `backend/CLAUDE.md`
 - `frontend/` — React 18 + Vite + TailwindCSS web dashboard/PWA. → `frontend/CLAUDE.md`, rules in `frontend/FE_Design_Claude.md`
 - `mobile/` — Expo (Router, file-based routes) + React Native app, talks to the same backend API. → "Mobile" below
-- `ai-pipeline/` — YOLO26n (ONNX Runtime) + ByteTrack bird counting on a PC/cloud AI node (plan in `docs/bird-counting-plan.md`). **Scaffold only, not implemented/deployed**; no `models/` folder, ONNX weights are never committed. → "AI pipeline" below
+- `ai-pipeline/` — YOLO26n (ONNX Runtime) + ByteTrack bird counting on a PC/cloud AI node (plan in `docs/bird-counting-plan.md`). **Counting pipeline runs on clips and the real camera with a temporary COCO model; not deployed**, no self-trained model yet; ONNX weights are never committed. → "AI pipeline" below
 - `docs/` — `docs/api/api-spec.yaml` is the OpenAPI 3.0 **source of truth** for the API contract; the backend reads it at boot and serves Swagger UI at `/api-docs`. Routes are unprefixed (no `/api/v1`, despite what the SRS narrative implies).
 
 **`SwiftletCare_SRS.md` §5, column "Trạng thái Backend"** is the single source of truth for per-requirement (FR) completion status — check it before assuming a feature is done.
@@ -68,7 +68,7 @@ Mobile (`mobile/`): Expo app pointing at `localhost:3000` by default (`constants
 
 Expo Router (file-based routing) under `mobile/app/`: `(auth)` group (login/register) and `(tabs)` group (dashboard/alerts/analytics/farms/tickets/settings), plus detail routes `farm/[farmId]`, `zone/[zoneId]`, `device/[deviceId]`, `alert/[alertId]`, `ticket/[ticketId]`, `livestream/[zoneId]`. Supporting code in `config/`, `constants/`, `hooks/`, `services/`, `store/`, `types/`, `utils/` (no `components/` folder yet). Talks to the **same backend**, unprefixed routes (`constants/api.ts`'s `ENDPOINTS` map follows `docs/api/api-spec.yaml`). React Query + Zustand + axios + socket.io-client, same overall pattern as the web frontend; storage via `react-native-mmkv`, charts via `victory-native`. Most screens are stubs. Still on the v1.24.0 scope: no `DOMAIN_EXPERT`, `BIRD_PANIC` labels, Zalo/SMS options, no FCM registration (SRS §0.5 Mobile) — only remove or replace these, never extend them.
 
-## AI pipeline (`ai-pipeline/`) — scaffold, not deployed
+## AI pipeline (`ai-pipeline/`) — not deployed
 
 `src/stream.py` (RTSP loop) → `inference.py` (YOLO via ONNX Runtime; today decodes YOLOv8 output only, plan §6.3 reads both YOLOv8n/YOLO11n and YOLO26n NMS-free output so §7.9 can compare them) → `tracker.py` (ByteTrack) → `counting.py` (line-crossing entry/exit) → `alert_publisher.py` (MQTT). The backend subscribes to `vision/bird-count`, but `backend/src/mqtt/handlers/birdCount.handler.ts` is still a stub that only logs (plan §8 adds `birdCount.service.ts`). `config/config.yaml` covers the RTSP source, model thresholds, MQTT (TLS 8883), MinIO snapshot upload and morning/evening session windows. It still lists 4 classes (swiftlet/rat/snake/owl) with predator settings — SRS v2 keeps only `swiftlet`, so the predator parts may only be removed, never extended.
 
@@ -78,7 +78,7 @@ Backend and firmware match SRS v2 (§0.5 backend/firmware lists are done except 
 
 ## Conventions
 
-- Commit messages follow Conventional Commits with a project-specific `type`/`scope` enum enforced by commitlint (`.commitlintrc.json`). CI (`.github/workflows/ci.yml`) validates them via `wagoid/commitlint-github-action`, runs a gitleaks secret scan, and — only for the modules a PR touches (`dorny/paths-filter`) — runs **backend** `npm run lint` · `build:check` · `npm test` (integration tests use `mongodb-memory-server`), **frontend** `npm run lint` · `tsc --noEmit` · `vitest run` · `npm run build`, **firmware** `pio test -e native`, **mobile** `npm run lint` · `typecheck` · `jest --passWithNoTests`. ai-pipeline has no CI job yet. Run the same commands locally before pushing.
+- Commit messages follow Conventional Commits with a project-specific `type`/`scope` enum enforced by commitlint (`.commitlintrc.json`). CI (`.github/workflows/ci.yml`) validates them via `wagoid/commitlint-github-action`, runs a gitleaks secret scan, and — only for the modules a PR touches (`dorny/paths-filter`) — runs **backend** `npm run lint` · `build:check` · `npm test` (integration tests use `mongodb-memory-server`), **frontend** `npm run lint` · `tsc --noEmit` · `vitest run` · `npm run build`, **firmware** `pio test -e native`, **mobile** `npm run lint` · `typecheck` · `jest --passWithNoTests`, **ai-pipeline** `pytest`. Run the same commands locally before pushing.
 - Tests are written by whoever builds the feature, in the same PR — not left for someone else later. How much is required is set per module (backend: [Bắt buộc] for new or changed service logic; frontend and mobile: [Nên] for pure logic; firmware: [Bắt buộc] for control/filter/detection logic).
 - Both `backend` and `frontend` use the `@/*` → `src/*` path alias.
 
