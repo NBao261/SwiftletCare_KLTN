@@ -68,7 +68,9 @@ tags:
   - name: Farms
     description: FARM-FR-001..002/007, AUTH-FR-005/010 (farm/house/zone/member/invitation)
   - name: Devices
-    description: FARM-FR-003..007, ENV-FR-006/015..018 (sensor/camera node, relay control)
+    description: FARM-FR-003..007, ENV-FR-006/015..018, VISION-FR-013 (sensor/camera node, relay control, token xem live stream)
+  - name: Internal
+    description: Dịch vụ nội bộ gọi backend (MediaMTX hỏi quyền stream) — không mở ra Internet
   - name: Telemetry
     description: ENV-FR-001..005
   - name: Alerts
@@ -2579,6 +2581,70 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/camera-nodes/{id}/stream-token:
+    get:
+      tags: [Devices]
+      summary: "Token xem live stream của 1 camera (VISION-FR-013) — FARM_OWNER/DOMAIN_EXPERT của farm chứa camera"
+      description: |
+        Video không đi qua backend: trình duyệt mở WebRTC (WHEP) tới MediaMTX ở đường `path`,
+        gửi `token` trong header `Authorization: Bearer <token>` (hoặc `?token=`). MediaMTX hỏi
+        `POST /internal/stream-auth`, token chỉ hợp lệ cho đúng `path` đó và hết hạn sau `expires_in`
+        giây (chỉ cần còn hạn lúc mở kết nối; kết nối lại thì xin token mới). Token này không dùng
+        được làm access token. Technician/Admin không xem live stream (SRS §4.4).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          path: { type: string, example: cam-cam-zone1-01, description: "cam-<device_id>" }
+                          token: { type: string }
+                          expires_in: { type: integer, example: 60 }
+        "400": { description: "device_id của camera không dùng được làm tên stream (ký tự lạ hoặc kết thúc bằng -raw)" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { description: "Máy chủ video chưa được cấu hình (STREAM_TOKEN_SECRET trống)" }
+
+  /internal/stream-auth:
+    post:
+      tags: [Internal]
+      summary: "MediaMTX hỏi quyền đẩy/xem stream (HTTP authentication của MediaMTX) — dịch vụ nội bộ"
+      description: |
+        Không dùng JWT người dùng; reverse proxy chặn `/internal` từ bên ngoài.
+        `publish` và đọc hình gốc `cam-<id>-raw`: chỉ với `password` = STREAM_PUBLISH_SECRET (pipeline).
+        `read` đường `cam-<id>`: token của `GET /devices/camera-nodes/{id}/stream-token`, lấy từ
+        `token` (header Bearer), `query` (`token=`) hoặc `password`. Hành động khác bị từ chối.
+        Trả 401 cả khi client RTSP hỏi lần đầu chưa kèm mật khẩu, để nó gửi lại kèm mật khẩu.
+      security: []
+      parameters:
+        - { name: key, in: query, required: true, schema: { type: string }, description: STREAM_AUTH_KEY }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [publish, read, playback, api, metrics, pprof] }
+                path: { type: string, example: cam-cam-zone1-01 }
+                user: { type: string }
+                password: { type: string }
+                token: { type: string }
+                query: { type: string }
+                protocol: { type: string }
+                ip: { type: string }
+                id: { type: string }
+      responses:
+        "200": { description: Được phép }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /devices/camera-nodes/{id}/restore:
     post:
