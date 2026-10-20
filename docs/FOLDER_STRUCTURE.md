@@ -10,7 +10,7 @@ SwiftletCare_KLTN/
 ├── frontend/            # Web dashboard / PWA (React 18, Vite, TailwindCSS)
 ├── mobile/              # App di động (Expo Router, React Native)
 ├── firmware/            # ESP32 (PlatformIO): cảm biến RS485, điều khiển mờ, MQTT, loa ru
-├── ai-pipeline/         # Đếm chim yến (YOLOv8 ONNX + ByteTrack) — mới là khung
+├── ai-pipeline/         # Đếm chim yến (YOLO26n ONNX + ByteTrack) — mới là khung
 ├── docs/                # Tài liệu (xem mục "docs/")
 ├── .github/             # CI (workflows/ci.yml), CODEOWNERS, PR template
 ├── .claude/             # Lệnh /review-pr và cấu hình Claude Code

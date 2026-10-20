@@ -1,6 +1,6 @@
 # ai-pipeline/CLAUDE.md
 
-Rules and map for `ai-pipeline/` (Python: OpenCV + YOLOv8n on ONNX Runtime + ByteTrack, bird in/out counting). This file wins over the root `CLAUDE.md` for pipeline code; `/review-pr` judges pipeline changes by it together with `ai-pipeline/README.md`. Rule tags: **[Bắt buộc]** = blocking (review requests changes), **[Nên]** = advisory. Only lines a PR adds or changes are judged; "Known debt" lists what is already out of line.
+Rules and map for `ai-pipeline/` (Python: OpenCV + YOLO26n on ONNX Runtime + ByteTrack, bird in/out counting). This file wins over the root `CLAUDE.md` for pipeline code; `/review-pr` judges pipeline changes by it together with `ai-pipeline/README.md`. Rule tags: **[Bắt buộc]** = blocking (review requests changes), **[Nên]** = advisory. Only lines a PR adds or changes are judged; "Known debt" lists what is already out of line.
 
 ## Where the pipeline stands
 
@@ -18,7 +18,7 @@ python src/stream.py --config config/config.yaml       # current scaffold entry 
 pytest tests/                                          # no tests yet (plan §6.7 adds tests/test_counting.py)
 ```
 
-Once rewritten per the plan (§6.6, §7.7), `stream.py` also takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY` and `--no-mqtt`, and serves an MJPEG preview at `http://127.0.0.1:8090/stream` for tuning ROI and the counting line. Python 3.10–3.12. The pipeline has no CI job yet.
+Once rewritten per the plan (§6.6, §7.7), `stream.py` also takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY` and `--no-mqtt`, and serves an MJPEG preview at `http://127.0.0.1:8090/stream` for tuning ROI and the counting line. Python 3.11–3.12 (`onnxruntime` 1.30 needs ≥ 3.11; versions pinned in plan §4). The pipeline has no CI job yet.
 
 ## Structure
 
@@ -28,7 +28,7 @@ config/config.yaml    camera, model, classes, tracking, MQTT, storage, sessions
 requirements.txt
 src/
   stream.py           RTSP loop (sequential cap.read, no publishing)
-  inference.py        YOLOv8 ONNX inference + NMS
+  inference.py        YOLOv8-style ONNX inference + NMS (plan §6.3 also reads YOLO26n NMS-free output)
   tracker.py          ByteTrack stub
   counting.py         horizontal-line entry/exit counter, CountingSession
   alert_publisher.py  MQTT publisher for predator alerts (out of scope)
@@ -76,7 +76,7 @@ Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (rewritten arou
 |---|---|---|
 | `config/config.yaml` | Four classes + `predator_classes`/`predator_confidence_min`; `rtsp_url` with placeholder credentials in the file; MQTT username `rpi-node-01`; `return_rate_drop_threshold` (the backend owns that) | Replace with the plan §6.2 config; move the URL to `.env` |
 | `requirements.txt` | Raspberry Pi comments; ByteTrack built from source (`cython`, `lap`); MinIO/boto3 | Replace with the plan §4 list (`supervision`, `loguru`, `python-dotenv`, `pytest`) |
-| `src/inference.py` | No BGR→RGB conversion; `cv2.dnn.NMSBoxes` given `x1,y1,x2,y2` instead of `x,y,w,h`; hard-coded `CLASS_NAMES`/`PREDATOR_IDS`; fixed 4 threads | Plan §6.3 |
+| `src/inference.py` | No BGR→RGB conversion; decodes only the YOLOv8 `(1, nc+4, 8400)` output, while the plan exports YOLO26n with `nms=False` (`(1, 300, 6)`, no NMS) and compares YOLOv8n/YOLO11n/YOLO26n (plan §7.9); hard-coded `CLASS_NAMES`/`PREDATOR_IDS`; fixed 4 threads; CPU provider only | Plan §6.3 |
 | `src/tracker.py` | Stub — `update()` returns an empty list, so nothing is ever counted | Delete; use `sv.ByteTrack` |
 | `src/counting.py` | Horizontal line only, hard-coded direction; `return_rate` from raw counts | Rewrite around `sv.LineZone` (plan §6.4) |
 | `src/stream.py` | Sequential `cap.read()` (lags), no MQTT, no sessions, no drawing, no stream push | Rewrite (plan §6.6) |

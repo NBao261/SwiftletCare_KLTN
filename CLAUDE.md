@@ -10,7 +10,7 @@ SwiftletCare — IoT monitoring + automation system for swiftlet (yến) houses 
 - `backend/` — Node.js + Express + TypeScript + MongoDB + MQTT (EMQX) + Socket.io. → `backend/CLAUDE.md`
 - `frontend/` — React 18 + Vite + TailwindCSS web dashboard/PWA. → `frontend/CLAUDE.md`, rules in `frontend/FE_Design_Claude.md`
 - `mobile/` — Expo (Router, file-based routes) + React Native app, talks to the same backend API. → "Mobile" below
-- `ai-pipeline/` — YOLOv8 (ONNX Runtime) + ByteTrack bird counting on a PC/cloud AI node (plan in `docs/bird-counting-plan.md`). **Scaffold only, not implemented/deployed**; no `models/` folder, ONNX weights are never committed. → "AI pipeline" below
+- `ai-pipeline/` — YOLO26n (ONNX Runtime) + ByteTrack bird counting on a PC/cloud AI node (plan in `docs/bird-counting-plan.md`). **Scaffold only, not implemented/deployed**; no `models/` folder, ONNX weights are never committed. → "AI pipeline" below
 - `docs/` — `docs/api/api-spec.yaml` is the OpenAPI 3.0 **source of truth** for the API contract; the backend reads it at boot and serves Swagger UI at `/api-docs`. Routes are unprefixed (no `/api/v1`, despite what the SRS narrative implies).
 
 **`SwiftletCare_SRS.md` §5, column "Trạng thái Backend"** is the single source of truth for per-requirement (FR) completion status — check it before assuming a feature is done.
@@ -70,7 +70,7 @@ Expo Router (file-based routing) under `mobile/app/`: `(auth)` group (login/regi
 
 ## AI pipeline (`ai-pipeline/`) — scaffold, not deployed
 
-`src/stream.py` (RTSP loop) → `inference.py` (YOLOv8 via ONNX Runtime) → `tracker.py` (ByteTrack) → `counting.py` (line-crossing entry/exit) → `alert_publisher.py` (MQTT). The backend subscribes to `vision/bird-count`, but `backend/src/mqtt/handlers/birdCount.handler.ts` is still a stub that only logs (plan §8 adds `birdCount.service.ts`). `config/config.yaml` covers the RTSP source, model thresholds, MQTT (TLS 8883), MinIO snapshot upload and morning/evening session windows. It still lists 4 classes (swiftlet/rat/snake/owl) with predator settings — SRS v2 keeps only `swiftlet`, so the predator parts may only be removed, never extended.
+`src/stream.py` (RTSP loop) → `inference.py` (YOLO via ONNX Runtime; today decodes YOLOv8 output only, plan §6.3 reads both YOLOv8n/YOLO11n and YOLO26n NMS-free output so §7.9 can compare them) → `tracker.py` (ByteTrack) → `counting.py` (line-crossing entry/exit) → `alert_publisher.py` (MQTT). The backend subscribes to `vision/bird-count`, but `backend/src/mqtt/handlers/birdCount.handler.ts` is still a stub that only logs (plan §8 adds `birdCount.service.ts`). `config/config.yaml` covers the RTSP source, model thresholds, MQTT (TLS 8883), MinIO snapshot upload and morning/evening session windows. It still lists 4 classes (swiftlet/rat/snake/owl) with predator settings — SRS v2 keeps only `swiftlet`, so the predator parts may only be removed, never extended.
 
 ## Module completion status (see SRS §5 for FR-level detail)
 
