@@ -1,5 +1,5 @@
 # SwiftletCare – Docker Compose (Development Environment)
-# Bao gồm: MongoDB + EMQX MQTT Broker + MinIO S3
+# Bao gồm: MongoDB + EMQX MQTT Broker + MinIO S3 + MediaMTX (video)
 # Chạy: docker compose up -d
 
 version: '3.9'
@@ -85,6 +85,26 @@ services:
       mc anonymous set none local/swiftletcare-snapshots;
       echo 'MinIO bucket ready';
       "
+
+  # ── MediaMTX (máy chủ video, live stream camera) ──────────────────────────────
+  # VISION-FR-013/014 — docs/bird-counting-plan.md §16.3. Pipeline đẩy RTSP vào :8554,
+  # trình duyệt xem WebRTC ở :8889. Mỗi lần đẩy/xem MediaMTX hỏi backend chạy trên máy
+  # bằng `npm run dev`: backend/.env phải có STREAM_AUTH_KEY=dev-auth-key (khớp ?key= dưới đây).
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.1
+    container_name: swiftletcare-mediamtx
+    restart: unless-stopped
+    environment:
+      MTX_AUTHHTTPADDRESS: http://host.docker.internal:3000/internal/stream-auth?key=dev-auth-key
+      MTX_WEBRTCADDITIONALHOSTS: 127.0.0.1     # đổi thành IP LAN của máy để xem từ điện thoại cùng Wi-Fi
+    extra_hosts:
+      - "host.docker.internal:host-gateway"    # Linux không tự có tên này
+    ports:
+      - "8554:8554"        # RTSP: pipeline đẩy video lên
+      - "8889:8889"        # WebRTC/WHEP cho trình duyệt
+      - "8189:8189/udp"    # WebRTC media
+    volumes:
+      - ./deploy/mediamtx.yml:/mediamtx.yml:ro
 
   # ── Redis (session/cache) ─────────────────────────────────────────────────────
   redis:
