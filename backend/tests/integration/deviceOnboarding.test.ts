@@ -135,10 +135,29 @@ describe('POST /devices/sensor-nodes/register', () => {
     expect(await SensorNode.countDocuments()).toBe(0)
   })
 
+  it('camera đếm chim đăng ký vào House (SRS v2.1.8); zone_id cũ quy ra House chứa Zone; farm khác → 409', async () => {
+    const { techToken, adminToken, a, b } = await seed()
+    const keyFor = async (device_id: string) => (await request(app).post('/admin/provisioned-devices')
+      .set('Authorization', `Bearer ${adminToken}`).send({ device_id, kind: 'CAMERA' }).expect(201)).body.data.secret_key as string
+    const registerCam = (body: object) =>
+      request(app).post('/devices/camera-nodes/register').set('Authorization', `Bearer ${techToken}`).send(body)
+
+    const byHouse = await registerCam({ device_id: 'cam_1', house_id: String(a.zone.house_id), secret_key: await keyFor('cam_1') }).expect(201)
+    expect(byHouse.body.data).toMatchObject({ house_id: String(a.zone.house_id), status: 'PENDING' })
+    expect(byHouse.body.data).not.toHaveProperty('zone_id')
+
+    const byZone = await registerCam({ device_id: 'cam_2', zone_id: String(a.zone._id), secret_key: await keyFor('cam_2') }).expect(201)
+    expect(byZone.body.data.house_id).toBe(String(a.zone.house_id))
+
+    await registerCam({ device_id: 'cam_3', secret_key: await keyFor('cam_3') }).expect(422)     // thiếu cả house_id lẫn zone_id
+    expect(await AuditLog.countDocuments({ action: 'DEVICE_REGISTERED', 'metadata.houseId': String(a.zone.house_id) })).toBe(2)
+    expect(await CameraNode.countDocuments({ house_id: b.zone.house_id })).toBe(0)
+  })
+
   it('sensor key không dùng để đăng ký camera', async () => {
     const { techToken, a, secretKey } = await seed()
     await request(app).post('/devices/camera-nodes/register').set('Authorization', `Bearer ${techToken}`)
-      .send({ device_id: 'node_100', zone_id: String(a.zone._id), secret_key: secretKey }).expect(400)
+      .send({ device_id: 'node_100', house_id: String(a.zone.house_id), secret_key: secretKey }).expect(400)
   })
 
   it('thiết bị đã thuộc Farm khác → 409 báo rõ (Flow 1 case 3a)', async () => {
@@ -160,7 +179,7 @@ describe('markOverdueActivations (Flow 1 case 8a)', () => {
     await SensorNode.create({ device_id: 'fresh', zone_id: a.zone._id })
     await SensorNode.create({ device_id: 'online', zone_id: a.zone._id, status: 'ONLINE', registered_at: old })
     // Camera chưa có kênh heartbeat (ai-pipeline chưa deploy) nên không bị báo quá hạn
-    await CameraNode.create({ device_id: 'cam_late', zone_id: a.zone._id, registered_at: old, registered_by: tech._id })
+    await CameraNode.create({ device_id: 'cam_late', house_id: a.zone.house_id, registered_at: old, registered_by: tech._id })
 
     expect(await markOverdueActivations()).toBe(1)
     expect((await SensorNode.findById(late._id))!.activation_overdue_at).toBeInstanceOf(Date)

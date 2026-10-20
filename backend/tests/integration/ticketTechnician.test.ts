@@ -254,7 +254,7 @@ describe('SAT khi đóng ticket (TICKET-FR-010, Flow 9 bước 6b)', () => {
     const house = await House.create({ farm_id: farm._id, name: 'H' })
     const zone = await Zone.create({ house_id: house._id, name: 'Z' })
     await Ticket.updateOne({ _id: ticket._id }, { zone_id: zone._id })
-    await CameraNode.create({ device_id: 'cam_9', zone_id: zone._id, status: 'ONLINE' })
+    await CameraNode.create({ device_id: 'cam_9', house_id: zone.house_id, status: 'ONLINE' })
     try {
       await put(`/tickets/${ticket._id}/sat-checklist`, assigneeToken, WITHOUT_CAMERA).expect(200)
       const res = await put(`/tickets/${ticket._id}/status`, assigneeToken, { status: 'CLOSED' }).expect(409)

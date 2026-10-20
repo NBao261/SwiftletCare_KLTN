@@ -52,7 +52,12 @@ info:
       không còn trả `rtsp_url`.
     - Hộp thông báo trong ứng dụng: `/notifications` (+ sự kiện Socket.io
       `NOTIFICATION_NEW` tới chính người nhận).
-    - Chưa có trong file này: stream token của camera (docs/bird-counting-plan.md §8.6).
+    - Live stream: `GET /devices/camera-nodes/{id}/stream-token`, `POST /internal/stream-auth` (MediaMTX).
+    - SRS v2.1.8 — camera đếm chim gắn **nhà yến (House)**, không gắn Zone: đăng ký bằng `house_id`,
+      `/analytics/bird-count/*?houseId=` (`zoneId` cũ vẫn nhận, quy ra House chứa Zone), mới
+      `GET /analytics/bird-count/current`, `PUT /farms/houses/{houseId}/bird-count-tuning`,
+      `GET /alerts?houseId=`; Socket.io `JOIN_HOUSE` → room `house:<id>` nhận `BIRD_COUNT_UPDATE`,
+      trạng thái camera, cảnh báo của cả nhà. MQTT của nút AI: `swiftletcare/{farm}/{house}/heartbeat|vision/bird-count|vision/alert`.
 
 servers:
   - url: http://localhost:3000
@@ -1828,17 +1833,45 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
 
+  /farms/houses/{houseId}/bird-count-tuning:
+    put:
+      tags: [Farms]
+      summary: "Chỉnh mức giảm tỷ lệ chim về của nhà yến (EXPERT-FR-008, SRS v2.1.8) — DOMAIN_EXPERT"
+      description: |
+        Chim ra vào ở cửa của cả nhà yến nên số đếm, tỷ lệ chim về và cảnh báo `LOW_RETURN_RATE` tính theo
+        House; mức giảm cho phép đặt ở đây (mặc định 20%, khoảng 5–50%). Lưu `bird_count_tuning_history`,
+        ghi audit `BIRD_COUNT_TUNING_UPDATED`. Backend dùng, không gửi xuống thiết bị.
+      parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BirdCountTuning" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/House" }
+        "400": { description: "Ngoài khoảng 5–50 / không phải số / body không có tham số nào" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /farms/zones/{zoneId}/detection-tuning:
     put:
       tags: [Farms]
       summary: "Chỉnh tham số phát hiện của Zone (EXPERT-FR-008) — DOMAIN_EXPERT"
       description: |
-        Gửi 1 hoặc nhiều trong 6 tham số; server gộp với giá trị hiện tại, kiểm tra khoảng
+        Gửi 1 hoặc nhiều trong 5 tham số; server gộp với giá trị hiện tại, kiểm tra khoảng
         (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `detection_tuning_history`
         (người sửa, role, thời điểm, cũ/mới), ghi audit `DETECTION_TUNING_UPDATED` rồi publish
         MQTT `config/update` với 5 tham số chạy trên ESP32 (firmware ≥ 1.3.0 kẹp lại và lưu
-        NVS). `return_rate_drop_pct` do backend dùng, không gửi xuống thiết bị. "Về mặc định"
-        = gửi lại bộ giá trị mặc định. Farm Owner xem qua `GET /farms/zones/{zoneId}`.
+        NVS). "Về mặc định" = gửi lại bộ giá trị mặc định. Farm Owner xem qua `GET /farms/zones/{zoneId}`.
+        SRS v2.1.8: mức giảm tỷ lệ chim về (`return_rate_drop_pct`) chuyển sang House —
+        `PUT /farms/houses/{houseId}/bird-count-tuning`; gửi khoá này ở đây bị bỏ qua như khoá lạ.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -2426,20 +2459,24 @@ paths:
   /devices/camera-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký Raspberry Pi Camera Node — chỉ TECHNICIAN/ADMIN (FARM-FR-004, Flow 1b)"
-      description: "Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho."
+      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — chỉ TECHNICIAN/ADMIN (FARM-FR-004, Flow 1b)"
+      description: |
+        Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho. SRS v2.1.8: camera lắp ở
+        cửa ra vào của cả nhà yến nên gắn House (`house_id`). `zone_id` là cách gửi cũ (trước v2.1.8), được quy
+        ra House chứa Zone; cần một trong hai.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [device_id, zone_id, secret_key]
+              required: [device_id, secret_key]
               properties:
                 {
                   device_id: { type: string, example: cam_001 },
                   secret_key: { type: string, example: DEMO-CAM-0001 },
-                  zone_id: { type: string },
+                  house_id: { type: string },
+                  zone_id: { type: string, deprecated: true, description: "Cách gửi cũ — quy ra House chứa Zone" },
                   rtsp_url: { type: string },
                 }
       responses:
@@ -2472,11 +2509,13 @@ paths:
   /devices/camera-nodes:
     get:
       tags: [Devices]
-      summary: Danh sách Camera Node
-      description: "Không trả `rtsp_url` (chứa mật khẩu camera — chỉ nút AI cần)."
+      summary: Danh sách camera đếm chim
+      description: "Camera của 1 nhà yến (`houseId`; `zoneId` cũ được quy ra House chứa Zone), không truyền thì mọi nhà user được xem. Không trả `rtsp_url` (chứa mật khẩu camera — chỉ nút AI cần)."
       parameters:
+        - { name: houseId, in: query, schema: { type: string } }
         - name: zoneId
           in: query
+          deprecated: true
           schema: { type: string }
       responses:
         "200":
@@ -2978,6 +3017,7 @@ paths:
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string }, description: "Cảnh báo của cả nhà yến (camera đếm chim)" }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/AlertType" } }
         - name: verdict
           in: query
@@ -3463,11 +3503,12 @@ paths:
       summary: "Thống kê đếm chim hàng ngày (VISION-FR-008/010)"
       description: |
         Mỗi ngày là 1 ngày theo giờ Việt Nam (`session_date` của bản ghi phiên — phiên sáng
-        05:30 VN là 22:30 UTC hôm trước). `morning_exit`/`evening_entry` là số thô;
-        `return_rate` tính trên số ròng `(vào − ra chiều) / (ra − vào sáng) × 100` (VISION-FR-009),
-        có thể > 100. Trả `records: []` kèm `note` khi chưa có dữ liệu — không phải lỗi truy vấn.
+        05:30 VN là 22:30 UTC hôm trước); `from`/`to` đổi sang ngày giờ VN, tính cả hai đầu.
+        Số của cả nhà yến (cộng mọi camera của nhà), xem `BirdCountDay`. Ngày không có tin nào thì không có dòng.
+        Trả `records: []` kèm `note` khi chưa có dữ liệu — không phải lỗi truy vấn.
       parameters:
-        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string }, description: "Nhà yến (SRS v2.1.8 — đếm chim theo House). Cần houseId hoặc zoneId" }
+        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Cách gửi cũ — quy ra House chứa Zone" }
         - { $ref: "#/components/parameters/From" }
         - { $ref: "#/components/parameters/To" }
       responses:
@@ -3482,27 +3523,51 @@ paths:
                       data:
                         type: object
                         properties:
+                          house_id: { type: string }
                           from: { type: string, format: date-time }
                           to: { type: string, format: date-time }
-                          records:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                {
-                                  date: { type: string },
-                                  morning_exit: { type: integer },
-                                  evening_entry: { type: integer },
-                                  return_rate: { type: number, nullable: true },
-                                }
+                          records: { type: array, items: { $ref: "#/components/schemas/BirdCountDay" } }
                           note: { type: string, nullable: true }
+
+  /analytics/bird-count/current:
+    get:
+      tags: [Analytics]
+      summary: "Số đếm chim hôm nay của nhà yến khi mở trang (VISION-FR-012)"
+      description: |
+        Hôm nay theo giờ Việt Nam, cả hai phiên, cộng mọi camera của nhà. Frontend gọi khi mở trang, gửi socket
+        `JOIN_HOUSE { houseId }` rồi cập nhật bằng `BIRD_COUNT_UPDATE` (room `house:<houseId>`), sự kiện mang
+        **cùng con số**: `{ houseId, sessionDate, sessionType, entryCount, exitCount, netCount, returnRate (null được), timestamp }`
+        với entry/exit/net là của phiên vừa có tin. Cùng room còn có `DEVICE_STATUS_CHANGE` của camera và `ALERT_NEW`
+        của cảnh báo cả nhà (EDGE_AI_DEGRADED, LOW_RETURN_RATE). Nhà chưa có tin hôm nay → các số 0, `return_rate: null`,
+        `updated_at: null`. Quyền như các API analytics khác (thành viên farm chứa nhà).
+      parameters:
+        - { name: houseId, in: query, schema: { type: string }, description: "Nhà yến (SRS v2.1.8 — đếm chim theo House). Cần houseId hoặc zoneId" }
+        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Cách gửi cũ — quy ra House chứa Zone" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/BirdCountDay"
+                          - properties:
+                              house_id: { type: string }
+                              updated_at: { type: string, format: date-time, nullable: true, description: "Tin mới nhất trong ngày" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /analytics/bird-count/trends:
     get:
       tags: [Analytics]
       summary: "Xu hướng đàn chim + cảnh báo giảm > 20% (VISION-FR-009/011, ANALYTICS-FR-002)"
       parameters:
-        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string }, description: "Nhà yến (SRS v2.1.8 — đếm chim theo House). Cần houseId hoặc zoneId" }
+        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Cách gửi cũ — quy ra House chứa Zone" }
         - { name: days, in: query, schema: { type: integer, default: 30 } }
       responses:
         "200":
@@ -3516,12 +3581,13 @@ paths:
                       data:
                         type: object
                         properties:
+                          house_id: { type: string }
                           days: { type: integer }
-                          records: { type: array, items: { type: object } }
+                          records: { type: array, items: { $ref: "#/components/schemas/BirdCountDay" } }
                           avg_return_rate: { type: number, nullable: true }
                           latest_return_rate: { type: number, nullable: true }
                           drop_percent: { type: number, nullable: true }
-                          drop_threshold_pct: { type: number, description: "return_rate_drop_pct của Zone (EXPERT-FR-008), mặc định 20" }
+                          drop_threshold_pct: { type: number, description: "return_rate_drop_pct của nhà yến (EXPERT-FR-008, PUT /farms/houses/{houseId}/bird-count-tuning), mặc định 20" }
                           is_significant_drop: { type: boolean }
 
   /analytics/bird-count/buckets:
@@ -3529,11 +3595,12 @@ paths:
       tags: [Analytics]
       summary: "Số chim ra/vào theo khoảng 5 phút (VISION-FR-017)"
       description: |
-        Cộng dồn mọi camera của Zone theo `bucket_start`, cả ngoài 2 phiên sáng/chiều. Dùng cho
+        Cộng dồn mọi camera của nhà yến theo `bucket_start`, cả ngoài 2 phiên sáng/chiều. Dùng cho
         biểu đồ theo giờ và bối cảnh ±30 phút khi Domain Expert kiểm chứng cảnh báo (EXPERT-FR-003).
         Mặc định 24 giờ gần nhất; khoảng tối đa 7 ngày. Dữ liệu giữ 90 ngày.
       parameters:
-        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string }, description: "Nhà yến (SRS v2.1.8 — đếm chim theo House). Cần houseId hoặc zoneId" }
+        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Cách gửi cũ — quy ra House chứa Zone" }
         - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 24 giờ" }
         - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
       responses:
@@ -3548,6 +3615,7 @@ paths:
                       data:
                         type: object
                         properties:
+                          house_id: { type: string }
                           from: { type: string, format: date-time }
                           to: { type: string, format: date-time }
                           buckets: { type: array, items: { $ref: "#/components/schemas/BirdCountBucket" } }
@@ -3557,7 +3625,7 @@ paths:
   /analytics/correlation:
     get:
       tags: [Analytics]
-      summary: "Tương quan môi trường vs return rate theo ngày (ANALYTICS-FR-003)"
+      summary: "Tương quan môi trường của Zone vs return rate của nhà yến chứa Zone, theo ngày (ANALYTICS-FR-003)"
       parameters:
         - { name: zoneId, in: query, required: true, schema: { type: string } }
         - { name: days, in: query, schema: { type: integer, default: 30 } }
@@ -5237,6 +5305,7 @@ components:
         name: { type: string }
         floors: { type: integer }
         description: { type: string }
+        bird_count_tuning: { $ref: "#/components/schemas/BirdCountTuning" }
         created_at: { type: string, format: date-time }
 
     Thresholds:
@@ -5262,14 +5331,19 @@ components:
 
     DetectionTuning:
       type: object
-      description: "EXPERT-FR-008 — tham số phát hiện theo Zone. Khoảng hợp lệ là giới hạn kỹ thuật, không phải khuyến nghị nuôi yến. 5 tham số đầu: tên field = key MQTT config/update"
+      description: "EXPERT-FR-008 — tham số phát hiện theo Zone, gửi xuống ESP32. Khoảng hợp lệ là giới hạn kỹ thuật, không phải khuyến nghị nuôi yến. Tên field = key MQTT config/update"
       properties:
         noise_margin_db: { type: number, minimum: 5, maximum: 30, example: 15, description: "dB — ồn cao hơn mức nền của giờ đó bao nhiêu thì tính (NOISE_ANOMALY)" }
         noise_min_sec: { type: integer, minimum: 5, maximum: 15, example: 10, description: "giây ồn trong cửa sổ 15 giây (NOISE_ANOMALY)" }
         pump_dry_on_sec: { type: integer, minimum: 120, maximum: 900, example: 300, description: "giây bơm BẬT cộng dồn trước khi xét (PUMP_DRY)" }
         pump_dry_min_rise_pct: { type: number, minimum: 0.5, maximum: 10, example: 2, description: "%RH — độ ẩm phải tăng tối thiểu (PUMP_DRY)" }
         speaker_drop_pct: { type: integer, minimum: 30, maximum: 90, example: 70, description: "% — mức âm giảm so với nền (SPEAKER_FAILURE)" }
-        return_rate_drop_pct: { type: number, minimum: 5, maximum: 50, example: 20, description: "% — tỷ lệ chim về giảm so với trung bình kỳ trước (backend dùng)" }
+
+    BirdCountTuning:
+      type: object
+      description: "EXPERT-FR-008 (SRS v2.1.8) — tham số đếm chim theo nhà yến (camera ở cửa ra vào của cả nhà); backend dùng, không gửi thiết bị"
+      properties:
+        return_rate_drop_pct: { type: number, minimum: 5, maximum: 50, example: 20, description: "% — tỷ lệ chim về giảm so với trung bình kỳ trước thì sinh LOW_RETURN_RATE" }
 
     MetricForecast:
       type: object
@@ -5341,6 +5415,28 @@ components:
         entry_count: { type: integer }
         exit_count: { type: integer }
 
+    BirdCountDay:
+      type: object
+      description: |
+        VISION-FR-008/009 — số đếm 1 ngày (giờ Việt Nam) của **cả nhà yến** (SRS v2.1.8: chim ra vào ở cửa của
+        nhà, không chia theo Zone). Nhà có 2 cửa thì cộng số thô mọi camera rồi mới lấy số ròng (chim có thể ra cửa
+        này về cửa kia). Cùng nguồn cho /current, /daily, /trends, /correlation, socket BIRD_COUNT_UPDATE, cảnh báo
+        LOW_RETURN_RATE, báo cáo sức khỏe Zone và ảnh chụp đàn khi thu hoạch (Zone lấy số của nhà chứa nó).
+      properties:
+        date: { type: string, example: "2026-10-20", description: "YYYY-MM-DD giờ Việt Nam" }
+        morning_entry: { type: integer, description: Số thô phiên sáng }
+        morning_exit: { type: integer, description: Số thô phiên sáng }
+        evening_entry: { type: integer, description: Số thô phiên chiều }
+        evening_exit: { type: integer, description: Số thô phiên chiều }
+        net_exit: { type: integer, description: "Ra − vào của phiên sáng, không âm" }
+        net_entry: { type: integer, description: "Vào − ra của phiên chiều, không âm" }
+        return_rate:
+          type: number
+          nullable: true
+          description: "net_entry / net_exit × 100, có thể > 100; null khi thiếu phiên sáng hoặc chiều, hoặc sáng không có chim ra"
+        has_morning: { type: boolean }
+        has_evening: { type: boolean }
+
     Notification:
       type: object
       description: "EXPERT-FR-006/007 — 1 thông báo trong ứng dụng"
@@ -5378,7 +5474,7 @@ components:
             misting_switches: { type: integer }
             ventilation_switches: { type: integer }
             alerts_by_type: { type: object, additionalProperties: { type: integer }, description: "{ <AlertType>: số cảnh báo phát sinh trong kỳ }" }
-            avg_return_rate: { type: number, nullable: true, description: "null khi chưa có dữ liệu đếm chim" }
+            avg_return_rate: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong kỳ; null khi chưa có dữ liệu đếm chim" }
             nh3_avg: { type: number, nullable: true }
             nh3_max: { type: number, nullable: true }
             co2_avg: { type: number, nullable: true }
@@ -5508,7 +5604,7 @@ components:
       properties:
         _id: { type: string }
         device_id: { type: string }
-        zone_id: { type: string }
+        house_id: { type: string, description: "SRS v2.1.8 — camera ở cửa ra vào của cả nhà yến, không gắn Zone" }
         rtsp_url: { type: string, description: "Chỉ có trong response đăng ký; `GET /devices/camera-nodes` không trả trường này" }
         status:
           {
@@ -5573,6 +5669,7 @@ components:
         _id: { type: string }
         farm_id: { type: string }
         zone_id: { type: string, nullable: true }
+        house_id: { type: string, nullable: true, description: "Cảnh báo của cả nhà yến (camera đếm chim: EDGE_AI_DEGRADED, LOW_RETURN_RATE) — SRS v2.1.8; khi đó không có zone_id" }
         node_id: { type: string, nullable: true }
         type: { $ref: "#/components/schemas/AlertType" }
         severity: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] }
@@ -5798,8 +5895,8 @@ components:
           type: object
           description: "MARKET-FR-003 — return rate trung bình 30 ngày (rỗng cho tới khi module VISION có dữ liệu thật)"
           properties:
-            avg_return_rate_30d: { type: number, nullable: true }
-            estimated_population: { type: integer, nullable: true }
+            avg_return_rate_30d: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong 30 ngày trước mẻ" }
+            estimated_population: { type: integer, nullable: true, description: "Số ròng về buổi chiều lớn nhất của Zone trong 30 ngày (BirdCountDay.net_entry)" }
         status: { $ref: "#/components/schemas/HarvestStatus" }
         is_deleted: { type: boolean }
         created_at: { type: string, format: date-time }

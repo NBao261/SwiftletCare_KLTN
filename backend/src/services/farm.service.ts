@@ -1,13 +1,13 @@
 import crypto from 'crypto'
 import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
-import { House, Zone, IZone } from '@/models/houseZone.model'
+import { House, Zone, IHouse, IZone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import {
   hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
-  assertZoneAccess,
+  assertZoneAccess, assertHouseAccess,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { notifyUser } from '@/services/notification.service'
@@ -16,7 +16,8 @@ import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage } from '@/servic
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import {
-  assertValidDetectionTuning, firmwareDetectionConfig, pickDetectionTuning, resolveDetectionTuning,
+  assertValidBirdCountTuning, assertValidDetectionTuning, firmwareDetectionConfig, pickBirdCountTuning,
+  pickDetectionTuning, resolveBirdCountTuning, resolveDetectionTuning,
 } from '@/utils/detectionTuning.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { assertRegionCode } from '@/utils/regions.util'
@@ -434,8 +435,8 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
 
 /**
  * EXPERT-FR-008 — Domain Expert chỉnh tham số phát hiện của 1 Zone: kiểm tra khoảng,
- * lưu lịch sử (người sửa, role, thời điểm, cũ/mới), gửi 5 tham số chạy trên ESP32
- * qua config/update (firmware kẹp lại rồi lưu NVS); `return_rate_drop_pct` backend tự dùng.
+ * lưu lịch sử (người sửa, role, thời điểm, cũ/mới), gửi 5 tham số xuống ESP32
+ * qua config/update (firmware kẹp lại rồi lưu NVS). Mức giảm tỷ lệ chim về chỉnh theo House.
  */
 export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
   const { zone, house, farm } = await assertZoneAccess(zoneId, user)
@@ -457,4 +458,30 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', firmwareDetectionConfig(merged))
   await logAction(user._id, 'DETECTION_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
   return zone
+}
+
+/**
+ * EXPERT-FR-008 (SRS v2.1.8) — Domain Expert chỉnh tham số đếm chim của 1 nhà yến: chim ra vào ở cửa
+ * của cả nhà nên mức giảm tỷ lệ chim về (cảnh báo LOW_RETURN_RATE) đặt theo House, không theo Zone.
+ * Cùng cách làm với tham số Zone: kiểm tra khoảng, lưu lịch sử, ghi audit. Backend dùng, không gửi thiết bị.
+ */
+export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IHouse> {
+  const { house } = await assertHouseAccess(houseId, user)
+
+  const picked = pickBirdCountTuning(updates)
+  if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
+  const oldValues = resolveBirdCountTuning(house.bird_count_tuning)
+  const merged = { ...oldValues, ...picked }
+  assertValidBirdCountTuning(merged)
+
+  house.bird_count_tuning = merged
+  house.bird_count_tuning_history.push({
+    changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_values: oldValues, new_values: picked,
+  } as never)
+  const overflow = house.bird_count_tuning_history.length - THRESHOLD_HISTORY_LIMIT
+  if (overflow > 0) house.bird_count_tuning_history.splice(0, overflow)
+  await house.save()
+
+  await logAction(user._id, 'BIRD_COUNT_TUNING_UPDATED', 'house', String(house._id), { before: oldValues, after: merged })
+  return house
 }

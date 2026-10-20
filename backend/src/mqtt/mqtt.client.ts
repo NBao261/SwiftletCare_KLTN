@@ -9,13 +9,17 @@ import { handleRelayStatus } from '@/mqtt/handlers/relayStatus.handler'
 
 let client: MqttClient | null = null
 
+// ESP32 theo Zone: swiftletcare/{farm}/{house}/{zone}/…
+// Nút AI đếm chim theo House (SRS v2.1.8, camera ở cửa ra vào của cả nhà): swiftletcare/{farm}/{house}/…
 const TOPICS = [
   'swiftletcare/+/+/+/telemetry',         // ENV-FR-001
-  'swiftletcare/+/+/+/heartbeat',          // FARM-FR-005
+  'swiftletcare/+/+/+/heartbeat',          // FARM-FR-005 (ESP32)
   'swiftletcare/+/+/+/relay/status',       // ENV-FR-015
-  'swiftletcare/+/+/+/alert',              // THREAT-FR-006/011/012/013 (ESP32)
-  'swiftletcare/+/+/+/vision/bird-count',  // VISION-FR-006
-  'swiftletcare/+/+/+/vision/alert',       // THREAT-FR-001
+  // THREAT-FR-006/011/012/013 (ESP32 {zone}/alert) — cũng khớp `{house}/vision/alert` của nút AI
+  // (EDGE_AI_DEGRADED, THREAT-FR-010): không đăng ký thêm mẫu riêng kẻo broker giao trùng tin
+  'swiftletcare/+/+/+/alert',
+  'swiftletcare/+/+/heartbeat',            // THREAT-FR-010 (nút AI)
+  'swiftletcare/+/+/vision/bird-count',    // VISION-FR-006
 ] as const
 
 export function connectMQTT(): void {
@@ -43,13 +47,13 @@ export function connectMQTT(): void {
     if (packet.retain) return
     try {
       const message = JSON.parse(payload.toString()) as Record<string, unknown>
-      const parts   = topic.split('/')  // [swiftletcare, farmId, houseId, zoneId, ...type]
+      const parts   = topic.split('/')  // [swiftletcare, farmId, houseId, zoneId, ...type] (nút AI: không có zoneId)
 
       if (topic.endsWith('/telemetry'))        void handleTelemetry(parts, message)
       else if (topic.endsWith('/heartbeat'))   void handleHeartbeat(parts, message)
       else if (topic.endsWith('/relay/status'))void handleRelayStatus(parts, message)
       else if (topic.endsWith('/bird-count'))  void handleBirdCount(parts, message)
-      else if (topic.endsWith('/alert'))       void handleAlert(parts, message)  // cả {base}/alert (ESP32) lẫn vision/alert (RPi)
+      else if (topic.endsWith('/alert'))       void handleAlert(parts, message)  // cả {zone}/alert (ESP32) lẫn {house}/vision/alert (nút AI)
     } catch (err) {
       logger.error('MQTT message parse error', { err })
     }

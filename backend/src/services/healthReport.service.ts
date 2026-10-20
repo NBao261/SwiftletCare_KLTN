@@ -1,7 +1,7 @@
 import { Types } from 'mongoose'
 import { ZoneHealthReport, IZoneHealthReport, ZoneHealthMetrics } from '@/models/zoneHealthReport.model'
 import { Alert } from '@/models/alert.model'
-import { BirdCountRecord } from '@/models/birdCountRecord.model'
+import { averageReturnRate, houseDailyCounts, vnDate } from '@/services/birdCount.service'
 import { Zone, IZone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { autonomyBetween, inRangeSum, pct, switchedSum } from '@/services/analytics.service'
@@ -26,11 +26,11 @@ const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.r
  * trong ngưỡng, % thời gian tự động, số lần đóng cắt relay, số cảnh báo theo loại,
  * tỷ lệ chim về, NH3/CO2 trung bình và cực đại. Hàm thuần đọc — không ghi gì.
  */
-export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'thresholds'>, from: Date, to: Date): Promise<ZoneHealthMetrics> {
+export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'house_id' | 'thresholds'>, from: Date, to: Date): Promise<ZoneHealthMetrics> {
   const zoneId = new Types.ObjectId(String(zone._id))
   const t = zone.thresholds
 
-  const [[tele], alertRows, [birds], autonomy] = await Promise.all([
+  const [[tele], alertRows, birdDays, autonomy] = await Promise.all([
     Telemetry.aggregate([
       { $match: { zone_id: zoneId, timestamp: { $gte: from, $lte: to } } },
       // Chỉ mang các trường cần dùng qua $setWindowFields — stage này giữ cả partition
@@ -65,10 +65,8 @@ export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'thresholds'>, 
       { $match: { zone_id: zoneId, created_at: { $gte: from, $lte: to } } },
       { $group: { _id: '$type', count: { $sum: 1 } } },
     ]),
-    BirdCountRecord.aggregate<{ avg: number | null }>([
-      { $match: { zone_id: zoneId, timestamp: { $gte: from, $lte: to }, return_rate: { $type: 'number' } } },
-      { $group: { _id: null, avg: { $avg: '$return_rate' } } },
-    ]),
+    // Tỷ lệ chim về là của cả nhà yến chứa Zone (SRS v2.1.8), cùng nguồn với /analytics/bird-count/*
+    houseDailyCounts(String(zone.house_id), { from: vnDate(from), to: vnDate(to) }),
     autonomyBetween(String(zone._id), from, to),
   ])
 
@@ -80,7 +78,7 @@ export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'thresholds'>, 
     misting_switches:     tele?.mistingSwitches ?? 0,
     ventilation_switches: tele?.ventilationSwitches ?? 0,
     alerts_by_type: Object.fromEntries(alertRows.map(r => [r._id, r.count])),
-    avg_return_rate: round1(birds?.avg),
+    avg_return_rate: round1(averageReturnRate(birdDays)),
     nh3_avg: round1(tele?.nh3Avg), nh3_max: round1(tele?.nh3Max),
     co2_avg: round1(tele?.co2Avg), co2_max: round1(tele?.co2Max),
   }
@@ -102,7 +100,7 @@ export async function generateWeeklyReports(at = new Date()): Promise<number> {
   // unique index (zone_id, period_end) chặn được báo cáo trùng
   const now = new Date(Math.floor(at.getTime() / 60_000) * 60_000)
   const periodStart = new Date(now.getTime() - REPORT_PERIOD_DAYS * DAY_MS)
-  const zones = await Zone.find({ _id: { $in: await listActiveZoneIds() } }).select('name farm_id thresholds').lean()
+  const zones = await Zone.find({ _id: { $in: await listActiveZoneIds() } }).select('name farm_id house_id thresholds').lean()
 
   let created = 0
   for (const zone of zones) {
@@ -117,7 +115,7 @@ export async function generateWeeklyReports(at = new Date()): Promise<number> {
 }
 
 async function generateZoneReport(
-  zone: Pick<IZone, '_id' | 'name' | 'farm_id' | 'thresholds'>, periodStart: Date, now: Date,
+  zone: Pick<IZone, '_id' | 'name' | 'farm_id' | 'house_id' | 'thresholds'>, periodStart: Date, now: Date,
 ): Promise<boolean> {
   // Đã có báo cáo phủ phần lớn kỳ này (job chạy 2 lần, hoặc khởi động lại) → bỏ qua
   const recent = await ZoneHealthReport.exists({ zone_id: zone._id, period_end: { $gt: new Date(now.getTime() - (REPORT_PERIOD_DAYS - 0.5) * DAY_MS) } })

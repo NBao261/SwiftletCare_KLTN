@@ -19,13 +19,22 @@ router.get('/autonomy',            query('zoneId').isMongoId(), validate, analyt
 router.get('/control/suggestion', query('zoneId').isMongoId(), validate, analyticsController.tuningSuggestion)
 router.get('/forecast',          query('zoneId').isMongoId(), validate, analyticsController.forecast)
 
-// VISION/ANALYTICS-FR-002/003 — phụ thuộc module VISION, trả rỗng cho tới khi có camera
-router.get('/bird-count/daily',  query('zoneId').isMongoId(), validate, analyticsController.birdCountDaily)
-router.get('/bird-count/trends', query('zoneId').isMongoId(), validate, analyticsController.birdCountTrends)
+// VISION/ANALYTICS-FR-002/003 — đếm chim là của cả nhà yến (SRS v2.1.8): `houseId`; `zoneId` là cách
+// gửi cũ (frontend/mobile trước v2.1.8), được quy ra House chứa Zone. Trả rỗng cho tới khi có camera.
+const birdScope = [
+  query('houseId').optional().isString().isMongoId(),
+  query('zoneId').optional().isString().isMongoId(),
+  query('houseId').if(query('zoneId').not().exists()).exists().withMessage('Cần houseId'),
+]
+router.get('/bird-count/daily',  ...birdScope, validate, analyticsController.birdCountDaily)
+router.get('/bird-count/trends', ...birdScope, validate, analyticsController.birdCountTrends)
+// VISION-FR-012 — số hôm nay của nhà yến khi mở trang; sau đó socket BIRD_COUNT_UPDATE (room house:<id>) gửi cùng con số
+router.get('/bird-count/current', ...birdScope, validate, analyticsController.birdCountCurrent)
 // VISION-FR-017 — số đếm theo khoảng 5 phút (biểu đồ theo giờ, bối cảnh ±30 phút khi kiểm chứng cảnh báo)
 router.get('/bird-count/buckets',
-  query('zoneId').isString().isMongoId(), query('from').optional().isString().isISO8601(), query('to').optional().isString().isISO8601(), validate,
+  ...birdScope, query('from').optional().isString().isISO8601(), query('to').optional().isString().isISO8601(), validate,
   analyticsController.birdCountBuckets)
+// Môi trường đo theo Zone, tỷ lệ chim về lấy của nhà yến chứa Zone
 router.get('/correlation',       query('zoneId').isMongoId(), validate, analyticsController.envBirdCorrelation)
 
 export default router

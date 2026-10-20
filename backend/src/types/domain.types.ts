@@ -112,15 +112,20 @@ export interface FuzzyTuning {
   fuzzy_input_filter: boolean  // ENV-FR-022 — lọc median+Kalman đầu vào bộ mờ (tắt để so sánh A/B)
 }
 
-// EXPERT-FR-008 (v2.1.0): tham số phát hiện theo Zone do Domain Expert chỉnh. Năm
-// tham số đầu gửi xuống ESP32 qua config/update (tên field = tên key MQTT); tham số
-// cuối do backend dùng. Mặc định + khoảng hợp lệ: utils/detectionTuning.util.ts.
+// EXPERT-FR-008 (v2.1.0): tham số phát hiện theo Zone do Domain Expert chỉnh, gửi xuống
+// ESP32 qua config/update (tên field = tên key MQTT). Mặc định + khoảng hợp lệ:
+// utils/detectionTuning.util.ts.
 export interface DetectionTuning {
   noise_margin_db: number        // dB — ồn cao hơn mức nền của giờ đó bao nhiêu thì tính
   noise_min_sec: number          // s — số giây ồn trong cửa sổ 15 giây
   pump_dry_on_sec: number        // s — thời gian bơm BẬT cộng dồn trước khi xét
   pump_dry_min_rise_pct: number  // %RH — độ ẩm phải tăng tối thiểu
   speaker_drop_pct: number       // % — mức âm giảm so với nền thì coi là hỏng loa
+}
+
+// EXPERT-FR-008 (v2.1.8): tham số đếm chim theo House (chim ra vào ở cửa của cả nhà, không
+// theo Zone) do Domain Expert chỉnh, backend dùng
+export interface BirdCountTuning {
   return_rate_drop_pct: number   // % — tỷ lệ chim về giảm so với trung bình kỳ trước
 }
 
@@ -168,7 +173,7 @@ export interface BirdCountPayload {
   session_type?: SessionType
   entry_count: number
   exit_count: number
-  /** Bỏ qua nếu nút AI gửi — backend tính trên số ròng */
+  /** Bỏ qua nếu nút AI gửi — backend tính cho cả House trên số ròng */
   return_rate?: number
   confidence_avg?: number
   /** Tin cuối của phiên — chỉ để tham khảo, job LOW_RETURN_RATE không dựa vào nó */
@@ -212,12 +217,22 @@ export interface WsRelayUpdate {
   overrideExpiry?: string
 }
 
+/**
+ * VISION-FR-012 — số của **cả House** (cộng mọi camera của nhà) cho phiên vừa có tin, phát vào room
+ * `house:<houseId>`, cùng con số với `GET /analytics/bird-count/current` (birdCount.service#houseDailyCounts).
+ */
 export interface WsBirdCountUpdate {
-  zoneId: string
+  houseId: string
+  /** 'YYYY-MM-DD' giờ Việt Nam */
+  sessionDate: string
+  sessionType: SessionType
+  /** Số thô của phiên, cộng mọi camera của House */
   entryCount: number
   exitCount: number
-  returnRate: number
-  sessionType: SessionType
+  /** Số ròng của phiên: ra − vào (sáng) hoặc vào − ra (chiều), không âm */
+  netCount: number
+  /** % chim về trong ngày; null khi chưa có phiên sáng hoặc phiên sáng không có chim ra */
+  returnRate: number | null
   timestamp: string
 }
 

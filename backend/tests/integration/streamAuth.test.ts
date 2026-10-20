@@ -59,7 +59,7 @@ async function seed(deviceId?: string) {
   })
   const house = await House.create({ farm_id: farm._id, name: 'H' })
   const zone = await Zone.create({ house_id: house._id, name: 'Z' })
-  const camera = await CameraNode.create({ device_id: deviceId ?? `cam-zone${seq}`, zone_id: zone._id })
+  const camera = await CameraNode.create({ device_id: deviceId ?? `cam-house${seq}`, house_id: house._id })
   return {
     camera,
     t: {

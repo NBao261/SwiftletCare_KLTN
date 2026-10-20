@@ -119,6 +119,12 @@ export const updateDetectionTuning = asyncHandler(async (req: Request, res: Resp
   res.json({ success: true, data: zone })
 })
 
+/** PUT /farms/houses/:houseId/bird-count-tuning – EXPERT-FR-008 (SRS v2.1.8) */
+export const updateBirdCountTuning = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.updateHouseBirdCountTuning(req.params.houseId, req.user, req.body)
+  res.json({ success: true, data: house })
+})
+
 /** PUT /farms/zones/:zoneId/thresholds/reset – ENV-FR-020 */
 export const resetThresholds = asyncHandler(async (req: Request, res: Response) => {
   const zone = await farmService.resetZoneThresholds(req.params.zoneId, req.user)

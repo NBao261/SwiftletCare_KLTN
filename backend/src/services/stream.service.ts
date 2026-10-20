@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import { CameraNode, IN_SERVICE } from '@/models/device.model'
-import { assertZoneAccess } from '@/utils/farmAccess.util'
+import { assertHouseAccess } from '@/utils/farmAccess.util'
 import {
   BadRequestError, NotFoundError, ServiceUnavailableError, UnauthorizedError,
 } from '@/utils/appError.util'
@@ -36,9 +36,9 @@ export async function issueStreamToken(cameraNodeId: string, user: CurrentUser) 
   const secret = env('STREAM_TOKEN_SECRET')
   if (!secret) throw ServiceUnavailableError('Máy chủ video chưa được cấu hình')
 
-  const node = await CameraNode.findOne({ _id: cameraNodeId, ...IN_SERVICE }).select('device_id zone_id').lean()
+  const node = await CameraNode.findOne({ _id: cameraNodeId, ...IN_SERVICE }).select('device_id house_id').lean()
   if (!node) throw NotFoundError('Không tìm thấy camera')
-  await assertZoneAccess(String(node.zone_id), user)
+  await assertHouseAccess(String(node.house_id), user)
 
   const path = `cam-${node.device_id}`
   // device_id "x-raw" sẽ ra đúng tên đường hình gốc của camera "x" (có thể ở farm khác)
