@@ -155,8 +155,8 @@ Xong khi: xem được hình, độ trễ dưới khoảng 1 giây, không vỡ 
 
 | Nơi chạy | Phần mềm |
 |---|---|
-| PC Edge AI | Python 3.10–3.12, ffmpeg, các gói trong `ai-pipeline/requirements.txt` |
-| Colab (train) | `ultralytics` (kéo theo torch), GPU T4 miễn phí |
+| PC Edge AI | **Python 3.11–3.12** (`onnxruntime` 1.30 cần ≥ 3.11), ffmpeg, các gói trong `ai-pipeline/requirements.txt` |
+| Colab (train) | `ultralytics==8.4.170` (kéo theo torch), GPU T4 miễn phí |
 | Gán nhãn | Roboflow (web) hoặc CVAT |
 | Backend/Frontend (dev) | Như hiện tại (`docker compose up -d mongodb emqx`, `npm run dev`) |
 | Cloud | Docker + Docker Compose; Caddy, MediaMTX, EMQX, MongoDB, backend (mục 15) |
@@ -164,16 +164,29 @@ Xong khi: xem được hình, độ trễ dưới khoảng 1 giây, không vỡ 
 `ai-pipeline/requirements.txt` mới:
 
 ```text
-opencv-python>=4.9
-numpy>=1.26
-onnxruntime>=1.22          # máy chạy CPU Intel: thay dòng này bằng onnxruntime-openvino>=1.22 (mục 18.4)
-supervision>=0.25
-paho-mqtt>=2.0
-PyYAML>=6.0
-python-dotenv>=1.0
-loguru>=0.7
-pytest>=8
+opencv-python>=4.14,<5          # 5.x mới ra 07/2026, chưa dùng
+numpy>=1.26,<3
+onnxruntime>=1.30,<1.31         # máy chạy CPU Intel: thay bằng onnxruntime-openvino>=1.24.1,<1.25 (mục 18.4)
+supervision>=0.30.9,<0.31       # ByteTrack, LineZone; 0.31 mới ra 16/10/2026
+paho-mqtt>=2.0,<3
+PyYAML>=6.0,<7
+python-dotenv>=1.0,<2
+loguru>=0.7,<1
+pytest>=8,<9
 ```
+
+**Phiên bản đã chốt (20/10/2026).** Chỉ chọn bản đã phát hành ít nhất 2 tuần: bản mới hơn chưa có thời gian lộ lỗi. Cận trên khóa trong cùng nhánh phát hành, nên `pip install` chỉ nhận bản vá, không tự nhảy lên bản có thể đổi API giữa lúc đang test.
+
+| Gói | Bản dùng | Ghi chú |
+|---|---|---|
+| Python | 3.11 (Docker `python:3.11-slim`) hoặc 3.12 | `onnxruntime` 1.30 và `onnxruntime-openvino` 1.24 không có bản cho 3.10 |
+| `ultralytics` (chỉ dùng trên Colab) | **8.4.170** (30/09/2026) | Có YOLOv8, YOLO11, YOLO26. Hầu như ngày nào cũng ra bản mới, nên ghim đúng một bản cho mọi lượt train để kết quả so sánh được |
+| `onnxruntime` | 1.30.x (10/09/2026) | 1.31 ra 09/10/2026, chưa dùng |
+| `onnxruntime-openvino` | 1.24.1 (26/02/2026) | Chỉ cho CPU Intel |
+| `supervision` | 0.30.9 (08/10/2026) | Bản vá cuối của nhánh 0.30 |
+| `opencv-python` | 4.14.x | |
+
+Khi muốn nâng phiên bản: nâng từng gói một, chạy lại `pytest` và một clip test (mục 7.9). Số đếm không đổi thì mới giữ bản mới.
 
 Cài đặt:
 
@@ -249,7 +262,7 @@ Thời gian: 2 ngày. Mục tiêu: chạy được trên clip, mở trình duy�
 Chưa có model riêng thì dùng YOLO26n pretrained (COCO, class `bird` = 14). Export một lần trên Colab:
 
 ```python
-!pip install -q -U "ultralytics>=8.4"     # YOLO26 có từ ultralytics 8.4.0
+!pip install -q "ultralytics==8.4.170"    # ghim bản, xem mục 4
 from ultralytics import YOLO
 YOLO("yolo26n.pt").export(format="onnx", imgsz=640, nms=False, simplify=True)
 # tải yolo26n.onnx về ai-pipeline/models/
@@ -282,6 +295,7 @@ model:
   version: "yolo26n-coco"
   input_size: 640                           # phải bằng imgsz lúc export; hạ 480/416 nếu thiếu FPS (mục 18.4)
   confidence_threshold: 0.30
+  nms_iou_threshold: 0.45                   # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
   providers: ["CPUExecutionProvider"]       # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
   classes:
     14: swiftlet                            # COCO bird. Model tự train: đổi thành  0: swiftlet
@@ -322,11 +336,12 @@ logging:
 
 ### 6.3. Sửa `src/inference.py`
 
-Bốn chỗ. Chỗ 4 viết lại cả `postprocess`, vì model YOLO26 export với `nms=False` (mục 6.1) không cần NMS nữa:
+Bốn chỗ. Chỗ 4 viết lại cả `postprocess` để đọc được **cả hai kiểu đầu ra**: YOLO26n export `nms=False` (không cần NMS) và YOLOv8n/YOLO11n (phải chạy NMS). Nhờ vậy, đổi model để so sánh (mục 7.9) chỉ cần sửa `model.path` trong config, không phải sửa code:
 
 ```python
 # 1) __init__: nhận tên class và provider từ config, số luồng theo máy
-def __init__(self, model_path, input_size=640, conf_threshold=0.5, class_names=None, providers=None):
+def __init__(self, model_path, input_size=640, conf_threshold=0.5, iou_threshold=0.45,
+             class_names=None, providers=None):
     self.class_names = class_names or {0: "swiftlet"}
     ...
     sess_opts.intra_op_num_threads = os.cpu_count() or 4      # thêm `import os`
@@ -339,20 +354,33 @@ blob = padded[:, :, ::-1].astype(np.float32) / 255.0
 
 # 3) preprocess trả về (blob, scale, pad_x, pad_y); infer() gọi postprocess(outputs, scale, pad_x, pad_y)
 
-# 4) postprocess: đầu ra (1, 300, 6) = [x1, y1, x2, y2, confidence, class_id], không chạy NMS
+# 4) postprocess: nhận kiểu đầu ra theo shape
 def postprocess(self, outputs, scale, pad_x, pad_y):
-    det = outputs[0][0]
-    conf, cls = det[:, 4], det[:, 5].astype(int)
+    out = outputs[0][0]
+    end2end = out.shape[1] == 6                  # YOLO26 nms=False: (300, 6); YOLOv8/11: (4 + số class, 8400)
+    if end2end:                                  # mỗi dòng: x1, y1, x2, y2, confidence, class_id
+        xyxy, conf, cls = out[:, :4], out[:, 4], out[:, 5].astype(int)
+    else:                                        # mỗi cột: cx, cy, w, h, điểm của từng class
+        out = out.T
+        cls = out[:, 4:].argmax(axis=1)
+        conf = out[np.arange(len(out)), 4 + cls]
+        cx, cy, w, h = out[:, 0], out[:, 1], out[:, 2], out[:, 3]
+        xyxy = np.stack([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], axis=1)
     keep = (conf >= self.conf_thresh) & np.isin(cls, list(self.class_names))
-    det, conf, cls = det[keep], conf[keep], cls[keep]
-    xyxy = (det[:, :4] - [pad_x, pad_y, pad_x, pad_y]) / scale      # bỏ viền letterbox, về tọa độ ROI
+    xyxy, conf, cls = xyxy[keep], conf[keep], cls[keep]
+    if not end2end and len(xyxy):                # cv2.dnn.NMSBoxes nhận [x, y, w, h]
+        xywh = np.concatenate([xyxy[:, :2], xyxy[:, 2:] - xyxy[:, :2]], axis=1)
+        idx = np.array(cv2.dnn.NMSBoxes(xywh.tolist(), conf.tolist(),
+                                        self.conf_thresh, self.iou_thresh)).reshape(-1)
+        xyxy, conf, cls = xyxy[idx], conf[idx], cls[idx]
+    xyxy = (xyxy - [pad_x, pad_y, pad_x, pad_y]) / scale      # bỏ viền letterbox, về tọa độ ROI
     return [Detection(int(c), self.class_names[int(c)], float(p), tuple(map(int, b)))
             for b, p, c in zip(xyxy, conf, cls)]
 ```
 
-Xóa hằng `CLASS_NAMES`/`PREDATOR_IDS`, tham số `iou_threshold` và lời gọi `cv2.dnn.NMSBoxes`. `confidence_threshold` vẫn dùng như cũ.
+Xóa hằng `CLASS_NAMES`/`PREDATOR_IDS`. `confidence_threshold` dùng cho mọi model, `nms_iou_threshold` chỉ có tác dụng với YOLOv8n/YOLO11n.
 
-Nếu ở mục 7.6 thấy model sót chim trong đàn dày, có thể export đầu ra cũ (bỏ `nms=False`, độ chính xác COCO cao hơn khoảng 0,8 mAP) và tự chạy NMS. Phải so trên cùng tập test thì mới biết đáng hay không.
+Với YOLO26n cũng có thể export đầu ra kiểu cũ (bỏ `nms=False`; trên COCO chính xác hơn khoảng 0,8 mAP nhưng phải chạy NMS). Code trên tự nhận ra kiểu đó. Chỉ chọn cách này khi so trên cùng tập test (mục 7.9) thấy đáng.
 
 ### 6.4. `src/counting.py` (viết lại)
 
@@ -656,7 +684,7 @@ def main():
     m, t = cfg["model"], cfg["tracking"]
 
     engine = InferenceEngine(m["path"], m["input_size"], m["confidence_threshold"],
-                             class_names=m["classes"], providers=m["providers"])
+                             m["nms_iou_threshold"], class_names=m["classes"], providers=m["providers"])
     server = MjpegServer(cfg["stream"]["host"], cfg["stream"]["port"], cfg["stream"]["jpeg_quality"])
     pub = None if args.no_mqtt else Publisher(cfg["mqtt"], m["version"])
 
@@ -1001,7 +1029,7 @@ Runtime → Change runtime type → **T4 GPU**. Mỗi khối dưới đây là m
 
 ```python
 # Cell 1 — môi trường
-!pip install -q -U "ultralytics>=8.4"     # YOLO26 có từ ultralytics 8.4.0
+!pip install -q "ultralytics==8.4.170"    # ghim bản, xem mục 4
 from google.colab import drive
 drive.mount("/content/drive")
 !rm -rf /content/dataset && unzip -q "/content/drive/MyDrive/swiftletcare/dataset.zip" -d /content/dataset
@@ -1189,6 +1217,62 @@ for name in ("swiftlet_v1", "swiftlet_v1_fbd"):          # v1: chỉ COCO → d�
 Chọn bản có recall và mAP50 cao hơn trên tập test, rồi kiểm lại bằng sai số đếm (mục 7.7). Nếu hai bản ngang nhau, giữ bản không dùng dữ liệu ngoài vì đơn giản hơn và không vướng giấy phép. Bảng so sánh này đưa thẳng vào báo cáo được: nó cho thấy dữ liệu ngoài có giúp hay không.
 
 Lợi ích của dữ liệu ngoài thường rõ nhất khi ảnh tự gán nhãn còn ít (vài trăm ảnh), và giảm dần khi đã có vài nghìn ảnh.
+
+
+### 7.9. So sánh model: YOLOv8n, YOLO11n, YOLO26n
+
+Chọn model theo **số đo trên dữ liệu chim yến của mình**, không theo bảng COCO ở mục 6.1. Trong lúc chưa so sánh xong, YOLO26n là mặc định (mục 6.1). Pipeline đọc được cả ba (mục 6.3), nên mỗi lần đổi model chỉ phải sửa `model.path` và `model.version` trong config.
+
+| Ứng viên | Ra mắt | Mạnh | Yếu |
+|---|---|---|---|
+| YOLOv8n | 01/2023 | Ổn định nhất, nhiều tài liệu và ví dụ nhất, đúng tên trên phiếu đăng ký | Chậm nhất: 80,4 ms/khung trên CPU, gần như chắc chắn cần OpenVINO hoặc đầu vào nhỏ hơn mới đạt 25 fps |
+| YOLO11n | 09/2024 | Đã dùng rộng rãi hơn 2 năm; 56,1 ms/khung | Vẫn chưa đủ 25 fps nếu không tăng tốc |
+| YOLO26n | 01/2026 | Nhanh nhất (38,9 ms), mAP COCO cao nhất, có STAL cho vật thể nhỏ, không cần NMS | Mới nhất nên ít ví dụ trên mạng hơn |
+
+Bản `s` (lớn hơn) không đưa vào: YOLO26s mất 87,2 ms/khung trên CPU, không đạt 25 fps nếu không có GPU.
+
+**Giữ mọi thứ giống nhau** để so sánh công bằng: cùng tập dữ liệu và cách chia theo ngày (mục 7.4), cùng `ultralytics==8.4.170`, cùng `imgsz`, epoch, augmentation và `seed`. Đo đếm trên cùng các clip test (mục 7.7). Đo FPS trên cùng máy sẽ chạy thật, cùng `providers`.
+
+Bước 1 — train cả ba trên Colab. Mỗi model chạy khoảng 2 giờ trên T4. Nếu Colab ngắt phiên giữa chừng thì chạy lại vòng lặp; nên sửa `CANDIDATES` để bỏ model đã xong, vì kết quả đã lưu trên Drive.
+
+```python
+!pip install -q "ultralytics==8.4.170"
+from ultralytics import YOLO
+
+RUNS = "/content/drive/MyDrive/swiftletcare/runs"
+DATA = "/content/dataset/data.yaml"
+AUG = dict(degrees=0.0, flipud=0.0, fliplr=0.5, scale=0.3, hsv_v=0.5, mosaic=1.0, close_mosaic=15)
+CANDIDATES = {"yolov8n": {}, "yolo11n": {}, "yolo26n": {"nms": False}}   # YOLO26: đo và export đúng đầu ra không NMS
+
+for name, head in CANDIDATES.items():
+    YOLO(f"{name}.pt").train(data=DATA, imgsz=640, epochs=120, patience=25, batch=16,
+                             seed=0, deterministic=True, project=RUNS, name=f"cmp_{name}", **AUG)
+    best = YOLO(f"{RUNS}/cmp_{name}/weights/best.pt")
+    m = best.val(data=DATA, split="test", imgsz=640, conf=0.25, **head)
+    print(name, "precision", round(m.box.mp, 3), "recall", round(m.box.mr, 3),
+          "mAP50", round(m.box.map50, 3), "mAP50-95", round(m.box.map, 3))
+    best.export(format="onnx", imgsz=640, simplify=True, **head)   # → cmp_<name>/weights/best.onnx
+```
+
+Bước 2 — trên máy chạy thật, lần lượt với từng file `.onnx`: sửa `model.path`/`model.version`, chạy đủ các clip test của mục 7.7 với `--no-mqtt`. Ghi lại dòng `KẾT QUẢ` và FPS trong log. Chạy trên file thì pipeline xử lý nhanh hết mức, nên FPS đo được là tốc độ tối đa của máy.
+
+Bước 3 — điền bảng (đưa thẳng vào báo cáo VISION-FR-016):
+
+| Model | Precision | Recall | mAP50 | Sai số ròng đủ sáng | Sai số ròng thiếu sáng | FPS trên máy thật | Đạt 25 fps? |
+|---|---|---|---|---|---|---|---|
+| YOLOv8n | | | | | | | |
+| YOLO11n | | | | | | | |
+| YOLO26n | | | | | | | |
+
+**Cách chọn**, áp dụng theo thứ tự:
+
+1. Loại model không đạt **≥ 25 fps** trên máy thật. Mọi model được dùng cùng cách tăng tốc ở bước 2 của mục 18.4 (OpenVINO nếu là CPU Intel).
+2. Loại model có sai số đếm **> 10%**, theo ngưỡng nội bộ ở mục 7.7.
+3. Trong các model còn lại, chọn model có **sai số ròng thấp nhất**, xét cả hai nhóm đủ sáng và thiếu sáng.
+4. Nếu sai số chênh nhau không đáng kể (ngưỡng nhóm tự chọn: ≤ 1 điểm %), chọn **bản ổn định hơn**, theo thứ tự YOLOv8n → YOLO11n → YOLO26n.
+5. Nếu cả ba đều trượt bước 1, áp dụng tiếp các bước 3–5 của mục 18.4 cho model có sai số thấp nhất, rồi đo lại.
+
+Chỉ model được chọn mới đi tiếp vào GĐ5 (chạy 24 giờ, mục 10). Ghi tên model và phiên bản (`model.version`, ví dụ `swiftlet_v1_yolo26n`) vào config và báo cáo.
 
 ---
 
@@ -1632,13 +1716,14 @@ Checklist:
 
 - [ ] Camera lắp đúng vị trí, xem được RTSP
 - [ ] CameraNode đã đăng ký, `.env` đủ giá trị
-- [ ] `inference.py` đã sửa 4 chỗ (RGB, đầu ra không NMS, class, số luồng/provider)
+- [ ] `inference.py` đã sửa 4 chỗ (RGB, đọc cả hai kiểu đầu ra, class, số luồng/provider)
 - [ ] `pytest` qua
 - [ ] Stream có ô xanh, ROI và vạch đếm đã hiệu chỉnh
 - [ ] FPS xử lý ≥ tốc độ khung hình của camera trên máy chạy thật (VPS)
 - [ ] Clip của ít nhất 4 ngày
 - [ ] 1.500+ ảnh đã gán nhãn, chia tập theo ngày
 - [ ] Model v1 đã train, export ONNX, có số liệu trên tập test
+- [ ] Đã so sánh YOLOv8n / YOLO11n / YOLO26n trên cùng dữ liệu, chọn theo mục 7.9
 - [ ] Sai số đếm trên các clip test đạt ngưỡng, có bảng tách đủ sáng / thiếu sáng
 - [ ] Backend: bản ghi được upsert, `return_rate` tính trên số ròng, `returnRate.job` tạo alert `LOW_RETURN_RATE`, test tích hợp qua
 - [ ] Số đếm 5 phút: pipeline gửi cả ngoài phiên, backend lưu `BirdCountBucket`, có API và biểu đồ
@@ -1664,7 +1749,7 @@ Checklist:
 - ESP32: cài TLS, có giới hạn thời gian và phương án lùi (mục 15.7).
 - Nhà yến lắp cáp quang VNPT có IP public, camera IP có RTSP mua riêng và nối dây vào modem; VPS kéo hình thẳng từ camera (mục 19). Phương án 4G ở mục 17 không còn dùng.
 - Không có máy dư để đặt tại nhà yến → thử chạy model trên cloud trước (mục 18), có 5 cổng kiểm tra; trượt thì quay về đặt máy tại chỗ.
-- Model: **YOLO26n**, export ONNX `nms=False` (20/10/2026, thay YOLOv8n). Cùng kích thước, nhanh hơn khoảng 2 lần trên CPU theo số liệu của Ultralytics (mục 6.1, 18.4). Mục tiêu xử lý **25 khung hình/giây**, bằng tốc độ thật của camera VIGI C320I (mục 19.3).
+- Model mặc định: **YOLO26n**, export ONNX `nms=False` (20/10/2026, thay YOLOv8n). Bản cuối chọn sau khi so với YOLOv8n và YOLO11n trên dữ liệu thật (mục 7.9). Cùng kích thước, nhanh hơn khoảng 2 lần trên CPU theo số liệu của Ultralytics (mục 6.1, 18.4). Mục tiêu xử lý **25 khung hình/giây**, bằng tốc độ thật của camera VIGI C320I (mục 19.3).
 
 ---
 
