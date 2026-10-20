@@ -2,6 +2,8 @@ import { Suspense, useRef, useState } from 'react'
 import { Outlet, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useBreadcrumbStore } from '@/stores/breadcrumbStore'
+import { usePageHeroStore } from '@/stores/pageHeroStore'
+import { cn } from '@/lib/cn'
 import AppSidebar, { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar'
 import AppHeader from '@/components/layouts/AppHeader'
 import Toast from '@/components/common/Toast'
@@ -26,6 +28,8 @@ export default function AppShell({
 }) {
   useAlertNotifications()
   const back = useBreadcrumbStore(s => s.back)
+  // Ảnh nền tràn đầu trang do trang tự bật (usePageHero) — null thì khung giữ nguyên như cũ
+  const heroImage = usePageHeroStore(state => state.image)
   // Đổi VI/EN → AppShell render lại (sidebar/header theo), vùng nội dung remount (key) để mọi t() gọi trong hàm thường
   // (cột bảng, helper ngày, bảng nhãn) ra đúng ngôn ngữ mới. Mất state tạm của trang (bộ lọc đang chọn) — chấp nhận được
   const { i18n } = useI18next()
@@ -39,14 +43,29 @@ export default function AppShell({
         {/* Header nổi đè lên vùng cuộn và phủ hết bề ngang cột (cả phần thanh cuộn) — nội dung trượt bên dưới
             bị blur. Không nằm trong <main> nên lăn chuột trên header phải chuyển tiếp sang <main> */}
         <div onWheel={e => mainRef.current?.scrollBy({ top: e.deltaY })} className="absolute inset-x-0 top-0 z-20">
-          <AppHeader menuSections={menuSections} elevated={scrolled} />
+          <AppHeader menuSections={menuSections} elevated={scrolled} isOverHero={heroImage !== null && !scrolled} />
         </div>
         {/* pt-16 chừa đúng chiều cao header; pb-28 trên mobile để dock nổi không che nội dung cuối trang */}
         <main
           ref={mainRef}
           onScroll={e => setScrolled(e.currentTarget.scrollTop > 0)}
-          className="flex flex-1 flex-col overflow-y-auto bg-stone pb-28 pt-16 lg:pb-8"
+          className={cn('relative flex flex-1 flex-col overflow-y-auto bg-stone pb-28 pt-16 lg:pb-8', heroImage && 'isolate')}
         >
+          {/* Ảnh nền đầu trang do trang bật (usePageHero): tràn sát mép, nằm sau header và khung, mép dưới tan vào nền */}
+          {heroImage && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[300px] [-webkit-mask-image:linear-gradient(to_bottom,black_66%,transparent_100%)] [mask-image:linear-gradient(to_bottom,black_66%,transparent_100%)] lg:h-[430px]"
+            >
+              <img
+                src={heroImage.src}
+                alt=""
+                width={heroImage.width}
+                height={heroImage.height}
+                className="h-full w-full object-cover object-top"
+              />
+            </div>
+          )}
           {/* Container duy nhất bọc mọi card nội dung — max-w + mx-auto để nội
               dung luôn căn giữa vùng nhìn ở màn hình rộng (Full HD/2K/4K), px-6/
               px-8 là lề 2 bên đồng nhất khi viewport hẹp hơn max-width. */}

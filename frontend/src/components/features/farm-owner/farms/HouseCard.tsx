@@ -1,7 +1,8 @@
 import { ArrowRightIcon, CheckCircleIcon, HouseIcon, InfoIcon, UserIcon, WarningIcon } from '@phosphor-icons/react'
 import PinButton from '@/components/features/farm-owner/farms/PinButton'
 import HealthBadge, { HEALTH_STYLE } from '@/components/features/farm-owner/farms/HealthBadge'
-import { CAPSULE_ACTION_CLASS, METRIC_BY_KEY } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { houseHeadlineText } from '@/components/features/farm-owner/farms/houseHeadline'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
@@ -25,7 +26,6 @@ export default function HouseCard({ node, staff, pinned, showYield, onTogglePin,
   const isEmpty = node.health === 'EMPTY'
   const issues = node.zones.reduce((sum, z) => sum + z.breaches.length + z.alerts.length, 0)
   const offline = counts.total - counts.online
-  const zoneLabel = headline?.zone.name || t('card.unknownZone')
 
   // Số liệu trống thì hiện "—" mờ thay vì 0 để không nhầm với "đo được bằng 0"
   const stats = [
@@ -34,18 +34,7 @@ export default function HouseCard({ node, staff, pinned, showYield, onTogglePin,
     { label: t('stat.online'), value: isEmpty ? '—' : `${num(counts.online)}/${num(counts.total)}`, warn: offline > 0 },
   ]
 
-  const bannerText = headline
-    ? headline.breach
-      ? t(headline.breach.direction === 'high' ? 'banner.high' : 'banner.low', {
-          metric: t(METRIC_BY_KEY[headline.breach.metric].labelKey),
-          zone: zoneLabel,
-          value: `${num(headline.breach.value, METRIC_BY_KEY[headline.breach.metric].decimals)} ${METRIC_BY_KEY[headline.breach.metric].unit}`,
-        })
-      : headline.alert
-        // Tên cảnh báo lấy theo loại (type), không dùng title của server vì có thể chứa "undefined"
-        ? t('banner.alert', { title: t(`alert.${headline.alert.type}`), zone: zoneLabel })
-        : t('banner.offline', { n: headline.offlineDevices ?? 0, zone: zoneLabel })
-    : ''
+  const bannerText = houseHeadlineText(headline, t, num)
 
   return (
     <article className={cn('flex flex-col gap-4 rounded-2xl border-2 bg-white p-5', style.card)}>

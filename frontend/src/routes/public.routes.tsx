@@ -1,5 +1,6 @@
 import { lazy } from 'react'
 import { Route } from 'react-router-dom'
+import AuthLayout from '@/components/layouts/AuthLayout'
 
 /**
  * Route không cần đăng nhập — nằm NGOÀI MainLayout nên không có sidebar/topbar.
@@ -17,9 +18,12 @@ const ForbiddenPage = lazy(() => import('@/pages/ForbiddenPage'))
 
 export const publicRoutes = (
   <>
-    <Route path="/login" element={<LoginPage />} />
-    <Route path="/register" element={<RegisterPage />} />
-    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    {/* Đăng nhập / Đăng ký / Quên mật khẩu chung 1 khung: khung giữ nguyên khi chuyển trang để ảnh trượt qua lại */}
+    <Route element={<AuthLayout />}>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    </Route>
     <Route path="/invitations/:token" element={<InvitationPage />} />
     <Route path="/marketplace" element={<MarketplacePage />} />
     <Route path="/marketplace/:id" element={<ListingDetailPage />} />

@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn'
 const DOT_CLASS: Record<StabilityStatus, string> = { FAULT: 'bg-safetyOrange', STABLE: 'bg-success', EMPTY: 'bg-warmGray/40' }
 const LABEL_CLASS: Record<StabilityStatus, string> = { FAULT: 'text-safetyOrange', STABLE: 'text-charcoal', EMPTY: 'text-warmGray' }
 
-// Trạng thái các nhà yến của farm
+// Thẻ nhỏ trạng thái các nhà yến của farm, đứng cạnh khối điều khiển
 export default function EcoHealthCard({ farmId }: { farmId: string }) {
   const { t } = useTranslation(dashboardDict)
   const { items, isLoading } = useHouseStability(farmId)
@@ -21,27 +21,27 @@ export default function EcoHealthCard({ farmId }: { farmId: string }) {
   else if (hasDevices) note = t('stability.allNormal')
 
   return (
-    <Card size="lg" className="flex h-full flex-col gap-5">
-      <p className="label-caption">{t('stability.caption')}</p>
+    <Card className="flex h-full flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="label-caption">{t('stability.caption')}</p>
+        <Badge tone="positive">{t('stability.stable')}</Badge>
+      </div>
 
       <div>
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <p className="leading-none">
-            <span className="text-[44px] font-extrabold tracking-tight text-charcoal">{isLoading ? '--' : stableCount}</span>
-            <span className="ml-1 text-base font-semibold text-warmGray">/{isLoading ? '--' : items.length}</span>
-          </p>
-          <Badge tone="positive">{t('stability.stable')}</Badge>
-        </div>
+        <p className="leading-none">
+          <span className="text-[32px] font-extrabold tracking-tight text-charcoal">{isLoading ? '--' : stableCount}</span>
+          <span className="ml-1 text-sm font-semibold text-warmGray">/{isLoading ? '--' : items.length}</span>
+        </p>
         {!isLoading && (
           <p className={cn('mt-2 truncate text-xs font-medium', hasFault ? 'text-safetyOrange' : 'text-warmGray')} title={note}>{note}</p>
         )}
       </div>
 
-      <div className="relative min-h-0 flex-1 border-t border-warmGray/10 pt-4">
+      <div className="relative min-h-0 flex-1 border-t border-warmGray/10 pt-3">
         {isLoading ? (
           <LoadingSkeleton count={3} className="h-5 w-full" />
         ) : (
-          <ul className="absolute inset-x-0 bottom-0 top-4 flex flex-col gap-2.5 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <ul className="absolute inset-x-0 bottom-0 top-3 flex flex-col gap-2 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {items.map(house => (
               <HouseRow key={house.houseId} house={house} />
             ))}

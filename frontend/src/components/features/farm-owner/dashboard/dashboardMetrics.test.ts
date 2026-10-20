@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageReadings, buildAlertRow, latestTimestamp, summarizeNodes, withLiveRelays, averageControlOutput, sortPinnedFirst, buildHouseStability, getAnomalies, getSeverityGroup, mergeBirdCountRecords, summarizeBirdCount, summarizeStability } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { averageReadings, buildAlertRow, latestTimestamp, summarizeNodes, withLiveRelays, averageControlOutput, sortPinnedFirst, buildHouseStability, getAnomalies, getSeverityGroup, mergeBirdCountRecords, summarizeBirdCount, summarizeStability, summarizeFarmHouses } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
 import type { Alert, House, Thresholds, Zone } from '@/types'
 
@@ -183,5 +183,25 @@ describe('averageControlOutput', () => {
 
   it('returns undefined when no zone has live output', () => {
     expect(averageControlOutput(['z1'], new Map())).toBeUndefined()
+  })
+})
+
+describe('summarizeFarmHouses', () => {
+  const house = (farmId: string, health: 'ALERT' | 'NORMAL' | 'EMPTY', severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>) => ({
+    farm: { _id: farmId }, health, zones: [{}, {}], counts: { total: 4, online: 3 },
+    alerts: severities.map(severity => ({ severity })), monthKg: 1.5, monthNests: 10, monthBatches: 1,
+  })
+
+  it('chỉ cộng nhà của farm đang chọn, quy cảnh báo về 3 cấp', () => {
+    const totals = summarizeFarmHouses([house('f1', 'ALERT', ['CRITICAL', 'MEDIUM']), house('f1', 'NORMAL', ['LOW']), house('f2', 'ALERT', ['HIGH'])], 'f1')
+    expect(totals.houses).toBe(2)
+    expect(totals.faultHouses).toBe(1)
+    expect(totals.zones).toBe(4)
+    expect(totals.devicesOnline).toBe(6)
+    expect(totals.devicesTotal).toBe(8)
+    expect(totals.alertsTotal).toBe(3)
+    expect(totals.alertsByLevel).toEqual({ P1: 1, P2: 1, P3: 1 })
+    expect(totals.monthKg).toBe(3)
+    expect(totals.monthBatches).toBe(2)
   })
 })

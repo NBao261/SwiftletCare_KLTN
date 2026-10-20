@@ -214,10 +214,13 @@ interface NodeRef {
   relay_states: RelayStates
 }
 
+// Relay hiển thị trên Dashboard: sưởi tuỳ chọn vì backend SRS v2 đã bỏ relay heating (ENV-FR-012)
+export type DashboardRelayStates = Omit<RelayStates, 'heating'> & { heating?: boolean }
+
 export interface NodesSummary {
   controlMode?: ControlMode
   overrideExpiry?: string
-  relayStates?: RelayStates
+  relayStates?: DashboardRelayStates
 }
 
 export function summarizeNodes(nodes: NodeRef[]): NodesSummary {
@@ -231,19 +234,21 @@ export function summarizeNodes(nodes: NodeRef[]): NodesSummary {
       misting: nodes.some(node => node.relay_states.misting),
       speaker: nodes.some(node => node.relay_states.speaker),
       ventilation: nodes.some(node => node.relay_states.ventilation),
-      heating: nodes.some(node => node.relay_states.heating),
+      // Sưởi chỉ có khi còn node gửi khoá heating (dữ liệu cũ); không có thì để trống thay vì báo TẮT
+      heating: nodes.some(node => node.relay_states.heating !== undefined) ? nodes.some(node => node.relay_states.heating) : undefined,
     },
   }
 }
 
-const RELAY_KEYS: Array<keyof RelayStates> = ['misting', 'speaker', 'ventilation', 'heating']
+// 3 relay bắt buộc của SRS v2 — sưởi đã bỏ nên không đòi khoá heating trong telemetry socket
+const RELAY_KEYS: Array<keyof RelayStates> = ['misting', 'speaker', 'ventilation']
 
 interface LiveControl {
   relayStates?: Partial<RelayStates>
   controlOutput?: ControlOutput
 }
 
-// Thay relay của node bằng bản socket mới nhất của zone (khi đủ 4 relay); chế độ AUTO/MANUAL giữ REST vì telemetry luôn gửi 'AUTO'
+// Thay relay của node bằng bản socket mới nhất của zone (khi đủ 3 relay); chế độ AUTO/MANUAL giữ REST vì telemetry luôn gửi 'AUTO'
 export function withLiveRelays<T extends NodeRef & { zone_id: string }>(nodes: T[], live: Map<string, LiveControl>): T[] {
   return nodes.map(node => {
     const states = live.get(node.zone_id)?.relayStates
@@ -356,4 +361,53 @@ export function buildAlertRow(alert: Alert, deviceName: string, locationName: st
     status: alert.status,
     group: getSeverityGroup(alert.severity),
   }
+}
+
+// Nguồn số liệu 1 nhà cho hàng KPI chế độ "Tất cả nhà yến" (HouseNode của màn Cấu trúc Farm)
+interface HouseKpiSource {
+  farm: { _id: string }
+  health: 'ALERT' | 'NORMAL' | 'EMPTY'
+  zones: unknown[]
+  counts: { total: number; online: number }
+  alerts: Array<{ severity: AlertSeverity }>
+  monthKg: number
+  monthNests: number
+  monthBatches: number
+}
+
+export interface FarmKpiTotals {
+  houses: number
+  faultHouses: number
+  zones: number
+  devicesOnline: number
+  devicesTotal: number
+  alertsTotal: number
+  alertsByLevel: Record<TicketPriority, number>
+  monthKg: number
+  monthNests: number
+  monthBatches: number
+}
+
+// Cộng số liệu các nhà yến thuộc 1 farm (nguồn chứa nhà của mọi farm nên lọc theo farmId)
+export function summarizeFarmHouses(houses: HouseKpiSource[], farmId: string): FarmKpiTotals {
+  const totals: FarmKpiTotals = {
+    houses: 0, faultHouses: 0, zones: 0, devicesOnline: 0, devicesTotal: 0,
+    alertsTotal: 0, alertsByLevel: { P1: 0, P2: 0, P3: 0 }, monthKg: 0, monthNests: 0, monthBatches: 0,
+  }
+  for (const house of houses) {
+    if (house.farm._id !== farmId) continue
+    totals.houses += 1
+    if (house.health === 'ALERT') totals.faultHouses += 1
+    totals.zones += house.zones.length
+    totals.devicesOnline += house.counts.online
+    totals.devicesTotal += house.counts.total
+    totals.monthKg += house.monthKg
+    totals.monthNests += house.monthNests
+    totals.monthBatches += house.monthBatches
+    for (const alert of house.alerts) {
+      totals.alertsByLevel[SEVERITY_TO_LEVEL[alert.severity]] += 1
+      totals.alertsTotal += 1
+    }
+  }
+  return totals
 }

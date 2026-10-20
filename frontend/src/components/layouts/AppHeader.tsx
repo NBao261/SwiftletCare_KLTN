@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
+import { useHeaderSlotStore } from '@/stores/headerSlotStore'
 import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
 import { usePermission } from '@/hooks/common/usePermission'
 import { cn } from '@/lib/cn'
@@ -67,9 +68,11 @@ function LanguageToggle() {
 }
 
 /** `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung */
-export default function AppHeader({ menuSections, elevated = false }: { menuSections: MenuSection[]; elevated?: boolean }) {
+// isOverHero: header nằm trên ảnh nền đầu trang, chưa cuộn → bỏ lớp kính để ảnh không bị nhòe
+export default function AppHeader({ menuSections, elevated = false, isOverHero = false }: { menuSections: MenuSection[]; elevated?: boolean; isOverHero?: boolean }) {
   const user = useAuthStore(s => s.user)
   const askLogout = useLogoutConfirmStore(s => s.ask)
+  const setHeaderSlot = useHeaderSlotStore(state => state.setSlot)
   const { t } = useTranslation(shellDict)
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -95,8 +98,9 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
       <div
         aria-hidden="true"
         className={cn(
-          'absolute inset-0 -z-10 border-b bg-white/10 backdrop-blur-lg backdrop-saturate-150 transition-[border-color,box-shadow] duration-300',
+          'absolute inset-0 -z-10 border-b bg-white/10 backdrop-blur-lg backdrop-saturate-150 transition-[border-color,box-shadow,opacity] duration-300',
           elevated ? 'border-white/60 shadow-glass' : 'border-transparent',
+          isOverHero && 'opacity-0',
         )}
       />
 
@@ -132,6 +136,8 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
       </nav>
 
       <div className="flex shrink-0 items-center gap-3">
+        {/* Chỗ trang đặt nút riêng (HeaderActions) — display: contents nên trống thì không chiếm chỗ */}
+        <div ref={setHeaderSlot} className="contents" />
         <LanguageToggle />
 
         {canViewAlerts && <NotificationPopover />}

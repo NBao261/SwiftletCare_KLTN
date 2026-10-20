@@ -10,6 +10,7 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { setNavigate } from "@/lib/navigation";
 import { getRoleHomePath } from "@/constants/roles";
 import { publicRoutes } from "@/routes/public.routes";
+import LoginSplash from "@/components/auth/LoginSplash";
 import { farmOwnerRoutes } from "@/routes/farm-owner.routes";
 import { technicianRoutes } from "@/routes/technician.routes";
 import { adminRoutes } from "@/routes/admin.routes";
@@ -92,30 +93,34 @@ function RouteFallback() {
  */
 export default function App() {
   return (
-    <Suspense fallback={<RouteFallback />}>
-      <NavigationBridge />
-      <Routes>
-        {publicRoutes}
+    <>
+      <Suspense fallback={<RouteFallback />}>
+        <NavigationBridge />
+        <Routes>
+          {publicRoutes}
 
-        {/* Đã đăng nhập — bọc trong khung sidebar/topbar */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <RoleLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<RoleHomeRedirect />} />
-          <Route path="settings" element={<SettingsPage />} />
-          {farmOwnerRoutes}
-          {technicianRoutes}
-          {adminRoutes}
-          {salesStaffRoutes}
-        </Route>
+          {/* Đã đăng nhập — bọc trong khung sidebar/topbar */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <RoleLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<RoleHomeRedirect />} />
+            <Route path="settings" element={<SettingsPage />} />
+            {farmOwnerRoutes}
+            {technicianRoutes}
+            {adminRoutes}
+            {salesStaffRoutes}
+          </Route>
 
-        <Route path="*" element={<RoleHomeRedirect />} />
-      </Routes>
-    </Suspense>
+          <Route path="*" element={<RoleHomeRedirect />} />
+        </Routes>
+      </Suspense>
+      {/* Màn chuyển cảnh sau đăng nhập — ngoài Suspense để không bị thay bằng màn chờ khi trang trong đang tải */}
+      <LoginSplash />
+    </>
   );
 }
