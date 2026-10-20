@@ -31,7 +31,9 @@ router.get ('/',
   query('slaBreached').optional().isIn(['true', 'false']),
   query('nodeId').optional().isMongoId(),
   validate, ticketController.list)
-router.get ('/kpi',                requireRole('ADMIN'), ticketController.kpi)
+// Mặc định 30 ngày gần nhất, tối đa 366 ngày (kiểm tra trong service)
+router.get ('/kpi',                requireRole('ADMIN'),
+  query('from').optional().isISO8601(), query('to').optional().isISO8601(), validate, ticketController.kpi)
 router.get ('/stats/me',           requireRole('TECHNICIAN'), ticketController.myStats)
 router.get ('/:id',                param('id').isMongoId(), validate, ticketController.getOne)
 router.put ('/:id/status',         requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('status').notEmpty(), validate, ticketController.updateStatus)
@@ -61,7 +63,8 @@ router.post('/:id/rating',         requireRole('FARM_OWNER','ADMIN'), param('id'
 // TICKET-FR-005b — Admin toàn quyền can thiệp: đổi Technician/priority/ngày hẹn/status bất kỳ lúc nào
 router.put ('/:id/admin-override', requireRole('ADMIN'),
   param('id').isMongoId(), body('reason').notEmpty(),
-  body('assigned_to').optional().isMongoId(),
+  // null = trả ticket về hàng đợi chung (TICKET-FR-005)
+  body('assigned_to').optional({ values: 'null' }).isMongoId(),
   body('priority').optional().isIn(['P1', 'P2', 'P3']),
   body('status').optional().isIn(['NEW', 'IN_PROGRESS', 'AWAITING_FIELD_CONFIRMATION', 'CLOSED']),
   body('scheduled_visit_at').optional().isISO8601(),

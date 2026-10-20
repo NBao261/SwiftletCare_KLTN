@@ -24,6 +24,23 @@ export interface ITicket extends Document {
    * Owner và người mới.
    */
   previous_assignees: Array<{ user_id: Types.ObjectId; until: Date }>
+  /**
+   * TICKET-FR-012 — các lượt phụ trách ĐÃ KẾT THÚC (lượt hiện tại nằm ở assigned_to /
+   * assigned_at / responded_at). KPI tính phản hồi, trễ phản hồi, xin gán lại theo từng
+   * lượt, nên ticket chuyền qua nhiều người thì ai làm phần nào được tính đúng phần đó.
+   */
+  assignment_history: Array<{
+    user_id: Types.ObjectId
+    assigned_at: Date
+    responded_at?: Date
+    ended_at: Date
+    end_reason: string
+    response_breached: boolean
+  }>
+  /** Người đang giữ ticket lúc job gắn vi phạm hạn xử lý — KPI tính vi phạm cho người này */
+  sla_breached_by?: Types.ObjectId
+  /** Mỗi lần Admin mở lại ticket đã đóng; `holder_at_close` = người giữ ticket lúc đóng */
+  reopen_history: Array<{ reopened_at: Date; holder_at_close?: Types.ObjectId; reason: string }>
   /** TICKET-FR-015 — sắp xếp danh sách ticket theo hoạt động chat gần nhất */
   last_message_at?: Date
   /**
@@ -95,6 +112,22 @@ const ticketSchema = new Schema<ITicket>(
       _id: false,
       user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
       until:   { type: Date, required: true },
+    }],
+    assignment_history: [{
+      _id: false,
+      user_id:           { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      assigned_at:       { type: Date, required: true },
+      responded_at:      { type: Date },
+      ended_at:          { type: Date, required: true },
+      end_reason:        { type: String, required: true },
+      response_breached: { type: Boolean, default: false },
+    }],
+    sla_breached_by: { type: Schema.Types.ObjectId, ref: 'User' },
+    reopen_history: [{
+      _id: false,
+      reopened_at:     { type: Date, required: true },
+      holder_at_close: { type: Schema.Types.ObjectId, ref: 'User' },
+      reason:          { type: String, required: true },
     }],
     last_message_at: { type: Date },
     scheduled_visit_at:  { type: Date },

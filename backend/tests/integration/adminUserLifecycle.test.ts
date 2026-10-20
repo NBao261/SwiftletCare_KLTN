@@ -1,5 +1,6 @@
 /**
- * admin.service — khoá tài khoản, xoá tài khoản theo yêu cầu (cascade, ticket dở, chạy lại).
+ * admin.service — khoá tài khoản (điều phối lại ticket), xoá tài khoản theo yêu cầu (cascade,
+ * ticket dở, chạy lại), từ chối và nhắc hạn yêu cầu xoá.
  * Chạy trên MongoDB in-memory.
  */
 import mongoose from 'mongoose'
@@ -9,13 +10,17 @@ import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
-import { completeDeletionRequest, setUserStatus } from '@/services/admin.service'
-import { notifyUser } from '@/services/notification.service'
+import {
+  completeDeletionRequest, rejectDeletionRequest, remindPendingDeletionRequests, setUserStatus,
+} from '@/services/admin.service'
+import { cancelAccountDeletion, requestAccountDeletion } from '@/services/auth.service'
+import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { disconnectUser } from '@/socket'
 
 jest.mock('@/services/notification.service', () => ({
   ...jest.requireActual('@/services/notification.service'),
   notifyUser: jest.fn().mockResolvedValue(undefined),
+  notifyAdmins: jest.fn().mockResolvedValue(undefined),
 }))
 jest.mock('@/socket', () => ({
   ...jest.requireActual('@/socket'),
@@ -103,30 +108,122 @@ describe('setUserStatus', () => {
     await expect(setUserStatus(String(admin._id), String(admin._id), false, 'x')).rejects.toMatchObject({ statusCode: 400 })
   })
 
-  it('reports open tickets when locking a technician that still has assigned work', async () => {
+  it('hands a locked technician\'s open tickets to a colleague of the region', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN')
+    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { assigned_regions: ['HCMC'] })
+    const colleague = await mkUser('colleague@test.vn', 'TECHNICIAN', { assigned_regions: ['HCMC'] })
     const owner = await mkUser('owner@test.vn')
-    const farm = await mkFarm(owner)
-    await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS' })
+    const farm = await mkFarm(owner, [], { region: 'HCMC' })
+    await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS', responded_at: new Date() })
     await mkTicket(farm._id, { assigned_to: tech._id, status: 'NEW' })
-    await mkTicket(farm._id, { assigned_to: tech._id, status: 'CLOSED' })
+    const closed = await mkTicket(farm._id, { assigned_to: tech._id, status: 'CLOSED' })
+
+    const result = await setUserStatus(String(admin._id), String(tech._id), false, 'Nghỉ việc')
+
+    expect(result.reroute!.rerouted).toHaveLength(2)
+    expect(result.openTickets).toBeUndefined() // không còn gì Admin phải gán tay
+    const moved = await Ticket.find({ assigned_to: colleague._id })
+    expect(moved).toHaveLength(2)
+    expect(moved.every(t => t.status === 'NEW')).toBe(true) // người mới phải tự xác nhận tiếp nhận
+    expect(String((await Ticket.findById(closed._id))!.assigned_to)).toBe(String(tech._id)) // ticket đã đóng giữ nguyên
+    const audits = await auditActions('TICKET_REROUTED')
+    expect(audits).toHaveLength(2)
+    expect(audits[0].metadata).toMatchObject({ reason: 'ACCOUNT_LOCKED', from: String(tech._id) })
+    // Người bị khoá không đăng nhập được — không gửi tin "ticket đã chuyển khỏi bạn"
+    expect(notifyUser).not.toHaveBeenCalledWith(String(tech._id), expect.objectContaining({ title: 'Ticket đã chuyển khỏi bạn' }))
+  })
+
+  it('puts the tickets in the shared queue and reports them when nobody else covers the region', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { assigned_regions: ['HCMC'] })
+    const owner = await mkUser('owner@test.vn')
+    const farm = await mkFarm(owner, [], { region: 'HCMC' })
+    const a = await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS' })
+    const b = await mkTicket(farm._id, { assigned_to: tech._id, status: 'NEW' })
 
     const result = await setUserStatus(String(admin._id), String(tech._id), false, 'Nghỉ việc')
 
     expect(result.openTickets).toBe(2)
-    expect(result.openTicketIds).toHaveLength(2) // đủ id để Admin bấm gán lại ngay
-    // Khoá tài khoản KHÔNG tự gán lại: người đó vẫn phụ trách vùng, việc gán lại
-    // là quyết định của Admin (AUTH-FR-011) — khác với khi vùng bị gỡ hẳn
-    const stillTheirs = await Ticket.countDocuments({ assigned_to: tech._id, status: { $ne: 'CLOSED' } })
-    expect(stillTheirs).toBe(2)
+    expect(result.openTicketIds!.sort()).toEqual([String(a._id), String(b._id)].sort()) // đủ id để Admin bấm gán lại ngay
+    const queued = (await Ticket.findById(a._id))!
+    expect(queued.assigned_to).toBeFalsy()
+    expect(queued.notes.at(-1)!.content).toContain('đã bị khoá')
   })
 
-  it('omits openTickets when the technician has none', async () => {
+  it('omits reroute info when the technician has no open ticket', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     const tech = await mkUser('tech@test.vn', 'TECHNICIAN')
     const result = await setUserStatus(String(admin._id), String(tech._id), false, 'Nghỉ việc')
+    expect(result.reroute).toBeUndefined()
     expect(result.openTickets).toBeUndefined()
+  })
+})
+
+// ── yêu cầu xoá: user huỷ, Admin từ chối, nhắc hạn ───────────────────────────
+describe('cancelAccountDeletion', () => {
+  it('withdraws a pending request, audits it and tells the admins', async () => {
+    const user = await mkUser('user@test.vn')
+    await requestAccountDeletion(String(user._id))
+
+    const after = await cancelAccountDeletion(String(user._id))
+
+    expect(after.deletion_requested_at).toBeUndefined()
+    expect(await auditActions('DELETION_CANCELLED')).toHaveLength(1)
+    expect(notifyAdmins).toHaveBeenCalledWith(expect.objectContaining({ title: 'Yêu cầu xoá tài khoản đã được huỷ' }))
+    // gửi lại được yêu cầu mới sau khi huỷ
+    await expect(requestAccountDeletion(String(user._id))).resolves.toBeDefined()
+  })
+
+  it('answers 409 when there is nothing to cancel', async () => {
+    const user = await mkUser('user@test.vn')
+    await expect(cancelAccountDeletion(String(user._id))).rejects.toMatchObject({ statusCode: 409 })
+  })
+})
+
+describe('rejectDeletionRequest', () => {
+  it('needs a reason, takes the user off the queue, notifies them and audits', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const user = await mkUser('user@test.vn', 'FARM_OWNER', { deletion_requested_at: new Date(), deletion_reminder_sent_at: new Date() })
+
+    await expect(rejectDeletionRequest(String(admin._id), String(user._id), '   ')).rejects.toMatchObject({ statusCode: 400 })
+
+    const after = await rejectDeletionRequest(String(admin._id), String(user._id), '  Còn hồ sơ thu hoạch phải lưu  ')
+
+    expect(after.deletion_requested_at).toBeUndefined()
+    expect(after.deletion_reminder_sent_at).toBeUndefined()
+    expect(after.is_active).toBe(true) // tài khoản giữ nguyên
+    const [audit] = await auditActions('DELETION_REJECTED')
+    expect(audit.metadata).toMatchObject({ reason: 'Còn hồ sơ thu hoạch phải lưu' })
+    expect(notifyUser).toHaveBeenCalledWith(String(user._id), expect.objectContaining({
+      body: expect.stringContaining('Còn hồ sơ thu hoạch phải lưu'),
+    }))
+  })
+
+  it('refuses a user without a pending request and the admin\'s own request', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN', { deletion_requested_at: new Date() })
+    const user = await mkUser('user@test.vn')
+    await expect(rejectDeletionRequest(String(admin._id), String(user._id), 'x')).rejects.toMatchObject({ statusCode: 400 })
+    await expect(rejectDeletionRequest(String(admin._id), String(admin._id), 'x')).rejects.toMatchObject({ statusCode: 400 })
+  })
+})
+
+describe('remindPendingDeletionRequests', () => {
+  const daysAgo = (now: Date, days: number) => new Date(now.getTime() - days * 86_400_000)
+
+  it('reminds the admins once for requests waiting 23 days or more, and not again on the next run', async () => {
+    const now = new Date('2026-10-17T08:00:00Z')
+    const old = await mkUser('old@test.vn', 'FARM_OWNER', { deletion_requested_at: daysAgo(now, 24) })
+    await mkUser('fresh@test.vn', 'FARM_OWNER', { deletion_requested_at: daysAgo(now, 10) })
+    await mkUser('none@test.vn')
+
+    expect(await remindPendingDeletionRequests(now)).toBe(1)
+    const reminders = () => (notifyAdmins as jest.Mock).mock.calls.filter(c => c[0].title === 'Yêu cầu xoá tài khoản sắp quá hạn')
+    expect(reminders()).toHaveLength(1)
+    expect(reminders()[0][0].body).toContain('còn 6 ngày')
+    expect((await User.findById(old._id))!.deletion_reminder_sent_at).toEqual(now)
+
+    expect(await remindPendingDeletionRequests(now)).toBe(0)
+    expect(reminders()).toHaveLength(1)
   })
 })
 

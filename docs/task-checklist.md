@@ -172,7 +172,7 @@
 ## B2. Training Model (Sprint 2-3)
 
 - [ ] Setup pipeline train trên Google Colab/Kaggle GPU `[11.4]`
-- [ ] Train YOLOv8n baseline v0, đánh giá sơ bộ `[11.2]`
+- [ ] Train YOLO26n baseline v0, đánh giá sơ bộ `[11.2]`
 - [ ] Train model v1, mục tiêu mAP@0.5 ≥75% `[11.2]`
 - [ ] Export ONNX `[11.2]`
 - [ ] (tùy chọn) Quantize INT8, kiểm tra model ≤20MB `[11.2]`
@@ -556,7 +556,7 @@
 ## G2. M2 — AI đếm chim (theo `docs/bird-counting-plan.md`)
 
 - [ ] Thu video thật tại cửa chim ra vào, cả phiên sáng và chiều tối `[VISION-FR-001/007]`
-- [ ] Gán nhãn 1 class `swiftlet`, train YOLOv8n, export ONNX `[VISION-FR-002/003]`
+- [ ] Gán nhãn 1 class `swiftlet`, train YOLO26n, export ONNX `nms=False` `[VISION-FR-002/003]`
 - [ ] Pipeline chạy trên video quay sẵn: YOLO → ByteTrack → đếm qua vạch ảo `[VISION-FR-004/005]`
 - [ ] **Báo cáo độ chính xác:** Precision, Recall và sai số đếm so với đếm tay, tách ban ngày / thiếu sáng; lưu `docs/test-reports/` `[VISION-FR-016]`
 - [ ] Gửi số đếm theo khoảng 5 phút cả ngày, kể cả ngoài phiên (`kind: "BUCKET"`) `[VISION-FR-017]`

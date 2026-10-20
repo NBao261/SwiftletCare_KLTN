@@ -17,6 +17,17 @@ info:
     **Response envelope** dùng chung cho mọi endpoint:
     `{ success: boolean, data?, meta?: {page,limit,total}, error?: {code,message} }`.
 
+    **Mã lỗi dùng chung cho mọi endpoint đã đăng nhập (SRS v2.1.3–2.1.4):**
+    - `429 RATE_LIMITED` (SEC-NFR-004) — API đã đăng nhập: 300 request/phút **mỗi tài
+      khoản** (chưa đăng nhập: theo IP). `POST /auth/login`, `/auth/otp/verify`,
+      `/auth/reset-password`, `PUT /auth/password`: 10 lần **sai**/15 phút theo IP;
+      `/auth/register`, `/auth/otp/send`, `/auth/forgot-password`: 10 lần/15 phút theo
+      IP; `/auth/refresh`: 30/phút theo IP. Kèm header `Retry-After` và
+      `error.details.retryAfterSec`; response có `X-RateLimit-Limit` / `X-RateLimit-Remaining`.
+    - `403 PASSWORD_CHANGE_REQUIRED` (AUTH-FR-005c) — tài khoản đang giữ mật khẩu tạm do
+      Admin cấp (`must_change_password`): mọi route trả mã này, trừ `PUT /auth/password` và
+      `POST /auth/logout`. Client nên chuyển sang màn đổi mật khẩu.
+
     **Trạng thái triển khai (cập nhật sau khi hoàn thành các module nghiệp vụ
     Farm Owner — xem `SwiftletCare_SRS.md` cột "Trạng thái Backend" ở mục 5):**
     Auth, Farms, Devices, Telemetry, Alerts, Analytics, Harvests, HealthReports,
@@ -337,6 +348,37 @@ paths:
           }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /auth/password:
+    put:
+      tags: [Auth]
+      summary: "Đổi mật khẩu khi đang đăng nhập — mọi role (AUTH-FR-005c)"
+      description: |
+        Cách duy nhất để bỏ mật khẩu tạm do Admin cấp (`must_change_password` → `false`);
+        route này vẫn gọi được khi các route khác đang trả 403 `PASSWORD_CHANGE_REQUIRED`.
+        Thu hồi refresh token của mọi thiết bị khác, **giữ** phiên hiện tại (refresh token
+        đọc từ cookie, hoặc `refreshToken` trong body cho mobile). Sai mật khẩu hiện tại
+        trả 400 (không phải 401, để client không tưởng token hết hạn). Tính vào giới hạn
+        10 lần sai/15 phút theo IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string }
+                new_password: { type: string, minLength: 8, description: "Phải khác mật khẩu hiện tại" }
+                refreshToken: { type: string, description: "Chỉ mobile — phiên cần giữ lại" }
+      responses:
+        "200": { description: Đã đổi mật khẩu, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
+        "400":
+          description: "INVALID_CURRENT_PASSWORD — mật khẩu hiện tại sai; PASSWORD_UNCHANGED — mật khẩu mới trùng mật khẩu cũ"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
   /auth/notification-preferences:
     put:
       tags: [Auth]
@@ -427,7 +469,9 @@ paths:
       description: |
         Chỉ ĐÁNH DẤU `deletion_requested_at` — việc xoá thật (kèm quy tắc
         cascade chuyển Primary Owner / xoá mềm Farm) do Administrator xử lý
-        trong ≤ 30 ngày (Flow 19), **chưa có endpoint xử lý phía Admin**.
+        trong ≤ 30 ngày (Flow 19): `PUT /admin/delete-requests/{id}/complete` hoặc
+        `.../reject`. Admin được báo ngay, và được nhắc lại một lần khi yêu cầu đã
+        chờ ≥ 23 ngày.
       responses:
         "200":
           {
@@ -448,15 +492,30 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
+    delete:
+      tags: [Auth]
+      summary: "Huỷ yêu cầu xoá tài khoản đang chờ (AUTH-FR-012)"
+      description: "User đổi ý trước khi Admin xử lý. Audit `DELETION_CANCELLED`, Admin được báo."
+      responses:
+        "200": { description: Đã huỷ yêu cầu, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: "Chưa có yêu cầu xoá nào để huỷ"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
 
   # ── ADMIN ─────────────────────────────────────────────────────────────────
   /admin/users:
     get:
       tags: [Admin]
-      summary: "Danh sách tài khoản, lọc theo role/trạng thái (AUTH-FR-011) — chỉ ADMIN"
+      summary: "Danh sách tài khoản, lọc theo role/trạng thái/vùng, tìm theo tên/email/SĐT (AUTH-FR-011) — chỉ ADMIN"
       parameters:
         - { name: role, in: query, schema: { $ref: "#/components/schemas/Role" } }
-        - { name: status, in: query, schema: { type: string, enum: [active, inactive] } }
+        - name: status
+          in: query
+          description: "`inactive` = đang bị khoá; `deleted` = đã xoá theo yêu cầu (AUTH-FR-012, cũng `is_active=false` nhưng không mở khoá được)"
+          schema: { type: string, enum: [active, inactive, deleted] }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 }, description: "Tìm trong full_name, email, phone — không phân biệt hoa/thường" }
+        - { name: region, in: query, schema: { type: string }, description: "Technician phụ trách vùng này — nhận mã, tên hoặc tên tỉnh cũ (xem GET /farms/regions)" }
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
       responses:
@@ -484,13 +543,13 @@ paths:
 
         Khi khoá: thu hồi mọi refresh token và ngắt các kết nối Socket.io đang
         mở của user (kết nối mới bằng access token còn hạn cũng bị từ chối). Nếu
-        user là Technician còn ticket đang giao, response kèm
-        `meta.openTickets` (số ticket chưa đóng) và `meta.openTicketIds` (id của
-        chúng, tối đa 100) để Admin gán lại bằng
-        `PUT /tickets/{id}/admin-override`. Khoá tài khoản KHÔNG tự gán lại
-        ticket: người đó vẫn phụ trách khu vực, việc gán lại là quyết định của
-        Admin (khác với khi gỡ hẳn khu vực — xem
-        `PUT /admin/technicians/{id}/regions`).
+        user là Technician còn ticket đang giao, ticket **tự điều phối lại** cho
+        Technician khác cùng vùng như khi gỡ khu vực (về `NEW`, audit
+        `TICKET_REROUTED` với `reason: ACCOUNT_LOCKED`); response kèm
+        `meta.rerouted`, `meta.unassigned`, và ticket không ai nhận được thì về hàng
+        đợi chung kèm `meta.openTickets` / `meta.openTicketIds` (tối đa 100) để Admin
+        gán tay bằng `PUT /tickets/{id}/admin-override`. Mở khoá Technician thì họ
+        nhận luôn ticket đang chờ ở hàng đợi của vùng mình.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -517,7 +576,7 @@ paths:
                       data: { $ref: "#/components/schemas/User" }
                       meta:
                         type: object
-                        description: Chỉ có khi việc gỡ khu vực làm ticket phải điều phối lại
+                        description: Chỉ có khi khoá Technician còn ticket đang giao
                         properties:
                           rerouted:
                             type: array
@@ -531,6 +590,8 @@ paths:
                             type: array
                             description: Ticket về hàng đợi chung vì không còn Technician phù hợp
                             items: { type: string }
+                          openTickets: { type: integer, description: "Số ticket trong `unassigned` — Admin cần gán tay" }
+                          openTicketIds: { type: array, items: { type: string }, description: "Tối đa 100 id" }
         "400":
           description: "Thiếu reason khi khoá tài khoản, hoặc Admin tự khoá chính mình"
           content:
@@ -622,10 +683,50 @@ paths:
               schema: { $ref: "#/components/schemas/ApiError" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /admin/delete-requests/{id}/reject:
+    put:
+      tags: [Admin]
+      summary: "Từ chối yêu cầu xoá tài khoản (AUTH-FR-012) — chỉ ADMIN"
+      description: |
+        VD còn nghĩa vụ lưu hồ sơ. Tài khoản giữ nguyên, rời hàng đợi
+        `GET /admin/delete-requests`; người yêu cầu được báo kèm lý do. Audit
+        `DELETION_REJECTED`. Admin không tự xử lý yêu cầu của chính mình.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, description: "Bắt buộc, gửi lại cho người yêu cầu" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/User" } }
+        "400":
+          description: "Người dùng chưa gửi yêu cầu xoá, hoặc Admin tự xử lý yêu cầu của chính mình"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /admin/technicians:
     post:
       tags: [Admin]
       summary: "Admin tự tạo tài khoản Technician + gán khu vực phụ trách (AUTH-FR-005c, Flow 16) — chỉ ADMIN"
+      description: |
+        `password` là mật khẩu tạm: tài khoản tạo ra có `must_change_password=true`,
+        Technician phải đổi (`PUT /auth/password`) trước khi dùng các API khác (403
+        `PASSWORD_CHANGE_REQUIRED`). Vùng được quy về mã danh mục, bỏ trùng; vùng lạ → 400.
+        Tạo xong, ticket đang chờ ở hàng đợi của các vùng này được chia ngay cho người mới.
       requestBody:
         required: true
         content:
@@ -635,13 +736,17 @@ paths:
               required: [email, password, full_name, assigned_regions]
               properties:
                 email: { type: string, format: email }
-                password: { type: string, minLength: 8 }
+                password: { type: string, minLength: 8, description: "Mật khẩu tạm" }
                 full_name: { type: string }
-                phone: { type: string }
+                phone:
+                  type: string
+                  description: "Tuỳ chọn. 0 + 9 số hoặc +84 + 9 số; khoảng trắng, dấu chấm, gạch ngang được bỏ trước khi kiểm tra"
+                  example: "0912 345 678"
                 assigned_regions:
                   type: array
                   items: { type: string }
-                  example: ["HCMC", "Long An"]
+                  description: "Mã, tên hoặc tên tỉnh cũ (VD \"Long An\" → TAY_NINH) — xem GET /farms/regions"
+                  example: ["HCMC", "TAY_NINH"]
       responses:
         "201":
           description: Đã tạo
@@ -651,6 +756,9 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/User" } }
+        "400":
+          description: "Khu vực không có trong danh mục 34 tỉnh/thành"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -660,9 +768,11 @@ paths:
       tags: [Admin]
       summary: "Điều chỉnh khu vực phụ trách của Technician (AUTH-FR-005c, Flow 21 case 4a-x) — chỉ ADMIN"
       description: |
-        Thay toàn bộ `assigned_regions` (giá trị được trim + bỏ trùng). Có hiệu
-        lực ngay ở request kế tiếp của Technician, không cần đăng nhập lại.
-        Lưu ý: phải ghi khớp đúng `farms.region` (VD `HCMC` ≠ `Hồ Chí Minh`).
+        Thay toàn bộ `assigned_regions`. Mỗi vùng được quy về mã danh mục 34 tỉnh/thành
+        (nhận mã, tên, viết tắt hoặc tên tỉnh cũ đã sáp nhập — xem `GET /farms/regions`),
+        bỏ trùng; vùng lạ → 400. Có hiệu lực ngay ở request kế tiếp của Technician,
+        không cần đăng nhập lại. Vùng mới thêm: ticket đang chờ ở hàng đợi của vùng đó
+        được chia ngay cho Technician này (nếu còn suất).
 
         Khu vực bị gỡ khỏi danh sách: ticket đang mở ở khu vực đó mà Technician
         này đang được gán sẽ **tự điều phối lại** — quyền trên ticket đi theo
@@ -686,7 +796,7 @@ paths:
                   type: array
                   minItems: 1
                   items: { type: string }
-                  example: ["HCMC", "Long An"]
+                  example: ["HCMC", "TAY_NINH"]
       responses:
         "200":
           description: OK
@@ -697,13 +807,85 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/User" } }
         "400":
-          description: "Tài khoản không phải Technician"
+          description: "Tài khoản không phải Technician, hoặc khu vực không có trong danh mục"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/technicians/{id}/profile:
+    put:
+      tags: [Admin]
+      summary: "Sửa tên/SĐT của Technician (AUTH-FR-005c) — chỉ ADMIN"
+      description: |
+        Không sửa email (là tên đăng nhập). Gửi ít nhất một trường; `phone: ""` = xoá SĐT.
+        Chỉ áp cho tài khoản Technician; tài khoản đã xoá theo yêu cầu → 409. Audit
+        `TECHNICIAN_PROFILE_UPDATED` kèm before/after.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name: { type: string }
+                phone: { type: string, description: "Cùng quy tắc với lúc tạo; chuỗi rỗng = xoá" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/User" } }
+        "400":
+          description: "Không gửi trường nào, hoặc tài khoản không phải Technician"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Tài khoản đã bị xoá theo yêu cầu"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/technicians/{id}/password:
+    put:
+      tags: [Admin]
+      summary: "Cấp mật khẩu tạm mới cho Technician (AUTH-FR-005c) — chỉ ADMIN"
+      description: |
+        Dùng khi Technician quên mật khẩu (email chưa nối SMTP thật) hoặc tài khoản nghi bị
+        lộ. Backend sinh mật khẩu ngẫu nhiên 12 ký tự, trả **đúng 1 lần** trong
+        `data.temporary_password`; thu hồi mọi phiên, ngắt socket, đặt
+        `must_change_password=true`. Audit `TECHNICIAN_PASSWORD_RESET` (không ghi mật khẩu).
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          technician: { $ref: "#/components/schemas/User" }
+                          temporary_password: { type: string, example: "q3Zx8_Lm0aPw" }
+        "400":
+          description: "Tài khoản không phải Technician"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Tài khoản đã bị xoá theo yêu cầu"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
 
   # ── SYSTEM ────────────────────────────────────────────────────────────────
   /admin/provisioned-devices:
@@ -742,6 +924,7 @@ paths:
       parameters:
         - { name: kind, in: query, schema: { type: string, enum: [SENSOR, CAMERA] } }
         - { name: claimed, in: query, schema: { type: string, enum: ["true", "false"] }, description: "Đã/chưa kích hoạt" }
+        - { name: revoked, in: query, schema: { type: string, enum: ["true", "false"] }, description: "Đã/chưa bị thu hồi" }
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
       responses:
@@ -754,6 +937,69 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { type: array, items: { $ref: "#/components/schemas/ProvisionedDevice" } } }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/provisioned-devices/{id}/revoke:
+    put:
+      tags: [Admin]
+      summary: "Thu hồi thiết bị trong kho (FARM-FR-003) — chỉ ADMIN"
+      description: |
+        Mất/lộ nhãn, hàng lỗi. Từ đó kích hoạt bị từ chối: nhập đúng secretKey thì 409 "đã
+        bị thu hồi", sai key vẫn chỉ là 400 "mã không đúng" (không lộ thiết bị nào bị thu
+        hồi). Thiết bị đang chạy ở một farm phải gỡ trước (`.../decommission`) — thu hồi
+        không tắt được thiết bị đang hoạt động. Thu hồi là trạng thái cuối. Audit
+        `DEVICE_PROVISION_REVOKED`.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string }, description: "_id trong kho (không phải device_id)" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/ProvisionedDevice" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Thiết bị đang hoạt động ở một farm, hoặc đã bị thu hồi"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/provisioned-devices/{id}/rotate-key:
+    post:
+      tags: [Admin]
+      summary: "Cấp secretKey mới để in lại nhãn (FARM-FR-003) — chỉ ADMIN"
+      description: |
+        Chỉ thiết bị CHƯA kích hoạt và chưa bị thu hồi: thiết bị đã kích hoạt lưu secretKey
+        trong NVS (mở khu AP-mode nâng cao — FARM-FR-003c), đổi ở backend là hai bên lệch
+        nhau. Key cũ hết dùng được ngay; key mới trả **đúng 1 lần**. Audit
+        `DEVICE_PROVISION_KEY_ROTATED`.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Thiết bị đã kích hoạt hoặc đã bị thu hồi"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
 
   /system/audit-logs:
     get:
@@ -901,6 +1147,7 @@ paths:
     put:
       tags: [System]
       summary: "Chỉnh ngưỡng quá tải của Ticket Router (TICKET-FR-005) — chỉ ADMIN"
+      description: "Nâng ngưỡng thì ticket đang chờ ở hàng đợi chung được chia ngay cho Technician vừa có thêm suất."
       requestBody:
         required: true
         content:
@@ -934,7 +1181,11 @@ paths:
                       data:
                         type: object
                         properties:
-                          farms: { type: object, properties: { total: { type: integer } } }
+                          farms:
+                            type: object
+                            properties:
+                              total: { type: integer }
+                              missingRegion: { type: integer, description: "Farm chưa có / sai mã khu vực — không Technician nào phụ trách được, ticket luôn vào hàng đợi" }
                           zones: { type: object, properties: { total: { type: integer } } }
                           devices: { $ref: "#/components/schemas/DeviceStatusSummary" }
                           openTickets:
@@ -953,7 +1204,8 @@ paths:
                             properties:
                               total: { type: integer }
                               active: { type: integer }
-                              inactive: { type: integer }
+                              inactive: { type: integer, description: "Đang bị khoá (không gồm tài khoản đã xoá)" }
+                              deleted: { type: integer, description: "Đã xoá theo yêu cầu (AUTH-FR-012)" }
                               byRole:
                                 type: object
                                 additionalProperties:
@@ -961,6 +1213,7 @@ paths:
                                   properties:
                                     active: { type: integer }
                                     inactive: { type: integer }
+                                    deleted: { type: integer }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── FARMS ─────────────────────────────────────────────────────────────────
@@ -1003,14 +1256,21 @@ paths:
           }
     post:
       tags: [Farms]
-      summary: Tạo farm mới (người tạo trở thành Primary Owner) — FARM_OWNER/ADMIN
+      summary: Tạo farm mới — FARM_OWNER/ADMIN
+      description: |
+        - FARM_OWNER: người tạo là Primary Owner; không được gửi `owner_email` (400).
+        - ADMIN tạo hộ (VD khi đi lắp đặt): **bắt buộc** `owner_email` của một tài khoản
+          Farm Owner đang hoạt động — người đó là Primary Owner, Admin không thành thành
+          viên; chủ farm được báo, audit `FARM_CREATED_FOR_OWNER`.
+        - `region` **bắt buộc** (FARM-FR-009): nhận mã, tên, viết tắt hoặc tên tỉnh cũ đã
+          sáp nhập, lưu mã danh mục (`GET /farms/regions`); vùng lạ → 400.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [name, address]
+              required: [name, address, region]
               properties:
                 name: { type: string }
                 address: { type: string }
@@ -1018,8 +1278,10 @@ paths:
                   {
                     type: string,
                     example: HCMC,
-                    description: "Khu vực để định tuyến Technician phụ trách — nên nhập, nếu bỏ trống thì không Technician nào lắp đặt/xử lý ticket được cho farm này",
+                    description: "Khu vực để định tuyến Technician phụ trách — VD `HCMC`, `TP. Hồ Chí Minh`, `Long An` (→ TAY_NINH)",
                   }
+                owner_email:
+                  { type: string, format: email, description: "Chỉ ADMIN và bắt buộc với ADMIN — Farm Owner sẽ làm chủ farm" }
                 coordinates:
                   {
                     type: object,
@@ -1048,7 +1310,36 @@ paths:
                   },
               },
           }
+        "400":
+          description: "Thiếu/sai khu vực; ADMIN thiếu owner_email hoặc owner_email không phải Farm Owner đang hoạt động; FARM_OWNER gửi owner_email"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  /farms/regions:
+    get:
+      tags: [Farms]
+      summary: "Danh mục 34 tỉnh/thành để chọn khu vực (FARM-FR-009) — mọi role đã đăng nhập"
+      description: |
+        `farms.region` và `users.assigned_regions` chỉ lưu `code`. Các API ghi khu vực vẫn
+        nhận tên/viết tắt/tên tỉnh cũ và tự quy về `code`, nhưng client nên hiển thị
+        dropdown từ danh sách này và hiện `name` thay cho mã.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code: { type: string, example: TAY_NINH }
+                            name: { type: string, example: "Tây Ninh" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /farms/{id}:
     parameters: [{ $ref: "#/components/parameters/FarmId" }]
@@ -1099,7 +1390,7 @@ paths:
                 address: { type: string }
                 region:
                   type: string
-                  description: "Khu vực điều phối, phải khớp đúng `users.assigned_regions` của Technician (VD `HCMC`); chỉ Primary Owner/Admin đổi được"
+                  description: "Khu vực điều phối — mã, tên hoặc tên tỉnh cũ, lưu mã danh mục (`GET /farms/regions`); vùng lạ → 400. Chỉ Primary Owner/Admin đổi được"
 
                 coordinates:
                   {
@@ -3839,6 +4130,16 @@ paths:
     get:
       tags: [Tickets]
       summary: "Dashboard KPI xử lý ticket theo Technician (TICKET-FR-012) — chỉ ADMIN"
+      description: |
+        Tính trong kỳ `from`–`to` (mặc định 30 ngày gần nhất, tối đa 366 ngày). Theo
+        Technician, trách nhiệm đi theo **người đang giữ ticket lúc sự việc xảy ra** (lượt
+        phụ trách hiện tại + `assignment_history`): phản hồi / trễ phản hồi / xin gán lại tính
+        cho từng lượt; xử lý tính cho người giữ ticket lúc đóng, từ lúc họ nhận việc; vi phạm
+        hạn xử lý tính cho `sla_breached_by`. Số liệu hệ thống (cam kết với khách) vẫn theo
+        ticket: tạo → đóng. `open`/`unaccepted` là ảnh chụp hiện tại, không theo kỳ.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định: hiện tại" }
       responses:
         "200":
           description: OK
@@ -3851,9 +4152,15 @@ paths:
                       data:
                         type: object
                         properties:
+                          period:
+                            type: object
+                            properties:
+                              from: { type: string, format: date-time }
+                              to: { type: string, format: date-time }
                           byStatus:
                             {
                               type: array,
+                              description: "Ticket tạo trong kỳ, theo trạng thái",
                               items:
                                 {
                                   type: object,
@@ -3872,15 +4179,20 @@ paths:
                                 technician_id: { type: string }
                                 full_name: { type: string, nullable: true }
                                 email: { type: string, nullable: true }
-                                total: { type: integer }
-                                closed: { type: integer }
+                                total: { type: integer, description: "Số lượt nhận việc trong kỳ (một ticket chuyển qua lại có thể là nhiều lượt)" }
+                                closed: { type: integer, description: "Ticket đóng trong kỳ khi người này đang giữ (gồm cả huỷ)" }
                                 cancelled: { type: integer }
+                                open: { type: integer, description: "Ảnh chụp hiện tại — ticket chưa đóng đang giữ" }
                                 unaccepted:
-                                  { type: integer, description: "Ticket được gán nhưng KTV chưa tiếp nhận (status NEW)" }
-                                avgResolveHours: { type: number, nullable: true }
-                                avgResponseHours: { type: number, nullable: true, description: "Giao ticket (assigned_at) → Technician xác nhận tiếp nhận (responded_at)" }
+                                  { type: integer, description: "Ảnh chụp hiện tại — ticket được gán nhưng chưa tiếp nhận (status NEW)" }
+                                avgResolveHours: { type: number, nullable: true, description: "Từ lúc người này nhận việc → đóng, không tính ticket huỷ" }
+                                avgResponseHours: { type: number, nullable: true, description: "Giao ticket (assigned_at) → xác nhận tiếp nhận (responded_at), theo từng lượt" }
+                                responseBreaches: { type: integer, description: "Số lượt trễ hạn phản hồi" }
+                                reassignRequests: { type: integer, description: "Số lượt kết thúc bằng xin gán lại" }
                                 escalated: { type: integer, description: "Số ticket Technician chủ động escalate" }
-                                slaComplianceRate: { type: number, nullable: true }
+                                reopened: { type: integer, description: "Số lần ticket người này giữ lúc đóng bị Admin mở lại" }
+                                reopenRate: { type: number, nullable: true, description: "% reopened / ticket xử lý xong" }
+                                slaComplianceRate: { type: number, nullable: true, description: "Vi phạm hạn xử lý tính cho người giữ ticket lúc trễ (`sla_breached_by`)" }
                           resolvedTickets:
                             { type: integer, description: "Ticket đã đóng, KHÔNG tính ticket bị huỷ" }
                           avgResolveHours:
@@ -3891,9 +4203,15 @@ paths:
                             {
                               type: number,
                               nullable: true,
-                              description: "% ticket đúng SLA trên tổng ticket đã tới hạn (gồm cả ticket quá hạn còn treo), bỏ qua ticket bị huỷ",
+                              description: "% ticket đúng SLA trên tổng ticket đã tới hạn trong kỳ (gồm cả ticket quá hạn còn treo), bỏ qua ticket bị huỷ",
                             }
+                          reopenedTickets: { type: integer, description: "Số lần mở lại ticket trong kỳ" }
+                          reopenRate: { type: number, nullable: true }
+        "400":
+          description: "from không trước to, hoặc kỳ dài hơn 366 ngày"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /tickets/stats/me:
     get:
@@ -4476,10 +4794,23 @@ paths:
           gán. Lịch hẹn của ticket sự cố (không phải `INSTALLATION`/`MAINTENANCE`) là cam
           kết của người cũ nên bị bỏ, trừ khi gửi kèm `scheduled_visit_at`; Farm Owner
           được báo nếu buổi hẹn đó còn ở tương lai.
-        - Đổi `priority` thì tính lại `sla_response_due_at`/`sla_resolve_due_at`
-          theo SLA của priority mới, mốc là `created_at` của ticket — riêng ticket
-          `MAINTENANCE` có giờ hẹn thì hạn xử lý tính từ `scheduled_visit_at` (TICKET-FR-013).
-        - Mở lại ticket đã `CLOSED` thì gỡ `closed_at`.
+        - `assigned_to: null` = **trả về hàng đợi chung**: ticket về `NEW`, bỏ `assigned_at`
+          / `responded_at`, bỏ lịch hẹn của ticket sự cố; người cũ được báo và không được
+          chia lại ticket này. Hàng đợi chia ngay cho Technician khác cùng vùng nếu có ai
+          rảnh. Ticket đã đóng → 409; ticket đang ở hàng đợi → 400; `status` khác `NEW` → 400.
+        - Đổi `priority` thì tính lại cả hai hạn theo SLA mới, mỗi hạn đúng mốc: hạn phản hồi
+          từ lúc giao cho người đang giữ (`assigned_at`, chưa giao thì `created_at`), hạn xử
+          lý từ `created_at` — riêng ticket `MAINTENANCE` có giờ hẹn thì từ
+          `scheduled_visit_at` (TICKET-FR-013). Cờ vi phạm tính lại: việc đã xong (đã tiếp
+          nhận / đã đóng) thì đánh giá đúng theo hạn mới; việc còn dở mà hạn mới chưa tới
+          thì gỡ cờ (kèm `sla_breached_by`); hạn mới đã qua thì để job SLA bật cờ.
+        - Ép `status` rời `NEW` mà người đang giữ chưa tiếp nhận → ghi `responded_at` là
+          lúc ép. Ép `CLOSED` cho ticket đã đóng thì giữ nguyên `closed_at`.
+        - Mở lại ticket đã `CLOSED` (gửi `status` khác `CLOSED`) = tiếp tục cùng yêu cầu:
+          gỡ `closed_at`/`cancelled_at`, **giữ** cờ vi phạm cũ, hạn xử lý mới tính từ lúc
+          mở lại, thêm 1 dòng `reopen_history`; mở lại về `NEW` với cùng người thì người đó
+          phải tiếp nhận lại (lượt phụ trách mới). Farm Owner và Technician được báo.
+        - Mọi lần đổi người đều chốt lượt phụ trách cũ vào `assignment_history`.
         - `scheduled_visit_at` đặt được cho mọi loại ticket nhưng vẫn phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai;
           đổi giờ thì Farm Owner, người tạo và Technician đang giữ ticket nhận thông báo.
       parameters:
@@ -4492,7 +4823,7 @@ paths:
               type: object
               required: [reason]
               properties:
-                assigned_to: { type: string, description: "Đổi Technician phụ trách" }
+                assigned_to: { type: string, nullable: true, description: "Đổi Technician phụ trách; `null` = trả về hàng đợi chung" }
                 priority: { type: string, enum: [P1, P2, P3] }
                 scheduled_visit_at: { type: string, format: date-time, description: "trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai" }
                 status: { $ref: "#/components/schemas/TicketStatus" }
@@ -4508,12 +4839,15 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/Ticket" } }
         "400":
-          description: "assigned_to không phải Technician đang hoạt động, hoặc không phụ trách khu vực của farm mà chưa gửi force: true; scheduled_visit_at không ở tương lai hoặc ngoài 7:00–18:00"
+          description: "assigned_to không phải Technician đang hoạt động, hoặc không phụ trách khu vực của farm mà chưa gửi force: true; scheduled_visit_at không ở tương lai hoặc ngoài 7:00–18:00; trả về hàng đợi một ticket chưa gán hoặc kèm status khác NEW"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Gán người khác cho ticket đã đóng mà không gửi status, hoặc trả ticket đã đóng về hàng đợi"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
 components:
@@ -4621,6 +4955,22 @@ components:
           application/json:
             { schema: { $ref: "#/components/schemas/ApiError" } },
         }
+    RateLimited:
+      description: "RATE_LIMITED — vượt giới hạn request (SEC-NFR-004); `error.details.retryAfterSec` = số giây phải chờ"
+      headers:
+        Retry-After: { schema: { type: integer }, description: "Số giây phải chờ" }
+      content:
+        {
+          application/json:
+            { schema: { $ref: "#/components/schemas/ApiError" } },
+        }
+    PasswordChangeRequired:
+      description: "PASSWORD_CHANGE_REQUIRED — tài khoản đang giữ mật khẩu tạm Admin cấp, phải gọi PUT /auth/password trước"
+      content:
+        {
+          application/json:
+            { schema: { $ref: "#/components/schemas/ApiError" } },
+        }
 
   schemas:
     ApiSuccess:
@@ -4646,6 +4996,7 @@ components:
           properties:
             code: { type: string, example: NOT_FOUND }
             message: { type: string, example: "Không tìm thấy farm" }
+            details: { description: "Tuỳ mã lỗi, VD `{ openTickets }` của HAS_OPEN_TICKETS, `{ retryAfterSec }` của RATE_LIMITED" }
 
     Role:
       type: string
@@ -4711,10 +5062,15 @@ components:
           {
             type: array,
             items: { type: string },
-            description: "chỉ dùng khi role=TECHNICIAN",
+            description: "chỉ dùng khi role=TECHNICIAN — mã danh mục khu vực (GET /farms/regions)",
           }
         avatar_url: { type: string }
         is_active: { type: boolean }
+        must_change_password:
+          {
+            type: boolean,
+            description: "AUTH-FR-005c — đang giữ mật khẩu tạm do Admin cấp; mọi API trả 403 PASSWORD_CHANGE_REQUIRED trừ PUT /auth/password và đăng xuất",
+          }
         deactivated_at:
           {
             type: string,
@@ -4748,6 +5104,10 @@ components:
             nullable: true,
             description: "AUTH-FR-012 — đã yêu cầu xoá tài khoản, chờ Administrator xử lý",
           }
+        deletion_reminder_sent_at:
+          { type: string, format: date-time, nullable: true, description: "Đã nhắc Admin yêu cầu xoá sắp quá hạn 30 ngày (nhắc 1 lần)" }
+        deleted_at:
+          { type: string, format: date-time, nullable: true, description: "Đã xoá/ẩn danh hoá theo yêu cầu — không khoá/mở khoá lại được" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -4761,7 +5121,7 @@ components:
           {
             type: string,
             example: HCMC,
-            description: "Khu vực địa lý — khớp users.assigned_regions để xác định Technician phụ trách (AUTH-FR-005c)",
+            description: "Mã khu vực trong danh mục 34 tỉnh/thành (GET /farms/regions) — khớp users.assigned_regions để xác định Technician phụ trách (AUTH-FR-005c, FARM-FR-009)",
           }
         coordinates:
           {
@@ -5226,6 +5586,30 @@ components:
             properties:
               user_id: { type: string }
               until: { type: string, format: date-time }
+        assignment_history:
+          type: array
+          description: "TICKET-FR-012 — các lượt phụ trách ĐÃ KẾT THÚC (lượt hiện tại là assigned_to/assigned_at/responded_at); KPI tính theo từng lượt"
+          items:
+            type: object
+            properties:
+              user_id: { type: string }
+              assigned_at: { type: string, format: date-time }
+              responded_at: { type: string, format: date-time, nullable: true }
+              ended_at: { type: string, format: date-time }
+              end_reason:
+                type: string
+                description: "REASSIGN_REQUESTED | ADMIN_REASSIGNED | ADMIN_UNASSIGNED | REOPENED | REROUTED_<REGION_UNASSIGNED|FARM_REGION_CHANGED|ACCOUNT_DELETED|ACCOUNT_LOCKED>"
+              response_breached: { type: boolean }
+        sla_breached_by: { type: string, nullable: true, description: "Người đang giữ ticket lúc vượt hạn xử lý — KPI tính vi phạm cho người này" }
+        reopen_history:
+          type: array
+          description: "TICKET-FR-005b — mỗi lần Admin mở lại ticket đã đóng"
+          items:
+            type: object
+            properties:
+              reopened_at: { type: string, format: date-time }
+              holder_at_close: { type: string, nullable: true }
+              reason: { type: string }
         last_message_at: { type: string, format: date-time, nullable: true }
         sat_checklist:
           type: object
@@ -5288,6 +5672,8 @@ components:
         device_id: { type: string }
         kind: { type: string, enum: [SENSOR, CAMERA] }
         claimed_at: { type: string, format: date-time, nullable: true }
+        revoked_at: { type: string, format: date-time, nullable: true, description: "Đã thu hồi — không kích hoạt được nữa" }
+        revoke_reason: { type: string, nullable: true }
         created_by: { type: string }
         created_at: { type: string, format: date-time }
 

@@ -1,4 +1,5 @@
 import type { Dictionary } from '@/lib/i18n'
+import { prefixLabels, alertStatusDict, alertTypeDict } from '@/constants/enumLabels.i18n'
 
 const vi = {
   'page.houseLabel': 'Chọn nhà yến để xem số liệu',
@@ -87,9 +88,6 @@ const vi = {
   'log.title': 'Nhật ký cảnh báo & giám sát cảm biến realtime',
   'log.filter': 'Lọc theo mức độ:',
   'log.all': 'Tất cả',
-  'log.critical': 'Critical',
-  'log.highMed': 'High/Med',
-  'log.normal': 'Normal',
   'log.colTime': 'Thời gian',
   'log.colLocation': 'Vị trí & Thiết bị',
   'sensorKind.env': 'Cảm biến môi trường',
@@ -114,22 +112,8 @@ const vi = {
   'pager.page': 'Trang {n}',
   'pager.next': 'Trang sau',
   'pager.last': 'Trang cuối',
-  'alertStatus.ACTIVE': 'Mới',
-  'alertStatus.ACKNOWLEDGED': 'Tiếp nhận',
-  'alertStatus.RESOLVED': 'Đã xử lý',
-  'alertType.THRESHOLD_BREACH': 'Vượt ngưỡng môi trường',
-  'alertType.PREDATOR_DETECTED': 'Phát hiện thiên địch',
-  'alertType.NODE_OFFLINE': 'Thiết bị mất kết nối',
-  'alertType.SPEAKER_FAILURE': 'Lỗi loa',
-  'alertType.PUMP_DRY': 'Bơm chạy khô',
-  'alertType.BIRD_PANIC': 'Chim hoảng loạn',
-  'alertType.POWER_OUTAGE': 'Mất điện',
-  'alertType.LOW_RETURN_RATE': 'Tỉ lệ chim về thấp',
-  'alertType.EDGE_AI_DEGRADED': 'Edge AI suy giảm',
-  'alertType.SENSOR_FAULT': 'Lỗi cảm biến',
-  'alertType.RS485_BUS_FAILURE': 'Lỗi bus RS485',
-  'alertType.SENSOR_ANOMALY': 'Cảm biến bất thường',
-  'alertType.FORECAST_BREACH': 'Dự báo vượt ngưỡng',
+  ...prefixLabels('alertStatus.', alertStatusDict.vi),
+  ...prefixLabels('alertType.', alertTypeDict.vi),
 }
 
 export type DashboardKey = keyof typeof vi
@@ -221,9 +205,6 @@ const en: Record<DashboardKey, string> = {
   'log.title': 'Real-time alert & sensor monitoring log',
   'log.filter': 'Filter by severity:',
   'log.all': 'All',
-  'log.critical': 'Critical',
-  'log.highMed': 'High/Med',
-  'log.normal': 'Normal',
   'log.colTime': 'Time',
   'log.colLocation': 'Location & Device',
   'sensorKind.env': 'Environment sensor',
@@ -248,22 +229,8 @@ const en: Record<DashboardKey, string> = {
   'pager.page': 'Page {n}',
   'pager.next': 'Next page',
   'pager.last': 'Last page',
-  'alertStatus.ACTIVE': 'New',
-  'alertStatus.ACKNOWLEDGED': 'Received',
-  'alertStatus.RESOLVED': 'Resolved',
-  'alertType.THRESHOLD_BREACH': 'Environment threshold breach',
-  'alertType.PREDATOR_DETECTED': 'Predator detected',
-  'alertType.NODE_OFFLINE': 'Device offline',
-  'alertType.SPEAKER_FAILURE': 'Speaker failure',
-  'alertType.PUMP_DRY': 'Pump running dry',
-  'alertType.BIRD_PANIC': 'Bird panic',
-  'alertType.POWER_OUTAGE': 'Power outage',
-  'alertType.LOW_RETURN_RATE': 'Low bird return rate',
-  'alertType.EDGE_AI_DEGRADED': 'Edge AI degraded',
-  'alertType.SENSOR_FAULT': 'Sensor fault',
-  'alertType.RS485_BUS_FAILURE': 'RS485 bus failure',
-  'alertType.SENSOR_ANOMALY': 'Sensor anomaly',
-  'alertType.FORECAST_BREACH': 'Forecast threshold breach',
+  ...prefixLabels('alertStatus.', alertStatusDict.en),
+  ...prefixLabels('alertType.', alertTypeDict.en),
 }
 
 export const dashboardDict: Dictionary<DashboardKey> = { vi, en }

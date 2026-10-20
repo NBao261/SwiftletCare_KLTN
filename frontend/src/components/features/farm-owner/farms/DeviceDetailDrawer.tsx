@@ -5,6 +5,8 @@ import { Drawer } from '@/components/ui/Drawer'
 import { ZONE_METRICS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { wifiQuality, type DeviceRow, type ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 import { useDeviceProfile } from '@/hooks/farm-owner/useFarmStructure'
+import { SUPPORT_PATH, supportCreateState } from '@/components/features/farm-owner/tickets/tickets.constants'
+import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
@@ -24,6 +26,8 @@ interface DeviceDetailDrawerProps { device: DeviceRow | null; zoneNode?: ZoneNod
 export default function DeviceDetailDrawer({ device, zoneNode, onClose }: DeviceDetailDrawerProps) {
   const { t, num, day, ago } = useTranslation(farmDict)
   const navigate = useNavigate()
+  // Ticket của Farm Owner ở /support (mở sẵn form báo sự cố); Technician/Admin vẫn dùng màn /tickets
+  const isFarmOwner = usePermission('FARM_OWNER')
   const { data: profile } = useDeviceProfile(device?.deviceId)
 
   if (!device) return <Drawer open={false} onClose={onClose}>{null}</Drawer>
@@ -98,7 +102,7 @@ export default function DeviceDetailDrawer({ device, zoneNode, onClose }: Device
       </div>
 
       <div className="flex flex-col gap-2 pt-4">
-        <Button className="w-full" onClick={() => navigate('/tickets')}>
+        <Button className="w-full" onClick={() => (isFarmOwner ? navigate(SUPPORT_PATH, { state: supportCreateState('fault', { zoneId: device.zoneId }) }) : navigate('/tickets'))}>
           <TicketIcon size={16} />
           {t('drawer.report')}
         </Button>

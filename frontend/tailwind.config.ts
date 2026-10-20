@@ -100,6 +100,8 @@ const config: Config = {
         'ring-glow': 'ringGlow 2.2s ease-in-out infinite',
         'step-in': 'stepIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both',
         indeterminate: 'indeterminate 1.4s ease-in-out infinite',
+        // Đoạn nối Stepper: kéo dài từ bước hiện tại tới bước sau rồi mờ đi, lặp lại
+        'step-progress': 'stepProgress 1.8s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
@@ -110,6 +112,7 @@ const config: Config = {
         ringGlow: { '0%, 100%': { boxShadow: '0 0 0 4px #FFFFFF, 0 0 0 4px rgba(210,249,58,0.55)' }, '50%': { boxShadow: '0 0 0 4px #FFFFFF, 0 0 0 10px rgba(210,249,58,0)' } },
         stepIn: { '0%': { opacity: '0', transform: 'translateX(16px)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
         indeterminate: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(250%)' } },
+        stepProgress: { '0%': { transform: 'scaleX(0)', opacity: '1' }, '75%': { transform: 'scaleX(1)', opacity: '1' }, '100%': { transform: 'scaleX(1)', opacity: '0' } },
       },
     },
   },

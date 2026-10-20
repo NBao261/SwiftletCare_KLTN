@@ -1,5 +1,6 @@
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
-import type { Alert, AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, House, RelayStates, Thresholds, Zone } from '@/types'
+import type { Alert, AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, House, RelayStates, Thresholds, TicketPriority, Zone } from '@/types'
+import { SEVERITY_TO_LEVEL } from '@/constants/severity'
 
 const DAY_MS = 86_400_000
 
@@ -265,19 +266,11 @@ export function averageControlOutput(zoneIds: string[], live: Map<string, LiveCo
 }
 
 // Bảng nhật ký cảnh báo
-export type SeverityGroup = 'CRITICAL' | 'HIGH_MED' | 'NORMAL'
+export type SeverityGroup = TicketPriority
 
+// Nhóm lọc theo 3 cấp chung (constants/severity.ts)
 export function getSeverityGroup(severity: AlertSeverity): SeverityGroup {
-  if (severity === 'CRITICAL') return 'CRITICAL'
-  if (severity === 'LOW') return 'NORMAL'
-  return 'HIGH_MED'
-}
-
-export const SEVERITY_BADGE_CLASS: Record<AlertSeverity, string> = {
-  CRITICAL: 'bg-alertRed/15 text-alertRed',
-  HIGH: 'bg-safetyOrange/10 text-safetyOrange',
-  MEDIUM: 'bg-orange-100 text-orange-800',
-  LOW: 'bg-warmGray/15 text-warmGray',
+  return SEVERITY_TO_LEVEL[severity]
 }
 
 export const STATUS_BADGE_CLASS: Record<AlertStatus, string> = {

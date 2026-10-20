@@ -10,7 +10,7 @@ SwiftletCare_KLTN/
 ├── frontend/            # Web dashboard / PWA (React 18, Vite, TailwindCSS)
 ├── mobile/              # App di động (Expo Router, React Native)
 ├── firmware/            # ESP32 (PlatformIO): cảm biến RS485, điều khiển mờ, MQTT, loa ru
-├── ai-pipeline/         # Đếm chim yến (YOLOv8 ONNX + ByteTrack) — mới là khung
+├── ai-pipeline/         # Đếm chim yến (YOLO26n ONNX + ByteTrack) — mới là khung
 ├── docs/                # Tài liệu (xem mục "docs/")
 ├── .github/             # CI (workflows/ci.yml), CODEOWNERS, PR template
 ├── .claude/             # Lệnh /review-pr và cấu hình Claude Code
@@ -57,6 +57,7 @@ docs/
 ├── FOLDER_STRUCTURE.md     # file này
 ├── api/                    # api-spec.yaml (OpenAPI 3.0 — nguồn sự thật của API) + README
 ├── bird-counting-plan.md   # kế hoạch triển khai đếm chim (module VISION)
+├── evidence-register.md   # sổ tài liệu tham khảo & minh chứng cho các con số, thiết bị (EVID-NFR-003)
 ├── diagrams/               # sơ đồ draw.io: context-diagram/, system-architecture/ (file chính: artifacts/diagram.drawio)
 ├── hardware/               # BOM.md, components-guide.md (linh kiện + đấu nối)
 ├── sprint-reviews/         # biên bản review theo sprint

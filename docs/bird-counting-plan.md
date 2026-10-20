@@ -44,7 +44,7 @@ Modem VNPT (IP public, mở 1 cổng về camera) ──Internet──► MediaM
                                                               │
 ESP32 các Zone ──MQTT qua TLS (8883)──► EMQX                  ▼
                                                     pipeline (container `vision`)
-                                                    [crop ROI → YOLOv8n (ONNX) → ByteTrack → vạch đếm → vẽ ô xanh]
+                                                    [crop ROI → YOLO26n (ONNX) → ByteTrack → vạch đếm → vẽ ô xanh]
                                                        │ MQTT nội bộ                 │ đẩy lại MediaMTX "cam-<id>"
                                                        │  • số đếm của phiên, 30 giây/lần
                                                        │  • số đếm theo khoảng 5 phút, cả ngày
@@ -134,11 +134,14 @@ Giá là ước lượng, cần kiểm tra lại khi mua. Cập nhật `docs/har
 
 ### 3.3. Cách lắp — quyết định độ chính xác nhiều hơn model
 
-1. Đặt camera **bên trong nhà yến, nhìn thẳng ra lỗ ra vào**. Chim hiện thành bóng tối trên nền trời sáng, dễ phát hiện nhất.
-2. Khung hình chỉ rộng hơn lỗ một chút. Mỗi con chim nên chiếm **ít nhất 15–20 px** mỗi chiều trong ảnh đưa vào model.
-3. Gắn chặt, không rung. Camera xê dịch là phải chỉnh lại ROI và vạch đếm.
-4. Không để đèn, vật đung đưa (dây, lá) trong khung hình.
-5. Vạch đếm đặt ở chỗ chim đã tách hàng, vuông góc với hướng bay.
+1. Đặt camera ở **lỗ ra vào thông ra ngoài trời**, không đặt ở lỗ thông tầng bên trong. Trong một phiên chim lượn lên xuống giữa các tầng nhiều lần, nên đếm ở lỗ thông tầng sẽ tính một con nhiều lần.
+2. Camera nằm **bên trong nhà yến, lệch sang một bên, nhìn chéo vào lỗ** (khoảng 30–60° so với hướng chim bay qua lỗ). Phía lỗ, chim hiện thành bóng tối trên nền trời sáng nên dễ phát hiện nhất. Không nhìn dọc theo hướng bay: khi đó chim chỉ to dần hoặc nhỏ dần ở giữa hình, không cắt qua vạch đếm nào. Khung hình phải có cả phía ngoài (lỗ) lẫn một khoảng phía trong, để tracker thấy chim vài khung trước và sau khi qua vạch.
+3. Khung hình chỉ rộng hơn vùng lỗ và vùng chim tỏa ra một chút. Mỗi con chim nên chiếm **ít nhất 15–20 px** mỗi chiều trong ảnh đưa vào model.
+4. Gắn chặt, không rung. Camera xê dịch là phải chỉnh lại ROI và vạch đếm.
+5. Không để đèn, loa treo, vật đung đưa (dây, lá) trong khung hình.
+6. Vạch đếm đặt sát miệng lỗ, ở chỗ chim đã tách hàng, vuông góc với hướng bay. Nếu clip thật cho thấy chim không cắt vạch rõ ràng, phương án dự phòng là đếm theo vùng: coi miệng lỗ là một vùng; track xuất hiện từ vùng đó là vào, track đi vào vùng đó rồi mất là ra. Phương án này chưa có trong code ở mục 6.4.
+
+Vị trí đã lắp thực tế ở nhà yến thử nghiệm: mục 19.7.
 
 ### 3.4. Kiểm tra camera trước khi làm tiếp
 
@@ -155,8 +158,8 @@ Xong khi: xem được hình, độ trễ dưới khoảng 1 giây, không vỡ 
 
 | Nơi chạy | Phần mềm |
 |---|---|
-| PC Edge AI | Python 3.10–3.12, ffmpeg, các gói trong `ai-pipeline/requirements.txt` |
-| Colab (train) | `ultralytics` (kéo theo torch), GPU T4 miễn phí |
+| PC Edge AI | **Python 3.11–3.12** (`onnxruntime` 1.30 cần ≥ 3.11), ffmpeg, các gói trong `ai-pipeline/requirements.txt` |
+| Colab (train) | `ultralytics==8.4.170` (kéo theo torch), GPU T4 miễn phí |
 | Gán nhãn | Roboflow (web) hoặc CVAT |
 | Backend/Frontend (dev) | Như hiện tại (`docker compose up -d mongodb emqx`, `npm run dev`) |
 | Cloud | Docker + Docker Compose; Caddy, MediaMTX, EMQX, MongoDB, backend (mục 15) |
@@ -164,16 +167,29 @@ Xong khi: xem được hình, độ trễ dưới khoảng 1 giây, không vỡ 
 `ai-pipeline/requirements.txt` mới:
 
 ```text
-opencv-python>=4.9
-numpy>=1.26
-onnxruntime>=1.17
-supervision>=0.25
-paho-mqtt>=2.0
-PyYAML>=6.0
-python-dotenv>=1.0
-loguru>=0.7
-pytest>=8
+opencv-python>=4.14,<5          # 5.x mới ra 07/2026, chưa dùng
+numpy>=1.26,<3
+onnxruntime>=1.30,<1.31         # máy chạy CPU Intel: thay bằng onnxruntime-openvino>=1.24.1,<1.25 (mục 18.4)
+supervision>=0.30.9,<0.31       # ByteTrack, LineZone; 0.31 mới ra 16/10/2026
+paho-mqtt>=2.0,<3
+PyYAML>=6.0,<7
+python-dotenv>=1.0,<2
+loguru>=0.7,<1
+pytest>=8,<9
 ```
+
+**Phiên bản đã chốt (20/10/2026).** Chỉ chọn bản đã phát hành ít nhất 2 tuần: bản mới hơn chưa có thời gian lộ lỗi. Cận trên khóa trong cùng nhánh phát hành, nên `pip install` chỉ nhận bản vá, không tự nhảy lên bản có thể đổi API giữa lúc đang test.
+
+| Gói | Bản dùng | Ghi chú |
+|---|---|---|
+| Python | 3.11 (Docker `python:3.11-slim`) hoặc 3.12 | `onnxruntime` 1.30 và `onnxruntime-openvino` 1.24 không có bản cho 3.10 |
+| `ultralytics` (chỉ dùng trên Colab) | **8.4.170** (30/09/2026) | Có YOLOv8, YOLO11, YOLO26. Hầu như ngày nào cũng ra bản mới, nên ghim đúng một bản cho mọi lượt train để kết quả so sánh được |
+| `onnxruntime` | 1.30.x (10/09/2026) | 1.31 ra 09/10/2026, chưa dùng |
+| `onnxruntime-openvino` | 1.24.1 (26/02/2026) | Chỉ cho CPU Intel |
+| `supervision` | 0.30.9 (08/10/2026) | Bản vá cuối của nhánh 0.30 |
+| `opencv-python` | 4.14.x | |
+
+Khi muốn nâng phiên bản: nâng từng gói một, chạy lại `pytest` và một clip test (mục 7.9). Số đếm không đổi thì mới giữ bản mới.
 
 Cài đặt:
 
@@ -246,14 +262,26 @@ Thời gian: 2 ngày. Mục tiêu: chạy được trên clip, mở trình duy�
 
 ### 6.1. Model tạm để thử đường ống
 
-Chưa có model riêng thì dùng YOLOv8n pretrained (COCO, class `bird` = 14). Export một lần trên Colab:
+Chưa có model riêng thì dùng YOLO26n pretrained (COCO, class `bird` = 14). Export một lần trên Colab:
 
 ```python
-!pip install -q ultralytics
+!pip install -q "ultralytics==8.4.170"    # ghim bản, xem mục 4
 from ultralytics import YOLO
-YOLO("yolov8n.pt").export(format="onnx", imgsz=640, opset=12, simplify=True)
-# tải yolov8n.onnx về ai-pipeline/models/
+YOLO("yolo26n.pt").export(format="onnx", imgsz=640, nms=False, simplify=True)
+# tải yolo26n.onnx về ai-pipeline/models/
 ```
+
+`nms=False` xuất đầu ra không cần NMS: mảng `(1, 300, 6)`, mỗi dòng là `[x1, y1, x2, y2, confidence, class_id]` theo tọa độ ảnh đầu vào đã letterbox. Không có `nms=False` thì file ONNX ra định dạng cũ `(1, 84, 8400)` và phải tự chạy NMS. `inference.py` ở mục 6.3 đọc định dạng mới. Nếu `onnxruntime` báo không hỗ trợ opset, export lại với `opset=17`.
+
+Vì sao chọn YOLO26n (tra cứu 20/10/2026):
+
+| Model | mAP COCO 50-95 | CPU ONNX, đầu vào 640 | Ghi chú |
+|---|---|---|---|
+| YOLOv8n | 37,3 | 80,4 ms | Bản trong SRS cũ |
+| YOLO11n | 39,5 | 56,1 ms | |
+| **YOLO26n** | **40,9** (40,1 khi không dùng NMS) | **38,9 ms** | Ra mắt 14/01/2026. Bỏ NMS, thêm STAL (gán nhãn có lợi cho vật thể nhỏ). Ultralytics khuyên dùng cho dự án hiện tại |
+
+Số liệu là của Ultralytics, đo trên Intel Xeon 2,0 GHz, chưa có nhóm độc lập nào đo lại. YOLO27 đã công bố ở YOLO Vision 2026 nhưng chưa phát hành trọng số. Khi có, chỉ cần đổi tên model rồi train lại theo mục 7.5. Cách train, định dạng nhãn và giấy phép (AGPL-3.0) của YOLO26 giống YOLOv8.
 
 Model này bắt sót nhiều chim yến (nhỏ, nhòe). Nó chỉ dùng để kiểm tra đường ống, không dùng để báo cáo số liệu.
 
@@ -266,11 +294,12 @@ camera:
   roi: [0.20, 0.10, 0.85, 0.80]             # x1,y1,x2,y2 theo tỉ lệ khung hình — vùng quanh lỗ ra vào
 
 model:
-  path: "models/yolov8n.onnx"               # đổi thành models/swiftlet_v1.onnx sau GĐ2
-  version: "coco-pretrained"
-  input_size: 640
+  path: "models/yolo26n.onnx"               # đổi thành models/swiftlet_v1.onnx sau GĐ2
+  version: "yolo26n-coco"
+  input_size: 640                           # phải bằng imgsz lúc export; hạ 480/416 nếu thiếu FPS (mục 18.4)
   confidence_threshold: 0.30
-  nms_iou_threshold: 0.45
+  nms_iou_threshold: 0.45                   # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
+  providers: ["CPUExecutionProvider"]       # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
   classes:
     14: swiftlet                            # COCO bird. Model tự train: đổi thành  0: swiftlet
 
@@ -310,27 +339,51 @@ logging:
 
 ### 6.3. Sửa `src/inference.py`
 
-Bốn chỗ:
+Bốn chỗ. Chỗ 4 viết lại cả `postprocess` để đọc được **cả hai kiểu đầu ra**: YOLO26n export `nms=False` (không cần NMS) và YOLOv8n/YOLO11n (phải chạy NMS). Nhờ vậy, đổi model để so sánh (mục 7.9) chỉ cần sửa `model.path` trong config, không phải sửa code:
 
 ```python
-# 1) __init__: nhận tên class từ config, số luồng theo máy
-def __init__(self, model_path, input_size=640, conf_threshold=0.5, iou_threshold=0.45, class_names=None):
+# 1) __init__: nhận tên class và provider từ config, số luồng theo máy
+def __init__(self, model_path, input_size=640, conf_threshold=0.5, iou_threshold=0.45,
+             class_names=None, providers=None):
     self.class_names = class_names or {0: "swiftlet"}
     ...
     sess_opts.intra_op_num_threads = os.cpu_count() or 4      # thêm `import os`
+    self.session = ort.InferenceSession(model_path, sess_opts,
+                                        providers=providers or ["CPUExecutionProvider"])
+    logger.info(f"Model loaded: {model_path} | providers: {self.session.get_providers()}")
 
 # 2) preprocess: model train bằng ảnh RGB, OpenCV đọc ra BGR
 blob = padded[:, :, ::-1].astype(np.float32) / 255.0
 
-# 3) postprocess: chỉ giữ class có trong config
-mask = (confidences >= self.conf_thresh) & np.isin(class_ids, list(self.class_names))
+# 3) preprocess trả về (blob, scale, pad_x, pad_y); infer() gọi postprocess(outputs, scale, pad_x, pad_y)
 
-# 4) postprocess: cv2.dnn.NMSBoxes nhận [x, y, w, h], không phải [x1, y1, x2, y2]
-xywh = np.stack([x1, y1, x2 - x1, y2 - y1], axis=1)
-indices = cv2.dnn.NMSBoxes(xywh.tolist(), confidences.tolist(), self.conf_thresh, self.iou_thresh)
+# 4) postprocess: nhận kiểu đầu ra theo shape
+def postprocess(self, outputs, scale, pad_x, pad_y):
+    out = outputs[0][0]
+    end2end = out.shape[1] == 6                  # YOLO26 nms=False: (300, 6); YOLOv8/11: (4 + số class, 8400)
+    if end2end:                                  # mỗi dòng: x1, y1, x2, y2, confidence, class_id
+        xyxy, conf, cls = out[:, :4], out[:, 4], out[:, 5].astype(int)
+    else:                                        # mỗi cột: cx, cy, w, h, điểm của từng class
+        out = out.T
+        cls = out[:, 4:].argmax(axis=1)
+        conf = out[np.arange(len(out)), 4 + cls]
+        cx, cy, w, h = out[:, 0], out[:, 1], out[:, 2], out[:, 3]
+        xyxy = np.stack([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], axis=1)
+    keep = (conf >= self.conf_thresh) & np.isin(cls, list(self.class_names))
+    xyxy, conf, cls = xyxy[keep], conf[keep], cls[keep]
+    if not end2end and len(xyxy):                # cv2.dnn.NMSBoxes nhận [x, y, w, h]
+        xywh = np.concatenate([xyxy[:, :2], xyxy[:, 2:] - xyxy[:, :2]], axis=1)
+        idx = np.array(cv2.dnn.NMSBoxes(xywh.tolist(), conf.tolist(),
+                                        self.conf_thresh, self.iou_thresh)).reshape(-1)
+        xyxy, conf, cls = xyxy[idx], conf[idx], cls[idx]
+    xyxy = (xyxy - [pad_x, pad_y, pad_x, pad_y]) / scale      # bỏ viền letterbox, về tọa độ ROI
+    return [Detection(int(c), self.class_names[int(c)], float(p), tuple(map(int, b)))
+            for b, p, c in zip(xyxy, conf, cls)]
 ```
 
-Thay mọi `self.CLASS_NAMES` bằng `self.class_names`, xóa hằng `CLASS_NAMES`/`PREDATOR_IDS`.
+Xóa hằng `CLASS_NAMES`/`PREDATOR_IDS`. `confidence_threshold` dùng cho mọi model, `nms_iou_threshold` chỉ có tác dụng với YOLOv8n/YOLO11n.
+
+Với YOLO26n cũng có thể export đầu ra kiểu cũ (bỏ `nms=False`; trên COCO chính xác hơn khoảng 0,8 mAP nhưng phải chạy NMS). Code trên tự nhận ra kiểu đó. Chỉ chọn cách này khi so trên cùng tập test (mục 7.9) thấy đáng.
 
 ### 6.4. `src/counting.py` (viết lại)
 
@@ -634,7 +687,7 @@ def main():
     m, t = cfg["model"], cfg["tracking"]
 
     engine = InferenceEngine(m["path"], m["input_size"], m["confidence_threshold"],
-                             m["nms_iou_threshold"], class_names=m["classes"])
+                             m["nms_iou_threshold"], class_names=m["classes"], providers=m["providers"])
     server = MjpegServer(cfg["stream"]["host"], cfg["stream"]["port"], cfg["stream"]["jpeg_quality"])
     pub = None if args.no_mqtt else Publisher(cfg["mqtt"], m["version"])
 
@@ -775,7 +828,7 @@ Trình tự hiệu chỉnh (sửa `config.yaml` rồi chạy lại):
 **Xong khi:**
 - `pytest` qua.
 - Thấy ô xanh bám theo chim và số đếm tăng khi chim qua vạch.
-- FPS xử lý trong log ≥ tốc độ khung hình của camera (20 với camera đã chốt), đo trên máy sẽ chạy thật — với kiến trúc đã chốt là VPS (cổng 1, mục 19.5). SRS v2.1 (PERF-NFR-004) chỉ yêu cầu kịp luồng camera, không còn con số 25 cố định. Nếu không đạt, xem mục 13 và 18.4.
+- FPS xử lý trong log ≥ tốc độ khung hình của camera (**25** với VIGI C320I, đã kiểm tra 20/10/2026), đo trên máy sẽ chạy thật — với kiến trúc đã chốt là VPS (cổng 1, mục 19.5). SRS v2.1 (PERF-NFR-004) chỉ yêu cầu kịp luồng camera, không còn con số 25 cố định. Nếu không đạt, xem mục 13 và 18.4.
 
 ---
 
@@ -903,7 +956,7 @@ Quy trình trên Roboflow (hoặc CVAT):
 1. Tạo project loại Object Detection, một class `swiftlet`.
 2. Tải lên ảnh **kèm** file `.txt` cùng tên (định dạng YOLO) để nhận sẵn nhãn nháp.
 3. Sửa từng ảnh theo quy tắc dưới.
-4. Export định dạng **YOLOv8**, **tắt** resize và augmentation của Roboflow (ultralytics tự làm khi train).
+4. Export định dạng **YOLOv8** (nhãn dạng txt dùng chung cho YOLO26), **tắt** resize và augmentation của Roboflow (ultralytics tự làm khi train).
 
 Quy tắc gán nhãn (cả nhóm thống nhất trước khi làm):
 
@@ -979,7 +1032,7 @@ Runtime → Change runtime type → **T4 GPU**. Mỗi khối dưới đây là m
 
 ```python
 # Cell 1 — môi trường
-!pip install -q ultralytics
+!pip install -q "ultralytics==8.4.170"    # ghim bản, xem mục 4
 from google.colab import drive
 drive.mount("/content/drive")
 !rm -rf /content/dataset && unzip -q "/content/drive/MyDrive/swiftletcare/dataset.zip" -d /content/dataset
@@ -993,10 +1046,10 @@ Nếu file zip chứa thêm một cấp thư mục (`final/…`), sửa dòng `p
 # Cell 2 — train
 from ultralytics import YOLO
 
-model = YOLO("yolov8n.pt")            # bản nano: nhanh nhất trên CPU
+model = YOLO("yolo26n.pt")            # bản nano: nhanh nhất trên CPU (mục 6.1)
 model.train(
     data="/content/dataset/data.yaml",
-    imgsz=640,                        # chim < 12 px sau khi resize → thử 960
+    imgsz=640,                        # bằng model.input_size; chim < 12 px sau khi resize → thu hẹp ROI trước, 960 làm chậm hơn 2,25 lần
     epochs=120,
     patience=25,                      # dừng sớm nếu val không cải thiện
     batch=16,
@@ -1016,7 +1069,8 @@ model.train(
 ```python
 # Cell 3 — đánh giá trên tập TEST (ngày chưa từng thấy)
 best = YOLO("/content/drive/MyDrive/swiftletcare/runs/swiftlet_v1/weights/best.pt")
-metrics = best.val(data="/content/dataset/data.yaml", split="test", imgsz=640, conf=0.25)
+metrics = best.val(data="/content/dataset/data.yaml", split="test", imgsz=640, conf=0.25,
+                   nms=False)          # đo đúng đầu ra không NMS mà pipeline dùng
 print("precision:", metrics.box.mp, "recall:", metrics.box.mr,
       "mAP50:", metrics.box.map50, "mAP50-95:", metrics.box.map)
 ```
@@ -1029,8 +1083,8 @@ best.predict("/content/dataset/images/test", conf=0.25, save=True, max_det=100,
 ```
 
 ```python
-# Cell 5 — export ONNX cho pipeline
-best.export(format="onnx", imgsz=640, opset=12, simplify=True)
+# Cell 5 — export ONNX cho pipeline (imgsz phải bằng model.input_size trong config)
+best.export(format="onnx", imgsz=640, nms=False, simplify=True)
 !cp /content/drive/MyDrive/swiftletcare/runs/swiftlet_v1/weights/best.onnx \
     /content/drive/MyDrive/swiftletcare/swiftlet_v1.onnx
 ```
@@ -1051,7 +1105,7 @@ Các file trong `runs/swiftlet_v1/`: `results.png` (đường loss và mAP), `PR
 
 | Dấu hiệu | Nguyên nhân thường gặp | Cách xử lý |
 |---|---|---|
-| Recall thấp (sót chim) | Chim quá nhỏ, thiếu ảnh nhòe | Thu hẹp ROI, `imgsz=960`, gán thêm ảnh nhòe |
+| Recall thấp (sót chim) | Chim quá nhỏ, thiếu ảnh nhòe | Thu hẹp ROI, gán thêm ảnh nhòe; `imgsz=960` chỉ khi FPS còn dư (mục 18.4) |
 | Precision thấp (bắt nhầm) | Thiếu ảnh âm | Thêm ảnh dơi/côn trùng/lá không gán nhãn |
 | Val tốt nhưng test kém | Train và val cùng ngày, hoặc ít ngày | Thu thêm ngày, kiểm tra lại cách chia |
 | Loss val tăng lại | Quá khớp | Giảm epoch, thêm dữ liệu |
@@ -1092,7 +1146,7 @@ Kết quả tra cứu tháng 10/2026: **không tìm thấy bộ dữ liệu côn
 | Roboflow Universe: [ionest/swiftlet](https://universe.roboflow.com/ionest/swiftlet) | Bộ dữ liệu có tên chim yến, hai lớp `swiftlet`/`walet` | Nhỏ | **Chưa rõ** | Không mở được trang để kiểm tra. Phải tự xem ảnh: nếu là chim đậu trên tổ trong nhà thì không dùng được cho bài toán đếm chim bay |
 | Roboflow Universe: [không gian `swiftlet`](https://universe.roboflow.com/swiftlet) | Một dự án object detection về chim yến | Khoảng 1.080 ảnh | **Chưa rõ** | Như trên: tự xem ảnh và giấy phép trước khi dùng |
 | Roboflow Universe: [bird_flock](https://universe.roboflow.com/mai-ofuyr/bird_flock), [bird-flying](https://universe.roboflow.com/nycuproject/bird-flying-z8lwp) | Chim bay, đàn chim trên nền trời | Chưa kiểm tra | Thấp – trung bình | Ghi giấy phép CC BY 4.0. Chất lượng nhãn không đồng đều, phải xem mẫu trước |
-| COCO (trọng số `yolov8n.pt`) | 80 lớp, có lớp `bird` | — | Đã dùng làm điểm xuất phát ở mục 7.5 | Chim trong COCO phần lớn to và rõ, khác chim yến đang bay |
+| COCO (trọng số `yolo26n.pt`) | 80 lớp, có lớp `bird` | — | Đã dùng làm điểm xuất phát ở mục 7.5 | Chim trong COCO phần lớn to và rõ, khác chim yến đang bay |
 
 Dữ liệu thiên địch (để dành cho THREAT-FR-001, ngoài phạm vi đợt này): Roboflow Universe có nhiều bộ ảnh cú, chuột, rắn. Đã có [một nghiên cứu](https://journal.ittelkom-sby.ac.id/jaiit/article/view/733) dùng ảnh cú từ Roboflow để train YOLOv8n phát hiện cú trong nhà yến.
 
@@ -1144,7 +1198,7 @@ from ultralytics import YOLO
 RUNS = "/content/drive/MyDrive/swiftletcare/runs"
 
 # Lượt 1: học chim bay nói chung từ FBD-SV-2024
-YOLO("yolov8n.pt").train(data="/content/fbd/fbd.yaml", imgsz=640, epochs=50, patience=15,
+YOLO("yolo26n.pt").train(data="/content/fbd/fbd.yaml", imgsz=640, epochs=50, patience=15,
                          batch=16, project=RUNS, name="pretrain_fbd")
 
 # Lượt 2: tinh chỉnh trên chim yến của mình, xuất phát từ kết quả lượt 1
@@ -1159,7 +1213,7 @@ Bước 3 — so sánh công bằng, cùng tập test, cùng ngưỡng:
 
 ```python
 for name in ("swiftlet_v1", "swiftlet_v1_fbd"):          # v1: chỉ COCO → dữ liệu của mình (mục 7.5)
-    m = YOLO(f"{RUNS}/{name}/weights/best.pt").val(data="/content/dataset/data.yaml", split="test", conf=0.25)
+    m = YOLO(f"{RUNS}/{name}/weights/best.pt").val(data="/content/dataset/data.yaml", split="test", conf=0.25, nms=False)
     print(name, "precision", round(m.box.mp, 3), "recall", round(m.box.mr, 3), "mAP50", round(m.box.map50, 3))
 ```
 
@@ -1167,13 +1221,69 @@ Chọn bản có recall và mAP50 cao hơn trên tập test, rồi kiểm lại 
 
 Lợi ích của dữ liệu ngoài thường rõ nhất khi ảnh tự gán nhãn còn ít (vài trăm ảnh), và giảm dần khi đã có vài nghìn ảnh.
 
+
+### 7.9. So sánh model: YOLOv8n, YOLO11n, YOLO26n
+
+Chọn model theo **số đo trên dữ liệu chim yến của mình**, không theo bảng COCO ở mục 6.1. Trong lúc chưa so sánh xong, YOLO26n là mặc định (mục 6.1). Pipeline đọc được cả ba (mục 6.3), nên mỗi lần đổi model chỉ phải sửa `model.path` và `model.version` trong config.
+
+| Ứng viên | Ra mắt | Mạnh | Yếu |
+|---|---|---|---|
+| YOLOv8n | 01/2023 | Ổn định nhất, nhiều tài liệu và ví dụ nhất, đúng tên trên phiếu đăng ký | Chậm nhất: 80,4 ms/khung trên CPU, gần như chắc chắn cần OpenVINO hoặc đầu vào nhỏ hơn mới đạt 25 fps |
+| YOLO11n | 09/2024 | Đã dùng rộng rãi hơn 2 năm; 56,1 ms/khung | Vẫn chưa đủ 25 fps nếu không tăng tốc |
+| YOLO26n | 01/2026 | Nhanh nhất (38,9 ms), mAP COCO cao nhất, có STAL cho vật thể nhỏ, không cần NMS | Mới nhất nên ít ví dụ trên mạng hơn |
+
+Bản `s` (lớn hơn) không đưa vào: YOLO26s mất 87,2 ms/khung trên CPU, không đạt 25 fps nếu không có GPU.
+
+**Giữ mọi thứ giống nhau** để so sánh công bằng: cùng tập dữ liệu và cách chia theo ngày (mục 7.4), cùng `ultralytics==8.4.170`, cùng `imgsz`, epoch, augmentation và `seed`. Đo đếm trên cùng các clip test (mục 7.7). Đo FPS trên cùng máy sẽ chạy thật, cùng `providers`.
+
+Bước 1 — train cả ba trên Colab. Mỗi model chạy khoảng 2 giờ trên T4. Nếu Colab ngắt phiên giữa chừng thì chạy lại vòng lặp; nên sửa `CANDIDATES` để bỏ model đã xong, vì kết quả đã lưu trên Drive.
+
+```python
+!pip install -q "ultralytics==8.4.170"
+from ultralytics import YOLO
+
+RUNS = "/content/drive/MyDrive/swiftletcare/runs"
+DATA = "/content/dataset/data.yaml"
+AUG = dict(degrees=0.0, flipud=0.0, fliplr=0.5, scale=0.3, hsv_v=0.5, mosaic=1.0, close_mosaic=15)
+CANDIDATES = {"yolov8n": {}, "yolo11n": {}, "yolo26n": {"nms": False}}   # YOLO26: đo và export đúng đầu ra không NMS
+
+for name, head in CANDIDATES.items():
+    YOLO(f"{name}.pt").train(data=DATA, imgsz=640, epochs=120, patience=25, batch=16,
+                             seed=0, deterministic=True, project=RUNS, name=f"cmp_{name}", **AUG)
+    best = YOLO(f"{RUNS}/cmp_{name}/weights/best.pt")
+    m = best.val(data=DATA, split="test", imgsz=640, conf=0.25, **head)
+    print(name, "precision", round(m.box.mp, 3), "recall", round(m.box.mr, 3),
+          "mAP50", round(m.box.map50, 3), "mAP50-95", round(m.box.map, 3))
+    best.export(format="onnx", imgsz=640, simplify=True, **head)   # → cmp_<name>/weights/best.onnx
+```
+
+Bước 2 — trên máy chạy thật, lần lượt với từng file `.onnx`: sửa `model.path`/`model.version`, chạy đủ các clip test của mục 7.7 với `--no-mqtt`. Ghi lại dòng `KẾT QUẢ` và FPS trong log. Chạy trên file thì pipeline xử lý nhanh hết mức, nên FPS đo được là tốc độ tối đa của máy.
+
+Bước 3 — điền bảng (đưa thẳng vào báo cáo VISION-FR-016):
+
+| Model | Precision | Recall | mAP50 | Sai số ròng đủ sáng | Sai số ròng thiếu sáng | FPS trên máy thật | Đạt 25 fps? |
+|---|---|---|---|---|---|---|---|
+| YOLOv8n | | | | | | | |
+| YOLO11n | | | | | | | |
+| YOLO26n | | | | | | | |
+
+**Cách chọn**, áp dụng theo thứ tự:
+
+1. Loại model không đạt **≥ 25 fps** trên máy thật. Mọi model được dùng cùng cách tăng tốc ở bước 2 của mục 18.4 (OpenVINO nếu là CPU Intel).
+2. Loại model có sai số đếm **> 10%**, theo ngưỡng nội bộ ở mục 7.7.
+3. Trong các model còn lại, chọn model có **sai số ròng thấp nhất**, xét cả hai nhóm đủ sáng và thiếu sáng.
+4. Nếu sai số chênh nhau không đáng kể (ngưỡng nhóm tự chọn: ≤ 1 điểm %), chọn **bản ổn định hơn**, theo thứ tự YOLOv8n → YOLO11n → YOLO26n.
+5. Nếu cả ba đều trượt bước 1, áp dụng tiếp các bước 3–5 của mục 18.4 cho model có sai số thấp nhất, rồi đo lại.
+
+Chỉ model được chọn mới đi tiếp vào GĐ5 (chạy 24 giờ, mục 10). Ghi tên model và phiên bản (`model.version`, ví dụ `swiftlet_v1_yolo26n`) vào config và báo cáo.
+
 ---
 
 ## 8. GĐ3 — Backend
 
 Thời gian: 2 ngày. Tuân theo quy tắc Route → Controller → Service → Model của module `backend/`.
 
-> **Trạng thái (SRS v2.1.3):** §8.1–8.5 và §8.7 **đã làm** (`backend/src/services/birdCount.service.ts`, `jobs/returnRate.job.ts`, `tests/integration/birdCount.test.ts`); **§8.6 (stream token/MediaMTX) chưa làm**. Chỗ code thật khác code mẫu dưới đây:
+> **Trạng thái (SRS v2.1.6):** §8.1–8.5 và §8.7 **đã làm** (`backend/src/services/birdCount.service.ts`, `jobs/returnRate.job.ts`, `tests/integration/birdCount.test.ts`); **§8.6 (stream token/MediaMTX) chưa làm**. Chỗ code thật khác code mẫu dưới đây:
 > - `checkReturnRateDrops` còn **đóng** `LOW_RETURN_RATE` đang mở khi tỷ lệ đã hồi lại; không có bước này thì dedup nuốt mọi lần giảm của những ngày sau. `LOW_RETURN_RATE` thành loại chỉ backend được tạo (thiết bị gửi lên bị từ chối).
 > - `/daily` và `/correlation` gom theo `session_date` (ngày giờ VN), không gom theo ngày UTC của `timestamp`: phiên sáng 05:30 VN là 22:30 UTC hôm trước.
 > - Nút AI mất heartbeat quá 90 giây sinh `EDGE_AI_DEGRADED` (THREAT-FR-010), không phải `NODE_OFFLINE`; `vision/alert` của camera chỉ nhận `EDGE_AI_DEGRADED`.
@@ -1569,7 +1679,7 @@ Chỉ làm khi thật sự cần.
 | Hạng mục | Khi nào cần | Cách làm |
 |---|---|---|
 | Luồng video không có khung (cho nút bật/tắt khung) | Người dùng thật sự cần xem hình gốc | Đẩy thêm một đường `cam-<id>-raw`; tốn gấp đôi băng thông upload |
-| Tăng tốc suy luận | FPS dưới mục tiêu | Thu nhỏ ROI → export OpenVINO / `onnxruntime-openvino` (CPU Intel) → suy luận cách frame |
+| Tăng tốc suy luận | FPS dưới mục tiêu | Theo thứ tự ở mục 18.4: `onnxruntime-openvino` (CPU Intel) → đầu vào 480/416 trên ROI hẹp → hạ camera 20 fps |
 | Phát hiện thiên địch (THREAT-FR-001) | Có dữ liệu chuột/rắn/cú và camera nhìn vào trong nhà | Thêm class, sửa `alert_publisher.py` (thêm `deviceId`), cho `ingestDeviceAlert` tra cả `CameraNode` |
 | Ghi hình sự kiện (VISION-FR-015) | Sau khi phần đếm ổn định | Chưa có endpoint, cần thiết kế riêng |
 
@@ -1616,13 +1726,14 @@ Checklist:
 
 - [ ] Camera lắp đúng vị trí, xem được RTSP
 - [ ] CameraNode đã đăng ký, `.env` đủ giá trị
-- [ ] `inference.py` đã sửa 4 chỗ (RGB, NMS, class, số luồng)
+- [ ] `inference.py` đã sửa 4 chỗ (RGB, đọc cả hai kiểu đầu ra, class, số luồng/provider)
 - [ ] `pytest` qua
 - [ ] Stream có ô xanh, ROI và vạch đếm đã hiệu chỉnh
 - [ ] FPS xử lý ≥ tốc độ khung hình của camera trên máy chạy thật (VPS)
 - [ ] Clip của ít nhất 4 ngày
 - [ ] 1.500+ ảnh đã gán nhãn, chia tập theo ngày
 - [ ] Model v1 đã train, export ONNX, có số liệu trên tập test
+- [ ] Đã so sánh YOLOv8n / YOLO11n / YOLO26n trên cùng dữ liệu, chọn theo mục 7.9
 - [ ] Sai số đếm trên các clip test đạt ngưỡng, có bảng tách đủ sáng / thiếu sáng
 - [ ] Backend: bản ghi được upsert, `return_rate` tính trên số ròng, `returnRate.job` tạo alert `LOW_RETURN_RATE`, test tích hợp qua
 - [ ] Số đếm 5 phút: pipeline gửi cả ngoài phiên, backend lưu `BirdCountBucket`, có API và biểu đồ
@@ -1648,6 +1759,7 @@ Checklist:
 - ESP32: cài TLS, có giới hạn thời gian và phương án lùi (mục 15.7).
 - Nhà yến lắp cáp quang VNPT có IP public, camera IP có RTSP mua riêng và nối dây vào modem; VPS kéo hình thẳng từ camera (mục 19). Phương án 4G ở mục 17 không còn dùng.
 - Không có máy dư để đặt tại nhà yến → thử chạy model trên cloud trước (mục 18), có 5 cổng kiểm tra; trượt thì quay về đặt máy tại chỗ.
+- Model mặc định: **YOLO26n**, export ONNX `nms=False` (20/10/2026, thay YOLOv8n). Bản cuối chọn sau khi so với YOLOv8n và YOLO11n trên dữ liệu thật (mục 7.9). Cùng kích thước, nhanh hơn khoảng 2 lần trên CPU theo số liệu của Ultralytics (mục 6.1, 18.4). Mục tiêu xử lý **25 khung hình/giây**, bằng tốc độ thật của camera VIGI C320I (mục 19.3).
 
 ---
 
@@ -2520,7 +2632,7 @@ done
 
 Tắt tối ưu pin cho Termux, cắm sạc liên tục, và cài Termux:Boot để tự chạy lại sau khi điện thoại khởi động.
 
-Cài đặt camera cho cả hai cách: **H.264** (không phải H.265), 1080p, 20–25 khung hình/giây, bitrate cố định khoảng 2 Mbps.
+Cài đặt camera cho cả hai cách: **H.264** (không phải H.265), 1080p, 25 khung hình/giây (camera đã mua chạy được 25, mục 19.3), bitrate cố định khoảng 2 Mbps.
 
 ### 18.3. Chạy pipeline trên VPS
 
@@ -2569,22 +2681,27 @@ Trạng thái camera vẫn đúng: pipeline chỉ gửi heartbeat khi nhận đ�
 
 ### 18.4. Cỡ VPS và tốc độ suy luận
 
-Số liệu công bố của Ultralytics, đầu vào 640, chạy ONNX trên CPU:
+**Mục tiêu:** xử lý kịp **25 khung hình/giây**. Đây là tốc độ thật của camera VIGI C320I, đã kiểm tra 20/10/2026. Như vậy mỗi khung có **40 ms** cho toàn bộ: giải mã video vào, crop ROI, suy luận, ByteTrack, vẽ khung và nén video đẩy lại MediaMTX. Riêng phần suy luận phải nhanh hơn 40 ms một khoảng rõ ràng.
+
+Số liệu công bố của Ultralytics, đầu vào 640, chạy ONNX trên CPU (Intel Xeon 2,0 GHz):
 
 | Model | Thời gian mỗi khung | Tương đương |
 |---|---|---|
 | YOLOv8n | 80,4 ms | khoảng 12 khung hình/giây |
 | YOLO11n | 56,1 ms | khoảng 18 khung hình/giây |
+| **YOLO26n** (`nms=False`) | **38,9 ms** | khoảng 25 khung hình/giây |
 
-Cả hai đều **dưới** tốc độ camera 20–25 khung hình/giây, và VPS dùng chung thường chậm hơn máy đo chuẩn. Cùng lúc đó VPS còn phải giải mã video vào, nén video ra và chạy backend. Vì vậy cấu hình 2 vCPU ở mục 15 không đủ cho phương án này.
+Ngay cả YOLO26n ở đầu vào 640 cũng dùng gần hết 40 ms, chưa tính phần giải mã và nén video. VPS dùng chung còn thường chậm hơn máy đo chuẩn. Vì vậy cấu hình 2 vCPU ở mục 15 không đủ, và phải áp dụng thêm các bước dưới.
 
-Cách đạt tốc độ, áp dụng theo thứ tự:
+Cách đạt tốc độ, áp dụng theo thứ tự. Bước nào không tốn tiền làm trước. Dừng ngay khi đạt cổng 1 (mục 19.5):
 
-1. Dùng VPS **4 vCPU loại dedicated, 8 GB RAM**.
-2. Đổi sang **YOLO11n** (train giống hệt, chỉ thay `yolov8n.pt` bằng `yolo11n.pt` ở mục 7.5).
-3. Giảm đầu vào xuống **416** trên vùng ROI hẹp (khối lượng tính giảm khoảng 2,4 lần). Phải train lại với `imgsz=416` và kiểm tra chim vẫn đủ lớn.
-4. Xuất model sang **OpenVINO** nếu VPS dùng CPU Intel (Ultralytics công bố nhanh hơn tới khoảng 3 lần).
-5. Hạ camera xuống 20 khung hình/giây.
+1. **YOLO26n, export `nms=False`.** Đây là mặc định của plan từ 20/10/2026 (mục 6.1, 7.5).
+2. **CPU Intel thì dùng OpenVINO.** Áp dụng cho VPS chạy Xeon, hoặc laptop/PC i5 cũ ở phương án lùi. Cài `onnxruntime-openvino` thay cho `onnxruntime`, rồi đặt `model.providers: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]`. Vẫn dùng đúng file `.onnx` cũ, không phải sửa code. Ultralytics công bố OpenVINO nhanh hơn tới khoảng 3 lần trên CPU. Mức tăng khi chạy qua ONNX Runtime thì phải tự đo. Xem dòng `providers:` trong log để chắc OpenVINO đã được dùng.
+3. **Giảm đầu vào xuống 480 hoặc 416** trên vùng ROI hẹp. Khối lượng tính giảm khoảng 1,8 lần (480) hoặc 2,4 lần (416). Phải train và export lại với cùng `imgsz`, đổi `model.input_size` cho khớp, rồi kiểm tra chim vẫn ≥ khoảng 15 px trong ảnh đầu vào (cổng 5) và sai số đếm vẫn đạt (cổng 2).
+4. Dùng VPS **4 vCPU loại dedicated, 8 GB RAM**. Nếu đặt máy tại chỗ thì cần CPU từ 4 nhân.
+5. Phương án cuối: **hạ camera xuống 20 khung hình/giây** và đặt `box_pad: 3.0` (mục 19.3). Không suy luận cách khung: chim bay nhanh, bỏ khung thì ByteTrack mất dấu, cũng giống như hạ FPS nhưng khó kiểm soát hơn.
+
+`camera.fps` trong config luôn phải bằng tốc độ thật của luồng RTSP, đọc bằng `ffprobe` hoặc trong app VIGI mục Luồng. ByteTrack dùng con số này để tính thời gian giữ dấu.
 
 Thuê GPU theo giờ là phương án cuối, vì phát sinh chi phí hằng ngày.
 
@@ -2674,9 +2791,24 @@ Cài đặt bắt buộc:
 - **Tắt mọi chế độ tự xoay/bám theo chuyển động nếu có.** Camera tự xoay thì ROI và vạch đếm sai hết.
 - **Tắt báo động khi phát hiện chuyển động, đàm thoại và mọi âm báo.** Tiếng động trong nhà yến làm chim hoảng.
 - Chọn luồng chính, độ phân giải cao nhất, **H.264**, 25 khung hình/giây, bitrate cố định (CBR) khoảng 2 Mbps.
+- **Tần số dòng điện 50 Hz** (điện Việt Nam). Để 60 Hz thì hình có sọc nhấp nháy dưới đèn.
 - Nếu có khe thẻ nhớ: bật ghi **liên tục** vào thẻ microSD (dùng cho cổng 4).
 
-Cấu hình pipeline (`config.vps.yaml`): `camera.fps` phải bằng tốc độ khung hình thật của camera (đọc bằng `ffprobe` ở bước 3). Nếu camera chỉ chạy được khoảng 20 khung hình/giây thì nới box tracking:
+Giá trị cho camera đã mua, **TP-Link VIGI C320I**, chỉnh được ngay trong app VIGI trên điện thoại:
+
+| Mục trong app | Giá trị |
+|---|---|
+| Video & Hiển thị → Luồng → Chủ đạo | 1920×1080, 25 fps, **CBR**, 2048 Kbps, H264 |
+| Luồng phụ | Giữ mặc định (848×480, 25 fps, CBR 512 Kbps, H264), chỉ để xem nhanh |
+| Tần số dòng điện | 50Hz (mặc định là 60Hz) |
+| Khung thông minh, WDR, HLC, Mặt nạ riêng tư | Tắt (khung thông minh vẽ lên hình gốc) |
+| Phát hiện (người, phương tiện, chuyển động, xâm nhập…) | Tắt hết |
+| Cài đặt OSD | Giữ ngày giờ, bỏ tên camera; đặt ở góc xa lỗ ra vào |
+| Địa chỉ IP | Để DHCP, gán IP cố định bằng DHCP reservation trên modem (mục 19.2) |
+
+Đã kiểm tra 20/10/2026, trong LAN ở nhà, bằng VLC trên điện thoại: `rtsp://admin:<mật khẩu>@<IP>:554/stream1` (luồng chính) xem được, 1920×1080, 25 fps, H264. Độ trễ khoảng 1–1,5 giây, phần lớn là bộ đệm khoảng 1 giây của VLC. Luồng phụ là `/stream2`.
+
+Cấu hình pipeline (`config.vps.yaml`): `camera.fps` phải bằng tốc độ khung hình thật của camera (đọc bằng `ffprobe` ở bước 3, hoặc trong app mục Luồng). Với VIGI C320I đặt như trên thì `camera.fps: 25` và giữ `box_pad: 2.5`. Chỉ khi phải hạ camera xuống 20 khung hình/giây (bước 5 ở mục 18.4) mới nới box tracking:
 
 ```yaml
 camera:
@@ -2754,3 +2886,42 @@ Cổng 3a, 5, 6 làm ngay ngày lắp mạng và các ngày đầu sau khi lắp
 - Mục 18.2, các cách A/B/C (thiết bị chuyển tiếp): chỉ còn là phương án lùi khi không dùng được IP public hoặc không chấp nhận mở cổng.
 - Mục 18.5, dòng "Dung lượng 4G": không còn.
 - Mục 15.7: ESP32 nối Wi-Fi của modem VNPT; phần TLS giữ nguyên.
+
+### 19.7. Kết quả lắp đặt ngày 20/10/2026
+
+Lắp camera và cấu hình modem tại nhà yến thử nghiệm, làm bằng điện thoại và laptop. Repo **không ghi** IP public của modem, mật khẩu camera hay tài khoản modem. Các giá trị đó để ngoài repo, giống địa chỉ RTSP ở mục 16.6.
+
+**Vị trí camera.** Nhà có phòng lượn ở tầng trên cùng. Lỗ ra vào nằm trên tường phòng lượn, có một ống dẫn ngắn; chim từ phòng lượn xuống các tầng làm tổ qua lỗ thông tầng. Camera VIGI C320I gắn trong phòng lượn, nhìn chéo vào miệng ống dẫn. Miệng lỗ nằm về phía phải khung hình, phần còn lại của khung là tường phòng lượn. Tường có rất nhiều vết phân đen, nên lúc gán nhãn cần nhiều ảnh âm của nền tường (mục 7.3). Chưa xem được chim bay qua với góc này, nên vạch đếm và ROI chốt sau khi có clip phiên chiều.
+
+**Modem VNPT.** Giao diện web tại `192.168.1.1` (menu Device / WAN / LAN / Wireless / Advance / Tools / Management). Model chưa ghi lại.
+
+| Hạng mục | Kết quả | Chỗ cài trong modem |
+|---|---|---|
+| WAN | Hai đường: `veip0.4000` (TR069, IPoE, IP `10.x`, là đường quản lý của VNPT, bỏ qua) và **`veip0.10` (Internet, PPPoE)** | Device → WAN Info |
+| IP public | **Có.** IPv4 của `veip0.10` trùng IP trên trang "What Is My IP" | Device → WAN Info |
+| IP tĩnh hay động | **Chưa biết.** PPPoE thường cấp IP động. Kiểm tra bằng cách rút điện modem rồi so WAN IP; nếu đổi thì cài DDNS (mục 19.4 bước 2) | — |
+| DHCP | Dải `192.168.1.2`–`192.168.1.254`, thời hạn 24 giờ. Giữ nguyên | LAN → IPv4 → IPv4 Setup |
+| IP cố định cho camera | MAC `5c:62:8b:5c:d1:b9` → **`192.168.1.163`**. Đã thêm; xác nhận lại sau lần rút điện thử | LAN → IPv4 → Static IP lease |
+| Mở cổng | `cam-rtsp`: cổng ngoài **18554**, TCP → `192.168.1.163:554`, WAN `veip0.10`. Không dùng DMZ Host | Advance → NAT Forwarding → Virtual Servers Setup |
+| Lọc IP nguồn | Màn hình Virtual Servers **không có** ô IP nguồn. Cổng đang mở cho mọi nơi, chỉ mật khẩu camera bảo vệ. Còn phải xem mục Advance → Security khi có IP của VPS | — |
+
+**Camera.** Cài theo bảng ở mục 19.3: luồng chính 1920×1080, 25 fps, CBR 2048 Kbps, H.264; 50 Hz; các mục Phát hiện tắt. App báo "Không có thiết bị lưu trữ nội bộ": camera chưa có thẻ microSD, nên chưa có bản ghi dự phòng cho cổng 4.
+
+**Đã kiểm tra:**
+
+| Kiểm tra | Cách làm | Kết quả |
+|---|---|---|
+| RTSP trong LAN (cổng 3a) | App VIGI và VLC qua Wi-Fi modem | Đạt |
+| Cổng mở từ ngoài Internet | Laptop dùng điểm phát 4G của điện thoại (IP nguồn `172.20.10.x`, không đi qua modem), chạy `Test-NetConnection <WAN IP> -Port 18554` | `TcpTestSucceeded : True` |
+| Xem hình từ ngoài Internet | Cũng laptop đó, VLC mở `rtsp://admin:<mật khẩu>@<WAN IP>:18554/stream1` | Có hình, xem liên tục khoảng 40 giây không giật |
+
+Kéo hình qua Internet đã chạy, nhưng mới thử ngắn. **Cổng 3b** (kéo liên tục 24 giờ, tự nối lại) chưa làm.
+
+**Còn lại:**
+
+- [ ] Rút điện modem và bộ PoE: camera lên lại đúng `192.168.1.163`, xem qua 4G vẫn được, ghi WAN IP có đổi không
+- [ ] IP động thì cài DDNS (mục 19.4)
+- [ ] Clip phiên chiều: hướng bay của chim sau khi qua lỗ, cỡ chim trong hình (cổng 5); chốt ROI và vạch đếm, hoặc chuyển sang đếm theo vùng (mục 3.3)
+- [ ] Đèn hồng ngoại lúc chạng vạng: hình có trắng xóa không, chim có né lỗ không (cổng 6)
+- [ ] Lắp thẻ microSD nếu camera có khe, bật ghi liên tục (cổng 4)
+- [ ] Có VPS: giới hạn cổng 18554 chỉ cho IP của VPS nếu modem hỗ trợ (cổng 3c), rồi cho MediaMTX kéo liên tục 24 giờ (cổng 3b)
