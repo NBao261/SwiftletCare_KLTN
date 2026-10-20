@@ -217,7 +217,7 @@ SRS ghi các số này là mặc định kỹ thuật, Domain Expert chỉnh đ�
 
 | Mã | Khẳng định | Giá trị | Dùng ở đâu | Nguồn | Trích đoạn & vị trí | Mức | Trạng thái | Phụ trách |
 | --- | --- | --- | --- | --- | --- | :---: | --- | --- |
-| KD-40 | YOLOv8n đủ nhẹ để phát hiện chim thời gian thực | YOLOv8n, ONNX Runtime | SRS §3.2, VISION-FR-002 | | | | Chưa tìm | M2 |
+| KD-40 | YOLO26n đủ nhẹ để phát hiện chim thời gian thực (25 fps) | YOLO26n, ONNX Runtime | SRS §3.2, VISION-FR-002 | | | | Chưa tìm | M2 |
 | KD-41 | ByteTrack giữ được ID từng con chim để đếm qua vạch ảo | ByteTrack | SRS §3.2; `ai-pipeline/src/tracker.py` | | | | Chưa tìm | M2 |
 | KD-42 | Đánh giá phát hiện bằng Precision, Recall, mAP50; đánh giá đếm bằng sai số so với đếm tay | — | SRS EVID-NFR-001, VISION-FR-016; plan §7.7 | | | | Chưa tìm | M2 |
 | KD-43 | Ngưỡng nội bộ sai số đếm | ≤ 10 % (đề xuất nội bộ, phiếu không cam kết) | `docs/bird-counting-plan.md` §7.7 | | | | Chưa tìm | M2 |

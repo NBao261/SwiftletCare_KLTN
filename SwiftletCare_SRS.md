@@ -7,7 +7,7 @@
 | Trường thông tin        | Nội dung                            |
 | ----------------------- | ----------------------------------- |
 | **Tên dự án**           | SwiftletCare                        |
-| **Phiên bản SRS**       | 2.1.4                               |
+| **Phiên bản SRS**       | 2.1.5                               |
 | **Ngày tạo**            | 07/09/2026                          |
 | **Thời gian thực hiện** | Tháng 7/2026 – Tháng 12/2026 (FA26) |
 | **Chuyên ngành**        | Software Engineering (SE)           |
@@ -51,7 +51,7 @@
 SwiftletCare là một **hệ thống** điều khiển và giám sát tự động, không phải nền tảng nghiệp vụ: nhà yến tự điều tiết và tự bảo vệ; con người giám sát, kiểm chứng và chỉ can thiệp như ngoại lệ. Ba thành phần chính:
 
 1. **Điều khiển vi khí hậu tự động** — ESP32 đọc 5 cảm biến RS485, lọc tín hiệu, điều khiển phun sương và quạt bằng logic mờ, phát loa dẫn dụ theo lịch; chạy được khi mất mạng.
-2. **Đếm chim ra/vào bằng thị giác máy tính** — YOLOv8 + ByteTrack, tính tỷ lệ quay về, phát video trực tiếp có vẽ khung trên từng con chim.
+2. **Đếm chim ra/vào bằng thị giác máy tính** — YOLO + ByteTrack (phiếu ghi YOLOv8; bản triển khai dùng YOLO26n, bản kế nhiệm cùng họ Ultralytics YOLO, xem 2.1.5), tính tỷ lệ quay về, phát video trực tiếp có vẽ khung trên từng con chim.
 3. **Giám sát sức khỏe đa phương thức có chuyên gia trong vòng lặp** — kết hợp cảm biến môi trường, mức ồn và số đếm chim; hệ thống là chuyên gia tự động chính, một Chuyên gia (Domain Expert) là người thật kiểm chứng kết luận và tinh chỉnh thông số.
 
 ### 0.2. Quyết định phạm vi
@@ -201,7 +201,7 @@ Tài liệu này là Đặc tả Yêu cầu Phần mềm (Software Requirements 
 - `docs/bird-counting-plan.md` – **[v2.0.0]** Kế hoạch triển khai đếm chim thời gian thực (Module VISION)
 - `docs/evidence-register.md` – Sổ tài liệu tham khảo & minh chứng: nguồn của từng ngưỡng, thông số thiết bị và biên bản xác nhận của người nuôi yến (EVID-NFR-003)
 - `KLTN_2026_SwiftletCare_FA26.docx` – Đặc tả kỹ thuật phần cứng và Edge AI Vision (tài liệu ban đầu, không lưu trong repo)
-- YOLOv8 Documentation – Ultralytics
+- Ultralytics YOLO Documentation (YOLO26)
 - ByteTrack: Multi-Object Tracking by Associating Every Detection Box
 - EMQX MQTT Broker Documentation
 - Express.js Framework Documentation
@@ -253,7 +253,7 @@ Sản phẩm đầu ra theo phiếu v2 (phiếu gộp P1 và P2 thành một s�
 | #   | Sản phẩm                          | Mô tả                                                                |
 | --- | --------------------------------- | -------------------------------------------------------------------- |
 | P1  | **Hardware Controller Prototype** | Bo mạch IoT ESP32 tích hợp cảm biến + relay, đóng gói trong hộp IP65 |
-| P2  | **AI Camera Node**                | Camera IP tại cửa chim ra vào + nút AI (PC tại nhà yến hoặc máy chủ cloud) chạy YOLOv8/ByteTrack |
+| P2  | **AI Camera Node**                | Camera IP tại cửa chim ra vào + nút AI (PC tại nhà yến hoặc máy chủ cloud) chạy YOLO26n/ByteTrack |
 | P3  | **Trained AI Model**              | Mô hình đếm chim ra/vào (1 class `swiftlet`, ONNX) kèm kết quả đánh giá |
 | P4  | **Web & Mobile Application**      | Web Dashboard (React) + Mobile App (React Native/Expo) cho Farm Owner và Domain Expert |
 | P5  | **Cloud Backend**                 | Node.js + Express API + MQTT Broker + Time-series DB + Alert Service |
@@ -280,7 +280,7 @@ Sản phẩm đầu ra theo phiếu v2 (phiếu gộp P1 và P2 thành một s�
 ┌────────▼───────────────────┐    ┌─────────────▼───────────┐
 │  TIER 1A: ESP32 NODE       │    │  TIER 1B: EDGE AI NODE  │
 │  Modbus RTU Master (RS485) │    │  PC x86 / máy chủ cloud │
-│  RS485 Bus → 5 Sensors     │    │  YOLOv8 + ByteTrack     │
+│  RS485 Bus → 5 Sensors     │    │  YOLO26 + ByteTrack     │
 │  GPIO → 4-ch Relay         │    │  IP Camera (RTSP)       │
 │  Fuzzy closed-loop         │    │  IR, stream có vẽ khung │
 │  IP65–IP67 Industrial Grade│    │  FullHD Resolution      │
@@ -293,7 +293,7 @@ Sản phẩm đầu ra theo phiếu v2 (phiếu gộp P1 và P2 thành một s�
 | --------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | **Firmware/Embedded** | ESP32-WROOM-32D, FreeRTOS, Arduino Framework, RS485 Modbus RTU (ModbusMaster/eModbus), MAX485 Transceiver | Dual-core 240MHz, Wi-Fi tích hợp, MQTT native, RS485 bus cho cảm biến công nghiệp IP65+ |
 | **Nút AI đếm chim**   | PC x86 tại nhà yến hoặc máy chủ cloud; Python, ONNX Runtime, `supervision` (ByteTrack), OpenCV, ffmpeg, MediaMTX | **[v2.0.0]** Không dùng Raspberry Pi — chi tiết ở `docs/bird-counting-plan.md` |
-| **AI Model**          | YOLOv8n (1 class `swiftlet`), ByteTrack                                                                    | Phát hiện + theo vết gọn nhẹ cho đếm qua vạch ảo                                        |
+| **AI Model**          | YOLO26n (1 class `swiftlet`, ONNX không NMS), ByteTrack                                                    | Phát hiện + theo vết gọn nhẹ cho đếm qua vạch ảo                                        |
 | **AI Training**       | Roboflow/CVAT, Google Colab GPU, ONNX                                                                     | Pipeline annotation → quantize → deploy                                                 |
 | **MQTT Broker**       | EMQX                                                                                                      | Pub/Sub IoT protocol, low latency                                                       |
 | **Backend**           | Node.js + Express, JavaScript/TypeScript                                                                  | Nhẹ, linh hoạt, hệ sinh thái npm lớn, WebSocket (socket.io)                             |
@@ -327,7 +327,7 @@ Sản phẩm đầu ra theo phiếu v2 (phiếu gộp P1 và P2 thành một s�
 | Actor                         | Mô tả                                                                                                              |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | **ESP32 Controller Node**     | Thu thập cảm biến, lọc tín hiệu, điều khiển bằng logic mờ, tự chẩn đoán thiết bị, publish MQTT                     |
-| **Nút AI đếm chim**           | **[v2.0.0]** PC tại nhà yến hoặc máy chủ cloud: chạy YOLOv8 + ByteTrack, publish số đếm, phát stream có vẽ khung   |
+| **Nút AI đếm chim**           | **[v2.0.0]** PC tại nhà yến hoặc máy chủ cloud: chạy YOLO26n + ByteTrack, publish số đếm, phát stream có vẽ khung   |
 | **MQTT Broker (EMQX)**        | Trung gian message routing giữa edge và cloud                                                                      |
 | **Alert Engine**              | Dịch vụ background phân tích sự kiện và gửi thông báo                                                              |
 | **Telemetry Aggregator**      | Thu thập, validate, lưu time-series IoT data                                                                       |
@@ -523,7 +523,7 @@ flowchart TB
 | ID            | Yêu cầu                                                                                                       | Mức độ   | Trạng thái Backend                                                    |
 | ------------- | ------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------- |
 | VISION-FR-001 | Nút AI nhận luồng RTSP từ camera IP tại cửa chim ra vào (H.264, 1080p, 25 fps), hoặc đọc từ file video để phát triển và đo độ chính xác | Bắt buộc | ⬜ Chưa cài (`ai-pipeline/` mới là khung) |
-| VISION-FR-002 | Mô hình YOLOv8n (ONNX Runtime) chạy trên nút AI đủ nhanh để xử lý luồng thời gian thực; tốc độ đo được ghi trong báo cáo đánh giá (VISION-FR-016) | Bắt buộc | ⬜ Chưa cài |
+| VISION-FR-002 | Mô hình YOLO26n (ONNX Runtime, export không NMS) chạy trên nút AI đủ nhanh để xử lý luồng thời gian thực (25 fps, bằng tốc độ camera); tốc độ đo được ghi trong báo cáo đánh giá (VISION-FR-016) | Bắt buộc | ⬜ Chưa cài |
 | VISION-FR-003 | **[v2.0.0]** Hệ thống phát hiện **1 class: `swiftlet`**. Các class `rat`, `snake`, `owl` bị bỏ cùng phát hiện thiên địch (mục 5.5.1) | Bắt buộc | ⬜ Chưa cài (chưa có dataset/model) |
 | VISION-FR-004 | Thuật toán ByteTrack theo dõi ID object qua các frame để tránh đếm trùng                                      | Bắt buộc | ⬜ Chưa cài |
 | VISION-FR-005 | Logic đếm dựa trên vector di chuyển: chim vượt qua line ảo theo hướng ra → counted as EXIT; ngược lại → ENTRY | Bắt buộc | ⬜ Chưa cài |
@@ -1821,7 +1821,7 @@ TICKET_CHAT_ASSIGNEE_CHANGED: { ticketId, oldAssigneeId, newAssigneeId }
 0. (Bối cảnh) 5:30–7:00 sáng cùng ngày, Nút AI đã chạy "Morning Session" (session_type: MORNING_EXIT) tương tự các bước 1–7 bên dưới nhưng đếm theo chiều ra → kết thúc lưu exit_count = 1823 vào `bird_count_records`
 1. 17:30 - Nút AI bắt đầu "Evening Session" mode (tăng độ nhạy detection)
 2. Camera stream RTSP → Nút AI decode frame theo tốc độ của camera (25 fps)
-3. YOLOv8 detect: [{class: "swiftlet", bbox: [x,y,w,h], conf: 0.92}]
+3. YOLO26n detect: [{class: "swiftlet", bbox: [x1,y1,x2,y2], conf: 0.92}]
 4. ByteTrack assign Track ID: track_id=15
 5. Frame t+1: track_id=15 vượt qua crossing line → direction: INWARD
 6. Increment entry_count: 1547
@@ -2523,8 +2523,8 @@ flowchart LR
 
 | Thông số                     | Giá trị Mục tiêu                       |
 | ---------------------------- | -------------------------------------- |
-| Base Model                   | YOLOv8n (nano, lightweight)            |
-| Input Resolution             | 640×640                                |
+| Base Model                   | YOLO26n (nano, lightweight)            |
+| Input Resolution             | 640×640 (480/416 nếu thiếu tốc độ)     |
 | mAP@0.5 (test set)           | ≥ 75%                                  |
 | Precision (swiftlet class)   | ≥ 80%                                  |
 | Recall (swiftlet class)      | ≥ 80%                                  |
@@ -2549,10 +2549,10 @@ flowchart LR
 2. Lọc frame có chuyển động (Motion Detection) → tiết kiệm 80% disk
 3. Upload lên Roboflow → annotation bounding box 1 class `swiftlet`
 4. Augmentation: random flip, brightness, blur, mosaic
-5. Train YOLOv8n trên Kaggle T4 GPU (~2 giờ/100 epochs)
+5. Train YOLO26n trên Colab/Kaggle T4 GPU (~2 giờ/100 epochs)
 6. Evaluate: mAP, Precision, Recall, Confusion Matrix
-7. Export → ONNX → test trên nút AI với video quay sẵn
-8. Nếu không kịp thời gian thực: crop vùng quan tâm (ROI) quanh cửa ra vào hoặc giảm input resolution
+7. Export → ONNX (`nms=False`) → test trên nút AI với video quay sẵn
+8. Nếu không kịp thời gian thực: crop vùng quan tâm (ROI) quanh cửa ra vào, OpenVINO trên CPU Intel, hoặc giảm input resolution (plan mục 18.4)
 ```
 
 ---
@@ -2667,7 +2667,7 @@ flowchart LR
 | Task                          | Nội dung                                                                         | Kỹ năng cần thiết                                       | Thành viên phụ trách  |
 | ----------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------- |
 | **Task 1 – Hardware**         | Thiết kế sơ đồ mạch, lắp ráp prototype, firmware ESP32 (sensor + lọc, logic mờ, tự chẩn đoán, MQTT, OTA), công tắc bypass | C/C++ nhúng, RS485/Modbus, điện tử cơ bản               | TBD                   |
-| **Task 2 – AI Pipeline**      | Thu thập dataset, annotation, train YOLOv8, tích hợp ByteTrack, stream có khung, đánh giá độ chính xác | Python, Ultralytics/PyTorch, OpenCV                     | TBD                   |
+| **Task 2 – AI Pipeline**      | Thu thập dataset, annotation, train YOLO26n, tích hợp ByteTrack, stream có khung, đánh giá độ chính xác | Python, Ultralytics/PyTorch, OpenCV                     | TBD                   |
 | **Task 3 – Backend**          | REST API (Express), MQTT Broker setup, MongoDB schema, WebSocket, Alert Engine   | Node.js/Express, MongoDB, MQTT                          | TBD                   |
 | **Task 4 – Frontend/Mobile**  | React.js Dashboard, Mobile App (React Native), giao diện Domain Expert, live stream             | React, TailwindCSS, Socket.io-client                    | TBD                   |
 | **Task 5 – Testing & Thesis** | Kịch bản tự động (mục 13.6), đo số liệu, tài liệu tham khảo, xác nhận của người nuôi yến, báo cáo KLTN              | Trách nhiệm chung, điều phối bởi 1 thành viên phụ trách | TBD (lead luân phiên) |
@@ -2711,8 +2711,8 @@ flowchart LR
 
 - Trang trại thử nghiệm có sẵn nguồn điện 220V ổn định và kết nối Internet cố định (cáp quang) khả dụng tại vị trí lắp đặt.
 - Chủ nhà yến hợp tác đồng ý cho lắp thiết bị thử nghiệm ít nhất 1 tháng để thu thập dữ liệu thực tế.
-- Nhóm có quyền truy cập GPU (Google Colab/Kaggle) đủ để train YOLOv8 trong thời gian Phase 3.
-- Các thư viện/framework mã nguồn mở (YOLOv8, ByteTrack, EMQX, v.v.) giữ nguyên license miễn phí trong suốt thời gian dự án.
+- Nhóm có quyền truy cập GPU (Google Colab/Kaggle) đủ để train YOLO26n trong thời gian Phase 3.
+- Các thư viện/framework mã nguồn mở (Ultralytics YOLO, ByteTrack, EMQX, v.v.) giữ nguyên license miễn phí trong suốt thời gian dự án.
 
 ### 16.2. Ràng buộc (Constraints)
 
@@ -2875,5 +2875,6 @@ _Tài liệu SRS này được tạo ngày 07/09/2026. Mọi thay đổi yêu c�
 | 2.1.2 | 13/10/2026 | **Rà soát sau khi gộp `develop`, sửa chi tiết triển khai (không đổi phạm vi).** (1) **Flow 1b viết lại** theo phương án hiện hành: camera IP cấp nguồn PoE tại cửa chim, nút AI là máy chủ kéo RTSP qua một cổng chuyển tiếp trên modem — bỏ các bước thao tác trên Raspberry Pi. (2) Mạng nhà yến là **Internet cáp quang có IP tĩnh** thay cho router 4G: sơ đồ mục 3.1, BOM dòng 14, giả định mục 16.1, mục kiểm tra kết nối trong checklist nghiệm thu (TICKET-FR-010, Flow 9b). (3) Flow 3 dùng cùng tốc độ khung hình 25 fps như các mục khác. (4) Flow 11: OTP gửi qua email, bỏ chữ SMS. (5) Sửa tên file phụ lục về `SwiftletCare_Components_Guide_v3.11.md`; ghi rõ hai tài liệu tham chiếu không lưu trong repo. (6) **Camera đã mua:** TP-Link VIGI C320I ống kính 6 mm (2MP, IR 850 nm) + bộ cấp PoE TP-Link TL-POE150S — thêm BOM dòng 24–25, viết lại ghi chú camera mục 7.1 (bản cũ ghi IR 940 nm, ống 2.8 mm); đèn 850 nm phải qua cổng kiểm tra 6 của kế hoạch đếm chim. |
 | 2.1.3 | 17/10/2026 | **Rà soát backend vai trò Admin và rate limit, sửa 4 lỗi (không đổi phạm vi).** (1) **AUTH-FR-011:** khoá Technician còn ticket đang giao thì tự điều phối lại cho người cùng vùng (lý do `ACCOUNT_LOCKED`) thay vì để nguyên — người bị khoá không đăng nhập được và thông báo SLA bỏ qua họ nên ticket nằm im; không ai nhận thì về hàng đợi chung, response vẫn trả `meta.openTickets`. (2) **AUTH-FR-012:** user huỷ được yêu cầu xoá (`DELETE /auth/delete-request`), Admin từ chối kèm lý do (`PUT /admin/delete-requests/:id/reject`), job hằng ngày nhắc Admin một lần khi yêu cầu chờ ≥ 23 ngày (`users.deletion_reminder_sent_at`); Flow 19 thêm bước 7d. (3) **AUTH-FR-005c:** `POST /admin/technicians` kiểm tra SĐT ở backend (cùng quy tắc với form web) và khử trùng `assigned_regions` như khi sửa vùng. (4) **SEC-NFR-004:** giới hạn API đã đăng nhập đếm theo **tài khoản**, 300 request/phút, thay cho 100/phút theo IP — trước đây mọi người chung mạng (hoặc sau proxy) dùng chung một suất, và chỉ riêng trang Tổng quan (gọi API theo từng zone, ~85 request/lần mở) F5 vài lần là chặn hết cả `/auth/refresh`; đăng nhập/xác thực OTP/đặt lại mật khẩu (chỉ đếm lần sai) và đăng ký/gửi OTP/quên mật khẩu (đếm mọi lần) có giới hạn riêng 10 lần/15 phút theo IP; `/auth/refresh` có suất riêng 30/phút; 429 trả đúng envelope mã `RATE_LIMITED` kèm `Retry-After`, header `X-RateLimit-*` như mục 9 |
 | 2.1.4 | 19/10/2026 | **Rà soát backend Admin vòng 2 — giải pháp cho các điểm nghiệp vụ còn hở (không đổi phạm vi).** (1) **TICKET-FR-012:** KPI theo kỳ và theo từng lượt phụ trách (`tickets.assignment_history`, `sla_breached_by`) — trước đây mọi số liệu, kể cả vi phạm SLA, dồn cho người được gán cuối và thời gian xử lý tính từ lúc tạo ticket, người nhận lại ticket đã trễ bị phạt oan; thêm trễ phản hồi, xin gán lại, tỉ lệ mở lại. (2) **TICKET-FR-005b:** mở lại ticket đã đóng giữ cờ vi phạm cũ nhưng có hạn xử lý mới, lưu `reopen_history`, báo Farm Owner + Technician; Admin trả ticket về hàng đợi (`assigned_to: null`). (3) **TICKET-FR-005:** hàng đợi tự chia lại khi có người rảnh + job 5 phút; Router hoà điểm ưu tiên người lâu chưa được giao. (4) **AUTH-FR-005c:** `PUT /auth/password` cho mọi user (trước đây không có cách đổi mật khẩu khi đang đăng nhập), mật khẩu tạm của Technician bắt đổi trước khi dùng, Admin sửa tên/SĐT và cấp lại mật khẩu tạm. (5) **FARM-FR-003:** thu hồi thiết bị trong kho, cấp lại secretKey cho thiết bị chưa kích hoạt. (6) **AUTH-FR-011:** tìm người dùng theo tên/email/SĐT, lọc theo vùng, tách tài khoản khoá với đã xoá. (7) **FARM-FR-009:** khu vực theo danh mục 34 tỉnh/thành (nhận cả tên tỉnh cũ đã sáp nhập), tạo farm bắt buộc khu vực, script `migrate:regions` cho dữ liệu cũ. (8) **TICKET-FR-005b / FARM-FR-001 / SYSTEM-FR-003 — 5 lỗi logic của Admin:** đổi ưu tiên tính hạn phản hồi từ lúc giao cho người đang giữ và gỡ cờ vi phạm khi hạn mới chưa tới (trước đây hạ ưu tiên sau khi trễ thì cờ không bao giờ gỡ); Admin tạo farm hộ Farm Owner qua `owner_email` thay vì tự thành chủ; ép `CLOSED` ticket đã đóng không ghi đè mốc đóng; ép rời `NEW` thì ghi mốc tiếp nhận; Tổng quan hệ thống tách tài khoản đã xoá khỏi tài khoản bị khoá. (9) Cập nhật `docs/api/api-spec.yaml` cho mọi route/tham số/mã lỗi mới của 2.1.3–2.1.4 (gồm `RATE_LIMITED` 429, `PASSWORD_CHANGE_REQUIRED` 403) và thêm các mốc tự chọn (rate limit, nhắc xoá tài khoản, chu kỳ chia hàng đợi, kỳ KPI, mật khẩu tạm, danh mục khu vực) vào bảng giả định mục 0.5 |
+| 2.1.5 | 20/10/2026 | **Đổi model đếm chim sang YOLO26n, mục tiêu 25 fps (không đổi phạm vi).** (1) **VISION-FR-002, mục 3.2, 11.2, 11.4:** YOLOv8n → **YOLO26n** (Ultralytics, ra mắt 14/01/2026), export ONNX `nms=False`. Số liệu của Ultralytics (CPU ONNX, đầu vào 640): YOLOv8n 80,4 ms/khung, mAP 37,3; YOLO26n 38,9 ms/khung, mAP 40,9. Cùng framework, định dạng nhãn, cách train và giấy phép. Phiếu đăng ký v2 ghi "YOLOv8" — YOLO26n là bản kế nhiệm cùng họ, chọn vì tốc độ trên CPU. (2) Mục tiêu xử lý là **25 fps**, bằng tốc độ thật của camera VIGI C320I đã kiểm tra (1920×1080, H.264). Cách đạt khi thiếu tốc độ theo thứ tự: OpenVINO trên CPU Intel → đầu vào 480/416 trên ROI → hạ camera 20 fps (`docs/bird-counting-plan.md` mục 18.4). (3) `docs/bird-counting-plan.md` cập nhật mục 6.1–6.3, 7.5, 18.4, 19.3 (cài đặt camera VIGI C320I). |
 
 _Phiên bản hiện tại: 2.1.4 | Ngày cập nhật: 19/10/2026 | Trạng thái: DRAFT — phạm vi theo phiếu đăng ký v2 sau Review 1 (mục 0). **4 actor:** Farm Owner, Domain Expert (luồng chính); Technician, Administrator (luồng phụ). Code hiện tại còn theo phạm vi v1.24.0 ở nhiều chỗ — danh sách việc cần sửa ở mục 0.5 và các dòng `🔄 Cần sửa code (v2.0.0)`._

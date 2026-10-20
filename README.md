@@ -31,7 +31,7 @@ Nhà yến cần giữ nhiệt độ, độ ẩm và ánh sáng ổn định su�
 Luồng chính của hệ thống:
 
 1. **Điều khiển vi khí hậu tự động** — bộ điều khiển mờ (fuzzy) trên ESP32 bật/tắt phun sương và quạt theo nhiệt độ, độ ẩm.
-2. **Đếm chim ra/vào** — camera tại cửa ra vào, model YOLOv8 + ByteTrack đếm chim và phát live stream có khung nhận diện.
+2. **Đếm chim ra/vào** — camera tại cửa ra vào, model YOLO26n + ByteTrack đếm chim và phát live stream có khung nhận diện.
 3. **Giám sát sức khỏe đa nguồn có chuyên gia tham gia** — kết hợp dữ liệu môi trường, khí, tiếng ồn và số chim; Domain Expert kiểm chứng cảnh báo và viết kết luận cho chủ nhà yến.
 
 Vai trò người dùng:
@@ -72,7 +72,7 @@ Vai trò người dùng:
    │ RTSP        └────────┼─────────────────────────────────┘
    ▼                      │ MQTT (TLS khi deploy)
  AI node ── MQTT ──────►  EMQX broker
- (YOLOv8 + ByteTrack)     │
+ (YOLO26 + ByteTrack)     │
                           ▼
                  Backend (Node.js / Express) ──► MongoDB
                  REST + Socket.io, cron jobs ──► MinIO (file)
@@ -91,7 +91,7 @@ Sơ đồ chi tiết (draw.io): [`docs/diagrams/`](./docs/diagrams/). Hợp đ�
 | Backend | Node.js 22, Express, TypeScript, MongoDB (Mongoose), MQTT (EMQX), Socket.io, node-cron, Jest |
 | Frontend | React 18, Vite, TypeScript, TailwindCSS, React Query, Zustand, Vitest, PWA |
 | Mobile | Expo, Expo Router, React Native, React Query, Zustand |
-| AI pipeline | Python, OpenCV, YOLOv8 (ONNX Runtime), ByteTrack |
+| AI pipeline | Python, OpenCV, YOLO26n (ONNX Runtime), ByteTrack |
 | Hạ tầng | Docker Compose (MongoDB, EMQX, MinIO, Redis), GitHub Actions |
 
 ## Trạng thái phát triển
@@ -114,7 +114,7 @@ SwiftletCare_KLTN/
 ├── frontend/             # Web dashboard / PWA
 ├── mobile/               # Ứng dụng di động
 ├── firmware/             # ESP32: cảm biến, điều khiển, MQTT, loa ru
-├── ai-pipeline/          # Đếm chim yến (YOLOv8 + ByteTrack)
+├── ai-pipeline/          # Đếm chim yến (YOLO26n + ByteTrack)
 ├── docs/                 # API spec, phần cứng, sơ đồ, kế hoạch, checklist
 ├── .github/              # CI, CODEOWNERS, PR template
 ├── docker-compose.yml    # Môi trường dev
