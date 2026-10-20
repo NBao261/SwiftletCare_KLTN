@@ -235,17 +235,16 @@ Thời gian: 0,5 ngày.
 POST /devices/camera-nodes/register
 Authorization: Bearer <token của TECHNICIAN hoặc ADMIN>
 
-{ "device_id": "cam-zone1-01", "zone_id": "<ObjectId của Zone>", "secret_key": "<khóa>" }
+{ "device_id": "cam-house1-01", "house_id": "<ObjectId của House>", "secret_key": "<khóa>" }
 ```
 
-4. Ghi lại `farmId`, `houseId`, `zoneId`, `device_id` vào `ai-pipeline/.env`:
+4. Ghi lại `farmId`, `houseId`, `device_id` vào `ai-pipeline/.env` (SRS v2.1.8: camera ở cửa ra vào của cả nhà yến nên gắn House, không có Zone):
 
 ```dotenv
 CAMERA_RTSP_URL=rtsp://USER:PASS@192.168.1.64:554/stream1
 CAMERA_DEVICE_ID=cam-zone1-01
 FARM_ID=...
 HOUSE_ID=...
-ZONE_ID=...
 MQTT_USERNAME=
 MQTT_PASSWORD=
 # Chỉ điền khi chạy với cloud (mục 15); để trống khi dev trên máy
@@ -631,7 +630,7 @@ class Publisher:
     def __init__(self, cfg: dict, model_version: str):
         self.device_id = os.environ["CAMERA_DEVICE_ID"]
         self.model_version = model_version
-        base = f"swiftletcare/{os.environ['FARM_ID']}/{os.environ['HOUSE_ID']}/{os.environ['ZONE_ID']}"
+        base = f"swiftletcare/{os.environ['FARM_ID']}/{os.environ['HOUSE_ID']}"   # SRS v2.1.8: topic theo nhà yến
         self.topic_count = f"{base}/vision/bird-count"
         self.topic_heartbeat = f"{base}/heartbeat"
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=self.device_id)
@@ -1284,6 +1283,7 @@ Chỉ model được chọn mới đi tiếp vào GĐ5 (chạy 24 giờ, mục 1
 Thời gian: 2 ngày. Tuân theo quy tắc Route → Controller → Service → Model của module `backend/`.
 
 > **Trạng thái (SRS v2.1.6):** §8.1–8.5 và §8.7 **đã làm** (`backend/src/services/birdCount.service.ts`, `jobs/returnRate.job.ts`, `tests/integration/birdCount.test.ts`); **§8.6 đã làm ở SRS v2.1.7** (`stream.service.ts`, `routes/internal.route.ts`, `tests/integration/streamAuth.test.ts`, MediaMTX 1.21.1 trong `docker-compose.yml` + `deploy/mediamtx.yml`), khác code mẫu ở chỗ: token người xem nhận qua header Bearer (trường `token`), `?token=` hoặc ô mật khẩu, không chỉ `query`; pipeline đọc hình gốc bằng mật khẩu dịch vụ (§18.3) nhưng token người xem không đọc được đường `-raw`; `device_id` kết thúc bằng `-raw` không được cấp token. Chỗ code thật khác code mẫu của §8.1–8.5:
+> - **[SRS v2.1.8] Camera và số đếm theo nhà yến (House), không theo Zone hay camera.** Camera ở cửa ra vào của cả nhà (1–2 cửa) nên `camera_nodes`, `bird_count_records`, `bird_count_buckets` mang `house_id`; nút AI publish `swiftletcare/{farm}/{house}/heartbeat|vision/bird-count|vision/alert` (không có đoạn zone). `houseDailyCounts()` cộng số thô mọi camera của nhà theo `session_date` rồi mới lấy số ròng và tỷ lệ (chim có thể ra cửa này về cửa kia); không lưu `return_rate` trên bản ghi. Mọi chỗ đọc dùng hàm này: `GET /analytics/bird-count/current` (mới), `/daily`, `/trends`, `/buckets` (`houseId`; `zoneId` cũ được quy ra nhà chứa Zone), `/correlation`, socket `BIRD_COUNT_UPDATE` (room `house:<id>` qua `JOIN_HOUSE`), job `LOW_RETURN_RATE` (1 cảnh báo cho cả nhà, mức giảm `houses.bird_count_tuning`), báo cáo sức khỏe Zone, ảnh chụp đàn khi thu hoạch. Code mẫu bên dưới là bản theo Zone/camera, đã thay.
 > - `checkReturnRateDrops` còn **đóng** `LOW_RETURN_RATE` đang mở khi tỷ lệ đã hồi lại; không có bước này thì dedup nuốt mọi lần giảm của những ngày sau. `LOW_RETURN_RATE` thành loại chỉ backend được tạo (thiết bị gửi lên bị từ chối).
 > - `/daily` và `/correlation` gom theo `session_date` (ngày giờ VN), không gom theo ngày UTC của `timestamp`: phiên sáng 05:30 VN là 22:30 UTC hôm trước.
 > - Nút AI mất heartbeat quá 90 giây sinh `EDGE_AI_DEGRADED` (THREAT-FR-010), không phải `NODE_OFFLINE`; `vision/alert` của camera chỉ nhận `EDGE_AI_DEGRADED`.
@@ -2345,7 +2345,6 @@ VITE_STREAM_URL=http://localhost:8889
 CAMERA_DEVICE_ID=cam-zone1-01
 FARM_ID=...
 HOUSE_ID=...
-ZONE_ID=...
 # bỏ dòng này nếu chỉ chạy mức 0 hoặc 1
 STREAM_PUSH_URL=rtsp://pipeline:dev-publish@localhost:8554/cam-cam-zone1-01
 ```
@@ -2661,7 +2660,6 @@ Thêm vào `deploy/docker-compose.prod.yml`:
       CAMERA_DEVICE_ID: ${CAMERA_DEVICE_ID}
       FARM_ID: ${FARM_ID}
       HOUSE_ID: ${HOUSE_ID}
-      ZONE_ID: ${ZONE_ID}
       MQTT_USERNAME: pipeline
       MQTT_PASSWORD: ${PIPELINE_MQTT_PASSWORD}
     volumes:

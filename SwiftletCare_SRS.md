@@ -7,7 +7,7 @@
 | Trường thông tin        | Nội dung                            |
 | ----------------------- | ----------------------------------- |
 | **Tên dự án**           | SwiftletCare                        |
-| **Phiên bản SRS**       | 2.1.7                               |
+| **Phiên bản SRS**       | 2.1.8                               |
 | **Ngày tạo**            | 07/09/2026                          |
 | **Thời gian thực hiện** | Tháng 7/2026 – Tháng 12/2026 (FA26) |
 | **Chuyên ngành**        | Software Engineering (SE)           |
@@ -127,6 +127,7 @@ Mỗi dòng là một việc; mã FR trỏ tới yêu cầu chi tiết ở mục
 - [x] ALERT-FR-013 / ALERT-FR-002 — nối **ít nhất một** kênh ngoài ứng dụng chạy thật: Telegram bot (nhanh nhất — thêm `sendTelegram` cạnh `sendPush` trong `services/notification.service.ts`, lưu `telegram_chat_id` của user) hoặc Firebase FCM (hiện chỉ ghi log). Adapter Zalo/SMS để nguyên, không nối. Đã chọn Telegram; cần đặt `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME` để gửi thật.
 - [x] **[v2.1.6]** VISION-FR-006/008/009/011/017, THREAT-FR-010 — phần backend của đợt đếm chim (`docs/bird-counting-plan.md` §8.1–8.5, 8.7): `birdCount.service.ts` nhận `vision/bird-count` (bản ghi theo phiên upsert theo `session_date` giờ VN, tỷ lệ chim về trên số ròng, số đếm 5 phút `bird_count_buckets`), job `returnRate.job.ts` sinh/đóng `LOW_RETURN_RATE`, `GET /analytics/bird-count/buckets`; nút AI gửi heartbeat như ESP32 (OFFLINE → `EDGE_AI_DEGRADED`); danh sách camera không trả `rtsp_url`.
 - [x] **[v2.1.7]** VISION-FR-013 — phần backend của live stream (`docs/bird-counting-plan.md` §8.6, §18.3): `GET /devices/camera-nodes/:id/stream-token` (Farm Owner/Domain Expert của farm, token 60 giây chỉ cho đường `cam-<device_id>`), `POST /internal/stream-auth` cho MediaMTX hỏi quyền (pipeline đẩy video và đọc hình gốc `-raw` bằng mật khẩu dịch vụ; người xem chỉ đọc bằng token), MediaMTX 1.21.1 trong `docker-compose.yml` + `deploy/mediamtx.yml`. Còn lại: màn xem WebRTC ở frontend/mobile.
+- [x] **[v2.1.8]** VISION-FR-008/009/011/012, EXPERT-FR-008 — **camera đếm chim gắn House**, không gắn Zone: camera lắp ở cửa ra vào của cả nhà yến (mỗi nhà 1–2 cửa), Zone chỉ là khu bên trong cùng nhà. Số đếm, tỷ lệ chim về, `LOW_RETURN_RATE`, `EDGE_AI_DEGRADED` và mức giảm cho phép (`houses.bird_count_tuning`, `PUT /farms/houses/:houseId/bird-count-tuning`) theo House; một nguồn `birdCount.service#houseDailyCounts` cho `GET /analytics/bird-count/current` (mới), `/daily`, `/trends`, `/correlation`, socket `BIRD_COUNT_UPDATE` (room `house:<id>`), báo cáo sức khỏe Zone và ảnh chụp đàn khi thu hoạch (Zone đọc số của nhà chứa nó). API cũ gửi `zoneId` vẫn chạy (quy ra House). Dữ liệu cũ: `npm run migrate:bird-count-house`. Còn lại: màn hình frontend/mobile.
 
 **Giả định kỹ thuật chưa có nguồn — cần nhóm xác nhận hoặc đo thực tế**
 
@@ -395,7 +396,7 @@ flowchart TB
 | Chỉnh ngưỡng cảm biến theo Zone (ENV-FR-006) | R | R (duyệt/điều chỉnh) | - | - |
 | Reset ngưỡng Zone về mặc định hệ thống (ENV-FR-020) | R | R | - | I (audit) |
 | Chỉnh hệ số logic mờ theo Zone (ENV-FR-021) | R | R (duyệt gợi ý của hệ thống) | R (hiệu chỉnh tại hiện trường) | I (audit) |
-| Chỉnh tham số phát hiện theo Zone (EXPERT-FR-008) | I (xem) | R | - | I (audit) |
+| Chỉnh tham số phát hiện theo Zone và mức giảm tỷ lệ chim về theo House (EXPERT-FR-008) | I (xem) | R | - | I (audit) |
 | Tạo/xử lý ticket lỗi ³ | R (tạo) | - | R (xử lý) | A (escalate/can thiệp) |
 | Trò chuyện trực tiếp trong Ticket (TICKET-FR-014..017) ⁶ | R | - | R | I |
 | Gán/kích hoạt/dời thiết bị (Farm→Zone khác) ¹ | - | - | R | I (audit) |
@@ -542,11 +543,11 @@ flowchart TB
 
 | ID            | Yêu cầu                                                                                               | Mức độ   | Trạng thái Backend                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------- |
-| VISION-FR-008 | Backend tổng hợp entry/exit count theo phiên (session): Phiên Sáng (ra), Phiên Tối (về)               | Bắt buộc | ✅ Backend xong (v2.1.6 — `bird_count_records` 1 bản ghi mỗi camera/phiên/ngày theo giờ VN; `/daily` gom theo `session_date`). Chờ dữ liệu thật từ nút AI |
-| VISION-FR-009 | **[Sửa v2.1.1]** Tính tỷ lệ chim về hàng ngày trên **số ròng**: `return_rate = (vào − ra của phiên chiều) / (ra − vào của phiên sáng) × 100%`. Chim lượn qua lại vạch đếm làm cả hai chiều phồng lên; phép trừ triệt tiêu phần đó. Số thô của cả hai chiều vẫn được lưu, và báo cáo đánh giá so sai số của hai cách (VISION-FR-016). Bản cũ dùng `evening_entry / morning_exit`                | Bắt buộc | ✅ Backend xong (v2.1.6 — tính khi nhận tin phiên chiều, trên số ròng, không kẹp ở 100%) |
+| VISION-FR-008 | Backend tổng hợp entry/exit count theo phiên (session): Phiên Sáng (ra), Phiên Tối (về)               | Bắt buộc | ✅ Backend xong (v2.1.6 — `bird_count_records` 1 bản ghi mỗi camera/phiên/ngày theo giờ VN; `/daily` gom theo `session_date`. **[v2.1.8]** Số đếm là của **nhà yến (House)** — camera ở cửa ra vào của cả nhà, không gắn Zone; nhà 2 cửa thì cộng số thô mọi camera; một nguồn `houseDailyCounts` cho mọi màn hình, socket, cảnh báo và báo cáo). Chờ dữ liệu thật từ nút AI |
+| VISION-FR-009 | **[Sửa v2.1.1]** Tính tỷ lệ chim về hàng ngày trên **số ròng**: `return_rate = (vào − ra của phiên chiều) / (ra − vào của phiên sáng) × 100%`. Chim lượn qua lại vạch đếm làm cả hai chiều phồng lên; phép trừ triệt tiêu phần đó. Số thô của cả hai chiều vẫn được lưu, và báo cáo đánh giá so sai số của hai cách (VISION-FR-016). Bản cũ dùng `evening_entry / morning_exit`                | Bắt buộc | ✅ Backend xong (v2.1.6 — trên số ròng, không kẹp ở 100%. **[v2.1.8]** Tính cho cả nhà yến lúc đọc: cộng số thô mọi camera của nhà rồi mới trừ, vì chim có thể ra cửa này về cửa kia; không lưu tỷ lệ theo từng camera; `null` khi thiếu phiên sáng/chiều) |
 | VISION-FR-010 | Lưu lịch sử đếm chim theo ngày, tuần, tháng; hiển thị biểu đồ xu hướng                                | Bắt buộc | ✅ Xong (endpoint `bird-count/trends`; chờ dữ liệu thật)                   |
-| VISION-FR-011 | Cảnh báo khi return_rate giảm > 20% so với trung bình 7 ngày trước (**[v2.1.0]** mức 20% chỉnh được theo Zone — EXPERT-FR-008)                                    | Bắt buộc | ✅ Backend xong (v2.1.6 — job `returnRate.job.ts` 19:15 giờ VN, không phụ thuộc tin kết thúc phiên; mức giảm là `return_rate_drop_pct` của Zone, cần ≥ 3 ngày nền; ngày đã hồi lại thì tự đóng cảnh báo cũ). Thiết bị không được tự gửi `LOW_RETURN_RATE` |
-| VISION-FR-012 | Dashboard hiển thị live count thời gian thực trong giờ cao điểm (5:30–7:00 sáng và 17:30–19:00 chiều) | Bắt buộc | ⬜ Chưa cài (frontend; socket `BIRD_COUNT_UPDATE` đã có) |
+| VISION-FR-011 | Cảnh báo khi return_rate giảm > 20% so với trung bình 7 ngày trước (**[v2.1.0]** mức 20% chỉnh được — EXPERT-FR-008; **[v2.1.8]** theo House)                                    | Bắt buộc | ✅ Backend xong (v2.1.6 — job `returnRate.job.ts` 19:15 giờ VN, không phụ thuộc tin kết thúc phiên; mức giảm là `return_rate_drop_pct` của Zone, cần ≥ 3 ngày nền; ngày đã hồi lại thì tự đóng cảnh báo cũ). Thiết bị không được tự gửi `LOW_RETURN_RATE`. **[v2.1.8]** Một cảnh báo cho cả nhà yến (`house_id`, không gắn Zone hay camera), tính trên tỷ lệ của nhà, mức giảm của House |
+| VISION-FR-012 | Dashboard hiển thị live count thời gian thực trong giờ cao điểm (5:30–7:00 sáng và 17:30–19:00 chiều) | Bắt buộc | 🟡 Backend ✅ (**[v2.1.8]** `GET /analytics/bird-count/current?houseId=` cho số hôm nay khi mở trang; socket `JOIN_HOUSE` → `BIRD_COUNT_UPDATE` ở room `house:<id>` gửi cùng con số của cả nhà kèm `sessionDate`, `netCount`, `returnRate` có thể null); màn hình frontend ⬜ |
 
 #### 5.4.3. Live Stream Camera
 
@@ -721,7 +722,7 @@ flowchart TB
 | EXPERT-FR-005 | **Báo cáo sức khỏe Zone** do hệ thống tự tổng hợp hàng tuần (chu kỳ cấu hình được) và xem được theo khoảng bất kỳ: % thời gian nhiệt độ/độ ẩm trong ngưỡng, % thời gian chạy tự động (ANALYTICS-FR-011), số lần đóng cắt relay, số cảnh báo theo loại, lỗi thiết bị, xu hướng tỷ lệ chim về, NH3/CO2 trung bình và cực đại | Bắt buộc | 🟡 Backend ✅ (`zone_health_reports`, job `healthReport.job.ts`, `GET /health-reports`, `/health-reports/preview`); web chưa làm. `avg_return_rate` rỗng cho tới khi có dữ liệu đếm chim |
 | EXPERT-FR-006 | Domain Expert viết **kết luận và khuyến nghị** gắn vào một báo cáo sức khỏe; Farm Owner nhận thông báo và đọc được trên web/mobile. Người viết sửa được kết luận của mình; có lưu thời điểm | Bắt buộc | 🟡 Backend ✅ (`PUT /health-reports/:id/conclusion`). Farm Owner được báo trong ứng dụng (**[v2.1.6]** `GET /notifications`, socket `NOTIFICATION_NEW`) và qua **Telegram** nếu đã liên kết bot; push/email mới ghi log; web/mobile chưa làm |
 | EXPERT-FR-007 | Domain Expert nhận thông báo trong ứng dụng khi có cảnh báo suy luận chờ kiểm chứng hoặc báo cáo sức khỏe mới; không nhận push cảnh báo vận hành (đó là việc của Farm Owner) | Bắt buộc | 🟡 Backend ✅ (v2.1.6): hộp thông báo trong ứng dụng (`notifications` TTL 90 ngày, `GET /notifications`, `PUT /notifications/:id/read`, `PUT /notifications/read-all`, socket `NOTIFICATION_NEW`). Cảnh báo suy luận mới báo Domain Expert **chỉ trong ứng dụng** (ALERT-FR-005); báo cáo sức khỏe mới vào hộp của cả Farm Owner và Domain Expert (kèm Telegram nếu đã liên kết). Domain Expert không nhận cảnh báo vận hành ngoài ứng dụng. Web/mobile chưa làm |
-| EXPERT-FR-008 **[mới v2.1.0]** | **Chỉnh tham số phát hiện theo Zone.** Các ngưỡng mà hệ thống dùng để *phát hiện* sự cố không còn cố định trong code; Domain Expert chỉnh được, dựa trên tỷ lệ cảnh báo được xác nhận (EXPERT-FR-003). Sáu tham số, giá trị mặc định là hằng số đang dùng: `noise_margin_db` — ồn cao hơn nền bao nhiêu dB thì tính (mặc định 15, khoảng 5–30); `noise_min_sec` — số giây vượt trong cửa sổ 15 giây (mặc định 10, khoảng 5–15); `pump_dry_on_sec` — thời gian bơm bật cộng dồn trước khi xét (mặc định 300, khoảng 120–900); `pump_dry_min_rise_pct` — độ ẩm phải tăng tối thiểu (mặc định 2, khoảng 0.5–10); `speaker_drop_pct` — mức âm giảm so với nền thì coi là hỏng loa (mặc định 70, khoảng 30–90); `return_rate_drop_pct` — tỷ lệ chim về giảm so với trung bình 7 ngày (mặc định 20, khoảng 5–50). Năm tham số đầu chạy trên ESP32: backend gửi qua `config/update`, thiết bị lưu NVS và tự kẹp vào khoảng hợp lệ; tham số cuối do backend dùng. Mỗi lần đổi lưu `zones.detection_tuning_history` (người sửa, role, thời điểm, giá trị cũ/mới) + audit `DETECTION_TUNING_UPDATED`; có nút "về mặc định". Farm Owner xem được nhưng không sửa. Khoảng hợp lệ là giới hạn kỹ thuật để tránh nhập nhầm, không phải khuyến nghị chuyên môn. Các ngưỡng của `SENSOR_ANOMALY` (đứng yên 2 giờ, nhảy 2°C/10%, lệch 2°C/8%) và của dự báo **chưa** mở ra ở bản này — Tùy chọn | Bắt buộc | 🟡 Firmware 1.3.0 + backend ✅ (`zones.detection_tuning`, `PUT /farms/zones/:zoneId/detection-tuning`, 5 tham số qua `config/update`); web chưa làm; job tỷ lệ chim về chờ đợt đếm chim |
+| EXPERT-FR-008 **[mới v2.1.0]** | **Chỉnh tham số phát hiện theo Zone (và theo House cho đếm chim — [v2.1.8]).** Các ngưỡng mà hệ thống dùng để *phát hiện* sự cố không còn cố định trong code; Domain Expert chỉnh được, dựa trên tỷ lệ cảnh báo được xác nhận (EXPERT-FR-003). Sáu tham số, giá trị mặc định là hằng số đang dùng: `noise_margin_db` — ồn cao hơn nền bao nhiêu dB thì tính (mặc định 15, khoảng 5–30); `noise_min_sec` — số giây vượt trong cửa sổ 15 giây (mặc định 10, khoảng 5–15); `pump_dry_on_sec` — thời gian bơm bật cộng dồn trước khi xét (mặc định 300, khoảng 120–900); `pump_dry_min_rise_pct` — độ ẩm phải tăng tối thiểu (mặc định 2, khoảng 0.5–10); `speaker_drop_pct` — mức âm giảm so với nền thì coi là hỏng loa (mặc định 70, khoảng 30–90); `return_rate_drop_pct` — tỷ lệ chim về giảm so với trung bình 7 ngày (mặc định 20, khoảng 5–50). Năm tham số đầu theo Zone, chạy trên ESP32: backend gửi qua `config/update`, thiết bị lưu NVS và tự kẹp vào khoảng hợp lệ. **[v2.1.8]** Tham số cuối theo **House** (camera đếm chim ở cửa ra vào của cả nhà): `houses.bird_count_tuning`, `PUT /farms/houses/:houseId/bird-count-tuning`, lịch sử `bird_count_tuning_history` + audit `BIRD_COUNT_TUNING_UPDATED`; backend dùng. Mỗi lần đổi lưu `zones.detection_tuning_history` (người sửa, role, thời điểm, giá trị cũ/mới) + audit `DETECTION_TUNING_UPDATED`; có nút "về mặc định". Farm Owner xem được nhưng không sửa. Khoảng hợp lệ là giới hạn kỹ thuật để tránh nhập nhầm, không phải khuyến nghị chuyên môn. Các ngưỡng của `SENSOR_ANOMALY` (đứng yên 2 giờ, nhảy 2°C/10%, lệch 2°C/8%) và của dự báo **chưa** mở ra ở bản này — Tùy chọn | Bắt buộc | 🟡 Firmware 1.3.0 + backend ✅ (`zones.detection_tuning`, `PUT /farms/zones/:zoneId/detection-tuning`, 5 tham số qua `config/update`; **[v2.1.8]** `houses.bird_count_tuning`, `PUT /farms/houses/:houseId/bird-count-tuning`, job `LOW_RETURN_RATE` dùng mức của House); web chưa làm |
 
 > **Kiểm chứng ngoài phần mềm:** một vai trò trong phần mềm chưa đủ để nói hệ thống đúng. Nhóm cần một người nuôi yến có kinh nghiệm thật xem xét bộ ngưỡng mặc định và dùng thử vai trò này; biên bản ý kiến được đưa vào báo cáo (mục 13.6).
 
@@ -1071,6 +1072,10 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
   "name": "string",
   "floors": "number",
   "description": "string",
+  "bird_count_tuning": { "return_rate_drop_pct": 20 },   // [v2.1.8] EXPERT-FR-008 — mức giảm tỷ lệ chim về của cả nhà
+  "bird_count_tuning_history": [
+    { "changed_by": "ObjectId (ref: users)", "changed_by_role": "DOMAIN_EXPERT", "changed_at": "ISODate", "old_values": "{...}", "new_values": "{...}" }
+  ],
   "created_at": "ISODate"
 }
 ```
@@ -1108,8 +1113,8 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
     "noise_min_sec": 10,
     "pump_dry_on_sec": 300,
     "pump_dry_min_rise_pct": 2,
-    "speaker_drop_pct": 70,
-    "return_rate_drop_pct": 20
+    "speaker_drop_pct": 70
+    // [v2.1.8] return_rate_drop_pct chuyển sang houses.bird_count_tuning
   },
   "detection_tuning_history": [
     { "changed_by": "ObjectId (ref: users)", "changed_by_role": "DOMAIN_EXPERT", "changed_at": "ISODate", "old_values": "{...}", "new_values": "{...chỉ các tham số đã đổi}" }
@@ -1248,7 +1253,7 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
 {
   "_id": "ObjectId",
   "camera_node_id": "ObjectId (ref: camera_nodes)",
-  "zone_id": "ObjectId",
+  "house_id": "ObjectId ([v2.1.8] nhà yến của camera, thay zone_id)",
   "bucket_start": "ISODate (đầu khoảng 5 phút; unique cùng camera_node_id; TTL 90 ngày)",
   "entry_count": "number (số chim vào trong khoảng)",
   "exit_count": "number (số chim ra trong khoảng)"
@@ -1261,16 +1266,17 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
 {
   "_id": "ObjectId",
   "camera_node_id": "ObjectId (ref: camera_nodes)",
-  "zone_id": "ObjectId",
+  "house_id": "ObjectId ([v2.1.8] nhà yến của camera, thay zone_id)",
   "timestamp": "ISODate",
   "session_type": "enum: MORNING_EXIT | EVENING_ENTRY",
   "session_date": "string 'YYYY-MM-DD' theo giờ Việt Nam — [v2.1.6] unique cùng camera_node_id + session_type (nút AI gửi số cộng dồn mỗi 30 giây, backend upsert)",
   "entry_count": "number (số thô)",
   "exit_count": "number (số thô)",
-  "return_rate": "number (percentage, chỉ phiên chiều; số ròng — VISION-FR-009; có thể > 100)",
   "confidence_avg": "number"
 }
 ```
+
+> **[v2.1.8]** Camera đếm chim gắn **House** (`camera_nodes.house_id`, không còn `zone_id`): camera ở cửa ra vào của cả nhà, Zone là khu bên trong. Bỏ `return_rate` lưu theo từng camera: tỷ lệ chim về tính cho cả nhà lúc đọc (cộng số thô mọi camera của nhà theo `session_date` rồi mới lấy số ròng, VISION-FR-009). Index đọc: `{ house_id, session_date }`. Dữ liệu cũ: `npm run migrate:bird-count-house`.
 
 #### `notifications` **[mới v2.1.6, EXPERT-FR-006/007]**
 
@@ -1293,6 +1299,7 @@ Ticket (1) ──< (N) TicketMessage                     # mới v1.16.0, TICKET
   "_id": "ObjectId",
   "farm_id": "ObjectId",
   "zone_id": "ObjectId (nullable)",
+  "house_id": "ObjectId (nullable — [v2.1.8] cảnh báo của cả nhà: EDGE_AI_DEGRADED, LOW_RETURN_RATE; khi đó không có zone_id)",
   "node_id": "ObjectId (nullable)",
   "type": "enum: THRESHOLD_BREACH | PREDATOR_DETECTED | NODE_OFFLINE | EDGE_AI_DEGRADED | SPEAKER_FAILURE | PUMP_DRY | NOISE_ANOMALY | POWER_OUTAGE | LOW_RETURN_RATE | SENSOR_FAULT | RS485_BUS_FAILURE | SENSOR_ANOMALY | FORECAST_BREACH (2 loại cuối mới v1.24.0 — ALERT-FR-010/011; [v2.0.0] NOISE_ANOMALY đổi tên từ BIRD_PANIC, PREDATOR_DETECTED không còn được sinh ra)",
   "severity": "enum: CRITICAL | HIGH | MEDIUM | LOW",
@@ -1665,9 +1672,10 @@ swiftletcare/{farmId}/{houseId}/{zoneId}/config/reassign   # mới v1.13.0, FARM
 # Từ nút AI đếm chim (PC tại nhà yến hoặc máy chủ cloud — v2.0.0).
 # vision/alert chỉ còn dùng cho EDGE_AI_DEGRADED; không còn cảnh báo thiên địch.
 # Topic `alert` của ESP32 đổi loại BIRD_PANIC thành NOISE_ANOMALY (THREAT-FR-007).
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count   # số đếm của phiên (30 giây/lần) và, với kind:"BUCKET", số đếm từng khoảng 5 phút cả ngày (VISION-FR-017)
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/alert
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/heartbeat
+# [v2.1.8] Theo House, không có đoạn zone: camera ở cửa ra vào của cả nhà yến.
+swiftletcare/{farmId}/{houseId}/vision/bird-count   # số đếm của phiên (30 giây/lần) và, với kind:"BUCKET", số đếm từng khoảng 5 phút cả ngày (VISION-FR-017)
+swiftletcare/{farmId}/{houseId}/vision/alert        # EDGE_AI_DEGRADED
+swiftletcare/{farmId}/{houseId}/heartbeat           # {deviceId, firmwareVersion = phiên bản model}
 
 # QoS Level:
 # - Telemetry: QoS 0 (best effort, high frequency)
@@ -1799,9 +1807,10 @@ TICKET_CHAT_ASSIGNEE_CHANGED: { ticketId, oldAssigneeId, newAssigneeId }
    khoản quản trị mặc định).
 2. Technician mở MỘT cổng trên modem chuyển tiếp tới cổng RTSP của camera (nhà yến
    dùng Internet cáp quang có IP tĩnh); nếu modem hỗ trợ thì chỉ cho phép IP của nút AI.
-3. Technician mở Web Console Onboarding → chọn Farm → House → Zone → loại thiết bị
-   "AI Camera Node" → nhập Node ID + secretKey (cấp kèm nút AI).
-4. Web Console gửi POST /devices/camera-nodes/register {nodeId, secretKey, zoneId, rtspUrl}
+3. Technician mở Web Console Onboarding → chọn Farm → House → loại thiết bị
+   "AI Camera Node" → nhập Node ID + secretKey (cấp kèm nút AI). [v2.1.8] Camera gắn
+   House, không chọn Zone: nó đếm chim ở cửa ra vào của cả nhà (nhà 2 cửa thì 2 camera).
+4. Web Console gửi POST /devices/camera-nodes/register {device_id, secret_key, house_id, rtsp_url}
 5. Backend tạo camera_node record, trả về {mqttCredentials, streamConfig}
 6. Đưa RTSP URL và MQTT credentials vào cấu hình của nút AI rồi khởi động service AI
    (tự khởi động lại khi crash — REL-NFR-004) → kết nối MQTT Broker → publish heartbeat
@@ -1849,7 +1858,7 @@ TICKET_CHAT_ASSIGNEE_CHANGED: { ticketId, oldAssigneeId, newAssigneeId }
 5. Frame t+1: track_id=15 vượt qua crossing line → direction: INWARD
 6. Increment entry_count: 1547
 7. Mỗi 30 giây publish MQTT: {sessionType: "EVENING_ENTRY", entryCount: 1547, exitCount: 0}
-8. 19:00 - Nút AI kết thúc session → Backend truy vấn exit_count = 1823 của MORNING_EXIT session cùng ngày, cùng zone → compute return_rate = 1547/1823 = 84.8% (ví dụ đơn giản hoá; [v2.1.1] công thức thật dùng số ròng của mỗi phiên — VISION-FR-009)
+8. 19:00 - Nút AI kết thúc session → Backend truy vấn exit_count = 1823 của MORNING_EXIT session cùng ngày, cùng nhà yến ([v2.1.8]) → compute return_rate = 1547/1823 = 84.8% (ví dụ đơn giản hoá; [v2.1.1] công thức thật dùng số ròng của mỗi phiên — VISION-FR-009)
 9. Publish summary → Backend lưu BirdCountRecord
 10. Dashboard cập nhật biểu đồ xu hướng
 11. Trong suốt phiên, nút AI vẽ khung trên từng con chim đang được theo vết + vạch đếm
@@ -2901,5 +2910,6 @@ _Tài liệu SRS này được tạo ngày 07/09/2026. Mọi thay đổi yêu c�
 | 2.1.5 | 20/10/2026 | **Đổi model đếm chim sang YOLO26n, mục tiêu 25 fps (không đổi phạm vi).** (1) **VISION-FR-002, mục 3.2, 11.2, 11.4:** YOLOv8n → **YOLO26n** (Ultralytics, ra mắt 14/01/2026), export ONNX `nms=False`. Số liệu của Ultralytics (CPU ONNX, đầu vào 640): YOLOv8n 80,4 ms/khung, mAP 37,3; YOLO26n 38,9 ms/khung, mAP 40,9. Cùng framework, định dạng nhãn, cách train và giấy phép. Phiếu đăng ký v2 ghi "YOLOv8" — YOLO26n là bản kế nhiệm cùng họ, chọn vì tốc độ trên CPU. (2) Mục tiêu xử lý là **25 fps**, bằng tốc độ thật của camera VIGI C320I đã kiểm tra (1920×1080, H.264). Cách đạt khi thiếu tốc độ theo thứ tự: OpenVINO trên CPU Intel → đầu vào 480/416 trên ROI → hạ camera 20 fps (`docs/bird-counting-plan.md` mục 18.4). (3) `docs/bird-counting-plan.md` cập nhật mục 6.1–6.3, 7.5, 18.4, 19.3 (cài đặt camera VIGI C320I). (4) YOLO26n là mặc định; bản cuối chọn sau khi so với YOLOv8n và YOLO11n trên cùng dữ liệu chim yến (sai số đếm, FPS trên máy thật — plan mục 7.9); bảng so sánh đưa vào báo cáo VISION-FR-016. Ghim phiên bản thư viện (plan mục 4): `ultralytics` 8.4.170 để train, `onnxruntime` 1.30, `supervision` 0.30.9, Python 3.11–3.12. |
 | 2.1.6 | 20/10/2026 | **Backend còn sót của SRS v2 (không đổi phạm vi).** (1) **Đếm chim phía backend** (`docs/bird-counting-plan.md` §8.1–8.5, 8.7): `birdCount.service.ts` nhận `vision/bird-count` — bản ghi theo phiên thêm `session_date` (giờ VN, unique cùng camera + phiên), tỷ lệ chim về trên số ròng (VISION-FR-009), số đếm 5 phút `bird_count_buckets` + `GET /analytics/bird-count/buckets` (VISION-FR-017); `/daily` và `/correlation` gom theo ngày giờ VN (trước đây gom theo ngày UTC nên phiên sáng 05:30 rơi vào hôm trước). (2) **VISION-FR-011**: job `returnRate.job.ts` 19:15 giờ VN sinh `LOW_RETURN_RATE` theo `return_rate_drop_pct` của Zone, tự đóng khi tỷ lệ hồi lại; thiết bị không được tự gửi loại này. (3) **THREAT-FR-010**: nút AI gửi heartbeat như ESP32, im quá 90 giây → OFFLINE + `EDGE_AI_DEGRADED`; `vision/alert` của nút AI được nhận. (4) Danh sách camera không trả `rtsp_url`. (5) **EXPERT-FR-006/007**: hộp thông báo trong ứng dụng (`notifications`, `/notifications`, socket `NOTIFICATION_NEW`); cảnh báo suy luận mới báo Domain Expert chỉ trong ứng dụng. Thêm 5 mốc vào bảng giả định §0.5. Stream token/MediaMTX (§8.6) để đợt sau |
 | 2.1.7 | 20/10/2026 | **Backend live stream (không đổi phạm vi).** **VISION-FR-013** (`docs/bird-counting-plan.md` §8.6, §18.3): `GET /devices/camera-nodes/:id/stream-token` — chỉ Farm Owner và Domain Expert của farm chứa camera (§4.4), token 60 giây ký bằng khóa riêng `STREAM_TOKEN_SECRET`, chỉ hợp lệ cho đường `cam-<device_id>`; `POST /internal/stream-auth` cho MediaMTX hỏi quyền mỗi lần đẩy/xem: pipeline đẩy video và đọc hình gốc `cam-<id>-raw` bằng `STREAM_PUBLISH_SECRET`, người xem đọc bằng token (header Bearer, `?token=` hoặc ô mật khẩu — theo tài liệu MediaMTX 1.21, plan mẫu chỉ đọc `query`), không xem được hình gốc. Camera có `device_id` kết thúc bằng `-raw` bị từ chối cấp token (trùng tên hình gốc của camera khác). MediaMTX 1.21.1 vào `docker-compose.yml` dev + `deploy/mediamtx.yml` (chỉ RTSP + WebRTC). Thêm 1 mốc vào bảng giả định §0.5 |
+| 2.1.8 | 20/10/2026 | **Camera và số đếm chim theo nhà yến (House), đủ API cho màn hình live (không đổi phạm vi).** Chim ra vào ở cửa của cả nhà yến (mỗi nhà 1–2 cửa), còn Zone là khu bên trong cùng nhà, nên camera đếm chim gắn House, không gắn Zone. Trước đây camera gắn Zone và các chỗ đọc số đếm còn tính khác nhau khi có nhiều camera (`/buckets` cộng, `/daily` lấy max, tỷ lệ lưu theo từng camera rồi lấy trung bình, socket gửi số của từng camera, cảnh báo theo camera). (1) **Mô hình:** `camera_nodes.house_id`, `bird_count_records`/`bird_count_buckets` theo `house_id`, bỏ `return_rate` lưu theo camera; `alerts.house_id` cho cảnh báo của cả nhà (`EDGE_AI_DEGRADED`, `LOW_RETURN_RATE`); migration `migrate:bird-count-house`. (2) **VISION-FR-008/009:** một nguồn `houseDailyCounts` — cộng số thô mọi camera của nhà rồi mới lấy số ròng (chim có thể ra cửa này về cửa kia); tỷ lệ `null` khi thiếu phiên thay vì 0. (3) **VISION-FR-012:** `GET /analytics/bird-count/current`; socket `JOIN_HOUSE` → room `house:<id>` nhận `BIRD_COUNT_UPDATE` (cùng con số với `/current`, thêm `sessionDate`, `netCount`), trạng thái camera và cảnh báo của nhà. (4) `/daily`, `/trends`, `/buckets` nhận `houseId` (vẫn nhận `zoneId` cũ, quy ra nhà chứa Zone); `/daily` thêm số thô hai chiều và số ròng; `/correlation` ghép môi trường của Zone với tỷ lệ của nhà; `GET /alerts?houseId=`. (5) **VISION-FR-011 / EXPERT-FR-008:** một `LOW_RETURN_RATE` cho mỗi nhà; mức giảm chuyển từ Zone sang `houses.bird_count_tuning` (`PUT /farms/houses/:houseId/bird-count-tuning`, chỉ Domain Expert, có lịch sử + audit); Zone còn 5 tham số gửi ESP32. (6) **EXPERT-FR-005, MARKET-FR-003:** báo cáo sức khỏe Zone và ảnh chụp đàn khi thu hoạch lấy số của nhà chứa Zone; ước tính đàn = số ròng về buổi chiều lớn nhất. (7) **MQTT:** nút AI dùng topic theo nhà `swiftletcare/{farm}/{house}/heartbeat|vision/bird-count|vision/alert`. (8) Đăng ký camera bằng `house_id` (Flow 1b); kiểm quyền xem stream theo nhà của camera |
 
-_Phiên bản hiện tại: 2.1.7 | Ngày cập nhật: 20/10/2026 | Trạng thái: DRAFT — phạm vi theo phiếu đăng ký v2 sau Review 1 (mục 0). **4 actor:** Farm Owner, Domain Expert (luồng chính); Technician, Administrator (luồng phụ). Code hiện tại còn theo phạm vi v1.24.0 ở nhiều chỗ — danh sách việc cần sửa ở mục 0.5 và các dòng `🔄 Cần sửa code (v2.0.0)`._
+_Phiên bản hiện tại: 2.1.8 | Ngày cập nhật: 20/10/2026 | Trạng thái: DRAFT — phạm vi theo phiếu đăng ký v2 sau Review 1 (mục 0). **4 actor:** Farm Owner, Domain Expert (luồng chính); Technician, Administrator (luồng phụ). Code hiện tại còn theo phạm vi v1.24.0 ở nhiều chỗ — danh sách việc cần sửa ở mục 0.5 và các dòng `🔄 Cần sửa code (v2.0.0)`._
