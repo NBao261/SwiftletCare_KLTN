@@ -22,6 +22,10 @@ router.get('/forecast',          query('zoneId').isMongoId(), validate, analytic
 // VISION/ANALYTICS-FR-002/003 — phụ thuộc module VISION, trả rỗng cho tới khi có camera
 router.get('/bird-count/daily',  query('zoneId').isMongoId(), validate, analyticsController.birdCountDaily)
 router.get('/bird-count/trends', query('zoneId').isMongoId(), validate, analyticsController.birdCountTrends)
+// VISION-FR-017 — số đếm theo khoảng 5 phút (biểu đồ theo giờ, bối cảnh ±30 phút khi kiểm chứng cảnh báo)
+router.get('/bird-count/buckets',
+  query('zoneId').isString().isMongoId(), query('from').optional().isString().isISO8601(), query('to').optional().isString().isISO8601(), validate,
+  analyticsController.birdCountBuckets)
 router.get('/correlation',       query('zoneId').isMongoId(), validate, analyticsController.envBirdCorrelation)
 
 export default router

@@ -215,10 +215,8 @@ export async function compareZones(user: CurrentUser, zoneIds: string[], range: 
 }
 
 /**
- * VISION-FR-008/010 — thống kê đếm chim theo ngày.
- * LƯU Ý: trả rỗng cho tới khi module VISION (Raspberry Pi + YOLO) đi vào hoạt
- * động và publish `vision/bird-count` — hiện chưa lắp phần cứng camera nên chưa
- * có nguồn dữ liệu, KHÔNG phải lỗi truy vấn.
+ * VISION-FR-008/010 — thống kê đếm chim theo ngày (ngày theo giờ Việt Nam, `session_date`).
+ * Trả rỗng cho tới khi nút AI publish `vision/bird-count` — không phải lỗi truy vấn.
  */
 export async function getBirdCountDaily(
   user: CurrentUser, zoneId: string, query: { from?: string; to?: string },
@@ -236,7 +234,8 @@ async function dailyBirdCounts(zoneId: string, query: { from?: string; to?: stri
     { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from, $lte: to } } },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+        // Không gom theo ngày UTC của timestamp: phiên sáng 05:30 VN là 22:30 UTC hôm trước
+        _id: '$session_date',
         morning_exit:  { $max: { $cond: [{ $eq: ['$session_type', 'MORNING_EXIT'] }, '$exit_count', 0] } },
         evening_entry: { $max: { $cond: [{ $eq: ['$session_type', 'EVENING_ENTRY'] }, '$entry_count', 0] } },
         return_rate:   { $avg: '$return_rate' },
@@ -246,7 +245,7 @@ async function dailyBirdCounts(zoneId: string, query: { from?: string; to?: stri
     { $project: { _id: 0, date: '$_id', morning_exit: 1, evening_entry: 1, return_rate: 1 } },
   ])
 
-  return { from, to, records, note: records.length === 0 ? 'Chưa có dữ liệu đếm chim — module VISION chưa triển khai' : undefined }
+  return { from, to, records, note: records.length === 0 ? 'Chưa có dữ liệu đếm chim trong khoảng này' : undefined }
 }
 
 /**
@@ -321,7 +320,8 @@ export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, q
       { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from } } },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+          // Ngày theo giờ VN để ghép đúng với `session_date` của số đếm chim
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp', timezone: 'Asia/Ho_Chi_Minh' } },
           avg_temperature: { $avg: '$temperature' },
           avg_humidity:    { $avg: '$humidity' },
           max_temperature: { $max: '$temperature' },
@@ -330,7 +330,7 @@ export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, q
     ]),
     BirdCountRecord.aggregate([
       { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from } } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } }, return_rate: { $avg: '$return_rate' } } },
+      { $group: { _id: '$session_date', return_rate: { $avg: '$return_rate' } } },
     ]),
   ])
 

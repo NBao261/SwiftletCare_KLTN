@@ -47,8 +47,12 @@ info:
       `PUT /farms/zones/{zoneId}/detection-tuning`,
       `GET /devices/sensor-nodes/{id}/relay-overrides`, `GET /analytics/autonomy`,
       `/health-reports`, `/auth/telegram/link`.
-    - Chưa có trong file này (thuộc đợt đếm chim): `GET /analytics/bird-count/buckets`,
-      stream token của camera.
+    - Đếm chim phía backend: `GET /analytics/bird-count/buckets` (số đếm 5 phút); nút AI
+      gửi heartbeat như ESP32, `vision/alert` nhận `EDGE_AI_DEGRADED`; danh sách camera
+      không còn trả `rtsp_url`.
+    - Hộp thông báo trong ứng dụng: `/notifications` (+ sự kiện Socket.io
+      `NOTIFICATION_NEW` tới chính người nhận).
+    - Chưa có trong file này: stream token của camera (docs/bird-counting-plan.md §8.6).
 
 servers:
   - url: http://localhost:3000
@@ -75,6 +79,8 @@ tags:
     description: MARKET-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0)
   - name: HealthReports
     description: EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert)
+  - name: Notifications
+    description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
   - name: Tickets
     description: TICKET-FR-001..004b/006/007/009..012 (tạo/định tuyến/SLA/SAT checklist/KPI)
 
@@ -2465,6 +2471,7 @@ paths:
     get:
       tags: [Devices]
       summary: Danh sách Camera Node
+      description: "Không trả `rtsp_url` (chứa mật khẩu camera — chỉ nút AI cần)."
       parameters:
         - name: zoneId
           in: query
@@ -3389,8 +3396,10 @@ paths:
       tags: [Analytics]
       summary: "Thống kê đếm chim hàng ngày (VISION-FR-008/010)"
       description: |
-        Trả `records: []` kèm `note` cảnh báo khi chưa có dữ liệu — module
-        VISION (Raspberry Pi + YOLO) chưa lắp phần cứng camera, KHÔNG phải lỗi truy vấn.
+        Mỗi ngày là 1 ngày theo giờ Việt Nam (`session_date` của bản ghi phiên — phiên sáng
+        05:30 VN là 22:30 UTC hôm trước). `morning_exit`/`evening_entry` là số thô;
+        `return_rate` tính trên số ròng `(vào − ra chiều) / (ra − vào sáng) × 100` (VISION-FR-009),
+        có thể > 100. Trả `records: []` kèm `note` khi chưa có dữ liệu — không phải lỗi truy vấn.
       parameters:
         - { name: zoneId, in: query, required: true, schema: { type: string } }
         - { $ref: "#/components/parameters/From" }
@@ -3448,6 +3457,36 @@ paths:
                           drop_percent: { type: number, nullable: true }
                           drop_threshold_pct: { type: number, description: "return_rate_drop_pct của Zone (EXPERT-FR-008), mặc định 20" }
                           is_significant_drop: { type: boolean }
+
+  /analytics/bird-count/buckets:
+    get:
+      tags: [Analytics]
+      summary: "Số chim ra/vào theo khoảng 5 phút (VISION-FR-017)"
+      description: |
+        Cộng dồn mọi camera của Zone theo `bucket_start`, cả ngoài 2 phiên sáng/chiều. Dùng cho
+        biểu đồ theo giờ và bối cảnh ±30 phút khi Domain Expert kiểm chứng cảnh báo (EXPERT-FR-003).
+        Mặc định 24 giờ gần nhất; khoảng tối đa 7 ngày. Dữ liệu giữ 90 ngày.
+      parameters:
+        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 24 giờ" }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          from: { type: string, format: date-time }
+                          to: { type: string, format: date-time }
+                          buckets: { type: array, items: { $ref: "#/components/schemas/BirdCountBucket" } }
+        "400": { description: "from không trước to, hoặc khoảng quá 7 ngày" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /analytics/correlation:
     get:
@@ -3769,6 +3808,73 @@ paths:
                       data: { $ref: "#/components/schemas/ZoneHealthReport" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── NOTIFICATIONS (EXPERT-FR-006/007) ─────────────────────────────────────
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: "Hộp thông báo trong ứng dụng của người gọi — mọi role đã đăng nhập"
+      description: |
+        Mới nhất trước, giữ 90 ngày. Nguồn: mọi thông báo nghiệp vụ (`notifyUser` — báo cáo sức
+        khỏe mới, kết luận của chuyên gia, ticket…) và, cho Domain Expert, cảnh báo suy luận mới
+        chờ kiểm chứng (`NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE` —
+        chỉ trong ứng dụng, không Telegram/push; ALERT-FR-005). Bản realtime: sự kiện Socket.io
+        `NOTIFICATION_NEW` (payload là một `Notification`) tới room của chính người nhận.
+      parameters:
+        - { name: unread, in: query, schema: { type: string, enum: ["true", "false"] }, description: "`true` = chỉ thông báo chưa đọc" }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/Notification" } }
+                      meta:
+                        type: object
+                        properties:
+                          page: { type: integer }
+                          limit: { type: integer }
+                          total: { type: integer }
+                          unreadCount: { type: integer, description: "Số chưa đọc của người gọi (không phụ thuộc bộ lọc `unread`)" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: "Đánh dấu mọi thông báo của người gọi là đã đọc"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: object, properties: { modified: { type: integer } } }
+
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: "Đánh dấu 1 thông báo đã đọc (gọi lại giữ nguyên thời điểm đọc đầu tiên)"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Notification" }
+        "404": { description: "Không có, hoặc là thông báo của người khác" }
 
   /maintenance-schedules:
     get:
@@ -5161,6 +5267,31 @@ components:
         since_service_switches: { type: integer }
         last_ticket_id: { type: string }
 
+    BirdCountBucket:
+      type: object
+      description: "VISION-FR-017 — số chim qua vạch đếm trong 1 khoảng 5 phút, cộng các camera của Zone"
+      properties:
+        bucket_start: { type: string, format: date-time }
+        entry_count: { type: integer }
+        exit_count: { type: integer }
+
+    Notification:
+      type: object
+      description: "EXPERT-FR-006/007 — 1 thông báo trong ứng dụng"
+      properties:
+        _id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        ref:
+          type: object
+          nullable: true
+          description: "Đối tượng để client mở tới"
+          properties:
+            kind: { type: string, enum: [alert, health_report] }
+            id: { type: string }
+        read_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
     ZoneHealthReport:
       type: object
       description: "EXPERT-FR-005/006 — số liệu sức khỏe của 1 Zone trong 1 kỳ + kết luận của Domain Expert"
@@ -5312,7 +5443,7 @@ components:
         _id: { type: string }
         device_id: { type: string }
         zone_id: { type: string }
-        rtsp_url: { type: string }
+        rtsp_url: { type: string, description: "Chỉ có trong response đăng ký; `GET /devices/camera-nodes` không trả trường này" }
         status:
           {
             type: string,
