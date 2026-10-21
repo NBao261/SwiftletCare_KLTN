@@ -1,4 +1,4 @@
-import { SensorNode, CameraNode, ISensorNode, IN_SERVICE } from '@/models/device.model'
+import { SensorNode, CameraNode, ISensorNode, ICameraNode, IN_SERVICE } from '@/models/device.model'
 import { Ticket } from '@/models/ticket.model'
 import { House, Zone, IZone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
@@ -6,7 +6,7 @@ import {
   findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertHouseAccessByParams,
   listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds,
 } from '@/utils/farmAccess.util'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishCommand, publishHouseCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { Alert } from '@/models/alert.model'
@@ -14,7 +14,7 @@ import { logAction } from '@/services/auditLog.service'
 import { notifyUser } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
-import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
+import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { firmwareDetectionConfig, resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogsFromDevice, openOverrideLog, openOverrideState,
@@ -22,7 +22,7 @@ import {
 } from '@/services/relayOverrideLog.service'
 import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
-import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange } from '@/types'
+import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange, CountingRing } from '@/types'
 
 // SRS v2.0.0 bỏ sưởi (ENV-FR-012): kênh IN4 để dự phòng, không còn là relay điều khiển được
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation'] as const
@@ -340,6 +340,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
   node.last_heartbeat = new Date()
   if (payload.rssi !== undefined) node.rssi = payload.rssi
   if (payload.firmwareVersion) node.firmware_version = payload.firmwareVersion
+  applyDiagnostics(node, payload)
   // Flow 15 bước 5 — heartbeat đầu tiên chạy đúng bản mới = OTA thành công
   const otaDone = node.ota_pending && payload.firmwareVersion === node.ota_pending.version ? node.ota_pending : null
   if (otaDone) node.ota_pending = undefined
@@ -392,8 +393,23 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
 }
 
 /**
- * THREAT-FR-010 — heartbeat của nút AI: chỉ cập nhật trạng thái. Không đẩy config như ESP32
- * (pipeline đọc cấu hình của nó từ config.yaml). `firmwareVersion` của nút AI là phiên bản model.
+ * FARM-FR-006 — số chẩn đoán trong heartbeat. Payload MQTT không đáng tin nên chỉ nhận đúng kiểu
+ * và chuỗi có giới hạn độ dài. `uptime` (ms) đổi thành thời điểm khởi động để giao diện tự tính
+ * thời gian chạy mà không lệch khi heartbeat cũ.
+ */
+function applyDiagnostics(node: ISensorNode, payload: HeartbeatPayload): void {
+  const { uptime, freeHeap, resetReason, ip } = payload as unknown as Record<string, unknown>
+  const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
+  if (isCount(uptime)) node.booted_at = new Date(Date.now() - uptime)
+  if (isCount(freeHeap)) node.free_heap = freeHeap
+  if (typeof resetReason === 'string' && resetReason.length <= 32) node.reset_reason = resetReason
+  if (typeof ip === 'string' && ip.length <= 45) node.ip = ip
+}
+
+/**
+ * THREAT-FR-010 — heartbeat của nút AI: cập nhật trạng thái. `firmwareVersion` của nút AI là phiên
+ * bản model. Cấu hình của pipeline nằm trong config.yaml, trừ vòng đếm Domain Expert đã vẽ
+ * (VISION-FR-018) được gửi lại mỗi lần nút AI vừa (re)connect, vì `config/update` không retained.
  */
 async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   const camera = await CameraNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
@@ -405,6 +421,7 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   if (payload.firmwareVersion) camera.model_version = payload.firmwareVersion
   camera.activation_overdue_at = undefined
   await camera.save()
+  if ((payload.justConnected || !wasOnline) && camera.counting_ring) await pushCountingRing(camera)
   if (wasOnline) return
 
   emitHouseDeviceStatusChange(String(camera.house_id), {
@@ -779,15 +796,25 @@ export async function replaceSensorNode(
 export type RemoteCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
 
 /**
- * Firmware hiện tại (`MQTTManager::onConfigUpdate` → `Config::update`) chỉ đọc
- * các khoá ngưỡng/loa và BỎ QUA `command`; OTA của nó là đẩy file qua ElegantOTA
- * `/update`, không tự tải từ URL. Nếu vẫn nhận RESTART/OTA thì API báo 202 còn
- * thiết bị không làm gì, và mọi lệnh OTA chắc chắn bị `markOtaTimeouts` báo thất
- * bại sau 30 phút — Technician kết luận sai về tình trạng thiết bị.
- * Bật cờ này khi firmware đã xử lý `command` (xem SRS TICKET-FR-008, Flow 15).
+ * Firmware trước 1.4.0 chỉ đọc các khoá ngưỡng/loa trong `config/update` và BỎ QUA
+ * `command`. Gửi RESTART/OTA tới thiết bị đó thì API báo 202 còn thiết bị không làm gì,
+ * và mọi lệnh OTA chắc chắn bị `markOtaTimeouts` báo thất bại sau 30 phút. Một nhà yến có
+ * thể chạy lẫn bản cũ và mới nên xét theo `firmware_version` của chính thiết bị; lên 1.4.0
+ * lần đầu thì nạp bằng ElegantOTA trong LAN hoặc USB.
  */
-const UNSUPPORTED_COMMANDS: RemoteCommand[] = ['RESTART', 'OTA']
-const firmwareHandlesCommands = () => process.env.FIRMWARE_COMMAND_SUPPORT === 'true'
+const COMMANDS_NEED_FIRMWARE: RemoteCommand[] = ['RESTART', 'OTA']
+export const COMMAND_SUPPORT_SINCE = '1.4.0'
+
+/** `x.y.z` >= `min`; chuỗi không đúng dạng (VD "1.4.0-beta") coi như chưa hỗ trợ */
+function versionAtLeast(version: string, min: string): boolean {
+  const a = version.split('.').map(Number)
+  const b = min.split('.').map(Number)
+  for (let i = 0; i < 3; i++) {
+    if (!Number.isInteger(a[i])) return false
+    if (a[i] !== b[i]) return a[i] > b[i]
+  }
+  return true
+}
 
 export interface RemoteCommandInput {
   command: RemoteCommand
@@ -878,10 +905,10 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE hoặc DEGRADED`)
   }
 
-  if (!firmwareHandlesCommands() && UNSUPPORTED_COMMANDS.includes(input.command)) {
+  if (COMMANDS_NEED_FIRMWARE.includes(input.command) && !versionAtLeast(node.firmware_version, COMMAND_SUPPORT_SINCE)) {
     throw NotImplementedError(
-      `Firmware trên thiết bị chưa xử lý lệnh ${input.command} — hiện chỉ dùng được PUSH_CONFIG. ` +
-      'Bật FIRMWARE_COMMAND_SUPPORT=true sau khi firmware hỗ trợ.',
+      `Firmware ${node.firmware_version} trên thiết bị chưa xử lý lệnh ${input.command} — cần firmware ${COMMAND_SUPPORT_SINCE} trở lên ` +
+      '(nạp lần đầu bằng ElegantOTA trong LAN hoặc USB). PUSH_CONFIG vẫn dùng được.',
     )
   }
 
@@ -950,6 +977,53 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     ...(input.ota ? { version: input.ota.version, url: input.ota.url } : {}),
   })
   return node
+}
+
+// ── VISION-FR-018: vòng đếm của camera ───────────────────────────────────────
+
+const ringOf = (ring: CountingRing): CountingRing => ({
+  points: ring.points.map(([x, y]) => [x, y]),
+  into_ring_is_exit: ring.into_ring_is_exit,
+})
+
+/**
+ * Gửi vòng đếm xuống nút AI qua `config/update` của nhà (nút AI không có đoạn zone). Trả false khi
+ * broker chưa kết nối — không chặn việc lưu: nút AI nhận lại lúc kết nối lại (recordCameraHeartbeat).
+ */
+async function pushCountingRing(camera: ICameraNode): Promise<boolean> {
+  if (!camera.counting_ring) return false
+  const house = await House.findById(camera.house_id).select('farm_id').lean()
+  if (!house) return false
+  return publishHouseCommand(String(house.farm_id), String(camera.house_id), 'config/update', {
+    deviceId: camera.device_id, counting_ring: ringOf(camera.counting_ring),
+  })
+}
+
+/**
+ * VISION-FR-018 — Domain Expert vẽ vòng đếm của 1 camera (trước đây chép tay từ tools/pick_roi.py
+ * vào config.yaml). Cùng cách làm với tham số phát hiện (EXPERT-FR-008): lưu lịch sử + audit. Đổi
+ * vòng thì số đếm trước và sau không so được với nhau, nên lịch sử giữ đúng thời điểm đổi.
+ */
+export async function updateCountingRing(cameraNodeId: string, user: CurrentUser, ring: CountingRing) {
+  const camera = await CameraNode.findById(cameraNodeId)
+  if (!camera) throw NotFoundError('Không tìm thấy camera')
+  assertInService(camera)
+  await assertHouseAccess(String(camera.house_id), user)
+
+  const before = camera.counting_ring ? ringOf(camera.counting_ring) : undefined
+  const after = ringOf(ring)
+  camera.counting_ring = { ...after, updated_at: new Date(), updated_by: user._id as never }
+  camera.counting_ring_history.push({
+    changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_value: before, new_value: after,
+  } as never)
+  const overflow = camera.counting_ring_history.length - THRESHOLD_HISTORY_LIMIT
+  if (overflow > 0) camera.counting_ring_history.splice(0, overflow)
+  await camera.save()
+
+  const delivered = await pushCountingRing(camera)
+  await logAction(user._id, 'COUNTING_RING_UPDATED', 'camera_node', String(camera._id), { before: before ?? null, after, delivered })
+  const { rtsp_url: _rtspUrl, ...publicFields } = camera.toObject()
+  return { ...publicFields, ring_delivered: delivered }
 }
 
 /** Flow 1 case 8a — SRS: quá 15 phút từ lúc đăng ký (bước 4) mà chưa có heartbeat đầu tiên */

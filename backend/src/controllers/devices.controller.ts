@@ -83,6 +83,12 @@ export const listCameraNodes = asyncHandler(async (req: Request, res: Response) 
 })
 
 /** GET /devices/system-status – OPS-NFR-004, chỉ Admin */
+/** PUT /devices/camera-nodes/:id/counting-ring – VISION-FR-018 */
+export const updateCountingRing = asyncHandler(async (req: Request, res: Response) => {
+  const camera = await deviceService.updateCountingRing(req.params.id, req.user, req.body)
+  res.json({ success: true, data: camera })
+})
+
 export const getSystemStatus = asyncHandler(async (_req: Request, res: Response) => {
   res.json({ success: true, data: await deviceService.getSystemStatus() })
 })

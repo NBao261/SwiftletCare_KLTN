@@ -26,15 +26,24 @@ class RingCounter:
 
     def __init__(self, ring: Sequence[Sequence[float]], width: int, height: int,
                  into_ring_is_exit: bool = True, base_entry: int = 0, base_exit: int = 0):
-        if len(ring) < 3:
-            raise ValueError("ring needs at least 3 points")
-        self.polygon = np.array([(x * width, y * height) for x, y in ring], np.float32)
-        self._into_ring_is_exit = into_ring_is_exit
         # track_id -> inside the ring when last seen; kept for the whole session so a track
         # the tracker loses for a few frames still counts if it crossed meanwhile
         self._inside: Dict[int, bool] = {}
         self.entry_count = base_entry
         self.exit_count = base_exit
+        self.set_ring(ring, width, height, into_ring_is_exit)
+
+    def set_ring(self, ring: Sequence[Sequence[float]], width: int, height: int, into_ring_is_exit: bool) -> None:
+        """
+        Swap in a new ring (the Domain Expert redrew it, VISION-FR-018) without losing the session's
+        counts. Where each track stood is forgotten: a bird sitting between the old and the new ring
+        would otherwise count as a crossing it never made.
+        """
+        if len(ring) < 3:
+            raise ValueError("ring needs at least 3 points")
+        self.polygon = np.array([(x * width, y * height) for x, y in ring], np.float32)
+        self._into_ring_is_exit = into_ring_is_exit
+        self._inside.clear()
 
     def contains(self, point: Tuple[float, float]) -> bool:
         return cv2.pointPolygonTest(self.polygon, (float(point[0]), float(point[1])), False) > 0

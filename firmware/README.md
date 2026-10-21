@@ -1,8 +1,8 @@
 # SwiftletCare Firmware (ESP32)
 
-> **Phạm vi v2 (sau Review 1) — firmware 1.3.0.** Firmware đã theo `SwiftletCare_SRS.md` mục 0: quạt chỉ theo nhiệt độ + độ ẩm (NH3/CO2 chỉ gửi telemetry), không còn sưởi, bơm khô thì tự ngừng phun, mất cảm biến nhiệt-ẩm thì relay về TẮT, cảnh báo ồn là `NOISE_ANOMALY`, năm tham số phát hiện chỉnh được qua MQTT. Còn lại: ENV-FR-023 (phần cứng) — công tắc 3 vị trí Auto/Off/Hand cho bơm và quạt, chưa lắp.
+> **Phạm vi v2 (sau Review 1) — firmware 1.4.0.** Firmware đã theo `SwiftletCare_SRS.md` mục 0: quạt chỉ theo nhiệt độ + độ ẩm (NH3/CO2 chỉ gửi telemetry), không còn sưởi, bơm khô thì tự ngừng phun, mất cảm biến nhiệt-ẩm thì relay về TẮT, cảnh báo ồn là `NOISE_ANOMALY`, năm tham số phát hiện chỉnh được qua MQTT; từ 1.4.0 nhận lệnh `RESTART`/`OTA` từ xa (kiểm SHA-256, tự quay về bản cũ nếu bản mới không kết nối được MQTT trong 10 phút) và gửi lý do khởi động lại + IP trong heartbeat. Còn lại: ENV-FR-023 (phần cứng) — công tắc 3 vị trí Auto/Off/Hand cho bơm và quạt, chưa lắp.
 >
-> **Chưa thử trên thiết bị thật:** bản 1.3.0 mới build và chạy unit test trên máy. Trước khi dùng ở nhà yến cần nạp và thử: rút cảm biến nhiệt-ẩm (relay phải TẮT), chạy bơm không có nước (phải báo `PUMP_DRY` và ngừng phun), đổi tham số từ web.
+> **Chưa thử trên thiết bị thật:** bản 1.3.0 và 1.4.0 mới build và chạy unit test trên máy. Trước khi dùng ở nhà yến cần nạp và thử: rút cảm biến nhiệt-ẩm (relay phải TẮT), chạy bơm không có nước (phải báo `PUMP_DRY` và ngừng phun), đổi tham số từ web. Riêng 1.4.0: OTA từ trang OTA của Technician thành công (heartbeat báo bản mới); file sai SHA-256 và rút mạng giữa lúc tải (phải giữ bản cũ); bản mới không tới được broker (phải quay về bản cũ sau 10 phút); `RESTART` từ web; TLS bắt tay trong `mqttTask` (stack 12 KB) không tràn stack.
 
 PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `docs/hardware/components-guide.md`. Checklist lắp đặt: `docs/task-checklist.md` mục A.
 
@@ -47,7 +47,7 @@ src/
 ## Test
 
 ```bash
-pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry
+pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry, test_remote_command
 ```
 
 Env `native` chỉ build các file C++ thuần (`pid/FuzzyControl`, `pid/PumpDryMonitor`, `sensors/SignalFilter`, `sensors/NoiseAnomalyDetector` — không phụ thuộc Arduino) và cần **g++ trên máy** — Windows: cài MinGW-w64 (vd `choco install mingw`) rồi thêm vào PATH.
