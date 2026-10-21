@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 import { User } from '@/models/user.model'
 import { assertCanJoin, sendMessage, type TicketMessageDto } from '@/services/ticketChat.service'
 import type { NotificationDto } from '@/services/notification.service'
-import { assertZoneAccess } from '@/utils/farmAccess.util'
+import { assertHouseAccess, assertZoneAccess } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser, JwtAccessPayload, WsTelemetryUpdate, WsRelayUpdate, WsBirdCountUpdate, WsAlertNew, WsDeviceStatusChange } from '@/types'
 
@@ -71,6 +71,9 @@ export type ServerEvents = {
 export type ClientEvents = {
   JOIN_ZONE:  (data: { zoneId: string }) => void
   LEAVE_ZONE: (data: { zoneId: string }) => void
+  /** SRS v2.1.8 — số đếm chim, trạng thái camera và cảnh báo của cả nhà yến */
+  JOIN_HOUSE:  (data: { houseId: string }) => void
+  LEAVE_HOUSE: (data: { houseId: string }) => void
   JOIN_TICKET_CHAT:    (data: { ticketId: string }, ack?: Ack) => void
   LEAVE_TICKET_CHAT:   (data: { ticketId: string }) => void
   SEND_TICKET_MESSAGE: (data: { ticketId: string; content: string; clientMessageId?: string }, ack?: Ack) => void
@@ -118,6 +121,23 @@ export function initSocket(httpServer: HttpServer): void {
       void socket.leave(`zone:${zoneId}`)
     })
 
+    // Cùng lý do với JOIN_ZONE: kiểm quyền trên farm chứa House trước khi cho nhận số đếm chim
+    socket.on('JOIN_HOUSE', ({ houseId }: { houseId: string }) => {
+      const currentUser = socket.data.user as CurrentUser
+      void assertHouseAccess(String(houseId), currentUser)
+        .then(() => {
+          void socket.join(`house:${houseId}`)
+          logger.debug(`Socket ${socket.id} joined house:${houseId}`)
+        })
+        .catch(() => {
+          logger.warn(`Socket ${socket.id} [user=${currentUser._id}] denied JOIN_HOUSE for house:${houseId}`)
+        })
+    })
+
+    socket.on('LEAVE_HOUSE', ({ houseId }: { houseId: string }) => {
+      void socket.leave(`house:${houseId}`)
+    })
+
     // Flow 23 — chat trong ticket. Lỗi trả qua ack (không throw) để client hiện đúng thông báo
     socket.on('JOIN_TICKET_CHAT', (data: { ticketId?: string }, ack?: unknown) => {
       const reply = safeAck(ack)
@@ -161,9 +181,9 @@ export function emitRelayUpdate(zoneId: string, data: WsRelayUpdate): void {
   io?.to(`zone:${zoneId}`).emit('RELAY_UPDATE', data)
 }
 
-/** Emit BIRD_COUNT_UPDATE to all clients in a zone */
-export function emitBirdCountUpdate(zoneId: string, data: WsBirdCountUpdate): void {
-  io?.to(`zone:${zoneId}`).emit('BIRD_COUNT_UPDATE', data)
+/** VISION-FR-012 — số đếm chim của cả nhà yến, tới room `house:<houseId>` */
+export function emitBirdCountUpdate(houseId: string, data: WsBirdCountUpdate): void {
+  io?.to(`house:${houseId}`).emit('BIRD_COUNT_UPDATE', data)
 }
 
 /** Emit ALERT_NEW to all clients in a zone */
@@ -174,6 +194,16 @@ export function emitAlertNew(zoneId: string, data: WsAlertNew): void {
 /** Emit DEVICE_STATUS_CHANGE to all clients in a zone (FARM-FR-005) */
 export function emitDeviceStatusChange(zoneId: string, data: WsDeviceStatusChange): void {
   io?.to(`zone:${zoneId}`).emit('DEVICE_STATUS_CHANGE', data)
+}
+
+/** Trạng thái camera đếm chim (gắn House) — cùng sự kiện DEVICE_STATUS_CHANGE, tới room `house:<houseId>` */
+export function emitHouseDeviceStatusChange(houseId: string, data: WsDeviceStatusChange): void {
+  io?.to(`house:${houseId}`).emit('DEVICE_STATUS_CHANGE', data)
+}
+
+/** Cảnh báo của cả nhà yến (EDGE_AI_DEGRADED, LOW_RETURN_RATE) — cùng sự kiện ALERT_NEW, tới room `house:<houseId>` */
+export function emitHouseAlertNew(houseId: string, data: WsAlertNew): void {
+  io?.to(`house:${houseId}`).emit('ALERT_NEW', data)
 }
 
 /** EXPERT-FR-006/007 — thông báo trong ứng dụng mới, tới mọi phiên đang mở của chính người nhận */

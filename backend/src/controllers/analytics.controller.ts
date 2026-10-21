@@ -51,26 +51,37 @@ export const envCompare = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data })
 })
 
-/** GET /analytics/bird-count/daily – VISION-FR-008/010 */
+/** Đếm chim theo nhà yến (SRS v2.1.8): `houseId`, hoặc `zoneId` cũ → House chứa Zone */
+const birdScope = (req: Request) => ({
+  houseId: req.query.houseId as string | undefined,
+  zoneId:  req.query.zoneId as string | undefined,
+})
+
+/** GET /analytics/bird-count/daily?houseId= – VISION-FR-008/010 */
 export const birdCountDaily = asyncHandler(async (req: Request, res: Response) => {
-  const data = await analyticsService.getBirdCountDaily(req.user, req.query.zoneId as string, {
+  const data = await analyticsService.getBirdCountDaily(req.user, birdScope(req), {
     from: req.query.from as string | undefined,
     to:   req.query.to as string | undefined,
   })
   res.json({ success: true, data })
 })
 
-/** GET /analytics/bird-count/trends – VISION-FR-009/010, ANALYTICS-FR-002 */
+/** GET /analytics/bird-count/trends?houseId= – VISION-FR-009/010, ANALYTICS-FR-002 */
 export const birdCountTrends = asyncHandler(async (req: Request, res: Response) => {
-  const data = await analyticsService.getBirdCountTrends(req.user, req.query.zoneId as string, {
+  const data = await analyticsService.getBirdCountTrends(req.user, birdScope(req), {
     days: req.query.days ? Number(req.query.days) : 30,
   })
   res.json({ success: true, data })
 })
 
-/** GET /analytics/bird-count/buckets – VISION-FR-017 (số đếm theo khoảng 5 phút) */
+/** GET /analytics/bird-count/current?houseId= — VISION-FR-012, số hôm nay của nhà yến */
+export const birdCountCurrent = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await birdCountService.getCurrentBirdCount(req.user, birdScope(req)) })
+})
+
+/** GET /analytics/bird-count/buckets?houseId= – VISION-FR-017 (số đếm theo khoảng 5 phút) */
 export const birdCountBuckets = asyncHandler(async (req: Request, res: Response) => {
-  const data = await birdCountService.getBirdCountBuckets(req.user, req.query.zoneId as string, {
+  const data = await birdCountService.getBirdCountBuckets(req.user, birdScope(req), {
     from: req.query.from as string | undefined,
     to:   req.query.to as string | undefined,
   })

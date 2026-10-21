@@ -3,7 +3,7 @@ import { Ticket, ITicket } from '@/models/ticket.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
-import { Zone } from '@/models/houseZone.model'
+import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import {
@@ -128,16 +128,16 @@ type SatItem = 'modbus_addresses_ok' | 'camera_rtsp_ok' | 'lte_connection_ok' | 
 const SAT_ITEMS_ALWAYS: SatItem[] = ['modbus_addresses_ok', 'lte_connection_ok', 'relay_test_ok']
 
 /**
- * TICKET-FR-010 — mục camera chỉ bắt buộc khi nơi của ticket thật sự có camera: Zone
- * của ticket, hoặc cả farm nếu ticket cấp farm. Nhà yến chỉ lắp cảm biến mà vẫn đòi
+ * TICKET-FR-010 — mục camera chỉ bắt buộc khi nơi của ticket thật sự có camera: nhà yến chứa
+ * Zone của ticket (camera gắn House, SRS v2.1.8), hoặc cả farm nếu ticket cấp farm. Nhà yến chỉ lắp cảm biến mà vẫn đòi
  * "camera RTSP ổn định" thì Technician buộc phải tick một mục không có thật để đóng
  * ticket, và dữ liệu nghiệm thu nói sai về hiện trường.
  */
 async function requiredSatItems(ticket: Pick<ITicket, 'farm_id' | 'zone_id'>): Promise<SatItem[]> {
-  const zoneIds = ticket.zone_id
-    ? [ticket.zone_id]
-    : await Zone.find({ farm_id: ticket.farm_id }).distinct('_id')
-  const hasCamera = await CameraNode.exists({ zone_id: { $in: zoneIds }, ...IN_SERVICE })
+  const houseIds = ticket.zone_id
+    ? await Zone.find({ _id: ticket.zone_id }).distinct('house_id')
+    : await House.find({ farm_id: ticket.farm_id }).distinct('_id')
+  const hasCamera = await CameraNode.exists({ house_id: { $in: houseIds }, ...IN_SERVICE })
   return hasCamera ? [...SAT_ITEMS_ALWAYS, 'camera_rtsp_ok'] : SAT_ITEMS_ALWAYS
 }
 

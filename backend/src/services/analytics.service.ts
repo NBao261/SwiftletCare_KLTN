@@ -2,9 +2,9 @@ import { Types } from 'mongoose'
 import { Telemetry } from '@/models/telemetry.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { RELAY_SERVICE_LIMITS } from '@/services/relayUsage.service'
-import { BirdCountRecord } from '@/models/birdCountRecord.model'
-import { assertZoneAccess } from '@/utils/farmAccess.util'
-import { resolveDetectionTuning } from '@/utils/detectionTuning.util'
+import { houseDailyCounts, vnDate } from '@/services/birdCount.service'
+import { assertHouseAccessByParams, assertZoneAccess } from '@/utils/farmAccess.util'
+import { resolveBirdCountTuning } from '@/utils/detectionTuning.util'
 import { manualTimeInZone } from '@/services/relayOverrideLog.service'
 import { BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
@@ -214,36 +214,29 @@ export async function compareZones(user: CurrentUser, zoneIds: string[], range: 
   return { range, from, to, zones: results }
 }
 
+/** Đếm chim là của cả nhà yến (SRS v2.1.8): `houseId`, hoặc `zoneId` cũ → House chứa Zone */
+export interface BirdCountScope { houseId?: string; zoneId?: string }
+
 /**
- * VISION-FR-008/010 — thống kê đếm chim theo ngày (ngày theo giờ Việt Nam, `session_date`).
+ * VISION-FR-008/010 — thống kê đếm chim theo ngày (ngày theo giờ Việt Nam, `session_date`) của 1 nhà yến.
  * Trả rỗng cho tới khi nút AI publish `vision/bird-count` — không phải lỗi truy vấn.
  */
-export async function getBirdCountDaily(
-  user: CurrentUser, zoneId: string, query: { from?: string; to?: string },
-) {
-  await assertZoneAccess(zoneId, user)
-  return dailyBirdCounts(zoneId, query)
+export async function getBirdCountDaily(user: CurrentUser, scope: BirdCountScope, query: { from?: string; to?: string }) {
+  const { house } = await assertHouseAccessByParams(scope, user)
+  return { house_id: String(house._id), ...(await dailyBirdCounts(String(house._id), query)) }
 }
 
-/** Phần truy vấn của getBirdCountDaily — caller đã kiểm tra quyền trên Zone */
-async function dailyBirdCounts(zoneId: string, query: { from?: string; to?: string }) {
+/**
+ * Phần truy vấn của getBirdCountDaily — caller đã kiểm tra quyền. Số của cả nhà (cộng mọi camera),
+ * cùng nguồn với /current và socket (birdCount.service#houseDailyCounts). Khoảng from/to đổi sang ngày
+ * giờ VN: phiên sáng 05:30 VN là 22:30 UTC hôm trước.
+ */
+async function dailyBirdCounts(houseId: string, query: { from?: string; to?: string }) {
   const to = query.to ? new Date(query.to) : new Date()
   const from = query.from ? new Date(query.from) : new Date(to.getTime() - 30 * 86400_000)
 
-  const records = await BirdCountRecord.aggregate([
-    { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from, $lte: to } } },
-    {
-      $group: {
-        // Không gom theo ngày UTC của timestamp: phiên sáng 05:30 VN là 22:30 UTC hôm trước
-        _id: '$session_date',
-        morning_exit:  { $max: { $cond: [{ $eq: ['$session_type', 'MORNING_EXIT'] }, '$exit_count', 0] } },
-        evening_entry: { $max: { $cond: [{ $eq: ['$session_type', 'EVENING_ENTRY'] }, '$entry_count', 0] } },
-        return_rate:   { $avg: '$return_rate' },
-      },
-    },
-    { $sort: { _id: 1 } },
-    { $project: { _id: 0, date: '$_id', morning_exit: 1, evening_entry: 1, return_rate: 1 } },
-  ])
+  const days = await houseDailyCounts(houseId, { from: vnDate(from), to: vnDate(to) })
+  const records = days.map(({ updated_at: _updatedAt, ...day }) => day)
 
   return { from, to, records, note: records.length === 0 ? 'Chưa có dữ liệu đếm chim trong khoảng này' : undefined }
 }
@@ -273,13 +266,13 @@ export async function autonomyBetween(zoneId: string, from: Date, to: Date) {
 }
 
 /**
- * VISION-FR-009/011, ANALYTICS-FR-002 — xu hướng return rate + cờ "giảm đáng kể". Mức
- * giảm là `return_rate_drop_pct` của Zone (mặc định 20%), Domain Expert chỉnh (EXPERT-FR-008).
+ * VISION-FR-009/011, ANALYTICS-FR-002 — xu hướng return rate của nhà yến + cờ "giảm đáng kể". Mức
+ * giảm là `return_rate_drop_pct` của House (mặc định 20%), Domain Expert chỉnh (EXPERT-FR-008).
  */
-export async function getBirdCountTrends(user: CurrentUser, zoneId: string, query: { days: number }) {
-  const { zone } = await assertZoneAccess(zoneId, user)
-  const dropThreshold = resolveDetectionTuning(zone.detection_tuning).return_rate_drop_pct
-  const { records } = await dailyBirdCounts(zoneId, {
+export async function getBirdCountTrends(user: CurrentUser, scope: BirdCountScope, query: { days: number }) {
+  const { house } = await assertHouseAccessByParams(scope, user)
+  const dropThreshold = resolveBirdCountTuning(house.bird_count_tuning).return_rate_drop_pct
+  const { records } = await dailyBirdCounts(String(house._id), {
     from: new Date(Date.now() - query.days * 86400_000).toISOString(),
   })
 
@@ -296,6 +289,7 @@ export async function getBirdCountTrends(user: CurrentUser, zoneId: string, quer
   const dropPercent = baseline && latest !== null ? +(((baseline - latest) / baseline) * 100).toFixed(1) : null
 
   return {
+    house_id: String(house._id),
     days: query.days,
     records,
     avg_return_rate: avg ? +avg.toFixed(1) : null,
@@ -307,12 +301,12 @@ export async function getBirdCountTrends(user: CurrentUser, zoneId: string, quer
 }
 
 /**
- * ANALYTICS-FR-003 — tương quan môi trường vs return rate.
- * Ghép theo NGÀY: mỗi ngày lấy trung bình môi trường + return rate của ngày đó,
- * để trả lời câu hỏi nghiệp vụ "ngày nào nóng quá thì chim có bỏ về ít hơn không".
+ * ANALYTICS-FR-003 — tương quan môi trường của 1 Zone vs return rate của nhà yến chứa Zone đó
+ * (chim ra vào ở cửa của cả nhà, SRS v2.1.8). Ghép theo NGÀY: mỗi ngày lấy trung bình môi trường
+ * + return rate của ngày đó, để trả lời câu hỏi nghiệp vụ "ngày nào nóng quá thì chim có bỏ về ít hơn không".
  */
 export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, query: { days: number }) {
-  await assertZoneAccess(zoneId, user)
+  const { house } = await assertZoneAccess(zoneId, user)
   const from = new Date(Date.now() - query.days * 86400_000)
 
   const [envDaily, birdDaily] = await Promise.all([
@@ -328,13 +322,10 @@ export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, q
         },
       },
     ]),
-    BirdCountRecord.aggregate([
-      { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from } } },
-      { $group: { _id: '$session_date', return_rate: { $avg: '$return_rate' } } },
-    ]),
+    houseDailyCounts(String(house._id), { from: vnDate(from) }),
   ])
 
-  const birdByDate = new Map(birdDaily.map(b => [b._id as string, b.return_rate as number]))
+  const birdByDate = new Map(birdDaily.map(b => [b.date, b.return_rate]))
   const points = envDaily
     .map(e => ({
       date: e._id as string,

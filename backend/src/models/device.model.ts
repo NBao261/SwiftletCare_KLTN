@@ -71,7 +71,8 @@ export interface IRelayUsage {
 export interface ICameraNode extends Document {
   _id: Types.ObjectId
   device_id: string
-  zone_id: Types.ObjectId
+  /** SRS v2.1.8 — camera đếm chim đặt ở cửa ra vào của cả nhà yến: gắn House, không gắn Zone */
+  house_id: Types.ObjectId
   rtsp_url?: string
   status: DeviceStatus
   last_heartbeat?: Date
@@ -164,7 +165,7 @@ const sensorNodeSchema = new Schema<ISensorNode>(
 const cameraNodeSchema = new Schema<ICameraNode>(
   {
     device_id:      { type: String, required: true, unique: true },
-    zone_id:        { type: Schema.Types.ObjectId, ref: 'Zone', required: true },
+    house_id:       { type: Schema.Types.ObjectId, ref: 'House', required: true },
     rtsp_url:       { type: String },
     status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] satisfies DeviceStatus[], default: 'PENDING' },
     last_heartbeat: { type: Date },
@@ -184,9 +185,9 @@ const cameraNodeSchema = new Schema<ICameraNode>(
 sensorNodeSchema.index({ status: 1, last_heartbeat: 1 })
 // Cùng job quét nút AI đếm chim mất heartbeat (THREAT-FR-010)
 cameraNodeSchema.index({ status: 1, last_heartbeat: 1 })
-// zone_id là filter chính của mọi danh sách thiết bị theo zone (dashboard).
+// zone_id là filter chính của mọi danh sách thiết bị theo zone (dashboard); camera lọc theo House
 sensorNodeSchema.index({ zone_id: 1 })
-cameraNodeSchema.index({ zone_id: 1 })
+cameraNodeSchema.index({ house_id: 1 })
 // activationOverdue.job quét node PENDING theo registered_at mỗi phút
 sensorNodeSchema.index({ status: 1, registered_at: 1 })
 cameraNodeSchema.index({ status: 1, registered_at: 1 })

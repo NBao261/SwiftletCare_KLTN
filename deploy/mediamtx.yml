@@ -1,0 +1,28 @@
+# MediaMTX 1.21.1 — máy chủ video cho live stream camera (VISION-FR-013/014, docs/bird-counting-plan.md §8.6, §15.5).
+# Khóa nào không ghi ở đây thì lấy mặc định của MediaMTX. Đổi phiên bản thì đối chiếu lại với mediamtx.yml mẫu
+# của đúng phiên bản đó (tên khóa thay đổi giữa các bản).
+# Không có bí mật trong file này: địa chỉ hỏi quyền kèm ?key= truyền qua biến MTX_AUTHHTTPADDRESS.
+
+# Mỗi lần có ai đẩy/xem, hỏi backend (POST /internal/stream-auth). Bị ghi đè bởi MTX_AUTHHTTPADDRESS.
+authMethod: http
+authHTTPAddress: http://backend:3000/internal/stream-auth
+
+# Chỉ dùng RTSP (pipeline đẩy video lên, đọc hình gốc) và WebRTC (trình duyệt xem)
+rtmp: false
+hls: false
+srt: false
+moq: false                            # 1.21 bật sẵn MoQ (cổng 8892/8893), không dùng
+rtspTransports: [tcp]                 # UDP không qua được NAT của Docker
+
+# WebRTC: trang WHEP ở :8889, media qua UDP 8189. IP mà trình duyệt dùng để nối tới
+# truyền qua MTX_WEBRTCADDITIONALHOSTS (dev: 127.0.0.1 hoặc IP LAN; cloud: IP công khai của VPS).
+webrtcLocalUDPAddress: :8189
+
+paths:
+  # Đường hình gốc từ camera (chỉ khi pipeline chạy trên VPS, plan §19.4): thêm vào bản cấu hình
+  # trên VPS, KHÔNG commit vì chứa mật khẩu camera:
+  #   cam-<device_id>-raw:
+  #     source: rtsp://admin:<mật khẩu>@<IP hoặc tên DDNS nhà yến>:18554/stream1
+  #     sourceOnDemand: yes
+  # Mọi đường khác (cam-<device_id> do pipeline đẩy lên) — quyền do backend quyết
+  all_others:

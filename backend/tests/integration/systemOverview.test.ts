@@ -110,7 +110,7 @@ describe('getHealthOverview', () => {
     const gone = await seedFarm('gone', true)
     await SensorNode.create({ device_id: 'S-live-1', zone_id: live.zone._id, status: 'ONLINE' })
     await SensorNode.create({ device_id: 'S-live-2', zone_id: live.zone._id, status: 'OFFLINE' })
-    await CameraNode.create({ device_id: 'C-live', zone_id: live.zone._id, status: 'ONLINE' })
+    await CameraNode.create({ device_id: 'C-live', house_id: live.zone.house_id, status: 'ONLINE' })
     await SensorNode.create({ device_id: 'S-gone', zone_id: gone.zone._id, status: 'ONLINE' })
 
     const overview = await getHealthOverview()
@@ -175,9 +175,9 @@ describe('getSystemStatus (OPS-NFR-004)', () => {
     const live = await seedFarm('live')
     const gone = await seedFarm('gone', true)
     await SensorNode.create({ device_id: 'S-live', zone_id: live.zone._id, status: 'ONLINE' })
-    await CameraNode.create({ device_id: 'C-live', zone_id: live.zone._id, status: 'OFFLINE' })
+    await CameraNode.create({ device_id: 'C-live', house_id: live.zone.house_id, status: 'OFFLINE' })
     await SensorNode.create({ device_id: 'S-gone', zone_id: gone.zone._id, status: 'ONLINE' })
-    await CameraNode.create({ device_id: 'C-gone', zone_id: gone.zone._id, status: 'ONLINE' })
+    await CameraNode.create({ device_id: 'C-gone', house_id: gone.zone.house_id, status: 'ONLINE' })
 
     const status = await getSystemStatus()
 

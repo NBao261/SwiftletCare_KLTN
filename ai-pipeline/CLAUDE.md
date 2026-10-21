@@ -83,7 +83,6 @@ Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (rewritten arou
 | `src/alert_publisher.py` | Predator alerts, payload without `deviceId` | Delete (out of scope) |
 | `README.md` | Lists `vision/alert` and `vision/heartbeat` topics; the backend listens on `.../heartbeat` and predator alerts are gone | Fix with the first code PR |
 | Tests / CI | No `tests/`, no CI job | Add `tests/test_counting.py`, then a CI job running `pytest` |
-| Backend side | Plan §8 done except the §8.6 stream token / MediaMTX (SRS v2.1.6) | Plan §8.6 (backend PR, judged by `backend/CLAUDE.md`) |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. adding a predator class or a secret to `config.yaml`).
 

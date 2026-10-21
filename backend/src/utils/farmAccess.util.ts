@@ -57,6 +57,36 @@ export async function findZoneChainOrThrow(zoneId: string): Promise<{ zone: IZon
   return { zone, house, farm }
 }
 
+export async function findHouseChainOrThrow(houseId: string): Promise<{ house: IHouse; farm: IFarm }> {
+  const house = await House.findById(houseId)
+  if (!house) throw NotFoundError('Không tìm thấy house')
+  const farm = await Farm.findById(house.farm_id)
+  if (!farm) throw NotFoundError('Không tìm thấy farm của house')
+  return { house, farm }
+}
+
+/** House→Farm + check quyền — camera đếm chim và số đếm chim gắn House (SRS v2.1.8) */
+export async function assertHouseAccess(houseId: string, user: CurrentUser): Promise<{ house: IHouse; farm: IFarm }> {
+  const chain = await findHouseChainOrThrow(houseId)
+  if (!hasFarmAccess(chain.farm, user)) throw ForbiddenError('Không có quyền trên house này')
+  return chain
+}
+
+/**
+ * Số đếm chim là của cả House. API cũ còn gửi `zoneId` (frontend/mobile trước v2.1.8): quy ra
+ * House chứa Zone đó. Có `houseId` thì dùng `houseId`.
+ */
+export async function assertHouseAccessByParams(
+  params: { houseId?: string; zoneId?: string }, user: CurrentUser,
+): Promise<{ house: IHouse; farm: IFarm }> {
+  if (params.houseId) return assertHouseAccess(params.houseId, user)
+  if (params.zoneId) {
+    const { house, farm } = await assertZoneAccess(params.zoneId, user)
+    return { house, farm }
+  }
+  throw BadRequestError('Cần houseId')
+}
+
 /** Farm + throw ForbiddenError nếu user không có quyền — dùng cho mọi service cần "đọc/sửa farm này" */
 export async function assertFarmAccess(farmId: string, user: CurrentUser): Promise<IFarm> {
   const farm = await findFarmOrThrow(farmId)
@@ -113,6 +143,18 @@ export async function listAccessibleFarmIds(user: CurrentUser) {
 export async function listAccessibleZoneIds(user: CurrentUser) {
   const farmIds = await listAccessibleFarmIds(user)
   return Zone.find({ farm_id: { $in: farmIds } }).distinct('_id')
+}
+
+/** House user được phép xem — liệt kê camera đếm chim khi không có `houseId` cụ thể (chống IDOR) */
+export async function listAccessibleHouseIds(user: CurrentUser) {
+  const farmIds = await listAccessibleFarmIds(user)
+  return House.find({ farm_id: { $in: farmIds } }).distinct('_id')
+}
+
+/** Mọi House thuộc Farm chưa xoá mềm — cùng phạm vi với listActiveZoneIds cho màn hình Admin */
+export async function listActiveHouseIds() {
+  const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
+  return House.find({ farm_id: { $in: farmIds } }).distinct('_id')
 }
 
 /**
