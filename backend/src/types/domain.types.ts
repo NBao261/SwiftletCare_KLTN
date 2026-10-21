@@ -153,6 +153,15 @@ export interface HeartbeatPayload {
   timestamp: number
   /** true ở heartbeat đầu tiên sau mỗi lần ESP32 (re)connect MQTT — backend đẩy lại config/update */
   justConnected?: boolean
+  /** FARM-FR-006 — firmware ≥ 1.4.0: lý do lần khởi động gần nhất (POWERON, BROWNOUT, TASK_WDT…) và IP LAN */
+  resetReason?: string
+  ip?: string
+}
+
+/** VISION-FR-018 — vòng đếm quanh lỗ ra vào, các đỉnh (x, y) theo tỉ lệ khung hình 0–1 */
+export interface CountingRing {
+  points: Array<[number, number]>
+  into_ring_is_exit: boolean
 }
 
 export interface RelayStatusPayload {

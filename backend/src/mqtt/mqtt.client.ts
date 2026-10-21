@@ -69,7 +69,15 @@ export function connectMQTT(): void {
  * dù không có gì rời khỏi backend — Technician đứng ở farm chờ thiết bị phản hồi.
  */
 export function publishCommand(farmId: string, houseId: string, zoneId: string, subtopic: string, payload: unknown): boolean {
-  const topic = `swiftletcare/${farmId}/${houseId}/${zoneId}/${subtopic}`
+  return publishTo(`swiftletcare/${farmId}/${houseId}/${zoneId}/${subtopic}`, payload)
+}
+
+/** Nút AI đếm chim nghe lệnh theo House, không có đoạn zone (SRS v2.1.8) */
+export function publishHouseCommand(farmId: string, houseId: string, subtopic: string, payload: unknown): boolean {
+  return publishTo(`swiftletcare/${farmId}/${houseId}/${subtopic}`, payload)
+}
+
+function publishTo(topic: string, payload: unknown): boolean {
   if (!client?.connected) {
     logger.warn('Không gửi được lệnh MQTT — broker chưa kết nối', { topic })
     return false

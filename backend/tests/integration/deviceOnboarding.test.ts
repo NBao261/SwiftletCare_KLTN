@@ -38,8 +38,6 @@ jest.mock('@/services/notification.service', () => ({
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.vn'
-// Firmware thật chưa xử lý `command`; bật cờ để test đúng phần backend (xem device.service.ts)
-process.env.FIRMWARE_COMMAND_SUPPORT = 'true'
 
 const app = express()
 app.use(express.json())
@@ -335,13 +333,13 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
 })
 
 describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () => {
-  const OTA = { version: '1.3.0', url: 'https://fw.swiftletcare.vn/esp32-1.3.0.bin', sha256: 'a'.repeat(64) }
+  const OTA = { version: '1.4.1', url: 'https://fw.swiftletcare.vn/esp32-1.4.1.bin', sha256: 'a'.repeat(64) }
   const send = (token: string, id: unknown, body: object) =>
     request(app).post(`/devices/sensor-nodes/${id}/commands`).set('Authorization', `Bearer ${token}`).send(body)
 
   async function onlineNode() {
     const ctx = await seed()
-    const node = await SensorNode.create({ device_id: 'node_100', zone_id: ctx.a.zone._id, status: 'ONLINE', firmware_version: '1.2.4' })
+    const node = await SensorNode.create({ device_id: 'node_100', zone_id: ctx.a.zone._id, status: 'ONLINE', firmware_version: '1.4.0' })
     return { ...ctx, node }
   }
 
@@ -363,18 +361,18 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
   it('OTA: validate đầu vào, lưu ota_pending, heartbeat đúng version thì xác nhận thành công', async () => {
     const { techToken, node } = await onlineNode()
     await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, sha256: 'xyz' } }).expect(422)
-    await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, version: '1.2.4' } }).expect(409)
+    await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, version: '1.4.0' } }).expect(409)
 
     await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(202)
     expect((publishCommand as jest.Mock).mock.calls[0][4]).toEqual({ deviceId: node.device_id, command: 'OTA', ota: OTA })
-    expect((await SensorNode.findById(node._id))!.ota_pending!.version).toBe('1.3.0')
+    expect((await SensorNode.findById(node._id))!.ota_pending!.version).toBe('1.4.1')
 
-    await recordHeartbeat({ deviceId: 'node_100', firmwareVersion: '1.2.4' } as never) // chưa lên bản mới
+    await recordHeartbeat({ deviceId: 'node_100', firmwareVersion: '1.4.0' } as never) // chưa lên bản mới
     expect((await SensorNode.findById(node._id))!.ota_pending).toBeDefined()
-    await recordHeartbeat({ deviceId: 'node_100', firmwareVersion: '1.3.0' } as never)
+    await recordHeartbeat({ deviceId: 'node_100', firmwareVersion: '1.4.1' } as never)
     const done = (await SensorNode.findById(node._id))!
     expect(done.ota_pending).toBeUndefined()
-    expect(done.firmware_version).toBe('1.3.0')
+    expect(done.firmware_version).toBe('1.4.1')
     expect(await AuditLog.countDocuments({ action: 'DEVICE_OTA_SUCCEEDED' })).toBe(1)
   })
 
@@ -412,7 +410,7 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     expect(await markOtaTimeouts()).toBe(1)
     const failed = (await SensorNode.findById(node._id))!
     expect(failed.ota_pending).toBeUndefined()
-    expect(failed.ota_failed).toMatchObject({ version: '1.3.0', running_version: '1.2.4' })
+    expect(failed.ota_failed).toMatchObject({ version: '1.4.1', running_version: '1.4.0' })
     expect(await AuditLog.countDocuments({ action: 'DEVICE_OTA_TIMEOUT' })).toBe(1)
     expect(await markOtaTimeouts()).toBe(0)
 
@@ -438,21 +436,23 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     await SensorNode.updateOne({ _id: node._id }, { status: 'ERROR' })
     await send(techToken, node._id, { command: 'RESTART' }).expect(409)
   })
-  it('chưa bật FIRMWARE_COMMAND_SUPPORT thì RESTART/OTA trả 501, PUSH_CONFIG vẫn chạy', async () => {
+  it('firmware trước 1.4.0 chưa xử lý RESTART/OTA → 501, PUSH_CONFIG vẫn chạy', async () => {
     const { techToken, node, a } = await onlineNode()
-    process.env.FIRMWARE_COMMAND_SUPPORT = 'false'
-    try {
+    for (const version of ['1.3.0', '1.4.0-beta']) {
+      await SensorNode.updateOne({ _id: node._id }, { firmware_version: version })
       const restart = await send(techToken, node._id, { command: 'RESTART' }).expect(501)
       expect(restart.body.error.message).toContain('chưa xử lý lệnh RESTART')
       await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(501)
-      expect(publishCommand).not.toHaveBeenCalled()
-
-      // PUSH_CONFIG không phụ thuộc trường `command` nên firmware cũ vẫn hiểu
-      await send(techToken, node._id, { command: 'PUSH_CONFIG' }).expect(202)
-      expect((publishCommand as jest.Mock).mock.calls[0][2]).toBe(String(a.zone._id))
-    } finally {
-      process.env.FIRMWARE_COMMAND_SUPPORT = 'true'
     }
+    expect(publishCommand).not.toHaveBeenCalled()
+
+    // PUSH_CONFIG không phụ thuộc trường `command` nên firmware cũ vẫn hiểu
+    await send(techToken, node._id, { command: 'PUSH_CONFIG' }).expect(202)
+    expect((publishCommand as jest.Mock).mock.calls[0][2]).toBe(String(a.zone._id))
+
+    // Bản mới hơn 1.4.0 (kể cả 1.10.0, so theo số chứ không theo chuỗi) thì gửi được
+    await SensorNode.updateOne({ _id: node._id }, { firmware_version: '1.10.0' })
+    await send(techToken, node._id, { command: 'RESTART' }).expect(202)
   })
 })
 

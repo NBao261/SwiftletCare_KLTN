@@ -1,5 +1,5 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
-import type { DeviceStatus, ControlMode, RelayStates } from '@/types'
+import type { DeviceStatus, ControlMode, RelayStates, CountingRing, Role } from '@/types'
 
 /**
  * SensorNode + CameraNode Documents – SRS §8.2
@@ -19,6 +19,11 @@ export interface ISensorNode extends Document {
   last_heartbeat?: Date
   status: DeviceStatus
   rssi?: number
+  /** FARM-FR-006 — chẩn đoán từ xa, lấy từ heartbeat (firmware ≥ 1.4.0 mới gửi reset_reason, ip) */
+  booted_at?: Date
+  free_heap?: number
+  reset_reason?: string
+  ip?: string
   relay_states: RelayStates
   control_mode: ControlMode
   override_expiry?: Date
@@ -90,6 +95,17 @@ export interface ICameraNode extends Document {
   decommission_reason?: string
   /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
+  /** VISION-FR-018 — vòng đếm do Domain Expert vẽ; chưa có thì nút AI dùng vòng trong config.yaml */
+  counting_ring?: CountingRing & { updated_at: Date; updated_by: Types.ObjectId }
+  counting_ring_history: ICountingRingHistoryEntry[]
+}
+
+export interface ICountingRingHistoryEntry {
+  changed_by: Types.ObjectId
+  changed_by_role?: Role
+  changed_at: Date
+  old_value?: CountingRing
+  new_value: CountingRing
 }
 
 const relayUsageSchema = {
@@ -128,6 +144,10 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     // PENDING không bị nhầm thành OFFLINE khi chưa từng kết nối.
     status:           { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] satisfies DeviceStatus[], default: 'PENDING' },
     rssi:             { type: Number },
+    booted_at:        { type: Date },
+    free_heap:        { type: Number },
+    reset_reason:     { type: String },
+    ip:               { type: String },
     relay_states: {
       misting:     { type: Boolean, default: false },
       speaker:     { type: Boolean, default: false },
@@ -176,6 +196,22 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },
     replaced_by:         { type: Schema.Types.ObjectId },
+    counting_ring: {
+      type: new Schema({
+        points:            { type: [[Number]], required: true },
+        into_ring_is_exit: { type: Boolean, required: true },
+        updated_at: { type: Date, required: true },
+        updated_by: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      }, { _id: false }),
+      default: undefined,
+    },
+    counting_ring_history: [{
+      changed_by:      { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
+      changed_at:      { type: Date },
+      old_value:       { type: Schema.Types.Mixed },
+      new_value:       { type: Schema.Types.Mixed },
+    }],
   },
   { timestamps: false }
 )
