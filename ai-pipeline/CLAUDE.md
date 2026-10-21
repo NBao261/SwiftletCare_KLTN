@@ -31,15 +31,16 @@ src/
   stream.py           RTSP loop (sequential cap.read, no publishing)
   inference.py        YOLOv8-style ONNX inference + NMS (plan §6.3 also reads YOLO26n NMS-free output)
   tracker.py          ByteTrack stub
-  counting.py         RingCounter: closed ring around the entrance hole, every crossing counted both ways
+  counting.py         RingCounter: closed ring around the entrance hole, every crossing counted both ways; set_ring() swaps it live
+  remote_config.py    VISION-FR-018: ring drawn by the Domain Expert, from {house}/config/update → state/counting_ring.json
 tools/pick_roi.py     calibration: hole outline → ring (offset by --margin) + ROI, printed as YAML
 tools/extract_frames.py  clip → ROI-cropped frames + draft YOLO labels (ROI from config.yaml)
 tools/split_by_day.py    labelled export → train/val/test by recording day + data.yaml
-tests/                test_counting.py, test_pick_roi.py, test_dataset_tools.py
+tests/                test_counting.py, test_pick_roi.py, test_dataset_tools.py, test_remote_config.py
   alert_publisher.py  MQTT publisher for predator alerts (out of scope)
 ```
 
-Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (done: `RingCounter`, plan §3.3 item 7 / §19.8; `sv.LineZone` only for a camera that sees the hole side-on), `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, drawing, MQTT, push to MediaMTX). `tracker.py` and `alert_publisher.py` go away (ByteTrack comes from `supervision`). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json` — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).
+Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (done: `RingCounter`, plan §3.3 item 7 / §19.8; `sv.LineZone` only for a camera that sees the hole side-on), `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, drawing, MQTT, push to MediaMTX). `tracker.py` and `alert_publisher.py` go away (ByteTrack comes from `supervision`). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `state/` (the last counting ring received) — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).
 
 ## Rules
 
@@ -58,6 +59,7 @@ Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (done: `RingCou
 - **[Bắt buộc]** Topics are `swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count` and `swiftletcare/{farmId}/{houseId}/{zoneId}/heartbeat` (what `backend/src/mqtt/mqtt.client.ts` subscribes to), using the real MongoDB ObjectIds.
 - **[Bắt buộc]** Every payload carries `deviceId` = the CameraNode `device_id` registered in the backend; the backend looks the device up by it, not by the topic segments.
 - **[Bắt buộc]** Payload shapes follow the plan (§6.6) and the backend's `BirdCountPayload` (`backend/src/types/domain.types.ts`, extended per plan §8.2): session message `{deviceId, session_type, entry_count, exit_count, confidence_avg, final, timestamp}`; bucket message `{deviceId, kind: "BUCKET", bucket_start, bucket_minutes, entry_count, exit_count, timestamp}`; heartbeat `{deviceId, firmwareVersion}`. Timestamps are epoch milliseconds. Counts are non-negative integers. A field change lands together with the backend type, the handler and `docs/api/api-spec.yaml` (or names the PR that does).
+- **[Bắt buộc]** The one message the node receives is `swiftletcare/{farmId}/{houseId}/config/update` with `{deviceId, counting_ring: {points, into_ring_is_exit}}` (VISION-FR-018, `remote_config.py`): drop it when `deviceId` names another camera, validate it with the same limits as the backend route (3–12 vertices in 0–1), and keep counting with the old ring when it is malformed.
 - **[Bắt buộc]** The pipeline sends raw entry/exit counts; the backend computes the return rate on **net** counts (VISION-FR-009). Do not compute or send `return_rate` from the pipeline.
 - **[Nên]** Publish with QoS 1 for counts and QoS 0 for heartbeats; reconnect with `connect_async` + `loop_start` so a broker outage does not stop counting.
 

@@ -40,6 +40,12 @@ tracking:
   # Camera trong nhà nhìn vào lỗ: trong vòng là phía ngoài trời, nên chim đi vào vòng = RA (EXIT).
   # Camera đặt ngoài nhà nhìn vào lỗ thì đổi thành false.
   into_ring_is_exit: true
+  # VISION-FR-018: vòng Domain Expert vẽ trên web (backend gửi qua MQTT config/update của nhà) được lưu
+  # vào file này và thắng ring/into_ring_is_exit ở trên, kể cả sau khi khởi động lại.
+  ring_override_file: "state/counting_ring.json"
+  # Khi có vòng mới, ROI = khung bao vòng nới thêm ngần này px (như tools/pick_roi.py --roi-pad).
+  # Chọn tay = mặc định của pick_roi; ROI đo tay ngày 21/10 cách vòng 150–340 px.
+  roi_pad_px: 250
 
 mqtt:
   broker: "localhost"

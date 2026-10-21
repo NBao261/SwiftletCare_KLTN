@@ -36,6 +36,7 @@ venv/
 ai-pipeline/models/*.onnx
 ai-pipeline/clips
 ai-pipeline/frames
+ai-pipeline/state/
 
 # PlatformIO
 firmware/.pio/
