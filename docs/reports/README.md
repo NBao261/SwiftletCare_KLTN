@@ -42,6 +42,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 15 | Sửa và reset ngưỡng Zone, sửa hệ số mờ: SRS mới chỉ cho Farm Owner và Domain Expert của farm (ENV-FR-006, 020, 021); các route `PUT /farms/zones/:zoneId/thresholds`, `.../thresholds/reset`, `PUT /farms/zones/:zoneId/fuzzy-tuning` và `PUT /devices/sensor-nodes/:id/thresholds` còn cho `TECHNICIAN`, `ADMIN`; web Technician còn `ThresholdsModal` | Sửa `requireRole`, `api-spec.yaml`, test; gỡ chỗ sửa ngưỡng ở giao diện Technician |
 | 16 | Admin đổi ngưỡng mặc định chưa phải ghi nguồn (ENV-FR-007); chưa có thông báo cho chuyên gia khi mặc định đổi (ENV-FR-026, Optional) | Thêm trường nguồn vào `PUT /system/settings/default-thresholds` |
 | 17 | Farm chưa có chuyên gia thì Farm Owner quyết thay (BR-22): route kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về và vòng đếm hiện chỉ cho `DOMAIN_EXPERT`; thông báo cảnh báo suy luận chưa chuyển cho Farm Owner khi farm không có chuyên gia | Thêm kiểm tra "farm có Domain Expert chưa" ở service, kèm test |
+| 18 | EXPERT-FR-009: hiện chỉ kết luận của chuyên gia mới báo Farm Owner; sửa ngưỡng, hệ số mờ, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm và kết luận cảnh báo chưa báo gì; lịch sử nằm rải rác theo từng loại (`threshold_history`, `fuzzy_tuning_history`, …), chưa có một danh sách chung | Gọi `notifyUser` cho các Farm Owner ở từng service; thêm endpoint lịch sử hoạt động của chuyên gia (có thể đọc từ `audit_logs` lọc theo farm và role `DOMAIN_EXPERT`) |
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 
