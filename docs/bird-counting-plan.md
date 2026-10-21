@@ -140,8 +140,9 @@ Giá là ước lượng, cần kiểm tra lại khi mua. Cập nhật `docs/har
 4. Gắn chặt, không rung. Camera xê dịch là phải chỉnh lại ROI và vạch đếm.
 5. Không để đèn, loa treo, vật đung đưa (dây, lá) trong khung hình.
 6. Vạch đếm đặt sát miệng lỗ, ở chỗ chim đã tách hàng, vuông góc với hướng bay. Nếu clip thật cho thấy chim không cắt vạch rõ ràng, phương án dự phòng là đếm theo vùng: coi miệng lỗ là một vùng; track xuất hiện từ vùng đó là vào, track đi vào vùng đó rồi mất là ra. Phương án này chưa có trong code ở mục 6.4.
+7. Camera nhìn vào miệng lỗ gần như theo hướng chim bay (chim chui qua lỗ rồi tỏa đi mọi hướng): dùng **vòng đếm** khép kín quanh miệng lỗ thay cho một vạch. Chim đi vào vòng là chui vào lỗ, đi ra khỏi vòng là chui ra; con chỉ bay lướt qua lỗ cắt vòng hai lần, số ròng triệt tiêu. Đã có trong code (`src/counting.py`, `RingCounter`), đang dùng ở nhà yến thử nghiệm (mục 19.8).
 
-Vị trí đã lắp thực tế ở nhà yến thử nghiệm: mục 19.7.
+Vị trí đã lắp thực tế ở nhà yến thử nghiệm: mục 19.7, đổi góc ngày 21/10/2026 ở mục 19.8.
 
 ### 3.4. Kiểm tra camera trước khi làm tiếp
 
@@ -385,6 +386,8 @@ Xóa hằng `CLASS_NAMES`/`PREDATOR_IDS`. `confidence_threshold` dùng cho mọi
 Với YOLO26n cũng có thể export đầu ra kiểu cũ (bỏ `nms=False`; trên COCO chính xác hơn khoảng 0,8 mAP nhưng phải chạy NMS). Code trên tự nhận ra kiểu đó. Chỉ chọn cách này khi so trên cùng tập test (mục 7.9) thấy đáng.
 
 ### 6.4. `src/counting.py` (viết lại)
+
+> **Đã làm theo góc camera ngày 21/10/2026 (mục 19.8):** `src/counting.py` là `RingCounter` — vòng đếm khép kín (`tracking.ring`, chiều `tracking.into_ring_is_exit`), không phải `LineCounter` bên dưới. Nhận `tracker_id` và `xyxy` dạng mảng nên dùng thẳng với `sv.Detections` (`counter.update(tracks.tracker_id, tracks.xyxy)`). Code mẫu bên dưới giữ cho trường hợp camera nhìn ngang lỗ, nơi một vạch là đủ.
 
 ```python
 """SwiftletCare – đếm chim qua vạch ảo (VISION-FR-005)."""
@@ -818,9 +821,10 @@ python src/stream.py --source clips/20261008_morning_01.mp4 --session MORNING_EX
 
 Trình tự hiệu chỉnh (sửa `config.yaml` rồi chạy lại):
 
-1. **ROI** (khung trắng): bao vừa quanh lỗ ra vào.
-2. **Vạch đếm** (vạch vàng): cắt ngang đường bay, nằm trong ROI.
-3. **Chiều đếm**: nếu chim bay ra mà số "VAO" tăng thì đổi `in_is_entry`.
+0. **Đo trên clip có chim** (mở clip, click bằng `tools/pick_roi.py` để đọc pixel): **s** = cỡ một con chim sát miệng lỗ, **v** = quãng nó bay giữa hai khung liên tiếp.
+1. **Vòng đếm** (vòng vàng): `python tools/pick_roi.py <ảnh|clip|rtsp> --margin <d> --roi-pad <3v>`, click lần lượt các góc viền ngoài miệng lỗ, Enter in ra khối YAML `roi` + `ring`. `d = max(s, 1,5 × v)`: chim vừa chui ra phải nằm *trong* vòng ít nhất 1–2 khung trước khi cắt vòng, nếu không tracker chưa kịp có id và con đó bị sót.
+2. **ROI** (khung trắng): công cụ lấy khung bao vòng đếm nới thêm `--roi-pad`. Cạnh dài nhất của ROI ≤ `640 × s / 15` để chim còn ≥ 15 px sau khi thu về đầu vào model (cổng 5); thừa thì cắt bớt phía ít chim bay. Không để dòng ngày giờ của camera trong ROI.
+3. **Chiều đếm**: nếu chim chui ra khỏi lỗ mà số "RA" tăng thì đổi `into_ring_is_exit` (vạch thẳng: `in_is_entry`).
 4. **`box_pad`**: nếu `#id` nhảy số liên tục trên cùng một con, tăng dần 2.5 → 3 → 4.
 5. **`confidence_threshold`**: hạ nếu sót nhiều, tăng nếu bắt nhầm.
 
@@ -2919,7 +2923,34 @@ Kéo hình qua Internet đã chạy, nhưng mới thử ngắn. **Cổng 3b** (k
 
 - [ ] Rút điện modem và bộ PoE: camera lên lại đúng `192.168.1.163`, xem qua 4G vẫn được, ghi WAN IP có đổi không
 - [ ] IP động thì cài DDNS (mục 19.4)
-- [ ] Clip phiên chiều: hướng bay của chim sau khi qua lỗ, cỡ chim trong hình (cổng 5); chốt ROI và vạch đếm, hoặc chuyển sang đếm theo vùng (mục 3.3)
+- [x] ~~Clip phiên chiều để chốt ROI và vạch đếm~~ — camera đã đổi góc ngày 21/10, xem mục 19.8
 - [ ] Đèn hồng ngoại lúc chạng vạng: hình có trắng xóa không, chim có né lỗ không (cổng 6)
 - [ ] Lắp thẻ microSD nếu camera có khe, bật ghi liên tục (cổng 4)
 - [ ] Có VPS: giới hạn cổng 18554 chỉ cho IP của VPS nếu modem hỗ trợ (cổng 3c), rồi cho MediaMTX kéo liên tục 24 giờ (cổng 3b)
+
+### 19.8. Đổi góc camera ngày 21/10/2026: nhìn vào miệng lỗ, đếm bằng vòng
+
+**Vị trí mới.** Camera vẫn trong phòng lượn, đổi sang nhìn xuống miệng lỗ ra vào ngoài trời. Miệng lỗ là một hộp gỗ chữ nhật nhô vào phòng, nằm hơi lệch trên giữa khung hình. Ban ngày miệng hộp sáng trắng vì ánh trời xuyên qua (xác nhận đây là lỗ thông ra ngoài), nên chim qua lỗ hiện thành bóng tối trên nền sáng. Chim chui qua lỗ gần như theo hướng nhìn của camera rồi tỏa đi mọi hướng, nên đếm bằng **vòng đếm** quanh miệng lỗ (mục 3.3, ý 7), không dùng một vạch thẳng.
+
+**Đo trên khung 1920×1080 lấy từ RTSP lúc 18:30** (phóng to 3 lần trên lưới 20 px, sai số khoảng ±3 px):
+
+| | Viền ngoài hộp gỗ (px) | Vòng đếm = viền nới 60 px (tỉ lệ) |
+|---|---|---|
+| 1 | (793, 287) góc trên trái | (0.379, 0.228) |
+| 2 | (985, 220) góc trên xa | (0.527, 0.136) |
+| 3 | (1042, 313) góc phải | (0.575, 0.277) |
+| 4 | (1037, 362) chân phải | (0.569, 0.374) |
+| 5 | (848, 439) chân trước | (0.427, 0.477) |
+| 6 | (800, 343) chân trái | (0.386, 0.334) |
+
+ROI `[0.25, 0.00, 0.75, 0.70]` (960×756 px): cách vòng đếm 150–340 px, ngoài dòng ngày giờ. Camera trong nhà nên trong vòng là phía ngoài trời: `into_ring_is_exit: true` (chui vào lỗ = RA, chui ra khỏi lỗ = VỀ). Các giá trị đã ghi vào `ai-pipeline/config/config.yaml`.
+
+**Chưa chốt:** khoảng nới 60 px và ROI là số chọn tay. Clip 90 giây quay lúc 18:35 **không có chim yến**; mọi vật chuyển động trong đó là côn trùng hoặc bụi bay sát ống kính, sáng trắng và nhòe dưới đèn hồng ngoại, cỡ 20–40 px, ngang cỡ một con chim. Cần clip có chim (phiên sáng 05:30–07:00 là tốt nhất) để đo `s`, `v` rồi tính lại theo mục 6.8.
+
+**Ảnh lệch giữa ngày và đêm.** Khung lúc 18:30 dịch đều khoảng 16 px theo chiều dọc so với ảnh app lúc 13:45. Mức dịch đo riêng ở hộp gỗ, góc xà và tường phải đều như nhau, còn dòng ngày giờ in trên hình vẫn đứng yên. Vậy hình ảnh thật sự đã dịch: hoặc camera nghiêng nhẹ sau khi lắp, hoặc do chuyển chế độ ngày/đêm. Từ 18:30 đến 18:42 lệch 0 px. Mức 16 px nhỏ hơn khoảng nới 60 px nên không làm sai việc đếm.
+
+**Còn lại:**
+
+- [ ] Lấy một khung RTSP ban ngày, so với khung 18:30: lệch 0 px thì camera chỉ dịch một lần; lệch lại khoảng 16 px thì do chế độ ngày/đêm → khóa một chế độ cho cả hai phiên, hoặc nới vòng thêm 16 px
+- [ ] Clip có chim: đo `s`, `v`, chạy lại `tools/pick_roi.py --margin`, chốt `roi` và `ring` (cổng 5)
+- [ ] Gán clip côn trùng dưới IR làm ảnh âm khi gán nhãn (mục 7.3)
