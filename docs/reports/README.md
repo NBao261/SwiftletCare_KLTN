@@ -26,7 +26,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | # | Chỗ lệch | Ghi chú |
 | --- | --- | --- |
 | 1 | THREAT-FR-009: SRS cũ ghi mất heartbeat > 60 s; code đánh dấu OFFLINE sau 30 s (job quét mỗi 10 s) | SRS mới ghi theo code (BR-10) |
-| 2 | Ma trận phân quyền SRS cũ ghi Technician/Admin không sửa ngưỡng, không can thiệp tay, không xác nhận cảnh báo; route backend cho phép | SRS mới ghi theo code ("when handling an incident"). Nếu nhóm muốn chặn thì sửa route |
+| 2 | Ma trận phân quyền SRS cũ ghi Technician/Admin không can thiệp tay, không xác nhận cảnh báo; route backend cho phép | SRS mới ghi theo code ("when handling an incident"). Nếu nhóm muốn chặn thì sửa route |
 | 3 | `DeviceStatus` có `DEGRADED`, `ERROR` nhưng không chỗ nào trong code gán hai trạng thái này | Bỏ khỏi enum hoặc thêm luồng gán; state machine ở mục 6.6 chưa có hai trạng thái này |
 | 4 | `HarvestStatus` có `ARCHIVED` nhưng code không gán | Tương tự mục 3 |
 | 5 | Tạo mẻ thu hoạch không kiểm tra số tổ/khối lượng > 0 và ngày không ở tương lai | MARKET-FR-001 hiện ghi theo code; nên thêm validate rồi siết tiêu chí |
@@ -39,8 +39,9 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 12 | ALERT-FR-002 (FCM) giờ là bắt buộc nhưng backend mới chỉ ghi log, mobile chưa đăng ký FCM token | Cần nối Firebase thật ở backend và đăng ký/huỷ token ở `mobile/` |
 | 13 | Hạn can thiệp tay tính theo **thiết bị**, không theo từng relay (cả backend `override_expiry` lẫn firmware `overrideExpiryMs`): bật tay relay thứ hai làm hạn của relay thứ nhất chạy lại từ đầu, huỷ sớm thì mọi relay về AUTO | SRS mới ghi đúng hành vi này thành BR-20; nếu nhóm muốn hạn riêng từng relay thì phải sửa cả hai phía |
 | 14 | `CLAUDE.md` mục AI pipeline vẫn ghi `counting.py` đếm qua vạch (line-crossing), code đã đổi sang vòng đếm | Sửa một dòng trong `CLAUDE.md` |
-| 15 | Reset ngưỡng Zone về mặc định: SRS mới chỉ cho Farm Owner và Domain Expert của farm (ENV-FR-020); route `PUT /farms/zones/:zoneId/thresholds/reset` còn cho `TECHNICIAN`, `ADMIN` | Sửa `requireRole` của route, `api-spec.yaml` và test |
+| 15 | Sửa và reset ngưỡng Zone: SRS mới chỉ cho Farm Owner và Domain Expert của farm (ENV-FR-006, 020); các route `PUT /farms/zones/:zoneId/thresholds`, `.../thresholds/reset` và `PUT /devices/sensor-nodes/:id/thresholds` còn cho `TECHNICIAN`, `ADMIN`; web Technician còn `ThresholdsModal` | Sửa `requireRole`, `api-spec.yaml`, test; gỡ chỗ sửa ngưỡng ở giao diện Technician |
 | 16 | Admin đổi ngưỡng mặc định chưa phải ghi nguồn (ENV-FR-007); chưa có thông báo cho chuyên gia khi mặc định đổi (ENV-FR-026, Optional) | Thêm trường nguồn vào `PUT /system/settings/default-thresholds` |
+| 17 | Farm chưa có chuyên gia thì Farm Owner quyết thay (BR-22): route kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về và vòng đếm hiện chỉ cho `DOMAIN_EXPERT`; thông báo cảnh báo suy luận chưa chuyển cho Farm Owner khi farm không có chuyên gia | Thêm kiểm tra "farm có Domain Expert chưa" ở service, kèm test |
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 

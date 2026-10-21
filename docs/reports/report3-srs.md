@@ -153,8 +153,8 @@ The main flows are those of the registration form (section D), numbered the same
 
 | Actor | Type | Description |
 | --- | --- | --- |
-| Farm Owner | Human, main flow | Owner of a swiftlet farm. Manages farms, houses and zones; monitors; receives and acknowledges alerts; overrides actuators for a limited time; records harvests; invites a Domain Expert; reads the expert's conclusions. The Primary Owner additionally deletes the farm, changes its region and invites or removes members. |
-| Domain Expert | Human, main flow | Swiftlet-farming specialist invited by the Primary Owner, with access to the whole farm. Read-only on operations; confirms or rejects inferred alerts; approves or adjusts thresholds, fuzzy coefficients and detection parameters; writes conclusions for the Farm Owner. Does not control relays, create tickets, record harvests or acknowledge alerts. |
+| Farm Owner | Human, main flow | Owner of a swiftlet farm. Manages farms, houses and zones; monitors; sets zone thresholds; receives and acknowledges alerts; overrides actuators for a limited time; records harvests; invites a Domain Expert; reads the expert's conclusions. While the farm has no Domain Expert, the Farm Owner also takes the expert's decisions (BR-22). The Primary Owner additionally deletes the farm, changes its region and invites or removes members. |
+| Domain Expert | Human, main flow | Swiftlet-farming specialist invited by the Primary Owner, with access to the whole farm. Read-only on operations; confirms or rejects inferred alerts; approves or adjusts thresholds, fuzzy coefficients, detection parameters and the counting ring; writes conclusions for the Farm Owner. Does not control relays, create tickets, record harvests or acknowledge alerts. A Domain Expert is optional: the system runs without one (BR-22). |
 | Technician | Human, supporting | Staff of the system operator. Installs and activates devices, provisions Wi-Fi, handles maintenance tickets, sends remote commands and firmware updates. |
 | Administrator | Human, supporting | Manages user accounts, Technician regions, system-wide default thresholds and SLA settings; reviews the audit log. |
 | Controller (ESP32) | System | Reads sensors, filters signals, runs fuzzy control, plays the attractant speaker, self-diagnoses and publishes over MQTT. |
@@ -171,14 +171,14 @@ The main flows are those of the registration form (section D), numbered the same
 | View zone health reports | ✓ | ✓ | – | – |
 | Acknowledge alerts | ✓ | – | ✓ (incident) | – |
 | Receive out-of-app notifications | ✓ | – | – | – |
-| Confirm or reject inferred alerts | read | ✓ | – | – |
+| Confirm or reject inferred alerts | read ¹ | ✓ | – | – |
 | Write conclusions and recommendations | read | ✓ | – | – |
-| Edit zone thresholds | ✓ | ✓ | ✓ (incident) | ✓ (incident) |
+| Edit zone thresholds | ✓ | ✓ | – | – |
 | Reset zone thresholds to the system defaults | ✓ | ✓ | – | – |
 | Edit system default thresholds | – | – | – | ✓ |
 | Edit fuzzy coefficients | ✓ | ✓ | ✓ | ✓ |
-| Edit detection parameters | read | ✓ | – | – |
-| Draw the counting ring of a camera | read | ✓ | – | – |
+| Edit detection parameters | read ¹ | ✓ | – | – |
+| Draw the counting ring of a camera | read ¹ | ✓ | – | – |
 | Manual relay override | ✓ | – | ✓ (incident) | ✓ (incident) |
 | Record and edit harvests | ✓ | read | – | – |
 | Create farms | ✓ | – | – | ✓ |
@@ -190,6 +190,8 @@ The main flows are those of the registration form (section D), numbered the same
 | Manage accounts, Technician regions, default thresholds, SLA, audit log | – | – | – | ✓ |
 
 Technicians and Administrators see the structure and device status of a farm, never its environmental dashboard or analytics (FARM-FR-009).
+
+¹ The Farm Owner takes this decision while the farm has no Domain Expert (BR-22). Zone thresholds belong to the farm: a Technician or Administrator neither edits nor resets them; the Administrator only maintains the system defaults (ENV-FR-007).
 
 ### 2.5 Operating Environment
 
@@ -233,12 +235,12 @@ The exact versions and the dev, staging and production environments are declared
 
 | ID | Actor | Requirement | Acceptance criteria | Pri. |
 | --- | --- | --- | --- | :---: |
-| ENV-FR-006 | Farm Owner, Domain Expert (Technician, Administrator when handling an incident) | Configure per-zone thresholds: `temp_min`, `temp_max`, `humidity_min`, `humidity_max`, `light_max`, `nh3_max`, `co2_max`. | A valid change is stored, recorded in the threshold history with author, role and time, and sent to every controller of the zone; a value with min ≥ max or outside the measurement range is rejected with 400 and nothing is stored; a user without access to the farm (FARM-FR-009) is rejected with 403. | M |
+| ENV-FR-006 | Farm Owner, Domain Expert of the farm | Configure per-zone thresholds: `temp_min`, `temp_max`, `humidity_min`, `humidity_max`, `light_max`, `nh3_max`, `co2_max`. | A valid change is stored, recorded in the threshold history with author, role and time, and sent to every controller of the zone; a value with min ≥ max or outside the measurement range is rejected with 400 and nothing is stored; a Technician or Administrator request, or a user who is not a member of the farm, is rejected with 403. | M |
 | ENV-FR-007 | Administrator | Maintain system-wide default thresholds (BR-01), taken from the sources in REF-5. Defaults are a reference, not live values: they are copied into a zone only when the zone is created or reset (ENV-FR-020). | Defaults are editable only by an Administrator and validated like zone thresholds; a change without a source reference (an entry of REF-5) is rejected with 400; the audit log keeps old values, new values and the source; after a change, the thresholds of every existing zone are unchanged and no configuration is sent to any controller; a zone created afterwards starts with the new defaults. | M |
 | ENV-FR-009 | Backend | Keep the history of threshold and coefficient changes. | Each change record holds old value, new value, user, role, time and source (`MANUAL` or `RESET_TO_DEFAULT`). | M |
 | ENV-FR-020 | Farm Owner, Domain Expert of the farm | Reset the thresholds of a zone to the current system defaults, for example when a setting proved wrong. | After reset the zone thresholds equal the defaults at that moment, a history record with source `RESET_TO_DEFAULT` exists and the controllers of the zone receive the new values; a later change of the defaults does not change this zone again; a Technician or Administrator request, or a user who is not a member of the farm, is rejected with 403. | M |
 | ENV-FR-021 | Farm Owner, Domain Expert, Technician, Administrator | Edit the fuzzy-control coefficients of a zone without reflashing firmware (BR-05). | A value inside its range is stored with history and applied by every controller of the zone on the next control cycle; a value outside its range is rejected with 400; the controller also clamps any received value to the range. | M |
-| ENV-FR-026 | Backend, Domain Expert | After the system defaults change, tell the Domain Expert of each farm which zones now differ from the new defaults; nothing is applied automatically. | After a change of `humidity_min`, every Domain Expert of a farm with a zone whose `humidity_min` differs from the new default has one in-app notification listing those zones; zone thresholds stay unchanged until a Farm Owner or Domain Expert resets or edits them. | O |
+| ENV-FR-026 | Backend, Domain Expert (Farm Owner, BR-22) | After the system defaults change, tell the Domain Expert of each farm, or its Farm Owners when it has no expert, which zones now differ from the new defaults; nothing is applied automatically. | After a change of `humidity_min`, the Domain Expert of each farm with a zone whose `humidity_min` differs from the new default (its Farm Owners if it has no expert) has one in-app notification listing those zones; zone thresholds stay unchanged until a Farm Owner or Domain Expert resets or edits them. | O |
 
 ### 3.3 Closed-Loop Control (ENV)
 
@@ -325,7 +327,7 @@ The exact versions and the dev, staging and production environments are declared
 | VISION-FR-014 | AI node | Draw a box on every tracked bird and the counting ring on the stream before it is published. | Every frame of the published stream shows the ring and a box with a track ID for each tracked bird. | M |
 | VISION-FR-016 | Team (evaluation) | Evaluate counting accuracy against manual counts on recorded video (NFR-09). | The evaluation report gives Precision, Recall and count error per direction, separately for daylight and low light, with the clips and manual counts stored for re-running. | M |
 | VISION-FR-017 | AI node, Backend | Record entry/exit counts of the house per 5-minute bucket all day, kept for 90 days. | Bucket totals of one day equal the session totals for the session windows; buckets older than 90 days are removed; one read covers at most 7 days. | M |
-| VISION-FR-018 | Domain Expert | Draw the counting ring of a camera on a frame of the live video and choose its direction; the AI node applies it without restart. | A ring with 3–12 vertices inside [0, 1] is stored with history and audit and sent to the AI node, which applies it while keeping the session's counts; a ring with 2 or 13 vertices or a vertex outside [0, 1] is rejected with 400; a Farm Owner can view but not change it (403); if the AI node is offline the ring is stored and sent when it reconnects. | M |
+| VISION-FR-018 | Domain Expert (Farm Owner, BR-22) | Draw the counting ring of a camera on a frame of the live video and choose its direction; the AI node applies it without restart. | A ring with 3–12 vertices inside [0, 1] is stored with history, role and audit and sent to the AI node, which applies it while keeping the session's counts; a ring with 2 or 13 vertices or a vertex outside [0, 1] is rejected with 400; a Farm Owner is rejected with 403 while the farm has a Domain Expert and accepted while it has none; if the AI node is offline the ring is stored and sent when it reconnects. | M |
 
 ### 3.9 Health Monitoring and Expert in the Loop (EXPERT)
 
@@ -333,12 +335,12 @@ The exact versions and the dev, staging and production environments are declared
 | --- | --- | --- | --- | :---: |
 | EXPERT-FR-001 | Farm Owner (Primary) | Invite a Domain Expert to the farm. | The invitation has role `DOMAIN_EXPERT` and covers the whole farm; a co-owner cannot invite (403); one expert can belong to several farms. | M |
 | EXPERT-FR-002 | Domain Expert | View, read-only, the dashboard, analytics, bird counts, live stream, alerts, change histories and harvests of invited farms. | Every read endpoint of these features returns data to the expert; every write endpoint outside EXPERT-FR-003…008 returns 403. | M |
-| EXPERT-FR-003 | Domain Expert | Confirm or reject an inferred alert with a note, seeing sensor readings and 5-minute bird counts ±30 minutes around it; the system reports the confirmation rate per alert type. | The verdict is stored with expert and time and can be changed; a verdict on a non-inferred alert type is rejected with 400; the alert status is not changed by a verdict; the statistics count confirmed, rejected and pending alerts per type. | M |
+| EXPERT-FR-003 | Domain Expert (Farm Owner, BR-22) | Confirm or reject an inferred alert with a note, seeing sensor readings and 5-minute bird counts ±30 minutes around it; the system reports the confirmation rate per alert type. | The verdict is stored with author, role and time and can be changed; a verdict on a non-inferred alert type is rejected with 400; a Farm Owner verdict is rejected with 403 while the farm has a Domain Expert and accepted while it has none; the alert status is not changed by a verdict; the statistics count confirmed, rejected and pending alerts per type and per role of the author. | M |
 | EXPERT-FR-004 | Domain Expert | Approve or adjust zone thresholds and fuzzy coefficients, including system suggestions. | Changes follow ENV-FR-006/021 and are stored with role `DOMAIN_EXPERT`; the control-performance chart shows a marker at each change. | M |
 | EXPERT-FR-005 | Backend | Produce a weekly health report per zone, also on demand for any period. | The report contains % time in range, % time automatic, relay switching, alerts by type, device faults, return-rate trend and NH3/CO2 mean and maximum, and its figures equal those computed from the seeded data. | M |
-| EXPERT-FR-006 | Domain Expert, Farm Owner | The expert writes a conclusion and recommendations on a report; the Farm Owner is notified and reads it. | After saving, every Farm Owner of the farm has a new in-app notification (and a Telegram message if linked) and sees the conclusion; only its author can edit it (403 for another expert), and the edit time is stored. | M |
-| EXPERT-FR-007 | Backend, Domain Expert, Farm Owner | Keep an in-app notification inbox per user; notify the expert in the app of new health reports and of inferred alerts awaiting validation; never send operational alerts to the expert out of the app. | A new `NOISE_ANOMALY` creates an in-app notification for the expert, pushed live over WebSocket, and no push or Telegram message to the expert; a user sees only their own notifications, can mark one or all as read, and notifications older than 90 days are removed. | M |
-| EXPERT-FR-008 | Domain Expert | Tune the detection parameters within technical limits (BR-09): five per zone (noise, pump-dry, speaker) and the return-rate drop per house; with history and reset to defaults. | A value inside its range is stored with author, role and time and, for the zone parameters, sent to the controllers of the zone; a value outside its range is rejected with 400; a Farm Owner can read but not change them (403). | M |
+| EXPERT-FR-006 | Domain Expert, Farm Owner | The expert writes a conclusion and recommendations on a report; the Farm Owner is notified and reads it. Without an expert the report is still produced and read by the Farm Owner, with no conclusion. | After saving, every Farm Owner of the farm has a new in-app notification (and a Telegram message if linked) and sees the conclusion; only its author can edit it (403 for another expert), and the edit time is stored; a Farm Owner cannot write a conclusion (403). | M |
+| EXPERT-FR-007 | Backend, Domain Expert, Farm Owner | Keep an in-app notification inbox per user; notify the expert in the app of new health reports and of inferred alerts awaiting validation (the Farm Owners when the farm has no expert); never send operational alerts to the expert out of the app. | A new `NOISE_ANOMALY` creates an in-app notification for the expert, pushed live over WebSocket, and no push or Telegram message to the expert; on a farm without an expert the same notification goes to its Farm Owners; a user sees only their own notifications, can mark one or all as read, and notifications older than 90 days are removed. | M |
+| EXPERT-FR-008 | Domain Expert (Farm Owner, BR-22) | Tune the detection parameters within technical limits (BR-09): five per zone (noise, pump-dry, speaker) and the return-rate drop per house; with history and reset to defaults. | A value inside its range is stored with author, role and time and, for the zone parameters, sent to the controllers of the zone; a value outside its range is rejected with 400; a Farm Owner is rejected with 403 while the farm has a Domain Expert and accepted while it has none. | M |
 
 ### 3.10 House, Zone and Device Management (FARM)
 
@@ -471,6 +473,7 @@ The defaults of the fuzzy coefficients (BR-05) and of the detection parameters (
 | BR-19 | Control precedence for the pump and the fan (highest first) | 1. Bypass switch at the cabinet (Hand or Off, ENV-FR-023). 2. Manual override (ENV-FR-016). 3. Pump-dry latch (THREAT-FR-011, misting only) and sensor safe state (BR-18). 4. Fuzzy output (ENV-FR-010, 011) |
 | BR-20 | Override expiry | One expiry per controller: a new override on any relay restarts the expiry of all overridden relays of that controller, and an early cancel returns all of them to `AUTO` |
 | BR-21 | Return-rate check | Runs daily at 19:15 Vietnam time (15 min after the evening session window); needs at least 3 previous days with a return rate, of up to 7 (engineering constants, A-4) |
+| BR-22 | Farm without a Domain Expert | While no Domain Expert is a member of the farm, its Farm Owners take the expert's decisions: verdicts on inferred alerts (EXPERT-FR-003), detection parameters (EXPERT-FR-008), counting ring (VISION-FR-018) and the expert notifications (EXPERT-FR-007, ENV-FR-026). Each decision is stored with the author's role. From the moment an expert joins, these decisions are the expert's alone; earlier decisions stay valid and the expert may change them. No conclusions are written without an expert (EXPERT-FR-006) |
 
 ---
 
@@ -515,7 +518,7 @@ Each lifecycle below has a state machine diagram in the SDD. Every transition na
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
-| (pending) | `CONFIRMED` / `REJECTED` | Domain Expert records a verdict | EXPERT-FR-003 |
+| (pending) | `CONFIRMED` / `REJECTED` | Domain Expert records a verdict (the Farm Owner while the farm has no expert, BR-22) | EXPERT-FR-003 |
 | `CONFIRMED` / `REJECTED` | `REJECTED` / `CONFIRMED` | Domain Expert changes the verdict after reviewing more data | EXPERT-FR-003 |
 | any | — | Verdict on a non-inferred type rejected (400) | EXPERT-FR-003 |
 
@@ -655,4 +658,4 @@ The mapping from each FR, transition and NFR to its test cases is kept in Report
 | Version | Date | Change |
 | --- | --- | --- |
 | 2.1.5 | 10/2026 | Internal working SRS (Vietnamese) after Review 1, aligned with registration form v2 |
-| 3.0.0 | `[TEAM]` | Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |
+| 3.0.0 | `[TEAM]` | Zone thresholds are edited and reset only by the Farm Owner or Domain Expert of the farm; without an expert the Farm Owner takes the expert's decisions (BR-22). Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |
