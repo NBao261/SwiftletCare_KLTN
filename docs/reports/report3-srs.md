@@ -173,7 +173,9 @@ The main flows are those of the registration form (section D), numbered the same
 | Receive out-of-app notifications | ✓ | – | – | – |
 | Confirm or reject inferred alerts | read | ✓ | – | – |
 | Write conclusions and recommendations | read | ✓ | – | – |
-| Edit zone thresholds, reset to defaults | ✓ | ✓ | ✓ (incident) | ✓ (incident) |
+| Edit zone thresholds | ✓ | ✓ | ✓ (incident) | ✓ (incident) |
+| Reset zone thresholds to the system defaults | ✓ | ✓ | – | – |
+| Edit system default thresholds | – | – | – | ✓ |
 | Edit fuzzy coefficients | ✓ | ✓ | ✓ | ✓ |
 | Edit detection parameters | read | ✓ | – | – |
 | Draw the counting ring of a camera | read | ✓ | – | – |
@@ -232,10 +234,11 @@ The exact versions and the dev, staging and production environments are declared
 | ID | Actor | Requirement | Acceptance criteria | Pri. |
 | --- | --- | --- | --- | :---: |
 | ENV-FR-006 | Farm Owner, Domain Expert (Technician, Administrator when handling an incident) | Configure per-zone thresholds: `temp_min`, `temp_max`, `humidity_min`, `humidity_max`, `light_max`, `nh3_max`, `co2_max`. | A valid change is stored, recorded in the threshold history with author, role and time, and sent to every controller of the zone; a value with min ≥ max or outside the measurement range is rejected with 400 and nothing is stored; a user without access to the farm (FARM-FR-009) is rejected with 403. | M |
-| ENV-FR-007 | Administrator | Maintain system-wide default thresholds (BR-01), taken from the sources in REF-5. Defaults are a reference, not live values: they are copied into a zone only when the zone is created or reset (ENV-FR-020). | Defaults are editable only by an Administrator, validated like zone thresholds and written to the audit log with old and new values; after a change, the thresholds of every existing zone are unchanged and no configuration is sent to any controller; a zone created afterwards starts with the new defaults. | M |
+| ENV-FR-007 | Administrator | Maintain system-wide default thresholds (BR-01), taken from the sources in REF-5. Defaults are a reference, not live values: they are copied into a zone only when the zone is created or reset (ENV-FR-020). | Defaults are editable only by an Administrator and validated like zone thresholds; a change without a source reference (an entry of REF-5) is rejected with 400; the audit log keeps old values, new values and the source; after a change, the thresholds of every existing zone are unchanged and no configuration is sent to any controller; a zone created afterwards starts with the new defaults. | M |
 | ENV-FR-009 | Backend | Keep the history of threshold and coefficient changes. | Each change record holds old value, new value, user, role, time and source (`MANUAL` or `RESET_TO_DEFAULT`). | M |
-| ENV-FR-020 | Farm Owner, Domain Expert (Technician, Administrator when handling an incident) | Reset the thresholds of a zone to the current system defaults. | After reset the zone thresholds equal the defaults at that moment, a history record with source `RESET_TO_DEFAULT` exists and the controllers of the zone receive the new values; a later change of the defaults does not change this zone again. | M |
+| ENV-FR-020 | Farm Owner, Domain Expert of the farm | Reset the thresholds of a zone to the current system defaults, for example when a setting proved wrong. | After reset the zone thresholds equal the defaults at that moment, a history record with source `RESET_TO_DEFAULT` exists and the controllers of the zone receive the new values; a later change of the defaults does not change this zone again; a Technician or Administrator request, or a user who is not a member of the farm, is rejected with 403. | M |
 | ENV-FR-021 | Farm Owner, Domain Expert, Technician, Administrator | Edit the fuzzy-control coefficients of a zone without reflashing firmware (BR-05). | A value inside its range is stored with history and applied by every controller of the zone on the next control cycle; a value outside its range is rejected with 400; the controller also clamps any received value to the range. | M |
+| ENV-FR-026 | Backend, Domain Expert | After the system defaults change, tell the Domain Expert of each farm which zones now differ from the new defaults; nothing is applied automatically. | After a change of `humidity_min`, every Domain Expert of a farm with a zone whose `humidity_min` differs from the new default has one in-app notification listing those zones; zone thresholds stay unchanged until a Farm Owner or Domain Expert resets or edits them. | O |
 
 ### 3.3 Closed-Loop Control (ENV)
 
@@ -450,6 +453,8 @@ These requirements serve the supporting roles of the registration form ("Technic
 
 The ranges are technical limits that prevent input errors, not domain recommendations.
 
+The defaults of the fuzzy coefficients (BR-05) and of the detection parameters (BR-09) are engineering constants fixed in the software; they are not edited by the Administrator, and "reset to defaults" of these parameters returns to these constants. Only the environmental thresholds (BR-01, BR-02) have Administrator-maintained defaults, because only they are taken from documented sources.
+
 ### 4.4 Timing and Calculation Rules
 
 | ID | Rule | Value |
@@ -609,7 +614,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 | C.2 Expert Collaboration | EXPERT-FR-001, 006 |
 | C.3 Review | EXPERT-FR-002, 005 |
 | C.3 Validation | EXPERT-FR-003, 007, THREAT-FR-007 |
-| C.3 Tuning | EXPERT-FR-004, 008, VISION-FR-018, ENV-FR-006, 009, 020, 021 |
+| C.3 Tuning | EXPERT-FR-004, 008, VISION-FR-018, ENV-FR-006, 009, 020, 021, 026 |
 | C.3 Conclusions | EXPERT-FR-006 |
 | C.4 Technician | FARM-FR-003…008, 007b, 009, TICKET-FR-001…018, ENV-FR-013c |
 | C.4 Administrator | AUTH-FR-001…012, ENV-FR-007, SYSTEM-FR-001…003 |
@@ -650,4 +655,4 @@ The mapping from each FR, transition and NFR to its test cases is kept in Report
 | Version | Date | Change |
 | --- | --- | --- |
 | 2.1.5 | 10/2026 | Internal working SRS (Vietnamese) after Review 1, aligned with registration form v2 |
-| 3.0.0 | `[TEAM]` | New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |
+| 3.0.0 | `[TEAM]` | Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |

@@ -39,6 +39,8 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 12 | ALERT-FR-002 (FCM) giờ là bắt buộc nhưng backend mới chỉ ghi log, mobile chưa đăng ký FCM token | Cần nối Firebase thật ở backend và đăng ký/huỷ token ở `mobile/` |
 | 13 | Hạn can thiệp tay tính theo **thiết bị**, không theo từng relay (cả backend `override_expiry` lẫn firmware `overrideExpiryMs`): bật tay relay thứ hai làm hạn của relay thứ nhất chạy lại từ đầu, huỷ sớm thì mọi relay về AUTO | SRS mới ghi đúng hành vi này thành BR-20; nếu nhóm muốn hạn riêng từng relay thì phải sửa cả hai phía |
 | 14 | `CLAUDE.md` mục AI pipeline vẫn ghi `counting.py` đếm qua vạch (line-crossing), code đã đổi sang vòng đếm | Sửa một dòng trong `CLAUDE.md` |
+| 15 | Reset ngưỡng Zone về mặc định: SRS mới chỉ cho Farm Owner và Domain Expert của farm (ENV-FR-020); route `PUT /farms/zones/:zoneId/thresholds/reset` còn cho `TECHNICIAN`, `ADMIN` | Sửa `requireRole` của route, `api-spec.yaml` và test |
+| 16 | Admin đổi ngưỡng mặc định chưa phải ghi nguồn (ENV-FR-007); chưa có thông báo cho chuyên gia khi mặc định đổi (ENV-FR-026, Optional) | Thêm trường nguồn vào `PUT /system/settings/default-thresholds` |
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 
