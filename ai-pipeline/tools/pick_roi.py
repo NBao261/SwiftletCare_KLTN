@@ -12,6 +12,7 @@ Cửa sổ thu phóng được (kéo to cửa sổ để click chính xác từn
 """
 import argparse
 import os
+import sys
 from typing import List, Sequence, Tuple
 
 import cv2
@@ -64,6 +65,8 @@ def grab_frame(src: str) -> np.ndarray:
 
 
 def main() -> None:
+    for stream in (sys.stdout, sys.stderr):      # console Windows mặc định cp1252, không in được tiếng Việt
+        stream.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("source", nargs="?", help="ảnh, clip hoặc rtsp://; bỏ trống = CAMERA_RTSP_URL trong .env")
     ap.add_argument("--margin", type=float, default=60, help="px nới vòng đếm ra khỏi viền lỗ")
