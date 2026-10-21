@@ -31,12 +31,13 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 4 | `HarvestStatus` có `ARCHIVED` nhưng code không gán | Tương tự mục 3 |
 | 5 | Tạo mẻ thu hoạch không kiểm tra số tổ/khối lượng > 0 và ngày không ở tương lai | MARKET-FR-001 hiện ghi theo code; nên thêm validate rồi siết tiêu chí |
 | 6 | `PREDATOR_DETECTED` còn trong `AlertType` và `TicketType` dù đã ra ngoài phạm vi | Chỉ được gỡ, không mở rộng |
-| 7 | Chuỗi đếm chim chưa có code: VISION-FR-001…011, 013, 014, 016, 017; THREAT-FR-010 | Phụ thuộc `ai-pipeline/` và `birdCount.handler.ts` |
+| 7 | Đếm chim: **backend đã xong** (nhận số đếm, bản ghi theo House, số đếm 5 phút, `LOW_RETURN_RATE`, heartbeat nút AI, token live stream, vòng đếm). Còn thiếu: nút AI chạy thật (`stream.py` chưa gửi heartbeat nên backend chưa gửi lại vòng đếm khi nút AI kết nối lại, chưa đo FPS), màn xem live/vẽ vòng/số đếm ở web và mobile, VISION-FR-016 đánh giá độ chính xác | VISION-FR-001…005, 007, 012…014, 016, 018 (phần giao diện), THREAT-FR-010 (đo FPS) |
 | 8 | ENV-FR-023 công tắc bypass chưa làm (phần cứng) | |
 | 9 | Giao diện Domain Expert (web/mobile) chưa có; backend EXPERT-FR đã xong | |
 | 10 | `docs/hardware/BOM.md` đã lỗi thời (5.410.000 VNĐ, linh kiện cũ) trong khi SRS cũ ghi COST-NFR-001 ≤ 10.105.000 VNĐ | Cập nhật BOM trước khi điền NFR-12 |
 | 11 | `docs/evidence-register.md` chưa điền nguồn | BR-01 ghi "nguồn từ tài liệu" nhưng chưa có minh chứng |
 | 12 | ALERT-FR-002 (FCM) giờ là bắt buộc nhưng backend mới chỉ ghi log, mobile chưa đăng ký FCM token | Cần nối Firebase thật ở backend và đăng ký/huỷ token ở `mobile/` |
+| 14 | `CLAUDE.md` mục AI pipeline vẫn ghi `counting.py` đếm qua vạch (line-crossing), code đã đổi sang vòng đếm | Sửa một dòng trong `CLAUDE.md` |
 | 13 | Hạn can thiệp tay tính theo **thiết bị**, không theo từng relay (cả backend `override_expiry` lẫn firmware `overrideExpiryMs`): bật tay relay thứ hai làm hạn của relay thứ nhất chạy lại từ đầu, huỷ sớm thì mọi relay về AUTO | SRS mới ghi đúng hành vi này thành BR-20; nếu nhóm muốn hạn riêng từng relay thì phải sửa cả hai phía |
 
 ### Trước khi chạy prompt tự rà soát (BM02)
