@@ -75,6 +75,29 @@ String mqttTopicBase;
 
 // ── Boot reason tracking (THREAT-FR-012) ─────────────────────────────────────
 static bool wasUnexpectedReset = false;
+// FARM-FR-006 — gửi trong heartbeat để chẩn đoán từ xa (brownout/watchdog lặp lại…)
+const char *bootResetReason = "UNKNOWN";
+
+static const char *resetReasonName(esp_reset_reason_t r) {
+  switch (r) {
+  case ESP_RST_POWERON: return "POWERON";
+  case ESP_RST_EXT: return "EXT";
+  case ESP_RST_SW: return "SW";
+  case ESP_RST_PANIC: return "PANIC";
+  case ESP_RST_INT_WDT: return "INT_WDT";
+  case ESP_RST_TASK_WDT: return "TASK_WDT";
+  case ESP_RST_WDT: return "WDT";
+  case ESP_RST_DEEPSLEEP: return "DEEPSLEEP";
+  case ESP_RST_BROWNOUT: return "BROWNOUT";
+  case ESP_RST_SDIO: return "SDIO";
+  default: return "UNKNOWN";
+  }
+}
+
+// Flow 15 bước 5a — không để Arduino core tự đánh dấu bản vừa OTA là hợp lệ lúc boot:
+// MQTTManager chỉ xác nhận sau lần kết nối MQTT đầu tiên, crash/reset trước đó thì
+// bootloader tự quay về bản cũ (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE của core).
+extern "C" bool verifyRollbackLater() { return true; }
 
 // Gửi cảnh báo theo CẠNH LÊN: 1 lần khi sự cố bắt đầu, không lặp lại mỗi chu kỳ
 // PID (10s) chừng nào sự cố còn đó — trước đây 1 cảm biến hỏng sinh ~288 cảnh
@@ -118,6 +141,7 @@ void setup() {
 
   // ── THREAT-FR-012: Check for unexpected reset ────────────────────────────
   esp_reset_reason_t reason = esp_reset_reason();
+  bootResetReason = resetReasonName(reason);
   if (reason == ESP_RST_PANIC || reason == ESP_RST_INT_WDT ||
       reason == ESP_RST_TASK_WDT || reason == ESP_RST_BROWNOUT) {
     wasUnexpectedReset = true;
@@ -199,7 +223,8 @@ void setup() {
   xTaskCreatePinnedToCore(sensorTask, "SensorTask", 4096, NULL, 2,
                           &sensorTaskHandle, 1);
   xTaskCreatePinnedToCore(pidTask, "PIDTask", 4096, NULL, 3, &pidTaskHandle, 1);
-  xTaskCreatePinnedToCore(mqttTask, "MQTTTask", 8192, NULL, 1, &mqttTaskHandle,
+  // 12 KB: lệnh OTA bắt tay TLS ngay trong mqttTask (RemoteOta), 8 KB cũ không đủ chỗ
+  xTaskCreatePinnedToCore(mqttTask, "MQTTTask", 12288, NULL, 1, &mqttTaskHandle,
                           0);
 
   Serial.println("[BOOT] ✓ All FreeRTOS tasks started\n");

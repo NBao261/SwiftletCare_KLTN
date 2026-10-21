@@ -2,7 +2,7 @@
 
 Rules and architecture for `firmware/` (ESP32, PlatformIO + Arduino framework, FreeRTOS). This file wins over the root `CLAUDE.md` for firmware code; `/review-pr` judges firmware changes by it together with `firmware/README.md`. Rule tags: **[Bắt buộc]** = blocking, **[Nên]** = advisory.
 
-Firmware **1.3.0** (`FIRMWARE_VERSION` in `src/config/Config.h`) follows the SRS v2.0.0 scope: the fan depends on temperature + humidity only, no heating relay, PUMP_DRY stops misting, safe state on sensor loss, `NOISE_ANOMALY` instead of `BIRD_PANIC`, detection parameters tunable over MQTT. It is **built and host-tested only — not yet flashed and exercised on a real board** (see the README for the on-device checks still owed).
+Firmware **1.4.0** (`FIRMWARE_VERSION` in `src/config/Config.h`) follows the SRS v2.0.0 scope: the fan depends on temperature + humidity only, no heating relay, PUMP_DRY stops misting, safe state on sensor loss, `NOISE_ANOMALY` instead of `BIRD_PANIC`, detection parameters tunable over MQTT, and (1.4.0) remote `RESTART`/`OTA` with rollback plus reset reason and IP in the heartbeat. It is **built and host-tested only — not yet flashed and exercised on a real board** (see the README for the on-device checks still owed).
 
 ## Commands (PlatformIO, not npm)
 
@@ -10,11 +10,11 @@ Firmware **1.3.0** (`FIRMWARE_VERSION` in `src/config/Config.h`) follows the SRS
 pio run -e esp32dev                    # build only, no board needed
 pio run -e esp32dev --target upload    # flash over USB (only when firmware code changes)
 pio device monitor -b 115200           # serial log
-pio test -e native                     # host-side unit tests: test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry
+pio test -e native                     # host-side unit tests: test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry, test_remote_command
 pio run -e modbus_scan                 # standalone RS485 slave-ID/baudrate scanner (test_noise_rs485.cpp only)
 ```
 
-`pio test -e native` builds only the Arduino-free units (`pid/FuzzyControl`, `pid/PumpDryMonitor`, `sensors/SignalFilter`, `sensors/NoiseAnomalyDetector`) and needs g++ on PATH (Windows: MinGW, e.g. winget WinLibs). CI (`.github/workflows/ci.yml`, job Firmware) runs it on every PR that touches `firmware/`. `platformio.ini` envs: `esp32dev` (default, full firmware), `modbus_scan`, `native`.
+`pio test -e native` builds only the Arduino-free units (`pid/FuzzyControl`, `pid/PumpDryMonitor`, `sensors/SignalFilter`, `sensors/NoiseAnomalyDetector`, `ota/RemoteCommand`) and needs g++ on PATH (Windows: MinGW, e.g. winget WinLibs). CI (`.github/workflows/ci.yml`, job Firmware) runs it on every PR that touches `firmware/`. `platformio.ini` envs: `esp32dev` (default, full firmware), `modbus_scan`, `native`.
 
 Changing WiFi/broker network does **not** need reflashing: the device re-discovers the broker via mDNS (`resolveBrokerViaMdns()` in `mqtt/MQTTManager.cpp`), then falls back to captive-portal entry (`wifi/WiFiProvisioner.h`), then to the compiled `Secrets.h` default.
 
@@ -29,6 +29,8 @@ pid/      PIDController — 3 relays (misting/speaker/ventilation; IN4 is a spar
           PumpDryMonitor (PUMP_DRY → stop misting until the spray session ends)
 audio/    AudioManager — DFPlayer Mini lullaby playback on schedule
 mqtt/     publish telemetry/heartbeat/relay-status, subscribe to command topics
+ota/      RemoteCommand (plain C++: reads RESTART/OTA out of config/update, SHA-256 compare, rollback decision)
+          · RemoteOta (HTTPS download into the spare OTA partition, SHA-256 checked before it may boot)
 storage/  NVS (config) + SPIFFS (offline buffering)
 wifi/     WiFiProvisioner — captive portal
 main.cpp  SensorTask / PIDTask / MQTTTask
@@ -44,7 +46,7 @@ main.cpp  SensorTask / PIDTask / MQTTTask
 
 **Detection parameters (EXPERT-FR-008).** `noise_margin_db`, `noise_min_sec`, `pump_dry_on_sec`, `pump_dry_min_rise_pct`, `speaker_drop_pct` arrive over `config/update`, are clamped and stored in NVS like the fuzzy coefficients.
 
-**MQTT.** Topics `swiftletcare/{farmId}/{houseId}/{zoneId}/...` use real MongoDB ObjectIds. Command topics are per **zone** but a zone can hold several ESP32s, so `mqttCallback` drops a command whose `deviceId` names another device and applies one without `deviceId` (zone-wide thresholds). Firmware older than this filter applies everything. Remote `RESTART`/`OTA` commands in `config/update` are **not handled yet** (the backend returns 501 unless `FIRMWARE_COMMAND_SUPPORT=true`); OTA today is ElegantOTA at `http://<device-ip>/update` on the local network.
+**MQTT.** Topics `swiftletcare/{farmId}/{houseId}/{zoneId}/...` use real MongoDB ObjectIds. Command topics are per **zone** but a zone can hold several ESP32s, so `mqttCallback` drops a command whose `deviceId` names another device and applies one without `deviceId` (zone-wide thresholds). Firmware older than this filter applies everything. Remote commands ride on `config/update` with a `command` field (`onConfigUpdate`): `RESTART` restarts; `OTA` downloads `ota.url` (HTTPS only) and boots it only when every byte arrived and the SHA-256 matches `ota.sha256` — otherwise the old firmware keeps running. **Rollback (Flow 15 step 5a):** the core's bootloader has app rollback enabled and `verifyRollbackLater()` returns true, so a freshly flashed image stays *pending* until the first MQTT connection marks it valid; a crash or reset before that, or `OTA_VERIFY_TIMEOUT_MS` (10 min) without connecting, boots the previous image. This also applies to images uploaded through ElegantOTA (`http://<device-ip>/update`, still the way to reach 1.4.0 the first time): with no reachable broker they roll back after 10 minutes. The backend sends RESTART/OTA only to devices reporting 1.4.0 or later.
 
 ## Rules
 
