@@ -49,8 +49,8 @@ export default function TechnicianDevicesPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState<DeviceSortKey>("last_heartbeat");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
-  // BE trả 501 khi firmware chưa hỗ trợ RESTART → khoá nút thay vì để kỹ thuật viên thử lại
-  const [rebootUnsupported, setRebootUnsupported] = useState(false);
+  // BE trả 501 khi firmware của thiết bị đó chưa hỗ trợ RESTART (trước 1.4.0) → khoá nút của riêng thiết bị đó
+  const [rebootUnsupportedIds, setRebootUnsupportedIds] = useState<Set<string>>(new Set());
   // POST /devices/sensor-nodes/:id/commands chỉ cho TECHNICIAN/ADMIN (TICKET-FR-008)
   const sendCommand = useSendNodeCommand();
   const [rebootNodeId, setRebootNodeId] = useState<string | null>(null);
@@ -165,6 +165,7 @@ export default function TechnicianDevicesPage() {
   function handleReboot() {
     if (!rebootNode) return;
     const deviceLabel = rebootNode.device_id;
+    const nodeId = rebootNode._id;
     sendCommand.mutate(
       { nodeId: rebootNode._id, input: { command: "RESTART" } },
       {
@@ -174,7 +175,7 @@ export default function TechnicianDevicesPage() {
         },
         onError: (err) => {
           if ((err as { response?: { status?: number } })?.response?.status === 501) {
-            setRebootUnsupported(true);
+            setRebootUnsupportedIds(prev => new Set(prev).add(nodeId));
             push("Firmware chưa hỗ trợ lệnh khởi động lại từ xa (501)", "error");
           } else {
             push(getApiErrorMessage(err, "Khởi động lại thất bại"), "error");
@@ -260,7 +261,7 @@ export default function TechnicianDevicesPage() {
                 onOpenReplace={() => setReplaceNodeId(node._id)}
                 onOpenDecommission={() => setDecommissionNodeId(node._id)}
                 canOnboard={canOnboard}
-                rebootUnsupported={rebootUnsupported}
+                rebootUnsupported={rebootUnsupportedIds.has(node._id)}
                 onReboot={canOnboard ? () => setRebootNodeId(node._id) : undefined}
               />
             ))}

@@ -113,7 +113,8 @@ export interface SensorNode {
 export interface CameraNode {
   _id: string
   device_id: string
-  zone_id: string
+  /** Camera đếm chim ở cửa ra vào của cả nhà yến — gắn House, không gắn Zone (backend SRS v2.1.8) */
+  house_id: string
   rtsp_url?: string
   status: DeviceStatus
   last_heartbeat?: string
@@ -205,11 +206,14 @@ export interface WsAlertNew {
   snapshotUrl?: string
 }
 
+/** Số của cả nhà yến cho phiên vừa có tin, room house:<houseId> (JOIN_HOUSE) — cùng con số với GET /analytics/bird-count/current (backend SRS v2.1.8) */
 export interface WsBirdCountUpdate {
-  zoneId: string
+  houseId: string
+  sessionDate: string
   entryCount: number
   exitCount: number
-  returnRate: number
+  netCount: number
+  returnRate: number | null
   sessionType: SessionType
   timestamp: string
 }

@@ -4,6 +4,7 @@
 import mongoose from 'mongoose'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { Telemetry } from '@/models/telemetry.model'
+import { vnDate } from '@/services/birdCount.service'
 import { createHarvest } from '@/services/harvest.service'
 import { seedOwnerFarm as seed, useTestDb } from '../helpers/ownerFarm'
 
@@ -36,9 +37,16 @@ describe('ảnh chụp của mẻ thu hoạch (MARKET-FR-002/003)', () => {
       sample(zone._id, node._id, 6.5 * DAY, 28, 80), sample(zone._id, node._id, 3 * DAY, 30, 84), sample(zone._id, node._id, 60_000, 29, 82),
       sample(other.zone._id, other.node._id, DAY, 40, 10), // Zone khác — không được lẫn vào
     ])
+    const camera = new mongoose.Types.ObjectId()
+    const session = (daysAgo: number, session_type: string, entry_count: number, exit_count: number) => ({
+      camera_node_id: camera, house_id: zone.house_id, timestamp: new Date(now - daysAgo * DAY),
+      session_date: vnDate(new Date(now - daysAgo * DAY)), session_type, entry_count, exit_count,
+    })
     await BirdCountRecord.create([
-      { camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: new Date(now - 2 * DAY), session_type: 'EVENING_ENTRY', entry_count: 120, return_rate: 90 },
-      { camera_node_id: new mongoose.Types.ObjectId(), zone_id: zone._id, timestamp: new Date(now - DAY), session_type: 'EVENING_ENTRY', entry_count: 100, return_rate: 80 },
+      // 2 ngày trước: ròng ra 100, ròng về 95 − 5 = 90 → 90%
+      session(2, 'MORNING_EXIT', 0, 100), session(2, 'EVENING_ENTRY', 95, 5),
+      // hôm qua: ròng ra 125 − 25 = 100, ròng về 85 − 5 = 80 → 80%
+      session(1, 'MORNING_EXIT', 25, 125), session(1, 'EVENING_ENTRY', 85, 5),
     ])
 
     const batch = await createHarvest(user, {
@@ -46,6 +54,7 @@ describe('ảnh chụp của mẻ thu hoạch (MARKET-FR-002/003)', () => {
     })
 
     expect(batch.toObject().env_snapshot).toMatchObject({ avg_temperature: 29, avg_humidity: 82, avg_nh3_ppm: 6, insufficient_data: false })
-    expect(batch.toObject().flock_snapshot).toMatchObject({ avg_return_rate_30d: 85, estimated_population: 120 })
+    // Ước tính đàn = số ròng về buổi chiều lớn nhất (90), không phải số thô lớn nhất (95)
+    expect(batch.toObject().flock_snapshot).toMatchObject({ avg_return_rate_30d: 85, estimated_population: 90 })
   })
 })

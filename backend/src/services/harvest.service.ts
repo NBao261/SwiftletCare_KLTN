@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 import { Types } from 'mongoose'
 import { HarvestBatch, IHarvestBatch } from '@/models/harvestBatch.model'
 import { Telemetry } from '@/models/telemetry.model'
-import { BirdCountRecord } from '@/models/birdCountRecord.model'
+import { averageReturnRate, houseDailyCounts, vnDate } from '@/services/birdCount.service'
 import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, NestType } from '@/types'
@@ -56,17 +56,19 @@ async function buildEnvSnapshot(zoneId: string, harvestDate: Date) {
   }
 }
 
-/** MARKET-FR-003 — return rate trung bình 30 ngày (rỗng cho tới khi module VISION có dữ liệu thật) */
-async function buildFlockSnapshot(zoneId: string, harvestDate: Date) {
+/**
+ * MARKET-FR-003 — đàn chim của nhà yến chứa Zone thu hoạch, 30 ngày trước mẻ (rỗng cho tới khi module
+ * VISION có dữ liệu thật): tỷ lệ chim về trung bình theo ngày, và ước tính đàn = số ròng về buổi chiều
+ * lớn nhất (số chim thật sự vào nhà ngủ, cộng mọi camera) — cùng nguồn với /analytics/bird-count/*.
+ */
+async function buildFlockSnapshot(houseId: string, harvestDate: Date) {
   const from = new Date(harvestDate.getTime() - FLOCK_SNAPSHOT_DAYS * 86400_000)
-  const [agg] = await BirdCountRecord.aggregate([
-    { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from, $lte: harvestDate } } },
-    { $group: { _id: null, avg_return_rate_30d: { $avg: '$return_rate' }, maxEntry: { $max: '$entry_count' } } },
-  ])
-  if (!agg) return {}
+  const days = await houseDailyCounts(houseId, { from: vnDate(from), to: vnDate(harvestDate) })
+  if (days.length === 0) return {}
+  const evenings = days.filter(d => d.has_evening)
   return {
-    avg_return_rate_30d: round1(agg.avg_return_rate_30d),
-    estimated_population: agg.maxEntry ?? undefined,
+    avg_return_rate_30d: round1(averageReturnRate(days)),
+    estimated_population: evenings.length ? Math.max(...evenings.map(d => d.net_entry)) : undefined,
   }
 }
 
@@ -88,7 +90,7 @@ export async function createHarvest(user: CurrentUser, input: CreateHarvestInput
   const harvestDate = new Date(input.harvest_date)
   const [envSnapshot, flockSnapshot] = await Promise.all([
     buildEnvSnapshot(input.zone_id, harvestDate),
-    buildFlockSnapshot(input.zone_id, harvestDate),
+    buildFlockSnapshot(String(house._id), harvestDate),
   ])
 
   return HarvestBatch.create({

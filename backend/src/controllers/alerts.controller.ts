@@ -8,6 +8,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit, unreadCount } = await alertService.listAlerts(req.user, {
     farmId:   req.query.farmId as string | undefined,
     zoneId:   req.query.zoneId as string | undefined,
+    houseId:  req.query.houseId as string | undefined,
     status:   req.query.status as string | undefined,
     severity: req.query.severity as string | undefined,
     type:     req.query.type as string | undefined,

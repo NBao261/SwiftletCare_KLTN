@@ -1,15 +1,11 @@
 ﻿import type { BirdCountPayload } from '@/types'
+import { ingestBirdCount } from '@/services/birdCount.service'
 import logger from '@/utils/logger.util'
 
-/**
- * birdCountHandler – processes MQTT messages and persists to MongoDB
- * TODO: Implement full logic in TASK-M3 sprint
- */
-export async function handleBirdCount(topicParts: string[], message: Record<string, unknown>): Promise<void> {
+/** VISION-FR-006/017 — `vision/bird-count` của nút AI (tin của phiên và tin BUCKET 5 phút) */
+export async function handleBirdCount(_topicParts: string[], message: Record<string, unknown>): Promise<void> {
   try {
-    const payload = message as unknown as BirdCountPayload
-    // TODO: validate, upsert device, save to DB, emit Socket.io event
-    logger.debug('birdCountHandler received', { topicParts, payload })
+    await ingestBirdCount(message as unknown as BirdCountPayload)
   } catch (err) {
     logger.error('birdCountHandler error', { err })
   }

@@ -6,11 +6,15 @@
 #include "MQTTManager.h"
 #include "audio/AudioManager.h"
 #include "config/Config.h"
+#include "ota/RemoteCommand.h"
+#include "ota/RemoteOta.h"
 #include "storage/StorageManager.h"
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <esp_ota_ops.h>
+#include <esp_timer.h>
 
 // Dev dùng cổng 1883 non-TLS (xem MQTT_PORT ở Config.h) — WiFiClient thường,
 // không cần WiFiClientSecure/setInsecure() nữa.
@@ -39,6 +43,11 @@ static volatile int mqttFailCount = 0;
 // 1s/lần) ≈ 30 giây — đủ lâu để không trigger nhầm lúc broker container mới
 // khởi động chưa kịp lên, nhưng không quá lâu để người dùng phải chờ.
 static const int MQTT_PROVISION_TRIGGER_FAILURES = 30;
+
+// Flow 15 bước 5a — bản vừa OTA chờ xác nhận (main.cpp verifyRollbackLater()): kết nối
+// được MQTT lần đầu mới đánh dấu hợp lệ; chỉ đọc/ghi trong mqttTask.
+static bool imagePendingVerify = false;
+static bool everConnected = false;
 
 // ── mDNS broker discovery ────────────────────────────────────────────────────
 // "swiftletcare-broker.local" (chạy `npm run mdns` trên máy host docker-compose,
@@ -100,6 +109,8 @@ extern TaskHandle_t pidTaskHandle;
 // compiler guard" lên trên 1 gap đồng bộ đã tồn tại. Tính sẵn 1 lần ở
 // setup() đơn giản hơn, chứng minh đúng dễ hơn.
 extern String mqttTopicBase; // định nghĩa + gán 1 lần trong main.cpp setup()
+// FARM-FR-006 — lý do lần khởi động gần nhất, gán 1 lần trong main.cpp setup()
+extern const char *bootResetReason;
 static const String &topicBase() { return mqttTopicBase; }
 
 static void mqttCallback(char *topic, byte *payload, unsigned int length) {
@@ -141,6 +152,11 @@ namespace MQTTManager {
 void begin() {
   mqtt.setClient(wifiClient);
 
+  esp_ota_img_states_t imageState;
+  imagePendingVerify = esp_ota_get_state_partition(esp_ota_get_running_partition(), &imageState) == ESP_OK &&
+                       imageState == ESP_OTA_IMG_PENDING_VERIFY;
+  if (imagePendingVerify) Serial.println("[OTA] Bản mới đang chờ xác nhận — cần kết nối MQTT để giữ lại");
+
 #if MQTT_PORT != 8883
   Serial.println("[MQTT] CANH BAO: dang dung cong " + String(MQTT_PORT) +
                  " (cleartext, khong TLS) — CHI danh cho dev. KHONG deploy len "
@@ -181,6 +197,12 @@ void loop() {
       Serial.println("[MQTT] Connected");
       mqttFailCount = 0;
       justConnected = true;
+      everConnected = true;
+      if (imagePendingVerify) {
+        esp_ota_mark_app_valid_cancel_rollback();
+        imagePendingVerify = false;
+        Serial.println("[OTA] Đã xác nhận firmware " FIRMWARE_VERSION);
+      }
       mqtt.subscribe((topicBase() + "/relay/command").c_str(), MQTT_QOS_COMMAND);
       mqtt.subscribe((topicBase() + "/config/update").c_str(), MQTT_QOS_COMMAND);
       mqtt.subscribe((topicBase() + "/config/reassign").c_str(), MQTT_QOS_COMMAND);
@@ -189,6 +211,10 @@ void loop() {
       mqttFailCount++;
       Serial.println("[MQTT] Connection failed, rc=" + String(mqtt.state()));
     }
+  }
+  if (otaShouldRollback(imagePendingVerify, everConnected, millis(), OTA_VERIFY_TIMEOUT_MS)) {
+    Serial.println("[OTA] Bản mới không kết nối được MQTT — quay về firmware cũ");
+    esp_ota_mark_app_invalid_rollback_and_reboot();
   }
   mqtt.loop();
 
@@ -228,7 +254,9 @@ bool publishHeartbeat() {
   doc["firmwareVersion"] = FIRMWARE_VERSION;
   doc["rssi"] = WiFi.RSSI();
   doc["freeHeap"] = ESP.getFreeHeap();
-  doc["uptime"] = millis();
+  doc["uptime"] = esp_timer_get_time() / 1000; // ms, 64 bit — millis() tràn sau 49 ngày
+  doc["resetReason"] = bootResetReason;
+  doc["ip"] = WiFi.localIP().toString();
   doc["timestamp"] = millis();
   if (justConnected) doc["justConnected"] = true;
 
@@ -333,9 +361,29 @@ void onAudioCommand(const char *payload) {
   if (pidTaskHandle) xTaskNotifyGive(pidTaskHandle);
 }
 
+// TICKET-FR-008 — RESTART/OTA đi chung topic với gói cấu hình, phân biệt bằng `command`
 void onConfigUpdate(const char *payload) {
   Serial.println("[MQTT] Config update: " + String(payload));
-  Config::update(payload);
+  RemoteCommand cmd = parseRemoteCommand(payload, FIRMWARE_VERSION);
+  switch (cmd.type) {
+  case RemoteCommand::NONE:
+    Config::update(payload);
+    return;
+  case RemoteCommand::INVALID:
+    Serial.println("[MQTT] Bỏ lệnh từ xa: " + String(cmd.error));
+    return;
+  case RemoteCommand::RESTART:
+    Serial.println("[MQTT] Lệnh RESTART — khởi động lại...");
+    break;
+  case RemoteCommand::OTA:
+    Serial.println("[OTA] Tải " + String(cmd.version) + " từ " + cmd.url);
+    // Thất bại thì giữ bản cũ; backend biết qua heartbeat vẫn báo bản cũ (markOtaTimeouts)
+    if (!RemoteOta::download(cmd.url, cmd.sha256)) return;
+    Serial.println("[OTA] Đã ghi " + String(cmd.version) + " — khởi động lại vào bản mới");
+    break;
+  }
+  delay(1500); // để log kịp flush trước khi restart
+  ESP.restart();
 }
 
 // Flow 21 Nhánh A (FARM-FR-007b): Technician dời thiết bị sang Zone/Farm khác

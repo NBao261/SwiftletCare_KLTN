@@ -1,18 +1,29 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
-import type { DetectionTuning, FuzzyTuning, Thresholds, Role } from '@/types'
-import { DEFAULT_DETECTION_TUNING } from '@/utils/detectionTuning.util'
+import type { BirdCountTuning, DetectionTuning, FuzzyTuning, Thresholds, Role } from '@/types'
+import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING } from '@/utils/detectionTuning.util'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
  */
+export interface IBirdCountTuningHistoryEntry {
+  changed_by: Types.ObjectId
+  changed_by_role?: Role
+  changed_at: Date
+  old_values: Partial<BirdCountTuning>
+  new_values: Partial<BirdCountTuning>
+}
+
 export interface IHouse extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   name: string
   floors: number
   description?: string
+  /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
+  bird_count_tuning: BirdCountTuning
+  bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
 }
 
 export interface IThresholdHistoryEntry {
@@ -64,6 +75,16 @@ const houseSchema = new Schema<IHouse>(
     name:        { type: String, required: true, trim: true },
     floors:      { type: Number, default: 1 },
     description: { type: String },
+    bird_count_tuning: {
+      return_rate_drop_pct: { type: Number, default: DEFAULT_BIRD_COUNT_TUNING.return_rate_drop_pct },
+    },
+    bird_count_tuning_history: [{
+      changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
+      changed_at: { type: Date },
+      old_values: { type: Schema.Types.Mixed },
+      new_values: { type: Schema.Types.Mixed },
+    }],
   },
   { timestamps: { createdAt: 'created_at' } }
 )
@@ -111,7 +132,6 @@ const zoneSchema = new Schema<IZone>(
       pump_dry_on_sec:       { type: Number, default: DEFAULT_DETECTION_TUNING.pump_dry_on_sec },
       pump_dry_min_rise_pct: { type: Number, default: DEFAULT_DETECTION_TUNING.pump_dry_min_rise_pct },
       speaker_drop_pct:      { type: Number, default: DEFAULT_DETECTION_TUNING.speaker_drop_pct },
-      return_rate_drop_pct:  { type: Number, default: DEFAULT_DETECTION_TUNING.return_rate_drop_pct },
     },
     detection_tuning_history: [{
       changed_by: { type: Schema.Types.ObjectId, ref: 'User' },

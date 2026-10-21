@@ -6,6 +6,8 @@ export interface IAlert extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   zone_id?: Types.ObjectId
+  /** Cảnh báo của cả nhà yến (camera đếm chim: EDGE_AI_DEGRADED, LOW_RETURN_RATE — SRS v2.1.8), không gắn Zone */
+  house_id?: Types.ObjectId
   node_id?: Types.ObjectId
   type: AlertType
   severity: AlertSeverity
@@ -32,6 +34,7 @@ const alertSchema = new Schema<IAlert>(
   {
     farm_id:  { type: Schema.Types.ObjectId, ref: 'Farm', required: true },
     zone_id:  { type: Schema.Types.ObjectId, ref: 'Zone' },
+    house_id: { type: Schema.Types.ObjectId, ref: 'House' },
     node_id:  { type: Schema.Types.ObjectId },
     type: {
       type: String,
@@ -70,6 +73,8 @@ const alertSchema = new Schema<IAlert>(
 
 // Tìm alert đang mở của cùng 1 sự cố (ALERT-FR-008)
 alertSchema.index({ farm_id: 1, zone_id: 1, node_id: 1, type: 1, status: 1 })
+// Cảnh báo của cả nhà (camera đếm chim) — lọc GET /alerts?houseId= và dedup theo House
+alertSchema.index({ house_id: 1, type: 1, status: 1 }, { partialFilterExpression: { house_id: { $exists: true } } })
 // Alert đã đóng tự xoá sau 180 ngày; alert đang mở không có resolved_at nên không bao giờ hết hạn
 alertSchema.index({ resolved_at: 1 }, { expireAfterSeconds: 180 * 24 * 60 * 60 })
 

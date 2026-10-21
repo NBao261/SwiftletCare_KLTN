@@ -18,6 +18,8 @@ export interface SensorNode {
   _id: string; device_id: string; zone_id: string
   firmware_version: string; last_heartbeat?: string
   status: DeviceStatus; rssi?: number; control_mode: ControlMode
+  /** FARM-FR-006 — chẩn đoán từ heartbeat; reset_reason, ip chỉ có từ firmware 1.4.0 */
+  booted_at?: string; free_heap?: number; reset_reason?: string; ip?: string
   relay_states: RelayStates
   override_expiry?: string
   speaker_schedule: { enabled: boolean; windows: Array<{ start: string; end: string }> }

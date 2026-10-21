@@ -15,6 +15,7 @@ router.use(authenticate)
 router.get('/',
   query('farmId').optional().isString().isMongoId(),
   query('zoneId').optional().isString().isMongoId(),
+  query('houseId').optional().isString().isMongoId(),
   query('status').optional().isString().isIn(['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED']),
   query('severity').optional().isString().isIn(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
   query('type').optional().isString().isIn(ALERT_TYPES),

@@ -47,8 +47,17 @@ info:
       `PUT /farms/zones/{zoneId}/detection-tuning`,
       `GET /devices/sensor-nodes/{id}/relay-overrides`, `GET /analytics/autonomy`,
       `/health-reports`, `/auth/telegram/link`.
-    - Chưa có trong file này (thuộc đợt đếm chim): `GET /analytics/bird-count/buckets`,
-      stream token của camera.
+    - Đếm chim phía backend: `GET /analytics/bird-count/buckets` (số đếm 5 phút); nút AI
+      gửi heartbeat như ESP32, `vision/alert` nhận `EDGE_AI_DEGRADED`; danh sách camera
+      không còn trả `rtsp_url`.
+    - Hộp thông báo trong ứng dụng: `/notifications` (+ sự kiện Socket.io
+      `NOTIFICATION_NEW` tới chính người nhận).
+    - Live stream: `GET /devices/camera-nodes/{id}/stream-token`, `POST /internal/stream-auth` (MediaMTX).
+    - SRS v2.1.8 — camera đếm chim gắn **nhà yến (House)**, không gắn Zone: đăng ký bằng `house_id`,
+      `/analytics/bird-count/*?houseId=` (`zoneId` cũ vẫn nhận, quy ra House chứa Zone), mới
+      `GET /analytics/bird-count/current`, `PUT /farms/houses/{houseId}/bird-count-tuning`,
+      `GET /alerts?houseId=`; Socket.io `JOIN_HOUSE` → room `house:<id>` nhận `BIRD_COUNT_UPDATE`,
+      trạng thái camera, cảnh báo của cả nhà. MQTT của nút AI: `swiftletcare/{farm}/{house}/heartbeat|vision/bird-count|vision/alert`.
 
 servers:
   - url: http://localhost:3000
@@ -64,7 +73,9 @@ tags:
   - name: Farms
     description: FARM-FR-001..002/007, AUTH-FR-005/010 (farm/house/zone/member/invitation)
   - name: Devices
-    description: FARM-FR-003..007, ENV-FR-006/015..018 (sensor/camera node, relay control)
+    description: FARM-FR-003..007, ENV-FR-006/015..018, VISION-FR-013 (sensor/camera node, relay control, token xem live stream)
+  - name: Internal
+    description: Dịch vụ nội bộ gọi backend (MediaMTX hỏi quyền stream) — không mở ra Internet
   - name: Telemetry
     description: ENV-FR-001..005
   - name: Alerts
@@ -75,6 +86,8 @@ tags:
     description: MARKET-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0)
   - name: HealthReports
     description: EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert)
+  - name: Notifications
+    description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
   - name: Tickets
     description: TICKET-FR-001..004b/006/007/009..012 (tạo/định tuyến/SLA/SAT checklist/KPI)
 
@@ -1820,17 +1833,45 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
 
+  /farms/houses/{houseId}/bird-count-tuning:
+    put:
+      tags: [Farms]
+      summary: "Chỉnh mức giảm tỷ lệ chim về của nhà yến (EXPERT-FR-008, SRS v2.1.8) — DOMAIN_EXPERT"
+      description: |
+        Chim ra vào ở cửa của cả nhà yến nên số đếm, tỷ lệ chim về và cảnh báo `LOW_RETURN_RATE` tính theo
+        House; mức giảm cho phép đặt ở đây (mặc định 20%, khoảng 5–50%). Lưu `bird_count_tuning_history`,
+        ghi audit `BIRD_COUNT_TUNING_UPDATED`. Backend dùng, không gửi xuống thiết bị.
+      parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BirdCountTuning" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/House" }
+        "400": { description: "Ngoài khoảng 5–50 / không phải số / body không có tham số nào" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /farms/zones/{zoneId}/detection-tuning:
     put:
       tags: [Farms]
       summary: "Chỉnh tham số phát hiện của Zone (EXPERT-FR-008) — DOMAIN_EXPERT"
       description: |
-        Gửi 1 hoặc nhiều trong 6 tham số; server gộp với giá trị hiện tại, kiểm tra khoảng
+        Gửi 1 hoặc nhiều trong 5 tham số; server gộp với giá trị hiện tại, kiểm tra khoảng
         (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `detection_tuning_history`
         (người sửa, role, thời điểm, cũ/mới), ghi audit `DETECTION_TUNING_UPDATED` rồi publish
         MQTT `config/update` với 5 tham số chạy trên ESP32 (firmware ≥ 1.3.0 kẹp lại và lưu
-        NVS). `return_rate_drop_pct` do backend dùng, không gửi xuống thiết bị. "Về mặc định"
-        = gửi lại bộ giá trị mặc định. Farm Owner xem qua `GET /farms/zones/{zoneId}`.
+        NVS). "Về mặc định" = gửi lại bộ giá trị mặc định. Farm Owner xem qua `GET /farms/zones/{zoneId}`.
+        SRS v2.1.8: mức giảm tỷ lệ chim về (`return_rate_drop_pct`) chuyển sang House —
+        `PUT /farms/houses/{houseId}/bird-count-tuning`; gửi khoá này ở đây bị bỏ qua như khoá lạ.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -2418,20 +2459,24 @@ paths:
   /devices/camera-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký Raspberry Pi Camera Node — chỉ TECHNICIAN/ADMIN (FARM-FR-004, Flow 1b)"
-      description: "Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho."
+      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — chỉ TECHNICIAN/ADMIN (FARM-FR-004, Flow 1b)"
+      description: |
+        Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho. SRS v2.1.8: camera lắp ở
+        cửa ra vào của cả nhà yến nên gắn House (`house_id`). `zone_id` là cách gửi cũ (trước v2.1.8), được quy
+        ra House chứa Zone; cần một trong hai.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [device_id, zone_id, secret_key]
+              required: [device_id, secret_key]
               properties:
                 {
                   device_id: { type: string, example: cam_001 },
                   secret_key: { type: string, example: DEMO-CAM-0001 },
-                  zone_id: { type: string },
+                  house_id: { type: string },
+                  zone_id: { type: string, deprecated: true, description: "Cách gửi cũ — quy ra House chứa Zone" },
                   rtsp_url: { type: string },
                 }
       responses:
@@ -2464,10 +2509,13 @@ paths:
   /devices/camera-nodes:
     get:
       tags: [Devices]
-      summary: Danh sách Camera Node
+      summary: Danh sách camera đếm chim
+      description: "Camera của 1 nhà yến (`houseId`; `zoneId` cũ được quy ra House chứa Zone), không truyền thì mọi nhà user được xem. Không trả `rtsp_url` (chứa mật khẩu camera — chỉ nút AI cần)."
       parameters:
+        - { name: houseId, in: query, schema: { type: string } }
         - name: zoneId
           in: query
+          deprecated: true
           schema: { type: string }
       responses:
         "200":
@@ -2572,6 +2620,109 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/camera-nodes/{id}/counting-ring:
+    put:
+      tags: [Devices]
+      summary: "Vẽ vòng đếm chim của 1 camera (VISION-FR-018) — DOMAIN_EXPERT của farm chứa camera"
+      description: |
+        Vòng khép kín quanh miệng lỗ ra vào (`docs/bird-counting-plan.md` 3.3 ý 7, 19.8), các đỉnh
+        `[x, y]` theo tỉ lệ khung hình 0–1, theo thứ tự quanh vòng; 3–12 đỉnh (12 là giới hạn kỹ thuật
+        chống nhập nhầm). `into_ring_is_exit`: true khi trong vòng là phía ngoài trời (camera trong nhà).
+        Lưu `counting_ring` + `counting_ring_history` (người sửa, role, giá trị cũ/mới) và audit
+        `COUNTING_RING_UPDATED`, rồi publish MQTT `swiftletcare/{farmId}/{houseId}/config/update`
+        `{ deviceId, counting_ring: { points, into_ring_is_exit } }` cho nút AI; nút AI vừa kết nối lại
+        (heartbeat `justConnected` hoặc từ OFFLINE) được gửi lại. Broker chưa kết nối thì vẫn lưu,
+        `ring_delivered=false`. Đổi vòng thì số đếm trước và sau không so được với nhau. Farm Owner
+        chỉ xem (trong `GET /devices/camera-nodes`).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CountingRing" }
+      responses:
+        "200":
+          description: Đã lưu
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/CameraNode"
+                          - properties:
+                              ring_delivered: { type: boolean, description: "Lệnh đã tới broker; false = nút AI nhận khi kết nối lại" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Camera đã gỡ khỏi hệ thống", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/camera-nodes/{id}/stream-token:
+    get:
+      tags: [Devices]
+      summary: "Token xem live stream của 1 camera (VISION-FR-013) — FARM_OWNER/DOMAIN_EXPERT của farm chứa camera"
+      description: |
+        Video không đi qua backend: trình duyệt mở WebRTC (WHEP) tới MediaMTX ở đường `path`,
+        gửi `token` trong header `Authorization: Bearer <token>` (hoặc `?token=`). MediaMTX hỏi
+        `POST /internal/stream-auth`, token chỉ hợp lệ cho đúng `path` đó và hết hạn sau `expires_in`
+        giây (chỉ cần còn hạn lúc mở kết nối; kết nối lại thì xin token mới). Token này không dùng
+        được làm access token. Technician/Admin không xem live stream (SRS §4.4).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          path: { type: string, example: cam-cam-zone1-01, description: "cam-<device_id>" }
+                          token: { type: string }
+                          expires_in: { type: integer, example: 60 }
+        "400": { description: "device_id của camera không dùng được làm tên stream (ký tự lạ hoặc kết thúc bằng -raw)" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { description: "Máy chủ video chưa được cấu hình (STREAM_TOKEN_SECRET trống)" }
+
+  /internal/stream-auth:
+    post:
+      tags: [Internal]
+      summary: "MediaMTX hỏi quyền đẩy/xem stream (HTTP authentication của MediaMTX) — dịch vụ nội bộ"
+      description: |
+        Không dùng JWT người dùng; reverse proxy chặn `/internal` từ bên ngoài.
+        `publish` và đọc hình gốc `cam-<id>-raw`: chỉ với `password` = STREAM_PUBLISH_SECRET (pipeline).
+        `read` đường `cam-<id>`: token của `GET /devices/camera-nodes/{id}/stream-token`, lấy từ
+        `token` (header Bearer), `query` (`token=`) hoặc `password`. Hành động khác bị từ chối.
+        Trả 401 cả khi client RTSP hỏi lần đầu chưa kèm mật khẩu, để nó gửi lại kèm mật khẩu.
+      security: []
+      parameters:
+        - { name: key, in: query, required: true, schema: { type: string }, description: STREAM_AUTH_KEY }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [publish, read, playback, api, metrics, pprof] }
+                path: { type: string, example: cam-cam-zone1-01 }
+                user: { type: string }
+                password: { type: string }
+                token: { type: string }
+                query: { type: string }
+                protocol: { type: string }
+                ip: { type: string }
+                id: { type: string }
+      responses:
+        "200": { description: Được phép }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /devices/camera-nodes/{id}/restore:
     post:
@@ -2686,9 +2837,11 @@ paths:
           `DEVICE_OTA_SUCCEEDED` (Flow 15 bước 5); quá 30 phút chưa xác nhận thì
           chuyển sang `ota_failed` (thiết bị đã rollback) và báo người gửi
 
-        **Firmware hiện tại chưa xử lý `command`**, nên RESTART/OTA trả **501**
-        cho tới khi bật `FIRMWARE_COMMAND_SUPPORT=true`; PUSH_CONFIG dùng được
-        ngay vì firmware đã hiểu payload ngưỡng. Có `ticket_id` thì hành động được ghi vào note
+        **Firmware xử lý `command` từ bản 1.4.0**: thiết bị đang báo `firmware_version`
+        cũ hơn thì RESTART/OTA trả **501** (lên 1.4.0 lần đầu bằng ElegantOTA trong LAN
+        hoặc USB); PUSH_CONFIG dùng được với mọi bản vì firmware đã hiểu payload ngưỡng.
+        Firmware 1.4.0 tải file, kiểm sha256 rồi mới khởi động vào bản mới; bản mới phải
+        kết nối được MQTT trong 10 phút, nếu không bootloader quay về bản cũ (Flow 15 bước 5a). Có `ticket_id` thì hành động được ghi vào note
         ticket — Technician phải là người đang được gán ticket đó.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
@@ -2705,8 +2858,8 @@ paths:
                   type: object
                   description: "Bắt buộc khi command=OTA"
                   properties:
-                    version: { type: string, pattern: "^\\d+\\.\\d+\\.\\d+$", example: "1.3.0", description: "Không có tiền tố \"v\" — phải khớp đúng FIRMWARE_VERSION thiết bị báo về" }
-                    url: { type: string, example: "https://fw.swiftletcare.vn/esp32-1.3.0.bin" }
+                    version: { type: string, pattern: "^\\d+\\.\\d+\\.\\d+$", example: "1.4.1", description: "Không có tiền tố \"v\" — phải khớp đúng FIRMWARE_VERSION thiết bị báo về" }
+                    url: { type: string, example: "https://fw.swiftletcare.vn/esp32-1.4.1.bin" }
                     sha256: { type: string, example: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
       responses:
         "202":
@@ -2721,7 +2874,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: "Thiết bị PENDING/OFFLINE/ERROR hoặc đã gỡ, ticket đã đóng, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
-        "501": { description: "Firmware chưa xử lý lệnh này (RESTART/OTA khi FIRMWARE_COMMAND_SUPPORT=false)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "501": { description: "RESTART/OTA tới thiết bị chạy firmware trước 1.4.0 (chưa xử lý `command`)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "503": { description: "Backend chưa kết nối MQTT broker — lệnh chưa rời backend, `ota_pending` KHÔNG được ghi", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
 
   /devices/camera-nodes/{id}/decommission:
@@ -2905,6 +3058,7 @@ paths:
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string }, description: "Cảnh báo của cả nhà yến (camera đếm chim)" }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/AlertType" } }
         - name: verdict
           in: query
@@ -3389,10 +3543,13 @@ paths:
       tags: [Analytics]
       summary: "Thống kê đếm chim hàng ngày (VISION-FR-008/010)"
       description: |
-        Trả `records: []` kèm `note` cảnh báo khi chưa có dữ liệu — module
-        VISION (Raspberry Pi + YOLO) chưa lắp phần cứng camera, KHÔNG phải lỗi truy vấn.
+        Mỗi ngày là 1 ngày theo giờ Việt Nam (`session_date` của bản ghi phiên — phiên sáng
+        05:30 VN là 22:30 UTC hôm trước); `from`/`to` đổi sang ngày giờ VN, tính cả hai đầu.
+        Số của cả nhà yến (cộng mọi camera của nhà), xem `BirdCountDay`. Ngày không có tin nào thì không có dòng.
+        Trả `records: []` kèm `note` khi chưa có dữ liệu — không phải lỗi truy vấn.
       parameters:
-        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string }, description: "Nhà yến (SRS v2.1.8 — đếm chim theo House). Cần houseId hoặc zoneId" }
+        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Cách gửi cũ — quy ra House chứa Zone" }
         - { $ref: "#/components/parameters/From" }
         - { $ref: "#/components/parameters/To" }
       responses:
@@ -3407,27 +3564,54 @@ paths:
                       data:
                         type: object
                         properties:
+                          house_id: { type: string }
                           from: { type: string, format: date-time }
                           to: { type: string, format: date-time }
-                          records:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                {
-                                  date: { type: string },
-                                  morning_exit: { type: integer },
-                                  evening_entry: { type: integer },
-                                  return_rate: { type: number, nullable: true },
-                                }
+                          records: { type: array, items: { $ref: "#/components/schemas/BirdCountDay" } }
                           note: { type: string, nullable: true }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /analytics/bird-count/current:
+    get:
+      tags: [Analytics]
+      summary: "Số đếm chim hôm nay của nhà yến khi mở trang (VISION-FR-012)"
+      description: |
+        Hôm nay theo giờ Việt Nam, cả hai phiên, cộng mọi camera của nhà. Frontend gọi khi mở trang, gửi socket
+        `JOIN_HOUSE { houseId }` rồi cập nhật bằng `BIRD_COUNT_UPDATE` (room `house:<houseId>`), sự kiện mang
+        **cùng con số**: `{ houseId, sessionDate, sessionType, entryCount, exitCount, netCount, returnRate (null được), timestamp }`
+        với entry/exit/net là của phiên vừa có tin. Cùng room còn có `DEVICE_STATUS_CHANGE` của camera và `ALERT_NEW`
+        của cảnh báo cả nhà (EDGE_AI_DEGRADED, LOW_RETURN_RATE). Nhà chưa có tin hôm nay → các số 0, `return_rate: null`,
+        `updated_at: null`. Quyền như các API analytics khác (thành viên farm chứa nhà).
+      parameters:
+        - { name: houseId, in: query, schema: { type: string }, description: "Nhà yến (SRS v2.1.8 — đếm chim theo House). Cần houseId hoặc zoneId" }
+        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Cách gửi cũ — quy ra House chứa Zone" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/BirdCountDay"
+                          - properties:
+                              house_id: { type: string }
+                              updated_at: { type: string, format: date-time, nullable: true, description: "Tin mới nhất trong ngày" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /analytics/bird-count/trends:
     get:
       tags: [Analytics]
       summary: "Xu hướng đàn chim + cảnh báo giảm > 20% (VISION-FR-009/011, ANALYTICS-FR-002)"
       parameters:
-        - { name: zoneId, in: query, required: true, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string }, description: "Nhà yến (SRS v2.1.8 — đếm chim theo House). Cần houseId hoặc zoneId" }
+        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Cách gửi cũ — quy ra House chứa Zone" }
         - { name: days, in: query, schema: { type: integer, default: 30 } }
       responses:
         "200":
@@ -3441,18 +3625,53 @@ paths:
                       data:
                         type: object
                         properties:
+                          house_id: { type: string }
                           days: { type: integer }
-                          records: { type: array, items: { type: object } }
+                          records: { type: array, items: { $ref: "#/components/schemas/BirdCountDay" } }
                           avg_return_rate: { type: number, nullable: true }
                           latest_return_rate: { type: number, nullable: true }
                           drop_percent: { type: number, nullable: true }
-                          drop_threshold_pct: { type: number, description: "return_rate_drop_pct của Zone (EXPERT-FR-008), mặc định 20" }
+                          drop_threshold_pct: { type: number, description: "return_rate_drop_pct của nhà yến (EXPERT-FR-008, PUT /farms/houses/{houseId}/bird-count-tuning), mặc định 20" }
                           is_significant_drop: { type: boolean }
+
+  /analytics/bird-count/buckets:
+    get:
+      tags: [Analytics]
+      summary: "Số chim ra/vào theo khoảng 5 phút (VISION-FR-017)"
+      description: |
+        Cộng dồn mọi camera của nhà yến theo `bucket_start`, cả ngoài 2 phiên sáng/chiều. Dùng cho
+        biểu đồ theo giờ và bối cảnh ±30 phút khi Domain Expert kiểm chứng cảnh báo (EXPERT-FR-003).
+        Mặc định 24 giờ gần nhất; khoảng tối đa 7 ngày. Dữ liệu giữ 90 ngày.
+      parameters:
+        - { name: houseId, in: query, schema: { type: string }, description: "Nhà yến (SRS v2.1.8 — đếm chim theo House). Cần houseId hoặc zoneId" }
+        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Cách gửi cũ — quy ra House chứa Zone" }
+        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 24 giờ" }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          from: { type: string, format: date-time }
+                          to: { type: string, format: date-time }
+                          buckets: { type: array, items: { $ref: "#/components/schemas/BirdCountBucket" } }
+        "400": { description: "from không trước to, hoặc khoảng quá 7 ngày" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }   # from/to không đọc được thành ngày, thiếu houseId/zoneId
 
   /analytics/correlation:
     get:
       tags: [Analytics]
-      summary: "Tương quan môi trường vs return rate theo ngày (ANALYTICS-FR-003)"
+      summary: "Tương quan môi trường của Zone vs return rate của nhà yến chứa Zone, theo ngày (ANALYTICS-FR-003)"
       parameters:
         - { name: zoneId, in: query, required: true, schema: { type: string } }
         - { name: days, in: query, schema: { type: integer, default: 30 } }
@@ -3769,6 +3988,74 @@ paths:
                       data: { $ref: "#/components/schemas/ZoneHealthReport" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── NOTIFICATIONS (EXPERT-FR-006/007) ─────────────────────────────────────
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: "Hộp thông báo trong ứng dụng của người gọi — mọi role đã đăng nhập"
+      description: |
+        Mới nhất trước, giữ 90 ngày. Nguồn: mọi thông báo nghiệp vụ (`notifyUser` — báo cáo sức
+        khỏe mới, kết luận của chuyên gia, ticket…) và, cho Domain Expert, cảnh báo suy luận mới
+        chờ kiểm chứng (`NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE` —
+        chỉ trong ứng dụng, không Telegram/push; ALERT-FR-005). Bản realtime: sự kiện Socket.io
+        `NOTIFICATION_NEW` (payload là một `Notification`) tới room của chính người nhận.
+      parameters:
+        - { name: unread, in: query, schema: { type: string, enum: ["true", "false"] }, description: "`true` = chỉ thông báo chưa đọc" }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/Notification" } }
+                      meta:
+                        type: object
+                        properties:
+                          page: { type: integer }
+                          limit: { type: integer }
+                          total: { type: integer }
+                          unreadCount: { type: integer, description: "Số chưa đọc của người gọi (không phụ thuộc bộ lọc `unread`)" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: "Đánh dấu mọi thông báo của người gọi là đã đọc"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: object, properties: { modified: { type: integer } } }
+
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: "Đánh dấu 1 thông báo đã đọc (gọi lại giữ nguyên thời điểm đọc đầu tiên)"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Notification" }
+        "404": { description: "Không có, hoặc là thông báo của người khác" }
+        "422": { $ref: "#/components/responses/ValidationError" }   # id không phải ObjectId
 
   /maintenance-schedules:
     get:
@@ -5065,6 +5352,7 @@ components:
         name: { type: string }
         floors: { type: integer }
         description: { type: string }
+        bird_count_tuning: { $ref: "#/components/schemas/BirdCountTuning" }
         created_at: { type: string, format: date-time }
 
     Thresholds:
@@ -5090,14 +5378,19 @@ components:
 
     DetectionTuning:
       type: object
-      description: "EXPERT-FR-008 — tham số phát hiện theo Zone. Khoảng hợp lệ là giới hạn kỹ thuật, không phải khuyến nghị nuôi yến. 5 tham số đầu: tên field = key MQTT config/update"
+      description: "EXPERT-FR-008 — tham số phát hiện theo Zone, gửi xuống ESP32. Khoảng hợp lệ là giới hạn kỹ thuật, không phải khuyến nghị nuôi yến. Tên field = key MQTT config/update"
       properties:
         noise_margin_db: { type: number, minimum: 5, maximum: 30, example: 15, description: "dB — ồn cao hơn mức nền của giờ đó bao nhiêu thì tính (NOISE_ANOMALY)" }
         noise_min_sec: { type: integer, minimum: 5, maximum: 15, example: 10, description: "giây ồn trong cửa sổ 15 giây (NOISE_ANOMALY)" }
         pump_dry_on_sec: { type: integer, minimum: 120, maximum: 900, example: 300, description: "giây bơm BẬT cộng dồn trước khi xét (PUMP_DRY)" }
         pump_dry_min_rise_pct: { type: number, minimum: 0.5, maximum: 10, example: 2, description: "%RH — độ ẩm phải tăng tối thiểu (PUMP_DRY)" }
         speaker_drop_pct: { type: integer, minimum: 30, maximum: 90, example: 70, description: "% — mức âm giảm so với nền (SPEAKER_FAILURE)" }
-        return_rate_drop_pct: { type: number, minimum: 5, maximum: 50, example: 20, description: "% — tỷ lệ chim về giảm so với trung bình kỳ trước (backend dùng)" }
+
+    BirdCountTuning:
+      type: object
+      description: "EXPERT-FR-008 (SRS v2.1.8) — tham số đếm chim theo nhà yến (camera ở cửa ra vào của cả nhà); backend dùng, không gửi thiết bị"
+      properties:
+        return_rate_drop_pct: { type: number, minimum: 5, maximum: 50, example: 20, description: "% — tỷ lệ chim về giảm so với trung bình kỳ trước thì sinh LOW_RETURN_RATE" }
 
     MetricForecast:
       type: object
@@ -5161,6 +5454,53 @@ components:
         since_service_switches: { type: integer }
         last_ticket_id: { type: string }
 
+    BirdCountBucket:
+      type: object
+      description: "VISION-FR-017 — số chim qua vạch đếm trong 1 khoảng 5 phút, cộng các camera của Zone"
+      properties:
+        bucket_start: { type: string, format: date-time }
+        entry_count: { type: integer }
+        exit_count: { type: integer }
+
+    BirdCountDay:
+      type: object
+      description: |
+        VISION-FR-008/009 — số đếm 1 ngày (giờ Việt Nam) của **cả nhà yến** (SRS v2.1.8: chim ra vào ở cửa của
+        nhà, không chia theo Zone). Nhà có 2 cửa thì cộng số thô mọi camera rồi mới lấy số ròng (chim có thể ra cửa
+        này về cửa kia). Cùng nguồn cho /current, /daily, /trends, /correlation, socket BIRD_COUNT_UPDATE, cảnh báo
+        LOW_RETURN_RATE, báo cáo sức khỏe Zone và ảnh chụp đàn khi thu hoạch (Zone lấy số của nhà chứa nó).
+      properties:
+        date: { type: string, example: "2026-10-20", description: "YYYY-MM-DD giờ Việt Nam" }
+        morning_entry: { type: integer, description: Số thô phiên sáng }
+        morning_exit: { type: integer, description: Số thô phiên sáng }
+        evening_entry: { type: integer, description: Số thô phiên chiều }
+        evening_exit: { type: integer, description: Số thô phiên chiều }
+        net_exit: { type: integer, description: "Ra − vào của phiên sáng, không âm" }
+        net_entry: { type: integer, description: "Vào − ra của phiên chiều, không âm" }
+        return_rate:
+          type: number
+          nullable: true
+          description: "net_entry / net_exit × 100, có thể > 100; null khi thiếu phiên sáng hoặc chiều, hoặc sáng không có chim ra"
+        has_morning: { type: boolean }
+        has_evening: { type: boolean }
+
+    Notification:
+      type: object
+      description: "EXPERT-FR-006/007 — 1 thông báo trong ứng dụng"
+      properties:
+        _id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        ref:
+          type: object
+          nullable: true
+          description: "Đối tượng để client mở tới"
+          properties:
+            kind: { type: string, enum: [alert, health_report] }
+            id: { type: string }
+        read_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
     ZoneHealthReport:
       type: object
       description: "EXPERT-FR-005/006 — số liệu sức khỏe của 1 Zone trong 1 kỳ + kết luận của Domain Expert"
@@ -5181,7 +5521,7 @@ components:
             misting_switches: { type: integer }
             ventilation_switches: { type: integer }
             alerts_by_type: { type: object, additionalProperties: { type: integer }, description: "{ <AlertType>: số cảnh báo phát sinh trong kỳ }" }
-            avg_return_rate: { type: number, nullable: true, description: "null khi chưa có dữ liệu đếm chim" }
+            avg_return_rate: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong kỳ; null khi chưa có dữ liệu đếm chim" }
             nh3_avg: { type: number, nullable: true }
             nh3_max: { type: number, nullable: true }
             co2_avg: { type: number, nullable: true }
@@ -5258,6 +5598,10 @@ components:
             description: "PENDING = Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi heartbeat đầu tiên (Flow 1)",
           }
         rssi: { type: number }
+        booted_at: { type: string, format: date-time, description: "FARM-FR-006 — thời điểm khởi động, tính từ `uptime` của heartbeat" }
+        free_heap: { type: number, description: "FARM-FR-006 — byte RAM còn trống lúc heartbeat gần nhất" }
+        reset_reason: { type: string, example: BROWNOUT, description: "FARM-FR-006 — lý do lần khởi động gần nhất (esp_reset_reason: POWERON, SW, PANIC, INT_WDT, TASK_WDT, WDT, BROWNOUT…), firmware ≥ 1.4.0" }
+        ip: { type: string, description: "FARM-FR-006 — IP trong LAN nhà yến (ElegantOTA tại http://<ip>/update), firmware ≥ 1.4.0" }
         relay_states: { $ref: "#/components/schemas/RelayStates" }
         control_mode: { type: string, enum: [AUTO, MANUAL] }
         override_expiry: { type: string, format: date-time }
@@ -5311,8 +5655,8 @@ components:
       properties:
         _id: { type: string }
         device_id: { type: string }
-        zone_id: { type: string }
-        rtsp_url: { type: string }
+        house_id: { type: string, description: "SRS v2.1.8 — camera ở cửa ra vào của cả nhà yến, không gắn Zone" }
+        rtsp_url: { type: string, description: "Chỉ có trong response đăng ký; `GET /devices/camera-nodes` không trả trường này" }
         status:
           {
             type: string,
@@ -5327,6 +5671,36 @@ components:
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
         decommission_reason: { type: string, nullable: true }
         replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }
+        counting_ring:
+          nullable: true
+          description: "VISION-FR-018 — vòng đếm Domain Expert đã vẽ; không có thì nút AI dùng vòng trong config.yaml"
+          allOf:
+            - $ref: "#/components/schemas/CountingRing"
+            - properties:
+                updated_at: { type: string, format: date-time }
+                updated_by: { type: string }
+        counting_ring_history:
+          type: array
+          items:
+            type: object
+            properties:
+              changed_by: { type: string }
+              changed_by_role: { type: string }
+              changed_at: { type: string, format: date-time }
+              old_value: { $ref: "#/components/schemas/CountingRing" }
+              new_value: { $ref: "#/components/schemas/CountingRing" }
+
+    CountingRing:
+      type: object
+      required: [points, into_ring_is_exit]
+      properties:
+        points:
+          type: array
+          minItems: 3
+          maxItems: 12
+          items: { type: array, minItems: 2, maxItems: 2, items: { type: number, minimum: 0, maximum: 1 } }
+          example: [[0.379, 0.228], [0.527, 0.136], [0.575, 0.277], [0.569, 0.374], [0.427, 0.477], [0.386, 0.334]]
+        into_ring_is_exit: { type: boolean, description: "true = chim đi vào vòng là RA (camera trong nhà nhìn vào lỗ)" }
 
     Telemetry:
       type: object
@@ -5376,6 +5750,7 @@ components:
         _id: { type: string }
         farm_id: { type: string }
         zone_id: { type: string, nullable: true }
+        house_id: { type: string, nullable: true, description: "Cảnh báo của cả nhà yến (camera đếm chim: EDGE_AI_DEGRADED, LOW_RETURN_RATE) — SRS v2.1.8; khi đó không có zone_id" }
         node_id: { type: string, nullable: true }
         type: { $ref: "#/components/schemas/AlertType" }
         severity: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] }
@@ -5601,8 +5976,8 @@ components:
           type: object
           description: "MARKET-FR-003 — return rate trung bình 30 ngày (rỗng cho tới khi module VISION có dữ liệu thật)"
           properties:
-            avg_return_rate_30d: { type: number, nullable: true }
-            estimated_population: { type: integer, nullable: true }
+            avg_return_rate_30d: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong 30 ngày trước mẻ" }
+            estimated_population: { type: integer, nullable: true, description: "Số ròng về buổi chiều lớn nhất của Zone trong 30 ngày (BirdCountDay.net_entry)" }
         status: { $ref: "#/components/schemas/HarvestStatus" }
         is_deleted: { type: boolean }
         created_at: { type: string, format: date-time }

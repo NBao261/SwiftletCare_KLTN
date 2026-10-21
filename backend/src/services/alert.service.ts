@@ -1,9 +1,9 @@
 import { Types } from 'mongoose'
 import { Alert, IAlert } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
-import { Zone } from '@/models/houseZone.model'
-import { SensorNode, IN_SERVICE } from '@/models/device.model'
-import { emitAlertNew } from '@/socket'
+import { House, Zone } from '@/models/houseZone.model'
+import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
+import { emitAlertNew, emitHouseAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
@@ -68,8 +68,14 @@ export const ALERT_TYPES = Object.keys(DEFAULT_SEVERITY) as AlertType[]
  */
 export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
 
-/** Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, mở ticket giả) */
-const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH']
+/**
+ * Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, mở ticket giả).
+ * LOW_RETURN_RATE do job của backend tính từ số đếm (VISION-FR-011), nút AI không tự báo.
+ */
+const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
+
+/** Loại nút AI đếm chim được tự báo qua `vision/alert` (THREAT-FR-010: tốc độ xử lý < 10 FPS) */
+const CAMERA_ALERT_TYPES: AlertType[] = ['EDGE_AI_DEGRADED']
 
 /** Cảnh báo không bao giờ được ở mức tự sinh ticket: mọi loại suy luận + vượt ngưỡng (ALERT-FR-012) */
 const NEVER_ESCALATE = new Set<AlertType>([...INFERRED_ALERT_TYPES, 'THRESHOLD_BREACH'])
@@ -80,6 +86,8 @@ const ALERT_TYPE_ALIAS: Record<string, AlertType> = { BIRD_PANIC: 'NOISE_ANOMALY
 export interface CreateAlertInput {
   farmId: string
   zoneId?: string
+  /** Cảnh báo của cả nhà yến (camera đếm chim) — SRS v2.1.8; không đi kèm zoneId */
+  houseId?: string
   nodeId?: string
   type: AlertType
   severity?: AlertSeverity
@@ -117,6 +125,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
   const open = await Alert.findOne({
     farm_id: input.farmId,
     zone_id: input.zoneId,
+    house_id: input.houseId,
     node_id: input.nodeId,
     type: input.type,
     status: { $in: OPEN_STATUSES },
@@ -137,6 +146,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     last_seen_at: now,
     farm_id:      input.farmId,
     zone_id:      input.zoneId,
+    house_id:     input.houseId,
     node_id:      input.nodeId,
     type:         input.type,
     severity,
@@ -147,19 +157,20 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     status:       'ACTIVE',
   })
 
-  if (input.zoneId) {
-    emitAlertNew(input.zoneId, {
-      alertId:     String(alert._id),
-      severity,
-      type:        input.type,
-      title:       input.title,
-      message:     input.message,
-      snapshotUrl: input.snapshotUrl,
-    })
+  const wsAlert = {
+    alertId:     String(alert._id),
+    severity,
+    type:        input.type,
+    title:       input.title,
+    message:     input.message,
+    snapshotUrl: input.snapshotUrl,
   }
+  if (input.zoneId) emitAlertNew(input.zoneId, wsAlert)
+  if (input.houseId) emitHouseAlertNew(input.houseId, wsAlert)
 
   // Không await: gửi thông báo chậm/lỗi không được chặn luồng ghi cảnh báo
-  void dispatchAlertNotification(alert).catch((err: Error) =>
+  // EXPERT-FR-007 — cảnh báo suy luận còn báo Domain Expert trong ứng dụng để kiểm chứng
+  void dispatchAlertNotification(alert, { awaitsVerdict: INFERRED_ALERT_TYPES.includes(input.type) }).catch((err: Error) =>
     logger.error('Gửi thông báo cảnh báo thất bại', { alertId: String(alert._id), err }),
   )
 
@@ -186,22 +197,35 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     throw BadRequestError(`Loại cảnh báo không hợp lệ: "${type}"`)
   }
 
-  const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE })
-  if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${deviceId}"`)
-  // `name` cho tiêu đề mặc định — firmware không gửi kèm title
-  const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
-  if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
-
-  return createAlert({
-    farmId:      String(zone.farm_id),
-    zoneId:      String(zone._id),
-    nodeId:      String(node._id),
+  const common = {
     type:        type as AlertType,
     severity:    message.severity as AlertSeverity | undefined, // createAlert giới hạn mức cho loại không leo thang
-    title:       (message.title as string | undefined) ?? `${type} tại ${zone.name}`,
     message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
     snapshotUrl: message.snapshotUrl as string | undefined,
     metadata:    { raw: message },
+  }
+
+  const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('zone_id').lean()
+  if (node) {
+    // `name` cho tiêu đề mặc định — firmware không gửi kèm title
+    const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
+    if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
+    return createAlert({
+      ...common, farmId: String(zone.farm_id), zoneId: String(zone._id), nodeId: String(node._id),
+      title: (message.title as string | undefined) ?? `${type} tại ${zone.name}`,
+    })
+  }
+
+  // Nút AI (`vision/alert`) dùng chung handler; nó chỉ được báo các loại của mình, và gắn House (SRS v2.1.8)
+  const camera = CAMERA_ALERT_TYPES.includes(type as AlertType)
+    ? await CameraNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('house_id').lean()
+    : null
+  if (!camera) throw NotFoundError(`Không tìm thấy thiết bị với device_id="${deviceId}" cho loại "${type}"`)
+  const house = await House.findById(camera.house_id).select('farm_id name').lean()
+  if (!house) throw NotFoundError(`Camera "${deviceId}" chưa gắn House hợp lệ`)
+  return createAlert({
+    ...common, farmId: String(house.farm_id), houseId: String(house._id), nodeId: String(camera._id),
+    title: (message.title as string | undefined) ?? `${type} tại ${house.name}`,
   })
 }
 
@@ -276,6 +300,8 @@ export async function raiseThresholdAlert(zoneId: string, nodeId: string, breach
 export interface ListAlertsQuery {
   farmId?: string
   zoneId?: string
+  /** Cảnh báo của cả nhà yến (camera đếm chim) — SRS v2.1.8 */
+  houseId?: string
   status?: string
   severity?: string
   type?: string
@@ -298,6 +324,7 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
     filter.farm_id = query.farmId
   }
   if (query.zoneId) filter.zone_id = query.zoneId
+  if (query.houseId) filter.house_id = query.houseId
   if (query.status) filter.status = query.status
   if (query.severity) filter.severity = query.severity
   if (query.type) filter.type = query.type
@@ -406,6 +433,18 @@ export async function resolveAlertsForNode(nodeId: string, reason: string, type?
 }
 
 /**
+ * Cảnh báo tính cho cả nhà yến (không gắn thiết bị, VD `LOW_RETURN_RATE`) đã hết nguyên nhân thì
+ * đóng theo House. Trả về số cảnh báo đã đóng.
+ */
+export async function resolveHouseAlerts(houseId: string, type: AlertType, reason: string): Promise<number> {
+  const { modifiedCount } = await Alert.updateMany(
+    { house_id: houseId, type, status: { $in: OPEN_STATUSES } },
+    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: reason },
+  )
+  return modifiedCount
+}
+
+/**
  * ALERT-FR-008 — THRESHOLD_BREACH không còn được ghi nhận lại trong
  * THRESHOLD_CLEAR_MS (chỉ số đã về bình thường, hoặc thiết bị ngừng gửi — khi
  * đó đã có NODE_OFFLINE riêng) thì tự đóng. Gọi định kỳ từ jobs/alertEscalation.job.ts.
@@ -470,6 +509,27 @@ export async function resolveNodeOfflineAlertsOfOnlineNodes(): Promise<number> {
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Thiết bị đã kết nối lại' },
   )
   return modifiedCount
+}
+
+/** THREAT-FR-010 — nút AI đếm chim mất heartbeat (deviceOffline.job) */
+export async function raiseCameraOfflineAlert(cameraId: string): Promise<void> {
+  const camera = await CameraNode.findById(cameraId).lean()
+  if (!camera || camera.status !== 'OFFLINE') return
+  const house = await House.findById(camera.house_id).lean()
+  if (!house) return
+
+  // Nút AI tự báo EDGE_AI_DEGRADED (FPS thấp) dùng chung khoá dedup với cảnh báo này: đóng cái đó
+  // trước, nếu không "mất kết nối" bị gộp vào cảnh báo FPS cũ và không ai được báo. Kết nối lại mà
+  // FPS vẫn thấp thì nút AI tự báo lại.
+  await resolveAlertsForNode(cameraId, 'Nút AI mất kết nối — chuyển sang cảnh báo mất kết nối', 'EDGE_AI_DEGRADED')
+  await createAlert({
+    farmId:  String(house.farm_id),
+    houseId: String(house._id),
+    nodeId:  String(camera._id),
+    type:    'EDGE_AI_DEGRADED',
+    title:   `Nút AI đếm chim ${camera.device_id} mất kết nối`,
+    message: `Không nhận được heartbeat từ nút AI ${camera.device_id} tại ${house.name}; số đếm chim đang gián đoạn.`,
+  })
 }
 
 /** Dùng cho job phát hiện thiết bị offline (FARM-FR-005 → THREAT-FR-009) */

@@ -1,5 +1,5 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
-import type { DeviceStatus, ControlMode, RelayStates } from '@/types'
+import type { DeviceStatus, ControlMode, RelayStates, CountingRing, Role } from '@/types'
 
 /**
  * SensorNode + CameraNode Documents – SRS §8.2
@@ -19,6 +19,11 @@ export interface ISensorNode extends Document {
   last_heartbeat?: Date
   status: DeviceStatus
   rssi?: number
+  /** FARM-FR-006 — chẩn đoán từ xa, lấy từ heartbeat (firmware ≥ 1.4.0 mới gửi reset_reason, ip) */
+  booted_at?: Date
+  free_heap?: number
+  reset_reason?: string
+  ip?: string
   relay_states: RelayStates
   control_mode: ControlMode
   override_expiry?: Date
@@ -71,7 +76,8 @@ export interface IRelayUsage {
 export interface ICameraNode extends Document {
   _id: Types.ObjectId
   device_id: string
-  zone_id: Types.ObjectId
+  /** SRS v2.1.8 — camera đếm chim đặt ở cửa ra vào của cả nhà yến: gắn House, không gắn Zone */
+  house_id: Types.ObjectId
   rtsp_url?: string
   status: DeviceStatus
   last_heartbeat?: Date
@@ -89,6 +95,17 @@ export interface ICameraNode extends Document {
   decommission_reason?: string
   /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
+  /** VISION-FR-018 — vòng đếm do Domain Expert vẽ; chưa có thì nút AI dùng vòng trong config.yaml */
+  counting_ring?: CountingRing & { updated_at: Date; updated_by: Types.ObjectId }
+  counting_ring_history: ICountingRingHistoryEntry[]
+}
+
+export interface ICountingRingHistoryEntry {
+  changed_by: Types.ObjectId
+  changed_by_role?: Role
+  changed_at: Date
+  old_value?: CountingRing
+  new_value: CountingRing
 }
 
 const relayUsageSchema = {
@@ -127,6 +144,10 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     // PENDING không bị nhầm thành OFFLINE khi chưa từng kết nối.
     status:           { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] satisfies DeviceStatus[], default: 'PENDING' },
     rssi:             { type: Number },
+    booted_at:        { type: Date },
+    free_heap:        { type: Number },
+    reset_reason:     { type: String },
+    ip:               { type: String },
     relay_states: {
       misting:     { type: Boolean, default: false },
       speaker:     { type: Boolean, default: false },
@@ -164,7 +185,7 @@ const sensorNodeSchema = new Schema<ISensorNode>(
 const cameraNodeSchema = new Schema<ICameraNode>(
   {
     device_id:      { type: String, required: true, unique: true },
-    zone_id:        { type: Schema.Types.ObjectId, ref: 'Zone', required: true },
+    house_id:       { type: Schema.Types.ObjectId, ref: 'House', required: true },
     rtsp_url:       { type: String },
     status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] satisfies DeviceStatus[], default: 'PENDING' },
     last_heartbeat: { type: Date },
@@ -175,6 +196,22 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },
     replaced_by:         { type: Schema.Types.ObjectId },
+    counting_ring: {
+      type: new Schema({
+        points:            { type: [[Number]], required: true },
+        into_ring_is_exit: { type: Boolean, required: true },
+        updated_at: { type: Date, required: true },
+        updated_by: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      }, { _id: false }),
+      default: undefined,
+    },
+    counting_ring_history: [{
+      changed_by:      { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
+      changed_at:      { type: Date },
+      old_value:       { type: Schema.Types.Mixed },
+      new_value:       { type: Schema.Types.Mixed },
+    }],
   },
   { timestamps: false }
 )
@@ -182,9 +219,11 @@ const cameraNodeSchema = new Schema<ICameraNode>(
 // `deviceOffline.job.ts` quét đúng cặp field này mỗi 10s — không có index thì
 // full collection scan lặp lại liên tục khi số thiết bị tăng lên.
 sensorNodeSchema.index({ status: 1, last_heartbeat: 1 })
-// zone_id là filter chính của mọi danh sách thiết bị theo zone (dashboard).
+// Cùng job quét nút AI đếm chim mất heartbeat (THREAT-FR-010)
+cameraNodeSchema.index({ status: 1, last_heartbeat: 1 })
+// zone_id là filter chính của mọi danh sách thiết bị theo zone (dashboard); camera lọc theo House
 sensorNodeSchema.index({ zone_id: 1 })
-cameraNodeSchema.index({ zone_id: 1 })
+cameraNodeSchema.index({ house_id: 1 })
 // activationOverdue.job quét node PENDING theo registered_at mỗi phút
 sensorNodeSchema.index({ status: 1, registered_at: 1 })
 cameraNodeSchema.index({ status: 1, registered_at: 1 })

@@ -1,9 +1,10 @@
 ﻿import { Router } from 'express'
-import { body, param } from 'express-validator'
+import { body, param, query } from 'express-validator'
 import multer from 'multer'
 import * as deviceController from '@/controllers/devices.controller'
 import { MAX_OVERRIDE_MS, MIN_OVERRIDE_MS } from '@/services/device.service'
 import * as audioTrackController from '@/controllers/audioTracks.controller'
+import * as streamController from '@/controllers/stream.controller'
 import { MAX_AUDIO_BYTES } from '@/services/audioTrack.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
@@ -87,8 +88,24 @@ router.post('/camera-nodes/:id/decommission', requireRole('TECHNICIAN','ADMIN'),
   body('force').optional().isBoolean().toBoolean(),
   validate, deviceController.decommission('camera'))
 router.post('/camera-nodes/:id/restore', requireRole('TECHNICIAN','ADMIN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('camera'))
-router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerCameraNode)
-router.get ('/camera-nodes',                 deviceController.listCameraNodes)
+// SRS v2.1.8 — camera đếm chim lắp ở cửa ra vào của cả nhà yến nên gắn House; zone_id là cách gửi cũ (quy ra House chứa Zone)
+router.post('/camera-nodes/register',        requireRole('TECHNICIAN','ADMIN'), body('device_id').trim().notEmpty(),
+  body('house_id').if(body('zone_id').not().exists()).isString().isMongoId().withMessage('Cần house_id'),
+  body('zone_id').optional().isString().isMongoId(),
+  body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerCameraNode)
+router.get ('/camera-nodes',
+  query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(), validate,
+  deviceController.listCameraNodes)
+// VISION-FR-018, SRS §4.4 — vòng đếm do Domain Expert vẽ; 3 đỉnh là tối thiểu của một vòng kín,
+// 12 là giới hạn kỹ thuật chống nhập nhầm (SRS 0.5), toạ độ theo tỉ lệ khung hình
+router.put ('/camera-nodes/:id/counting-ring', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(),
+  body('points').isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
+  body('points.*').isArray({ min: 2, max: 2 }).withMessage('mỗi đỉnh là [x, y]'),
+  body('points.*.*').isFloat({ min: 0, max: 1 }).withMessage('toạ độ theo tỉ lệ khung hình 0-1').toFloat(),
+  body('into_ring_is_exit').isBoolean({ strict: true }),
+  validate, deviceController.updateCountingRing)
+// VISION-FR-013, SRS §4.4 — live stream chỉ cho Farm Owner và Domain Expert của farm chứa camera
+router.get ('/camera-nodes/:id/stream-token', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('id').isMongoId(), validate, streamController.getStreamToken)
 
 // OPS-NFR-004 — Admin dashboard trạng thái node toàn hệ thống
 router.get ('/system-status',                requireRole('ADMIN'), deviceController.getSystemStatus)

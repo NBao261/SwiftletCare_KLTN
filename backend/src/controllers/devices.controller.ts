@@ -67,18 +67,28 @@ export const reassignZone = asyncHandler(async (req: Request, res: Response) => 
 /** POST /devices/camera-nodes/register – FARM-FR-004 */
 export const registerCameraNode = asyncHandler(async (req: Request, res: Response) => {
   const node = await deviceService.registerCameraNode(req.user, {
-    device_id: req.body.device_id, zone_id: req.body.zone_id, secret_key: req.body.secret_key, rtsp_url: req.body.rtsp_url,
+    device_id: req.body.device_id, secret_key: req.body.secret_key, rtsp_url: req.body.rtsp_url,
+    house_id: req.body.house_id, zone_id: req.body.zone_id,   // zone_id: cách gửi cũ, quy ra House chứa Zone
   })
   res.status(201).json({ success: true, data: node })
 })
 
-/** GET /devices/camera-nodes?zoneId= */
+/** GET /devices/camera-nodes?houseId= (zoneId cũ vẫn nhận) */
 export const listCameraNodes = asyncHandler(async (req: Request, res: Response) => {
-  const nodes = await deviceService.listCameraNodes(req.query.zoneId as string | undefined, req.user)
+  const nodes = await deviceService.listCameraNodes({
+    houseId: req.query.houseId as string | undefined,
+    zoneId:  req.query.zoneId as string | undefined,   // cách gửi cũ: quy ra House chứa Zone
+  }, req.user)
   res.json({ success: true, data: nodes })
 })
 
 /** GET /devices/system-status – OPS-NFR-004, chỉ Admin */
+/** PUT /devices/camera-nodes/:id/counting-ring – VISION-FR-018 */
+export const updateCountingRing = asyncHandler(async (req: Request, res: Response) => {
+  const camera = await deviceService.updateCountingRing(req.params.id, req.user, req.body)
+  res.json({ success: true, data: camera })
+})
+
 export const getSystemStatus = asyncHandler(async (_req: Request, res: Response) => {
   res.json({ success: true, data: await deviceService.getSystemStatus() })
 })

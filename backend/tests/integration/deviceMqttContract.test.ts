@@ -333,6 +333,20 @@ describe('recordHeartbeat', () => {
     return ctx
   }
 
+  it('stores the diagnostics of firmware 1.4.0 and ignores malformed ones (FARM-FR-006)', async () => {
+    const { node, deviceId, topic } = await provisioned()
+
+    const before = Date.now()
+    await recordHeartbeat({ ...hb(deviceId), uptime: 3_600_000, freeHeap: 182_000, resetReason: 'BROWNOUT', ip: '192.168.1.50' }, topic)
+    const saved = (await SensorNode.findById(node._id).lean())!
+    expect(saved).toMatchObject({ free_heap: 182_000, reset_reason: 'BROWNOUT', ip: '192.168.1.50' })
+    expect(before - saved.booted_at!.getTime()).toBeGreaterThanOrEqual(3_600_000 - 1000)
+    expect(before - saved.booted_at!.getTime()).toBeLessThanOrEqual(3_600_000 + 1000)
+
+    await recordHeartbeat({ ...hb(deviceId), uptime: -5, freeHeap: 'lots', resetReason: 'X'.repeat(100), ip: { $ne: 1 } } as never, topic)
+    expect(await SensorNode.findById(node._id).lean()).toMatchObject({ free_heap: 182_000, reset_reason: 'BROWNOUT', ip: '192.168.1.50' })
+  })
+
   it('stays quiet on a routine heartbeat', async () => {
     const { deviceId, topic } = await provisioned()
 

@@ -140,8 +140,9 @@ Giá là ước lượng, cần kiểm tra lại khi mua. Cập nhật `docs/har
 4. Gắn chặt, không rung. Camera xê dịch là phải chỉnh lại ROI và vạch đếm.
 5. Không để đèn, loa treo, vật đung đưa (dây, lá) trong khung hình.
 6. Vạch đếm đặt sát miệng lỗ, ở chỗ chim đã tách hàng, vuông góc với hướng bay. Nếu clip thật cho thấy chim không cắt vạch rõ ràng, phương án dự phòng là đếm theo vùng: coi miệng lỗ là một vùng; track xuất hiện từ vùng đó là vào, track đi vào vùng đó rồi mất là ra. Phương án này chưa có trong code ở mục 6.4.
+7. Camera nhìn vào miệng lỗ gần như theo hướng chim bay (chim chui qua lỗ rồi tỏa đi mọi hướng): dùng **vòng đếm** khép kín quanh miệng lỗ thay cho một vạch. Chim đi vào vòng là chui vào lỗ, đi ra khỏi vòng là chui ra; con chỉ bay lướt qua lỗ cắt vòng hai lần, số ròng triệt tiêu. Đã có trong code (`src/counting.py`, `RingCounter`), đang dùng ở nhà yến thử nghiệm (mục 19.8).
 
-Vị trí đã lắp thực tế ở nhà yến thử nghiệm: mục 19.7.
+Vị trí đã lắp thực tế ở nhà yến thử nghiệm: mục 19.7, đổi góc ngày 21/10/2026 ở mục 19.8.
 
 ### 3.4. Kiểm tra camera trước khi làm tiếp
 
@@ -235,17 +236,16 @@ Thời gian: 0,5 ngày.
 POST /devices/camera-nodes/register
 Authorization: Bearer <token của TECHNICIAN hoặc ADMIN>
 
-{ "device_id": "cam-zone1-01", "zone_id": "<ObjectId của Zone>", "secret_key": "<khóa>" }
+{ "device_id": "cam-house1-01", "house_id": "<ObjectId của House>", "secret_key": "<khóa>" }
 ```
 
-4. Ghi lại `farmId`, `houseId`, `zoneId`, `device_id` vào `ai-pipeline/.env`:
+4. Ghi lại `farmId`, `houseId`, `device_id` vào `ai-pipeline/.env` (SRS v2.1.8: camera ở cửa ra vào của cả nhà yến nên gắn House, không có Zone):
 
 ```dotenv
 CAMERA_RTSP_URL=rtsp://USER:PASS@192.168.1.64:554/stream1
 CAMERA_DEVICE_ID=cam-zone1-01
 FARM_ID=...
 HOUSE_ID=...
-ZONE_ID=...
 MQTT_USERNAME=
 MQTT_PASSWORD=
 # Chỉ điền khi chạy với cloud (mục 15); để trống khi dev trên máy
@@ -386,6 +386,8 @@ Xóa hằng `CLASS_NAMES`/`PREDATOR_IDS`. `confidence_threshold` dùng cho mọi
 Với YOLO26n cũng có thể export đầu ra kiểu cũ (bỏ `nms=False`; trên COCO chính xác hơn khoảng 0,8 mAP nhưng phải chạy NMS). Code trên tự nhận ra kiểu đó. Chỉ chọn cách này khi so trên cùng tập test (mục 7.9) thấy đáng.
 
 ### 6.4. `src/counting.py` (viết lại)
+
+> **Đã làm theo góc camera ngày 21/10/2026 (mục 19.8):** `src/counting.py` là `RingCounter` — vòng đếm khép kín (`tracking.ring`, chiều `tracking.into_ring_is_exit`), không phải `LineCounter` bên dưới. Nhận `tracker_id` và `xyxy` dạng mảng nên dùng thẳng với `sv.Detections` (`counter.update(tracks.tracker_id, tracks.xyxy)`). Code mẫu bên dưới giữ cho trường hợp camera nhìn ngang lỗ, nơi một vạch là đủ.
 
 ```python
 """SwiftletCare – đếm chim qua vạch ảo (VISION-FR-005)."""
@@ -631,7 +633,7 @@ class Publisher:
     def __init__(self, cfg: dict, model_version: str):
         self.device_id = os.environ["CAMERA_DEVICE_ID"]
         self.model_version = model_version
-        base = f"swiftletcare/{os.environ['FARM_ID']}/{os.environ['HOUSE_ID']}/{os.environ['ZONE_ID']}"
+        base = f"swiftletcare/{os.environ['FARM_ID']}/{os.environ['HOUSE_ID']}"   # SRS v2.1.8: topic theo nhà yến
         self.topic_count = f"{base}/vision/bird-count"
         self.topic_heartbeat = f"{base}/heartbeat"
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=self.device_id)
@@ -819,9 +821,10 @@ python src/stream.py --source clips/20261008_morning_01.mp4 --session MORNING_EX
 
 Trình tự hiệu chỉnh (sửa `config.yaml` rồi chạy lại):
 
-1. **ROI** (khung trắng): bao vừa quanh lỗ ra vào.
-2. **Vạch đếm** (vạch vàng): cắt ngang đường bay, nằm trong ROI.
-3. **Chiều đếm**: nếu chim bay ra mà số "VAO" tăng thì đổi `in_is_entry`.
+0. **Đo trên clip có chim** (mở clip, click bằng `tools/pick_roi.py` để đọc pixel): **s** = cỡ một con chim sát miệng lỗ, **v** = quãng nó bay giữa hai khung liên tiếp.
+1. **Vòng đếm** (vòng vàng): `python tools/pick_roi.py <ảnh|clip|rtsp> --margin <d> --roi-pad <3v>`, click lần lượt các góc viền ngoài miệng lỗ, Enter in ra khối YAML `roi` + `ring`. `d = max(s, 1,5 × v)`: chim vừa chui ra phải nằm *trong* vòng ít nhất 1–2 khung trước khi cắt vòng, nếu không tracker chưa kịp có id và con đó bị sót.
+2. **ROI** (khung trắng): công cụ lấy khung bao vòng đếm nới thêm `--roi-pad`. Cạnh dài nhất của ROI ≤ `640 × s / 15` để chim còn ≥ 15 px sau khi thu về đầu vào model (cổng 5); thừa thì cắt bớt phía ít chim bay. Không để dòng ngày giờ của camera trong ROI.
+3. **Chiều đếm**: nếu chim chui ra khỏi lỗ mà số "RA" tăng thì đổi `into_ring_is_exit` (vạch thẳng: `in_is_entry`).
 4. **`box_pad`**: nếu `#id` nhảy số liên tục trên cùng một con, tăng dần 2.5 → 3 → 4.
 5. **`confidence_threshold`**: hạ nếu sót nhiều, tăng nếu bắt nhầm.
 
@@ -855,7 +858,7 @@ Kế hoạch thu:
 | Tổng 2–4 giờ clip | Đủ để rút 1.500–3.000 frame có chim |
 | Giữ nguyên vị trí camera | Dữ liệu train phải giống lúc chạy thật |
 
-Có thể đặt Task Scheduler chạy lệnh `ffmpeg` trên lúc 05:25 và 17:25 hằng ngày.
+**Đã đặt từ 21/10/2026** trên laptop của nhóm: Task Scheduler (`\SwiftletCare\`) đánh thức máy lúc 05:15 và 17:15, chạy `D:\SwiftletCare\record_session.ps1` quay tới 07:15 / 19:15 vào `D:\SwiftletCare\clips\YYYYMMDD_<morning|evening>_NN.mp4` (`ffmpeg -c copy`, fragmented mp4 nên file bị ngắt vẫn xem được; log ở `D:\SwiftletCare\logs\record.log`). Máy phải cắm sạc: wake timer chỉ bật khi dùng nguồn điện. Clip, frame và dataset để ở ổ D, không để trong repo (`ai-pipeline/clips` là junction trỏ sang `D:\SwiftletCare\clips`, đã gitignore).
 
 **Nguồn dữ liệu là chính camera sẽ dùng thật, tại đúng vị trí lắp thật.** Không dùng điện thoại hay camera khác để thu dữ liệu train: khác ống kính, góc nhìn, độ nhòe và màu thì model học sai thứ. Hai cách lấy clip từ camera, theo thứ tự ưu tiên:
 
@@ -867,85 +870,18 @@ Có thể đặt Task Scheduler chạy lệnh `ffmpeg` trên lúc 05:25 và 17:2
 
 ### 7.2. Tách frame và sinh nhãn nháp — `tools/extract_frames.py`
 
-Camera cố định nên có thể dùng background subtraction để khoanh sẵn vật thể chuyển động. Người gán nhãn chỉ còn sửa và xóa, nhanh hơn vẽ từ đầu nhiều lần.
-
-```python
-"""Tách frame từ clip, crop theo ROI và sinh nhãn nháp YOLO bằng background subtraction.
-
-Dùng:
-  python tools/extract_frames.py clips/20261008_morning_01.mp4 --roi 0.20 0.10 0.85 0.80 --every 5
-ROI PHẢI trùng camera.roi trong config.yaml: model train trên ảnh nào thì chạy thật trên ảnh đó.
-"""
-import argparse
-from pathlib import Path
-
-import cv2
-
-ap = argparse.ArgumentParser()
-ap.add_argument("clip")
-ap.add_argument("--out", default="dataset/raw")
-ap.add_argument("--roi", nargs=4, type=float, default=[0, 0, 1, 1], help="x1 y1 x2 y2 theo tỉ lệ")
-ap.add_argument("--every", type=int, default=5, help="lưu 1 frame mỗi N frame")
-ap.add_argument("--min-area", type=int, default=30, help="bỏ đốm nhỏ hơn (px²) — nhiễu, côn trùng")
-ap.add_argument("--max-area", type=int, default=20000, help="bỏ đốm lớn hơn (px²) — đổi sáng, người")
-ap.add_argument("--keep-empty", type=int, default=20, help="giữ 1 trong N frame không có gì (ảnh âm)")
-args = ap.parse_args()
-
-clip = Path(args.clip)
-img_dir, lbl_dir = Path(args.out) / "images", Path(args.out) / "labels"
-img_dir.mkdir(parents=True, exist_ok=True)
-lbl_dir.mkdir(parents=True, exist_ok=True)
-
-cap = cv2.VideoCapture(str(clip))
-if not cap.isOpened():
-    raise SystemExit(f"Không mở được {clip}")
-
-bg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-i = saved = empty_seen = 0
-
-while True:
-    ok, frame = cap.read()
-    if not ok:
-        break
-    H, W = frame.shape[:2]
-    x1, y1, x2, y2 = (int(args.roi[k] * (W, H)[k % 2]) for k in range(4))
-    crop = frame[y1:y2, x1:x2]
-    mask = bg.apply(crop)                 # phải chạy trên MỌI frame để mô hình nền hội tụ
-    i += 1
-    if i < 100 or i % args.every:         # 100 frame đầu: nền chưa ổn định
-        continue
-
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.dilate(mask, kernel, iterations=2)
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    h, w = crop.shape[:2]
-    lines = []
-    for c in contours:
-        bx, by, bw, bh = cv2.boundingRect(c)
-        if args.min_area <= bw * bh <= args.max_area:
-            lines.append(f"0 {(bx + bw / 2) / w:.6f} {(by + bh / 2) / h:.6f} {bw / w:.6f} {bh / h:.6f}")
-
-    if not lines:
-        empty_seen += 1
-        if empty_seen % args.keep_empty:
-            continue
-
-    stem = f"{clip.stem}_{i:06d}"
-    cv2.imwrite(str(img_dir / f"{stem}.jpg"), crop, [cv2.IMWRITE_JPEG_QUALITY, 95])
-    (lbl_dir / f"{stem}.txt").write_text("\n".join(lines))
-    saved += 1
-
-print(f"{clip.name}: đọc {i} frame, lưu {saved} ảnh vào {args.out}")
-```
-
-Chạy cho mọi clip:
+Camera cố định nên có thể dùng background subtraction để khoanh sẵn vật thể chuyển động. Người gán nhãn chỉ còn sửa và xóa, nhanh hơn vẽ từ đầu nhiều lần. Code: `ai-pipeline/tools/extract_frames.py` (test ở `tests/test_dataset_tools.py`).
 
 ```powershell
-Get-ChildItem clips\*.mp4 | ForEach-Object { python tools/extract_frames.py $_.FullName --roi 0.20 0.10 0.85 0.80 --every 5 }
+cd ai-pipeline
+Get-ChildItem D:\SwiftletCare\clips\*.mp4 | ForEach-Object { python tools/extract_frames.py $_.FullName --out D:\SwiftletCare\dataset\raw }
 ```
 
-Lưu ý: `--every 5` ở 25 fps = 5 ảnh/giây. Hai ảnh liên tiếp khá giống nhau; nếu ra quá nhiều ảnh thì tăng lên 10–15.
+- **ROI lấy từ `camera.roi` trong `config.yaml`** (truyền `--roi` chỉ khi cần thử khác): model train trên ảnh crop nào thì chạy thật trên đúng crop đó. **Chốt ROI trước khi tách frame**; đổi ROI sau đó là phải tách và gán nhãn lại.
+- Tên clip phải bắt đầu bằng `YYYYMMDD` (dùng để chia tập ở mục 7.4); công cụ từ chối tên khác.
+- `--every 5` ở 25 fps = 5 ảnh/giây; ra quá nhiều ảnh gần giống nhau thì tăng lên 10–15.
+- `--min-area 150` (px² trong ảnh crop): đo trên clip IR 21/10, nhiễu cảm biến ra đốm 49–108 px² sau dilate (119 ô nháp giả trên clip 90 giây với ngưỡng 30 cũ, còn 8 với 150). Chim ≥ 15 px trong ảnh đầu vào model ≈ 22×22 px trong crop 960 px, nên 150 không bỏ sót chim nào model cần thấy.
+- Côn trùng dưới đèn IR vẫn lọt vào nhãn nháp (đốm sáng 20–40 px, ngang cỡ chim): xóa ô khi gán nhãn, ảnh đó thành ảnh âm.
 
 ### 7.3. Gán nhãn
 
@@ -977,54 +913,19 @@ Mục tiêu số lượng:
 
 ### 7.4. Chia tập theo ngày — `tools/split_by_day.py`
 
-Frame liên tiếp gần như giống hệt nhau. Chia ngẫu nhiên theo frame sẽ để ảnh "sinh đôi" lọt vào cả train lẫn test, cho kết quả đẹp giả. Phải chia theo **ngày quay**.
+Frame liên tiếp gần như giống hệt nhau. Chia ngẫu nhiên theo frame sẽ để ảnh "sinh đôi" lọt vào cả train lẫn test, cho kết quả đẹp giả. Phải chia theo **ngày quay**. Code: `ai-pipeline/tools/split_by_day.py`.
 
-```python
-"""Chia dataset theo NGÀY quay (ngày = 8 chữ số đầu tên file) và ghi data.yaml.
-
-Dùng:
-  python tools/split_by_day.py <thư mục export> dataset/final --val 20261010 --test 20261011
-Nhận mọi cấu trúc có cặp .../images/x.jpg và .../labels/x.txt (kể cả bản export của Roboflow).
-"""
-import argparse
-import shutil
-from collections import Counter
-from pathlib import Path
-
-ap = argparse.ArgumentParser()
-ap.add_argument("src")
-ap.add_argument("dst")
-ap.add_argument("--val", nargs="+", required=True, help="các ngày YYYYMMDD dùng để validate")
-ap.add_argument("--test", nargs="+", required=True, help="các ngày YYYYMMDD dùng để test")
-args = ap.parse_args()
-
-src, dst = Path(args.src), Path(args.dst)
-stats = Counter()
-for img in sorted(src.rglob("*.jpg")):
-    day = img.stem[:8]
-    if not day.isdigit():
-        raise SystemExit(f"Tên file không bắt đầu bằng YYYYMMDD: {img.name}")
-    split = "test" if day in args.test else "val" if day in args.val else "train"
-    label = img.parent.parent / "labels" / f"{img.stem}.txt"
-    (dst / "images" / split).mkdir(parents=True, exist_ok=True)
-    (dst / "labels" / split).mkdir(parents=True, exist_ok=True)
-    shutil.copy2(img, dst / "images" / split / img.name)
-    if label.exists():
-        shutil.copy2(label, dst / "labels" / split / label.name)
-    else:                                   # ảnh âm: file nhãn rỗng
-        (dst / "labels" / split / f"{img.stem}.txt").write_text("")
-    stats[split] += 1
-
-(dst / "data.yaml").write_text(
-    "path: /content/dataset\n"
-    "train: images/train\nval: images/val\ntest: images/test\n"
-    "names:\n  0: swiftlet\n"
-)
-print(dict(stats))
-assert stats["train"] and stats["val"] and stats["test"], "Thiếu một trong ba tập — kiểm tra --val/--test"
+```powershell
+# bản export YOLOv8 của Roboflow giải nén vào D:\SwiftletCare\dataset\roboflow
+python tools/split_by_day.py D:\SwiftletCare\dataset\roboflow D:\SwiftletCare\dataset\final --val 20261024 --test 20261025
+Compress-Archive D:\SwiftletCare\dataset\final\* D:\SwiftletCare\dataset\dataset.zip
 ```
 
-Sau đó nén `dataset/final` thành `dataset.zip` và tải lên Google Drive.
+- Ngày lấy từ 8 chữ số đầu tên file; Roboflow giữ tên gốc và thêm đuôi `_jpg.rf.<hash>` nên vẫn đọc được.
+- Ảnh không có file nhãn được ghi nhãn rỗng (ảnh âm). Ghi `data.yaml` (`path: /content/dataset`, 1 class `swiftlet`).
+- Một ngày không được vừa ở val vừa ở test; thiếu một trong ba tập thì công cụ báo lỗi.
+
+Sau đó tải `dataset.zip` lên Google Drive (`MyDrive/swiftletcare/`).
 
 ### 7.5. Train trên Google Colab
 
@@ -1127,7 +1028,7 @@ mAP chỉ là chỉ số trung gian. Thứ cần báo cáo là sai số đếm.
 3. Chạy pipeline trên từng clip, đọc dòng `KẾT QUẢ`:
 
 ```powershell
-python src/stream.py --source clips/20261011_morning_02.mp4 --session MORNING_EXIT --no-mqtt
+python src/stream.py --source D:/SwiftletCare/clips/20261025_morning_01.mp4 --session MORNING_EXIT --no-mqtt
 ```
 
 4. Tính sai số = `|hệ thống − đếm tay| / đếm tay × 100%` cho từng chiều, và cho **số ròng** (ra trừ vào ở clip sáng, vào trừ ra ở clip chiều).
@@ -1282,6 +1183,14 @@ Chỉ model được chọn mới đi tiếp vào GĐ5 (chạy 24 giờ, mục 1
 ## 8. GĐ3 — Backend
 
 Thời gian: 2 ngày. Tuân theo quy tắc Route → Controller → Service → Model của module `backend/`.
+
+> **Trạng thái (SRS v2.1.6):** §8.1–8.5 và §8.7 **đã làm** (`backend/src/services/birdCount.service.ts`, `jobs/returnRate.job.ts`, `tests/integration/birdCount.test.ts`); **§8.6 đã làm ở SRS v2.1.7** (`stream.service.ts`, `routes/internal.route.ts`, `tests/integration/streamAuth.test.ts`, MediaMTX 1.21.1 trong `docker-compose.yml` + `deploy/mediamtx.yml`), khác code mẫu ở chỗ: token người xem nhận qua header Bearer (trường `token`), `?token=` hoặc ô mật khẩu, không chỉ `query`; pipeline đọc hình gốc bằng mật khẩu dịch vụ (§18.3) nhưng token người xem không đọc được đường `-raw`; `device_id` kết thúc bằng `-raw` không được cấp token. Chỗ code thật khác code mẫu của §8.1–8.5:
+> - **[SRS v2.1.8] Camera và số đếm theo nhà yến (House), không theo Zone hay camera.** Camera ở cửa ra vào của cả nhà (1–2 cửa) nên `camera_nodes`, `bird_count_records`, `bird_count_buckets` mang `house_id`; nút AI publish `swiftletcare/{farm}/{house}/heartbeat|vision/bird-count|vision/alert` (không có đoạn zone). `houseDailyCounts()` cộng số thô mọi camera của nhà theo `session_date` rồi mới lấy số ròng và tỷ lệ (chim có thể ra cửa này về cửa kia); không lưu `return_rate` trên bản ghi. Mọi chỗ đọc dùng hàm này: `GET /analytics/bird-count/current` (mới), `/daily`, `/trends`, `/buckets` (`houseId`; `zoneId` cũ được quy ra nhà chứa Zone), `/correlation`, socket `BIRD_COUNT_UPDATE` (room `house:<id>` qua `JOIN_HOUSE`), job `LOW_RETURN_RATE` (1 cảnh báo cho cả nhà, mức giảm `houses.bird_count_tuning`), báo cáo sức khỏe Zone, ảnh chụp đàn khi thu hoạch. Code mẫu bên dưới là bản theo Zone/camera, đã thay.
+> - `checkReturnRateDrops` còn **đóng** `LOW_RETURN_RATE` đang mở khi tỷ lệ đã hồi lại; không có bước này thì dedup nuốt mọi lần giảm của những ngày sau. `LOW_RETURN_RATE` thành loại chỉ backend được tạo (thiết bị gửi lên bị từ chối).
+> - `/daily` và `/correlation` gom theo `session_date` (ngày giờ VN), không gom theo ngày UTC của `timestamp`: phiên sáng 05:30 VN là 22:30 UTC hôm trước.
+> - Nút AI mất heartbeat quá 90 giây sinh `EDGE_AI_DEGRADED` (THREAT-FR-010), không phải `NODE_OFFLINE`; `vision/alert` của camera chỉ nhận `EDGE_AI_DEGRADED`.
+> - Mức giảm lấy qua `resolveDetectionTuning(zone.detection_tuning)`, không viết `?? 20`.
+> - Job dùng `{ timezone: 'Asia/Ho_Chi_Minh' }` của node-cron, không phụ thuộc giờ máy chủ.
 
 ### 8.1. Model `birdCountRecord.model.ts`
 
@@ -1674,7 +1583,8 @@ Chỉ làm khi thật sự cần.
 | Luồng video không có khung (cho nút bật/tắt khung) | Người dùng thật sự cần xem hình gốc | Đẩy thêm một đường `cam-<id>-raw`; tốn gấp đôi băng thông upload |
 | Tăng tốc suy luận | FPS dưới mục tiêu | Theo thứ tự ở mục 18.4: `onnxruntime-openvino` (CPU Intel) → đầu vào 480/416 trên ROI hẹp → hạ camera 20 fps |
 | Phát hiện thiên địch (THREAT-FR-001) | Có dữ liệu chuột/rắn/cú và camera nhìn vào trong nhà | Thêm class, sửa `alert_publisher.py` (thêm `deviceId`), cho `ingestDeviceAlert` tra cả `CameraNode` |
-| Ghi hình sự kiện (VISION-FR-015) | Sau khi phần đếm ổn định | Chưa có endpoint, cần thiết kế riêng |
+| Ghi hình sự kiện (VISION-FR-015) | Sau khi phần đếm ổn định, và khi VPS có chỗ: luồng 2 Mbps ghi cả ngày tốn khoảng 150 GB mỗi 7 ngày; thẻ nhớ camera đã ghi liên tục (19.3) | Tính năng có sẵn của MediaMTX: `record: yes` chỉ trong giờ phiên, `recordDeleteAfter: 7d`, `playback: yes` cho đường `cam-<id>` (đã vẽ khung); backend cấp token xem lại giống `stream-token` (SRS 0.5) |
+| Vẽ vòng đếm trên giao diện (VISION-FR-018) | Khi phải chỉnh vòng mà không muốn sửa `config.yaml` tay (mục 19.8) | **Đã có backend + pipeline (SRS v2.1.10):** `PUT /devices/camera-nodes/:id/counting-ring` lưu theo camera, gửi qua `swiftletcare/{farmId}/{houseId}/config/update` kèm `deviceId`; `src/remote_config.py` lưu `state/counting_ring.json` (thắng `tracking.ring`), áp ngay và tính lại ROI = khung bao vòng + `tracking.roi_pad_px`. Còn màn vẽ ở web |
 
 ---
 
@@ -2338,7 +2248,6 @@ VITE_STREAM_URL=http://localhost:8889
 CAMERA_DEVICE_ID=cam-zone1-01
 FARM_ID=...
 HOUSE_ID=...
-ZONE_ID=...
 # bỏ dòng này nếu chỉ chạy mức 0 hoặc 1
 STREAM_PUSH_URL=rtsp://pipeline:dev-publish@localhost:8554/cam-cam-zone1-01
 ```
@@ -2654,7 +2563,6 @@ Thêm vào `deploy/docker-compose.prod.yml`:
       CAMERA_DEVICE_ID: ${CAMERA_DEVICE_ID}
       FARM_ID: ${FARM_ID}
       HOUSE_ID: ${HOUSE_ID}
-      ZONE_ID: ${ZONE_ID}
       MQTT_USERNAME: pipeline
       MQTT_PASSWORD: ${PIPELINE_MQTT_PASSWORD}
     volumes:
@@ -2914,7 +2822,34 @@ Kéo hình qua Internet đã chạy, nhưng mới thử ngắn. **Cổng 3b** (k
 
 - [ ] Rút điện modem và bộ PoE: camera lên lại đúng `192.168.1.163`, xem qua 4G vẫn được, ghi WAN IP có đổi không
 - [ ] IP động thì cài DDNS (mục 19.4)
-- [ ] Clip phiên chiều: hướng bay của chim sau khi qua lỗ, cỡ chim trong hình (cổng 5); chốt ROI và vạch đếm, hoặc chuyển sang đếm theo vùng (mục 3.3)
+- [x] ~~Clip phiên chiều để chốt ROI và vạch đếm~~ — camera đã đổi góc ngày 21/10, xem mục 19.8
 - [ ] Đèn hồng ngoại lúc chạng vạng: hình có trắng xóa không, chim có né lỗ không (cổng 6)
 - [ ] Lắp thẻ microSD nếu camera có khe, bật ghi liên tục (cổng 4)
 - [ ] Có VPS: giới hạn cổng 18554 chỉ cho IP của VPS nếu modem hỗ trợ (cổng 3c), rồi cho MediaMTX kéo liên tục 24 giờ (cổng 3b)
+
+### 19.8. Đổi góc camera ngày 21/10/2026: nhìn vào miệng lỗ, đếm bằng vòng
+
+**Vị trí mới.** Camera vẫn trong phòng lượn, đổi sang nhìn xuống miệng lỗ ra vào ngoài trời. Miệng lỗ là một hộp gỗ chữ nhật nhô vào phòng, nằm hơi lệch trên giữa khung hình. Ban ngày miệng hộp sáng trắng vì ánh trời xuyên qua (xác nhận đây là lỗ thông ra ngoài), nên chim qua lỗ hiện thành bóng tối trên nền sáng. Chim chui qua lỗ gần như theo hướng nhìn của camera rồi tỏa đi mọi hướng, nên đếm bằng **vòng đếm** quanh miệng lỗ (mục 3.3, ý 7), không dùng một vạch thẳng.
+
+**Đo trên khung 1920×1080 lấy từ RTSP lúc 18:30** (phóng to 3 lần trên lưới 20 px, sai số khoảng ±3 px):
+
+| | Viền ngoài hộp gỗ (px) | Vòng đếm = viền nới 60 px (tỉ lệ) |
+|---|---|---|
+| 1 | (793, 287) góc trên trái | (0.379, 0.228) |
+| 2 | (985, 220) góc trên xa | (0.527, 0.136) |
+| 3 | (1042, 313) góc phải | (0.575, 0.277) |
+| 4 | (1037, 362) chân phải | (0.569, 0.374) |
+| 5 | (848, 439) chân trước | (0.427, 0.477) |
+| 6 | (800, 343) chân trái | (0.386, 0.334) |
+
+ROI `[0.25, 0.00, 0.75, 0.70]` (960×756 px): cách vòng đếm 150–340 px, ngoài dòng ngày giờ. Camera trong nhà nên trong vòng là phía ngoài trời: `into_ring_is_exit: true` (chui vào lỗ = RA, chui ra khỏi lỗ = VỀ). Các giá trị đã ghi vào `ai-pipeline/config/config.yaml`.
+
+**Chưa chốt:** khoảng nới 60 px và ROI là số chọn tay. Clip 90 giây quay lúc 18:35 **không có chim yến**; mọi vật chuyển động trong đó là côn trùng hoặc bụi bay sát ống kính, sáng trắng và nhòe dưới đèn hồng ngoại, cỡ 20–40 px, ngang cỡ một con chim. Cần clip có chim (phiên sáng 05:30–07:00 là tốt nhất) để đo `s`, `v` rồi tính lại theo mục 6.8.
+
+**Ảnh lệch giữa ngày và đêm.** Khung lúc 18:30 dịch đều khoảng 16 px theo chiều dọc so với ảnh app lúc 13:45. Mức dịch đo riêng ở hộp gỗ, góc xà và tường phải đều như nhau, còn dòng ngày giờ in trên hình vẫn đứng yên. Vậy hình ảnh thật sự đã dịch: hoặc camera nghiêng nhẹ sau khi lắp, hoặc do chuyển chế độ ngày/đêm. Từ 18:30 đến 18:42 lệch 0 px. Mức 16 px nhỏ hơn khoảng nới 60 px nên không làm sai việc đếm.
+
+**Còn lại:**
+
+- [ ] Lấy một khung RTSP ban ngày, so với khung 18:30: lệch 0 px thì camera chỉ dịch một lần; lệch lại khoảng 16 px thì do chế độ ngày/đêm → khóa một chế độ cho cả hai phiên, hoặc nới vòng thêm 16 px
+- [ ] Clip có chim: đo `s`, `v`, chạy lại `tools/pick_roi.py --margin`, chốt `roi` và `ring` (cổng 5)
+- [ ] Gán clip côn trùng dưới IR làm ảnh âm khi gán nhãn (mục 7.3)

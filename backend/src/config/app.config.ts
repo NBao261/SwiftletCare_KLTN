@@ -25,8 +25,10 @@ import alertRoutes     from '@/routes/alerts.route'
 import analyticsRoutes from '@/routes/analytics.route'
 import harvestRoutes        from '@/routes/harvests.route'
 import healthReportRoutes   from '@/routes/healthReports.route'
+import notificationRoutes   from '@/routes/notifications.route'
 import ticketRoutes         from '@/routes/tickets.route'
 import maintenanceScheduleRoutes from '@/routes/maintenanceSchedules.route'
+import internalRoutes from '@/routes/internal.route'
 
 const app: Application = express()
 
@@ -91,10 +93,15 @@ app.use('/harvests',    harvestRoutes)
 
 // Module EXPERT (§5.12) — báo cáo sức khỏe Zone + kết luận của chuyên gia
 app.use('/health-reports', healthReportRoutes)
+// Hộp thông báo trong ứng dụng (EXPERT-FR-006/007)
+app.use('/notifications', notificationRoutes)
 
 // Module TICKET (§5.9) — thuộc phạm vi MVP
 app.use('/tickets', ticketRoutes)
 app.use('/maintenance-schedules', maintenanceScheduleRoutes)
+
+// MediaMTX hỏi quyền đẩy/xem live stream (VISION-FR-013) — dịch vụ nội bộ, không phải người dùng
+app.use('/internal', internalRoutes)
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {
