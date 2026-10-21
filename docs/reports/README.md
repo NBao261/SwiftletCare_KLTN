@@ -37,8 +37,8 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 10 | `docs/hardware/BOM.md` đã lỗi thời (5.410.000 VNĐ, linh kiện cũ) trong khi SRS cũ ghi COST-NFR-001 ≤ 10.105.000 VNĐ | Cập nhật BOM trước khi điền NFR-12 |
 | 11 | `docs/evidence-register.md` chưa điền nguồn | BR-01 ghi "nguồn từ tài liệu" nhưng chưa có minh chứng |
 | 12 | ALERT-FR-002 (FCM) giờ là bắt buộc nhưng backend mới chỉ ghi log, mobile chưa đăng ký FCM token | Cần nối Firebase thật ở backend và đăng ký/huỷ token ở `mobile/` |
-| 14 | `CLAUDE.md` mục AI pipeline vẫn ghi `counting.py` đếm qua vạch (line-crossing), code đã đổi sang vòng đếm | Sửa một dòng trong `CLAUDE.md` |
 | 13 | Hạn can thiệp tay tính theo **thiết bị**, không theo từng relay (cả backend `override_expiry` lẫn firmware `overrideExpiryMs`): bật tay relay thứ hai làm hạn của relay thứ nhất chạy lại từ đầu, huỷ sớm thì mọi relay về AUTO | SRS mới ghi đúng hành vi này thành BR-20; nếu nhóm muốn hạn riêng từng relay thì phải sửa cả hai phía |
+| 14 | `CLAUDE.md` mục AI pipeline vẫn ghi `counting.py` đếm qua vạch (line-crossing), code đã đổi sang vòng đếm | Sửa một dòng trong `CLAUDE.md` |
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 
