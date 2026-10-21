@@ -7,7 +7,7 @@
 // - Trạng thái chạy lấy từ SensorNode: `ota_pending` (đang chờ, trang tự làm mới 5s) / `ota_failed`
 //   (job BE đánh dấu thất bại sau 30 phút) / `firmware_version` khớp bản yêu cầu → thành công.
 // - Lỗi BE: 400 (host không được phép / dữ liệu sai), 409 (node không ONLINE / trùng version),
-//   501 (firmware chưa hỗ trợ lệnh từ xa — FIRMWARE_COMMAND_SUPPORT tắt), 503 (mất MQTT).
+//   501 (thiết bị chạy firmware trước 1.4.0, chưa xử lý lệnh từ xa), 503 (mất MQTT).
 import { useState } from 'react'
 import { useSensorNodes, useSendNodeCommand } from '@/hooks/shared/useDevices'
 import { getApiErrorMessage } from '@/lib/helpers'
@@ -24,7 +24,7 @@ import type { SensorNode } from '@/types'
 
 function otaErrorMessage(err: unknown): string {
   const status = (err as { response?: { status?: number } })?.response?.status
-  if (status === 501) return 'Máy chủ chưa bật lệnh từ xa cho firmware hiện tại (501). Cần firmware hỗ trợ lệnh trước khi dùng OTA.'
+  if (status === 501) return 'Firmware trên thiết bị chưa hỗ trợ cập nhật từ xa. Nạp bản 1.4.0 trở lên tại chỗ (ElegantOTA trong mạng LAN hoặc cáp USB) trước.'
   if (status === 503) return 'Mất kết nối MQTT broker — chưa thể gửi lệnh tới thiết bị. Thử lại sau.'
   if (status === 403) return 'Bạn không có quyền gửi lệnh cho thiết bị này (ngoài khu vực phụ trách).'
   return getApiErrorMessage(err, 'Gửi lệnh OTA thất bại')

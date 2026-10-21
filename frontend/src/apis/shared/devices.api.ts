@@ -38,7 +38,7 @@ export const deviceApi = {
   listCameraNodes: (zoneId?: string) =>
     api.get<ApiResponse<CameraNode[]>>('/devices/camera-nodes', { params: zoneId ? { zoneId } : undefined }),
 
-  // TICKET-FR-008, Flow 15 — xử lý từ xa. RESTART/OTA trả 501 khi firmware chưa hỗ trợ (chỉ PUSH_CONFIG dùng được)
+  // TICKET-FR-008, Flow 15 — xử lý từ xa. RESTART/OTA trả 501 khi thiết bị chạy firmware trước 1.4.0 (chỉ PUSH_CONFIG dùng được)
   sendCommand: (id: string, input: NodeCommandInput) =>
     api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/commands`, input),
 

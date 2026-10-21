@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Badge, Button } from "@/components/ui"
 import RelayToggle from "@/components/features/technician/devices/RelayToggle"
+import DeviceInfoCard from "@/components/features/technician/devices/DeviceInfoCard"
 import { useTelemetry } from "@/hooks/farm-owner/useTelemetry"
 import type { SensorNode } from "@/types"
 import { useClearRelayOverride } from "@/hooks/shared/useDevices"
@@ -244,7 +245,9 @@ export default function DeviceDiagnosticsPanel({
       )}
 
       {activeTab === "config" && (
-        <div className="flex flex-col md:flex-row gap-4 animate-fade-in">
+        <div className="flex flex-col gap-4 animate-fade-in">
+        <DeviceInfoCard node={node} />
+        <div className="flex flex-col md:flex-row gap-4">
           {canOnboard && node.status === "ONLINE" && (
             <div className="flex-1 p-5 bg-white border border-warmGray/10 rounded-2xl shadow-sm">
               <h4 className="text-small font-bold text-charcoal mb-4">Điều chuyển Zone</h4>
@@ -262,6 +265,7 @@ export default function DeviceDiagnosticsPanel({
               </div>
             </div>
           )}
+        </div>
         </div>
       )}
     </div>
