@@ -518,6 +518,10 @@ export async function raiseCameraOfflineAlert(cameraId: string): Promise<void> {
   const house = await House.findById(camera.house_id).lean()
   if (!house) return
 
+  // Nút AI tự báo EDGE_AI_DEGRADED (FPS thấp) dùng chung khoá dedup với cảnh báo này: đóng cái đó
+  // trước, nếu không "mất kết nối" bị gộp vào cảnh báo FPS cũ và không ai được báo. Kết nối lại mà
+  // FPS vẫn thấp thì nút AI tự báo lại.
+  await resolveAlertsForNode(cameraId, 'Nút AI mất kết nối — chuyển sang cảnh báo mất kết nối', 'EDGE_AI_DEGRADED')
   await createAlert({
     farmId:  String(house.farm_id),
     houseId: String(house._id),

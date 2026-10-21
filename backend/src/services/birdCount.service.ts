@@ -8,11 +8,14 @@ import { createAlert, resolveHouseAlerts } from '@/services/alert.service'
 import { assertHouseAccessByParams } from '@/utils/farmAccess.util'
 import { resolveBirdCountTuning } from '@/utils/detectionTuning.util'
 import { BadRequestError, NotFoundError } from '@/utils/appError.util'
+import logger from '@/utils/logger.util'
 import type { BirdCountPayload, CurrentUser, SessionType } from '@/types'
 
 const SESSION_TYPES: SessionType[] = ['MORNING_EXIT', 'EVENING_ENTRY']
 const VN_OFFSET_MS = 7 * 3600_000
 const DAY_MS = 86_400_000
+/** VISION-FR-017 — khoảng 5 phút */
+const BUCKET_MS = 5 * 60_000
 
 /** VISION-FR-011 — "so với trung bình 7 ngày trước" */
 const BASELINE_DAYS = 7
@@ -20,6 +23,8 @@ const BASELINE_DAYS = 7
 const MIN_BASELINE_DAYS = 3
 /** ponytail: khoảng tối đa 1 lần đọc bucket chọn tay (7 ngày ≈ 2016 khoảng/camera), không có nguồn (SRS §0.5) */
 const MAX_BUCKET_RANGE_MS = 7 * DAY_MS
+/** ponytail: khoảng đọc mặc định khi không gửi from (24 giờ gần nhất) chọn tay, không có nguồn (SRS §0.5) */
+const DEFAULT_BUCKET_RANGE_MS = DAY_MS
 
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
 /** Ngày theo giờ Việt Nam — phiên sáng 05:30 VN là 22:30 UTC hôm trước */
@@ -137,12 +142,18 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> 
   const node = await CameraNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('house_id').lean()
   if (!node) throw NotFoundError(`Không tìm thấy CameraNode với device_id="${deviceId}"`)
 
+  // Số đếm chỉ tăng trong một phiên/khoảng: `$max` để tin MQTT QoS 1 giao lại hoặc tới lệch thứ tự,
+  // hay tin của pipeline vừa khởi động lại mất trạng thái, không kéo số đã lưu xuống
+  const counts = { $max: { entry_count, exit_count } }
+
   // VISION-FR-017: số đếm theo khoảng 5 phút, có cả ngoài phiên
   if (payload.kind === 'BUCKET') {
     if (!Number.isFinite(payload.bucket_start)) throw BadRequestError('Thiếu bucket_start')
+    // Căn về đầu khoảng 5 phút: mốc lệch vài giây vẫn gộp vào cùng một dòng thay vì tạo dòng mới
+    const bucketStart = Math.floor((payload.bucket_start as number) / BUCKET_MS) * BUCKET_MS
     await BirdCountBucket.updateOne(
-      { camera_node_id: node._id, bucket_start: new Date(payload.bucket_start as number) },
-      { $set: { house_id: node.house_id, entry_count, exit_count } },
+      { camera_node_id: node._id, bucket_start: new Date(bucketStart) },
+      { $set: { house_id: node.house_id }, ...counts },
       { upsert: true },
     )
     return
@@ -158,9 +169,10 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> 
     { camera_node_id: node._id, session_type: sessionType, session_date: sessionDate },
     {
       $set: {
-        house_id: node.house_id, timestamp, entry_count, exit_count, // số thô của cả hai chiều vẫn được lưu
+        house_id: node.house_id,
         ...(payload.confidence_avg !== undefined && Number.isFinite(payload.confidence_avg) && { confidence_avg: payload.confidence_avg }),
       },
+      $max: { timestamp, entry_count, exit_count }, // số thô của cả hai chiều vẫn được lưu
     },
     { upsert: true },
   )
@@ -191,39 +203,53 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> 
 export async function checkReturnRateDrops(sessionDate = vnDate(new Date())): Promise<number> {
   const houseIds = await BirdCountRecord.distinct('house_id', { session_type: 'EVENING_ENTRY', session_date: sessionDate })
 
+  // "7 ngày trước" là 7 ngày lịch, không phải 7 bản ghi gần nhất: camera mất kết nối nhiều ngày thì nền ít đi
+  const from = new Date(Date.parse(sessionDate) - BASELINE_DAYS * DAY_MS).toISOString().slice(0, 10)
+
   let created = 0
   for (const id of houseIds) {
     const houseId = String(id)
-    const days = await houseDailyCounts(houseId, { to: sessionDate })
-    const today = days.at(-1)
-    if (today?.date !== sessionDate || today.return_rate === null) continue
-    const previous = days.slice(0, -1).filter(d => d.return_rate !== null).slice(-BASELINE_DAYS)
-    if (previous.length < MIN_BASELINE_DAYS) continue
-
-    const rate = today.return_rate
-    const avg = previous.reduce((sum, d) => sum + (d.return_rate as number), 0) / previous.length
-    const dropPct = avg > 0 ? ((avg - rate) / avg) * 100 : 0
-
-    const house = await House.findById(houseId).select('farm_id name bird_count_tuning').lean()
-    if (!house) continue
-    // EXPERT-FR-008: Domain Expert chỉnh mức giảm theo House (mặc định 20%)
-    const limit = resolveBirdCountTuning(house.bird_count_tuning).return_rate_drop_pct
-
-    if (dropPct <= limit) {
-      await resolveHouseAlerts(houseId, 'LOW_RETURN_RATE', 'Tỷ lệ chim về đã trở lại mức bình thường')
-      continue
+    // Lỗi ở một nhà không được làm bỏ qua các nhà sau: job chỉ chạy một lần mỗi tối
+    try {
+      if (await checkHouseReturnRate(houseId, sessionDate, from)) created++
+    } catch (err) {
+      logger.error('Kiểm tra tỷ lệ chim về thất bại', { houseId, sessionDate, err })
     }
-
-    const alert = await createAlert({
-      farmId: String(house.farm_id), houseId,
-      type: 'LOW_RETURN_RATE',
-      title: `Tỷ lệ chim về giảm tại ${house.name}`,
-      message: `Tỷ lệ chim về ${rate.toFixed(1)}%, giảm ${dropPct.toFixed(1)}% so với trung bình ${previous.length} ngày trước (${avg.toFixed(1)}%)`,
-      metadata: { sessionDate, returnRate: rate, avg: +avg.toFixed(2), dropPct: +dropPct.toFixed(1), limit },
-    })
-    if (alert) created++
   }
   return created
+}
+
+/** Một nhà của checkReturnRateDrops; trả true khi tạo cảnh báo mới */
+async function checkHouseReturnRate(houseId: string, sessionDate: string, from: string): Promise<boolean> {
+  const days = await houseDailyCounts(houseId, { from, to: sessionDate })
+  const today = days.at(-1)
+  if (today?.date !== sessionDate || today.return_rate === null) return false
+  const previous = days.slice(0, -1).filter(d => d.return_rate !== null)
+  if (previous.length < MIN_BASELINE_DAYS) return false
+
+  const rate = today.return_rate
+  const avg = previous.reduce((sum, d) => sum + (d.return_rate as number), 0) / previous.length
+  const dropPct = avg > 0 ? ((avg - rate) / avg) * 100 : 0
+
+  const house = await House.findById(houseId).select('farm_id name bird_count_tuning').lean()
+  if (!house) return false
+  // EXPERT-FR-008: Domain Expert chỉnh mức giảm theo House (mặc định 20%)
+  const limit = resolveBirdCountTuning(house.bird_count_tuning).return_rate_drop_pct
+
+  if (dropPct <= limit) {
+    // Đóng xong vẫn còn trong hàng chờ kiểm chứng: hàng chờ lọc theo expert_verdict, không theo trạng thái
+    await resolveHouseAlerts(houseId, 'LOW_RETURN_RATE', 'Tỷ lệ chim về đã trở lại mức bình thường')
+    return false
+  }
+
+  const alert = await createAlert({
+    farmId: String(house.farm_id), houseId,
+    type: 'LOW_RETURN_RATE',
+    title: `Tỷ lệ chim về giảm tại ${house.name}`,
+    message: `Tỷ lệ chim về ${rate.toFixed(1)}%, giảm ${dropPct.toFixed(1)}% so với trung bình ${previous.length} ngày trước (${avg.toFixed(1)}%)`,
+    metadata: { sessionDate, returnRate: rate, avg: +avg.toFixed(2), dropPct: +dropPct.toFixed(1), limit },
+  })
+  return alert !== null
 }
 
 /**
@@ -236,7 +262,7 @@ export async function getBirdCountBuckets(
 ) {
   const { house } = await assertHouseAccessByParams(params, user)
   const to = query.to ? new Date(query.to) : new Date()
-  const from = query.from ? new Date(query.from) : new Date(to.getTime() - DAY_MS)
+  const from = query.from ? new Date(query.from) : new Date(to.getTime() - DEFAULT_BUCKET_RANGE_MS)
   if (from >= to) throw BadRequestError('from phải trước to')
   if (to.getTime() - from.getTime() > MAX_BUCKET_RANGE_MS) throw BadRequestError('Khoảng thời gian tối đa 7 ngày')
 

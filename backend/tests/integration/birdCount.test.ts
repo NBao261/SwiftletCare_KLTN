@@ -14,7 +14,7 @@ import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
 import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
-import { CameraNode } from '@/models/device.model'
+import { CameraNode, SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
@@ -56,7 +56,8 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  await Promise.all([Alert, BirdCountBucket, BirdCountRecord, CameraNode, Farm, House, Zone, User]
+  jest.restoreAllMocks()
+  await Promise.all([Alert, BirdCountBucket, BirdCountRecord, CameraNode, Farm, House, SensorNode, Zone, User]
     .map(m => (m as typeof User).deleteMany({})))
 })
 
@@ -122,6 +123,21 @@ describe('ingestBirdCount — tin của phiên (VISION-FR-006/008/009)', () => {
     await expect(ingestBirdCount(session(camera.device_id, 'MORNING_EXIT', -1, 0, Date.now()))).rejects.toThrow()
     await expect(ingestBirdCount({ ...session(camera.device_id, 'MORNING_EXIT', 1, 0, Date.now()), session_type: 'NOON' as never })).rejects.toThrow()
     expect(await BirdCountRecord.countDocuments()).toBe(0)
+  })
+
+  it('tin cũ tới sau (QoS 1 giao lại, pipeline khởi động lại mất trạng thái) không kéo số đã lưu xuống', async () => {
+    const { camera } = await seed()
+    await ingestBirdCount(session(camera.device_id, 'MORNING_EXIT', 110, 10, vnAt('2026-10-15', '06:30')))
+    await ingestBirdCount(session(camera.device_id, 'MORNING_EXIT', 5, 0, vnAt('2026-10-15', '05:40')))
+    const record = (await BirdCountRecord.findOne().lean())!
+    expect(record).toMatchObject({ exit_count: 110, entry_count: 10 })
+    expect(record.timestamp.getTime()).toBe(vnAt('2026-10-15', '06:30'))
+  })
+
+  it('from/to không đọc được thành ngày (ISO hợp lệ nhưng JS không parse) → 422, không phải 500', async () => {
+    const { house, token } = await seed()
+    await get('/analytics/bird-count/daily', token, { houseId: String(house._id), from: '2026-W43' }).expect(422)
+    await get('/analytics/bird-count/buckets', token, { houseId: String(house._id), from: '2026-283' }).expect(422)
   })
 
   it('/daily gom phiên sáng (22:30 UTC hôm trước) và phiên chiều vào cùng 1 ngày VN', async () => {
@@ -240,6 +256,16 @@ describe('số đếm 5 phút (VISION-FR-017)', () => {
     await expect(ingestBirdCount({ ...bucket(camera.device_id, t0, 1, 1), bucket_start: undefined })).rejects.toThrow()
   })
 
+  it('bucket_start lệch vài giây được căn về đầu khoảng 5 phút; tin cũ không kéo số xuống', async () => {
+    const { camera } = await seed()
+    await ingestBirdCount(bucket(camera.device_id, t0, 4, 2))
+    await ingestBirdCount(bucket(camera.device_id, t0 + 7_000, 1, 0))
+    const rows = await BirdCountBucket.find().lean()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ entry_count: 4, exit_count: 2 })
+    expect(rows[0].bucket_start.getTime()).toBe(t0)
+  })
+
   it('/buckets cộng các camera của nhà; zoneId cũ vẫn chạy; khoảng quá 7 ngày → 400; farm khác → 403', async () => {
     const { camera, house, zone, token } = await seed()
     const second = await CameraNode.create({ device_id: `cam-${seq}-b`, house_id: house._id })
@@ -305,6 +331,23 @@ describe('checkReturnRateDrops (VISION-FR-011)', () => {
     expect(await checkReturnRateDrops('2026-10-15')).toBe(0)
   })
 
+  it('nền là 7 ngày lịch trước đó, không phải 7 bản ghi gần nhất: dữ liệu cũ hơn 7 ngày không tính', async () => {
+    const { camera, house } = await seed()
+    await eveningRates(camera._id, house._id, [['2026-10-01', 90], ['2026-10-02', 90], ['2026-10-03', 90], ['2026-10-15', 60]])
+    expect(await checkReturnRateDrops('2026-10-15')).toBe(0)
+    expect(await Alert.countDocuments({ type: 'LOW_RETURN_RATE' })).toBe(0)
+  })
+
+  it('lỗi ở một nhà không làm bỏ qua các nhà sau', async () => {
+    const days: Array<[string, number]> = [['2026-10-12', 90], ['2026-10-13', 90], ['2026-10-14', 90], ['2026-10-15', 60]]
+    const a = await seed()
+    const b = await seed()
+    await eveningRates(a.camera._id, a.house._id, days)
+    await eveningRates(b.camera._id, b.house._id, days)
+    jest.spyOn(House, 'findById').mockImplementationOnce(() => { throw new Error('Mongo tạm lỗi') })
+    expect(await checkReturnRateDrops('2026-10-15')).toBe(1)
+  })
+
   it('nhà có 2 cửa chỉ ra 1 cảnh báo, tính trên tổng của nhà; 2 nhà cùng farm có cảnh báo riêng', async () => {
     const { camera, house, farm } = await seed()
     const doorB = await CameraNode.create({ device_id: `cam-${seq}-b`, house_id: house._id })
@@ -346,6 +389,29 @@ describe('nút AI: heartbeat, offline, vision/alert (THREAT-FR-010)', () => {
 
     await recordHeartbeat({ deviceId: camera.device_id } as never)
     expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
+  })
+
+  it('đang có EDGE_AI_DEGRADED do FPS thấp rồi mất heartbeat → đóng cảnh báo FPS, tạo cảnh báo mất kết nối mới', async () => {
+    const { camera } = await seed()
+    const fps = (await ingestDeviceAlert({ deviceId: camera.device_id, type: 'EDGE_AI_DEGRADED', message: 'FPS 6' }))!
+    await CameraNode.updateOne({ _id: camera._id }, { last_heartbeat: new Date(Date.now() - CAMERA_OFFLINE_THRESHOLD_MS - 1000) })
+    await markStaleDevicesOffline()
+
+    expect((await Alert.findById(fps._id).lean())!.status).toBe('RESOLVED')
+    const offline = await Alert.find({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' }).lean()
+    expect(offline).toHaveLength(1)
+    expect(offline[0].title).toContain('mất kết nối')
+  })
+
+  it('lỗi khi quét SensorNode không làm bỏ qua lượt quét camera', async () => {
+    const { camera, zone } = await seed()
+    const stale = new Date(Date.now() - CAMERA_OFFLINE_THRESHOLD_MS - 1000)
+    await SensorNode.create({ device_id: `ESP-${seq}`, zone_id: zone._id, status: 'ONLINE', last_heartbeat: new Date(0) })
+    await CameraNode.updateOne({ _id: camera._id }, { last_heartbeat: stale })
+    jest.spyOn(SensorNode, 'updateOne').mockRejectedValueOnce(new Error('Mongo tạm lỗi') as never)
+
+    await expect(markStaleDevicesOffline()).rejects.toThrow('Mongo tạm lỗi')
+    expect((await CameraNode.findById(camera._id).lean())!.status).toBe('OFFLINE')
   })
 
   it('chưa quá 90 giây thì vẫn ONLINE', async () => {

@@ -155,6 +155,7 @@ Các mốc dưới đây do người viết code chọn để hệ thống chạ
 | Giờ chạy job so tỷ lệ chim về **[v2.1.6]** | 19:15 giờ VN (hết phiên chiều 19:00 + 15 phút) | backend `jobs/returnRate.job.ts` | Chờ tin cuối của phiên chiều trước khi so (VISION-FR-011); đổi cùng khung giờ phiên |
 | Số ngày nền tối thiểu để so tỷ lệ chim về **[v2.1.6]** | 3 ngày (trong tối đa 7 ngày trước) | backend `MIN_BASELINE_DAYS` | Ít ngày hơn thì 1 ngày lệch đã thành cảnh báo (VISION-FR-011) |
 | Khoảng tối đa 1 lần đọc số đếm 5 phút **[v2.1.6]** | 7 ngày | backend `MAX_BUCKET_RANGE_MS` | Giới hạn kích thước response của `GET /analytics/bird-count/buckets` (VISION-FR-017) |
+| Khoảng đọc mặc định số đếm 5 phút khi không gửi `from` **[v2.1.6]** | 24 giờ gần nhất | backend `DEFAULT_BUCKET_RANGE_MS` | Đủ cho biểu đồ theo giờ của một ngày; bối cảnh ±30 phút khi kiểm chứng cảnh báo gửi `from`/`to` riêng (VISION-FR-017, EXPERT-FR-003) |
 | Thời gian giữ thông báo trong ứng dụng **[v2.1.6]** | 90 ngày | backend `NOTIFICATION_TTL_SECONDS` | Cùng mức giữ telemetry; hộp thông báo không phình mãi (EXPERT-FR-007) |
 | Thời hạn token xem live stream **[v2.1.7]** | 60 giây (chỉ cần còn hạn lúc mở kết nối) | backend `STREAM_TOKEN_TTL_SEC` | Token lộ ra (log, lịch sử trình duyệt) cũng hết hạn nhanh; kết nối lại thì xin token mới (VISION-FR-013) |
 

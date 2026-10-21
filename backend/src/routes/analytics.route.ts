@@ -26,13 +26,17 @@ const birdScope = [
   query('zoneId').optional().isString().isMongoId(),
   query('houseId').if(query('zoneId').not().exists()).exists().withMessage('Cần houseId'),
 ]
-router.get('/bird-count/daily',  ...birdScope, validate, analyticsController.birdCountDaily)
+// isISO8601 (kể cả strict) vẫn nhận dạng JS không đọc được như '2026-283', '2026-W43' → Invalid Date → 500;
+// kiểm tra luôn bằng Date.parse để trả 422
+const dateRange = ['from', 'to'].map(name =>
+  query(name).optional().isString().isISO8601().custom((v: string) => !Number.isNaN(Date.parse(v))).withMessage(`${name} không phải ngày hợp lệ`))
+router.get('/bird-count/daily',  ...birdScope, ...dateRange, validate, analyticsController.birdCountDaily)
 router.get('/bird-count/trends', ...birdScope, validate, analyticsController.birdCountTrends)
 // VISION-FR-012 — số hôm nay của nhà yến khi mở trang; sau đó socket BIRD_COUNT_UPDATE (room house:<id>) gửi cùng con số
 router.get('/bird-count/current', ...birdScope, validate, analyticsController.birdCountCurrent)
 // VISION-FR-017 — số đếm theo khoảng 5 phút (biểu đồ theo giờ, bối cảnh ±30 phút khi kiểm chứng cảnh báo)
 router.get('/bird-count/buckets',
-  ...birdScope, query('from').optional().isString().isISO8601(), query('to').optional().isString().isISO8601(), validate,
+  ...birdScope, ...dateRange, validate,
   analyticsController.birdCountBuckets)
 // Môi trường đo theo Zone, tỷ lệ chim về lấy của nhà yến chứa Zone
 router.get('/correlation',       query('zoneId').isMongoId(), validate, analyticsController.envBirdCorrelation)

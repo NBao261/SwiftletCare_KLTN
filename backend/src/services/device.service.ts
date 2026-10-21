@@ -526,28 +526,31 @@ export async function markStaleDevicesOffline(): Promise<void> {
     .select('_id zone_id')
     .lean()
 
-  await Promise.all(staleNodes.map(async node => {
-    // Lặp lại điều kiện "vẫn im lặng" trong chính lệnh ghi: heartbeat tới giữa lúc
-    // find và lúc update thì node không bị đè thành OFFLINE, không có cảnh báo giả.
-    const { modifiedCount } = await SensorNode.updateOne(
-      { _id: node._id, status: 'ONLINE', last_heartbeat: { $lt: staleBefore } },
-      { status: 'OFFLINE' },
-    )
-    if (modifiedCount === 0) return
+  // finally: lỗi ghi ở một SensorNode không được làm bỏ qua lượt quét camera
+  try {
+    await Promise.all(staleNodes.map(async node => {
+      // Lặp lại điều kiện "vẫn im lặng" trong chính lệnh ghi: heartbeat tới giữa lúc
+      // find và lúc update thì node không bị đè thành OFFLINE, không có cảnh báo giả.
+      const { modifiedCount } = await SensorNode.updateOne(
+        { _id: node._id, status: 'ONLINE', last_heartbeat: { $lt: staleBefore } },
+        { status: 'OFFLINE' },
+      )
+      if (modifiedCount === 0) return
 
-    emitDeviceStatusChange(String(node.zone_id), {
-      nodeId: String(node._id),
-      status: 'OFFLINE',
-      timestamp: new Date().toISOString(),
-    })
-    // THREAT-FR-009 — trước đây job này chỉ đổi trạng thái, không hề tạo Alert
-    // nên NODE_OFFLINE không bao giờ xuất hiện trong danh sách cảnh báo.
-    await raiseNodeOfflineAlert(String(node._id)).catch((err: Error) =>
-      logger.error('Tạo cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
-    )
-  }))
-
-  await markStaleCamerasOffline()
+      emitDeviceStatusChange(String(node.zone_id), {
+        nodeId: String(node._id),
+        status: 'OFFLINE',
+        timestamp: new Date().toISOString(),
+      })
+      // THREAT-FR-009 — trước đây job này chỉ đổi trạng thái, không hề tạo Alert
+      // nên NODE_OFFLINE không bao giờ xuất hiện trong danh sách cảnh báo.
+      await raiseNodeOfflineAlert(String(node._id)).catch((err: Error) =>
+        logger.error('Tạo cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
+      )
+    }))
+  } finally {
+    await markStaleCamerasOffline()
+  }
 }
 
 /** THREAT-FR-010 — nút AI im lặng quá CAMERA_OFFLINE_THRESHOLD_MS → OFFLINE + EDGE_AI_DEGRADED */
