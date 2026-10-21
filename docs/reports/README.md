@@ -26,7 +26,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | # | Chỗ lệch | Ghi chú |
 | --- | --- | --- |
 | 1 | THREAT-FR-009: SRS cũ ghi mất heartbeat > 60 s; code đánh dấu OFFLINE sau 30 s (job quét mỗi 10 s) | SRS mới ghi theo code (BR-10) |
-| 2 | Ma trận phân quyền SRS cũ ghi Technician/Admin không can thiệp tay, không xác nhận cảnh báo; route backend cho phép | SRS mới ghi theo code ("when handling an incident"). Nếu nhóm muốn chặn thì sửa route |
+| 2 | Technician chỉ can thiệp tay khi đang được giao một ticket mở của farm đó, chỉ xác nhận cảnh báo gắn với ticket của mình; Admin không được cả hai (ENV-FR-016, ALERT-FR-009); route hiện cho cả `TECHNICIAN`, `ADMIN` (can thiệp tay) và `TECHNICIAN` không điều kiện (xác nhận) | Kiểm tra ticket được giao ở service; báo Farm Owner khi Technician can thiệp tay |
 | 3 | `DeviceStatus` có `DEGRADED`, `ERROR` nhưng không chỗ nào trong code gán hai trạng thái này | Bỏ khỏi enum hoặc thêm luồng gán; state machine ở mục 6.6 chưa có hai trạng thái này |
 | 4 | `HarvestStatus` có `ARCHIVED` nhưng code không gán | Tương tự mục 3 |
 | 5 | Tạo mẻ thu hoạch không kiểm tra số tổ/khối lượng > 0 và ngày không ở tương lai | MARKET-FR-001 hiện ghi theo code; nên thêm validate rồi siết tiêu chí |
@@ -45,6 +45,10 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 18 | EXPERT-FR-009: hiện chỉ kết luận của chuyên gia mới báo Farm Owner; sửa ngưỡng, hệ số mờ, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm và kết luận cảnh báo chưa báo gì; lịch sử nằm rải rác theo từng loại (`threshold_history`, `fuzzy_tuning_history`, …), chưa có một danh sách chung | Gọi `notifyUser` cho các Farm Owner ở từng service; thêm endpoint lịch sử hoạt động của chuyên gia (có thể đọc từ `audit_logs` lọc theo farm và role `DOMAIN_EXPERT`) |
 | 19 | Trạng thái `DISMISSED` khi bác bỏ (EXPERT-FR-003, mục 6.1): code hiện không đổi trạng thái khi có kết luận, ghi chú không bắt buộc, chưa lưu trạng thái trước khi bác bỏ, báo cáo sức khỏe chưa tách cảnh báo đã bác bỏ | Thêm `DISMISSED` vào `AlertStatus` ở backend, `frontend/src/types/`, `mobile/types/` cùng một PR; gộp trùng và tự đóng tính cả `DISMISSED`; lưu trạng thái trước để khôi phục khi đổi sang `CONFIRMED`; bắt buộc ghi chú khi `REJECTED` |
 | 20 | Lịch đếm theo mùa (VISION-FR-019): khung giờ phiên đang cố định trong `ai-pipeline/config/config.yaml`, job so tỷ lệ cố định 19:15; phiên đang do pipeline cộng dồn chứ không tính từ số đếm 5 phút | Lưu lịch theo House; backend tính phiên từ `bird_count_buckets` theo khung của ngày; job chạy theo giờ kết thúc phiên chiều |
+| 21 | EXPERT-FR-010 (chuyên gia xem lại thay đổi của Farm Owner) và EXPERT-FR-011 (chỉ chuyên gia áp gợi ý hệ số): chưa có | Thêm thực thể review item và proposal (state machine mục 6.10, 6.11), route accept/revert/approve/reject, thông báo hai chiều; route áp gợi ý hiện ai có quyền sửa hệ số cũng dùng được |
+| 22 | ENV-FR-027 đồng bộ cấu hình: chưa có version cấu hình, heartbeat chưa báo version, chưa có loại cảnh báo `CONFIG_MISMATCH` | Firmware gửi version trong heartbeat; backend tăng version mỗi lần đổi, gửi lại khi lệch; thêm `CONFIG_MISMATCH` vào `AlertType` ở backend, frontend, mobile; mốc 3 heartbeat (BR-24) ghi vào danh sách giả định của SRS cũ §0.5 |
+| 23 | ALERT-FR-014 gói bằng chứng: dữ liệu đã có (telemetry, số đếm 5 phút, cảnh báo) nhưng chưa có endpoint gom theo cảnh báo | Thêm endpoint đọc bằng chứng của một cảnh báo suy luận |
+| 24 | VISION-FR-020 phiên không đầy đủ: job so tỷ lệ chim về chưa xét nút AI offline trong phiên | Đánh dấu phiên theo cảnh báo `EDGE_AI_DEGRADED` mở trong khung giờ; loại ngày không đầy đủ khỏi so sánh và nền |
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 
