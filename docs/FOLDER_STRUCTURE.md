@@ -60,7 +60,8 @@ docs/
 ├── evidence-register.md   # sổ tài liệu tham khảo & minh chứng cho các con số, thiết bị (EVID-NFR-003)
 ├── diagrams/               # sơ đồ draw.io: context-diagram/, system-architecture/ (file chính: artifacts/diagram.drawio)
 ├── hardware/               # BOM.md, components-guide.md (linh kiện + đấu nối)
-├── reports/                # Report 1–5 tiếng Anh nộp Review 2 (report3-srs.md, …) + README
+├── reports/                # Report 1–5 tiếng Anh nộp Review 2 (report3-srs.md, report4-sdd.md, …) + README
+├── database/               # init.mongo.js — database script sinh từ model Mongoose (`npm run db:script`), không sửa tay
 ├── sprint-reviews/         # biên bản review theo sprint
 ├── test-reports/           # báo cáo kiểm thử (đang trống)
 ├── task-checklist.md       # checklist việc theo sprint/thành viên
