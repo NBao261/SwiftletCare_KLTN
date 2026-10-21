@@ -1583,7 +1583,8 @@ Chỉ làm khi thật sự cần.
 | Luồng video không có khung (cho nút bật/tắt khung) | Người dùng thật sự cần xem hình gốc | Đẩy thêm một đường `cam-<id>-raw`; tốn gấp đôi băng thông upload |
 | Tăng tốc suy luận | FPS dưới mục tiêu | Theo thứ tự ở mục 18.4: `onnxruntime-openvino` (CPU Intel) → đầu vào 480/416 trên ROI hẹp → hạ camera 20 fps |
 | Phát hiện thiên địch (THREAT-FR-001) | Có dữ liệu chuột/rắn/cú và camera nhìn vào trong nhà | Thêm class, sửa `alert_publisher.py` (thêm `deviceId`), cho `ingestDeviceAlert` tra cả `CameraNode` |
-| Ghi hình sự kiện (VISION-FR-015) | Sau khi phần đếm ổn định | Chưa có endpoint, cần thiết kế riêng |
+| Ghi hình sự kiện (VISION-FR-015) | Sau khi phần đếm ổn định | Dùng tính năng có sẵn của MediaMTX: `record: yes`, `recordDeleteAfter: 7d`, `playback: yes` cho đường `cam-<id>` (đã vẽ khung); backend cấp token xem lại giống `stream-token` (SRS 0.5, v2.1.9) |
+| Vẽ vòng đếm trên giao diện (VISION-FR-018) | Khi phải chỉnh vòng mà không muốn sửa `config.yaml` tay (mục 19.8) | Backend lưu `counting_ring` theo camera, gửi qua `swiftletcare/{farmId}/{houseId}/config/update` kèm `deviceId`; pipeline ghi đè `tracking.ring`, áp ngay (SRS 0.5, v2.1.9) |
 
 ---
 
