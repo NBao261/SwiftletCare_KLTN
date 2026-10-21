@@ -25,7 +25,9 @@ src/
   counting.py            Vòng đếm quanh miệng lỗ → entry/exit (VISION-FR-005)
   alert_publisher.py     Publish MQTT vision/bird-count (§9.2); vision/alert không còn dùng cho thiên địch
 tools/pick_roi.py     Lấy ROI + vòng đếm cho config.yaml
-tests/                pytest cho vòng đếm và công cụ hiệu chỉnh
+tools/extract_frames.py  Tách frame theo ROI + nhãn nháp để gán nhãn (plan §7.2)
+tools/split_by_day.py    Chia train/val/test theo ngày quay (plan §7.4)
+tests/                pytest cho vòng đếm và các công cụ
 ```
 
 ## Hiệu chỉnh ROI và vòng đếm
@@ -39,6 +41,10 @@ Camera nhìn vào miệng lỗ ra vào từ trong nhà, nên đếm bằng một
 5. Chạy pipeline trên clip, đếm tay rồi so với số máy đếm. Chim chui ra khỏi lỗ mà số RA tăng thì đổi `into_ring_is_exit`.
 
 Giá trị đang dùng ở nhà yến thử nghiệm và cách đo: `docs/bird-counting-plan.md` mục 19.8.
+
+## Train model
+
+Từ clip đến file ONNX: `docs/bird-counting-plan.md` mục 7 (tách frame → gán nhãn trên Roboflow → chia theo ngày → train trên Google Colab T4 → export ONNX → đo sai số đếm). Clip, frame và dataset để ở `D:\SwiftletCare\`, không để trong repo.
 
 ## MQTT Topics (§9.2)
 

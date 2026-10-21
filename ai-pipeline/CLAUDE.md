@@ -33,11 +33,13 @@ src/
   tracker.py          ByteTrack stub
   counting.py         RingCounter: closed ring around the entrance hole, every crossing counted both ways
 tools/pick_roi.py     calibration: hole outline → ring (offset by --margin) + ROI, printed as YAML
-tests/                test_counting.py, test_pick_roi.py
+tools/extract_frames.py  clip → ROI-cropped frames + draft YOLO labels (ROI from config.yaml)
+tools/split_by_day.py    labelled export → train/val/test by recording day + data.yaml
+tests/                test_counting.py, test_pick_roi.py, test_dataset_tools.py
   alert_publisher.py  MQTT publisher for predator alerts (out of scope)
 ```
 
-Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (done: `RingCounter`, plan §3.3 item 7 / §19.8; `sv.LineZone` only for a camera that sees the hole side-on), `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, drawing, MQTT, push to MediaMTX), `tools/extract_frames.py` and `tools/split_by_day.py` (dataset), `tests/test_counting.py`. `tracker.py` and `alert_publisher.py` go away (ByteTrack comes from `supervision`). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`.
+Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (done: `RingCounter`, plan §3.3 item 7 / §19.8; `sv.LineZone` only for a camera that sees the hole side-on), `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, drawing, MQTT, push to MediaMTX). `tracker.py` and `alert_publisher.py` go away (ByteTrack comes from `supervision`). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json` — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).
 
 ## Rules
 

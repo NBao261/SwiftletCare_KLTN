@@ -858,7 +858,7 @@ Kế hoạch thu:
 | Tổng 2–4 giờ clip | Đủ để rút 1.500–3.000 frame có chim |
 | Giữ nguyên vị trí camera | Dữ liệu train phải giống lúc chạy thật |
 
-Có thể đặt Task Scheduler chạy lệnh `ffmpeg` trên lúc 05:25 và 17:25 hằng ngày.
+**Đã đặt từ 21/10/2026** trên laptop của nhóm: Task Scheduler (`\SwiftletCare\`) đánh thức máy lúc 05:15 và 17:15, chạy `D:\SwiftletCare\record_session.ps1` quay tới 07:15 / 19:15 vào `D:\SwiftletCare\clips\YYYYMMDD_<morning|evening>_NN.mp4` (`ffmpeg -c copy`, fragmented mp4 nên file bị ngắt vẫn xem được; log ở `D:\SwiftletCare\logs\record.log`). Máy phải cắm sạc: wake timer chỉ bật khi dùng nguồn điện. Clip, frame và dataset để ở ổ D, không để trong repo (`ai-pipeline/clips` là junction trỏ sang `D:\SwiftletCare\clips`, đã gitignore).
 
 **Nguồn dữ liệu là chính camera sẽ dùng thật, tại đúng vị trí lắp thật.** Không dùng điện thoại hay camera khác để thu dữ liệu train: khác ống kính, góc nhìn, độ nhòe và màu thì model học sai thứ. Hai cách lấy clip từ camera, theo thứ tự ưu tiên:
 
@@ -870,85 +870,18 @@ Có thể đặt Task Scheduler chạy lệnh `ffmpeg` trên lúc 05:25 và 17:2
 
 ### 7.2. Tách frame và sinh nhãn nháp — `tools/extract_frames.py`
 
-Camera cố định nên có thể dùng background subtraction để khoanh sẵn vật thể chuyển động. Người gán nhãn chỉ còn sửa và xóa, nhanh hơn vẽ từ đầu nhiều lần.
-
-```python
-"""Tách frame từ clip, crop theo ROI và sinh nhãn nháp YOLO bằng background subtraction.
-
-Dùng:
-  python tools/extract_frames.py clips/20261008_morning_01.mp4 --roi 0.20 0.10 0.85 0.80 --every 5
-ROI PHẢI trùng camera.roi trong config.yaml: model train trên ảnh nào thì chạy thật trên ảnh đó.
-"""
-import argparse
-from pathlib import Path
-
-import cv2
-
-ap = argparse.ArgumentParser()
-ap.add_argument("clip")
-ap.add_argument("--out", default="dataset/raw")
-ap.add_argument("--roi", nargs=4, type=float, default=[0, 0, 1, 1], help="x1 y1 x2 y2 theo tỉ lệ")
-ap.add_argument("--every", type=int, default=5, help="lưu 1 frame mỗi N frame")
-ap.add_argument("--min-area", type=int, default=30, help="bỏ đốm nhỏ hơn (px²) — nhiễu, côn trùng")
-ap.add_argument("--max-area", type=int, default=20000, help="bỏ đốm lớn hơn (px²) — đổi sáng, người")
-ap.add_argument("--keep-empty", type=int, default=20, help="giữ 1 trong N frame không có gì (ảnh âm)")
-args = ap.parse_args()
-
-clip = Path(args.clip)
-img_dir, lbl_dir = Path(args.out) / "images", Path(args.out) / "labels"
-img_dir.mkdir(parents=True, exist_ok=True)
-lbl_dir.mkdir(parents=True, exist_ok=True)
-
-cap = cv2.VideoCapture(str(clip))
-if not cap.isOpened():
-    raise SystemExit(f"Không mở được {clip}")
-
-bg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-i = saved = empty_seen = 0
-
-while True:
-    ok, frame = cap.read()
-    if not ok:
-        break
-    H, W = frame.shape[:2]
-    x1, y1, x2, y2 = (int(args.roi[k] * (W, H)[k % 2]) for k in range(4))
-    crop = frame[y1:y2, x1:x2]
-    mask = bg.apply(crop)                 # phải chạy trên MỌI frame để mô hình nền hội tụ
-    i += 1
-    if i < 100 or i % args.every:         # 100 frame đầu: nền chưa ổn định
-        continue
-
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.dilate(mask, kernel, iterations=2)
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    h, w = crop.shape[:2]
-    lines = []
-    for c in contours:
-        bx, by, bw, bh = cv2.boundingRect(c)
-        if args.min_area <= bw * bh <= args.max_area:
-            lines.append(f"0 {(bx + bw / 2) / w:.6f} {(by + bh / 2) / h:.6f} {bw / w:.6f} {bh / h:.6f}")
-
-    if not lines:
-        empty_seen += 1
-        if empty_seen % args.keep_empty:
-            continue
-
-    stem = f"{clip.stem}_{i:06d}"
-    cv2.imwrite(str(img_dir / f"{stem}.jpg"), crop, [cv2.IMWRITE_JPEG_QUALITY, 95])
-    (lbl_dir / f"{stem}.txt").write_text("\n".join(lines))
-    saved += 1
-
-print(f"{clip.name}: đọc {i} frame, lưu {saved} ảnh vào {args.out}")
-```
-
-Chạy cho mọi clip:
+Camera cố định nên có thể dùng background subtraction để khoanh sẵn vật thể chuyển động. Người gán nhãn chỉ còn sửa và xóa, nhanh hơn vẽ từ đầu nhiều lần. Code: `ai-pipeline/tools/extract_frames.py` (test ở `tests/test_dataset_tools.py`).
 
 ```powershell
-Get-ChildItem clips\*.mp4 | ForEach-Object { python tools/extract_frames.py $_.FullName --roi 0.20 0.10 0.85 0.80 --every 5 }
+cd ai-pipeline
+Get-ChildItem D:\SwiftletCare\clips\*.mp4 | ForEach-Object { python tools/extract_frames.py $_.FullName --out D:\SwiftletCare\dataset\raw }
 ```
 
-Lưu ý: `--every 5` ở 25 fps = 5 ảnh/giây. Hai ảnh liên tiếp khá giống nhau; nếu ra quá nhiều ảnh thì tăng lên 10–15.
+- **ROI lấy từ `camera.roi` trong `config.yaml`** (truyền `--roi` chỉ khi cần thử khác): model train trên ảnh crop nào thì chạy thật trên đúng crop đó. **Chốt ROI trước khi tách frame**; đổi ROI sau đó là phải tách và gán nhãn lại.
+- Tên clip phải bắt đầu bằng `YYYYMMDD` (dùng để chia tập ở mục 7.4); công cụ từ chối tên khác.
+- `--every 5` ở 25 fps = 5 ảnh/giây; ra quá nhiều ảnh gần giống nhau thì tăng lên 10–15.
+- `--min-area 150` (px² trong ảnh crop): đo trên clip IR 21/10, nhiễu cảm biến ra đốm 49–108 px² sau dilate (119 ô nháp giả trên clip 90 giây với ngưỡng 30 cũ, còn 8 với 150). Chim ≥ 15 px trong ảnh đầu vào model ≈ 22×22 px trong crop 960 px, nên 150 không bỏ sót chim nào model cần thấy.
+- Côn trùng dưới đèn IR vẫn lọt vào nhãn nháp (đốm sáng 20–40 px, ngang cỡ chim): xóa ô khi gán nhãn, ảnh đó thành ảnh âm.
 
 ### 7.3. Gán nhãn
 
@@ -980,54 +913,19 @@ Mục tiêu số lượng:
 
 ### 7.4. Chia tập theo ngày — `tools/split_by_day.py`
 
-Frame liên tiếp gần như giống hệt nhau. Chia ngẫu nhiên theo frame sẽ để ảnh "sinh đôi" lọt vào cả train lẫn test, cho kết quả đẹp giả. Phải chia theo **ngày quay**.
+Frame liên tiếp gần như giống hệt nhau. Chia ngẫu nhiên theo frame sẽ để ảnh "sinh đôi" lọt vào cả train lẫn test, cho kết quả đẹp giả. Phải chia theo **ngày quay**. Code: `ai-pipeline/tools/split_by_day.py`.
 
-```python
-"""Chia dataset theo NGÀY quay (ngày = 8 chữ số đầu tên file) và ghi data.yaml.
-
-Dùng:
-  python tools/split_by_day.py <thư mục export> dataset/final --val 20261010 --test 20261011
-Nhận mọi cấu trúc có cặp .../images/x.jpg và .../labels/x.txt (kể cả bản export của Roboflow).
-"""
-import argparse
-import shutil
-from collections import Counter
-from pathlib import Path
-
-ap = argparse.ArgumentParser()
-ap.add_argument("src")
-ap.add_argument("dst")
-ap.add_argument("--val", nargs="+", required=True, help="các ngày YYYYMMDD dùng để validate")
-ap.add_argument("--test", nargs="+", required=True, help="các ngày YYYYMMDD dùng để test")
-args = ap.parse_args()
-
-src, dst = Path(args.src), Path(args.dst)
-stats = Counter()
-for img in sorted(src.rglob("*.jpg")):
-    day = img.stem[:8]
-    if not day.isdigit():
-        raise SystemExit(f"Tên file không bắt đầu bằng YYYYMMDD: {img.name}")
-    split = "test" if day in args.test else "val" if day in args.val else "train"
-    label = img.parent.parent / "labels" / f"{img.stem}.txt"
-    (dst / "images" / split).mkdir(parents=True, exist_ok=True)
-    (dst / "labels" / split).mkdir(parents=True, exist_ok=True)
-    shutil.copy2(img, dst / "images" / split / img.name)
-    if label.exists():
-        shutil.copy2(label, dst / "labels" / split / label.name)
-    else:                                   # ảnh âm: file nhãn rỗng
-        (dst / "labels" / split / f"{img.stem}.txt").write_text("")
-    stats[split] += 1
-
-(dst / "data.yaml").write_text(
-    "path: /content/dataset\n"
-    "train: images/train\nval: images/val\ntest: images/test\n"
-    "names:\n  0: swiftlet\n"
-)
-print(dict(stats))
-assert stats["train"] and stats["val"] and stats["test"], "Thiếu một trong ba tập — kiểm tra --val/--test"
+```powershell
+# bản export YOLOv8 của Roboflow giải nén vào D:\SwiftletCare\dataset\roboflow
+python tools/split_by_day.py D:\SwiftletCare\dataset\roboflow D:\SwiftletCare\dataset\final --val 20261024 --test 20261025
+Compress-Archive D:\SwiftletCare\dataset\final\* D:\SwiftletCare\dataset\dataset.zip
 ```
 
-Sau đó nén `dataset/final` thành `dataset.zip` và tải lên Google Drive.
+- Ngày lấy từ 8 chữ số đầu tên file; Roboflow giữ tên gốc và thêm đuôi `_jpg.rf.<hash>` nên vẫn đọc được.
+- Ảnh không có file nhãn được ghi nhãn rỗng (ảnh âm). Ghi `data.yaml` (`path: /content/dataset`, 1 class `swiftlet`).
+- Một ngày không được vừa ở val vừa ở test; thiếu một trong ba tập thì công cụ báo lỗi.
+
+Sau đó tải `dataset.zip` lên Google Drive (`MyDrive/swiftletcare/`).
 
 ### 7.5. Train trên Google Colab
 
@@ -1130,7 +1028,7 @@ mAP chỉ là chỉ số trung gian. Thứ cần báo cáo là sai số đếm.
 3. Chạy pipeline trên từng clip, đọc dòng `KẾT QUẢ`:
 
 ```powershell
-python src/stream.py --source clips/20261011_morning_02.mp4 --session MORNING_EXIT --no-mqtt
+python src/stream.py --source D:/SwiftletCare/clips/20261025_morning_01.mp4 --session MORNING_EXIT --no-mqtt
 ```
 
 4. Tính sai số = `|hệ thống − đếm tay| / đếm tay × 100%` cho từng chiều, và cho **số ròng** (ra trừ vào ở clip sáng, vào trừ ra ở clip chiều).
