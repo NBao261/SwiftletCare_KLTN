@@ -607,15 +607,15 @@
 
 > Làm sau G2. Thứ tự: OTA/khởi động lại → thông tin thiết bị → vẽ vòng đếm → ghi hình. Không chỉnh ảnh camera trong ứng dụng (SRS 0.2, quyết định 14).
 
-- [ ] M1: firmware xử lý `command` trong `config/update`: `RESTART` → `ESP.restart()`, `OTA` → tải `.bin` qua HTTPS bằng `HTTPUpdate`, kiểm checksum; kiểm tra bootloader có bật rollback; unit test phần đọc lệnh `[TICKET-FR-008, Flow 15]`
-- [ ] M3: bật `FIRMWARE_COMMAND_SUPPORT=true` sau khi M1 xong; 🤝 M1+M3 thử OTA thật trên 1 ESP32: thành công, file hỏng, mất mạng giữa chừng `[Flow 15 bước 4a/4b/5a]`
-- [ ] M1: heartbeat gửi thêm `resetReason` và IP `[FARM-FR-006]`
-- [ ] M3: lưu `uptime`, `free_heap`, `reset_reason`, `ip` từ heartbeat, trả trong chi tiết thiết bị, sửa `api-spec.yaml` `[FARM-FR-006]`
-- [ ] M4: thẻ "Thông tin thiết bị"; nút "Khởi động lại" / "Cập nhật firmware" trong Web Console của Technician, hiện trạng thái OTA `[FARM-FR-006, TICKET-FR-008]`
-- [ ] M3: `camera_nodes.counting_ring` + `PUT /devices/camera-nodes/:id/counting-ring` (Domain Expert, lịch sử + audit), gửi xuống nút AI qua `config/update` kèm `deviceId`, gửi lại khi nút AI kết nối lại `[VISION-FR-018]`
-- [ ] M2: nút AI nghe `config/update`, áp vòng mới không cần khởi động lại, lưu ra file; test `[VISION-FR-018]`
-- [ ] M4: màn vẽ vòng đếm trên khung lấy từ video live (`<video>` → `<canvas>`) cho Domain Expert `[VISION-FR-018]`
-- [ ] (Tùy chọn) M3/M5: bật `record` + `playback` của MediaMTX, giữ 7 ngày, token xem lại giống `stream-token` `[VISION-FR-015]`
+- [ ] M1: firmware xử lý `command` trong `config/update`: `RESTART` → `ESP.restart()`, `OTA` → tải `.bin` qua HTTPS bằng `HTTPUpdate`, kiểm checksum; kiểm tra bootloader có bật rollback; unit test phần đọc lệnh `[TICKET-FR-008, Flow 15]` — code xong 21/10 (SRS v2.1.10), chờ review + thử trên board (rollback của bootloader đã bật sẵn)
+- [ ] M3: ~~bật `FIRMWARE_COMMAND_SUPPORT=true`~~ (v2.1.10: bỏ cờ, backend xét theo `firmware_version` ≥ 1.4.0 của từng thiết bị); 🤝 M1+M3 thử OTA thật trên 1 ESP32: thành công, file hỏng, mất mạng giữa chừng `[Flow 15 bước 4a/4b/5a]`
+- [ ] M1: heartbeat gửi thêm `resetReason` và IP `[FARM-FR-006]` — code xong 21/10 (SRS v2.1.10), chờ review
+- [ ] M3: lưu `uptime`, `free_heap`, `reset_reason`, `ip` từ heartbeat, trả trong chi tiết thiết bị, sửa `api-spec.yaml` `[FARM-FR-006]` — code xong 21/10 (SRS v2.1.10), chờ review
+- [ ] M4: thẻ "Thông tin thiết bị"; nút "Khởi động lại" / "Cập nhật firmware" trong Web Console của Technician, hiện trạng thái OTA `[FARM-FR-006, TICKET-FR-008]` — code xong 21/10 (SRS v2.1.10), chờ review (trang OTA và nút khởi động lại đã có từ trước)
+- [ ] M3: `camera_nodes.counting_ring` + `PUT /devices/camera-nodes/:id/counting-ring` (Domain Expert, lịch sử + audit), gửi xuống nút AI qua `config/update` kèm `deviceId`, gửi lại khi nút AI kết nối lại `[VISION-FR-018]` — code xong 21/10 (SRS v2.1.10), chờ review
+- [ ] M2: nút AI nghe `config/update`, áp vòng mới không cần khởi động lại, lưu ra file; test `[VISION-FR-018]` — code xong 21/10 (SRS v2.1.10), chờ review
+- [ ] M4: màn vẽ vòng đếm trên khung lấy từ video live (`<video>` → `<canvas>`) cho Domain Expert `[VISION-FR-018]` — chờ layout Domain Expert + màn live stream (G4)
+- [ ] (Tùy chọn) M3/M5: bật `record` + `playback` của MediaMTX, giữ 7 ngày, token xem lại giống `stream-token` `[VISION-FR-015]` — hoãn: khoảng 150 GB/7 ngày trên VPS, thẻ nhớ camera đã ghi liên tục
 - [ ] (Tùy chọn) M2/M3: nút AI báo độ phân giải/fps thực của camera, lệch 1920×1080 / 25 fps thì cảnh báo `[VISION-FR-001]`
 
 ---
