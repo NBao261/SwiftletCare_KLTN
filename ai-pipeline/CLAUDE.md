@@ -15,7 +15,8 @@ cd ai-pipeline
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python src/stream.py --config config/config.yaml       # current scaffold entry point
-pytest tests/                                          # no tests yet (plan §6.7 adds tests/test_counting.py)
+pytest tests/                                          # ring counter + calibration tool, no camera/model needed
+python tools/pick_roi.py [image|clip|rtsp] --margin 60  # click the hole outline → prints roi + ring for config.yaml (plan §6.8)
 ```
 
 Once rewritten per the plan (§6.6, §7.7), `stream.py` also takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY` and `--no-mqtt`, and serves an MJPEG preview at `http://127.0.0.1:8090/stream` for tuning ROI and the counting line. Python 3.11–3.12 (`onnxruntime` 1.30 needs ≥ 3.11; versions pinned in plan §4). The pipeline has no CI job yet.
@@ -30,11 +31,15 @@ src/
   stream.py           RTSP loop (sequential cap.read, no publishing)
   inference.py        YOLOv8-style ONNX inference + NMS (plan §6.3 also reads YOLO26n NMS-free output)
   tracker.py          ByteTrack stub
-  counting.py         horizontal-line entry/exit counter, CountingSession
+  counting.py         RingCounter: closed ring around the entrance hole, every crossing counted both ways
+tools/pick_roi.py     calibration: hole outline → ring (offset by --margin) + ROI, printed as YAML
+tools/extract_frames.py  clip → ROI-cropped frames + draft YOLO labels (ROI from config.yaml)
+tools/split_by_day.py    labelled export → train/val/test by recording day + data.yaml
+tests/                test_counting.py, test_pick_roi.py, test_dataset_tools.py
   alert_publisher.py  MQTT publisher for predator alerts (out of scope)
 ```
 
-Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (rewritten around `sv.LineZone`), `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, drawing, MQTT, push to MediaMTX), `tools/extract_frames.py` and `tools/split_by_day.py` (dataset), `tests/test_counting.py`. `tracker.py` and `alert_publisher.py` go away (ByteTrack comes from `supervision`). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`.
+Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (done: `RingCounter`, plan §3.3 item 7 / §19.8; `sv.LineZone` only for a camera that sees the hole side-on), `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, drawing, MQTT, push to MediaMTX). `tracker.py` and `alert_publisher.py` go away (ByteTrack comes from `supervision`). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json` — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).
 
 ## Rules
 
@@ -78,11 +83,10 @@ Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (rewritten arou
 | `requirements.txt` | Raspberry Pi comments; ByteTrack built from source (`cython`, `lap`); MinIO/boto3 | Replace with the plan §4 list (`supervision`, `loguru`, `python-dotenv`, `pytest`) |
 | `src/inference.py` | No BGR→RGB conversion; decodes only the YOLOv8 `(1, nc+4, 8400)` output, while the plan exports YOLO26n with `nms=False` (`(1, 300, 6)`, no NMS) and compares YOLOv8n/YOLO11n/YOLO26n (plan §7.9); hard-coded `CLASS_NAMES`/`PREDATOR_IDS`; fixed 4 threads; CPU provider only | Plan §6.3 |
 | `src/tracker.py` | Stub — `update()` returns an empty list, so nothing is ever counted | Delete; use `sv.ByteTrack` |
-| `src/counting.py` | Horizontal line only, hard-coded direction; `return_rate` from raw counts | Rewrite around `sv.LineZone` (plan §6.4) |
 | `src/stream.py` | Sequential `cap.read()` (lags), no MQTT, no sessions, no drawing, no stream push | Rewrite (plan §6.6) |
 | `src/alert_publisher.py` | Predator alerts, payload without `deviceId` | Delete (out of scope) |
 | `README.md` | Lists `vision/alert` and `vision/heartbeat` topics; the backend listens on `.../heartbeat` and predator alerts are gone | Fix with the first code PR |
-| Tests / CI | No `tests/`, no CI job | Add `tests/test_counting.py`, then a CI job running `pytest` |
+| CI | `tests/` exists but no CI job runs it | Add a CI job running `pytest` |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. adding a predator class or a secret to `config.yaml`).
 

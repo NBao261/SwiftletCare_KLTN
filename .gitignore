@@ -34,6 +34,8 @@ __pycache__/
 venv/
 .venv/
 ai-pipeline/models/*.onnx
+ai-pipeline/clips
+ai-pipeline/frames
 
 # PlatformIO
 firmware/.pio/

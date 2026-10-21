@@ -603,6 +603,21 @@
 - [ ] Mời một người nuôi yến có kinh nghiệm xem bộ ngưỡng, việc dùng quạt và cách xử lý NH3; dùng thử vai trò Domain Expert; lập biên bản `[RISK-10, RISK-11]`
 - [ ] Cập nhật 4 sơ đồ trong `docs/architecture/` cho các phần mới (use case và luồng của Domain Expert, bảng `relay_override_logs`, `zone_health_reports`)
 
+## G6. Quản lý thiết bị từ xa (SRS v2.1.9)
+
+> Làm sau G2. Thứ tự: OTA/khởi động lại → thông tin thiết bị → vẽ vòng đếm → ghi hình. Không chỉnh ảnh camera trong ứng dụng (SRS 0.2, quyết định 14).
+
+- [ ] M1: firmware xử lý `command` trong `config/update`: `RESTART` → `ESP.restart()`, `OTA` → tải `.bin` qua HTTPS bằng `HTTPUpdate`, kiểm checksum; kiểm tra bootloader có bật rollback; unit test phần đọc lệnh `[TICKET-FR-008, Flow 15]`
+- [ ] M3: bật `FIRMWARE_COMMAND_SUPPORT=true` sau khi M1 xong; 🤝 M1+M3 thử OTA thật trên 1 ESP32: thành công, file hỏng, mất mạng giữa chừng `[Flow 15 bước 4a/4b/5a]`
+- [ ] M1: heartbeat gửi thêm `resetReason` và IP `[FARM-FR-006]`
+- [ ] M3: lưu `uptime`, `free_heap`, `reset_reason`, `ip` từ heartbeat, trả trong chi tiết thiết bị, sửa `api-spec.yaml` `[FARM-FR-006]`
+- [ ] M4: thẻ "Thông tin thiết bị"; nút "Khởi động lại" / "Cập nhật firmware" trong Web Console của Technician, hiện trạng thái OTA `[FARM-FR-006, TICKET-FR-008]`
+- [ ] M3: `camera_nodes.counting_ring` + `PUT /devices/camera-nodes/:id/counting-ring` (Domain Expert, lịch sử + audit), gửi xuống nút AI qua `config/update` kèm `deviceId`, gửi lại khi nút AI kết nối lại `[VISION-FR-018]`
+- [ ] M2: nút AI nghe `config/update`, áp vòng mới không cần khởi động lại, lưu ra file; test `[VISION-FR-018]`
+- [ ] M4: màn vẽ vòng đếm trên khung lấy từ video live (`<video>` → `<canvas>`) cho Domain Expert `[VISION-FR-018]`
+- [ ] (Tùy chọn) M3/M5: bật `record` + `playback` của MediaMTX, giữ 7 ngày, token xem lại giống `stream-token` `[VISION-FR-015]`
+- [ ] (Tùy chọn) M2/M3: nút AI báo độ phân giải/fps thực của camera, lệch 1920×1080 / 25 fps thì cảnh báo `[VISION-FR-001]`
+
 ---
 
 ## Quy tắc chung khi tick
