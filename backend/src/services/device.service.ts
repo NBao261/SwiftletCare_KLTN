@@ -2,9 +2,12 @@ import { SensorNode, CameraNode, ISensorNode, IN_SERVICE } from '@/models/device
 import { Ticket } from '@/models/ticket.model'
 import { House, Zone, IZone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
-import { findZoneChainOrThrow, assertZoneAccess, listAccessibleZoneIds, listActiveZoneIds } from '@/utils/farmAccess.util'
+import {
+  findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertHouseAccessByParams,
+  listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds,
+} from '@/utils/farmAccess.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
-import { emitRelayUpdate, emitDeviceStatusChange } from '@/socket'
+import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { Alert } from '@/models/alert.model'
 import { logAction } from '@/services/auditLog.service'
@@ -19,7 +22,7 @@ import {
 } from '@/services/relayOverrideLog.service'
 import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
-import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds } from '@/types'
+import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange } from '@/types'
 
 // SRS v2.0.0 bỏ sưởi (ENV-FR-012): kênh IN4 để dự phòng, không còn là relay điều khiển được
 const RELAY_NAMES = ['misting', 'speaker', 'ventilation'] as const
@@ -49,8 +52,13 @@ export interface RegisterDeviceInput { device_id: string; zone_id: string; secre
  * Flow 1 case 3a — thiết bị đã có bản ghi: nói rõ là thuộc Farm khác (Technician
  * cần kiểm tra lại nhãn) hay chỉ là đăng ký trùng trong cùng Farm.
  */
-async function assertNotRegistered(existingZoneId: unknown, targetFarmId: string): Promise<never> {
-  const chain = await findZoneChainOrThrow(String(existingZoneId)).catch(() => null)
+async function assertNotRegistered(
+  existing: { zoneId?: unknown; houseId?: unknown }, targetFarmId: string,
+): Promise<never> {
+  // Cảm biến gắn Zone, camera gắn House (SRS v2.1.8)
+  const chain = existing.houseId
+    ? await findHouseChainOrThrow(String(existing.houseId)).catch(() => null)
+    : await findZoneChainOrThrow(String(existing.zoneId)).catch(() => null)
   if (chain && String(chain.farm._id) !== targetFarmId) {
     throw ConflictError('Thiết bị đã thuộc về Farm khác')
   }
@@ -79,7 +87,7 @@ export async function registerSensorNode(user: CurrentUser, input: RegisterDevic
 
   const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
   if (existing?.decommissioned_at) await retireDeviceId(SensorNode, existing._id, input.device_id)
-  else if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
+  else if (existing) await assertNotRegistered({ zoneId: existing.zone_id }, String(farm._id))
 
   const node = await SensorNode.create({
     device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING', registered_by: user._id,
@@ -264,23 +272,33 @@ export async function reassignZone(
   return { node, delivered }
 }
 
-/** FARM-FR-004 — chỉ Technician/Admin, cùng Web Console Onboarding với sensor node (Flow 1b) */
-export async function registerCameraNode(user: CurrentUser, input: RegisterDeviceInput & { rtsp_url?: string }) {
-  const { farm } = await assertZoneAccess(input.zone_id, user)
+export interface RegisterCameraInput {
+  device_id: string; secret_key: string; rtsp_url?: string
+  house_id?: string
+  /** Cách gửi cũ (trước SRS v2.1.8): quy ra House chứa Zone */
+  zone_id?: string
+}
+
+/**
+ * FARM-FR-004 — chỉ Technician/Admin, cùng Web Console Onboarding với sensor node (Flow 1b).
+ * SRS v2.1.8: camera đếm chim lắp ở cửa ra vào của cả nhà yến (1–2 cửa mỗi nhà) nên gắn House.
+ */
+export async function registerCameraNode(user: CurrentUser, input: RegisterCameraInput) {
+  const { house, farm } = await assertHouseAccessByParams({ houseId: input.house_id, zoneId: input.zone_id }, user)
   await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
 
-  const existing = await CameraNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
+  const existing = await CameraNode.findOne({ device_id: input.device_id }).select('house_id decommissioned_at').lean()
   if (existing?.decommissioned_at) await retireDeviceId(CameraNode as never, existing._id, input.device_id)
-  else if (existing) await assertNotRegistered(existing.zone_id, String(farm._id))
+  else if (existing) await assertNotRegistered({ houseId: existing.house_id }, String(farm._id))
 
   // Chọn field tường minh — trải thẳng body vào create() cho phép client tự đặt status/registered_at
   const node = await CameraNode.create({
-    device_id: input.device_id, zone_id: input.zone_id, rtsp_url: input.rtsp_url,
+    device_id: input.device_id, house_id: house._id, rtsp_url: input.rtsp_url,
     status: 'PENDING', registered_by: user._id,
   })
   await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'camera_node', String(node._id), {
-    deviceId: input.device_id, zoneId: input.zone_id,
+    deviceId: input.device_id, houseId: String(house._id),
   })
   return node
 }
@@ -288,13 +306,14 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterDevic
 /** `rtsp_url` chứa mật khẩu camera — chỉ nút AI cần, không trả ra API (plan §8.7) */
 const CAMERA_PUBLIC_FIELDS = '-rtsp_url'
 
-export async function listCameraNodes(zoneId: string | undefined, user: CurrentUser) {
-  if (zoneId) {
-    await assertZoneAccess(zoneId, user)
-    return CameraNode.find({ zone_id: zoneId, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
+/** Camera của 1 House (`houseId`, hoặc `zoneId` cũ → House chứa Zone), không truyền thì mọi House user được xem */
+export async function listCameraNodes(params: { houseId?: string; zoneId?: string }, user: CurrentUser) {
+  if (params.houseId || params.zoneId) {
+    const { house } = await assertHouseAccessByParams(params, user)
+    return CameraNode.find({ house_id: house._id, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
   }
-  const accessibleZoneIds = await listAccessibleZoneIds(user)
-  return CameraNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
+  const accessibleHouseIds = await listAccessibleHouseIds(user)
+  return CameraNode.find({ house_id: { $in: accessibleHouseIds }, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
 }
 
 /** FARM-FR-005 — gọi từ mqtt/handlers/heartbeat.handler.ts. */
@@ -388,7 +407,7 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   await camera.save()
   if (wasOnline) return
 
-  emitDeviceStatusChange(String(camera.zone_id), {
+  emitHouseDeviceStatusChange(String(camera.house_id), {
     nodeId: String(camera._id),
     status: 'ONLINE',
     timestamp: new Date().toISOString(),
@@ -507,34 +526,37 @@ export async function markStaleDevicesOffline(): Promise<void> {
     .select('_id zone_id')
     .lean()
 
-  await Promise.all(staleNodes.map(async node => {
-    // Lặp lại điều kiện "vẫn im lặng" trong chính lệnh ghi: heartbeat tới giữa lúc
-    // find và lúc update thì node không bị đè thành OFFLINE, không có cảnh báo giả.
-    const { modifiedCount } = await SensorNode.updateOne(
-      { _id: node._id, status: 'ONLINE', last_heartbeat: { $lt: staleBefore } },
-      { status: 'OFFLINE' },
-    )
-    if (modifiedCount === 0) return
+  // finally: lỗi ghi ở một SensorNode không được làm bỏ qua lượt quét camera
+  try {
+    await Promise.all(staleNodes.map(async node => {
+      // Lặp lại điều kiện "vẫn im lặng" trong chính lệnh ghi: heartbeat tới giữa lúc
+      // find và lúc update thì node không bị đè thành OFFLINE, không có cảnh báo giả.
+      const { modifiedCount } = await SensorNode.updateOne(
+        { _id: node._id, status: 'ONLINE', last_heartbeat: { $lt: staleBefore } },
+        { status: 'OFFLINE' },
+      )
+      if (modifiedCount === 0) return
 
-    emitDeviceStatusChange(String(node.zone_id), {
-      nodeId: String(node._id),
-      status: 'OFFLINE',
-      timestamp: new Date().toISOString(),
-    })
-    // THREAT-FR-009 — trước đây job này chỉ đổi trạng thái, không hề tạo Alert
-    // nên NODE_OFFLINE không bao giờ xuất hiện trong danh sách cảnh báo.
-    await raiseNodeOfflineAlert(String(node._id)).catch((err: Error) =>
-      logger.error('Tạo cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
-    )
-  }))
-
-  await markStaleCamerasOffline()
+      emitDeviceStatusChange(String(node.zone_id), {
+        nodeId: String(node._id),
+        status: 'OFFLINE',
+        timestamp: new Date().toISOString(),
+      })
+      // THREAT-FR-009 — trước đây job này chỉ đổi trạng thái, không hề tạo Alert
+      // nên NODE_OFFLINE không bao giờ xuất hiện trong danh sách cảnh báo.
+      await raiseNodeOfflineAlert(String(node._id)).catch((err: Error) =>
+        logger.error('Tạo cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
+      )
+    }))
+  } finally {
+    await markStaleCamerasOffline()
+  }
 }
 
 /** THREAT-FR-010 — nút AI im lặng quá CAMERA_OFFLINE_THRESHOLD_MS → OFFLINE + EDGE_AI_DEGRADED */
 async function markStaleCamerasOffline(): Promise<void> {
   const staleBefore = new Date(Date.now() - CAMERA_OFFLINE_THRESHOLD_MS)
-  const stale = await CameraNode.find({ status: 'ONLINE', last_heartbeat: { $lt: staleBefore } }).select('_id zone_id').lean()
+  const stale = await CameraNode.find({ status: 'ONLINE', last_heartbeat: { $lt: staleBefore } }).select('_id house_id').lean()
 
   await Promise.all(stale.map(async camera => {
     // Cùng điều kiện trong lệnh ghi như SensorNode: heartbeat tới giữa chừng thì không đè OFFLINE
@@ -544,7 +566,7 @@ async function markStaleCamerasOffline(): Promise<void> {
     )
     if (modifiedCount === 0) return
 
-    emitDeviceStatusChange(String(camera.zone_id), {
+    emitHouseDeviceStatusChange(String(camera.house_id), {
       nodeId: String(camera._id),
       status: 'OFFLINE',
       timestamp: new Date().toISOString(),
@@ -560,6 +582,27 @@ async function markStaleCamerasOffline(): Promise<void> {
 export type DeviceKind = 'sensor' | 'camera'
 const DEVICE_MODELS = { sensor: SensorNode, camera: CameraNode as unknown as typeof SensorNode }
 const TARGET_TYPES = { sensor: 'sensor_node', camera: 'camera_node' } as const
+
+/**
+ * Nơi đặt thiết bị — để kiểm quyền, phát trạng thái, ghi audit và báo chủ farm: cảm biến gắn Zone,
+ * camera đếm chim gắn House (SRS v2.1.8).
+ */
+async function locateDevice(kind: DeviceKind, node: { zone_id?: unknown; house_id?: unknown }, user: CurrentUser) {
+  if (kind === 'camera') {
+    const { house, farm } = await assertHouseAccess(String(node.house_id), user)
+    const houseId = String(house._id)
+    return {
+      farm, place: `nhà "${house.name}"`, audit: { houseId },
+      emitStatus: (data: WsDeviceStatusChange) => emitHouseDeviceStatusChange(houseId, data),
+    }
+  }
+  const { zone, farm } = await assertZoneAccess(String(node.zone_id), user)
+  const zoneId = String(zone._id)
+  return {
+    farm, place: `khu vực "${zone.name}"`, audit: { zoneId },
+    emitStatus: (data: WsDeviceStatusChange) => emitDeviceStatusChange(zoneId, data),
+  }
+}
 
 /**
  * Ticket đang mở sinh ra từ cảnh báo của thiết bị vừa gỡ: chỉ thêm ghi chú, KHÔNG
@@ -594,7 +637,7 @@ export async function decommissionDevice(
   const Model = DEVICE_MODELS[kind]
   const node = await Model.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
-  const chain = await assertZoneAccess(String(node.zone_id), user)
+  const loc = await locateDevice(kind, node, user)
   assertInService(node)
 
   // Gỡ thiết bị hỏng (OFFLINE/ERROR/PENDING) là việc thường ngày nên không hỏi gì
@@ -605,7 +648,7 @@ export async function decommissionDevice(
   if (isAlive && force !== true) {
     const lastSeen = node.last_heartbeat ? ` (heartbeat lúc ${node.last_heartbeat.toISOString()})` : ''
     throw ConflictError(
-      `Thiết bị đang ${node.status}${lastSeen} — gỡ sẽ mất giám sát của Zone này. ` +
+      `Thiết bị đang ${node.status}${lastSeen} — gỡ sẽ mất giám sát tại ${loc.place}. ` +
       'Gửi kèm force=true nếu vẫn muốn gỡ.',
     )
   }
@@ -621,24 +664,22 @@ export async function decommissionDevice(
   await node.save()
   await closeOverrideLogs([node._id], 'CLEARED_EARLY')
 
-  emitDeviceStatusChange(String(node.zone_id), {
-    nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString(),
-  })
+  loc.emitStatus({ nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString() })
 
   const closedAlerts = await resolveAlertsForNode(String(node._id), `Thiết bị đã được gỡ bỏ: ${reason}`)
   const notedTickets = await noteTicketsOfRemovedDevice(String(node._id), node.device_id)
 
   await logAction(user._id, 'DEVICE_DECOMMISSIONED', TARGET_TYPES[kind], String(node._id), {
-    deviceId: node.device_id, zoneId: String(node.zone_id), reason,
+    deviceId: node.device_id, ...loc.audit, reason,
     replacedBy: replacedBy ? String(replacedBy) : null, closedAlerts, notedTickets,
     ...(isAlive ? { forcedWhileOnline: true } : {}),
   })
 
   // Farm Owner không tham gia luồng tháo lắp (RACI mục 4.4) nhưng phải biết nhà
   // yến của mình vừa mất một thiết bị giám sát.
-  void notifyUser(String(chain.farm.owner_id), {
+  void notifyUser(String(loc.farm.owner_id), {
     title: 'Thiết bị đã được gỡ khỏi nhà yến',
-    body: `Kỹ thuật viên đã gỡ ${node.device_id} khỏi khu vực "${chain.zone.name}". Lý do: ${reason}`,
+    body: `Kỹ thuật viên đã gỡ ${node.device_id} khỏi ${loc.place}. Lý do: ${reason}`,
   })
   return node
 }
@@ -658,7 +699,7 @@ export async function restoreDevice(kind: DeviceKind, nodeId: string, user: Curr
   const Model = DEVICE_MODELS[kind]
   const node = await Model.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
-  const chain = await assertZoneAccess(String(node.zone_id), user)
+  const loc = await locateDevice(kind, node, user)
   if (!node.decommissioned_at) throw ConflictError('Thiết bị này chưa bị gỡ nên không cần khôi phục')
 
   const elapsed = Date.now() - node.decommissioned_at.getTime()
@@ -692,15 +733,13 @@ export async function restoreDevice(kind: DeviceKind, nodeId: string, user: Curr
 
   // Phát đúng trạng thái vừa lưu — thiết bị chưa từng kết nối về PENDING, báo OFFLINE
   // thì màn hình Onboarding/Thiết bị hiện sai cho tới lần tải lại
-  emitDeviceStatusChange(String(node.zone_id), {
-    nodeId: String(node._id), status: node.status, timestamp: new Date().toISOString(),
-  })
+  loc.emitStatus({ nodeId: String(node._id), status: node.status, timestamp: new Date().toISOString() })
   await logAction(user._id, 'DEVICE_RESTORED', TARGET_TYPES[kind], String(node._id), {
-    deviceId: node.device_id, zoneId: String(node.zone_id), reason, decommissionedForMs: elapsed,
+    deviceId: node.device_id, ...loc.audit, reason, decommissionedForMs: elapsed,
   })
-  void notifyUser(String(chain.farm.owner_id), {
+  void notifyUser(String(loc.farm.owner_id), {
     title: 'Thiết bị đã được khôi phục',
-    body: `Kỹ thuật viên đã khôi phục ${node.device_id} tại khu vực "${chain.zone.name}". Lý do: ${reason}`,
+    body: `Kỹ thuật viên đã khôi phục ${node.device_id} tại ${loc.place}. Lý do: ${reason}`,
   })
   return node
 }
@@ -1081,15 +1120,15 @@ export function summarizeByStatus(nodes: Array<{ status: DeviceStatus }>): Devic
  * `getHealthOverview` (SYSTEM-FR-003), để 2 màn hình trên cùng trang không lệch số.
  */
 export async function getSystemStatus() {
-  const activeZoneIds = await listActiveZoneIds()
+  const [activeZoneIds, activeHouseIds] = await Promise.all([listActiveZoneIds(), listActiveHouseIds()])
   const [sensorNodes, cameraNodes] = await Promise.all([
     SensorNode.find({ zone_id: { $in: activeZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean(),
-    CameraNode.find({ zone_id: { $in: activeZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean(),
+    CameraNode.find({ house_id: { $in: activeHouseIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean(),
   ])
 
-  const zoneIds = [...new Set([...sensorNodes, ...cameraNodes].map(n => String(n.zone_id)))]
+  const zoneIds = [...new Set(sensorNodes.map(n => String(n.zone_id)))]
   const zones = await Zone.find({ _id: { $in: zoneIds } }).select('name floor house_id').lean()
-  const houseIds = [...new Set(zones.map(z => String(z.house_id)))]
+  const houseIds = [...new Set([...zones.map(z => String(z.house_id)), ...cameraNodes.map(n => String(n.house_id))])]
   const houses = await House.find({ _id: { $in: houseIds } }).select('name farm_id').lean()
   const farmIds = [...new Set(houses.map(h => String(h.farm_id)))]
   const farms = await Farm.find({ _id: { $in: farmIds } }).select('name').lean()
@@ -1108,6 +1147,15 @@ export async function getSystemStatus() {
     }
   }
 
+  // Camera đếm chim gắn House (SRS v2.1.8): không có Zone/tầng
+  function resolveHouseLocation(houseId: string) {
+    const house = houseById.get(houseId)
+    const farm  = house ? farmById.get(String(house.farm_id)) : undefined
+    return {
+      zone_id: '', house_id: houseId, farm_id: house ? String(house.farm_id) : '', farm_name: farm?.name ?? '', house_name: house?.name ?? '', zone_name: '',
+    }
+  }
+
   return {
     summary: summarizeByStatus([...sensorNodes, ...cameraNodes]),
     nodes: [
@@ -1119,7 +1167,7 @@ export async function getSystemStatus() {
       // Camera không có firmware_version/rssi trên model
       ...cameraNodes.map(n => ({
         _id: String(n._id), device_id: n.device_id, type: 'camera' as const, status: n.status,
-        last_heartbeat: n.last_heartbeat, registered_at: n.registered_at, ...resolveLocation(String(n.zone_id)),
+        last_heartbeat: n.last_heartbeat, registered_at: n.registered_at, ...resolveHouseLocation(String(n.house_id)),
       })),
     ],
   }

@@ -13,6 +13,7 @@
     "migrate:data-model": "tsx src/scripts/migrate-data-model.script.ts",
     "migrate:scope-v2": "tsx src/scripts/migrate-scope-v2.script.ts",
     "migrate:regions": "tsx src/scripts/migrate-regions.script.ts",
+    "migrate:bird-count-house": "tsx src/scripts/migrate-bird-count-house.script.ts",
     "build": "tsc",
     "build:check": "tsc --noEmit",
     "test": "jest --coverage",

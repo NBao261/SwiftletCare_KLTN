@@ -6,7 +6,7 @@ import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { summarizeByStatus } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
-import { listActiveZoneIds } from '@/utils/farmAccess.util'
+import { listActiveHouseIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
 import { BadRequestError } from '@/utils/appError.util'
 import { DEFAULT_THRESHOLDS, assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
@@ -155,15 +155,16 @@ export async function getHealthOverview() {
   // Ticket cũng phải bó theo Farm chưa xoá mềm như Farm/Zone/thiết bị: ticket của
   // farm đã xoá không ai mở hay đóng được nữa (xem closeTicketsOfDeletedFarm), đếm
   // chúng vào đây là bày ra con số Admin bấm vào không tìm thấy gì.
-  const [activeFarmIds, zoneIds, farmsMissingRegion] = await Promise.all([
+  const [activeFarmIds, zoneIds, houseIds, farmsMissingRegion] = await Promise.all([
     Farm.find({ is_deleted: false }).distinct('_id'),
     listActiveZoneIds(),
+    listActiveHouseIds(),
     // Không có / sai mã khu vực = không Technician nào phụ trách, ticket luôn vào hàng đợi
     Farm.countDocuments({ is_deleted: false, region: { $nin: [...REGION_CODES] } }),
   ])
   const [sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
     SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
-    CameraNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
+    CameraNode.find({ house_id: { $in: houseIds }, ...IN_SERVICE }).select('status').lean(),   // camera gắn House (v2.1.8)
     Ticket.aggregate<{ _id: TicketPriority; count: number }>([
       { $match: { status: { $ne: 'CLOSED' }, farm_id: { $in: activeFarmIds } } },
       { $group: { _id: '$priority', count: { $sum: 1 } } },

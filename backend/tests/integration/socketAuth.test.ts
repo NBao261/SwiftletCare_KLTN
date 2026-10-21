@@ -207,4 +207,44 @@ describe('initSocket wiring (socket.io mocked)', () => {
       expect(socket.join).not.toHaveBeenCalledWith(`zone:${String(zone._id)}`)
     })
   })
+
+  // SRS v2.1.8 — số đếm chim, trạng thái camera và cảnh báo của cả nhà đi qua room house:<id>;
+  // cùng lý do với JOIN_ZONE: chỉ join khi assertHouseAccess cho phép
+  describe('JOIN_HOUSE authorization', () => {
+    afterEach(async () => {
+      await Promise.all([Farm.deleteMany({}), House.deleteMany({})])
+    })
+
+    function fakeSocket(user: CurrentUser) {
+      let joinHouseHandler: ((data: { houseId: string }) => void) | undefined
+      const socket = {
+        id: 's-house',
+        data: { userId: user._id, role: user.role, user },
+        join: jest.fn(),
+        leave: jest.fn(),
+        on: jest.fn((event: string, fn: never) => { if (event === 'JOIN_HOUSE') joinHouseHandler = fn as never }),
+      }
+      mockHandlers.connection!(socket)
+      return { socket, handler: () => joinHouseHandler! }
+    }
+
+    const settle = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+    it('joins house:<id> for a member of the farm, refuses a user of another farm', async () => {
+      const owner = await User.create({ email: 'howner@test.vn', password_hash: 'password123', full_name: 'Owner', role: 'FARM_OWNER' })
+      const stranger = await User.create({ email: 'hstranger@test.vn', password_hash: 'password123', full_name: 'S', role: 'FARM_OWNER' })
+      const farm = await Farm.create({ name: 'Farm', address: 'HCMC', owner_id: owner._id })
+      const house = await House.create({ farm_id: farm._id, name: 'House' })
+      const room = `house:${String(house._id)}`
+
+      const member = fakeSocket({ _id: String(owner._id), email: owner.email, role: 'FARM_OWNER' })
+      const outsider = fakeSocket({ _id: String(stranger._id), email: stranger.email, role: 'FARM_OWNER' })
+      member.handler()({ houseId: String(house._id) })
+      outsider.handler()({ houseId: String(house._id) })
+      await settle(300)
+
+      expect(member.socket.join).toHaveBeenCalledWith(room)
+      expect(outsider.socket.join).not.toHaveBeenCalledWith(room)
+    })
+  })
 })
