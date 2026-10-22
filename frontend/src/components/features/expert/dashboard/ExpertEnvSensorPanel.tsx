@@ -87,7 +87,7 @@ export default function ExpertEnvSensorPanel({ farmId, houseId = '', zoneId }: P
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-h2 text-charcoal">{t('env.title')}</h2>
-          <p className="mt-1 text-sm text-warmGray">{t('env.subtitle')}</p>
+          <p className="mt-1 text-sm text-warmGray">6 chỉ số cảm biến môi trường RS485 thời gian thực</p>
         </div>
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200/60">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

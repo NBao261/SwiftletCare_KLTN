@@ -4,7 +4,7 @@ import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { cn } from '@/lib/cn'
-import type { ControlMode, ControlOutput, RelayStates } from '@/types'
+import type { ControlMode, ControlOutput } from '@/types'
 
 const RELAY_ITEMS = [
   { key: 'misting', labelKey: 'relay.misting', icon: Droplets },
@@ -29,9 +29,11 @@ const ICON_CLASS: Record<RelayTone, string> = {
   off: 'text-warmGray',
 }
 
+export type ExpertRelayStates = { misting: boolean; speaker: boolean; ventilation: boolean; heating?: boolean }
+
 interface Props {
   zoneName?: string
-  relayStates?: RelayStates
+  relayStates?: ExpertRelayStates
   controlMode?: ControlMode
   controlOutput?: ControlOutput
   tooHot?: boolean
@@ -90,7 +92,7 @@ export default function ExpertControlPanel({
 
 interface RelayTileProps {
   item: RelayItem
-  relayStates?: RelayStates
+  relayStates?: ExpertRelayStates
   controlMode?: ControlMode
   fuzzyPercent?: number
   isAnomaly: boolean

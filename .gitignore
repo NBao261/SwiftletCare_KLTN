@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 .npm/
 
@@ -57,3 +57,4 @@ docker-compose.override.yml
 coverage/
 .coverage
 *.tsbuildinfo
+.stitch/
