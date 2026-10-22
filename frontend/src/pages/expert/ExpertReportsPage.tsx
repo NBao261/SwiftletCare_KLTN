@@ -1,0 +1,123 @@
+/**
+ * Màn hình 05_Health_Reports_v3 — Báo cáo Sức khoẻ (Page Shell)
+ * Layout Master-Detail 2 cột: list panel (340px) | detail panel
+ * SRS v2.1.4: EXPERT-FR-005/006/007
+ */
+import { Calendar } from 'lucide-react'
+import { useZoneStore } from '@/stores/zoneStore'
+import MockDataTooltip from '@/components/shared/MockDataTooltip'
+import ReportListPanel from '@/components/features/expert/reports/ReportListPanel'
+import HealthMetricsGrid from '@/components/features/expert/reports/HealthMetricsGrid'
+import ExpertConclusionEditor from '@/components/features/expert/reports/ExpertConclusionEditor'
+import {
+  useHealthReportList, useHealthReportPreview,
+  usePublishConclusion, useReportSelection, formatPeriodLabel, formatGeneratedAt,
+} from '@/hooks/expert/useHealthReports'
+
+function ReportDetailHeader({
+  zoneName, previewMode, period, generatedAt, samplesCount,
+}: {
+  zoneName: string; previewMode: boolean; period: string; generatedAt?: string; samplesCount: number
+}) {
+  const isEstimated = samplesCount <= 0
+  const displaySamples = isEstimated ? 2016 : samplesCount
+
+  return (
+    <div className="flex flex-col gap-2 pb-4 border-b border-neutral-100">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <h2 className="text-base font-bold text-[#27231F]">
+          {previewMode ? `Số liệu Tạm tính Tuần này — ${zoneName}` : `Báo cáo Sức khỏe Định kỳ — ${zoneName}`}
+        </h2>
+        {previewMode && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#27231F] text-[#ECFFA9]">
+            Bản tạm tính Preview
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-xs text-[#878380]">
+        <span className="flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5" />
+          Chu kỳ: <b className="text-[#27231F] ml-0.5">{period}</b>
+        </span>
+        <span className="text-neutral-300">•</span>
+        <span>Tổng hợp: <b>{formatGeneratedAt(generatedAt)}</b></span>
+        <span className="text-neutral-300">•</span>
+        <span className="inline-flex items-center gap-1">
+          Số mẫu đo: <b className="text-[#27231F]">{displaySamples.toLocaleString()} mẫu</b>
+          {isEstimated && (
+            <MockDataTooltip reason="Số mẫu quy đổi ước tính trong kỳ tuần tạm tính (7 ngày x 288 mẫu/ngày)." />
+          )}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+export default function ExpertReportsPage() {
+  const { selectedZoneId, selectedZoneName } = useZoneStore()
+  const zoneId = selectedZoneId ?? undefined
+  const zoneName = selectedZoneName || 'Phía Sau'
+
+  const { data: reports = [], isLoading: loadingList } = useHealthReportList(zoneId)
+  const { selectedId, setSelectedId, selected, previewMode, setPreviewMode } = useReportSelection(reports)
+  const { data: previewReport, isLoading: loadingPreview } = useHealthReportPreview(zoneId, previewMode)
+  const activeReport = previewMode ? (previewReport ?? null) : selected
+
+  const publishMutation = usePublishConclusion(activeReport?._id ?? '')
+
+  const samplesCount = activeReport?.metrics?.sample_count ?? 0
+  const period = activeReport ? formatPeriodLabel(activeReport) : '12/10/2026 – 18/10/2026'
+
+  return (
+    <div className="relative w-full flex-1 flex flex-col gap-5">
+      <div className="w-full max-w-screen-xl mx-auto">
+        {/* 2-col layout: list (left 340px) + detail (right flex-1) */}
+        <div className="flex flex-col lg:flex-row gap-5 items-start">
+          {/* Cột trái — 340px */}
+          <div className="w-full lg:w-[340px] lg:flex-shrink-0">
+            <ReportListPanel
+              reports={reports}
+              selectedId={selectedId}
+              previewMode={previewMode}
+              isLoading={loadingList}
+              onSelect={id => { setSelectedId(id); setPreviewMode(false) }}
+              onPreview={() => setPreviewMode(p => !p)}
+            />
+          </div>
+
+          {/* Cột phải — flex-1 */}
+          <div className="flex-1 min-w-0 w-full">
+            <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6 space-y-5">
+              {/* Header chi tiết */}
+              <ReportDetailHeader
+                zoneName={zoneName}
+                previewMode={previewMode}
+                period={period}
+                generatedAt={activeReport?.generated_at}
+                samplesCount={samplesCount}
+              />
+
+              {/* 2x2 Metrics grid */}
+              <HealthMetricsGrid
+                report={activeReport}
+                isLoading={(previewMode && loadingPreview) || (!previewMode && loadingList)}
+              />
+
+              {/* Conclusion editor */}
+              <div className="pt-2 border-t border-neutral-100">
+                <ExpertConclusionEditor
+                  report={activeReport}
+                  zoneName={zoneName}
+                  previewMode={previewMode}
+                  isSaving={publishMutation.isPending}
+                  onSave={conclusion => publishMutation.mutate(conclusion)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
