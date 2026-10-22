@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn'
 import { IconLogout } from '@/components/ui/icons'
 import { ROLE_LABEL } from '@/constants/roles'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
+import { useExpertPendingAlerts } from '@/hooks/expert/useExpertDashboard'
 
 export interface MenuItem {
   label: string
@@ -37,6 +38,9 @@ export default function AppSidebar({
 }) {
   const user = useAuthStore(s => s.user)
   const unreadCount = useAlertStore(s => s.unreadCount)
+  const isExpert = user?.role === 'DOMAIN_EXPERT'
+  const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined)
+  const expertPendingCount = expertAlerts?.length ?? 0
   const askLogout = useLogoutConfirmStore(s => s.ask)
   const navigationLabel = useNavigationLabel()
   const { scrollRef, contentRef, canScrollDown } = useCanScrollDown<HTMLElement, HTMLDivElement>()
@@ -70,17 +74,21 @@ export default function AppSidebar({
                   <p className="px-[10px] py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{navigationLabel(section.title)}</p>
                   <div className="space-y-1">
                     {section.items.map(item => {
-                      const badgeCount = item.path === '/alerts' ? unreadCount : 0
+                      const badgeCount = item.path === '/expert/audit-logs'
+                        ? (isExpert ? expertPendingCount : unreadCount)
+                        : item.path === '/alerts'
+                          ? unreadCount
+                          : 0
                       return (
                         <NavLink
                           key={item.path}
                           to={item.path}
                           className={({ isActive }) =>
                             cn(
-                              'flex items-center gap-2.5 rounded-full px-[14px] text-sm transition-colors',
+                              'flex items-center gap-2 rounded-full px-3 text-sm transition-colors',
                               isActive
-                                ? 'h-11 bg-charcoal text-[13.5px] font-bold text-white shadow-[inset_0_1.5px_0.5px_rgba(255,255,255,0.35)]'
-                                : 'h-10 font-medium text-graphite hover:bg-warmGray/10',
+                                ? 'h-11 bg-charcoal text-[13px] font-bold text-white shadow-[inset_0_1.5px_0.5px_rgba(255,255,255,0.35)]'
+                                : 'h-10 text-[13px] font-medium text-graphite hover:bg-warmGray/10',
                             )
                           }
                         >
@@ -88,12 +96,12 @@ export default function AppSidebar({
                             <>
                               {isActive ? (
                                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
-                                  <item.icon width={16} height={16} />
+                                  <item.icon width={15} height={15} />
                                 </span>
                               ) : (
-                                <item.icon width={16} height={16} className="shrink-0 text-warmGray" />
+                                <item.icon width={16} height={16} className="shrink-0 text-warmGray ml-1" />
                               )}
-                              <span className="flex-1 truncate">{navigationLabel(item.label)}</span>
+                              <span className="flex-1 truncate tracking-tight">{navigationLabel(item.label)}</span>
                               {badgeCount > 0 && (
                                 <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-alertRed px-1 text-[11px] font-bold text-white">
                                   {badgeCount > 9 ? '9+' : badgeCount}
