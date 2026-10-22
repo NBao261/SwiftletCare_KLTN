@@ -104,9 +104,9 @@ export default function BirdCountMonitorCard({ zoneId, farmId }: Props) {
 
         {/* 3 chỉ số chim */}
         <div className="grid grid-cols-3 gap-3">
-          <MetricPill label="Xuất tổ sáng" value={morningExit.toLocaleString('vi-VN')} subtext="05:15 – 06:45" isMock={isMorningMock} />
-          <MetricPill label="Về tổ tối" value={eveningEntry.toLocaleString('vi-VN')} subtext="17:00 – 18:30" isMock={isEveningMock} />
-          <MetricPill label="Tỷ lệ về tổ" value={`${returnRate.toFixed(1)}%`} subtext="Đạt chuẩn > 95%" isMock={isReturnMock} isBadge />
+          <MetricPill label="Chim bay ra (Sáng)" value={morningExit.toLocaleString('vi-VN')} subtext="05:15 – 06:45" isMock={isMorningMock} />
+          <MetricPill label="Chim bay về (Chiều)" value={eveningEntry.toLocaleString('vi-VN')} subtext="17:00 – 18:30" isMock={isEveningMock} />
+          <MetricPill label="Tỷ lệ quay về" value={`${returnRate.toFixed(1)}%`} subtext="Đạt chuẩn > 95%" isMock={isReturnMock} isBadge />
         </div>
 
         {/* 2 cảnh báo suy luận gần nhất hoặc Empty State */}
