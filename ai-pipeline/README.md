@@ -16,29 +16,33 @@ python src/stream.py --config config/config.yaml
 ## Cấu trúc
 
 ```
-config/config.yaml   RTSP URL, model path, ngưỡng confidence, MQTT broker
-models/               Model ONNX/NCNN quantized (không commit file .onnx lớn — dùng Git LFS/release asset)
+config/config.yaml   2 ô + vùng tô đen, model, ngưỡng, vòng đếm, MQTT (địa chỉ RTSP nằm trong .env)
+models/               Model ONNX (không commit)
 src/
   stream.py           Nhận RTSP, vòng lặp chính
-  inference.py         YOLO inference (1 class: swiftlet)
-  tracker.py            ByteTrack — tránh đếm trùng qua các frame
-  counting.py            Vòng đếm quanh miệng lỗ → entry/exit (VISION-FR-005)
-  alert_publisher.py     Publish MQTT vision/bird-count (§9.2); vision/alert không còn dùng cho thiên địch
-tools/pick_roi.py     Lấy ROI + vòng đếm cho config.yaml
-tools/extract_frames.py  Tách frame theo ROI + nhãn nháp để gán nhãn (plan §7.2)
+  pipeline.py         Mỗi frame: tô đen → 2 ô → YOLO → ByteTrack → vòng đếm → vẽ ô xanh
+  frame_prep.py       Tô đen + cắt ô, dùng chung với công cụ tách ảnh train
+  inference.py        YOLO qua ONNX Runtime (YOLO26 và YOLOv8/11), chạy theo ô rồi gộp
+  counting.py         Vòng đếm quanh miệng lỗ + ngoại suy cho chim lao qua lỗ → entry/exit (VISION-FR-005)
+  remote_config.py    Vòng đếm Domain Expert vẽ trên web (VISION-FR-018)
+tools/pick_roi.py     Lấy vòng đếm cho config.yaml
+tools/extract_frames.py  Tách frame theo 2 ô + nhãn nháp để gán nhãn (plan §7.2)
+tools/track_clip.py   Chạy pipeline trên một đoạn clip, ghi video có ô xanh (plan §6.8)
 tools/split_by_day.py    Chia train/val/test theo ngày quay (plan §7.4)
 tests/                pytest cho vòng đếm và các công cụ
 ```
 
-## Hiệu chỉnh ROI và vòng đếm
+## Theo dõi và vòng đếm
 
 Camera nhìn vào miệng lỗ ra vào từ trong nhà, nên đếm bằng một **vòng khép kín** quanh miệng lỗ (`tracking.ring` trong `config/config.yaml`), không phải một vạch thẳng. Chim đi vào vòng là chui vào lỗ (**RA**), đi ra khỏi vòng là chui ra (**VỀ**); con chỉ bay lướt qua lỗ cắt vòng hai lần và số ròng triệt tiêu. Camera đặt ngoài nhà thì đổi `tracking.into_ring_is_exit: false`.
 
+Chim được theo dõi trên **cả khung hình** (ô xanh cho mọi con, kể cả đang lượn), chia 2 ô chồng nhau (`camera.tiles`) để chim còn ≥ 15 px trong ảnh đưa vào model; dòng ngày giờ được tô đen (`camera.mask`). Chim qua lỗ bay 150–200 px/frame nên frame trong vòng thường không được phát hiện: vết nhanh mất ngay ngoài vòng mà đi tiếp thì vào vòng tính RA, vết nhanh mới xuất hiện mà lùi lại thì ra từ vòng tính VỀ (`extrapolate_frames`, `extrapolate_min_speed_px`). Vết sinh và mất đều trong vòng thì không rõ chiều, chỉ đếm riêng. Vết mất ở mép khung không tính gì.
+
 1. Lấy một clip có chim. Đo **s** = cỡ một con chim sát miệng lỗ (px), **v** = quãng nó bay giữa hai khung liên tiếp (px).
-2. Chạy `python tools/pick_roi.py <ảnh|clip|rtsp> --margin <d> --roi-pad <3v>` với `d = max(s, 1,5 × v)`. Không truyền nguồn thì công cụ lấy `CAMERA_RTSP_URL` trong `.env`.
-3. Kéo to cửa sổ, click lần lượt các góc viền ngoài miệng lỗ. Phím `+`/`-` nới hoặc thu vòng 10 px, `z` bỏ điểm cuối, Enter in khối `roi` + `ring` để chép vào `config.yaml`.
-4. Cạnh dài nhất của ROI ≤ `640 × s / 15` để chim còn ≥ 15 px trong ảnh đưa vào model. Không để dòng ngày giờ của camera trong ROI.
-5. Chạy pipeline trên clip, đếm tay rồi so với số máy đếm. Chim chui ra khỏi lỗ mà số RA tăng thì đổi `into_ring_is_exit`.
+2. Chạy `python tools/pick_roi.py <ảnh|clip|rtsp> --margin <d>` với `d = max(s, 1,5 × v)` (chim lượn; chim lao qua lỗ do luật ngoại suy lo). Không truyền nguồn thì công cụ lấy `CAMERA_RTSP_URL` trong `.env`.
+3. Kéo to cửa sổ, click lần lượt các góc viền ngoài miệng lỗ. Phím `+`/`-` nới hoặc thu vòng 10 px, `z` bỏ điểm cuối, Enter in khối `ring` để chép vào `config.yaml`.
+4. Chạy `python tools/track_clip.py <clip> --start <giây> --seconds 20`, xem video có ô xanh trong `D:/SwiftletCare/clips/annotated/`. Chưa có model tự train thì thêm `--detector motion` (vật chuyển động thay cho model) để xem tracker và bộ đếm.
+5. Đếm tay rồi so với số máy đếm. Chim chui ra khỏi lỗ mà số RA tăng thì đổi `into_ring_is_exit`.
 
 Giá trị đang dùng ở nhà yến thử nghiệm và cách đo: `docs/bird-counting-plan.md` mục 19.8.
 

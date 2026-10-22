@@ -822,8 +822,8 @@ python src/stream.py --source clips/20261008_morning_01.mp4 --session MORNING_EX
 Trình tự hiệu chỉnh (sửa `config.yaml` rồi chạy lại):
 
 0. **Đo trên clip có chim** (mở clip, click bằng `tools/pick_roi.py` để đọc pixel): **s** = cỡ một con chim sát miệng lỗ, **v** = quãng nó bay giữa hai khung liên tiếp.
-1. **Vòng đếm** (vòng vàng): `python tools/pick_roi.py <ảnh|clip|rtsp> --margin <d> --roi-pad <3v>`, click lần lượt các góc viền ngoài miệng lỗ, Enter in ra khối YAML `roi` + `ring`. `d = max(s, 1,5 × v)`: chim vừa chui ra phải nằm *trong* vòng ít nhất 1–2 khung trước khi cắt vòng, nếu không tracker chưa kịp có id và con đó bị sót.
-2. **ROI** (khung trắng): công cụ lấy khung bao vòng đếm nới thêm `--roi-pad`. Cạnh dài nhất của ROI ≤ `640 × s / 15` để chim còn ≥ 15 px sau khi thu về đầu vào model (cổng 5); thừa thì cắt bớt phía ít chim bay. Không để dòng ngày giờ của camera trong ROI.
+1. **Vòng đếm** (vòng vàng): `python tools/pick_roi.py <ảnh|clip|rtsp> --margin <d>`, click lần lượt các góc viền ngoài miệng lỗ, Enter in ra khối YAML `ring`. `d = max(s, 1,5 × v)`: chim vừa chui ra phải nằm *trong* vòng ít nhất 1–2 khung trước khi cắt vòng, nếu không tracker chưa kịp có id và con đó bị sót.
+2. **Vùng theo dõi**: cả khung, chia 2 ô `camera.tiles`, tô đen dòng ngày giờ `camera.mask` (mục 19.8). Mỗi ô thu về đầu vào model phải giữ chim ≥ 15 px (cổng 5). Xem ô xanh bằng `python tools/track_clip.py <clip> --start <giây> --seconds 20` (thêm `--detector motion` khi chưa có model tự train).
 3. **Chiều đếm**: nếu chim chui ra khỏi lỗ mà số "RA" tăng thì đổi `into_ring_is_exit` (vạch thẳng: `in_is_entry`).
 4. **`box_pad`**: nếu `#id` nhảy số liên tục trên cùng một con, tăng dần 2.5 → 3 → 4.
 5. **`confidence_threshold`**: hạ nếu sót nhiều, tăng nếu bắt nhầm.
@@ -877,10 +877,10 @@ cd ai-pipeline
 Get-ChildItem D:\SwiftletCare\clips\*.mp4 | ForEach-Object { python tools/extract_frames.py $_.FullName --out D:\SwiftletCare\dataset\raw }
 ```
 
-- **ROI lấy từ `camera.roi` trong `config.yaml`** (truyền `--roi` chỉ khi cần thử khác): model train trên ảnh crop nào thì chạy thật trên đúng crop đó. **Chốt ROI trước khi tách frame**; đổi ROI sau đó là phải tách và gán nhãn lại.
+- **Ảnh cắt theo 2 ô `camera.tiles` và tô đen `camera.mask`** bằng đúng `src/frame_prep.py` mà pipeline dùng: model train trên ảnh nào thì chạy thật trên đúng ảnh đó. Mỗi frame ra `_t0.jpg` và `_t1.jpg`. **Chốt ô và mask trước khi tách frame**; đổi sau đó là phải tách và gán nhãn lại. `--start`/`--seconds` để chỉ tách đoạn có chim.
 - Tên clip phải bắt đầu bằng `YYYYMMDD` (dùng để chia tập ở mục 7.4); công cụ từ chối tên khác.
 - `--every 5` ở 25 fps = 5 ảnh/giây; ra quá nhiều ảnh gần giống nhau thì tăng lên 10–15.
-- `--min-area 150` (px² trong ảnh crop): đo trên clip IR 21/10, nhiễu cảm biến ra đốm 49–108 px² sau dilate (119 ô nháp giả trên clip 90 giây với ngưỡng 30 cũ, còn 8 với 150). Chim ≥ 15 px trong ảnh đầu vào model ≈ 22×22 px trong crop 960 px, nên 150 không bỏ sót chim nào model cần thấy.
+- `--min-area 150` (px² trong ảnh crop): đo trên clip IR 21/10, nhiễu cảm biến ra đốm 49–108 px² sau dilate (119 ô nháp giả trên clip 90 giây với ngưỡng 30 cũ, còn 8 với 150). Chim ≥ 15 px trong ảnh đầu vào model ≈ 25×25 px trong ô cao 1080 px, nên 150 không bỏ sót chim nào model cần thấy. `--max-area 60000` giữ được chim bay sát ống kính (~180×180 px).
 - Côn trùng dưới đèn IR vẫn lọt vào nhãn nháp (đốm sáng 20–40 px, ngang cỡ chim): xóa ô khi gán nhãn, ảnh đó thành ảnh âm.
 
 ### 7.3. Gán nhãn
@@ -1584,7 +1584,7 @@ Chỉ làm khi thật sự cần.
 | Tăng tốc suy luận | FPS dưới mục tiêu | Theo thứ tự ở mục 18.4: `onnxruntime-openvino` (CPU Intel) → đầu vào 480/416 trên ROI hẹp → hạ camera 20 fps |
 | Phát hiện thiên địch (THREAT-FR-001) | Có dữ liệu chuột/rắn/cú và camera nhìn vào trong nhà | Thêm class, sửa `alert_publisher.py` (thêm `deviceId`), cho `ingestDeviceAlert` tra cả `CameraNode` |
 | Ghi hình sự kiện (VISION-FR-015) | Sau khi phần đếm ổn định, và khi VPS có chỗ: luồng 2 Mbps ghi cả ngày tốn khoảng 150 GB mỗi 7 ngày; thẻ nhớ camera đã ghi liên tục (19.3) | Tính năng có sẵn của MediaMTX: `record: yes` chỉ trong giờ phiên, `recordDeleteAfter: 7d`, `playback: yes` cho đường `cam-<id>` (đã vẽ khung); backend cấp token xem lại giống `stream-token` (SRS 0.5) |
-| Vẽ vòng đếm trên giao diện (VISION-FR-018) | Khi phải chỉnh vòng mà không muốn sửa `config.yaml` tay (mục 19.8) | **Đã có backend + pipeline (SRS v2.1.10):** `PUT /devices/camera-nodes/:id/counting-ring` lưu theo camera, gửi qua `swiftletcare/{farmId}/{houseId}/config/update` kèm `deviceId`; `src/remote_config.py` lưu `state/counting_ring.json` (thắng `tracking.ring`), áp ngay và tính lại ROI = khung bao vòng + `tracking.roi_pad_px`. Còn màn vẽ ở web |
+| Vẽ vòng đếm trên giao diện (VISION-FR-018) | Khi phải chỉnh vòng mà không muốn sửa `config.yaml` tay (mục 19.8) | **Đã có backend + pipeline (SRS v2.1.10):** `PUT /devices/camera-nodes/:id/counting-ring` lưu theo camera, gửi qua `swiftletcare/{farmId}/{houseId}/config/update` kèm `deviceId`; `src/remote_config.py` lưu `state/counting_ring.json` (thắng `tracking.ring`), áp ngay (từ 22/10 vùng theo dõi là cả khung nên không còn tính lại ROI theo vòng, mục 19.8). Còn màn vẽ ở web |
 
 ---
 
@@ -2270,7 +2270,7 @@ Toàn bộ nằm ở mục 15. Trên PC nhà yến, tách cấu hình cloud ra f
 
 | File | Dev | Deploy |
 |---|---|---|
-| Cấu hình pipeline | `config/config.yaml` | `config/config.cloud.yaml` (sao từ file dev, đổi khối `mqtt` theo mục 15.6 và `camera.roi`/`tracking.line` theo camera thật) |
+| Cấu hình pipeline | `config/config.yaml` | `config/config.cloud.yaml` (sao từ file dev, đổi khối `mqtt` theo mục 15.6 và `camera.tiles`/`camera.mask`/`tracking.ring` theo camera thật) |
 | Biến môi trường pipeline | `.env` | `.env` trên PC nhà yến (mục 15.6) |
 | Lệnh chạy | `python src/stream.py` | `python src/stream.py --config config/config.cloud.yaml` |
 | Backend env | `backend/.env` | `deploy/backend.env` |
@@ -2862,6 +2862,12 @@ ROI `[0.25, 0.00, 0.75, 0.70]` (960×756 px): cách vòng đếm 150–340 px, n
   - Chim qua miệng lỗ: vệt trong suốt rộng ~45 px, dài ~200 px, dời ~150–200 px mỗi khung, chỉ thấy 1–2 khung (khung 18661–18662: vệt đi ngang miệng hộp rồi lên phía trên hộp; khung 17631: vệt tối trong hộp). Ảnh IR phơi sáng gần hết thời gian một khung (~40 ms ở 25 fps) nên chim nhanh bị nhòe thành vệt.
   - Hai cách quét tự động đầu tiên (tách nền trong ROI, độ sáng miệng lỗ) đều bỏ sót: lọc bỏ đốm > 200 px và vệt trong suốt gần như không đổi độ sáng trung bình. Quét khe sáng ở đáy hộp chỉ bắt được 2 lần che khe.
 - *Hệ quả cho cách đếm:* `d = max(s, 1,5v)` với v ~150–200 px ra khoảng nới ~300 px, gần bằng cả ROI; và một con chỉ có 1–2 lần phát hiện thì ByteTrack chưa kịp có id. Vòng đếm 60 px hiện tại không đếm được chim qua lỗ ở tốc độ này. Hướng thử, theo thứ tự: (1) giảm thời gian phơi sáng của camera (cài trong app/web của hãng, mục 3.2, 19.3) để vệt ngắn và rõ hơn, kiểm tra ảnh IR lúc chạng vạng còn đủ sáng; (2) quay lại clip và đo lại s, v; (3) nếu vẫn chỉ thấy 1–2 khung thì chuyển sang đếm theo vùng quanh miệng lỗ (mục 3.3 ý 6) với hướng lấy từ vệt hoặc khung kề.
+
+**Quyết định 22/10: theo dõi cả khung, đếm ở miệng lỗ.** Bám mọi con chim (ô xanh), kể cả đang lượn, để con chim có id từ trước khi lao vào lỗ.
+
+- **Vùng theo dõi = cả khung**, chia 2 ô chồng nhau 160 px (`x 0–1040` và `880–1920`), mỗi ô thu về 640: tỉ lệ 0,59, chim lượn 25–40 px còn 15–24 px (cổng 5), chi phí khoảng 2× một lần suy luận. Không chọn đầu vào 960 (chim còn 12–20 px) hay 1280 (chậm ~4×). Ô trùng ở dải chồng được gộp theo phần giao / ô nhỏ hơn > 0,6. Dòng ngày giờ tô đen.
+- **Luật đếm** (`src/counting.py`): cắt vòng như cũ; thêm ngoại suy cho vết nhanh (≥ 60 px/frame; chim lượn 20–35, chim qua lỗ 150–200): vết mất ngay ngoài vòng mà đi tiếp ≤ 2 frame thì vào vòng → RA; vết mới mà lùi lại ≤ 2 frame thì ra từ vòng → VỀ. Vết sinh và mất đều trong vòng → không rõ chiều, chỉ đếm riêng. Vết mất ở mép khung không tính.
+- **Model COCO không dùng được để thử:** `yolo26n` COCO không ra class bird lần nào trên ảnh IR ngày 22/10, kể cả ngưỡng 0,02 (nó gọi hộp gỗ là lò vi sóng/TV). Phải có model tự train (GĐ2). Trong lúc chờ, `tools/track_clip.py --detector motion` lấy vật chuyển động làm phát hiện để xem tracker và bộ đếm: đoạn 05:22 (20 giây) có tới 9 vết cùng lúc, ô xanh bám đúng các con lượn phía trái hộp, kể cả vệt chim sát ống kính; xử lý ~49 FPS trên laptop. Model COCO 2 ô chạy ~7 FPS trên laptop (chỉ tham khảo, cổng 1 đo trên máy chạy thật).
 
 **Còn lại sau 22/10:**
 
