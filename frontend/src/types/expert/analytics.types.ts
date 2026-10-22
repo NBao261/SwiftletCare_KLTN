@@ -112,3 +112,23 @@ export interface HarvestBatchItem {
   }
   notes?: string
 }
+
+export interface ZoneComparisonMetrics {
+  sampleCount: number
+  humidity: number
+  temperature: number
+  anomalyCount?: number
+}
+
+export interface ZoneComparisonItem {
+  zoneId: string
+  zoneName: string
+  metrics?: ZoneComparisonMetrics
+}
+
+export interface ZoneComparisonResponse {
+  range: string
+  from: string
+  to: string
+  zones: ZoneComparisonItem[]
+}

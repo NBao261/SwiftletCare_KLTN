@@ -37,7 +37,15 @@ function NowLabel({ viewBox }: { viewBox?: { x?: number; y?: number } }) {
   )
 }
 
-function DotLabel(props: any) {
+interface DotLabelProps {
+  x?: number
+  y?: number
+  cx?: number
+  cy?: number
+  viewBox?: { x?: number; y?: number }
+}
+
+function DotLabel(props: DotLabelProps) {
   const x = props.x ?? props.cx ?? props.viewBox?.x
   const y = props.y ?? props.cy ?? props.viewBox?.y
   if (x == null || y == null) return null

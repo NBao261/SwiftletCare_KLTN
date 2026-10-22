@@ -13,6 +13,7 @@ import {
   useAlertsWithFilters,
   useExpertVerdictStats,
   buildVerdictStatsSummary,
+  type AlertTabFilter,
 } from '@/hooks/expert/useExpertAlerts'
 import type { InferredAlertItem } from '@/types/expert.types'
 import { useZoneStore } from '@/stores/zoneStore'
@@ -50,7 +51,7 @@ export default function ExpertAuditLogsPage() {
 
   useEffect(() => {
     if (initialTab && ['ALL', 'PENDING', 'CONFIRMED', 'REJECTED'].includes(initialTab.toUpperCase())) {
-      setTab(initialTab.toUpperCase() as any)
+      setTab(initialTab.toUpperCase() as AlertTabFilter)
     }
   }, [initialTab, setTab])
 

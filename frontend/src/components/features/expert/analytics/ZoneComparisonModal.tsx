@@ -9,6 +9,7 @@ import { useZoneStore } from '@/stores/zoneStore'
 import { useScopeZones } from '@/hooks/farm-owner/useFarmOwnerDashboard'
 import { expertApi } from '@/services/expert.service'
 import MockDataTooltip from '@/components/shared/MockDataTooltip'
+import type { ZoneComparisonItem } from '@/types/expert.types'
 
 interface Props {
   isOpen: boolean
@@ -49,10 +50,10 @@ export default function ZoneComparisonModal({ isOpen, onClose }: Props) {
     staleTime: 5 * 60_000,
   })
 
-  const hasRealData = Boolean(realCompare?.zones?.some((z: any) => z.metrics && z.metrics.sampleCount > 0))
+  const hasRealData = Boolean(realCompare?.zones?.some((z: ZoneComparisonItem) => z.metrics && z.metrics.sampleCount > 0))
 
   const displayZones = hasRealData && realCompare?.zones
-    ? realCompare.zones.map((z: any) => ({
+    ? realCompare.zones.map((z: ZoneComparisonItem) => ({
         id: z.zoneId,
         name: z.zoneName,
         autonomyPct: 95.0,

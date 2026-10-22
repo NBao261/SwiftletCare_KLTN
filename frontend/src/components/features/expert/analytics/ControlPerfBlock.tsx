@@ -34,7 +34,11 @@ const PERF_DATA = [
   { date: '18/10', hum: 91.8, tmp: 95.2 }, { date: '19/10', hum: 92.4, tmp: 95.1 },
 ]
 
-function TuningLabel(props: any) {
+interface TuningLabelProps {
+  viewBox?: { x?: number; y?: number }
+}
+
+function TuningLabel(props: TuningLabelProps) {
   const cx = props.viewBox?.x ?? 0
   const cy = props.viewBox?.y ?? 0
   return (

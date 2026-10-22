@@ -11,6 +11,7 @@ import type {
   ControlPerformanceResponse,
   AutonomyResponse,
   BirdCountTrendsResponse,
+  ZoneComparisonResponse,
   ZoneHealthReportItem,
   HarvestBatchItem,
   RelayOverrideLogItem,
@@ -73,7 +74,7 @@ export const expertApi = {
     api.get<ApiResponse<BirdCountTrendsResponse>>('/analytics/bird-count/trends', { params: { zoneId, days } }),
 
   compareZones: (zoneIds: string[], range = '24h') =>
-    api.get<ApiResponse<{ range: string; from: string; to: string; zones: any[] }>>('/analytics/env/compare', {
+    api.get<ApiResponse<ZoneComparisonResponse>>('/analytics/env/compare', {
       params: { zoneIds: zoneIds.join(','), range },
     }),
 
