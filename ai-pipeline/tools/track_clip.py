@@ -27,14 +27,20 @@ class MotionDetector:
     ByteTrack và bộ đếm chạy trên clip thật. Bắt cả côn trùng và nhiễu, nên số đếm chỉ để tham khảo.
     """
 
-    def __init__(self, min_side_px: int = 8, max_side_px: int = 260):
+    # max_fg_fraction 0,02: frame thường có 0,05% điểm ảnh "chuyển động" (trung vị), chim sát ống kính
+    # (~180×180 px) ~1,6%, còn lúc camera tự chỉnh phơi sáng vọt lên 14% (clip 22/10, 05:31:50). Chọn tay.
+    def __init__(self, min_side_px: int = 8, max_side_px: int = 260, max_fg_fraction: float = 0.02):
         self.bg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
         self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
         self.min_side, self.max_side = min_side_px, max_side_px
+        self.max_fg = max_fg_fraction
 
     def infer_tiles(self, frame, _tiles, _overlap):
         small = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), None, fx=0.5, fy=0.5)
         mask = cv2.morphologyEx(self.bg.apply(small), cv2.MORPH_OPEN, self.kernel)
+        if (mask > 0).mean() > self.max_fg:      # cả khung đổi sáng: học lại nền ngay, bỏ frame này
+            self.bg.apply(small, learningRate=1)
+            return [], 0.0
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         dets = []
         for c in contours:
