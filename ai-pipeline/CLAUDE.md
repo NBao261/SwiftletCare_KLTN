@@ -6,7 +6,7 @@ Rules and map for `ai-pipeline/` (Python: OpenCV + YOLO26n on ONNX Runtime + Byt
 
 - **Design source:** `docs/bird-counting-plan.md` is the implementation plan (architecture, config, MQTT payloads, training, accuracy measurement, backend and frontend work). Requirements: SRS §5.4 (Module VISION) and §0 scope. When the plan and this file disagree on *what to build*, the plan wins; this file wins on *how code must be written and checked*.
 - **Scope (SRS v2.0.0 §0):** one class, `swiftlet`. Predator detection is removed. The AI node is a PC or cloud VPS (container `vision`), **not** a Raspberry Pi. An annotated live stream (boxes drawn on the frame, viewed over WebRTC via MediaMTX) and a counting-accuracy report split by lighting (VISION-FR-014/016) are required.
-- **State:** a scaffold, never run for real. There is no `models/` folder (weights are never committed), `tracker.py` is a stub that returns nothing, `stream.py` publishes nothing, and the code still carries the v1 four-class/Raspberry Pi design — see Known debt. The backend's `mqtt/handlers/birdCount.handler.ts` is also a stub (logs only), so nothing persists bird counts end-to-end yet.
+- **State:** a scaffold, never run for real. There is no `models/` folder (weights are never committed), `stream.py` tracks every bird over the whole frame (2 tiles → YOLO → ByteTrack → ring count) but publishes nothing, and the code still carries the v1 four-class/Raspberry Pi design — see Known debt. The backend's `mqtt/handlers/birdCount.handler.ts` is also a stub (logs only), so nothing persists bird counts end-to-end yet.
 
 ## Commands
 
@@ -14,33 +14,35 @@ Rules and map for `ai-pipeline/` (Python: OpenCV + YOLO26n on ONNX Runtime + Byt
 cd ai-pipeline
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python src/stream.py --config config/config.yaml       # current scaffold entry point
-pytest tests/                                          # ring counter + calibration tool, no camera/model needed
-python tools/pick_roi.py [image|clip|rtsp] --margin 60  # click the hole outline → prints roi + ring for config.yaml (plan §6.8)
+python src/stream.py                                   # live: CAMERA_RTSP_URL from .env
+pytest tests/                                          # no camera, model or broker needed
+python tools/pick_roi.py [image|clip|rtsp] --margin 60  # click the hole outline → prints the ring for config.yaml (plan §6.8)
+python tools/track_clip.py <clip> --start 425 --seconds 20 [--detector motion]  # video with green boxes → D:/SwiftletCare/clips/annotated
 ```
 
-Once rewritten per the plan (§6.6, §7.7), `stream.py` also takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY` and `--no-mqtt`, and serves an MJPEG preview at `http://127.0.0.1:8090/stream` for tuning ROI and the counting line. Python 3.11–3.12 (`onnxruntime` 1.30 needs ≥ 3.11; versions pinned in plan §4). The pipeline has no CI job yet.
+Once rewritten per the plan (§6.6, §7.7), `stream.py` also takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY` and `--no-mqtt`, and serves an MJPEG preview at `http://127.0.0.1:8090/stream`. Python 3.11–3.12 (`onnxruntime` 1.30 needs ≥ 3.11; versions pinned in plan §4). The pipeline has no CI job yet.
 
 ## Structure
 
 Today:
 ```
-config/config.yaml    camera, model, classes, tracking, MQTT, storage, sessions
+config/config.yaml    camera (tiles, mask), model, classes, tracking (ring, extrapolation), MQTT, sessions
 requirements.txt
 src/
-  stream.py           RTSP loop (sequential cap.read, no publishing)
-  inference.py        YOLOv8-style ONNX inference + NMS (plan §6.3 also reads YOLO26n NMS-free output)
-  tracker.py          ByteTrack stub
-  counting.py         RingCounter: closed ring around the entrance hole, every crossing counted both ways; set_ring() swaps it live
+  stream.py           RTSP loop (sequential cap.read, no publishing) around pipeline.py
+  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack → RingCounter → draw (green boxes)
+  frame_prep.py       mask + tiles, shared with the dataset tools so training and production see the same pixels
+  inference.py        ONNX inference, YOLO26 (300, 6) and YOLOv8/11 outputs, per-tile run + merge
+  counting.py         RingCounter: ring crossings both ways + extrapolation for birds too fast at the hole; set_ring() swaps it live
   remote_config.py    VISION-FR-018: ring drawn by the Domain Expert, from {house}/config/update → state/counting_ring.json
-tools/pick_roi.py     calibration: hole outline → ring (offset by --margin) + ROI, printed as YAML
-tools/extract_frames.py  clip → ROI-cropped frames + draft YOLO labels (ROI from config.yaml)
+tools/pick_roi.py     calibration: hole outline → ring (offset by --margin), printed as YAML
+tools/extract_frames.py  clip → masked 2-tile frames + draft YOLO labels from motion tracks (--draft tracks) or blobs
+tools/track_clip.py  clip segment → video with green boxes + counts; --detector motion until a trained model exists
 tools/split_by_day.py    labelled export → train/val/test by recording day + data.yaml
-tests/                test_counting.py, test_pick_roi.py, test_dataset_tools.py, test_remote_config.py
-  alert_publisher.py  MQTT publisher for predator alerts (out of scope)
+tests/                test_counting.py, test_inference.py, test_frame_prep.py, test_pick_roi.py, test_dataset_tools.py, test_remote_config.py
 ```
 
-Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (done: `RingCounter`, plan §3.3 item 7 / §19.8; `sv.LineZone` only for a camera that sees the hole side-on), `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, drawing, MQTT, push to MediaMTX). `tracker.py` and `alert_publisher.py` go away (ByteTrack comes from `supervision`). Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `state/` (the last counting ring received) — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).
+Target (plan §4): `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, MQTT, push to MediaMTX). Done: `inference.py` (plan §6.3), `counting.py` (`RingCounter`, plan §3.3 item 7 / §19.8), tracking with `sv.ByteTrack` in `pipeline.py`. Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `state/` (the last counting ring received) — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).
 
 ## Rules
 
@@ -81,12 +83,9 @@ Target (plan §4): `src/inference.py` (fixed), `src/counting.py` (done: `RingCou
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| `config/config.yaml` | Four classes + `predator_classes`/`predator_confidence_min`; `rtsp_url` with placeholder credentials in the file; MQTT username `rpi-node-01`; `return_rate_drop_threshold` (the backend owns that) | Replace with the plan §6.2 config; move the URL to `.env` |
-| `requirements.txt` | Raspberry Pi comments; ByteTrack built from source (`cython`, `lap`); MinIO/boto3 | Replace with the plan §4 list (`supervision`, `loguru`, `python-dotenv`, `pytest`) |
-| `src/inference.py` | No BGR→RGB conversion; decodes only the YOLOv8 `(1, nc+4, 8400)` output, while the plan exports YOLO26n with `nms=False` (`(1, 300, 6)`, no NMS) and compares YOLOv8n/YOLO11n/YOLO26n (plan §7.9); hard-coded `CLASS_NAMES`/`PREDATOR_IDS`; fixed 4 threads; CPU provider only | Plan §6.3 |
-| `src/tracker.py` | Stub — `update()` returns an empty list, so nothing is ever counted | Delete; use `sv.ByteTrack` |
-| `src/stream.py` | Sequential `cap.read()` (lags), no MQTT, no sessions, no drawing, no stream push | Rewrite (plan §6.6) |
-| `src/alert_publisher.py` | Predator alerts, payload without `deviceId` | Delete (out of scope) |
+| `config/config.yaml` | MQTT username `rpi-node-01`; `mqtt.farm_id/house_id/zone_id` placeholders (IDs come from `.env`) | Replace the `mqtt` block with plan §6.2 |
+| `src/pipeline.py` | `sv.ByteTrack` is deprecated and removed in supervision 0.31 (pinned `<0.31`) | Move to the `trackers` package before upgrading |
+| `src/stream.py` | Sequential `cap.read()` (lags), no MQTT, no sessions, no stream push | Rewrite (plan §6.6) |
 | `README.md` | Lists `vision/alert` and `vision/heartbeat` topics; the backend listens on `.../heartbeat` and predator alerts are gone | Fix with the first code PR |
 | CI | `tests/` exists but no CI job runs it | Add a CI job running `pytest` |
 

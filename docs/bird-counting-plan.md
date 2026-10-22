@@ -822,8 +822,8 @@ python src/stream.py --source clips/20261008_morning_01.mp4 --session MORNING_EX
 Trình tự hiệu chỉnh (sửa `config.yaml` rồi chạy lại):
 
 0. **Đo trên clip có chim** (mở clip, click bằng `tools/pick_roi.py` để đọc pixel): **s** = cỡ một con chim sát miệng lỗ, **v** = quãng nó bay giữa hai khung liên tiếp.
-1. **Vòng đếm** (vòng vàng): `python tools/pick_roi.py <ảnh|clip|rtsp> --margin <d> --roi-pad <3v>`, click lần lượt các góc viền ngoài miệng lỗ, Enter in ra khối YAML `roi` + `ring`. `d = max(s, 1,5 × v)`: chim vừa chui ra phải nằm *trong* vòng ít nhất 1–2 khung trước khi cắt vòng, nếu không tracker chưa kịp có id và con đó bị sót.
-2. **ROI** (khung trắng): công cụ lấy khung bao vòng đếm nới thêm `--roi-pad`. Cạnh dài nhất của ROI ≤ `640 × s / 15` để chim còn ≥ 15 px sau khi thu về đầu vào model (cổng 5); thừa thì cắt bớt phía ít chim bay. Không để dòng ngày giờ của camera trong ROI.
+1. **Vòng đếm** (vòng vàng): `python tools/pick_roi.py <ảnh|clip|rtsp> --margin <d>`, click lần lượt các góc viền ngoài miệng lỗ, Enter in ra khối YAML `ring`. `d = max(s, 1,5 × v)`: chim vừa chui ra phải nằm *trong* vòng ít nhất 1–2 khung trước khi cắt vòng, nếu không tracker chưa kịp có id và con đó bị sót.
+2. **Vùng theo dõi**: cả khung, chia 2 ô `camera.tiles`, tô đen dòng ngày giờ `camera.mask` (mục 19.8). Mỗi ô thu về đầu vào model phải giữ chim ≥ 15 px (cổng 5). Xem ô xanh bằng `python tools/track_clip.py <clip> --start <giây> --seconds 20` (thêm `--detector motion` khi chưa có model tự train).
 3. **Chiều đếm**: nếu chim chui ra khỏi lỗ mà số "RA" tăng thì đổi `into_ring_is_exit` (vạch thẳng: `in_is_entry`).
 4. **`box_pad`**: nếu `#id` nhảy số liên tục trên cùng một con, tăng dần 2.5 → 3 → 4.
 5. **`confidence_threshold`**: hạ nếu sót nhiều, tăng nếu bắt nhầm.
@@ -858,7 +858,7 @@ Kế hoạch thu:
 | Tổng 2–4 giờ clip | Đủ để rút 1.500–3.000 frame có chim |
 | Giữ nguyên vị trí camera | Dữ liệu train phải giống lúc chạy thật |
 
-**Đã đặt từ 21/10/2026** trên laptop của nhóm: Task Scheduler (`\SwiftletCare\`) đánh thức máy lúc 05:15 và 17:15, chạy `D:\SwiftletCare\record_session.ps1` quay tới 07:15 / 19:15 vào `D:\SwiftletCare\clips\YYYYMMDD_<morning|evening>_NN.mp4` (`ffmpeg -c copy`, fragmented mp4 nên file bị ngắt vẫn xem được; log ở `D:\SwiftletCare\logs\record.log`). Máy phải cắm sạc: wake timer chỉ bật khi dùng nguồn điện. Clip, frame và dataset để ở ổ D, không để trong repo (`ai-pipeline/clips` là junction trỏ sang `D:\SwiftletCare\clips`, đã gitignore).
+**Đã đặt từ 21/10/2026** trên laptop của nhóm: Task Scheduler (`\SwiftletCare\`) đánh thức máy lúc 05:15 và 17:15, chạy `D:\SwiftletCare\record_session.ps1` quay tới 07:15 / 19:15 vào `D:\SwiftletCare\clips\YYYYMMDD_<morning|evening>_NN.mp4` (`ffmpeg -c copy` ra `.part.mp4` dạng fragmented để file bị ngắt vẫn xem được, quay xong tự đóng gói lại thành mp4 thường `-movflags +faststart` vì fragmented mp4 không có chỉ mục nên không tua được; log ở `D:\SwiftletCare\logs\record.log`). Lần đầu chạy thật 22/10/2026: máy ngủ vẫn tự thức lúc 05:15 và quay đủ 2 giờ. Máy phải cắm sạc: wake timer chỉ bật khi dùng nguồn điện. Clip, frame và dataset để ở ổ D, không để trong repo (`ai-pipeline/clips` là junction trỏ sang `D:\SwiftletCare\clips`, đã gitignore).
 
 **Nguồn dữ liệu là chính camera sẽ dùng thật, tại đúng vị trí lắp thật.** Không dùng điện thoại hay camera khác để thu dữ liệu train: khác ống kính, góc nhìn, độ nhòe và màu thì model học sai thứ. Hai cách lấy clip từ camera, theo thứ tự ưu tiên:
 
@@ -877,10 +877,11 @@ cd ai-pipeline
 Get-ChildItem D:\SwiftletCare\clips\*.mp4 | ForEach-Object { python tools/extract_frames.py $_.FullName --out D:\SwiftletCare\dataset\raw }
 ```
 
-- **ROI lấy từ `camera.roi` trong `config.yaml`** (truyền `--roi` chỉ khi cần thử khác): model train trên ảnh crop nào thì chạy thật trên đúng crop đó. **Chốt ROI trước khi tách frame**; đổi ROI sau đó là phải tách và gán nhãn lại.
+- **Ảnh cắt theo 2 ô `camera.tiles` và tô đen `camera.mask`** bằng đúng `src/frame_prep.py` mà pipeline dùng: model train trên ảnh nào thì chạy thật trên đúng ảnh đó. Mỗi frame ra `_t0.jpg` và `_t1.jpg`. **Chốt ô và mask trước khi tách frame**; đổi sau đó là phải tách và gán nhãn lại. `--start`/`--seconds` để chỉ tách đoạn có chim.
 - Tên clip phải bắt đầu bằng `YYYYMMDD` (dùng để chia tập ở mục 7.4); công cụ từ chối tên khác.
 - `--every 5` ở 25 fps = 5 ảnh/giây; ra quá nhiều ảnh gần giống nhau thì tăng lên 10–15.
-- `--min-area 150` (px² trong ảnh crop): đo trên clip IR 21/10, nhiễu cảm biến ra đốm 49–108 px² sau dilate (119 ô nháp giả trên clip 90 giây với ngưỡng 30 cũ, còn 8 với 150). Chim ≥ 15 px trong ảnh đầu vào model ≈ 22×22 px trong crop 960 px, nên 150 không bỏ sót chim nào model cần thấy.
+- `--min-area 150` (px² trong ảnh crop): đo trên clip IR 21/10, nhiễu cảm biến ra đốm 49–108 px² sau dilate (119 ô nháp giả trên clip 90 giây với ngưỡng 30 cũ, còn 8 với 150). Chim ≥ 15 px trong ảnh đầu vào model ≈ 25×25 px trong ô cao 1080 px, nên 150 không bỏ sót chim nào model cần thấy. `--max-area 60000` giữ được chim bay sát ống kính (~180×180 px).
+- **Nhãn nháp mặc định lấy từ tracking** (`--draft tracks`): vật chuyển động → ByteTrack trên cả khung như `tools/track_clip.py --detector motion`, chỉ giữ vết sống ≥ 3 frame và dời ≥ 20 px. Đoạn 05:22 ngày 22/10: 159 vết chuyển động còn 22 vết, ô nằm đúng trên chim; xem video thì khoảng 90% chim được bắt. Vẫn sót chim đứng yên hay bay chậm và gộp 2 con sát nhau: trên Roboflow vẽ thêm ô (công cụ Bounding Box, phím `B`), sửa hoặc xóa ô sai. Cách cũ (đốm từng frame, nhiễu hơn) còn ở `--draft blobs`. Có model đầu tiên rồi thì dùng chính model đó làm nhãn nháp cho phần ảnh còn lại.
 - Côn trùng dưới đèn IR vẫn lọt vào nhãn nháp (đốm sáng 20–40 px, ngang cỡ chim): xóa ô khi gán nhãn, ảnh đó thành ảnh âm.
 
 ### 7.3. Gán nhãn
@@ -1584,7 +1585,7 @@ Chỉ làm khi thật sự cần.
 | Tăng tốc suy luận | FPS dưới mục tiêu | Theo thứ tự ở mục 18.4: `onnxruntime-openvino` (CPU Intel) → đầu vào 480/416 trên ROI hẹp → hạ camera 20 fps |
 | Phát hiện thiên địch (THREAT-FR-001) | Có dữ liệu chuột/rắn/cú và camera nhìn vào trong nhà | Thêm class, sửa `alert_publisher.py` (thêm `deviceId`), cho `ingestDeviceAlert` tra cả `CameraNode` |
 | Ghi hình sự kiện (VISION-FR-015) | Sau khi phần đếm ổn định, và khi VPS có chỗ: luồng 2 Mbps ghi cả ngày tốn khoảng 150 GB mỗi 7 ngày; thẻ nhớ camera đã ghi liên tục (19.3) | Tính năng có sẵn của MediaMTX: `record: yes` chỉ trong giờ phiên, `recordDeleteAfter: 7d`, `playback: yes` cho đường `cam-<id>` (đã vẽ khung); backend cấp token xem lại giống `stream-token` (SRS 0.5) |
-| Vẽ vòng đếm trên giao diện (VISION-FR-018) | Khi phải chỉnh vòng mà không muốn sửa `config.yaml` tay (mục 19.8) | **Đã có backend + pipeline (SRS v2.1.10):** `PUT /devices/camera-nodes/:id/counting-ring` lưu theo camera, gửi qua `swiftletcare/{farmId}/{houseId}/config/update` kèm `deviceId`; `src/remote_config.py` lưu `state/counting_ring.json` (thắng `tracking.ring`), áp ngay và tính lại ROI = khung bao vòng + `tracking.roi_pad_px`. Còn màn vẽ ở web |
+| Vẽ vòng đếm trên giao diện (VISION-FR-018) | Khi phải chỉnh vòng mà không muốn sửa `config.yaml` tay (mục 19.8) | **Đã có backend + pipeline (SRS v2.1.10):** `PUT /devices/camera-nodes/:id/counting-ring` lưu theo camera, gửi qua `swiftletcare/{farmId}/{houseId}/config/update` kèm `deviceId`; `src/remote_config.py` lưu `state/counting_ring.json` (thắng `tracking.ring`), áp ngay (từ 22/10 vùng theo dõi là cả khung nên không còn tính lại ROI theo vòng, mục 19.8). Còn màn vẽ ở web |
 
 ---
 
@@ -2270,7 +2271,7 @@ Toàn bộ nằm ở mục 15. Trên PC nhà yến, tách cấu hình cloud ra f
 
 | File | Dev | Deploy |
 |---|---|---|
-| Cấu hình pipeline | `config/config.yaml` | `config/config.cloud.yaml` (sao từ file dev, đổi khối `mqtt` theo mục 15.6 và `camera.roi`/`tracking.line` theo camera thật) |
+| Cấu hình pipeline | `config/config.yaml` | `config/config.cloud.yaml` (sao từ file dev, đổi khối `mqtt` theo mục 15.6 và `camera.tiles`/`camera.mask`/`tracking.ring` theo camera thật) |
 | Biến môi trường pipeline | `.env` | `.env` trên PC nhà yến (mục 15.6) |
 | Lệnh chạy | `python src/stream.py` | `python src/stream.py --config config/config.cloud.yaml` |
 | Backend env | `backend/.env` | `deploy/backend.env` |
@@ -2850,6 +2851,27 @@ ROI `[0.25, 0.00, 0.75, 0.70]` (960×756 px): cách vòng đếm 150–340 px, n
 
 **Còn lại:**
 
-- [ ] Lấy một khung RTSP ban ngày, so với khung 18:30: lệch 0 px thì camera chỉ dịch một lần; lệch lại khoảng 16 px thì do chế độ ngày/đêm → khóa một chế độ cho cả hai phiên, hoặc nới vòng thêm 16 px
+- [x] Lấy một khung RTSP ban ngày, so với khung 18:30 — xong 22/10, xem bên dưới: camera đứng yên, không cần nới vòng
 - [ ] Clip có chim: đo `s`, `v`, chạy lại `tools/pick_roi.py --margin`, chốt `roi` và `ring` (cổng 5)
 - [ ] Gán clip côn trùng dưới IR làm ảnh âm khi gán nhãn (mục 7.3)
+
+**Kiểm tra ngày 22/10/2026.**
+
+- *Camera đứng yên.* Khung RTSP 12:44 so với khung đêm 21/10 18:30: cả khung lệch khoảng 1 px, góc xà và tường phải khoảng 3 px. Đổi chế độ ngày/đêm không làm hình dịch, nên 16 px ở trên là camera xê dịch một lần sau ảnh app 13:45 (hoặc do app hiển thị khác luồng RTSP). Viền hộp gỗ đo ban đêm vẫn khớp hộp trên ảnh ban ngày; miệng lỗ sáng nằm trọn trong vòng đếm. `roi` và `ring` giữ nguyên.
+- *Clip phiên sáng `20261022_morning_01.mp4` (05:15–07:15) có chim, nhưng chim qua lỗ chỉ là vệt mờ 1–2 khung.* Chim ra rộ khoảng 05:19–05:36 (cao nhất 05:25–05:31). Camera ở chế độ IR (ảnh xám) tới 05:50:37 mới sang chế độ ngày (dùng để chia clip đủ sáng / thiếu sáng, VISION-FR-016).
+  - Chim lượn trong phòng thấy rõ: cỡ 25–40 px, dời 20–35 px mỗi khung (vd. khung 10840–10861, 05:22). Nhiều con lượn **ngoài ROI** (sát tường trái x < 480, sàn y > 756) và có con bay sát ống kính thành vệt ~180 px, dời ~190 px mỗi khung.
+  - Chim qua miệng lỗ: vệt trong suốt rộng ~45 px, dài ~200 px, dời ~150–200 px mỗi khung, chỉ thấy 1–2 khung (khung 18661–18662: vệt đi ngang miệng hộp rồi lên phía trên hộp; khung 17631: vệt tối trong hộp). Ảnh IR phơi sáng gần hết thời gian một khung (~40 ms ở 25 fps) nên chim nhanh bị nhòe thành vệt.
+  - Hai cách quét tự động đầu tiên (tách nền trong ROI, độ sáng miệng lỗ) đều bỏ sót: lọc bỏ đốm > 200 px và vệt trong suốt gần như không đổi độ sáng trung bình. Quét khe sáng ở đáy hộp chỉ bắt được 2 lần che khe.
+- *Hệ quả cho cách đếm:* `d = max(s, 1,5v)` với v ~150–200 px ra khoảng nới ~300 px, gần bằng cả ROI; và một con chỉ có 1–2 lần phát hiện thì ByteTrack chưa kịp có id. Vòng đếm 60 px hiện tại không đếm được chim qua lỗ ở tốc độ này. Hướng thử, theo thứ tự: (1) giảm thời gian phơi sáng của camera (cài trong app/web của hãng, mục 3.2, 19.3) để vệt ngắn và rõ hơn, kiểm tra ảnh IR lúc chạng vạng còn đủ sáng; (2) quay lại clip và đo lại s, v; (3) nếu vẫn chỉ thấy 1–2 khung thì chuyển sang đếm theo vùng quanh miệng lỗ (mục 3.3 ý 6) với hướng lấy từ vệt hoặc khung kề.
+
+**Quyết định 22/10: theo dõi cả khung, đếm ở miệng lỗ.** Bám mọi con chim (ô xanh), kể cả đang lượn, để con chim có id từ trước khi lao vào lỗ.
+
+- **Vùng theo dõi = cả khung**, chia 2 ô chồng nhau 160 px (`x 0–1040` và `880–1920`), mỗi ô thu về 640: tỉ lệ 0,59, chim lượn 25–40 px còn 15–24 px (cổng 5), chi phí khoảng 2× một lần suy luận. Không chọn đầu vào 960 (chim còn 12–20 px) hay 1280 (chậm ~4×). Ô trùng ở dải chồng được gộp theo phần giao / ô nhỏ hơn > 0,6. Dòng ngày giờ tô đen.
+- **Luật đếm** (`src/counting.py`): cắt vòng như cũ; thêm ngoại suy cho vết nhanh (≥ 60 px/frame; chim lượn 20–35, chim qua lỗ 150–200): vết mất ngay ngoài vòng mà đi tiếp ≤ 2 frame thì vào vòng → RA; vết mới mà lùi lại ≤ 2 frame thì ra từ vòng → VỀ. Vết sinh và mất đều trong vòng → không rõ chiều, chỉ đếm riêng. Vết mất ở mép khung không tính.
+- **Model COCO không dùng được để thử:** `yolo26n` COCO không ra class bird lần nào trên ảnh IR ngày 22/10, kể cả ngưỡng 0,02 (nó gọi hộp gỗ là lò vi sóng/TV). Phải có model tự train (GĐ2). Trong lúc chờ, `tools/track_clip.py --detector motion` lấy vật chuyển động làm phát hiện để xem tracker và bộ đếm: đoạn 05:22 (20 giây) có tới 9 vết cùng lúc, ô xanh bám đúng các con lượn phía trái hộp, kể cả vệt chim sát ống kính; xử lý ~49 FPS trên laptop. Model COCO 2 ô chạy ~7 FPS trên laptop (chỉ tham khảo, cổng 1 đo trên máy chạy thật).
+
+**Còn lại sau 22/10:**
+
+- [ ] Giảm thời gian phơi sáng của camera, quay clip, đo lại cỡ và tốc độ chim qua lỗ
+- [ ] Gán vài chục vệt qua lỗ làm dữ liệu thử: YOLO có phát hiện được vệt mờ 1 khung không
+- [ ] Xem clip phiên chiều 22/10

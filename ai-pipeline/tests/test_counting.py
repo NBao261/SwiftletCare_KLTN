@@ -62,3 +62,84 @@ def test_crossing_while_the_tracker_lost_the_bird_still_counts():
     c.update([], [])
     c.update([1], [box(95, 95)])
     assert (c.entry_count, c.exit_count) == (1, 0)
+
+
+# ── Luật ngoại suy (plan §19.8): chim qua lỗ 150–200 px/frame, frame trong vòng thường không được phát hiện ──
+HOLE = [(0.4, 0.4), (0.6, 0.4), (0.6, 0.6), (0.4, 0.6)]   # 1000x1000 frame -> 400..600 px
+
+
+def fast_counter(**kw):
+    return RingCounter(HOLE, 1000, 1000, lost_frames=3, extrapolate_frames=2, min_speed_px=60, **kw)
+
+
+def idle(counter, frames=5):
+    for _ in range(frames):
+        counter.update([], [])
+
+
+def test_track_lost_just_outside_heading_into_the_hole_is_exit():
+    c = fast_counter()
+    run(c, [(100, 500), (250, 500), (370, 500)])           # 120 px/frame, next frame at 490 = inside
+    assert (c.entry_count, c.exit_count) == (0, 0)          # not final until lost_frames pass
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 1)
+
+
+def test_new_track_first_seen_just_outside_moving_away_from_the_hole_is_entry():
+    c = fast_counter()
+    run(c, [(650, 500), (780, 500)])                        # going back 130 px from 650 lands inside
+    assert (c.entry_count, c.exit_count) == (1, 0)
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (1, 0)
+
+
+def test_track_lost_at_the_frame_edge_counts_nothing():
+    c = fast_counter()
+    run(c, [(820, 500), (920, 500), (990, 500)])            # far from the hole, flies off the frame
+    idle(c)
+    assert (c.entry_count, c.exit_count, c.ambiguous) == (0, 0, 0)
+
+
+def test_slow_circling_bird_lost_near_the_ring_counts_nothing():
+    c = fast_counter()
+    run(c, [(300, 500), (330, 500), (360, 500)])            # 30 px/frame: circling, not diving
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_track_born_and_lost_inside_is_ambiguous_not_counted():
+    c = fast_counter()
+    run(c, [(480, 500), (520, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count, c.ambiguous) == (0, 0, 1)
+
+
+def test_crossing_into_the_ring_then_lost_inside_counts_once():
+    c = fast_counter()
+    run(c, [(250, 500), (370, 500), (480, 500)])            # crossing counted when it happens
+    idle(c)
+    assert (c.entry_count, c.exit_count, c.ambiguous) == (0, 1, 0)
+
+
+def test_short_gap_does_not_finalise_and_the_last_motion_decides():
+    c = fast_counter()
+    run(c, [(100, 500), (250, 500), (370, 500)])
+    idle(c, 2)                                              # tracker lost it for 2 frames < lost_frames
+    run(c, [(300, 300)])                                    # reacquired, now veering away from the hole
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_extrapolation_is_off_unless_configured():
+    c = RingCounter(HOLE, 1000, 1000, lost_frames=3)
+    run(c, [(100, 500), (250, 500), (370, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_new_ring_forgets_tracks():
+    c = fast_counter()
+    run(c, [(100, 500), (250, 500), (370, 500)])
+    c.set_ring(HOLE, 1000, 1000, True)
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
