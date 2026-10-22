@@ -858,7 +858,7 @@ Kế hoạch thu:
 | Tổng 2–4 giờ clip | Đủ để rút 1.500–3.000 frame có chim |
 | Giữ nguyên vị trí camera | Dữ liệu train phải giống lúc chạy thật |
 
-**Đã đặt từ 21/10/2026** trên laptop của nhóm: Task Scheduler (`\SwiftletCare\`) đánh thức máy lúc 05:15 và 17:15, chạy `D:\SwiftletCare\record_session.ps1` quay tới 07:15 / 19:15 vào `D:\SwiftletCare\clips\YYYYMMDD_<morning|evening>_NN.mp4` (`ffmpeg -c copy`, fragmented mp4 nên file bị ngắt vẫn xem được; log ở `D:\SwiftletCare\logs\record.log`). Máy phải cắm sạc: wake timer chỉ bật khi dùng nguồn điện. Clip, frame và dataset để ở ổ D, không để trong repo (`ai-pipeline/clips` là junction trỏ sang `D:\SwiftletCare\clips`, đã gitignore).
+**Đã đặt từ 21/10/2026** trên laptop của nhóm: Task Scheduler (`\SwiftletCare\`) đánh thức máy lúc 05:15 và 17:15, chạy `D:\SwiftletCare\record_session.ps1` quay tới 07:15 / 19:15 vào `D:\SwiftletCare\clips\YYYYMMDD_<morning|evening>_NN.mp4` (`ffmpeg -c copy` ra `.part.mp4` dạng fragmented để file bị ngắt vẫn xem được, quay xong tự đóng gói lại thành mp4 thường `-movflags +faststart` vì fragmented mp4 không có chỉ mục nên không tua được; log ở `D:\SwiftletCare\logs\record.log`). Lần đầu chạy thật 22/10/2026: máy ngủ vẫn tự thức lúc 05:15 và quay đủ 2 giờ. Máy phải cắm sạc: wake timer chỉ bật khi dùng nguồn điện. Clip, frame và dataset để ở ổ D, không để trong repo (`ai-pipeline/clips` là junction trỏ sang `D:\SwiftletCare\clips`, đã gitignore).
 
 **Nguồn dữ liệu là chính camera sẽ dùng thật, tại đúng vị trí lắp thật.** Không dùng điện thoại hay camera khác để thu dữ liệu train: khác ống kính, góc nhìn, độ nhòe và màu thì model học sai thứ. Hai cách lấy clip từ camera, theo thứ tự ưu tiên:
 
@@ -2850,6 +2850,21 @@ ROI `[0.25, 0.00, 0.75, 0.70]` (960×756 px): cách vòng đếm 150–340 px, n
 
 **Còn lại:**
 
-- [ ] Lấy một khung RTSP ban ngày, so với khung 18:30: lệch 0 px thì camera chỉ dịch một lần; lệch lại khoảng 16 px thì do chế độ ngày/đêm → khóa một chế độ cho cả hai phiên, hoặc nới vòng thêm 16 px
+- [x] Lấy một khung RTSP ban ngày, so với khung 18:30 — xong 22/10, xem bên dưới: camera đứng yên, không cần nới vòng
 - [ ] Clip có chim: đo `s`, `v`, chạy lại `tools/pick_roi.py --margin`, chốt `roi` và `ring` (cổng 5)
 - [ ] Gán clip côn trùng dưới IR làm ảnh âm khi gán nhãn (mục 7.3)
+
+**Kiểm tra ngày 22/10/2026.**
+
+- *Camera đứng yên.* Khung RTSP 12:44 so với khung đêm 21/10 18:30: cả khung lệch khoảng 1 px, góc xà và tường phải khoảng 3 px. Đổi chế độ ngày/đêm không làm hình dịch, nên 16 px ở trên là camera xê dịch một lần sau ảnh app 13:45 (hoặc do app hiển thị khác luồng RTSP). Viền hộp gỗ đo ban đêm vẫn khớp hộp trên ảnh ban ngày; miệng lỗ sáng nằm trọn trong vòng đếm. `roi` và `ring` giữ nguyên.
+- *Clip phiên sáng `20261022_morning_01.mp4` (05:15–07:15) có chim, nhưng chim qua lỗ chỉ là vệt mờ 1–2 khung.* Chim ra rộ khoảng 05:19–05:36 (cao nhất 05:25–05:31). Camera ở chế độ IR (ảnh xám) tới 05:50:37 mới sang chế độ ngày (dùng để chia clip đủ sáng / thiếu sáng, VISION-FR-016).
+  - Chim lượn trong phòng thấy rõ: cỡ 25–40 px, dời 20–35 px mỗi khung (vd. khung 10840–10861, 05:22). Nhiều con lượn **ngoài ROI** (sát tường trái x < 480, sàn y > 756) và có con bay sát ống kính thành vệt ~180 px, dời ~190 px mỗi khung.
+  - Chim qua miệng lỗ: vệt trong suốt rộng ~45 px, dài ~200 px, dời ~150–200 px mỗi khung, chỉ thấy 1–2 khung (khung 18661–18662: vệt đi ngang miệng hộp rồi lên phía trên hộp; khung 17631: vệt tối trong hộp). Ảnh IR phơi sáng gần hết thời gian một khung (~40 ms ở 25 fps) nên chim nhanh bị nhòe thành vệt.
+  - Hai cách quét tự động đầu tiên (tách nền trong ROI, độ sáng miệng lỗ) đều bỏ sót: lọc bỏ đốm > 200 px và vệt trong suốt gần như không đổi độ sáng trung bình. Quét khe sáng ở đáy hộp chỉ bắt được 2 lần che khe.
+- *Hệ quả cho cách đếm:* `d = max(s, 1,5v)` với v ~150–200 px ra khoảng nới ~300 px, gần bằng cả ROI; và một con chỉ có 1–2 lần phát hiện thì ByteTrack chưa kịp có id. Vòng đếm 60 px hiện tại không đếm được chim qua lỗ ở tốc độ này. Hướng thử, theo thứ tự: (1) giảm thời gian phơi sáng của camera (cài trong app/web của hãng, mục 3.2, 19.3) để vệt ngắn và rõ hơn, kiểm tra ảnh IR lúc chạng vạng còn đủ sáng; (2) quay lại clip và đo lại s, v; (3) nếu vẫn chỉ thấy 1–2 khung thì chuyển sang đếm theo vùng quanh miệng lỗ (mục 3.3 ý 6) với hướng lấy từ vệt hoặc khung kề.
+
+**Còn lại sau 22/10:**
+
+- [ ] Giảm thời gian phơi sáng của camera, quay clip, đo lại cỡ và tốc độ chim qua lỗ
+- [ ] Gán vài chục vệt qua lỗ làm dữ liệu thử: YOLO có phát hiện được vệt mờ 1 khung không
+- [ ] Xem clip phiên chiều 22/10
