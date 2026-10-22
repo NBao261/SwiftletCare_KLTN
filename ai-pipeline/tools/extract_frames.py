@@ -28,6 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from frame_prep import apply_mask, tile_rects  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parents[1] / "config" / "config.yaml"
+# Roboflow đọc tên class của nhãn YOLO từ file này; thiếu thì class hiện là "0" (plan §7.3)
+ROBOFLOW_YAML = "nc: 1\nnames: [swiftlet]\n"
 KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
 Box = Tuple[float, float, float, float]
 
@@ -171,6 +173,7 @@ def main() -> None:
             (lbl_dir / f"{stem}.txt").write_text("\n".join(lines))
             saved += 1
     cap.release()
+    (Path(args.out) / "data.yaml").write_text(ROBOFLOW_YAML)
     print(f"{clip.name}: đọc tới frame {i}, {len(tiles or [])} ô, nhãn nháp {args.draft}, lưu {saved} ảnh vào {args.out}")
 
 
