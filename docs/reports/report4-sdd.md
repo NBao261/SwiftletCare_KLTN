@@ -132,7 +132,8 @@ flowchart LR
 | Firebase Cloud Messaging | Mobile push notifications (ALERT-FR-002) | Device token, alert title and message | Backend adapter logs only; mobile token registration not built |
 | NTP (`pool.ntp.org`) | Clock of the ESP32 for the speaker schedule and hourly noise baseline | Time request only, no user data | Implemented |
 | SMTP e-mail provider | OTP, password reset and invitation e-mails | E-mail address, one-time code or link | Not wired: codes are logged in development |
-| `[TEAM: dataset tools, e.g. Roboflow / CVAT / Google Colab]` | Annotation and training of the counting model | Frames extracted from the team's own entrance video; no personal data | `[TEAM: confirm]` |
+| Roboflow | Annotation of the training images: draft labels from motion tracks are uploaded and corrected by hand | Frames extracted from the team's own entrance clips (masked, no people, no personal data) | In use for the first dataset |
+| Google Colab | Training the detection model (Ultralytics) and exporting it to ONNX | The labelled dataset | Planned for the first trained model |
 
 Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, MinIO, MediaMTX, Redis (reserved, not used yet).
 
@@ -142,7 +143,7 @@ Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, M
 | --- | --- | --- |
 | Firmware | ESP32 (ESP32-WROOM-32D), Arduino framework on FreeRTOS, PlatformIO `espressif32` | Arduino-ESP32 core 2.0.17; firmware 1.4.0 |
 | Firmware libraries | PubSubClient, ArduinoJson, ModbusMaster, DFRobotDFPlayerMini, ElegantOTA | ^2.8, ^7.0, ^2.0.1, ^1.0.6, ^3.1 |
-| AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, ByteTrack, paho-mqtt; model YOLO26n exported to ONNX (one class) | Python 3.12 (CI), opencv-python 4.8.1, numpy 1.26.4, onnxruntime 1.17.1, paho-mqtt 2.0.0 |
+| AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, supervision (ByteTrack), paho-mqtt, PyYAML, loguru; detection model YOLO26n exported to ONNX (one class, trained on Colab; `torch`/`ultralytics` are not runtime dependencies) | Python 3.11–3.12; opencv-python ≥ 4.14 < 5; numpy ≥ 1.26 < 3; onnxruntime 1.30; supervision 0.30; paho-mqtt 2.x |
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23 |
 | Mobile | Expo (Router), React Native | Expo ~53, React Native 0.79.6, React 19.0 |
@@ -190,7 +191,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D3 | Device–cloud protocol | HTTP polling; WebSocket; MQTT | **MQTT (EMQX) with TLS**, QoS 1 for commands, `deviceId` in every payload; topics per zone for controllers and per house for AI nodes. Light on the ESP32, survives intermittent links | Section 7.2 |
 | D4 | Database | Relational (PostgreSQL); time-series DB; MongoDB | **MongoDB** with Mongoose: telemetry as documents with TTL (90 days), flexible embedded histories (thresholds, tuning), one store for the whole system; schema enforced by `$jsonSchema` validators generated from the models | Section 6 |
 | D5 | Where bird counting runs | Raspberry Pi at the house; PC at the house or cloud server | **PC or cloud AI node**: enough throughput for real time at 25 fps with YOLO; one camera per entrance, counts per house | VISION-FR-002, THREAT-FR-010 |
-| D6 | Counting geometry | Straight virtual line; closed ring around the entrance hole | **Closed ring** drawn by the Domain Expert: birds leave the hole in every direction, a line misses some; fly-pasts cancel in the net count | VISION-FR-005, 009, 018 |
+| D6 | Counting geometry | Straight virtual line; ring around the hole with tracking only near it; ring with whole-frame tracking | **Whole-frame tracking and a closed ring around the hole, with extrapolation of fast tracks**: birds leave the hole in every direction, so a line misses some; at the hole a bird is a 1–2-frame blur moving 150–200 px/frame (clip of 22/10/2026), so tracking near the hole alone never gives it an identity — tracked over the whole room it already has one, and a fast track lost just outside the ring is counted by its last velocity. Fly-pasts cancel in the net count | VISION-FR-004, 005, 009, 018, BR-25 |
 | D7 | Expert in the loop | Expert approval blocks every change; changes apply at once with no review | **Owner changes apply at once and open a review item; only the expert applies system suggestions; without an expert the owner decides** — safety on site is never blocked and every parameter is still validated | EXPERT-FR-010, 011, BR-22 |
 | D8 | Live video path | Through the backend; dedicated video server | **MediaMTX** with short-lived viewing tokens checked by the backend: the API never carries video, raw feed only for the pipeline | VISION-FR-013 |
 
@@ -215,7 +216,9 @@ Configuration (`config/Config`) is stored in NVS and every received value is cla
 
 ### 5.2 AI Pipeline (AI node)
 
-`stream.py` (RTSP or file loop, ROI around the ring) → `inference.py` (YOLO ONNX, one class) → `tracker.py` (ByteTrack) → `counting.py` (`RingCounter`, entry/exit per track) → `alert_publisher.py` (MQTT session counts every 30 s and 5-minute buckets, `EDGE_AI_DEGRADED`) and the annotated stream to MediaMTX. `remote_config.py` listens on `{house}/config/update` and applies a new counting ring without restart. Tools: `tools/pick_roi.py`, `tools/extract_frames.py`, `tools/split_by_day.py` for calibration and dataset preparation.
+`stream.py` (RTSP or clip loop) runs `pipeline.py` (`FramePipeline`) on every frame: `frame_prep.py` masks the camera's date overlay and cuts the frame into 2 overlapping tiles → `inference.py` runs YOLO (ONNX) on each tile and merges the duplicates of the overlap → `sv.ByteTrack` tracks every bird over the whole frame (boxes enlarged before matching, because a small fast bird's boxes in consecutive frames do not overlap) → `counting.py` (`RingCounter`) counts ring crossings, extrapolates fast tracks at the hole and keeps ambiguous tracks apart → the frame is drawn with green boxes and the yellow ring. `remote_config.py` listens on `{house}/config/update` and swaps in a new ring without restart. The same `FramePipeline` is used by `tools/track_clip.py`, so a recorded clip is processed exactly like the live stream. Dataset tools: `tools/pick_roi.py` (ring calibration), `tools/extract_frames.py` (masked tile images and draft labels from motion tracks for Roboflow), `tools/split_by_day.py` (train/val/test split by recording day).
+
+Still to build (plan §6.6): a latest-frame reader thread, session switching, MQTT publishing of session counts, 5-minute buckets and heartbeat, and the push of the annotated stream to MediaMTX.
 
 ### 5.3 Backend
 
@@ -857,8 +860,8 @@ flowchart TB
 ```mermaid
 flowchart TB
   subgraph AI[AI node]
-    A1[Read RTSP stream] --> A2[Detect and track swiftlets]
-    A2 --> A3[Count ring crossings<br/>EXIT / ENTRY]
+    A1[Read RTSP stream] --> A2[Detect on 2 tiles,<br/>track over the whole frame]
+    A2 --> A3[Count ring crossings,<br/>extrapolate fast tracks<br/>EXIT / ENTRY]
     A3 --> A4[Publish session counts every 30 s<br/>and 5-minute buckets]
     A2 --> A5[Draw boxes and ring,<br/>publish annotated stream]
   end
@@ -1089,7 +1092,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Alert lifecycle | `DISMISSED` status (SM-01) |
 | Expert loop | Review items and suggestion proposals (SM-10, SM-11); owner notifications of every expert decision; owner fallback without an expert |
 | Configuration sync | Configuration version, `CONFIG_MISMATCH` (SM-12) |
-| Bird counting | AI node not deployed; seasonal schedule and incomplete sessions; screens for live stream and counting ring |
+| Bird counting | No trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10); `stream.py` publishes nothing yet (counts, buckets, heartbeat, video push); throughput risk: two tiles with the COCO model ran at about 7 fps on a laptop against the 25 fps of NFR-04, to be measured on the real AI node; seasonal schedule and incomplete sessions; screens for live stream and counting ring |
 | Clients | Domain Expert screens; mobile push registration |
 | Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes |
 | CI | No job for the AI pipeline tests |
@@ -1101,4 +1104,5 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.1 | `[TEAM]` | AI pipeline after PR #88: whole-frame tracking on two tiles, extrapolation at the hole, `FramePipeline` shared with the clip tool, Roboflow and Colab declared, library versions updated |
 | 1.0.0 | `[TEAM]` | First SDD for Review 2: architecture, technology declaration, design decisions, component design, Logical ERD with a generated database script, interfaces, 12 state machine diagrams and 12 activity diagrams |
