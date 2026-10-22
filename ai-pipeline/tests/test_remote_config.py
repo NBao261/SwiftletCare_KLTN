@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from counting import RingCounter  # noqa: E402
-from remote_config import RingStore, parse_ring, roi_for_ring  # noqa: E402
+from remote_config import RingStore, parse_ring  # noqa: E402
 
 RING = [[0.379, 0.228], [0.527, 0.136], [0.575, 0.277], [0.569, 0.374], [0.427, 0.477], [0.386, 0.334]]
 SQUARE = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]
@@ -39,11 +39,6 @@ def test_other_device_or_no_ring_is_ignored():
 def test_malformed_ring_raises(ring):
     with pytest.raises(ValueError):
         parse_ring(msg(**ring), "cam_01")
-
-
-def test_roi_wraps_the_ring_with_padding_and_stays_in_frame():
-    # 21/10 ring on 1920x1080: x 728..1104 px, y 147..515 px
-    assert roi_for_ring([tuple(p) for p in RING], 250, 1920, 1080) == (477, 0, 1354, 765)
 
 
 def test_store_saves_the_ring_and_hands_it_to_the_loop_once(tmp_path):

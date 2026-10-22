@@ -1,11 +1,11 @@
-"""SwiftletCare – lấy ROI và vòng đếm cho config.yaml (plan §6.8).
+"""SwiftletCare – lấy vòng đếm cho config.yaml (plan §6.8).
 
 Click lần lượt các góc viền ngoài của miệng lỗ / hộp gỗ trên một khung hình, theo một chiều.
-Công cụ nới viền đó ra đều `--margin` px thành vòng đếm, lấy ROI = khung bao vòng nới thêm `--roi-pad` px,
-rồi in khối YAML để chép vào config.yaml.
+Công cụ nới viền đó ra đều `--margin` px thành vòng đếm rồi in khối YAML để chép vào config.yaml.
+Vùng theo dõi là cả khung chia 2 ô (camera.tiles, plan §19.8), không còn ROI đi theo vòng.
 
   python tools/pick_roi.py                       # lấy 1 khung từ CAMERA_RTSP_URL trong .env
-  python tools/pick_roi.py D:/SwiftletCare/frames/frame.png --margin 60 --roi-pad 250 --save D:/SwiftletCare/frames/picked.png
+  python tools/pick_roi.py D:/SwiftletCare/frames/frame.png --margin 60 --save D:/SwiftletCare/frames/picked.png
 
 Phím: z = bỏ điểm cuối, + / - = nới vòng thêm/bớt 10 px, Enter = in YAML (và lưu ảnh nếu có --save), Esc = thoát.
 Cửa sổ thu phóng được (kéo to cửa sổ để click chính xác từng góc).
@@ -41,12 +41,6 @@ def offset_polygon(points: Sequence[Point], d: float) -> List[Point]:
     return out
 
 
-def roi_around(ring: Sequence[Point], pad: float, w: int, h: int) -> Tuple[int, int, int, int]:
-    xs, ys = [x for x, _ in ring], [y for _, y in ring]
-    return (int(max(0, min(xs) - pad)), int(max(0, min(ys) - pad)),
-            int(min(w, max(xs) + pad)), int(min(h, max(ys) + pad)))
-
-
 def grab_frame(src: str) -> np.ndarray:
     if src.lower().endswith((".png", ".jpg", ".jpeg")):
         frame = cv2.imread(src)
@@ -70,7 +64,6 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("source", nargs="?", help="ảnh, clip hoặc rtsp://; bỏ trống = CAMERA_RTSP_URL trong .env")
     ap.add_argument("--margin", type=float, default=60, help="px nới vòng đếm ra khỏi viền lỗ")
-    ap.add_argument("--roi-pad", type=float, default=250, help="px nới ROI ra khỏi vòng đếm")
     ap.add_argument("--save", help="đường dẫn lưu ảnh đã vẽ")
     args = ap.parse_args()
 
@@ -99,9 +92,7 @@ def main() -> None:
         ring = offset_polygon(pts, margin) if len(pts) >= 3 else []
         if ring:
             cv2.polylines(img, [np.int32(ring)], True, (0, 255, 255), 2)
-            x1, y1, x2, y2 = roi_around(ring, args.roi_pad, w, h)
-            cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 255), 2)
-            cv2.putText(img, f"margin {margin:.0f}px  ROI {x2 - x1}x{y2 - y1}px", (20, h - 20), 0, 1, (0, 255, 255), 2)
+            cv2.putText(img, f"margin {margin:.0f}px", (20, h - 20), 0, 1, (0, 255, 255), 2)
         cv2.imshow("pick_roi", img)
         k = cv2.waitKey(30) & 0xFF
         if k == 27:
@@ -114,7 +105,6 @@ def main() -> None:
             margin = max(0, margin - 10)
         elif k == 13 and ring:
             print(f"# khung {w}x{h}, viền lỗ (px): {[(int(x), int(y)) for x, y in pts]}, margin {margin:.0f}px")
-            print(f"  roi: [{x1 / w:.3f}, {y1 / h:.3f}, {x2 / w:.3f}, {y2 / h:.3f}]   # {x2 - x1}x{y2 - y1}px")
             print("  ring:")
             for x, y in ring:
                 print(f"    - [{x / w:.3f}, {y / h:.3f}]")

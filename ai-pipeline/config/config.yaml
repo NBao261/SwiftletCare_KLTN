@@ -1,35 +1,39 @@
 ﻿# SwiftletCare AI Pipeline Configuration
-# SRS: §9.2, §11.2, §11.3
+# SRS: §9.2, §11.2, §11.3. Địa chỉ RTSP (có mật khẩu camera) và ID thiết bị nằm trong .env, không ở đây.
 
 camera:
-  rtsp_url: "rtsp://admin:password@192.168.1.64:554/stream1"
-  target_fps: 30
-  resolution: [2560, 1440]   # 2K
-  # Vùng đưa vào model, x1,y1,x2,y2 theo tỉ lệ khung hình. Lấy bằng tools/pick_roi.py (plan §6.8).
-  # Đo 21/10/2026 trên khung 1920x1080 của VIGI C320I ở nhà yến thử nghiệm (plan §19.8): bao vòng đếm
-  # thêm 150–340 px, bỏ dòng ngày giờ góc trái. Chọn tay, chốt lại khi có clip có chim.
-  roi: [0.25, 0.00, 0.75, 0.70]
+  fps: 25                         # VIGI C320I, đã kiểm tra 20/10/2026 (plan §19.7)
+  # Theo dõi cả khung (plan §19.8): chim lượn khắp phòng, có id từ trước khi lao vào lỗ.
+  # 2 ô chồng nhau 160 px (x1,y1,x2,y2 theo tỉ lệ; trên 1920x1080: x 0–1040 và 880–1920). Mỗi ô thu về
+  # model.input_size, tỉ lệ 640/1080 = 0,59 → chim lượn 25–40 px còn 15–24 px (cổng 5: ≥ 15 px).
+  # Chồng 160 px > cỡ chim lượn (~40 px) nên con nào ở mép ô cũng nằm trọn trong ô kia. Chọn tay.
+  # tools/extract_frames.py cắt ảnh train theo đúng các ô này.
+  tiles:
+    - [0.0, 0.0, 0.5417, 1.0]
+    - [0.4583, 0.0, 1.0, 1.0]
+  # Tô đen trước khi đưa vào model (cả lúc tách ảnh train): dòng ngày giờ của camera ở góc trên trái,
+  # chữ số đổi mỗi giây sẽ thành "vật chuyển động". Đo trên khung 1920x1080 ngày 21/10: chữ ở x 61–415, y 39–57 px.
+  mask:
+    - [0.0, 0.0, 0.23, 0.07]
 
 model:
-  path: "models/swiftletcare_v1.onnx"
-  input_size: 640            # YOLO input resolution
-  confidence_threshold: 0.5
-  nms_iou_threshold: 0.45
+  path: "models/yolo26n.onnx"     # model COCO tạm để thử đường ống; đổi thành models/swiftlet_v1.onnx sau GĐ2
+  version: "yolo26n-coco"
+  input_size: 640                 # phải bằng imgsz lúc export
+  confidence_threshold: 0.30      # cũng là ngưỡng mở vết của ByteTrack; plan §6.2
+  nms_iou_threshold: 0.45         # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
+  # Gộp ô trùng ở dải chồng giữa 2 ô: bỏ ô có phần giao / diện tích ô nhỏ hơn vượt mức này. Chọn tay.
+  tile_merge_overlap: 0.6
+  providers: ["CPUExecutionProvider"]   # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
   classes:
-    0: swiftlet
-    1: rat
-    2: snake
-    3: owl
-  predator_classes: [1, 2, 3]
-  predator_confidence_min: 0.70    # THREAT-FR-001
+    14: swiftlet                  # COCO bird. Model tự train: đổi thành  0: swiftlet
 
 tracking:
-  algorithm: bytetrack           # primary (§11.3)
-  track_confirmation_frames: 3   # min frames to confirm (THREAT-FR-003)
-  max_active_tracks: 50
+  box_pad: 2.5                    # nới box trước khi track (chim nhỏ bay nhanh), plan §6.2
+  lost_track_buffer: 15           # frame giữ vết đã mất (0,6 s ở 25 fps); bộ đếm chốt vết sau ngần này frame
+  minimum_matching_threshold: 0.8
   # Vòng đếm khép kín quanh miệng lỗ ra vào, các điểm (x, y) theo tỉ lệ khung hình (plan §3.3 mục 6).
-  # = viền ngoài hộp gỗ đo 21/10/2026 (±3 px) nới đều 60 px. 60 px là số chọn tay, phải ≥ max(cỡ chim,
-  # 1,5 × quãng bay mỗi frame) — đo trên clip có chim rồi chạy lại tools/pick_roi.py --margin.
+  # = viền ngoài hộp gỗ đo 21/10/2026 (±3 px) nới đều 60 px. Chọn tay; vẽ lại bằng tools/pick_roi.py --margin.
   ring:
     - [0.379, 0.228]
     - [0.527, 0.136]
@@ -40,12 +44,16 @@ tracking:
   # Camera trong nhà nhìn vào lỗ: trong vòng là phía ngoài trời, nên chim đi vào vòng = RA (EXIT).
   # Camera đặt ngoài nhà nhìn vào lỗ thì đổi thành false.
   into_ring_is_exit: true
+  # Chim qua lỗ dời 150–200 px/frame và chỉ là vệt mờ 1–2 frame (clip 22/10, plan §19.8), nên frame
+  # trong vòng thường không được phát hiện. Vết mất ngay ngoài vòng mà đi tiếp ngần này frame theo vận
+  # tốc cuối thì vào vòng → RA; vết mới mà lùi lại thì ra từ vòng → VÀO. 2 = số frame vệt mờ thấy được.
+  extrapolate_frames: 2
+  # Chỉ ngoại suy vết nhanh: chim lượn dời 20–35 px/frame, chim qua lỗ 150–200 px/frame (clip 22/10).
+  # 60 nằm giữa hai mức, chọn tay; đo lại khi có clip với thời gian phơi sáng ngắn hơn.
+  extrapolate_min_speed_px: 60
   # VISION-FR-018: vòng Domain Expert vẽ trên web (backend gửi qua MQTT config/update của nhà) được lưu
   # vào file này và thắng ring/into_ring_is_exit ở trên, kể cả sau khi khởi động lại.
   ring_override_file: "state/counting_ring.json"
-  # Khi có vòng mới, ROI = khung bao vòng nới thêm ngần này px (như tools/pick_roi.py --roi-pad).
-  # Chọn tay = mặc định của pick_roi; ROI đo tay ngày 21/10 cách vòng 150–340 px.
-  roi_pad_px: 250
 
 mqtt:
   broker: "localhost"
@@ -65,16 +73,6 @@ sessions:
   evening_entry:
     start: "17:30"
     end:   "19:00"
-
-storage:
-  minio_endpoint: "localhost:9000"
-  minio_bucket: "swiftletcare-snapshots"
-  snapshot_dir: "/tmp/snapshots"
-
-alerts:
-  predator_temporal_filter_frames: 2   # THREAT-FR-003
-  return_rate_drop_threshold: 0.20     # 20% drop triggers alert (VISION-FR-011)
-  return_rate_window_days: 7
 
 logging:
   level: INFO

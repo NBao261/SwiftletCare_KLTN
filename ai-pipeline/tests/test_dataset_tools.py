@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
-from extract_frames import draft_labels, roi_pixels  # noqa: E402
+from extract_frames import draft_labels  # noqa: E402
 from split_by_day import day_of, split  # noqa: E402
 
 
@@ -24,10 +24,6 @@ def test_draft_labels_respects_area_limits():
     mask = np.zeros((100, 100), np.uint8)
     mask[10:90, 10:90] = 255
     assert draft_labels(mask, min_area=30, max_area=1000) == []
-
-
-def test_roi_pixels_matches_config_ratios():
-    assert roi_pixels([0.25, 0.0, 0.75, 0.70], 1920, 1080) == (480, 0, 1440, 756)
 
 
 def test_day_of_reads_roboflow_names():

@@ -14,7 +14,7 @@ import json
 import os
 import threading
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Tuple
 
 from loguru import logger
 
@@ -54,14 +54,6 @@ def parse_ring(message: Any, device_id: str) -> Optional[Ring]:
     if not isinstance(into_ring_is_exit, bool):
         raise ValueError("into_ring_is_exit must be true or false")
     return parsed, into_ring_is_exit
-
-
-def roi_for_ring(points: Sequence[Point], pad_px: float, width: int, height: int) -> Tuple[int, int, int, int]:
-    """ROI in pixels = the ring's bounding box grown by pad_px, clipped to the frame (as tools/pick_roi.py)."""
-    xs = [x * width for x, _ in points]
-    ys = [y * height for _, y in points]
-    return (int(max(0, min(xs) - pad_px)), int(max(0, min(ys) - pad_px)),
-            int(min(width, max(xs) + pad_px)), int(min(height, max(ys) + pad_px)))
 
 
 class RingStore:
