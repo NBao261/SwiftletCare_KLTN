@@ -103,8 +103,8 @@ def start_listener(mqtt_cfg: dict, store: RingStore, farm_id: str, house_id: str
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"SC-{device_id}-config")
     if os.environ.get("MQTT_USERNAME"):
         client.username_pw_set(os.environ["MQTT_USERNAME"], os.environ.get("MQTT_PASSWORD"))
-    if mqtt_cfg["port"] == 8883:   # deploy mode (SEC-NFR-001)
-        client.tls_set(ca_certs=mqtt_cfg["tls_ca_cert"])
+    if mqtt_cfg.get("tls"):   # deploy mode (SEC-NFR-001): Let's Encrypt cert, the OS's CA store, as stream.Publisher
+        client.tls_set()
     # Subscribing in on_connect re-subscribes after every reconnect (clean session)
     client.on_connect = lambda c, _userdata, _flags, _reason, _props: c.subscribe(topic, qos=1)
     client.on_message = lambda _c, _userdata, msg: store.on_message(msg.payload)

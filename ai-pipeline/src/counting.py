@@ -23,12 +23,14 @@ else, e.g. at the frame edge, counts nothing.
 SRS: VISION-FR-005; plan §3.3 items 6-7, §6.4, §19.8
 """
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Dict, Iterable, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
 
 Point = Tuple[float, float]
+SESSION_TYPES = ("MORNING_EXIT", "EVENING_ENTRY")
 
 
 @dataclass
@@ -135,3 +137,32 @@ class RingCounter:
                     e, x = self._count(into_ring=True)
                     entries, exits = entries + e, exits + x
         return entries, exits
+
+
+def current_session(windows: Dict[str, Sequence[str]], now: datetime) -> Optional[str]:
+    """Phiên đang diễn ra theo giờ của `now` ("HH:MM", đầu tính, cuối không tính)."""
+    hhmm = now.strftime("%H:%M")
+    for name, (start, end) in windows.items():
+        if start <= hhmm < end:
+            return name
+    return None
+
+
+class BucketClock:
+    """VISION-FR-017 — cắt số đếm cả ngày thành từng khoảng, căn theo đồng hồ (…:00, …:05).
+
+    Nhận tổng cộng dồn của bộ đếm cả ngày; trả số của khoảng vừa hết. Mất hình giữa chừng thì
+    khoảng đó dài hơn bình thường nhưng vẫn mang mốc đầu của nó, số trong lúc mất hình là 0.
+    """
+
+    def __init__(self, minutes: int, now: float, total: Tuple[int, int] = (0, 0)):
+        self.length = minutes * 60
+        self.start = now // self.length * self.length
+        self._base = total
+
+    def roll(self, now: float, total: Tuple[int, int]) -> Optional[Tuple[float, int, int]]:
+        if now < self.start + self.length:
+            return None
+        done = (self.start, total[0] - self._base[0], total[1] - self._base[1])
+        self.start, self._base = now // self.length * self.length, total
+        return done
