@@ -1,6 +1,6 @@
 # SwiftletCare AI Pipeline (đếm chim yến)
 
-Python + OpenCV + YOLO26n (ONNX Runtime) + ByteTrack. Nhận RTSP từ camera IP tại cửa chim ra vào, đếm chim ra/vào qua vạch ảo, publish số đếm qua MQTT và phát video đã vẽ khung. Xem `SwiftletCare_SRS.md` §5.4 (Module VISION), §11 và kế hoạch chi tiết ở `docs/bird-counting-plan.md`.
+Python + OpenCV + YOLO26n (ONNX Runtime) + ByteTrack. Nhận RTSP từ camera IP tại cửa chim ra vào, theo vết mọi con chim trên cả khung hình và đếm ra/vào qua vòng khép kín quanh miệng lỗ (kèm ngoại suy cho chim lao qua lỗ quá nhanh), publish số đếm qua MQTT và phát video đã vẽ khung. Xem `SwiftletCare_SRS.md` §5.4 (Module VISION), §11 và kế hoạch chi tiết ở `docs/bird-counting-plan.md`.
 
 > **Phạm vi v2.0.0 (sau Review 1):** chỉ còn **1 class `swiftlet`** — phát hiện thiên địch (rat/snake/owl) đã bị bỏ. Nút AI là **PC tại nhà yến hoặc máy chủ cloud**, không dùng Raspberry Pi. Live stream có vẽ khung và báo cáo độ chính xác đếm (VISION-FR-014/016) là bắt buộc.
 
@@ -53,11 +53,12 @@ Từ clip đến file ONNX: `docs/bird-counting-plan.md` mục 7 (tách frame �
 ## MQTT Topics (§9.2)
 
 ```
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/alert
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/heartbeat
+swiftletcare/{farmId}/{houseId}/vision/bird-count   # số đếm của phiên (30 giây/lần) và số đếm 5 phút (kind: BUCKET)
+swiftletcare/{farmId}/{houseId}/vision/alert         # chỉ EDGE_AI_DEGRADED (tốc độ xử lý < 10 FPS)
+swiftletcare/{farmId}/{houseId}/heartbeat            # {deviceId, firmwareVersion = phiên bản model}
+swiftletcare/{farmId}/{houseId}/config/update        # nhận: vòng đếm do Domain Expert vẽ (VISION-FR-018)
 ```
 
 ## Trạng thái
 
-Scaffold module (`src/*.py`), chưa có model và chưa chạy thật — implement theo `docs/bird-counting-plan.md`. Tiến trình phải tự khởi động lại khi crash (REL-NFR-004).
+Đã theo vết và đếm được trên clip và RTSP (`tools/track_clip.py`), nhưng chưa có model tự train (model COCO không nhận ra chim trong ảnh hồng ngoại) và `stream.py` chưa gửi gì qua MQTT hay đẩy video — phần còn lại theo `docs/bird-counting-plan.md` §6.6. Topic theo nhà yến, không có đoạn zone (SRS v2.1.8). Tiến trình phải tự khởi động lại khi crash (REL-NFR-004).
