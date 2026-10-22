@@ -95,35 +95,19 @@ export const expertService = {
   },
 
   async getForecast(zoneId: string): Promise<ForecastResponse> {
-    try {
-      return (await expertApi.getForecast(zoneId)).data?.data ?? MOCK_FORECAST_RESPONSE
-    } catch {
-      return MOCK_FORECAST_RESPONSE
-    }
+    return expertApi.getForecast(zoneId).then(r => r.data?.data ?? MOCK_FORECAST_RESPONSE).catch(() => MOCK_FORECAST_RESPONSE)
   },
 
   async getControlPerformance(zoneId: string, range = '24h'): Promise<ControlPerformanceResponse> {
-    try {
-      return (await expertApi.getControlPerformance(zoneId, range)).data?.data ?? MOCK_CONTROL_PERFORMANCE
-    } catch {
-      return MOCK_CONTROL_PERFORMANCE
-    }
+    return expertApi.getControlPerformance(zoneId, range).then(r => r.data?.data ?? MOCK_CONTROL_PERFORMANCE).catch(() => MOCK_CONTROL_PERFORMANCE)
   },
 
   async getAutonomy(zoneId: string, range = '24h'): Promise<AutonomyResponse> {
-    try {
-      return (await expertApi.getAutonomy(zoneId, range)).data?.data ?? MOCK_AUTONOMY
-    } catch {
-      return MOCK_AUTONOMY
-    }
+    return expertApi.getAutonomy(zoneId, range).then(r => r.data?.data ?? MOCK_AUTONOMY).catch(() => MOCK_AUTONOMY)
   },
 
   async getBirdCountTrends(zoneId: string, days = 30): Promise<BirdCountTrendsResponse> {
-    try {
-      return (await expertApi.getBirdCountTrends(zoneId, days)).data?.data ?? MOCK_BIRD_COUNT_TRENDS
-    } catch {
-      return MOCK_BIRD_COUNT_TRENDS
-    }
+    return expertApi.getBirdCountTrends(zoneId, days).then(r => r.data?.data ?? MOCK_BIRD_COUNT_TRENDS).catch(() => MOCK_BIRD_COUNT_TRENDS)
   },
 
   async getHarvestBatches(params?: { farmId?: string; zoneId?: string }): Promise<HarvestBatchItem[]> {
@@ -153,6 +137,20 @@ export const expertService = {
   },
 
   async setReportConclusion(reportId: string, text: string): Promise<ZoneHealthReportItem> {
+    if (!/^[0-9a-fA-F]{24}$/.test(reportId)) {
+      const idx = MOCK_HEALTH_REPORTS.findIndex(r => r._id === reportId)
+      const existing = idx >= 0 ? MOCK_HEALTH_REPORTS[idx] : MOCK_HEALTH_REPORTS[0]
+      const updated: ZoneHealthReportItem = {
+        ...existing,
+        expert_conclusion: {
+          text,
+          by: { _id: 'current_user', full_name: 'Chuyên gia nuôi yến' },
+          at: new Date().toISOString(),
+        },
+      }
+      if (idx >= 0) MOCK_HEALTH_REPORTS[idx] = updated
+      return updated
+    }
     try {
       return (await expertApi.setReportConclusion(reportId, text)).data.data
     } catch {

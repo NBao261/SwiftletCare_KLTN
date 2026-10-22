@@ -51,7 +51,11 @@ export function usePublishConclusion(reportId: string) {
   return useMutation({
     mutationFn: (conclusion: string) =>
       expertService.publishHealthConclusion(reportId, conclusion),
-    onSuccess: () => {
+    onSuccess: (updatedReport) => {
+      qc.setQueriesData({ queryKey: ['expert', 'health-reports'] }, (old: ZoneHealthReportItem[] | undefined) => {
+        if (!old) return [updatedReport]
+        return old.map(r => r._id === updatedReport._id ? updatedReport : r)
+      })
       void qc.invalidateQueries({ queryKey: ['expert', 'health-reports'] })
     },
   })

@@ -3,7 +3,8 @@
  * Layout Master-Detail 2 cột: list panel (340px) | detail panel
  * SRS v2.1.4: EXPERT-FR-005/006/007
  */
-import { Calendar } from 'lucide-react'
+import { useState } from 'react'
+import { Calendar, Check } from 'lucide-react'
 import { useZoneStore } from '@/stores/zoneStore'
 import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import ReportListPanel from '@/components/features/expert/reports/ReportListPanel'
@@ -13,6 +14,16 @@ import {
   useHealthReportList, useHealthReportPreview,
   usePublishConclusion, useReportSelection, formatPeriodLabel, formatGeneratedAt,
 } from '@/hooks/expert/useHealthReports'
+
+function Toast({ show, message }: { show: boolean; message: string }) {
+  if (!show) return null
+  return (
+    <div className="fixed bottom-6 right-6 z-[60] px-5 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-3 bg-[#27231F] text-[#ECFFA9]">
+      <Check className="w-4 h-4 flex-shrink-0" />
+      {message}
+    </div>
+  )
+}
 
 function ReportDetailHeader({
   zoneName, previewMode, period, generatedAt, samplesCount,
@@ -58,6 +69,12 @@ export default function ExpertReportsPage() {
   const { selectedZoneId, selectedZoneName } = useZoneStore()
   const zoneId = selectedZoneId ?? undefined
   const zoneName = selectedZoneName || 'Phía Sau'
+  const [toast, setToast] = useState({ show: false, message: '' })
+
+  const showToast = (message: string) => {
+    setToast({ show: true, message })
+    setTimeout(() => setToast(t => ({ ...t, show: false })), 3000)
+  }
 
   const { data: reports = [], isLoading: loadingList } = useHealthReportList(zoneId)
   const { selectedId, setSelectedId, selected, previewMode, setPreviewMode } = useReportSelection(reports)
@@ -111,13 +128,20 @@ export default function ExpertReportsPage() {
                   zoneName={zoneName}
                   previewMode={previewMode}
                   isSaving={publishMutation.isPending}
-                  onSave={conclusion => publishMutation.mutate(conclusion)}
+                  onSave={conclusion => {
+                    publishMutation.mutate(conclusion, {
+                      onSuccess: () => {
+                        showToast(previewMode ? 'Đã lưu bản nháp kết luận tạm tính thành công!' : 'Đã lưu & xuất bản kết luận gửi Chủ trại thành công!')
+                      },
+                    })
+                  }}
                 />
               </div>
             </div>
           </div>
         </div>
       </div>
+      <Toast show={toast.show} message={toast.message} />
     </div>
   )
 }
