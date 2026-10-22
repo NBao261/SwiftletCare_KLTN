@@ -10,7 +10,10 @@ Python + OpenCV + YOLO26n (ONNX Runtime) + ByteTrack. Nhận RTSP từ camera IP
 cd ai-pipeline
 python -m venv .venv && source .venv/bin/activate   # hoặc .venv\Scripts\activate trên Windows
 pip install -r requirements.txt
-python src/stream.py --config config/config.yaml
+cp .env.example .env                                  # điền CAMERA_RTSP_URL, ID thiết bị/farm/nhà
+python src/stream.py                                  # camera thật; xem http://127.0.0.1:8090/stream
+python src/stream.py --source D:/SwiftletCare/clips/20261022_morning_01.mp4 --session MORNING_EXIT --no-mqtt
+pytest
 ```
 
 ## Cấu trúc
@@ -19,16 +22,19 @@ python src/stream.py --config config/config.yaml
 config/config.yaml   2 ô + vùng tô đen, model, ngưỡng, vòng đếm, MQTT (địa chỉ RTSP nằm trong .env)
 models/               Model ONNX (không commit)
 src/
-  stream.py           Nhận RTSP, vòng lặp chính
+  stream.py           Vòng lặp chính: đọc RTSP (giữ frame mới nhất), phiên theo giờ VN, MQTT, số đếm 5 phút
   pipeline.py         Mỗi frame: tô đen → 2 ô → YOLO → ByteTrack → vòng đếm → vẽ ô xanh
   frame_prep.py       Tô đen + cắt ô, dùng chung với công cụ tách ảnh train
   inference.py        YOLO qua ONNX Runtime (YOLO26 và YOLOv8/11), chạy theo ô rồi gộp
   counting.py         Vòng đếm quanh miệng lỗ + ngoại suy cho chim lao qua lỗ → entry/exit (VISION-FR-005)
   remote_config.py    Vòng đếm Domain Expert vẽ trên web (VISION-FR-018)
+  mjpeg_server.py     Xem thử MJPEG trên máy (127.0.0.1:8090)
+  stream_pusher.py    Đẩy hình đã vẽ khung lên MediaMTX để xem trên web/mobile
 tools/pick_roi.py     Lấy vòng đếm cho config.yaml
 tools/extract_frames.py  Tách frame theo 2 ô + nhãn nháp từ tracking để gán nhãn trên Roboflow (plan §7.2)
 tools/track_clip.py   Chạy pipeline trên một đoạn clip, ghi video có ô xanh (plan §6.8)
 tools/split_by_day.py    Chia train/val/test theo ngày quay (plan §7.4)
+tools/record_session.ps1 Quay clip hằng ngày (Task Scheduler) vào D:\SwiftletCare\clips
 tests/                pytest cho vòng đếm và các công cụ
 ```
 
@@ -50,14 +56,14 @@ Giá trị đang dùng ở nhà yến thử nghiệm và cách đo: `docs/bird-c
 
 Từ clip đến file ONNX: `docs/bird-counting-plan.md` mục 7 (tách frame → gán nhãn trên Roboflow → chia theo ngày → train trên Google Colab T4 → export ONNX → đo sai số đếm). Clip, frame và dataset để ở `D:\SwiftletCare\`, không để trong repo.
 
-## MQTT Topics (§9.2)
+## MQTT Topics (SRS v2.1.8: theo nhà yến, không có đoạn zone)
 
 ```
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/alert
-swiftletcare/{farmId}/{houseId}/{zoneId}/vision/heartbeat
+swiftletcare/{farmId}/{houseId}/vision/bird-count   ← số đếm phiên (30 giây/lần) và số đếm 5 phút (kind: BUCKET)
+swiftletcare/{farmId}/{houseId}/heartbeat           ← {deviceId, firmwareVersion}; im 90 giây là EDGE_AI_DEGRADED
+swiftletcare/{farmId}/{houseId}/config/update       → vòng đếm Domain Expert vẽ (VISION-FR-018)
 ```
 
 ## Trạng thái
 
-Scaffold module (`src/*.py`), chưa có model và chưa chạy thật — implement theo `docs/bird-counting-plan.md`. Tiến trình phải tự khởi động lại khi crash (REL-NFR-004).
+Chạy được trên clip và camera thật với model COCO tạm; model COCO không nhận ra chim yến trong ảnh hồng ngoại, nên phải train model riêng (plan §7). Chưa triển khai lên VPS. Tiến trình phải tự khởi động lại khi crash (REL-NFR-004).

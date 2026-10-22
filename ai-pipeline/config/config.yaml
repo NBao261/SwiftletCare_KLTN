@@ -2,7 +2,8 @@
 # SRS: §9.2, §11.2, §11.3. Địa chỉ RTSP (có mật khẩu camera) và ID thiết bị nằm trong .env, không ở đây.
 
 camera:
-  fps: 25                         # VIGI C320I, đã kiểm tra 20/10/2026 (plan §19.7)
+  source: "clips/sample.mp4"      # bị --source hoặc CAMERA_RTSP_URL trong .env ghi đè
+  fps: 25                         # VIGI C320I, đã kiểm tra 20/10/2026 (plan §19.7); ByteTrack dùng số này
   # Theo dõi cả khung (plan §19.8): chim lượn khắp phòng, có id từ trước khi lao vào lỗ.
   # 2 ô chồng nhau 160 px (x1,y1,x2,y2 theo tỉ lệ; trên 1920x1080: x 0–1040 và 880–1920). Mỗi ô thu về
   # model.input_size, tỉ lệ 640/1080 = 0,59 → chim lượn 25–40 px còn 15–24 px (cổng 5: ≥ 15 px).
@@ -18,7 +19,7 @@ camera:
 
 model:
   path: "models/yolo26n.onnx"     # model COCO tạm để thử đường ống; đổi thành models/swiftlet_v1.onnx sau GĐ2
-  version: "yolo26n-coco"
+  version: "yolo26n-coco"         # gửi lên backend làm firmwareVersion trong heartbeat
   input_size: 640                 # phải bằng imgsz lúc export
   confidence_threshold: 0.30      # cũng là ngưỡng mở vết của ByteTrack; plan §6.2
   nms_iou_threshold: 0.45         # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
@@ -55,26 +56,32 @@ tracking:
   # vào file này và thắng ring/into_ring_is_exit ở trên, kể cả sau khi khởi động lại.
   ring_override_file: "state/counting_ring.json"
 
-mqtt:
-  broker: "localhost"
-  port: 8883                     # TLS (SEC-NFR-001)
-  username: "rpi-node-01"
-  password: ""                   # loaded from env
-  tls_ca_cert: "config/ca.crt"
-  farm_id: ""                    # loaded from env
-  house_id: ""
-  zone_id: ""
-  publish_interval_sec: 30       # VISION-FR-006
-
 sessions:
-  morning_exit:
-    start: "05:30"
-    end:   "07:00"
-  evening_entry:
-    start: "17:30"
-    end:   "19:00"
+  # Giờ Việt Nam cố định UTC+7 (không đổi giờ mùa hè), không dùng giờ máy: VPS thường chạy UTC.
+  utc_offset_hours: 7
+  windows:                                  # giờ chim bay đổi theo mùa: xem lại bằng biểu đồ số đếm 5 phút
+    MORNING_EXIT:  ["05:30", "07:00"]
+    EVENING_ENTRY: ["17:30", "19:00"]
+
+# Tên người dùng/mật khẩu MQTT và ID farm/nhà/thiết bị nằm trong .env (xem .env.example).
+mqtt:
+  broker: "localhost"                       # cloud: tên miền của VPS; trong Docker trên VPS: emqx
+  port: 1883                                # cloud: 8883
+  tls: false                                # cloud: true (SEC-NFR-001), dùng CA có sẵn của hệ điều hành
+  publish_interval_sec: 30                  # số đếm của phiên + heartbeat (VISION-FR-006); backend coi im 90 giây là mất kết nối
+  bucket_minutes: 5                         # số đếm theo khoảng, gửi cả ngoài phiên (VISION-FR-017)
+
+push:                                       # đẩy hình đã vẽ khung lên MediaMTX; chỉ chạy khi có STREAM_PUSH_URL trong .env (plan 6.2, 15.6)
+  width: 1280                               # thu từ 1080p để nén nhẹ CPU và băng thông người xem
+  height: 720
+  fps: 15                                   # chỉ là tốc độ phát cho người xem; việc đếm vẫn chạy đủ camera.fps
+  bitrate: "1500k"
+
+stream:                                     # MJPEG để xem thử; chỉ nén ảnh khi có người đang xem
+  host: "127.0.0.1"                         # chỉ máy này xem được; người xem từ xa đi qua MediaMTX
+  port: 8090
+  jpeg_quality: 70
 
 logging:
-  level: INFO
   file: "logs/pipeline.log"
   rotation: "10 MB"
