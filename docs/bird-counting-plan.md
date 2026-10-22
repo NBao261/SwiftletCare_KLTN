@@ -881,6 +881,7 @@ Get-ChildItem D:\SwiftletCare\clips\*.mp4 | ForEach-Object { python tools/extrac
 - Tên clip phải bắt đầu bằng `YYYYMMDD` (dùng để chia tập ở mục 7.4); công cụ từ chối tên khác.
 - `--every 5` ở 25 fps = 5 ảnh/giây; ra quá nhiều ảnh gần giống nhau thì tăng lên 10–15.
 - `--min-area 150` (px² trong ảnh crop): đo trên clip IR 21/10, nhiễu cảm biến ra đốm 49–108 px² sau dilate (119 ô nháp giả trên clip 90 giây với ngưỡng 30 cũ, còn 8 với 150). Chim ≥ 15 px trong ảnh đầu vào model ≈ 25×25 px trong ô cao 1080 px, nên 150 không bỏ sót chim nào model cần thấy. `--max-area 60000` giữ được chim bay sát ống kính (~180×180 px).
+- **Nhãn nháp mặc định lấy từ tracking** (`--draft tracks`): vật chuyển động → ByteTrack trên cả khung như `tools/track_clip.py --detector motion`, chỉ giữ vết sống ≥ 3 frame và dời ≥ 20 px. Đoạn 05:22 ngày 22/10: 159 vết chuyển động còn 22 vết, ô nằm đúng trên chim; xem video thì khoảng 90% chim được bắt. Vẫn sót chim đứng yên hay bay chậm và gộp 2 con sát nhau: trên Roboflow vẽ thêm ô (công cụ Bounding Box, phím `B`), sửa hoặc xóa ô sai. Cách cũ (đốm từng frame, nhiễu hơn) còn ở `--draft blobs`. Có model đầu tiên rồi thì dùng chính model đó làm nhãn nháp cho phần ảnh còn lại.
 - Côn trùng dưới đèn IR vẫn lọt vào nhãn nháp (đốm sáng 20–40 px, ngang cỡ chim): xóa ô khi gán nhãn, ảnh đó thành ảnh âm.
 
 ### 7.3. Gán nhãn

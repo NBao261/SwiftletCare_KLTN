@@ -36,7 +36,7 @@ src/
   counting.py         RingCounter: ring crossings both ways + extrapolation for birds too fast at the hole; set_ring() swaps it live
   remote_config.py    VISION-FR-018: ring drawn by the Domain Expert, from {house}/config/update → state/counting_ring.json
 tools/pick_roi.py     calibration: hole outline → ring (offset by --margin), printed as YAML
-tools/extract_frames.py  clip → masked 2-tile frames + draft YOLO labels (tiles from config.yaml)
+tools/extract_frames.py  clip → masked 2-tile frames + draft YOLO labels from motion tracks (--draft tracks) or blobs
 tools/track_clip.py  clip segment → video with green boxes + counts; --detector motion until a trained model exists
 tools/split_by_day.py    labelled export → train/val/test by recording day + data.yaml
 tests/                test_counting.py, test_inference.py, test_frame_prep.py, test_pick_roi.py, test_dataset_tools.py, test_remote_config.py

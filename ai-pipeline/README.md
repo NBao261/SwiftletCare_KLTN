@@ -26,7 +26,7 @@ src/
   counting.py         Vòng đếm quanh miệng lỗ + ngoại suy cho chim lao qua lỗ → entry/exit (VISION-FR-005)
   remote_config.py    Vòng đếm Domain Expert vẽ trên web (VISION-FR-018)
 tools/pick_roi.py     Lấy vòng đếm cho config.yaml
-tools/extract_frames.py  Tách frame theo 2 ô + nhãn nháp để gán nhãn (plan §7.2)
+tools/extract_frames.py  Tách frame theo 2 ô + nhãn nháp từ tracking để gán nhãn trên Roboflow (plan §7.2)
 tools/track_clip.py   Chạy pipeline trên một đoạn clip, ghi video có ô xanh (plan §6.8)
 tools/split_by_day.py    Chia train/val/test theo ngày quay (plan §7.4)
 tests/                pytest cho vòng đếm và các công cụ
