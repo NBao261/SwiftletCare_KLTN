@@ -1,5 +1,5 @@
 /**
- * Database script (Review 2 – SDD §6.3): build a mongosh script that creates every
+ * Database script (Review 2 – SDD §6.5): build a mongosh script that creates every
  * collection with a `$jsonSchema` validator and the indexes declared in the Mongoose
  * models. Mongo has no DDL file of its own, so the models are the single source and the
  * script is generated from them — `docs/database/init.mongo.js` is checked against this

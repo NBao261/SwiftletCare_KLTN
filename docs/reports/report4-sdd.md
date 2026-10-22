@@ -89,6 +89,7 @@ flowchart LR
   MOB[Mobile app<br/>Expo / React Native]
   TG[[Telegram Bot API]]
   FCM[[Firebase Cloud<br/>Messaging]]
+  NTP[[NTP pool]]
 
   ESP <-- MQTT over TLS --> EMQX
   CAM -- RTSP --> AINODE
@@ -105,7 +106,10 @@ flowchart LR
   MTX -- WebRTC / HLS --> MOB
   API -- alert messages --> TG
   API -- push --> FCM
+  ESP -- time sync --> NTP
 ```
+
+Redis is started by `docker-compose.yml` but no module uses it yet (reserved); it is therefore not part of the architecture.
 
 ### 2.2 Main Data Flows
 
@@ -160,6 +164,7 @@ Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, M
 | Commits | Conventional Commits with a project `type`/`scope` list, checked by commitlint in CI (`.commitlintrc.json`) |
 | CI (`.github/workflows/ci.yml`) | On every pull request: commitlint, gitleaks secret scan, then only for the modules the PR touches: backend `lint`, `build:check`, `npm test` (unit + integration on mongodb-memory-server, 80 % line coverage); web `lint`, `tsc`, `vitest`, `build`; firmware `pio test -e native`; mobile `lint`, `typecheck`, `jest`. AI pipeline: no CI job yet (Section 12) |
 | Code review | Every PR is reviewed against the module's own rules (`*/CLAUDE.md`), with an automated review routine (`.claude/commands/review-pr.md`) plus one human approval |
+| CD | No automated deployment: staging and production are deployed by hand from a tag (Section 11) |
 
 ### 3.4 Deployment Environments
 
@@ -207,10 +212,10 @@ FreeRTOS tasks pinned to core 1:
 
 | Task | Priority | Does |
 | --- | --- | --- |
-| `SensorTask` | 2 | Every 1 s: read the five Modbus sensors (`sensors/SensorManager`), mark stale readings, filter temperature and humidity (`sensors/SignalFilter`: median 5 + scalar Kalman), update the hourly noise baseline (`sensors/NoiseAnomalyDetector`) |
-| `PIDTask` | 3 | Every 10 s: fuzzy misting and fan demand (`pid/FuzzyControl`), time-proportioning, pump-dry monitor (`pid/PumpDryMonitor`), safe state on missing inputs, override expiry; applies relays (BR-19 precedence) |
-| `MQTTTask` | 1 | Wi-Fi and TLS MQTT session, publish telemetry / heartbeat / relay status / alerts, receive commands (`relay/command`, `audio/command`, `config/update`, `config/reassign`), remote RESTART and OTA with SHA-256 check (`ota/RemoteCommand`, `ota/RemoteOta`) |
-| `loop()` | — | Speaker schedule (`audio/AudioManager`), offline buffer flush (`storage/StorageManager`, 256 KB in SPIFFS), watchdog feed |
+| `SensorTask` | 2 | Every 1 s: read the five Modbus sensors (`sensors/SensorManager`), mark stale readings, filter temperature and humidity (`sensors/SignalFilter`: median 5 + scalar Kalman), update the hourly noise baseline and detect abnormal noise (`sensors/NoiseAnomalyDetector`); while the broker is unreachable, append the sample to the offline buffer (`storage/StorageManager`, SPIFFS, 1 sample / 10 s, 256 KB) |
+| `PIDTask` | 3 | Every 10 s: speaker schedule (`audio/AudioManager`), override expiry, fuzzy misting and fan demand (`pid/FuzzyControl`) with time-proportioning, pump-dry monitor (`pid/PumpDryMonitor`), safe state on missing inputs; applies relays in the precedence of BR-19 and publishes device alerts (pump dry, speaker failure, sensor and bus faults) |
+| `MQTTTask` | 1 | Wi-Fi and TLS MQTT session; publishes telemetry, heartbeat (with diagnostics) and relay status, and `POWER_OUTAGE` once after an unexpected restart; flushes the offline buffer after reconnecting; receives commands (`relay/command`, `audio/command`, `config/update`, `config/reassign`) and remote RESTART / OTA with SHA-256 check and rollback (`ota/RemoteCommand`, `ota/RemoteOta`) |
+| `loop()` | — | Feeds the task watchdog (30 s); serves the Wi-Fi captive portal (`wifi/WiFiProvisioner`) while it is open, and reopens it when the broker stays unreachable so a new broker address can be entered |
 
 Configuration (`config/Config`) is stored in NVS and every received value is clamped to the same ranges as the backend validator. Pure C++ parts (fuzzy, filter, noise detector, pump-dry monitor, remote command) are unit-tested on the host.
 
@@ -305,6 +310,7 @@ erDiagram
     ObjectId farm_id FK
     string name
     object bird_count_tuning "return_rate_drop_pct"
+    object counting_schedule "planned: seasonal profiles, temporary windows"
     array bird_count_tuning_history
   }
   ZONE {
@@ -315,6 +321,7 @@ erDiagram
     object thresholds
     object fuzzy_tuning
     object detection_tuning
+    number config_version "planned"
     array threshold_history
     array fuzzy_tuning_history
     array detection_tuning_history
@@ -330,6 +337,9 @@ erDiagram
     string firmware_version
     date last_heartbeat
     date decommissioned_at
+    number applied_config_version "planned"
+    object ota_pending "version, requested_at"
+    object ota_failed "version, failed_at"
   }
   CAMERA_NODE {
     ObjectId _id PK
@@ -383,7 +393,8 @@ erDiagram
     ObjectId node_id FK
     string type
     string severity
-    string status "ACTIVE | ACKNOWLEDGED | RESOLVED"
+    string status "ACTIVE | ACKNOWLEDGED | DISMISSED (planned) | RESOLVED"
+    string previous_status "planned"
     object expert_verdict "result, note, by, at"
     number occurrence_count
   }
@@ -463,6 +474,24 @@ erDiagram
     string target_type
     string target_id
   }
+  PARAMETER_REVIEW {
+    ObjectId _id PK
+    ObjectId zone_id FK
+    ObjectId changed_by FK
+    string group "thresholds | fuzzy"
+    object old_values
+    object new_values
+    string status "planned: PENDING_REVIEW | ACCEPTED | REVERTED | ADJUSTED"
+  }
+  COEFFICIENT_PROPOSAL {
+    ObjectId _id PK
+    ObjectId zone_id FK
+    ObjectId submitted_by FK
+    object suggested_values
+    object current_values
+    string status "planned: PROPOSED | APPROVED | REJECTED | SUPERSEDED"
+    string note
+  }
   SYSTEM_SETTING {
     bool _singleton UK
     object default_thresholds
@@ -492,7 +521,11 @@ erDiagram
   TICKET ||--o{ TICKET_MESSAGE : "chat"
   FARM ||--o{ MAINTENANCE_SCHEDULE : "plans"
   USER ||--o{ AUDIT_LOG : "acts"
+  ZONE ||--o{ PARAMETER_REVIEW : "owner changes, planned"
+  ZONE ||--o{ COEFFICIENT_PROPOSAL : "suggestions, planned"
 ```
+
+Entities and attributes marked *planned* are required by Report 3 (EXPERT-FR-010, 011, ENV-FR-027, VISION-FR-019, EXPERT-FR-003) but are not in the code or the database script yet; Section 6.4 lists them.
 
 ### 6.2 Collections
 
@@ -519,9 +552,22 @@ erDiagram
 | `auditlogs` | Audit entry | `actor_id + created_at`, `target_type + target_id`, `action + created_at` | — | |
 | `systemsettings` | Singleton settings | `_singleton` unique | — | Default thresholds, SLA, routing limit |
 
-The exact field list, types and indexes of every collection are those of the database script (6.3).
+The exact field list, types and indexes of every collection are those of the database script (6.5).
 
-### 6.3 Database Script
+### 6.4 Planned Data Changes
+
+| Change | Collection | Requirement |
+| --- | --- | --- |
+| New collection for reviews of a Farm Owner's change | `parameterreviews` | EXPERT-FR-010 (SM-10) |
+| New collection for coefficient suggestion proposals | `coefficientproposals` | EXPERT-FR-011 (SM-11) |
+| `config_version` on the zone, `applied_config_version` on the controller | `zones`, `sensornodes` | ENV-FR-027 (SM-12) |
+| `DISMISSED` alert status and `previous_status` | `alerts` | EXPERT-FR-003 (SM-01) |
+| Seasonal counting schedule; incomplete-session flag on session records | `houses`, `birdcountrecords` | VISION-FR-019, 020 |
+| Remove the unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest), or give them a requirement | `sensornodes`, `cameranodes`, `harvestbatches` | Known gap |
+
+The database script is regenerated from the models when these changes are made (6.5).
+
+### 6.5 Database Script
 
 `docs/database/init.mongo.js` creates every collection with a `$jsonSchema` validator (types, required fields, enumerations, nested objects and arrays) and all indexes, including unique, partial and TTL indexes. It is **generated from the Mongoose models** by `npm run db:script` (`backend/src/utils/dbScript.util.ts`), so the script, the ERD entities above and the code describe the same data:
 
@@ -663,6 +709,8 @@ stateDiagram-v2
   DECOMMISSIONED --> [*]
 ```
 
+`ERROR` and `DEGRADED` are declared in the device status enumeration but never assigned by the code; no requirement uses them (Section 12).
+
 ### 8.7 Misting protection (SM-07, controller)
 
 ```mermaid
@@ -733,6 +781,42 @@ stateDiagram-v2
 ```
 
 ---
+
+### 8.13 Harvest batch (SM-13)
+
+```mermaid
+stateDiagram-v2
+  [*] --> DRAFT : owner records a harvest, snapshots attached (MARKET-FR-001)
+  DRAFT --> DRAFT : owner edits (MARKET-FR-005)
+  DRAFT --> DELETED : owner soft-deletes (MARKET-FR-005)
+  DELETED --> [*]
+```
+
+`ARCHIVED` is declared in the harvest status enumeration but never assigned (Section 12).
+
+### 8.14 User account (SM-14)
+
+```mermaid
+stateDiagram-v2
+  [*] --> ACTIVE : verified registration, accepted invitation, Technician created (AUTH-FR-001, 005c, 010)
+  ACTIVE --> LOCKED : Administrator locks with reason (AUTH-FR-011)
+  LOCKED --> ACTIVE : Administrator unlocks
+  ACTIVE --> DELETION_REQUESTED : user requests deletion (AUTH-FR-012)
+  DELETION_REQUESTED --> ACTIVE : user cancels or Administrator rejects
+  DELETION_REQUESTED --> DELETED : Administrator completes, data anonymised
+  DELETED --> [*]
+```
+
+### 8.15 Firmware update per controller (SM-15)
+
+```mermaid
+stateDiagram-v2
+  [*] --> NONE
+  NONE --> PENDING : Technician sends OTA, firmware >= 1.4.0 (TICKET-FR-008)
+  PENDING --> NONE : heartbeat reports the new version
+  PENDING --> FAILED : no confirmation in 30 min, image discarded or rolled back
+  FAILED --> PENDING : OTA sent again
+```
 
 ## 9. Activity Diagrams
 
@@ -1040,6 +1124,26 @@ flowchart TB
 
 ---
 
+### 9.13 SF-04 Harvest logging (AD-13)
+
+```mermaid
+flowchart TB
+  subgraph O[Farm Owner]
+    O1[Record harvest: date, zone,<br/>nest count, weight, type, photo] --> O2[View harvests against<br/>environment and flock]
+  end
+  subgraph B[Backend]
+    B1{Valid and zone of<br/>own farm?} -- no --> B2[Reject]
+    B1 -- yes --> B3[Attach 7-day environment means<br/>and 30-day flock figures of the house]
+    B3 --> B4[Store batch DRAFT<br/>with trace code]
+  end
+  subgraph E[Domain Expert]
+    E1[Read harvests in health review]
+  end
+  O1 --> B1
+  B4 --> O2
+  B4 --> E1
+```
+
 ## 10. Security Design
 
 | Concern | Design |
@@ -1097,6 +1201,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes |
 | CI | No job for the AI pipeline tests |
 | Hardware | Bypass switch not built |
+| Data model | Planned entities and attributes of Section 6.4; unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest) |
 
 ---
 
@@ -1104,5 +1209,6 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.2 | `[TEAM]` | Checked against the Review 2 guideline and the self-review prompt: firmware task responsibilities corrected from `main.cpp`; NTP added and Redis explained in the architecture; CD declared; planned entities and attributes in the ERD (6.4); state machines for harvest, user account and firmware update (SM-13…15); activity diagram for harvest logging (AD-13) |
 | 1.0.1 | `[TEAM]` | AI pipeline after PR #88: whole-frame tracking on two tiles, extrapolation at the hole, `FramePipeline` shared with the clip tool, Roboflow and Colab declared, library versions updated |
 | 1.0.0 | `[TEAM]` | First SDD for Review 2: architecture, technology declaration, design decisions, component design, Logical ERD with a generated database script, interfaces, 12 state machine diagrams and 12 activity diagrams |

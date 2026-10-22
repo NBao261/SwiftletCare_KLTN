@@ -1,6 +1,6 @@
 /**
  * npm run db:script — regenerate docs/database/init.mongo.js from the Mongoose models
- * (SDD §6.3). Run after changing a model; the unit test fails until the file is regenerated.
+ * (SDD §6.5). Run after changing a model; the unit test fails until the file is regenerated.
  */
 import { writeFileSync } from 'fs'
 import { resolve } from 'path'
