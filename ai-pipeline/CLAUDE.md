@@ -6,7 +6,7 @@ Rules and map for `ai-pipeline/` (Python: OpenCV + YOLO26n on ONNX Runtime + Byt
 
 - **Design source:** `docs/bird-counting-plan.md` is the implementation plan (architecture, config, MQTT payloads, training, accuracy measurement, backend and frontend work). Requirements: SRS §5.4 (Module VISION) and §0 scope. When the plan and this file disagree on *what to build*, the plan wins; this file wins on *how code must be written and checked*.
 - **Scope (SRS v2.0.0 §0):** one class, `swiftlet`. Predator detection is removed. The AI node is a PC or cloud VPS (container `vision`), **not** a Raspberry Pi. An annotated live stream (boxes drawn on the frame, viewed over WebRTC via MediaMTX) and a counting-accuracy report split by lighting (VISION-FR-014/016) are required.
-- **State:** a scaffold, never run for real. There is no `models/` folder (weights are never committed), `stream.py` tracks every bird over the whole frame (2 tiles → YOLO → ByteTrack → ring count) but publishes nothing, and the code still carries the v1 four-class/Raspberry Pi design — see Known debt. The backend's `mqtt/handlers/birdCount.handler.ts` is also a stub (logs only), so nothing persists bird counts end-to-end yet.
+- **State:** a scaffold, never run for real. There is no `models/` folder (weights are never committed), `stream.py` tracks every bird over the whole frame (2 tiles → YOLO → ByteTrack → ring count) but publishes nothing, and there is no trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10, plan §19.8); `config.yaml` still carries the Raspberry Pi MQTT block — see Known debt. The backend side is ready: `mqtt/handlers/birdCount.handler.ts` → `services/birdCount.service.ts` stores session records and 5-minute buckets and raises `LOW_RETURN_RATE`, and the AI node's heartbeat and `EDGE_AI_DEGRADED` are handled, so counts persist as soon as the pipeline publishes them.
 
 ## Commands
 
@@ -47,18 +47,18 @@ Target (plan §4): `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (re
 ## Rules
 
 ### Scope and parameters
-- **[Bắt buộc]** One detection class, `swiftlet`. Nothing new for predators (rat/snake/owl), `PREDATOR_DETECTED` or `vision/alert`; code a PR touches that still refers to them is removed, not extended.
-- **[Bắt buộc]** Class map, confidence/NMS thresholds, ROI, counting line and direction, session windows, publish intervals and model path come from `config/config.yaml` — no magic numbers in `src/`. A new tunable goes into the config with a comment.
+- **[Bắt buộc]** One detection class, `swiftlet`. Nothing new for predators (rat/snake/owl) or `PREDATOR_DETECTED`; code a PR touches that still refers to them is removed, not extended. `vision/alert` carries only `EDGE_AI_DEGRADED` (THREAT-FR-010), the one alert type the backend accepts from a camera.
+- **[Bắt buộc]** Class map, confidence/NMS thresholds, tiles and mask, counting ring and direction, tracking and extrapolation limits, session windows, publish intervals and model path come from `config/config.yaml` — no magic numbers in `src/`. A new tunable goes into the config with a comment.
 - **[Bắt buộc]** No threshold or behaviour invented without a source (SRS, plan, Domain Expert, a measured result). A value picked by hand is labelled as such in the config comment and, if it reaches users or the backend, listed with the unconfirmed assumptions at the end of SRS §0.5.
-- **[Bắt buộc]** Runtime targets the plan's stack: `onnxruntime` + `supervision` (ByteTrack, `LineZone`) — no `torch`/`ultralytics` in `requirements.txt` (they are for training on Colab only). New dependencies are pinned with a lower bound like the existing ones.
+- **[Bắt buộc]** Runtime targets the plan's stack: `onnxruntime` + `supervision` (ByteTrack) — no `torch`/`ultralytics` in `requirements.txt` (they are for training on Colab only). New dependencies are pinned with a lower bound like the existing ones.
 
 ### Secrets, data and models
-- **[Bắt buộc]** Camera RTSP URL (it carries the camera password), MQTT credentials, `STREAM_PUSH_URL` and the farm/house/zone/device IDs come from `.env` (`CAMERA_RTSP_URL`, `MQTT_USERNAME`/`MQTT_PASSWORD`, `STREAM_PUSH_URL`, `CAMERA_DEVICE_ID`, `FARM_ID`, `HOUSE_ID`, `ZONE_ID`), never from `config.yaml` or code. A new variable is added to an `.env.example` with a placeholder.
+- **[Bắt buộc]** Camera RTSP URL (it carries the camera password), MQTT credentials, `STREAM_PUSH_URL` and the farm/house/device IDs come from `.env` (`CAMERA_RTSP_URL`, `MQTT_USERNAME`/`MQTT_PASSWORD`, `STREAM_PUSH_URL`, `CAMERA_DEVICE_ID`, `FARM_ID`, `HOUSE_ID`), never from `config.yaml` or code. A new variable is added to an `.env.example` with a placeholder.
 - **[Bắt buộc]** Never commit model weights (`*.onnx`, `*.pt`), clips, frames, datasets, `.env`, logs or `state.json`; extend `.gitignore` when a new artifact folder appears. Record which model version runs (`model.version` in the config, sent as `firmwareVersion` in the heartbeat).
 - **[Bắt buộc]** Anything leaving the machine uses TLS in deploy mode (MQTT 8883, `rtsps://` push). The MJPEG preview binds to `127.0.0.1` only; remote viewers go through MediaMTX with backend-checked access.
 
 ### MQTT contract with the backend
-- **[Bắt buộc]** Topics are `swiftletcare/{farmId}/{houseId}/{zoneId}/vision/bird-count` and `swiftletcare/{farmId}/{houseId}/{zoneId}/heartbeat` (what `backend/src/mqtt/mqtt.client.ts` subscribes to), using the real MongoDB ObjectIds.
+- **[Bắt buộc]** Topics are per house, with no zone segment (SRS v2.1.8: the camera watches the entrance of the whole house): `swiftletcare/{farmId}/{houseId}/vision/bird-count`, `swiftletcare/{farmId}/{houseId}/heartbeat` and `swiftletcare/{farmId}/{houseId}/vision/alert` (what `backend/src/mqtt/mqtt.client.ts` subscribes to), using the real MongoDB ObjectIds.
 - **[Bắt buộc]** Every payload carries `deviceId` = the CameraNode `device_id` registered in the backend; the backend looks the device up by it, not by the topic segments.
 - **[Bắt buộc]** Payload shapes follow the plan (§6.6) and the backend's `BirdCountPayload` (`backend/src/types/domain.types.ts`, extended per plan §8.2): session message `{deviceId, session_type, entry_count, exit_count, confidence_avg, final, timestamp}`; bucket message `{deviceId, kind: "BUCKET", bucket_start, bucket_minutes, entry_count, exit_count, timestamp}`; heartbeat `{deviceId, firmwareVersion}`. Timestamps are epoch milliseconds. Counts are non-negative integers. A field change lands together with the backend type, the handler and `docs/api/api-spec.yaml` (or names the PR that does).
 - **[Bắt buộc]** The one message the node receives is `swiftletcare/{farmId}/{houseId}/config/update` with `{deviceId, counting_ring: {points, into_ring_is_exit}}` (VISION-FR-018, `remote_config.py`): drop it when `deviceId` names another camera, validate it with the same limits as the backend route (3–12 vertices in 0–1), and keep counting with the old ring when it is malformed.
@@ -73,7 +73,7 @@ Target (plan §4): `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (re
 ### Code quality
 - **[Bắt buộc]** Logging via `loguru` with file rotation from the config — no `print` in `src/` (a CLI result line in an evaluation run is the exception).
 - **[Bắt buộc]** Type hints on public functions and classes; no bare `except:` — catch specific errors or log and re-raise.
-- **[Bắt buộc]** Counting logic (line crossing, direction, session switching, bucket rollover, net count inputs) has `pytest` tests that run without a camera, model or broker.
+- **[Bắt buộc]** Counting logic (ring crossing, direction, extrapolation of fast tracks, ambiguous tracks, session switching, bucket rollover, net count inputs) has `pytest` tests that run without a camera, model or broker.
 - **[Nên]** Keep `src/` modules importable without side effects (no work at import time); entry points behind `if __name__ == "__main__":`.
 
 ### Accuracy claims
@@ -86,7 +86,6 @@ Target (plan §4): `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (re
 | `config/config.yaml` | MQTT username `rpi-node-01`; `mqtt.farm_id/house_id/zone_id` placeholders (IDs come from `.env`) | Replace the `mqtt` block with plan §6.2 |
 | `src/pipeline.py` | `sv.ByteTrack` is deprecated and removed in supervision 0.31 (pinned `<0.31`) | Move to the `trackers` package before upgrading |
 | `src/stream.py` | Sequential `cap.read()` (lags), no MQTT, no sessions, no stream push | Rewrite (plan §6.6) |
-| `README.md` | Lists `vision/alert` and `vision/heartbeat` topics; the backend listens on `.../heartbeat` and predator alerts are gone | Fix with the first code PR |
 | CI | `tests/` exists but no CI job runs it | Add a CI job running `pytest` |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. adding a predator class or a secret to `config.yaml`).
