@@ -5,20 +5,20 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | File | Report | Trạng thái |
 | --- | --- | --- |
 | `report3-srs.md` | Report 3 – SRS | Bản nháp 3.0.0, cần điền các chỗ `[TEAM: …]` |
-| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 15 state machine, 13 activity diagram) | Bản nháp 1.0.0, cần điền các chỗ `[TEAM: …]` (staging, công cụ AI, dịch vụ huấn luyện) |
+| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 16 state machine, 13 activity diagram) | Bản nháp 1.0.3, cần điền các chỗ `[TEAM: …]` (staging, công cụ AI, dịch vụ huấn luyện) |
 | `report5-test.md` | Report 5 – Test plan và test case | Chưa có |
 
 ## Report 3 – SRS: cách dùng
 
 - File này **chỉ chứa yêu cầu**: actor, tiêu chí chấp nhận, NFR (chỉ số, ngưỡng, cách đo), vòng đời thực thể, truy vết tới phiếu đăng ký. Phần thiết kế (schema, API, MQTT, kiến trúc, môi trường) thuộc Report 4; tiến độ thuộc Project Tracking.
 - Mã FR giữ nguyên như `SwiftletCare_SRS.md` để code, test và commit đang trỏ tới vẫn đúng.
-- Phạm vi bám theo phiếu đăng ký **bản đề xuất chốt**, với giả định BM03 gồm các thay đổi: phiếu ghi "YOLO" không kèm phiên bản (phiên bản cụ thể khai báo trong Report 4); phát hiện thiên địch chuyển hẳn sang Out of scope; kênh ngoài ứng dụng cam kết **cả** push (FCM) và Telegram bot.
+- Phạm vi bám theo phiếu đăng ký **bản đề xuất chốt**, với giả định BM03 gồm các thay đổi: phiếu ghi "YOLO" không kèm phiên bản (phiên bản cụ thể khai báo trong Report 4); phát hiện thiên địch chuyển hẳn sang Out of scope; kênh ngoài ứng dụng cam kết **cả** push (FCM) và Telegram bot; Farm Owner tự setup thiết bị bằng QR (MF-10). Bản nháp các dòng BM03 ở mục bên dưới.
 - Độ ưu tiên: `M` = thuộc luồng chính, là ứng viên cho tính năng bắt buộc của Defense 1.1; `S` = luồng phụ (ticket, tài khoản, lắp đặt), giữ chạy được nhưng không đề xuất làm tính năng bắt buộc, để số test case cam kết tập trung vào hệ thống tự động.
 
 ### Chỗ nhóm phải điền trước khi gắn tag `review-2`
 
 1. Header: mã đề tài, GVHD, ngày, phiên bản phiếu.
-2. NFR-08 (tỷ lệ tự động, % trong ngưỡng), NFR-09 (độ chính xác đếm chim, số clip), NFR-11 (MAE dự báo), NFR-12 (chi phí theo BOM hiện hành). Không có căn cứ thì đặt mức nhóm chắc chắn đo được, và ghi căn cứ vào `docs/evidence-register.md`.
+2. NFR-08 (tỷ lệ tự động, % trong ngưỡng), NFR-09 (độ chính xác đếm chim, số clip), NFR-11 (MAE dự báo), NFR-12 (chi phí theo BOM hiện hành), NFR-13 (xác nhận mốc 10 phút cho khâu setup). Không có căn cứ thì đặt mức nhóm chắc chắn đo được, và ghi căn cứ vào `docs/evidence-register.md`.
 3. Ngày ở bảng Revision History.
 
 ### Chỗ lệch phát hiện khi viết (nên xử lý hoặc đưa vào Known Gaps của Design Brief)
@@ -49,6 +49,22 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 22 | ENV-FR-027 đồng bộ cấu hình: chưa có version cấu hình, heartbeat chưa báo version, chưa có loại cảnh báo `CONFIG_MISMATCH` | Firmware gửi version trong heartbeat; backend tăng version mỗi lần đổi, gửi lại khi lệch; thêm `CONFIG_MISMATCH` vào `AlertType` ở backend, frontend, mobile; mốc 3 heartbeat (BR-24) ghi vào danh sách giả định của SRS cũ §0.5 |
 | 23 | ALERT-FR-014 gói bằng chứng: dữ liệu đã có (telemetry, số đếm 5 phút, cảnh báo) nhưng chưa có endpoint gom theo cảnh báo | Thêm endpoint đọc bằng chứng của một cảnh báo suy luận |
 | 24 | VISION-FR-020 phiên không đầy đủ: job so tỷ lệ chim về chưa xét nút AI offline trong phiên | Đánh dấu phiên theo cảnh báo `EDGE_AI_DEGRADED` mở trong khung giờ; loại ngày không đầy đủ khỏi so sánh và nền |
+| 25 | MF-10 Farm Owner tự setup (FARM-FR-003, 007, 007b, 008): các route `POST /devices/sensor-nodes/register`, `PUT .../reassign-zone`, `.../decommission`, `.../replace` (và camera) mới cho `TECHNICIAN`, `ADMIN`; SRS cho Farm Owner (farm của mình) và Technician, không cho Admin | Thêm `FARM_OWNER` vào `requireRole`, bỏ `ADMIN` ở đăng ký; `api-spec.yaml`; test quyền |
+| 26 | FARM-FR-007b dời thiết bị đang OFFLINE: `reassignZone` từ chối (409) | Lưu Zone mới ngay; thiết bị kết nối lại thì `recordHeartbeat` tự gửi `config/reassign` (cơ chế đã có, FARM-FR-003c); bỏ "Nhánh B" AP-mode + secretKey |
+| 27 | FARM-FR-010 cấp lại key: `rotateProvisionedKey` chặn khi thiết bị đã kích hoạt một lần, với lý do "secretKey đã nằm trong thiết bị" — firmware không lưu key (FARM-FR-003c) | Cho cấp lại khi thiết bị không còn hoạt động ở farm nào (BR-26), sửa comment; chú thích FARM-FR-003c cũ trong code cũng cần sửa |
+| 28 | Giao diện MF-10: chưa có in nhãn QR khi thêm thiết bị vào kho (web Admin, đã có thư viện `qrcode`), in mã tầng ở màn Zone, quét QR ở mobile (`expo-camera`), màn tiến trình setup (FARM-FR-012, cần ENV-FR-027) | Thông báo PENDING quá 15 phút đã có (`activationOverdue.job.ts`) |
+| 29 | (Optional) Device ID lấy từ MAC của ESP32 khi `Secrets.h` không ghi ID, để mọi board dùng chung một bản firmware | Sửa nhỏ firmware; không bắt buộc cho Review 2 |
+
+### Bản nháp các dòng BM03 (Record of Changes)
+
+Report 3 đang giả định phiếu đăng ký đã có các thay đổi dưới đây. Nhóm chép vào BM03 (cột lý do lấy từ góp ý Review 1 hoặc quyết định của nhóm) rồi sửa phiếu tương ứng.
+
+| # | Mục của phiếu | Trước | Sau | Lý do |
+| --- | --- | --- | --- | --- |
+| 1 | Công nghệ (YOLO) | Ghi kèm phiên bản YOLO | Chỉ ghi "YOLO"; phiên bản khai báo trong Report 4 | Phiên bản model có thể đổi khi huấn luyện, không phải phạm vi |
+| 2 | Phát hiện thiên địch | Có trong phạm vi | Chuyển hẳn sang Out of scope | Góp ý Review 1, thu hẹp thị giác máy tính về một lớp `swiftlet` |
+| 3 | Kênh thông báo ngoài ứng dụng | Telegram bot hoặc FCM push (một trong hai) | Cả push (FCM) và Telegram bot | Quyết định của nhóm |
+| 4 | C.4 Technician ("Install and activate devices, provision Wi-Fi") và mục D (luồng) | Chỉ Technician lắp, kích hoạt và dời thiết bị | Farm Owner tự setup trên mobile: quét nhãn QR của board và mã QR của tầng (MF-10, FARM-FR-003…012, NFR-13); Technician làm cùng các bước khi Farm Owner tạo ticket lắp đặt | GVHD yêu cầu khâu setup thuận tiện nhất có thể |
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 

@@ -8,7 +8,7 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.0.0 (Review 2) |
+| Document version | 1.0.3 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
 | Requirements baseline | Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -107,6 +107,7 @@ flowchart LR
   API -- alert messages --> TG
   API -- push --> FCM
   ESP -- time sync --> NTP
+  MOB -. scans label and floor QR codes,<br/>Wi-Fi setup in AP mode .-> ESP
 ```
 
 Redis is started by `docker-compose.yml` but no module uses it yet (reserved); it is therefore not part of the architecture.
@@ -122,6 +123,7 @@ Redis is started by `docker-compose.yml` but no module uses it yet (reserved); i
 | DF-5 | Inferred alerts | Backend jobs: offline (10 s), sensor anomaly and forecast (10 min), return rate (daily) → `createAlert()` | Inferred types stay MEDIUM/LOW and go to the expert's queue |
 | DF-6 | Bird counts | Camera RTSP → AI node → MQTT `{house}/vision/bird-count` (session every 30 s, 5-minute buckets) → backend → `BIRD_COUNT_UPDATE` | Counts belong to the house |
 | DF-7 | Live video | AI node publishes annotated stream to MediaMTX → viewer gets a 60-second token from the API → MediaMTX asks `POST /internal/stream-auth` → stream to the browser | Video never passes through the backend |
+| DF-9 | Device setup | Administrator adds the device to the stock and prints its label → Farm Owner scans the label and the floor code in the mobile app → `POST /devices/sensor-nodes/register` (device `PENDING`) → Wi-Fi entered in AP mode → first heartbeat, still on the default topic → backend sends `config/reassign` with the registered zone → controller restarts on the zone topic → `config/update` → heartbeat reports the configuration version → app shows "configuration applied" | Nothing about the farm is typed on the device (FARM-FR-003c); the same correction moves an offline controller when it reconnects |
 | DF-8 | Expert loop | Health report job (weekly) and inferred alerts → expert verdict, tuning, conclusion → notifications to the Farm Owner | EXPERT-FR-003…011 |
 
 ---
@@ -149,8 +151,8 @@ Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, M
 | Firmware libraries | PubSubClient, ArduinoJson, ModbusMaster, DFRobotDFPlayerMini, ElegantOTA | ^2.8, ^7.0, ^2.0.1, ^1.0.6, ^3.1 |
 | AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, supervision (ByteTrack), paho-mqtt, PyYAML, loguru; detection model YOLO26n exported to ONNX (one class, trained on Colab; `torch`/`ultralytics` are not runtime dependencies) | Python 3.11–3.12; opencv-python ≥ 4.14 < 5; numpy ≥ 1.26 < 3; onnxruntime 1.30; supervision 0.30; paho-mqtt 2.x |
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
-| Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23 |
-| Mobile | Expo (Router), React Native | Expo ~53, React Native 0.79.6, React 19.0 |
+| Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8 |
+| Mobile | Expo (Router), React Native; `expo-camera` for scanning device labels and floor codes | Expo ~53, React Native 0.79.6, React 19.0 |
 | Database and infrastructure | MongoDB, EMQX, MinIO, MediaMTX (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1 |
 | Testing | Jest + mongodb-memory-server (backend, mobile), Vitest (web), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7, Vitest ^1.6 |
 
@@ -198,6 +200,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D5 | Where bird counting runs | Raspberry Pi at the house; PC at the house or cloud server | **PC or cloud AI node**: enough throughput for real time at 25 fps with YOLO; one camera per entrance, counts per house | VISION-FR-002, THREAT-FR-010 |
 | D6 | Counting geometry | Straight virtual line; ring around the hole with tracking only near it; ring with whole-frame tracking | **Whole-frame tracking and a closed ring around the hole, with extrapolation of fast tracks**: birds leave the hole in every direction, so a line misses some; at the hole a bird is a 1–2-frame blur moving 150–200 px/frame (clip of 22/10/2026), so tracking near the hole alone never gives it an identity — tracked over the whole room it already has one, and a fast track lost just outside the ring is counted by its last velocity. Fly-pasts cancel in the net count | VISION-FR-004, 005, 009, 018, BR-25 |
 | D7 | Expert in the loop | Expert approval blocks every change; changes apply at once with no review | **Owner changes apply at once and open a review item; only the expert applies system suggestions; without an expert the owner decides** — safety on site is never blocked and every parameter is still validated | EXPERT-FR-010, 011, BR-22 |
+| D9 | Device identity and setup | Technician types device ID and key on a web console; QR code shown on the controller's AP-mode page; small display on the board; Bluetooth (BLE) provisioning; **printed label QR code plus a code on each floor** | **Printed label with device ID and activation key, and a floor code**: the ESP32 has no display or code of its own, and a label needs no hardware or firmware change because the key is checked only by the backend and never stored on the controller. Floors share one Wi-Fi network, so the floor cannot be told by radio; scanning its code replaces choosing from a list. The backend already corrects a controller's topic at its heartbeat, so farm, house and zone are never entered on the device, and an offline move needs no visit. A display or BLE would add hardware or much more firmware for the same two steps. Optional later: derive the device ID from the factory MAC address so every board runs one firmware image | FARM-FR-003, 003c, 007, 007b, 010, 011, 012, BR-26, 27 |
 | D8 | Live video path | Through the backend; dedicated video server | **MediaMTX** with short-lived viewing tokens checked by the backend: the API never carries video, raw feed only for the pipeline | VISION-FR-013 |
 
 The Design Brief (BM01, section 3) proposes five of these.
@@ -271,6 +274,8 @@ Background jobs:
 ### 5.4 Web and Mobile
 
 Both clients follow the same pattern: TanStack Query for server state, Zustand for session state, axios for REST, socket.io-client for real-time events, one route group per role. The web application is a PWA; the mobile application uses Expo Router. Screens for the Domain Expert, the live stream and the counting ring are still to be built (Section 12).
+
+Device setup (MF-10): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; a scan in the web console (`html5-qrcode`) reads the same formats.
 
 ---
 
@@ -589,7 +594,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/auth` | Register, login, refresh, logout, OTP, password reset, notification preferences, Telegram link, deletion request |
 | `/farms` | Farms, members, houses, zones, thresholds and reset, fuzzy tuning, detection tuning, bird-count tuning |
 | `/invitations` | Accept, decline |
-| `/devices` | Sensor nodes (register, relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
+| `/devices` | Sensor nodes (register and move, also by the Farm Owner for MF-10; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
 | `/telemetry` | Latest and history |
 | `/alerts` | List, detail, acknowledge, verdict, verdict statistics |
 | `/analytics` | Charts, comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
@@ -597,7 +602,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/notifications` | Inbox, mark read |
 | `/harvests` | Harvest batches |
 | `/tickets`, `/maintenance-schedules` | Supporting flows |
-| `/admin`, `/system` | Accounts, Technicians, deletion requests, default thresholds, SLA, audit log, health overview |
+| `/admin`, `/system` | Provisioned-device stock (add and return the activation key once, revoke, re-issue key), accounts, Technicians, deletion requests, default thresholds, SLA, audit log, health overview |
 | `/internal/stream-auth` | MediaMTX authorisation (no user token, blocked from outside by the reverse proxy) |
 
 ### 7.2 MQTT
@@ -610,7 +615,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `…/{zone}/alert` | ESP32 → cloud | `deviceId`, type, severity, details | 0 |
 | `…/{zone}/relay/command` | cloud → ESP32 | `deviceId`, relay, state, duration, or `clear_override` | 1 |
 | `…/{zone}/config/update` | cloud → ESP32 | Thresholds, fuzzy and detection parameters (zone-wide), speaker settings or `RESTART`/`OTA` (with `deviceId`) | 1 |
-| `…/{zone}/config/reassign`, `…/{zone}/audio/command` | cloud → ESP32 | `deviceId`, new zone / play-stop | 1 |
+| `…/{zone}/config/reassign`, `…/{zone}/audio/command` | cloud → ESP32 | `deviceId`, new zone / play-stop. `config/reassign` is also sent by the backend itself when a heartbeat arrives on another topic than the registered zone (first connection, offline move; FARM-FR-003c) | 1 |
 | `swiftletcare/{farm}/{house}/heartbeat` | AI node → cloud | `deviceId`, model version | 0 |
 | `…/{house}/vision/bird-count` | AI node → cloud | Session counts every 30 s, or `kind: BUCKET` 5-minute counts | 1 |
 | `…/{house}/vision/alert` | AI node → cloud | `EDGE_AI_DEGRADED` | 1 |
@@ -709,7 +714,7 @@ stateDiagram-v2
   DECOMMISSIONED --> [*]
 ```
 
-`ERROR` and `DEGRADED` are declared in the device status enumeration but never assigned by the code; no requirement uses them (Section 12).
+Registration is done by the Farm Owner or a Technician (MF-10). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012). `ERROR` and `DEGRADED` are declared in the device status enumeration but never assigned by the code; no requirement uses them (Section 12).
 
 ### 8.7 Misting protection (SM-07, controller)
 
@@ -817,6 +822,23 @@ stateDiagram-v2
   PENDING --> FAILED : no confirmation in 30 min, image discarded or rolled back
   FAILED --> PENDING : OTA sent again
 ```
+
+### 8.16 Device label — stock entry (SM-16)
+
+```mermaid
+stateDiagram-v2
+  [*] --> IN_STOCK : added to stock, label issued (FARM-FR-010)
+  IN_STOCK --> IN_SERVICE : registered from the label (FARM-FR-003, 004)
+  IN_SERVICE --> RELEASED : removed or replaced (FARM-FR-008)
+  RELEASED --> IN_SERVICE : registered again (BR-26)
+  IN_STOCK --> IN_STOCK : key re-issued
+  RELEASED --> RELEASED : key re-issued (planned)
+  IN_STOCK --> REVOKED : revoked by Administrator
+  RELEASED --> REVOKED : revoked by Administrator
+  REVOKED --> [*]
+```
+
+The state is derived from `provisioned_devices` (`claimed_at`, `revoked_at`) and whether a sensor or camera node with that device ID is in service; it is not a stored field. Re-issuing the key of a released device is blocked by the code today (Section 12).
 
 ## 9. Activity Diagrams
 
@@ -1051,27 +1073,43 @@ flowchart TB
   H1 -. loads run without controller .-> C1
 ```
 
-### 9.10 SF-01 Installation and activation (AD-10)
+### 9.10 MF-10 Device setup by the Farm Owner (AD-10)
 
 ```mermaid
 flowchart TB
-  subgraph O[Farm Owner]
-    O1[Request installation ticket]
+  subgraph A[Administrator - before delivery]
+    A1[Add device to stock] --> A2[Print label:<br/>QR with device ID + key]
+  end
+  subgraph O[Farm Owner - mobile app]
+    O1[Scan device label] --> O2[Scan floor code<br/>or pick zone]
+    O3[Join the device's setup Wi-Fi,<br/>enter farm Wi-Fi]
+    O4[See online,<br/>configuration applied]
   end
   subgraph B[Backend]
-    B1[Route ticket to regional Technician]
-    B2{Device ID and key in stock?} -- no --> B3[Reject]
-    B2 -- yes --> B4[Register device PENDING]
-    B5[First heartbeat: ONLINE,<br/>push configuration]
+    B1{Key valid, device not<br/>in service, zone accessible?} -- no --> B2[Reject 400 / 409 / 403]
+    B1 -- yes --> B3[Register PENDING, audit]
+    B9[Still PENDING after 15 min:<br/>notify registrant]
+    B4{Heartbeat on the<br/>registered zone topic?} -- no --> B5[Send config/reassign]
+    B4 -- yes --> B6[ONLINE, push zone configuration]
+    B7{Reported version =<br/>zone version?} -- yes --> B8[Configuration applied]
+    B7 -- no, 3 heartbeats --> B10[CONFIG_MISMATCH]
   end
-  subgraph T[Technician]
-    T1[Install controller and camera] --> T2[Register device to zone / house]
-    T3[Provision Wi-Fi in AP mode] --> T4[Site acceptance checklist, close ticket]
+  subgraph C[Controller]
+    C1[Power on, no Wi-Fi:<br/>AP mode] --> C2[Join farm Wi-Fi,<br/>first heartbeat]
+    C3[Store zone, restart<br/>on zone topic]
+    C4[Apply configuration,<br/>report version]
   end
-  O1 --> B1 --> T1
-  T2 --> B2
-  B4 --> T3 --> B5 --> T4
+  A2 --> O1
+  O2 --> B1
+  B3 --> O3
+  B3 -.-> B9
+  C1 --> O3 --> C2 --> B4
+  B5 --> C3 --> B4
+  B6 --> C4 --> B7
+  B8 --> O4
 ```
+
+Moving a controller to another floor: scan the new floor's code; an online controller receives `config/reassign` at once, an offline one gets the same correction at its next heartbeat (B4). A Technician follows the same steps on an installation ticket (SF-02).
 
 ### 9.11 SF-02 Maintenance request (AD-11)
 
@@ -1152,7 +1190,7 @@ flowchart TB
 | Authorisation | `requireRole` on every route following Report 3, Section 2.4; farm membership checked in services (`farmAccess.util`); Technicians limited to their regions |
 | Passwords and codes | bcrypt; one-time codes hashed and never returned by the API |
 | Rate limiting | 300 requests/min per account; 10 failed sign-ins / 15 min per IP; 30 refreshes/min per IP |
-| Devices | Device key from the provisioned stock; MQTT username/password over TLS (port 8883 in production); commands to one device carry its `deviceId`; OTA only over HTTPS from allowed hosts with SHA-256 verification and rollback |
+| Devices | Activation key from the provisioned stock, printed on the device label and checked only by the backend (stored hashed, compared in constant time, one message for an unknown ID and a wrong key); never stored on the controller; a device in service is never registered again (BR-26); labels and floor codes carry no Wi-Fi or MQTT credential; MQTT username/password over TLS (port 8883 in production); commands to one device carry its `deviceId`; OTA only over HTTPS from allowed hosts with SHA-256 verification and rollback |
 | Video | Viewing tokens valid 60 s for one camera path, signed with a separate secret; the raw feed is readable only by the pipeline |
 | Secrets | Environment variables only (`.env.example` documents them); gitleaks scan in CI |
 | Personal data | Account deletion with anonymisation (AUTH-FR-012, Decree 13/2023/ND-CP); audit log of sensitive changes |
@@ -1199,6 +1237,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Bird counting | No trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10); `stream.py` publishes nothing yet (counts, buckets, heartbeat, video push); throughput risk: two tiles with the COCO model ran at about 7 fps on a laptop against the 25 fps of NFR-04, to be measured on the real AI node; seasonal schedule and incomplete sessions; screens for live stream and counting ring |
 | Clients | Domain Expert screens; mobile push registration |
 | Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes |
+| Device setup (MF-10) | Register, move, remove and replace routes allow only Technician and Administrator; moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
 | CI | No job for the AI pipeline tests |
 | Hardware | Bypass switch not built |
 | Data model | Planned entities and attributes of Section 6.4; unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest) |
@@ -1209,6 +1248,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.3 | `[TEAM]` | Device setup by the Farm Owner (MF-10): data flow DF-9, decision D9 (label and floor QR codes), QR libraries declared, state machine SM-16 for the device label, activity diagram AD-10 rewritten for MF-10, security of the activation key, setup gaps |
 | 1.0.2 | `[TEAM]` | Checked against the Review 2 guideline and the self-review prompt: firmware task responsibilities corrected from `main.cpp`; NTP added and Redis explained in the architecture; CD declared; planned entities and attributes in the ERD (6.4); state machines for harvest, user account and firmware update (SM-13…15); activity diagram for harvest logging (AD-13) |
 | 1.0.1 | `[TEAM]` | AI pipeline after PR #88: whole-frame tracking on two tiles, extrapolation at the hole, `FramePipeline` shared with the clip tool, Roboflow and Colab declared, library versions updated |
 | 1.0.0 | `[TEAM]` | First SDD for Review 2: architecture, technology declaration, design decisions, component design, Logical ERD with a generated database script, interfaces, 12 state machine diagrams and 12 activity diagrams |
