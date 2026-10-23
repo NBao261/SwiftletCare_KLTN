@@ -1,6 +1,6 @@
 # SwiftletCare — BẢNG TASK CHI TIẾT (Micro-task Checklist) v3
 
-**Bám theo:** SRS **v2.0.0** (phiếu đăng ký bản sửa sau Review 1) + Components Guide v3.11 + Sensor Config Guide + `docs/bird-counting-plan.md` | **Phạm vi:** theo phiếu v2 (SRS mục 0)
+**Bám theo:** Report 3 – SRS (`docs/reports/report3-srs.md`, phiếu đăng ký bản sửa sau Review 1; chỗ code còn lệch ở `docs/reports/README.md`) + Components Guide v3.11 + Sensor Config Guide + `docs/bird-counting-plan.md` | **Phạm vi:** theo phiếu v2 (SRS mục 0)
 
 > **[v2 cập nhật]** theo linh kiện thực tế đã mua: ESP32 NodeMCU 38 chân + đế mở rộng, **2 mạch Buck** (tách nguồn PAM8403), Domino TB1504, relay kích H/L (đặt mức High), DFPlayer + PAM8403 6W có volume, camera IR 940nm.
 >
@@ -533,13 +533,13 @@
 - [ ] **M3+M4** — Đăng ký/đăng nhập/quên mật khẩu/mời thành viên end-to-end (Sprint 1-2) `[Flow 11, 12]`
 - [ ] **M3+M4** — Admin khoá/mở khoá + xử lý yêu cầu xoá tài khoản end-to-end (Sprint 6) `[Flow 19]`
 - ~~**M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`~~ — ❌ bỏ ở SRS v2.0.0
-- [ ] **Cả nhóm** — Demo tổng theo 9 luồng của phiếu v2 (SRS mục 0.4): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay + bypass (Sprint 8)
+- [ ] **Cả nhóm** — Demo tổng theo 10 luồng chính của Report 3 §2.2 (MF-01…10): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay + bypass, Farm Owner tự setup thiết bị bằng QR (Sprint 8)
 
 ---
 
 # G. Việc theo SRS v2.0.0 (sau Review 1) — ưu tiên
 
-> Danh sách này là SRS mục 0.5 viết lại thành đầu việc tick được. Hội đồng đánh giá theo phiếu đăng ký bản sửa, nên các việc dưới đây đi trước mọi task còn mở ở mục A–F. Thứ tự ưu tiên: **G2 (đếm chim) → G1 → G3/G4 → G5**.
+> Danh sách này là SRS cũ mục 0.5 viết lại thành đầu việc tick được; các yêu cầu Report 3 thêm sau đó (MF-10, `DISMISSED`, duyệt thay đổi, đồng bộ cấu hình…) nằm ở `docs/reports/README.md` mục "Chỗ lệch". Hội đồng đánh giá theo phiếu đăng ký bản sửa, nên các việc dưới đây đi trước mọi task còn mở ở mục A–F. Thứ tự ưu tiên: **G2 (đếm chim) → G1 → G3/G4 → G5**.
 
 ## G1. M1 — Firmware / Hardware
 

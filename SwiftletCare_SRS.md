@@ -1,5 +1,9 @@
 # Software Requirements Specification (SRS)
 
+> **Từ Review 2, đây không còn là đặc tả chính thức.** Yêu cầu chính thức là **Report 3** — [`docs/reports/report3-srs.md`](docs/reports/report3-srs.md) (tiếng Anh, giữ nguyên mã FR); thiết kế là **Report 4** — [`docs/reports/report4-sdd.md`](docs/reports/report4-sdd.md). Hai tài liệu đó thắng mọi chỗ lệch với file này (ví dụ: Farm Owner tự setup thiết bị bằng QR — MF-10; trang AP-mode không có farm/zone/khoá — FARM-FR-003c; chỉ Farm Owner và Domain Expert của farm sửa ngưỡng). Chỗ code còn lệch với Report 3 nằm ở [`docs/reports/README.md`](docs/reports/README.md); các hằng số kỹ thuật chưa có nguồn chuyển sang Report 3 mục 4.5.
+>
+> File này giữ làm ghi chú nội bộ: lịch sử thay đổi phạm vi (mục 0 và bảng lịch sử phiên bản ở cuối file), mô tả luồng chi tiết bằng tiếng Việt. Không thêm yêu cầu mới vào đây; cột "Trạng thái Backend" ở mục 5 không còn được cập nhật.
+
 ## SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming
 
 ---

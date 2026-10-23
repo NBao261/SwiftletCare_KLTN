@@ -4,9 +4,10 @@ Rules and map for `mobile/` (Expo SDK 53 + Expo Router 5 + React Native 0.79 + R
 
 ## Where mobile stands
 
-- **Who it is for (SRS v2.0.0 §0.3, §0.5 Mobile):** Farm Owner, Domain Expert and Technician. The expert needs at least the dashboard and the zone health report on mobile; verification and tuning screens are web-first.
+- **Requirements:** Report 3 (`docs/reports/report3-srs.md`) and Report 4 (`docs/reports/report4-sdd.md` §5.4) win over `SwiftletCare_SRS.md`; what mobile still lacks is listed in `docs/reports/README.md`.
+- **Who it is for:** Farm Owner, Domain Expert and Technician (Report 3 §2.3). The expert needs at least the dashboard and the zone health report on mobile; verification and tuning screens are web-first. Two main-flow pieces live on mobile: **device setup** (MF-10 — scan the device label and the floor QR code with `expo-camera`, guide Wi-Fi provisioning in AP mode, show the setup progress, FARM-FR-003…012) and **FCM push** (ALERT-FR-002 — register the token after sign-in, remove it at sign-out).
 - **State:** a scaffold. Most screens under `app/` are stubs with `TODO` comments; the plumbing (axios client, auth store, React Query hooks, socket client, push registration) exists. The code still follows the SRS v1.24.0 scope — see Known debt.
-- **Backend contract:** the same backend as the web, unprefixed routes, `docs/api/api-spec.yaml` is the source of truth. The backend already follows SRS v2 (roles `ADMIN | FARM_OWNER | DOMAIN_EXPERT | TECHNICIAN`, `NOISE_ANOMALY`, Telegram as the out-of-app channel, no Marketplace, no heating).
+- **Backend contract:** the same backend as the web, unprefixed routes, `docs/api/api-spec.yaml` is the source of truth. The backend already follows the Review 1 scope (roles `ADMIN | FARM_OWNER | DOMAIN_EXPERT | TECHNICIAN`, `NOISE_ANOMALY`, Telegram and FCM push as the out-of-app channels, no Marketplace, no heating).
 
 ## Commands
 
@@ -73,13 +74,14 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 ### Realtime and push
 - **[Bắt buộc]** Every socket subscription (`on*`, `joinZone`) made in an effect is undone in its cleanup (`off`, `leaveZone`); a screen that joins a zone leaves it when it unmounts or the zone changes. Add `off*` helpers to `services/socket` when wiring the first screen.
 - **[Bắt buộc]** Socket event names and payloads match the backend (`TELEMETRY_UPDATE`, `RELAY_UPDATE`, `ALERT_NEW`, `DEVICE_STATUS_CHANGE`, `BIRD_COUNT_UPDATE`).
+- **[Bắt buộc]** QR codes are read in the formats of Report 4 §5.4 (`swiftletcare://claim?d=<device ID>&k=<activation key>`, `swiftletcare://zone?z=<zone ID>`); the activation key is sent once to the registration endpoint and never stored, logged or cached on the phone.
 - **[Bắt buộc]** Push registration (FCM via `expo-notifications`) only asks for permission at a point the user understands, and sends the token to the backend through an endpoint in `api-spec.yaml` — do not invent one; if the endpoint does not exist yet, say so in the PR and leave it unsent.
 
 ### Roles and scope
-- **[Bắt buộc]** Role-dependent UI follows SRS §4.4: Domain Expert only reads operations (no relay control, no tickets, no harvest writes, no alert acknowledgement) but can see verdict/health-report screens; Technician and Farm Owner per the matrix. Hiding a button is not security — the backend enforces it — but the app must not offer an action the backend will refuse.
+- **[Bắt buộc]** Role-dependent UI follows Report 3 §2.4: Domain Expert only reads operations (no relay control, no tickets, no harvest writes, no alert acknowledgement) but can see verdict/health-report screens; Technician and Farm Owner per the matrix. Hiding a button is not security — the backend enforces it — but the app must not offer an action the backend will refuse.
 - **[Bắt buộc]** Enums in `types/index.ts` (`Role`, `AlertType`, `DeviceStatus`, `TicketType/Priority/Status`…) match `backend/src/types/domain.types.ts`. A PR that touches an enum brings it fully in line, or says which follow-up PR does.
-- **[Bắt buộc]** Nothing new for what SRS §0.2 removed: Marketplace/Buyer, Farm Operator/zone scope, predator detection, heating relay, Zalo/SMS, NH3/CO2 driving the fan. NH3/CO2 are shown as alert thresholds set by the Domain Expert.
-- **[Bắt buộc]** No threshold, limit or behaviour invented without a source (SRS, Domain Expert, cited reference).
+- **[Bắt buộc]** Nothing new for what Report 3 §8 puts out of scope: Marketplace/Buyer, Farm Operator/zone scope, predator detection, heating relay, Zalo/SMS, NH3/CO2 driving the fan. NH3/CO2 are shown as alert thresholds of the zone, not control limits.
+- **[Bắt buộc]** No threshold, limit or behaviour invented without a source (Report 3, Domain Expert, cited reference).
 
 ### Screens and quality
 - **[Bắt buộc]** Every screen with async data has loading, empty and error states; errors shown to the user are short Vietnamese messages, not raw error text. Destructive actions (relay off, delete, logout) ask for confirmation, and their button is disabled while the request runs.
@@ -93,12 +95,12 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| `types/index.ts` | `Role` still has `OPERATOR`/`SALES_STAFF` and no `DOMAIN_EXPERT`; `AlertType` has `BIRD_PANIC`, `PREDATOR_DETECTED` and lacks `NOISE_ANOMALY`; `FarmMember.role: 'OPERATOR'`; `NotificationPreferences` has `zalo`/`sms` | Align with `backend/src/types/domain.types.ts` in one PR (SRS §0.5 Mobile) |
+| `types/index.ts` | `Role` still has `OPERATOR`/`SALES_STAFF` and no `DOMAIN_EXPERT`; `AlertType` has `BIRD_PANIC`, `PREDATOR_DETECTED` and lacks `NOISE_ANOMALY`; `FarmMember.role: 'OPERATOR'`; `NotificationPreferences` has `zalo`/`sms` | Align with `backend/src/types/domain.types.ts` in one PR |
 | `services/socket/index.ts` | `on*` helpers have no matching `off*`, so screens cannot clean up | Add `off*` helpers before the first screen subscribes |
-| `services/notification/index.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-013) |
+| `services/notification/index.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-002) |
 | Tooling | No tests yet; `npm run lint` passes with ~44 warnings (UTF-8 BOM at the top of files, `Array<T>` instead of `T[]`) | Write tests with the features; `npx eslint . --fix` clears most warnings |
 | `package.json` | Libraries declared for planned screens but not imported yet (`expo-camera`, `expo-av`, `react-native-maps`, `victory-native` + Skia, `react-native-mmkv`, `burnt`); `@shopify/react-native-skia` is pinned to `~2.0.7` and excluded from `expo install --check` because the SDK's `v2.0.0-next.4` prerelease does not satisfy `victory-native`'s peer range | Drop what the screens end up not using |
-| `app/**` screens | Stubs with `TODO` comments | Implement per SRS §0.5 Mobile |
+| `app/**` screens | Stubs with `TODO` comments | Implement per Report 3 (main flows first: MF-10 setup, alerts, dashboard, live stream) |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. using `BIRD_PANIC` or `SALES_STAFF` in new code).
 

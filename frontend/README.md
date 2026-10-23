@@ -1,14 +1,15 @@
 # SwiftletCare Frontend (Web Dashboard / PWA)
 
-React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Xem `SwiftletCare_SRS.md` §3.2, §9.3.
+React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md), phân quyền §2.4); thiết kế: Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.4). Hai Report thắng `SwiftletCare_SRS.md` khi lệch nhau.
 
-> **Phạm vi v2.0.0 (sau Review 1).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; `SwiftletCare_SRS.md` mục 0 là căn cứ. Việc phải sửa ở web (chi tiết ở SRS mục 0.5):
+> **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa. Việc phải sửa ở web (chỗ lệch theo FR ở `docs/reports/README.md`, quyền theo màn ở `FE_Design_Claude.md` §12.0):
 >
 > - Gỡ `MarketplacePage`, `ListingDetailPage`, route công khai của marketplace, `useMarketplace`, `marketplace.api`; gỡ nốt code `sales-staff/` cũ.
 > - Role `DOMAIN_EXPERT` thay `FARM_OPERATOR`: nhóm role và `MENU_ACCESS` trong `constants/roles.ts`, `DomainExpertLayout` thay `FarmOperatorLayout`, bucket `domain-expert/` cho các trang báo cáo sức khỏe Zone, kiểm chứng cảnh báo, duyệt gợi ý hệ số.
 > - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận của chuyên gia, live stream có khung và số đếm trực tiếp.
-> - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận; Farm Owner chỉ xem.
-> - Bỏ relay sưởi; NH3/CO2 ghi rõ là ngưỡng cảnh báo do chuyên gia đặt; nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
+> - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận, duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010), duyệt đề xuất hệ số (EXPERT-FR-011), vòng đếm và lịch đếm theo mùa; Farm Owner chỉ xem, trừ khi farm chưa có chuyên gia (BR-22).
+> - Thiết lập thiết bị (MF-10): Farm Owner quét nhãn QR và mã QR tầng, xem tiến trình setup; Admin in nhãn QR khi thêm thiết bị vào kho; màn Zone in mã QR tầng. Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician.
+> - Bỏ relay sưởi; NH3/CO2 ghi rõ là ngưỡng cảnh báo của Zone (không điều khiển quạt); nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
 
 ## Chạy local
 

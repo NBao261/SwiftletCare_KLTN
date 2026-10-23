@@ -1,12 +1,13 @@
 # SwiftletCare Mobile
 
-> **Phạm vi v2.0.0 (sau Review 1).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; `SwiftletCare_SRS.md` mục 0 là căn cứ. Việc phải sửa ở mobile (chi tiết ở SRS mục 0.5):
+> **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; yêu cầu là Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md)), thiết kế là Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.4). Việc phải làm ở mobile:
 >
 > - Đồng bộ enum: role `DOMAIN_EXPERT` thay `FARM_OPERATOR`, loại cảnh báo `NOISE_ANOMALY` thay `BIRD_PANIC`; bỏ tùy chọn kênh Zalo/SMS và relay sưởi.
-> - Đăng ký FCM token và nhận push; màn hình live stream có khung; Farm Owner đọc kết luận của chuyên gia.
+> - Thiết lập thiết bị (MF-10): quét nhãn QR của bộ điều khiển và mã QR tầng bằng `expo-camera`, hướng dẫn cài Wi-Fi qua AP-mode, hiện tiến trình setup (đã đăng ký → online → đã áp cấu hình).
+> - Đăng ký FCM token sau khi đăng nhập, huỷ khi đăng xuất, nhận push (ALERT-FR-002); màn hình live stream có khung; Farm Owner đọc kết luận và lịch sử quyết định của chuyên gia.
 > - Domain Expert: tối thiểu xem dashboard và báo cáo sức khỏe Zone; thao tác kiểm chứng/tinh chỉnh ưu tiên làm trên web.
 
-Expo Router (React Native) app cho Farm Owner, Domain Expert và Technician. Đây là "Mobile App" trong phiếu đăng ký bản sửa; SRS v2.0.0 mục 3.2 và 7.6 đã ghi nhận app React Native này (web vẫn là PWA riêng trong `frontend/`).
+Expo Router (React Native) app cho Farm Owner, Domain Expert và Technician. Đây là "Mobile App" trong phiếu đăng ký bản sửa; Report 4 §3.2 khai báo app React Native này (web vẫn là PWA riêng trong `frontend/`).
 
 ## Chạy local
 

@@ -6,7 +6,7 @@
 | **Phiên bản** | 0.2 (khung, chưa điền nguồn) |
 | **Ngày tạo** | 18/10/2026 |
 | **Người phụ trách** | _(tên người giữ file)_ |
-| **Áp dụng cho** | SRS v2.x — yêu cầu EVID-NFR-003 (mục 6.8): mỗi ngưỡng mặc định phải có nguồn trích dẫn hoặc xác nhận của người nuôi yến |
+| **Áp dụng cho** | Report 3 – SRS (`docs/reports/report3-srs.md`: A-3, REF-5, BR-01, mục 4.5) — mỗi ngưỡng mặc định phải có nguồn trích dẫn hoặc xác nhận của người nuôi yến. Cột "Dùng ở đâu" còn trỏ mục của `SwiftletCare_SRS.md` cũ |
 | **Trạng thái** | Đang thu thập |
 
 ---
@@ -235,9 +235,9 @@ SRS ghi các số này là mặc định kỹ thuật, Domain Expert chỉnh đ�
 | KD-53 | Sự cố thiết bị (hỏng loa, bơm cạn, cảm biến sai, mất điện) thường phát hiện muộn | — | SRS §2.1 | | | | Chưa tìm | M4 |
 | KD-54 | Điều kiện pháp lý khi xây và vận hành nhà yến (vị trí, loa phóng thanh…) | — | chưa có trong SRS | | | | Chưa tìm | M4 |
 
-### 5.7. Giả định kỹ thuật đã biết là chưa có nguồn (SRS §0.5)
+### 5.7. Giả định kỹ thuật đã biết là chưa có nguồn (Report 3 §4.5)
 
-Những mốc này SRS đã ghi là do người viết code chọn. Không cần tìm tài liệu nuôi yến cho chúng; cần **số đo thực tế** (mục 6) hoặc xác nhận của nhóm/Domain Expert. Khi có, điền mã `MC-xxx` và cập nhật SRS §0.5 bằng PR riêng.
+Những mốc này SRS đã ghi là do người viết code chọn. Không cần tìm tài liệu nuôi yến cho chúng; cần **số đo thực tế** (mục 6) hoặc xác nhận của nhóm/Domain Expert. Khi có, điền mã `MC-xxx` và cập nhật Report 3 §4.5 bằng PR riêng.
 
 | Mã | Mốc | Giá trị | Ở đâu | Minh chứng (`MC-xxx`) | Kết luận | Trạng thái |
 | --- | --- | --- | --- | --- | --- | --- |

@@ -15,7 +15,7 @@ SwiftletCare_KLTN/
 ├── .github/             # CI (workflows/ci.yml), CODEOWNERS, PR template
 ├── .claude/             # Lệnh /review-pr và cấu hình Claude Code
 ├── docker-compose.yml   # Môi trường dev: MongoDB, EMQX, MinIO, Redis
-├── SwiftletCare_SRS.md  # Đặc tả yêu cầu — mục 0 là phạm vi hiện hành (v2.0.0)
+├── SwiftletCare_SRS.md  # Ghi chú SRS nội bộ; đặc tả chính thức là docs/reports/report3-srs.md
 ├── CLAUDE.md            # Hướng dẫn chung cho mọi module + quy tắc liên module
 ├── README.md            # Giới thiệu, cách chạy local
 └── .commitlintrc.json   # type/scope hợp lệ cho commit message

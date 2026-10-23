@@ -2,7 +2,7 @@
 
 Rules and architecture for `firmware/` (ESP32, PlatformIO + Arduino framework, FreeRTOS). This file wins over the root `CLAUDE.md` for firmware code; `/review-pr` judges firmware changes by it together with `firmware/README.md`. Rule tags: **[Bắt buộc]** = blocking, **[Nên]** = advisory.
 
-Firmware **1.4.0** (`FIRMWARE_VERSION` in `src/config/Config.h`) follows the SRS v2.0.0 scope: the fan depends on temperature + humidity only, no heating relay, PUMP_DRY stops misting, safe state on sensor loss, `NOISE_ANOMALY` instead of `BIRD_PANIC`, detection parameters tunable over MQTT, and (1.4.0) remote `RESTART`/`OTA` with rollback plus reset reason and IP in the heartbeat. It is **built and host-tested only — not yet flashed and exercised on a real board** (see the README for the on-device checks still owed).
+Requirements are Report 3 (`docs/reports/report3-srs.md`), the design Report 4 (`docs/reports/report4-sdd.md` §5.1); they win over `SwiftletCare_SRS.md`. Firmware **1.4.0** (`FIRMWARE_VERSION` in `src/config/Config.h`) follows the Review 1 scope: the fan depends on temperature + humidity only, no heating relay, PUMP_DRY stops misting, safe state on sensor loss, `NOISE_ANOMALY` instead of `BIRD_PANIC`, detection parameters tunable over MQTT, and (1.4.0) remote `RESTART`/`OTA` with rollback plus reset reason and IP in the heartbeat. The firmware runs on a real ESP32 board, but which version and which scenarios were checked on hardware is not recorded yet: write them into `firmware/README.md` (the on-device check list there) before a report or PR claims them. Still missing against Report 3: the configuration version in the heartbeat (ENV-FR-027, `docs/reports/README.md`).
 
 ## Commands (PlatformIO, not npm)
 
@@ -16,7 +16,7 @@ pio run -e modbus_scan                 # standalone RS485 slave-ID/baudrate scan
 
 `pio test -e native` builds only the Arduino-free units (`pid/FuzzyControl`, `pid/PumpDryMonitor`, `sensors/SignalFilter`, `sensors/NoiseAnomalyDetector`, `ota/RemoteCommand`) and needs g++ on PATH (Windows: MinGW, e.g. winget WinLibs). CI (`.github/workflows/ci.yml`, job Firmware) runs it on every PR that touches `firmware/`. `platformio.ini` envs: `esp32dev` (default, full firmware), `modbus_scan`, `native`.
 
-Changing WiFi/broker network does **not** need reflashing: the device re-discovers the broker via mDNS (`resolveBrokerViaMdns()` in `mqtt/MQTTManager.cpp`), then falls back to captive-portal entry (`wifi/WiFiProvisioner.h`), then to the compiled `Secrets.h` default.
+Changing WiFi/broker network does **not** need reflashing: the device re-discovers the broker via mDNS (`resolveBrokerViaMdns()` in `mqtt/MQTTManager.cpp`), then falls back to captive-portal entry (`wifi/WiFiProvisioner.h`), then to the compiled `Secrets.h` default. The portal takes only Wi-Fi and the broker address, never farm/house/zone or a key (FARM-FR-003c): a new or moved device boots with its stored identity, and the backend answers its first heartbeat on a wrong topic with `config/reassign`. The device never stores the activation key printed on its label — the backend alone checks it when the Farm Owner scans the label (MF-10, BR-26).
 
 ## Architecture: FreeRTOS, 3 tasks
 
@@ -54,14 +54,14 @@ main.cpp  SensorTask / PIDTask / MQTTTask
 - **[Bắt buộc]** Every runtime parameter arriving over `config/update` is range-checked and clamped on the device, persisted to NVS, and uses the same key name and range as the backend validator; out-of-range values never reach the controller.
 - **[Bắt buộc]** Commands handled per device honour the `deviceId` filter; a new per-device command type follows the same rule.
 - **[Bắt buộc]** The safe state holds: any change to sensor reading, filtering or the control loop keeps "no valid temp/humidity → misting and ventilation off, loop keeps running", and keeps alert/override handling alive.
-- **[Bắt buộc]** NH3/CO2 never feed the fan or any relay (SRS §0.2 #7); no heating relay comes back; nothing new for removed features (predator detection, Zalo/SMS).
-- **[Bắt buộc]** No threshold or timing without a source; a hand-picked engineering constant (like `PUMP_DRY_RETRY_MS`) is added to the unconfirmed-assumptions list at the end of SRS §0.5 in the same PR.
+- **[Bắt buộc]** NH3/CO2 never feed the fan or any relay (Report 3 C-2, ENV-FR-011); no heating relay comes back; nothing new for what Report 3 §8 puts out of scope (predator detection, Zalo/SMS).
+- **[Bắt buộc]** No threshold or timing without a source; a hand-picked engineering constant (like `PUMP_DRY_RETRY_MIN`) is added to Report 3 §4.5 (engineering constants, A-4) in the same PR.
 - **[Bắt buộc]** Logic that can live without Arduino (control, filtering, detection, monitors) stays in plain C++ units and gets `pio test -e native` tests; a behaviour change updates or adds a test that fails without it.
 - **[Bắt buộc]** Telemetry, heartbeat and alert payload fields stay compatible with the backend handlers (`backend/src/mqtt/handlers/*.handler.ts`) and `docs/api/api-spec.yaml`; a field rename or new alert type is made on both sides in the same PR.
 - **[Bắt buộc]** No secrets in the repo: credentials go in `src/config/Secrets.h` (git-ignored; `Secrets.h.example` is the template).
 - **[Bắt buộc]** Bump `FIRMWARE_VERSION` with a one-line note when behaviour visible to the backend or the house changes.
 - **[Nên]** FreeRTOS tasks never block on the network; shared state between tasks is protected (mutex/queue) rather than read half-written.
-- **[Nên]** Comments explain *why* (SRS FR code, physical reason), not what the code does.
+- **[Nên]** Comments explain *why* (FR code from Report 3, physical reason), not what the code does.
 
 ## Before opening a PR
 

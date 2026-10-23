@@ -1,14 +1,15 @@
 # frontend/CLAUDE.md
 
-Map of `frontend/` (React 18 + Vite + TailwindCSS dashboard/PWA) **as the code is today**. The rules — design tokens, components, i18n, mock data, folder placement, file naming, code rules tagged **[Bắt buộc]**/**[Nên]**, known debt and the PR checklist — live in **`frontend/FE_Design_Claude.md`**, which is the first rule source for this module and describes the **target** structure under SRS v2.0.0. When this file and FE_Design disagree, FE_Design wins for rules and target; this file wins for "what exists now".
+Map of `frontend/` (React 18 + Vite + TailwindCSS dashboard/PWA) **as the code is today**. The rules — design tokens, components, i18n, mock data, folder placement, file naming, code rules tagged **[Bắt buộc]**/**[Nên]**, known debt and the PR checklist — live in **`frontend/FE_Design_Claude.md`**, which is the first rule source for this module and describes the **target** structure. What the product must do is Report 3 (`docs/reports/report3-srs.md`; roles and permissions §2.4) and Report 4 (`docs/reports/report4-sdd.md` §5.4); they win over `SwiftletCare_SRS.md`. When this file and FE_Design disagree, FE_Design wins for rules and target; this file wins for "what exists now".
 
 ## Scope gap — read this first
 
-The frontend still follows the SRS v1.24.0 scope while the backend already follows v2.0.0:
+The frontend still follows the SRS v1.24.0 scope while the backend already follows the Review 1 scope and Report 3:
 
 - Roles in the code are `ADMIN | FARM_OWNER | TECHNICIAN | SALES_STAFF` (`types/common.types.ts`). There is **no** Farm Operator and **no** `DOMAIN_EXPERT` code yet; the backend role is `DOMAIN_EXPERT`.
 - `sales-staff/` code (`pages/sales-staff/SalesStaffHomePage.tsx`, `routes/sales-staff.routes.tsx`, `SalesStaffLayout`), the marketplace screens (`MarketplacePage`, `ListingDetailPage`, `useMarketplace`, `marketplace.api`, listing panels under `features/farm-owner/harvest/`), the heating relay toggle and `BIRD_PANIC` labels are still in the code, although the backend no longer serves them.
-- These are FE_Design §13.14 known debt: **only remove or replace them** (SRS §0.5 Web), never extend them. New role work follows FE_Design §12 (bucket `domain-expert/`, `DomainExpertLayout`, role groups in §12.8).
+- These are FE_Design §13.14 known debt: **only remove or replace them**, never extend them (Report 3 §8 puts them out of scope).
+- Report 3 also moves device setup to the Farm Owner (MF-10: scan the device label and the floor QR code, setup progress; Admin prints labels, the zone screen prints floor codes — FE_Design §12.0 c rows 5b and 10) and removes threshold and coefficient editing from Technician screens (row 9). Open gaps are in `docs/reports/README.md`. New role work follows FE_Design §12 (bucket `domain-expert/`, `DomainExpertLayout`, role groups in §12.8).
 
 ## Commands
 

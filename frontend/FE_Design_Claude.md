@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.8.0 · **Cập nhật:** 17/10/2026 · **Thay thế:** v2.7.0 · **Theo:** SRS v2.0.0 (mục 0)
+**Phiên bản:** 2.8.0 · **Cập nhật:** 17/10/2026 · **Thay thế:** v2.7.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -90,7 +90,7 @@
 
 ### v2.5.0 → v2.6.0 (theo SRS v2.0.0, sau Review 1)
 
-> Khi file này mâu thuẫn với `SwiftletCare_SRS.md` mục 0, mục 0 thắng và file này phải sửa theo.
+> Khi file này mâu thuẫn với Report 3 (`docs/reports/report3-srs.md`, yêu cầu) hoặc Report 4 (`docs/reports/report4-sdd.md`, thiết kế), hai Report thắng và file này phải sửa theo. `SwiftletCare_SRS.md` từ Review 2 chỉ còn là ghi chú nội bộ.
 
 | # | Thay đổi |
 |---|---|
@@ -778,7 +778,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 - Màn hiển thị dữ liệu giả phải có dòng nhãn 5.4 và có dòng trong bảng dưới.
 - Khi backend có API thật: xoá file trong `src/data/` và dòng import, đổi trạng thái trong bảng.
 
-Đối chiếu SRS (cột "Trạng thái Backend") + backend thật trước khi bỏ nhãn. Bảng chi tiết:
+Đối chiếu Report 3, danh sách chỗ lệch ở `docs/reports/README.md` và backend thật trước khi bỏ nhãn. Bảng chi tiết:
 
 | Màn hình | FR liên quan | Trạng thái | Cần nhãn? |
 |---|---|---|---|
@@ -793,7 +793,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Cấu hình ngưỡng mặc định hệ thống (Admin) | SYSTEM-FR-002 | ✅ Đã code (`GET/PUT /system/settings/default-thresholds`) | Không |
 | Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ✅ Đã code (`GET /system/health-overview`) | Không |
 | ~~Đăng bán/Truy xuất nguồn gốc (Marketplace)~~ | MARKET-FR-006..013 | ❌ Bỏ ở SRS v2.0.0 — gỡ các trang này; chỉ giữ ghi nhận thu hoạch (MARKET-FR-001..005) | — |
-| Thông báo ngoài ứng dụng: Telegram bot hoặc push (SRS v2.0.0 bỏ Zalo/SMS) | ALERT-FR-002/013 | 🟡 chưa nối kênh nào | Có (màn cấu hình kênh) |
+| Thông báo ngoài ứng dụng: Telegram bot và push FCM, cả hai (Report 3; Zalo/SMS ngoài phạm vi) | ALERT-FR-002/013 | 🟡 backend gửi Telegram thật, FCM mới ghi log | Có (màn cấu hình kênh) |
 | Báo cáo sức khỏe Zone, kiểm chứng cảnh báo, kết luận của chuyên gia | EXPERT-FR-003..006 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
 | Lịch sử can thiệp tay, tỷ lệ thời gian tự động | ENV-FR-019, ANALYTICS-FR-011 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
 | Live stream có khung trên từng con chim | VISION-FR-013/014 | ⬜ Chưa cài | **Có** |
@@ -802,7 +802,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
 | Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
 
-*Giới hạn:* bảng này là ảnh chụp tại v2.4.0 (SRS v1.21.0). Nguồn sự thật luôn là cột "Trạng thái Backend" trong `SwiftletCare_SRS.md` §5 — lệch nhau thì tin SRS và sửa bảng này.
+*Giới hạn:* bảng này là ảnh chụp tại v2.4.0 (SRS v1.21.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/README.md` (cột "Trạng thái Backend" của `SwiftletCare_SRS.md` §5 không còn được cập nhật) — lệch nhau thì tin hai nguồn đó và sửa bảng này.
 
 ---
 
@@ -932,9 +932,9 @@ module.exports = {
 
 > Mục này quy định **file mới đặt ở đâu**. Mục 9 nói về tái dùng component giữa các role; mục này nói về vị trí vật lý của file. Hai mục bổ sung cho nhau: tái dùng component (mục 9) nhưng vẫn phải đặt đúng thư mục role sở hữu (mục này).
 
-### 12.0. Bản đồ role — đọc từ SRS (§0.3, §4.1, §4.4)
+### 12.0. Bản đồ role — đọc từ Report 3 (§2.3 vai trò, §2.4 phân quyền)
 
-**4 actor người dùng** (SRS v2.0.0). Luồng chính: Farm Owner + Domain Expert. Luồng phụ (giữ chạy, không mở rộng): Technician + Administrator. Buyer, Sales Staff, Farm Operator đã bỏ. Phía Farm có 3 mức: **Primary Owner** (người tạo farm) · **đồng sở hữu** (Farm Owner được mời) · **Domain Expert** (được mời, chỉ đọc + kiểm chứng + tinh chỉnh). UI của mọi role theo mẫu Farm Owner (1.1).
+**4 actor người dùng** (Report 3 §2.3). Luồng chính: Farm Owner + Domain Expert, gồm cả thiết lập thiết bị bằng QR (MF-10). Luồng phụ (giữ chạy, không mở rộng): Technician + Administrator. Buyer, Sales Staff, Farm Operator đã bỏ. Phía Farm có 3 mức: **Primary Owner** (người tạo farm) · **đồng sở hữu** (Farm Owner được mời) · **Domain Expert** (được mời, chỉ đọc + kiểm chứng + tinh chỉnh). UI của mọi role theo mẫu Farm Owner (1.1).
 
 **a) Ai nắm quyền gì** (R = thực hiện, A = quyết định cuối/can thiệp, I = chỉ xem/được báo, – = không có)
 
@@ -942,14 +942,16 @@ module.exports = {
 |---|:---:|:---:|:---:|:---:|
 | Dashboard môi trường, Analytics, đếm chim, live stream | R | I (chỉ đọc) | – | – |
 | Báo cáo sức khỏe Zone | R | R | – | – |
-| Xác nhận (acknowledge) cảnh báo | R | – | – | – |
-| Kiểm chứng cảnh báo suy luận, viết kết luận | I (đọc kết luận) | R | – | – |
-| Can thiệp tay relay có thời hạn | R | – | R (khắc phục) | – |
+| Xác nhận (acknowledge) cảnh báo | R | – | R (chỉ cảnh báo gắn ticket mình đang giữ) | – |
+| Kiểm chứng cảnh báo suy luận, viết kết luận | I (đọc kết luận; kiểm chứng thay khi farm chưa có chuyên gia, BR-22) | R | – | – |
+| Can thiệp tay relay có thời hạn | R | – | R (chỉ khi đang giữ ticket mở của farm) | – |
 | Ngưỡng Zone, reset mặc định | R | R | – | I |
-| Hệ số logic mờ | R | R (duyệt gợi ý) | R (hiện trường) | I |
-| Tham số phát hiện (EXPERT-FR-008) | I | R | – | I |
+| Hệ số logic mờ | R (áp gợi ý chỉ khi farm chưa có chuyên gia) | R (duyệt thay đổi của chủ farm, áp gợi ý) | – | I |
+| Tham số phát hiện, vòng đếm, lịch đếm theo mùa | I (R khi farm chưa có chuyên gia, BR-22) | R | – | I |
 | Ticket: tạo · xử lý · can thiệp | R (tạo, chat, huỷ, đánh giá) | – | R (xử lý, chat) | A (mọi ticket) |
-| Kích hoạt / dời / gỡ thiết bị, OTA, file loa | – (chỉ xem) | – | R | I |
+| Đăng ký thiết bị bằng nhãn QR, gán Zone bằng mã QR tầng, dời, gỡ (MF-10) | R | – | R (khi có ticket lắp đặt) | – |
+| Lệnh từ xa, OTA, file loa | – (chỉ xem) | – | R | I |
+| Kho thiết bị: thêm, in nhãn QR, cấp lại/thu hồi khoá | – | – | – | R |
 | Cấu trúc Farm (Farm/House/Zone) | R (farm mình) | I | R (trong `assigned_regions`) | A (toàn bộ) |
 | Xoá farm, đổi `region`, mời/gỡ thành viên | R (chỉ Primary Owner) | – | – | I |
 | Ghi nhận thu hoạch | R | I | – | – |
@@ -961,6 +963,7 @@ module.exports = {
 ```
 Farm Owner (luồng chính — UI MẪU)
 ├── Riêng:     /dashboard · /analytics · /vision · /harvests (ghi) · /support + /support/chi-tiet (⏳)
+├── Thiết lập thiết bị (MF-10, mobile là chính; web là đích): quét nhãn, quét mã tầng, tiến trình setup, in mã tầng
 ├── Dùng chung với Domain Expert (Domain Expert chỉ đọc, ẩn nút ghi bằng usePermission):
 │              /dashboard · /analytics · /vision · /stream/:id · /harvests (xem) · báo cáo sức khỏe Zone (đích)
 ├── Dùng chung với Technician (trang thuộc technician/, mở bằng OPS_ROLES):
@@ -973,9 +976,10 @@ Domain Expert (luồng chính — CHƯA CÓ CODE FE, backend đã có)
     KHÔNG BAO GIỜ: relay, lịch loa, ticket, ghi thu hoạch, acknowledge cảnh báo, sửa/xoá farm, mời thành viên
 
 Technician (luồng phụ)
-├── Riêng:     /tickets + /tickets/:id (xử lý, SAT) · /onboarding · /ota · /maintenance
+├── Riêng:     /tickets + /tickets/:id (xử lý, SAT) · /ota · /maintenance
+├── Cùng bước với Farm Owner khi có ticket lắp đặt: /onboarding (MF-10)
 ├── Dùng chung với Farm Owner: /devices · /alerts · /farms (lọc theo assigned_regions)
-└── KHÔNG xem Dashboard/Analytics môi trường (SRS §4.4 ghi chú ⁵)
+└── KHÔNG xem Dashboard/Analytics môi trường (Report 3 FARM-FR-009)
 
 Administrator (luồng phụ)
 ├── Riêng:     /system/health · /system/devices · /system/farms(…) · /system/tickets(…) · /users
@@ -986,20 +990,23 @@ Administrator (luồng phụ)
 Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile/) — thiết kế riêng, không theo 1.1
 ```
 
-**c) Kiểm tra luồng (BA) — code hiện tại so với SRS §4.4** — cập nhật mỗi khi sửa route/quyền
+**c) Kiểm tra luồng (BA) — code hiện tại so với Report 3 §2.4** — cập nhật mỗi khi sửa route/quyền
 
-| # | Chỗ | Code hiện tại | SRS | Việc cần làm |
+| # | Chỗ | Code hiện tại | Report 3 | Việc cần làm |
 |---|---|---|---|---|
 | 1 | Domain Expert | Chưa có role `DOMAIN_EXPERT`, layout, route; còn `SALES_STAFF` | Luồng chính | Thêm role theo checklist 12.10; gỡ Sales Staff (13.14) |
 | 2 | `/dashboard`, `/analytics`, `/vision` | `FARM_OWNER_ONLY` | Farm Owner + Domain Expert (chỉ đọc) | Đổi sang `FARM_SIDE_ROLES` khi thêm Domain Expert |
 | 3 | `/stream/:id` | `OPS_ROLES` (có Technician, Admin) | Chỉ Farm Owner + Domain Expert | Thu hẹp quyền route |
 | 4 | `/harvests` | `HARVEST_ROLES` (Farm Owner + Admin) | Farm Owner R, Domain Expert I, Admin – | Bỏ Admin, thêm Domain Expert chỉ xem |
-| 5 | `/onboarding`, `/ota`, `/maintenance` | `OPS_ROLES` (Farm Owner vào được) | Chỉ Technician (Admin I) | Tạo nhóm quyền riêng cho Technician |
+| 5 | `/ota`, `/maintenance` | `OPS_ROLES` (Farm Owner vào được) | Chỉ Technician (Admin I) | Tạo nhóm quyền riêng cho Technician |
+| 5b | `/onboarding` | Màn nhập tay Device ID + khoá của Technician | Farm Owner + Technician, quét nhãn QR và mã QR tầng (MF-10, FARM-FR-003…012) | Thêm quét QR (`html5-qrcode`) và tiến trình setup; mobile là nơi làm chính |
 | 6 | `/tickets` (màn Technician) | `OPS_ROLES` — Farm Owner đang dùng màn này; `/support` riêng của Farm Owner ⏳ | Farm Owner chỉ tạo/theo dõi | Khi `/support` merge: bỏ Farm Owner khỏi `/tickets` |
-| 7 | `/alerts` | `OPS_ROLES`, ai cũng có nút xác nhận | Chỉ Farm Owner acknowledge | Ẩn nút xác nhận với Technician/Admin bằng `usePermission` |
-| 8 | `/marketplace`, `/marketplace/:id` | Còn route công khai | Đã bỏ (§0.2 #1) | Gỡ (13.14) |
+| 7 | `/alerts` | `OPS_ROLES`, ai cũng có nút xác nhận | Farm Owner; Technician chỉ cảnh báo gắn ticket mình giữ; Admin không | Ẩn nút xác nhận với Admin, và với Technician khi cảnh báo không gắn ticket của họ |
+| 8 | `/marketplace`, `/marketplace/:id` | Còn route công khai | Ngoài phạm vi (Report 3 §8) | Gỡ (13.14) |
+| 9 | Sửa ngưỡng / hệ số mờ ở màn Technician (`ThresholdsModal`) | Technician sửa được | Chỉ Farm Owner + Domain Expert của farm (ENV-FR-006, 021) | Gỡ chỗ sửa khỏi màn Technician |
+| 10 | Kho thiết bị (Admin) | Trả khoá một lần, chưa in nhãn | Admin in nhãn QR ngay khi thêm (FARM-FR-010); màn Zone in mã QR tầng (FARM-FR-011) | Sinh QR ở client bằng `qrcode`, định dạng ở Report 4 §5.4 |
 
-Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao diện đang mở rộng hơn SRS. Mỗi dòng sửa trong PR của role sở hữu màn đó.
+Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao diện đang lệch với Report 3. Mỗi dòng sửa trong PR của role sở hữu màn đó.
 
 ### 12.1. Nguyên tắc
 
@@ -1152,7 +1159,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 ### 12.8. Checklist khi thêm một màn hình mới
 
 1. Màn này thuộc nghiệp vụ role nào? → tạo `pages/<role>/<Role><ChứcNăng>Page.tsx`, tên hàm trùng tên file.
-2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts`, chọn theo bảng phân quyền SRS 4.4:
+2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts`, chọn theo bảng phân quyền Report 3 §2.4:
 
    | Nhóm | Gồm | Dùng cho | Trạng thái |
    |---|---|---|---|

@@ -6,7 +6,7 @@ Hệ thống IoT tự động điều khiển vi khí hậu và giám sát sức
 
 [![CI](https://github.com/NBao261/SwiftletCare_KLTN/actions/workflows/ci.yml/badge.svg)](https://github.com/NBao261/SwiftletCare_KLTN/actions/workflows/ci.yml)
 
-> Phạm vi hiện hành là **SRS v2** (phiếu đăng ký bản sửa sau Review 1) — xem [`SwiftletCare_SRS.md`](./SwiftletCare_SRS.md) mục 0. Những gì còn phải làm theo từng module nằm ở SRS mục 0.5.
+> Yêu cầu chính thức là **Report 3 – SRS** ([`docs/reports/report3-srs.md`](./docs/reports/report3-srs.md)), thiết kế là **Report 4 – SDD** ([`docs/reports/report4-sdd.md`](./docs/reports/report4-sdd.md)), theo phiếu đăng ký bản sửa sau Review 1. Những chỗ code còn lệch với Report 3 nằm ở [`docs/reports/README.md`](./docs/reports/README.md). `SwiftletCare_SRS.md` chỉ còn là ghi chú nội bộ.
 
 ---
 
@@ -34,13 +34,15 @@ Luồng chính của hệ thống:
 2. **Đếm chim ra/vào** — camera tại cửa ra vào, model YOLO26n + ByteTrack đếm chim và phát live stream có khung nhận diện.
 3. **Giám sát sức khỏe đa nguồn có chuyên gia tham gia** — kết hợp dữ liệu môi trường, khí, tiếng ồn và số chim; Domain Expert kiểm chứng cảnh báo và viết kết luận cho chủ nhà yến.
 
+Report 3 chia thành 10 luồng chính (MF-01…10), gồm cả việc chủ nhà yến tự gắn bộ điều khiển vào tầng bằng hai lần quét QR (MF-10).
+
 Vai trò người dùng:
 
 | Vai trò | Việc chính |
 |---|---|
-| Farm Owner | Theo dõi nhà yến, điều khiển tay khi cần, nhận cảnh báo, ghi nhận thu hoạch, mời thành viên |
-| Domain Expert | Chuyên gia nuôi yến: kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và hệ số điều khiển, viết kết luận báo cáo sức khỏe (chỉ đọc phần vận hành) |
-| Technician | Lắp đặt, bảo trì thiết bị, xử lý ticket kỹ thuật |
+| Farm Owner | Theo dõi nhà yến, tự lắp và gán thiết bị bằng QR, điều khiển tay khi cần, nhận cảnh báo, ghi nhận thu hoạch, mời thành viên; quyết thay chuyên gia khi farm chưa có chuyên gia |
+| Domain Expert | Chuyên gia nuôi yến: kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và hệ số điều khiển, duyệt thay đổi của chủ farm, viết kết luận báo cáo sức khỏe (chỉ đọc phần vận hành); mọi quyết định đều báo cho chủ farm |
+| Technician | Lắp đặt khi chủ farm yêu cầu qua ticket, bảo trì thiết bị, cập nhật firmware từ xa, xử lý ticket kỹ thuật |
 | Admin | Quản trị tài khoản, cấu hình hệ thống, giám sát toàn cục |
 
 ## Tính năng chính
@@ -54,9 +56,13 @@ Vai trò người dùng:
 
 **Cảnh báo và giám sát**
 - Cảnh báo vượt ngưỡng, thiết bị mất kết nối, bơm khô, tiếng ồn bất thường, cảm biến bất thường, dự báo sắp vượt ngưỡng (60 phút tới); NH3/CO2 chỉ cảnh báo, không điều khiển quạt.
-- Gửi cảnh báo ngoài ứng dụng qua **Telegram bot**; khử trùng lặp theo sự cố, tự đóng khi sự cố qua.
+- Gửi cảnh báo ngoài ứng dụng qua **Telegram bot** và **push FCM** (Telegram đã gửi thật, FCM đang làm); khử trùng lặp theo sự cố, tự đóng khi sự cố qua.
 - Domain Expert xác nhận hoặc bác bỏ cảnh báo suy luận; báo cáo sức khỏe Zone tự tổng hợp hằng tuần, chuyên gia viết kết luận.
 - Dashboard thời gian thực qua Socket.io, biểu đồ và phân tích hiệu quả điều khiển.
+
+**Thiết lập thiết bị (MF-10)**
+- Chủ farm quét nhãn QR trên bộ điều khiển (Device ID + mã kích hoạt) và mã QR dán ở tầng trong app mobile; cài Wi-Fi qua AP-mode, không nạp lại firmware; không phải nhập farm/zone trên thiết bị — backend tự gửi định danh đúng khi nhận heartbeat.
+- Dời bộ điều khiển sang tầng khác từ xa, lịch sử dữ liệu đi theo thiết bị.
 
 **Vận hành (luồng phụ)**
 - Ticket kỹ thuật có SLA, tự định tuyến, lịch hẹn trong khung 07:00–18:00, checklist nghiệm thu; bảo trì định kỳ tự sinh ticket.
@@ -96,12 +102,12 @@ Sơ đồ chi tiết (draw.io): [`docs/diagrams/`](./docs/diagrams/). Hợp đ�
 
 ## Trạng thái phát triển
 
-Trạng thái chi tiết theo từng yêu cầu (FR) nằm ở cột "Trạng thái Backend" trong SRS mục 5.
+Những yêu cầu của Report 3 mà code chưa đáp ứng được liệt kê theo từng FR ở [`docs/reports/README.md`](./docs/reports/README.md) (mục "Chỗ lệch") và Report 4 mục 12.
 
 | Module | Trạng thái |
 |---|---|
-| `backend/` | Theo SRS v2. Đủ các module AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, System, Harvest, Expert. Còn thiếu phần nhận số đếm chim (handler MQTT mới ghi log). |
-| `firmware/` | Bản 1.3.0 theo SRS v2; đã build và chạy unit test trên máy tính, **chưa nạp và thử trên board thật**. |
+| `backend/` | Đủ các module AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, System, Harvest, Expert và phần nhận số đếm chim. Còn thiếu các yêu cầu mới của Report 3: quyền theo §2.4, Farm Owner tự setup thiết bị, `DISMISSED`, duyệt thay đổi của chủ farm, đồng bộ cấu hình, lịch đếm theo mùa, push FCM thật… |
+| `firmware/` | Bản 1.4.0 (thêm khởi động lại và OTA từ xa có rollback); đã chạy trên board ESP32 thật, nhưng chưa ghi lại kịch bản nào đã thử. Chưa gửi version cấu hình trong heartbeat (ENV-FR-027). |
 | `frontend/` | Chạy được nhưng còn theo phạm vi cũ (v1.24): chưa có màn hình Domain Expert, còn Marketplace và relay sưởi cần gỡ. |
 | `mobile/` | Khung ứng dụng; phần lớn màn hình chưa làm. |
 | `ai-pipeline/` | Khung code; đang làm theo [`docs/bird-counting-plan.md`](./docs/bird-counting-plan.md). Chưa có model. |
@@ -115,10 +121,10 @@ SwiftletCare_KLTN/
 ├── mobile/               # Ứng dụng di động
 ├── firmware/             # ESP32: cảm biến, điều khiển, MQTT, loa ru
 ├── ai-pipeline/          # Đếm chim yến (YOLO26n + ByteTrack)
-├── docs/                 # API spec, phần cứng, sơ đồ, kế hoạch, checklist
+├── docs/                 # Report 3–4 (SRS, SDD), API spec, database script, phần cứng, sơ đồ, kế hoạch
 ├── .github/              # CI, CODEOWNERS, PR template
 ├── docker-compose.yml    # Môi trường dev
-└── SwiftletCare_SRS.md   # Đặc tả yêu cầu
+└── SwiftletCare_SRS.md   # Ghi chú SRS nội bộ (đặc tả chính thức: docs/reports/report3-srs.md)
 ```
 
 Mỗi module là một project độc lập, không import code của nhau; chúng giao tiếp qua REST, Socket.io và MQTT. Chi tiết từng thư mục: [`docs/FOLDER_STRUCTURE.md`](./docs/FOLDER_STRUCTURE.md).
@@ -223,7 +229,11 @@ Chi tiết quy trình Git của nhóm: [`docs/github-setup.md`](./docs/github-se
 
 | Tài liệu | Nội dung |
 |---|---|
-| [`SwiftletCare_SRS.md`](./SwiftletCare_SRS.md) | Đặc tả yêu cầu — mục 0 là phạm vi hiện hành, mục 5 là trạng thái từng FR |
+| [`docs/reports/report3-srs.md`](./docs/reports/report3-srs.md) | **Report 3 – SRS**: yêu cầu chính thức (FR, BR, NFR, vòng đời, truy vết) |
+| [`docs/reports/report4-sdd.md`](./docs/reports/report4-sdd.md) | **Report 4 – SDD**: kiến trúc, công nghệ, quyết định thiết kế, ERD, giao diện, sơ đồ trạng thái và hoạt động |
+| [`docs/reports/README.md`](./docs/reports/README.md) | Trạng thái hồ sơ Review 2, chỗ code còn lệch với Report 3, bản nháp BM03 |
+| [`docs/database/init.mongo.js`](./docs/database/init.mongo.js) | Database script (sinh từ model bằng `npm run db:script`) |
+| [`SwiftletCare_SRS.md`](./SwiftletCare_SRS.md) | Ghi chú SRS nội bộ (tiếng Việt): lịch sử phạm vi, mô tả luồng chi tiết — không còn là đặc tả chính thức |
 | [`docs/api/`](./docs/api/README.md) | OpenAPI spec và hướng dẫn xem API |
 | [`docs/FOLDER_STRUCTURE.md`](./docs/FOLDER_STRUCTURE.md) | Cấu trúc thư mục, file nào đặt ở đâu |
 | [`docs/hardware/`](./docs/hardware/) | BOM, hướng dẫn linh kiện và đấu nối |
