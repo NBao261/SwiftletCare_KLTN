@@ -15,10 +15,12 @@ interface ScopeFilterProps {
 // Khung lọc chung các trang Farm Owner: 1 khung bo tròn chứa ô Nhà và ô Zone; chọn nhà thì Zone mặc định "Tất cả Zone"
 export default function ScopeFilter({ scope, lockZone = false, issueZoneIds }: ScopeFilterProps): JSX.Element {
   const { t } = useTranslation(dashboardDict);
-  const houseOptions = [
-    { value: '', label: t('page.allHouses') },
-    ...scope.houses.map(house => ({ value: house._id, label: house.name })),
-  ];
+  // Nhiều farm: "Tất cả · <farm>" và "<nhà> · <farm>" để phân biệt nhà trùng tên ở 2 farm
+  const houseOptions = scope.houseOptions.map(option => {
+    let label = option.houseName || t('page.allHouses');
+    if (scope.isMultiFarm) label = option.houseName ? t('scope.houseInFarm', { house: option.houseName, farm: option.farmName }) : t('scope.allInFarm', { farm: option.farmName });
+    return { value: option.value, label };
+  });
   // Ô Zone khoá ở "Tất cả Zone" khi trang chỉ tính theo nhà hoặc đang chọn tất cả nhà
   const isZoneLocked = lockZone || !scope.houseId;
   const zoneOptions = [
@@ -34,10 +36,10 @@ export default function ScopeFilter({ scope, lockZone = false, issueZoneIds }: S
     >
       <SelectMenu
         ariaLabel={t('page.houseLabel')}
-        value={scope.houseId}
+        value={scope.houseValue}
         options={houseOptions}
         onChange={scope.setHouseId}
-        className="h-9 w-40 justify-between"
+        className={cn('h-9 justify-between', scope.isMultiFarm ? 'w-60' : 'w-40')}
       />
       <SelectMenu
         ariaLabel={t('scope.zoneLabel')}

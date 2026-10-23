@@ -12,6 +12,8 @@ interface ZoneState {
   // Đổi nhà thì Zone về "Tất cả Zone"
   setHouse: (houseId: string) => void
   setScopeZone: (zoneId: string) => void
+  // Đổi farm ở khung lọc: bỏ lọc nhà, Zone và Zone đang xem của farm cũ
+  setFarm: (farmId: string, farmName: string) => void
   /**
    * Farm luôn đi kèm Zone vì chọn Zone là đi qua cascade Farm→House→Zone — biết
    * sẵn farmId lúc đó tránh các trang khác (Harvest/Ticket/Analytics So sánh
@@ -33,6 +35,8 @@ export const useZoneStore = create<ZoneState>()(
       scopeZoneId: '',
       setHouse: houseId => set({ selectedHouseId: houseId, scopeZoneId: '' }),
       setScopeZone: zoneId => set({ scopeZoneId: zoneId }),
+      setFarm: (farmId, farmName) =>
+        set({ selectedFarmId: farmId, selectedFarmName: farmName, selectedZoneId: null, selectedZoneName: null, selectedHouseId: '', scopeZoneId: '' }),
       setZone: (farmId, farmName, zoneId, zoneName) =>
         set({ selectedFarmId: farmId, selectedFarmName: farmName, selectedZoneId: zoneId, selectedZoneName: zoneName }),
       clearZone: () => set({ selectedFarmId: null, selectedFarmName: null, selectedZoneId: null, selectedZoneName: null, selectedHouseId: '', scopeZoneId: '' }),
