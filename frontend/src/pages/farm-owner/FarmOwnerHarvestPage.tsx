@@ -16,7 +16,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeleteHarvest, useHarvests } from '@/hooks/farm-owner/useHarvests';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
-import { useFarm, useFarmZones } from '@/hooks/shared/useFarms';
+import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { formatStandardDate } from '@/lib/i18n';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
@@ -28,12 +28,14 @@ import { NO_VALUE } from '@/constants/display';
 const CSV_BYTE_ORDER_MARK = String.fromCharCode(0xfeff);
 
 // Tên người theo id: người đang đăng nhập, chủ farm và thành viên farm (đã có tên trong GET /farms/:id)
-function buildPersonNames(farm: Farm | undefined, user: User | null): Map<string, string> {
+function buildPersonNames(farms: Farm[], user: User | null): Map<string, string> {
   const names = new Map<string, string>();
-  for (const member of farm?.members ?? []) {
-    if (member.full_name) names.set(member.user_id, member.full_name);
+  for (const farm of farms) {
+    for (const member of farm.members ?? []) {
+      if (member.full_name) names.set(member.user_id, member.full_name);
+    }
+    if (farm.owner?.full_name) names.set(farm.owner_id, farm.owner.full_name);
   }
-  if (farm?.owner?.full_name) names.set(farm.owner_id, farm.owner.full_name);
   if (user) names.set(user._id, user.full_name);
   return names;
 }
@@ -70,14 +72,17 @@ function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>
 // Trang Thu hoạch của Farm Owner — chỉ ghi nhận thu hoạch theo SRS v2 (MARKET-FR-001..005, Flow 7)
 export default function FarmOwnerHarvestPage(): JSX.Element {
   const { t } = useTranslation(harvestDict);
-  // Khung lọc chung các trang Farm Owner, lưu lại khi chuyển trang; trang này chỉ lọc theo nhà (ô Zone khoá xám) nên bỏ Zone đã lưu ở trang khác
+  // Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner, lưu lại khi chuyển trang
+  // Sản lượng nhập theo nhà yến nên trang chỉ lọc tới nhà: ô Zone khoá, bỏ Zone đã lưu ở trang khác
   const scope = { ...useScopeFilter(), zone: undefined };
   const farmId = scope.farmId;
+  // Đợt thu của farm đang lọc, hoặc của mọi farm khi xem tất cả trang trại
   const { data: batches, isLoading, isError, error, refetch } = useHarvests(farmId || undefined);
-  const { data: zones } = useFarmZones(farmId || undefined);
-  const { data: farm } = useFarm(farmId || undefined);
+  const zones = scope.zones;
+  const detailFarmIds = useMemo(() => (farmId ? [farmId] : scope.farms.map(farm => farm._id)), [farmId, scope.farms]);
+  const farmDetails = useFarmDetails(detailFarmIds);
   const user = useAuthStore(state => state.user);
-  const deleteHarvest = useDeleteHarvest(farmId || undefined);
+  const deleteHarvest = useDeleteHarvest();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
 
@@ -90,8 +95,8 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
 
   // Backend lưu lần thu theo Zone; giao diện chỉ hiện nhà yến của Zone đó
   const houseNameByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.houseName])), [zones]);
-  const personNames = useMemo(() => buildPersonNames(farm, user), [farm, user]);
-  // Đợt thu trong phạm vi đang lọc: các Zone của 1 nhà, hoặc cả farm
+  const personNames = useMemo(() => buildPersonNames(farmDetails, user), [farmDetails, user]);
+  // Đợt thu trong phạm vi đang lọc: các Zone của 1 nhà, hoặc cả farm / mọi farm
   const scopedBatches = useMemo(() => {
     const allFarmBatches = batches ?? [];
     if (!scope.houseId) return allFarmBatches;
@@ -102,7 +107,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   const groups = useMemo(() => groupHarvests(scopedBatches), [scopedBatches]);
   const groupByKey = useMemo(() => new Map(groups.map(group => [group.key, group])), [groups]);
 
-  if (!farmId) {
+  if (scope.farms.length === 0) {
     return (
       <EmptyState
         title={t('page.noFarmTitle')}
@@ -174,7 +179,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
       <HarvestStatsCards
         groups={groups}
         zones={zones}
-        farmName={scope.farmName}
+        farmNames={scope.farmNames}
       />
 
       {/* Bảng lần thu bên trái (8/12), phân bổ theo loại tổ bên phải (4/12); màn xl khoá cứng chiều cao 2 khung (556px), màn hẹp xếp chồng */}

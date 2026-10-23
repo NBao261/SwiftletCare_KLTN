@@ -1,10 +1,11 @@
 import type { ComponentType, SVGProps } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useAlertStore } from '@/stores/alertStore'
 import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
 import { useCanScrollDown } from '@/hooks/common/useCanScrollDown'
 import { cn } from '@/lib/cn'
+import { menuLinkState } from '@/lib/navigationState'
 import { IconLogout } from '@/components/ui/icons'
 import { ROLE_LABEL } from '@/constants/roles'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
@@ -42,6 +43,8 @@ export default function AppSidebar({
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
   const expertPendingCount = isExpert ? (expertAlerts?.length ?? 0) : 0
   const askLogout = useLogoutConfirmStore(s => s.ask)
+  // Trang hiện tại: ở trang con của 1 mục menu thì link mục đó mang state đi lên
+  const { pathname } = useLocation()
   const navigationLabel = useNavigationLabel()
   const { scrollRef, contentRef, canScrollDown } = useCanScrollDown<HTMLElement, HTMLDivElement>()
 
@@ -83,6 +86,7 @@ export default function AppSidebar({
                         <NavLink
                           key={item.path}
                           to={item.path}
+                          state={menuLinkState(item.path, pathname)}
                           className={({ isActive }) =>
                             cn(
                               'flex items-center gap-2 rounded-full px-3 text-sm transition-colors',
@@ -146,6 +150,7 @@ export default function AppSidebar({
             <NavLink
               key={item.path}
               to={item.path}
+              state={menuLinkState(item.path, pathname)}
               aria-label={navigationLabel(item.label)}
               className={({ isActive }) =>
                 cn(

@@ -1,14 +1,15 @@
+import { useState } from 'react'
 import { CheckCircleIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
-import { SUPPORT_PATH, supportCreateState } from '@/components/features/farm-owner/tickets/tickets.constants'
 import { usePermission } from '@/hooks/common/usePermission'
 import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceCounts, DeviceRow } from '@/components/features/farm-owner/farms/farmStructure'
+import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
 
 interface AttentionDevicesCardProps {
   counts: DeviceCounts
@@ -26,6 +27,8 @@ export default function AttentionDevicesCard({ counts, problems, zoneNameById, o
   const navigate = useNavigate()
   // Ticket của Farm Owner ở /support (mở sẵn form báo sự cố); Technician/Admin vẫn dùng màn /tickets
   const isFarmOwner = usePermission('FARM_OWNER')
+  // Popup yêu cầu hỗ trợ mở tại chỗ (không chuyển sang trang Yêu cầu hỗ trợ); undefined = đóng
+  const [supportDefaults, setSupportDefaults] = useState<CreateSupportDefaults>()
   const readiness = counts.total > 0 ? (counts.online / counts.total) * 100 : 0
 
   return (
@@ -57,13 +60,14 @@ export default function AttentionDevicesCard({ counts, problems, zoneNameById, o
                 </span>
               </span>
             </button>
-            <Button variant="secondary" size="sm" className={cn('h-8 self-start px-3.5 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => (isFarmOwner ? navigate(SUPPORT_PATH, { state: supportCreateState('fault', { zoneId: d.zoneId }) }) : navigate('/tickets'))}>
+            <Button variant="secondary" size="sm" className={cn('h-8 self-start px-3.5 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => (isFarmOwner ? setSupportDefaults({ kind: 'fault', zoneId: d.zoneId }) : navigate('/tickets'))}>
               {t('attn.report')}
             </Button>
           </div>
         ))
       )}
       {problems.length > MAX_LISTED && <p className="text-small text-warmGray">{t('attn.more', { n: problems.length - MAX_LISTED })}</p>}
+      <CreateSupportTicketModal open={supportDefaults !== undefined} defaults={supportDefaults} onClose={() => setSupportDefaults(undefined)} />
     </FarmFrame>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildFarmStructure, detectBreaches, isNameTaken, mergeMetrics, wifiQuality, type StructureInput, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
+import { buildFarmStructure, detectBreaches, isNameTaken, mergeMetrics, summarizeScope, wifiQuality, type StructureInput, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import { translate } from '@/lib/i18n'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { Alert, CameraNode, Farm, HarvestBatch, House, SensorNode, Thresholds, Zone } from '@/types'
@@ -156,5 +156,20 @@ describe('isNameTaken', () => {
   it('đổi tên giữ nguyên tên cũ thì không tính là trùng', () => {
     expect(isNameTaken('Nhà chính', ['Nhà chính', 'Nhà phụ'], 'Nhà chính')).toBe(false)
     expect(isNameTaken('Nhà phụ', ['Nhà chính', 'Nhà phụ'], 'Nhà chính')).toBe(true)
+  })
+})
+
+describe('summarizeScope', () => {
+  it('cộng các nhà; lọc 1 Zone thì thiết bị của Zone đó, sản lượng của cả nhà', () => {
+    const structure = buildFarmStructure(input({ harvests: [batch('b1', 'zB', '2026-10-05T00:00:00+07:00', 500, 10)] }))
+    const houseTotals = summarizeScope(structure.houses, undefined, new Date('2026-10-10T05:00:00Z'))
+    expect(houseTotals.houses).toBe(1)
+    expect(houseTotals.zones).toBe(2)
+    expect(houseTotals.monthKg).toBe(0.5)
+    expect(houseTotals.monthLastBatchAt).toBe('2026-10-05T00:00:00+07:00')
+    const zoneTotals = summarizeScope(structure.houses, structure.zoneById.get('zA'), new Date('2026-10-10T05:00:00Z'))
+    expect(zoneTotals.zones).toBe(1)
+    expect(zoneTotals.counts).toEqual(structure.zoneById.get('zA')?.counts)
+    expect(zoneTotals.monthKg).toBe(0.5)
   })
 })

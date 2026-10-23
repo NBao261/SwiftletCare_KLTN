@@ -16,13 +16,13 @@ interface FarmKpiRowProps {
   showYield: boolean;
 }
 
-// Hàng KPI chế độ "Tất cả nhà yến": số liệu chung của mọi nhà trong trang trại đang chọn
+// Hàng KPI chế độ "Tất cả nhà yến": số liệu chung của mọi nhà trong trang trại đang chọn ('' = mọi trang trại)
 export default function FarmKpiRow({ farmId, totals, showYield }: FarmKpiRowProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   const { t: translateLevel } = useTranslation(levelDict);
   // Yêu cầu hỗ trợ chưa hoàn tất của trang trại = tổng − đã đóng (đếm bằng meta.total, limit=1)
-  const allTickets = useTicketsList({ farmId, limit: 1 });
-  const closedTickets = useTicketsList({ farmId, status: 'CLOSED', limit: 1 });
+  const allTickets = useTicketsList({ farmId: farmId || undefined, limit: 1 });
+  const closedTickets = useTicketsList({ farmId: farmId || undefined, status: 'CLOSED', limit: 1 });
   const openTickets = Math.max(0, allTickets.total - closedTickets.total);
   const isTicketsLoading = allTickets.isLoading || closedTickets.isLoading;
 

@@ -5,15 +5,16 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { summarizeStability, type HouseStability, type StabilityStatus } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import { cn } from '@/lib/cn'
+import type { House } from '@/types'
 import { NO_VALUE } from '@/constants/display'
 
 const DOT_CLASS: Record<StabilityStatus, string> = { FAULT: 'bg-safetyOrange', STABLE: 'bg-success', EMPTY: 'bg-warmGray/40' }
 const LABEL_CLASS: Record<StabilityStatus, string> = { FAULT: 'text-safetyOrange', STABLE: 'text-charcoal', EMPTY: 'text-warmGray' }
 
-// Thẻ nhỏ trạng thái các nhà yến của farm, đứng cạnh khối điều khiển
-export default function EcoHealthCard({ farmId }: { farmId: string }) {
+// Thẻ nhỏ trạng thái các nhà yến trong phạm vi khung lọc, đứng cạnh hàng KPI
+export default function EcoHealthCard({ houses }: { houses: House[] }) {
   const { t } = useTranslation(dashboardDict)
-  const { items, isLoading } = useHouseStability(farmId)
+  const { items, isLoading } = useHouseStability(houses)
   const { faultHouses, stableCount, hasDevices } = summarizeStability(items)
   const hasFault = faultHouses.length > 0
 

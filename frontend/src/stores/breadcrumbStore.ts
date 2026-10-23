@@ -9,13 +9,17 @@ export interface Crumb {
 export interface BackLink {
   to: string
   label: string
+  // State gắn vào lượt chuyển trang (VD báo trang cha biết là đi lên)
+  state?: unknown
 }
 
 interface BreadcrumbState {
   trail: Crumb[]
   /** Nút "← Quay lại" phía trên khung trắng nội dung, do trang tự đăng ký qua `usePageBack` — null thì AppShell không render */
   back: BackLink | null
-  setTrail: (trail: Crumb[]) => void
+  // State gắn khi bấm cấp gốc của breadcrumb (tên trang)
+  rootState?: unknown
+  setTrail: (trail: Crumb[], rootState?: unknown) => void
   setBack: (back: BackLink | null) => void
 }
 
@@ -28,6 +32,6 @@ interface BreadcrumbState {
 export const useBreadcrumbStore = create<BreadcrumbState>(set => ({
   trail: [],
   back: null,
-  setTrail: trail => set({ trail }),
+  setTrail: (trail, rootState) => set({ trail, rootState }),
   setBack: back => set({ back }),
 }))

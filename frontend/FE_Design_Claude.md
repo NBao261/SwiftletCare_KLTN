@@ -1541,7 +1541,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `TicketProgressStepper` ⏳ | Thanh tiến độ ticket chuẩn (bước đậm + hiệu ứng đoạn nối, thêm bước riêng qua `extraSteps`) | 2.10 |
 | `StatusDot` | Chấm + chữ trạng thái thiết bị | 2.5 |
 | `DateTimePicker` | Chọn ngày giờ hẹn | — |
-| `ScopeFilter` | Khung lọc Nhà + Zone chung các trang Farm Owner, lưu khi chuyển trang (`hooks/farm-owner/useScopeFilter`) | — |
+| `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/farm-owner/useScopeFilter`) | — |
 | `NotificationPopover` · `ProfilePopover` · `LogoutConfirmModal` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
 
 **Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, đóng băng 4.1) · `components/auth/RequireRole.tsx` (chặn route).

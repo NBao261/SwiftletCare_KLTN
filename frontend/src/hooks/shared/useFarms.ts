@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { farmApi } from '@/apis/shared/farms.api'
 import type { FuzzyTuning, Zone, FarmMemberRole } from '@/types'
 
@@ -17,6 +17,17 @@ export function useFarm(farmId: string | undefined) {
     queryKey: ['farms', farmId],
     queryFn: () => farmApi.getOne(farmId!).then(response => response.data.data),
     enabled: isMongoId(farmId),
+  })
+}
+
+// Chi tiết nhiều farm cùng lúc (chung cache ['farms', id] với useFarm), VD tra tên người nhập đợt thu của mọi farm
+export function useFarmDetails(farmIds: string[]) {
+  return useQueries({
+    queries: farmIds.map(farmId => ({
+      queryKey: ['farms', farmId],
+      queryFn: () => farmApi.getOne(farmId).then(response => response.data.data),
+    })),
+    combine: results => results.flatMap(result => (result.data ? [result.data] : [])),
   })
 }
 
