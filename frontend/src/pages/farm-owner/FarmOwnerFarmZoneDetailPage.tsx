@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowRightIcon, CubeIcon, PlusIcon, SlidersHorizontalIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState } from '@/components/ui'
@@ -15,7 +15,6 @@ import ActionsMenu from '@/components/ui/ActionsMenu'
 import { ZONE_METRICS, thresholdRange, type MetricMeta, CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { detectBreaches, type DeviceRow, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
-import { SUPPORT_PATH, supportCreateState } from '@/components/features/farm-owner/tickets/tickets.constants'
 import { useTelemetry } from '@/hooks/farm-owner/useTelemetry'
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
@@ -24,6 +23,10 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { useZoneStore } from '@/stores/zoneStore'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
+import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
+import ScopeFilter from '@/components/common/ScopeFilter'
+import HeaderActions from '@/components/layouts/HeaderActions'
+import { noteLeftFarmDetail, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
 
 // Chi tiết 1 Zone: thông số realtime so ngưỡng (REST latest + socket), danh sách thiết bị, bấm Chi tiết mở drawer
 export default function FarmOwnerFarmZoneDetailPage() {
@@ -36,13 +39,23 @@ export default function FarmOwnerFarmZoneDetailPage() {
   const live = useTelemetry(zoneId)
   const isFarmOwner = usePermission('FARM_OWNER')
   const setZone = useZoneStore(state => state.setZone)
-  const setHouse = useZoneStore(state => state.setHouse)
-  const setScopeZone = useZoneStore(state => state.setScopeZone)
+  const setScopePath = useZoneStore(state => state.setScopePath)
+  // Khung lọc khớp Zone đang xem; đổi lựa chọn thì sang trang đúng cấp
+  const scope = useScopeFilter()
+  const routedScope = useFarmsScopeRouting(scope)
+  const farmName = node?.farm.name ?? ''
+  useEffect(() => {
+    if (farmId && houseId && zoneId) setScopePath(farmId, farmName, houseId, zoneId)
+  }, [farmId, houseId, zoneId, farmName, setScopePath])
+  // Rời trang sang danh sách Trang trại thì danh sách không tự mở lại trang chi tiết
+  useEffect(() => noteLeftFarmDetail, [])
   const [selected, setSelected] = useState<DeviceRow | null>(null)
   // Farm Owner chỉnh ngưỡng của Zone ngay tại trang (ENV-FR-006/020); role khác vẫn sang trang Thiết bị của mình
   const [isThresholdsOpen, setIsThresholdsOpen] = useState(false)
   // Đổi tên / xoá Zone (giao diện dựng sẵn, chờ API backend)
   const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
+  // Popup yêu cầu hỗ trợ mở tại chỗ (không chuyển sang trang Yêu cầu hỗ trợ); undefined = đóng
+  const [supportDefaults, setSupportDefaults] = useState<CreateSupportDefaults>()
 
   usePageBack(`/farms/${farmId}/houses/${houseId}`, node?.house.name ?? t('page.house'))
   usePageBreadcrumb(
@@ -84,11 +97,9 @@ export default function FarmOwnerFarmZoneDetailPage() {
       ? `${t('zone.stale')} · ${ago(d.timestamp)}`
       : d.timestamp ? t('zone.lastReading', { ago: ago(d.timestamp) }) : t('zone.noSignal')
 
-  // Mở Tổng quan / Thiết bị đúng Zone này: ghi Zone đang xem và khung lọc Nhà + Zone chung
+  // Mở Tổng quan / Thiết bị đúng Zone này: ghi Zone đang xem (khung lọc đã khớp Zone theo URL)
   const goTo = (path: string) => {
     setZone(farm._id, farm.name, zone._id, zone.name)
-    setHouse(node.house._id)
-    setScopeZone(zone._id)
     navigate(path)
   }
   const metricProps = (m: MetricMeta) => ({
@@ -100,6 +111,14 @@ export default function FarmOwnerFarmZoneDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <HeaderActions>
+        <div className="hidden sm:block">
+          <ScopeFilter scope={routedScope} />
+        </div>
+      </HeaderActions>
+      <div className="sm:hidden">
+        <ScopeFilter scope={routedScope} />
+      </div>
       <FarmFrame
         title={<>{zone.name}<HealthBadge health={health} /></>}
         description={
@@ -154,7 +173,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         title={t('zone.devicesTitle', { n: node.devices.length })}
         description={t('zone.devicesDesc')}
         action={
-          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => (isFarmOwner ? navigate(SUPPORT_PATH, { state: supportCreateState('install', { farmId, zoneId }) }) : navigate('/tickets'))}>
+          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => (isFarmOwner ? setSupportDefaults({ kind: 'install', farmId, zoneId }) : navigate('/tickets'))}>
             <PlusIcon size={14} weight="bold" />
             {t('zone.requestInstall')}
           </Button>
@@ -179,6 +198,8 @@ export default function FarmOwnerFarmZoneDetailPage() {
       )}
 
       <DeviceDetailDrawer device={selected} zoneNode={{ ...node, metrics, breaches }} onClose={() => setSelected(null)} />
+      {/* Yêu cầu lắp đặt mở ngay tại trang, gửi xong popup báo kết quả */}
+      <CreateSupportTicketModal open={supportDefaults !== undefined} defaults={supportDefaults} onClose={() => setSupportDefaults(undefined)} />
       {editMode && <StructureEditModal kind="zone" mode={editMode} name={node.zone.name} deviceCount={node.counts.total} existingNames={structure.houseById.get(node.house._id)?.zones.map(item => item.zone.name) ?? []} onClose={() => setEditMode(null)} />}
       {isThresholdsOpen && <ZoneThresholdsModal zoneId={node.zone._id} zoneName={node.zone.name} onClose={() => setIsThresholdsOpen(false)} />}
     </div>

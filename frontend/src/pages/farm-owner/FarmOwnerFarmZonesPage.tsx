@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { MapPinIcon, PlusIcon, UserIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState, FilterChip } from '@/components/ui'
@@ -23,11 +23,15 @@ import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
-import { SUPPORT_PATH, supportCreateState } from '@/components/features/farm-owner/tickets/tickets.constants'
 import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceRow, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
+import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
+import ScopeFilter from '@/components/common/ScopeFilter'
+import HeaderActions from '@/components/layouts/HeaderActions'
+import { FARMS_PATH, noteLeftFarmDetail, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { useZoneStore } from '@/stores/zoneStore'
 
 /** Khung nội dung cao CỨNG (px) cho mọi tab — tab Tổng quan (cột phải ~880px) là cao nhất, tải lại hay đổi tab trang không đổi chiều cao */
 const TAB_MIN_HEIGHT = 880
@@ -54,9 +58,33 @@ export default function FarmOwnerFarmZonesPage() {
   const [selected, setSelected] = useState<DeviceRow | null>(null)
   // Đổi tên / xoá nhà (giao diện dựng sẵn, chờ API backend)
   const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
+  // Popup yêu cầu hỗ trợ mở tại chỗ (không chuyển sang trang Yêu cầu hỗ trợ); undefined = đóng
+  const [supportDefaults, setSupportDefaults] = useState<CreateSupportDefaults>()
   const { data: regions } = useRegions()
+  // Khung lọc khớp nhà đang xem; đổi lựa chọn thì sang trang đúng cấp
+  const scope = useScopeFilter()
+  const routedScope = useFarmsScopeRouting(scope)
+  const setScopePath = useZoneStore(state => state.setScopePath)
+  const farmName = node?.farm.name ?? ''
+  useEffect(() => {
+    if (farmId && houseId) setScopePath(farmId, farmName, houseId, '')
+  }, [farmId, houseId, farmName, setScopePath])
+  // Rời trang sang danh sách Trang trại thì danh sách không tự mở lại trang này
+  useEffect(() => noteLeftFarmDetail, [])
+  const scopeFilter = (
+    <>
+      <HeaderActions>
+        <div className="hidden sm:block">
+          <ScopeFilter scope={routedScope} />
+        </div>
+      </HeaderActions>
+      <div className="sm:hidden">
+        <ScopeFilter scope={routedScope} />
+      </div>
+    </>
+  )
 
-  usePageBack('/farms', t('page.farms'))
+  usePageBack(FARMS_PATH, t('page.farms'))
   usePageBreadcrumb(node ? [{ label: node.house.name }] : [])
 
   // Gom thiết bị của nhà trong 1 lượt duyệt: tất cả / không online / camera đầu tiên
@@ -106,6 +134,7 @@ export default function FarmOwnerFarmZonesPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {scopeFilter}
       <FarmFrame
         title={<>{house.name}<HealthBadge health={node.health} /></>}
         description={
@@ -119,7 +148,7 @@ export default function FarmOwnerFarmZonesPage() {
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" className="h-9 text-xs" onClick={() => (isFarmOwner ? navigate(SUPPORT_PATH, { state: supportCreateState('install', { farmId }) }) : navigate('/tickets'))}>
+            <Button size="sm" className="h-9 text-xs" onClick={() => (isFarmOwner ? setSupportDefaults({ kind: 'install', farmId }) : navigate('/tickets'))}>
               <PlusIcon size={14} weight="bold" />
               {t('house.requestInstall')}
             </Button>
@@ -198,6 +227,8 @@ export default function FarmOwnerFarmZonesPage() {
       <AddZoneModal open={showAddZone} onClose={() => setShowAddZone(false)} houseId={house._id} />
       {editMode && <StructureEditModal kind="house" mode={editMode} name={house.name} deviceCount={node.counts.total} existingNames={structure.houses.map(item => item.house.name)} onClose={() => setEditMode(null)} />}
       <DeviceDetailDrawer device={selected} zoneNode={selected ? zoneById.get(selected.zoneId) : undefined} onClose={() => setSelected(null)} />
+      {/* Yêu cầu lắp đặt / báo lỗi mở ngay tại trang, gửi xong popup báo kết quả */}
+      <CreateSupportTicketModal open={supportDefaults !== undefined} defaults={supportDefaults} onClose={() => setSupportDefaults(undefined)} />
     </div>
   )
 }
