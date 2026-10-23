@@ -49,7 +49,7 @@ export default function AppShell({
         <main
           ref={mainRef}
           onScroll={e => setScrolled(e.currentTarget.scrollTop > 0)}
-          className={cn('relative flex flex-1 flex-col overflow-y-auto bg-stone pb-28 pt-16 lg:pb-8', heroImage && 'isolate')}
+          className={cn('relative z-10 flex flex-1 flex-col overflow-y-auto bg-stone pb-28 pt-16 lg:pb-8', heroImage && 'isolate')}
         >
           {/* Ảnh nền đầu trang do trang bật (usePageHero): tràn sát mép, nằm sau header và khung, mép dưới tan vào nền */}
           {heroImage && (

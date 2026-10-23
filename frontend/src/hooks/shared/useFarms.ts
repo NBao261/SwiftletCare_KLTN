@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { farmApi } from '@/apis/shared/farms.api'
 import type { FuzzyTuning, Zone } from '@/types'
 
+const isMongoId = (id: string | undefined): boolean => Boolean(id && /^[0-9a-fA-F]{24}$/.test(id))
+
 export function useFarms() {
   return useQuery({
     queryKey: ['farms'],
@@ -14,7 +16,7 @@ export function useFarm(farmId: string | undefined) {
   return useQuery({
     queryKey: ['farms', farmId],
     queryFn: () => farmApi.getOne(farmId!).then(r => r.data.data),
-    enabled: !!farmId,
+    enabled: isMongoId(farmId),
   })
 }
 
@@ -30,7 +32,7 @@ export function useHouses(farmId: string | undefined) {
   return useQuery({
     queryKey: ['houses', farmId],
     queryFn: () => farmApi.listHouses(farmId!).then(r => r.data.data),
-    enabled: !!farmId,
+    enabled: isMongoId(farmId),
   })
 }
 
@@ -46,7 +48,7 @@ export function useZones(houseId: string | undefined) {
   return useQuery({
     queryKey: ['zones', houseId],
     queryFn: () => farmApi.listZones(houseId!).then(r => r.data.data),
-    enabled: !!houseId,
+    enabled: isMongoId(houseId),
   })
 }
 
@@ -67,7 +69,7 @@ export function useZone(zoneId: string | undefined) {
   return useQuery({
     queryKey: ['zone', zoneId],
     queryFn: () => farmApi.getZone(zoneId!).then(r => r.data.data),
-    enabled: !!zoneId,
+    enabled: isMongoId(zoneId),
   })
 }
 
@@ -136,7 +138,7 @@ export function useSalesStaff(farmId: string | undefined) {
   return useQuery({
     queryKey: ['sales-staff', farmId],
     queryFn: () => farmApi.listSalesStaff(farmId!).then(r => r.data.data),
-    enabled: !!farmId,
+    enabled: isMongoId(farmId),
   })
 }
 
@@ -145,7 +147,7 @@ export function usePendingSalesStaffRequests(farmId: string | undefined) {
   return useQuery({
     queryKey: ['sales-staff', farmId, 'requests'],
     queryFn: () => farmApi.listSalesStaffRequests(farmId!).then(r => r.data.data.filter(req => req.status === 'PENDING')),
-    enabled: !!farmId,
+    enabled: isMongoId(farmId),
   })
 }
 
@@ -168,7 +170,7 @@ export function useFarmZones(farmId: string | undefined) {
       )
       return perHouse.flat() as FlatZone[]
     },
-    enabled: !!farmId,
+    enabled: isMongoId(farmId),
     // House/Zone hiếm khi đổi cấu trúc — tránh request N+1 (listHouses + listZones
     // từng house) lặp lại theo staleTime toàn cục 30s ở cả 3 nơi gọi hook này.
     staleTime: 5 * 60 * 1000,
@@ -204,7 +206,7 @@ export function useAllZones() {
       )
       return perFarm.flat() as AllZone[]
     },
-    enabled: !!farms,
+    enabled: Boolean(farms && farms.length > 0),
     staleTime: 5 * 60 * 1000,
   })
 }
