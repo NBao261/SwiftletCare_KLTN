@@ -4,7 +4,7 @@ React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Xem `Swiftle
 
 > **Phạm vi v2.0.0 (sau Review 1).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; `SwiftletCare_SRS.md` mục 0 là căn cứ. Việc phải sửa ở web (chi tiết ở SRS mục 0.5):
 >
-> - Gỡ `MarketplacePage`, `ListingDetailPage`, route công khai của marketplace, `useMarketplace`, `marketplace.api`; gỡ nốt code `sales-staff/` cũ.
+> - Gỡ nốt code `sales-staff/` cũ (marketplace đã gỡ).
 > - Role `DOMAIN_EXPERT` thay `FARM_OPERATOR`: nhóm role và `MENU_ACCESS` trong `constants/roles.ts`, `DomainExpertLayout` thay `FarmOperatorLayout`, bucket `domain-expert/` cho các trang báo cáo sức khỏe Zone, kiểm chứng cảnh báo, duyệt gợi ý hệ số.
 > - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận của chuyên gia, live stream có khung và số đếm trực tiếp.
 > - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận; Farm Owner chỉ xem.
@@ -32,7 +32,7 @@ src/
                LoadingSkeleton, ConfirmModal, ActionsMenu...). index.ts là
                barrel duy nhất trong src/; icons import riêng.
     common/    Widget CÓ biết domain và dùng ở >= 2 tính năng (StatusDot,
-               ZonePicker). Cố ý giữ nhỏ.
+               ScopeFilter). Cố ý giữ nhỏ.
     features/  Component riêng của từng tính năng: <role>/<area>/
                (không có features/shared — mỗi component thuộc đúng 1 role)
     layouts/   Đúng 7 file — 4 của role, 3 dùng chung:
@@ -56,9 +56,8 @@ src/
                  technician/  TechnicianDevicesPage, TechnicianTicketsPage...
                  auth/        LoginPage, RegisterPage, ForgotPasswordPage,
                               InvitationPage (chưa đăng nhập, không gắn role)
-               4 trang không thuộc role nào nằm thẳng ở pages/:
-                 SettingsPage (mọi role), MarketplacePage,
-                 ListingDetailPage, ForbiddenPage
+               2 trang không thuộc role nào nằm thẳng ở pages/:
+                 SettingsPage (mọi role), ForbiddenPage
   routes/      1 file cho mỗi thư mục pages/<role>/: <role>.routes.tsx
   stores/      Zustand (authStore, alertStore, toastStore, zoneStore, breadcrumbStore)
   types/       Tách theo module backend (auth, farm, device, telemetry, alert,

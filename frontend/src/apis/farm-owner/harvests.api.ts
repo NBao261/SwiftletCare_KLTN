@@ -14,7 +14,6 @@ export interface CreateHarvestInput {
 export const harvestApi = {
   create: (input: CreateHarvestInput) => api.post<ApiResponse<HarvestBatch>>('/harvests', input),
   list:   (farmId?: string) => api.get<ApiResponse<HarvestBatch[]>>('/harvests', { params: farmId ? { farmId } : undefined }),
-  getOne: (id: string) => api.get<ApiResponse<HarvestBatch>>(`/harvests/${id}`),
   update: (id: string, input: Partial<Omit<CreateHarvestInput, 'zone_id'>>) =>
     api.put<ApiResponse<HarvestBatch>>(`/harvests/${id}`, input),
   remove: (id: string) => api.delete<ApiResponse<{ message: string }>>(`/harvests/${id}`),

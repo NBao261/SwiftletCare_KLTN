@@ -96,6 +96,8 @@ export default function CreateSupportTicketModal({ open, onClose, defaults }: Cr
 
   const errors = validateNewTicket(form)
   const isInstall = kind === 'install'
+  // Mở từ thiết bị / cảnh báo / Zone cụ thể: yêu cầu thuộc đúng nhà, Zone đó — không đổi sang farm, nhà khác
+  const isLocationLocked = Boolean(defaults?.zoneId)
   const hours = { start: VISIT_START_HOUR, end: VISIT_END_HOUR }
   const farmError = submitted && errors.farmId ? t('form.errFarm') : undefined
   const visitError = submitted && errors.scheduledAt ? t(visitErrorKey(form.scheduledAt), hours) : undefined
@@ -149,13 +151,13 @@ export default function CreateSupportTicketModal({ open, onClose, defaults }: Cr
                     onClick={() => chooseKind(option.value)}
                     className={cn(
                       'flex items-start gap-3 rounded-2xl border p-3 text-left transition-colors',
-                      isActive ? 'border-accent-600 bg-limeMist' : 'border-warmGray/15 bg-white hover:bg-warmGray/5',
+                      isActive ? 'border-accent-600 bg-accent-600' : 'border-warmGray/15 bg-white hover:bg-warmGray/5',
                     )}
                   >
                     <span
                       className={cn(
                         'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
-                        isActive ? 'bg-charcoal text-limeMist' : 'bg-warmGray/10 text-graphite',
+                        isActive ? 'bg-charcoal text-accent-600' : 'bg-warmGray/10 text-graphite',
                       )}
                     >
                       <KindIcon size={16} weight="bold" />
@@ -190,7 +192,7 @@ export default function CreateSupportTicketModal({ open, onClose, defaults }: Cr
                 <SelectMenu
                   field
                   ariaLabel={t('form.farm')}
-                  disabled={loadingFarms}
+                  disabled={loadingFarms || isLocationLocked}
                   invalid={!!farmError}
                   value={form.farmId}
                   onChange={farmId => { setFarmTouched(true); setForm(current => ({ ...current, farmId })); setZoneId('') }}
@@ -201,7 +203,7 @@ export default function CreateSupportTicketModal({ open, onClose, defaults }: Cr
                 <SelectMenu
                   field
                   ariaLabel="Zone"
-                  disabled={!form.farmId || loadingZones}
+                  disabled={!form.farmId || loadingZones || isLocationLocked}
                   value={zoneId}
                   onChange={setZoneId}
                   options={[

@@ -111,7 +111,7 @@ export default function FarmOwnerTicketDetailPage() {
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2">
-          <Button variant="secondary" className="hover:border-accent-600/50 hover:bg-limeMist" onClick={() => setShowChat(true)}>
+          <Button variant="secondary" className="hover:border-accent-600 hover:bg-accent-600" onClick={() => setShowChat(true)}>
             <ChatCircleDotsIcon size={16} weight="bold" />
             {t('detail.chat')}
           </Button>

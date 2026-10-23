@@ -8,6 +8,8 @@ import { IconChevronDown, IconCheck } from '@/components/ui/icons'
 export interface SelectMenuOption<V extends string> {
   value: V
   label: string
+  // Dòng cần chú ý: chấm cam trước nhãn trong danh sách
+  warning?: boolean
 }
 
 interface SelectMenuProps<V extends string> {
@@ -25,6 +27,10 @@ interface SelectMenuProps<V extends string> {
   disabled?: boolean
   /** Chỉ với `field`: viền đỏ như Input có `error` */
   invalid?: boolean
+  // Câu đọc cho dòng có `warning` và cho huy hiệu "!" trên góc nút (hiện khi có ít nhất 1 dòng `warning`)
+  warningLabel?: string
+  // false khi danh sách không có mục "Tất cả" ở đầu (VD chọn Zone): không tô viền xanh "đang lọc"
+  highlightFiltered?: boolean
 }
 
 const OPTION_HEIGHT = 36
@@ -50,7 +56,7 @@ const FIELD_VISIBLE_OPTIONS = 4
  * `options[0]` phải là giá trị mặc định ("Mọi …"): chọn option khác thì trigger
  * viền xanh (accent-600) để thấy ngay bộ lọc nào đang bật.
  */
-export default function SelectMenu<V extends string>({ value, options, onChange, ariaLabel, className, field, disabled, invalid }: SelectMenuProps<V>) {
+export default function SelectMenu<V extends string>({ value, options, onChange, ariaLabel, className, field, disabled, invalid, warningLabel, highlightFiltered = true }: SelectMenuProps<V>) {
   const maxVisible = field ? FIELD_VISIBLE_OPTIONS : MAX_VISIBLE_OPTIONS
   const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
     align: 'left',
@@ -89,7 +95,8 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
 
   const selected = options[selectedIndex]
   // Quy ước: option đầu tiên là giá trị mặc định ("Mọi …"). Chọn khác đi = đang lọc → viền xanh
-  const isFiltered = value !== options[0]?.value
+  const isFiltered = highlightFiltered && value !== options[0]?.value
+  const hasWarning = options.some(option => option.warning)
 
   return (
     <>
@@ -106,9 +113,9 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
         aria-invalid={invalid || undefined}
         className={cn(
           field
-            ? cn('input flex items-center justify-between gap-2 text-left', open ? 'border-charcoal' : invalid && 'border-alertRed')
+            ? cn('input relative flex items-center justify-between gap-2 text-left', open ? 'border-charcoal' : invalid && 'border-alertRed')
             : cn(
-                'inline-flex h-8 items-center gap-1.5 rounded-full border bg-white pl-3.5 pr-2.5 text-xs font-semibold text-charcoal transition-colors',
+                'relative inline-flex h-8 items-center gap-1.5 rounded-full border bg-white pl-3.5 pr-2.5 text-xs font-semibold text-charcoal transition-colors',
                 open ? 'border-charcoal' : isFiltered ? 'border-accent-600' : 'border-warmGray/25 hover:border-warmGray/50',
               ),
           className,
@@ -117,6 +124,16 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
         {/* Nhãn option tự dịch theo VI/EN (tên trại/người dùng không có bản dịch nên giữ nguyên) */}
         <span className="truncate">{tr(selected?.label)}</span>
         <IconChevronDown width={field ? 16 : 14} height={field ? 16 : 14} className={cn('shrink-0 text-warmGray transition-transform', open && 'rotate-180')} />
+        {/* Huy hiệu "!" góc trên phải khi có dòng cần chú ý, kiểu số tin mới trên chuông */}
+        {hasWarning && !open && (
+          <span
+            title={warningLabel ? tr(warningLabel) : undefined}
+            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-safetyOrange text-[10px] font-bold leading-none text-white ring-2 ring-white"
+          >
+            !
+            {warningLabel && <span className="sr-only">{tr(warningLabel)}</span>}
+          </span>
+        )}
       </button>
 
       {open && createPortal(
@@ -146,7 +163,11 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
                   isSelected && 'font-semibold',
                 )}
               >
-                <span className="truncate">{tr(opt.label)}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  {opt.warning && <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-safetyOrange" />}
+                  <span className="truncate">{tr(opt.label)}</span>
+                  {opt.warning && warningLabel && <span className="sr-only">{tr(warningLabel)}</span>}
+                </span>
                 {isSelected && <IconCheck width={14} height={14} className="shrink-0" />}
               </button>
             )

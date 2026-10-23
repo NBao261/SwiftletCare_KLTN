@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageReadings, buildAlertRow, latestTimestamp, summarizeNodes, withLiveRelays, averageControlOutput, sortPinnedFirst, buildHouseStability, getAnomalies, getSeverityGroup, mergeBirdCountRecords, summarizeBirdCount, summarizeStability, summarizeFarmHouses } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { averageReadings, buildAlertRow, latestTimestamp, summarizeNodes, withLiveRelays, averageControlOutput, sortPinnedFirst, buildHouseStability, getAnomalies, getSeverityGroup, isFaultDeviceStatus, zoneHasIssue, mergeBirdCountRecords, summarizeBirdCount, summarizeStability, summarizeFarmHouses, thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
 import type { Alert, House, Thresholds, Zone } from '@/types'
 
@@ -42,6 +42,11 @@ describe('house stability', () => {
       ['Nhà trống', 'EMPTY', 0],
     ])
     expect(items[0]).toMatchObject({ faultZoneName: 'Tầng 1', faultDeviceType: 'camera' })
+  })
+
+  it('counts a camera attached to the house without a zone (SRS v2.1.8)', () => {
+    const items = buildHouseStability(houses, zones, [{ house_id: 'h2', status: 'OFFLINE', type: 'camera' }])
+    expect(items.find(item => item.houseId === 'h2')).toMatchObject({ status: 'FAULT', faultyDevices: 1, faultDeviceType: 'camera' })
   })
 
   it('treats waiting devices as normal and summarizes', () => {
@@ -203,5 +208,49 @@ describe('summarizeFarmHouses', () => {
     expect(totals.alertsByLevel).toEqual({ P1: 1, P2: 1, P3: 1 })
     expect(totals.monthKg).toBe(3)
     expect(totals.monthBatches).toBe(2)
+  })
+})
+
+describe('zoneHasIssue', () => {
+  const limits: Thresholds = { temp_min: 26, temp_max: 31, humidity_min: 75, humidity_max: 95, light_max: 0.2, nh3_max: 25, co2_max: 1500 }
+
+  it('báo khi thiết bị hư dù số đo trong ngưỡng', () => {
+    expect(zoneHasIssue({ readings: { temperature: 28 }, thresholds: limits, isOnline: false, hasFaultDevice: true })).toBe(true)
+  })
+
+  it('báo khi thiết bị đang chạy và 1 chỉ số vượt ngưỡng', () => {
+    expect(zoneHasIssue({ readings: { temperature: 28, light_lux: 7900 }, thresholds: limits, isOnline: true, hasFaultDevice: false })).toBe(true)
+  })
+
+  it('không báo số đo cũ khi Zone không có thiết bị chạy', () => {
+    expect(zoneHasIssue({ readings: { temperature: 40 }, thresholds: limits, isOnline: false, hasFaultDevice: false })).toBe(false)
+  })
+
+  it('không báo khi mọi chỉ số trong ngưỡng', () => {
+    expect(zoneHasIssue({ readings: { temperature: 28, humidity: 80 }, thresholds: limits, isOnline: true, hasFaultDevice: false })).toBe(false)
+  })
+
+  it('chỉ lỗi, suy giảm, mất kết nối là thiết bị hư', () => {
+    expect(isFaultDeviceStatus('OFFLINE')).toBe(true)
+    expect(isFaultDeviceStatus('ERROR')).toBe(true)
+    expect(isFaultDeviceStatus('PENDING')).toBe(false)
+    expect(isFaultDeviceStatus('ONLINE')).toBe(false)
+  })
+})
+
+describe('thresholdSource', () => {
+  it('is the system default when the zone was never changed or was last reset', () => {
+    expect(thresholdSource(undefined)).toEqual({ isDefault: true, changedAt: undefined })
+    expect(thresholdSource([
+      { source: 'MANUAL', changed_by_role: 'FARM_OWNER', changed_at: '2026-10-01T00:00:00Z' },
+      { source: 'RESET_TO_DEFAULT', changed_by_role: 'DOMAIN_EXPERT', changed_at: '2026-10-05T00:00:00Z' },
+    ])).toEqual({ isDefault: true, changedAt: '2026-10-05T00:00:00Z' })
+  })
+
+  it('returns the role of the latest manual change', () => {
+    expect(thresholdSource([
+      { source: 'MANUAL', changed_by_role: 'DOMAIN_EXPERT', changed_at: '2026-10-09T00:00:00Z' },
+      { source: 'MANUAL', changed_by_role: 'FARM_OWNER', changed_at: '2026-10-02T00:00:00Z' },
+    ])).toEqual({ isDefault: false, role: 'DOMAIN_EXPERT', changedAt: '2026-10-09T00:00:00Z' })
   })
 })

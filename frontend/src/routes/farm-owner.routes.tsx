@@ -4,14 +4,10 @@ import RequireRole from '@/components/auth/RequireRole'
 import { FARM_OWNER_ONLY, HARVEST_ROLES, OPS_ROLES } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
 
-/**
- * Nghiệp vụ nuôi yến — Farm Owner là role sở hữu các màn hình này, nhưng
- * `allow` mới là thứ quyết định ai vào được: Tổng quan/Phân tích (giám sát môi
- * trường chi tiết theo zone) chỉ riêng Farm Owner; Trang trại/Camera mở cho cả
- * Technician + Admin; Thu hoạch mở cho Admin (khớp requireRole của router
- * harvests bên backend).
- */
+// Màn nuôi yến của Farm Owner; allow quyết định ai vào: Trang trại / Camera mở cho Technician + Admin, Thu hoạch cho Admin (khớp backend)
 const FarmOwnerDashboardPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDashboardPage'))
+const FarmOwnerScadaPage = lazy(() => import('@/pages/farm-owner/FarmOwnerScadaPage'))
+const FarmOwnerDeviceDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDeviceDetailPage'))
 const FarmOwnerAnalyticsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerAnalyticsPage'))
 const FarmOwnerVisionPage = lazy(() => import('@/pages/farm-owner/FarmOwnerVisionPage'))
 const FarmOwnerFarmsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmsPage'))
@@ -36,6 +32,22 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={FARM_OWNER_ONLY}>
           <FarmOwnerDashboardPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="dashboard/scada"
+      element={
+        <RequireRole allow={FARM_OWNER_ONLY}>
+          <FarmOwnerScadaPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="devices/detail"
+      element={
+        <RequireRole allow={FARM_OWNER_ONLY}>
+          <FarmOwnerDeviceDetailPage />
         </RequireRole>
       }
     />

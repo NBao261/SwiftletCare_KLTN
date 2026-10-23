@@ -1,4 +1,4 @@
-import type { AlertSeverity, TicketPriority } from '@/types';
+import type { AlertSeverity, AlertStatus, TicketPriority } from '@/types';
 
 // 3 cấp mức độ dùng chung cho cảnh báo và ticket: P1 Khẩn cấp, P2 Cao, P3 Thường
 export const LEVELS: TicketPriority[] = ['P1', 'P2', 'P3'];
@@ -20,6 +20,11 @@ export const LEVEL_BADGE_CLASS: Record<TicketPriority, string> = {
 
 // Màu badge khi việc đã kết thúc (ticket đóng/huỷ): xám trung tính, dùng lại màu cấp Thường
 export const LEVEL_BADGE_MUTED_CLASS = LEVEL_BADGE_CLASS.P3;
+
+// Cảnh báo đã kết thúc (đã xử lý) thì badge mức độ về xám
+export function isAlertFinished(status: AlertStatus): boolean {
+  return status === 'RESOLVED';
+}
 
 // Cỡ badge mức độ
 export const LEVEL_BADGE_SIZE = 'whitespace-nowrap px-2.5 py-0.5 text-[11px]';

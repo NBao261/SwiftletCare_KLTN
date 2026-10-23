@@ -1,4 +1,5 @@
 import type { Lang } from '@/stores/languageStore'
+import { NO_VALUE } from '@/constants/display'
 
 /** Từ điển 1 module: `vi` là bản gốc, `en` bắt buộc đủ đúng các key của `vi` (thiếu key là lỗi biên dịch) */
 export interface Dictionary<K extends string> {
@@ -24,7 +25,7 @@ const relativeFormatters: Partial<Record<Lang, Intl.RelativeTimeFormat>> = {}
 
 /** "30 giây trước" / "30 seconds ago" — chọn đơn vị lớn nhất còn ≥ 1 */
 export function formatRelative(iso: string | undefined, lang: Lang, now = Date.now()): string {
-  if (!iso) return '—'
+  if (!iso) return NO_VALUE
   const relativeFormatter = (relativeFormatters[lang] ??= new Intl.RelativeTimeFormat(LOCALE[lang], { numeric: 'auto' }))
   const seconds = Math.round((new Date(iso).getTime() - now) / 1000)
   const abs = Math.abs(seconds)
@@ -37,6 +38,11 @@ export function formatRelative(iso: string | undefined, lang: Lang, now = Date.n
 /** Số theo locale: vi "1,51" · en "1.51" */
 export function formatNumber(value: number, lang: Lang, digits = 0): string {
   return value.toLocaleString(LOCALE[lang], { minimumFractionDigits: digits, maximumFractionDigits: digits })
+}
+
+/** Số giữ nguyên độ chính xác: tối đa `maxDigits` chữ số lẻ, không thêm số 0 thừa (VD 0,456 kg; 4 kg) */
+export function formatExactNumber(value: number, lang: Lang, maxDigits: number): string {
+  return value.toLocaleString(LOCALE[lang], { minimumFractionDigits: 0, maximumFractionDigits: maxDigits })
 }
 
 /** Giờ theo múi giờ VN, định dạng 24h theo ngôn ngữ đang chọn */
