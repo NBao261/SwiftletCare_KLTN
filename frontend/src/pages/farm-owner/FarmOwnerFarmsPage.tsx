@@ -96,8 +96,8 @@ export default function FarmOwnerFarmsPage() {
   const [showCreateFarm, setShowCreateFarm] = useState(false)
   const [editFarm, setEditFarm] = useState<Farm | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Farm | null>(null)
-  // Farm đang xổ; null = mặc định xổ farm đầu tiên
-  const [expandedIds, setExpandedIds] = useState<Set<string> | null>(null)
+  // Farm người dùng bấm xổ khi đang xem tất cả trang trại (mặc định thu hết)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   // Đang tìm / lọc / chọn farm ở khung lọc thì farm có kết quả tự xổ, trừ farm người dùng vừa thu lại (đổi điều kiện lọc thì xổ lại)
   const [collapsed, setCollapsed] = useState<{ key: string; ids: Set<string> }>({ key: '', ids: new Set() })
   const isFiltering = search.trim() !== '' || filter !== 'all'
@@ -177,16 +177,15 @@ export default function FarmOwnerFarmsPage() {
     return next
   }
 
-  // Mặc định xổ farm tạo sớm nhất
-  const defaultExpanded = new Set(sortedFarms[0] ? [sortedFarms[0]._id] : [])
+  // Tất cả trang trại: thu hết, bấm farm nào mở farm đó; chọn farm / tìm / lọc thì farm có kết quả tự mở
   function isFarmExpanded(farmId: string): boolean {
     if (isAutoExpand) return !collapsedIds.has(farmId)
-    return (expandedIds ?? defaultExpanded).has(farmId)
+    return expandedIds.has(farmId)
   }
 
   function toggleFarm(farmId: string): void {
     if (isAutoExpand) setCollapsed({ key: autoExpandKey, ids: toggleIn(collapsedIds, farmId) })
-    else setExpandedIds(current => toggleIn(current ?? defaultExpanded, farmId))
+    else setExpandedIds(current => toggleIn(current, farmId))
   }
 
   function handleDeleteFarm(): void {
