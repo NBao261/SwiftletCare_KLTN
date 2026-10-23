@@ -19,7 +19,7 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 | [x] | **Report 5** – test plan + 131 test case (22 tính năng × 3, 11 workflow, 48 chuyển trạng thái, 6 NFR) | P0 | | `report5-test.md`, sinh từ `report5/tc.py`. 69 test tự động đang đạt; 42 test tự động còn phải viết; 20 test thủ công chạy trên staging/nhà yến |
 | [x] | **Project Tracking** | P0 | | `project-tracking.md` (mốc, PR theo người, trạng thái tính năng, defect) |
 | [x] | **BM01 Design Brief** + Phụ lục A | P0 | | `design-brief.md`, docx ở `design-brief/` (mục 0–8 vừa 4 trang). Còn: xác nhận Ownership Map (đề xuất theo lịch sử commit), PR của từng người, ngưỡng NFR-09/14 |
-| [ ] | **Đưa PR #89 vào `develop`** (pipeline gửi MQTT, đẩy video, job pytest): PR này được merge vào nhánh của #88 sau khi #88 đã vào develop nên code chưa lên develop | P0 | Bảo | Project Tracking DF-1; mở PR `feat/vision-full-frame-tracking` → `develop` |
+| [ ] | **Đưa PR #89 vào `develop`** (pipeline gửi MQTT, đẩy video, job pytest): PR này được merge vào nhánh của #88 sau khi #88 đã vào develop nên code chưa lên develop | P0 | Bảo | Project Tracking DF-1; mở PR `feat/vision-live-pipeline` → `develop` (nhánh này có thêm commit sửa script quay clip `5eb9ca3`) |
 | [ ] | Điền các ô `[TEAM]` còn lại | P0 | | Danh sách ở mục 2 |
 | [ ] | Xuất Report 1–5 và Project Tracking ra PDF theo mẫu, tên `SWP490_<Mã>_R2_Report<n>.pdf` | P0 | | Sơ đồ Mermaid render sẵn |
 | [ ] | Gắn tag `review-2` trên repo sau khi mọi thứ trên đã merge | P0 | | |
