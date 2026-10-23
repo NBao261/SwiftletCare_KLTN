@@ -1,6 +1,6 @@
 # Việc cần làm trước Review 2 — theo Report 3 (SRS) và Report 4 (SDD)
 
-Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bảng "Chỗ lệch" trong `docs/reports/README.md` (số `#` ở cột Nguồn), các ô `[TEAM]`, và hướng dẫn chuẩn bị Review 2 (PDF). Cập nhật ngày 23/10/2026 (sau PR #93).
+Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bảng "Chỗ lệch" trong `docs/reports/README.md` (số `#` ở cột Nguồn), các ô `[TEAM]`, và hướng dẫn chuẩn bị Review 2 (PDF). Cập nhật ngày 23/10/2026 (sau PR #95).
 
 **Cách dùng:** đánh `[x]` khi xong, điền người nhận vào cột Người. Việc xong ở code thì sửa luôn dòng tương ứng trong `docs/reports/README.md` ("Chỗ lệch") trong cùng PR. Mức ưu tiên:
 
@@ -19,7 +19,7 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 | [x] | **Report 5** – test plan + 131 test case (22 tính năng × 3, 11 workflow, 48 chuyển trạng thái, 6 NFR) | P0 | | `report5-test.md`, sinh từ `report5/tc.py`. 69 test tự động đang đạt; 42 test tự động còn phải viết; 20 test thủ công chạy trên staging/nhà yến |
 | [x] | **Project Tracking** | P0 | | `project-tracking.md` (mốc, PR theo người, trạng thái tính năng, defect) |
 | [x] | **BM01 Design Brief** + Phụ lục A | P0 | | `design-brief.md`, docx ở `design-brief/` (mục 0–8 vừa 4 trang). Còn: xác nhận Ownership Map (đề xuất theo lịch sử commit), PR của từng người, ngưỡng NFR-09/14 |
-| [ ] | **Đưa PR #89 vào `develop`** (pipeline gửi MQTT, đẩy video, job pytest): PR này được merge vào nhánh của #88 sau khi #88 đã vào develop nên code chưa lên develop | P0 | Bảo | Project Tracking DF-1; mở PR `feat/vision-live-pipeline` → `develop` (nhánh này có thêm commit sửa script quay clip `5eb9ca3`) |
+| [x] | **Đưa PR #89 vào `develop`** (pipeline gửi MQTT, đẩy video, job pytest) | P0 | Bảo | Xong 23/10/2026 qua PR #95 (Project Tracking DF-1 đã đóng) |
 | [ ] | Điền các ô `[TEAM]` còn lại | P0 | | Danh sách ở mục 2 |
 | [ ] | Xuất Report 1–5 và Project Tracking ra PDF theo mẫu, tên `SWP490_<Mã>_R2_Report<n>.pdf` | P0 | | Sơ đồ Mermaid render sẵn |
 | [ ] | Gắn tag `review-2` trên repo sau khi mọi thứ trên đã merge | P0 | | |
@@ -137,9 +137,9 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 
 | | Việc | Ưu tiên | Người | Nguồn |
 |---|---|:---:|---|---|
-| [ ] | Đưa code của PR #89 lên develop (gửi MQTT số đếm phiên, số đếm 5 phút, heartbeat; đẩy video lên MediaMTX; luồng đọc khung mới nhất, tự nối lại) rồi thử lại với EMQX/MediaMTX của staging | P0 | | #7, DF-1, VISION-FR-006, 013, 014, 017 |
-| [ ] | Bỏ khối MQTT Raspberry Pi trong `config.yaml`; khung giờ phiên chỉ là mặc định | P2 | | `ai-pipeline/CLAUDE.md` Known debt |
-| [ ] | Job CI cho `pytest` của pipeline (đã có ở PR #89, đi cùng việc đưa PR #89 lên develop) | P1 | | Report 4 §12 |
+| [~] | `stream.py` gửi MQTT (số đếm phiên, số đếm 5 phút, heartbeat) và đẩy video lên MediaMTX đã có trên develop (PR #95); còn chạy thử với EMQX/MediaMTX của staging từ PC ở nhà yến | P0 | Bảo | #7, VISION-FR-006, 013, 014, 017 |
+| [~] | Khối MQTT Raspberry Pi trong `config.yaml` đã bỏ (PR #95); khung giờ phiên trong `config.yaml` chỉ còn là mặc định cho tới khi backend tính phiên từ số đếm 5 phút | P2 | | `ai-pipeline/CLAUDE.md`, #20 |
+| [x] | Job CI cho `pytest` của pipeline | P1 | Bảo | Có từ PR #95 |
 
 ### 4.4. Web (frontend)
 
@@ -189,7 +189,7 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 1. **Tuần 1:**
    - Dữ liệu và phần cứng: train model, dựng staging (VPS + PC cũ ở nhà yến), đưa hệ thống vào nhà yến, phỏng vấn người nuôi.
    - Backend P0: quyền theo §2.4, MF-10, `DISMISSED`, FCM, MF-11 (đánh giá theo ngày, đánh giá của người nuôi, báo cáo).
-   - Đưa PR #89 lên develop (pipeline gửi MQTT và video).
+   - Chạy pipeline (gửi MQTT và video) với staging từ PC ở nhà yến.
 2. **Tuần 2:**
    - Web và mobile P0: role chuyên gia, màn chuyên gia, MF-10, MF-11, live stream.
    - Backend và firmware P1.

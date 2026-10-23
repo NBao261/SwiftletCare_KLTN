@@ -69,7 +69,7 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
 - **Truy cập từ xa:** Tailscale (SSH hoặc Remote Desktop), không mở thêm cổng trên modem.
 - **Đo NFR-04 trên đúng máy này:** fps trong log `stream.py` trên toàn bộ video đánh giá.
   - Ghi cấu hình máy (CPU, RAM, GPU nếu có) vào Report 3 §2.5 và Report 4 §3.2.
-  - Trên laptop, 2 ô với model COCO mới đạt khoảng 7 fps, trong khi NFR-04 cần 25 fps. Đây là **rủi ro lớn nhất** của phần đếm (Design Brief R2).
+  - Trên laptop, 2 ô với model COCO mới đạt khoảng 7–12 fps (số đo chưa tin cậy), trong khi NFR-04 cần 25 fps. Đây là **rủi ro lớn nhất** của phần đếm (Design Brief R2).
   - Nếu không đạt, có thể thử: giảm kích thước ảnh vào model, bỏ một ô, hoặc dùng GPU của PC (nếu có) qua ONNX Runtime DirectML/CUDA. Giá trị cuối cùng phải là số đo thật; không đổi ngưỡng mà không ghi lý do.
 - **Đường lên của nhà yến:** luồng 720p có khung khoảng 1–2 Mbps. Đo tốc độ upload thật của đường VNPT, ghi vào `[TEAM]`.
 

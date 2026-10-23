@@ -51,7 +51,7 @@ Swiftlet houses are closed buildings that owners visit every few days, so humidi
 
 | ID | Risk | Impact | How we verify or mitigate | Owner |
 | --- | --- | --- | --- | --- |
-| R1 | No trained swiftlet model; spare PC may not reach 25 fps (≈ 7 fps on a laptop) | WF-06, WF-11 miss NFR-04/09 | Train on 3 recorded days; measure on the PC in It. 2; else smaller input, demo on clips | Nguyễn Chí Bảo |
+| R1 | No trained swiftlet model; spare PC may not reach 25 fps (≈ 7–12 fps on a laptop) | WF-06, WF-11 miss NFR-04/09 | Train on 3 recorded days; measure on the PC in It. 2; else smaller input, demo on clips | Nguyễn Chí Bảo |
 | R2 | MF-11 not built; NFR-14 needs ≥ 14 rated days | Health output not shown or measured | Daily job first against seeded days; start field run at installation | Nguyễn Thị Yến Nhi |
 | R3 | No staging yet; firmware has no MQTT TLS | Demos must run on staging | Staging and demo seed in It. 2; TLS in 2 days, else authenticated 1883 as a limitation | Trần Minh Kiệt |
 
@@ -62,7 +62,7 @@ Swiftlet houses are closed buildings that owners visit every few days, so humidi
 | G1 | Role checks on thresholds, overrides, device setup differ from SRS 2.4 | backend routes | Fix roles, spec, tests | Trần Minh Kiệt | It. 2 |
 | G2 | `DISMISSED`, alert evidence, owner fallback (BR-22), review items, proposals | backend, web | Per SM-01, 10, 11 | Thái Minh Tuấn | It. 2 |
 | G3 | Config version, `CONFIG_MISMATCH`; actuator current check | firmware, backend | Version in heartbeat; ADS1115 | Nguyễn Chí Bảo | It. 2–3 |
-| G4 | Pipeline publishes nothing; sessions from buckets | ai-pipeline, backend | MQTT + RTSPS push | Nguyễn Chí Bảo | It. 2 |
+| G4 | Pipeline not run on staging; sessions from buckets | ai-pipeline, backend | Run on the AI node PC | Nguyễn Chí Bảo | It. 2 |
 | G5 | Daily status, ratings, house reports, PDF/CSV, weather | backend, web | SDD 6.4, AD-14 | Nguyễn Thị Yến Nhi | It. 2–3 |
 | G6 | QR setup, labels, progress; FCM push; staging, demo seed | mobile, backend, deploy | `expo-camera`; Firebase; staging.md | Trần Minh Kiệt | It. 2 |
 | G7 | Web leftovers (`SALES_STAFF`, Technician threshold editing); expert screens on mock fallback | frontend | Remove; wire to API | Nguyễn Vũ Len | It. 2 |
@@ -117,7 +117,7 @@ FO = Farm Owner, DE = Domain Expert (or the Farm Owner on a farm without one, BR
 | Trần Minh Kiệt | Backend, mobile | Backend devices and setup; tickets; mobile app | WF-04, 10 | D4; `[TEAM]` |
 | Nguyễn Vũ Len | Web Farm Owner | Farm Owner screens; notification settings and inbox | WF-02, 09 | `[TEAM]` |
 | Nguyễn Thị Yến Nhi | Web Admin, reports | Admin screens (accounts, stock, defaults); daily status, reports, export | WF-05, 11 | D5; `[TEAM]` |
-| Thái Minh Tuấn | Web Domain Expert | Expert screens; expert backend (review, proposals, notices) | WF-07, 08 | D3; PR #91 |
+| Thái Minh Tuấn | Web Domain Expert | Expert screens; expert backend (reviews, proposals) | WF-07, 08 | D3; PR #91 |
 
 ---
 

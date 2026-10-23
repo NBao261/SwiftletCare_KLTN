@@ -43,7 +43,7 @@ This report is the test plan and the test cases of SwiftletCare for Defense 1.1.
 
 | Level | What | Tool | Where | Run by |
 | --- | --- | --- | --- | --- |
-| Unit | Firmware control and detection logic; backend utilities (fuzzy model, forecast, anomaly, thresholds); web pure logic; pipeline geometry | Unity (`pio test -e native`), Jest, Vitest, pytest | CI on every pull request (pytest: local until the AI-pipeline CI job exists) | Module owner |
+| Unit | Firmware control and detection logic; backend utilities (fuzzy model, forecast, anomaly, thresholds); web pure logic; pipeline geometry | Unity (`pio test -e native`), Jest, Vitest, pytest | CI on every pull request that touches the module (pytest job since PR #95) | Module owner |
 | Integration | Backend routes, services, jobs and MQTT handlers against an in-memory MongoDB; role checks | Jest + supertest + mongodb-memory-server | CI | Module owner |
 | System (end-to-end) | Each main workflow through real devices or simulators, backend, web and mobile | Manual, following the demo scenarios | Staging (Report 4, Section 3.4) with the demo seed | Workflow owner |
 | Field | Control, counting, health assessment in the test house | Manual measurement, scripts | Test house, AI node | Whole team |
@@ -55,7 +55,7 @@ Each mandatory feature has three test cases (guideline §9.3): one main path, on
 
 ### 2.3 Automation
 
-CI (`.github/workflows/ci.yml`) runs on every pull request, only for the modules it touches: backend lint, type check and Jest with an 80 % line-coverage threshold; web lint, type check, Vitest and build; firmware host tests; mobile lint, type check and Jest. Test cases marked "Auto (CI)" are part of these suites; "Auto (CI, planned)" are written with the feature they test. Target at Defense 1.1: at least 50 % of the committed test cases automated in CI.
+CI (`.github/workflows/ci.yml`) runs on every pull request, only for the modules it touches: backend lint, type check and Jest with an 80 % line-coverage threshold; web lint, type check, Vitest and build; firmware host tests; mobile lint, type check and Jest; AI pipeline pytest. Test cases marked "Auto (CI)" are part of these suites; "Auto (CI, planned)" are written with the feature they test. Target at Defense 1.1: at least 50 % of the committed test cases automated in CI.
 
 ### 2.4 Entry and Exit Criteria
 
@@ -81,7 +81,7 @@ Every defect is fixed by a pull request that adds a test failing without the fix
 
 | Environment | Content |
 | --- | --- |
-| CI | GitHub Actions, Ubuntu runner, Node 22, Python 3 + PlatformIO, MongoDB in memory |
+| CI | GitHub Actions, Ubuntu runner, Node 22, Python 3 + PlatformIO, Python + pytest for the AI pipeline, MongoDB in memory |
 | Local | Members' machines with `docker compose` (MongoDB, EMQX, MinIO, MediaMTX) |
 | Staging | VPS with backend, web, EMQX (TLS), MongoDB, MinIO, MediaMTX behind Caddy; AI node on the spare PC at the house (`docs/deploy/staging.md`) |
 | Prototype | ESP32 controller with the five RS485 sensors, relay module, DFPlayer and speaker; test house in the field run |
