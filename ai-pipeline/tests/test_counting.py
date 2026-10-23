@@ -3,7 +3,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from counting import RingCounter  # noqa: E402
+from datetime import datetime  # noqa: E402
+
+from counting import BucketClock, RingCounter, current_session  # noqa: E402
 
 SQUARE = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]   # 100x100 frame -> 25..75 px
 
@@ -143,3 +145,33 @@ def test_new_ring_forgets_tracks():
     c.set_ring(HOLE, 1000, 1000, True)
     idle(c)
     assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+# ── Phiên theo giờ VN và số đếm 5 phút (VISION-FR-006/017) ──
+WINDOWS = {"MORNING_EXIT": ["05:30", "07:00"], "EVENING_ENTRY": ["17:30", "19:00"]}
+
+
+def test_current_session_bounds():
+    at = lambda hhmm: datetime.strptime(f"2026-10-20 {hhmm}", "%Y-%m-%d %H:%M")  # noqa: E731
+    assert current_session(WINDOWS, at("05:29")) is None
+    assert current_session(WINDOWS, at("05:30")) == "MORNING_EXIT"   # đầu tính
+    assert current_session(WINDOWS, at("06:59")) == "MORNING_EXIT"
+    assert current_session(WINDOWS, at("07:00")) is None             # cuối không tính
+    assert current_session(WINDOWS, at("18:15")) == "EVENING_ENTRY"
+    assert current_session(WINDOWS, at("23:00")) is None
+
+
+def test_bucket_clock_aligns_and_reports_deltas():
+    t0 = 1_760_000_000 - 1_760_000_000 % 300 + 42            # 42 giây sau mốc 5 phút
+    b = BucketClock(5, t0)
+    assert b.start == t0 - 42
+    assert b.roll(t0 + 100, (3, 1)) is None                   # chưa hết khoảng
+    assert b.roll(t0 - 42 + 300, (5, 2)) == (t0 - 42, 5, 2)   # hết khoảng đầu: số từ đầu
+    assert b.roll(t0 - 42 + 610, (9, 2)) == (t0 - 42 + 300, 4, 0)   # khoảng sau chỉ phần tăng thêm
+    assert b.start == t0 - 42 + 600
+
+
+def test_bucket_clock_after_outage_keeps_old_start():
+    b = BucketClock(5, 0)
+    assert b.roll(1000, (2, 0)) == (0, 2, 0)                  # mất hình 1000 giây: một khoảng dài, mốc đầu cũ
+    assert b.start == 900

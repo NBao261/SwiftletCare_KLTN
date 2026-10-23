@@ -268,6 +268,15 @@ STREAM_PUSH_URL=rtsps://pipeline:<STREAM_PUBLISH_SECRET>@<tên miền>:8322/cam-
 
 Thời gian: 2 ngày. Mục tiêu: chạy được trên clip, mở trình duyệt thấy ô xanh và số đếm.
 
+> **Trạng thái (20/10/2026):** §6.1–6.7 **đã làm** trong `ai-pipeline/` và chạy thử với camera thật: YOLO26n COCO, ROI cả khung (khi đó 1 lần suy luận/frame), laptop Ryzen 7 6800H đạt 25 FPS bằng tốc độ camera; đầu ra ONNX khớp ultralytics (lệch ≤ 1 px) với cả YOLO26n `nms=False` lẫn YOLO11n; payload MQTT kiểm tra qua EMQX trên máy. **Từ 22/10 (mục 19.8):** đếm bằng vòng quanh miệng lỗ thay cho vạch thẳng (`RingCounter`), theo dõi cả khung bằng 2 ô chồng nhau, nên mỗi frame suy luận 2 lần: FPS phải đo lại trên máy chạy thật (cổng 1). **Chưa làm:** model tự train và đo sai số. Chỗ code thật khác code mẫu dưới đây:
+> - `inference.py` **không** đặt `intra_op_num_threads = os.cpu_count()`: số luồng logic (gấp đôi số nhân khi có SMT) làm suy luận chậm gấp đôi (45 ms so với 21 ms). Để mặc định của ONNX Runtime.
+> - `sv.ByteTrack` bị đánh dấu bỏ từ supervision 0.28 và **bị xoá ở 0.31**; `requirements.txt` đã ghim `<0.31`. Nâng supervision thì phải chuyển sang gói `trackers` của Roboflow.
+> - Phiên tính theo giờ Việt Nam cố định (`sessions.utc_offset_hours: 7`, khung giờ ở `sessions.windows`), không theo giờ máy: VPS thường chạy UTC, khi đó 05:30 máy là 12:30 VN. Ngày trong `state.json` cũng theo giờ VN.
+> - Giải mã đầu ra tách thành hàm `decode()` để test không cần model; logic đếm theo khoảng 5 phút là lớp `BucketClock` trong `counting.py` (có test).
+> - Luồng đọc camera nối lại với back-off 1 → 30 giây; luồng đứng hình quá 10 giây thì nối lại (OpenCV mặc định chờ 30 giây).
+> - MJPEG chỉ nén ảnh khi đang có người xem: nén 2 bản 1080p mỗi frame tốn một phần đáng kể của 40 ms. Chữ VAO/RA vẽ ở đáy khung vì góc trên là giờ OSD của camera.
+> - Ghi clip bằng `ai-pipeline/tools/record_session.ps1` (mục 16.6), thêm `-map 0:v:0 -an`; trong lúc ghi dùng mp4 phân mảnh (tắt máy giữa chừng vẫn đọc được), hết phiên tự ghép lại thành mp4 thường (`-c copy -movflags +faststart`), vì mp4 phân mảnh không tua được trên nhiều trình phát. Luồng VIGI C320I hiện chỉ có hình; nếu bật micro camera thì tiếng G.711 không cho vào mp4 được.
+
 ### 6.1. Model tạm để thử đường ống
 
 Chưa có model riêng thì dùng YOLO26n pretrained (COCO, class `bird` = 14). Export một lần trên Colab:
@@ -1945,6 +1954,8 @@ Tên khóa cấu hình của MediaMTX thay đổi giữa các phiên bản. Sau 
 
 ### 15.6. Pipeline: đẩy video và MQTT lên cloud
 
+> **Trạng thái (20/10/2026):** `src/stream_pusher.py` **đã làm**, chạy thử ở dev mức 2 (mục 16.3) với camera thật: MediaMTX 1.21.1 nhận hình, trình duyệt xem qua WebRTC bằng token của backend (thấy vạch đếm và số VAO/RA), không token thì 401, pipeline vẫn đếm 25 FPS trong lúc đẩy; tắt bật lại MediaMTX thì 3 giây sau đẩy lại được. Khác code mẫu dưới đây: (1) đọc stderr của ffmpeg ở luồng riêng và **che mật khẩu trong URL** trước khi ghi log (lỗi của ffmpeg có thể in nguyên `rtsp://pipeline:<mật khẩu>@…`; để stderr không ai đọc thì pipe đầy làm ffmpeg đứng); (2) thử lại chờ tăng dần 1 → 30 giây thay cho 3 giây cố định, để bị từ chối (401) không gọi backend liên tục; (3) không có ffmpeg cũng chỉ ghi log rồi thử lại, không làm chết luồng; (4) chỉ vẽ khung khi có người xem MJPEG hoặc có đẩy video. Chưa làm `on_demand` (mục 17.4): nhà yến dùng cáp quang nên đẩy liên tục.
+
 `src/stream_pusher.py` (mới):
 
 ```python
@@ -2826,6 +2837,8 @@ Lắp camera và cấu hình modem tại nhà yến thử nghiệm, làm bằng 
 | Xem hình từ ngoài Internet | Cũng laptop đó, VLC mở `rtsp://admin:<mật khẩu>@<WAN IP>:18554/stream1` | Có hình, xem liên tục khoảng 40 giây không giật |
 
 Kéo hình qua Internet đã chạy, nhưng mới thử ngắn. **Cổng 3b** (kéo liên tục 24 giờ, tự nối lại) chưa làm.
+
+**Chiều 20/10/2026, từ laptop ở nhà qua IP public:** `ffprobe` đọc được H.264 1920×1080, 25 fps, không có tiếng; ghi clip phiên chiều bằng `tools/record_session.ps1` và chạy pipeline trên luồng thật ở 25 FPS. Lúc 17:40 camera đã chuyển sang hồng ngoại (ảnh đen trắng), nên phần lớn phiên chiều thuộc nhóm thiếu sáng của VISION-FR-016. Miệng ống dẫn nằm ở góc phải trên, khoảng x 0,76–0,89 và y 0,25–0,45 của khung, chiếm chừng 200×200 px ở 1080p; ROI cả khung thì chim còn rất nhỏ khi đưa vào model, nên ROI phải thu quanh miệng lỗ khi chốt. (Góc camera đổi ngày 21/10, mục 19.8.)
 
 **Còn lại:**
 

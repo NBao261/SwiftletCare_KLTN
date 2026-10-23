@@ -16,7 +16,7 @@ import cv2
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from inference import Detection  # noqa: E402
-from pipeline import FramePipeline  # noqa: E402
+from pipeline import FramePipeline, draw, track_ids  # noqa: E402
 from stream import load_config, make_counter, make_engine  # noqa: E402
 
 
@@ -75,7 +75,7 @@ def main() -> None:
 
     counter = make_counter(cfg, w, h)
     engine = MotionDetector() if args.detector == "motion" else make_engine(cfg, args.model)
-    pipe = FramePipeline(cfg, engine, counter, w, h)
+    pipe = FramePipeline(cfg, engine, w, h)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{Path(args.clip).stem}_{int(args.start)}s_{args.detector}.mp4"
@@ -86,8 +86,9 @@ def main() -> None:
         ok, frame = cap.read()
         if not ok:
             break
-        drawn, tracks = pipe.process(frame)
-        writer.write(drawn)
+        tracks, _, _ = pipe.track(frame)
+        counter.update(track_ids(tracks), tracks.xyxy)
+        writer.write(draw(frame.copy(), tracks, counter, n / max(time.perf_counter() - t0, 1e-6)))
         max_tracks = max(max_tracks, len(tracks))
         n += 1
     cap.release()
