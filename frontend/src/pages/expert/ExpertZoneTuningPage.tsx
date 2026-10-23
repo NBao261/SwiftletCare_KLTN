@@ -32,7 +32,7 @@ function Toast({ show, message }: { show: boolean; message: string }) {
 
 export default function ExpertZoneTuningPage() {
   const { selectedZoneId } = useZoneStore()
-  const zoneId = selectedZoneId ?? 'zone_demo_01'
+  const zoneId = selectedZoneId ?? undefined
 
   // Data hooks
   const thresholds = useExpertThresholds(zoneId)

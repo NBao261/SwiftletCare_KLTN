@@ -5,15 +5,7 @@
  */
 import { useState } from 'react'
 import { Eye, Info, ChevronLeft, ChevronRight } from 'lucide-react'
-import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import type { HarvestBatchItem } from '@/types/expert.types'
-
-const MOCK_ROWS: HarvestBatchItem[] = [
-  { _id: 'b1', zone_id: 'zone_demo_01', harvest_date: '2026-09-15', total_nests: 84, total_weight_kg: 0.92, quality_grades: { grade_1_pct: 65, grade_2_pct: 25, grade_3_pct: 10 }, notes: '' },
-  { _id: 'b2', zone_id: 'zone_demo_01', harvest_date: '2026-09-01', total_nests: 76, total_weight_kg: 0.81, quality_grades: { grade_1_pct: 60, grade_2_pct: 30, grade_3_pct: 10 }, notes: '' },
-  { _id: 'b3', zone_id: 'zone_demo_01', harvest_date: '2026-08-15', total_nests: 91, total_weight_kg: 1.01, quality_grades: { grade_1_pct: 70, grade_2_pct: 22, grade_3_pct: 8 }, notes: '' },
-  { _id: 'b4', zone_id: 'zone_demo_01', harvest_date: '2026-08-01', total_nests: 68, total_weight_kg: 0.74, quality_grades: { grade_1_pct: 58, grade_2_pct: 32, grade_3_pct: 10 }, notes: '' },
-]
 
 const ZONE_LABELS: Record<number, string> = { 0: 'Tầng 2 - Khu A', 1: 'Tầng 1 - Khu B', 2: 'Tầng 2 - Khu A', 3: 'Tầng 1 - Khu A' }
 const HUM_VALS = ['89,4 %RH', '87,1 %RH', '91,3 %RH', '88,6 %RH']
@@ -31,8 +23,7 @@ interface Props {
 
 export default function HarvestHistoryCard({ batches, isLoading }: Props) {
   const [page, setPage] = useState(1)
-  const isMock = !batches || batches.length === 0
-  const rows = batches && batches.length > 0 ? batches : MOCK_ROWS
+  const rows = batches ?? []
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const paginatedRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -42,12 +33,7 @@ export default function HarvestHistoryCard({ batches, isLoading }: Props) {
       {/* Header */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-[#27231F]">Lịch sử thu hoạch tổ yến đối chiếu</h3>
-            {isMock && (
-              <MockDataTooltip reason="Dữ liệu thu hoạch mẫu do trang trại chưa cập nhật chuỗi lịch sử thu hoạch thực tế." />
-            )}
-          </div>
+          <h3 className="text-sm font-bold text-[#27231F]">Lịch sử thu hoạch tổ yến đối chiếu</h3>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-[#878380] border border-neutral-200 shrink-0">
             <Eye className="w-3.5 h-3.5" />
             Chế độ chỉ đọc
@@ -69,32 +55,40 @@ export default function HarvestHistoryCard({ batches, isLoading }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
-                {paginatedRows.map((batch, i) => {
-                  const globalIdx = (currentPage - 1) * PAGE_SIZE + i
-                  const nests = batch.total_nests ?? batch.nest_count ?? 0
-                  const weightKg = batch.total_weight_kg ?? (batch.weight_grams ? batch.weight_grams / 1000 : 0)
-                  const humidity = batch.env_snapshot?.avg_humidity != null
-                    ? `${batch.env_snapshot.avg_humidity.toFixed(1)} %RH`
-                    : (HUM_VALS[globalIdx % HUM_VALS.length] ?? '—')
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-xs text-[#878380]">
+                      Chưa có dữ liệu thu hoạch nào được ghi nhận cho khu vực này.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedRows.map((batch, i) => {
+                    const globalIdx = (currentPage - 1) * PAGE_SIZE + i
+                    const nests = batch.total_nests ?? batch.nest_count ?? 0
+                    const weightKg = batch.total_weight_kg ?? (batch.weight_grams ? batch.weight_grams / 1000 : 0)
+                    const humidity = batch.env_snapshot?.avg_humidity != null
+                      ? `${batch.env_snapshot.avg_humidity.toFixed(1)} %RH`
+                      : (HUM_VALS[globalIdx % HUM_VALS.length] ?? '—')
 
-                  return (
-                    <tr key={batch._id || globalIdx} className="hover:bg-neutral-50/80 transition-colors">
-                      <td className="px-2.5 py-2 font-medium text-[#27231F] whitespace-nowrap">
-                        {batch.harvest_date ? formatDate(batch.harvest_date) : '—'}
-                      </td>
-                      <td className="px-2.5 py-2 text-[#4A5C00] font-medium whitespace-nowrap">
-                        {ZONE_LABELS[globalIdx % 4] ?? 'Tầng 1 - Khu A'}
-                      </td>
-                      <td className="px-2.5 py-2 tabular-nums whitespace-nowrap"><b>{nests}</b> tổ</td>
-                      <td className="px-2.5 py-2 tabular-nums whitespace-nowrap">
-                        <b>{typeof weightKg === 'number' && !isNaN(weightKg) ? weightKg.toFixed(2) : '0.00'}</b> kg
-                      </td>
-                      <td className="px-2.5 py-2 tabular-nums text-[#4A5C00] font-semibold whitespace-nowrap">
-                        {humidity}
-                      </td>
-                    </tr>
-                  )
-                })}
+                    return (
+                      <tr key={batch._id || globalIdx} className="hover:bg-neutral-50/80 transition-colors">
+                        <td className="px-2.5 py-2 font-medium text-[#27231F] whitespace-nowrap">
+                          {batch.harvest_date ? formatDate(batch.harvest_date) : '—'}
+                        </td>
+                        <td className="px-2.5 py-2 text-[#4A5C00] font-medium whitespace-nowrap">
+                          {ZONE_LABELS[globalIdx % 4] ?? 'Tầng 1 - Khu A'}
+                        </td>
+                        <td className="px-2.5 py-2 tabular-nums whitespace-nowrap"><b>{nests}</b> tổ</td>
+                        <td className="px-2.5 py-2 tabular-nums whitespace-nowrap">
+                          <b>{typeof weightKg === 'number' && !isNaN(weightKg) ? weightKg.toFixed(2) : '0.00'}</b> kg
+                        </td>
+                        <td className="px-2.5 py-2 tabular-nums text-[#4A5C00] font-semibold whitespace-nowrap">
+                          {humidity}
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>

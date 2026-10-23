@@ -64,12 +64,14 @@ export default function ExpertConclusionEditor({ report, zoneName, previewMode, 
       setText(report.expert_conclusion.text)
     } else if (report && !report.expert_conclusion) {
       setText(generateDraft(report, zoneName))
+    } else {
+      setText('')
     }
   }, [report, zoneName])
 
   const charCount = text.length
   const isOverLimit = charCount > MAX_CHARS
-  const canSave = text.trim().length >= 10 && !isOverLimit && !isSaving
+  const canSave = Boolean(report) && text.trim().length >= 10 && !isOverLimit && !isSaving
 
   const expertName = typeof report?.expert_conclusion?.by === 'object' && report?.expert_conclusion?.by?.full_name
     ? report.expert_conclusion.by.full_name

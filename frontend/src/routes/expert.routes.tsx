@@ -7,7 +7,7 @@ import ExpertPageShell from '@/components/features/expert/ExpertPageShell'
 /**
  * Tuyến đường chuyên môn cho Chuyên gia nuôi yến (DOMAIN_EXPERT) — SRS v2.1.4:
  * Bảng điều khiển, Kiểm chứng cảnh báo suy luận, Tinh chỉnh & Hiệu chuẩn, Phân tích dự báo, Báo cáo sức khỏe.
- * Guard bảo vệ bằng RequireRole với EXPERT_ROLES = ['DOMAIN_EXPERT', 'ADMIN'].
+ * Guard bảo vệ bằng RequireRole với EXPERT_ROLES = ['DOMAIN_EXPERT'].
  * Tích hợp khung ExpertPageShell mang theo thanh banner đen SCADA Chuyên gia và bộ chọn Zone 3 cấp.
  */
 const ExpertDashboardPage = lazy(() => import('@/pages/expert/ExpertDashboardPage'))

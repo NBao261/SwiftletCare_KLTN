@@ -10,7 +10,6 @@ import { Video, CheckCircle, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import MockDataTooltip from '@/components/shared/MockDataTooltip'
-import { MOCK_INFERRED_ALERTS } from '@/data/expertMock.data'
 import { useExpertBirdTrends, useExpertPendingAlerts } from '@/hooks/expert/useExpertDashboard'
 import LiveStreamModal from './LiveStreamModal'
 
@@ -71,9 +70,7 @@ export default function BirdCountMonitorCard({ zoneId, farmId }: Props) {
   const returnRate = !isReturnMock ? birdTrends!.avg_return_rate! : 97.9
 
   // Lọc đúng 4 loại cảnh báo suy luận chuyên gia (EXPERT-FR-003)
-  const isAlertsMock = !pendingAlerts || pendingAlerts.length === 0
-  const effectiveAlerts = !isAlertsMock ? pendingAlerts : MOCK_INFERRED_ALERTS
-  const filteredAlerts = effectiveAlerts.filter(a => INFERRED_TYPES.includes(a.type))
+  const filteredAlerts = (pendingAlerts ?? []).filter(a => INFERRED_TYPES.includes(a.type))
   const topAlerts = filteredAlerts.slice(0, 2)
 
   return (
@@ -116,9 +113,6 @@ export default function BirdCountMonitorCard({ zoneId, farmId }: Props) {
               <p className="text-[11px] font-bold uppercase tracking-wider text-warmGray">
                 Cảnh báo suy luận cần kiểm chứng
               </p>
-              {isAlertsMock && (
-                <MockDataTooltip reason="Dữ liệu mô phỏng cảnh báo sự cố — Hiện chưa có cảnh báo suy luận nào phát sinh trong cơ sở dữ liệu." />
-              )}
             </div>
             {topAlerts.map(alert => (
               <div

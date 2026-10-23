@@ -10,7 +10,6 @@ import type {
   ControlPerformanceResponse,
   AutonomyResponse,
   BirdCountTrendsResponse,
-  HarvestBatchItem,
 } from '@/types/expert.types'
 
 export type PerfRange = '1h' | '6h' | '24h' | '7d' | '30d'
@@ -89,15 +88,8 @@ export function useBirdCountTrends(zoneId?: string, days: number = 7) {
 export function useHarvestBatches(zoneId?: string) {
   return useQuery({
     queryKey: ['expert', 'harvests', zoneId],
-    queryFn: async (): Promise<HarvestBatchItem[]> => {
-      try {
-        if (!zoneId) throw new Error('no zone')
-        return await expertService.getHarvestBatches({ zoneId })
-      } catch {
-        const { MOCK_HARVEST_BATCHES } = await import('@/data/expertMock.data')
-        return MOCK_HARVEST_BATCHES
-      }
-    },
+    queryFn: () => (zoneId ? expertService.getHarvestBatches({ zoneId }) : Promise.resolve([])),
+    enabled: Boolean(zoneId),
     staleTime: 30 * 60_000,
   })
 }

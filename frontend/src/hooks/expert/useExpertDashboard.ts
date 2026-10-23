@@ -6,16 +6,16 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { expertService, expertApi } from '@/services/expert.service'
-import { MOCK_RELAY_OVERRIDES } from '@/data/expertMock.data'
 import type { RelayOverrideLogItem } from '@/types/expert.types'
 
 // ── 1. Cảnh báo suy luận đang chờ kiểm chứng (tóm tắt cho Dashboard) ─────────
-export function useExpertPendingAlerts(farmId?: string, zoneId?: string) {
+export function useExpertPendingAlerts(farmId?: string, zoneId?: string, enabled = true) {
   return useQuery({
     queryKey: ['expert', 'pending-alerts', farmId, zoneId],
     queryFn: () => expertService.getPendingAlerts({ farmId, zoneId }),
     staleTime: 60_000,
     refetchInterval: 120_000,
+    enabled,
   })
 }
 
@@ -85,9 +85,9 @@ async function fetchRelayOverrideLogs(params?: { farmId?: string; zoneId?: strin
         }
       }
     }
-    return MOCK_RELAY_OVERRIDES
+    return []
   } catch {
-    return MOCK_RELAY_OVERRIDES
+    return []
   }
 }
 
@@ -104,7 +104,7 @@ export function useSetAlertVerdict() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ alertId, result, note }: { alertId: string; result: 'CONFIRMED' | 'REJECTED'; note?: string }) =>
-      expertApi.setAlertVerdict(alertId, result, note),
+      expertService.setAlertVerdict(alertId, result, note),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['expert', 'pending-alerts'] })
     },

@@ -36,7 +36,7 @@ export const OPS_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'ADMIN']
  * Nhóm role Chuyên gia nuôi yến — SRS v2.1.4:
  * Bảng điều khiển, Kiểm chứng cảnh báo suy luận, Tinh chỉnh & Hiệu chuẩn, Phân tích dự báo, Báo cáo sức khỏe.
  */
-export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT', 'ADMIN']
+export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
 
 /**
  * Tổng quan/Phân tích (giám sát môi trường chi tiết theo zone) là công cụ vận

@@ -4,7 +4,6 @@
  */
 import { Zap, Clock } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import type { ZoneHealthReportItem } from '@/types/expert.types'
 import { getWeekLabel } from '@/hooks/expert/useHealthReports'
 
@@ -70,8 +69,6 @@ function ReportCard({ report, index, selected, onClick }: {
 export default function ReportListPanel({
   reports, selectedId, previewMode, isLoading, onSelect, onPreview,
 }: Props) {
-  const isFallback = reports.some(r => r._id.startsWith('report_w') || r._id.startsWith('mock_'))
-
   return (
     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-4 flex flex-col gap-3 w-full">
       {/* Nút Xem số liệu tạm tính (Preview) */}
@@ -101,15 +98,19 @@ export default function ReportListPanel({
         <span className="text-[11px] font-bold text-[#878380] uppercase tracking-wider">
           Kỳ báo cáo đã chốt
         </span>
-        {isFallback && (
-          <MockDataTooltip reason="Dữ liệu các kỳ báo cáo tuần mô phỏng luồng đối chiếu khi trạm chưa đến nhịp chốt tự động (00:05 Thứ Hai)." />
-        )}
       </div>
 
       {/* Danh sách thẻ báo cáo */}
       {isLoading ? (
         <div className="space-y-2.5 animate-pulse">
           {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 bg-neutral-100 rounded-xl" />)}
+        </div>
+      ) : reports.length === 0 ? (
+        <div className="p-4 text-center rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50">
+          <p className="text-xs font-semibold text-[#27231F]">Chưa có kỳ báo cáo nào</p>
+          <p className="text-[11px] text-[#878380] mt-1">
+            Bấm &quot;Xem số liệu tạm tính&quot; phía trên để tổng hợp tuần này.
+          </p>
         </div>
       ) : (
         <div className="space-y-2.5">

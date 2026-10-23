@@ -16,35 +16,34 @@ const QK = (key: string, zoneId?: string) => ['expert', 'tuning', key, zoneId]
 export function useExpertThresholds(zoneId?: string) {
   return useQuery({
     queryKey: QK('thresholds', zoneId),
-    queryFn: async (): Promise<ExpertThresholds> => {
-      try {
-        const { MOCK_EXPERT_THRESHOLDS } = await import('@/data/expertMock.data')
-        if (!zoneId) return MOCK_EXPERT_THRESHOLDS
-        const res = await expertApi.getZone(zoneId)
-        return res.data?.data?.thresholds ?? MOCK_EXPERT_THRESHOLDS
-      } catch {
-        const { MOCK_EXPERT_THRESHOLDS } = await import('@/data/expertMock.data')
-        return MOCK_EXPERT_THRESHOLDS
-      }
+    queryFn: async (): Promise<ExpertThresholds | undefined> => {
+      if (!zoneId) return undefined
+      const res = await expertApi.getZone(zoneId)
+      return res.data?.data?.thresholds
     },
     staleTime: 5 * 60_000,
-    enabled: true,
+    enabled: Boolean(zoneId),
   })
 }
 
-export function useUpdateThresholds(zoneId: string) {
+export function useUpdateThresholds(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (thresholds: Partial<ExpertThresholds>) =>
-      expertService.updateThresholds(zoneId, thresholds),
+    mutationFn: (thresholds: Partial<ExpertThresholds>) => {
+      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      return expertService.updateThresholds(zoneId, thresholds)
+    },
     onSuccess: () => void qc.invalidateQueries({ queryKey: QK('thresholds', zoneId) }),
   })
 }
 
-export function useResetThresholds(zoneId: string) {
+export function useResetThresholds(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => expertService.resetThresholds(zoneId),
+    mutationFn: () => {
+      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      return expertService.resetThresholds(zoneId)
+    },
     onSuccess: () => void qc.invalidateQueries({ queryKey: QK('thresholds', zoneId) }),
   })
 }
@@ -53,26 +52,23 @@ export function useResetThresholds(zoneId: string) {
 export function useExpertFuzzyTuning(zoneId?: string) {
   return useQuery({
     queryKey: QK('fuzzy', zoneId),
-    queryFn: async (): Promise<ExpertFuzzyTuning> => {
-      try {
-        const { MOCK_EXPERT_FUZZY_TUNING } = await import('@/data/expertMock.data')
-        if (!zoneId) return MOCK_EXPERT_FUZZY_TUNING
-        const res = await expertApi.getZone(zoneId)
-        return res.data?.data?.fuzzy_tuning ?? MOCK_EXPERT_FUZZY_TUNING
-      } catch {
-        const { MOCK_EXPERT_FUZZY_TUNING } = await import('@/data/expertMock.data')
-        return MOCK_EXPERT_FUZZY_TUNING
-      }
+    queryFn: async (): Promise<ExpertFuzzyTuning | undefined> => {
+      if (!zoneId) return undefined
+      const res = await expertApi.getZone(zoneId)
+      return res.data?.data?.fuzzy_tuning
     },
     staleTime: 5 * 60_000,
+    enabled: Boolean(zoneId),
   })
 }
 
-export function useUpdateFuzzyTuning(zoneId: string) {
+export function useUpdateFuzzyTuning(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (tuning: Partial<ExpertFuzzyTuning>) =>
-      expertService.updateFuzzyTuning(zoneId, tuning),
+    mutationFn: (tuning: Partial<ExpertFuzzyTuning>) => {
+      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      return expertService.updateFuzzyTuning(zoneId, tuning)
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: QK('fuzzy', zoneId) })
       void qc.invalidateQueries({ queryKey: ['expert', 'fuzzy-suggestion'] })
@@ -94,26 +90,23 @@ export function useExpertAiSuggestion(zoneId?: string) {
 export function useExpertDetectionTuning(zoneId?: string) {
   return useQuery({
     queryKey: QK('detection', zoneId),
-    queryFn: async (): Promise<ExpertDetectionTuning> => {
-      try {
-        const { MOCK_EXPERT_DETECTION_TUNING } = await import('@/data/expertMock.data')
-        if (!zoneId) return MOCK_EXPERT_DETECTION_TUNING
-        const res = await expertApi.getZone(zoneId)
-        return res.data?.data?.detection_tuning ?? MOCK_EXPERT_DETECTION_TUNING
-      } catch {
-        const { MOCK_EXPERT_DETECTION_TUNING } = await import('@/data/expertMock.data')
-        return MOCK_EXPERT_DETECTION_TUNING
-      }
+    queryFn: async (): Promise<ExpertDetectionTuning | undefined> => {
+      if (!zoneId) return undefined
+      const res = await expertApi.getZone(zoneId)
+      return res.data?.data?.detection_tuning
     },
     staleTime: 5 * 60_000,
+    enabled: Boolean(zoneId),
   })
 }
 
-export function useUpdateDetectionTuning(zoneId: string) {
+export function useUpdateDetectionTuning(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (tuning: Partial<ExpertDetectionTuning>) =>
-      expertService.updateDetectionTuning(zoneId, tuning),
+    mutationFn: (tuning: Partial<ExpertDetectionTuning>) => {
+      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      return expertService.updateDetectionTuning(zoneId, tuning)
+    },
     onSuccess: () => void qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),
   })
 }

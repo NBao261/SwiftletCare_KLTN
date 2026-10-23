@@ -4,8 +4,8 @@
  */
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { expertService, expertApi } from '@/services/expert.service'
-import type { InferredAlertItem, InferredAlertType, ExpertVerdictStats } from '@/types/expert.types'
+import { expertService } from '@/services/expert.service'
+import type { InferredAlertType, ExpertVerdictStats } from '@/types/expert.types'
 import type { AlertSeverity } from '@/types'
 
 // Re-export helpers để không vỡ import trong components
@@ -27,17 +27,7 @@ const PAGE_SIZE = 5
 export function useAllInferredAlerts(farmId?: string, zoneId?: string) {
   return useQuery({
     queryKey: ['expert', 'all-alerts', farmId, zoneId],
-    queryFn: async (): Promise<InferredAlertItem[]> => {
-      try {
-        const res = await expertApi.getAllAlerts({ farmId, zoneId })
-        if (Array.isArray(res.data?.data)) return res.data.data
-        const { MOCK_INFERRED_ALERTS } = await import('@/data/expertMock.data')
-        return MOCK_INFERRED_ALERTS
-      } catch {
-        const { MOCK_INFERRED_ALERTS } = await import('@/data/expertMock.data')
-        return MOCK_INFERRED_ALERTS
-      }
-    },
+    queryFn: () => expertService.getAllAlerts({ farmId, zoneId }),
     staleTime: 60_000,
     refetchInterval: 120_000,
   })

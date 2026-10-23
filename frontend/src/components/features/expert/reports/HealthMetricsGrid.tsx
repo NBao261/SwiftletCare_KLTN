@@ -39,9 +39,16 @@ interface Props {
 }
 
 export default function HealthMetricsGrid({ report, isLoading }: Props) {
-  if (isLoading || !report) return (
-    <div className="grid grid-cols-2 gap-4 animate-pulse">
+  if (isLoading) return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
       {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-40 bg-neutral-100 rounded-xl" />)}
+    </div>
+  )
+
+  if (!report) return (
+    <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50 p-10 text-center">
+      <p className="text-sm font-semibold text-[#27231F]">Chưa có dữ liệu báo cáo</p>
+      <p className="text-xs text-[#878380] mt-1">Vui lòng chọn kỳ báo cáo hoặc nhấn &quot;Xem số liệu tạm tính&quot; để tổng hợp dữ liệu tuần.</p>
     </div>
   )
 

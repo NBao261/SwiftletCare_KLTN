@@ -39,8 +39,8 @@ export default function AppSidebar({
   const user = useAuthStore(s => s.user)
   const unreadCount = useAlertStore(s => s.unreadCount)
   const isExpert = user?.role === 'DOMAIN_EXPERT'
-  const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined)
-  const expertPendingCount = expertAlerts?.length ?? 0
+  const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
+  const expertPendingCount = isExpert ? (expertAlerts?.length ?? 0) : 0
   const askLogout = useLogoutConfirmStore(s => s.ask)
   const navigationLabel = useNavigationLabel()
   const { scrollRef, contentRef, canScrollDown } = useCanScrollDown<HTMLElement, HTMLDivElement>()

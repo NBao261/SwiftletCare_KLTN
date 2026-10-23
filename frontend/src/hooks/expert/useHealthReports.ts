@@ -11,17 +11,11 @@ export function useHealthReportList(zoneId?: string) {
   return useQuery({
     queryKey: ['expert', 'health-reports', zoneId],
     queryFn: async (): Promise<ZoneHealthReportItem[]> => {
-      try {
-        if (!zoneId) throw new Error('no zone')
-        const data = await expertService.getHealthReports(zoneId)
-        if (Array.isArray(data) && data.length > 0) return data
-        const { MOCK_HEALTH_REPORTS } = await import('@/data/mocks/expertHealthReport.mock')
-        return MOCK_HEALTH_REPORTS
-      } catch {
-        const { MOCK_HEALTH_REPORTS } = await import('@/data/mocks/expertHealthReport.mock')
-        return MOCK_HEALTH_REPORTS
-      }
+      if (!zoneId) return []
+      const data = await expertService.getHealthReports(zoneId)
+      return Array.isArray(data) ? data : []
     },
+    enabled: Boolean(zoneId),
     staleTime: 10 * 60_000,
   })
 }
@@ -30,16 +24,9 @@ export function useHealthReportPreview(zoneId?: string, enabled = false) {
   return useQuery({
     queryKey: ['expert', 'health-reports-preview', zoneId],
     queryFn: async (): Promise<ZoneHealthReportItem | null> => {
-      try {
-        if (!zoneId) throw new Error('no zone')
-        const data = await expertService.getHealthReportPreview(zoneId)
-        if (data) return data
-        const { MOCK_HEALTH_REPORTS } = await import('@/data/mocks/expertHealthReport.mock')
-        return { ...MOCK_HEALTH_REPORTS[0], expert_conclusion: undefined, _id: 'preview' }
-      } catch {
-        const { MOCK_HEALTH_REPORTS } = await import('@/data/mocks/expertHealthReport.mock')
-        return { ...MOCK_HEALTH_REPORTS[0], expert_conclusion: undefined, _id: 'preview' }
-      }
+      if (!zoneId) return null
+      const data = await expertService.getHealthReportPreview(zoneId)
+      return data ?? null
     },
     enabled: Boolean(zoneId) && enabled,
     staleTime: 5 * 60_000,
