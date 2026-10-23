@@ -1,6 +1,6 @@
 # SwiftletCare — BẢNG TASK CHI TIẾT (Micro-task Checklist) v3
 
-> Mã NFR trong file này là mã của SRS cũ. Report 3 dùng NFR-01…13: REL-NFR-001/003 → NFR-06 (ENV-FR-014, 024) · REL-NFR-002, PERF-NFR-007 → NFR-07 (ENV-FR-025) · PERF-NFR-004 → NFR-04 · SEC-NFR-003/004 → NFR-10 · AUTO-NFR-001 → NFR-08 · EVID-NFR-003 → giả định A-3, REF-5. Các mã còn lại (UX-, OPS-, PRIV-, SLA-NFR, SEC-NFR-001/005/006, REL-NFR-004/005/007) không còn là NFR cam kết; phần thiết kế tương ứng ở Report 4 §10–11.
+> Mã NFR trong file này là mã của SRS cũ. Report 3 dùng NFR-01…14 (NFR-12 chi phí đã bỏ): REL-NFR-001/003 → NFR-06 (ENV-FR-014, 024) · REL-NFR-002, PERF-NFR-007 → NFR-07 (ENV-FR-025) · PERF-NFR-004 → NFR-04 · SEC-NFR-003/004 → NFR-10 · AUTO-NFR-001 → NFR-08 · EVID-NFR-003 → giả định A-3, REF-5. Các mã còn lại (UX-, OPS-, PRIV-, SLA-NFR, SEC-NFR-001/005/006, REL-NFR-004/005/007) không còn là NFR cam kết; phần thiết kế tương ứng ở Report 4 §10–11.
 
 **Bám theo:** Report 3 – SRS (`docs/reports/report3-srs.md`, phiếu đăng ký bản sửa sau Review 1; chỗ code còn lệch ở `docs/reports/README.md`) + Components Guide v3.11 + Sensor Config Guide + `docs/bird-counting-plan.md` | **Phạm vi:** theo phiếu v2 và Report 3 §8
 

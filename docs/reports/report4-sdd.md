@@ -8,7 +8,7 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.0.5 (Review 2) |
+| Document version | 1.0.6 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
 | Requirements baseline | Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -77,7 +77,7 @@ flowchart LR
     end
     CAM[IP camera at entrance<br/>IR night vision, RTSP]
   end
-  AINODE[AI node - PC or cloud<br/>YOLO + ByteTrack<br/>ring counter]
+  AINODE[AI node - PC at the house<br/>YOLO + ByteTrack<br/>ring counter]
   subgraph CLOUD[Cloud server - Docker]
     direction TB
     EMQX[(EMQX<br/>MQTT broker)]
@@ -155,7 +155,7 @@ Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, M
 | --- | --- | --- |
 | Firmware | ESP32 (ESP32-WROOM-32D), Arduino framework on FreeRTOS, PlatformIO `espressif32` | Arduino-ESP32 core 2.0.17; firmware 1.4.0 |
 | Firmware libraries | PubSubClient, ArduinoJson, ModbusMaster, DFRobotDFPlayerMini, ElegantOTA; planned: Adafruit ADS1X15 for the current transformers | ^2.8, ^7.0, ^2.0.1, ^1.0.6, ^3.1 |
-| Controller board (planned) | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC with two clamp-on current transformers (SCT-013 or ZMCT103C class, isolated from mains) | `[TEAM: board revision, BOM]` |
+| Controller board (planned) | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC with two clamp-on current transformers (SCT-013 or ZMCT103C class, isolated from mains) | `[TEAM: board revision]` |
 | AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, supervision (ByteTrack), paho-mqtt, PyYAML, loguru; detection model YOLO26n exported to ONNX (one class, trained on Colab; `torch`/`ultralytics` are not runtime dependencies) | Python 3.11–3.12; opencv-python ≥ 4.14 < 5; numpy ≥ 1.26 < 3; onnxruntime 1.30; supervision 0.30; paho-mqtt 2.x |
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
@@ -180,7 +180,7 @@ Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, M
 | Environment | Where | How it is deployed | Rollback |
 | --- | --- | --- | --- |
 | Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA | — |
-| Staging | `[TEAM: VPS provider, URL]` | `[TEAM: e.g. docker compose on the VPS behind a reverse proxy with TLS; backend built from the tag being demonstrated]`; seed data with `npm run seed` | Re-deploy the previous tag; restore the MongoDB dump taken before deployment |
+| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, `[TEAM: provider]`, with a domain `[TEAM: domain]` and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at the test house (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Caddy reverse proxy with Let's Encrypt TLS, a TLS proxy for MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
 | Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (TICKET-FR-008) |
 
 Defense 1.1 demonstrations run on staging with seeded data (guideline §9.2).
@@ -204,7 +204,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D2 | Control method | On/off thresholds; PID; fuzzy logic | **Zero-order Sugeno fuzzy logic with time-proportioning** on relays: smooth power levels with plain relays, parameters a domain expert can read and tune; mirrored in the backend for simulation and suggestions | ENV-FR-010, 011, 021, ANALYTICS-FR-010 |
 | D3 | Device–cloud protocol | HTTP polling; WebSocket; MQTT | **MQTT (EMQX) with TLS**, QoS 1 for commands, `deviceId` in every payload; topics per zone for controllers and per house for AI nodes. Light on the ESP32, survives intermittent links | Section 7.2 |
 | D4 | Database | Relational (PostgreSQL); time-series DB; MongoDB | **MongoDB** with Mongoose: telemetry as documents with TTL (90 days), flexible embedded histories (thresholds, tuning), one store for the whole system; schema enforced by `$jsonSchema` validators generated from the models | Section 6 |
-| D5 | Where bird counting runs | Raspberry Pi at the house; PC at the house or cloud server | **PC or cloud AI node**: enough throughput for real time at 25 fps with YOLO; one camera per entrance, counts per house | VISION-FR-002, THREAT-FR-010 |
+| D5 | Where bird counting runs | Raspberry Pi at the house; cloud GPU server fed by the camera stream; **desktop PC at the house** | **The team's spare PC at the house, on the camera's LAN**: the 1080p RTSP feed never crosses the house's uplink (only counts and the annotated stream go up), no new hardware is bought, and it has more compute than a Raspberry Pi; a cloud GPU would need the full feed uploaded and a paid server. Throughput is measured on this PC (NFR-04); one camera per entrance, counts per house | VISION-FR-002, THREAT-FR-010, NFR-04 |
 | D6 | Counting geometry | Straight virtual line; ring around the hole with tracking only near it; ring with whole-frame tracking | **Whole-frame tracking and a closed ring around the hole, with extrapolation of fast tracks**: birds leave the hole in every direction, so a line misses some; at the hole a bird is a 1–2-frame blur moving 150–200 px/frame (clip of 22/10/2026), so tracking near the hole alone never gives it an identity — tracked over the whole room it already has one, and a fast track lost just outside the ring is counted by its last velocity. Fly-pasts cancel in the net count | VISION-FR-004, 005, 009, 018, BR-25 |
 | D7 | Expert in the loop | Expert approval blocks every change; changes apply at once with no review | **Owner changes apply at once and open a review item; only the expert applies system suggestions; without an expert the owner decides** — safety on site is never blocked and every parameter is still validated | EXPERT-FR-010, 011, BR-22 |
 | D8 | Live video path | Through the backend; dedicated video server | **MediaMTX** with short-lived viewing tokens checked by the backend: the API never carries video, raw feed only for the pipeline | VISION-FR-013 |
@@ -239,7 +239,7 @@ Configuration (`config/Config`) is stored in NVS and every received value is cla
 
 `stream.py` (RTSP or clip loop) runs `pipeline.py` (`FramePipeline`) on every frame: `frame_prep.py` masks the camera's date overlay and cuts the frame into 2 overlapping tiles → `inference.py` runs YOLO (ONNX) on each tile and merges the duplicates of the overlap → `sv.ByteTrack` tracks every bird over the whole frame (boxes enlarged before matching, because a small fast bird's boxes in consecutive frames do not overlap) → `counting.py` (`RingCounter`) counts ring crossings, extrapolates fast tracks at the hole and keeps ambiguous tracks apart → the frame is drawn with green boxes and the yellow ring. `remote_config.py` listens on `{house}/config/update` and swaps in a new ring without restart. The same `FramePipeline` is used by `tools/track_clip.py`, so a recorded clip is processed exactly like the live stream. Dataset tools: `tools/pick_roi.py` (ring calibration), `tools/extract_frames.py` (masked tile images and draft labels from motion tracks for Roboflow), `tools/split_by_day.py` (train/val/test split by recording day).
 
-Still to build (plan §6.6): a latest-frame reader thread, session switching, MQTT publishing of session counts, 5-minute buckets and heartbeat, and the push of the annotated stream to MediaMTX.
+Not on `develop` yet (plan §6.6): a latest-frame reader thread, session switching, MQTT publishing of session counts, 5-minute buckets and heartbeat, and the push of the annotated stream to MediaMTX. They are written in pull request #89, which was merged into the branch of #88 after #88 had reached `develop`; they reach the design baseline when that branch is merged into `develop`.
 
 ### 5.3 Backend
 
@@ -1296,27 +1296,41 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  subgraph VPS[Staging server - TEAM to confirm]
-    RP[Reverse proxy + TLS] --> API[backend container]
+  subgraph VPS[Staging VPS - Docker]
+    RP[Caddy reverse proxy<br/>Let's Encrypt TLS, 443] --> API[backend container]
     RP --> WEBS[web static build]
-    RP --> MTX[MediaMTX]
-    API --> MONGO[(MongoDB)]
-    API --> EMQX[(EMQX)]
-    API --> MINIO[(MinIO)]
+    RP --> MTX[MediaMTX<br/>WebRTC signalling]
+    API --> MONGO[(MongoDB<br/>internal only)]
+    API -- MQTT 1883<br/>Docker network --> EMQX[(EMQX)]
+    TLSP[TLS proxy<br/>8883 MQTT, 8322 RTSPS] --> EMQX
+    TLSP --> MTX
+    API --> MINIO[(MinIO<br/>internal only)]
+    MTX -- stream auth --> API
   end
-  HOUSE[Test house:<br/>ESP32 + camera] -- MQTT TLS 8883 --> EMQX
-  AIN[AI node] -- MQTT, RTSP push --> EMQX
-  AIN --> MTX
-  USERS[Web and mobile users] -- HTTPS / WSS --> RP
+  subgraph HOUSE[Test house - LAN behind the house router]
+    ESP[ESP32 controllers]
+    CAM[IP camera] -- RTSP on the LAN --> PC[AI node:<br/>spare desktop PC]
+  end
+  ESP -- MQTT over TLS 8883 --> TLSP
+  PC -- counts, heartbeat<br/>MQTT TLS 8883 --> TLSP
+  PC -- annotated video<br/>RTSPS 8322 --> TLSP
+  USERS[Web and mobile users] -- HTTPS / WSS 443 --> RP
+  USERS -- WebRTC media UDP 8189 --> MTX
+  API -- outbound HTTPS --> EXT[[Telegram, FCM,<br/>Open-Meteo]]
 ```
+
+Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a public but possibly dynamic IP on a consumer modem), so the backend runs on a VPS; the video stays at the house, where the camera is, so only counts and the annotated stream use the house's uplink (D5). Only ports 80/443 (Caddy), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only) — both wrapped by a TLS proxy that reuses Caddy's certificate — and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
 
 | Operation | Procedure |
 | --- | --- |
-| Deploy | Build and start the containers from the tag being demonstrated; run pending `npm run migrate:*` scripts (all idempotent); load demo data with `npm run seed` |
+| Deploy | On the VPS: check out the tag, `docker compose -f docker-compose.staging.yml up -d --build`, run pending `npm run migrate:*` scripts (all idempotent), load demo data with the seed script on a fresh database; smoke check `GET /health`, sign-in, one telemetry message |
 | Rollback | Re-deploy the previous tag; restore the MongoDB dump taken before the deployment |
-| Backup | `mongodump` before each deployment and daily `[TEAM: schedule]` |
+| Backup | `mongodump` before each deployment and once a day by cron, 7 dumps kept, copied off the VPS `[TEAM: where]` |
+| AI node | `stream.py` runs as a service on the spare PC that starts at boot and restarts on failure; the PC's BIOS is set to power on after a power cut; the counting ring and model file are versioned with the tag |
 | Firmware | OTA from the Technician console; the new image is kept only after it reaches the broker within 10 minutes, otherwise the bootloader returns to the previous one |
-| Monitoring | System health overview (SYSTEM-FR-003), device status and alerts, audit log |
+| Monitoring | System health overview (SYSTEM-FR-003), device and AI-node status and alerts (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`), audit log, `docker compose logs` |
+
+Not in the repository yet (Section 12): `docker-compose.staging.yml`, Dockerfiles for backend and web, the Caddy configuration, a demo seed covering every main workflow, MQTT over TLS in the firmware.
 
 ---
 
@@ -1330,10 +1344,11 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Expert loop | Review items and suggestion proposals (SM-10, SM-11); owner notifications of every expert decision; owner fallback without an expert |
 | Configuration sync | Configuration version, `CONFIG_MISMATCH` (SM-12) |
 | Bird counting | No trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10); `stream.py` publishes nothing yet (counts, buckets, heartbeat, video push); throughput risk: two tiles with the COCO model ran at about 7 fps on a laptop against the 25 fps of NFR-04, to be measured on the real AI node; seasonal schedule and incomplete sessions; screens for live stream and counting ring |
-| Clients | Domain Expert screens; mobile push registration |
+| Clients | Web Domain Expert screens exist (`/expert/*`: dashboard, alert verdicts, tuning, analytics, reports) but still read the SRS v2.1.4 names, fall back to mock data and sit outside the FE_Design folder plan; no Domain Expert screens on mobile; mobile push registration |
 | Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes |
 | Device setup (MF-10) | Register, move, remove and replace routes allow only Technician and Administrator; moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
-| CI | No job for the AI pipeline tests |
+| CI | No job for the AI pipeline tests on `develop` (added by pull request #89, not merged into `develop` yet) |
+| Staging | Staging compose file, Dockerfiles for backend and web, Caddy configuration and a demo seed for every main workflow not written; firmware connects on port 1883 without TLS (`MQTTManager.cpp`), so the controller cannot reach the staging broker on 8883 until TLS with the CA certificate is added |
 | Health assessment (MF-11) | Daily health status, ratings, health levels, reports per house (daily, weekly, monthly), PDF and CSV export, weather job: not built (SM-17, D10, D12, D13) |
 | Hardware | Controller PCB with current transformers and actuator check (D11, THREAT-FR-014) not built. Bypass switches removed from scope (Report 3 §8) |
 | Data model | Planned entities and attributes of Section 6.4; unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest) |
@@ -1344,6 +1359,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.6 | `[TEAM]` | Staging declared: one VPS with Caddy TLS for backend, web, broker and video server, the team's spare PC at the house as AI node (D5, Sections 3.4 and 11); hardware cost no longer tracked (NFR-12 removed in Report 3); Domain Expert web screens noted in Section 12 |
 | 1.0.5 | `[TEAM]` | Bypass switch removed (borrowed test house cannot be rewired): architecture, controller board and AD-09 updated; the house's own switches are shown outside the system |
 | 1.0.4 | `[TEAM]` | Daily health assessment and periodic reports (MF-11): data flows DF-10, DF-11, decisions D10 (agreement rules), D11 (current transformers), D12 (weather API), D13 (report files), planned entities `HOUSE_HEALTH_DAY` and `WEATHER_OBSERVATION`, SM-17, AD-14; Open-Meteo and the team's controller board declared |
 | 1.0.3 | `[TEAM]` | Device setup by the Farm Owner (MF-10): data flow DF-9, decision D9 (label and floor QR codes), QR libraries declared, state machine SM-16 for the device label, activity diagram AD-10 rewritten for MF-10, security of the activation key, setup gaps |

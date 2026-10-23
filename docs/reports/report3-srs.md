@@ -10,7 +10,7 @@
 | Supervisor | `[TEAM: supervisor name]` |
 | Document version | 3.0.0 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
-| Scope baseline | Registration form – proposed final version `[TEAM: vN]` with Record of Changes (BM03) |
+| Scope baseline | Registration form – proposed final version v3 with Record of Changes (BM03), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 ---
@@ -42,7 +42,7 @@ This document specifies **what** SwiftletCare must do: its actors, functional re
 SwiftletCare is an **automated control and monitoring system** for swiftlet houses. The house regulates and protects itself; people supervise, validate and intervene only as an exception. The product consists of:
 
 - an **edge controller** (ESP32 with five RS485 Modbus sensors, a relay module and an attractant speaker) in each zone (floor) of a house;
-- an **AI camera node** at the bird entrance (IP camera with infrared night vision and a PC or cloud server running the detection and tracking pipeline);
+- an **AI camera node** at the bird entrance (IP camera with infrared night vision and a desktop PC at the house running the detection and tracking pipeline);
 - a **cloud backend** (REST API, MQTT broker, database, WebSocket, background services);
 - a **web application** and a **mobile application** for the Farm Owner and the Domain Expert, and a web console for the supporting roles. The Farm Owner sets up devices in the mobile application by scanning the label of a device and the code of its floor (MF-10).
 
@@ -144,7 +144,7 @@ The component-level architecture, data flows and deployment are in the SDD (REF-
 
 ### 2.2 Main Flows
 
-The main flows MF-01…09 are those of the registration form (section D), numbered the same way. MF-10 and MF-11 are added by the Record of Changes (BM03): MF-10 at the supervisor's request that setting up a device be as simple as possible (it replaces the former supporting flow SF-01), MF-11 to make the multi-modal health assessment an explicit, measurable output. Each flow is described by one activity diagram in the SDD.
+The main flows MF-01…11 are Flows 1–11 of the registration form v3 (section D), numbered the same way. Flows 10 and 11 were added by the Record of Changes (BM03 rows 2 and 3): MF-10 at the supervisor's request that setting up a device be as simple as possible (it replaces the former supporting flow SF-01), MF-11 to make the multi-modal health assessment an explicit, measurable output. Each flow is described by one activity diagram in the SDD.
 
 | ID | Flow (registration form) | Actors | Trigger | Business outcome | FRs |
 | --- | --- | --- | --- | --- | --- |
@@ -223,7 +223,7 @@ Technicians and Administrators see the structure and device status of a farm, ne
 ### 2.5 Operating Environment
 
 - Controller: ESP32 on 2.4 GHz Wi-Fi, five RS485 Modbus RTU sensors on one bus, 4-channel relay module, DFPlayer Mini audio module, hardware watchdog.
-- AI node: PC at the house or a cloud server; IP camera with RTSP (H.264, 1080p, 25 fps) and infrared night vision.
+- AI node: a desktop PC at the house, on the same LAN as the camera, reaching the backend over the Internet (the team's spare PC, `[TEAM: CPU, RAM, GPU if any]`); IP camera with RTSP (H.264, 1080p, 25 fps) and infrared night vision.
 - Backend: Linux server with Docker; MongoDB, EMQX MQTT broker, MinIO object storage.
 - Clients: current Chrome, Edge and Safari for the web application; Android 9+ and iOS 16.4+ for the mobile application.
 
@@ -602,9 +602,10 @@ Every NFR has one metric, one threshold and one measurement method; each is veri
 | NFR-09 | Accuracy – bird counting | Precision and Recall of detection; absolute count error per direction | `[TEAM: Precision ≥ X, Recall ≥ Y, count error ≤ Z %]`, reported separately for daylight and low light | Comparison with manual counts on `[TEAM: N]` recorded clips (VISION-FR-016) |
 | NFR-10 | Security | (a) Share of non-public endpoints that reject requests without a valid token; (b) password storage; (c) sign-in throttling | (a) 100 %; (b) bcrypt cost ≥ 12; (c) the 11th wrong sign-in attempt within 15 min from one IP returns 429 | Automated test enumerating every path of `api-spec.yaml` without a token; unit test on the stored hash; integration test on the sign-in limiter |
 | NFR-11 | Accuracy – forecast | Mean absolute error of the 30- and 60-minute humidity and temperature forecasts | `[TEAM: MAE60 humidity ≤ X %RH, temperature ≤ Y °C]` | Back-test on ≥ 7 days of recorded telemetry, value returned by ANALYTICS-FR-009 |
-| NFR-12 | Cost | Hardware cost of one zone prototype (controller, sensors, relays, speaker) plus one entrance camera | `[TEAM: ≤ total of the current BOM]` VND | Sum of the BOM in the SDD with purchase invoices |
 | NFR-13 | Usability – device setup | Time from powering a new controller to "configuration applied" in the application (FARM-FR-012), and the input it needs | ≤ 10 min `[TEAM: confirm]` in 5 of 5 trials, with two QR scans and only the Wi-Fi password typed | 5 trials on the prototype by people who have not set up a device before, timed from power-on to the confirmation in the application |
 | NFR-14 | Accuracy – daily health assessment | Agreement between the daily health status and the assessors' independent ratings (BR-31), and Cohen's kappa | `[TEAM: agreement ≥ X %, kappa ≥ Y]` over ≥ 14 rated days | Field run in the test house; ratings collected through EXPERT-FR-012; computed by ANALYTICS-FR-014 |
+
+NFR-12 (hardware cost) was removed in 3.0.0: the registration's "Cost-Efficiency" is a design constraint (C-4), not a measured target, and the team's controller board is still being built. Its ID is not reused.
 
 The Design Brief (BM01, section 7) proposes at most six of these NFRs for commitment at Review 2.
 
@@ -643,7 +644,7 @@ Each lifecycle below has a state machine diagram in the SDD. Every transition na
 | --- | --- | --- | --- |
 | `AUTO` | `MANUAL` | Owner or Technician override applied by the controller | ENV-FR-016, 017 |
 | `MANUAL` | `AUTO` | Override expires or is cancelled | ENV-FR-018, 019 |
-| `AUTO` | `AUTO` | Domain Expert override request rejected (403); duration outside BR-08 rejected (400) | ENV-FR-016 |
+| `AUTO` | `AUTO` | Domain Expert override request rejected (403); duration outside BR-08 rejected (422) | ENV-FR-016 |
 
 ### 6.4 Invitation
 
@@ -805,17 +806,19 @@ The state is derived from the stock entry and the device record; it is not a sto
 
 ### 7.1 Registration Form → Requirements
 
-| Registration item (section C) | Requirements |
+| Registration item (form v3) | Requirements |
 | --- | --- |
 | C.1 Sensing & Telemetry | ENV-FR-001, 002, 004, 005, 014, 022, 024 |
 | C.1 Closed-Loop Control | ENV-FR-010, 011, 013b, 015, 021, ENV-FR-027 |
-| C.1 Self-Protection & Self-Diagnosis | THREAT-FR-005, 006, 007, 009, 010, 011, 012, 013, ENV-FR-025, ALERT-FR-010 |
+| C.1 Self-Protection & Self-Diagnosis | THREAT-FR-005, 006, 007, 009, 010, 011, 012, 013, 014, ENV-FR-025, ALERT-FR-010 |
 | C.1 Forecasting & Tuning Suggestion | ANALYTICS-FR-008, 009, 010, ALERT-FR-011 |
 | C.1 Bird Counting | VISION-FR-001…011, 014, 016, 017, THREAT-FR-010, VISION-FR-019, 020 |
-| C.1 Health Assessment & Alerts | ALERT-FR-001, 008, EXPERT-FR-005, ALERT-FR-014, ANALYTICS-FR-012, EXPERT-FR-012 |
+| C.1 Health Assessment & Alerts | ALERT-FR-001, 008, 014, ANALYTICS-FR-012, 013, EXPERT-FR-005, 013 |
 | C.2 House & Zone Management | FARM-FR-001, 002, 005, 006 |
+| C.2 Device Setup | FARM-FR-003, 003b, 003c, 004, 007, 007b, 008, 011, 012, ENV-FR-027, NFR-13 |
 | C.2 Real-Time Monitoring | ENV-FR-005, 015, ANALYTICS-FR-001, 005 |
 | C.2 Flock Monitoring & Live View | ANALYTICS-FR-002, 003, VISION-FR-010, 012, 013, 014 |
+| C.2 Daily Health & Reports | ANALYTICS-FR-012, EXPERT-FR-005, 012, 013 |
 | C.2 Alerts | ALERT-FR-002, 005, 006, 007, 009, 012, 013 |
 | C.2 Manual Override | ENV-FR-016…019, ANALYTICS-FR-011 |
 | C.2 Harvest Logging | MARKET-FR-001…005, ANALYTICS-FR-004 |
@@ -823,16 +826,21 @@ The state is derived from the stock entry and the device record; it is not a sto
 | C.3 Review | EXPERT-FR-002, 005 |
 | C.3 Validation | EXPERT-FR-003, 007, THREAT-FR-007, ALERT-FR-014 |
 | C.3 Tuning | EXPERT-FR-004, 008, VISION-FR-018, 019, ENV-FR-006, 009, 020, 021, 026, EXPERT-FR-010, 011 |
+| C.3 Rating | EXPERT-FR-012, BR-31 |
 | C.3 Conclusions | EXPERT-FR-006 |
-| C.4 Technician | FARM-FR-003, 003b, 003c, 004, 006, 007, 007b, 008, 009, TICKET-FR-001…018, 004b, 005b, ENV-FR-013c |
+| C.4 Technician | FARM-FR-003 (on an installation ticket), 006, 009, TICKET-FR-001…018, 004b, 005b, ENV-FR-013c |
 | C.4 Administrator | FARM-FR-010, AUTH-FR-001, 002, 003, 004, 005, 005c, 007, 009, 010, 011, 012, ENV-FR-007, SYSTEM-FR-001, 002, 003 |
-| D. Flow 9 (bypass) and section 4 (bypass switches) | Removed by BM03 (Section 8): the house's own switches are used instead |
+| D. Flows 1–11 | MF-01…11 (Section 2.2); supporting flows SF-02…04 |
+| D. Flow 9 and section 4: no bypass switch (BM03 row 6) | Section 8; the house's own switches stay outside the system (Section 8.1) |
 | Section 4 (infrared night vision) | VISION-FR-007, 016 |
-| E. Non-functional requirements | NFR-01…12 |
-| BM03 change: device setup by the Farm Owner (MF-10, supervisor's request at Review 1) | FARM-FR-003, 003b, 003c, 004, 007, 007b, 008, 010, 011, 012, NFR-13 |
-| BM03 change: daily health assessment, periodic reports and their export (MF-11) | ANALYTICS-FR-012, 014, EXPERT-FR-005, 012, 013, NFR-14 |
-| BM03 change: weather context from a weather service | ANALYTICS-FR-013 |
-| BM03 change: actuator current sensing on the team's controller board | THREAT-FR-014 |
+| Section 4 (load-current sensing) | THREAT-FR-014, BR-32 |
+| E. Reliability & Offline Resiliency | NFR-05, 06, 07 |
+| E. Performance | NFR-01, 02, 03, 05 |
+| E. Autonomy | NFR-08 |
+| E. Accuracy & Evidence | NFR-04, 09, 11, 14, ANALYTICS-FR-014 |
+| E. Cost-Efficiency | Constraint C-4 (no measured NFR) |
+| (added) Security and usability of device setup | NFR-10, 13 |
+| 3.2 a) Weather API | ANALYTICS-FR-013, C-6 |
 | 3.2 b) Evaluation report (control performance, counting accuracy, response latency, offline-recovery and fault scenarios) | ANALYTICS-FR-008, 011, 014, VISION-FR-016, NFR-01…09, NFR-14 |
 
 ### 7.2 Requirement → Main Flow
@@ -884,4 +892,4 @@ The mapping from each FR, transition and NFR to its test cases is kept in Report
 | Version | Date | Change |
 | --- | --- | --- |
 | 2.1.5 | 10/2026 | Internal working SRS (Vietnamese) after Review 1, aligned with registration form v2 |
-| 3.0.0 | `[TEAM]` | Every mandatory and supporting FR belongs to a flow; supporting flow SF-04 (harvest logging); lifecycles 6.13–6.15 (harvest, account, firmware update); rejection codes 400 / 422 distinguished. The Farm Owner is notified of every expert decision and sees them in one activity history (EXPERT-FR-009). Bird counting tracks over the whole frame and extrapolates fast tracks at the hole (VISION-FR-004, 005, BR-25). Expert in the loop for owner changes (EXPERT-FR-010) and suggestions (EXPERT-FR-011); configuration sync with `CONFIG_MISMATCH` (ENV-FR-027); multi-modal evidence on inferred alerts (ALERT-FR-014); incomplete counting sessions (VISION-FR-020); Technician override and acknowledgement only within an assigned ticket; Farm/House/Zone responsibilities (2.8) and known limitations (8.1). A rejected inferred alert becomes `DISMISSED`; session windows follow per-house seasonal profiles and temporary windows (VISION-FR-019). Zone thresholds and fuzzy coefficients are edited and reset only by the Farm Owner or Domain Expert of the farm; without an expert the Farm Owner takes the expert's decisions (BR-22). Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Device setup becomes main flow MF-10 for the Farm Owner (replacing SF-01): label QR code with device ID and activation key (FARM-FR-010), floor QR code (FARM-FR-011), setup progress (FARM-FR-012), move of an offline controller applied when it reconnects; farm, house and zone are never entered on the controller (FARM-FR-003c); rules BR-26, BR-27; lifecycle 6.16; NFR-13. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Engineering constants listed in one table (Section 4.5). Daily health assessment of each house by agreement between sources, with weather context, independent ratings by Farm Owner and expert, daily/weekly/monthly reports with PDF and CSV export (MF-11, ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33, NFR-14, lifecycle 6.17); actuator current sensing (THREAT-FR-014, BR-32, `ACTUATOR_FAULT`); references REF-9…13. Bypass switches (former ENV-FR-023) removed by BM03 because the borrowed test house cannot be rewired; BR-19 and the known limitations say how the loads run when the controller fails. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |
+| 3.0.0 | `[TEAM]` | Every mandatory and supporting FR belongs to a flow; supporting flow SF-04 (harvest logging); lifecycles 6.13–6.15 (harvest, account, firmware update); rejection codes 400 / 422 distinguished. The Farm Owner is notified of every expert decision and sees them in one activity history (EXPERT-FR-009). Bird counting tracks over the whole frame and extrapolates fast tracks at the hole (VISION-FR-004, 005, BR-25). Expert in the loop for owner changes (EXPERT-FR-010) and suggestions (EXPERT-FR-011); configuration sync with `CONFIG_MISMATCH` (ENV-FR-027); multi-modal evidence on inferred alerts (ALERT-FR-014); incomplete counting sessions (VISION-FR-020); Technician override and acknowledgement only within an assigned ticket; Farm/House/Zone responsibilities (2.8) and known limitations (8.1). A rejected inferred alert becomes `DISMISSED`; session windows follow per-house seasonal profiles and temporary windows (VISION-FR-019). Zone thresholds and fuzzy coefficients are edited and reset only by the Farm Owner or Domain Expert of the farm; without an expert the Farm Owner takes the expert's decisions (BR-22). Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Device setup becomes main flow MF-10 for the Farm Owner (replacing SF-01): label QR code with device ID and activation key (FARM-FR-010), floor QR code (FARM-FR-011), setup progress (FARM-FR-012), move of an offline controller applied when it reconnects; farm, house and zone are never entered on the controller (FARM-FR-003c); rules BR-26, BR-27; lifecycle 6.16; NFR-13. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Engineering constants listed in one table (Section 4.5). Daily health assessment of each house by agreement between sources, with weather context, independent ratings by Farm Owner and expert, daily/weekly/monthly reports with PDF and CSV export (MF-11, ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33, NFR-14, lifecycle 6.17); actuator current sensing (THREAT-FR-014, BR-32, `ACTUATOR_FAULT`); references REF-9…13. Bypass switches (former ENV-FR-023) removed by BM03 because the borrowed test house cannot be rewired; BR-19 and the known limitations say how the loads run when the controller fails. NFR-12 (hardware cost) removed; the registration's Cost-Efficiency is traced to constraint C-4. AI node declared as a PC at the house. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |
