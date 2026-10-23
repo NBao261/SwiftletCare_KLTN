@@ -1,3 +1,4 @@
+import { DEVICE_COMPONENT_NAMES, type DeviceComponentName } from '@/data/deviceComponents.data'
 import type { ApiResponse } from '@/types'
 
 /**
@@ -33,4 +34,7 @@ export const farmMockApi = {
   getHouseAdvice: (_houseId: string) => mockResponse<HouseAdvice | null>(null),
 
   getDeviceProfile: (_deviceId: string) => mockResponse<DeviceProfile>({}),
+
+  // Tên thiết bị con của bộ kit do Kỹ thuật viên đặt — dữ liệu giả trong src/data, chờ API thật
+  getDeviceComponentNames: (deviceId: string) => mockResponse<DeviceComponentName[]>(DEVICE_COMPONENT_NAMES[deviceId] ?? []),
 }
