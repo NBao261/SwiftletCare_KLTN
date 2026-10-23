@@ -1,127 +1,158 @@
-import { useState, type ReactNode } from 'react'
-import { Play, Maximize2, Minimize2 } from 'lucide-react'
-import { Card } from '@/components/ui'
+import { useRef, useState, type ReactNode } from 'react'
+import { ArrowsInIcon, ArrowsOutIcon, HourglassIcon, VideoCameraSlashIcon, WarningIcon, WifiSlashIcon } from '@phosphor-icons/react'
+import StatusDot from '@/components/common/StatusDot'
+import { Button, Card, SelectMenu } from '@/components/ui'
+import { NO_VALUE } from '@/constants/display'
+import { dashboardDict } from '@/constants/dashboard.i18n'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { useHousesBirdCountCurrent } from '@/hooks/farm-owner/useAnalytics'
+import { useHouseCameras } from '@/hooks/farm-owner/useHouseCameras'
+import { useWhepStream } from '@/hooks/farm-owner/useWhepStream'
 import { cn } from '@/lib/cn'
+import type { DeviceStatus } from '@/types'
+
+// Trạng thái camera backend trả về mà vẫn mở luồng xem (DEGRADED: camera còn hình nhưng nút AI suy giảm)
+const STREAMABLE_STATUSES = new Set<DeviceStatus>(['ONLINE', 'DEGRADED'])
 
 interface LiveCameraCardProps {
-  zoneName: string
-  expanded: boolean
-  onToggleExpand: () => void
+  houseId: string
+  houseName: string
+  // Có thì hiện nút phóng to / thu nhỏ khung camera
+  expanded?: boolean
+  onToggleExpand?: () => void
+  // Nút phụ góc phải đầu khung (VD link sang trang Giám sát đàn chim)
+  action?: ReactNode
 }
 
-// LiveCameraCard – khung video trực tiếp + bounding box nhận diện chim — MOCK, chưa có API thật
-export default function LiveCameraCard({ zoneName, expanded, onToggleExpand }: LiveCameraCardProps) {
-  const [showBoxes, setShowBoxes] = useState(true)
+// Khung xem trực tiếp camera cửa thu chim của 1 nhà yến (VISION-FR-013) + thông số camera và số đếm hôm nay, đều lấy từ backend
+export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action }: LiveCameraCardProps) {
+  const { t, num, ago, date } = useTranslation(dashboardDict)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const { data: cameras, isLoading, isError, refetch } = useHouseCameras(houseId)
+  const { today } = useHousesBirdCountCurrent(houseId ? [houseId] : [])
+  const [pickedCameraId, setPickedCameraId] = useState('')
+  const camera = cameras?.find(item => item._id === pickedCameraId) ?? cameras?.[0]
+  const canStream = camera !== undefined && STREAMABLE_STATUSES.has(camera.status)
+  const { status, retry } = useWhepStream(videoRef, canStream ? camera._id : undefined)
+  const isPlaying = status === 'playing'
+
+  // Lớp phủ giữa khung theo trạng thái backend trả về; đang phát thì không phủ
+  let overlay: ReactNode = null
+  if (isLoading) overlay = <StreamMessage title={t('camera.loading')} />
+  else if (isError) overlay = <StreamMessage title={t('camera.loadError')} action={<RetryButton label={t('camera.retry')} onClick={() => void refetch()} />} />
+  else if (!camera) overlay = <StreamMessage icon={<VideoCameraSlashIcon size={28} />} title={t('camera.noCamera')} description={t('camera.noCameraDesc')} />
+  else if (camera.status === 'PENDING') overlay = <StreamMessage icon={<HourglassIcon size={28} />} title={t('camera.pending')} description={t('camera.pendingDesc')} />
+  else if (camera.status === 'ERROR') overlay = <StreamMessage icon={<WarningIcon size={28} />} title={t('camera.error')} description={t('camera.errorDesc')} />
+  else if (camera.status === 'OFFLINE') overlay = <StreamMessage icon={<WifiSlashIcon size={28} />} title={t('camera.offline')} description={t('camera.offlineDesc')} />
+  else if (status === 'failed') overlay = <StreamMessage title={t('camera.failed')} description={t('camera.failedDesc')} action={<RetryButton label={t('camera.retry')} onClick={retry} />} />
+  else if (!isPlaying) overlay = <StreamMessage title={t('camera.connecting')} />
+
+  const expandLabel = expanded ? t('camera.collapse') : t('camera.expand')
+  // Số đếm hôm nay: nhà chưa có tin đếm (updated_at null) thì "_", không hiện 0
+  const hasToday = today?.updatedAt != null
+  const ring = camera?.counting_ring
+
+  // Thông số camera + đếm hôm nay; mọi giá trị từ GET /devices/camera-nodes và /analytics/bird-count/current
+  const params: Array<{ label: string; value: ReactNode }> = [
+    { label: t('camera.paramStatus'), value: camera ? <StatusDot status={camera.status} /> : NO_VALUE },
+    { label: t('camera.paramHeartbeat'), value: camera ? ago(camera.last_heartbeat) : NO_VALUE },
+    { label: t('camera.paramModel'), value: camera?.model_version ? `v${camera.model_version}` : NO_VALUE },
+    {
+      label: t('camera.paramRing'),
+      value: !camera ? NO_VALUE : ring ? t('camera.ringSet', { date: ring.updated_at ? date(ring.updated_at) : NO_VALUE }) : t('camera.ringDefault'),
+    },
+    { label: t('camera.paramExit'), value: hasToday ? num(today.morningExit) : NO_VALUE },
+    { label: t('camera.paramEntry'), value: hasToday ? num(today.eveningEntry) : NO_VALUE },
+    { label: t('camera.paramReturn'), value: hasToday && today.returnRate !== null ? `${num(today.returnRate, 1)}%` : NO_VALUE },
+  ]
 
   return (
     <Card size="lg" className="flex h-full flex-col gap-4">
-      <div>
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-alertRed" />
-          <h2 className="text-h2 text-charcoal">Luồng trực tiếp · Camera cửa thu chim ({zoneName})</h2>
-        </div>
-        <p className="mt-1 text-xs font-medium italic text-warmGray">Dữ liệu minh hoạ, chưa nối API thật</p>
-      </div>
-
-      <div className="relative aspect-video max-h-[70vh] overflow-hidden rounded-2xl bg-graphite">
-        <div className="flex h-full w-full items-center justify-center">
-          <button
-            type="button"
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-charcoal"
-            aria-label="Video minh hoạ, chưa có camera thật"
-          >
-            <Play width={22} height={22} className="ml-0.5" />
-          </button>
-        </div>
-
-        {showBoxes && (
-          <>
-            <DetectionBox className="left-[28%] top-[32%]" label="Swiftlet #1042" confidence={0.94} />
-            <DetectionBox className="left-[55%] top-[42%]" label="Swiftlet #1043" confidence={0.91} />
-          </>
-        )}
-
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between p-2 text-[11px] font-medium text-white">
-          <span className="inline-flex h-10 items-center rounded-full bg-black/60 px-3 backdrop-blur-sm">1080p @ 60fps · Độ trễ ~120ms · RTSP</span>
-          <div className="flex h-10 items-center gap-2 rounded-full bg-black/60 px-3 backdrop-blur-sm">
-            <IconTooltip label="Hiện khung nhận diện">
-              <DarkToggle checked={showBoxes} onChange={setShowBoxes} ariaLabel="Hiện khung nhận diện" />
-            </IconTooltip>
-            <IconTooltip label={expanded ? 'Thu nhỏ khung camera' : 'Phóng to khung camera'} align="right">
-              <button
-                type="button"
-                onClick={onToggleExpand}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/20"
-                aria-label={expanded ? 'Thu nhỏ khung camera' : 'Phóng to khung camera'}
-              >
-                {expanded ? <Minimize2 width={18} height={18} /> : <Maximize2 width={18} height={18} />}
-              </button>
-            </IconTooltip>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            {/* Chấm xanh khi đang phát, xám khi chưa có hình */}
+            <span className={cn('h-2 w-2 shrink-0 rounded-full', isPlaying ? 'bg-accent-600' : 'bg-warmGray/40')} />
+            <h2 className="text-h2 text-charcoal">{t('camera.title')}</h2>
           </div>
+          <p className="mt-1 text-sm text-warmGray">{t('camera.subtitle', { house: houseName })}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {(cameras?.length ?? 0) > 1 && (
+            <SelectMenu
+              ariaLabel={t('camera.pick')}
+              value={camera?._id ?? ''}
+              options={(cameras ?? []).map(item => ({ value: item._id, label: item.device_id }))}
+              onChange={setPickedCameraId}
+              highlightFiltered={false}
+              className="h-9 w-40 justify-between"
+            />
+          )}
+          {action}
         </div>
       </div>
+
+      <div className={cn('relative aspect-video overflow-hidden rounded-2xl bg-graphite', expanded && 'max-h-[70vh]')}>
+        <video ref={videoRef} autoPlay muted playsInline className={cn('h-full w-full object-contain', !isPlaying && 'invisible')} />
+        {overlay && <div className="absolute inset-0 flex items-center justify-center p-6">{overlay}</div>}
+
+        {/* Thanh dưới khung: nhãn Trực tiếp khi đang phát, cảnh báo AI suy giảm, nút phóng to nếu trang cho phép */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-2 text-[11px] font-medium text-white">
+          <span className="flex items-center gap-2">
+            <span className={cn('inline-flex h-8 items-center gap-1.5 rounded-full bg-black/60 px-3 backdrop-blur-sm', !isPlaying && 'invisible')}>
+              <span className="h-1.5 w-1.5 rounded-full bg-accent-600" />
+              {t('camera.live')}
+            </span>
+            {camera?.status === 'DEGRADED' && (
+              <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-safetyOrange/90 px-3">
+                <WarningIcon size={12} weight="bold" />
+                {t('camera.degraded')}
+              </span>
+            )}
+          </span>
+          {onToggleExpand && (
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              title={expandLabel}
+              aria-label={expandLabel}
+              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm hover:bg-black/75"
+            >
+              {expanded ? <ArrowsInIcon size={16} /> : <ArrowsOutIcon size={16} />}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
+        {params.map(param => (
+          <div key={param.label} className="min-w-0">
+            <dt className="truncate text-xs text-warmGray">{param.label}</dt>
+            <dd className={cn('truncate text-sm font-semibold', param.value === NO_VALUE ? 'text-warmGray' : 'text-charcoal')}>{param.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {isPlaying && <p className="text-xs text-warmGray">{t('camera.boxesHint')}</p>}
     </Card>
   )
 }
 
-// Bản Toggle riêng cho nền tối (thanh video) — Toggle dùng chung (@/components/ui)
-// lấy track charcoal/warmGray, hợp với card nền trắng nhưng chìm vào nền đen ở
-// đây. Không sửa Toggle dùng chung vì nó đang chạy đúng màu ở mọi nơi khác
-// trong app — chỉ đổi riêng bản này: BẬT = track trắng + chấm charcoal, TẮT =
-// track trắng mờ (white/25) + chấm trắng, cả 2 trạng thái đều nổi trên nền đen.
-function DarkToggle({ checked, onChange, ariaLabel }: { checked: boolean; onChange: (v: boolean) => void; ariaLabel: string }) {
+// Thông báo trạng thái giữa khung video tối
+function StreamMessage({ icon, title, description, action }: { icon?: ReactNode; title: string; description?: string; action?: ReactNode }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
-        checked ? 'bg-white' : 'bg-white/25',
-      )}
-    >
-      <span
-        className={cn(
-          'inline-block h-3.5 w-3.5 transform rounded-full shadow transition-transform',
-          checked ? 'translate-x-[18px] bg-charcoal' : 'translate-x-1 bg-white',
-        )}
-      />
-    </button>
-  )
-}
-
-// Chỉ hiện nhãn dạng tooltip khi rê chuột (giống nút "Cinema mode" của YouTube) —
-// nút bên dưới không còn chữ cố định, đỡ rối thanh thông tin cuối video.
-// align="right" cho nút sát mép phải (VD nút thu phóng) — canh tooltip theo mép
-// phải thay vì canh giữa, để chữ không tràn ra ngoài khung video bị overflow-hidden cắt mất.
-function IconTooltip({ label, children, align = 'center' }: { label: string; children: ReactNode; align?: 'center' | 'right' }) {
-  return (
-    <div className="group relative flex items-center">
-      {children}
-      <span
-        className={cn(
-          'pointer-events-none absolute -top-9 whitespace-nowrap rounded-full bg-black/70 px-3 py-1.5 text-[11px] font-medium text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100',
-          align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
-        )}
-      >
-        {label}
-      </span>
+    <div className="flex max-w-sm flex-col items-center gap-2 text-center text-white/80">
+      {icon}
+      <p className="text-sm font-semibold text-white">{title}</p>
+      {description && <p className="text-xs text-white/60">{description}</p>}
+      {action}
     </div>
   )
 }
 
-// Width/height tính theo % của khung video (không phải px cố định) để khung
-// nhận diện luôn đúng tỉ lệ dù camera đang thu nhỏ hay phóng to (ENV-FR liên
-// quan tới LiveCameraCard.expanded) — trước đây h-16 w-20 cố định nên khi
-// khung video giãn to, ô nhận diện bị "lệch" vì không phóng theo.
-function DetectionBox({ className, label, confidence }: { className: string; label: string; confidence: number }) {
+function RetryButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <div className={cn('absolute h-[14%] w-[9%] rounded border-2 border-lime-500', className)}>
-      <span className="absolute -top-5 left-0 whitespace-nowrap rounded bg-lime-500 px-1.5 py-0.5 text-[10px] font-bold text-charcoal">
-        {label} ({confidence.toFixed(2)})
-      </span>
-    </div>
+    <Button size="sm" variant="secondary" className="mt-1" onClick={onClick}>
+      {label}
+    </Button>
   )
 }

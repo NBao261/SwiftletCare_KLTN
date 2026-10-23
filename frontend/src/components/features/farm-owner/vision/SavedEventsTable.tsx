@@ -1,4 +1,4 @@
-import { Play } from 'lucide-react'
+import { PlayIcon } from '@phosphor-icons/react'
 import { Badge, Button, Card, DataTable, type BadgeTone, type DataTableColumn } from '@/components/ui'
 
 interface MockEvent {
@@ -41,7 +41,7 @@ const COLUMNS: DataTableColumn<MockEvent>[] = [
     key: 'preview', header: 'Xem trước', className: 'w-[10%]',
     render: () => (
       <span className="flex h-10 w-14 items-center justify-center rounded-lg bg-graphite text-white">
-        <Play width={14} height={14} />
+        <PlayIcon width={14} height={14} weight="fill" />
       </span>
     ),
   },

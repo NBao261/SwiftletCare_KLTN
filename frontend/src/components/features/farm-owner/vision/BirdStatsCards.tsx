@@ -1,13 +1,15 @@
-import { LogIn, LogOut, Repeat, type LucideIcon } from 'lucide-react'
+import { RepeatIcon, SignInIcon, SignOutIcon, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { Card, Badge } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { useBirdCountTrends } from '@/hooks/farm-owner/useAnalytics'
+import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics'
 import { formatReturnRate } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
+import { NO_VALUE } from '@/constants/display'
 
 interface BirdStatsCardsProps {
-  zoneId: string
+  // 1 nhà, hoặc mọi nhà của farm khi lọc tất cả nhà yến (số đếm cộng theo ngày)
+  houseIds: string[]
   /** true khi LiveCameraCard đang phóng to — 3 card xếp ngang bên dưới thay vì xếp dọc bên cạnh */
   horizontal?: boolean
 }
@@ -18,8 +20,8 @@ function percentDelta(current: number, previous: number): number | null {
 }
 
 // BirdStatsCards – Entry/Exit/Return rate ngày gần nhất — API thật (GET /analytics/bird-count/trends)
-export default function BirdStatsCards({ zoneId, horizontal }: BirdStatsCardsProps) {
-  const { data, isLoading } = useBirdCountTrends(zoneId, 7)
+export default function BirdStatsCards({ houseIds, horizontal }: BirdStatsCardsProps) {
+  const { records, single, isLoading } = useHousesBirdCountTrends(houseIds, 7)
 
   if (isLoading) {
     return (
@@ -29,7 +31,6 @@ export default function BirdStatsCards({ zoneId, horizontal }: BirdStatsCardsPro
     )
   }
 
-  const records = data?.records ?? []
   const latest: BirdCountDailyRecord | undefined = records[records.length - 1]
   const previous = records[records.length - 2]
 
@@ -39,25 +40,25 @@ export default function BirdStatsCards({ zoneId, horizontal }: BirdStatsCardsPro
   return (
     <div className={cn(horizontal ? 'grid grid-cols-1 gap-4 sm:grid-cols-3' : 'flex flex-col gap-4')}>
       <StatCard
-        icon={LogIn}
+        icon={SignInIcon}
         label="Vào tổ hôm nay"
         hint="Lượt chim bay vào tổ"
-        value={latest ? latest.evening_entry.toLocaleString('vi-VN') : '--'}
+        value={latest ? latest.evening_entry.toLocaleString('vi-VN') : NO_VALUE}
         unit="lượt"
         deltaPercent={entryDelta}
       />
       <StatCard
-        icon={LogOut}
+        icon={SignOutIcon}
         label="Xuất đàn hôm nay"
         hint="Lượt chim xuất đàn"
-        value={latest ? latest.morning_exit.toLocaleString('vi-VN') : '--'}
+        value={latest ? latest.morning_exit.toLocaleString('vi-VN') : NO_VALUE}
         unit="lượt"
         deltaPercent={exitDelta}
       />
       <ReturnRateCard
-        icon={Repeat}
+        icon={RepeatIcon}
         returnRate={latest?.return_rate ?? null}
-        isSignificantDrop={data?.is_significant_drop ?? false}
+        isSignificantDrop={single?.is_significant_drop ?? false}
       />
     </div>
   )
@@ -66,13 +67,13 @@ export default function BirdStatsCards({ zoneId, horizontal }: BirdStatsCardsPro
 function StatCard({
   icon: Icon, label, hint, value, unit, deltaPercent,
 }: {
-  icon: LucideIcon; label: string; hint: string; value: string; unit: string; deltaPercent: number | null
+  icon: PhosphorIcon; label: string; hint: string; value: string; unit: string; deltaPercent: number | null
 }) {
   return (
     <Card className="flex h-full flex-col gap-1">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-600 text-charcoal">
             <Icon width={16} height={16} />
           </span>
           <div>
@@ -97,7 +98,7 @@ function StatCard({
 function ReturnRateCard({
   icon: Icon, returnRate, isSignificantDrop,
 }: {
-  icon: LucideIcon; returnRate: number | null; isSignificantDrop: boolean
+  icon: PhosphorIcon; returnRate: number | null; isSignificantDrop: boolean
 }) {
   const hasValue = returnRate !== null
   const percent = hasValue ? Math.min(100, Math.max(0, returnRate)) : 0
@@ -106,7 +107,7 @@ function ReturnRateCard({
     <Card className="flex h-full flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-600 text-charcoal">
             <Icon width={16} height={16} />
           </span>
           <div>
@@ -122,7 +123,7 @@ function ReturnRateCard({
       </div>
       <p className="leading-none">
         <span className="text-3xl font-extrabold tracking-tight text-charcoal">
-          {hasValue ? formatReturnRate(returnRate) : '--'}
+          {hasValue ? formatReturnRate(returnRate) : NO_VALUE}
         </span>
       </p>
       <div className="h-2 w-full overflow-hidden rounded-full bg-warmGray/10">

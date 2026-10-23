@@ -2,27 +2,27 @@ import { useMemo, useState } from 'react'
 import { Line } from 'react-chartjs-2'
 import type { ChartOptions } from 'chart.js'
 import { format, parseISO } from 'date-fns'
-import { Card } from '@/components/ui'
+import { Card, ChartEmptyFrame } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme'
-import { useBirdCountTrends } from '@/hooks/farm-owner/useAnalytics'
-import { xAxisTicks } from '@/components/features/farm-owner/analytics/analytics.constants'
+import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics'
+import { X_AXIS_TICKS } from '@/components/features/farm-owner/analytics/analytics.constants'
 import { cn } from '@/lib/cn'
 
 const DAY_OPTIONS = [7, 14, 30] as const
 type DayOption = (typeof DAY_OPTIONS)[number]
 
 interface BirdTrendChartProps {
-  zoneId: string
+  // 1 nhà, hoặc mọi nhà của farm khi lọc tất cả nhà yến (số đếm cộng theo ngày)
+  houseIds: string[]
 }
 
 // BirdTrendChart – Entry vs Exit theo ngày — API thật (GET /analytics/bird-count/trends)
-export default function BirdTrendChart({ zoneId }: BirdTrendChartProps) {
+export default function BirdTrendChart({ houseIds }: BirdTrendChartProps) {
   const [days, setDays] = useState<DayOption>(7)
-  const { data, isLoading } = useBirdCountTrends(zoneId, days)
+  const { records, isLoading } = useHousesBirdCountTrends(houseIds, days)
 
   const chartData = useMemo(() => {
-    const records = data?.records ?? []
     return {
       labels: records.map(r => format(parseISO(r.date), 'dd/MM')),
       datasets: [
@@ -42,7 +42,7 @@ export default function BirdTrendChart({ zoneId }: BirdTrendChartProps) {
         },
       ],
     }
-  }, [data])
+  }, [records])
 
   const chartOptions = useMemo(() => ({
     ...baseChartOptions,
@@ -51,7 +51,7 @@ export default function BirdTrendChart({ zoneId }: BirdTrendChartProps) {
       legend: { display: true, position: 'top' as const, labels: { boxWidth: 10, font: { family: 'Plus Jakarta Sans', size: 11 } } },
     },
     scales: {
-      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...xAxisTicks } },
+      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
       y: baseChartOptions.scales.y,
     },
   } as ChartOptions<'line'>), [])
@@ -81,6 +81,8 @@ export default function BirdTrendChart({ zoneId }: BirdTrendChartProps) {
 
       {isLoading ? (
         <LoadingSkeleton className="h-72 w-full" />
+      ) : records.length === 0 ? (
+        <ChartEmptyFrame message="Chưa có dữ liệu đếm chim trong khoảng này" className="h-72" />
       ) : (
         <div className="h-72">
           <Line data={chartData} options={chartOptions} />
