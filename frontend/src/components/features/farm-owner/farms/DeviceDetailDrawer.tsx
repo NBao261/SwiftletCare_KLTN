@@ -11,6 +11,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import type { DeviceStatus } from '@/types'
+import { NO_VALUE } from '@/constants/display'
 
 const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
   ONLINE: 'positive', OFFLINE: 'neutral', ERROR: 'critical', DEGRADED: 'warning', PENDING: 'warning',
@@ -21,7 +22,7 @@ interface DeviceDetailDrawerProps { device: DeviceRow | null; zoneNode?: ZoneNod
 /**
  * Drawer chi tiết thiết bị trượt từ bên phải (Farm Owner chỉ XEM — cấu hình/thay thế/OTA do Kỹ thuật viên làm).
  * Trường thật: mã, trạng thái, RSSI, firmware, heartbeat, ngày kích hoạt, số đo mới nhất của zone.
- * Kỹ thuật viên lắp đặt / firmware mới nhất chưa có API (farmMock.api.ts trả rỗng) → hiện "—", không bịa số liệu.
+ * Kỹ thuật viên lắp đặt / firmware mới nhất chưa có API (farmMock.api.ts trả rỗng) → hiện NO_VALUE, không bịa số liệu.
  */
 export default function DeviceDetailDrawer({ device, zoneNode, onClose }: DeviceDetailDrawerProps) {
   const { t, num, day, ago } = useTranslation(farmDict)
@@ -36,16 +37,16 @@ export default function DeviceDetailDrawer({ device, zoneNode, onClose }: Device
   const isSensor = device.type === 'sensor'
   const over = new Set<string>(zoneNode?.breaches.map(b => b.metric))
   const isLatest = !!device.firmware && device.firmware === profile?.latestFirmware
-  const location = zoneNode ? `${zoneNode.house.name} › ${zoneNode.zone.name}` : '—'
+  const location = zoneNode ? `${zoneNode.house.name} › ${zoneNode.zone.name}` : NO_VALUE
 
   const rows: Array<[string, string]> = [
     [t('drawer.location'), location],
     [t('drawer.type'), t(isSensor ? 'device.sensor.model' : 'device.camera.model')],
-    ['Wi-Fi', device.rssi !== undefined && q ? `${device.rssi} dBm · ${t(`wifi.${q}`)}` : '—'],
-    ['Firmware', device.firmware ? `v${device.firmware}${isLatest ? ` · ${t('drawer.latest')}` : ''}` : '—'],
+    ['Wi-Fi', device.rssi !== undefined && q ? `${device.rssi} dBm · ${t(`wifi.${q}`)}` : NO_VALUE],
+    ['Firmware', device.firmware ? `v${device.firmware}${isLatest ? ` · ${t('drawer.latest')}` : ''}` : NO_VALUE],
     [t('drawer.heartbeat'), ago(device.lastHeartbeat)],
     [t('drawer.activated'), day(device.registeredAt)],
-    [t('drawer.installer'), profile?.installedBy ?? '—'],
+    [t('drawer.installer'), profile?.installedBy ?? NO_VALUE],
   ]
 
   return (
@@ -86,7 +87,7 @@ export default function DeviceDetailDrawer({ device, zoneNode, onClose }: Device
                       {t(m.labelKey)}{isOver ? ` · ${t('drawer.overThreshold')}` : ''}
                     </p>
                     <p className={cn('text-small font-bold', isOver ? 'text-climateOrange' : 'text-charcoal')}>
-                      {value !== undefined ? `${num(value, m.decimals)} ${m.unit}` : '—'}
+                      {value !== undefined ? `${num(value, m.decimals)} ${m.unit}` : NO_VALUE}
                     </p>
                   </div>
                 )
@@ -95,7 +96,7 @@ export default function DeviceDetailDrawer({ device, zoneNode, onClose }: Device
           </>
         )}
 
-        <div className="mt-4 flex items-start gap-2 rounded-xl bg-limeMist px-3 py-3 text-small text-charcoal">
+        <div className="mt-4 flex items-start gap-2 rounded-xl bg-accent-600 px-3 py-3 text-small text-charcoal">
           <InfoIcon size={18} className="mt-0.5 shrink-0" />
           {t('drawer.readOnly')}
         </div>

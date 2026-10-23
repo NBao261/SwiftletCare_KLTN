@@ -39,11 +39,24 @@ describe('detectBreaches', () => {
 })
 
 describe('buildFarmStructure', () => {
-  it('đếm thiết bị online/offline theo zone và nhà (camera tính chung)', () => {
+  it('đếm thiết bị online/offline theo zone và nhà; camera gắn nhà, không vào Zone (SRS v2.1.8)', () => {
     const s = buildFarmStructure(input())
     expect(s.totals.counts).toEqual({ total: 3, online: 2, offline: 1 })
-    expect(s.zoneById.get('zA')?.counts.total).toBe(2)
+    expect(s.zoneById.get('zA')?.counts.total).toBe(1)
+    expect(s.houseById.get('h1')?.counts.total).toBe(3)
+    expect(s.houseById.get('h1')?.cameraDevices.map(d => d.id)).toEqual(['c1'])
     expect(s.houseById.get('h1')?.zones).toHaveLength(2)
+  })
+
+  it('camera chỉ có house_id và cảnh báo của cả nhà vào đúng nhà', () => {
+    const houseCamera = { _id: 'c2', device_id: 'c2', house_id: 'h1', status: 'OFFLINE', registered_at: '2026-01-01' } as CameraNode
+    const houseAlert = { _id: 'a1', farm_id: 'f1', house_id: 'h1', type: 'EDGE_AI_DEGRADED', severity: 'HIGH', status: 'ACTIVE', created_at: '2026-10-10T00:00:00Z' } as Alert
+    const s = buildFarmStructure(input({ sensors: [sensor('s1', 'zA', 'ONLINE')], cameras: [houseCamera], alerts: [houseAlert] }))
+    const node = s.houseById.get('h1')
+    expect(node?.counts).toEqual({ total: 2, online: 1, offline: 1 })
+    expect(node?.cameras).toBe(1)
+    expect(node?.alerts.map(a => a._id)).toEqual(['a1'])
+    expect(node?.health).toBe('ALERT')
   })
 
   it('nhà "Cảnh báo" khi 1 zone vượt ngưỡng, kèm banner đầu tiên; đếm cảm biến/camera của nhà', () => {
@@ -91,6 +104,19 @@ describe('buildFarmStructure', () => {
     expect(h.recent.map(b => b._id)).toEqual(['b5', 'b4', 'b3'])
     expect(s.totals.monthBatches).toBe(3)
     expect(s.totals.monthLastBatchAt).toBe('2026-10-09T00:00:00Z')
+  })
+
+  it('1 lần thu nhiều loại yến (cùng zone + ngày) đếm là 1 đợt, cộng gộp kg và số tổ', () => {
+    const harvests = [
+      { ...batch('b1', 'zA', '2026-10-09T00:00:00Z', 2000, 100), nest_type: 'RAW' },
+      { ...batch('b2', 'zA', '2026-10-09T00:00:00Z', 500, 20), nest_type: 'PREMIUM' },
+    ] as HarvestBatch[]
+    const s = buildFarmStructure(input({ harvests }))
+    const h = s.houseById.get('h1')!
+    expect(s.totals.monthBatches).toBe(1)
+    expect(h.monthKg).toBeCloseTo(2.5)
+    expect(h.recent).toHaveLength(1)
+    expect(h.recent[0].nest_count).toBe(120)
   })
 
   it('dựng đúng cây với dữ liệu lớn', () => {

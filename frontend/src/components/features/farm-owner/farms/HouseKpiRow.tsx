@@ -5,6 +5,8 @@ import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { StructureTotals } from '@/components/features/farm-owner/farms/farmStructure'
+import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants'
+import { NO_VALUE } from '@/constants/display'
 
 /** 4 ô KPI đầu màn "Cấu trúc Farm", bọc 1 khung như EnvSensorPanel ở Dashboard — số liệu tính từ cây cấu trúc thật (thiết bị, cảnh báo ACTIVE = chưa xác nhận, thu hoạch trong tháng giờ VN) */
 interface HouseKpiRowProps {
@@ -58,8 +60,8 @@ export default function HouseKpiRow({ totals, monthLabel, showYield }: HouseKpiR
           <KpiTile
             icon={PackageIcon}
             label={t('kpi.monthYield', { month: monthLabel })}
-            value={num(totals.monthKg, 2)}
-            unit="kg"
+            value={totals.monthBatches > 0 ? num(totals.monthKg, KILOGRAM_DIGITS) : NO_VALUE}
+            unit={totals.monthBatches > 0 ? 'kg' : undefined}
             sub={yieldSub}
           />
         )}

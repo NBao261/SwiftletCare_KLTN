@@ -8,6 +8,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { wifiQuality, type DeviceRow } from '@/components/features/farm-owner/farms/farmStructure'
+import { NO_VALUE } from '@/constants/display'
 
 interface DeviceListTableProps {
   devices: DeviceRow[]
@@ -42,7 +43,7 @@ export default function DeviceListTable({ devices, zoneNameById, onSelect }: Dev
       },
     ]
     if (zoneNameById) {
-      cols.push({ key: 'zone', header: 'Zone', className: 'w-[8%]', render: d => <span className="text-charcoal">{zoneNameById.get(d.zoneId) ?? '—'}</span> })
+      cols.push({ key: 'zone', header: 'Zone', className: 'w-[8%]', render: d => <span className="text-charcoal">{zoneNameById.get(d.zoneId) ?? NO_VALUE}</span> })
     }
     cols.push(
       { key: 'status', header: t('device.col.status'), className: 'w-[12%]', render: d => <StatusDot status={d.status} /> },
@@ -51,11 +52,11 @@ export default function DeviceListTable({ devices, zoneNameById, onSelect }: Dev
         render: d => {
           const q = wifiQuality(d.rssi)
           return d.rssi === undefined || !q
-            ? <span className="text-warmGray">—</span>
+            ? <span className="text-warmGray">{NO_VALUE}</span>
             : <span className="text-charcoal">{d.rssi} dBm <span className="text-warmGray">· {t(`wifi.${q}`)}</span></span>
         },
       },
-      { key: 'fw', header: 'Firmware', className: 'w-[9%] whitespace-nowrap', render: d => <span className="text-charcoal">{d.firmware ? `v${d.firmware}` : '—'}</span> },
+      { key: 'fw', header: 'Firmware', className: 'w-[9%] whitespace-nowrap', render: d => <span className="text-charcoal">{d.firmware ? `v${d.firmware}` : NO_VALUE}</span> },
       { key: 'hb', header: 'Heartbeat', className: 'w-[10%] whitespace-nowrap', render: d => <span className="text-warmGray">{ago(d.lastHeartbeat)}</span> },
       {
         key: 'actions', header: t('device.col.actions'), align: 'center', className: 'w-[11%] whitespace-nowrap',

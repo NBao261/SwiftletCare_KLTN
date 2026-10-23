@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ListIcon, PlusIcon, SquaresFourIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { GearSixIcon, ListIcon, PlusIcon, SquaresFourIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState, FilterChip, SearchInput } from '@/components/ui'
 import StableHeight from '@/components/ui/StableHeight'
 import Pagination from '@/components/ui/Pagination'
@@ -10,7 +10,8 @@ import HouseKpiRow from '@/components/features/farm-owner/farms/HouseKpiRow'
 import HouseCard from '@/components/features/farm-owner/farms/HouseCard'
 import HouseTable from '@/components/features/farm-owner/farms/HouseTable'
 import AddHouseModal from '@/components/features/farm-owner/farms/AddHouseModal'
-import CreateFarmModal from '@/components/features/farm-owner/farms/CreateFarmModal'
+import FarmFormModal from '@/components/features/farm-owner/farms/FarmFormModal'
+import FarmManageModal from '@/components/features/farm-owner/farms/FarmManageModal'
 import { useFarms } from '@/hooks/shared/useFarms'
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
 import { useFarmStructure, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
@@ -56,6 +57,16 @@ export default function FarmOwnerFarmsPage() {
   const [gridPage, setGridPage] = useState(1)
   const [showAddHouse, setShowAddHouse] = useState(false)
   const [showCreateFarm, setShowCreateFarm] = useState(false)
+  const [showManageFarms, setShowManageFarms] = useState(false)
+  // Số nhà và thiết bị của từng farm cho popup quản lý (chặn xoá farm còn thiết bị)
+  const statsByFarm = useMemo(() => {
+    const stats = new Map<string, { houses: number; devices: number }>()
+    for (const node of structure.houses) {
+      const current = stats.get(node.farm._id) ?? { houses: 0, devices: 0 }
+      stats.set(node.farm._id, { houses: current.houses + 1, devices: current.devices + node.counts.total })
+    }
+    return stats
+  }, [structure.houses])
 
   // Đếm theo tình trạng + lọc/tìm kiếm trong cùng 1 lượt duyệt
   const { visible, counts } = useMemo(() => {
@@ -121,7 +132,7 @@ export default function FarmOwnerFarmsPage() {
               : (canCreateFarm ? <Button onClick={() => setShowCreateFarm(true)}>+ {t('empty.createFarm')}</Button> : undefined)
           }
         />
-        <CreateFarmModal open={showCreateFarm} onClose={() => setShowCreateFarm(false)} />
+        {showCreateFarm && <FarmFormModal onClose={() => setShowCreateFarm(false)} />}
         <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} />
       </>
     )
@@ -136,6 +147,12 @@ export default function FarmOwnerFarmsPage() {
         description={t('list.desc', { n: structure.totals.houses })}
         action={(canCreateFarm || canAddHouse) && (
           <div className="flex flex-wrap items-center gap-2">
+            {canCreateFarm && (farms?.length ?? 0) > 0 && (
+              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setShowManageFarms(true)}>
+                <GearSixIcon size={14} weight="bold" />
+                {t('manage.open')}
+              </Button>
+            )}
             {canCreateFarm && (
               <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setShowCreateFarm(true)}>
                 <PlusIcon size={14} weight="bold" />
@@ -207,7 +224,8 @@ export default function FarmOwnerFarmsPage() {
       </FarmFrame>
 
       <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} />
-      <CreateFarmModal open={showCreateFarm} onClose={() => setShowCreateFarm(false)} />
+      {showCreateFarm && <FarmFormModal onClose={() => setShowCreateFarm(false)} />}
+      {showManageFarms && <FarmManageModal farms={farms ?? []} statsByFarm={statsByFarm} onClose={() => setShowManageFarms(false)} />}
     </div>
   )
 }

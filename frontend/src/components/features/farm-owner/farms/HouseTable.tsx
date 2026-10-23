@@ -8,6 +8,8 @@ import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
+import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants'
+import { NO_VALUE } from '@/constants/display'
 
 interface HouseTableProps {
   houses: HouseNode[]
@@ -47,11 +49,11 @@ export default function HouseTable({ houses, staffByHouse, pinned, showYield, on
       },
       {
         key: 'yield', header: t('table.yield'), className: 'w-[12%] whitespace-nowrap',
-        render: n => <span className="text-charcoal">{num(n.monthKg, 2)} kg</span>,
+        render: n => <span className="text-charcoal">{num(n.monthKg, KILOGRAM_DIGITS)} kg</span>,
       },
       {
         key: 'staff', header: t('card.staff'), className: 'w-[12%]',
-        render: n => <span className="truncate text-small text-graphite">{staffByHouse?.[n.house._id]?.name ?? '—'}</span>,
+        render: n => <span className="truncate text-small text-graphite">{staffByHouse?.[n.house._id]?.name ?? NO_VALUE}</span>,
       },
       {
         key: 'actions', header: t('table.actions'), align: 'center', className: 'w-[7%]',

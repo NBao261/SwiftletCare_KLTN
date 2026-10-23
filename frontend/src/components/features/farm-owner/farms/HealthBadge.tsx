@@ -13,10 +13,10 @@ export const HEALTH_STYLE: Record<HouseHealth, { badge: string; card: string; ic
     banner: 'border-warmGray/15 bg-warmGray/5 text-warmGray',
   },
   NORMAL: {
-    badge: 'border-success/40 bg-limeMist/30 px-3 text-xs text-accent-900',
+    badge: 'border-accent-600 bg-accent-600 px-3 text-xs text-charcoal',
     card: 'border-warmGray/20',
     iconBox: 'bg-warmGray/10 text-charcoal',
-    banner: 'border-success/30 bg-limeMist/20 text-xs text-accent-900',
+    banner: 'border-accent-600 bg-accent-600 text-xs text-charcoal',
   },
   ALERT: {
     badge: 'border-orange-600/40 bg-orange-100 text-orange-800',

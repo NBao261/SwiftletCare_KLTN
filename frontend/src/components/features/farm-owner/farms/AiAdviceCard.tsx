@@ -21,7 +21,7 @@ export default function AiAdviceCard({ houseId, camera }: { houseId: string; cam
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-h3 text-charcoal">{t('ai.title')}</h3>
-          {advice?.tag && <span className="rounded-full bg-limeMist px-2 py-0.5 text-caption text-charcoal">{advice.tag}</span>}
+          {advice?.tag && <span className="rounded-full bg-accent-600 px-2 py-0.5 text-caption text-charcoal">{advice.tag}</span>}
         </div>
         {advice ? (
           <p className="mt-1 text-small text-graphite">{advice.body}</p>

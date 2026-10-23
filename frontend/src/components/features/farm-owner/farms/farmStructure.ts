@@ -1,3 +1,4 @@
+import { groupHarvests } from '@/components/features/farm-owner/harvest/harvestMetrics'
 import { vnYearMonth } from '@/lib/helpers'
 import type { Alert, CameraNode, DeviceStatus, Farm, HarvestBatch, House, SensorNode, Thresholds, Zone } from '@/types'
 
@@ -40,6 +41,8 @@ export interface ZoneNode {
 
 export interface HouseNode {
   house: House; farm: Farm; zones: ZoneNode[]
+  /** Camera cửa thu chim của cả nhà (SRS v2.1.8 — camera gắn nhà, không gắn Zone) */
+  cameraDevices: DeviceRow[]
   counts: DeviceCounts; alerts: Alert[]; health: HouseHealth
   /** Số cảm biến / camera của cả nhà (số đo chỉ hiện ở cấp Zone) */
   sensors: number; cameras: number
@@ -149,14 +152,25 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
       firmware: s.firmware_version, lastHeartbeat: s.last_heartbeat, registeredAt: s.registered_at, zoneId: s.zone_id,
     })
   }
+  // Camera gắn nhà (house_id); bản ghi cũ chỉ có zone_id thì quy ra nhà chứa Zone đó
+  const houseIdByZone = new Map<string, string>()
+  for (const zoneList of zonesByHouse.values()) for (const zone of zoneList) houseIdByZone.set(zone._id, zone.house_id)
+  const camerasByHouse = new Map<string, DeviceRow[]>()
   for (const c of cameras) {
-    pushDevice({
+    const houseId = c.house_id ?? (c.zone_id ? houseIdByZone.get(c.zone_id) : undefined)
+    if (!houseId) continue
+    const row: DeviceRow = {
       id: c._id, deviceId: c.device_id, type: 'camera', status: c.status, firmware: c.model_version,
-      lastHeartbeat: c.last_heartbeat, registeredAt: c.registered_at, zoneId: c.zone_id,
-    })
+      lastHeartbeat: c.last_heartbeat, registeredAt: c.registered_at, zoneId: '',
+    }
+    const list = camerasByHouse.get(houseId)
+    if (list) list.push(row)
+    else camerasByHouse.set(houseId, [row])
   }
 
   const alertsByZone = groupBy(alerts, a => a.zone_id)
+  // Cảnh báo của cả nhà (camera đếm chim) không có zone_id
+  const alertsByHouse = groupBy(alerts.filter(a => !a.zone_id), a => a.house_id)
 
   // Thu hoạch: danh sách API đã sắp mới → cũ nên bản ghi đầu tiên gặp của zone chính là lần thu gần nhất
   const harvestByZone = new Map<string, { kg: number; nests: number; batches: number; last: HarvestBatch; recent: HarvestBatch[] }>()
@@ -164,7 +178,13 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
   let monthNests = 0
   let monthBatches = 0
   let monthLastBatchAt: string | undefined
-  for (const b of harvests) {
+  // 1 lần thu nhiều loại yến (cùng zone + ngày) đếm là 1 đợt, cộng gộp kg + số tổ — khớp bảng trang Thu hoạch
+  const harvestRuns: HarvestBatch[] = groupHarvests(harvests).map(group => (
+    group.batches.length === 1
+      ? group.batches[0]
+      : { ...group.batches[0], _id: group.key, nest_count: group.nest_count, weight_grams: group.weight_grams }
+  ))
+  for (const b of harvestRuns) {
     const d = vnYearMonth(b.harvest_date)
     const inMonth = d.year === now.year && d.month === now.month
     let agg = harvestByZone.get(b.zone_id)
@@ -204,6 +224,8 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
       let sensorCount = 0
       let cameraCount = 0
       let headline: HouseNode['headline']
+      const cameraDevices = camerasByHouse.get(house._id) ?? []
+      const houseOnlyAlerts = alertsByHouse.get(house._id) ?? []
 
       for (const zone of zonesByHouse.get(house._id) ?? []) {
         const devices = devicesByZone.get(zone._id) ?? []
@@ -236,9 +258,16 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
         else if (!headline && zoneCounts.offline > 0) headline = { zone, offlineDevices: zoneCounts.offline }
       }
 
+      // Camera và cảnh báo cấp nhà cộng vào số của nhà
+      const cameraCounts = countDevices(cameraDevices)
+      counts = addCounts(counts, cameraCounts)
+      cameraCount += cameraDevices.length
+      for (const a of houseOnlyAlerts) houseAlerts.push(a)
+      const hasHouseIssue = cameraCounts.offline > 0 || houseOnlyAlerts.length > 0
+
       const houseNode: HouseNode = {
-        house, farm, zones: zoneNodes, counts, alerts: houseAlerts,
-        health: headline ? 'ALERT' : counts.total === 0 ? 'EMPTY' : 'NORMAL',
+        house, farm, zones: zoneNodes, cameraDevices, counts, alerts: houseAlerts,
+        health: headline || hasHouseIssue ? 'ALERT' : counts.total === 0 ? 'EMPTY' : 'NORMAL',
         sensors: sensorCount, cameras: cameraCount,
         monthKg: kg, monthNests: nests, monthBatches: batches, recent: houseRecent, headline,
       }

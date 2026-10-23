@@ -1,238 +1,180 @@
-import { useState, FormEvent } from "react";
-import { useAuthStore } from "@/stores/authStore";
-import { usePermission } from "@/hooks/common/usePermission";
-import {
-  useFarm,
-  useInviteMember,
-  useRemoveMember,
-  useInviteSalesStaff,
-  useSalesStaff,
-} from "@/hooks/shared/useFarms";
-import { Button, Input, Modal, Badge } from "@/components/ui";
-import ConfirmModal from "@/components/ui/ConfirmModal";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import { useToastStore } from "@/stores/toastStore";
-import { getApiErrorMessage } from "@/lib/helpers";
+import { useState, type FormEvent } from 'react'
+import { PlusIcon } from '@phosphor-icons/react'
+import { Badge, Button, Input, Modal, SelectMenu } from '@/components/ui'
+import ConfirmModal from '@/components/ui/ConfirmModal'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
+import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { NO_VALUE } from '@/constants/display'
+import { farmDict, type FarmKey } from '@/constants/farmStructure.i18n'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
+import { usePermission } from '@/hooks/common/usePermission'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { useFarm, useInviteFarmMember, useRemoveMember } from '@/hooks/shared/useFarms'
+import { cn } from '@/lib/cn'
+import { useAuthStore } from '@/stores/authStore'
+import { useToastStore } from '@/stores/toastStore'
+import type { FarmMemberRole } from '@/types'
 
-/** Quản lý thành viên Farm Owner + Sales Staff của 1 Farm (AUTH-FR-005/005b/010) */
+// Vai trò hiển thị trong bảng thành viên; thêm role mới chỉ cần thêm dòng ở đây và trong INVITE_ROLES
+type MemberRoleKey = 'PRIMARY' | FarmMemberRole
+
+const ROLE_LABEL: Record<MemberRoleKey, FarmKey> = {
+  PRIMARY: 'members.role.PRIMARY',
+  FARM_OWNER: 'members.role.FARM_OWNER',
+  DOMAIN_EXPERT: 'members.role.DOMAIN_EXPERT',
+}
+
+// Vai trò mời được (swagger POST /farms/:id/members: role FARM_OWNER | DOMAIN_EXPERT)
+const INVITE_ROLES: FarmMemberRole[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
+
+interface MemberRow {
+  userId: string
+  name?: string
+  email?: string
+  role: MemberRoleKey
+}
+
+// Thành viên của 1 farm theo vai trò (AUTH-FR-005/010, EXPERT-FR-001): chủ chính, đồng sở hữu, chuyên gia; chỉ Primary Owner mời / gỡ
 export default function FarmMembersManager({ farmId }: { farmId: string }) {
-  const { data: farm, isLoading } = useFarm(farmId);
-  const { data: salesStaff } = useSalesStaff(farmId);
-  const currentUserId = useAuthStore((s) => s.user?._id);
-  const isAdmin = usePermission("ADMIN");
-  const [showInviteMember, setShowInviteMember] = useState(false);
-  const [showInviteSales, setShowInviteSales] = useState(false);
-  const [removeTargetId, setRemoveTargetId] = useState<string | null>(null);
-  const removeMember = useRemoveMember(farmId);
-  const push = useToastStore((s) => s.push);
+  const { t } = useTranslation(farmDict)
+  const { data: farm, isLoading } = useFarm(farmId)
+  const currentUserId = useAuthStore(state => state.user?._id)
+  const isAdmin = usePermission('ADMIN')
+  const removeMember = useRemoveMember(farmId)
+  const push = useToastStore(state => state.push)
+  const apiErrorMessage = useApiErrorMessage()
+  const [inviteRole, setInviteRole] = useState<FarmMemberRole | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<MemberRow | null>(null)
 
-  if (isLoading) return <LoadingSkeleton count={2} className="h-16 w-full" />;
-  if (!farm) return null;
+  if (isLoading) return <LoadingSkeleton count={2} className="h-16 w-full" />
+  if (!farm) return null
 
   // Khớp backend farmAccess.util.ts#isPrimaryOwner: ADMIN hoặc đúng owner_id của farm
-  // (không phải mọi FARM_OWNER — thành viên được mời không có quyền mời/gỡ thêm người khác).
-  const isPrimaryOwner = isAdmin || farm.owner_id === currentUserId;
+  const isPrimaryOwner = isAdmin || farm.owner_id === currentUserId
+  const rows: MemberRow[] = [
+    { userId: farm.owner_id, name: farm.owner?.full_name, email: farm.owner?.email, role: 'PRIMARY' },
+    ...farm.members
+      .filter(member => !member.is_primary && member.user_id !== farm.owner_id)
+      .map(member => ({ userId: member.user_id, name: member.full_name, email: member.email, role: member.role ?? 'FARM_OWNER' })),
+  ]
+  const owners = rows.filter(row => row.role !== 'DOMAIN_EXPERT')
+  const experts = rows.filter(row => row.role === 'DOMAIN_EXPERT')
 
-  function handleRemove() {
-    if (!removeTargetId) return;
-    removeMember.mutate(removeTargetId, {
+  function handleRemove(): void {
+    if (!removeTarget) return
+    removeMember.mutate(removeTarget.userId, {
       onSuccess: () => {
-        push("Đã gỡ thành viên");
-        setRemoveTargetId(null);
+        push(t('members.removed'))
+        setRemoveTarget(null)
       },
-      onError: (err) =>
-        push(getApiErrorMessage(err, "Gỡ thành viên thất bại"), "error"),
-    });
+      onError: reason => push(apiErrorMessage(reason, t('members.removeFailed')), 'error'),
+    })
   }
 
-  return (
-    <div className="mt-4 flex flex-col gap-5">
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          {/* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng Farm Owner. Đổi: bỏ `uppercase tracking-wide` ở tiêu đề mục (FE_Design v2.5.0 §2.8) */}
-          <h3 className="text-sm font-bold text-warmGray">
-            Thành viên Farm Owner
-          </h3>
-          {isPrimaryOwner && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowInviteMember(true)}
-            >
-              + Mời thành viên
-            </Button>
-          )}
+  const renderSection = (titleKey: FarmKey, descriptionKey: FarmKey, list: MemberRow[], role: FarmMemberRole, emptyKey: FarmKey) => (
+    <FarmFrame
+      title={t(titleKey, { n: list.length })}
+      description={t(descriptionKey)}
+      action={isPrimaryOwner && (
+        <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setInviteRole(role)}>
+          <PlusIcon size={14} weight="bold" />
+          {t(role === 'DOMAIN_EXPERT' ? 'members.inviteExpert' : 'members.inviteOwner')}
+        </Button>
+      )}
+    >
+      {/* Bảng thành viên: tên + email · vai trò · thao tác */}
+      <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white">
+        <div className="hidden grid-cols-[minmax(0,1fr)_10rem_6rem] gap-4 border-b border-warmGray/15 bg-warmGray/5 px-4 py-3 label-caption md:grid">
+          <span>{t('members.colMember')}</span>
+          <span>{t('members.colRole')}</span>
+          <span className="text-center">{t('members.colActions')}</span>
         </div>
-
-        <div className="flex flex-col gap-2">
-          <MemberRow
-            name={farm.owner?.full_name}
-            email={farm.owner?.email}
-            badge="Chủ chính"
-          />
-          {farm.members
-            .filter((m) => !m.is_primary)
-            .map((m) => (
-              <MemberRow
-                key={m.user_id}
-                name={m.full_name}
-                email={m.email}
-                badge="Thành viên"
-                onRemove={
-                  isPrimaryOwner
-                    ? () => setRemoveTargetId(m.user_id)
-                    : undefined
-                }
-              />
-            ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          {/* [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng Farm Owner. Đổi: bỏ `uppercase tracking-wide` ở tiêu đề mục (FE_Design v2.5.0 §2.8) */}
-          <h3 className="text-sm font-bold text-warmGray">
-            Chuyên gia
-          </h3>
-          {isPrimaryOwner && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowInviteSales(true)}
-            >
-              + Mời chuyên gia
-            </Button>
-          )}
-        </div>
-
-        {salesStaff?.length ? (
-          <div className="flex flex-col gap-2">
-            {salesStaff.map((s) => (
-              <MemberRow
-                key={s._id}
-                name={s.sales_staff_id.full_name}
-                email={s.sales_staff_id.email}
-                badge="Chuyên gia"
-              />
-            ))}
+        {list.length === 0 && <p className="px-4 py-6 text-center text-sm text-warmGray">{t(emptyKey)}</p>}
+        {list.map(row => (
+          <div key={row.userId} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-warmGray/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_10rem_6rem]">
+            <div className="min-w-0">
+              <p className={cn('truncate text-sm font-semibold', row.name ? 'text-charcoal' : 'text-warmGray')}>{row.name ?? NO_VALUE}</p>
+              <p className="truncate text-xs text-warmGray">{row.email ?? NO_VALUE}</p>
+            </div>
+            <span>
+              <Badge tone={row.role === 'DOMAIN_EXPERT' ? 'info' : 'neutral'}>{t(ROLE_LABEL[row.role])}</Badge>
+            </span>
+            <span className="hidden justify-center md:flex">
+              {isPrimaryOwner && row.role !== 'PRIMARY' ? (
+                <Button variant="secondary" size="sm" onClick={() => setRemoveTarget(row)}>{t('members.remove')}</Button>
+              ) : (
+                <span className="text-warmGray">{NO_VALUE}</span>
+              )}
+            </span>
           </div>
-        ) : (
-          <p className="text-sm text-warmGray">
-            Chưa có chuyên gia — Farm Owner tự động có toàn bộ quyền quản lý
-            bán hàng.
-          </p>
-        )}
-      </section>
+        ))}
+      </div>
+    </FarmFrame>
+  )
 
-      <InviteModal
-        open={showInviteMember}
-        onClose={() => setShowInviteMember(false)}
-        title="Mời thành viên Farm Owner"
-        farmId={farmId}
-        kind="member"
-      />
-      <InviteModal
-        open={showInviteSales}
-        onClose={() => setShowInviteSales(false)}
-        title="Mời chuyên gia"
-        farmId={farmId}
-        kind="sales"
-      />
+  return (
+    <div className="flex flex-col gap-6">
+      {renderSection('members.ownersTitle', 'members.ownersDesc', owners, 'FARM_OWNER', 'members.ownersEmpty')}
+      {renderSection('members.expertsTitle', 'members.expertsDesc', experts, 'DOMAIN_EXPERT', 'members.expertsEmpty')}
+      {!isPrimaryOwner && <p className="text-xs text-warmGray">{t('members.primaryOnly')}</p>}
+
+      {inviteRole && <InviteModal farmId={farmId} defaultRole={inviteRole} onClose={() => setInviteRole(null)} />}
       <ConfirmModal
-        open={!!removeTargetId}
-        title="Gỡ thành viên?"
+        open={removeTarget !== null}
+        title={t('members.removeTitle', { name: removeTarget?.name ?? removeTarget?.email ?? NO_VALUE })}
+        description={t('members.removeDesc')}
+        confirmLabel={t('members.remove')}
         danger
-        description="Thành viên này sẽ mất toàn bộ quyền truy cập farm này."
         loading={removeMember.isPending}
         onConfirm={handleRemove}
-        onCancel={() => setRemoveTargetId(null)}
+        onCancel={() => setRemoveTarget(null)}
       />
     </div>
-  );
+  )
 }
 
-function MemberRow({
-  name,
-  email,
-  badge,
-  onRemove,
-}: {
-  name?: string;
-  email?: string;
-  badge: string;
-  onRemove?: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-warmGray/5 px-4 py-2.5">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-charcoal">
-          {name ?? "—"}
-        </p>
-        <p className="truncate text-xs text-warmGray">{email ?? "—"}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Badge tone="neutral">{badge}</Badge>
-        {onRemove && (
-          <Button variant="secondary" size="sm" onClick={onRemove}>
-            Gỡ
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
+// Popup mời thành viên: email + vai trò (chọn sẵn theo mục đang bấm, đổi được); lời mời hiệu lực 7 ngày
+function InviteModal({ farmId, defaultRole, onClose }: { farmId: string; defaultRole: FarmMemberRole; onClose: () => void }) {
+  const { t } = useTranslation(farmDict)
+  const inviteMember = useInviteFarmMember(farmId)
+  const push = useToastStore(state => state.push)
+  const apiErrorMessage = useApiErrorMessage()
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState<FarmMemberRole>(defaultRole)
 
-function InviteModal({
-  open,
-  onClose,
-  title,
-  farmId,
-  kind,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  farmId: string;
-  kind: "member" | "sales";
-}) {
-  const inviteMember = useInviteMember(farmId);
-  const inviteSales = useInviteSalesStaff(farmId);
-  const push = useToastStore((s) => s.push);
-  const [email, setEmail] = useState("");
-  const mutation = kind === "member" ? inviteMember : inviteSales;
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    mutation.mutate(email, {
+  function handleSubmit(event: FormEvent): void {
+    event.preventDefault()
+    inviteMember.mutate({ email: email.trim(), role }, {
       onSuccess: () => {
-        push("Đã gửi lời mời");
-        setEmail("");
-        onClose();
+        push(t('members.invited'))
+        onClose()
       },
-      onError: (err) =>
-        push(getApiErrorMessage(err, "Gửi lời mời thất bại"), "error"),
-    });
+      onError: reason => push(apiErrorMessage(reason, t('members.inviteFailed')), 'error'),
+    })
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={title}>
+    <Modal open onClose={onClose} title={t('members.inviteTitle')}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input
-          label="Email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="nguoi-duoc-moi@email.com"
-        />
-        <p className="text-xs text-warmGray">
-          Lời mời có hiệu lực 7 ngày. Nếu email chưa có tài khoản, người được
-          mời đăng ký xong sẽ tự động được thêm vào farm.
-        </p>
-        <Button type="submit" loading={mutation.isPending} className="w-full">
-          Gửi lời mời
-        </Button>
+        <Input label={t('members.email')} type="email" required value={email} onChange={event => setEmail(event.target.value)} placeholder={t('members.emailPlaceholder')} />
+        <div className="flex flex-col gap-1.5">
+          <span className="label-caption">{t('members.colRole')}</span>
+          <SelectMenu
+            field
+            ariaLabel={t('members.colRole')}
+            value={role}
+            onChange={setRole}
+            options={INVITE_ROLES.map(item => ({ value: item, label: t(ROLE_LABEL[item]) }))}
+          />
+          <p className="text-xs text-warmGray">{t(role === 'DOMAIN_EXPERT' ? 'members.expertHint' : 'members.ownerHint')}</p>
+        </div>
+        <p className="text-xs text-warmGray">{t('members.inviteHint')}</p>
+        <div className="flex justify-end gap-2 border-t border-warmGray/10 pt-4">
+          <Button type="button" variant="secondary" className="min-w-[8rem]" onClick={onClose}>{t('members.cancel')}</Button>
+          <Button type="submit" className="min-w-[8rem]" loading={inviteMember.isPending} disabled={!email.trim()}>{t('members.send')}</Button>
+        </div>
       </form>
     </Modal>
-  );
+  )
 }
