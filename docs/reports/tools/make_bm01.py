@@ -31,7 +31,8 @@ def note_after(tbl, text):
     for r in para.runs[1:]: r._r.getparent().remove(r._r)
     para.runs[0].text=text
 note_after(d.tables[5], 'Full list with FR references: docs/reports/README.md and SDD Section 12. High findings of the self-review (BM02) marked Kept or Planned are added here after the prompt is run.')
-note_after(d.tables[6], 'FO = Farm Owner; DE = Domain Expert (or the Farm Owner on a farm without one, BR-22). Status as of the review-2 tag.')
+note_after(d.tables[6], 'FO = Farm Owner; DE = Domain Expert (Farm Owner if none, BR-22); (auto) = done by a system component, not an actor.')
+note_after(d.tables[9], 'Actors are people and external services only; the controller, the AI node and the backend are parts of SwiftletCare (SRS 2.3). WF-03 and WF-09 have one actor and are valid because each passes through three mandatory features.')
 # A3 note
 for p in d.paragraphs:
     if p.text.startswith('Automated in CI'):
