@@ -78,7 +78,7 @@ export default function HouseCard({ node, staff, pinned, showYield, onTogglePin,
         {showYield && (
           <>
             <span aria-hidden="true">•</span>
-            <span>{t('card.yield', { kg: num(node.monthKg, KILOGRAM_DIGITS) })}</span>
+            <span>{t('card.yield', { kg: node.monthBatches > 0 ? `${num(node.monthKg, KILOGRAM_DIGITS)} kg` : NO_VALUE })}</span>
           </>
         )}
       </p>

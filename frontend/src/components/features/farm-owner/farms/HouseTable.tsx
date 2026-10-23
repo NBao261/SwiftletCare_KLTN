@@ -49,7 +49,7 @@ export default function HouseTable({ houses, staffByHouse, pinned, showYield, on
       },
       {
         key: 'yield', header: t('table.yield'), className: 'w-[12%] whitespace-nowrap',
-        render: n => <span className="text-charcoal">{num(n.monthKg, KILOGRAM_DIGITS)} kg</span>,
+        render: n => (n.monthBatches > 0 ? <span className="text-charcoal">{num(n.monthKg, KILOGRAM_DIGITS)} kg</span> : <span className="text-warmGray">{NO_VALUE}</span>),
       },
       {
         key: 'staff', header: t('card.staff'), className: 'w-[12%]',
