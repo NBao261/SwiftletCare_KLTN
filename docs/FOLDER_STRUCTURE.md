@@ -15,7 +15,7 @@ SwiftletCare_KLTN/
 ├── .github/             # CI (workflows/ci.yml), CODEOWNERS, PR template
 ├── .claude/             # Lệnh /review-pr và cấu hình Claude Code
 ├── docker-compose.yml   # Môi trường dev: MongoDB, EMQX, MinIO, Redis
-├── SwiftletCare_SRS.md  # Đặc tả yêu cầu — mục 0 là phạm vi hiện hành (v2.0.0)
+├── SwiftletCare_SRS.md  # Ghi chú SRS nội bộ; đặc tả chính thức là docs/reports/report3-srs.md
 ├── CLAUDE.md            # Hướng dẫn chung cho mọi module + quy tắc liên module
 ├── README.md            # Giới thiệu, cách chạy local
 └── .commitlintrc.json   # type/scope hợp lệ cho commit message
@@ -57,10 +57,16 @@ docs/
 ├── FOLDER_STRUCTURE.md     # file này
 ├── api/                    # api-spec.yaml (OpenAPI 3.0 — nguồn sự thật của API) + README
 ├── bird-counting-plan.md   # kế hoạch triển khai đếm chim (module VISION)
-├── evidence-register.md   # sổ tài liệu tham khảo & minh chứng cho các con số, thiết bị (EVID-NFR-003)
+├── evidence-register.md   # sổ tài liệu tham khảo & minh chứng cho các con số, thiết bị (Report 3 A-3, REF-5, §4.5)
 ├── diagrams/               # sơ đồ draw.io: context-diagram/, system-architecture/ (file chính: artifacts/diagram.drawio)
 ├── hardware/               # BOM.md, components-guide.md (linh kiện + đấu nối)
-├── reports/                # Report 1–5 tiếng Anh nộp Review 2 (report3-srs.md, report4-sdd.md, …) + README
+├── reports/                # Hồ sơ Review 2 (tiếng Anh): phiếu v3 + BM03, Report 1–5, Project Tracking, Design Brief + README
+│   ├── registration/       #   phiếu v3 và BM03 dạng Word (sinh từ Markdown, không có số điện thoại)
+│   ├── design-brief/       #   BM01 dạng Word (sinh từ design-brief.md)
+│   ├── report5/            #   danh sách test case (tc.py) + script sinh report5-test.md
+│   ├── templates/          #   biểu mẫu trống BM01, BM03 của môn
+│   └── tools/              #   script điền biểu mẫu Word từ Markdown
+├── deploy/                 # staging.md — môi trường staging (VPS + PC cũ ở nhà yến làm AI node)
 ├── database/               # init.mongo.js — database script sinh từ model Mongoose (`npm run db:script`), không sửa tay
 ├── sprint-reviews/         # biên bản review theo sprint
 ├── test-reports/           # báo cáo kiểm thử (đang trống)

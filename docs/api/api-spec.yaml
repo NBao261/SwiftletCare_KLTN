@@ -29,7 +29,7 @@ info:
       `POST /auth/logout`. Client nên chuyển sang màn đổi mật khẩu.
 
     **Trạng thái triển khai (cập nhật sau khi hoàn thành các module nghiệp vụ
-    Farm Owner — xem `SwiftletCare_SRS.md` cột "Trạng thái Backend" ở mục 5):**
+    Farm Owner — yêu cầu ở Report 3 `docs/reports/report3-srs.md`, chỗ còn thiếu ở `docs/reports/README.md`):**
     Auth, Farms, Devices, Telemetry, Alerts, Analytics, Harvests, HealthReports,
     Tickets đều có logic thật phía sau.
 
@@ -2669,7 +2669,7 @@ paths:
         gửi `token` trong header `Authorization: Bearer <token>` (hoặc `?token=`). MediaMTX hỏi
         `POST /internal/stream-auth`, token chỉ hợp lệ cho đúng `path` đó và hết hạn sau `expires_in`
         giây (chỉ cần còn hạn lúc mở kết nối; kết nối lại thì xin token mới). Token này không dùng
-        được làm access token. Technician/Admin không xem live stream (SRS §4.4).
+        được làm access token. Technician/Admin không xem live stream (Report 3 §2.4).
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
         "200":

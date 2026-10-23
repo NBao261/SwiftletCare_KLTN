@@ -5,20 +5,29 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | File | Report | Trạng thái |
 | --- | --- | --- |
 | `report3-srs.md` | Report 3 – SRS | Bản nháp 3.0.0, cần điền các chỗ `[TEAM: …]` |
-| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 12 state machine, 12 activity diagram) | Bản nháp 1.0.0, cần điền các chỗ `[TEAM: …]` (staging, công cụ AI, dịch vụ huấn luyện) |
-| `report5-test.md` | Report 5 – Test plan và test case | Chưa có |
+| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 17 state machine, 14 activity diagram) | Bản nháp 1.0.6, đã có đề xuất staging (VPS + PC cũ ở nhà yến, `docs/deploy/staging.md`); còn `[TEAM: …]` (nhà cung cấp VPS, tên miền, công cụ AI) |
+| `registration-v3.md` | Phiếu đăng ký bản đề xuất chốt v3 (nội dung phiếu, đã bỏ số điện thoại) | Bản nháp 23/10/2026; bản docx để nộp: `registration/` |
+| `bm03-record-of-changes.md` | BM03 – Record of Changes (phiếu v2 → v3) | Bản nháp 23/10/2026; docx: `registration/` |
+| `report1-introduction.md` | Report 1 – Introduction | Bản nháp 1.0.0 |
+| `report2-project-management-plan.md` | Report 2 – Project Management Plan | Bản nháp 1.0.0 |
+| `report5-test.md` | Report 5 – Software Test Documentation (test plan, 131 test case, ánh xạ sang test tự động) | Bản nháp 1.0.0, sinh từ `report5/tc.py` bằng `report5/gen_report5.py` |
+| `project-tracking.md` | Project Tracking (tiến độ, việc theo người, defect) | Cập nhật 23/10/2026 |
+| `design-brief.md` | Design Brief BM01 + Phụ lục A (Defense 1.1 targets) | Bản nháp 1.0.0; docx: `design-brief/` |
+| `todo-review2.md` | Danh sách việc cần làm trước Review 2 (hồ sơ, ô `[TEAM]`, việc thực tế, code theo module, sửa cho chuẩn) | Cập nhật 23/10/2026 |
 
 ## Report 3 – SRS: cách dùng
 
 - File này **chỉ chứa yêu cầu**: actor, tiêu chí chấp nhận, NFR (chỉ số, ngưỡng, cách đo), vòng đời thực thể, truy vết tới phiếu đăng ký. Phần thiết kế (schema, API, MQTT, kiến trúc, môi trường) thuộc Report 4; tiến độ thuộc Project Tracking.
 - Mã FR giữ nguyên như `SwiftletCare_SRS.md` để code, test và commit đang trỏ tới vẫn đúng.
-- Phạm vi bám theo phiếu đăng ký **bản đề xuất chốt**, với giả định BM03 gồm các thay đổi: phiếu ghi "YOLO" không kèm phiên bản (phiên bản cụ thể khai báo trong Report 4); phát hiện thiên địch chuyển hẳn sang Out of scope; kênh ngoài ứng dụng cam kết **cả** push (FCM) và Telegram bot.
+- Phạm vi bám theo phiếu đăng ký **bản đề xuất chốt**, với giả định BM03 gồm các thay đổi: phiếu ghi "YOLO" không kèm phiên bản (phiên bản cụ thể khai báo trong Report 4); phát hiện thiên địch chuyển hẳn sang Out of scope; kênh ngoài ứng dụng cam kết **cả** push (FCM) và Telegram bot; Farm Owner tự setup thiết bị bằng QR (MF-10). Bản nháp các dòng BM03 ở mục bên dưới.
 - Độ ưu tiên: `M` = thuộc luồng chính, là ứng viên cho tính năng bắt buộc của Defense 1.1; `S` = luồng phụ (ticket, tài khoản, lắp đặt), giữ chạy được nhưng không đề xuất làm tính năng bắt buộc, để số test case cam kết tập trung vào hệ thống tự động.
 
 ### Chỗ nhóm phải điền trước khi gắn tag `review-2`
 
-1. Header: mã đề tài, GVHD, ngày, phiên bản phiếu.
-2. NFR-08 (tỷ lệ tự động, % trong ngưỡng), NFR-09 (độ chính xác đếm chim, số clip), NFR-11 (MAE dự báo), NFR-12 (chi phí theo BOM hiện hành). Không có căn cứ thì đặt mức nhóm chắc chắn đo được, và ghi căn cứ vào `docs/evidence-register.md`.
+1. Header: mã đề tài, GVHD, ngày (mọi hồ sơ). Danh sách đầy đủ theo dòng: `todo-review2.md` mục 2.
+2. NFR-08 (tỷ lệ tự động, % trong ngưỡng), NFR-09 (độ chính xác đếm chim, số clip), NFR-11 (MAE dự báo), NFR-13 (xác nhận mốc 10 phút cho khâu setup), NFR-14 (mức trùng khớp giữa trạng thái theo ngày và đánh giá của người nuôi yến, VD ≥ X % và kappa ≥ Y, trên ≥ 14 ngày).
+4. BR-01: các nghiên cứu ở REF-11 cho mức sàn độ ẩm khoảng 80 %, SRS đang ghi 75 % — hỏi người nuôi yến rồi giữ hoặc nâng. REF-9 (MS 2273:2012) cần mua bản đầy đủ; REF-10 (Nghị định 13/2020, Điều 25 — giờ phát loa) cần đọc nguyên văn và quy định của tỉnh.
+5. BR-28: các mức lệch của chỉ số sức khỏe đang là mặc định tự chọn — đưa vào biên bản phỏng vấn người nuôi yến để xác nhận hoặc sửa. Không có căn cứ thì đặt mức nhóm chắc chắn đo được, và ghi căn cứ vào `docs/evidence-register.md`.
 3. Ngày ở bảng Revision History.
 
 ### Chỗ lệch phát hiện khi viết (nên xử lý hoặc đưa vào Known Gaps của Design Brief)
@@ -31,10 +40,10 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 4 | `HarvestStatus` có `ARCHIVED` nhưng code không gán | Tương tự mục 3 |
 | 5 | Tạo mẻ thu hoạch không kiểm tra số tổ/khối lượng > 0 và ngày không ở tương lai | MARKET-FR-001 hiện ghi theo code; nên thêm validate rồi siết tiêu chí |
 | 6 | `PREDATOR_DETECTED` còn trong `AlertType` và `TicketType` dù đã ra ngoài phạm vi | Chỉ được gỡ, không mở rộng |
-| 7 | Đếm chim: **backend đã xong** (nhận số đếm, bản ghi theo House, số đếm 5 phút, `LOW_RETURN_RATE`, heartbeat nút AI, token live stream, vòng đếm). Pipeline (PR #88): theo vết cả khung trên 2 ô, ngoại suy ở lỗ. Còn thiếu: **model tự train** (model COCO không nhận ra chim trong ảnh IR), `stream.py` chưa gửi gì (số đếm, số đếm 5 phút, heartbeat, đẩy video), chưa đo FPS trên máy chạy thật (2 ô với model COCO chỉ ~7 FPS trên laptop, NFR-04 cần 25), màn xem live/vẽ vòng/số đếm ở web và mobile, VISION-FR-016 đánh giá độ chính xác | VISION-FR-001…007, 012…014, 016, 018 (giao diện), THREAT-FR-010, NFR-04 |
-| 8 | ENV-FR-023 công tắc bypass chưa làm (phần cứng) | |
-| 9 | Giao diện Domain Expert (web/mobile) chưa có; backend EXPERT-FR đã xong | |
-| 10 | `docs/hardware/BOM.md` đã lỗi thời (5.410.000 VNĐ, linh kiện cũ) trong khi SRS cũ ghi COST-NFR-001 ≤ 10.105.000 VNĐ | Cập nhật BOM trước khi điền NFR-12 |
+| 7 | Đếm chim: **backend đã xong** (nhận số đếm, bản ghi theo House, số đếm 5 phút, `LOW_RETURN_RATE`, heartbeat nút AI, token live stream, vòng đếm). Pipeline (PR #88): theo vết cả khung trên 2 ô, ngoại suy ở lỗ. Còn thiếu: **model tự train** (model COCO không nhận ra chim trong ảnh IR), `stream.py` đã gửi số đếm, số đếm 5 phút, heartbeat và đẩy video (PR #89, lên develop qua PR #95) nhưng chưa chạy thử với staging, chưa đo FPS trên PC ở nhà yến (2 ô với model COCO ~7–12 FPS trên laptop, số đo chưa tin cậy; NFR-04 cần 25), màn xem live/vẽ vòng/số đếm ở web và mobile, VISION-FR-016 đánh giá độ chính xác | VISION-FR-001…007, 012…014, 016, 018 (giao diện), THREAT-FR-010, NFR-04 |
+| 8 | ~~ENV-FR-023 công tắc bypass~~ | **Đã bỏ** khỏi phạm vi (BM03 #8): nhà yến thử nghiệm đi mượn, không đấu thêm được. Nhóm cần ghi cách chạy tay bơm/quạt bằng công tắc có sẵn của nhà khi bộ điều khiển hỏng (Report 3 §8.1 `[TEAM]`) |
+| 9 | Giao diện Domain Expert: **web đã có** (PR #91, `/expert/*`: tổng quan, kết luận cảnh báo suy luận, tinh chỉnh ngưỡng/hệ số/tham số phát hiện, phân tích, báo cáo sức khỏe) nhưng còn ghi theo SRS v2.1.4, có dữ liệu giả dự phòng (`data/mocks/`, `services/expert/expertFallback.service.ts`), đặt ở `expert/` + `services/` thay vì `domain-expert/` + `apis/` (FE_Design §12); chưa nối `DISMISSED`, báo cáo theo House, đánh giá theo ngày (MF-11). Mobile chưa có màn chuyên gia | Đối chiếu từng màn với Report 3 §2.4 và EXPERT-FR; bỏ dữ liệu giả khi API đã có (FE_Design §7) |
+| 10 | ~~BOM và NFR-12 chi phí~~ | **Đã bỏ** (23/10/2026): không theo dõi chi phí phần cứng; Cost-Efficiency của phiếu truy về ràng buộc C-4; `BOM.md` chỉ để tham khảo |
 | 11 | `docs/evidence-register.md` chưa điền nguồn | BR-01 ghi "nguồn từ tài liệu" nhưng chưa có minh chứng |
 | 12 | ALERT-FR-002 (FCM) giờ là bắt buộc nhưng backend mới chỉ ghi log, mobile chưa đăng ký FCM token | Cần nối Firebase thật ở backend và đăng ký/huỷ token ở `mobile/` |
 | 13 | Hạn can thiệp tay tính theo **thiết bị**, không theo từng relay (cả backend `override_expiry` lẫn firmware `overrideExpiryMs`): bật tay relay thứ hai làm hạn của relay thứ nhất chạy lại từ đầu, huỷ sớm thì mọi relay về AUTO | SRS mới ghi đúng hành vi này thành BR-20; nếu nhóm muốn hạn riêng từng relay thì phải sửa cả hai phía |
@@ -46,10 +55,30 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 19 | Trạng thái `DISMISSED` khi bác bỏ (EXPERT-FR-003, mục 6.1): code hiện không đổi trạng thái khi có kết luận, ghi chú không bắt buộc, chưa lưu trạng thái trước khi bác bỏ, báo cáo sức khỏe chưa tách cảnh báo đã bác bỏ | Thêm `DISMISSED` vào `AlertStatus` ở backend, `frontend/src/types/`, `mobile/types/` cùng một PR; gộp trùng và tự đóng tính cả `DISMISSED`; lưu trạng thái trước để khôi phục khi đổi sang `CONFIRMED`; bắt buộc ghi chú khi `REJECTED` |
 | 20 | Lịch đếm theo mùa (VISION-FR-019): khung giờ phiên đang cố định trong `ai-pipeline/config/config.yaml`, job so tỷ lệ cố định 19:15; phiên đang do pipeline cộng dồn chứ không tính từ số đếm 5 phút | Lưu lịch theo House; backend tính phiên từ `bird_count_buckets` theo khung của ngày; job chạy theo giờ kết thúc phiên chiều |
 | 21 | EXPERT-FR-010 (chuyên gia xem lại thay đổi của Farm Owner) và EXPERT-FR-011 (chỉ chuyên gia áp gợi ý hệ số): chưa có | Thêm thực thể review item và proposal (state machine mục 6.10, 6.11), route accept/revert/approve/reject, thông báo hai chiều; route áp gợi ý hiện ai có quyền sửa hệ số cũng dùng được |
-| 22 | ENV-FR-027 đồng bộ cấu hình: chưa có version cấu hình, heartbeat chưa báo version, chưa có loại cảnh báo `CONFIG_MISMATCH` | Firmware gửi version trong heartbeat; backend tăng version mỗi lần đổi, gửi lại khi lệch; thêm `CONFIG_MISMATCH` vào `AlertType` ở backend, frontend, mobile; mốc 3 heartbeat (BR-24) ghi vào danh sách giả định của SRS cũ §0.5 |
+| 22 | ENV-FR-027 đồng bộ cấu hình: chưa có version cấu hình, heartbeat chưa báo version, chưa có loại cảnh báo `CONFIG_MISMATCH` | Firmware gửi version trong heartbeat; backend tăng version mỗi lần đổi, gửi lại khi lệch; thêm `CONFIG_MISMATCH` vào `AlertType` ở backend, frontend, mobile; mốc 3 heartbeat (BR-24) đã ghi ở Report 3 §4.5 |
 | 23 | ALERT-FR-014 gói bằng chứng: dữ liệu đã có (telemetry, số đếm 5 phút, cảnh báo) nhưng chưa có endpoint gom theo cảnh báo | Thêm endpoint đọc bằng chứng của một cảnh báo suy luận |
 | 24 | VISION-FR-020 phiên không đầy đủ: job so tỷ lệ chim về chưa xét nút AI offline trong phiên | Đánh dấu phiên theo cảnh báo `EDGE_AI_DEGRADED` mở trong khung giờ; loại ngày không đầy đủ khỏi so sánh và nền |
+| 25 | MF-10 Farm Owner tự setup (FARM-FR-003, 007, 007b, 008): các route `POST /devices/sensor-nodes/register`, `PUT .../reassign-zone`, `.../decommission`, `.../replace` (và camera) mới cho `TECHNICIAN`, `ADMIN`; SRS cho Farm Owner (farm của mình) và Technician, không cho Admin | Thêm `FARM_OWNER` vào `requireRole`, bỏ `ADMIN` ở đăng ký; `api-spec.yaml`; test quyền |
+| 26 | FARM-FR-007b dời thiết bị đang OFFLINE: `reassignZone` từ chối (409) | Lưu Zone mới ngay; thiết bị kết nối lại thì `recordHeartbeat` tự gửi `config/reassign` (cơ chế đã có, FARM-FR-003c); bỏ "Nhánh B" AP-mode + secretKey |
+| 27 | FARM-FR-010 cấp lại key: `rotateProvisionedKey` chặn khi thiết bị đã kích hoạt một lần, với lý do "secretKey đã nằm trong thiết bị" — firmware không lưu key (FARM-FR-003c) | Cho cấp lại khi thiết bị không còn hoạt động ở farm nào (BR-26), sửa comment; chú thích FARM-FR-003c cũ trong code cũng cần sửa |
+| 28 | Giao diện MF-10: chưa có in nhãn QR khi thêm thiết bị vào kho (web Admin, đã có thư viện `qrcode`), in mã tầng ở màn Zone, quét QR ở mobile (`expo-camera`), màn tiến trình setup (FARM-FR-012, cần ENV-FR-027) | Thông báo PENDING quá 15 phút đã có (`activationOverdue.job.ts`) |
+| 29 | (Optional) Device ID lấy từ MAC của ESP32 khi `Secrets.h` không ghi ID, để mọi board dùng chung một bản firmware | Sửa nhỏ firmware; không bắt buộc cho Review 2 |
+| 30 | Web còn sót phạm vi v1.24.0: `sales-staff/` (`SalesStaffLayout`, route, role `SALES_STAFF`), trường `heating` trong `RelayStates`, tùy chọn Zalo/SMS ở `SettingsPage`; Technician còn `ThresholdsModal` sửa ngưỡng; Farm Owner còn trong `MENU_ACCESS` của `/tickets`; chưa có vẽ vòng đếm. **Đã xong ở PR #93:** gỡ Marketplace, live stream xem qua WHEP ở trang Vision (`useWhepStream`), lịch sử can thiệp tay và tỷ lệ tự động ở `/analytics`, thiết bị và chi tiết thiết bị của Farm Owner, số đếm theo nhà yến; PR #91: màn Domain Expert (#9) | `frontend/CLAUDE.md`, `FE_Design_Claude.md` §12.0 c, §13.14 |
+| 31 | Mobile: enum `Role`/`AlertType` lệch backend (`OPERATOR`, `SALES_STAFF`, `BIRD_PANIC`, `PREDATOR_DETECTED`), còn tùy chọn Zalo/SMS; socket chưa có `off*`; hầu hết màn là stub | `mobile/CLAUDE.md` Known debt |
+| 32 | MF-11 đánh giá sức khỏe theo ngày (ANALYTICS-FR-012, BR-28…30): chưa có | Job `healthAssessment` sau job tỷ lệ chim về; collection `househealthdays`; mức chỉ số theo House (`houses.health_levels`), chuyên gia sửa |
+| 33 | EXPERT-FR-012 đánh giá của người nuôi theo ngày, hỏi trước rồi mới hiện trạng thái (BR-31): chưa có | Route ghi đánh giá; màn web/mobile |
+| 34 | EXPERT-FR-005 báo cáo theo House ngày/tuần/tháng: code đang tạo báo cáo **tuần theo Zone** (`zone_health_reports`) | Đổi sang theo House có phần cho từng Zone, thêm `kind`; job theo BR-33 |
+| 35 | EXPERT-FR-013 xuất PDF/CSV: chưa có | PDF bằng `jspdf` ở web (đã có thư viện), CSV từ API |
+| 36 | ANALYTICS-FR-013 thời tiết: chưa có | Job `weather` mỗi giờ gọi Open-Meteo theo toạ độ farm; collection `weatherobservations`; kiểm tra điều khoản sử dụng |
+| 37 | THREAT-FR-014 cảm biến dòng: chưa có phần cứng, firmware, loại cảnh báo `ACTUATOR_FAULT` | Mạch nhóm tự vẽ (ADS1115 + 2 biến dòng kẹp); firmware học dòng bình thường và so với trạng thái relay; thêm `ACTUATOR_FAULT` vào `AlertType` cả 3 phía |
+| 38 | ANALYTICS-FR-014 đánh giá trên đợt chạy thật: chưa có dữ liệu | Chạy ≥ 14 ngày ở nhà yến, người nuôi đánh giá mỗi ngày; tính mức trùng khớp, kappa, báo nhầm theo từng nguồn so với kết hợp |
+| 39 | Firmware chỉ nối MQTT cổng 1883, không TLS (`MQTTManager.cpp`, `Config.h`): không nối được broker staging qua 8883 | Môi trường build `cloud` + CA Let's Encrypt theo `docs/bird-counting-plan.md` §15.7; lùi: mở tạm 1883 có mật khẩu + ACL (`docs/deploy/staging.md` §4) |
+| 40 | Staging chưa có trong repo: `deploy/docker-compose.staging.yml`, Dockerfile backend/web, Caddyfile, tls-proxy, `.env.staging.example`, script seed demo đủ dữ liệu cho mọi kịch bản Phụ lục A2 | `docs/deploy/staging.md` §3, §5; bản mẫu ở plan §15.3–15.5 |
+
+### BM03 (Record of Changes) và phiếu v3
+
+Đã soạn: `bm03-record-of-changes.md` (8 dòng thay đổi, tiếng Anh) và `registration-v3.md` (nội dung phiếu v3, mục 4 thêm (8)–(14)). Hai file Word sinh từ đó nằm ở `registration/`. Report 3 §2.2 và §7.1 đã truy vết theo phiếu v3 (Flow 10, 11; C.2 Device Setup, Daily Health & Reports; C.3 Rating). Sửa một thay đổi thì sửa cả ba chỗ: BM03, phiếu v3, mục 1.1 của Design Brief.
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 
-Repo không nên có hai tài liệu cùng được gọi là SRS. Khi Report 3 đã chốt, chuyển `SwiftletCare_SRS.md` sang `docs/archive/` (hoặc ghi rõ ở đầu file là ghi chú nội bộ) và cập nhật các chỗ `CLAUDE.md` đang trỏ tới nó.
+Repo không nên có hai tài liệu cùng được gọi là SRS. **Đã làm:** đầu `SwiftletCare_SRS.md` ghi rõ đây là ghi chú nội bộ và Report 3/Report 4 thắng; các `CLAUDE.md`, README, `FE_Design_Claude.md` và `.claude/commands/review-pr.md` đã trỏ về Report 3/4; bảng hằng số kỹ thuật chưa có nguồn đã chuyển sang Report 3 §4.5. Nếu muốn gọn hơn nữa, có thể chuyển hẳn file sang `docs/archive/` khi Report 3 đã chốt.

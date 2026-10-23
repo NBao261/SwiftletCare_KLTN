@@ -1,5 +1,5 @@
 /**
- * Database script (SDD §6.3): docs/database/init.mongo.js is generated from the models and
+ * Database script (SDD §6.5): docs/database/init.mongo.js is generated from the models and
  * must stay identical to what the models produce today.
  */
 import { readFileSync } from 'fs'

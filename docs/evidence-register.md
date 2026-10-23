@@ -6,7 +6,7 @@
 | **Phiên bản** | 0.2 (khung, chưa điền nguồn) |
 | **Ngày tạo** | 18/10/2026 |
 | **Người phụ trách** | _(tên người giữ file)_ |
-| **Áp dụng cho** | SRS v2.x — yêu cầu EVID-NFR-003 (mục 6.8): mỗi ngưỡng mặc định phải có nguồn trích dẫn hoặc xác nhận của người nuôi yến |
+| **Áp dụng cho** | Report 3 – SRS (`docs/reports/report3-srs.md`: A-3, REF-5, BR-01, mục 4.5) — mỗi ngưỡng mặc định phải có nguồn trích dẫn hoặc xác nhận của người nuôi yến. Cột "Dùng ở đâu" còn trỏ mục của `SwiftletCare_SRS.md` cũ |
 | **Trạng thái** | Đang thu thập |
 
 ---
@@ -97,6 +97,24 @@ Dùng kiểu **IEEE** (thống nhất với báo cáo KLTN):
 ## 4. Danh mục tài liệu (`TL-xxx`)
 
 Mỗi tài liệu một dòng. Thêm dòng vào đúng nhóm; số `TL` lấy trong dải của người thêm (mục 2.2), không dùng lại số đã xoá.
+
+### 4.0. Nguồn ứng viên chờ kiểm (chưa cấp mã `TL`)
+
+Tìm được khi soạn Report 3 (23/10/2026), mới đọc phần tóm tắt hoặc trang giới thiệu. Người trong nhóm đọc bản đầy đủ, rồi chuyển sang đúng bảng bên dưới với mã `TL` của mình (mục 2.2) và xoá dòng ở đây.
+
+| Nguồn | Link | Nội dung (theo tóm tắt) | Dùng cho |
+| --- | --- | --- | --- |
+| MS 2273:2012 – Good animal husbandry practice: edible-nest swiftlet ranching (Standards Malaysia) | https://mysol.jsm.gov.my | Tiêu chuẩn thực hành nuôi yến nhà; phải mua bản đầy đủ | BR-01, REF-9 |
+| Luật Chăn nuôi 2018, Nghị định 13/2020/NĐ-CP, Điều 25 | https://thuvienphapluat.vn/van-ban/Linh-vuc-khac/Nghi-dinh-13-2020-ND-CP-huong-dan-Luat-Chan-nuoi-433295.aspx | Điều kiện nuôi chim yến, phát âm thanh dẫn dụ; một trang thứ cấp ghi giờ phát loa 5:00–11:30 và 13:30–19:00 — phải đọc nguyên văn | BR-07, REF-10 |
+| Master house ở Malaysia, Journal of Sustainability Science and Management 16(4), 2021 | https://jssm.umt.edu.my/wp-content/uploads/2021/07/9-16.4.pdf | Trung bình 28,3 °C, 82,6 % trong 2010–2016 | BR-01, REF-11 |
+| 30 nhà yến ở Terengganu, Journal of Sustainability Science and Management 13(1) | https://jssm.umt.edu.my/wp-content/uploads/2020/05/bab-11-13.1.pdf | Nhà cho nhiều tổ: 30,1 °C, 83,7 %, 0,16 lux | BR-01, REF-11 |
+| Hướng dẫn xây nhà yến, JCEST (UNIMAS) | https://publisher.unimas.my/ojs/index.php/JCEST/article/view/67/44 | 26–35 °C, độ ẩm 80–90 % | BR-01, REF-11 |
+| Nhà yến ở Thái Lan, Burapha Science Journal | https://li05.tci-thaijo.org/index.php/buuscij/article/view/522 | 30,3–32,9 °C, 79–88 % | BR-01, REF-11 |
+| Hang tự nhiên ở Thái Lan, Thai Natural History | https://li01.tci-thaijo.org/index.php/tnh/article/download/102854/82398/260008 | 27–32 °C, 64–81 % | BR-01, REF-11 |
+| Atiu swiftlet, đếm chim ra/vào sáng và chiều ở cửa hang | https://resolve.cambridge.org/core/services/aop-cambridge-core/content/view/0163B5B5027B06D0794A269BA30CBCC8/S095927091000016Xa.pdf | Đếm ra/vào sáng, chiều để ước lượng quần thể | Cách đếm (REF-12) |
+| Gorresen và cộng sự, Endangered Species Research, 2024 | https://doaj.org/article/38bb7ef9e8454747982435d5a6cbe928 | Video nhiệt và hồng ngoại để đếm chim yến ở cửa hang; nêu các nguồn sai số của cách đếm | Cách đếm, sai số (REF-12, NFR-09) |
+
+Lưu ý: các nghiên cứu trên đặt mức sàn độ ẩm khoảng 80 %, BR-01 đang dùng 75 % — hỏi người nuôi yến ở biên bản (mục 7).
 
 ### 4.1. Nuôi chim yến & vi khí hậu nhà yến
 
@@ -235,9 +253,9 @@ SRS ghi các số này là mặc định kỹ thuật, Domain Expert chỉnh đ�
 | KD-53 | Sự cố thiết bị (hỏng loa, bơm cạn, cảm biến sai, mất điện) thường phát hiện muộn | — | SRS §2.1 | | | | Chưa tìm | M4 |
 | KD-54 | Điều kiện pháp lý khi xây và vận hành nhà yến (vị trí, loa phóng thanh…) | — | chưa có trong SRS | | | | Chưa tìm | M4 |
 
-### 5.7. Giả định kỹ thuật đã biết là chưa có nguồn (SRS §0.5)
+### 5.7. Giả định kỹ thuật đã biết là chưa có nguồn (Report 3 §4.5)
 
-Những mốc này SRS đã ghi là do người viết code chọn. Không cần tìm tài liệu nuôi yến cho chúng; cần **số đo thực tế** (mục 6) hoặc xác nhận của nhóm/Domain Expert. Khi có, điền mã `MC-xxx` và cập nhật SRS §0.5 bằng PR riêng.
+Những mốc này SRS đã ghi là do người viết code chọn. Không cần tìm tài liệu nuôi yến cho chúng; cần **số đo thực tế** (mục 6) hoặc xác nhận của nhóm/Domain Expert. Khi có, điền mã `MC-xxx` và cập nhật Report 3 §4.5 bằng PR riêng.
 
 | Mã | Mốc | Giá trị | Ở đâu | Minh chứng (`MC-xxx`) | Kết luận | Trạng thái |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -299,6 +317,12 @@ Nội dung xác nhận:
 | KD-03 | Ánh sáng                | < 0.2 lux                  |                                      |         |
 | KD-10 | Giờ phát loa dẫn dụ      | 5–7 h, 17–19 h             |                                      |         |
 | KD-14 | Đèn hồng ngoại camera    | 850 nm                     |                                      |         |
+| BR-28 | Môi trường trong ngưỡng: lệch nhẹ / lệch rõ | < 90 % / < 75 % thời gian của ngày |          |         |
+| BR-28 | NH3/CO2 vượt ngưỡng: lệch nhẹ / lệch rõ | từ 1 giờ / từ 4 giờ trong ngày |                 |         |
+| BR-28 | Tỷ lệ chim về giảm so với 7 ngày trước: lệch nhẹ / lệch rõ | từ 10 % / từ 20 % |                |         |
+| BR-28 | Ồn bất thường: lệch nhẹ / lệch rõ | từ 1 / từ 3 đợt trong ngày |                         |         |
+| BR-29 | "Cần xử lý" khi chim về giảm rõ VÀ có thêm 1 nguồn khác lệch cùng ngày | (luật kết hợp) |              |         |
+| BR-30 | Ngày mưa trong giờ đếm thì chim về ít không tính là "cần xử lý" | mưa ≥ 1 mm/giờ |              |         |
 | ...   |                         |                            |                                      |         |
 
 Ý kiến khác: ______________________________________________________

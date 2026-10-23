@@ -1,5 +1,13 @@
 # Kế hoạch triển khai đếm chim yến real-time (Module VISION)
 
+> **Đọc trước — Report 3/Report 4 thắng kế hoạch này.** Yêu cầu là Report 3 §3.8 (VISION-FR) trong `docs/reports/report3-srs.md`, thiết kế là Report 4 §5.2, D5–D6 trong `docs/reports/report4-sdd.md`. Những chỗ kế hoạch dưới đây đã cũ so với hai Report:
+> - **Đếm bằng vòng khép kín quanh miệng lỗ** + theo vết cả khung + ngoại suy chim lao nhanh (mục 19.8, BR-25), không phải vạch ảo — đoạn code "đếm qua vạch ảo" ở mục 6 là bản cũ.
+> - **Camera, số đếm và cảnh báo thuộc House**: topic `swiftletcare/{farm}/{house}/vision/bird-count|heartbeat|vision/alert`, không có Zone (Report 3 §2.8) — ví dụ còn `F/H/Z` ở mục 8 là bản cũ.
+> - **Phiên do backend tính** từ số đếm 5 phút theo lịch đếm của nhà yến: hồ sơ theo mùa + khung tạm thời do Domain Expert đặt, không có thì mặc định 05:30–07:00 và 17:30–19:00 (VISION-FR-008, 019, BR-13); ngày nút AI mất kết nối giữa phiên là phiên không đầy đủ (VISION-FR-020); job so tỷ lệ chim về chạy 15 phút sau khung chiều của ngày đó (BR-21), không cố định 19:15. Khung `sessions` trong `config.yaml` chỉ còn là mặc định. Phần backend của các điểm này chưa làm (`docs/reports/README.md` #20, #24).
+> - **Vòng đếm do Domain Expert vẽ** trên khung hình live (VISION-FR-018); farm chưa có chuyên gia thì Farm Owner vẽ (BR-22). Người xem live stream: Farm Owner và Domain Expert của farm (VISION-FR-013).
+> - Hằng số tự chọn (khoảng chồng 2 ô, mốc ngoại suy, vòng nới 60 px…) ghi ở Report 3 §4.5.
+> - **AI node là PC cũ của nhóm đặt tại nhà yến** (Report 4 D5, §11; `docs/deploy/staging.md`, 23/10/2026): PC lấy RTSP của camera trong LAN, gửi MQTT TLS và đẩy video có khung lên VPS. Dòng "không đặt máy tính tại nhà yến" bên dưới, mục 15.2 bước 1 (VPS 4 vCPU / 8 GB) và mục 18–19.4 (VPS kéo hình qua cổng 18554) đã cũ; VPS staging chỉ cần 2 vCPU / 4 GB, cổng 18554 trên modem nên đóng.
+
 > Phạm vi: VISION-FR-001…014, 016, 017 (đếm chim, live stream có khung nhận diện, báo cáo độ chính xác, số đếm theo khoảng 5 phút).
 > **[SRS v2.0.0]** Phiếu đăng ký bản sửa đã chính thức bỏ phát hiện thiên địch và lấy đếm chim làm phần AI duy nhất: live stream có khung (VISION-FR-014) là **bắt buộc**, thêm **VISION-FR-016** (báo cáo Precision/Recall và sai số đếm trên video quay sẵn, tách ban ngày / thiếu sáng). Người xem stream là Farm Owner và Domain Expert (role thay cho Farm Operator).
 > **Kiến trúc đã chốt:** không dùng Raspberry Pi và không đặt máy tính tại nhà yến. Model chạy trong một container trên VPS; VPS kéo hình thẳng từ camera qua Internet của nhà yến (mục 1, 18, 19). Đặt một PC tại nhà yến chỉ còn là phương án lùi.
@@ -1611,7 +1619,7 @@ Chỉ làm khi thật sự cần.
 | Đèn hồng ngoại 850 nm của camera làm chim khó chịu | Chim né cửa, số chim về giảm sau khi lắp camera | Cổng kiểm tra 6 (mục 19.5); hỏi người nuôi yến; tắt IR hoặc đổi camera IR 940 nm |
 | Cổng camera mở ra Internet mà modem không lọc được IP nguồn | Người lạ xem được hình, dò mật khẩu camera | Cổng kiểm tra 3c (mục 19.5); không đạt thì dùng router có WireGuard (mục 18.2) hoặc đặt máy tại chỗ |
 | Internet nhà yến rớt trong phiên đếm | Số đếm phiên đó thấp bất thường, thiếu vài bản ghi 5 phút | Đếm lại phiên đó từ file thẻ nhớ của camera; ghi nhận là hạn chế của kiến trúc đếm trên cloud |
-| Giờ chim bay lệch khỏi khung giờ phiên theo mùa | Biểu đồ 5 phút cho thấy nhiều chim trước/sau khung giờ | Chỉnh `sessions` trong config và giờ chạy của `returnRate.job` |
+| Giờ chim bay lệch khỏi khung giờ phiên theo mùa | Biểu đồ 5 phút cho thấy nhiều chim trước/sau khung giờ | Domain Expert đặt lịch đếm theo mùa hoặc khung tạm thời cho nhà yến (VISION-FR-019); `sessions` trong config chỉ là mặc định |
 | Camera bị xê dịch | Vạch và ROI lệch khỏi lỗ | Gắn chặt; kiểm tra stream mỗi tuần |
 | Chim lượn qua lại quanh vạch | Một con bị đếm nhiều lần | Dời vạch sâu vào trong lỗ, nơi chim chỉ bay một chiều |
 | **Giờ bảo vệ không trùng giờ chim bay** (chim chỉ ra/vào lúc 05:30–07:00 và 17:30–19:00) | Hội đồng mở stream chỉ thấy lỗ trống | Chuẩn bị "camera demo" phát lại clip đã quay (mục 15.8) |

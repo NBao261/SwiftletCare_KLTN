@@ -1,8 +1,12 @@
 # SwiftletCare — BẢNG TASK CHI TIẾT (Micro-task Checklist) v3
 
-**Bám theo:** SRS **v2.0.0** (phiếu đăng ký bản sửa sau Review 1) + Components Guide v3.11 + Sensor Config Guide + `docs/bird-counting-plan.md` | **Phạm vi:** theo phiếu v2 (SRS mục 0)
+> Mã NFR trong file này là mã của SRS cũ. Report 3 dùng NFR-01…14 (NFR-12 chi phí đã bỏ): REL-NFR-001/003 → NFR-06 (ENV-FR-014, 024) · REL-NFR-002, PERF-NFR-007 → NFR-07 (ENV-FR-025) · PERF-NFR-004 → NFR-04 · SEC-NFR-003/004 → NFR-10 · AUTO-NFR-001 → NFR-08 · EVID-NFR-003 → giả định A-3, REF-5. Các mã còn lại (UX-, OPS-, PRIV-, SLA-NFR, SEC-NFR-001/005/006, REL-NFR-004/005/007) không còn là NFR cam kết; phần thiết kế tương ứng ở Report 4 §10–11.
+
+**Bám theo:** Report 3 – SRS (`docs/reports/report3-srs.md`, phiếu đăng ký bản sửa sau Review 1; chỗ code còn lệch ở `docs/reports/README.md`) + Components Guide v3.11 + Sensor Config Guide + `docs/bird-counting-plan.md` | **Phạm vi:** theo phiếu v2 và Report 3 §8
 
 > **[v2 cập nhật]** theo linh kiện thực tế đã mua: ESP32 NodeMCU 38 chân + đế mở rộng, **2 mạch Buck** (tách nguồn PAM8403), Domino TB1504, relay kích H/L (đặt mức High), DFPlayer + PAM8403 6W có volume, camera IR 940nm.
+>
+> **[Report 3 — thay mục v3 dưới đây]** Thiết lập thiết bị quay về **Farm Owner tự làm trên mobile bằng QR** (MF-10: quét nhãn thiết bị và mã QR tầng, FARM-FR-003…012); Technician chỉ làm cùng các bước khi có ticket lắp đặt. Việc còn thiếu: `docs/reports/README.md` #25–28.
 >
 > **[v3 cập nhật — theo SRS v1.12.0]** Đổi mô hình onboarding thiết bị: **Technician thao tác qua Web Console** (không phải Farm Owner tự quét QR qua Mobile App như bản checklist cũ) — xem Flow 1/1b. Thêm hẳn 9 Flow mới (Flow 11→19: đăng ký/đăng nhập/quên mật khẩu, mời thành viên, điều khiển relay thủ công + auto-revert, offline-detection, OTA, mời Sales Staff, duyệt sản phẩm, cảnh báo tồn kho, quản lý tài khoản Admin) → mục A/C/D/E dưới đây đã bổ sung task tương ứng. Ticket thêm loại `INSTALLATION` (Flow 9b) đi kèm cơ chế tự động định tuyến giống ticket báo lỗi.
 >
@@ -533,13 +537,13 @@
 - [ ] **M3+M4** — Đăng ký/đăng nhập/quên mật khẩu/mời thành viên end-to-end (Sprint 1-2) `[Flow 11, 12]`
 - [ ] **M3+M4** — Admin khoá/mở khoá + xử lý yêu cầu xoá tài khoản end-to-end (Sprint 6) `[Flow 19]`
 - ~~**M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`~~ — ❌ bỏ ở SRS v2.0.0
-- [ ] **Cả nhóm** — Demo tổng theo 9 luồng của phiếu v2 (SRS mục 0.4): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay + bypass (Sprint 8)
+- [ ] **Cả nhóm** — Demo tổng theo 11 luồng chính của Report 3 §2.2 (MF-01…11): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay, Farm Owner tự setup thiết bị bằng QR, trạng thái sức khỏe theo ngày + báo cáo (Sprint 8)
 
 ---
 
 # G. Việc theo SRS v2.0.0 (sau Review 1) — ưu tiên
 
-> Danh sách này là SRS mục 0.5 viết lại thành đầu việc tick được. Hội đồng đánh giá theo phiếu đăng ký bản sửa, nên các việc dưới đây đi trước mọi task còn mở ở mục A–F. Thứ tự ưu tiên: **G2 (đếm chim) → G1 → G3/G4 → G5**.
+> Danh sách này là SRS cũ mục 0.5 viết lại thành đầu việc tick được; các yêu cầu Report 3 thêm sau đó (MF-10, `DISMISSED`, duyệt thay đổi, đồng bộ cấu hình…) nằm ở `docs/reports/README.md` mục "Chỗ lệch". Hội đồng đánh giá theo phiếu đăng ký bản sửa, nên các việc dưới đây đi trước mọi task còn mở ở mục A–F. Thứ tự ưu tiên: **G2 (đếm chim) → G1 → G3/G4 → G5**.
 
 ## G1. M1 — Firmware / Hardware
 
@@ -549,8 +553,8 @@
 - [ ] Cảm biến nhiệt-ẩm mất hoặc sai thì relay phun sương và quạt về TẮT cho tới khi có số đo hợp lệ; viết unit test `[THREAT-FR-013]`
 - [ ] Đổi loại cảnh báo `BIRD_PANIC` thành `NOISE_ANOMALY` `[THREAT-FR-007]`
 - [ ] Nhận 5 tham số phát hiện qua `config/update` (`noise_margin_db`, `noise_min_sec`, `pump_dry_on_sec`, `pump_dry_min_rise_pct`, `speaker_drop_pct`), lưu NVS, tự kẹp khoảng; bỏ các hằng số tương ứng; unit test `[EXPERT-FR-008]`
-- [ ] Lắp 2 công tắc xoay 3 vị trí Auto/Off/Hand cho bơm và quạt, thử chạy tay khi rút nguồn ESP32 `[ENV-FR-023, Flow 28]`
-- [ ] (tùy chọn) Nối tiếp điểm phụ của công tắc về GPIO, báo "đang bypass tại tủ" `[ENV-FR-023]`
+- ~~Lắp 2 công tắc xoay 3 vị trí Auto/Off/Hand cho bơm và quạt `[ENV-FR-023, Flow 28]`~~ — bỏ (nhà yến đi mượn, Report 3 §8). Thay bằng: ghi cách chạy tay bằng công tắc có sẵn của nhà khi rút nguồn ESP32
+- ~~(tùy chọn) Nối tiếp điểm phụ của công tắc về GPIO `[ENV-FR-023]`~~ — bỏ cùng công tắc bypass
 - [ ] 🤝 Chạy liên tục nhiều ngày tại nhà yến/mô hình để lấy số liệu cho mục 13.6 (phối hợp M5)
 
 ## G2. M2 — AI đếm chim (theo `docs/bird-counting-plan.md`)
