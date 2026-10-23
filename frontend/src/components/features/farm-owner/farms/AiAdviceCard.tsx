@@ -4,10 +4,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceRow } from '@/components/features/farm-owner/farms/farmStructure'
 
-/**
- * Khuyến nghị kỹ thuật từ hệ thống AI của nhà. AI chưa triển khai nên hiện là khung trống có sẵn (không bịa nội dung);
- * khi backend có endpoint, `useHouseAdvice` trả dữ liệu là khung tự đầy. Khối camera chỉ dùng mã camera node THẬT của nhà.
- */
+// Khuyến nghị AI của nhà: AI chưa triển khai nên là khung trống, có API thì useHouseAdvice tự đổ dữ liệu; camera dùng mã thật của nhà
 export default function AiAdviceCard({ houseId, camera }: { houseId: string; camera?: DeviceRow }) {
   const { t } = useTranslation(farmDict)
   const { data: advice } = useHouseAdvice(houseId)
@@ -21,7 +18,7 @@ export default function AiAdviceCard({ houseId, camera }: { houseId: string; cam
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-h3 text-charcoal">{t('ai.title')}</h3>
-          {advice?.tag && <span className="rounded-full bg-limeMist px-2 py-0.5 text-caption text-charcoal">{advice.tag}</span>}
+          {advice?.tag && <span className="rounded-full bg-accent-600 px-2 py-0.5 text-caption text-charcoal">{advice.tag}</span>}
         </div>
         {advice ? (
           <p className="mt-1 text-small text-graphite">{advice.body}</p>

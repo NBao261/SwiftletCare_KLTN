@@ -8,6 +8,10 @@ import ThresholdMetricCard from '@/components/features/farm-owner/farms/Threshol
 import DeviceListTable from '@/components/features/farm-owner/farms/DeviceListTable'
 import DeviceDetailDrawer from '@/components/features/farm-owner/farms/DeviceDetailDrawer'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
+import ZoneThresholdsModal from '@/components/features/farm-owner/devices/ZoneThresholdsModal'
+import DetectionTuningCard from '@/components/features/farm-owner/farms/DetectionTuningCard'
+import StructureEditModal from '@/components/features/farm-owner/farms/StructureEditModal'
+import ActionsMenu from '@/components/ui/ActionsMenu'
 import { ZONE_METRICS, thresholdRange, type MetricMeta, CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { detectBreaches, type DeviceRow, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
@@ -21,10 +25,7 @@ import { useZoneStore } from '@/stores/zoneStore'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 
-/**
- * Chi tiết 1 Zone (/farms/:farmId/houses/:houseId/zones/:zoneId): thông số realtime so với ngưỡng, danh sách thiết bị,
- * bấm "Chi tiết" mở drawer bên phải. Số đo = REST latest + socket TELEMETRY_UPDATE (useTelemetry); phần còn lại từ cây cấu trúc đã cache.
- */
+// Chi tiết 1 Zone: thông số realtime so ngưỡng (REST latest + socket), danh sách thiết bị, bấm Chi tiết mở drawer
 export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
@@ -34,8 +35,14 @@ export default function FarmOwnerFarmZoneDetailPage() {
   const node = zoneId ? structure.zoneById.get(zoneId) : undefined
   const live = useTelemetry(zoneId)
   const isFarmOwner = usePermission('FARM_OWNER')
-  const setZone = useZoneStore(s => s.setZone)
+  const setZone = useZoneStore(state => state.setZone)
+  const setHouse = useZoneStore(state => state.setHouse)
+  const setScopeZone = useZoneStore(state => state.setScopeZone)
   const [selected, setSelected] = useState<DeviceRow | null>(null)
+  // Farm Owner chỉnh ngưỡng của Zone ngay tại trang (ENV-FR-006/020); role khác vẫn sang trang Thiết bị của mình
+  const [isThresholdsOpen, setIsThresholdsOpen] = useState(false)
+  // Đổi tên / xoá Zone (giao diện dựng sẵn, chờ API backend)
+  const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
 
   usePageBack(`/farms/${farmId}/houses/${houseId}`, node?.house.name ?? t('page.house'))
   usePageBreadcrumb(
@@ -50,7 +57,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
     [d.temperature, d.humidity, d.light_lux, d.nh3_ppm, d.co2_ppm, d.sound_db],
   )
   const breaches = useMemo(() => (node ? detectBreaches(metrics, node.zone.thresholds) : []), [metrics, node])
-  const breached = useMemo(() => new Set<string>(breaches.map(b => b.metric)), [breaches])
+  const breached = useMemo(() => new Set<string>(breaches.map(breach => breach.metric)), [breaches])
 
   if (isError) {
     return (
@@ -77,7 +84,13 @@ export default function FarmOwnerFarmZoneDetailPage() {
       ? `${t('zone.stale')} · ${ago(d.timestamp)}`
       : d.timestamp ? t('zone.lastReading', { ago: ago(d.timestamp) }) : t('zone.noSignal')
 
-  const goTo = (path: string) => { setZone(farm._id, farm.name, zone._id, zone.name); navigate(path) }
+  // Mở Tổng quan / Thiết bị đúng Zone này: ghi Zone đang xem và khung lọc Nhà + Zone chung
+  const goTo = (path: string) => {
+    setZone(farm._id, farm.name, zone._id, zone.name)
+    setHouse(node.house._id)
+    setScopeZone(zone._id)
+    navigate(path)
+  }
   const metricProps = (m: MetricMeta) => ({
     meta: m,
     value: metrics[m.key],
@@ -101,7 +114,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => goTo('/devices')}>
+            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => (isFarmOwner ? setIsThresholdsOpen(true) : goTo('/devices'))}>
               <SlidersHorizontalIcon size={14} />
               {t('zone.thresholds')}
             </Button>
@@ -112,6 +125,14 @@ export default function FarmOwnerFarmZoneDetailPage() {
                 <ArrowRightIcon size={12} weight="bold" />
               </Button>
             )}
+            {isFarmOwner && (
+              <ActionsMenu
+                items={[
+                  { label: t('structure.rename'), onClick: () => setEditMode('rename') },
+                  { label: t('structure.delete'), onClick: () => setEditMode('delete'), danger: true },
+                ]}
+              />
+            )}
           </div>
         }
       />
@@ -121,10 +142,13 @@ export default function FarmOwnerFarmZoneDetailPage() {
           <EmptyState title={t('zone.noData')} description={t('zone.noDataDesc')} />
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {ZONE_METRICS.map(m => <ThresholdMetricCard key={m.key} {...metricProps(m)} />)}
+            {ZONE_METRICS.map(metric => <ThresholdMetricCard key={metric.key} {...metricProps(metric)} />)}
           </div>
         )}
       </FarmFrame>
+
+      {/* EXPERT-FR-008 — tham số phát hiện chuyên gia đặt cho Zone, chủ nhà yến chỉ xem */}
+      <DetectionTuningCard tuning={zone.detection_tuning} />
 
       <FarmFrame
         title={t('zone.devicesTitle', { n: node.devices.length })}
@@ -155,6 +179,8 @@ export default function FarmOwnerFarmZoneDetailPage() {
       )}
 
       <DeviceDetailDrawer device={selected} zoneNode={{ ...node, metrics, breaches }} onClose={() => setSelected(null)} />
+      {editMode && <StructureEditModal kind="zone" mode={editMode} name={node.zone.name} deviceCount={node.counts.total} existingNames={structure.houseById.get(node.house._id)?.zones.map(item => item.zone.name) ?? []} onClose={() => setEditMode(null)} />}
+      {isThresholdsOpen && <ZoneThresholdsModal zoneId={node.zone._id} zoneName={node.zone.name} onClose={() => setIsThresholdsOpen(false)} />}
     </div>
   )
 }

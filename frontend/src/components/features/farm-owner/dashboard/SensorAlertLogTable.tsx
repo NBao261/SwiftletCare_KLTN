@@ -7,13 +7,14 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { buildAlertRow, STATUS_BADGE_CLASS, type AlertLogRow, type SeverityGroup } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import SeverityBadge from '@/components/common/SeverityBadge'
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants'
-import { useHouseAlerts } from '@/hooks/farm-owner/useFarmOwnerDashboard'
+import { useCameraNodes, useHouseAlerts } from '@/hooks/farm-owner/useFarmOwnerDashboard'
 import type { AllZone } from '@/hooks/shared/useFarms'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
-import { LEVELS } from '@/constants/severity'
+import { isAlertFinished, LEVELS } from '@/constants/severity'
 import { levelDict } from '@/constants/severity.i18n'
 import { cn } from '@/lib/cn'
+import { NO_VALUE } from '@/constants/display'
 
 const ROW_COUNT = 6
 const ROW_HEIGHT = 64
@@ -24,25 +25,33 @@ interface SensorAlertLogTableProps {
   houseId: string
   zones: AllZone[]
   deviceNames: Map<string, string>
+  // Nhà đang xem cả nhà (không lọc 1 Zone): lấy thêm cảnh báo của cả nhà (camera đếm chim)
+  houseAlertsId?: string
 }
 
 // Bảng nhật ký cảnh báo
-export default function SensorAlertLogTable({ farmId, houseId, zones, deviceNames }: SensorAlertLogTableProps) {
+export default function SensorAlertLogTable({ farmId, houseId, zones, deviceNames, houseAlertsId = '' }: SensorAlertLogTableProps) {
   const { t, num, time, day } = useTranslation(dashboardDict)
   const { t: tLevel } = useTranslation(levelDict)
   const navigate = useNavigate()
   const [filter, setFilter] = useState<SeverityGroup | undefined>(undefined)
   const zoneIds = useMemo(() => zones.map(zone => zone._id), [zones])
   const locationNames = useMemo(() => new Map(zones.map(zone => [zone._id, `${zone.houseName} | ${zone.name}`])), [zones])
-  const { records, isLoading, isError, refetch } = useHouseAlerts(farmId, zoneIds, !houseId)
+  // Tên nhà cho cảnh báo của cả nhà (không có Zone)
+  const houseNames = useMemo(() => new Map(zones.map(zone => [zone.house_id, zone.houseName])), [zones])
+  // Mã camera cho cảnh báo do camera gửi (dùng chung cache danh sách camera)
+  const { data: cameras } = useCameraNodes()
+  const cameraNames = useMemo(() => new Map((cameras ?? []).map(camera => [camera._id, camera.device_id])), [cameras])
+  const { records, isLoading, isError, refetch } = useHouseAlerts(farmId, zoneIds, !houseId, houseAlertsId)
 
   const allRows = useMemo(
-    () => records.map(alert => buildAlertRow(
-      alert,
-      alert.node_id ? deviceNames.get(alert.node_id) ?? '—' : '—',
-      alert.zone_id ? locationNames.get(alert.zone_id) ?? '—' : '—',
-    )),
-    [records, deviceNames, locationNames],
+    () => records.map(alert => {
+      const deviceName = alert.node_id ? deviceNames.get(alert.node_id) ?? cameraNames.get(alert.node_id) : undefined
+      let locationName = alert.zone_id ? locationNames.get(alert.zone_id) : undefined
+      if (!alert.zone_id && alert.house_id) locationName = houseNames.get(alert.house_id)
+      return buildAlertRow(alert, deviceName ?? NO_VALUE, locationName ?? NO_VALUE)
+    }),
+    [records, deviceNames, cameraNames, locationNames, houseNames],
   )
   const rows = filter ? allRows.filter(row => row.group === filter) : allRows
 
@@ -67,7 +76,7 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
   const columns = useMemo<DataTableColumn<AlertLogRow>[]>(() => [
     {
       key: 'severity', header: t('log.colSeverity'), className: 'w-[100px]',
-      render: row => <SeverityBadge severity={row.severity} />,
+      render: row => <SeverityBadge severity={row.severity} isMuted={isAlertFinished(row.status)} />,
     },
     {
       key: 'time', header: t('log.colTime'), className: 'w-[110px] whitespace-nowrap',
@@ -98,7 +107,7 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
           <span className="font-bold text-safetyOrange">{formatValue(row.breach.value)} {row.breach.unit}</span>{' '}
           <span className="text-xs text-warmGray">/ {row.breach.sign} {formatValue(row.breach.limit)} {row.breach.unit}</span>
         </p>
-      ) : <span className="text-warmGray">—</span>,
+      ) : <span className="text-warmGray">{NO_VALUE}</span>,
     },
     {
       key: 'status', header: t('log.colStatus'), className: 'w-[120px]',

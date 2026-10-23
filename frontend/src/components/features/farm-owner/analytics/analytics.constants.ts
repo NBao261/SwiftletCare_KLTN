@@ -1,46 +1,55 @@
-import { format, parseISO } from 'date-fns'
-import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api'
+import { format, parseISO } from 'date-fns';
 
-export const RANGES: Array<{ value: AnalyticsRange; label: string }> = [
-  { value: '1h', label: '1 giờ' }, { value: '6h', label: '6 giờ' }, { value: '24h', label: '24 giờ' },
-  { value: '7d', label: '7 ngày' }, { value: '30d', label: '30 ngày' },
-]
+import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api';
+import { CHART_COLORS, withAlpha } from '@/lib/chartTheme';
 
-export const METRICS = [
-  { key: 'temperature', label: 'Nhiệt độ', unit: '°C' },
-  { key: 'humidity', label: 'Độ ẩm', unit: '%' },
-  { key: 'light_lux', label: 'Ánh sáng', unit: 'lux' },
-  { key: 'nh3_ppm', label: 'NH3', unit: 'ppm' },
-  { key: 'co2_ppm', label: 'CO2', unit: 'ppm' },
-  { key: 'sound_db', label: 'Âm thanh', unit: 'dB' },
-] as const
-export type MetricKey = typeof METRICS[number]['key']
+// 5 khoảng thời gian backend hỗ trợ (ANALYTICS-FR-001/008/011)
+export const ANALYTICS_RANGES: AnalyticsRange[] = ['1h', '6h', '24h', '7d', '30d'];
 
+// Chỉ số so sánh giữa các Zone — API so sánh không có âm thanh
+export const COMPARE_METRICS = [
+  { key: 'temperature', unit: '°C' },
+  { key: 'humidity', unit: '%' },
+  { key: 'light_lux', unit: 'lux' },
+  { key: 'nh3_ppm', unit: 'ppm' },
+  { key: 'co2_ppm', unit: 'ppm' },
+] as const;
+export type CompareMetricKey = typeof COMPARE_METRICS[number]['key'];
+
+// Backend chặn quá 6 Zone mỗi lần so sánh
+export const MAX_COMPARE_ZONES = 6;
+
+// Số lần can thiệp tay hiện trong lịch sử
+export const OVERRIDE_HISTORY_LIMIT = 8;
+
+// Số tuần xem tỷ lệ chim về
+export const BIRD_WEEK_OPTIONS = [4, 12] as const;
+export type BirdWeekOption = typeof BIRD_WEEK_OPTIONS[number];
+
+// Số ngày xem tương quan
+export const CORRELATION_DAY_OPTIONS = [30, 90] as const;
+export type CorrelationDayOption = typeof CORRELATION_DAY_OPTIONS[number];
+
+// Nhãn trục thời gian: khoảng theo ngày hiện ngày/tháng, còn lại hiện giờ:phút
 export function labelForRange(iso: string, range: AnalyticsRange): string {
-  const date = parseISO(iso)
-  return range === '7d' || range === '30d' ? format(date, 'dd/MM') : format(date, 'HH:mm')
+  const date = parseISO(iso);
+  if (range === '7d' || range === '30d') return format(date, 'dd/MM');
+  return format(date, 'HH:mm');
 }
 
-export const xAxisTicks = { autoSkip: true, maxRotation: 0, maxTicksLimit: 8 }
+// Trục thời gian tự bỏ bớt nhãn, tối đa 8 nhãn, không xoay chữ
+export const X_AXIS_TICKS = { autoSkip: true, maxRotation: 0, maxTicksLimit: 8 };
 
-/**
- * Hệ số tương quan Pearson (r) giữa 2 chuỗi cùng độ dài — dùng cho
- * CorrelationCard (độ ẩm × return rate, ANALYTICS-FR-003). Trả `null` nếu
- * không đủ điểm dữ liệu hoặc 1 trong 2 chuỗi không có phương sai (chia cho 0).
- */
-export function pearsonCorrelation(xs: number[], ys: number[]): number | null {
-  const n = Math.min(xs.length, ys.length)
-  if (n < 2) return null
-  const meanX = xs.reduce((a, b) => a + b, 0) / n
-  const meanY = ys.reduce((a, b) => a + b, 0) / n
-  let cov = 0, varX = 0, varY = 0
-  for (let i = 0; i < n; i++) {
-    const dx = xs[i] - meanX
-    const dy = ys[i] - meanY
-    cov += dx * dy
-    varX += dx * dx
-    varY += dy * dy
-  }
-  if (varX === 0 || varY === 0) return null
-  return cov / Math.sqrt(varX * varY)
+// Chữ trên biểu đồ
+export const CHART_FONT = { family: 'Plus Jakarta Sans', size: 11 };
+
+// Chú thích biểu đồ đặt trên cùng
+export const CHART_LEGEND = { display: true, position: 'top' as const, labels: { boxWidth: 10, font: CHART_FONT } };
+
+// Tiêu đề trục biểu đồ
+export function axisTitle(text: string): { display: boolean; text: string; color: string; font: typeof CHART_FONT } {
+  return { display: true, text, color: CHART_COLORS.warmGray, font: CHART_FONT };
 }
+
+// Nền dải ngưỡng trên biểu đồ = accent-600 (token accentGreen) độ đậm 12%
+export const THRESHOLD_BAND_FILL = withAlpha(CHART_COLORS.accentGreen, 0.12);

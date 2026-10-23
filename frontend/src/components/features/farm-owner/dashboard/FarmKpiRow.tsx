@@ -6,6 +6,8 @@ import { dashboardDict } from '@/constants/dashboard.i18n';
 import { levelDict } from '@/constants/severity.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useTicketsList } from '@/hooks/shared/useTickets';
+import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants';
+import { NO_VALUE } from '@/constants/display';
 
 interface FarmKpiRowProps {
   farmId: string;
@@ -59,15 +61,15 @@ export default function FarmKpiRow({ farmId, totals, showYield }: FarmKpiRowProp
         <KpiTile
           icon={PackageIcon}
           label={t('kpi.harvest')}
-          value={num(totals.monthKg, 1)}
-          unit="kg"
+          value={totals.monthBatches > 0 ? num(totals.monthKg, KILOGRAM_DIGITS) : NO_VALUE}
+          unit={totals.monthBatches > 0 ? 'kg' : undefined}
           sub={t('kpi.harvestSub', { nests: num(totals.monthNests), batches: num(totals.monthBatches) })}
         />
       )}
       <KpiTile
         icon={TicketIcon}
         label={t('kpi.tickets')}
-        value={isTicketsLoading ? '—' : num(openTickets)}
+        value={isTicketsLoading ? NO_VALUE : num(openTickets)}
         sub={t('kpi.ticketsSub')}
       />
     </div>

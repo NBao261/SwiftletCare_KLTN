@@ -1,5 +1,5 @@
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
-import type { Alert, AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, House, RelayStates, Thresholds, TicketPriority, Zone } from '@/types'
+import type { Alert, AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, House, RelayStates, Thresholds, TicketPriority, Zone, ZoneThresholdHistoryEntry } from '@/types'
 import { SEVERITY_TO_LEVEL } from '@/constants/severity'
 
 const DAY_MS = 86_400_000
@@ -40,6 +40,29 @@ export function getAnomalies(data: EnvReadings, limits: Thresholds): Anomalies {
   }
 }
 
+// Trạng thái thiết bị tính là hư: lỗi, suy giảm hoặc mất kết nối (PENDING là chưa kích hoạt, không tính)
+const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['ERROR', 'DEGRADED', 'OFFLINE'])
+
+export function isFaultDeviceStatus(status: DeviceStatus): boolean {
+  return FAULT_DEVICE_STATUSES.has(status)
+}
+
+export interface ZoneIssueInput {
+  readings: EnvReadings
+  thresholds?: Thresholds
+  // Có ít nhất 1 thiết bị ONLINE — chỉ khi đó số đo mới dùng để xét vượt ngưỡng (cùng luật ô cảm biến)
+  isOnline: boolean
+  hasFaultDevice: boolean
+}
+
+// Zone cần chú ý: có thiết bị hư, hoặc thiết bị đang chạy mà 1 chỉ số vượt ngưỡng của chính Zone đó
+export function zoneHasIssue({ readings, thresholds, isOnline, hasFaultDevice }: ZoneIssueInput): boolean {
+  if (hasFaultDevice) return true
+  if (!isOnline || !thresholds) return false
+  const anomalies = getAnomalies(readings, thresholds)
+  return anomalies.temperature || anomalies.humidity || anomalies.light || anomalies.nh3 || anomalies.co2
+}
+
 // Trạng thái các nhà yến của farm
 export type StabilityStatus = 'FAULT' | 'STABLE' | 'EMPTY'
 
@@ -62,7 +85,9 @@ export interface StabilitySummary {
 }
 
 interface DeviceRef {
-  zone_id: string
+  // Node cảm biến theo Zone; camera theo nhà (SRS v2.1.8)
+  zone_id?: string
+  house_id?: string
   status: DeviceStatus
   type: StabilityDeviceType
 }
@@ -82,16 +107,17 @@ export function buildHouseStability(houses: House[], zones: Zone[], devices: Dev
   const statsByHouse = new Map<string, HouseStats>()
 
   devices.forEach(device => {
-    const zone = zoneById.get(device.zone_id)
-    if (!zone) return
-    const stats = statsByHouse.get(zone.house_id) ?? { total: 0, faulty: 0 }
+    const zone = device.zone_id ? zoneById.get(device.zone_id) : undefined
+    const houseId = device.house_id ?? zone?.house_id
+    if (!houseId) return
+    const stats = statsByHouse.get(houseId) ?? { total: 0, faulty: 0 }
     stats.total += 1
     if (FAULT_STATUSES.includes(device.status)) {
       stats.faulty += 1
-      stats.faultZoneName ??= zone.name
+      if (zone) stats.faultZoneName ??= zone.name
       stats.faultDeviceType ??= device.type
     }
-    statsByHouse.set(zone.house_id, stats)
+    statsByHouse.set(houseId, stats)
   })
 
   return houses
@@ -107,7 +133,7 @@ export function buildHouseStability(houses: House[], zones: Zone[], devices: Dev
         faultDeviceType: stats.faultDeviceType,
       }
     })
-    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || b.faultyDevices - a.faultyDevices || a.name.localeCompare(b.name))
+    .sort((left, right) => STATUS_ORDER[left.status] - STATUS_ORDER[right.status] || right.faultyDevices - left.faultyDevices || left.name.localeCompare(right.name))
 }
 
 export function summarizeStability(items: HouseStability[]): StabilitySummary {
@@ -280,11 +306,11 @@ export function getSeverityGroup(severity: AlertSeverity): SeverityGroup {
 
 export const STATUS_BADGE_CLASS: Record<AlertStatus, string> = {
   ACTIVE: 'bg-infoBlue/10 text-infoBlue',
-  ACKNOWLEDGED: 'bg-limeMist text-charcoal',
+  ACKNOWLEDGED: 'bg-accent-600 text-charcoal',
   RESOLVED: 'bg-warmGray/15 text-warmGray',
 }
 
-export type SensorKind = 'env' | 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2'
+export type SensorKind = 'env' | 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2' | 'camera'
 
 const SENSOR_KIND_BY_METRIC: Record<string, SensorKind> = {
   temperature: 'temperature',
@@ -341,6 +367,12 @@ export interface AlertLogRow {
   group: SeverityGroup
 }
 
+// Loại cảm biến của cảnh báo: cảnh báo cả nhà (không gắn Zone) đến từ camera đếm chim, còn lại theo chỉ số vượt ngưỡng
+function alertSensorKind(alert: Alert, metric: string | undefined): SensorKind {
+  if (!alert.zone_id && alert.house_id) return 'camera'
+  return (metric && SENSOR_KIND_BY_METRIC[metric]) || 'env'
+}
+
 export function buildAlertRow(alert: Alert, deviceName: string, locationName: string): AlertLogRow {
   const breach = getFirstBreach(alert)
 
@@ -349,7 +381,7 @@ export function buildAlertRow(alert: Alert, deviceName: string, locationName: st
     createdAt: alert.created_at,
     deviceName,
     locationName,
-    sensorKind: breach ? SENSOR_KIND_BY_METRIC[breach.metric] ?? 'env' : 'env',
+    sensorKind: alertSensorKind(alert, breach?.metric),
     type: alert.type,
     breach: breach && {
       value: breach.value,
@@ -410,4 +442,20 @@ export function summarizeFarmHouses(houses: HouseKpiSource[], farmId: string): F
     }
   }
   return totals
+}
+
+// Ai đặt ngưỡng hiện hành của Zone, đọc từ threshold_history (ENV-FR-009/020): chưa từng sửa hoặc lần cuối là "đặt lại mặc định" → mặc định hệ thống
+export interface ThresholdSource {
+  isDefault: boolean
+  role?: string
+  changedAt?: string
+}
+
+export function thresholdSource(history: ZoneThresholdHistoryEntry[] | undefined): ThresholdSource {
+  let last: ZoneThresholdHistoryEntry | undefined
+  for (const entry of history ?? []) {
+    if (!last || (entry.changed_at ?? '') > (last.changed_at ?? '')) last = entry
+  }
+  if (!last || last.source === 'RESET_TO_DEFAULT') return { isDefault: true, changedAt: last?.changed_at }
+  return { isDefault: false, role: last.changed_by_role, changedAt: last.changed_at }
 }

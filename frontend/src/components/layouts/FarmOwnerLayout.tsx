@@ -1,14 +1,12 @@
-import { Camera } from 'lucide-react'
+import {
+  BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, GearSixIcon, HouseIcon, SquaresFourIcon, TicketIcon, WarningIcon,
+} from '@phosphor-icons/react'
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
-import {
-  IconAlert, IconAnalytics, IconDashboard, IconDevice,
-  IconFarm, IconHarvest, IconSettings, IconTicket,
-} from '@/components/ui/icons'
 
 /**
  * Khung ứng dụng cho Farm Owner — role duy nhất có Tổng quan + Phân tích (giám
- * sát môi trường chi tiết theo zone) và Thu hoạch & Chợ yến.
+ * sát môi trường chi tiết theo zone) và Thống kê sản lượng (thu hoạch).
  */
 const menuSections: MenuSection[] = [
   {
@@ -17,17 +15,17 @@ const menuSections: MenuSection[] = [
       {
         label: 'Tổng quan',
         path: '/dashboard',
-        icon: IconDashboard
+        icon: SquaresFourIcon
       },
       {
         label: 'Thiết bị & Cảm biến',
         path: '/devices',
-        icon: IconDevice
+        icon: CpuIcon
       },
       {
         label: 'Giám sát đàn chim',
         path: '/vision',
-        icon: Camera
+        icon: BirdIcon
       },
     ],
   },
@@ -37,17 +35,17 @@ const menuSections: MenuSection[] = [
       {
         label: 'Trang trại',
         path: '/farms',
-        icon: IconFarm
+        icon: HouseIcon
       },
       {
         label: 'Yêu cầu hỗ trợ',
         path: '/support',
-        icon: IconTicket
+        icon: TicketIcon
       },
       {
-        label: 'Thu hoạch & Chợ yến',
+        label: 'Thống kê sản lượng',
         path: '/harvests',
-        icon: IconHarvest
+        icon: BasketIcon
       },
     ],
   },
@@ -57,17 +55,17 @@ const menuSections: MenuSection[] = [
       {
         label: 'Phân tích',
         path: '/analytics',
-        icon: IconAnalytics
+        icon: ChartBarIcon
       },
       {
         label: 'Thông báo',
         path: '/alerts',
-        icon: IconAlert
+        icon: WarningIcon
       },
       {
         label: 'Cài đặt',
         path: '/settings',
-        icon: IconSettings
+        icon: GearSixIcon
       },
     ],
   },

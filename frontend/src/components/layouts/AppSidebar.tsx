@@ -95,8 +95,8 @@ export default function AppSidebar({
                           {({ isActive }) => (
                             <>
                               {isActive ? (
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-limeMist text-charcoal">
-                                  <item.icon width={15} height={15} />
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-600 text-charcoal">
+                                  <item.icon width={16} height={16} />
                                 </span>
                               ) : (
                                 <item.icon width={16} height={16} className="shrink-0 text-warmGray ml-1" />

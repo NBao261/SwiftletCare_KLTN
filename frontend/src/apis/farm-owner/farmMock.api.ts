@@ -1,15 +1,7 @@
+import { DEVICE_COMPONENT_NAMES, type DeviceComponentName } from '@/data/deviceComponents.data'
 import type { ApiResponse } from '@/types'
 
-/**
- * MOCK API — những trường màn "Cấu trúc Farm" cần mà backend/swagger CHƯA có (đã đối chiếu
- * docs/api/api-spec.yaml): người phụ trách nhà, lịch thu hoạch dự kiến, khuyến nghị AI, kỹ thuật
- * viên lắp đặt + firmware mới nhất của thiết bị. Mọi thứ còn lại (farm/house/zone/thiết bị/
- * telemetry/cảnh báo/thu hoạch) đi qua API thật.
- *
- * KHÔNG bịa số liệu: khi chưa có endpoint, hàm trả dữ liệu RỖNG đúng kiểu và UI hiển thị khung
- * trống ("Chưa có dữ liệu"). Trả đúng khuôn `AxiosResponse<ApiResponse<T>>` (`{ data: { success, data } }`)
- * có độ trễ giả, nên khi backend có endpoint chỉ cần thay thân hàm — hook/UI giữ nguyên.
- */
+// MOCK API cho trường swagger chưa có (người phụ trách, lịch thu, khuyến nghị AI, kỹ thuật viên lắp, firmware mới nhất): trả rỗng đúng khuôn ApiResponse, có API thì chỉ thay thân hàm
 const MOCK_LATENCY_MS = 120
 
 function mockResponse<T>(data: T): Promise<{ data: ApiResponse<T> }> {
@@ -33,4 +25,7 @@ export const farmMockApi = {
   getHouseAdvice: (_houseId: string) => mockResponse<HouseAdvice | null>(null),
 
   getDeviceProfile: (_deviceId: string) => mockResponse<DeviceProfile>({}),
+
+  // Tên thiết bị con của bộ kit do Kỹ thuật viên đặt — dữ liệu giả trong src/data, chờ API thật
+  getDeviceComponentNames: (deviceId: string) => mockResponse<DeviceComponentName[]>(DEVICE_COMPONENT_NAMES[deviceId] ?? []),
 }

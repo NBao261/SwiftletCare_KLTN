@@ -4,13 +4,13 @@ React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: 
 
 > **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa. Việc phải sửa ở web (chỗ lệch theo FR ở `docs/reports/README.md`, quyền theo màn ở `FE_Design_Claude.md` §12.0):
 >
-> - Gỡ `MarketplacePage`, `ListingDetailPage`, route công khai của marketplace, `useMarketplace`, `marketplace.api`; gỡ nốt code `sales-staff/` cũ.
-> - Role `DOMAIN_EXPERT` thay `FARM_OPERATOR`: nhóm role và `MENU_ACCESS` trong `constants/roles.ts`, `DomainExpertLayout` thay `FarmOperatorLayout`, bucket `domain-expert/` cho các trang báo cáo sức khỏe Zone, kiểm chứng cảnh báo, duyệt gợi ý hệ số.
+> - Gỡ nốt code `sales-staff/` cũ (marketplace đã gỡ).
+> - Role `DOMAIN_EXPERT` đã có màn từ PR #91 (`/expert/*`): bỏ dữ liệu giả dự phòng (`services/expert/expertFallback.service.ts`, `data/mocks/`), chuyển về bucket `domain-expert/`, `DomainExpertLayout`, `apis/` theo FE_Design §12.
 > - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009), live stream có khung và số đếm trực tiếp.
 > - Technician/Admin: Admin không có nút can thiệp tay hay xác nhận cảnh báo; Technician chỉ có hai nút đó khi đang giữ ticket của farm (Report 3 §2.4).
 > - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận, duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010), duyệt đề xuất hệ số (EXPERT-FR-011), vòng đếm và lịch đếm theo mùa; Farm Owner chỉ xem, trừ khi farm chưa có chuyên gia (BR-22).
 > - Thiết lập thiết bị (MF-10): Farm Owner quét nhãn QR và mã QR tầng, xem tiến trình setup; Admin in nhãn QR khi thêm thiết bị vào kho; màn Zone in mã QR tầng. Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician.
-> - Bỏ relay sưởi; NH3/CO2 ghi rõ là ngưỡng cảnh báo của Zone (không điều khiển quạt); nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
+> - Gỡ trường `heating` còn sót trong `RelayStates` (màn đã chỉ hiện 3 relay); NH3/CO2 ghi rõ là ngưỡng cảnh báo của Zone (không điều khiển quạt); nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
 
 ## Chạy local
 
@@ -34,7 +34,7 @@ src/
                LoadingSkeleton, ConfirmModal, ActionsMenu...). index.ts là
                barrel duy nhất trong src/; icons import riêng.
     common/    Widget CÓ biết domain và dùng ở >= 2 tính năng (StatusDot,
-               ZonePicker). Cố ý giữ nhỏ.
+               ScopeFilter). Cố ý giữ nhỏ.
     features/  Component riêng của từng tính năng: <role>/<area>/
                (không có features/shared — mỗi component thuộc đúng 1 role)
     layouts/   Đích 7 file — 4 của role, 3 dùng chung:
@@ -61,9 +61,9 @@ src/
                               InvitationPage (chưa đăng nhập, không gắn role)
                  domain-expert/ (đích) màn chuyên gia: kiểm chứng cảnh báo,
                               kết luận, duyệt thay đổi, tham số phát hiện…
-               Trang không thuộc role nào nằm thẳng ở pages/: SettingsPage
-               (mọi role), ForbiddenPage. MarketplacePage, ListingDetailPage
-               còn trong code nhưng ngoài phạm vi (Report 3 §8) — chỉ được gỡ.
+                              (code hiện có nằm ở expert/, PR #91)
+               2 trang không thuộc role nào nằm thẳng ở pages/:
+                 SettingsPage (mọi role), ForbiddenPage
   routes/      1 file cho mỗi thư mục pages/<role>/: <role>.routes.tsx
   stores/      Zustand (authStore, alertStore, toastStore, zoneStore, breadcrumbStore)
   types/       Tách theo module backend (auth, farm, device, telemetry, alert,
