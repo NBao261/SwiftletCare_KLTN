@@ -6,7 +6,7 @@ Rules and map for `ai-pipeline/` (Python: OpenCV + YOLO26n on ONNX Runtime + Byt
 
 - **Design source:** `docs/bird-counting-plan.md` is the implementation plan (architecture, config, MQTT payloads, training, accuracy measurement, backend and frontend work). Requirements: SRS §5.4 (Module VISION) and §0 scope. When the plan and this file disagree on *what to build*, the plan wins; this file wins on *how code must be written and checked*.
 - **Scope (SRS v2.0.0 §0):** one class, `swiftlet`. Predator detection is removed. The AI node is a PC or cloud VPS (container `vision`), **not** a Raspberry Pi. An annotated live stream (boxes drawn on the frame, viewed over WebRTC via MediaMTX) and a counting-accuracy report split by lighting (VISION-FR-014/016) are required.
-- **State:** a scaffold, never run for real. There is no `models/` folder (weights are never committed), `stream.py` tracks every bird over the whole frame (2 tiles → YOLO → ByteTrack → ring count) but publishes nothing, and there is no trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10, plan §19.8); `config.yaml` still carries the Raspberry Pi MQTT block — see Known debt. The backend side is ready: `mqtt/handlers/birdCount.handler.ts` → `services/birdCount.service.ts` stores session records and 5-minute buckets and raises `LOW_RETURN_RATE`, and the AI node's heartbeat and `EDGE_AI_DEGRADED` are handled, so counts persist as soon as the pipeline publishes them.
+- **State:** runs on recorded clips and on the real camera (VIGI C320I, 25 fps) with a temporary COCO `yolo26n`, which does not find swiftlets in the IR frames; no self-trained model yet and not deployed. `stream.py` tracks every bird over the whole frame (2 tiles → YOLO → ByteTrack → ring count), publishes session counts, 5-minute buckets and heartbeats over MQTT, serves an MJPEG preview and pushes the annotated stream to MediaMTX. Weights are never committed (`models/` is git-ignored).
 
 ## Commands
 
@@ -14,35 +14,41 @@ Rules and map for `ai-pipeline/` (Python: OpenCV + YOLO26n on ONNX Runtime + Byt
 cd ai-pipeline
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python src/stream.py                                   # live: CAMERA_RTSP_URL from .env
-pytest tests/                                          # no camera, model or broker needed
+python src/stream.py                                   # live: CAMERA_RTSP_URL from .env; preview http://127.0.0.1:8090/stream
+python src/stream.py --source <clip> --session EVENING_ENTRY --no-mqtt   # on a clip, prints KẾT QUẢ
+pytest                                                 # no camera, model or broker needed (pytest.ini sets src/ and tests/)
 python tools/pick_roi.py [image|clip|rtsp] --margin 60  # click the hole outline → prints the ring for config.yaml (plan §6.8)
 python tools/track_clip.py <clip> --start 425 --seconds 20 [--detector motion]  # video with green boxes → D:/SwiftletCare/clips/annotated
 ```
 
-Once rewritten per the plan (§6.6, §7.7), `stream.py` also takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY` and `--no-mqtt`, and serves an MJPEG preview at `http://127.0.0.1:8090/stream`. Python 3.11–3.12 (`onnxruntime` 1.30 needs ≥ 3.11; versions pinned in plan §4). The pipeline has no CI job yet.
+`stream.py` takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY`, `--realtime` (play a file at real speed, camera demo) and `--no-mqtt`. Python 3.11–3.12 (`onnxruntime` 1.30 needs ≥ 3.11; versions pinned in plan §4). CI runs `pytest` for PRs that touch `ai-pipeline/`.
 
 ## Structure
 
 Today:
 ```
-config/config.yaml    camera (tiles, mask), model, classes, tracking (ring, extrapolation), MQTT, sessions
+config/config.yaml    camera (source, tiles, mask), model, classes, tracking (ring, extrapolation), sessions, MQTT, push, MJPEG
+.env.example          RTSP URL, device/farm/house ids, MQTT login, STREAM_PUSH_URL (copy to .env, never committed)
+pytest.ini
 requirements.txt
 src/
-  stream.py           RTSP loop (sequential cap.read, no publishing) around pipeline.py
-  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack → RingCounter → draw (green boxes)
+  stream.py           live loop: latest-frame reader, sessions in Vietnam time, state.json, MQTT publisher, 5-minute buckets
+  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack; draw() green boxes, ring, counts
+  mjpeg_server.py     MJPEG preview on 127.0.0.1 (encodes only while someone watches)
+  stream_pusher.py    pushes the annotated frames to MediaMTX with ffmpeg; masks the password in its logs
   frame_prep.py       mask + tiles, shared with the dataset tools so training and production see the same pixels
   inference.py        ONNX inference, YOLO26 (300, 6) and YOLOv8/11 outputs, per-tile run + merge
-  counting.py         RingCounter: ring crossings both ways + extrapolation for birds too fast at the hole; set_ring() swaps it live
+  counting.py         RingCounter (ring crossings + extrapolation at the hole; set_ring() swaps it live), sessions, BucketClock
   remote_config.py    VISION-FR-018: ring drawn by the Domain Expert, from {house}/config/update → state/counting_ring.json
 tools/pick_roi.py     calibration: hole outline → ring (offset by --margin), printed as YAML
 tools/extract_frames.py  clip → masked 2-tile frames + draft YOLO labels from motion tracks (--draft tracks) or blobs
 tools/track_clip.py  clip segment → video with green boxes + counts; --detector motion until a trained model exists
 tools/split_by_day.py    labelled export → train/val/test by recording day + data.yaml
-tests/                test_counting.py, test_inference.py, test_frame_prep.py, test_pick_roi.py, test_dataset_tools.py, test_remote_config.py
+tools/record_session.ps1 daily clip recording (Task Scheduler 05:15/17:15) to D:\SwiftletCare\clips, remuxed to seekable mp4
+tests/                counting, inference, frame_prep, state, stream_pusher, pick_roi, dataset_tools, remote_config
 ```
 
-Target (plan §4): `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (rewritten: latest-frame reader thread, session switching, MQTT, push to MediaMTX). Done: `inference.py` (plan §6.3), `counting.py` (`RingCounter`, plan §3.3 item 7 / §19.8), tracking with `sv.ByteTrack` in `pipeline.py`. Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `state/` (the last counting ring received) — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).
+Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `state/` (the last counting ring received) — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).
 
 ## Rules
 
@@ -83,16 +89,13 @@ Target (plan §4): `src/mjpeg_server.py` (new, dev preview), `src/stream.py` (re
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| `config/config.yaml` | MQTT username `rpi-node-01`; `mqtt.farm_id/house_id/zone_id` placeholders (IDs come from `.env`) | Replace the `mqtt` block with plan §6.2 |
 | `src/pipeline.py` | `sv.ByteTrack` is deprecated and removed in supervision 0.31 (pinned `<0.31`) | Move to the `trackers` package before upgrading |
-| `src/stream.py` | Sequential `cap.read()` (lags), no MQTT, no sessions, no stream push | Rewrite (plan §6.6) |
-| CI | `tests/` exists but no CI job runs it | Add a CI job running `pytest` |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. adding a predator class or a secret to `config.yaml`).
 
 ## Before opening a PR
 
-- **[Bắt buộc]** `pytest tests/` passes (once tests exist); the pipeline runs on at least one clip with `--no-mqtt` and the PR states the resulting counts.
+- **[Bắt buộc]** `pytest` passes; the pipeline runs on at least one clip with `--no-mqtt` and the PR states the resulting counts.
 - **[Bắt buộc]** For a payload or topic change: checked against `backend/src/mqtt/mqtt.client.ts`, `BirdCountPayload` and `docs/api/api-spec.yaml`, and tested end-to-end against a local EMQX + backend when the backend handler exists.
 - **[Bắt buộc]** For a model, threshold or counting change: before/after numbers on the same clips, following the accuracy rule above.
 - **[Bắt buộc]** No weights, clips, datasets or `.env` in the diff.

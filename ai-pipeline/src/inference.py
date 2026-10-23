@@ -8,7 +8,6 @@ columns of cx, cy, w, h, class scores and need NMS.
 
 SRS: VISION-FR-001, VISION-FR-002, VISION-FR-003
 """
-import os
 import time
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -85,7 +84,8 @@ class InferenceEngine:
         self.class_names = {int(k): v for k, v in class_names.items()}
 
         sess_opts = ort.SessionOptions()
-        sess_opts.intra_op_num_threads = os.cpu_count() or 4
+        # Không đặt intra_op_num_threads = os.cpu_count(): số luồng logic (gấp đôi số nhân khi có SMT) làm
+        # suy luận chậm gấp đôi (45 ms so với 21 ms trên Ryzen 7 6800H, đo 20/10). Để mặc định của ONNX Runtime.
         sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         self.session = ort.InferenceSession(model_path, sess_opts, providers=list(providers or ["CPUExecutionProvider"]))
         self.input_name  = self.session.get_inputs()[0].name

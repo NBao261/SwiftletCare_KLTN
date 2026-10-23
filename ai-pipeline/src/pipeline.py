@@ -1,12 +1,13 @@
 """
-SwiftletCare - one frame through the pipeline: mask -> 2 tiles -> YOLO -> ByteTrack -> ring count -> draw
+SwiftletCare - one frame through the pipeline: mask -> 2 tiles -> YOLO -> ByteTrack, and drawing
 
 Shared by the live loop (src/stream.py) and tools/track_clip.py so a clip is
-processed exactly like the camera stream.
+processed exactly like the camera stream. Counting stays with the caller: the live loop
+feeds the same tracks to the session counter and to the all-day counter.
 
 SRS: VISION-FR-004, VISION-FR-005, VISION-FR-014; plan §6.6, §19.8
 """
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -39,14 +40,15 @@ def to_sv(dets: List[Detection]) -> sv.Detections:
 
 
 class FramePipeline:
-    def __init__(self, cfg: dict, engine: InferenceEngine, counter: RingCounter, width: int, height: int):
+    def __init__(self, cfg: dict, engine: InferenceEngine, width: int, height: int):
         cam, m, t = cfg["camera"], cfg["model"], cfg["tracking"]
         self.engine = engine
-        self.counter = counter
         self.mask = cam["mask"]
         self.tiles = tile_rects(cam["tiles"], width, height)
         self.tile_overlap = m["tile_merge_overlap"]
         self.box_pad = t["box_pad"]
+        # Lives for the whole run (not rebuilt per session) so track ids never repeat: the counters
+        # remember where each id stood.
         # ponytail: sv.ByteTrack is deprecated and removed in supervision 0.31 (pinned <0.31 in
         # requirements.txt); move to the `trackers` package before upgrading
         self.tracker = sv.ByteTrack(
@@ -55,30 +57,33 @@ class FramePipeline:
             minimum_matching_threshold=t["minimum_matching_threshold"],
             frame_rate=cam["fps"],
         )
-        self.fps = 0.0
 
-    def process(self, frame: np.ndarray) -> Tuple[np.ndarray, sv.Detections]:
-        """Returns (frame with green boxes, ring and counts drawn; tracks in full-frame pixels)."""
-        dets, fps = self.engine.infer_tiles(apply_mask(frame, self.mask), self.tiles, self.tile_overlap)
-        self.fps = 0.9 * self.fps + 0.1 * fps if self.fps else fps
+    def track(self, frame: np.ndarray) -> Tuple[sv.Detections, float, int]:
+        """Returns (tracks in full-frame pixels at real size, sum of detection confidences, detections)."""
+        dets, _ = self.engine.infer_tiles(apply_mask(frame, self.mask), self.tiles, self.tile_overlap)
         det = to_sv(dets)
         if len(det):
             det.xyxy = scale_boxes(det.xyxy, self.box_pad)
         tracks = self.tracker.update_with_detections(det)
         if len(tracks):
             tracks.xyxy = scale_boxes(tracks.xyxy, 1 / self.box_pad)    # real size for counting and drawing
-        ids = tracks.tracker_id if tracks.tracker_id is not None else []
-        self.counter.update(ids, tracks.xyxy)
-        return self.draw(frame.copy(), tracks), tracks
+        return tracks, float(sum(d.confidence for d in dets)), len(dets)
 
-    def draw(self, frame: np.ndarray, tracks: sv.Detections) -> np.ndarray:
-        cv2.polylines(frame, [self.counter.polygon.astype(np.int32)], True, YELLOW, 2)     # counting ring
-        ids = tracks.tracker_id if tracks.tracker_id is not None else []
-        for box, tid in zip(tracks.xyxy.astype(int), ids):
-            cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), GREEN, 2)            # green box per bird
-            cv2.putText(frame, f"#{tid}", (box[0], box[1] - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 1)
-        c = self.counter
-        text = f"VAO {c.entry_count}  RA {c.exit_count}  ?{c.ambiguous}  {self.fps:.1f} FPS"
-        cv2.putText(frame, text, (10, frame.shape[0] - 16), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 4)
-        cv2.putText(frame, text, (10, frame.shape[0] - 16), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
-        return frame
+
+def track_ids(tracks: sv.Detections):
+    return tracks.tracker_id if tracks.tracker_id is not None else []
+
+
+def draw(frame: np.ndarray, tracks: sv.Detections, counter: RingCounter, fps: float,
+         session: Optional[str] = None) -> np.ndarray:
+    """Green box + #id per bird, the counting ring and the counts; text at the bottom (the camera's clock is top-left)."""
+    cv2.polylines(frame, [counter.polygon.astype(np.int32)], True, YELLOW, 2)
+    for box, tid in zip(tracks.xyxy.astype(int), track_ids(tracks)):
+        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), GREEN, 2)
+        cv2.putText(frame, f"#{tid}", (box[0], box[1] - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 1)
+    text = (f"VAO {counter.entry_count}  RA {counter.exit_count}  ?{counter.ambiguous}  {fps:.0f} FPS"
+            f"  {session or 'ngoai phien'}")
+    org = (10, frame.shape[0] - 16)
+    cv2.putText(frame, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 4)
+    cv2.putText(frame, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+    return frame
