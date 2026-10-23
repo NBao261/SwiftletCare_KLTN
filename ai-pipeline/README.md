@@ -1,8 +1,8 @@
 # SwiftletCare AI Pipeline (đếm chim yến)
 
-Python + OpenCV + YOLO26n (ONNX Runtime) + ByteTrack. Nhận RTSP từ camera IP tại cửa chim ra vào, theo vết mọi con chim trên cả khung hình và đếm ra/vào qua vòng khép kín quanh miệng lỗ (kèm ngoại suy cho chim lao qua lỗ quá nhanh), publish số đếm qua MQTT và phát video đã vẽ khung. Xem `SwiftletCare_SRS.md` §5.4 (Module VISION), §11 và kế hoạch chi tiết ở `docs/bird-counting-plan.md`.
+Python + OpenCV + YOLO26n (ONNX Runtime) + ByteTrack. Nhận RTSP từ camera IP tại cửa chim ra vào, theo vết mọi con chim trên cả khung hình và đếm ra/vào qua vòng khép kín quanh miệng lỗ (kèm ngoại suy cho chim lao qua lỗ quá nhanh), publish số đếm qua MQTT và phát video đã vẽ khung. Yêu cầu: Report 3 §3.8 (VISION-FR) trong [`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md); thiết kế: Report 4 §5.2, D5–D6 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md)); kế hoạch chi tiết ở `docs/bird-counting-plan.md`.
 
-> **Phạm vi v2.0.0 (sau Review 1):** chỉ còn **1 class `swiftlet`** — phát hiện thiên địch (rat/snake/owl) đã bị bỏ. Nút AI là **PC tại nhà yến hoặc máy chủ cloud**, không dùng Raspberry Pi. Live stream có vẽ khung và báo cáo độ chính xác đếm (VISION-FR-014/016) là bắt buộc.
+> **Phạm vi sau Review 1 (Report 3 §8):** chỉ còn **1 class `swiftlet`** — phát hiện thiên địch (rat/snake/owl) đã bị bỏ. Nút AI là **PC tại nhà yến hoặc máy chủ cloud**, không dùng Raspberry Pi. Live stream có vẽ khung và báo cáo độ chính xác đếm (VISION-FR-014/016) là bắt buộc. Theo Report 3, phiên sáng/chiều do backend tính từ số đếm 5 phút theo lịch đếm của nhà yến (VISION-FR-008, 019); khung giờ trong `config.yaml` chỉ là mặc định (BR-13).
 
 ## Chạy local
 

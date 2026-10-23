@@ -148,7 +148,7 @@ src/
   models/      Mongoose schema (§8.2)
   routes/      REST endpoint (§9.1) + express-validator + RBAC (requireRole)
   middlewares/ auth (JWT+RBAC), rateLimiter, errorHandler (bắt AppError), validate
-  jobs/        node-cron background jobs (deviceOffline, alertEscalation, overrideExpiry, invitationExpiry)
+  jobs/        node-cron background jobs — danh sách và lịch chạy ở `backend/CLAUDE.md` (bảng Background jobs)
   mqtt/        mqtt.client.ts (kết nối EMQX, subscribe theo wildcard, route theo topic) + handlers/ (adapter mỏng → service)
   socket/      Socket.io realtime events (§9.3) — emit*() functions dùng từ service
   utils/       appError.util, farmAccess.util, logger.util, helpers.util — helper dùng chung, không đặt logic module cụ thể ở đây

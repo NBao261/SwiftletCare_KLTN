@@ -548,6 +548,8 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | KPI period | 30 days default, 366 days maximum | backend `KPI_DEFAULT_DAYS`, `KPI_MAX_DAYS` | TICKET-FR-012 |
 | Temporary Technician password | 12 random characters, changed at next sign-in | backend `resetTechnicianPassword` | AUTH-FR-005c, until e-mail is wired |
 | Region list | 34 provinces and cities (2025 administrative map), with former province names | backend `utils/regions.util.ts` | Technician regions (FARM-FR-009); list and mapping to be confirmed |
+| Live-data label on the dashboard | latest reading older than 20 s shows the controller as disconnected | web `LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS` | Display only; the device status itself follows BR-10 |
+| Zone balance score bands | ≥ 90 / ≥ 80 / ≥ 65 of 100 | web `ZoneBalanceCard` | Colour and label of the zone comparison card only; no alert depends on them |
 
 ---
 

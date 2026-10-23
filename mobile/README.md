@@ -23,13 +23,13 @@ Cấu hình `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` trong `.env` (xem `.env
 ```
 app/            Expo Router file-based routing ((auth)/, (tabs)/, farm/, device/,
                 zone/, alert/, ticket/, livestream/)
-components/     UI theo domain (dashboard, farm, device, alert, analytics, charts)
+components/     (chưa có — tạo khi màn thứ hai cần cùng một khối UI)
 services/api/   Axios wrapper theo module, mirror frontend/src/services
 hooks/          React Query hooks
 store/          Zustand (authStore, alertStore)
-types/          Mirror backend/src/types/domain.ts (§8.2)
+types/          Enum khớp backend/src/types/domain.types.ts (Report 4 §6)
 ```
 
 ## Trạng thái màn hình
 
-Phần lớn màn hình là stub — implement theo `docs/task-checklist.md` mục D (sprint tương ứng). Tab `Tickets` là scaffold mới thêm để khớp Module TICKET trong SRS §5.9.
+Phần lớn màn hình là stub — implement theo Report 3, luồng chính trước: thiết lập thiết bị bằng QR (MF-10), cảnh báo + push, dashboard, live stream. Tab `Tickets` là luồng phụ (Report 3 §3.12.1, SF-02): giữ chạy, không mở rộng. Route `livestream/[zoneId]` phải theo camera của nhà yến (VISION-FR-013, Report 3 §2.8).

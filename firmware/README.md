@@ -31,7 +31,7 @@ src/
             PumpDryMonitor (bơm khô → chốt ngừng phun, C++ thuần)
   audio/    DFPlayer Mini — loa ru dẫn dụ theo lịch (AudioManager) — Guide §10-12
   mqtt/     Publish telemetry/heartbeat/relay status, subscribe command (§9.2)
-  storage/  NVS (config) + SPIFFS (buffer offline, REL-NFR-003)
+  storage/  NVS (config) + SPIFFS (buffer offline, ENV-FR-024)
   main.cpp  SensorTask / PIDTask / MQTTTask
 ```
 

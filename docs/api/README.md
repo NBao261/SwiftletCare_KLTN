@@ -2,7 +2,7 @@
 **Version:** 1.0.0 | **Dev base URL:** `http://localhost:3000` (production TBD, chưa deploy)
 
 ## Authentication
-Hầu hết endpoint (trừ `/auth/*` — Marketplace đã gỡ theo SRS v2.0.0) yêu cầu `Authorization: Bearer <access_token>`
+Hầu hết endpoint (trừ `/auth/*` và `/internal/stream-auth` của MediaMTX) yêu cầu `Authorization: Bearer <access_token>`. Quyền theo role đi theo Report 3 §2.4 (`docs/reports/report3-srs.md`); phần thiết kế giao diện API ở Report 4 §7 (`docs/reports/report4-sdd.md`).
 
 ## Xem API
 
@@ -11,4 +11,4 @@ Hầu hết endpoint (trừ `/auth/*` — Marketplace đã gỡ theo SRS v2.0.0)
 - Chạy `npm run dev` trong `backend/` rồi mở `http://localhost:3000/api-docs`
 - Hoặc paste nội dung `api-spec.yaml` vào https://editor.swagger.io để xem offline
 
-Endpoint thuộc các tag ghi "(stub)" là stub (501, chưa có logic thật) — xem `backend/README.md` mục "Module → phạm vi" để biết trạng thái từng module.
+Endpoint thuộc các tag ghi "(stub)" là stub (501, chưa có logic thật) — xem `backend/README.md` mục "Module → phạm vi". Endpoint Report 3 cần mà backend chưa có nằm ở `docs/reports/README.md` (mục "Chỗ lệch").

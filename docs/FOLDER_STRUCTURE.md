@@ -57,7 +57,7 @@ docs/
 ├── FOLDER_STRUCTURE.md     # file này
 ├── api/                    # api-spec.yaml (OpenAPI 3.0 — nguồn sự thật của API) + README
 ├── bird-counting-plan.md   # kế hoạch triển khai đếm chim (module VISION)
-├── evidence-register.md   # sổ tài liệu tham khảo & minh chứng cho các con số, thiết bị (EVID-NFR-003)
+├── evidence-register.md   # sổ tài liệu tham khảo & minh chứng cho các con số, thiết bị (Report 3 A-3, REF-5, §4.5)
 ├── diagrams/               # sơ đồ draw.io: context-diagram/, system-architecture/ (file chính: artifacts/diagram.drawio)
 ├── hardware/               # BOM.md, components-guide.md (linh kiện + đấu nối)
 ├── reports/                # Report 1–5 tiếng Anh nộp Review 2 (report3-srs.md, report4-sdd.md, …) + README

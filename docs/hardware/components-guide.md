@@ -375,7 +375,7 @@ Hết giờ (7:00): stop() → ngắt Relay IN2 (GPIO26=LOW) → cắt điện a
 
 ## Bổ sung theo SRS v2.0.0 — Công tắc bypass (chưa lắp)
 
-> Phiếu đăng ký bản sửa cam kết công tắc bypass vật lý (SRS ENV-FR-023, REL-NFR-005, Flow 28): khi ESP32 hỏng, người tại nhà yến vẫn chạy được bơm phun sương và quạt bằng tay.
+> Phiếu đăng ký bản sửa cam kết công tắc bypass vật lý (Report 3 ENV-FR-023, BR-19): khi ESP32 hỏng, người tại nhà yến vẫn chạy được bơm phun sương và quạt bằng tay.
 
 - **Linh kiện:** 2 công tắc xoay 3 vị trí (Auto / Off / Hand), dòng định mức lớn hơn dòng của tải; nên chọn loại có tiếp điểm phụ.
 - **Auto:** nguồn của tải đi qua tiếp điểm NO-COM của relay (K1 phun sương, K3 quạt) như hiện nay.

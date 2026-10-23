@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.8.0 · **Cập nhật:** 17/10/2026 · **Thay thế:** v2.7.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.9.0 · **Cập nhật:** 23/10/2026 · **Thay thế:** v2.8.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,17 @@
 ---
 
 ## 0. Changelog
+
+### v2.8.0 → v2.9.0 (theo Report 3 – SRS 3.0.0 và Report 4 – SDD)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Căn cứ đổi sang Report 3/Report 4** (`docs/reports/`); `SwiftletCare_SRS.md` chỉ còn là ghi chú nội bộ. Chỗ code còn lệch với Report 3 ghi ở `docs/reports/README.md`. |
+| 2 | **12.0 viết lại theo Report 3 §2.4:** Farm Owner tự thiết lập thiết bị bằng QR (MF-10), Technician chỉ làm khi có ticket lắp đặt; Technician không sửa ngưỡng/hệ số mờ; Technician chỉ can thiệp tay và xác nhận cảnh báo khi đang giữ ticket; Admin không xác nhận cảnh báo, không can thiệp tay; farm chưa có chuyên gia thì Farm Owner quyết thay (BR-22); chuyên gia duyệt thay đổi của chủ farm (EXPERT-FR-010) và là người duy nhất áp gợi ý hệ số (EXPERT-FR-011); chủ farm xem lịch sử quyết định của chuyên gia (EXPERT-FR-009). |
+| 3 | **12.8 nhóm role:** thêm `SETUP_ROLES` (Farm Owner · Technician); kiểm chứng cảnh báo, tham số phát hiện, vòng đếm, lịch đếm chuyển sang `FARM_SIDE_ROLES` (Farm Owner ghi khi farm chưa có chuyên gia); `EXPERT_ONLY` chỉ còn kết luận, duyệt thay đổi, duyệt đề xuất; `HARVEST_ROLES` đích bỏ Admin. |
+| 4 | **2.5, 2.6.1:** trạng thái thiết bị theo vòng đời Report 3 §6.6 (`ERROR`/`DEGRADED` không dùng); thêm trạng thái cảnh báo `DISMISSED` (Đã bác bỏ); NH3/CO2 là ngưỡng cảnh báo của Zone; bỏ "Quá lạnh (sưởi)"; mốc 20 giây của nhãn bộ điều khiển và các mốc của điểm cân bằng Zone là hằng số tự chọn của giao diện (Report 3 §4.5). |
+| 5 | **6.2 thuật ngữ** thêm nhóm thiết lập thiết bị, kiểm chứng, đồng bộ cấu hình, vòng đếm, lịch đếm; "Bộ điều khiển / Controller" thay chữ PLC; "Loa dẫn dụ / Attractant speaker" theo Report 3. |
+| 6 | **Mục 7** cập nhật trạng thái API theo backend hiện tại và thêm các màn Report 3 mới (duyệt thay đổi, đề xuất hệ số, lịch sử chuyên gia, gói bằng chứng, đồng bộ cấu hình, lịch đếm, thiết lập thiết bị). **13.4** đủ sự kiện socket theo Report 4 §7.3. **13.14** thêm nợ theo Report 3. |
 
 ### v2.7.0 → v2.8.0
 
@@ -148,7 +159,7 @@ Xem tóm tắt ở Phụ lục C.
 
 ## 1. Tổng quan & Nguyên tắc thiết kế
 
-SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát cảm biến, điều khiển PLC, AI vision, cảnh báo, ticket, nhân sự) — ưu tiên **đọc số liệu nhanh, chính xác, đáng tin cậy** hơn trang trí.
+SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát cảm biến, bộ điều khiển ESP32, AI vision, cảnh báo, chuyên gia kiểm chứng, ticket, nhân sự) — ưu tiên **đọc số liệu nhanh, chính xác, đáng tin cậy** hơn trang trí.
 
 1. **Nền xám là sân khấu, nền trắng là diễn viên.** `#EAEAEA` (canvas) không bao giờ là nơi đặt nội dung trực tiếp — mọi text/số liệu/control đều nằm trong 1 khung trắng nổi lên trên.
 2. **Không pha màu ngoài hệ thống — tuyệt đối.** Kể cả các sắc xám/đen cũng phải nằm trong đúng 1 hue ấm (~28°) đã chốt ở mục 2 — không dùng lại bất kỳ mã xám/đen "mặc định của framework" (VD `#000`, `#333`, Tailwind `slate/zinc` mặc định) vì các mã đó thường có tông lạnh khác hue hệ thống.
@@ -315,12 +326,14 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 
 ### 2.5. Trạng thái an toàn / thiết bị
 
-| Trạng thái | Hex |
-|---|---|
-| An toàn / ONLINE | `--accent-600` `#B5D32C` |
-| Cảnh báo nhẹ / PENDING | `--orange-500` `#ED8F50` |
-| Vượt ngưỡng / ERROR | `--red-500` `#D53F35` |
-| OFFLINE | `--gray-400` `#A5A3A1` |
+| Trạng thái thiết bị (Report 3 §6.6) | Nghĩa | Hex |
+|---|---|---|
+| `ONLINE` | Đang gửi heartbeat | `--accent-600` `#B5D32C` |
+| `PENDING` | Đã đăng ký, chưa có heartbeat đầu tiên (đang thiết lập, MF-10) | `--orange-500` `#ED8F50` |
+| `OFFLINE` | Mất heartbeat (bộ điều khiển 30 giây, nút AI 90 giây — BR-10) | `--gray-400` `#A5A3A1` |
+| Đã gỡ (`decommissioned_at`) | Không còn hoạt động, lịch sử vẫn xem được | `--gray-400` `#A5A3A1` + chữ "Đã gỡ" |
+
+`ERROR` và `DEGRADED` có trong enum backend nhưng không chỗ nào gán (Report 3 §6.6) — giao diện không dựng màu/nhãn riêng cho hai giá trị này. Màu đỏ `--red-500` `#D53F35` dành cho giá trị vượt ngưỡng và lỗi, không phải trạng thái thiết bị.
 
 ### 2.6. Nguyên tắc màu dữ liệu cảm biến (không đổi so với v2.0.0)
 
@@ -335,10 +348,10 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 | Token Tailwind | Hex | Dùng ở |
 |---|---|---|
 | `safetyOrange` | `#FF7426` | Khung *Trạng thái nhà yến*: chữ + chấm "Lỗi N thiết bị", dòng ghi chú lỗi. *Nhật ký cảnh báo*: nhãn mức HIGH, giá trị vượt ngưỡng (in đậm) |
-| `climateOrange` (= `orange-500`) | `#ED8F50` | Ô cảm biến vượt ngưỡng; relay "Quá nóng / Quá lạnh"; thanh tỉ lệ chim về 65–79% |
+| `climateOrange` (= `orange-500`) | `#ED8F50` | Ô cảm biến vượt ngưỡng; relay "Quá nóng"; thanh điểm cân bằng Zone 65–79 (`ZoneBalanceCard`; dải chỉ để hiển thị — xem ghi chú dưới bảng b) |
 | `orange-100` / `orange-800` | `#FAE1D1` / `#8B400E` | Nhãn mức MEDIUM ở *Nhật ký cảnh báo* |
 | `infoBlue` | `#4A89EB` | Trạng thái cảnh báo "Mới" |
-| `statusYellow` | `#FFE033` | Nhãn "PLC: Đang chờ kết nối" (nền 70%, chữ charcoal) |
+| `statusYellow` | `#FFE033` | Nhãn "Bộ điều khiển: Đang chờ kết nối" (code cũ ghi "PLC") (nền 70%, chữ charcoal) |
 
 **a) 6 chỉ số cảm biến — icon**
 
@@ -347,8 +360,8 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 | Nhiệt độ | `IconTemp` (nhiệt kế, `ui/icons.tsx`) | °C | `temp_min`–`temp_max` |
 | Độ ẩm | `Droplets` (lucide, hai giọt nước — cùng icon relay Phun sương) | % | `humidity_min`–`humidity_max` |
 | Ánh sáng | `IconLight` (mặt trời) | lux | < `light_max` |
-| NH3 | `FlaskConical` (lucide, bình thí nghiệm) | ppm | < `nh3_max` |
-| CO2 | `IconCloud` (đám mây) | ppm | < `co2_max` |
+| NH3 | `FlaskConical` (lucide, bình thí nghiệm) | ppm | < `nh3_max` — ngưỡng **cảnh báo** của Zone, chưa có chuẩn cho nhà yến, không điều khiển quạt (ALERT-FR-012, BR-02) |
+| CO2 | `IconCloud` (đám mây) | ppm | < `co2_max` — như NH3 |
 | Âm thanh | `IconSound` (sóng âm) | dB | Không có ngưỡng |
 
 **b) 3 trạng thái màu của ô cảm biến** — "thiết bị hoạt động" = có ít nhất 1 SensorNode `ONLINE` trong phạm vi đang chọn.
@@ -360,7 +373,9 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 | **Xám đen** — thiết bị không hoạt động | Không có SensorNode `ONLINE` (offline / chưa kết nối) | Nền trắng | Nền `warmGray/10`, icon charcoal | charcoal (số đo cuối, chỉ để tham khảo) | "An toàn …" |
 | Không có dữ liệu | Chưa có số đo, đang tải, hoặc chọn "Tất cả nhà yến" | Nền trắng | Icon charcoal | `_` màu `warmGray` | Trống khi chọn "Tất cả" |
 
-Âm thanh không có ngưỡng nên icon luôn charcoal. Relay ở khung *Phân hệ điều khiển*: BẬT `success`, TẮT `warmGray`, "Quá nóng" (thông gió) / "Quá lạnh" (sưởi) `climateOrange`, không có dữ liệu hoặc chọn "Tất cả" hiện `_`.
+Âm thanh không có ngưỡng nên icon luôn charcoal. Relay ở khung *Phân hệ điều khiển*: BẬT `success`, TẮT `warmGray`, "Quá nóng" (thông gió) `climateOrange`, không có dữ liệu hoặc chọn "Tất cả" hiện `_`. Hệ thống không có sưởi (Report 3 §8): nhãn "Quá lạnh (sưởi)" còn trong code là nợ 13.14, chỉ được gỡ.
+
+Các mốc của điểm cân bằng Zone (`ZoneBalanceCard`: ≥ 90 "Rất tối ưu", ≥ 80 "Tối ưu" xanh, ≥ 65 "Bình thường" cam) **không có nguồn nuôi yến** — chỉ để tô màu, không phải ngưỡng cảnh báo; giao diện không tự đặt dải màu nào cho tỷ lệ chim về. Cảnh báo tỷ lệ chim về là `LOW_RETURN_RATE` theo `return_rate_drop_pct` của nhà yến (VISION-FR-011, BR-21). Các mốc này đã ghi ở Report 3 §4.5; đổi giá trị thì sửa cả ở đó.
 
 **c) Trạng thái xử lý cảnh báo** (cột *Trạng thái* ở Nhật ký cảnh báo — `status` từ BE)
 
@@ -368,6 +383,7 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 |---|---|---|---|---|
 | `ACTIVE` | Mới / New | `infoBlue/10` | `infoBlue` | Chưa ai xác nhận. Cấp Khẩn cấp để quá 15 phút thì BE tự tạo Ticket |
 | `ACKNOWLEDGED` | Tiếp nhận / Received | `limeMist` | charcoal | Đã có người xác nhận — **chưa** có nghĩa là đã sửa |
+| `DISMISSED` ⏳ backend | Đã bác bỏ / Dismissed | `warmGray/10` | `graphite` | Chuyên gia (hoặc chủ farm khi farm chưa có chuyên gia) bác bỏ cảnh báo suy luận: không còn hiệu lực, không báo lại; đổi kết luận sang xác nhận thì về trạng thái trước (Report 3 §6.1, EXPERT-FR-003). Hiện người bác bỏ, lúc nào, lý do |
 | `RESOLVED` | Đã xử lý / Resolved | `warmGray/15` | `warmGray` | Sự cố đã hết (vượt ngưỡng không lặp lại 5 phút, thiết bị online lại, hoặc thiết bị bị gỡ) |
 
 Mức độ (cột *Mức độ*) và ưu tiên ticket: **theo 2.4**. Trên `develop` hiện tại Nhật ký cảnh báo vẫn dùng `SEVERITY_BADGE_CLASS` 4 mức và bộ lọc "Critical · High/Med · Normal" (`dashboardMetrics.ts`); bản đích ⏳ hiển thị 3 cấp qua `SeverityBadge`/`PriorityBadge`, bộ lọc "Tất cả · Khẩn cấp · Cao · Thường".
@@ -397,7 +413,7 @@ import { PRIORITIES, PRIORITY } from '@/constants/priority';
 | `PRIORITY_DOT_CLS`, `PRIORITY_ORDER` (`technician/tickets/ticketListTypes.ts`) | `PRIORITY[p].dot`, `PRIORITIES.indexOf(p)` |
 | `HEADER_TINT` (`TechnicianTicketDetailPage.tsx`) | `PRIORITY[p].headerTint` |
 
-**d) Trạng thái PLC** (thanh *Giám sát vận hành SCADA*)
+**d) Trạng thái bộ điều khiển** (thanh *Giám sát vận hành SCADA*; code cũ ghi "PLC")
 
 | Trạng thái | Điều kiện | Nhãn VI / EN | Nền | Chữ |
 |---|---|---|---|---|
@@ -405,7 +421,9 @@ import { PRIORITIES, PRIORITY } from '@/constants/priority';
 | Mất kết nối | Có bản đo nhưng cũ hơn 20 giây | PLC: Mất kết nối / Disconnected | `alertRed/15` (Badge `critical`) | `alertRed` |
 | Đang chờ kết nối | Chưa có bản đo nào | PLC: Đang chờ kết nối / Awaiting connection | `statusYellow/70` | charcoal |
 
-Chấm tròn đầu thanh: `success` khi Online, `warmGray` khi không. Nhãn PLC rộng cố định 190px để đổi trạng thái không làm thanh nhảy.
+Chấm tròn đầu thanh: `success` khi Online, `warmGray` khi không. Nhãn rộng cố định 190px để đổi trạng thái không làm thanh nhảy.
+
+Mốc 20 giây (`LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`) là hằng số tự chọn của giao diện (Report 3 §4.5), khác mốc mất kết nối của backend (heartbeat 30 giây, BR-10). Trạng thái thiết bị chính thức là `DEVICE_STATUS_CHANGE`/`status` của backend; nhãn này chỉ nói số đo trên màn có còn mới hay không.
 
 ### 2.7. Icon-box content area — 4 biến thể tông màu
 
@@ -733,7 +751,10 @@ Mọi từ điển dùng đúng các cặp dưới đây; thuật ngữ mới th
 | Thiết bị | Device | |
 | Cảm biến | Sensor | |
 | Cảnh báo | Alert | |
-| Xác nhận (cảnh báo) | Acknowledge | Trạng thái: Mới / New · Tiếp nhận / Received · Đã xử lý / Resolved |
+| Xác nhận (cảnh báo) | Acknowledge | Trạng thái: Mới / New · Tiếp nhận / Received · Đã bác bỏ / Dismissed · Đã xử lý / Resolved |
+| Kiểm chứng · Xác nhận đúng · Bác bỏ (cảnh báo suy luận) | Verdict · Confirm · Reject | Việc của chuyên gia (EXPERT-FR-003), khác "Xác nhận (cảnh báo)" của chủ farm |
+| Cảnh báo suy luận | Inferred alert | `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE` |
+| Bằng chứng | Evidence | Số đo, số đếm chim, cảnh báo thiết bị quanh 1 cảnh báo suy luận (ALERT-FR-014) |
 | Mức độ · Ưu tiên | Level · Priority | 3 cấp: Khẩn cấp / Urgent · Cao / High · Thường / Normal (2.4) |
 | Yêu cầu (hỗ trợ) | Ticket | **Bản VI màn chủ nhà yến** gọi ticket là "yêu cầu" — bản EN vẫn là **Ticket** (không dịch thành "Request") (menu "Yêu cầu hỗ trợ", "Danh sách yêu cầu", "Tạo yêu cầu", "Huỷ yêu cầu"); màn Technician/Admin vẫn dùng "Ticket" |
 | Kỹ thuật viên | Technician | |
@@ -742,10 +763,21 @@ Mọi từ điển dùng đúng các cặp dưới đây; thuật ngữ mới th
 | Quản trị viên | Administrator | |
 | Ngưỡng | Threshold | |
 | Hệ số logic mờ | Fuzzy coefficient | |
+| Duyệt thay đổi · Giữ · Hoàn tác | Review · Accept · Revert | Chuyên gia duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010) |
+| Đề xuất hệ số · Duyệt · Từ chối | Proposal · Approve · Reject | Gợi ý hệ số chủ farm gửi chuyên gia (EXPERT-FR-011) |
+| Tham số phát hiện | Detection parameter | EXPERT-FR-008 |
+| Đồng bộ cấu hình · Đã áp dụng · Đang chờ · Lệch cấu hình | Configuration sync · Applied · Pending · Mismatch | ENV-FR-027 |
+| Bộ điều khiển | Controller | Bộ ESP32 ở mỗi Zone; không dùng chữ "PLC" ở màn mới |
+| Nút AI | AI node | Máy chạy đếm chim cho camera cửa ra vào của nhà yến |
+| Thiết lập thiết bị | Device setup | MF-10 |
+| Nhãn thiết bị · Mã kích hoạt | Device label · Activation key | Nhãn QR trên thiết bị (FARM-FR-010) |
+| Mã QR tầng | Floor code | QR dán ở mỗi tầng, chọn Zone khi thiết lập (FARM-FR-011) |
+| Kho thiết bị | Device stock | Admin thêm thiết bị, in nhãn |
 | Can thiệp tay | Manual override | |
 | Phun sương · Thông gió | Misting · Ventilation | |
-| Loa ru | Lullaby speaker | |
+| Loa dẫn dụ (loa ru) | Attractant speaker | Thuật ngữ của Report 3; chữ EN "Lullaby" cũ đổi khi sửa màn |
 | Đếm chim · Tỷ lệ chim về | Bird count · Return rate | |
+| Vòng đếm · Lịch đếm (theo mùa, tạm thời) | Counting ring · Counting schedule (seasonal, temporary) | VISION-FR-018, 019 |
 | Thu hoạch | Harvest | |
 | Lịch hẹn | Appointment | |
 | Nghiệm thu hiện trường | Field sign-off (SAT) | |
@@ -757,7 +789,7 @@ Mọi từ điển dùng đúng các cặp dưới đây; thuật ngữ mới th
 - **[Bắt buộc]** Không ghép câu bằng cộng chuỗi (`t('a') + ' ' + n + t('b')`) — dùng tham số: `'kpi.openSub': '{n} ticket chờ tiếp nhận'`.
 - **[Bắt buộc]** Bản `en` đủ đúng key của `vi` (kiểu `Dictionary<K>` đã bắt lỗi biên dịch); không để chuỗi tiếng Việt trong bản `en`.
 - Nhãn dùng chung nhiều màn (3 cấp mức độ, tên menu) chỉ khai ở 1 từ điển chung (`navigation.i18n.ts`; `severity.i18n.ts` ⏳) rồi import, không khai lại ở từ điển màn.
-- **[Bắt buộc] Nhãn của mã backend chỉ khai 1 lần** ở `constants/enumLabels.i18n.ts` ⏳: `alertTypeDict`, `alertStatusDict`, `ticketTypeDict`, `ticketStatusDict`, `deviceStatusDict`, `roleDict` (VI/EN). Mức độ ở `severity.i18n.ts` (`levelDict`; `severityLabels()` quy key 4 mức backend về 3 cấp). Từ điển màn cần key riêng (`status.NEW`, `alert.NODE_OFFLINE`) thì lấy lại bằng `...prefixLabels('status.', ticketStatusDict.vi)` — không gõ lại nhãn. Đang áp: `dashboard.i18n.ts`, `farmStructure.i18n.ts`, `shell.i18n.ts` (popup thông báo mọi role), `support.i18n.ts`.
+- **[Bắt buộc] Nhãn của mã backend chỉ khai 1 lần** ở `constants/enumLabels.i18n.ts` ⏳: `alertTypeDict` (thêm `CONFIG_MISMATCH` khi backend có), `alertStatusDict` (thêm `DISMISSED` khi backend có), `ticketTypeDict`, `ticketStatusDict`, `deviceStatusDict`, `roleDict` (VI/EN). Mức độ ở `severity.i18n.ts` (`levelDict`; `severityLabels()` quy key 4 mức backend về 3 cấp). Từ điển màn cần key riêng (`status.NEW`, `alert.NODE_OFFLINE`) thì lấy lại bằng `...prefixLabels('status.', ticketStatusDict.vi)` — không gõ lại nhãn. Đang áp: `dashboard.i18n.ts`, `farmStructure.i18n.ts`, `shell.i18n.ts` (popup thông báo mọi role), `support.i18n.ts`.
 - Nội dung do người dùng hoặc backend sinh ra (ghi chú, tin nhắn, tên farm) không dịch, hiện nguyên văn.
 
 ---
@@ -784,7 +816,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 |---|---|---|---|
 | AI Giám sát đàn — đếm chim, return rate | VISION-FR-006/008/009/010/011 | 🟡 chờ dữ liệu thật từ Edge AI | **Có** |
 | Phân tích tương quan môi trường ↔ return rate | ANALYTICS-FR-002/003 | 🟡 chờ dữ liệu VISION thật | **Có** |
-| ~~Cảnh báo thiên địch từ camera~~ | THREAT-FR-001/002/003 | ❌ Bỏ ở SRS v2.0.0 — không làm màn này | — |
+| ~~Cảnh báo thiên địch từ camera~~ | THREAT-FR-001/002/003 | ❌ Ngoài phạm vi (Report 3 §8) — không làm màn này | — |
 | Chat trực tiếp trong Ticket | TICKET-FR-014→017 | ✅ API thật (`/tickets/:id/messages` + socket, `useTicketChat`) | Không |
 | Ticket của Farm Owner `/support` (tạo, theo dõi, huỷ, đánh giá, khung thiết bị đang báo lỗi) | TICKET-FR-001/011/014..016 | ⏳ Đang làm ở nhánh `feat/fe-farmowner-ticket`, dùng API thật (`/tickets`, `/alerts`, `/devices/sensor-nodes`); trên develop Farm Owner vẫn vào `/tickets` | Không |
 | Giám sát đàn chim `/vision` | VISION-FR-008..011 | 🟡 API thật nhưng chưa có dữ liệu (AI chưa triển khai) → khung trống | Không (không có số liệu giả) |
@@ -792,17 +824,23 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Audit Log toàn hệ thống (Admin) | SYSTEM-FR-001 | ✅ Đã code (`GET /system/audit-logs`) | Không |
 | Cấu hình ngưỡng mặc định hệ thống (Admin) | SYSTEM-FR-002 | ✅ Đã code (`GET/PUT /system/settings/default-thresholds`) | Không |
 | Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ✅ Đã code (`GET /system/health-overview`) | Không |
-| ~~Đăng bán/Truy xuất nguồn gốc (Marketplace)~~ | MARKET-FR-006..013 | ❌ Bỏ ở SRS v2.0.0 — gỡ các trang này; chỉ giữ ghi nhận thu hoạch (MARKET-FR-001..005) | — |
+| ~~Đăng bán/Truy xuất nguồn gốc (Marketplace)~~ | MARKET-FR-006..013 | ❌ Ngoài phạm vi (Report 3 §8) — gỡ các trang này; chỉ giữ ghi nhận thu hoạch (MARKET-FR-001..005) | — |
 | Thông báo ngoài ứng dụng: Telegram bot và push FCM, cả hai (Report 3; Zalo/SMS ngoài phạm vi) | ALERT-FR-002/013 | 🟡 backend gửi Telegram thật, FCM mới ghi log | Có (màn cấu hình kênh) |
-| Báo cáo sức khỏe Zone, kiểm chứng cảnh báo, kết luận của chuyên gia | EXPERT-FR-003..006 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
-| Lịch sử can thiệp tay, tỷ lệ thời gian tự động | ENV-FR-019, ANALYTICS-FR-011 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
-| Live stream có khung trên từng con chim | VISION-FR-013/014 | ⬜ Chưa cài | **Có** |
+| Báo cáo sức khỏe Zone, kiểm chứng cảnh báo, kết luận của chuyên gia, tham số phát hiện | EXPERT-FR-003..006, 008 | 🟡 Backend có API (`/health-reports`, `PUT /alerts/:id/verdict`, `GET /alerts/verdict-stats`, `PUT /farms/zones/:zoneId/detection-tuning`); màn FE chưa làm | Không — dùng API thật |
+| Lịch sử can thiệp tay, tỷ lệ thời gian tự động | ENV-FR-019, ANALYTICS-FR-011 | 🟡 Backend có API (`/devices/sensor-nodes/:id/relay-overrides`, `/analytics/autonomy`); màn FE chưa làm | Không — dùng API thật |
+| Live stream có khung trên từng con chim | VISION-FR-013/014 | 🟡 Backend cấp token (`/devices/camera-nodes/:id/stream-token`), nút AI chưa phát video → khung trống | Không (không có hình giả) |
+| Vẽ vòng đếm của camera | VISION-FR-018 | 🟡 Backend có API (`PUT /devices/camera-nodes/:id/counting-ring`); màn FE chưa làm | Không |
+| Thiết lập thiết bị bằng QR (quét nhãn, quét mã tầng, tiến trình), in nhãn ở kho thiết bị, in mã QR tầng | FARM-FR-003…012 (MF-10) | 🟡 Backend có đăng ký/dời/gỡ nhưng mới cho Technician/Admin; tiến trình "đã áp cấu hình" cần ENV-FR-027 | Không — làm phần đã có API, phần chưa có dùng `ComingSoon` |
+| Duyệt thay đổi của chủ farm, đề xuất hệ số, lịch sử quyết định của chuyên gia | EXPERT-FR-009, 010, 011 | ⬜ Chưa có endpoint (`docs/reports/README.md` #18, #21) | `ComingSoon` |
+| Trạng thái `DISMISSED`, gói bằng chứng của cảnh báo suy luận | EXPERT-FR-003, ALERT-FR-014 | ⬜ Chưa có ở backend (#19, #23) | `ComingSoon` cho phần bằng chứng |
+| Đồng bộ cấu hình theo bộ điều khiển | ENV-FR-027 | ⬜ Chưa có (#22) | `ComingSoon` |
+| Lịch đếm theo mùa / tạm thời, phiên không đầy đủ | VISION-FR-019, 020 | ⬜ Chưa có (#20, #24) | `ComingSoon` |
 | Cấu trúc Farm — người phụ trách nhà, lịch thu dự kiến, khuyến nghị AI, KTV lắp đặt/firmware mới nhất của thiết bị | FARM-FR-* (phần mở rộng UI) | ⬜ Chưa có endpoint — `apis/farm-owner/farmMock.api.ts` trả RỖNG, UI hiện khung trống | Không (không có số liệu giả); farm/house/zone/thiết bị/số đo/cảnh báo/thu hoạch là API thật |
 | Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
 | Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
 
-*Giới hạn:* bảng này là ảnh chụp tại v2.4.0 (SRS v1.21.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/README.md` (cột "Trạng thái Backend" của `SwiftletCare_SRS.md` §5 không còn được cập nhật) — lệch nhau thì tin hai nguồn đó và sửa bảng này.
+*Giới hạn:* bảng này cập nhật theo backend ngày 23/10/2026 (v2.9.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/README.md` (cột "Trạng thái Backend" của `SwiftletCare_SRS.md` §5 không còn được cập nhật) — lệch nhau thì tin hai nguồn đó và sửa bảng này.
 
 ---
 
@@ -827,7 +865,7 @@ Trước khi dựng chart: tự hỏi *"chuỗi thời gian, danh mục, tỷ tr
 | Bảng dữ liệu | `<DataTable />` (`components/ui/`) | Mọi role |
 | Popup xác nhận | `<ConfirmModal />` (`components/ui/`) | Toàn bộ 4 role đăng nhập |
 | Nhật ký/lịch sử | `<Timeline />` — **chưa tồn tại** | Admin Audit Log, Ticket notes, threshold_history |
-| Cấu hình ngưỡng cảm biến | `<ThresholdConfigCard />` — **chưa tồn tại** (hiện là `features/technician/devices/ThresholdsModal`) | Farm Owner + Domain Expert (Zone) + Admin (mặc định hệ thống) — cùng component, khác quyền ghi |
+| Cấu hình ngưỡng cảm biến | `<ThresholdConfigCard />` — **chưa tồn tại** (hiện là `features/technician/devices/ThresholdsModal`, Technician không được sửa nữa — nợ 13.14) | Farm Owner + Domain Expert (Zone) + Admin (mặc định hệ thống, bắt buộc ghi nguồn — ENV-FR-007) — cùng component, khác quyền ghi |
 | Stat card | `<StatCard />` — **chưa dùng chung** (đang là hàm cục bộ trong `AdminSystemHealthPage`) | Dashboard mọi role |
 
 Component "chưa tồn tại" là định hướng: PR **không** bị yêu cầu dùng chúng. Khi màn thứ hai cần đúng giao diện đó thì tách ra theo bảng 12.3 thay vì viết bản thứ hai.
@@ -942,6 +980,9 @@ module.exports = {
 |---|:---:|:---:|:---:|:---:|
 | Dashboard môi trường, Analytics, đếm chim, live stream | R | I (chỉ đọc) | – | – |
 | Báo cáo sức khỏe Zone | R | R | – | – |
+| Lịch sử quyết định của chuyên gia (EXPERT-FR-009) | R (xem, được báo từng quyết định) | R | – | – |
+| Duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010) | I | R | – | – |
+| Thông báo ngoài ứng dụng (Telegram, push) | R | – (chỉ trong ứng dụng) | – | – |
 | Xác nhận (acknowledge) cảnh báo | R | – | R (chỉ cảnh báo gắn ticket mình đang giữ) | – |
 | Kiểm chứng cảnh báo suy luận, viết kết luận | I (đọc kết luận; kiểm chứng thay khi farm chưa có chuyên gia, BR-22) | R | – | – |
 | Can thiệp tay relay có thời hạn | R | – | R (chỉ khi đang giữ ticket mở của farm) | – |
@@ -953,16 +994,19 @@ module.exports = {
 | Lệnh từ xa, OTA, file loa | – (chỉ xem) | – | R | I |
 | Kho thiết bị: thêm, in nhãn QR, cấp lại/thu hồi khoá | – | – | – | R |
 | Cấu trúc Farm (Farm/House/Zone) | R (farm mình) | I | R (trong `assigned_regions`) | A (toàn bộ) |
-| Xoá farm, đổi `region`, mời/gỡ thành viên | R (chỉ Primary Owner) | – | – | I |
+| Xoá farm, đổi `region`, mời/gỡ thành viên | R (chỉ Primary Owner) | – | – | R (xoá farm, đổi `region`) |
 | Ghi nhận thu hoạch | R | I | – | – |
 | Tài khoản, cấu hình mặc định, SLA, audit log, sức khỏe hệ thống | I | I | I | R/A |
 | Chọn bài loa ru / nghe thử | R | – | – | – |
+
+Nguồn: Report 3 §2.4. Farm chưa có chuyên gia (BR-22): Farm Owner làm thay các việc R của Domain Expert ở bảng trên, trừ viết kết luận và duyệt thay đổi của chính mình.
 
 **b) Cây màn theo role** — màn nào dùng chung, màn nào riêng
 
 ```
 Farm Owner (luồng chính — UI MẪU)
 ├── Riêng:     /dashboard · /analytics · /vision · /harvests (ghi) · /support + /support/chi-tiet (⏳)
+├── Đích (Report 3): đọc kết luận + lịch sử quyết định của chuyên gia · gửi đề xuất hệ số cho chuyên gia
 ├── Thiết lập thiết bị (MF-10, mobile là chính; web là đích): quét nhãn, quét mã tầng, tiến trình setup, in mã tầng
 ├── Dùng chung với Domain Expert (Domain Expert chỉ đọc, ẩn nút ghi bằng usePermission):
 │              /dashboard · /analytics · /vision · /stream/:id · /harvests (xem) · báo cáo sức khỏe Zone (đích)
@@ -970,8 +1014,9 @@ Farm Owner (luồng chính — UI MẪU)
 │              /devices (relay, lịch loa) · /alerts (xác nhận) · /farms (cấu trúc)
 └── Chung mọi role: /settings · chuông thông báo · đổi ngôn ngữ
 
-Domain Expert (luồng chính — CHƯA CÓ CODE FE, backend đã có)
-├── Riêng (đích, bucket domain-expert/): kiểm chứng cảnh báo · viết kết luận · duyệt gợi ý hệ số · tham số phát hiện
+Domain Expert (luồng chính — CHƯA CÓ CODE FE; backend có một phần, xem mục 7)
+├── Riêng (đích, bucket domain-expert/): kiểm chứng cảnh báo (kèm bằng chứng) · viết kết luận · duyệt thay đổi của chủ farm
+│              · duyệt đề xuất hệ số · tham số phát hiện · vòng đếm · lịch đếm theo mùa
 └── Đọc chung trang Farm Owner: dashboard · analytics · vision · live stream · thu hoạch · cấu trúc farm (chỉ xem)
     KHÔNG BAO GIỜ: relay, lịch loa, ticket, ghi thu hoạch, acknowledge cảnh báo, sửa/xoá farm, mời thành viên
 
@@ -1010,7 +1055,7 @@ Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao di
 
 ### 12.1. Nguyên tắc
 
-1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `domain-expert/` · `technician/` · `auth/` · `shared/` · `common/`. `domain-expert/` chứa các màn **chỉ** chuyên gia dùng (kiểm chứng cảnh báo, viết kết luận, chỉnh tham số phát hiện); màn chuyên gia chỉ xem (dashboard, analytics, live stream, thu hoạch) là trang Farm Owner mở với nhóm role rộng hơn, không nhân bản sang `domain-expert/`. Không gom theo feature, không để file rải rác cạnh trang dùng nó.
+1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `domain-expert/` · `technician/` · `auth/` · `shared/` · `common/`. `domain-expert/` chứa các màn do chuyên gia sở hữu (kiểm chứng cảnh báo, viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số, tham số phát hiện, vòng đếm, lịch đếm — farm chưa có chuyên gia thì Farm Owner mở cùng trang, BR-22); màn chuyên gia chỉ xem (dashboard, analytics, live stream, thu hoạch) là trang Farm Owner mở với nhóm role rộng hơn, không nhân bản sang `domain-expert/`. Không gom theo feature, không để file rải rác cạnh trang dùng nó.
 2. **Vào `shared/` chỉ khi từ 2 role trở lên thật sự dùng.** Một role dùng thì về thư mục role đó, dù file trông "chung chung" tới đâu. Đây là luật chống `shared/` phình thành bãi rác.
 3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** `TechnicianDevicesPage` vẫn được Farm Owner và Admin mở. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
 4. **Mọi import dùng alias `@/`**, không dùng đường dẫn tương đối `../`. Nhờ vậy dời file chỉ phải sửa đúng đường dẫn của chính nó.
@@ -1024,7 +1069,7 @@ frontend/src/
 │   ├── admin/                 users.api · system.api
 │   ├── auth/                  auth.api · invitations.api
 │   ├── farm-owner/            analytics.api · telemetry.api · harvests.api
-│   ├── domain-expert/         (đích) endpoint chỉ chuyên gia gọi: kiểm chứng cảnh báo, kết luận, tham số phát hiện
+│   ├── domain-expert/         (đích) kiểm chứng cảnh báo, kết luận, duyệt thay đổi, đề xuất hệ số, tham số phát hiện, vòng đếm, lịch đếm
 │   └── shared/                farms.api · alerts.api · devices.api · tickets.api
 │                              audioTracks.api (⚠ chỉ Technician dùng — nợ, xem 13.14)
 │
@@ -1042,7 +1087,8 @@ frontend/src/
 │   ├── features/              Component riêng của từng tính năng
 │   │   ├── admin/             users/ · system/ · tickets/
 │   │   ├── farm-owner/        dashboard/ · analytics/ · farms/ · harvest/ · vision/ · (⏳ tickets/)
-│   │   ├── domain-expert/     (đích) alert-verdicts/ · health-reports/ · detection-tuning/
+│   │   ├── domain-expert/     (đích) alert-verdicts/ · health-reports/ · detection-tuning/ · change-reviews/
+│   │   │                      · coefficient-proposals/ · counting-ring/ · counting-schedule/
 │   │   └── technician/        devices/ · alerts/
 │   └── layouts/               Đúng 7 file — 4 của role, 3 dùng chung
 │                              AdminLayout · FarmOwnerLayout · DomainExpertLayout · TechnicianLayout
@@ -1055,8 +1101,10 @@ frontend/src/
 │   │                          FarmOwnerFarmHousesPage · FarmOwnerFarmZonesPage
 │   │                          FarmOwnerFarmZoneDetailPage · FarmOwnerHarvestPage · FarmOwnerLiveStreamPage
 │   │                          FarmOwnerVisionPage · (⏳ FarmOwnerTicketsPage · FarmOwnerTicketDetailPage)
+│   │                          (đích) FarmOwnerDeviceSetupPage — MF-10, Technician mở cùng trang khi có ticket lắp đặt
 │   ├── domain-expert/         (đích) DomainExpert<ChứcNăng>Page — kiểm chứng cảnh báo, báo cáo
-│   │                          sức khỏe Zone, duyệt gợi ý hệ số, tham số phát hiện
+│   │                          sức khỏe Zone, duyệt thay đổi, duyệt đề xuất hệ số, tham số phát hiện,
+│   │                          vòng đếm, lịch đếm
 │   ├── technician/            TechnicianDevicesPage · TechnicianAlertsPage
 │   │                          TechnicianTicketsPage · TechnicianTicketDetailPage
 │   ├── auth/                  LoginPage · RegisterPage · ForgotPasswordPage · InvitationPage
@@ -1125,7 +1173,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
 - Tên file **mang luôn tên role sở hữu**: `AdminUsersPage.tsx`, `FarmOwnerHarvestPage.tsx`, `TechnicianDevicesPage.tsx`.
 - **Tên hàm component trùng tên file** — `export default function TechnicianDevicesPage()`.
-- `pages/` **không có** thư mục `shared/` hay `public/`. Trang nhiều role dùng chung đặt ở thư mục role sở hữu nghiệp vụ chính (Thiết bị/Cảnh báo/Ticket → `technician/`; Trang trại/Dashboard/Analytics/Thu hoạch/Camera → `farm-owner/`; kiểm chứng/kết luận/tham số phát hiện → `domain-expert/`).
+- `pages/` **không có** thư mục `shared/` hay `public/`. Trang nhiều role dùng chung đặt ở thư mục role sở hữu nghiệp vụ chính (Thiết bị/Cảnh báo/Ticket → `technician/`; Trang trại/Dashboard/Analytics/Thu hoạch/Camera và **thiết lập thiết bị bằng QR (MF-10)** → `farm-owner/`; kiểm chứng/kết luận/duyệt thay đổi/đề xuất hệ số/tham số phát hiện/vòng đếm/lịch đếm → `domain-expert/`).
 - Trang không thuộc nghiệp vụ role nào để thẳng ở gốc `pages/`; màn đăng nhập/đăng ký/nhận lời mời ở `pages/auth/`.
 - **Trong `pages/` không được có gì ngoài `*Page.tsx`.** Modal, tab, cột bảng, hằng số riêng của trang đều nằm ở `components/features/<role>/<area>/`.
 
@@ -1163,12 +1211,13 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
    | Nhóm | Gồm | Dùng cho | Trạng thái |
    |---|---|---|---|
-   | `OPS_ROLES` | Farm Owner · Technician · Admin | Thiết bị/relay, xác nhận cảnh báo, ticket | Có |
-   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone | Tạo khi thêm `DOMAIN_EXPERT` |
-   | `EXPERT_ONLY` | Domain Expert | Kiểm chứng cảnh báo suy luận, viết kết luận, tham số phát hiện | Tạo khi thêm `DOMAIN_EXPERT` |
+   | `OPS_ROLES` | Farm Owner · Technician · Admin | Thiết bị/relay, xác nhận cảnh báo, ticket. Admin chỉ xem: không can thiệp tay, không xác nhận cảnh báo; Technician chỉ làm hai việc đó khi đang giữ ticket của farm — ẩn nút bằng `usePermission` | Có |
+   | `SETUP_ROLES` | Farm Owner · Technician | Thiết lập thiết bị bằng QR, dời/gỡ thiết bị, in mã QR tầng (MF-10) | Tạo khi làm màn MF-10 |
+   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone, lịch sử quyết định của chuyên gia; kiểm chứng cảnh báo, tham số phát hiện, vòng đếm, lịch đếm (Farm Owner chỉ ghi khi farm chưa có chuyên gia — BR-22) | Tạo khi thêm `DOMAIN_EXPERT` |
+   | `EXPERT_ONLY` | Domain Expert | Viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số | Tạo khi thêm `DOMAIN_EXPERT` |
    | `FARM_OWNER_ONLY` | Farm Owner | Thành viên, cài đặt farm | Có |
-   | `HARVEST_ROLES` | Farm Owner · Admin | Ghi nhận thu hoạch | Có |
-   | `ADMIN_ONLY` | Admin | Quản trị hệ thống | Có |
+   | `HARVEST_ROLES` | Farm Owner (ghi) · Domain Expert (xem) | Ghi nhận thu hoạch. Code hiện là Farm Owner · Admin — bỏ Admin, thêm chuyên gia khi thêm `DOMAIN_EXPERT` (12.0 c dòng 4) | Có (đích khác) |
+   | `ADMIN_ONLY` | Admin | Quản trị hệ thống, kho thiết bị và in nhãn | Có |
 
    Domain Expert **không bao giờ** thuộc nhóm có hành động ghi vận hành (relay, ticket, ghi thu hoạch, acknowledge cảnh báo). Trang dùng chung có nút ghi (VD Thu hoạch mà chuyên gia chỉ xem) thì thêm chuyên gia vào `allow` và ẩn nút bằng `usePermission` (13.8).
 3. Cần lên sidebar? → thêm `{ label, path, icon }` vào `menuSections` trong `<Role>Layout.tsx`, và thêm dòng vào `MENU_ACCESS` (`constants/roles.ts`).
@@ -1276,7 +1325,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 - **[Bắt buộc]** Component/page **không** import `@/lib/socket`. Kết nối và đăng ký sự kiện đi qua hook (`useSocket`, `useTelemetry`, `useAlertNotifications`).
 - **[Bắt buộc]** Mọi `on*`/`joinZone` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`) — thiếu cleanup là rò listener mỗi lần đổi zone.
-- **[Bắt buộc]** Tên sự kiện và payload khớp backend (`TELEMETRY_UPDATE`, `RELAY_UPDATE`, `ALERT_NEW`, `DEVICE_STATUS_CHANGE`, `BIRD_COUNT_UPDATE`; type trong `types/socket.types.ts`).
+- **[Bắt buộc]** Tên sự kiện và payload khớp backend và Report 4 §7.3: phòng `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE` — số đếm chim, camera, cảnh báo của nhà yến), `ticket:<id>` (`JOIN_TICKET_CHAT`), phòng riêng `user:<id>`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`, `TICKET_MESSAGE_NEW`, `TICKET_CHAT_ASSIGNEE_CHANGED`; type trong `types/socket.types.ts`.
 
 ### 13.5. Lỗi, loading, rỗng
 
@@ -1373,10 +1422,14 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | Màn Admin/Technician còn hiện mã rút gọn từ id (VD `#{ticket._id.slice(-6)}`) | 13.16 a | Người phụ trách role đó gỡ khi sửa màn |
 | Nhãn mã backend khai riêng/viết cứng ngoài `enumLabels.i18n.ts`: `TICKET_TYPE_LABEL`, `STATUS_LABEL` (`constants/tickets.ts`, chỉ VI), `STATUS_LABEL` (`common/StatusDot.tsx`), `ROLE_LABEL` (`constants/roles.ts`), "Technician" cứng trong `technician/tickets/TicketChat.tsx`, chữ trạng thái trong `StatusStepper`, `UpdateStatusModal`, `TicketToolbar`, `admin/tickets/TicketStatusSteps`, bản dịch trùng trong `src/i18n/en.ts` | 6.3 | Người phụ trách role đó chuyển sang đọc `enumLabels.i18n.ts` khi sửa màn |
 | ~230 chỗ `text-xs`/`text-sm`/`text-lg`/`text-2xl`… | Lệch thang chữ 2.8 (13.7 [Nên]) | Đổi dần khi sửa file đó |
-| `pages/sales-staff/` · `routes/sales-staff.routes.tsx` · `SalesStaffLayout` · role `SALES_STAFF` trong `types/common.types.ts`, `types/ticket.types.ts`, `INVITE_ROLE_LABEL` | Role đã bỏ từ SRS v1.23.0 | Gỡ trong PR thêm `DOMAIN_EXPERT` (SRS §0.5 Web) |
-| `MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · `features/farm-owner/harvest/` phần đăng bán (`CreateListingModal`, `ListingPanel`, `ListingsTab`, `TraceCodeRow`) | Bỏ ở SRS v2.0.0 (§0.2 #1) | Gỡ cùng lúc backend gỡ `/marketplace/*`; trang Thu hoạch chỉ còn ghi nhận |
+| `pages/sales-staff/` · `routes/sales-staff.routes.tsx` · `SalesStaffLayout` · role `SALES_STAFF` trong `types/common.types.ts`, `types/ticket.types.ts`, `INVITE_ROLE_LABEL` | Role đã bỏ từ SRS v1.23.0 | Gỡ trong PR thêm `DOMAIN_EXPERT` (Report 3 §2.3) |
+| `MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · `features/farm-owner/harvest/` phần đăng bán (`CreateListingModal`, `ListingPanel`, `ListingsTab`, `TraceCodeRow`) | Ngoài phạm vi (Report 3 §8) | Gỡ; backend đã không còn `/marketplace/*`; trang Thu hoạch chỉ còn ghi nhận |
 | Chưa có role `DOMAIN_EXPERT`, `DomainExpertLayout`, `FARM_SIDE_ROLES`/`EXPERT_ONLY` | Mục 12 mô tả trạng thái đích | PR thêm role theo checklist "Thêm role mới" ở 12.10 |
-| Nhãn `BIRD_PANIC`, relay sưởi, tùy chọn kênh Zalo/SMS trên giao diện | Bỏ/đổi tên ở SRS v2.0.0 | Đổi sang `NOISE_ANOMALY`, gỡ sưởi và Zalo/SMS khi backend đổi enum |
+| Nhãn `BIRD_PANIC`, relay sưởi ("Quá lạnh"), tùy chọn kênh Zalo/SMS trên giao diện | Ngoài phạm vi / đổi tên (Report 3 §8) | Đổi sang `NOISE_ANOMALY`, gỡ sưởi và Zalo/SMS |
+| `features/technician/devices/ThresholdsModal` cho Technician sửa ngưỡng và hệ số mờ | Report 3 §2.4: chỉ Farm Owner + Domain Expert của farm (12.0 c dòng 9) | Gỡ chỗ sửa khỏi màn Technician; dời thành `ThresholdConfigCard` dùng chung (mục 9) |
+| Nút can thiệp tay và xác nhận cảnh báo hiện cho Admin, và cho Technician không giữ ticket | Report 3 §2.4, ENV-FR-016, ALERT-FR-009 (12.0 c dòng 7) | Ẩn bằng `usePermission`; backend chặn khi làm xong `docs/reports/README.md` #2 |
+| `/onboarding` chỉ là màn Technician nhập tay Device ID + khoá | MF-10 (12.0 c dòng 5b) | Làm `FarmOwnerDeviceSetupPage` quét QR, mở cho `SETUP_ROLES` |
+| Chữ "PLC" trên Dashboard; mốc 20 giây và mốc điểm cân bằng Zone tự chọn; câu "Camera AI đếm chim, Raspberry Pi" ở `BirdTab`, `CorrelationCard` | 6.2, 2.6.1; Report 3: nút AI là PC/máy chủ, không phải Raspberry Pi | Đổi chữ thành "Bộ điều khiển", "nút AI" khi sửa màn; mốc giữ đúng giá trị ghi ở Report 3 §4.5 |
 
 PR đụng vào file trong bảng thì **nên** trả nợ luôn; bắt buộc chỉ khi PR làm nợ nặng thêm (VD thêm consumer thứ hai vẫn chỉ của Technician vào `shared/`, hoặc thêm màn/tính năng mới cho Sales Staff, Marketplace, sưởi, Zalo/SMS — các phần này chỉ được gỡ, không được mở rộng).
 
@@ -1439,7 +1492,7 @@ Quy tắc định dạng ở đầu tài liệu phải do máy bắt, không tr�
 | Hook React Query, component có logic (bảng, form, badge dùng chung) | vitest + `@testing-library/react` + `jsdom` | **[Nên]** với component dùng chung ở `common/`, form có validate | Chưa cài |
 | Luồng chính end-to-end | Playwright | **[Nên]** trước mỗi vòng review hội đồng | Chưa cài |
 
-Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và về đúng trang chủ · Farm Owner tạo ticket từ khung thiết bị đang báo lỗi · Farm Owner xác nhận cảnh báo · Farm Owner can thiệp tay relay có thời hạn · Domain Expert kiểm chứng cảnh báo (khi có màn) · đổi VI/EN trên 1 màn có từ điển.
+Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và về đúng trang chủ · Farm Owner tạo ticket từ khung thiết bị đang báo lỗi · Farm Owner xác nhận cảnh báo · Farm Owner can thiệp tay relay có thời hạn · Domain Expert kiểm chứng cảnh báo (khi có màn) · Domain Expert duyệt thay đổi ngưỡng của chủ farm (khi có endpoint) · đổi VI/EN trên 1 màn có từ điển. Thiết lập thiết bị bằng QR (MF-10) kiểm trên mobile.
 
 - Test đặt tên theo hành vi bằng tiếng Việt hoặc tiếng Anh nhất quán trong file (`it('gộp CRITICAL vào Khẩn cấp')`).
 - Không gọi backend thật trong unit test; dữ liệu mẫu cho test đặt ngay trong file test (không phải dữ liệu giả hiển thị — mục 7 chỉ áp cho dữ liệu lên giao diện).

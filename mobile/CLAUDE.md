@@ -73,7 +73,7 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 
 ### Realtime and push
 - **[Bắt buộc]** Every socket subscription (`on*`, `joinZone`) made in an effect is undone in its cleanup (`off`, `leaveZone`); a screen that joins a zone leaves it when it unmounts or the zone changes. Add `off*` helpers to `services/socket` when wiring the first screen.
-- **[Bắt buộc]** Socket event names and payloads match the backend (`TELEMETRY_UPDATE`, `RELAY_UPDATE`, `ALERT_NEW`, `DEVICE_STATUS_CHANGE`, `BIRD_COUNT_UPDATE`).
+- **[Bắt buộc]** Socket rooms, event names and payloads match the backend and Report 4 §7.3: rooms `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE` — bird counts, camera status and house alerts), `user:<id>`; events `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `ALERT_NEW`, `DEVICE_STATUS_CHANGE`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`.
 - **[Bắt buộc]** QR codes are read in the formats of Report 4 §5.4 (`swiftletcare://claim?d=<device ID>&k=<activation key>`, `swiftletcare://zone?z=<zone ID>`); the activation key is sent once to the registration endpoint and never stored, logged or cached on the phone.
 - **[Bắt buộc]** Push registration (FCM via `expo-notifications`) only asks for permission at a point the user understands, and sends the token to the backend through an endpoint in `api-spec.yaml` — do not invent one; if the endpoint does not exist yet, say so in the PR and leave it unsent.
 
@@ -100,6 +100,7 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 | `services/notification/index.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-002) |
 | Tooling | No tests yet; `npm run lint` passes with ~44 warnings (UTF-8 BOM at the top of files, `Array<T>` instead of `T[]`) | Write tests with the features; `npx eslint . --fix` clears most warnings |
 | `package.json` | Libraries declared for planned screens but not imported yet (`expo-camera`, `expo-av`, `react-native-maps`, `victory-native` + Skia, `react-native-mmkv`, `burnt`); `@shopify/react-native-skia` is pinned to `~2.0.7` and excluded from `expo install --check` because the SDK's `v2.0.0-next.4` prerelease does not satisfy `victory-native`'s peer range | Drop what the screens end up not using |
+| `app/livestream/[zoneId]` | Keyed by zone, but cameras, bird counts and the stream belong to the house's camera (Report 3 §2.8, VISION-FR-013) | Key the route by camera (house) when the screen is built |
 | `app/**` screens | Stubs with `TODO` comments | Implement per Report 3 (main flows first: MF-10 setup, alerts, dashboard, live stream) |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. using `BIRD_PANIC` or `SALES_STAFF` in new code).

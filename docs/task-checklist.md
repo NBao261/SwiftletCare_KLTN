@@ -1,8 +1,12 @@
 # SwiftletCare — BẢNG TASK CHI TIẾT (Micro-task Checklist) v3
 
-**Bám theo:** Report 3 – SRS (`docs/reports/report3-srs.md`, phiếu đăng ký bản sửa sau Review 1; chỗ code còn lệch ở `docs/reports/README.md`) + Components Guide v3.11 + Sensor Config Guide + `docs/bird-counting-plan.md` | **Phạm vi:** theo phiếu v2 (SRS mục 0)
+> Mã NFR trong file này là mã của SRS cũ. Report 3 dùng NFR-01…13: REL-NFR-001/003 → NFR-06 (ENV-FR-014, 024) · REL-NFR-002, PERF-NFR-007 → NFR-07 (ENV-FR-025) · PERF-NFR-004 → NFR-04 · SEC-NFR-003/004 → NFR-10 · AUTO-NFR-001 → NFR-08 · EVID-NFR-003 → giả định A-3, REF-5. Các mã còn lại (UX-, OPS-, PRIV-, SLA-NFR, SEC-NFR-001/005/006, REL-NFR-004/005/007) không còn là NFR cam kết; phần thiết kế tương ứng ở Report 4 §10–11.
+
+**Bám theo:** Report 3 – SRS (`docs/reports/report3-srs.md`, phiếu đăng ký bản sửa sau Review 1; chỗ code còn lệch ở `docs/reports/README.md`) + Components Guide v3.11 + Sensor Config Guide + `docs/bird-counting-plan.md` | **Phạm vi:** theo phiếu v2 và Report 3 §8
 
 > **[v2 cập nhật]** theo linh kiện thực tế đã mua: ESP32 NodeMCU 38 chân + đế mở rộng, **2 mạch Buck** (tách nguồn PAM8403), Domino TB1504, relay kích H/L (đặt mức High), DFPlayer + PAM8403 6W có volume, camera IR 940nm.
+>
+> **[Report 3 — thay mục v3 dưới đây]** Thiết lập thiết bị quay về **Farm Owner tự làm trên mobile bằng QR** (MF-10: quét nhãn thiết bị và mã QR tầng, FARM-FR-003…012); Technician chỉ làm cùng các bước khi có ticket lắp đặt. Việc còn thiếu: `docs/reports/README.md` #25–28.
 >
 > **[v3 cập nhật — theo SRS v1.12.0]** Đổi mô hình onboarding thiết bị: **Technician thao tác qua Web Console** (không phải Farm Owner tự quét QR qua Mobile App như bản checklist cũ) — xem Flow 1/1b. Thêm hẳn 9 Flow mới (Flow 11→19: đăng ký/đăng nhập/quên mật khẩu, mời thành viên, điều khiển relay thủ công + auto-revert, offline-detection, OTA, mời Sales Staff, duyệt sản phẩm, cảnh báo tồn kho, quản lý tài khoản Admin) → mục A/C/D/E dưới đây đã bổ sung task tương ứng. Ticket thêm loại `INSTALLATION` (Flow 9b) đi kèm cơ chế tự động định tuyến giống ticket báo lỗi.
 >

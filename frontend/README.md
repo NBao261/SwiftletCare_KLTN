@@ -6,7 +6,8 @@ React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: 
 >
 > - Gỡ `MarketplacePage`, `ListingDetailPage`, route công khai của marketplace, `useMarketplace`, `marketplace.api`; gỡ nốt code `sales-staff/` cũ.
 > - Role `DOMAIN_EXPERT` thay `FARM_OPERATOR`: nhóm role và `MENU_ACCESS` trong `constants/roles.ts`, `DomainExpertLayout` thay `FarmOperatorLayout`, bucket `domain-expert/` cho các trang báo cáo sức khỏe Zone, kiểm chứng cảnh báo, duyệt gợi ý hệ số.
-> - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận của chuyên gia, live stream có khung và số đếm trực tiếp.
+> - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009), live stream có khung và số đếm trực tiếp.
+> - Technician/Admin: Admin không có nút can thiệp tay hay xác nhận cảnh báo; Technician chỉ có hai nút đó khi đang giữ ticket của farm (Report 3 §2.4).
 > - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận, duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010), duyệt đề xuất hệ số (EXPERT-FR-011), vòng đếm và lịch đếm theo mùa; Farm Owner chỉ xem, trừ khi farm chưa có chuyên gia (BR-22).
 > - Thiết lập thiết bị (MF-10): Farm Owner quét nhãn QR và mã QR tầng, xem tiến trình setup; Admin in nhãn QR khi thêm thiết bị vào kho; màn Zone in mã QR tầng. Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician.
 > - Bỏ relay sưởi; NH3/CO2 ghi rõ là ngưỡng cảnh báo của Zone (không điều khiển quạt); nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
@@ -36,9 +37,10 @@ src/
                ZonePicker). Cố ý giữ nhỏ.
     features/  Component riêng của từng tính năng: <role>/<area>/
                (không có features/shared — mỗi component thuộc đúng 1 role)
-    layouts/   Đúng 7 file — 4 của role, 3 dùng chung:
+    layouts/   Đích 7 file — 4 của role, 3 dùng chung:
                  AdminLayout · FarmOwnerLayout
-                 FarmOperatorLayout · TechnicianLayout
+                 DomainExpertLayout (chưa có) · TechnicianLayout
+                 (SalesStaffLayout còn trong code — nợ, chỉ được gỡ)
                    -> menu viết đầy đủ ngay đầu mỗi file
                  AppShell    khung chung (sidebar + header + nội dung)
                  AppSidebar  sidebar desktop + dock mobile
@@ -57,9 +59,11 @@ src/
                  technician/  TechnicianDevicesPage, TechnicianTicketsPage...
                  auth/        LoginPage, RegisterPage, ForgotPasswordPage,
                               InvitationPage (chưa đăng nhập, không gắn role)
-               4 trang không thuộc role nào nằm thẳng ở pages/:
-                 SettingsPage (mọi role), MarketplacePage,
-                 ListingDetailPage, ForbiddenPage
+                 domain-expert/ (đích) màn chuyên gia: kiểm chứng cảnh báo,
+                              kết luận, duyệt thay đổi, tham số phát hiện…
+               Trang không thuộc role nào nằm thẳng ở pages/: SettingsPage
+               (mọi role), ForbiddenPage. MarketplacePage, ListingDetailPage
+               còn trong code nhưng ngoài phạm vi (Report 3 §8) — chỉ được gỡ.
   routes/      1 file cho mỗi thư mục pages/<role>/: <role>.routes.tsx
   stores/      Zustand (authStore, alertStore, toastStore, zoneStore, breadcrumbStore)
   types/       Tách theo module backend (auth, farm, device, telemetry, alert,
@@ -83,14 +87,15 @@ Quy ước đặt component: không biết domain (không import @/types, @/hook
 @/stores) thì vào `ui/` bất kể mấy nơi dùng; biết domain mà chỉ 1 tính năng dùng thì
 vào `features/`; biết domain và >= 2 tính năng dùng mới vào `common/`.
 
-Quy ước: tên thư mục con (`admin/`, `farm-owner/`, `shared/`...) cho biết ROLE NÀO
-vào được, khớp đúng `RequireRole allow={...}` của route dùng nó. Nhóm role khai báo
-một chỗ ở `constants/roles.ts` để bảng route và sidebar không lệch nhau. Mọi import
+Quy ước: tên thư mục con (`admin/`, `farm-owner/`, `shared/`...) cho biết role SỞ HỮU
+nghiệp vụ (`shared/` = từ 2 role trở lên dùng); ai vào được là `RequireRole allow={...}`
+của route, chọn theo bảng phân quyền Report 3 §2.4 (`FE_Design_Claude.md` 12.0, 12.8).
+Nhóm role khai báo một chỗ ở `constants/roles.ts` để bảng route và sidebar không lệch nhau. Mọi import
 dùng alias `@/`, không dùng đường dẫn tương đối.
 
 ## Trạng thái trang
 
-Phần lớn trang là stub "Coming soon" — implement theo `docs/task-checklist.md` mục D (sprint tương ứng). `Tickets`, `Harvest`, `Marketplace` là scaffold mới thêm để khớp Module TICKET/MARKET trong SRS.
+Trạng thái từng màn (API thật, chờ dữ liệu, chưa có endpoint) ở `FE_Design_Claude.md` mục 7; màn còn thiếu so với Report 3 ở `docs/reports/README.md` (#9, #28, #30). `Marketplace` ngoài phạm vi — chỉ được gỡ.
 
 ## Lệnh hữu ích
 
