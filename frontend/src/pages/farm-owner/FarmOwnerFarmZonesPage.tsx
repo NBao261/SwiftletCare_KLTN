@@ -30,7 +30,8 @@ import type { DeviceRow, ZoneNode } from '@/components/features/farm-owner/farms
 import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
-import { FARMS_PATH, FARMS_UP_STATE, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { FARMS_PATH, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
 import { useZoneStore } from '@/stores/zoneStore'
 
 /** Khung nội dung cao CỨNG (px) cho mọi tab — tab Tổng quan (cột phải ~880px) là cao nhất, tải lại hay đổi tab trang không đổi chiều cao */
@@ -82,8 +83,8 @@ export default function FarmOwnerFarmZonesPage() {
     </>
   )
 
-  usePageBack(FARMS_PATH, t('page.farms'), FARMS_UP_STATE)
-  usePageBreadcrumb(node ? [{ label: node.house.name }] : [], FARMS_UP_STATE)
+  usePageBack(FARMS_PATH, t('page.farms'), UP_FROM_CHILD_STATE)
+  usePageBreadcrumb(node ? [{ label: node.house.name }] : [], UP_FROM_CHILD_STATE)
 
   // Gom thiết bị của nhà trong 1 lượt duyệt: tất cả / không online / camera đầu tiên
   const { devices, problems, camera, zoneNameById, zoneById } = useMemo(() => {

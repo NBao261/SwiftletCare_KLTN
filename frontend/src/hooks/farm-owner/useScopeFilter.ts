@@ -7,6 +7,7 @@ import { sortPinnedFirst } from '@/components/features/farm-owner/dashboard/dash
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses';
 import { useScopeIssues } from '@/hooks/farm-owner/useFarmOwnerDashboard';
 import { useAllZones, useFarms, type AllZone } from '@/hooks/shared/useFarms';
+import { UP_FROM_CHILD_STATE } from '@/lib/navigationState';
 import { useZoneStore } from '@/stores/zoneStore';
 import type { Farm, House } from '@/types';
 
@@ -138,16 +139,6 @@ export function useScopeFilter(): ScopeFilterState {
 
 // Trang Trang trại (danh sách farm)
 export const FARMS_PATH = '/farms';
-// State gắn vào lượt chuyển trang đi lên từ trang chi tiết nhà / Zone (Quay lại, breadcrumb, đổi khung lọc): danh sách bỏ lọc nhà, Zone
-export interface FarmsUpState {
-  fromFarmDetail: true;
-}
-
-export const FARMS_UP_STATE: FarmsUpState = { fromFarmDetail: true };
-
-export function isFarmsUpState(state: unknown): state is FarmsUpState {
-  return typeof state === 'object' && state !== null && (state as Partial<FarmsUpState>).fromFarmDetail === true;
-}
 
 export function farmHousePath(farmId: string, houseId: string): string {
   return `/farms/${farmId}/houses/${houseId}`;
@@ -164,14 +155,14 @@ export function useFarmsScopeRouting(scope: ScopeFilterState): ScopeFilterState 
 
   function setFarmId(farmId: string): void {
     scope.setFarmId(farmId);
-    if (pathname !== FARMS_PATH) navigate(FARMS_PATH, { state: FARMS_UP_STATE });
+    if (pathname !== FARMS_PATH) navigate(FARMS_PATH, { state: UP_FROM_CHILD_STATE });
   }
 
   function setHouseId(houseId: string): void {
     scope.setHouseId(houseId);
     const house = scope.houses.find(item => item._id === houseId);
     if (house) navigate(farmHousePath(house.farm_id, house._id));
-    else navigate(FARMS_PATH, { state: FARMS_UP_STATE });
+    else navigate(FARMS_PATH, { state: UP_FROM_CHILD_STATE });
   }
 
   function setZoneId(zoneId: string): void {

@@ -16,7 +16,8 @@ import FarmGroupRow from '@/components/features/farm-owner/farms/FarmGroupRow'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import { summarizeScope } from '@/components/features/farm-owner/farms/farmStructure'
-import { farmHousePath, farmZonePath, isFarmsUpState, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { farmHousePath, farmZonePath, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { isUpFromChildState } from '@/lib/navigationState'
 import { useDeleteFarm, useFarms, useRegions } from '@/hooks/shared/useFarms'
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
 import { useFarmStructure, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
@@ -61,8 +62,8 @@ export default function FarmOwnerFarmsPage() {
   const routedScope = useFarmsScopeRouting(scope)
   const navigationType = useNavigationType()
   const location = useLocation()
-  // Đi lên từ trang chi tiết (Quay lại, breadcrumb, đổi khung lọc gắn state) hoặc bấm Back của trình duyệt
-  const isGoingUp = navigationType === 'POP' || isFarmsUpState(location.state)
+  // Đi lên từ trang chi tiết (Quay lại, breadcrumb, menu, đổi khung lọc gắn state) hoặc bấm Back của trình duyệt
+  const isGoingUp = navigationType === 'POP' || isUpFromChildState(location.state)
   const hasRoutedRef = useRef(false)
   // Chạy 1 lần khi khung lọc tải xong: đang lọc 1 nhà / Zone thì mở thẳng trang đó; đi lên thì bỏ lọc nhà, Zone
   useEffect(() => {

@@ -26,7 +26,8 @@ import { cn } from '@/lib/cn'
 import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
-import { FARMS_UP_STATE, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
 
 // Chi tiết 1 Zone: thông số realtime so ngưỡng (REST latest + socket), danh sách thiết bị, bấm Chi tiết mở drawer
 export default function FarmOwnerFarmZoneDetailPage() {
@@ -60,7 +61,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
     node
       ? [{ label: node.house.name, onClick: () => navigate(`/farms/${farmId}/houses/${houseId}`) }, { label: node.zone.name }]
       : [],
-    FARMS_UP_STATE,
+    UP_FROM_CHILD_STATE,
   )
 
   const d = live.data
