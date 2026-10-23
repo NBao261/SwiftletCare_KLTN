@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/authStore";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import FarmOwnerLayout from "@/components/layouts/FarmOwnerLayout";
 import TechnicianLayout from "@/components/layouts/TechnicianLayout";
+import ExpertLayout from "@/components/layouts/ExpertLayout";
 import SalesStaffLayout from "@/components/layouts/SalesStaffLayout";
 import AppShell from "@/components/layouts/AppShell";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -14,6 +15,7 @@ import LoginSplash from "@/components/auth/LoginSplash";
 import { farmOwnerRoutes } from "@/routes/farm-owner.routes";
 import { technicianRoutes } from "@/routes/technician.routes";
 import { adminRoutes } from "@/routes/admin.routes";
+import { expertRoutes } from "@/routes/expert.routes";
 import { salesStaffRoutes } from "@/routes/sales-staff.routes";
 
 /** Cài đặt tài khoản — route duy nhất mọi role đã đăng nhập đều dùng, nên nằm ngay đây thay vì trong một file route theo role. */
@@ -48,6 +50,8 @@ function RoleLayout() {
       return <AdminLayout />;
     case "TECHNICIAN":
       return <TechnicianLayout />;
+    case "DOMAIN_EXPERT":
+      return <ExpertLayout />;
     case "SALES_STAFF":
       return <SalesStaffLayout />;
     case "FARM_OWNER":
@@ -113,6 +117,7 @@ export default function App() {
             {farmOwnerRoutes}
             {technicianRoutes}
             {adminRoutes}
+            {expertRoutes}
             {salesStaffRoutes}
           </Route>
 
