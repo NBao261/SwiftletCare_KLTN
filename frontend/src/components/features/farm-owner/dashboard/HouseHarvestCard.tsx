@@ -5,6 +5,8 @@ import type { HouseNode } from '@/components/features/farm-owner/farms/farmStruc
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { formatStandardDate } from '@/lib/i18n';
+import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants';
+import { NO_VALUE } from '@/constants/display';
 
 const GRAMS_PER_KG = 1000;
 
@@ -25,8 +27,10 @@ export default function HouseHarvestCard({ node }: { node: HouseNode }): JSX.Ele
       <div>
         <p className="label-caption">{t('harvest.month')}</p>
         <p className="mt-1 leading-none">
-          <span className="text-[32px] font-extrabold tracking-tight tabular-nums text-charcoal">{num(node.monthKg, 1)}</span>
-          <span className="ml-1 text-sm font-semibold text-warmGray">kg</span>
+          <span className="text-[32px] font-extrabold tracking-tight tabular-nums text-charcoal">
+            {node.monthBatches > 0 ? num(node.monthKg, KILOGRAM_DIGITS) : NO_VALUE}
+          </span>
+          {node.monthBatches > 0 && <span className="ml-1 text-sm font-semibold text-warmGray">kg</span>}
         </p>
         <p className="mt-1 text-xs text-warmGray">
           {t('harvest.sub', { nests: num(node.monthNests), batches: num(node.monthBatches) })}
@@ -44,7 +48,7 @@ export default function HouseHarvestCard({ node }: { node: HouseNode }): JSX.Ele
               <li key={batch._id} className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-graphite">{formatStandardDate(batch.harvest_date)}</span>
                 <span className="font-semibold tabular-nums text-charcoal">
-                  {t('harvest.batch', { kg: num(batch.weight_grams / GRAMS_PER_KG, 1), nests: num(batch.nest_count) })}
+                  {t('harvest.batch', { kg: num(batch.weight_grams / GRAMS_PER_KG, KILOGRAM_DIGITS), nests: num(batch.nest_count) })}
                 </span>
               </li>
             ))}

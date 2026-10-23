@@ -1,26 +1,43 @@
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { analyticsApi } from '@/apis/farm-owner/analytics.api'
 import { alertApi } from '@/apis/shared/alerts.api'
 import { telemetryApi } from '@/apis/farm-owner/telemetry.api'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { useAllZones, useHouses, type AllZone } from '@/hooks/shared/useFarms'
 import { useSensorNodes } from '@/hooks/shared/useDevices'
-import { useLiveZoneTelemetry } from '@/hooks/farm-owner/useLiveZoneTelemetry'
+import { useLiveZoneTelemetry, type LiveZone } from '@/hooks/farm-owner/useLiveZoneTelemetry'
+import { useSocketConnected } from '@/hooks/common/useSocketConnected'
+import type { TelemetryRecord } from '@/types'
 import {
   averageReadings,
   buildHouseStability,
   latestTimestamp,
-  mergeBirdCountRecords,
-  summarizeBirdCount,
   summarizeNodes,
   withLiveRelays,
   averageControlOutput,
+  isFaultDeviceStatus,
+  zoneHasIssue,
 } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 
-const DAY_MS = 86_400_000
 const ALERT_LOG_LIMIT = 50
-const RETURN_RATE_DAYS = 30
+// Mất socket thì hỏi lại số đo, relay mỗi 15 giây (FE_Design 5.5)
+const FALLBACK_POLL_MS = 15_000
+
+// Số đo của 1 Zone: lấy bản mới hơn giữa gói socket và bản REST (mất socket thì bản REST hỏi lại định kỳ mới là bản mới)
+function pickReadings(now: LiveZone | undefined, record: TelemetryRecord | undefined) {
+  const useLive = now?.timestamp !== undefined && (!record?.timestamp || now.timestamp >= record.timestamp)
+  if (!useLive) {
+    return { temperature: record?.temperature, humidity: record?.humidity, light_lux: record?.light_lux, nh3_ppm: record?.nh3_ppm, co2_ppm: record?.co2_ppm, sound_db: record?.sound_db }
+  }
+  return {
+    temperature: now?.temperature ?? record?.temperature,
+    humidity: now?.humidity ?? record?.humidity,
+    light_lux: now?.light ?? record?.light_lux,
+    nh3_ppm: now?.nh3 ?? record?.nh3_ppm,
+    co2_ppm: now?.co2 ?? record?.co2_ppm,
+    sound_db: now?.sound ?? record?.sound_db,
+  }
+}
 
 // Trạng thái các nhà yến của farm
 export function useHouseStability(farmId: string) {
@@ -36,7 +53,9 @@ export function useHouseStability(farmId: string) {
     () => {
       const devices = [
         ...(sensors ?? []).map(device => ({ zone_id: device.zone_id, status: device.status, type: 'sensor' as const })),
-        ...(cameras ?? []).map(device => ({ zone_id: device.zone_id, status: device.status, type: 'camera' as const })),
+        // Camera gắn nhà (SRS v2.1.8), bỏ camera đã gỡ
+        ...(cameras ?? []).filter(device => !device.decommissioned_at)
+          .map(device => ({ house_id: device.house_id, zone_id: device.zone_id, status: device.status, type: 'camera' as const })),
       ]
       return buildHouseStability(houses ?? [], zones ?? [], devices)
     },
@@ -60,7 +79,9 @@ export function useScopeZones(farmId: string, houseId: string) {
 export function useZonesEnvironment(zones: AllZone[]) {
   const zoneIds = useMemo(() => zones.map(zone => zone._id), [zones])
   const live = useLiveZoneTelemetry(zoneIds)
-  const { data: allSensors } = useSensorNodes()
+  const isLive = useSocketConnected()
+  const pollInterval = isLive ? false : FALLBACK_POLL_MS
+  const { data: allSensors } = useSensorNodes(undefined, { refetchInterval: pollInterval })
   const sensors = useMemo(() => {
     const zoneIdSet = new Set(zoneIds)
     return (allSensors ?? []).filter(sensor => zoneIdSet.has(sensor.zone_id))
@@ -77,6 +98,7 @@ export function useZonesEnvironment(zones: AllZone[]) {
       queryKey: ['telemetry', 'latest', zoneId],
       queryFn: () => telemetryApi.getLatest(zoneId).then(r => r.data.data),
       retry: false,
+      refetchInterval: pollInterval,
     })),
     combine: results => ({
       isLoading: results.some(r => r.isLoading),
@@ -85,17 +107,9 @@ export function useZonesEnvironment(zones: AllZone[]) {
   })
 
   const readings = useMemo(
-    () => averageReadings(latest.filter(({ zoneId }) => !isActive || onlineZoneIds.has(zoneId)).map(({ zoneId, record }) => {
-      const now = live.get(zoneId)
-      return {
-        temperature: now?.temperature ?? record?.temperature,
-        humidity: now?.humidity ?? record?.humidity,
-        light_lux: now?.light ?? record?.light_lux,
-        nh3_ppm: now?.nh3 ?? record?.nh3_ppm,
-        co2_ppm: now?.co2 ?? record?.co2_ppm,
-        sound_db: now?.sound ?? record?.sound_db,
-      }
-    })),
+    () => averageReadings(latest
+      .filter(({ zoneId }) => !isActive || onlineZoneIds.has(zoneId))
+      .map(({ zoneId, record }) => pickReadings(live.get(zoneId), record))),
     [latest, live, isActive, onlineZoneIds],
   )
 
@@ -104,6 +118,24 @@ export function useZonesEnvironment(zones: AllZone[]) {
     [latest, live],
   )
   const control = useMemo(() => summarizeNodes(withLiveRelays(sensors, live)), [sensors, live])
+
+  // Zone cần chú ý (thiết bị hư hoặc vượt ngưỡng của chính Zone) — chấm cảnh báo ở ô chọn Zone
+  const issueZoneIds = useMemo(() => {
+    const faultZoneIds = new Set(sensors.filter(sensor => isFaultDeviceStatus(sensor.status)).map(sensor => sensor.zone_id))
+    const thresholdsByZone = new Map(zones.map(zone => [zone._id, zone.thresholds]))
+    const result = new Set<string>()
+    for (const { zoneId, record } of latest) {
+      const readings = pickReadings(live.get(zoneId), record)
+      const hasIssue = zoneHasIssue({
+        readings,
+        thresholds: thresholdsByZone.get(zoneId),
+        isOnline: onlineZoneIds.has(zoneId),
+        hasFaultDevice: faultZoneIds.has(zoneId),
+      })
+      if (hasIssue) result.add(zoneId)
+    }
+    return result
+  }, [sensors, zones, latest, live, onlineZoneIds])
 
   return {
     zones,
@@ -116,50 +148,16 @@ export function useZonesEnvironment(zones: AllZone[]) {
     relayStates: control.relayStates,
     controlOutput: useMemo(() => averageControlOutput(zoneIds, live), [zoneIds, live]),
     deviceNames: useMemo(() => new Map(sensors.map(sensor => [sensor._id, sensor.device_id])), [sensors]),
+    issueZoneIds,
     isLoading: isLoadingLatest,
   }
 }
 
-// Chart thống kê chim
-export function useBirdCount(zoneIds: string[], days: number) {
-  const { records, isLoading, isError } = useQueries({
-    queries: zoneIds.map(zoneId => ({
-      queryKey: ['analytics', 'bird-count-daily', zoneId, days],
-      queryFn: () => {
-        const now = Date.now()
-        const params = { from: new Date(now - 2 * days * DAY_MS).toISOString(), to: new Date(now).toISOString() }
-        return analyticsApi.birdCountDaily(zoneId, params).then(r => r.data.data)
-      },
-    })),
-    combine: results => ({
-      isLoading: results.some(r => r.isLoading),
-      isError: results.some(r => r.isError),
-      records: mergeBirdCountRecords(results.map(r => r.data?.records ?? [])),
-    }),
-  })
-
-  const summary = useMemo(() => summarizeBirdCount(records, days), [records, days])
-
-  return { summary, isLoading, isError }
-}
-
-// Tỉ lệ chim về theo Zone
-export function useZoneReturnRates(zoneIds: string[]) {
-  return useQueries({
-    queries: zoneIds.map(zoneId => ({
-      queryKey: ['analytics', 'bird-count-trends', zoneId, RETURN_RATE_DAYS],
-      queryFn: () => analyticsApi.birdCountTrends(zoneId, RETURN_RATE_DAYS).then(r => r.data.data),
-    })),
-    combine: results => ({
-      isLoading: results.some(r => r.isLoading),
-      rates: results.map((r, index) => ({ zoneId: zoneIds[index], rate: r.data?.latest_return_rate ?? undefined })),
-    }),
-  })
-}
-
 // Bảng nhật ký cảnh báo: cả farm gộp 1 request, 1 nhà yến thì lấy theo từng zone của nhà
-export function useHouseAlerts(farmId: string, zoneIds: string[], wholeFarm: boolean) {
+// + cảnh báo của cả nhà (camera đếm chim, SRS v2.1.8) khi đang xem cả nhà, không lọc 1 Zone
+export function useHouseAlerts(farmId: string, zoneIds: string[], wholeFarm: boolean, houseAlertsId = '') {
   let scopes = zoneIds.map(zoneId => ({ key: zoneId, filter: { zoneId } as Record<string, string> }))
+  if (houseAlertsId) scopes.push({ key: `house-${houseAlertsId}`, filter: { houseId: houseAlertsId } })
   if (wholeFarm) scopes = farmId ? [{ key: farmId, filter: { farmId } }] : []
   return useQueries({
     queries: scopes.map(scope => ({
