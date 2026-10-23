@@ -1,5 +1,5 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useDeferredValue, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PlusIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, ClearFiltersButton, EmptyState, LoadingSkeleton, SearchInput, SelectMenu } from '@/components/ui'
 import FixedRowsTable from '@/components/ui/FixedRowsTable'
@@ -11,7 +11,7 @@ import { buildTicketColumns } from '@/components/features/farm-owner/tickets/tic
 import DeviceFaultAlertPanel from '@/components/features/farm-owner/tickets/DeviceFaultAlertPanel'
 import {
   ALERT_TO_TICKET_TYPE, PAGE_SIZE, SUPPORT_DETAIL_PATH,
-  type SupportDetailState, type SupportListState,
+  type SupportDetailState,
 } from '@/components/features/farm-owner/tickets/tickets.constants'
 import { useTicketsList } from '@/hooks/shared/useTickets'
 import { useTicketCounts } from '@/hooks/farm-owner/useTicketCounts'
@@ -47,18 +47,8 @@ export default function FarmOwnerTicketsPage() {
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [createDefaults, setCreateDefaults] = useState<CreateSupportDefaults>()
-  const location = useLocation()
   // Gõ tới đâu gọi API tới đó sẽ dồn request — để React hoãn giá trị tìm kiếm khi người dùng đang gõ
   const deferredSearch = useDeferredValue(search.trim())
-
-  // Form tạo chọn sẵn từ màn Cấu trúc Farm qua history state
-  const createRequest = (location.state as SupportListState | null)?.create
-  useEffect(() => {
-    if (!createRequest) return
-    setCreateDefaults(createRequest)
-    setShowCreate(true)
-    navigate(location.pathname, { replace: true, state: null })
-  }, [createRequest, navigate, location.pathname])
 
   function openCreate() {
     setCreateDefaults(undefined)

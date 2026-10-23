@@ -19,7 +19,6 @@ interface HouseKpiRowProps {
 export default function HouseKpiRow({ totals, monthLabel, showYield }: HouseKpiRowProps) {
   const { t, num, day } = useTranslation(farmDict)
   const { counts, alerts } = totals
-  const onlinePct = counts.total > 0 ? (counts.online / counts.total) * 100 : 0
   // Thiết bị chưa online = mất kết nối (OFFLINE/ERROR) + đang chờ kết nối (PENDING/DEGRADED)
   const waiting = counts.total - counts.online - counts.offline
   const deviceIssues = [
@@ -46,7 +45,6 @@ export default function HouseKpiRow({ totals, monthLabel, showYield }: HouseKpiR
           icon={WifiHighIcon}
           label={t('kpi.devicesOnline')}
           value={`${counts.online}/${counts.total}`}
-          unit={`${num(onlinePct, 1)}%`}
           sub={deviceIssues || t('kpi.allOnline')}
         />
         <KpiTile

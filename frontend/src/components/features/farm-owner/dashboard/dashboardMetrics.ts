@@ -421,13 +421,14 @@ export interface FarmKpiTotals {
 }
 
 // Cộng số liệu các nhà yến thuộc 1 farm (nguồn chứa nhà của mọi farm nên lọc theo farmId)
+// Cộng số liệu các nhà của 1 farm; farmId '' = cộng mọi farm
 export function summarizeFarmHouses(houses: HouseKpiSource[], farmId: string): FarmKpiTotals {
   const totals: FarmKpiTotals = {
     houses: 0, faultHouses: 0, zones: 0, devicesOnline: 0, devicesTotal: 0,
     alertsTotal: 0, alertsByLevel: { P1: 0, P2: 0, P3: 0 }, monthKg: 0, monthNests: 0, monthBatches: 0,
   }
   for (const house of houses) {
-    if (house.farm._id !== farmId) continue
+    if (farmId && house.farm._id !== farmId) continue
     totals.houses += 1
     if (house.health === 'ALERT') totals.faultHouses += 1
     totals.zones += house.zones.length

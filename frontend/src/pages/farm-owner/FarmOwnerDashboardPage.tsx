@@ -41,11 +41,9 @@ export default function FarmOwnerDashboardPage() {
   usePageHero(DASHBOARD_HERO_IMAGE)
   // Khung lọc Nhà + Zone lưu ở store chung nên chuyển trang rồi quay lại vẫn giữ nguyên
   const scope = useScopeFilter()
-  const { farmId, houses, houseId, houseName, zones, zone: scopeZone, isLoading: isLoadingHouses, isError: isHousesError, refetch: refetchHouses } = scope
+  const { farmId, houses, houseId, houseName, zones, zone: scopeZone, issueZoneIds, isLoading: isLoadingHouses, isError: isHousesError, refetch: refetchHouses } = scope
   // Phạm vi số liệu: 1 Zone đã lọc, hoặc tất cả Zone trong phạm vi nhà
   const scopedZones = useMemo(() => (scopeZone ? [scopeZone] : zones), [scopeZone, zones])
-  // Zone có vấn đề tính trên mọi Zone của nhà để chấm cảnh báo ở ô chọn Zone
-  const { issueZoneIds } = useZonesEnvironment(zones)
   const { lastSyncedAt, controlMode, overrideExpiry, deviceNames } = useZonesEnvironment(scopedZones)
 
   // Zone của khung Cảm biến và khung Điều khiển; đồng bộ (mặc định bật) thì 2 khung dùng chung 1 Zone
@@ -93,17 +91,27 @@ export default function FarmOwnerDashboardPage() {
     )
   }
 
+  // Bộ lọc nhà yến chung: đổi phạm vi là mọi khối (SCADA, cảm biến, điều khiển, đếm chim, mật độ tổ, nhật ký) lọc theo
+  const houseFilter = <ScopeFilter scope={scope} />
+
+  // Phạm vi đang lọc chưa có nhà: vẫn giữ khung lọc để chọn trang trại khác
   if (houses.length === 0) {
     return (
-      <EmptyState
-        title={t('page.noZoneTitle')}
-        description={t('page.noZoneDesc')}
-        action={
-          <Link to="/farms">
-            <Button>{t('page.goFarms')}</Button>
-          </Link>
-        }
-      />
+      <div className="flex flex-col gap-5">
+        <HeaderActions>
+          <div className="hidden sm:block">{houseFilter}</div>
+        </HeaderActions>
+        <div className="sm:hidden">{houseFilter}</div>
+        <EmptyState
+          title={farmId ? t('page.noHouseInFarmTitle') : t('page.noZoneTitle')}
+          description={farmId ? t('page.noHouseInFarmDesc') : t('page.noZoneDesc')}
+          action={
+            <Link to="/farms">
+              <Button>{t('page.goFarms')}</Button>
+            </Link>
+          }
+        />
+      </div>
     )
   }
 
@@ -132,9 +140,6 @@ export default function FarmOwnerDashboardPage() {
     }
     setIsZoneLinked(linked => !linked)
   }
-  // Bộ lọc nhà yến chung: đổi nhà là mọi khối (SCADA, cảm biến, điều khiển, đếm chim, mật độ tổ, nhật ký) lọc theo nhà đó
-  const houseFilter = <ScopeFilter scope={scope} issueZoneIds={issueZoneIds} />
-
   // Hàng KPI chế độ "Tất cả nhà yến": đang tải thì khung xương, lỗi thì báo lỗi, không hiện số 0 giả
   let kpiSection: ReactNode = <FarmKpiRow farmId={farmId} totals={farmTotals} showYield={canViewHarvest} />
   if (isStructureLoading) kpiSection = <LoadingSkeleton count={2} className="h-28 w-full" />
@@ -167,7 +172,7 @@ export default function FarmOwnerDashboardPage() {
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
             {kpiSection}
             <div className="flex min-h-[240px] [&>*]:flex-1">
-              <EcoHealthCard farmId={farmId} />
+              <EcoHealthCard houses={houses} />
             </div>
           </div>
 

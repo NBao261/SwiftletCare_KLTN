@@ -24,7 +24,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   const { t } = useTranslation(analyticsDict);
   // Khung lọc Nhà + Zone lưu ở store chung, giữ nguyên khi chuyển trang
   const scope = useScopeFilter();
-  const { farmId, houses, houseId, houseName, zones, zone, isLoading, isError, refetch } = scope;
+  const { farms, houses, houseId, houseName, zones, zone, isLoading, isError, refetch } = scope;
   // Phạm vi đếm chim (theo nhà) và Zone đang tính: theo khung lọc, chưa lọc thì gồm tất cả
   const houseIds = useMemo(() => (houseId ? [houseId] : houses.map(house => house._id)), [houseId, houses]);
   const scopedZoneIds = useMemo(() => (zone ? [zone._id] : zones.map(item => item._id)), [zone, zones]);
@@ -45,7 +45,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     );
   }
 
-  if (!farmId) {
+  if (farms.length === 0) {
     return (
       <EmptyState
         title={t('page.noFarmTitle')}

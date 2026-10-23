@@ -1,17 +1,17 @@
 import { useEffect, useState, FormEvent, ReactNode } from 'react'
-import { WrenchIcon, HouseLineIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, HouseLineIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
+import { useNavigate } from 'react-router-dom'
 import { Button, Modal, SelectMenu, Textarea } from '@/components/ui'
 import DateTimePicker from '@/components/common/DateTimePicker'
 import { useCreateTicket } from '@/hooks/shared/useTickets'
 import { useAllZones, useFarms, useFarmZones } from '@/hooks/shared/useFarms'
 import { useTranslation } from '@/hooks/common/useTranslation'
-import { useToastStore } from '@/stores/toastStore'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { cn } from '@/lib/cn'
 import { supportDict, type SupportKey } from '@/constants/support.i18n'
 import { VISIT_END_HOUR, VISIT_START_HOUR, validateNewTicket, type NewTicketForm } from '@/validations/common/schedule.validation'
 import type { TicketType } from '@/types'
-import { DESCRIPTION_MAX, FAULT_TYPES, type SupportKind as Kind } from '@/components/features/farm-owner/tickets/tickets.constants'
+import { DESCRIPTION_MAX, FAULT_TYPES, SUPPORT_PATH, type SupportKind as Kind } from '@/components/features/farm-owner/tickets/tickets.constants'
 
 // Giá trị chọn sẵn khi mở form từ màn Cấu trúc Farm hoặc từ cảnh báo lỗi thiết bị
 export interface CreateSupportDefaults {
@@ -36,6 +36,9 @@ function visitErrorKey(scheduledAt: string): SupportKey {
   return 'form.errVisitHours'
 }
 
+// Kết quả lần gửi: null = đang ở form
+type SubmitResult = { isSuccess: true } | { isSuccess: false; message: string } | null
+
 function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -58,8 +61,8 @@ interface CreateSupportTicketModalProps {
 export default function CreateSupportTicketModal({ open, onClose, defaults }: CreateSupportTicketModalProps) {
   const { t } = useTranslation(supportDict)
   const createTicket = useCreateTicket()
-  const push = useToastStore(state => state.push)
   const apiErrorMessage = useApiErrorMessage()
+  const navigate = useNavigate()
   const { data: farms, isLoading: loadingFarms } = useFarms()
   // Chỉ cần khi được chọn sẵn zone mà thiếu farm (mở từ thiết bị) — suy farm của zone đó
   const { data: allZones } = useAllZones()
@@ -69,6 +72,7 @@ export default function CreateSupportTicketModal({ open, onClose, defaults }: Cr
   const [description, setDescription] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [farmTouched, setFarmTouched] = useState(false)
+  const [result, setResult] = useState<SubmitResult>(null)
   const { data: zones, isLoading: loadingZones } = useFarmZones(form.farmId || undefined)
 
   // Modal không unmount giữa các lần mở — reset mỗi lần mở, áp giá trị chọn sẵn nếu có
@@ -85,6 +89,7 @@ export default function CreateSupportTicketModal({ open, onClose, defaults }: Cr
     setDescription(defaults?.description?.slice(0, DESCRIPTION_MAX) ?? '')
     setSubmitted(false)
     setFarmTouched(false)
+    setResult(null)
   }, [open, defaults])
 
   // Farm mặc định: suy từ zone chọn sẵn, hoặc farm duy nhất của người dùng
@@ -121,12 +126,41 @@ export default function CreateSupportTicketModal({ open, onClose, defaults }: Cr
         alert_id: !isInstall ? defaults?.alertId : undefined,
       },
       {
-        onSuccess: () => {
-          push(isInstall ? t('form.sentInstall') : t('form.sentFault'))
-          onClose()
-        },
-        onError: error => push(apiErrorMessage(error, t('form.sendFailed')), 'error'),
+        onSuccess: () => setResult({ isSuccess: true }),
+        onError: error => setResult({ isSuccess: false, message: apiErrorMessage(error, t('form.sendFailed')) }),
       },
+    )
+  }
+
+  // Màn kết quả sau khi gửi: thành công thì đóng hoặc xem danh sách yêu cầu; thất bại thì quay lại form (giữ dữ liệu đã nhập) để gửi lại
+  if (result) {
+    let title = isInstall ? t('result.installFail') : t('result.faultFail')
+    if (result.isSuccess) title = isInstall ? t('result.installOk') : t('result.faultOk')
+    return (
+      <Modal open={open} onClose={onClose} title={t('form.title')} className="max-w-md">
+        <div className="flex flex-col items-center gap-3 py-2 text-center">
+          <span className={cn('flex h-14 w-14 items-center justify-center rounded-full', result.isSuccess ? 'bg-warmGray/10 text-charcoal' : 'bg-alertRed/10 text-alertRed')}>
+            {result.isSuccess ? <CheckCircleIcon size={30} weight="fill" /> : <WarningCircleIcon size={30} weight="fill" />}
+          </span>
+          <p className="text-h3 text-charcoal">{title}</p>
+          <p className="text-sm text-warmGray">
+            {result.isSuccess ? (isInstall ? t('form.sentInstall') : t('form.sentFault')) : result.message}
+          </p>
+        </div>
+        <div className="mt-5 flex justify-end gap-2 border-t border-warmGray/10 pt-4">
+          {result.isSuccess ? (
+            <>
+              <Button type="button" variant="secondary" onClick={() => { onClose(); navigate(SUPPORT_PATH) }}>{t('result.viewTickets')}</Button>
+              <Button type="button" onClick={onClose}>{t('result.close')}</Button>
+            </>
+          ) : (
+            <>
+              <Button type="button" variant="secondary" onClick={onClose}>{t('result.close')}</Button>
+              <Button type="button" onClick={() => setResult(null)}>{t('result.retry')}</Button>
+            </>
+          )}
+        </div>
+      </Modal>
     )
   }
 

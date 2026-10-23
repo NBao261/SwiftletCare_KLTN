@@ -29,15 +29,6 @@ export const SUPPORT_DETAIL_PATH = '/support/chi-tiet'
 // openChat: mở sẵn khung trao đổi khi vào trang (chọn "Trao đổi" trong menu thao tác của bảng)
 export interface SupportDetailState { ticketId: string; openChat?: boolean }
 
-// State mở trang yêu cầu với form tạo chọn sẵn
-export interface SupportListState {
-  create: { kind: SupportKind; farmId?: string; zoneId?: string }
-}
-
-export function supportCreateState(kind: SupportKind, target?: { farmId?: string; zoneId?: string }): SupportListState {
-  return { create: { kind, farmId: target?.farmId, zoneId: target?.zoneId } }
-}
-
 // Ticket đã kết thúc (đóng hoặc huỷ — huỷ cũng chuyển trạng thái CLOSED) thì badge ưu tiên về xám
 export function isTicketFinished(ticket: { status: TicketStatus }): boolean {
   return ticket.status === 'CLOSED'

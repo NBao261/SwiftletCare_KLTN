@@ -13,12 +13,12 @@ import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 export default function FarmOwnerDevicesPage(): JSX.Element {
   const { t } = useTranslation(devicesDict);
   const scope = useScopeFilter();
-  const { farmName, houses, houseId, zones, zone, isLoading: isLoadingScope } = scope;
+  const { farmNames, houses, houseId, zones, zone, isLoading: isLoadingScope } = scope;
   // Phạm vi: 1 nhà đang lọc hoặc mọi nhà của farm; chọn 1 Zone thì chỉ còn thiết bị của Zone đó
   const scopedHouses = useMemo(() => (houseId ? houses.filter(house => house._id === houseId) : houses), [houses, houseId]);
   const { inventory, isLoading, isError, refetch } = useDeviceInventory(scopedHouses, zones, zone?._id);
 
-  let body = <HouseDeviceAccordion inventory={inventory} farmName={farmName} />;
+  let body = <HouseDeviceAccordion inventory={inventory} farmNames={farmNames} />;
   if (isLoadingScope || isLoading) body = <LoadingSkeleton count={4} className="h-16 w-full" />;
   if (isError) {
     body = (

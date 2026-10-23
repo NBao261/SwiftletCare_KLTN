@@ -294,6 +294,48 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
 /** Mức tín hiệu Wi-Fi theo RSSI — dời sang lib/helpers để bảng Thiết bị của Admin dùng chung ngưỡng */
 export { wifiQuality } from '@/lib/helpers'
 
+// KPI theo phạm vi khung lọc: cộng các nhà; lọc 1 Zone thì thiết bị, cảnh báo của Zone đó, sản lượng của nhà (thu hoạch nhập theo nhà)
+export function summarizeScope(houses: HouseNode[], zone?: ZoneNode, now: Date = new Date()): StructureTotals {
+  const current = vnYearMonth(now)
+  let counts: DeviceCounts = { total: 0, online: 0, offline: 0 }
+  let alerts: Alert[] = []
+  let zoneCount = 0
+  let monthKg = 0
+  let monthNests = 0
+  let monthBatches = 0
+  let monthLastBatchAt: string | undefined
+  for (const house of houses) {
+    counts = addCounts(counts, house.counts)
+    alerts = alerts.concat(house.alerts)
+    zoneCount += house.zones.length
+    monthKg += house.monthKg
+    monthNests += house.monthNests
+    monthBatches += house.monthBatches
+    const newest = house.recent[0]
+    const newestMonth = newest ? vnYearMonth(newest.harvest_date) : undefined
+    const isThisMonth = newestMonth?.year === current.year && newestMonth.month === current.month
+    if (newest && isThisMonth && (!monthLastBatchAt || newest.harvest_date > monthLastBatchAt)) monthLastBatchAt = newest.harvest_date
+  }
+  if (zone) {
+    counts = zone.counts
+    alerts = zone.alerts
+    zoneCount = 1
+  }
+  let high = 0
+  let medium = 0
+  let low = 0
+  for (const alert of alerts) {
+    if (alert.severity === 'CRITICAL' || alert.severity === 'HIGH') high += 1
+    else if (alert.severity === 'MEDIUM') medium += 1
+    else low += 1
+  }
+  return {
+    houses: houses.length, zones: zoneCount, counts,
+    alerts: { total: alerts.length, high, medium, low },
+    monthKg, monthNests, monthBatches, monthLastBatchAt,
+  }
+}
+
 // Chuẩn hoá tên để so trùng: Unicode NFC, bỏ khoảng trắng thừa, chữ thường
 export function normalizeName(name: string): string {
   return name.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi')
