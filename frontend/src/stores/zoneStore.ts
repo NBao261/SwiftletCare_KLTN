@@ -6,6 +6,12 @@ interface ZoneState {
   selectedFarmName: string | null
   selectedZoneId: string | null
   selectedZoneName: string | null
+  // Khung lọc Nhà + Zone ở header các trang Farm Owner; '' = tất cả. Lưu lại để chuyển trang không bị trả về
+  selectedHouseId: string
+  scopeZoneId: string
+  // Đổi nhà thì Zone về "Tất cả Zone"
+  setHouse: (houseId: string) => void
+  setScopeZone: (zoneId: string) => void
   /**
    * Farm luôn đi kèm Zone vì chọn Zone là đi qua cascade Farm→House→Zone — biết
    * sẵn farmId lúc đó tránh các trang khác (Harvest/Ticket/Analytics So sánh
@@ -23,9 +29,13 @@ export const useZoneStore = create<ZoneState>()(
       selectedFarmName: null,
       selectedZoneId: null,
       selectedZoneName: null,
+      selectedHouseId: '',
+      scopeZoneId: '',
+      setHouse: houseId => set({ selectedHouseId: houseId, scopeZoneId: '' }),
+      setScopeZone: zoneId => set({ scopeZoneId: zoneId }),
       setZone: (farmId, farmName, zoneId, zoneName) =>
         set({ selectedFarmId: farmId, selectedFarmName: farmName, selectedZoneId: zoneId, selectedZoneName: zoneName }),
-      clearZone: () => set({ selectedFarmId: null, selectedFarmName: null, selectedZoneId: null, selectedZoneName: null }),
+      clearZone: () => set({ selectedFarmId: null, selectedFarmName: null, selectedZoneId: null, selectedZoneName: null, selectedHouseId: '', scopeZoneId: '' }),
     }),
     {
       name: 'swiftletcare-zone',
@@ -35,7 +45,7 @@ export const useZoneStore = create<ZoneState>()(
       // vẫn còn giá trị, khiến các trang gate theo farmId "kẹt" dù UI hiện như
       // đã chọn. Buộc reset cả 2 để user chọn lại từ đầu, nhất quán.
       migrate: (persisted, version) => {
-        if (version < 1) return { selectedFarmId: null, selectedFarmName: null, selectedZoneId: null, selectedZoneName: null }
+        if (version < 1) return { selectedFarmId: null, selectedFarmName: null, selectedZoneId: null, selectedZoneName: null, selectedHouseId: '', scopeZoneId: '' }
         return persisted as ZoneState
       },
     },

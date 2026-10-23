@@ -45,7 +45,7 @@ export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
  */
 export const FARM_OWNER_ONLY: Role[] = ['FARM_OWNER']
 
-/** Thu hoạch & Chợ yến — khớp backend: router harvests chỉ requireRole(FARM_OWNER, ADMIN). */
+/** Thống kê sản lượng (thu hoạch) — khớp backend: router harvests chỉ requireRole(FARM_OWNER, ADMIN). */
 export const HARVEST_ROLES: Role[] = ['FARM_OWNER', 'ADMIN']
 
 /** Module SYSTEM (mục 5.11) + quản lý tài khoản toàn hệ thống. */

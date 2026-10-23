@@ -44,7 +44,7 @@ const config: Config = {
         charcoal:      '#27231F', // = gray-900 — Chữ chính / Nút primary / Track toggle ON
         graphite:      '#4E4A46', // = gray-700 — Card xám đậm phụ / Track toggle OFF
         warmGray:      '#878380', // = gray-500 — Chữ phụ / Border opacity / Label caption
-        limeMist:      '#ECFFA9', // = lime-300 — Bề mặt nhạt: nền icon-box/chip/active pill icon
+        limeMist:      '#B5D32C', // = accent-600 — xanh chanh duy nhất của hệ thống (FE_Design 2.1); trước là #ECFFA9 (lime-300), nhạt quá nên đổi
         success:       '#B5D32C', // = accent-600 — Trạng thái an toàn/ONLINE/đã kết nối (status dot)
         climateOrange: '#ED8F50', // = orange-500 — Cảnh báo vi khí hậu / quá nhiệt
         infoBlue:      '#4A89EB', // Trạng thái cảnh báo "Mới" (bảng nhật ký Dashboard)

@@ -28,15 +28,19 @@ export const CHART_COLORS = {
   alertRed: '#D53F35',
   /** accent-600 — đường/bar "Độ ẩm" và trạng thái tích cực (EnvVariationCard, BirdFlowCard) */
   accentGreen: '#B5D32C',
-  /** lime-500 — "đỉnh chim xuất đàn" (BirdVisionCard), tách khỏi accentGreen vì khác sắc độ */
+  /** accent-700 — đoạn "Yến hồng" của biểu đồ sản lượng (HarvestYearChart) */
+  accentDeep: '#89A022',
+  /** accent-900 — đoạn "Yến huyết" của biểu đồ sản lượng (HarvestYearChart) */
+  accentMoss: '#414C10',
+  /** lime-500 — series "Đã đóng" của TicketTrendsCard (Admin); Farm Owner đã chuyển sang accentGreen */
   limeBright: '#D2F93A',
 } as const
 
-/** Cycle 6 màu (bỏ white/limeMist — không đủ tương phản cho bar/line trên nền trắng) */
-export const CHART_PALETTE = [
-  CHART_COLORS.charcoal, CHART_COLORS.climateOrange, CHART_COLORS.graphite,
-  CHART_COLORS.alertRed, CHART_COLORS.warmGray, CHART_COLORS.gray300,
-]
+/** Màu token với độ trong suốt (0–1) cho nền dải ngưỡng, vùng tô — chỉ nhận màu hex 6 ký tự trong CHART_COLORS */
+export function withAlpha(hexColor: string, alpha: number): string {
+  const channel = (start: number) => parseInt(hexColor.slice(start, start + 2), 16)
+  return `rgba(${channel(1)}, ${channel(3)}, ${channel(5)}, ${alpha})`
+}
 
 /**
  * Options nền chung — font Inter, tooltip nền charcoal, lưới mờ, không viền

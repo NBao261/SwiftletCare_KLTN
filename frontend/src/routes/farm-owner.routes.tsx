@@ -12,6 +12,8 @@ import { usePermission } from '@/hooks/common/usePermission'
  * harvests bên backend).
  */
 const FarmOwnerDashboardPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDashboardPage'))
+const FarmOwnerScadaPage = lazy(() => import('@/pages/farm-owner/FarmOwnerScadaPage'))
+const FarmOwnerDeviceDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDeviceDetailPage'))
 const FarmOwnerAnalyticsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerAnalyticsPage'))
 const FarmOwnerVisionPage = lazy(() => import('@/pages/farm-owner/FarmOwnerVisionPage'))
 const FarmOwnerFarmsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmsPage'))
@@ -36,6 +38,22 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={FARM_OWNER_ONLY}>
           <FarmOwnerDashboardPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="dashboard/scada"
+      element={
+        <RequireRole allow={FARM_OWNER_ONLY}>
+          <FarmOwnerScadaPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="devices/detail"
+      element={
+        <RequireRole allow={FARM_OWNER_ONLY}>
+          <FarmOwnerDeviceDetailPage />
         </RequireRole>
       }
     />
