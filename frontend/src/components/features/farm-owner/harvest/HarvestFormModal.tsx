@@ -96,7 +96,7 @@ function FieldLabel({ text }: { text: string }): JSX.Element {
 }
 
 interface HarvestFormModalProps {
-  // Khung lọc Nhà + Zone của trang: chọn 1 nhà thì popup khoá nhà đó, chọn 1 Zone thì đợt thu ghi vào Zone đó
+  // Khung lọc của trang: chọn 1 nhà thì popup khoá nhà đó (sản lượng nhập theo nhà, không chọn Zone)
   scope: ScopeFilterState;
   onClose: () => void;
   // Có thì là sửa lần thu đó; không có thì tạo mới
@@ -108,12 +108,11 @@ interface HarvestFormModalProps {
 
 // Popup tạo / sửa 1 lần thu (MARKET-FR-001, 005): khu vực + ngày, sản lượng 3 loại yến, ảnh; mỗi loại có số liệu là 1 đợt cùng zone + ngày
 export default function HarvestFormModal({ scope, onClose, group, houseName, creatorName }: HarvestFormModalProps): JSX.Element {
-  const farmId = scope.farmId;
   const { t, num, exact } = useTranslation(harvestDict);
   const isEdit = group !== undefined;
-  const createHarvest = useCreateHarvest(farmId);
-  const updateHarvest = useUpdateHarvest(farmId);
-  const deleteHarvest = useDeleteHarvest(farmId);
+  const createHarvest = useCreateHarvest();
+  const updateHarvest = useUpdateHarvest();
+  const deleteHarvest = useDeleteHarvest();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   // Nhà lấy sẵn từ khung lọc; chưa lọc nhà thì chọn trong các nhà của farm đang xem, không chọn được farm khác
@@ -140,13 +139,15 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
   const isHouseLocked = scope.houseId !== '';
   const houseOptions = [
     { value: '', label: t('form.pickHouse') },
-    ...scope.houses.map(house => ({ value: house._id, label: house.name })),
+    ...scope.houses.map(house => ({
+      value: house._id,
+      label: scope.farmId ? house.name : `${house.name} · ${scope.farmNames.get(house.farm_id) ?? NO_VALUE}`,
+    })),
   ];
-  // Backend vẫn bắt lần thu thuộc 1 Zone: đang lọc 1 Zone của nhà thì ghi vào Zone đó, không thì Zone tạo sớm nhất của nhà (mã tăng theo thời gian tạo)
-  const oldestZoneId = scope.zones
+  // Backend vẫn bắt lần thu thuộc 1 Zone: tự gắn vào Zone tạo sớm nhất của nhà (mã tăng theo thời gian tạo), người dùng không chọn Zone
+  const zoneId = scope.zones
     .filter(zone => zone.house_id === houseId)
     .reduce<string>((oldest, zone) => (oldest === '' || zone._id < oldest ? zone._id : oldest), '');
-  const zoneId = scope.zone?.house_id === houseId ? scope.zone._id : oldestZoneId;
   const isHouseWithoutZone = houseId !== '' && zoneId === '';
   const canSubmit = isTargetLocked || (Boolean(zoneId) && Boolean(harvestDate));
   const lockedHouseName = houseName ?? scope.houses.find(house => house._id === houseId)?.name ?? NO_VALUE;

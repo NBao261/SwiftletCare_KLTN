@@ -7,7 +7,7 @@ import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harves
 import { summarizeHarvestOverview, type HarvestGroup, type PeriodSummary } from '@/components/features/farm-owner/harvest/harvestMetrics';
 import { harvestDict } from '@/constants/harvest.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import type { FlatZone } from '@/hooks/shared/useFarms';
+import type { AllZone } from '@/hooks/shared/useFarms';
 import { formatStandardDate } from '@/lib/i18n';
 import { NO_VALUE } from '@/constants/display';
 
@@ -40,16 +40,18 @@ function ChangeBadge({ change, children }: { change: number; children: ReactNode
 
 interface HarvestStatsCardsProps {
   groups: HarvestGroup[];
-  farmName: string;
+  // Tên trang trại theo mã, tra theo Zone của đợt thu
+  farmNames: Map<string, string>;
   // Nhà yến của từng Zone, để ghi nhà thu và đếm số nhà yến
-  zones: FlatZone[] | undefined;
+  zones: AllZone[];
 }
 
 // Khung tổng quan (Card lg) 3 ô KPI chuẩn (KpiTile, FE_Design 1.1) theo tầng quản lý: đợt gần nhất · quý hiện tại · cả năm, tính từ lần thu thật
-export default function HarvestStatsCards({ groups, farmName, zones }: HarvestStatsCardsProps): JSX.Element {
+export default function HarvestStatsCards({ groups, farmNames, zones }: HarvestStatsCardsProps): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const houseIdByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.house_id])), [zones]);
   const houseNameByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.houseName])), [zones]);
+  const farmIdByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.farmId])), [zones]);
   const overview = summarizeHarvestOverview(groups, new Date(), houseIdByZone);
   const { latest, quarter, year } = overview;
 
@@ -72,7 +74,7 @@ export default function HarvestStatsCards({ groups, farmName, zones }: HarvestSt
           unit="kg"
           sub={latest
             ? t('stats.latestSub', {
-              farm: farmName,
+              farm: farmNames.get(farmIdByZone.get(latest.group.zone_id) ?? '') ?? NO_VALUE,
               house: houseNameByZone.get(latest.group.zone_id) ?? NO_VALUE,
               date: formatStandardDate(latest.group.harvest_date),
             })
