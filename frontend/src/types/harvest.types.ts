@@ -1,9 +1,9 @@
-// Module MARKET (§5.8) — lô thu hoạch, tin đăng chợ yến, liên hệ của người mua.
+// Module MARKET (§5.8) — chỉ còn ghi nhận lô thu hoạch (SRS v2.0.0 bỏ Marketplace).
 
 // Module MARKET (§5.8)
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-export type HarvestStatus = 'DRAFT' | 'LISTED' | 'ARCHIVED'
-export type ListingStatus = 'AVAILABLE' | 'SOLD' | 'HIDDEN'
+// Khớp backend v2.0.0 (domain.types.ts): bỏ LISTED cùng Marketplace
+export type HarvestStatus = 'DRAFT' | 'ARCHIVED'
 
 // Module MARKET (§5.8, §8.2)
 export interface EnvSnapshot {
@@ -25,24 +25,6 @@ export interface HarvestBatch {
   nest_type: NestType; product_images: string[]
   env_snapshot: EnvSnapshot; flock_snapshot: FlockSnapshot
   status: HarvestStatus
-  /** Set khi đã tạo Nest Listing từ batch này (MARKET-FR-006) */
-  listing_id?: string
   is_deleted: boolean
   created_at: string; updated_at?: string
-}
-
-export interface NestListing {
-  _id: string; harvest_batch_id: string | HarvestBatch; farm_id: string
-  title: string; description?: string; price_vnd?: number; price_unit: string
-  listing_status: ListingStatus
-  contact_info: { show_phone: boolean; show_email: boolean; show_zalo: boolean }
-  view_count: number; inquiry_count: number
-  published_at?: string
-}
-
-/** MARKET-FR-010 — Buyer gửi liên hệ tới 1 Nest Listing */
-export interface ContactInquiry {
-  _id: string; listing_id: string
-  buyer_name: string; buyer_phone?: string; buyer_email?: string; message: string
-  created_at: string
 }
