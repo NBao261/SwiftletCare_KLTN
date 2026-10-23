@@ -47,7 +47,7 @@ export default function ExpertAnalyticsPage() {
         <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5">
           <ControlPerfBlock
             range={range} onRangeChange={setRange}
-            autonomyPct={autonomy.data?.auto_mode_pct ?? 96.4}
+            autonomyPct={autonomy.data?.auto_mode_pct != null ? Number(autonomy.data.auto_mode_pct.toFixed(1)) : 0}
             data={perf.data}
             isLoading={perf.isLoading}
           />
@@ -58,7 +58,6 @@ export default function ExpertAnalyticsPage() {
           <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5 flex flex-col">
             <BirdTrendChart
               days={days} onDaysChange={setDays}
-              avgReturnRate={birdTrends.data?.avg_return_rate ?? 97.9}
               data={birdTrends.data}
               isLoading={birdTrends.isLoading}
             />

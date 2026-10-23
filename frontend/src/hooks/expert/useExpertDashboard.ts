@@ -62,33 +62,25 @@ export function useExpertFuzzySuggestion(zoneId: string) {
 
 // ── 6. Nhật ký can thiệp relay thủ công (Farm Owner Override History) ─────────
 async function fetchRelayOverrideLogs(params?: { farmId?: string; zoneId?: string }): Promise<RelayOverrideLogItem[]> {
-  try {
-    if (params?.zoneId) {
-      const nodesRes = await expertApi.getSensorNodes(params.zoneId)
-      const nodes = nodesRes.data?.data
-      if (Array.isArray(nodes) && nodes.length > 0) {
-        const logsRes = await expertApi.getRelayOverrideLogs(nodes[0]._id, { limit: 20 })
-        const rawLogs = logsRes.data?.data
-        if (Array.isArray(rawLogs) && rawLogs.length > 0) {
-          return rawLogs.map((log: RelayOverrideLogItem) => ({
-            _id: String(log._id),
-            node_id: String(log.node_id ?? nodes[0]._id),
-            device_id: String(log.device_id ?? nodes[0].device_id ?? 'ESP32 Node'),
-            relay_name: log.relay_name,
-            state: Boolean(log.state),
-            duration_ms: Number(log.duration_ms ?? 0),
-            overridden_by: log.overridden_by ?? { _id: 'owner', full_name: 'Chủ nhà yến', role: 'FARM_OWNER' },
-            started_at: log.started_at ?? new Date().toISOString(),
-            expires_at: log.expires_at ?? new Date().toISOString(),
-            is_active: Boolean(log.is_active),
-          }))
-        }
-      }
-    }
-    return []
-  } catch {
-    return []
-  }
+  if (!params?.zoneId) return []
+  const nodesRes = await expertApi.getSensorNodes(params.zoneId)
+  const nodes = nodesRes.data?.data
+  if (!Array.isArray(nodes) || nodes.length === 0) return []
+  const logsRes = await expertApi.getRelayOverrideLogs(nodes[0]._id, { limit: 20 })
+  const rawLogs = logsRes.data?.data
+  if (!Array.isArray(rawLogs) || rawLogs.length === 0) return []
+  return rawLogs.map((log: RelayOverrideLogItem) => ({
+    _id: String(log._id),
+    node_id: String(log.node_id ?? nodes[0]._id),
+    device_id: String(log.device_id ?? nodes[0].device_id ?? 'ESP32 Node'),
+    relay_name: log.relay_name,
+    state: Boolean(log.state),
+    duration_ms: Number(log.duration_ms ?? 0),
+    overridden_by: log.overridden_by ?? { _id: 'owner', full_name: 'Chủ nhà yến', role: 'FARM_OWNER' },
+    started_at: log.started_at ?? new Date().toISOString(),
+    expires_at: log.expires_at ?? new Date().toISOString(),
+    is_active: Boolean(log.is_active),
+  }))
 }
 
 export function useRelayOverrideLogs(farmId?: string, zoneId?: string) {

@@ -8,10 +8,10 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, TrendingUp, Lightbulb } from 'lucide-react'
 import { Card } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import {
   useLatestHealthReport,
   useExpertBirdTrends,
+  useExpertFuzzySuggestion,
 } from '@/hooks/expert/useExpertDashboard'
 
 interface Props {
@@ -39,9 +39,10 @@ function StatBar({ label, value, color }: { label: string; value: number | null;
   )
 }
 
-export default function WeeklyHealthSummaryCard({ zoneId, farmId: _farmId }: Props) {
+export default function WeeklyHealthSummaryCard({ zoneId }: Props) {
   const { data: report, isLoading: isLoadingReport } = useLatestHealthReport(zoneId)
   const { data: birdTrends, isLoading: isLoadingBird } = useExpertBirdTrends(zoneId, 7)
+  const { data: suggestionData } = useExpertFuzzySuggestion(zoneId)
 
   const isLoading = isLoadingReport || isLoadingBird
 
@@ -53,11 +54,11 @@ export default function WeeklyHealthSummaryCard({ zoneId, farmId: _farmId }: Pro
     )
   }
 
-  const tempPct = report?.metrics?.temp_in_range_pct ?? 84.5
-  const humidityPct = report?.metrics?.humidity_in_range_pct ?? 91.2
-  const avgReturnRate = birdTrends?.avg_return_rate
-  const isReturnRateMock = avgReturnRate === null || avgReturnRate === undefined
-  const displayReturnRate = !isReturnRateMock ? avgReturnRate : 97.9
+  const tempPct = report?.metrics?.temp_in_range_pct ?? null
+  const humidityPct = report?.metrics?.humidity_in_range_pct ?? null
+  const avgReturnRate = birdTrends?.avg_return_rate ?? null
+  const displayReturnRate = avgReturnRate != null ? `${avgReturnRate.toFixed(1)}%` : '—'
+  const explanation = suggestionData?.reason || 'Hệ thống đang theo dõi và duy trì bộ tham số vi khí hậu ổn định.'
 
   return (
     <Card size="lg" className="flex flex-col gap-5 hover:shadow-md transition-all duration-200">
@@ -68,7 +69,7 @@ export default function WeeklyHealthSummaryCard({ zoneId, farmId: _farmId }: Pro
           <p className="mt-0.5 text-xs text-warmGray">
             {report
               ? `${new Date(report.period_start).toLocaleDateString('vi-VN')} – ${new Date(report.period_end).toLocaleDateString('vi-VN')}`
-              : 'Kỳ đánh giá gần nhất: 14/10 – 20/10'}
+              : 'Chưa có kỳ đánh giá sức khỏe chốt'}
           </p>
         </div>
         <TrendingUp className="mt-0.5 shrink-0 text-success" size={20} />
@@ -85,40 +86,32 @@ export default function WeeklyHealthSummaryCard({ zoneId, farmId: _farmId }: Pro
         <div className="flex items-center gap-3">
           <TrendingUp size={18} className="shrink-0 text-success" />
           <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-[11px] uppercase tracking-wider text-warmGray font-semibold">
-                Tỷ lệ chim về tổ TB (7 ngày)
-              </p>
-              {isReturnRateMock && (
-                <MockDataTooltip reason="Dữ liệu mô phỏng — Đang chờ kết nối luồng dữ liệu đếm chim thực tế từ Module AI Camera Cửa thu (VISION-FR-017)." />
-              )}
-            </div>
+            <p className="text-[11px] uppercase tracking-wider text-warmGray font-semibold">
+              Tỷ lệ chim về tổ TB (7 ngày)
+            </p>
             <p className="text-xl font-extrabold text-charcoal leading-tight">
-              {displayReturnRate.toFixed(1)}%
+              {displayReturnRate}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Hộp gợi ý thuật toán AI màu xanh cốm #ECFFA9 */}
+      {/* Hộp gợi ý thuật toán AI */}
       <div className="rounded-2xl border border-[#D4E88B] bg-[#ECFFA9]/60 p-4">
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <div className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-[#27231F] shrink-0" />
-            <span className="text-xs font-extrabold uppercase tracking-wider text-[#27231F]">
-              Gợi ý thuật toán AI
-            </span>
-          </div>
-          <MockDataTooltip reason="Dữ liệu mô phỏng — Hệ thống cần tích lũy tối thiểu 3–14 ngày dữ liệu cảm biến liên tục với độ tin cậy R² ≥ 0.3 để sinh gợi ý thực tế (ANALYTICS-FR-010)." />
+        <div className="flex items-center gap-2 mb-1.5">
+          <Lightbulb className="h-4 w-4 text-[#27231F] shrink-0" />
+          <span className="text-xs font-extrabold uppercase tracking-wider text-[#27231F]">
+            Gợi ý thuật toán AI
+          </span>
         </div>
         <p className="text-xs font-medium leading-relaxed text-[#27231F]/90">
-          Đề xuất giảm dải biên độ ẩm xuống 6%RH để tối ưu hệ số mờ.
+          {explanation}
         </p>
       </div>
 
-      {/* Chân trang Card: Kỳ đánh giá + Link xem báo cáo */}
+      {/* Chân trang Card */}
       <div className="mt-auto flex items-center justify-between border-t border-warmGray/10 pt-3">
-        <span className="text-xs font-medium text-warmGray">Kỳ đánh giá: Tuần 42</span>
+        <span className="text-xs font-medium text-warmGray">Kỳ đánh giá gần nhất</span>
         <Link
           to="/expert/reports"
           className="flex items-center gap-1 text-xs font-semibold text-charcoal underline-offset-2 hover:underline"

@@ -3,14 +3,13 @@
  * 6 KPI stat tiles + LineChart với ReferenceLine tuning event
  * SRS v2.1.4: ANALYTICS-FR-009, EXPERT-FR-005
  */
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import { ArrowLeftRight } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ReferenceLine, ReferenceArea, Legend, ResponsiveContainer,
+  ReferenceLine, Legend, ResponsiveContainer,
 } from 'recharts'
-import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import ZoneComparisonModal from './ZoneComparisonModal'
 import type { PerfRange } from '@/hooks/expert/useExpertAnalytics'
 import type { ControlPerformanceResponse } from '@/types/expert.types'
@@ -25,32 +24,6 @@ const RANGE_LABELS: Record<PerfRange, string> = {
   '30d': '30 ngày',
 }
 
-const PERF_DATA = [
-  { date: '08/10', hum: 85.2, tmp: 91.0 }, { date: '09/10', hum: 86.1, tmp: 92.5 },
-  { date: '10/10', hum: 84.8, tmp: 93.0 }, { date: '11/10', hum: 83.9, tmp: 92.8 },
-  { date: '12/10', hum: 85.5, tmp: 93.1 }, { date: '13/10', hum: 86.0, tmp: 93.5 },
-  { date: '14/10', hum: 85.8, tmp: 94.0 }, { date: '15/10', hum: 86.5, tmp: 94.2 },
-  { date: '16/10', hum: 89.5, tmp: 95.0 }, { date: '17/10', hum: 91.0, tmp: 95.1 },
-  { date: '18/10', hum: 91.8, tmp: 95.2 }, { date: '19/10', hum: 92.4, tmp: 95.1 },
-]
-
-interface TuningLabelProps {
-  viewBox?: { x?: number; y?: number }
-}
-
-function TuningLabel(props: TuningLabelProps) {
-  const cx = props.viewBox?.x ?? 0
-  const cy = props.viewBox?.y ?? 0
-  return (
-    <g>
-      <rect x={cx - 165} y={cy + 4} width={330} height={20} rx={10} fill="#ECFFA9" stroke="#B5D32C" strokeWidth={1} />
-      <text x={cx} y={cy + 17} fill="#27231F" fontSize={9.5} fontWeight={700} textAnchor="middle">
-        15/10 14:30 — Chuyên gia giảm dải biên độ ẩm từ 8% xuống 6%RH
-      </text>
-    </g>
-  )
-}
-
 interface Props {
   range: PerfRange
   onRangeChange: (r: PerfRange) => void
@@ -61,6 +34,19 @@ interface Props {
 
 export default function ControlPerfBlock({ range, onRangeChange, autonomyPct = 96.4, data, isLoading }: Props) {
   const [showComparison, setShowComparison] = useState(false)
+
+  const seriesData = useMemo(() => {
+    if (!data?.series || data.series.length === 0) return []
+    return data.series.map(s => {
+      const dt = new Date(s.timestamp)
+      return {
+        date: `${dt.getDate().toString().padStart(2, '0')}/${(dt.getMonth() + 1).toString().padStart(2, '0')}`,
+        hum: s.humidity,
+        tmp: s.temperature,
+      }
+    })
+  }, [data?.series])
+
   if (isLoading) return (
     <div className="space-y-3 animate-pulse">
       <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
@@ -70,16 +56,14 @@ export default function ControlPerfBlock({ range, onRangeChange, autonomyPct = 9
     </div>
   )
 
-  const isMock = !data?.stats
   const stats = data?.stats
-
   const kpiTiles = [
-    { label: 'Độ ẩm đạt chuẩn', value: stats?.humidityInRangePct != null ? `${stats.humidityInRangePct}%` : '92,4%', sub: '', progress: stats?.humidityInRangePct ?? 92, color: '#B5D32C' },
-    { label: 'Nhiệt độ đạt chuẩn', value: stats?.temperatureInRangePct != null ? `${stats.temperatureInRangePct}%` : '95,1%', sub: '', progress: stats?.temperatureInRangePct ?? 95, color: '#B5D32C' },
-    { label: 'Công suất phun sương TB', value: stats?.mistingAvgPct != null ? `${stats.mistingAvgPct}%` : '42,0%', sub: '', progress: stats?.mistingAvgPct ?? 42, color: '#27231F' },
-    { label: 'Công suất Quạt TB', value: stats?.ventilationAvgPct != null ? `${stats.ventilationAvgPct}%` : '18,5%', sub: '', progress: stats?.ventilationAvgPct ?? 19, color: '#27231F' },
-    { label: 'Tần suất đóng cắt Bơm', value: stats?.mistingSwitchesPerHour != null ? `${stats.mistingSwitchesPerHour} lần/h` : '3,2 lần/h', sub: 'Tuổi thọ rơ-le tối ưu', progress: null, color: '#27231F' },
-    { label: 'Tần suất đóng cắt Quạt', value: stats?.ventilationSwitchesPerHour != null ? `${stats.ventilationSwitchesPerHour} lần/h` : '1,5 lần/h', sub: 'Tuổi thọ rơ-le tối ưu', progress: null, color: '#27231F' },
+    { label: 'Độ ẩm đạt chuẩn', value: stats?.humidityInRangePct != null ? `${stats.humidityInRangePct.toFixed(1)}%` : '—', sub: '', progress: stats?.humidityInRangePct ?? null, color: '#B5D32C' },
+    { label: 'Nhiệt độ đạt chuẩn', value: stats?.temperatureInRangePct != null ? `${stats.temperatureInRangePct.toFixed(1)}%` : '—', sub: '', progress: stats?.temperatureInRangePct ?? null, color: '#B5D32C' },
+    { label: 'Công suất phun sương TB', value: stats?.mistingAvgPct != null ? `${stats.mistingAvgPct.toFixed(1)}%` : '—', sub: '', progress: stats?.mistingAvgPct ?? null, color: '#27231F' },
+    { label: 'Công suất Quạt TB', value: stats?.ventilationAvgPct != null ? `${stats.ventilationAvgPct.toFixed(1)}%` : '—', sub: '', progress: stats?.ventilationAvgPct ?? null, color: '#27231F' },
+    { label: 'Tần suất đóng cắt Bơm', value: stats?.mistingSwitchesPerHour != null ? `${stats.mistingSwitchesPerHour.toFixed(1)} lần/h` : '—', sub: 'Tuổi thọ rơ-le tối ưu', progress: null, color: '#27231F' },
+    { label: 'Tần suất đóng cắt Quạt', value: stats?.ventilationSwitchesPerHour != null ? `${stats.ventilationSwitchesPerHour.toFixed(1)} lần/h` : '—', sub: 'Tuổi thọ rơ-le tối ưu', progress: null, color: '#27231F' },
   ]
 
   return (
@@ -88,9 +72,6 @@ export default function ControlPerfBlock({ range, onRangeChange, autonomyPct = 9
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <h2 className="text-base font-bold text-[#27231F]">Hiệu năng điều khiển mờ &amp; Dấu mốc tinh chỉnh</h2>
-          {isMock && (
-            <MockDataTooltip reason="Đang hiển thị thống kê hiệu năng mô phỏng do DB chưa tích lũy đủ chu kỳ telemetry." />
-          )}
           <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-[#ECFFA9] text-[#4A5C00] border border-[#B5D32C] whitespace-nowrap">
             Tỷ lệ tự động AUTO ({RANGE_LABELS[range]}): {autonomyPct}%
           </span>
@@ -130,20 +111,33 @@ export default function ControlPerfBlock({ range, onRangeChange, autonomyPct = 9
         ))}
       </div>
 
-      {/* LineChart hiệu năng + dấu mốc tinh chỉnh */}
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={PERF_DATA} margin={{ top: 28, right: 16, left: -8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" vertical={false} />
-          <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#878380' }} axisLine={false} tickLine={false} />
-          <YAxis domain={[75, 100]} tickCount={4} unit="%" tick={{ fontSize: 10, fill: '#878380' }} axisLine={false} tickLine={false} />
-          <ReferenceArea x1="15/10" x2="19/10" fill="#F4FCE3" fillOpacity={0.8} />
-          <ReferenceLine x="15/10" stroke="#27231F" strokeDasharray="4 3" strokeWidth={1.5} label={<TuningLabel />} />
-          <Line type="monotone" dataKey="hum" name="Tỉ lệ đạt chuẩn độ ẩm (Tăng mạnh >92% sau tinh chỉnh)" stroke="#27231F" strokeWidth={2.2} dot={false} />
-          <Line type="monotone" dataKey="tmp" name="Tỉ lệ đạt chuẩn nhiệt độ (Duy trì ổn định >95%)" stroke="#8BAF2A" strokeWidth={2.2} dot={false} />
-          <Tooltip wrapperStyle={{ zIndex: 50 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} formatter={(v) => [`${v}%`]} />
-          <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
-        </LineChart>
-      </ResponsiveContainer>
+      {/* LineChart hiệu năng */}
+      {seriesData.length === 0 ? (
+        <div className="h-44 flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 text-center">
+          <p className="text-xs font-semibold text-[#27231F]">Chưa có dữ liệu chuỗi thời gian hiệu năng</p>
+          <p className="text-[11px] text-[#878380] mt-1">Hệ thống đang tích lũy dữ liệu điều khiển cho chu kỳ {RANGE_LABELS[range]}.</p>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={seriesData} margin={{ top: 12, right: 16, left: -8, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" vertical={false} />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#878380' }} axisLine={false} tickLine={false} />
+            <YAxis domain={[70, 100]} tickCount={4} unit="%" tick={{ fontSize: 10, fill: '#878380' }} axisLine={false} tickLine={false} />
+            {data?.tuning_changes?.[0] && (
+              <ReferenceLine
+                x={new Date(data.tuning_changes[0].changed_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                stroke="#27231F"
+                strokeDasharray="4 3"
+                strokeWidth={1.5}
+              />
+            )}
+            <Line type="monotone" dataKey="hum" name="Tỉ lệ đạt chuẩn độ ẩm" stroke="#27231F" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="tmp" name="Tỉ lệ đạt chuẩn nhiệt độ" stroke="#8BAF2A" strokeWidth={2} dot={false} />
+            <Tooltip wrapperStyle={{ zIndex: 50 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} formatter={(v) => [`${v}%`]} />
+            <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
 
       {/* Modal đối chiếu đa Zone */}
       <ZoneComparisonModal isOpen={showComparison} onClose={() => setShowComparison(false)} />

@@ -17,17 +17,10 @@ export type BirdRange = '7d' | '14d' | '30d'
 
 // ── 1. Dự báo vi khí hậu Holt ─────────────────────────────────────────────────
 export function useHoltForecast(zoneId?: string) {
-  return useQuery({
+  return useQuery<ForecastResponse>({
     queryKey: ['expert', 'forecast', zoneId],
-    queryFn: async (): Promise<ForecastResponse> => {
-      try {
-        if (!zoneId) throw new Error('no zone')
-        return await expertService.getForecast(zoneId)
-      } catch {
-        const { MOCK_FORECAST_RESPONSE } = await import('@/data/expertMock.data')
-        return MOCK_FORECAST_RESPONSE
-      }
-    },
+    queryFn: () => (zoneId ? expertService.getForecast(zoneId) : Promise.reject(new Error('no zone'))),
+    enabled: Boolean(zoneId),
     staleTime: 5 * 60_000,
     refetchInterval: 5 * 60_000,
   })
@@ -35,51 +28,30 @@ export function useHoltForecast(zoneId?: string) {
 
 // ── 2. Hiệu năng điều khiển mờ ────────────────────────────────────────────────
 export function useControlPerformance(zoneId?: string, range: PerfRange = '7d') {
-  return useQuery({
+  return useQuery<ControlPerformanceResponse>({
     queryKey: ['expert', 'control-perf', zoneId, range],
-    queryFn: async (): Promise<ControlPerformanceResponse> => {
-      try {
-        if (!zoneId) throw new Error('no zone')
-        return await expertService.getControlPerformance(zoneId, range)
-      } catch {
-        const { MOCK_CONTROL_PERFORMANCE } = await import('@/data/expertMock.data')
-        return MOCK_CONTROL_PERFORMANCE
-      }
-    },
+    queryFn: () => (zoneId ? expertService.getControlPerformance(zoneId, range) : Promise.reject(new Error('no zone'))),
+    enabled: Boolean(zoneId),
     staleTime: 5 * 60_000,
   })
 }
 
 // ── 3. Tỷ lệ tự động hoá ─────────────────────────────────────────────────────
 export function useAutonomy(zoneId?: string, range: PerfRange = '7d') {
-  return useQuery({
+  return useQuery<AutonomyResponse>({
     queryKey: ['expert', 'autonomy', zoneId, range],
-    queryFn: async (): Promise<AutonomyResponse> => {
-      try {
-        if (!zoneId) throw new Error('no zone')
-        return await expertService.getAutonomy(zoneId, range)
-      } catch {
-        const { MOCK_AUTONOMY } = await import('@/data/expertMock.data')
-        return MOCK_AUTONOMY
-      }
-    },
+    queryFn: () => (zoneId ? expertService.getAutonomy(zoneId, range) : Promise.reject(new Error('no zone'))),
+    enabled: Boolean(zoneId),
     staleTime: 5 * 60_000,
   })
 }
 
 // ── 4. Xu hướng đàn chim ─────────────────────────────────────────────────────
 export function useBirdCountTrends(zoneId?: string, days: number = 7) {
-  return useQuery({
+  return useQuery<BirdCountTrendsResponse>({
     queryKey: ['expert', 'bird-trends', zoneId, days],
-    queryFn: async (): Promise<BirdCountTrendsResponse> => {
-      try {
-        if (!zoneId) throw new Error('no zone')
-        return await expertService.getBirdCountTrends(zoneId, days)
-      } catch {
-        const { MOCK_BIRD_COUNT_TRENDS } = await import('@/data/expertMock.data')
-        return MOCK_BIRD_COUNT_TRENDS
-      }
-    },
+    queryFn: () => (zoneId ? expertService.getBirdCountTrends(zoneId, days) : Promise.reject(new Error('no zone'))),
+    enabled: Boolean(zoneId),
     staleTime: 10 * 60_000,
   })
 }

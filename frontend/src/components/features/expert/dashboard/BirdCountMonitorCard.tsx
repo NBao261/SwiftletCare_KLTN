@@ -9,7 +9,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Video, CheckCircle, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import { useExpertBirdTrends, useExpertPendingAlerts } from '@/hooks/expert/useExpertDashboard'
 import LiveStreamModal from './LiveStreamModal'
 
@@ -19,18 +18,16 @@ interface Props {
 }
 
 const INFERRED_TYPES = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
-const MOCK_TOOLTIP_MSG = 'Dữ liệu mô phỏng — Đang chờ kết nối luồng dữ liệu đếm chim thực tế từ Module AI Camera Cửa thu (VISION-FR-017).'
 
 function MetricPill({
-  label, value, subtext, isMock, isBadge,
+  label, value, subtext, isBadge,
 }: {
-  label: string; value: string; subtext: string; isMock?: boolean; isBadge?: boolean
+  label: string; value: string; subtext: string; isBadge?: boolean
 }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-xl border border-warmGray/15 bg-stone/40 px-3 py-2.5 text-center">
       <div className="flex items-center gap-1">
         <span className="text-xl font-extrabold text-charcoal leading-tight">{value}</span>
-        {isMock && <MockDataTooltip reason={MOCK_TOOLTIP_MSG} />}
       </div>
       <span className="text-[11px] font-semibold text-warmGray">{label}</span>
       {isBadge ? (
@@ -61,13 +58,13 @@ export default function BirdCountMonitorCard({ zoneId, farmId }: Props) {
   }
 
   const latest = birdTrends?.records?.[birdTrends.records.length - 1]
-  const isMorningMock = !latest?.morning_exit
-  const isEveningMock = !latest?.evening_entry
-  const isReturnMock = birdTrends?.avg_return_rate === null || birdTrends?.avg_return_rate === undefined
-
-  const morningExit = !isMorningMock ? latest!.morning_exit : 1240
-  const eveningEntry = !isEveningMock ? latest!.evening_entry : 1215
-  const returnRate = !isReturnMock ? birdTrends!.avg_return_rate! : 97.9
+  const morningExit = latest?.morning_exit != null ? latest.morning_exit.toLocaleString('vi-VN') : '—'
+  const eveningEntry = latest?.evening_entry != null ? latest.evening_entry.toLocaleString('vi-VN') : '—'
+  const hasReturnRate = birdTrends?.avg_return_rate !== null && birdTrends?.avg_return_rate !== undefined
+  const returnRate = hasReturnRate ? `${birdTrends!.avg_return_rate!.toFixed(1)}%` : '—'
+  const returnSubtext = hasReturnRate
+    ? (birdTrends!.avg_return_rate! >= 95 ? 'Đạt chuẩn ≥ 95%' : 'Cần theo dõi')
+    : 'Chưa có số liệu'
 
   // Lọc đúng 4 loại cảnh báo suy luận chuyên gia (EXPERT-FR-003)
   const filteredAlerts = (pendingAlerts ?? []).filter(a => INFERRED_TYPES.includes(a.type))
@@ -82,7 +79,6 @@ export default function BirdCountMonitorCard({ zoneId, farmId }: Props) {
             <h2 className="text-h2 text-charcoal">Theo dõi đếm chim</h2>
             <p className="mt-0.5 text-xs text-warmGray">Module camera phát hiện & bounding box</p>
           </div>
-          <MockDataTooltip reason={MOCK_TOOLTIP_MSG} />
         </div>
 
         {/* Nút Live Stream giữ nguyên vị trí dưới tiêu đề */}
@@ -101,9 +97,9 @@ export default function BirdCountMonitorCard({ zoneId, farmId }: Props) {
 
         {/* 3 chỉ số chim */}
         <div className="grid grid-cols-3 gap-3">
-          <MetricPill label="Chim bay ra (Sáng)" value={morningExit.toLocaleString('vi-VN')} subtext="05:15 – 06:45" isMock={isMorningMock} />
-          <MetricPill label="Chim bay về (Chiều)" value={eveningEntry.toLocaleString('vi-VN')} subtext="17:00 – 18:30" isMock={isEveningMock} />
-          <MetricPill label="Tỷ lệ quay về" value={`${returnRate.toFixed(1)}%`} subtext="Đạt chuẩn > 95%" isMock={isReturnMock} isBadge />
+          <MetricPill label="Chim bay ra (Sáng)" value={morningExit} subtext="05:15 – 06:45" />
+          <MetricPill label="Chim bay về (Chiều)" value={eveningEntry} subtext="17:00 – 18:30" />
+          <MetricPill label="Tỷ lệ quay về" value={returnRate} subtext={returnSubtext} isBadge={hasReturnRate} />
         </div>
 
         {/* 2 cảnh báo suy luận gần nhất hoặc Empty State */}
