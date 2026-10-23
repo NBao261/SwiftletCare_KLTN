@@ -3,11 +3,11 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { alertApi } from '@/apis/shared/alerts.api'
 import { telemetryApi } from '@/apis/farm-owner/telemetry.api'
 import { deviceApi } from '@/apis/shared/devices.api'
-import { useAllZones, useHouses, type AllZone } from '@/hooks/shared/useFarms'
+import { useAllZones, type AllZone } from '@/hooks/shared/useFarms'
 import { useSensorNodes } from '@/hooks/shared/useDevices'
 import { useLiveZoneTelemetry, type LiveZone } from '@/hooks/farm-owner/useLiveZoneTelemetry'
 import { useSocketConnected } from '@/hooks/common/useSocketConnected'
-import type { TelemetryRecord } from '@/types'
+import type { House, TelemetryRecord } from '@/types'
 import {
   averageReadings,
   buildHouseStability,
@@ -47,9 +47,8 @@ export function useCameraNodes() {
   })
 }
 
-// Trạng thái các nhà yến của farm
-export function useHouseStability(farmId: string) {
-  const { data: houses, isLoading: isLoadingHouses } = useHouses(farmId)
+// Trạng thái các nhà yến trong phạm vi khung lọc (1 farm hoặc mọi farm)
+export function useHouseStability(houses: House[]) {
   const { data: zones, isLoading: isLoadingZones } = useAllZones()
   const { data: sensors, isLoading: isLoadingSensors } = useSensorNodes()
   const { data: cameras, isLoading: isLoadingCameras } = useCameraNodes()
@@ -62,12 +61,12 @@ export function useHouseStability(farmId: string) {
         ...(cameras ?? []).filter(device => !device.decommissioned_at)
           .map(device => ({ house_id: device.house_id, zone_id: device.zone_id, status: device.status, type: 'camera' as const })),
       ]
-      return buildHouseStability(houses ?? [], zones ?? [], devices)
+      return buildHouseStability(houses, zones ?? [], devices)
     },
     [houses, zones, sensors, cameras],
   )
 
-  return { items, isLoading: isLoadingHouses || isLoadingZones || isLoadingSensors || isLoadingCameras }
+  return { items, isLoading: isLoadingZones || isLoadingSensors || isLoadingCameras }
 }
 
 // Các Zone trong phạm vi đang chọn: cả farm hoặc 1 nhà yến
@@ -158,11 +157,33 @@ export function useZonesEnvironment(zones: AllZone[]) {
   }
 }
 
-// Nhật ký cảnh báo: cả farm 1 request; 1 nhà thì theo từng Zone, thêm cảnh báo cấp nhà (camera, SRS v2.1.8) khi không lọc 1 Zone
+// Chấm cảnh báo ở khung lọc: Zone vượt ngưỡng hoặc có thiết bị hư; nhà có Zone như vậy hoặc camera hư; farm chứa nhà như vậy
+export function useScopeIssues(zones: AllZone[], houses: House[]) {
+  const { issueZoneIds } = useZonesEnvironment(zones)
+  const { data: cameras } = useCameraNodes()
+  return useMemo(() => {
+    const farmByHouse = new Map(houses.map(house => [house._id, house.farm_id]))
+    const issueHouseIds = new Set<string>()
+    for (const zone of zones) {
+      if (issueZoneIds.has(zone._id)) issueHouseIds.add(zone.house_id)
+    }
+    for (const camera of cameras ?? []) {
+      if (camera.house_id && !camera.decommissioned_at && isFaultDeviceStatus(camera.status)) issueHouseIds.add(camera.house_id)
+    }
+    const issueFarmIds = new Set<string>()
+    for (const houseId of issueHouseIds) {
+      const farmId = farmByHouse.get(houseId)
+      if (farmId) issueFarmIds.add(farmId)
+    }
+    return { issueFarmIds, issueHouseIds, issueZoneIds }
+  }, [zones, houses, cameras, issueZoneIds])
+}
+
+// Nhật ký cảnh báo: cả farm (farmId '' = mọi farm) 1 request; 1 nhà thì theo từng Zone, thêm cảnh báo cấp nhà (camera, SRS v2.1.8) khi không lọc 1 Zone
 export function useHouseAlerts(farmId: string, zoneIds: string[], wholeFarm: boolean, houseAlertsId = '') {
   let scopes = zoneIds.map(zoneId => ({ key: zoneId, filter: { zoneId } as Record<string, string> }))
   if (houseAlertsId) scopes.push({ key: `house-${houseAlertsId}`, filter: { houseId: houseAlertsId } })
-  if (wholeFarm) scopes = farmId ? [{ key: farmId, filter: { farmId } }] : []
+  if (wholeFarm) scopes = [farmId ? { key: farmId, filter: { farmId } } : { key: 'all-farms', filter: {} }]
   return useQueries({
     queries: scopes.map(scope => ({
       queryKey: ['alerts', 'house-log', scope.key],

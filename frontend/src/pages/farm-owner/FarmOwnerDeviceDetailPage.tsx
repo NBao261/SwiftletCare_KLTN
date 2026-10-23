@@ -23,6 +23,7 @@ import { useScopeZones } from '@/hooks/farm-owner/useFarmOwnerDashboard';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useSensorNodes } from '@/hooks/shared/useDevices';
 import { cn } from '@/lib/cn';
+import { NO_VALUE } from '@/constants/display';
 import type { House } from '@/types';
 
 const NO_HOUSES: House[] = [];
@@ -38,7 +39,8 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const houseId = state?.houseId ?? scope.houseId;
   const house = scope.houses.find(item => item._id === houseId);
   const houses = useMemo(() => (house ? [house] : NO_HOUSES), [house]);
-  const { zones, isLoading: isLoadingZones } = useScopeZones(scope.farmId, house?._id ?? '');
+  const houseFarmId = house?.farm_id ?? '';
+  const { zones, isLoading: isLoadingZones } = useScopeZones(houseFarmId, house?._id ?? '');
   const houseZones = house ? zones : [];
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
@@ -92,7 +94,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
         <DeviceDetailCard
           key={device.id}
           device={device}
-          farmId={scope.farmId}
+          farmId={houseFarmId}
           zoneName={zoneName}
           onReport={setReportDefaults}
           onOpenSchedule={device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
@@ -104,7 +106,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-5">
-      <FarmFrame title={house.name} description={t('detail.subtitle', { farm: scope.farmName })}>
+      <FarmFrame title={house.name} description={t('detail.subtitle', { farm: scope.farmNames.get(houseFarmId) ?? NO_VALUE })}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiTile icon={SquaresFourIcon} label={t('detail.kpiZones')} value={num(item.zoneGroups.length)} sub={t('detail.kpiZonesSub')} />
           <KpiTile
@@ -163,7 +165,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
                 {renderCards(group.devices, group.zone.name)}
                 <KitComponentsToggle
                   zoneId={group.zone._id}
-                  farmId={scope.farmId}
+                  farmId={houseFarmId}
                   nodes={group.devices}
                   thresholds={group.zone.thresholds}
                   defaultOpen={isTarget}

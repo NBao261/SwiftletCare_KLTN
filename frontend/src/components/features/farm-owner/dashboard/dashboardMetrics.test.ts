@@ -209,6 +209,14 @@ describe('summarizeFarmHouses', () => {
     expect(totals.monthKg).toBe(3)
     expect(totals.monthBatches).toBe(2)
   })
+
+  it('tất cả trang trại (farmId rỗng) cộng nhà của mọi farm', () => {
+    const totals = summarizeFarmHouses([house('f1', 'ALERT', ['CRITICAL']), house('f2', 'NORMAL', ['HIGH', 'LOW'])], '')
+    expect(totals.houses).toBe(2)
+    expect(totals.alertsTotal).toBe(3)
+    expect(totals.alertsByLevel).toEqual({ P1: 2, P2: 0, P3: 1 })
+    expect(totals.monthKg).toBe(3)
+  })
 })
 
 describe('zoneHasIssue', () => {

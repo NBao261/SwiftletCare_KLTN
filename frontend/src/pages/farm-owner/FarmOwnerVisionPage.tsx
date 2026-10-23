@@ -42,7 +42,9 @@ export default function FarmOwnerVisionPage(): JSX.Element {
   const isStatsHorizontal = isCameraExpanded || !houseId;
 
   // Thân trang: farm chưa có nhà, hoặc camera và số đếm của phạm vi đang lọc
-  let body = <EmptyState title={t('page.noZoneTitle')} description={t('page.noZoneDesc')} />;
+  let body = scope.farmId
+    ? <EmptyState title={t('page.noHouseInFarmTitle')} description={t('page.noHouseInFarmDesc')} />
+    : <EmptyState title={t('page.noZoneTitle')} description={t('page.noZoneDesc')} />;
   if (houseIds.length > 0) {
     body = (
       <>

@@ -14,6 +14,7 @@ import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/ha
 import { devicesDict } from '@/constants/devices.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
+import { NO_VALUE } from '@/constants/display';
 import type { SortDirection } from '@/types';
 
 // Cột hàng nhà yến: tên · quy mô · trạng thái · thao tác
@@ -26,11 +27,12 @@ const DEFAULT_SORT_DIRECTION: SortDirection = 'asc';
 
 interface HouseDeviceAccordionProps {
   inventory: HouseInventory[];
-  farmName: string;
+  // Tên trang trại theo mã, hiện dưới tên nhà
+  farmNames: Map<string, string>;
 }
 
 // Bảng thiết bị dạng cha - con: tìm / lọc / sắp xếp nhà yến ở client; bấm hàng nhà để xổ / thu thiết bị theo Zone; nút "Chi tiết" mới chuyển trang (chỉ xem)
-export default function HouseDeviceAccordion({ inventory, farmName }: HouseDeviceAccordionProps): JSX.Element {
+export default function HouseDeviceAccordion({ inventory, farmNames }: HouseDeviceAccordionProps): JSX.Element {
   const { t, num } = useTranslation(devicesDict);
   const navigate = useNavigate();
   // Nhà đã bấm đổi trạng thái xổ; chỉ có 1 nhà hoặc khớp tìm kiếm nhờ Zone / thiết bị thì mặc định xổ sẵn
@@ -176,7 +178,7 @@ export default function HouseDeviceAccordion({ inventory, farmName }: HouseDevic
                   />
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-charcoal">{item.house.name}</p>
-                    <p className="truncate text-xs text-warmGray">{farmName}</p>
+                    <p className="truncate text-xs text-warmGray">{farmNames.get(item.house.farm_id) ?? NO_VALUE}</p>
                   </div>
                 </div>
                 <span className="pl-7 text-sm text-charcoal md:pl-0">
