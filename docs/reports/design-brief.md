@@ -73,18 +73,18 @@ Full list: `docs/reports/README.md` and SDD 12. High self-review findings (BM02)
 
 | ID | Feature | Actor | Acceptance criteria (testable) | Test | Status |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | Telemetry, live dashboard | Controller, FO | Read every 1 s; on the dashboard ≤ 2 s; dead sensor shown stale; no event to other farms | TC-F01-01..03 | Done |
-| F-02 | Fuzzy control | Controller | Decision every 10 s ± 1 s; firmware = backend (±1 %) on shared cases | TC-F02-01..03 | Done |
+| F-01 | Telemetry, live dashboard | FO, DE | Read every 1 s; on the dashboard ≤ 2 s; dead sensor shown stale; no event to other farms | TC-F01-01..03 | Done |
+| F-02 | Fuzzy control | FO (auto) | Decision every 10 s ± 1 s; firmware = backend (±1 %) on shared cases | TC-F02-01..03 | Done |
 | F-03 | Thresholds, coefficients | FO, DE | Stored with history and sent; out of range 400, nothing stored; Technician/Admin 403 | TC-F03-01..03 | In progress |
-| F-04 | Offline operation | Controller | 30-min outage: all decisions, 0 samples lost; hang → restart, `POWER_OUTAGE` | TC-F04-01..03 | Done |
-| F-05 | Self-diagnosis | Controller | 300 s pump ON without +2 % → `PUMP_DRY`, misting 0; timeout → `SENSOR_FAULT` | TC-F05-01..03 | Done |
-| F-06 | Actuator current check | Controller | Relay ON, current < 50 % of normal for 30 s → `ACTUATOR_FAULT` | TC-F06-01..03 | Planned |
-| F-07 | Alert lifecycle | Backend, FO | Repeats merge into one alert; recovery resolves; ack of resolved → 409 | TC-F07-01..03 | In progress |
-| F-08 | Push and Telegram | Backend, FO | CRITICAL alert on both ≤ 5 s; none after sign-out/unlink | TC-F08-01..03 | In progress |
-| F-09 | Forecast warning | Backend | ≥ 2 h data: crossing within 60 min → `FORECAST_BREACH` with time; less → "insufficient data" | TC-F09-01..03 | Done |
-| F-10 | Counting, return rate | AI node, Backend | Session and 5-min counts per house; drop > threshold vs ≥ 3 days → one alert; incomplete day skipped | TC-F10-01..03 | In progress |
+| F-04 | Offline operation | FO (auto) | 30-min outage: all decisions, 0 samples lost; hang → restart, `POWER_OUTAGE` | TC-F04-01..03 | Done |
+| F-05 | Self-diagnosis | FO (auto) | 300 s pump ON without +2 % → `PUMP_DRY`, misting 0; timeout → `SENSOR_FAULT` | TC-F05-01..03 | Done |
+| F-06 | Actuator current check | FO (auto) | Relay ON, current < 50 % of normal for 30 s → `ACTUATOR_FAULT` | TC-F06-01..03 | Planned |
+| F-07 | Alert lifecycle | FO | Repeats merge into one alert; recovery resolves; ack of resolved → 409 | TC-F07-01..03 | In progress |
+| F-08 | Push and Telegram | FO, Telegram, FCM | CRITICAL alert on both ≤ 5 s; none after sign-out/unlink | TC-F08-01..03 | In progress |
+| F-09 | Forecast warning | FO, DE (auto) | ≥ 2 h data: crossing within 60 min → `FORECAST_BREACH` with time; less → "insufficient data" | TC-F09-01..03 | Done |
+| F-10 | Counting, return rate | FO, DE (auto) | Session and 5-min counts per house; drop > threshold vs ≥ 3 days → one alert; incomplete day skipped | TC-F10-01..03 | In progress |
 | F-11 | Annotated live stream | FO, DE | Box on each bird; token 60 s, one camera; others 403 | TC-F11-01..03 | In progress |
-| F-12 | Abnormal noise | Controller | +20 dB for 12 s of 15 s → one `NOISE_ANOMALY`; none while the speaker plays | TC-F12-01..03 | Done |
+| F-12 | Abnormal noise | DE (auto) | +20 dB for 12 s of 15 s → one `NOISE_ANOMALY`; none while the speaker plays | TC-F12-01..03 | Done |
 | F-13 | Expert verdict | DE | Stored with author; `REJECTED` without note 422, sets `DISMISSED`; FO on expert farm 403 | TC-F13-01..03 | In progress |
 | F-14 | Tuning, ring, schedule | DE | Applied without restart, with history; out of range 400; ring of 2 or 13 vertices 422; overlapping windows 400 | TC-F14-01..03 | In progress |
 | F-15 | Review and suggestions | DE, FO | Owner change opens one review item; revert resends old values; owner applying a suggestion 403 | TC-F15-01..03 | Planned |
@@ -92,11 +92,11 @@ Full list: `docs/reports/README.md` and SDD 12. High self-review findings (BM02)
 | F-17 | Manual override | FO | `MANUAL` then `AUTO` at expiry; outside 1 min–24 h 422; expert 403 | TC-F17-01..03 | Done |
 | F-18 | Register by QR | FO, Admin | Label + floor scan → `PENDING` in that zone; bad key or ID same 400; in service 409 | TC-F18-01..03 | In progress |
 | F-19 | Setup progress, move | FO | "Applied" only after the version is reported; offline move corrected on reconnect; 15-min notice | TC-F19-01..03 | In progress |
-| F-20 | Daily health status | Backend | Flock `CLEAR` + humidity `SLIGHT` → `ACTION`; flock alone → `WATCH`; incomplete → `INSUFFICIENT_DATA` | TC-F20-01..03 | Planned |
+| F-20 | Daily health status | FO, DE (auto) | Flock `CLEAR` + humidity `SLIGHT` → `ACTION`; flock alone → `WATCH`; incomplete → `INSUFFICIENT_DATA` | TC-F20-01..03 | Planned |
 | F-21 | Reports, PDF/CSV | FO, DE | Day/week/month per house; files match the screen, no internal IDs; other farms 403 | TC-F21-01..03 | In progress |
 | F-22 | Independent rating | FO, DE | Asked before the status, locked after; Technician/Admin 403; ≤ 7 days after | TC-F22-01..03 | Planned |
 
-FO = Farm Owner, DE = Domain Expert (or the Farm Owner on a farm without one, BR-22).
+FO = Farm Owner, DE = Domain Expert (Farm Owner if none, BR-22); (auto) = done by a system component (controller, backend or AI node), not an actor.
 
 ## 7. Non-Functional Requirements
 
@@ -125,19 +125,21 @@ FO = Farm Owner, DE = Domain Expert (or the Farm Owner on a farm without one, BR
 
 ## A1. Main Workflows
 
+Actors are people and external services only; the controller, the AI node and the backend are parts of SwiftletCare (SRS Section 2.3). WF-03 and WF-09 have one actor and are valid because each passes through three mandatory features.
+
 | ID | Workflow | Actors | Trigger | Business outcome | Features | Entity states | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| WF-01 | Automatic micro-climate regulation (MF-01, AD-01) | Controller, Farm Owner, Domain Expert | 10-s control cycle; parameter change | Misting and fan follow humidity and temperature with the zone's current parameters | F-01, F-02, F-03 | Config sync: `PENDING` → `APPLIED`; relay output in `AUTO` | Nguyễn Chí Bảo |
-| WF-02 | Air-quality monitoring (MF-02, AD-02) | Controller, Backend, Farm Owner, Domain Expert | NH3 or CO2 above the zone limit | Alert raised for assessment; fan not driven | F-01, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Nguyễn Vũ Len |
-| WF-03 | Offline operation and recovery (MF-03, AD-03) | Controller, Backend, Farm Owner | Internet lost, hang or power loss | Control continues; buffered data uploaded; restart reported | F-04, F-07, F-08 | Device: `ONLINE` → `OFFLINE` → `ONLINE`; `NODE_OFFLINE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
-| WF-04 | Equipment fault handling (MF-04, AD-04) | Controller, Backend, Farm Owner | Pump dry, sensor fault, load not drawing current | Loop in a safe state; alert raised and acknowledged | F-05, F-06, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Trần Minh Kiệt |
-| WF-05 | Early warning by forecast (MF-05, AD-05) | Backend, Farm Owner, Domain Expert | Every 10 min | Early warning with the expected crossing time; verdict recorded | F-09, F-07, F-13 | Alert: `ACTIVE` → `RESOLVED`; verdict: pending → `CONFIRMED` | Nguyễn Thị Yến Nhi |
-| WF-06 | Bird counting session (MF-06, AD-06) | AI node, Backend, Farm Owner | Morning and evening sessions | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11, F-07 | AI node: `PENDING` → `ONLINE`; `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
-| WF-07 | Abnormal noise (MF-07, AD-07) | Controller, Backend, Domain Expert, Farm Owner | Noise above the hourly baseline | Indication shown with bird counts; validated by the expert | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED` (verdict `REJECTED`) | Thái Minh Tuấn |
-| WF-08 | Expert validation and tuning (MF-08, AD-08) | Domain Expert, Farm Owner, Backend | Owner change, suggestion, health report | Changes reviewed, suggestion applied, conclusion delivered, owner notified | F-03, F-14, F-15, F-16 | Review item: `PENDING_REVIEW` → `ADJUSTED`; proposal: `PROPOSED` → `APPROVED`; report: `GENERATED` → `CONCLUDED` | Thái Minh Tuấn |
-| WF-09 | Manual override (MF-09, AD-09) | Farm Owner, Controller | Owner switches a relay | Relay manual for a limited time, then automatic; logged | F-17, F-01, F-02 | Relay: `AUTO` → `MANUAL` → `AUTO` | Nguyễn Vũ Len |
-| WF-10 | Device setup by the Farm Owner (MF-10, AD-10) | Administrator, Farm Owner, Controller, Backend | New controller or move to another floor | Device online in the scanned zone with its configuration | F-18, F-19, F-03 | Label: `IN_STOCK` → `IN_SERVICE`; device: `PENDING` → `ONLINE`; config: `PENDING` → `APPLIED` | Trần Minh Kiệt |
-| WF-11 | Daily health assessment and reports (MF-11, AD-14) | Backend, Farm Owner, Domain Expert, weather service | End of day; week; month | Daily status with reasons; reports downloaded; day rated independently | F-20, F-21, F-22 | Daily status: (new) → `COMPUTED` → `RATED`; report: `GENERATED` | Nguyễn Thị Yến Nhi |
+| WF-01 | Automatic micro-climate regulation (MF-01, AD-01) | Farm Owner, Domain Expert | 10-s control cycle; parameter change | Misting and fan follow humidity and temperature with the zone's current parameters | F-01, F-02, F-03 | Config sync: `PENDING` → `APPLIED`; relay output in `AUTO` | Nguyễn Chí Bảo |
+| WF-02 | Air-quality monitoring (MF-02, AD-02) | Farm Owner, Domain Expert, Telegram, FCM | NH3 or CO2 above the zone limit | Alert raised for assessment; fan not driven | F-01, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Nguyễn Vũ Len |
+| WF-03 | Offline operation and recovery (MF-03, AD-03) | Farm Owner | Internet lost, hang or power loss | Control continues; buffered data uploaded; restart reported | F-04, F-07, F-08 | Device: `ONLINE` → `OFFLINE` → `ONLINE`; `NODE_OFFLINE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
+| WF-04 | Equipment fault handling (MF-04, AD-04) | Farm Owner, Telegram, FCM | Pump dry, sensor fault, load not drawing current | Loop in a safe state; alert raised and acknowledged | F-05, F-06, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Trần Minh Kiệt |
+| WF-05 | Early warning by forecast (MF-05, AD-05) | Farm Owner, Domain Expert | Every 10 min | Early warning with the expected crossing time; verdict recorded | F-09, F-07, F-13 | Alert: `ACTIVE` → `RESOLVED`; verdict: pending → `CONFIRMED` | Nguyễn Thị Yến Nhi |
+| WF-06 | Bird counting session (MF-06, AD-06) | Farm Owner, Domain Expert | Morning and evening sessions | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11, F-07 | AI node: `PENDING` → `ONLINE`; `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
+| WF-07 | Abnormal noise (MF-07, AD-07) | Domain Expert, Farm Owner | Noise above the hourly baseline | Indication shown with bird counts; validated by the expert | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED` (verdict `REJECTED`) | Thái Minh Tuấn |
+| WF-08 | Expert validation and tuning (MF-08, AD-08) | Domain Expert, Farm Owner | Owner change, suggestion, health report | Changes reviewed, suggestion applied, conclusion delivered, owner notified | F-03, F-14, F-15, F-16 | Review item: `PENDING_REVIEW` → `ADJUSTED`; proposal: `PROPOSED` → `APPROVED`; report: `GENERATED` → `CONCLUDED` | Thái Minh Tuấn |
+| WF-09 | Manual override (MF-09, AD-09) | Farm Owner | Owner switches a relay | Relay manual for a limited time, then automatic; logged | F-17, F-01, F-02 | Relay: `AUTO` → `MANUAL` → `AUTO` | Nguyễn Vũ Len |
+| WF-10 | Device setup by the Farm Owner (MF-10, AD-10) | Administrator, Farm Owner | New controller or move to another floor | Device online in the scanned zone with its configuration | F-18, F-19, F-03 | Label: `IN_STOCK` → `IN_SERVICE`; device: `PENDING` → `ONLINE`; config: `PENDING` → `APPLIED` | Trần Minh Kiệt |
+| WF-11 | Daily health assessment and reports (MF-11, AD-14) | Farm Owner, Domain Expert, Open-Meteo | End of day; week; month | Daily status with reasons; reports downloaded; day rated independently | F-20, F-21, F-22 | Daily status: (new) → `COMPUTED` → `RATED`; report: `GENERATED` | Nguyễn Thị Yến Nhi |
 
 ## A2. Demo Scenarios
 
