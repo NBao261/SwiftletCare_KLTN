@@ -14,40 +14,44 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 
 | | Việc | Ưu tiên | Người | Ghi chú |
 |---|---|:---:|---|---|
-| [ ] | Điền các ô `[TEAM]` trong Report 3 (16 chỗ) và Report 4 (15 chỗ) | P0 | | Danh sách dòng: xem mục 2 bên dưới |
-| [ ] | Phiếu đăng ký bản chốt + **BM03** (chép 8 dòng ở `docs/reports/README.md`, mục "Bản nháp các dòng BM03") | P0 | | Phiếu phải có trong repo (PDF yêu cầu) |
-| [ ] | Report 1 (giới thiệu dự án), Report 2 (kế hoạch quản lý dự án) | P0 | | Chưa có |
-| [ ] | **Report 5 – Test plan + test case**: test theo FR, theo chuyển trạng thái (17 lifecycle), theo NFR, end-to-end cho 11 luồng chính | P0 | | Ánh xạ ~700 test backend đang có vào test case |
-| [ ] | **BM01 Design Brief** + Phụ lục A (bảng workflow, kịch bản demo chính và ngoại lệ, số test cam kết, tối đa 6 NFR cam kết) | P0 | | Report 4 §4 có 13 quyết định thiết kế, Brief chọn 5 |
-| [ ] | Xuất Report 3, 4 ra PDF theo mẫu, tên `SWP490_<Mã>_R2_Report<n>.pdf` | P0 | | Sơ đồ Mermaid render sẵn |
+| [x] | Phiếu đăng ký bản đề xuất chốt v3 + **BM03** | P0 | | `registration-v3.md`, `bm03-record-of-changes.md`, docx ở `registration/`. Còn: thêm số điện thoại vào bản docx nộp (repo cố ý không lưu), điền mã đề tài, GVHD, ngày; xuất PDF chung một file `…_R2_Registration.pdf` |
+| [x] | Report 1 (Introduction), Report 2 (Project Management Plan) | P0 | | `report1-introduction.md`, `report2-project-management-plan.md`. Còn: ô `[TEAM]` (khảo sát thị trường, số liệu ngành, ngày các mốc, nhóm chat), xác nhận ước lượng công và % hoàn thành |
+| [x] | **Report 5** – test plan + 131 test case (22 tính năng × 3, 11 workflow, 48 chuyển trạng thái, 6 NFR) | P0 | | `report5-test.md`, sinh từ `report5/tc.py`. 69 test tự động đang đạt; 42 test tự động còn phải viết; 20 test thủ công chạy trên staging/nhà yến |
+| [x] | **Project Tracking** | P0 | | `project-tracking.md` (mốc, PR theo người, trạng thái tính năng, defect) |
+| [x] | **BM01 Design Brief** + Phụ lục A | P0 | | `design-brief.md`, docx ở `design-brief/` (mục 0–8 vừa 4 trang). Còn: xác nhận Ownership Map (đề xuất theo lịch sử commit), PR của từng người, ngưỡng NFR-09/14 |
+| [ ] | **Đưa PR #89 vào `develop`** (pipeline gửi MQTT, đẩy video, job pytest): PR này được merge vào nhánh của #88 sau khi #88 đã vào develop nên code chưa lên develop | P0 | Bảo | Project Tracking DF-1; mở PR `feat/vision-full-frame-tracking` → `develop` |
+| [ ] | Điền các ô `[TEAM]` còn lại | P0 | | Danh sách ở mục 2 |
+| [ ] | Xuất Report 1–5 và Project Tracking ra PDF theo mẫu, tên `SWP490_<Mã>_R2_Report<n>.pdf` | P0 | | Sơ đồ Mermaid render sẵn |
 | [ ] | Gắn tag `review-2` trên repo sau khi mọi thứ trên đã merge | P0 | | |
-| [ ] | **BM02 Self-review**: chạy prompt mẫu của PDF trên tag `review-2`, không sửa prompt | P0 | | Tắt Memory trước khi chạy |
+| [ ] | **BM02 Self-review**: chạy prompt mẫu của PDF trên tag `review-2`, không sửa prompt; điểm High Kept/Planned thêm vào Known Gaps của Design Brief | P0 | | Tắt Memory trước khi chạy |
 | [ ] | Mở PR cho nhánh tài liệu `claude/modest-mendel-wz9d7b` và merge vào `develop` | P0 | | |
 | [ ] | (Tùy chọn) Chuyển `SwiftletCare_SRS.md` sang `docs/archive/` khi Report 3 chốt | P2 | | Đầu file đã ghi là ghi chú nội bộ |
 
-**Ngưỡng Defense 1.1 cần nhắm tới:** 100 % workflow chạy end-to-end trên staging · ≥ 90 % test case đạt · ≥ 50 % test chạy tự động trong CI.
+**Ngưỡng Defense 1.1 cần nhắm tới:** 100 % workflow chạy end-to-end trên staging · ≥ 90 % test case đạt · ≥ 50 % test chạy tự động trong CI · không còn defect Critical/High.
 
 ---
 
 ## 2. Ô `[TEAM]` cần điền
 
+Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design Brief, BM03, phiếu v3) — điền một lần cho tất cả.
+
 ### `docs/reports/report3-srs.md`
 
 | | Dòng | Nội dung |
 |---|---|---|
-| [ ] | 7, 10, 12, 13 | Mã đề tài, GVHD, ngày, phiên bản phiếu |
+| [ ] | 7, 10, 12 | Mã đề tài, GVHD, ngày |
 | [ ] | 94 | REF-9 MS 2273:2012 — có bản đầy đủ hay bỏ |
 | [ ] | 95 | REF-10 Nghị định 13/2020 Điều 25 — đọc nguyên văn, giờ được phát loa, quy định tỉnh |
+| [ ] | 226 | Cấu hình PC cũ làm AI node (CPU, RAM, GPU nếu có) |
 | [ ] | 483 | BR-01 độ ẩm sàn 75 % hay 80 % — hỏi người nuôi yến |
 | [ ] | 494 | BR-07 giờ phát loa nằm trong khung pháp luật cho phép |
 | [ ] | 601 | NFR-08 tỷ lệ tự động, % trong ngưỡng |
 | [ ] | 602 | NFR-09 Precision/Recall/sai số đếm (ban ngày, hồng ngoại) |
 | [ ] | 604 | NFR-11 MAE dự báo 60 phút |
-| [ ] | 605 | NFR-12 chi phí (theo BOM mới) |
-| [ ] | 606 | NFR-13 mốc 10 phút setup thiết bị |
-| [ ] | 607 | NFR-14 mức trùng khớp và kappa |
-| [ ] | 872 | Cách chạy tay bơm/quạt khi bộ điều khiển hỏng (theo cách đấu của nhà yến đang mượn) |
-| [ ] | 887 | Ngày phiên bản 3.0.0 |
+| [ ] | 605 | NFR-13 mốc 10 phút setup thiết bị |
+| [ ] | 606 | NFR-14 mức trùng khớp và kappa |
+| [ ] | 880 | Cách chạy tay bơm/quạt khi bộ điều khiển hỏng (theo cách đấu của nhà yến đang mượn) |
+| [ ] | 895 | Ngày phiên bản 3.0.0 |
 
 ### `docs/reports/report4-sdd.md`
 
@@ -55,11 +59,21 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 |---|---|---|
 | [ ] | 7, 10, 12 | Mã đề tài, GVHD, ngày |
 | [ ] | 144 | Điều khoản sử dụng Open-Meteo |
-| [ ] | 158 | Phiên bản mạch nhóm tự vẽ + BOM mạch |
-| [ ] | 183 | Staging: VPS, URL, cách triển khai |
+| [ ] | 158 | Phiên bản mạch nhóm tự vẽ |
+| [ ] | 183 | Nhà cung cấp VPS và tên miền staging (đề xuất ở `docs/deploy/staging.md`) |
 | [ ] | 192, 193 | Công cụ AI và model nhóm dùng |
-| [ ] | 1317 | Lịch sao lưu MongoDB |
-| [ ] | 1347–1352 | Ngày các phiên bản 1.0.0 → 1.0.5 |
+| [ ] | 1328 | Nơi chép bản sao lưu MongoDB ra ngoài VPS |
+| [ ] | 1362–1368 | Ngày các phiên bản 1.0.0 → 1.0.6 |
+
+### Các hồ sơ mới
+
+| | File | Nội dung |
+|---|---|---|
+| [ ] | `report1-introduction.md` dòng 53, 64 | Sản phẩm có trên thị trường (tên, giá, link); số liệu ngành yến có nguồn |
+| [ ] | `report2-project-management-plan.md` dòng 22, 74–80, 145 | Xác nhận ước lượng; ngày Review 1, Review 2, các iteration, Defense 1.1, Viva; nhóm chat |
+| [ ] | `design-brief.md` dòng 108, 110, 117–119 | Ngưỡng NFR-09, NFR-14; PR tiêu biểu của từng người |
+| [ ] | `project-tracking.md` dòng 14–19 | Ngày các mốc |
+| [ ] | `report5-test.md` (sửa trong `report5/tc.py`) | Số clip của NFR-09; ngưỡng NFR-09, NFR-14 |
 
 ---
 
@@ -68,16 +82,17 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 | | Việc | Ưu tiên | Người | Nguồn |
 |---|---|:---:|---|---|
 | [ ] | Train model 1 lớp `swiftlet` trên clip của nhà (Roboflow → Colab → ONNX); chia train/test **theo ngày**; báo độ chính xác tách ban ngày và hồng ngoại | P0 | | #7, VISION-FR-003, 016, NFR-09 |
-| [ ] | Đo FPS của pipeline trên máy chạy thật (NFR-04 cần 25 fps); không đạt thì sửa NFR-04 theo số đo | P0 | | #7, NFR-04 |
+| [ ] | Đo FPS của pipeline trên **PC cũ đặt ở nhà yến** (NFR-04 cần 25 fps); ghi cấu hình máy; không đạt thì thử ảnh vào nhỏ hơn / 1 ô / GPU, rồi ghi số đo thật | P0 | | #7, NFR-04, `docs/deploy/staging.md` §2.3 |
 | [ ] | Đưa hệ thống vào nhà yến, chạy liên tục **≥ 14 ngày** (đủ cho NFR-08, 11, 14) | P0 | | #38 |
 | [ ] | Người nuôi yến đánh giá từng ngày (hỏi đánh giá trước, rồi mới xem trạng thái của hệ thống) trong đợt chạy | P0 | | EXPERT-FR-012, BR-31 |
 | [ ] | Biên bản phỏng vấn 2–3 người nuôi yến lâu năm: ngưỡng BR-01, NH3/CO2 BR-02, mức lệch BR-28, luật kết hợp BR-29, mưa BR-30 (mẫu ở `docs/evidence-register.md` mục 7.2) | P0 | | #11 |
 | [ ] | `docs/evidence-register.md`: đọc các nguồn ở mục 4.0, chuyển vào bảng 4.1/4.2; điền cột nguồn cho các khẳng định `KD-xx` | P0 | | #11 |
 | [ ] | Ghi kết quả thử firmware trên board thật vào `firmware/README.md` (rút cảm biến, bơm khô, đổi tham số, OTA, RESTART, mất mạng 30 phút, mất điện) | P0 | | NFR-05, 06, 07 |
 | [ ] | Kiểm tra cách đấu công tắc có sẵn của nhà yến (trước hay song song relay) và viết cách chạy tay | P1 | | Report 3 §8.1 |
-| [ ] | Cập nhật `docs/hardware/BOM.md` theo linh kiện thật + hoá đơn | P1 | | #10, NFR-12 |
 | [ ] | Vẽ và in mạch điều khiển: ESP32, RS485, relay, ADS1115 + 2 biến dòng kẹp (SCT-013 / ZMCT103C) | P1 | | #37, THREAT-FR-014, D11 |
-| [ ] | Dựng staging (VPS, TLS, MediaMTX, EMQX 8883) để demo | P0 | | Report 4 §3.4, §11 |
+| [ ] | Dựng staging theo `docs/deploy/staging.md`: VPS 2 vCPU/4 GB + tên miền, Caddy TLS, tls-proxy cho MQTT 8883 và RTSPS 8322, MediaMTX; viết `deploy/docker-compose.staging.yml`, Dockerfile backend/web, Caddyfile; script seed demo đủ dữ liệu cho 22 kịch bản | P0 | | #40, Report 4 §3.4, §11 |
+| [ ] | Cài PC cũ ở nhà yến làm AI node: cắm LAN, `stream.py` chạy như service, BIOS tự bật khi có điện, Tailscale; đóng cổng 18554 trên modem | P0 | | Report 4 D5, `docs/deploy/staging.md` §2.3 |
+| [ ] | Firmware MQTT TLS (môi trường build `cloud`, CA Let's Encrypt) để ESP32 nối được broker staging | P0 | | #39, plan §15.7 |
 | [ ] | In nhãn QR cho các board thật và mã QR cho từng tầng của nhà yến thử nghiệm | P1 | | MF-10 |
 
 ---
@@ -122,18 +137,16 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 
 | | Việc | Ưu tiên | Người | Nguồn |
 |---|---|:---:|---|---|
-| [ ] | `stream.py` gửi MQTT: số đếm phiên mỗi 30 s, số đếm 5 phút, heartbeat (TLS 8883, topic theo House) | P0 | | #7, VISION-FR-006, 017 |
-| [ ] | Đẩy video đã vẽ khung lên MediaMTX | P0 | | VISION-FR-013, 014 |
-| [ ] | Luồng đọc khung mới nhất (không trễ dần), tự kết nối lại camera/broker | P1 | | plan §6.6 |
+| [ ] | Đưa code của PR #89 lên develop (gửi MQTT số đếm phiên, số đếm 5 phút, heartbeat; đẩy video lên MediaMTX; luồng đọc khung mới nhất, tự nối lại) rồi thử lại với EMQX/MediaMTX của staging | P0 | | #7, DF-1, VISION-FR-006, 013, 014, 017 |
 | [ ] | Bỏ khối MQTT Raspberry Pi trong `config.yaml`; khung giờ phiên chỉ là mặc định | P2 | | `ai-pipeline/CLAUDE.md` Known debt |
-| [ ] | Thêm job CI cho `pytest` của pipeline | P2 | | Report 4 §12 |
+| [ ] | Job CI cho `pytest` của pipeline (đã có ở PR #89, đi cùng việc đưa PR #89 lên develop) | P1 | | Report 4 §12 |
 
 ### 4.4. Web (frontend)
 
 | | Việc | Ưu tiên | Người | Nguồn |
 |---|---|:---:|---|---|
-| [ ] | Thêm role `DOMAIN_EXPERT`: `DomainExpertLayout`, nhóm role `FARM_SIDE_ROLES`, `EXPERT_ONLY`, `MENU_ACCESS` | P0 | | #9, FE_Design 12.8 |
-| [ ] | Màn chuyên gia: kiểm chứng cảnh báo (kèm bằng chứng), báo cáo + kết luận, tham số phát hiện, vòng đếm (vẽ trên khung live), duyệt thay đổi, đề xuất hệ số, lịch đếm | P0 | | #9, #21 |
+| [~] | Role `DOMAIN_EXPERT` đã có từ PR #91 (`/expert/*`, `EXPERT_ROLES`, `ExpertPageShell`); còn: bỏ dữ liệu giả dự phòng, đổi sang thư mục/tên theo FE_Design §12 (`domain-expert/`, `DomainExpertLayout`, `apis/`) | P1 | Tuấn | #9, FE_Design 12.8 |
+| [~] | Màn chuyên gia: kiểm chứng cảnh báo, báo cáo + kết luận, tham số phát hiện đã có (PR #91); còn: bằng chứng theo cảnh báo, `DISMISSED`, vòng đếm vẽ trên khung live, duyệt thay đổi, đề xuất hệ số, lịch đếm | P0 | Tuấn | #9, #21 |
 | [ ] | MF-11: trạng thái sức khỏe theo ngày + lý do, màn đánh giá ngày (hỏi trước rồi mới hiện), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | P0 | | #32–35 |
 | [ ] | Live stream có khung + số đếm trực tiếp theo House | P0 | | VISION-FR-012, 013 |
 | [ ] | Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ tự động, lịch sử quyết định của chuyên gia | P1 | | ENV-FR-019, ANALYTICS-FR-011, EXPERT-FR-009 |
@@ -174,13 +187,13 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 ## 6. Thứ tự đề xuất trong 2 tuần
 
 1. **Tuần 1:**
-   - Dữ liệu và phần cứng: train model, dựng staging, đưa hệ thống vào nhà yến, phỏng vấn người nuôi.
+   - Dữ liệu và phần cứng: train model, dựng staging (VPS + PC cũ ở nhà yến), đưa hệ thống vào nhà yến, phỏng vấn người nuôi.
    - Backend P0: quyền theo §2.4, MF-10, `DISMISSED`, FCM, MF-11 (đánh giá theo ngày, đánh giá của người nuôi, báo cáo).
-   - Pipeline gửi MQTT và video.
+   - Đưa PR #89 lên develop (pipeline gửi MQTT và video).
 2. **Tuần 2:**
    - Web và mobile P0: role chuyên gia, màn chuyên gia, MF-10, MF-11, live stream.
    - Backend và firmware P1.
-   - Report 5 và Design Brief; điền `[TEAM]`; gắn tag `review-2`; chạy BM02.
+   - Điền `[TEAM]` trong các hồ sơ đã soạn; gắn tag `review-2`; chạy BM02.
 3. **Song song suốt 2 tuần:** ghi minh chứng (ảnh, log, số đo) vào `docs/evidence-register.md` mục 6.
 
 Việc P1 không kịp thì không xoá khỏi SRS mà ghi vào mục Known Gaps của Design Brief; riêng yêu cầu M của Report 3 phải có kế hoạch làm sau Review 2.
