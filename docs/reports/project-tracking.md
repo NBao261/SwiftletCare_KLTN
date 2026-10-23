@@ -12,7 +12,7 @@ Status values: **Done** (merged into `develop`, tests pass), **In progress** (pa
 | --- | --- | --- | --- |
 | Registration v1 | 22/07/2026 | Done | |
 | Review 1 | `[TEAM: date]` | Done | Registration v2; scope narrowed to the automated system |
-| Iteration 1 | until Review 2 | Done | 89 pull requests merged (#2…#91) |
+| Iteration 1 | until Review 2 | Done | 90 pull requests merged (#2…#93) |
 | Review 2 documents | `[TEAM: date]` | In progress | Registration v3 + BM03, Reports 1–5, Design Brief done as drafts; `[TEAM]` cells, self-review (BM02) and tag `review-2` remain |
 | Iteration 2 | `[TEAM: dates]` | Planned | See Section 3 |
 | Iteration 3 | `[TEAM: dates]` | Planned | |
@@ -20,13 +20,13 @@ Status values: **Done** (merged into `develop`, tests pass), **In progress** (pa
 
 ## 2. Iteration 1 — Work Merged
 
-Merged pull requests on GitHub, grouped by author account (`NBao261/SwiftletCare_KLTN`, #1…#91; #1 and #22 were closed without merge).
+Merged pull requests on GitHub, grouped by author account (`NBao261/SwiftletCare_KLTN`, #1…#93; #1 and #22 were closed without merge; #92, these documents, is open).
 
 | Member (account) | Merged PRs | Main content |
 | --- | --- | --- |
 | Nguyễn Chí Bảo (`NBao261`) | 60 | Backend modules (farm, device, telemetry, alert, analytics, expert, bird counting, stream access); firmware (MQTT contract, speaker, fuzzy control, filters, anomaly, remote restart/OTA); counting pipeline (#85, #88); CI, review rules, SRS/SDD (#59, #50, #77, #84–#88, #90) |
 | Trần Minh Kiệt (`minhkiet1001`) | 7 | Admin backend modules, technician backend, device decommission and restore, admin logic fixes (#16, #21, #23, #35, #40, #62, #80) |
-| Nguyễn Vũ Len (`VuLen203`) | 12 | Web design rules, sidebar, Farm Owner dashboard, analytics, monitor, farms, harvest, tickets, auth screens (#2, #20, #33, #34, #37, #48, #54, #55, #63, #78, #79, #82) |
+| Nguyễn Vũ Len (`VuLen203`) | 13 | Web design rules, sidebar, Farm Owner dashboard, analytics, monitor, farms, harvest, tickets, auth screens; Farm Owner rework with devices, live stream over WHEP, house-level counts, override history and autonomy, marketplace removal (#2, #20, #33, #34, #37, #48, #54, #55, #63, #78, #79, #82, #93) |
 | Nguyễn Thị Yến Nhi (`NhiNhi306`) | 6 | Admin web: users and account requests, design-system components, system pages, settings and logs, overview (#26, #27, #28, #47, #49, #72) |
 | Thái Minh Tuấn (`Tuaans1807`) | 4 | Technician web screens and logic, Domain Expert web screens (#38, #52, #56, #91) |
 
@@ -46,13 +46,13 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-08 | Push and Telegram | Trần Minh Kiệt | In progress | FCM sending; token registration in mobile | 2 |
 | F-09 | Forecast warning | Nguyễn Thị Yến Nhi | Done | — | — |
 | F-10 | Counting, return rate | Nguyễn Chí Bảo | In progress | Bring PR #89 into `develop` (DF-1); trained model; sessions from buckets; incomplete sessions | 2 |
-| F-11 | Annotated live stream | Nguyễn Chí Bảo | In progress | Video push (PR #89); viewing screens in web and mobile | 2 |
+| F-11 | Annotated live stream | Nguyễn Chí Bảo | In progress | Video push (PR #89); web viewing done on the Farm Owner Vision page (PR #93); mobile screen | 2 |
 | F-12 | Abnormal noise | Nguyễn Chí Bảo | Done | — | — |
 | F-13 | Expert verdict | Thái Minh Tuấn | In progress | `DISMISSED`, note required, evidence endpoint, owner fallback | 2 |
 | F-14 | Tuning, ring, schedule | Thái Minh Tuấn | In progress | Seasonal schedule; ring editor screen | 2 |
 | F-15 | Review and suggestions | Thái Minh Tuấn | Planned | Review items, proposals (SM-10, 11) | 2 |
 | F-16 | Conclusions, owner notice | Thái Minh Tuấn | In progress | Notify owners of every expert decision; activity history | 2 |
-| F-17 | Manual override | Nguyễn Vũ Len | Done | Technician only on an assigned ticket (G1) | 2 |
+| F-17 | Manual override | Nguyễn Vũ Len | Done | Technician only on an assigned ticket (G1); override history shown on `/analytics` (PR #93) | 2 |
 | F-18 | Register by QR | Trần Minh Kiệt | In progress | Farm Owner role; label printing; QR scan in mobile | 2 |
 | F-19 | Setup progress, move | Trần Minh Kiệt | In progress | Offline move; progress screen; key re-issue | 2 |
 | F-20 | Daily health status | Nguyễn Thị Yến Nhi | Planned | Daily job, levels per house, weather job | 2 |
@@ -89,3 +89,4 @@ The full list, one row per FR, is `docs/reports/README.md` ("Chỗ lệch", #1�
 | Date | Change |
 | --- | --- |
 | 23/10/2026 | First tracking sheet for Review 2: milestones, Iteration 1 pull requests, feature status, tests, defects |
+| 23/10/2026 | After PR #93 (Farm Owner web rework): pull-request counts, F-11 and F-17 |

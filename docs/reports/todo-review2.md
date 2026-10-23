@@ -1,6 +1,6 @@
 # Việc cần làm trước Review 2 — theo Report 3 (SRS) và Report 4 (SDD)
 
-Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bảng "Chỗ lệch" trong `docs/reports/README.md` (số `#` ở cột Nguồn), các ô `[TEAM]`, và hướng dẫn chuẩn bị Review 2 (PDF). Cập nhật ngày 23/10/2026.
+Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bảng "Chỗ lệch" trong `docs/reports/README.md` (số `#` ở cột Nguồn), các ô `[TEAM]`, và hướng dẫn chuẩn bị Review 2 (PDF). Cập nhật ngày 23/10/2026 (sau PR #93).
 
 **Cách dùng:** đánh `[x]` khi xong, điền người nhận vào cột Người. Việc xong ở code thì sửa luôn dòng tương ứng trong `docs/reports/README.md` ("Chỗ lệch") trong cùng PR. Mức ưu tiên:
 
@@ -148,8 +148,8 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | [~] | Role `DOMAIN_EXPERT` đã có từ PR #91 (`/expert/*`, `EXPERT_ROLES`, `ExpertPageShell`); còn: bỏ dữ liệu giả dự phòng, đổi sang thư mục/tên theo FE_Design §12 (`domain-expert/`, `DomainExpertLayout`, `apis/`) | P1 | Tuấn | #9, FE_Design 12.8 |
 | [~] | Màn chuyên gia: kiểm chứng cảnh báo, báo cáo + kết luận, tham số phát hiện đã có (PR #91); còn: bằng chứng theo cảnh báo, `DISMISSED`, vòng đếm vẽ trên khung live, duyệt thay đổi, đề xuất hệ số, lịch đếm | P0 | Tuấn | #9, #21 |
 | [ ] | MF-11: trạng thái sức khỏe theo ngày + lý do, màn đánh giá ngày (hỏi trước rồi mới hiện), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | P0 | | #32–35 |
-| [ ] | Live stream có khung + số đếm trực tiếp theo House | P0 | | VISION-FR-012, 013 |
-| [ ] | Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ tự động, lịch sử quyết định của chuyên gia | P1 | | ENV-FR-019, ANALYTICS-FR-011, EXPERT-FR-009 |
+| [~] | Live stream có khung + số đếm trực tiếp theo House: web Farm Owner đã có (trang Vision, WHEP, PR #93); còn chờ nút AI đẩy video (PR #89) và màn mobile | P0 | | VISION-FR-012, 013 |
+| [~] | Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ tự động đã có ở `/analytics` (PR #93); còn lịch sử quyết định của chuyên gia (chờ backend EXPERT-FR-009) | P1 | | ENV-FR-019, ANALYTICS-FR-011, EXPERT-FR-009 |
 | [ ] | MF-10 trên web: in nhãn QR ở kho thiết bị (Admin), in mã QR tầng ở màn Zone, quét QR (`html5-qrcode`), tiến trình setup | P1 | | #28 |
 | [ ] | Hiện `DISMISSED` trong danh sách cảnh báo khi backend có | P1 | | FE_Design 2.6.1 |
 
@@ -172,11 +172,11 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 |---|---|---|:---:|---|
 | [ ] | Gỡ `PREDATOR_DETECTED` khỏi `AlertType`, `TicketType` (3 phía cùng PR) | BE/FE/Mobile | P1 | #6 |
 | [ ] | Quyết `ERROR`/`DEGRADED` (thiết bị) và `ARCHIVED` (thu hoạch): bỏ khỏi enum hoặc có luồng gán | BE/FE/Mobile | P2 | #3, #4 |
-| [ ] | Gỡ `sales-staff/`, các trang Marketplace, relay sưởi ("Quá lạnh"), nhãn `BIRD_PANIC`, kênh Zalo/SMS | Web | P0 | #30, FE_Design 13.14 |
+| [~] | Gỡ phần cũ: Marketplace, nhãn `BIRD_PANIC`, relay sưởi trên màn đã xong (PR #93); còn `sales-staff/` + role `SALES_STAFF`, trường `heating` trong `RelayStates`, tùy chọn Zalo/SMS ở `SettingsPage` | Web | P0 | #30, FE_Design 13.14 |
 | [ ] | Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician (`ThresholdsModal`) | Web | P0 | #15 |
 | [ ] | Ẩn nút can thiệp tay/xác nhận cảnh báo với Admin, và với Technician không giữ ticket | Web | P1 | FE_Design 12.0 c |
 | [ ] | `HARVEST_ROLES`: bỏ Admin, thêm chuyên gia chỉ xem | Web | P2 | FE_Design 12.0 c dòng 4 |
-| [ ] | Đổi chữ "PLC" thành "Bộ điều khiển"; bỏ câu "Raspberry Pi" ở `BirdTab`, `CorrelationCard` | Web | P2 | FE_Design 13.14 |
+| [ ] | Đổi chữ "PLC" thành "Bộ điều khiển" (`zone.plc` trong `farmStructure.i18n.ts`, `ScadaModeBanner`); gỡ trang stub `FarmOwnerLiveStreamPage` còn ghi "RPi" (live stream đã ở trang Vision) | Web | P2 | FE_Design 13.14 |
 | [ ] | `/onboarding` → `FarmOwnerDeviceSetupPage` mở cho Farm Owner + Technician | Web | P1 | FE_Design 12.0 c dòng 5b |
 | [ ] | Comment cũ "FARM-FR-003c khu nâng cao / secretKey trong NVS" ở `provisionedDevice.service.ts`, `device.service.ts` | BE | P2 | #27 |
 | [ ] | Nợ frontend còn lại (ErrorBoundary, gộp i18n, lỗi API theo nhóm, nhãn enum chung…) — trả khi sửa màn | Web | P2 | FE_Design 13.14 |

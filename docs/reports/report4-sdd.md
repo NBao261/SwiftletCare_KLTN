@@ -288,7 +288,7 @@ Background jobs:
 
 ### 5.4 Web and Mobile
 
-Both clients follow the same pattern: TanStack Query for server state, Zustand for session state, axios for REST, socket.io-client for real-time events, one route group per role. The web application is a PWA; the mobile application uses Expo Router. Screens for the Domain Expert, the live stream and the counting ring are still to be built (Section 12).
+Both clients follow the same pattern: TanStack Query for server state, Zustand for session state, axios for REST, socket.io-client for real-time events, one route group per role. The web application is a PWA; the mobile application uses Expo Router. The web has Farm Owner, Administrator, Technician and Domain Expert screens (the last since pull request #91); the Farm Owner's Vision page plays the annotated stream over WHEP with a token from the API (pull request #93). The counting-ring editor and the mobile screens are still to be built (Section 12).
 
 Health (MF-11): web and mobile show each house's daily status with its reasons and the rating screen, which asks for the assessor's own status before revealing the system's (BR-31); the web exports a report as PDF with `jspdf` and downloads the daily indicators as CSV from the API.
 
@@ -1344,7 +1344,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Expert loop | Review items and suggestion proposals (SM-10, SM-11); owner notifications of every expert decision; owner fallback without an expert |
 | Configuration sync | Configuration version, `CONFIG_MISMATCH` (SM-12) |
 | Bird counting | No trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10); `stream.py` publishes nothing yet (counts, buckets, heartbeat, video push); throughput risk: two tiles with the COCO model ran at about 7 fps on a laptop against the 25 fps of NFR-04, to be measured on the real AI node; seasonal schedule and incomplete sessions; screens for live stream and counting ring |
-| Clients | Web Domain Expert screens exist (`/expert/*`: dashboard, alert verdicts, tuning, analytics, reports) but still read the SRS v2.1.4 names, fall back to mock data and sit outside the FE_Design folder plan; no Domain Expert screens on mobile; mobile push registration |
+| Clients | Web Domain Expert screens exist (`/expert/*`: dashboard, alert verdicts, tuning, analytics, reports) but still read the SRS v2.1.4 names, fall back to mock data and sit outside the FE_Design folder plan; no counting-ring editor; leftovers of the old scope (`SALES_STAFF`, a `heating` relay field, Zalo/SMS options); mobile is a scaffold without push registration or QR setup |
 | Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes |
 | Device setup (MF-10) | Register, move, remove and replace routes allow only Technician and Administrator; moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
 | CI | No job for the AI pipeline tests on `develop` (added by pull request #89, not merged into `develop` yet) |
@@ -1359,7 +1359,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.0.6 | `[TEAM]` | Staging declared: one VPS with Caddy TLS for backend, web, broker and video server, the team's spare PC at the house as AI node (D5, Sections 3.4 and 11); hardware cost no longer tracked (NFR-12 removed in Report 3); Domain Expert web screens noted in Section 12 |
+| 1.0.6 | `[TEAM]` | Staging declared: one VPS with Caddy TLS for backend, web, broker and video server, the team's spare PC at the house as AI node (D5, Sections 3.4 and 11); hardware cost no longer tracked (NFR-12 removed in Report 3); Domain Expert web screens (PR #91) and the Farm Owner rework with the WHEP live stream (PR #93) noted in Sections 5.4 and 12 |
 | 1.0.5 | `[TEAM]` | Bypass switch removed (borrowed test house cannot be rewired): architecture, controller board and AD-09 updated; the house's own switches are shown outside the system |
 | 1.0.4 | `[TEAM]` | Daily health assessment and periodic reports (MF-11): data flows DF-10, DF-11, decisions D10 (agreement rules), D11 (current transformers), D12 (weather API), D13 (report files), planned entities `HOUSE_HEALTH_DAY` and `WEATHER_OBSERVATION`, SM-17, AD-14; Open-Meteo and the team's controller board declared |
 | 1.0.3 | `[TEAM]` | Device setup by the Farm Owner (MF-10): data flow DF-9, decision D9 (label and floor QR codes), QR libraries declared, state machine SM-16 for the device label, activity diagram AD-10 rewritten for MF-10, security of the activation key, setup gaps |

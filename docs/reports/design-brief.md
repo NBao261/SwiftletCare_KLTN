@@ -65,7 +65,7 @@ Swiftlet houses are closed buildings that owners visit every few days, so humidi
 | G4 | Pipeline publishes nothing; sessions from buckets | ai-pipeline, backend | MQTT + RTSPS push | Nguyễn Chí Bảo | It. 2 |
 | G5 | Daily status, ratings, house reports, PDF/CSV, weather | backend, web | SDD 6.4, AD-14 | Nguyễn Thị Yến Nhi | It. 2–3 |
 | G6 | QR setup, labels, progress; FCM push; staging, demo seed | mobile, backend, deploy | `expo-camera`; Firebase; staging.md | Trần Minh Kiệt | It. 2 |
-| G7 | Web v1.24.0 leftovers; expert screens on mock fallback | frontend | Remove; wire to API | Nguyễn Vũ Len | It. 2 |
+| G7 | Web leftovers (`SALES_STAFF`, Technician threshold editing); expert screens on mock fallback | frontend | Remove; wire to API | Nguyễn Vũ Len | It. 2 |
 
 Full list: `docs/reports/README.md` and SDD 12. High self-review findings (BM02) marked Kept or Planned are added after the prompt is run.
 
