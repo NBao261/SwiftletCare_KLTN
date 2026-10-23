@@ -55,5 +55,28 @@ while (($left = [int]($endTime - (Get-Date)).TotalSeconds) -gt 5) {
     }
     if ((Get-Date) -lt $endTime.AddSeconds(-5)) { Start-Sleep -Seconds 10 }   # mất kết nối: chờ rồi quay file mới
 }
+# Luồng camera đứng hình > 10 giây (mạng chập chờn) làm ffmpeg dừng sớm và phiên bị chia nhiều đoạn
+# (23/10: 3 đoạn). Hết phiên thì gộp lại thành 1 file; chỉ xóa đoạn lẻ khi tổng thời lượng khớp.
+$parts = @(Get-ChildItem $OutDir -Filter "${day}_${Label}_*.mp4" | Where-Object { $_.Name -notlike '*.part.mp4' } | Sort-Object Name)
+if ($parts.Count -gt 1) {
+    $list = Join-Path $OutDir "concat_${day}_${Label}.txt"
+    $merged = Join-Path $OutDir "${day}_${Label}_merged.mp4"
+    $parts | ForEach-Object { "file '" + ($_.FullName -replace '\\', '/') + "'" } | Set-Content -Encoding ascii $list
+    # -auto_convert 0: đoạn bị ngắt đột ngột có gói hình cuối cắt dở; bộ lọc h264_mp4toannexb mà concat tự chèn
+    # gặp gói đó thì dừng cả việc gộp (thử 23/10: ra 13 s thay vì 23 s). Không cần bộ lọc này khi gộp mp4 sang mp4.
+    & ffmpeg -nostdin -loglevel error -f concat -safe 0 -auto_convert 0 -i $list -c copy -movflags +faststart $merged
+    $dur = { param($f) [double](& ffprobe -v error -show_entries format=duration -of csv=p=0 $f) }
+    $sum = ($parts | ForEach-Object { & $dur $_.FullName } | Measure-Object -Sum).Sum
+    $got = if (Test-Path $merged) { & $dur $merged } else { 0 }
+    if ($LASTEXITCODE -eq 0 -and [math]::Abs($got - $sum) -lt 2) {
+        $parts | Remove-Item
+        Move-Item $merged (Join-Path $OutDir "${day}_${Label}_01.mp4")
+        Log ("gộp {0} đoạn thành {1}_{2}_01.mp4 ({3:N0} s)" -f $parts.Count, $day, $Label, $got)
+    } else {
+        Remove-Item $merged -ErrorAction SilentlyContinue
+        Log ("gộp {0} đoạn lỗi (thời lượng {1:N0} s, mong đợi {2:N0} s), giữ các đoạn lẻ" -f $parts.Count, $got, $sum)
+    }
+    Remove-Item $list -ErrorAction SilentlyContinue
+}
 [Win32.Power]::SetThreadExecutionState([uint32]2147483648) | Out-Null   # trả máy về chế độ ngủ bình thường
 Log "xong"
