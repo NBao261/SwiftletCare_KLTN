@@ -1,151 +1,190 @@
-import { useMemo } from 'react'
-import { Line } from 'react-chartjs-2'
-import type { Chart as ChartJSInstance, ChartOptions, Plugin } from 'chart.js'
-import { Radio } from 'lucide-react'
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme'
-import { useEnvSummary } from '@/hooks/farm-owner/useAnalytics'
-import { Badge, Card } from '@/components/ui'
-import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { formatSensor } from '@/lib/helpers'
-import { labelForRange, xAxisTicks } from '@/components/features/farm-owner/analytics/analytics.constants'
-import RangeChips from '@/components/features/farm-owner/analytics/RangeChips'
-import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api'
-import type { Thresholds } from '@/types'
+import { useMemo, useState } from 'react';
+import { Line } from 'react-chartjs-2';
+import type { Chart as ChartInstance, ChartOptions, Plugin } from 'chart.js';
 
-/** Tô nền dải "lý tưởng" [min,max] trên trục Nhiệt độ (trái) — không cần thêm chartjs-plugin-annotation. */
-function idealZonePlugin(min: number, max: number): Plugin<'line'> {
+import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
+import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
+import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
+import {
+  ANALYTICS_RANGES,
+  CHART_FONT,
+  CHART_LEGEND,
+  THRESHOLD_BAND_FILL,
+  X_AXIS_TICKS,
+  axisTitle,
+  labelForRange,
+} from '@/components/features/farm-owner/analytics/analytics.constants';
+import { analyticsDict } from '@/constants/analytics.i18n';
+import { useTranslation } from '@/hooks/common/useTranslation';
+import { useEnvSummary } from '@/hooks/farm-owner/useAnalytics';
+import { useTelemetry } from '@/hooks/farm-owner/useTelemetry';
+import { cn } from '@/lib/cn';
+import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
+import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api';
+import type { Thresholds, ZoneThresholdHistoryEntry } from '@/types';
+import { thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
+import { NO_VALUE } from '@/constants/display';
+
+// Tô nền dải ngưỡng nhiệt độ trên trục trái, kẹp trong vùng vẽ để không đè lên chú thích
+function thresholdBandPlugin(min: number, max: number): Plugin<'line'> {
   return {
-    id: 'idealZone',
-    beforeDatasetsDraw(chart: ChartJSInstance<'line'>) {
-      const { ctx, chartArea, scales } = chart
-      const yScale = scales.y
-      if (!chartArea || !yScale) return
-      // getPixelForValue không tự cắt theo chartArea — khi ngưỡng nằm ngoài dải trục Y hiện tại
-      // (VD nhiệt độ thực 20-23°C nhưng ngưỡng 26-31°C), yTop/yBottom lọt ra ngoài chartArea.top
-      // và mảng màu tô đè lên legend/tiêu đề phía trên. Kẹp lại trước khi vẽ.
-      const yTop = Math.max(chartArea.top, Math.min(yScale.getPixelForValue(max), chartArea.bottom))
-      const yBottom = Math.min(chartArea.bottom, Math.max(yScale.getPixelForValue(min), chartArea.top))
-      if (yBottom <= yTop) return
-      ctx.save()
-      ctx.fillStyle = 'rgba(181,211,44,0.10)'
-      ctx.fillRect(chartArea.left, yTop, chartArea.right - chartArea.left, yBottom - yTop)
-      ctx.restore()
+    id: 'thresholdBand',
+    beforeDatasetsDraw(chart: ChartInstance<'line'>) {
+      const { ctx, chartArea, scales } = chart;
+      const yScale = scales.y;
+      if (!chartArea || !yScale) return;
+      const top = Math.max(chartArea.top, Math.min(yScale.getPixelForValue(max), chartArea.bottom));
+      const bottom = Math.min(chartArea.bottom, Math.max(yScale.getPixelForValue(min), chartArea.top));
+      if (bottom <= top) return;
+      ctx.save();
+      ctx.fillStyle = THRESHOLD_BAND_FILL;
+      ctx.fillRect(chartArea.left, top, chartArea.right - chartArea.left, bottom - top);
+      ctx.restore();
     },
-  }
+  };
 }
 
-/**
- * ANALYTICS-FR-001 — biểu đồ kép Nhiệt độ (trục trái) × Độ ẩm (trục phải) theo
- * khoảng thời gian, dữ liệu thật từ `/analytics/env/summary` (không fake — thay
- * thế EnvTab cũ, gộp cả 2 trục vào 1 card duy nhất). Badge NH3/CO2 + "LIVE" lấy
- * từ telemetry realtime qua socket (useTelemetry ở trang cha), không phải REST
- * bucket — nên tách props riêng khỏi phần lịch sử.
- */
-export default function EnvVariationCard({
-  zoneId, range, setRange, thresholds,
-  live,
-}: {
-  zoneId: string
-  range: AnalyticsRange
-  setRange: (r: AnalyticsRange) => void
-  thresholds?: Thresholds
-  live: { isLive: boolean; nh3_ppm?: number; co2_ppm?: number }
-}) {
-  const { data, isLoading } = useEnvSummary(zoneId, range)
+interface GasChipProps {
+  label: string;
+  isOverThreshold: boolean;
+}
 
-  const chartData = useMemo(() => ({
-    labels: data?.series.map(p => labelForRange(p.timestamp, range)) ?? [],
-    datasets: [
-      {
-        label: 'Nhiệt độ (°C)',
-        data: data?.series.map(p => p.temperature ?? null) ?? [],
-        borderColor: CHART_COLORS.climateOrange,
-        backgroundColor: 'rgba(237,143,80,0.08)',
-        yAxisID: 'y',
-        fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true,
-      },
-      {
-        label: 'Độ ẩm (%)',
-        data: data?.series.map(p => p.humidity ?? null) ?? [],
-        borderColor: CHART_COLORS.accentGreen,
-        backgroundColor: 'rgba(181,211,44,0.08)',
-        yAxisID: 'y1',
-        fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true,
-      },
-    ],
-  }), [data, range])
+// Chip số đo khí: xám khi an toàn, cam khi vượt ngưỡng cảnh báo
+function GasChip({ label, isOverThreshold }: GasChipProps): JSX.Element {
+  return (
+    <span
+      className={cn(
+        'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium',
+        isOverThreshold ? 'border-climateOrange/40 bg-climateOrange/[0.06] text-climateOrange' : 'border-warmGray/15 text-charcoal',
+      )}
+    >
+      <span className={cn('h-1.5 w-1.5 rounded-full', isOverThreshold ? 'bg-climateOrange' : 'bg-warmGray/40')} />
+      {label}
+    </span>
+  );
+}
+
+interface EnvVariationCardProps {
+  zoneId: string;
+  thresholds?: Thresholds;
+  // Lịch sử ngưỡng của Zone (backend trả kèm Zone) để ghi ai đặt ngưỡng đang áp
+  thresholdHistory?: ZoneThresholdHistoryEntry[];
+}
+
+// Vai trò người đặt ngưỡng có nhãn riêng
+const SETTER_ROLES = new Set(['FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN', 'ADMIN']);
+type SetterRole = 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'TECHNICIAN' | 'ADMIN';
+
+// Biến thiên nhiệt độ, độ ẩm theo khoảng thời gian (ANALYTICS-FR-001) kèm số đo khí trực tiếp
+export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory }: EnvVariationCardProps): JSX.Element {
+  const { t, exact, ago, date } = useTranslation(analyticsDict);
+  const [range, setRange] = useState<AnalyticsRange>('24h');
+  const { data, isLoading, isError, refetch } = useEnvSummary(zoneId, range);
+  const telemetry = useTelemetry(zoneId);
+
+  const rangeOptions = ANALYTICS_RANGES.map(value => ({ value, label: t(`range.${value}`) }));
+
+  const chartData = useMemo(() => {
+    const series = data?.series ?? [];
+    const line = { fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
+    return {
+      labels: series.map(point => labelForRange(point.timestamp, range)),
+      datasets: [
+        { label: t('chart.temperature'), data: series.map(point => point.temperature ?? null), borderColor: CHART_COLORS.charcoal, yAxisID: 'y', ...line },
+        { label: t('chart.humidity'), data: series.map(point => point.humidity ?? null), borderColor: CHART_COLORS.accentGreen, yAxisID: 'y1', ...line },
+      ],
+    };
+  }, [data, range, t]);
 
   const chartOptions = useMemo(() => ({
     ...baseChartOptions,
-    plugins: { ...baseChartOptions.plugins, legend: { display: true, position: 'top' as const, labels: { boxWidth: 10, font: { family: 'Plus Jakarta Sans', size: 11 } } } },
+    plugins: { ...baseChartOptions.plugins, legend: CHART_LEGEND },
     scales: {
-      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...xAxisTicks } },
-      y: {
-        ...baseChartOptions.scales.y,
-        title: { display: true, text: '°C', color: CHART_COLORS.warmGray, font: { family: 'Plus Jakarta Sans', size: 11 } },
-      },
+      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
+      y: { ...baseChartOptions.scales.y, title: axisTitle('°C') },
       y1: {
         position: 'right' as const,
         grid: { display: false },
-        ticks: { color: CHART_COLORS.warmGray, font: { family: 'Plus Jakarta Sans', size: 11 } },
-        title: { display: true, text: '%', color: CHART_COLORS.warmGray, font: { family: 'Plus Jakarta Sans', size: 11 } },
+        ticks: { color: CHART_COLORS.warmGray, font: CHART_FONT },
+        title: axisTitle('%'),
       },
     },
-  } as ChartOptions<'line'>), [])
+  } as ChartOptions<'line'>), []);
 
   const plugins = useMemo(
-    () => (thresholds ? [idealZonePlugin(thresholds.temp_min, thresholds.temp_max)] : []),
+    () => (thresholds ? [thresholdBandPlugin(thresholds.temp_min, thresholds.temp_max)] : []),
     [thresholds],
-  )
+  );
+
+  const nh3 = telemetry.data.nh3_ppm;
+  const co2 = telemetry.data.co2_ppm;
+
+  // Ai đặt ngưỡng đang áp — cùng cách đọc với trang Tổng quan (threshold_history backend trả về)
+  const source = thresholdSource(thresholdHistory);
+  let sourceText = t('env.sourceDefault');
+  if (!source.isDefault) {
+    const setterKey = source.role && SETTER_ROLES.has(source.role) ? `env.setter.${source.role as SetterRole}` as const : 'env.setter.other';
+    sourceText = t('env.sourceManual', { setter: t(setterKey), date: source.changedAt ? date(source.changedAt) : NO_VALUE });
+  }
+
+  // Biểu đồ theo trạng thái tải, lỗi, rỗng
+  let chart = <LoadingSkeleton className="h-72 w-full" />;
+  if (!isLoading && isError) {
+    chart = (
+      <EmptyState
+        title={t('common.loadError')}
+        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
+      />
+    );
+  }
+  if (!isLoading && !isError && (!data || data.series.length === 0)) {
+    chart = <ChartEmptyFrame message={t('env.empty')} className="h-72" />;
+  }
+  if (!isLoading && !isError && data && data.series.length > 0) {
+    chart = (
+      <div className="h-72">
+        {/* react-chartjs-2 chỉ đọc plugins lúc tạo chart nên remount khi ngưỡng đổi */}
+        <Line key={`${thresholds?.temp_min ?? 'none'}-${thresholds?.temp_max ?? 'none'}`} data={chartData} options={chartOptions} plugins={plugins} />
+      </div>
+    );
+  }
 
   return (
-    <Card size="lg" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge tone={live.isLive ? 'positive' : 'neutral'}>
-              <Radio width={12} height={12} />
-              {live.isLive ? 'LIVE' : 'Chưa realtime'}
-            </Badge>
-            <h2 className="text-h2 text-charcoal">Biến thiên vi khí hậu theo thời gian</h2>
-          </div>
-          <p className="mt-1 text-sm text-warmGray">
-            Nhiệt độ (trục trái) và Độ ẩm (trục phải) — dữ liệu cảm biến RS485 qua MQTT, gộp theo khoảng thời gian đã chọn
-          </p>
-        </div>
-        <RangeChips range={range} onChange={setRange} />
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <span className="flex items-center gap-1.5 rounded-full border border-warmGray/15 px-3 py-1 text-xs font-medium text-charcoal">
-          <span className="h-1.5 w-1.5 rounded-full bg-alertRed" />
-          Khí độc NH3: {formatSensor(live.nh3_ppm, 'ppm', 2)}
-          {thresholds && <span className="text-warmGray">(Cảnh giác &gt; {thresholds.nh3_max} ppm)</span>}
-        </span>
-        <span className="flex items-center gap-1.5 rounded-full border border-warmGray/15 px-3 py-1 text-xs font-medium text-charcoal">
-          <span className="h-1.5 w-1.5 rounded-full bg-graphite" />
-          Khí CO2: {formatSensor(live.co2_ppm, 'ppm', 0)}
-          {thresholds && <span className="text-warmGray">(An toàn &lt; {thresholds.co2_max} ppm)</span>}
-        </span>
+    <FarmFrame
+      title={t('env.title')}
+      description={t('env.subtitle')}
+      action={<SegmentedChips options={rangeOptions} value={range} onChange={setRange} ariaLabel={t('range.label')} />}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Mốc số đo khí gần nhất; chưa có số đo thì không hiện */}
+        {telemetry.data.timestamp && (
+          <span className="text-small font-semibold text-warmGray">{t('env.lastReading', { ago: ago(telemetry.data.timestamp) })}</span>
+        )}
+        {thresholds && nh3 !== undefined && (
+          <GasChip
+            label={t('env.gas', { gas: 'NH3', value: exact(nh3, 1), max: thresholds.nh3_max })}
+            isOverThreshold={nh3 > thresholds.nh3_max}
+          />
+        )}
+        {thresholds && co2 !== undefined && (
+          <GasChip
+            label={t('env.gas', { gas: 'CO2', value: exact(co2, 0), max: thresholds.co2_max })}
+            isOverThreshold={co2 > thresholds.co2_max}
+          />
+        )}
         {thresholds && (
-          <span className="rounded-full bg-accent-100 px-3 py-1 text-xs font-semibold text-accent-800">
-            Vùng lý tưởng: {thresholds.temp_min}–{thresholds.temp_max}°C · {thresholds.humidity_min}–{thresholds.humidity_max}% RH
+          <span className="rounded-full border border-warmGray/15 bg-warmGray/10 px-3 py-1 text-xs font-medium text-graphite">
+            {t('env.range', {
+              temperatureMin: thresholds.temp_min,
+              temperatureMax: thresholds.temp_max,
+              humidityMin: thresholds.humidity_min,
+              humidityMax: thresholds.humidity_max,
+            })}
           </span>
         )}
       </div>
-
-      {isLoading ? (
-        <LoadingSkeleton className="h-72 w-full" />
-      ) : data && data.series.length > 0 ? (
-        <div className="h-72">
-          {/* react-chartjs-2 5.3.1 chỉ đọc prop `plugins` một lần lúc `new Chart(...)` (dist/index.js:79-90)
-              — nếu thresholds về sau khi chart đã mount (hoặc đổi ở nơi khác), dải "vùng lý tưởng" sẽ
-              không bao giờ cập nhật. Ép remount bằng key đổi theo min/max để plugin luôn khớp ngưỡng mới. */}
-          <Line key={`${thresholds?.temp_min ?? '_'}-${thresholds?.temp_max ?? '_'}`} data={chartData} options={chartOptions} plugins={plugins} />
-        </div>
-      ) : (
-        <div className="flex h-72 items-center justify-center text-sm text-warmGray">Chưa có dữ liệu trong khoảng thời gian này</div>
-      )}
-    </Card>
-  )
+      {thresholds && <p className="text-xs text-warmGray">{sourceText}</p>}
+      {chart}
+    </FarmFrame>
+  );
 }

@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '@/apis/farm-owner/analytics.api'
+import { deviceApi } from '@/apis/shared/devices.api'
+import { mergeBirdCountRecords } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { mergeBirdCountBuckets, sumTodayBirdCounts } from '@/components/features/farm-owner/analytics/analyticsMetrics'
 import type { AnalyticsRange, EnvCompareZone } from '@/apis/farm-owner/analytics.api'
 
 /** ANALYTICS-FR-010 — gợi ý hệ số mờ; chỉ chạy khi người dùng bấm (mô phỏng 120 bộ hệ số, không cần tự động) */
@@ -29,6 +32,35 @@ export function useControlPerformance(zoneId: string | undefined, range: Analyti
     queryKey: ['analytics', 'control-performance', zoneId, range],
     queryFn: () => analyticsApi.controlPerformance(zoneId!, range).then(r => r.data.data),
     enabled: !!zoneId,
+  })
+}
+
+// ANALYTICS-FR-011 — tỷ lệ thời gian tự động của Zone
+export function useAutonomy(zoneId: string | undefined, range: AnalyticsRange) {
+  return useQuery({
+    queryKey: ['analytics', 'autonomy', zoneId, range],
+    queryFn: () => analyticsApi.autonomy(zoneId!, range).then(r => r.data.data),
+    enabled: !!zoneId,
+  })
+}
+
+// ENV-FR-019 — các lần can thiệp tay gần nhất của mọi thiết bị trong Zone, gộp và xếp mới nhất trước
+export function useZoneRelayOverrides(nodeIds: string[], limit: number) {
+  return useQueries({
+    queries: nodeIds.map(nodeId => ({
+      queryKey: ['sensor-nodes', nodeId, 'relay-overrides', limit],
+      queryFn: () => deviceApi.listRelayOverrides(nodeId, { limit }).then(r => r.data.data),
+    })),
+    combine: results => {
+      const logs = results.flatMap(result => result.data ?? [])
+      logs.sort((first, second) => second.started_at.localeCompare(first.started_at))
+      return {
+        isLoading: results.some(result => result.isLoading),
+        isError: results.some(result => result.isError),
+        refetch: () => results.forEach(result => void result.refetch()),
+        logs: logs.slice(0, limit),
+      }
+    },
   })
 }
 
@@ -85,12 +117,60 @@ export function useEnvCompareBatched(zoneIds: string[], range: AnalyticsRange) {
   })
 }
 
-/** VISION-FR-009/010/011, ANALYTICS-FR-002 — xu hướng đàn chim (chờ dữ liệu VISION) */
-export function useBirdCountTrends(zoneId: string | undefined, days: number) {
-  return useQuery({
-    queryKey: ['analytics', 'bird-count-trends', zoneId, days],
-    queryFn: () => analyticsApi.birdCountTrends(zoneId!, days).then(r => r.data.data),
-    enabled: !!zoneId,
+// ANALYTICS-FR-002, VISION-FR-011 — xu hướng đàn chim của 1 hoặc nhiều nhà yến; nhiều nhà thì cộng số đếm theo ngày
+export function useHousesBirdCountTrends(houseIds: string[], days: number) {
+  return useQueries({
+    queries: houseIds.map(houseId => ({
+      queryKey: ['analytics', 'bird-count-trends', 'house', houseId, days],
+      queryFn: () => analyticsApi.houseBirdCountTrends(houseId, days).then(r => r.data.data),
+    })),
+    combine: results => {
+      const lists = results.flatMap(result => (result.data ? [result.data] : []))
+      // 1 nhà: dùng nguyên số backend (kể cả cờ giảm đáng kể theo mức chuyên gia đặt cho nhà đó)
+      const single = houseIds.length === 1 ? lists[0] : undefined
+      return {
+        isLoading: results.some(result => result.isLoading),
+        isError: results.some(result => result.isError),
+        refetch: () => results.forEach(result => void result.refetch()),
+        records: single ? single.records : mergeBirdCountRecords(lists.map(list => list.records)),
+        single,
+      }
+    },
+  })
+}
+
+// VISION-FR-017 — số chim ra, vào mỗi 5 phút trong 24 giờ gần nhất, cộng các nhà yến
+export function useHousesBirdCountBuckets(houseIds: string[]) {
+  return useQueries({
+    queries: houseIds.map(houseId => ({
+      queryKey: ['analytics', 'bird-count-buckets', houseId],
+      queryFn: () => analyticsApi.houseBirdCountBuckets(houseId).then(r => r.data.data),
+    })),
+    combine: results => ({
+      isLoading: results.some(result => result.isLoading),
+      isError: results.some(result => result.isError),
+      refetch: () => results.forEach(result => void result.refetch()),
+      buckets: mergeBirdCountBuckets(results.map(result => result.data?.buckets ?? [])),
+    }),
+  })
+}
+
+// VISION-FR-012 — số đếm hôm nay, cộng các nhà yến
+export function useHousesBirdCountCurrent(houseIds: string[]) {
+  return useQueries({
+    queries: houseIds.map(houseId => ({
+      queryKey: ['analytics', 'bird-count-current', houseId],
+      queryFn: () => analyticsApi.houseBirdCountCurrent(houseId).then(r => r.data.data),
+    })),
+    combine: results => {
+      const list = results.flatMap(result => (result.data ? [result.data] : []))
+      return {
+        isLoading: results.some(result => result.isLoading),
+        isError: results.some(result => result.isError),
+        refetch: () => results.forEach(result => void result.refetch()),
+        today: list.length > 0 ? sumTodayBirdCounts(list) : undefined,
+      }
+    },
   })
 }
 

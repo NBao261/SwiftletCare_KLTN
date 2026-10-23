@@ -1,123 +1,160 @@
-import { useMemo } from 'react'
-import { Line } from 'react-chartjs-2'
-import type { ChartOptions } from 'chart.js'
-import { format, parseISO } from 'date-fns'
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme'
-import { useForecast } from '@/hooks/farm-owner/useAnalytics'
-import { Card } from '@/components/ui'
-import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { xAxisTicks } from '@/components/features/farm-owner/analytics/analytics.constants'
-import StatChip from '@/components/features/farm-owner/analytics/StatChip'
-import type { MetricForecast } from '@/apis/farm-owner/analytics.api'
+import { useMemo } from 'react';
+import { Line } from 'react-chartjs-2';
+import type { ChartOptions } from 'chart.js';
+import { format, parseISO } from 'date-fns';
+import { DropIcon, ThermometerIcon, WarningIcon } from '@phosphor-icons/react';
 
-const LABEL = { humidity: 'Độ ẩm', temperature: 'Nhiệt độ' } as const
-const UNIT = { humidity: '%', temperature: '°C' } as const
-const mae = (v: number | null | undefined, unit: string) => (v === null || v === undefined ? '--' : `±${Math.round(v * 10) / 10}${unit}`)
+import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
+import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
+import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import {
+  CHART_FONT,
+  CHART_LEGEND,
+  X_AXIS_TICKS,
+  axisTitle,
+} from '@/components/features/farm-owner/analytics/analytics.constants';
+import { analyticsDict } from '@/constants/analytics.i18n';
+import { NO_VALUE } from '@/constants/display';
+import { useTranslation } from '@/hooks/common/useTranslation';
+import { useForecast } from '@/hooks/farm-owner/useAnalytics';
+import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
+import type { MetricForecast } from '@/apis/farm-owner/analytics.api';
 
-/** Tách 1 chuỗi thành 2 dataset: lịch sử (liền) và dự báo (nét đứt, nối từ điểm thật cuối cùng) */
-function split(fc: MetricForecast | null, labels: string[]) {
-  const byTime = new Map<string, number>()
-  fc?.history.forEach(p => byTime.set(p.timestamp, p.value))
-  const forecastByTime = new Map<string, number>()
-  fc?.forecast.forEach(p => forecastByTime.set(p.timestamp, p.value))
-  const lastHistory = fc?.history[fc.history.length - 1]
-  if (lastHistory) forecastByTime.set(lastHistory.timestamp, lastHistory.value)
+// Đơn vị của 2 chỉ số được dự báo
+const FORECAST_UNIT = { humidity: '%', temperature: '°C' } as const;
+
+// Tách 1 chỉ số thành 2 đường trên cùng trục thời gian: lịch sử (liền) và dự báo (đứt, nối từ điểm thật cuối)
+function splitForecast(forecast: MetricForecast | null, labels: string[]): { history: Array<number | null>; forecast: Array<number | null> } {
+  const historyByTime = new Map<string, number>();
+  const forecastByTime = new Map<string, number>();
+  for (const point of forecast?.history ?? []) historyByTime.set(point.timestamp, point.value);
+  for (const point of forecast?.forecast ?? []) forecastByTime.set(point.timestamp, point.value);
+  const lastHistory = forecast?.history[forecast.history.length - 1];
+  if (lastHistory) forecastByTime.set(lastHistory.timestamp, lastHistory.value);
   return {
-    history: labels.map(t => byTime.get(t) ?? null),
-    forecast: labels.map(t => forecastByTime.get(t) ?? null),
-  }
+    history: labels.map(time => historyByTime.get(time) ?? null),
+    forecast: labels.map(time => forecastByTime.get(time) ?? null),
+  };
 }
 
-/**
- * ANALYTICS-FR-009 — dự báo độ ẩm/nhiệt độ 60 phút tới (Holt trend tắt dần trên
- * dữ liệu 6 giờ, gom 5 phút). Sai số là MAE đánh giá lùi trên chính dữ liệu đã
- * qua — hiện kèm để người xem biết dự báo tin được tới đâu. Cảnh báo sớm
- * FORECAST_BREACH (mức LOW) do job backend sinh, card này chỉ hiển thị.
- */
-export default function ForecastCard({ zoneId }: { zoneId: string }) {
-  const { data, isLoading } = useForecast(zoneId)
+interface ForecastCardProps {
+  zoneId: string;
+}
+
+// Dự báo độ ẩm, nhiệt độ 60 phút tới kèm sai số đánh giá lùi (ANALYTICS-FR-009)
+export default function ForecastCard({ zoneId }: ForecastCardProps): JSX.Element {
+  const { t, exact } = useTranslation(analyticsDict);
+  const { data, isLoading, isError, refetch } = useForecast(zoneId);
+
+  // Sai số dạng ±x kèm đơn vị
+  const errorText = (value: number | null | undefined, unit: string): string => {
+    if (value === null || value === undefined) return NO_VALUE;
+    return `±${exact(value, 1)}${unit}`;
+  };
 
   const labels = useMemo(() => {
-    const times = new Set<string>()
-    for (const fc of [data?.humidity, data?.temperature]) {
-      fc?.history.forEach(p => times.add(p.timestamp))
-      fc?.forecast.forEach(p => times.add(p.timestamp))
+    const times = new Set<string>();
+    for (const forecast of [data?.humidity, data?.temperature]) {
+      for (const point of forecast?.history ?? []) times.add(point.timestamp);
+      for (const point of forecast?.forecast ?? []) times.add(point.timestamp);
     }
-    return [...times].sort()
-  }, [data])
+    return [...times].sort();
+  }, [data]);
 
   const chartData = useMemo(() => {
-    const h = split(data?.humidity ?? null, labels)
-    const t = split(data?.temperature ?? null, labels)
-    const line = { tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true }
+    const humidity = splitForecast(data?.humidity ?? null, labels);
+    const temperature = splitForecast(data?.temperature ?? null, labels);
+    const line = { tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
     return {
-      labels: labels.map(ts => format(parseISO(ts), 'HH:mm')),
+      labels: labels.map(time => format(parseISO(time), 'HH:mm')),
       datasets: [
-        { label: 'Độ ẩm (%)', data: h.history, borderColor: CHART_COLORS.accentGreen, yAxisID: 'y', ...line },
-        { label: 'Độ ẩm dự báo', data: h.forecast, borderColor: CHART_COLORS.accentGreen, borderDash: [6, 4], yAxisID: 'y', ...line },
-        { label: 'Nhiệt độ (°C)', data: t.history, borderColor: CHART_COLORS.climateOrange, yAxisID: 'y1', ...line },
-        { label: 'Nhiệt độ dự báo', data: t.forecast, borderColor: CHART_COLORS.climateOrange, borderDash: [6, 4], yAxisID: 'y1', ...line },
+        { label: t('chart.humidity'), data: humidity.history, borderColor: CHART_COLORS.accentGreen, yAxisID: 'y', ...line },
+        { label: t('chart.humidityForecast'), data: humidity.forecast, borderColor: CHART_COLORS.accentGreen, borderDash: [6, 4], yAxisID: 'y', ...line },
+        { label: t('chart.temperature'), data: temperature.history, borderColor: CHART_COLORS.charcoal, yAxisID: 'y1', ...line },
+        { label: t('chart.temperatureForecast'), data: temperature.forecast, borderColor: CHART_COLORS.charcoal, borderDash: [6, 4], yAxisID: 'y1', ...line },
       ],
-    }
-  }, [data, labels])
+    };
+  }, [data, labels, t]);
 
-  const chartOptions = useMemo(() => {
-    const axisFont = { family: 'Plus Jakarta Sans', size: 11 }
-    return {
-      ...baseChartOptions,
-      plugins: { ...baseChartOptions.plugins, legend: { display: true, position: 'top' as const, labels: { boxWidth: 10, font: axisFont } } },
-      scales: {
-        x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...xAxisTicks } },
-        y: { ...baseChartOptions.scales.y, title: { display: true, text: '%RH', color: CHART_COLORS.warmGray, font: axisFont } },
-        y1: {
-          position: 'right' as const,
-          grid: { display: false },
-          ticks: { color: CHART_COLORS.warmGray, font: axisFont },
-          title: { display: true, text: '°C', color: CHART_COLORS.warmGray, font: axisFont },
-        },
+  const chartOptions = useMemo(() => ({
+    ...baseChartOptions,
+    plugins: { ...baseChartOptions.plugins, legend: CHART_LEGEND },
+    scales: {
+      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
+      y: { ...baseChartOptions.scales.y, title: axisTitle('%RH') },
+      y1: {
+        position: 'right' as const,
+        grid: { display: false },
+        ticks: { color: CHART_COLORS.warmGray, font: CHART_FONT },
+        title: axisTitle('°C'),
       },
-    } as ChartOptions<'line'>
-  }, [])
+    },
+  } as ChartOptions<'line'>), []);
 
-  const hasData = !!(data?.humidity || data?.temperature)
-  const p = data?.predicted
+  const hasData = Boolean(data?.humidity || data?.temperature);
+  const predicted = data?.predicted;
 
-  return (
-    <Card size="lg" className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-h2 text-charcoal">Dự báo 60 phút tới</h2>
-        <p className="mt-1 text-sm text-warmGray">
-          Nét liền: dữ liệu 6 giờ qua (gom 5 phút) · Nét đứt: dự báo — cảnh báo sớm trước khi độ ẩm/nhiệt độ vượt ngưỡng
-        </p>
-      </div>
+  // Thân khung theo trạng thái tải, lỗi, chưa đủ dữ liệu
+  let body = <LoadingSkeleton className="h-64 w-full" />;
+  if (!isLoading && isError) {
+    body = (
+      <EmptyState
+        title={t('common.loadError')}
+        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
+      />
+    );
+  }
+  if (!isLoading && !isError) {
+    const unit = predicted ? FORECAST_UNIT[predicted.metric] : '';
+    const breachParams = predicted
+      ? {
+        metric: t(`metric.${predicted.metric}`),
+        value: `${exact(predicted.value, 1)}${unit}`,
+        minutes: predicted.minutesAhead,
+        limit: `${exact(predicted.limit, 1)}${unit}`,
+      }
+      : undefined;
+    body = (
+      <>
+        {/* Cảnh báo sớm khi có chỉ số dự báo vượt ngưỡng */}
+        {hasData && (predicted && breachParams ? (
+          <p className="flex items-start gap-2 rounded-2xl border-2 border-orange-300 bg-orange-50 px-4 py-3 text-sm text-charcoal">
+            <WarningIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-safetyOrange" aria-hidden="true" />
+            {predicted.direction === 'above' ? t('forecast.breachUp', breachParams) : t('forecast.breachDown', breachParams)}
+          </p>
+        ) : (
+          <p className="text-sm text-warmGray">{t('forecast.noBreach')}</p>
+        ))}
 
-      {isLoading ? (
-        <LoadingSkeleton className="h-64 w-full" />
-      ) : !hasData ? (
-        <div className="flex h-32 items-center justify-center px-4 text-center text-sm text-warmGray">
-          Chưa đủ dữ liệu để dự báo — cần ít nhất 2 giờ dữ liệu liên tục và thiết bị còn gửi trong 15 phút gần nhất.
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <KpiTile
+            icon={DropIcon}
+            label={t('forecast.humidityError')}
+            value={errorText(data?.humidity?.mae30, '%')}
+            sub={t('forecast.errorSub', { value: errorText(data?.humidity?.mae60, '%') })}
+          />
+          <KpiTile
+            icon={ThermometerIcon}
+            label={t('forecast.temperatureError')}
+            value={errorText(data?.temperature?.mae30, '°C')}
+            sub={t('forecast.errorSub', { value: errorText(data?.temperature?.mae60, '°C') })}
+          />
         </div>
-      ) : (
-        <>
-          {p ? (
-            <p className="rounded-2xl border border-climateOrange/30 bg-climateOrange/5 px-4 py-3 text-sm text-charcoal">
-              {LABEL[p.metric]} có thể {p.direction === 'above' ? 'lên' : 'xuống'} <b>{p.value}{UNIT[p.metric]}</b> trong khoảng{' '}
-              <b>{p.minutesAhead} phút</b> nữa (ngưỡng {p.limit}{UNIT[p.metric]}).
-            </p>
-          ) : (
-            <p className="text-sm text-warmGray">Không có chỉ số nào được dự báo vượt ngưỡng trong 60 phút tới.</p>
-          )}
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatChip label="Sai số độ ẩm · 30 phút" value={mae(data?.humidity?.mae30, '%')} />
-            <StatChip label="Sai số độ ẩm · 60 phút" value={mae(data?.humidity?.mae60, '%')} />
-            <StatChip label="Sai số nhiệt độ · 30 phút" value={mae(data?.temperature?.mae30, '°C')} />
-            <StatChip label="Sai số nhiệt độ · 60 phút" value={mae(data?.temperature?.mae60, '°C')} />
-          </div>
+
+        {hasData ? (
           <div className="h-64">
             <Line data={chartData} options={chartOptions} />
           </div>
-        </>
-      )}
-    </Card>
-  )
+        ) : (
+          <ChartEmptyFrame message={t('forecast.empty')} className="h-64" />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <FarmFrame title={t('forecast.title')} description={t('forecast.subtitle')} className="h-full">
+      {body}
+    </FarmFrame>
+  );
 }
