@@ -537,7 +537,7 @@
 - [ ] **M3+M4** — Đăng ký/đăng nhập/quên mật khẩu/mời thành viên end-to-end (Sprint 1-2) `[Flow 11, 12]`
 - [ ] **M3+M4** — Admin khoá/mở khoá + xử lý yêu cầu xoá tài khoản end-to-end (Sprint 6) `[Flow 19]`
 - ~~**M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`~~ — ❌ bỏ ở SRS v2.0.0
-- [ ] **Cả nhóm** — Demo tổng theo 10 luồng chính của Report 3 §2.2 (MF-01…10): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay + bypass, Farm Owner tự setup thiết bị bằng QR (Sprint 8)
+- [ ] **Cả nhóm** — Demo tổng theo 11 luồng chính của Report 3 §2.2 (MF-01…11): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay + bypass, Farm Owner tự setup thiết bị bằng QR, trạng thái sức khỏe theo ngày + báo cáo (Sprint 8)
 
 ---
 
