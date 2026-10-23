@@ -3,7 +3,7 @@ Tổng chi phí: ≤ 5.410.000 VNĐ (SRS §7.1)
 
 > **Cần cập nhật trước Review 2:** Report 3 NFR-12 (chi phí một Zone + một camera cửa ra vào) và Report 4 tính theo BOM này, nên phải thay bảng dưới bằng linh kiện thật đã mua, kèm hoá đơn (`docs/reports/README.md` #10).
 >
-> **Lưu ý (SRS v2.0.0):** bảng dưới là BOM dự toán ban đầu và **đã lỗi thời**. Linh kiện thực tế xem `SwiftletCare_SRS.md` mục 7.1 (5 cảm biến RS485, không còn SHT31/BH1750/MQ-135/MAX9814/DHT22). Theo phạm vi v2.0.0: **không dùng Raspberry Pi** (nút AI là PC/máy chủ), **không dùng hệ thống sưởi**, và cần **bổ sung 2 công tắc xoay 3 vị trí Auto/Off/Hand** làm bypass cho bơm và quạt (ENV-FR-023). Các dòng Router 4G, Camera PoE 4MP, Raspberry Pi, Switch PoE và Sưởi không còn dùng: nhà yến dùng cáp quang IP tĩnh, camera là TP-Link VIGI C320I ống kính 6 mm kèm bộ cấp PoE TP-Link TL-POE150S, nút AI chạy trên máy chủ (SRS v2.1.2).
+> **Lưu ý (SRS v2.0.0):** bảng dưới là BOM dự toán ban đầu và **đã lỗi thời**. Linh kiện thực tế xem `SwiftletCare_SRS.md` mục 7.1 (5 cảm biến RS485, không còn SHT31/BH1750/MQ-135/MAX9814/DHT22). Theo phạm vi v2.0.0: **không dùng Raspberry Pi** (nút AI là PC/máy chủ), **không dùng hệ thống sưởi**, và cần **bổ sung ADS1115 + 2 biến dòng kẹp** để đo dòng bơm và quạt (THREAT-FR-014). Công tắc bypass đã bỏ (Report 3 §8). Các dòng Router 4G, Camera PoE 4MP, Raspberry Pi, Switch PoE và Sưởi không còn dùng: nhà yến dùng cáp quang IP tĩnh, camera là TP-Link VIGI C320I ống kính 6 mm kèm bộ cấp PoE TP-Link TL-POE150S, nút AI chạy trên máy chủ (SRS v2.1.2).
 
 | STT | Linh kiện | Số lượng | Đơn giá | Thành tiền | Nhà cung cấp |
 |---|---|---|---|---|---|

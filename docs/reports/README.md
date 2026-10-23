@@ -34,7 +34,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 5 | Tạo mẻ thu hoạch không kiểm tra số tổ/khối lượng > 0 và ngày không ở tương lai | MARKET-FR-001 hiện ghi theo code; nên thêm validate rồi siết tiêu chí |
 | 6 | `PREDATOR_DETECTED` còn trong `AlertType` và `TicketType` dù đã ra ngoài phạm vi | Chỉ được gỡ, không mở rộng |
 | 7 | Đếm chim: **backend đã xong** (nhận số đếm, bản ghi theo House, số đếm 5 phút, `LOW_RETURN_RATE`, heartbeat nút AI, token live stream, vòng đếm). Pipeline (PR #88): theo vết cả khung trên 2 ô, ngoại suy ở lỗ. Còn thiếu: **model tự train** (model COCO không nhận ra chim trong ảnh IR), `stream.py` chưa gửi gì (số đếm, số đếm 5 phút, heartbeat, đẩy video), chưa đo FPS trên máy chạy thật (2 ô với model COCO chỉ ~7 FPS trên laptop, NFR-04 cần 25), màn xem live/vẽ vòng/số đếm ở web và mobile, VISION-FR-016 đánh giá độ chính xác | VISION-FR-001…007, 012…014, 016, 018 (giao diện), THREAT-FR-010, NFR-04 |
-| 8 | ENV-FR-023 công tắc bypass chưa làm (phần cứng) | |
+| 8 | ~~ENV-FR-023 công tắc bypass~~ | **Đã bỏ** khỏi phạm vi (BM03 #8): nhà yến thử nghiệm đi mượn, không đấu thêm được. Nhóm cần ghi cách chạy tay bơm/quạt bằng công tắc có sẵn của nhà khi bộ điều khiển hỏng (Report 3 §8.1 `[TEAM]`) |
 | 9 | Giao diện Domain Expert (web/mobile) chưa có; backend EXPERT-FR đã xong | |
 | 10 | `docs/hardware/BOM.md` đã lỗi thời (5.410.000 VNĐ, linh kiện cũ) trong khi SRS cũ ghi COST-NFR-001 ≤ 10.105.000 VNĐ | Cập nhật BOM trước khi điền NFR-12 |
 | 11 | `docs/evidence-register.md` chưa điền nguồn | BR-01 ghi "nguồn từ tài liệu" nhưng chưa có minh chứng |
@@ -79,6 +79,7 @@ Report 3 đang giả định phiếu đăng ký đã có các thay đổi dướ
 | 5 | C.1 Health Assessment, mục D (luồng) | Báo cáo sức khỏe tuần theo Zone; không xuất file ("Report export to PDF/CSV" ngoài phạm vi) | Thêm luồng MF-11: trạng thái sức khỏe nhà yến theo ngày, kết hợp các nguồn theo sự đồng thuận, có lý do; báo cáo ngày/tuần/tháng, xuất PDF/CSV; người nuôi yến đánh giá từng ngày; đo mức trùng khớp (NFR-14) | Làm rõ đầu ra "giám sát sức khỏe đa phương thức" và có cách đo được |
 | 6 | Mục 3 (công nghệ) / dịch vụ ngoài | Không có dữ liệu thời tiết | Thêm API thời tiết (Open-Meteo) làm ngữ cảnh, không dùng để điều khiển | Giải thích ngày mưa chim về ít, tránh báo nhầm |
 | 7 | Mục 4 (phần cứng) | Không đo dòng tải | Mạch điều khiển nhóm tự thiết kế, thêm 2 biến dòng đo dòng bơm và quạt (THREAT-FR-014) | Biết tải có chạy thật không: cháy mô-tơ, nhảy aptomat, relay dính |
+| 8 | Mục 4 (công tắc bypass) và Flow 9 | 2 công tắc xoay 3 vị trí Auto/Off/Hand cho bơm và quạt | Bỏ. Khi bộ điều khiển hỏng, chạy tay bằng công tắc có sẵn của nhà yến (nằm ngoài hệ thống); cảm biến dòng báo khi tải không chạy theo relay | Nhà yến thử nghiệm đi mượn, hệ thống điện có sẵn, nhóm không được đấu lại |
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 

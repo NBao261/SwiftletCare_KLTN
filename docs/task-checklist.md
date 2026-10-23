@@ -537,7 +537,7 @@
 - [ ] **M3+M4** — Đăng ký/đăng nhập/quên mật khẩu/mời thành viên end-to-end (Sprint 1-2) `[Flow 11, 12]`
 - [ ] **M3+M4** — Admin khoá/mở khoá + xử lý yêu cầu xoá tài khoản end-to-end (Sprint 6) `[Flow 19]`
 - ~~**M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`~~ — ❌ bỏ ở SRS v2.0.0
-- [ ] **Cả nhóm** — Demo tổng theo 11 luồng chính của Report 3 §2.2 (MF-01…11): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay + bypass, Farm Owner tự setup thiết bị bằng QR, trạng thái sức khỏe theo ngày + báo cáo (Sprint 8)
+- [ ] **Cả nhóm** — Demo tổng theo 11 luồng chính của Report 3 §2.2 (MF-01…11): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay, Farm Owner tự setup thiết bị bằng QR, trạng thái sức khỏe theo ngày + báo cáo (Sprint 8)
 
 ---
 
@@ -553,8 +553,8 @@
 - [ ] Cảm biến nhiệt-ẩm mất hoặc sai thì relay phun sương và quạt về TẮT cho tới khi có số đo hợp lệ; viết unit test `[THREAT-FR-013]`
 - [ ] Đổi loại cảnh báo `BIRD_PANIC` thành `NOISE_ANOMALY` `[THREAT-FR-007]`
 - [ ] Nhận 5 tham số phát hiện qua `config/update` (`noise_margin_db`, `noise_min_sec`, `pump_dry_on_sec`, `pump_dry_min_rise_pct`, `speaker_drop_pct`), lưu NVS, tự kẹp khoảng; bỏ các hằng số tương ứng; unit test `[EXPERT-FR-008]`
-- [ ] Lắp 2 công tắc xoay 3 vị trí Auto/Off/Hand cho bơm và quạt, thử chạy tay khi rút nguồn ESP32 `[ENV-FR-023, Flow 28]`
-- [ ] (tùy chọn) Nối tiếp điểm phụ của công tắc về GPIO, báo "đang bypass tại tủ" `[ENV-FR-023]`
+- ~~Lắp 2 công tắc xoay 3 vị trí Auto/Off/Hand cho bơm và quạt `[ENV-FR-023, Flow 28]`~~ — bỏ (nhà yến đi mượn, Report 3 §8). Thay bằng: ghi cách chạy tay bằng công tắc có sẵn của nhà khi rút nguồn ESP32
+- ~~(tùy chọn) Nối tiếp điểm phụ của công tắc về GPIO `[ENV-FR-023]`~~ — bỏ cùng công tắc bypass
 - [ ] 🤝 Chạy liên tục nhiều ngày tại nhà yến/mô hình để lấy số liệu cho mục 13.6 (phối hợp M5)
 
 ## G2. M2 — AI đếm chim (theo `docs/bird-counting-plan.md`)

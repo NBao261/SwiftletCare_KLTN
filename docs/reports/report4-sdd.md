@@ -8,7 +8,7 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.0.4 (Review 2) |
+| Document version | 1.0.5 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
 | Requirements baseline | Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -68,12 +68,10 @@ flowchart LR
       ESP[ESP32 controller<br/>firmware]
       R[4-channel relay<br/>misting, speaker, fan]
       SPK[DFPlayer + amplifier<br/>+ speaker]
-      BY[Bypass switch<br/>Auto / Hand / Off]
       CT[Current transformers<br/>pump, fan - planned]
       S -- Modbus RTU --> ESP
       ESP -- GPIO --> R
       ESP -- UART --> SPK
-      BY --- R
       R --- CT
       CT -- ADS1115 I2C --> ESP
     end
@@ -157,7 +155,7 @@ Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, M
 | --- | --- | --- |
 | Firmware | ESP32 (ESP32-WROOM-32D), Arduino framework on FreeRTOS, PlatformIO `espressif32` | Arduino-ESP32 core 2.0.17; firmware 1.4.0 |
 | Firmware libraries | PubSubClient, ArduinoJson, ModbusMaster, DFRobotDFPlayerMini, ElegantOTA; planned: Adafruit ADS1X15 for the current transformers | ^2.8, ^7.0, ^2.0.1, ^1.0.6, ^3.1 |
-| Controller board (planned) | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC with two clamp-on current transformers (SCT-013 or ZMCT103C class, isolated from mains), bypass switches on the cabinet | `[TEAM: board revision, BOM]` |
+| Controller board (planned) | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC with two clamp-on current transformers (SCT-013 or ZMCT103C class, isolated from mains) | `[TEAM: board revision, BOM]` |
 | AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, supervision (ByteTrack), paho-mqtt, PyYAML, loguru; detection model YOLO26n exported to ONNX (one class, trained on Colab; `torch`/`ultralytics` are not runtime dependencies) | Python 3.11–3.12; opencv-python ≥ 4.14 < 5; numpy ≥ 1.26 < 3; onnxruntime 1.30; supervision 0.30; paho-mqtt 2.x |
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
@@ -1111,7 +1109,7 @@ flowchart TB
   E3 & E4 & E6 & E7 --> O4
 ```
 
-### 9.9 MF-09 Manual override and bypass (AD-09)
+### 9.9 MF-09 Manual override (AD-09)
 
 ```mermaid
 flowchart TB
@@ -1126,13 +1124,13 @@ flowchart TB
   subgraph C[Controller]
     C1[Apply relay, report MANUAL] --> C2[On expiry: back to AUTO]
   end
-  subgraph H[Cabinet]
-    H1[Controller failed:<br/>bypass switch to Hand]
+  subgraph H[House - outside the system]
+    H1[Controller failed:<br/>relays release, loads stop] --> H2[Farmer runs loads with<br/>the house's own switches]
   end
   O1 --> B1
   B3 --> C1
   B5 --> C2
-  H1 -. loads run without controller .-> C1
+  C1 -. controller fails .-> H1
 ```
 
 ### 9.10 MF-10 Device setup by the Farm Owner (AD-10)
@@ -1337,7 +1335,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Device setup (MF-10) | Register, move, remove and replace routes allow only Technician and Administrator; moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
 | CI | No job for the AI pipeline tests |
 | Health assessment (MF-11) | Daily health status, ratings, health levels, reports per house (daily, weekly, monthly), PDF and CSV export, weather job: not built (SM-17, D10, D12, D13) |
-| Hardware | Bypass switch not built; controller PCB with current transformers and actuator check (D11, THREAT-FR-014) not built |
+| Hardware | Controller PCB with current transformers and actuator check (D11, THREAT-FR-014) not built. Bypass switches removed from scope (Report 3 §8) |
 | Data model | Planned entities and attributes of Section 6.4; unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest) |
 
 ---
@@ -1346,6 +1344,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.5 | `[TEAM]` | Bypass switch removed (borrowed test house cannot be rewired): architecture, controller board and AD-09 updated; the house's own switches are shown outside the system |
 | 1.0.4 | `[TEAM]` | Daily health assessment and periodic reports (MF-11): data flows DF-10, DF-11, decisions D10 (agreement rules), D11 (current transformers), D12 (weather API), D13 (report files), planned entities `HOUSE_HEALTH_DAY` and `WEATHER_OBSERVATION`, SM-17, AD-14; Open-Meteo and the team's controller board declared |
 | 1.0.3 | `[TEAM]` | Device setup by the Farm Owner (MF-10): data flow DF-9, decision D9 (label and floor QR codes), QR libraries declared, state machine SM-16 for the device label, activity diagram AD-10 rewritten for MF-10, security of the activation key, setup gaps |
 | 1.0.2 | `[TEAM]` | Checked against the Review 2 guideline and the self-review prompt: firmware task responsibilities corrected from `main.cpp`; NTP added and Redis explained in the architecture; CD declared; planned entities and attributes in the ERD (6.4); state machines for harvest, user account and firmware update (SM-13…15); activity diagram for harvest logging (AD-13) |
