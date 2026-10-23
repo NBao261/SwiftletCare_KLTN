@@ -7,6 +7,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | `report3-srs.md` | Report 3 – SRS | Bản nháp 3.0.0, cần điền các chỗ `[TEAM: …]` |
 | `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 17 state machine, 14 activity diagram) | Bản nháp 1.0.4, cần điền các chỗ `[TEAM: …]` (staging, công cụ AI, dịch vụ huấn luyện) |
 | `report5-test.md` | Report 5 – Test plan và test case | Chưa có |
+| `todo-review2.md` | Danh sách việc cần làm trước Review 2 (hồ sơ, ô `[TEAM]`, việc thực tế, code theo module, sửa cho chuẩn) | Cập nhật 23/10/2026 |
 
 ## Report 3 – SRS: cách dùng
 
