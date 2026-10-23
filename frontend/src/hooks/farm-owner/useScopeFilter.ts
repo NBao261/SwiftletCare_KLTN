@@ -47,8 +47,7 @@ export interface ScopeFilterState {
   refetch: () => void;
 }
 
-// Khung lọc Nhà + Zone dùng chung các trang Farm Owner, lựa chọn lưu trong store nên chuyển trang không bị trả về;
-// liệt kê nhà của mọi farm, chọn nhà ở farm khác thì trang chuyển sang farm đó
+// Khung lọc Nhà + Zone dùng chung các trang Farm Owner (lưu trong store); liệt kê nhà mọi farm, chọn nhà farm khác thì chuyển farm
 export function useScopeFilter(): ScopeFilterState {
   const selectedFarmId = useZoneStore(state => state.selectedFarmId);
   const selectedHouseId = useZoneStore(state => state.selectedHouseId);
@@ -106,7 +105,7 @@ export function useScopeFilter(): ScopeFilterState {
   }, [isMultiFarm, farmList, housesByFarm, houses, farmName]);
   const houseValue = houseId || (isMultiFarm && farmId ? `${FARM_OPTION_PREFIX}${farmId}` : '');
 
-  const { zones, isLoading: isLoadingZones } = useScopeZones(farmId, houseId);
+  const { zones, isLoading: isLoadingZones, isError: isZonesError } = useScopeZones(farmId, houseId);
   // Chỉ lọc được Zone khi đã chọn 1 nhà; Zone đã lưu không còn thuộc nhà thì về tất cả Zone
   const zone = houseId ? zones.find(item => item._id === scopeZoneId) : undefined;
 
@@ -149,7 +148,7 @@ export function useScopeFilter(): ScopeFilterState {
     setHouseId,
     setZoneId,
     isLoading: isLoadingFarms || housesQuery.isLoading || isLoadingZones,
-    isError: isFarmsError || housesQuery.isError,
+    isError: isFarmsError || housesQuery.isError || isZonesError,
     refetch: () => {
       void refetchFarms();
       housesQuery.refetch();

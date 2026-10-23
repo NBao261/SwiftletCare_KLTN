@@ -65,8 +65,7 @@ interface ZoneComponentLogProps {
   onReport: (defaults: CreateSupportDefaults) => void;
 }
 
-// Thiết bị của bộ kit gom theo loại: mỗi loại 1 hàng tóm tắt, bấm xổ log từng thiết bị kèm mục Thông số;
-// số liệu chỉ lấy khi bấm "Kiểm tra thiết bị" và giữ nguyên tới lần bấm sau (không realtime như Tổng quan)
+// Thiết bị bộ kit gom theo loại, bấm xổ log từng thiết bị; số liệu chỉ lấy khi bấm "Kiểm tra thiết bị", không realtime
 export default function ZoneComponentLog({ zoneId, farmId, nodes, thresholds, onReport }: ZoneComponentLogProps): JSX.Element {
   const { t, dateTime } = useTranslation(devicesDict);
   const { groups, componentNames, checkedAt, isChecking, isError, runCheck } = useZoneComponents(zoneId, nodes);

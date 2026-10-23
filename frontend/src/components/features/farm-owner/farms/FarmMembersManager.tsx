@@ -92,7 +92,7 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
         </div>
         {list.length === 0 && <p className="px-4 py-6 text-center text-sm text-warmGray">{t(emptyKey)}</p>}
         {list.map(row => (
-          <div key={row.userId} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-warmGray/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_10rem_6rem]">
+          <div key={row.userId} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 border-t border-warmGray/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_10rem_6rem]">
             <div className="min-w-0">
               <p className={cn('truncate text-sm font-semibold', row.name ? 'text-charcoal' : 'text-warmGray')}>{row.name ?? NO_VALUE}</p>
               <p className="truncate text-xs text-warmGray">{row.email ?? NO_VALUE}</p>
@@ -100,7 +100,7 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
             <span>
               <Badge tone={row.role === 'DOMAIN_EXPERT' ? 'info' : 'neutral'}>{t(ROLE_LABEL[row.role])}</Badge>
             </span>
-            <span className="hidden justify-center md:flex">
+            <span className="flex justify-center">
               {isPrimaryOwner && row.role !== 'PRIMARY' ? (
                 <Button variant="secondary" size="sm" onClick={() => setRemoveTarget(row)}>{t('members.remove')}</Button>
               ) : (

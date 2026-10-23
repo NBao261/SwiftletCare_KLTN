@@ -59,10 +59,25 @@ function initialAmounts(group: HarvestGroup | undefined): AmountTexts {
   return { RAW: amountOf('RAW'), CLEANED: amountOf('CLEANED'), PREMIUM: amountOf('PREMIUM') };
 }
 
-// 1 thao tác lưu của 1 loại yến (tạo / sửa / xoá đợt)
+// Ngày thu bắt buộc, không ở tương lai, không trước năm 2000 (chuỗi yyyy-mm-dd so sánh được trực tiếp)
+function harvestDateError(harvestDate: string, today: string): HarvestKey | null {
+  if (!harvestDate) return 'form.errorDate';
+  if (harvestDate > today) return 'form.errorFutureDate';
+  if (harvestDate < HARVEST_DATE_MIN) return 'form.errorOldDate';
+  return null;
+}
+
+// 1 thao tác lưu của 1 loại yến (tạo / sửa / xoá đợt), trả đợt còn lại sau thao tác (xoá thì null)
 interface SaveOperation {
   nestType: NestType;
-  run: () => Promise<unknown>;
+  run: () => Promise<HarvestBatch | null>;
+}
+
+// Lần bấm Tạo trước chỉ lưu được một phần: giữ Zone, ngày đã ghi và đợt đã lưu để lần sau không tạo trùng
+interface PartialSave {
+  zoneId: string;
+  harvestDateIso: string;
+  batches: Partial<Record<NestType, HarvestBatch | null>>;
 }
 
 // Ô chọn đã có giá trị: viền xanh như ô lọc đang bật; chưa chọn: chữ xám như placeholder
@@ -81,7 +96,7 @@ function FieldLabel({ text }: { text: string }): JSX.Element {
 }
 
 interface HarvestFormModalProps {
-  // Khung lọc Nhà + Zone của trang: chọn 1 nhà thì popup khoá nhà đó, chọn 1 Zone thì khoá luôn Zone
+  // Khung lọc Nhà + Zone của trang: chọn 1 nhà thì popup khoá nhà đó, chọn 1 Zone thì đợt thu ghi vào Zone đó
   scope: ScopeFilterState;
   onClose: () => void;
   // Có thì là sửa lần thu đó; không có thì tạo mới
@@ -109,6 +124,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
   const [imageLinks, setImageLinks] = useState<string[]>(() => group?.product_images ?? []);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [partialSave, setPartialSave] = useState<PartialSave | null>(null);
 
   // Kiểm từng dòng và cộng tổng ngay khi gõ
   const checks = NEST_TYPES.map(nestType => ({ nestType, ...checkNestAmount(amounts[nestType].nests, amounts[nestType].grams) }));
@@ -118,22 +134,23 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
   const totalGrams = filledRows.reduce((sum, row) => sum + row.grams, 0);
   const isEmpty = filledRows.length === 0;
   const today = todayInputValue();
-  // Ngày thu bắt buộc, không ở tương lai, không trước năm 2000 (chuỗi yyyy-mm-dd so sánh được trực tiếp); sửa thì ngày đã cố định
-  const dateError: HarvestKey | null = isEdit ? null
-    : !harvestDate ? 'form.errorDate'
-      : harvestDate > today ? 'form.errorFutureDate'
-        : harvestDate < HARVEST_DATE_MIN ? 'form.errorOldDate' : null;
+  // Sửa hoặc đã lưu một phần thì nhà, ngày đã cố định
+  const isTargetLocked = isEdit || partialSave !== null;
+  const dateError = isTargetLocked ? null : harvestDateError(harvestDate, today);
   const isHouseLocked = scope.houseId !== '';
   const houseOptions = [
     { value: '', label: t('form.pickHouse') },
     ...scope.houses.map(house => ({ value: house._id, label: house.name })),
   ];
-  // Backend vẫn bắt lần thu thuộc 1 Zone: tự gắn vào Zone tạo sớm nhất của nhà (mã tăng theo thời gian tạo), người dùng không chọn Zone
-  const zoneId = scope.zones
+  // Backend vẫn bắt lần thu thuộc 1 Zone: đang lọc 1 Zone của nhà thì ghi vào Zone đó, không thì Zone tạo sớm nhất của nhà (mã tăng theo thời gian tạo)
+  const oldestZoneId = scope.zones
     .filter(zone => zone.house_id === houseId)
     .reduce<string>((oldest, zone) => (oldest === '' || zone._id < oldest ? zone._id : oldest), '');
+  const zoneId = scope.zone?.house_id === houseId ? scope.zone._id : oldestZoneId;
   const isHouseWithoutZone = houseId !== '' && zoneId === '';
-  const canSubmit = isEdit || (Boolean(zoneId) && Boolean(harvestDate));
+  const canSubmit = isTargetLocked || (Boolean(zoneId) && Boolean(harvestDate));
+  const lockedHouseName = houseName ?? scope.houses.find(house => house._id === houseId)?.name ?? NO_VALUE;
+  const lockedDateIso = group?.harvest_date ?? partialSave?.harvestDateIso;
 
   function setAmount(nestType: NestType, field: keyof AmountText, value: string): void {
     setAmounts(current => ({ ...current, [nestType]: { ...current[nestType], [field]: value } }));
@@ -150,14 +167,20 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setIsSubmitted(true);
-    const targetZoneId = group?.zone_id ?? zoneId;
+    const targetZoneId = group?.zone_id ?? partialSave?.zoneId ?? zoneId;
     if (!targetZoneId || dateError || hasRowError || isEmpty) return;
 
     setIsSaving(true);
     const productImages = imageLinks;
     // Ngày thu là 0 giờ giờ VN của ngày đã chọn; sửa thì giữ nguyên ngày cũ
-    const harvestDateIso = group?.harvest_date ?? `${harvestDate}T00:00:00+07:00`;
+    const harvestDateIso = lockedDateIso ?? `${harvestDate}T00:00:00+07:00`;
+    // Đợt đang có = đợt của lần thu, cộng đợt đã tạo / bỏ đợt đã xoá ở lần bấm trước lỗi một phần
     const batchByType = new Map<NestType, HarvestBatch>(group?.batches.map(batch => [batch.nest_type, batch]));
+    for (const nestType of NEST_TYPES) {
+      const saved = partialSave?.batches[nestType];
+      if (saved) batchByType.set(nestType, saved);
+      else if (saved === null) batchByType.delete(nestType);
+    }
     const filledByType = new Map(filledRows.map(row => [row.nestType, row]));
 
     // Mỗi loại: có số + đã có đợt → sửa; có số + chưa có → tạo; hết số + đã có đợt → xoá
@@ -167,15 +190,15 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
       if (row && batch) {
         return [{ nestType, run: () => updateHarvest.mutateAsync({
           id: batch._id, nest_count: row.nests, weight_grams: row.grams, product_images: productImages,
-        }) }];
+        }).then(() => batch) }];
       }
       if (row) {
         return [{ nestType, run: () => createHarvest.mutateAsync({
           zone_id: targetZoneId, harvest_date: harvestDateIso, nest_count: row.nests, weight_grams: row.grams,
           nest_type: nestType, product_images: productImages,
-        }) }];
+        }).then(response => response.data.data) }];
       }
-      if (batch) return [{ nestType, run: () => deleteHarvest.mutateAsync(batch._id) }];
+      if (batch) return [{ nestType, run: () => deleteHarvest.mutateAsync(batch._id).then(() => null) }];
       return [];
     });
     const results = await Promise.allSettled(operations.map(operation => operation.run()));
@@ -187,6 +210,12 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
       onClose();
       return;
     }
+    // Ghi lại các loại đã lưu được để lần bấm sau chỉ thử lại loại lỗi, không tạo trùng đợt thu
+    const savedBatches = { ...partialSave?.batches };
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') savedBatches[operations[index].nestType] = result.value;
+    });
+    setPartialSave({ zoneId: targetZoneId, harvestDateIso, batches: savedBatches });
     const firstFailure = results.find(result => result.status === 'rejected') as PromiseRejectedResult;
     reportFailures(failedTypes, firstFailure.reason);
   }
@@ -194,13 +223,13 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
   return (
     <Modal open onClose={onClose} title={isEdit ? t('form.editTitle') : t('form.createTitle')} className="max-w-2xl">
       <form onSubmit={event => void handleSubmit(event)} noValidate className="flex flex-col gap-4">
-        {/* Hàng 1: nhà yến · ngày thu cùng hàng; sửa thì 2 ô này cố định */}
-        {isEdit ? (
+        {/* Hàng 1: nhà yến · ngày thu cùng hàng; sửa hoặc đã lưu một phần thì 2 ô này cố định */}
+        {isTargetLocked ? (
           <div className="flex flex-col gap-1.5">
             <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-3">
-              <Input label={t('form.house')} value={houseName ?? NO_VALUE} disabled readOnly />
+              <Input label={t('form.house')} value={lockedHouseName} disabled readOnly />
               <Input label={t('form.creator')} value={creatorName} disabled readOnly />
-              <Input label={t('form.date')} value={formatStandardDate(group.harvest_date)} disabled readOnly />
+              <Input label={t('form.date')} value={lockedDateIso ? formatStandardDate(lockedDateIso) : NO_VALUE} disabled readOnly />
             </div>
             <p className="text-xs text-warmGray">{t('form.lockedHint')}</p>
           </div>

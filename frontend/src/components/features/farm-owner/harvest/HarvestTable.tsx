@@ -55,8 +55,7 @@ interface HarvestTableProps {
   createBlockedReason?: string;
 }
 
-// Bảng lần thu hoạch (mỗi dòng 1 lần thu, gộp các loại yến): tìm/lọc/sắp xếp ở client, kèm môi trường 7 ngày trước thu
-// Khung hiện cố định 4 dòng, còn lại cuộn dọc, không bù dòng trống (ngoại lệ FE_Design 1.1 cho trang Thu hoạch)
+// Bảng lần thu (1 dòng 1 lần thu): tìm / lọc / sắp xếp ở client, khung 4 dòng cuộn dọc không bù dòng trống (ngoại lệ FE_Design 1.1)
 export default function HarvestTable({ groups, zones, houses, creatorName, onOpenDetail, onEdit, onDelete, onCreate, onExport, createBlockedReason }: HarvestTableProps): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const [search, setSearch] = useState('');

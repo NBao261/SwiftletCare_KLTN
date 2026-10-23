@@ -91,7 +91,6 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   // Backend lưu lần thu theo Zone; giao diện chỉ hiện nhà yến của Zone đó
   const houseNameByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.houseName])), [zones]);
   const personNames = useMemo(() => buildPersonNames(farm, user), [farm, user]);
-  // Mỗi lần thu 1 nhóm: các loại yến ghi cùng lần gộp lại
   // Đợt thu trong phạm vi đang lọc: các Zone của 1 nhà, hoặc cả farm
   const scopedBatches = useMemo(() => {
     const allFarmBatches = batches ?? [];
@@ -99,6 +98,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
     const scopeZoneIds = new Set(scope.zones.map(zone => zone._id));
     return allFarmBatches.filter(batch => scopeZoneIds.has(batch.zone_id));
   }, [batches, scope.houseId, scope.zones]);
+  // Mỗi lần thu 1 nhóm: các loại yến ghi cùng lần gộp lại
   const groups = useMemo(() => groupHarvests(scopedBatches), [scopedBatches]);
   const groupByKey = useMemo(() => new Map(groups.map(group => [group.key, group])), [groups]);
 

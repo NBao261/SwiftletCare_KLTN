@@ -12,7 +12,7 @@ interface MockEvent {
   duration: string
 }
 
-// SavedEventsTable – bảng video sự kiện đã lưu (bầy đàn/thiên địch) — MOCK, chưa có API thật
+// SavedEventsTable – bảng video sự kiện đã lưu (bầy đàn ra / vào) — MOCK, chưa có API thật
 const MOCK_EVENTS: MockEvent[] = [
   {
     id: '1', title: 'Đàn về tổ buổi chiều', location: 'Cửa B · Tầng 2 Đông Nam',
@@ -26,7 +26,7 @@ const MOCK_EVENTS: MockEvent[] = [
   },
   {
     id: '3', title: 'Chuyển động bất thường ban đêm', location: 'Góc Tây · Cửa thông tầng',
-    recordedAt: '23:14:05 Hôm qua', detection: 'Cảnh báo cú/thiên địch', confidence: 88.5,
+    recordedAt: '23:14:05 Hôm qua', detection: 'Số chim ra / vào đột biến', confidence: 88.5,
     tone: 'critical', duration: '00:48',
   },
   {
@@ -79,7 +79,7 @@ export default function SavedEventsTable() {
         <div>
           <h2 className="text-h2 text-charcoal">Video sự kiện đã lưu</h2>
           <p className="mt-1 text-sm text-warmGray">
-            Trích xuất tự động khi phát hiện chuyển động bầy đàn đột biến hoặc thiên địch
+            Trích xuất tự động khi số chim ra / vào cửa thu chim thay đổi đột biến
           </p>
         </div>
         <p className="text-[11px] font-medium italic text-warmGray">Dữ liệu minh hoạ, chưa nối API thật</p>

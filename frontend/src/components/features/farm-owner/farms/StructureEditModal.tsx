@@ -16,8 +16,7 @@ interface StructureEditModalProps {
   onClose: () => void
 }
 
-// Đổi tên / xoá nhà yến hoặc Zone — giao diện dựng sẵn, chờ backend có API (swagger chưa có PUT/DELETE cho House, Zone).
-// Khi backend có API: thay nút Lưu / Xoá đang khoá bằng mutation gọi API, giữ nguyên phần chặn xoá khi còn thiết bị
+// Đổi tên / xoá nhà yến hoặc Zone: dựng sẵn, nút khoá tới khi swagger có PUT/DELETE House, Zone (giữ chặn xoá khi còn thiết bị)
 export default function StructureEditModal({ kind, mode, name, deviceCount, existingNames = [], onClose }: StructureEditModalProps) {
   const { t, num } = useTranslation(farmDict)
   const [newName, setNewName] = useState(name)

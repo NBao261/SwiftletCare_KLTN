@@ -133,7 +133,7 @@ export function buildHouseStability(houses: House[], zones: Zone[], devices: Dev
         faultDeviceType: stats.faultDeviceType,
       }
     })
-    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || b.faultyDevices - a.faultyDevices || a.name.localeCompare(b.name))
+    .sort((left, right) => STATUS_ORDER[left.status] - STATUS_ORDER[right.status] || right.faultyDevices - left.faultyDevices || left.name.localeCompare(right.name))
 }
 
 export function summarizeStability(items: HouseStability[]): StabilitySummary {
@@ -367,6 +367,12 @@ export interface AlertLogRow {
   group: SeverityGroup
 }
 
+// Loại cảm biến của cảnh báo: cảnh báo cả nhà (không gắn Zone) đến từ camera đếm chim, còn lại theo chỉ số vượt ngưỡng
+function alertSensorKind(alert: Alert, metric: string | undefined): SensorKind {
+  if (!alert.zone_id && alert.house_id) return 'camera'
+  return (metric && SENSOR_KIND_BY_METRIC[metric]) || 'env'
+}
+
 export function buildAlertRow(alert: Alert, deviceName: string, locationName: string): AlertLogRow {
   const breach = getFirstBreach(alert)
 
@@ -375,8 +381,7 @@ export function buildAlertRow(alert: Alert, deviceName: string, locationName: st
     createdAt: alert.created_at,
     deviceName,
     locationName,
-    // Cảnh báo của cả nhà (không gắn Zone) đến từ camera đếm chim
-    sensorKind: !alert.zone_id && alert.house_id ? 'camera' : breach ? SENSOR_KIND_BY_METRIC[breach.metric] ?? 'env' : 'env',
+    sensorKind: alertSensorKind(alert, breach?.metric),
     type: alert.type,
     breach: breach && {
       value: breach.value,

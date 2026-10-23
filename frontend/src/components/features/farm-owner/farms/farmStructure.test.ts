@@ -33,7 +33,7 @@ describe('detectBreaches', () => {
   it('chỉ báo chỉ số vượt/dưới ngưỡng, bỏ qua chỉ số thiếu', () => {
     const m: ZoneMetrics = { temperature: 34, humidity: 70, nh3: 27, co2: 1000 }
     const b = detectBreaches(m, T)
-    expect(b.map(x => [x.metric, x.direction])).toEqual([['temperature', 'high'], ['humidity', 'low'], ['nh3', 'high']])
+    expect(b.map(item => [item.metric, item.direction])).toEqual([['temperature', 'high'], ['humidity', 'low'], ['nh3', 'high']])
     expect(detectBreaches(undefined, T)).toEqual([])
   })
 })
@@ -44,7 +44,7 @@ describe('buildFarmStructure', () => {
     expect(s.totals.counts).toEqual({ total: 3, online: 2, offline: 1 })
     expect(s.zoneById.get('zA')?.counts.total).toBe(1)
     expect(s.houseById.get('h1')?.counts.total).toBe(3)
-    expect(s.houseById.get('h1')?.cameraDevices.map(d => d.id)).toEqual(['c1'])
+    expect(s.houseById.get('h1')?.cameraDevices.map(cameraDevice => cameraDevice.id)).toEqual(['c1'])
     expect(s.houseById.get('h1')?.zones).toHaveLength(2)
   })
 
@@ -55,7 +55,7 @@ describe('buildFarmStructure', () => {
     const node = s.houseById.get('h1')
     expect(node?.counts).toEqual({ total: 2, online: 1, offline: 1 })
     expect(node?.cameras).toBe(1)
-    expect(node?.alerts.map(a => a._id)).toEqual(['a1'])
+    expect(node?.alerts.map(alert => alert._id)).toEqual(['a1'])
     expect(node?.health).toBe('ALERT')
   })
 
@@ -101,7 +101,7 @@ describe('buildFarmStructure', () => {
     const h = s.houseById.get('h1')!
     expect(h.monthKg).toBeCloseTo(3.5)
     expect(h.monthNests).toBe(170)
-    expect(h.recent.map(b => b._id)).toEqual(['b5', 'b4', 'b3'])
+    expect(h.recent.map(batch => batch._id)).toEqual(['b5', 'b4', 'b3'])
     expect(s.totals.monthBatches).toBe(3)
     expect(s.totals.monthLastBatchAt).toBe('2026-10-09T00:00:00Z')
   })
@@ -121,7 +121,7 @@ describe('buildFarmStructure', () => {
 
   it('dựng đúng cây với dữ liệu lớn', () => {
     const zones = Array.from({ length: 2000 }, (_, i) => ({ ...zoneA, _id: `z${i}` }))
-    const sensors = zones.map((z, i) => sensor(`s${i}`, z._id, 'ONLINE'))
+    const sensors = zones.map((zone, i) => sensor(`s${i}`, zone._id, 'ONLINE'))
     const s = buildFarmStructure(input({ zonesByHouse: new Map([['h1', zones]]), sensors }))
     expect(s.zones).toHaveLength(2000)
     expect(s.totals.counts.total).toBe(2000)

@@ -32,20 +32,16 @@ const GRID_PAGE_SIZE = 4
 type Filter = 'all' | HouseHealth
 type View = 'grid' | 'list'
 
-/**
- * Cấu trúc Farm (/farms) — tổng quan mọi nhà yến của các farm user được xem: KPI, lọc theo
- * tình trạng, lưới/danh sách. Dữ liệu thật (farm/house/zone/thiết bị/cảnh báo/thu hoạch/số đo);
- * "người phụ trách" chưa có API → farmMock.api.ts trả rỗng, card hiện "Chưa phân công". Bấm 1 nhà → chi tiết nhà → zone → thiết bị.
- */
+// Trang trại: mọi nhà yến của các farm (KPI, lọc tình trạng, lưới / danh sách); người phụ trách chưa có API nên hiện Chưa phân công
 export default function FarmOwnerFarmsPage() {
   const { t, num } = useTranslation(farmDict)
   useScrollToTop()
   const navigate = useNavigate()
   const { data: farms } = useFarms()
   const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
-  const houseIds = useMemo(() => structure.houses.map(h => h.house._id), [structure.houses])
-  // Tên các nhà đã có để chặn tạo nhà trùng tên
-  const houseNames = useMemo(() => structure.houses.map(node => node.house.name), [structure.houses])
+  const houseIds = useMemo(() => structure.houses.map(node => node.house._id), [structure.houses])
+  // Nhà đã có (kèm trang trại) để chặn tạo nhà trùng tên trong cùng trang trại
+  const existingHouses = useMemo(() => structure.houses.map(node => node.house), [structure.houses])
   const { data: extras } = useStructureExtras(houseIds)
   const { pinned, toggle: togglePin } = usePinnedHouses()
 
@@ -87,7 +83,7 @@ export default function FarmOwnerFarmsPage() {
       visible.push(n)
     }
     // Nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm) — chia 2 nhóm bằng 2 lượt lọc, vẫn O(n)
-    const pinnedFirst = [...visible.filter(n => pinned.has(n.house._id)), ...visible.filter(n => !pinned.has(n.house._id))]
+    const pinnedFirst = [...visible.filter(node => pinned.has(node.house._id)), ...visible.filter(node => !pinned.has(node.house._id))]
     return { visible: pinnedFirst, counts }
   }, [structure.houses, search, filter, extras, pinned])
 
@@ -135,7 +131,7 @@ export default function FarmOwnerFarmsPage() {
           }
         />
         {showCreateFarm && <FarmFormModal onClose={() => setShowCreateFarm(false)} />}
-        <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} existingNames={houseNames} />
+        <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} existingHouses={existingHouses} />
       </>
     )
   }
@@ -205,15 +201,15 @@ export default function FarmOwnerFarmsPage() {
           ) : view === 'grid' ? (
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                {gridRows.map(n => (
+                {gridRows.map(row => (
                   <HouseCard
-                    key={n.house._id}
-                    node={n}
-                    staff={extras?.houseStaff[n.house._id]}
-                    pinned={pinned.has(n.house._id)}
+                    key={row.house._id}
+                    node={row}
+                    staff={extras?.houseStaff[row.house._id]}
+                    pinned={pinned.has(row.house._id)}
                     showYield={canViewHarvest}
-                    onTogglePin={() => togglePin(n.house._id)}
-                    onOpen={() => openHouse(n)}
+                    onTogglePin={() => togglePin(row.house._id)}
+                    onOpen={() => openHouse(row)}
                   />
                 ))}
               </div>
@@ -225,7 +221,7 @@ export default function FarmOwnerFarmsPage() {
         </StableHeight>
       </FarmFrame>
 
-      <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} existingNames={houseNames} />
+      <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} existingHouses={existingHouses} />
       {showCreateFarm && <FarmFormModal onClose={() => setShowCreateFarm(false)} />}
       {showManageFarms && <FarmManageModal farms={farms ?? []} statsByFarm={statsByFarm} onClose={() => setShowManageFarms(false)} />}
     </div>

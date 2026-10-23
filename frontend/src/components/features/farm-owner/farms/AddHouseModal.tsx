@@ -7,20 +7,20 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { isNameTaken } from '@/components/features/farm-owner/farms/farmStructure'
-import type { Farm } from '@/types'
+import type { Farm, House } from '@/types'
 
 interface AddHouseModalProps {
   open: boolean
   onClose: () => void
   farms: Farm[]
-  // Tên các nhà yến đã có của chủ nhà yến — không cho tạo nhà trùng tên
-  existingNames?: string[]
+  // Nhà đã có của mọi trang trại — không cho tạo nhà trùng tên trong cùng trang trại
+  existingHouses?: Pick<House, 'farm_id' | 'name'>[]
 }
 
 /** Thêm nhà yến (POST /farms/:id/houses) — chọn farm ngay trong form vì màn tổng quan gộp nhà của mọi farm */
-export default function AddHouseModal({ open, onClose, farms, existingNames = [] }: AddHouseModalProps) {
+export default function AddHouseModal({ open, onClose, farms, existingHouses = [] }: AddHouseModalProps) {
   const { t } = useTranslation(farmDict)
-  const push = useToastStore(s => s.push)
+  const push = useToastStore(state => state.push)
   const [farmId, setFarmId] = useState('')
   const [name, setName] = useState('')
   const [floors, setFloors] = useState('')
@@ -29,10 +29,11 @@ export default function AddHouseModal({ open, onClose, farms, existingNames = []
   const apiErrorMessage = useApiErrorMessage()
   const selectedFarmId = farmId || farms[0]?._id || ''
   const createHouse = useCreateHouse(selectedFarmId)
-  const isDuplicate = isNameTaken(name, existingNames)
+  const farmHouseNames = existingHouses.filter(house => house.farm_id === selectedFarmId).map(house => house.name)
+  const isDuplicate = isNameTaken(name, farmHouseNames)
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
     // Số tầng tuỳ chọn; có nhập thì phải là số nguyên ≥ 1
     const floorCount = floors.trim() === '' ? undefined : Number(floors)
     const isFloorsInvalid = floorCount !== undefined && (!Number.isInteger(floorCount) || floorCount < 1)
@@ -47,7 +48,7 @@ export default function AddHouseModal({ open, onClose, farms, existingNames = []
         setDescription('')
         onClose()
       },
-      onError: err => push(apiErrorMessage(err, t('toast.houseCreateFailed')), 'error'),
+      onError: reason => push(apiErrorMessage(reason, t('toast.houseCreateFailed')), 'error'),
     })
   }
 
@@ -62,7 +63,7 @@ export default function AddHouseModal({ open, onClose, farms, existingNames = []
               ariaLabel={t('addHouse.farm')}
               value={selectedFarmId}
               onChange={setFarmId}
-              options={farms.map(f => ({ value: f._id, label: f.name }))}
+              options={farms.map(farm => ({ value: farm._id, label: farm.name }))}
             />
           </div>
         )}
@@ -70,7 +71,7 @@ export default function AddHouseModal({ open, onClose, farms, existingNames = []
           label={t('addHouse.name')}
           required
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={event => setName(event.target.value)}
           placeholder={t('addHouse.namePlaceholder')}
           error={isDuplicate ? t('addHouse.errorDuplicate') : undefined}
         />
@@ -80,11 +81,11 @@ export default function AddHouseModal({ open, onClose, farms, existingNames = []
           min={1}
           step={1}
           value={floors}
-          onChange={e => setFloors(e.target.value)}
+          onChange={event => setFloors(event.target.value)}
           placeholder={t('addHouse.floorsPlaceholder')}
           error={floorsError ? t('addHouse.errorFloors') : undefined}
         />
-        <Input label={t('addHouse.description')} value={description} onChange={e => setDescription(e.target.value)} placeholder={t('addHouse.descriptionPlaceholder')} />
+        <Input label={t('addHouse.description')} value={description} onChange={event => setDescription(event.target.value)} placeholder={t('addHouse.descriptionPlaceholder')} />
         <Button type="submit" loading={createHouse.isPending} disabled={isDuplicate} className="w-full">{t('addHouse.submit')}</Button>
       </form>
     </Modal>

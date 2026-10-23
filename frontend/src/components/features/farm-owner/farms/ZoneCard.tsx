@@ -17,7 +17,7 @@ interface ZoneCardProps { node: ZoneNode; loadingMetrics: boolean; onOpen: () =>
 export default function ZoneCard({ node, loadingMetrics, onOpen }: ZoneCardProps) {
   const { t, num } = useTranslation(farmDict)
   const { zone, metrics, breaches, counts } = node
-  const over = new Set(breaches.map(b => b.metric))
+  const over = new Set(breaches.map(breach => breach.metric))
   const worst = breaches[0]
   const hasData = metrics !== undefined
 

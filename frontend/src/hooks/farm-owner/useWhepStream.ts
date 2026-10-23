@@ -43,7 +43,9 @@ export function useWhepStream(videoRef: RefObject<HTMLVideoElement>, cameraNodeI
     };
     peer.onconnectionstatechange = () => {
       if (peer.connectionState === 'connected' && !isCancelled) setStatus('playing');
-      if (peer.connectionState === 'failed' || peer.connectionState === 'disconnected') fail();
+      // disconnected thường tự nối lại nên chỉ hiện đang kết nối; failed mới là lỗi cuối
+      if (peer.connectionState === 'disconnected' && !isCancelled) setStatus('connecting');
+      if (peer.connectionState === 'failed') fail();
     };
 
     void (async () => {

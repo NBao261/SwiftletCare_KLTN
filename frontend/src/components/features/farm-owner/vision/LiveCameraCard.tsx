@@ -99,7 +99,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
         {/* Thanh dưới khung: nhãn Trực tiếp khi đang phát, cảnh báo AI suy giảm, nút phóng to nếu trang cho phép */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-2 text-[11px] font-medium text-white">
           <span className="flex items-center gap-2">
-            <span className={cn('inline-flex h-8 items-center gap-1.5 rounded-full bg-black/60 px-3 backdrop-blur-sm', !isPlaying && 'invisible')}>
+            <span className={cn('inline-flex h-8 items-center gap-1.5 rounded-full bg-charcoal/60 px-3 backdrop-blur-sm', !isPlaying && 'invisible')}>
               <span className="h-1.5 w-1.5 rounded-full bg-accent-600" />
               {t('camera.live')}
             </span>
@@ -116,7 +116,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
               onClick={onToggleExpand}
               title={expandLabel}
               aria-label={expandLabel}
-              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm hover:bg-black/75"
+              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-charcoal/60 backdrop-blur-sm hover:bg-charcoal/75"
             >
               {expanded ? <ArrowsInIcon size={16} /> : <ArrowsOutIcon size={16} />}
             </button>

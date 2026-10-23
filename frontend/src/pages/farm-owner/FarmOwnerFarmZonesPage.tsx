@@ -34,10 +34,7 @@ const TAB_MIN_HEIGHT = 880
 
 type Tab = 'overview' | 'devices' | 'members'
 
-/**
- * Chi tiết 1 nhà yến (/farms/:farmId/houses/:houseId): danh sách Zone realtime (join socket đúng các zone của nhà này),
- * sản lượng tháng, thiết bị cần chú ý. Bấm Zone → chi tiết Zone; bấm thiết bị → drawer bên phải.
- */
+// Chi tiết 1 nhà yến: Zone realtime, sản lượng tháng, thiết bị cần chú ý; bấm Zone mở chi tiết Zone, bấm thiết bị mở drawer
 export default function FarmOwnerFarmZonesPage() {
   const { farmId, houseId } = useParams<{ farmId: string; houseId: string }>()
   const navigate = useNavigate()
@@ -161,12 +158,12 @@ export default function FarmOwnerFarmZonesPage() {
                 <EmptyState title={t('house.noZone')} description={t('house.noZoneDesc')} />
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {node.zones.map(z => (
+                  {node.zones.map(zone => (
                     <ZoneCard
-                      key={z.zone._id}
-                      node={z}
+                      key={zone.zone._id}
+                      node={zone}
                       loadingMetrics={metricsLoading}
-                      onOpen={() => navigate(`/farms/${farmId}/houses/${houseId}/zones/${z.zone._id}`)}
+                      onOpen={() => navigate(`/farms/${farmId}/houses/${houseId}/zones/${zone.zone._id}`)}
                     />
                   ))}
                 </div>

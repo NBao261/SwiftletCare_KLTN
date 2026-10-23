@@ -65,10 +65,10 @@ export default function HouseCard({ node, staff, pinned, showYield, onTogglePin,
       </div>
 
       <div className="grid grid-cols-3 divide-x divide-warmGray/15 rounded-xl border border-warmGray/15">
-        {stats.map(s => (
-          <div key={s.label} className="px-3 py-2.5">
-            <p className="label-caption truncate">{s.label}</p>
-            <p className={cn('mt-0.5 text-h3', isEmpty ? 'text-warmGray/60' : s.warn ? 'text-climateOrange' : 'text-charcoal')}>{s.value}</p>
+        {stats.map(stat => (
+          <div key={stat.label} className="px-3 py-2.5">
+            <p className="label-caption truncate">{stat.label}</p>
+            <p className={cn('mt-0.5 text-h3', isEmpty ? 'text-warmGray/60' : stat.warn ? 'text-climateOrange' : 'text-charcoal')}>{stat.value}</p>
           </div>
         ))}
       </div>

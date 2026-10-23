@@ -7,9 +7,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { buildAlertRow, STATUS_BADGE_CLASS, type AlertLogRow, type SeverityGroup } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import SeverityBadge from '@/components/common/SeverityBadge'
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants'
-import { useQuery } from '@tanstack/react-query'
-import { deviceApi } from '@/apis/shared/devices.api'
-import { useHouseAlerts } from '@/hooks/farm-owner/useFarmOwnerDashboard'
+import { useCameraNodes, useHouseAlerts } from '@/hooks/farm-owner/useFarmOwnerDashboard'
 import type { AllZone } from '@/hooks/shared/useFarms'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
@@ -42,7 +40,7 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
   // Tên nhà cho cảnh báo của cả nhà (không có Zone)
   const houseNames = useMemo(() => new Map(zones.map(zone => [zone.house_id, zone.houseName])), [zones])
   // Mã camera cho cảnh báo do camera gửi (dùng chung cache danh sách camera)
-  const { data: cameras } = useQuery({ queryKey: ['camera-nodes'], queryFn: () => deviceApi.listCameraNodes().then(r => r.data.data) })
+  const { data: cameras } = useCameraNodes()
   const cameraNames = useMemo(() => new Map((cameras ?? []).map(camera => [camera._id, camera.device_id])), [cameras])
   const { records, isLoading, isError, refetch } = useHouseAlerts(farmId, zoneIds, !houseId, houseAlertsId)
 

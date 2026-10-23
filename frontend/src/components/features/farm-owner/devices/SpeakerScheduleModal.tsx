@@ -38,7 +38,9 @@ export default function SpeakerScheduleModal({ node, onClose }: { node: SensorNo
     event.preventDefault();
     const volumeValue = Number(volume);
     const isVolumeValid = Number.isInteger(volumeValue) && volumeValue >= 0 && volumeValue <= MAX_VOLUME;
-    const problem = validateSpeakerWindows(windows) ?? (isVolumeValid ? null : t('sch.errorVolume'));
+    // Lịch tắt thì các ô giờ bị khoá, không kiểm khung giờ để vẫn lưu được trạng thái tắt
+    const windowProblem = isEnabled ? validateSpeakerWindows(windows) : null;
+    const problem = windowProblem ?? (isVolumeValid ? null : t('sch.errorVolume'));
     setError(problem);
     if (problem) return;
     updateSchedule.mutate({ enabled: isEnabled, windows, volume: volumeValue }, {

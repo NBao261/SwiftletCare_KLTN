@@ -171,6 +171,7 @@ const vi = {
   'correlation.positive': 'thuận',
   'correlation.negative': 'nghịch',
   'correlation.sample': '{n} ngày có đủ dữ liệu trong {days} ngày qua',
+  'correlation.mockNotice': 'Dữ liệu giả: tỷ lệ chim về chưa có số thật vì hệ thống đếm chim chưa triển khai',
   'correlation.emptyDesc': 'Cần ít nhất 2 ngày có cả số đo môi trường và số đếm chim từ camera AI.',
 
   // So sánh giữa các Zone
@@ -377,6 +378,7 @@ const en: Record<AnalyticsKey, string> = {
   'correlation.positive': 'positive',
   'correlation.negative': 'negative',
   'correlation.sample': '{n} days with complete data in the last {days} days',
+  'correlation.mockNotice': 'Sample data: return rate is not real yet because bird counting is not deployed',
   'correlation.emptyDesc': 'At least 2 days with both climate readings and AI camera bird counts are needed.',
 
   'compare.title': 'Zone comparison',

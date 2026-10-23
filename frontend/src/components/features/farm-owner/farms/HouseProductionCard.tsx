@@ -26,7 +26,7 @@ export default function HouseProductionCard({ node, recent, nextHarvestAt }: Hou
   const { month, year } = vnYearMonth(new Date())
   const avgPerNest = node.monthNests > 0 ? (node.monthKg * 1000) / node.monthNests : undefined
   const last = recent[0]
-  const zoneNames = new Map(node.zones.map(z => [z.zone._id, z.zone.name]))
+  const zoneNames = new Map(node.zones.map(zone => [zone.zone._id, zone.zone.name]))
   const zoneName = (id: string) => zoneNames.get(id) ?? ''
 
   return (
@@ -52,11 +52,11 @@ export default function HouseProductionCard({ node, recent, nextHarvestAt }: Hou
       <div className="flex flex-col gap-2">
         <p className="label-caption">{t('prod.recent')}</p>
         {recent.length === 0 && <p className="text-small text-warmGray">{t('prod.none')}</p>}
-        {recent.map(b => (
-          <div key={b._id} className="flex items-center justify-between gap-2 rounded-xl border border-warmGray/15 px-3 py-2">
+        {recent.map(batch => (
+          <div key={batch._id} className="flex items-center justify-between gap-2 rounded-xl border border-warmGray/15 px-3 py-2">
             <div className="min-w-0">
-              <p className="truncate text-small font-semibold text-charcoal">{day(b.harvest_date)} · {zoneName(b.zone_id)}</p>
-              <p className="text-caption text-warmGray">{exact(b.weight_grams, GRAM_DIGITS)} g · {num(b.nest_count)} {t('prod.nestUnit')}</p>
+              <p className="truncate text-small font-semibold text-charcoal">{day(batch.harvest_date)} · {zoneName(batch.zone_id)}</p>
+              <p className="text-caption text-warmGray">{exact(batch.weight_grams, GRAM_DIGITS)} g · {num(batch.nest_count)} {t('prod.nestUnit')}</p>
             </div>
           </div>
         ))}

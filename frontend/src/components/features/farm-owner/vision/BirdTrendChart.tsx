@@ -24,18 +24,18 @@ export default function BirdTrendChart({ houseIds }: BirdTrendChartProps) {
 
   const chartData = useMemo(() => {
     return {
-      labels: records.map(r => format(parseISO(r.date), 'dd/MM')),
+      labels: records.map(record => format(parseISO(record.date), 'dd/MM')),
       datasets: [
         {
           label: 'Vào tổ',
-          data: records.map(r => r.evening_entry),
+          data: records.map(record => record.evening_entry),
           borderColor: CHART_COLORS.accentGreen,
           backgroundColor: 'rgba(181,211,44,0.12)',
           fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2,
         },
         {
           label: 'Xuất đàn',
-          data: records.map(r => r.morning_exit),
+          data: records.map(record => record.morning_exit),
           borderColor: CHART_COLORS.climateOrange,
           backgroundColor: 'rgba(237,143,80,0.1)',
           fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2,
@@ -64,16 +64,16 @@ export default function BirdTrendChart({ houseIds }: BirdTrendChartProps) {
           <p className="mt-1 text-sm text-warmGray">Số lượt vào tổ và xuất đàn theo ngày</p>
         </div>
         <div className="flex gap-1 rounded-2xl bg-warmGray/10 p-1">
-          {DAY_OPTIONS.map(d => (
+          {DAY_OPTIONS.map(dayOption => (
             <button
-              key={d}
-              onClick={() => setDays(d)}
+              key={dayOption}
+              onClick={() => setDays(dayOption)}
               className={cn(
                 'rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors',
-                days === d ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
+                days === dayOption ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
               )}
             >
-              {d} Ngày
+              {dayOption} Ngày
             </button>
           ))}
         </div>

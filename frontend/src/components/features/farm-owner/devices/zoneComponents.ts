@@ -4,8 +4,7 @@ import type { Alert, SensorNode, TelemetryRecord } from '@/types';
 // Bộ phận của 1 node cảm biến ESP32: 5 cảm biến RS485 + micro đo âm thanh, loa ru và 2 relay chấp hành
 export type ComponentKind = 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2' | 'sound' | 'speaker' | 'misting' | 'ventilation';
 
-// Trạng thái 1 bộ phận: hoạt động (có số đo) · đang bật/phát · đang tắt · lỗi · số đo đã cũ · chưa có số đo
-// · node mất kết nối / chờ kết nối · chưa bấm kiểm tra
+// Trạng thái 1 bộ phận: có số đo · đang bật · đang tắt · lỗi · số đo cũ · chưa có số đo · node mất / chờ kết nối · chưa kiểm tra
 export type ComponentStatus = 'ok' | 'on' | 'off' | 'fault' | 'stale' | 'noData' | 'offline' | 'pending' | 'unchecked';
 
 export interface ComponentItem {

@@ -118,6 +118,8 @@ export default function CorrelationCard({ zoneId }: CorrelationCardProps): JSX.E
         ))}
       </div>
       {body}
+      {/* Tỷ lệ chim về lấy từ hệ thống đếm chim chưa triển khai (FE_Design 5.4) */}
+      <p className="text-[11px] font-medium italic text-warmGray">{t('correlation.mockNotice')}</p>
     </FarmFrame>
   );
 }

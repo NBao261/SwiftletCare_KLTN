@@ -51,6 +51,7 @@ export function useZoneComponents(zoneId: string, nodes: DeviceItem[]) {
         checkedAt,
       };
     },
+    // Chỉ tải khi bấm Kiểm tra thiết bị và giữ kết quả lần đó (không realtime); lỗi thì người dùng bấm lại, không tự thử lại
     enabled: false,
     staleTime: Infinity,
     gcTime: Infinity,
@@ -65,6 +66,7 @@ export function useZoneComponents(zoneId: string, nodes: DeviceItem[]) {
     queries: sensorNodes.map(node => ({
       queryKey: ['device-component-names', node.deviceId],
       queryFn: () => farmMockApi.getDeviceComponentNames(node.deviceId).then(response => response.data.data),
+      // Tên thiết bị con là dữ liệu giả cố định, không cần tải lại
       staleTime: Infinity,
     })),
     combine: results => {

@@ -25,10 +25,7 @@ import { useZoneStore } from '@/stores/zoneStore'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 
-/**
- * Chi tiết 1 Zone (/farms/:farmId/houses/:houseId/zones/:zoneId): thông số realtime so với ngưỡng, danh sách thiết bị,
- * bấm "Chi tiết" mở drawer bên phải. Số đo = REST latest + socket TELEMETRY_UPDATE (useTelemetry); phần còn lại từ cây cấu trúc đã cache.
- */
+// Chi tiết 1 Zone: thông số realtime so ngưỡng (REST latest + socket), danh sách thiết bị, bấm Chi tiết mở drawer
 export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
@@ -38,9 +35,9 @@ export default function FarmOwnerFarmZoneDetailPage() {
   const node = zoneId ? structure.zoneById.get(zoneId) : undefined
   const live = useTelemetry(zoneId)
   const isFarmOwner = usePermission('FARM_OWNER')
-  const setZone = useZoneStore(s => s.setZone)
-  const setHouse = useZoneStore(s => s.setHouse)
-  const setScopeZone = useZoneStore(s => s.setScopeZone)
+  const setZone = useZoneStore(state => state.setZone)
+  const setHouse = useZoneStore(state => state.setHouse)
+  const setScopeZone = useZoneStore(state => state.setScopeZone)
   const [selected, setSelected] = useState<DeviceRow | null>(null)
   // Farm Owner chỉnh ngưỡng của Zone ngay tại trang (ENV-FR-006/020); role khác vẫn sang trang Thiết bị của mình
   const [isThresholdsOpen, setIsThresholdsOpen] = useState(false)
@@ -60,7 +57,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
     [d.temperature, d.humidity, d.light_lux, d.nh3_ppm, d.co2_ppm, d.sound_db],
   )
   const breaches = useMemo(() => (node ? detectBreaches(metrics, node.zone.thresholds) : []), [metrics, node])
-  const breached = useMemo(() => new Set<string>(breaches.map(b => b.metric)), [breaches])
+  const breached = useMemo(() => new Set<string>(breaches.map(breach => breach.metric)), [breaches])
 
   if (isError) {
     return (
@@ -145,7 +142,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
           <EmptyState title={t('zone.noData')} description={t('zone.noDataDesc')} />
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {ZONE_METRICS.map(m => <ThresholdMetricCard key={m.key} {...metricProps(m)} />)}
+            {ZONE_METRICS.map(metric => <ThresholdMetricCard key={metric.key} {...metricProps(metric)} />)}
           </div>
         )}
       </FarmFrame>

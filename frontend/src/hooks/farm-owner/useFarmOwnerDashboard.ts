@@ -39,15 +39,20 @@ function pickReadings(now: LiveZone | undefined, record: TelemetryRecord | undef
   }
 }
 
+// Mọi camera tài khoản xem được (chung cache ['camera-nodes'] với trang Thiết bị, Trang trại)
+export function useCameraNodes() {
+  return useQuery({
+    queryKey: ['camera-nodes'],
+    queryFn: () => deviceApi.listCameraNodes().then(response => response.data.data),
+  })
+}
+
 // Trạng thái các nhà yến của farm
 export function useHouseStability(farmId: string) {
   const { data: houses, isLoading: isLoadingHouses } = useHouses(farmId)
   const { data: zones, isLoading: isLoadingZones } = useAllZones()
   const { data: sensors, isLoading: isLoadingSensors } = useSensorNodes()
-  const { data: cameras, isLoading: isLoadingCameras } = useQuery({
-    queryKey: ['camera-nodes'],
-    queryFn: () => deviceApi.listCameraNodes().then(r => r.data.data),
-  })
+  const { data: cameras, isLoading: isLoadingCameras } = useCameraNodes()
 
   const items = useMemo(
     () => {
@@ -67,12 +72,12 @@ export function useHouseStability(farmId: string) {
 
 // Các Zone trong phạm vi đang chọn: cả farm hoặc 1 nhà yến
 export function useScopeZones(farmId: string, houseId: string) {
-  const { data: allZones, isLoading } = useAllZones()
+  const { data: allZones, isLoading, isError } = useAllZones()
   const zones = useMemo(
     () => (allZones ?? []).filter(zone => zone.farmId === farmId && (!houseId || zone.house_id === houseId)),
     [allZones, farmId, houseId],
   )
-  return { zones, isLoading }
+  return { zones, isLoading, isError }
 }
 
 // Số đo, relay và đồng bộ của các Zone đang chọn
@@ -96,12 +101,12 @@ export function useZonesEnvironment(zones: AllZone[]) {
   const { isLoading: isLoadingLatest, latest } = useQueries({
     queries: zoneIds.map(zoneId => ({
       queryKey: ['telemetry', 'latest', zoneId],
-      queryFn: () => telemetryApi.getLatest(zoneId).then(r => r.data.data),
+      queryFn: () => telemetryApi.getLatest(zoneId).then(response => response.data.data),
       retry: false,
       refetchInterval: pollInterval,
     })),
     combine: results => ({
-      isLoading: results.some(r => r.isLoading),
+      isLoading: results.some(result => result.isLoading),
       latest: results.map((r, index) => ({ zoneId: zoneIds[index], record: r.data })),
     }),
   })
@@ -153,8 +158,7 @@ export function useZonesEnvironment(zones: AllZone[]) {
   }
 }
 
-// Bảng nhật ký cảnh báo: cả farm gộp 1 request, 1 nhà yến thì lấy theo từng zone của nhà
-// + cảnh báo của cả nhà (camera đếm chim, SRS v2.1.8) khi đang xem cả nhà, không lọc 1 Zone
+// Nhật ký cảnh báo: cả farm 1 request; 1 nhà thì theo từng Zone, thêm cảnh báo cấp nhà (camera, SRS v2.1.8) khi không lọc 1 Zone
 export function useHouseAlerts(farmId: string, zoneIds: string[], wholeFarm: boolean, houseAlertsId = '') {
   let scopes = zoneIds.map(zoneId => ({ key: zoneId, filter: { zoneId } as Record<string, string> }))
   if (houseAlertsId) scopes.push({ key: `house-${houseAlertsId}`, filter: { houseId: houseAlertsId } })
@@ -162,16 +166,16 @@ export function useHouseAlerts(farmId: string, zoneIds: string[], wholeFarm: boo
   return useQueries({
     queries: scopes.map(scope => ({
       queryKey: ['alerts', 'house-log', scope.key],
-      queryFn: () => alertApi.list({ ...scope.filter, limit: String(ALERT_LOG_LIMIT) }).then(r => r.data.data),
+      queryFn: () => alertApi.list({ ...scope.filter, limit: String(ALERT_LOG_LIMIT) }).then(response => response.data.data),
     })),
     combine: results => ({
-      isLoading: results.some(r => r.isLoading),
-      isError: results.some(r => r.isError),
+      isLoading: results.some(result => result.isLoading),
+      isError: results.some(result => result.isError),
       records: results
-        .flatMap(r => r.data ?? [])
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .flatMap(result => result.data ?? [])
+        .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
         .slice(0, ALERT_LOG_LIMIT),
-      refetch: () => results.forEach(r => void r.refetch()),
+      refetch: () => results.forEach(result => void result.refetch()),
     }),
   })
 }

@@ -14,8 +14,7 @@ function sdFileName(trackNumber: number): string {
   return `${String(trackNumber).padStart(4, '0')}.mp3`;
 }
 
-// Bài loa ru của 1 bộ kit (ENV-FR-013c): Farm Owner chọn bài mặc định cho lịch, phát thử, dừng phát — chỉ với bài đã chép vào thẻ SD.
-// Tải lên, đánh dấu đã chép thẻ SD, xoá bài là việc của Kỹ thuật viên nên không có ở đây
+// Bài loa ru của 1 bộ kit (ENV-FR-013c): chọn bài mặc định, phát thử, dừng với bài đã chép thẻ SD; tải lên / xoá bài là việc của Kỹ thuật viên
 export default function LullabyTracksModal({ node, onClose }: { node: SensorNode; onClose: () => void }): JSX.Element {
   const { t, num } = useTranslation(devicesDict);
   const push = useToastStore(state => state.push);

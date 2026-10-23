@@ -36,7 +36,8 @@ export default function FarmFormModal({ farm, canChangeRegion = true, onClose }:
       setError('farmForm.errorRequired')
       return
     }
-    if (!region) {
+    // Không có quyền đổi khu vực thì ô bị khoá, farm cũ chưa có khu vực vẫn sửa được tên, địa chỉ
+    if (!region && !(isEdit && !canChangeRegion)) {
       setError('farmForm.errorRegion')
       return
     }

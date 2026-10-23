@@ -2,12 +2,7 @@ import { groupHarvests } from '@/components/features/farm-owner/harvest/harvestM
 import { vnYearMonth } from '@/lib/helpers'
 import type { Alert, CameraNode, DeviceStatus, Farm, HarvestBatch, House, SensorNode, Thresholds, Zone } from '@/types'
 
-/**
- * Tổng hợp Farm → House → Zone → Device cho màn "Cấu trúc Farm". Toàn bộ là hàm
- * thuần: mỗi tập dữ liệu (thiết bị, cảnh báo, thu hoạch, số đo) chỉ duyệt MỘT lần để
- * dựng Map theo zone_id, sau đó dựng cây bằng tra Map — tổng độ phức tạp O(n), không
- * có vòng lặp lồng nhau kiểu "với mỗi zone lọc lại toàn bộ thiết bị".
- */
+// Dựng cây Farm → House → Zone → Device bằng hàm thuần: mỗi tập dữ liệu duyệt 1 lần vào Map theo zone_id, tổng O(n)
 
 export type Health = 'ALERT' | 'NORMAL'
 /** Nhà thêm trạng thái EMPTY: chưa có zone/thiết bị nào để theo dõi (khác "bình thường") */
@@ -83,7 +78,7 @@ const RECENT_LIMIT = 3
 
 /** Chèn vào danh sách "N mới nhất" (mới → cũ) — N rất nhỏ nên chèn thẳng, không cần sắp lại cả mảng */
 function pushRecent(list: HarvestBatch[], batch: HarvestBatch): void {
-  let i = list.findIndex(x => batch.harvest_date > x.harvest_date)
+  let i = list.findIndex(item => batch.harvest_date > item.harvest_date)
   if (i === -1) i = list.length
   list.splice(i, 0, batch)
   if (list.length > RECENT_LIMIT) list.pop()
@@ -118,8 +113,8 @@ function countDevices(devices: DeviceRow[]): DeviceCounts {
   return { total: devices.length, online, offline }
 }
 
-function addCounts(a: DeviceCounts, b: DeviceCounts): DeviceCounts {
-  return { total: a.total + b.total, online: a.online + b.online, offline: a.offline + b.offline }
+function addCounts(left: DeviceCounts, right: DeviceCounts): DeviceCounts {
+  return { total: left.total + right.total, online: left.online + right.online, offline: left.offline + right.offline }
 }
 
 /** Gom các bản ghi vào Map theo khoá — dùng chung cho thiết bị/cảnh báo, mỗi tập duyệt đúng 1 lần */
@@ -168,9 +163,9 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
     else camerasByHouse.set(houseId, [row])
   }
 
-  const alertsByZone = groupBy(alerts, a => a.zone_id)
+  const alertsByZone = groupBy(alerts, alert => alert.zone_id)
   // Cảnh báo của cả nhà (camera đếm chim) không có zone_id
-  const alertsByHouse = groupBy(alerts.filter(a => !a.zone_id), a => a.house_id)
+  const alertsByHouse = groupBy(alerts.filter(alert => !alert.zone_id), alert => alert.house_id)
 
   // Thu hoạch: danh sách API đã sắp mới → cũ nên bản ghi đầu tiên gặp của zone chính là lần thu gần nhất
   const harvestByZone = new Map<string, { kg: number; nests: number; batches: number; last: HarvestBatch; recent: HarvestBatch[] }>()
