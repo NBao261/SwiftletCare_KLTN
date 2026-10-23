@@ -26,7 +26,7 @@ import { cn } from '@/lib/cn'
 import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
-import { noteLeftFarmDetail, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { FARMS_UP_STATE, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
 
 // Chi tiết 1 Zone: thông số realtime so ngưỡng (REST latest + socket), danh sách thiết bị, bấm Chi tiết mở drawer
 export default function FarmOwnerFarmZoneDetailPage() {
@@ -47,8 +47,6 @@ export default function FarmOwnerFarmZoneDetailPage() {
   useEffect(() => {
     if (farmId && houseId && zoneId) setScopePath(farmId, farmName, houseId, zoneId)
   }, [farmId, houseId, zoneId, farmName, setScopePath])
-  // Rời trang sang danh sách Trang trại thì danh sách không tự mở lại trang chi tiết
-  useEffect(() => noteLeftFarmDetail, [])
   const [selected, setSelected] = useState<DeviceRow | null>(null)
   // Farm Owner chỉnh ngưỡng của Zone ngay tại trang (ENV-FR-006/020); role khác vẫn sang trang Thiết bị của mình
   const [isThresholdsOpen, setIsThresholdsOpen] = useState(false)
@@ -62,6 +60,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
     node
       ? [{ label: node.house.name, onClick: () => navigate(`/farms/${farmId}/houses/${houseId}`) }, { label: node.zone.name }]
       : [],
+    FARMS_UP_STATE,
   )
 
   const d = live.data

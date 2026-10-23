@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useNavigationType } from 'react-router-dom'
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { ListIcon, PlusIcon, SquaresFourIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState, FilterChip, SearchInput } from '@/components/ui'
 import StableHeight from '@/components/ui/StableHeight'
@@ -16,7 +16,7 @@ import FarmGroupRow from '@/components/features/farm-owner/farms/FarmGroupRow'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import { summarizeScope } from '@/components/features/farm-owner/farms/farmStructure'
-import { farmHousePath, farmZonePath, isComingFromFarmDetail, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { farmHousePath, farmZonePath, isFarmsUpState, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
 import { useDeleteFarm, useFarms, useRegions } from '@/hooks/shared/useFarms'
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
 import { useFarmStructure, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
@@ -60,21 +60,21 @@ export default function FarmOwnerFarmsPage() {
   const scope = useScopeFilter()
   const routedScope = useFarmsScopeRouting(scope)
   const navigationType = useNavigationType()
-  // Đo ở lần chạy effect đầu (sau khi trang chi tiết vừa rời đã dọn dẹp): đi lên từ trang chi tiết hoặc bấm Back của trình duyệt
-  const isGoingUpRef = useRef<boolean | null>(null)
+  const location = useLocation()
+  // Đi lên từ trang chi tiết (Quay lại, breadcrumb, đổi khung lọc gắn state) hoặc bấm Back của trình duyệt
+  const isGoingUp = navigationType === 'POP' || isFarmsUpState(location.state)
   const hasRoutedRef = useRef(false)
-  // Chạy 1 lần khi khung lọc tải xong: đang lọc 1 nhà / Zone thì mở thẳng trang đó; đi lên từ trang chi tiết thì bỏ lọc nhà, Zone
+  // Chạy 1 lần khi khung lọc tải xong: đang lọc 1 nhà / Zone thì mở thẳng trang đó; đi lên thì bỏ lọc nhà, Zone
   useEffect(() => {
-    isGoingUpRef.current ??= navigationType === 'POP' || isComingFromFarmDetail()
     if (hasRoutedRef.current || scope.isLoading) return
     hasRoutedRef.current = true
-    if (isGoingUpRef.current) {
+    if (isGoingUp) {
       if (scope.houseId) scope.setHouseId('')
       return
     }
     if (scope.zone) navigate(farmZonePath(scope.zone.farmId, scope.zone.house_id, scope.zone._id), { replace: true })
     else if (scope.houseId && scope.farmId) navigate(farmHousePath(scope.farmId, scope.houseId), { replace: true })
-  }, [scope, navigationType, navigate])
+  }, [scope, isGoingUp, navigate])
   const { data: regions } = useRegions()
   const currentUserId = useAuthStore(state => state.user?._id)
   const isAdmin = usePermission('ADMIN')

@@ -12,17 +12,17 @@ import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
  * literal tạo mới mỗi render nên so sánh tham chiếu sẽ chạy lại vô hạn; nhãn đổi
  * mới thực sự là lúc cần cập nhật store.
  */
-export function usePageBreadcrumb(crumbs: Crumb[]) {
+export function usePageBreadcrumb(crumbs: Crumb[], rootState?: unknown) {
   const setTrail = useBreadcrumbStore(s => s.setTrail)
   const crumbsRef = useRef(crumbs)
   crumbsRef.current = crumbs
   const signal = crumbs.map(c => c.label).join('›')
 
   useEffect(() => {
-    setTrail(crumbsRef.current)
+    setTrail(crumbsRef.current, rootState)
     return () => setTrail([])
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signal, setTrail])
+  }, [signal, setTrail, rootState])
 }
 
 /**
@@ -31,11 +31,11 @@ export function usePageBreadcrumb(crumbs: Crumb[]) {
  * đi qua store như breadcrumb. `to` là path trang cha cố định (không navigate(-1)):
  * vào thẳng bằng URL vẫn quay lại đúng chỗ.
  */
-export function usePageBack(to: string, label: string) {
+export function usePageBack(to: string, label: string, state?: unknown) {
   const setBack = useBreadcrumbStore(s => s.setBack)
 
   useEffect(() => {
-    setBack({ to, label })
+    setBack({ to, label, state })
     return () => setBack(null)
-  }, [to, label, setBack])
+  }, [to, label, state, setBack])
 }

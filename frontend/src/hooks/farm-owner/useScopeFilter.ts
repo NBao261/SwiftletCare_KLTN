@@ -138,18 +138,15 @@ export function useScopeFilter(): ScopeFilterState {
 
 // Trang Trang trại (danh sách farm)
 export const FARMS_PATH = '/farms';
-// Khoảng từ lúc rời trang chi tiết nhà / Zone tới lúc trang danh sách mở, coi là đi lên cấp farm (cùng 1 lần chuyển trang)
-const LEAVE_DETAIL_WINDOW_MS = 1500;
-let leftFarmDetailAt = 0;
-
-// Trang chi tiết nhà / Zone gọi khi rời trang: trang danh sách mở ngay sau đó thì không tự vào lại trang chi tiết
-export function noteLeftFarmDetail(): void {
-  leftFarmDetailAt = Date.now();
+// State gắn vào lượt chuyển trang đi lên từ trang chi tiết nhà / Zone (Quay lại, breadcrumb, đổi khung lọc): danh sách bỏ lọc nhà, Zone
+export interface FarmsUpState {
+  fromFarmDetail: true;
 }
 
-// Trang danh sách vừa mở do rời trang chi tiết (Back, breadcrumb, menu, đổi khung lọc)
-export function isComingFromFarmDetail(): boolean {
-  return Date.now() - leftFarmDetailAt < LEAVE_DETAIL_WINDOW_MS;
+export const FARMS_UP_STATE: FarmsUpState = { fromFarmDetail: true };
+
+export function isFarmsUpState(state: unknown): state is FarmsUpState {
+  return typeof state === 'object' && state !== null && (state as Partial<FarmsUpState>).fromFarmDetail === true;
 }
 
 export function farmHousePath(farmId: string, houseId: string): string {
@@ -167,13 +164,14 @@ export function useFarmsScopeRouting(scope: ScopeFilterState): ScopeFilterState 
 
   function setFarmId(farmId: string): void {
     scope.setFarmId(farmId);
-    if (pathname !== FARMS_PATH) navigate(FARMS_PATH);
+    if (pathname !== FARMS_PATH) navigate(FARMS_PATH, { state: FARMS_UP_STATE });
   }
 
   function setHouseId(houseId: string): void {
     scope.setHouseId(houseId);
     const house = scope.houses.find(item => item._id === houseId);
-    navigate(house ? farmHousePath(house.farm_id, house._id) : FARMS_PATH);
+    if (house) navigate(farmHousePath(house.farm_id, house._id));
+    else navigate(FARMS_PATH, { state: FARMS_UP_STATE });
   }
 
   function setZoneId(zoneId: string): void {

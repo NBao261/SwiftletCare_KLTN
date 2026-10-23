@@ -30,7 +30,7 @@ import type { DeviceRow, ZoneNode } from '@/components/features/farm-owner/farms
 import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
-import { FARMS_PATH, noteLeftFarmDetail, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { FARMS_PATH, FARMS_UP_STATE, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
 import { useZoneStore } from '@/stores/zoneStore'
 
 /** Khung nội dung cao CỨNG (px) cho mọi tab — tab Tổng quan (cột phải ~880px) là cao nhất, tải lại hay đổi tab trang không đổi chiều cao */
@@ -69,8 +69,6 @@ export default function FarmOwnerFarmZonesPage() {
   useEffect(() => {
     if (farmId && houseId) setScopePath(farmId, farmName, houseId, '')
   }, [farmId, houseId, farmName, setScopePath])
-  // Rời trang sang danh sách Trang trại thì danh sách không tự mở lại trang này
-  useEffect(() => noteLeftFarmDetail, [])
   const scopeFilter = (
     <>
       <HeaderActions>
@@ -84,8 +82,8 @@ export default function FarmOwnerFarmZonesPage() {
     </>
   )
 
-  usePageBack(FARMS_PATH, t('page.farms'))
-  usePageBreadcrumb(node ? [{ label: node.house.name }] : [])
+  usePageBack(FARMS_PATH, t('page.farms'), FARMS_UP_STATE)
+  usePageBreadcrumb(node ? [{ label: node.house.name }] : [], FARMS_UP_STATE)
 
   // Gom thiết bị của nhà trong 1 lượt duyệt: tất cả / không online / camera đầu tiên
   const { devices, problems, camera, zoneNameById, zoneById } = useMemo(() => {
