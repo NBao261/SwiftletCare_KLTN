@@ -35,8 +35,28 @@ export interface EnvCompareResponse {
   zones: EnvCompareZone[]
 }
 
+// Số đếm 1 ngày giờ Việt Nam của cả nhà yến (SRS v2.1.8); các trường thêm ở v2.1.8 để tuỳ chọn cho dữ liệu cũ
 export interface BirdCountDailyRecord {
   date: string; morning_exit: number; evening_entry: number; return_rate: number | null
+  morning_entry?: number; evening_exit?: number
+  net_exit?: number; net_entry?: number
+  has_morning?: boolean; has_evening?: boolean
+}
+
+// VISION-FR-017 — số chim qua vạch đếm trong 1 khoảng 5 phút, cộng mọi camera của nhà yến
+export interface BirdCountBucket {
+  bucket_start: string; entry_count: number; exit_count: number
+}
+
+export interface BirdCountBucketsResponse {
+  house_id: string; from: string; to: string
+  buckets: BirdCountBucket[]
+}
+
+// VISION-FR-012 — số đếm hôm nay của nhà yến, updated_at null khi hôm nay chưa có tin
+export interface BirdCountCurrentResponse extends Required<BirdCountDailyRecord> {
+  house_id: string
+  updated_at: string | null
 }
 
 export interface BirdCountDailyResponse {
@@ -51,7 +71,17 @@ export interface BirdCountTrendsResponse {
   avg_return_rate: number | null
   latest_return_rate: number | null
   drop_percent: number | null
+  // Mức giảm coi là đáng kể của nhà yến (return_rate_drop_pct, Domain Expert chỉnh — EXPERT-FR-008)
+  drop_threshold_pct: number
   is_significant_drop: boolean
+}
+
+// ANALYTICS-FR-011 — tỷ lệ thời gian tự động, tính từ lịch sử can thiệp tay
+export interface AutonomyResponse {
+  range: AnalyticsRange; from: string; to: string
+  auto_mode_pct: number | null
+  manual_minutes: number
+  override_count: number
 }
 
 export interface EnvBirdCorrelationPoint {
@@ -125,6 +155,8 @@ export interface ForecastResponse {
 export const analyticsApi = {
   tuningSuggestion: (zoneId: string) =>
     api.get<ApiResponse<TuningSuggestionResponse>>('/analytics/control/suggestion', { params: { zoneId } }),
+  autonomy: (zoneId: string, range: AnalyticsRange) =>
+    api.get<ApiResponse<AutonomyResponse>>('/analytics/autonomy', { params: { zoneId, range } }),
   forecast: (zoneId: string) =>
     api.get<ApiResponse<ForecastResponse>>('/analytics/forecast', { params: { zoneId } }),
   controlPerformance: (zoneId: string, range: AnalyticsRange) =>
@@ -135,8 +167,13 @@ export const analyticsApi = {
     api.get<ApiResponse<EnvCompareResponse>>('/analytics/env/compare', { params: { zoneIds: zoneIds.join(','), range } }),
   birdCountDaily: (zoneId: string, params?: { from?: string; to?: string }) =>
     api.get<ApiResponse<BirdCountDailyResponse>>('/analytics/bird-count/daily', { params: { zoneId, ...params } }),
-  birdCountTrends: (zoneId: string, days = 30) =>
-    api.get<ApiResponse<BirdCountTrendsResponse>>('/analytics/bird-count/trends', { params: { zoneId, days } }),
+  // Đếm chim theo nhà yến (SRS v2.1.8) — houseId thay cho zoneId cũ
+  houseBirdCountTrends: (houseId: string, days = 30) =>
+    api.get<ApiResponse<BirdCountTrendsResponse>>('/analytics/bird-count/trends', { params: { houseId, days } }),
+  houseBirdCountBuckets: (houseId: string, params?: { from?: string; to?: string }) =>
+    api.get<ApiResponse<BirdCountBucketsResponse>>('/analytics/bird-count/buckets', { params: { houseId, ...params } }),
+  houseBirdCountCurrent: (houseId: string) =>
+    api.get<ApiResponse<BirdCountCurrentResponse>>('/analytics/bird-count/current', { params: { houseId } }),
   correlation: (zoneId: string, days = 30) =>
     api.get<ApiResponse<EnvBirdCorrelationResponse>>('/analytics/correlation', { params: { zoneId, days } }),
 }

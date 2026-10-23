@@ -5,14 +5,16 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { summarizeStability, type HouseStability, type StabilityStatus } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import { cn } from '@/lib/cn'
+import type { House } from '@/types'
+import { NO_VALUE } from '@/constants/display'
 
 const DOT_CLASS: Record<StabilityStatus, string> = { FAULT: 'bg-safetyOrange', STABLE: 'bg-success', EMPTY: 'bg-warmGray/40' }
 const LABEL_CLASS: Record<StabilityStatus, string> = { FAULT: 'text-safetyOrange', STABLE: 'text-charcoal', EMPTY: 'text-warmGray' }
 
-// Thẻ nhỏ trạng thái các nhà yến của farm, đứng cạnh khối điều khiển
-export default function EcoHealthCard({ farmId }: { farmId: string }) {
+// Thẻ nhỏ trạng thái các nhà yến trong phạm vi khung lọc, đứng cạnh hàng KPI
+export default function EcoHealthCard({ houses }: { houses: House[] }) {
   const { t } = useTranslation(dashboardDict)
-  const { items, isLoading } = useHouseStability(farmId)
+  const { items, isLoading } = useHouseStability(houses)
   const { faultHouses, stableCount, hasDevices } = summarizeStability(items)
   const hasFault = faultHouses.length > 0
 
@@ -29,8 +31,8 @@ export default function EcoHealthCard({ farmId }: { farmId: string }) {
 
       <div>
         <p className="leading-none">
-          <span className="text-[32px] font-extrabold tracking-tight text-charcoal">{isLoading ? '--' : stableCount}</span>
-          <span className="ml-1 text-sm font-semibold text-warmGray">/{isLoading ? '--' : items.length}</span>
+          <span className="text-[32px] font-extrabold tracking-tight text-charcoal">{isLoading ? NO_VALUE : stableCount}</span>
+          <span className="ml-1 text-sm font-semibold text-warmGray">/{isLoading ? NO_VALUE : items.length}</span>
         </p>
         {!isLoading && (
           <p className={cn('mt-2 truncate text-xs font-medium', hasFault ? 'text-safetyOrange' : 'text-warmGray')} title={note}>{note}</p>

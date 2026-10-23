@@ -1,246 +1,248 @@
-// Harvest & Marketplace Page (Farm Owner) – MARKET-FR-001..013 (trừ Buyer công khai)
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useZoneStore } from '@/stores/zoneStore'
-import { useFarmZones } from '@/hooks/shared/useFarms'
-import { useHarvests, useDeleteHarvest } from '@/hooks/farm-owner/useHarvests'
-import { Button } from '@/components/ui'
-import ConfirmModal from '@/components/ui/ConfirmModal'
-import EmptyState from '@/components/ui/EmptyState'
-import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { useToastStore } from '@/stores/toastStore'
-import { formatDateOnly, getApiErrorMessage } from '@/lib/helpers'
-import { cn } from '@/lib/cn'
-import HarvestStatsCards from '@/components/features/farm-owner/harvest/HarvestStatsCards'
-import HarvestTable from '@/components/features/farm-owner/harvest/HarvestTable'
-import HarvestYearChart from '@/components/features/farm-owner/harvest/HarvestYearChart'
-import ListingsTab from '@/components/features/farm-owner/harvest/ListingsTab'
-import HarvestDetailModal from '@/components/features/farm-owner/harvest/HarvestDetailModal'
-import CreateHarvestModal from '@/components/features/farm-owner/harvest/CreateHarvestModal'
-import EditHarvestModal from '@/components/features/farm-owner/harvest/EditHarvestModal'
-import CreateListingModal from '@/components/features/farm-owner/harvest/CreateListingModal'
-import { NEST_TYPE_LABEL, HARVEST_STATUS_LABEL } from '@/components/features/farm-owner/harvest/harvest.constants'
-import type { HarvestBatch } from '@/types'
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-const SECTIONS = [
-  { id: 'section-harvest', label: 'Đợt thu hoạch' },
-  { id: 'section-marketplace', label: 'Tin đăng bán' },
-  { id: 'section-analytics', label: 'Biểu đồ & Thống kê' },
-] as const
+import ScopeFilter from '@/components/common/ScopeFilter';
+import HeaderActions from '@/components/layouts/HeaderActions';
+import { Button, ConfirmModal, EmptyState, LoadingSkeleton } from '@/components/ui';
+import HarvestDetailModal from '@/components/features/farm-owner/harvest/HarvestDetailModal';
+import HarvestStatsCards from '@/components/features/farm-owner/harvest/HarvestStatsCards';
+import HarvestFormModal from '@/components/features/farm-owner/harvest/HarvestFormModal';
+import HarvestTable from '@/components/features/farm-owner/harvest/HarvestTable';
+import HarvestYearChart from '@/components/features/farm-owner/harvest/HarvestYearChart';
+import NestTypeBreakdownCard from '@/components/features/farm-owner/harvest/NestTypeBreakdownCard';
+import { environmentSummary, groupHarvests } from '@/components/features/farm-owner/harvest/harvestMetrics';
+import { harvestDict, type HarvestTranslate } from '@/constants/harvest.i18n';
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { useTranslation } from '@/hooks/common/useTranslation';
+import { useDeleteHarvest, useHarvests } from '@/hooks/farm-owner/useHarvests';
+import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useFarmDetails } from '@/hooks/shared/useFarms';
+import { formatStandardDate } from '@/lib/i18n';
+import { useAuthStore } from '@/stores/authStore';
+import { useToastStore } from '@/stores/toastStore';
+import type { HarvestGroup } from '@/components/features/farm-owner/harvest/harvestMetrics';
+import type { Farm, HarvestBatch, User } from '@/types';
+import { NO_VALUE } from '@/constants/display';
 
-function exportCsv(batches: HarvestBatch[], zoneNameById: Map<string, string>) {
-  const header = ['Ngày thu hoạch', 'Khu vực', 'Loại tổ', 'Số tổ', 'Khối lượng (g)', 'Trạng thái']
-  const rows = batches.map(b => [
-    formatDateOnly(b.harvest_date),
-    zoneNameById.get(b.zone_id) ?? '',
-    NEST_TYPE_LABEL[b.nest_type],
-    String(b.nest_count),
-    String(b.weight_grams),
-    HARVEST_STATUS_LABEL[b.status],
-  ])
-  const csv = [header, ...rows].map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
-  const blob = new Blob([String.fromCharCode(0xfeff) + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `thu-hoach-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+// Ký tự BOM để Excel mở file CSV tiếng Việt đúng bảng mã
+const CSV_BYTE_ORDER_MARK = String.fromCharCode(0xfeff);
+
+// Tên người theo id: người đang đăng nhập, chủ farm và thành viên farm (đã có tên trong GET /farms/:id)
+function buildPersonNames(farms: Farm[], user: User | null): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const farm of farms) {
+    for (const member of farm.members ?? []) {
+      if (member.full_name) names.set(member.user_id, member.full_name);
+    }
+    if (farm.owner?.full_name) names.set(farm.owner_id, farm.owner.full_name);
+  }
+  if (user) names.set(user._id, user.full_name);
+  return names;
 }
 
-export default function FarmOwnerHarvestPage() {
-  const { selectedFarmId } = useZoneStore()
-  const { data: batches, isLoading, isError, refetch } = useHarvests(selectedFarmId ?? undefined)
-  const { data: zones } = useFarmZones(selectedFarmId ?? undefined)
-  const deleteHarvest = useDeleteHarvest(selectedFarmId ?? undefined)
-  const push = useToastStore(s => s.push)
+// Xuất danh sách đợt thu ra CSV theo ngôn ngữ đang chọn, kèm nhiệt/ẩm TB 7 ngày trước thu
+function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>, personNames: Map<string, string>, translate: HarvestTranslate): void {
+  const header = [
+    translate('col.date'), translate('col.house'), translate('col.creator'), translate('col.nestType'), translate('form.nests'),
+    translate('csv.weight'), translate('csv.temperature'), translate('csv.humidity'),
+  ];
+  const rows = batches.map(batch => {
+    const environment = environmentSummary(batch.env_snapshot);
+    return [
+      formatStandardDate(batch.harvest_date),
+      houseNameByZone.get(batch.zone_id) ?? '',
+      (batch.created_by && personNames.get(batch.created_by)) ?? '',
+      translate(`nestType.${batch.nest_type}`),
+      String(batch.nest_count),
+      String(batch.weight_grams),
+      environment ? String(environment.temperature) : '',
+      environment ? String(environment.humidity) : '',
+    ];
+  });
+  const csv = [header, ...rows].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([CSV_BYTE_ORDER_MARK + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `thu-hoach-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
-  const [showCreate, setShowCreate] = useState(false)
-  const [detailBatchId, setDetailBatchId] = useState<string | null>(null)
-  const [editBatchId, setEditBatchId] = useState<string | null>(null)
-  const [listingBatchId, setListingBatchId] = useState<string | null>(null)
-  const [deleteBatchId, setDeleteBatchId] = useState<string | null>(null)
+// Trang Thu hoạch của Farm Owner — chỉ ghi nhận thu hoạch theo SRS v2 (MARKET-FR-001..005, Flow 7)
+export default function FarmOwnerHarvestPage(): JSX.Element {
+  const { t } = useTranslation(harvestDict);
+  // Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner, lưu lại khi chuyển trang
+  // Sản lượng nhập theo nhà yến nên trang chỉ lọc tới nhà: ô Zone khoá, bỏ Zone đã lưu ở trang khác
+  const scope = { ...useScopeFilter(), zone: undefined };
+  const farmId = scope.farmId;
+  // Đợt thu của farm đang lọc, hoặc của mọi farm khi xem tất cả trang trại
+  const { data: batches, isLoading, isError, error, refetch } = useHarvests(farmId || undefined);
+  const zones = scope.zones;
+  const detailFarmIds = useMemo(() => (farmId ? [farmId] : scope.farms.map(farm => farm._id)), [farmId, scope.farms]);
+  const farmDetails = useFarmDetails(detailFarmIds);
+  const user = useAuthStore(state => state.user);
+  const deleteHarvest = useDeleteHarvest();
+  const push = useToastStore(state => state.push);
+  const apiErrorMessage = useApiErrorMessage();
 
-  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id)
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  // Khoá lần thu (nhóm các loại yến) đang mở chi tiết / sửa / chờ xoá
+  const [detailGroupKey, setDetailGroupKey] = useState<string | null>(null);
+  const [editGroupKey, setEditGroupKey] = useState<string | null>(null);
+  const [deleteGroupKey, setDeleteGroupKey] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // 3 section chỉ được render sau khi qua 2 nhánh return sớm (chưa chọn farm /
-  // đang tải / lỗi) — effect phải chạy lại khi chúng thật sự có mặt, nếu không
-  // lần mở đầu (chưa có cache) mọi ref còn null và scrollspy không gắn gì cả.
-  const sectionsMounted = !!selectedFarmId && !isLoading && !isError
+  // Backend lưu lần thu theo Zone; giao diện chỉ hiện nhà yến của Zone đó
+  const houseNameByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.houseName])), [zones]);
+  const personNames = useMemo(() => buildPersonNames(farmDetails, user), [farmDetails, user]);
+  // Đợt thu trong phạm vi đang lọc: các Zone của 1 nhà, hoặc cả farm / mọi farm
+  const scopedBatches = useMemo(() => {
+    const allFarmBatches = batches ?? [];
+    if (!scope.houseId) return allFarmBatches;
+    const scopeZoneIds = new Set(scope.zones.map(zone => zone._id));
+    return allFarmBatches.filter(batch => scopeZoneIds.has(batch.zone_id));
+  }, [batches, scope.houseId, scope.zones]);
+  // Mỗi lần thu 1 nhóm: các loại yến ghi cùng lần gộp lại
+  const groups = useMemo(() => groupHarvests(scopedBatches), [scopedBatches]);
+  const groupByKey = useMemo(() => new Map(groups.map(group => [group.key, group])), [groups]);
 
-  // Scrollspy: section nào nằm ở dải giữa màn hình (35%-65%) nhiều nhất thì tab
-  // tương ứng sáng lên.
-  useEffect(() => {
-    if (!sectionsMounted) return
-    const observer = new IntersectionObserver(
-      entries => {
-        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-        if (visible[0]) setActiveSection(visible[0].target.id)
-      },
-      { rootMargin: '-35% 0px -35% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] },
-    )
-    SECTIONS.forEach(s => {
-      const el = sectionRefs.current[s.id]
-      if (el) observer.observe(el)
-    })
-
-    // Section cuối (biểu đồ) có thể thấp hơn vùng quan sát 45% phía trên nên
-    // IntersectionObserver không bao giờ kích hoạt nó — cuộn chạm đáy khung cuộn
-    // (<main> của AppShell) thì ép active luôn section cuối cùng.
-    const scrollEl = sectionRefs.current[SECTIONS[0].id]?.closest('main')
-    function handleScroll() {
-      if (!scrollEl) return
-      if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 4) {
-        setActiveSection(SECTIONS[SECTIONS.length - 1].id)
-      }
-    }
-    scrollEl?.addEventListener('scroll', handleScroll, { passive: true })
-
-    return () => {
-      observer.disconnect()
-      scrollEl?.removeEventListener('scroll', handleScroll)
-    }
-  }, [sectionsMounted])
-
-  function scrollToSection(id: string) {
-    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  const zoneNameById = useMemo(
-    () => new Map(zones?.map(z => [z._id, `${z.houseName} / ${z.name}`])),
-    [zones],
-  )
-
-  if (!selectedFarmId) {
+  if (scope.farms.length === 0) {
     return (
       <EmptyState
-        title="Chưa chọn trang trại"
-        description="Chọn 1 zone ở thanh trên cùng để xác định trang trại cần quản lý thu hoạch."
+        title={t('page.noFarmTitle')}
+        description={t('page.noFarmDesc')}
         action={
           <Link to="/farms">
-            <Button>Đi tới Trang trại</Button>
+            <Button>{t('page.goFarms')}</Button>
           </Link>
         }
       />
-    )
+    );
   }
 
   if (isLoading) {
-    return <LoadingSkeleton count={3} className="h-28 w-full" />
+    return <LoadingSkeleton count={3} className="h-28 w-full" />;
   }
 
   if (isError) {
     return (
       <EmptyState
-        title="Không tải được nhật ký thu hoạch"
-        description="Kiểm tra kết nối tới máy chủ rồi thử lại."
-        action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+        title={t('page.errorTitle')}
+        description={apiErrorMessage(error)}
+        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
       />
-    )
+    );
   }
 
-  const allBatches = batches ?? []
-  const findBatch = (id: string | null) => (id ? allBatches.find(b => b._id === id) ?? null : null)
-  const detailBatch = findBatch(detailBatchId)
-  const editBatch = findBatch(editBatchId)
-  const listingBatch = findBatch(listingBatchId)
+  const allBatches = scopedBatches;
+  // Người nhập 1 lần thu = người tạo đợt đầu; không tra được tên (VD Admin nhập hộ) thì "_"
+  const creatorName = (group: HarvestGroup): string => {
+    const creatorId = group.batches[0]?.created_by;
+    return (creatorId && personNames.get(creatorId)) || NO_VALUE;
+  };
+  // Phạm vi đang lọc chưa có Zone nào (VD nhà mới tạo) thì chặn ghi đợt thu, nói rõ lý do
+  const createBlockedReason = scope.zones.length > 0 ? undefined
+    : scope.houseId ? t('page.blockedHouse', { house: scope.houseName }) : t('page.blockedFarm');
+  const detailGroup = detailGroupKey ? groupByKey.get(detailGroupKey) : undefined;
+  const editGroup = editGroupKey ? groupByKey.get(editGroupKey) : undefined;
 
-  function handleDelete() {
-    if (!deleteBatchId) return
-    deleteHarvest.mutate(deleteBatchId, {
-      onSuccess: () => { push('Đã xoá đợt thu hoạch'); setDeleteBatchId(null); setDetailBatchId(null) },
-      onError: (err) => push(getApiErrorMessage(err, 'Xoá thất bại'), 'error'),
-    })
+  // Xoá cả lần thu = xoá đợt của từng loại yến trong nhóm
+  async function handleDelete(): Promise<void> {
+    const group = deleteGroupKey ? groupByKey.get(deleteGroupKey) : undefined;
+    if (!group) return;
+    setIsDeleting(true);
+    const results = await Promise.allSettled(group.batches.map(batch => deleteHarvest.mutateAsync(batch._id)));
+    setIsDeleting(false);
+    const failure = results.find(result => result.status === 'rejected') as PromiseRejectedResult | undefined;
+    if (failure) {
+      push(apiErrorMessage(failure.reason, t('delete.failed')), 'error');
+      return;
+    }
+    push(t('delete.done'));
+    setDeleteGroupKey(null);
+    setDetailGroupKey(null);
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-charcoal">Nhật ký thu hoạch tổ yến</h1>
-          <p className="mt-1 text-sm text-warmGray">Theo dõi sản lượng, phân hạng và truy xuất nguồn gốc</p>
+      {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
+      <HeaderActions>
+        <div className="hidden sm:block">
+          <ScopeFilter scope={scope} lockZone />
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button variant="secondary" onClick={() => exportCsv(allBatches, zoneNameById)} disabled={allBatches.length === 0}>
-            Xuất dữ liệu
-          </Button>
-          <Button onClick={() => setShowCreate(true)}>+ Ghi đợt thu hoạch</Button>
+      </HeaderActions>
+      <div className="sm:hidden">
+        <ScopeFilter scope={scope} lockZone />
+      </div>
+
+      <HarvestStatsCards
+        groups={groups}
+        zones={zones}
+        farmNames={scope.farmNames}
+      />
+
+      {/* Bảng lần thu bên trái (8/12), phân bổ theo loại tổ bên phải (4/12); màn xl khoá cứng chiều cao 2 khung (556px), màn hẹp xếp chồng */}
+      {/* Hàng lưới đặt cứng minmax(0,1fr): nội dung dài không kéo hàng cao quá 556px, bảng tự cuộn bên trong */}
+      <div className="grid grid-cols-1 gap-6 xl:h-[556px] xl:grid-cols-12 xl:grid-rows-[minmax(0,1fr)]">
+        <div className="min-w-0 xl:col-span-8 xl:h-full xl:min-h-0">
+          <HarvestTable
+            groups={groups}
+            zones={scope.zones}
+            houses={scope.houseId ? [] : scope.houses}
+            creatorName={creatorName}
+            onOpenDetail={group => setDetailGroupKey(group.key)}
+            onEdit={group => setEditGroupKey(group.key)}
+            onDelete={group => setDeleteGroupKey(group.key)}
+            onCreate={() => setIsCreateOpen(true)}
+            createBlockedReason={createBlockedReason}
+            onExport={() => exportCsv(allBatches, houseNameByZone, personNames, t)}
+          />
+        </div>
+        <div className="min-w-0 xl:col-span-4 xl:h-full xl:min-h-0">
+          <NestTypeBreakdownCard batches={allBatches} />
         </div>
       </div>
 
-      <HarvestStatsCards batches={allBatches} />
+      <HarvestYearChart batches={allBatches} />
 
-      {/* top-16: dính ngay dưới header kính (header nổi đè lên vùng cuộn, cao h-16) */}
-      <div className="sticky top-16 z-10 -my-3 flex flex-wrap gap-2 rounded-2xl border border-warmGray/15 bg-white/80 p-[15px] shadow-card backdrop-blur-md">
-        {SECTIONS.map(s => (
-          <button
-            key={s.id}
-            type="button"
-            aria-current={activeSection === s.id}
-            onClick={() => scrollToSection(s.id)}
-            className={cn(
-              'rounded-full px-4 py-2 text-sm font-semibold transition-colors',
-              activeSection === s.id ? 'bg-charcoal text-white' : 'bg-warmGray/10 text-charcoal hover:bg-warmGray/20',
-            )}
-          >
-            {s.label}
-            {s.id === 'section-marketplace' && ` (${allBatches.filter(b => b.status === 'LISTED').length})`}
-          </button>
-        ))}
-      </div>
+      {/* Popup chỉ dựng khi mở nên mỗi lần mở là form mới */}
+      {isCreateOpen && !createBlockedReason && <HarvestFormModal scope={scope} creatorName={user?.full_name ?? NO_VALUE} onClose={() => setIsCreateOpen(false)} />}
 
-      <div id="section-harvest" ref={el => { sectionRefs.current['section-harvest'] = el }} className="scroll-mt-20">
-        <HarvestTable
-          batches={allBatches}
-          zones={zones}
-          zoneNameById={zoneNameById}
-          onOpenDetail={batch => setDetailBatchId(batch._id)}
-          onEdit={batch => setEditBatchId(batch._id)}
-          onDelete={batch => setDeleteBatchId(batch._id)}
-          onCreateListing={batch => setListingBatchId(batch._id)}
-        />
-      </div>
-
-      <div id="section-marketplace" ref={el => { sectionRefs.current['section-marketplace'] = el }} className="scroll-mt-20">
-        <ListingsTab batches={allBatches} zones={zones} onOpenDetail={batch => setDetailBatchId(batch._id)} />
-      </div>
-
-      <div id="section-analytics" ref={el => { sectionRefs.current['section-analytics'] = el }} className="scroll-mt-20">
-        <HarvestYearChart batches={allBatches} />
-      </div>
-
-      <CreateHarvestModal open={showCreate} onClose={() => setShowCreate(false)} farmId={selectedFarmId} />
-
-      {detailBatch && (
+      {detailGroup && (
         <HarvestDetailModal
-          batch={detailBatch}
-          farmId={selectedFarmId}
-          zoneLabel={zoneNameById.get(detailBatch.zone_id) ?? '—'}
-          onClose={() => setDetailBatchId(null)}
-          onEdit={batch => { setDetailBatchId(null); setEditBatchId(batch._id) }}
-          onDelete={batch => setDeleteBatchId(batch._id)}
-          onCreateListing={batch => { setDetailBatchId(null); setListingBatchId(batch._id) }}
+          group={detailGroup}
+          houseName={houseNameByZone.get(detailGroup.zone_id) ?? NO_VALUE}
+          creatorName={creatorName(detailGroup)}
+          onClose={() => setDetailGroupKey(null)}
+          onEdit={group => {
+            setDetailGroupKey(null);
+            setEditGroupKey(group.key);
+          }}
+          onDelete={group => setDeleteGroupKey(group.key)}
         />
       )}
 
-      {editBatch && (
-        <EditHarvestModal open onClose={() => setEditBatchId(null)} batch={editBatch} farmId={selectedFarmId} />
-      )}
-
-      {listingBatch && (
-        <CreateListingModal open onClose={() => setListingBatchId(null)} batch={listingBatch} farmId={selectedFarmId} />
+      {editGroup && (
+        <HarvestFormModal
+          scope={scope}
+          group={editGroup}
+          houseName={houseNameByZone.get(editGroup.zone_id) ?? NO_VALUE}
+          creatorName={creatorName(editGroup)}
+          onClose={() => setEditGroupKey(null)}
+        />
       )}
 
       <ConfirmModal
-        open={!!deleteBatchId}
-        title="Xóa đợt thu hoạch?"
+        open={deleteGroupKey !== null}
+        title={t('delete.title')}
+        description={t('delete.description')}
+        confirmLabel={t('delete.confirm')}
         danger
-        description="Chỉ xóa được khi chưa đăng bán. Hành động này không thể hoàn tác."
-        loading={deleteHarvest.isPending}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteBatchId(null)}
+        loading={isDeleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setDeleteGroupKey(null)}
       />
     </div>
-  )
+  );
 }

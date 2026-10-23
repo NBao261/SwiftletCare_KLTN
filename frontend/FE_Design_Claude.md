@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.8.0 · **Cập nhật:** 17/10/2026 · **Thay thế:** v2.7.0 · **Theo:** SRS v2.0.0 (mục 0)
+**Phiên bản:** 2.9.0 · **Cập nhật:** 22/10/2026 · **Thay thế:** v2.8.0 · **Theo:** SRS v2.0.0 (mục 0)
 
 ---
 
@@ -55,6 +55,14 @@
 ---
 
 ## 0. Changelog
+
+### v2.8.0 → v2.9.0
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Thông số chưa có dữ liệu hiện `_`** (hằng số `NO_VALUE` trong `constants/display.ts`), không hiện số `0` thay cho số chưa đo/chưa tính được, không dùng `—`/`--` cho giá trị trống. Áp toàn role Farm Owner, kể cả popup/drawer. Xem 6.1. |
+| 2 | **Biểu đồ không có dữ liệu vẫn hiện khung biểu đồ** (lưới ngang + trục), không cột/đường, không số trục dọc, không tooltip/chú thích, chữ thông báo ở giữa — dùng `ui/ChartEmptyFrame` (Chart.js) hoặc giữ `CartesianGrid` + trục của recharts. Không thay biểu đồ bằng `EmptyState`. Xem 8. |
+| 3 | **Khung số liệu không có dữ liệu vẫn hiện đủ khung**: ô KPI hiện `_`, các mục (VD loại yến ở khung phân bổ) ghi "Chưa có dữ liệu", màu xám. `EmptyState` chỉ dùng cho lỗi tải (kèm nút Thử lại) hoặc khi chưa có farm/nhà/Zone nào để xem. |
 
 ### v2.7.0 → v2.8.0
 
@@ -167,14 +175,14 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 | Card | `Card size="md"` = `rounded-2xl p-5`; `Card size="lg"` = `rounded-3xl p-6`; nền trắng + `shadow-card` | `ui/Card.tsx` |
 | Khung section | Card lớn, tiêu đề `text-h2 text-charcoal` + mô tả `text-sm text-warmGray`, nút bên phải header, không icon vuông | `features/farm-owner/farms/FarmFrame.tsx` |
 | Ô chỉ số (KPI) | `rounded-2xl border border-warmGray/15 bg-white p-4`, nhãn `.label-caption`, icon tròn 28px, số `text-2xl font-extrabold`, dòng phụ 16px | `features/farm-owner/farms/KpiTile.tsx` |
-| Bảng | **Chỉ dùng `DataTable`** (hoặc `FixedRowsTable` — bảng danh sách luôn giữ đủ 10 dòng, thiếu thì đệm dòng trống; dữ liệu phân trang ở server thì truyền `serverPagination={{ page, total, onChange }}`): khung `rounded-2xl border-warmGray/15 shadow-card`, header `bg-warmGray/5`, `table-fixed` chia cột theo %, hover dòng `bg-warmGray/5` (chỉ nổi nền, chữ không đổi màu), ô 2 tầng (dòng chính đậm + dòng phụ xám). **Thao tác qua menu ⋯ ở cột cuối (`ActionsMenu`: Xem chi tiết, …) — bấm vào dòng không chuyển trang** | `ui/DataTable.tsx`; mẫu cột: `features/farm-owner/tickets/ticketColumns.tsx` ⏳ |
+| Bảng | **Chỉ dùng `DataTable`** (hoặc `FixedRowsTable` — bảng danh sách luôn giữ đủ 10 dòng, thiếu thì đệm dòng trống; dữ liệu phân trang ở server thì truyền `serverPagination={{ page, total, onChange }}`; **ngoại lệ:** bảng đợt thu ở trang Thu hoạch nằm trong cột 8/12 cạnh khung phân bổ loại tổ nên dùng `DataTable visibleRows={4} fillHeight`: màn xl hai khung khoá cứng cao `556px`, bảng lấp phần còn lại của khung (màn hẹp cao cố định 4 dòng), dòng còn lại cuộn dọc với tiêu đề cột đứng yên, không phân trang, không đệm dòng trống, `minTableWidth` 640, ô đệm ngang `px-3`): khung `rounded-2xl border-warmGray/15 shadow-card`, header `bg-warmGray/5`, `table-fixed` chia cột theo %, hover dòng `bg-warmGray/5` (chỉ nổi nền, chữ không đổi màu), ô 2 tầng (dòng chính đậm + dòng phụ xám). **Thao tác qua menu ⋯ ở cột cuối (`ActionsMenu`: Xem chi tiết, …) — bấm vào dòng không chuyển trang** | `ui/DataTable.tsx`; mẫu cột: `features/farm-owner/tickets/ticketColumns.tsx` ⏳ |
 | Phân trang | `Pagination variant="full"` đặt dưới bảng, nút tròn `h-9` | `ui/Pagination.tsx` |
 | Lọc + tìm | Bảng danh sách: `SelectMenu` cho từng điều kiện (Trạng thái kèm số đếm, Mức ưu tiên, Trang trại…) + `ClearFiltersButton tone="danger" count` bên trái — cùng cao `h-9`, ô lọc rộng theo chữ `min-w-[80px] max-w-[220px]` (dài hơn thì cắt "…"), `px-3.5 text-xs font-medium`, cách nhau `gap-2`; `SearchInput` `lg:w-72` bên phải. `FilterChip` chỉ dùng khi ít lựa chọn và cần thấy hết cùng lúc (VD bộ lọc Nhật ký cảnh báo Dashboard) | `ui/SelectMenu.tsx`, `ui/ClearFiltersButton.tsx`, `ui/SearchInput.tsx` |
 | Nút | `Button` bo tròn hoàn toàn: `sm` `h-9 px-4`, `md` `h-12 px-5`; nút phụ trong card dùng `CAPSULE_ACTION_CLASS`; nút "Chi tiết" dùng `DETAIL_BUTTON_CLASS` | `ui/Button.tsx`, `farmStructure.constants.ts`, `harvest.constants.ts` |
 | Badge | Cỡ `px-2.5 py-0.5 text-[11px]`; mức độ/ưu tiên theo 2.4; trạng thái theo bảng 2.6.1 | Trên develop: `SEVERITY_BADGE_CLASS` (`dashboard/dashboardMetrics.ts`); đích: `SeverityBadge`/`PriorityBadge` ⏳ |
 | Khung cảnh báo | Nền cam rất nhạt `bg-orange-50` + viền dày `border-2 border-orange-300`, **không** vạch màu ở cạnh; dòng bên trong nền trắng `bg-white border-orange-100`. Không dùng nền `orange-100` trở lên cho khung — trùng màu badge mức độ Cao làm badge chìm | `features/farm-owner/tickets/DeviceFaultAlertPanel.tsx` ⏳ |
 | Ô nhập | Class `.input`: `rounded-xl border-warmGray/25 px-4 py-2.5` | `src/index.css` |
-| Popup | `Modal`/`ConfirmModal`/`NoteActionModal`: `rounded-3xl p-6 shadow-popover`, nền mờ theo 5.2. **Popup form nhiều ô** (tạo yêu cầu…): ngang `className="max-w-3xl"`, 2 cột `md:grid-cols-[15rem_1fr]` — trái: lựa chọn loại (thẻ chọn: đang chọn `border-accent-600 bg-limeMist`, icon ô `bg-charcoal text-limeMist`) + ghi chú `bg-warmGray/5`; phải: các ô nhập. Chân popup `border-t`, canh phải: Secondary "Huỷ" + Primary "Gửi…" (không nút full width). Popup xác nhận ngắn vẫn dọc `max-w-sm/md` | `ui/Modal.tsx`, `features/farm-owner/tickets/CreateSupportTicketModal.tsx` ⏳ |
+| Popup | `Modal`/`ConfirmModal`/`NoteActionModal`: `rounded-3xl p-6 shadow-popover`, nền mờ theo 5.2. **Popup form nhiều ô** (tạo yêu cầu…): ngang `className="max-w-3xl"`, 2 cột `md:grid-cols-[15rem_1fr]` — trái: lựa chọn loại (thẻ chọn: đang chọn `border-accent-600 bg-accent-600`, icon ô `bg-charcoal text-accent-600`) + ghi chú `bg-warmGray/5`; phải: các ô nhập. Chân popup `border-t`, canh phải: Secondary "Huỷ" + Primary "Gửi…" (không nút full width). Popup xác nhận ngắn vẫn dọc `max-w-sm/md` | `ui/Modal.tsx`, `features/farm-owner/tickets/CreateSupportTicketModal.tsx` ⏳ |
 | Trạng thái rỗng/lỗi/tải | **Bảng rỗng:** `FixedRowsTable emptyContent={<TableEmptyState title description? />}` — hình minh hoạ chuẩn (vòng tròn mờ, chồng 3 thẻ giả với thẻ giữa viền `accent-600`, 6 icon lucide thiết bị/kỹ thuật/chim yến quanh) + tiêu đề `text-h3` + mô tả `text-small`, nằm giữa khung bảng. Khối không phải bảng: `EmptyState` (có nút Thử lại khi lỗi). Đang tải: `LoadingSkeleton` đúng chiều cao khối thật | `common/TableEmptyState.tsx` ⏳, `ui/FixedRowsTable.tsx`, `ui/` |
 
 Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTile`) mà role thứ hai cần dùng → **dời lên `components/common/`** theo 12.3 trong PR đó, không chép thành bản thứ hai. Màu chỉ lấy từ token mục 2; màu riêng Dashboard Farm Owner ở 2.6.1 là màu chuẩn cho trạng thái tương ứng ở mọi role.
@@ -190,13 +198,20 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 | Nền chính toàn app | `#EAEAEA` | Canvas cố định phía sau mọi trang nội dung |
 | Cam cảnh báo/quá nhiệt | `#ED8F50` | Giá trị vượt ngưỡng, quá nhiệt (mức độ cảnh báo dùng bảng 2.4) |
 | Đỏ cảnh báo/nguy hiểm | `#D53F35` | CRITICAL, badge thông báo |
-| Xanh chanh (brand/success) | `#D5E688` | Online, thành công, điểm nhấn |
-| Xanh nền bề mặt — **LIME MIST** | `#ECFFA9` | Nền icon-box, chip, highlight nhẹ *(cập nhật chính xác từ `#F0FEB3`)* |
+| **Xanh chanh — `accent-600`** (`success`) | `#B5D32C` | **Màu xanh chanh DUY NHẤT của hệ thống [Bắt buộc]** — mọi chỗ trước đây dùng xanh chanh (`#D5E688`, LIME MIST `#ECFFA9`, `limeMist`, `lime-*`, `accent-100…300` làm nền nhạt) **đều thay bằng màu này**, chữ trên nền là `charcoal`. Mẫu: badge "Ổn định" (Badge `positive`). Dùng cho online / thành công / thiết bị bật, vòng icon mục đang chọn ở sidebar, thẻ đang chọn, cột biểu đồ chính, loại Yến trắng |
+| Xanh đậm — **`accent-700`** | `#89A022` | **Dùng tự do** khi cần thêm một sắc xanh (nhóm thứ 2 trong biểu đồ, viền/chữ nhấn trên nền trắng…); chữ trên nền là `charcoal`. Trang Thu hoạch: loại Yến hồng |
+| Rêu — **`accent-900`** | `#414C10` | **Dùng tự do** khi cần sắc xanh tối (nhóm thứ 3 trong biểu đồ, chữ xanh đậm trên nền nhạt…); chữ trên nền là trắng. Trang Thu hoạch: loại Yến huyết |
+| ~~Xanh nền bề mặt — LIME MIST `#ECFFA9`~~ | `#B5D32C` | **Đã bỏ màu cũ:** alias `limeMist` trong `tailwind.config.ts` giờ trỏ cùng mã `#B5D32C` với `accent-600`, nên mọi chỗ còn ghi `limeMist` (Stepper `soft`, popover thông báo, ticket `IN_PROGRESS`, màn Admin/Technician…) đã hiện đúng xanh chanh mới. Code mới viết `accent-600`, không dùng tên `limeMist` |
 | Trắng — **WHITE** | `#FFFFFF` | Sidebar, khung nổi |
 | Xám ấm trung — **WARM GRAY** | `#878380` | Text phụ, icon mờ |
 | Xám ấm đậm — **GRAPHITE** | `#4E4A46` | Text đậm phụ, icon neutral đậm |
 | Đen ấm — **CHARCOAL** | `#27231F` | **Text chính, bề mặt tối chính** — thay thế hoàn toàn `#111728` |
 | Đen tuyệt đối — **BLACK** | `#000000` | Dự phòng cho nhu cầu tương phản tối đa |
+
+**Quy tắc phân bổ màu theo ý nghĩa [Bắt buộc]:**
+- **Cam** (`safetyOrange` / thang `orange`) chỉ xuất hiện khi có cảnh báo, lỗi thiết bị hoặc tình huống khẩn cấp.
+- **Xanh chanh** (`success` = `accent-600` `#B5D32C`, màu xanh chanh duy nhất) chỉ xuất hiện khi thiết bị đang bật, online hoặc ở trạng thái bình thường. Ngoại lệ có chủ đích: bộ 3 màu loại yến (`accent-600` trắng · `accent-700` hồng · `accent-900` huyết) dùng cho badge, biểu đồ và khung phân bổ ở trang Thu hoạch (`harvest.constants.ts`, `chartTheme.ts`: `accentGreen` · `accentDeep` · `accentMoss`). `accent-700` và `accent-900` dùng tự do cho nhu cầu riêng của từng màn.
+- **Mọi số liệu báo cáo, thống kê tĩnh còn lại** (ô KPI, icon của ô KPI, huy hiệu so sánh tăng/giảm) dùng tông xám/trắng: nền `warmGray/10`, chữ và icon `graphite`/`charcoal`, viền `warmGray/15`. Mẫu: ô KPI trang Trang trại (`KpiTile` tone `neutral`) và khối "Tổng quan thu hoạch" (`HarvestStatsCards`).
 
 **Bằng chứng loại bỏ `#111728`:**
 
@@ -224,13 +239,13 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 --gray-900: #27231F;   /* = CHARCOAL — TEXT CHÍNH, bề mặt tối chính (thay #111728) */
 --gray-950: #000000;   /* = BLACK — dự phòng tương phản tối đa */
 
-/* LIME — bề mặt nhạt, neo tại #ECFFA9 (LIME MIST) */
+/* LIME — thang cũ, KHÔNG dùng cho màn mới: mọi xanh chanh dùng --accent-600 (#B5D32C) — xem 2.1 */
 --lime-50:  #FDFFF3; --lime-100: #FAFFE6; --lime-200: #F5FFD0;
 --lime-300: #ECFFA9;  /* = LIME MIST — "xanh nền bề mặt" */
 --lime-400: #DFFD73; --lime-500: #D2F93A; --lime-600: #BEEC08;
 --lime-700: #8FAF08; --lime-800: #677E09; --lime-900: #445407;
 
-/* ACCENT — xanh chanh thương hiệu (online/success/active), neo tại #D5E688 */
+/* ACCENT — xanh thương hiệu: --accent-600 #B5D32C là xanh chanh duy nhất; --accent-700, --accent-900 dùng tự do */
 --accent-50:  #F9FBEE; --accent-100: #F0F6D5; --accent-200: #E6F0B7;
 --accent-300: #D5E688;  /* = màu neo — 42926A cũ */
 --accent-400: #CCE170; --accent-500: #C6DD5D; --accent-600: #B5D32C;
@@ -311,6 +326,7 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 - **[Bắt buộc — từ khi các file trên có trên develop]** Câu chữ nhắc tên cấp lấy nhãn từ `levelDict` truyền vào làm tham số (VD "Lỗi {urgent} chưa ai xác nhận sau 15 phút…"), không gõ lại "Khẩn cấp".
 - Đổi màu/nhãn một cấp → sửa đúng 1 dòng trong `severity.ts`/`severity.i18n.ts`; mọi badge đổi theo.
 - **Ticket đã kết thúc** (`CLOSED`, gồm cả huỷ) → badge ưu tiên về xám: `<PriorityBadge isMuted={isTicketFinished(ticket)} />`, màu `LEVEL_BADGE_MUTED_CLASS` (= màu cấp Thường). Chỉ ticket đang mở (Mới, Đang xử lý, Chờ xác nhận hiện trường) mới hiện màu Khẩn cấp/Cao, để không lẫn với việc đang cần làm.
+- **Cảnh báo đã xử lý** (`RESOLVED`) → badge mức độ cũng về xám: `<SeverityBadge isMuted={isAlertFinished(alert.status)} />` (`isAlertFinished` trong `constants/severity.ts`). Trên màn Farm Owner, cột/nhãn của 3 cấp ở yêu cầu hỗ trợ ghi **"Mức độ"** (không ghi "Ưu tiên"), cùng tên cột ở nhật ký cảnh báo.
 - Backend tự sinh ticket cho cảnh báo `CRITICAL`/`HIGH` chưa xác nhận sau 15 phút (TICKET-FR-002) = toàn bộ cấp Khẩn cấp.
 
 ### 2.5. Trạng thái an toàn / thiết bị
@@ -367,7 +383,7 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 | `status` | Nhãn VI / EN | Nền | Chữ | Ý nghĩa |
 |---|---|---|---|---|
 | `ACTIVE` | Mới / New | `infoBlue/10` | `infoBlue` | Chưa ai xác nhận. Cấp Khẩn cấp để quá 15 phút thì BE tự tạo Ticket |
-| `ACKNOWLEDGED` | Tiếp nhận / Received | `limeMist` | charcoal | Đã có người xác nhận — **chưa** có nghĩa là đã sửa |
+| `ACKNOWLEDGED` | Tiếp nhận / Received | `accent-600` | charcoal | Đã có người xác nhận — **chưa** có nghĩa là đã sửa |
 | `RESOLVED` | Đã xử lý / Resolved | `warmGray/15` | `warmGray` | Sự cố đã hết (vượt ngưỡng không lặp lại 5 phút, thiết bị online lại, hoặc thiết bị bị gỡ) |
 
 Mức độ (cột *Mức độ*) và ưu tiên ticket: **theo 2.4**. Trên `develop` hiện tại Nhật ký cảnh báo vẫn dùng `SEVERITY_BADGE_CLASS` 4 mức và bộ lọc "Critical · High/Med · Normal" (`dashboardMetrics.ts`); bản đích ⏳ hiển thị 3 cấp qua `SeverityBadge`/`PriorityBadge`, bộ lọc "Tất cả · Khẩn cấp · Cao · Thường".
@@ -401,7 +417,7 @@ import { PRIORITIES, PRIORITY } from '@/constants/priority';
 
 | Trạng thái | Điều kiện | Nhãn VI / EN | Nền | Chữ |
 |---|---|---|---|---|
-| Online | Bản đo mới nhất cách hiện tại ≤ 20 giây | PLC: Online | `limeMist` (Badge `positive`) | charcoal |
+| Online | Bản đo mới nhất cách hiện tại ≤ 20 giây | PLC: Online | `accent-600` (Badge `positive`) | charcoal |
 | Mất kết nối | Có bản đo nhưng cũ hơn 20 giây | PLC: Mất kết nối / Disconnected | `alertRed/15` (Badge `critical`) | `alertRed` |
 | Đang chờ kết nối | Chưa có bản đo nào | PLC: Đang chờ kết nối / Awaiting connection | `statusYellow/70` | charcoal |
 
@@ -471,12 +487,12 @@ Font duy nhất: **Plus Jakarta Sans** (Google Fonts), weight 400–800.
 | `constants/enumLabels.i18n.ts` | `ticketStatusDict` · `ticketDisplayStatusDict` | Nhãn VI/EN (Mới · Đã tiếp nhận · Đang xử lý · Hoàn tất · Đã huỷ) |
 | `components/common/TicketStatusBadge.tsx` | `<TicketStatusBadge ticket={ticket} />` | Badge trạng thái — tự xử lý huỷ |
 | `components/common/TicketProgressStepper.tsx` | `<TicketProgressStepper status extraSteps? currentKey? />` | **Thanh tiến độ ticket chuẩn — dùng cái này**, đã bật sẵn bước đang làm nền đậm + đoạn nối có hiệu ứng; mọi role dùng là đồng bộ |
-| `components/ui/Stepper.tsx` | `<Stepper steps current completed activeTone />` | Vẽ thanh tiến độ; `activeTone="strong"` = bước đang làm nền `accent-800` chữ trắng (tương phản 5.3:1, mẫu Farm Owner), mặc định `soft` = `limeMist`; `showNextProgress` = đoạn nối tới bước kế tiếp kéo dài từ bước hiện tại tới bước sau rồi mờ đi, lặp lại (`animate-step-progress`, `scaleX` + `opacity`; tắt khi giảm chuyển động) |
+| `components/ui/Stepper.tsx` | `<Stepper steps current completed activeTone />` | Vẽ thanh tiến độ; `activeTone="strong"` = bước đang làm nền `accent-800` chữ trắng (tương phản 5.3:1, mẫu Farm Owner), mặc định `soft` = `accent-600` (`limeMist` = cùng mã); `showNextProgress` = đoạn nối tới bước kế tiếp kéo dài từ bước hiện tại tới bước sau rồi mờ đi, lặp lại (`animate-step-progress`, `scaleX` + `opacity`; tắt khi giảm chuyển động) |
 
 | Trạng thái backend | Bước hiển thị VI / EN | Nghĩa (đối chiếu `ticket.service.ts`) | Màu |
 |---|---|---|---|
 | `NEW` | Mới / New | Ticket vừa tạo, kỹ thuật viên chưa nhận việc | `bg-infoBlue/10 text-infoBlue` |
-| `IN_PROGRESS` | Đã tiếp nhận / Accepted | Kỹ thuật viên đã nhận việc (ghi `responded_at`), đang kiểm tra/xử lý | `bg-limeMist text-charcoal` |
+| `IN_PROGRESS` | Đã tiếp nhận / Accepted | Kỹ thuật viên đã nhận việc (ghi `responded_at`), đang kiểm tra/xử lý | `bg-accent-600 text-charcoal` (`limeMist` = cùng mã) |
 | `AWAITING_FIELD_CONFIRMATION` | Đang xử lý / In progress | Kỹ thuật viên đang xác nhận kết quả (chỉ có ở ticket có buổi đến hiện trường) | `bg-statusYellow/70 text-charcoal` |
 | `CLOSED` | Hoàn tất / Completed | Kỹ thuật viên xác nhận hoàn thành (`closed_at`) | `bg-warmGray/15 text-warmGray` |
 | `CLOSED` + `cancelled_at` | Đã huỷ / Cancelled | Ticket bị huỷ | `bg-warmGray/15 text-warmGray` |
@@ -650,9 +666,9 @@ Lớp nằm đè lên nội dung dùng nền trong suốt + blur thay cho nền 
 - **Bóng:** `0 8px 32px` đen 10% · `inset 0 1px 0` trắng 50% · `inset 0 -1px 0` trắng 10% · `inset 0 0 2px 1px` trắng 10% (viền sáng mảnh phía trong mép).
 - **Vệt sáng mảnh:** mép trên gradient 90° (trong suốt → trắng 80% → trong suốt), mép trái gradient 180° (trắng 80% → trong suốt → trắng 30%). Vẽ bằng lớp nền thay cho `::before`/`::after` để không trôi khi danh sách `SelectMenu` tự cuộn.
 
-Chữ trên kính trắng: chính `text-charcoal`, phụ `text-warmGray`, mục đang trỏ/đang chọn `bg-charcoal/5`, vạch ngăn `border-charcoal/10` hoặc `bg-charcoal/10`, mục nguy hiểm (Xóa) `text-alertRed`. Nền của từng mục dùng màu có độ trong (`/5`, `/10`, `limeMist/50`) thay cho nền đặc (`bg-white`, `bg-gray-100`) để không che mất lớp kính.
+Chữ trên kính trắng: chính `text-charcoal`, phụ `text-warmGray`, mục đang trỏ/đang chọn `bg-charcoal/5`, vạch ngăn `border-charcoal/10` hoặc `bg-charcoal/10`, mục nguy hiểm (Xóa) `text-alertRed`. Nền của từng mục dùng màu có độ trong (`/5`, `/10`, `accent-600/15`) thay cho nền đặc (`bg-white`, `bg-gray-100`) để không che mất lớp kính.
 
-Popup thông báo: tin chưa đọc nền `bg-charcoal/5` + chấm cam, tin đã đọc trong suốt + `opacity-80`, tin đang xổ chi tiết nền `bg-limeMist/50` với nút mũi tên đen.
+Popup thông báo: tin chưa đọc nền `bg-charcoal/5` + chấm cam, tin đã đọc trong suốt + `opacity-80`, tin đang xổ chi tiết nền `bg-accent-600/15` (code `limeMist/50` = cùng mã) với nút mũi tên đen.
 
 **[Bắt buộc]** Không đặt `backdrop-filter` (hay `filter`, `opacity` < 1, `mask`, `clip-path`, `mix-blend-mode`) lên phần tử **chứa** popup kính: phần tử đó thành *backdrop root*, kính của popup con chỉ làm nhòe được nội dung bên trong nó — phần popup thò ra ngoài nhìn xuyên thấy nội dung trang sắc nét. Vì vậy kính của AppHeader nằm ở lớp nền riêng, còn `SelectMenu`/`ActionsMenu` render qua portal ra `document.body`.
 
@@ -713,8 +729,9 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, chat ticket, trạng
 | Số đo cảm biến | Tối đa 1 chữ số lẻ, số nguyên thì không lẻ; dấu thập phân theo ngôn ngữ (`num`) | 33,5 / 33.5 |
 | Số đếm, số lượng | Số nguyên, dấu phân cách hàng nghìn theo ngôn ngữ | 1.250 / 1,250 |
 | Đơn vị | Đặt sau số, không dịch (°C, %, lux, ppm, dB, g) | 70 % |
-| Không có giá trị | `—` trong bảng và văn bản; riêng ô cảm biến Dashboard dùng `_` (2.6.1) | — |
+| Không có giá trị | **`_`** ở mọi nơi (ô KPI, bảng, chú thích, popup/drawer) — hằng số `NO_VALUE` (`constants/display.ts`), không viết tay ký tự. Hai giá trị trống đi cặp thì `_ · _` | _ |
 
+- **[Bắt buộc] Không hiện số `0` thay cho số chưa có.** `0` chỉ hiện khi đó là số đếm thật (0 thiết bị, 0 cảnh báo, 0 đợt thu). Tổng/trung bình tính trên tập rỗng (sản lượng tháng chưa có đợt thu, số chim hôm nay chưa có tin đếm, tỷ lệ chưa đủ phiên), số đo chưa về, trường backend trả `null`/thiếu → hiện `NO_VALUE` (`_`) và bỏ đơn vị (không ghi `_ kg`). Áp mọi màn Farm Owner, kể cả popup và drawer.
 - **[Bắt buộc]** Dùng hàm định dạng chung, không tự `toLocaleString` rải trong component:
   - `lib/i18n.ts` ⏳: `formatStandardDate` (DD/MM/YYYY) · `formatHourMinute` (HH:mm) · `formatDateTime` (DD/MM/YYYY, HH:mm) · `formatTimestampsInText` (đổi mốc ISO trong chuỗi backend, VD ghi chú "hạn 2026-09-17T15:34:00.721Z" → "17/09/2026, 22:34"). Gọi được cả ngoài component (column builder).
   - Trong component: `useTranslation` → `date`, `hourMinute`, `dateTime`, `num`, `ago`.
@@ -783,7 +800,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Màn hình | FR liên quan | Trạng thái | Cần nhãn? |
 |---|---|---|---|
 | AI Giám sát đàn — đếm chim, return rate | VISION-FR-006/008/009/010/011 | 🟡 chờ dữ liệu thật từ Edge AI | **Có** |
-| Phân tích tương quan môi trường ↔ return rate | ANALYTICS-FR-002/003 | 🟡 chờ dữ liệu VISION thật | **Có** |
+| Phân tích `/analytics` — chim ra/vào theo giờ, số đếm hôm nay, tỷ lệ chim về theo tuần (theo nhà yến, `houseId`), tương quan môi trường ↔ tỷ lệ chim về | ANALYTICS-FR-002/003, VISION-FR-012/017 | 🟡 API thật (`/analytics/bird-count/buckets`, `/current`, `/trends`, `/analytics/correlation`) nhưng chưa có dữ liệu tới khi nút AI chạy → khung trống | Không (không có số liệu giả) |
 | ~~Cảnh báo thiên địch từ camera~~ | THREAT-FR-001/002/003 | ❌ Bỏ ở SRS v2.0.0 — không làm màn này | — |
 | Chat trực tiếp trong Ticket | TICKET-FR-014→017 | ✅ API thật (`/tickets/:id/messages` + socket, `useTicketChat`) | Không |
 | Ticket của Farm Owner `/support` (tạo, theo dõi, huỷ, đánh giá, khung thiết bị đang báo lỗi) | TICKET-FR-001/011/014..016 | ⏳ Đang làm ở nhánh `feat/fe-farmowner-ticket`, dùng API thật (`/tickets`, `/alerts`, `/devices/sensor-nodes`); trên develop Farm Owner vẫn vào `/tickets` | Không |
@@ -794,13 +811,15 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ✅ Đã code (`GET /system/health-overview`) | Không |
 | ~~Đăng bán/Truy xuất nguồn gốc (Marketplace)~~ | MARKET-FR-006..013 | ❌ Bỏ ở SRS v2.0.0 — gỡ các trang này; chỉ giữ ghi nhận thu hoạch (MARKET-FR-001..005) | — |
 | Thông báo ngoài ứng dụng: Telegram bot hoặc push (SRS v2.0.0 bỏ Zalo/SMS) | ALERT-FR-002/013 | 🟡 chưa nối kênh nào | Có (màn cấu hình kênh) |
-| Báo cáo sức khỏe Zone, kiểm chứng cảnh báo, kết luận của chuyên gia | EXPERT-FR-003..006 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
-| Lịch sử can thiệp tay, tỷ lệ thời gian tự động | ENV-FR-019, ANALYTICS-FR-011 | ⬜ Chưa cài (mới ở SRS v2.0.0) | **Có** |
+| Báo cáo sức khỏe Zone + đọc kết luận chuyên gia (Farm Owner, trang `/analytics`) | EXPERT-FR-005/006 | ✅ API thật (`GET /health-reports`) | Không |
+| Kiểm chứng cảnh báo, viết kết luận (Domain Expert) | EXPERT-FR-003/004/006 | ⬜ Chưa có màn (chưa có role `DOMAIN_EXPERT` ở FE) | — |
+| Lịch sử can thiệp tay, tỷ lệ thời gian tự động (trang `/analytics`) | ENV-FR-019, ANALYTICS-FR-011 | ✅ API thật (`GET /devices/sensor-nodes/:id/relay-overrides`, `GET /analytics/autonomy`) | Không |
 | Live stream có khung trên từng con chim | VISION-FR-013/014 | ⬜ Chưa cài | **Có** |
 | Cấu trúc Farm — người phụ trách nhà, lịch thu dự kiến, khuyến nghị AI, KTV lắp đặt/firmware mới nhất của thiết bị | FARM-FR-* (phần mở rộng UI) | ⬜ Chưa có endpoint — `apis/farm-owner/farmMock.api.ts` trả RỖNG, UI hiện khung trống | Không (không có số liệu giả); farm/house/zone/thiết bị/số đo/cảnh báo/thu hoạch là API thật |
 | Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
 | Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
+| Chi tiết thiết bị `/devices/detail` — tên thiết bị con của bộ kit (do Kỹ thuật viên đặt) | FARM-FR-005/006 (phần mở rộng UI) | 🟡 Chưa có endpoint — `farmMock.api.ts#getDeviceComponentNames` đọc `src/data/deviceComponents.data.ts`; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) | **Có** |
 
 *Giới hạn:* bảng này là ảnh chụp tại v2.4.0 (SRS v1.21.0). Nguồn sự thật luôn là cột "Trạng thái Backend" trong `SwiftletCare_SRS.md` §5 — lệch nhau thì tin SRS và sửa bảng này.
 
@@ -817,6 +836,16 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Gauge/Bullet | 1 giá trị realtime vs ngưỡng | NH3/CO2/nhiệt độ/độ ẩm hiện tại vs `zones.thresholds`, đếm ngược Manual Override |
 
 Trước khi dựng chart: tự hỏi *"chuỗi thời gian, danh mục, tỷ trọng, phân phối, hay giá trị-so-ngưỡng?"* — câu trả lời quyết định nhóm chart.
+
+**[Bắt buộc] Biểu đồ không có dữ liệu vẫn hiện khung biểu đồ:**
+- Giữ nguyên tiêu đề, mô tả, thanh điều khiển (khoảng thời gian, chỉ số…) và khung biểu đồ cùng chiều cao lúc có số.
+- Trong khung: lưới ngang + trục dưới, **không** cột/đường/điểm, **không** số trên trục dọc, **không** tooltip, **không** chú thích; giữa khung 1 dòng chữ xám `text-sm text-warmGray` nói chưa có dữ liệu.
+- Chart.js: render `<ChartEmptyFrame message className="h-…" />` (`components/ui/ChartEmptyFrame.tsx`) thay cho `<Line>/<Bar>/<Scatter>`. Recharts: giữ `CartesianGrid` + `XAxis`, `YAxis tick={false}`, bỏ `Bar`/`Tooltip`/`Legend` (mẫu `HarvestYearChart`).
+- Biểu đồ vòng/thanh tỉ lệ tự vẽ (VD `NestTypeBreakdownCard`, `NestingDensityCard`): vẫn vẽ vòng/thanh ở màu xám (rãnh nền), số hiện `_`, mục ghi "Chưa có dữ liệu".
+- Ô KPI cạnh biểu đồ vẫn hiện, giá trị `_` (6.1).
+- **Không** thay biểu đồ bằng `EmptyState`. `EmptyState` chỉ cho lỗi tải (kèm nút Thử lại) hoặc khi chưa có farm/nhà/Zone nào. Đang tải vẫn dùng `LoadingSkeleton` đúng chiều cao biểu đồ.
+
+**Thư viện:** mặc định Chart.js qua `lib/chartTheme.ts`. **Ngoại lệ:** biểu đồ sản lượng trang Thu hoạch (`HarvestYearChart`) dùng recharts qua `features/farm-owner/harvest/ChartParts.tsx` (mẫu shadcn chart-bar-stacked, đã đổi sang recharts 2 + Tailwind 3 + token màu): cột xếp chồng theo loại tổ từ dưới lên yến trắng `accentGreen` → yến hồng `accentDeep` → yến huyết `accentMoss`, loại không có trong kỳ thì không vẽ, chỉ đoạn trên cùng bo góc đỉnh. `ChartParts.tsx` kéo theo recharts nên không được chuyển vào `ui/` hay `common/`.
 
 ---
 
@@ -997,7 +1026,7 @@ Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile
 | 5 | `/onboarding`, `/ota`, `/maintenance` | `OPS_ROLES` (Farm Owner vào được) | Chỉ Technician (Admin I) | Tạo nhóm quyền riêng cho Technician |
 | 6 | `/tickets` (màn Technician) | `OPS_ROLES` — Farm Owner đang dùng màn này; `/support` riêng của Farm Owner ⏳ | Farm Owner chỉ tạo/theo dõi | Khi `/support` merge: bỏ Farm Owner khỏi `/tickets` |
 | 7 | `/alerts` | `OPS_ROLES`, ai cũng có nút xác nhận | Chỉ Farm Owner acknowledge | Ẩn nút xác nhận với Technician/Admin bằng `usePermission` |
-| 8 | `/marketplace`, `/marketplace/:id` | Còn route công khai | Đã bỏ (§0.2 #1) | Gỡ (13.14) |
+| 8 | ~~`/marketplace`, `/marketplace/:id`~~ | Đã gỡ route, trang và API | Đã bỏ (§0.2 #1) | ✅ Đã gỡ |
 
 Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao diện đang mở rộng hơn SRS. Mỗi dòng sửa trong PR của role sở hữu màn đó.
 
@@ -1030,7 +1059,7 @@ frontend/src/
 │   │                                     ConfirmModal NoteActionModal ComingSoon
 │   │                          + icons.tsx · useFloatingMenu.ts · index.ts (barrel duy nhất)
 │   ├── common/                CÓ biết domain và dùng ở >= 2 nơi. Cố ý giữ nhỏ.
-│   │                          ZoneSwitcher · NotificationPopover · Toast · ZonePicker · StatusDot
+│   │                          NotificationPopover · Toast · ScopeFilter · StatusDot
 │   │                          DateTimePicker · LogoutConfirmModal · ProfilePopover · (⏳ SeverityBadge · PriorityBadge)
 │   ├── features/              Component riêng của từng tính năng
 │   │   ├── admin/             users/ · system/ · tickets/
@@ -1135,7 +1164,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | Tầng | Biết domain? | Số nơi dùng | Ví dụ |
 |---|---|---|---|
 | `ui/` | Không | bất kỳ | `Button` · `DataTable` · `EmptyState` · `ConfirmModal` |
-| `common/` | Có | >= 2 | `ZoneSwitcher` · `ZonePicker` · `StatusDot` |
+| `common/` | Có | >= 2 | `ScopeFilter` · `StatusDot` |
 | `features/<role>/<area>/` | Có | 1 | `ThresholdsModal` · `SensorCard` · `CreateUserModal` |
 
 `ui/` là design system **tự chứa**: chỉ phụ thuộc `@/lib/cn` và `@/i18n` (dịch nhãn mặc định/prop chữ — không mang kiến thức domain). Không file nào trong `ui/` được import barrel `@/components/ui` của chính nó — import thẳng module anh em để tránh vòng lặp.
@@ -1147,7 +1176,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `types/` chia theo **module backend**, không theo role | Type là shape thực thể mirror model Mongoose. `Zone`, `Alert`, `Ticket` được 3 role đọc, không có chủ sở hữu duy nhất. Ép vào thư mục role thì hoặc phải nhân bản, hoặc 80% type dồn vào `types/shared/`. |
 | `components/features/admin/tickets/AdminOverrideModals.tsx` nằm ở `admin/` nhưng bị trang Technician import | Là UI riêng của Admin, gated bằng `usePermission('ADMIN')` trong `TechnicianTicketDetailPage`. Khi một component là **năng lực của role này render trong màn của role khác**, quyền sở hữu thắng nơi import. |
 | `constants/roles.ts` giữ bảng `MENU_ACCESS` tách rời menu trong layout | Không thể đọc ngược menu từ file layout: `useAuth` cần `canAccessPath`, mà layout lại render `AppHeader` gọi `useAuth` → import vòng, lỗi lúc chạy. |
-| `apis/shared/` + `hooks/shared/` còn tồn tại (11 file, gồm 2 file `audioTracks` đang nằm sai chỗ — xem 13.14) | Đã kiểm bằng đồ thị import: `farms`/`alerts` được cả 4 role chạm tới vì chính khung app render `ZoneSwitcher` + `NotificationPopover`; `devices`/`tickets` dùng bởi admin + technician. **Không có `components/features/shared/`.** |
+| `apis/shared/` + `hooks/shared/` còn tồn tại (11 file, gồm 2 file `audioTracks` đang nằm sai chỗ — xem 13.14) | Đã kiểm bằng đồ thị import: `farms`/`alerts` được cả 4 role chạm tới vì chính khung app render `NotificationPopover` (cùng các trang farm của từng role); `devices`/`tickets` dùng bởi admin + technician. **Không có `components/features/shared/`.** |
 
 ### 12.8. Checklist khi thêm một màn hình mới
 
@@ -1187,7 +1216,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `pages/auth/` + 2 trang gốc `pages/` | `[ChứcNăng]Page.tsx` — không role | `LoginPage.tsx` · `SettingsPage.tsx` · `ForbiddenPage.tsx` |
 | `components/features/<role>/<area>/` | `[TênFeature].tsx` — không tiền tố role; cột bảng `<area>Columns.tsx` (camelCase, vì là hàm build cột chứ không phải component) | `CreateUserModal.tsx` · `CreateHarvestModal.tsx` · `RelayToggle.tsx` · `userColumns.tsx` |
 | `components/layouts/` | `[Role]Layout.tsx` cho layout của role · `App[Phần].tsx` cho khung dùng chung | `AdminLayout.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` |
-| `components/ui/` · `components/common/` | `[TênFeature].tsx` — **không** tiền tố role | `DataTable.tsx` · `ConfirmModal.tsx` · `ZoneSwitcher.tsx` |
+| `components/ui/` · `components/common/` | `[TênFeature].tsx` — **không** tiền tố role | `DataTable.tsx` · `ConfirmModal.tsx` · `ScopeFilter.tsx` |
 | `hooks/<bucket>/` | `use[Resource].ts` — camelCase, **bắt buộc** bắt đầu bằng `use` | `useUsers.ts` · `useFarms.ts` · `usePermission.ts` |
 | `apis/<bucket>/` | `<resource>.api.ts` | `users.api.ts` · `farms.api.ts` |
 | `types/` | `<module>.types.ts` | `auth.types.ts` · `device.types.ts` |
@@ -1292,7 +1321,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 ### 13.7. Style
 
-- **[Bắt buộc]** Màu chỉ lấy từ token trong `tailwind.config.ts`: thang `gray` / `lime` / `accent` / `orange` / `red` và alias `charcoal` · `graphite` · `warmGray` · `limeMist` · `success` · `climateOrange` · `safetyOrange` (`#FF7426`, lỗi thiết bị ở widget Trạng thái nhà yến) · `infoBlue` (`#4A89EB`, nhãn trạng thái cảnh báo "Mới") · `statusYellow` (`#FFE033`, nhãn "PLC: Đang chờ kết nối") · `alertRed` · `stone` · `white`. **Không** viết hex/`rgb()` trong `className` hay `style` (kể cả arbitrary value `bg-[#...]` — code hiện 0 chỗ), không dùng palette mặc định của Tailwind (`slate`, `zinc`, `neutral`, `blue`, `green`…). Lưu ý `stone` đã bị ghi đè = `#EAEAEA` (canvas), không phải thang stone của Tailwind.
+- **[Bắt buộc]** Màu chỉ lấy từ token trong `tailwind.config.ts`: thang `gray` / `lime` / `accent` / `orange` / `red` và alias `charcoal` · `graphite` · `warmGray` · `limeMist` (cũ, không dùng cho màn mới — xem 2.1) · `success` (= `accent-600` `#B5D32C`) · `climateOrange` · `safetyOrange` (`#FF7426`, lỗi thiết bị ở widget Trạng thái nhà yến) · `infoBlue` (`#4A89EB`, nhãn trạng thái cảnh báo "Mới") · `statusYellow` (`#FFE033`, nhãn "PLC: Đang chờ kết nối") · `alertRed` · `stone` · `white`. **Không** viết hex/`rgb()` trong `className` hay `style` (kể cả arbitrary value `bg-[#...]` — code hiện 0 chỗ), không dùng palette mặc định của Tailwind (`slate`, `zinc`, `neutral`, `blue`, `green`…). Lưu ý `stone` đã bị ghi đè = `#EAEAEA` (canvas), không phải thang stone của Tailwind.
 - **[Nên]** Chữ dùng thang `text-h1` · `text-h2` · `text-h3` · `text-body` · `text-small` · `text-caption` · `text-metric` (mục 2.8) thay cho `text-sm`/`text-2xl` mặc định. Code cũ còn ~230 chỗ dùng size mặc định (13.14) nên chưa bắt buộc; file mới tạo thì nên dùng thang này ngay từ đầu.
 - **[Bắt buộc]** Modal/popup dùng `Modal` / `ConfirmModal` / `NoteActionModal` trong `components/ui/`, không tự dựng overlay (overlay tự dựng rất dễ dùng `bg-black/…` — trái 5.2).
 - **[Bắt buộc]** Không sửa layout/kích thước sidebar, topbar (4.1).
@@ -1313,7 +1342,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 ### 13.10. Routing & hiệu năng
 
 - **[Bắt buộc]** Trang mới được `lazy()` trong file `routes/` của role (code-splitting; hiện mọi trang đều lazy, kể cả `SettingsPage` trong `App.tsx`). Không import tĩnh trang vào `App.tsx` hay file route.
-- **[Bắt buộc]** Không import thư viện nặng (`chart.js`, `react-chartjs-2`, `date-fns`, `video.js`) vào file nằm trong bundle chính: `App.tsx`, `components/layouts/`, `components/common/`, `components/ui/`, `stores/`, `lib/` (trừ `lib/chartTheme.ts`).
+- **[Bắt buộc]** Không import thư viện nặng (`chart.js`, `react-chartjs-2`, `recharts`, `date-fns`, `video.js`) vào file nằm trong bundle chính: `App.tsx`, `components/layouts/`, `components/common/`, `components/ui/`, `stores/`, `lib/` (trừ `lib/chartTheme.ts`).
 - **[Nên]** Danh sách dài dùng phân trang server (`usePaginatedListQuery` + `Pagination`), không tải hết rồi cắt ở client.
 
 ### 13.11. Accessibility tối thiểu
@@ -1367,7 +1396,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | Nhãn mã backend khai riêng/viết cứng ngoài `enumLabels.i18n.ts`: `TICKET_TYPE_LABEL`, `STATUS_LABEL` (`constants/tickets.ts`, chỉ VI), `STATUS_LABEL` (`common/StatusDot.tsx`), `ROLE_LABEL` (`constants/roles.ts`), "Technician" cứng trong `technician/tickets/TicketChat.tsx`, chữ trạng thái trong `StatusStepper`, `UpdateStatusModal`, `TicketToolbar`, `admin/tickets/TicketStatusSteps`, bản dịch trùng trong `src/i18n/en.ts` | 6.3 | Người phụ trách role đó chuyển sang đọc `enumLabels.i18n.ts` khi sửa màn |
 | ~230 chỗ `text-xs`/`text-sm`/`text-lg`/`text-2xl`… | Lệch thang chữ 2.8 (13.7 [Nên]) | Đổi dần khi sửa file đó |
 | `pages/sales-staff/` · `routes/sales-staff.routes.tsx` · `SalesStaffLayout` · role `SALES_STAFF` trong `types/common.types.ts`, `types/ticket.types.ts`, `INVITE_ROLE_LABEL` | Role đã bỏ từ SRS v1.23.0 | Gỡ trong PR thêm `DOMAIN_EXPERT` (SRS §0.5 Web) |
-| `MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · `features/farm-owner/harvest/` phần đăng bán (`CreateListingModal`, `ListingPanel`, `ListingsTab`, `TraceCodeRow`) | Bỏ ở SRS v2.0.0 (§0.2 #1) | Gỡ cùng lúc backend gỡ `/marketplace/*`; trang Thu hoạch chỉ còn ghi nhận |
+| ~~`MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · kiểu `NestListing`/`ContactInquiry`/`ListingStatus`~~ | Bỏ ở SRS v2.0.0 (§0.2 #1) | ✅ Đã gỡ hết (cùng gói `qrcode`); `HarvestStatus` còn `DRAFT \| ARCHIVED` khớp backend |
 | Chưa có role `DOMAIN_EXPERT`, `DomainExpertLayout`, `FARM_SIDE_ROLES`/`EXPERT_ONLY` | Mục 12 mô tả trạng thái đích | PR thêm role theo checklist "Thêm role mới" ở 12.10 |
 | Nhãn `BIRD_PANIC`, relay sưởi, tùy chọn kênh Zalo/SMS trên giao diện | Bỏ/đổi tên ở SRS v2.0.0 | Đổi sang `NOISE_ANOMALY`, gỡ sưởi và Zalo/SMS khi backend đổi enum |
 
@@ -1477,13 +1506,14 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 |---|---|---|---|
 | Token màu, bo góc, bóng, cỡ chữ | `../tailwind.config.ts` | `charcoal` `graphite` `warmGray` `limeMist` `success` `climateOrange` `safetyOrange` `infoBlue` `statusYellow` `alertRed` · `rounded-xl/2xl/3xl` · `shadow-card/popover/glass` · `text-h1…text-metric` | 2, 2.8, 4.3 |
 | Class CSS chung | `index.css` | `.input` · `.label-caption` · `.glass-panel` | 1.1, 2.8, 5.2.1 |
-| 3 cấp mức độ — màu ⏳ | `constants/severity.ts` | `LEVELS` · `SEVERITY_TO_LEVEL` · `LEVEL_BADGE_CLASS` · `LEVEL_BADGE_MUTED_CLASS` · `LEVEL_BADGE_SIZE` | 2.4 |
+| 3 cấp mức độ — màu ⏳ | `constants/severity.ts` | `LEVELS` · `SEVERITY_TO_LEVEL` · `LEVEL_BADGE_CLASS` · `LEVEL_BADGE_MUTED_CLASS` · `LEVEL_BADGE_SIZE` · `isAlertFinished` | 2.4 |
 | 3 cấp mức độ — nhãn VI/EN ⏳ | `constants/severity.i18n.ts` | `levelDict` · `severityLabels()` | 2.4 |
 | Ưu tiên ticket P1/P2/P3 ⏳ | `constants/priority.ts` | `PRIORITIES` · `PRIORITY[p]` (`tint` `solid` `dot` `rowTint` `headerTint`) | 2.4, 2.6.1 |
 | Nhãn mã backend VI/EN ⏳ | `constants/enumLabels.i18n.ts` | `alertTypeDict` · `alertStatusDict` · `ticketTypeDict` · `ticketStatusDict` · `ticketDisplayStatusDict` · `deviceStatusDict` · `roleDict` · `prefixLabels()` | 6.3 |
 | Trạng thái ticket + thanh tiến độ ⏳ | `constants/ticketStatus.ts` | `TICKET_STATUS_ORDER` · `ticketDisplayStatus()` · `TICKET_STATUS_BADGE_CLASS` · `TICKET_STATUS_BADGE_SIZE` · `buildTicketProgressSteps()` · `findStepIndex()` | 2.10 |
 | Hạn SLA mặc định | `constants/sla.ts` | `FACTORY_DEFAULT_SLA` · `validateSla` · `SLA_PRIORITIES` · `PRIORITY_LABEL` (tên cũ) | 2.4 |
 | Ngưỡng cảm biến | `constants/thresholds.ts` | khoảng hợp lệ ngưỡng Zone | — |
+| Giá trị trống | `constants/display.ts` | `NO_VALUE` (`_`) — thông số chưa có dữ liệu | 6.1 |
 | Nhóm role, trang chủ theo role, quyền menu | `constants/roles.ts` | `OPS_ROLES` · `FARM_OWNER_ONLY` · `HARVEST_ROLES` · `ADMIN_ONLY` · `ROLE_HOME` · `MENU_ACCESS` · `canAccessPath` | 12.0, 12.8 |
 | Nhãn hành động audit log | `constants/auditActions.ts` | nhãn hành động | — |
 | Nhãn ticket cũ (chỉ VI) | `constants/tickets.ts` | `TICKET_TYPE_LABEL` · `STATUS_LABEL` · `STATUS_TONE` · `PRIORITY_TONE` · `PRIORITY_ICON_CLASS` | nợ — thay bằng `enumLabels`/`ticketStatus`/`priority` |
@@ -1495,10 +1525,10 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Nhóm | Component |
 |---|---|
 | Nền tảng | `Button` · `Card` · `Badge` · `Input` · `Select` · `Textarea` · `Toggle` · `Avatar` · `icons.tsx` |
-| Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `PaginationBar` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
+| Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
 | Khung, ô số liệu | `SectionCard` · `StatTile` · `RadialGauge` · `Stepper` (thanh tiến độ) · `StableHeight` (giữ chiều cao khung) |
 | Lớp nổi | `Modal` · `ConfirmModal` · `NoteActionModal` (popup nhập lý do) · `Drawer` · `ActionsMenu` · `SelectMenu` · `useFloatingMenu.ts` |
-| Trạng thái màn | `EmptyState` · `LoadingSkeleton` · `ComingSoon` (tính năng chưa có API) · `DemoBanner` · `StarRating` |
+| Trạng thái màn | `EmptyState` (lỗi tải / chưa có farm-nhà-Zone) · `LoadingSkeleton` · `ChartEmptyFrame` (khung biểu đồ khi chưa có dữ liệu, mục 8) · `ComingSoon` (tính năng chưa có API) · `StarRating` |
 
 **`components/common/`** — có biết domain, ≥ 2 nơi dùng:
 
@@ -1511,7 +1541,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `TicketProgressStepper` ⏳ | Thanh tiến độ ticket chuẩn (bước đậm + hiệu ứng đoạn nối, thêm bước riêng qua `extraSteps`) | 2.10 |
 | `StatusDot` | Chấm + chữ trạng thái thiết bị | 2.5 |
 | `DateTimePicker` | Chọn ngày giờ hẹn | — |
-| `ZoneSwitcher` · `ZonePicker` | Chọn Zone | — |
+| `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/farm-owner/useScopeFilter`) | — |
 | `NotificationPopover` · `ProfilePopover` · `LogoutConfirmModal` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
 
 **Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, đóng băng 4.1) · `components/auth/RequireRole.tsx` (chặn route).
@@ -1530,7 +1560,8 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `lib/axios.ts` | instance API + tự làm mới phiên 401 | 13.1 |
 | `lib/socket.ts` | socket singleton — chỉ dùng qua hook | 13.4 |
 | `lib/queryClient.ts` | React Query client (30s, retry 1) | 13.2 |
-| `lib/navigation.ts` · `lib/chartTheme.ts` | chuyển về đăng nhập · theme Chart.js | 8 |
+| `lib/navigation.ts` · `lib/chartTheme.ts` | chuyển về đăng nhập · theme Chart.js (bảng `CHART_COLORS` dùng cả cho recharts) | 8 |
+| `features/farm-owner/harvest/ChartParts.tsx` | Thành phần biểu đồ shadcn trên recharts: `ChartContainer`, `ChartTooltip(Content)`, `ChartLegend(Content)` — chỉ dùng trong trang Thu hoạch | 8 |
 
 ### D.4. Hook, API, store, validator dùng chung
 

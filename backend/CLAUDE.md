@@ -21,6 +21,7 @@ npm run migrate:remove-sales  # one-off after SRS v1.23.0 (idempotent)
 npm run migrate:data-model    # one-off, BEFORE deploying v1.23.0 code (idempotent)
 npm run migrate:scope-v2      # one-off after deploying the SRS v2 backend: FARM_OPERATOR → DOMAIN_EXPERT, drop zone_ids, BIRD_PANIC → NOISE_ANOMALY, remove heating, un-list harvests, drop marketplace collections (idempotent)
 npm run migrate:bird-count-house  # one-off after SRS v2.1.8: cameras, bird counts, camera alerts and return_rate_drop_pct move from Zone to House (idempotent; prints houses whose zones disagreed for the expert to set)
+npm run db:script    # regenerate docs/database/init.mongo.js (collections, $jsonSchema validators, indexes) from the models — run after any model change; tests/unit/utils/dbScript.util.test.ts fails until you do
 npm run mdns         # publish mDNS "swiftletcare-broker.local" for a real ESP32 (run alongside npm run dev)
 ```
 

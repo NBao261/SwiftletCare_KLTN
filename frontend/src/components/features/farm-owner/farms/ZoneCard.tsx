@@ -6,6 +6,7 @@ import { farmDict } from '@/constants/farmStructure.i18n'
 import { METRIC_BY_KEY, CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { cn } from '@/lib/cn'
 import type { MetricKey, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
+import { NO_VALUE } from '@/constants/display'
 
 /** 3 chỉ số chính hiện trên card zone — đủ 6 chỉ số ở trang chi tiết zone */
 const CARD_METRICS: MetricKey[] = ['temperature', 'humidity', 'nh3']
@@ -16,7 +17,7 @@ interface ZoneCardProps { node: ZoneNode; loadingMetrics: boolean; onOpen: () =>
 export default function ZoneCard({ node, loadingMetrics, onOpen }: ZoneCardProps) {
   const { t, num } = useTranslation(farmDict)
   const { zone, metrics, breaches, counts } = node
-  const over = new Set(breaches.map(b => b.metric))
+  const over = new Set(breaches.map(breach => breach.metric))
   const worst = breaches[0]
   const hasData = metrics !== undefined
 
@@ -49,7 +50,7 @@ export default function ZoneCard({ node, loadingMetrics, onOpen }: ZoneCardProps
             <div key={key} className="px-2 py-2 text-center">
               <p className="label-caption truncate">{t(meta.labelKey)}</p>
               <p className={cn('text-h3', value === undefined ? 'text-warmGray' : over.has(key) ? 'text-climateOrange' : 'text-charcoal')}>
-                {value !== undefined ? num(value, meta.decimals) : '—'}
+                {value !== undefined ? num(value, meta.decimals) : NO_VALUE}
                 {value !== undefined && <span className="ml-1 text-xs font-medium text-warmGray">{meta.unit}</span>}
               </p>
             </div>

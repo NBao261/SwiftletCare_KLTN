@@ -1,4 +1,5 @@
-import { Droplets, Wind, Volume2 } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { DropIcon, SpeakerHighIcon, WindIcon } from '@phosphor-icons/react'
 import { Button, Card, RadialGauge } from '@/components/ui'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
@@ -8,9 +9,9 @@ import type { ControlMode, ControlOutput } from '@/types'
 
 // SRS v2.0.0 đã bỏ sưởi (ENV-FR-012) nên chỉ còn 3 relay
 const RELAY_ITEMS = [
-  { key: 'misting', labelKey: 'relay.misting', icon: Droplets },
-  { key: 'ventilation', labelKey: 'relay.ventilation', icon: Wind },
-  { key: 'speaker', labelKey: 'relay.speaker', icon: Volume2 },
+  { key: 'misting', labelKey: 'relay.misting', icon: DropIcon },
+  { key: 'ventilation', labelKey: 'relay.ventilation', icon: WindIcon },
+  { key: 'speaker', labelKey: 'relay.speaker', icon: SpeakerHighIcon },
 ] as const
 
 type RelayItem = (typeof RELAY_ITEMS)[number]
@@ -36,24 +37,35 @@ interface ControlSubsystemPanelProps {
   controlMode?: ControlMode
   controlOutput?: ControlOutput
   tooHot?: boolean
+  // Ô chọn Zone + nút đồng bộ đặt ở góc phải header
+  scopeControl?: ReactNode
+  // Đang đồng bộ Zone với khung Cảm biến: viền nổi để thấy 2 khung đang đi cùng nhau
+  isLinked?: boolean
+  // Mở trang chi tiết SCADA; không truyền (role không được điều khiển relay) thì ẩn nút
+  onOpenDetail?: () => void
 }
 
 // Trạng thái relay phân hệ điều khiển, phun sương/quạt hiện % công suất logic mờ khi có telemetry live
-export default function ControlSubsystemPanel({ zoneName, relayStates, controlMode, controlOutput, tooHot }: ControlSubsystemPanelProps) {
+export default function ControlSubsystemPanel({ zoneName, relayStates, controlMode, controlOutput, tooHot, scopeControl, isLinked = false, onOpenDetail }: ControlSubsystemPanelProps) {
   const { t } = useTranslation(dashboardDict)
 
   return (
-    <Card size="lg" className="flex h-full flex-col gap-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <Card size="lg" className={cn('flex h-full flex-col gap-5 transition-shadow duration-300', isLinked && 'ring-2 ring-charcoal/25')}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-h2 text-charcoal">{t('control.title')}</h2>
           <p className="mt-1 text-sm text-warmGray">
             {zoneName ? t('control.subtitleZone', { zone: zoneName }) : t('control.subtitle')}
           </p>
         </div>
-        <Button variant="secondary" size="sm" disabled title={t('control.detailHint')}>
-          {t('control.detail')}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {scopeControl}
+          {onOpenDetail && (
+            <Button variant="secondary" size="sm" onClick={onOpenDetail}>
+              {t('control.detail')}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-3">

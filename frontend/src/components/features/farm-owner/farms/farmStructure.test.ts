@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildFarmStructure, detectBreaches, mergeMetrics, wifiQuality, type StructureInput, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
+import { buildFarmStructure, detectBreaches, isNameTaken, mergeMetrics, summarizeScope, wifiQuality, type StructureInput, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import { translate } from '@/lib/i18n'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { Alert, CameraNode, Farm, HarvestBatch, House, SensorNode, Thresholds, Zone } from '@/types'
@@ -33,17 +33,30 @@ describe('detectBreaches', () => {
   it('chỉ báo chỉ số vượt/dưới ngưỡng, bỏ qua chỉ số thiếu', () => {
     const m: ZoneMetrics = { temperature: 34, humidity: 70, nh3: 27, co2: 1000 }
     const b = detectBreaches(m, T)
-    expect(b.map(x => [x.metric, x.direction])).toEqual([['temperature', 'high'], ['humidity', 'low'], ['nh3', 'high']])
+    expect(b.map(item => [item.metric, item.direction])).toEqual([['temperature', 'high'], ['humidity', 'low'], ['nh3', 'high']])
     expect(detectBreaches(undefined, T)).toEqual([])
   })
 })
 
 describe('buildFarmStructure', () => {
-  it('đếm thiết bị online/offline theo zone và nhà (camera tính chung)', () => {
+  it('đếm thiết bị online/offline theo zone và nhà; camera gắn nhà, không vào Zone (SRS v2.1.8)', () => {
     const s = buildFarmStructure(input())
     expect(s.totals.counts).toEqual({ total: 3, online: 2, offline: 1 })
-    expect(s.zoneById.get('zA')?.counts.total).toBe(2)
+    expect(s.zoneById.get('zA')?.counts.total).toBe(1)
+    expect(s.houseById.get('h1')?.counts.total).toBe(3)
+    expect(s.houseById.get('h1')?.cameraDevices.map(cameraDevice => cameraDevice.id)).toEqual(['c1'])
     expect(s.houseById.get('h1')?.zones).toHaveLength(2)
+  })
+
+  it('camera chỉ có house_id và cảnh báo của cả nhà vào đúng nhà', () => {
+    const houseCamera = { _id: 'c2', device_id: 'c2', house_id: 'h1', status: 'OFFLINE', registered_at: '2026-01-01' } as CameraNode
+    const houseAlert = { _id: 'a1', farm_id: 'f1', house_id: 'h1', type: 'EDGE_AI_DEGRADED', severity: 'HIGH', status: 'ACTIVE', created_at: '2026-10-10T00:00:00Z' } as Alert
+    const s = buildFarmStructure(input({ sensors: [sensor('s1', 'zA', 'ONLINE')], cameras: [houseCamera], alerts: [houseAlert] }))
+    const node = s.houseById.get('h1')
+    expect(node?.counts).toEqual({ total: 2, online: 1, offline: 1 })
+    expect(node?.cameras).toBe(1)
+    expect(node?.alerts.map(alert => alert._id)).toEqual(['a1'])
+    expect(node?.health).toBe('ALERT')
   })
 
   it('nhà "Cảnh báo" khi 1 zone vượt ngưỡng, kèm banner đầu tiên; đếm cảm biến/camera của nhà', () => {
@@ -88,14 +101,27 @@ describe('buildFarmStructure', () => {
     const h = s.houseById.get('h1')!
     expect(h.monthKg).toBeCloseTo(3.5)
     expect(h.monthNests).toBe(170)
-    expect(h.recent.map(b => b._id)).toEqual(['b5', 'b4', 'b3'])
+    expect(h.recent.map(batch => batch._id)).toEqual(['b5', 'b4', 'b3'])
     expect(s.totals.monthBatches).toBe(3)
     expect(s.totals.monthLastBatchAt).toBe('2026-10-09T00:00:00Z')
   })
 
+  it('1 lần thu nhiều loại yến (cùng zone + ngày) đếm là 1 đợt, cộng gộp kg và số tổ', () => {
+    const harvests = [
+      { ...batch('b1', 'zA', '2026-10-09T00:00:00Z', 2000, 100), nest_type: 'RAW' },
+      { ...batch('b2', 'zA', '2026-10-09T00:00:00Z', 500, 20), nest_type: 'PREMIUM' },
+    ] as HarvestBatch[]
+    const s = buildFarmStructure(input({ harvests }))
+    const h = s.houseById.get('h1')!
+    expect(s.totals.monthBatches).toBe(1)
+    expect(h.monthKg).toBeCloseTo(2.5)
+    expect(h.recent).toHaveLength(1)
+    expect(h.recent[0].nest_count).toBe(120)
+  })
+
   it('dựng đúng cây với dữ liệu lớn', () => {
     const zones = Array.from({ length: 2000 }, (_, i) => ({ ...zoneA, _id: `z${i}` }))
-    const sensors = zones.map((z, i) => sensor(`s${i}`, z._id, 'ONLINE'))
+    const sensors = zones.map((zone, i) => sensor(`s${i}`, zone._id, 'ONLINE'))
     const s = buildFarmStructure(input({ zonesByHouse: new Map([['h1', zones]]), sensors }))
     expect(s.zones).toHaveLength(2000)
     expect(s.totals.counts.total).toBe(2000)
@@ -117,5 +143,33 @@ describe('helpers', () => {
   it('từ điển VI/EN nội suy tham số', () => {
     expect(translate(farmDict, 'vi', 'kpi.alertSplit', { high: 1, medium: 2, low: 0 })).toBe('1 cao · 2 trung bình · 0 thấp')
     expect(translate(farmDict, 'en', 'kpi.alertSplit', { high: 1, medium: 2, low: 0 })).toBe('1 high · 2 medium · 0 low')
+  })
+})
+
+describe('isNameTaken', () => {
+  it('so trùng không phân biệt hoa thường, khoảng trắng thừa', () => {
+    expect(isNameTaken('  nhà   CHÍNH ', ['Nhà chính', 'Nhà phụ'])).toBe(true)
+    expect(isNameTaken('Nhà sau', ['Nhà chính', 'Nhà phụ'])).toBe(false)
+    expect(isNameTaken('', ['Nhà chính'])).toBe(false)
+  })
+
+  it('đổi tên giữ nguyên tên cũ thì không tính là trùng', () => {
+    expect(isNameTaken('Nhà chính', ['Nhà chính', 'Nhà phụ'], 'Nhà chính')).toBe(false)
+    expect(isNameTaken('Nhà phụ', ['Nhà chính', 'Nhà phụ'], 'Nhà chính')).toBe(true)
+  })
+})
+
+describe('summarizeScope', () => {
+  it('cộng các nhà; lọc 1 Zone thì thiết bị của Zone đó, sản lượng của cả nhà', () => {
+    const structure = buildFarmStructure(input({ harvests: [batch('b1', 'zB', '2026-10-05T00:00:00+07:00', 500, 10)] }))
+    const houseTotals = summarizeScope(structure.houses, undefined, new Date('2026-10-10T05:00:00Z'))
+    expect(houseTotals.houses).toBe(1)
+    expect(houseTotals.zones).toBe(2)
+    expect(houseTotals.monthKg).toBe(0.5)
+    expect(houseTotals.monthLastBatchAt).toBe('2026-10-05T00:00:00+07:00')
+    const zoneTotals = summarizeScope(structure.houses, structure.zoneById.get('zA'), new Date('2026-10-10T05:00:00Z'))
+    expect(zoneTotals.zones).toBe(1)
+    expect(zoneTotals.counts).toEqual(structure.zoneById.get('zA')?.counts)
+    expect(zoneTotals.monthKg).toBe(0.5)
   })
 })

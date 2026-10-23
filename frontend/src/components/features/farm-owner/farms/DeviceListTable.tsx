@@ -8,6 +8,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { wifiQuality, type DeviceRow } from '@/components/features/farm-owner/farms/farmStructure'
+import { NO_VALUE } from '@/constants/display'
 
 interface DeviceListTableProps {
   devices: DeviceRow[]
@@ -24,45 +25,45 @@ export default function DeviceListTable({ devices, zoneNameById, onSelect }: Dev
     const cols: DataTableColumn<DeviceRow>[] = [
       {
         key: 'device', header: t('device.col.device'), className: 'w-[24%]',
-        render: d => (
+        render: device => (
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-warmGray/10 text-charcoal">
-              {d.type === 'sensor' ? <CpuIcon size={18} /> : <VideoCameraIcon size={18} />}
+              {device.type === 'sensor' ? <CpuIcon size={18} /> : <VideoCameraIcon size={18} />}
             </span>
             <div className="min-w-0">
-              <p className="truncate font-semibold text-charcoal">{t(d.type === 'sensor' ? 'device.sensor.name' : 'device.camera.name')}</p>
-              <p className="truncate text-small text-warmGray">{t(d.type === 'sensor' ? 'device.sensor.model' : 'device.camera.model')}</p>
+              <p className="truncate font-semibold text-charcoal">{t(device.type === 'sensor' ? 'device.sensor.name' : 'device.camera.name')}</p>
+              <p className="truncate text-small text-warmGray">{t(device.type === 'sensor' ? 'device.sensor.model' : 'device.camera.model')}</p>
             </div>
           </div>
         ),
       },
       {
         key: 'id', header: t('device.col.id'), className: 'w-[16%] whitespace-nowrap',
-        render: d => <span className="rounded-lg bg-warmGray/10 px-2 py-1 text-caption text-graphite">{d.deviceId}</span>,
+        render: device => <span className="rounded-lg bg-warmGray/10 px-2 py-1 text-caption text-graphite">{device.deviceId}</span>,
       },
     ]
     if (zoneNameById) {
-      cols.push({ key: 'zone', header: 'Zone', className: 'w-[8%]', render: d => <span className="text-charcoal">{zoneNameById.get(d.zoneId) ?? '—'}</span> })
+      cols.push({ key: 'zone', header: 'Zone', className: 'w-[8%]', render: device => <span className="text-charcoal">{zoneNameById.get(device.zoneId) ?? NO_VALUE}</span> })
     }
     cols.push(
-      { key: 'status', header: t('device.col.status'), className: 'w-[12%]', render: d => <StatusDot status={d.status} /> },
+      { key: 'status', header: t('device.col.status'), className: 'w-[12%]', render: device => <StatusDot status={device.status} /> },
       {
         key: 'wifi', header: 'Wi-Fi', className: 'w-[16%] whitespace-nowrap',
-        render: d => {
-          const q = wifiQuality(d.rssi)
-          return d.rssi === undefined || !q
-            ? <span className="text-warmGray">—</span>
-            : <span className="text-charcoal">{d.rssi} dBm <span className="text-warmGray">· {t(`wifi.${q}`)}</span></span>
+        render: device => {
+          const q = wifiQuality(device.rssi)
+          return device.rssi === undefined || !q
+            ? <span className="text-warmGray">{NO_VALUE}</span>
+            : <span className="text-charcoal">{device.rssi} dBm <span className="text-warmGray">· {t(`wifi.${q}`)}</span></span>
         },
       },
-      { key: 'fw', header: 'Firmware', className: 'w-[9%] whitespace-nowrap', render: d => <span className="text-charcoal">{d.firmware ? `v${d.firmware}` : '—'}</span> },
-      { key: 'hb', header: 'Heartbeat', className: 'w-[10%] whitespace-nowrap', render: d => <span className="text-warmGray">{ago(d.lastHeartbeat)}</span> },
+      { key: 'fw', header: 'Firmware', className: 'w-[9%] whitespace-nowrap', render: device => <span className="text-charcoal">{device.firmware ? `v${device.firmware}` : NO_VALUE}</span> },
+      { key: 'hb', header: 'Heartbeat', className: 'w-[10%] whitespace-nowrap', render: device => <span className="text-warmGray">{ago(device.lastHeartbeat)}</span> },
       {
         key: 'actions', header: t('device.col.actions'), align: 'center', className: 'w-[11%] whitespace-nowrap',
-        render: d => (
+        render: device => (
           <button
             type="button"
-            onClick={e => { e.stopPropagation(); onSelect(d) }}
+            onClick={event => { event.stopPropagation(); onSelect(device) }}
             className={DETAIL_BUTTON_CLASS}
           >
             {t('device.detail')}

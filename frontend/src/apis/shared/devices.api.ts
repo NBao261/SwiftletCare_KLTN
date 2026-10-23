@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, SensorNode, CameraNode, RelayName, SystemNodeStatus, SpeakerScheduleInput, NodeCommandInput } from '@/types'
+import type { ApiResponse, SensorNode, CameraNode, RelayName, RelayOverrideLog, SystemNodeStatus, SpeakerScheduleInput, NodeCommandInput } from '@/types'
 
 /**
  * Flow 1 bước 3–4 — BE xác thực cặp {device_id, secret_key} in trên nhãn thiết bị
@@ -26,6 +26,10 @@ export const deviceApi = {
   // ENV-FR-018 — trả về AUTO ngay, không đợi hết hạn override
   clearRelayOverride: (id: string) =>
     api.delete<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/relay-override`),
+
+  // ENV-FR-019 — lịch sử can thiệp tay của thiết bị, mới nhất trước
+  listRelayOverrides: (id: string, params?: { page?: number; limit?: number }) =>
+    api.get<ApiResponse<RelayOverrideLog[]>>(`/devices/sensor-nodes/${id}/relay-overrides`, { params }),
 
   // ENV-FR-013b — lịch loa ru của thiết bị
   updateSpeakerSchedule: (id: string, input: SpeakerScheduleInput) =>

@@ -78,15 +78,16 @@ export default function AppHeader({ menuSections, elevated = false, isOverHero =
   const navigate = useNavigate()
   const page = usePageTitle(menuSections)
   const registeredTrail = useBreadcrumbStore(s => s.trail)
-  // Khớp RequireRole của route /alerts — Sales Staff không có trang này nên không hiện nút
-  const canViewAlerts = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
+  const rootState = useBreadcrumbStore(s => s.rootState)
+  // Khớp RequireRole của thông báo cảnh báo — cho phép cả Chuyên gia xem thông báo
+  const canViewAlerts = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN', 'DOMAIN_EXPERT')
 
   // Chỉ trang tự đăng ký breadcrumb (VD Ticket/Farms drill-down) mới có cấp con —
   // header không còn ô chọn Zone nên không gắn tên Zone đang lưu vào đây nữa.
   const extraCrumbs: Crumb[] = registeredTrail
 
   const trail: Crumb[] = [
-    { label: page.label, onClick: pathname !== page.to ? () => navigate(page.to) : undefined },
+    { label: page.label, onClick: pathname !== page.to ? () => navigate(page.to, { state: rootState }) : undefined },
     ...extraCrumbs,
   ]
 

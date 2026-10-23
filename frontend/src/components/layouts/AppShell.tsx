@@ -49,7 +49,7 @@ export default function AppShell({
         <main
           ref={mainRef}
           onScroll={e => setScrolled(e.currentTarget.scrollTop > 0)}
-          className={cn('relative flex flex-1 flex-col overflow-y-auto bg-stone pb-28 pt-16 lg:pb-8', heroImage && 'isolate')}
+          className={cn('relative z-10 flex flex-1 flex-col overflow-y-auto bg-stone pb-28 pt-16 lg:pb-8', heroImage && 'isolate')}
         >
           {/* Ảnh nền đầu trang do trang bật (usePageHero): tràn sát mép, nằm sau header và khung, mép dưới tan vào nền */}
           {heroImage && (
@@ -73,7 +73,7 @@ export default function AppShell({
             {/* Nút quay lại của trang drill-down (usePageBack) — nút tròn cùng kiểu Dashboard Farm Owner (FarmOwnerDashboardPage)
                 + chữ tên trang cha; cả cụm là 1 link. self-start để vùng bấm không kéo hết hàng */}
             {back && (
-              <Link to={back.to} className="group mb-3 flex items-center gap-2.5 self-start text-sm font-semibold text-graphite hover:text-charcoal">
+              <Link to={back.to} state={back.state} className="group mb-3 flex items-center gap-2.5 self-start text-sm font-semibold text-graphite hover:text-charcoal">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-warmGray/15 bg-white text-charcoal shadow-icon transition-colors group-hover:bg-warmGray/10">
                   <ArrowLeft width={18} height={18} />
                 </span>

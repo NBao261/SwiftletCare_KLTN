@@ -1,158 +1,205 @@
-import { useState, FormEvent } from 'react'
-import { useUpdateFuzzyTuning } from '@/hooks/shared/useFarms'
-import { useTuningSuggestion } from '@/hooks/farm-owner/useAnalytics'
-import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
-import { Button, Input, Modal, Toggle } from '@/components/ui'
-import { DEFAULT_FUZZY_TUNING } from '@/constants/thresholds'
-import { parseThresholdInput } from '@/validations/common/threshold.validation'
-import { FUZZY_TUNING_LIMITS, validateFuzzyTuning } from '@/validations/common/fuzzyTuning.validation'
-import type { FuzzyNumericKey, FuzzyTuning } from '@/types'
+import { useState, type FormEvent } from 'react';
 
-const FIELDS: Array<{ key: FuzzyNumericKey; label: string; step: string; hint: string }> = [
-  {
-    key: 'fuzzy_humidity_band', label: 'Độ rộng vùng độ ẩm (%RH)', step: '0.5',
-    hint: 'Lớn hơn → bắt đầu phun sớm hơn và giảm dần mềm hơn quanh ngưỡng ẩm min.',
-  },
-  {
-    key: 'fuzzy_temp_band', label: 'Độ rộng vùng nóng (°C)', step: '0.5',
-    hint: 'Lớn hơn → quạt/phun làm mát phản ứng từ sớm hơn khi nhiệt độ tiến gần ngưỡng max.',
-  },
-  {
-    key: 'fuzzy_fan_dry_level', label: 'Mức quạt khi nóng mà khô (%)', step: '5',
-    hint: 'Thấp hơn → giữ hơi ẩm trong nhà, để phun sương làm mát. NH3/CO2 vượt ngưỡng vẫn luôn chạy quạt 100%.',
-  },
-  {
-    key: 'fuzzy_window_sec', label: 'Chu kỳ bật/tắt relay (giây)', step: '10',
-    hint: 'Dài hơn → relay/bơm ít đóng cắt hơn nhưng dao động độ ẩm lớn hơn. Độ mịn điều khiển ≈ 10 giây.',
-  },
-]
+import { Button, Input, Modal, Toggle } from '@/components/ui';
+import { analyticsDict } from '@/constants/analytics.i18n';
+import { NO_VALUE } from '@/constants/display';
+import { DEFAULT_FUZZY_TUNING } from '@/constants/thresholds';
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { useTranslation } from '@/hooks/common/useTranslation';
+import { useTuningSuggestion } from '@/hooks/farm-owner/useAnalytics';
+import { useUpdateFuzzyTuning } from '@/hooks/shared/useFarms';
+import { useToastStore } from '@/stores/toastStore';
+import { parseThresholdInput } from '@/validations/common/threshold.validation';
+import { FUZZY_TUNING_LIMITS, validateFuzzyTuning } from '@/validations/common/fuzzyTuning.validation';
+import type { FuzzyNumericKey, FuzzyTuning } from '@/types';
 
-type Form = Record<FuzzyNumericKey, string> & { fuzzy_input_filter: boolean }
-const toForm = (t: FuzzyTuning): Form => ({
-  ...(Object.fromEntries(FIELDS.map(f => [f.key, String(t[f.key])])) as Record<FuzzyNumericKey, string>),
-  fuzzy_input_filter: t.fuzzy_input_filter,
-})
+// 4 hệ số số học của bộ điều khiển mờ, nhãn và gợi ý lấy từ từ điển
+const FIELDS = [
+  { key: 'fuzzy_humidity_band', labelKey: 'fuzzy.humidityBand', hintKey: 'fuzzy.humidityBandHint', step: '0.5' },
+  { key: 'fuzzy_temp_band', labelKey: 'fuzzy.temperatureBand', hintKey: 'fuzzy.temperatureBandHint', step: '0.5' },
+  { key: 'fuzzy_fan_dry_level', labelKey: 'fuzzy.fanDryLevel', hintKey: 'fuzzy.fanDryLevelHint', step: '5' },
+  { key: 'fuzzy_window_sec', labelKey: 'fuzzy.window', hintKey: 'fuzzy.windowHint', step: '10' },
+] as const satisfies ReadonlyArray<{ key: FuzzyNumericKey; labelKey: string; hintKey: string; step: string }>;
 
-/** ENV-FR-021/022 — chỉnh 4 hệ số + cờ lọc đầu vào của bộ điều khiển mờ; lưu xong backend đẩy config/update xuống ESP32 ngay */
-export default function FuzzyTuningModal({
-  zoneId, zoneName, current, onClose,
-}: {
-  zoneId: string
-  zoneName: string
-  current: FuzzyTuning
-  onClose: () => void
-}) {
-  const update = useUpdateFuzzyTuning(zoneId)
-  const suggestion = useTuningSuggestion(zoneId)
-  const push = useToastStore(s => s.push)
-  const [form, setForm] = useState<Form>(() => toForm(current))
-  const [errors, setErrors] = useState<Partial<Record<FuzzyNumericKey, string>>>({})
+type TuningForm = Record<FuzzyNumericKey, string> & { fuzzy_input_filter: boolean };
 
-  // ANALYTICS-FR-010 — chỉ điền sẵn vào form; người vận hành vẫn phải bấm "Lưu & áp dụng"
-  async function handleSuggest() {
-    const { data } = await suggestion.refetch()
-    const s = data?.suggestion
-    if (!s) return
-    setForm(prev => ({
-      ...prev,
-      ...Object.fromEntries(FIELDS.filter(f => s[f.key] !== undefined).map(f => [f.key, String(s[f.key])])),
-    }))
-    setErrors({})
+// Đổi hệ số đang áp dụng sang giá trị form (chuỗi để ô số nhập tự do)
+function toForm(tuning: FuzzyTuning): TuningForm {
+  return {
+    fuzzy_humidity_band: String(tuning.fuzzy_humidity_band),
+    fuzzy_temp_band: String(tuning.fuzzy_temp_band),
+    fuzzy_fan_dry_level: String(tuning.fuzzy_fan_dry_level),
+    fuzzy_window_sec: String(tuning.fuzzy_window_sec),
+    fuzzy_input_filter: tuning.fuzzy_input_filter,
+  };
+}
+
+interface FuzzyTuningModalProps {
+  zoneId: string;
+  zoneName: string;
+  current: FuzzyTuning;
+  onClose: () => void;
+}
+
+// Popup chỉnh 4 hệ số và cờ lọc nhiễu của bộ điều khiển mờ (ENV-FR-021/022), lưu xong backend đẩy xuống ESP32
+export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }: FuzzyTuningModalProps): JSX.Element {
+  const { t } = useTranslation(analyticsDict);
+  const updateTuning = useUpdateFuzzyTuning(zoneId);
+  const suggestion = useTuningSuggestion(zoneId);
+  const push = useToastStore(state => state.push);
+  const apiErrorMessage = useApiErrorMessage();
+  const [form, setForm] = useState<TuningForm>(() => toForm(current));
+  const [errors, setErrors] = useState<Partial<Record<FuzzyNumericKey, string>>>({});
+
+  // Câu lỗi của 1 ô theo ngôn ngữ đang chọn (validator dùng chung chỉ báo ô nào sai)
+  function fieldError(key: FuzzyNumericKey, value: number): string {
+    const limit = FUZZY_TUNING_LIMITS[key];
+    if (!Number.isFinite(value)) return t('fuzzy.errorNumber');
+    if (value < limit.min || value > limit.max) return t('fuzzy.errorRange', { min: limit.min, max: limit.max });
+    return t('fuzzy.errorInteger');
   }
 
-  function handleSave(e: FormEvent) {
-    e.preventDefault()
-    const values: FuzzyTuning = { ...current, fuzzy_input_filter: form.fuzzy_input_filter }
-    for (const f of FIELDS) values[f.key] = parseThresholdInput(form[f.key])
-    const found = validateFuzzyTuning(values)
-    setErrors(found)
-    if (Object.keys(found).length > 0) return
+  // Gợi ý hệ số (ANALYTICS-FR-010) chỉ điền sẵn vào form, người dùng vẫn phải bấm lưu
+  async function handleSuggest(): Promise<void> {
+    const { data } = await suggestion.refetch();
+    const suggested = data?.suggestion;
+    if (!suggested) return;
+    setForm(previous => {
+      const next = { ...previous };
+      for (const field of FIELDS) {
+        const value = suggested[field.key];
+        if (value !== undefined) next[field.key] = String(value);
+      }
+      return next;
+    });
+    setErrors({});
+  }
 
-    // Chỉ gửi hệ số đã đổi để lịch sử chỉnh (vạch mốc trên biểu đồ) ghi đúng cái đã thay đổi
-    const changed: Partial<FuzzyTuning> = Object.fromEntries(FIELDS.filter(f => values[f.key] !== current[f.key]).map(f => [f.key, values[f.key]]))
-    if (values.fuzzy_input_filter !== current.fuzzy_input_filter) changed.fuzzy_input_filter = values.fuzzy_input_filter
-    if (Object.keys(changed).length === 0) {
-      onClose()
-      return
+  function handleSave(event: FormEvent): void {
+    event.preventDefault();
+    const values: FuzzyTuning = {
+      ...current,
+      fuzzy_humidity_band: parseThresholdInput(form.fuzzy_humidity_band),
+      fuzzy_temp_band: parseThresholdInput(form.fuzzy_temp_band),
+      fuzzy_fan_dry_level: parseThresholdInput(form.fuzzy_fan_dry_level),
+      fuzzy_window_sec: parseThresholdInput(form.fuzzy_window_sec),
+      fuzzy_input_filter: form.fuzzy_input_filter,
+    };
+    const invalidKeys = Object.keys(validateFuzzyTuning(values)) as FuzzyNumericKey[];
+    const foundErrors: Partial<Record<FuzzyNumericKey, string>> = {};
+    for (const key of invalidKeys) foundErrors[key] = fieldError(key, values[key]);
+    setErrors(foundErrors);
+    if (invalidKeys.length > 0) return;
+
+    // Chỉ gửi hệ số đã đổi để lịch sử chỉnh (vạch mốc trên biểu đồ) ghi đúng phần thay đổi
+    const changed: Partial<FuzzyTuning> = {};
+    for (const field of FIELDS) {
+      if (values[field.key] !== current[field.key]) changed[field.key] = values[field.key];
     }
-    update.mutate(changed, {
+    if (values.fuzzy_input_filter !== current.fuzzy_input_filter) changed.fuzzy_input_filter = values.fuzzy_input_filter;
+    if (Object.keys(changed).length === 0) {
+      onClose();
+      return;
+    }
+    updateTuning.mutate(changed, {
       onSuccess: () => {
-        push('Đã lưu hệ số — thiết bị đang online áp dụng ngay')
-        onClose()
+        push(t('fuzzy.saved'));
+        onClose();
       },
-      onError: err => push(getApiErrorMessage(err, 'Lưu hệ số thất bại'), 'error'),
-    })
+      onError: error => push(apiErrorMessage(error, t('fuzzy.saveFailed')), 'error'),
+    });
   }
+
+  function handleReset(): void {
+    setForm(toForm(DEFAULT_FUZZY_TUNING));
+    setErrors({});
+  }
+
+  const suggestionData = suggestion.data;
 
   return (
-    <Modal open onClose={onClose} title={`Hệ số logic mờ — ${zoneName}`}>
+    <Modal open onClose={onClose} title={t('fuzzy.title', { zone: zoneName })} size="lg">
       <form onSubmit={handleSave} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 rounded-2xl border border-warmGray/15 p-3">
+        {/* Khối gợi ý hệ số từ mô hình */}
+        <div className="flex flex-col gap-2 rounded-2xl border border-warmGray/15 bg-warmGray/5 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-warmGray">Học mô hình nhà yến từ dữ liệu 14 ngày qua, mô phỏng 120 bộ hệ số, đề xuất bộ tốt nhất.</p>
+            <p className="text-small text-warmGray">{t('fuzzy.suggestHint')}</p>
             <Button type="button" size="sm" variant="secondary" loading={suggestion.isFetching} onClick={() => void handleSuggest()}>
-              Gợi ý hệ số
+              {t('fuzzy.suggest')}
             </Button>
           </div>
-          {suggestion.isError && <p className="text-xs text-alertRed">{getApiErrorMessage(suggestion.error, 'Không lấy được gợi ý')}</p>}
-          {suggestion.data && (
-            suggestion.data.suggestion ? (
-              <p className="text-xs text-charcoal">
-                Đã điền gợi ý vào form. Theo mô hình (R² {suggestion.data.model?.r2}, {suggestion.data.model?.days} ngày dữ liệu):
-                độ ẩm trong ngưỡng <b>{suggestion.data.predicted?.inRangeNow}% → {suggestion.data.predicted?.inRangeSuggested}%</b>,
-                phun trung bình {suggestion.data.predicted?.mistingNow}% → {suggestion.data.predicted?.mistingSuggested}%.
-                Đây là dự đoán trên mô hình — kiểm tra rồi mới bấm "Lưu & áp dụng".
-              </p>
-            ) : (
-              <p className="text-xs text-warmGray">Chưa có gợi ý: {suggestion.data.reason}</p>
-            )
+          {suggestion.isError && <p className="text-small text-alertRed">{apiErrorMessage(suggestion.error, t('fuzzy.suggestFailed'))}</p>}
+          {suggestionData?.suggestion && (
+            <p className="text-small text-charcoal">
+              {t('fuzzy.suggestFilled', {
+                r2: suggestionData.model?.r2 ?? NO_VALUE,
+                days: suggestionData.model?.days ?? NO_VALUE,
+                inRangeNow: suggestionData.predicted?.inRangeNow ?? NO_VALUE,
+                inRangeSuggested: suggestionData.predicted?.inRangeSuggested ?? NO_VALUE,
+                mistingNow: suggestionData.predicted?.mistingNow ?? NO_VALUE,
+                mistingSuggested: suggestionData.predicted?.mistingSuggested ?? NO_VALUE,
+              })}
+            </p>
+          )}
+          {suggestionData && !suggestionData.suggestion && (
+            <p className="text-small text-warmGray">{t('fuzzy.noSuggestion', { reason: suggestionData.reason ?? NO_VALUE })}</p>
           )}
         </div>
-        {FIELDS.map(f => (
-          <div key={f.key} className="flex flex-col gap-1">
+
+        {/* 4 ô hệ số */}
+        {FIELDS.map(field => (
+          <div key={field.key} className="flex flex-col gap-1">
             <Input
-              label={f.label}
+              label={t(field.labelKey)}
               type="number"
-              step={f.step}
-              min={FUZZY_TUNING_LIMITS[f.key].min}
-              max={FUZZY_TUNING_LIMITS[f.key].max}
-              value={form[f.key]}
-              error={errors[f.key]}
-              onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+              step={field.step}
+              min={FUZZY_TUNING_LIMITS[field.key].min}
+              max={FUZZY_TUNING_LIMITS[field.key].max}
+              value={form[field.key]}
+              error={errors[field.key]}
+              onChange={event => setForm(previous => ({ ...previous, [field.key]: event.target.value }))}
             />
-            <p className="text-xs text-warmGray">
-              {f.hint} Mặc định {DEFAULT_FUZZY_TUNING[f.key]}, khoảng {FUZZY_TUNING_LIMITS[f.key].min}–{FUZZY_TUNING_LIMITS[f.key].max}.
+            <p className="text-small text-warmGray">
+              {t(field.hintKey)}{' '}
+              {t('fuzzy.defaultRange', {
+                default: DEFAULT_FUZZY_TUNING[field.key],
+                min: FUZZY_TUNING_LIMITS[field.key].min,
+                max: FUZZY_TUNING_LIMITS[field.key].max,
+              })}
             </p>
           </div>
         ))}
+
+        {/* Cờ lọc nhiễu đầu vào */}
         <div className="flex items-start justify-between gap-3 rounded-2xl border border-warmGray/15 p-3">
           <div>
-            <p className="label-caption">Lọc nhiễu đầu vào (median + Kalman)</p>
-            <p className="mt-1 text-xs text-warmGray">
-              Làm mượt nhiệt độ/độ ẩm/khí trước khi đưa vào bộ mờ để relay ít đóng cắt vì nhiễu. Tắt tạm để so sánh
-              "đóng cắt/giờ" trên biểu đồ. An toàn NH3/CO2 luôn xét theo giá trị đo thô. Cần firmware ≥ 1.2.0.
-            </p>
+            <p className="label-caption">{t('fuzzy.filterTitle')}</p>
+            <p className="mt-1 text-small text-warmGray">{t('fuzzy.filterHint')}</p>
           </div>
           <Toggle
             checked={form.fuzzy_input_filter}
-            onChange={checked => setForm(prev => ({ ...prev, fuzzy_input_filter: checked }))}
-            aria-label="Lọc nhiễu đầu vào"
+            onChange={checked => setForm(previous => ({ ...previous, fuzzy_input_filter: checked }))}
+            aria-label={t('fuzzy.filterTitle')}
           />
         </div>
-        <p className="text-xs text-warmGray">
-          Chỉnh từng chút một rồi theo dõi biểu đồ "Hiệu quả điều khiển" vài giờ trước khi chỉnh tiếp.
-          Thiết bị firmware cũ hơn 1.1.0 bỏ qua các hệ số này.
-        </p>
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" className="flex-1" onClick={() => { setForm(toForm(DEFAULT_FUZZY_TUNING)); setErrors({}) }}>
-            Về mặc định
+
+        <p className="text-small text-warmGray">{t('fuzzy.footer')}</p>
+
+        {/* Chân popup: về mặc định bên trái, huỷ và lưu bên phải */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-warmGray/15 pt-4">
+          <Button type="button" variant="secondary" size="sm" onClick={handleReset}>
+            {t('fuzzy.reset')}
           </Button>
-          <Button type="submit" loading={update.isPending} className="flex-1">
-            Lưu & áp dụng
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+              {t('fuzzy.cancel')}
+            </Button>
+            <Button type="submit" size="sm" loading={updateTuning.isPending}>
+              {t('fuzzy.save')}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>
-  )
+  );
 }

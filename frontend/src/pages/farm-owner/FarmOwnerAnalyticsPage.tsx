@@ -1,80 +1,134 @@
-// Analytics Page – ANALYTICS-FR-001..003/005/008/009, VISION-FR-008..011
-import { useRef, useState } from 'react'
-import '@/lib/chartTheme'
-import { useZoneStore } from '@/stores/zoneStore'
-import { useZone } from '@/hooks/shared/useFarms'
-import { useTelemetry } from '@/hooks/farm-owner/useTelemetry'
-import EmptyState from '@/components/ui/EmptyState'
-import EnvVariationCard from '@/components/features/farm-owner/analytics/EnvVariationCard'
-import ZoneBalanceCard from '@/components/features/farm-owner/analytics/ZoneBalanceCard'
-import ControlPerformanceCard from '@/components/features/farm-owner/analytics/ControlPerformanceCard'
-import ForecastCard from '@/components/features/farm-owner/analytics/ForecastCard'
-import BirdFlowCard from '@/components/features/farm-owner/analytics/BirdFlowCard'
-import CorrelationCard from '@/components/features/farm-owner/analytics/CorrelationCard'
-import CompareTab from '@/components/features/farm-owner/analytics/CompareTab'
-import BirdTab from '@/components/features/farm-owner/analytics/BirdTab'
-import { METRICS, type MetricKey } from '@/components/features/farm-owner/analytics/analytics.constants'
-import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api'
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import '@/lib/chartTheme';
 
-export default function FarmOwnerAnalyticsPage() {
-  const [range, setRange] = useState<AnalyticsRange>('24h')
-  const [compareRange, setCompareRange] = useState<AnalyticsRange>('24h')
-  const [compareMetric, setCompareMetric] = useState<MetricKey>(METRICS[0].key)
-  const { selectedZoneId, selectedZoneName, selectedFarmId } = useZoneStore()
-  const { data: zone } = useZone(selectedZoneId ?? undefined)
-  const telemetry = useTelemetry(selectedZoneId ?? undefined)
-  const correlationRef = useRef<HTMLDivElement>(null)
+import ScopeFilter from '@/components/common/ScopeFilter';
+import HeaderActions from '@/components/layouts/HeaderActions';
+import AutomationCard from '@/components/features/farm-owner/analytics/AutomationCard';
+import BirdHourlyCard from '@/components/features/farm-owner/analytics/BirdHourlyCard';
+import BirdWeeklyCard from '@/components/features/farm-owner/analytics/BirdWeeklyCard';
+import CompareZonesCard from '@/components/features/farm-owner/analytics/CompareZonesCard';
+import CorrelationCard from '@/components/features/farm-owner/analytics/CorrelationCard';
+import EnvVariationCard from '@/components/features/farm-owner/analytics/EnvVariationCard';
+import ForecastCard from '@/components/features/farm-owner/analytics/ForecastCard';
+import HealthReportCard from '@/components/features/farm-owner/analytics/HealthReportCard';
+import RelayOverrideHistoryCard from '@/components/features/farm-owner/analytics/RelayOverrideHistoryCard';
+import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { analyticsDict } from '@/constants/analytics.i18n';
+import { useTranslation } from '@/hooks/common/useTranslation';
+import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useZone } from '@/hooks/shared/useFarms';
 
-  if (!selectedZoneId) {
+// Trang Phân tích của Farm Owner — ANALYTICS-FR-001..003/005/008..011, ENV-FR-019, EXPERT-FR-005/006
+export default function FarmOwnerAnalyticsPage(): JSX.Element {
+  const { t } = useTranslation(analyticsDict);
+  // Khung lọc Nhà + Zone lưu ở store chung, giữ nguyên khi chuyển trang
+  const scope = useScopeFilter();
+  const { farms, houses, houseId, houseName, zones, zone, isLoading, isError, refetch } = scope;
+  // Phạm vi đếm chim (theo nhà) và Zone đang tính: theo khung lọc, chưa lọc thì gồm tất cả
+  const houseIds = useMemo(() => (houseId ? [houseId] : houses.map(house => house._id)), [houseId, houses]);
+  const scopedZoneIds = useMemo(() => (zone ? [zone._id] : zones.map(item => item._id)), [zone, zones]);
+  const scopeLabel = houseName || t('common.allHouses');
+  // Ngưỡng lấy từ chi tiết Zone (luôn mới), danh sách Zone được giữ cache lâu hơn
+  const { data: zoneDetail } = useZone(zone?._id);
+
+  if (isLoading) {
+    return <LoadingSkeleton count={4} className="h-32 w-full" />;
+  }
+
+  if (isError) {
     return (
       <EmptyState
-        title="Chưa chọn khu vực nào"
-        description="Chọn khu vực ở thanh trên cùng để xem phân tích môi trường và đàn chim."
+        title={t('page.errorTitle')}
+        action={<Button variant="secondary" onClick={refetch}>{t('common.retry')}</Button>}
       />
-    )
+    );
+  }
+
+  if (farms.length === 0) {
+    return (
+      <EmptyState
+        title={t('page.noFarmTitle')}
+        description={t('page.noFarmDesc')}
+        action={(
+          <Link to="/farms">
+            <Button>{t('page.goFarms')}</Button>
+          </Link>
+        )}
+      />
+    );
+  }
+
+  // Thân trang theo phạm vi đang lọc
+  let body = (
+    <EmptyState
+      title={houseId ? t('page.noHouseZoneTitle') : t('page.noZoneTitle')}
+      description={t('page.noZoneDesc')}
+      action={(
+        <Link to="/farms">
+          <Button>{t('page.goFarms')}</Button>
+        </Link>
+      )}
+    />
+  );
+
+  // Tất cả Zone: chỉ các khung hiện được nhiều Zone/nhà (lịch sử can thiệp tay, đếm chim cộng các nhà, so sánh Zone)
+  if (zones.length > 0 && !zone) {
+    body = (
+      <>
+        <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
+        <BirdHourlyCard houseIds={houseIds} scopeLabel={scopeLabel} />
+        <BirdWeeklyCard houseIds={houseIds} scopeLabel={scopeLabel} />
+        <CompareZonesCard zones={zones} />
+      </>
+    );
+  }
+
+  // 1 Zone: đủ mọi khung
+  if (zone) {
+    body = (
+      <>
+        <AutomationCard zoneId={zone._id} zoneName={zone.name} />
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <HealthReportCard zoneId={zone._id} />
+          <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
+        </div>
+
+        <EnvVariationCard
+          zoneId={zone._id}
+          thresholds={zoneDetail?.thresholds ?? zone.thresholds}
+          thresholdHistory={zoneDetail?.threshold_history ?? zone.threshold_history}
+        />
+
+        <ForecastCard zoneId={zone._id} />
+
+        {/* Đếm chim là của cả nhà yến chứa Zone (SRS v2.1.8) */}
+        <BirdHourlyCard houseIds={[zone.house_id]} scopeLabel={zone.houseName} />
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <BirdWeeklyCard houseIds={[zone.house_id]} scopeLabel={zone.houseName} />
+          <CorrelationCard zoneId={zone._id} />
+        </div>
+
+        <CompareZonesCard zones={zones} />
+      </>
+    );
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="min-w-0">
-        <p className="label-caption">Khu vực đang xem</p>
-        <p className="truncate text-2xl font-bold tracking-tight text-charcoal">{selectedZoneName}</p>
+      {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
+      <HeaderActions>
+        <div className="hidden sm:block">
+          <ScopeFilter scope={scope} />
+        </div>
+      </HeaderActions>
+      <div className="sm:hidden">
+        <ScopeFilter scope={scope} />
       </div>
 
-      <EnvVariationCard
-        zoneId={selectedZoneId}
-        range={range}
-        setRange={setRange}
-        thresholds={zone?.thresholds}
-        live={{ isLive: telemetry.isLive, nh3_ppm: telemetry.data.nh3_ppm, co2_ppm: telemetry.data.co2_ppm }}
-      />
-
-      <ForecastCard zoneId={selectedZoneId} />
-
-      <ControlPerformanceCard zoneId={selectedZoneId} zoneName={selectedZoneName ?? ''} />
-
-      <ZoneBalanceCard farmId={selectedFarmId ?? undefined} />
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <BirdFlowCard onExpandCorrelation={() => correlationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
-        <CorrelationCard ref={correlationRef} zoneId={selectedZoneId} />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-h2 text-charcoal">So sánh môi trường giữa các Zone</h2>
-        <CompareTab
-          farmId={selectedFarmId ?? undefined}
-          range={compareRange}
-          setRange={setCompareRange}
-          metric={compareMetric}
-          setMetric={setCompareMetric}
-        />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-h2 text-charcoal">Xu hướng đàn chim theo ngày</h2>
-        <BirdTab zoneId={selectedZoneId} />
-      </div>
+      {body}
     </div>
-  )
+  );
 }

@@ -1,11 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { farmApi } from '@/apis/shared/farms.api'
-import type { FuzzyTuning, Zone } from '@/types'
+import type { FuzzyTuning, Zone, FarmMemberRole } from '@/types'
+
+const isMongoId = (id: string | undefined): boolean => Boolean(id && /^[0-9a-fA-F]{24}$/.test(id))
 
 export function useFarms() {
   return useQuery({
     queryKey: ['farms'],
-    queryFn: () => farmApi.list().then(r => r.data.data),
+    queryFn: () => farmApi.list().then(response => response.data.data),
   })
 }
 
@@ -13,8 +15,19 @@ export function useFarms() {
 export function useFarm(farmId: string | undefined) {
   return useQuery({
     queryKey: ['farms', farmId],
-    queryFn: () => farmApi.getOne(farmId!).then(r => r.data.data),
-    enabled: !!farmId,
+    queryFn: () => farmApi.getOne(farmId!).then(response => response.data.data),
+    enabled: isMongoId(farmId),
+  })
+}
+
+// Chi tiết nhiều farm cùng lúc (chung cache ['farms', id] với useFarm), VD tra tên người nhập đợt thu của mọi farm
+export function useFarmDetails(farmIds: string[]) {
+  return useQueries({
+    queries: farmIds.map(farmId => ({
+      queryKey: ['farms', farmId],
+      queryFn: () => farmApi.getOne(farmId).then(response => response.data.data),
+    })),
+    combine: results => results.flatMap(result => (result.data ? [result.data] : [])),
   })
 }
 
@@ -26,11 +39,42 @@ export function useCreateFarm() {
   })
 }
 
+// FARM-FR-009 — danh mục khu vực, hiếm khi đổi
+export function useRegions() {
+  return useQuery({
+    queryKey: ['farm-regions'],
+    queryFn: () => farmApi.listRegions().then(response => response.data.data),
+    // Danh mục tỉnh cố định ở backend, không đổi trong phiên làm việc nên không tải lại
+    staleTime: Infinity,
+  })
+}
+
+// FARM-FR-001 — sửa tên, địa chỉ, khu vực farm (khu vực chỉ Primary Owner/Admin đổi được)
+export function useUpdateFarm(farmId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Partial<{ name: string; address: string; region: string }>) => farmApi.update(farmId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['farms'] }),
+  })
+}
+
+// FARM-FR-001 — xoá mềm farm (chỉ Primary Owner); backend đóng cảnh báo và ticket đang mở của farm
+export function useDeleteFarm() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (farmId: string) => farmApi.remove(farmId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['farms'] })
+      void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
+    },
+  })
+}
+
 export function useHouses(farmId: string | undefined) {
   return useQuery({
     queryKey: ['houses', farmId],
-    queryFn: () => farmApi.listHouses(farmId!).then(r => r.data.data),
-    enabled: !!farmId,
+    queryFn: () => farmApi.listHouses(farmId!).then(response => response.data.data),
+    enabled: isMongoId(farmId),
   })
 }
 
@@ -45,8 +89,8 @@ export function useCreateHouse(farmId: string) {
 export function useZones(houseId: string | undefined) {
   return useQuery({
     queryKey: ['zones', houseId],
-    queryFn: () => farmApi.listZones(houseId!).then(r => r.data.data),
-    enabled: !!houseId,
+    queryFn: () => farmApi.listZones(houseId!).then(response => response.data.data),
+    enabled: isMongoId(houseId),
   })
 }
 
@@ -56,7 +100,7 @@ export function useCreateZone(houseId: string) {
     mutationFn: (input: { name: string; floor?: number }) => farmApi.createZone(houseId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['zones', houseId] })
-      // 2 danh sách zone phẳng có staleTime 5 phút — không làm mới thì zone mới vắng mặt ở ZonePicker/ZoneSwitcher và số zone ở trang Farm
+      // 2 danh sách zone phẳng có staleTime 5 phút — không làm mới thì zone mới vắng mặt ở ZonePicker và số zone ở trang Farm
       void queryClient.invalidateQueries({ queryKey: ['farm-zones'] })
       void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
     },
@@ -66,8 +110,8 @@ export function useCreateZone(houseId: string) {
 export function useZone(zoneId: string | undefined) {
   return useQuery({
     queryKey: ['zone', zoneId],
-    queryFn: () => farmApi.getZone(zoneId!).then(r => r.data.data),
-    enabled: !!zoneId,
+    queryFn: () => farmApi.getZone(zoneId!).then(response => response.data.data),
+    enabled: isMongoId(zoneId),
   })
 }
 
@@ -78,6 +122,8 @@ export function useUpdateThresholds(zoneId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['zones'] })
       void queryClient.invalidateQueries({ queryKey: ['zone', zoneId] })
+      // Tổng quan đọc ngưỡng từ danh sách Zone phẳng (staleTime 5 phút)
+      void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
     },
   })
 }
@@ -102,16 +148,19 @@ export function useResetThresholds(zoneId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['zones'] })
       void queryClient.invalidateQueries({ queryKey: ['zone', zoneId] })
+      // Tổng quan đọc ngưỡng từ danh sách Zone phẳng (staleTime 5 phút)
+      void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
     },
   })
 }
 
-// ── Thành viên & Sales Staff (AUTH-FR-005/005b/010) ─────────────────────────
+// ── Thành viên farm (AUTH-FR-005/010, EXPERT-FR-001) ─────────────────────────
 
-export function useInviteMember(farmId: string) {
+// AUTH-FR-005, EXPERT-FR-001 — mời đồng sở hữu (FARM_OWNER) hoặc chuyên gia (DOMAIN_EXPERT) qua POST /farms/:id/members
+export function useInviteFarmMember(farmId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (email: string) => farmApi.inviteMember(farmId, email),
+    mutationFn: (input: { email: string; role: FarmMemberRole }) => farmApi.inviteMember(farmId, input.email, input.role),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['farms', farmId] }),
   })
 }
@@ -124,78 +173,42 @@ export function useRemoveMember(farmId: string) {
   })
 }
 
-export function useInviteSalesStaff(farmId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (email: string) => farmApi.inviteSalesStaff(farmId, email),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sales-staff', farmId] }),
-  })
-}
-
-export function useSalesStaff(farmId: string | undefined) {
-  return useQuery({
-    queryKey: ['sales-staff', farmId],
-    queryFn: () => farmApi.listSalesStaff(farmId!).then(r => r.data.data),
-    enabled: !!farmId,
-  })
-}
-
-/** Đề xuất Sales Staff còn chờ Admin duyệt — key nằm dưới ['sales-staff', farmId] nên useInviteSalesStaff tự làm mới */
-export function usePendingSalesStaffRequests(farmId: string | undefined) {
-  return useQuery({
-    queryKey: ['sales-staff', farmId, 'requests'],
-    queryFn: () => farmApi.listSalesStaffRequests(farmId!).then(r => r.data.data.filter(req => req.status === 'PENDING')),
-    enabled: !!farmId,
-  })
-}
-
-// ── Zone phẳng của 1 Farm (chọn Farm→Zone gọn trong form, xem ZonePicker) ───
+// ── Zone phẳng của 1 Farm (kèm tên nhà) ───────────────────────────────────
 
 export interface FlatZone extends Zone { houseName: string }
 
-/**
- * Gộp `listHouses` + `listZones` từng house thành 1 danh sách Zone phẳng của
- * Farm — dùng cho `ZonePicker` (tạo Harvest/Ticket) và để resolve tên zone
- * trong danh sách Harvest/Ticket (API đó chỉ trả `zone_id` thô).
- */
+// Zone phẳng của 1 farm (kèm tên nhà) để tra tên Zone, nhà cho Harvest / Ticket vốn chỉ trả zone_id
 export function useFarmZones(farmId: string | undefined) {
   return useQuery({
     queryKey: ['farm-zones', farmId],
     queryFn: async () => {
       const houses = (await farmApi.listHouses(farmId!)).data.data
       const perHouse = await Promise.all(
-        houses.map(house => farmApi.listZones(house._id).then(r => r.data.data.map(z => ({ ...z, houseName: house.name })))),
+        houses.map(house => farmApi.listZones(house._id).then(response => response.data.data.map(zone => ({ ...zone, houseName: house.name })))),
       )
       return perHouse.flat() as FlatZone[]
     },
-    enabled: !!farmId,
-    // House/Zone hiếm khi đổi cấu trúc — tránh request N+1 (listHouses + listZones
-    // từng house) lặp lại theo staleTime toàn cục 30s ở cả 3 nơi gọi hook này.
+    enabled: isMongoId(farmId),
+    // Cấu trúc nhà / Zone hiếm đổi: giữ 5 phút để không lặp request N+1 theo staleTime chung 30 giây
     staleTime: 5 * 60 * 1000,
   })
 }
 
 export interface AllZone extends Zone { houseName: string; farmId: string; farmName: string }
 
-/**
- * Zone phẳng của TẤT CẢ farm user đang có quyền xem — dùng cho chế độ "Tất cả"
- * của ZoneSwitcher (Dashboard hiện lưới tổng quan mọi zone thay vì bắt chọn 1
- * zone trước). Không có endpoint backend gộp sẵn nên gọi listHouses/listZones
- * lặp qua từng farm ở client — chấp nhận được vì phần lớn tài khoản chỉ có 1-2
- * farm (xem comment ZoneSwitcher).
- */
+// Zone phẳng của mọi farm tài khoản xem được; backend không có API gộp nên gọi listHouses / listZones từng farm ở client
 export function useAllZones() {
   const { data: farms } = useFarms()
   return useQuery({
-    queryKey: ['all-zones', farms?.map(f => f._id)],
+    queryKey: ['all-zones', farms?.map(farm => farm._id)],
     queryFn: async () => {
       const perFarm = await Promise.all(
         (farms ?? []).map(async farm => {
           const houses = (await farmApi.listHouses(farm._id)).data.data
           const perHouse = await Promise.all(
             houses.map(house =>
-              farmApi.listZones(house._id).then(r =>
-                r.data.data.map(z => ({ ...z, houseName: house.name, farmId: farm._id, farmName: farm.name })),
+              farmApi.listZones(house._id).then(response =>
+                response.data.data.map(zone => ({ ...zone, houseName: house.name, farmId: farm._id, farmName: farm.name })),
               ),
             ),
           )
@@ -204,7 +217,7 @@ export function useAllZones() {
       )
       return perFarm.flat() as AllZone[]
     },
-    enabled: !!farms,
+    enabled: Boolean(farms && farms.length > 0),
     staleTime: 5 * 60 * 1000,
   })
 }

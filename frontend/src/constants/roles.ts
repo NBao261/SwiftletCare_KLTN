@@ -6,21 +6,21 @@ export const ROLE_LABEL: Record<Role, string> = translated({
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',
   TECHNICIAN: 'Kỹ thuật viên',
-  // Hiển thị "Chuyên gia" — luồng mới đổi Sales Staff thành chuyên gia (người dùng phía khách hàng, cùng nhóm chủ nhà
-  // yến); chỉ đổi chữ ở giao diện, mã SALES_STAFF giữ nguyên như backend
-  SALES_STAFF: 'Chuyên gia',
+  DOMAIN_EXPERT: 'Chuyên gia',
+  SALES_STAFF: 'Nhân viên kinh doanh',
 })
 
 /**
  * Nhãn vai trò trong ngữ cảnh lời mời (InvitationPage) — chỉ 2 role mời được
- * (FARM_FR-*: FARM_OWNER mời thành viên/sales-staff). FARM_OWNER ở đây được
+ * (FARM_FR-*: FARM_OWNER mời thành viên/chuyên gia). FARM_OWNER ở đây được
  * chú thích "(thành viên)" vì người được mời KHÔNG trở thành chủ sở hữu chính
  * (isPrimaryOwner), khác với nhãn chung ở trên — cố ý không dùng lại ROLE_LABEL
  * để tránh nhầm lẫn về quyền sở hữu farm.
  */
-export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'SALES_STAFF'>, string> = {
+export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'SALES_STAFF'>, string> = {
   // getter: đọc ROLE_LABEL (dịch lúc đọc) mỗi lần dùng — gán giá trị thẳng thì nhãn đóng băng theo ngôn ngữ lúc import
   get FARM_OWNER() { return `${ROLE_LABEL.FARM_OWNER} (${t('thành viên')})` },
+  get DOMAIN_EXPERT() { return ROLE_LABEL.DOMAIN_EXPERT },
   get SALES_STAFF() { return ROLE_LABEL.SALES_STAFF },
 }
 
@@ -33,20 +33,26 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'SALES_STAFF
 export const OPS_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'ADMIN']
 
 /**
+ * Nhóm role Chuyên gia nuôi yến — SRS v2.1.4:
+ * Bảng điều khiển, Kiểm chứng cảnh báo suy luận, Tinh chỉnh & Hiệu chuẩn, Phân tích dự báo, Báo cáo sức khỏe.
+ */
+export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
+
+/**
  * Tổng quan/Phân tích (giám sát môi trường chi tiết theo zone) là công cụ vận
  * hành hằng ngày CỦA RIÊNG Farm Owner — Technician/Admin xử lý kỹ thuật/ticket,
  * họ "check tín hiệu" qua trang Thiết bị chứ không cần chi tiết tới mức đó.
  */
 export const FARM_OWNER_ONLY: Role[] = ['FARM_OWNER']
 
-/** Thu hoạch & Chợ yến — khớp backend: router harvests chỉ requireRole(FARM_OWNER, ADMIN). */
+/** Thống kê sản lượng (thu hoạch) — khớp backend: router harvests chỉ requireRole(FARM_OWNER, ADMIN). */
 export const HARVEST_ROLES: Role[] = ['FARM_OWNER', 'ADMIN']
 
 /** Module SYSTEM (mục 5.11) + quản lý tài khoản toàn hệ thống. */
 export const ADMIN_ONLY: Role[] = ['ADMIN']
 
 /** Mọi role đã đăng nhập — mục menu ai cũng thấy (Cài đặt tài khoản). */
-const ALL_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'ADMIN', 'SALES_STAFF']
+const ALL_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'ADMIN', 'DOMAIN_EXPERT', 'SALES_STAFF']
 
 /**
  * Trang "nhà" của mỗi role — dùng cho cả `RoleHomeRedirect` (App.tsx, khi vào
@@ -60,6 +66,7 @@ const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
   ADMIN: '/system/health',
   TECHNICIAN: '/devices',
+  DOMAIN_EXPERT: '/expert/dashboard',
   SALES_STAFF: '/sales-home',
 }
 
@@ -94,6 +101,11 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/devices',   roles: ADMIN_ONLY },
   { path: '/analytics',        roles: FARM_OWNER_ONLY },
   { path: '/vision',           roles: FARM_OWNER_ONLY },
+  { path: '/expert/dashboard', roles: EXPERT_ROLES },
+  { path: '/expert/audit-logs',roles: EXPERT_ROLES },
+  { path: '/expert/tuning',    roles: EXPERT_ROLES },
+  { path: '/expert/analytics', roles: EXPERT_ROLES },
+  { path: '/expert/reports',   roles: EXPERT_ROLES },
   { path: '/settings',         roles: ALL_ROLES },
 ]
 

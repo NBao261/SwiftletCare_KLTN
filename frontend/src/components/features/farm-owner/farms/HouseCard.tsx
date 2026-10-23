@@ -7,6 +7,8 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
+import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants'
+import { NO_VALUE } from '@/constants/display'
 
 interface HouseCardProps {
   node: HouseNode
@@ -27,11 +29,11 @@ export default function HouseCard({ node, staff, pinned, showYield, onTogglePin,
   const issues = node.zones.reduce((sum, z) => sum + z.breaches.length + z.alerts.length, 0)
   const offline = counts.total - counts.online
 
-  // Số liệu trống thì hiện "—" mờ thay vì 0 để không nhầm với "đo được bằng 0"
+  // Số liệu trống thì hiện NO_VALUE mờ thay vì 0 để không nhầm với "đo được bằng 0"
   const stats = [
-    { label: t('stat.sensors'), value: isEmpty ? '—' : num(node.sensors), warn: false },
-    { label: t('stat.cameras'), value: isEmpty ? '—' : num(node.cameras), warn: false },
-    { label: t('stat.online'), value: isEmpty ? '—' : `${num(counts.online)}/${num(counts.total)}`, warn: offline > 0 },
+    { label: t('stat.sensors'), value: isEmpty ? NO_VALUE : num(node.sensors), warn: false },
+    { label: t('stat.cameras'), value: isEmpty ? NO_VALUE : num(node.cameras), warn: false },
+    { label: t('stat.online'), value: isEmpty ? NO_VALUE : `${num(counts.online)}/${num(counts.total)}`, warn: offline > 0 },
   ]
 
   const bannerText = houseHeadlineText(headline, t, num)
@@ -63,10 +65,10 @@ export default function HouseCard({ node, staff, pinned, showYield, onTogglePin,
       </div>
 
       <div className="grid grid-cols-3 divide-x divide-warmGray/15 rounded-xl border border-warmGray/15">
-        {stats.map(s => (
-          <div key={s.label} className="px-3 py-2.5">
-            <p className="label-caption truncate">{s.label}</p>
-            <p className={cn('mt-0.5 text-h3', isEmpty ? 'text-warmGray/60' : s.warn ? 'text-climateOrange' : 'text-charcoal')}>{s.value}</p>
+        {stats.map(stat => (
+          <div key={stat.label} className="px-3 py-2.5">
+            <p className="label-caption truncate">{stat.label}</p>
+            <p className={cn('mt-0.5 text-h3', isEmpty ? 'text-warmGray/60' : stat.warn ? 'text-climateOrange' : 'text-charcoal')}>{stat.value}</p>
           </div>
         ))}
       </div>
@@ -76,7 +78,7 @@ export default function HouseCard({ node, staff, pinned, showYield, onTogglePin,
         {showYield && (
           <>
             <span aria-hidden="true">•</span>
-            <span>{t('card.yield', { kg: num(node.monthKg, 2) })}</span>
+            <span>{t('card.yield', { kg: node.monthBatches > 0 ? `${num(node.monthKg, KILOGRAM_DIGITS)} kg` : NO_VALUE })}</span>
           </>
         )}
       </p>

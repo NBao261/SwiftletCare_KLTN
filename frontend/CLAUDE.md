@@ -7,7 +7,7 @@ Map of `frontend/` (React 18 + Vite + TailwindCSS dashboard/PWA) **as the code i
 The frontend still follows the SRS v1.24.0 scope while the backend already follows v2.0.0:
 
 - Roles in the code are `ADMIN | FARM_OWNER | TECHNICIAN | SALES_STAFF` (`types/common.types.ts`). There is **no** Farm Operator and **no** `DOMAIN_EXPERT` code yet; the backend role is `DOMAIN_EXPERT`.
-- `sales-staff/` code (`pages/sales-staff/SalesStaffHomePage.tsx`, `routes/sales-staff.routes.tsx`, `SalesStaffLayout`), the marketplace screens (`MarketplacePage`, `ListingDetailPage`, `useMarketplace`, `marketplace.api`, listing panels under `features/farm-owner/harvest/`), the heating relay toggle and `BIRD_PANIC` labels are still in the code, although the backend no longer serves them.
+- `sales-staff/` code (`pages/sales-staff/SalesStaffHomePage.tsx`, `routes/sales-staff.routes.tsx`, `SalesStaffLayout`), the heating relay toggle and `BIRD_PANIC` labels are still in the code, although the backend no longer serves them.
 - These are FE_Design §13.14 known debt: **only remove or replace them** (SRS §0.5 Web), never extend them. New role work follows FE_Design §12 (bucket `domain-expert/`, `DomainExpertLayout`, role groups in §12.8).
 
 ## Commands
@@ -34,7 +34,7 @@ src/
   hooks/       admin/ auth/ common/ farm-owner/ shared/ — React Query wrappers over apis/
   i18n/        index.ts (t · tr · trChildren · translated · intlLocale · setLang) · en.ts — i18next, keys are the Vietnamese sentences
   lib/         axios · queryClient · socket · cn · helpers · i18n · navigation · chartTheme · apiError (⏳)
-  pages/       admin/ auth/ farm-owner/ sales-staff/ technician/ + 4 root pages (SettingsPage, MarketplacePage, ListingDetailPage, ForbiddenPage) — ONLY *Page.tsx
+  pages/       admin/ auth/ farm-owner/ sales-staff/ technician/ + 2 root pages (SettingsPage, ForbiddenPage) — ONLY *Page.tsx
   providers/   AppProviders.tsx
   routes/      admin · farm-owner · technician · sales-staff · public (.routes.tsx)
   stores/      Zustand: authStore · alertStore · toastStore · zoneStore · breadcrumbStore · languageStore · pinnedHouseStore
@@ -47,7 +47,7 @@ src/
 - **Routes**: one `routes/<role>.routes.tsx` per `pages/<role>/` folder, each exporting a `<Route>` fragment (`publicRoutes`, `adminRoutes`, `farmOwnerRoutes`, `technicianRoutes`, `salesStaffRoutes`), lazy-loading its pages and wrapping them in `<RequireRole allow={...}>`. `App.tsx` assembles them plus the index redirect and `/settings`; `RoleLayout` picks the layout from `user.role` at runtime because URLs carry no role prefix.
 - **Role groups** (`constants/roles.ts`): `OPS_ROLES` (Farm Owner, Technician, Admin), `FARM_OWNER_ONLY` (dashboard, analytics, vision, harvests), `HARVEST_ROLES` (Farm Owner, Admin), `ADMIN_ONLY`. `MENU_ACCESS` (path → roles) mirrors the layout menus and backs `canAccessPath`; it is kept apart from the layouts on purpose (`useAuth` → `canAccessPath`, layouts → `AppHeader` → `useAuth` would be an import cycle). `hooks/common/usePermission.ts` does the UI-level hide/disable check.
 - **Layouts** (`components/layouts/`): one per role — `AdminLayout`, `FarmOwnerLayout`, `TechnicianLayout`, `SalesStaffLayout` (legacy) — each writing its whole menu literally at the top, plus `AppShell` (sidebar + header + `Outlet` + `Toast`, mounts the global `useAlertNotifications` listener), `AppSidebar` (same menu as desktop rail and mobile dock), `AppHeader`. Adding a menu item = edit that role's layout **and** add a `MENU_ACCESS` row.
-- **Component tiers**: no domain knowledge → `components/ui/` (self-contained design system, only imports `@/lib/cn` and `@/i18n`; `ui/index.ts` is the only barrel in `src/`, `icons.tsx` left out; nothing inside `ui/` imports the barrel). Knows the domain, one feature → `components/features/<role>/<area>/`. Knows the domain, two or more features → `components/common/` (kept small: `ZoneSwitcher`, `ZonePicker`, `NotificationPopover`, `Toast`, `StatusDot`, `DateTimePicker`).
+- **Component tiers**: no domain knowledge → `components/ui/` (self-contained design system, only imports `@/lib/cn` and `@/i18n`; `ui/index.ts` is the only barrel in `src/`, `icons.tsx` left out; nothing inside `ui/` imports the barrel). Knows the domain, one feature → `components/features/<role>/<area>/`. Knows the domain, two or more features → `components/common/` (kept small: `ScopeFilter`, `NotificationPopover`, `Toast`, `StatusDot`, `DateTimePicker`).
 - **Placement exception**: `components/features/admin/tickets/AdminOverrideModals.tsx` is imported by a Technician page but stays under `admin/` — it is Admin-only UI gated by `usePermission('ADMIN')`.
 - **Imports** always use the `@/` alias (`@/*` → `src/*`), never `../`.
 

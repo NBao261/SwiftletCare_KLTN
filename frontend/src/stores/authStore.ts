@@ -1,6 +1,7 @@
-﻿import { create } from 'zustand'
+import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { queryClient } from '@/lib/queryClient'
+import { useZoneStore } from '@/stores/zoneStore'
 import type { User } from '@/types'
 
 interface AuthState {
@@ -25,7 +26,10 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       hasHydrated:     false,
       setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: true }),
-      clearAuth: () => set({ user: null, accessToken: null, isAuthenticated: false }),
+      clearAuth: () => {
+        useZoneStore.getState().clearZone()
+        set({ user: null, accessToken: null, isAuthenticated: false })
+      },
       setAccessToken: (token) => set({ accessToken: token }),
       updateUser: (partial) => set(s => ({ user: s.user ? { ...s.user, ...partial } : s.user })),
       setHasHydrated: (v) => set({ hasHydrated: v }),
