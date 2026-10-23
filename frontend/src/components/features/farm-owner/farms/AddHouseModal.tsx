@@ -6,12 +6,19 @@ import { useToastStore } from '@/stores/toastStore'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
+import { isNameTaken } from '@/components/features/farm-owner/farms/farmStructure'
 import type { Farm } from '@/types'
 
-interface AddHouseModalProps { open: boolean; onClose: () => void; farms: Farm[] }
+interface AddHouseModalProps {
+  open: boolean
+  onClose: () => void
+  farms: Farm[]
+  // Tên các nhà yến đã có của chủ nhà yến — không cho tạo nhà trùng tên
+  existingNames?: string[]
+}
 
 /** Thêm nhà yến (POST /farms/:id/houses) — chọn farm ngay trong form vì màn tổng quan gộp nhà của mọi farm */
-export default function AddHouseModal({ open, onClose, farms }: AddHouseModalProps) {
+export default function AddHouseModal({ open, onClose, farms, existingNames = [] }: AddHouseModalProps) {
   const { t } = useTranslation(farmDict)
   const push = useToastStore(s => s.push)
   const [farmId, setFarmId] = useState('')
@@ -22,6 +29,7 @@ export default function AddHouseModal({ open, onClose, farms }: AddHouseModalPro
   const apiErrorMessage = useApiErrorMessage()
   const selectedFarmId = farmId || farms[0]?._id || ''
   const createHouse = useCreateHouse(selectedFarmId)
+  const isDuplicate = isNameTaken(name, existingNames)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -29,7 +37,7 @@ export default function AddHouseModal({ open, onClose, farms }: AddHouseModalPro
     const floorCount = floors.trim() === '' ? undefined : Number(floors)
     const isFloorsInvalid = floorCount !== undefined && (!Number.isInteger(floorCount) || floorCount < 1)
     setFloorsError(isFloorsInvalid)
-    if (isFloorsInvalid) return
+    if (isFloorsInvalid || isDuplicate) return
     const input = { name: name.trim(), ...(floorCount !== undefined && { floors: floorCount }), ...(description.trim() && { description: description.trim() }) }
     createHouse.mutate(input, {
       onSuccess: () => {
@@ -58,7 +66,14 @@ export default function AddHouseModal({ open, onClose, farms }: AddHouseModalPro
             />
           </div>
         )}
-        <Input label={t('addHouse.name')} required value={name} onChange={e => setName(e.target.value)} placeholder={t('addHouse.namePlaceholder')} />
+        <Input
+          label={t('addHouse.name')}
+          required
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder={t('addHouse.namePlaceholder')}
+          error={isDuplicate ? t('addHouse.errorDuplicate') : undefined}
+        />
         <Input
           label={t('addHouse.floors')}
           type="number"
@@ -70,7 +85,7 @@ export default function AddHouseModal({ open, onClose, farms }: AddHouseModalPro
           error={floorsError ? t('addHouse.errorFloors') : undefined}
         />
         <Input label={t('addHouse.description')} value={description} onChange={e => setDescription(e.target.value)} placeholder={t('addHouse.descriptionPlaceholder')} />
-        <Button type="submit" loading={createHouse.isPending} className="w-full">{t('addHouse.submit')}</Button>
+        <Button type="submit" loading={createHouse.isPending} disabled={isDuplicate} className="w-full">{t('addHouse.submit')}</Button>
       </form>
     </Modal>
   )

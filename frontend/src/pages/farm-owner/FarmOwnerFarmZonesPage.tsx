@@ -199,7 +199,7 @@ export default function FarmOwnerFarmZonesPage() {
       </StableHeight>
 
       <AddZoneModal open={showAddZone} onClose={() => setShowAddZone(false)} houseId={house._id} />
-      {editMode && <StructureEditModal kind="house" mode={editMode} name={house.name} deviceCount={node.counts.total} onClose={() => setEditMode(null)} />}
+      {editMode && <StructureEditModal kind="house" mode={editMode} name={house.name} deviceCount={node.counts.total} existingNames={structure.houses.map(item => item.house.name)} onClose={() => setEditMode(null)} />}
       <DeviceDetailDrawer device={selected} zoneNode={selected ? zoneById.get(selected.zoneId) : undefined} onClose={() => setSelected(null)} />
     </div>
   )

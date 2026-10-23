@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildFarmStructure, detectBreaches, mergeMetrics, wifiQuality, type StructureInput, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
+import { buildFarmStructure, detectBreaches, isNameTaken, mergeMetrics, wifiQuality, type StructureInput, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import { translate } from '@/lib/i18n'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { Alert, CameraNode, Farm, HarvestBatch, House, SensorNode, Thresholds, Zone } from '@/types'
@@ -143,5 +143,18 @@ describe('helpers', () => {
   it('từ điển VI/EN nội suy tham số', () => {
     expect(translate(farmDict, 'vi', 'kpi.alertSplit', { high: 1, medium: 2, low: 0 })).toBe('1 cao · 2 trung bình · 0 thấp')
     expect(translate(farmDict, 'en', 'kpi.alertSplit', { high: 1, medium: 2, low: 0 })).toBe('1 high · 2 medium · 0 low')
+  })
+})
+
+describe('isNameTaken', () => {
+  it('so trùng không phân biệt hoa thường, khoảng trắng thừa', () => {
+    expect(isNameTaken('  nhà   CHÍNH ', ['Nhà chính', 'Nhà phụ'])).toBe(true)
+    expect(isNameTaken('Nhà sau', ['Nhà chính', 'Nhà phụ'])).toBe(false)
+    expect(isNameTaken('', ['Nhà chính'])).toBe(false)
+  })
+
+  it('đổi tên giữ nguyên tên cũ thì không tính là trùng', () => {
+    expect(isNameTaken('Nhà chính', ['Nhà chính', 'Nhà phụ'], 'Nhà chính')).toBe(false)
+    expect(isNameTaken('Nhà phụ', ['Nhà chính', 'Nhà phụ'], 'Nhà chính')).toBe(true)
   })
 })

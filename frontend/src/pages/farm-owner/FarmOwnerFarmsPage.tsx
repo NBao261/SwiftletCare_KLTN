@@ -44,6 +44,8 @@ export default function FarmOwnerFarmsPage() {
   const { data: farms } = useFarms()
   const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
   const houseIds = useMemo(() => structure.houses.map(h => h.house._id), [structure.houses])
+  // Tên các nhà đã có để chặn tạo nhà trùng tên
+  const houseNames = useMemo(() => structure.houses.map(node => node.house.name), [structure.houses])
   const { data: extras } = useStructureExtras(houseIds)
   const { pinned, toggle: togglePin } = usePinnedHouses()
 
@@ -133,7 +135,7 @@ export default function FarmOwnerFarmsPage() {
           }
         />
         {showCreateFarm && <FarmFormModal onClose={() => setShowCreateFarm(false)} />}
-        <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} />
+        <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} existingNames={houseNames} />
       </>
     )
   }
@@ -223,7 +225,7 @@ export default function FarmOwnerFarmsPage() {
         </StableHeight>
       </FarmFrame>
 
-      <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} />
+      <AddHouseModal open={showAddHouse} onClose={() => setShowAddHouse(false)} farms={farms ?? []} existingNames={houseNames} />
       {showCreateFarm && <FarmFormModal onClose={() => setShowCreateFarm(false)} />}
       {showManageFarms && <FarmManageModal farms={farms ?? []} statsByFarm={statsByFarm} onClose={() => setShowManageFarms(false)} />}
     </div>

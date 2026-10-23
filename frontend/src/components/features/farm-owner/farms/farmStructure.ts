@@ -299,6 +299,18 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
 /** Mức tín hiệu Wi-Fi theo RSSI — dời sang lib/helpers để bảng Thiết bị của Admin dùng chung ngưỡng */
 export { wifiQuality } from '@/lib/helpers'
 
+// Chuẩn hoá tên để so trùng: Unicode NFC, bỏ khoảng trắng thừa, chữ thường
+export function normalizeName(name: string): string {
+  return name.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi')
+}
+
+// Tên đã có trong danh sách (bỏ qua tên đang sửa, nếu có)
+export function isNameTaken(name: string, existingNames: string[], currentName?: string): boolean {
+  const target = normalizeName(name)
+  if (!target || (currentName !== undefined && normalizeName(currentName) === target)) return false
+  return existingNames.some(existing => normalizeName(existing) === target)
+}
+
 /** Giá trị cuối cùng của mỗi chỉ số theo thứ tự ưu tiên: realtime → trung bình 1h */
 export function mergeMetrics(live: ZoneMetrics | undefined, avg: ZoneMetrics | undefined): ZoneMetrics | undefined {
   if (!live) return avg

@@ -3,11 +3,14 @@ import { InfoIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, Input, Modal } from '@/components/ui'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { useTranslation } from '@/hooks/common/useTranslation'
+import { isNameTaken } from '@/components/features/farm-owner/farms/farmStructure'
 
 interface StructureEditModalProps {
   kind: 'house' | 'zone'
   mode: 'rename' | 'delete'
   name: string
+  // Tên các nhà / Zone cùng cấp — không cho đổi sang tên đã có
+  existingNames?: string[]
   // Số thiết bị đang lắp trong nhà / Zone — còn thiết bị thì chặn xoá
   deviceCount: number
   onClose: () => void
@@ -15,11 +18,12 @@ interface StructureEditModalProps {
 
 // Đổi tên / xoá nhà yến hoặc Zone — giao diện dựng sẵn, chờ backend có API (swagger chưa có PUT/DELETE cho House, Zone).
 // Khi backend có API: thay nút Lưu / Xoá đang khoá bằng mutation gọi API, giữ nguyên phần chặn xoá khi còn thiết bị
-export default function StructureEditModal({ kind, mode, name, deviceCount, onClose }: StructureEditModalProps) {
+export default function StructureEditModal({ kind, mode, name, deviceCount, existingNames = [], onClose }: StructureEditModalProps) {
   const { t, num } = useTranslation(farmDict)
   const [newName, setNewName] = useState(name)
   const target = t(kind === 'house' ? 'structure.house' : 'structure.zone')
   const isDeleteBlocked = mode === 'delete' && deviceCount > 0
+  const isDuplicate = mode === 'rename' && isNameTaken(newName, existingNames, name)
 
   return (
     <Modal
@@ -29,7 +33,12 @@ export default function StructureEditModal({ kind, mode, name, deviceCount, onCl
     >
       <div className="flex flex-col gap-4">
         {mode === 'rename' && (
-          <Input label={t('structure.newName')} value={newName} onChange={event => setNewName(event.target.value)} />
+          <Input
+            label={t('structure.newName')}
+            value={newName}
+            onChange={event => setNewName(event.target.value)}
+            error={isDuplicate ? t('structure.errorDuplicate', { target }) : undefined}
+          />
         )}
         {mode === 'delete' && !isDeleteBlocked && <p className="text-sm text-charcoal">{t('structure.deleteDesc', { target })}</p>}
         {isDeleteBlocked && (
