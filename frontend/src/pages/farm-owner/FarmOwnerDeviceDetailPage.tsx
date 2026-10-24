@@ -13,7 +13,6 @@ import KitComponentsToggle from '@/components/features/farm-owner/devices/KitCom
 import type { DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
 import type { DeviceDetailState } from '@/components/features/farm-owner/devices/devices.constants';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal';
 import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
 import { devicesDict } from '@/constants/devices.i18n';
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb';
@@ -44,8 +43,6 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const houseZones = house ? zones : [];
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
-  // Popup báo lỗi tại chỗ: giá trị chọn sẵn của thiết bị vừa bấm, không chuyển sang trang Yêu cầu hỗ trợ
-  const [reportDefaults, setReportDefaults] = useState<CreateSupportDefaults>();
   // Popup vận hành Farm Owner được làm: ngưỡng của 1 Zone, lịch / bài loa ru của 1 node cảm biến
   const [thresholdZone, setThresholdZone] = useState<{ id: string; name: string }>();
   const [scheduleNodeId, setScheduleNodeId] = useState<string>();
@@ -94,9 +91,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
         <DeviceDetailCard
           key={device.id}
           device={device}
-          farmId={houseFarmId}
           zoneName={zoneName}
-          onReport={setReportDefaults}
           onOpenSchedule={device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
           onOpenTracks={device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
         />
@@ -165,11 +160,9 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
                 {renderCards(group.devices, group.zone.name)}
                 <KitComponentsToggle
                   zoneId={group.zone._id}
-                  farmId={houseFarmId}
                   nodes={group.devices}
                   thresholds={group.zone.thresholds}
                   defaultOpen={isTarget}
-                  onReport={setReportDefaults}
                 />
               </div>
             )}
@@ -187,7 +180,6 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
         </DeviceSection>
       )}
 
-      <CreateSupportTicketModal open={reportDefaults !== undefined} defaults={reportDefaults} onClose={() => setReportDefaults(undefined)} />
       {thresholdZone && <ZoneThresholdsModal zoneId={thresholdZone.id} zoneName={thresholdZone.name} onClose={() => setThresholdZone(undefined)} />}
       {scheduleNode && <SpeakerScheduleModal node={scheduleNode} onClose={() => setScheduleNodeId(undefined)} />}
       {tracksNode && <LullabyTracksModal node={tracksNode} onClose={() => setTracksNodeId(undefined)} />}

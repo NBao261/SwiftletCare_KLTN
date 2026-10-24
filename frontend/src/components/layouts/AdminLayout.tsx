@@ -2,7 +2,7 @@ import AppShell from '@/components/layouts/AppShell'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import {
   IconAlert, IconAnalytics, IconBell, IconDashboard,
-  IconDevice, IconFarm, IconSettings, IconTicket, IconUsers,
+  IconDevice, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
 /**
@@ -26,10 +26,6 @@ const menuSections: MenuSection[] = [
   {
     title: 'Quản lý',
     items: [
-      // FARM-FR-009 — trang riêng của Admin (mọi farm, không nút tạo), không dùng chung /farms của Farm Owner
-      { label: 'Trang trại', path: '/system/farms', icon: IconFarm },
-      // Bảng ticket riêng của Admin (search/filter/sort/can thiệp) — không dùng chung /tickets
-      { label: 'Ticket', path: '/system/tickets', icon: IconTicket },
       // AUTH-FR-011 — quản lý tài khoản toàn hệ thống (RACI mục 4.4)
       { label: 'Người dùng', path: '/users', icon: IconUsers },
       // AUTH-FR-012 (hàng đợi xoá tài khoản) + AUTH-FR-005d (đề xuất Sales Staff)
@@ -51,12 +47,12 @@ const menuSections: MenuSection[] = [
 ]
 
 /**
- * Admin có 10 mục nên dock mobile phải chọn tay — lấy 4 mục đầu sidebar theo
+ * Admin có nhiều mục nên dock mobile phải chọn tay — lấy 4 mục đầu sidebar theo
  * mặc định thì Người dùng/Yêu cầu tài khoản không bao giờ mở được từ điện thoại.
  */
 const dockItems: MenuItem[] = [
   { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
-  { label: 'Ticket', path: '/system/tickets', icon: IconTicket },
+  { label: 'Thiết bị & Cảm biến', path: '/system/devices', icon: IconDevice },
   { label: 'Người dùng', path: '/users', icon: IconUsers },
   { label: 'Yêu cầu tài khoản', path: '/account-requests', icon: IconBell },
 ]

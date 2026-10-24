@@ -15,8 +15,6 @@ import DeviceListRow from "@/components/features/technician/devices/DeviceListRo
 import FarmHouseZonePicker, {
   FarmHouseZonePickerValue,
 } from "@/components/features/technician/devices/FarmHouseZonePicker";
-import ThresholdsModal from "@/components/features/technician/devices/ThresholdsModal";
-import SpeakerScheduleModal from "@/components/features/technician/devices/SpeakerScheduleModal";
 import AudioTracksModal from "@/components/features/technician/devices/AudioTracksModal";
 import DecommissionDeviceModal from "@/components/features/technician/devices/DecommissionDeviceModal";
 import ReplaceDeviceModal from "@/components/features/technician/devices/ReplaceDeviceModal";
@@ -26,13 +24,11 @@ import { getApiErrorMessage } from "@/lib/helpers";
 
 /** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018 */
 export default function TechnicianDevicesPage() {
-  const { selectedZoneId, selectedZoneName } = useZoneStore();
-  // Đăng ký/kích hoạt thiết bị là việc của Technician (SRS §4.1, FARM-FR-003) —
-  // Farm Owner chỉ xem và điều khiển relay, muốn lắp thêm thì tạo ticket lắp đặt.
-  const canOnboard = usePermission("TECHNICIAN", "ADMIN");
-  // Chỉnh ngưỡng tự động (ENV-FR-006): Farm Owner vận hành hằng ngày, Technician chỉnh khi
-  // xử lý sự cố (RACI mục 4.4) — PUT /farms/zones/:zoneId/thresholds cho cả hai vai trò.
-  const canEditThresholds = usePermission("FARM_OWNER", "TECHNICIAN");
+  const { selectedZoneId } = useZoneStore();
+  // Trang này chỉ Technician + Admin mở (Farm Owner có trang riêng). Kích hoạt/dời/gỡ/thay, lệnh từ xa và bài loa
+  // là của Technician (FARM-FR-003, 008, 013, ENV-FR-013c); Admin chỉ xem. Ngưỡng, relay, lịch loa là của Farm Owner
+  // (Report 3 §2.4) nên không có ở đây.
+  const canOnboard = usePermission("TECHNICIAN");
   const { data: nodes, isLoading } = useSensorNodes(
     selectedZoneId ?? undefined,
   );
@@ -43,7 +39,6 @@ export default function TechnicianDevicesPage() {
   const [deviceId, setDeviceId] = useState("");
   const [secretKey, setSecretKey] = useState("");
   const [registering, setRegistering] = useState(false);
-  const [showThresholds, setShowThresholds] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -93,11 +88,9 @@ export default function TechnicianDevicesPage() {
   const [reassigning, setReassigning] = useState(false);
 
   // Lưu id (không lưu object) để modal luôn đọc bản mới nhất của thiết bị từ query
-  const [scheduleNodeId, setScheduleNodeId] = useState<string | null>(null);
   const [audioNodeId, setAudioNodeId] = useState<string | null>(null);
-  const scheduleNode = nodes?.find((n) => n._id === scheduleNodeId);
   const audioNode = nodes?.find((n) => n._id === audioNodeId);
-  // FARM-FR-008 — gỡ / thay thiết bị (BE: TECHNICIAN, ADMIN)
+  // FARM-FR-008 — gỡ / thay thiết bị (BE: FARM_OWNER, TECHNICIAN)
   const [decommissionNodeId, setDecommissionNodeId] = useState<string | null>(null);
   const [replaceNodeId, setReplaceNodeId] = useState<string | null>(null);
   const decommissionNode = nodes?.find((n) => n._id === decommissionNodeId) ?? null;
@@ -190,14 +183,6 @@ export default function TechnicianDevicesPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
         <div className="flex flex-wrap items-center gap-2">
-          {canEditThresholds && (
-            <Button
-              variant="secondary"
-              onClick={() => setShowThresholds(true)}
-            >
-              Ngưỡng cảm biến
-            </Button>
-          )}
           {canOnboard && (
             <Button onClick={() => setShowRegister(true)}>
               + Kích hoạt thiết bị
@@ -216,7 +201,7 @@ export default function TechnicianDevicesPage() {
             description={
               canOnboard
                 ? "Kích hoạt ESP32 vào zone này: nhập device_id in trên vỏ máy, sau đó cấu hình WiFi cho thiết bị qua AP-mode."
-                : "Thiết bị do kỹ thuật viên SwiftletCare lắp đặt và kích hoạt. Tạo yêu cầu lắp đặt để được hỗ trợ."
+                : "Thiết bị do Kỹ thuật viên hoặc Chủ trang trại lắp đặt và kích hoạt."
             }
             action={
               canOnboard ? (
@@ -255,7 +240,6 @@ export default function TechnicianDevicesPage() {
                 zoneId={selectedZoneId!}
                 isExpanded={expandedNodeId === node._id}
                 onToggleExpand={() => setExpandedNodeId(prev => prev === node._id ? null : node._id)}
-                onOpenSchedule={() => setScheduleNodeId(node._id)}
                 onOpenAudio={() => setAudioNodeId(node._id)}
                 onOpenReassign={() => setReassignNodeId(node._id)}
                 onOpenReplace={() => setReplaceNodeId(node._id)}
@@ -340,13 +324,6 @@ export default function TechnicianDevicesPage() {
           </form>
         </Modal>
 
-        {scheduleNode && (
-          <SpeakerScheduleModal
-            node={scheduleNode}
-            onClose={() => setScheduleNodeId(null)}
-          />
-        )}
-
         {audioNode && (
           <AudioTracksModal
             node={audioNode}
@@ -373,14 +350,6 @@ export default function TechnicianDevicesPage() {
           onConfirm={handleReboot}
           onCancel={() => setRebootNodeId(null)}
         />
-
-        {showThresholds && (
-          <ThresholdsModal
-            zoneId={selectedZoneId}
-            zoneName={selectedZoneName ?? ""}
-            onClose={() => setShowThresholds(false)}
-          />
-        )}
 
       </Card>
     </div>

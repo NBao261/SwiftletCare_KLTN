@@ -21,7 +21,7 @@ const sizeLabel = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
  * chọn bài mặc định cho lịch và phát thử — chỉ với bài đã có trên thẻ.
  */
 export default function AudioTracksModal({ node, onClose }: { node: SensorNode; onClose: () => void }) {
-  const canManage = usePermission('TECHNICIAN', 'ADMIN')
+  const canManage = usePermission('TECHNICIAN')
   const canOperate = usePermission('FARM_OWNER')
   const push = useToastStore(s => s.push)
   const { data: tracks, isLoading } = useAudioTracks(node._id)

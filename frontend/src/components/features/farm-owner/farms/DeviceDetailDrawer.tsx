@@ -1,18 +1,14 @@
-import { useState } from 'react'
-import { CpuIcon, InfoIcon, TicketIcon, VideoCameraIcon } from '@phosphor-icons/react'
-import { useNavigate } from 'react-router-dom'
+import { CpuIcon, InfoIcon, VideoCameraIcon } from '@phosphor-icons/react'
 import { Badge, Button, type BadgeTone } from '@/components/ui'
 import { Drawer } from '@/components/ui/Drawer'
 import { ZONE_METRICS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { wifiQuality, type DeviceRow, type ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 import { useDeviceProfile } from '@/hooks/farm-owner/useFarmStructure'
-import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import type { DeviceStatus } from '@/types'
 import { NO_VALUE } from '@/constants/display'
-import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
 
 const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
   ONLINE: 'positive', OFFLINE: 'neutral', ERROR: 'critical', DEGRADED: 'warning', PENDING: 'warning',
@@ -23,11 +19,6 @@ interface DeviceDetailDrawerProps { device: DeviceRow | null; zoneNode?: ZoneNod
 // Drawer chi tiết thiết bị (Farm Owner chỉ xem); kỹ thuật viên lắp, firmware mới nhất chưa có API nên hiện NO_VALUE
 export default function DeviceDetailDrawer({ device, zoneNode, onClose }: DeviceDetailDrawerProps) {
   const { t, num, day, ago } = useTranslation(farmDict)
-  const navigate = useNavigate()
-  // Ticket của Farm Owner ở /support (mở sẵn form báo sự cố); Technician/Admin vẫn dùng màn /tickets
-  const isFarmOwner = usePermission('FARM_OWNER')
-  // Popup yêu cầu hỗ trợ mở tại chỗ (không chuyển sang trang Yêu cầu hỗ trợ); undefined = đóng
-  const [supportDefaults, setSupportDefaults] = useState<CreateSupportDefaults>()
   const { data: profile } = useDeviceProfile(device?.deviceId)
 
   if (!device) return <Drawer open={false} onClose={onClose}>{null}</Drawer>
@@ -102,13 +93,8 @@ export default function DeviceDetailDrawer({ device, zoneNode, onClose }: Device
       </div>
 
       <div className="flex flex-col gap-2 pt-4">
-        <Button className="w-full" onClick={() => (isFarmOwner ? setSupportDefaults({ kind: 'fault', zoneId: device.zoneId }) : navigate('/tickets'))}>
-          <TicketIcon size={16} />
-          {t('drawer.report')}
-        </Button>
         <Button variant="secondary" className="w-full" onClick={onClose}>{t('drawer.close')}</Button>
       </div>
-      <CreateSupportTicketModal open={supportDefaults !== undefined} defaults={supportDefaults} onClose={() => setSupportDefaults(undefined)} />
     </Drawer>
   )
 }

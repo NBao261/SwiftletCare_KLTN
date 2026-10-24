@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowRightIcon, CubeIcon, PlusIcon, SlidersHorizontalIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, CubeIcon, SlidersHorizontalIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
@@ -23,7 +23,6 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { useZoneStore } from '@/stores/zoneStore'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
-import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
@@ -49,12 +48,10 @@ export default function FarmOwnerFarmZoneDetailPage() {
     if (farmId && houseId && zoneId) setScopePath(farmId, farmName, houseId, zoneId)
   }, [farmId, houseId, zoneId, farmName, setScopePath])
   const [selected, setSelected] = useState<DeviceRow | null>(null)
-  // Farm Owner chỉnh ngưỡng của Zone ngay tại trang (ENV-FR-006/020); role khác vẫn sang trang Thiết bị của mình
+  // Farm Owner chỉnh ngưỡng của Zone ngay tại trang (ENV-FR-006/020); Technician/Admin không sửa ngưỡng nên không thấy nút
   const [isThresholdsOpen, setIsThresholdsOpen] = useState(false)
   // Đổi tên / xoá Zone (giao diện dựng sẵn, chờ API backend)
   const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
-  // Popup yêu cầu hỗ trợ mở tại chỗ (không chuyển sang trang Yêu cầu hỗ trợ); undefined = đóng
-  const [supportDefaults, setSupportDefaults] = useState<CreateSupportDefaults>()
 
   usePageBack(`/farms/${farmId}/houses/${houseId}`, node?.house.name ?? t('page.house'))
   usePageBreadcrumb(
@@ -133,10 +130,12 @@ export default function FarmOwnerFarmZoneDetailPage() {
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => (isFarmOwner ? setIsThresholdsOpen(true) : goTo('/devices'))}>
-              <SlidersHorizontalIcon size={14} />
-              {t('zone.thresholds')}
-            </Button>
+            {isFarmOwner && (
+              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setIsThresholdsOpen(true)}>
+                <SlidersHorizontalIcon size={14} />
+                {t('zone.thresholds')}
+              </Button>
+            )}
             {isFarmOwner && (
               <Button size="sm" className="h-9 text-xs" onClick={() => goTo('/dashboard')}>
                 <CubeIcon size={14} />
@@ -172,12 +171,6 @@ export default function FarmOwnerFarmZoneDetailPage() {
       <FarmFrame
         title={t('zone.devicesTitle', { n: node.devices.length })}
         description={t('zone.devicesDesc')}
-        action={
-          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => (isFarmOwner ? setSupportDefaults({ kind: 'install', farmId, zoneId }) : navigate('/tickets'))}>
-            <PlusIcon size={14} weight="bold" />
-            {t('zone.requestInstall')}
-          </Button>
-        }
       >
         <DeviceListTable devices={node.devices} zoneNameById={zoneNameById} onSelect={setSelected} />
       </FarmFrame>
@@ -198,8 +191,6 @@ export default function FarmOwnerFarmZoneDetailPage() {
       )}
 
       <DeviceDetailDrawer device={selected} zoneNode={{ ...node, metrics, breaches }} onClose={() => setSelected(null)} />
-      {/* Yêu cầu lắp đặt mở ngay tại trang, gửi xong popup báo kết quả */}
-      <CreateSupportTicketModal open={supportDefaults !== undefined} defaults={supportDefaults} onClose={() => setSupportDefaults(undefined)} />
       {editMode && <StructureEditModal kind="zone" mode={editMode} name={node.zone.name} deviceCount={node.counts.total} existingNames={structure.houseById.get(node.house._id)?.zones.map(item => item.zone.name) ?? []} onClose={() => setEditMode(null)} />}
       {isThresholdsOpen && <ZoneThresholdsModal zoneId={node.zone._id} zoneName={node.zone.name} onClose={() => setIsThresholdsOpen(false)} />}
     </div>

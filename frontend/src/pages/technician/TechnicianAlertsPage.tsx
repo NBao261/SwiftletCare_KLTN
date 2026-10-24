@@ -42,9 +42,9 @@ export default function TechnicianAlertsPage() {
   );
   const [page, setPage] = useState(1);
   const [ackTargetId, setAckTargetId] = useState<string | null>(null);
-  // Admin chỉ xem cảnh báo (RACI §4.4, ALERT-FR-009) — xác nhận thay sẽ chặn alertEscalation tự tạo ticket
-  // (TICKET-FR-002) dù Admin không ở farm. Backend chặn cùng role ở PUT /alerts/:id/acknowledge.
-  const canAcknowledge = usePermission("FARM_OWNER", "TECHNICIAN");
+  // Chỉ Farm Owner xác nhận cảnh báo (ALERT-FR-009, Report 3 §2.4); Technician, Admin chỉ xem.
+  // Backend chặn cùng role ở PUT /alerts/:id/acknowledge.
+  const canAcknowledge = usePermission("FARM_OWNER");
   // Bấm 1 thông báo ở NotificationPopover (AppHeader) điều hướng sang đây kèm
   // ?highlight=<id> — cuộn tới & làm nổi đúng dòng đó nếu đang nằm trong trang/filter hiện tại.
   const [searchParams] = useSearchParams();
