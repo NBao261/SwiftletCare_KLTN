@@ -1,7 +1,7 @@
 /**
  * SRS v2.0.0 — cảnh báo suy luận và kiểm chứng của chuyên gia:
- * - ALERT-FR-012: breach NH3/CO2 là MEDIUM, ghi rõ ngưỡng do chuyên gia đặt, không sinh ticket
- * - THREAT-FR-007: NOISE_ANOMALY (firmware cũ gửi BIRD_PANIC vẫn nhận), không leo thang
+ * - ALERT-FR-012: breach NH3/CO2 là MEDIUM, ghi rõ ngưỡng do chuyên gia đặt, không được gửi lại
+ * - THREAT-FR-007: NOISE_ANOMALY (firmware cũ gửi BIRD_PANIC vẫn nhận), không được gửi lại
  * - EXPERT-FR-003: PUT /alerts/:id/verdict, lọc danh sách, thống kê tỷ lệ xác nhận
  */
 import express from 'express'
@@ -16,10 +16,8 @@ import { AuditLog } from '@/models/auditLog.model'
 import { SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
-import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
-import { findThresholdBreaches, ingestDeviceAlert, raiseThresholdAlert } from '@/services/alert.service'
-import { createTicketsFromStaleAlerts } from '@/services/ticket.service'
+import { findThresholdBreaches, ingestDeviceAlert, raiseThresholdAlert, renotifyStaleAlerts } from '@/services/alert.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import type { AlertType, Role } from '@/types'
 
@@ -51,7 +49,7 @@ afterAll(async () => {
   await mongod.stop()
 })
 afterEach(async () => {
-  await Promise.all([Alert, AuditLog, SensorNode, Farm, House, Zone, Ticket, User].map(m => (m as typeof User).deleteMany({})))
+  await Promise.all([Alert, AuditLog, SensorNode, Farm, House, Zone, User].map(m => (m as typeof User).deleteMany({})))
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -76,15 +74,14 @@ async function seed() {
   return { owner, expert, farm, zone, node, mkAlert, t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT') } }
 }
 
-/** Đẩy mọi cảnh báo về 20 phút trước rồi chạy job leo thang — trả số ticket sinh ra */
-async function ticketsAfterEscalation() {
+/** Đẩy mọi cảnh báo về 20 phút trước rồi chạy job gửi lại (ALERT-FR-015) — trả số cảnh báo được gửi lại */
+async function renotifiedAfterEscalation() {
   await Alert.collection.updateMany({}, { $set: { created_at: new Date(Date.now() - 20 * 60_000) } })
-  await createTicketsFromStaleAlerts()
-  return Ticket.countDocuments()
+  return renotifyStaleAlerts()
 }
 
 describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
-  it('breach NH3 là MEDIUM, ghi rõ ngưỡng do chuyên gia đặt, không tự sinh ticket', async () => {
+  it('breach NH3 là MEDIUM, ghi rõ ngưỡng do chuyên gia đặt, không được gửi lại', async () => {
     const { zone, node } = await seed()
     const breaches = findThresholdBreaches(
       { temperature: 28, humidity: 85, light_lux: 0.1, nh3_ppm: DEFAULT_THRESHOLDS.nh3_max + 10, co2_ppm: 800 }, DEFAULT_THRESHOLDS,
@@ -95,7 +92,7 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
     expect(alert.severity).toBe('MEDIUM')
     expect(alert.message).toContain('NH3')
     expect(alert.message).toContain('không tự chạy quạt')
-    expect(await ticketsAfterEscalation()).toBe(0)
+    expect(await renotifiedAfterEscalation()).toBe(0)
   })
 
   it('breach nhiệt độ không kèm ghi chú chất lượng không khí', async () => {
@@ -104,11 +101,11 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
     expect((await Alert.findOne().lean())!.message).not.toContain('chuyên gia')
   })
 
-  it('thiết bị gửi THRESHOLD_BREACH mức HIGH vẫn bị giữ ở MEDIUM — không sinh ticket', async () => {
+  it('thiết bị gửi THRESHOLD_BREACH mức HIGH vẫn bị giữ ở MEDIUM — không được gửi lại', async () => {
     const { node } = await seed()
     await ingestDeviceAlert({ deviceId: node.device_id, type: 'THRESHOLD_BREACH', severity: 'HIGH', message: 'NH3 cao' })
     expect((await Alert.findOne().lean())!.severity).toBe('MEDIUM')
-    expect(await ticketsAfterEscalation()).toBe(0)
+    expect(await renotifiedAfterEscalation()).toBe(0)
   })
 
   it('firmware không gửi title: tiêu đề mặc định mang tên Zone', async () => {
@@ -119,28 +116,28 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
 
   it('thiết bị không được gửi loại cảnh báo chỉ backend suy ra', async () => {
     const { node } = await seed()
-    for (const type of ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH']) {
+    for (const type of ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'MAINTENANCE_DUE']) {
       await expect(ingestDeviceAlert({ deviceId: node.device_id, type, message: 'x' })).rejects.toThrow('không hợp lệ')
     }
     expect(await Alert.countDocuments()).toBe(0)
   })
 
-  it('loại cảnh báo phần cứng vẫn giữ mức thiết bị gửi và vẫn leo thang', async () => {
+  it('loại cảnh báo phần cứng vẫn giữ mức thiết bị gửi và vẫn được gửi lại', async () => {
     const { node } = await seed()
     await ingestDeviceAlert({ deviceId: node.device_id, type: 'SPEAKER_FAILURE', severity: 'CRITICAL', message: 'x' })
     expect((await Alert.findOne().lean())!.severity).toBe('CRITICAL')
-    expect(await ticketsAfterEscalation()).toBe(1)
+    expect(await renotifiedAfterEscalation()).toBe(1)
   })
 })
 
 describe('NOISE_ANOMALY (THREAT-FR-007)', () => {
-  it('firmware < 1.3.0 gửi BIRD_PANIC được lưu thành NOISE_ANOMALY, mức MEDIUM, không sinh ticket', async () => {
+  it('firmware < 1.3.0 gửi BIRD_PANIC được lưu thành NOISE_ANOMALY, mức MEDIUM, không được gửi lại', async () => {
     const { node } = await seed()
     await ingestDeviceAlert({ deviceId: node.device_id, type: 'BIRD_PANIC', severity: 'CRITICAL', message: 'ồn' })
     const alert = (await Alert.findOne().lean())!
     expect(alert.type).toBe('NOISE_ANOMALY')
     expect(alert.severity).toBe('MEDIUM')
-    expect(await ticketsAfterEscalation()).toBe(0)
+    expect(await renotifiedAfterEscalation()).toBe(0)
   })
 })
 

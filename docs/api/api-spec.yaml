@@ -3177,7 +3177,7 @@ paths:
     put:
       tags: [Alerts]
       summary: "Xác nhận cảnh báo (ALERT-FR-009) — chỉ FARM_OWNER (Domain Expert chỉ đọc và kiểm chứng)"
-      description: Chỉ `FARM_OWNER`; Technician, Administrator chỉ xem cảnh báo → 403 (Report 3 §2.4). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả").
+      description: Chỉ `FARM_OWNER`; Technician, Administrator chỉ xem cảnh báo → 403 (Report 3 §2.4). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả"). Xác nhận `MAINTENANCE_DUE` = đã bảo trì: đếm lại `since_service_*` của các tải trong `metadata.loads` từ 0 và chuyển cảnh báo sang `RESOLVED` (ALERT-FR-016, BR-16).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3394,7 +3394,7 @@ paths:
                               ventilationSwitchesPerHour: { type: number, nullable: true }
                           service_limits:
                             type: object
-                            description: "TICKET-FR-018 — mốc bảo trì theo thời gian chạy"
+                            description: "ALERT-FR-016 — mốc bảo trì theo thời gian chạy (quá mốc → cảnh báo MAINTENANCE_DUE)"
                             properties:
                               misting: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
                               ventilation: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
@@ -5457,7 +5457,6 @@ components:
         switches: { type: integer }
         since_service_hours: { type: number }
         since_service_switches: { type: integer }
-        last_ticket_id: { type: string }
 
     BirdCountBucket:
       type: object
@@ -5586,7 +5585,7 @@ components:
       properties:
         relay_usage:
           type: object
-          description: "TICKET-FR-018 (v1.24.0) — giờ chạy + số lần đóng cắt thật của bơm/quạt"
+          description: "ALERT-FR-016 — giờ chạy + số lần đóng cắt thật của bơm/quạt; `since_service_*` về 0 khi Farm Owner xác nhận MAINTENANCE_DUE"
           properties:
             misting: { $ref: "#/components/schemas/RelayUsage" }
             ventilation: { $ref: "#/components/schemas/RelayUsage" }
@@ -5748,6 +5747,7 @@ components:
         - RS485_BUS_FAILURE
         - SENSOR_ANOMALY
         - FORECAST_BREACH
+        - MAINTENANCE_DUE
 
     Alert:
       type: object
@@ -5771,6 +5771,7 @@ components:
         resolved_at: { type: string, format: date-time, nullable: true, description: "Sự cố hết (THRESHOLD_BREACH tự đóng sau 5 phút không vượt ngưỡng, NODE_OFFLINE tự đóng khi thiết bị kết nối lại), hoặc thiết bị đã được gỡ khỏi hệ thống (FARM-FR-008). Alert đã đóng tự xoá sau 180 ngày." }
         acknowledged_by: { type: string, nullable: true }
         acknowledgement_note: { type: string, nullable: true }
+        renotified_at: { type: string, format: date-time, nullable: true, description: "ALERT-FR-015 — lúc đã gửi lại cho Farm Owner vì chưa ai xác nhận (CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau 1 giờ); chỉ gửi lại 1 lần" }
         expert_verdict:
           type: object
           nullable: true

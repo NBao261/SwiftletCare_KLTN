@@ -1,8 +1,7 @@
 import { Types } from 'mongoose'
 import { Ticket, ITicket } from '@/models/ticket.model'
 import { Alert } from '@/models/alert.model'
-import { OPEN_STATUSES } from '@/services/alert.service'
-import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
+import { CameraNode, IN_SERVICE } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
@@ -19,7 +18,7 @@ import { escapeRegex, paginate } from '@/utils/helpers.util'
 import { assigneeIdOf } from '@/utils/ticket.util'
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
-import type { CurrentUser, AlertType, TicketType, TicketPriority, TicketStatus } from '@/types'
+import type { CurrentUser, TicketType, TicketPriority, TicketStatus } from '@/types'
 
 /** TICKET-FR-003 — priority mặc định theo loại; Technician/Admin chỉnh tay được sau */
 const DEFAULT_PRIORITY: Record<TicketType, TicketPriority> = {
@@ -142,29 +141,6 @@ async function requiredSatItems(ticket: Pick<ITicket, 'farm_id' | 'zone_id'>): P
 }
 
 /**
- * Alert Engine phát nhiều loại cảnh báo hơn TicketType hỗ trợ — ép kiểu trực
- * tiếp (`alert.type as TicketType`) tạo ra giá trị enum không hợp lệ cho
- * NOISE_ANOMALY/THRESHOLD_BREACH/PUMP_DRY/LOW_RETURN_RATE, làm `Ticket.create`
- * throw ValidationError và crash cả batch xử lý stale alert. Map rõ ràng
- * từng giá trị, loại không có ticket type tương ứng thì dùng OTHER.
- */
-const ALERT_TYPE_TO_TICKET_TYPE: Record<AlertType, TicketType> = {
-  SENSOR_FAULT:      'SENSOR_FAULT',
-  RS485_BUS_FAILURE: 'RS485_BUS_FAILURE',
-  NODE_OFFLINE:      'NODE_OFFLINE',
-  POWER_OUTAGE:      'POWER_OUTAGE',
-  SPEAKER_FAILURE:   'SPEAKER_FAILURE',
-  PREDATOR_DETECTED: 'PREDATOR_DETECTED',
-  EDGE_AI_DEGRADED:  'EDGE_AI_DEGRADED',
-  THRESHOLD_BREACH:  'OTHER',
-  NOISE_ANOMALY:     'OTHER',
-  PUMP_DRY:          'OTHER',
-  LOW_RETURN_RATE:   'OTHER',
-  SENSOR_ANOMALY:    'SENSOR_FAULT',
-  FORECAST_BREACH:   'OTHER',
-}
-
-/**
  * TICKET-FR-004/005 — Ticket Router: gán Technician phụ trách khu vực của Farm.
  * Áp dụng cho MỌI loại ticket kể cả INSTALLATION (SRS v1.12.0 bỏ bước Admin
  * điều phối tay). Chọn người ít việc nhất, bỏ qua người đã quá tải (≥ ngưỡng
@@ -191,8 +167,7 @@ async function routeToTechnician(farmId: string, opts: { exclude?: string[] } = 
   const { max_open_tickets_per_technician: maxOpen } = await getTicketRouting()
 
   // Chọn người đang ít việc nhất để tránh dồn tải (TICKET-FR-005). 1 aggregate
-  // cho cả batch thay vì 1 countDocuments/candidate (N+1) — cùng idiom "$in theo
-  // batch" mà createTicketsFromStaleAlerts bên dưới đã dùng cho bước dedup.
+  // cho cả batch thay vì 1 countDocuments/candidate (N+1).
   const candidateIds = candidates.map(c => c._id)
   const loads = await Ticket.aggregate<{ _id: Types.ObjectId; open: number; lastAssignedAt: Date | null }>([
     { $match: { assigned_to: { $in: candidateIds } } },
@@ -401,123 +376,6 @@ export async function createMaintenanceTicket(input: {
     notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
   }
   return ticket
-}
-
-/**
- * TICKET-FR-002 — tự tạo ticket từ Alert CRITICAL/HIGH chưa acknowledge sau 15
- * phút. Gọi định kỳ từ jobs/alertEscalation.job.ts.
- *
- * Riêng NODE_OFFLINE: chỉ khi thiết bị mất kết nối LIÊN TỤC quá
- * NODE_OFFLINE_TICKET_AFTER_MS (alert còn mở = vẫn offline, vì markNodeSeen
- * đóng alert ngay khi thiết bị online lại), kể cả khi chủ trại đã xác nhận —
- * xác nhận không làm thiết bị kết nối lại. Mỗi lần mất kết nối là 1 alert mới
- * nên được tối đa 1 ticket; nếu ticket của lần trước còn mở thì chỉ ghi chú vào đó.
- */
-export const UNACKED_ALERT_THRESHOLD_MS = 15 * 60 * 1000
-export const NODE_OFFLINE_TICKET_AFTER_MS = 60 * 60 * 1000
-
-export async function createTicketsFromStaleAlerts(): Promise<number> {
-  const now = Date.now()
-  const staleAlerts = await Alert.find({
-    $or: [
-      {
-        type: { $ne: 'NODE_OFFLINE' },
-        status: 'ACTIVE',
-        severity: { $in: ['CRITICAL', 'HIGH'] },
-        created_at: { $lt: new Date(now - UNACKED_ALERT_THRESHOLD_MS) },
-      },
-      {
-        type: 'NODE_OFFLINE',
-        status: { $in: OPEN_STATUSES },
-        created_at: { $lt: new Date(now - NODE_OFFLINE_TICKET_AFTER_MS) },
-      },
-    ],
-  })
-  if (staleAlerts.length === 0) return 0
-
-  // Batch dedup: 1 query cho cả batch thay vì findOne từng alert.
-  const alreadyTicketed = new Set(
-    (await Ticket.find({ alert_id: { $in: staleAlerts.map(a => a._id) } }).select('alert_id').lean())
-      .map(t => String(t.alert_id)),
-  )
-  // 1 truy vấn cho cả batch, cùng idiom dedup ở trên:
-  // - thiết bị đã gỡ (FARM-FR-008): không còn gì ở hiện trường để sửa;
-  // - NODE_OFFLINE của thiết bị đã ONLINE lại: cảnh báo chỉ chưa kịp đóng (heartbeat
-  //   tới đúng lúc job chạy) — kiểm tra ngay lúc quyết định nên không phụ thuộc thứ tự
-  //   với resolveNodeOfflineAlertsOfOnlineNodes, lượt quét đó sẽ đóng cảnh báo sau.
-  const nodeIds = [...new Set(staleAlerts.map(a => a.node_id).filter(Boolean))]
-  const nodes = await SensorNode.find({ _id: { $in: nodeIds } }).select('_id status decommissioned_at').lean()
-  const removedNodeIds = new Set(nodes.filter(n => n.decommissioned_at).map(n => String(n._id)))
-  const onlineNodeIds = new Set(nodes.filter(n => n.status === 'ONLINE').map(n => String(n._id)))
-
-  const toProcess = staleAlerts.filter(a => {
-    const nodeId = a.node_id ? String(a.node_id) : undefined
-    if (alreadyTicketed.has(String(a._id))) return false
-    if (nodeId && removedNodeIds.has(nodeId)) return false
-    return !(a.type === 'NODE_OFFLINE' && nodeId && onlineNodeIds.has(nodeId))
-  })
-
-  // Ticket mất kết nối của lần trước còn mở, theo từng thiết bị — cũng 2 truy vấn cho cả batch.
-  const offlineNodeIds = [...new Set(toProcess.filter(a => a.type === 'NODE_OFFLINE' && a.node_id).map(a => String(a.node_id)))]
-  const openOfflineTicketByNode = new Map<string, InstanceType<typeof Ticket>>()
-  if (offlineNodeIds.length > 0) {
-    const pastAlerts = await Alert.find({ type: 'NODE_OFFLINE', node_id: { $in: offlineNodeIds } }).select('_id node_id').lean()
-    const nodeOfAlert = new Map(pastAlerts.map(a => [String(a._id), String(a.node_id)]))
-    const openTickets = await Ticket.find({ alert_id: { $in: pastAlerts.map(a => a._id) }, status: { $ne: 'CLOSED' } })
-    for (const t of openTickets) openOfflineTicketByNode.set(nodeOfAlert.get(String(t.alert_id))!, t)
-  }
-
-  let created = 0
-  for (const alert of toProcess) {
-    try {
-      const since = alert.created_at.toLocaleString('vi-VN')
-      const openTicket = alert.type === 'NODE_OFFLINE' ? openOfflineTicketByNode.get(String(alert.node_id)) : undefined
-      if (openTicket) {
-        // Trỏ ticket sang alert mới để lần chạy sau `alreadyTicketed` bỏ qua alert
-        // này (không ghi chú lặp mỗi 2 phút); ghi chú giữ lại lịch sử các lần mất kết nối.
-        openTicket.notes.push({
-          content: `Thiết bị mất kết nối lại từ ${since} (hơn 1 giờ) — cảnh báo mới "${alert.title}"`,
-          created_at: new Date(),
-        } as never)
-        openTicket.alert_id = alert._id
-        await openTicket.save()
-        continue
-      }
-
-      const ticketType = ALERT_TYPE_TO_TICKET_TYPE[alert.type as AlertType] ?? 'OTHER'
-      const priority = DEFAULT_PRIORITY[ticketType]
-      const sla = await slaDueDates(priority, new Date())
-      // Không cache theo farm: mỗi ticket vừa tạo làm tăng tải của người được gán,
-      // cache sẽ dồn cả loạt alert của 1 farm cho cùng 1 người, vượt ngưỡng quá tải.
-      const assignedTo = await routeToTechnician(String(alert.farm_id))
-
-      const ticket = await Ticket.create({
-        farm_id:  alert.farm_id,
-        zone_id:  alert.zone_id,
-        alert_id: alert._id,
-        type:     ticketType,
-        priority,
-        status:   'NEW',
-        assigned_to: assignedTo ?? undefined,
-        assigned_at: assignedTo ? new Date() : undefined,
-        ...sla,
-        notes: [{
-          content: alert.type === 'NODE_OFFLINE'
-            ? `Tự tạo vì thiết bị mất kết nối liên tục hơn 1 giờ (từ ${since}) — cảnh báo "${alert.title}" (TICKET-FR-002)`
-            : `Tự tạo từ cảnh báo "${alert.title}" chưa được xác nhận sau 15 phút (TICKET-FR-002)`,
-          created_at: new Date(),
-        }],
-      })
-      if (assignedTo) notifyNewAssignment(assignedTo, ticket)
-      else notifyUnassigned(ticket, 'không có Technician rảnh trong khu vực của farm')
-      created++
-    } catch (err) {
-      // 1 alert lỗi không được chặn các alert khác trong cùng batch — trước
-      // đây throw ở đây làm abort cả for loop, không tạo được ticket nào khác.
-      logger.error('Tạo ticket tự động từ alert thất bại', { alertId: String(alert._id), err })
-    }
-  }
-  return created
 }
 
 // ── Truy vấn / cập nhật ──────────────────────────────────────────────────────
@@ -1240,7 +1098,7 @@ export async function rateTicket(ticketId: string, user: CurrentUser, rating: nu
   }
 
   const isCreator = !!ticket.created_by && String(ticket.created_by) === user._id
-  // Ticket tự tạo từ Alert (TICKET-FR-002, createTicketsFromStaleAlerts) không
+  // Ticket tự tạo từ Alert (TICKET-FR-002 cũ, nay là ALERT-FR-015; ticket cũ còn trong DB) không
   // có created_by vì chạy trong cron job, không có user context — coi Farm
   // Owner của farm đó (đã qua check quyền ở getTicket) là người được đánh giá,
   // thay vì chỉ giới hạn cho ADMIN.

@@ -93,32 +93,32 @@ Chỉ gỡ khỏi menu/route và ẩn nút; chưa xoá file (xoá ở PR 6). Nh�
 
 ## Iteration 2 (P0/P1)
 
-### PR 3 — Backend: cảnh báo thay cho ticket (ALERT-FR-015, 016) · đề xuất: Trần Minh Kiệt
+### PR 3 — Backend: cảnh báo thay cho ticket (ALERT-FR-015, 016) · đề xuất: Trần Minh Kiệt · xong ở PR #103
 
 Làm trước PR 4 vì `alertEscalation.job.ts` và `relayUsage.service.ts` đang gọi `ticket.service`. Nhánh gợi ý `feat/alert-renotify-maintenance`.
 
 **ALERT-FR-015 — gửi lại cảnh báo chưa ai xác nhận:**
-- [ ] `models/alert.model.ts`: thêm `renotified_at?: Date` (đánh dấu đã gửi lại, để chỉ gửi **một lần**).
-- [ ] `jobs/alertEscalation.job.ts`: thay `createTicketsFromStaleAlerts()` bằng hàm mới trong `alert.service.ts`, ví dụ `renotifyStaleAlerts(now)`:
-  - [ ] chọn cảnh báo `ACTIVE`, `renotified_at` chưa có, mức CRITICAL hoặc HIGH, `type ≠ NODE_OFFLINE`, tạo cách đây ≥ 15 phút;
-  - [ ] và cảnh báo `NODE_OFFLINE` `ACTIVE` tạo cách đây ≥ 1 giờ;
-  - [ ] gửi qua `notification.service` cho các Farm Owner của farm theo kênh họ chọn (ALERT-FR-005), tôn trọng giờ yên lặng (ALERT-FR-006);
-  - [ ] ghi `renotified_at`.
+- [x] `models/alert.model.ts`: thêm `renotified_at?: Date` (đánh dấu đã gửi lại, để chỉ gửi **một lần**).
+- [x] `jobs/alertEscalation.job.ts`: thay `createTicketsFromStaleAlerts()` bằng hàm mới trong `alert.service.ts`, ví dụ `renotifyStaleAlerts(now)`:
+  - [x] chọn cảnh báo `ACTIVE`, `renotified_at` chưa có, mức CRITICAL hoặc HIGH, `type ≠ NODE_OFFLINE`, tạo cách đây ≥ 15 phút;
+  - [x] và cảnh báo `NODE_OFFLINE` `ACTIVE` tạo cách đây ≥ 1 giờ;
+  - [x] gửi qua `notification.service` cho các Farm Owner của farm theo kênh họ chọn (ALERT-FR-005), tôn trọng giờ yên lặng (ALERT-FR-006);
+  - [x] ghi `renotified_at`.
   - Giữ nguyên mốc 15 phút / 1 giờ (Report 3 §4.5) — không đặt số mới.
-- [ ] Test `tests/integration/alertRenotify.test.ts`: CRITICAL chưa xác nhận sau 15 phút → gửi lại đúng 1 lần, chạy job lần 2 không gửi nữa; đã xác nhận/đã DISMISSED/đã RESOLVED → không gửi; MEDIUM → không gửi; `NODE_OFFLINE` sau 1 giờ → gửi 1 lần.
+- [x] Test `tests/integration/alertRenotify.test.ts`: CRITICAL chưa xác nhận sau 15 phút → gửi lại đúng 1 lần, chạy job lần 2 không gửi nữa; đã xác nhận/đã RESOLVED → không gửi (`DISMISSED` chưa có trong code; job chỉ chọn `ACTIVE`); MEDIUM → không gửi; `NODE_OFFLINE` sau 1 giờ → gửi 1 lần.
 
 **ALERT-FR-016 — `MAINTENANCE_DUE`:**
-- [ ] Thêm `'MAINTENANCE_DUE'` vào `AlertType` ở **cả 3 phía trong cùng PR**: `backend/src/types/domain.types.ts`, `frontend/src/types/` (kèm nhãn trong `constants/enumLabels.i18n.ts`), `mobile/types/index.ts`.
-- [ ] Mức mặc định LOW (BR-15) trong bảng mức của `alert.service.ts`.
-- [ ] `services/relayUsage.service.ts`: thay `createServiceTicketIfDue` (tạo ticket) bằng tạo cảnh báo `MAINTENANCE_DUE` qua `createAlert()`, nêu controller, tải (bơm/quạt) và số giờ/số lần; **không** reset bộ đếm lúc tạo.
-- [ ] `alert.service.ts` (xác nhận cảnh báo): khi Farm Owner xác nhận một `MAINTENANCE_DUE` → reset `since_service_*` của tải đó trong `sensor_nodes.relay_usage` và chuyển cảnh báo sang `RESOLVED` (BR-16).
-- [ ] Bỏ import `ticket.service`, `visitTime.util` khỏi `relayUsage.service.ts`.
-- [ ] Sửa `tests/integration/forecastAndRelayUsage.test.ts`: quá giới hạn → 1 cảnh báo `MAINTENANCE_DUE` (không còn ticket); dưới giới hạn → không có; xác nhận → bộ đếm về 0 và cảnh báo `RESOLVED`.
+- [x] Thêm `'MAINTENANCE_DUE'` vào `AlertType` ở **cả 3 phía trong cùng PR**: `backend/src/types/domain.types.ts`, `frontend/src/types/` (kèm nhãn trong `constants/enumLabels.i18n.ts`), `mobile/types/index.ts`.
+- [x] Mức mặc định LOW (BR-15) trong bảng mức của `alert.service.ts`.
+- [x] `services/relayUsage.service.ts`: thay `createServiceTicketIfDue` (tạo ticket) bằng tạo cảnh báo `MAINTENANCE_DUE` qua `createAlert()`, nêu controller, tải (bơm/quạt) và số giờ/số lần; **không** reset bộ đếm lúc tạo.
+- [x] `alert.service.ts` (xác nhận cảnh báo): khi Farm Owner xác nhận một `MAINTENANCE_DUE` → reset `since_service_*` của tải đó trong `sensor_nodes.relay_usage` và chuyển cảnh báo sang `RESOLVED` (BR-16).
+- [x] Bỏ import `ticket.service`, `visitTime.util` khỏi `relayUsage.service.ts`.
+- [x] Sửa `tests/integration/forecastAndRelayUsage.test.ts`: quá giới hạn → 1 cảnh báo `MAINTENANCE_DUE` (không còn ticket); dưới giới hạn → không có; xác nhận → bộ đếm về 0 và cảnh báo `RESOLVED`.
 
 **Chung:**
-- [ ] `npm run db:script` (đổi model alert) và commit `docs/database/init.mongo.js`.
-- [ ] `api-spec.yaml`: thêm `MAINTENANCE_DUE` vào enum `AlertType`.
-- [ ] Chạy CI của backend, frontend, mobile (PR đụng enum 3 phía).
+- [x] `npm run db:script` (đổi model alert) và commit `docs/database/init.mongo.js`.
+- [x] `api-spec.yaml`: thêm `MAINTENANCE_DUE` vào enum `AlertType`.
+- [x] Chạy CI của backend, frontend, mobile (PR đụng enum 3 phía).
 
 **Xong khi:** không còn chỗ nào tạo ticket từ cảnh báo; `README.md` "Chỗ lệch" #42, #43 đã xong.
 

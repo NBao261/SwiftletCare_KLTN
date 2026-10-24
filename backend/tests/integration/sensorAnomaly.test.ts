@@ -1,6 +1,6 @@
 /**
  * ALERT-FR-010 — quét cảm biến bất thường tạo SENSOR_ANOMALY mức MEDIUM (không bị
- * alertEscalation tự sinh ticket) và tự đóng khi dữ liệu bình thường trở lại.
+ * alertEscalation gửi lại) và tự đóng khi dữ liệu bình thường trở lại.
  */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
@@ -9,10 +9,9 @@ import { SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
-import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { scanSensorAnomalies } from '@/services/sensorAnomaly.service'
-import { createTicketsFromStaleAlerts } from '@/services/ticket.service'
+import { renotifyStaleAlerts } from '@/services/alert.service'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
 jest.mock('@/socket', () => ({
@@ -37,7 +36,7 @@ afterAll(async () => {
 })
 
 afterEach(async () => {
-  await Promise.all([Alert, SensorNode, Farm, House, Zone, Telemetry, Ticket, User].map(m => (m as typeof Alert).deleteMany({})))
+  await Promise.all([Alert, SensorNode, Farm, House, Zone, Telemetry, User].map(m => (m as typeof Alert).deleteMany({})))
 })
 
 async function seed() {
@@ -67,11 +66,10 @@ describe('scanSensorAnomalies', () => {
     expect(alert.severity).toBe('MEDIUM')
     expect(String(alert.node_id)).toBe(String(node._id))
 
-    // Không ai xác nhận sau 20 phút: vẫn không được tự sinh ticket (chỉ HIGH/CRITICAL)
+    // Không ai xác nhận sau 20 phút: vẫn không được gửi lại (chỉ HIGH/CRITICAL — ALERT-FR-015)
     // collection.updateOne: bỏ qua Mongoose (created_at là timestamp bất biến)
     await Alert.collection.updateOne({ _id: alert._id }, { $set: { created_at: new Date(now - 20 * 60_000) } })
-    await createTicketsFromStaleAlerts()
-    expect(await Ticket.countDocuments()).toBe(0)
+    expect(await renotifyStaleAlerts()).toBe(0)
 
     await Telemetry.deleteMany({})
     await writeSamples(node._id, zone._id, now, i => 80 + (i % 4) / 10)

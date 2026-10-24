@@ -26,6 +26,8 @@ export interface IAlert extends Document {
   resolved_at?: Date
   acknowledged_by?: Types.ObjectId
   acknowledgement_note?: string
+  /** ALERT-FR-015 — lúc đã gửi lại vì chưa ai xác nhận; có rồi thì không gửi lần nữa */
+  renotified_at?: Date
   /** EXPERT-FR-003 — Domain Expert xác nhận/bác bỏ cảnh báo suy luận; không có = chờ kiểm chứng */
   expert_verdict?: { result: AlertVerdictResult; note?: string; by: Types.ObjectId; at: Date }
 }
@@ -41,7 +43,7 @@ const alertSchema = new Schema<IAlert>(
       enum: [
         'THRESHOLD_BREACH','PREDATOR_DETECTED','NODE_OFFLINE','SPEAKER_FAILURE',
         'PUMP_DRY','NOISE_ANOMALY','POWER_OUTAGE','LOW_RETURN_RATE','EDGE_AI_DEGRADED',
-        'SENSOR_FAULT','RS485_BUS_FAILURE','SENSOR_ANOMALY','FORECAST_BREACH',
+        'SENSOR_FAULT','RS485_BUS_FAILURE','SENSOR_ANOMALY','FORECAST_BREACH','MAINTENANCE_DUE',
       ] satisfies AlertType[],
       required: true,
     },
@@ -58,6 +60,7 @@ const alertSchema = new Schema<IAlert>(
     resolved_at:         { type: Date },
     acknowledged_by:     { type: Schema.Types.ObjectId, ref: 'User' },
     acknowledgement_note:{ type: String },
+    renotified_at:       { type: Date },
     expert_verdict: {
       type: {
         result: { type: String, enum: ['CONFIRMED', 'REJECTED'] satisfies AlertVerdictResult[], required: true },

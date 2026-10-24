@@ -23,8 +23,7 @@ import { notifyUser } from '@/services/notification.service'
 import { RESTORE_WINDOW_MS } from '@/services/device.service'
 import { Alert } from '@/models/alert.model'
 import { Ticket } from '@/models/ticket.model'
-import { createTicketsFromStaleAlerts } from '@/services/ticket.service'
-import { createAlert } from '@/services/alert.service'
+import { createAlert, renotifyStaleAlerts } from '@/services/alert.service'
 import { removeFarm, updateFarm } from '@/services/farm.service'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import * as socket from '@/socket'
@@ -482,86 +481,11 @@ describe('gỡ thiết bị thì dọn cảnh báo của nó (FARM-FR-008)', () 
     const audit = await AuditLog.findOne({ action: 'DEVICE_DECOMMISSIONED' }).lean()
     expect(audit!.metadata).toMatchObject({ closedAlerts: 1, notedTickets: 1 })
 
-    // Cảnh báo cũ còn sót của thiết bị đã gỡ cũng không được biến thành ticket
+    // Cảnh báo cũ còn sót của thiết bị đã gỡ cũng không được gửi lại (ALERT-FR-015)
     await Alert.updateOne({ _id: alert._id }, { status: 'ACTIVE' })
-    expect(await createTicketsFromStaleAlerts()).toBe(0)
+    expect(await renotifyStaleAlerts()).toBe(0)
   })
 
-})
-
-describe('ticket tự động khi thiết bị mất kết nối (TICKET-FR-002)', () => {
-  const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000)
-
-  async function offlineNode() {
-    const { a } = await seed()
-    const node = await SensorNode.create({ device_id: 'node_200', zone_id: a.zone._id, status: 'OFFLINE' })
-    const offlineAlert = (created_at: Date, status: 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED' = 'ACTIVE') => Alert.create({
-      farm_id: a.farm._id, zone_id: a.zone._id, node_id: node._id, type: 'NODE_OFFLINE', severity: 'HIGH',
-      title: 'Mất kết nối', message: 'x', status, created_at,
-    })
-    return { a, offlineAlert }
-  }
-
-  it('chỉ tạo ticket khi mất kết nối liên tục quá 1 giờ, và chỉ 1 lần cho mỗi lần mất kết nối', async () => {
-    const { offlineAlert } = await offlineNode()
-    const alert = await offlineAlert(minutesAgo(30))
-    expect(await createTicketsFromStaleAlerts()).toBe(0)
-
-    await Alert.updateOne({ _id: alert._id }, { created_at: minutesAgo(120) })
-    expect(await createTicketsFromStaleAlerts()).toBe(1)
-    expect(await createTicketsFromStaleAlerts()).toBe(0)
-    expect((await Ticket.findOne({ alert_id: alert._id }))!.notes[0].content).toContain('mất kết nối liên tục hơn 1 giờ')
-  })
-
-  it('không tạo ticket nếu thiết bị đã ONLINE lại mà cảnh báo chưa kịp đóng (heartbeat tới đúng lúc job chạy)', async () => {
-    const { offlineAlert } = await offlineNode()
-    await offlineAlert(minutesAgo(120))
-    await SensorNode.updateOne({ device_id: 'node_200' }, { status: 'ONLINE' })
-
-    expect(await createTicketsFromStaleAlerts()).toBe(0)
-    expect(await Ticket.countDocuments()).toBe(0)
-  })
-
-  it('vẫn tạo ticket khi chủ trại đã xác nhận nhưng thiết bị vẫn offline', async () => {
-    const { offlineAlert } = await offlineNode()
-    await offlineAlert(minutesAgo(120), 'ACKNOWLEDGED')
-    expect(await createTicketsFromStaleAlerts()).toBe(1)
-  })
-
-  it('mất kết nối lại khi ticket cũ còn mở thì ghi chú vào ticket cũ, không tạo ticket mới', async () => {
-    const { a, offlineAlert } = await offlineNode()
-    const first = await offlineAlert(minutesAgo(300), 'RESOLVED')
-    const ticket = await Ticket.create({ farm_id: a.farm._id, alert_id: first._id, type: 'NODE_OFFLINE', priority: 'P2' })
-    const second = await offlineAlert(minutesAgo(90))
-
-    expect(await createTicketsFromStaleAlerts()).toBe(0)
-    const updated = (await Ticket.findById(ticket._id))!
-    expect(String(updated.alert_id)).toBe(String(second._id))
-    expect(updated.notes.at(-1)!.content).toContain('mất kết nối lại')
-
-    expect(await createTicketsFromStaleAlerts()).toBe(0)
-    expect((await Ticket.findById(ticket._id))!.notes).toHaveLength(updated.notes.length)
-    expect(await Ticket.countDocuments()).toBe(1)
-  })
-
-  it('ticket cũ đã đóng thì lần mất kết nối mới được ticket riêng', async () => {
-    const { a, offlineAlert } = await offlineNode()
-    const first = await offlineAlert(minutesAgo(300), 'RESOLVED')
-    await Ticket.create({ farm_id: a.farm._id, alert_id: first._id, type: 'NODE_OFFLINE', priority: 'P2', status: 'CLOSED' })
-    await offlineAlert(minutesAgo(90))
-
-    expect(await createTicketsFromStaleAlerts()).toBe(1)
-    expect(await Ticket.countDocuments()).toBe(2)
-  })
-
-  it('cảnh báo HIGH loại khác vẫn sinh ticket sau 15 phút như cũ', async () => {
-    const { a } = await offlineNode()
-    await Alert.create({
-      farm_id: a.farm._id, zone_id: a.zone._id, type: 'POWER_OUTAGE', severity: 'HIGH',
-      title: 'Mất điện', message: 'x', status: 'ACTIVE', created_at: minutesAgo(20),
-    })
-    expect(await createTicketsFromStaleAlerts()).toBe(1)
-  })
 })
 
 describe('thiết bị đã gỡ không còn nhận lệnh (FARM-FR-008)', () => {

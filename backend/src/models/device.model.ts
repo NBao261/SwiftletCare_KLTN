@@ -70,7 +70,6 @@ export interface IRelayUsage {
   switches: number
   since_service_hours: number
   since_service_switches: number
-  last_ticket_id?: Types.ObjectId
 }
 
 export interface ICameraNode extends Document {
@@ -113,7 +112,6 @@ const relayUsageSchema = {
   switches:               { type: Number, default: 0 },
   since_service_hours:    { type: Number, default: 0 },
   since_service_switches: { type: Number, default: 0 },
-  last_ticket_id:         { type: Schema.Types.ObjectId, ref: 'Ticket' },
 }
 
 const sensorNodeSchema = new Schema<ISensorNode>(
