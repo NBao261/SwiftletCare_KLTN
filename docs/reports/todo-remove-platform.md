@@ -41,6 +41,8 @@ Chỉ sửa `requireRole` và kiểm tra trong service, chưa xoá module nào. 
 | [ ] | `farms.route.ts:35, 37, 39` | ngưỡng Zone, reset, hệ số mờ | + TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | ENV-FR-006, 020, 021 |
 | [ ] | `devices.route.ts:27` | `PUT /devices/sensor-nodes/:id/thresholds` | + TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | ENV-FR-006 |
 | [ ] | `devices.route.ts:39, 42` | bật/tắt relay, huỷ override | FARM_OWNER, TECHNICIAN, ADMIN | FARM_OWNER | ENV-FR-016 |
+| [ ] | `devices.route.ts:29` | `PUT /devices/sensor-nodes/:id/speaker-schedule` (lịch loa) | FARM_OWNER, TECHNICIAN, ADMIN | FARM_OWNER | §2.4, BR-07 |
+| [ ] | `devices.route.ts:44` | `GET /devices/sensor-nodes/:id/relay-overrides` (lịch sử can thiệp tay) | FARM_OWNER, DOMAIN_EXPERT, TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | §2.4, ENV-FR-019 |
 | [ ] | `devices.route.ts:23, 92` | đăng ký controller, camera | TECHNICIAN, ADMIN | FARM_OWNER, TECHNICIAN | FARM-FR-003, 004 |
 | [ ] | `devices.route.ts:61, 65, 70, 71, 85, 90` | dời Zone, gỡ, khôi phục, thay | TECHNICIAN, ADMIN | FARM_OWNER, TECHNICIAN | FARM-FR-007b, 008 |
 | [ ] | `devices.route.ts:75` | lệnh từ xa (RESTART, đẩy cấu hình, OTA) | TECHNICIAN, ADMIN | TECHNICIAN | FARM-FR-013 |
@@ -53,7 +55,7 @@ Chỉ sửa `requireRole` và kiểm tra trong service, chưa xoá module nào. 
 
 **API spec và test:**
 - [ ] `docs/api/api-spec.yaml`: sửa phần mô tả role/403 của từng route ở bảng trên.
-- [ ] Thêm test 403 (mỗi dòng của bảng một case). Có thể gom vào `tests/integration/roleMatrix.test.ts`: TECHNICIAN, ADMIN gọi sửa ngưỡng/hệ số → 403; TECHNICIAN, ADMIN bật relay → 403; TECHNICIAN xác nhận cảnh báo → 403; ADMIN tạo farm, House, Zone → 403; FARM_OWNER đăng ký thiết bị vào Zone của mình → 201, vào Zone farm khác → 403.
+- [ ] Thêm test 403 (mỗi dòng của bảng một case). Có thể gom vào `tests/integration/roleMatrix.test.ts`: TECHNICIAN, ADMIN gọi sửa ngưỡng/hệ số → 403; TECHNICIAN, ADMIN bật relay hoặc sửa lịch loa → 403; TECHNICIAN, ADMIN đọc lịch sử can thiệp tay → 403, DOMAIN_EXPERT đọc → 200; TECHNICIAN xác nhận cảnh báo → 403; ADMIN tạo farm, House, Zone → 403; FARM_OWNER đăng ký thiết bị vào Zone của mình → 201, vào Zone farm khác → 403.
 - [ ] Sửa các test cũ đang dùng Technician/Admin cho những thao tác này (tìm `grep -rln "TECHNICIAN\|ADMIN" tests/integration`), ví dụ `deviceOnboarding.test.ts`, `audioTracks.test.ts`, `adminApi.test.ts`.
 - [ ] Chạy: `npm run lint && npm run build:check && npm test`.
 

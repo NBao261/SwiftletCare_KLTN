@@ -1041,6 +1041,8 @@ module.exports = {
 | Ghi nhận thu hoạch | R | I | – | – |
 | Tài khoản (tạo Technician, khoá/mở), cấu hình mặc định, audit log, tổng quan kỹ thuật | I | I | I | R |
 | Chọn bài loa ru / nghe thử | R | – | – | – |
+| Lịch loa của bộ điều khiển (BR-07) | R | – | – | – |
+| Lịch sử can thiệp tay, tỷ lệ thời gian tự động (ENV-FR-019, ANALYTICS-FR-011) | R | I | – | – |
 
 Nguồn: Report 3 §2.4. Farm chưa có chuyên gia (BR-22): Farm Owner làm thay các việc R của Domain Expert ở bảng trên, trừ viết kết luận và duyệt thay đổi của chính mình.
 

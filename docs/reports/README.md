@@ -36,7 +36,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | # | Chỗ lệch | Ghi chú |
 | --- | --- | --- |
 | 1 | THREAT-FR-009: SRS cũ ghi mất heartbeat > 60 s; code đánh dấu OFFLINE sau 30 s (job quét mỗi 10 s) | SRS mới ghi theo code (BR-10) |
-| 2 | Technician không bật/tắt relay và không xác nhận cảnh báo; Admin cũng không (ENV-FR-016, ALERT-FR-009); route hiện cho cả `TECHNICIAN`, `ADMIN` (can thiệp tay) và `TECHNICIAN` (xác nhận) | Bỏ `TECHNICIAN`, `ADMIN` khỏi `requireRole` của hai route; `api-spec.yaml`; test 403 |
+| 2 | Technician không bật/tắt relay và không xác nhận cảnh báo; Admin cũng không (ENV-FR-016, ALERT-FR-009); lịch loa chỉ Farm Owner, lịch sử can thiệp tay chỉ Farm Owner và Domain Expert (§2.4, ENV-FR-019); route hiện cho cả `TECHNICIAN`, `ADMIN` (can thiệp tay, lịch loa `PUT .../speaker-schedule`, lịch sử `GET .../relay-overrides`) và `TECHNICIAN` (xác nhận) | Bỏ `TECHNICIAN`, `ADMIN` khỏi `requireRole` của các route này; `api-spec.yaml`; test 403 |
 | 3 | `DeviceStatus` có `DEGRADED`, `ERROR` nhưng không chỗ nào trong code gán hai trạng thái này | Bỏ khỏi enum hoặc thêm luồng gán; state machine ở mục 6.6 chưa có hai trạng thái này |
 | 4 | `HarvestStatus` có `ARCHIVED` nhưng code không gán | Tương tự mục 3 |
 | 5 | Tạo mẻ thu hoạch không kiểm tra số tổ/khối lượng > 0 và ngày không ở tương lai | MARKET-FR-001 hiện ghi theo code; nên thêm validate rồi siết tiêu chí |
