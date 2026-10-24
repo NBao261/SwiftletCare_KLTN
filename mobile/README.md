@@ -32,4 +32,4 @@ types/          Enum khớp backend/src/types/domain.types.ts (Report 4 §6)
 
 ## Trạng thái màn hình
 
-Phần lớn màn hình là stub — implement theo Report 3, luồng chính trước: thiết lập thiết bị bằng QR (MF-10), cảnh báo + push, dashboard, live stream. Tab `Tickets` là luồng phụ (Report 3 §3.12.1, SF-02): giữ chạy, không mở rộng. Route `livestream/[zoneId]` phải theo camera của nhà yến (VISION-FR-013, Report 3 §2.8).
+Phần lớn màn hình là stub — implement theo Report 3, luồng chính trước: thiết lập thiết bị bằng QR (MF-10), cảnh báo + push, dashboard, live stream. Tab `Tickets` và route `ticket/[ticketId]` đã ra ngoài phạm vi (Report 3 §8, không còn ticket): chỉ được gỡ. Route `livestream/[zoneId]` phải theo camera của nhà yến (VISION-FR-013, Report 3 §2.8).

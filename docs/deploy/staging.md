@@ -150,4 +150,4 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 - cảnh báo suy luận đang chờ kết luận (MF-08);
 - số đếm 5 phút và bản ghi phiên của ≥ 7 ngày (MF-06);
 - telemetry ≥ 1 ngày cho dự báo và đánh giá sức khỏe (MF-05, MF-11);
-- một ticket đang mở.
+- một bơm đã quá giới hạn giờ chạy (cảnh báo `MAINTENANCE_DUE`).

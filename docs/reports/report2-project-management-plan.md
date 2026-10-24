@@ -125,7 +125,7 @@ R = responsible, A = accountable, C = consulted.
 | Firmware, hardware | A, R | C | | | |
 | AI pipeline, model | A, R | | | | |
 | Backend core (MQTT, alerts, jobs) | A, R | R | | | C |
-| Backend devices, setup, tickets | C | A, R | | | |
+| Backend devices, setup, ticket removal | C | A, R | | | |
 | Backend expert module | C | | | | A, R |
 | Backend daily health and reports | C | | | A, R | C |
 | Web – Farm Owner | | | A, R | | |

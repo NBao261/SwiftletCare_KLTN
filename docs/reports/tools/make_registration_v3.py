@@ -36,15 +36,16 @@ set2(42,'Alerts:','Receive real-time alerts in the web and mobile applications, 
 set2(47,'Review:','Access the environmental data, control performance, flock trends, daily health statuses and health reports of the farms the expert is invited to.')
 after(49,'Rating:','Rate each day of the house from own observation before the system status is shown, so that the agreement between the system and the practitioners can be measured.')
 # C.4
-set2(52,'Technician:','Install devices on an installation ticket (following the same setup steps as the Farm Owner), and handle maintenance requests and firmware updates.')
-set2(53,'Administrator:','Manage user accounts, the device stock with its printed labels, and system-wide default settings.')
+set2(52,'Technician:','Set up, move and remove devices on any farm with the same steps as the Farm Owner, diagnose them remotely, and send restarts, configuration pushes and firmware updates; no relay control and no access to the environmental data.')
+set2(53,'Administrator:','Manage user and Technician accounts, the device stock with its printed labels, system-wide default settings and the audit log.')
 # D
+set2(58,'Flow 4: Equipment Fault Handling:',P[58].runs[1].text.strip()+' An alert that nobody acknowledges is sent again, and a pump or fan that reaches its service limit raises a maintenance alert.')
 set2(60,'Flow 6: Bird Counting Session:','During the morning exit and evening return sessions, the AI pipeline detects and tracks birds at the entrance, counts their crossings of the ring around the entrance hole in each direction and publishes the counts of the house, while the live stream shows a box on each tracked bird. At the end of the day the return rate is computed; a drop of more than the house\'s threshold (default 20%) against the average of the previous 7 days raises an alert.')
 set2(62,'Flow 8: Expert Validation & Tuning:','The system produces the health reports and, when enough data is available, a suggested set of control coefficients. The Domain Expert reviews them, confirms or rejects the inferred alerts, approves or adjusts the parameters, and writes a conclusion for the Farm Owner. The new parameters are sent to the controller and their effect is visible in the control-performance chart.')
 set2(63,'Flow 9: Manual Override:','The Farm Owner switches an actuator from the application for a limited duration; the controller applies it, reports manual mode, and returns to automatic control when the duration expires. If the controller itself fails, the existing electrical switches of the house, outside the system, remain the manual fallback, and the current sensing reports when a load does not run as commanded.')
 set2(64,'Flow 10: Device Setup by the Farm Owner:','The Administrator adds the device to the stock and prints its label. The Farm Owner scans the label and the QR code of the floor in the mobile app and enters the Wi-Fi network on the device; the backend registers the device to that zone, sends it its zone and configuration at its first connection, and the application shows when the configuration is applied. Nothing about the farm is typed on the device.')
 after(64,'Flow 11: Daily Health Assessment & Periodic Reports:','After the evening session, the system rates the environment, air quality, return rate and abnormal noise of each house against the house\'s levels, combines them by agreement into one daily status (good, watch, action or insufficient data) with its reasons and the weather of the day, and notifies the Farm Owner and the Domain Expert. Each of them rates the day from their own observation before the status is shown. Weekly and monthly reports aggregate the days, and every report can be downloaded as PDF or CSV.')
-inserts.append((64,'Supporting flows:','Maintenance requests (tickets), account and access management, and harvest logging support the main flows; a Technician performs device setup only on an installation ticket.'))
+inserts.append((64,'Supporting flows:','Remote device maintenance by the Technician, account and access management, and harvest logging support the main flows; there are no maintenance tickets.'))
 # E
 set2(69,'Accuracy & Evidence:','Counting accuracy is evaluated against manual counts on recorded video under different lighting conditions (Precision, Recall, counting error); the forecast error is reported as mean absolute error; the agreement between the daily health status and the practitioners\' independent ratings is reported.')
 # 3.2
@@ -63,12 +64,13 @@ set1(91,'The hardware prototype will be built with fail-safe hardware watchdogs 
 rv=[
  'Scope adjustments at Review 2 (version 3, see the Record of Changes BM03):',
  '(8) The detection model is named "YOLO" without a version (declared in the design document), and birds are counted by crossings of a closed ring around the entrance hole instead of a virtual line.',
- '(9) Device setup becomes a main flow of the Farm Owner (Flow 10): scanning the device label and the floor QR code in the mobile app; the Technician installs devices only on an installation ticket.',
+ '(9) Device setup becomes a main flow of the Farm Owner (Flow 10): scanning the device label and the floor QR code in the mobile app; a Technician may follow the same steps on any farm.',
  '(10) The health assessment becomes a daily status per house combining the sources by agreement, with daily, weekly and monthly reports exportable to PDF and CSV, rated by the Farm Owner and the Domain Expert (Flow 11).',
  '(11) Weather data from a public weather API is used as context for the health assessment, never to drive the actuators.',
  '(12) The controller board measures the current of the pump and the fan to detect a load that does not run as commanded.',
  '(13) Bypass switches are removed: the test house is borrowed and cannot be rewired; its existing switches remain the manual fallback.',
  '(14) Both mobile push notifications and a Telegram bot are committed, and predator detection is removed from the possible extensions.',
+ '(15) Maintenance tickets, service levels (SLA), Technician regions and ticket statistics are removed: the Technician is the technical role that works on the devices of every farm without controlling relays; faults reach the Farm Owner as alerts that are sent again until acknowledged, and pump or fan wear raises a maintenance alert.',
 ]
 # apply inserts from the bottom up so indices stay valid
 def clone_after(src_par, ref_par):

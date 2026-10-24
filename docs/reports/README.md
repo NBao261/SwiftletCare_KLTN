@@ -5,7 +5,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | File | Report | Trạng thái |
 | --- | --- | --- |
 | `report3-srs.md` | Report 3 – SRS | Bản nháp 3.0.0, cần điền các chỗ `[TEAM: …]` |
-| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 17 state machine, 14 activity diagram) | Bản nháp 1.0.7, đã có đề xuất staging (VPS + PC cũ tại nhà thành viên kéo hình camera qua Internet, `docs/deploy/staging.md`); còn `[TEAM: …]` (nhà cung cấp VPS, tên miền, công cụ AI) |
+| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 17 state machine, 14 activity diagram) | Bản nháp 1.0.8, đã có đề xuất staging (VPS + PC cũ tại nhà thành viên kéo hình camera qua Internet, `docs/deploy/staging.md`); còn `[TEAM: …]` (nhà cung cấp VPS, tên miền, công cụ AI) |
 | `registration-v3.md` | Phiếu đăng ký bản đề xuất chốt v3 (nội dung phiếu, đã bỏ số điện thoại) | Bản nháp 23/10/2026; bản docx để nộp: `registration/` |
 | `bm03-record-of-changes.md` | BM03 – Record of Changes (phiếu v2 → v3) | Bản nháp 23/10/2026; docx: `registration/` |
 | `report1-introduction.md` | Report 1 – Introduction | Bản nháp 1.0.0 |
@@ -20,7 +20,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 - File này **chỉ chứa yêu cầu**: actor, tiêu chí chấp nhận, NFR (chỉ số, ngưỡng, cách đo), vòng đời thực thể, truy vết tới phiếu đăng ký. Phần thiết kế (schema, API, MQTT, kiến trúc, môi trường) thuộc Report 4; tiến độ thuộc Project Tracking.
 - Mã FR giữ nguyên như `SwiftletCare_SRS.md` để code, test và commit đang trỏ tới vẫn đúng.
 - Phạm vi bám theo phiếu đăng ký **bản đề xuất chốt**, với giả định BM03 gồm các thay đổi: phiếu ghi "YOLO" không kèm phiên bản (phiên bản cụ thể khai báo trong Report 4); phát hiện thiên địch chuyển hẳn sang Out of scope; kênh ngoài ứng dụng cam kết **cả** push (FCM) và Telegram bot; Farm Owner tự setup thiết bị bằng QR (MF-10). Bản nháp các dòng BM03 ở mục bên dưới.
-- Độ ưu tiên: `M` = thuộc luồng chính, là ứng viên cho tính năng bắt buộc của Defense 1.1; `S` = luồng phụ (ticket, tài khoản, lắp đặt), giữ chạy được nhưng không đề xuất làm tính năng bắt buộc, để số test case cam kết tập trung vào hệ thống tự động.
+- Độ ưu tiên: `M` = thuộc luồng chính, là ứng viên cho tính năng bắt buộc của Defense 1.1; `S` = luồng phụ (bảo trì thiết bị từ xa của Technician, tài khoản), giữ chạy được nhưng không đề xuất làm tính năng bắt buộc, để số test case cam kết tập trung vào hệ thống tự động.
 
 ### Chỗ nhóm phải điền trước khi gắn tag `review-2`
 
@@ -35,11 +35,11 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | # | Chỗ lệch | Ghi chú |
 | --- | --- | --- |
 | 1 | THREAT-FR-009: SRS cũ ghi mất heartbeat > 60 s; code đánh dấu OFFLINE sau 30 s (job quét mỗi 10 s) | SRS mới ghi theo code (BR-10) |
-| 2 | Technician chỉ can thiệp tay khi đang được giao một ticket mở của farm đó, chỉ xác nhận cảnh báo gắn với ticket của mình; Admin không được cả hai (ENV-FR-016, ALERT-FR-009); route hiện cho cả `TECHNICIAN`, `ADMIN` (can thiệp tay) và `TECHNICIAN` không điều kiện (xác nhận) | Kiểm tra ticket được giao ở service; báo Farm Owner khi Technician can thiệp tay |
+| 2 | Technician không bật/tắt relay và không xác nhận cảnh báo; Admin cũng không (ENV-FR-016, ALERT-FR-009); route hiện cho cả `TECHNICIAN`, `ADMIN` (can thiệp tay) và `TECHNICIAN` (xác nhận) | Bỏ `TECHNICIAN`, `ADMIN` khỏi `requireRole` của hai route; `api-spec.yaml`; test 403 |
 | 3 | `DeviceStatus` có `DEGRADED`, `ERROR` nhưng không chỗ nào trong code gán hai trạng thái này | Bỏ khỏi enum hoặc thêm luồng gán; state machine ở mục 6.6 chưa có hai trạng thái này |
 | 4 | `HarvestStatus` có `ARCHIVED` nhưng code không gán | Tương tự mục 3 |
 | 5 | Tạo mẻ thu hoạch không kiểm tra số tổ/khối lượng > 0 và ngày không ở tương lai | MARKET-FR-001 hiện ghi theo code; nên thêm validate rồi siết tiêu chí |
-| 6 | `PREDATOR_DETECTED` còn trong `AlertType` và `TicketType` dù đã ra ngoài phạm vi | Chỉ được gỡ, không mở rộng |
+| 6 | `PREDATOR_DETECTED` còn trong `AlertType` dù đã ra ngoài phạm vi (`TicketType` bỏ cả cùng ticket, #41) | Chỉ được gỡ, không mở rộng |
 | 7 | Đếm chim: **backend đã xong** (nhận số đếm, bản ghi theo House, số đếm 5 phút, `LOW_RETURN_RATE`, heartbeat nút AI, token live stream, vòng đếm). Pipeline (PR #88): theo vết cả khung trên 2 ô, ngoại suy ở lỗ. Còn thiếu: **model tự train** (model COCO không nhận ra chim trong ảnh IR), `stream.py` đã gửi số đếm, số đếm 5 phút, heartbeat và đẩy video (PR #89, lên develop qua PR #95) nhưng chưa chạy thử với staging, chưa đo FPS trên PC ở nhà yến (2 ô với model COCO ~7–12 FPS trên laptop, số đo chưa tin cậy; NFR-04 cần 25), màn xem live/vẽ vòng/số đếm ở web và mobile, VISION-FR-016 đánh giá độ chính xác | VISION-FR-001…007, 012…014, 016, 018 (giao diện), THREAT-FR-010, NFR-04 |
 | 8 | ~~ENV-FR-023 công tắc bypass~~ | **Đã bỏ** khỏi phạm vi (BM03 #8): nhà yến thử nghiệm đi mượn, không đấu thêm được. Nhóm cần ghi cách chạy tay bơm/quạt bằng công tắc có sẵn của nhà khi bộ điều khiển hỏng (Report 3 §8.1 `[TEAM]`) |
 | 9 | Giao diện Domain Expert: **web đã có** (PR #91, `/expert/*`: tổng quan, kết luận cảnh báo suy luận, tinh chỉnh ngưỡng/hệ số/tham số phát hiện, phân tích, báo cáo sức khỏe) nhưng còn ghi theo SRS v2.1.4, có dữ liệu giả dự phòng (`data/mocks/`, `services/expert/expertFallback.service.ts`), đặt ở `expert/` + `services/` thay vì `domain-expert/` + `apis/` (FE_Design §12); chưa nối `DISMISSED`, báo cáo theo House, đánh giá theo ngày (MF-11). Mobile chưa có màn chuyên gia | Đối chiếu từng màn với Report 3 §2.4 và EXPERT-FR; bỏ dữ liệu giả khi API đã có (FE_Design §7) |
@@ -74,10 +74,16 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 38 | ANALYTICS-FR-014 đánh giá trên đợt chạy thật: chưa có dữ liệu | Chạy ≥ 14 ngày ở nhà yến, người nuôi đánh giá mỗi ngày; tính mức trùng khớp, kappa, báo nhầm theo từng nguồn so với kết hợp |
 | 39 | Firmware chỉ nối MQTT cổng 1883, không TLS (`MQTTManager.cpp`, `Config.h`): không nối được broker staging qua 8883 | Môi trường build `cloud` + CA Let's Encrypt theo `docs/bird-counting-plan.md` §15.7; lùi: mở tạm 1883 có mật khẩu + ACL (`docs/deploy/staging.md` §4) |
 | 40 | Staging chưa có trong repo: `deploy/docker-compose.staging.yml`, Dockerfile backend/web, Caddyfile, tls-proxy, `.env.staging.example`, script seed demo đủ dữ liệu cho mọi kịch bản Phụ lục A2 | `docs/deploy/staging.md` §3, §5; bản mẫu ở plan §15.3–15.5 |
+| 41 | Bỏ ticket (BM03 #9, Report 3 §8): code còn đủ module ticket — `ticket.service` (1.656 dòng), `ticketChat`, `maintenanceSchedule`, route `/tickets`, `/maintenance-schedules`, job `slaBreach`, `ticketQueue`, `maintenanceSchedule`, cài đặt SLA và cách gán ticket (`/system/settings/sla`, `ticket-routing`), `PUT /tickets/:id/admin-override`; 16 file ngoài module gọi ticket (`alertEscalation`, `relayUsage`, `device`, `farm`, `admin`, `system`, `farmAccess`, socket…); 17 file test; web có trang ticket ở Farm Owner, Technician (kèm trang Maintenance) và Admin; mobile có tab `tickets` và `ticket/[ticketId]`; enum `TicketType/Priority/Status` ở 3 phía | Gỡ theo thứ tự rủi ro thấp → cao: ẩn giao diện trước, rồi gỡ backend cùng `api-spec.yaml` trong một PR; migration xoá `tickets`, `ticketmessages`, `maintenanceschedules`; sinh lại `init.mongo.js` |
+| 42 | ALERT-FR-015 gửi lại cảnh báo chưa ai xác nhận: `alertEscalation.job.ts` đang tạo ticket (15 phút CRITICAL/HIGH, 1 giờ `NODE_OFFLINE`) | Đổi thành gửi lại một lần cho Farm Owner qua kênh họ chọn; giữ mốc thời gian |
+| 43 | ALERT-FR-016 `MAINTENANCE_DUE`: `relayUsage.service.ts` đang tạo ticket MAINTENANCE khi bơm/quạt quá giờ chạy hoặc số lần đóng cắt; bộ đếm reset lúc tạo | Thêm `MAINTENANCE_DUE` (LOW) vào `AlertType` ở 3 phía; reset bộ đếm khi Farm Owner xác nhận cảnh báo |
+| 44 | FARM-FR-009 Technician trên mọi farm: code giới hạn theo vùng (`assigned_regions`, `farm.region`, `regions.util.ts`, `isAssignedTechnician` trong `farmAccess.util.ts`, 18 file); Technician còn tạo được House/Zone; chưa báo Farm Owner khi Technician đăng ký, dời, gỡ thiết bị hay gửi lệnh từ xa | Technician xem mọi farm (chỉ cấu trúc, thiết bị, cảnh báo thiết bị); bỏ vùng và `migrate:regions`; thông báo trong app cho Farm Owner |
+| 45 | Admin không còn quản lý farm (FARM-FR-001, 002, SYSTEM-FR-003): code cho Admin tạo farm hộ (`owner_email`), xoá farm, đổi vùng, tạo House/Zone; web Admin có `AdminFarmsPage`, `AdminFarmDetailPage`, `AdminFarmHousePage`; tổng quan đếm ticket theo ưu tiên | Bỏ các quyền và trang này; tổng quan chỉ còn số farm, zone, thiết bị theo trạng thái, tài khoản |
+| 46 | AUTH-FR-005c: Admin còn sửa hồ sơ Technician (`PUT /admin/technicians/:id/profile`) và gán vùng (`.../regions`) | Chỉ giữ tạo tài khoản và cấp lại mật khẩu tạm |
 
 ### BM03 (Record of Changes) và phiếu v3
 
-Đã soạn: `bm03-record-of-changes.md` (8 dòng thay đổi, tiếng Anh) và `registration-v3.md` (nội dung phiếu v3, mục 4 thêm (8)–(14)). Hai file Word sinh từ đó nằm ở `registration/`. Report 3 §2.2 và §7.1 đã truy vết theo phiếu v3 (Flow 10, 11; C.2 Device Setup, Daily Health & Reports; C.3 Rating). Sửa một thay đổi thì sửa cả ba chỗ: BM03, phiếu v3, mục 1.1 của Design Brief.
+Đã soạn: `bm03-record-of-changes.md` (9 dòng thay đổi, tiếng Anh) và `registration-v3.md` (nội dung phiếu v3, mục 4 thêm (8)–(15)). Hai file Word sinh từ đó nằm ở `registration/`. Report 3 §2.2 và §7.1 đã truy vết theo phiếu v3 (Flow 10, 11; C.2 Device Setup, Daily Health & Reports; C.3 Rating). Sửa một thay đổi thì sửa cả ba chỗ: BM03, phiếu v3, mục 1.1 của Design Brief.
 
 ### Trước khi chạy prompt tự rà soát (BM02)
 

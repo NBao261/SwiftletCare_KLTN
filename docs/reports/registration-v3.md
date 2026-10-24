@@ -1,6 +1,6 @@
 # Capstone Project Register — SwiftletCare (proposed final version v3)
 
-> Text of the registration form submitted for Review 2 (`registration/FA26_SE_Capstone_Project_Register_SwiftletCare_v3.docx`), kept in Markdown so that the self-review prompt and the reports can cite it. Changes from v2 are listed in the Record of Changes (`bm03-record-of-changes.md`) and in section 4, items (8)–(14). Phone numbers are left out of the repository copy; the team adds them to the submitted file.
+> Text of the registration form submitted for Review 2 (`registration/FA26_SE_Capstone_Project_Register_SwiftletCare_v3.docx`), kept in Markdown so that the self-review prompt and the reports can cite it. Changes from v2 are listed in the Record of Changes (`bm03-record-of-changes.md`) and in section 4, items (8)–(15). Phone numbers are left out of the repository copy; the team adds them to the submitted file.
 
 | Field | Value |
 | --- | --- |
@@ -104,9 +104,9 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 #### 4. Supporting roles (outside the main flow)
 
-**Technician:** Install devices on an installation ticket (following the same setup steps as the Farm Owner), and handle maintenance requests and firmware updates.
+**Technician:** Set up, move and remove devices on any farm with the same steps as the Farm Owner, diagnose them remotely, and send restarts, configuration pushes and firmware updates; no relay control and no access to the environmental data.
 
-**Administrator:** Manage user accounts, the device stock with its printed labels, and system-wide default settings.
+**Administrator:** Manage user and Technician accounts, the device stock with its printed labels, system-wide default settings and the audit log.
 
 ### D. Main flow
 
@@ -116,7 +116,7 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **Flow 3: Offline Operation & Recovery:** When the internet connection is lost, the controller keeps regulating with its stored configuration and buffers telemetry in flash memory; when the connection returns, the buffered data is uploaded. If the controller hangs, the hardware watchdog restarts it and an unexpected-restart alert is reported.
 
-**Flow 4: Equipment Fault Handling:** If the pump has run for an accumulated 5 minutes without humidity rising, the system stops misting for that session and raises a pump-dry alert. If a sensor stops responding or returns implausible values, its reading is excluded from control decisions, the affected loop holds a safe state, and a sensor alert is raised. If the speaker is on but the measured sound level stays far below its baseline, a speaker-failure alert is raised.
+**Flow 4: Equipment Fault Handling:** If the pump has run for an accumulated 5 minutes without humidity rising, the system stops misting for that session and raises a pump-dry alert. If a sensor stops responding or returns implausible values, its reading is excluded from control decisions, the affected loop holds a safe state, and a sensor alert is raised. If the speaker is on but the measured sound level stays far below its baseline, a speaker-failure alert is raised. An alert that nobody acknowledges is sent again, and a pump or fan that reaches its service limit raises a maintenance alert.
 
 **Flow 5: Early Warning by Forecast:** Every 10 minutes the system forecasts humidity and temperature for the next 60 minutes; if a value that is still in range is predicted to cross its threshold, an early-warning alert is raised with the expected time.
 
@@ -132,7 +132,7 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **Flow 11: Daily Health Assessment & Periodic Reports:** After the evening session, the system rates the environment, air quality, return rate and abnormal noise of each house against the house's levels, combines them by agreement into one daily status (good, watch, action or insufficient data) with its reasons and the weather of the day, and notifies the Farm Owner and the Domain Expert. Each of them rates the day from their own observation before the status is shown. Weekly and monthly reports aggregate the days, and every report can be downloaded as PDF or CSV.
 
-**Supporting flows:** Maintenance requests (tickets), account and access management, and harvest logging support the main flows; a Technician performs device setup only on an installation ticket.
+**Supporting flows:** Remote device maintenance by the Technician, account and access management, and harvest logging support the main flows; there are no maintenance tickets.
 
 ### E. Non-functional requirement
 
@@ -204,7 +204,7 @@ Default temperature, humidity and light thresholds are taken from the swiftlet-f
 
 (8) The detection model is named "YOLO" without a version (declared in the design document), and birds are counted by crossings of a closed ring around the entrance hole instead of a virtual line.
 
-(9) Device setup becomes a main flow of the Farm Owner (Flow 10): scanning the device label and the floor QR code in the mobile app; the Technician installs devices only on an installation ticket.
+(9) Device setup becomes a main flow of the Farm Owner (Flow 10): scanning the device label and the floor QR code in the mobile app; a Technician may follow the same steps on any farm.
 
 (10) The health assessment becomes a daily status per house combining the sources by agreement, with daily, weekly and monthly reports exportable to PDF and CSV, rated by the Farm Owner and the Domain Expert (Flow 11).
 
@@ -215,3 +215,5 @@ Default temperature, humidity and light thresholds are taken from the swiftlet-f
 (13) Bypass switches are removed: the test house is borrowed and cannot be rewired; its existing switches remain the manual fallback.
 
 (14) Both mobile push notifications and a Telegram bot are committed, and predator detection is removed from the possible extensions.
+
+(15) Maintenance tickets, service levels (SLA), Technician regions and ticket statistics are removed: the Technician is the technical role that works on the devices of every farm without controlling relays; faults reach the Farm Owner as alerts that are sent again until acknowledged, and pump or fan wear raises a maintenance alert.

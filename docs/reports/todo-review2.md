@@ -40,18 +40,18 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | | Dòng | Nội dung |
 |---|---|---|
 | [ ] | 7, 10, 12 | Mã đề tài, GVHD, ngày |
-| [ ] | 94 | REF-9 MS 2273:2012 — có bản đầy đủ hay bỏ |
-| [ ] | 95 | REF-10 Nghị định 13/2020 Điều 25 — đọc nguyên văn, giờ được phát loa, quy định tỉnh |
-| [ ] | 233 | Cấu hình PC cũ làm AI node (CPU, RAM, GPU nếu có) |
-| [ ] | 490 | BR-01 độ ẩm sàn 75 % hay 80 % — hỏi người nuôi yến |
-| [ ] | 501 | BR-07 giờ phát loa nằm trong khung pháp luật cho phép |
-| [ ] | 608 | NFR-08 tỷ lệ tự động, % trong ngưỡng |
-| [ ] | 609 | NFR-09 Precision/Recall/sai số đếm (ban ngày, hồng ngoại) |
-| [ ] | 611 | NFR-11 MAE dự báo 60 phút |
-| [ ] | 612 | NFR-13 mốc 10 phút setup thiết bị |
-| [ ] | 613 | NFR-14 mức trùng khớp và kappa |
-| [ ] | 887 | Cách chạy tay bơm/quạt khi bộ điều khiển hỏng (theo cách đấu của nhà yến đang mượn) |
-| [ ] | 904 | Ngày phiên bản 3.0.0 |
+| [ ] | 95 | REF-9 MS 2273:2012 — có bản đầy đủ hay bỏ |
+| [ ] | 96 | REF-10 Nghị định 13/2020 Điều 25 — đọc nguyên văn, giờ được phát loa, quy định tỉnh |
+| [ ] | 234 | Cấu hình PC cũ làm AI node (CPU, RAM, GPU nếu có) |
+| [ ] | 479 | BR-01 độ ẩm sàn 75 % hay 80 % — hỏi người nuôi yến |
+| [ ] | 490 | BR-07 giờ phát loa nằm trong khung pháp luật cho phép |
+| [ ] | 595 | NFR-08 tỷ lệ tự động, % trong ngưỡng |
+| [ ] | 596 | NFR-09 Precision/Recall/sai số đếm (ban ngày, hồng ngoại) |
+| [ ] | 598 | NFR-11 MAE dự báo 60 phút |
+| [ ] | 599 | NFR-13 mốc 10 phút setup thiết bị |
+| [ ] | 600 | NFR-14 mức trùng khớp và kappa |
+| [ ] | 867 | Cách chạy tay bơm/quạt khi bộ điều khiển hỏng (theo cách đấu của nhà yến đang mượn) |
+| [ ] | 884 | Ngày phiên bản 3.0.0 |
 
 ### `docs/reports/report4-sdd.md`
 
@@ -62,8 +62,8 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | [ ] | 158 | Phiên bản mạch nhóm tự vẽ |
 | [ ] | 183 | Nhà cung cấp VPS và tên miền staging (đề xuất ở `docs/deploy/staging.md`) |
 | [ ] | 192, 193 | Công cụ AI và model nhóm dùng |
-| [ ] | 1333 | Nơi chép bản sao lưu MongoDB ra ngoài VPS |
-| [ ] | 1366–1373 | Ngày các phiên bản 1.0.0 → 1.0.7 |
+| [ ] | 1302 | Nơi chép bản sao lưu MongoDB ra ngoài VPS |
+| [ ] | 1336–1344 | Ngày các phiên bản 1.0.0 → 1.0.8 |
 
 ### Các hồ sơ mới
 
@@ -104,7 +104,9 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 
 | | Việc | Ưu tiên | Người | Nguồn |
 |---|---|:---:|---|---|
-| [ ] | **Quyền theo Report 3 §2.4:** bỏ `TECHNICIAN`, `ADMIN` khỏi sửa/reset ngưỡng Zone, hệ số mờ, ngưỡng theo node; Technician chỉ can thiệp tay và xác nhận cảnh báo khi giữ ticket mở của farm; Admin không làm hai việc đó; báo Farm Owner khi Technician can thiệp tay | P0 | | #2, #15 |
+| [ ] | **Quyền theo Report 3 §2.4:** bỏ `TECHNICIAN`, `ADMIN` khỏi sửa/reset ngưỡng Zone, hệ số mờ, ngưỡng theo node; Technician và Admin không can thiệp tay, không xác nhận cảnh báo | P0 | | #2, #15 |
+| [ ] | **Bỏ ticket (BM03 #9):** gỡ module ticket, chat, SLA, cách gán, hàng đợi, KPI, lịch bảo trì, admin override (route, service, job, model, `api-spec.yaml`, test); migration xoá collection; enum ticket 3 phía; `alertEscalation` gửi lại cảnh báo thay vì tạo ticket (ALERT-FR-015); `relayUsage` sinh `MAINTENANCE_DUE` (ALERT-FR-016) | P0 | | #41, #42, #43 |
+| [ ] | **Technician trên mọi farm (FARM-FR-009):** bỏ vùng (`assigned_regions`, `farm.region`, `regions.util.ts`, `migrate:regions`); Technician xem cấu trúc, thiết bị, cảnh báo thiết bị của mọi farm, không tạo House/Zone; báo Farm Owner mỗi thao tác thiết bị của Technician; Admin không tạo/xoá/xem farm, tổng quan bỏ ticket; Admin chỉ tạo tài khoản Technician | P0 | | #44, #45, #46 |
 | [ ] | **MF-10:** cho `FARM_OWNER` đăng ký/dời/gỡ/thay thiết bị (farm của mình), bỏ `ADMIN` ở đăng ký; dời thiết bị đang offline (lưu Zone mới, heartbeat tự sửa topic); cho cấp lại key khi thiết bị không còn hoạt động; sửa comment FARM-FR-003c cũ | P0 | | #25, #26, #27 |
 | [ ] | **MF-11:** job `healthAssessment` hằng ngày, collection `househealthdays`, mức chỉ số theo House (chuyên gia sửa), luật kết hợp BR-29, mưa BR-30 | P0 | | #32 |
 | [ ] | Đánh giá theo ngày của người nuôi (route ghi đánh giá; không cho sửa sau khi đã xem trạng thái) | P0 | | #33 |
@@ -118,7 +120,7 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | [ ] | ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận | P1 | | #23 |
 | [ ] | VISION-FR-019/020: lịch đếm theo mùa/tạm thời theo House; backend tính phiên từ số đếm 5 phút; job so tỷ lệ theo giờ kết thúc phiên chiều; đánh dấu phiên không đầy đủ | P1 | | #20, #24 |
 | [ ] | ALERT-FR-002: gửi FCM thật; route đăng ký/huỷ device token; xoá token FCM báo không hợp lệ | P0 | | #12 |
-| [ ] | `ACTUATOR_FAULT`: nhận từ firmware, mức HIGH, sinh ticket `ACTUATOR_FAILURE` (enum 3 phía) | P1 | | #37 |
+| [ ] | `ACTUATOR_FAULT`: nhận từ firmware, mức HIGH (enum 3 phía) | P1 | | #37 |
 | [ ] | ENV-FR-007: bắt buộc ghi nguồn khi Admin đổi ngưỡng mặc định | P1 | | #16 |
 | [ ] | MARKET-FR-001: kiểm tra số tổ/khối lượng > 0, ngày không ở tương lai | P2 | | #5 |
 | [ ] | (Optional) ENV-FR-026 báo chuyên gia khi ngưỡng mặc định đổi | P2 | | #16 |
@@ -171,11 +173,12 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 
 | | Việc | Module | Ưu tiên | Nguồn |
 |---|---|---|:---:|---|
-| [ ] | Gỡ `PREDATOR_DETECTED` khỏi `AlertType`, `TicketType` (3 phía cùng PR) | BE/FE/Mobile | P1 | #6 |
+| [ ] | Gỡ `PREDATOR_DETECTED` khỏi `AlertType` (3 phía cùng PR) | BE/FE/Mobile | P1 | #6 |
+| [ ] | Gỡ màn ticket: Farm Owner (`FarmOwnerTickets*`), Technician (`TechnicianTickets*`, `TechnicianMaintenancePage`), Admin (`AdminTickets*`, phần SLA/gán ticket ở `AdminSystemSettingsPage`, `AdminFarms*`); mobile tab `tickets`, `ticket/[ticketId]` | Web/Mobile | P0 | #41, #45 |
 | [ ] | Quyết `ERROR`/`DEGRADED` (thiết bị) và `ARCHIVED` (thu hoạch): bỏ khỏi enum hoặc có luồng gán | BE/FE/Mobile | P2 | #3, #4 |
 | [~] | Gỡ phần cũ: Marketplace, nhãn `BIRD_PANIC`, relay sưởi trên màn đã xong (PR #93); còn `sales-staff/` + role `SALES_STAFF`, trường `heating` trong `RelayStates`, tùy chọn Zalo/SMS ở `SettingsPage` | Web | P0 | #30, FE_Design 13.14 |
 | [ ] | Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician (`ThresholdsModal`) | Web | P0 | #15 |
-| [ ] | Ẩn nút can thiệp tay/xác nhận cảnh báo với Admin, và với Technician không giữ ticket | Web | P1 | FE_Design 12.0 c |
+| [ ] | Ẩn nút can thiệp tay/xác nhận cảnh báo với Admin và Technician | Web | P1 | FE_Design 12.0 c |
 | [ ] | `HARVEST_ROLES`: bỏ Admin, thêm chuyên gia chỉ xem | Web | P2 | FE_Design 12.0 c dòng 4 |
 | [ ] | Đổi chữ "PLC" thành "Bộ điều khiển" (`zone.plc` trong `farmStructure.i18n.ts`, `ScadaModeBanner`); gỡ trang stub `FarmOwnerLiveStreamPage` còn ghi "RPi" (live stream đã ở trang Vision) | Web | P2 | FE_Design 13.14 |
 | [ ] | `/onboarding` → `FarmOwnerDeviceSetupPage` mở cho Farm Owner + Technician | Web | P1 | FE_Design 12.0 c dòng 5b |
