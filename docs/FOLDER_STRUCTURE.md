@@ -58,15 +58,15 @@ docs/
 ├── api/                    # api-spec.yaml (OpenAPI 3.0 — nguồn sự thật của API) + README
 ├── bird-counting-plan.md   # kế hoạch triển khai đếm chim (module VISION)
 ├── evidence-register.md   # sổ tài liệu tham khảo & minh chứng cho các con số, thiết bị (Report 3 A-3, REF-5, §4.5)
-├── diagrams/               # sơ đồ draw.io: context-diagram/, system-architecture/ (file chính: artifacts/diagram.drawio)
+├── diagrams/               # sơ đồ draw.io cũ (trước Review 1): context-diagram/, system-architecture/; sơ đồ hiện hành nằm trong Report 4
 ├── hardware/               # BOM.md, components-guide.md (linh kiện + đấu nối)
-├── reports/                # Hồ sơ Review 2 (tiếng Anh): phiếu v3 + BM03, Report 1–5, Project Tracking, Design Brief + README
+├── reports/                # Hồ sơ Review 2 (tiếng Anh): phiếu v3 + BM03, Report 1–5, Project Tracking, Design Brief + README; todo-review2.md, todo-remove-platform.md (tiếng Việt)
 │   ├── registration/       #   phiếu v3 và BM03 dạng Word (sinh từ Markdown, không có số điện thoại)
 │   ├── design-brief/       #   BM01 dạng Word (sinh từ design-brief.md)
 │   ├── report5/            #   danh sách test case (tc.py) + script sinh report5-test.md
 │   ├── templates/          #   biểu mẫu trống BM01, BM03 của môn
 │   └── tools/              #   script điền biểu mẫu Word từ Markdown
-├── deploy/                 # staging.md — môi trường staging (VPS + PC cũ ở nhà yến làm AI node)
+├── deploy/                 # staging.md — môi trường staging (VPS + PC cũ tại nhà một thành viên làm AI node, đọc camera qua Internet)
 ├── database/               # init.mongo.js — database script sinh từ model Mongoose (`npm run db:script`), không sửa tay
 ├── sprint-reviews/         # biên bản review theo sprint
 ├── test-reports/           # báo cáo kiểm thử (đang trống)

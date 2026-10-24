@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.10.0 · **Cập nhật:** 23/10/2026 · **Thay thế:** v2.9.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.11.0 · **Cập nhật:** 24/10/2026 · **Thay thế:** v2.10.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,14 @@
 ---
 
 ## 0. Changelog
+
+### v2.10.0 → v2.11.0 (bỏ ticket, SLA, vùng — Report 3 §8, BM03 dòng 9)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Ticket, chat ticket, SLA, lịch bảo trì, vùng của Technician và việc Admin quản lý farm ra ngoài phạm vi** (Report 3 §8). Màn và component ticket còn trong code chỉ được gỡ, không thêm hay sửa rộng; việc gỡ theo `docs/reports/todo-remove-platform.md` (PR 2 ẩn, PR 6 xoá). Các mục 2.4, 2.10, 6.2, 7, 12.2, 13.4 và Phụ lục D vẫn tả code hiện có cho tới khi gỡ xong. |
+| 2 | **12.0 viết lại:** Technician là vai trò kỹ thuật, thấy nhà/tầng/thiết bị và cảnh báo thiết bị của **mọi farm**, không xem dữ liệu môi trường; đăng ký, dời, gỡ thiết bị, lệnh từ xa, OTA; **không** bật/tắt relay, không sửa ngưỡng/hệ số, không xác nhận cảnh báo; Farm Owner được báo mỗi thao tác thiết bị của Technician. Admin không tạo, xem hay quản lý farm. 12.0 c thêm dòng gỡ ticket và màn farm của Admin. |
+| 3 | **12.8 `OPS_ROLES`:** nút relay và xác nhận cảnh báo chỉ Farm Owner thấy. **13.4:** phòng `ticket:<id>` và sự kiện chat ticket sẽ gỡ. **13.14:** thêm nợ ticket/vùng. Cảnh báo `ACTIVE` quá 15 phút giờ được **gửi lại** cho Farm Owner (ALERT-FR-015), không còn sinh ticket; loại cảnh báo mới `MAINTENANCE_DUE` (ALERT-FR-016) cần nhãn ở `enumLabels.i18n.ts` khi backend có. |
 
 ### v2.9.0 → v2.10.0 (theo Report 3 – SRS 3.0.0 và Report 4 – SDD)
 
@@ -335,7 +343,7 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 - Đổi màu/nhãn một cấp → sửa đúng 1 dòng trong `severity.ts`/`severity.i18n.ts`; mọi badge đổi theo.
 - **Ticket đã kết thúc** (`CLOSED`, gồm cả huỷ) → badge ưu tiên về xám: `<PriorityBadge isMuted={isTicketFinished(ticket)} />`, màu `LEVEL_BADGE_MUTED_CLASS` (= màu cấp Thường). Chỉ ticket đang mở (Mới, Đang xử lý, Chờ xác nhận hiện trường) mới hiện màu Khẩn cấp/Cao, để không lẫn với việc đang cần làm.
 - **Cảnh báo đã xử lý** (`RESOLVED`) → badge mức độ cũng về xám: `<SeverityBadge isMuted={isAlertFinished(alert.status)} />` (`isAlertFinished` trong `constants/severity.ts`). Trên màn Farm Owner, cột/nhãn của 3 cấp ở yêu cầu hỗ trợ ghi **"Mức độ"** (không ghi "Ưu tiên"), cùng tên cột ở nhật ký cảnh báo.
-- Backend tự sinh ticket cho cảnh báo `CRITICAL`/`HIGH` chưa xác nhận sau 15 phút (TICKET-FR-002) = toàn bộ cấp Khẩn cấp.
+- Cảnh báo `CRITICAL`/`HIGH` chưa xác nhận sau 15 phút được backend **gửi lại** cho Farm Owner (ALERT-FR-015; code hiện vẫn sinh ticket — sẽ đổi, `docs/reports/todo-remove-platform.md` PR 3) = toàn bộ cấp Khẩn cấp.
 
 ### 2.5. Trạng thái an toàn / thiết bị
 
@@ -394,7 +402,7 @@ Các mốc của điểm cân bằng Zone (`ZoneBalanceCard`: ≥ 90 "Rất tố
 
 | `status` | Nhãn VI / EN | Nền | Chữ | Ý nghĩa |
 |---|---|---|---|---|
-| `ACTIVE` | Mới / New | `infoBlue/10` | `infoBlue` | Chưa ai xác nhận. Cấp Khẩn cấp để quá 15 phút thì BE tự tạo Ticket |
+| `ACTIVE` | Mới / New | `infoBlue/10` | `infoBlue` | Chưa ai xác nhận. Cấp Khẩn cấp để quá 15 phút thì BE gửi lại thông báo (ALERT-FR-015) |
 | `ACKNOWLEDGED` | Tiếp nhận / Received | `accent-600` | charcoal | Đã có người xác nhận — **chưa** có nghĩa là đã sửa |
 | `DISMISSED` ⏳ backend | Đã bác bỏ / Dismissed | `warmGray/10` | `graphite` | Chuyên gia (hoặc chủ farm khi farm chưa có chuyên gia) bác bỏ cảnh báo suy luận: không còn hiệu lực, không báo lại; đổi kết luận sang xác nhận thì về trạng thái trước (Report 3 §6.1, EXPERT-FR-003). Hiện người bác bỏ, lúc nào, lý do |
 | `RESOLVED` | Đã xử lý / Resolved | `warmGray/15` | `warmGray` | Sự cố đã hết (vượt ngưỡng không lặp lại 5 phút, thiết bị online lại, hoặc thiết bị bị gỡ) |
@@ -493,6 +501,8 @@ Font duy nhất: **Plus Jakarta Sans** (Google Fonts), weight 400–800.
 - Icon chỉ có hình (không chữ) phải có `aria-label` (13.11); icon trang trí cạnh chữ thêm `aria-hidden`.
 
 ### 2.10. Trạng thái ticket và thanh tiến độ — cấu hình dùng chung
+
+> **Ngoài phạm vi (Report 3 §8, v2.11.0):** ticket sẽ bị gỡ. Mục này chỉ áp dụng cho code ticket còn lại tới khi gỡ; không làm màn ticket mới. `Stepper` trơn vẫn dùng cho luồng khác (VD tiến trình thiết lập thiết bị MF-10).
 
 **[Bắt buộc]** Mọi role hiển thị trạng thái ticket và thanh các bước xử lý **chỉ import** từ các file dưới, không tự khai màu, nhãn, thứ tự hay danh sách bước:
 
@@ -773,7 +783,7 @@ Mọi từ điển dùng đúng các cặp dưới đây; thuật ngữ mới th
 | Đánh giá ngày (của người nuôi) | Daily rating | EXPERT-FR-012 |
 | Bằng chứng | Evidence | Số đo, số đếm chim, cảnh báo thiết bị quanh 1 cảnh báo suy luận (ALERT-FR-014) |
 | Mức độ · Ưu tiên | Level · Priority | 3 cấp: Khẩn cấp / Urgent · Cao / High · Thường / Normal (2.4) |
-| Yêu cầu (hỗ trợ) | Ticket | **Bản VI màn chủ nhà yến** gọi ticket là "yêu cầu" — bản EN vẫn là **Ticket** (không dịch thành "Request") (menu "Yêu cầu hỗ trợ", "Danh sách yêu cầu", "Tạo yêu cầu", "Huỷ yêu cầu"); màn Technician/Admin vẫn dùng "Ticket" |
+| ~~Yêu cầu (hỗ trợ)~~ | ~~Ticket~~ | **Ngoài phạm vi (v2.11.0), gỡ cùng màn ticket.** **Bản VI màn chủ nhà yến** gọi ticket là "yêu cầu" — bản EN vẫn là **Ticket** (không dịch thành "Request") (menu "Yêu cầu hỗ trợ", "Danh sách yêu cầu", "Tạo yêu cầu", "Huỷ yêu cầu"); màn Technician/Admin vẫn dùng "Ticket" |
 | Kỹ thuật viên | Technician | |
 | Chủ nhà yến | Farm Owner | |
 | Chuyên gia | Domain Expert | |
@@ -834,8 +844,8 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | AI Giám sát đàn — đếm chim, return rate | VISION-FR-006/008/009/010/011 | 🟡 chờ dữ liệu thật từ Edge AI | **Có** |
 | Phân tích `/analytics` — chim ra/vào theo giờ, số đếm hôm nay, tỷ lệ chim về theo tuần (theo nhà yến, `houseId`), tương quan môi trường ↔ tỷ lệ chim về | ANALYTICS-FR-002/003, VISION-FR-012/017 | 🟡 API thật (`/analytics/bird-count/buckets`, `/current`, `/trends`, `/analytics/correlation`) nhưng chưa có dữ liệu tới khi nút AI chạy → khung trống | Không (không có số liệu giả) |
 | ~~Cảnh báo thiên địch từ camera~~ | THREAT-FR-001/002/003 | ❌ Ngoài phạm vi (Report 3 §8) — không làm màn này | — |
-| Chat trực tiếp trong Ticket | TICKET-FR-014→017 | ✅ API thật (`/tickets/:id/messages` + socket, `useTicketChat`) | Không |
-| Ticket của Farm Owner `/support` (tạo, theo dõi, huỷ, đánh giá, khung thiết bị đang báo lỗi) | TICKET-FR-001/011/014..016 | ✅ API thật (`/tickets`, `/alerts`, `/devices/sensor-nodes`), PR #79; Farm Owner vẫn còn trong `MENU_ACCESS` của `/tickets` (12.0 c dòng 6) | Không |
+| ~~Chat trực tiếp trong Ticket~~ | ~~TICKET-FR-014→017~~ | Ngoài phạm vi (Report 3 §8) — gỡ cùng màn ticket | Không |
+| ~~Ticket của Farm Owner `/support`~~ (tạo, theo dõi, huỷ, đánh giá, khung thiết bị đang báo lỗi) — **ngoài phạm vi, gỡ** | ~~TICKET-FR-001/011/014..016~~ | ✅ API thật (`/tickets`, `/alerts`, `/devices/sensor-nodes`), PR #79; Farm Owner vẫn còn trong `MENU_ACCESS` của `/tickets` (12.0 c dòng 6) | Không |
 | Giám sát đàn chim `/vision` | VISION-FR-008..011 | 🟡 API thật nhưng chưa có dữ liệu (AI chưa triển khai) → khung trống | Không (không có số liệu giả) |
 | Reset ngưỡng Zone về mặc định | ENV-FR-020 | ✅ Đã code (v1.18.0) | Không |
 | Audit Log toàn hệ thống (Admin) | SYSTEM-FR-001 | ✅ Đã code (`GET /system/audit-logs`) | Không |
@@ -1016,20 +1026,20 @@ module.exports = {
 | Mức của chỉ số sức khỏe theo nhà yến (BR-28) | I (R khi farm chưa có chuyên gia) | R | – | – |
 | Duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010) | I | R | – | – |
 | Thông báo ngoài ứng dụng (Telegram, push) | R | – (chỉ trong ứng dụng) | – | – |
-| Xác nhận (acknowledge) cảnh báo | R | – | R (chỉ cảnh báo gắn ticket mình đang giữ) | – |
+| Xác nhận (acknowledge) cảnh báo | R | – | – (chỉ xem cảnh báo thiết bị) | – |
 | Kiểm chứng cảnh báo suy luận, viết kết luận | I (đọc kết luận; kiểm chứng thay khi farm chưa có chuyên gia, BR-22) | R | – | – |
-| Can thiệp tay relay có thời hạn | R | – | R (chỉ khi đang giữ ticket mở của farm) | – |
+| Can thiệp tay relay có thời hạn | R | – | – | – |
 | Ngưỡng Zone, reset mặc định | R | R | – | I |
 | Hệ số logic mờ | R (áp gợi ý chỉ khi farm chưa có chuyên gia) | R (duyệt thay đổi của chủ farm, áp gợi ý) | – | I |
 | Tham số phát hiện, vòng đếm, lịch đếm theo mùa | I (R khi farm chưa có chuyên gia, BR-22) | R | – | I |
-| Ticket: tạo · xử lý · can thiệp | R (tạo, chat, huỷ, đánh giá) | – | R (xử lý, chat) | A (mọi ticket) |
-| Đăng ký thiết bị bằng nhãn QR, gán Zone bằng mã QR tầng, dời, gỡ (MF-10) | R | – | R (khi có ticket lắp đặt) | – |
-| Lệnh từ xa, OTA, file loa | – (chỉ xem) | – | R | I |
+| Ticket, SLA, lịch bảo trì, vùng Technician | – (ngoài phạm vi, Report 3 §8) | – | – | – |
+| Đăng ký thiết bị bằng nhãn QR, gán Zone bằng mã QR tầng, dời, gỡ (MF-10) | R (farm mình) | – | R (mọi farm; Farm Owner được báo) | – |
+| Lệnh từ xa, OTA, file loa | – (chỉ xem) | – | R (mọi farm; Farm Owner được báo) | – |
 | Kho thiết bị: thêm, in nhãn QR, cấp lại/thu hồi khoá | – | – | – | R |
-| Cấu trúc Farm (Farm/House/Zone) | R (farm mình) | I | R (trong `assigned_regions`) | A (toàn bộ) |
-| Xoá farm, đổi `region`, mời/gỡ thành viên | R (chỉ Primary Owner) | – | – | R (xoá farm, đổi `region`) |
+| Cấu trúc Farm (Farm/House/Zone) | R (farm mình) | I | I (mọi farm; chỉ cấu trúc, thiết bị, cảnh báo thiết bị) | – |
+| Xoá farm, mời/gỡ thành viên | R (chỉ Primary Owner) | – | – | – |
 | Ghi nhận thu hoạch | R | I | – | – |
-| Tài khoản, cấu hình mặc định, SLA, audit log, sức khỏe hệ thống | I | I | I | R/A |
+| Tài khoản (tạo Technician, khoá/mở), cấu hình mặc định, audit log, tổng quan kỹ thuật | I | I | I | R |
 | Chọn bài loa ru / nghe thử | R | – | – | – |
 
 Nguồn: Report 3 §2.4. Farm chưa có chuyên gia (BR-22): Farm Owner làm thay các việc R của Domain Expert ở bảng trên, trừ viết kết luận và duyệt thay đổi của chính mình.
@@ -1038,32 +1048,32 @@ Nguồn: Report 3 §2.4. Farm chưa có chuyên gia (BR-22): Farm Owner làm tha
 
 ```
 Farm Owner (luồng chính — UI MẪU)
-├── Riêng:     /dashboard · /analytics · /vision · /harvests (ghi) · /support + /support/chi-tiet
+├── Riêng:     /dashboard · /analytics · /vision · /harvests (ghi)   (/support — ticket, ngoài phạm vi, sẽ gỡ)
 ├── Đích (Report 3): đọc kết luận + lịch sử quyết định của chuyên gia · gửi đề xuất hệ số cho chuyên gia
 ├── Thiết lập thiết bị (MF-10, mobile là chính; web là đích): quét nhãn, quét mã tầng, tiến trình setup, in mã tầng
 ├── Dùng chung với Domain Expert (Domain Expert chỉ đọc, ẩn nút ghi bằng usePermission):
 │              /dashboard · /analytics · /vision · /stream/:id · /harvests (xem) · báo cáo sức khỏe Zone (đích)
 ├── Dùng chung với Technician (trang thuộc technician/, mở bằng OPS_ROLES):
-│              /devices (relay, lịch loa) · /alerts (xác nhận) · /farms (cấu trúc)
+│              /devices (relay, lịch loa — chỉ Farm Owner) · /alerts (xác nhận — chỉ Farm Owner) · /farms (cấu trúc)
 └── Chung mọi role: /settings · chuông thông báo · đổi ngôn ngữ
 
 Domain Expert (luồng chính — CHƯA CÓ CODE FE; backend có một phần, xem mục 7)
 ├── Riêng (đích, bucket domain-expert/): kiểm chứng cảnh báo (kèm bằng chứng) · viết kết luận · duyệt thay đổi của chủ farm
 │              · duyệt đề xuất hệ số · tham số phát hiện · vòng đếm · lịch đếm theo mùa
 └── Đọc chung trang Farm Owner: dashboard · analytics · vision · live stream · thu hoạch · cấu trúc farm (chỉ xem)
-    KHÔNG BAO GIỜ: relay, lịch loa, ticket, ghi thu hoạch, acknowledge cảnh báo, sửa/xoá farm, mời thành viên
+    KHÔNG BAO GIỜ: relay, lịch loa, ghi thu hoạch, acknowledge cảnh báo, sửa/xoá farm, mời thành viên
 
-Technician (luồng phụ)
-├── Riêng:     /tickets + /tickets/:id (xử lý, SAT) · /ota · /maintenance
-├── Cùng bước với Farm Owner khi có ticket lắp đặt: /onboarding (MF-10)
-├── Dùng chung với Farm Owner: /devices · /alerts · /farms (lọc theo assigned_regions)
-└── KHÔNG xem Dashboard/Analytics môi trường (Report 3 FARM-FR-009)
+Technician (luồng phụ — vai trò kỹ thuật, thấy MỌI farm)
+├── Riêng:     /ota   (/tickets, /maintenance — ngoài phạm vi, sẽ gỡ)
+├── Cùng bước với Farm Owner ở mọi farm: /onboarding (MF-10); Farm Owner được báo mỗi thao tác thiết bị
+├── Dùng chung với Farm Owner: /devices (không nút relay) · /alerts (cảnh báo thiết bị, không nút xác nhận) · /farms (cấu trúc)
+└── KHÔNG: relay, ngưỡng/hệ số, xác nhận cảnh báo, Dashboard/Analytics/đếm chim/live stream/thu hoạch (Report 3 FARM-FR-009)
 
 Administrator (luồng phụ)
-├── Riêng:     /system/health · /system/devices · /system/farms(…) · /system/tickets(…) · /users
-│              /account-requests · /system/settings · /system/audit-log
-├── Dùng chung: /alerts
-└── KHÔNG xem Dashboard/Analytics môi trường; can thiệp ticket qua /system/tickets
+├── Riêng:     /system/health (tổng quan kỹ thuật) · /system/devices (kho, in nhãn) · /users
+│              /account-requests · /system/settings (ngưỡng mặc định) · /system/audit-log
+│              (/system/farms(…), /system/tickets(…) — ngoài phạm vi, sẽ gỡ)
+└── KHÔNG xem farm nào, không ticket, không relay, không xác nhận cảnh báo
 
 Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile/) — thiết kế riêng, không theo 1.1
 ```
@@ -1076,13 +1086,14 @@ Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile
 | 2 | `/dashboard`, `/analytics`, `/vision` | `FARM_OWNER_ONLY` | Farm Owner + Domain Expert (chỉ đọc) | Đổi sang `FARM_SIDE_ROLES` khi thêm Domain Expert |
 | 3 | `/stream/:id` | `OPS_ROLES` (có Technician, Admin) | Chỉ Farm Owner + Domain Expert | Thu hẹp quyền route |
 | 4 | `/harvests` | `HARVEST_ROLES` (Farm Owner + Admin) | Farm Owner R, Domain Expert I, Admin – | Bỏ Admin, thêm Domain Expert chỉ xem |
-| 5 | `/ota`, `/maintenance` | `OPS_ROLES` (Farm Owner vào được) | Chỉ Technician (Admin I) | Tạo nhóm quyền riêng cho Technician |
+| 5 | `/ota`, `/maintenance` | `OPS_ROLES` (Farm Owner vào được) | `/ota` chỉ Technician; `/maintenance` ngoài phạm vi | Tạo nhóm quyền riêng cho Technician; gỡ `/maintenance` |
 | 5b | `/onboarding` | Màn nhập tay Device ID + khoá của Technician | Farm Owner + Technician, quét nhãn QR và mã QR tầng (MF-10, FARM-FR-003…012) | Thêm quét QR (`html5-qrcode`) và tiến trình setup; mobile là nơi làm chính |
-| 6 | `/tickets` (màn Technician) | `OPS_ROLES` — Farm Owner vẫn còn quyền vào; Farm Owner đã có `/support` riêng | Farm Owner chỉ tạo/theo dõi qua `/support` | Bỏ Farm Owner khỏi `/tickets` trong `MENU_ACCESS` |
-| 7 | `/alerts` | `OPS_ROLES`, ai cũng có nút xác nhận | Farm Owner; Technician chỉ cảnh báo gắn ticket mình giữ; Admin không | Ẩn nút xác nhận với Admin, và với Technician khi cảnh báo không gắn ticket của họ |
+| 6 | Ticket ở mọi role: `/tickets`, `/support`, `/system/tickets` | Đủ màn, chat, SLA | Ngoài phạm vi (Report 3 §8, BM03 dòng 9) | Gỡ route, menu (`todo-remove-platform.md` PR 2), rồi xoá trang, component, API (PR 6) |
+| 7 | `/alerts`, nút relay ở `/devices` | `OPS_ROLES`, ai cũng có nút xác nhận và nút relay | Chỉ Farm Owner xác nhận và bật/tắt relay; Technician chỉ xem cảnh báo thiết bị; Admin không | Ẩn nút xác nhận và nút relay với Technician, Admin |
 | 8 | ~~`/marketplace`, `/marketplace/:id`~~ | Đã gỡ route, trang và API (PR #93) | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ |
 | 9 | Sửa ngưỡng / hệ số mờ ở màn Technician (`ThresholdsModal`) | Technician sửa được | Chỉ Farm Owner + Domain Expert của farm (ENV-FR-006, 021) | Gỡ chỗ sửa khỏi màn Technician |
 | 10 | Kho thiết bị (Admin) | Trả khoá một lần, chưa in nhãn | Admin in nhãn QR ngay khi thêm (FARM-FR-010); màn Zone in mã QR tầng (FARM-FR-011) | Sinh QR ở client bằng `qrcode`, định dạng ở Report 4 §5.4 |
+| 11 | `/system/farms(…)`, ô khu vực (`region`) ở form farm và form người dùng | Admin quản lý farm, tạo farm hộ; Technician theo `assigned_regions` | Admin không có farm; Technician thấy mọi farm, không có vùng (FARM-FR-009) | Gỡ màn farm của Admin, ô vùng (sau khi backend bỏ `region`, `todo-remove-platform.md` PR 5) |
 
 Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao diện đang lệch với Report 3. Mỗi dòng sửa trong PR của role sở hữu màn đó.
 
@@ -1134,7 +1145,7 @@ frontend/src/
 │   │                          FarmOwnerFarmHousesPage · FarmOwnerFarmZonesPage
 │   │                          FarmOwnerFarmZoneDetailPage · FarmOwnerHarvestPage · FarmOwnerLiveStreamPage
 │   │                          FarmOwnerVisionPage · FarmOwnerTicketsPage · FarmOwnerTicketDetailPage · FarmOwnerDevicesPage · FarmOwnerDeviceDetailPage
-│   │                          (đích) FarmOwnerDeviceSetupPage — MF-10, Technician mở cùng trang khi có ticket lắp đặt
+│   │                          (đích) FarmOwnerDeviceSetupPage — MF-10, Technician mở cùng trang ở mọi farm
 │   ├── domain-expert/         (đích) DomainExpert<ChứcNăng>Page — kiểm chứng cảnh báo, báo cáo
 │   │                          sức khỏe Zone, duyệt thay đổi, duyệt đề xuất hệ số, tham số phát hiện,
 │   │                          vòng đếm, lịch đếm
@@ -1244,7 +1255,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
    | Nhóm | Gồm | Dùng cho | Trạng thái |
    |---|---|---|---|
-   | `OPS_ROLES` | Farm Owner · Technician · Admin | Thiết bị/relay, xác nhận cảnh báo, ticket. Admin chỉ xem: không can thiệp tay, không xác nhận cảnh báo; Technician chỉ làm hai việc đó khi đang giữ ticket của farm — ẩn nút bằng `usePermission` | Có |
+   | `OPS_ROLES` | Farm Owner · Technician · Admin | Thiết bị, cảnh báo, cấu trúc farm. Nút bật/tắt relay và xác nhận cảnh báo **chỉ Farm Owner** thấy (Technician, Admin: không) — ẩn bằng `usePermission`; Admin không còn màn farm (v2.11.0) | Có |
    | `SETUP_ROLES` | Farm Owner · Technician | Thiết lập thiết bị bằng QR, dời/gỡ thiết bị, in mã QR tầng (MF-10) | Tạo khi làm màn MF-10 |
    | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone, lịch sử quyết định của chuyên gia; kiểm chứng cảnh báo, tham số phát hiện, vòng đếm, lịch đếm (Farm Owner chỉ ghi khi farm chưa có chuyên gia — BR-22) | Tạo khi thêm `DOMAIN_EXPERT` |
    | `EXPERT_ONLY` | Domain Expert | Viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số | Tạo khi thêm `DOMAIN_EXPERT` |
@@ -1252,7 +1263,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
    | `HARVEST_ROLES` | Farm Owner (ghi) · Domain Expert (xem) | Ghi nhận thu hoạch. Code hiện là Farm Owner · Admin — bỏ Admin, thêm chuyên gia khi thêm `DOMAIN_EXPERT` (12.0 c dòng 4) | Có (đích khác) |
    | `ADMIN_ONLY` | Admin | Quản trị hệ thống, kho thiết bị và in nhãn | Có |
 
-   Domain Expert **không bao giờ** thuộc nhóm có hành động ghi vận hành (relay, ticket, ghi thu hoạch, acknowledge cảnh báo). Trang dùng chung có nút ghi (VD Thu hoạch mà chuyên gia chỉ xem) thì thêm chuyên gia vào `allow` và ẩn nút bằng `usePermission` (13.8).
+   Domain Expert **không bao giờ** thuộc nhóm có hành động ghi vận hành (relay, ghi thu hoạch, acknowledge cảnh báo). Trang dùng chung có nút ghi (VD Thu hoạch mà chuyên gia chỉ xem) thì thêm chuyên gia vào `allow` và ẩn nút bằng `usePermission` (13.8).
 3. Cần lên sidebar? → thêm `{ label, path, icon }` vào `menuSections` trong `<Role>Layout.tsx`, và thêm dòng vào `MENU_ACCESS` (`constants/roles.ts`).
 4. Endpoint mới → `apis/<role>/<resource>.api.ts`; hook bọc React Query → `hooks/<role>/use<Resource>.ts`.
 5. Component riêng của màn → `components/features/<role>/<area>/`. **Không để trong `pages/`.**
@@ -1358,7 +1369,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 - **[Bắt buộc]** Component/page **không** import `@/lib/socket`. Kết nối và đăng ký sự kiện đi qua hook (`useSocket`, `useTelemetry`, `useAlertNotifications`).
 - **[Bắt buộc]** Mọi `on*`/`joinZone` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`) — thiếu cleanup là rò listener mỗi lần đổi zone.
-- **[Bắt buộc]** Tên sự kiện và payload khớp backend và Report 4 §7.3: phòng `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE` — số đếm chim, camera, cảnh báo của nhà yến), `ticket:<id>` (`JOIN_TICKET_CHAT`), phòng riêng `user:<id>`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`, `TICKET_MESSAGE_NEW`, `TICKET_CHAT_ASSIGNEE_CHANGED`; type trong `types/socket.types.ts`.
+- **[Bắt buộc]** Tên sự kiện và payload khớp backend và Report 4 §7.3: phòng `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE` — số đếm chim, camera, cảnh báo của nhà yến), phòng riêng `user:<id>`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW` (phòng `ticket:<id>`, `TICKET_MESSAGE_NEW`, `TICKET_CHAT_ASSIGNEE_CHANGED` còn trong code, sẽ gỡ cùng ticket — Report 4 §7.3); type trong `types/socket.types.ts`.
 
 ### 13.5. Lỗi, loading, rỗng
 
@@ -1460,7 +1471,8 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | Chưa có role `DOMAIN_EXPERT`, `DomainExpertLayout`, `FARM_SIDE_ROLES`/`EXPERT_ONLY` | Mục 12 mô tả trạng thái đích | PR thêm role theo checklist "Thêm role mới" ở 12.10 |
 | Trường `heating` trong `RelayStates` (`types/device.types.ts`), tùy chọn kênh Zalo/SMS ở `SettingsPage` (`BIRD_PANIC` và relay sưởi trên màn đã gỡ ở PR #93) | Ngoài phạm vi (Report 3 §8) | Gỡ `heating` khỏi kiểu và Zalo/SMS khỏi màn cài đặt |
 | `features/technician/devices/ThresholdsModal` cho Technician sửa ngưỡng và hệ số mờ | Report 3 §2.4: chỉ Farm Owner + Domain Expert của farm (12.0 c dòng 9) | Gỡ chỗ sửa khỏi màn Technician; dời thành `ThresholdConfigCard` dùng chung (mục 9) |
-| Nút can thiệp tay và xác nhận cảnh báo hiện cho Admin, và cho Technician không giữ ticket | Report 3 §2.4, ENV-FR-016, ALERT-FR-009 (12.0 c dòng 7) | Ẩn bằng `usePermission`; backend chặn khi làm xong `docs/reports/README.md` #2 |
+| Nút can thiệp tay và xác nhận cảnh báo hiện cho Admin và Technician | Report 3 §2.4, ENV-FR-016, ALERT-FR-009 (12.0 c dòng 7) | Ẩn bằng `usePermission`; backend chặn khi làm xong `docs/reports/README.md` #2 |
+| Màn, component, API, hook, hằng số của ticket, SLA, lịch bảo trì, vùng Technician; màn farm của Admin (`AdminFarms*`) | Report 3 §8, BM03 dòng 9 (12.0 c dòng 6, 11) | Chỉ gỡ, theo `docs/reports/todo-remove-platform.md` PR 2 (ẩn) và PR 6 (xoá) |
 | `/onboarding` chỉ là màn Technician nhập tay Device ID + khoá | MF-10 (12.0 c dòng 5b) | Làm `FarmOwnerDeviceSetupPage` quét QR, mở cho `SETUP_ROLES` |
 | Chữ "PLC" trên Dashboard; mốc 20 giây và mốc điểm cân bằng Zone tự chọn; câu "Camera AI đếm chim, Raspberry Pi" ở `BirdTab`, `CorrelationCard` | 6.2, 2.6.1; Report 3: nút AI là PC/máy chủ, không phải Raspberry Pi | Đổi chữ thành "Bộ điều khiển", "nút AI" khi sửa màn; mốc giữ đúng giá trị ghi ở Report 3 §4.5 |
 
@@ -1525,7 +1537,7 @@ Quy tắc định dạng ở đầu tài liệu phải do máy bắt, không tr�
 | Hook React Query, component có logic (bảng, form, badge dùng chung) | vitest + `@testing-library/react` + `jsdom` | **[Nên]** với component dùng chung ở `common/`, form có validate | Chưa cài |
 | Luồng chính end-to-end | Playwright | **[Nên]** trước mỗi vòng review hội đồng | Chưa cài |
 
-Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và về đúng trang chủ · Farm Owner tạo ticket từ khung thiết bị đang báo lỗi · Farm Owner xác nhận cảnh báo · Farm Owner can thiệp tay relay có thời hạn · Domain Expert kiểm chứng cảnh báo (khi có màn) · Domain Expert duyệt thay đổi ngưỡng của chủ farm (khi có endpoint) · đổi VI/EN trên 1 màn có từ điển. Thiết lập thiết bị bằng QR (MF-10) kiểm trên mobile.
+Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và về đúng trang chủ · Farm Owner xác nhận cảnh báo · Farm Owner can thiệp tay relay có thời hạn · Domain Expert kiểm chứng cảnh báo (khi có màn) · Domain Expert duyệt thay đổi ngưỡng của chủ farm (khi có endpoint) · đổi VI/EN trên 1 màn có từ điển. Thiết lập thiết bị bằng QR (MF-10) kiểm trên mobile.
 
 - Test đặt tên theo hành vi bằng tiếng Việt hoặc tiếng Anh nhất quán trong file (`it('gộp CRITICAL vào Khẩn cấp')`).
 - Không gọi backend thật trong unit test; dữ liệu mẫu cho test đặt ngay trong file test (không phải dữ liệu giả hiển thị — mục 7 chỉ áp cho dữ liệu lên giao diện).

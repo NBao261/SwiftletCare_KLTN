@@ -242,7 +242,7 @@ Thời gian: 0,5 ngày.
 
 ```http
 POST /devices/camera-nodes/register
-Authorization: Bearer <token của TECHNICIAN hoặc ADMIN>
+Authorization: Bearer <token của FARM_OWNER hoặc TECHNICIAN — Report 3 §2.4; code hiện còn cho TECHNICIAN, ADMIN>
 
 { "device_id": "cam-house1-01", "house_id": "<ObjectId của House>", "secret_key": "<khóa>" }
 ```

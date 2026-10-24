@@ -3,6 +3,8 @@
 > **Từ Review 2, đây không còn là đặc tả chính thức.** Yêu cầu chính thức là **Report 3** — [`docs/reports/report3-srs.md`](docs/reports/report3-srs.md) (tiếng Anh, giữ nguyên mã FR); thiết kế là **Report 4** — [`docs/reports/report4-sdd.md`](docs/reports/report4-sdd.md). Hai tài liệu đó thắng mọi chỗ lệch với file này (ví dụ: Farm Owner tự setup thiết bị bằng QR — MF-10; trang AP-mode không có farm/zone/khoá — FARM-FR-003c; chỉ Farm Owner và Domain Expert của farm sửa ngưỡng). Chỗ code còn lệch với Report 3 nằm ở [`docs/reports/README.md`](docs/reports/README.md); các hằng số kỹ thuật chưa có nguồn chuyển sang Report 3 mục 4.5.
 >
 > File này giữ làm ghi chú nội bộ: lịch sử thay đổi phạm vi (mục 0 và bảng lịch sử phiên bản ở cuối file), mô tả luồng chi tiết bằng tiếng Việt. Không thêm yêu cầu mới vào đây; cột "Trạng thái Backend" ở mục 5 không còn được cập nhật.
+>
+> **Sau Review 2 (BM03 dòng 9, Report 3 §8):** bỏ ticket (TICKET-FR-*, Flow 9/9b, SLA-NFR), chat ticket, lịch bảo trì, vùng và KPI của Technician, Admin tạo/quản lý farm. Technician chỉ còn là vai trò kỹ thuật (thấy thiết bị của mọi farm, không bật/tắt relay); cảnh báo chưa ai xác nhận được gửi lại (ALERT-FR-015), bơm/quạt mòn sinh `MAINTENANCE_DUE` (ALERT-FR-016). Các mục về những phần này trong file chỉ còn là lịch sử.
 
 ## SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming
 

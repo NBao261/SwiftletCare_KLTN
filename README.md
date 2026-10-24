@@ -43,7 +43,7 @@ Vai trò người dùng:
 | Farm Owner | Theo dõi nhà yến, tự lắp và gán thiết bị bằng QR, điều khiển tay khi cần, nhận cảnh báo, ghi nhận thu hoạch, mời thành viên; quyết thay chuyên gia khi farm chưa có chuyên gia |
 | Domain Expert | Chuyên gia nuôi yến: kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và hệ số điều khiển, duyệt thay đổi của chủ farm, viết kết luận báo cáo sức khỏe (chỉ đọc phần vận hành); mọi quyết định đều báo cho chủ farm |
 | Technician | Vai trò kỹ thuật: xem thiết bị và cảnh báo thiết bị của mọi farm, lắp/dời/gỡ thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường |
-| Admin | Quản trị tài khoản, cấu hình hệ thống, giám sát toàn cục |
+| Admin | Tạo tài khoản Technician, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; không quản lý farm |
 
 ## Tính năng chính
 
@@ -87,7 +87,7 @@ Vai trò người dùng:
               Web dashboard (React)  ·  Mobile app (Expo)
 ```
 
-Sơ đồ chi tiết (draw.io): [`docs/diagrams/`](./docs/diagrams/). Hợp đồng API: [`docs/api/api-spec.yaml`](./docs/api/api-spec.yaml) (OpenAPI 3.0, backend phục vụ Swagger UI tại `/api-docs`).
+Sơ đồ draw.io cũ ở [`docs/diagrams/`](./docs/diagrams/) vẽ theo phạm vi trước Review 1 (PID, SMS, vai trò Operator); sơ đồ hiện hành là sơ đồ Mermaid trong Report 4 (`docs/reports/report4-sdd.md` §2.1, §8–9, §11). Hợp đồng API: [`docs/api/api-spec.yaml`](./docs/api/api-spec.yaml) (OpenAPI 3.0, backend phục vụ Swagger UI tại `/api-docs`).
 
 ## Công nghệ
 
@@ -106,7 +106,7 @@ Những yêu cầu của Report 3 mà code chưa đáp ứng được liệt kê
 
 | Module | Trạng thái |
 |---|---|
-| `backend/` | Đủ các module AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, System, Harvest, Expert và phần nhận số đếm chim. Còn thiếu các yêu cầu mới của Report 3: quyền theo §2.4, Farm Owner tự setup thiết bị, `DISMISSED`, duyệt thay đổi của chủ farm, đồng bộ cấu hình, lịch đếm theo mùa, push FCM thật… |
+| `backend/` | Đủ các module AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, System, Harvest, Expert và phần nhận số đếm chim. Còn thiếu các yêu cầu mới của Report 3: quyền theo §2.4, gỡ ticket/SLA/vùng Technician (thay bằng gửi lại cảnh báo và `MAINTENANCE_DUE`), Farm Owner tự setup thiết bị, `DISMISSED`, duyệt thay đổi của chủ farm, đồng bộ cấu hình, lịch đếm theo mùa, push FCM thật… |
 | `firmware/` | Bản 1.4.0 (thêm khởi động lại và OTA từ xa có rollback); đã chạy trên board ESP32 thật, nhưng chưa ghi lại kịch bản nào đã thử. Chưa gửi version cấu hình trong heartbeat (ENV-FR-027). |
 | `frontend/` | Chạy được nhưng còn theo phạm vi cũ (v1.24): chưa có màn hình Domain Expert, còn Marketplace và relay sưởi cần gỡ. |
 | `mobile/` | Khung ứng dụng; phần lớn màn hình chưa làm. |
@@ -237,7 +237,7 @@ Chi tiết quy trình Git của nhóm: [`docs/github-setup.md`](./docs/github-se
 | [`docs/api/`](./docs/api/README.md) | OpenAPI spec và hướng dẫn xem API |
 | [`docs/FOLDER_STRUCTURE.md`](./docs/FOLDER_STRUCTURE.md) | Cấu trúc thư mục, file nào đặt ở đâu |
 | [`docs/hardware/`](./docs/hardware/) | BOM, hướng dẫn linh kiện và đấu nối |
-| [`docs/diagrams/`](./docs/diagrams/) | Context diagram, kiến trúc hệ thống |
+| [`docs/diagrams/`](./docs/diagrams/) | Context diagram, kiến trúc hệ thống (bản cũ trước Review 1; bản hiện hành trong Report 4) |
 | [`docs/bird-counting-plan.md`](./docs/bird-counting-plan.md) | Kế hoạch triển khai đếm chim |
 | [`docs/task-checklist.md`](./docs/task-checklist.md) | Checklist công việc theo sprint |
 | `<module>/README.md` | Hướng dẫn riêng từng module |

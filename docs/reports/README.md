@@ -20,7 +20,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 
 - File này **chỉ chứa yêu cầu**: actor, tiêu chí chấp nhận, NFR (chỉ số, ngưỡng, cách đo), vòng đời thực thể, truy vết tới phiếu đăng ký. Phần thiết kế (schema, API, MQTT, kiến trúc, môi trường) thuộc Report 4; tiến độ thuộc Project Tracking.
 - Mã FR giữ nguyên như `SwiftletCare_SRS.md` để code, test và commit đang trỏ tới vẫn đúng.
-- Phạm vi bám theo phiếu đăng ký **bản đề xuất chốt**, với giả định BM03 gồm các thay đổi: phiếu ghi "YOLO" không kèm phiên bản (phiên bản cụ thể khai báo trong Report 4); phát hiện thiên địch chuyển hẳn sang Out of scope; kênh ngoài ứng dụng cam kết **cả** push (FCM) và Telegram bot; Farm Owner tự setup thiết bị bằng QR (MF-10). Bản nháp các dòng BM03 ở mục bên dưới.
+- Phạm vi bám theo phiếu đăng ký **bản đề xuất chốt**, với giả định BM03 gồm các thay đổi: phiếu ghi "YOLO" không kèm phiên bản (phiên bản cụ thể khai báo trong Report 4); phát hiện thiên địch chuyển hẳn sang Out of scope; kênh ngoài ứng dụng cam kết **cả** push (FCM) và Telegram bot; Farm Owner tự setup thiết bị bằng QR (MF-10); bỏ ticket, SLA, vùng của Technician, Technician là vai trò kỹ thuật trên mọi farm (BM03 dòng 9). Bản nháp các dòng BM03 ở mục bên dưới.
 - Độ ưu tiên: `M` = thuộc luồng chính, là ứng viên cho tính năng bắt buộc của Defense 1.1; `S` = luồng phụ (bảo trì thiết bị từ xa của Technician, tài khoản), giữ chạy được nhưng không đề xuất làm tính năng bắt buộc, để số test case cam kết tập trung vào hệ thống tự động.
 
 ### Chỗ nhóm phải điền trước khi gắn tag `review-2`

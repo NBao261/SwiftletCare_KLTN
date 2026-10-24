@@ -6,7 +6,9 @@
 
 > **[v2 cập nhật]** theo linh kiện thực tế đã mua: ESP32 NodeMCU 38 chân + đế mở rộng, **2 mạch Buck** (tách nguồn PAM8403), Domino TB1504, relay kích H/L (đặt mức High), DFPlayer + PAM8403 6W có volume, camera IR 940nm.
 >
-> **[Report 3 — thay mục v3 dưới đây]** Thiết lập thiết bị quay về **Farm Owner tự làm trên mobile bằng QR** (MF-10: quét nhãn thiết bị và mã QR tầng, FARM-FR-003…012); Technician chỉ làm cùng các bước khi có ticket lắp đặt. Việc còn thiếu: `docs/reports/README.md` #25–28.
+> **[Report 3 — BM03 dòng 9, 24/10/2026]** **Bỏ ticket, SLA, chat ticket, lịch bảo trì, vùng của Technician, KPI, Admin quản lý farm** (Report 3 §8). Technician là vai trò kỹ thuật: thấy thiết bị và cảnh báo thiết bị của mọi farm, lắp/dời/gỡ, lệnh từ xa, OTA; không bật/tắt relay, không xác nhận cảnh báo. Mục **C7, D6** và các dòng ticket ở mục khác dưới đây không còn làm (❌); việc gỡ code theo `docs/reports/todo-remove-platform.md`.
+>
+> **[Report 3 — thay mục v3 dưới đây]** Thiết lập thiết bị quay về **Farm Owner tự làm trên mobile bằng QR** (MF-10: quét nhãn thiết bị và mã QR tầng, FARM-FR-003…012); Technician làm cùng các bước được ở mọi farm. Việc còn thiếu: `docs/reports/README.md` #25–28.
 >
 > **[v3 cập nhật — theo SRS v1.12.0]** Đổi mô hình onboarding thiết bị: **Technician thao tác qua Web Console** (không phải Farm Owner tự quét QR qua Mobile App như bản checklist cũ) — xem Flow 1/1b. Thêm hẳn 9 Flow mới (Flow 11→19: đăng ký/đăng nhập/quên mật khẩu, mời thành viên, điều khiển relay thủ công + auto-revert, offline-detection, OTA, mời Sales Staff, duyệt sản phẩm, cảnh báo tồn kho, quản lý tài khoản Admin) → mục A/C/D/E dưới đây đã bổ sung task tương ứng. Ticket thêm loại `INSTALLATION` (Flow 9b) đi kèm cơ chế tự động định tuyến giống ticket báo lỗi.
 >
@@ -260,7 +262,7 @@
 - [ ] Collection `system_settings` + API `GET/PUT /system/settings/default-thresholds`; reset ngưỡng Zone đọc từ đây `[SYSTEM-FR-002, ENV-FR-007/020]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [ ] API `GET /system/health-overview` (farm/zone/thiết bị/ticket/tài khoản) `[SYSTEM-FR-003]` — ✅ backend đã code + test E2E trên nhánh `feat/admin-system-and-sales-approval`, chờ review PR mới tick
 - [ ] UI Admin: audit log, ngưỡng mặc định, tổng quan hệ thống `[SYSTEM-FR-001..003]`
-- [ ] Chat theo ticket (Farm Owner ↔ Technician, Admin tham gia được) + tin nhắn hệ thống khi Admin reassign `[TICKET-FR-014..017]`
+- [ ] ~~Chat theo ticket (Farm Owner ↔ Technician, Admin tham gia được) + tin nhắn hệ thống khi Admin reassign `[TICKET-FR-014..017]`~~ ❌ (BM03 dòng 9)
 
 ## C2. Farm & Device (Sprint 2)
 
@@ -319,7 +321,7 @@
 - [ ] Setup S3/MinIO + presigned URL TTL 15p `[SEC-NFR-006]`
 - [ ] API analytics: history, bird-count trends, correlation, multi-zone `[ANALYTICS-FR-001~005]`
 
-## C7. Ticket & SLA (Sprint 5)
+## C7. ~~Ticket & SLA (Sprint 5)~~ ❌ — ngoài phạm vi (Report 3 §8, BM03 dòng 9); gỡ code theo `docs/reports/todo-remove-platform.md`
 
 - [ ] Schema `tickets` (type/priority/status/sla/sat_checklist) `[8.2]` — model đã có, chưa có logic
 - [ ] Thêm type `INSTALLATION` vào enum + field `scheduled_visit_at` (Farm Owner chọn thẳng lúc tạo, không qua bước liên hệ) `[TICKET-FR-001, 8.2, Flow 9b bước 1]`
@@ -421,7 +423,7 @@
 - [ ] Xử lý event BIRD_COUNT_UPDATE realtime `[9.3]`
 - [ ] (tùy chọn, không thuộc phiếu v2) Trang xem video recording sự kiện `[VISION-FR-015]`
 
-## D6. Ticket UI (Sprint 5)
+## D6. ~~Ticket UI (Sprint 5)~~ ❌ — ngoài phạm vi (Report 3 §8, BM03 dòng 9); gỡ màn theo `docs/reports/todo-remove-platform.md`
 
 - [ ] Màn Farm Owner tạo ticket báo lỗi (chọn loại lỗi) `[TICKET-FR-001]`
 - [ ] Màn Farm Owner "Yêu cầu lắp đặt" — chọn ngày giờ hẹn cụ thể ngay lúc tạo (`scheduled_visit_at`), không có bước liên hệ `[TICKET-FR-001, Flow 9b bước 1]`
@@ -487,7 +489,7 @@
 - [ ] Test override auto-expire 30p thật (không chỉ trên giấy) + gia hạn override `[Flow 13]`
 - [ ] Test đăng ký/đăng nhập/quên mật khẩu/refresh token đầy đủ bad case `[Flow 11]`
 - [ ] 🤝 Test mời đồng sở hữu / Domain Expert — chấp nhận/từ chối/hết hạn; chuyên gia bị 403 khi gọi API relay/ticket/ghi thu hoạch `[Flow 12]`
-- [ ] 🤝 Test ticket INSTALLATION: tạo → tự động gán Technician → Web Console onboarding → SAT → đóng `[Flow 9b]`
+- [ ] ~~🤝 Test ticket INSTALLATION: tạo → tự động gán Technician → Web Console onboarding → SAT → đóng `[Flow 9b]`~~ ❌ (BM03 dòng 9)
 - [ ] Test Admin khoá/mở khoá tài khoản + JWT bị chặn ngay dù token còn hạn `[Flow 19]`
 - [ ] Test OTA + rollback khi firmware lỗi `[Flow 15]`
 - [ ] 🤝 Test Bird Count E2E `[13.2]`
@@ -532,8 +534,8 @@
 - [ ] **M2+M3** — Nút AI publish bird-count ↔ Backend tính return rate (Sprint 4) `[Flow 3]`
 - ~~**M2+M3** — Predator detection: RPi → S3 upload → Alert đa kênh (Sprint 5) `[Flow 4]`~~ — ❌ bỏ ở SRS v2.0.0
 - [ ] **M1+M2** — Lắp Camera Node thật + onboarding qua Web Console (Sprint 5) `[Flow 1b]`
-- [ ] **M3+M4** — Ticket lifecycle báo lỗi: tạo → gán tự động → xử lý → đóng (Sprint 5) `[Flow 9]`
-- [ ] **M3+M4** — Ticket INSTALLATION: Farm Owner yêu cầu → Ticket Router tự gán Technician → onboarding Flow 1 → SAT → đóng (Sprint 5) `[Flow 9b]`
+- [ ] ~~**M3+M4** — Ticket lifecycle báo lỗi: tạo → gán tự động → xử lý → đóng (Sprint 5) `[Flow 9]`~~ ❌ (BM03 dòng 9)
+- [ ] ~~**M3+M4** — Ticket INSTALLATION: Farm Owner yêu cầu → Ticket Router tự gán Technician → onboarding Flow 1 → SAT → đóng (Sprint 5) `[Flow 9b]`~~ ❌ (BM03 dòng 9)
 - [ ] **M3+M4** — Đăng ký/đăng nhập/quên mật khẩu/mời thành viên end-to-end (Sprint 1-2) `[Flow 11, 12]`
 - [ ] **M3+M4** — Admin khoá/mở khoá + xử lý yêu cầu xoá tài khoản end-to-end (Sprint 6) `[Flow 19]`
 - ~~**M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`~~ — ❌ bỏ ở SRS v2.0.0
