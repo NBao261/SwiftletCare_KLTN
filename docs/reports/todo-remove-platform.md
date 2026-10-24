@@ -61,29 +61,30 @@ Chỉ sửa `requireRole` và kiểm tra trong service, chưa xoá module nào. 
 
 **Xong khi:** mọi route khớp bảng §2.4; test 403 xanh; `README.md` "Chỗ lệch" #2, #15, #25 (phần quyền) đánh dấu đã xong.
 
-### PR 2 — Web + mobile: ẩn ticket, khớp nút theo quyền · đề xuất: Len (Farm Owner), Tuấn (Technician), Nhi (Admin)
+### PR 2 — Web + mobile: ẩn ticket, khớp nút theo quyền · đề xuất: Len (Farm Owner), Tuấn (Technician), Nhi (Admin) · xong ở PR #101
 
 Chỉ gỡ khỏi menu/route và ẩn nút; chưa xoá file (xoá ở PR 6). Nhánh gợi ý `refactor/hide-platform-ui`.
 
 **Route và menu (`frontend/src/`):**
-- [ ] `routes/farm-owner.routes.tsx`: bỏ route `FarmOwnerTicketsPage`, `FarmOwnerTicketDetailPage` (dòng ~19–20, 102–115).
-- [ ] `routes/technician.routes.tsx`: bỏ `tickets`, `tickets/:id`, `maintenance` (dòng ~16–20, 47–82).
-- [ ] `routes/admin.routes.tsx`: bỏ `system/tickets`, `system/tickets/:id` (dòng ~20–23, 104–115); bỏ route các trang `AdminFarmsPage`, `AdminFarmDetailPage`, `AdminFarmHousePage`.
-- [ ] `constants/roles.ts`: bỏ `/tickets`, `/maintenance`, `/system/tickets` khỏi `MENU_ACCESS` (dòng ~89–100); bỏ mục menu tương ứng trong `components/layouts/*Layout.tsx`.
-- [ ] Gỡ link "Tạo yêu cầu hỗ trợ"/"Tạo ticket" ở các màn khác (`DeviceFaultAlertPanel`, `CreateSupportTicketModal`, `FarmRecentTickets`, `TicketTrendsCard` ở dashboard Admin).
+- [x] `routes/farm-owner.routes.tsx`: bỏ route `FarmOwnerTicketsPage`, `FarmOwnerTicketDetailPage` (dòng ~19–20, 102–115).
+- [x] `routes/technician.routes.tsx`: bỏ `tickets`, `tickets/:id`, `maintenance` (dòng ~16–20, 47–82).
+- [x] `routes/admin.routes.tsx`: bỏ `system/tickets`, `system/tickets/:id` (dòng ~20–23, 104–115); bỏ route các trang `AdminFarmsPage`, `AdminFarmDetailPage`, `AdminFarmHousePage`.
+- [x] `constants/roles.ts`: bỏ `/tickets`, `/maintenance`, `/system/tickets` khỏi `MENU_ACCESS` (dòng ~89–100); bỏ mục menu tương ứng trong `components/layouts/*Layout.tsx`.
+- [x] Gỡ link "Tạo yêu cầu hỗ trợ"/"Tạo ticket" ở các màn khác (`DeviceFaultAlertPanel`, `CreateSupportTicketModal`, `FarmRecentTickets`, `TicketTrendsCard` ở dashboard Admin).
 
 **Nút theo quyền:**
-- [ ] Ẩn nút bật/tắt relay, huỷ override và nút xác nhận cảnh báo với Technician và Admin (Farm Owner mới thấy).
-- [ ] Gỡ `ThresholdsModal` (sửa ngưỡng/hệ số) khỏi màn Technician.
-- [ ] Ẩn nút tạo farm/House/Zone với Admin và Technician; form tạo farm của Farm Owner bỏ ô khu vực (`FarmFormModal`) — chỉ làm sau khi backend PR 5 bỏ bắt buộc `region`, trước đó giữ nguyên ô.
-- [ ] Trang cài đặt hệ thống Admin (`AdminSystemSettingsPage`): ẩn thẻ SLA (`SlaCard`) và cách gán ticket.
+- [x] Ẩn nút bật/tắt relay, huỷ override và nút xác nhận cảnh báo với Technician và Admin (Farm Owner mới thấy).
+- [x] Gỡ `ThresholdsModal` (sửa ngưỡng/hệ số) khỏi màn Technician.
+- [x] Ẩn nút tạo farm/House/Zone với Admin và Technician.
+- [ ] Form tạo farm của Farm Owner bỏ ô khu vực (`FarmFormModal`) — chỉ làm sau khi backend PR 5 bỏ bắt buộc `region`, trước đó giữ nguyên ô.
+- [x] Trang cài đặt hệ thống Admin (`AdminSystemSettingsPage`): ẩn thẻ SLA (`SlaCard`) và cách gán ticket.
 
 **Mobile (`mobile/`):**
-- [ ] `app/(tabs)/_layout.tsx`: bỏ tab `tickets`; bỏ link tới `ticket/[ticketId]`.
+- [x] `app/(tabs)/_layout.tsx`: bỏ tab `tickets`; bỏ link tới `ticket/[ticketId]`.
 
 **Kiểm tra:**
-- [ ] `cd frontend && npm run lint && npx tsc --noEmit && npx vitest run && npm run build`.
-- [ ] `cd mobile && npm run lint && npm run typecheck && npx jest --passWithNoTests`.
+- [x] `cd frontend && npm run lint && npx tsc --noEmit && npx vitest run && npm run build`.
+- [x] `cd mobile && npm run lint && npm run typecheck && npx jest --passWithNoTests`.
 - [ ] Đăng nhập thử 4 role (`npm run seed` có Farm Owner, Technician; tạo thêm Admin, Domain Expert): không còn thấy chữ "Ticket", "SLA", "Bảo trì định kỳ" ở menu; Technician không thấy nút relay/xác nhận.
 
 **Xong khi:** demo Review 2 không còn màn ticket; `README.md` "Chỗ lệch" #30 cập nhật phần ticket.
