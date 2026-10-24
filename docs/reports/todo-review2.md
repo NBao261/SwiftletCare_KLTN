@@ -64,8 +64,8 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | [ ] | 158 | Phiên bản mạch nhóm tự vẽ |
 | [ ] | 183 | Nhà cung cấp VPS và tên miền staging (đề xuất ở `docs/deploy/staging.md`) |
 | [ ] | 192, 193 | Công cụ AI và model nhóm dùng |
-| [ ] | 1302 | Nơi chép bản sao lưu MongoDB ra ngoài VPS |
-| [ ] | 1336–1344 | Ngày các phiên bản 1.0.0 → 1.0.8 |
+| [ ] | 1307 | Nơi chép bản sao lưu MongoDB ra ngoài VPS |
+| [ ] | 1341–1350 | Ngày các phiên bản 1.0.0 → 1.0.9 |
 
 ### Các hồ sơ mới
 
@@ -113,7 +113,7 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | [ ] | **MF-11:** job `healthAssessment` hằng ngày, collection `househealthdays`, mức chỉ số theo House (chuyên gia sửa), luật kết hợp BR-29, mưa BR-30 | P0 | | #32 |
 | [ ] | Đánh giá theo ngày của người nuôi (route ghi đánh giá; không cho sửa sau khi đã xem trạng thái) | P0 | | #33 |
 | [ ] | Báo cáo theo House ngày/tuần/tháng (đổi từ tuần theo Zone), CSV chỉ số theo ngày | P0 | | #34, #35 |
-| [ ] | Job thời tiết Open-Meteo mỗi giờ, collection `weatherobservations` | P1 | | #36 |
+| [ ] | Job thời tiết Open-Meteo mỗi giờ theo tọa độ của từng farm, collection `weatherobservations` (cần tọa độ bắt buộc khi tạo farm: #47, `todo-remove-platform.md` PR 5–6) | P1 | | #36, #47 |
 | [ ] | `DISMISSED` khi chuyên gia bác bỏ: lưu trạng thái trước, bắt buộc ghi chú khi `REJECTED`, gộp trùng/tự đóng tính cả `DISMISSED` (enum 3 phía cùng PR) | P0 | | #19 |
 | [ ] | BR-22: farm chưa có chuyên gia thì Farm Owner kiểm chứng, sửa tham số phát hiện, vòng đếm, lịch đếm; thông báo cảnh báo suy luận chuyển cho Farm Owner | P1 | | #17 |
 | [ ] | EXPERT-FR-009: báo Farm Owner mọi quyết định của chuyên gia + endpoint lịch sử hoạt động của chuyên gia | P1 | | #18 |

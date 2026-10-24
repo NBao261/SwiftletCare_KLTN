@@ -1095,7 +1095,7 @@ Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile
 | 8 | ~~`/marketplace`, `/marketplace/:id`~~ | Đã gỡ route, trang và API (PR #93) | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ |
 | 9 | Sửa ngưỡng / hệ số mờ ở màn Technician (`ThresholdsModal`) | Technician sửa được | Chỉ Farm Owner + Domain Expert của farm (ENV-FR-006, 021) | Gỡ chỗ sửa khỏi màn Technician |
 | 10 | Kho thiết bị (Admin) | Trả khoá một lần, chưa in nhãn | Admin in nhãn QR ngay khi thêm (FARM-FR-010); màn Zone in mã QR tầng (FARM-FR-011) | Sinh QR ở client bằng `qrcode`, định dạng ở Report 4 §5.4 |
-| 11 | `/system/farms(…)`, ô khu vực (`region`) ở form farm và form người dùng | Admin quản lý farm, tạo farm hộ; Technician theo `assigned_regions` | Admin không có farm; Technician thấy mọi farm, không có vùng (FARM-FR-009) | Gỡ màn farm của Admin, ô vùng (sau khi backend bỏ `region`, `todo-remove-platform.md` PR 5) |
+| 11 | `/system/farms(…)`, ô khu vực (`region`) ở form farm và form người dùng | Admin quản lý farm, tạo farm hộ; Technician theo `assigned_regions` | Admin không có farm; Technician thấy mọi farm, không có vùng (FARM-FR-009) | Gỡ màn farm của Admin; thay ô vùng ở form farm bằng ô **vị trí** ("Dùng vị trí hiện tại" + vĩ độ/kinh độ, bắt buộc khi tạo — FARM-FR-001: một farm là một địa điểm, thời tiết theo tọa độ); bỏ ô vùng ở form người dùng (sau `todo-remove-platform.md` PR 5) |
 
 Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao diện đang lệch với Report 3. Mỗi dòng sửa trong PR của role sở hữu màn đó.
 

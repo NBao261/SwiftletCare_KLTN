@@ -5,7 +5,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | File | Report | Trạng thái |
 | --- | --- | --- |
 | `report3-srs.md` | Report 3 – SRS | Bản nháp 3.0.0, cần điền các chỗ `[TEAM: …]` |
-| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 17 state machine, 14 activity diagram) | Bản nháp 1.0.8, đã có đề xuất staging (VPS + PC cũ tại nhà thành viên kéo hình camera qua Internet, `docs/deploy/staging.md`); còn `[TEAM: …]` (nhà cung cấp VPS, tên miền, công cụ AI) |
+| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 17 state machine, 14 activity diagram) | Bản nháp 1.0.9, đã có đề xuất staging (VPS + PC cũ tại nhà thành viên kéo hình camera qua Internet, `docs/deploy/staging.md`); còn `[TEAM: …]` (nhà cung cấp VPS, tên miền, công cụ AI) |
 | `registration-v3.md` | Phiếu đăng ký bản đề xuất chốt v3 (nội dung phiếu, đã bỏ số điện thoại) | Bản nháp 23/10/2026; bản docx để nộp: `registration/` |
 | `bm03-record-of-changes.md` | BM03 – Record of Changes (phiếu v2 → v3) | Bản nháp 23/10/2026; docx: `registration/` |
 | `report1-introduction.md` | Report 1 – Introduction | Bản nháp 1.0.0 |
@@ -81,6 +81,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | 44 | FARM-FR-009 Technician trên mọi farm: code giới hạn theo vùng (`assigned_regions`, `farm.region`, `regions.util.ts`, `isAssignedTechnician` trong `farmAccess.util.ts`, 18 file); Technician còn tạo được House/Zone; chưa báo Farm Owner khi Technician đăng ký, dời, gỡ thiết bị hay gửi lệnh từ xa | Technician xem mọi farm (chỉ cấu trúc, thiết bị, cảnh báo thiết bị); bỏ vùng và `migrate:regions`; thông báo trong app cho Farm Owner |
 | 45 | Admin không còn quản lý farm (FARM-FR-001, 002, SYSTEM-FR-003): code cho Admin tạo farm hộ (`owner_email`), xoá farm, đổi vùng, tạo House/Zone; web Admin có `AdminFarmsPage`, `AdminFarmDetailPage`, `AdminFarmHousePage`; tổng quan đếm ticket theo ưu tiên | Bỏ các quyền và trang này; tổng quan chỉ còn số farm, zone, thiết bị theo trạng thái, tài khoản |
 | 46 | AUTH-FR-005c: Admin còn sửa hồ sơ Technician (`PUT /admin/technicians/:id/profile`) và gán vùng (`.../regions`) | Chỉ giữ tạo tài khoản và cấp lại mật khẩu tạm |
+| 47 | FARM-FR-001, A-5 — một farm là một địa điểm, tọa độ bắt buộc: route `POST /farms` không kiểm tra `coordinates` (service nhận nguyên `req.body`), form tạo farm web chỉ có ô khu vực, không có ô vị trí | Validator tọa độ bắt buộc khi tạo, kiểm tra khoảng khi sửa (`todo-remove-platform.md` PR 5); form có "Dùng vị trí hiện tại" và ô vĩ độ/kinh độ, farm thiếu tọa độ được đánh dấu (PR 6) |
 
 ### BM03 (Record of Changes) và phiếu v3
 
