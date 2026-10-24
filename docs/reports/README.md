@@ -5,7 +5,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | File | Report | Trạng thái |
 | --- | --- | --- |
 | `report3-srs.md` | Report 3 – SRS | Bản nháp 3.0.0, cần điền các chỗ `[TEAM: …]` |
-| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 17 state machine, 14 activity diagram) | Bản nháp 1.0.6, đã có đề xuất staging (VPS + PC cũ ở nhà yến, `docs/deploy/staging.md`); còn `[TEAM: …]` (nhà cung cấp VPS, tên miền, công cụ AI) |
+| `report4-sdd.md` | Report 4 – SDD (kiến trúc, khai báo công nghệ, quyết định thiết kế, ERD + database script, giao diện, 17 state machine, 14 activity diagram) | Bản nháp 1.0.7, đã có đề xuất staging (VPS + PC cũ tại nhà thành viên kéo hình camera qua Internet, `docs/deploy/staging.md`); còn `[TEAM: …]` (nhà cung cấp VPS, tên miền, công cụ AI) |
 | `registration-v3.md` | Phiếu đăng ký bản đề xuất chốt v3 (nội dung phiếu, đã bỏ số điện thoại) | Bản nháp 23/10/2026; bản docx để nộp: `registration/` |
 | `bm03-record-of-changes.md` | BM03 – Record of Changes (phiếu v2 → v3) | Bản nháp 23/10/2026; docx: `registration/` |
 | `report1-introduction.md` | Report 1 – Introduction | Bản nháp 1.0.0 |

@@ -11,7 +11,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
 | Repository link (tag review-2) | https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2 |
-| Version | 1.0 (registration v3, SRS 3.0.0, SDD 1.0.6) |
+| Version | 1.0 (registration v3, SRS 3.0.0, SDD 1.0.7) |
 | Date | 23/10/2026 |
 
 ## 1. Scope
@@ -35,7 +35,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 
 ## 2. System at a Glance
 
-Swiftlet houses are closed buildings that owners visit every few days, so humidity drift, equipment faults and a falling flock go unnoticed. SwiftletCare lets the house regulate and watch itself. On each floor an ESP32 controller reads five RS485 sensors and drives misting, fan and speaker with fuzzy logic, even without Internet. A PC at the house counts birds at the entrance (YOLO + ByteTrack) and streams annotated video. A cloud backend raises alerts, forecasts breaches and gives every house one daily health status combining environment, air quality, return rate and noise by agreement. The Farm Owner monitors, overrides and sets up devices by QR code; a Domain Expert validates inferred alerts and tunes parameters; Technician and Administrator support them. Architecture: SDD 2.1; deployment: SDD 11.
+Swiftlet houses are closed buildings that owners visit every few days, so humidity drift, equipment faults and a falling flock go unnoticed. SwiftletCare lets the house regulate and watch itself. On each floor an ESP32 controller reads five RS485 sensors and drives misting, fan and speaker with fuzzy logic, even without Internet. A PC reads the entrance camera, counts birds (YOLO + ByteTrack) and streams annotated video. A cloud backend raises alerts, forecasts breaches and gives every house one daily health status combining environment, air quality, return rate and noise by agreement. The Farm Owner monitors, overrides and sets up devices by QR code; a Domain Expert validates inferred alerts and tunes parameters; Technician and Administrator support them. Architecture: SDD 2.1; deployment: SDD 11.
 
 ## 3. Key Design Decisions
 

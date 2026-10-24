@@ -83,7 +83,7 @@ Every defect is fixed by a pull request that adds a test failing without the fix
 | --- | --- |
 | CI | GitHub Actions, Ubuntu runner, Node 22, Python 3 + PlatformIO, Python + pytest for the AI pipeline, MongoDB in memory |
 | Local | Members' machines with `docker compose` (MongoDB, EMQX, MinIO, MediaMTX) |
-| Staging | VPS with backend, web, EMQX (TLS), MongoDB, MinIO, MediaMTX behind Caddy; AI node on the spare PC at the house (`docs/deploy/staging.md`) |
+| Staging | VPS with backend, web, EMQX (TLS), MongoDB, MinIO, MediaMTX behind Caddy; AI node on the spare PC at a member's home, reading the camera over the Internet (`docs/deploy/staging.md`) |
 | Prototype | ESP32 controller with the five RS485 sensors, relay module, DFPlayer and speaker; test house in the field run |
 | Data | `npm run seed` plus the demo seed (gap G6); recorded entrance clips for counting |
 

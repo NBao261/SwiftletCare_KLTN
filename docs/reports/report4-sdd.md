@@ -8,7 +8,7 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.0.6 (Review 2) |
+| Document version | 1.0.7 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
 | Requirements baseline | Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -77,7 +77,7 @@ flowchart LR
     end
     CAM[IP camera at entrance<br/>IR night vision, RTSP]
   end
-  AINODE[AI node - PC at the house<br/>YOLO + ByteTrack<br/>ring counter]
+  AINODE[AI node - spare PC at a<br/>member's home<br/>YOLO + ByteTrack, ring counter]
   subgraph CLOUD[Cloud server - Docker]
     direction TB
     EMQX[(EMQX<br/>MQTT broker)]
@@ -94,7 +94,7 @@ flowchart LR
   WX[[Open-Meteo<br/>weather API - planned]]
 
   ESP <-- MQTT over TLS --> EMQX
-  CAM -- RTSP --> AINODE
+  CAM -- RTSP over the Internet<br/>static IP, forwarded port --> AINODE
   AINODE -- counts, heartbeat --> EMQX
   EMQX -- counting ring --> AINODE
   AINODE -- annotated + raw video --> MTX
@@ -180,7 +180,7 @@ Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, M
 | Environment | Where | How it is deployed | Rollback |
 | --- | --- | --- | --- |
 | Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA | — |
-| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, `[TEAM: provider]`, with a domain `[TEAM: domain]` and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at the test house (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Caddy reverse proxy with Let's Encrypt TLS, a TLS proxy for MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
+| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, `[TEAM: provider]`, with a domain `[TEAM: domain]` and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Caddy reverse proxy with Let's Encrypt TLS, a TLS proxy for MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
 | Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (TICKET-FR-008) |
 
 Defense 1.1 demonstrations run on staging with seeded data (guideline §9.2).
@@ -204,7 +204,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D2 | Control method | On/off thresholds; PID; fuzzy logic | **Zero-order Sugeno fuzzy logic with time-proportioning** on relays: smooth power levels with plain relays, parameters a domain expert can read and tune; mirrored in the backend for simulation and suggestions | ENV-FR-010, 011, 021, ANALYTICS-FR-010 |
 | D3 | Device–cloud protocol | HTTP polling; WebSocket; MQTT | **MQTT (EMQX) with TLS**, QoS 1 for commands, `deviceId` in every payload; topics per zone for controllers and per house for AI nodes. Light on the ESP32, survives intermittent links | Section 7.2 |
 | D4 | Database | Relational (PostgreSQL); time-series DB; MongoDB | **MongoDB** with Mongoose: telemetry as documents with TTL (90 days), flexible embedded histories (thresholds, tuning), one store for the whole system; schema enforced by `$jsonSchema` validators generated from the models | Section 6 |
-| D5 | Where bird counting runs | Raspberry Pi at the house; cloud GPU server fed by the camera stream; **desktop PC at the house** | **The team's spare PC at the house, on the camera's LAN**: the 1080p RTSP feed never crosses the house's uplink (only counts and the annotated stream go up), no new hardware is bought, and it has more compute than a Raspberry Pi; a cloud GPU would need the full feed uploaded and a paid server. Throughput is measured on this PC (NFR-04); one camera per entrance, counts per house | VISION-FR-002, THREAT-FR-010, NFR-04 |
+| D5 | Where bird counting runs | Raspberry Pi at the house; cloud GPU server fed by the camera stream; desktop PC at the house; **the team's spare PC at a member's home** | **Spare PC at a member's home, reading the camera over the Internet**: no new hardware and more compute than a Raspberry Pi, no paid GPU server, and the machine stays dry and is maintained where the team lives instead of in a humid house nobody visits. The house's VNPT line has a static public IP, so the camera's RTSP feed (1080p, about 2 Mbps) is pulled over TCP through one forwarded port. Costs: the house's uplink carries the feed during the sessions; an outage of either line leaves the session incomplete (VISION-FR-020); the forwarded port must be protected (strong camera password, source IP limited where the modem allows). Checked by a 24-hour pull test and by counting the same clip read locally and over the Internet; throughput is measured on this PC (NFR-04). One camera per entrance, counts per house | VISION-FR-002, 020, THREAT-FR-010, NFR-04 |
 | D6 | Counting geometry | Straight virtual line; ring around the hole with tracking only near it; ring with whole-frame tracking | **Whole-frame tracking and a closed ring around the hole, with extrapolation of fast tracks**: birds leave the hole in every direction, so a line misses some; at the hole a bird is a 1–2-frame blur moving 150–200 px/frame (clip of 22/10/2026), so tracking near the hole alone never gives it an identity — tracked over the whole room it already has one, and a fast track lost just outside the ring is counted by its last velocity. Fly-pasts cancel in the net count | VISION-FR-004, 005, 009, 018, BR-25 |
 | D7 | Expert in the loop | Expert approval blocks every change; changes apply at once with no review | **Owner changes apply at once and open a review item; only the expert applies system suggestions; without an expert the owner decides** — safety on site is never blocked and every parameter is still validated | EXPERT-FR-010, 011, BR-22 |
 | D8 | Live video path | Through the backend; dedicated video server | **MediaMTX** with short-lived viewing tokens checked by the backend: the API never carries video, raw feed only for the pipeline | VISION-FR-013 |
@@ -1286,6 +1286,7 @@ flowchart TB
 | Rate limiting | 300 requests/min per account; 10 failed sign-ins / 15 min per IP; 30 refreshes/min per IP |
 | Devices | Activation key from the provisioned stock, printed on the device label and checked only by the backend (stored hashed, compared in constant time, one message for an unknown ID and a wrong key); never stored on the controller; a device in service is never registered again (BR-26); labels and floor codes carry no Wi-Fi or MQTT credential; MQTT username/password over TLS (port 8883 in production); commands to one device carry its `deviceId`; OTA only over HTTPS from allowed hosts with SHA-256 verification and rollback |
 | Health and reports | Ratings and downloads limited to the Farm Owners and Domain Expert of the farm; exported files carry names and figures, never internal identifiers; the weather service receives only the farm's coordinates |
+| Camera | The RTSP port of the camera is forwarded on the house modem (static IP) for the AI node only; strong camera password, kept only in the AI node's `.env`; source IP limited to the AI node's line where the modem allows it, otherwise listed as a limitation (Report 3, Section 8.1) |
 | Video | Viewing tokens valid 60 s for one camera path, signed with a separate secret; the raw feed is readable only by the pipeline |
 | Secrets | Environment variables only (`.env.example` documents them); gitleaks scan in CI |
 | Personal data | Account deletion with anonymisation (AUTH-FR-012, Decree 13/2023/ND-CP); audit log of sensitive changes |
@@ -1307,10 +1308,14 @@ flowchart LR
     API --> MINIO[(MinIO<br/>internal only)]
     MTX -- stream auth --> API
   end
-  subgraph HOUSE[Test house - LAN behind the house router]
+  subgraph HOUSE[Test house - VNPT line, static public IP]
     ESP[ESP32 controllers]
-    CAM[IP camera] -- RTSP on the LAN --> PC[AI node:<br/>spare desktop PC]
+    CAM[IP camera<br/>RTSP, port 18554 forwarded]
   end
+  subgraph HOME[Member's home]
+    PC[AI node:<br/>spare desktop PC]
+  end
+  CAM -- RTSP over TCP<br/>across the Internet --> PC
   ESP -- MQTT over TLS 8883 --> TLSP
   PC -- counts, heartbeat<br/>MQTT TLS 8883 --> TLSP
   PC -- annotated video<br/>RTSPS 8322 --> TLSP
@@ -1319,14 +1324,14 @@ flowchart LR
   API -- outbound HTTPS --> EXT[[Telegram, FCM,<br/>Open-Meteo]]
 ```
 
-Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a public but possibly dynamic IP on a consumer modem), so the backend runs on a VPS; the video stays at the house, where the camera is, so only counts and the annotated stream use the house's uplink (D5). Only ports 80/443 (Caddy), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only) — both wrapped by a TLS proxy that reuses Caddy's certificate — and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
+Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a static public IP, but on a consumer modem in a borrowed house), so the backend runs on a VPS. The AI node runs on a spare PC at a member's home and pulls the camera's RTSP feed over the Internet through the one port forwarded on the house modem (D5); it sends counts and the annotated stream on to the VPS. Only ports 80/443 (Caddy), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only) — both wrapped by a TLS proxy that reuses Caddy's certificate — and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
 
 | Operation | Procedure |
 | --- | --- |
 | Deploy | On the VPS: check out the tag, `docker compose -f docker-compose.staging.yml up -d --build`, run pending `npm run migrate:*` scripts (all idempotent), load demo data with the seed script on a fresh database; smoke check `GET /health`, sign-in, one telemetry message |
 | Rollback | Re-deploy the previous tag; restore the MongoDB dump taken before the deployment |
 | Backup | `mongodump` before each deployment and once a day by cron, 7 dumps kept, copied off the VPS `[TEAM: where]` |
-| AI node | `stream.py` runs as a service on the spare PC that starts at boot and restarts on failure; the PC's BIOS is set to power on after a power cut; the counting ring and model file are versioned with the tag |
+| AI node | `stream.py` runs as a service on the spare PC at a member's home that starts at boot and restarts on failure, reconnecting to the camera with back-off; the PC's BIOS is set to power on after a power cut; the camera URL and password live only in the node's `.env`; the counting ring and model file are versioned with the tag |
 | Firmware | OTA from the Technician console; the new image is kept only after it reaches the broker within 10 minutes, otherwise the bootloader returns to the previous one |
 | Monitoring | System health overview (SYSTEM-FR-003), device and AI-node status and alerts (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`), audit log, `docker compose logs` |
 
@@ -1347,7 +1352,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Clients | Web Domain Expert screens exist (`/expert/*`: dashboard, alert verdicts, tuning, analytics, reports) but still read the SRS v2.1.4 names, fall back to mock data and sit outside the FE_Design folder plan; no counting-ring editor; leftovers of the old scope (`SALES_STAFF`, a `heating` relay field, Zalo/SMS options); mobile is a scaffold without push registration or QR setup |
 | Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes |
 | Device setup (MF-10) | Register, move, remove and replace routes allow only Technician and Administrator; moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
-| Staging | Staging compose file, Dockerfiles for backend and web, Caddy configuration and a demo seed for every main workflow not written; firmware connects on port 1883 without TLS (`MQTTManager.cpp`), so the controller cannot reach the staging broker on 8883 until TLS with the CA certificate is added |
+| Staging | 24-hour pull test of the camera from the AI node at a member's home, with counts compared on the same clip read locally; staging compose file, Dockerfiles for backend and web, Caddy configuration and a demo seed for every main workflow not written; firmware connects on port 1883 without TLS (`MQTTManager.cpp`), so the controller cannot reach the staging broker on 8883 until TLS with the CA certificate is added |
 | Health assessment (MF-11) | Daily health status, ratings, health levels, reports per house (daily, weekly, monthly), PDF and CSV export, weather job: not built (SM-17, D10, D12, D13) |
 | Hardware | Controller PCB with current transformers and actuator check (D11, THREAT-FR-014) not built. Bypass switches removed from scope (Report 3 §8) |
 | Data model | Planned entities and attributes of Section 6.4; unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest) |
@@ -1358,6 +1363,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.7 | `[TEAM]` | AI node moved to the team's spare PC at a member's home, reading the camera over the Internet through the house's static IP (D5, Sections 2.1, 3.4, 10, 11, 12) |
 | 1.0.6 | `[TEAM]` | Staging declared: one VPS with Caddy TLS for backend, web, broker and video server, the team's spare PC at the house as AI node (D5, Sections 3.4 and 11); hardware cost no longer tracked (NFR-12 removed in Report 3); Domain Expert web screens (PR #91), the Farm Owner rework with the WHEP live stream (PR #93) and the live pipeline with MQTT publishing, video push and its pytest CI job (PR #95) noted in Sections 3.3, 5.2, 5.4 and 12; activity-diagram lanes named as actors or system components (Section 9) |
 | 1.0.5 | `[TEAM]` | Bypass switch removed (borrowed test house cannot be rewired): architecture, controller board and AD-09 updated; the house's own switches are shown outside the system |
 | 1.0.4 | `[TEAM]` | Daily health assessment and periodic reports (MF-11): data flows DF-10, DF-11, decisions D10 (agreement rules), D11 (current transformers), D12 (weather API), D13 (report files), planned entities `HOUSE_HEALTH_DAY` and `WEATHER_OBSERVATION`, SM-17, AD-14; Open-Meteo and the team's controller board declared |

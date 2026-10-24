@@ -42,16 +42,16 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | [ ] | 7, 10, 12 | Mã đề tài, GVHD, ngày |
 | [ ] | 94 | REF-9 MS 2273:2012 — có bản đầy đủ hay bỏ |
 | [ ] | 95 | REF-10 Nghị định 13/2020 Điều 25 — đọc nguyên văn, giờ được phát loa, quy định tỉnh |
-| [ ] | 226 | Cấu hình PC cũ làm AI node (CPU, RAM, GPU nếu có) |
-| [ ] | 483 | BR-01 độ ẩm sàn 75 % hay 80 % — hỏi người nuôi yến |
-| [ ] | 494 | BR-07 giờ phát loa nằm trong khung pháp luật cho phép |
-| [ ] | 601 | NFR-08 tỷ lệ tự động, % trong ngưỡng |
-| [ ] | 602 | NFR-09 Precision/Recall/sai số đếm (ban ngày, hồng ngoại) |
-| [ ] | 604 | NFR-11 MAE dự báo 60 phút |
-| [ ] | 605 | NFR-13 mốc 10 phút setup thiết bị |
-| [ ] | 606 | NFR-14 mức trùng khớp và kappa |
-| [ ] | 880 | Cách chạy tay bơm/quạt khi bộ điều khiển hỏng (theo cách đấu của nhà yến đang mượn) |
-| [ ] | 895 | Ngày phiên bản 3.0.0 |
+| [ ] | 233 | Cấu hình PC cũ làm AI node (CPU, RAM, GPU nếu có) |
+| [ ] | 490 | BR-01 độ ẩm sàn 75 % hay 80 % — hỏi người nuôi yến |
+| [ ] | 501 | BR-07 giờ phát loa nằm trong khung pháp luật cho phép |
+| [ ] | 608 | NFR-08 tỷ lệ tự động, % trong ngưỡng |
+| [ ] | 609 | NFR-09 Precision/Recall/sai số đếm (ban ngày, hồng ngoại) |
+| [ ] | 611 | NFR-11 MAE dự báo 60 phút |
+| [ ] | 612 | NFR-13 mốc 10 phút setup thiết bị |
+| [ ] | 613 | NFR-14 mức trùng khớp và kappa |
+| [ ] | 887 | Cách chạy tay bơm/quạt khi bộ điều khiển hỏng (theo cách đấu của nhà yến đang mượn) |
+| [ ] | 904 | Ngày phiên bản 3.0.0 |
 
 ### `docs/reports/report4-sdd.md`
 
@@ -62,8 +62,8 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | [ ] | 158 | Phiên bản mạch nhóm tự vẽ |
 | [ ] | 183 | Nhà cung cấp VPS và tên miền staging (đề xuất ở `docs/deploy/staging.md`) |
 | [ ] | 192, 193 | Công cụ AI và model nhóm dùng |
-| [ ] | 1328 | Nơi chép bản sao lưu MongoDB ra ngoài VPS |
-| [ ] | 1362–1368 | Ngày các phiên bản 1.0.0 → 1.0.6 |
+| [ ] | 1333 | Nơi chép bản sao lưu MongoDB ra ngoài VPS |
+| [ ] | 1366–1373 | Ngày các phiên bản 1.0.0 → 1.0.7 |
 
 ### Các hồ sơ mới
 
@@ -82,7 +82,7 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | | Việc | Ưu tiên | Người | Nguồn |
 |---|---|:---:|---|---|
 | [ ] | Train model 1 lớp `swiftlet` trên clip của nhà (Roboflow → Colab → ONNX); chia train/test **theo ngày**; báo độ chính xác tách ban ngày và hồng ngoại | P0 | | #7, VISION-FR-003, 016, NFR-09 |
-| [ ] | Đo FPS của pipeline trên **PC cũ đặt ở nhà yến** (NFR-04 cần 25 fps); ghi cấu hình máy; không đạt thì thử ảnh vào nhỏ hơn / 1 ô / GPU, rồi ghi số đo thật | P0 | | #7, NFR-04, `docs/deploy/staging.md` §2.3 |
+| [ ] | Đo FPS của pipeline trên **PC cũ đặt tại nhà thành viên** (NFR-04 cần 25 fps); ghi cấu hình máy; không đạt thì thử ảnh vào nhỏ hơn / 1 ô / GPU, rồi ghi số đo thật | P0 | | #7, NFR-04, `docs/deploy/staging.md` §2.3 |
 | [ ] | Đưa hệ thống vào nhà yến, chạy liên tục **≥ 14 ngày** (đủ cho NFR-08, 11, 14) | P0 | | #38 |
 | [ ] | Người nuôi yến đánh giá từng ngày (hỏi đánh giá trước, rồi mới xem trạng thái của hệ thống) trong đợt chạy | P0 | | EXPERT-FR-012, BR-31 |
 | [ ] | Biên bản phỏng vấn 2–3 người nuôi yến lâu năm: ngưỡng BR-01, NH3/CO2 BR-02, mức lệch BR-28, luật kết hợp BR-29, mưa BR-30 (mẫu ở `docs/evidence-register.md` mục 7.2) | P0 | | #11 |
@@ -91,7 +91,8 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | [ ] | Kiểm tra cách đấu công tắc có sẵn của nhà yến (trước hay song song relay) và viết cách chạy tay | P1 | | Report 3 §8.1 |
 | [ ] | Vẽ và in mạch điều khiển: ESP32, RS485, relay, ADS1115 + 2 biến dòng kẹp (SCT-013 / ZMCT103C) | P1 | | #37, THREAT-FR-014, D11 |
 | [ ] | Dựng staging theo `docs/deploy/staging.md`: VPS 2 vCPU/4 GB + tên miền, Caddy TLS, tls-proxy cho MQTT 8883 và RTSPS 8322, MediaMTX; viết `deploy/docker-compose.staging.yml`, Dockerfile backend/web, Caddyfile; script seed demo đủ dữ liệu cho 22 kịch bản | P0 | | #40, Report 4 §3.4, §11 |
-| [ ] | Cài PC cũ ở nhà yến làm AI node: cắm LAN, `stream.py` chạy như service, BIOS tự bật khi có điện, Tailscale; đóng cổng 18554 trên modem | P0 | | Report 4 D5, `docs/deploy/staging.md` §2.3 |
+| [ ] | Cài PC cũ tại nhà thành viên làm AI node: `.env` có URL RTSP qua IP tĩnh nhà yến (cổng 18554), `stream.py` chạy như service, BIOS tự bật khi có điện; đặt mật khẩu camera mạnh và giới hạn IP nguồn trên modem nếu được | P0 | | Report 4 D5, `docs/deploy/staging.md` §2.3 |
+| [ ] | Chạy thử kéo hình camera qua Internet liên tục 24 giờ; đếm cùng một clip đọc trực tiếp và đọc qua Internet, so số đếm | P0 | | Report 4 D5, plan §19.5 cổng 3b |
 | [ ] | Firmware MQTT TLS (môi trường build `cloud`, CA Let's Encrypt) để ESP32 nối được broker staging | P0 | | #39, plan §15.7 |
 | [ ] | In nhãn QR cho các board thật và mã QR cho từng tầng của nhà yến thử nghiệm | P1 | | MF-10 |
 
@@ -137,7 +138,7 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 
 | | Việc | Ưu tiên | Người | Nguồn |
 |---|---|:---:|---|---|
-| [~] | `stream.py` gửi MQTT (số đếm phiên, số đếm 5 phút, heartbeat) và đẩy video lên MediaMTX đã có trên develop (PR #95); còn chạy thử với EMQX/MediaMTX của staging từ PC ở nhà yến | P0 | Bảo | #7, VISION-FR-006, 013, 014, 017 |
+| [~] | `stream.py` gửi MQTT (số đếm phiên, số đếm 5 phút, heartbeat) và đẩy video lên MediaMTX đã có trên develop (PR #95); còn chạy thử với EMQX/MediaMTX của staging từ PC cũ tại nhà thành viên | P0 | Bảo | #7, VISION-FR-006, 013, 014, 017 |
 | [~] | Khối MQTT Raspberry Pi trong `config.yaml` đã bỏ (PR #95); khung giờ phiên trong `config.yaml` chỉ còn là mặc định cho tới khi backend tính phiên từ số đếm 5 phút | P2 | | `ai-pipeline/CLAUDE.md`, #20 |
 | [x] | Job CI cho `pytest` của pipeline | P1 | Bảo | Có từ PR #95 |
 
@@ -187,9 +188,9 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 ## 6. Thứ tự đề xuất trong 2 tuần
 
 1. **Tuần 1:**
-   - Dữ liệu và phần cứng: train model, dựng staging (VPS + PC cũ ở nhà yến), đưa hệ thống vào nhà yến, phỏng vấn người nuôi.
+   - Dữ liệu và phần cứng: train model, dựng staging (VPS + PC cũ tại nhà thành viên), đưa hệ thống vào nhà yến, phỏng vấn người nuôi.
    - Backend P0: quyền theo §2.4, MF-10, `DISMISSED`, FCM, MF-11 (đánh giá theo ngày, đánh giá của người nuôi, báo cáo).
-   - Chạy pipeline (gửi MQTT và video) với staging từ PC ở nhà yến.
+   - Chạy pipeline (gửi MQTT và video) với staging từ PC cũ tại nhà thành viên.
 2. **Tuần 2:**
    - Web và mobile P0: role chuyên gia, màn chuyên gia, MF-10, MF-11, live stream.
    - Backend và firmware P1.

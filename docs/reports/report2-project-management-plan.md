@@ -174,7 +174,7 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 | Front-end and mobile | React 18, Vite, TailwindCSS, Expo |
 | AI | Python, ONNX Runtime, supervision, Roboflow, Google Colab |
 | Testing | Jest, Vitest, Unity (PlatformIO native), pytest, k6 (load) |
-| Environments | Development on members' machines; staging on a VPS with the AI node on the spare PC at the house (Report 4, Section 3.4) |
+| Environments | Development on members' machines; staging on a VPS with the AI node on the spare PC at a member's home (Report 4, Section 3.4) |
 | AI assistants | Declared in Report 4, Section 3.5 |
 
 ## 7. Revision History

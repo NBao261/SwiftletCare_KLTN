@@ -38,7 +38,7 @@ Two further gaps remain. First, owners have no objective way to follow the flock
 
 ### B. Proposed Solutions
 
-We propose SwiftletCare, an automated control and monitoring system consisting of an edge controller with industrial sensors, actuators and load-current sensing in each zone of the house, an AI camera pipeline at the bird entrance running on a PC at the house, and a cloud backend with web and mobile applications.
+We propose SwiftletCare, an automated control and monitoring system consisting of an edge controller with industrial sensors, actuators and load-current sensing in each zone of the house, an AI camera pipeline that reads the camera at the bird entrance and runs on a desktop PC, and a cloud backend with web and mobile applications.
 
 The system is designed so that the house regulates and protects itself; people supervise, validate and intervene only as an exception. Its research focus and value lie in three components:
 
@@ -158,7 +158,7 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **b) Products:**
 
-- An operational IoT Hardware Controller Prototype (ESP32 with RS485 sensors, relay module, load-current sensing and attractant speaker) performing autonomous micro-climate control, and an AI Camera Node at the bird entrance (IP camera and a PC at the house).
+- An operational IoT Hardware Controller Prototype (ESP32 with RS485 sensors, relay module, load-current sensing and attractant speaker) performing autonomous micro-climate control, and an AI Camera Node for the bird entrance (IP camera and a desktop PC running the pipeline).
 - A trained AI Model for Swiftlet Entry/Exit Counting, with its evaluation results.
 - A fully functional Web & Mobile Application for monitoring environmental data, viewing swiftlet count analytics and the annotated live stream, receiving alerts, manual override, device setup by QR code, daily health status and reports with PDF/CSV export, harvest logging, and expert validation and tuning.
 - A scalable Cloud Backend handling real-time time-series telemetry, swiftlet counting logs, alert dispatching, forecasting, daily health assessment and periodic reports.
