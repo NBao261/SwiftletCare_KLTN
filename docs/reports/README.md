@@ -13,6 +13,7 @@ Thư mục này chứa bản tiếng Anh của các Report nộp ở Review 2, t
 | `report5-test.md` | Report 5 – Software Test Documentation (test plan, 131 test case, ánh xạ sang test tự động) | Bản nháp 1.0.0, sinh từ `report5/tc.py` bằng `report5/gen_report5.py` |
 | `project-tracking.md` | Project Tracking (tiến độ, việc theo người, defect) | Cập nhật 23/10/2026 |
 | `design-brief.md` | Design Brief BM01 + Phụ lục A (Defense 1.1 targets) | Bản nháp 1.0.0; docx: `design-brief/` |
+| `todo-remove-platform.md` | Todo ưu tiên ở code: bỏ ticket, SLA, vùng Technician, khớp quyền §2.4 — 7 PR theo thứ tự, từng file và test | Cập nhật 24/10/2026 |
 | `todo-review2.md` | Danh sách việc cần làm trước Review 2 (hồ sơ, ô `[TEAM]`, việc thực tế, code theo module, sửa cho chuẩn) | Cập nhật 23/10/2026 |
 
 ## Report 3 – SRS: cách dùng

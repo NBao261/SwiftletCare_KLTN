@@ -8,6 +8,8 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 - **P1** — yêu cầu bắt buộc (M) của Report 3 nhưng không chặn demo.
 - **P2** — sửa cho đúng chuẩn, nợ cũ, tùy chọn.
 
+**Việc ưu tiên nhất ở code** (bỏ ticket, SLA, vùng; quyền theo §2.4) có danh sách từng bước, từng file, chia theo PR ở [`todo-remove-platform.md`](todo-remove-platform.md). Các dòng tương ứng ở mục 4 và 5 dưới đây là bản tóm tắt.
+
 ---
 
 ## 1. Hồ sơ Review 2 (không phải code)
