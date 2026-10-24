@@ -1263,12 +1263,10 @@ paths:
           }
     post:
       tags: [Farms]
-      summary: Tạo farm mới — FARM_OWNER/ADMIN
+      summary: Tạo farm mới — FARM_OWNER
       description: |
-        - FARM_OWNER: người tạo là Primary Owner; không được gửi `owner_email` (400).
-        - ADMIN tạo hộ (VD khi đi lắp đặt): **bắt buộc** `owner_email` của một tài khoản
-          Farm Owner đang hoạt động — người đó là Primary Owner, Admin không thành thành
-          viên; chủ farm được báo, audit `FARM_CREATED_FOR_OWNER`.
+        - Người tạo là Primary Owner (FARM-FR-001). Role khác → 403: Administrator không
+          quản lý farm (Report 3 §2.4).
         - `region` **bắt buộc** (FARM-FR-009): nhận mã, tên, viết tắt hoặc tên tỉnh cũ đã
           sáp nhập, lưu mã danh mục (`GET /farms/regions`); vùng lạ → 400.
       requestBody:
@@ -1287,8 +1285,6 @@ paths:
                     example: HCMC,
                     description: "Khu vực để định tuyến Technician phụ trách — VD `HCMC`, `TP. Hồ Chí Minh`, `Long An` (→ TAY_NINH)",
                   }
-                owner_email:
-                  { type: string, format: email, description: "Chỉ ADMIN và bắt buộc với ADMIN — Farm Owner sẽ làm chủ farm" }
                 coordinates:
                   {
                     type: object,
@@ -1318,8 +1314,9 @@ paths:
               },
           }
         "400":
-          description: "Thiếu/sai khu vực; ADMIN thiếu owner_email hoặc owner_email không phải Farm Owner đang hoạt động; FARM_OWNER gửi owner_email"
+          description: "Thiếu/sai khu vực"
           content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /farms/regions:
@@ -1379,9 +1376,10 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [Farms]
-      summary: Cập nhật farm (owner/member)
+      summary: Cập nhật farm — FARM_OWNER của farm
       description: |
-        `region` chỉ Primary Owner/Admin được đổi (FARM-FR-001) vì nó quyết định
+        Role khác FARM_OWNER → 403 (Report 3 §2.4: Administrator không quản lý farm).
+        `region` chỉ Primary Owner được đổi (FARM-FR-001) vì nó quyết định
         Technician nào phụ trách farm và ticket được giao cho ai. Đổi `region`
         thì ticket đang mở của farm **tự điều phối lại** sang Technician của khu
         vực mới (hoặc về hàng đợi chung + báo Admin nếu chưa có ai phụ trách khu
@@ -1397,7 +1395,7 @@ paths:
                 address: { type: string }
                 region:
                   type: string
-                  description: "Khu vực điều phối — mã, tên hoặc tên tỉnh cũ, lưu mã danh mục (`GET /farms/regions`); vùng lạ → 400. Chỉ Primary Owner/Admin đổi được"
+                  description: "Khu vực điều phối — mã, tên hoặc tên tỉnh cũ, lưu mã danh mục (`GET /farms/regions`); vùng lạ → 400. Chỉ Primary Owner đổi được"
 
                 coordinates:
                   {
@@ -1432,6 +1430,7 @@ paths:
       tags: [Farms]
       summary: Xóa mềm farm — chỉ Primary Owner
       description: |
+        Role khác FARM_OWNER → 403; Farm Owner không phải Primary Owner → 403 (FARM-FR-001).
         Farm chỉ bị ẩn (`is_deleted`), dữ liệu lịch sử giữ nguyên. Kéo theo:
         mọi cảnh báo đang mở của farm được đóng (`RESOLVED`), và mọi **ticket
         đang mở cũng bị đóng** kèm `cancelled_at` + ghi chú "farm đã bị xoá",
@@ -1656,7 +1655,8 @@ paths:
     parameters: [{ $ref: "#/components/parameters/FarmId" }]
     post:
       tags: [Farms]
-      summary: Tạo House trong farm
+      summary: Tạo House trong farm — FARM_OWNER (FARM-FR-002)
+      description: Technician, Administrator, Domain Expert → 403 (Report 3 §2.4).
       requestBody:
         required: true
         content:
@@ -1731,7 +1731,8 @@ paths:
     parameters: [{ $ref: "#/components/parameters/HouseId" }]
     post:
       tags: [Farms]
-      summary: Tạo Zone trong house
+      summary: Tạo Zone trong house — FARM_OWNER (FARM-FR-002)
+      description: Technician, Administrator, Domain Expert → 403 (Report 3 §2.4).
       requestBody:
         required: true
         content:
@@ -1801,12 +1802,13 @@ paths:
   /farms/zones/{zoneId}/fuzzy-tuning:
     put:
       tags: [Farms]
-      summary: "Chỉnh hệ số bộ điều khiển mờ của Zone (ENV-FR-021) — FARM_OWNER/DOMAIN_EXPERT/TECHNICIAN/ADMIN"
+      summary: "Chỉnh hệ số bộ điều khiển mờ của Zone (ENV-FR-021) — FARM_OWNER/DOMAIN_EXPERT"
       description: |
         Gửi 1 hoặc nhiều trong 4 hệ số; server gộp với giá trị hiện tại, kiểm tra khoảng
         (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `fuzzy_tuning_history`, ghi audit
         `FUZZY_TUNING_UPDATED` rồi publish MQTT `config/update` (4 key `fuzzy_*`) để mọi ESP32
         trong Zone áp dụng ngay — không cần nạp lại firmware. Khoá lạ bị bỏ qua.
+        Technician, Administrator → 403 (Report 3 §2.4).
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -1828,7 +1830,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403":
-          description: "Không có quyền trên Zone này"
+          description: "Role không được sửa hệ số (TECHNICIAN, ADMIN) hoặc không có quyền trên Zone này"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
@@ -1897,10 +1899,11 @@ paths:
   /farms/zones/{zoneId}/thresholds:
     put:
       tags: [Farms]
-      summary: "Cập nhật ngưỡng cảnh báo/điều khiển của Zone (ENV-FR-006, lưu lịch sử ENV-FR-009) — FARM_OWNER/DOMAIN_EXPERT/TECHNICIAN/ADMIN"
+      summary: "Cập nhật ngưỡng cảnh báo/điều khiển của Zone (ENV-FR-006, lưu lịch sử ENV-FR-009) — FARM_OWNER/DOMAIN_EXPERT"
       description: |
         Kiểm tra từng cặp min<max và khoảng đo của từng cảm biến (nhiệt −40..125°C,
         ẩm 0..100%, ánh sáng ≤ 200.000 lux, NH3 ≤ 500 ppm, CO2 ≤ 5000 ppm) — 400 nếu vi phạm.
+        Technician, Administrator → 403 (Report 3 §2.4).
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -1933,8 +1936,9 @@ paths:
   /farms/zones/{zoneId}/thresholds/reset:
     put:
       tags: [Farms]
-      summary: "Reset ngưỡng của Zone về mặc định hệ thống (ENV-FR-020, Flow 22 nhánh B) — FARM_OWNER/DOMAIN_EXPERT/TECHNICIAN/ADMIN"
+      summary: "Reset ngưỡng của Zone về mặc định hệ thống (ENV-FR-020, Flow 22 nhánh B) — FARM_OWNER/DOMAIN_EXPERT"
       description: |
+        Technician, Administrator → 403 (Report 3 §2.4).
         Ghi đè cả 7 ngưỡng của Zone bằng `system_settings.default_thresholds` hiện
         hành (chưa cấu hình thì dùng giá trị gốc khớp firmware), thêm 1 bản ghi
         `threshold_history` với `source=RESET_TO_DEFAULT`, publish `config/update`
@@ -1956,11 +1960,10 @@ paths:
   /devices/sensor-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — chỉ TECHNICIAN/ADMIN (FARM-FR-003)"
+      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — FARM_OWNER/TECHNICIAN (FARM-FR-003, MF-10)"
       description: |
-        Bước 3-4 của Flow 1 (Web Console Onboarding). **Farm Owner không gọi được
-        endpoint này** (403) — theo mô hình "công ty vận hành, khách hàng chỉ dùng",
-        việc lắp đặt/kích hoạt thiết bị do Technician thực hiện tại hiện trường.
+        Farm Owner tự setup thiết bị ở farm của mình (MF-10): Zone thuộc farm khác → 403
+        (FARM-FR-007). Technician hỗ trợ; Administrator, Domain Expert → 403 (Report 3 §2.4).
 
         Technician chỉ đăng ký được cho Farm thuộc `assigned_regions` của mình.
         Phải nhập đúng cặp `{device_id, secret_key}` in trên nhãn thiết bị (do Admin
@@ -2092,7 +2095,7 @@ paths:
   /devices/sensor-nodes/{id}/thresholds:
     put:
       tags: [Devices]
-      summary: "Cập nhật ngưỡng qua device (tương đương PUT /farms/zones/:zoneId/thresholds), publish MQTT config/update — FARM_OWNER/DOMAIN_EXPERT/TECHNICIAN/ADMIN"
+      summary: "Cập nhật ngưỡng qua device (tương đương PUT /farms/zones/:zoneId/thresholds), publish MQTT config/update — FARM_OWNER/DOMAIN_EXPERT (Technician, Admin → 403)"
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         content:
@@ -2113,7 +2116,7 @@ paths:
   /devices/sensor-nodes/{id}/speaker-schedule:
     put:
       tags: [Devices]
-      summary: "Lịch loa ru của thiết bị (ENV-FR-013b), FARM_OWNER/TECHNICIAN/ADMIN — publish MQTT config/update"
+      summary: "Lịch loa ru của thiết bị (ENV-FR-013b, BR-07), chỉ FARM_OWNER — publish MQTT config/update"
       description: |
         Cập nhật từng phần `speaker_schedule` / `audio.volume` / `audio.current_track`
         rồi publish ngay `config/update` (kèm ngưỡng hiện hành của Zone) xuống ESP32;
@@ -2164,7 +2167,7 @@ paths:
   /devices/sensor-nodes/{id}/relay-override:
     delete:
       tags: [Devices]
-      summary: "Tắt Manual Override sớm, trả thiết bị về AUTO ngay (ENV-FR-018), FARM_OWNER/TECHNICIAN/ADMIN"
+      summary: "Tắt Manual Override sớm, trả thiết bị về AUTO ngay (ENV-FR-018), chỉ FARM_OWNER"
       description: |
         Đặt `control_mode=AUTO`, xoá `override_expiry`, publish MQTT `relay/command`
         `{action:"clear_override"}` để ESP32 trả mọi relay về điều khiển tự động. Gọi
@@ -2209,7 +2212,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Devices]
-      summary: "Upload file .mp3 vào danh mục loa ru (ENV-FR-013c(a)) — TECHNICIAN/ADMIN"
+      summary: "Upload file .mp3 vào danh mục loa ru (ENV-FR-013c(a)) — TECHNICIAN"
       description: |
         Lưu bản gốc lên MinIO + tạo bản ghi `synced_to_sd=false`. Web KHÔNG ghi được
         file xuống thẻ SD (DFPlayer không có lệnh ghi) — Technician tự chép file với
@@ -2254,7 +2257,7 @@ paths:
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}:
     delete:
       tags: [Devices]
-      summary: "Xoá bài khỏi danh mục web (không xoá file trên thẻ SD) — TECHNICIAN/ADMIN"
+      summary: "Xoá bài khỏi danh mục web (không xoá file trên thẻ SD) — TECHNICIAN"
       description: |
         Bài đã chép vào thẻ SD và đang là `speaker_track` của thiết bị (còn hoạt động) thì
         trả 409 — thiết bị vẫn phát số đó mà web mất dấu là bài nào; chọn bài khác hoặc
@@ -2274,7 +2277,7 @@ paths:
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}/sync-status:
     put:
       tags: [Devices]
-      summary: "Đánh dấu đã/chưa chép file vào thẻ SD (ENV-FR-013c(a)) — TECHNICIAN/ADMIN"
+      summary: "Đánh dấu đã/chưa chép file vào thẻ SD (ENV-FR-013c(a)) — TECHNICIAN"
       parameters: [{ $ref: "#/components/parameters/NodeId" }, { $ref: "#/components/parameters/TrackId" }]
       requestBody:
         required: true
@@ -2362,7 +2365,7 @@ paths:
   /devices/sensor-nodes/{id}/relay-overrides:
     get:
       tags: [Devices]
-      summary: "Lịch sử can thiệp tay của thiết bị (ENV-FR-019) — FARM_OWNER/DOMAIN_EXPERT/TECHNICIAN/ADMIN"
+      summary: "Lịch sử can thiệp tay của thiết bị (ENV-FR-019) — FARM_OWNER/DOMAIN_EXPERT (Technician, Admin → 403)"
       description: |
         Mỗi lần ép 1 relay là 1 bản ghi, mới nhất trước. `ended_at = null` là đang override.
         `end_reason`: `EXPIRED` (hết hạn), `CLEARED_EARLY` (tắt sớm, gỡ thiết bị, hoặc thiết
@@ -2390,11 +2393,11 @@ paths:
   /devices/sensor-nodes/{id}/relay:
     post:
       tags: [Devices]
-      summary: "Điều khiển relay — Manual Override (ENV-FR-016..018), FARM_OWNER/TECHNICIAN/ADMIN (Domain Expert không vận hành thiết bị)"
+      summary: "Điều khiển relay — Manual Override (ENV-FR-016..018), chỉ FARM_OWNER"
       description: |
         Publish MQTT `relay/command` tới ESP32, đặt `control_mode=MANUAL` và
-        `override_expiry = now + durationMs`. Farm Owner dùng để vận hành hằng ngày,
-        Technician dùng khi khắc phục sự cố (RACI mục 4.4). Gọi lại cùng trạng thái
+        `override_expiry = now + durationMs`. Technician, Administrator, Domain Expert → 403
+        (Report 3 §2.4). Gọi lại cùng trạng thái
         để gia hạn override (Flow 13 case 4a).
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
@@ -2459,7 +2462,7 @@ paths:
   /devices/camera-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — chỉ TECHNICIAN/ADMIN (FARM-FR-004, Flow 1b)"
+      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — FARM_OWNER (farm của mình)/TECHNICIAN (FARM-FR-004, MF-10)"
       description: |
         Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho. SRS v2.1.8: camera lắp ở
         cửa ra vào của cả nhà yến nên gắn House (`house_id`). `zone_id` là cách gửi cũ (trước v2.1.8), được quy
@@ -2552,7 +2555,7 @@ paths:
   /devices/sensor-nodes/{id}/decommission:
     post:
       tags: [Devices]
-      summary: "Gỡ bỏ thiết bị, giữ lịch sử dữ liệu (FARM-FR-008) — TECHNICIAN/ADMIN"
+      summary: "Gỡ bỏ thiết bị, giữ lịch sử dữ liệu (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
       description: |
         Không xoá document: telemetry/alert cũ tham chiếu `node_id` nên vẫn truy
         vấn được. Thiết bị bị ẩn khỏi danh sách/thống kê, heartbeat/telemetry từ
@@ -2589,7 +2592,7 @@ paths:
   /devices/sensor-nodes/{id}/restore:
     post:
       tags: [Devices]
-      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
+      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
       description: |
         Xoá `decommissioned_at` và cờ `activation_overdue_at`, đưa thiết bị về
         `OFFLINE` — hoặc `PENDING` nếu nó chưa từng gửi heartbeat lần nào (vẫn
@@ -2727,7 +2730,7 @@ paths:
   /devices/camera-nodes/{id}/restore:
     post:
       tags: [Devices]
-      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — TECHNICIAN/ADMIN"
+      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -2752,7 +2755,7 @@ paths:
   /devices/sensor-nodes/{id}/replace:
     post:
       tags: [Devices]
-      summary: "Thay thiết bị hỏng bằng thiết bị mới cùng Zone (FARM-FR-008) — TECHNICIAN/ADMIN"
+      summary: "Thay thiết bị hỏng bằng thiết bị mới cùng Zone (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
       description: |
         Đăng ký thiết bị mới (cần `secret_key` như onboarding, trạng thái PENDING)
         vào đúng Zone của thiết bị cũ, chép lịch loa/âm lượng, rồi gỡ thiết bị cũ
@@ -2785,8 +2788,10 @@ paths:
   /devices/sensor-nodes/{id}/reassign-zone:
     put:
       tags: [Devices]
-      summary: "Dời thiết bị đang kết nối sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — TECHNICIAN/ADMIN"
+      summary: "Dời thiết bị đang kết nối sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — FARM_OWNER/TECHNICIAN"
       description: |
+        Farm Owner chỉ dời trong farm của mình: Zone nguồn hoặc đích thuộc farm khác → 403
+        (FARM-FR-007); Administrator → 403 (Report 3 §2.4).
         Publish `config/reassign` (kèm `deviceId`) lên topic của Zone CŨ — thiết bị
         lưu identity mới rồi kết nối lại theo topic mới. Kiểm quyền trên cả Zone
         nguồn lẫn Zone đích; cảnh báo còn mở của thiết bị ở Zone cũ được đóng; audit
@@ -2821,7 +2826,7 @@ paths:
   /devices/sensor-nodes/{id}/commands:
     post:
       tags: [Devices]
-      summary: "Xử lý từ xa: khởi động lại / đẩy lại ngưỡng / OTA firmware (TICKET-FR-008, Flow 15) — TECHNICIAN/ADMIN"
+      summary: "Xử lý từ xa: khởi động lại / đẩy lại ngưỡng / OTA firmware (FARM-FR-013, Flow 15) — chỉ TECHNICIAN"
       description: |
         Chỉ gửi được khi thiết bị `ONLINE` hoặc `DEGRADED` (hỏng một phần nhưng
         vẫn kết nối — restart/đẩy lại cấu hình chính là cách xử lý cho tình trạng đó). Cả 3 lệnh publish lên topic
@@ -2880,7 +2885,7 @@ paths:
   /devices/camera-nodes/{id}/decommission:
     post:
       tags: [Devices]
-      summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — TECHNICIAN/ADMIN"
+      summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
       description: |
         Cùng quy tắc với `POST /devices/sensor-nodes/{id}/decommission`: không xoá
         document nên dữ liệu cũ tham chiếu `node_id` vẫn truy vấn được, thiết bị
@@ -3171,8 +3176,8 @@ paths:
   /alerts/{id}/acknowledge:
     put:
       tags: [Alerts]
-      summary: "Xác nhận cảnh báo (ALERT-FR-009) — FARM_OWNER/TECHNICIAN (Domain Expert chỉ đọc và kiểm chứng)"
-      description: Chỉ `FARM_OWNER`/`TECHNICIAN` (Admin chỉ xem cảnh báo → 403, vì xác nhận thay sẽ chặn việc tự tạo ticket TICKET-FR-002). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả").
+      summary: "Xác nhận cảnh báo (ALERT-FR-009) — chỉ FARM_OWNER (Domain Expert chỉ đọc và kiểm chứng)"
+      description: Chỉ `FARM_OWNER`; Technician, Administrator chỉ xem cảnh báo → 403 (Report 3 §2.4). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả").
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
