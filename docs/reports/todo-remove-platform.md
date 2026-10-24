@@ -49,7 +49,6 @@ Chỉ sửa `requireRole` và kiểm tra trong service, chưa xoá module nào. 
 
 **Service:**
 - [ ] Farm Owner chỉ đăng ký, dời, gỡ thiết bị ở farm **của mình** (`assertZoneAccess`/`hasFarmAccess`), Zone của farm khác → 403 (FARM-FR-007).
-- [ ] `backend/CLAUDE.md` mục Roles: bỏ câu "limits Technician overrides and acknowledgements to an assigned ticket".
 - [ ] Không đụng tới `farmAccess.util.ts` ở PR này; vùng (region) để PR 5.
 
 **API spec và test:**
