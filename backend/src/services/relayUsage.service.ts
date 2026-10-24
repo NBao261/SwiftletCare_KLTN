@@ -1,16 +1,14 @@
 import { SensorNode, IN_SERVICE, ISensorNode } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
-import { createMaintenanceTicket } from '@/services/ticket.service'
-import { nextVisitSlot } from '@/utils/visitTime.util'
-import logger from '@/utils/logger.util'
+import { createAlert } from '@/services/alert.service'
 
 type UsageRelay = 'misting' | 'ventilation'
 const RELAYS: UsageRelay[] = ['misting', 'ventilation']
 const RELAY_LABEL: Record<UsageRelay, string> = { misting: 'bơm phun sương', ventilation: 'quạt thông gió' }
 
 /**
- * TICKET-FR-018 — ngưỡng bảo trì theo thời gian chạy thật.
+ * ALERT-FR-016 — ngưỡng bảo trì theo thời gian chạy thật (Report 3 §4.5).
  * ponytail: số tham khảo chung (bơm màng ~500 giờ thay màng/lọc, quạt ~2.000 giờ
  * vệ sinh/tra dầu, relay cơ ~100.000 lần đóng cắt) — thay bằng số trong datasheet
  * thiết bị thật đã lắp.
@@ -51,12 +49,13 @@ export function tallyRelayUsage(prev: { at?: Date; misting?: boolean; ventilatio
 
 /**
  * Chạy mỗi giờ (jobs/maintenanceSchedule.job.ts): cộng dồn giờ chạy/số lần đóng
- * cắt của bơm và quạt từ telemetry mới, vượt RELAY_SERVICE_LIMITS thì tạo 1 ticket
- * MAINTENANCE rồi đếm lại từ 0 cho chu kỳ bảo trì kế tiếp.
+ * cắt của bơm và quạt từ telemetry mới, vượt RELAY_SERVICE_LIMITS thì báo cảnh báo
+ * MAINTENANCE_DUE. Bộ đếm KHÔNG reset ở đây: Farm Owner xác nhận cảnh báo (đã bảo
+ * trì) mới đếm lại từ 0 (BR-16, `acknowledgeAlert`).
  */
-export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: number; tickets: number }> {
+export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: number; alerts: number }> {
   const nodes = await SensorNode.find(IN_SERVICE).select('_id zone_id device_id relay_usage')
-  let tickets = 0
+  let alerts = 0
 
   for (const node of nodes) {
     const usage = node.relay_usage
@@ -66,48 +65,59 @@ export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: n
     if (samples.length === 0) continue
 
     const result = tallyRelayUsage({ at: usage.counted_until, misting: usage.last_misting_on, ventilation: usage.last_ventilation_on }, samples)
+    // $inc thay vì save(): Farm Owner xác nhận MAINTENANCE_DUE giữa lúc job chạy thì lần
+    // đếm lại về 0 (acknowledgeAlert) không bị số cũ ghi đè
+    const inc: Record<string, number> = {}
     for (const r of RELAYS) {
-      usage[r].on_hours += result.onHours[r]
-      usage[r].switches += result.switches[r]
-      usage[r].since_service_hours += result.onHours[r]
-      usage[r].since_service_switches += result.switches[r]
+      inc[`relay_usage.${r}.on_hours`] = result.onHours[r]
+      inc[`relay_usage.${r}.switches`] = result.switches[r]
+      inc[`relay_usage.${r}.since_service_hours`] = result.onHours[r]
+      inc[`relay_usage.${r}.since_service_switches`] = result.switches[r]
     }
-    usage.counted_until = result.last.at
-    usage.last_misting_on = result.last.misting
-    usage.last_ventilation_on = result.last.ventilation
-
-    for (const r of RELAYS) {
-      if (await createServiceTicketIfDue(node, r, now)) tickets++
-    }
-    await node.save()
+    const updated = await SensorNode.findOneAndUpdate({ _id: node._id }, {
+      $inc: inc,
+      $set: {
+        'relay_usage.counted_until': result.last.at,
+        'relay_usage.last_misting_on': result.last.misting,
+        'relay_usage.last_ventilation_on': result.last.ventilation,
+      },
+    }, { new: true })
+    if (updated && await raiseMaintenanceDueIfDue(updated)) alerts++
   }
-  return { nodes: nodes.length, tickets }
+  return { nodes: nodes.length, alerts }
 }
 
-async function createServiceTicketIfDue(node: ISensorNode, relay: UsageRelay, now: Date): Promise<boolean> {
-  const u = node.relay_usage[relay]
-  const limit = RELAY_SERVICE_LIMITS[relay]
-  if (u.since_service_hours < limit.hours && u.since_service_switches < limit.switches) return false
-
-  const zone = await Zone.findById(node.zone_id).select('farm_id').lean()
+/**
+ * Một cảnh báo cho mỗi controller, liệt kê mọi tải đã quá mốc (khoá dedup của cảnh báo là
+ * thiết bị + loại). Mỗi giờ còn quá mốc thì gọi lại: cảnh báo đang mở được cập nhật số
+ * mới và danh sách tải (`metadata.loads`) mà lúc xác nhận sẽ được đếm lại.
+ */
+async function raiseMaintenanceDueIfDue(node: ISensorNode): Promise<boolean> {
+  const due = RELAYS.filter(r => {
+    const u = node.relay_usage[r]
+    return u.since_service_hours >= RELAY_SERVICE_LIMITS[r].hours || u.since_service_switches >= RELAY_SERVICE_LIMITS[r].switches
+  })
+  if (due.length === 0) return false
+  const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
   if (!zone) return false
-  try {
-    const ticket = await createMaintenanceTicket({
-      farm_id: String(zone.farm_id),
-      zone_id: String(node.zone_id),
-      scheduled_visit_at: nextVisitSlot(new Date(now.getTime() + 86400_000)),
-      description: `Bảo trì theo thời gian chạy: ${RELAY_LABEL[relay]} của thiết bị ${node.device_id} đã chạy ` +
-        `${Math.round(u.since_service_hours)} giờ / ${u.since_service_switches.toLocaleString('vi-VN')} lần đóng cắt ` +
-        `kể từ lần bảo trì trước (mốc ${limit.hours} giờ hoặc ${limit.switches.toLocaleString('vi-VN')} lần)`,
-    })
-    u.since_service_hours = 0
-    u.since_service_switches = 0
-    u.last_ticket_id = ticket._id
-    return true
-  } catch (err) {
-    // Không reset bộ đếm → giờ sau thử lại. Không sinh ticket trùng: createMaintenanceTicket
-    // chỉ ném lỗi trước/khi ghi ticket (thông báo sau đó là fire-and-forget).
-    logger.error('Tạo ticket bảo trì theo thời gian chạy thất bại', { deviceId: node.device_id, relay, err: (err as Error).message })
-    return false
-  }
+
+  const loads = due.map(r => ({
+    relay: r,
+    hours: Math.round(node.relay_usage[r].since_service_hours),
+    switches: node.relay_usage[r].since_service_switches,
+    limit_hours: RELAY_SERVICE_LIMITS[r].hours,
+    limit_switches: RELAY_SERVICE_LIMITS[r].switches,
+  }))
+  const created = await createAlert({
+    farmId: String(zone.farm_id),
+    zoneId: String(node.zone_id),
+    nodeId: String(node._id),
+    type: 'MAINTENANCE_DUE',
+    title: `Đến hạn bảo trì ${due.map(r => RELAY_LABEL[r]).join(', ')} — ${node.device_id}`,
+    message: loads.map(l => `${RELAY_LABEL[l.relay]} của ${node.device_id} (${zone.name}) đã chạy ${l.hours} giờ / ` +
+      `${l.switches.toLocaleString('vi-VN')} lần đóng cắt kể từ lần bảo trì trước (mốc ${l.limit_hours} giờ hoặc ` +
+      `${l.limit_switches.toLocaleString('vi-VN')} lần)`).join('; ') + '. Xác nhận cảnh báo sau khi bảo trì để đếm lại từ 0.',
+    metadata: { loads },
+  })
+  return created !== null
 }

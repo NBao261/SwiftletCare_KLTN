@@ -1,7 +1,7 @@
 /**
  * TICKET-FR-013 — tự tạo ticket MAINTENANCE khi lịch bảo trì định kỳ đến hạn.
- * TICKET-FR-018 — cùng nhịp: cộng dồn giờ chạy/số lần đóng cắt bơm-quạt, vượt mốc
- * thì tạo ticket bảo trì theo thời gian chạy.
+ * ALERT-FR-016 — cùng nhịp: cộng dồn giờ chạy/số lần đóng cắt bơm-quạt, vượt mốc
+ * thì báo cảnh báo MAINTENANCE_DUE.
  */
 import cron from 'node-cron'
 import { generateDueMaintenanceTickets } from '@/services/maintenanceSchedule.service'
@@ -19,8 +19,8 @@ export function startMaintenanceScheduleJob(): void {
       })
       .catch((err: Error) => logger.error('maintenanceSchedule.job failed', { err }))
     accumulateRelayUsage()
-      .then(({ tickets }) => {
-        if (tickets > 0) logger.info(`Đã tạo ${tickets} ticket bảo trì theo thời gian chạy (TICKET-FR-018)`)
+      .then(({ alerts }) => {
+        if (alerts > 0) logger.info(`Đã báo ${alerts} cảnh báo đến hạn bảo trì bơm/quạt (ALERT-FR-016)`)
       })
       .catch((err: Error) => logger.error('accumulateRelayUsage failed', { err }))
   })

@@ -47,16 +47,17 @@ const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   SPEAKER_FAILURE:   'HIGH',
   NODE_OFFLINE:      'HIGH',
   // MEDIUM: tín hiệu tham khảo theo dB (THREAT-FR-007), chờ Domain Expert kiểm chứng —
-  // HIGH sẽ bị alertEscalation.job tự sinh ticket sau 15 phút nếu báo nhầm.
+  // HIGH sẽ bị alertEscalation.job gửi lại sau 15 phút nếu báo nhầm (ALERT-FR-015).
   NOISE_ANOMALY:     'MEDIUM',
   THRESHOLD_BREACH:  'MEDIUM',
   SENSOR_FAULT:      'MEDIUM',
   PUMP_DRY:          'MEDIUM',
   EDGE_AI_DEGRADED:  'MEDIUM',
   LOW_RETURN_RATE:   'LOW',
-  // v1.24.0 — suy luận thống kê, có thể báo nhầm → không để mức tự sinh ticket
+  // v1.24.0 — suy luận thống kê, có thể báo nhầm → không để mức được gửi lại
   SENSOR_ANOMALY:    'MEDIUM',
   FORECAST_BREACH:   'LOW',
+  MAINTENANCE_DUE:   'LOW',
 }
 
 /** Mọi loại cảnh báo hợp lệ — lấy từ bảng mức mặc định nên luôn đủ theo `AlertType` */
@@ -69,15 +70,16 @@ export const ALERT_TYPES = Object.keys(DEFAULT_SEVERITY) as AlertType[]
 export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
 
 /**
- * Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, mở ticket giả).
- * LOW_RETURN_RATE do job của backend tính từ số đếm (VISION-FR-011), nút AI không tự báo.
+ * Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, báo giả).
+ * LOW_RETURN_RATE do job của backend tính từ số đếm (VISION-FR-011), nút AI không tự báo;
+ * MAINTENANCE_DUE do relayUsage tính từ telemetry (ALERT-FR-016).
  */
-const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
+const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE', 'MAINTENANCE_DUE']
 
 /** Loại nút AI đếm chim được tự báo qua `vision/alert` (THREAT-FR-010: tốc độ xử lý < 10 FPS) */
 const CAMERA_ALERT_TYPES: AlertType[] = ['EDGE_AI_DEGRADED']
 
-/** Cảnh báo không bao giờ được ở mức tự sinh ticket: mọi loại suy luận + vượt ngưỡng (ALERT-FR-012) */
+/** Cảnh báo không bao giờ được ở mức gửi lại (ALERT-FR-015): mọi loại suy luận + vượt ngưỡng (ALERT-FR-012) */
 const NEVER_ESCALATE = new Set<AlertType>([...INFERRED_ALERT_TYPES, 'THRESHOLD_BREACH'])
 
 /** Tên loại cảnh báo firmware cũ còn gửi → tên hiện hành */
@@ -108,15 +110,15 @@ export interface CreateAlertInput {
  * không gửi thông báo lại.
  */
 export async function createAlert(input: CreateAlertInput): Promise<IAlert | null> {
-  // Loại không được leo thang thành ticket (ALERT-FR-012 + cảnh báo suy luận) giữ tối đa
-  // MEDIUM dù nguồn nào gửi mức cao hơn — đặt ở điểm vào duy nhất để không producer nào
-  // (firmware cấu hình sai, job mới) tự sinh ticket cho cảnh báo có thể báo nhầm.
+  // Loại không được gửi lại (ALERT-FR-012 + cảnh báo suy luận) giữ tối đa MEDIUM dù
+  // nguồn nào gửi mức cao hơn — đặt ở điểm vào duy nhất để không producer nào
+  // (firmware cấu hình sai, job mới) làm cảnh báo có thể báo nhầm bị gửi lại.
   const requested = input.severity ?? DEFAULT_SEVERITY[input.type]
   const severity: AlertSeverity =
     NEVER_ESCALATE.has(input.type) && (requested === 'CRITICAL' || requested === 'HIGH') ? 'MEDIUM' : requested
   const now = new Date()
 
-  // Farm đã xoá mềm mà thiết bị vẫn cắm điện: không sinh cảnh báo (và ticket) mà
+  // Farm đã xoá mềm mà thiết bị vẫn cắm điện: không sinh cảnh báo mà
   // không ai mở được. Pre-hook findOne của Farm đã loại is_deleted.
   if (!(await Farm.exists({ _id: input.farmId }))) return null
 
@@ -369,6 +371,20 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
   alert.acknowledged_at = new Date()
   alert.acknowledged_by = user._id as never
   alert.acknowledgement_note = note
+  if (alert.type === 'MAINTENANCE_DUE') {
+    // BR-16 — xác nhận = đã bảo trì: đếm lại từ 0 cho tải đó và đóng cảnh báo
+    alert.status = 'RESOLVED'
+    alert.resolved_at = alert.acknowledged_at
+    const loads = ((alert.metadata?.loads as Array<{ relay: string }> | undefined) ?? [])
+      .filter(l => l.relay === 'misting' || l.relay === 'ventilation')
+    if (alert.node_id && loads.length > 0) {
+      await SensorNode.updateOne({ _id: alert.node_id }, {
+        $set: Object.fromEntries(loads.flatMap(l => [
+          [`relay_usage.${l.relay}.since_service_hours`, 0], [`relay_usage.${l.relay}.since_service_switches`, 0],
+        ])),
+      })
+    }
+  }
   await alert.save()
   return alert
 }
@@ -491,6 +507,53 @@ export async function resolveStaleEpisodeAlerts(now = new Date()): Promise<numbe
     }],
   )
   return modifiedCount
+}
+
+/**
+ * ALERT-FR-015 — cảnh báo chưa ai xác nhận được gửi lại ĐÚNG 1 lần cho Farm Owner theo
+ * kênh họ chọn (giờ im lặng áp như lần đầu): CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau
+ * 1 giờ. Thay ticket leo thang cũ (TICKET-FR-002), giữ nguyên mốc thời gian (Report 3 §4.5).
+ * Bỏ qua thiết bị đã gỡ và NODE_OFFLINE của thiết bị đã ONLINE lại (cảnh báo chỉ chưa kịp
+ * đóng). Gọi định kỳ từ jobs/alertEscalation.job.ts.
+ */
+export const RENOTIFY_AFTER_MS = 15 * 60 * 1000
+export const NODE_OFFLINE_RENOTIFY_AFTER_MS = 60 * 60 * 1000
+
+export async function renotifyStaleAlerts(now = new Date()): Promise<number> {
+  const stale = await Alert.find({
+    status: 'ACTIVE',
+    renotified_at: { $exists: false },
+    $or: [
+      { type: { $ne: 'NODE_OFFLINE' }, severity: { $in: ['CRITICAL', 'HIGH'] }, created_at: { $lte: new Date(now.getTime() - RENOTIFY_AFTER_MS) } },
+      { type: 'NODE_OFFLINE', created_at: { $lte: new Date(now.getTime() - NODE_OFFLINE_RENOTIFY_AFTER_MS) } },
+    ],
+  })
+  if (stale.length === 0) return 0
+
+  const nodeIds = [...new Set(stale.map(a => a.node_id).filter(Boolean))]
+  const nodes = await SensorNode.find({ _id: { $in: nodeIds } }).select('_id status decommissioned_at').lean()
+  const skipNodeIds = new Set(nodes.filter(n => n.decommissioned_at).map(n => String(n._id)))
+  const onlineNodeIds = new Set(nodes.filter(n => n.status === 'ONLINE').map(n => String(n._id)))
+
+  let sent = 0
+  for (const alert of stale) {
+    const nodeId = alert.node_id ? String(alert.node_id) : undefined
+    if (nodeId && skipNodeIds.has(nodeId)) continue
+    if (alert.type === 'NODE_OFFLINE' && nodeId && onlineNodeIds.has(nodeId)) continue
+    // Giữ chỗ trước rồi mới gửi: 2 lượt job chồng nhau cũng chỉ 1 lượt gửi được
+    const { modifiedCount } = await Alert.updateOne(
+      { _id: alert._id, status: 'ACTIVE', renotified_at: { $exists: false } }, { renotified_at: now },
+    )
+    if (modifiedCount === 0) continue
+    try {
+      await dispatchAlertNotification(alert, { repeat: true })
+      sent++
+    } catch (err) {
+      // 1 cảnh báo lỗi không chặn các cảnh báo khác; không gửi lại lần nữa (ALERT-FR-015: tối đa 2 lần)
+      logger.error('Gửi lại cảnh báo chưa xác nhận thất bại', { alertId: String(alert._id), err })
+    }
+  }
+  return sent
 }
 
 /**

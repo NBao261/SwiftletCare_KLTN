@@ -19,6 +19,7 @@ export const alertTypeDict: Dictionary<AlertType> = {
     RS485_BUS_FAILURE: 'Lỗi bus RS485',
     SENSOR_ANOMALY: 'Cảm biến bất thường',
     FORECAST_BREACH: 'Dự báo vượt ngưỡng',
+    MAINTENANCE_DUE: 'Đến hạn bảo trì bơm/quạt',
   },
   en: {
     THRESHOLD_BREACH: 'Environment threshold breach',
@@ -34,6 +35,7 @@ export const alertTypeDict: Dictionary<AlertType> = {
     RS485_BUS_FAILURE: 'RS485 bus failure',
     SENSOR_ANOMALY: 'Sensor anomaly',
     FORECAST_BREACH: 'Forecast threshold breach',
+    MAINTENANCE_DUE: 'Pump/fan service due',
   },
 };
 

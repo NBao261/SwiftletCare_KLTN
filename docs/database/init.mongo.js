@@ -28,7 +28,7 @@ ensureCollection("alerts", {
     },
     "type": {
       "bsonType": "string",
-      "enum": ["THRESHOLD_BREACH", "PREDATOR_DETECTED", "NODE_OFFLINE", "SPEAKER_FAILURE", "PUMP_DRY", "NOISE_ANOMALY", "POWER_OUTAGE", "LOW_RETURN_RATE", "EDGE_AI_DEGRADED", "SENSOR_FAULT", "RS485_BUS_FAILURE", "SENSOR_ANOMALY", "FORECAST_BREACH"]
+      "enum": ["THRESHOLD_BREACH", "PREDATOR_DETECTED", "NODE_OFFLINE", "SPEAKER_FAILURE", "PUMP_DRY", "NOISE_ANOMALY", "POWER_OUTAGE", "LOW_RETURN_RATE", "EDGE_AI_DEGRADED", "SENSOR_FAULT", "RS485_BUS_FAILURE", "SENSOR_ANOMALY", "FORECAST_BREACH", "MAINTENANCE_DUE"]
     },
     "severity": {
       "bsonType": "string",
@@ -68,6 +68,9 @@ ensureCollection("alerts", {
     },
     "acknowledgement_note": {
       "bsonType": ["string", "null"]
+    },
+    "renotified_at": {
+      "bsonType": ["date", "null"]
     },
     "expert_verdict": {
       "bsonType": ["object", "null"],
@@ -943,9 +946,6 @@ ensureCollection("sensornodes", {
             },
             "since_service_switches": {
               "bsonType": ["number", "null"]
-            },
-            "last_ticket_id": {
-              "bsonType": ["objectId", "null"]
             }
           }
         },
@@ -963,9 +963,6 @@ ensureCollection("sensornodes", {
             },
             "since_service_switches": {
               "bsonType": ["number", "null"]
-            },
-            "last_ticket_id": {
-              "bsonType": ["objectId", "null"]
             }
           }
         },

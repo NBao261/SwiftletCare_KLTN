@@ -71,7 +71,8 @@ async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
   })))
 }
 
-export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVerdict?: boolean } = {}): Promise<void> {
+/** `repeat` — lần gửi lại vì chưa ai xác nhận (ALERT-FR-015): chỉ báo Farm Owner, tiêu đề ghi "Nhắc lại" */
+export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVerdict?: boolean; repeat?: boolean } = {}): Promise<void> {
   if (opts.awaitsVerdict) {
     // Không chặn kênh của Farm Owner: lỗi ở đây chỉ ghi log
     void notifyExpertsPendingVerdict(alert).catch((err: Error) =>
@@ -96,7 +97,8 @@ export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVer
       return
     }
 
-    const body = `[${alert.severity}] ${alert.title} — ${alert.message}`
+    const title = opts.repeat ? `Nhắc lại: ${alert.title}` : alert.title
+    const body = `[${alert.severity}] ${title} — ${alert.message}`
 
     // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
     // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot;
@@ -104,7 +106,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVer
     // Các kênh của 1 người cũng chạy song song; kênh nào ném lỗi thì ghi log riêng,
     // không kéo theo kênh còn lại.
     const channels: Array<[string, Promise<unknown> | undefined]> = [
-      ['push', prefs?.push ? sendPush(String(user._id), alert.title, body) : undefined],
+      ['push', prefs?.push ? sendPush(String(user._id), title, body) : undefined],
       ['telegram', prefs?.telegram !== false && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
       ['zalo', prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH') ? sendZalo(user.phone, body) : undefined],
       ['sms', prefs?.sms && alert.severity === 'CRITICAL' ? sendSms(user.phone, body) : undefined],
