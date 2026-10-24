@@ -26,38 +26,38 @@ Danh sách việc **code** để hệ thống khớp với phạm vi đã chốt
 
 ## Trước Review 2 (P0)
 
-### PR 1 — Backend: quyền theo Report 3 §2.4 · đề xuất: Trần Minh Kiệt
+### PR 1 — Backend: quyền theo Report 3 §2.4 · đề xuất: Trần Minh Kiệt · xong ở PR #100
 
 Chỉ sửa `requireRole` và kiểm tra trong service, chưa xoá module nào. Nhánh gợi ý `fix/role-matrix-srs3`.
 
 **Route (`backend/src/routes/`):**
 
-| [ ] | File : dòng | Route | Hiện tại | Sửa thành | FR |
+| [x] | File : dòng | Route | Hiện tại | Sửa thành | FR |
 |---|---|---|---|---|---|
-| [ ] | `farms.route.ts:16` | `POST /farms` | FARM_OWNER, ADMIN | FARM_OWNER | FARM-FR-001 |
-| [ ] | `farms.route.ts:18–19` | `PUT`, `DELETE /farms/:id` | FARM_OWNER, ADMIN | FARM_OWNER (xoá: chỉ Primary Owner, kiểm tra ở service) | FARM-FR-001 |
-| [ ] | `farms.route.ts:21, 23` | thêm/gỡ thành viên | FARM_OWNER, ADMIN | FARM_OWNER (Primary Owner) | AUTH-FR-005 |
-| [ ] | `farms.route.ts:27, 31` | tạo House, Zone | FARM_OWNER, TECHNICIAN, ADMIN | FARM_OWNER | FARM-FR-002 |
-| [ ] | `farms.route.ts:35, 37, 39` | ngưỡng Zone, reset, hệ số mờ | + TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | ENV-FR-006, 020, 021 |
-| [ ] | `devices.route.ts:27` | `PUT /devices/sensor-nodes/:id/thresholds` | + TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | ENV-FR-006 |
-| [ ] | `devices.route.ts:39, 42` | bật/tắt relay, huỷ override | FARM_OWNER, TECHNICIAN, ADMIN | FARM_OWNER | ENV-FR-016 |
-| [ ] | `devices.route.ts:29` | `PUT /devices/sensor-nodes/:id/speaker-schedule` (lịch loa) | FARM_OWNER, TECHNICIAN, ADMIN | FARM_OWNER | §2.4, BR-07 |
-| [ ] | `devices.route.ts:44` | `GET /devices/sensor-nodes/:id/relay-overrides` (lịch sử can thiệp tay) | FARM_OWNER, DOMAIN_EXPERT, TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | §2.4, ENV-FR-019 |
-| [ ] | `devices.route.ts:23, 92` | đăng ký controller, camera | TECHNICIAN, ADMIN | FARM_OWNER, TECHNICIAN | FARM-FR-003, 004 |
-| [ ] | `devices.route.ts:61, 65, 70, 71, 85, 90` | dời Zone, gỡ, khôi phục, thay | TECHNICIAN, ADMIN | FARM_OWNER, TECHNICIAN | FARM-FR-007b, 008 |
-| [ ] | `devices.route.ts:75` | lệnh từ xa (RESTART, đẩy cấu hình, OTA) | TECHNICIAN, ADMIN | TECHNICIAN | FARM-FR-013 |
-| [ ] | `devices.route.ts:48, 53, 57` | bài loa ru | TECHNICIAN, ADMIN | TECHNICIAN | ENV-FR-013c |
-| [ ] | `alerts.route.ts:32` | xác nhận cảnh báo | FARM_OWNER, TECHNICIAN | FARM_OWNER | ALERT-FR-009 |
+| [x] | `farms.route.ts:16` | `POST /farms` | FARM_OWNER, ADMIN | FARM_OWNER | FARM-FR-001 |
+| [x] | `farms.route.ts:18–19` | `PUT`, `DELETE /farms/:id` | FARM_OWNER, ADMIN | FARM_OWNER (xoá: chỉ Primary Owner, kiểm tra ở service) | FARM-FR-001 |
+| [x] | `farms.route.ts:21, 23` | thêm/gỡ thành viên | FARM_OWNER, ADMIN | FARM_OWNER (Primary Owner) | AUTH-FR-005 |
+| [x] | `farms.route.ts:27, 31` | tạo House, Zone | FARM_OWNER, TECHNICIAN, ADMIN | FARM_OWNER | FARM-FR-002 |
+| [x] | `farms.route.ts:35, 37, 39` | ngưỡng Zone, reset, hệ số mờ | + TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | ENV-FR-006, 020, 021 |
+| [x] | `devices.route.ts:27` | `PUT /devices/sensor-nodes/:id/thresholds` | + TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | ENV-FR-006 |
+| [x] | `devices.route.ts:39, 42` | bật/tắt relay, huỷ override | FARM_OWNER, TECHNICIAN, ADMIN | FARM_OWNER | ENV-FR-016 |
+| [x] | `devices.route.ts:29` | `PUT /devices/sensor-nodes/:id/speaker-schedule` (lịch loa) | FARM_OWNER, TECHNICIAN, ADMIN | FARM_OWNER | §2.4, BR-07 |
+| [x] | `devices.route.ts:44` | `GET /devices/sensor-nodes/:id/relay-overrides` (lịch sử can thiệp tay) | FARM_OWNER, DOMAIN_EXPERT, TECHNICIAN, ADMIN | FARM_OWNER, DOMAIN_EXPERT | §2.4, ENV-FR-019 |
+| [x] | `devices.route.ts:23, 92` | đăng ký controller, camera | TECHNICIAN, ADMIN | FARM_OWNER, TECHNICIAN | FARM-FR-003, 004 |
+| [x] | `devices.route.ts:61, 65, 70, 71, 85, 90` | dời Zone, gỡ, khôi phục, thay | TECHNICIAN, ADMIN | FARM_OWNER, TECHNICIAN | FARM-FR-007b, 008 |
+| [x] | `devices.route.ts:75` | lệnh từ xa (RESTART, đẩy cấu hình, OTA) | TECHNICIAN, ADMIN | TECHNICIAN | FARM-FR-013 |
+| [x] | `devices.route.ts:48, 53, 57` | bài loa ru | TECHNICIAN, ADMIN | TECHNICIAN | ENV-FR-013c |
+| [x] | `alerts.route.ts:32` | xác nhận cảnh báo | FARM_OWNER, TECHNICIAN | FARM_OWNER | ALERT-FR-009 |
 
 **Service:**
-- [ ] Farm Owner chỉ đăng ký, dời, gỡ thiết bị ở farm **của mình** (`assertZoneAccess`/`hasFarmAccess`), Zone của farm khác → 403 (FARM-FR-007).
-- [ ] Không đụng tới `farmAccess.util.ts` ở PR này; vùng (region) để PR 5.
+- [x] Farm Owner chỉ đăng ký, dời, gỡ thiết bị ở farm **của mình** (`assertZoneAccess`/`hasFarmAccess`), Zone của farm khác → 403 (FARM-FR-007).
+- [x] Không đụng tới `farmAccess.util.ts` ở PR này; vùng (region) để PR 5.
 
 **API spec và test:**
-- [ ] `docs/api/api-spec.yaml`: sửa phần mô tả role/403 của từng route ở bảng trên.
-- [ ] Thêm test 403 (mỗi dòng của bảng một case). Có thể gom vào `tests/integration/roleMatrix.test.ts`: TECHNICIAN, ADMIN gọi sửa ngưỡng/hệ số → 403; TECHNICIAN, ADMIN bật relay hoặc sửa lịch loa → 403; TECHNICIAN, ADMIN đọc lịch sử can thiệp tay → 403, DOMAIN_EXPERT đọc → 200; TECHNICIAN xác nhận cảnh báo → 403; ADMIN tạo farm, House, Zone → 403; FARM_OWNER đăng ký thiết bị vào Zone của mình → 201, vào Zone farm khác → 403.
-- [ ] Sửa các test cũ đang dùng Technician/Admin cho những thao tác này (tìm `grep -rln "TECHNICIAN\|ADMIN" tests/integration`), ví dụ `deviceOnboarding.test.ts`, `audioTracks.test.ts`, `adminApi.test.ts`.
-- [ ] Chạy: `npm run lint && npm run build:check && npm test`.
+- [x] `docs/api/api-spec.yaml`: sửa phần mô tả role/403 của từng route ở bảng trên.
+- [x] Thêm test 403 (mỗi dòng của bảng một case). Có thể gom vào `tests/integration/roleMatrix.test.ts`: TECHNICIAN, ADMIN gọi sửa ngưỡng/hệ số → 403; TECHNICIAN, ADMIN bật relay hoặc sửa lịch loa → 403; TECHNICIAN, ADMIN đọc lịch sử can thiệp tay → 403, DOMAIN_EXPERT đọc → 200; TECHNICIAN xác nhận cảnh báo → 403; ADMIN tạo farm, House, Zone → 403; FARM_OWNER đăng ký thiết bị vào Zone của mình → 201, vào Zone farm khác → 403.
+- [x] Sửa các test cũ đang dùng Technician/Admin cho những thao tác này (tìm `grep -rln "TECHNICIAN\|ADMIN" tests/integration`), ví dụ `deviceOnboarding.test.ts`, `audioTracks.test.ts`, `adminApi.test.ts`.
+- [x] Chạy: `npm run lint && npm run build:check && npm test`.
 
 **Xong khi:** mọi route khớp bảng §2.4; test 403 xanh; `README.md` "Chỗ lệch" #2, #15, #25 (phần quyền) đánh dấu đã xong.
 
