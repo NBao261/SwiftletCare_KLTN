@@ -1,7 +1,7 @@
 /**
  * Rà soát Admin vòng 2, lỗi 1–4: Admin đổi ưu tiên (hạn SLA đúng mốc, gỡ cờ vi phạm
- * khi hạn mới chưa tới), ép CLOSED ticket đã đóng, ép rời NEW thì ghi mốc tiếp nhận;
- * lỗi 2: Admin tạo farm hộ Farm Owner. SLA mặc định: P1 30 phút / 4 giờ, P3 24 giờ / 72 giờ.
+ * khi hạn mới chưa tới), ép CLOSED ticket đã đóng, ép rời NEW thì ghi mốc tiếp nhận.
+ * (Lỗi 2 — Admin tạo farm hộ — đã bỏ: Report 3 §2.4 không cho Admin quản lý farm.) SLA mặc định: P1 30 phút / 4 giờ, P3 24 giờ / 72 giờ.
  */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
@@ -9,9 +9,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
-import { createFarm } from '@/services/farm.service'
 import { adminOverrideTicket } from '@/services/ticket.service'
-import { notifyUser } from '@/services/notification.service'
 import type { CurrentUser } from '@/types'
 
 jest.mock('@/services/notification.service', () => ({
@@ -139,43 +137,5 @@ describe('lỗi 4 — ép rời NEW thì ghi mốc tiếp nhận', () => {
     const queued = await Ticket.create({ farm_id: ticket.farm_id, type: 'OTHER', priority: 'P3', status: 'NEW' })
     const after = await override(admin, queued._id, { status: 'IN_PROGRESS' })
     expect(after.responded_at).toBeUndefined()
-  })
-})
-
-describe('lỗi 2 — Admin tạo farm hộ Farm Owner', () => {
-  it('makes the named farm owner the primary owner, not the admin, and tells them', async () => {
-    const admin = asCurrent(await mkUser('ADMIN'))
-    const owner = await mkUser('FARM_OWNER')
-
-    const farm = await createFarm(admin, { name: 'Nhà yến A', address: 'x', region: 'HCMC', owner_email: owner.email.toUpperCase() })
-
-    expect(String(farm.owner_id)).toBe(String(owner._id))
-    expect(farm.members.map(m => String(m.user_id))).toEqual([String(owner._id)])
-    expect(farm.members[0].is_primary).toBe(true)
-    expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ title: 'Bạn có farm mới' }))
-    expect(await AuditLog.countDocuments({ action: 'FARM_CREATED_FOR_OWNER' })).toBe(1)
-  })
-
-  it('refuses a missing, unknown, non-owner, locked or deleted owner', async () => {
-    const admin = asCurrent(await mkUser('ADMIN'))
-    const tech = await mkUser('TECHNICIAN')
-    const locked = await mkUser('FARM_OWNER', { is_active: false })
-    const deleted = await mkUser('FARM_OWNER', { deleted_at: new Date() })
-    const base = { name: 'F', address: 'x', region: 'HCMC' }
-
-    for (const owner_email of [undefined, 'nobody@test.vn', tech.email, locked.email, deleted.email]) {
-      await expect(createFarm(admin, { ...base, owner_email })).rejects.toMatchObject({ statusCode: 400 })
-    }
-    expect(await Farm.countDocuments()).toBe(0)
-  })
-
-  it('does not let a farm owner hand a new farm to someone else', async () => {
-    const owner = asCurrent(await mkUser('FARM_OWNER'))
-    const other = await mkUser('FARM_OWNER')
-    await expect(createFarm(owner, { name: 'F', address: 'x', region: 'HCMC', owner_email: other.email }))
-      .rejects.toMatchObject({ statusCode: 400 })
-
-    const own = await createFarm(owner, { name: 'F', address: 'x', region: 'HCMC' })
-    expect(String(own.owner_id)).toBe(owner._id)
   })
 })

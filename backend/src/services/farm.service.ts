@@ -10,7 +10,6 @@ import {
   assertZoneAccess, assertHouseAccess,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
-import { notifyUser } from '@/services/notification.service'
 import { getDefaultThresholds } from '@/services/system.service'
 import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage } from '@/services/ticket.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
@@ -54,33 +53,16 @@ function onlyOwnMembership(farm: IFarm, user: CurrentUser): FarmDetail {
 
 export interface CreateFarmInput {
   name: string; address: string; region?: string; coordinates?: { lat: number; lng: number }
-  /** Chỉ Admin: email tài khoản Farm Owner sẽ làm chủ farm (Admin tạo hộ khi đi lắp đặt) */
-  owner_email?: string
 }
 
-/**
- * FARM-FR-001 — Farm Owner tạo thì chính họ là Primary Owner. Admin tạo HỘ thì phải chỉ
- * định Farm Owner làm chủ: trước đây Admin thành chủ farm — cảnh báo của farm gửi cho
- * Admin, Farm Owner thật không vào được, và không có API nào chuyển quyền chủ sang họ.
- */
+/** FARM-FR-001 — chỉ Farm Owner tạo farm và thành Primary Owner (Report 3 §2.4: Admin không quản lý farm) */
 export async function createFarm(user: CurrentUser, input: CreateFarmInput): Promise<IFarm> {
   // Farm thiếu vùng thì không Technician nào phụ trách được — bắt buộc, quy về mã danh mục
   if (!input.region?.trim()) throw BadRequestError('Phải chọn khu vực (tỉnh/thành) của farm')
   const region = assertRegionCode(input.region)
 
-  let ownerId = user._id
-  if (user.role === 'ADMIN') {
-    if (!input.owner_email?.trim()) throw BadRequestError('Admin tạo farm phải chỉ định owner_email của Farm Owner làm chủ')
-    const owner = await User.findOne({ email: input.owner_email.toLowerCase().trim() }).select('role is_active deleted_at').lean()
-    if (!owner || owner.role !== 'FARM_OWNER' || !owner.is_active || owner.deleted_at) {
-      throw BadRequestError('owner_email phải là tài khoản Farm Owner đang hoạt động')
-    }
-    ownerId = String(owner._id)
-  } else if (input.owner_email !== undefined) {
-    throw BadRequestError('Chỉ Admin mới chỉ định được chủ farm')
-  }
-
-  const farm = await Farm.create({
+  const ownerId = user._id
+  return Farm.create({
     name: input.name,
     address: input.address,
     region,
@@ -88,14 +70,6 @@ export async function createFarm(user: CurrentUser, input: CreateFarmInput): Pro
     owner_id: ownerId,
     members: [{ user_id: ownerId, is_primary: true }],
   })
-  if (user.role === 'ADMIN') {
-    await logAction(user._id, 'FARM_CREATED_FOR_OWNER', 'farm', String(farm._id), { ownerId, region })
-    await notifyUser(ownerId, {
-      title: 'Bạn có farm mới',
-      body: `Administrator đã tạo farm "${farm.name}" cho tài khoản của bạn.`,
-    })
-  }
-  return farm
 }
 
 /**
