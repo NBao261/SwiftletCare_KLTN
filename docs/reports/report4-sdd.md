@@ -8,7 +8,7 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.0.8 (Review 2) |
+| Document version | 1.0.9 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
 | Requirements baseline | Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -294,6 +294,8 @@ Both clients follow the same pattern: TanStack Query for server state, Zustand f
 
 Health (MF-11): web and mobile show each house's daily status with its reasons and the rating screen, which asks for the assessor's own status before revealing the system's (BR-31); the web exports a report as PDF with `jspdf` and downloads the daily indicators as CSV from the API.
 
+Farm location (FARM-FR-001): the farm form takes the coordinates from the device's current position (browser or phone geolocation, used while standing at the house) or as typed latitude and longitude; no map library is added. The farm list marks a farm still without coordinates, because it gets no weather (A-5).
+
 Device setup (MF-10): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; a scan in the web console (`html5-qrcode`) reads the same formats.
 
 ---
@@ -316,6 +318,8 @@ erDiagram
     ObjectId _id PK
     ObjectId owner_id FK
     string name
+    string address
+    object coordinates "lat, lng - required at creation"
     array members "embedded: user_id, role, is_primary"
     bool is_deleted
   }
@@ -582,6 +586,7 @@ The exact field list, types and indexes of every collection are those of the dat
 | Seasonal counting schedule; incomplete-session flag on session records | `houses`, `birdcountrecords` | VISION-FR-019, 020 |
 | New collection for the daily health status of each house, with its indicators, reasons and ratings | `househealthdays` | ANALYTICS-FR-012, EXPERT-FR-012 (SM-17) |
 | New collection for hourly weather, TTL 90 days | `weatherobservations` | ANALYTICS-FR-013 |
+| Coordinates required and range-checked when a farm is created or edited (validator, not a schema change, so farms created earlier stay readable and are shown as missing their location) | `farms` | FARM-FR-001, A-5 |
 | Health-indicator levels per house | `houses` | BR-28 |
 | Reports per house with `kind` (daily, weekly, monthly, custom) instead of weekly per zone | `zonehealthreports` (renamed when migrated) | EXPERT-FR-005 |
 | Learned normal current per load; pump and fan current in telemetry; alert type `ACTUATOR_FAULT` | `sensornodes`, `telemetries`, `alerts` | THREAT-FR-014 |
@@ -1333,6 +1338,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.9 | `[TEAM]` | A farm is one place with required coordinates (Report 3 FARM-FR-001, A-5): `address` and `coordinates` in the ERD, planned validator in Section 6.4, location field in the farm form (Section 5.4) |
 | 1.0.8 | `[TEAM]` | Maintenance tickets, SLA and Technician regions removed (Report 3 §8, BM03 row 9): decision D14, ERD and collections, jobs, REST and WebSocket, SM-05 removed, AD-04 with repeated alerts and `MAINTENANCE_DUE`, AD-11 rewritten as remote device maintenance, security and gaps |
 | 1.0.7 | `[TEAM]` | AI node moved to the team's spare PC at a member's home, reading the camera over the Internet through the house's static IP (D5, Sections 2.1, 3.4, 10, 11, 12) |
 | 1.0.6 | `[TEAM]` | Staging declared: one VPS with Caddy TLS for backend, web, broker and video server, the team's spare PC at the house as AI node (D5, Sections 3.4 and 11); hardware cost no longer tracked (NFR-12 removed in Report 3); Domain Expert web screens (PR #91), the Farm Owner rework with the WHEP live stream (PR #93) and the live pipeline with MQTT publishing, video push and its pytest CI job (PR #95) noted in Sections 3.3, 5.2, 5.4 and 12; activity-diagram lanes named as actors or system components (Section 9) |

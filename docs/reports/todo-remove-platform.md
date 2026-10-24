@@ -76,7 +76,7 @@ Chỉ gỡ khỏi menu/route và ẩn nút; chưa xoá file (xoá ở PR 6). Nh�
 - [x] Ẩn nút bật/tắt relay, huỷ override và nút xác nhận cảnh báo với Technician và Admin (Farm Owner mới thấy).
 - [x] Gỡ `ThresholdsModal` (sửa ngưỡng/hệ số) khỏi màn Technician.
 - [x] Ẩn nút tạo farm/House/Zone với Admin và Technician.
-- [ ] Form tạo farm của Farm Owner bỏ ô khu vực (`FarmFormModal`) — chỉ làm sau khi backend PR 5 bỏ bắt buộc `region`, trước đó giữ nguyên ô.
+- [ ] Form tạo farm của Farm Owner: thay ô khu vực bằng ô vị trí (GPS) — chuyển sang PR 6, làm sau khi backend PR 5 bỏ bắt buộc `region` và bắt buộc tọa độ.
 - [x] Trang cài đặt hệ thống Admin (`AdminSystemSettingsPage`): ẩn thẻ SLA (`SlaCard`) và cách gán ticket.
 
 **Mobile (`mobile/`):**
@@ -185,13 +185,19 @@ Làm sau PR 4 (lúc đó vùng không còn dính ticket). Nhánh gợi ý `refac
 - [ ] Sửa `middlewares/auth.middleware.ts`, `types/express.d.ts`, `types/domain.types.ts`, `controllers/admin.controller.ts`, `controllers/farms.controller.ts`, `services/admin.service.ts`, `services/system.service.ts`, `scripts/seed.script.ts` (bỏ mọi `region`, `assigned_regions`).
 - [ ] Migration `migrate:remove-regions` (hoặc gộp vào `migrate:remove-tickets`): `$unset` `users.assigned_regions`, `farms.region`.
 
+**Tọa độ bắt buộc (FARM-FR-001, A-5 — một farm là một địa điểm):**
+- [ ] `routes/farms.route.ts`, `POST /farms`: thay validator `region` bằng `body('coordinates.lat').isFloat({ min: -90, max: 90 })` và `body('coordinates.lng').isFloat({ min: -180, max: 180 })`, bắt buộc; `PUT /farms/:id`: cùng kiểm tra nhưng không bắt buộc gửi.
+- [ ] `services/farm.service.ts`: chỉ nhận `coordinates.lat`, `coordinates.lng` dạng số (không gán nguyên `req.body`); không đổi schema `farm.model.ts` để farm cũ chưa có tọa độ vẫn đọc được.
+- [ ] `scripts/seed.script.ts`: farm mẫu có tọa độ.
+- [ ] Test: tạo farm thiếu tọa độ → 422; vĩ độ 95 → 422; hợp lệ → 201 và lưu đúng; sửa farm với kinh độ −200 → 422; một Farm Owner tạo 2 farm, mỗi farm tọa độ riêng → cả hai được lưu.
+
 **Thông báo cho Farm Owner (FARM-FR-009, ghi chú ² §2.4):**
 - [ ] Mỗi lần Technician đăng ký, dời, gỡ, thay thiết bị, gửi lệnh từ xa hay OTA: tạo một thông báo trong app (`notification.service`) cho từng Farm Owner của farm, và một dòng audit (`logAction`) nếu chưa có.
 - [ ] Test: Technician dời controller → 1 audit + 1 thông báo cho mỗi Farm Owner; Technician gọi telemetry/analytics/live stream/harvest → 403; Admin gọi `GET /farms/:id` → 403; Technician `GET /farms` thấy farm của mọi chủ.
 
-**API spec:** cập nhật role và bỏ `region` ở schema Farm, User, request tạo farm.
+**API spec:** cập nhật role; bỏ `region` ở schema Farm, User, request tạo farm; `coordinates` (`lat`, `lng`, khoảng giá trị) bắt buộc ở request tạo farm.
 
-**Xong khi:** `README.md` "Chỗ lệch" #44, #45 đã xong; `grep -rn "region" backend/src` chỉ còn chữ không liên quan (ví dụ "regional" trong comment thời tiết).
+**Xong khi:** `README.md` "Chỗ lệch" #44, #45, #47 đã xong; `grep -rn "region" backend/src` chỉ còn chữ không liên quan (ví dụ "regional" trong comment thời tiết).
 
 ### PR 6 — Web + mobile: xoá code ticket, SLA, vùng · đề xuất: Len, Tuấn, Nhi (mỗi người phần role mình), mobile: Kiệt
 
@@ -199,7 +205,9 @@ Làm sau PR 4 và PR 5 (API đã mất). Có thể chia 3 PR nhỏ theo role.
 
 **Farm Owner (Len):**
 - [ ] Xoá `pages/farm-owner/FarmOwnerTicketsPage.tsx`, `FarmOwnerTicketDetailPage.tsx`, thư mục `components/features/farm-owner/tickets/` (kèm `tickets.constants.test.ts`).
-- [ ] `FarmFormModal`: bỏ ô khu vực; `FarmGroupRow`, `HouseCard`: bỏ hiển thị vùng.
+- [ ] `FarmFormModal`: thay ô khu vực bằng ô **vị trí**: nút "Dùng vị trí hiện tại" (`navigator.geolocation`, dùng khi đang đứng ở nhà yến) và 2 ô vĩ độ/kinh độ nhập tay, bắt buộc khi tạo; báo lỗi khi trình duyệt chặn quyền vị trí. Không thêm thư viện bản đồ.
+- [ ] Danh sách farm (`FarmGroupRow`, `HouseCard`): bỏ hiển thị vùng; farm chưa có tọa độ hiện nhãn "Chưa có vị trí — không có thời tiết" và nút sửa.
+- [ ] Câu chữ ở form: "Mỗi farm là một địa điểm. Nhà yến ở nơi khác thì tạo farm khác." (từ điển `farmStructure.i18n.ts`, đủ VI/EN).
 - [ ] Dashboard (`FarmKpiRow`, `dashboardMetrics.ts`), thiết bị (`DeviceDetailCard`, `ZoneComponentLog`, `AttentionDevicesCard`, `DeviceDetailDrawer`): bỏ số ticket, nút tạo ticket.
 
 **Technician (Tuấn):**
@@ -217,7 +225,7 @@ Làm sau PR 4 và PR 5 (API đã mất). Có thể chia 3 PR nhỏ theo role.
 **Dùng chung:**
 - [ ] Xoá `apis/shared/tickets.api.ts`, hook ticket, `components/common/TicketStatusBadge.tsx`, `TicketProgressStepper.tsx`, `PriorityBadge.tsx` và `constants/priority.ts` (nếu chỉ ticket dùng), `constants/tickets*`, `constants/sla*`, `constants/ticketStatus.ts`.
 - [ ] `constants/enumLabels.i18n.ts`: bỏ nhãn ticket; `types/`: bỏ enum ticket (nếu PR 4 chưa làm), bỏ `region`/`assigned_regions` ở `auth.types.ts`, `farm.types.ts`.
-- [ ] `apis/shared/farms.api.ts`, `hooks/shared/useFarms.ts`, `constants/farmStructure.i18n.ts`: bỏ vùng.
+- [ ] `apis/shared/farms.api.ts`, `hooks/shared/useFarms.ts`, `constants/farmStructure.i18n.ts`: bỏ vùng; type `Farm` có `coordinates`.
 - [ ] Socket client: bỏ sự kiện chat ticket.
 
 **Mobile (Kiệt):**

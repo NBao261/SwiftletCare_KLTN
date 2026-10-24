@@ -11,7 +11,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
 | Repository link (tag review-2) | https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2 |
-| Version | 1.0 (registration v3, SRS 3.0.0, SDD 1.0.8) |
+| Version | 1.0 (registration v3, SRS 3.0.0, SDD 1.0.9) |
 | Date | 23/10/2026 |
 
 ## 1. Scope
