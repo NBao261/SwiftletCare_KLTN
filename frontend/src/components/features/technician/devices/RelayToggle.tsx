@@ -14,8 +14,8 @@ interface RelayToggleProps {
 /** RelayToggle – bật/tắt relay thủ công + badge AUTO/MANUAL (ENV-FR-016, 017) */
 export default function RelayToggle({ nodeId, relayName, label, checked, mode }: RelayToggleProps) {
   const controlRelay = useControlRelay()
-  // Backend: POST /devices/sensor-nodes/:id/relay chỉ cho FARM_OWNER, TECHNICIAN, ADMIN
-  const canControl = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
+  // Backend: POST /devices/sensor-nodes/:id/relay chỉ cho FARM_OWNER (ENV-FR-016)
+  const canControl = usePermission('FARM_OWNER')
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-stone/30 rounded-xl border border-warmGray/10 hover:border-primary/20 transition-colors">

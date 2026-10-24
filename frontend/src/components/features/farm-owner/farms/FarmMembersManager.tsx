@@ -8,7 +8,6 @@ import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/far
 import { NO_VALUE } from '@/constants/display'
 import { farmDict, type FarmKey } from '@/constants/farmStructure.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
-import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useFarm, useInviteFarmMember, useRemoveMember } from '@/hooks/shared/useFarms'
 import { cn } from '@/lib/cn'
@@ -40,7 +39,6 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
   const { t } = useTranslation(farmDict)
   const { data: farm, isLoading } = useFarm(farmId)
   const currentUserId = useAuthStore(state => state.user?._id)
-  const isAdmin = usePermission('ADMIN')
   const removeMember = useRemoveMember(farmId)
   const push = useToastStore(state => state.push)
   const apiErrorMessage = useApiErrorMessage()
@@ -50,8 +48,8 @@ export default function FarmMembersManager({ farmId }: { farmId: string }) {
   if (isLoading) return <LoadingSkeleton count={2} className="h-16 w-full" />
   if (!farm) return null
 
-  // Khớp backend farmAccess.util.ts#isPrimaryOwner: ADMIN hoặc đúng owner_id của farm
-  const isPrimaryOwner = isAdmin || farm.owner_id === currentUserId
+  // Chỉ Primary Owner (đúng owner_id) thêm/gỡ thành viên — route chỉ cho FARM_OWNER (AUTH-FR-005)
+  const isPrimaryOwner = farm.owner_id === currentUserId
   const rows: MemberRow[] = [
     { userId: farm.owner_id, name: farm.owner?.full_name, email: farm.owner?.email, role: 'PRIMARY' },
     ...farm.members

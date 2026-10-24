@@ -1,29 +1,14 @@
 import { useState, useRef, useEffect } from "react"
 import { Badge, Button } from "@/components/ui"
-import RelayToggle from "@/components/features/technician/devices/RelayToggle"
 import DeviceInfoCard from "@/components/features/technician/devices/DeviceInfoCard"
 import { useTelemetry } from "@/hooks/farm-owner/useTelemetry"
 import type { SensorNode } from "@/types"
-import { useClearRelayOverride } from "@/hooks/shared/useDevices"
-import { useToastStore } from "@/stores/toastStore"
-import { getApiErrorMessage } from "@/lib/helpers"
 import { cn } from "@/lib/cn"
 import { Music, Clock, ListMusic } from "lucide-react"
-
-const timeLabel = (iso: string) =>
-  new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-
-const RELAY_LABELS = {
-  misting: "Phun sương",
-  speaker: "Loa ru",
-  ventilation: "Quạt thông gió",
-  heating: "Sưởi",
-} as const;
 
 interface DeviceDiagnosticsPanelProps {
   node: SensorNode
   zoneId: string
-  onOpenSchedule: () => void
   onOpenAudio: () => void
   onOpenReassign: () => void
   onOpenReplace: () => void
@@ -34,7 +19,6 @@ interface DeviceDiagnosticsPanelProps {
 export default function DeviceDiagnosticsPanel({
   node,
   zoneId,
-  onOpenSchedule,
   onOpenAudio,
   onOpenReassign,
   onOpenReplace,
@@ -56,8 +40,6 @@ export default function DeviceDiagnosticsPanel({
     }
   }, [activeTab]);
   const telemetry = useTelemetry(zoneId)
-  const clearOverride = useClearRelayOverride()
-  const push = useToastStore((s) => s.push)
 
   // Số đo gần nhất của ZONE (useTelemetry theo zoneId) — không phải riêng thiết bị này; phục vụ chẩn đoán (FARM-FR-009)
   const renderReading = (label: string, value: string | number | undefined, unit: string) => {
@@ -87,7 +69,7 @@ export default function DeviceDiagnosticsPanel({
           onClick={() => setActiveTab("telemetry")}
           className={`relative z-10 px-5 py-2 text-sm font-bold rounded-lg transition-colors duration-300 ${activeTab === "telemetry" ? "text-white" : "text-warmGray hover:text-charcoal"}`}
         >
-          Môi trường & Rơ-le
+          Môi trường
         </button>
         <button
           ref={el => { tabRefs.current[1] = el; }}
@@ -115,50 +97,6 @@ export default function DeviceDiagnosticsPanel({
               {renderReading("Độ ẩm", telemetry.data.humidity, "%")}
               {renderReading("Khí NH₃", telemetry.data.nh3_ppm, "ppm")}
             </div>
-          </div>
-
-          <div>
-            <h3 className="label-caption mb-3">Điều khiển thủ công</h3>
-            {node.status === "PENDING" ? (
-              <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
-                Thiết bị chưa kết nối. Điều khiển sẽ bật khi online.
-              </p>
-            ) : (
-              <div className="bg-white border border-warmGray/10 rounded-2xl p-4 shadow-sm divide-y divide-warmGray/10">
-                {node.control_mode === "MANUAL" && (
-                  <div className="flex items-center justify-between gap-3 pb-3 mb-1">
-                    <span className="text-xs font-medium text-climateOrange">
-                      Đang ghi đè thủ công
-                      {node.override_expiry ? ` — hết hạn ${timeLabel(node.override_expiry)}` : ""}
-                    </span>
-                    <Button
-                      variant="secondary" size="sm"
-                      loading={clearOverride.isPending && clearOverride.variables === node._id}
-                      onClick={() =>
-                        clearOverride.mutate(node._id, {
-                          onSuccess: () => push("Đã trả về tự động"),
-                          onError: (err) => push(getApiErrorMessage(err, "Lỗi"), "error"),
-                        })
-                      }
-                    >
-                      Về tự động
-                    </Button>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-3">
-                  {(Object.keys(RELAY_LABELS) as Array<keyof typeof RELAY_LABELS>).map((relayName) => (
-                    <RelayToggle
-                      key={relayName}
-                      nodeId={node._id}
-                      relayName={relayName}
-                      label={RELAY_LABELS[relayName]}
-                      checked={node.relay_states[relayName]}
-                      mode={node.control_mode}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -213,32 +151,22 @@ export default function DeviceDiagnosticsPanel({
           </div>
 
           <div className="flex flex-col gap-3 flex-1">
-            {/* Giữ guard như bản develop: thiết bị PENDING chưa nhận cấu hình nên chưa cho chỉnh lịch/file loa */}
+            {/* Lịch loa ru là của Farm Owner (§2.4, BR-07) — màn này chỉ còn quản lý bài loa (Technician, ENV-FR-013c).
+                Thiết bị PENDING chưa nhận cấu hình nên chưa cho chỉnh file loa */}
             {node.status === "PENDING" ? (
               <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
-                Thiết bị chưa kết nối. Lịch phát và file loa ru sẽ chỉnh được khi thiết bị online.
+                Thiết bị chưa kết nối. File loa ru sẽ chỉnh được khi thiết bị online.
               </p>
-            ) : (
-              <>
-                <Button variant="secondary" className="w-full justify-start h-[76px] bg-white border border-warmGray/10 shadow-sm" onClick={onOpenSchedule}>
-                  <div className="w-10 h-10 rounded-full bg-stone shrink-0 flex items-center justify-center mr-3">
-                    <Clock size={20} className="text-charcoal" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-charcoal">Lịch phát loa ru</p>
-                    <p className="text-xs text-warmGray mt-0.5">Cài đặt giờ bật/tắt tự động</p>
-                  </div>
-                </Button>
-                <Button variant="secondary" className="w-full justify-start h-[76px] bg-white border border-warmGray/10 shadow-sm" onClick={onOpenAudio}>
-                  <div className="w-10 h-10 rounded-full bg-stone shrink-0 flex items-center justify-center mr-3">
-                    <ListMusic size={20} className="text-charcoal" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-charcoal">Quản lý File Audio</p>
-                    <p className="text-xs text-warmGray mt-0.5">Danh sách file mp3 trên thẻ SD</p>
-                  </div>
-                </Button>
-              </>
+            ) : canOnboard && (
+              <Button variant="secondary" className="w-full justify-start h-[76px] bg-white border border-warmGray/10 shadow-sm" onClick={onOpenAudio}>
+                <div className="w-10 h-10 rounded-full bg-stone shrink-0 flex items-center justify-center mr-3">
+                  <ListMusic size={20} className="text-charcoal" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-charcoal">Quản lý File Audio</p>
+                  <p className="text-xs text-warmGray mt-0.5">Danh sách file mp3 trên thẻ SD</p>
+                </div>
+              </Button>
             )}
           </div>
         </div>

@@ -27,7 +27,6 @@ import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceRow, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
-import CreateSupportTicketModal, { type CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import { FARMS_PATH, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
@@ -49,8 +48,7 @@ export default function FarmOwnerFarmZonesPage() {
   const { structure, isLoading, isError, metricsLoading, canViewHarvest, refetch } = useFarmStructure({ liveZoneIds })
   const node = houseId ? structure.houseById.get(houseId) : undefined
   const { data: extras } = useStructureExtras(houseId ? [houseId] : [])
-  const canManage = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
-  // Ticket của Farm Owner ở /support (mở sẵn form lắp đặt); Technician/Admin vẫn dùng màn /tickets
+  // FARM-FR-002 — chỉ Farm Owner tạo Zone
   const isFarmOwner = usePermission('FARM_OWNER')
 
   const [searchParams] = useSearchParams()
@@ -59,8 +57,6 @@ export default function FarmOwnerFarmZonesPage() {
   const [selected, setSelected] = useState<DeviceRow | null>(null)
   // Đổi tên / xoá nhà (giao diện dựng sẵn, chờ API backend)
   const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
-  // Popup yêu cầu hỗ trợ mở tại chỗ (không chuyển sang trang Yêu cầu hỗ trợ); undefined = đóng
-  const [supportDefaults, setSupportDefaults] = useState<CreateSupportDefaults>()
   const { data: regions } = useRegions()
   // Khung lọc khớp nhà đang xem; đổi lựa chọn thì sang trang đúng cấp
   const scope = useScopeFilter()
@@ -147,10 +143,6 @@ export default function FarmOwnerFarmZonesPage() {
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" className="h-9 text-xs" onClick={() => (isFarmOwner ? setSupportDefaults({ kind: 'install', farmId }) : navigate('/tickets'))}>
-              <PlusIcon size={14} weight="bold" />
-              {t('house.requestInstall')}
-            </Button>
             {isFarmOwner && (
               <ActionsMenu
                 items={[
@@ -175,7 +167,7 @@ export default function FarmOwnerFarmZonesPage() {
             <FarmFrame
               title={t('house.zoneList', { n: node.zones.length })}
               description={t('house.zoneListDesc')}
-              action={canManage && (
+              action={isFarmOwner && (
                 <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setShowAddZone(true)}>
                   <PlusIcon size={12} weight="bold" />
                   {t('house.addZone')}
@@ -227,7 +219,6 @@ export default function FarmOwnerFarmZonesPage() {
       {editMode && <StructureEditModal kind="house" mode={editMode} name={house.name} deviceCount={node.counts.total} existingNames={structure.houses.map(item => item.house.name)} onClose={() => setEditMode(null)} />}
       <DeviceDetailDrawer device={selected} zoneNode={selected ? zoneById.get(selected.zoneId) : undefined} onClose={() => setSelected(null)} />
       {/* Yêu cầu lắp đặt / báo lỗi mở ngay tại trang, gửi xong popup báo kết quả */}
-      <CreateSupportTicketModal open={supportDefaults !== undefined} defaults={supportDefaults} onClose={() => setSupportDefaults(undefined)} />
     </div>
   )
 }

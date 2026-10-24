@@ -16,8 +16,6 @@ const FarmOwnerFarmZoneDetailPage = lazy(() => import('@/pages/farm-owner/FarmOw
 const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarvestPage'))
 const FarmOwnerLiveStreamPage = lazy(() => import('@/pages/farm-owner/FarmOwnerLiveStreamPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
-const FarmOwnerTicketsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerTicketsPage'))
-const FarmOwnerTicketDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerTicketDetailPage'))
 
 /** /farms dùng chung URL nhưng Technician có trang riêng (chỉ cấu trúc + thiết bị trong vùng, không sản lượng) */
 function FarmsIndexRoute() {
@@ -96,23 +94,6 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={HARVEST_ROLES}>
           <FarmOwnerHarvestPage />
-        </RequireRole>
-      }
-    />
-    {/* Ticket của Farm Owner tách URL khỏi /tickets (màn xử lý của Technician): tạo, theo dõi, huỷ, đánh giá */}
-    <Route
-      path="support"
-      element={
-        <RequireRole allow={FARM_OWNER_ONLY}>
-          <FarmOwnerTicketsPage />
-        </RequireRole>
-      }
-    />
-    <Route
-      path="support/chi-tiet"
-      element={
-        <RequireRole allow={FARM_OWNER_ONLY}>
-          <FarmOwnerTicketDetailPage />
         </RequireRole>
       }
     />

@@ -79,7 +79,7 @@ export default function OnboardingPage() {
           {step === 5 && (
             <Step6SAT
               data={data}
-              onDone={(ticketId) => navigate(ticketId ? `/tickets/${ticketId}` : '/tickets')}
+              onDone={() => navigate('/devices')}
             />
           )}
         </div>

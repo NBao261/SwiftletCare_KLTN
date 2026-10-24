@@ -141,7 +141,7 @@ export default function FarmOwnerDashboardPage() {
     setIsZoneLinked(linked => !linked)
   }
   // Hàng KPI chế độ "Tất cả nhà yến": đang tải thì khung xương, lỗi thì báo lỗi, không hiện số 0 giả
-  let kpiSection: ReactNode = <FarmKpiRow farmId={farmId} totals={farmTotals} showYield={canViewHarvest} />
+  let kpiSection: ReactNode = <FarmKpiRow totals={farmTotals} showYield={canViewHarvest} />
   if (isStructureLoading) kpiSection = <LoadingSkeleton count={2} className="h-28 w-full" />
   if (isStructureError) {
     kpiSection = (

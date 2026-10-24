@@ -16,7 +16,6 @@ interface DeviceListRowProps {
   onReboot?: () => void;
   /** Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích */
   rebootUnsupported?: boolean;
-  onOpenSchedule: () => void;
   onOpenAudio: () => void;
   onOpenReassign: () => void;
   onOpenReplace: () => void;
@@ -54,7 +53,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pu
 export default function DeviceListRow({
   node, zoneId, index = 0, isExpanded, onToggleExpand,
   onReboot, rebootUnsupported,
-  onOpenSchedule, onOpenAudio, onOpenReassign, onOpenReplace, onOpenDecommission, canOnboard
+  onOpenAudio, onOpenReassign, onOpenReplace, onOpenDecommission, canOnboard
 }: DeviceListRowProps) {
   const isOnline = node.status === "ONLINE";
   const badge = STATUS_BADGE[node.status] ?? { label: node.status, cls: "bg-stone text-charcoal", dot: "bg-warmGray", accent: "bg-transparent" };
@@ -164,7 +163,6 @@ export default function DeviceListRow({
               <DeviceDiagnosticsPanel
                 node={node}
                 zoneId={zoneId}
-                onOpenSchedule={onOpenSchedule}
                 onOpenAudio={onOpenAudio}
                 onOpenReassign={onOpenReassign}
                 onOpenReplace={onOpenReplace}

@@ -1,31 +1,23 @@
-import { HouseLineIcon, PackageIcon, SquaresFourIcon, TicketIcon, WarningIcon, WifiHighIcon } from '@phosphor-icons/react';
+import { HouseLineIcon, PackageIcon, SquaresFourIcon, WarningIcon, WifiHighIcon } from '@phosphor-icons/react';
 
 import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
 import type { FarmKpiTotals } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { levelDict } from '@/constants/severity.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useTicketsList } from '@/hooks/shared/useTickets';
 import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { NO_VALUE } from '@/constants/display';
 
 interface FarmKpiRowProps {
-  farmId: string;
   totals: FarmKpiTotals;
   // false = role không xem được thu hoạch → ẩn ô sản lượng thay vì hiện 0
   showYield: boolean;
 }
 
 // Hàng KPI chế độ "Tất cả nhà yến": số liệu chung của mọi nhà trong trang trại đang chọn ('' = mọi trang trại)
-export default function FarmKpiRow({ farmId, totals, showYield }: FarmKpiRowProps): JSX.Element {
+export default function FarmKpiRow({ totals, showYield }: FarmKpiRowProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   const { t: translateLevel } = useTranslation(levelDict);
-  // Yêu cầu hỗ trợ chưa hoàn tất của trang trại = tổng − đã đóng (đếm bằng meta.total, limit=1)
-  const allTickets = useTicketsList({ farmId: farmId || undefined, limit: 1 });
-  const closedTickets = useTicketsList({ farmId: farmId || undefined, status: 'CLOSED', limit: 1 });
-  const openTickets = Math.max(0, allTickets.total - closedTickets.total);
-  const isTicketsLoading = allTickets.isLoading || closedTickets.isLoading;
-
   const offlineDevices = totals.devicesTotal - totals.devicesOnline;
   const alertsSub = t('kpi.alertsSub', {
     p1: totals.alertsByLevel.P1, l1: translateLevel('P1'),
@@ -66,12 +58,6 @@ export default function FarmKpiRow({ farmId, totals, showYield }: FarmKpiRowProp
           sub={t('kpi.harvestSub', { nests: num(totals.monthNests), batches: num(totals.monthBatches) })}
         />
       )}
-      <KpiTile
-        icon={TicketIcon}
-        label={t('kpi.tickets')}
-        value={isTicketsLoading ? NO_VALUE : num(openTickets)}
-        sub={t('kpi.ticketsSub')}
-      />
     </div>
   );
 }

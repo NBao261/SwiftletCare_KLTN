@@ -3,36 +3,21 @@ import { ArrowsClockwiseIcon, CaretDownIcon, CloudRainIcon, FanIcon, SpeakerHigh
 
 import { Button } from '@/components/ui';
 import { isOutsideRange, metricThresholdRange } from '@/components/features/farm-owner/analytics/analyticsMetrics';
-import type { CreateSupportDefaults } from '@/components/features/farm-owner/tickets/CreateSupportTicketModal';
 import type { DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
 import { COMPONENT_STATUS_CLASS } from '@/components/features/farm-owner/devices/devices.constants';
 import {
   READING_FIELD, SENSOR_KINDS, summarizeGroup, type ComponentGroup, type ComponentItem, type ComponentKind, type ComponentStatus,
 } from '@/components/features/farm-owner/devices/zoneComponents';
 import { METRIC_BY_KEY, thresholdRange } from '@/components/features/farm-owner/farms/farmStructure.constants';
-import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { NO_VALUE } from '@/constants/display';
 import { devicesDict, type DevicesKey } from '@/constants/devices.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { componentNameKey, useZoneComponents } from '@/hooks/farm-owner/useZoneComponents';
 import { cn } from '@/lib/cn';
-import type { Thresholds, TicketType } from '@/types';
+import type { Thresholds } from '@/types';
 
 // Icon của thiết bị chấp hành; cảm biến dùng icon chỉ số chung của màn Trang trại
 const ACTUATOR_ICON: Partial<Record<ComponentKind, Icon>> = { speaker: SpeakerHighIcon, misting: CloudRainIcon, ventilation: FanIcon };
-
-// Loại sự cố chọn sẵn trong popup báo lỗi theo thiết bị
-const REPORT_TYPE: Record<ComponentKind, TicketType> = {
-  temperature: 'SENSOR_FAULT',
-  humidity: 'SENSOR_FAULT',
-  light: 'SENSOR_FAULT',
-  nh3: 'SENSOR_FAULT',
-  co2: 'SENSOR_FAULT',
-  sound: 'SENSOR_FAULT',
-  speaker: 'SPEAKER_FAILURE',
-  misting: 'ACTUATOR_FAILURE',
-  ventilation: 'ACTUATOR_FAILURE',
-};
 
 // Âm lượng tối đa của DFPlayer (backend giới hạn 0–30)
 const MAX_VOLUME = 30;
@@ -57,16 +42,13 @@ function runningKey(kind: ComponentKind): DevicesKey {
 
 interface ZoneComponentLogProps {
   zoneId: string;
-  farmId: string;
   nodes: DeviceItem[];
   // Ngưỡng của Zone để đánh giá số đo trong mục Thông số
   thresholds?: Thresholds;
-  // Mở popup báo lỗi tại chỗ, điền sẵn Zone, loại sự cố và mô tả của thiết bị đó
-  onReport: (defaults: CreateSupportDefaults) => void;
 }
 
 // Thiết bị bộ kit gom theo loại, bấm xổ log từng thiết bị; số liệu chỉ lấy khi bấm "Kiểm tra thiết bị", không realtime
-export default function ZoneComponentLog({ zoneId, farmId, nodes, thresholds, onReport }: ZoneComponentLogProps): JSX.Element {
+export default function ZoneComponentLog({ zoneId, nodes, thresholds }: ZoneComponentLogProps): JSX.Element {
   const { t, dateTime } = useTranslation(devicesDict);
   const { groups, componentNames, checkedAt, isChecking, isError, runCheck } = useZoneComponents(zoneId, nodes);
   const [openKinds, setOpenKinds] = useState<Set<ComponentKind>>(() => new Set());
@@ -77,16 +59,6 @@ export default function ZoneComponentLog({ zoneId, farmId, nodes, thresholds, on
       if (next.has(kind)) next.delete(kind);
       else next.add(kind);
       return next;
-    });
-  }
-
-  function report(kind: ComponentKind, item: ComponentItem): void {
-    onReport({
-      kind: 'fault',
-      farmId,
-      zoneId,
-      type: item.status === 'offline' ? 'NODE_OFFLINE' : REPORT_TYPE[kind],
-      description: t('report.component', { component: t(`kind.${kind}`), id: item.deviceId, status: t(statusKey(kind, item.status)) }),
     });
   }
 
@@ -115,7 +87,6 @@ export default function ZoneComponentLog({ zoneId, farmId, nodes, thresholds, on
             componentNames={componentNames}
             isOpen={openKinds.has(group.kind)}
             onToggle={() => toggleKind(group.kind)}
-            onReport={item => report(group.kind, item)}
           />
         ))}
       </ul>
@@ -135,11 +106,10 @@ interface KindRowProps {
   componentNames: Map<string, string>;
   isOpen: boolean;
   onToggle: () => void;
-  onReport: (item: ComponentItem) => void;
 }
 
 // 1 loại thiết bị: hàng tóm tắt bấm để xổ, bên dưới mỗi thiết bị 1 dòng log kèm mục Thông số và nút Báo lỗi
-function KindRow({ group, thresholds, componentNames, isOpen, onToggle, onReport }: KindRowProps): JSX.Element {
+function KindRow({ group, thresholds, componentNames, isOpen, onToggle }: KindRowProps): JSX.Element {
   const { t, num } = useTranslation(devicesDict);
   const RowIcon = metricOf(group.kind)?.icon ?? ACTUATOR_ICON[group.kind];
   const summary = summarizeGroup(group.items);
@@ -195,10 +165,10 @@ function KindRow({ group, thresholds, componentNames, isOpen, onToggle, onReport
             const tone = COMPONENT_STATUS_CLASS[item.status];
             const name = componentNames.get(componentNameKey(item.nodeId, group.kind));
             return (
-              // 1 thiết bị = 1 hàng: tên (VD "Quạt thông gió 1") · thông số · trạng thái · Báo lỗi; màn hẹp thông số xuống dòng
+              // 1 thiết bị = 1 hàng: tên (VD "Quạt thông gió 1") · thông số · trạng thái; màn hẹp thông số xuống dòng
               <li
                 key={item.nodeId}
-                className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-1.5 py-2.5 pl-14 pr-4 lg:grid-cols-[11rem_minmax(0,1fr)_8.5rem_auto]"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-2.5 pl-14 pr-4 lg:grid-cols-[11rem_minmax(0,1fr)_8.5rem]"
               >
                 {/* Tên do Kỹ thuật viên đặt; chưa đặt tên thì "_" */}
                 <span className={cn('truncate text-sm font-semibold', name ? 'text-charcoal' : 'text-warmGray')} title={t('list.kitName', { id: item.deviceId })}>
@@ -211,9 +181,6 @@ function KindRow({ group, thresholds, componentNames, isOpen, onToggle, onReport
                   <span className={cn('h-2 w-2 shrink-0 rounded-full', tone.dot)} />
                   {t(statusKey(group.kind, item.status))}
                 </span>
-                <button type="button" className={DETAIL_BUTTON_CLASS} onClick={() => onReport(item)}>
-                  {t('report.button')}
-                </button>
               </li>
             );
           })}

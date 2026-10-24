@@ -78,14 +78,13 @@ export default function FarmOwnerFarmsPage() {
   }, [scope, isGoingUp, navigate])
   const { data: regions } = useRegions()
   const currentUserId = useAuthStore(state => state.user?._id)
-  const isAdmin = usePermission('ADMIN')
   const deleteFarm = useDeleteFarm()
   const push = useToastStore(state => state.push)
   const apiErrorMessage = useApiErrorMessage()
 
-  // Backend: POST /farms chỉ cho FARM_OWNER, ADMIN; POST /farms/:id/houses cho cả TECHNICIAN
-  const canCreateFarm = usePermission('FARM_OWNER', 'ADMIN')
-  const canAddHouse = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN')
+  // Backend: POST /farms và POST /farms/:id/houses chỉ cho FARM_OWNER (FARM-FR-001, 002)
+  const canCreateFarm = usePermission('FARM_OWNER')
+  const canAddHouse = canCreateFarm
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
@@ -106,7 +105,7 @@ export default function FarmOwnerFarmsPage() {
   const autoExpandKey = `${search.trim()}|${filter}|${scope.farmId}|${scope.houseId}`
   const collapsedIds = collapsed.key === autoExpandKey ? collapsed.ids : NO_IDS
   const regionNameByCode = useMemo(() => new Map((regions ?? []).map(region => [region.code, region.name])), [regions])
-  const isPrimaryOf = (farm: Farm) => isAdmin || farm.owner_id === currentUserId
+  const isPrimaryOf = (farm: Farm) => farm.owner_id === currentUserId
 
   // Số nhà, thiết bị và nhà đang cảnh báo của từng farm (chặn xoá farm còn thiết bị)
   const statsByFarm = useMemo(() => {

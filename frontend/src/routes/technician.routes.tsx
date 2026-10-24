@@ -13,11 +13,8 @@ const TechnicianDevicesPage = lazy(() => import('@/pages/technician/TechnicianDe
 // Farm Owner mở /devices qua trang bọc của mình (thêm khung lọc Nhà + Zone), trang Technician giữ nguyên
 const FarmOwnerDevicesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDevicesPage'))
 const TechnicianAlertsPage = lazy(() => import('@/pages/technician/TechnicianAlertsPage'))
-const TechnicianTicketsPage = lazy(() => import('@/pages/technician/TechnicianTicketsPage'))
-const TechnicianTicketDetailPage = lazy(() => import('@/pages/technician/TechnicianTicketDetailPage'))
 const TechnicianOnboardingPage = lazy(() => import('@/pages/technician/TechnicianOnboardingPage'))
 const TechnicianOtaPage = lazy(() => import('@/pages/technician/TechnicianOtaPage'))
-const TechnicianMaintenancePage = lazy(() => import('@/pages/technician/TechnicianMaintenancePage'))
 
 // /devices dùng chung URL: Farm Owner đi qua trang bọc, role khác mở thẳng trang Technician
 function DevicesIndexRoute() {
@@ -44,22 +41,6 @@ export const technicianRoutes = (
       }
     />
     <Route
-      path="tickets"
-      element={
-        <RequireRole allow={OPS_ROLES}>
-          <TechnicianTicketsPage />
-        </RequireRole>
-      }
-    />
-    <Route
-      path="tickets/:id"
-      element={
-        <RequireRole allow={OPS_ROLES}>
-          <TechnicianTicketDetailPage />
-        </RequireRole>
-      }
-    />
-    <Route
       path="onboarding"
       element={
         <RequireRole allow={OPS_ROLES}>
@@ -72,14 +53,6 @@ export const technicianRoutes = (
       element={
         <RequireRole allow={OPS_ROLES}>
           <TechnicianOtaPage />
-        </RequireRole>
-      }
-    />
-    <Route
-      path="maintenance"
-      element={
-        <RequireRole allow={OPS_ROLES}>
-          <TechnicianMaintenancePage />
         </RequireRole>
       }
     />
