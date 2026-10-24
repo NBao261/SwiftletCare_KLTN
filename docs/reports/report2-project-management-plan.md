@@ -125,7 +125,7 @@ R = responsible, A = accountable, C = consulted.
 | Firmware, hardware | A, R | C | | | |
 | AI pipeline, model | A, R | | | | |
 | Backend core (MQTT, alerts, jobs) | A, R | R | | | C |
-| Backend devices, setup, tickets | C | A, R | | | |
+| Backend devices, setup, ticket removal | C | A, R | | | |
 | Backend expert module | C | | | | A, R |
 | Backend daily health and reports | C | | | A, R | C |
 | Web – Farm Owner | | | A, R | | |
@@ -174,7 +174,7 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 | Front-end and mobile | React 18, Vite, TailwindCSS, Expo |
 | AI | Python, ONNX Runtime, supervision, Roboflow, Google Colab |
 | Testing | Jest, Vitest, Unity (PlatformIO native), pytest, k6 (load) |
-| Environments | Development on members' machines; staging on a VPS with the AI node on the spare PC at the house (Report 4, Section 3.4) |
+| Environments | Development on members' machines; staging on a VPS with the AI node on the spare PC at a member's home (Report 4, Section 3.4) |
 | AI assistants | Declared in Report 4, Section 3.5 |
 
 ## 7. Revision History

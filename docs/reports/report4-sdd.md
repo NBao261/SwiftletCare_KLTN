@@ -8,7 +8,7 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.0.6 (Review 2) |
+| Document version | 1.0.8 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
 | Requirements baseline | Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -77,7 +77,7 @@ flowchart LR
     end
     CAM[IP camera at entrance<br/>IR night vision, RTSP]
   end
-  AINODE[AI node - PC at the house<br/>YOLO + ByteTrack<br/>ring counter]
+  AINODE[AI node - spare PC at a<br/>member's home<br/>YOLO + ByteTrack, ring counter]
   subgraph CLOUD[Cloud server - Docker]
     direction TB
     EMQX[(EMQX<br/>MQTT broker)]
@@ -94,7 +94,7 @@ flowchart LR
   WX[[Open-Meteo<br/>weather API - planned]]
 
   ESP <-- MQTT over TLS --> EMQX
-  CAM -- RTSP --> AINODE
+  CAM -- RTSP over the Internet<br/>static IP, forwarded port --> AINODE
   AINODE -- counts, heartbeat --> EMQX
   EMQX -- counting ring --> AINODE
   AINODE -- annotated + raw video --> MTX
@@ -180,8 +180,8 @@ Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, M
 | Environment | Where | How it is deployed | Rollback |
 | --- | --- | --- | --- |
 | Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA | — |
-| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, `[TEAM: provider]`, with a domain `[TEAM: domain]` and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at the test house (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Caddy reverse proxy with Let's Encrypt TLS, a TLS proxy for MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
-| Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (TICKET-FR-008) |
+| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, `[TEAM: provider]`, with a domain `[TEAM: domain]` and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Caddy reverse proxy with Let's Encrypt TLS, a TLS proxy for MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
+| Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (FARM-FR-013) |
 
 Defense 1.1 demonstrations run on staging with seeded data (guideline §9.2).
 
@@ -204,7 +204,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D2 | Control method | On/off thresholds; PID; fuzzy logic | **Zero-order Sugeno fuzzy logic with time-proportioning** on relays: smooth power levels with plain relays, parameters a domain expert can read and tune; mirrored in the backend for simulation and suggestions | ENV-FR-010, 011, 021, ANALYTICS-FR-010 |
 | D3 | Device–cloud protocol | HTTP polling; WebSocket; MQTT | **MQTT (EMQX) with TLS**, QoS 1 for commands, `deviceId` in every payload; topics per zone for controllers and per house for AI nodes. Light on the ESP32, survives intermittent links | Section 7.2 |
 | D4 | Database | Relational (PostgreSQL); time-series DB; MongoDB | **MongoDB** with Mongoose: telemetry as documents with TTL (90 days), flexible embedded histories (thresholds, tuning), one store for the whole system; schema enforced by `$jsonSchema` validators generated from the models | Section 6 |
-| D5 | Where bird counting runs | Raspberry Pi at the house; cloud GPU server fed by the camera stream; **desktop PC at the house** | **The team's spare PC at the house, on the camera's LAN**: the 1080p RTSP feed never crosses the house's uplink (only counts and the annotated stream go up), no new hardware is bought, and it has more compute than a Raspberry Pi; a cloud GPU would need the full feed uploaded and a paid server. Throughput is measured on this PC (NFR-04); one camera per entrance, counts per house | VISION-FR-002, THREAT-FR-010, NFR-04 |
+| D5 | Where bird counting runs | Raspberry Pi at the house; cloud GPU server fed by the camera stream; desktop PC at the house; **the team's spare PC at a member's home** | **Spare PC at a member's home, reading the camera over the Internet**: no new hardware and more compute than a Raspberry Pi, no paid GPU server, and the machine stays dry and is maintained where the team lives instead of in a humid house nobody visits. The house's VNPT line has a static public IP, so the camera's RTSP feed (1080p, about 2 Mbps) is pulled over TCP through one forwarded port. Costs: the house's uplink carries the feed during the sessions; an outage of either line leaves the session incomplete (VISION-FR-020); the forwarded port must be protected (strong camera password, source IP limited where the modem allows). Checked by a 24-hour pull test and by counting the same clip read locally and over the Internet; throughput is measured on this PC (NFR-04). One camera per entrance, counts per house | VISION-FR-002, 020, THREAT-FR-010, NFR-04 |
 | D6 | Counting geometry | Straight virtual line; ring around the hole with tracking only near it; ring with whole-frame tracking | **Whole-frame tracking and a closed ring around the hole, with extrapolation of fast tracks**: birds leave the hole in every direction, so a line misses some; at the hole a bird is a 1–2-frame blur moving 150–200 px/frame (clip of 22/10/2026), so tracking near the hole alone never gives it an identity — tracked over the whole room it already has one, and a fast track lost just outside the ring is counted by its last velocity. Fly-pasts cancel in the net count | VISION-FR-004, 005, 009, 018, BR-25 |
 | D7 | Expert in the loop | Expert approval blocks every change; changes apply at once with no review | **Owner changes apply at once and open a review item; only the expert applies system suggestions; without an expert the owner decides** — safety on site is never blocked and every parameter is still validated | EXPERT-FR-010, 011, BR-22 |
 | D8 | Live video path | Through the backend; dedicated video server | **MediaMTX** with short-lived viewing tokens checked by the backend: the API never carries video, raw feed only for the pipeline | VISION-FR-013 |
@@ -213,6 +213,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D11 | Actuator current sensing | None (infer from humidity); Hall-effect IC in the mains path (ACS712); **clamp-on current transformer with an external ADC** | **Current transformer + ADS1115**: isolated from mains, so no mains track crosses the logic board; non-invasive on existing wiring; the ESP32's own ADC is not linear enough. Normal current is learned per load, so no threshold is invented for an unknown pump or fan | THREAT-FR-014, BR-32 |
 | D12 | Outdoor conditions | Outdoor sensor node; **weather API**; none | **Weather API (Open-Meteo)** by farm coordinates: no hardware, includes rainfall, which a node does not measure easily and which explains low return rates; it is a regional estimate, so it is context only. An outdoor node stays optional | ANALYTICS-FR-013, BR-30, C-6 |
 | D13 | Report files | Server-side PDF; **PDF in the web client, CSV from the API** | **`jspdf` in the web client** (already a dependency) renders the report the API returns, so the file shows the same figures as the screen; the CSV of daily indicators is produced by the API so every client gets the same columns | EXPERT-FR-013 |
+| D14 | Scope of the supporting roles | Maintenance tickets with routing by region, SLA and KPIs; Technician invited into each farm by its owner; **Technician sees every farm's devices, without relay control** | **Technician on every farm, devices only**: tickets, SLA, regions and KPIs serve a service company with many customers, not the house (Review 1: "more a platform than a system"); an invitation per farm adds a step for every repair. The risk of a role that is not a farm member is limited by what it can do: no relays, thresholds, coefficients or alert acknowledgement, no environmental data, and every device action is audited and notified to the Farm Owners. Faults reach the owner as repeated alerts instead of tickets | FARM-FR-009, 013, ALERT-FR-015, 016, Report 3 §2.4 |
 
 The Design Brief (BM01, section 3) proposes five of these.
 
@@ -253,7 +254,7 @@ flowchart TB
   end
   JOBS[jobs - node-cron] --> SV
   SV --> MD[models - Mongoose] --> DB[(MongoDB)]
-  SV --> EMIT[socket emit helpers] --> WS[Socket.io rooms<br/>zone, house, user, ticket]
+  SV --> EMIT[socket emit helpers] --> WS[Socket.io rooms<br/>zone, house, user]
   SV --> NOTI[notification.service<br/>in-app, Telegram, push]
   SV --> PUB[MQTT publish<br/>config/update, relay/command]
 ```
@@ -263,12 +264,12 @@ Layer rules: only services query the database, check permissions, publish MQTT a
 | Service group | Services | Requirements |
 | --- | --- | --- |
 | Identity and access | `auth`, `admin`, `farmAccess.util` | AUTH-FR-*, Section 2.4 of Report 3 |
-| Structure and devices | `farm`, `device`, `audioTrack`, `stream` | FARM-FR-*, ENV-FR-016…021, TICKET-FR-008, VISION-FR-013, 018 |
+| Structure and devices | `farm`, `device`, `audioTrack`, `stream` | FARM-FR-*, ENV-FR-016…021, VISION-FR-013, 018 |
 | Telemetry and control | `telemetry`, `fuzzyModel.util` | ENV-FR-001…005, ANALYTICS-FR-008, 010 |
-| Alerts and notifications | `alert`, `sensorAnomaly`, `forecast`, `notification`, `telegram` | ALERT-FR-*, THREAT-FR-009, 010 |
+| Alerts and notifications | `alert`, `sensorAnomaly`, `forecast`, `notification`, `telegram`, `relayUsage` | ALERT-FR-*, THREAT-FR-009, 010 |
 | Flock | `birdCount` | VISION-FR-006…012, 017 |
 | Analytics and expert | `analytics`, `healthReport`; planned: `healthAssessment`, `weather` | ANALYTICS-FR-*, EXPERT-FR-* |
-| Supporting | `ticket`, `ticketChat`, `maintenanceSchedule`, `relayUsage`, `system`, `harvest` | TICKET-FR-*, SYSTEM-FR-*, MARKET-FR-* |
+| Supporting | `system`, `harvest` | SYSTEM-FR-*, MARKET-FR-* |
 
 Background jobs:
 
@@ -276,7 +277,7 @@ Background jobs:
 | --- | --- | --- |
 | `deviceOffline` | every 10 s | Controller silent > 30 s → `OFFLINE` + `NODE_OFFLINE`; AI node silent > 90 s → `OFFLINE` + `EDGE_AI_DEGRADED` |
 | `overrideExpiry` | every 1 min | Expired overrides back to `AUTO` |
-| `alertEscalation` | every 2 min | Unacknowledged CRITICAL/HIGH → ticket; automatic resolution of breaches and episodic alerts |
+| `alertEscalation` | every 2 min | Unacknowledged CRITICAL/HIGH after 15 min, `NODE_OFFLINE` after 1 h → sent once more to the Farm Owners (ALERT-FR-015); automatic resolution of breaches and episodic alerts |
 | `sensorAnomaly` | every 10 min | Stuck, jumping and drifting sensors → `SENSOR_ANOMALY` |
 | `forecast` | every 10 min | 60-minute forecast → `FORECAST_BREACH` |
 | `returnRate` | daily 19:15 (default windows) | House return rate vs previous days → `LOW_RETURN_RATE` |
@@ -284,7 +285,8 @@ Background jobs:
 | `healthAssessment` (planned) | daily, after `returnRate` | Daily health status of every house (ANALYTICS-FR-012) |
 | `weather` (planned) | hourly | Weather of every farm with coordinates (ANALYTICS-FR-013) |
 | `activationOverdue` | every 1 min | Devices not activated in 15 min; OTA unconfirmed after 30 min |
-| `slaBreach`, `maintenanceSchedule`, `invitationExpiry` | 2 min, hourly, hourly | Supporting flows |
+| `relayUsage` | hourly | Pump and fan ON time and switch count since the last service → `MAINTENANCE_DUE` (ALERT-FR-016) |
+| `invitationExpiry` | hourly | Invitations older than 7 days → `EXPIRED` |
 
 ### 5.4 Web and Mobile
 
@@ -308,14 +310,12 @@ erDiagram
     string role "ADMIN | FARM_OWNER | DOMAIN_EXPERT | TECHNICIAN"
     string full_name
     bool is_active
-    array assigned_regions "Technician"
     string telegram_chat_id
   }
   FARM {
     ObjectId _id PK
     ObjectId owner_id FK
     string name
-    string region
     array members "embedded: user_id, role, is_primary"
     bool is_deleted
   }
@@ -488,30 +488,6 @@ erDiagram
     object env_snapshot
     object flock_snapshot
   }
-  TICKET {
-    ObjectId _id PK
-    ObjectId farm_id FK
-    ObjectId zone_id FK
-    ObjectId alert_id FK
-    ObjectId assigned_to FK
-    string type
-    string priority "P1 | P2 | P3"
-    string status "NEW | IN_PROGRESS | AWAITING_FIELD_CONFIRMATION | CLOSED"
-    object sat_checklist
-  }
-  TICKET_MESSAGE {
-    ObjectId _id PK
-    ObjectId ticket_id FK
-    ObjectId sender_id FK
-    string content
-  }
-  MAINTENANCE_SCHEDULE {
-    ObjectId _id PK
-    ObjectId farm_id FK
-    ObjectId zone_id FK
-    number interval_days
-    date next_due_at
-  }
   AUDIT_LOG {
     ObjectId _id PK
     ObjectId actor_id FK
@@ -560,11 +536,6 @@ erDiagram
   ZONE ||--o{ ZONE_HEALTH_REPORT : "reported"
   USER ||--o{ NOTIFICATION : "receives"
   ZONE ||--o{ HARVEST_BATCH : "harvested"
-  FARM ||--o{ TICKET : "requests"
-  ALERT |o--o| TICKET : "escalates"
-  USER ||--o{ TICKET : "assigned"
-  TICKET ||--o{ TICKET_MESSAGE : "chat"
-  FARM ||--o{ MAINTENANCE_SCHEDULE : "plans"
   USER ||--o{ AUDIT_LOG : "acts"
   ZONE ||--o{ PARAMETER_REVIEW : "owner changes, planned"
   ZONE ||--o{ COEFFICIENT_PROPOSAL : "suggestions, planned"
@@ -572,7 +543,7 @@ erDiagram
   FARM ||--o{ WEATHER_OBSERVATION : "weather, planned"
 ```
 
-Entities and attributes marked *planned* are required by Report 3 (EXPERT-FR-010, 011, ENV-FR-027, VISION-FR-019, EXPERT-FR-003, ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, THREAT-FR-014) but are not in the code or the database script yet; Section 6.4 lists them.
+Entities and attributes marked *planned* are required by Report 3 (EXPERT-FR-010, 011, ENV-FR-027, VISION-FR-019, EXPERT-FR-003, ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, THREAT-FR-014) but are not in the code or the database script yet; Section 6.4 lists them. The other way round, the ticket collections, the farm region and the Technician regions are still in the code and the database script until they are dropped (Section 6.4).
 
 ### 6.2 Collections
 
@@ -595,9 +566,8 @@ Entities and attributes marked *planned* are required by Report 3 (EXPERT-FR-010
 | `zonehealthreports` | Health report | `zone_id + period_end` unique | — | Expert conclusion embedded |
 | `notifications` | In-app notification | `user_id + created_at`; TTL | 90 days | |
 | `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date` | Soft delete | |
-| `tickets`, `ticketmessages`, `maintenanceschedules` | Supporting flows | `farm_id + status`, `assigned_to + status`, `ticket_id + created_at` | — | |
 | `auditlogs` | Audit entry | `actor_id + created_at`, `target_type + target_id`, `action + created_at` | — | |
-| `systemsettings` | Singleton settings | `_singleton` unique | — | Default thresholds, SLA, routing limit |
+| `systemsettings` | Singleton settings | `_singleton` unique | — | Default thresholds |
 
 The exact field list, types and indexes of every collection are those of the database script (6.5).
 
@@ -615,6 +585,8 @@ The exact field list, types and indexes of every collection are those of the dat
 | Health-indicator levels per house | `houses` | BR-28 |
 | Reports per house with `kind` (daily, weekly, monthly, custom) instead of weekly per zone | `zonehealthreports` (renamed when migrated) | EXPERT-FR-005 |
 | Learned normal current per load; pump and fan current in telemetry; alert type `ACTUATOR_FAULT` | `sensornodes`, `telemetries`, `alerts` | THREAT-FR-014 |
+| Drop the ticket collections, the farm region, the Technician regions and the SLA and routing settings; drop the ticket enumerations on all three sides | `tickets`, `ticketmessages`, `maintenanceschedules`, `farms`, `users`, `systemsettings` | Report 3 §8 (BM03 row 9) |
+| Alert type `MAINTENANCE_DUE`; relay usage counters restart at the Farm Owner's acknowledgement | `alerts`, `sensornodes` | ALERT-FR-016 |
 | Remove the unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest), or give them a requirement | `sensornodes`, `cameranodes`, `harvestbatches` | Known gap |
 
 The database script is regenerated from the models when these changes are made (6.5).
@@ -648,8 +620,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/health-reports` | Reports and conclusions; planned: daily, weekly and monthly reports per house, daily health statuses of a house, a rating of a day, CSV of daily indicators (routes added to `api-spec.yaml` with the code) |
 | `/notifications` | Inbox, mark read |
 | `/harvests` | Harvest batches |
-| `/tickets`, `/maintenance-schedules` | Supporting flows |
-| `/admin`, `/system` | Provisioned-device stock (add and return the activation key once, revoke, re-issue key), accounts, Technicians, deletion requests, default thresholds, SLA, audit log, health overview |
+| `/admin`, `/system` | Provisioned-device stock (add and return the activation key once, revoke, re-issue key), accounts, Technician accounts, deletion requests, default thresholds, audit log, technical overview |
 | `/internal/stream-auth` | MediaMTX authorisation (no user token, blocked from outside by the reverse proxy) |
 
 ### 7.2 MQTT
@@ -672,7 +643,7 @@ Ingestion keys off `deviceId` in the payload, not the topic; retained messages a
 
 ### 7.3 WebSocket (Socket.io)
 
-Clients authenticate with the access token. Rooms: `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE`), `ticket:<id>` (`JOIN_TICKET_CHAT`) and the personal room `user:<id>`. Server events: `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`, `TICKET_MESSAGE_NEW`, `TICKET_CHAT_ASSIGNEE_CHANGED`; client event `SEND_TICKET_MESSAGE`.
+Clients authenticate with the access token. Rooms: `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE`) and the personal room `user:<id>`. Server events: `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`.
 
 ---
 
@@ -734,19 +705,9 @@ stateDiagram-v2
   EXPIRED --> [*]
 ```
 
-### 8.5 Ticket (SM-05)
+### 8.5 Ticket (SM-05, removed)
 
-```mermaid
-stateDiagram-v2
-  [*] --> NEW : owner creates, or alert escalates (TICKET-FR-001, 002)
-  NEW --> IN_PROGRESS : Technician accepts (TICKET-FR-007)
-  NEW --> CLOSED : cancelled
-  IN_PROGRESS --> AWAITING_FIELD_CONFIRMATION : site work done (TICKET-FR-010)
-  IN_PROGRESS --> CLOSED : resolved remotely, or cancelled
-  AWAITING_FIELD_CONFIRMATION --> CLOSED : checklist passed
-  AWAITING_FIELD_CONFIRMATION --> IN_PROGRESS : checklist failed
-  CLOSED --> [*]
-```
+Removed with the maintenance tickets (Report 3, Sections 6.5 and 8). The number is kept so that SM-06…SM-17 keep theirs.
 
 ### 8.6 Device — connection status (SM-06)
 
@@ -864,7 +825,7 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> NONE
-  NONE --> PENDING : Technician sends OTA, firmware >= 1.4.0 (TICKET-FR-008)
+  NONE --> PENDING : Technician sends OTA, firmware >= 1.4.0 (FARM-FR-013)
   PENDING --> NONE : heartbeat reports the new version
   PENDING --> FAILED : no confirmation in 30 min, image discarded or rolled back
   FAILED --> PENDING : OTA sent again
@@ -987,17 +948,23 @@ flowchart TB
   end
   subgraph B[Backend]
     B0[Every 10 min: stuck, jump, drift] --> B1[SENSOR_ANOMALY]
-    B2[One open alert per incident<br/>notify, escalate CRITICAL/HIGH after 15 min]
+    B5[Pump or fan past its service limit] --> B6[MAINTENANCE_DUE]
+    B2[One open alert per incident<br/>notify the Farm Owners]
+    B3{Still ACTIVE after 15 min<br/>CRITICAL/HIGH, 1 h NODE_OFFLINE?} -- yes --> B4[Send once more]
   end
   subgraph O[Farm Owner]
-    O1[Acknowledge or create ticket]
+    O1[Acknowledge, act on site]
   end
   subgraph T[Technician]
-    T1[Handle ticket, fix on site]
+    T1[Sees device alerts of every farm:<br/>diagnose, restart, OTA - SF-02]
   end
   A2 & A3 & A4 --> B2
   B1 --> B2
-  B2 --> O1 --> T1
+  B6 --> B2
+  B2 --> O1
+  B2 --> B3
+  B4 --> O1
+  B2 -.-> T1
 ```
 
 ### 9.5 MF-05 Early warning by forecast (AD-05)
@@ -1169,33 +1136,35 @@ flowchart TB
   B8 --> O4
 ```
 
-Moving a controller to another floor: scan the new floor's code; an online controller receives `config/reassign` at once, an offline one gets the same correction at its next heartbeat (B4). A Technician follows the same steps on an installation ticket (SF-02).
+Moving a controller to another floor: scan the new floor's code; an online controller receives `config/reassign` at once, an offline one gets the same correction at its next heartbeat (B4). A Technician may follow the same steps on any farm; the Farm Owners are notified of each registration or move (FARM-FR-009).
 
-### 9.11 SF-02 Maintenance request (AD-11)
+### 9.11 SF-02 Remote device maintenance (AD-11)
 
 ```mermaid
 flowchart TB
-  subgraph O[Farm Owner]
-    O1[Create fault ticket] --> O2[Rate service]
+  subgraph T[Technician - console]
+    T0[Device alert, or new firmware] --> T1[Open device: firmware, uptime,<br/>RSSI, memory, reset reason]
+    T1 --> T2{Remote fix?}
+    T2 -- yes --> T3[Restart, push configuration or OTA]
+    T2 -- no --> T4[Replace or set up again on site<br/>steps of MF-10]
   end
   subgraph B[Backend]
-    B0[Unacknowledged CRITICAL/HIGH alert 15 min] --> B1[Create ticket, priority by type]
-    B1 --> B2[Assign by region, start SLA]
-    B3{SLA exceeded?} -- yes --> B4[Escalate to Admin]
+    B1{Role Technician,<br/>device online or degraded?} -- no --> B2[Reject 403 / 409]
+    B1 -- yes --> B3[Send command with deviceId, audit]
+    B3 --> B4[Notify the Farm Owners in the app]
+    B5{OTA confirmed by heartbeat<br/>within 30 min?} -- no --> B6[FAILED]
   end
-  subgraph T[Technician]
-    T1[Accept] --> T2{Fix remotely?}
-    T2 -- yes --> T3[Restart / config / OTA, close]
-    T2 -- no --> T4[Schedule visit, fix, checklist, close]
+  subgraph C[Controller]
+    C1[Restart, apply configuration,<br/>or verify and install image]
+    C1 --> C2{New firmware reaches<br/>broker in 10 min?} -- no --> C3[Roll back]
   end
-  subgraph A[Administrator]
-    A1[Reassign or intervene]
+  subgraph O[Farm Owner]
+    O1[Sees what the Technician did]
   end
-  O1 --> B1
-  B2 --> T1
-  B2 --> B3
-  B4 --> A1
-  T3 & T4 --> O2
+  T3 --> B1
+  B3 --> C1
+  C2 -- yes --> B5
+  B4 --> O1
 ```
 
 ### 9.12 SF-03 Account and access management (AD-12)
@@ -1281,11 +1250,12 @@ flowchart TB
 | Concern | Design |
 | --- | --- |
 | Authentication | JWT access token (15 min) in the response body; refresh token (30 days) in an httpOnly, `sameSite=strict` cookie and stored hashed per user so each one can be revoked; password reset revokes all |
-| Authorisation | `requireRole` on every route following Report 3, Section 2.4; farm membership checked in services (`farmAccess.util`); Technicians limited to their regions |
+| Authorisation | `requireRole` on every route following Report 3, Section 2.4; farm membership checked in services (`farmAccess.util`); a Technician reaches every farm's devices but never its environmental data, relays, thresholds or alerts, and every device action is audited and notified to the Farm Owners |
 | Passwords and codes | bcrypt; one-time codes hashed and never returned by the API |
 | Rate limiting | 300 requests/min per account; 10 failed sign-ins / 15 min per IP; 30 refreshes/min per IP |
 | Devices | Activation key from the provisioned stock, printed on the device label and checked only by the backend (stored hashed, compared in constant time, one message for an unknown ID and a wrong key); never stored on the controller; a device in service is never registered again (BR-26); labels and floor codes carry no Wi-Fi or MQTT credential; MQTT username/password over TLS (port 8883 in production); commands to one device carry its `deviceId`; OTA only over HTTPS from allowed hosts with SHA-256 verification and rollback |
 | Health and reports | Ratings and downloads limited to the Farm Owners and Domain Expert of the farm; exported files carry names and figures, never internal identifiers; the weather service receives only the farm's coordinates |
+| Camera | The RTSP port of the camera is forwarded on the house modem (static IP) for the AI node only; strong camera password, kept only in the AI node's `.env`; source IP limited to the AI node's line where the modem allows it, otherwise listed as a limitation (Report 3, Section 8.1) |
 | Video | Viewing tokens valid 60 s for one camera path, signed with a separate secret; the raw feed is readable only by the pipeline |
 | Secrets | Environment variables only (`.env.example` documents them); gitleaks scan in CI |
 | Personal data | Account deletion with anonymisation (AUTH-FR-012, Decree 13/2023/ND-CP); audit log of sensitive changes |
@@ -1307,10 +1277,14 @@ flowchart LR
     API --> MINIO[(MinIO<br/>internal only)]
     MTX -- stream auth --> API
   end
-  subgraph HOUSE[Test house - LAN behind the house router]
+  subgraph HOUSE[Test house - VNPT line, static public IP]
     ESP[ESP32 controllers]
-    CAM[IP camera] -- RTSP on the LAN --> PC[AI node:<br/>spare desktop PC]
+    CAM[IP camera<br/>RTSP, port 18554 forwarded]
   end
+  subgraph HOME[Member's home]
+    PC[AI node:<br/>spare desktop PC]
+  end
+  CAM -- RTSP over TCP<br/>across the Internet --> PC
   ESP -- MQTT over TLS 8883 --> TLSP
   PC -- counts, heartbeat<br/>MQTT TLS 8883 --> TLSP
   PC -- annotated video<br/>RTSPS 8322 --> TLSP
@@ -1319,16 +1293,16 @@ flowchart LR
   API -- outbound HTTPS --> EXT[[Telegram, FCM,<br/>Open-Meteo]]
 ```
 
-Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a public but possibly dynamic IP on a consumer modem), so the backend runs on a VPS; the video stays at the house, where the camera is, so only counts and the annotated stream use the house's uplink (D5). Only ports 80/443 (Caddy), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only) — both wrapped by a TLS proxy that reuses Caddy's certificate — and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
+Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a static public IP, but on a consumer modem in a borrowed house), so the backend runs on a VPS. The AI node runs on a spare PC at a member's home and pulls the camera's RTSP feed over the Internet through the one port forwarded on the house modem (D5); it sends counts and the annotated stream on to the VPS. Only ports 80/443 (Caddy), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only) — both wrapped by a TLS proxy that reuses Caddy's certificate — and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
 
 | Operation | Procedure |
 | --- | --- |
 | Deploy | On the VPS: check out the tag, `docker compose -f docker-compose.staging.yml up -d --build`, run pending `npm run migrate:*` scripts (all idempotent), load demo data with the seed script on a fresh database; smoke check `GET /health`, sign-in, one telemetry message |
 | Rollback | Re-deploy the previous tag; restore the MongoDB dump taken before the deployment |
 | Backup | `mongodump` before each deployment and once a day by cron, 7 dumps kept, copied off the VPS `[TEAM: where]` |
-| AI node | `stream.py` runs as a service on the spare PC that starts at boot and restarts on failure; the PC's BIOS is set to power on after a power cut; the counting ring and model file are versioned with the tag |
+| AI node | `stream.py` runs as a service on the spare PC at a member's home that starts at boot and restarts on failure, reconnecting to the camera with back-off; the PC's BIOS is set to power on after a power cut; the camera URL and password live only in the node's `.env`; the counting ring and model file are versioned with the tag |
 | Firmware | OTA from the Technician console; the new image is kept only after it reaches the broker within 10 minutes, otherwise the bootloader returns to the previous one |
-| Monitoring | System health overview (SYSTEM-FR-003), device and AI-node status and alerts (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`), audit log, `docker compose logs` |
+| Monitoring | Technical overview (SYSTEM-FR-003), device and AI-node status and alerts (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`), audit log, `docker compose logs` |
 
 Not in the repository yet (Section 12): `docker-compose.staging.yml`, Dockerfiles for backend and web, the Caddy configuration, a demo seed covering every main workflow, MQTT over TLS in the firmware.
 
@@ -1345,9 +1319,10 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Configuration sync | Configuration version, `CONFIG_MISMATCH` (SM-12) |
 | Bird counting | No trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10); publishing and video push are written but not yet run against staging; throughput risk: two tiles with the COCO model ran at about 7–12 fps on a laptop (not a reliable measurement) against the 25 fps of NFR-04, to be measured on the AI node PC; seasonal schedule and incomplete sessions (backend); counting-ring editor screen and mobile live stream |
 | Clients | Web Domain Expert screens exist (`/expert/*`: dashboard, alert verdicts, tuning, analytics, reports) but still read the SRS v2.1.4 names, fall back to mock data and sit outside the FE_Design folder plan; no counting-ring editor; leftovers of the old scope (`SALES_STAFF`, a `heating` relay field, Zalo/SMS options); mobile is a scaffold without push registration or QR setup |
-| Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes |
+| Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes; Technician access is by region, not to every farm; the Administrator still creates and manages farms |
+| Supporting roles | Tickets, chat, SLA, routing, queue, KPIs, maintenance schedules and regions are still in the code (routes, services, jobs, web and mobile screens, `api-spec.yaml`); escalation creates a ticket instead of repeating the notification (ALERT-FR-015); relay wear creates a ticket instead of `MAINTENANCE_DUE` (ALERT-FR-016); no owner notification of a Technician's device actions (FARM-FR-009) |
 | Device setup (MF-10) | Register, move, remove and replace routes allow only Technician and Administrator; moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
-| Staging | Staging compose file, Dockerfiles for backend and web, Caddy configuration and a demo seed for every main workflow not written; firmware connects on port 1883 without TLS (`MQTTManager.cpp`), so the controller cannot reach the staging broker on 8883 until TLS with the CA certificate is added |
+| Staging | 24-hour pull test of the camera from the AI node at a member's home, with counts compared on the same clip read locally; staging compose file, Dockerfiles for backend and web, Caddy configuration and a demo seed for every main workflow not written; firmware connects on port 1883 without TLS (`MQTTManager.cpp`), so the controller cannot reach the staging broker on 8883 until TLS with the CA certificate is added |
 | Health assessment (MF-11) | Daily health status, ratings, health levels, reports per house (daily, weekly, monthly), PDF and CSV export, weather job: not built (SM-17, D10, D12, D13) |
 | Hardware | Controller PCB with current transformers and actuator check (D11, THREAT-FR-014) not built. Bypass switches removed from scope (Report 3 §8) |
 | Data model | Planned entities and attributes of Section 6.4; unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest) |
@@ -1358,6 +1333,8 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.8 | `[TEAM]` | Maintenance tickets, SLA and Technician regions removed (Report 3 §8, BM03 row 9): decision D14, ERD and collections, jobs, REST and WebSocket, SM-05 removed, AD-04 with repeated alerts and `MAINTENANCE_DUE`, AD-11 rewritten as remote device maintenance, security and gaps |
+| 1.0.7 | `[TEAM]` | AI node moved to the team's spare PC at a member's home, reading the camera over the Internet through the house's static IP (D5, Sections 2.1, 3.4, 10, 11, 12) |
 | 1.0.6 | `[TEAM]` | Staging declared: one VPS with Caddy TLS for backend, web, broker and video server, the team's spare PC at the house as AI node (D5, Sections 3.4 and 11); hardware cost no longer tracked (NFR-12 removed in Report 3); Domain Expert web screens (PR #91), the Farm Owner rework with the WHEP live stream (PR #93) and the live pipeline with MQTT publishing, video push and its pytest CI job (PR #95) noted in Sections 3.3, 5.2, 5.4 and 12; activity-diagram lanes named as actors or system components (Section 9) |
 | 1.0.5 | `[TEAM]` | Bypass switch removed (borrowed test house cannot be rewired): architecture, controller board and AD-09 updated; the house's own switches are shown outside the system |
 | 1.0.4 | `[TEAM]` | Daily health assessment and periodic reports (MF-11): data flows DF-10, DF-11, decisions D10 (agreement rules), D11 (current transformers), D12 (weather API), D13 (report files), planned entities `HOUSE_HEALTH_DAY` and `WEATHER_OBSERVATION`, SM-17, AD-14; Open-Meteo and the team's controller board declared |

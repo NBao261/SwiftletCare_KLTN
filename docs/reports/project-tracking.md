@@ -42,7 +42,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-04 | Offline operation | Nguyễn Chí Bảo | Done | 30-min outage test on the prototype (NFR-06) | 2 |
 | F-05 | Self-diagnosis | Nguyễn Chí Bảo | Done | — | — |
 | F-06 | Actuator current check | Nguyễn Chí Bảo | Planned | Board with ADS1115 and current transformers; firmware; `ACTUATOR_FAULT` on three sides | 3 |
-| F-07 | Alert lifecycle | Trần Minh Kiệt | In progress | `DISMISSED`; acknowledge tests | 2 |
+| F-07 | Alert lifecycle | Trần Minh Kiệt | In progress | `DISMISSED`; acknowledge tests; repeat instead of escalation ticket (ALERT-FR-015); `MAINTENANCE_DUE` (ALERT-FR-016) | 2 |
 | F-08 | Push and Telegram | Trần Minh Kiệt | In progress | FCM sending; token registration in mobile | 2 |
 | F-09 | Forecast warning | Nguyễn Thị Yến Nhi | Done | — | — |
 | F-10 | Counting, return rate | Nguyễn Chí Bảo | In progress | Trained model; run the publisher against staging; sessions from buckets; incomplete sessions | 2 |
@@ -52,7 +52,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-14 | Tuning, ring, schedule | Thái Minh Tuấn | In progress | Seasonal schedule; ring editor screen | 2 |
 | F-15 | Review and suggestions | Thái Minh Tuấn | Planned | Review items, proposals (SM-10, 11) | 2 |
 | F-16 | Conclusions, owner notice | Thái Minh Tuấn | In progress | Notify owners of every expert decision; activity history | 2 |
-| F-17 | Manual override | Nguyễn Vũ Len | Done | Technician only on an assigned ticket (G1); override history shown on `/analytics` (PR #93) | 2 |
+| F-17 | Manual override | Nguyễn Vũ Len | Done | Technician and Administrator rejected (G1); override history shown on `/analytics` (PR #93) | 2 |
 | F-18 | Register by QR | Trần Minh Kiệt | In progress | Farm Owner role; label printing; QR scan in mobile | 2 |
 | F-19 | Setup progress, move | Trần Minh Kiệt | In progress | Offline move; progress screen; key re-issue | 2 |
 | F-20 | Daily health status | Nguyễn Thị Yến Nhi | Planned | Daily job, levels per house, weather job | 2 |
@@ -73,7 +73,7 @@ Summary: 8 Done, 10 In progress, 4 Planned.
 | ID | Defect | Severity | Found | Owner | Status |
 | --- | --- | --- | --- | --- | --- |
 | DF-1 | PR #89 (pipeline publishes counts, buckets and heartbeat over MQTT, pushes video to MediaMTX, CI job for pytest) was merged into the branch of PR #88 eleven seconds after #88 itself was merged into `develop`, so none of it reached `develop` | High | 23/10/2026 | Nguyễn Chí Bảo | Closed 23/10/2026 — merged into `develop` by PR #95 |
-| DF-2 | Technician and Administrator can edit zone thresholds and fuzzy coefficients; Technician can override relays without an assigned ticket (Report 3 §2.4) | High | Report 3 review | Trần Minh Kiệt | Open (gap G1) |
+| DF-2 | Technician and Administrator can edit zone thresholds and fuzzy coefficients; Technician can override relays and acknowledge alerts (Report 3 §2.4) | High | Report 3 review | Trần Minh Kiệt | Open (gap G1) |
 | DF-3 | Farm Owner cannot register, move or remove devices (MF-10) | High | Report 3 review | Trần Minh Kiệt | Open (gap G1) |
 | DF-4 | Firmware connects to MQTT without TLS; cannot reach the staging broker on 8883 | Medium | Staging design | Nguyễn Chí Bảo | Open (gap #39) |
 | DF-5 | Domain Expert web screens fall back to mock data (`services/expert/expertFallback.service.ts`, `data/mocks/`) | Medium | Merge of PR #91 | Thái Minh Tuấn | Open (gap G7) |
@@ -82,7 +82,7 @@ Severity follows Report 5, Section 2.5. Defense 1.1 requires no open Critical or
 
 ## 6. Gaps Against Report 3
 
-The full list, one row per FR, is `docs/reports/README.md` ("Chỗ lệch", #1…#40); the summary with owners is the Design Brief, Section 5 (G1…G7). Work items with priorities are in `docs/reports/todo-review2.md`.
+The full list, one row per FR, is `docs/reports/README.md` ("Chỗ lệch", #1…#46); the summary with owners is the Design Brief, Section 5 (G1…G7). Work items with priorities are in `docs/reports/todo-review2.md`.
 
 ## 7. Change Log
 
@@ -92,3 +92,4 @@ The full list, one row per FR, is `docs/reports/README.md` ("Chỗ lệch", #1�
 | 23/10/2026 | After PR #93 (Farm Owner web rework): pull-request counts, F-11 and F-17 |
 | 23/10/2026 | After PR #94 (scope filter by farm, house and zone; support requests opened in place): pull-request counts |
 | 23/10/2026 | After PR #95 (live pipeline on `develop`): DF-1 closed, F-10 and F-11 updated |
+| 24/10/2026 | Tickets, SLA and Technician regions removed from scope (BM03 row 9): F-07, F-17 and DF-2 updated |

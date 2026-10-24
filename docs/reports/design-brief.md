@@ -11,7 +11,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
 | Repository link (tag review-2) | https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2 |
-| Version | 1.0 (registration v3, SRS 3.0.0, SDD 1.0.6) |
+| Version | 1.0 (registration v3, SRS 3.0.0, SDD 1.0.8) |
 | Date | 23/10/2026 |
 
 ## 1. Scope
@@ -21,7 +21,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | Section | Current | Proposed | Reason |
 | --- | --- | --- | --- |
 | B, D6, 3.2a | YOLOv8; virtual line | YOLO (version in SDD); ring around the hole | Birds leave the hole in every direction (Iteration 1 clips) |
-| C.2, C.4, D | Technician installs devices | Flow 10: Farm Owner sets up by label and floor QR codes | Review 1: simplest possible setup |
+| C.2, C.4, D | Technician installs on tickets | Flow 10: owner sets up by QR; no tickets; Technician on devices only | Review 1: simple setup; "platform, not system" |
 | B, C, D, E | Periodic summary per zone | Flow 11: daily status per house, reports with PDF/CSV, ratings | Measurable multi-modal output |
 | B, C.1, 4 | No weather, no load current | Weather API as context; current sensing on pump and fan | Explain low return rates; detect dead loads |
 | D9, 4, C.2 | Bypass switches; Telegram or push; predator extension | No bypass; Telegram and push; no predator detection | Borrowed house cannot be rewired; team; Review 1 |
@@ -31,11 +31,11 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | Item | Reason |
 | --- | --- |
 | Predator detection, call classification, heating, light control, fan driven by NH3/CO2 or weather | One vision class; dB-only sensor; no equipment or established limits |
-| Marketplace, buyer role, Zalo/SMS, bypass switches, 24/7 production | Removed after Review 1; borrowed house; prototype and staging only |
+| Marketplace, buyer role, tickets, SLA, regions, Zalo/SMS, bypass switches, 24/7 production | Removed after Review 1 (platform functions); borrowed house; prototype and staging only |
 
 ## 2. System at a Glance
 
-Swiftlet houses are closed buildings that owners visit every few days, so humidity drift, equipment faults and a falling flock go unnoticed. SwiftletCare lets the house regulate and watch itself. On each floor an ESP32 controller reads five RS485 sensors and drives misting, fan and speaker with fuzzy logic, even without Internet. A PC at the house counts birds at the entrance (YOLO + ByteTrack) and streams annotated video. A cloud backend raises alerts, forecasts breaches and gives every house one daily health status combining environment, air quality, return rate and noise by agreement. The Farm Owner monitors, overrides and sets up devices by QR code; a Domain Expert validates inferred alerts and tunes parameters; Technician and Administrator support them. Architecture: SDD 2.1; deployment: SDD 11.
+Swiftlet houses are closed buildings that owners visit every few days, so humidity drift, equipment faults and a falling flock go unnoticed. SwiftletCare lets the house regulate and watch itself. On each floor an ESP32 controller reads five RS485 sensors and drives misting, fan and speaker with fuzzy logic, even without Internet. A PC reads the entrance camera, counts birds (YOLO + ByteTrack) and streams annotated video. A cloud backend raises alerts, forecasts breaches and gives every house one daily health status combining environment, air quality, return rate and noise by agreement. The Farm Owner monitors, overrides and sets up devices by QR code; a Domain Expert validates inferred alerts and tunes parameters; Technician and Administrator support them. Architecture: SDD 2.1; deployment: SDD 11.
 
 ## 3. Key Design Decisions
 
@@ -59,7 +59,7 @@ Swiftlet houses are closed buildings that owners visit every few days, so humidi
 
 | ID | Gap | Location | Plan | Owner | Due |
 | --- | --- | --- | --- | --- | --- |
-| G1 | Role checks on thresholds, overrides, device setup differ from SRS 2.4 | backend routes | Fix roles, spec, tests | Trần Minh Kiệt | It. 2 |
+| G1 | Roles differ from SRS 2.4; tickets still in code | backend, clients | Fix roles; drop tickets | Trần Minh Kiệt | It. 2 |
 | G2 | `DISMISSED`, alert evidence, owner fallback (BR-22), review items, proposals | backend, web | Per SM-01, 10, 11 | Thái Minh Tuấn | It. 2 |
 | G3 | Config version, `CONFIG_MISMATCH`; actuator current check | firmware, backend | Version in heartbeat; ADS1115 | Nguyễn Chí Bảo | It. 2–3 |
 | G4 | Pipeline not run on staging; sessions from buckets | ai-pipeline, backend | Run on the AI node PC | Nguyễn Chí Bảo | It. 2 |
@@ -114,7 +114,7 @@ FO = Farm Owner, DE = Domain Expert (Farm Owner if none, BR-22); (auto) = done b
 | Member | Role | Owned parts (2–3) | Main workflow owned | Key decisions / PRs |
 | --- | --- | --- | --- | --- |
 | Nguyễn Chí Bảo | Leader; IoT, AI | Firmware; AI pipeline; backend MQTT ingestion and alert engine | WF-01, 03, 06 | D1, D2; PR #88 |
-| Trần Minh Kiệt | Backend, mobile | Backend devices and setup; tickets; mobile app | WF-04, 10 | D4; `[TEAM]` |
+| Trần Minh Kiệt | Backend, mobile | Backend devices and setup; ticket removal; mobile app | WF-04, 10 | D4; `[TEAM]` |
 | Nguyễn Vũ Len | Web Farm Owner | Farm Owner screens; notification settings and inbox | WF-02, 09 | `[TEAM]` |
 | Nguyễn Thị Yến Nhi | Web Admin, reports | Admin screens (accounts, stock, defaults); daily status, reports, export | WF-05, 11 | D5; `[TEAM]` |
 | Thái Minh Tuấn | Web Domain Expert | Expert screens; expert backend (reviews, proposals) | WF-07, 08 | D3; PR #91 |
@@ -132,7 +132,7 @@ Actors are people and external services only; the controller, the AI node and th
 | WF-01 | Automatic micro-climate regulation (MF-01, AD-01) | Farm Owner, Domain Expert | 10-s control cycle; parameter change | Misting and fan follow humidity and temperature with the zone's current parameters | F-01, F-02, F-03 | Config sync: `PENDING` → `APPLIED`; relay output in `AUTO` | Nguyễn Chí Bảo |
 | WF-02 | Air-quality monitoring (MF-02, AD-02) | Farm Owner, Domain Expert, Telegram, FCM | NH3 or CO2 above the zone limit | Alert raised for assessment; fan not driven | F-01, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Nguyễn Vũ Len |
 | WF-03 | Offline operation and recovery (MF-03, AD-03) | Farm Owner | Internet lost, hang or power loss | Control continues; buffered data uploaded; restart reported | F-04, F-07, F-08 | Device: `ONLINE` → `OFFLINE` → `ONLINE`; `NODE_OFFLINE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
-| WF-04 | Equipment fault handling (MF-04, AD-04) | Farm Owner, Telegram, FCM | Pump dry, sensor fault, load not drawing current | Loop in a safe state; alert raised and acknowledged | F-05, F-06, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Trần Minh Kiệt |
+| WF-04 | Equipment fault handling (MF-04, AD-04) | Farm Owner, Telegram, FCM | Pump dry, sensor fault, load not drawing current | Loop in a safe state; alert raised, sent again until acknowledged | F-05, F-06, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Trần Minh Kiệt |
 | WF-05 | Early warning by forecast (MF-05, AD-05) | Farm Owner, Domain Expert | Every 10 min | Early warning with the expected crossing time; verdict recorded | F-09, F-07, F-13 | Alert: `ACTIVE` → `RESOLVED`; verdict: pending → `CONFIRMED` | Nguyễn Thị Yến Nhi |
 | WF-06 | Bird counting session (MF-06, AD-06) | Farm Owner, Domain Expert | Morning and evening sessions | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11, F-07 | AI node: `PENDING` → `ONLINE`; `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
 | WF-07 | Abnormal noise (MF-07, AD-07) | Domain Expert, Farm Owner | Noise above the hourly baseline | Indication shown with bird counts; validated by the expert | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED` (verdict `REJECTED`) | Thái Minh Tuấn |

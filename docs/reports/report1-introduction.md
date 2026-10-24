@@ -31,7 +31,7 @@
 | Member | Student code | Role in the team |
 | --- | --- | --- |
 | Nguyễn Chí Bảo | SE183383 | Leader; firmware, AI pipeline, backend core |
-| Trần Minh Kiệt | SE182180 | Backend devices and tickets; mobile application |
+| Trần Minh Kiệt | SE182180 | Backend devices and device setup; mobile application |
 | Nguyễn Vũ Len | SE182055 | Web application – Farm Owner |
 | Nguyễn Thị Yến Nhi | SE184223 | Web application – Administrator, health reports |
 | Thái Minh Tuấn | SE181850 | Web application – Domain Expert |
@@ -79,8 +79,8 @@ Users and what they do (Report 3, Section 2.3):
 | --- | --- |
 | Farm Owner | Watch the houses live, receive alerts by push and Telegram, override an actuator for a limited time, set up devices by scanning QR codes, read the daily status and reports, rate each day, record harvests |
 | Domain Expert | Review data and reports, confirm or reject inferred alerts, tune thresholds, coefficients, detection parameters and the counting ring, write conclusions, rate each day |
-| Technician (supporting) | Install devices on an installation ticket, handle maintenance tickets, send remote commands and firmware updates |
-| Administrator (supporting) | Manage accounts, the device stock and its labels, and system-wide defaults |
+| Technician (supporting) | Set up, move and remove devices on any farm, diagnose them remotely, send restarts, configuration pushes and firmware updates; no relay control and no environmental data |
+| Administrator (supporting) | Manage accounts (including Technician accounts), the device stock and its labels, system-wide defaults and the audit log; no farm management |
 
 ## 6. Project Scope and Limitations
 
@@ -102,7 +102,7 @@ The main flows of the registration form v3 (Report 3, Section 2.2):
 | MF-10 | Device setup by the Farm Owner | Scanning the device label and the floor code puts a new controller online in the right zone |
 | MF-11 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF and CSV, rated by the owner and the expert |
 
-Supporting flows: maintenance tickets (SF-02), accounts and access (SF-03), harvest logging (SF-04).
+Supporting flows: remote device maintenance by the Technician (SF-02), accounts and access (SF-03), harvest logging (SF-04). There are no maintenance tickets: faults reach the Farm Owner as alerts that are sent again until acknowledged (MF-04).
 
 ### 6.2 Limitations and Exclusions
 

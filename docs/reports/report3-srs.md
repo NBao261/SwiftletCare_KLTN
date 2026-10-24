@@ -42,7 +42,7 @@ This document specifies **what** SwiftletCare must do: its actors, functional re
 SwiftletCare is an **automated control and monitoring system** for swiftlet houses. The house regulates and protects itself; people supervise, validate and intervene only as an exception. The product consists of:
 
 - an **edge controller** (ESP32 with five RS485 Modbus sensors, a relay module and an attractant speaker) in each zone (floor) of a house;
-- an **AI camera node** at the bird entrance (IP camera with infrared night vision and a desktop PC at the house running the detection and tracking pipeline);
+- an **AI camera node** at the bird entrance (IP camera with infrared night vision at the entrance, read over the Internet by a desktop PC that runs the detection and tracking pipeline);
 - a **cloud backend** (REST API, MQTT broker, database, WebSocket, background services);
 - a **web application** and a **mobile application** for the Farm Owner and the Domain Expert, and a web console for the supporting roles. The Farm Owner sets up devices in the mobile application by scanning the label of a device and the code of its floor (MF-10).
 
@@ -65,6 +65,7 @@ Items explicitly excluded are listed in Section 8.
 | Provisioned-device stock | The list of devices the Administrator has added before delivery, each with a device ID and a hashed activation key. Only a device in the stock can be registered. |
 | Device label | Sticker on a device with a QR code and the same values as text: device ID and activation key (FARM-FR-010). Holding the label is what allows registering the device (BR-26). |
 | Floor code | QR code fixed on a floor that identifies its zone (FARM-FR-011); scanned to choose the zone of a controller. |
+| Device alert | An alert about the equipment rather than the house: `NODE_OFFLINE`, `EDGE_AI_DEGRADED`, `SENSOR_FAULT`, `RS485_BUS_FAILURE`, `POWER_OUTAGE`, `SPEAKER_FAILURE`, `PUMP_DRY`, `ACTUATOR_FAULT`, `CONFIG_MISMATCH`, `MAINTENANCE_DUE`. The Technician sees the device alerts of every farm (FARM-FR-009). |
 | Primary Owner | The Farm Owner who created the farm. Co-owners are Farm Owners invited by the Primary Owner. |
 | Inferred alert | An alert produced by inference rather than a direct measurement against a threshold: `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE`. These are validated by the Domain Expert; a rejected one becomes `DISMISSED` (no longer in force). |
 | Episode | A continuous period during which one incident persists (for example one period of abnormal noise, or one misting demand period). |
@@ -151,16 +152,16 @@ The main flows MF-01…11 are Flows 1–11 of the registration form v3 (section 
 | MF-01 | Automatic micro-climate regulation | Farm Owner, Domain Expert | Every 10 s control cycle | Misting and ventilation power follow humidity and temperature; state shown on the dashboard | ENV-FR-001, 002, 004, 005, 010, 011, 013b, 015, 021, 022, ENV-FR-027, ANALYTICS-FR-001, 005 |
 | MF-02 | Air-quality monitoring | Farm Owner, Domain Expert, Telegram Bot API, Firebase Cloud Messaging | NH3 or CO2 reading above the zone alert limit | Alert raised for assessment; no automatic ventilation | ENV-FR-006, 007, ALERT-FR-012, EXPERT-FR-004, ALERT-FR-001, 002, 005, 006, 007, 009, 013 |
 | MF-03 | Offline operation and recovery | Farm Owner | Internet lost, controller hang or power loss | Control continues; buffered data uploaded; restart reported | ENV-FR-014, 024, 025, FARM-FR-005, THREAT-FR-009, 012 |
-| MF-04 | Equipment fault handling | Farm Owner, Telegram Bot API, Firebase Cloud Messaging | Pump dry, sensor or bus fault, implausible readings, speaker failure, pump or fan not drawing the expected current | Affected loop in a safe state; alert raised | THREAT-FR-006, 011, 013, 014, ALERT-FR-010, ALERT-FR-001, 008, 009 |
+| MF-04 | Equipment fault handling | Farm Owner, Technician, Telegram Bot API, Firebase Cloud Messaging | Pump dry, sensor or bus fault, implausible readings, speaker failure, pump or fan not drawing the expected current, pump or fan past its service limit | Affected loop in a safe state; alert raised and sent again while nobody acknowledges it; the Technician sees it among the device alerts | THREAT-FR-006, 011, 013, 014, ALERT-FR-010, ALERT-FR-001, 008, 009, 015, 016, FARM-FR-009 |
 | MF-05 | Early warning by forecast | Farm Owner, Domain Expert | Every 10 min | Early-warning alert with the expected crossing time | ANALYTICS-FR-009, ALERT-FR-011 |
 | MF-06 | Bird counting session | Farm Owner, Domain Expert | Morning exit and evening return sessions | Counts and return rate of the house recorded; alert on abnormal drop; annotated live stream | VISION-FR-001…014, 016, 017, 019, THREAT-FR-010, VISION-FR-020, ANALYTICS-FR-002, 003 |
 | MF-07 | Abnormal noise | Domain Expert, Farm Owner (BR-22) | Noise sustained above the hourly baseline | Indication shown with bird counts of the same period and validated by the expert | THREAT-FR-005, 007, VISION-FR-017, EXPERT-FR-003, ALERT-FR-014 |
 | MF-08 | Expert validation and tuning | Domain Expert, Farm Owner | Weekly and monthly health reports; pending inferred alerts; coefficient suggestion | Alerts confirmed or rejected; parameters and counting ring approved; the Farm Owner informed of every decision; conclusion delivered | EXPERT-FR-001…009, VISION-FR-018, ANALYTICS-FR-008, 010, 011, EXPERT-FR-010, 011, ALERT-FR-014, ENV-FR-009, 020 |
-| MF-09 | Manual override | Farm Owner (a Technician only on an assigned ticket) | Owner switches a relay by hand | Relay in manual mode for a limited time, then back to automatic; logged | ENV-FR-016…019 |
-| MF-10 | Device setup by the Farm Owner | Administrator, Farm Owner (a Technician follows the same steps on an installation ticket) | A new controller or AI node, or a controller moved to another floor | Device registered by scanning its label, assigned to the zone of the scanned floor code, online and running that zone's configuration, confirmed in the application | FARM-FR-003, 003b, 003c, 004, 006, 007, 007b, 008, 010, 011, 012, ENV-FR-027 |
+| MF-09 | Manual override | Farm Owner | Owner switches a relay by hand | Relay in manual mode for a limited time, then back to automatic; logged | ENV-FR-016…019 |
+| MF-10 | Device setup by the Farm Owner | Administrator, Farm Owner (a Technician may follow the same steps on any farm) | A new controller or AI node, or a controller moved to another floor | Device registered by scanning its label, assigned to the zone of the scanned floor code, online and running that zone's configuration, confirmed in the application | FARM-FR-003, 003b, 003c, 004, 006, 007, 007b, 008, 010, 011, 012, ENV-FR-027 |
 | MF-11 | Daily health assessment and periodic reports | Farm Owner, Domain Expert, weather service (Open-Meteo) | End of each day after the evening session; every week; every month | Every house gets a daily status (`GOOD`, `WATCH`, `ACTION`, `INSUFFICIENT_DATA`) with its reasons from all sources and the weather of the day; daily, weekly and monthly reports are produced and can be downloaded; the Farm Owner and the expert rate each day from their own observation | ANALYTICS-FR-012, 013, 014, EXPERT-FR-005, 006, 012, 013 |
-| SF-02 | Maintenance requests (supporting) | Farm Owner, Technician, Administrator | Fault ticket or installation request | Ticket handled within SLA and closed | TICKET-FR-001, 002, 003, 004, 004b, 005, 005b, 006, 007, 008, 009, 010, 011, 012, 013, 014…017, 018 |
-| SF-03 | Account and access management (supporting) | All users, Administrator | Registration, invitation, account request | Users hold the right role and farm access | AUTH-FR-001, 002, 003, 004, 005, 005c, 007, 009, 010, 011, 012, FARM-FR-001, 002, 009, SYSTEM-FR-001, 002, 003 |
+| SF-02 | Remote device maintenance (supporting) | Technician, Farm Owner | A device alert, or a new firmware release | Device diagnosed, restarted, reconfigured or updated from the console; the Farm Owners notified of each action | FARM-FR-006, 009, 013, ENV-FR-013c |
+| SF-03 | Account and access management (supporting) | All users, Administrator | Registration, invitation, account request | Users hold the right role and farm access | AUTH-FR-001, 002, 003, 004, 005, 005c, 007, 009, 010, 011, 012, FARM-FR-001, 002, SYSTEM-FR-001, 002, 003 |
 | SF-04 | Harvest logging (registration C.2) | Farm Owner, Domain Expert | Farm Owner records a harvest | Batch stored with the environment and flock snapshots of the period before it; expert can read it | MARKET-FR-001, 002, 003, 004, 005, ANALYTICS-FR-004 |
 
 ### 2.3 Actors and System Components
@@ -169,10 +170,10 @@ Actors are the people and external services that SwiftletCare interacts with. Th
 
 | Actor | Type | Description |
 | --- | --- | --- |
-| Farm Owner | Human, main flow | Owner of a swiftlet farm. Manages farms, houses and zones; monitors; sets zone thresholds; receives and acknowledges alerts; overrides actuators for a limited time; records harvests; sets up devices by scanning the label of a controller and the code of its floor, and moves or removes them (MF-10); invites a Domain Expert; is informed of every decision the expert makes and reads the expert's conclusions (EXPERT-FR-009). While the farm has no Domain Expert, the Farm Owner also takes the expert's decisions (BR-22). The Primary Owner additionally deletes the farm, changes its region and invites or removes members. |
-| Domain Expert | Human, main flow | Swiftlet-farming specialist invited by the Primary Owner, with access to the whole farm. Read-only on operations; confirms or rejects inferred alerts; approves or adjusts thresholds, fuzzy coefficients, detection parameters and the counting ring; writes conclusions for the Farm Owner. Does not control relays, create tickets, record harvests or acknowledge alerts. A Domain Expert is optional: the system runs without one (BR-22). |
-| Technician | Human, supporting | Staff of the system operator. Installs devices when a Farm Owner asks for it through an installation ticket (same steps as MF-10), handles maintenance tickets, sends remote commands and firmware updates. |
-| Administrator | Human, supporting | Maintains the provisioned-device stock and issues device labels; manages user accounts, Technician regions, system-wide default thresholds and SLA settings; reviews the audit log. |
+| Farm Owner | Human, main flow | Owner of a swiftlet farm. Manages farms, houses and zones; monitors; sets zone thresholds; receives and acknowledges alerts; overrides actuators for a limited time; records harvests; sets up devices by scanning the label of a controller and the code of its floor, and moves or removes them (MF-10); invites a Domain Expert; is informed of every decision the expert makes and reads the expert's conclusions (EXPERT-FR-009). While the farm has no Domain Expert, the Farm Owner also takes the expert's decisions (BR-22). The Primary Owner additionally deletes the farm and invites or removes members. |
+| Domain Expert | Human, main flow | Swiftlet-farming specialist invited by the Primary Owner, with access to the whole farm. Read-only on operations; confirms or rejects inferred alerts; approves or adjusts thresholds, fuzzy coefficients, detection parameters and the counting ring; writes conclusions for the Farm Owner. Does not control relays, record harvests or acknowledge alerts. A Domain Expert is optional: the system runs without one (BR-22). |
+| Technician | Human, supporting | Technical staff of the team that runs the system. Sees the houses, zones, devices and device alerts of every farm, never its environmental data; sets up, moves, removes and replaces devices with the same steps as the Farm Owner (MF-10); diagnoses devices, sends remote commands (restart, configuration push) and firmware updates; registers attractant tracks copied to the SD card (SF-02). Never controls relays, edits thresholds or coefficients, or acknowledges alerts. The Farm Owners are notified of every device action a Technician takes on their farm. |
+| Administrator | Human, supporting | Maintains the provisioned-device stock and issues device labels; creates Technician accounts, locks and unlocks accounts and handles data-deletion requests; maintains the system-wide default thresholds; reviews the audit log and a technical overview of devices and accounts. Does not create, view or manage farms. |
 | Telegram Bot API | External service | Delivers alert messages to the Farm Owner's Telegram account. |
 | Firebase Cloud Messaging | External service | Delivers push notifications to the mobile application. |
 | Weather service (Open-Meteo) | External service | Gives hourly outdoor temperature, humidity and rainfall for the farm's coordinates; used as context only (C-6). |
@@ -183,7 +184,7 @@ The components below are parts of SwiftletCare built by the team. They perform t
 | --- | --- |
 | Controller (ESP32) | Reads sensors, filters signals, runs fuzzy control, plays the attractant speaker, self-diagnoses and publishes over MQTT. |
 | AI node | Detects, tracks and counts swiftlets at the entrance, publishes counts and streams annotated video. |
-| Backend | Stores telemetry, runs the alert engine, forecasting, anomaly detection, health reports and the ticket router; sends notifications. |
+| Backend | Stores telemetry, runs the alert engine, forecasting, anomaly detection and health reports; sends notifications and repeats them while an alert is not acknowledged. |
 
 ### 2.4 Permissions
 
@@ -194,7 +195,7 @@ The components below are parts of SwiftletCare built by the team. They perform t
 | Rate the daily status of a house from own observation | ✓ | ✓ | – | – |
 | Download reports (PDF) and daily indicators (CSV) | ✓ | ✓ | – | – |
 | Set the health-indicator levels of a house | read ¹ | ✓ | – | – |
-| Acknowledge alerts | ✓ | – | ✓ ² | – |
+| Acknowledge alerts | ✓ | – | – | – |
 | Receive out-of-app notifications | ✓ | – | – | – |
 | Confirm or reject inferred alerts | read ¹ | ✓ | – | – |
 | Write conclusions and recommendations | read | ✓ | – | – |
@@ -208,29 +209,29 @@ The components below are parts of SwiftletCare built by the team. They perform t
 | Edit detection parameters | read ¹ | ✓ | – | – |
 | Draw the counting ring of a camera | read ¹ | ✓ | – | – |
 | Set the counting schedule of a house (seasons, temporary windows) | read ¹ | ✓ | – | – |
-| Manual relay override | ✓ | – | ✓ ² | – |
+| Manual relay override | ✓ | – | – | – |
 | Record and edit harvests | ✓ | read | – | – |
-| Create farms | ✓ | – | – | ✓ |
-| Create houses and zones | ✓ | – | ✓ (own regions) | ✓ |
-| Delete farm, change region, invite or remove members | Primary Owner | – | – | ✓ (delete, region) |
-| Register a device from its label, assign it to a zone, move, remove or replace it | ✓ | – | ✓ (own regions) | – |
-| Print the QR code of a floor | ✓ | – | ✓ (own regions) | – |
-| Remote commands (restart, configuration push), OTA | – | – | ✓ (own regions) | – |
-| Create fault and installation tickets | ✓ | – | – | – |
-| Handle tickets | – | – | ✓ | ✓ (any ticket) |
+| Create farms | ✓ | – | – | – |
+| Create houses and zones | ✓ | – | – | – |
+| Delete farm, invite or remove members | Primary Owner | – | – | – |
+| View devices, their diagnostics and device alerts | ✓ | read | ✓ (every farm) ² | – |
+| Register a device from its label, assign it to a zone, move, remove or replace it | ✓ | – | ✓ (every farm) ² | – |
+| Print the QR code of a floor | ✓ | – | ✓ (every farm) | – |
+| Remote commands (restart, configuration push), OTA | – | – | ✓ (every farm) ² | – |
 | Maintain the provisioned-device stock: add devices and issue labels, re-issue or revoke an activation key | – | – | – | ✓ |
-| Manage accounts, Technician regions, default thresholds, SLA, audit log | – | – | – | ✓ |
+| Create Technician accounts, lock or unlock accounts, handle data-deletion requests | – | – | – | ✓ |
+| View the audit log and the technical overview (devices and accounts) | – | – | – | ✓ |
 
-Technicians and Administrators see the structure and device status of a farm, never its environmental dashboard or analytics (FARM-FR-009).
+A Technician sees the houses, zones and devices of every farm, never its environmental dashboard, analytics, bird counts, live stream, harvests or reports; an Administrator sees no farm, only the counts of the system overview (FARM-FR-009, SYSTEM-FR-003).
 
 ¹ The Farm Owner takes this decision while the farm has no Domain Expert (BR-22). Zone thresholds and fuzzy coefficients belong to the farm: a Technician or Administrator neither edits nor resets them; the Administrator only maintains the system default thresholds (ENV-FR-007).
 
-² A Technician overrides relays only while assigned to an open ticket of that farm (for example to test the relays during the site acceptance checklist), and acknowledges only alerts linked to a ticket assigned to them; the Farm Owners are notified of every Technician override.
+² A Technician works on any farm without being its member and without a request in the system. Every device registration, move, removal, replacement, remote command and firmware update by a Technician is audited and notified in the app to the Farm Owners of the farm (FARM-FR-009). A Technician never switches relays: the relays are tested after an installation by the Farm Owner (MF-09).
 
 ### 2.5 Operating Environment
 
 - Controller: ESP32 on 2.4 GHz Wi-Fi, five RS485 Modbus RTU sensors on one bus, 4-channel relay module, DFPlayer Mini audio module, hardware watchdog.
-- AI node: a desktop PC at the house, on the same LAN as the camera, reaching the backend over the Internet (the team's spare PC, `[TEAM: CPU, RAM, GPU if any]`); IP camera with RTSP (H.264, 1080p, 25 fps) and infrared night vision.
+- AI node: the team's spare desktop PC at a member's home (`[TEAM: CPU, RAM, GPU if any]`), reading the camera's RTSP feed over the Internet through the house's static public IP and reaching the backend over the Internet; IP camera with RTSP (H.264, 1080p, 25 fps) and infrared night vision.
 - Backend: Linux server with Docker; MongoDB, EMQX MQTT broker, MinIO object storage.
 - Clients: current Chrome, Edge and Safari for the web application; Android 9+ and iOS 16.4+ for the mobile application.
 
@@ -260,7 +261,7 @@ The exact versions and the dev, staging and production environments are declared
 
 | Level | Unit of | Owns |
 | --- | --- | --- |
-| Farm | Ownership and access | Members (Farm Owners, Domain Expert), region, coordinates and the weather of that place, tickets, harvests, expert activity history |
+| Farm | Ownership and access | Members (Farm Owners, Domain Expert), coordinates and the weather of that place, harvests, expert activity history |
 | House | The flock | Entrances and their cameras (AI nodes), bird counts and 5-minute counts, return rate, `LOW_RETURN_RATE`, `EDGE_AI_DEGRADED`, counting ring, counting schedule, return-rate drop parameter, health-indicator levels, daily health status and its ratings, daily/weekly/monthly health reports |
 | Zone (floor) | Micro-climate and control | Controllers, sensors and relays, thresholds, fuzzy coefficients, the five zone detection parameters, telemetry, environmental and device alerts, actuator current, configuration sync, its section of the house health report |
 
@@ -306,7 +307,7 @@ Where a zone needs flock data it reads the figures of its house: the correlation
 
 | ID | Actor / component | Requirement | Acceptance criteria | Pri. |
 | --- | --- | --- | --- | :---: |
-| ENV-FR-016 | Farm Owner (Technician during an assigned ticket) | Switch one relay (misting, fan, speaker) ON or OFF by hand for a limited duration. | The command is applied by the target controller and the relay reports `MANUAL`; a duration outside BR-08 is rejected with 422; a Technician without an open ticket of that farm assigned to them, an Administrator or a Domain Expert is rejected with 403; every Farm Owner of the farm is notified in the app of a Technician override. | M |
+| ENV-FR-016 | Farm Owner | Switch one relay (misting, fan, speaker) ON or OFF by hand for a limited duration. | The command is applied by the target controller and the relay reports `MANUAL`; a duration outside BR-08 is rejected with 422; a Technician, an Administrator or a Domain Expert request is rejected with 403. | M |
 | ENV-FR-017 | Controller, Backend | Suspend automatic control of an overridden relay and show it clearly; the precedence of BR-19 applies. | While in `MANUAL`, neither the fuzzy output, the pump-dry latch nor the sensor safe state changes that relay, and the dashboard shows a manual-mode banner for it. | M |
 | ENV-FR-018 | Backend, Controller | End an override automatically when its duration expires, or early on request, and return to automatic control (BR-20). | At expiry (default 30 min) every overridden relay of the controller returns to `AUTO` within one control cycle; an early cancel does the same immediately. | M |
 | ENV-FR-019 | Backend | Log every override and show the history. | Each record holds user, role, relay, state, start, end and end reason (`EXPIRED` or `CANCELLED`) and is listed in the zone history. | M |
@@ -317,7 +318,7 @@ Where a zone needs flock data it reads the figures of its house: the correlation
 | --- | --- | --- | --- | :---: |
 | THREAT-FR-005 | Controller | Measure the noise level in dB continuously for speaker and abnormal-noise detection; no call classification. | Noise is present in every telemetry message; no requirement depends on frequency analysis. | M |
 | THREAT-FR-006 | Controller | Raise `SPEAKER_FAILURE` when the speaker is on and playing but the sound level drops more than `speaker_drop_pct` below its baseline. | With the speaker ON and playing and a measured level 75 % below baseline (default 70 %), one `SPEAKER_FAILURE` alert is raised; at a 50 % drop no alert is raised. | M |
-| THREAT-FR-007 | Controller, Backend | Learn a noise baseline for each hour of the day (90th percentile while the speaker is off) and raise `NOISE_ANOMALY` (MEDIUM) when noise stays above the baseline of that hour by `noise_margin_db` for `noise_min_sec` within 15 s. The indication is never a conclusion on its own: it is shown with the bird counts of the same period and waits for the Domain Expert's verdict. | Noise 20 dB above a learned baseline for 12 s of 15 s raises one alert (defaults 15 dB, 10 s); 20 dB for 8 s raises none; no evaluation while the speaker plays, for an hour with less than about one hour of learned data, or before the clock is synchronised; the alert creates no ticket and shows the 5-minute bird counts around it. | M |
+| THREAT-FR-007 | Controller, Backend | Learn a noise baseline for each hour of the day (90th percentile while the speaker is off) and raise `NOISE_ANOMALY` (MEDIUM) when noise stays above the baseline of that hour by `noise_margin_db` for `noise_min_sec` within 15 s. The indication is never a conclusion on its own: it is shown with the bird counts of the same period and waits for the Domain Expert's verdict. | Noise 20 dB above a learned baseline for 12 s of 15 s raises one alert (defaults 15 dB, 10 s); 20 dB for 8 s raises none; no evaluation while the speaker plays, for an hour with less than about one hour of learned data, or before the clock is synchronised; the alert is shown with the 5-minute bird counts around it. | M |
 | THREAT-FR-009 | Backend | Mark a controller offline when no heartbeat arrives and raise `NODE_OFFLINE`. | With heartbeats stopped, the device is `OFFLINE` and one `NODE_OFFLINE` alert exists within 40 s (BR-10); the alert resolves automatically when the device reconnects. | M |
 | THREAT-FR-010 | Backend | Raise `EDGE_AI_DEGRADED` for the house when its AI node stops sending heartbeats, or reports fewer than 10 frames per second. | With heartbeats stopped, the camera node is `OFFLINE` and one `EDGE_AI_DEGRADED` alert exists for the house within 100 s (BR-10); it resolves at the next heartbeat; an `EDGE_AI_DEGRADED` message from the node reporting 8 fps also raises it. | M |
 | THREAT-FR-011 | Controller | Detect a pump running dry and stop misting for the rest of the episode. | With humidity below `humidity_min` and the pump ON for an accumulated `pump_dry_on_sec` (default 300 s) in one episode without humidity rising by `pump_dry_min_rise_pct` (default 2 %), misting output becomes 0, one `PUMP_DRY` alert is raised and misting is retried after BR-11; a manual ON override keeps the pump running and the alert says so. | M |
@@ -335,12 +336,14 @@ Where a zone needs flock data it reads the figures of its house: the correlation
 | ALERT-FR-006 | Farm Owner | Set quiet hours during which only CRITICAL alerts are sent out of the app. | During quiet hours a HIGH alert is not sent by push or Telegram but is listed in the app; a CRITICAL alert is sent on both. | M |
 | ALERT-FR-007 | Farm Owner, Domain Expert | View the notification centre with all alerts and the number of unread (`ACTIVE`) alerts; alerts in force (`ACTIVE`, `ACKNOWLEDGED`) are shown apart from `DISMISSED` and `RESOLVED` ones. | The list shows only alerts of farms the user can access and filters by farm, zone or house, status (including `DISMISSED`), severity, type and expert verdict; a `DISMISSED` alert shows who rejected it, when and why; an invalid filter value is rejected with 422. | M |
 | ALERT-FR-008 | Backend | Keep one open alert per incident (same type and same zone and device, or same house for house-level alerts) and close alerts automatically when conditions recover (BR-16). | A repeated occurrence increments `occurrence_count` of the open alert (`ACTIVE`, `ACKNOWLEDGED` or `DISMISSED`) instead of creating a new alert, and a `DISMISSED` alert sends no notification; a threshold breach resolves after 5 min back in range; an episodic alert resolves after 60 min without a new occurrence; `LOW_RETURN_RATE` resolves on the first later day back within the limit. | M |
-| ALERT-FR-009 | Farm Owner (Technician for alerts of an assigned ticket) | Acknowledge an alert with a note. | An `ACTIVE` alert becomes `ACKNOWLEDGED` with user, time and note; acknowledging an alert that is not `ACTIVE` is rejected with 409; a Technician acknowledging an alert not linked to a ticket assigned to them, a Domain Expert or an Administrator is rejected with 403. | M |
+| ALERT-FR-009 | Farm Owner | Acknowledge an alert with a note. | An `ACTIVE` alert becomes `ACKNOWLEDGED` with user, time and note; acknowledging an alert that is not `ACTIVE` is rejected with 409; a Technician, Domain Expert or Administrator request is rejected with 403. | M |
 | ALERT-FR-011 | Backend | Raise `FORECAST_BREACH` when humidity or temperature is in range now but is forecast to cross a threshold within 60 minutes. | With a series forecast to cross `humidity_min` in 40 min, one LOW alert is raised containing the expected minutes and the forecast error; it resolves when the forecast no longer crosses or when the reading actually crosses (then `THRESHOLD_BREACH` applies). | M |
 | ALERT-FR-012 | Backend | Raise `THRESHOLD_BREACH` (MEDIUM) when NH3 or CO2 exceeds the zone alert limit, without driving the fan. | The alert text states that the limit is the zone's alert limit; the fan output is unchanged; both the Farm Owner and the Domain Expert see the alert. | M |
 | ALERT-FR-013 | Backend | Deliver alerts to the Farm Owner's phone through a Telegram bot after a one-time account link. | After linking with the one-time code, a CRITICAL alert produces a Telegram message within 5 s (NFR-02); after unlinking, no message is sent; the bot token is read from the environment and never stored in the repository. | M |
 | ALERT-FR-014 | Backend | Attach multi-modal evidence to every inferred alert (BR-23): for `NOISE_ANOMALY`, `SENSOR_ANOMALY` and `FORECAST_BREACH`, the temperature, humidity, NH3, CO2 and noise of the zone and the 5-minute bird counts of its house ±30 min around the alert, with the open device alerts of the zone; for `LOW_RETURN_RATE`, the day's % time in range of each zone of the house and that day's `NOISE_ANOMALY` and device alerts of the house. The system presents the evidence; it does not conclude. | Opening an inferred alert returns these series for the window and they equal the stored data; a source with no data in the window (for example an AI node offline) is reported as missing, not as zero; a user without access to the farm is refused (403). | M |
 | ALERT-FR-002 | Backend, Farm Owner | Deliver alerts as push notifications to the mobile application through Firebase Cloud Messaging; the app registers its device token after sign-in and removes it at sign-out. | A signed-in device receives a push for a CRITICAL alert within 5 s (NFR-02); after sign-out it receives none; an invalid token reported by FCM is removed. | M |
+| ALERT-FR-015 | Backend | Send an alert again when nobody has acknowledged it: a CRITICAL or HIGH alert other than `NODE_OFFLINE` still `ACTIVE` 15 min after it was raised, and a `NODE_OFFLINE` alert still `ACTIVE` 1 h after it was raised, are sent once more to the Farm Owners of the farm on the channels they chose (ALERT-FR-005). Replaces the former escalation ticket (TICKET-FR-002). | An unacknowledged CRITICAL alert is sent a second time 15 min after it was raised and never a third time; an alert acknowledged, dismissed or resolved before then is not sent again; quiet hours (ALERT-FR-006) apply to the repeat as to the first message; MEDIUM and LOW alerts are never repeated. | M |
+| ALERT-FR-016 | Backend | Raise `MAINTENANCE_DUE` (LOW) for the pump or the fan of a controller whose ON time or relay switch count since its last service exceeds its service limit (Section 4.5). The Farm Owner acknowledges it once the load is serviced. Replaces the former maintenance ticket (TICKET-FR-018). | When the accumulated pump ON time passes the limit, one `MAINTENANCE_DUE` alert names the controller, the load and the counter; below the limit none is raised; acknowledging it restarts the counter of that load and resolves the alert (BR-16). | M |
 
 ### 3.7 Forecasting, Control Performance and Tuning Suggestion (ANALYTICS)
 
@@ -407,9 +410,9 @@ FARM-FR-003…012 (except 005 and 009) form main flow MF-10: the Farm Owner sets
 
 | ID | Actor / component | Requirement | Acceptance criteria | Pri. |
 | --- | --- | --- | --- | :---: |
-| FARM-FR-001 | Farm Owner | Create, update and soft-delete a farm (name, address, GPS, description, region). | Only the Primary Owner or an Administrator changes the region or deletes; deleting resolves the farm's open alerts and cancels its open tickets; a deleted farm produces no new alerts. | M |
-| FARM-FR-002 | Farm Owner (Technician, Administrator at installation) | Manage houses and zones (floors) of a farm. | A zone always belongs to exactly one house of one farm; a Domain Expert cannot create them (403). | M |
-| FARM-FR-003 | Farm Owner, Technician | Register a controller from the provisioned-device stock by scanning the QR code on its label in the mobile application, or by typing the device ID and activation key printed under it. | A wrong key and an ID not in stock are rejected with 400 and the same message, so the stock cannot be probed; a revoked device is rejected with 409; a device in service in any farm is rejected with 409 (BR-26); a Domain Expert or Administrator request is rejected with 403; a Technician registers only in farms of their regions; a registered device starts in `PENDING` and the registration is audited. | M |
+| FARM-FR-001 | Farm Owner | Create, update and soft-delete a farm (name, address, GPS, description). | The Farm Owner who creates a farm is its Primary Owner, and only the Primary Owner deletes it; deleting resolves the farm's open alerts; a deleted farm produces no new alerts; a Technician or Administrator request to create, edit or delete a farm is rejected with 403. | M |
+| FARM-FR-002 | Farm Owner | Manage houses and zones (floors) of a farm. | A zone always belongs to exactly one house of one farm; a Domain Expert, Technician or Administrator request to create, edit or delete them is rejected with 403. | M |
+| FARM-FR-003 | Farm Owner, Technician | Register a controller from the provisioned-device stock by scanning the QR code on its label in the mobile application, or by typing the device ID and activation key printed under it. | A wrong key and an ID not in stock are rejected with 400 and the same message, so the stock cannot be probed; a revoked device is rejected with 409; a device in service in any farm is rejected with 409 (BR-26); a Domain Expert or Administrator request is rejected with 403; a registration by a Technician notifies the Farm Owners of the farm (FARM-FR-009); a registered device starts in `PENDING` and the registration is audited. | M |
 | FARM-FR-003b | Farm Owner, Technician | Provision the farm Wi-Fi through the controller's access-point mode, without reflashing; the mobile application guides this step right after registration. | After submitting SSID and password in AP mode, the controller joins the network and its first heartbeat sets it `ONLINE`. | M |
 | FARM-FR-003c | Controller, Backend | The AP-mode page takes only the Wi-Fi network and, where automatic broker discovery fails, the broker address. The farm, house and zone of a controller are never entered on the device: they follow its registration (BR-27). | The AP-mode page has no farm, house, zone or key field; a registered controller that connects with another farm, house or zone than its registration receives the registered one at its first heartbeat and from then on reports on the topic of its registered zone. | M |
 | FARM-FR-004 | Farm Owner, Technician | Register the AI node of an entrance of a house with its device ID and activation key, scanned from its label or typed. | A registered camera node is linked to exactly one house; the rejections of FARM-FR-003 apply; the camera list never returns its RTSP address. | S |
@@ -418,7 +421,7 @@ FARM-FR-003…012 (except 005 and 009) form main flow MF-10: the Farm Owner sets
 | FARM-FR-007 | Farm Owner, Technician | Choose the zone of a controller at registration by scanning the QR code fixed on that floor (FARM-FR-011) or by picking the zone from the list; a zone may have several controllers. | Scanning the floor code fills in its zone; a zone of a farm the user cannot access is rejected with 403; a Domain Expert request is rejected with 403. | M |
 | FARM-FR-007b | Farm Owner, Technician | Move an installed controller to another zone by scanning the new floor's code or picking the zone. An online controller is moved at once; an offline one is moved when it next connects (FARM-FR-003c). | After the move the controller reports on the new zone's topic and runs that zone's configuration (FARM-FR-012); its history stays attached to the device; a move to the zone it is already in is rejected with 400 and to a zone the user cannot access with 403; every move is audited. A device goes to a farm of another owner only through removal (FARM-FR-008) and a new registration. | M |
 | FARM-FR-008 | Farm Owner, Technician | Remove or replace a device without losing its history. | A removed device no longer appears as active but its telemetry remains queryable; after removal the same label registers it again (BR-26). | M |
-| FARM-FR-009 | Technician, Administrator | Manage farm structure without seeing operational data. | A Technician sees only farms in their assigned regions; Technician and Administrator requests to the dashboard and analytics are rejected with 403. | S |
+| FARM-FR-009 | Technician, Backend | Let the Technician see the houses, zones, devices, device details and device alerts of every farm without being a member and without its operational data; audit every device action of a Technician and notify it in the app to the Farm Owners of the farm. | A Technician lists every farm with its houses, zones and devices; Technician requests to the dashboard, analytics, telemetry, bird counts, live stream, harvests and health reports are rejected with 403, and Administrator requests to any farm are rejected with 403; a move of a controller by a Technician creates one audit entry and one in-app notification for each Farm Owner of the farm. | S |
 | FARM-FR-010 | Administrator, Backend | Issue a device label when a device is added to the stock: a QR code holding `swiftletcare://claim?d=<device ID>&k=<activation key>` and the same two values as text, for typing when the camera cannot read the code. | The QR code decodes to exactly the device ID and key; the label carries no Wi-Fi or MQTT credential; the key is shown only when the label is issued and is stored hashed; for a device not in service the Administrator re-issues the key and the old label is then rejected with 400; a device in service cannot be revoked (409). | M |
 | FARM-FR-011 | Farm Owner, Technician | Print a QR code for each zone, to be fixed on that floor; it holds `swiftletcare://zone?z=<zone ID>` only. | The code decodes to the zone ID; it gives no access by itself (FARM-FR-007 checks the user's access); it stays valid until the zone is deleted. | M |
 | FARM-FR-012 | Farm Owner, Technician | Follow the setup of a device in the application: registered (`PENDING`), online (first heartbeat), configuration of the zone applied (ENV-FR-027). | Each step is shown when the device reaches it; "configuration applied" is shown only after the controller reports the zone's current configuration version; a device still `PENDING` 15 min after registration notifies the person who registered it, naming Wi-Fi provisioning as the step to check (BR-27). | M |
@@ -437,27 +440,13 @@ FARM-FR-003…012 (except 005 and 009) form main flow MF-10: the Farm Owner sets
 
 These requirements serve the supporting roles of the registration form ("Technician" and "Administrator"). They are kept working and regression-tested but are not extended, and they are not proposed as mandatory features (priority `S`).
 
-#### 3.12.1 Maintenance Requests (SF-02)
+#### 3.12.1 Remote Device Maintenance (SF-02)
+
+There are no maintenance tickets (BM03 row 9). A device fault reaches the Farm Owner as an alert that is repeated until someone acknowledges it (MF-04, ALERT-FR-015), and the Technician, who sees the devices and device alerts of every farm (FARM-FR-009), works on the device remotely or sets it up again with the steps of MF-10.
 
 | ID | Actor / component | Requirement | Acceptance criteria | Pri. |
 | --- | --- | --- | --- | :---: |
-| TICKET-FR-001 | Farm Owner (Administrator on behalf) | Create a fault ticket or an installation request (with a preferred visit time between 07:00 and 18:00, Vietnam time). | A visit time in the past or outside 07:00–18:00 is rejected with 400; a Domain Expert request is rejected with 403. | S |
-| TICKET-FR-002 | Backend | Create a ticket linked to a CRITICAL or HIGH alert not acknowledged within 15 min; for `NODE_OFFLINE`, after 1 h offline. | An unacknowledged CRITICAL alert has exactly one linked ticket after 15 min; an acknowledged one gets none (except `NODE_OFFLINE` after 1 h). | S |
-| TICKET-FR-003 | Backend, Administrator | Assign priority P1/P2/P3 by type; the Administrator may change it with a reason. | A `RS485_BUS_FAILURE` ticket starts as P1 and an `INSTALLATION` ticket as P3; a change without a reason is rejected with 422. | S |
-| TICKET-FR-004 | Backend | Route every ticket to the Technician of the farm's region. | A ticket of a farm in region R is assigned to the Technician who holds R. | S |
-| TICKET-FR-004b | Technician | Confirm the requested visit time or reschedule with a reason. | A reschedule without a reason is rejected with 422 and one outside 07:00–18:00 with 400; the Farm Owner is notified of any change. | S |
-| TICKET-FR-005 | Backend | Route to a backup Technician or the shared queue when no Technician fits or the assigned one is overloaded. | With the regional Technician above the overload limit, the ticket goes to the backup or the shared queue. | S |
-| TICKET-FR-005b | Administrator | Intervene on any ticket: edit, reassign, change priority or visit time, close or cancel. | An Administrator can reassign a ticket, change its priority, status or visit time, or close it, each with a mandatory reason; a request without a reason is rejected with 422 and a non-Administrator request with 403; every intervention creates an audit entry with the old and new values. | S |
-| TICKET-FR-006 | Administrator | Configure response and resolution SLA per priority (BR-17). | A configuration with P1 > P2 or P2 > P3 is rejected with 400. | S |
-| TICKET-FR-007 | Technician | Move a ticket through its lifecycle (Section 6.5) with a note. | A transition not allowed by Section 6.5 is rejected with 409. | S |
-| TICKET-FR-008 | Technician | Send remote commands to a controller: restart, push configuration, OTA firmware update. The controller verifies the downloaded image and keeps the new firmware only after it reconnects to the broker. | A command to a device that is not `ONLINE` or `DEGRADED` is rejected with 409; RESTART or OTA to firmware older than 1.4.0 is rejected with 501; an image with a wrong SHA-256 or an interrupted download is discarded and the old firmware keeps running; a new firmware that does not reach the broker within 10 min rolls back; an OTA not confirmed within 30 min is reported as failed. | S |
-| TICKET-FR-009 | Backend | Escalate a ticket that exceeds its resolution SLA. | Within 5 min after the deadline the ticket is flagged as breached and the Administrator and backup Technician are notified. | S |
-| TICKET-FR-010 | Technician | Complete the site acceptance checklist before closing a ticket that had a site visit. | Closing such a ticket without a passed checklist is rejected with 409. | S |
-| TICKET-FR-012 | Administrator | View ticket KPIs: open and closed per Technician, mean resolution time, SLA compliance. | For seeded tickets the KPIs equal the expected values; cancelled tickets are excluded from resolution time. | S |
-| TICKET-FR-014…017 | Farm Owner, Technician, Administrator | Real-time chat per ticket; read-only once closed; a system message on reassignment. | A message sent on an open ticket reaches the other party; sending on a closed ticket returns 409; after reassignment the previous Technician can no longer send. | S |
-| TICKET-FR-018 | Backend | Create a maintenance ticket when pump or fan run time or relay switch count exceeds its limit. | When accumulated pump ON time passes the limit, one `MAINTENANCE` ticket is created and the counter restarts. | S |
-| TICKET-FR-011 | Farm Owner | Rate a closed ticket from 1 to 5 stars. | A rating outside 1–5, or on a cancelled ticket, is rejected. | O |
-| TICKET-FR-013 | Administrator, Technician | Schedule periodic maintenance that creates `MAINTENANCE` tickets. | A ticket is created before each due date. | O |
+| FARM-FR-013 | Technician | Send remote commands to a controller: restart, push configuration, OTA firmware update. The controller verifies the downloaded image and keeps the new firmware only after it reconnects to the broker. (Formerly TICKET-FR-008.) | A command to a device that is not `ONLINE` or `DEGRADED` is rejected with 409; RESTART or OTA to firmware older than 1.4.0 is rejected with 501; an image with a wrong SHA-256 or an interrupted download is discarded and the old firmware keeps running; a new firmware that does not reach the broker within 10 min rolls back; an OTA not confirmed within 30 min is reported as failed.; a Farm Owner, Domain Expert or Administrator request is rejected with 403; every command is audited and notified to the Farm Owners of the farm (FARM-FR-009). | S |
 | ENV-FR-013c | Technician, Farm Owner | Manage attractant tracks: the Technician registers a track copied to the SD card; the Farm Owner selects the default track or plays one for testing. | A track not marked as copied to the SD card cannot be selected or played (400). | O |
 
 #### 3.12.2 Account and Access Management (SF-03)
@@ -469,7 +458,7 @@ These requirements serve the supporting roles of the registration form ("Technic
 | AUTH-FR-003 | Backend | Manage sessions with a 15-minute access token and a 30-day refresh token. | An expired access token returns 401 and a valid refresh token issues a new one. | S |
 | AUTH-FR-004 | Backend | Enforce the four roles of Section 2.4 on every route and farm membership in every service. | Every role/route pair not allowed in Section 2.4 returns 403. | S |
 | AUTH-FR-005 | Farm Owner (Primary) | Invite co-owners and Domain Experts; remove members. | An account that already holds another role cannot accept the invitation (409). | S |
-| AUTH-FR-005c | Administrator | Create Technician accounts and assign regions. | A new Technician can access only farms of the assigned regions. | S |
+| AUTH-FR-005c | Administrator | Create Technician accounts with a temporary password that must be changed at the first sign-in. | A new Technician signs in with the temporary password; until it is changed, every request other than changing the password or signing out is rejected with 403 (`PASSWORD_CHANGE_REQUIRED`); a non-Administrator request is rejected with 403. | S |
 | AUTH-FR-007 | Backend | Record sign-ins and configuration changes in the audit log. | Every change listed in Sections 3.2, 3.4 and 3.9 produces an audit entry with actor and time. | S |
 | AUTH-FR-009 | All users | Reset a forgotten password with a single-use code valid for 15 minutes. | A code used twice or after 15 min is rejected; after a reset all previous refresh tokens are revoked. | S |
 | AUTH-FR-010 | Invitee | Accept or decline an invitation valid for 7 days (Section 6.4). | After 7 days the invitation is `EXPIRED` and cannot be accepted. | S |
@@ -477,7 +466,7 @@ These requirements serve the supporting roles of the registration form ("Technic
 | AUTH-FR-012 | All users, Administrator | Request deletion of one's account and personal data; the Administrator completes or rejects it within 30 days. | On completion, ownership passes to the earliest co-owner, or the farm is soft-deleted if none; personal data is anonymised; a reminder is sent to the Administrator once 7 days before the deadline. | S |
 | SYSTEM-FR-001 | Administrator | Browse and filter the audit log. | Filtering by actor, action, target and period returns only matching entries. | S |
 | SYSTEM-FR-002 | Administrator | Edit the system default thresholds. | Valid defaults are stored and audited; a value outside the measurement range is rejected with 422 and a set with min ≥ max with 400; a non-Administrator request is rejected with 403; existing zones are not changed (ENV-FR-007). | S |
-| SYSTEM-FR-003 | Administrator | View a system health overview: farms, zones, devices by status, open tickets by priority, accounts by role and state. | For seeded data each count equals the expected value; soft-deleted farms are excluded. | S |
+| SYSTEM-FR-003 | Administrator | View a technical overview of the system: number of farms and zones, devices by status, accounts by role and state; no farm's data. | For seeded data each count equals the expected value; soft-deleted farms are excluded. | S |
 
 ---
 
@@ -525,9 +514,8 @@ The defaults of the fuzzy coefficients (BR-05) and of the detection parameters (
 | BR-12 | Return rate | `(evening entry − evening exit) / (morning exit − morning entry) × 100 %`; raw counts of both directions are also stored |
 | BR-13 | Default session windows (used when no seasonal profile or temporary window covers the day) | Morning 05:30–07:00, evening 17:30–19:00 (engineering default, A-4); live count (VISION-FR-012) follows the windows in force that day |
 | BR-14 | Sensor anomaly | Stuck: temperature or humidity unchanged ≥ 2 h. Jump: ≥ 3 changes between consecutive samples above 2 °C / 10 % RH / 20 ppm NH3 / 500 ppm CO2. Drift: two devices of a zone differ by > 2 °C or > 8 % RH on 1-hour means |
-| BR-15 | Default severity | CRITICAL: `RS485_BUS_FAILURE`. HIGH: `POWER_OUTAGE`, `SPEAKER_FAILURE`, `NODE_OFFLINE`, `ACTUATOR_FAULT`. MEDIUM: `THRESHOLD_BREACH`, `CONFIG_MISMATCH`, `NOISE_ANOMALY`, `SENSOR_FAULT`, `SENSOR_ANOMALY`, `PUMP_DRY`, `EDGE_AI_DEGRADED`. LOW: `LOW_RETURN_RATE`, `FORECAST_BREACH` |
-| BR-16 | Automatic resolution | Threshold breach: 5 min back in range. `NODE_OFFLINE`: device reconnects. Episodic alerts (`NOISE_ANOMALY`, `PUMP_DRY`): 60 min without a new occurrence, while the controller repeats the alert every 15 min during an ongoing episode (engineering constants, A-4) |
-| BR-17 | Default SLA (response / resolution) | P1 30 min / 4 h; P2 4 h / 24 h; P3 24 h / 72 h |
+| BR-15 | Default severity | CRITICAL: `RS485_BUS_FAILURE`. HIGH: `POWER_OUTAGE`, `SPEAKER_FAILURE`, `NODE_OFFLINE`, `ACTUATOR_FAULT`. MEDIUM: `THRESHOLD_BREACH`, `CONFIG_MISMATCH`, `NOISE_ANOMALY`, `SENSOR_FAULT`, `SENSOR_ANOMALY`, `PUMP_DRY`, `EDGE_AI_DEGRADED`. LOW: `LOW_RETURN_RATE`, `FORECAST_BREACH`, `MAINTENANCE_DUE` |
+| BR-16 | Automatic resolution | Threshold breach: 5 min back in range. `NODE_OFFLINE`: device reconnects. Episodic alerts (`NOISE_ANOMALY`, `PUMP_DRY`): 60 min without a new occurrence, while the controller repeats the alert every 15 min during an ongoing episode (engineering constants, A-4). `MAINTENANCE_DUE`: the Farm Owner's acknowledgement records the service, restarts the counter of that load and resolves the alert |
 | BR-18 | Safe state of the control loop | Last valid temperature and humidity are used for up to 2 control cycles (20 s); beyond that misting and fan are OFF (engineering constant, A-4) |
 | BR-19 | Control precedence for the pump and the fan (highest first) | 1. Manual override (ENV-FR-016). 2. Pump-dry latch (THREAT-FR-011, misting only) and sensor safe state (BR-18). 3. Fuzzy output (ENV-FR-010, 011). The house's own switches act on the loads outside the system: the controller cannot override them, and a load that does not follow its relay is reported by THREAT-FR-014 |
 | BR-20 | Override expiry | One expiry per controller: a new override on any relay restarts the expiry of all overridden relays of that controller, and an early cancel returns all of them to `AUTO` |
@@ -569,19 +557,18 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Ring margin around the hole outline | 60 px | AI node `config.yaml` `tracking.ring` (`tools/pick_roi.py --margin`) | Outline measured on 21/10/2026, widened evenly (VISION-FR-005) |
 | Overlap of the two image tiles | 160 px | AI node `config.yaml` | Larger than a circling bird (about 40 px), so a bird at a tile edge is whole in the other tile (VISION-FR-004) |
 | Extrapolation at the hole | tracks faster than 60 px/frame, over at most 2 frames | AI node `config.yaml` `extrapolate_min_speed_px`, `extrapolate_frames` | Measured on one clip (BR-25) |
-| New firmware must reach the broker | 10 min, else rollback | firmware `OTA_VERIFY_TIMEOUT_MS` | A broken image cannot stay installed (TICKET-FR-008) |
+| New firmware must reach the broker | 10 min, else rollback | firmware `OTA_VERIFY_TIMEOUT_MS` | A broken image cannot stay installed (FARM-FR-013) |
 | Firmware download stalled | 10 s without data | firmware `OTA_READ_TIMEOUT_MS` | Treated as a lost connection; the old firmware keeps running |
-| OTA not confirmed | 30 min | backend `OTA_CONFIRM_TIMEOUT_MS` | Reported as failed (TICKET-FR-008, Section 6.15) |
+| OTA not confirmed | 30 min | backend `OTA_CONFIRM_TIMEOUT_MS` | Reported as failed (FARM-FR-013, Section 6.15) |
 | Configuration mismatch | 3 heartbeats | backend (planned) | `CONFIG_MISMATCH` (ENV-FR-027, BR-24) |
 | Device not connected after registration | 15 min | backend `ACTIVATION_TIMEOUT_MS` | Registrant told to check Wi-Fi (FARM-FR-012, BR-27) |
 | API rate limit (signed in) | 300 requests/min per account | backend `RATE_LIMIT_MAX` | The overview page calls the API per zone |
 | Sign-in, OTP and password-reset limit | 10 wrong attempts / 15 min per IP | backend `AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_WINDOW_MS` | NFR-10 |
 | Token refresh limit | 30/min per IP | backend `REFRESH_RATE_LIMIT_MAX` | Refresh still works when the API quota is used up |
 | Account deletion reminder | once, 7 days before the 30-day deadline | backend `DELETION_REMIND_DAYS_BEFORE` | AUTH-FR-012 |
-| Shared ticket queue re-dispatch | every 5 min | backend `jobs/ticketQueue.job.ts` | Safety net; the shortest response SLA is 30 min (TICKET-FR-005) |
-| KPI period | 30 days default, 366 days maximum | backend `KPI_DEFAULT_DAYS`, `KPI_MAX_DAYS` | TICKET-FR-012 |
+| Repeat of an unacknowledged alert | once, 15 min after it was raised (CRITICAL, HIGH); 1 h for `NODE_OFFLINE` | backend `jobs/alertEscalation.job.ts` | The owner is told again when nobody reacted (ALERT-FR-015); the times were those of the former escalation ticket |
+| Service limits of the pump and the fan | 500 h (pump) and 2 000 h (fan) of ON time, 100 000 switchings each, since the last service | backend `RELAY_SERVICE_LIMITS` | `MAINTENANCE_DUE` (ALERT-FR-016); to be replaced by the makers' figures of the installed pump, fan and relay |
 | Temporary Technician password | 12 random characters, changed at next sign-in | backend `resetTechnicianPassword` | AUTH-FR-005c, until e-mail is wired |
-| Region list | 34 provinces and cities (2025 administrative map), with former province names | backend `utils/regions.util.ts` | Technician regions (FARM-FR-009); list and mapping to be confirmed |
 | Live-data label on the dashboard | latest reading older than 20 s shows the controller as disconnected | web `LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS` | Display only; the device status itself follows BR-10 |
 | Zone balance score bands | ≥ 90 / ≥ 80 / ≥ 65 of 100 | web `ZoneBalanceCard` | Colour and label of the zone comparison card only; no alert depends on them |
 | Health-indicator level defaults | in range 90 % / 75 %; air quality 1 h / 4 h; noise 1 / 3 episodes; telemetry completeness 80 % | backend (planned) | Daily health status until the Domain Expert sets confirmed levels (BR-28) |
@@ -620,7 +607,7 @@ The Design Brief (BM01, section 7) proposes at most six of these NFRs for commit
 
 ## 6. Main Entity Lifecycles
 
-Each lifecycle below has a state machine diagram in the SDD. Every transition names the FR that triggers it; each transition, including a rejected one, is covered by one test case in Report 5. Sections 6.1–6.3 and 6.6–6.12 belong to the automated system and the expert loop; 6.4, 6.5, 6.14 and 6.15 belong to the supporting flows; 6.13 to harvest logging.
+Each lifecycle below has a state machine diagram in the SDD. Every transition names the FR that triggers it; each transition, including a rejected one, is covered by one test case in Report 5. Sections 6.1–6.3 and 6.6–6.12 belong to the automated system and the expert loop; 6.4, 6.14 and 6.15 belong to the supporting flows (6.5 is no longer used); 6.13 to harvest logging.
 
 ### 6.1 Alert — status
 
@@ -649,9 +636,9 @@ Each lifecycle below has a state machine diagram in the SDD. Every transition na
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
-| `AUTO` | `MANUAL` | Owner or Technician override applied by the controller | ENV-FR-016, 017 |
+| `AUTO` | `MANUAL` | Farm Owner override applied by the controller | ENV-FR-016, 017 |
 | `MANUAL` | `AUTO` | Override expires or is cancelled | ENV-FR-018, 019 |
-| `AUTO` | `AUTO` | Domain Expert override request rejected (403); duration outside BR-08 rejected (422) | ENV-FR-016 |
+| `AUTO` | `AUTO` | Domain Expert, Technician or Administrator override request rejected (403); duration outside BR-08 rejected (422) | ENV-FR-016 |
 
 ### 6.4 Invitation
 
@@ -663,18 +650,9 @@ Each lifecycle below has a state machine diagram in the SDD. Every transition na
 | `PENDING` | `EXPIRED` | 7 days pass, the farm is deleted, or the inviter's account is deleted | AUTH-FR-010, FARM-FR-001, AUTH-FR-012 |
 | `ACCEPTED`, `DECLINED`, `EXPIRED` | — | Accept request rejected (409) | AUTH-FR-010 |
 
-### 6.5 Ticket
+### 6.5 Ticket (removed)
 
-| From | To | Trigger | FR |
-| --- | --- | --- | --- |
-| (new) | `NEW` | Farm Owner creates it, or an unacknowledged alert escalates | TICKET-FR-001, 002, 018 |
-| `NEW` | `IN_PROGRESS` | Assigned Technician accepts | TICKET-FR-007 |
-| `NEW` | `CLOSED` | Cancelled by the creator or an Administrator | TICKET-FR-005b |
-| `IN_PROGRESS` | `AWAITING_FIELD_CONFIRMATION` | Site work done, checklist pending | TICKET-FR-007, 010 |
-| `IN_PROGRESS` | `CLOSED` | Resolved remotely (no site visit), or cancelled | TICKET-FR-007, 008 |
-| `AWAITING_FIELD_CONFIRMATION` | `CLOSED` | Site acceptance checklist passed | TICKET-FR-010 |
-| `AWAITING_FIELD_CONFIRMATION` | `IN_PROGRESS` | Checklist failed, rework needed | TICKET-FR-007 |
-| `CLOSED` | — | Any transition rejected (409); chat becomes read-only | TICKET-FR-007, 016 |
+Removed with the maintenance tickets (BM03 row 9). The number is kept so that Sections 6.6–6.17 keep theirs.
 
 ### 6.6 Device (controller and AI node) — connection status
 
@@ -779,11 +757,11 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
-| `NONE` | `PENDING` | Technician sends an OTA command to an online controller with firmware ≥ 1.4.0 | TICKET-FR-008 |
-| `PENDING` | `NONE` | A heartbeat reports the requested version (update confirmed) | TICKET-FR-008 |
-| `PENDING` | `FAILED` | No confirmation within 30 min (the controller discarded a bad image or rolled back) | TICKET-FR-008 |
-| `FAILED` | `PENDING` | Technician sends the OTA command again | TICKET-FR-008 |
-| any | — | OTA to a device that is not online, or with firmware older than 1.4.0, rejected (409 / 501) | TICKET-FR-008 |
+| `NONE` | `PENDING` | Technician sends an OTA command to an online controller with firmware ≥ 1.4.0 | FARM-FR-013 |
+| `PENDING` | `NONE` | A heartbeat reports the requested version (update confirmed) | FARM-FR-013 |
+| `PENDING` | `FAILED` | No confirmation within 30 min (the controller discarded a bad image or rolled back) | FARM-FR-013 |
+| `FAILED` | `PENDING` | Technician sends the OTA command again | FARM-FR-013 |
+| any | — | OTA to a device that is not online, or with firmware older than 1.4.0, rejected (409 / 501) | FARM-FR-013 |
 ### 6.16 Device label (provisioned-device stock entry)
 
 The state is derived from the stock entry and the device record; it is not a stored field.
@@ -817,7 +795,7 @@ The state is derived from the stock entry and the device record; it is not a sto
 | --- | --- |
 | C.1 Sensing & Telemetry | ENV-FR-001, 002, 004, 005, 014, 022, 024 |
 | C.1 Closed-Loop Control | ENV-FR-010, 011, 013b, 015, 021, ENV-FR-027 |
-| C.1 Self-Protection & Self-Diagnosis | THREAT-FR-005, 006, 007, 009, 010, 011, 012, 013, 014, ENV-FR-025, ALERT-FR-010 |
+| C.1 Self-Protection & Self-Diagnosis | THREAT-FR-005, 006, 007, 009, 010, 011, 012, 013, 014, ENV-FR-025, ALERT-FR-010, 016 |
 | C.1 Forecasting & Tuning Suggestion | ANALYTICS-FR-008, 009, 010, ALERT-FR-011 |
 | C.1 Bird Counting | VISION-FR-001…011, 014, 016, 017, THREAT-FR-010, VISION-FR-019, 020 |
 | C.1 Health Assessment & Alerts | ALERT-FR-001, 008, 014, ANALYTICS-FR-012, 013, EXPERT-FR-005, 013 |
@@ -826,7 +804,7 @@ The state is derived from the stock entry and the device record; it is not a sto
 | C.2 Real-Time Monitoring | ENV-FR-005, 015, ANALYTICS-FR-001, 005 |
 | C.2 Flock Monitoring & Live View | ANALYTICS-FR-002, 003, VISION-FR-010, 012, 013, 014 |
 | C.2 Daily Health & Reports | ANALYTICS-FR-012, EXPERT-FR-005, 012, 013 |
-| C.2 Alerts | ALERT-FR-002, 005, 006, 007, 009, 012, 013 |
+| C.2 Alerts | ALERT-FR-002, 005, 006, 007, 009, 012, 013, 015 |
 | C.2 Manual Override | ENV-FR-016…019, ANALYTICS-FR-011 |
 | C.2 Harvest Logging | MARKET-FR-001…005, ANALYTICS-FR-004 |
 | C.2 Expert Collaboration | EXPERT-FR-001, 006, 009 |
@@ -835,9 +813,10 @@ The state is derived from the stock entry and the device record; it is not a sto
 | C.3 Tuning | EXPERT-FR-004, 008, VISION-FR-018, 019, ENV-FR-006, 009, 020, 021, 026, EXPERT-FR-010, 011 |
 | C.3 Rating | EXPERT-FR-012, BR-31 |
 | C.3 Conclusions | EXPERT-FR-006 |
-| C.4 Technician | FARM-FR-003 (on an installation ticket), 006, 009, TICKET-FR-001…018, 004b, 005b, ENV-FR-013c |
+| C.4 Technician | FARM-FR-003, 003b, 004, 006, 007, 007b, 008, 009, 011, 013, ENV-FR-013c |
 | C.4 Administrator | FARM-FR-010, AUTH-FR-001, 002, 003, 004, 005, 005c, 007, 009, 010, 011, 012, ENV-FR-007, SYSTEM-FR-001, 002, 003 |
 | D. Flows 1–11 | MF-01…11 (Section 2.2); supporting flows SF-02…04 |
+| D. Supporting flows: no maintenance tickets (BM03 row 9) | Section 8; SF-02 is remote device maintenance by the Technician; ALERT-FR-015, 016 |
 | D. Flow 9 and section 4: no bypass switch (BM03 row 6) | Section 8; the house's own switches stay outside the system (Section 8.1) |
 | Section 4 (infrared night vision) | VISION-FR-007, 016 |
 | Section 4 (load-current sensing) | THREAT-FR-014, BR-32 |
@@ -877,6 +856,7 @@ The mapping from each FR, transition and NFR to its test cases is kept in Report
 | Automatic session windows from weather data | Weather is a regional estimate used as context only (C-6); bad-weather days are handled by temporary windows set by the Domain Expert (VISION-FR-019) |
 | Camera image settings (brightness, infrared, WDR) in the application, PTZ, two-way audio, cloud video storage | The model is trained on one fixed image setup, so camera settings stay locked in the vendor's app; recording of past events is deferred (the camera's own memory card records continuously) |
 | Publication to the App Store or Google Play | The mobile app is distributed as an internal build |
+| Maintenance tickets and their chat, service levels (SLA), Technician regions, ticket routing and queues, Technician KPIs, periodic maintenance scheduling, farms created or managed by the Administrator on behalf of owners | Removed at Review 2 (BM03 row 9): they serve a service company with many customers rather than the house. Device faults reach the owner as alerts that are repeated until acknowledged (MF-04, ALERT-FR-015) and the Technician works on the devices remotely (SF-02) |
 | Commercial production operation (99.9 % uptime, 24/7 on-call) | NFR targets are for the prototype and staging environment |
 
 ### 8.1 Known Limitations
@@ -886,6 +866,8 @@ The mapping from each FR, transition and NFR to its test cases is kept in Report
 | The controller has no battery-backed clock | After a power loss while the Internet is down, the speaker keeps its current state instead of following the schedule, and abnormal noise is not evaluated, until the clock is synchronised again | Control of misting and fan does not depend on the clock and continues (ENV-FR-014) |
 | When the controller fails, its relays release and the pump and fan stop | Misting and ventilation stop until someone acts; the system cannot run the loads without the controller | The farmer runs the loads with the house's own switches or by connecting a load directly, as described in the operation guide `[TEAM: describe from the test house's wiring]`; `NODE_OFFLINE` and THREAT-FR-014 tell the Farm Owner that the loads are not driven |
 | Actuator current is compared with a level learned at installation | A load replaced by one of a different power raises a false `ACTUATOR_FAULT` until the level is learned again; the speaker has no current sensing | The level is learned again after a replacement or on request (THREAT-FR-014) |
+| The AI node reads the camera over the Internet | An outage of the house's line or of the AI node's line, or lost frames on the way, can miss birds or part of a session | The session is marked incomplete and left out of the return-rate comparison (VISION-FR-020); counts read over the Internet are compared with the same clip read locally before the field run (Report 4, D5) |
+| The camera's RTSP port is open on the house modem | Anyone who finds the port can try the camera password | Strong camera password kept only on the AI node; source IP limited to the AI node's line where the modem allows it |
 | The daily health status is an indicator, not a diagnosis | No source links a status to a disease or cause; the levels are defaults until practitioners confirm them | Every status shows its reasons and evidence; the expert concludes (EXPERT-FR-006); agreement is measured (NFR-14) |
 | Weather values are a regional model estimate | Rain or heat at the house may differ from the grid value | Used only as context and named as such (C-6) |
 | The controller cannot tell which floor it is on | Floors of a house share one Wi-Fi network and are too close for placement by radio signal | The floor is chosen by scanning the code fixed on it (FARM-FR-007, 011), and the application confirms that the zone's configuration is applied (FARM-FR-012) |
@@ -899,4 +881,4 @@ The mapping from each FR, transition and NFR to its test cases is kept in Report
 | Version | Date | Change |
 | --- | --- | --- |
 | 2.1.5 | 10/2026 | Internal working SRS (Vietnamese) after Review 1, aligned with registration form v2 |
-| 3.0.0 | `[TEAM]` | Every mandatory and supporting FR belongs to a flow; supporting flow SF-04 (harvest logging); lifecycles 6.13–6.15 (harvest, account, firmware update); rejection codes 400 / 422 distinguished. The Farm Owner is notified of every expert decision and sees them in one activity history (EXPERT-FR-009). Bird counting tracks over the whole frame and extrapolates fast tracks at the hole (VISION-FR-004, 005, BR-25). Expert in the loop for owner changes (EXPERT-FR-010) and suggestions (EXPERT-FR-011); configuration sync with `CONFIG_MISMATCH` (ENV-FR-027); multi-modal evidence on inferred alerts (ALERT-FR-014); incomplete counting sessions (VISION-FR-020); Technician override and acknowledgement only within an assigned ticket; Farm/House/Zone responsibilities (2.8) and known limitations (8.1). A rejected inferred alert becomes `DISMISSED`; session windows follow per-house seasonal profiles and temporary windows (VISION-FR-019). Zone thresholds and fuzzy coefficients are edited and reset only by the Farm Owner or Domain Expert of the farm; without an expert the Farm Owner takes the expert's decisions (BR-22). Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Device setup becomes main flow MF-10 for the Farm Owner (replacing SF-01): label QR code with device ID and activation key (FARM-FR-010), floor QR code (FARM-FR-011), setup progress (FARM-FR-012), move of an offline controller applied when it reconnects; farm, house and zone are never entered on the controller (FARM-FR-003c); rules BR-26, BR-27; lifecycle 6.16; NFR-13. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Engineering constants listed in one table (Section 4.5). Daily health assessment of each house by agreement between sources, with weather context, independent ratings by Farm Owner and expert, daily/weekly/monthly reports with PDF and CSV export (MF-11, ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33, NFR-14, lifecycle 6.17); actuator current sensing (THREAT-FR-014, BR-32, `ACTUATOR_FAULT`); references REF-9…13. Bypass switches (former ENV-FR-023) removed by BM03 because the borrowed test house cannot be rewired; BR-19 and the known limitations say how the loads run when the controller fails. NFR-12 (hardware cost) removed; the registration's Cost-Efficiency is traced to constraint C-4. AI node declared as a PC at the house. Actors (people and external services) separated from the system's own components (controller, backend, AI node) in Section 2.3; flow actors and the FR column follow. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |
+| 3.0.0 | `[TEAM]` | Every mandatory and supporting FR belongs to a flow; supporting flow SF-04 (harvest logging); lifecycles 6.13–6.15 (harvest, account, firmware update); rejection codes 400 / 422 distinguished. The Farm Owner is notified of every expert decision and sees them in one activity history (EXPERT-FR-009). Bird counting tracks over the whole frame and extrapolates fast tracks at the hole (VISION-FR-004, 005, BR-25). Expert in the loop for owner changes (EXPERT-FR-010) and suggestions (EXPERT-FR-011); configuration sync with `CONFIG_MISMATCH` (ENV-FR-027); multi-modal evidence on inferred alerts (ALERT-FR-014); incomplete counting sessions (VISION-FR-020); no maintenance tickets, SLA or Technician regions (BM03 row 9): the Technician is the technical role that sees the devices of every farm and never switches relays (FARM-FR-009, SF-02 remote device maintenance with FARM-FR-013, formerly TICKET-FR-008), an unacknowledged alert is sent again (ALERT-FR-015, replacing TICKET-FR-002) and pump or fan wear raises `MAINTENANCE_DUE` (ALERT-FR-016, replacing TICKET-FR-018), farms are created and managed only by their owners; Farm/House/Zone responsibilities (2.8) and known limitations (8.1). A rejected inferred alert becomes `DISMISSED`; session windows follow per-house seasonal profiles and temporary windows (VISION-FR-019). Zone thresholds and fuzzy coefficients are edited and reset only by the Farm Owner or Domain Expert of the farm; without an expert the Farm Owner takes the expert's decisions (BR-22). Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Device setup becomes main flow MF-10 for the Farm Owner (replacing SF-01): label QR code with device ID and activation key (FARM-FR-010), floor QR code (FARM-FR-011), setup progress (FARM-FR-012), move of an offline controller applied when it reconnects; farm, house and zone are never entered on the controller (FARM-FR-003c); rules BR-26, BR-27; lifecycle 6.16; NFR-13. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Engineering constants listed in one table (Section 4.5). Daily health assessment of each house by agreement between sources, with weather context, independent ratings by Farm Owner and expert, daily/weekly/monthly reports with PDF and CSV export (MF-11, ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33, NFR-14, lifecycle 6.17); actuator current sensing (THREAT-FR-014, BR-32, `ACTUATOR_FAULT`); references REF-9…13. Bypass switches (former ENV-FR-023) removed by BM03 because the borrowed test house cannot be rewired; BR-19 and the known limitations say how the loads run when the controller fails. NFR-12 (hardware cost) removed; the registration's Cost-Efficiency is traced to constraint C-4. AI node declared as the team's spare PC at a member's home, reading the camera over the Internet. Actors (people and external services) separated from the system's own components (controller, backend, AI node) in Section 2.3; flow actors and the FR column follow. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |

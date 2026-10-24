@@ -42,7 +42,7 @@ Vai trò người dùng:
 |---|---|
 | Farm Owner | Theo dõi nhà yến, tự lắp và gán thiết bị bằng QR, điều khiển tay khi cần, nhận cảnh báo, ghi nhận thu hoạch, mời thành viên; quyết thay chuyên gia khi farm chưa có chuyên gia |
 | Domain Expert | Chuyên gia nuôi yến: kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và hệ số điều khiển, duyệt thay đổi của chủ farm, viết kết luận báo cáo sức khỏe (chỉ đọc phần vận hành); mọi quyết định đều báo cho chủ farm |
-| Technician | Lắp đặt khi chủ farm yêu cầu qua ticket, bảo trì thiết bị, cập nhật firmware từ xa, xử lý ticket kỹ thuật |
+| Technician | Vai trò kỹ thuật: xem thiết bị và cảnh báo thiết bị của mọi farm, lắp/dời/gỡ thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường |
 | Admin | Quản trị tài khoản, cấu hình hệ thống, giám sát toàn cục |
 
 ## Tính năng chính
@@ -65,7 +65,7 @@ Vai trò người dùng:
 - Dời bộ điều khiển sang tầng khác từ xa, lịch sử dữ liệu đi theo thiết bị.
 
 **Vận hành (luồng phụ)**
-- Ticket kỹ thuật có SLA, tự định tuyến, lịch hẹn trong khung 07:00–18:00, checklist nghiệm thu; bảo trì định kỳ tự sinh ticket.
+- Không còn ticket, SLA, phân vùng Technician (Report 3 §8): cảnh báo chưa ai xác nhận được gửi lại, bơm/quạt chạy quá giới hạn sinh cảnh báo bảo trì. Module ticket trong code sẽ được gỡ.
 - Ghi nhận mẻ thu hoạch, tự lưu kèm số liệu môi trường và đàn chim của Zone tại thời điểm thu hoạch.
 
 ## Kiến trúc

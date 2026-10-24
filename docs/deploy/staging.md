@@ -1,6 +1,6 @@
 # Môi trường staging — đề xuất cho Review 2 và Defense 1.1
 
-Tài liệu này giải thích **staging là gì**, cấu hình nhóm chọn và các bước dựng nó. Report 4 §3.4, §11 và quyết định D5 là bản chính thức bằng tiếng Anh. Phần Dockerfile, compose và Caddyfile mẫu nằm ở `docs/bird-counting-plan.md` §15.3–15.5 (bản thiết kế, **chưa chạy thử**). Mục 15.2 và mục 18 của plan còn giả định model chạy trên VPS. Tài liệu này thay hai mục đó: **model chạy trên PC cũ đặt tại nhà yến**.
+Tài liệu này giải thích **staging là gì**, cấu hình nhóm chọn và các bước dựng nó. Report 4 §3.4, §11 và quyết định D5 là bản chính thức bằng tiếng Anh. Phần Dockerfile, compose và Caddyfile mẫu nằm ở `docs/bird-counting-plan.md` §15.3–15.5 (bản thiết kế, **chưa chạy thử**). Mục 15.2 và mục 18 của plan còn giả định model chạy trên VPS. Tài liệu này thay hai mục đó: **model chạy trên PC cũ đặt tại nhà một thành viên**. PC kéo hình camera qua Internet, nhờ IP tĩnh của đường VNPT ở nhà yến.
 
 ## 1. Staging là gì, vì sao phải có
 
@@ -23,8 +23,11 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
                 │  MongoDB, MinIO: chỉ trong mạng Docker
                 └────────────────────────────────────────┘
                         ▲ 8883 MQTT TLS     ▲ 8322 RTSPS
- Nhà yến (LAN) ── ESP32 ┘                   │
-                  Camera ──RTSP trong LAN──► PC cũ (AI node: stream.py)
+ Nhà yến ──────── ESP32 ┘                   │
+   Camera (IP tĩnh, mở cổng 18554)          │
+      │ RTSP qua TCP, qua Internet          │
+      ▼                                     │
+ Nhà thành viên ── PC cũ (AI node: stream.py) ┘
 ```
 
 ### 2.1. VPS
@@ -48,14 +51,31 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
 | backend | API, Socket.io, job nền; nối EMQX qua `mqtt://emqx:1883` trong mạng Docker | không |
 | EMQX | Broker; bắt buộc mật khẩu (tắt anonymous); dashboard 18083 chỉ mở cho `127.0.0.1` và vào qua SSH tunnel | không (đi qua tls-proxy) |
 | MongoDB, MinIO | Dữ liệu, file âm thanh | không |
-| MediaMTX | Nhận video có khung từ PC nhà yến; phát WebRTC; hỏi backend `/internal/stream-auth` ở mỗi lần đẩy hoặc xem | 8189 TCP + UDP (WebRTC tự mã hoá) |
+| MediaMTX | Nhận video có khung từ PC cũ (AI node); phát WebRTC; hỏi backend `/internal/stream-auth` ở mỗi lần đẩy hoặc xem | 8189 TCP + UDP (WebRTC tự mã hoá) |
 
 Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 không mở ra ngoài**, trừ phương án lùi ở mục 4.
 
-### 2.3. PC cũ tại nhà yến (AI node)
+### 2.3. PC cũ đặt tại nhà (AI node)
 
-- **Vị trí:** cắm dây LAN vào modem VNPT, cùng mạng với camera. Lấy hình bằng `rtsp://…@192.168.1.163:554/stream1` trong LAN.
-- **Đóng cổng 18554:** khi PC đã lấy hình qua LAN, VPS không cần kéo RTSP từ ngoài vào nữa. Đóng cổng 18554 đang mở trên modem (plan §19.7) để camera không lộ ra Internet.
+- **Vị trí:** nhà một thành viên. Máy để nơi khô ráo, có người trông, sửa lỗi và đo FPS trực tiếp được. Không phải để máy tính trong nhà yến, nơi ẩm và ít người lui tới.
+- **Lấy hình camera qua Internet:**
+  - Đường VNPT ở nhà yến dùng **IP tĩnh**, không cần DDNS.
+  - Cổng 18554 trên modem đã mở về `192.168.1.163:554` của camera (plan §19.7).
+  - PC dùng `rtsp://<tài khoản>:<mật khẩu>@<IP tĩnh nhà yến>:18554/stream1`, kéo qua TCP (`stream.py` đặt sẵn `OPENCV_FFMPEG_CAPTURE_OPTIONS=rtsp_transport;tcp`).
+  - URL và mật khẩu chỉ nằm trong `.env` của PC, không commit.
+- **Đường truyền:**
+  - Luồng chính 1080p, 25 fps, khoảng 2 Mbps đi qua upload của nhà yến và download của nhà thành viên trong khung giờ đếm.
+  - Video có khung (khoảng 1–2 Mbps) đi tiếp từ nhà thành viên lên VPS.
+  - Đo upload thật của cả hai đường, ghi vào `[TEAM]`.
+- **Bảo mật camera** (cổng 18554 đang mở cho mọi nơi):
+  - Đặt mật khẩu camera thật mạnh, đổi mật khẩu mặc định.
+  - Xem trong modem (Advance → Security) có giới hạn được IP nguồn không. Nhà thành viên có IP tĩnh thì chỉ cho IP đó vào.
+  - Không giới hạn được thì ghi ở Report 3 §8.1 (đã có dòng hạn chế).
+  - Bật ghi thẻ microSD của camera để có bản đối chiếu khi mạng rớt (plan §19.7).
+- **Kiểm tra trước khi chốt** (bắt buộc, plan §19.5 cổng 3b):
+  1. Kéo hình liên tục 24 giờ: PC tự nối lại khi mất mạng; ghi số lần rớt và tổng thời gian mất hình.
+  2. Đếm cùng một clip theo hai cách: chạy trực tiếp từ file, và phát lại clip đó qua đường Internet. Mục đích là chắc rằng mất khung không làm đếm sót chim ở miệng lỗ, nơi mỗi con chỉ hiện 1–2 khung.
+  3. Lệch nhiều thì quay về phương án đặt PC tại nhà yến, cắm dây LAN cùng modem (Report 4 D5 có ghi phương án này).
 - **Phần mềm:** Python 3.11–3.12 và `ai-pipeline`.
   - `stream.py` chạy như một service: Ubuntu dùng `systemd` với `Restart=always`; Windows dùng NSSM hoặc Task Scheduler "At startup".
   - Model ONNX tải về máy, không commit vào repo.
@@ -63,15 +83,14 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
   - MQTT TLS tới `mqtt.<tên miền>:8883` (số đếm, số đếm 5 phút, heartbeat). Nhận vòng đếm qua `{house}/config/update`.
   - Đẩy video có khung bằng RTSPS tới `<tên miền>:8322`, xác thực bằng `STREAM_PUBLISH_SECRET`.
 - **Tự chạy lại sau sự cố:**
-  - Bật BIOS "Restore on AC power loss = Power On", để có điện lại là máy tự bật.
+  - Bật BIOS "Restore on AC power loss = Power On".
   - Tắt sleep/hibernate.
   - Tắt cập nhật tự khởi động lại, hoặc đặt giờ cập nhật ngoài khung đếm.
-- **Truy cập từ xa:** Tailscale (SSH hoặc Remote Desktop), không mở thêm cổng trên modem.
+- **Khi mất mạng:** mạng nhà yến hoặc nhà thành viên rớt trong phiên thì phiên đó là **phiên không đầy đủ** (VISION-FR-020). Hệ thống không so tỷ lệ chim về của ngày đó nên không báo nhầm.
 - **Đo NFR-04 trên đúng máy này:** fps trong log `stream.py` trên toàn bộ video đánh giá.
   - Ghi cấu hình máy (CPU, RAM, GPU nếu có) vào Report 3 §2.5 và Report 4 §3.2.
-  - Trên laptop, 2 ô với model COCO mới đạt khoảng 7–12 fps (số đo chưa tin cậy), trong khi NFR-04 cần 25 fps. Đây là **rủi ro lớn nhất** của phần đếm (Design Brief R2).
+  - Trên laptop, 2 ô với model COCO mới đạt khoảng 7–12 fps (số đo chưa tin cậy), trong khi NFR-04 cần 25 fps. Đây là **rủi ro lớn nhất** của phần đếm (Design Brief R1).
   - Nếu không đạt, có thể thử: giảm kích thước ảnh vào model, bỏ một ô, hoặc dùng GPU của PC (nếu có) qua ONNX Runtime DirectML/CUDA. Giá trị cuối cùng phải là số đo thật; không đổi ngưỡng mà không ghi lý do.
-- **Đường lên của nhà yến:** luồng 720p có khung khoảng 1–2 Mbps. Đo tốc độ upload thật của đường VNPT, ghi vào `[TEAM]`.
 
 ### 2.4. ESP32
 
@@ -117,8 +136,8 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 | Sự cố | Phương án |
 | --- | --- |
 | Firmware TLS chưa xong | Mở tạm 1883 trên VPS, bắt buộc mật khẩu và ACL theo `deviceId` trên EMQX. Dữ liệu ESP32 đi dạng rõ; ghi vào Report 3 §8.1 và Known Gaps của Design Brief |
-| PC nhà yến không đạt 25 fps | Demo đếm trên clip quay sẵn bằng `tools/track_clip.py` (cùng `FramePipeline`); báo cáo fps đo được, không sửa ngưỡng âm thầm |
-| Mất mạng hoặc mất điện ở nhà yến lúc demo | Camera demo phát lặp clip (plan §15.8); ESP32 dự phòng đặt tại chỗ demo, nối vào cùng staging |
+| PC cũ không đạt 25 fps | Demo đếm trên clip quay sẵn bằng `tools/track_clip.py` (cùng `FramePipeline`); báo cáo fps đo được, không sửa ngưỡng âm thầm |
+| Mất mạng hoặc mất điện ở nhà yến hay ở nhà đặt PC lúc demo | Camera demo phát lặp clip (plan §15.8); ESP32 dự phòng đặt tại chỗ demo, nối vào cùng staging |
 | Wi-Fi trường chặn UDP 8189 | MediaMTX có WebRTC qua TCP 8189; dự phòng điện thoại phát 4G |
 
 ## 5. Dữ liệu demo
@@ -131,4 +150,4 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 - cảnh báo suy luận đang chờ kết luận (MF-08);
 - số đếm 5 phút và bản ghi phiên của ≥ 7 ngày (MF-06);
 - telemetry ≥ 1 ngày cho dự báo và đánh giá sức khỏe (MF-05, MF-11);
-- một ticket đang mở.
+- một bơm đã quá giới hạn giờ chạy (cảnh báo `MAINTENANCE_DUE`).
