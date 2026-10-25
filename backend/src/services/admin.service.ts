@@ -8,7 +8,6 @@ import { softDeleteFarm } from '@/services/farm.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { disconnectUser } from '@/socket'
 import { escapeRegex, paginate } from '@/utils/helpers.util'
-import { assertRegionCode, toRegionCode } from '@/utils/regions.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Role } from '@/types'
 
@@ -22,8 +21,6 @@ export interface ListUsersQuery extends ListQuery {
   status?: 'active' | 'inactive' | 'deleted'
   /** Tìm theo tên, email hoặc SĐT (không phân biệt hoa/thường) */
   q?: string
-  /** Technician phụ trách vùng này */
-  region?: string
 }
 
 export async function listUsers(query: ListUsersQuery) {
@@ -32,7 +29,6 @@ export async function listUsers(query: ListUsersQuery) {
   if (query.status === 'active') filter.is_active = true
   if (query.status === 'inactive') Object.assign(filter, { is_active: false, deleted_at: null })
   if (query.status === 'deleted') filter.deleted_at = { $ne: null }
-  if (query.region) filter.assigned_regions = toRegionCode(query.region) ?? query.region
   const term = query.q?.trim()
   if (term) {
     const pattern = new RegExp(escapeRegex(term), 'i')
@@ -176,8 +172,6 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   user.email = `deleted-${String(user._id)}@swiftletcare.local`
   user.phone = undefined
   user.full_name = 'Tài khoản đã xoá'
-  // Tài khoản đã ẩn danh không còn phụ trách vùng nào
-  if (user.role === 'TECHNICIAN') user.assigned_regions = []
   user.avatar_url = undefined
   // Chat id Telegram là dữ liệu cá nhân và còn là đường gửi tin tới người thật (PRIV-NFR-003)
   user.telegram_chat_id = undefined
@@ -264,19 +258,9 @@ export async function remindPendingDeletionRequests(now = new Date()): Promise<n
 
 // ── Admin tự tạo tài khoản Technician — AUTH-FR-005c ─────────────────────────
 
-
-/**
- * Quy mỗi vùng về mã danh mục (nhận cả tên/tên tỉnh cũ), bỏ mục rỗng và trùng — dùng
- * chung cho tạo và sửa vùng. Vùng lạ ném 400: lưu chuỗi tự do thì không khớp được farm nào.
- */
-function normalizeRegions(regions: string[]): string[] {
-  const codes = [...new Set(regions.filter(r => r.trim()).map(assertRegionCode))]
-  if (codes.length === 0) throw BadRequestError('Technician phải phụ trách ít nhất 1 khu vực')
-  return codes
-}
-
+/** Technician làm việc trên mọi farm (FARM-FR-009) nên không còn khu vực phụ trách */
 export interface CreateTechnicianInput {
-  email: string; password: string; full_name: string; phone?: string; assigned_regions: string[]
+  email: string; password: string; full_name: string; phone?: string
 }
 
 export async function createTechnician(adminId: string, input: CreateTechnicianInput): Promise<IUser> {
@@ -289,34 +273,12 @@ export async function createTechnician(adminId: string, input: CreateTechnicianI
     full_name: input.full_name,
     phone: input.phone || undefined,
     role: 'TECHNICIAN',
-    assigned_regions: normalizeRegions(input.assigned_regions),
     // Admin biết mật khẩu này — Technician phải tự đổi ở lần đăng nhập đầu
     must_change_password: true,
   })
 
   await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'TECHNICIAN' })
   return user
-}
-
-/**
- * AUTH-FR-005c, Flow 21 case 4a-x — Admin điều chỉnh khu vực phụ trách. Có
- * hiệu lực ngay ở request kế tiếp vì middleware authenticate đọc lại
- * assigned_regions từ DB mỗi request, không lấy từ JWT.
- */
-export async function updateTechnicianRegions(
-  adminId: string, technicianId: string, regions: string[],
-): Promise<IUser> {
-  const technician = await User.findById(technicianId)
-  if (!technician) throw NotFoundError('Không tìm thấy người dùng')
-  if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ gán khu vực được cho tài khoản Technician')
-
-  const before = [...(technician.assigned_regions ?? [])]
-  const after = normalizeRegions(regions)
-  technician.assigned_regions = after
-  await technician.save()
-
-  await logAction(adminId, 'TECHNICIAN_REGIONS_UPDATED', 'user', technicianId, { before, after })
-  return technician
 }
 
 /** Technician còn dùng được (chưa xoá theo yêu cầu) */

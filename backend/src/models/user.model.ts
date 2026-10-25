@@ -13,7 +13,6 @@ export interface IUser extends Document {
   password_hash: string
   full_name: string
   role: Role
-  assigned_regions?: string[] // chỉ dùng khi role=TECHNICIAN (AUTH-FR-005c)
   avatar_url?: string
   is_active: boolean
   /**
@@ -60,7 +59,6 @@ const userSchema = new Schema<IUser>(
     password_hash: { type: String, required: true },
     full_name:     { type: String, required: true, trim: true },
     role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN'] satisfies Role[], default: 'FARM_OWNER' },
-    assigned_regions: [{ type: String }],
     avatar_url:    { type: String },
     is_active:     { type: Boolean, default: true },
     must_change_password: { type: Boolean, default: false },

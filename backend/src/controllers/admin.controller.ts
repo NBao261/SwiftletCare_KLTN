@@ -10,7 +10,6 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
     role:   req.query.role as Role | undefined,
     status: req.query.status as 'active' | 'inactive' | 'deleted' | undefined,
     q:      req.query.q as string | undefined,
-    region: req.query.region as string | undefined,
     page:   req.query.page as string | undefined,
     limit:  req.query.limit as string | undefined,
   })
@@ -50,14 +49,6 @@ export const rejectDeletionRequest = asyncHandler(async (req: Request, res: Resp
 export const createTechnician = asyncHandler(async (req: Request, res: Response) => {
   const user = await adminService.createTechnician(req.user._id, req.body)
   res.status(201).json({ success: true, data: user })
-})
-
-/** PUT /admin/technicians/:id/regions – AUTH-FR-005c, Flow 21 case 4a-x */
-export const updateTechnicianRegions = asyncHandler(async (req: Request, res: Response) => {
-  const technician = await adminService.updateTechnicianRegions(
-    req.user._id, req.params.id, req.body.assigned_regions as string[],
-  )
-  res.json({ success: true, data: technician })
 })
 
 /** PUT /admin/technicians/:id/password – AUTH-FR-005c (mật khẩu tạm chỉ trả về 1 lần) */

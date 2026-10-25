@@ -40,17 +40,11 @@ export interface JwtAccessPayload {
   exp: number
 }
 
-/**
- * Người dùng đang đăng nhập, rút gọn từ req.user để truyền xuống tầng service.
- * `assigned_regions` chỉ có ý nghĩa khi role=TECHNICIAN — dùng để giới hạn
- * Technician chỉ thao tác được trên Farm thuộc khu vực mình phụ trách
- * (SRS AUTH-FR-005c, RACI mục 4.4 ghi chú ¹).
- */
+/** Người dùng đang đăng nhập, rút gọn từ req.user để truyền xuống tầng service. */
 export interface CurrentUser {
   _id: string
   email: string
   role: Role
-  assigned_regions?: string[]
 }
 
 // ── Sub-document interfaces ────────────────────────────────────────────────────

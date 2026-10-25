@@ -245,8 +245,8 @@ describe('PUT /admin/delete-requests/:id/reject', () => {
   })
 })
 
-describe('POST /admin/technicians — phone & regions', () => {
-  const base = { email: 'newtech@test.vn', password: 'password123', full_name: 'Tech mới', assigned_regions: ['HCMC'] }
+describe('POST /admin/technicians — phone', () => {
+  const base = { email: 'newtech@test.vn', password: 'password123', full_name: 'Tech mới' }
 
   it.each(['12345', '09123456789', 'abc0912345678'])('returns 422 for phone %p', async phone => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
@@ -262,12 +262,12 @@ describe('POST /admin/technicians — phone & regions', () => {
     expect(res.body.data.phone).toBe('+84912345678')
   })
 
-  it('works without a phone and de-duplicates the regions', async () => {
+  it('works without a phone and stores no region (Technician works on every farm, FARM-FR-009)', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
     const res = await request(app).post('/admin/technicians').set('Authorization', `Bearer ${token}`)
-      .send({ ...base, phone: '', assigned_regions: [' HCMC ', 'HCMC', 'Long An'] }).expect(201)
+      .send({ ...base, phone: '', assigned_regions: ['HCMC'] }).expect(201)
     expect(res.body.data.phone).toBeUndefined()
-    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'TAY_NINH']) // tên tỉnh cũ Long An quy về mã Tây Ninh
+    expect(res.body.data.assigned_regions).toBeUndefined()
   })
 })
 
@@ -284,23 +284,11 @@ describe('PUT /admin/delete-requests/:id/complete', () => {
   })
 })
 
-describe('POST /admin/technicians — assigned_regions validation', () => {
-  const base = { email: 'new-tech@test.vn', password: 'password123', full_name: 'Tech' }
-
-  it('rejects blank region entries', async () => {
+describe('PUT /admin/technicians/:id/regions', () => {
+  it('is gone (Report 3 §8: no Technician regions)', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    await request(app)
-      .post('/admin/technicians').set('Authorization', `Bearer ${token}`)
-      .send({ ...base, assigned_regions: ['HCMC', '  '] })
-      .expect(422)
-  })
-
-  it('creates the technician with valid regions', async () => {
-    const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    const res = await request(app)
-      .post('/admin/technicians').set('Authorization', `Bearer ${token}`)
-      .send({ ...base, assigned_regions: ['HCMC', 'Long An'] })
-      .expect(201)
-    expect(res.body.data.assigned_regions).toEqual(['HCMC', 'TAY_NINH'])
+    const { user: tech } = await makeUser('tech@test.vn', 'TECHNICIAN')
+    await request(app).put(`/admin/technicians/${tech._id}/regions`).set('Authorization', `Bearer ${token}`)
+      .send({ assigned_regions: ['HCMC'] }).expect(404)
   })
 })

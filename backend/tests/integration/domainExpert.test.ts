@@ -78,7 +78,7 @@ const mkUser = (role: Role, email = `u${++seq}@test.vn`) =>
 async function seed() {
   const owner = await mkUser('FARM_OWNER')
   const expert = await mkUser('DOMAIN_EXPERT')
-  const farm = await Farm.create({ name: 'F', address: 'x', region: 'HCMC', owner_id: owner._id, members: [{ user_id: owner._id, is_primary: true }] })
+  const farm = await Farm.create({ name: 'F', address: 'x', owner_id: owner._id, members: [{ user_id: owner._id, is_primary: true }] })
   const house = await House.create({ farm_id: farm._id, name: 'H' })
   const zoneA = await Zone.create({ house_id: house._id, name: 'A' })
   const zoneB = await Zone.create({ house_id: house._id, name: 'B' })

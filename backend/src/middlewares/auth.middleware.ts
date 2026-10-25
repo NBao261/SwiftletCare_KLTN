@@ -44,7 +44,6 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       role:                     user.role,
       full_name:                user.full_name,
       is_active:                user.is_active,
-      assigned_regions:         user.assigned_regions,
       notification_preferences: user.notification_preferences,
     }
     next()

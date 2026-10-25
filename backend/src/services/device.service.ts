@@ -9,7 +9,7 @@ import { publishCommand, publishHouseCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
-import { notifyUser } from '@/services/notification.service'
+import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
@@ -73,14 +73,30 @@ async function retireDeviceId(Model: typeof SensorNode, nodeId: unknown, deviceI
 }
 
 /**
- * FARM-FR-003 — chỉ Technician (hoặc Admin) thực hiện, qua Web Console Onboarding.
+ * FARM-FR-009, Report 3 §2.4 ghi chú ² — Technician thao tác trên farm mà không là thành viên, nên
+ * mỗi lần đăng ký, dời, gỡ, khôi phục, thay hay gửi lệnh từ xa đều báo trong app cho các Farm Owner
+ * của farm (cùng danh sách người nhận cảnh báo, không có Domain Expert). Không throw: thông báo
+ * hỏng không được làm hỏng thao tác thiết bị.
+ */
+async function notifyOwnersOfTechnicianAction(user: CurrentUser, farmId: unknown, message: UserNotification): Promise<void> {
+  if (user.role !== 'TECHNICIAN') return
+  try {
+    const owners = await findRecipients(String(farmId))
+    await Promise.all(owners.map(o => notifyUser(String(o._id), message)))
+  } catch (err) {
+    logger.warn('Báo Farm Owner về thao tác thiết bị của Technician thất bại', { err, farmId: String(farmId), title: message.title })
+  }
+}
+
+/**
+ * FARM-FR-003 — Farm Owner (farm của mình) hoặc Technician (mọi farm, FARM-FR-009), MF-10.
  * Phải nhập đúng cặp {device_id, secretKey} trên nhãn (Flow 1 bước 3–4). Node
  * được tạo ở trạng thái PENDING và chỉ chuyển ONLINE khi thiết bị gửi heartbeat
  * đầu tiên (bước 8), nên Farm Owner nhìn thấy ngay là thiết bị đã khai báo nhưng
  * chưa thật sự kết nối.
  */
 export async function registerSensorNode(user: CurrentUser, input: RegisterDeviceInput): Promise<ISensorNode> {
-  const { farm } = await assertZoneAccess(input.zone_id, user)
+  const { zone, farm } = await assertZoneAccess(input.zone_id, user, 'device')
   await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
 
   const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
@@ -94,6 +110,10 @@ export async function registerSensorNode(user: CurrentUser, input: RegisterDevic
   await logAction(user._id, 'DEVICE_REGISTERED', 'sensor_node', String(node._id), {
     deviceId: input.device_id, zoneId: input.zone_id,
   })
+  await notifyOwnersOfTechnicianAction(user, farm._id, {
+    title: 'Kỹ thuật viên đã đăng ký thiết bị',
+    body: `${input.device_id} đã được đăng ký vào khu vực "${zone.name}".`,
+  })
   return node
 }
 
@@ -104,10 +124,10 @@ export async function registerSensorNode(user: CurrentUser, input: RegisterDevic
  */
 export async function listSensorNodes(zoneId: string | undefined, user: CurrentUser): Promise<ISensorNode[]> {
   if (zoneId) {
-    await assertZoneAccess(zoneId, user)
+    await assertZoneAccess(zoneId, user, 'device')
     return SensorNode.find({ zone_id: zoneId, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
   }
-  const accessibleZoneIds = await listAccessibleZoneIds(user)
+  const accessibleZoneIds = await listAccessibleZoneIds(user, 'device')
   return SensorNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
 }
 
@@ -120,7 +140,7 @@ export function assertInService(node: { decommissioned_at?: Date }): void {
 export async function getSensorNode(nodeId: string, user: CurrentUser): Promise<ISensorNode> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
-  await assertZoneAccess(String(node.zone_id), user)
+  await assertZoneAccess(String(node.zone_id), user, 'device')
   return node
 }
 
@@ -237,12 +257,12 @@ export async function reassignZone(
   }
 
   // Check quyền trên CẢ Farm nguồn lẫn Farm đích (SRS Flow 21 bước 4a).
-  const sourceChain = await assertZoneAccess(String(node.zone_id), user)
+  const sourceChain = await assertZoneAccess(String(node.zone_id), user, 'device')
   // Dời về chính Zone đang ở chỉ làm thiết bị khởi động lại vô ích và ghi audit sai
   if (String(sourceChain.zone._id) === input.newZoneId) {
     throw BadRequestError('Thiết bị đã ở Zone này — chọn Zone khác để dời')
   }
-  const destChain = await assertZoneAccess(input.newZoneId, user)
+  const destChain = await assertZoneAccess(input.newZoneId, user, 'device')
 
   // Publish lên topic CŨ — thiết bị vẫn đang lắng nghe ở đó cho tới khi restart.
   const delivered = publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'config/reassign', {
@@ -267,6 +287,12 @@ export async function reassignZone(
   await logAction(user._id, 'DEVICE_REASSIGNED', 'sensor_node', String(node._id), {
     fromZoneId: String(sourceChain.zone._id), toZoneId: String(destChain.zone._id), delivered,
   })
+  const moved = {
+    title: 'Kỹ thuật viên đã dời thiết bị',
+    body: `${node.device_id} đã được dời từ khu vực "${sourceChain.zone.name}" sang khu vực "${destChain.zone.name}".`,
+  }
+  await notifyOwnersOfTechnicianAction(user, destChain.farm._id, moved)
+  if (String(sourceChain.farm._id) !== String(destChain.farm._id)) await notifyOwnersOfTechnicianAction(user, sourceChain.farm._id, moved)
   return { node, delivered }
 }
 
@@ -278,11 +304,11 @@ export interface RegisterCameraInput {
 }
 
 /**
- * FARM-FR-004 — chỉ Technician/Admin, cùng Web Console Onboarding với sensor node (Flow 1b).
+ * FARM-FR-004 — Farm Owner hoặc Technician, cùng luồng setup với sensor node (Flow 1b, MF-10).
  * SRS v2.1.8: camera đếm chim lắp ở cửa ra vào của cả nhà yến (1–2 cửa mỗi nhà) nên gắn House.
  */
 export async function registerCameraNode(user: CurrentUser, input: RegisterCameraInput) {
-  const { house, farm } = await assertHouseAccessByParams({ houseId: input.house_id, zoneId: input.zone_id }, user)
+  const { house, farm } = await assertHouseAccessByParams({ houseId: input.house_id, zoneId: input.zone_id }, user, 'device')
   await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
 
   const existing = await CameraNode.findOne({ device_id: input.device_id }).select('house_id decommissioned_at').lean()
@@ -298,6 +324,10 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterCamer
   await logAction(user._id, 'DEVICE_REGISTERED', 'camera_node', String(node._id), {
     deviceId: input.device_id, houseId: String(house._id),
   })
+  await notifyOwnersOfTechnicianAction(user, farm._id, {
+    title: 'Kỹ thuật viên đã đăng ký thiết bị',
+    body: `Camera ${input.device_id} đã được đăng ký vào nhà "${house.name}".`,
+  })
   return node
 }
 
@@ -307,10 +337,10 @@ const CAMERA_PUBLIC_FIELDS = '-rtsp_url'
 /** Camera của 1 House (`houseId`, hoặc `zoneId` cũ → House chứa Zone), không truyền thì mọi House user được xem */
 export async function listCameraNodes(params: { houseId?: string; zoneId?: string }, user: CurrentUser) {
   if (params.houseId || params.zoneId) {
-    const { house } = await assertHouseAccessByParams(params, user)
+    const { house } = await assertHouseAccessByParams(params, user, 'device')
     return CameraNode.find({ house_id: house._id, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
   }
-  const accessibleHouseIds = await listAccessibleHouseIds(user)
+  const accessibleHouseIds = await listAccessibleHouseIds(user, 'device')
   return CameraNode.find({ house_id: { $in: accessibleHouseIds }, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
 }
 
@@ -604,14 +634,14 @@ const TARGET_TYPES = { sensor: 'sensor_node', camera: 'camera_node' } as const
  */
 async function locateDevice(kind: DeviceKind, node: { zone_id?: unknown; house_id?: unknown }, user: CurrentUser) {
   if (kind === 'camera') {
-    const { house, farm } = await assertHouseAccess(String(node.house_id), user)
+    const { house, farm } = await assertHouseAccess(String(node.house_id), user, 'device')
     const houseId = String(house._id)
     return {
       farm, place: `nhà "${house.name}"`, audit: { houseId },
       emitStatus: (data: WsDeviceStatusChange) => emitHouseDeviceStatusChange(houseId, data),
     }
   }
-  const { zone, farm } = await assertZoneAccess(String(node.zone_id), user)
+  const { zone, farm } = await assertZoneAccess(String(node.zone_id), user, 'device')
   const zoneId = String(zone._id)
   return {
     farm, place: `khu vực "${zone.name}"`, audit: { zoneId },
@@ -670,9 +700,7 @@ export async function decommissionDevice(
     ...(isAlive ? { forcedWhileOnline: true } : {}),
   })
 
-  // Farm Owner không tham gia luồng tháo lắp (RACI mục 4.4) nhưng phải biết nhà
-  // yến của mình vừa mất một thiết bị giám sát.
-  void notifyUser(String(loc.farm.owner_id), {
+  await notifyOwnersOfTechnicianAction(user, loc.farm._id, {
     title: 'Thiết bị đã được gỡ khỏi nhà yến',
     body: `Kỹ thuật viên đã gỡ ${node.device_id} khỏi ${loc.place}. Lý do: ${reason}`,
   })
@@ -732,7 +760,7 @@ export async function restoreDevice(kind: DeviceKind, nodeId: string, user: Curr
   await logAction(user._id, 'DEVICE_RESTORED', TARGET_TYPES[kind], String(node._id), {
     deviceId: node.device_id, ...loc.audit, reason, decommissionedForMs: elapsed,
   })
-  void notifyUser(String(loc.farm.owner_id), {
+  await notifyOwnersOfTechnicianAction(user, loc.farm._id, {
     title: 'Thiết bị đã được khôi phục',
     body: `Kỹ thuật viên đã khôi phục ${node.device_id} tại ${loc.place}. Lý do: ${reason}`,
   })
@@ -868,7 +896,7 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
-  const chain = await assertZoneAccess(String(node.zone_id), user)
+  const chain = await assertZoneAccess(String(node.zone_id), user, 'device')
   // Validate nội dung lệnh trước trạng thái thiết bị: URL firmware sai thì phải
   // báo đúng lý do đó, không lẫn với "thiết bị chưa ONLINE".
   if (input.command === 'OTA') {
@@ -926,6 +954,12 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   await logAction(user._id, 'DEVICE_COMMAND_SENT', 'sensor_node', String(node._id), {
     deviceId: node.device_id, command: input.command,
     ...(input.ota ? { version: input.ota.version, url: input.ota.url } : {}),
+  })
+  await notifyOwnersOfTechnicianAction(user, chain.farm._id, {
+    title: input.command === 'OTA' ? 'Kỹ thuật viên đã cập nhật firmware' : 'Kỹ thuật viên đã gửi lệnh tới thiết bị',
+    body: input.command === 'OTA'
+      ? `${node.device_id} đang được cập nhật lên firmware ${input.ota?.version}.`
+      : `Lệnh ${input.command} đã được gửi tới ${node.device_id} ở khu vực "${chain.zone.name}".`,
   })
   return node
 }

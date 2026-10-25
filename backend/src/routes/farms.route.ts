@@ -7,16 +7,22 @@ import { validate } from '@/middlewares/validate.middleware'
 const router = Router()
 router.use(authenticate)
 
+// FARM-FR-001, A-5 — một farm là một địa điểm: tọa độ bắt buộc khi tạo; sửa thì không bắt buộc gửi
+// nhưng gửi thì cùng kiểm tra. Farm cũ chưa có tọa độ vẫn đọc được (schema không đổi).
+const coordinates = (required: boolean) => {
+  const field = (path: string) => (required ? body(path) : body(path).if(body('coordinates').exists()))
+  return [
+    field('coordinates.lat').isFloat({ min: -90, max: 90 }).withMessage('Vĩ độ phải là số trong khoảng -90…90').toFloat(),
+    field('coordinates.lng').isFloat({ min: -180, max: 180 }).withMessage('Kinh độ phải là số trong khoảng -180…180').toFloat(),
+  ]
+}
+
+// FARM-FR-009 — Technician thấy mọi farm (chỉ cấu trúc), Admin không thấy farm nào (service lọc)
 router.get   ('/',             farmController.list)
-// `region` (VD: 'HCMC') quyết định Technician nào phụ trách farm này — xem
-// utils/farmAccess.util.ts + AUTH-FR-005c. Không bắt buộc để không chặn farm cũ.
-// Danh mục 34 tỉnh/thành cho dropdown — đặt trước '/:id' để "regions" không bị hiểu là id
-router.get   ('/regions',      farmController.listRegions)
-// region bắt buộc: nhận mã, tên hoặc tên tỉnh cũ, service quy về mã danh mục (regions.util)
-router.post  ('/',             requireRole('FARM_OWNER'), body('name').trim().notEmpty(), body('address').trim().notEmpty(), body('region').isString().trim().notEmpty(), validate, farmController.create)
+router.post  ('/',             requireRole('FARM_OWNER'), body('name').trim().notEmpty(), body('address').trim().notEmpty(), ...coordinates(true), validate, farmController.create)
 router.get   ('/:id',          param('id').isMongoId(), validate, farmController.getOne)
 // Report 3 §2.4 — Administrator không quản lý farm (FARM-FR-001); xoá farm và thành viên: service chỉ cho Primary Owner
-router.put   ('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), validate, farmController.update)
+router.put   ('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), ...coordinates(false), validate, farmController.update)
 router.delete('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), validate, farmController.remove)
 // AUTH-FR-005 (v2.0.0) — mời đồng sở hữu hoặc Domain Expert; cả hai đều theo cả farm (không còn zone_ids)
 router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(), body('email').isEmail(),

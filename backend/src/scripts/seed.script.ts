@@ -23,8 +23,8 @@ import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisio
 import { hashKey } from '@/services/provisionedDevice.service'
 import logger from '@/utils/logger.util'
 
-/** Khu vực của farm demo (mã trong utils/regions.util) — Technician phải có mã này trong assigned_regions */
-const DEMO_REGION = 'HCMC'
+/** Tọa độ farm demo (Quận 1, TP.HCM) — bắt buộc khi tạo farm (FARM-FR-001, A-5) */
+const DEMO_COORDINATES = { lat: 10.7769, lng: 106.7009 }
 
 async function seed(): Promise<void> {
   await connectDB()
@@ -51,9 +51,8 @@ async function seed(): Promise<void> {
       password_hash: 'Test1234!',
       full_name: 'Demo Technician',
       role: 'TECHNICIAN',
-      assigned_regions: [DEMO_REGION],
     })
-    logger.info(`[seed] Created technician: ${technician.email} (password: Test1234!, region: ${DEMO_REGION})`)
+    logger.info(`[seed] Created technician: ${technician.email} (password: Test1234!)`)
   } else {
     logger.info(`[seed] Technician already exists: ${technician.email}`)
   }
@@ -64,15 +63,15 @@ async function seed(): Promise<void> {
     farm = await Farm.create({
       name: 'Nhà Yến Demo',
       address: '12 Nguyễn Huệ, Quận 1',
-      region: DEMO_REGION,
+      coordinates: DEMO_COORDINATES,
       owner_id: user._id,
     })
     logger.info(`[seed] Created farm: ${farm._id}`)
-  } else if (!farm.region) {
-    // Farm seed từ bản cũ chưa có region → Technician sẽ không truy cập được
-    farm.region = DEMO_REGION
+  } else if (!farm.coordinates?.lat) {
+    // Farm seed từ bản cũ chưa có tọa độ → không có thời tiết (A-5)
+    farm.coordinates = DEMO_COORDINATES
     await farm.save()
-    logger.info(`[seed] Backfilled region="${DEMO_REGION}" cho farm cũ: ${farm._id}`)
+    logger.info(`[seed] Backfilled coordinates cho farm cũ: ${farm._id}`)
   } else {
     logger.info(`[seed] Farm already exists: ${farm._id}`)
   }

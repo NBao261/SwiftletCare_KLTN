@@ -17,8 +17,8 @@ const userRoom = (userId: string) => `user:${userId}`
  * giống middleware `authenticate` của REST (AUTH-FR-011).
  *
  * Trả về `CurrentUser` đầy đủ (không chỉ payload JWT) vì `JOIN_ZONE` cần gọi
- * `assertZoneAccess` — cùng hàm check quyền mà REST dùng — nên cần cả
- * `assigned_regions` (Technician) chứ không chỉ `sub`/`role`.
+ * `assertZoneAccess` — cùng hàm check quyền mà REST dùng. Technician và Admin không qua được:
+ * room zone/house mang telemetry, relay và số đếm chim, là dữ liệu vận hành (FARM-FR-009).
  */
 export async function verifySocketToken(token: string | undefined): Promise<CurrentUser> {
   if (!token) throw new Error('Unauthorized: missing token')
@@ -30,9 +30,9 @@ export async function verifySocketToken(token: string | undefined): Promise<Curr
     throw new Error('Unauthorized: invalid token')
   }
 
-  const user = await User.findById(payload.sub).select('is_active email role assigned_regions').lean()
+  const user = await User.findById(payload.sub).select('is_active email role').lean()
   if (!user?.is_active) throw new Error('Unauthorized: account inactive')
-  return { _id: String(user._id), email: user.email, role: user.role, assigned_regions: user.assigned_regions }
+  return { _id: String(user._id), email: user.email, role: user.role }
 }
 
 /** AUTH-FR-011 — ngắt mọi kết nối realtime của 1 user (gọi khi Admin khoá/xoá tài khoản) */

@@ -69,7 +69,7 @@ const tokenFor = (id: unknown, role: Role) =>
   jwt.sign({ sub: String(id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
 
 async function zoneIn(ownerId: unknown, name: string) {
-  const farm = await Farm.create({ name, address: 'x', region: 'HCMC', owner_id: ownerId })
+  const farm = await Farm.create({ name, address: 'x', owner_id: ownerId })
   const house = await House.create({ farm_id: farm._id, name: 'H' })
   const zone = await Zone.create({ house_id: house._id, name: 'Z' })
   return { farm, zone }
@@ -79,7 +79,7 @@ async function seed() {
   const admin = await User.create({ email: 'admin@test.vn', password_hash: 'password123', full_name: 'Admin', role: 'ADMIN' })
   const owner = await User.create({ email: 'owner@test.vn', password_hash: 'password123', full_name: 'Owner', role: 'FARM_OWNER' })
   const tech = await User.create({
-    email: 'tech@test.vn', password_hash: 'password123', full_name: 'Tech', role: 'TECHNICIAN', assigned_regions: ['HCMC'],
+    email: 'tech@test.vn', password_hash: 'password123', full_name: 'Tech', role: 'TECHNICIAN',
   })
   const a = await zoneIn(owner._id, 'Farm A')
   const b = await zoneIn(owner._id, 'Farm B')
@@ -544,27 +544,25 @@ describe('dời zone (FARM-FR-007b)', () => {
   })
 })
 
-describe('farm: quyền đổi region và xoá farm (FARM-FR-001)', () => {
+describe('farm: sửa và xoá farm (FARM-FR-001)', () => {
   async function farmWithCoOwner() {
     const primary = await User.create({ email: 'p@test.vn', password_hash: 'password123', full_name: 'P', role: 'FARM_OWNER' })
     const coOwner = await User.create({ email: 'c@test.vn', password_hash: 'password123', full_name: 'C', role: 'FARM_OWNER' })
     const farm = await Farm.create({
-      name: 'F', address: 'x', region: 'HCMC', owner_id: primary._id,
+      name: 'F', address: 'x', owner_id: primary._id,
       members: [{ user_id: primary._id, is_primary: true }, { user_id: coOwner._id }],
     })
     const as = (u: { _id: unknown; email: string }) => ({ _id: String(u._id), email: u.email, role: 'FARM_OWNER' as const })
     return { farm, primary: as(primary), coOwner: as(coOwner) }
   }
 
-  it('đồng sở hữu sửa được tên nhưng không đổi được region; Primary Owner thì được', async () => {
-    const { farm, primary, coOwner } = await farmWithCoOwner()
+  it('đồng sở hữu sửa được tên và tọa độ', async () => {
+    const { farm, coOwner } = await farmWithCoOwner()
 
-    await updateFarm(String(farm._id), coOwner, { name: 'Tên mới', region: 'HCMC' }) // gửi lại region cũ vẫn OK
-    await expect(updateFarm(String(farm._id), coOwner, { region: 'Hanoi' })).rejects.toThrow('Primary Owner')
-    await updateFarm(String(farm._id), primary, { region: 'Hanoi' })
+    await updateFarm(String(farm._id), coOwner, { name: 'Tên mới', coordinates: { lat: 10.5, lng: 106.5 } })
 
     const saved = (await Farm.findById(farm._id))!
-    expect([saved.name, saved.region]).toEqual(['Tên mới', 'HA_NOI'])
+    expect([saved.name, saved.coordinates]).toEqual(['Tên mới', { lat: 10.5, lng: 106.5 }])
   })
 
   it('xoá farm đóng cảnh báo đang mở và không sinh cảnh báo mới cho farm đó', async () => {

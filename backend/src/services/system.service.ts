@@ -8,7 +8,6 @@ import { logAction } from '@/services/auditLog.service'
 import { listActiveHouseIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
 import { DEFAULT_THRESHOLDS, assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
-import { REGION_CODES } from '@/utils/regions.util'
 import type { Thresholds } from '@/types'
 
 // ── SYSTEM-FR-001: Audit Log viewer ──────────────────────────────────────────
@@ -104,12 +103,10 @@ export async function updateDefaultThresholds(
 // ── SYSTEM-FR-003: tổng quan sức khỏe hệ thống ──────────────────────────────
 
 export async function getHealthOverview() {
-  const [activeFarmIds, zoneIds, houseIds, farmsMissingRegion] = await Promise.all([
+  const [activeFarmIds, zoneIds, houseIds] = await Promise.all([
     Farm.find({ is_deleted: false }).distinct('_id'),
     listActiveZoneIds(),
     listActiveHouseIds(),
-    // Không có / sai mã khu vực = farm ngoài vùng của mọi Technician
-    Farm.countDocuments({ is_deleted: false, region: { $nin: [...REGION_CODES] } }),
   ])
   const [sensorStatuses, cameraStatuses, userGroups] = await Promise.all([
     SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
@@ -149,7 +146,7 @@ export async function getHealthOverview() {
   }
 
   return {
-    farms: { total: activeFarmIds.length, missingRegion: farmsMissingRegion },
+    farms: { total: activeFarmIds.length },
     zones: { total: zoneIds.length },
     devices: summarizeByStatus([...sensorStatuses, ...cameraStatuses]),
 

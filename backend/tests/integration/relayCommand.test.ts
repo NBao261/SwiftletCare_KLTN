@@ -95,7 +95,7 @@ describe('dời thiết bị sang Zone khác', () => {
     await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
     jest.clearAllMocks()
 
-    await reassignZone(String(node._id), { _id: String(new mongoose.Types.ObjectId()), email: 'admin@test.vn', role: 'ADMIN' }, { newZoneId: String(zone2._id) })
+    await reassignZone(String(node._id), { _id: String(new mongoose.Types.ObjectId()), email: 'tech@test.vn', role: 'TECHNICIAN' }, { newZoneId: String(zone2._id) })
 
     const after = (await SensorNode.findById(node._id))!
     expect(String(after.zone_id)).toBe(String(zone2._id))

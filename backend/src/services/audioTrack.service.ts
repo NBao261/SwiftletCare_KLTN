@@ -22,7 +22,8 @@ const sdName = (n: number) => `${String(n).padStart(4, '0')}.mp3`
 async function loadNode(nodeId: string, user: CurrentUser) {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
-  const chain = await assertZoneAccess(String(node.zone_id), user)
+  // Bài loa ru là việc phần cứng của Technician trên mọi farm (ENV-FR-013c, FARM-FR-009)
+  const chain = await assertZoneAccess(String(node.zone_id), user, 'device')
   return { node, chain }
 }
 
