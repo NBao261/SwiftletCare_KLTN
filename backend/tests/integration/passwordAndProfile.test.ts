@@ -1,6 +1,6 @@
 /**
  * AUTH-FR-005c — mật khẩu tạm của Technician (bắt đổi trước khi dùng), PUT /auth/password,
- * Admin sửa hồ sơ và cấp lại mật khẩu tạm cho Technician.
+ * Admin cấp lại mật khẩu tạm cho Technician.
  */
 import { randomBytes } from 'crypto'
 import express, { type RequestHandler } from 'express'
@@ -14,7 +14,7 @@ import { authenticate } from '@/middlewares/auth.middleware'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { AuditLog } from '@/models/auditLog.model'
 import { User } from '@/models/user.model'
-import { createTechnician, resetTechnicianPassword, updateTechnicianProfile } from '@/services/admin.service'
+import { createTechnician, resetTechnicianPassword } from '@/services/admin.service'
 import { loginUser } from '@/services/auth.service'
 import type { Role } from '@/types'
 
@@ -130,28 +130,16 @@ describe('Admin quản lý Technician', () => {
     expect(await AuditLog.countDocuments({ action: 'TECHNICIAN_PASSWORD_RESET' })).toBe(1)
   })
 
-  it('updates the name and phone, clears the phone with an empty string, and audits before/after', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { phone: '0900000000' })
-
-    const updated = await updateTechnicianProfile(String(admin._id), String(tech._id), { full_name: 'Tên mới', phone: '' })
-
-    expect(updated.full_name).toBe('Tên mới')
-    expect(updated.phone).toBeUndefined()
-    const [audit] = await AuditLog.find({ action: 'TECHNICIAN_PROFILE_UPDATED' }).lean()
-    expect(audit.metadata).toMatchObject({ before: { full_name: 'tech@test.vn', phone: '0900000000' }, after: { phone: null } })
-  })
-
-  it('validates the phone at the route and refuses non-technicians and deleted accounts', async () => {
+  it('refuses non-technicians and deleted accounts, and no longer edits a technician profile', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     const tech = await mkUser('tech@test.vn', 'TECHNICIAN')
     const owner = await mkUser('owner@test.vn', 'FARM_OWNER')
     const deleted = await mkUser('gone@test.vn', 'TECHNICIAN', { deleted_at: new Date(), is_active: false })
 
+    // AUTH-FR-005c chỉ còn tạo tài khoản và cấp lại mật khẩu tạm
     await request(app).put(`/admin/technicians/${tech._id}/profile`)
-      .set('Authorization', `Bearer ${tokenFor(admin._id, 'ADMIN')}`).send({ phone: '12345' }).expect(422)
-    await expect(updateTechnicianProfile(String(admin._id), String(owner._id), { full_name: 'x' })).rejects.toMatchObject({ statusCode: 400 })
-    await expect(updateTechnicianProfile(String(admin._id), String(tech._id), {})).rejects.toMatchObject({ statusCode: 400 })
+      .set('Authorization', `Bearer ${tokenFor(admin._id, 'ADMIN')}`).send({ full_name: 'x' }).expect(404)
+    await expect(resetTechnicianPassword(String(admin._id), String(owner._id))).rejects.toMatchObject({ statusCode: 400 })
     await expect(resetTechnicianPassword(String(admin._id), String(deleted._id))).rejects.toMatchObject({ statusCode: 409 })
   })
 })

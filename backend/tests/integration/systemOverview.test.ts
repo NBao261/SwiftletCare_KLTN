@@ -13,7 +13,6 @@ import { CameraNode, SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { SystemSetting } from '@/models/systemSetting.model'
-import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { getSystemStatus } from '@/services/device.service'
 import { getDefaultThresholds, getHealthOverview, updateDefaultThresholds } from '@/services/system.service'
@@ -42,7 +41,7 @@ afterAll(async () => {
 afterEach(async () => {
   await Promise.all([
     AuditLog.deleteMany({}), CameraNode.deleteMany({}), Farm.deleteMany({}), House.deleteMany({}),
-    SensorNode.deleteMany({}), SystemSetting.deleteMany({}), Ticket.deleteMany({}), User.deleteMany({}), Zone.deleteMany({}),
+    SensorNode.deleteMany({}), SystemSetting.deleteMany({}), User.deleteMany({}), Zone.deleteMany({}),
   ])
 })
 
@@ -93,6 +92,13 @@ describe('default thresholds', () => {
         .send({ nh3_max: 30 }).expect(200)
       expect(res.body.data).toMatchObject({ ...DEFAULT_THRESHOLDS, nh3_max: 30 })
     })
+
+    it('no longer serves SLA or ticket-routing settings (Report 3 §8)', async () => {
+      const { token } = await adminToken()
+      for (const path of ['/system/settings/sla', '/system/settings/ticket-routing']) {
+        await request(app).get(path).set('Authorization', `Bearer ${token}`).expect(404)
+      }
+    })
   })
 })
 
@@ -120,12 +126,8 @@ describe('getHealthOverview', () => {
     expect(overview.devices).toMatchObject({ total: 3, online: 2, offline: 1 })
   })
 
-  it('counts open tickets per priority (CLOSED excluded) and users per role/activity', async () => {
-    const { farm } = await seedFarm('live')
-    await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P1', status: 'NEW' })
-    await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P1', status: 'IN_PROGRESS' })
-    await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P3', status: 'AWAITING_FIELD_CONFIRMATION' })
-    await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P2', status: 'CLOSED' })
+  it('counts users per role/activity and no tickets (SYSTEM-FR-003)', async () => {
+    await seedFarm('live')
     await User.create({ email: 'locked@test.vn', password_hash: 'password123', full_name: 'L', role: 'TECHNICIAN', is_active: false })
     // Đã xoá theo yêu cầu: cũng is_active=false nhưng không được tính là "bị khoá"
     await User.create({
@@ -135,22 +137,10 @@ describe('getHealthOverview', () => {
 
     const overview = await getHealthOverview()
 
-    expect(overview.openTickets).toEqual({ total: 3, P1: 2, P2: 0, P3: 1 })
+    expect(overview).not.toHaveProperty('openTickets')
     expect(overview.users.byRole.FARM_OWNER).toEqual({ active: 1, inactive: 0, deleted: 0 })
     expect(overview.users.byRole.TECHNICIAN).toEqual({ active: 0, inactive: 1, deleted: 1 })
     expect(overview.users).toMatchObject({ total: 3, active: 1, inactive: 1, deleted: 1 })
-  })
-
-  it('leaves out tickets of soft-deleted farms, like it already does for farms, zones and devices', async () => {
-    const live = await seedFarm('live')
-    const gone = await seedFarm('gone', true)
-    await Ticket.create({ farm_id: live.farm._id, type: 'OTHER', priority: 'P2', status: 'NEW' })
-    // Ticket của farm đã xoá: không ai mở hay đóng được nữa nên không được tính
-    await Ticket.create({ farm_id: gone.farm._id, type: 'OTHER', priority: 'P1', status: 'IN_PROGRESS' })
-
-    const overview = await getHealthOverview()
-
-    expect(overview.openTickets).toEqual({ total: 1, P1: 0, P2: 1, P3: 0 })
   })
 
   it('returns zeros on an empty system', async () => {
@@ -158,7 +148,6 @@ describe('getHealthOverview', () => {
     expect(overview.farms.total).toBe(0)
     expect(overview.zones.total).toBe(0)
     expect(overview.devices.total).toBe(0)
-    expect(overview.openTickets.total).toBe(0)
   })
 })
 

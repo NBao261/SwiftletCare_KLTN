@@ -93,7 +93,7 @@ export async function getZoneForecast(user: CurrentUser, zoneId: string) {
 }
 
 /**
- * ALERT-FR-011 — cảnh báo sớm FORECAST_BREACH (mức LOW, không tự sinh ticket) cho
+ * ALERT-FR-011 — cảnh báo sớm FORECAST_BREACH (mức LOW, không gửi lại) cho
  * mọi Zone còn gửi telemetry trong 15 phút qua; tự đóng khi dự báo hết vượt hoặc
  * chỉ số đã vượt thật (THRESHOLD_BREACH tiếp quản). Gọi từ jobs/forecast.job.ts.
  */

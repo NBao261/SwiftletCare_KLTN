@@ -24,7 +24,7 @@ import type { AlertType, Role } from '@/types'
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
-  emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(), emitTicketAssigneeChanged: jest.fn(),
+  emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(),
 }))
 jest.mock('@/services/notification.service', () => ({
   dispatchAlertNotification: jest.fn().mockResolvedValue(undefined),

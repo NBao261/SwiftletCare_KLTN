@@ -1,6 +1,6 @@
 /**
- * admin.service — khoá tài khoản (điều phối lại ticket), xoá tài khoản theo yêu cầu (cascade,
- * ticket dở, chạy lại), từ chối và nhắc hạn yêu cầu xoá.
+ * admin.service — khoá tài khoản, xoá tài khoản theo yêu cầu (cascade, chạy lại),
+ * từ chối và nhắc hạn yêu cầu xoá.
  * Chạy trên MongoDB in-memory.
  */
 import mongoose from 'mongoose'
@@ -8,7 +8,6 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
-import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import {
   completeDeletionRequest, rejectDeletionRequest, remindPendingDeletionRequests, setUserStatus,
@@ -46,7 +45,7 @@ afterEach(async () => {
   jest.clearAllMocks()
   await Promise.all([
     AuditLog.deleteMany({}), Farm.deleteMany({}),
-    Invitation.deleteMany({}), Ticket.deleteMany({}), User.deleteMany({}),
+    Invitation.deleteMany({}), User.deleteMany({}),
   ])
 })
 
@@ -63,9 +62,6 @@ const mkFarm = (owner: { _id: unknown }, others: Array<{ user: { _id: unknown };
     ...extra,
   })
 
-const mkTicket = (farmId: unknown, extra: object = {}) =>
-  Ticket.create({ farm_id: farmId, type: 'OTHER', priority: 'P3', ...extra })
-
 const auditActions = async (action: string) => AuditLog.find({ action }).lean()
 
 // ── setUserStatus ──────────────────────────────────────────────────────────────
@@ -74,7 +70,7 @@ describe('setUserStatus', () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     const target = await mkUser('victim@test.vn', 'FARM_OWNER', { refresh_tokens: [{ token_hash: 't', expires: new Date(Date.now() + 1e6) }] })
 
-    const { user } = await setUserStatus(String(admin._id), String(target._id), false, '  Spam đơn hàng  ')
+    const user = await setUserStatus(String(admin._id), String(target._id), false, '  Spam đơn hàng  ')
 
     expect(user.is_active).toBe(false)
     expect(user.deactivated_reason).toBe('Spam đơn hàng')
@@ -95,7 +91,7 @@ describe('setUserStatus', () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     const target = await mkUser('victim@test.vn', 'FARM_OWNER', { is_active: false, deactivated_reason: 'x', deactivated_at: new Date() })
 
-    const { user } = await setUserStatus(String(admin._id), String(target._id), true)
+    const user = await setUserStatus(String(admin._id), String(target._id), true)
 
     expect(user.is_active).toBe(true)
     expect(user.deactivated_reason).toBeUndefined()
@@ -106,56 +102,6 @@ describe('setUserStatus', () => {
   it('refuses self-lock', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     await expect(setUserStatus(String(admin._id), String(admin._id), false, 'x')).rejects.toMatchObject({ statusCode: 400 })
-  })
-
-  it('hands a locked technician\'s open tickets to a colleague of the region', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { assigned_regions: ['HCMC'] })
-    const colleague = await mkUser('colleague@test.vn', 'TECHNICIAN', { assigned_regions: ['HCMC'] })
-    const owner = await mkUser('owner@test.vn')
-    const farm = await mkFarm(owner, [], { region: 'HCMC' })
-    await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS', responded_at: new Date() })
-    await mkTicket(farm._id, { assigned_to: tech._id, status: 'NEW' })
-    const closed = await mkTicket(farm._id, { assigned_to: tech._id, status: 'CLOSED' })
-
-    const result = await setUserStatus(String(admin._id), String(tech._id), false, 'Nghỉ việc')
-
-    expect(result.reroute!.rerouted).toHaveLength(2)
-    expect(result.openTickets).toBeUndefined() // không còn gì Admin phải gán tay
-    const moved = await Ticket.find({ assigned_to: colleague._id })
-    expect(moved).toHaveLength(2)
-    expect(moved.every(t => t.status === 'NEW')).toBe(true) // người mới phải tự xác nhận tiếp nhận
-    expect(String((await Ticket.findById(closed._id))!.assigned_to)).toBe(String(tech._id)) // ticket đã đóng giữ nguyên
-    const audits = await auditActions('TICKET_REROUTED')
-    expect(audits).toHaveLength(2)
-    expect(audits[0].metadata).toMatchObject({ reason: 'ACCOUNT_LOCKED', from: String(tech._id) })
-    // Người bị khoá không đăng nhập được — không gửi tin "ticket đã chuyển khỏi bạn"
-    expect(notifyUser).not.toHaveBeenCalledWith(String(tech._id), expect.objectContaining({ title: 'Ticket đã chuyển khỏi bạn' }))
-  })
-
-  it('puts the tickets in the shared queue and reports them when nobody else covers the region', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { assigned_regions: ['HCMC'] })
-    const owner = await mkUser('owner@test.vn')
-    const farm = await mkFarm(owner, [], { region: 'HCMC' })
-    const a = await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS' })
-    const b = await mkTicket(farm._id, { assigned_to: tech._id, status: 'NEW' })
-
-    const result = await setUserStatus(String(admin._id), String(tech._id), false, 'Nghỉ việc')
-
-    expect(result.openTickets).toBe(2)
-    expect(result.openTicketIds!.sort()).toEqual([String(a._id), String(b._id)].sort()) // đủ id để Admin bấm gán lại ngay
-    const queued = (await Ticket.findById(a._id))!
-    expect(queued.assigned_to).toBeFalsy()
-    expect(queued.notes.at(-1)!.content).toContain('đã bị khoá')
-  })
-
-  it('omits reroute info when the technician has no open ticket', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN')
-    const result = await setUserStatus(String(admin._id), String(tech._id), false, 'Nghỉ việc')
-    expect(result.reroute).toBeUndefined()
-    expect(result.openTickets).toBeUndefined()
   })
 })
 
@@ -276,7 +222,7 @@ describe('completeDeletionRequest', () => {
     expect(await auditActions('FARM_SOFT_DELETED')).toHaveLength(1)
 
     const [done] = await auditActions('ACCOUNT_DELETED')
-    expect(done.metadata).toMatchObject({ farmsTransferred: 1, farmsDeleted: 1, forced: false })
+    expect(done.metadata).toMatchObject({ farmsTransferred: 1, farmsDeleted: 1 })
   })
 
   it('removes the user from farms they only belong to as a plain member', async () => {
@@ -390,107 +336,15 @@ describe('completeDeletionRequest', () => {
     })
   })
 
-  describe('open tickets (Flow 19 bước 7c)', () => {
-    it('answers 409 HAS_OPEN_TICKETS with the count and changes nothing', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const tech = await mkUser('tech@test.vn', 'TECHNICIAN', requested)
-      const owner = await mkUser('owner@test.vn')
-      const farm = await mkFarm(owner)
-      await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS' })
+  it('anonymises a deleted technician and clears their regions', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { ...requested, assigned_regions: ['HCMC'] })
 
-      await expect(completeDeletionRequest(String(admin._id), String(tech._id))).rejects.toMatchObject({
-        statusCode: 409, code: 'HAS_OPEN_TICKETS', details: { openTickets: 1 },
-      })
+    await completeDeletionRequest(String(admin._id), String(tech._id))
 
-      const still = (await User.findById(tech._id))!
-      expect(still.email).toBe('tech@test.vn')
-      expect(still.deletion_requested_at).toBeInstanceOf(Date)
-      expect(await auditActions('ACCOUNT_DELETED')).toHaveLength(0)
-    })
-
-    it('counts tickets the user created and tickets of a farm that would be soft-deleted', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
-      const soleFarm = await mkFarm(leaver)
-      await mkTicket(soleFarm._id, { status: 'NEW' })                        // farm sẽ bị xoá mềm
-      await mkTicket(oid(), { created_by: leaver._id, status: 'IN_PROGRESS' }) // ticket do user tạo
-
-      await expect(completeDeletionRequest(String(admin._id), String(leaver._id)))
-        .rejects.toMatchObject({ code: 'HAS_OPEN_TICKETS', details: { openTickets: 2 } })
-    })
-
-    it('does not block on closed tickets or on tickets of a farm that survives the transfer', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
-      const other = await mkUser('other@test.vn')
-      const sharedFarm = await mkFarm(leaver, [{ user: other, joined: '2026-02-01' }])
-      await mkTicket(sharedFarm._id, { status: 'NEW' })
-      await mkTicket(oid(), { created_by: leaver._id, status: 'CLOSED' })
-
-      await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).resolves.toBeDefined()
-    })
-
-    it('closes the open tickets of a farm it soft-deletes, so nobody is left holding a dead ticket', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
-      const tech = await mkUser('tech@test.vn', 'TECHNICIAN')
-      const soleFarm = await mkFarm(leaver)
-      const stranded = await mkTicket(soleFarm._id, { status: 'IN_PROGRESS', assigned_to: tech._id })
-
-      await completeDeletionRequest(String(admin._id), String(leaver._id), { force: true })
-
-      // Farm đã xoá mềm thì không ai mở được ticket của nó nữa (kể cả Admin), mà
-      // nó vẫn chiếm suất quá tải của Technician và vẫn cộng vào báo cáo → phải đóng
-      const closed = (await Ticket.findById(stranded._id))!
-      expect(closed.status).toBe('CLOSED')
-      expect(closed.cancelled_at).toBeInstanceOf(Date)
-      const [audit] = await auditActions('TICKET_CLOSED_FARM_DELETED')
-      expect(audit.metadata).toMatchObject({ farmId: String(soleFarm._id), previousStatus: 'IN_PROGRESS' })
-    })
-
-    it('proceeds with force and records it in the audit log', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const tech = await mkUser('tech@test.vn', 'TECHNICIAN', requested)
-      await mkTicket(oid(), { assigned_to: tech._id, status: 'IN_PROGRESS' })
-
-      await completeDeletionRequest(String(admin._id), String(tech._id), { force: true })
-
-      expect((await User.findById(tech._id))!.email).toBe(`deleted-${String(tech._id)}@swiftletcare.local`)
-      const [done] = await auditActions('ACCOUNT_DELETED')
-      expect(done.metadata).toMatchObject({ forced: true })
-    })
-
-    it('hands a deleted technician\'s open tickets to a colleague of the region instead of stranding them', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { ...requested, assigned_regions: ['HCMC'] })
-      const colleague = await mkUser('colleague@test.vn', 'TECHNICIAN', { assigned_regions: ['HCMC'] })
-      const owner = await mkUser('owner@test.vn')
-      const farm = await mkFarm(owner, [], { region: 'HCMC' })
-      const ticket = await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS', responded_at: new Date() })
-
-      await completeDeletionRequest(String(admin._id), String(tech._id), { force: true })
-
-      const moved = (await Ticket.findById(ticket._id))!
-      expect(String(moved.assigned_to)).toBe(String(colleague._id))
-      expect(moved.status).toBe('NEW') // người mới phải tự xác nhận tiếp nhận
-      expect((await User.findById(tech._id))!.assigned_regions).toEqual([])
-      const [done] = await auditActions('ACCOUNT_DELETED')
-      expect(done.metadata).toMatchObject({ ticketsRerouted: 1 })
-    })
-
-    it('puts a deleted technician\'s ticket in the shared queue when nobody else covers the region', async () => {
-      const admin = await mkUser('admin@test.vn', 'ADMIN')
-      const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { ...requested, assigned_regions: ['HCMC'] })
-      const owner = await mkUser('owner@test.vn')
-      const farm = await mkFarm(owner, [], { region: 'HCMC' })
-      const ticket = await mkTicket(farm._id, { assigned_to: tech._id, status: 'IN_PROGRESS' })
-
-      await completeDeletionRequest(String(admin._id), String(tech._id), { force: true })
-
-      const queued = (await Ticket.findById(ticket._id))!
-      expect(queued.assigned_to).toBeFalsy()
-      expect(queued.notes.at(-1)!.content).toContain('đã bị xoá')
-    })
+    const gone = (await User.findById(tech._id))!
+    expect(gone.email).toBe(`deleted-${String(tech._id)}@swiftletcare.local`)
+    expect(gone.assigned_regions).toEqual([])
   })
 
   it('can be re-run after failing midway without repeating finished farms', async () => {

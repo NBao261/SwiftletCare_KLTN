@@ -6,7 +6,7 @@
 // ── Domain Enums ───────────────────────────────────────────────────────────────
 // SRS AUTH-FR-004 (v2.0.0). DOMAIN_EXPERT = chuyên gia nuôi yến do Primary Owner mời,
 // phạm vi luôn là cả farm: chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo suy luận,
-// chỉnh ngưỡng/hệ số/tham số phát hiện — không relay, ticket hay ghi thu hoạch (mục 4.4).
+// chỉnh ngưỡng/hệ số/tham số phát hiện — không relay hay ghi thu hoạch (mục 4.4).
 export type Role         = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'TECHNICIAN'
 /** Vai trò phía khách hàng có thể là thành viên farm (`farms.members[].role`, `invitations.invited_role`) */
 export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>
@@ -21,19 +21,12 @@ export type AlertType =
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE' // THREAT-FR-013
   | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'   // v1.24.0 — ALERT-FR-010/011
-  | 'MAINTENANCE_DUE'                       // ALERT-FR-016 (thay ticket bảo trì)
+  | 'MAINTENANCE_DUE'                       // ALERT-FR-016
 /** EXPERT-FR-003 — kết quả Domain Expert kiểm chứng 1 cảnh báo suy luận */
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 
-// ── Module TICKET (§5.9, §8.2) ───────────────────────────────────────────────
-export type TicketType =
-  | 'SENSOR_FAULT' | 'RS485_BUS_FAILURE' | 'ACTUATOR_FAILURE' | 'NODE_OFFLINE'
-  | 'EDGE_AI_DEGRADED' | 'POWER_OUTAGE' | 'SPEAKER_FAILURE' | 'PREDATOR_DETECTED'
-  | 'INSTALLATION' | 'MAINTENANCE' | 'OTHER'
-export type TicketPriority = 'P1' | 'P2' | 'P3'
-export type TicketStatus = 'NEW' | 'IN_PROGRESS' | 'AWAITING_FIELD_CONFIRMATION' | 'CLOSED'
 
 // ── Module MARKET (§5.8, §8.2) ───────────────────────────────────────────────
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
@@ -70,12 +63,6 @@ export interface NotificationPreferences {
   quiet_hours: { start: string; end: string }
 }
 
-/** TICKET-FR-006, SLA-NFR-001 — SLA theo mức ưu tiên, Admin cấu hình được */
-export interface SlaLevel {
-  response_hours: number
-  resolve_hours: number
-}
-export type SlaConfig = Record<TicketPriority, SlaLevel>
 
 export interface Thresholds {
   temp_min: number

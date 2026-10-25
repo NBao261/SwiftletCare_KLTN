@@ -19,16 +19,10 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
 
 /** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
 export const setUserStatus = asyncHandler(async (req: Request, res: Response) => {
-  const { user, reroute, openTickets, openTicketIds } = await adminService.setUserStatus(
+  const user = await adminService.setUserStatus(
     req.user._id, req.params.id, req.body.is_active as boolean, req.body.reason as string | undefined,
   )
-  // Khoá Technician còn ticket đang giao: báo ticket đã chuyển cho ai, và số ticket + id
-  // không ai nhận được để Admin gán tay
-  res.json({
-    success: true,
-    data: user,
-    ...(reroute ? { meta: { rerouted: reroute.rerouted, unassigned: reroute.unassigned, openTickets, openTicketIds } } : {}),
-  })
+  res.json({ success: true, data: user })
 })
 
 /** GET /admin/delete-requests – AUTH-FR-012 */
@@ -42,9 +36,7 @@ export const listDeletionRequests = asyncHandler(async (req: Request, res: Respo
 
 /** PUT /admin/delete-requests/:id/complete – AUTH-FR-012, Flow 19 bước 7-8 */
 export const completeDeletionRequest = asyncHandler(async (req: Request, res: Response) => {
-  const user = await adminService.completeDeletionRequest(req.user._id, req.params.id, {
-    force: req.body?.force === true,
-  })
+  const user = await adminService.completeDeletionRequest(req.user._id, req.params.id)
   res.json({ success: true, data: user })
 })
 
@@ -62,24 +54,9 @@ export const createTechnician = asyncHandler(async (req: Request, res: Response)
 
 /** PUT /admin/technicians/:id/regions – AUTH-FR-005c, Flow 21 case 4a-x */
 export const updateTechnicianRegions = asyncHandler(async (req: Request, res: Response) => {
-  const { technician, rerouted, unassigned } = await adminService.updateTechnicianRegions(
+  const technician = await adminService.updateTechnicianRegions(
     req.user._id, req.params.id, req.body.assigned_regions as string[],
   )
-  // Gỡ vùng làm ticket đang mở ở vùng đó mất người xử lý — báo lại Admin những
-  // ticket đã được điều phối sang người khác và những ticket không còn ai nhận
-  res.json({
-    success: true,
-    data: technician,
-    ...(rerouted.length || unassigned.length ? { meta: { rerouted, unassigned } } : {}),
-  })
-})
-
-/** PUT /admin/technicians/:id/profile – AUTH-FR-005c */
-export const updateTechnicianProfile = asyncHandler(async (req: Request, res: Response) => {
-  const technician = await adminService.updateTechnicianProfile(req.user._id, req.params.id, {
-    full_name: req.body.full_name as string | undefined,
-    phone:     req.body.phone as string | undefined,
-  })
   res.json({ success: true, data: technician })
 })
 

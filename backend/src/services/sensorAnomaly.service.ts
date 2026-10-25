@@ -20,7 +20,7 @@ async function resolveOpen(filter: { node_id?: Types.ObjectId | null; zone_id?: 
 /**
  * ALERT-FR-010 — quét telemetry 2 giờ gần nhất của mọi thiết bị ONLINE: kẹt /
  * nhảy phi vật lý theo từng thiết bị, lệch giữa các thiết bị cùng Zone. Có phát
- * hiện → SENSOR_ANOMALY (MEDIUM, không tự sinh ticket; dedup theo thiết bị);
+ * hiện → SENSOR_ANOMALY (MEDIUM, không gửi lại; dedup theo thiết bị);
  * hết phát hiện → tự đóng. Gọi từ jobs/sensorAnomaly.job.ts mỗi 10 phút.
  * ponytail: mỗi thiết bị 1 truy vấn ~720 mẫu — đủ cho vài chục thiết bị; nhiều
  * hơn thì gộp thành 1 aggregation theo node_id.

@@ -2,22 +2,15 @@ import crypto from 'crypto'
 import { User, IUser } from '@/models/user.model'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
-import { Ticket } from '@/models/ticket.model'
 import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { softDeleteFarm } from '@/services/farm.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
-import {
-  closeTicketsOfDeletedFarm, drainUnassignedQueueSafely, rerouteTicketsOutOfCoverage, type CoverageRerouteResult,
-} from '@/services/ticket.service'
 import { disconnectUser } from '@/socket'
 import { escapeRegex, paginate } from '@/utils/helpers.util'
 import { assertRegionCode, toRegionCode } from '@/utils/regions.util'
-import { AppError, NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Role } from '@/types'
-
-/** Trả đủ id để Admin bấm gán lại, nhưng không bơm cả nghìn id vào 1 response */
-const OPEN_TICKET_IDS_LIMIT = 100
 
 // ── Quản lý tài khoản — AUTH-FR-011, AUTH-FR-012, Flow 19 ──────────────────────
 
@@ -55,15 +48,6 @@ export async function listUsers(query: ListUsersQuery) {
   return { records, total, page, limit }
 }
 
-export interface SetUserStatusResult {
-  user: IUser
-  /** Chỉ có khi khoá Technician còn ticket đang giao — đã điều phối lại (TICKET-FR-005b) */
-  reroute?: CoverageRerouteResult
-  /** Số ticket không ai trong vùng nhận được, về hàng đợi chung — Admin cần gán tay */
-  openTickets?: number
-  /** Id của chính các ticket đó, để Admin gán lại được ngay mà không phải tự đi tìm */
-  openTicketIds?: string[]
-}
 
 /**
  * AUTH-FR-011 — khoá/mở khoá tài khoản. Lý do bắt buộc khi khoá (không bắt buộc
@@ -74,7 +58,7 @@ export interface SetUserStatusResult {
  */
 export async function setUserStatus(
   adminId: string, userId: string, isActive: boolean, reason?: string,
-): Promise<SetUserStatusResult> {
+): Promise<IUser> {
   // Không cho tự khoá mình: người gọi luôn là 1 Admin đang hoạt động, nên chặn
   // tự khoá là đủ đảm bảo hệ thống luôn còn ít nhất 1 Admin (Flow 19 case 2a).
   if (adminId === userId) throw BadRequestError('Không thể tự khoá tài khoản của chính mình')
@@ -101,29 +85,8 @@ export async function setUserStatus(
   await user.save()
 
   await logAction(adminId, isActive ? 'ACCOUNT_UNLOCKED' : 'ACCOUNT_LOCKED', 'user', userId, { reason: trimmedReason })
-  if (isActive) {
-    // Technician mở khoá lại có suất trống — nhận ticket đang chờ của vùng mình
-    if (user.role === 'TECHNICIAN') await drainUnassignedQueueSafely({ regions: user.assigned_regions ?? [] })
-    return { user }
-  }
-
-  disconnectUser(userId)
-  if (user.role === 'TECHNICIAN') {
-    // Người bị khoá không đăng nhập được, thông báo SLA cũng bỏ qua họ — để ticket
-    // lại thì không ai xử lý. Điều phối lại như khi xoá tài khoản; ai không nhận
-    // được thì về hàng đợi chung và trả id để Admin gán tay.
-    const reroute = await rerouteTicketsOutOfCoverage({ technicianId: userId }, adminId, 'ACCOUNT_LOCKED')
-    if (reroute.rerouted.length || reroute.unassigned.length) {
-      return {
-        user,
-        reroute,
-        ...(reroute.unassigned.length
-          ? { openTickets: reroute.unassigned.length, openTicketIds: reroute.unassigned.slice(0, OPEN_TICKET_IDS_LIMIT) }
-          : {}),
-      }
-    }
-  }
-  return { user }
+  if (!isActive) disconnectUser(userId)
+  return user
 }
 
 export async function listDeletionRequests(query: ListQuery) {
@@ -137,26 +100,20 @@ export async function listDeletionRequests(query: ListQuery) {
   return { records, total, page, limit }
 }
 
-export interface CompleteDeletionOptions {
-  /** Bỏ qua cảnh báo ticket đang mở (Flow 19 bước 7c) và vẫn xoá */
-  force?: boolean
-}
 
 /**
  * AUTH-FR-012 / PRIV-NFR-003 — Flow 19 bước 7-8. Cascade:
  * - Farm mà user là Primary Owner: còn thành viên khác → chuyển owner_id cho
  *   người có joined_at sớm nhất; hết thành viên → soft-delete Farm.
  * - Farm mà user chỉ là member thường: gỡ khỏi members.
- * - Anonymize thông tin cá nhân, không xoá document (giữ FK cho tickets/farms lịch sử).
+ * - Anonymize thông tin cá nhân, không xoá document (giữ FK cho farms/audit lịch sử).
  *
  * Mongo dev chạy standalone (không transaction) nên hàm này được thiết kế để CHẠY
  * LẠI được khi lỗi giữa chừng: cờ `deletion_requested_at` chỉ bị gỡ ở bước lưu
  * cuối, mỗi farm xử lý xong đã có audit riêng, còn farm đã chuyển/xoá thì lần
  * chạy sau không tìm thấy nữa (không bị xử lý hai lần).
  */
-export async function completeDeletionRequest(
-  adminId: string, userId: string, opts: CompleteDeletionOptions = {},
-): Promise<IUser> {
+export async function completeDeletionRequest(adminId: string, userId: string): Promise<IUser> {
   if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
   const user = await User.findById(userId)
   if (!user) throw NotFoundError('Không tìm thấy người dùng')
@@ -165,25 +122,6 @@ export async function completeDeletionRequest(
   }
 
   const ownedFarms = await Farm.find({ owner_id: user._id, is_deleted: false })
-
-  if (!opts.force) {
-    // Farm chỉ có mình user sẽ bị xoá mềm → ticket đang mở của farm đó cũng thành mồ côi
-    // Farm chỉ còn Domain Expert (không đồng sở hữu) cũng bị xoá mềm — xem vòng lặp bên dưới
-    const soleOwnerFarmIds = ownedFarms
-      .filter(f => f.members.every(m => String(m.user_id) === userId || m.role === 'DOMAIN_EXPERT'))
-      .map(f => f._id)
-    const openTickets = await Ticket.countDocuments({
-      status: { $ne: 'CLOSED' },
-      $or: [{ assigned_to: user._id }, { created_by: user._id }, { farm_id: { $in: soleOwnerFarmIds } }],
-    })
-    if (openTickets > 0) {
-      throw new AppError(
-        409, 'HAS_OPEN_TICKETS',
-        `Người dùng còn ${openTickets} ticket đang mở — xử lý xong hoặc gửi force:true để vẫn xoá`,
-        { openTickets },
-      )
-    }
-  }
 
   for (const farm of ownedFarms) {
     // Quyền chủ chỉ chuyển cho đồng sở hữu (AUTH-FR-012) — Domain Expert là người được mời
@@ -211,11 +149,6 @@ export async function completeDeletionRequest(
       await logAction(adminId, 'FARM_SOFT_DELETED', 'farm', String(farm._id), {
         reason: 'OWNER_ACCOUNT_DELETED', ownerId: userId,
       })
-      // Farm đã xoá thì không ai mở được ticket của nó nữa (kể cả Admin) nhưng
-      // chúng vẫn tính vào ngưỡng quá tải của Router và báo cáo — đóng hẳn,
-      // giống removeFarm. Gọi cả khi force:true vì đó đúng là trường hợp còn
-      // ticket mở (Flow 19 bước 7c).
-      await closeTicketsOfDeletedFarm(String(farm._id), adminId)
     }
   }
 
@@ -225,25 +158,14 @@ export async function completeDeletionRequest(
     { $pull: { members: { user_id: user._id } } },
   )
 
-  // Technician bị xoá (kể cả khi Admin gửi force vì họ còn ticket mở): ticket đang giao
-  // không được ở lại với một tài khoản đã ẩn danh — không ai xử lý, SLA vẫn chạy. Gỡ vùng
-  // phụ trách TRƯỚC, nếu không rerouteTicketsOutOfCoverage coi họ "vẫn phụ trách" và bỏ qua.
-  // Chạy trước bước ẩn danh để lỗi giữa chừng vẫn chạy lại được (gỡ vùng là idempotent).
-  if (user.role === 'TECHNICIAN') {
-    if (user.assigned_regions?.length) {
-      user.assigned_regions = []
-      await user.save()
-    }
-    await rerouteTicketsOutOfCoverage({ technicianId: userId }, adminId, 'ACCOUNT_DELETED')
-  }
+
 
   // Tổng qua MỌI lần chạy (kể cả lần lỗi giữa chừng trước đó), đọc từ audit từng farm — tính TRƯỚC bước
   // ẩn danh không thể đảo ngược để một lỗi đọc DB ở đây vẫn cho phép chạy lại. Đây là số liệu theo audit
   // (ghi audit là best-effort, xem logAction), không phải nguồn sự thật về dữ liệu farm.
-  const [farmsTransferred, farmsDeleted, ticketsRerouted] = await Promise.all([
+  const [farmsTransferred, farmsDeleted] = await Promise.all([
     AuditLog.countDocuments({ action: 'FARM_OWNERSHIP_TRANSFERRED', 'metadata.fromUserId': userId }),
     AuditLog.countDocuments({ action: 'FARM_SOFT_DELETED', 'metadata.ownerId': userId }),
-    AuditLog.countDocuments({ action: 'TICKET_REROUTED', 'metadata.from': userId, 'metadata.reason': 'ACCOUNT_DELETED' }),
   ])
 
   const contactEmail = user.email // giữ lại để gửi thông báo cuối sau khi ẩn danh
@@ -254,6 +176,8 @@ export async function completeDeletionRequest(
   user.email = `deleted-${String(user._id)}@swiftletcare.local`
   user.phone = undefined
   user.full_name = 'Tài khoản đã xoá'
+  // Tài khoản đã ẩn danh không còn phụ trách vùng nào
+  if (user.role === 'TECHNICIAN') user.assigned_regions = []
   user.avatar_url = undefined
   // Chat id Telegram là dữ liệu cá nhân và còn là đường gửi tin tới người thật (PRIV-NFR-003)
   user.telegram_chat_id = undefined
@@ -277,7 +201,7 @@ export async function completeDeletionRequest(
   }, { email: contactEmail, emailOnly: true })
 
   await logAction(adminId, 'ACCOUNT_DELETED', 'user', userId, {
-    farmsTransferred, farmsDeleted, ticketsRerouted, forced: opts.force === true,
+    farmsTransferred, farmsDeleted,
   })
   return user
 }
@@ -340,10 +264,6 @@ export async function remindPendingDeletionRequests(now = new Date()): Promise<n
 
 // ── Admin tự tạo tài khoản Technician — AUTH-FR-005c ─────────────────────────
 
-/** Ticket được điều phối lại kèm theo, để màn hình Admin hiện ngay (TICKET-FR-005b) */
-export interface UpdateTechnicianRegionsResult extends CoverageRerouteResult {
-  technician: IUser
-}
 
 /**
  * Quy mỗi vùng về mã danh mục (nhận cả tên/tên tỉnh cũ), bỏ mục rỗng và trùng — dùng
@@ -375,8 +295,6 @@ export async function createTechnician(adminId: string, input: CreateTechnicianI
   })
 
   await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'TECHNICIAN' })
-  // Vùng vừa có thêm người — ticket đang chờ vì thiếu người phụ trách được chia ngay
-  await drainUnassignedQueueSafely({ regions: user.assigned_regions ?? [] })
   return user
 }
 
@@ -387,7 +305,7 @@ export async function createTechnician(adminId: string, input: CreateTechnicianI
  */
 export async function updateTechnicianRegions(
   adminId: string, technicianId: string, regions: string[],
-): Promise<UpdateTechnicianRegionsResult> {
+): Promise<IUser> {
   const technician = await User.findById(technicianId)
   if (!technician) throw NotFoundError('Không tìm thấy người dùng')
   if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ gán khu vực được cho tài khoản Technician')
@@ -398,50 +316,15 @@ export async function updateTechnicianRegions(
   await technician.save()
 
   await logAction(adminId, 'TECHNICIAN_REGIONS_UPDATED', 'user', technicianId, { before, after })
-
-  // Vùng bị gỡ: ticket đang mở ở đó không còn người xử lý được (họ mất quyền trên
-  // chính ticket của mình) — điều phối lại ngay thay vì để kẹt im lặng.
-  const removedRegions = before.filter(r => !after.includes(r))
-  const reroute = removedRegions.length > 0
-    ? await rerouteTicketsOutOfCoverage({ technicianId }, adminId, 'REGION_UNASSIGNED')
-    : { rerouted: [], unassigned: [] }
-  // Vùng mới thêm: nhận ticket đang chờ ở đó vì trước giờ không ai phụ trách
-  const addedRegions = after.filter(r => !before.includes(r))
-  if (addedRegions.length > 0) await drainUnassignedQueueSafely({ regions: addedRegions })
-  return { technician, ...reroute }
+  return technician
 }
 
-/** Technician còn dùng được (chưa xoá theo yêu cầu) — dùng chung cho sửa hồ sơ / đặt lại mật khẩu */
+/** Technician còn dùng được (chưa xoá theo yêu cầu) */
 async function findManageableTechnician(technicianId: string): Promise<IUser> {
   const technician = await User.findById(technicianId)
   if (!technician) throw NotFoundError('Không tìm thấy người dùng')
   if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ áp dụng cho tài khoản Technician')
   if (technician.deleted_at) throw ConflictError('Tài khoản đã bị xoá theo yêu cầu')
-  return technician
-}
-
-export interface TechnicianProfileInput { full_name?: string; phone?: string }
-
-/**
- * AUTH-FR-005c — Admin sửa tên/SĐT của Technician (nhân sự nội bộ do Admin tạo).
- * Không sửa email vì đó là tên đăng nhập. `phone: ''` = xoá SĐT.
- */
-export async function updateTechnicianProfile(
-  adminId: string, technicianId: string, input: TechnicianProfileInput,
-): Promise<IUser> {
-  if (input.full_name === undefined && input.phone === undefined) {
-    throw BadRequestError('Cần ít nhất full_name hoặc phone')
-  }
-  const technician = await findManageableTechnician(technicianId)
-  const before = { full_name: technician.full_name, phone: technician.phone ?? null }
-
-  if (input.full_name !== undefined) technician.full_name = input.full_name
-  if (input.phone !== undefined) technician.phone = input.phone || undefined
-  await technician.save()
-
-  await logAction(adminId, 'TECHNICIAN_PROFILE_UPDATED', 'user', technicianId, {
-    before, after: { full_name: technician.full_name, phone: technician.phone ?? null },
-  })
   return technician
 }
 

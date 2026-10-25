@@ -315,7 +315,7 @@ export interface ListAlertsQuery {
 
 /**
  * ALERT-FR-007 — Farm Owner chỉ thấy cảnh báo của farm mình; ADMIN thấy tất cả;
- * Technician thấy farm trong khu vực phụ trách (phục vụ xử lý ticket, RACI 4.4).
+ * Technician thấy farm trong khu vực phụ trách (RACI 4.4).
  */
 export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   const accessibleFarms = await listAccessibleFarmIds(user)
@@ -433,8 +433,8 @@ export async function getVerdictStats(user: CurrentUser, query: { farmId?: strin
 
 /**
  * FARM-FR-008 — gỡ thiết bị thì cảnh báo của nó phải đóng theo. Cảnh báo còn
- * `ACTIVE` của thiết bị đã tháo về kho vẫn bị `alertEscalation.job` biến thành
- * ticket sau 15 phút, gán cho Technician một việc không còn tồn tại để sửa.
+ * `ACTIVE` của thiết bị đã tháo về kho vẫn bị `alertEscalation.job` gửi lại cho
+ * Farm Owner sau 15 phút, về một thiết bị không còn ở nhà yến.
  * Trả về số cảnh báo đã đóng.
  */
 export async function resolveAlertsForNode(nodeId: string, reason: string, type?: AlertType): Promise<number> {
@@ -512,7 +512,7 @@ export async function resolveStaleEpisodeAlerts(now = new Date()): Promise<numbe
 /**
  * ALERT-FR-015 — cảnh báo chưa ai xác nhận được gửi lại ĐÚNG 1 lần cho Farm Owner theo
  * kênh họ chọn (giờ im lặng áp như lần đầu): CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau
- * 1 giờ. Thay ticket leo thang cũ (TICKET-FR-002), giữ nguyên mốc thời gian (Report 3 §4.5).
+ * 1 giờ, giữ nguyên mốc thời gian (Report 3 §4.5).
  * Bỏ qua thiết bị đã gỡ và NODE_OFFLINE của thiết bị đã ONLINE lại (cảnh báo chỉ chưa kịp
  * đóng). Gọi định kỳ từ jobs/alertEscalation.job.ts.
  */

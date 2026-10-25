@@ -115,10 +115,10 @@ export const replaceSensorNode = asyncHandler(async (req: Request, res: Response
   res.status(201).json({ success: true, data: result })
 })
 
-/** POST /devices/sensor-nodes/:id/commands – TICKET-FR-008, Flow 15 */
+/** POST /devices/sensor-nodes/:id/commands – FARM-FR-013, Flow 15 */
 export const sendCommand = asyncHandler(async (req: Request, res: Response) => {
   const node = await deviceService.sendRemoteCommand(req.params.id, req.user, {
-    command: req.body.command, ticket_id: req.body.ticket_id, ota: req.body.ota,
+    command: req.body.command, ota: req.body.ota,
   })
   res.status(202).json({ success: true, data: node })
 })

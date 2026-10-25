@@ -195,7 +195,7 @@ export async function setReportConclusion(id: string, user: CurrentUser, text: s
   await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'zone_health_report', String(report._id), { zone_id: String(report.zone_id), isEdit })
 
   const zone = await Zone.findById(report.zone_id).select('name').lean()
-  // Không chờ gửi: kết luận đã lưu, Telegram chậm không được giữ response (như ticket.service)
+  // Không chờ gửi: kết luận đã lưu, Telegram chậm không được giữ response
   for (const ownerId of await ownerIdsOf(report.farm_id)) {
     void notifyUser(ownerId, {
       title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho ${zone?.name ?? 'Zone'}`,

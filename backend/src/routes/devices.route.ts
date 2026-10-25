@@ -73,7 +73,6 @@ router.post('/sensor-nodes/:id/replace',      requireRole('FARM_OWNER','TECHNICI
 // FARM-FR-013 — xử lý từ xa (khởi động lại / đẩy lại ngưỡng / OTA firmware): chỉ Technician
 router.post('/sensor-nodes/:id/commands', requireRole('TECHNICIAN'), param('id').isMongoId(),
   body('command').isIn(['RESTART', 'PUSH_CONFIG', 'OTA']),
-  body('ticket_id').optional().isMongoId(),
   // Không nhận tiền tố "v": heartbeat so sánh firmware_version bằng === với
   // FIRMWARE_VERSION của firmware ("1.0.0"), "v1.1.0" sẽ không bao giờ khớp
   // nên OTA thành công vẫn bị markOtaTimeouts báo thất bại sau 30 phút.

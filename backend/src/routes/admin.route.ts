@@ -35,9 +35,8 @@ router.get('/delete-requests',
   ...paginationQuery, validate,
   adminController.listDeletionRequests,
 )
-// force: bỏ qua cảnh báo ticket đang mở (Flow 19 bước 7c)
 router.put('/delete-requests/:id/complete',
-  param('id').isMongoId(), body('force').optional().isBoolean().toBoolean(), validate,
+  param('id').isMongoId(), validate,
   adminController.completeDeletionRequest,
 )
 // Từ chối phải có lý do — người yêu cầu được báo lại lý do đó (AUTH-FR-012)
@@ -61,15 +60,6 @@ router.put('/technicians/:id/regions',
   body('assigned_regions').isArray({ min: 1 }), body('assigned_regions.*').isString().trim().notEmpty(),
   validate,
   adminController.updateTechnicianRegions,
-)
-/** Sửa tên/SĐT Technician – AUTH-FR-005c. phone rỗng = xoá SĐT */
-router.put('/technicians/:id/profile',
-  param('id').isMongoId(),
-  body('full_name').optional().isString().trim().notEmpty(),
-  body('phone').optional().isString().customSanitizer((v: string) => v.replace(/[\s.-]/g, ''))
-    .custom((v: string) => v === '' || PHONE_RE.test(v)).withMessage('SĐT phải là 10 số bắt đầu bằng 0 hoặc +84 rồi 9 số'),
-  validate,
-  adminController.updateTechnicianProfile,
 )
 /** Cấp mật khẩu tạm cho Technician (trả 1 lần, bắt đổi ở lần đăng nhập sau) – AUTH-FR-005c */
 router.put('/technicians/:id/password', param('id').isMongoId(), validate, adminController.resetTechnicianPassword)
