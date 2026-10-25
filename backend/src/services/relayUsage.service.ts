@@ -48,7 +48,7 @@ export function tallyRelayUsage(prev: { at?: Date; misting?: boolean; ventilatio
 }
 
 /**
- * Chạy mỗi giờ (jobs/maintenanceSchedule.job.ts): cộng dồn giờ chạy/số lần đóng
+ * Chạy mỗi giờ (jobs/relayUsage.job.ts): cộng dồn giờ chạy/số lần đóng
  * cắt của bơm và quạt từ telemetry mới, vượt RELAY_SERVICE_LIMITS thì báo cảnh báo
  * MAINTENANCE_DUE. Bộ đếm KHÔNG reset ở đây: Farm Owner xác nhận cảnh báo (đã bảo
  * trì) mới đếm lại từ 0 (BR-16, `acknowledgeAlert`).

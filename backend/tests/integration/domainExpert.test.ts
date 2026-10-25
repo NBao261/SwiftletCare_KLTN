@@ -1,7 +1,7 @@
 /**
  * Domain Expert (AUTH-FR-004/005, SRS v2.0.0 mục 4.4) — chuyên gia nuôi yến do Primary
  * Owner mời, phạm vi luôn là cả farm. Được: đọc dữ liệu vận hành, sửa ngưỡng và hệ số
- * mờ. Không được: relay/loa, ticket, ghi thu hoạch, xác nhận cảnh báo, sửa/xoá farm,
+ * mờ. Không được: relay/loa, ghi thu hoạch, xác nhận cảnh báo, sửa/xoá farm,
  * quản lý thành viên, tạo House/Zone.
  */
 import express from 'express'
@@ -13,8 +13,6 @@ import alertRoutes from '@/routes/alerts.route'
 import farmRoutes from '@/routes/farms.route'
 import deviceRoutes from '@/routes/devices.route'
 import harvestRoutes from '@/routes/harvests.route'
-import maintenanceScheduleRoutes from '@/routes/maintenanceSchedules.route'
-import ticketRoutes from '@/routes/tickets.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
 import { AuditLog } from '@/models/auditLog.model'
@@ -23,7 +21,6 @@ import { Farm } from '@/models/farm.model'
 import { HarvestBatch } from '@/models/harvestBatch.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Invitation } from '@/models/invitation.model'
-import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { listAlerts } from '@/services/alert.service'
 import { completeDeletionRequest } from '@/services/admin.service'
@@ -36,7 +33,6 @@ jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnVal
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(), disconnectUser: jest.fn(),
-  emitTicketAssigneeChanged: jest.fn(), removeUserFromTicketRoom: jest.fn(),
 }))
 jest.mock('@/services/notification.service', () => ({
   ...jest.requireActual('@/services/notification.service'),
@@ -53,8 +49,6 @@ app.use('/alerts', alertRoutes)
 app.use('/farms', farmRoutes)
 app.use('/devices', deviceRoutes)
 app.use('/harvests', harvestRoutes)
-app.use('/maintenance-schedules', maintenanceScheduleRoutes)
-app.use('/tickets', ticketRoutes)
 app.use(errorHandler)
 
 let mongod: MongoMemoryServer
@@ -68,7 +62,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   await Promise.all([
-    Alert, AuditLog, SensorNode, Farm, HarvestBatch, House, Zone, Invitation, Ticket, User,
+    Alert, AuditLog, SensorNode, Farm, HarvestBatch, House, Zone, Invitation, User,
   ].map(m => (m as typeof User).deleteMany({})))
 })
 
@@ -191,18 +185,6 @@ describe('việc Domain Expert không được làm (mục 4.4)', () => {
     await call('post', `/devices/sensor-nodes/${nodeA._id}/relay`, t.owner, { relayName: 'misting', state: true }).expect(200)
   })
 
-  it('không tạo, xem, chat ticket và không xem lịch bảo trì', async () => {
-    const { farm, owner, zoneA, t } = await seed()
-    const ticket = await Ticket.create({ farm_id: farm._id, zone_id: zoneA._id, type: 'OTHER', priority: 'P3', created_by: owner._id })
-    await call('post', '/tickets', t.expert, { farm_id: String(farm._id), type: 'OTHER' }).expect(403)
-    await call('get', '/tickets', t.expert).expect(403)
-    await call('get', `/tickets/${ticket._id}`, t.expert).expect(403)
-    await call('get', `/tickets/${ticket._id}/messages`, t.expert).expect(403)
-    await call('post', `/tickets/${ticket._id}/notes`, t.expert, { content: 'x' }).expect(403)
-    await call('get', '/maintenance-schedules', t.expert).expect(403)
-    await call('get', '/tickets', t.owner).expect(200)
-  })
-
   it('không xác nhận (acknowledge) cảnh báo — đó là việc của Farm Owner', async () => {
     const { farm, zoneA, t } = await seed()
     const alert = await Alert.create({ farm_id: farm._id, zone_id: zoneA._id, type: 'PUMP_DRY', severity: 'MEDIUM', title: 't', message: 'm' })
@@ -235,7 +217,7 @@ describe('xoá tài khoản chủ farm (AUTH-FR-012)', () => {
     const admin = await mkUser('ADMIN')
     await User.updateOne({ _id: owner._id }, { deletion_requested_at: new Date() })
 
-    await completeDeletionRequest(String(admin._id), String(owner._id), { force: true })
+    await completeDeletionRequest(String(admin._id), String(owner._id))
 
     // Đọc thẳng collection: hook find của Farm tự loại bản ghi đã xoá mềm
     const after = await Farm.collection.findOne({ _id: farm._id })

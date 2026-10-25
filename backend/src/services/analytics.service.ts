@@ -163,7 +163,7 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
       .filter(h => h.changed_at >= from)
       .map(h => ({ changed_at: h.changed_at, new_values: h.new_values })),
     series,
-    // TICKET-FR-018 — tiến độ tới mốc bảo trì theo thời gian chạy của từng thiết bị
+    // ALERT-FR-016 — tiến độ tới mốc bảo trì theo thời gian chạy của từng thiết bị
     service_limits: RELAY_SERVICE_LIMITS,
     relay_usage: nodes.map(n => ({
       device_id: n.device_id,

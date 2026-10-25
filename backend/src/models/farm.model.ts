@@ -20,8 +20,7 @@ export interface IFarm extends Document {
   /**
    * Khu vực địa lý cấp tỉnh/thành (VD: 'HCMC', 'Long An') — khớp với
    * `users.assigned_regions` của Technician để giới hạn Technician chỉ lắp đặt
-   * / xử lý ticket cho Farm thuộc khu vực mình phụ trách (AUTH-FR-005c,
-   * TICKET-FR-004, RACI mục 4.4 ghi chú ¹).
+   * cho Farm thuộc khu vực mình phụ trách (AUTH-FR-005c, RACI mục 4.4 ghi chú ¹).
    */
   region?: string
   coordinates?: { lat: number; lng: number }

@@ -13,15 +13,13 @@ import { startDeviceOfflineJob } from './jobs/deviceOffline.job'
 import { startAlertEscalationJob } from './jobs/alertEscalation.job'
 import { startOverrideExpiryJob } from './jobs/overrideExpiry.job'
 import { startInvitationExpiryJob } from './jobs/invitationExpiry.job'
-import { startSlaBreachJob } from './jobs/slaBreach.job'
 import { startActivationOverdueJob } from './jobs/activationOverdue.job'
-import { startMaintenanceScheduleJob } from './jobs/maintenanceSchedule.job'
+import { startRelayUsageJob } from './jobs/relayUsage.job'
 import { startSensorAnomalyJob } from './jobs/sensorAnomaly.job'
 import { startForecastJob } from './jobs/forecast.job'
 import { startHealthReportJob } from './jobs/healthReport.job'
 import { startReturnRateJob } from './jobs/returnRate.job'
 import { startDeletionRequestReminderJob } from './jobs/deletionRequestReminder.job'
-import { startTicketQueueJob } from './jobs/ticketQueue.job'
 import { startTelegramPolling } from './services/telegram.service'
 import logger           from './utils/logger.util'
 
@@ -40,21 +38,19 @@ async function bootstrap(): Promise<void> {
   // 4. Connect MQTT broker + start subscriptions (§9.2)
   connectMQTT()
 
-  // 4b. Các job nền: phát hiện offline (FARM-FR-005), tự tạo ticket từ cảnh báo
-  // chưa xác nhận (TICKET-FR-002), hết hạn Manual Override (ENV-FR-018)
+  // 4b. Các job nền: phát hiện offline (FARM-FR-005), gửi lại cảnh báo
+  // chưa xác nhận (ALERT-FR-015), hết hạn Manual Override (ENV-FR-018)
   startDeviceOfflineJob()
   startAlertEscalationJob()
   startOverrideExpiryJob()
   startInvitationExpiryJob()
-  startSlaBreachJob()
   startActivationOverdueJob()
-  startMaintenanceScheduleJob()
+  startRelayUsageJob()
   startSensorAnomalyJob()
   startForecastJob()
   startHealthReportJob()
   startReturnRateJob()
   startDeletionRequestReminderJob()
-  startTicketQueueJob()
   // ALERT-FR-013 — nhận `/start <mã>` của bot Telegram (chỉ chạy khi có TELEGRAM_BOT_TOKEN)
   startTelegramPolling()
 

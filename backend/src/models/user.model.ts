@@ -41,7 +41,7 @@ export interface IUser extends Document {
   deletion_reminder_sent_at?: Date
   /**
    * AUTH-FR-012 — thời điểm Admin đã xoá/ẩn danh hoá xong. Document vẫn ở lại
-   * để ticket/farm lịch sử không vỡ tham chiếu, nên cần cờ này để phân biệt
+   * để farm/audit lịch sử không vỡ tham chiếu, nên cần cờ này để phân biệt
    * "đã xoá theo yêu cầu" với "đang bị khoá kỷ luật" (cả hai đều is_active=false).
    */
   deleted_at?: Date

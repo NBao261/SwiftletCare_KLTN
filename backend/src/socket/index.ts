@@ -2,7 +2,6 @@
 import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
 import { User } from '@/models/user.model'
-import { assertCanJoin, sendMessage, type TicketMessageDto } from '@/services/ticketChat.service'
 import type { NotificationDto } from '@/services/notification.service'
 import { assertHouseAccess, assertZoneAccess } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
@@ -11,20 +10,6 @@ import type { CurrentUser, JwtAccessPayload, WsTelemetryUpdate, WsRelayUpdate, W
 let io: Server | null = null
 
 const userRoom = (userId: string) => `user:${userId}`
-const ticketRoom = (ticketId: string) => `ticket:${ticketId}`
-
-type Ack = (res: { ok: true; data?: unknown } | { ok: false; error: string }) => void
-const safeAck = (ack: unknown): Ack => (typeof ack === 'function' ? ack as Ack : () => undefined)
-
-/**
- * Đọc lại user từ DB cho mỗi thao tác chat: quyền phụ thuộc `assigned_regions`
- * và `assigned_to` hiện tại, không được dựa vào thông tin lúc handshake.
- */
-async function socketUser(socket: Socket): Promise<CurrentUser> {
-  const user = await User.findById(socket.data.userId).select('email role assigned_regions is_active').lean()
-  if (!user?.is_active || !user.role) throw new Error('Tài khoản không còn hoạt động')
-  return { _id: String(user._id), email: user.email, role: user.role, assigned_regions: user.assigned_regions }
-}
 
 /**
  * Xác thực kết nối realtime. Ngoài chữ ký JWT còn phải đọc lại `is_active`:
@@ -62,8 +47,6 @@ export type ServerEvents = {
   BIRD_COUNT_UPDATE:    (data: WsBirdCountUpdate) => void
   ALERT_NEW:            (data: WsAlertNew) => void
   DEVICE_STATUS_CHANGE: (data: WsDeviceStatusChange) => void
-  TICKET_MESSAGE_NEW:   (data: TicketMessageDto) => void
-  TICKET_CHAT_ASSIGNEE_CHANGED: (data: { ticketId: string; from: string | null; to: string | null }) => void
   NOTIFICATION_NEW:     (data: NotificationDto) => void
 }
 
@@ -74,9 +57,6 @@ export type ClientEvents = {
   /** SRS v2.1.8 — số đếm chim, trạng thái camera và cảnh báo của cả nhà yến */
   JOIN_HOUSE:  (data: { houseId: string }) => void
   LEAVE_HOUSE: (data: { houseId: string }) => void
-  JOIN_TICKET_CHAT:    (data: { ticketId: string }, ack?: Ack) => void
-  LEAVE_TICKET_CHAT:   (data: { ticketId: string }) => void
-  SEND_TICKET_MESSAGE: (data: { ticketId: string; content: string; clientMessageId?: string }, ack?: Ack) => void
 }
 
 export function initSocket(httpServer: HttpServer): void {
@@ -138,31 +118,6 @@ export function initSocket(httpServer: HttpServer): void {
       void socket.leave(`house:${houseId}`)
     })
 
-    // Flow 23 — chat trong ticket. Lỗi trả qua ack (không throw) để client hiện đúng thông báo
-    socket.on('JOIN_TICKET_CHAT', (data: { ticketId?: string }, ack?: unknown) => {
-      const reply = safeAck(ack)
-      const ticketId = String(data?.ticketId ?? '')
-      socketUser(socket)
-        .then(user => assertCanJoin(ticketId, user))
-        .then(() => socket.join(ticketRoom(ticketId)))
-        .then(() => reply({ ok: true }))
-        .catch((err: Error) => reply({ ok: false, error: err.message }))
-    })
-
-    socket.on('LEAVE_TICKET_CHAT', (data: { ticketId?: string }) => {
-      void socket.leave(ticketRoom(String(data?.ticketId ?? '')))
-    })
-
-    socket.on('SEND_TICKET_MESSAGE', (data: { ticketId?: string; content?: string; clientMessageId?: string }, ack?: unknown) => {
-      const reply = safeAck(ack)
-      socketUser(socket)
-        .then(user => sendMessage(String(data?.ticketId ?? ''), user, {
-          content: String(data?.content ?? ''), client_message_id: data?.clientMessageId,
-        }))
-        .then(message => reply({ ok: true, data: message }))
-        .catch((err: Error) => reply({ ok: false, error: err.message }))
-    })
-
     socket.on('disconnect', () => {
       logger.debug(`Socket disconnected: ${socket.id}`)
     })
@@ -211,17 +166,3 @@ export function emitNotificationNew(userId: string, data: NotificationDto): void
   io?.to(userRoom(userId)).emit('NOTIFICATION_NEW', data)
 }
 
-/** TICKET-FR-015 — tin mới tới mọi người đang mở kênh chat của ticket */
-export function emitTicketMessage(ticketId: string, data: TicketMessageDto): void {
-  io?.to(ticketRoom(ticketId)).emit('TICKET_MESSAGE_NEW', data)
-}
-
-/** TICKET-FR-017 — Technician bị chuyển ticket phải rời kênh chat ngay (chỉ còn đọc lịch sử cũ qua REST) */
-export function removeUserFromTicketRoom(userId: string, ticketId: string): void {
-  io?.in(userRoom(userId)).socketsLeave(ticketRoom(ticketId))
-}
-
-/** TICKET-FR-017 — đổi Technician phụ trách giữa cuộc trò chuyện */
-export function emitTicketAssigneeChanged(ticketId: string, data: { from: string | null; to: string | null }): void {
-  io?.to(ticketRoom(ticketId)).emit('TICKET_CHAT_ASSIGNEE_CHANGED', { ticketId, ...data })
-}

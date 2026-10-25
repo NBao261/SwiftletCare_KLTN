@@ -11,7 +11,6 @@ import {
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { getDefaultThresholds } from '@/services/system.service'
-import { closeTicketsOfDeletedFarm, rerouteTicketsOutOfCoverage } from '@/services/ticket.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import {
@@ -117,24 +116,18 @@ export async function updateFarm(
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền sửa farm này')
   if (updates.region !== undefined) updates = { ...updates, region: assertRegionCode(updates.region) }
-  // region quyết định Technician nào phụ trách farm và ticket được giao cho ai —
-  // cùng mức nhạy cảm với xoá farm/mời thành viên nên chỉ Primary Owner/Admin được đổi.
+  // region quyết định Technician nào phụ trách farm — cùng mức nhạy cảm với xoá
+  // farm/mời thành viên nên chỉ Primary Owner được đổi.
   if (updates.region !== undefined && updates.region !== farm.region && !isPrimaryOwner(farm, user)) {
     throw ForbiddenError('Chỉ Primary Owner mới được đổi khu vực của farm')
   }
 
-  const regionChanged = updates.region !== undefined && updates.region !== farm.region
 
   if (updates.name !== undefined) farm.name = updates.name
   if (updates.address !== undefined) farm.address = updates.address
   if (updates.region !== undefined) farm.region = updates.region
   if (updates.coordinates !== undefined) farm.coordinates = updates.coordinates
   await farm.save()
-
-  // Đổi vùng là đổi luôn ai được phép vào ticket của farm này: Technician đang
-  // giữ ticket mà không phụ trách vùng mới sẽ bị chặn 403 trên chính việc của
-  // mình — điều phối lại cho người của vùng mới (hoặc về hàng đợi chung).
-  if (regionChanged) await rerouteTicketsOutOfCoverage({ farmId }, user._id, 'FARM_REGION_CHANGED')
   return farm
 }
 
@@ -143,9 +136,6 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được xóa farm')
   await softDeleteFarm(farm)
-  // Ticket đã tồn tại trước đó cũng mồ côi y như cảnh báo — và còn tệ hơn vì
-  // chúng vẫn chiếm suất quá tải của Technician cùng các con số của Admin.
-  await closeTicketsOfDeletedFarm(farmId, user._id)
 }
 
 /**
@@ -155,8 +145,8 @@ export async function removeFarm(farmId: string, user: CurrentUser): Promise<voi
 export async function softDeleteFarm(farm: IFarm): Promise<void> {
   farm.is_deleted = true
   await farm.save()
-  // Cảnh báo còn mở của farm đã xoá sẽ bị alertEscalation biến thành ticket mồ côi
-  // (không ai mở được farm, không Technician nào được gán) — đóng hết.
+  // Cảnh báo còn mở của farm đã xoá sẽ bị alertEscalation gửi lại cho một farm
+  // không ai mở được nữa — đóng hết.
   await Alert.updateMany(
     { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },

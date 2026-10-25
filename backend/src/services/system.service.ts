@@ -2,17 +2,14 @@ import { AuditLog } from '@/models/auditLog.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Farm } from '@/models/farm.model'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
-import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import { summarizeByStatus } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
 import { listActiveHouseIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
-import { BadRequestError } from '@/utils/appError.util'
 import { DEFAULT_THRESHOLDS, assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
-import { DEFAULT_SLA, assertValidSla, pickSla } from '@/utils/sla.util'
 import { REGION_CODES } from '@/utils/regions.util'
-import type { SlaConfig, Thresholds, TicketPriority } from '@/types'
+import type { Thresholds } from '@/types'
 
 // ── SYSTEM-FR-001: Audit Log viewer ──────────────────────────────────────────
 
@@ -104,71 +101,20 @@ export async function updateDefaultThresholds(
   return after
 }
 
-// ── TICKET-FR-006 / SLA-NFR-001: SLA do Admin cấu hình ───────────────────────
-
-export async function getSlaHours(): Promise<SlaConfig> {
-  const setting = await SystemSetting.findOne(SINGLETON).lean()
-  return setting?.sla_hours ?? { ...DEFAULT_SLA }
-}
-
-export async function updateSlaHours(adminId: string, input: Record<string, unknown>): Promise<SlaConfig> {
-  const before = await getSlaHours()
-  const after = pickSla(input, before)
-  assertValidSla(after)
-
-  await writeSetting({ sla_hours: after, updated_by: adminId })
-  await logAction(adminId, 'SLA_UPDATED', 'system_settings', undefined, { before, after })
-  return after
-}
-
-// ── TICKET-FR-005: ngưỡng quá tải của Ticket Router ─────────────────────────
-
-/** SRS để trống giá trị N — chọn 10 ticket mở/người làm mặc định, Admin chỉnh được */
-export const DEFAULT_MAX_OPEN_TICKETS = 10
-const MAX_OPEN_TICKETS_LIMIT = 100
-
-export interface TicketRoutingConfig { max_open_tickets_per_technician: number }
-
-export async function getTicketRouting(): Promise<TicketRoutingConfig> {
-  const setting = await SystemSetting.findOne(SINGLETON).lean()
-  return { max_open_tickets_per_technician: setting?.max_open_tickets_per_technician ?? DEFAULT_MAX_OPEN_TICKETS }
-}
-
-export async function updateTicketRouting(adminId: string, input: Record<string, unknown>): Promise<TicketRoutingConfig> {
-  const before = await getTicketRouting()
-  const value = Number(input.max_open_tickets_per_technician)
-  if (!Number.isInteger(value) || value < 1 || value > MAX_OPEN_TICKETS_LIMIT) {
-    throw BadRequestError(`max_open_tickets_per_technician phải là số nguyên 1–${MAX_OPEN_TICKETS_LIMIT}`)
-  }
-  const after = { max_open_tickets_per_technician: value }
-
-  await writeSetting({ ...after, updated_by: adminId })
-  await logAction(adminId, 'TICKET_ROUTING_UPDATED', 'system_settings', undefined, { before, after })
-  return after
-}
-
 // ── SYSTEM-FR-003: tổng quan sức khỏe hệ thống ──────────────────────────────
 
-const PRIORITIES: TicketPriority[] = ['P1', 'P2', 'P3']
-
 export async function getHealthOverview() {
-  // Ticket cũng phải bó theo Farm chưa xoá mềm như Farm/Zone/thiết bị: ticket của
-  // farm đã xoá không ai mở hay đóng được nữa (xem closeTicketsOfDeletedFarm), đếm
-  // chúng vào đây là bày ra con số Admin bấm vào không tìm thấy gì.
   const [activeFarmIds, zoneIds, houseIds, farmsMissingRegion] = await Promise.all([
     Farm.find({ is_deleted: false }).distinct('_id'),
     listActiveZoneIds(),
     listActiveHouseIds(),
-    // Không có / sai mã khu vực = không Technician nào phụ trách, ticket luôn vào hàng đợi
+    // Không có / sai mã khu vực = farm ngoài vùng của mọi Technician
     Farm.countDocuments({ is_deleted: false, region: { $nin: [...REGION_CODES] } }),
   ])
-  const [sensorStatuses, cameraStatuses, ticketGroups, userGroups] = await Promise.all([
+  const [sensorStatuses, cameraStatuses, userGroups] = await Promise.all([
     SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
     CameraNode.find({ house_id: { $in: houseIds }, ...IN_SERVICE }).select('status').lean(),   // camera gắn House (v2.1.8)
-    Ticket.aggregate<{ _id: TicketPriority; count: number }>([
-      { $match: { status: { $ne: 'CLOSED' }, farm_id: { $in: activeFarmIds } } },
-      { $group: { _id: '$priority', count: { $sum: 1 } } },
-    ]),
+
     // Tài khoản xoá theo yêu cầu cũng is_active=false nhưng không phải "đang bị khoá" —
     // tách riêng, nếu không số tài khoản bị khoá Admin thấy cứ tăng theo mỗi lần xoá
     User.aggregate<{ _id: { role: string | null; is_active: boolean; deleted: boolean }; count: number }>([
@@ -181,11 +127,6 @@ export async function getHealthOverview() {
     ]),
   ])
 
-  const openTickets = { total: 0, P1: 0, P2: 0, P3: 0 }
-  for (const g of ticketGroups) {
-    if (PRIORITIES.includes(g._id)) openTickets[g._id] = g.count
-    openTickets.total += g.count
-  }
 
   const users = {
     total: 0, active: 0, inactive: 0, deleted: 0,
@@ -211,7 +152,7 @@ export async function getHealthOverview() {
     farms: { total: activeFarmIds.length, missingRegion: farmsMissingRegion },
     zones: { total: zoneIds.length },
     devices: summarizeByStatus([...sensorStatuses, ...cameraStatuses]),
-    openTickets,
+
     users,
   }
 }

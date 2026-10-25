@@ -5,8 +5,8 @@
  *
  * Chạy: npm run migrate:scope-v2   (chạy lại nhiều lần vẫn an toàn)
  *
- * 1. Role `FARM_OPERATOR` → `DOMAIN_EXPERT` ở `users`, `farms.members[]`, `invitations`,
- *    `ticketmessages.sender_role`.
+ * 1. Role `FARM_OPERATOR` → `DOMAIN_EXPERT` ở `users`, `farms.members[]`, `invitations`
+ *    (tin nhắn ticket không còn — migrate:remove-tickets xoá cả collection).
  *    LƯU Ý: đây là đổi TÊN role theo SRS — quyền thì khác hẳn (chuyên gia chỉ đọc + tinh
  *    chỉnh, không vận hành). Người vận hành cũ không phải chuyên gia thì nên gỡ khỏi farm
  *    sau khi chạy (DELETE /farms/:id/members/:userId); script in ra danh sách email, và
@@ -51,8 +51,7 @@ export async function migrateScopeV2() {
     { arrayFilters: [{ 'm.role': 'FARM_OPERATOR' }] },
   )
   const invitations = await db.collection('invitations').updateMany({ invited_role: 'FARM_OPERATOR' }, { $set: { invited_role: 'DOMAIN_EXPERT' } })
-  const messages = await db.collection('ticketmessages').updateMany({ sender_role: 'FARM_OPERATOR' }, { $set: { sender_role: 'DOMAIN_EXPERT' } })
-  logger.info(`[migrate] FARM_OPERATOR → DOMAIN_EXPERT: ${users.modifiedCount} user, ${members.modifiedCount} farm, ${invitations.modifiedCount} lời mời, ${messages.modifiedCount} tin nhắn`)
+  logger.info(`[migrate] FARM_OPERATOR → DOMAIN_EXPERT: ${users.modifiedCount} user, ${members.modifiedCount} farm, ${invitations.modifiedCount} lời mời`)
   if (operatorEmails.length > 0) {
     logger.warn(`[migrate] Các tài khoản vừa thành Domain Expert (chỉ đọc + tinh chỉnh) — gỡ khỏi farm nếu không phải chuyên gia: ${operatorEmails.join(', ')}`)
   }
@@ -93,7 +92,6 @@ export async function migrateScopeV2() {
     scopedOperatorsWidened: scoped.length,
     farms: members.modifiedCount,
     invitations: invitations.modifiedCount,
-    ticketMessages: messages.modifiedCount,
     zoneScopesRemoved: memberScopes.modifiedCount + invitationScopes.modifiedCount,
     alerts: alerts.modifiedCount,
     heatingRemoved: heating.modifiedCount,

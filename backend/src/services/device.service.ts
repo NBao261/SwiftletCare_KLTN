@@ -1,5 +1,4 @@
 import { SensorNode, CameraNode, ISensorNode, ICameraNode, IN_SERVICE } from '@/models/device.model'
-import { Ticket } from '@/models/ticket.model'
 import { House, Zone, IZone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
 import {
@@ -9,7 +8,6 @@ import {
 import { publishCommand, publishHouseCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
-import { Alert } from '@/models/alert.model'
 import { logAction } from '@/services/auditLog.service'
 import { notifyUser } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
@@ -20,7 +18,7 @@ import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogsFromDevice, openOverrideLog, openOverrideState,
   DEVICE_CONFIRM_GRACE_MS,
 } from '@/services/relayOverrideLog.service'
-import { NotFoundError, ConflictError, BadRequestError, ForbiddenError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
+import { NotFoundError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange, CountingRing } from '@/types'
 
@@ -262,8 +260,8 @@ export async function reassignZone(
   node.override_expiry = undefined
   await node.save()
   await closeOverrideLogs([node._id], 'CLEARED_EARLY')
-  // Cảnh báo cũ thuộc farm/zone nguồn — để lại thì job leo thang thành ticket ở farm cũ
-  // cho phần cứng đã chuyển đi; sự cố còn thật sẽ được báo lại ở zone mới.
+  // Cảnh báo cũ thuộc farm/zone nguồn — để lại thì job gửi lại cho Farm Owner farm cũ
+  // về phần cứng đã chuyển đi; sự cố còn thật sẽ được báo lại ở zone mới.
   await resolveAlertsForNode(String(node._id), 'Thiết bị đã dời sang zone khác')
 
   await logAction(user._id, 'DEVICE_REASSIGNED', 'sensor_node', String(node._id), {
@@ -447,8 +445,8 @@ export async function markNodeSeen(node: Pick<ISensorNode, '_id' | 'zone_id' | '
 /**
  * Thiết bị vừa chuyển sang ONLINE — dùng chung cho recordHeartbeat (heartbeat) và
  * markNodeSeen (telemetry): 2 topic MQTT độc lập, không đảm bảo cái nào tới trước,
- * nên cả 2 phải đóng NODE_OFFLINE, nếu không alert treo và sau 1 giờ sinh ticket
- * "mất kết nối" cho thiết bị đang online (TICKET-FR-002).
+ * nên cả 2 phải đóng NODE_OFFLINE, nếu không alert treo và sau 1 giờ bị gửi lại
+ * "mất kết nối" cho thiết bị đang online (ALERT-FR-015).
  */
 async function announceBackOnline(node: Pick<ISensorNode, '_id' | 'zone_id'>): Promise<void> {
   emitDeviceStatusChange(String(node.zone_id), {
@@ -621,24 +619,6 @@ async function locateDevice(kind: DeviceKind, node: { zone_id?: unknown; house_i
   }
 }
 
-/**
- * Ticket đang mở sinh ra từ cảnh báo của thiết bị vừa gỡ: chỉ thêm ghi chú, KHÔNG
- * tự đóng — người xử lý vẫn phải xác nhận đã bàn giao xong (TICKET-FR-007).
- */
-async function noteTicketsOfRemovedDevice(nodeId: string, deviceId: string): Promise<number> {
-  const alertIds = await Alert.find({ node_id: nodeId }).select('_id').lean()
-  if (alertIds.length === 0) return 0
-
-  const tickets = await Ticket.find({ alert_id: { $in: alertIds.map(a => a._id) }, status: { $ne: 'CLOSED' } })
-  for (const ticket of tickets) {
-    ticket.notes.push({
-      content: `Thiết bị ${deviceId} đã được gỡ khỏi hệ thống — kiểm tra lại trước khi đóng ticket này`,
-      created_at: new Date(),
-    } as never)
-    await ticket.save()
-  }
-  return tickets.length
-}
 
 /**
  * FARM-FR-008 — Technician gỡ thiết bị khỏi hiện trường. Document được giữ lại
@@ -659,8 +639,7 @@ export async function decommissionDevice(
 
   // Gỡ thiết bị hỏng (OFFLINE/ERROR/PENDING) là việc thường ngày nên không hỏi gì
   // thêm. Nhưng thiết bị đang sống mà gỡ là mất luôn giám sát của cả Zone — bắt
-  // gửi `force` để đó là quyết định có ý thức, không phải một cú bấm nhầm
-  // (cùng cách `adminOverrideTicket` bắt force khi gán Technician ngoài vùng).
+  // gửi `force` để đó là quyết định có ý thức, không phải một cú bấm nhầm.
   const isAlive = node.status === 'ONLINE' || node.status === 'DEGRADED'
   if (isAlive && force !== true) {
     const lastSeen = node.last_heartbeat ? ` (heartbeat lúc ${node.last_heartbeat.toISOString()})` : ''
@@ -684,11 +663,10 @@ export async function decommissionDevice(
   loc.emitStatus({ nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString() })
 
   const closedAlerts = await resolveAlertsForNode(String(node._id), `Thiết bị đã được gỡ bỏ: ${reason}`)
-  const notedTickets = await noteTicketsOfRemovedDevice(String(node._id), node.device_id)
 
   await logAction(user._id, 'DEVICE_DECOMMISSIONED', TARGET_TYPES[kind], String(node._id), {
     deviceId: node.device_id, ...loc.audit, reason,
-    replacedBy: replacedBy ? String(replacedBy) : null, closedAlerts, notedTickets,
+    replacedBy: replacedBy ? String(replacedBy) : null, closedAlerts,
     ...(isAlive ? { forcedWhileOnline: true } : {}),
   })
 
@@ -791,7 +769,7 @@ export async function replaceSensorNode(
   return { oldNode, newNode }
 }
 
-// ── TICKET-FR-008 / Flow 15: xử lý từ xa ─────────────────────────────────────
+// ── FARM-FR-013 / Flow 15: xử lý từ xa ───────────────────────────────────────
 
 export type RemoteCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
 
@@ -818,13 +796,11 @@ function versionAtLeast(version: string, min: string): boolean {
 
 export interface RemoteCommandInput {
   command: RemoteCommand
-  /** Ghi kết quả vào ticket đang xử lý (Flow 9 bước 5) */
-  ticket_id?: string
   ota?: { version: string; url: string; sha256: string }
 }
 
 /**
- * TICKET-FR-008 — Technician thử xử lý từ xa trước khi quyết định ra hiện
+ * FARM-FR-013 — Technician thử xử lý từ xa trước khi quyết định ra hiện
  * trường. Cả 3 lệnh đi qua topic `config/update` đã có trong §9.2 (Flow 15 bước
  * 3 chỉ định OTA dùng topic này), phân biệt bằng trường `command`:
  * - PUSH_CONFIG: đẩy lại toàn bộ cấu hình hiện hành (thiết bị lệch cấu hình) — ngưỡng,
@@ -912,28 +888,14 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     )
   }
 
-  const ticket = input.ticket_id ? await Ticket.findById(input.ticket_id) : null
-  if (input.ticket_id) {
-    if (!ticket) throw NotFoundError('Không tìm thấy ticket')
-    if (String(ticket.farm_id) !== String(chain.farm._id)) throw BadRequestError('Ticket không thuộc farm của thiết bị này')
-    if (ticket.status === 'CLOSED') throw ConflictError('Ticket đã đóng')
-    // Ghi note vào ticket là thao tác xử lý — cùng quy tắc với đổi trạng thái: chỉ người được gán
-    if (user.role === 'TECHNICIAN' && String(ticket.assigned_to ?? '') !== user._id) {
-      throw ForbiddenError('Chỉ Technician đang được gán ticket này mới ghi lệnh từ xa vào ticket')
-    }
-  }
-
   let payload: Record<string, unknown>
-  let summary: string
   switch (input.command) {
     case 'PUSH_CONFIG':
       // Chỉ đẩy ngưỡng thì hệ số mờ/lịch loa lệch vẫn lệch — đúng thứ lệnh này phải sửa
       payload = buildDeviceConfig(chain.zone, node)
-      summary = 'đẩy lại toàn bộ cấu hình của thiết bị'
       break
     case 'RESTART':
       payload = { command: 'RESTART' }
-      summary = 'khởi động lại thiết bị'
       break
     case 'OTA': {
       if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
@@ -942,7 +904,6 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
       }
       const { version, url, sha256 } = input.ota
       payload = { command: 'OTA', ota: { version, url, sha256 } }
-      summary = `đẩy OTA ${node.firmware_version} → ${input.ota.version}`
       break
     }
     default:
@@ -962,18 +923,8 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     await node.save()
   }
 
-  if (ticket) {
-    // Chỉ biết lệnh đã tới broker, KHÔNG biết thiết bị đã thực thi — note phải nói
-    // đúng chừng đó, nếu không Technician đọc ticket tưởng việc đã xong.
-    ticket.notes.push({
-      author_id: user._id as never,
-      content: `Xử lý từ xa trên thiết bị ${node.device_id}: đã gửi lệnh ${summary}, chờ thiết bị xác nhận`,
-      created_at: new Date(),
-    })
-    await ticket.save()
-  }
   await logAction(user._id, 'DEVICE_COMMAND_SENT', 'sensor_node', String(node._id), {
-    deviceId: node.device_id, command: input.command, ticketId: input.ticket_id ?? null,
+    deviceId: node.device_id, command: input.command,
     ...(input.ota ? { version: input.ota.version, url: input.ota.url } : {}),
   })
   return node

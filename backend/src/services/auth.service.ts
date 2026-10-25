@@ -303,7 +303,7 @@ export async function updateNotificationPreferences(
 /**
  * AUTH-FR-012 / PRIV-NFR-003 — user tự yêu cầu xoá tài khoản. Chỉ ĐÁNH DẤU,
  * việc xoá thật do Administrator xử lý trong ≤30 ngày (Flow 19) vì còn phải
- * kiểm tra ràng buộc Farm/ticket dở dang trước khi xoá.
+ * xử lý Farm của họ (chuyển chủ hoặc xoá mềm) trước khi xoá.
  */
 export async function requestAccountDeletion(userId: string): Promise<IUser> {
   const user = await User.findById(userId)

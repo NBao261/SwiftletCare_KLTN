@@ -25,24 +25,6 @@ router.put('/settings/default-thresholds',
   systemController.updateDefaultThresholds,
 )
 
-router.get('/settings/sla', systemController.getSlaHours)
-router.put('/settings/sla',
-  ...['P1', 'P2', 'P3'].flatMap(p => [
-    body(`${p}.response_hours`).optional().isFloat({ gt: 0 }),
-    body(`${p}.resolve_hours`).optional().isFloat({ gt: 0 }),
-  ]),
-  validate,
-  systemController.updateSlaHours,
-)
-
-// TICKET-FR-005 — ngưỡng quá tải: Technician có từ N ticket mở trở lên không được Router gán thêm
-router.get('/settings/ticket-routing', systemController.getTicketRouting)
-router.put('/settings/ticket-routing',
-  body('max_open_tickets_per_technician').isInt({ min: 1, max: 100 }).toInt(),
-  validate,
-  systemController.updateTicketRouting,
-)
-
 router.get('/health-overview', systemController.getHealthOverview)
 
 export default router

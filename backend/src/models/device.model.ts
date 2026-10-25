@@ -10,7 +10,7 @@ export interface ISensorNode extends Document {
   zone_id: Types.ObjectId
   firmware_version: string
   /**
-   * TICKET-FR-008, Flow 15 — lệnh OTA đã gửi, chờ heartbeat báo đúng
+   * FARM-FR-013, Flow 15 — lệnh OTA đã gửi, chờ heartbeat báo đúng
    * `firmware_version` mới để xác nhận thành công (bước 5).
    */
   ota_pending?: { version: string; url: string; requested_at: Date; requested_by?: Types.ObjectId }
@@ -52,9 +52,9 @@ export interface ISensorNode extends Document {
   /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
   /**
-   * TICKET-FR-018 (v1.24.0) — thời gian chạy + số lần đóng cắt thật của bơm/quạt,
-   * cộng dồn mỗi giờ từ telemetry (relayUsage.service). `since_service_*` về 0 mỗi
-   * lần sinh ticket bảo trì theo thời gian chạy.
+   * ALERT-FR-016 — thời gian chạy + số lần đóng cắt thật của bơm/quạt, cộng dồn mỗi
+   * giờ từ telemetry (relayUsage.service). `since_service_*` về 0 khi Farm Owner xác
+   * nhận cảnh báo MAINTENANCE_DUE (BR-16).
    */
   relay_usage: {
     misting: IRelayUsage

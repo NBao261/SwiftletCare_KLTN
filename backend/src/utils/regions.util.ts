@@ -5,7 +5,7 @@ import { BadRequestError } from '@/utils/appError.util'
  * vị hành chính 2025. `farms.region` và `users.assigned_regions` chỉ lưu `code`.
  *
  * Trước đây region là chuỗi gõ tay và so khớp tuyệt đối: farm "hcmc" và Technician
- * "HCMC" không bao giờ gặp nhau, ticket của farm đó luôn rơi vào hàng đợi. Người dùng
+ * "HCMC" không bao giờ gặp nhau, farm đó không Technician nào phụ trách. Người dùng
  * vẫn được gõ tên/viết tắt quen thuộc hoặc tên tỉnh cũ đã sáp nhập (`aliases`) —
  * backend quy về `code` trước khi lưu.
  */

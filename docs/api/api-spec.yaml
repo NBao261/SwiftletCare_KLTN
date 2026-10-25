@@ -5,7 +5,7 @@ info:
   version: 1.0.0
   description: |
     REST API cho hệ thống SwiftletCare (giám sát/điều khiển môi trường nhà yến,
-    đếm chim, cảnh báo, kiểm chứng của chuyên gia, ghi nhận thu hoạch, ticket).
+    đếm chim, cảnh báo, kiểm chứng của chuyên gia, ghi nhận thu hoạch).
     Xem `SwiftletCare_SRS.md` §9.
 
     **Lưu ý:** SRS §9.0 quy ước base path `/api/v1`, nhưng code thực tế
@@ -30,18 +30,20 @@ info:
 
     **Trạng thái triển khai (cập nhật sau khi hoàn thành các module nghiệp vụ
     Farm Owner — yêu cầu ở Report 3 `docs/reports/report3-srs.md`, chỗ còn thiếu ở `docs/reports/README.md`):**
-    Auth, Farms, Devices, Telemetry, Alerts, Analytics, Harvests, HealthReports,
-    Tickets đều có logic thật phía sau.
+    Auth, Farms, Devices, Telemetry, Alerts, Analytics, Harvests, HealthReports
+    đều có logic thật phía sau. Module ticket (ticket, chat, SLA, gán ticket, lịch
+    bảo trì định kỳ) đã gỡ theo Report 3 §8: cảnh báo chưa ai xác nhận được gửi lại
+    (ALERT-FR-015), bảo trì bơm/quạt là cảnh báo `MAINTENANCE_DUE` (ALERT-FR-016).
 
     **Phạm vi SRS v2 (sau Review 1) — file này đã theo phạm vi mới:**
     - Role `DOMAIN_EXPERT` thay `FARM_OPERATOR`: chuyên gia nuôi yến do Primary Owner
       mời, phạm vi cả farm (không còn `zone_ids`, không còn
       `PUT /farms/{id}/members/{userId}`). Chỉ đọc dữ liệu vận hành; sửa ngưỡng, hệ số
       mờ và tham số phát hiện; kiểm chứng cảnh báo suy luận; viết kết luận. Không
-      relay/loa, ticket, ghi thu hoạch hay xác nhận cảnh báo.
+      relay/loa, ghi thu hoạch hay xác nhận cảnh báo.
     - Không còn `/marketplace/*`; chỉ ghi nhận thu hoạch (`/harvests`).
     - Relay chỉ còn `misting`, `speaker`, `ventilation` (bỏ `heating`).
-    - NH3/CO2 chỉ cảnh báo (`THRESHOLD_BREACH` mức MEDIUM, không sinh ticket);
+    - NH3/CO2 chỉ cảnh báo (`THRESHOLD_BREACH` mức MEDIUM, không gửi lại);
       loại cảnh báo `NOISE_ANOMALY` thay `BIRD_PANIC`.
     - Mới: `PUT /alerts/{id}/verdict`, `GET /alerts/verdict-stats`,
       `PUT /farms/zones/{zoneId}/detection-tuning`,
@@ -67,7 +69,7 @@ tags:
   - name: Auth
     description: AUTH-FR-001..003/004/005/009/010/012 (đăng ký/đăng nhập/JWT/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản)
   - name: Admin
-    description: AUTH-FR-005c/007/011/012, TICKET-FR-005b, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician, can thiệp ticket toàn quyền, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
+    description: AUTH-FR-005c/007/011/012, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician và cấp lại mật khẩu tạm, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
   - name: System
     description: SYSTEM-FR-001..003 (Module SYSTEM §5.11 — xem audit log, ngưỡng mặc định hệ thống, tổng quan sức khỏe hệ thống) — mọi endpoint chỉ ADMIN
   - name: Farms
@@ -88,8 +90,7 @@ tags:
     description: EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert)
   - name: Notifications
     description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
-  - name: Tickets
-    description: TICKET-FR-001..004b/006/007/009..012 (tạo/định tuyến/SLA/SAT checklist/KPI)
+
 
 security:
   - bearerAuth: []
@@ -549,14 +550,7 @@ paths:
         1 Admin đang hoạt động (Flow 19 case 2a).
 
         Khi khoá: thu hồi mọi refresh token và ngắt các kết nối Socket.io đang
-        mở của user (kết nối mới bằng access token còn hạn cũng bị từ chối). Nếu
-        user là Technician còn ticket đang giao, ticket **tự điều phối lại** cho
-        Technician khác cùng vùng như khi gỡ khu vực (về `NEW`, audit
-        `TICKET_REROUTED` với `reason: ACCOUNT_LOCKED`); response kèm
-        `meta.rerouted`, `meta.unassigned`, và ticket không ai nhận được thì về hàng
-        đợi chung kèm `meta.openTickets` / `meta.openTicketIds` (tối đa 100) để Admin
-        gán tay bằng `PUT /tickets/{id}/admin-override`. Mở khoá Technician thì họ
-        nhận luôn ticket đang chờ ở hàng đợi của vùng mình.
+        mở của user (kết nối mới bằng access token còn hạn cũng bị từ chối).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -581,24 +575,6 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/User" }
-                      meta:
-                        type: object
-                        description: Chỉ có khi khoá Technician còn ticket đang giao
-                        properties:
-                          rerouted:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                ticketId: { type: string }
-                                from: { type: string }
-                                to: { type: string }
-                          unassigned:
-                            type: array
-                            description: Ticket về hàng đợi chung vì không còn Technician phù hợp
-                            items: { type: string }
-                          openTickets: { type: integer, description: "Số ticket trong `unassigned` — Admin cần gán tay" }
-                          openTicketIds: { type: array, items: { type: string }, description: "Tối đa 100 id" }
         "400":
           description: "Thiếu reason khi khoá tài khoản, hoặc Admin tự khoá chính mình"
           content:
@@ -636,37 +612,20 @@ paths:
         `owner_id` cho người có `joined_at` sớm nhất; hết thành viên → xoá mềm
         Farm. Gỡ user khỏi `members` của các Farm khác nếu chỉ là thành viên
         thường. Anonymize email/phone/full_name, không xoá document (giữ FK
-        cho lịch sử ticket/farm). Xử lý xong thì gỡ `deletion_requested_at` —
+        cho lịch sử farm/audit). Xử lý xong thì gỡ `deletion_requested_at` —
         tài khoản rời khỏi `GET /admin/delete-requests` và không xử lý lại được.
 
-        Còn ticket đang mở (được giao cho user, do user tạo, hoặc thuộc Farm sẽ
-        bị xoá mềm) thì trả 409 `HAS_OPEN_TICKETS` kèm `error.details.openTickets`
-        (Flow 19 bước 7c) — xử lý xong ticket rồi gọi lại, hoặc gửi `force: true`
-        để vẫn xoá. Mỗi Farm được chuyển chủ/xoá mềm có 1 bản ghi audit riêng
+        Mỗi Farm được chuyển chủ/xoá mềm có 1 bản ghi audit riêng
         (`FARM_OWNERSHIP_TRANSFERRED`, `FARM_SOFT_DELETED`) và chủ mới cùng người bị
         xoá nhận thông báo; kết nối Socket.io của user bị ngắt. Cũng dọn các liên
         kết trỏ tới user: cho hết hạn (`EXPIRED`) các lời mời đang chờ user đã gửi, đặt `deleted_at`
         (tài khoản đã xoá không khoá/mở khoá lại được, 409). User là **Technician**:
-        gỡ hết `assigned_regions` rồi điều phối lại ticket đang giao cho họ như khi gỡ
-        khu vực (người khác trong vùng, về `NEW`; không còn ai thì hàng đợi chung + báo
-        Admin; audit `TICKET_REROUTED` với `reason: ACCOUNT_DELETED`) — không để ticket
-        nằm lại với tài khoản đã ẩn danh. Audit `ACCOUNT_DELETED`
-        ghi `farmsTransferred`, `farmsDeleted`, `ticketsRerouted`, `forced`. Nếu lỗi giữa chừng
+        gỡ hết `assigned_regions`. Audit `ACCOUNT_DELETED`
+        ghi `farmsTransferred`, `farmsDeleted`. Nếu lỗi giữa chừng
         (Mongo standalone, không transaction) thì gọi lại được: farm đã xử lý xong
         không bị xử lý lần nữa.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                force:
-                  type: boolean
-                  default: false
-                  description: "true = bỏ qua cảnh báo ticket đang mở và vẫn xoá"
       responses:
         "200":
           description: "Đã xử lý xong (anonymized)"
@@ -683,11 +642,6 @@ paths:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          description: "HAS_OPEN_TICKETS — user còn ticket đang mở, kèm `error.details.openTickets`; gửi `force: true` để vẫn xoá"
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /admin/delete-requests/{id}/reject:
@@ -733,7 +687,6 @@ paths:
         `password` là mật khẩu tạm: tài khoản tạo ra có `must_change_password=true`,
         Technician phải đổi (`PUT /auth/password`) trước khi dùng các API khác (403
         `PASSWORD_CHANGE_REQUIRED`). Vùng được quy về mã danh mục, bỏ trùng; vùng lạ → 400.
-        Tạo xong, ticket đang chờ ở hàng đợi của các vùng này được chia ngay cho người mới.
       requestBody:
         required: true
         content:
@@ -778,17 +731,7 @@ paths:
         Thay toàn bộ `assigned_regions`. Mỗi vùng được quy về mã danh mục 34 tỉnh/thành
         (nhận mã, tên, viết tắt hoặc tên tỉnh cũ đã sáp nhập — xem `GET /farms/regions`),
         bỏ trùng; vùng lạ → 400. Có hiệu lực ngay ở request kế tiếp của Technician,
-        không cần đăng nhập lại. Vùng mới thêm: ticket đang chờ ở hàng đợi của vùng đó
-        được chia ngay cho Technician này (nếu còn suất).
-
-        Khu vực bị gỡ khỏi danh sách: ticket đang mở ở khu vực đó mà Technician
-        này đang được gán sẽ **tự điều phối lại** — quyền trên ticket đi theo
-        `assigned_regions` nên nếu để nguyên, chính người được gán sẽ bị chặn
-        403 trên việc của mình. Ticket được chuyển cho Technician khác trong
-        khu vực (trả về `NEW` để người mới xác nhận tiếp nhận, lịch hẹn cũ bị
-        huỷ trừ ticket `INSTALLATION`/`MAINTENANCE`), hoặc về hàng đợi chung
-        nếu không còn ai. Response kèm `meta.rerouted`
-        (`[{ticketId, from, to}]`) và `meta.unassigned` (`[ticketId]`).
+        không cần đăng nhập lại.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -820,44 +763,6 @@ paths:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /admin/technicians/{id}/profile:
-    put:
-      tags: [Admin]
-      summary: "Sửa tên/SĐT của Technician (AUTH-FR-005c) — chỉ ADMIN"
-      description: |
-        Không sửa email (là tên đăng nhập). Gửi ít nhất một trường; `phone: ""` = xoá SĐT.
-        Chỉ áp cho tài khoản Technician; tài khoản đã xoá theo yêu cầu → 409. Audit
-        `TECHNICIAN_PROFILE_UPDATED` kèm before/after.
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                full_name: { type: string }
-                phone: { type: string, description: "Cùng quy tắc với lúc tạo; chuỗi rỗng = xoá" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/User" } }
-        "400":
-          description: "Không gửi trường nào, hoặc tài khoản không phải Technician"
-          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          description: "Tài khoản đã bị xoá theo yêu cầu"
-          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /admin/technicians/{id}/password:
@@ -1018,7 +923,7 @@ paths:
         FARM_OWNERSHIP_TRANSFERRED, FARM_SOFT_DELETED, USER_CREATED,
         TECHNICIAN_REGIONS_UPDATED, THRESHOLD_UPDATED, DEFAULT_THRESHOLDS_UPDATED,
         RELAY_OVERRIDE, RELAY_OVERRIDE_CLEARED, SPEAKER_SCHEDULE_UPDATED,
-        AUDIO_TRACK_UPLOADED/SYNC_UPDATED/SELECTED/DELETED, DEVICE_REGISTERED, DEVICE_REASSIGNED, TICKET_ADMIN_OVERRIDE.
+        AUDIO_TRACK_UPLOADED/SYNC_UPDATED/SELECTED/DELETED, DEVICE_REGISTERED, DEVICE_REASSIGNED, DEVICE_COMMAND_SENT.
         Mỗi bản ghi có `ip_address` của request gây ra hành động (rỗng nếu do hệ
         thống tự thực hiện).
       parameters:
@@ -1089,89 +994,6 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
-  /system/settings/sla:
-    get:
-      tags: [System]
-      summary: "Xem SLA theo mức ưu tiên (TICKET-FR-006, SLA-NFR-001) — chỉ ADMIN"
-      description: Chưa cấu hình thì trả giá trị đề xuất trong SRS (P1 0.5/4h, P2 4/24h, P3 24/72h).
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/SlaConfig" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-    put:
-      tags: [System]
-      summary: "Chỉnh SLA theo mức ưu tiên (TICKET-FR-006) — chỉ ADMIN"
-      description: |
-        Gửi 1 phần hoặc cả 3 mức, phần còn lại giữ nguyên. Áp dụng cho ticket
-        tạo MỚI và cho ticket được Admin đổi priority; ticket cũ giữ hạn đã tính.
-        Sau khi gộp phải giữ đúng thứ tự ưu tiên: hạn phản hồi và hạn xử lý của P1 ≤ P2
-        ≤ P3 (được bằng nhau) — mức gấp hơn mà hạn dài hơn thì trả 400.
-        Job nền so `sla_resolve_due_at` mỗi 2 phút để đánh dấu vượt hạn
-        (TICKET-FR-009, SLA-NFR-002).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/SlaConfig" }
-      responses:
-        "200":
-          description: Giá trị sau khi cập nhật
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/SlaConfig" } }
-        "400":
-          description: "Giá trị ≤ 0, hoặc hạn phản hồi muộn hơn hạn xử lý"
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /system/settings/ticket-routing:
-    get:
-      tags: [System]
-      summary: "Ngưỡng quá tải của Ticket Router (TICKET-FR-005) — chỉ ADMIN"
-      description: "Technician có ≥ N ticket chưa đóng không được Router gán thêm. Mặc định 10."
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/TicketRoutingConfig" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-    put:
-      tags: [System]
-      summary: "Chỉnh ngưỡng quá tải của Ticket Router (TICKET-FR-005) — chỉ ADMIN"
-      description: "Nâng ngưỡng thì ticket đang chờ ở hàng đợi chung được chia ngay cho Technician vừa có thêm suất."
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/TicketRoutingConfig" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/TicketRoutingConfig" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
   /system/health-overview:
     get:
       tags: [System]
@@ -1192,20 +1014,9 @@ paths:
                             type: object
                             properties:
                               total: { type: integer }
-                              missingRegion: { type: integer, description: "Farm chưa có / sai mã khu vực — không Technician nào phụ trách được, ticket luôn vào hàng đợi" }
+                              missingRegion: { type: integer, description: "Farm chưa có / sai mã khu vực — không Technician nào phụ trách được" }
                           zones: { type: object, properties: { total: { type: integer } } }
                           devices: { $ref: "#/components/schemas/DeviceStatusSummary" }
-                          openTickets:
-                            type: object
-                            description: >-
-                              Ticket chưa CLOSED theo priority, chỉ tính Farm chưa xoá mềm —
-                              cùng phạm vi với farms/zones/devices ở trên (ticket của Farm đã
-                              xoá được đóng ngay lúc xoá farm nên không còn tồn tại ở đây)
-                            properties:
-                              total: { type: integer }
-                              P1: { type: integer }
-                              P2: { type: integer }
-                              P3: { type: integer }
                           users:
                             type: object
                             properties:
@@ -1380,11 +1191,7 @@ paths:
       description: |
         Role khác FARM_OWNER → 403 (Report 3 §2.4: Administrator không quản lý farm).
         `region` chỉ Primary Owner được đổi (FARM-FR-001) vì nó quyết định
-        Technician nào phụ trách farm và ticket được giao cho ai. Đổi `region`
-        thì ticket đang mở của farm **tự điều phối lại** sang Technician của khu
-        vực mới (hoặc về hàng đợi chung + báo Admin nếu chưa có ai phụ trách khu
-        vực đó) — để nguyên thì người đang được gán bị chặn 403 trên chính
-        ticket của mình.
+        Technician nào phụ trách farm.
       requestBody:
         content:
           application/json:
@@ -1432,12 +1239,8 @@ paths:
       description: |
         Role khác FARM_OWNER → 403; Farm Owner không phải Primary Owner → 403 (FARM-FR-001).
         Farm chỉ bị ẩn (`is_deleted`), dữ liệu lịch sử giữ nguyên. Kéo theo:
-        mọi cảnh báo đang mở của farm được đóng (`RESOLVED`), và mọi **ticket
-        đang mở cũng bị đóng** kèm `cancelled_at` + ghi chú "farm đã bị xoá",
-        Technician đang giữ ticket được thông báo. Lý do: farm đã xoá thì không
-        ai mở được ticket của nó nữa (kể cả Admin), nhưng nếu để mở, chúng vẫn
-        chiếm suất quá tải của Technician trong Ticket Router và vẫn cộng vào
-        `/system/health-overview` cùng tỉ lệ đúng SLA.
+        mọi cảnh báo đang mở của farm được đóng (`RESOLVED`) để không bị gửi lại
+        (ALERT-FR-015), và lời mời còn chờ hết hạn.
       responses:
         "200":
           {
@@ -2563,8 +2366,8 @@ paths:
 
         Thiết bị **đang ONLINE/DEGRADED** phải gửi kèm `force: true` (409 nếu
         thiếu) — gỡ một thiết bị còn sống là mất giám sát cả Zone. Cảnh báo còn mở
-        của nó được đóng theo, ticket liên quan được ghi chú, Farm Owner nhận thông
-        báo, và trong **24 giờ** vẫn khôi phục lại được qua `/restore`.
+        của nó được đóng theo, Farm Owner nhận thông báo, và trong **24 giờ** vẫn
+        khôi phục lại được qua `/restore`.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -2846,8 +2649,8 @@ paths:
         cũ hơn thì RESTART/OTA trả **501** (lên 1.4.0 lần đầu bằng ElegantOTA trong LAN
         hoặc USB); PUSH_CONFIG dùng được với mọi bản vì firmware đã hiểu payload ngưỡng.
         Firmware 1.4.0 tải file, kiểm sha256 rồi mới khởi động vào bản mới; bản mới phải
-        kết nối được MQTT trong 10 phút, nếu không bootloader quay về bản cũ (Flow 15 bước 5a). Có `ticket_id` thì hành động được ghi vào note
-        ticket — Technician phải là người đang được gán ticket đó.
+        kết nối được MQTT trong 10 phút, nếu không bootloader quay về bản cũ (Flow 15 bước 5a).
+        Mỗi lệnh được ghi audit `DEVICE_COMMAND_SENT`.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -2858,7 +2661,7 @@ paths:
               required: [command]
               properties:
                 command: { type: string, enum: [RESTART, PUSH_CONFIG, OTA] }
-                ticket_id: { type: string, description: "Ticket cùng farm, chưa đóng, do chính Technician này phụ trách" }
+
                 ota:
                   type: object
                   description: "Bắt buộc khi command=OTA"
@@ -2875,9 +2678,9 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
-        "400": { description: "Ticket không thuộc farm của thiết bị, hoặc URL firmware không phải HTTPS/không thuộc OTA_ALLOWED_HOSTS", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "400": { description: "URL firmware không phải HTTPS/không thuộc OTA_ALLOWED_HOSTS", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { description: "Thiết bị PENDING/OFFLINE/ERROR hoặc đã gỡ, ticket đã đóng, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "409": { description: "Thiết bị PENDING/OFFLINE/ERROR hoặc đã gỡ, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
         "501": { description: "RESTART/OTA tới thiết bị chạy firmware trước 1.4.0 (chưa xử lý `command`)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "503": { description: "Backend chưa kết nối MQTT broker — lệnh chưa rời backend, `ota_pending` KHÔNG được ghi", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
@@ -2893,8 +2696,8 @@ paths:
 
         Camera **đang ONLINE/DEGRADED** phải gửi kèm `force: true` (409 nếu
         thiếu) — gỡ một camera còn sống là mất giám sát hình ảnh của Zone. Cảnh báo
-        còn mở của nó được đóng theo, ticket liên quan được ghi chú, Farm Owner nhận
-        thông báo, và trong **24 giờ** vẫn khôi phục lại được qua `/restore`.
+        còn mở của nó được đóng theo, Farm Owner nhận thông báo, và trong **24 giờ**
+        vẫn khôi phục lại được qua `/restore`.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -3177,7 +2980,7 @@ paths:
     put:
       tags: [Alerts]
       summary: "Xác nhận cảnh báo (ALERT-FR-009) — chỉ FARM_OWNER (Domain Expert chỉ đọc và kiểm chứng)"
-      description: Chỉ `FARM_OWNER`; Technician, Administrator chỉ xem cảnh báo → 403 (Report 3 §2.4). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD "Báo động giả"). Xác nhận `MAINTENANCE_DUE` = đã bảo trì: đếm lại `since_service_*` của các tải trong `metadata.loads` từ 0 và chuyển cảnh báo sang `RESOLVED` (ALERT-FR-016, BR-16).
+      description: "Chỉ `FARM_OWNER`; Technician, Administrator chỉ xem cảnh báo → 403 (Report 3 §2.4). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD \"Báo động giả\"). Xác nhận `MAINTENANCE_DUE` = đã bảo trì: đếm lại `since_service_*` của các tải trong `metadata.loads` từ 0 và chuyển cảnh báo sang `RESOLVED` (ALERT-FR-016, BR-16)."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -4001,7 +3804,7 @@ paths:
       summary: "Hộp thông báo trong ứng dụng của người gọi — mọi role đã đăng nhập"
       description: |
         Mới nhất trước, giữ 90 ngày. Nguồn: mọi thông báo nghiệp vụ (`notifyUser` — báo cáo sức
-        khỏe mới, kết luận của chuyên gia, ticket…) và, cho Domain Expert, cảnh báo suy luận mới
+        khỏe mới, kết luận của chuyên gia, thiết bị bị gỡ…) và, cho Domain Expert, cảnh báo suy luận mới
         chờ kiểm chứng (`NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE` —
         chỉ trong ứng dụng, không Telegram/push; ALERT-FR-005). Bản realtime: sự kiện Socket.io
         `NOTIFICATION_NEW` (payload là một `Notification`) tới room của chính người nhận.
@@ -4061,980 +3864,6 @@ paths:
                       data: { $ref: "#/components/schemas/Notification" }
         "404": { description: "Không có, hoặc là thông báo của người khác" }
         "422": { $ref: "#/components/responses/ValidationError" }   # id không phải ObjectId
-
-  /maintenance-schedules:
-    get:
-      tags: [Tickets]
-      summary: "Danh sách lịch bảo trì định kỳ (TICKET-FR-013) — FARM_OWNER/TECHNICIAN/ADMIN"
-      parameters:
-        - { name: farmId, in: query, schema: { type: string } }
-        - { $ref: "#/components/parameters/Page" }
-        - { $ref: "#/components/parameters/Limit" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { type: array, items: { $ref: "#/components/schemas/MaintenanceSchedule" } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-    post:
-      tags: [Tickets]
-      summary: "Tạo lịch bảo trì định kỳ (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
-      description: |
-        Kỳ trước chưa hoàn thành thì **vẫn** sinh ticket kỳ mới (mỗi chu kỳ là một nghĩa vụ
-        riêng) nhưng cả hai ticket được ghi chú rõ và Admin nhận thông báo điều phối.
-        Lịch trùng nội dung đang hoạt động trên cùng farm/zone bị từ chối 409.
-
-        Job chạy đầu mỗi giờ, tạo ticket MAINTENANCE trước hạn `MAINTENANCE_LEAD_DAYS`
-        ngày (mặc định 3) qua Ticket Router rồi dời hạn sang chu kỳ kế tiếp.
-        `next_due_at` chính là giờ hẹn của ticket sinh ra nên phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai.
-        Ticket sinh ra có hạn **xử lý** SLA tính từ giờ hẹn (không phải lúc tạo — ticket tạo sớm
-        3 ngày nên tính từ lúc tạo sẽ hết hạn ngay sau giờ hẹn); hạn phản hồi tính từ lúc tạo.
-        Lịch trễ nhiều chu kỳ hẹn sớm nhất 1 giờ sau, rơi ngoài khung giờ thì dời lên
-        07:00 kế tiếp, không hẹn về quá khứ; lịch của farm đã xoá mềm tự chuyển `is_active=false`.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [farm_id, description, interval_days, next_due_at]
-              properties:
-                farm_id: { type: string }
-                zone_id: { type: string, description: "Phải thuộc farm_id" }
-                description: { type: string, example: "Vệ sinh đầu dò NH3/CO2" }
-                interval_days: { type: integer, minimum: 1, maximum: 365, example: 30 }
-                next_due_at: { type: string, format: date-time, description: "Giờ hẹn của ticket sinh ra — trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai" }
-      responses:
-        "201":
-          description: Đã tạo
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/MaintenanceSchedule" } }
-        "400": { description: "next_due_at không ở tương lai hoặc ngoài khung 7:00–18:00 / zone khác farm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /maintenance-schedules/{id}:
-    put:
-      tags: [Tickets]
-      summary: "Sửa / tạm dừng lịch bảo trì (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
-      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                zone_id: { type: string }
-                description: { type: string }
-                interval_days: { type: integer, minimum: 1, maximum: 365 }
-                next_due_at: { type: string, format: date-time, description: "trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai" }
-                is_active: { type: boolean }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/MaintenanceSchedule" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { description: "Đổi zone_id/description hoặc bật lại (is_active=true) làm lịch trùng một lịch đang chạy của farm (cùng zone + nội dung) — giống khi tạo" }
-    delete:
-      tags: [Tickets]
-      summary: "Xoá lịch bảo trì (TICKET-FR-013) — TECHNICIAN trong vùng/ADMIN"
-      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses:
-        "200": { description: Đã xoá, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /tickets:
-    post:
-      tags: [Tickets]
-      summary: "Farm Owner tạo ticket báo lỗi hoặc yêu cầu lắp đặt (TICKET-FR-001) — FARM_OWNER/ADMIN. Mọi route /tickets chỉ cho FARM_OWNER/TECHNICIAN/ADMIN"
-      description: |
-        Ticket Router tự động gán Technician ít việc nhất trong `region` của
-        farm (TICKET-FR-004); priority/SLA gán tự động theo `type`
-        (TICKET-FR-003/006); Technician được gán nhận thông báo (kèm giờ hẹn nếu có).
-        - `type=INSTALLATION`: bắt buộc `scheduled_visit_at` ngay lúc tạo, trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai (TICKET-FR-004b).
-        - Ticket sự cố/`OTHER`: **không** gửi `scheduled_visit_at` — Technician chẩn đoán từ xa
-          trước, cần xuống hiện trường thì mới hẹn qua `PUT /tickets/:id/scheduled-date` (Flow 9 bước 6b).
-        - `type=MAINTENANCE` không tạo tay — chỉ sinh từ `/maintenance-schedules` (TICKET-FR-013).
-        - `zone_id` (nếu có) phải thuộc `farm_id`.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [farm_id, type]
-              properties:
-                farm_id: { type: string }
-                zone_id: { type: string, description: "Phải thuộc farm_id" }
-                type:
-                  type: string
-                  enum: [SENSOR_FAULT, RS485_BUS_FAILURE, ACTUATOR_FAILURE, NODE_OFFLINE, EDGE_AI_DEGRADED, POWER_OUTAGE, SPEAKER_FAILURE, PREDATOR_DETECTED, INSTALLATION, OTHER]
-                  description: "TicketType trừ MAINTENANCE"
-                description: { type: string, maxLength: 1000, description: "Ghi thành note đầu tiên của ticket" }
-                scheduled_visit_at:
-                  {
-                    type: string,
-                    format: date-time,
-                    description: "Chỉ và bắt buộc khi type=INSTALLATION — trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai",
-                  }
-                alert_id:
-                  {
-                    type: string,
-                    description: "Gắn với Alert gốc nếu ticket phát sinh từ 1 cảnh báo",
-                  }
-      responses:
-        "201":
-          {
-            description: "Đã tạo (status=NEW)",
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data: { $ref: "#/components/schemas/Ticket" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "400":
-          {
-            description: "Yêu cầu lắp đặt thiếu/sai giờ hẹn (quá khứ, ngoài 7:00–18:00); ticket sự cố gửi kèm giờ hẹn; type=MAINTENANCE; zone khác farm",
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-    get:
-      tags: [Tickets]
-      summary: "Danh sách ticket (filter farm/status/priority/assignee)"
-      description: |
-        Farm Owner chỉ thấy ticket farm mình; Technician thấy farm trong
-        `assigned_regions`; Admin thấy tất cả. Lọc theo `farmId` được kiểm
-        quyền riêng — farm không thuộc phạm vi của user thì trả 403, không
-        trả về danh sách rỗng.
-      parameters:
-        - { name: farmId, in: query, schema: { type: string } }
-        - {
-            name: status,
-            in: query,
-            schema: { $ref: "#/components/schemas/TicketStatus" },
-          }
-        - {
-            name: priority,
-            in: query,
-            schema: { type: string, enum: [P1, P2, P3] },
-          }
-        - { name: assignedToMe, in: query, schema: { type: boolean } }
-        - { name: unassigned, in: query, schema: { type: boolean }, description: "TICKET-FR-005 — hàng đợi chung: ticket chưa có Technician" }
-        - {
-            name: slaBreached,
-            in: query,
-            schema: { type: boolean },
-            description: "TICKET-FR-009 — chỉ ticket vượt hạn xử lý: đã bị đánh dấu `is_sla_breached`, hoặc còn mở mà đã qua `sla_resolve_due_at` (job đánh dấu chạy 2 phút/lần). Ticket đã đóng chỉ tính theo cờ",
-          }
-        - {
-            name: nodeId,
-            in: query,
-            schema: { type: string },
-            description: "Chỉ ticket của 1 thiết bị (_id SensorNode/CameraNode) — ticket có `alert_id` trỏ tới cảnh báo của thiết bị đó. Ticket bảo trì/lắp đặt/tự tạo (gắn phòng, không gắn thiết bị) không có trong kết quả",
-          }
-        - {
-            name: search,
-            in: query,
-            schema: { type: string, maxLength: 100 },
-            description: "Tìm không phân biệt hoa thường trong ghi chú ticket (mô tả lúc tạo là ghi chú đầu tiên) và tên farm. Ký tự đặc biệt được hiểu là chữ thường, không phải regex",
-          }
-        - {
-            name: sort,
-            in: query,
-            schema: { type: string, enum: [created_at, sla, status, priority], default: created_at },
-            description: "`sla` = hạn xử lý `sla_resolve_due_at`; `status` theo thứ tự nghiệp vụ NEW → IN_PROGRESS → AWAITING_FIELD_CONFIRMATION → CLOSED",
-          }
-        - { name: order, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
-        - { $ref: "#/components/parameters/Page" }
-        - { $ref: "#/components/parameters/Limit" }
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data:
-                                    {
-                                      type: array,
-                                      items:
-                                        { $ref: "#/components/schemas/Ticket" },
-                                    },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "422": { description: "search dài quá 100 ký tự, sort/order/slaBreached không hợp lệ" }
-
-  /tickets/kpi:
-    get:
-      tags: [Tickets]
-      summary: "Dashboard KPI xử lý ticket theo Technician (TICKET-FR-012) — chỉ ADMIN"
-      description: |
-        Tính trong kỳ `from`–`to` (mặc định 30 ngày gần nhất, tối đa 366 ngày). Theo
-        Technician, trách nhiệm đi theo **người đang giữ ticket lúc sự việc xảy ra** (lượt
-        phụ trách hiện tại + `assignment_history`): phản hồi / trễ phản hồi / xin gán lại tính
-        cho từng lượt; xử lý tính cho người giữ ticket lúc đóng, từ lúc họ nhận việc; vi phạm
-        hạn xử lý tính cho `sla_breached_by`. Số liệu hệ thống (cam kết với khách) vẫn theo
-        ticket: tạo → đóng. `open`/`unaccepted` là ảnh chụp hiện tại, không theo kỳ.
-      parameters:
-        - { name: from, in: query, schema: { type: string, format: date-time } }
-        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định: hiện tại" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          period:
-                            type: object
-                            properties:
-                              from: { type: string, format: date-time }
-                              to: { type: string, format: date-time }
-                          byStatus:
-                            {
-                              type: array,
-                              description: "Ticket tạo trong kỳ, theo trạng thái",
-                              items:
-                                {
-                                  type: object,
-                                  properties:
-                                    {
-                                      _id: { type: string },
-                                      count: { type: integer },
-                                    },
-                                },
-                            }
-                          byTechnician:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                technician_id: { type: string }
-                                full_name: { type: string, nullable: true }
-                                email: { type: string, nullable: true }
-                                total: { type: integer, description: "Số lượt nhận việc trong kỳ (một ticket chuyển qua lại có thể là nhiều lượt)" }
-                                closed: { type: integer, description: "Ticket đóng trong kỳ khi người này đang giữ (gồm cả huỷ)" }
-                                cancelled: { type: integer }
-                                open: { type: integer, description: "Ảnh chụp hiện tại — ticket chưa đóng đang giữ" }
-                                unaccepted:
-                                  { type: integer, description: "Ảnh chụp hiện tại — ticket được gán nhưng chưa tiếp nhận (status NEW)" }
-                                avgResolveHours: { type: number, nullable: true, description: "Từ lúc người này nhận việc → đóng, không tính ticket huỷ" }
-                                avgResponseHours: { type: number, nullable: true, description: "Giao ticket (assigned_at) → xác nhận tiếp nhận (responded_at), theo từng lượt" }
-                                responseBreaches: { type: integer, description: "Số lượt trễ hạn phản hồi" }
-                                reassignRequests: { type: integer, description: "Số lượt kết thúc bằng xin gán lại" }
-                                escalated: { type: integer, description: "Số ticket Technician chủ động escalate" }
-                                reopened: { type: integer, description: "Số lần ticket người này giữ lúc đóng bị Admin mở lại" }
-                                reopenRate: { type: number, nullable: true, description: "% reopened / ticket xử lý xong" }
-                                slaComplianceRate: { type: number, nullable: true, description: "Vi phạm hạn xử lý tính cho người giữ ticket lúc trễ (`sla_breached_by`)" }
-                          resolvedTickets:
-                            { type: integer, description: "Ticket đã đóng, KHÔNG tính ticket bị huỷ" }
-                          avgResolveHours:
-                            { type: number, nullable: true, description: "Giờ, tính trên resolvedTickets" }
-                          ticketsPastDue:
-                            { type: integer, description: "Ticket đã qua hạn xử lý, kể cả còn đang mở" }
-                          slaComplianceRate:
-                            {
-                              type: number,
-                              nullable: true,
-                              description: "% ticket đúng SLA trên tổng ticket đã tới hạn trong kỳ (gồm cả ticket quá hạn còn treo), bỏ qua ticket bị huỷ",
-                            }
-                          reopenedTickets: { type: integer, description: "Số lần mở lại ticket trong kỳ" }
-                          reopenRate: { type: number, nullable: true }
-        "400":
-          description: "from không trước to, hoặc kỳ dài hơn 366 ngày"
-          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /tickets/stats/me:
-    get:
-      tags: [Tickets]
-      summary: "Thống kê ticket của Technician đang đăng nhập — chỉ TECHNICIAN"
-      description: |
-        Đếm trên toàn bộ DB (không giới hạn theo trang), cùng phạm vi với
-        `GET /tickets?assignedToMe=true` nên `total` khớp `meta.total` của danh
-        sách đó. Quá hạn SLA dùng cùng quy tắc với `slaBreached=true`.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          total: { type: integer }
-                          open: { type: integer, description: "Ticket chưa CLOSED" }
-                          by_status:
-                            type: object
-                            properties:
-                              NEW: { type: integer }
-                              IN_PROGRESS: { type: integer }
-                              AWAITING_FIELD_CONFIRMATION: { type: integer }
-                              CLOSED: { type: integer }
-                          sla_breached: { type: integer, description: "Vượt hạn xử lý, kể cả ticket đã đóng" }
-                          sla_breached_open: { type: integer, description: "Vượt hạn xử lý và còn mở — việc cần làm ngay" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /tickets/{id}:
-    get:
-      tags: [Tickets]
-      summary: Chi tiết ticket + lịch sử ghi chú
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data: { $ref: "#/components/schemas/Ticket" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /tickets/{id}/status:
-    put:
-      tags: [Tickets]
-      summary: "Technician cập nhật trạng thái ticket (TICKET-FR-007) — TECHNICIAN/ADMIN"
-      description: |
-        Chỉ cho chuyển đúng thứ tự: `NEW → IN_PROGRESS → AWAITING_FIELD_CONFIRMATION
-        → CLOSED` (không nhảy cóc/lùi tuỳ tiện). Không cho chuyển `CLOSED` nếu
-        `sat_checklist` chưa đạt đủ các mục bắt buộc khi ticket có buổi đến hiện trường:
-        `INSTALLATION`/`MAINTENANCE`, hoặc ticket sự cố đã có `scheduled_visit_at`
-        (TICKET-FR-010, Flow 9 bước 6b). Mục bắt buộc: Modbus, kết nối mạng, relay;
-        `camera_rtsp_ok` chỉ bắt buộc khi Zone của ticket (hoặc cả farm, nếu ticket cấp
-        farm) có Camera Node đang hoạt động. Ticket sự cố xử lý từ xa (không có lịch hẹn)
-        đóng thẳng.
-
-        Chỉ Technician **đang được gán** (hoặc Admin) mới đổi được — Technician
-        khác cùng vùng xem được ticket nhưng nhận 403. Lần đầu chuyển
-        `IN_PROGRESS` ghi `responded_at` (mốc SLA phản hồi, TICKET-FR-004b).
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [status],
-                properties:
-                  {
-                    status: { $ref: "#/components/schemas/TicketStatus" },
-                    note: { type: string },
-                  },
-              }
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data: { $ref: "#/components/schemas/Ticket" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "400":
-          {
-            description: "Chuyển trạng thái không hợp lệ",
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          {
-            description: "Checklist nghiệm thu (SAT) chưa đạt đủ 4 mục",
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
-
-  /tickets/{id}/cancel:
-    put:
-      tags: [Tickets]
-      summary: "Farm Owner tự huỷ ticket của mình (Flow 9 case 6c / Flow 9b case 4a) — FARM_OWNER/ADMIN"
-      description: "Khác /status ở chỗ không đòi SAT checklist — dùng khi Farm Owner đã tự khắc phục hoặc đổi ý không cần lắp nữa. Technician đang được gán nhận thông báo (kèm \"không cần đến hiện trường lúc …\" nếu còn lịch hẹn sắp tới)."
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [reason],
-                properties: { reason: { type: string } },
-              }
-      responses:
-        "200":
-          {
-            description: "Đã huỷ (status=CLOSED)",
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data: { $ref: "#/components/schemas/Ticket" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          {
-            description: Ticket đã đóng,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
-
-  /tickets/{id}/notes:
-    post:
-      tags: [Tickets]
-      summary: Thêm ghi chú xử lý
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [content],
-                properties: { content: { type: string } },
-              }
-      responses:
-        "201":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data: { $ref: "#/components/schemas/Ticket" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /tickets/{id}/sat-checklist:
-    put:
-      tags: [Tickets]
-      summary: "Cập nhật checklist nghiệm thu tại hiện trường (TICKET-FR-010) — TECHNICIAN được gán/ADMIN"
-      description: "Chỉ cho ticket `INSTALLATION`/`MAINTENANCE` hoặc ticket sự cố đã hẹn đến hiện trường (có `scheduled_visit_at`); ticket khác → 400. Ticket đã đóng → 409."
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                modbus_addresses_ok:
-                  {
-                    type: boolean,
-                    description: "5 địa chỉ Modbus phản hồi đúng",
-                  }
-                camera_rtsp_ok: { type: boolean }
-                lte_connection_ok: { type: boolean }
-                relay_test_ok: { type: boolean }
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data: { $ref: "#/components/schemas/Ticket" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /tickets/{id}/escalate:
-    post:
-      tags: [Tickets]
-      summary: "Escalate thủ công lên Admin (TICKET-FR-009) — TECHNICIAN được gán/ADMIN"
-      description: |
-        Ghi `escalated_at`/`escalation_reason`, audit `TICKET_ESCALATED` và thông báo
-        mọi Admin. **Không** bật `is_sla_breached` — escalate là xin hỗ trợ, cờ vượt
-        hạn chỉ do job SLA đặt khi thật sự quá `sla_resolve_due_at`. Ticket đã đóng → 409.
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        content:
-          application/json:
-            schema: { type: object, properties: { reason: { type: string } } }
-      responses:
-        "200":
-          {
-            description: "Đã escalate (escalated_at được ghi)",
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data: { $ref: "#/components/schemas/Ticket" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /tickets/{id}/scheduled-date:
-    put:
-      tags: [Tickets]
-      summary: "Technician hẹn/dời giờ đến hiện trường kèm lý do (TICKET-FR-004b, Flow 9 bước 6b) — TECHNICIAN được gán/ADMIN"
-      description: |
-        - `INSTALLATION`/`MAINTENANCE`: dời lịch có sẵn (Farm Owner chọn lúc tạo / sinh từ lịch bảo trì).
-        - Ticket sự cố/`OTHER`: chỉ hẹn được khi ticket đã tiếp nhận (`IN_PROGRESS` hoặc
-          `AWAITING_FIELD_CONFIRMATION`) — Technician chẩn đoán từ xa trước (TICKET-FR-008),
-          cần xuống hiện trường thì mới hẹn. Từ lúc có lịch hẹn, đóng ticket phải đủ SAT;
-          xử lý được từ xa thì huỷ lịch bằng `DELETE` trên chính endpoint này.
-        - Giờ hẹn trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai; ticket đã đóng → 409.
-        Ghi note ("Hẹn đến hiện trường…" / "Dời lịch hẹn…") + audit `TICKET_VISIT_SCHEDULED`
-        (lần đầu) / `TICKET_RESCHEDULED` (dời); Farm Owner và người tạo ticket nhận thông báo.
-      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [scheduled_visit_at, reason]
-              properties:
-                scheduled_visit_at: { type: string, format: date-time }
-                reason: { type: string, example: "Trùng lịch lắp đặt farm khác" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
-        "400": { description: "Giờ hẹn không ở tương lai hoặc ngoài khung 7:00–18:00", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "403": { description: "Không phải Technician đang được gán", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "409": { description: "Ticket đã đóng, hoặc ticket sự cố chưa được tiếp nhận (chưa IN_PROGRESS)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "422": { $ref: "#/components/responses/ValidationError" }
-    delete:
-      tags: [Tickets]
-      summary: "Huỷ buổi đến hiện trường khi xử lý được từ xa (Flow 9 bước 6a) — TECHNICIAN được gán/ADMIN"
-      description: |
-        Xoá `scheduled_visit_at` nên ticket không còn bị đòi checklist nghiệm thu khi đóng.
-        Chỉ áp dụng cho ticket **sự cố**: `INSTALLATION`/`MAINTENANCE` bắt buộc có buổi đến
-        hiện trường nên chỉ dời được lịch (dùng `PUT`). Ghi note + audit `TICKET_VISIT_CANCELLED`,
-        Farm Owner và người tạo ticket được thông báo.
-      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [reason]
-              properties: { reason: { type: string, example: "Reset từ xa là hết lỗi, không cần xuống farm" } }
-      responses:
-        "200":
-          description: Đã huỷ lịch hẹn
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
-        "400": { description: "Ticket lắp đặt/bảo trì — chỉ dời lịch, không huỷ", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { description: "Ticket đã đóng hoặc chưa hẹn đến hiện trường", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /tickets/{id}/reassign-request:
-    post:
-      tags: [Tickets]
-      summary: "Technician xin gán lại ticket kèm lý do (Flow 9 case 4a) — TECHNICIAN được gán"
-      description: |
-        Lịch hẹn của người cũ bị huỷ theo (Farm Owner được báo) — Technician mới tự hẹn lại.
-        Ticket Router chọn Technician khác trong vùng (loại người xin và mọi người
-        đã từng bị chuyển khỏi ticket này, bỏ qua người quá tải). Có người → ticket về `NEW` cho người mới xác nhận lại
-        (hạn phản hồi tính lại từ lúc giao cho người mới, hạn xử lý giữ nguyên); không còn
-        ai → `assigned_to` để trống (hàng đợi chung, `GET /tickets?unassigned=true`)
-        và Admin được thông báo. Thread chat nhận tin hệ thống (TICKET-FR-017).
-      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [reason]
-              properties: { reason: { type: string, example: "Farm ghi sai khu vực, thực tế ở Long An" } }
-      responses:
-        "200":
-          description: "Ticket sau khi gán lại (assigned_to đã populate hoặc null)"
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /tickets/{id}/messages:
-    get:
-      tags: [Tickets]
-      summary: "Lịch sử chat của ticket (TICKET-FR-015) — FARM_OWNER/TECHNICIAN/ADMIN"
-      description: |
-        Trang 1 là tin mới nhất; trong mỗi trang tin xếp cũ → mới. Được đọc: Admin,
-        Farm Owner/thành viên của farm, Technician đang phụ trách. Technician TỪNG
-        phụ trách chỉ đọc được lịch sử tới tin hệ thống báo bàn giao và không
-        `JOIN_TICKET_CHAT` được nữa (TICKET-FR-017). Technician khác cùng vùng
-        không đọc được (Flow 23 case 6a).
-
-        Realtime qua Socket.io: emit `JOIN_TICKET_CHAT { ticketId }` (ack
-        `{ ok }`), `SEND_TICKET_MESSAGE { ticketId, content, clientMessageId }`
-        (ack `{ ok, data: TicketMessage }`); server phát `TICKET_MESSAGE_NEW` và
-        `TICKET_CHAT_ASSIGNEE_CHANGED` tới room `ticket:{ticketId}`.
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string } }
-        - { $ref: "#/components/parameters/Page" }
-        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 100 } }
-        - { name: before, in: query, schema: { type: string, format: date-time }, description: "Cursor cuộn ngược: `created_at` của tin cũ nhất đang hiển thị. Dùng thay `page` để tin mới chen vào giữa 2 lần tải không làm lặp tin" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { type: array, items: { $ref: "#/components/schemas/TicketMessage" } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-    post:
-      tags: [Tickets]
-      summary: "Gửi tin nhắn (TICKET-FR-014/016) — dự phòng khi client không giữ WebSocket — FARM_OWNER/TECHNICIAN/ADMIN"
-      description: |
-        Chỉ gửi khi ticket chưa đóng (đã đóng → 409, kênh chỉ đọc). Technician chỉ
-        gửi được khi đang là `assigned_to` (kiểm lại mỗi lần gửi). Gửi lại cùng
-        `client_message_id` trả về tin đã lưu, không tạo trùng.
-      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [content]
-              properties:
-                content: { type: string, maxLength: 2000 }
-                client_message_id: { type: string, maxLength: 100 }
-      responses:
-        "201":
-          description: Đã gửi
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/TicketMessage" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { description: "Ticket đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /tickets/{id}/rating:
-    post:
-      tags: [Tickets]
-      summary: "Farm Owner đánh giá mức hài lòng sau khi đóng ticket (TICKET-FR-011) — FARM_OWNER/ADMIN"
-      description: |
-        Ticket **đã huỷ** không đánh giá được (409) — không có việc nào được thực hiện để chấm điểm.
-        Mỗi ticket chỉ chấm **một lần**; muốn sửa điểm phải qua Admin (để còn ghi audit).
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [satisfaction_rating],
-                properties:
-                  {
-                    satisfaction_rating:
-                      { type: integer, minimum: 1, maximum: 5 },
-                  },
-              }
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        allOf:
-                          [
-                            { $ref: "#/components/schemas/ApiSuccess" },
-                            {
-                              properties:
-                                {
-                                  data: { $ref: "#/components/schemas/Ticket" },
-                                },
-                            },
-                          ],
-                      },
-                  },
-              },
-          }
-        "403":
-          {
-            description: "Chỉ người tạo ticket mới được đánh giá",
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
-        "409":
-          {
-            description: "Chỉ đánh giá được ticket đã đóng",
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
-
-  /tickets/{id}/admin-override:
-    put:
-      tags: [Tickets, Admin]
-      summary: "Admin toàn quyền can thiệp ticket bất kỳ (TICKET-FR-005b) — chỉ ADMIN"
-      description: |
-        Không giới hạn ở SLA breach hay ticket của farm mình — Admin đổi được
-        `assigned_to`/`priority`/`scheduled_visit_at`/`status` bất kỳ lúc nào,
-        bỏ qua `ALLOWED_TRANSITIONS` thường áp dụng cho `PUT /tickets/:id/status`
-        và không đòi SAT checklist khi đóng ticket lắp đặt. `reason` luôn được
-        ghi vào `notes` của ticket.
-        - `assigned_to` phải là Technician đang hoạt động **và phụ trách khu vực
-          (`assigned_regions`) của farm** — người ngoài vùng sẽ bị chặn 403 khi mở
-          chính ticket đó nên ticket thành mồ côi. Gửi `force: true` để vẫn gán;
-          quyết định này được ghi `forcedOutOfRegion` vào audit log. `force` chỉ có
-          tác dụng khi là boolean `true` (chuỗi `"true"`/`"1"` được ép về `true`,
-          `"false"`/`"0"` về `false`).
-        - Đổi `assigned_to` gửi thông báo cho **cả** Technician mới (nhận việc) lẫn người cũ
-          (biết ticket đã chuyển đi); audit ghi `notifiedAssignee`.
-        - Đổi `assigned_to` sang người khác mà **không** truyền `status` thì ticket
-          quay về `NEW` để người mới xác nhận tiếp nhận; riêng ticket đang `CLOSED`
-          bị chặn 409 — muốn mở lại phải nói rõ `status`, tránh ticket vừa `NEW`
-          vừa còn `closed_at` và bị job SLA báo vi phạm. `assigned_at` chỉ đổi khi
-          thật sự đổi người.
-        - Khi thật sự đổi người: mốc tiếp nhận của người cũ bị bỏ — hạn phản hồi
-          (`sla_response_due_at`) tính lại từ lúc giao cho người mới (hạn xử lý giữ
-          nguyên); nếu Admin truyền luôn `status` đã tiếp nhận thì `responded_at` là lúc
-          gán. Lịch hẹn của ticket sự cố (không phải `INSTALLATION`/`MAINTENANCE`) là cam
-          kết của người cũ nên bị bỏ, trừ khi gửi kèm `scheduled_visit_at`; Farm Owner
-          được báo nếu buổi hẹn đó còn ở tương lai.
-        - `assigned_to: null` = **trả về hàng đợi chung**: ticket về `NEW`, bỏ `assigned_at`
-          / `responded_at`, bỏ lịch hẹn của ticket sự cố; người cũ được báo và không được
-          chia lại ticket này. Hàng đợi chia ngay cho Technician khác cùng vùng nếu có ai
-          rảnh. Ticket đã đóng → 409; ticket đang ở hàng đợi → 400; `status` khác `NEW` → 400.
-        - Đổi `priority` thì tính lại cả hai hạn theo SLA mới, mỗi hạn đúng mốc: hạn phản hồi
-          từ lúc giao cho người đang giữ (`assigned_at`, chưa giao thì `created_at`), hạn xử
-          lý từ `created_at` — riêng ticket `MAINTENANCE` có giờ hẹn thì từ
-          `scheduled_visit_at` (TICKET-FR-013). Cờ vi phạm tính lại: việc đã xong (đã tiếp
-          nhận / đã đóng) thì đánh giá đúng theo hạn mới; việc còn dở mà hạn mới chưa tới
-          thì gỡ cờ (kèm `sla_breached_by`); hạn mới đã qua thì để job SLA bật cờ.
-        - Ép `status` rời `NEW` mà người đang giữ chưa tiếp nhận → ghi `responded_at` là
-          lúc ép. Ép `CLOSED` cho ticket đã đóng thì giữ nguyên `closed_at`.
-        - Mở lại ticket đã `CLOSED` (gửi `status` khác `CLOSED`) = tiếp tục cùng yêu cầu:
-          gỡ `closed_at`/`cancelled_at`, **giữ** cờ vi phạm cũ, hạn xử lý mới tính từ lúc
-          mở lại, thêm 1 dòng `reopen_history`; mở lại về `NEW` với cùng người thì người đó
-          phải tiếp nhận lại (lượt phụ trách mới). Farm Owner và Technician được báo.
-        - Mọi lần đổi người đều chốt lượt phụ trách cũ vào `assignment_history`.
-        - `scheduled_visit_at` đặt được cho mọi loại ticket nhưng vẫn phải trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai;
-          đổi giờ thì Farm Owner, người tạo và Technician đang giữ ticket nhận thông báo.
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [reason]
-              properties:
-                assigned_to: { type: string, nullable: true, description: "Đổi Technician phụ trách; `null` = trả về hàng đợi chung" }
-                priority: { type: string, enum: [P1, P2, P3] }
-                scheduled_visit_at: { type: string, format: date-time, description: "trong khung 7:00–18:00 giờ Việt Nam (Asia/Ho_Chi_Minh), ở tương lai" }
-                status: { $ref: "#/components/schemas/TicketStatus" }
-                reason: { type: string, description: "Lý do can thiệp, ghi vào notes + audit_logs" }
-                force: { type: boolean, default: false, description: "true = vẫn gán Technician ngoài khu vực phụ trách của farm" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/Ticket" } }
-        "400":
-          description: "assigned_to không phải Technician đang hoạt động, hoặc không phụ trách khu vực của farm mà chưa gửi force: true; scheduled_visit_at không ở tương lai hoặc ngoài 7:00–18:00; trả về hàng đợi một ticket chưa gán hoặc kèm status khác NEW"
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          description: "Gán người khác cho ticket đã đóng mà không gửi status, hoặc trả ticket đã đóng về hàng đợi"
-          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
-        "422": { $ref: "#/components/responses/ValidationError" }
 
 components:
   securitySchemes:
@@ -5182,26 +4011,12 @@ components:
           properties:
             code: { type: string, example: NOT_FOUND }
             message: { type: string, example: "Không tìm thấy farm" }
-            details: { description: "Tuỳ mã lỗi, VD `{ openTickets }` của HAS_OPEN_TICKETS, `{ retryAfterSec }` của RATE_LIMITED" }
+            details: { description: "Tuỳ mã lỗi, VD `{ retryAfterSec }` của RATE_LIMITED" }
 
     Role:
       type: string
       enum: [ADMIN, FARM_OWNER, DOMAIN_EXPERT, TECHNICIAN]
-      description: "AUTH-FR-004 (v2.0.0). DOMAIN_EXPERT = chuyên gia nuôi yến do Primary Owner mời, phạm vi cả farm: chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo suy luận, chỉnh ngưỡng/hệ số/tham số phát hiện; không relay, ticket hay ghi thu hoạch (SRS mục 4.4)"
-
-    SlaConfig:
-      type: object
-      description: "TICKET-FR-006, SLA-NFR-001 — SLA theo mức ưu tiên, lưu ở system_settings.sla_hours"
-      properties:
-        P1: { $ref: "#/components/schemas/SlaLevel" }
-        P2: { $ref: "#/components/schemas/SlaLevel" }
-        P3: { $ref: "#/components/schemas/SlaLevel" }
-
-    SlaLevel:
-      type: object
-      properties:
-        response_hours: { type: number, example: 0.5 }
-        resolve_hours: { type: number, example: 4 }
+      description: "AUTH-FR-004 (v2.0.0). DOMAIN_EXPERT = chuyên gia nuôi yến do Primary Owner mời, phạm vi cả farm: chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo suy luận, chỉnh ngưỡng/hệ số/tham số phát hiện; không relay hay ghi thu hoạch (SRS mục 4.4)"
 
     DeviceStatusSummary:
       type: object
@@ -5634,7 +4449,7 @@ components:
         ota_pending:
           type: object
           nullable: true
-          description: "TICKET-FR-008 — OTA đã gửi, chờ heartbeat báo đúng version"
+          description: "FARM-FR-013 — OTA đã gửi, chờ heartbeat báo đúng version"
           properties:
             version: { type: string }
             url: { type: string }
@@ -5782,138 +4597,6 @@ components:
             by: { type: string }
             at: { type: string, format: date-time }
 
-    TicketType:
-      type: string
-      enum:
-        [
-          SENSOR_FAULT,
-          RS485_BUS_FAILURE,
-          ACTUATOR_FAILURE,
-          NODE_OFFLINE,
-          EDGE_AI_DEGRADED,
-          POWER_OUTAGE,
-          SPEAKER_FAILURE,
-          PREDATOR_DETECTED,
-          INSTALLATION,
-          MAINTENANCE,
-          OTHER,
-        ]
-    TicketStatus:
-      type: string
-      enum: [NEW, IN_PROGRESS, AWAITING_FIELD_CONFIRMATION, CLOSED]
-
-    Ticket:
-      type: object
-      properties:
-        _id: { type: string }
-        farm_id: { type: string }
-        zone_id: { type: string, nullable: true }
-        alert_id: { type: string, nullable: true }
-        type: { $ref: "#/components/schemas/TicketType" }
-        priority: { type: string, enum: [P1, P2, P3] }
-        status: { $ref: "#/components/schemas/TicketStatus" }
-        assigned_to: { type: string, nullable: true }
-        scheduled_visit_at:
-          {
-            type: string,
-            format: date-time,
-            nullable: true,
-            description: "Giờ đến hiện trường (TICKET-FR-004b), 7:00–18:00 giờ VN. INSTALLATION/MAINTENANCE có từ lúc tạo; ticket sự cố chỉ có khi Technician hẹn xuống sau khi chẩn đoán từ xa (Flow 9 bước 6b)",
-          }
-        sla_response_due_at: { type: string, format: date-time, nullable: true }
-        sla_resolve_due_at: { type: string, format: date-time, nullable: true }
-        is_sla_breached: { type: boolean }
-        responded_at: { type: string, format: date-time, nullable: true, description: "Technician xác nhận tiếp nhận (lần đầu IN_PROGRESS)" }
-        is_sla_response_breached: { type: boolean, description: "Quá sla_response_due_at mà vẫn NEW" }
-        assigned_at: { type: string, format: date-time, nullable: true, description: "Lúc giao cho Technician hiện tại — mốc tính KPI phản hồi" }
-        escalated_at: { type: string, format: date-time, nullable: true, description: "TICKET-FR-009 — Technician xin Admin can thiệp (khác vượt hạn SLA)" }
-        escalation_reason: { type: string, nullable: true }
-        previous_assignees:
-          type: array
-          description: "TICKET-FR-017 — Technician từng phụ trách; chỉ đọc chat tới mốc `until`"
-          items:
-            type: object
-            properties:
-              user_id: { type: string }
-              until: { type: string, format: date-time }
-        assignment_history:
-          type: array
-          description: "TICKET-FR-012 — các lượt phụ trách ĐÃ KẾT THÚC (lượt hiện tại là assigned_to/assigned_at/responded_at); KPI tính theo từng lượt"
-          items:
-            type: object
-            properties:
-              user_id: { type: string }
-              assigned_at: { type: string, format: date-time }
-              responded_at: { type: string, format: date-time, nullable: true }
-              ended_at: { type: string, format: date-time }
-              end_reason:
-                type: string
-                description: "REASSIGN_REQUESTED | ADMIN_REASSIGNED | ADMIN_UNASSIGNED | REOPENED | REROUTED_<REGION_UNASSIGNED|FARM_REGION_CHANGED|ACCOUNT_DELETED|ACCOUNT_LOCKED>"
-              response_breached: { type: boolean }
-        sla_breached_by: { type: string, nullable: true, description: "Người đang giữ ticket lúc vượt hạn xử lý — KPI tính vi phạm cho người này" }
-        reopen_history:
-          type: array
-          description: "TICKET-FR-005b — mỗi lần Admin mở lại ticket đã đóng"
-          items:
-            type: object
-            properties:
-              reopened_at: { type: string, format: date-time }
-              holder_at_close: { type: string, nullable: true }
-              reason: { type: string }
-        last_message_at: { type: string, format: date-time, nullable: true }
-        sat_checklist:
-          type: object
-          description: "TICKET-FR-010 — bắt buộc đủ 4 mục trước khi đóng ticket có buổi đến hiện trường (lắp đặt/bảo trì, hoặc sự cố đã có scheduled_visit_at)"
-          properties:
-            modbus_addresses_ok: { type: boolean }
-            camera_rtsp_ok: { type: boolean }
-            lte_connection_ok: { type: boolean }
-            relay_test_ok: { type: boolean }
-        notes:
-          type: array
-          items:
-            type: object
-            properties:
-              {
-                author_id: { type: string },
-                content: { type: string },
-                created_at: { type: string, format: date-time },
-              }
-        satisfaction_rating:
-          { type: integer, minimum: 1, maximum: 5, nullable: true }
-        created_at: { type: string, format: date-time }
-        closed_at: { type: string, format: date-time, nullable: true }
-
-    TicketMessage:
-      type: object
-      description: "TICKET-FR-014..017 — tin nhắn chat trong ticket"
-      properties:
-        _id: { type: string }
-        ticket_id: { type: string }
-        content: { type: string }
-        author_id: { type: string, nullable: true }
-        author_name: { type: string, nullable: true }
-        role: { type: string, enum: [FARM_OWNER, TECHNICIAN, ADMIN, SYSTEM] }
-        is_system: { type: boolean }
-        client_message_id: { type: string, nullable: true }
-        created_at: { type: string, format: date-time }
-
-    MaintenanceSchedule:
-      type: object
-      description: "TICKET-FR-013 — lịch bảo trì định kỳ theo Farm"
-      properties:
-        _id: { type: string }
-        farm_id: { type: string }
-        zone_id: { type: string, nullable: true }
-        description: { type: string }
-        interval_days: { type: integer }
-        next_due_at: { type: string, format: date-time }
-        is_active: { type: boolean }
-        created_by: { type: string }
-        last_ticket_id: { type: string, nullable: true }
-        last_generated_at: { type: string, format: date-time, nullable: true }
-        created_at: { type: string, format: date-time }
-
     ProvisionedDevice:
       type: object
       description: "FARM-FR-003 — thiết bị trong kho (không bao giờ trả secret_key/hash)"
@@ -5926,12 +4609,6 @@ components:
         revoke_reason: { type: string, nullable: true }
         created_by: { type: string }
         created_at: { type: string, format: date-time }
-
-    TicketRoutingConfig:
-      type: object
-      required: [max_open_tickets_per_technician]
-      properties:
-        max_open_tickets_per_technician: { type: integer, minimum: 1, maximum: 100, example: 10 }
 
     HarvestStatus:
       type: string

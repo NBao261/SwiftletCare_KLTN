@@ -1,4 +1,3 @@
-import { Types } from 'mongoose'
 import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError.util'
@@ -105,24 +104,7 @@ export async function assertZoneAccess(
   return chain
 }
 
-/**
- * Zone gửi kèm 1 bản ghi thuộc farm (ticket, lịch bảo trì) phải nằm đúng farm đó —
- * tránh bản ghi farm A trỏ sang zone farm B. Chỉ kiểm tra quan hệ, không kiểm tra
- * quyền: caller đã assertFarmAccess(farmId) nên zone cùng farm thì cũng có quyền.
- */
-export async function assertZoneInFarm(zoneId: string, farmId: string): Promise<void> {
-  await assertZonesInFarm([zoneId], farmId)
-}
-
-async function assertZonesInFarm(zoneIds: string[], farmId: string): Promise<void> {
-  const unique = [...new Set(zoneIds.map(String))]
-  if (unique.length === 0) return
-  if (!unique.every(id => Types.ObjectId.isValid(id))) throw BadRequestError('zone_id không hợp lệ')
-  const found = await Zone.countDocuments({ _id: { $in: unique }, farm_id: farmId })
-  if (found !== unique.length) throw BadRequestError('zone_id không thuộc farm này')
-}
-
-/** Farm user được phép xem — dùng chung cho list/scoping theo role (Alert/Analytics/Market/Ticket) */
+/** Farm user được phép xem — dùng chung cho list/scoping theo role (Alert/Analytics/Harvest) */
 export async function listAccessibleFarmIds(user: CurrentUser) {
   if (user.role === 'ADMIN') return (await Farm.find().select('_id').lean()).map(f => f._id)
   if (user.role === 'TECHNICIAN') {

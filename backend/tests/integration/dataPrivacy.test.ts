@@ -44,7 +44,7 @@ describe('xoá tài khoản (AUTH-FR-012, PRIV-NFR-003)', () => {
       deletion_requested_at: new Date(),
     })
 
-    await completeDeletionRequest(String(admin._id), String(user._id), {})
+    await completeDeletionRequest(String(admin._id), String(user._id))
 
     const after = (await User.findById(user._id).select('+telegram_link_code_hash +telegram_link_expires_at'))!
     expect(after.email).toContain('deleted-')

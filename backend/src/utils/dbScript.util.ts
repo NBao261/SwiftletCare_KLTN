@@ -16,14 +16,11 @@ import { Farm } from '@/models/farm.model'
 import { HarvestBatch } from '@/models/harvestBatch.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Invitation } from '@/models/invitation.model'
-import { MaintenanceSchedule } from '@/models/maintenanceSchedule.model'
 import { Notification } from '@/models/notification.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Telemetry } from '@/models/telemetry.model'
-import { Ticket } from '@/models/ticket.model'
-import { TicketMessage } from '@/models/ticketMessage.model'
 import { User } from '@/models/user.model'
 import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 
@@ -32,9 +29,8 @@ type AnyModel = Model<any>
 
 export const ALL_MODELS: AnyModel[] = [
   Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode,
-  Farm, HarvestBatch, House, Zone, Invitation, MaintenanceSchedule, Notification,
-  ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, Ticket, TicketMessage,
-  User, ZoneHealthReport,
+  Farm, HarvestBatch, House, Zone, Invitation, Notification,
+  ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, ZoneHealthReport,
 ]
 
 export interface JsonSchemaNode {

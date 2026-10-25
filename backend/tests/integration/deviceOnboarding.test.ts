@@ -22,7 +22,6 @@ import { createProvisionedDevice } from '@/services/provisionedDevice.service'
 import { notifyUser } from '@/services/notification.service'
 import { RESTORE_WINDOW_MS } from '@/services/device.service'
 import { Alert } from '@/models/alert.model'
-import { Ticket } from '@/models/ticket.model'
 import { createAlert, renotifyStaleAlerts } from '@/services/alert.service'
 import { removeFarm, updateFarm } from '@/services/farm.service'
 import { publishCommand } from '@/mqtt/mqtt.client'
@@ -60,7 +59,7 @@ afterEach(async () => {
   await Promise.all([
     AuditLog.deleteMany({}), Farm.deleteMany({}), House.deleteMany({}), Zone.deleteMany({}),
     SensorNode.deleteMany({}), CameraNode.deleteMany({}), ProvisionedDevice.deleteMany({}), User.deleteMany({}),
-    Ticket.deleteMany({}), Alert.deleteMany({}),
+    Alert.deleteMany({}),
   ])
   jest.clearAllMocks()
   ;(publishCommand as jest.Mock).mockReturnValue(true)
@@ -379,18 +378,11 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     expect(await AuditLog.countDocuments({ action: 'DEVICE_OTA_SUCCEEDED' })).toBe(1)
   })
 
-  it('gắn vào ticket cùng farm thì ghi note; thiết bị OFFLINE hoặc ticket farm khác bị từ chối', async () => {
-    const { techToken, node, a, b, tech } = await onlineNode()
-    const ticket = await Ticket.create({ farm_id: a.farm._id, type: 'NODE_OFFLINE', priority: 'P2', assigned_to: tech._id })
-    await send(techToken, node._id, { command: 'RESTART', ticket_id: String(ticket._id) }).expect(202)
-    const note = (await Ticket.findById(ticket._id))!.notes.at(-1)!.content
-    expect(note).toContain('khởi động lại')
-    expect(note).toContain('chờ thiết bị xác nhận') // không khẳng định thiết bị đã thực thi
-
-    const other = await Ticket.create({ farm_id: b.farm._id, type: 'OTHER', priority: 'P3', assigned_to: tech._id })
-    const notMine = await Ticket.create({ farm_id: a.farm._id, type: 'OTHER', priority: 'P3' })
-    await send(techToken, node._id, { command: 'RESTART', ticket_id: String(notMine._id) }).expect(403)
-    await send(techToken, node._id, { command: 'RESTART', ticket_id: String(other._id) }).expect(400)
+  it('thiết bị ONLINE nhận lệnh và được ghi audit; thiết bị OFFLINE bị từ chối', async () => {
+    const { techToken, node } = await onlineNode()
+    await send(techToken, node._id, { command: 'RESTART' }).expect(202)
+    const audit = await AuditLog.findOne({ action: 'DEVICE_COMMAND_SENT' }).lean()
+    expect(audit!.metadata).toMatchObject({ deviceId: node.device_id, command: 'RESTART' })
 
     await SensorNode.updateOne({ _id: node._id }, { status: 'OFFLINE' })
     await send(techToken, node._id, { command: 'RESTART' }).expect(409)
@@ -460,26 +452,24 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
 })
 
 describe('gỡ thiết bị thì dọn cảnh báo của nó (FARM-FR-008)', () => {
-  it('cảnh báo còn mở chuyển RESOLVED, ticket đang mở được ghi chú, không sinh ticket rác', async () => {
+  it('cảnh báo còn mở chuyển RESOLVED và không bị gửi lại', async () => {
     const { techToken, a, secretKey } = await seed()
     const nodeId = (await register(techToken, { device_id: 'node_100', zone_id: String(a.zone._id), secret_key: secretKey }).expect(201)).body.data._id
 
-    const stale = new Date(Date.now() - 2 * 60 * 60_000) // quá ngưỡng ticket NODE_OFFLINE (1 giờ)
+    const stale = new Date(Date.now() - 2 * 60 * 60_000) // quá ngưỡng gửi lại NODE_OFFLINE (1 giờ)
     const alert = await Alert.create({
       farm_id: a.farm._id, zone_id: a.zone._id, node_id: nodeId, type: 'NODE_OFFLINE', severity: 'HIGH',
       title: 'Mất kết nối', message: 'x', status: 'ACTIVE', created_at: stale,
     })
-    const ticket = await Ticket.create({ farm_id: a.farm._id, alert_id: alert._id, type: 'NODE_OFFLINE', priority: 'P2' })
 
     await request(app).post(`/devices/sensor-nodes/${nodeId}/decommission`)
       .set('Authorization', `Bearer ${techToken}`).send({ reason: 'Thiết bị chết, thu hồi' }).expect(200)
 
     expect((await Alert.findById(alert._id))!.status).toBe('RESOLVED')
     expect((await Alert.findById(alert._id))!.resolved_at).toBeInstanceOf(Date)
-    expect((await Ticket.findById(ticket._id))!.notes.at(-1)!.content).toContain('đã được gỡ khỏi hệ thống')
 
     const audit = await AuditLog.findOne({ action: 'DEVICE_DECOMMISSIONED' }).lean()
-    expect(audit!.metadata).toMatchObject({ closedAlerts: 1, notedTickets: 1 })
+    expect(audit!.metadata).toMatchObject({ closedAlerts: 1 })
 
     // Cảnh báo cũ còn sót của thiết bị đã gỡ cũng không được gửi lại (ALERT-FR-015)
     await Alert.updateOne({ _id: alert._id }, { status: 'ACTIVE' })

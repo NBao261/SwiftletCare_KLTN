@@ -1,6 +1,5 @@
 import { Request, Response } from 'express'
 import * as systemService from '@/services/system.service'
-import { drainUnassignedQueueSafely } from '@/services/ticket.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** GET /system/audit-logs – SYSTEM-FR-001 */
@@ -27,33 +26,6 @@ export const getDefaultThresholds = asyncHandler(async (_req: Request, res: Resp
 export const updateDefaultThresholds = asyncHandler(async (req: Request, res: Response) => {
   const thresholds = await systemService.updateDefaultThresholds(req.user._id, req.body)
   res.json({ success: true, data: thresholds })
-})
-
-/** GET /system/settings/sla – TICKET-FR-006, SLA-NFR-001 */
-export const getSlaHours = asyncHandler(async (_req: Request, res: Response) => {
-  res.json({ success: true, data: await systemService.getSlaHours() })
-})
-
-/** PUT /system/settings/sla – TICKET-FR-006, SLA-NFR-001 */
-export const updateSlaHours = asyncHandler(async (req: Request, res: Response) => {
-  res.json({ success: true, data: await systemService.updateSlaHours(req.user._id, req.body) })
-})
-
-/** GET /system/settings/ticket-routing – TICKET-FR-005 */
-export const getTicketRouting = asyncHandler(async (_req: Request, res: Response) => {
-  res.json({ success: true, data: await systemService.getTicketRouting() })
-})
-
-/** PUT /system/settings/ticket-routing – TICKET-FR-005 */
-export const updateTicketRouting = asyncHandler(async (req: Request, res: Response) => {
-  const before = await systemService.getTicketRouting()
-  const after = await systemService.updateTicketRouting(req.user._id, req.body)
-  // Nâng ngưỡng quá tải = Technician có thêm suất → chia ticket đang chờ. Gọi từ
-  // controller vì ticket.service đã import system.service (tránh vòng import).
-  if (after.max_open_tickets_per_technician > before.max_open_tickets_per_technician) {
-    await drainUnassignedQueueSafely()
-  }
-  res.json({ success: true, data: after })
 })
 
 /** GET /system/health-overview – SYSTEM-FR-003 */

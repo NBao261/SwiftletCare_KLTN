@@ -12,7 +12,6 @@ import adminRoutes from '@/routes/admin.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { forgotPassword, resetPassword } from '@/services/auth.service'
 import { Farm } from '@/models/farm.model'
-import { Ticket } from '@/models/ticket.model'
 import { User } from '@/models/user.model'
 import type { Role } from '@/types'
 
@@ -44,7 +43,7 @@ afterAll(async () => {
 })
 
 afterEach(async () => {
-  await Promise.all([User.deleteMany({}), Ticket.deleteMany({}), Farm.deleteMany({})])
+  await Promise.all([User.deleteMany({}), Farm.deleteMany({})])
 })
 
 describe('access control', () => {
@@ -207,32 +206,12 @@ describe('PUT /admin/users/:id/status — boolean coercion', () => {
   })
 })
 
-describe('PUT /admin/users/:id/status — technician with open tickets', () => {
-  it('reroutes the tickets and reports the ones left for the admin in meta', async () => {
+describe('PUT /admin/users/:id/status — response', () => {
+  it('returns the locked user without meta', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
     const { user: tech } = await makeUser('tech@test.vn', 'TECHNICIAN')
-    const { user: owner } = await makeUser('owner@test.vn', 'FARM_OWNER')
-    const farm = await Farm.create({ name: 'Farm', address: 'HCMC', region: 'HCMC', owner_id: owner._id, members: [] })
-    const ticket = await Ticket.create({ farm_id: farm._id, type: 'OTHER', priority: 'P2', assigned_to: tech._id, status: 'IN_PROGRESS' })
-
     const res = await request(app)
       .put(`/admin/users/${tech._id}/status`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ is_active: false, reason: 'Nghỉ việc' })
-      .expect(200)
-
-    // Không ai khác trong vùng → về hàng đợi chung, Admin gán tay
-    expect(res.body.meta).toMatchObject({ rerouted: [], unassigned: [String(ticket._id)], openTickets: 1 })
-    expect(res.body.meta.openTicketIds).toEqual([String(ticket._id)])
-    expect(res.body.data.is_active).toBe(false)
-    expect((await Ticket.findById(ticket._id))!.assigned_to).toBeFalsy()
-  })
-
-  it('has no meta when there is nothing to reassign', async () => {
-    const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    const { user: owner } = await makeUser('owner@test.vn', 'FARM_OWNER')
-    const res = await request(app)
-      .put(`/admin/users/${owner._id}/status`)
       .set('Authorization', `Bearer ${token}`)
       .send({ is_active: false, reason: 'Spam' })
       .expect(200)
@@ -292,44 +271,16 @@ describe('POST /admin/technicians — phone & regions', () => {
   })
 })
 
-describe('PUT /admin/delete-requests/:id/complete — force flag', () => {
-  async function techWithOpenTicket() {
+describe('PUT /admin/delete-requests/:id/complete', () => {
+  it('completes a technician deletion without any extra flag', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
     const { user: tech } = await makeUser('tech@test.vn', 'TECHNICIAN')
     tech.deletion_requested_at = new Date()
     await tech.save()
-    await Ticket.create({ farm_id: new mongoose.Types.ObjectId(), type: 'OTHER', priority: 'P2', assigned_to: tech._id, status: 'NEW' })
-    return { token, tech }
-  }
-
-  it('answers 409 HAS_OPEN_TICKETS with the count by default', async () => {
-    const { token, tech } = await techWithOpenTicket()
-    const res = await request(app)
-      .put(`/admin/delete-requests/${tech._id}/complete`).set('Authorization', `Bearer ${token}`).send({})
-      .expect(409)
-    expect(res.body.error).toMatchObject({ code: 'HAS_OPEN_TICKETS', details: { openTickets: 1 } })
-  })
-
-  it.each([true, 'true'])('proceeds when force is %p', async force => {
-    const { token, tech } = await techWithOpenTicket()
     await request(app)
-      .put(`/admin/delete-requests/${tech._id}/complete`).set('Authorization', `Bearer ${token}`).send({ force })
+      .put(`/admin/delete-requests/${tech._id}/complete`).set('Authorization', `Bearer ${token}`).send({})
       .expect(200)
     expect((await User.findById(tech._id))!.is_active).toBe(false)
-  })
-
-  it('does not accept force:"false" as true', async () => {
-    const { token, tech } = await techWithOpenTicket()
-    await request(app)
-      .put(`/admin/delete-requests/${tech._id}/complete`).set('Authorization', `Bearer ${token}`).send({ force: 'false' })
-      .expect(409)
-  })
-
-  it('rejects a non-boolean force', async () => {
-    const { token, tech } = await techWithOpenTicket()
-    await request(app)
-      .put(`/admin/delete-requests/${tech._id}/complete`).set('Authorization', `Bearer ${token}`).send({ force: 'yes-please' })
-      .expect(422)
   })
 })
 

@@ -43,7 +43,6 @@ it('đổi dữ liệu cũ về phạm vi v2 và chạy lại lần 2 không đ�
     farm_id: farmId, invited_email: 'new@test.vn', invited_role: 'FARM_OPERATOR', zone_ids: [zoneId],
     invited_by: ownerId, token: 't1', status: 'PENDING', expires_at: new Date(Date.now() + 86400_000),
   })
-  await db.collection('ticketmessages').insertOne({ ticket_id: id(), sender_id: operatorId, sender_role: 'FARM_OPERATOR', content: 'hi' })
   await db.collection('alerts').insertMany([
     { farm_id: farmId, zone_id: zoneId, type: 'BIRD_PANIC', severity: 'MEDIUM', title: 't', message: 'm', status: 'ACTIVE' },
     { farm_id: farmId, zone_id: zoneId, type: 'PUMP_DRY', severity: 'MEDIUM', title: 't', message: 'm', status: 'ACTIVE' },
@@ -60,7 +59,7 @@ it('đổi dữ liệu cũ về phạm vi v2 và chạy lại lần 2 không đ�
   await db.collection('contactinquiries').insertOne({ message: 'hi' })
 
   expect(await migrateScopeV2()).toEqual({
-    users: 1, scopedOperatorsWidened: 1, farms: 1, invitations: 1, ticketMessages: 1, zoneScopesRemoved: 2,
+    users: 1, scopedOperatorsWidened: 1, farms: 1, invitations: 1, zoneScopesRemoved: 2,
     alerts: 1, heatingRemoved: 1, harvests: 1, collectionsDropped: 2,
   })
 
@@ -75,7 +74,6 @@ it('đổi dữ liệu cũ về phạm vi v2 và chạy lại lần 2 không đ�
   const invitation = (await Invitation.findOne({ token: 't1' }))!
   expect(invitation.invited_role).toBe('DOMAIN_EXPERT')
   expect(await db.collection('invitations').findOne({ token: 't1' })).not.toHaveProperty('zone_ids')
-  expect((await db.collection('ticketmessages').findOne({}))!.sender_role).toBe('DOMAIN_EXPERT')
 
   expect((await Alert.find().sort({ type: 1 }).lean()).map(a => a.type)).toEqual(['NOISE_ANOMALY', 'PUMP_DRY'])
   expect((await db.collection('sensornodes').findOne({ _id: nodeId }))!.relay_states).toEqual({ misting: true, speaker: false, ventilation: false })
@@ -90,7 +88,7 @@ it('đổi dữ liệu cũ về phạm vi v2 và chạy lại lần 2 không đ�
   expect(collections).not.toEqual(expect.arrayContaining(['contactinquiries']))
 
   expect(await migrateScopeV2()).toEqual({
-    users: 0, scopedOperatorsWidened: 0, farms: 0, invitations: 0, ticketMessages: 0, zoneScopesRemoved: 0,
+    users: 0, scopedOperatorsWidened: 0, farms: 0, invitations: 0, zoneScopesRemoved: 0,
     alerts: 0, heatingRemoved: 0, harvests: 0, collectionsDropped: 0,
   })
 })

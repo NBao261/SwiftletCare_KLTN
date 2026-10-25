@@ -122,48 +122,48 @@ Làm trước PR 4 vì `alertEscalation.job.ts` và `relayUsage.service.ts` đan
 
 **Xong khi:** không còn chỗ nào tạo ticket từ cảnh báo; `README.md` "Chỗ lệch" #42, #43 đã xong.
 
-### PR 4 — Backend: gỡ module ticket · đề xuất: Trần Minh Kiệt
+### PR 4 — Backend: gỡ module ticket · đề xuất: Trần Minh Kiệt · xong ở PR #104
 
 PR lớn nhất. Làm sau PR 3. Nhánh gợi ý `refactor/remove-ticket-module`.
 
 **Xoá file (`backend/src/`):**
-- [ ] `routes/tickets.route.ts`, `routes/maintenanceSchedules.route.ts`
-- [ ] `controllers/tickets.controller.ts`, `controllers/maintenanceSchedules.controller.ts`
-- [ ] `services/ticket.service.ts`, `services/ticketChat.service.ts`, `services/maintenanceSchedule.service.ts`
-- [ ] `models/ticket.model.ts`, `models/ticketMessage.model.ts`, `models/maintenanceSchedule.model.ts`
-- [ ] `jobs/slaBreach.job.ts`, `jobs/ticketQueue.job.ts`, `jobs/maintenanceSchedule.job.ts` (chuyển phần `accumulateRelayUsage()` sang job mới `jobs/relayUsage.job.ts`, mỗi giờ)
-- [ ] `utils/sla.util.ts`, `utils/ticket.util.ts`, `utils/visitTime.util.ts` (kiểm tra không còn ai dùng)
+- [x] `routes/tickets.route.ts`, `routes/maintenanceSchedules.route.ts`
+- [x] `controllers/tickets.controller.ts`, `controllers/maintenanceSchedules.controller.ts`
+- [x] `services/ticket.service.ts`, `services/ticketChat.service.ts`, `services/maintenanceSchedule.service.ts`
+- [x] `models/ticket.model.ts`, `models/ticketMessage.model.ts`, `models/maintenanceSchedule.model.ts`
+- [x] `jobs/slaBreach.job.ts`, `jobs/ticketQueue.job.ts`, `jobs/maintenanceSchedule.job.ts` (chuyển phần `accumulateRelayUsage()` sang job mới `jobs/relayUsage.job.ts`, mỗi giờ)
+- [x] `utils/sla.util.ts`, `utils/ticket.util.ts`, `utils/visitTime.util.ts` (kiểm tra không còn ai dùng)
 
 **Sửa file đang gọi ticket:**
-- [ ] `config/app.config.ts`: bỏ `app.use('/tickets'…)`, `app.use('/maintenance-schedules'…)`.
-- [ ] `index.ts`: bỏ `startSlaBreachJob`, `startTicketQueueJob`, `startMaintenanceScheduleJob`; thêm `startRelayUsageJob`.
-- [ ] `services/device.service.ts`: bỏ `noteTicketsOfRemovedDevice` và import `Ticket`; bỏ `ticket_id` và đoạn kiểm tra "Technician được gán ticket" ở lệnh từ xa (khoảng dòng 915–924); route `POST /devices/sensor-nodes/:id/commands` bỏ `ticket_id` khỏi body.
-- [ ] `services/farm.service.ts`: bỏ `closeTicketsOfDeletedFarm`, `rerouteTicketsOutOfCoverage`.
-- [ ] `services/admin.service.ts`: bỏ điều phối lại ticket khi khoá/xoá Technician, bỏ kiểm tra ticket đang mở khi xoá tài khoản; bỏ `PUT /admin/technicians/:id/profile` (AUTH-FR-005c chỉ còn tạo tài khoản và cấp lại mật khẩu tạm).
-- [ ] `services/system.service.ts`, `controllers/system.controller.ts`, `routes/system.route.ts`: bỏ `/settings/sla`, `/settings/ticket-routing`; `health-overview` bỏ đếm ticket (SYSTEM-FR-003 chỉ còn số farm, Zone, thiết bị theo trạng thái, tài khoản theo role).
-- [ ] `models/systemSetting.model.ts`: bỏ `sla_hours` và cấu hình gán ticket.
-- [ ] `socket/index.ts`: bỏ room `ticket:<id>`, `JOIN_TICKET_CHAT`, `SEND_TICKET_MESSAGE`, `TICKET_MESSAGE_NEW`, `TICKET_CHAT_ASSIGNEE_CHANGED`.
-- [ ] `services/healthReport.service.ts`: bỏ phần đếm hoặc nhắc ticket (nếu có).
-- [ ] `scripts/migrate-retention.script.ts`, `utils/dbScript.util.ts`: bỏ collection ticket khỏi danh sách.
-- [ ] `types/domain.types.ts`: bỏ `TicketType`, `TicketPriority`, `TicketStatus`, `SlaConfig` — **cùng PR** bỏ ở `frontend/src/types/` và `mobile/types/index.ts` (hoặc ghi rõ PR 6 làm phía web/mobile; khi đó PR 6 phải merge liền sau).
+- [x] `config/app.config.ts`: bỏ `app.use('/tickets'…)`, `app.use('/maintenance-schedules'…)`.
+- [x] `index.ts`: bỏ `startSlaBreachJob`, `startTicketQueueJob`, `startMaintenanceScheduleJob`; thêm `startRelayUsageJob`.
+- [x] `services/device.service.ts`: bỏ `noteTicketsOfRemovedDevice` và import `Ticket`; bỏ `ticket_id` và đoạn kiểm tra "Technician được gán ticket" ở lệnh từ xa (khoảng dòng 915–924); route `POST /devices/sensor-nodes/:id/commands` bỏ `ticket_id` khỏi body.
+- [x] `services/farm.service.ts`: bỏ `closeTicketsOfDeletedFarm`, `rerouteTicketsOutOfCoverage`.
+- [x] `services/admin.service.ts`: bỏ điều phối lại ticket khi khoá/xoá Technician, bỏ kiểm tra ticket đang mở khi xoá tài khoản; bỏ `PUT /admin/technicians/:id/profile` (AUTH-FR-005c chỉ còn tạo tài khoản và cấp lại mật khẩu tạm).
+- [x] `services/system.service.ts`, `controllers/system.controller.ts`, `routes/system.route.ts`: bỏ `/settings/sla`, `/settings/ticket-routing`; `health-overview` bỏ đếm ticket (SYSTEM-FR-003 chỉ còn số farm, Zone, thiết bị theo trạng thái, tài khoản theo role).
+- [x] `models/systemSetting.model.ts`: bỏ `sla_hours` và cấu hình gán ticket.
+- [x] `socket/index.ts`: bỏ room `ticket:<id>`, `JOIN_TICKET_CHAT`, `SEND_TICKET_MESSAGE`, `TICKET_MESSAGE_NEW`, `TICKET_CHAT_ASSIGNEE_CHANGED`.
+- [x] `services/healthReport.service.ts`: bỏ phần đếm hoặc nhắc ticket (nếu có) — chỉ có một comment.
+- [x] `scripts/migrate-retention.script.ts`, `utils/dbScript.util.ts`: bỏ collection ticket khỏi danh sách.
+- [x] `types/domain.types.ts`: bỏ `TicketType`, `TicketPriority`, `TicketStatus`, `SlaConfig` — **cùng PR** bỏ ở `frontend/src/types/` và `mobile/types/index.ts` (hoặc ghi rõ PR 6 làm phía web/mobile; khi đó PR 6 phải merge liền sau). PR #104 chỉ bỏ ở backend; web còn ~40 file dùng các enum này nên bỏ ở PR 6.
 
 **Migration (chạy một lần trên staging):**
-- [ ] `scripts/migrate-remove-tickets.script.ts` + script `"migrate:remove-tickets"` trong `package.json`: xoá collection `tickets`, `ticketmessages`, `maintenanceschedules`; `$unset` `sla_hours` và cấu hình gán ticket trong `systemsettings`. Chạy hai lần không lỗi (idempotent).
-- [ ] Test `tests/integration/migrateRemoveTickets.test.ts`; thêm dòng `npm run migrate:remove-tickets` vào mục Commands của `backend/CLAUDE.md` (luật migration).
-- [ ] `.env.example`: bỏ `MAINTENANCE_LEAD_DAYS`.
+- [x] `scripts/migrate-remove-tickets.script.ts` + script `"migrate:remove-tickets"` trong `package.json`: xoá collection `tickets`, `ticketmessages`, `maintenanceschedules`; `$unset` `sla_hours` và cấu hình gán ticket trong `systemsettings`. Chạy hai lần không lỗi (idempotent).
+- [x] Test `tests/integration/migrateRemoveTickets.test.ts`; thêm dòng `npm run migrate:remove-tickets` vào mục Commands của `backend/CLAUDE.md` (luật migration).
+- [x] `.env.example`: bỏ `MAINTENANCE_LEAD_DAYS`.
 
 **Test:**
-- [ ] Xoá: `ticketChat`, `ticketHistory`, `ticketKpi`, `ticketListQuery`, `ticketOverride`, `ticketQueue`, `ticketTechnician`, `slaBreach`, `maintenanceSchedule`, `adminOverrideFixes` (nếu chỉ thử admin override ticket).
-- [ ] Sửa: `adminApi`, `adminUserLifecycle`, `adminInventoryAndSearch`, `systemOverview`, `passwordAndProfile`, `alertVerdict`, `domainExpert`, `deviceOnboarding`, `sensorAnomaly`, `audioTracks` — bỏ phần tạo hoặc kiểm tra ticket.
-- [ ] Giữ độ phủ ≥ 80 % (`npm test` báo lỗi nếu tụt).
+- [x] Xoá: `ticketChat`, `ticketHistory`, `ticketKpi`, `ticketListQuery`, `ticketOverride`, `ticketQueue`, `ticketTechnician`, `slaBreach`, `maintenanceSchedule`, `adminOverrideFixes` (nếu chỉ thử admin override ticket).
+- [x] Sửa: `adminApi`, `adminUserLifecycle`, `adminInventoryAndSearch`, `systemOverview`, `passwordAndProfile`, `alertVerdict`, `domainExpert`, `deviceOnboarding`, `sensorAnomaly`, `audioTracks` — bỏ phần tạo hoặc kiểm tra ticket (`adminInventoryAndSearch`, `sensorAnomaly`, `audioTracks` không dính ticket; sửa thêm `dataPrivacy`, `migrateScopeV2`).
+- [x] Giữ độ phủ ≥ 80 % (`npm test` báo lỗi nếu tụt).
 
 **API spec, DB script:**
-- [ ] `docs/api/api-spec.yaml`: xoá `/tickets*` (từ khoảng dòng 4156), `/maintenance-schedules*` (khoảng 4060), `/system/settings/sla`, `/system/settings/ticket-routing`, `/admin/technicians/{id}/profile`; xoá schema Ticket, TicketMessage, MaintenanceSchedule, SlaConfig.
-- [ ] `npm run db:script`, commit `docs/database/init.mongo.js`.
+- [x] `docs/api/api-spec.yaml`: xoá `/tickets*` (từ khoảng dòng 4156), `/maintenance-schedules*` (khoảng 4060), `/system/settings/sla`, `/system/settings/ticket-routing`, `/admin/technicians/{id}/profile`; xoá schema Ticket, TicketMessage, MaintenanceSchedule, SlaConfig.
+- [x] `npm run db:script`, commit `docs/database/init.mongo.js`.
 
 **Kiểm tra cuối:**
-- [ ] `grep -rniE "ticket|sla_|maintenanceSchedule" backend/src` → không còn kết quả (trừ comment lịch sử nếu cố ý giữ).
-- [ ] `npm run lint && npm run build:check && npm test`.
+- [x] `grep -rniE "ticket|sla_|maintenanceSchedule" backend/src` → không còn kết quả (trừ comment lịch sử nếu cố ý giữ) — chỉ còn `migrate-remove-tickets.script.ts` và một comment ở `migrate-scope-v2.script.ts`.
+- [x] `npm run lint && npm run build:check && npm test`.
 
 **Xong khi:** `README.md` "Chỗ lệch" #41, #45 (phần backend), #46 đã xong.
 
