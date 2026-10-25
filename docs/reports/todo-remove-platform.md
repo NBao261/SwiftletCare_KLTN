@@ -167,33 +167,33 @@ PR lớn nhất. Làm sau PR 3. Nhánh gợi ý `refactor/remove-ticket-module`.
 
 **Xong khi:** `README.md` "Chỗ lệch" #41, #45 (phần backend), #46 đã xong.
 
-### PR 5 — Backend: Technician trên mọi farm, bỏ vùng (FARM-FR-009) · đề xuất: Trần Minh Kiệt
+### PR 5 — Backend: Technician trên mọi farm, bỏ vùng (FARM-FR-009) · đề xuất: Trần Minh Kiệt · xong ở PR #105
 
 Làm sau PR 4 (lúc đó vùng không còn dính ticket). Nhánh gợi ý `refactor/technician-all-farms`.
 
 **Quyền truy cập:**
-- [ ] `utils/farmAccess.util.ts`: xoá `isAssignedTechnician`. **Không** cho Technician vào `hasFarmAccess` (hàm này mở cả dữ liệu vận hành). Thêm hàm riêng, ví dụ `hasDeviceAccess(farm, user)`: đúng khi user có `hasFarmAccess` hoặc là `TECHNICIAN`.
-- [ ] Dùng `hasDeviceAccess` chỉ ở: danh sách farm (chỉ cấu trúc), House/Zone (đọc), danh sách và chi tiết thiết bị, đăng ký/dời/gỡ/thay, lệnh từ xa, bài loa, cảnh báo **thiết bị** (định nghĩa "Device alert" ở Report 3 §1.3).
-- [ ] Rà mọi route dữ liệu vận hành còn cho TECHNICIAN ở `requireRole` (telemetry, analytics, số đếm chim, live stream, harvest, health report, ngưỡng): phải trả 403 với Technician.
-- [ ] `socket/index.ts`: Technician không được `JOIN_ZONE`/`JOIN_HOUSE` (đó là telemetry và số đếm trực tiếp); chỉ nhận `DEVICE_STATUS_CHANGE` qua room riêng nếu cần.
-- [ ] `services/farm.service.ts`: Technician thấy mọi farm (bỏ lọc `region`), Admin không thấy farm nào.
+- [x] `utils/farmAccess.util.ts`: xoá `isAssignedTechnician`. **Không** cho Technician vào `hasFarmAccess` (hàm này mở cả dữ liệu vận hành). Thêm hàm riêng, ví dụ `hasDeviceAccess(farm, user)`: đúng khi user có `hasFarmAccess` hoặc là `TECHNICIAN`.
+- [x] Dùng `hasDeviceAccess` chỉ ở: danh sách farm (chỉ cấu trúc), House/Zone (đọc), danh sách và chi tiết thiết bị, đăng ký/dời/gỡ/thay, lệnh từ xa, bài loa, cảnh báo **thiết bị** (định nghĩa "Device alert" ở Report 3 §1.3).
+- [x] Rà mọi route dữ liệu vận hành còn cho TECHNICIAN ở `requireRole` (telemetry, analytics, số đếm chim, live stream, harvest, health report, ngưỡng): phải trả 403 với Technician.
+- [x] `socket/index.ts`: Technician không được `JOIN_ZONE`/`JOIN_HOUSE` (đó là telemetry và số đếm trực tiếp); chỉ nhận `DEVICE_STATUS_CHANGE` qua room riêng nếu cần.
+- [x] `services/farm.service.ts`: Technician thấy mọi farm (bỏ lọc `region`), Admin không thấy farm nào.
 
 **Bỏ vùng:**
-- [ ] Xoá `utils/regions.util.ts`, `scripts/migrate-regions.script.ts`, script `migrate:regions`, `tests/unit/utils/regions.util.test.ts`, `tests/integration/migrateRegions.test.ts`.
-- [ ] `models/user.model.ts`: bỏ `assigned_regions`; `models/farm.model.ts`: bỏ `region`.
-- [ ] `routes/farms.route.ts:16`: bỏ validator bắt buộc `region`; `routes/admin.route.ts`: bỏ `PUT /admin/technicians/:id/regions`.
-- [ ] Sửa `middlewares/auth.middleware.ts`, `types/express.d.ts`, `types/domain.types.ts`, `controllers/admin.controller.ts`, `controllers/farms.controller.ts`, `services/admin.service.ts`, `services/system.service.ts`, `scripts/seed.script.ts` (bỏ mọi `region`, `assigned_regions`).
-- [ ] Migration `migrate:remove-regions` (hoặc gộp vào `migrate:remove-tickets`): `$unset` `users.assigned_regions`, `farms.region`.
+- [x] Xoá `utils/regions.util.ts`, `scripts/migrate-regions.script.ts`, script `migrate:regions`, `tests/unit/utils/regions.util.test.ts`, `tests/integration/migrateRegions.test.ts`.
+- [x] `models/user.model.ts`: bỏ `assigned_regions`; `models/farm.model.ts`: bỏ `region`.
+- [x] `routes/farms.route.ts:16`: bỏ validator bắt buộc `region`; `routes/admin.route.ts`: bỏ `PUT /admin/technicians/:id/regions`.
+- [x] Sửa `middlewares/auth.middleware.ts`, `types/express.d.ts`, `types/domain.types.ts`, `controllers/admin.controller.ts`, `controllers/farms.controller.ts`, `services/admin.service.ts`, `services/system.service.ts`, `scripts/seed.script.ts` (bỏ mọi `region`, `assigned_regions`).
+- [x] Migration `migrate:remove-regions` (hoặc gộp vào `migrate:remove-tickets`): `$unset` `users.assigned_regions`, `farms.region`.
 
 **Tọa độ bắt buộc (FARM-FR-001, A-5 — một farm là một địa điểm):**
-- [ ] `routes/farms.route.ts`, `POST /farms`: thay validator `region` bằng `body('coordinates.lat').isFloat({ min: -90, max: 90 })` và `body('coordinates.lng').isFloat({ min: -180, max: 180 })`, bắt buộc; `PUT /farms/:id`: cùng kiểm tra nhưng không bắt buộc gửi.
-- [ ] `services/farm.service.ts`: chỉ nhận `coordinates.lat`, `coordinates.lng` dạng số (không gán nguyên `req.body`); không đổi schema `farm.model.ts` để farm cũ chưa có tọa độ vẫn đọc được.
-- [ ] `scripts/seed.script.ts`: farm mẫu có tọa độ.
-- [ ] Test: tạo farm thiếu tọa độ → 422; vĩ độ 95 → 422; hợp lệ → 201 và lưu đúng; sửa farm với kinh độ −200 → 422; một Farm Owner tạo 2 farm, mỗi farm tọa độ riêng → cả hai được lưu.
+- [x] `routes/farms.route.ts`, `POST /farms`: thay validator `region` bằng `body('coordinates.lat').isFloat({ min: -90, max: 90 })` và `body('coordinates.lng').isFloat({ min: -180, max: 180 })`, bắt buộc; `PUT /farms/:id`: cùng kiểm tra nhưng không bắt buộc gửi.
+- [x] `services/farm.service.ts`: chỉ nhận `coordinates.lat`, `coordinates.lng` dạng số (không gán nguyên `req.body`); không đổi schema `farm.model.ts` để farm cũ chưa có tọa độ vẫn đọc được.
+- [x] `scripts/seed.script.ts`: farm mẫu có tọa độ.
+- [x] Test: tạo farm thiếu tọa độ → 422; vĩ độ 95 → 422; hợp lệ → 201 và lưu đúng; sửa farm với kinh độ −200 → 422; một Farm Owner tạo 2 farm, mỗi farm tọa độ riêng → cả hai được lưu.
 
 **Thông báo cho Farm Owner (FARM-FR-009, ghi chú ² §2.4):**
-- [ ] Mỗi lần Technician đăng ký, dời, gỡ, thay thiết bị, gửi lệnh từ xa hay OTA: tạo một thông báo trong app (`notification.service`) cho từng Farm Owner của farm, và một dòng audit (`logAction`) nếu chưa có.
-- [ ] Test: Technician dời controller → 1 audit + 1 thông báo cho mỗi Farm Owner; Technician gọi telemetry/analytics/live stream/harvest → 403; Admin gọi `GET /farms/:id` → 403; Technician `GET /farms` thấy farm của mọi chủ.
+- [x] Mỗi lần Technician đăng ký, dời, gỡ, thay thiết bị, gửi lệnh từ xa hay OTA: tạo một thông báo trong app (`notification.service`) cho từng Farm Owner của farm, và một dòng audit (`logAction`) nếu chưa có.
+- [x] Test: Technician dời controller → 1 audit + 1 thông báo cho mỗi Farm Owner; Technician gọi telemetry/analytics/live stream/harvest → 403; Admin gọi `GET /farms/:id` → 403; Technician `GET /farms` thấy farm của mọi chủ.
 
 **API spec:** cập nhật role; bỏ `region` ở schema Farm, User, request tạo farm; `coordinates` (`lat`, `lng`, khoảng giá trị) bắt buộc ở request tạo farm.
 
