@@ -346,9 +346,6 @@ ensureCollection("farms", {
     "address": {
       "bsonType": "string"
     },
-    "region": {
-      "bsonType": ["string", "null"]
-    },
     "coordinates": {
       "bsonType": ["object", "null"],
       "properties": {
@@ -402,7 +399,6 @@ ensureCollection("farms", {
   },
   "required": ["name", "address", "owner_id"]
 })
-db.getCollection("farms").createIndex({"region":1})
 db.getCollection("farms").createIndex({"owner_id":1})
 db.getCollection("farms").createIndex({"members.user_id":1})
 
@@ -1066,12 +1062,6 @@ ensureCollection("users", {
     "role": {
       "bsonType": ["string", "null"],
       "enum": ["ADMIN", "FARM_OWNER", "DOMAIN_EXPERT", "TECHNICIAN", null]
-    },
-    "assigned_regions": {
-      "bsonType": ["array", "null"],
-      "items": {
-        "bsonType": "string"
-      }
     },
     "avatar_url": {
       "bsonType": ["string", "null"]

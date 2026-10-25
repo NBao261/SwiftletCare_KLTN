@@ -8,8 +8,8 @@ const router = Router()
 router.use(authenticate)
 
 /** MARKET-FR-001..005 — Farm Owner ghi nhận; Domain Expert chỉ xem (mục 4.4) */
-const canRead  = requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'ADMIN')
-const canWrite = requireRole('FARM_OWNER', 'ADMIN')
+const canRead  = requireRole('FARM_OWNER', 'DOMAIN_EXPERT')
+const canWrite = requireRole('FARM_OWNER')
 router.post  ('/',    canWrite, body('zone_id').isMongoId(), body('harvest_date').isISO8601(), validate, harvestController.create)
 router.get   ('/',    canRead,  harvestController.list)
 router.get   ('/:id', canRead,  param('id').isMongoId(), validate, harvestController.getOne)

@@ -20,9 +20,8 @@ const paginationQuery = [
 /** Quản lý tài khoản – AUTH-FR-011, AUTH-FR-012, Flow 19 */
 router.get('/users',
   query('role').optional().isIn(ROLES), query('status').optional().isIn(['active', 'inactive', 'deleted']),
-  // Tìm theo tên/email/SĐT; region chỉ có nghĩa với Technician (assigned_regions)
+  // Tìm theo tên/email/SĐT
   query('q').optional().isString().trim().isLength({ max: 100 }),
-  query('region').optional().isString().trim().notEmpty(),
   ...paginationQuery, validate,
   adminController.listUsers,
 )
@@ -51,15 +50,8 @@ router.post('/technicians',
   // Cùng quy tắc với form tạo user ở frontend (validations/admin/user.validation.ts) — gọi API thẳng cũng không lưu được SĐT sai
   body('phone').optional({ values: 'falsy' }).isString().customSanitizer((v: string) => v.replace(/[\s.-]/g, ''))
     .matches(PHONE_RE).withMessage('SĐT phải là 10 số bắt đầu bằng 0 hoặc +84 rồi 9 số'),
-  body('assigned_regions').isArray({ min: 1 }), body('assigned_regions.*').isString().trim().notEmpty(), validate,
-  adminController.createTechnician,
-)
-/** Điều chỉnh khu vực Technician – AUTH-FR-005c, Flow 21 4a-x */
-router.put('/technicians/:id/regions',
-  param('id').isMongoId(),
-  body('assigned_regions').isArray({ min: 1 }), body('assigned_regions.*').isString().trim().notEmpty(),
   validate,
-  adminController.updateTechnicianRegions,
+  adminController.createTechnician,
 )
 /** Cấp mật khẩu tạm cho Technician (trả 1 lần, bắt đổi ở lần đăng nhập sau) – AUTH-FR-005c */
 router.put('/technicians/:id/password', param('id').isMongoId(), validate, adminController.resetTechnicianPassword)

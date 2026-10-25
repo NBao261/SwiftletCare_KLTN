@@ -57,7 +57,7 @@ describe('mật khẩu tạm (must_change_password)', () => {
     const temporary = freshPassword()
     const chosen = freshPassword()
     const tech = await createTechnician(String(admin._id), {
-      email: 'tech@test.vn', password: temporary, full_name: 'Tech', assigned_regions: ['HCMC'],
+      email: 'tech@test.vn', password: temporary, full_name: 'Tech',
     })
     expect(tech.must_change_password).toBe(true)
     const token = tokenFor(tech._id, 'TECHNICIAN')
@@ -115,7 +115,7 @@ describe('Admin quản lý Technician', () => {
   it('issues a one-time temporary password that works and must be changed, and drops every session', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     const tech = await mkUser('tech@test.vn', 'TECHNICIAN', {
-      assigned_regions: ['HCMC'], refresh_tokens: [{ token_hash: 'x', expires: new Date(Date.now() + 1e6) }],
+      refresh_tokens: [{ token_hash: 'x', expires: new Date(Date.now() + 1e6) }],
     })
 
     const res = await request(app).put(`/admin/technicians/${tech._id}/password`)

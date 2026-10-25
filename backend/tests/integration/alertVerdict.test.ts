@@ -63,7 +63,7 @@ async function seed() {
   const owner = await User.create({ email: `o${seq}@test.vn`, password_hash: 'password123', full_name: 'O', role: 'FARM_OWNER' })
   const expert = await User.create({ email: `e${seq}@test.vn`, password_hash: 'password123', full_name: 'E', role: 'DOMAIN_EXPERT' })
   const farm = await Farm.create({
-    name: 'F', address: 'x', region: 'HCMC', owner_id: owner._id,
+    name: 'F', address: 'x', owner_id: owner._id,
     members: [{ user_id: owner._id, is_primary: true }, { user_id: expert._id, role: 'DOMAIN_EXPERT' }],
   })
   const house = await House.create({ farm_id: farm._id, name: 'H' })

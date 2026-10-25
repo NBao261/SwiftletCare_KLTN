@@ -1,11 +1,13 @@
 ﻿import { Router } from 'express'
 import { query } from 'express-validator'
 import * as analyticsController from '@/controllers/analytics.controller'
-import { authenticate } from '@/middlewares/auth.middleware'
+import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
 router.use(authenticate)
+// Dữ liệu vận hành: chỉ Farm Owner, Domain Expert; Technician, Admin không (Report 3 §2.4, FARM-FR-009)
+router.use(requireRole('FARM_OWNER', 'DOMAIN_EXPERT'))
 
 // ANALYTICS-FR-001/005 — biểu đồ môi trường + so sánh đa Zone (Farm Owner dùng hằng ngày)
 router.get('/env/summary',       query('zoneId').isMongoId(), validate, analyticsController.envSummary)

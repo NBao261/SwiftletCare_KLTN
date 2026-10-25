@@ -6,7 +6,7 @@ import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import {
-  hasFarmAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
+  hasFarmAccess, hasDeviceAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
   assertZoneAccess, assertHouseAccess,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
@@ -18,7 +18,6 @@ import {
   pickDetectionTuning, resolveBirdCountTuning, resolveDetectionTuning,
 } from '@/utils/detectionTuning.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
-import { assertRegionCode } from '@/utils/regions.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser, FarmMemberRole } from '@/types'
@@ -27,22 +26,22 @@ import type { Thresholds, CurrentUser, FarmMemberRole } from '@/types'
 const INVITATION_TTL_MS = 7 * 86400_000
 
 /**
- * FARM-FR-001. Technician thấy các Farm thuộc `assigned_regions` của mình để còn
- * chọn Farm→House→Zone khi onboarding thiết bị (Flow 1 bước 2), không phải mọi Farm.
+ * FARM-FR-001, FARM-FR-009 — Technician thấy mọi farm (chỉ cấu trúc, để chọn House→Zone khi
+ * setup thiết bị); Administrator không thấy farm nào (Report 3 §2.4).
  */
 export async function listFarms(user: CurrentUser): Promise<Array<IFarm | FarmDetail>> {
-  let filter: object = { $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] }
-  if (user.role === 'ADMIN') filter = {}
-  else if (user.role === 'TECHNICIAN') filter = { region: { $in: user.assigned_regions ?? [] } }
+  if (user.role === 'ADMIN') return []
+  const filter = user.role === 'TECHNICIAN' ? {} : { $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] }
 
   const farms = await Farm.find(filter).sort({ created_at: -1 })
-  return user.role === 'DOMAIN_EXPERT' ? farms.map(farm => onlyOwnMembership(farm, user)) : farms
+  return user.role === 'FARM_OWNER' ? farms : farms.map(farm => onlyOwnMembership(farm, user))
 }
 
 /**
  * Domain Expert không quản lý thành viên (AUTH-FR-005) nên không cần — và không được
- * thấy — danh sách thành viên của farm; chỉ giữ bản ghi của chính mình. Dùng chung cho
- * danh sách và chi tiết farm để hai đường không lệch nhau.
+ * thấy — danh sách thành viên của farm; chỉ giữ bản ghi của chính mình. Technician không
+ * là thành viên nên không thấy ai. Dùng chung cho danh sách và chi tiết farm để hai đường
+ * không lệch nhau.
  */
 function onlyOwnMembership(farm: IFarm, user: CurrentUser): FarmDetail {
   const plain = farm.toObject() as unknown as FarmDetail
@@ -50,22 +49,25 @@ function onlyOwnMembership(farm: IFarm, user: CurrentUser): FarmDetail {
   return plain
 }
 
+export interface Coordinates { lat: number; lng: number }
+
 export interface CreateFarmInput {
-  name: string; address: string; region?: string; coordinates?: { lat: number; lng: number }
+  name: string; address: string; coordinates: Coordinates
 }
 
-/** FARM-FR-001 — chỉ Farm Owner tạo farm và thành Primary Owner (Report 3 §2.4: Admin không quản lý farm) */
-export async function createFarm(user: CurrentUser, input: CreateFarmInput): Promise<IFarm> {
-  // Farm thiếu vùng thì không Technician nào phụ trách được — bắt buộc, quy về mã danh mục
-  if (!input.region?.trim()) throw BadRequestError('Phải chọn khu vực (tỉnh/thành) của farm')
-  const region = assertRegionCode(input.region)
+/** Chỉ lấy 2 số lat/lng — route đã kiểm khoảng; không gán nguyên object client gửi */
+const pickCoordinates = (c: Coordinates): Coordinates => ({ lat: Number(c.lat), lng: Number(c.lng) })
 
+/**
+ * FARM-FR-001 — chỉ Farm Owner tạo farm và thành Primary Owner (Report 3 §2.4: Admin không quản lý farm).
+ * Một farm là một địa điểm, tọa độ bắt buộc (A-5) để có thời tiết của đúng nơi đó.
+ */
+export async function createFarm(user: CurrentUser, input: CreateFarmInput): Promise<IFarm> {
   const ownerId = user._id
   return Farm.create({
     name: input.name,
     address: input.address,
-    region,
-    coordinates: input.coordinates,
+    coordinates: pickCoordinates(input.coordinates),
     owner_id: ownerId,
     members: [{ user_id: ownerId, is_primary: true }],
   })
@@ -87,9 +89,9 @@ export interface FarmDetail extends Omit<IFarm, 'members'> {
 
 export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDetail> {
   const farm = await findFarmOrThrow(farmId)
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
+  if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
 
-  if (user.role === 'DOMAIN_EXPERT') return onlyOwnMembership(farm, user)
+  if (user.role !== 'FARM_OWNER') return onlyOwnMembership(farm, user)
 
   const memberIds = [farm.owner_id, ...farm.members.map(m => m.user_id)]
   const users = await User.find({ _id: { $in: memberIds } }).select('full_name email').lean()
@@ -111,22 +113,14 @@ export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDe
 export async function updateFarm(
   farmId: string,
   user: CurrentUser,
-  updates: Partial<{ name: string; address: string; region: string; coordinates: { lat: number; lng: number } }>,
+  updates: Partial<{ name: string; address: string; coordinates: Coordinates }>,
 ): Promise<IFarm> {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền sửa farm này')
-  if (updates.region !== undefined) updates = { ...updates, region: assertRegionCode(updates.region) }
-  // region quyết định Technician nào phụ trách farm — cùng mức nhạy cảm với xoá
-  // farm/mời thành viên nên chỉ Primary Owner được đổi.
-  if (updates.region !== undefined && updates.region !== farm.region && !isPrimaryOwner(farm, user)) {
-    throw ForbiddenError('Chỉ Primary Owner mới được đổi khu vực của farm')
-  }
-
 
   if (updates.name !== undefined) farm.name = updates.name
   if (updates.address !== undefined) farm.address = updates.address
-  if (updates.region !== undefined) farm.region = updates.region
-  if (updates.coordinates !== undefined) farm.coordinates = updates.coordinates
+  if (updates.coordinates !== undefined) farm.coordinates = pickCoordinates(updates.coordinates)
   await farm.save()
   return farm
 }
@@ -313,7 +307,7 @@ export async function createHouse(
 
 export async function listHouses(farmId: string, user: CurrentUser) {
   const farm = await findFarmOrThrow(farmId)
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
+  if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
   return House.find({ farm_id: farm._id }).sort({ created_at: -1 })
 }
 
@@ -338,7 +332,7 @@ export async function listZones(houseId: string, user: CurrentUser) {
   const house = await House.findById(houseId)
   if (!house) throw NotFoundError('Không tìm thấy house')
   const farm = await findFarmOrThrow(String(house.farm_id))
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
+  if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
   return Zone.find({ house_id: house._id }).sort({ created_at: -1 })
 }
 
@@ -346,7 +340,8 @@ export async function listZones(houseId: string, user: CurrentUser) {
 /** ENV-FR-006 — GET đơn 1 Zone, chủ yếu để FE lấy `thresholds` hiện tại trước khi mở form sửa. */
 export async function getZone(zoneId: string, user: CurrentUser): Promise<IZone> {
   const { zone, farm } = await findZoneChainOrThrow(zoneId)
-  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
+  // Technician cần Zone (và cấu hình gửi xuống thiết bị) khi setup và đẩy cấu hình (FARM-FR-009)
+  if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
   return zone
 }
 

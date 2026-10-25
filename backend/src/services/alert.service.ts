@@ -76,6 +76,15 @@ export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMA
  */
 const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE', 'MAINTENANCE_DUE']
 
+/**
+ * "Device alert" (Report 3 §1.3) — cảnh báo về thiết bị, không về nhà yến: Technician thấy loại này
+ * ở mọi farm (FARM-FR-009) và không thấy loại nào khác. ACTUATOR_FAULT, CONFIG_MISMATCH chưa có trong code.
+ */
+export const DEVICE_ALERT_TYPES: AlertType[] = [
+  'NODE_OFFLINE', 'EDGE_AI_DEGRADED', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'POWER_OUTAGE',
+  'SPEAKER_FAILURE', 'PUMP_DRY', 'MAINTENANCE_DUE',
+]
+
 /** Loại nút AI đếm chim được tự báo qua `vision/alert` (THREAT-FR-010: tốc độ xử lý < 10 FPS) */
 const CAMERA_ALERT_TYPES: AlertType[] = ['EDGE_AI_DEGRADED']
 
@@ -314,12 +323,14 @@ export interface ListAlertsQuery {
 }
 
 /**
- * ALERT-FR-007 — Farm Owner chỉ thấy cảnh báo của farm mình; ADMIN thấy tất cả;
- * Technician thấy farm trong khu vực phụ trách (RACI 4.4).
+ * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Technician thấy
+ * cảnh báo thiết bị của mọi farm (FARM-FR-009); Admin không thấy farm nào (Report 3 §2.4).
  */
 export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
-  const accessibleFarms = await listAccessibleFarmIds(user)
+  const accessibleFarms = await listAccessibleFarmIds(user, 'device')
   const filter: Record<string, unknown> = { farm_id: { $in: accessibleFarms } }
+  // $and để giữ nguyên bộ lọc `type` của người gọi: giao với loại thiết bị
+  if (user.role === 'TECHNICIAN') filter.$and = [{ type: { $in: DEVICE_ALERT_TYPES } }]
 
   if (query.farmId) {
     if (!accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
@@ -355,7 +366,7 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
 export async function getAlert(alertId: string, user: CurrentUser): Promise<IAlert> {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')
-  await assertFarmAccess(String(alert.farm_id), user)
+  await assertFarmAccess(String(alert.farm_id), user, DEVICE_ALERT_TYPES.includes(alert.type) ? 'device' : 'farm')
   return alert
 }
 

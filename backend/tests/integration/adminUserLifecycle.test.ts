@@ -336,15 +336,14 @@ describe('completeDeletionRequest', () => {
     })
   })
 
-  it('anonymises a deleted technician and clears their regions', async () => {
+  it('anonymises a deleted technician', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', { ...requested, assigned_regions: ['HCMC'] })
+    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', requested)
 
     await completeDeletionRequest(String(admin._id), String(tech._id))
 
     const gone = (await User.findById(tech._id))!
     expect(gone.email).toBe(`deleted-${String(tech._id)}@swiftletcare.local`)
-    expect(gone.assigned_regions).toEqual([])
   })
 
   it('can be re-run after failing midway without repeating finished farms', async () => {

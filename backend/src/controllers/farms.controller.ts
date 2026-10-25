@@ -1,7 +1,6 @@
 import { Request, Response } from 'express'
 import * as farmService from '@/services/farm.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
-import * as regionsUtil from '@/utils/regions.util'
 
 /** GET /farms – FARM-FR-001 */
 export const list = asyncHandler(async (req: Request, res: Response) => {
@@ -14,11 +13,6 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
   const farm = await farmService.createFarm(req.user, req.body)
   res.status(201).json({ success: true, data: farm })
 })
-
-/** GET /farms/regions — danh mục khu vực (FARM-FR-009) */
-export const listRegions = (_req: Request, res: Response): void => {
-  res.json({ success: true, data: regionsUtil.listRegions() })
-}
 
 /** GET /farms/:id */
 export const getOne = asyncHandler(async (req: Request, res: Response) => {

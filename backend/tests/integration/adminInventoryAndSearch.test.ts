@@ -109,8 +109,8 @@ describe('cấp lại secretKey', () => {
 describe('GET /admin/users — tìm kiếm', () => {
   async function seed() {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
-    await mkUser('nguyen.van.a@test.vn', 'TECHNICIAN', { full_name: 'Nguyễn Văn A', phone: '0911111111', assigned_regions: ['HCMC'] })
-    await mkUser('tran.b@test.vn', 'TECHNICIAN', { full_name: 'Trần B', assigned_regions: ['TAY_NINH'] })
+    await mkUser('nguyen.van.a@test.vn', 'TECHNICIAN', { full_name: 'Nguyễn Văn A', phone: '0911111111' })
+    await mkUser('tran.b@test.vn', 'TECHNICIAN', { full_name: 'Trần B' })
     await mkUser('locked@test.vn', 'FARM_OWNER', { is_active: false })
     await mkUser('deleted-x@swiftletcare.local', 'FARM_OWNER', { is_active: false, deleted_at: new Date() })
     return tokenFor(admin._id, 'ADMIN')
@@ -128,13 +128,10 @@ describe('GET /admin/users — tìm kiếm', () => {
     expect(emails(await get(`q=${encodeURIComponent('.*')}`))).toEqual([])
   })
 
-  it('filters technicians by region and separates locked from deleted accounts', async () => {
+  it('separates locked from deleted accounts', async () => {
     const token = await seed()
     const get = (qs: string) => request(app).get(`/admin/users?${qs}`).set('Authorization', `Bearer ${token}`).expect(200)
 
-    // Lọc bằng mã hay bằng tên/tên tỉnh cũ đều ra cùng kết quả
-    expect(emails(await get('region=TAY_NINH'))).toEqual(['tran.b@test.vn'])
-    expect(emails(await get('region=Long%20An'))).toEqual(['tran.b@test.vn'])
     expect(emails(await get('status=inactive'))).toEqual(['locked@test.vn'])
     expect(emails(await get('status=deleted'))).toEqual(['deleted-x@swiftletcare.local'])
   })

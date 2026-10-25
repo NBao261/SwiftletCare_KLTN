@@ -64,8 +64,8 @@ const tokenFor = (id: unknown, role: string) =>
 
 async function seed(status: 'ONLINE' | 'OFFLINE' = 'ONLINE') {
   const owner = await User.create({ email: 'owner@test.vn', password_hash: 'password123', full_name: 'Owner', role: 'FARM_OWNER' })
-  const tech = await User.create({ email: 'tech@test.vn', password_hash: 'password123', full_name: 'Tech', role: 'TECHNICIAN', assigned_regions: ['HCM'] })
-  const farm = await Farm.create({ name: 'Farm', address: 'HCMC', owner_id: owner._id, region: 'HCM' })
+  const tech = await User.create({ email: 'tech@test.vn', password_hash: 'password123', full_name: 'Tech', role: 'TECHNICIAN' })
+  const farm = await Farm.create({ name: 'Farm', address: 'HCMC', owner_id: owner._id })
   const house = await House.create({ farm_id: farm._id, name: 'House' })
   const zone = await Zone.create({ house_id: house._id, name: 'Zone' })
   const node = await SensorNode.create({ device_id: 'ESP32-A', zone_id: zone._id, status })

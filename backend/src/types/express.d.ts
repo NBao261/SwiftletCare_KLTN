@@ -16,7 +16,6 @@ declare global {
         role: Role
         full_name: string
         is_active: boolean
-        assigned_regions?: string[]
         notification_preferences: NotificationPreferences
       }
     }

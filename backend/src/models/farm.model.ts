@@ -17,12 +17,7 @@ export interface IFarm extends Document {
   _id: Types.ObjectId
   name: string
   address: string
-  /**
-   * Khu vực địa lý cấp tỉnh/thành (VD: 'HCMC', 'Long An') — khớp với
-   * `users.assigned_regions` của Technician để giới hạn Technician chỉ lắp đặt
-   * cho Farm thuộc khu vực mình phụ trách (AUTH-FR-005c, RACI mục 4.4 ghi chú ¹).
-   */
-  region?: string
+  /** FARM-FR-001, A-5 — bắt buộc khi tạo (route); farm tạo trước đó có thể chưa có, nên schema không bắt buộc */
   coordinates?: { lat: number; lng: number }
   owner_id: Types.ObjectId
   members: Types.DocumentArray<IFarmMember & Document>
@@ -34,7 +29,6 @@ const farmSchema = new Schema<IFarm>(
   {
     name:        { type: String, required: true, trim: true },
     address:     { type: String, required: true },
-    region:      { type: String, trim: true, index: true },
     coordinates: {
       lat: { type: Number },
       lng: { type: Number },
