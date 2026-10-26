@@ -1407,7 +1407,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | `getApiErrorMessage` trả câu lỗi nguyên văn của backend — màn trang trại, thiết bị của Farm Owner đã chuyển; khoảng 40 file còn gọi `getApiErrorMessage` | 13.16 b | Màn khi sửa đổi sang `useApiErrorMessage()` (`hooks/common/`); hết chỗ gọi thì xoá `getApiErrorMessage` |
 | Chưa có Prettier, husky, lint-staged; ESLint thiếu rule ở 13.15 | 13.15 | 1 PR cài công cụ + 1 commit format toàn bộ |
 | `formatDate`/`formatDateOnly` (`lib/helpers.ts`), `day`/`time` của `useTranslation` lệch chuẩn 6.1 | 6.1 | Chuyển sang `formatStandardDate`/`formatHourMinute`/`formatDateTime` khi sửa màn |
-| Màn Admin/Technician còn hiện mã rút gọn từ id (VD `Khu vực ${alert.zone_id.slice(-6)}` ở `TechnicianAlertsPage`) | 13.16 a | Người phụ trách role đó gỡ khi sửa màn |
+| ~~Màn Admin/Technician còn hiện mã rút gọn từ id (`TechnicianAlertsPage`, bảng OTA)~~ | 13.16 a | ✅ Đã gỡ ở PR #106 — tra tên Zone (`useAllZones`) và mã thiết bị (`useSensorNodes`) |
 | Nhãn mã backend khai riêng/viết cứng ngoài `enumLabels.i18n.ts`: `STATUS_LABEL` (`common/StatusDot.tsx`), `ROLE_LABEL` (`constants/roles.ts`), bản dịch trùng trong `src/i18n/en.ts` | 6.3 | Người phụ trách role đó chuyển sang đọc `enumLabels.i18n.ts` khi sửa màn |
 | ~230 chỗ `text-xs`/`text-sm`/`text-lg`/`text-2xl`… | Lệch thang chữ 2.8 (13.7 [Nên]) | Đổi dần khi sửa file đó |
 | ~~`pages/sales-staff/` · `routes/sales-staff.routes.tsx` · `SalesStaffLayout` · role `SALES_STAFF`, form tạo chuyên gia và tab đề xuất chuyên gia của Admin~~ | Role đã bỏ từ SRS v1.23.0 | ✅ Đã gỡ ở PR #106; Admin chỉ tạo Kỹ thuật viên (AUTH-FR-005c) |

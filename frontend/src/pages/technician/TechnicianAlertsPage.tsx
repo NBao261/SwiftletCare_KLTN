@@ -1,7 +1,10 @@
 // Alerts Page – ALERT-FR-001/002/006/007/008/009
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useAlertsList, useAcknowledgeAlert } from "@/hooks/shared/useAlerts";
+import { useSensorNodes } from "@/hooks/shared/useDevices";
+import { useAllZones } from "@/hooks/shared/useFarms";
+import { NO_VALUE } from "@/constants/display";
 import { Card, Button } from "@/components/ui";
 import AlertBadge from "@/components/features/technician/alerts/AlertBadge";
 import EmptyState from "@/components/ui/EmptyState";
@@ -56,6 +59,18 @@ export default function TechnicianAlertsPage() {
     page,
     limit: 10,
   });
+
+  // Tên Zone (kèm nhà) và mã thiết bị trên nhãn — không hiện mã cắt từ id (FE_Design 13.16 a)
+  const { data: zones } = useAllZones();
+  const { data: sensorNodes } = useSensorNodes();
+  const zoneNameById = useMemo(
+    () => new Map((zones ?? []).map((zone) => [zone._id, `${zone.houseName} · ${zone.name}`])),
+    [zones],
+  );
+  const deviceNameById = useMemo(
+    () => new Map((sensorNodes ?? []).map((node) => [node._id, node.device_id])),
+    [sensorNodes],
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -148,13 +163,13 @@ export default function TechnicianAlertsPage() {
                     Vị trí:{' '}
                     {alert.zone_id && (
                       <Link to="/devices" className="text-accent-800 hover:underline">
-                        {String(alert.metadata?.zone_name || `Khu vực ${alert.zone_id.slice(-6)}`)}
+                        {String(alert.metadata?.zone_name || zoneNameById.get(alert.zone_id) || NO_VALUE)}
                       </Link>
                     )}
                     {alert.zone_id && alert.node_id && ' / '}
                     {alert.node_id && (
                       <Link to="/devices" className="text-accent-800 hover:underline">
-                        {String(alert.metadata?.device_id || `Thiết bị ${alert.node_id.slice(-6)}`)}
+                        {String(alert.metadata?.device_id || deviceNameById.get(alert.node_id) || NO_VALUE)}
                       </Link>
                     )}
                   </>
