@@ -4,16 +4,17 @@ Node.js 22 + Express 4 + TypeScript + MongoDB + EMQX (MQTT) + Socket.io. Yêu c�
 
 > **Phạm vi sau Review 1.** Khác so với bản v1.24.0:
 >
-> - Role `DOMAIN_EXPERT` thay `FARM_OPERATOR`, phạm vi cả farm (không còn `zone_ids`, `operatorZoneScope`, `applyZoneScope`, `PUT /farms/:id/members/:userId`). Chuyên gia chỉ đọc dữ liệu vận hành, sửa ngưỡng/hệ số/tham số phát hiện, kiểm chứng cảnh báo, viết kết luận — không relay, ticket, ghi thu hoạch hay xác nhận cảnh báo (Report 3 §2.4).
+> - Role `DOMAIN_EXPERT` thay `FARM_OPERATOR`, phạm vi cả farm (không còn `zone_ids`, `operatorZoneScope`, `applyZoneScope`, `PUT /farms/:id/members/:userId`). Chuyên gia chỉ đọc dữ liệu vận hành, sửa ngưỡng/hệ số/tham số phát hiện, kiểm chứng cảnh báo, viết kết luận — không relay, ghi thu hoạch hay xác nhận cảnh báo (Report 3 §2.4).
 > - Không còn Marketplace; `services/harvest.service.ts` chỉ ghi nhận thu hoạch.
-> - Không còn relay `heating`. NH3/CO2 chỉ cảnh báo: `utils/fuzzyModel.util.ts` khớp firmware 1.3.0, breach NH3/CO2 mức MEDIUM và không sinh ticket.
+> - Không còn relay `heating`. NH3/CO2 chỉ cảnh báo: `utils/fuzzyModel.util.ts` khớp firmware 1.3.0, breach NH3/CO2 mức MEDIUM.
 > - `NOISE_ANOMALY` thay `BIRD_PANIC` (firmware cũ gửi tên cũ vẫn nhận); `alerts.expert_verdict`, `PUT /alerts/:id/verdict`, `GET /alerts/verdict-stats`.
 > - `zones.detection_tuning` + `PUT /farms/zones/:zoneId/detection-tuning` (EXPERT-FR-008); 5 tham số gửi xuống ESP32 qua `config/update`.
 > - `relay_override_logs` + `GET /devices/sensor-nodes/:id/relay-overrides`, `GET /analytics/autonomy`.
 > - `zone_health_reports`, job `healthReport.job.ts` và `/health-reports`.
+> - Không còn ticket, chat, SLA, lịch bảo trì và vùng của Technician (PR #104, #105; `npm run migrate:remove-tickets`, `migrate:remove-regions`): cảnh báo không ai xác nhận được gửi lại một lần (ALERT-FR-015), bơm/quạt quá giờ chạy báo `MAINTENANCE_DUE` (ALERT-FR-016); Technician thấy cấu trúc, thiết bị, cảnh báo thiết bị của mọi farm (FARM-FR-009); Admin không quản lý farm. Quyền từng route theo Report 3 §2.4 (PR #100).
 > - Kênh ngoài ứng dụng chạy thật: Telegram bot (`services/telegram.service.ts`, cần `TELEGRAM_BOT_TOKEN` + `TELEGRAM_BOT_USERNAME`). Firebase FCM vẫn chỉ ghi log dù Report 3 cam kết cả hai kênh (ALERT-FR-002); Zalo/SMS không làm.
 >
-> **Report 3 còn đòi hỏi thêm** những việc backend chưa làm — mỗi việc một dòng ở [`docs/reports/README.md`](../docs/reports/README.md) mục "Chỗ lệch": quyền theo §2.4 (Technician/Admin không sửa ngưỡng và hệ số; Technician không can thiệp tay, không xác nhận cảnh báo; bỏ ticket, SLA, vùng của Technician), Farm Owner tự setup thiết bị bằng QR (MF-10), `DISMISSED`, farm chưa có chuyên gia thì chủ farm quyết (BR-22), báo chủ farm mọi quyết định của chuyên gia (EXPERT-FR-009), duyệt thay đổi và đề xuất hệ số (EXPERT-FR-010/011), version cấu hình và `CONFIG_MISMATCH` (ENV-FR-027), gói bằng chứng (ALERT-FR-014), lịch đếm theo mùa và phiên không đầy đủ (VISION-FR-019/020).
+> **Report 3 còn đòi hỏi thêm** những việc backend chưa làm — mỗi việc một dòng ở [`docs/reports/README.md`](../docs/reports/README.md) mục "Chỗ lệch": phần còn lại của MF-10 (dời thiết bị đang offline, cấp lại khoá), `DISMISSED`, farm chưa có chuyên gia thì chủ farm quyết (BR-22), báo chủ farm mọi quyết định của chuyên gia (EXPERT-FR-009), duyệt thay đổi và đề xuất hệ số (EXPERT-FR-010/011), version cấu hình và `CONFIG_MISMATCH` (ENV-FR-027), gói bằng chứng (ALERT-FR-014), lịch đếm theo mùa và phiên không đầy đủ (VISION-FR-019/020).
 >
 > **DB đang chạy bản cũ:** chạy `npm run migrate:scope-v2` một lần sau khi deploy (đổi role, bỏ `zone_ids`, đổi tên loại cảnh báo, gỡ dữ liệu Marketplace).
 >
@@ -95,7 +96,7 @@ Spec OpenAPI 3.0 ở `docs/api/api-spec.yaml` (gốc repo) — nguồn sự th�
 - Raw YAML: `http://localhost:3000/api-docs.yaml`
 
 Mọi tag (Auth, Admin, System, Farms, Devices, Telemetry, Alerts, Analytics, Harvests,
-HealthReports, Tickets) đều có logic thật phía sau. Quyền theo farm kiểm tra ở
+HealthReports) đều có logic thật phía sau. Quyền theo farm kiểm tra ở
 `utils/farmAccess.util.ts`; quyền theo role ở `requireRole` của từng route. Những FR của Report 3 mà code
 chưa đáp ứng nằm ở `docs/reports/README.md` (mục "Chỗ lệch") và Report 4 §12 — luôn kiểm tra
 đó trước khi giả định 1 tính năng đã xong hoàn toàn.
@@ -166,12 +167,11 @@ src/
 | ------ | ---------- | ------- |
 | AUTH | Đã code đầy đủ (`auth.service.ts`, `admin.service.ts`) | register/login/refresh/logout/OTP/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản; audit log, Admin khoá/mở khoá tài khoản, Admin tạo tài khoản Technician. **Chưa có:** gửi OTP qua email thật (SMTP, mới ghi log). 2FA ngoài phạm vi (Report 3 §8) |
 | FARM (farm/house/zone/member) | Đã code đầy đủ (`farm.service.ts`) | `GET /farms/:id` trả kèm `full_name`/`email` của owner/members (Domain Expert chỉ nhận bản ghi của chính mình). Mời đồng sở hữu hoặc Domain Expert (`role`); tham số phát hiện theo Zone (`PUT /farms/zones/:zoneId/detection-tuning`, chỉ Domain Expert) |
-| Device (sensor/camera node, relay control) | Đã code (`device.service.ts`, `provisionedDevice.service.ts`) | Đăng ký từ kho thiết bị, gỡ/thay/dời Zone khi online, lệnh từ xa và OTA; relay control publish MQTT thật — xem ghi chú topic bên dưới. **Report 3 còn thiếu:** Farm Owner tự đăng ký/dời/gỡ bằng QR (MF-10), dời thiết bị đang offline, cấp lại khoá cho thiết bị đã kích hoạt một lần (FARM-FR-007b, 010) |
+| Device (sensor/camera node, relay control) | Đã code (`device.service.ts`, `provisionedDevice.service.ts`) | Đăng ký từ kho thiết bị, gỡ/thay/dời Zone khi online, lệnh từ xa và OTA; relay control publish MQTT thật — xem ghi chú topic bên dưới. Farm Owner và Technician đăng ký/dời/gỡ/thay (MF-10; Farm Owner chỉ ở farm của mình). **Report 3 còn thiếu:** dời thiết bị đang offline, cấp lại khoá cho thiết bị đã kích hoạt một lần (FARM-FR-007b, 010) |
 | ENV/Telemetry (ingest MQTT, REST latest/history) | Đã code đầy đủ (`telemetry.service.ts`) | |
 | Heartbeat, Relay status confirm (MQTT) | Đã code đầy đủ (`device.service.ts`) | Job `node-cron` mỗi 10s (`jobs/deviceOffline.job.ts`) tự chuyển OFFLINE khi mất heartbeat >30s, phát `DEVICE_STATUS_CHANGE` |
 | ALERT (Alert Engine, dedup, quiet hours) | Đã code đầy đủ (`alert.service.ts`) | Telegram bot gửi thật khi có `TELEGRAM_BOT_TOKEN` (`telegram.service.ts`); kiểm chứng của Domain Expert (`PUT /alerts/:id/verdict`). **Chưa nối:** Firebase FCM (chỉ log; Report 3 bắt buộc, ALERT-FR-002); Zalo/SMS ngoài phạm vi. **Report 3 còn thiếu:** trạng thái `DISMISSED`, gói bằng chứng (ALERT-FR-014) |
 | ANALYTICS (env summary/compare, bird-count) | Đã code đầy đủ (`analytics.service.ts`) | Nhóm bird-count/return-rate/correlation trả rỗng cho tới khi module VISION (Edge AI, chưa lắp phần cứng) có dữ liệu thật — không phải lỗi |
-| TICKET | Đã code đầy đủ (`ticket.service.ts`, `maintenanceSchedule.service.ts`) | Tạo/định tuyến/SLA/SAT checklist/KPI/huỷ/đánh giá, bảo trì định kỳ tự sinh ticket, Admin can thiệp mọi ticket. **Ra ngoài phạm vi** (Report 3 §8, BM03 #9): chỉ được gỡ, không mở rộng |
 | HARVEST (ghi nhận thu hoạch) | Đã code đầy đủ (`harvest.service.ts`) | Farm Owner tạo/sửa/xoá mềm Harvest Batch (tự gắn snapshot môi trường + đàn chim, `trace_code`); Domain Expert chỉ xem. Marketplace ngoài phạm vi (Report 3 §8) |
 | EXPERT (báo cáo sức khỏe Zone) | Đã code đầy đủ (`healthReport.service.ts`) | Job tổng hợp theo chu kỳ (`HEALTH_REPORT_CRON`, mặc định thứ Hai 06:00), xem theo khoảng bất kỳ, Domain Expert viết kết luận, Farm Owner được báo |
 | Lịch sử can thiệp tay + tỷ lệ tự động | Đã code đầy đủ (`relayOverrideLog.service.ts`) | Ghi ở mọi đường override bắt đầu/kết thúc; `GET /analytics/autonomy` |

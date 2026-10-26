@@ -59,13 +59,13 @@ Swiftlet houses are closed buildings that owners visit every few days, so humidi
 
 | ID | Gap | Location | Plan | Owner | Due |
 | --- | --- | --- | --- | --- | --- |
-| G1 | Roles differ from SRS 2.4; tickets still in code | backend, clients | Fix roles; drop tickets | Trần Minh Kiệt | It. 2 |
+| G1 | Roles per SRS 2.4; tickets, SLA and regions removed | backend, clients | Closed: PR #100–#106 | Trần Minh Kiệt | Done |
 | G2 | `DISMISSED`, alert evidence, owner fallback (BR-22), review items, proposals | backend, web | Per SM-01, 10, 11 | Thái Minh Tuấn | It. 2 |
 | G3 | Config version, `CONFIG_MISMATCH`; actuator current check | firmware, backend | Version in heartbeat; ADS1115 | Nguyễn Chí Bảo | It. 2–3 |
 | G4 | Pipeline not run on staging; sessions from buckets | ai-pipeline, backend | Run on the AI node PC | Nguyễn Chí Bảo | It. 2 |
 | G5 | Daily status, ratings, house reports, PDF/CSV, weather | backend, web | SDD 6.4, AD-14 | Nguyễn Thị Yến Nhi | It. 2–3 |
 | G6 | QR setup, labels, progress; FCM push; staging, demo seed | mobile, backend, deploy | `expo-camera`; Firebase; staging.md | Trần Minh Kiệt | It. 2 |
-| G7 | Web leftovers (`SALES_STAFF`, Technician threshold editing); expert screens on mock fallback | frontend | Remove; wire to API | Nguyễn Vũ Len | It. 2 |
+| G7 | Web leftovers (`heating` relay field, Zalo/SMS options); expert screens on mock fallback | frontend | Remove; wire to API | Nguyễn Vũ Len | It. 2 |
 
 Full list: `docs/reports/README.md` and SDD 12. High self-review findings (BM02) marked Kept or Planned are added after the prompt is run.
 

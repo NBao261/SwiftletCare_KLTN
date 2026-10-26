@@ -8,7 +8,7 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.0.9 (Review 2) |
+| Document version | 1.0.10 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
 | Requirements baseline | Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -547,7 +547,7 @@ erDiagram
   FARM ||--o{ WEATHER_OBSERVATION : "weather, planned"
 ```
 
-Entities and attributes marked *planned* are required by Report 3 (EXPERT-FR-010, 011, ENV-FR-027, VISION-FR-019, EXPERT-FR-003, ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, THREAT-FR-014) but are not in the code or the database script yet; Section 6.4 lists them. The other way round, the ticket collections, the farm region and the Technician regions are still in the code and the database script until they are dropped (Section 6.4).
+Entities and attributes marked *planned* are required by Report 3 (EXPERT-FR-010, 011, ENV-FR-027, VISION-FR-019, EXPERT-FR-003, ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, THREAT-FR-014) but are not in the code or the database script yet; Section 6.4 lists them.
 
 ### 6.2 Collections
 
@@ -586,12 +586,9 @@ The exact field list, types and indexes of every collection are those of the dat
 | Seasonal counting schedule; incomplete-session flag on session records | `houses`, `birdcountrecords` | VISION-FR-019, 020 |
 | New collection for the daily health status of each house, with its indicators, reasons and ratings | `househealthdays` | ANALYTICS-FR-012, EXPERT-FR-012 (SM-17) |
 | New collection for hourly weather, TTL 90 days | `weatherobservations` | ANALYTICS-FR-013 |
-| Coordinates required and range-checked when a farm is created or edited (validator, not a schema change, so farms created earlier stay readable and are shown as missing their location) | `farms` | FARM-FR-001, A-5 |
 | Health-indicator levels per house | `houses` | BR-28 |
 | Reports per house with `kind` (daily, weekly, monthly, custom) instead of weekly per zone | `zonehealthreports` (renamed when migrated) | EXPERT-FR-005 |
 | Learned normal current per load; pump and fan current in telemetry; alert type `ACTUATOR_FAULT` | `sensornodes`, `telemetries`, `alerts` | THREAT-FR-014 |
-| Drop the ticket collections, the farm region, the Technician regions and the SLA and routing settings; drop the ticket enumerations on all three sides | `tickets`, `ticketmessages`, `maintenanceschedules`, `farms`, `users`, `systemsettings` | Report 3 §8 (BM03 row 9) |
-| Alert type `MAINTENANCE_DUE`; relay usage counters restart at the Farm Owner's acknowledgement | `alerts`, `sensornodes` | ALERT-FR-016 |
 | Remove the unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest), or give them a requirement | `sensornodes`, `cameranodes`, `harvestbatches` | Known gap |
 
 The database script is regenerated from the models when these changes are made (6.5).
@@ -1323,10 +1320,8 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 | Expert loop | Review items and suggestion proposals (SM-10, SM-11); owner notifications of every expert decision; owner fallback without an expert |
 | Configuration sync | Configuration version, `CONFIG_MISMATCH` (SM-12) |
 | Bird counting | No trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10); publishing and video push are written but not yet run against staging; throughput risk: two tiles with the COCO model ran at about 7–12 fps on a laptop (not a reliable measurement) against the 25 fps of NFR-04, to be measured on the AI node PC; seasonal schedule and incomplete sessions (backend); counting-ring editor screen and mobile live stream |
-| Clients | Web Domain Expert screens exist (`/expert/*`: dashboard, alert verdicts, tuning, analytics, reports) but still read the SRS v2.1.4 names, fall back to mock data and sit outside the FE_Design folder plan; no counting-ring editor; leftovers of the old scope (`SALES_STAFF`, a `heating` relay field, Zalo/SMS options); mobile is a scaffold without push registration or QR setup |
-| Permissions | Technician and Administrator still allowed on thresholds, coefficients and overrides in some routes; Technician access is by region, not to every farm; the Administrator still creates and manages farms |
-| Supporting roles | Tickets, chat, SLA, routing, queue, KPIs, maintenance schedules and regions are still in the code (routes, services, jobs, web and mobile screens, `api-spec.yaml`); escalation creates a ticket instead of repeating the notification (ALERT-FR-015); relay wear creates a ticket instead of `MAINTENANCE_DUE` (ALERT-FR-016); no owner notification of a Technician's device actions (FARM-FR-009) |
-| Device setup (MF-10) | Register, move, remove and replace routes allow only Technician and Administrator; moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
+| Clients | Web Domain Expert screens exist (`/expert/*`: dashboard, alert verdicts, tuning, analytics, reports) but still read the SRS v2.1.4 names, fall back to mock data and sit outside the FE_Design folder plan; no counting-ring editor; leftovers of the old scope (a `heating` relay field, Zalo/SMS options); mobile is a scaffold without push registration or QR setup |
+| Device setup (MF-10) | Moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
 | Staging | 24-hour pull test of the camera from the AI node at a member's home, with counts compared on the same clip read locally; staging compose file, Dockerfiles for backend and web, Caddy configuration and a demo seed for every main workflow not written; firmware connects on port 1883 without TLS (`MQTTManager.cpp`), so the controller cannot reach the staging broker on 8883 until TLS with the CA certificate is added |
 | Health assessment (MF-11) | Daily health status, ratings, health levels, reports per house (daily, weekly, monthly), PDF and CSV export, weather job: not built (SM-17, D10, D12, D13) |
 | Hardware | Controller PCB with current transformers and actuator check (D11, THREAT-FR-014) not built. Bypass switches removed from scope (Report 3 §8) |
@@ -1338,6 +1333,7 @@ The design above is the target of Report 3. The parts not yet implemented in cod
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.10 | `[TEAM]` | Tickets, SLA, Technician regions and the Administrator's farm management removed from the code (pull requests #100–#106): permission and supporting-role gaps closed in Section 12, done ticket, region, coordinate and `MAINTENANCE_DUE` rows dropped from Section 6.4 |
 | 1.0.9 | `[TEAM]` | A farm is one place with required coordinates (Report 3 FARM-FR-001, A-5): `address` and `coordinates` in the ERD, planned validator in Section 6.4, location field in the farm form (Section 5.4) |
 | 1.0.8 | `[TEAM]` | Maintenance tickets, SLA and Technician regions removed (Report 3 §8, BM03 row 9): decision D14, ERD and collections, jobs, REST and WebSocket, SM-05 removed, AD-04 with repeated alerts and `MAINTENANCE_DUE`, AD-11 rewritten as remote device maintenance, security and gaps |
 | 1.0.7 | `[TEAM]` | AI node moved to the team's spare PC at a member's home, reading the camera over the Internet through the house's static IP (D5, Sections 2.1, 3.4, 10, 11, 12) |

@@ -239,13 +239,13 @@ Làm sau PR 4 và PR 5 (API đã mất). Có thể chia 3 PR nhỏ theo role.
 
 **Xong khi:** `README.md` "Chỗ lệch" #30, #31 (phần ticket) và #41 đã xong.
 
-### PR 7 — Tài liệu sau khi code xong · đề xuất: Nguyễn Chí Bảo
+### PR 7 — Tài liệu sau khi code xong · đề xuất: Nguyễn Chí Bảo · xong ở PR #107
 
-- [ ] `docs/reports/README.md`: đóng #2, #15, #25, #41–#46.
-- [ ] Report 4 §12: bỏ dòng "Supporting roles" và phần quyền trong dòng "Permissions"; §6.1 bỏ câu "ticket collections … still in the code"; §6.4 bỏ dòng xoá ticket; §5.3 tên job `relayUsage`.
-- [ ] Design Brief G1, Project Tracking (F-07, F-17, DF-2, DF-3), `todo-review2.md`.
-- [ ] `CLAUDE.md` gốc mục Module status, `backend/CLAUDE.md` (bảng job, Alert Engine, Ticket visits), `backend/README.md` (dòng TICKET).
-- [ ] Sinh lại Report 5 nếu kết quả test đổi: `python3 docs/reports/report5/gen_report5.py <jest.json> docs/reports/report5/template.md docs/reports/report5-test.md`.
+- [x] `docs/reports/README.md`: đóng #2, #15, #25, #41–#46 (#25 còn giao diện setup, theo dõi ở #28).
+- [x] Report 4 §12: bỏ dòng "Supporting roles" và phần quyền trong dòng "Permissions"; §6.1 bỏ câu "ticket collections … still in the code"; §6.4 bỏ dòng xoá ticket; §5.3 tên job `relayUsage` (đã đúng từ PR #104). Report 4 lên 1.0.10; §6.4 bỏ luôn dòng tọa độ và `MAINTENANCE_DUE` đã làm.
+- [x] Design Brief G1 (sinh lại BM01 docx), Project Tracking (F-07, F-17, DF-2, DF-3, số test Jest), `todo-review2.md`.
+- [x] `CLAUDE.md` gốc mục Module status, `backend/CLAUDE.md` (bảng job, Alert Engine, Ticket visits — đã đúng từ PR #104, #105), `backend/README.md` (dòng TICKET).
+- [x] Sinh lại Report 5 nếu kết quả test đổi (26/10/2026: 519 test Jest xanh, Report 5 sinh lại không đổi — 69/69 test case tự động vẫn pass): `python3 docs/reports/report5/gen_report5.py <jest.json> docs/reports/report5/template.md docs/reports/report5-test.md`.
 
 ---
 
