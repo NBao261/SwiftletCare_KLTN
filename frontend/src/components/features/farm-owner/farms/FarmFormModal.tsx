@@ -93,8 +93,9 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
   return (
     <Modal open onClose={onClose} title={isEdit ? t('farmForm.editTitle') : t('createFarm.title')}>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-        <Input label={t('createFarm.name')} required value={name} onChange={event => setName(event.target.value)} placeholder={t('createFarm.namePlaceholder')} />
+        <Input name="farmName" label={t('createFarm.name')} required value={name} onChange={event => setName(event.target.value)} placeholder={t('createFarm.namePlaceholder')} />
         <Input
+          name="farmAddress"
           label={t('farmForm.address')}
           required
           value={address}
@@ -114,6 +115,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input
+              name="latitude"
               label={t('farmForm.latitude')}
               inputMode="decimal"
               value={latitude}
@@ -122,6 +124,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
               aria-invalid={isLocationError || error === 'farmForm.errorLatitude'}
             />
             <Input
+              name="longitude"
               label={t('farmForm.longitude')}
               inputMode="decimal"
               value={longitude}

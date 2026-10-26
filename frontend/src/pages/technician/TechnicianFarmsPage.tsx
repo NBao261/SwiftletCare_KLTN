@@ -111,7 +111,7 @@ export default function TechnicianFarmsPage() {
       </FarmFrame>
 
       {/* Danh sách */}
-      <FarmFrame title="Danh sách Nhà yến" description="Các nhà yến thuộc khu vực của bạn">
+      <FarmFrame title="Danh sách Nhà yến" description="Các nhà yến của mọi trang trại">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-[220px] max-w-sm flex-1">

@@ -27,7 +27,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
     // Width theo % (bảng đang table-fixed) = độ dài nội dung thường gặp + 1 khoảng trống như nhau, để khe giữa
     // chữ cột này và cột sau đều nhau. Tổng = 100% (6+15+25+17+15+12+10), vẫn đủ chỗ ở min-w 960px.
     // Không thêm padding trái riêng cho cột nào (từng có `pl-12` ở Trạng thái làm badge lệch khỏi mép cột).
-    // Mỗi ô 1 dòng (tên và email tách 2 cột): vùng phụ trách / lý do khoá xem ở modal chi tiết.
+    // Mỗi ô 1 dòng (tên và email tách 2 cột): lý do khoá xem ở modal chi tiết.
     {
       key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]',
       render: (_user, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
