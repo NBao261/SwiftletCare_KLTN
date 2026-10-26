@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import * as harvestService from '@/services/harvest.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
-/** POST /harvests – MARKET-FR-001..004 (tự gắn env/flock snapshot + trace_code) */
+/** POST /harvests – HARVEST-FR-001..004 (tự gắn env/flock snapshot + trace_code) */
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const batch = await harvestService.createHarvest(req.user, req.body)
   res.status(201).json({ success: true, data: batch })
@@ -20,7 +20,7 @@ export const getOne = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: batch })
 })
 
-/** PUT /harvests/:id – MARKET-FR-005 */
+/** PUT /harvests/:id – HARVEST-FR-005 */
 export const update = asyncHandler(async (req: Request, res: Response) => {
   const batch = await harvestService.updateHarvest(req.params.id, req.user, req.body)
   res.json({ success: true, data: batch })

@@ -26,7 +26,7 @@ useTestDb()
 
 const DAY = 86400_000
 
-describe('ảnh chụp của mẻ thu hoạch (MARKET-FR-002/003)', () => {
+describe('ảnh chụp của mẻ thu hoạch (HARVEST-FR-002/003)', () => {
   it('lấy được trung bình môi trường 7 ngày và tỷ lệ chim về 30 ngày của đúng Zone', async () => {
     const { user, zone, node } = await seed()
     const other = await seed()

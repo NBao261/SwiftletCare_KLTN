@@ -7,13 +7,13 @@ import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/uti
 import { NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, NestType } from '@/types'
 
-/** MARKET-FR-002 — cửa sổ lấy trung bình môi trường trước ngày thu hoạch */
+/** HARVEST-FR-002 — cửa sổ lấy trung bình môi trường trước ngày thu hoạch */
 const ENV_SNAPSHOT_DAYS = 7
-/** MARKET-FR-003 — cửa sổ lấy trung bình return rate đàn chim */
+/** HARVEST-FR-003 — cửa sổ lấy trung bình return rate đàn chim */
 const FLOCK_SNAPSHOT_DAYS = 30
 
 /**
- * MARKET-FR-002 — trung bình môi trường 7 ngày trước thu hoạch.
+ * HARVEST-FR-002 — trung bình môi trường 7 ngày trước thu hoạch.
  * Flow 7 case 3a: Zone mới chưa đủ dữ liệu thì trả `insufficient_data` thay vì
  * số liệu rỗng/sai lệch, để người xem biết ảnh chụp môi trường chưa đủ tin cậy.
  */
@@ -57,7 +57,7 @@ async function buildEnvSnapshot(zoneId: string, harvestDate: Date) {
 }
 
 /**
- * MARKET-FR-003 — đàn chim của nhà yến chứa Zone thu hoạch, 30 ngày trước mẻ (rỗng cho tới khi module
+ * HARVEST-FR-003 — đàn chim của nhà yến chứa Zone thu hoạch, 30 ngày trước mẻ (rỗng cho tới khi module
  * VISION có dữ liệu thật): tỷ lệ chim về trung bình theo ngày, và ước tính đàn = số ròng về buổi chiều
  * lớn nhất (số chim thật sự vào nhà ngủ, cộng mọi camera) — cùng nguồn với /analytics/bird-count/*.
  */
@@ -83,7 +83,7 @@ export interface CreateHarvestInput {
   product_images?: string[]
 }
 
-/** MARKET-FR-001..004 — tạo đợt thu hoạch, tự gắn ảnh chụp môi trường/đàn chim + trace_code (mã định danh mẻ) */
+/** HARVEST-FR-001..004 — tạo đợt thu hoạch, tự gắn ảnh chụp môi trường/đàn chim + trace_code (mã định danh mẻ) */
 export async function createHarvest(user: CurrentUser, input: CreateHarvestInput): Promise<IHarvestBatch> {
   const { zone, house } = await assertZoneAccess(input.zone_id, user)
 
@@ -125,7 +125,7 @@ export async function getHarvest(id: string, user: CurrentUser): Promise<IHarves
 }
 
 /**
- * MARKET-FR-005 — sửa số liệu ghi nhận của mẻ. SRS v2.0.0 bỏ Marketplace nên không
+ * HARVEST-FR-005 — sửa số liệu ghi nhận của mẻ. SRS v2.0.0 bỏ Marketplace nên không
  * còn ràng buộc "đã đăng bán thì không sửa"; env_snapshot/flock_snapshot vẫn không
  * sửa được qua đây (chỉ chụp một lần lúc tạo).
  */

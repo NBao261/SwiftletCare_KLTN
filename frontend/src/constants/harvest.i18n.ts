@@ -1,6 +1,6 @@
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển màn Thu hoạch của Farm Owner (/harvests) — chỉ ghi nhận thu hoạch theo SRS v2 (MARKET-FR-001..005)
+// Từ điển màn Thu hoạch của Farm Owner (/harvests) — chỉ ghi nhận thu hoạch theo SRS v2 (HARVEST-FR-001..005)
 const vi = {
   // Đầu trang
   'page.export': 'Xuất dữ liệu',

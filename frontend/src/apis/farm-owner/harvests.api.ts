@@ -10,7 +10,7 @@ export interface CreateHarvestInput {
   product_images?: string[]
 }
 
-/** MARKET-FR-001..005 — Harvest Batch (đợt thu hoạch), tự gắn env/flock snapshot */
+/** HARVEST-FR-001..005 — Harvest Batch (đợt thu hoạch), tự gắn env/flock snapshot */
 export const harvestApi = {
   create: (input: CreateHarvestInput) => api.post<ApiResponse<HarvestBatch>>('/harvests', input),
   list:   (farmId?: string) => api.get<ApiResponse<HarvestBatch[]>>('/harvests', { params: farmId ? { farmId } : undefined }),

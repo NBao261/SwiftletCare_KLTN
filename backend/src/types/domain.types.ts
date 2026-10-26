@@ -28,7 +28,7 @@ export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 
 
-// ── Module MARKET (§5.8, §8.2) ───────────────────────────────────────────────
+// ── Module HARVEST (§5.8, §8.2) ───────────────────────────────────────────────
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
 export type HarvestStatus = 'DRAFT' | 'ARCHIVED'
 
