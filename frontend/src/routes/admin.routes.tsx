@@ -5,7 +5,7 @@ import { ADMIN_ONLY } from '@/constants/roles'
 
 /**
  * Route chỉ Admin: quản lý tài khoản toàn hệ thống (AUTH-FR-011), hàng đợi xoá
- * tài khoản + đề xuất Sales Staff (AUTH-FR-012, AUTH-FR-005d) và Module SYSTEM
+ * tài khoản (AUTH-FR-012) và Module SYSTEM
  * (mục 5.11). /system/health gộp luôn OPS-NFR-004 (trạng thái node).
  */
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))

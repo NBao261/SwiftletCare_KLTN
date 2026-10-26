@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminApi, type CreateTechnicianInput, type CreateSalesStaffInput } from '@/apis/admin/users.api'
+import { adminApi, type CreateTechnicianInput } from '@/apis/admin/users.api'
 import type { User, Role, UserStatus, SortDirection } from '@/types'
 
 export type UsersSortKey = 'full_name' | 'email' | 'role' | 'status' | 'created_at'
@@ -122,39 +122,14 @@ export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = 
 }
 
 /**
- * AUTH-FR-005c, Flow 16 bước 1a — Admin chỉ tạo được 2 loại tài khoản (RACI mục
- * 4.4: Farm Owner tự đăng ký/được mời, Admin là tài khoản gốc seed). Backend là
- * 2 endpoint riêng (POST /admin/technicians, POST /admin/sales-staff).
+ * AUTH-FR-005c — Admin chỉ tạo tài khoản Technician (POST /admin/technicians). Farm Owner tự đăng ký,
+ * chuyên gia do Primary Owner mời (AUTH-FR-010), Admin là tài khoản gốc seed.
  */
-export type AdminCreatableRole = Extract<Role, 'TECHNICIAN' | 'SALES_STAFF'>
-
-export type CreateUserInput =
-  | ({ role: 'TECHNICIAN' } & CreateTechnicianInput)
-  | ({ role: 'SALES_STAFF' } & CreateSalesStaffInput)
-
-export function useCreateUser() {
+export function useCreateTechnician() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: CreateUserInput) => {
-      const base = { email: input.email, password: input.password, full_name: input.full_name, phone: input.phone }
-      return input.role === 'TECHNICIAN'
-        ? adminApi.createTechnician(base)
-        : adminApi.createSalesStaff({ ...base, farm_ids: input.farm_ids })
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
-      // Sales Staff mới được gán thẳng farm_ids — danh sách Sales Staff của farm (card Thành viên) phải làm mới
-      void queryClient.invalidateQueries({ queryKey: ['sales-staff'] })
-    },
-  })
-}
-
-/** Flow 16 case 1e — Admin gỡ thẳng Sales Staff khỏi 1 farm (chỉ xoá bản ghi gán, không đụng tài khoản) */
-export function useUnassignSalesStaff(farmId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (salesStaffId: string) => adminApi.unassignSalesStaff(farmId, salesStaffId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sales-staff', farmId] }),
+    mutationFn: (input: CreateTechnicianInput) => adminApi.createTechnician(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
   })
 }
 

@@ -1,22 +1,18 @@
 // ADMIN — Yêu cầu tài khoản: xoá tài khoản (AUTH-FR-012, Flow 19) — API thật /admin/delete-requests.
-// Tab "Đề xuất chuyên gia": backend đã bỏ /admin/sales-staff-requests (SRS v2.0.0 chuyển sang Domain Expert do
-// Primary Owner mời) nên hiện ComingSoon, không gọi endpoint thiếu (FE_Design §13.8/13.9).
 import { useState, useEffect } from 'react'
 import { useDeleteRequestsList, useCompleteDeleteRequest } from '@/hooks/admin/useAccountRequests'
 import { Button, Badge, SectionCard } from '@/components/ui'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import ComingSoon from '@/components/ui/ComingSoon'
 import Pagination from '@/components/ui/Pagination'
 import { useToastStore } from '@/stores/toastStore'
 import { formatRelativeTime, getApiErrorMessage } from '@/lib/helpers'
-import { cn } from '@/lib/cn'
 // `t` là biến lặp TABS trong file này — hàm dịch đặt tên khác
 import { t as i18nT, tr } from '@/i18n'
 import type { User } from '@/types'
 
-const DELETE_SLA_DAYS = 30
+const DELETE_DEADLINE_DAYS = 30
 /**
  * Dạng log như bảng Nhật ký hệ thống: DataTable cố định 10 dòng (dòng trống bù cao bằng dòng thật) + phân trang,
  * mỗi yêu cầu 1 dòng, nút xử lý ở cột Thao tác. 64px vừa ô Thời gian 2 dòng (giờ/ngày)
@@ -40,8 +36,6 @@ function TimeCell({ at }: { at?: string }) {
   )
 }
 
-type Tab = 'DELETE' | 'SALES_STAFF'
-
 
 /**
  * Xử lý xong mục cuối của trang N (N > 1) thì trang đó trống trong khi các trang trước
@@ -57,51 +51,21 @@ function useClampedPage(page: number, setPage: (page: number) => void, total: nu
   return beyondLastPage
 }
 
-const TABS: { key: Tab; label: string; description: string }[] = [
-  { key: 'DELETE', label: 'Yêu cầu xoá tài khoản', description: `Người dùng xin xoá tài khoản — xử lý trong ${DELETE_SLA_DAYS} ngày` },
-  { key: 'SALES_STAFF', label: 'Đề xuất chuyên gia', description: 'Farm Owner đề xuất thêm hoặc gỡ chuyên gia cho trang trại' },
-]
-
-/**
- * Không lặp tiêu đề "Yêu cầu tài khoản" — AppHeader đã hiện tên trang. 1 card (SectionCard) như các trang Admin khác,
- * tab pill ở góc phải cùng kiểu trang Người dùng.
- */
+/** Không lặp tiêu đề "Yêu cầu tài khoản" — AppHeader đã hiện tên trang. 1 card (SectionCard) như các trang Admin khác */
 export default function AdminAccountRequestsPage() {
-  const [tab, setTab] = useState<Tab>('DELETE')
-  const current = TABS.find(t => t.key === tab)!
-
   return (
     <SectionCard
-      title={current.label}
-      description={current.description}
-      action={
-        <div className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={tr('Loại yêu cầu')}>
-          {TABS.map(t => (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
-                tab === t.key ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-              )}
-            >
-              {tr(t.label)}
-            </button>
-          ))}
-        </div>
-      }
+      title={tr('Yêu cầu xoá tài khoản')}
+      description={tr(`Người dùng xin xoá tài khoản — xử lý trong ${DELETE_DEADLINE_DAYS} ngày`)}
     >
-      {tab === 'DELETE' ? <DeleteRequestsTab /> : <SalesStaffRequestsTab />}
+      <DeleteRequestsTab />
     </SectionCard>
   )
 }
 
 function daysRemaining(requestedAt: string): number {
   const elapsedDays = Math.floor((Date.now() - new Date(requestedAt).getTime()) / (24 * 60 * 60 * 1000))
-  return DELETE_SLA_DAYS - elapsedDays
+  return DELETE_DEADLINE_DAYS - elapsedDays
 }
 
 function DeleteRequestsTab() {
@@ -174,17 +138,3 @@ function DeleteRequestsTab() {
   )
 }
 
-
-/**
- * Đề xuất thêm/gỡ chuyên gia: backend đã bỏ /admin/sales-staff-requests (module Sales gỡ ở SRS v1.23.0, v2.0.0 thay bằng
- * Domain Expert do Primary Owner mời — Admin chỉ "I (audit)"). Không gọi endpoint thiếu như thể đã có (FE_Design §13.8/
- * 13.9) — hiện ComingSoon tới khi backend chốt luồng chuyên gia.
- */
-function SalesStaffRequestsTab() {
-  return (
-    <ComingSoon
-      title="Sắp ra mắt"
-      note="Chưa có API cho đề xuất chuyên gia — luồng đang chuyển sang chuyên gia do chủ nhà yến mời (Domain Expert)."
-    />
-  )
-}

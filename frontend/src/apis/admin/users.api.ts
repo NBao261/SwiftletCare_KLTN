@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, User, Role, SalesAssignmentRequest } from '@/types'
+import type { ApiResponse, User, Role } from '@/types'
 
 /** GET /admin/users — backend chỉ lọc theo role + is_active, sort cố định created_at desc. */
 export interface ListAdminUsersQuery {
@@ -12,19 +12,6 @@ export interface ListAdminUsersQuery {
 
 export interface CreateTechnicianInput {
   email: string; password: string; full_name: string; phone?: string
-}
-
-export interface CreateSalesStaffInput {
-  email: string; password: string; full_name: string; phone?: string
-  /** Bắt buộc ≥1 farm đang tồn tại (backend kiểm tra trước khi tạo tài khoản) */
-  farm_ids: string[]
-}
-
-export interface ListSalesStaffRequestsQuery {
-  status?: SalesAssignmentRequest['status']
-  type?: SalesAssignmentRequest['type']
-  page?: number
-  limit?: number
 }
 
 /**
@@ -52,18 +39,4 @@ export const adminApi = {
   // ── Tạo tài khoản nhân viên — AUTH-FR-005c / Flow 16 bước 1a ────────────────
   createTechnician: (input: CreateTechnicianInput) =>
     api.post<ApiResponse<User>>('/admin/technicians', input),
-  createSalesStaff: (input: CreateSalesStaffInput) =>
-    api.post<ApiResponse<User>>('/admin/sales-staff', input),
-
-  /** Flow 16 case 1e — chỉ xoá bản ghi gán, không đụng tài khoản */
-  unassignSalesStaff: (farmId: string, salesStaffId: string) =>
-    api.delete<ApiResponse<{ message: string }>>(`/admin/farms/${farmId}/sales-staff/${salesStaffId}`),
-
-  // ── Duyệt đề xuất Sales Staff — AUTH-FR-005d / Flow 16 bước 1b ──────────────
-  listSalesStaffRequests: (query?: ListSalesStaffRequestsQuery) =>
-    api.get<ApiResponse<SalesAssignmentRequest[]>>('/admin/sales-staff-requests', { params: query }),
-
-  /** REJECTED bắt buộc `reason` */
-  decideSalesStaffRequest: (id: string, decision: 'APPROVED' | 'REJECTED', reason?: string) =>
-    api.put<ApiResponse<SalesAssignmentRequest>>(`/admin/sales-staff-requests/${id}/decision`, { decision, reason }),
 }

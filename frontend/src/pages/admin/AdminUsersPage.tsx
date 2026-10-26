@@ -29,13 +29,13 @@ const DEFAULT_SORT_DIR: SortDirection = 'desc'
 
 /**
  * 2 tab tách nhân viên vận hành hệ thống (Quản trị viên, Kỹ thuật viên) khỏi người dùng phía khách hàng (Chủ nhà yến +
- * Chuyên gia — mã SALES_STAFF, chỉ đổi tên hiển thị). `roles` = nhóm vai trò của tab, lọc ở client vì backend
+ * Chuyên gia). `roles` = nhóm vai trò của tab, lọc ở client vì backend
  * /admin/users chỉ nhận 1 role.
  */
 type UserTab = 'staff' | 'customers'
 const TABS: { key: UserTab; label: string; description: string; roles: Role[] }[] = [
   { key: 'staff', label: 'Nhân viên hệ thống', description: 'Quản trị viên và kỹ thuật viên', roles: ['ADMIN', 'TECHNICIAN'] },
-  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến và chuyên gia', roles: ['FARM_OWNER', 'SALES_STAFF'] },
+  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến và chuyên gia', roles: ['FARM_OWNER', 'DOMAIN_EXPERT'] },
 ]
 
 export default function AdminUsersPage() {

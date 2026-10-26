@@ -95,7 +95,7 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| `types/index.ts` | `Role` still has `OPERATOR`/`SALES_STAFF` and no `DOMAIN_EXPERT`; `AlertType` has `BIRD_PANIC`, `PREDATOR_DETECTED` and lacks `NOISE_ANOMALY`; `FarmMember.role: 'OPERATOR'`; `NotificationPreferences` has `zalo`/`sms` | Align with `backend/src/types/domain.types.ts` in one PR |
+| `types/index.ts` | `AlertType` still has `PREDATOR_DETECTED` (the backend too); `NotificationPreferences` keeps `zalo`/`sms` because the backend model still has them — never show them | Remove `PREDATOR_DETECTED` on all three sides in one PR |
 | `services/socket/index.ts` | `on*` helpers have no matching `off*`, so screens cannot clean up | Add `off*` helpers before the first screen subscribes |
 | `services/notification/index.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-002) |
 | Tooling | No tests yet; `npm run lint` passes with ~44 warnings (UTF-8 BOM at the top of files, `Array<T>` instead of `T[]`) | Write tests with the features; `npx eslint . --fix` clears most warnings |
@@ -103,7 +103,7 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 | `app/livestream/[zoneId]` | Keyed by zone, but cameras, bird counts and the stream belong to the house's camera (Report 3 §2.8, VISION-FR-013) | Key the route by camera (house) when the screen is built |
 | `app/**` screens | Stubs with `TODO` comments | Implement per Report 3 (main flows first: MF-10 setup, alerts, dashboard, live stream) |
 
-A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. using `BIRD_PANIC` or `SALES_STAFF` in new code).
+A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. using `PREDATOR_DETECTED` or a Zalo/SMS option in new code).
 
 ## Before opening a PR
 

@@ -125,11 +125,6 @@ export const IconSound = (p: IconProps) => (
   <Svg {...p}><path d="M4 8v4M7.5 5.5v9M11 3.5v13M14.5 7v6M18 9v2" /></Svg>
 )
 
-/** Tai nghe có mic — nhân viên kinh doanh/chăm sóc khách (Sales Staff); túi mua sắm trông giống ổ khoá khi thu nhỏ nên không dùng cho vai trò */
-export const IconHeadset = (p: IconProps) => (
-  <Svg {...p}><path d="M4 12v-1.5a6 6 0 0 1 12 0V12" /><rect x="3" y="11" width="3" height="5" rx="1.5" /><rect x="14" y="11" width="3" height="5" rx="1.5" /><path d="M16 16v.5a2 2 0 0 1-2 2h-2.5" /></Svg>
-)
-
 /** 1 người — dùng cho vai trò đơn lẻ (VD nút chọn Kỹ thuật viên); IconUsers là nhóm người cho mục "Người dùng" */
 export const IconUser = (p: IconProps) => (
   <Svg {...p}><circle cx="10" cy="7" r="3.2" /><path d="M4 17.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /></Svg>

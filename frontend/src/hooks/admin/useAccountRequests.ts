@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/apis/admin/users.api'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
-import type { SalesAssignmentRequest, User } from '@/types'
+import type { User } from '@/types'
 
 export interface QueuePageQuery { page?: number; limit?: number }
 
@@ -30,25 +30,3 @@ export function useCompleteDeleteRequest() {
   })
 }
 
-/** AUTH-FR-005d, Flow 16 bước 1b/1e — GET /admin/sales-staff-requests?status=PENDING (cả ADD lẫn REMOVE), phân trang server. */
-export function useSalesAssignmentRequestsList(query: QueuePageQuery = {}) {
-  return usePaginatedListQuery<SalesAssignmentRequest>(
-    ['admin-sales-assignment-requests', query],
-    () => adminApi.listSalesStaffRequests({ status: 'PENDING', ...query }),
-    query.page,
-    query.limit,
-  )
-}
-
-export function useDecideSalesAssignmentRequest() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, decision, reason }: { id: string; decision: Exclude<SalesAssignmentRequest['status'], 'PENDING'>; reason?: string }) =>
-      adminApi.decideSalesStaffRequest(id, decision, reason),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin-sales-assignment-requests'] })
-      // Duyệt ADD có thể tạo tài khoản Sales Staff mới → bảng người dùng đổi
-      void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
-    },
-  })
-}

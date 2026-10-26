@@ -103,7 +103,7 @@ export default function AuditLogStats() {
           value={locked.total}
           sub="Trong 7 ngày qua"
         />
-        {/* USER_CREATED chỉ ghi khi Admin tạo Technician/Sales Staff — Farm Owner tự đăng ký không ghi log này */}
+        {/* USER_CREATED chỉ ghi khi Admin tạo Technician — Farm Owner tự đăng ký không ghi log này */}
         <StatTile
           className="shadow-none"
           icon={UserPlusIcon}

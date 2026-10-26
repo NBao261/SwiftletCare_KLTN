@@ -4,15 +4,14 @@
  */
 
 // ── Enums ──────────────────────────────────────────────────────────────────────
-// SRS v1.7.0: OPERATOR gộp vào FARM_OWNER; TECHNICIAN/SALES_STAFF là 2 role mới.
-// 'OPERATOR' giữ lại để tương thích ngược, không dùng cho code mới.
-export type Role         = 'ADMIN' | 'FARM_OWNER' | 'OPERATOR' | 'TECHNICIAN' | 'SALES_STAFF'
+// Khớp backend/src/types/domain.types.ts (Report 3 §2.3)
+export type Role         = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'TECHNICIAN'
 export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'
 export type AlertType =
   | 'THRESHOLD_BREACH' | 'PREDATOR_DETECTED' | 'NODE_OFFLINE'
-  | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'BIRD_PANIC'
+  | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'NOISE_ANOMALY'
   | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'
   | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'
@@ -35,6 +34,9 @@ export interface User {
 
 export interface NotificationPreferences {
   push: boolean
+  /** ALERT-FR-013 — chỉ có tác dụng khi tài khoản đã liên kết bot Telegram */
+  telegram: boolean
+  // zalo/sms còn trong model backend nhưng ngoài phạm vi (Report 3 §8) — không hiện trên UI
   zalo: boolean
   sms: boolean
   quiet_hours: { start: string; end: string }
@@ -52,7 +54,9 @@ export interface Farm {
 
 export interface FarmMember {
   user_id: string
-  role: 'OPERATOR'
+  is_primary: boolean
+  /** FARM_OWNER = đồng sở hữu, DOMAIN_EXPERT = chuyên gia; member cũ không có field → đồng sở hữu */
+  role?: Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>
   joined_at: string
 }
 

@@ -4,7 +4,6 @@ React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: 
 
 > **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa. Việc phải sửa ở web (chỗ lệch theo FR ở `docs/reports/README.md`, quyền theo màn ở `FE_Design_Claude.md` §12.0):
 >
-> - Gỡ nốt code `sales-staff/` cũ (marketplace đã gỡ).
 > - Role `DOMAIN_EXPERT` đã có màn từ PR #91 (`/expert/*`): bỏ dữ liệu giả dự phòng (`services/expert/expertFallback.service.ts`, `data/mocks/`), chuyển về bucket `domain-expert/`, `DomainExpertLayout`, `apis/` theo FE_Design §12.
 > - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009), live stream có khung và số đếm trực tiếp.
 > - Technician/Admin: Admin không có nút can thiệp tay hay xác nhận cảnh báo; Technician cũng không có hai nút đó (Report 3 §2.4). Ticket, SLA, vùng của Technician và màn quản lý farm của Admin đã ra ngoài phạm vi (Report 3 §8) và đã gỡ khỏi code.
@@ -40,7 +39,6 @@ src/
     layouts/   Đích 7 file — 4 của role, 3 dùng chung:
                  AdminLayout · FarmOwnerLayout
                  DomainExpertLayout (chưa có) · TechnicianLayout
-                 (SalesStaffLayout còn trong code — nợ, chỉ được gỡ)
                    -> menu viết đầy đủ ngay đầu mỗi file
                  AppShell    khung chung (sidebar + header + nội dung)
                  AppSidebar  sidebar desktop + dock mobile

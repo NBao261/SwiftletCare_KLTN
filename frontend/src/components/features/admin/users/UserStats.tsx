@@ -10,7 +10,7 @@ import type { Role, User } from '@/types'
 /** Vòng icon xám như các ô trang Tổng quan (theo ReadingTile Dashboard Farm Owner) */
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'SALES_STAFF', 'TECHNICIAN', 'ADMIN']
+const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN', 'ADMIN']
 
 /** Dòng phụ ô vai trò: tình trạng hoạt động của nhóm đó (thay cho "% tổng số" — tỉ lệ không giúp Admin làm gì) */
 function roleSub(list: User[]) {
@@ -78,8 +78,7 @@ export default function UserStats() {
         />
         <StatTile className="shadow-none" icon={HouseIcon} iconClass={ICON} label="Chủ nhà yến" value={byRole('FARM_OWNER').length} sub={roleSub(byRole('FARM_OWNER'))} />
         <StatTile className="shadow-none" icon={WrenchIcon} iconClass={ICON} label="Kỹ thuật viên" value={technicians.length} sub={roleSub(technicians)} />
-        {/* Chuyên gia = SALES_STAFF (chỉ đổi tên hiển thị) */}
-        <StatTile className="shadow-none" icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.SALES_STAFF} value={byRole('SALES_STAFF').length} sub={roleSub(byRole('SALES_STAFF'))} />
+        <StatTile className="shadow-none" icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.DOMAIN_EXPERT} value={byRole('DOMAIN_EXPERT').length} sub={roleSub(byRole('DOMAIN_EXPERT'))} />
         <StatTile
           className="shadow-none"
           icon={LockIcon}

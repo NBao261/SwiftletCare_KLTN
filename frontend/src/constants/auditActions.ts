@@ -14,9 +14,6 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = translated({
   ACCOUNT_DELETED: 'Hoàn tất xoá tài khoản',
   DELETION_REQUESTED: 'Yêu cầu xoá tài khoản',
   USER_CREATED: 'Tạo tài khoản nhân viên',
-  SALES_STAFF_UNASSIGNED: 'Gỡ chuyên gia khỏi farm',
-  SALES_STAFF_REQUEST_APPROVED: 'Duyệt đề xuất chuyên gia',
-  SALES_STAFF_REQUEST_REJECTED: 'Từ chối đề xuất chuyên gia',
   PASSWORD_RESET: 'Đặt lại mật khẩu',
   LOGIN: 'Đăng nhập',
   LOGIN_FAILED: 'Đăng nhập thất bại',
@@ -61,6 +58,4 @@ export const AUDIT_TARGET_LABEL: Record<string, string> = translated({
   sensor_node: 'Sensor node',
   camera_node: 'Camera node',
   system_settings: 'Cấu hình hệ thống',
-  sales_assignment: 'Gán chuyên gia',
-  sales_assignment_request: 'Đề xuất chuyên gia',
 })

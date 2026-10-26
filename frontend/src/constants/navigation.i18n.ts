@@ -33,7 +33,6 @@ const vi = {
   'Quản trị viên': 'Quản trị viên',
   'Chủ nhà yến': 'Chủ nhà yến',
   'Kỹ thuật viên': 'Kỹ thuật viên',
-  'Nhân viên kinh doanh': 'Nhân viên kinh doanh',
 }
 
 type NavigationKey = keyof typeof vi
@@ -70,7 +69,6 @@ const en: Record<NavigationKey, string> = {
   'Quản trị viên': 'Administrator',
   'Chủ nhà yến': 'Farm Owner',
   'Kỹ thuật viên': 'Technician',
-  'Nhân viên kinh doanh': 'Sales Staff',
 }
 
 export const navigationDict: Dictionary<NavigationKey> = { vi, en }
