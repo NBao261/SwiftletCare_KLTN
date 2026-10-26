@@ -2686,11 +2686,12 @@ paths:
     get:
       tags: [Telemetry]
       summary: Giá trị cảm biến mới nhất của Zone (ENV-FR-004)
+      description: "Zone chưa có số đo nào → 200 với `data: null` (trạng thái rỗng, không phải lỗi)."
       parameters: [{ $ref: "#/components/parameters/ZoneIdPath" }]
       responses:
         "200":
           {
-            description: OK,
+            description: "OK — `data` là bản ghi mới nhất, hoặc null khi Zone chưa có số đo",
             content:
               {
                 application/json:
@@ -2704,7 +2705,11 @@ paths:
                               properties:
                                 {
                                   data:
-                                    { $ref: "#/components/schemas/Telemetry" },
+                                    {
+                                      allOf:
+                                        [{ $ref: "#/components/schemas/Telemetry" }],
+                                      nullable: true,
+                                    },
                                 },
                             },
                           ],
@@ -2712,15 +2717,7 @@ paths:
                   },
               },
           }
-        "404":
-          {
-            description: Chưa có dữ liệu,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /telemetry/zones/{id}/history:
     get:

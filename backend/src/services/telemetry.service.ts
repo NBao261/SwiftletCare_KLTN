@@ -12,12 +12,11 @@ import type { TelemetryPayload, CurrentUser } from '@/types'
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
-/** GET /telemetry/zones/:id/latest – ENV-FR-004 */
-export async function getLatest(zoneId: string, user: CurrentUser): Promise<ITelemetry> {
+/** GET /telemetry/zones/:id/latest – ENV-FR-004. Zone chưa có số đo nào → null (trạng thái rỗng, không phải lỗi) */
+export async function getLatest(zoneId: string, user: CurrentUser): Promise<ITelemetry | null> {
   await assertZoneAccess(zoneId, user)
   const latest = await Telemetry.findOne({ zone_id: zoneId }).sort({ timestamp: -1 }).lean()
-  if (!latest) throw NotFoundError('Chưa có dữ liệu cho zone này')
-  return latest as unknown as ITelemetry
+  return (latest as unknown as ITelemetry | null) ?? null
 }
 
 export interface HistoryQuery { from?: string; to?: string; page?: number; limit?: number }

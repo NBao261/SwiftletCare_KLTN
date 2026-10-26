@@ -19,14 +19,10 @@ export function componentNameKey(nodeId: string, kind: ComponentKind): string {
   return `${nodeId}|${kind}`;
 }
 
-// Số đo mới nhất của Zone; Zone chưa có số đo nào thì backend trả 404 → coi là không có
+// Số đo mới nhất của Zone; Zone chưa có số đo nào thì backend trả null
 async function latestZoneReading(zoneId: string): Promise<TelemetryRecord[]> {
-  try {
-    const response = await telemetryApi.getLatest(zoneId);
-    return response.data.data ? [response.data.data] : [];
-  } catch {
-    return [];
-  }
+  const response = await telemetryApi.getLatest(zoneId);
+  return response.data.data ? [response.data.data] : [];
 }
 
 // Kiểm tra thiết bị của bộ kit trong 1 Zone: chỉ tải khi bấm nút, giữ kết quả lần bấm đó (không realtime, không tự làm mới)
