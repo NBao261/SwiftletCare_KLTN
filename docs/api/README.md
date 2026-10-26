@@ -11,4 +11,4 @@ Hầu hết endpoint (trừ `/auth/*` và `/internal/stream-auth` của MediaMTX
 - Chạy `npm run dev` trong `backend/` rồi mở `http://localhost:3000/api-docs`
 - Hoặc paste nội dung `api-spec.yaml` vào https://editor.swagger.io để xem offline
 
-Endpoint thuộc các tag ghi "(stub)" là stub (501, chưa có logic thật) — xem `backend/README.md` mục "Module → phạm vi". Endpoint Report 3 cần mà backend chưa có nằm ở `docs/reports/README.md` (mục "Chỗ lệch").
+Endpoint thuộc các tag ghi "(stub)" là stub (501, chưa có logic thật) — xem `backend/README.md` mục "Module → phạm vi". Endpoint Report 3 cần mà backend chưa có nằm ở `docs/reports/project-tracking.md` §6.

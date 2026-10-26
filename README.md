@@ -6,7 +6,7 @@ Hệ thống IoT tự động điều khiển vi khí hậu và giám sát sức
 
 [![CI](https://github.com/NBao261/SwiftletCare_KLTN/actions/workflows/ci.yml/badge.svg)](https://github.com/NBao261/SwiftletCare_KLTN/actions/workflows/ci.yml)
 
-> Yêu cầu chính thức là **Report 3 – SRS** ([`docs/reports/report3-srs.md`](./docs/reports/report3-srs.md)), thiết kế là **Report 4 – SDD** ([`docs/reports/report4-sdd.md`](./docs/reports/report4-sdd.md)), theo phiếu đăng ký bản sửa sau Review 1. Những chỗ code còn lệch với Report 3 nằm ở [`docs/reports/README.md`](./docs/reports/README.md). `SwiftletCare_SRS.md` chỉ còn là ghi chú nội bộ.
+> Yêu cầu chính thức là **Report 3 – SRS** ([`docs/reports/report3-srs.md`](./docs/reports/report3-srs.md)), thiết kế là **Report 4 – SDD** ([`docs/reports/report4-sdd.md`](./docs/reports/report4-sdd.md)), theo phiếu đăng ký bản sửa sau Review 1. Những chỗ code còn lệch với Report 3 nằm ở [`docs/reports/project-tracking.md`](./docs/reports/project-tracking.md) §6. `SwiftletCare_SRS.md` chỉ còn là ghi chú nội bộ.
 
 ---
 
@@ -34,6 +34,8 @@ Luồng chính của hệ thống:
 2. **Đếm chim ra/vào** — camera tại cửa ra vào, model YOLO26n + ByteTrack đếm chim và phát live stream có khung nhận diện.
 3. **Giám sát sức khỏe đa nguồn có chuyên gia tham gia** — kết hợp dữ liệu môi trường, khí, tiếng ồn và số chim; Domain Expert kiểm chứng cảnh báo và viết kết luận cho chủ nhà yến.
 
+Một bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các farm của chủ đó: Admin tạo tài khoản, thành viên vào bằng lời mời, không có đăng ký công khai; không có mua bán, ticket hay điều phối dịch vụ.
+
 Report 3 chia thành 11 luồng chính (MF-01…11), gồm cả việc chủ nhà yến tự gắn bộ điều khiển vào tầng bằng hai lần quét QR (MF-10) và trạng thái sức khỏe nhà yến theo ngày kèm báo cáo ngày/tuần/tháng (MF-11).
 
 Vai trò người dùng:
@@ -43,30 +45,31 @@ Vai trò người dùng:
 | Farm Owner | Theo dõi nhà yến, tự lắp và gán thiết bị bằng QR, điều khiển tay khi cần, nhận cảnh báo, ghi nhận thu hoạch, mời thành viên; quyết thay chuyên gia khi farm chưa có chuyên gia |
 | Domain Expert | Chuyên gia nuôi yến: kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và hệ số điều khiển, duyệt thay đổi của chủ farm, viết kết luận báo cáo sức khỏe (chỉ đọc phần vận hành); mọi quyết định đều báo cho chủ farm |
 | Technician | Vai trò kỹ thuật: xem thiết bị và cảnh báo thiết bị của mọi farm, lắp/dời/gỡ thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường |
-| Admin | Tạo tài khoản Technician, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; không quản lý farm |
+| Admin | Tạo tài khoản Farm Owner và Technician, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; không quản lý farm |
 
 ## Tính năng chính
 
 **Điều khiển môi trường**
 - Đọc 5 cảm biến RS485 (nhiệt độ + độ ẩm, NH3, CO2, ánh sáng, tiếng ồn); nhiệt độ và độ ẩm được lọc nhiễu (median + Kalman) trước khi vào bộ điều khiển.
 - Điều khiển mờ Sugeno cho phun sương và quạt; hệ số và ngưỡng chỉnh được theo từng Zone, đẩy xuống thiết bị qua MQTT và lưu trong NVS.
-- Trạng thái an toàn: mất số đo hợp lệ thì tắt relay nhưng vòng điều khiển vẫn chạy; tự ngừng phun khi phát hiện bơm khô.
-- Can thiệp tay có thời hạn (1 phút – 24 giờ), tự trở về chế độ tự động và được ghi lịch sử; tỷ lệ thời gian chạy tự động được thống kê.
+- Trạng thái an toàn: mất số đo hợp lệ thì tắt relay nhưng vòng điều khiển vẫn chạy; tự ngừng phun khi phun mà độ ẩm không tăng (`MISTING_INEFFECTIVE`). Đây là kiểm tra phần mềm; bảo vệ điện của tải vẫn là tủ điện của nhà yến.
+- Can thiệp tay có thời hạn riêng cho từng relay (bơm tối đa 30 phút và phải xác nhận khi đang có cảnh báo cảm biến hoặc phun sương; quạt và loa 1 phút – 24 giờ), tự trở về chế độ tự động và được ghi lịch sử; tỷ lệ thời gian chạy tự động được thống kê.
 - Loa phát âm thanh dẫn dụ theo lịch, quản lý file từ web.
 
 **Cảnh báo và giám sát**
-- Cảnh báo vượt ngưỡng, thiết bị mất kết nối, bơm khô, tiếng ồn bất thường, cảm biến bất thường, dự báo sắp vượt ngưỡng (60 phút tới); NH3/CO2 chỉ cảnh báo, không điều khiển quạt.
+- Cảnh báo vượt ngưỡng (có thời gian chờ để không báo khi điều khiển đang kéo về), thiết bị mất kết nối, phun không tăng ẩm, khởi động lại bất thường, tiếng ồn bất thường, cảm biến bất thường, dự báo sắp vượt ngưỡng (60 phút tới); NH3/CO2 chỉ cảnh báo, không điều khiển quạt.
 - Gửi cảnh báo ngoài ứng dụng qua **Telegram bot** và **push FCM** (Telegram đã gửi thật, FCM đang làm); khử trùng lặp theo sự cố, tự đóng khi sự cố qua.
-- Domain Expert xác nhận hoặc bác bỏ cảnh báo suy luận; báo cáo sức khỏe Zone tự tổng hợp hằng tuần, chuyên gia viết kết luận.
+- Domain Expert xác nhận hoặc bác bỏ cảnh báo suy luận (bác bỏ thì cảnh báo thành `DISMISSED`).
+- Mỗi nhà yến có một trạng thái sức khỏe theo ngày (chỉ báo theo luật, không phải chẩn đoán) và báo cáo ngày/tuần/tháng theo nhà, xuất PDF/CSV; chủ farm và chuyên gia tự đánh giá ngày trước khi xem trạng thái của hệ thống để đo mức trùng khớp; chuyên gia viết kết luận.
 - Dashboard thời gian thực qua Socket.io, biểu đồ và phân tích hiệu quả điều khiển.
 
 **Thiết lập thiết bị (MF-10)**
-- Chủ farm quét nhãn QR trên bộ điều khiển (Device ID + mã kích hoạt) và mã QR dán ở tầng trong app mobile; cài Wi-Fi qua AP-mode, không nạp lại firmware; không phải nhập farm/zone trên thiết bị — backend tự gửi định danh đúng khi nhận heartbeat.
+- Chủ farm quét nhãn QR trên bộ điều khiển (Device ID + mã kích hoạt) và mã QR dán ở tầng trong app mobile; cài Wi-Fi qua AP-mode, không nạp lại firmware; không phải nhập farm/zone trên thiết bị — farm, nhà và tầng chỉ lưu ở backend, thiết bị chỉ nhận cấu hình của tầng.
 - Dời bộ điều khiển sang tầng khác từ xa, lịch sử dữ liệu đi theo thiết bị.
 
 **Vận hành (luồng phụ)**
-- Không còn ticket, SLA, phân vùng Technician (Report 3 §8): cảnh báo chưa ai xác nhận được gửi lại, bơm/quạt chạy quá giới hạn sinh cảnh báo bảo trì. Module ticket trong code sẽ được gỡ.
-- Ghi nhận mẻ thu hoạch, tự lưu kèm số liệu môi trường và đàn chim của Zone tại thời điểm thu hoạch.
+- Không còn ticket, SLA, phân vùng Technician (Report 3 §8): cảnh báo chưa ai xác nhận được gửi lại, bơm/quạt chạy quá giới hạn sinh cảnh báo bảo trì. Code ticket, SLA và vùng Technician đã gỡ (PR #103–#106).
+- Ghi nhận mẻ thu hoạch (chỉ để theo dõi nội bộ, không mua bán), tự lưu kèm số liệu môi trường của Zone và đàn chim của nhà yến trước thời điểm thu hoạch.
 
 ## Kiến trúc
 
@@ -102,15 +105,15 @@ Sơ đồ draw.io cũ ở [`docs/diagrams/`](./docs/diagrams/) vẽ theo phạm 
 
 ## Trạng thái phát triển
 
-Những yêu cầu của Report 3 mà code chưa đáp ứng được liệt kê theo từng FR ở [`docs/reports/README.md`](./docs/reports/README.md) (mục "Chỗ lệch") và Report 4 mục 12.
+Những yêu cầu của Report 3 mà code chưa đáp ứng được liệt kê theo từng FR ở [`docs/reports/project-tracking.md`](./docs/reports/project-tracking.md) §6 (gap G-01…G-19).
 
 | Module | Trạng thái |
 |---|---|
-| `backend/` | Đủ các module AUTH, FARM, Device, Telemetry, Alert, Analytics, Ticket, System, Harvest, Expert và phần nhận số đếm chim. Còn thiếu các yêu cầu mới của Report 3: quyền theo §2.4, gỡ ticket/SLA/vùng Technician (thay bằng gửi lại cảnh báo và `MAINTENANCE_DUE`), Farm Owner tự setup thiết bị, `DISMISSED`, duyệt thay đổi của chủ farm, đồng bộ cấu hình, lịch đếm theo mùa, push FCM thật… |
+| `backend/` | Đủ các module AUTH, FARM, Device, Telemetry, Alert, Analytics, System, Harvest, Expert và phần nhận số đếm chim; quyền theo Report 3 §2.4, gửi lại cảnh báo và `MAINTENANCE_DUE` đã xong, ticket/SLA/vùng đã gỡ (PR #100–#106). Còn thiếu: bỏ đăng ký công khai, đổi tên cảnh báo, `DISMISSED`, topic MQTT theo thiết bị, đồng bộ cấu hình, duyệt thay đổi của chủ farm, đánh giá sức khỏe theo ngày, push FCM thật… (G-01…G-14) |
 | `firmware/` | Bản 1.4.0 (thêm khởi động lại và OTA từ xa có rollback); đã chạy trên board ESP32 thật, nhưng chưa ghi lại kịch bản nào đã thử. Chưa gửi version cấu hình trong heartbeat (ENV-FR-027). |
-| `frontend/` | Chạy được nhưng còn theo phạm vi cũ (v1.24): chưa có màn hình Domain Expert, còn Marketplace và relay sưởi cần gỡ. |
+| `frontend/` | Có màn Farm Owner, Domain Expert (PR #91, còn dữ liệu giả dự phòng), Technician và Admin; Marketplace đã gỡ (PR #93). Còn thiếu: màn setup bằng QR, trạng thái sức khỏe theo ngày và chấm điểm, vẽ vòng đếm; còn trường relay sưởi và tùy chọn Zalo/SMS cần gỡ (G-01, G-09, G-11, G-15) |
 | `mobile/` | Khung ứng dụng; phần lớn màn hình chưa làm. |
-| `ai-pipeline/` | Khung code; đang làm theo [`docs/bird-counting-plan.md`](./docs/bird-counting-plan.md). Chưa có model. |
+| `ai-pipeline/` | Theo vết cả khung, đếm qua vòng quanh lỗ, gửi số đếm và heartbeat qua MQTT, đẩy video có khung (PR #88, #95); chưa có model swiftlet tự train, chưa chạy với staging ([`docs/bird-counting-plan.md`](./docs/bird-counting-plan.md), G-12) |
 
 ## Cấu trúc repository
 
@@ -231,7 +234,7 @@ Chi tiết quy trình Git của nhóm: [`docs/github-setup.md`](./docs/github-se
 |---|---|
 | [`docs/reports/report3-srs.md`](./docs/reports/report3-srs.md) | **Report 3 – SRS**: yêu cầu chính thức (FR, BR, NFR, vòng đời, truy vết) |
 | [`docs/reports/report4-sdd.md`](./docs/reports/report4-sdd.md) | **Report 4 – SDD**: kiến trúc, công nghệ, quyết định thiết kế, ERD, giao diện, sơ đồ trạng thái và hoạt động |
-| [`docs/reports/README.md`](./docs/reports/README.md) | Trạng thái hồ sơ Review 2, chỗ code còn lệch với Report 3, bản nháp BM03 |
+| [`docs/reports/project-tracking.md`](./docs/reports/project-tracking.md) §6 | Trạng thái tiến độ: tính năng, test, defect và các gap G-01…G-19 của code so với Report 3/Report 4 |
 | [`docs/database/init.mongo.js`](./docs/database/init.mongo.js) | Database script (sinh từ model bằng `npm run db:script`) |
 | [`SwiftletCare_SRS.md`](./SwiftletCare_SRS.md) | Ghi chú SRS nội bộ (tiếng Việt): lịch sử phạm vi, mô tả luồng chi tiết — không còn là đặc tả chính thức |
 | [`docs/api/`](./docs/api/README.md) | OpenAPI spec và hướng dẫn xem API |
