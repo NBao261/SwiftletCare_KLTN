@@ -85,7 +85,7 @@ tags:
   - name: Analytics
     description: "ANALYTICS-FR-001..005, VISION-FR-008..011 (biểu đồ môi trường, so sánh đa Zone, đếm chim/return-rate — chờ dữ liệu thật từ module VISION) — Farm Owner, Domain Expert của farm; Technician, Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
   - name: Harvests
-    description: "MARKET-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0) — ghi: Farm Owner; đọc: Farm Owner, Domain Expert; Technician, Administrator → 403 (Report 3 §2.4)"
+    description: "HARVEST-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0) — ghi: Farm Owner; đọc: Farm Owner, Domain Expert; Technician, Administrator → 403 (Report 3 §2.4)"
   - name: HealthReports
     description: EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert)
   - name: Notifications
@@ -3424,11 +3424,11 @@ paths:
   /harvests:
     post:
       tags: [Harvests]
-      summary: "Tạo Harvest Batch (MARKET-FR-001..004) — FARM_OWNER (Domain Expert chỉ xem qua GET)"
+      summary: "Tạo Harvest Batch (HARVEST-FR-001..004) — FARM_OWNER (Domain Expert chỉ xem qua GET)"
       description: |
         Tự động gắn `env_snapshot` (trung bình môi trường 7 ngày trước thu
-        hoạch — MARKET-FR-002) và `flock_snapshot` (return rate 30 ngày —
-        MARKET-FR-003), sinh `trace_code` (UUID) làm mã định danh mẻ. Nếu
+        hoạch — HARVEST-FR-002) và `flock_snapshot` (return rate 30 ngày —
+        HARVEST-FR-003), sinh `trace_code` (UUID) làm mã định danh mẻ. Nếu
         Zone chưa đủ dữ liệu telemetry/bird-count, snapshot trả về
         `insufficient_data: true` thay vì số liệu sai lệch.
       requestBody:
@@ -3553,7 +3553,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [Harvests]
-      summary: "Cập nhật Harvest Batch (MARKET-FR-005)"
+      summary: "Cập nhật Harvest Batch (HARVEST-FR-005)"
       description: "Sửa số liệu ghi nhận của mẻ; env/flock snapshot chỉ chụp một lần lúc tạo, không sửa qua đây."
       requestBody:
         content:
@@ -4520,7 +4520,7 @@ components:
 
     HarvestBatch:
       type: object
-      description: MARKET-FR-001..005 — Harvest Batch (đợt thu hoạch), tự gắn env/flock snapshot lúc tạo
+      description: HARVEST-FR-001..005 — Harvest Batch (đợt thu hoạch), tự gắn env/flock snapshot lúc tạo
       properties:
         _id: { type: string }
         farm_id: { type: string }
@@ -4529,7 +4529,7 @@ components:
         trace_code:
           {
             type: string,
-            description: "UUID dùng làm mã QR truy xuất nguồn gốc (MARKET-FR-004)",
+            description: "UUID dùng làm mã QR truy xuất nguồn gốc (HARVEST-FR-004)",
           }
         harvest_date: { type: string, format: date-time }
         nest_count: { type: integer }
@@ -4538,7 +4538,7 @@ components:
         product_images: { type: array, items: { type: string } }
         env_snapshot:
           type: object
-          description: "MARKET-FR-002 — trung bình môi trường 7 ngày trước thu hoạch"
+          description: "HARVEST-FR-002 — trung bình môi trường 7 ngày trước thu hoạch"
           properties:
             avg_temperature: { type: number, nullable: true }
             avg_humidity: { type: number, nullable: true }
@@ -4561,7 +4561,7 @@ components:
               }
         flock_snapshot:
           type: object
-          description: "MARKET-FR-003 — return rate trung bình 30 ngày (rỗng cho tới khi module VISION có dữ liệu thật)"
+          description: "HARVEST-FR-003 — return rate trung bình 30 ngày (rỗng cho tới khi module VISION có dữ liệu thật)"
           properties:
             avg_return_rate_30d: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong 30 ngày trước mẻ" }
             estimated_population: { type: integer, nullable: true, description: "Số ròng về buổi chiều lớn nhất của Zone trong 30 ngày (BirdCountDay.net_entry)" }

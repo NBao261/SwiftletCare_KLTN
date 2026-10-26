@@ -35,12 +35,12 @@ STEP 2 - per-module rules. A changed file is judged ONLY by the rules of the mod
 - A rule file inside the touched module on the base branch (<module>/CLAUDE.md, AGENTS.md, CONTRIBUTING.md, *RULES*.md, *CONVENTION*.md) overrides root CLAUDE.md for that module.
 - Repo-wide: commit messages vs .commitlintrc.json; PR description vs .github/pull_request_template.md (flag only an empty/unfilled template, as non-blocking).
 - Severity: [Bắt buộc] = blocking; [Nên] = advisory. Known debt (e.g. FE_Design_Claude.md 13.14) is flagged only if the PR adds new code repeating or worsening it. Rules marked not yet applied (e.g. i18n in FE section 6) are never flagged. Judge only lines the PR adds or changes.
-- Product scope (every module): Report 3 (`docs/reports/report3-srs.md`) on the base branch wins over older text in `SwiftletCare_SRS.md`, CLAUDE.md, READMEs and FE_Design_Claude.md; much of the code and those docs still describe the older v1.24.0 scope. Read §2.2 (main and supporting flows), §2.4 (permissions), §8 (out of scope) and the rows of `docs/reports/README.md` ("Chỗ lệch") for the modules the PR touches, then flag:
+- Product scope (every module): Report 3 (`docs/reports/report3-srs.md`) on the base branch wins over older text in `SwiftletCare_SRS.md`, CLAUDE.md, READMEs and FE_Design_Claude.md; much of the code and those docs still describe the older v1.24.0 scope. Read §2.2 (main and supporting flows), §2.4 (permissions), §8 (out of scope) and the gaps of `docs/reports/project-tracking.md` §6 for the modules the PR touches, then flag:
   - [blocking] New features, endpoints, screens or enum values that extend something §8 puts out of scope (Marketplace/Buyer listings and inquiries, the Farm Operator role and its zone scope, predator detection, the heating relay, Zalo/SMS channels, NH3/CO2 driving the fan). Removing or migrating them, and keeping existing code working, is fine.
   - [blocking] A threshold, limit or behaviour introduced without a source (Report 3, the Domain Expert, a cited reference): CLAUDE.md says never invent one; ask for the source or a downgrade to alert-only / "set by the Domain Expert". A hand-picked constant goes into Report 3 §4.5 in the same PR.
   - [blocking] A change that closes a gap but changes routes without updating `docs/api/api-spec.yaml` in the same PR, or changes a shared enum (`Role`, `AlertType`…) on only one of backend/frontend/mobile.
   - [non-blocking] New work on a supporting flow (remote device maintenance, accounts, Admin, harvest — Report 3 §2.2 SF-02…04) beyond keeping it working. Tickets, SLA, ticket routing, Technician regions and KPIs are out of scope (Report 3 §8): code for them may only be removed. Device setup is main flow MF-10, not a supporting flow.
-  - When the PR closes a gap of `docs/reports/README.md`, say which one (FR code) in the summary.
+  - When the PR closes a gap of `docs/reports/project-tracking.md` §6, say which one (G-xx and FR code) in the summary.
 - Cross-module rules: the 'Cross-module rules' section of root CLAUDE.md on the base branch (API contract, shared enums, MQTT `deviceId`, `FuzzyControl.cpp` ↔ `fuzzyModel.util.ts`, runtime parameter names and ranges). They apply to every module the PR touches; a PR that breaks one is blocking.
 
 STEP 3 - find issues. First scan the PR, then decide how to review it; say in the final report what you saw and what you chose.
@@ -70,8 +70,8 @@ STEP 3b - frontend <-> backend API check (only when the PR changes files under f
   - DONE: the route exists and calls a real service.
   - STUB: the route exists but its service only throws `NotImplementedError` (501, `utils/appError.util.ts`) or returns placeholder data.
   - MISSING: no route.
-  - REMOVING: the endpoint belongs to something Report 3 §8 puts out of scope (e.g. `/marketplace/*`) or a row of `docs/reports/README.md` says it is being replaced.
-  Use `docs/reports/README.md` ("Chỗ lệch") and FE_Design_Claude.md section 7 only to confirm; when they disagree with the code, trust the code and mention the mismatch.
+  - REMOVING: the endpoint belongs to something Report 3 §8 puts out of scope (e.g. `/marketplace/*`) or a gap of `docs/reports/project-tracking.md` §6 says it is being replaced.
+  Use `docs/reports/project-tracking.md` §6 (gaps) and FE_Design_Claude.md section 7 only to confirm; when they disagree with the code, trust the code and mention the mismatch.
 - Then flag, citing FE_Design_Claude.md 13.9 / 13.8 (all [Bắt buộc], blocking):
   - Mock/hardcoded data on a screen whose endpoint is DONE: must switch to the real API. Name the endpoint and the existing `apis/` function or hook to use, or say one has to be added in the right `apis/<role|shared>/` file.
   - New UI built on a REMOVING endpoint: must not be added (see the product-scope rule in STEP 2); point to the replacement in Report 3 if there is one.

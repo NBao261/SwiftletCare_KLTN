@@ -1,6 +1,6 @@
 # Capstone Project Register — SwiftletCare (proposed final version v3)
 
-> Text of the registration form submitted for Review 2 (`registration/FA26_SE_Capstone_Project_Register_SwiftletCare_v3.docx`), kept in Markdown so that the self-review prompt and the reports can cite it. Changes from v2 are listed in the Record of Changes (`bm03-record-of-changes.md`) and in section 4, items (8)–(15). Phone numbers are left out of the repository copy; the team adds them to the submitted file.
+> Text of the registration form submitted for Review 2 (`registration/FA26_SE_Capstone_Project_Register_SwiftletCare_v3.docx`), kept in Markdown so that the self-review prompt and the reports can cite it. Changes from v2 are listed in the Record of Changes (`bm03-record-of-changes.md`) and in section 4, items (8)–(16). Phone numbers are left out of the repository copy; the team adds them to the submitted file.
 
 | Field | Value |
 | --- | --- |
@@ -40,6 +40,8 @@ Two further gaps remain. First, owners have no objective way to follow the flock
 
 We propose SwiftletCare, an automated control and monitoring system consisting of an edge controller with industrial sensors, actuators and load-current sensing in each zone of the house, an AI camera pipeline that reads the camera at the bird entrance and runs on a desktop PC, and a cloud backend with web and mobile applications.
 
+One installation of SwiftletCare serves one owner of swiftlet houses (a person or a business) and the farms of that owner. Accounts are created by the installation's Administrator or by invitation; there is no public sign-up. SwiftletCare does not connect buyers and sellers, dispatch technical services, handle payments or host third parties: every function serves the operation of the owner's houses.
+
 The system is designed so that the house regulates and protects itself; people supervise, validate and intervene only as an exception. Its research focus and value lie in three components:
 
 **Autonomous Micro-Climate Control:**
@@ -52,7 +54,7 @@ A lightweight detection and tracking pipeline (YOLO + ByteTrack) processes the v
 
 **Multi-Modal Health Monitoring with an Expert in the Loop:**
 
-The system combines three sources of evidence (environmental sensors, noise level, and flock movement from the camera) to assess the condition of the house and of its own equipment: faulty or drifting sensors, a pump running dry, a pump or fan that draws no current, speaker failure, device offline, abnormal noise, forecast threshold breaches and drops in the return rate. Each day the system gives every house one health status that combines the sources by agreement between them, with its reasons and with the day's weather from a public weather service as context; daily, weekly and monthly reports can be downloaded as PDF or CSV. The system acts as the primary, automatic expert; a human Domain Expert reviews its assessments, confirms or rejects its inferred alerts, and adjusts thresholds and control coefficients. The Farm Owner and the Domain Expert rate each day from their own observation, and the agreement between the system and these ratings is measured.
+The system combines three sources of evidence (environmental sensors, noise level, and flock movement from the camera) to assess the condition of the house and of its own equipment: faulty or drifting sensors, misting that does not raise the humidity (dry pump, empty tank, clogged nozzle), a pump or fan that draws no current, speaker failure, device offline, abnormal noise, threshold and forecast breaches and drops in the return rate. Each day the system gives every house one health status that combines the sources by agreement between them, with its reasons and with the day's weather from a public weather service as context; daily, weekly and monthly reports can be downloaded as PDF or CSV. The status comes from transparent rules and is an indicator for people to act on, not a diagnosis: a human Domain Expert reviews the system's assessments, confirms or rejects its inferred alerts, and adjusts thresholds and control coefficients. The Farm Owner and the Domain Expert rate each day from their own observation, and the agreement between the system and these ratings is measured.
 
 ### C. Functional requirement
 
@@ -62,7 +64,7 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **Closed-Loop Control:** Regulate humidity and temperature with fuzzy logic (misting, ventilation), and play the attractant sound on schedule, without user action.
 
-**Self-Protection & Self-Diagnosis:** Detect sensor faults and RS485 bus failure, implausible sensor behaviour (stuck values, impossible jumps, drift between devices), a pump running dry, a pump or fan that does not draw current as commanded, speaker failure, power loss and device offline; move the affected actuator to a safe state where applicable and raise an alert.
+**Self-Protection & Self-Diagnosis:** Detect sensor faults and RS485 bus failure, implausible sensor behaviour (stuck values, impossible jumps, drift between devices), misting that does not raise the humidity, a pump or fan that does not draw current as commanded, speaker failure, an unexpected restart and device offline; move the affected actuator to a safe state where applicable and raise an alert. These checks monitor the equipment; the electrical protection of the loads (breaker, thermal relay, float switch) stays in the house's own panel.
 
 **Forecasting & Tuning Suggestion:** Forecast humidity and temperature for the next 60 minutes and warn before a threshold is crossed; measure control performance (time in range, relay switching); suggest fuzzy-control coefficients from recorded data.
 
@@ -96,7 +98,7 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **Validation:** Confirm or reject alerts inferred by the system (abnormal noise, sensor anomaly, forecast breach, return-rate drop), so that detection thresholds can be calibrated.
 
-**Tuning:** Approve or adjust environmental thresholds and fuzzy-control coefficients, including those suggested by the system; every change is recorded with its author and time.
+**Tuning:** Approve or adjust environmental thresholds and fuzzy-control coefficients, including those suggested by the system, and tune the detection parameters of the alerts (abnormal-noise margin, misting-check and speaker-failure criteria, return-rate drop); every change is recorded with its author and time.
 
 **Rating:** Rate each day of the house from own observation before the system status is shown, so that the agreement between the system and the practitioners can be measured.
 
@@ -106,7 +108,7 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **Technician:** Set up, move and remove devices on any farm with the same steps as the Farm Owner, diagnose them remotely, and send restarts, configuration pushes and firmware updates; no relay control and no access to the environmental data.
 
-**Administrator:** Manage user and Technician accounts, the device stock with its printed labels, system-wide default settings and the audit log.
+**Administrator:** Technical administrator of the installation: create the accounts of the Farm Owner and the Technicians, lock accounts and handle data-deletion requests, keep the device stock with its printed labels, the system-wide default thresholds and the audit log. The Administrator does not create or manage farms.
 
 ### D. Main flow
 
@@ -116,7 +118,7 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **Flow 3: Offline Operation & Recovery:** When the internet connection is lost, the controller keeps regulating with its stored configuration and buffers telemetry in flash memory; when the connection returns, the buffered data is uploaded. If the controller hangs, the hardware watchdog restarts it and an unexpected-restart alert is reported.
 
-**Flow 4: Equipment Fault Handling:** If the pump has run for an accumulated 5 minutes without humidity rising, the system stops misting for that session and raises a pump-dry alert. If a sensor stops responding or returns implausible values, its reading is excluded from control decisions, the affected loop holds a safe state, and a sensor alert is raised. If the speaker is on but the measured sound level stays far below its baseline, a speaker-failure alert is raised. An alert that nobody acknowledges is sent again, and a pump or fan that reaches its service limit raises a maintenance alert.
+**Flow 4: Equipment Fault Handling:** If the pump has run for an accumulated 5 minutes without humidity rising, the system stops automatic misting for that session and raises a misting-ineffective alert that asks to check the water, the nozzles, the pump and the doors. If a sensor stops responding or returns implausible values, its reading is excluded from control decisions, the affected loop holds a safe state, and a sensor alert is raised. If the speaker is on but the measured sound level stays far below its baseline, a speaker-failure alert is raised. An alert that nobody acknowledges is sent again, and a pump or fan that reaches its service limit raises a maintenance alert.
 
 **Flow 5: Early Warning by Forecast:** Every 10 minutes the system forecasts humidity and temperature for the next 60 minutes; if a value that is still in range is predicted to cross its threshold, an early-warning alert is raised with the expected time.
 
@@ -126,9 +128,9 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **Flow 8: Expert Validation & Tuning:** The system produces the health reports and, when enough data is available, a suggested set of control coefficients. The Domain Expert reviews them, confirms or rejects the inferred alerts, approves or adjusts the parameters, and writes a conclusion for the Farm Owner. The new parameters are sent to the controller and their effect is visible in the control-performance chart.
 
-**Flow 9: Manual Override:** The Farm Owner switches an actuator from the application for a limited duration; the controller applies it, reports manual mode, and returns to automatic control when the duration expires. If the controller itself fails, the existing electrical switches of the house, outside the system, remain the manual fallback, and the current sensing reports when a load does not run as commanded.
+**Flow 9: Manual Override:** The Farm Owner switches an actuator from the application for a limited duration (the pump for at most 30 minutes, and only after confirming any open sensor or misting alert); the controller applies it, reports manual mode, and returns to automatic control when the duration expires. If the controller itself fails, the existing electrical switches of the house, outside the system, remain the manual fallback, and the current sensing reports when a load does not run as commanded.
 
-**Flow 10: Device Setup by the Farm Owner:** The Administrator adds the device to the stock and prints its label. The Farm Owner scans the label and the QR code of the floor in the mobile app and enters the Wi-Fi network on the device; the backend registers the device to that zone, sends it its zone and configuration at its first connection, and the application shows when the configuration is applied. Nothing about the farm is typed on the device.
+**Flow 10: Device Setup by the Farm Owner:** The Administrator adds the device to the stock and prints its label. The Farm Owner scans the label and the QR code of the floor in the mobile app and enters the Wi-Fi network on the device; the backend links the device to that zone in its database and sends it that zone's configuration at its first connection, and the application shows when the configuration is applied. Nothing about the farm is typed on the device.
 
 **Flow 11: Daily Health Assessment & Periodic Reports:** After the evening session, the system rates the environment, air quality, return rate and abnormal noise of each house against the house's levels, combines them by agreement into one daily status (good, watch, action or insufficient data) with its reasons and the weather of the day, and notifies the Farm Owner and the Domain Expert. Each of them rates the day from their own observation before the status is shown. Weekly and monthly reports aggregate the days, and every report can be downloaded as PDF or CSV.
 
@@ -217,3 +219,5 @@ Default temperature, humidity and light thresholds are taken from the swiftlet-f
 (14) Both mobile push notifications and a Telegram bot are committed, and predator detection is removed from the possible extensions.
 
 (15) Maintenance tickets, service levels (SLA), Technician regions and ticket statistics are removed: the Technician is the technical role that works on the devices of every farm without controlling relays; faults reach the Farm Owner as alerts that are sent again until acknowledged, and pump or fan wear raises a maintenance alert.
+
+(16) One installation serves one owner of swiftlet houses and that owner's farms: the Administrator creates the Farm Owner's account, co-owners and the Domain Expert join by invitation, and there is no public sign-up. The health status is described as a rule-based indicator, not as an automatic expert.

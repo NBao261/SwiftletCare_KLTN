@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from 'mongoose'
 import type { HarvestStatus, NestType } from '@/types'
 import { applySoftDeleteScope } from '@/utils/softDelete.util'
 
-/** HarvestBatch – SRS §8.2, MARKET-FR-001..003 */
+/** HarvestBatch – SRS §8.2, HARVEST-FR-001..003 */
 export interface IHarvestBatch extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId

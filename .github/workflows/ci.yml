@@ -5,11 +5,15 @@ on:
     branches: [develop, main]
   push:
     branches: [develop]
+    # Tag của mốc review (review-2…): chạy đủ mọi module và lưu kết quả test làm bằng chứng (Report 5 §6)
+    tags: ['review-*']
+  workflow_dispatch:
 
 jobs:
   # ── Job 1: Validate commit messages ────────────────────────────────────────
   validate-commits:
     name: Validate Commit Messages
+    if: github.event_name == 'pull_request' || github.ref_type == 'branch' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +39,7 @@ jobs:
 
   # ── Job 3: Xác định module nào bị sửa ──────────────────────────────────
   # Job của module không bị đụng sẽ bị bỏ qua (skipped = không chặn merge).
+  # Tag review-* và chạy tay (workflow_dispatch) luôn chạy đủ mọi module.
   changes:
     name: Detect Changed Modules
     runs-on: ubuntu-latest
@@ -47,9 +52,11 @@ jobs:
       firmware: ${{ steps.filter.outputs.firmware }}
       mobile: ${{ steps.filter.outputs.mobile }}
       ai-pipeline: ${{ steps.filter.outputs.ai-pipeline }}
+      full: ${{ github.event_name == 'workflow_dispatch' || github.ref_type == 'tag' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
+        if: github.event_name != 'workflow_dispatch' && github.ref_type != 'tag'
         id: filter
         with:
           filters: |
@@ -74,7 +81,7 @@ jobs:
   backend:
     name: Backend (lint · type-check · test)
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -94,13 +101,18 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build:check
-      - run: npm test
+      - run: npm test -- --json --outputFile=jest-results.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-jest-results
+          path: backend/jest-results.json
 
   # ── Job 5: Frontend — lint, type-check, test, build ─────────────────────
   frontend:
     name: Frontend (lint · type-check · test · build)
     needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -122,7 +134,7 @@ jobs:
   firmware:
     name: Firmware (native unit tests)
     needs: changes
-    if: needs.changes.outputs.firmware == 'true'
+    if: needs.changes.outputs.firmware == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -137,14 +149,19 @@ jobs:
           path: ~/.platformio
           key: platformio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
       - run: pip install platformio
-      - run: pio test -e native
+      - run: pio test -e native --junit-output-path pio-junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: firmware-pio-junit
+          path: firmware/pio-junit.xml
 
   # ── Job 7: Mobile — lint, type-check, test ──────────────────────────────
   # Chưa có test nào nên jest chạy với --passWithNoTests; test thêm vào sẽ tự được chạy.
   mobile:
     name: Mobile (lint · type-check · test)
     needs: changes
-    if: needs.changes.outputs.mobile == 'true'
+    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -165,7 +182,7 @@ jobs:
   ai-pipeline:
     name: AI pipeline (pytest)
     needs: changes
-    if: needs.changes.outputs.ai-pipeline == 'true'
+    if: needs.changes.outputs.ai-pipeline == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -178,4 +195,9 @@ jobs:
           cache: pip
           cache-dependency-path: ai-pipeline/requirements.txt
       - run: pip install -r requirements.txt
-      - run: pytest
+      - run: pytest --junitxml=pytest-junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-pipeline-pytest-junit
+          path: ai-pipeline/pytest-junit.xml

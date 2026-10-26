@@ -69,7 +69,7 @@ function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>
   URL.revokeObjectURL(url);
 }
 
-// Trang Thu hoạch của Farm Owner — chỉ ghi nhận thu hoạch theo SRS v2 (MARKET-FR-001..005, Flow 7)
+// Trang Thu hoạch của Farm Owner — chỉ ghi nhận thu hoạch theo SRS v2 (HARVEST-FR-001..005, Flow 7)
 export default function FarmOwnerHarvestPage(): JSX.Element {
   const { t } = useTranslation(harvestDict);
   // Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner, lưu lại khi chuyển trang

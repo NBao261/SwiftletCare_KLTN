@@ -19,12 +19,12 @@ Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commi
 
 ### 1.1 Scope and Estimation
 
-Scope is the registration form v3: main flows MF-01…11 and supporting flows SF-02…04 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from Report 4, Section 12 and the gap list in `docs/reports/README.md`. Both columns are draft estimates `[TEAM: confirm]`.
+Scope is the registration form v3: main flows MF-01…11 and supporting flows SF-02…04 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are draft estimates `[TEAM: confirm]`.
 
 | WBS | Work package | Main deliverable | Owner | Estimate (person-days) | Done at Review 2 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.4.x (sensing, fuzzy control, self-diagnosis, offline buffer, OTA); controller board with current sensing | Nguyễn Chí Bảo | 45 | About 70 % (board, current check, config version and MQTT TLS remain) |
-| 2 | Vision (Task 2) | Labelled dataset, trained YOLO model, counting pipeline, annotated stream, accuracy report | Nguyễn Chí Bảo | 40 | About 45 % (pipeline and tests done; model, publishing and evaluation remain) |
+| 2 | Vision (Task 2) | Labelled dataset, trained YOLO model, counting pipeline, annotated stream, accuracy report | Nguyễn Chí Bảo | 40 | About 50 % (pipeline, MQTT publishing, video push and tests done; trained model, device topics and evaluation remain) |
 | 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine, forecasting, expert module, daily health assessment, reports | Bảo, Kiệt, Tuấn, Nhi | 70 | About 70 % (MF-11, review items, proposals, config sync, FCM remain) |
 | 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens; mobile app with QR setup and push | Len, Nhi, Tuấn, Kiệt | 75 | Web about 60 %, mobile about 10 % |
 | 5 | Evaluation and thesis (Task 5) | Staging, field run, NFR measurements, practitioner interview, test report, thesis | Whole team | 40 | About 15 % (camera installed in the test house, 3 days of clips recorded) |
@@ -51,6 +51,8 @@ Scope is the registration form v3: main flows MF-01…11 and supporting flows SF
 | RK-5 | Web screens lag behind the backend scope | Medium | Medium | Remove v1.24.0 leftovers first; one owner per role screen set; weekly integration on `develop` | Nguyễn Vũ Len |
 | RK-6 | Thresholds or health levels without a source | Medium | Medium | Evidence register and practitioner interview; constants declared in Report 3 §4.5 | Nguyễn Chí Bảo |
 | RK-7 | A member cannot explain the part they own at Review 2 or Defense 1.1 | Low | High | Ownership Map; each owner presents their workflow at internal rehearsals | Nguyễn Chí Bảo |
+| RK-8 | The mobile application must cover the whole scope of the registration form (3.2 b) with one owner | High | High | Reuse the web API hooks and types; build the Farm Owner flows first (alerts and push, setup by QR, override, daily status); share the mobile screens out per role if the owner falls behind (Project Tracking G-16) | Trần Minh Kiệt |
+| RK-9 | The move to device topics, `esp-mqtt` and TLS (Report 4 D3) breaks the link between controllers, AI node and backend | Medium | High | One pull request for firmware, backend and AI node; bench test with two controllers and the AI node before staging; old firmware reflashed over USB if needed (Project Tracking G-07) | Nguyễn Chí Bảo |
 
 ## 2. Management Approach
 
@@ -60,7 +62,7 @@ The team works in iterations of two-week sprints with Scrum-style ceremonies, ad
 
 | Practice | How |
 | --- | --- |
-| Sprint planning | At the start of each sprint, tasks are taken from Project Tracking and the gap list (`docs/reports/README.md`) and assigned to their owner |
+| Sprint planning | At the start of each sprint, tasks are taken from the gap list of Project Tracking (Section 6) and assigned to their owner |
 | Weekly meeting | One online meeting a week with the supervisor; progress, blockers, decisions |
 | Sprint review and retrospective | At the end of each sprint, recorded in `docs/sprint-reviews/` |
 | Definition of Done | Code merged into `develop` through a pull request that passes CI and one review; tests written with the feature (backend service logic: mandatory); docs and API contract updated in the same pull request |
@@ -72,9 +74,9 @@ The team works in iterations of two-week sprints with Scrum-style ceremonies, ad
 | --- | --- | --- |
 | Registration | 22/07/2026 | Registration form v1 |
 | Review 1 | `[TEAM: date]` | Registration v2; scope narrowed to the automated system |
-| Iteration 1 | until Review 2 | Firmware 1.4.0, backend of every main flow except MF-11, counting pipeline, Farm Owner, Admin and Domain Expert web screens, test house camera |
+| Iteration 1 | until Review 2 | Firmware 1.4.0, backend of the main flows except MF-11 and the review items and proposals of MF-08, counting pipeline with MQTT publishing and video push, Farm Owner, Admin and Domain Expert web screens, test house camera |
 | **Review 2** | `[TEAM: date]` | Registration v3, Reports 1–5, Design Brief, self-review |
-| Iteration 2 | Review 2 + 4 weeks `[TEAM: dates]` | Permissions per Report 3; MF-11 backend; review items and proposals; config sync; FCM; QR setup on mobile; pipeline publishing; trained model; staging; field run starts |
+| Iteration 2 | Review 2 + 4 weeks `[TEAM: dates]` | Gaps due "It. 2" in Project Tracking: device topics and TLS; MF-11 backend; review items and proposals; config sync; FCM; QR setup on mobile; pipeline against staging; trained model; staging; field run starts |
 | Iteration 3 | 3 weeks `[TEAM: dates]` | Current sensing; reports and export; remaining screens; all committed test cases; NFR measurements; evaluation report |
 | **Defense 1.1** | `[TEAM: date]` | Workflows, scenarios, tests and NFRs against the Commitment |
 | Viva | `[TEAM: date]` | Thesis (Report 7), final package |
@@ -125,7 +127,7 @@ R = responsible, A = accountable, C = consulted.
 | Firmware, hardware | A, R | C | | | |
 | AI pipeline, model | A, R | | | | |
 | Backend core (MQTT, alerts, jobs) | A, R | R | | | C |
-| Backend devices, setup, ticket removal | C | A, R | | | |
+| Backend devices, setup, scope cleanup and device onboarding | C | A, R | | | |
 | Backend expert module | C | | | | A, R |
 | Backend daily health and reports | C | | | A, R | C |
 | Web – Farm Owner | | | A, R | | |
@@ -181,4 +183,5 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0 and SDD 1.1.0: progress judged from Project Tracking, Iteration 1 and 2 content corrected, RACI wording, risks RK-8 (mobile scope) and RK-9 (move to device topics) |
 | 1.0.0 | 23/10/2026 | First version for Review 2 |

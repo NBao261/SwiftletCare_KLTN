@@ -1,11 +1,11 @@
-// Module MARKET (§5.8) — chỉ còn ghi nhận lô thu hoạch (SRS v2.0.0 bỏ Marketplace).
+// Module HARVEST (§5.8) — chỉ còn ghi nhận lô thu hoạch (SRS v2.0.0 bỏ Marketplace).
 
-// Module MARKET (§5.8)
+// Module HARVEST (§5.8)
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
 // Khớp backend v2.0.0 (domain.types.ts): bỏ LISTED cùng Marketplace
 export type HarvestStatus = 'DRAFT' | 'ARCHIVED'
 
-// Module MARKET (§5.8, §8.2)
+// Module HARVEST (§5.8, §8.2)
 export interface EnvSnapshot {
   avg_temperature?: number; avg_humidity?: number; avg_light_lux?: number
   avg_nh3_ppm?: number; avg_co2_ppm?: number

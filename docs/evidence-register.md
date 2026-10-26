@@ -6,7 +6,7 @@
 | **Phiên bản** | 0.2 (khung, chưa điền nguồn) |
 | **Ngày tạo** | 18/10/2026 |
 | **Người phụ trách** | _(tên người giữ file)_ |
-| **Áp dụng cho** | Report 3 – SRS (`docs/reports/report3-srs.md`: A-3, REF-5, BR-01, mục 4.5) — mỗi ngưỡng mặc định phải có nguồn trích dẫn hoặc xác nhận của người nuôi yến. Cột "Dùng ở đâu" còn trỏ mục của `SwiftletCare_SRS.md` cũ |
+| **Áp dụng cho** | Report 3 – SRS (`docs/reports/report3-srs.md`: A-3, REF-5, BR-01, mục 4.5) — mỗi ngưỡng mặc định phải có nguồn trích dẫn hoặc xác nhận của người nuôi yến. Cột "Dùng ở đâu" trỏ mã BR/FR/NFR của Report 3 3.1.0 |
 | **Trạng thái** | Đang thu thập |
 
 ---
@@ -24,7 +24,7 @@ Bảng ở mục 5 đã liệt kê sẵn những khẳng định đang có trong
 1. **Đọc tận mắt rồi mới ghi.** Chỉ ghi tài liệu mình đã mở và đọc được đoạn chứa con số. Không chép nguồn từ trang tổng hợp, blog hay câu trả lời AI mà chưa mở bản gốc.
 2. **Ghi chỗ cụ thể.** Mỗi con số phải kèm trang / bảng / hình / mục, và trích nguyên văn đoạn có số đó (giữ ngôn ngữ gốc, dịch ở cột ghi chú nếu cần).
 3. **Ghi đúng phạm vi của nguồn.** Nguồn đo ở loài khác, nước khác, hay cho gà/lợn chứ không phải chim yến thì ghi rõ ở cột "Phạm vi áp dụng". Đừng nói nguồn chứng minh nhiều hơn những gì nó viết.
-4. **Không có nguồn thì nói không có.** Đặt trạng thái **Không có nguồn** và ghi cách xử lý (hạ thành giả định, chỉ cảnh báo, hoặc để Domain Expert đặt) — đúng quy tắc ở SRS §0 và §0.5.
+4. **Không có nguồn thì nói không có.** Đặt trạng thái **Không có nguồn** và ghi cách xử lý (hạ thành giả định, chỉ cảnh báo, hoặc để Domain Expert đặt) — đúng quy tắc ở quy tắc "không bịa ngưỡng" của Report 3 (A-3, A-4, §4.5).
 5. **Người khác kiểm lại.** Một dòng chỉ lên **Đã kiểm chứng** khi một thành viên **khác** người tìm đã mở nguồn và thấy đúng con số.
 6. **File gốc.** Không commit PDF/ảnh có bản quyền vào repo. Ghi link + DOI ở đây; bản lưu trữ đặt trong thư mục chung của nhóm (ghi đường dẫn ở cột "Bản lưu"). Ảnh/biên bản do nhóm tự làm (mục 6, 7) thì ghi đường dẫn nơi lưu.
 7. **Không xoá dòng.** Nguồn bị loại thì đổi trạng thái thành **Loại** và ghi lý do, để người sau không tìm lại đúng nguồn đó.
@@ -186,24 +186,24 @@ Danh sách dưới đây lấy từ SRS và code **tại thời điểm tạo fi
 
 | Mã | Khẳng định | Giá trị đang dùng | Dùng ở đâu | Nguồn | Trích đoạn & vị trí | Mức | Trạng thái | Phụ trách |
 | --- | --- | --- | --- | --- | --- | :---: | --- | --- |
-| KD-01 | Nhiệt độ thích hợp trong nhà yến | 26–31 °C | SRS ENV-FR-007; firmware `Config.h` `DEFAULT_TEMP_MIN/MAX`; backend `utils/thresholds.util.ts` | | | | Chưa tìm | M3 |
-| KD-02 | Độ ẩm thích hợp trong nhà yến | 75–95 %RH | SRS ENV-FR-007; firmware `DEFAULT_HUMIDITY_MIN/MAX`; backend `thresholds.util.ts` | | | | Chưa tìm | M3 |
-| KD-03 | Nhà yến cần tối gần như hoàn toàn | ánh sáng < 0.2 lux | SRS ENV-FR-007; firmware `DEFAULT_LIGHT_MAX` | | | | Chưa tìm | M3 |
-| KD-04 | Ngưỡng cảnh báo NH3 | < 25 ppm (**tạm**, SRS ghi chưa có nguồn riêng cho nhà yến) | SRS ENV-FR-007, §0.2 #7; backend `thresholds.util.ts` | | | | Chưa tìm | M3 |
-| KD-05 | Ngưỡng cảnh báo CO2 | < 1500 ppm (**tạm**, như trên) | SRS ENV-FR-007, §0.2 #7; backend `thresholds.util.ts` | | | | Chưa tìm | M3 |
-| KD-06 | Độ ẩm < 75 % hoặc nhiệt độ > 31 °C gây thoái hoá tổ, chim bỏ tổ, chim non chết nhiều | < 75 %RH / > 31 °C | SRS §2.1 | | | | Chưa tìm | M3 |
-| KD-07 | NH3 trong nhà yến chủ yếu từ phân chim; người nuôi dùng phân để dẫn dụ | — | SRS §0.2 #7 | | | | Chưa tìm | M3 |
+| KD-01 | Nhiệt độ thích hợp trong nhà yến | 26–31 °C | Report 3 BR-01; firmware `Config.h` `DEFAULT_TEMP_MIN/MAX`; backend `utils/thresholds.util.ts` | | | | Chưa tìm | M3 |
+| KD-02 | Độ ẩm thích hợp trong nhà yến | 75–95 %RH | Report 3 BR-01; firmware `DEFAULT_HUMIDITY_MIN/MAX`; backend `thresholds.util.ts` | | | | Chưa tìm | M3 |
+| KD-03 | Nhà yến cần tối gần như hoàn toàn | ánh sáng < 0.2 lux | Report 3 BR-01; firmware `DEFAULT_LIGHT_MAX` | | | | Chưa tìm | M3 |
+| KD-04 | Ngưỡng cảnh báo NH3 | < 25 ppm (**tạm**, SRS ghi chưa có nguồn riêng cho nhà yến) | Report 3 BR-02, C-2; backend `thresholds.util.ts` | | | | Chưa tìm | M3 |
+| KD-05 | Ngưỡng cảnh báo CO2 | < 1500 ppm (**tạm**, như trên) | Report 3 BR-02, C-2; backend `thresholds.util.ts` | | | | Chưa tìm | M3 |
+| KD-06 | Độ ẩm < 75 % hoặc nhiệt độ > 31 °C gây thoái hoá tổ, chim bỏ tổ, chim non chết nhiều | < 75 %RH / > 31 °C | Phiếu đăng ký A (Context) | | | | Chưa tìm | M3 |
+| KD-07 | NH3 trong nhà yến chủ yếu từ phân chim; người nuôi dùng phân để dẫn dụ | — | Report 3 C-2 | | | | Chưa tìm | M3 |
 
 ### 5.2. Vận hành & tập tính chim yến
 
 | Mã | Khẳng định | Giá trị đang dùng | Dùng ở đâu | Nguồn | Trích đoạn & vị trí | Mức | Trạng thái | Phụ trách |
 | --- | --- | --- | --- | --- | --- | :---: | --- | --- |
-| KD-10 | Loa dẫn dụ phát vào giờ chim ra/vào tổ | 5–7 h và 17–19 h | SRS §7.1, §7.2; firmware `SPEAKER_WINDOW_*` | | | | Chưa tìm | M5 |
-| KD-11 | Chim rời tổ buổi sáng, về tổ buổi chiều (cơ sở để chia phiên đếm sáng/chiều) | phiên sáng / phiên chiều | SRS §5.4, VISION-FR-009; `ai-pipeline/config/config.yaml` | | | | Chưa tìm | M5 |
-| KD-12 | Tỷ lệ chim về là chỉ số then chốt đánh giá sức khoẻ đàn và dự báo năng suất | — | SRS §2.1 | | | | Chưa tìm | M5 |
-| KD-13 | Phun sương làm tăng độ ẩm, quạt làm giảm nhiệt trong nhà yến (hai cơ cấu chấp hành của vòng điều khiển) | — | SRS §5.3.3 | | | | Chưa tìm | M5 |
+| KD-10 | Loa dẫn dụ phát vào giờ chim ra/vào tổ | 5–7 h và 17–19 h | Report 3 BR-07; firmware `SPEAKER_WINDOW_*` | | | | Chưa tìm | M5 |
+| KD-11 | Chim rời tổ buổi sáng, về tổ buổi chiều (cơ sở để chia phiên đếm sáng/chiều) | phiên sáng / phiên chiều | Report 3 BR-12, BR-13, VISION-FR-009; `ai-pipeline/config/config.yaml` | | | | Chưa tìm | M5 |
+| KD-12 | Tỷ lệ chim về là chỉ số then chốt đánh giá sức khoẻ đàn và dự báo năng suất | — | Phiếu đăng ký A (Context) | | | | Chưa tìm | M5 |
+| KD-13 | Phun sương làm tăng độ ẩm, quạt làm giảm nhiệt trong nhà yến (hai cơ cấu chấp hành của vòng điều khiển) | — | Report 3 ENV-FR-010, 011 | | | | Chưa tìm | M5 |
 | KD-14 | Đèn hồng ngoại 850 nm có ánh đỏ nhìn thấy được, có thể làm chim khó chịu; 940 nm an toàn hơn | IR 850 nm | `docs/bird-counting-plan.md` §3.2, §19.5 cổng 6 | | | | Chưa tìm | M5 |
-| KD-15 | Một nhà yến đã có đàn chim cần được kiểm chứng bởi người có chuyên môn (lý do có vai trò Domain Expert) | — | SRS §0.3, §5.12 | | | | Chưa tìm | M5 |
+| KD-15 | Một nhà yến đã có đàn chim cần được kiểm chứng bởi người có chuyên môn (lý do có vai trò Domain Expert) | — | Report 3 §2.3 (Domain Expert) | | | | Chưa tìm | M5 |
 
 ### 5.3. Tham số phát hiện sự cố (EXPERT-FR-008, mặc định do code chọn)
 
@@ -218,39 +218,39 @@ SRS ghi các số này là mặc định kỹ thuật, Domain Expert chỉnh đ�
 | KD-24 | Bơm khô: độ ẩm phải tăng tối thiểu | 2 %RH (0.5–10) | firmware `DEFAULT_PUMP_DRY_MIN_RISE_PCT` | | | | Chưa tìm | M1 |
 | KD-25 | Hỏng loa: mức âm giảm so với nền | 70 % (30–90) | firmware `DEFAULT_SPEAKER_DROP_PCT`; THREAT-FR-006 | | | | Chưa tìm | M1 |
 | KD-26 | Tỷ lệ chim về giảm so với trung bình 7 ngày thì cảnh báo | 20 % (5–50) | backend `zones.detection_tuning.return_rate_drop_pct`; VISION-FR-011 | | | | Chưa tìm | M1 |
-| KD-27 | Cảm biến bất thường: đứng yên ≥ 2 giờ, nhảy 2 °C / 10 %, lệch 2 °C / 8 % | như bên trái | SRS ALERT-FR-010 | | | | Chưa tìm | M1 |
+| KD-27 | Cảm biến bất thường: đứng yên ≥ 2 giờ, nhảy 2 °C / 10 %, lệch 2 °C / 8 % | như bên trái | Report 3 ALERT-FR-010, BR-14 | | | | Chưa tìm | M1 |
 
 ### 5.4. Bộ điều khiển mờ (ENV-FR-010/011/021)
 
 | Mã | Khẳng định | Giá trị mặc định (khoảng hợp lệ) | Dùng ở đâu | Nguồn | Trích đoạn & vị trí | Mức | Trạng thái | Phụ trách |
 | --- | --- | --- | --- | --- | --- | :---: | --- | --- |
-| KD-30 | Dùng logic mờ Sugeno (thay vì bật/tắt theo ngưỡng) để điều khiển phun sương và quạt | — | SRS §5.3.3; firmware `pid/FuzzyControl.cpp`; backend `utils/fuzzyModel.util.ts` | | | | Chưa tìm | M1 |
+| KD-30 | Dùng logic mờ Sugeno (thay vì bật/tắt theo ngưỡng) để điều khiển phun sương và quạt | — | Report 3 ENV-FR-010, 011; firmware `pid/FuzzyControl.cpp`; backend `utils/fuzzyModel.util.ts` | | | | Chưa tìm | M1 |
 | KD-31 | Độ rộng vùng chuyển tiếp độ ẩm | 8 %RH (2–20) | firmware `DEFAULT_FUZZY_HUMIDITY_BAND` | | | | Chưa tìm | M1 |
 | KD-32 | Độ rộng vùng nóng | 4 °C (1–10) | firmware `DEFAULT_FUZZY_TEMP_BAND` | | | | Chưa tìm | M1 |
 | KD-33 | Mức quạt khi nóng mà khô | 40 % (0–100) | firmware `DEFAULT_FUZZY_FAN_DRY_LEVEL` | | | | Chưa tìm | M1 |
 | KD-34 | Điều khiển theo tỷ lệ thời gian (time-proportioning) với cửa sổ | 120 s (60–600) | firmware `DEFAULT_FUZZY_WINDOW_SEC` | | | | Chưa tìm | M1 |
-| KD-35 | Chu kỳ đọc cảm biến 1 Hz, quyết định điều khiển mỗi 10 giây | 1 s / 10 s | SRS PERF-NFR-005; firmware `SENSOR_INTERVAL_MS`, `PID_INTERVAL_MS` | | | | Chưa tìm | M1 |
+| KD-35 | Chu kỳ đọc cảm biến 1 Hz, quyết định điều khiển mỗi 10 giây | 1 s / 10 s | Report 3 NFR-05; firmware `SENSOR_INTERVAL_MS`, `PID_INTERVAL_MS` | | | | Chưa tìm | M1 |
 
 ### 5.5. Đếm chim & AI (Module VISION)
 
 | Mã | Khẳng định | Giá trị | Dùng ở đâu | Nguồn | Trích đoạn & vị trí | Mức | Trạng thái | Phụ trách |
 | --- | --- | --- | --- | --- | --- | :---: | --- | --- |
-| KD-40 | YOLO26n đủ nhẹ để phát hiện chim thời gian thực (25 fps) | YOLO26n, ONNX Runtime | SRS §3.2, VISION-FR-002 | | | | Chưa tìm | M2 |
-| KD-41 | ByteTrack giữ được ID từng con chim để đếm qua vạch ảo | ByteTrack | SRS §3.2; `ai-pipeline/src/tracker.py` | | | | Chưa tìm | M2 |
-| KD-42 | Đánh giá phát hiện bằng Precision, Recall, mAP50; đánh giá đếm bằng sai số so với đếm tay | — | SRS EVID-NFR-001, VISION-FR-016; plan §7.7 | | | | Chưa tìm | M2 |
+| KD-40 | YOLO26n đủ nhẹ để phát hiện chim thời gian thực (25 fps) | YOLO26n, ONNX Runtime | Report 3 NFR-04, VISION-FR-002 | | | | Chưa tìm | M2 |
+| KD-41 | ByteTrack giữ được ID từng con chim để đếm qua vạch ảo | ByteTrack | Report 3 §2.5; `ai-pipeline/src/tracker.py` | | | | Chưa tìm | M2 |
+| KD-42 | Đánh giá phát hiện bằng Precision, Recall, mAP50; đánh giá đếm bằng sai số so với đếm tay | — | Report 3 NFR-09, VISION-FR-016; plan §7.7 | | | | Chưa tìm | M2 |
 | KD-43 | Ngưỡng nội bộ sai số đếm | ≤ 10 % (đề xuất nội bộ, phiếu không cam kết) | `docs/bird-counting-plan.md` §7.7 | | | | Chưa tìm | M2 |
 | KD-44 | Không có bộ dữ liệu công khai quay chim yến bay qua lỗ ra vào | tra cứu 10/2026 | plan §7.8 | | | | Chưa tìm | M2 |
 | KD-45 | Dữ liệu ngoài (FBD-SV-2024, SOD4SB, Roboflow…) — giấy phép cho phép dùng | — | plan §7.8 | | | | Chưa tìm | M2 |
-| KD-46 | Nút AI xử lý kịp luồng camera | ≥ tốc độ khung hình camera (SRS ghi 25 fps, plan ghi 20 fps với camera đã chốt) | SRS PERF-NFR-004; plan §6.8 | | | | Chưa tìm | M2 |
+| KD-46 | Nút AI xử lý kịp luồng camera | ≥ tốc độ khung hình camera (SRS ghi 25 fps, plan ghi 20 fps với camera đã chốt) | Report 3 NFR-04; plan §6.8 | | | | Chưa tìm | M2 |
 
 ### 5.6. Kinh tế & bối cảnh
 
 | Mã | Khẳng định | Giá trị | Dùng ở đâu | Nguồn | Trích đoạn & vị trí | Mức | Trạng thái | Phụ trách |
 | --- | --- | --- | --- | --- | --- | :---: | --- | --- |
-| KD-50 | Giá tổ yến | 20–60 triệu đồng/kg | SRS §2.1 | | | | Chưa tìm | M4 |
-| KD-51 | Nuôi yến là ngành có giá trị kinh tế cao ở Việt Nam | — | SRS §2.1 | | | | Chưa tìm | M4 |
-| KD-52 | Phần lớn người nuôi dùng cảm biến rời, kiểm tra thủ công nhiều lần/ngày | — | SRS §2.1 | | | | Chưa tìm | M4 |
-| KD-53 | Sự cố thiết bị (hỏng loa, bơm cạn, cảm biến sai, mất điện) thường phát hiện muộn | — | SRS §2.1 | | | | Chưa tìm | M4 |
+| KD-50 | Giá tổ yến | 20–60 triệu đồng/kg | Phiếu đăng ký A (Context) | | | | Chưa tìm | M4 |
+| KD-51 | Nuôi yến là ngành có giá trị kinh tế cao ở Việt Nam | — | Phiếu đăng ký A (Context) | | | | Chưa tìm | M4 |
+| KD-52 | Phần lớn người nuôi dùng cảm biến rời, kiểm tra thủ công nhiều lần/ngày | — | Phiếu đăng ký A (Context) | | | | Chưa tìm | M4 |
+| KD-53 | Sự cố thiết bị (hỏng loa, bơm cạn, cảm biến sai, mất điện) thường phát hiện muộn | — | Phiếu đăng ký A (Context) | | | | Chưa tìm | M4 |
 | KD-54 | Điều kiện pháp lý khi xây và vận hành nhà yến (vị trí, loa phóng thanh…) | — | chưa có trong SRS | | | | Chưa tìm | M4 |
 
 ### 5.7. Giả định kỹ thuật đã biết là chưa có nguồn (Report 3 §4.5)
@@ -271,27 +271,27 @@ Những mốc này SRS đã ghi là do người viết code chọn. Không cần
 
 ## 6. Minh chứng do nhóm tạo (`MC-xxx`)
 
-Ảnh lắp đặt, số đo, log, video, kết quả test. Đây là bằng chứng mạnh nhất cho phần "hệ thống chạy thật" (SRS §0.2 #12, §6.8, §13.6).
+Ảnh lắp đặt, số đo, log, video, kết quả test. Đây là bằng chứng mạnh nhất cho phần "hệ thống chạy thật" (Report 3 §7.1, mục 3.2 b của phiếu).
 
 | Mã | Loại | Mô tả (cái gì, đo ở đâu, điều kiện) | Thời gian | Người tạo | Nơi lưu (link thư mục chung / file trong `docs/test-reports/`) | Chứng minh cho (`KD-xx` / FR) |
 | --- | --- | --- | --- | --- | --- | --- |
 | MC-xxx | | | | | | |
 
-Gợi ý những minh chứng còn thiếu (theo SRS §0.2 #12 và §6.8):
+Gợi ý những minh chứng còn thiếu (theo Report 3 §7.1, mục 3.2 b của phiếu):
 
 - Ảnh/video bộ điều khiển đã lắp (hộp, dây, nhãn) và tại nhà yến.
 - Số đo nhiệt độ, độ ẩm, ánh sáng, NH3, CO2, tiếng ồn ở nhà yến thật (xuất từ hệ thống, ghi rõ khoảng thời gian).
 - Tỷ lệ thời gian tự động và tỷ lệ thời gian trong ngưỡng (AUTO-NFR-001, ANALYTICS-FR-011).
 - Bảng độ chính xác đếm chim: Precision, Recall, sai số đếm, tách đủ sáng / thiếu sáng (EVID-NFR-001, VISION-FR-016).
 - Sai số dự báo MAE ở 30 và 60 phút (EVID-NFR-002).
-- Kết quả các kịch bản mất mạng / lỗi thiết bị (SRS §13.6).
+- Kết quả các kịch bản mất mạng / lỗi thiết bị (phiếu đăng ký, Task 5).
 - Kết quả `pio test -e native` và test backend dùng chung case cho bộ mờ.
 
 ---
 
 ## 7. Biên bản xác nhận của người nuôi yến / Domain Expert
 
-EVID-NFR-003 chấp nhận "xác nhận của người nuôi yến" là nguồn cho ngưỡng mặc định, và SRS §5.12 yêu cầu biên bản ý kiến của một người nuôi yến có kinh nghiệm được đưa vào báo cáo (§13.6). Để xác nhận đó dùng được làm minh chứng, mỗi lần phỏng vấn/xác nhận lập một biên bản theo mẫu dưới, lưu bản có chữ ký (ảnh/scan) ở thư mục chung và ghi vào bảng.
+EVID-NFR-003 chấp nhận "xác nhận của người nuôi yến" là nguồn cho ngưỡng mặc định, và Report 3 A-6 và phiếu đăng ký (Task 5) yêu cầu biên bản ý kiến của một người nuôi yến có kinh nghiệm được đưa vào báo cáo (phiếu đăng ký, Task 5). Để xác nhận đó dùng được làm minh chứng, mỗi lần phỏng vấn/xác nhận lập một biên bản theo mẫu dưới, lưu bản có chữ ký (ảnh/scan) ở thư mục chung và ghi vào bảng.
 
 ### 7.1. Danh sách biên bản
 

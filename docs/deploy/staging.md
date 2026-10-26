@@ -67,10 +67,11 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
   - Luồng chính 1080p, 25 fps, khoảng 2 Mbps đi qua upload của nhà yến và download của nhà thành viên trong khung giờ đếm.
   - Video có khung (khoảng 1–2 Mbps) đi tiếp từ nhà thành viên lên VPS.
   - Đo upload thật của cả hai đường, ghi vào `[TEAM]`.
-- **Bảo mật camera** (cổng 18554 đang mở cho mọi nơi):
+- **Bảo mật camera** (Report 3 NFR-10 e):
   - Đặt mật khẩu camera thật mạnh, đổi mật khẩu mặc định.
-  - Xem trong modem (Advance → Security) có giới hạn được IP nguồn không. Nhà thành viên có IP tĩnh thì chỉ cho IP đó vào.
-  - Không giới hạn được thì ghi ở Report 3 §8.1 (đã có dòng hạn chế).
+  - Trên modem nhà yến (gói IP tĩnh VNPT, Advance → Security): luật lọc IP nguồn cho cổng 18554, **chỉ cho IP tĩnh của nhà thành viên** (AI node), chặn mọi nguồn khác. Chuyển cổng (Virtual Server) một mình không chặn ai.
+  - Kiểm tra: từ điện thoại dùng 4G và từ một mạng khác, kiểm tra cổng + mở `rtsp://…:18554` bằng VLC phải **thất bại**; cùng lúc AI node vẫn kéo được hình. Ghi kết quả và ảnh chụp vào `docs/evidence-register.md`.
+  - Đổi modem hoặc đổi đường mạng của AI node thì sửa luật và kiểm tra lại.
   - Bật ghi thẻ microSD của camera để có bản đối chiếu khi mạng rớt (plan §19.7).
 - **Kiểm tra trước khi chốt** (bắt buộc, plan §19.5 cổng 3b):
   1. Kéo hình liên tục 24 giờ: PC tự nối lại khi mất mạng; ghi số lần rớt và tổng thời gian mất hình.
@@ -99,7 +100,7 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
   - thêm môi trường build `cloud` và nạp CA Let's Encrypt (ISRG Root X1, X2);
   - chờ NTP đồng bộ trước lần kết nối đầu.
 
-  Việc này đã nằm trong `docs/reports/README.md` (gap #39) và Report 4 §12.
+  Việc này là gap G-07 ở `docs/reports/project-tracking.md` §6.
 
 ## 3. Triển khai, rollback, sao lưu
 

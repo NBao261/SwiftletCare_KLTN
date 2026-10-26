@@ -2,7 +2,7 @@
 
 React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md), phân quyền §2.4); thiết kế: Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.4). Hai Report thắng `SwiftletCare_SRS.md` khi lệch nhau.
 
-> **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa. Việc phải sửa ở web (chỗ lệch theo FR ở `docs/reports/README.md`, quyền theo màn ở `FE_Design_Claude.md` §12.0):
+> **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa. Việc phải sửa ở web (chỗ lệch theo FR ở `docs/reports/project-tracking.md` §6, quyền theo màn ở `FE_Design_Claude.md` §12.0):
 >
 > - Role `DOMAIN_EXPERT` đã có màn từ PR #91 (`/expert/*`): bỏ dữ liệu giả dự phòng (`services/expert/expertFallback.service.ts`, `data/mocks/`), chuyển về bucket `domain-expert/`, `DomainExpertLayout`, `apis/` theo FE_Design §12.
 > - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009), live stream có khung và số đếm trực tiếp.
@@ -93,7 +93,7 @@ dùng alias `@/`, không dùng đường dẫn tương đối.
 
 ## Trạng thái trang
 
-Trạng thái từng màn (API thật, chờ dữ liệu, chưa có endpoint) ở `FE_Design_Claude.md` mục 7; màn còn thiếu so với Report 3 ở `docs/reports/README.md` (#9, #28, #30). `Marketplace` ngoài phạm vi — chỉ được gỡ.
+Trạng thái từng màn (API thật, chờ dữ liệu, chưa có endpoint) ở `FE_Design_Claude.md` mục 7; màn còn thiếu so với Report 3 ở `docs/reports/project-tracking.md` §6 (G-09, G-15, G-16). `Marketplace` ngoài phạm vi — chỉ được gỡ.
 
 ## Lệnh hữu ích
 

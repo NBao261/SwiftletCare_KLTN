@@ -340,11 +340,11 @@
 ## C8. Thu hoạch (trước là Marketplace — phần đăng bán ❌ bỏ ở SRS v2.0.0)
 
 - [ ] Schema `harvest_batches` (v2.0.0: gỡ `nest_listings`, `contact_inquiries`) `[8.2]` — model đã có, chưa có logic
-- [ ] API tạo Harvest Batch + auto-attach env_snapshot (5 cảm biến, 7 ngày) `[MARKET-FR-001, 002]`
+- [ ] API tạo Harvest Batch + auto-attach env_snapshot (5 cảm biến, 7 ngày) `[HARVEST-FR-001, 002]`
 - [ ] Bad case: Zone chưa đủ 7 ngày dữ liệu → đánh dấu `insufficient_data: true` thay vì hiện số liệu sai/rỗng `[Flow 7 case 3a]`
-- [ ] Auto-attach flock_snapshot (bird_count 30 ngày) `[MARKET-FR-003]`
-- [ ] Sinh trace_code UUID làm mã mẻ (v2.0.0: bỏ QR) `[MARKET-FR-004]`
-- ~~Chặn sửa/xoá Harvest Batch sau khi đã đăng bán (status khác DRAFT), chỉ cho đổi status Listing `[MARKET-FR-005, Flow 7 case 5a]`~~ — ❌ bỏ ở SRS v2.0.0
+- [ ] Auto-attach flock_snapshot (bird_count 30 ngày) `[HARVEST-FR-003]`
+- [ ] Sinh trace_code UUID làm mã mẻ (v2.0.0: bỏ QR) `[HARVEST-FR-004]`
+- ~~Chặn sửa/xoá Harvest Batch sau khi đã đăng bán (status khác DRAFT), chỉ cho đổi status Listing `[HARVEST-FR-005, Flow 7 case 5a]`~~ — ❌ bỏ ở SRS v2.0.0
 - ~~API Listing CRUD + public list/detail/trace/inquiry/profile `[MARKET-FR-006~013]`~~ — ❌ bỏ ở SRS v2.0.0 — phải gỡ route `/marketplace/*` (mục G3)
 - ~~Bad case: `GET /marketplace/trace/:traceCode` với mã không tồn tại → thông báo rõ ràng, không lộ lỗi hệ thống; thêm rate limit riêng cho endpoint public này `[Flow 7 case 11a, SEC-NFR-004]`~~ — ❌ bỏ ở SRS v2.0.0
 
@@ -436,8 +436,8 @@
 
 ## D7. Thu hoạch UI (trước là Marketplace UI — phần đăng bán ❌ bỏ ở SRS v2.0.0)
 
-- [ ] Form tạo Harvest Batch + hiển thị snapshot tự động `[MARKET-FR-001~003]`
-- ~~Hiển thị Trace Code + QR `[MARKET-FR-004]`~~ — ❌ bỏ ở SRS v2.0.0
+- [ ] Form tạo Harvest Batch + hiển thị snapshot tự động `[HARVEST-FR-001~003]`
+- ~~Hiển thị Trace Code + QR `[HARVEST-FR-004]`~~ — ❌ bỏ ở SRS v2.0.0
 - ~~Form đăng bán Nest Listing `[MARKET-FR-006]`~~ — ❌ bỏ ở SRS v2.0.0
 - ~~Trang Marketplace công khai + filter `[MARKET-FR-008]`~~ — ❌ bỏ ở SRS v2.0.0 — phải gỡ `MarketplacePage`/`ListingDetailPage` (mục G4)
 - ~~Traceability Card (biểu đồ nhiệt/ẩm 7 ngày, return rate) `[MARKET-FR-009]`~~ — ❌ bỏ ở SRS v2.0.0

@@ -106,7 +106,7 @@ interface HarvestFormModalProps {
   creatorName: string;
 }
 
-// Popup tạo / sửa 1 lần thu (MARKET-FR-001, 005): khu vực + ngày, sản lượng 3 loại yến, ảnh; mỗi loại có số liệu là 1 đợt cùng zone + ngày
+// Popup tạo / sửa 1 lần thu (HARVEST-FR-001, 005): khu vực + ngày, sản lượng 3 loại yến, ảnh; mỗi loại có số liệu là 1 đợt cùng zone + ngày
 export default function HarvestFormModal({ scope, onClose, group, houseName, creatorName }: HarvestFormModalProps): JSX.Element {
   const { t, num, exact } = useTranslation(harvestDict);
   const isEdit = group !== undefined;

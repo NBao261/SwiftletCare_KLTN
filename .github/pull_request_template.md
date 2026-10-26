@@ -33,7 +33,7 @@
 - [ ] **KHÔNG** commit file `.env`, credentials, API key, secret
 - [ ] Không còn `console.log`, `print` debug thừa
 - [ ] Tên biến/hàm rõ ràng (không dùng `a`, `b`, `temp`, `data`...)
-- [ ] Ghi mã yêu cầu của Report 3 (`docs/reports/report3-srs.md`) mà PR này làm, VD `FARM-FR-010`; PR đóng hoặc mở một chỗ lệch thì cập nhật `docs/reports/README.md`
+- [ ] Ghi mã yêu cầu của Report 3 (`docs/reports/report3-srs.md`) mà PR này làm, VD `FARM-FR-010`; PR đóng hoặc mở một gap thì cập nhật `docs/reports/project-tracking.md` §6
 - [ ] Route đổi → đã cập nhật `docs/api/api-spec.yaml`; hằng số tự chọn mới → đã thêm vào Report 3 §4.5; đổi model → đã chạy `npm run db:script`
 
 ## Screenshot / Video (nếu thay đổi UI)

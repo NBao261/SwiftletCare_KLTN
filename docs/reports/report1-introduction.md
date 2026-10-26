@@ -93,7 +93,7 @@ The main flows of the registration form v3 (Report 3, Section 2.2):
 | MF-01 | Automatic micro-climate regulation | Every 10 s a fuzzy controller on each floor sets misting and fan power from humidity and temperature |
 | MF-02 | Air-quality monitoring | NH3 and CO2 above the limit set by the expert raise an alert; they never drive the fan |
 | MF-03 | Offline operation and recovery | Control continues without Internet; buffered data is uploaded later; a hang restarts the controller |
-| MF-04 | Equipment fault handling | A dry pump, a failed sensor, a silent speaker or a load drawing no current is detected and reported |
+| MF-04 | Equipment fault handling | Misting that does not raise the humidity, a failed sensor, a silent speaker or a load drawing no current is detected and reported |
 | MF-05 | Early warning by forecast | A 60-minute forecast warns before a threshold is crossed |
 | MF-06 | Bird counting session | Birds crossing a ring around the entrance hole are counted per session; the return rate is computed; the annotated video is streamed |
 | MF-07 | Abnormal noise | Noise above the learned hourly baseline is shown with the bird counts and judged by the expert |

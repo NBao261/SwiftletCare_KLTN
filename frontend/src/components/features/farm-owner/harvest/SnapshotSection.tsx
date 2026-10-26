@@ -11,7 +11,7 @@ interface SnapshotRow {
   decimals: number;
 }
 
-// Môi trường TB 7 ngày trước thu (MARKET-FR-002) + đàn chim TB 30 ngày (MARKET-FR-003) do backend gắn lúc tạo đợt thu
+// Môi trường TB 7 ngày trước thu (HARVEST-FR-002) + đàn chim TB 30 ngày (HARVEST-FR-003) do backend gắn lúc tạo đợt thu
 export default function SnapshotSection({ batch }: { batch: HarvestBatch }): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   // Dữ liệu cũ (seed, nhập tay) có thể thiếu hẳn 2 khối snapshot

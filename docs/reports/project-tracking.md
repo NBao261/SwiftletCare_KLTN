@@ -1,8 +1,8 @@
 # Project Tracking
 
-**SwiftletCare** · updated 26/10/2026 (Review 2) · plan: Report 2 · requirements: Report 3 · tests: Report 5
+**SwiftletCare** · updated 26/10/2026 (Review 2) · plan: Report 2 · requirements: Report 3 · design: Report 4 · tests: Report 5
 
-Status values: **Done** (merged into `develop`, tests pass), **In progress** (partly merged), **Planned** (not started). Owners follow the Design Brief, Section 8.
+This sheet is the only record of progress. Report 3 and Report 4 describe what the system must do and how it is built, without status; the Design Brief (Section 5) summarises the gaps below. Status values: **Done** (merged into `develop`, its committed tests pass, and it runs end to end from the client), **In progress** (partly merged, or the backend works without its client), **Planned** (not started). Owners follow the Design Brief, Section 8.
 
 ---
 
@@ -12,21 +12,21 @@ Status values: **Done** (merged into `develop`, tests pass), **In progress** (pa
 | --- | --- | --- | --- |
 | Registration v1 | 22/07/2026 | Done | |
 | Review 1 | `[TEAM: date]` | Done | Registration v2; scope narrowed to the automated system |
-| Iteration 1 | until Review 2 | Done | 92 pull requests merged (#2…#95) |
-| Review 2 documents | `[TEAM: date]` | In progress | Registration v3 + BM03, Reports 1–5, Design Brief done as drafts; `[TEAM]` cells, self-review (BM02) and tag `review-2` remain |
-| Iteration 2 | `[TEAM: dates]` | Planned | See Section 3 |
-| Iteration 3 | `[TEAM: dates]` | Planned | |
-| Defense 1.1 | `[TEAM: date]` | Planned | |
+| Iteration 1 | until Review 2 | Done | Pull requests #2…#107 |
+| Review 2 documents | `[TEAM: date]` | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1 aligned on 26/10/2026; left: `[TEAM]` cells, the enumeration PR (G-01), tag `review-2`, CI run on the tag, BM02 |
+| Iteration 2 | `[TEAM: dates]` | Planned | Gaps due "It. 2" in Section 6 |
+| Iteration 3 | `[TEAM: dates]` | Planned | Gaps due "It. 3" |
+| Defense 1.1 | `[TEAM: date]` | Planned | Thresholds of the guideline §9.4 |
 
 ## 2. Iteration 1 — Work Merged
 
-Merged pull requests on GitHub, grouped by author account (`NBao261/SwiftletCare_KLTN`, #1…#95; #1 and #22 were closed without merge; #92, these documents, is open).
+Merged pull requests on GitHub, grouped by author account (`NBao261/SwiftletCare_KLTN`, #1…#107; #1 and #22 were closed without merge).
 
 | Member (account) | Merged PRs | Main content |
 | --- | --- | --- |
-| Nguyễn Chí Bảo (`NBao261`) | 61 | Backend modules (farm, device, telemetry, alert, analytics, expert, bird counting, stream access); firmware (MQTT contract, speaker, fuzzy control, filters, anomaly, remote restart/OTA); counting pipeline (#85, #88); CI, review rules, SRS/SDD (#59, #50, #77, #84–#88, #90, #95) |
+| Nguyễn Chí Bảo (`NBao261`) | `[TEAM: recount after #107]` | Backend modules (farm, device, telemetry, alert, analytics, expert, bird counting, stream access); firmware (MQTT contract, speaker, fuzzy control, filters, anomaly, remote restart/OTA); counting pipeline (#85, #88, #95); CI, review rules, SRS/SDD; scope removal of tickets, SLA and regions (#100–#107) |
 | Trần Minh Kiệt (`minhkiet1001`) | 7 | Admin backend modules, technician backend, device decommission and restore, admin logic fixes (#16, #21, #23, #35, #40, #62, #80) |
-| Nguyễn Vũ Len (`VuLen203`) | 14 | Web design rules, sidebar, Farm Owner dashboard, analytics, monitor, farms, harvest, tickets, auth screens; Farm Owner rework with devices, live stream over WHEP, house-level counts, override history and autonomy, marketplace removal, farm → house → zone scope filter (#2, #20, #33, #34, #37, #48, #54, #55, #63, #78, #79, #82, #93, #94) |
+| Nguyễn Vũ Len (`VuLen203`) | 14 | Web design rules, sidebar, Farm Owner dashboard, analytics, monitor, farms, harvest, auth screens; Farm Owner rework with devices, live stream over WHEP, house-level counts, override history and autonomy, marketplace removal, farm → house → zone scope filter (#2, #20, #33, #34, #37, #48, #54, #55, #63, #78, #79, #82, #93, #94) |
 | Nguyễn Thị Yến Nhi (`NhiNhi306`) | 6 | Admin web: users and account requests, design-system components, system pages, settings and logs, overview (#26, #27, #28, #47, #49, #72) |
 | Thái Minh Tuấn (`Tuaans1807`) | 4 | Technician web screens and logic, Domain Expert web screens (#38, #52, #56, #91) |
 
@@ -34,39 +34,47 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 
 ## 3. Feature Status (Design Brief, Section 6)
 
-| ID | Feature | Owner | Status | Remaining work | Iteration |
-| --- | --- | --- | --- | --- | --- |
-| F-01 | Telemetry, live dashboard | Nguyễn Chí Bảo | Done | Hardware run record | 2 |
-| F-02 | Fuzzy control | Nguyễn Chí Bảo | Done | — | — |
-| F-03 | Thresholds, coefficients | Nguyễn Vũ Len | In progress | Config version (G3); roles per Report 3 §2.4 done (PR #100, #101) | 2 |
-| F-04 | Offline operation | Nguyễn Chí Bảo | Done | 30-min outage test on the prototype (NFR-06) | 2 |
-| F-05 | Self-diagnosis | Nguyễn Chí Bảo | Done | — | — |
-| F-06 | Actuator current check | Nguyễn Chí Bảo | Planned | Board with ADS1115 and current transformers; firmware; `ACTUATOR_FAULT` on three sides | 3 |
-| F-07 | Alert lifecycle | Trần Minh Kiệt | In progress | `DISMISSED`; acknowledge tests; repeated alert (ALERT-FR-015) and `MAINTENANCE_DUE` (ALERT-FR-016) done (PR #103) | 2 |
-| F-08 | Push and Telegram | Trần Minh Kiệt | In progress | FCM sending; token registration in mobile | 2 |
-| F-09 | Forecast warning | Nguyễn Thị Yến Nhi | Done | — | — |
-| F-10 | Counting, return rate | Nguyễn Chí Bảo | In progress | Trained model; run the publisher against staging; sessions from buckets; incomplete sessions | 2 |
-| F-11 | Annotated live stream | Nguyễn Chí Bảo | In progress | Video push written (PR #89, on `develop` through #95), to run against staging; web viewing done on the Farm Owner Vision page (PR #93); mobile screen | 2 |
-| F-12 | Abnormal noise | Nguyễn Chí Bảo | Done | — | — |
-| F-13 | Expert verdict | Thái Minh Tuấn | In progress | `DISMISSED`, note required, evidence endpoint, owner fallback | 2 |
-| F-14 | Tuning, ring, schedule | Thái Minh Tuấn | In progress | Seasonal schedule; ring editor screen | 2 |
-| F-15 | Review and suggestions | Thái Minh Tuấn | Planned | Review items, proposals (SM-10, 11) | 2 |
-| F-16 | Conclusions, owner notice | Thái Minh Tuấn | In progress | Notify owners of every expert decision; activity history | 2 |
-| F-17 | Manual override | Nguyễn Vũ Len | Done | Technician and Administrator rejected (PR #100, #101); override history shown on `/analytics` (PR #93) | 2 |
-| F-18 | Register by QR | Trần Minh Kiệt | In progress | Label printing; QR scan in mobile; Farm Owner role done (PR #100) | 2 |
-| F-19 | Setup progress, move | Trần Minh Kiệt | In progress | Offline move; progress screen; key re-issue | 2 |
-| F-20 | Daily health status | Nguyễn Thị Yến Nhi | Planned | Daily job, levels per house, weather job | 2 |
-| F-21 | Reports, PDF/CSV | Nguyễn Thị Yến Nhi | In progress | Reports per house (day/week/month); PDF, CSV | 3 |
-| F-22 | Independent rating | Nguyễn Thị Yến Nhi | Planned | Rating route and screens (BR-31) | 2 |
+"Evidence" names the pull requests that built the feature and the committed test cases of Report 5 that run today. A feature whose backend works without its client is In progress.
 
-Summary: 8 Done, 10 In progress, 4 Planned.
+| ID | Feature | Owner | Status | Evidence (PR; tests) | Remaining work (gap) | Iteration |
+| --- | --- | --- | --- | --- | --- | --- |
+| F-01 | Telemetry, live dashboard | Nguyễn Chí Bảo | Done | `[TEAM: PR]`; TC-F01-01..03 | — | — |
+| F-02 | Fuzzy control | Nguyễn Chí Bảo | Done | `[TEAM: PR]`; TC-F02-01..03 | — | — |
+| F-03 | Thresholds, coefficients | Nguyễn Vũ Len | In progress | #100, #101; TC-F03-01..03 | Configuration version (G-08) | 2 |
+| F-04 | Offline operation | Nguyễn Chí Bảo | In progress | `[TEAM: PR]`; TC-F04-02 | 30-min outage run on the prototype (NFR-06); alerts kept until PUBACK and `UNEXPECTED_RESTART` (G-01, G-07) | 2 |
+| F-05 | Self-diagnosis | Nguyễn Chí Bảo | In progress | `[TEAM: PR]`; TC-F05-01..03 | `MISTING_INEFFECTIVE` rename (G-01) | 2 |
+| F-06 | Actuator current check | Nguyễn Chí Bảo | Planned | — | Board with ADS1115 and current transformers; firmware; `ACTUATOR_FAULT` (G-13) | 3 |
+| F-07 | Alert lifecycle | Trần Minh Kiệt | In progress | #103; TC-F07-01, 03 | Breach dwell (G-05); event IDs (G-07); `DISMISSED` (G-03) | 2 |
+| F-08 | Push and Telegram | Trần Minh Kiệt | In progress | `[TEAM: PR]`; TC-F08-01, 02 | FCM sending and mobile token (G-10) | 2 |
+| F-09 | Forecast warning | Nguyễn Thị Yến Nhi | Done | `[TEAM: PR]`; TC-F09-01..03 | — | — |
+| F-10 | Counting, return rate | Nguyễn Chí Bảo | In progress | #85, #88, #95; TC-F10-01..03 | Trained model; sessions from buckets; incomplete sessions (G-12) | 2 |
+| F-11 | Annotated live stream | Nguyễn Chí Bảo | In progress | #89 (via #95), #93; TC-F11-01..03 | Run against staging (G-17); mobile HLS screen (G-16) | 2 |
+| F-12 | Abnormal noise | Nguyễn Chí Bảo | Done | `[TEAM: PR]`; TC-F12-01..03 | — | — |
+| F-13 | Expert verdict | Thái Minh Tuấn | In progress | #91; TC-F13-01, 02 | `DISMISSED`, note required, evidence, owner fallback (G-03) | 2 |
+| F-14 | Tuning, ring, schedule | Thái Minh Tuấn | In progress | #91; TC-F14-01..03 | Seasonal schedule; ring editor (G-12) | 2 |
+| F-15 | Review and suggestions | Thái Minh Tuấn | Planned | TC-F15-01 (suggestion only) | Review items, proposals (G-04) | 2 |
+| F-16 | Conclusions, owner notice | Thái Minh Tuấn | In progress | #91; TC-F16-01, 02 | Owner notice of every expert decision; activity history (G-03) | 2 |
+| F-17 | Manual override | Nguyễn Vũ Len | In progress | #93, #100, #101; TC-F17-01, 03 | Pump limit, confirmation, per-relay expiry, command freshness (G-06) | 2 |
+| F-18 | Farm structure and device registration | Trần Minh Kiệt | In progress | #100; TC-F18-01..03 | Label printing; QR scan in mobile (G-09) | 2 |
+| F-19 | Device lifecycle, diagnostics and setup progress | Trần Minh Kiệt | In progress | TC-F19-02 | Device topics and retained configuration (G-07); progress screen (G-09); version (G-08) | 2 |
+| F-20 | Daily health status | Nguyễn Thị Yến Nhi | Planned | — | Daily job, levels, weather (G-11) | 2 |
+| F-21 | Reports, PDF/CSV | Nguyễn Thị Yến Nhi | In progress | TC-F21-01 | Reports per house (day/week/month); PDF, CSV (G-11) | 3 |
+| F-22 | Independent rating | Nguyễn Thị Yến Nhi | Planned | — | Rating route, snapshot, screens (G-11) | 2 |
+
+Summary: 4 Done, 14 In progress, 4 Planned.
 
 ## 4. Test Progress (Report 5)
 
-| Item | Committed | Automated now | Passing now |
-| --- | --- | --- | --- |
-| Test cases | 131 | 69 | 69 |
-| Backend Jest suite (all tests) | — | 519 | 519 (26/10/2026; ticket and region tests removed with their code) |
+Results count only when they come from a CI run on the tag being reported (Report 5, Section 6). Until the tag `review-2` exists, no committed test case is reported as passed.
+
+| Item | Count |
+| --- | --- |
+| Committed test cases | 136 |
+| Automated, test written | 66 (49 %; the Defense 1.1 bar of 50 % is met once the tests of Iteration 2 are written) |
+| Automated, to be written with its feature | 50 |
+| Mandatory requirements verified by a committed case | 62 of 102; the other 40 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
+| Manual (staging, prototype, test house) | 20 |
+| Passed on the tag | — (tag not created) |
 
 ## 5. Defect List
 
@@ -75,14 +83,37 @@ Summary: 8 Done, 10 In progress, 4 Planned.
 | DF-1 | PR #89 (pipeline publishes counts, buckets and heartbeat over MQTT, pushes video to MediaMTX, CI job for pytest) was merged into the branch of PR #88 eleven seconds after #88 itself was merged into `develop`, so none of it reached `develop` | High | 23/10/2026 | Nguyễn Chí Bảo | Closed 23/10/2026 — merged into `develop` by PR #95 |
 | DF-2 | Technician and Administrator can edit zone thresholds and fuzzy coefficients; Technician can override relays and acknowledge alerts (Report 3 §2.4) | High | Report 3 review | Trần Minh Kiệt | Closed 24/10/2026 — PR #100 (routes), PR #101 (web buttons) |
 | DF-3 | Farm Owner cannot register, move or remove devices (MF-10) | High | Report 3 review | Trần Minh Kiệt | Closed 24/10/2026 — PR #100 |
-| DF-4 | Firmware connects to MQTT without TLS; cannot reach the staging broker on 8883 | Medium | Staging design | Nguyễn Chí Bảo | Open (gap #39) |
-| DF-5 | Domain Expert web screens fall back to mock data (`services/expert/expertFallback.service.ts`, `data/mocks/`) | Medium | Merge of PR #91 | Thái Minh Tuấn | Open (gap G7) |
+| DF-4 | Firmware connects to MQTT without TLS; OTA download uses `setInsecure()` | High | Staging design, specification review | Nguyễn Chí Bảo | Open (G-07) |
+| DF-5 | Domain Expert web screens fall back to mock data (`services/expert/expertFallback.service.ts`, `data/mocks/`) | Medium | Merge of PR #91 | Thái Minh Tuấn | Open (G-15) |
+| DF-6 | `THRESHOLD_BREACH` is raised on the first out-of-range sample, so a controlled humidity dip raises an alert | Medium | Specification review 26/10/2026 | Nguyễn Chí Bảo | Open (G-05) |
 
 Severity follows Report 5, Section 2.5. Defense 1.1 requires no open Critical or High defect.
 
-## 6. Gaps Against Report 3
+## 6. Gaps
 
-The full list, one row per FR, is `docs/reports/README.md` ("Chỗ lệch", #1…#47); the summary with owners is the Design Brief, Section 5 (G1…G7). Work items with priorities are in `docs/reports/todo-review2.md`.
+Differences between Report 3 / Report 4 and the code. A pull request that closes a gap updates its row here in the same change. Work steps per gap: `docs/reports/todo-review2.md`.
+
+| ID | Gap | Requirement / design | Modules | Owner | Due |
+| --- | --- | --- | --- | --- | --- |
+| G-01 | Shared enumerations: rename `PUMP_DRY` → `MISTING_INEFFECTIVE` and `POWER_OUTAGE` → `UNEXPECTED_RESTART` (with `reset_reason`); add `DISMISSED`, `CONFIG_MISMATCH`, `ACTUATOR_FAULT`; remove `PREDATOR_DETECTED`, Zalo/SMS preferences, the `heating` relay field, device states `ERROR`/`DEGRADED`, harvest state `ARCHIVED`; migration of stored data | THREAT-FR-011, 012, BR-15, Report 3 §6, §8; SDD 6.4 | backend, web, mobile, firmware, `api-spec.yaml`, database script | Trần Minh Kiệt | Before tag |
+| G-02 | Public sign-up still open (`/auth/register` in code and `api-spec.yaml`, sign-up screens on web and mobile); the Administrator cannot create a Farm Owner; an invitee without an account cannot create it from the link | Report 3 §1.2, AUTH-FR-005c, 010; SM-14 | backend, web, mobile, `api-spec.yaml` | Trần Minh Kiệt | Sign-up removed before the tag; the rest It. 2 |
+| G-03 | Expert loop: `DISMISSED` with `previous_status` and required note; owner fallback without an expert (BR-22); owner notice of every expert decision and one activity history (EXPERT-FR-009); evidence of an inferred alert (ALERT-FR-014) | SM-01, EXPERT-FR-003, 009, ALERT-FR-014, BR-22 | backend, web | Thái Minh Tuấn | It. 2 |
+| G-04 | Review items and coefficient proposals | EXPERT-FR-010, 011; SM-10, 11 | backend, web | Thái Minh Tuấn | It. 2 |
+| G-05 | `THRESHOLD_BREACH` without dwell time; alert details (metric, observed value, threshold, direction, start) | ALERT-FR-012, BR-34 | backend | Nguyễn Chí Bảo | It. 2 |
+| G-06 | Manual override: one expiry per controller instead of per relay; no 30-min pump limit; no confirmation (409); no command freshness | ENV-FR-016…018, BR-08, 20, 35; SDD D15 | backend, firmware, web, mobile | Nguyễn Vũ Len | It. 2 |
+| G-07 | MQTT design: topics per zone instead of per device; shared credential; no `/internal/mqtt-auth` or broker authorisation rule; ESP32 on PubSubClient (QoS 0 only), port 1883 without TLS; no event ID on alerts, no command envelope, no retained configuration; `config/reassign` still used; AI node on house topics; OTA with `setInsecure()` | SDD D3, 5.1, 7.2, 10; FARM-FR-003c, 010, BR-27, 35, NFR-06 c, NFR-10 d | firmware, backend, AI node, deploy | Nguyễn Chí Bảo | It. 2 |
+| G-08 | Configuration version and `CONFIG_MISMATCH` | ENV-FR-027, BR-24; SM-12 | firmware, backend | Nguyễn Chí Bảo | It. 2 |
+| G-09 | MF-10 screens: label printing in the stock screen, floor code printing, QR scan, AP-mode guide, setup progress; key re-issue of a released device | FARM-FR-010…012, BR-26; AD-10 | web, mobile, backend | Trần Minh Kiệt | It. 2 |
+| G-10 | FCM sending and push tokens | ALERT-FR-002 | backend, mobile | Trần Minh Kiệt | It. 2 |
+| G-11 | MF-11: health assessment job, `househealthdays` with current status and rating snapshots, levels per house, house reports (day, week, month), PDF and CSV, weather job, evaluation (agreement, CI, weighted kappa, AC1) | ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33; SM-17, AD-14 | backend, web, mobile | Nguyễn Thị Yến Nhi | It. 2–3 |
+| G-12 | Counting: trained one-class model; sessions computed by the backend from buckets per the house schedule; incomplete sessions; AI heartbeat with fps; ring editor screen | VISION-FR-003, 008, 016, 018–020, THREAT-FR-010 | AI node, backend, web | Nguyễn Chí Bảo | It. 2 |
+| G-13 | Actuator current sensing on the team's board | THREAT-FR-014, BR-32 | hardware, firmware, backend | Nguyễn Chí Bảo | It. 3 |
+| G-14 | Data model behind the ERD: user `status`, audit source fields, harvest type and photo, notification references, telemetry validity fields, per-relay override, `sla_hours` left in settings; database script regenerated | SDD 6.1–6.4 | backend | Trần Minh Kiệt | It. 2 |
+| G-15 | Web leftovers: Domain Expert screens on mock fallback and outside the FE_Design folder plan; `FarmOwnerLiveStreamPage` stub (Raspberry Pi wording); "PLC" wording; `HARVEST_ROLES` | FE_Design §7, §12, §13.14 | web | Thái Minh Tuấn | It. 2 |
+| G-16 | Mobile: login, dashboard, alerts with acknowledge, manual override, QR setup, analytics and HLS live stream, daily status and rating, reports, harvests, expert validation and tuning; socket clean-up | Registration 3.2 b, SDD 5.4 | mobile | Trần Minh Kiệt | It. 2–3 |
+| G-17 | Staging: compose file, Dockerfiles, Caddy, TLS proxy, EMQX authentication and authorisation files, demo seed for every scenario of Appendix A2, backup off the VPS | SDD 3.4, 11 | deploy | Trần Minh Kiệt | It. 2 |
+| G-18 | Smaller rules: source required for default thresholds (ENV-FR-007); harvest validation (HARVEST-FR-001); optional ENV-FR-026; optional device ID from the MAC address | ENV-FR-007, 026, HARVEST-FR-001 | backend, firmware | Nguyễn Vũ Len | It. 3 |
+| G-19 | Evidence and field work: sources in `docs/evidence-register.md`, practitioner interviews (BR-01, 02, 28–30), field run of ≥ 14 rated days, hardware test record (NFR-05…07), NFR measurements | REF-5, NFR-04…14 | team | Nguyễn Chí Bảo | It. 2–3 |
 
 ## 7. Change Log
 
@@ -94,3 +125,4 @@ The full list, one row per FR, is `docs/reports/README.md` ("Chỗ lệch", #1�
 | 23/10/2026 | After PR #95 (live pipeline on `develop`): DF-1 closed, F-10 and F-11 updated |
 | 24/10/2026 | Tickets, SLA and Technician regions removed from scope (BM03 row 9): F-07, F-17 and DF-2 updated |
 | 26/10/2026 | After PR #100–#106 (roles per Report 3 §2.4; tickets, SLA, regions and Admin farm pages removed from the code): DF-2, DF-3 closed; F-03, F-07, F-17, F-18 and the Jest count updated |
+| 26/10/2026 | Aligned with SRS 3.1.0 and SDD 1.1.0: this sheet becomes the only progress record (gap list G-01…G-19 replaces the README table and SDD §12); feature evidence column; F-04, F-05, F-17 back to In progress; DF-4 raised to High, DF-6 added; test progress counted on the tag only |

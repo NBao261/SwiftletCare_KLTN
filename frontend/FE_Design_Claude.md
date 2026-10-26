@@ -77,7 +77,7 @@
 
 | # | Thay đổi |
 |---|---|
-| 1 | **Căn cứ đổi sang Report 3/Report 4** (`docs/reports/`); `SwiftletCare_SRS.md` chỉ còn là ghi chú nội bộ. Chỗ code còn lệch với Report 3 ghi ở `docs/reports/README.md`. |
+| 1 | **Căn cứ đổi sang Report 3/Report 4** (`docs/reports/`); `SwiftletCare_SRS.md` chỉ còn là ghi chú nội bộ. Chỗ code còn lệch với Report 3/Report 4 ghi ở `docs/reports/project-tracking.md` §6. |
 | 2 | **12.0 viết lại theo Report 3 §2.4:** Farm Owner tự thiết lập thiết bị bằng QR (MF-10), Technician chỉ làm khi có ticket lắp đặt; Technician không sửa ngưỡng/hệ số mờ; Technician chỉ can thiệp tay và xác nhận cảnh báo khi đang giữ ticket; Admin không xác nhận cảnh báo, không can thiệp tay; farm chưa có chuyên gia thì Farm Owner quyết thay (BR-22); chuyên gia duyệt thay đổi của chủ farm (EXPERT-FR-010) và là người duy nhất áp gợi ý hệ số (EXPERT-FR-011); chủ farm xem lịch sử quyết định của chuyên gia (EXPERT-FR-009). |
 | 3 | **12.8 nhóm role:** thêm `SETUP_ROLES` (Farm Owner · Technician); kiểm chứng cảnh báo, tham số phát hiện, vòng đếm, lịch đếm chuyển sang `FARM_SIDE_ROLES` (Farm Owner ghi khi farm chưa có chuyên gia); `EXPERT_ONLY` chỉ còn kết luận, duyệt thay đổi, duyệt đề xuất; `HARVEST_ROLES` đích bỏ Admin. |
 | 4 | **2.5, 2.6.1:** trạng thái thiết bị theo vòng đời Report 3 §6.6 (`ERROR`/`DEGRADED` không dùng); thêm trạng thái cảnh báo `DISMISSED` (Đã bác bỏ); NH3/CO2 là ngưỡng cảnh báo của Zone; bỏ "Quá lạnh (sưởi)"; mốc 20 giây của nhãn bộ điều khiển và các mốc của điểm cân bằng Zone là hằng số tự chọn của giao diện (Report 3 §4.5). |
@@ -784,7 +784,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 - Màn hiển thị dữ liệu giả phải có dòng nhãn 5.4 và có dòng trong bảng dưới.
 - Khi backend có API thật: xoá file trong `src/data/` và dòng import, đổi trạng thái trong bảng.
 
-Đối chiếu Report 3, danh sách chỗ lệch ở `docs/reports/README.md` và backend thật trước khi bỏ nhãn. Bảng chi tiết:
+Đối chiếu Report 3, danh sách chỗ lệch ở `docs/reports/project-tracking.md` §6 và backend thật trước khi bỏ nhãn. Bảng chi tiết:
 
 | Màn hình | FR liên quan | Trạng thái | Cần nhãn? |
 |---|---|---|---|
@@ -796,7 +796,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Audit Log toàn hệ thống (Admin) | SYSTEM-FR-001 | ✅ Đã code (`GET /system/audit-logs`) | Không |
 | Cấu hình ngưỡng mặc định hệ thống (Admin) | SYSTEM-FR-002 | ✅ Đã code (`GET/PUT /system/settings/default-thresholds`) | Không |
 | Tổng quan sức khỏe hệ thống (Admin) | SYSTEM-FR-003 | ✅ Đã code (`GET /system/health-overview`) | Không |
-| ~~Đăng bán/Truy xuất nguồn gốc (Marketplace)~~ | MARKET-FR-006..013 | ❌ Ngoài phạm vi (Report 3 §8) — đã gỡ các trang; chỉ giữ ghi nhận thu hoạch (MARKET-FR-001..005) | — |
+| ~~Đăng bán/Truy xuất nguồn gốc (Marketplace)~~ | (yêu cầu marketplace cũ, đã bỏ ở Review 1) | ❌ Ngoài phạm vi (Report 3 §8) — đã gỡ các trang; chỉ giữ ghi nhận thu hoạch (HARVEST-FR-001..005) | — |
 | Thông báo ngoài ứng dụng: Telegram bot và push FCM, cả hai (Report 3; Zalo/SMS ngoài phạm vi) | ALERT-FR-002/013 | 🟡 backend gửi Telegram thật, FCM mới ghi log | Có (màn cấu hình kênh) |
 | Báo cáo sức khỏe Zone + đọc kết luận chuyên gia (Farm Owner, trang `/analytics`) | EXPERT-FR-005/006 | ✅ API thật (`GET /health-reports`); Report 3 đổi sang báo cáo theo nhà yến ngày/tuần/tháng (#34) | Không |
 | Kiểm chứng cảnh báo, kết luận, tham số phát hiện (Domain Expert, `/expert/*`) | EXPERT-FR-003..006, 008 | 🟡 Màn có từ PR #91, gọi API thật (`PUT /alerts/:id/verdict`, `GET /alerts/verdict-stats`, `/health-reports`, `PUT /farms/zones/:zoneId/detection-tuning`) nhưng còn dữ liệu giả dự phòng (`services/expert/expertFallback.service.ts`, `data/mocks/`) — phải bỏ (mục 7) | Không — dùng API thật |
@@ -804,7 +804,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Live stream có khung trên từng con chim | VISION-FR-013/014 | 🟡 Màn có (`useWhepStream`, token `/devices/camera-nodes/:id/stream-token`); nút AI chưa phát video trên develop → khung trống | Không (không có hình giả) |
 | Vẽ vòng đếm của camera | VISION-FR-018 | 🟡 Backend có API (`PUT /devices/camera-nodes/:id/counting-ring`); màn FE chưa làm | Không |
 | Thiết lập thiết bị bằng QR (quét nhãn, quét mã tầng, tiến trình), in nhãn ở kho thiết bị, in mã QR tầng | FARM-FR-003…012 (MF-10) | 🟡 Backend có đăng ký/dời/gỡ nhưng mới cho Technician/Admin; tiến trình "đã áp cấu hình" cần ENV-FR-027 | Không — làm phần đã có API, phần chưa có dùng `ComingSoon` |
-| Duyệt thay đổi của chủ farm, đề xuất hệ số, lịch sử quyết định của chuyên gia | EXPERT-FR-009, 010, 011 | ⬜ Chưa có endpoint (`docs/reports/README.md` #18, #21) | `ComingSoon` |
+| Duyệt thay đổi của chủ farm, đề xuất hệ số, lịch sử quyết định của chuyên gia | EXPERT-FR-009, 010, 011 | ⬜ Chưa có endpoint (`docs/reports/project-tracking.md` §6 G-03, G-04) | `ComingSoon` |
 | Trạng thái `DISMISSED`, gói bằng chứng của cảnh báo suy luận | EXPERT-FR-003, ALERT-FR-014 | ⬜ Chưa có ở backend (#19, #23) | `ComingSoon` cho phần bằng chứng |
 | Đồng bộ cấu hình theo bộ điều khiển | ENV-FR-027 | ⬜ Chưa có (#22) | `ComingSoon` |
 | Lịch đếm theo mùa / tạm thời, phiên không đầy đủ | VISION-FR-019, 020 | ⬜ Chưa có (#20, #24) | `ComingSoon` |
@@ -815,7 +815,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
 | Chi tiết thiết bị `/devices/detail` — tên thiết bị con của bộ kit (do Kỹ thuật viên đặt) | FARM-FR-005/006 (phần mở rộng UI) | 🟡 Chưa có endpoint — `farmMock.api.ts#getDeviceComponentNames` đọc `src/data/deviceComponents.data.ts`; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) | **Có** |
 
-*Giới hạn:* bảng này cập nhật theo backend ngày 23/10/2026 (v2.9.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/README.md` (cột "Trạng thái Backend" của `SwiftletCare_SRS.md` §5 không còn được cập nhật) — lệch nhau thì tin hai nguồn đó và sửa bảng này.
+*Giới hạn:* bảng này cập nhật theo backend ngày 23/10/2026 (v2.9.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/project-tracking.md` §6 (cột "Trạng thái Backend" của `SwiftletCare_SRS.md` §5 không còn được cập nhật) — lệch nhau thì tin hai nguồn đó và sửa bảng này.
 
 ---
 

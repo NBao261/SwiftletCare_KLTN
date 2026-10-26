@@ -14,7 +14,7 @@ Node.js 22 + Express 4 + TypeScript + MongoDB + EMQX (MQTT) + Socket.io. Yêu c�
 > - Không còn ticket, chat, SLA, lịch bảo trì và vùng của Technician (PR #104, #105; `npm run migrate:remove-tickets`, `migrate:remove-regions`): cảnh báo không ai xác nhận được gửi lại một lần (ALERT-FR-015), bơm/quạt quá giờ chạy báo `MAINTENANCE_DUE` (ALERT-FR-016); Technician thấy cấu trúc, thiết bị, cảnh báo thiết bị của mọi farm (FARM-FR-009); Admin không quản lý farm. Quyền từng route theo Report 3 §2.4 (PR #100).
 > - Kênh ngoài ứng dụng chạy thật: Telegram bot (`services/telegram.service.ts`, cần `TELEGRAM_BOT_TOKEN` + `TELEGRAM_BOT_USERNAME`). Firebase FCM vẫn chỉ ghi log dù Report 3 cam kết cả hai kênh (ALERT-FR-002); Zalo/SMS không làm.
 >
-> **Report 3 còn đòi hỏi thêm** những việc backend chưa làm — mỗi việc một dòng ở [`docs/reports/README.md`](../docs/reports/README.md) mục "Chỗ lệch": phần còn lại của MF-10 (dời thiết bị đang offline, cấp lại khoá), `DISMISSED`, farm chưa có chuyên gia thì chủ farm quyết (BR-22), báo chủ farm mọi quyết định của chuyên gia (EXPERT-FR-009), duyệt thay đổi và đề xuất hệ số (EXPERT-FR-010/011), version cấu hình và `CONFIG_MISMATCH` (ENV-FR-027), gói bằng chứng (ALERT-FR-014), lịch đếm theo mùa và phiên không đầy đủ (VISION-FR-019/020).
+> **Report 3 còn đòi hỏi thêm** những việc backend chưa làm — mỗi việc một dòng ở [`docs/reports/project-tracking.md`](../docs/reports/project-tracking.md) §6: phần còn lại của MF-10 (dời thiết bị đang offline, cấp lại khoá), `DISMISSED`, farm chưa có chuyên gia thì chủ farm quyết (BR-22), báo chủ farm mọi quyết định của chuyên gia (EXPERT-FR-009), duyệt thay đổi và đề xuất hệ số (EXPERT-FR-010/011), version cấu hình và `CONFIG_MISMATCH` (ENV-FR-027), gói bằng chứng (ALERT-FR-014), lịch đếm theo mùa và phiên không đầy đủ (VISION-FR-019/020).
 >
 > **DB đang chạy bản cũ:** chạy `npm run migrate:scope-v2` một lần sau khi deploy (đổi role, bỏ `zone_ids`, đổi tên loại cảnh báo, gỡ dữ liệu Marketplace).
 >
@@ -98,7 +98,7 @@ Spec OpenAPI 3.0 ở `docs/api/api-spec.yaml` (gốc repo) — nguồn sự th�
 Mọi tag (Auth, Admin, System, Farms, Devices, Telemetry, Alerts, Analytics, Harvests,
 HealthReports) đều có logic thật phía sau. Quyền theo farm kiểm tra ở
 `utils/farmAccess.util.ts`; quyền theo role ở `requireRole` của từng route. Những FR của Report 3 mà code
-chưa đáp ứng nằm ở `docs/reports/README.md` (mục "Chỗ lệch") và Report 4 §12 — luôn kiểm tra
+chưa đáp ứng nằm ở `docs/reports/project-tracking.md` §6 — luôn kiểm tra
 đó trước khi giả định 1 tính năng đã xong hoàn toàn.
 
 ## Kiến trúc — Route → Controller → Service → Model
@@ -160,7 +160,7 @@ src/
 ## Module → phạm vi
 
 > Bảng này chỉ nêu tổng quan theo module. Muốn biết 1 FR cụ thể còn thiếu gì so với
-> Report 3, tra `docs/reports/README.md` mục "Chỗ lệch" — bảng dưới đây dễ bị lỗi thời.
+> Report 3, tra `docs/reports/project-tracking.md` §6 — bảng dưới đây dễ bị lỗi thời.
 > (Cột "Trạng thái Backend" của `SwiftletCare_SRS.md` §5 không còn được cập nhật.)
 
 | Module | Trạng thái | Ghi chú |
