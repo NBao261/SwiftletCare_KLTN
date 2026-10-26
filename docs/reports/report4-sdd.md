@@ -8,9 +8,9 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.0.10 (Review 2) |
+| Document version | 1.1.0 (Review 2) |
 | Date | `[TEAM: dd/mm/2026]` |
-| Requirements baseline | Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) |
+| Requirements baseline | Report 3 – SRS 3.1.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -30,8 +30,7 @@ All diagrams in this document are written in Mermaid and kept in the repository 
 9. Activity Diagrams
 10. Security Design
 11. Deployment and Operations
-12. Design Status and Known Gaps
-13. Revision History
+12. Revision History
 
 ---
 
@@ -40,6 +39,8 @@ All diagrams in this document are written in Mermaid and kept in the repository 
 ### 1.1 Purpose
 
 This document describes how SwiftletCare realises the requirements of Report 3: the components and the data flows between them, the technologies and environments, the database design and script, the lifecycles of the main entities and the business flows of every main workflow. Requirement IDs (`ENV-FR-010`, `BR-19`, `MF-01`…) refer to Report 3.
+
+It describes the design that the system is built to, not the progress of the code. Where the code of the tagged repository still differs from this design, the difference is listed once, in Project Tracking (Section 6, "Gaps"), with its owner and plan.
 
 ### 1.2 Scope
 
@@ -68,7 +69,7 @@ flowchart LR
       ESP[ESP32 controller<br/>firmware]
       R[4-channel relay<br/>misting, speaker, fan]
       SPK[DFPlayer + amplifier<br/>+ speaker]
-      CT[Current transformers<br/>pump, fan - planned]
+      CT[Current transformers<br/>pump, fan]
       S -- Modbus RTU --> ESP
       ESP -- GPIO --> R
       ESP -- UART --> SPK
@@ -91,11 +92,11 @@ flowchart LR
   TG[[Telegram Bot API]]
   FCM[[Firebase Cloud<br/>Messaging]]
   NTP[[NTP pool]]
-  WX[[Open-Meteo<br/>weather API - planned]]
+  WX[[Open-Meteo<br/>weather API]]
 
-  ESP <-- MQTT over TLS --> EMQX
+  ESP <-- MQTT over TLS<br/>own device topics --> EMQX
   CAM -- RTSP over the Internet<br/>static IP, forwarded port --> AINODE
-  AINODE -- counts, heartbeat --> EMQX
+  AINODE -- counts, heartbeat<br/>own device topics --> EMQX
   EMQX -- counting ring --> AINODE
   AINODE -- annotated + raw video --> MTX
   EMQX <--> API
@@ -119,17 +120,17 @@ Redis is started by `docker-compose.yml` but no module uses it yet (reserved); i
 
 | # | Flow | Path | Notes |
 | --- | --- | --- | --- |
-| DF-1 | Telemetry | Sensors → ESP32 (1 Hz, filtered) → MQTT `…/{zone}/telemetry` → backend → MongoDB (1 sample / 10 s) and Socket.io `TELEMETRY_UPDATE` | While the broker is unreachable the ESP32 buffers 1 sample / 10 s in flash (ENV-FR-024) |
-| DF-2 | Control | ESP32 decides every 10 s locally (fuzzy) → relays → `relay/status` → backend → `RELAY_UPDATE` | The cloud never closes the control loop (C-1) |
-| DF-3 | Configuration | User changes thresholds / coefficients / detection parameters → backend validates and stores with history → MQTT `config/update` → ESP32 clamps and stores in NVS | Full configuration is pushed again when a device reconnects |
-| DF-4 | Device alerts | ESP32 detects pump-dry, speaker failure, sensor/bus fault, noise anomaly, power loss → MQTT `alert` → `createAlert()` → `ALERT_NEW`, Telegram, push, in-app inbox | One open alert per incident (ALERT-FR-008) |
-| DF-5 | Inferred alerts | Backend jobs: offline (10 s), sensor anomaly and forecast (10 min), return rate (daily) → `createAlert()` | Inferred types stay MEDIUM/LOW and go to the expert's queue |
-| DF-6 | Bird counts | Camera RTSP → AI node → MQTT `{house}/vision/bird-count` (session every 30 s, 5-minute buckets) → backend → `BIRD_COUNT_UPDATE` | Counts belong to the house |
-| DF-7 | Live video | AI node publishes annotated stream to MediaMTX → viewer gets a 60-second token from the API → MediaMTX asks `POST /internal/stream-auth` → stream to the browser | Video never passes through the backend |
-| DF-9 | Device setup | Administrator adds the device to the stock and prints its label → Farm Owner scans the label and the floor code in the mobile app → `POST /devices/sensor-nodes/register` (device `PENDING`) → Wi-Fi entered in AP mode → first heartbeat, still on the default topic → backend sends `config/reassign` with the registered zone → controller restarts on the zone topic → `config/update` → heartbeat reports the configuration version → app shows "configuration applied" | Nothing about the farm is typed on the device (FARM-FR-003c); the same correction moves an offline controller when it reconnects |
-| DF-10 | Daily health assessment (MF-11) | After the evening return-rate check: per house, environment in range (telemetry of each zone), air-quality hours and noise episodes (alerts), return-rate drop (counts), data completeness and the day's weather → levels of the house (BR-28) → combined status with reasons (BR-29, 30) → `house_health_days` → daily report → in-app notification → each assessor rates the day before seeing the status (BR-31) | Weekly and monthly reports aggregate the stored days; the field evaluation reads ratings and statuses (ANALYTICS-FR-014) |
-| DF-11 | Weather | Hourly job → Open-Meteo by farm coordinates → `weather_observations` (90 days) → charts and DF-10 | Only coordinates leave the system; never used for control (C-6) |
-| DF-8 | Expert loop | Health report job (weekly) and inferred alerts → expert verdict, tuning, conclusion → notifications to the Farm Owner | EXPERT-FR-003…011 |
+| DF-1 | Telemetry | Sensors → ESP32 (1 Hz, filtered) → MQTT `swiftletcare/dev/{deviceId}/telemetry` (QoS 0) → backend → MongoDB (1 sample / 10 s) and Socket.io `TELEMETRY_UPDATE` | While the broker is unreachable the ESP32 buffers 1 sample / 10 s in flash and uploads it on `…/telemetry/buffered` (QoS 1); a sample leaves the flash only after its PUBACK (ENV-FR-024) |
+| DF-2 | Control | ESP32 decides every 10 s locally (fuzzy) → relays → `…/relay/status` → backend → `RELAY_UPDATE` | The cloud never closes the control loop (C-1) |
+| DF-3 | Configuration | User changes thresholds / coefficients / detection parameters → backend validates, stores with history and raises the zone's configuration version → full configuration published retained on `…/{deviceId}/config` of every controller of the zone → ESP32 clamps, stores in NVS, reports the applied version in its heartbeat | A controller that reconnects receives the retained configuration at once (ENV-FR-027) |
+| DF-4 | Device alerts | ESP32 detects misting without humidity rise, speaker failure, sensor/bus fault, noise anomaly, unexpected restart → MQTT `…/alert` (QoS 1, event ID) → `createAlert()` → `ALERT_NEW`, Telegram, push, in-app inbox | An alert raised offline waits in NVS until its PUBACK; the backend counts an event ID once (ALERT-FR-008) |
+| DF-5 | Backend-raised alerts | Telemetry ingestion with dwell time (`THRESHOLD_BREACH`, BR-34); jobs: offline (10 s), sensor anomaly and forecast (10 min), return rate (daily) → `createAlert()` | Inferred types stay MEDIUM/LOW and go to the expert's queue |
+| DF-6 | Bird counts | Camera RTSP → AI node → MQTT `swiftletcare/dev/{deviceId}/vision/bird-count` (session every 30 s, 5-minute buckets, QoS 1) → backend resolves the camera's house → `BIRD_COUNT_UPDATE` | Counts belong to the house (Report 3 §2.8) |
+| DF-7 | Live video | AI node publishes annotated stream to MediaMTX → viewer gets a 60-second token from the API → MediaMTX asks `POST /internal/stream-auth` → WebRTC (web) or HLS (mobile) | Video never passes through the backend |
+| DF-8 | Expert loop | Daily, weekly and monthly house health reports and inferred alerts → expert verdict, tuning, conclusion → notifications to the Farm Owner | EXPERT-FR-003…011 |
+| DF-9 | Device setup | Administrator adds the device to the stock (label and broker credential issued) → device flashed with its ID and credential → Farm Owner scans the label and the floor code in the mobile app → `POST /devices/sensor-nodes/register` (device `PENDING`) → Wi-Fi entered in AP mode → first heartbeat on the device's own topics → backend sets `ONLINE` and publishes the zone's configuration retained → heartbeat reports the configuration version → app shows "configuration applied" | Nothing about the farm is typed on or stored in the device (FARM-FR-003c); a move only changes the zone in the database and republishes the configuration, online or offline |
+| DF-10 | Daily health assessment (MF-11) | After the evening return-rate check: per house, environment in range (telemetry of each zone), air-quality hours and noise episodes (alerts, dismissed ones excluded), return-rate drop (counts), completeness per source and the day's rain → levels of the house (BR-28) → status with reasons (BR-29, 30) → `househealthdays` (current status) → daily report → in-app notification → each assessor rates the day before seeing the status; the status shown is stored with the rating (BR-31) | Late data and later verdicts recompute the current status only; weekly and monthly reports aggregate the stored days; the field evaluation reads the snapshots (ANALYTICS-FR-014) |
+| DF-11 | Weather | Hourly job → Open-Meteo by farm coordinates → `weatherobservations` → charts and DF-10 | Only coordinates leave the system; used only by BR-30 and for display (C-6) |
 
 ---
 
@@ -137,41 +138,41 @@ Redis is started by `docker-compose.yml` but no module uses it yet (reserved); i
 
 ### 3.1 Third-Party Services
 
-| Service | Purpose | Data sent | Status |
-| --- | --- | --- | --- |
-| Telegram Bot API | Out-of-app alert channel (ALERT-FR-013) | Chat ID of the linked user, alert title, message, farm and zone names | Implemented; needs `TELEGRAM_BOT_TOKEN` |
-| Firebase Cloud Messaging | Mobile push notifications (ALERT-FR-002) | Device token, alert title and message | Backend adapter logs only; mobile token registration not built |
-| Open-Meteo | Weather context: hourly outdoor temperature, humidity, rainfall (ANALYTICS-FR-013) | Latitude and longitude of the farm only | Planned. `[TEAM: confirm the terms of use for this project]` |
-| NTP (`pool.ntp.org`) | Clock of the ESP32 for the speaker schedule and hourly noise baseline | Time request only, no user data | Implemented |
-| SMTP e-mail provider | OTP, password reset and invitation e-mails | E-mail address, one-time code or link | Not wired: codes are logged in development |
-| Roboflow | Annotation of the training images: draft labels from motion tracks are uploaded and corrected by hand | Frames extracted from the team's own entrance clips (masked, no people, no personal data) | In use for the first dataset |
-| Google Colab | Training the detection model (Ultralytics) and exporting it to ONNX | The labelled dataset | Planned for the first trained model |
+| Service | Purpose | Data sent |
+| --- | --- | --- |
+| Telegram Bot API | Out-of-app alert channel (ALERT-FR-013) | Chat ID of the linked user, alert title, message, farm and zone names |
+| Firebase Cloud Messaging | Mobile push notifications (ALERT-FR-002) | Device token, alert title and message |
+| Open-Meteo | Weather context: hourly outdoor temperature, humidity, rainfall (ANALYTICS-FR-013) | Latitude and longitude of the farm only. `[TEAM: confirm the terms of use for this project]` |
+| NTP (`pool.ntp.org`) | Clock of the ESP32 for the speaker schedule, the hourly noise baseline and command freshness (BR-35) | Time request only, no user data |
+| SMTP e-mail provider | Invitation links, temporary passwords and password-reset codes | E-mail address, link or one-time code |
+| Roboflow | Annotation of the training images: draft labels from motion tracks are uploaded and corrected by hand | Frames extracted from the team's own entrance clips (masked, no people, no personal data) |
+| Google Colab | Training the detection model (Ultralytics) and exporting it to ONNX | The labelled dataset |
 
-Self-hosted components (no data leaves the operator's servers): EMQX, MongoDB, MinIO, MediaMTX, Redis (reserved, not used yet).
+Self-hosted components (no data leaves the installation's servers): EMQX, MongoDB, MinIO, MediaMTX.
 
 ### 3.2 Development Technologies
 
 | Layer | Technology | Version (from the repository) |
 | --- | --- | --- |
 | Firmware | ESP32 (ESP32-WROOM-32D), Arduino framework on FreeRTOS, PlatformIO `espressif32` | Arduino-ESP32 core 2.0.17; firmware 1.4.0 |
-| Firmware libraries | PubSubClient, ArduinoJson, ModbusMaster, DFRobotDFPlayerMini, ElegantOTA; planned: Adafruit ADS1X15 for the current transformers | ^2.8, ^7.0, ^2.0.1, ^1.0.6, ^3.1 |
-| Controller board (planned) | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC with two clamp-on current transformers (SCT-013 or ZMCT103C class, isolated from mains) | `[TEAM: board revision]` |
+| Firmware libraries | ESP-IDF MQTT client `esp-mqtt` (`mqtt_client.h`, shipped with the Arduino-ESP32 core: QoS 1 publish, TLS with a CA certificate, persistent session), ArduinoJson, ModbusMaster, DFRobotDFPlayerMini, ElegantOTA, Adafruit ADS1X15 for the current transformers | core 2.0.17, ^7.0, ^2.0.1, ^1.0.6, ^3.1; ADS1X15 pinned when it is added |
+| Controller board | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC with two clamp-on current transformers (SCT-013 or ZMCT103C class, isolated from mains) | `[TEAM: board revision]` |
 | AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, supervision (ByteTrack), paho-mqtt, PyYAML, loguru; detection model YOLO26n exported to ONNX (one class, trained on Colab; `torch`/`ultralytics` are not runtime dependencies) | Python 3.11–3.12; opencv-python ≥ 4.14 < 5; numpy ≥ 1.26 < 3; onnxruntime 1.30; supervision 0.30; paho-mqtt 2.x |
-| Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
+| Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs, firebase-admin (FCM) | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
-| Mobile | Expo (Router), React Native; `expo-camera` for scanning device labels and floor codes | Expo ~53, React Native 0.79.6, React 19.0 |
-| Database and infrastructure | MongoDB, EMQX, MinIO, MediaMTX (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1 |
+| Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `victory-native` | Expo ~53, React Native 0.79.6, React 19.0 |
+| Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1 |
 | Testing | Jest + mongodb-memory-server (backend, mobile), Vitest (web), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7, Vitest ^1.6 |
 
 ### 3.3 Source Code and DevOps
 
 | Item | Choice |
 | --- | --- |
-| Platform | GitHub, repository `NBao261/SwiftletCare_KLTN` |
+| Repository hosting | GitHub, repository `NBao261/SwiftletCare_KLTN` |
 | Branches | `develop` is the integration branch (default); `main` receives releases for production. Work branches `feat/…`, `fix/…`, `docs/…`, `chore/…`, `hotfix/…` (`docs/github-setup.md`) |
 | Branch rules | `develop`: pull request with 1 approval, stale reviews dismissed, no force push, no deletion. `main`: pull request with code-owner approval, required status checks, linear history, push restricted to the owner |
 | Commits | Conventional Commits with a project `type`/`scope` list, checked by commitlint in CI (`.commitlintrc.json`) |
-| CI (`.github/workflows/ci.yml`) | On every pull request: commitlint, gitleaks secret scan, then only for the modules the PR touches: backend `lint`, `build:check`, `npm test` (unit + integration on mongodb-memory-server, 80 % line coverage); web `lint`, `tsc`, `vitest`, `build`; firmware `pio test -e native`; mobile `lint`, `typecheck`, `jest`. AI pipeline `pytest` (job added by pull request #89) |
+| CI (`.github/workflows/ci.yml`) | On every pull request: commitlint, gitleaks secret scan, then only for the modules the PR touches: backend `lint`, `build:check`, `npm test` (unit + integration on mongodb-memory-server, 80 % line coverage); web `lint`, `tsc`, `vitest`, `build`; firmware `pio test -e native`; mobile `lint`, `typecheck`, `jest`; AI pipeline `pytest` |
 | Code review | Every PR is reviewed against the module's own rules (`*/CLAUDE.md`), with an automated review routine (`.claude/commands/review-pr.md`) plus one human approval |
 | CD | No automated deployment: staging and production are deployed by hand from a tag (Section 11) |
 
@@ -202,18 +203,20 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | --- | --- | --- | --- | --- |
 | D1 | Where the control loop runs | Cloud decides and sends commands; ESP32 decides locally | **ESP32 decides locally** every 10 s; the cloud only configures. Control keeps working without the Internet, which the registration commits to | ENV-FR-010, 011, 014, C-1 |
 | D2 | Control method | On/off thresholds; PID; fuzzy logic | **Zero-order Sugeno fuzzy logic with time-proportioning** on relays: smooth power levels with plain relays, parameters a domain expert can read and tune; mirrored in the backend for simulation and suggestions | ENV-FR-010, 011, 021, ANALYTICS-FR-010 |
-| D3 | Device–cloud protocol | HTTP polling; WebSocket; MQTT | **MQTT (EMQX) with TLS**, QoS 1 for commands, `deviceId` in every payload; topics per zone for controllers and per house for AI nodes. Light on the ESP32, survives intermittent links | Section 7.2 |
+| D3 | Device–cloud protocol and device identity | HTTP polling; WebSocket; MQTT with topics per farm/house/zone and a shared credential; **MQTT with topics per device and a credential per device** | **MQTT (EMQX) over TLS, one topic tree per device `swiftletcare/dev/{deviceId}/…`, one broker credential per device.** The device knows only its ID and credential; its farm, house and zone live in the backend, so a move needs no message to the device and no topic correction. The broker authorises with one static rule (a device reaches only `swiftletcare/dev/${username}/#`), so a leaked credential exposes one device, and revoking the stock entry cuts it off. Delivery: live telemetry and heartbeat QoS 0 (the next sample replaces a lost one); buffered telemetry, device alerts, relay status, counts and every command QoS 1, with an event ID or command ID so a redelivery is applied once (BR-35); configuration retained per device and applied by version. The ESP32 uses ESP-IDF `esp-mqtt` because PubSubClient cannot publish with QoS 1 | Section 7.2, FARM-FR-003c, BR-27, BR-35, NFR-10 |
 | D4 | Database | Relational (PostgreSQL); time-series DB; MongoDB | **MongoDB** with Mongoose: telemetry as documents with TTL (90 days), flexible embedded histories (thresholds, tuning), one store for the whole system; schema enforced by `$jsonSchema` validators generated from the models | Section 6 |
-| D5 | Where bird counting runs | Raspberry Pi at the house; cloud GPU server fed by the camera stream; desktop PC at the house; **the team's spare PC at a member's home** | **Spare PC at a member's home, reading the camera over the Internet**: no new hardware and more compute than a Raspberry Pi, no paid GPU server, and the machine stays dry and is maintained where the team lives instead of in a humid house nobody visits. The house's VNPT line has a static public IP, so the camera's RTSP feed (1080p, about 2 Mbps) is pulled over TCP through one forwarded port. Costs: the house's uplink carries the feed during the sessions; an outage of either line leaves the session incomplete (VISION-FR-020); the forwarded port must be protected (strong camera password, source IP limited where the modem allows). Checked by a 24-hour pull test and by counting the same clip read locally and over the Internet; throughput is measured on this PC (NFR-04). One camera per entrance, counts per house | VISION-FR-002, 020, THREAT-FR-010, NFR-04 |
+| D5 | Where bird counting runs | Raspberry Pi at the house; cloud GPU server fed by the camera stream; desktop PC at the house; **the team's spare PC at a member's home** | **Spare PC at a member's home, reading the camera over the Internet**: no new hardware and more compute than a Raspberry Pi, no paid GPU server, and the machine stays dry and is maintained where the team lives instead of in a humid house nobody visits. The house's VNPT line has a static public IP, so the camera's RTSP feed (1080p, about 2 Mbps) is pulled over TCP through one forwarded port. Costs: the house's uplink carries the feed during the sessions; an outage of either line leaves the session incomplete (VISION-FR-020); the forwarded port answers only the AI node's static public IP (source-IP rule on the house modem, NFR-10 e) and the camera has a strong password. Checked by a 24-hour pull test and by counting the same clip read locally and over the Internet; throughput is measured on this PC (NFR-04). One camera per entrance, counts per house | VISION-FR-002, 020, THREAT-FR-010, NFR-04 |
 | D6 | Counting geometry | Straight virtual line; ring around the hole with tracking only near it; ring with whole-frame tracking | **Whole-frame tracking and a closed ring around the hole, with extrapolation of fast tracks**: birds leave the hole in every direction, so a line misses some; at the hole a bird is a 1–2-frame blur moving 150–200 px/frame (clip of 22/10/2026), so tracking near the hole alone never gives it an identity — tracked over the whole room it already has one, and a fast track lost just outside the ring is counted by its last velocity. Fly-pasts cancel in the net count | VISION-FR-004, 005, 009, 018, BR-25 |
 | D7 | Expert in the loop | Expert approval blocks every change; changes apply at once with no review | **Owner changes apply at once and open a review item; only the expert applies system suggestions; without an expert the owner decides** — safety on site is never blocked and every parameter is still validated | EXPERT-FR-010, 011, BR-22 |
 | D8 | Live video path | Through the backend; dedicated video server | **MediaMTX** with short-lived viewing tokens checked by the backend: the API never carries video, raw feed only for the pipeline | VISION-FR-013 |
-| D9 | Device identity and setup | Technician types device ID and key on a web console; QR code shown on the controller's AP-mode page; small display on the board; Bluetooth (BLE) provisioning; **printed label QR code plus a code on each floor** | **Printed label with device ID and activation key, and a floor code**: the ESP32 has no display or code of its own, and a label needs no hardware or firmware change because the key is checked only by the backend and never stored on the controller. Floors share one Wi-Fi network, so the floor cannot be told by radio; scanning its code replaces choosing from a list. The backend already corrects a controller's topic at its heartbeat, so farm, house and zone are never entered on the device, and an offline move needs no visit. A display or BLE would add hardware or much more firmware for the same two steps. Optional later: derive the device ID from the factory MAC address so every board runs one firmware image | FARM-FR-003, 003c, 007, 007b, 010, 011, 012, BR-26, 27 |
+| D9 | Device identity and setup | Technician types device ID and key on a web console; QR code shown on the controller's AP-mode page; small display on the board; Bluetooth (BLE) provisioning; **printed label QR code plus a code on each floor** | **Printed label with device ID and activation key, and a floor code**: the ESP32 has no display or code of its own, and a label needs no hardware or firmware change because the key is checked only by the backend and never stored on the controller. Floors share one Wi-Fi network, so the floor cannot be told by radio; scanning its code replaces choosing from a list. Farm, house and zone are kept only by the backend (D3), so they are never entered on the device and a move, online or offline, needs no visit. A display or BLE would add hardware or much more firmware for the same two steps. Optional later: derive the device ID from the factory MAC address so every board runs one firmware image | FARM-FR-003, 003c, 007, 007b, 010, 011, 012, BR-26, 27 |
 | D10 | How the sources are combined into a house's health | Weighted health score; classifier trained on labelled days; **transparent rules with agreement between sources** | **Rules with agreement**: no source gives weights, and there are no labelled days to train on yet; each source is compared with the house's own past or with sourced ranges, a status needs two sources to reach `ACTION`, every status lists the indicators behind it, and the levels are set by the expert. The rules are judged by agreement with practitioners' independent ratings (NFR-14); a learned model can be tried later on the rated days | ANALYTICS-FR-012, 014, BR-28…31 |
 | D11 | Actuator current sensing | None (infer from humidity); Hall-effect IC in the mains path (ACS712); **clamp-on current transformer with an external ADC** | **Current transformer + ADS1115**: isolated from mains, so no mains track crosses the logic board; non-invasive on existing wiring; the ESP32's own ADC is not linear enough. Normal current is learned per load, so no threshold is invented for an unknown pump or fan | THREAT-FR-014, BR-32 |
 | D12 | Outdoor conditions | Outdoor sensor node; **weather API**; none | **Weather API (Open-Meteo)** by farm coordinates: no hardware, includes rainfall, which a node does not measure easily and which explains low return rates; it is a regional estimate, so it is context only. An outdoor node stays optional | ANALYTICS-FR-013, BR-30, C-6 |
 | D13 | Report files | Server-side PDF; **PDF in the web client, CSV from the API** | **`jspdf` in the web client** (already a dependency) renders the report the API returns, so the file shows the same figures as the screen; the CSV of daily indicators is produced by the API so every client gets the same columns | EXPERT-FR-013 |
 | D14 | Scope of the supporting roles | Maintenance tickets with routing by region, SLA and KPIs; Technician invited into each farm by its owner; **Technician sees every farm's devices, without relay control** | **Technician on every farm, devices only**: tickets, SLA, regions and KPIs serve a service company with many customers, not the house (Review 1: "more a platform than a system"); an invitation per farm adds a step for every repair. The risk of a role that is not a farm member is limited by what it can do: no relays, thresholds, coefficients or alert acknowledgement, no environmental data, and every device action is audited and notified to the Farm Owners. Faults reach the owner as repeated alerts instead of tickets | FARM-FR-009, 013, ALERT-FR-015, 016, Report 3 §2.4 |
+| D15 | Manual override against the controller's checks | Manual override above everything; protections above manual; **manual above the software checks, with limits** | **Manual override passes the fuzzy output, the misting latch and the sensor safe state, within limits:** these checks infer a fault from humidity or from a missing reading, so they must not lock out the owner who sees the house; the electrical protection stays in the house's panel (C-7). A remote pump ON lasts at most 30 min and needs a confirmation while a sensor or misting alert is open, so a forgotten command cannot run the pump for hours on a faulty sensor; each relay has its own expiry | ENV-FR-016…018, BR-08, BR-19, BR-20, C-7 |
+| D16 | Daily status when data arrives late | Freeze the day at the first rating; recompute and overwrite; **keep both** | **A current status that follows the data and an evaluation snapshot per rating that never changes:** operations see the best status, while the agreement measure (NFR-14) compares each rating with exactly what the assessor saw | ANALYTICS-FR-012, 014, EXPERT-FR-012, BR-31 |
 
 The Design Brief (BM01, section 3) proposes five of these.
 
@@ -227,20 +230,18 @@ FreeRTOS tasks pinned to core 1:
 
 | Task | Priority | Does |
 | --- | --- | --- |
-| `SensorTask` | 2 | Every 1 s: read the five Modbus sensors (`sensors/SensorManager`), mark stale readings, filter temperature and humidity (`sensors/SignalFilter`: median 5 + scalar Kalman), update the hourly noise baseline and detect abnormal noise (`sensors/NoiseAnomalyDetector`); while the broker is unreachable, append the sample to the offline buffer (`storage/StorageManager`, SPIFFS, 1 sample / 10 s, 256 KB) |
-| `PIDTask` | 3 | Every 10 s: speaker schedule (`audio/AudioManager`), override expiry, fuzzy misting and fan demand (`pid/FuzzyControl`) with time-proportioning, pump-dry monitor (`pid/PumpDryMonitor`), safe state on missing inputs; applies relays in the precedence of BR-19 and publishes device alerts (pump dry, speaker failure, sensor and bus faults) |
-| `MQTTTask` | 1 | Wi-Fi and TLS MQTT session; publishes telemetry, heartbeat (with diagnostics) and relay status, and `POWER_OUTAGE` once after an unexpected restart; flushes the offline buffer after reconnecting; receives commands (`relay/command`, `audio/command`, `config/update`, `config/reassign`) and remote RESTART / OTA with SHA-256 check and rollback (`ota/RemoteCommand`, `ota/RemoteOta`) |
+| `SensorTask` | 2 | Every 1 s: read the five Modbus sensors (`sensors/SensorManager`), mark stale readings, filter temperature and humidity (`sensors/SignalFilter`: median 5 + scalar Kalman), read the pump and fan currents from the ADS1115, update the hourly noise baseline and detect abnormal noise (`sensors/NoiseAnomalyDetector`); while the broker is unreachable, append the sample to the offline buffer (`storage/StorageManager`, SPIFFS, 1 sample / 10 s, 256 KB) |
+| `PIDTask` | 3 | Every 10 s: speaker schedule (`audio/AudioManager`), the expiry of each overridden relay (BR-20), fuzzy misting and fan demand (`pid/FuzzyControl`) with time-proportioning, misting check (`pid/PumpDryMonitor`, raises `MISTING_INEFFECTIVE`), safe state on missing inputs, actuator current check against the learned normal current (BR-32); applies relays in the precedence of BR-19 and queues device alerts with an event ID |
+| `MQTTTask` | 1 | Wi-Fi and the `esp-mqtt` session over TLS (CA certificate of the broker's issuer, device ID as user name, device credential as password, persistent session); publishes telemetry and heartbeat (QoS 0, heartbeat with diagnostics and the applied configuration version), relay status, device alerts and the offline buffer (QoS 1), deleting an alert or a buffered sample from NVS or flash only on its PUBACK; after an unexpected restart queues one `UNEXPECTED_RESTART` with the reset reason; receives the retained configuration (`…/config`) and commands (`…/cmd`), skipping a command ID already applied and relay, audio or restart commands older than BR-35 (the last RESTART and OTA command IDs are kept in NVS so a redelivery after the restart is ignored); remote RESTART / OTA with SHA-256 check and rollback (`ota/RemoteCommand`, `ota/RemoteOta`, OTA over HTTPS with the CA certificate) |
 | `loop()` | — | Feeds the task watchdog (30 s); serves the Wi-Fi captive portal (`wifi/WiFiProvisioner`) while it is open, and reopens it when the broker stays unreachable so a new broker address can be entered |
 
-Planned (THREAT-FR-014): `SensorTask` also reads the pump and fan currents from the ADS1115 every second; `PIDTask` learns each load's normal current during its first ON period and compares the current with the relay state (BR-32); telemetry carries both currents and the check raises `ACTUATOR_FAULT`.
-
-Configuration (`config/Config`) is stored in NVS and every received value is clamped to the same ranges as the backend validator. Pure C++ parts (fuzzy, filter, noise detector, pump-dry monitor, remote command) are unit-tested on the host.
+Configuration (`config/Config`) is stored in NVS with its version, and every received value is clamped to the same ranges as the backend validator. Pure C++ parts (fuzzy, filter, noise detector, misting check, current check, command de-duplication, remote command) are unit-tested on the host.
 
 ### 5.2 AI Pipeline (AI node)
 
-`stream.py` (RTSP or clip loop) runs `pipeline.py` (`FramePipeline`) on every frame: `frame_prep.py` masks the camera's date overlay and cuts the frame into 2 overlapping tiles → `inference.py` runs YOLO (ONNX) on each tile and merges the duplicates of the overlap → `sv.ByteTrack` tracks every bird over the whole frame (boxes enlarged before matching, because a small fast bird's boxes in consecutive frames do not overlap) → `counting.py` (`RingCounter`) counts ring crossings, extrapolates fast tracks at the hole and keeps ambiguous tracks apart → the frame is drawn with green boxes and the yellow ring. `remote_config.py` listens on `{house}/config/update` and swaps in a new ring without restart. The same `FramePipeline` is used by `tools/track_clip.py`, so a recorded clip is processed exactly like the live stream. Dataset tools: `tools/pick_roi.py` (ring calibration), `tools/extract_frames.py` (masked tile images and draft labels from motion tracks for Roboflow), `tools/split_by_day.py` (train/val/test split by recording day).
+`stream.py` (RTSP or clip loop) runs `pipeline.py` (`FramePipeline`) on every frame: `frame_prep.py` masks the camera's date overlay and cuts the frame into 2 overlapping tiles → `inference.py` runs YOLO (ONNX) on each tile and merges the duplicates of the overlap → `sv.ByteTrack` tracks every bird over the whole frame (boxes enlarged before matching, because a small fast bird's boxes in consecutive frames do not overlap) → `counting.py` (`RingCounter`) counts ring crossings, extrapolates fast tracks at the hole and keeps ambiguous tracks apart → the frame is drawn with green boxes and the yellow ring. `remote_config.py` reads the node's retained `swiftletcare/dev/{deviceId}/config` and swaps in a new ring without restart. The same `FramePipeline` is used by `tools/track_clip.py`, so a recorded clip is processed exactly like the live stream. Dataset tools: `tools/pick_roi.py` (ring calibration), `tools/extract_frames.py` (masked tile images and draft labels from motion tracks for Roboflow), `tools/split_by_day.py` (train/val/test split by recording day).
 
-`stream.py` (pull request #89, on `develop` through #95) reads the latest frame in its own thread and reconnects with back-off, switches sessions in Vietnam time and keeps them in `state.json` across restarts, publishes session counts, 5-minute buckets (`BucketClock`) and heartbeats over MQTT on the house topics, serves an MJPEG preview on localhost and pushes the annotated stream to MediaMTX with ffmpeg (`stream_pusher.py`). Report 3 moves session totals to the backend (VISION-FR-008, 019): the pipeline's own session windows stay as defaults until the backend computes sessions from the buckets (Section 12).
+`stream.py` reads the latest frame in its own thread and reconnects with back-off, publishes 5-minute buckets (`BucketClock`) and cumulative session counts (its session windows are defaults; the backend computes the sessions from the buckets, VISION-FR-008, 019) and a heartbeat every 30 s with the processed frames per second and the model version, all on the node's own device topics with its broker credential; serves an MJPEG preview on localhost and pushes the annotated stream to MediaMTX with ffmpeg (`stream_pusher.py`).
 
 ### 5.3 Backend
 
@@ -263,13 +264,13 @@ Layer rules: only services query the database, check permissions, publish MQTT a
 
 | Service group | Services | Requirements |
 | --- | --- | --- |
-| Identity and access | `auth`, `admin`, `farmAccess.util` | AUTH-FR-*, Section 2.4 of Report 3 |
-| Structure and devices | `farm`, `device`, `audioTrack`, `stream` | FARM-FR-*, ENV-FR-016…021, VISION-FR-013, 018 |
-| Telemetry and control | `telemetry`, `fuzzyModel.util` | ENV-FR-001…005, ANALYTICS-FR-008, 010 |
-| Alerts and notifications | `alert`, `sensorAnomaly`, `forecast`, `notification`, `telegram`, `relayUsage` | ALERT-FR-*, THREAT-FR-009, 010 |
+| Identity and access | `auth`, `admin`, `farmAccess.util`, `mqttAuth` (broker authentication of devices) | AUTH-FR-002…012, NFR-10, Section 2.4 of Report 3 |
+| Structure and devices | `farm`, `device`, `provisionedDevice`, `configSync`, `audioTrack`, `stream` | FARM-FR-001…013, ENV-FR-016…021, 027, VISION-FR-013, 018 |
+| Telemetry and control | `telemetry` (with the breach dwell of BR-34), `fuzzyModel.util` | ENV-FR-001…005, ALERT-FR-012, ANALYTICS-FR-008, 010 |
+| Alerts and notifications | `alert`, `sensorAnomaly`, `forecast`, `notification`, `telegram`, `push` (FCM), `relayUsage` | ALERT-FR-001…016, THREAT-FR-009, 010 |
 | Flock | `birdCount` | VISION-FR-006…012, 017 |
-| Analytics and expert | `analytics`, `healthReport`; planned: `healthAssessment`, `weather` | ANALYTICS-FR-*, EXPERT-FR-* |
-| Supporting | `system`, `harvest` | SYSTEM-FR-*, MARKET-FR-* |
+| Analytics and expert | `analytics`, `healthAssessment`, `healthReport`, `weather`, `expertActivity`, `parameterReview`, `coefficientProposal` | ANALYTICS-FR-001…014, EXPERT-FR-001…013 |
+| Supporting | `system`, `harvest` | SYSTEM-FR-001…003, HARVEST-FR-001…005 |
 
 Background jobs:
 
@@ -277,26 +278,71 @@ Background jobs:
 | --- | --- | --- |
 | `deviceOffline` | every 10 s | Controller silent > 30 s → `OFFLINE` + `NODE_OFFLINE`; AI node silent > 90 s → `OFFLINE` + `EDGE_AI_DEGRADED` |
 | `overrideExpiry` | every 1 min | Expired overrides back to `AUTO` |
-| `alertEscalation` | every 2 min | Unacknowledged CRITICAL/HIGH after 15 min, `NODE_OFFLINE` after 1 h → sent once more to the Farm Owners (ALERT-FR-015); automatic resolution of breaches and episodic alerts |
+| `alertEscalation` | every 2 min | Unacknowledged CRITICAL/HIGH after 15 min, `NODE_OFFLINE` after 1 h → sent once more to the Farm Owners (ALERT-FR-015); automatic resolution of breaches and episodic alerts (BR-16) |
+| `configSync` | every 1 min | Controllers still reporting an old configuration version: republish; 3 heartbeats behind while online → `CONFIG_MISMATCH` (BR-24) |
 | `sensorAnomaly` | every 10 min | Stuck, jumping and drifting sensors → `SENSOR_ANOMALY` |
 | `forecast` | every 10 min | 60-minute forecast → `FORECAST_BREACH` |
-| `returnRate` | daily 19:15 (default windows) | House return rate vs previous days → `LOW_RETURN_RATE` |
-| `healthReport` | weekly (Mon 06:00); target daily, weekly, monthly (BR-33) | Health reports, notifications. Code: weekly per zone; target: per house with zone sections |
-| `healthAssessment` (planned) | daily, after `returnRate` | Daily health status of every house (ANALYTICS-FR-012) |
-| `weather` (planned) | hourly | Weather of every farm with coordinates (ANALYTICS-FR-013) |
+| `returnRate` | daily, 15 min after the evening window of each house (BR-21) | Sessions from the 5-minute buckets of that day's windows, completeness (VISION-FR-020), return rate vs previous days → `LOW_RETURN_RATE` |
+| `healthAssessment` | daily, after `returnRate`; again when late data or a verdict touches a day of the last 7 | Current daily status of every house (ANALYTICS-FR-012, BR-28…30) |
+| `healthReport` | BR-33 | Daily, weekly and monthly reports per house with a section per zone; notifications |
+| `weather` | hourly | Weather of every farm with coordinates (ANALYTICS-FR-013) |
 | `activationOverdue` | every 1 min | Devices not activated in 15 min; OTA unconfirmed after 30 min |
 | `relayUsage` | hourly | Pump and fan ON time and switch count since the last service → `MAINTENANCE_DUE` (ALERT-FR-016) |
 | `invitationExpiry` | hourly | Invitations older than 7 days → `EXPIRED` |
 
 ### 5.4 Web and Mobile
 
-Both clients follow the same pattern: TanStack Query for server state, Zustand for session state, axios for REST, socket.io-client for real-time events, one route group per role. The web application is a PWA; the mobile application uses Expo Router. The web has Farm Owner, Administrator, Technician and Domain Expert screens (the last since pull request #91); the Farm Owner's Vision page plays the annotated stream over WHEP with a token from the API (pull request #93). The counting-ring editor and the mobile screens are still to be built (Section 12).
+Both clients follow the same pattern: TanStack Query for server state, Zustand for session state, axios for REST, socket.io-client for real-time events, one route group per role, data from the API only (no mock data). The web application is a PWA with the Farm Owner, Domain Expert, Technician and Administrator screens; the mobile application uses Expo Router and serves the Farm Owner and the Domain Expert with the scope of the registration form (3.2 b): monitoring, count analytics and the live stream, alerts with push, manual override, device setup by QR code, daily health status, reports and ratings, harvest logging, and expert validation and tuning.
 
-Health (MF-11): web and mobile show each house's daily status with its reasons and the rating screen, which asks for the assessor's own status before revealing the system's (BR-31); the web exports a report as PDF with `jspdf` and downloads the daily indicators as CSV from the API.
+Live stream (VISION-FR-013): the web plays WebRTC (WHEP) and the mobile app plays HLS with `expo-video`, both from MediaMTX with the same 60-second token. The counting-ring editor draws the ring over a frame of the stream (web, VISION-FR-018).
+
+Push (ALERT-FR-002): after sign-in the mobile app gets the FCM device token with `expo-notifications` and registers it with the API; sign-out removes it; the backend deletes a token that FCM reports invalid.
+
+Health (MF-11): web and mobile show each house's daily status with its reasons and the rating screen, which asks for the assessor's own status before revealing the system's (BR-31). The blinding is enforced by the API, not only by the screens: for a Farm Owner or Domain Expert who has neither rated nor skipped a day inside the rating window, the day, report, CSV and notification endpoints return the day without its status, reasons or the other ratings; `POST …/rating` stores the rating and its snapshot in one atomic update and returns the status in its response; `POST …/skip` reveals it without a rating; the web exports a report as PDF with `jspdf` and downloads the daily indicators as CSV from the API.
+
+Manual override (MF-09): before a pump ON, the client reads the zone's open alerts; when a `SENSOR_FAULT`, `RS485_BUS_FAILURE` or `MISTING_INEFFECTIVE` is open it shows them and sends the command with the confirmation (ENV-FR-016).
 
 Farm location (FARM-FR-001): the farm form takes the coordinates from the device's current position (browser or phone geolocation, used while standing at the house) or as typed latitude and longitude; no map library is added. The farm list marks a farm still without coordinates, because it gets no weather (A-5).
 
-Device setup (MF-10): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; a scan in the web console (`html5-qrcode`) reads the same formats.
+Device setup (MF-10): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key (and, for flashing, the broker credential) only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; a scan in the web console (`html5-qrcode`) reads the same formats.
+
+### 5.5 Engineering Constants in the Code
+
+Each constant of Report 3, Section 4.5 has one home in the code. A change of value is made there and in Report 3 in the same pull request.
+
+| Constant (Report 3 §4.5) | Where |
+| --- | --- |
+| Misting retry after a misting latch | firmware `PUMP_DRY_RETRY_MIN` |
+| Highest humidity still valid | firmware `HUMIDITY_SATURATION_MAX`, backend `fuzzyModel.util.ts` |
+| Last valid temperature/humidity reused | firmware `CONTROL_INPUT_MAX_AGE_CYCLES` |
+| Repeat of an ongoing episodic alert | firmware `EPISODE_ALERT_RESEND_MS` |
+| Automatic resolution of an episodic alert | backend `EPISODE_CLEAR_MS` |
+| AUTO status ignored after a manual command | backend `DEVICE_CONFIRM_GRACE_MS` |
+| Override duration limits | backend `MIN_OVERRIDE_MS`, `MAX_OVERRIDE_MS`, `MAX_PUMP_ON_OVERRIDE_MS` |
+| Command freshness | firmware and backend `COMMAND_MAX_AGE_MS` |
+| Threshold-breach dwell time | backend `BREACH_DWELL_MS` |
+| AI node silent before it is offline | backend `CAMERA_OFFLINE_THRESHOLD_MS` |
+| AI node frame rate that raises `EDGE_AI_DEGRADED` | AI node `config.yaml`, backend `CAMERA_MIN_FPS` |
+| Default session windows | AI node `config.yaml`, backend `DEFAULT_SESSION_WINDOWS` |
+| Return-rate check | backend `jobs/returnRate.job.ts`, `MIN_BASELINE_DAYS` |
+| One read of 5-minute counts | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS` |
+| Live-stream viewing token | backend `STREAM_TOKEN_TTL_SEC` |
+| Counting ring vertices | backend `devices.route.ts`, AI node `remote_config.MAX_POINTS` |
+| Ring margin, tile overlap, extrapolation | AI node `config.yaml` (`tracking.ring`, tile overlap, `extrapolate_min_speed_px`, `extrapolate_frames`) |
+| OTA timeouts | firmware `OTA_VERIFY_TIMEOUT_MS`, `OTA_READ_TIMEOUT_MS`; backend `OTA_CONFIRM_TIMEOUT_MS` |
+| Configuration mismatch | backend `CONFIG_MISMATCH_HEARTBEATS` |
+| Device not connected after registration | backend `ACTIVATION_TIMEOUT_MS` |
+| Rate limits | backend `RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_WINDOW_MS`, `REFRESH_RATE_LIMIT_MAX` |
+| Account deletion reminder | backend `DELETION_REMIND_DAYS_BEFORE` |
+| Repeat of an unacknowledged alert | backend `jobs/alertEscalation.job.ts` |
+| Service limits of the pump and the fan | backend `RELAY_SERVICE_LIMITS` |
+| Temporary password | backend account-creation service of AUTH-FR-005c |
+| Live-data label, zone balance bands | web `LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`, `ZoneBalanceCard` |
+| Health-indicator level defaults, rain confounder, rating window | backend `healthAssessment` service |
+| Actuator current check | firmware actuator-current monitor |
+| Weather fetch | backend `jobs/weather.job.ts` |
+| Size of one installation | staging sizing (Section 3.4) and the NFR-03 load script |
+| Retention (BR-36) | TTL indexes of Section 6.3 |
 
 ---
 
@@ -311,15 +357,27 @@ erDiagram
     string email UK
     string role "ADMIN | FARM_OWNER | DOMAIN_EXPERT | TECHNICIAN"
     string full_name
-    bool is_active
+    string status "ACTIVE | LOCKED | DELETION_REQUESTED | DELETED"
+    string locked_reason
+    date locked_at
+    date deletion_requested_at
+    date deleted_at
+    bool must_change_password
     string telegram_chat_id
+  }
+  PUSH_TOKEN {
+    ObjectId _id PK
+    ObjectId user_id FK
+    string token UK
+    string platform "android | ios"
+    date last_seen_at
   }
   FARM {
     ObjectId _id PK
     ObjectId owner_id FK
     string name
     string address
-    object coordinates "lat, lng - required at creation"
+    object coordinates "lat, lng"
     array members "embedded: user_id, role, is_primary"
     bool is_deleted
   }
@@ -327,6 +385,7 @@ erDiagram
     ObjectId _id PK
     ObjectId farm_id FK
     ObjectId invited_by FK
+    string invited_email
     string invited_role
     string status "PENDING | ACCEPTED | DECLINED | EXPIRED"
     date expires_at
@@ -336,9 +395,9 @@ erDiagram
     ObjectId farm_id FK
     string name
     object bird_count_tuning "return_rate_drop_pct"
-    object counting_schedule "planned: seasonal profiles, temporary windows"
-    object health_levels "planned: BR-28 levels"
-    array bird_count_tuning_history
+    object counting_schedule "seasonal profiles, temporary windows"
+    object health_levels "BR-28 level boundaries"
+    array tuning_history
   }
   ZONE {
     ObjectId _id PK
@@ -348,7 +407,7 @@ erDiagram
     object thresholds
     object fuzzy_tuning
     object detection_tuning
-    number config_version "planned"
+    number config_version
     array threshold_history
     array fuzzy_tuning_history
     array detection_tuning_history
@@ -358,14 +417,13 @@ erDiagram
     string device_id UK
     ObjectId zone_id FK
     string status "PENDING | ONLINE | OFFLINE"
-    string control_mode "AUTO | MANUAL"
-    object relay_states
-    date override_expiry
+    date decommissioned_at
+    object relays "per relay: state, mode AUTO|MANUAL, override_expiry, override_by"
     string firmware_version
     date last_heartbeat
-    date decommissioned_at
-    number applied_config_version "planned"
-    object actuator_baseline "planned: learned current per load"
+    string last_reset_reason
+    number applied_config_version
+    object actuator_baseline "learned normal current per load"
     object ota_pending "version, requested_at"
     object ota_failed "version, failed_at"
   }
@@ -373,7 +431,11 @@ erDiagram
     ObjectId _id PK
     string device_id UK
     ObjectId house_id FK
-    string status
+    string status "PENDING | ONLINE | OFFLINE"
+    date decommissioned_at
+    date last_heartbeat
+    number fps
+    string model_version
     object counting_ring
     array counting_ring_history
   }
@@ -381,20 +443,30 @@ erDiagram
     ObjectId _id PK
     string device_id UK
     string kind "SENSOR | CAMERA"
-    string secret_key_hash
+    string activation_key_hash
+    string broker_secret_hash
+    date claimed_at
+    date key_reissued_at
+    date revoked_at
   }
   TELEMETRY {
     ObjectId node_id FK
     ObjectId zone_id FK
-    date timestamp "TTL 90 days"
+    date timestamp
     number temperature
     number humidity
     number nh3_ppm
     number co2_ppm
     number light_lux
     number sound_db
+    array stale_fields "sensors reported stale"
+    bool is_anomaly
+    array anomaly_fields
     number misting_pct
     number ventilation_pct
+    number pump_current_a
+    number fan_current_a
+    bool buffered
   }
   RELAY_OVERRIDE_LOG {
     ObjectId _id PK
@@ -403,9 +475,11 @@ erDiagram
     ObjectId started_by FK
     string relay
     bool state
+    bool alert_confirmed
     date started_at
     date expires_at
-    string end_reason
+    date ended_at
+    string end_reason "EXPIRED | CANCELLED"
   }
   AUDIO_TRACK {
     ObjectId _id PK
@@ -419,12 +493,16 @@ erDiagram
     ObjectId zone_id FK "zone alerts"
     ObjectId house_id FK "house alerts"
     ObjectId node_id FK
+    string event_id "device event, unique per node"
     string type
     string severity
-    string status "ACTIVE | ACKNOWLEDGED | DISMISSED (planned) | RESOLVED"
-    string previous_status "planned"
-    object expert_verdict "result, note, by, at"
+    string status "ACTIVE | ACKNOWLEDGED | DISMISSED | RESOLVED"
+    string previous_status "status before DISMISSED"
+    object details "metric, observed, threshold, direction, started_at, reset_reason"
+    object expert_verdict "result, note, by, role, at"
     number occurrence_count
+    date renotified_at
+    date resolved_at
   }
   BIRD_COUNT_RECORD {
     ObjectId _id PK
@@ -432,42 +510,46 @@ erDiagram
     ObjectId house_id FK
     string session_date
     string session_type "MORNING_EXIT | EVENING_ENTRY"
+    string window_start
+    string window_end
     number entry_count
     number exit_count
+    bool complete
   }
   BIRD_COUNT_BUCKET {
     ObjectId camera_node_id FK
     ObjectId house_id FK
-    date bucket_start "TTL 90 days"
+    date bucket_start
     number entry_count
     number exit_count
-  }
-  ZONE_HEALTH_REPORT {
-    ObjectId _id PK
-    ObjectId farm_id FK
-    ObjectId zone_id FK
-    ObjectId house_id FK "planned: report per house"
-    string kind "planned: DAILY | WEEKLY | MONTHLY | CUSTOM"
-    date period_start
-    date period_end
-    object metrics
-    object expert_conclusion "text, by, at"
   }
   HOUSE_HEALTH_DAY {
     ObjectId _id PK
     ObjectId house_id FK
     ObjectId farm_id FK
     string date "Vietnam day"
-    object indicators "planned: environment, air, flock, noise, completeness"
-    string status "planned: GOOD | WATCH | ACTION | INSUFFICIENT_DATA"
-    array reasons
-    array ratings "by, role, rating, note, at, status_shown"
-    string state "planned: COMPUTED | RATED | UNRATED"
+    object indicators "environment, air, flock, noise: value and level"
+    object completeness "per source"
+    string current_status "GOOD | WATCH | ACTION | INSUFFICIENT_DATA"
+    array current_reasons
+    date computed_at
+    array ratings "by, role, outcome RATED | SKIPPED, rating, note, at, snapshot status and reasons"
+  }
+  HOUSE_HEALTH_REPORT {
+    ObjectId _id PK
+    ObjectId house_id FK
+    ObjectId farm_id FK
+    string kind "DAILY | WEEKLY | MONTHLY | CUSTOM"
+    date period_start
+    date period_end
+    object house_metrics
+    array zone_sections
+    object expert_conclusion "text, by, at, edited_at"
   }
   WEATHER_OBSERVATION {
     ObjectId _id PK
     ObjectId farm_id FK
-    date hour "TTL 90 days"
+    date hour
     number temperature
     number humidity
     number precipitation_mm
@@ -476,9 +558,9 @@ erDiagram
     ObjectId _id PK
     ObjectId user_id FK
     string title
-    object ref "alert | health_report"
+    object ref "type: ALERT | HEALTH_REPORT | HEALTH_DAY | EXPERT_DECISION | PARAMETER_REVIEW | COEFFICIENT_PROPOSAL | TECHNICIAN_ACTION | INVITATION; id"
     date read_at
-    date created_at "TTL 90 days"
+    date created_at
   }
   HARVEST_BATCH {
     ObjectId _id PK
@@ -489,15 +571,26 @@ erDiagram
     date harvest_date
     number nest_count
     number weight_grams
+    string nest_type
+    string photo_object_key
     object env_snapshot
-    object flock_snapshot
+    object flock_snapshot "of the zone's house"
+    bool is_deleted
   }
   AUDIT_LOG {
     ObjectId _id PK
     ObjectId actor_id FK
+    string actor_role
+    ObjectId farm_id FK
     string action
     string target_type
     string target_id
+    object before
+    object after
+    string source_ip
+    string client
+    string correlation_id
+    date created_at
   }
   PARAMETER_REVIEW {
     ObjectId _id PK
@@ -506,7 +599,8 @@ erDiagram
     string group "thresholds | fuzzy"
     object old_values
     object new_values
-    string status "planned: PENDING_REVIEW | ACCEPTED | REVERTED | ADJUSTED"
+    string status "PENDING_REVIEW | ACCEPTED | REVERTED | ADJUSTED"
+    ObjectId reviewed_by FK
   }
   COEFFICIENT_PROPOSAL {
     ObjectId _id PK
@@ -514,22 +608,25 @@ erDiagram
     ObjectId submitted_by FK
     object suggested_values
     object current_values
-    string status "planned: PROPOSED | APPROVED | REJECTED | SUPERSEDED"
+    string status "PROPOSED | APPROVED | REJECTED | SUPERSEDED"
     string note
   }
   SYSTEM_SETTING {
     bool _singleton UK
     object default_thresholds
-    object sla_hours
+    array default_threshold_history "values, source, by, at"
   }
 
   USER ||--o{ FARM : "owns"
   FARM }o--o{ USER : "members"
+  USER ||--o{ PUSH_TOKEN : "registers"
   FARM ||--o{ INVITATION : "invites"
   FARM ||--o{ HOUSE : "has"
   HOUSE ||--o{ ZONE : "has floors"
   ZONE ||--o{ SENSOR_NODE : "controlled by"
   HOUSE ||--o{ CAMERA_NODE : "entrances"
+  PROVISIONED_DEVICE ||--o| SENSOR_NODE : "registered as"
+  PROVISIONED_DEVICE ||--o| CAMERA_NODE : "registered as"
   SENSOR_NODE ||--o{ TELEMETRY : "publishes"
   SENSOR_NODE ||--o{ RELAY_OVERRIDE_LOG : "overridden"
   SENSOR_NODE ||--o{ AUDIO_TRACK : "plays"
@@ -537,65 +634,82 @@ erDiagram
   HOUSE ||--o{ ALERT : "house alerts"
   CAMERA_NODE ||--o{ BIRD_COUNT_RECORD : "sessions"
   CAMERA_NODE ||--o{ BIRD_COUNT_BUCKET : "5-minute counts"
-  ZONE ||--o{ ZONE_HEALTH_REPORT : "reported"
+  HOUSE ||--o{ HOUSE_HEALTH_DAY : "assessed daily"
+  HOUSE ||--o{ HOUSE_HEALTH_REPORT : "reported"
+  FARM ||--o{ WEATHER_OBSERVATION : "weather"
   USER ||--o{ NOTIFICATION : "receives"
   ZONE ||--o{ HARVEST_BATCH : "harvested"
   USER ||--o{ AUDIT_LOG : "acts"
-  ZONE ||--o{ PARAMETER_REVIEW : "owner changes, planned"
-  ZONE ||--o{ COEFFICIENT_PROPOSAL : "suggestions, planned"
-  HOUSE ||--o{ HOUSE_HEALTH_DAY : "assessed daily, planned"
-  FARM ||--o{ WEATHER_OBSERVATION : "weather, planned"
+  ZONE ||--o{ PARAMETER_REVIEW : "owner changes"
+  ZONE ||--o{ COEFFICIENT_PROPOSAL : "suggestions"
 ```
 
-Entities and attributes marked *planned* are required by Report 3 (EXPERT-FR-010, 011, ENV-FR-027, VISION-FR-019, EXPERT-FR-003, ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, THREAT-FR-014) but are not in the code or the database script yet; Section 6.4 lists them.
+The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` by `farm_id` and actor role; it is not a separate entity. The device label state (SM-16) is derived from `PROVISIONED_DEVICE` and the node registered with its device ID.
 
 ### 6.2 Collections
 
-| Collection | Entity | Key indexes | Retention | Notes |
-| --- | --- | --- | --- | --- |
-| `users` | User | `email` unique | — | Password hash, OTP and reset hashes never returned by the API |
-| `farms` | Farm | `owner_id`, `members.user_id` | Soft delete | Members embedded with role |
-| `invitations` | Invitation | `token` unique; `farm_id + invited_email + status` | — | 7-day expiry by job |
-| `houses` | House | `farm_id` | — | Bird-count tuning per house |
-| `zones` | Zone | `house_id`, `farm_id` | — | `farm_id` immutable; histories embedded |
-| `sensornodes` | Controller | `device_id` unique; `zone_id`; `status + last_heartbeat` | Decommission flag | Relay state, override expiry, diagnostics |
-| `cameranodes` | AI node / camera | `device_id` unique; `house_id` | — | Counting ring and its history |
-| `provisioneddevices` | Device stock | `device_id` unique | — | Hash of the device key |
-| `telemetries` | Telemetry | `zone_id + timestamp`; TTL on `timestamp` | 90 days | One stored sample per 10 s per device |
-| `relayoverridelogs` | Override | `node_id + started_at`; `zone_id + started_at` | — | Source of the autonomy ratio |
-| `audiotracks` | Attractant track | `node_id + track_number` unique | — | |
-| `alerts` | Alert | `farm_id + zone_id + node_id + type + status`; partial `house_id + type + status`; TTL on `resolved_at` | 180 days after resolution | Expert verdict embedded |
-| `birdcountrecords` | Session count | `camera_node_id + session_type + session_date` unique; `house_id + session_date` | — | Upserted every 30 s |
-| `birdcountbuckets` | 5-minute count | `camera_node_id + bucket_start` unique; TTL | 90 days | |
-| `zonehealthreports` | Health report | `zone_id + period_end` unique | — | Expert conclusion embedded |
-| `notifications` | In-app notification | `user_id + created_at`; TTL | 90 days | |
-| `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date` | Soft delete | |
-| `auditlogs` | Audit entry | `actor_id + created_at`, `target_type + target_id`, `action + created_at` | — | |
-| `systemsettings` | Singleton settings | `_singleton` unique | — | Default thresholds |
+| Collection | Entity | Key indexes | Notes |
+| --- | --- | --- | --- |
+| `users` | User | `email` unique; `status` | Password hash and reset-code hashes never returned by the API |
+| `pushtokens` | Push token | `token` unique; `user_id` | Removed at sign-out and when FCM reports it invalid |
+| `farms` | Farm | `owner_id`, `members.user_id` | Members embedded with role |
+| `invitations` | Invitation | `token` unique; `farm_id + invited_email + status` | 7-day expiry by job |
+| `houses` | House | `farm_id` | Counting schedule, health levels, return-rate drop |
+| `zones` | Zone | `house_id`, `farm_id` | `farm_id` immutable; histories embedded; `config_version` raised by every change |
+| `sensornodes` | Controller | `device_id` unique; `zone_id`; `status + last_heartbeat` | Relays embedded, one expiry per relay |
+| `cameranodes` | AI node / camera | `device_id` unique; `house_id` | Counting ring and its history |
+| `provisioneddevices` | Device stock | `device_id` unique | Hashes of the activation key and the broker secret |
+| `telemetries` | Telemetry | `node_id + timestamp` unique; `zone_id + timestamp`; TTL on `timestamp` | One stored sample per 10 s per device; the unique index drops a re-sent buffered sample |
+| `relayoverridelogs` | Override | `node_id + started_at`; `zone_id + started_at` | Source of the autonomy ratio |
+| `audiotracks` | Attractant track | `node_id + track_number` unique | |
+| `alerts` | Alert | `farm_id + zone_id + node_id + type + status`; partial `house_id + type + status`; partial unique `node_id + event_id`; TTL on `resolved_at` | Expert verdict embedded |
+| `birdcountrecords` | Session count | `camera_node_id + session_type + session_date` unique; `house_id + session_date` | Computed from the buckets of the day's windows |
+| `birdcountbuckets` | 5-minute count | `camera_node_id + bucket_start` unique; TTL | |
+| `househealthdays` | Daily health status | `house_id + date` unique; `farm_id + date` | Ratings with their snapshots embedded |
+| `househealthreports` | Health report | `house_id + kind + period_start + period_end` unique | Zone sections and conclusion embedded |
+| `weatherobservations` | Weather hour | `farm_id + hour` unique; TTL | |
+| `notifications` | In-app notification | `user_id + created_at`; TTL | |
+| `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date` | Soft delete; photo in MinIO |
+| `auditlogs` | Audit entry | `actor_id + created_at`, `farm_id + created_at`, `target_type + target_id`, `action + created_at` | Source of the expert activity history |
+| `parameterreviews` | Review item | `zone_id + group + status` | One open item per zone and group |
+| `coefficientproposals` | Proposal | `zone_id + status` | |
+| `systemsettings` | Singleton settings | `_singleton` unique | Default thresholds and their sourced history |
 
 The exact field list, types and indexes of every collection are those of the database script (6.5).
 
-### 6.4 Planned Data Changes
+### 6.3 Data Retention
 
-| Change | Collection | Requirement |
+Report 3, BR-36 sets the retention periods; this table is how they are enforced.
+
+| Data | Period (BR-36) | Mechanism |
 | --- | --- | --- |
-| New collection for reviews of a Farm Owner's change | `parameterreviews` | EXPERT-FR-010 (SM-10) |
-| New collection for coefficient suggestion proposals | `coefficientproposals` | EXPERT-FR-011 (SM-11) |
-| `config_version` on the zone, `applied_config_version` on the controller | `zones`, `sensornodes` | ENV-FR-027 (SM-12) |
-| `DISMISSED` alert status and `previous_status` | `alerts` | EXPERT-FR-003 (SM-01) |
-| Seasonal counting schedule; incomplete-session flag on session records | `houses`, `birdcountrecords` | VISION-FR-019, 020 |
-| New collection for the daily health status of each house, with its indicators, reasons and ratings | `househealthdays` | ANALYTICS-FR-012, EXPERT-FR-012 (SM-17) |
-| New collection for hourly weather, TTL 90 days | `weatherobservations` | ANALYTICS-FR-013 |
-| Health-indicator levels per house | `houses` | BR-28 |
-| Reports per house with `kind` (daily, weekly, monthly, custom) instead of weekly per zone | `zonehealthreports` (renamed when migrated) | EXPERT-FR-005 |
-| Learned normal current per load; pump and fan current in telemetry; alert type `ACTUATOR_FAULT` | `sensornodes`, `telemetries`, `alerts` | THREAT-FR-014 |
-| Remove the unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest), or give them a requirement | `sensornodes`, `cameranodes`, `harvestbatches` | Known gap |
+| Telemetry | 90 days | TTL index on `telemetries.timestamp` |
+| 5-minute bird counts | 90 days | TTL index on `birdcountbuckets.bucket_start` |
+| Hourly weather | 90 days | TTL index on `weatherobservations.hour` |
+| In-app notifications | 90 days | TTL index on `notifications.created_at` |
+| Resolved alerts | 180 days after resolution | TTL index on `alerts.resolved_at` |
+| Session counts, daily statuses and ratings, reports, harvests, override logs, histories, audit log | Life of the installation | No TTL; soft delete where a requirement asks for it |
 
-The database script is regenerated from the models when these changes are made (6.5).
+### 6.4 Schema Migrations
+
+The Iteration 1 database is carried into this design by idempotent scripts (`npm run migrate:*`), run once at deployment (Section 11).
+
+| Migration | Collections | Requirement |
+| --- | --- | --- |
+| Alert types renamed (`PUMP_DRY` → `MISTING_INEFFECTIVE`, `POWER_OUTAGE` → `UNEXPECTED_RESTART`), `PREDATOR_DETECTED` alerts removed, `DISMISSED` and `previous_status` added | `alerts` | THREAT-FR-011, 012, EXPERT-FR-003 |
+| `is_active` replaced by `status` with the lock and deletion dates | `users` | Report 3 §6.14 |
+| Zalo and SMS notification preferences removed | `users` | Report 3 §8 |
+| One `control_mode` and one `override_expiry` per controller replaced by the embedded `relays` object; `heating` relay field removed; unused device states `ERROR`, `DEGRADED` mapped to `ONLINE` | `sensornodes`, `cameranodes` | BR-20, Report 3 §6.6 |
+| Broker secret issued for every device in the stock (to be flashed), `claimed_at`, `revoked_at` | `provisioneddevices` | FARM-FR-010, BR-27 |
+| `config_version` on zones, `applied_config_version` on controllers | `zones`, `sensornodes` | ENV-FR-027 |
+| Weekly zone reports moved into house reports with `kind` and zone sections | `zonehealthreports` → `househealthreports` | EXPERT-FR-005 |
+| Unused harvest state `ARCHIVED` removed; `nest_type`, `photo_object_key` | `harvestbatches` | HARVEST-FR-001 |
+| `sla_hours` removed from the settings | `systemsettings` | Report 3 §8 |
+| New collections created empty | `pushtokens`, `househealthdays`, `weatherobservations`, `parameterreviews`, `coefficientproposals` | ALERT-FR-002, ANALYTICS-FR-012, 013, EXPERT-FR-010, 011 |
 
 ### 6.5 Database Script
 
-`docs/database/init.mongo.js` creates every collection with a `$jsonSchema` validator (types, required fields, enumerations, nested objects and arrays) and all indexes, including unique, partial and TTL indexes. It is **generated from the Mongoose models** by `npm run db:script` (`backend/src/utils/dbScript.util.ts`), so the script, the ERD entities above and the code describe the same data:
+`docs/database/init.mongo.js` creates every collection with a `$jsonSchema` validator (types, required fields, enumerations, nested objects and arrays) and all indexes, including unique, partial and TTL indexes. It is **generated from the Mongoose models** by `npm run db:script` (`backend/src/utils/dbScript.util.ts`), so the script and the models always describe the same data, and every model change that brings the code closer to the ERD above regenerates it:
 
 - `tests/unit/utils/dbScript.util.test.ts` fails if the committed script differs from what the models produce, so a model change cannot be merged without regenerating it;
 - `tests/integration/databaseScript.test.ts` enforces the validators (`validationLevel: strict`, `validationAction: error`) on a MongoDB instance and writes real documents through the models, and checks that a document missing a required field is rejected.
@@ -612,36 +726,38 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 
 | Router | Main resources |
 | --- | --- |
-| `/auth` | Register, login, refresh, logout, OTP, password reset, notification preferences, Telegram link, deletion request |
+| `/auth` | Login, refresh, logout, first-sign-in password change, password reset, account creation from an invitation link, notification preferences, Telegram link, deletion request (no public sign-up) |
 | `/farms` | Farms, members, houses, zones, thresholds and reset, fuzzy tuning, detection tuning, bird-count tuning |
 | `/invitations` | Accept, decline |
 | `/devices` | Sensor nodes (register and move, also by the Farm Owner for MF-10; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
 | `/telemetry` | Latest and history |
-| `/alerts` | List, detail, acknowledge, verdict, verdict statistics |
+| `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert |
 | `/analytics` | Charts, comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
-| `/health-reports` | Reports and conclusions; planned: daily, weekly and monthly reports per house, daily health statuses of a house, a rating of a day, CSV of daily indicators (routes added to `api-spec.yaml` with the code) |
-| `/notifications` | Inbox, mark read |
+| `/health-reports` | Daily, weekly and monthly reports per house and conclusions; daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (days not yet rated or skipped by the caller are returned without status, BR-31) |
+| `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011) |
+| `/notifications` | Inbox, mark read; push-token registration and removal (ALERT-FR-002) |
 | `/harvests` | Harvest batches |
-| `/admin`, `/system` | Provisioned-device stock (add and return the activation key once, revoke, re-issue key), accounts, Technician accounts, deletion requests, default thresholds, audit log, technical overview |
-| `/internal/stream-auth` | MediaMTX authorisation (no user token, blocked from outside by the reverse proxy) |
+| `/admin`, `/system` | Provisioned-device stock (add and return the activation key and the broker secret once, revoke, re-issue key), Farm Owner and Technician accounts, lock, deletion requests, default thresholds, audit log, technical overview |
+| `/internal/stream-auth`, `/internal/mqtt-auth` | MediaMTX authorisation and EMQX device authentication (no user token, reachable only inside the Docker network) |
 
 ### 7.2 MQTT
 
-| Topic | Direction | Payload (main fields) | QoS |
-| --- | --- | --- | --- |
-| `swiftletcare/{farm}/{house}/{zone}/telemetry` | ESP32 → cloud | `deviceId`, six readings, `control_output`, timestamp; planned: `pump_current_a`, `fan_current_a` | 0 |
-| `…/{zone}/heartbeat` | ESP32 → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP | 0 |
-| `…/{zone}/relay/status` | ESP32 → cloud | `deviceId`, relay states, control mode | 0 |
-| `…/{zone}/alert` | ESP32 → cloud | `deviceId`, type, severity, details (planned type `ACTUATOR_FAULT`) | 0 |
-| `…/{zone}/relay/command` | cloud → ESP32 | `deviceId`, relay, state, duration, or `clear_override` | 1 |
-| `…/{zone}/config/update` | cloud → ESP32 | Thresholds, fuzzy and detection parameters (zone-wide), speaker settings or `RESTART`/`OTA` (with `deviceId`) | 1 |
-| `…/{zone}/config/reassign`, `…/{zone}/audio/command` | cloud → ESP32 | `deviceId`, new zone / play-stop. `config/reassign` is also sent by the backend itself when a heartbeat arrives on another topic than the registered zone (first connection, offline move; FARM-FR-003c) | 1 |
-| `swiftletcare/{farm}/{house}/heartbeat` | AI node → cloud | `deviceId`, model version | 0 |
-| `…/{house}/vision/bird-count` | AI node → cloud | Session counts every 30 s, or `kind: BUCKET` 5-minute counts | 1 |
-| `…/{house}/vision/alert` | AI node → cloud | `EDGE_AI_DEGRADED` | 1 |
-| `…/{house}/config/update` | cloud → AI node | `deviceId`, counting ring | 1 |
+Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its own broker credential (D3). EMQX authenticates a device through `POST /internal/mqtt-auth` (device ID and secret checked against the stock, refused once revoked) and authorises it with one static rule: a device publishes and subscribes only under `swiftletcare/dev/${username}/#`; the backend's service account subscribes to `swiftletcare/dev/+/…` with a persistent session and QoS 1. The backend resolves the farm, house and zone from the device record; a payload whose `deviceId` differs from the topic is dropped.
 
-Ingestion keys off `deviceId` in the payload, not the topic; retained messages are ignored.
+| Topic (under `swiftletcare/dev/{deviceId}/`) | Direction | Payload (main fields) | QoS |
+| --- | --- | --- | --- |
+| `telemetry` | controller → cloud | `deviceId`, six readings, stale sensors, `control_output`, `pump_current_a`, `fan_current_a`, timestamp | 0 |
+| `telemetry/buffered` | controller → cloud | Samples from the offline buffer, each with its own timestamp; deleted from flash on PUBACK | 1 |
+| `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `applied_config_version` | 0 |
+| `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected | 0 |
+| `relay/status` | controller → cloud | `deviceId`, per relay: state, mode, expiry; `commandId` of the command that caused the change, if any | 1 |
+| `alert` | controller → cloud | `deviceId`, `eventId`, type, severity, details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
+| `vision/bird-count` | AI node → cloud | Session counts every 30 s, or `kind: BUCKET` 5-minute counts | 1 |
+| `vision/alert` | AI node → cloud | `EDGE_AI_DEGRADED` with the frame rate | 1 |
+| `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: counting ring, `config_version` | 1 |
+| `cmd` | cloud → device | Envelope `commandId`, `type` (`RELAY`, `CLEAR_OVERRIDE`, `AUDIO`, `RESTART`, `OTA`), `issuedAt`, payload. Applied once per `commandId`; `RELAY`, `AUDIO` and `RESTART` older than BR-35 are not applied | 1 |
+
+Retained messages are never ingested by the backend. A move to another zone only updates the database and republishes `config`; nothing is sent about farm, house or zone.
 
 ### 7.3 WebSocket (Socket.io)
 
@@ -651,7 +767,7 @@ Clients authenticate with the access token. Rooms: `zone:<id>` (`JOIN_ZONE`), `h
 
 ## 8. State Machine Diagrams
 
-One diagram per lifecycle of Report 3, Section 6. Transition labels name the triggering requirement. Diagrams marked *planned* describe behaviour required by Report 3 that the code does not have yet (Section 12).
+One diagram per lifecycle of Report 3, Section 6. Transition labels name the triggering requirement; the diagrams add no rule of their own.
 
 ### 8.1 Alert — status (SM-01)
 
@@ -671,8 +787,6 @@ stateDiagram-v2
   RESOLVED --> [*]
 ```
 
-`DISMISSED` is planned.
-
 ### 8.2 Alert — expert verdict (SM-02)
 
 ```mermaid
@@ -690,8 +804,9 @@ stateDiagram-v2
 stateDiagram-v2
   [*] --> AUTO
   AUTO --> MANUAL : override applied (ENV-FR-016, 017)
-  MANUAL --> MANUAL : another relay overridden, expiry restarts (BR-20)
-  MANUAL --> AUTO : expiry or early cancel (ENV-FR-018, BR-20)
+  AUTO --> AUTO : rejected 403 / 422 / 409, or command older than BR-35
+  MANUAL --> MANUAL : another relay overridden, own expiry kept (BR-20)
+  MANUAL --> AUTO : this relay expires or is cancelled (ENV-FR-018, BR-20)
 ```
 
 ### 8.4 Invitation (SM-04)
@@ -707,24 +822,25 @@ stateDiagram-v2
   EXPIRED --> [*]
 ```
 
-### 8.5 Ticket (SM-05, removed)
+### 8.5 (SM-05, number not used)
 
-Removed with the maintenance tickets (Report 3, Sections 6.5 and 8). The number is kept so that SM-06…SM-17 keep theirs.
+The number is kept so that SM-06…SM-17 match Report 3, Sections 6.6–6.17.
 
 ### 8.6 Device — connection status (SM-06)
 
 ```mermaid
 stateDiagram-v2
   [*] --> PENDING : registered (FARM-FR-003, 004)
-  PENDING --> ONLINE : first heartbeat (FARM-FR-003b)
-  ONLINE --> OFFLINE : silent 30 s controller, 90 s AI node (BR-10)
+  PENDING --> ONLINE : first heartbeat, configuration sent (FARM-FR-003b, 003c)
+  ONLINE --> OFFLINE : silent beyond BR-10 for its kind
   OFFLINE --> ONLINE : heartbeat
+  PENDING --> DECOMMISSIONED : removed (FARM-FR-008)
   ONLINE --> DECOMMISSIONED : removed or replaced (FARM-FR-008)
   OFFLINE --> DECOMMISSIONED : removed or replaced
   DECOMMISSIONED --> [*]
 ```
 
-Registration is done by the Farm Owner or a Technician (MF-10). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012). `ERROR` and `DEGRADED` are declared in the device status enumeration but never assigned by the code; no requirement uses them (Section 12).
+Registration is done by the Farm Owner or a Technician (MF-10). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
 
 ### 8.7 Misting protection (SM-07, controller)
 
@@ -733,7 +849,7 @@ stateDiagram-v2
   [*] --> IDLE
   IDLE --> MONITORING : misting demand > 0 or manual ON (THREAT-FR-011)
   MONITORING --> IDLE : demand back to 0
-  MONITORING --> LATCHED : below humidity_min, no rise after pump_dry_on_sec, PUMP_DRY
+  MONITORING --> LATCHED : below humidity_min, no rise after pump_dry_on_sec, MISTING_INEFFECTIVE
   LATCHED --> IDLE : demand back to 0, or auto/manual switch
   LATCHED --> MONITORING : retry after 30 min (BR-11)
 ```
@@ -756,7 +872,7 @@ stateDiagram-v2
   CONCLUDED --> CONCLUDED : author edits
 ```
 
-### 8.10 Review of a Farm Owner's change (SM-10, planned)
+### 8.10 Review of a Farm Owner's change (SM-10)
 
 ```mermaid
 stateDiagram-v2
@@ -770,7 +886,7 @@ stateDiagram-v2
   ADJUSTED --> [*]
 ```
 
-### 8.11 Coefficient suggestion proposal (SM-11, planned)
+### 8.11 Coefficient suggestion proposal (SM-11)
 
 ```mermaid
 stateDiagram-v2
@@ -783,7 +899,7 @@ stateDiagram-v2
   SUPERSEDED --> [*]
 ```
 
-### 8.12 Configuration sync per controller (SM-12, planned)
+### 8.12 Configuration sync per controller (SM-12)
 
 ```mermaid
 stateDiagram-v2
@@ -801,19 +917,17 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-  [*] --> DRAFT : owner records a harvest, snapshots attached (MARKET-FR-001)
-  DRAFT --> DRAFT : owner edits (MARKET-FR-005)
-  DRAFT --> DELETED : owner soft-deletes (MARKET-FR-005)
+  [*] --> DRAFT : owner records a harvest, snapshots attached (HARVEST-FR-001)
+  DRAFT --> DRAFT : owner edits (HARVEST-FR-005)
+  DRAFT --> DELETED : owner soft-deletes (HARVEST-FR-005)
   DELETED --> [*]
 ```
-
-`ARCHIVED` is declared in the harvest status enumeration but never assigned (Section 12).
 
 ### 8.14 User account (SM-14)
 
 ```mermaid
 stateDiagram-v2
-  [*] --> ACTIVE : verified registration, accepted invitation, Technician created (AUTH-FR-001, 005c, 010)
+  [*] --> ACTIVE : created by the Administrator, or from an invitation link (AUTH-FR-005c, 010)
   ACTIVE --> LOCKED : Administrator locks with reason (AUTH-FR-011)
   LOCKED --> ACTIVE : Administrator unlocks
   ACTIVE --> DELETION_REQUESTED : user requests deletion (AUTH-FR-012)
@@ -842,26 +956,35 @@ stateDiagram-v2
   IN_SERVICE --> RELEASED : removed or replaced (FARM-FR-008)
   RELEASED --> IN_SERVICE : registered again (BR-26)
   IN_STOCK --> IN_STOCK : key re-issued
-  RELEASED --> RELEASED : key re-issued (planned)
+  RELEASED --> RELEASED : key re-issued, label lost or exposed
   IN_STOCK --> REVOKED : revoked by Administrator
   RELEASED --> REVOKED : revoked by Administrator
   REVOKED --> [*]
 ```
 
-The state is derived from `provisioned_devices` (`claimed_at`, `revoked_at`) and whether a sensor or camera node with that device ID is in service; it is not a stored field. Re-issuing the key of a released device is blocked by the code today (Section 12).
+The state is derived from `provisioneddevices` (`claimed_at`, `revoked_at`) and whether a sensor or camera node with that device ID is in service; it is not a stored field.
 
-### 8.17 Daily health status of a house (SM-17, planned)
+### 8.17 Daily health status of a house and assessor rating (SM-17)
 
 ```mermaid
 stateDiagram-v2
   [*] --> COMPUTED : daily assessment (ANALYTICS-FR-012)
-  COMPUTED --> COMPUTED : late data, recomputed
-  COMPUTED --> RATED : first assessor rating (EXPERT-FR-012)
-  RATED --> RATED : another assessor rates, note added
-  COMPUTED --> UNRATED : 7 days without rating
-  RATED --> [*]
-  UNRATED --> [*]
+  COMPUTED --> COMPUTED : late data or verdict, current status recomputed; snapshots kept
 ```
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING : day computed, one per Farm Owner and Domain Expert; status hidden (BR-31)
+  PENDING --> RATED : rating + snapshot stored together, status shown (EXPERT-FR-012)
+  PENDING --> SKIPPED : status shown, not in NFR-14
+  PENDING --> EXPIRED : 7 days without rating
+  RATED --> RATED : note added
+  RATED --> [*]
+  SKIPPED --> [*]
+  EXPIRED --> [*]
+```
+
+The rating state is derived per assessor from `househealthdays.ratings` and the day's date (Report 3, Section 6.18); a request to rate again after `RATED`, `SKIPPED` or `EXPIRED` is rejected with 409.
 
 ## 9. Activity Diagrams
 
@@ -898,7 +1021,7 @@ flowchart TB
     A1[Measure NH3 and CO2] --> A2[Publish telemetry]
   end
   subgraph B[Backend]
-    B1{Above zone<br/>alert limit?} -- no --> B2[Store, show trend]
+    B1{Above zone alert limit<br/>for the dwell time of BR-34?} -- no --> B2[Store, show trend]
     B1 -- yes --> B3[THRESHOLD_BREACH MEDIUM<br/>no fan action]
     B3 --> B4[Notify Farm Owner]
   end
@@ -923,12 +1046,12 @@ flowchart TB
     A1 -- no --> A3[Keep controlling with stored config<br/>buffer 1 sample / 10 s in flash]
     A3 --> A1
     A4[Firmware hang or power loss] --> A5[Watchdog / power-on restart]
-    A5 --> A6[Resume control,<br/>publish POWER_OUTAGE]
-    A2 --> A7[Upload buffered samples]
+    A5 --> A6[Resume control, queue<br/>UNEXPECTED_RESTART with reset reason]
+    A2 --> A7[Upload buffered samples<br/>and queued alerts, QoS 1]
   end
   subgraph B[Backend]
     B1{Heartbeat for 30 s?} -- no --> B2[OFFLINE + NODE_OFFLINE]
-    B3[Heartbeat back] --> B4[ONLINE, resolve alert,<br/>push full configuration]
+    B3[Heartbeat back] --> B4[ONLINE, resolve alert;<br/>retained configuration delivered]
   end
   subgraph O[Farm Owner]
     O1[Receive offline / restart alerts]
@@ -944,7 +1067,7 @@ flowchart TB
 flowchart TB
   subgraph C[Controller]
     A1{Which fault?}
-    A1 -- pump on, humidity not rising --> A2[Stop misting for the episode<br/>PUMP_DRY, retry after 30 min]
+    A1 -- pump on, humidity not rising --> A2[Stop automatic misting for the episode<br/>MISTING_INEFFECTIVE, retry after 30 min]
     A1 -- sensor timeout / CRC --> A3[Mark stale, safe state<br/>SENSOR_FAULT or RS485_BUS_FAILURE]
     A1 -- speaker on, level low --> A4[SPEAKER_FAILURE]
   end
@@ -1053,7 +1176,7 @@ flowchart TB
 ```mermaid
 flowchart TB
   subgraph B[Backend]
-    B1[Weekly zone health report] --> B2[Notify owner and expert]
+    B1[Daily, weekly, monthly<br/>house health reports] --> B2[Notify owner and expert]
     B3[Coefficient suggestion from data]
   end
   subgraph O[Farm Owner]
@@ -1086,12 +1209,12 @@ flowchart TB
     O1[Switch a relay for a duration<br/>harvest, cleaning, maintenance]
   end
   subgraph B[Backend]
-    B1{Role allowed and<br/>1 min ≤ duration ≤ 24 h?} -- no --> B2[Reject]
-    B1 -- yes --> B3[Log override, send command]
+    B1{Role allowed, duration within BR-08,<br/>pump ON confirmed if an alert is open?} -- no --> B2[Reject 403 / 422 / 409]
+    B1 -- yes --> B3[Log override, send command<br/>with commandId]
     B4[Expiry job] --> B5[Clear override, log end]
   end
   subgraph C[Controller]
-    C1[Apply relay, report MANUAL] --> C2[On expiry: back to AUTO]
+    C1[Apply relay if fresh, report MANUAL] --> C2[On this relay's expiry: back to AUTO]
   end
   subgraph H[House - outside the system]
     H1[Controller failed:<br/>relays release, loads stop] --> H2[Farmer runs loads with<br/>the house's own switches]
@@ -1118,14 +1241,12 @@ flowchart TB
     B1{Key valid, device not<br/>in service, zone accessible?} -- no --> B2[Reject 400 / 409 / 403]
     B1 -- yes --> B3[Register PENDING, audit]
     B9[Still PENDING after 15 min:<br/>notify registrant]
-    B4{Heartbeat on the<br/>registered zone topic?} -- no --> B5[Send config/reassign]
-    B4 -- yes --> B6[ONLINE, push zone configuration]
+    B4[First heartbeat on the<br/>device's own topics] --> B6[ONLINE, publish zone<br/>configuration retained]
     B7{Reported version =<br/>zone version?} -- yes --> B8[Configuration applied]
     B7 -- no, 3 heartbeats --> B10[CONFIG_MISMATCH]
   end
   subgraph C[Controller]
     C1[Power on, no Wi-Fi:<br/>AP mode] --> C2[Join farm Wi-Fi,<br/>first heartbeat]
-    C3[Store zone, restart<br/>on zone topic]
     C4[Apply configuration,<br/>report version]
   end
   A2 --> O1
@@ -1133,12 +1254,11 @@ flowchart TB
   B3 --> O3
   B3 -.-> B9
   C1 --> O3 --> C2 --> B4
-  B5 --> C3 --> B4
   B6 --> C4 --> B7
   B8 --> O4
 ```
 
-Moving a controller to another floor: scan the new floor's code; an online controller receives `config/reassign` at once, an offline one gets the same correction at its next heartbeat (B4). A Technician may follow the same steps on any farm; the Farm Owners are notified of each registration or move (FARM-FR-009).
+Moving a controller to another floor: scan the new floor's code; the backend changes the zone in the database and republishes the new zone's configuration, which an online controller applies at once and an offline one at its next connection. A Technician may follow the same steps on any farm; the Farm Owners are notified of each registration or move (FARM-FR-009).
 
 ### 9.11 SF-02 Remote device maintenance (AD-11)
 
@@ -1151,7 +1271,7 @@ flowchart TB
     T2 -- no --> T4[Replace or set up again on site<br/>steps of MF-10]
   end
   subgraph B[Backend]
-    B1{Role Technician,<br/>device online or degraded?} -- no --> B2[Reject 403 / 409]
+    B1{Role Technician,<br/>device online?} -- no --> B2[Reject 403 / 409]
     B1 -- yes --> B3[Send command with deviceId, audit]
     B3 --> B4[Notify the Farm Owners in the app]
     B5{OTA confirmed by heartbeat<br/>within 30 min?} -- no --> B6[FAILED]
@@ -1173,8 +1293,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
+  subgraph A0[Administrator]
+    A0a[Create the Farm Owner's account<br/>temporary password]
+  end
   subgraph U[Farm Owner]
-    U1[Register, verify code] --> U2[Create farm]
+    U1[First sign-in, change password] --> U2[Create farm]
     U2 --> U3[Invite co-owner or Domain Expert]
   end
   subgraph B[Backend]
@@ -1183,11 +1306,12 @@ flowchart TB
     B2 -- no --> B4[EXPIRED]
   end
   subgraph E[Invitee]
-    E1[Accept or decline]
+    E1[Accept or decline;<br/>no account: create it from the link]
   end
   subgraph A[Administrator]
     A1[Create Technicians, lock accounts,<br/>handle deletion requests]
   end
+  A0a --> U1
   U3 --> B1 --> E1 --> B2
 ```
 
@@ -1221,30 +1345,32 @@ flowchart TB
     W1[Hourly temperature,<br/>humidity, rainfall]
   end
   subgraph B[Backend]
-    B1[Evening return-rate check done] --> B2{Data complete?}
-    B2 -- no --> B3[Status INSUFFICIENT_DATA]
-    B2 -- yes --> B4[Indicators: environment, air,<br/>flock, noise vs house levels]
-    B4 --> B5{Flock CLEAR and another<br/>source deviates?}
-    B5 -- yes --> B6{Rain in a session window<br/>and flock alone?}
-    B6 -- no --> B7[Status ACTION]
-    B6 -- yes --> B8[Status WATCH]
+    B1[Evening return-rate check done] --> B2{Environment and flock<br/>complete? BR-28}
+    B2 -- no --> B3[INSUFFICIENT_DATA]
+    B2 -- yes --> B4[Indicators vs house levels;<br/>optional source incomplete: not assessed;<br/>dismissed noise not counted]
+    B4 --> B5{Flock CLEAR and environment,<br/>air or noise deviates? BR-29}
+    B5 -- yes --> B6{Deciding sources exactly flock + noise,<br/>rain over a session and a noise episode? BR-30}
+    B6 -- no --> B7[ACTION]
+    B6 -- yes --> B8[WATCH]
     B5 -- no --> B9{Any CLEAR or two SLIGHT?}
     B9 -- yes --> B8
-    B9 -- no --> B10[Status GOOD]
-    B11[Store day with reasons,<br/>daily report, notify]
+    B9 -- no --> B10[GOOD]
+    B11[Store current status with reasons,<br/>daily report, notify]
     B12[Weekly / monthly reports]
+    B13[Late data or verdict:<br/>recompute current status only]
   end
   subgraph A[Farm Owner / Domain Expert]
-    A1[Open the day: give own status first] --> A2[See system status,<br/>reasons, evidence]
+    A1[Open the day: give own status first] --> A2[See status and reasons;<br/>snapshot stored with the rating]
     A3[Read reports, download PDF / CSV,<br/>expert writes conclusion]
   end
-  W1 --> B4
+  W1 --> B6
   B3 --> B11
   B7 --> B11
   B8 --> B11
   B10 --> B11
   B11 --> A1
   B11 --> B12 --> A3
+  B13 --> B11
 ```
 
 ## 10. Security Design
@@ -1252,15 +1378,16 @@ flowchart TB
 | Concern | Design |
 | --- | --- |
 | Authentication | JWT access token (15 min) in the response body; refresh token (30 days) in an httpOnly, `sameSite=strict` cookie and stored hashed per user so each one can be revoked; password reset revokes all |
-| Authorisation | `requireRole` on every route following Report 3, Section 2.4; farm membership checked in services (`farmAccess.util`); a Technician reaches every farm's devices but never its environmental data, relays, thresholds or alerts, and every device action is audited and notified to the Farm Owners |
+| Authorisation | No public sign-up: accounts are created by the Administrator or from an invitation link; `requireRole` on every route following Report 3, Section 2.4; farm membership checked in services (`farmAccess.util`); a Technician reaches every farm's devices and their device alerts (FARM-FR-009) but never its environmental data, relays, thresholds, or its environmental and inferred alerts, and every device action is audited and notified to the Farm Owners |
 | Passwords and codes | bcrypt; one-time codes hashed and never returned by the API |
 | Rate limiting | 300 requests/min per account; 10 failed sign-ins / 15 min per IP; 30 refreshes/min per IP |
-| Devices | Activation key from the provisioned stock, printed on the device label and checked only by the backend (stored hashed, compared in constant time, one message for an unknown ID and a wrong key); never stored on the controller; a device in service is never registered again (BR-26); labels and floor codes carry no Wi-Fi or MQTT credential; MQTT username/password over TLS (port 8883 in production); commands to one device carry its `deviceId`; OTA only over HTTPS from allowed hosts with SHA-256 verification and rollback |
-| Health and reports | Ratings and downloads limited to the Farm Owners and Domain Expert of the farm; exported files carry names and figures, never internal identifiers; the weather service receives only the farm's coordinates |
-| Camera | The RTSP port of the camera is forwarded on the house modem (static IP) for the AI node only; strong camera password, kept only in the AI node's `.env`; source IP limited to the AI node's line where the modem allows it, otherwise listed as a limitation (Report 3, Section 8.1) |
-| Video | Viewing tokens valid 60 s for one camera path, signed with a separate secret; the raw feed is readable only by the pipeline |
+| Devices | Activation key from the provisioned stock, printed on the device label and checked only by the backend (stored hashed, compared in constant time, one message for an unknown ID and a wrong key); never stored on the controller; a device in service is never registered again (BR-26); labels and floor codes carry no Wi-Fi or broker credential. Each device has its own broker secret, flashed with its device ID and stored hashed in the stock; EMQX checks it through `/internal/mqtt-auth` and refuses it once the entry is revoked |
+| Broker | MQTT over TLS only (8883), the controller and the AI node verifying the server with the CA certificate of its issuer; a device reaches only `swiftletcare/dev/${username}/#` (NFR-10 d); commands carry a command ID and issue time and are applied once and only while fresh (BR-35); device alerts carry an event ID; OTA only over HTTPS with the CA certificate, SHA-256 verification and rollback |
+| Health and reports | Ratings and downloads limited to the Farm Owners and Domain Expert of the farm; the status of a day is hidden server-side from an assessor who has not rated or skipped it (BR-31); exported files carry names and figures, never internal identifiers; the weather service receives only the farm's coordinates |
+| Camera | The RTSP port of the camera is forwarded on the house modem (VNPT static-IP plan) with a source-IP rule: only the AI node's static public IP reaches it, every other source is dropped by the modem (NFR-10 e); strong camera password, kept only in the AI node's `.env`; the rule is re-checked from a 4G connection after any change of the modem or of the AI node's line. RTSP is not encrypted between the two lines; this residual risk is accepted for the prototype, and RTSPS (if the camera supports it) or a VPN between the two modems replaces it when available (Report 3, Section 8.1) |
+| Video | Viewing tokens valid 60 s for one camera path, signed with a separate secret, for WebRTC and HLS alike; the raw feed is readable only by the pipeline |
 | Secrets | Environment variables only (`.env.example` documents them); gitleaks scan in CI |
-| Personal data | Account deletion with anonymisation (AUTH-FR-012, Decree 13/2023/ND-CP); audit log of sensitive changes |
+| Personal data | Account deletion with anonymisation (AUTH-FR-012, Decree 13/2023/ND-CP); audit log of sensitive changes with source IP, client and correlation ID; push tokens and Telegram chat IDs never written to logs |
 
 ---
 
@@ -1281,7 +1408,7 @@ flowchart LR
   end
   subgraph HOUSE[Test house - VNPT line, static public IP]
     ESP[ESP32 controllers]
-    CAM[IP camera<br/>RTSP, port 18554 forwarded]
+    CAM[IP camera<br/>RTSP, port 18554 forwarded,<br/>AI node's IP only]
   end
   subgraph HOME[Member's home]
     PC[AI node:<br/>spare desktop PC]
@@ -1306,33 +1433,15 @@ Why this split: users, the panel's network and the controllers need one stable p
 | Firmware | OTA from the Technician console; the new image is kept only after it reaches the broker within 10 minutes, otherwise the bootloader returns to the previous one |
 | Monitoring | Technical overview (SYSTEM-FR-003), device and AI-node status and alerts (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`), audit log, `docker compose logs` |
 
-Not in the repository yet (Section 12): `docker-compose.staging.yml`, Dockerfiles for backend and web, the Caddy configuration, a demo seed covering every main workflow, MQTT over TLS in the firmware.
+The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of the backend and the web, the Caddyfile, the TLS proxy configuration, the EMQX authentication and authorisation files, `.env.staging.example` and the demo seed of every scenario of the Design Brief, Appendix A2 (procedure: `docs/deploy/staging.md`).
 
 ---
 
-## 12. Design Status and Known Gaps
-
-The design above is the target of Report 3. The parts not yet implemented in code are listed with their owners in `docs/reports/README.md` and in section 5 of the Design Brief. The main ones affecting this document are:
-
-| Area | Gap |
-| --- | --- |
-| Alert lifecycle | `DISMISSED` status (SM-01) |
-| Expert loop | Review items and suggestion proposals (SM-10, SM-11); owner notifications of every expert decision; owner fallback without an expert |
-| Configuration sync | Configuration version, `CONFIG_MISMATCH` (SM-12) |
-| Bird counting | No trained swiftlet model yet (the COCO `yolo26n` finds no bird in the infrared images of 22/10); publishing and video push are written but not yet run against staging; throughput risk: two tiles with the COCO model ran at about 7–12 fps on a laptop (not a reliable measurement) against the 25 fps of NFR-04, to be measured on the AI node PC; seasonal schedule and incomplete sessions (backend); counting-ring editor screen and mobile live stream |
-| Clients | Web Domain Expert screens exist (`/expert/*`: dashboard, alert verdicts, tuning, analytics, reports) but still read the SRS v2.1.4 names, fall back to mock data and sit outside the FE_Design folder plan; no counting-ring editor; leftovers of the old scope (a `heating` relay field, Zalo/SMS options); mobile is a scaffold without push registration or QR setup |
-| Device setup (MF-10) | Moving an offline controller is rejected; re-issuing the key of a device that was registered once is blocked; label and floor-code printing, QR scanning and the setup progress screen are not built |
-| Staging | 24-hour pull test of the camera from the AI node at a member's home, with counts compared on the same clip read locally; staging compose file, Dockerfiles for backend and web, Caddy configuration and a demo seed for every main workflow not written; firmware connects on port 1883 without TLS (`MQTTManager.cpp`), so the controller cannot reach the staging broker on 8883 until TLS with the CA certificate is added |
-| Health assessment (MF-11) | Daily health status, ratings, health levels, reports per house (daily, weekly, monthly), PDF and CSV export, weather job: not built (SM-17, D10, D12, D13) |
-| Hardware | Controller PCB with current transformers and actuator check (D11, THREAT-FR-014) not built. Bypass switches removed from scope (Report 3 §8) |
-| Data model | Planned entities and attributes of Section 6.4; unused enumeration values `ERROR`, `DEGRADED` (device) and `ARCHIVED` (harvest) |
-
----
-
-## 13. Revision History
+## 12. Revision History
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.1.0 | 26/10/2026 | SM-17 splits the day status from the rating state of each assessor (`ratingWindow` job and the day's `state` field removed). Harvest requirements referred to as `HARVEST-FR` (Report 3 3.1.0). Camera port restricted to the AI node's static IP by a modem rule (D5, Sections 10, 11). Final design for Review 2 against Report 3 3.1.0: device topics and one broker credential per device with a static authorisation rule, QoS 1 with event and command IDs, retained configuration, `esp-mqtt` on the ESP32, `config/reassign` removed (D3, D9, Sections 2.2, 5.1, 7.2, 10, AD-10); decisions D15 (manual override within limits) and D16 (current status and evaluation snapshot); Logical ERD as the final design: user status, push tokens, per-relay override, telemetry validity, alert event ID and details, house health reports with a unique key per kind and period, notification references, harvest type and photo, audit source, stock credentials, `sla_hours` removed; Section 6.3 data retention (BR-36), Section 6.4 schema migrations, Section 5.5 code location of the engineering constants; mobile scope, HLS stream and FCM token in Section 5.4; state machines and activity diagrams aligned (SM-03, 06, 14, 17; AD-02, 03, 04, 08, 09, 10, 11, 12, 14); 'planned' marks and the former Section 12 removed: implementation gaps are tracked only in Project Tracking |
 | 1.0.10 | `[TEAM]` | Tickets, SLA, Technician regions and the Administrator's farm management removed from the code (pull requests #100–#106): permission and supporting-role gaps closed in Section 12, done ticket, region, coordinate and `MAINTENANCE_DUE` rows dropped from Section 6.4 |
 | 1.0.9 | `[TEAM]` | A farm is one place with required coordinates (Report 3 FARM-FR-001, A-5): `address` and `coordinates` in the ERD, planned validator in Section 6.4, location field in the farm form (Section 5.4) |
 | 1.0.8 | `[TEAM]` | Maintenance tickets, SLA and Technician regions removed (Report 3 §8, BM03 row 9): decision D14, ERD and collections, jobs, REST and WebSocket, SM-05 removed, AD-04 with repeated alerts and `MAINTENANCE_DUE`, AD-11 rewritten as remote device maintenance, security and gaps |

@@ -30,12 +30,13 @@ def note_after(tbl, text):
     para=docx.text.paragraph.Paragraph(np_, target._parent)
     for r in para.runs[1:]: r._r.getparent().remove(r._r)
     para.runs[0].text=text
-note_after(d.tables[5], 'Full list with FR references: docs/reports/README.md and SDD Section 12. High findings of the self-review (BM02) marked Kept or Planned are added here after the prompt is run.')
-note_after(d.tables[6], 'FO = Farm Owner; DE = Domain Expert (Farm Owner if none, BR-22); (auto) = done by a system component, not an actor.')
+note_after(d.tables[5], 'Each gap with its requirements: Project Tracking, Section 6 (G-01…G-19). High findings of the self-review (BM02) marked Kept or Planned are added here after the prompt is run.')
+note_after(d.tables[6], 'FO = Farm Owner; DE = Domain Expert (Farm Owner if none, BR-22); auto = done by a system component, not an actor; TC-Fnn = TC-Fnn-01..03 in Report 5. Status is copied from Project Tracking.')
 note_after(d.tables[9], 'Actors are people and external services only; the controller, the AI node and the backend are parts of SwiftletCare (SRS 2.3). WF-03 and WF-09 have one actor and are valid because each passes through three mandatory features.')
-# A3 note
+# A3 note, taken from the Markdown
+a3=re.search(r'^Automated in CI:.*$', txt, re.M).group(0)
 for p in d.paragraphs:
     if p.text.startswith('Automated in CI'):
-        p.runs[0].text='Automated in CI: at least 50% of the committed total (≥ 66 test cases). Transitions counted from SRS Section 6: alert status 10, verdict 2, relay mode 3, device 4, device label 6, configuration sync 4, review item 6, proposal 5, daily health status 5, health report 3.'
+        p.runs[0].text=a3
         for r in p.runs[1:]: r.text=''
 d.save(os.path.join(REPORTS,'design-brief','SWP490_R2_BM01_Design_Brief_SwiftletCare.docx'))

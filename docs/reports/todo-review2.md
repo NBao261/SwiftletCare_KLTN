@@ -1,205 +1,335 @@
-# Việc cần làm trước Review 2 — theo Report 3 (SRS) và Report 4 (SDD)
+# Việc cần làm — Review 2 và Iteration 2
 
-Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bảng "Chỗ lệch" trong `docs/reports/README.md` (số `#` ở cột Nguồn), các ô `[TEAM]`, và hướng dẫn chuẩn bị Review 2 (PDF). Cập nhật ngày 26/10/2026 (sau PR #106).
+Cập nhật 26/10/2026, sau khi đồng bộ hồ sơ: phiếu v3 + BM03 1.1, SRS 3.1.0, SDD 1.1.0, Design Brief 1.1, Report 5 1.1.0 (136 test case).
 
-**Cách dùng:** đánh `[x]` khi xong, điền người nhận vào cột Người. Việc xong ở code thì sửa luôn dòng tương ứng trong `docs/reports/README.md` ("Chỗ lệch") trong cùng PR. Mức ưu tiên:
+**Cách dùng:**
+- Trạng thái chỉ ghi ở `project-tracking.md`. File này chỉ liệt kê **các bước** làm từng gap (G-xx).
+- Đóng một gap thì trong cùng PR: sửa dòng gap ở Project Tracking §6, cập nhật trạng thái tính năng ở §3, và đổi nguồn test trong `report5/tc.py` từ `todo-auto` sang test thật rồi sinh lại Report 5.
+- Không sửa SRS/SDD để "khớp code"; code theo SRS/SDD. Hằng số mới thì thêm vào Report 3 §4.5, vị trí trong code thì thêm vào Report 4 §5.5.
+- Mức ưu tiên: **P0-Tag** phải xong trước khi gắn tag `review-2` · **P0-Demo** phải xong trước khi demo Defense 1.1 trên staging · **P1** yêu cầu M của Report 3, chưa chặn tag hay demo · **P2** dọn dẹp, tùy chọn.
 
-- **P0** — thiếu thì không demo được luồng chính hoặc hội đồng chắc chắn hỏi.
-- **P1** — yêu cầu bắt buộc (M) của Report 3 nhưng không chặn demo.
-- **P2** — sửa cho đúng chuẩn, nợ cũ, tùy chọn.
+## Các quyết định đã chốt (26/10/2026)
 
-**Việc ưu tiên nhất ở code** (bỏ ticket, SLA, vùng; quyền theo §2.4) có danh sách từng bước, từng file, chia theo PR ở [`todo-remove-platform.md`](todo-remove-platform.md) — **đã xong ở PR #100–#106**. Các dòng tương ứng ở mục 4 và 5 dưới đây là bản tóm tắt.
+1. Một installation phục vụ một chủ sở hữu nhà yến; **không có đăng ký công khai**. Admin tạo tài khoản Farm Owner và Technician; co-owner và Domain Expert vào bằng lời mời (BM03 dòng 10).
+2. Kênh ngoài app: **cả FCM push và Telegram**.
+3. Mobile **giữ đủ phạm vi phiếu** (3.2 b): theo dõi, phân tích số đếm, live stream (HLS), cảnh báo + push, can thiệp tay, setup QR, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, kiểm chứng và tinh chỉnh của chuyên gia.
+4. NFR:
+   - NFR-04: tốc độ xử lý ≥ tốc độ luồng camera (25 fps).
+   - NFR-08: tự động ≥ 95 %; độ ẩm trong ngưỡng ≥ 80 %.
+   - NFR-09: P ≥ 0,80, R ≥ 0,80, sai số ≤ 10 %, trên 20 clip 5 phút.
+   - NFR-11: MAE60 thấp hơn persistence.
+   - NFR-13: ≤ 10 phút.
+   - NFR-14: đồng thuận ≥ 70 % kèm khoảng tin cậy 95 %, trên ≥ 14 ngày; kappa có trọng số và Gwet's AC1 chỉ để báo cáo.
+5. MQTT **theo thiết bị**: `swiftletcare/dev/{deviceId}/…`, mỗi thiết bị một credential, ACL tĩnh, ESP32 chuyển sang `esp-mqtt` + TLS, bỏ `config/reassign`.
+6. Đổi tên cảnh báo `PUMP_DRY` → `MISTING_INEFFECTIVE`, `POWER_OUTAGE` → `UNEXPECTED_RESTART` (+ `reset_reason`), **không giữ alias** ngoài bảng `ALERT_TYPE_ALIAS` cho firmware cũ.
+7. Can thiệp tay:
+   - Bơm ON tối đa 30 phút.
+   - Phải xác nhận (thiếu xác nhận thì 409) khi zone đang có `SENSOR_FAULT`, `RS485_BUS_FAILURE` hoặc `MISTING_INEFFECTIVE`.
+   - Mỗi relay có hạn riêng.
+   - Lệnh quá 60 giây kể từ lúc phát thì không áp dụng.
+8. Trạng thái sức khỏe:
+   - `current_status` luôn tính lại theo dữ liệu.
+   - `evaluation_snapshot` lưu theo từng lượt chấm, không bao giờ đổi.
+   - Môi trường và đàn chim là nguồn bắt buộc; không khí và tiếng ồn là tuỳ chọn.
+   - Mưa chỉ hạ `ACTION` → `WATCH` khi nguồn quyết định đúng là đàn chim + tiếng ồn.
+   - Cảnh báo tiếng ồn đã `DISMISSED` không tính.
+9. `THRESHOLD_BREACH` cho cả 5 chỉ số: nhiệt độ/độ ẩm phải ngoài ngưỡng 10 phút, ánh sáng/NH3/CO2 phải ngoài ngưỡng 5 phút.
 
 ---
 
-## 1. Hồ sơ Review 2 (không phải code)
+## 1. Hồ sơ Review 2
 
-| | Việc | Ưu tiên | Người | Ghi chú |
-|---|---|:---:|---|---|
-| [x] | Phiếu đăng ký bản đề xuất chốt v3 + **BM03** | P0 | | `registration-v3.md`, `bm03-record-of-changes.md`, docx ở `registration/`. Còn: thêm số điện thoại vào bản docx nộp (repo cố ý không lưu), điền mã đề tài, GVHD, ngày; xuất PDF chung một file `…_R2_Registration.pdf` |
-| [x] | Report 1 (Introduction), Report 2 (Project Management Plan) | P0 | | `report1-introduction.md`, `report2-project-management-plan.md`. Còn: ô `[TEAM]` (khảo sát thị trường, số liệu ngành, ngày các mốc, nhóm chat), xác nhận ước lượng công và % hoàn thành |
-| [x] | **Report 5** – test plan + 131 test case (22 tính năng × 3, 11 workflow, 48 chuyển trạng thái, 6 NFR) | P0 | | `report5-test.md`, sinh từ `report5/tc.py`. 69 test tự động đang đạt; 42 test tự động còn phải viết; 20 test thủ công chạy trên staging/nhà yến |
-| [x] | **Project Tracking** | P0 | | `project-tracking.md` (mốc, PR theo người, trạng thái tính năng, defect) |
-| [x] | **BM01 Design Brief** + Phụ lục A | P0 | | `design-brief.md`, docx ở `design-brief/` (mục 0–8 vừa 4 trang). Còn: xác nhận Ownership Map (đề xuất theo lịch sử commit), PR của từng người, ngưỡng NFR-09/14 |
-| [x] | **Đưa PR #89 vào `develop`** (pipeline gửi MQTT, đẩy video, job pytest) | P0 | Bảo | Xong 23/10/2026 qua PR #95 (Project Tracking DF-1 đã đóng) |
-| [ ] | Điền các ô `[TEAM]` còn lại | P0 | | Danh sách ở mục 2 |
-| [ ] | Xuất Report 1–5 và Project Tracking ra PDF theo mẫu, tên `SWP490_<Mã>_R2_Report<n>.pdf` | P0 | | Sơ đồ Mermaid render sẵn |
-| [ ] | Gắn tag `review-2` trên repo sau khi mọi thứ trên đã merge | P0 | | |
-| [ ] | **BM02 Self-review**: chạy prompt mẫu của PDF trên tag `review-2`, không sửa prompt; điểm High Kept/Planned thêm vào Known Gaps của Design Brief | P0 | | Tắt Memory trước khi chạy |
-| [ ] | Mở PR cho nhánh tài liệu `claude/modest-mendel-wz9d7b` và merge vào `develop` | P0 | | |
-| [ ] | (Tùy chọn) Chuyển `SwiftletCare_SRS.md` sang `docs/archive/` khi Report 3 chốt | P2 | | Đầu file đã ghi là ghi chú nội bộ |
+| | Việc | Ưu tiên | Ghi chú |
+|---|---|:---:|---|
+| [x] | Đồng bộ **cấu trúc** phiếu v3, BM03, SRS, SDD, BM01, Tracking, Report 5 theo các quyết định trên (chưa phải baseline cuối: còn G-01, G-02, `[TEAM]`, CI trên tag, BM02) | P0-Tag | 26/10/2026 |
+| [x] | Sinh lại Word: `tools/make_registration_v3.py`, `make_bm03.py`, `make_bm01.py`; BM01 mục 0–8 = 4 trang (đo bằng Word 26/10) | P0-Tag | Sinh lại và đo lại sau khi điền `[TEAM]` |
+| [ ] | Điền các ô `[TEAM]` (mục 2) | P0-Tag | |
+| [ ] | PR code nhỏ **G-01** (enum + dọn phạm vi) và phần **bỏ đăng ký công khai** của G-02 merge trước khi gắn tag | P0-Tag | Mục 4 |
+| [ ] | Mở PR nhánh tài liệu này vào `develop` | P0-Tag | |
+| [ ] | Chạy CI đủ mọi module trên commit cuối của `develop` (Actions → CI → *Run workflow*); xanh thì gắn tag `review-2` **đúng commit đó** (push tag chạy CI lần nữa, không phải dời tag). Tải 3 artifact của lần chạy trên tag (`backend-jest-results`, `firmware-pio-junit`, `ai-pipeline-pytest-junit`), rồi `python docs/reports/report5/gen_report5.py docs/reports/report5/template.md docs/reports/report5-test.md --jest jest-results.json --pio pio-junit.xml --pytest pytest-junit.xml`; ghi link lần chạy CI vào Report 5 §6 | P0-Tag | CI đã có trigger tag `review-*`, chạy tay và artifact (26/10) |
+| [ ] | **BM02**: chạy prompt chuẩn trên tag, không sửa prompt, giữ nguyên kết quả; trả lời Fixed/Kept/Planned; điểm High Kept/Planned thêm vào BM01 §5 | P0-Tag | Tắt Memory trước khi chạy |
+| [ ] | Xuất PDF Report 1–5, Tracking, BM01, phiếu + BM03 | P0-Tag | Mermaid render sẵn |
+| [ ] | (Tùy chọn) Chuyển `SwiftletCare_SRS.md` sang `docs/archive/` | P2 | |
 
-**Ngưỡng Defense 1.1 cần nhắm tới:** 100 % workflow chạy end-to-end trên staging · ≥ 90 % test case đạt · ≥ 50 % test chạy tự động trong CI · không còn defect Critical/High.
-
----
+**Ngưỡng Defense 1.1** (không phải điều kiện nộp Review 2): 100 % workflow chạy end-to-end trên staging · ≥ 90 % test đạt · ≥ 50 % test tự động trong CI · không còn defect Critical/High.
 
 ## 2. Ô `[TEAM]` cần điền
 
-Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design Brief, BM03, phiếu v3) — điền một lần cho tất cả.
+- **Mọi hồ sơ:** mã đề tài, GVHD, ngày.
+- **Phiếu đăng ký (Word), các ô không có `[TEAM]`:** Class; chọn Specialty (ES/IS/JS); đánh dấu "Kinds of person make registers" (Lecturer/Students); bảng Supervisor (tên, điện thoại, e-mail, chức danh); ngày ký; số điện thoại sinh viên (chỉ điền ở bản nộp, không commit). Sửa trong `tools/make_registration_v3.py` rồi sinh lại.
+- **Report 3:**
+  - REF-9: có mua bản đầy đủ MS 2273:2012 hay bỏ tham chiếu.
+  - REF-10: đọc nguyên văn Nghị định 13/2020 Điều 25 và quy định của tỉnh về giờ phát loa.
+  - §2.5: cấu hình PC làm AI node.
+  - BR-01: mức sàn độ ẩm 75 % hay 80 % (hỏi người nuôi).
+  - BR-07: giờ phát loa được phép.
+  - §8.1: cách chạy tay bơm/quạt bằng công tắc của nhà yến.
+  - Ngày phiên bản 3.0.0.
+- **Report 4:**
+  - Điều khoản sử dụng Open-Meteo.
+  - Phiên bản mạch tự vẽ.
+  - Nhà cung cấp VPS và tên miền.
+  - Công cụ AI và model đã dùng.
+  - Nơi lưu bản sao lưu.
+  - Ngày các phiên bản 1.0.x.
+- **Report 1:** sản phẩm trên thị trường (tên, giá, link) và số liệu ngành có nguồn. Không bịa số.
+- **Report 2:** ngày các mốc, xác nhận ước lượng công.
+- **Design Brief §8:** PR tiêu biểu của từng người.
+- **Project Tracking:**
+  - §1: ngày các mốc.
+  - §2: đếm lại số PR của Bảo sau #107.
+  - §3: PR của F-01, 02, 04, 05, 08, 09, 12.
 
-### `docs/reports/report3-srs.md`
+## 3. Việc thực tế ngoài code (G-19)
 
-| | Dòng | Nội dung |
-|---|---|---|
-| [ ] | 7, 10, 12 | Mã đề tài, GVHD, ngày |
-| [ ] | 95 | REF-9 MS 2273:2012 — có bản đầy đủ hay bỏ |
-| [ ] | 96 | REF-10 Nghị định 13/2020 Điều 25 — đọc nguyên văn, giờ được phát loa, quy định tỉnh |
-| [ ] | 234 | Cấu hình PC cũ làm AI node (CPU, RAM, GPU nếu có) |
-| [ ] | 479 | BR-01 độ ẩm sàn 75 % hay 80 % — hỏi người nuôi yến |
-| [ ] | 490 | BR-07 giờ phát loa nằm trong khung pháp luật cho phép |
-| [ ] | 595 | NFR-08 tỷ lệ tự động, % trong ngưỡng |
-| [ ] | 596 | NFR-09 Precision/Recall/sai số đếm (ban ngày, hồng ngoại) |
-| [ ] | 598 | NFR-11 MAE dự báo 60 phút |
-| [ ] | 599 | NFR-13 mốc 10 phút setup thiết bị |
-| [ ] | 600 | NFR-14 mức trùng khớp và kappa |
-| [ ] | 867 | Cách chạy tay bơm/quạt khi bộ điều khiển hỏng (theo cách đấu của nhà yến đang mượn) |
-| [ ] | 884 | Ngày phiên bản 3.0.0 |
+| | Việc | Ưu tiên |
+|---|---|:---:|
+| [ ] | Train model 1 lớp `swiftlet` (Roboflow → Colab → ONNX). Chia **train / val / test theo ngày quay trước khi trích frame**; augmentation chỉ cho train; ngày test không dùng để chỉnh tham số; 20 clip NFR-09 lấy từ ngày test, chưa từng dùng cho train hay val | P0-Demo |
+| [ ] | Đếm tay 20 clip 5 phút (10 ban ngày, 10 hồng ngoại), mỗi clip 2 người đếm, đối chiếu từng khung chỗ lệch | P0-Demo |
+| [ ] | Đo NFR-04 trên PC thật với luồng 25 fps cả một phiên 90 phút. Không kịp thì giảm fps camera và **đo lại NFR-09 ở fps đó** | P0-Demo |
+| [ ] | Đưa hệ thống vào nhà yến, chạy ≥ 7 ngày (NFR-08, NFR-11) và ≥ 14 ngày có chấm điểm (NFR-14) | P0-Demo |
+| [ ] | Biên bản phỏng vấn 2–3 người nuôi: BR-01, BR-02, mức lệch BR-28, luật BR-29, mưa BR-30 (`docs/evidence-register.md` §7.2) | P0-Demo |
+| [ ] | Ghi kết quả thử board thật vào `firmware/README.md`: mất mạng 30 phút, mất điện, watchdog, rút cảm biến, phun không tăng ẩm, RESTART, OTA, SHA sai, rollback | P0-Demo |
+| [ ] | Kiểm tra cách đấu công tắc của nhà yến, viết cách chạy tay (Report 3 §8.1) | P1 |
+| [ ] | Vẽ, in mạch có ADS1115 + 2 biến dòng kẹp (G-13) | P1 |
+| [ ] | In nhãn QR cho board thật và mã QR từng tầng | P1 |
+| [ ] | Camera (NFR-10 e): xác nhận luật lọc IP nguồn trên modem nhà yến chỉ cho IP tĩnh của nhà thành viên vào cổng 18554 (chuyển cổng thôi là chưa đủ); thử từ 4G và một mạng khác phải thất bại, AI node vẫn kéo được hình; lưu ảnh chụp luật + kết quả vào `docs/evidence-register.md` | P0-Demo |
 
-### `docs/reports/report4-sdd.md`
+## 4. Code theo gap
 
-| | Dòng | Nội dung |
-|---|---|---|
-| [ ] | 7, 10, 12 | Mã đề tài, GVHD, ngày |
-| [ ] | 144 | Điều khoản sử dụng Open-Meteo |
-| [ ] | 158 | Phiên bản mạch nhóm tự vẽ |
-| [ ] | 183 | Nhà cung cấp VPS và tên miền staging (đề xuất ở `docs/deploy/staging.md`) |
-| [ ] | 192, 193 | Công cụ AI và model nhóm dùng |
-| [ ] | 1307 | Nơi chép bản sao lưu MongoDB ra ngoài VPS |
-| [ ] | 1341–1350 | Ngày các phiên bản 1.0.0 → 1.0.9 |
+Mỗi gap: tên ở Project Tracking §6, yêu cầu ở SRS, thiết kế ở SDD. Mỗi PR có test cho logic mới (backend [Bắt buộc], firmware [Bắt buộc] cho logic điều khiển/phát hiện).
 
-### Các hồ sơ mới
+### G-01 — Enum và dọn phạm vi (P0-Tag)
 
-| | File | Nội dung |
-|---|---|---|
-| [ ] | `report1-introduction.md` dòng 53, 64 | Sản phẩm có trên thị trường (tên, giá, link); số liệu ngành yến có nguồn |
-| [ ] | `report2-project-management-plan.md` dòng 22, 74–80, 145 | Xác nhận ước lượng; ngày Review 1, Review 2, các iteration, Defense 1.1, Viva; nhóm chat |
-| [ ] | `design-brief.md` dòng 108, 110, 117–119 | Ngưỡng NFR-09, NFR-14; PR tiêu biểu của từng người |
-| [ ] | `project-tracking.md` dòng 14–19 | Ngày các mốc |
-| [ ] | `report5-test.md` (sửa trong `report5/tc.py`) | Số clip của NFR-09; ngưỡng NFR-09, NFR-14 |
+Một PR cho backend, web, mobile, firmware:
 
----
+- [ ] `AlertType`:
+  - đổi `PUMP_DRY` → `MISTING_INEFFECTIVE`, `POWER_OUTAGE` → `UNEXPECTED_RESTART`;
+  - thêm `CONFIG_MISMATCH`, `ACTUATOR_FAULT`;
+  - bỏ `PREDATOR_DETECTED`.
+- [ ] `AlertStatus`: thêm `DISMISSED`.
+- [ ] Ở 3 phía `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/types/`: bỏ `DeviceStatus` `ERROR`/`DEGRADED`, `HarvestStatus` `ARCHIVED`, trường `heating` trong `RelayStates`, Zalo/SMS trong tùy chọn thông báo (backend `user.model.ts`, `auth.service.ts`, `notification.service.ts`; web `SettingsPage.tsx`, `auth.types.ts`, `en.ts`).
+- [ ] Backend:
+  - `ALERT_TYPE_ALIAS` nhận tên cũ từ firmware cũ (`PUMP_DRY`, `POWER_OUTAGE`, `BIRD_PANIC`);
+  - `UNEXPECTED_RESTART` mang `details.reset_reason` lấy từ heartbeat;
+  - bỏ các nhánh `DEGRADED` ở `device.service.ts` (lệnh từ xa và dời thiết bị chỉ khi `ONLINE`), sửa test `deviceOnboarding.test.ts` theo.
+- [ ] Firmware:
+  - gửi tên mới;
+  - `UNEXPECTED_RESTART` kèm `reset_reason` (`POWER_ON` | `WATCHDOG` | `BROWNOUT` | `CRASH`);
+  - không gửi sau RESTART/OTA chủ động;
+  - bump `FIRMWARE_VERSION`.
+- [ ] Web/mobile:
+  - nhãn i18n mới;
+  - gỡ `heating` khỏi `ExpertControlPanel`, `ControlSubsystemPanel`, `dashboardMetrics`, `deviceInventory` và test;
+  - gỡ nhãn predator.
+- [ ] `migrate:alert-types` (đổi tên trong `alerts`, xoá cảnh báo predator, bỏ `heating`, map `ERROR`/`DEGRADED` → `ONLINE`, bỏ `ARCHIVED`, bỏ Zalo/SMS, bỏ `sla_hours` trong `systemsettings`) kèm test migration.
+- [ ] Sau khi sửa: `api-spec.yaml`, `npm run db:script`.
 
-## 3. Việc thực tế ngoài code
+### G-02 — Không đăng ký công khai (bỏ đăng ký: P0-Tag; phần còn lại P1)
 
-| | Việc | Ưu tiên | Người | Nguồn |
-|---|---|:---:|---|---|
-| [ ] | Train model 1 lớp `swiftlet` trên clip của nhà (Roboflow → Colab → ONNX); chia train/test **theo ngày**; báo độ chính xác tách ban ngày và hồng ngoại | P0 | | #7, VISION-FR-003, 016, NFR-09 |
-| [ ] | Đo FPS của pipeline trên **PC cũ đặt tại nhà thành viên** (NFR-04 cần 25 fps); ghi cấu hình máy; không đạt thì thử ảnh vào nhỏ hơn / 1 ô / GPU, rồi ghi số đo thật | P0 | | #7, NFR-04, `docs/deploy/staging.md` §2.3 |
-| [ ] | Đưa hệ thống vào nhà yến, chạy liên tục **≥ 14 ngày** (đủ cho NFR-08, 11, 14) | P0 | | #38 |
-| [ ] | Người nuôi yến đánh giá từng ngày (hỏi đánh giá trước, rồi mới xem trạng thái của hệ thống) trong đợt chạy | P0 | | EXPERT-FR-012, BR-31 |
-| [ ] | Biên bản phỏng vấn 2–3 người nuôi yến lâu năm: ngưỡng BR-01, NH3/CO2 BR-02, mức lệch BR-28, luật kết hợp BR-29, mưa BR-30 (mẫu ở `docs/evidence-register.md` mục 7.2) | P0 | | #11 |
-| [ ] | `docs/evidence-register.md`: đọc các nguồn ở mục 4.0, chuyển vào bảng 4.1/4.2; điền cột nguồn cho các khẳng định `KD-xx` | P0 | | #11 |
-| [ ] | Ghi kết quả thử firmware trên board thật vào `firmware/README.md` (rút cảm biến, bơm khô, đổi tham số, OTA, RESTART, mất mạng 30 phút, mất điện) | P0 | | NFR-05, 06, 07 |
-| [ ] | Kiểm tra cách đấu công tắc có sẵn của nhà yến (trước hay song song relay) và viết cách chạy tay | P1 | | Report 3 §8.1 |
-| [ ] | Vẽ và in mạch điều khiển: ESP32, RS485, relay, ADS1115 + 2 biến dòng kẹp (SCT-013 / ZMCT103C) | P1 | | #37, THREAT-FR-014, D11 |
-| [ ] | Dựng staging theo `docs/deploy/staging.md`: VPS 2 vCPU/4 GB + tên miền, Caddy TLS, tls-proxy cho MQTT 8883 và RTSPS 8322, MediaMTX; viết `deploy/docker-compose.staging.yml`, Dockerfile backend/web, Caddyfile; script seed demo đủ dữ liệu cho 22 kịch bản | P0 | | #40, Report 4 §3.4, §11 |
-| [ ] | Cài PC cũ tại nhà thành viên làm AI node: `.env` có URL RTSP qua IP tĩnh nhà yến (cổng 18554), `stream.py` chạy như service, BIOS tự bật khi có điện; đặt mật khẩu camera mạnh và giới hạn IP nguồn trên modem nếu được | P0 | | Report 4 D5, `docs/deploy/staging.md` §2.3 |
-| [ ] | Chạy thử kéo hình camera qua Internet liên tục 24 giờ; đếm cùng một clip đọc trực tiếp và đọc qua Internet, so số đếm | P0 | | Report 4 D5, plan §19.5 cổng 3b |
-| [ ] | Firmware MQTT TLS (môi trường build `cloud`, CA Let's Encrypt) để ESP32 nối được broker staging | P0 | | #39, plan §15.7 |
-| [ ] | In nhãn QR cho các board thật và mã QR cho từng tầng của nhà yến thử nghiệm | P1 | | MF-10 |
+- [ ] **Trước tag:** bỏ `/auth/register` và OTP đăng ký ở backend + `api-spec.yaml` (kể cả dòng giới hạn tốc độ nhắc `/auth/register`), bỏ trang đăng ký web và `(auth)/register` mobile; test route đăng ký trả 404.
+- [ ] Backend:
+  - thêm `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, như Technician);
+  - lời mời gửi tới email chưa có tài khoản thì người nhận tạo tài khoản từ link (email, role cố định);
+  - test: route đăng ký trả 404, tài khoản tạo từ link có đúng role.
+- [ ] Web: bỏ trang đăng ký; màn Admin "Tạo Farm Owner"; trang nhận lời mời có ô đặt mật khẩu.
+- [ ] Mobile: bỏ `(auth)/register`.
+- [ ] Sửa `api-spec.yaml` và `docs/database/` nếu đổi model.
 
----
+### G-03 — Vòng chuyên gia (P1)
 
-## 4. Code chưa làm theo Report 3 / Report 4
+- [ ] `DISMISSED`:
+  - lưu `previous_status`;
+  - `REJECTED` bắt buộc ghi chú (422);
+  - đổi sang `CONFIRMED` thì khôi phục trạng thái cũ và báo lại Farm Owner;
+  - gộp trùng và tự đóng tính cả `DISMISSED`;
+  - `DISMISSED` không gửi thông báo.
+- [ ] BR-22: farm chưa có chuyên gia thì Farm Owner ghi kết luận, sửa tham số phát hiện, vòng đếm, lịch đếm; thông báo cảnh báo suy luận chuyển cho Farm Owner.
+- [ ] EXPERT-FR-009:
+  - `notifyUser` cho mọi Farm Owner ở mỗi quyết định của chuyên gia;
+  - `audit_logs` thêm `farm_id`, `actor_role`;
+  - `GET /expert-activity?farmId=` đọc từ audit log.
+- [ ] ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận (thiếu dữ liệu thì báo "missing", không phải 0).
+- [ ] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động.
 
-### 4.1. Backend
+### G-04 — Mục duyệt và đề xuất hệ số (P1)
 
-| | Việc | Ưu tiên | Người | Nguồn |
-|---|---|:---:|---|---|
-| [x] | **Quyền theo Report 3 §2.4:** bỏ `TECHNICIAN`, `ADMIN` khỏi sửa/reset ngưỡng Zone, hệ số mờ, ngưỡng theo node; Technician và Admin không can thiệp tay, không xác nhận cảnh báo — PR #100 | P0 | | #2, #15 |
-| [x] | **Bỏ ticket (BM03 #9):** gỡ module ticket, chat, SLA, cách gán, hàng đợi, KPI, lịch bảo trì, admin override (route, service, job, model, `api-spec.yaml`, test); migration xoá collection; enum ticket 3 phía; `alertEscalation` gửi lại cảnh báo thay vì tạo ticket (ALERT-FR-015); `relayUsage` sinh `MAINTENANCE_DUE` (ALERT-FR-016) — PR #103, #104, #106 | P0 | | #41, #42, #43 |
-| [x] | **Technician trên mọi farm (FARM-FR-009):** bỏ vùng (`assigned_regions`, `farm.region`, `regions.util.ts`, `migrate:regions`); Technician xem cấu trúc, thiết bị, cảnh báo thiết bị của mọi farm, không tạo House/Zone; báo Farm Owner mỗi thao tác thiết bị của Technician; Admin không tạo/xoá/xem farm, tổng quan bỏ ticket; Admin chỉ tạo tài khoản Technician — PR #105, #106 | P0 | | #44, #45, #46 |
-| [~] | **MF-10:** cho `FARM_OWNER` đăng ký/dời/gỡ/thay thiết bị (farm của mình), bỏ `ADMIN` ở đăng ký (xong ở PR #100); còn dời thiết bị đang offline (lưu Zone mới, heartbeat tự sửa topic); cho cấp lại key khi thiết bị không còn hoạt động; sửa comment FARM-FR-003c cũ | P0 | | #25, #26, #27 |
-| [ ] | **MF-11:** job `healthAssessment` hằng ngày, collection `househealthdays`, mức chỉ số theo House (chuyên gia sửa), luật kết hợp BR-29, mưa BR-30 | P0 | | #32 |
-| [ ] | Đánh giá theo ngày của người nuôi (route ghi đánh giá; không cho sửa sau khi đã xem trạng thái) | P0 | | #33 |
-| [ ] | Báo cáo theo House ngày/tuần/tháng (đổi từ tuần theo Zone), CSV chỉ số theo ngày | P0 | | #34, #35 |
-| [ ] | Job thời tiết Open-Meteo mỗi giờ theo tọa độ của từng farm, collection `weatherobservations` (tọa độ bắt buộc khi tạo farm đã có: #47, PR #105, #106) | P1 | | #36, #47 |
-| [ ] | `DISMISSED` khi chuyên gia bác bỏ: lưu trạng thái trước, bắt buộc ghi chú khi `REJECTED`, gộp trùng/tự đóng tính cả `DISMISSED` (enum 3 phía cùng PR) | P0 | | #19 |
-| [ ] | BR-22: farm chưa có chuyên gia thì Farm Owner kiểm chứng, sửa tham số phát hiện, vòng đếm, lịch đếm; thông báo cảnh báo suy luận chuyển cho Farm Owner | P1 | | #17 |
-| [ ] | EXPERT-FR-009: báo Farm Owner mọi quyết định của chuyên gia + endpoint lịch sử hoạt động của chuyên gia | P1 | | #18 |
-| [ ] | EXPERT-FR-010/011: mục duyệt thay đổi của chủ farm, đề xuất hệ số (2 collection, route, thông báo) | P1 | | #21 |
-| [ ] | ENV-FR-027: version cấu hình theo Zone, so với version thiết bị báo, gửi lại khi lệch, `CONFIG_MISMATCH` | P1 | | #22 |
-| [ ] | ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận | P1 | | #23 |
-| [ ] | VISION-FR-019/020: lịch đếm theo mùa/tạm thời theo House; backend tính phiên từ số đếm 5 phút; job so tỷ lệ theo giờ kết thúc phiên chiều; đánh dấu phiên không đầy đủ | P1 | | #20, #24 |
-| [ ] | ALERT-FR-002: gửi FCM thật; route đăng ký/huỷ device token; xoá token FCM báo không hợp lệ | P0 | | #12 |
-| [ ] | `ACTUATOR_FAULT`: nhận từ firmware, mức HIGH (enum 3 phía) | P1 | | #37 |
-| [ ] | ENV-FR-007: bắt buộc ghi nguồn khi Admin đổi ngưỡng mặc định | P1 | | #16 |
-| [ ] | MARKET-FR-001: kiểm tra số tổ/khối lượng > 0, ngày không ở tương lai | P2 | | #5 |
-| [ ] | (Optional) ENV-FR-026 báo chuyên gia khi ngưỡng mặc định đổi | P2 | | #16 |
-| [ ] | Mỗi việc trên: cập nhật `docs/api/api-spec.yaml`, chạy `npm run db:script` khi đổi model, thêm test (unit/integration), thêm hằng số tự chọn vào Report 3 §4.5 | — | | `backend/CLAUDE.md` |
+- [ ] Collection `parameterreviews`, `coefficientproposals` theo SDD 6.1; route accept/revert/adjust, submit/approve/reject; thông báo hai chiều; Farm Owner áp gợi ý trực tiếp khi farm có chuyên gia → 403.
+- [ ] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner.
 
-### 4.2. Firmware
+### G-05 — Vượt ngưỡng có thời gian chờ (P1)
 
-| | Việc | Ưu tiên | Người | Nguồn |
-|---|---|:---:|---|---|
-| [ ] | Gửi version cấu hình đang áp trong heartbeat | P1 | | #22, ENV-FR-027 |
-| [ ] | Đo dòng bơm/quạt qua ADS1115, học dòng bình thường, `ACTUATOR_FAULT` (BR-32); test host-side cho logic so sánh | P1 | | #37, THREAT-FR-014 |
-| [ ] | Telemetry thêm `pump_current_a`, `fan_current_a` (đổi cùng backend handler) | P1 | | Report 4 §7.2 |
-| [ ] | (Optional) Device ID lấy từ MAC khi `Secrets.h` không ghi | P2 | | #29 |
-| [ ] | Bump `FIRMWARE_VERSION` khi đổi hành vi | — | | `firmware/CLAUDE.md` |
+- [ ] `telemetry.service.ts`:
+  - giữ thời điểm bắt đầu vượt ngưỡng theo `(node, metric, direction)`;
+  - chỉ tạo `THRESHOLD_BREACH` khi vượt liên tục `BREACH_DWELL_MS`: 10 phút cho nhiệt độ/độ ẩm, 5 phút cho ánh sáng/NH3/CO2;
+  - mẫu stale không tính;
+  - `details = {metric, observed, threshold, direction, started_at}`.
+- [ ] Test `thresholdBreach.test.ts` (TC-F07-02): 9 phút không có cảnh báo, 10 phút có 1 cảnh báo.
+- [ ] Đóng defect DF-6.
 
-### 4.3. AI pipeline
+### G-06 — Can thiệp tay (P1)
 
-| | Việc | Ưu tiên | Người | Nguồn |
-|---|---|:---:|---|---|
-| [~] | `stream.py` gửi MQTT (số đếm phiên, số đếm 5 phút, heartbeat) và đẩy video lên MediaMTX đã có trên develop (PR #95); còn chạy thử với EMQX/MediaMTX của staging từ PC cũ tại nhà thành viên | P0 | Bảo | #7, VISION-FR-006, 013, 014, 017 |
-| [~] | Khối MQTT Raspberry Pi trong `config.yaml` đã bỏ (PR #95); khung giờ phiên trong `config.yaml` chỉ còn là mặc định cho tới khi backend tính phiên từ số đếm 5 phút | P2 | | `ai-pipeline/CLAUDE.md`, #20 |
-| [x] | Job CI cho `pytest` của pipeline | P1 | Bảo | Có từ PR #95 |
+- [ ] Backend:
+  - `MAX_PUMP_ON_OVERRIDE_MS` = 30 phút (422);
+  - đang có `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` mà thiếu `confirmed: true` thì 409;
+  - `relay_override_logs.alert_confirmed`;
+  - `sensornodes.relays` có hạn riêng từng relay (`overrideExpiry.job.ts` theo relay);
+  - huỷ theo relay hoặc tất cả.
+- [ ] Firmware: `overrideExpiryMs` theo từng relay (BR-20); test native.
+- [ ] Lệnh có `commandId`, `issuedAt` (làm cùng G-07).
+- [ ] Web/mobile: hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm.
+- [ ] Test TC-F17-02, TC-ST "MANUAL → MANUAL".
 
-### 4.4. Web (frontend)
+### G-07 — MQTT theo thiết bị (P1, PR lớn nhất)
 
-| | Việc | Ưu tiên | Người | Nguồn |
-|---|---|:---:|---|---|
-| [~] | Role `DOMAIN_EXPERT` đã có từ PR #91 (`/expert/*`, `EXPERT_ROLES`, `ExpertPageShell`); còn: bỏ dữ liệu giả dự phòng, đổi sang thư mục/tên theo FE_Design §12 (`domain-expert/`, `DomainExpertLayout`, `apis/`) | P1 | Tuấn | #9, FE_Design 12.8 |
-| [~] | Màn chuyên gia: kiểm chứng cảnh báo, báo cáo + kết luận, tham số phát hiện đã có (PR #91); còn: bằng chứng theo cảnh báo, `DISMISSED`, vòng đếm vẽ trên khung live, duyệt thay đổi, đề xuất hệ số, lịch đếm | P0 | Tuấn | #9, #21 |
-| [ ] | MF-11: trạng thái sức khỏe theo ngày + lý do, màn đánh giá ngày (hỏi trước rồi mới hiện), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | P0 | | #32–35 |
-| [~] | Live stream có khung + số đếm trực tiếp theo House: web Farm Owner đã có (trang Vision, WHEP, PR #93); còn chờ nút AI đẩy video (PR #89) và màn mobile | P0 | | VISION-FR-012, 013 |
-| [~] | Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ tự động đã có ở `/analytics` (PR #93); còn lịch sử quyết định của chuyên gia (chờ backend EXPERT-FR-009) | P1 | | ENV-FR-019, ANALYTICS-FR-011, EXPERT-FR-009 |
-| [ ] | MF-10 trên web: in nhãn QR ở kho thiết bị (Admin), in mã QR tầng ở màn Zone, quét QR (`html5-qrcode`), tiến trình setup | P1 | | #28 |
-| [ ] | Hiện `DISMISSED` trong danh sách cảnh báo khi backend có | P1 | | FE_Design 2.6.1 |
+Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 controller + AI node trước khi lên staging.
 
-### 4.5. Mobile
+- [ ] Kho thiết bị: khi thêm thiết bị, sinh broker secret (trả một lần như activation key, lưu hash `broker_secret_hash`); thu hồi thì EMQX từ chối.
+- [ ] Backend:
+  - `POST /internal/mqtt-auth` cho EMQX HTTP authentication;
+  - service account của backend;
+  - subscribe `swiftletcare/dev/+/…` với `clean: false`, QoS 1;
+  - payload có `deviceId` khác topic thì bỏ;
+  - không ingest retained.
+- [ ] EMQX: file authz một luật `swiftletcare/dev/${username}/#` + service account; tắt anonymous.
+- [ ] Topic:
+  - lên (thiết bị → cloud): `telemetry` (0), `telemetry/buffered` (1), `heartbeat` (0), `relay/status` (1, kèm `commandId`), `alert` (1, kèm `eventId`), `vision/bird-count` (1), `vision/alert` (1);
+  - xuống (cloud → thiết bị): `config` (retained, có `config_version`), `cmd` (envelope `commandId`, `type`, `issuedAt`).
+- [ ] Backend:
+  - alert theo `eventId` (unique một phần `node_id + event_id`);
+  - telemetry buffered unique `node_id + timestamp`;
+  - bỏ `config/reassign` và `recordHeartbeat` sửa topic;
+  - dời zone chỉ đổi DB và publish lại `config`.
+- [ ] Firmware:
+  - thay PubSubClient bằng `esp-mqtt` (`mqtt_client.h`), TLS với CA (ISRG Root X1), cổng 8883, user = device ID, password = secret flash cùng ID (NVS);
+  - hàng đợi alert trong NVS, xoá khi có PUBACK;
+  - buffer flash xoá khi có PUBACK;
+  - nhớ 16 `commandId` gần nhất, RESTART/OTA lưu NVS;
+  - bỏ lệnh RELAY/AUDIO/RESTART cũ hơn 60 giây (cần NTP);
+  - OTA bỏ `setInsecure()`, dùng CA;
+  - test native cho bộ lọc lệnh trùng/cũ.
+- [ ] AI node: topic theo thiết bị, credential riêng, heartbeat có `fps` và `model_version`; đọc ring từ `config` retained.
+- [ ] Cập nhật quy tắc MQTT ở `CLAUDE.md` gốc, `backend/CLAUDE.md`, `firmware/CLAUDE.md`, `ai-pipeline/CLAUDE.md`; bỏ câu "current code".
+- [ ] Đóng DF-4.
+- [ ] Test NFR-10 (d): script thử publish sang topic thiết bị khác thì bị từ chối.
 
-| | Việc | Ưu tiên | Người | Nguồn |
-|---|---|:---:|---|---|
-| [ ] | Đồng bộ enum với backend (`Role`, `AlertType`…), bỏ Zalo/SMS | P0 | | #31 |
-| [ ] | Đăng ký FCM token sau đăng nhập, huỷ khi đăng xuất; nhận push | P0 | | #12, ALERT-FR-002 |
-| [ ] | MF-10: quét nhãn + mã tầng (`expo-camera`), hướng dẫn cài Wi-Fi AP-mode, tiến trình setup | P0 | | #28 |
-| [ ] | Dashboard, cảnh báo, trạng thái sức khỏe theo ngày + đánh giá ngày | P0 | | MF-11 |
-| [ ] | Live stream theo camera của House (đổi route `livestream/[zoneId]`) | P1 | | `mobile/CLAUDE.md` |
-| [ ] | Thêm `off*` cho socket trước khi màn đầu tiên đăng ký sự kiện | P1 | | #31 |
+### G-08 — Phiên bản cấu hình (P1)
 
----
+- [ ] `zones.config_version` tăng mỗi lần đổi ngưỡng, hệ số hoặc tham số phát hiện; `config` retained mang version; heartbeat báo `applied_config_version`; job `configSync` publish lại khi còn version cũ, quá 3 heartbeat lúc online thì `CONFIG_MISMATCH`; firmware cũ không báo version thì `UNKNOWN`.
+- [ ] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN).
+- [ ] Test TC-ST config sync 4 dòng.
 
-## 5. Sửa lại cho đúng chuẩn (code đang có)
+### G-09 — Màn MF-10 (P1)
 
-| | Việc | Module | Ưu tiên | Nguồn |
-|---|---|---|:---:|---|
-| [ ] | Gỡ `PREDATOR_DETECTED` khỏi `AlertType` (3 phía cùng PR) | BE/FE/Mobile | P1 | #6 |
-| [x] | Gỡ màn ticket (ẩn ở PR #101, xoá ở PR #106): Farm Owner (`FarmOwnerTickets*`), Technician (`TechnicianTickets*`, `TechnicianMaintenancePage`), Admin (`AdminTickets*`, phần SLA/gán ticket ở `AdminSystemSettingsPage`, `AdminFarms*`); mobile tab `tickets`, `ticket/[ticketId]` | Web/Mobile | P0 | #41, #45 |
-| [ ] | Quyết `ERROR`/`DEGRADED` (thiết bị) và `ARCHIVED` (thu hoạch): bỏ khỏi enum hoặc có luồng gán | BE/FE/Mobile | P2 | #3, #4 |
-| [~] | Gỡ phần cũ: Marketplace, nhãn `BIRD_PANIC`, relay sưởi trên màn đã xong (PR #93), `sales-staff/` + role `SALES_STAFF` đã xoá (PR #106); còn trường `heating` trong `RelayStates`, tùy chọn Zalo/SMS ở `SettingsPage` | Web | P0 | #30, FE_Design 13.14 |
-| [x] | Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician (`ThresholdsModal`) — PR #101 | Web | P0 | #15 |
-| [x] | Ẩn nút can thiệp tay/xác nhận cảnh báo với Admin và Technician — PR #101 | Web | P1 | FE_Design 12.0 c |
-| [ ] | `HARVEST_ROLES`: bỏ Admin, thêm chuyên gia chỉ xem | Web | P2 | FE_Design 12.0 c dòng 4 |
-| [ ] | Đổi chữ "PLC" thành "Bộ điều khiển" (`zone.plc` trong `farmStructure.i18n.ts`, `ScadaModeBanner`); gỡ trang stub `FarmOwnerLiveStreamPage` còn ghi "RPi" (live stream đã ở trang Vision) | Web | P2 | FE_Design 13.14 |
-| [ ] | `/onboarding` → `FarmOwnerDeviceSetupPage` mở cho Farm Owner + Technician | Web | P1 | FE_Design 12.0 c dòng 5b |
-| [ ] | Comment cũ "FARM-FR-003c khu nâng cao / secretKey trong NVS" ở `provisionedDevice.service.ts`, `device.service.ts` | BE | P2 | #27 |
-| [ ] | Nợ frontend còn lại (ErrorBoundary, gộp i18n, lỗi API theo nhóm, nhãn enum chung…) — trả khi sửa màn | Web | P2 | FE_Design 13.14 |
-| [ ] | Hạn can thiệp tay theo thiết bị (BR-20) — giữ như SRS; muốn tính riêng từng relay thì sửa cả backend và firmware | BE/FW | P2 | #13 |
+- [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
+- [ ] Màn Zone: in mã QR tầng.
+- [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
+- [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED).
+- [ ] Web: `/onboarding` cho Farm Owner + Technician.
 
----
+### G-10 — FCM (P0-Demo, cần cho NFR-02)
 
-## 6. Thứ tự đề xuất trong 2 tuần
+- [ ] Backend:
+  - collection `pushtokens`;
+  - `POST`/`DELETE /notifications/push-tokens`;
+  - adapter `push` dùng `firebase-admin` (credential qua biến môi trường, không commit);
+  - xoá token FCM báo invalid;
+  - không log token.
+- [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo.
+- [ ] Test TC-F08-03 (mock Firebase Admin).
 
-1. **Tuần 1:**
-   - Dữ liệu và phần cứng: train model, dựng staging (VPS + PC cũ tại nhà thành viên), đưa hệ thống vào nhà yến, phỏng vấn người nuôi.
-   - Backend P0: quyền theo §2.4, MF-10, `DISMISSED`, FCM, MF-11 (đánh giá theo ngày, đánh giá của người nuôi, báo cáo).
-   - Chạy pipeline (gửi MQTT và video) với staging từ PC cũ tại nhà thành viên.
-2. **Tuần 2:**
-   - Web và mobile P0: role chuyên gia, màn chuyên gia, MF-10, MF-11, live stream.
-   - Backend và firmware P1.
-   - Điền `[TEAM]` trong các hồ sơ đã soạn; gắn tag `review-2`; chạy BM02.
-3. **Song song suốt 2 tuần:** ghi minh chứng (ảnh, log, số đo) vào `docs/evidence-register.md` mục 6.
+### G-11 — MF-11 (P0-Demo)
 
-Việc P1 không kịp thì không xoá khỏi SRS mà ghi vào mục Known Gaps của Design Brief; riêng yêu cầu M của Report 3 phải có kế hoạch làm sau Review 2.
+- [ ] `houses.health_levels` (Domain Expert sửa, Farm Owner khi không có chuyên gia).
+- [ ] Job `weather` mỗi giờ (Open-Meteo, chỉ gửi tọa độ), `weatherobservations` TTL 90 ngày.
+- [ ] Job `healthAssessment` sau `returnRate`:
+  - chỉ số và completeness theo từng nguồn (BR-28);
+  - luật BR-29 theo thứ tự;
+  - mưa BR-30;
+  - bỏ `NOISE_ANOMALY` đã `DISMISSED`;
+  - lưu `current_status` và `current_reasons`;
+  - tính lại khi có dữ liệu trễ hoặc kết luận mới trong 7 ngày.
+- [ ] Chấm điểm (BR-31, chặn ở **API**, không chỉ ở màn hình): với Farm Owner/Domain Expert chưa chấm hoặc chưa bỏ qua ngày đó trong 7 ngày, mọi endpoint (ngày, báo cáo ngày/tuần/tháng, CSV) trả ngày **không có** status, reasons, rating của người khác; thông báo "ngày đã sẵn sàng" không kèm status; `POST …/rating` lưu rating + `evaluation_snapshot` trong một lần ghi atomic rồi mới trả status; `POST …/skip` mở status, không tính vào NFR-14; không cho đổi rating sau khi đã xem, chỉ thêm ghi chú; trạng thái chấm theo **từng người** (PENDING → RATED / SKIPPED / EXPIRED, Report 3 §6.18), quá 7 ngày người chưa chấm thành `EXPIRED`; ngày không có trạng thái chấm riêng. Test TC-F22-01..03 thử xem trước qua mọi endpoint.
+- [ ] Báo cáo theo House ngày/tuần/tháng (`househealthreports`, unique `house_id + kind + period_start + period_end`), migrate báo cáo tuần theo Zone cũ; CSV chỉ số theo ngày; PDF bằng `jspdf` ở web.
+- [ ] `ANALYTICS-FR-014`: đồng thuận + CI 95 %, kappa có trọng số tuyến tính, Gwet's AC1, ma trận nhầm lẫn, ngày `INSUFFICIENT_DATA` tách riêng.
+- [ ] Web + mobile: trạng thái ngày, màn chấm điểm, báo cáo.
+- [ ] Test TC-F20/21/22 và 5 dòng TC-ST 6.17.
+
+### G-12 — Đếm chim (P1)
+
+- [ ] Backend:
+  - lịch đếm theo mùa và khung tạm (VISION-FR-019);
+  - phiên tính từ bucket 5 phút theo khung của ngày (`window_start`, `window_end`);
+  - phiên không đầy đủ khi `EDGE_AI_DEGRADED` mở trong khung (VISION-FR-020);
+  - job tỷ lệ chạy 15 phút sau khung chiều của từng House;
+  - heartbeat AI có `fps` < 10 thì `EDGE_AI_DEGRADED`.
+- [ ] Web: trình vẽ vòng đếm trên khung hình live (VISION-FR-018).
+- [ ] AI pipeline: tách phần vẽ khung + vòng thành hàm có test `tests/test_annotate.py` (TC-F11-01: mọi khung có vòng và hộp kèm track ID).
+- [ ] Đánh giá NFR-09 (VISION-FR-016): P/R phát hiện trên ≥ 200 khung có nhãn hộp cho mỗi điều kiện sáng (IoU ≥ 0,5) và sai số đếm trên 20 clip, đều lấy từ ngày quay không dùng cho train, val, chọn model, ngưỡng confidence, vòng đếm hay tham số tracker; nếu đã chia ngẫu nhiên theo frame trên Roboflow thì chia lại theo ngày (`tools/split_by_day.py`).
+- [ ] Model: xem mục 3.
+
+### G-13 — Đo dòng tải (P1, It. 3)
+
+- [ ] Firmware: ADS1115 (Adafruit ADS1X15), học dòng bình thường 30 giây đầu mỗi tải, so với trạng thái relay (BR-32), `ACTUATOR_FAULT`; telemetry `pump_current_a`, `fan_current_a`; test native TC-F06-01..03.
+- [ ] Backend lưu dòng, nhận cảnh báo (HIGH).
+
+### G-14 — Mô hình dữ liệu theo ERD (P1)
+
+- [ ] `users.status` thay `is_active` (+ `locked_reason`, `locked_at`, `deletion_requested_at`, `deleted_at`).
+- [ ] `auditlogs`: `actor_role`, `farm_id`, `before`, `after`, `source_ip`, `client`, `correlation_id`.
+- [ ] `harvestbatches`: `nest_type`, `photo_object_key` (MinIO); `flock_snapshot` của House (HARVEST-FR-003).
+- [ ] `notifications.ref.type` mở rộng (SDD 6.1).
+- [ ] `telemetries`: `stale_fields`, `anomaly_fields`, `buffered`.
+- [ ] Migration theo SDD 6.4; `npm run db:script`; test `dbScript`/`databaseScript` xanh.
+
+### G-15 — Dọn web (P1)
+
+- [ ] Bỏ dữ liệu giả của màn chuyên gia (`expertFallback.service.ts`, `data/mocks/`), nối API thật; chuyển thư mục theo FE_Design §12 (`domain-expert/`, `apis/`).
+- [ ] Xoá stub `FarmOwnerLiveStreamPage` (ghi Raspberry Pi); đổi chữ "PLC" → "Bộ điều khiển"; `HARVEST_ROLES` bỏ Admin, chuyên gia chỉ xem.
+- [ ] Đóng DF-5.
+
+### G-16 — Mobile đủ phạm vi phiếu (P0-Demo cho luồng Farm Owner, P1 phần còn lại)
+
+Thứ tự:
+
+1. Đăng nhập (đổi mật khẩu lần đầu), lưu token an toàn.
+2. FCM (G-10).
+3. Dashboard số đo hiện tại + chế độ relay.
+4. Cảnh báo: danh sách, chi tiết, xác nhận, `DISMISSED`.
+5. Can thiệp tay có xác nhận (G-06).
+6. Setup QR (G-09).
+7. Trạng thái ngày + chấm điểm (G-11).
+8. Phân tích số đếm + live stream HLS (`expo-video`, token 60 giây; đổi route `livestream/[zoneId]` → theo camera của House).
+9. Báo cáo.
+10. Thu hoạch.
+11. Màn chuyên gia (kết luận cảnh báo, tham số).
+
+Socket: gọi `off*` khi unmount.
+
+### G-17 — Staging (P0-Demo)
+
+- [ ] `deploy/docker-compose.staging.yml`, Dockerfile backend và web, Caddyfile, tls-proxy (8883 MQTT, 8322 RTSPS), file auth/authz EMQX, `.env.staging.example`.
+- [ ] Seed demo đủ 22 kịch bản Phụ lục A2.
+- [ ] `mongodump` hằng ngày, chép ra ngoài VPS.
+- [ ] Theo `docs/deploy/staging.md`; hướng dẫn rollback theo tag.
+
+### G-18 — Việc nhỏ (P2)
+
+- [ ] ENV-FR-007: bắt buộc nguồn khi Admin đổi ngưỡng mặc định (422).
+- [ ] HARVEST-FR-001: số tổ, khối lượng > 0, ngày không ở tương lai.
+- [ ] (Tùy chọn) ENV-FR-026; device ID lấy từ MAC.
+
+## 5. Thứ tự đề xuất
+
+1. **Trước tag `review-2`:** G-01; bỏ đăng ký công khai (G-02); điền `[TEAM]`; sinh lại Word; merge → chạy CI đủ module bằng tay trên commit cuối → gắn tag đúng commit xanh → CI trên tag → sinh Report 5 từ artifact → BM02 → xuất PDF.
+2. **Đầu Iteration 2, chạy song song:**
+   - G-07 + G-08 (Bảo);
+   - G-17 + G-10 + G-02 (Kiệt);
+   - G-11 (Nhi);
+   - G-03 + G-04 + G-15 (Tuấn);
+   - G-06 + G-05 (Len).
+3. **Giữa Iteration 2:**
+   - G-09 và G-16 (mobile chia thêm người nếu chậm, RK-8);
+   - G-12 khi đã có model;
+   - G-14 làm dần theo từng gap chạm tới model.
+4. **Iteration 3:** G-13, G-18; chạy thực địa ≥ 14 ngày; đo NFR; tổng duyệt demo trên staging.
