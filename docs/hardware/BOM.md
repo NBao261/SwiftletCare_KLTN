@@ -1,9 +1,9 @@
 ﻿# Bill of Materials (BOM) – SwiftletCare
 Tổng chi phí: ≤ 5.410.000 VNĐ (SRS §7.1)
 
-> **Không dùng cho Review 2 (23/10/2026):** nhóm bỏ theo dõi chi phí phần cứng — NFR-12 đã bỏ khỏi Report 3, "Cost-Efficiency" của phiếu chỉ còn là ràng buộc C-4. File giữ lại để tham khảo linh kiện; không cần cập nhật giá hay hoá đơn. Mạch nhóm tự vẽ (ADS1115 + biến dòng) đang làm.
+> **Không dùng cho Review 2 (23/10/2026):** nhóm bỏ theo dõi chi phí phần cứng — NFR-12 đã bỏ khỏi Report 3, "Cost-Efficiency" của phiếu chỉ còn là ràng buộc C-4. File giữ lại để tham khảo linh kiện; không cần cập nhật giá hay hoá đơn. Mạch nhóm tự vẽ (ADS1115 + shunt đo dòng tải demo một chiều) đang làm.
 >
-> **Lưu ý (SRS v2.0.0):** bảng dưới là BOM dự toán ban đầu và **đã lỗi thời**. Linh kiện thực tế xem `SwiftletCare_SRS.md` mục 7.1 (5 cảm biến RS485, không còn SHT31/BH1750/MQ-135/MAX9814/DHT22). Theo phạm vi v2.0.0: **không dùng Raspberry Pi** (nút AI là PC/máy chủ), **không dùng hệ thống sưởi**, và cần **bổ sung ADS1115 + 2 biến dòng kẹp** để đo dòng bơm và quạt (THREAT-FR-014). Công tắc bypass đã bỏ (Report 3 §8). Các dòng Router 4G, Camera PoE 4MP, Raspberry Pi, Switch PoE và Sưởi không còn dùng: nhà yến dùng cáp quang IP tĩnh, camera là TP-Link VIGI C320I ống kính 6 mm kèm bộ cấp PoE TP-Link TL-POE150S, nút AI là PC cũ của nhóm đặt tại nhà yến (Report 4 D5).
+> **Lưu ý (SRS v2.0.0):** bảng dưới là BOM dự toán ban đầu và **đã lỗi thời**. Linh kiện thực tế xem `SwiftletCare_SRS.md` mục 7.1 (5 cảm biến RS485, không còn SHT31/BH1750/MQ-135/MAX9814/DHT22). Theo phạm vi v2.0.0: **không dùng Raspberry Pi** (nút AI là PC/máy chủ), **không dùng hệ thống sưởi**, và cần **bổ sung ADS1115 + 2 điện trở shunt** để đo dòng phun sương và quạt (THREAT-FR-014; tải demo 5 V/12 V một chiều, biến dòng kẹp chỉ đo được dòng xoay chiều). Công tắc bypass đã bỏ (Report 3 §8). Các dòng Router 4G, Camera PoE 4MP, Raspberry Pi, Switch PoE và Sưởi không còn dùng: nhà yến dùng cáp quang IP tĩnh, camera là TP-Link VIGI C320I ống kính 6 mm kèm bộ cấp PoE TP-Link TL-POE150S, nút AI là PC cũ của nhóm đặt tại nhà yến (Report 4 D5).
 
 | STT | Linh kiện | Số lượng | Đơn giá | Thành tiền | Nhà cung cấp |
 |---|---|---|---|---|---|

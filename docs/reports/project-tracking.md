@@ -43,7 +43,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-03 | Thresholds, coefficients | Nguyễn Vũ Len | In progress | #100, #101; TC-F03-01..03 | Configuration version (G-08) | 2 |
 | F-04 | Offline operation | Nguyễn Chí Bảo | In progress | `[TEAM: PR]`; TC-F04-02 | 30-min outage run on the prototype (NFR-06); alerts kept until PUBACK and `UNEXPECTED_RESTART` (G-01, G-07) | 2 |
 | F-05 | Self-diagnosis | Nguyễn Chí Bảo | In progress | `[TEAM: PR]`; TC-F05-01..03 | `MISTING_INEFFECTIVE` rename (G-01) | 2 |
-| F-06 | Actuator current check | Nguyễn Chí Bảo | Planned | — | Board with ADS1115 and current transformers; firmware; `ACTUATOR_FAULT` (G-13) | 3 |
+| F-06 | Actuator current check | Nguyễn Chí Bảo | Planned | — | Board with ADS1115 and shunt resistors on the DC demo loads; firmware; `ACTUATOR_FAULT` (G-13) | 3 |
 | F-07 | Alert lifecycle | Trần Minh Kiệt | In progress | #103; TC-F07-01, 03 | Breach dwell (G-05); event IDs (G-07); `DISMISSED` (G-03) | 2 |
 | F-08 | Push and Telegram | Trần Minh Kiệt | In progress | `[TEAM: PR]`; TC-F08-01, 02 | FCM sending and mobile token (G-10) | 2 |
 | F-09 | Forecast warning | Nguyễn Thị Yến Nhi | Done | `[TEAM: PR]`; TC-F09-01..03 | — | — |
