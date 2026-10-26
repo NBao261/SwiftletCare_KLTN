@@ -1,6 +1,6 @@
 # Việc cần làm trước Review 2 — theo Report 3 (SRS) và Report 4 (SDD)
 
-Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bảng "Chỗ lệch" trong `docs/reports/README.md` (số `#` ở cột Nguồn), các ô `[TEAM]`, và hướng dẫn chuẩn bị Review 2 (PDF). Cập nhật ngày 23/10/2026 (sau PR #95).
+Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bảng "Chỗ lệch" trong `docs/reports/README.md` (số `#` ở cột Nguồn), các ô `[TEAM]`, và hướng dẫn chuẩn bị Review 2 (PDF). Cập nhật ngày 26/10/2026 (sau PR #106).
 
 **Cách dùng:** đánh `[x]` khi xong, điền người nhận vào cột Người. Việc xong ở code thì sửa luôn dòng tương ứng trong `docs/reports/README.md` ("Chỗ lệch") trong cùng PR. Mức ưu tiên:
 
@@ -8,7 +8,7 @@ Danh sách gom từ: Report 3 `report3-srs.md`, Report 4 `report4-sdd.md`, bản
 - **P1** — yêu cầu bắt buộc (M) của Report 3 nhưng không chặn demo.
 - **P2** — sửa cho đúng chuẩn, nợ cũ, tùy chọn.
 
-**Việc ưu tiên nhất ở code** (bỏ ticket, SLA, vùng; quyền theo §2.4) có danh sách từng bước, từng file, chia theo PR ở [`todo-remove-platform.md`](todo-remove-platform.md). Các dòng tương ứng ở mục 4 và 5 dưới đây là bản tóm tắt.
+**Việc ưu tiên nhất ở code** (bỏ ticket, SLA, vùng; quyền theo §2.4) có danh sách từng bước, từng file, chia theo PR ở [`todo-remove-platform.md`](todo-remove-platform.md) — **đã xong ở PR #100–#106**. Các dòng tương ứng ở mục 4 và 5 dưới đây là bản tóm tắt.
 
 ---
 
@@ -106,14 +106,14 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 
 | | Việc | Ưu tiên | Người | Nguồn |
 |---|---|:---:|---|---|
-| [ ] | **Quyền theo Report 3 §2.4:** bỏ `TECHNICIAN`, `ADMIN` khỏi sửa/reset ngưỡng Zone, hệ số mờ, ngưỡng theo node; Technician và Admin không can thiệp tay, không xác nhận cảnh báo | P0 | | #2, #15 |
-| [ ] | **Bỏ ticket (BM03 #9):** gỡ module ticket, chat, SLA, cách gán, hàng đợi, KPI, lịch bảo trì, admin override (route, service, job, model, `api-spec.yaml`, test); migration xoá collection; enum ticket 3 phía; `alertEscalation` gửi lại cảnh báo thay vì tạo ticket (ALERT-FR-015); `relayUsage` sinh `MAINTENANCE_DUE` (ALERT-FR-016) | P0 | | #41, #42, #43 |
-| [ ] | **Technician trên mọi farm (FARM-FR-009):** bỏ vùng (`assigned_regions`, `farm.region`, `regions.util.ts`, `migrate:regions`); Technician xem cấu trúc, thiết bị, cảnh báo thiết bị của mọi farm, không tạo House/Zone; báo Farm Owner mỗi thao tác thiết bị của Technician; Admin không tạo/xoá/xem farm, tổng quan bỏ ticket; Admin chỉ tạo tài khoản Technician | P0 | | #44, #45, #46 |
-| [ ] | **MF-10:** cho `FARM_OWNER` đăng ký/dời/gỡ/thay thiết bị (farm của mình), bỏ `ADMIN` ở đăng ký; dời thiết bị đang offline (lưu Zone mới, heartbeat tự sửa topic); cho cấp lại key khi thiết bị không còn hoạt động; sửa comment FARM-FR-003c cũ | P0 | | #25, #26, #27 |
+| [x] | **Quyền theo Report 3 §2.4:** bỏ `TECHNICIAN`, `ADMIN` khỏi sửa/reset ngưỡng Zone, hệ số mờ, ngưỡng theo node; Technician và Admin không can thiệp tay, không xác nhận cảnh báo — PR #100 | P0 | | #2, #15 |
+| [x] | **Bỏ ticket (BM03 #9):** gỡ module ticket, chat, SLA, cách gán, hàng đợi, KPI, lịch bảo trì, admin override (route, service, job, model, `api-spec.yaml`, test); migration xoá collection; enum ticket 3 phía; `alertEscalation` gửi lại cảnh báo thay vì tạo ticket (ALERT-FR-015); `relayUsage` sinh `MAINTENANCE_DUE` (ALERT-FR-016) — PR #103, #104, #106 | P0 | | #41, #42, #43 |
+| [x] | **Technician trên mọi farm (FARM-FR-009):** bỏ vùng (`assigned_regions`, `farm.region`, `regions.util.ts`, `migrate:regions`); Technician xem cấu trúc, thiết bị, cảnh báo thiết bị của mọi farm, không tạo House/Zone; báo Farm Owner mỗi thao tác thiết bị của Technician; Admin không tạo/xoá/xem farm, tổng quan bỏ ticket; Admin chỉ tạo tài khoản Technician — PR #105, #106 | P0 | | #44, #45, #46 |
+| [~] | **MF-10:** cho `FARM_OWNER` đăng ký/dời/gỡ/thay thiết bị (farm của mình), bỏ `ADMIN` ở đăng ký (xong ở PR #100); còn dời thiết bị đang offline (lưu Zone mới, heartbeat tự sửa topic); cho cấp lại key khi thiết bị không còn hoạt động; sửa comment FARM-FR-003c cũ | P0 | | #25, #26, #27 |
 | [ ] | **MF-11:** job `healthAssessment` hằng ngày, collection `househealthdays`, mức chỉ số theo House (chuyên gia sửa), luật kết hợp BR-29, mưa BR-30 | P0 | | #32 |
 | [ ] | Đánh giá theo ngày của người nuôi (route ghi đánh giá; không cho sửa sau khi đã xem trạng thái) | P0 | | #33 |
 | [ ] | Báo cáo theo House ngày/tuần/tháng (đổi từ tuần theo Zone), CSV chỉ số theo ngày | P0 | | #34, #35 |
-| [ ] | Job thời tiết Open-Meteo mỗi giờ theo tọa độ của từng farm, collection `weatherobservations` (cần tọa độ bắt buộc khi tạo farm: #47, `todo-remove-platform.md` PR 5–6) | P1 | | #36, #47 |
+| [ ] | Job thời tiết Open-Meteo mỗi giờ theo tọa độ của từng farm, collection `weatherobservations` (tọa độ bắt buộc khi tạo farm đã có: #47, PR #105, #106) | P1 | | #36, #47 |
 | [ ] | `DISMISSED` khi chuyên gia bác bỏ: lưu trạng thái trước, bắt buộc ghi chú khi `REJECTED`, gộp trùng/tự đóng tính cả `DISMISSED` (enum 3 phía cùng PR) | P0 | | #19 |
 | [ ] | BR-22: farm chưa có chuyên gia thì Farm Owner kiểm chứng, sửa tham số phát hiện, vòng đếm, lịch đếm; thông báo cảnh báo suy luận chuyển cho Farm Owner | P1 | | #17 |
 | [ ] | EXPERT-FR-009: báo Farm Owner mọi quyết định của chuyên gia + endpoint lịch sử hoạt động của chuyên gia | P1 | | #18 |
@@ -176,11 +176,11 @@ Mã đề tài, GVHD và ngày nằm ở đầu mọi file (Report 1–5, Design
 | | Việc | Module | Ưu tiên | Nguồn |
 |---|---|---|:---:|---|
 | [ ] | Gỡ `PREDATOR_DETECTED` khỏi `AlertType` (3 phía cùng PR) | BE/FE/Mobile | P1 | #6 |
-| [ ] | Gỡ màn ticket: Farm Owner (`FarmOwnerTickets*`), Technician (`TechnicianTickets*`, `TechnicianMaintenancePage`), Admin (`AdminTickets*`, phần SLA/gán ticket ở `AdminSystemSettingsPage`, `AdminFarms*`); mobile tab `tickets`, `ticket/[ticketId]` | Web/Mobile | P0 | #41, #45 |
+| [x] | Gỡ màn ticket (ẩn ở PR #101, xoá ở PR #106): Farm Owner (`FarmOwnerTickets*`), Technician (`TechnicianTickets*`, `TechnicianMaintenancePage`), Admin (`AdminTickets*`, phần SLA/gán ticket ở `AdminSystemSettingsPage`, `AdminFarms*`); mobile tab `tickets`, `ticket/[ticketId]` | Web/Mobile | P0 | #41, #45 |
 | [ ] | Quyết `ERROR`/`DEGRADED` (thiết bị) và `ARCHIVED` (thu hoạch): bỏ khỏi enum hoặc có luồng gán | BE/FE/Mobile | P2 | #3, #4 |
-| [~] | Gỡ phần cũ: Marketplace, nhãn `BIRD_PANIC`, relay sưởi trên màn đã xong (PR #93); còn `sales-staff/` + role `SALES_STAFF`, trường `heating` trong `RelayStates`, tùy chọn Zalo/SMS ở `SettingsPage` | Web | P0 | #30, FE_Design 13.14 |
-| [ ] | Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician (`ThresholdsModal`) | Web | P0 | #15 |
-| [ ] | Ẩn nút can thiệp tay/xác nhận cảnh báo với Admin và Technician | Web | P1 | FE_Design 12.0 c |
+| [~] | Gỡ phần cũ: Marketplace, nhãn `BIRD_PANIC`, relay sưởi trên màn đã xong (PR #93), `sales-staff/` + role `SALES_STAFF` đã xoá (PR #106); còn trường `heating` trong `RelayStates`, tùy chọn Zalo/SMS ở `SettingsPage` | Web | P0 | #30, FE_Design 13.14 |
+| [x] | Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician (`ThresholdsModal`) — PR #101 | Web | P0 | #15 |
+| [x] | Ẩn nút can thiệp tay/xác nhận cảnh báo với Admin và Technician — PR #101 | Web | P1 | FE_Design 12.0 c |
 | [ ] | `HARVEST_ROLES`: bỏ Admin, thêm chuyên gia chỉ xem | Web | P2 | FE_Design 12.0 c dòng 4 |
 | [ ] | Đổi chữ "PLC" thành "Bộ điều khiển" (`zone.plc` trong `farmStructure.i18n.ts`, `ScadaModeBanner`); gỡ trang stub `FarmOwnerLiveStreamPage` còn ghi "RPi" (live stream đã ở trang Vision) | Web | P2 | FE_Design 13.14 |
 | [ ] | `/onboarding` → `FarmOwnerDeviceSetupPage` mở cho Farm Owner + Technician | Web | P1 | FE_Design 12.0 c dòng 5b |
