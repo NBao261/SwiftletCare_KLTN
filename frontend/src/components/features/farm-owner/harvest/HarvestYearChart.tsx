@@ -38,7 +38,7 @@ const PERIOD_OPTIONS: Array<{ value: HarvestPeriod; labelKey: HarvestKey; titleK
 // Chỉ đoạn trên cùng của mỗi cột được bo góc đỉnh
 const TOP_RADIUS: [number, number, number, number] = [6, 6, 0, 0];
 
-// Rãnh xám bọc nhóm nút, cùng kiểu nút gộp ở các trang Admin (TicketTrendsCard)
+// Rãnh xám bọc nhóm nút, cùng kiểu nút gộp ở các trang Admin
 const TRACK_CLASS = 'inline-flex items-center gap-0.5 rounded-full bg-warmGray/10 p-1';
 
 // Nhóm nút chọn 1 trong nhiều: mục đang chọn nền trắng nổi lên, mục khác chữ xám

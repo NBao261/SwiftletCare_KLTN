@@ -1,6 +1,6 @@
 // ADMIN — Tổng quan hệ thống (SYSTEM-FR-003), thay thế /system-status cũ. Bố cục theo mẫu "Tổng quan nền tảng":
 // 1) hàng 3 ô KPI · 2) nhật ký hoạt động gần đây (RecentActivityCard). Số liệu thật: health-overview, /alerts,
-// /system/audit-logs. Không có ticket/SLA (Report 3 §8). Không phải BI đầy đủ (SYSTEM-FR-003).
+// /system/audit-logs. Không phải BI đầy đủ (SYSTEM-FR-003).
 // Tiêu đề trang lấy từ menu (AppHeader tự tra), không lặp lại trong nội dung.
 import { CpuIcon, HouseIcon, WarningIcon } from '@phosphor-icons/react'
 import { useSystemHealth } from '@/hooks/admin/useSystem'

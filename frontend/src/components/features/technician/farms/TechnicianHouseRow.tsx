@@ -57,7 +57,7 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
         <div className="min-w-0">
           <h3 className="truncate text-h3 text-charcoal">{house.name}</h3>
           <p className="truncate text-small text-warmGray">
-            {farm.name}{farm.region ? ` · ${farm.region}` : ''}
+            {farm.name}
           </p>
         </div>
       </div>

@@ -31,11 +31,8 @@ export default function LockUserModal({ user, onClose }: { user: User | null; on
       onSubmit={(reason) => {
         if (!user) return
         setStatus.mutate({ id: user._id, isActive: false, reason }, {
-          onSuccess: ({ openTickets }) => {
-            // Khoá Technician còn ticket đang giao — backend báo số lượng để Admin gán lại (TICKET-FR-005b)
-            push(openTickets
-              ? t('Đã khoá tài khoản. Còn {{n}} ticket đang giao cho người này — cần gán lại kỹ thuật viên.', { n: openTickets })
-              : 'Đã khoá tài khoản')
+          onSuccess: () => {
+            push('Đã khoá tài khoản')
             onClose()
           },
           onError: (err) => push(getApiErrorMessage(err, 'Khoá tài khoản thất bại'), 'error'),

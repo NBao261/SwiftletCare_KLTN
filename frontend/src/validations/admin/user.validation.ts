@@ -15,15 +15,10 @@ export interface FormState {
   email: string
   phone: string
   password: string
-  regions: string
   farmIds: string[]
 }
 
 export type Field = Exclude<keyof FormState, 'role'>
-
-export function parseRegions(raw: string): string[] {
-  return raw.split(',').map(r => r.trim()).filter(Boolean)
-}
 
 /**
  * Trả về map lỗi theo field — rỗng nghĩa là form hợp lệ. Tách khỏi component để
@@ -50,9 +45,6 @@ export function validateNewUser(form: FormState): Partial<Record<Field, string>>
     errors.password = t('Tối thiểu {{min}} ký tự', { min: PASSWORD_MIN })
   }
 
-  if (form.role === 'TECHNICIAN' && parseRegions(form.regions).length === 0) {
-    errors.regions = 'Chưa nhập vùng phụ trách'
-  }
   if (form.role === 'SALES_STAFF' && form.farmIds.length === 0) {
     errors.farmIds = t('Chưa chọn farm')
   }

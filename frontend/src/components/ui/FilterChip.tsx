@@ -14,7 +14,7 @@ const SIZE_CLASS: Record<NonNullable<FilterChipProps['size']>, string> = {
   lg: 'px-5 py-2.5 text-sm',
 }
 
-/** Chip lọc dạng pill — dùng chung giữa TechnicianAlertsPage (status/severity) và TechnicianTicketsPage (status) */
+/** Chip lọc dạng pill — VD TechnicianAlertsPage (status/severity) */
 export default function FilterChip({ active, label, onClick, size = 'sm' }: FilterChipProps) {
   return (
     <button

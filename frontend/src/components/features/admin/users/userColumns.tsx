@@ -11,8 +11,6 @@ const TIME_FORMAT = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: 
 
 export interface UserColumnHandlers {
   onView: (user: User) => void
-  /** Chỉ Technician — backend chỉ có PUT /admin/technicians/:id/regions, không sửa được full_name/phone */
-  onEditRegions: (user: User) => void
   onLock: (user: User) => void
   onUnlock: (user: User) => void
 }
@@ -57,7 +55,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
     },
     {
       // Sort ngày tạo cũng đặt ở nút "Sắp xếp" cùng hàng filter, xem full_name ở trên.
-      // 2 tầng như cột Ngày tạo bảng Trang trại/Ticket: giờ:phút:giây đậm trên, ngày xám dưới
+      // 2 tầng: giờ:phút:giây đậm trên, ngày xám dưới
       key: 'created_at', header: 'Ngày tạo', className: 'w-[12%] whitespace-nowrap',
       render: (user) => user.created_at
         ? (
@@ -73,9 +71,6 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
       render: (user) => {
         const status = getUserStatus(user)
         const items: ActionsMenuItem[] = [{ label: 'Xem chi tiết', onClick: () => handlers.onView(user) }]
-        if (user.role === 'TECHNICIAN') {
-          items.push({ label: 'Sửa vùng phụ trách', onClick: () => handlers.onEditRegions(user) })
-        }
         // Đã xoá theo yêu cầu thì backend từ chối khoá/mở khoá (409) — không hiện nút
         const isSelf = user._id === currentUserId
         if (status === 'LOCKED') {

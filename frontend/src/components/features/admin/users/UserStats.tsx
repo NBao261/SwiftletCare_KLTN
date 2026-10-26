@@ -20,12 +20,10 @@ function roleSub(list: User[]) {
 }
 
 /**
- * Hàng 5 ô chỉ số đầu trang Người dùng — cùng khuôn hàng KPI trang Ticket (StatTile). Số liệu TOÀN HỆ
+ * Hàng 5 ô chỉ số đầu trang Người dùng (StatTile). Số liệu TOÀN HỆ
  * THỐNG (không theo bộ lọc bảng), đếm ở client từ useAllUsers() vì backend không có endpoint thống kê
  * tài khoản. Chỉ để xem — lọc theo vai trò/trạng thái dùng thanh công cụ của bảng.
  * - Tổng: kèm số Quản trị viên (không có ô riêng) để cộng các ô vai trò khớp tổng, + số chờ xoá nếu có.
- * - Kỹ thuật viên: dòng phụ đếm người CHƯA gán khu vực — Ticket Router không gán ticket được cho họ
- *   (TICKET-FR-004), là việc Admin cần làm (AUTH-FR-005c).
  * - Đã khoá: bị khoá thuộc vai trò nào.
  */
 export default function UserStats() {
@@ -47,7 +45,6 @@ export default function UserStats() {
   const byRole = (r: Role) => users.filter(u => u.role === r)
   const statusCount = (s: ReturnType<typeof getUserStatus>) => users.filter(u => getUserStatus(u) === s).length
   const technicians = byRole('TECHNICIAN')
-  const noRegion = technicians.filter(u => !u.assigned_regions?.length).length
   const pendingDeletion = statusCount('PENDING_DELETION')
   const lockedUsers = users.filter(u => getUserStatus(u) === 'LOCKED')
   const lockedByRole = ROLES_IN_TILES
@@ -80,16 +77,7 @@ export default function UserStats() {
           sub={totalSub}
         />
         <StatTile className="shadow-none" icon={HouseIcon} iconClass={ICON} label="Chủ nhà yến" value={byRole('FARM_OWNER').length} sub={roleSub(byRole('FARM_OWNER'))} />
-        <StatTile
-          className="shadow-none"
-          icon={WrenchIcon}
-          iconClass={ICON}
-          label="Kỹ thuật viên"
-          value={technicians.length}
-          // Có kỹ thuật viên chưa gán khu vực → ô nổi cam: Ticket Router không giao ticket cho họ được, việc của Admin
-          tone={noRegion > 0 ? 'warning' : undefined}
-          sub={technicians.length === 0 ? 'Chưa có tài khoản nào' : noRegion > 0 ? t('{{n}} chưa gán khu vực', { n: noRegion }) : 'Tất cả đã gán khu vực'}
-        />
+        <StatTile className="shadow-none" icon={WrenchIcon} iconClass={ICON} label="Kỹ thuật viên" value={technicians.length} sub={roleSub(technicians)} />
         {/* Chuyên gia = SALES_STAFF (chỉ đổi tên hiển thị) */}
         <StatTile className="shadow-none" icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.SALES_STAFF} value={byRole('SALES_STAFF').length} sub={roleSub(byRole('SALES_STAFF'))} />
         <StatTile

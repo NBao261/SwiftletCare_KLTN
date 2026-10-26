@@ -62,7 +62,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           iconClass={ICON}
           label="Cần xử lý"
           value={faulty}
-          // Có thiết bị lỗi/suy giảm → ô nổi đỏ (nghiêm trọng nhất, cần tạo ticket)
+          // Có thiết bị lỗi/suy giảm → ô nổi đỏ (nghiêm trọng nhất)
           tone={faulty > 0 ? 'critical' : undefined}
           sub={faulty > 0 ? t('{{error}} lỗi · {{degraded}} suy giảm', { error: summary.error, degraded: summary.degraded }) : 'Không có thiết bị lỗi'}
         />

@@ -1,6 +1,8 @@
 // Module ALERT (§5.5) — cảnh báo và mức độ nghiêm trọng.
 
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+// 3 cấp hiển thị của mức cảnh báo: P1 Khẩn cấp, P2 Cao, P3 Thường
+export type SeverityLevel = 'P1' | 'P2' | 'P3'
 export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'
 export type AlertType =
   | 'THRESHOLD_BREACH' | 'PREDATOR_DETECTED' | 'NODE_OFFLINE'

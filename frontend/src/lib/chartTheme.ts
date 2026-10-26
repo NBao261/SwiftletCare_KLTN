@@ -32,8 +32,6 @@ export const CHART_COLORS = {
   accentDeep: '#89A022',
   /** accent-900 — đoạn "Yến huyết" của biểu đồ sản lượng (HarvestYearChart) */
   accentMoss: '#414C10',
-  /** lime-500 — series "Đã đóng" của TicketTrendsCard (Admin); Farm Owner đã chuyển sang accentGreen */
-  limeBright: '#D2F93A',
 } as const
 
 /** Màu token với độ trong suốt (0–1) cho nền dải ngưỡng, vùng tô — chỉ nhận màu hex 6 ký tự trong CHART_COLORS */

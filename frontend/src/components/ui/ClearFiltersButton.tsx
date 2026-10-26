@@ -3,7 +3,7 @@ import { IconX } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
 
 /**
- * Nút "Hủy lọc" cuối hàng bộ lọc các trang Admin (Người dùng, Trang trại, Ticket, Audit log) — Secondary
+ * Nút "Hủy lọc" cuối hàng bộ lọc các trang Admin (Người dùng, Thiết bị, Audit log) — Secondary
  * (FE_Design 5.1: xoá bộ lọc không phá huỷ dữ liệu), cao h-8 chữ text-xs cho thẳng hàng SelectMenu/FilterChip/
  * SortChips. Trang tự quyết khi nào hiện (thường là khi có bộ lọc/sắp xếp khác mặc định) và tự đặt lại state
  * trong `onClick`.

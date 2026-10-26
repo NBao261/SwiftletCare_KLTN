@@ -10,8 +10,8 @@ interface PaginationProps {
   onChange: (page: number) => void
   /**
    * simple   — chỉ nút Trước/Sau + info x–y trong z (mặc định)
-   * numbered — số trang 1–2–…–N + prev/next (Technician ticket table)
-   * full     — « ‹ 1 2 3 … N › » cửa sổ luôn đủ 3 trang (các trang Admin: Ticket, Người dùng, Trang trại, Nhật ký…)
+   * numbered — số trang 1–2–…–N + prev/next
+   * full     — « ‹ 1 2 3 … N › » cửa sổ luôn đủ 3 trang (các trang Admin: Người dùng, Thiết bị, Nhật ký…)
    */
   variant?: 'simple' | 'numbered' | 'full'
   /** Chỉ variant `full`: chữ hiển thị theo ngôn ngữ của màn gọi — bỏ trống thì dùng tiếng Việt */

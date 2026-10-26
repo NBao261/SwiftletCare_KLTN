@@ -17,7 +17,6 @@ import AddZoneModal from '@/components/features/farm-owner/farms/AddZoneModal'
 import StructureEditModal from '@/components/features/farm-owner/farms/StructureEditModal'
 import ActionsMenu from '@/components/ui/ActionsMenu'
 import { NO_VALUE } from '@/constants/display'
-import { useRegions } from '@/hooks/shared/useFarms'
 import { useFarmStructure, useHouseZoneIds, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
@@ -57,7 +56,6 @@ export default function FarmOwnerFarmZonesPage() {
   const [selected, setSelected] = useState<DeviceRow | null>(null)
   // Đổi tên / xoá nhà (giao diện dựng sẵn, chờ API backend)
   const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
-  const { data: regions } = useRegions()
   // Khung lọc khớp nhà đang xem; đổi lựa chọn thì sang trang đúng cấp
   const scope = useScopeFilter()
   const routedScope = useFarmsScopeRouting(scope)
@@ -122,8 +120,6 @@ export default function FarmOwnerFarmZonesPage() {
   if (!node) return <EmptyState title={t('house.notFound')} description={t('house.notFoundDesc')} />
 
   const { house, farm } = node
-  // Hiện tên tỉnh / thành thay cho mã khu vực (swagger GET /farms/regions)
-  const regionName = farm.region ? regions?.find(region => region.code === farm.region)?.name ?? NO_VALUE : ''
   const returnRateDrop = house.bird_count_tuning?.return_rate_drop_pct
   const staff = extras?.houseStaff[house._id]
 
@@ -134,7 +130,7 @@ export default function FarmOwnerFarmZonesPage() {
         title={<>{house.name}<HealthBadge health={node.health} /></>}
         description={
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-warmGray">
-            <span className="flex items-center gap-1"><MapPinIcon size={14} />{farm.address}{regionName ? ` · ${regionName}` : ''}</span>
+            <span className="flex items-center gap-1"><MapPinIcon size={14} />{farm.address}</span>
             <span className="flex items-center gap-1">
               <UserIcon size={14} />
               {t('house.staff')}: {staff ? <strong className="text-charcoal">{staff.name}</strong> : <span>{t('card.noStaff')}</span>}

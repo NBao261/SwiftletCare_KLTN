@@ -69,7 +69,7 @@ export function useUpdateSpeakerSchedule(nodeId: string) {
   })
 }
 
-/** TICKET-FR-008 — gửi lệnh từ xa (RESTART / PUSH_CONFIG / OTA) tới 1 sensor node */
+/** FARM-FR-013 — gửi lệnh từ xa (RESTART / PUSH_CONFIG / OTA) tới 1 sensor node */
 export function useSendNodeCommand() {
   const queryClient = useQueryClient()
   return useMutation({

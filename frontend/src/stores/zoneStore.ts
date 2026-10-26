@@ -19,14 +19,14 @@ interface ZoneState {
   setScopePath: (farmId: string, farmName: string, houseId: string, zoneId: string) => void
   /**
    * Farm luôn đi kèm Zone vì chọn Zone là đi qua cascade Farm→House→Zone — biết
-   * sẵn farmId lúc đó tránh các trang khác (Harvest/Ticket/Analytics So sánh
+   * sẵn farmId lúc đó tránh các trang khác (Harvest/Analytics So sánh
    * Zone) phải bắt người dùng chọn lại farm từ đầu.
    */
   setZone: (farmId: string, farmName: string, zoneId: string, zoneName: string) => void
   clearZone: () => void
 }
 
-/** Farm/Zone hiện đang xem — dùng chung giữa Dashboard, Devices, Harvest, Tickets, Analytics */
+/** Farm/Zone hiện đang xem — dùng chung giữa Dashboard, Devices, Harvest, Analytics */
 export const useZoneStore = create<ZoneState>()(
   persist(
     (set) => ({

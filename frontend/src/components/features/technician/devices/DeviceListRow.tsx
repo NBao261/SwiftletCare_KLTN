@@ -103,7 +103,7 @@ export default function DeviceListRow({
           <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badge.cls}`}>
             <span className="relative flex h-1.5 w-1.5">
               {badge.pulse && <span className={`absolute inline-flex h-full w-full rounded-full ${badge.dot} animate-ping-soft motion-reduce:animate-none`} />}
-              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${badge.dot} ${badge.blink ? 'animate-pulse-sla motion-reduce:animate-none' : ''}`} />
+              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${badge.dot} ${badge.blink ? 'animate-pulse-dot motion-reduce:animate-none' : ''}`} />
             </span>
             {badge.label}
           </span>

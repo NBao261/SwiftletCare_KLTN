@@ -2,9 +2,8 @@
 
 export interface Farm {
   _id: string; name: string; address: string
-  /** Khu vực (VD 'HCMC') — khớp assigned_regions của Technician phụ trách (AUTH-FR-005c) */
-  region?: string
-  coordinates?: { lat: number; lng: number }
+  /** FARM-FR-001 — bắt buộc khi tạo farm; farm cũ có thể chưa có (khi đó không có thời tiết) */
+  coordinates?: Coordinates
   owner_id: string
   /** Chỉ có ở GET /farms/:id (đã populate tên/email, xem farm.service.ts getFarm) */
   owner?: { full_name?: string; email?: string }
@@ -17,8 +16,8 @@ export interface Farm {
 /** Vai trò thành viên farm (POST /farms/:id/members) */
 export type FarmMemberRole = 'FARM_OWNER' | 'DOMAIN_EXPERT'
 
-/** FARM-FR-009 — 1 tỉnh/thành trong danh mục khu vực (GET /farms/regions) */
-export interface Region { code: string; name: string }
+/** Vị trí farm — một farm là một địa điểm (A-5) */
+export interface Coordinates { lat: number; lng: number }
 
 /** EXPERT-FR-008 (SRS v2.1.8) — tham số đếm chim theo nhà, Domain Expert chỉnh */
 export interface BirdCountTuning { return_rate_drop_pct?: number }

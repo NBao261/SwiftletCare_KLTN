@@ -76,7 +76,7 @@ function InfoItem({ icon: ItemIcon, label, value }: { icon: Icon; label: string;
   )
 }
 
-/** Khung card + đầu card (ô icon charcoal · tiêu đề text-h2 · dòng phụ) — cùng khuôn card trang Ticket của Admin */
+/** Khung card + đầu card (ô icon charcoal · tiêu đề text-h2 · dòng phụ) */
 function SettingsCard({ icon: HeaderIcon, title, subtitle, danger, children }: {
   icon: Icon; title: string; subtitle: string; danger?: boolean; children: ReactNode
 }) {

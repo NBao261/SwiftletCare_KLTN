@@ -1,7 +1,7 @@
 // ADMIN — Nhật ký hệ thống (SYSTEM-FR-001): GET /system/audit-logs, lọc theo
 // người thực hiện / hành động / khoảng ngày (server) + ô tìm kiếm & sắp xếp (client, trên
 // TOÀN BỘ nhật ký khớp bộ lọc). Hiển thị 1 bảng DataTable như trang Người dùng.
-// Chỉ nhật ký TÀI KHOẢN (target_type='user', lọc server) — không hiện log thiết bị/ticket/cấu hình.
+// Chỉ nhật ký TÀI KHOẢN (target_type='user', lọc server) — không hiện log thiết bị/cấu hình.
 // Logic lọc/sắp xếp dùng chung với card "Nhật ký hoạt động gần đây" (useAuditLogTable + AuditLogFilters).
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -44,7 +44,7 @@ export default function AdminAuditLogPage() {
   return (
     // Tiêu đề trang do AppHeader (topbar) tự tra từ menu — không lặp lại trong nội dung
     <div className="flex min-w-0 flex-col gap-5">
-      {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Ticket/Người dùng */}
+      {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Người dùng */}
       <AuditLogStats />
 
       {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang */}

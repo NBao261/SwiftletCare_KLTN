@@ -165,7 +165,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
         <div className="flex w-full max-w-xs flex-col gap-2">
           <Button onClick={onRetry} className="w-full justify-center">Thử lại từ Bước 3</Button>
           <button onClick={onSuccess} className="text-sm text-warmGray hover:text-charcoal">
-            Bỏ qua, tiếp tục nghiệm thu
+            Bỏ qua, về danh sách thiết bị
           </button>
         </div>
       </div>

@@ -30,13 +30,13 @@ Configure `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` in `.env` (template `.env
 app/            Expo Router routes — the folder tree IS the navigation
   _layout.tsx     root Stack: QueryClientProvider, GestureHandlerRootView, splash until stored auth loads
   (auth)/         login, register
-  (tabs)/         dashboard, alerts, analytics, farms, tickets, settings (each <tab>/index.tsx)
-  farm/[farmId] · zone/[zoneId] · device/[deviceId] · alert/[alertId] · ticket/[ticketId] · livestream/[zoneId]
+  (tabs)/         dashboard, alerts, analytics, farms, settings (each <tab>/index.tsx)
+  farm/[farmId] · zone/[zoneId] · device/[deviceId] · alert/[alertId] · livestream/[zoneId]
 config/         queryClient.ts
 constants/      api.ts (API_BASE_URL, WS_BASE_URL, ENDPOINTS) · theme.ts · index.ts
-hooks/          React Query hooks, one per resource: useAuth, useFarms, useTelemetry, useAlerts, useBirdCount, useTickets
+hooks/          React Query hooks, one per resource: useAuth, useFarms, useTelemetry, useAlerts, useBirdCount
 services/
-  api/          client.ts (axios instance) + one file per resource (auth, farms, devices, telemetry, alerts, analytics, tickets)
+  api/          client.ts (axios instance) + one file per resource (auth, farms, devices, telemetry, alerts, analytics)
   socket/       socket.io client: connect/disconnect, joinZone/leaveZone, on* subscribers
   notification/ expo-notifications: permission + Expo push token + Android "alerts" channel
 store/          Zustand: authStore (SecureStore-backed), alertStore
@@ -79,7 +79,7 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 
 ### Roles and scope
 - **[Bắt buộc]** Role-dependent UI follows Report 3 §2.4: Domain Expert only reads operations (no relay control, no harvest writes, no alert acknowledgement); Technician sees devices and device alerts only, no relay control or acknowledgement but can see verdict/health-report screens; Technician and Farm Owner per the matrix. Hiding a button is not security — the backend enforces it — but the app must not offer an action the backend will refuse.
-- **[Bắt buộc]** Enums in `types/index.ts` (`Role`, `AlertType`, `DeviceStatus`, `TicketType/Priority/Status`…) match `backend/src/types/domain.types.ts`. A PR that touches an enum brings it fully in line, or says which follow-up PR does.
+- **[Bắt buộc]** Enums in `types/index.ts` (`Role`, `AlertType`, `DeviceStatus`, `AlertSeverity/Status`…) match `backend/src/types/domain.types.ts`. A PR that touches an enum brings it fully in line, or says which follow-up PR does.
 - **[Bắt buộc]** Nothing new for what Report 3 §8 puts out of scope: Marketplace/Buyer, Farm Operator/zone scope, predator detection, heating relay, Zalo/SMS, NH3/CO2 driving the fan. NH3/CO2 are shown as alert thresholds of the zone, not control limits.
 - **[Bắt buộc]** No threshold, limit or behaviour invented without a source (Report 3, Domain Expert, cited reference).
 
@@ -89,7 +89,7 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 - **[Bắt buộc]** TypeScript strict: no `any`, `as any`, `@ts-ignore`/`@ts-expect-error`; unknown data is `unknown` and narrowed. No `console.log` left in committed code (`console.warn`/`error` only for real fault paths).
 - **[Bắt buộc]** Touchable elements have an `accessibilityLabel` when they show only an icon.
 - **[Nên]** Pure logic (formatters, validators, mappers) gets a jest test next to it.
-- **[Nên]** User-facing text is Vietnamese with the same terms as the web ("Zone", "Farm", "Ticket" kept in English).
+- **[Nên]** User-facing text is Vietnamese with the same terms as the web ("Zone", "Farm" kept in English).
 
 ## Known debt — not held against PRs that don't touch it
 

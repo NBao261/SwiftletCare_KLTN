@@ -49,10 +49,6 @@ export const IconAnalytics = (p: IconProps) => (
   <Svg {...p}><path d="M3 17h14" /><path d="M5.5 17v-5" /><path d="M10 17V5" /><path d="M14.5 17v-8" /></Svg>
 )
 
-export const IconTicket = (p: IconProps) => (
-  <Svg {...p}><path d="M3 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h11A1.5 1.5 0 0 1 17 5.5v2a2.5 2.5 0 0 0 0 5v2a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5v-2a2.5 2.5 0 0 0 0-5Z" /><path d="M12 4.5v11" strokeDasharray="2 2" /></Svg>
-)
-
 export const IconHarvest = (p: IconProps) => (
   <Svg {...p}><path d="M10 17c0-4.5 2.2-7.5 6-8.5-.4 4.6-2.6 7.3-6 8.5Z" /><path d="M10 17c0-4.5-2.2-7.5-6-8.5.4 4.6 2.6 7.3 6 8.5Z" /><path d="M10 17v-3" /></Svg>
 )

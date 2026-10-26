@@ -202,7 +202,7 @@ export default function AutomationCard({ zoneId, zoneName }: AutomationCardProps
     >
       {body}
 
-      {/* Tiến độ tới mốc bảo trì theo thời gian chạy của từng thiết bị (TICKET-FR-018) */}
+      {/* Tiến độ tới mốc bảo trì theo thời gian chạy của từng thiết bị (ALERT-FR-016) */}
       {data && data.relay_usage.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-warmGray/15 pt-4">
           <p className="label-caption">{t('automation.maintenanceTitle')}</p>

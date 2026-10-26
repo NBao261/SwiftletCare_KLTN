@@ -24,8 +24,6 @@ export interface User {
   deletion_requested_at?: string
   /** AUTH-FR-012 — Admin đã xoá/ẩn danh xong; document vẫn còn để giữ tham chiếu lịch sử */
   deleted_at?: string
-  /** AUTH-FR-005c — chỉ Technician, vùng phụ trách do Admin gán khi tạo tài khoản */
-  assigned_regions?: string[]
   created_at?: string
 }
 
@@ -37,7 +35,7 @@ export interface User {
 export interface SalesAssignmentRequest {
   _id: string
   type: 'ADD' | 'REMOVE'
-  farm_id: { _id: string; name: string; region?: string }
+  farm_id: { _id: string; name: string }
   requested_by: { _id: string; full_name: string; email: string }
   /** Chỉ có với type=REMOVE */
   sales_staff_id?: { _id: string; full_name: string; email: string }

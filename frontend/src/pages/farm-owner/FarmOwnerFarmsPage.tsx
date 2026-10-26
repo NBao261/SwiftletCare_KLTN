@@ -18,7 +18,7 @@ import HeaderActions from '@/components/layouts/HeaderActions'
 import { summarizeScope } from '@/components/features/farm-owner/farms/farmStructure'
 import { farmHousePath, farmZonePath, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
 import { isUpFromChildState } from '@/lib/navigationState'
-import { useDeleteFarm, useFarms, useRegions } from '@/hooks/shared/useFarms'
+import { useDeleteFarm, useFarms } from '@/hooks/shared/useFarms'
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
 import { useFarmStructure, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
@@ -76,7 +76,6 @@ export default function FarmOwnerFarmsPage() {
     if (scope.zone) navigate(farmZonePath(scope.zone.farmId, scope.zone.house_id, scope.zone._id), { replace: true })
     else if (scope.houseId && scope.farmId) navigate(farmHousePath(scope.farmId, scope.houseId), { replace: true })
   }, [scope, isGoingUp, navigate])
-  const { data: regions } = useRegions()
   const currentUserId = useAuthStore(state => state.user?._id)
   const deleteFarm = useDeleteFarm()
   const push = useToastStore(state => state.push)
@@ -104,7 +103,6 @@ export default function FarmOwnerFarmsPage() {
   const isAutoExpand = isFiltering || scope.farmId !== ''
   const autoExpandKey = `${search.trim()}|${filter}|${scope.farmId}|${scope.houseId}`
   const collapsedIds = collapsed.key === autoExpandKey ? collapsed.ids : NO_IDS
-  const regionNameByCode = useMemo(() => new Map((regions ?? []).map(region => [region.code, region.name])), [regions])
   const isPrimaryOf = (farm: Farm) => farm.owner_id === currentUserId
 
   // Số nhà, thiết bị và nhà đang cảnh báo của từng farm (chặn xoá farm còn thiết bị)
@@ -350,7 +348,6 @@ export default function FarmOwnerFarmsPage() {
                   <FarmGroupRow
                     key={farm._id}
                     farm={farm}
-                    regionName={farm.region ? regionNameByCode.get(farm.region) : undefined}
                     houseCount={stats.houses}
                     deviceCount={stats.devices}
                     alertHouseCount={stats.alertHouses}
@@ -376,7 +373,7 @@ export default function FarmOwnerFarmsPage() {
         <AddHouseModal open onClose={() => setAddHouseFarmId(null)} farms={farms} existingHouses={existingHouses} initialFarmId={addHouseFarmId} />
       )}
       {showCreateFarm && <FarmFormModal onClose={() => setShowCreateFarm(false)} />}
-      {editFarm && <FarmFormModal farm={editFarm} canChangeRegion={isPrimaryOf(editFarm)} onClose={() => setEditFarm(null)} />}
+      {editFarm && <FarmFormModal farm={editFarm} onClose={() => setEditFarm(null)} />}
       <ConfirmModal
         open={deleteTarget !== null}
         title={t('manage.deleteTitle', { name: deleteTarget?.name ?? NO_VALUE })}

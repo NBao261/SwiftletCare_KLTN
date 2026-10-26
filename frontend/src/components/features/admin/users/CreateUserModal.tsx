@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useCreateUser, type AdminCreatableRole } from '@/hooks/admin/useUsers'
-import { PASSWORD_MIN, parseRegions, validateNewUser, type Field, type FormState } from '@/validations/admin/user.validation'
+import { PASSWORD_MIN, validateNewUser, type Field, type FormState } from '@/validations/admin/user.validation'
 import { useFarms } from '@/hooks/shared/useFarms'
 import { Button, Input, Modal, ModalHeader, MODAL_SECTION_TITLE } from '@/components/ui'
 import ComingSoon from '@/components/ui/ComingSoon'
@@ -16,17 +16,17 @@ const CREATABLE_ROLES: AdminCreatableRole[] = ['TECHNICIAN', 'SALES_STAFF']
  * thay cho form. Bật lại (true) khi backend xong; phần form chuyên gia bên dưới vẫn giữ nguyên.
  */
 const STAFF_FORM_READY = false
-const EMPTY_FORM: FormState ={ role: 'TECHNICIAN', full_name: '', email: '', phone: '', password: '', regions: '', farmIds: [] }
+const EMPTY_FORM: FormState ={ role: 'TECHNICIAN', full_name: '', email: '', phone: '', password: '', farmIds: [] }
 
 /**
  * AUTH-FR-005c, Flow 16 bước 1a — 1 modal cho cả 2 loại tài khoản Admin được
  * tạo (RACI mục 4.4: không tạo Farm Owner, Admin là tài khoản gốc seed):
- * - Technician → POST /admin/technicians, bắt buộc `assigned_regions`
+ * - Technician → POST /admin/technicians (thấy thiết bị của mọi farm, không gắn farm nào — FARM-FR-009)
  * - Sales Staff → POST /admin/sales-staff, bắt buộc `farm_ids` (≥1 farm đang tồn tại)
  * Admin tự đặt mật khẩu ban đầu (backend không tự sinh/gửi mail ở 2 endpoint này).
  * Lỗi chỉ hiện sau khi người dùng rời ô (blur) hoặc đã bấm submit — không đỏ cả form lúc mới mở.
  * `presetFarmId`: mở từ trang chi tiết Farm → KHOÁ vai trò ở Sales Staff + tích sẵn farm đó.
- * Khoá chứ không chỉ chọn sẵn: Technician gắn với `assigned_regions` chứ không gắn farm nào,
+ * Khoá chứ không chỉ chọn sẵn: Technician không gắn farm nào,
  * đổi vai trò ở màn này sẽ làm rơi farm đang mở khỏi payload mà không báo gì.
  */
 export default function CreateUserModal({ open, onClose, presetFarmId }: { open: boolean; onClose: () => void; presetFarmId?: string }) {
@@ -70,7 +70,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
     }
     createUser.mutate(
       form.role === 'TECHNICIAN'
-        ? { role: form.role, ...base, assigned_regions: parseRegions(form.regions) }
+        ? { role: form.role, ...base }
         : { role: form.role, ...base, farm_ids: form.farmIds },
       {
         onSuccess: () => { push(t('Đã tạo tài khoản {{role}}', { role: ROLE_LABEL[form.role] })); onClose() },
@@ -96,7 +96,7 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
         <ModalHeader title={title} description="Chọn vai trò và điền thông tin tài khoản" />
 
         <div className="flex h-[27rem] gap-6">
-        {/* Cột trái: vai trò — đang chọn nền đen chữ trắng như popup Tạo ticket */}
+        {/* Cột trái: vai trò — đang chọn nền đen chữ trắng */}
         <div className="flex w-52 shrink-0 flex-col border-r border-gray-200 pr-5">
           <h3 className={MODAL_SECTION_TITLE}>{t('Vai trò')}</h3>
           <div className="flex flex-col gap-0.5" role="radiogroup" aria-label={t('Vai trò')}>
@@ -181,22 +181,11 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
             </div>
           </section>
 
+          {form.role === 'SALES_STAFF' && (
           <section>
             <h4 className={MODAL_SECTION_TITLE}>{t('Phân công')}</h4>
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-        {form.role === 'TECHNICIAN' && (
-          <Input
-            label="Vùng phụ trách"
-            required
-            placeholder="VD: HCMC, Long An"
-            value={form.regions}
-            onChange={e => set('regions', e.target.value)}
-            onBlur={() => touch('regions')}
-            error={showError('regions')}
-            />
-        )}
 
-        {form.role === 'SALES_STAFF' && (
           <div className="flex flex-col gap-1.5">
             <span className="label-caption">
               {t('Farm phụ trách')}<span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
@@ -214,7 +203,6 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
                   <label key={f._id} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm hover:bg-warmGray/10">
                     <input type="checkbox" className="accent-success" checked={form.farmIds.includes(f._id)} onChange={() => toggleFarm(f._id)} />
                     <span className="truncate text-charcoal">{f.name}</span>
-                    {f.region && <span className="ml-auto shrink-0 text-xs text-warmGray">{f.region}</span>}
                   </label>
                 ))}
               </div>
@@ -222,10 +210,9 @@ export default function CreateUserModal({ open, onClose, presetFarmId }: { open:
             {/* Lỗi ngắn dưới danh sách — như Input */}
             {showError('farmIds') && <span className="text-xs text-alertRed">{errors.farmIds}</span>}
           </div>
-        )}
-
             </div>
           </section>
+          )}
           </div>
 
           <div className="flex shrink-0 justify-end">

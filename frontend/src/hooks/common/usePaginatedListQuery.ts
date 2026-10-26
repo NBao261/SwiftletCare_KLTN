@@ -3,7 +3,7 @@ import type { ApiResponse } from '@/types'
 
 /**
  * Unwrap chung envelope phân trang `{success,data:{data,meta:{total,page,limit}}}` — trước đây
- * bị viết lại y hệt ở `useAlertsList`/`useTicketsList`. Dùng cho mọi danh sách phân trang.
+ * bị viết lại y hệt ở `useAlertsList`/`useAuditLogList`. Dùng cho mọi danh sách phân trang.
  */
 export function usePaginatedListQuery<T>(
   queryKey: readonly unknown[],

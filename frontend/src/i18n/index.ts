@@ -48,7 +48,7 @@ export function tr<T>(value: T): T {
   return (typeof value === 'string' ? t(value) : value) as T
 }
 
-/** Như tr() cho children: dịch từng đoạn chữ, giữ nguyên icon/element (VD <Button><PlusIcon />Tạo ticket</Button>) */
+/** Như tr() cho children: dịch từng đoạn chữ, giữ nguyên icon/element (VD <Button><PlusIcon />Tạo tài khoản</Button>) */
 export function trChildren(children: ReactNode): ReactNode {
   return Children.map(children, c => (typeof c === 'string' ? t(c) : c))
 }

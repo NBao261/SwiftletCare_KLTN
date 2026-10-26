@@ -1,14 +1,12 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Farm, FarmMemberRole, FuzzyTuning, House, Region, Zone, Invitation } from '@/types'
+import type { ApiResponse, Farm, FarmMemberRole, Coordinates, FuzzyTuning, House, Zone, Invitation } from '@/types'
 
 export const farmApi = {
   list:   () => api.get<ApiResponse<Farm[]>>('/farms'),
-  // FARM-FR-009 — danh mục 34 tỉnh/thành để chọn khu vực farm
-  listRegions: () => api.get<ApiResponse<Region[]>>('/farms/regions'),
-  create: (input: { name: string; address: string; region?: string; coordinates?: { lat: number; lng: number } }) =>
+  create: (input: { name: string; address: string; coordinates: Coordinates }) =>
     api.post<ApiResponse<Farm>>('/farms', input),
   getOne: (id: string) => api.get<ApiResponse<Farm>>(`/farms/${id}`),
-  update: (id: string, input: Partial<{ name: string; address: string; region: string }>) =>
+  update: (id: string, input: Partial<{ name: string; address: string; coordinates: Coordinates }>) =>
     api.put<ApiResponse<Farm>>(`/farms/${id}`, input),
   remove: (id: string) => api.delete<ApiResponse<{ message: string }>>(`/farms/${id}`),
 

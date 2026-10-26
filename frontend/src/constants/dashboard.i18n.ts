@@ -103,8 +103,6 @@ const vi = {
   'kpi.alertsSub': '{p1} {l1} · {p2} {l2} · {p3} {l3}',
   'kpi.harvest': 'Sản lượng tháng này',
   'kpi.harvestSub': '{nests} tổ · {batches} đợt thu',
-  'kpi.tickets': 'Yêu cầu hỗ trợ đang mở',
-  'kpi.ticketsSub': 'Chưa hoàn tất ở trang trại này',
 
   // Khung sản lượng thu hoạch của 1 nhà yến
   'harvest.title': 'Sản lượng thu hoạch',
@@ -311,8 +309,6 @@ const en: Record<DashboardKey, string> = {
   'kpi.alertsSub': '{p1} {l1} · {p2} {l2} · {p3} {l3}',
   'kpi.harvest': 'Harvest this month',
   'kpi.harvestSub': '{nests} nests · {batches} batches',
-  'kpi.tickets': 'Open support tickets',
-  'kpi.ticketsSub': 'Not completed on this farm',
 
   'harvest.title': 'Harvest yield',
   'harvest.month': 'This month',

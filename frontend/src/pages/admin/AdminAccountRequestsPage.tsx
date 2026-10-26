@@ -64,7 +64,7 @@ const TABS: { key: Tab; label: string; description: string }[] = [
 
 /**
  * Không lặp tiêu đề "Yêu cầu tài khoản" — AppHeader đã hiện tên trang. 1 card (SectionCard) như các trang Admin khác,
- * tab pill ở góc phải cùng kiểu trang Ticket / chi tiết Farm.
+ * tab pill ở góc phải cùng kiểu trang Người dùng.
  */
 export default function AdminAccountRequestsPage() {
   const [tab, setTab] = useState<Tab>('DELETE')
@@ -104,13 +104,6 @@ function daysRemaining(requestedAt: string): number {
   return DELETE_SLA_DAYS - elapsedDays
 }
 
-/** Đọc details.openTickets từ envelope 409 HAS_OPEN_TICKETS (backend/src/services/admin.service.ts) */
-function readOpenTickets(err: unknown): number | null {
-  const e = err as { response?: { data?: { error?: { code?: string; details?: { openTickets?: number } } } } }
-  const error = e?.response?.data?.error
-  return error?.code === 'HAS_OPEN_TICKETS' ? (error.details?.openTickets ?? 0) : null
-}
-
 function DeleteRequestsTab() {
   const [page, setPage] = useState(1)
   const { records: requests, total, limit, isLoading } = useDeleteRequestsList({ page, limit: PAGE_SIZE })
@@ -118,21 +111,11 @@ function DeleteRequestsTab() {
   const completeDeleteRequest = useCompleteDeleteRequest()
   const push = useToastStore(s => s.push)
   const [target, setTarget] = useState<User | null>(null)
-  /** Backend báo còn ticket mở → hỏi lại lần 2 với force:true (Flow 19 bước 7c) */
-  const [forceTarget, setForceTarget] = useState<{ user: User; openTickets: number } | null>(null)
 
-  function complete(user: User, force: boolean) {
-    completeDeleteRequest.mutate({ id: user._id, force }, {
-      onSuccess: () => { push('Đã xử lý yêu cầu xoá tài khoản'); setTarget(null); setForceTarget(null) },
-      onError: (err) => {
-        const openTickets = readOpenTickets(err)
-        if (openTickets !== null && !force) {
-          setTarget(null)
-          setForceTarget({ user, openTickets })
-          return
-        }
-        push(getApiErrorMessage(err, 'Xử lý yêu cầu xoá thất bại'), 'error')
-      },
+  function complete(user: User) {
+    completeDeleteRequest.mutate(user._id, {
+      onSuccess: () => { push('Đã xử lý yêu cầu xoá tài khoản'); setTarget(null) },
+      onError: (err) => push(getApiErrorMessage(err, 'Xử lý yêu cầu xoá thất bại'), 'error'),
     })
   }
 
@@ -183,20 +166,10 @@ function DeleteRequestsTab() {
         confirmLabel="Xác nhận xoá"
         danger
         loading={completeDeleteRequest.isPending}
-        onConfirm={() => target && complete(target, false)}
+        onConfirm={() => target && complete(target)}
         onCancel={() => setTarget(null)}
       />
 
-      <ConfirmModal
-        open={!!forceTarget}
-        title="Người dùng còn ticket đang mở"
-        description={i18nT('Còn {{n}} ticket đang mở liên quan tới {{name}}. Bạn có thể chờ xử lý xong ticket rồi quay lại, hoặc vẫn xoá ngay (ticket sẽ mất người phụ trách/farm).', { n: forceTarget?.openTickets ?? 0, name: forceTarget?.user.full_name ?? '' })}
-        confirmLabel="Vẫn xoá"
-        danger
-        loading={completeDeleteRequest.isPending}
-        onConfirm={() => forceTarget && complete(forceTarget.user, true)}
-        onCancel={() => setForceTarget(null)}
-      />
     </div>
   )
 }

@@ -10,7 +10,7 @@ interface StatTileProps {
   value: string | number
   sub: string
   className?: string
-  /** Nhãn nền đỏ cùng hàng số lớn, sát mép phải (VD "115 quá hạn" ở ô Ticket đang mở) */
+  /** Nhãn nền đỏ cùng hàng số lớn, sát mép phải (VD "3 quá hạn") */
   valueBadge?: string
   /**
    * Làm nổi cả ô khi số đang báo vấn đề (nơi gọi tự quyết, VD > 0): `warning` cam / `critical` đỏ — viền + nền nhạt,

@@ -18,8 +18,7 @@ interface SortChipsProps<K extends string> {
 }
 
 /**
- * Nhóm nút "Sắp xếp:" — lấy nguyên thiết kế ở trang Ticket của Admin, dùng chung cho Người dùng, Trang trại,
- * Ticket, Audit log. Nhãn `.label-caption` + chip tròn cao bằng SelectMenu/FilterChip. Chip đang sắp: nền
+ * Nhóm nút "Sắp xếp:" — dùng chung cho các trang Admin (Người dùng, Thiết bị, Audit log). Nhãn `.label-caption` + chip tròn cao bằng SelectMenu/FilterChip. Chip đang sắp: nền
  * charcoal chữ trắng + icon chiều Phosphor (bold 12px); chip khác: nền xám nhạt, hover đậm hơn. Đổi chip là
  * đổi màu ngay, không hiệu ứng động. Chỉ hiển thị — trạng thái sortBy/sortDir do trang giữ.
  */

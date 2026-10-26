@@ -20,14 +20,6 @@ export type AlertType =
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 
-// Module TICKET (§5.9)
-export type TicketType =
-  | 'SENSOR_FAULT' | 'RS485_BUS_FAILURE' | 'ACTUATOR_FAILURE' | 'NODE_OFFLINE'
-  | 'EDGE_AI_DEGRADED' | 'POWER_OUTAGE' | 'SPEAKER_FAILURE' | 'PREDATOR_DETECTED'
-  | 'INSTALLATION' | 'MAINTENANCE' | 'OTHER'
-export type TicketPriority = 'P1' | 'P2' | 'P3'
-export type TicketStatus = 'NEW' | 'IN_PROGRESS' | 'AWAITING_FIELD_CONFIRMATION' | 'CLOSED'
-
 // ── Entities ───────────────────────────────────────────────────────────────────
 export interface User {
   _id: string
@@ -136,25 +128,6 @@ export interface TelemetryRecord {
   is_anomaly: boolean
 }
 
-// Module TICKET (§5.9, §8.2)
-export interface Ticket {
-  _id: string
-  farm_id: string
-  zone_id?: string
-  alert_id?: string
-  type: TicketType
-  priority: TicketPriority
-  status: TicketStatus
-  assigned_to?: string
-  sla_response_due_at?: string
-  sla_resolve_due_at?: string
-  is_sla_breached: boolean
-  notes: Array<{ author_id: string; content: string; created_at: string }>
-  satisfaction_rating?: number
-  created_at: string
-  closed_at?: string
-}
-
 export interface Alert {
   _id: string
   farm_id: string
@@ -251,4 +224,3 @@ export interface FarmDetailParams { farmId: string }
 export interface ZoneDetailParams { zoneId: string }
 export interface DeviceDetailParams { deviceId: string }
 export interface AlertDetailParams { alertId: string }
-export interface TicketDetailParams { ticketId: string }

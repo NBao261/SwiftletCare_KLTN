@@ -78,7 +78,7 @@ export function useAllUsers(status?: ListUsersQuery['status'], role?: Role) {
 
 /**
  * AUTH-FR-011 — GET /admin/users. Backend chỉ lọc được status/role và không có search/sort, nên tải
- * HẾT các trang khớp status/role (mỗi request tối đa PICKER_LIMIT, như useAllTickets) rồi tìm kiếm +
+ * HẾT các trang khớp status/role (mỗi request tối đa PICKER_LIMIT) rồi tìm kiếm +
  * sắp xếp + cắt trang ở client — tìm ra bao nhiêu thì `total`/phân trang đúng bấy nhiêu, không chỉ
  * trong trang đang xem.
  * ponytail: tải toàn bộ tài khoản mỗi lần đổi status/role — đủ cho quy mô hiện tại; khi lên vài nghìn
@@ -105,7 +105,7 @@ export function useUsersList(query: ListUsersQuery) {
 }
 
 /**
- * Danh sách người dùng cho các ô chọn (gán lại KTV, lọc actor nhật ký) — 1 trang
+ * Danh sách người dùng cho các ô chọn (lọc actor nhật ký) — 1 trang
  * tối đa PICKER_LIMIT. Backend không có search nên không phân trang dropdown
  * được; khi `truncated` (total > số lấy về) UI phải báo để Admin biết danh sách
  * chưa đủ thay vì tưởng người đó không tồn tại.
@@ -119,11 +119,6 @@ export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = 
   const records = result.data?.data ?? []
   const total = result.data?.meta?.total ?? records.length
   return { records, total, truncated: total > records.length, isLoading: result.isLoading }
-}
-
-/** Technician đang hoạt động để gán lại ticket (TechnicianTicketDetailPage, TICKET-FR-005b) */
-export function useTechniciansList() {
-  return useUsersPicker({ role: 'TECHNICIAN', activeOnly: true })
 }
 
 /**
@@ -143,7 +138,7 @@ export function useCreateUser() {
     mutationFn: (input: CreateUserInput) => {
       const base = { email: input.email, password: input.password, full_name: input.full_name, phone: input.phone }
       return input.role === 'TECHNICIAN'
-        ? adminApi.createTechnician({ ...base, assigned_regions: input.assigned_regions })
+        ? adminApi.createTechnician(base)
         : adminApi.createSalesStaff({ ...base, farm_ids: input.farm_ids })
     },
     onSuccess: () => {
@@ -163,31 +158,13 @@ export function useUnassignSalesStaff(farmId: string) {
   })
 }
 
-export interface SetUserStatusResult {
-  user: User
-  /** Chỉ có khi khoá Technician còn ticket đang giao — Admin cần gán lại (TICKET-FR-005b) */
-  openTickets?: number
-}
-
 /** AUTH-FR-011 — PUT /admin/users/:id/status. Khoá cần lý do, mở khoá không. */
 export function useSetUserStatus() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, isActive, reason }: { id: string; isActive: boolean; reason?: string }): Promise<SetUserStatusResult> => {
-      const res = await adminApi.setUserStatus(id, isActive, reason)
-      const meta = res.data.meta as { openTickets?: number } | undefined
-      return { user: res.data.data, openTickets: meta?.openTickets }
-    },
+    mutationFn: ({ id, isActive, reason }: { id: string; isActive: boolean; reason?: string }) =>
+      adminApi.setUserStatus(id, isActive, reason).then(r => r.data.data),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
   })
 }
 
-/** AUTH-FR-005c, Flow 21 4a-x — PUT /admin/technicians/:id/regions (chỉ Technician). */
-export function useUpdateTechnicianRegions() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, assigned_regions }: { id: string; assigned_regions: string[] }) =>
-      adminApi.updateTechnicianRegions(id, assigned_regions),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
-  })
-}

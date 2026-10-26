@@ -2,7 +2,7 @@
 // thiết bị: kích hoạt/gán/dời là việc của Technician (FARM-FR-003/007/007b, RACI Admin = "I (audit)"), bật/tắt relay
 // là việc của Farm Owner/Technician (ENV-FR-016, RACI Admin = "–"). Vì vậy trang này thay cho /devices (màn làm việc
 // của Technician) trong menu Admin: không nút kích hoạt, không điều khiển relay, không dời Zone.
-// Cùng khuôn trang Ticket/Người dùng: hàng ô số → tìm kiếm → bộ lọc + sắp xếp → bảng → phân trang (client-side trên
+// Cùng khuôn trang Người dùng: hàng ô số → tìm kiếm → bộ lọc + sắp xếp → bảng → phân trang (client-side trên
 // toàn bộ node vì API trả hết 1 lần).
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'

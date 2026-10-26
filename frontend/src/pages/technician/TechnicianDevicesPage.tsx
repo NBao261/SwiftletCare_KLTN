@@ -46,7 +46,7 @@ export default function TechnicianDevicesPage() {
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
   // BE trả 501 khi firmware của thiết bị đó chưa hỗ trợ RESTART (trước 1.4.0) → khoá nút của riêng thiết bị đó
   const [rebootUnsupportedIds, setRebootUnsupportedIds] = useState<Set<string>>(new Set());
-  // POST /devices/sensor-nodes/:id/commands chỉ cho TECHNICIAN/ADMIN (TICKET-FR-008)
+  // POST /devices/sensor-nodes/:id/commands chỉ cho TECHNICIAN (FARM-FR-013)
   const sendCommand = useSendNodeCommand();
   const [rebootNodeId, setRebootNodeId] = useState<string | null>(null);
 
