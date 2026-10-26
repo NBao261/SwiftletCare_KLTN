@@ -1,12 +1,16 @@
 // DeviceTable.tsx — Bảng danh sách thiết bị với nút "Đẩy OTA"
 // Cột "Cập nhật" đọc trực tiếp ota_pending / ota_failed của node (không suy diễn "bản mới nhất" vì BE không có catalog firmware).
+import { useMemo } from 'react'
 import { Card } from '@/components/ui'
 import StatusDot from '@/components/common/StatusDot'
 import { formatDate } from '@/lib/helpers'
+import { useAllZones } from '@/hooks/shared/useFarms'
 import type { SensorNode, DeviceStatus } from '@/types'
 
 interface DeviceRowProps {
   node: SensorNode
+  // Tên Zone kèm nhà; chưa tải xong thì '—'
+  zoneName: string
   selected: boolean
   onSelect: () => void
 }
@@ -34,7 +38,7 @@ function OtaChip({ node }: { node: SensorNode }) {
   return <span className="text-warmGray">—</span>
 }
 
-function DeviceRow({ node, selected, onSelect }: DeviceRowProps) {
+function DeviceRow({ node, zoneName, selected, onSelect }: DeviceRowProps) {
   // BE (409): chỉ node ONLINE/DEGRADED mới nhận lệnh từ xa
   const isOffline = node.status !== 'ONLINE' && node.status !== 'DEGRADED'
   // Viền trái: đang chọn → đen; OTA đang chờ → cam; OTA lỗi → đỏ; còn lại không viền
@@ -46,7 +50,7 @@ function DeviceRow({ node, selected, onSelect }: DeviceRowProps) {
         <StatusDot status={node.status as DeviceStatus} />
       </td>
       <td className="px-4 py-3 font-mono text-sm font-semibold text-charcoal">{node.device_id}</td>
-      <td className="px-4 py-3 text-warmGray">{node.zone_id ? `KV ${node.zone_id.slice(-6).toUpperCase()}` : '—'}</td>
+      <td className="px-4 py-3 text-warmGray">{zoneName}</td>
       <td className="px-4 py-3 font-mono text-sm">{node.firmware_version ?? '—'}</td>
       <td className="px-4 py-3 text-sm"><OtaChip node={node} /></td>
       <td className="px-4 py-3 text-xs text-warmGray">
@@ -77,6 +81,10 @@ interface Props {
 }
 
 export function DeviceTable({ nodes, selectedId, onSelect }: Props) {
+  // Tên Zone thay cho mã cắt từ id (FE_Design 13.16 a)
+  const { data: zones } = useAllZones()
+  const zoneNameById = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, `${zone.houseName} · ${zone.name}`])), [zones])
+
   return (
     <Card className="!p-0 overflow-hidden">
       <table className="w-full text-sm">
@@ -94,6 +102,7 @@ export function DeviceTable({ nodes, selectedId, onSelect }: Props) {
             <DeviceRow
               key={node._id}
               node={node}
+              zoneName={zoneNameById.get(node.zone_id) ?? '—'}
               selected={selectedId === node._id}
               onSelect={() => onSelect(node)}
             />

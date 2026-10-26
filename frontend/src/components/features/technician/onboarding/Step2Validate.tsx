@@ -2,7 +2,7 @@
 // BE (Flow 1 bước 3–4) xác thực cặp {device_id, secret_key} in trên nhãn thiết bị:
 // sensor → POST /devices/sensor-nodes/register, camera → POST /devices/camera-nodes/register.
 // Phân loại lỗi bằng HTTP status code, không string-match message:
-//   400 = sai Device ID / secretKey, 403 = không phụ trách farm này, 409 = đã đăng ký
+//   400 = sai Device ID / secretKey, 403 = không có quyền với farm này, 409 = đã đăng ký
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
@@ -183,9 +183,9 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       {error === 'FORBIDDEN' && (
         <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
-          <p className="font-semibold text-alertRed">✗ Bạn không phụ trách khu vực này</p>
+          <p className="font-semibold text-alertRed">✗ Bạn không có quyền với trang trại này</p>
           <p className="mt-1 text-sm text-alertRed/80">
-            {errorMessage || 'Chỉ Technician được phân công cho farm này mới kích hoạt được thiết bị. Quay lại bước 1 chọn Zone khác.'}
+            {errorMessage || 'Tài khoản này không được đăng ký thiết bị vào trang trại đã chọn. Quay lại bước 1 chọn Zone khác.'}
           </p>
         </div>
       )}

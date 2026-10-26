@@ -1,6 +1,6 @@
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { farmApi } from '@/apis/shared/farms.api'
-import type { FuzzyTuning, Zone, FarmMemberRole } from '@/types'
+import type { Coordinates, FuzzyTuning, Zone, FarmMemberRole } from '@/types'
 
 const isMongoId = (id: string | undefined): boolean => Boolean(id && /^[0-9a-fA-F]{24}$/.test(id))
 
@@ -34,31 +34,21 @@ export function useFarmDetails(farmIds: string[]) {
 export function useCreateFarm() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { name: string; address: string; region?: string }) => farmApi.create(input),
+    mutationFn: (input: { name: string; address: string; coordinates: Coordinates }) => farmApi.create(input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['farms'] }),
   })
 }
 
-// FARM-FR-009 — danh mục khu vực, hiếm khi đổi
-export function useRegions() {
-  return useQuery({
-    queryKey: ['farm-regions'],
-    queryFn: () => farmApi.listRegions().then(response => response.data.data),
-    // Danh mục tỉnh cố định ở backend, không đổi trong phiên làm việc nên không tải lại
-    staleTime: Infinity,
-  })
-}
-
-// FARM-FR-001 — sửa tên, địa chỉ, khu vực farm (khu vực chỉ Primary Owner/Admin đổi được)
+// FARM-FR-001 — sửa tên, địa chỉ, vị trí farm
 export function useUpdateFarm(farmId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: Partial<{ name: string; address: string; region: string }>) => farmApi.update(farmId, input),
+    mutationFn: (input: Partial<{ name: string; address: string; coordinates: Coordinates }>) => farmApi.update(farmId, input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['farms'] }),
   })
 }
 
-// FARM-FR-001 — xoá mềm farm (chỉ Primary Owner); backend đóng cảnh báo và ticket đang mở của farm
+// FARM-FR-001 — xoá mềm farm (chỉ Primary Owner); backend đóng cảnh báo đang mở của farm
 export function useDeleteFarm() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -177,7 +167,7 @@ export function useRemoveMember(farmId: string) {
 
 export interface FlatZone extends Zone { houseName: string }
 
-// Zone phẳng của 1 farm (kèm tên nhà) để tra tên Zone, nhà cho Harvest / Ticket vốn chỉ trả zone_id
+// Zone phẳng của 1 farm (kèm tên nhà) để tra tên Zone, nhà cho Harvest vốn chỉ trả zone_id
 export function useFarmZones(farmId: string | undefined) {
   return useQuery({
     queryKey: ['farm-zones', farmId],

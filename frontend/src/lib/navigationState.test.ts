@@ -7,7 +7,7 @@ describe('isUpFromChildState', () => {
     expect(isUpFromChildState(null)).toBe(false)
     expect(isUpFromChildState(undefined)).toBe(false)
     expect(isUpFromChildState({ fromChildPage: false })).toBe(false)
-    expect(isUpFromChildState({ ticketId: 't1' })).toBe(false)
+    expect(isUpFromChildState({ zoneId: 'z1' })).toBe(false)
   })
 })
 

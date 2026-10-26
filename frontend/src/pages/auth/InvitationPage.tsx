@@ -42,9 +42,9 @@ export default function InvitationPage() {
     if (!token) return
     accept.mutate(token, {
       // Chấp nhận lời mời không đổi role của tài khoản hiện có (chỉ thêm vào
-      // farm.members hoặc tạo SalesAssignment — xem farm.service.ts), nên
-      // user.role trong store vẫn đúng ngay lúc này — về đúng trang nhà của
-      // role đó thay vì hardcode '/dashboard' (Sales Staff sẽ bị văng /403).
+      // farm.members — xem farm.service.ts), nên user.role trong store vẫn
+      // đúng ngay lúc này — về đúng trang nhà của role đó thay vì hardcode
+      // '/dashboard' (chuyên gia sẽ bị văng /403).
       onSuccess: () => { push('Đã chấp nhận lời mời'); navigate(getRoleHomePath(user?.role)) },
       onError: (err) => push(getApiErrorMessage(err, 'Chấp nhận thất bại'), 'error'),
     })

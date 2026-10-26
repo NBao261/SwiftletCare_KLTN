@@ -28,7 +28,7 @@ const menuSections: MenuSection[] = [
     items: [
       // AUTH-FR-011 — quản lý tài khoản toàn hệ thống (RACI mục 4.4)
       { label: 'Người dùng', path: '/users', icon: IconUsers },
-      // AUTH-FR-012 (hàng đợi xoá tài khoản) + AUTH-FR-005d (đề xuất Sales Staff)
+      // AUTH-FR-012 (hàng đợi xoá tài khoản)
       { label: 'Yêu cầu tài khoản', path: '/account-requests', icon: IconBell },
     ],
   },

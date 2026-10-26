@@ -117,7 +117,7 @@ export interface ControlPerformanceResponse {
   tuning_changes: Array<{ changed_at: string; new_values: Partial<FuzzyTuning> }>
   series: ControlPerformancePoint[]
   stats: ControlPerformanceStats | null
-  /** TICKET-FR-018 — mốc bảo trì theo thời gian chạy + tiến độ từng thiết bị (từ lần bảo trì trước) */
+  /** ALERT-FR-016 — mốc bảo trì theo thời gian chạy + tiến độ từng thiết bị (từ lần bảo trì trước) */
   service_limits: Record<'misting' | 'ventilation', { hours: number; switches: number }>
   relay_usage: Array<{
     device_id: string

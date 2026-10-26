@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminApi, type CreateTechnicianInput, type CreateSalesStaffInput } from '@/apis/admin/users.api'
+import { adminApi, type CreateTechnicianInput } from '@/apis/admin/users.api'
 import type { User, Role, UserStatus, SortDirection } from '@/types'
 
 export type UsersSortKey = 'full_name' | 'email' | 'role' | 'status' | 'created_at'
@@ -78,7 +78,7 @@ export function useAllUsers(status?: ListUsersQuery['status'], role?: Role) {
 
 /**
  * AUTH-FR-011 — GET /admin/users. Backend chỉ lọc được status/role và không có search/sort, nên tải
- * HẾT các trang khớp status/role (mỗi request tối đa PICKER_LIMIT, như useAllTickets) rồi tìm kiếm +
+ * HẾT các trang khớp status/role (mỗi request tối đa PICKER_LIMIT) rồi tìm kiếm +
  * sắp xếp + cắt trang ở client — tìm ra bao nhiêu thì `total`/phân trang đúng bấy nhiêu, không chỉ
  * trong trang đang xem.
  * ponytail: tải toàn bộ tài khoản mỗi lần đổi status/role — đủ cho quy mô hiện tại; khi lên vài nghìn
@@ -105,7 +105,7 @@ export function useUsersList(query: ListUsersQuery) {
 }
 
 /**
- * Danh sách người dùng cho các ô chọn (gán lại KTV, lọc actor nhật ký) — 1 trang
+ * Danh sách người dùng cho các ô chọn (lọc actor nhật ký) — 1 trang
  * tối đa PICKER_LIMIT. Backend không có search nên không phân trang dropdown
  * được; khi `truncated` (total > số lấy về) UI phải báo để Admin biết danh sách
  * chưa đủ thay vì tưởng người đó không tồn tại.
@@ -121,73 +121,25 @@ export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = 
   return { records, total, truncated: total > records.length, isLoading: result.isLoading }
 }
 
-/** Technician đang hoạt động để gán lại ticket (TechnicianTicketDetailPage, TICKET-FR-005b) */
-export function useTechniciansList() {
-  return useUsersPicker({ role: 'TECHNICIAN', activeOnly: true })
-}
-
 /**
- * AUTH-FR-005c, Flow 16 bước 1a — Admin chỉ tạo được 2 loại tài khoản (RACI mục
- * 4.4: Farm Owner tự đăng ký/được mời, Admin là tài khoản gốc seed). Backend là
- * 2 endpoint riêng (POST /admin/technicians, POST /admin/sales-staff).
+ * AUTH-FR-005c — Admin chỉ tạo tài khoản Technician (POST /admin/technicians). Farm Owner tự đăng ký,
+ * chuyên gia do Primary Owner mời (AUTH-FR-010), Admin là tài khoản gốc seed.
  */
-export type AdminCreatableRole = Extract<Role, 'TECHNICIAN' | 'SALES_STAFF'>
-
-export type CreateUserInput =
-  | ({ role: 'TECHNICIAN' } & CreateTechnicianInput)
-  | ({ role: 'SALES_STAFF' } & CreateSalesStaffInput)
-
-export function useCreateUser() {
+export function useCreateTechnician() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: CreateUserInput) => {
-      const base = { email: input.email, password: input.password, full_name: input.full_name, phone: input.phone }
-      return input.role === 'TECHNICIAN'
-        ? adminApi.createTechnician({ ...base, assigned_regions: input.assigned_regions })
-        : adminApi.createSalesStaff({ ...base, farm_ids: input.farm_ids })
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
-      // Sales Staff mới được gán thẳng farm_ids — danh sách Sales Staff của farm (card Thành viên) phải làm mới
-      void queryClient.invalidateQueries({ queryKey: ['sales-staff'] })
-    },
+    mutationFn: (input: CreateTechnicianInput) => adminApi.createTechnician(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
   })
-}
-
-/** Flow 16 case 1e — Admin gỡ thẳng Sales Staff khỏi 1 farm (chỉ xoá bản ghi gán, không đụng tài khoản) */
-export function useUnassignSalesStaff(farmId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (salesStaffId: string) => adminApi.unassignSalesStaff(farmId, salesStaffId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sales-staff', farmId] }),
-  })
-}
-
-export interface SetUserStatusResult {
-  user: User
-  /** Chỉ có khi khoá Technician còn ticket đang giao — Admin cần gán lại (TICKET-FR-005b) */
-  openTickets?: number
 }
 
 /** AUTH-FR-011 — PUT /admin/users/:id/status. Khoá cần lý do, mở khoá không. */
 export function useSetUserStatus() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, isActive, reason }: { id: string; isActive: boolean; reason?: string }): Promise<SetUserStatusResult> => {
-      const res = await adminApi.setUserStatus(id, isActive, reason)
-      const meta = res.data.meta as { openTickets?: number } | undefined
-      return { user: res.data.data, openTickets: meta?.openTickets }
-    },
+    mutationFn: ({ id, isActive, reason }: { id: string; isActive: boolean; reason?: string }) =>
+      adminApi.setUserStatus(id, isActive, reason).then(r => r.data.data),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
   })
 }
 
-/** AUTH-FR-005c, Flow 21 4a-x — PUT /admin/technicians/:id/regions (chỉ Technician). */
-export function useUpdateTechnicianRegions() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, assigned_regions }: { id: string; assigned_regions: string[] }) =>
-      adminApi.updateTechnicianRegions(id, assigned_regions),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
-  })
-}

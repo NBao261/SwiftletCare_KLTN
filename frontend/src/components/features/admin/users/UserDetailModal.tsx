@@ -7,10 +7,9 @@ import { t, trChildren } from '@/i18n'
 import { STATUS_LABEL, STATUS_TONE, ROLE_LABEL } from '@/components/features/admin/users/users.constants'
 import type { User } from '@/types'
 
-type Section = 'info' | 'assignment' | 'history'
+type Section = 'info' | 'history'
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'info', label: 'Thông tin' },
-  { key: 'assignment', label: 'Phân công' },
   { key: 'history', label: 'Lịch sử' },
 ]
 
@@ -100,21 +99,6 @@ export default function UserDetailModal({ user, onClose }: { user: User | null; 
                   <Row label="Trạng thái"><Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge></Row>
                 </Group>
               </>
-            )}
-
-            {section === 'assignment' && (
-              <Group>
-                {user.role === 'TECHNICIAN' ? (
-                  <Row label="Vùng phụ trách" hint="Ticket của farm trong các vùng này được giao cho người này">
-                    {user.assigned_regions?.length
-                      ? <span title={user.assigned_regions.join(', ')}>{user.assigned_regions.join(', ')}</span>
-                      // Chưa gán thì Ticket Router không giao ticket được cho người này (TICKET-FR-004)
-                      : <Empty>Chưa gán — chưa nhận được ticket</Empty>}
-                  </Row>
-                ) : (
-                  <Row label="Vùng phụ trách" hint="Chỉ kỹ thuật viên có vùng phụ trách"><Empty>Không áp dụng</Empty></Row>
-                )}
-              </Group>
             )}
 
             {section === 'history' && (

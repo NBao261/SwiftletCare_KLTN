@@ -15,7 +15,6 @@ import { tr } from '@/i18n'
 import { STATUS_LABEL, FILTERABLE_STATUSES, ROLE_LABEL, SORT_FIELDS, type FilterableStatus } from '@/components/features/admin/users/users.constants'
 import { buildUserColumns } from '@/components/features/admin/users/userColumns'
 import UserDetailModal from '@/components/features/admin/users/UserDetailModal'
-import EditUserModal from '@/components/features/admin/users/EditUserModal'
 import LockUserModal from '@/components/features/admin/users/LockUserModal'
 import UnlockUserModal from '@/components/features/admin/users/UnlockUserModal'
 import CreateUserModal from '@/components/features/admin/users/CreateUserModal'
@@ -30,13 +29,13 @@ const DEFAULT_SORT_DIR: SortDirection = 'desc'
 
 /**
  * 2 tab tách nhân viên vận hành hệ thống (Quản trị viên, Kỹ thuật viên) khỏi người dùng phía khách hàng (Chủ nhà yến +
- * Chuyên gia — mã SALES_STAFF, chỉ đổi tên hiển thị). `roles` = nhóm vai trò của tab, lọc ở client vì backend
+ * Chuyên gia). `roles` = nhóm vai trò của tab, lọc ở client vì backend
  * /admin/users chỉ nhận 1 role.
  */
 type UserTab = 'staff' | 'customers'
 const TABS: { key: UserTab; label: string; description: string; roles: Role[] }[] = [
   { key: 'staff', label: 'Nhân viên hệ thống', description: 'Quản trị viên và kỹ thuật viên', roles: ['ADMIN', 'TECHNICIAN'] },
-  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến và chuyên gia', roles: ['FARM_OWNER', 'SALES_STAFF'] },
+  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến và chuyên gia', roles: ['FARM_OWNER', 'DOMAIN_EXPERT'] },
 ]
 
 export default function AdminUsersPage() {
@@ -51,7 +50,6 @@ export default function AdminUsersPage() {
   const [sortDir, setSortDir] = useState<SortDirection>(DEFAULT_SORT_DIR)
   const [showCreate, setShowCreate] = useState(false)
   const [viewTarget, setViewTarget] = useState<User | null>(null)
-  const [editTarget, setEditTarget] = useState<User | null>(null)
   const [lockTarget, setLockTarget] = useState<User | null>(null)
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null)
 
@@ -92,7 +90,6 @@ export default function AdminUsersPage() {
 
   const columns = buildUserColumns({
     onView: setViewTarget,
-    onEditRegions: setEditTarget,
     onLock: setLockTarget,
     onUnlock: setUnlockTarget,
   }, (page - 1) * limit, currentUserId)
@@ -100,14 +97,14 @@ export default function AdminUsersPage() {
   return (
     // Tiêu đề trang do AppHeader (topbar) tự tra từ menu — không lặp lại trong nội dung
     <div className="flex flex-col gap-5">
-      {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Ticket */}
+      {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống */}
       <UserStats />
 
       {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang — icon như mục menu sidebar */}
       <SectionCard
         title={currentTab.label}
         description={currentTab.description}
-        // Tab pill cùng kiểu trang Ticket / chi tiết Farm
+        // Tab pill
         action={
           <div className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={tr('Nhóm tài khoản')}>
             {TABS.map(x => (
@@ -191,7 +188,6 @@ export default function AdminUsersPage() {
 
       <CreateUserModal open={showCreate} onClose={() => setShowCreate(false)} />
       <UserDetailModal user={viewTarget} onClose={() => setViewTarget(null)} />
-      <EditUserModal user={editTarget} onClose={() => setEditTarget(null)} />
       <LockUserModal user={lockTarget} onClose={() => setLockTarget(null)} />
       <UnlockUserModal user={unlockTarget} onClose={() => setUnlockTarget(null)} />
     </div>

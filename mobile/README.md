@@ -22,7 +22,7 @@ Cấu hình `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` trong `.env` (xem `.env
 
 ```
 app/            Expo Router file-based routing ((auth)/, (tabs)/, farm/, device/,
-                zone/, alert/, ticket/, livestream/)
+                zone/, alert/, livestream/)
 components/     (chưa có — tạo khi màn thứ hai cần cùng một khối UI)
 services/api/   Axios wrapper theo module, mirror frontend/src/services
 hooks/          React Query hooks
@@ -32,4 +32,4 @@ types/          Enum khớp backend/src/types/domain.types.ts (Report 4 §6)
 
 ## Trạng thái màn hình
 
-Phần lớn màn hình là stub — implement theo Report 3, luồng chính trước: thiết lập thiết bị bằng QR (MF-10), cảnh báo + push, dashboard, live stream. Tab `Tickets` và route `ticket/[ticketId]` đã ra ngoài phạm vi (Report 3 §8, không còn ticket): chỉ được gỡ. Route `livestream/[zoneId]` phải theo camera của nhà yến (VISION-FR-013, Report 3 §2.8).
+Phần lớn màn hình là stub — implement theo Report 3, luồng chính trước: thiết lập thiết bị bằng QR (MF-10), cảnh báo + push, dashboard, live stream. Ticket đã ra ngoài phạm vi (Report 3 §8) và đã gỡ khỏi app. Route `livestream/[zoneId]` phải theo camera của nhà yến (VISION-FR-013, Report 3 §2.8).

@@ -106,7 +106,8 @@ export function useZonesEnvironment(zones: AllZone[]) {
     })),
     combine: results => ({
       isLoading: results.some(result => result.isLoading),
-      latest: results.map((r, index) => ({ zoneId: zoneIds[index], record: r.data })),
+      // Zone chưa có số đo → backend trả null
+      latest: results.map((r, index) => ({ zoneId: zoneIds[index], record: r.data ?? undefined })),
     }),
   })
 

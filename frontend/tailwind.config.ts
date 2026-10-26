@@ -94,7 +94,7 @@ const config: Config = {
         'fade-in': 'fadeIn 0.2s ease-out',
         'slide-in-right': 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         // Hiệu ứng trạng thái (Ticket/Thiết bị) — luôn kèm motion-reduce:animate-none khi dùng
-        'pulse-sla': 'pulseSla 1.4s ease-in-out infinite',
+        'pulse-dot': 'pulseDot 1.4s ease-in-out infinite',
         'row-in': 'rowIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both',
         'ping-soft': 'pingSoft 2s cubic-bezier(0, 0, 0.2, 1) infinite',
         'ring-glow': 'ringGlow 2.2s ease-in-out infinite',
@@ -106,7 +106,7 @@ const config: Config = {
       keyframes: {
         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         slideInRight: { '0%': { transform: 'translateX(100%)' }, '100%': { transform: 'translateX(0)' } },
-        pulseSla: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.45' } },
+        pulseDot: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.45' } },
         rowIn: { '0%': { opacity: '0', transform: 'translateY(6px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
         pingSoft: { '0%': { transform: 'scale(1)', opacity: '0.6' }, '75%, 100%': { transform: 'scale(2.6)', opacity: '0' } },
         ringGlow: { '0%, 100%': { boxShadow: '0 0 0 4px #FFFFFF, 0 0 0 4px rgba(210,249,58,0.55)' }, '50%': { boxShadow: '0 0 0 4px #FFFFFF, 0 0 0 10px rgba(210,249,58,0)' } },

@@ -28,7 +28,7 @@ function useAuditCount(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>) {
 }
 
 /**
- * Hàng 5 ô chỉ số đầu trang Nhật ký hệ thống — cùng khuôn hàng KPI trang Ticket/Người dùng (StatTile).
+ * Hàng 5 ô chỉ số đầu trang Nhật ký hệ thống — cùng khuôn hàng KPI trang Người dùng (StatTile).
  * Chỉ nhật ký tài khoản, không theo bộ lọc bảng. Tổng + hôm nay cho biết nhịp ghi nhật ký; 3 ô sau đếm
  * trong 7 ngày gần nhất việc Admin cần để mắt: đăng nhập thất bại (dấu hiệu dò mật khẩu), tài khoản bị
  * khoá (AUTH-FR-011), tài khoản nhân viên mới tạo (AUTH-FR-005c). Icon xám như ReadingTile Dashboard Farm Owner.
@@ -103,7 +103,7 @@ export default function AuditLogStats() {
           value={locked.total}
           sub="Trong 7 ngày qua"
         />
-        {/* USER_CREATED chỉ ghi khi Admin tạo Technician/Sales Staff — Farm Owner tự đăng ký không ghi log này */}
+        {/* USER_CREATED chỉ ghi khi Admin tạo Technician — Farm Owner tự đăng ký không ghi log này */}
         <StatTile
           className="shadow-none"
           icon={UserPlusIcon}

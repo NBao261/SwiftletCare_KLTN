@@ -14,8 +14,6 @@ const vi = {
   'Cảnh báo': 'Cảnh báo',
   'Giám sát đàn chim': 'Giám sát đàn chim',
   'Trang trại': 'Trang trại',
-  'Ticket': 'Ticket',
-  'Yêu cầu hỗ trợ': 'Yêu cầu hỗ trợ',
   'Thống kê sản lượng': 'Thống kê sản lượng',
   'Phân tích': 'Phân tích',
   'Thông báo': 'Thông báo',
@@ -35,7 +33,6 @@ const vi = {
   'Quản trị viên': 'Quản trị viên',
   'Chủ nhà yến': 'Chủ nhà yến',
   'Kỹ thuật viên': 'Kỹ thuật viên',
-  'Nhân viên kinh doanh': 'Nhân viên kinh doanh',
 }
 
 type NavigationKey = keyof typeof vi
@@ -53,8 +50,6 @@ const en: Record<NavigationKey, string> = {
   'Cảnh báo': 'Alerts',
   'Giám sát đàn chim': 'Bird monitoring',
   'Trang trại': 'Farms',
-  'Ticket': 'Tickets',
-  'Yêu cầu hỗ trợ': 'Support tickets',
   'Thống kê sản lượng': 'Yield statistics',
   'Phân tích': 'Analytics',
   'Thông báo': 'Notifications',
@@ -74,7 +69,6 @@ const en: Record<NavigationKey, string> = {
   'Quản trị viên': 'Administrator',
   'Chủ nhà yến': 'Farm Owner',
   'Kỹ thuật viên': 'Technician',
-  'Nhân viên kinh doanh': 'Sales Staff',
 }
 
 export const navigationDict: Dictionary<NavigationKey> = { vi, en }

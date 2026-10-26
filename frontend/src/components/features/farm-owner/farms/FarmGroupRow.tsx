@@ -10,12 +10,11 @@ import type { Farm } from '@/types'
 
 interface FarmGroupRowProps {
   farm: Farm
-  regionName?: string
   houseCount: number
   deviceCount: number
   alertHouseCount: number
   isExpanded: boolean
-  // Chủ chính (hoặc Admin): được xoá farm, đổi khu vực
+  // Chủ chính: được xoá farm
   isPrimary: boolean
   canEdit: boolean
   canAddHouse: boolean
@@ -29,7 +28,7 @@ interface FarmGroupRowProps {
 
 // 1 hàng trang trại trên trang Trang trại: bấm hàng để xổ / thu các nhà yến bên trong, nút Sửa / Xoá / Thêm nhà ngay trên hàng
 export default function FarmGroupRow({
-  farm, regionName, houseCount, deviceCount, alertHouseCount, isExpanded, isPrimary, canEdit, canAddHouse,
+  farm, houseCount, deviceCount, alertHouseCount, isExpanded, isPrimary, canEdit, canAddHouse,
   onToggle, onEdit, onDelete, onAddHouse, children,
 }: FarmGroupRowProps) {
   const { t, num } = useTranslation(farmDict)
@@ -63,7 +62,8 @@ export default function FarmGroupRow({
               <span className="truncate">{farm.name}</span>
               {isPrimary && <Badge tone="neutral">{t('manage.primary')}</Badge>}
             </p>
-            <p className="truncate text-xs text-warmGray">{regionName ?? NO_VALUE} · {farm.address || NO_VALUE}</p>
+            <p className="truncate text-xs text-warmGray">{farm.address || NO_VALUE}</p>
+            {!farm.coordinates && <p className="text-xs text-climateOrange">{t('farmForm.noLocation')}</p>}
             <p className="text-xs text-warmGray">
               {t('manage.stats', { houses: num(houseCount), devices: num(deviceCount) })}
               {alertHouseCount > 0 && <span className="text-climateOrange"> · {t('farmGroup.alertHouses', { n: num(alertHouseCount) })}</span>}

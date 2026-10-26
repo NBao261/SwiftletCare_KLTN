@@ -76,7 +76,7 @@ Chỉ gỡ khỏi menu/route và ẩn nút; chưa xoá file (xoá ở PR 6). Nh�
 - [x] Ẩn nút bật/tắt relay, huỷ override và nút xác nhận cảnh báo với Technician và Admin (Farm Owner mới thấy).
 - [x] Gỡ `ThresholdsModal` (sửa ngưỡng/hệ số) khỏi màn Technician.
 - [x] Ẩn nút tạo farm/House/Zone với Admin và Technician.
-- [ ] Form tạo farm của Farm Owner: thay ô khu vực bằng ô vị trí (GPS) — chuyển sang PR 6, làm sau khi backend PR 5 bỏ bắt buộc `region` và bắt buộc tọa độ.
+- [x] Form tạo farm của Farm Owner: thay ô khu vực bằng ô vị trí (GPS) — làm ở PR 6 (PR #106).
 - [x] Trang cài đặt hệ thống Admin (`AdminSystemSettingsPage`): ẩn thẻ SLA (`SlaCard`) và cách gán ticket.
 
 **Mobile (`mobile/`):**
@@ -199,43 +199,43 @@ Làm sau PR 4 (lúc đó vùng không còn dính ticket). Nhánh gợi ý `refac
 
 **Xong khi:** `README.md` "Chỗ lệch" #44, #45, #47 đã xong; `grep -rn "region" backend/src` chỉ còn chữ không liên quan (ví dụ "regional" trong comment thời tiết).
 
-### PR 6 — Web + mobile: xoá code ticket, SLA, vùng · đề xuất: Len, Tuấn, Nhi (mỗi người phần role mình), mobile: Kiệt
+### PR 6 — Web + mobile: xoá code ticket, SLA, vùng · đề xuất: Len, Tuấn, Nhi (mỗi người phần role mình), mobile: Kiệt · xong ở PR #106
 
 Làm sau PR 4 và PR 5 (API đã mất). Có thể chia 3 PR nhỏ theo role.
 
 **Farm Owner (Len):**
-- [ ] Xoá `pages/farm-owner/FarmOwnerTicketsPage.tsx`, `FarmOwnerTicketDetailPage.tsx`, thư mục `components/features/farm-owner/tickets/` (kèm `tickets.constants.test.ts`).
-- [ ] `FarmFormModal`: thay ô khu vực bằng ô **vị trí**: nút "Dùng vị trí hiện tại" (`navigator.geolocation`, dùng khi đang đứng ở nhà yến) và 2 ô vĩ độ/kinh độ nhập tay, bắt buộc khi tạo; báo lỗi khi trình duyệt chặn quyền vị trí. Không thêm thư viện bản đồ.
-- [ ] Danh sách farm (`FarmGroupRow`, `HouseCard`): bỏ hiển thị vùng; farm chưa có tọa độ hiện nhãn "Chưa có vị trí — không có thời tiết" và nút sửa.
-- [ ] Câu chữ ở form: "Mỗi farm là một địa điểm. Nhà yến ở nơi khác thì tạo farm khác." (từ điển `farmStructure.i18n.ts`, đủ VI/EN).
-- [ ] Dashboard (`FarmKpiRow`, `dashboardMetrics.ts`), thiết bị (`DeviceDetailCard`, `ZoneComponentLog`, `AttentionDevicesCard`, `DeviceDetailDrawer`): bỏ số ticket, nút tạo ticket.
+- [x] Xoá `pages/farm-owner/FarmOwnerTicketsPage.tsx`, `FarmOwnerTicketDetailPage.tsx`, thư mục `components/features/farm-owner/tickets/` (kèm `tickets.constants.test.ts`).
+- [x] `FarmFormModal`: thay ô khu vực bằng ô **vị trí**: nút "Dùng vị trí hiện tại" (`navigator.geolocation`, dùng khi đang đứng ở nhà yến) và 2 ô vĩ độ/kinh độ nhập tay, bắt buộc khi tạo; báo lỗi khi trình duyệt chặn quyền vị trí. Không thêm thư viện bản đồ.
+- [x] Danh sách farm (`FarmGroupRow`, `HouseCard`): bỏ hiển thị vùng; farm chưa có tọa độ hiện nhãn "Chưa có vị trí — không có thời tiết" và nút sửa.
+- [x] Câu chữ ở form: "Mỗi farm là một địa điểm. Nhà yến ở nơi khác thì tạo farm khác." (từ điển `farmStructure.i18n.ts`, đủ VI/EN).
+- [x] Dashboard (`FarmKpiRow`, `dashboardMetrics.ts`), thiết bị (`DeviceDetailCard`, `ZoneComponentLog`, `AttentionDevicesCard`, `DeviceDetailDrawer`): bỏ số ticket, nút tạo ticket — nút đã gỡ ở PR #101; PR #106 bỏ khoá từ điển còn sót (`kpi.tickets`, `attn.report`, `drawer.report`).
 
 **Technician (Tuấn):**
-- [ ] Xoá `TechnicianTicketsPage.tsx`, `TechnicianTicketDetailPage.tsx`, `TechnicianMaintenancePage.tsx`, `components/features/technician/tickets/`, `components/features/technician/maintenance/`.
-- [ ] `TechnicianOnboardingPage`: bỏ bước SAT (`Step6SAT.tsx`) và chỗ gắn ticket; trang này về sau thành màn setup thiết bị chung với Farm Owner (MF-10).
-- [ ] `TechnicianFarmsPage`, `TechnicianHouseRow`: bỏ vùng; hiện mọi farm (chỉ cấu trúc và thiết bị).
-- [ ] `TechnicianAlertsPage`: chỉ cảnh báo thiết bị, không có nút xác nhận.
+- [x] Xoá `TechnicianTicketsPage.tsx`, `TechnicianTicketDetailPage.tsx`, `TechnicianMaintenancePage.tsx`, `components/features/technician/tickets/`, `components/features/technician/maintenance/`.
+- [x] `TechnicianOnboardingPage`: bỏ bước SAT (`Step6SAT.tsx`) và chỗ gắn ticket; trang này về sau thành màn setup thiết bị chung với Farm Owner (MF-10).
+- [x] `TechnicianFarmsPage`, `TechnicianHouseRow`: bỏ vùng; hiện mọi farm (chỉ cấu trúc và thiết bị).
+- [x] `TechnicianAlertsPage`: chỉ cảnh báo thiết bị, không có nút xác nhận — không cần sửa: backend chỉ trả cảnh báo thiết bị cho Technician (PR #105), nút xác nhận chỉ còn với Farm Owner (PR #101).
 
 **Admin (Nhi):**
-- [ ] Xoá `AdminTicketsPage.tsx`, `AdminTicketDetailPage.tsx`, `components/features/admin/tickets/`, `SlaCard.tsx`, `SlaEditModal.tsx`, `TicketTrendsCard.tsx`, `FarmRecentTickets.tsx`.
-- [ ] Xoá `AdminFarmsPage.tsx`, `AdminFarmDetailPage.tsx`, `AdminFarmHousePage.tsx`, `components/features/admin/farms/` (Admin không quản lý farm).
-- [ ] Người dùng (`CreateUserModal`, `EditUserModal`, `UserDetailModal`, `userColumns`, `UserStats`, `validations/admin/user.validation.ts`, `apis/admin/users.api.ts`, `hooks/admin/useUsers.ts`): bỏ vùng, bỏ sửa hồ sơ Technician.
-- [ ] `AdminSystemHealthPage`: chỉ còn số farm, Zone, thiết bị theo trạng thái, tài khoản theo role.
+- [x] Xoá `AdminTicketsPage.tsx`, `AdminTicketDetailPage.tsx`, `components/features/admin/tickets/`, `SlaCard.tsx`, `SlaEditModal.tsx`, `TicketTrendsCard.tsx`, `FarmRecentTickets.tsx`.
+- [x] Xoá `AdminFarmsPage.tsx`, `AdminFarmDetailPage.tsx`, `AdminFarmHousePage.tsx`, `components/features/admin/farms/` (Admin không quản lý farm).
+- [x] Người dùng (`CreateUserModal`, `EditUserModal`, `UserDetailModal`, `userColumns`, `UserStats`, `validations/admin/user.validation.ts`, `apis/admin/users.api.ts`, `hooks/admin/useUsers.ts`): bỏ vùng, bỏ sửa hồ sơ Technician.
+- [x] `AdminSystemHealthPage`: chỉ còn số farm, Zone, thiết bị theo trạng thái, tài khoản theo role (bỏ `openTickets` khỏi type).
 
 **Dùng chung:**
-- [ ] Xoá `apis/shared/tickets.api.ts`, hook ticket, `components/common/TicketStatusBadge.tsx`, `TicketProgressStepper.tsx`, `PriorityBadge.tsx` và `constants/priority.ts` (nếu chỉ ticket dùng), `constants/tickets*`, `constants/sla*`, `constants/ticketStatus.ts`.
-- [ ] `constants/enumLabels.i18n.ts`: bỏ nhãn ticket; `types/`: bỏ enum ticket (nếu PR 4 chưa làm), bỏ `region`/`assigned_regions` ở `auth.types.ts`, `farm.types.ts`.
-- [ ] `apis/shared/farms.api.ts`, `hooks/shared/useFarms.ts`, `constants/farmStructure.i18n.ts`: bỏ vùng; type `Farm` có `coordinates`.
-- [ ] Socket client: bỏ sự kiện chat ticket.
+- [x] Xoá `apis/shared/tickets.api.ts`, hook ticket, `components/common/TicketStatusBadge.tsx`, `TicketProgressStepper.tsx`, `PriorityBadge.tsx` và `constants/priority.ts` (nếu chỉ ticket dùng), `constants/tickets*`, `constants/sla*`, `constants/ticketStatus.ts`.
+- [x] `constants/enumLabels.i18n.ts`: bỏ nhãn ticket; `types/`: bỏ enum ticket (nếu PR 4 chưa làm), bỏ `region`/`assigned_regions` ở `auth.types.ts`, `farm.types.ts`.
+- [x] `apis/shared/farms.api.ts`, `hooks/shared/useFarms.ts`, `constants/farmStructure.i18n.ts`: bỏ vùng; type `Farm` có `coordinates`.
+- [x] Socket client: bỏ sự kiện chat ticket.
 
 **Mobile (Kiệt):**
-- [ ] Xoá `app/(tabs)/tickets/`, `app/ticket/[ticketId].tsx`, `hooks/useTickets.ts`, `services/api/tickets.ts`; sửa `hooks/index.ts`, `services/api/index.ts`, `constants/api.ts` (`ENDPOINTS`), `types/index.ts`.
+- [x] Xoá `app/(tabs)/tickets/`, `app/ticket/[ticketId].tsx`, `hooks/useTickets.ts`, `services/api/tickets.ts`; sửa `hooks/index.ts`, `services/api/index.ts`, `constants/api.ts` (`ENDPOINTS`), `types/index.ts`.
 
 **Tài liệu module:** cập nhật `frontend/CLAUDE.md` (cây thư mục, `PriorityBadge`, ticket), `frontend/README.md`, `mobile/CLAUDE.md` (cây `app/`), `CLAUDE.md` gốc (mục Mobile còn ghi tab `tickets`).
 
 **Kiểm tra:**
-- [ ] `grep -rniE "ticket|sla|region" frontend/src mobile --include=*.ts --include=*.tsx` → không còn (trừ chữ không liên quan).
-- [ ] Lệnh CI của frontend và mobile.
+- [x] `grep -rniE "ticket|sla|region" frontend/src mobile --include=*.ts --include=*.tsx` → không còn (trừ chữ không liên quan: `node_modules`, "translate", bản dịch `'Khu vực': 'Region'` của bảng thu hoạch chuyên gia).
+- [x] Lệnh CI của frontend và mobile.
 
 **Xong khi:** `README.md` "Chỗ lệch" #30, #31 (phần ticket) và #41 đã xong.
 

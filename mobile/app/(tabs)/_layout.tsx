@@ -19,8 +19,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="farms"     options={{ title: 'Trang trại', tabBarLabel: 'Farms' }} />
       <Tabs.Screen name="alerts"    options={{ title: 'Cảnh báo', tabBarLabel: 'Alerts', tabBarBadge: unreadCount > 0 ? unreadCount : undefined }} />
       <Tabs.Screen name="analytics" options={{ title: 'Phân tích', tabBarLabel: 'Analytics' }} />
-      {/* Ticket ngoài phạm vi (BM03 dòng 9): href null ẩn tab, thư mục tickets/ xoá ở PR sau */}
-      <Tabs.Screen name="tickets"   options={{ href: null }} />
       <Tabs.Screen name="settings"  options={{ title: 'Cài đặt', tabBarLabel: 'Settings' }} />
     </Tabs>
   )

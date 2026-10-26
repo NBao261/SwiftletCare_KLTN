@@ -1,10 +1,10 @@
-import type { AlertSeverity, AlertStatus, TicketPriority } from '@/types';
+import type { AlertSeverity, AlertStatus, SeverityLevel } from '@/types';
 
-// 3 cấp mức độ dùng chung cho cảnh báo và ticket: P1 Khẩn cấp, P2 Cao, P3 Thường
-export const LEVELS: TicketPriority[] = ['P1', 'P2', 'P3'];
+// 3 cấp mức độ cảnh báo: P1 Khẩn cấp, P2 Cao, P3 Thường
+export const LEVELS: SeverityLevel[] = ['P1', 'P2', 'P3'];
 
 // Backend gửi 4 mức cảnh báo, giao diện gộp CRITICAL và HIGH vào P1
-export const SEVERITY_TO_LEVEL: Record<AlertSeverity, TicketPriority> = {
+export const SEVERITY_TO_LEVEL: Record<AlertSeverity, SeverityLevel> = {
   CRITICAL: 'P1',
   HIGH: 'P1',
   MEDIUM: 'P2',
@@ -12,13 +12,13 @@ export const SEVERITY_TO_LEVEL: Record<AlertSeverity, TicketPriority> = {
 };
 
 // Màu badge của 3 cấp
-export const LEVEL_BADGE_CLASS: Record<TicketPriority, string> = {
+export const LEVEL_BADGE_CLASS: Record<SeverityLevel, string> = {
   P1: 'bg-safetyOrange text-white',
   P2: 'bg-orange-100 text-orange-800',
   P3: 'bg-warmGray/15 text-warmGray',
 };
 
-// Màu badge khi việc đã kết thúc (ticket đóng/huỷ): xám trung tính, dùng lại màu cấp Thường
+// Màu badge khi cảnh báo đã xử lý: xám trung tính, dùng lại màu cấp Thường
 export const LEVEL_BADGE_MUTED_CLASS = LEVEL_BADGE_CLASS.P3;
 
 // Cảnh báo đã kết thúc (đã xử lý) thì badge mức độ về xám

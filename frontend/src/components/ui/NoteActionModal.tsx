@@ -25,7 +25,7 @@ interface NoteActionModalProps {
 
 /**
  * Modal 1 field (Textarea) + submit — mẫu dùng chung cho các hành động chỉ cần
- * ghi chú (xác nhận cảnh báo, hủy ticket, khoá tài khoản...). Không dùng cho
+ * ghi chú (xác nhận cảnh báo, khoá tài khoản...). Không dùng cho
  * modal nhiều field khác kiểu (mời thành viên, sửa harvest...).
  * Tự validate (noValidate) để báo lỗi tiếng Việt dưới ô thay vì popup trình
  * duyệt; giá trị gửi đi đã được trim.

@@ -52,7 +52,7 @@ export function buildAuditLogColumns(startIndex: number): DataTableColumn<AuditL
     },
     // Căn đều: width = độ dài nội dung thường gặp + 1 khoảng trống như nhau, để khe giữa chữ cột này và cột sau
     // đều nhau (6/20/19/18/21/16 = 100%). Hành động thường ngắn ("Đăng nhập") nên không chiếm rộng — nhãn dài
-    // (VD "Cập nhật vùng phụ trách Technician") mờ dần ở đuôi. Độ đậm theo thứ bậc:
+    // (VD "Cập nhật ngưỡng mặc định hệ thống") mờ dần ở đuôi. Độ đậm theo thứ bậc:
     // Người thực hiện đậm (ai làm) > Hành động vừa (làm gì) > Thời gian thường > Vai trò xám.
     {
       key: 'action', header: 'Hành động', className: 'w-[20%]',

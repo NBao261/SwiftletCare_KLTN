@@ -1,5 +1,5 @@
 import type { Dictionary } from '@/lib/i18n';
-import type { AlertStatus, AlertType, DeviceStatus, Role, TicketStatus, TicketType } from '@/types';
+import type { AlertStatus, AlertType, DeviceStatus, Role } from '@/types';
 
 // Nhãn VI/EN của mã backend — nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
 
@@ -45,60 +45,6 @@ export const alertStatusDict: Dictionary<AlertStatus> = {
   en: { ACTIVE: 'New', ACKNOWLEDGED: 'Received', RESOLVED: 'Resolved' },
 };
 
-// Loại ticket
-export const ticketTypeDict: Dictionary<TicketType> = {
-  vi: {
-    SENSOR_FAULT: 'Lỗi cảm biến',
-    RS485_BUS_FAILURE: 'Lỗi bus RS485',
-    ACTUATOR_FAILURE: 'Lỗi thiết bị chấp hành',
-    NODE_OFFLINE: 'Thiết bị mất kết nối',
-    EDGE_AI_DEGRADED: 'Camera AI suy giảm',
-    POWER_OUTAGE: 'Mất điện',
-    SPEAKER_FAILURE: 'Lỗi loa ru',
-    PREDATOR_DETECTED: 'Phát hiện thiên địch',
-    INSTALLATION: 'Yêu cầu lắp đặt mới',
-    MAINTENANCE: 'Bảo trì định kỳ',
-    OTHER: 'Khác',
-  },
-  en: {
-    SENSOR_FAULT: 'Sensor fault',
-    RS485_BUS_FAILURE: 'RS485 bus failure',
-    ACTUATOR_FAILURE: 'Actuator failure',
-    NODE_OFFLINE: 'Device offline',
-    EDGE_AI_DEGRADED: 'AI camera degraded',
-    POWER_OUTAGE: 'Power outage',
-    SPEAKER_FAILURE: 'Lullaby speaker fault',
-    PREDATOR_DETECTED: 'Predator detected',
-    INSTALLATION: 'New installation request',
-    MAINTENANCE: 'Scheduled maintenance',
-    OTHER: 'Other',
-  },
-};
-
-// Trạng thái ticket — 4 bước: NEW Mới · IN_PROGRESS kỹ thuật viên đã nhận việc · AWAITING_FIELD_CONFIRMATION kỹ thuật viên đang xác nhận kết quả · CLOSED kỹ thuật viên xác nhận xong
-export const ticketStatusDict: Dictionary<TicketStatus> = {
-  vi: {
-    NEW: 'Mới',
-    IN_PROGRESS: 'Đã tiếp nhận',
-    AWAITING_FIELD_CONFIRMATION: 'Đang xử lý',
-    CLOSED: 'Hoàn tất',
-  },
-  en: {
-    NEW: 'New',
-    IN_PROGRESS: 'Accepted',
-    AWAITING_FIELD_CONFIRMATION: 'In progress',
-    CLOSED: 'Completed',
-  },
-};
-
-// Trạng thái hiển thị của ticket: 4 trạng thái backend + Đã huỷ (CLOSED kèm cancelled_at)
-export type TicketDisplayStatus = TicketStatus | 'CANCELLED';
-
-export const ticketDisplayStatusDict: Dictionary<TicketDisplayStatus> = {
-  vi: { ...ticketStatusDict.vi, CANCELLED: 'Đã huỷ' },
-  en: { ...ticketStatusDict.en, CANCELLED: 'Cancelled' },
-};
-
 // Trạng thái thiết bị
 export const deviceStatusDict: Dictionary<DeviceStatus> = {
   vi: { PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Offline', ERROR: 'Lỗi', DEGRADED: 'Suy giảm' },
@@ -112,14 +58,12 @@ export const roleDict: Dictionary<Role> = {
     FARM_OWNER: 'Chủ nhà yến',
     TECHNICIAN: 'Kỹ thuật viên',
     DOMAIN_EXPERT: 'Chuyên gia',
-    SALES_STAFF: 'Nhân viên kinh doanh',
   },
   en: {
     ADMIN: 'Administrator',
     FARM_OWNER: 'Farm Owner',
     TECHNICIAN: 'Technician',
     DOMAIN_EXPERT: 'Expert',
-    SALES_STAFF: 'Sales Staff',
   },
 };
 

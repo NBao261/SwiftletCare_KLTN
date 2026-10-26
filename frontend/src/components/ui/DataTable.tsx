@@ -43,7 +43,7 @@ const ALIGN_CLASS: Record<NonNullable<DataTableColumn<unknown>['align']>, string
 /**
  * Bảng dữ liệu dùng chung — FE_Design_Claude.md §9 gọi tên `<DataTable/>` làm
  * component chung cho mọi role nhưng trước đây chưa có implementation nào
- * (mọi danh sách cũ đều là Card xếp hàng, xem TechnicianAlertsPage/TechnicianTicketsPage). Đây là
+ * (mọi danh sách cũ đều là Card xếp hàng, xem TechnicianAlertsPage). Đây là
  * `<table>` HTML ngữ nghĩa đầu tiên trong codebase — style bám đúng token màu/
  * bo góc/shadow hiện có (border-warmGray/15, rounded-2xl, shadow-card), không
  * phát sinh màu/bo góc mới.

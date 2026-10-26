@@ -11,8 +11,6 @@ const TIME_FORMAT = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: 
 
 export interface UserColumnHandlers {
   onView: (user: User) => void
-  /** Chỉ Technician — backend chỉ có PUT /admin/technicians/:id/regions, không sửa được full_name/phone */
-  onEditRegions: (user: User) => void
   onLock: (user: User) => void
   onUnlock: (user: User) => void
 }
@@ -29,7 +27,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
     // Width theo % (bảng đang table-fixed) = độ dài nội dung thường gặp + 1 khoảng trống như nhau, để khe giữa
     // chữ cột này và cột sau đều nhau. Tổng = 100% (6+15+25+17+15+12+10), vẫn đủ chỗ ở min-w 960px.
     // Không thêm padding trái riêng cho cột nào (từng có `pl-12` ở Trạng thái làm badge lệch khỏi mép cột).
-    // Mỗi ô 1 dòng (tên và email tách 2 cột): vùng phụ trách / lý do khoá xem ở modal chi tiết.
+    // Mỗi ô 1 dòng (tên và email tách 2 cột): lý do khoá xem ở modal chi tiết.
     {
       key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]',
       render: (_user, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
@@ -57,7 +55,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
     },
     {
       // Sort ngày tạo cũng đặt ở nút "Sắp xếp" cùng hàng filter, xem full_name ở trên.
-      // 2 tầng như cột Ngày tạo bảng Trang trại/Ticket: giờ:phút:giây đậm trên, ngày xám dưới
+      // 2 tầng: giờ:phút:giây đậm trên, ngày xám dưới
       key: 'created_at', header: 'Ngày tạo', className: 'w-[12%] whitespace-nowrap',
       render: (user) => user.created_at
         ? (
@@ -73,9 +71,6 @@ export function buildUserColumns(handlers: UserColumnHandlers, startIndex: numbe
       render: (user) => {
         const status = getUserStatus(user)
         const items: ActionsMenuItem[] = [{ label: 'Xem chi tiết', onClick: () => handlers.onView(user) }]
-        if (user.role === 'TECHNICIAN') {
-          items.push({ label: 'Sửa vùng phụ trách', onClick: () => handlers.onEditRegions(user) })
-        }
         // Đã xoá theo yêu cầu thì backend từ chối khoá/mở khoá (409) — không hiện nút
         const isSelf = user._id === currentUserId
         if (status === 'LOCKED') {

@@ -7,7 +7,7 @@ export default function SettingsScreen() {
       <Text style={styles.title}>Cài đặt</Text>
       {/* TODO: M4
         - Profile section (avatar, name, email)
-        - Notification preferences (push, zalo, sms, quiet_hours)
+        - Notification preferences (push, telegram, quiet_hours)
         - Change password
         - Language selector
         - About & version

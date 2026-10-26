@@ -1,4 +1,4 @@
-// Stepper.tsx — stepper ngang dùng chung (Ticket: StatusStepper · Onboarding: WizardStepper).
+// Stepper.tsx — stepper ngang dùng chung (Onboarding: WizardStepper).
 // Trước đây 2 nơi copy-paste cùng 1 khối JSX; gộp lại để chỉnh giao diện/chuyển động 1 chỗ.
 // Chuyển động: đường nối tô dần 500ms, bước hiện tại có vòng sáng (tắt khi prefers-reduced-motion).
 import { cn } from '@/lib/cn'
@@ -7,7 +7,7 @@ interface StepperProps {
   steps: string[]
   /** Chỉ số bước hiện tại (0-based) */
   current: number
-  /** true → mọi bước đều "xong" (VD ticket đã đóng): không còn bước active */
+  /** true → mọi bước đều "xong": không còn bước active */
   completed?: boolean
   // Màu bước đang làm: soft = nền limeMist (mặc định, các màn cũ) · strong = nền accent-800 chữ trắng, tương phản cao
   activeTone?: 'soft' | 'strong'

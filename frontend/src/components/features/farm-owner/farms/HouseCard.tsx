@@ -47,7 +47,7 @@ export default function HouseCard({ node, staff, pinned, showYield, onTogglePin,
           </span>
           <div className="min-w-0">
             <h3 className="truncate text-h3 text-charcoal">{house.name}</h3>
-            <p className="truncate text-small text-warmGray">{farm.address}{farm.region ? ` · ${farm.region}` : ''}</p>
+            <p className="truncate text-small text-warmGray">{farm.address}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">

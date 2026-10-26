@@ -12,9 +12,6 @@ export type OnboardingState = {
   secretKey:  string
   /** _id của SensorNode/CameraNode trong DB sau khi đăng ký thành công (Step2) */
   deviceDbId: string
-  /** _id của Ticket liên kết với lắp đặt này — đọc từ URL query ?ticketId=...
-   *  Dùng ở Step6 để gọi updateSatChecklist. Undefined nếu onboard không từ ticket. */
-  ticketId:   string | undefined
   ssid:       string  // WiFi farm SSID
   wifiPass:   string
 }

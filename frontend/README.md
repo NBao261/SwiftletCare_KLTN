@@ -4,10 +4,9 @@ React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: 
 
 > **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa. Việc phải sửa ở web (chỗ lệch theo FR ở `docs/reports/README.md`, quyền theo màn ở `FE_Design_Claude.md` §12.0):
 >
-> - Gỡ nốt code `sales-staff/` cũ (marketplace đã gỡ).
 > - Role `DOMAIN_EXPERT` đã có màn từ PR #91 (`/expert/*`): bỏ dữ liệu giả dự phòng (`services/expert/expertFallback.service.ts`, `data/mocks/`), chuyển về bucket `domain-expert/`, `DomainExpertLayout`, `apis/` theo FE_Design §12.
 > - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009), live stream có khung và số đếm trực tiếp.
-> - Technician/Admin: Admin không có nút can thiệp tay hay xác nhận cảnh báo; Technician cũng không có hai nút đó (Report 3 §2.4). Ticket, SLA, vùng của Technician đã ra ngoài phạm vi (Report 3 §8): các màn ticket chỉ được gỡ, không sửa thêm.
+> - Technician/Admin: Admin không có nút can thiệp tay hay xác nhận cảnh báo; Technician cũng không có hai nút đó (Report 3 §2.4). Ticket, SLA, vùng của Technician và màn quản lý farm của Admin đã ra ngoài phạm vi (Report 3 §8) và đã gỡ khỏi code.
 > - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận, duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010), duyệt đề xuất hệ số (EXPERT-FR-011), vòng đếm và lịch đếm theo mùa; Farm Owner chỉ xem, trừ khi farm chưa có chuyên gia (BR-22).
 > - Thiết lập thiết bị (MF-10): Farm Owner quét nhãn QR và mã QR tầng, xem tiến trình setup; Admin in nhãn QR khi thêm thiết bị vào kho; màn Zone in mã QR tầng. Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician.
 > - Gỡ trường `heating` còn sót trong `RelayStates` (màn đã chỉ hiện 3 relay); NH3/CO2 ghi rõ là ngưỡng cảnh báo của Zone (không điều khiển quạt); nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
@@ -40,13 +39,12 @@ src/
     layouts/   Đích 7 file — 4 của role, 3 dùng chung:
                  AdminLayout · FarmOwnerLayout
                  DomainExpertLayout (chưa có) · TechnicianLayout
-                 (SalesStaffLayout còn trong code — nợ, chỉ được gỡ)
                    -> menu viết đầy đủ ngay đầu mỗi file
                  AppShell    khung chung (sidebar + header + nội dung)
                  AppSidebar  sidebar desktop + dock mobile
                  AppHeader   breadcrumb + zone + chuông + ngôn ngữ
   constants/   roles (nhóm role + getRoleHomePath + canAccessPath),
-               thresholds, tickets, auditActions
+               thresholds, auditActions
   validations/ Hàm kiểm tra form, thuần logic: admin/ (theo role) và
                common/ (luật không gắn role)
   providers/   AppProviders.tsx — gom mọi provider bọc cây React
@@ -56,7 +54,7 @@ src/
                nghiệp vụ đó, tên file mang luôn tên role:
                  admin/       AdminUsersPage, AdminSystemHealthPage...
                  farm-owner/  FarmOwnerDashboardPage, FarmOwnerHarvestPage...
-                 technician/  TechnicianDevicesPage, TechnicianTicketsPage...
+                 technician/  TechnicianDevicesPage, TechnicianFarmsPage...
                  auth/        LoginPage, RegisterPage, ForgotPasswordPage,
                               InvitationPage (chưa đăng nhập, không gắn role)
                  domain-expert/ (đích) màn chuyên gia: kiểm chứng cảnh báo,
@@ -67,7 +65,7 @@ src/
   routes/      1 file cho mỗi thư mục pages/<role>/: <role>.routes.tsx
   stores/      Zustand (authStore, alertStore, toastStore, zoneStore, breadcrumbStore)
   types/       Tách theo module backend (auth, farm, device, telemetry, alert,
-               ticket, harvest, vision, system, socket, common) + index.ts barrel.
+               harvest, vision, system, socket, common) + index.ts barrel.
                Kiểu là shape thực thể mirror model backend, dùng chung nhiều
                role nên chia theo module chứ không theo role như các lớp khác.
 ```

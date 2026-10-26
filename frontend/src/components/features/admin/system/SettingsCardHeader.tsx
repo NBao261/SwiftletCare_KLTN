@@ -3,7 +3,7 @@ import { IconEdit } from '@/components/ui/icons'
 import { t } from '@/i18n'
 
 /**
- * Đầu card cấu hình (ngưỡng mặc định / SLA): tiêu đề + nhãn "Mặc định gốc / Đã tuỳ chỉnh" + mô tả, nút "Chỉnh sửa"
+ * Đầu card cấu hình (ngưỡng mặc định): tiêu đề + nhãn "Mặc định gốc / Đã tuỳ chỉnh" + mô tả, nút "Chỉnh sửa"
  * bên phải — cùng kiểu tiêu đề card "Chỉ số vận hành toàn hệ thống" (Tổng quan), màu trung tính.
  */
 export default function SettingsCardHeader({ title, description, isDefault, onEdit, editLabel }: {

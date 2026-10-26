@@ -2,7 +2,7 @@
 
 // SRS AUTH-FR-004: 4 role tham gia RBAC. Buyer đăng ký qua OTP không mang role
 // nào (role = null) vì không truy cập endpoint nào bị chặn theo role.
-export type Role = 'ADMIN' | 'FARM_OWNER' | 'TECHNICIAN' | 'DOMAIN_EXPERT' | 'SALES_STAFF'
+export type Role = 'ADMIN' | 'FARM_OWNER' | 'TECHNICIAN' | 'DOMAIN_EXPERT'
 
 /** Chiều sắp xếp dùng chung cho DataTable + các hook list có sort */
 export type SortDirection = 'asc' | 'desc'

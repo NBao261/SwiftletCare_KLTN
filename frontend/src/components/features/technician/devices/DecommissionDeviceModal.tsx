@@ -1,6 +1,6 @@
 // DecommissionDeviceModal.tsx — FARM-FR-008: Technician gỡ thiết bị khỏi hiện trường.
 // BE giữ document (telemetry/alert cũ còn tham chiếu), chỉ đánh dấu decommissioned_at, tắt relay về AUTO,
-// đóng cảnh báo của node và ghi chú vào ticket liên quan — nên hành động này KHÔNG hoàn tác được.
+// đóng cảnh báo của node — nên hành động này KHÔNG hoàn tác được.
 import { useState, useEffect, FormEvent } from 'react'
 import { Button, Modal, Textarea } from '@/components/ui'
 import { useDecommissionDevice } from '@/hooks/shared/useDevices'

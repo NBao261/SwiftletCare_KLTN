@@ -1,5 +1,5 @@
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
-import type { Alert, AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, House, RelayStates, Thresholds, TicketPriority, Zone, ZoneThresholdHistoryEntry } from '@/types'
+import type { Alert, AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, House, RelayStates, Thresholds, SeverityLevel, Zone, ZoneThresholdHistoryEntry } from '@/types'
 import { SEVERITY_TO_LEVEL } from '@/constants/severity'
 
 const DAY_MS = 86_400_000
@@ -297,7 +297,7 @@ export function averageControlOutput(zoneIds: string[], live: Map<string, LiveCo
 }
 
 // Bảng nhật ký cảnh báo
-export type SeverityGroup = TicketPriority
+export type SeverityGroup = SeverityLevel
 
 // Nhóm lọc theo 3 cấp chung (constants/severity.ts)
 export function getSeverityGroup(severity: AlertSeverity): SeverityGroup {
@@ -414,7 +414,7 @@ export interface FarmKpiTotals {
   devicesOnline: number
   devicesTotal: number
   alertsTotal: number
-  alertsByLevel: Record<TicketPriority, number>
+  alertsByLevel: Record<SeverityLevel, number>
   monthKg: number
   monthNests: number
   monthBatches: number

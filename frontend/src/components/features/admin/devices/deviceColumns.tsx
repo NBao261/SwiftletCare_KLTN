@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn'
 import { t, translated } from '@/i18n'
 import type { SystemNodeStatusItem } from '@/types'
 
-// Cột heartbeat: 2 dòng giờ:phút:giây / ngày theo giờ VN — cùng kiểu cột Ngày tạo ở bảng Ticket
+// Cột heartbeat: 2 dòng giờ:phút:giây / ngày theo giờ VN — cùng kiểu cột Ngày tạo ở bảng Người dùng
 const DAY_FORMAT = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
 const TIME_FORMAT = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
 

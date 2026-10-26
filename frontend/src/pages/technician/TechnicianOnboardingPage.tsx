@@ -1,11 +1,8 @@
 // OnboardingPage — F-TC-01 / Stitch A3 + B5 + B6 + B7 + B9 + C1
-// Wizard 6 bước lắp đặt thiết bị ESP32 — shell + state only
+// Wizard 5 bước lắp đặt thiết bị ESP32 — shell + state only
 // Logic từng bước được tách sang ./steps/
-//
-// ticketId: đọc từ URL query ?ticketId=<id> khi Technician bắt đầu Onboarding
-// từ màn hình Ticket (INSTALLATION ticket). Nếu vào trực tiếp từ nav, ticketId = undefined.
 import { useState, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui'
 import Stepper from '@/components/ui/Stepper'
 import { Step1Location }   from '@/components/features/technician/onboarding/Step1Location'
@@ -13,11 +10,10 @@ import { Step2Validate }   from '@/components/features/technician/onboarding/Ste
 import { Step3ConnectAP }  from '@/components/features/technician/onboarding/Step3ConnectAP'
 import { Step4WiFi }       from '@/components/features/technician/onboarding/Step4WiFi'
 import { Step5WaitOnline } from '@/components/features/technician/onboarding/Step5WaitOnline'
-import { Step6SAT }        from '@/components/features/technician/onboarding/Step6SAT'
 import type { OnboardingState } from '@/components/features/technician/onboarding/onboardingTypes'
 
 // ── Wizard Stepper ─────────────────────────────────────────────────────────────
-const STEP_LABELS = ['Vị trí', 'Thiết bị', 'Kết nối AP', 'WiFi farm', 'Đợi MQTT', 'Nghiệm thu']
+const STEP_LABELS = ['Vị trí', 'Thiết bị', 'Kết nối AP', 'WiFi farm', 'Đợi MQTT']
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 const INITIAL_STATE: OnboardingState = {
@@ -26,7 +22,6 @@ const INITIAL_STATE: OnboardingState = {
   deviceId:   '',
   secretKey:  '',
   deviceDbId: '',
-  ticketId:   undefined,
   ssid:       '',
   wifiPass:   '',
 }
@@ -34,13 +29,8 @@ const INITIAL_STATE: OnboardingState = {
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const [step, setStep] = useState(0)
-  // Đọc ticketId từ URL query param ?ticketId=xxx (khi vào từ màn hình Ticket)
-  const [data, setData] = useState<OnboardingState>({
-    ...INITIAL_STATE,
-    ticketId: searchParams.get('ticketId') ?? undefined,
-  })
+  const [data, setData] = useState<OnboardingState>(INITIAL_STATE)
 
   const patch = (partial: Partial<OnboardingState>) =>
     setData(prev => ({ ...prev, ...partial }))
@@ -72,14 +62,8 @@ export default function OnboardingPage() {
           {step === 4 && (
             <Step5WaitOnline
               data={data}
-              onSuccess={next}
+              onSuccess={() => navigate('/devices')}
               onRetry={() => setStep(2)} // Retry từ bước 3 (index 2)
-            />
-          )}
-          {step === 5 && (
-            <Step6SAT
-              data={data}
-              onDone={() => navigate('/devices')}
             />
           )}
         </div>

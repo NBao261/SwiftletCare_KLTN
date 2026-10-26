@@ -1,7 +1,6 @@
-import type { AdminCreatableRole } from '@/hooks/admin/useUsers'
 import { t } from '@/i18n'
 
-/** Khớp validator backend admin.route.ts: isEmail / isLength({min:8}) / notEmpty / isArray({min:1}) */
+/** Khớp validator backend admin.route.ts (POST /admin/technicians): isEmail / isLength({min:8}) / notEmpty */
 export const PASSWORD_MIN = 8
 // Không đưa mật khẩu mẫu cụ thể vào placeholder/thông báo: Admin sẽ copy dùng luôn
 // → nhiều tài khoản chung một mật khẩu đoán được (và bị GitGuardian quét là secret).
@@ -10,20 +9,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^(0|\+84)\d{9}$/
 
 export interface FormState {
-  role: AdminCreatableRole
   full_name: string
   email: string
   phone: string
   password: string
-  regions: string
-  farmIds: string[]
 }
 
-export type Field = Exclude<keyof FormState, 'role'>
-
-export function parseRegions(raw: string): string[] {
-  return raw.split(',').map(r => r.trim()).filter(Boolean)
-}
+export type Field = keyof FormState
 
 /**
  * Trả về map lỗi theo field — rỗng nghĩa là form hợp lệ. Tách khỏi component để
@@ -50,11 +42,5 @@ export function validateNewUser(form: FormState): Partial<Record<Field, string>>
     errors.password = t('Tối thiểu {{min}} ký tự', { min: PASSWORD_MIN })
   }
 
-  if (form.role === 'TECHNICIAN' && parseRegions(form.regions).length === 0) {
-    errors.regions = 'Chưa nhập vùng phụ trách'
-  }
-  if (form.role === 'SALES_STAFF' && form.farmIds.length === 0) {
-    errors.farmIds = t('Chưa chọn farm')
-  }
   return errors
 }

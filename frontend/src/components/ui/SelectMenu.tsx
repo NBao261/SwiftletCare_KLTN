@@ -44,7 +44,7 @@ function listHeight(count: number): number {
   return count * OPTION_HEIGHT + Math.max(0, count - 1) * OPTION_GAP + MENU_CHROME
 }
 /** Kiểu `field` nằm trong modal: chỉ hiện 4 dòng rồi cuộn, để danh sách không tràn khỏi form */
-// [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Chỉ ảnh hưởng SelectMenu có prop `field` (hiện chỉ popup ticket của Admin dùng). Thêm: `field`/`disabled`/`invalid`, danh sách field cao 4 dòng rồi cuộn, Esc không đóng Modal. Hàng bộ lọc (không `field`) của mọi role giữ nguyên max-h-72.
+// [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Chỉ ảnh hưởng SelectMenu có prop `field` (VD popup tạo trang trại). Thêm: `field`/`disabled`/`invalid`, danh sách field cao 4 dòng rồi cuộn, Esc không đóng Modal. Hàng bộ lọc (không `field`) của mọi role giữ nguyên max-h-72.
 const FIELD_VISIBLE_OPTIONS = 4
 
 /**
