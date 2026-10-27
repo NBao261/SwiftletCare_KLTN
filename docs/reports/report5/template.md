@@ -133,15 +133,15 @@ Requirements of priority `S` are kept working by the automated suites that run o
 
 ## 5. Responsibilities
 
-Each owner writes and runs the test cases of their features and workflows (Design Brief, Section 8); a test case is counted for one person only (BM04).
+Each owner runs the test cases of their features and workflows and records the result (Design Brief, Section 8); a test case is counted for one person only, its owner (BM04). Automated tests of backend code are written by the author of that code.
 
-| Member | Test cases |
-| --- | --- |
-| Nguyễn Chí Bảo | F-01, 02, 04, 05, 06, 10, 11, 12; WF-01, 03, 06; config sync transitions; NFR-01, 06, 09 |
-| Trần Minh Kiệt | F-07, 08, 18, 19; WF-04, 10; alert, device and label transitions; NFR-02, 13 |
-| Nguyễn Vũ Len | F-03, 17; WF-02, 09; relay transitions |
-| Nguyễn Thị Yến Nhi | F-09, 20, 21, 22; WF-05, 11; daily status and health report transitions; NFR-14 |
-| Thái Minh Tuấn | F-13, 14, 15, 16; WF-07, 08; verdict, review item and proposal transitions |
+| Member | Owns and runs | Writes |
+| --- | --- | --- |
+| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12; WF-01, 03, 06; config sync transitions; NFR-04, 05, 06, 07, 09, 11 | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push and current sensing |
+| Trần Minh Kiệt | F-05, 06, 08, 18, 19; WF-04, 10; device and label transitions; NFR-10 | Backend tests of devices, accounts, alerts, the expert module and daily health (including those of F-07, 13–17, 20–22) |
+| Nguyễn Vũ Len | F-07, 17; WF-02, 05, 09; alert and relay transitions; NFR-01 | E2E tests of DS-03, 04, 09, 10, 17, 18 |
+| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-11; daily status and health report transitions; NFR-02, 03, 14 | E2E tests of DS-21, 22; mobile tests |
+| Thái Minh Tuấn | F-13, 14, 15, 16; WF-07, 08; verdict, review item and proposal transitions; NFR-08, 13 | E2E tests of DS-13, 14, 15, 16 |
 
 ## 6. Test Results at Review 2
 

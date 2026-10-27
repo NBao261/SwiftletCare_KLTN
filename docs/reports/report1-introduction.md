@@ -30,11 +30,11 @@
 
 | Member | Student code | Role in the team |
 | --- | --- | --- |
-| Nguyễn Chí Bảo | SE183383 | Leader; firmware, AI pipeline, backend core |
-| Trần Minh Kiệt | SE182180 | Backend devices and device setup; mobile application |
-| Nguyễn Vũ Len | SE182055 | Web application – Farm Owner |
-| Nguyễn Thị Yến Nhi | SE184223 | Web application – Administrator, health reports |
-| Thái Minh Tuấn | SE181850 | Web application – Domain Expert |
+| Nguyễn Chí Bảo | SE183383 | Leader; firmware, AI pipeline, backend core; documents |
+| Trần Minh Kiệt | SE182180 | Backend (devices, accounts, alerts, expert module, daily health); firmware self-diagnosis |
+| Nguyễn Vũ Len | SE182055 | Web and mobile application – Farm Owner |
+| Nguyễn Thị Yến Nhi | SE184223 | Web and mobile application – Administrator, daily health and reports; mobile sign-in, push and QR setup |
+| Thái Minh Tuấn | SE181850 | Web and mobile application – Domain Expert; Technician screens |
 
 Responsibilities in detail are in Report 2, Section 4, and in the Ownership Map of the Design Brief.
 
@@ -127,4 +127,5 @@ Supporting flows: remote device maintenance by the Technician (SF-02), accounts 
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.1 | 27/10/2026 | Team roles re-split: backend and firmware for Bảo and Kiệt, web and mobile per role for Len, Nhi and Tuấn |
 | 1.0.0 | 23/10/2026 | First version for Review 2, written from the registration form v3 |
