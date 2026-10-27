@@ -44,7 +44,7 @@ Cập nhật 26/10/2026, sau khi đồng bộ hồ sơ: phiếu v3 + BM03 1.1, S
 | [x] | Đồng bộ **cấu trúc** phiếu v3, BM03, SRS, SDD, BM01, Tracking, Report 5 theo các quyết định trên (chưa phải baseline cuối: còn G-01, G-02, `[TEAM]`, CI trên tag, BM02) | P0-Tag | 26/10/2026 |
 | [x] | Sinh lại Word: `tools/make_registration_v3.py`, `make_bm03.py`, `make_bm01.py`; BM01 mục 0–8 = 4 trang (đo bằng Word 26/10) | P0-Tag | Sinh lại và đo lại sau khi điền `[TEAM]` |
 | [ ] | Điền các ô `[TEAM]` (mục 2) | P0-Tag | |
-| [ ] | PR code nhỏ **G-01** (enum + dọn phạm vi) và phần **bỏ đăng ký công khai** của G-02 merge trước khi gắn tag | P0-Tag | Mục 4 |
+| [ ] | PR code nhỏ **G-01** (enum + dọn phạm vi) và phần P0 của **G-02** (bỏ đăng ký công khai, bỏ đăng nhập OTP, thay luồng tạo tài khoản từ lời mời) merge trước khi gắn tag | P0-Tag | Mục 4 |
 | [ ] | Mở PR nhánh tài liệu này vào `develop` | P0-Tag | |
 | [ ] | Chạy CI đủ mọi module trên commit cuối của `develop` (Actions → CI → *Run workflow*); xanh thì gắn tag `review-2` **đúng commit đó** (push tag chạy CI lần nữa, không phải dời tag). Tải 3 artifact của lần chạy trên tag (`backend-jest-results`, `firmware-pio-junit`, `ai-pipeline-pytest-junit`), rồi `python docs/reports/report5/gen_report5.py docs/reports/report5/template.md docs/reports/report5-test.md --jest jest-results.json --pio pio-junit.xml --pytest pytest-junit.xml`; ghi link lần chạy CI vào Report 5 §6 | P0-Tag | CI đã có trigger tag `review-*`, chạy tay và artifact (26/10) |
 | [ ] | **BM02**: chạy prompt chuẩn trên tag, không sửa prompt, giữ nguyên kết quả; trả lời Fixed/Kept/Planned; điểm High Kept/Planned thêm vào BM01 §5 | P0-Tag | Tắt Memory trước khi chạy |
@@ -125,16 +125,28 @@ Một PR cho backend, web, mobile, firmware:
 - [ ] `migrate:alert-types` (đổi tên trong `alerts`, xoá cảnh báo predator, bỏ `heating`, map `ERROR`/`DEGRADED` → `ONLINE`, bỏ `ARCHIVED`, bỏ Zalo/SMS, bỏ `sla_hours` trong `systemsettings`) kèm test migration.
 - [ ] Sau khi sửa: `api-spec.yaml`, `npm run db:script`.
 
-### G-02 — Không đăng ký công khai (bỏ đăng ký: P0-Tag; phần còn lại P1)
+### G-02 — Tài khoản theo lời mời, không đăng ký công khai, không đăng nhập OTP
 
-- [ ] **Trước tag:** bỏ `/auth/register` và OTP đăng ký ở backend + `api-spec.yaml` (kể cả dòng giới hạn tốc độ nhắc `/auth/register`), bỏ trang đăng ký web và `(auth)/register` mobile; test route đăng ký trả 404.
-- [ ] Backend:
-  - thêm `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, như Technician);
-  - lời mời gửi tới email chưa có tài khoản thì người nhận tạo tài khoản từ link (email, role cố định);
-  - test: route đăng ký trả 404, tài khoản tạo từ link có đúng role.
-- [ ] Web: bỏ trang đăng ký; màn Admin "Tạo Farm Owner"; trang nhận lời mời có ô đặt mật khẩu.
-- [ ] Mobile: bỏ `(auth)/register`.
-- [ ] Sửa `api-spec.yaml` và `docs/database/` nếu đổi model.
+**P0-Tag:** bỏ các endpoint công khai và thay luồng tạo tài khoản từ lời mời. **P1:** Admin tạo Farm Owner, gửi e-mail thật.
+
+- [ ] **P0-Tag — backend:**
+  - bỏ `POST /auth/register` và `registerUser`;
+  - bỏ luồng **đăng nhập không mật khẩu bằng OTP** (ngoài SRS: chỉ có AUTH-FR-002 đăng nhập bằng mật khẩu và AUTH-FR-009 đặt lại mật khẩu): `POST /auth/otp/send`, `POST /auth/otp/verify`, `sendOtp`/`verifyOtp` trong `auth.service.ts` và controller, các trường `otp_code`/`otp_expires` của `users` (migration `$unset`, `npm run db:script`);
+  - thêm luồng tạo tài khoản từ link lời mời (e-mail và role lấy từ lời mời, người nhận chỉ đặt tên và mật khẩu) — hiện người được mời chưa có tài khoản đi qua `/auth/register` (`registerUser` tự nhận lời mời theo e-mail), bỏ route mà thiếu luồng này thì chuyên gia mới không vào được;
+  - bỏ các endpoint cũ khỏi `api-spec.yaml` (kể cả dòng giới hạn tốc độ nhắc `/auth/register`, `/auth/otp/send`), thêm endpoint mới; `otpSendLimiter` chỉ còn cho `/auth/forgot-password`, đổi tên cho đúng;
+  - test: `/auth/register`, `/auth/otp/send`, `/auth/otp/verify` trả 404; người được mời tạo tài khoản từ link có đúng e-mail và role; link hết hạn hoặc đã dùng bị từ chối.
+- [ ] **P0-Tag — web:**
+  - xoá `pages/auth/RegisterPage.tsx`, route và import `/register` ở `routes/public.routes.tsx`, link "Đăng ký" trên `LoginPage.tsx`;
+  - xoá `authApi.register` (`apis/auth/auth.api.ts`), mutation `register` trong `hooks/auth/useAuth.ts`, `RegisterRequest` (`types/auth.types.ts`) và các comment AUTH-FR-001;
+  - `InvitationPage.tsx`: người chưa có tài khoản đặt tên và mật khẩu ngay trên trang lời mời, gọi endpoint mới, không điều hướng sang `/register`.
+- [ ] **P0-Tag — mobile:** xoá `app/(auth)/register.tsx`; xoá `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY` (`constants/api.ts`) và `register`, `sendOtp`, `verifyOtp` (`services/api/auth.ts`).
+- [ ] **P1 — Admin tạo Farm Owner:** `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, như Technician); màn Admin "Tạo Farm Owner"; test quyền và đổi mật khẩu lần đầu; sửa `api-spec.yaml`, `docs/database/` nếu đổi model.
+- [ ] **P1 — e-mail thật** cho lời mời, mã đặt lại mật khẩu và mật khẩu tạm (SF-03 chạy end-to-end; hiện `auth.service.ts` chỉ `console.log` mã reset, `notification.service.ts#sendEmail` chỉ ghi log):
+  - SMTP qua `nodemailer` (đã có trong dependencies), thông tin đăng nhập SMTP bằng biến môi trường, thêm vào `.env.example`;
+  - không ghi log mật khẩu tạm, mã reset hay token lời mời;
+  - không gửi OTP đăng nhập: luồng này bị bỏ ở trên vì không thuộc SRS;
+  - link và mã hết hạn đúng Report 3 (lời mời 7 ngày, mã reset 15 phút);
+  - test bằng adapter mail giả; trên staging gửi thử một lời mời, một mã reset và một mật khẩu tạm của tài khoản do Admin tạo tới hộp thư thật.
 
 ### G-03 — Vòng chuyên gia (P1)
 
@@ -285,7 +297,17 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 ### G-15 — Dọn web (P1)
 
 - [ ] Bỏ dữ liệu giả của màn chuyên gia (`expertFallback.service.ts`, `data/mocks/`), nối API thật; chuyển thư mục theo FE_Design §12 (`domain-expert/`, `apis/`).
-- [ ] Xoá stub `FarmOwnerLiveStreamPage` (ghi Raspberry Pi); đổi chữ "PLC" → "Bộ điều khiển"; `HARVEST_ROLES` bỏ Admin, chuyên gia chỉ xem.
+- [ ] Route `/stream/:id` (đang trỏ tới stub `FarmOwnerLiveStreamPage` ghi Raspberry Pi, chặn bằng `OPS_ROLES`): dùng lại `LiveCameraCard`/`useWhepStream` đang có, hoặc xoá route nếu phần phóng to đã có ở trang Vision — không viết player mới, không để route trỏ tới trang đã xoá. Chỉ Farm Owner và Domain Expert xem được (token 60 giây); Technician và Admin bị từ chối. Bỏ mọi chữ Raspberry Pi/RPi (AI node là PC).
+- [ ] Đổi chữ "PLC" → "Bộ điều khiển".
+- [ ] Đồng bộ route, menu và nút theo Report 3 §2.4 (hiện `OPS_ROLES = FARM_OWNER, TECHNICIAN, ADMIN` dùng cho `/devices`, `/alerts`, `/farms`, `/onboarding`, `/ota`, `/stream/:id`; `HARVEST_ROLES` còn Admin):
+  - `/dashboard`, `/analytics`, `/vision`, `/stream/:id`: Farm Owner; Domain Expert chỉ đọc (qua `/expert/*` hoặc dùng chung ở chế độ chỉ đọc, chọn một cách);
+  - `/harvests`: Farm Owner ghi, Domain Expert chỉ đọc, bỏ Admin;
+  - `/farms`: Farm Owner quản lý, Domain Expert chỉ đọc, Technician chỉ xem cấu trúc mọi farm, bỏ Admin;
+  - `/devices`: Farm Owner, Technician; Domain Expert chỉ đọc; bỏ Admin;
+  - `/onboarding`: Farm Owner và Technician; `/ota`: chỉ Technician;
+  - `/alerts`: Farm Owner xem và xác nhận; Technician chỉ cảnh báo thiết bị; Domain Expert dùng hàng đợi kiểm chứng; bỏ Admin;
+  - Admin chỉ dùng `/system/devices`, `/system/health`, `/system/settings`, `/system/audit-log`, `/users`, `/account-requests`;
+  - sửa `constants/roles.ts` (`OPS_ROLES`, `HARVEST_ROLES`, `MENU_ACCESS`), sidebar, `RequireRole` ở `routes/*.tsx`; test Vitest cho bảng role → route.
 - [ ] Đóng DF-5.
 
 ### G-16 — Mobile đủ phạm vi phiếu (P0-Demo cho luồng Farm Owner, P1 phần còn lại)
@@ -306,6 +328,12 @@ Thứ tự:
 
 Socket: gọi `off*` khi unmount.
 
+Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app không hiện màn hay nút không được phép):
+- chỉ Farm Owner xác nhận cảnh báo và bật/tắt relay;
+- Domain Expert chỉ đọc vận hành, được kết luận cảnh báo, chỉnh tham số, viết kết luận;
+- Farm Owner chỉ làm thay quyết định của chuyên gia khi farm chưa có Domain Expert (BR-22);
+- Technician và Admin không dùng mobile (đăng nhập bằng hai role này thì báo dùng web).
+
 ### G-17 — Staging (P0-Demo)
 
 - [ ] `deploy/docker-compose.staging.yml`, Dockerfile backend và web, Caddyfile, tls-proxy (8883 MQTT, 8322 RTSPS), file auth/authz EMQX, `.env.staging.example`.
@@ -321,7 +349,7 @@ Socket: gọi `off*` khi unmount.
 
 ## 5. Thứ tự đề xuất
 
-1. **Trước tag `review-2`:** G-01; bỏ đăng ký công khai (G-02); điền `[TEAM]`; sinh lại Word; merge → chạy CI đủ module bằng tay trên commit cuối → gắn tag đúng commit xanh → CI trên tag → sinh Report 5 từ artifact → BM02 → xuất PDF.
+1. **Trước tag `review-2`:** G-01; phần P0 của G-02 (bỏ đăng ký công khai, bỏ đăng nhập OTP, thay luồng tạo tài khoản từ lời mời); điền `[TEAM]`; sinh lại Word; merge → chạy CI đủ module bằng tay trên commit cuối → gắn tag đúng commit xanh → CI trên tag → sinh Report 5 từ artifact → BM02 → xuất PDF.
 2. **Đầu Iteration 2, chạy song song:**
    - G-07 + G-08 (Bảo);
    - G-17 + G-10 + G-02 (Kiệt);
