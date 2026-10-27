@@ -56,6 +56,7 @@ src/
 
 **Before writing any component, colour, label, formatter or hook, check FE_Design Appendix D (Phụ lục D) — the full list of shared items with paths.** Full text in FE_Design (top section "Quy tắc viết code TypeScript/TSX", 1.1, 2.4, 7, 12.0, 13.12–13.13). In short:
 
+- **Domain Expert screens (decided 27/10/2026, FE_Design §12.0 c rows 1–3):** the expert reads the Farm Owner's operational pages (`/dashboard`, `/analytics`, `/vision`, `/devices`, `/harvests`) in read-only mode through `FARM_SIDE_ROLES` — no expert copy of those pages; `/expert/*` keeps only the expert's decisions (work queue home, alert verdicts, detection parameters with ring and schedule, thresholds and coefficients, reports and conclusions, activity history), and those decision pages also open to a Farm Owner whose farm has no expert (BR-22). `/expert/analytics` and `/stream/:id` are removed.
 - **Farm Owner UI is the template** for Admin, Technician, Domain Expert and any later role (frames, radius, `DataTable`, buttons, badges — FE_Design 1.1). Only the Landing Page and `mobile/` are designed separately.
 - **Backend enum labels** (alert type/status, device status, role) are declared once in `constants/enumLabels.i18n.ts`; screen dictionaries reuse them with `...prefixLabels('status.', alertStatusDict.vi)` — never retype a label (FE_Design 6.3).
 - **Dates**: `formatStandardDate` / `formatHourMinute` / `formatDateTime` in `lib/i18n.ts` (DD/MM/YYYY, HH:mm, Vietnam time).

@@ -23,12 +23,12 @@ Scope is the registration form v3: main flows MF-01…11 and supporting flows SF
 
 | WBS | Work package | Main deliverable | Owner | Estimate (person-days) | Done at Review 2 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.4.x (sensing, fuzzy control, self-diagnosis, offline buffer, OTA); controller board with current sensing | Nguyễn Chí Bảo | 45 | About 70 % (board, current check, config version and MQTT TLS remain) |
+| 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.4.x (sensing, fuzzy control, self-diagnosis, offline buffer, OTA); controller board with current sensing | Bảo, Kiệt | 45 | About 70 % (board, current check, config version and MQTT TLS remain) |
 | 2 | Vision (Task 2) | Labelled dataset, trained YOLO model, counting pipeline, annotated stream, accuracy report | Nguyễn Chí Bảo | 40 | About 50 % (pipeline, MQTT publishing, video push and tests done; trained model, device topics and evaluation remain) |
-| 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine, forecasting, expert module, daily health assessment, reports | Bảo, Kiệt, Tuấn, Nhi | 70 | About 70 % (MF-11, review items, proposals, config sync, FCM remain) |
-| 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens; mobile app with QR setup and push | Len, Nhi, Tuấn, Kiệt | 75 | Web about 60 %, mobile about 10 % |
-| 5 | Evaluation and thesis (Task 5) | Staging, field run, NFR measurements, practitioner interview, test report, thesis | Whole team | 40 | About 15 % (camera installed in the test house, 3 days of clips recorded) |
-| 6 | Project management and documents | Reports 1–7, reviews, tracking | Nguyễn Chí Bảo | 20 | Reports 1–5 drafted |
+| 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine, forecasting, expert module, daily health assessment, reports | Kiệt, Bảo | 70 | About 70 % (MF-11, review items, proposals, config sync, FCM remain) |
+| 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens; mobile app with QR setup and push | Len, Nhi, Tuấn, Bảo | 75 | Web about 60 %, mobile about 10 % |
+| 5 | Evaluation and thesis (Task 5) | Staging, field run, NFR measurements, practitioner interview, test report, thesis | Whole team, led by Bảo | 40 | About 15 % (camera installed in the test house, 3 days of clips recorded) |
+| 6 | Project management and documents | Reports 1–7, reviews, tracking | Bảo (lead), whole team | 20 | Reports 1–5 drafted |
 
 ### 1.2 Project Objectives
 
@@ -46,12 +46,12 @@ Scope is the registration form v3: main flows MF-01…11 and supporting flows SF
 | --- | --- | --- | --- | --- | --- |
 | RK-1 | No trained swiftlet model in time; the spare PC is too slow for 25 fps | High | High | Train early on the 3 recorded days; measure fps on the PC in Iteration 2; fall back to a smaller input or one tile; demo on clips through the same pipeline | Nguyễn Chí Bảo |
 | RK-2 | Daily health assessment built late, leaving fewer than 14 rated days | Medium | High | Build MF-11 first in Iteration 2; start the field run as soon as the system is installed | Nguyễn Thị Yến Nhi |
-| RK-3 | Staging not ready or unreachable from the defence room | Medium | High | Staging in Iteration 2; rehearse from the university network; 4G hotspot and recorded demo as back-up (`docs/deploy/staging.md`) | Trần Minh Kiệt |
+| RK-3 | Staging not ready or unreachable from the defence room | Medium | High | Staging in Iteration 2; rehearse from the university network; 4G hotspot and recorded demo as back-up (`docs/deploy/staging.md`) | Nguyễn Chí Bảo |
 | RK-4 | Test house unavailable (borrowed), power or Internet cuts at the house | Medium | Medium | Bench prototype with the same firmware; offline operation is itself tested (MF-03) | Nguyễn Chí Bảo |
 | RK-5 | Web screens lag behind the backend scope | Medium | Medium | Remove v1.24.0 leftovers first; one owner per role screen set; weekly integration on `develop` | Nguyễn Vũ Len |
 | RK-6 | Thresholds or health levels without a source | Medium | Medium | Evidence register and practitioner interview; constants declared in Report 3 §4.5 | Nguyễn Chí Bảo |
 | RK-7 | A member cannot explain the part they own at Review 2 or Defense 1.1 | Low | High | Ownership Map; each owner presents their workflow at internal rehearsals | Nguyễn Chí Bảo |
-| RK-8 | The mobile application must cover the whole scope of the registration form (3.2 b) with one owner | High | High | Reuse the web API hooks and types; build the Farm Owner flows first (alerts and push, setup by QR, override, daily status); share the mobile screens out per role if the owner falls behind (Project Tracking G-16) | Trần Minh Kiệt |
+| RK-8 | The mobile application must cover the whole scope of the registration form (3.2 b) while the same members build the web screens | High | High | Split per role: Nhi sign-in, push, QR setup and daily status first, Len the Farm Owner screens, Tuấn the expert screens, Len also the live stream; reuse the web API hooks and types; Farm Owner flows first (Project Tracking G-16) | Nguyễn Thị Yến Nhi |
 | RK-9 | The move to device topics, `esp-mqtt` and TLS (Report 4 D3) breaks the link between controllers, AI node and backend | Medium | High | One pull request for firmware, backend and AI node; bench test with two controllers and the AI node before staging; old firmware reflashed over USB if needed (Project Tracking G-07) | Nguyễn Chí Bảo |
 
 ## 2. Management Approach
@@ -99,8 +99,9 @@ The team works in iterations of two-week sprints with Scrum-style ceremonies, ad
 | Swiftlet farming basics, house practice | Whole team | Visits to the test house; interview with the practitioner |
 | ESP32, RS485 Modbus, MQTT | Bảo, Kiệt | Vendor datasheets; prototype on the bench |
 | YOLO training, ONNX Runtime, ByteTrack | Bảo | Ultralytics and supervision documentation; Colab |
-| Node.js, TypeScript, MongoDB, Socket.io | Kiệt, Tuấn, Nhi | Backend codebase and its `CLAUDE.md` |
-| React, Vite, TailwindCSS, Expo | Len, Nhi, Tuấn, Kiệt | `frontend/FE_Design_Claude.md`; Expo Router documentation |
+| Roboflow labelling, Playwright | Len, Nhi, Tuấn | Roboflow documentation; `frontend/FE_Design_Claude.md` §13.17 |
+| Node.js, TypeScript, MongoDB, Socket.io | Kiệt, Bảo | Backend codebase and its `CLAUDE.md` |
+| React, Vite, TailwindCSS, Expo | Len, Nhi, Tuấn | `frontend/FE_Design_Claude.md`; Expo Router documentation |
 | Testing with Jest, Vitest, Unity | Whole team | Existing tests in each module |
 
 ## 3. Project Deliverables
@@ -123,21 +124,27 @@ R = responsible, A = accountable, C = consulted.
 
 | Area | Bảo | Kiệt | Len | Nhi | Tuấn |
 | --- | --- | --- | --- | --- | --- |
-| Project management, reports | A, R | C | C | C | C |
-| Firmware, hardware | A, R | C | | | |
+| Project management, reports | A, R | R | R | R | R |
+| Firmware, hardware | A, R | R | | | |
 | AI pipeline, model | A, R | | | | |
-| Backend core (MQTT, alerts, jobs) | A, R | R | | | C |
-| Backend devices, setup, scope cleanup and device onboarding | C | A, R | | | |
-| Backend expert module | C | | | | A, R |
-| Backend daily health and reports | C | | | A, R | C |
+| Dataset labelling, manual clip counts | A | | R | R | R |
+| Backend MQTT ingestion, configuration sync, bird counting, push, current sensing | A, R | C | | | |
+| Backend devices, accounts, alerts, setup | C | A, R | C | C | C |
+| Backend expert module | C | A, R | | | C |
+| Backend daily health and reports | C | A, R | | C | |
 | Web – Farm Owner | | | A, R | | |
-| Web – Administrator | | | | A, R | |
-| Web – Domain Expert | | | | | A, R |
-| Mobile application | | A, R | C | | |
-| Staging and deployment | C | A, R | | | |
+| Web – Administrator, role matrix | | | | A, R | |
+| Web – Domain Expert, Technician | | | | | A, R |
+| Mobile – sign-in, push, QR setup, daily status | C | | | A, R | |
+| Mobile – Farm Owner screens, live stream | | | A, R | C | |
+| Mobile – Domain Expert screens | | | | C | A, R |
+| E2E tests of the demo scenarios | A | C | R | R | R |
+| Staging and deployment | A, R | R | R | R | R |
 | Tests and Report 5 | A | R | R | R | R |
 
-Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03, 06; Kiệt WF-04, 10; Len WF-02, 09; Nhi WF-05, 11; Tuấn WF-07, 08.
+Staging and documents are shared: Bảo is accountable and runs the infrastructure and the final documents, and every member is responsible for their part (Kiệt the backend image, migrations, seed and backup; Len the web build; Nhi the mobile build; Tuấn the E2E runs on staging; each member the report sections of their own workflows). Backend code is written only by Bảo and Kiệt. Len, Nhi and Tuấn are consulted on the backend of the features they own and answer for those features working end to end (Project Tracking, Section 3).
+
+Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03, 06; Kiệt WF-04, 10; Len WF-02, 05, 09; Nhi WF-11; Tuấn WF-07, 08. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
 
 ## 5. Project Communications
 
@@ -183,5 +190,6 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo), skills, workflow owners, RK-3 and RK-8 |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0 and SDD 1.1.0: progress judged from Project Tracking, Iteration 1 and 2 content corrected, RACI wording, risks RK-8 (mobile scope) and RK-9 (move to device topics) |
 | 1.0.0 | 23/10/2026 | First version for Review 2 |

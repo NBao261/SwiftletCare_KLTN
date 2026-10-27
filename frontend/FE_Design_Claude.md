@@ -1027,9 +1027,9 @@ Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile
 
 | # | Chỗ | Code hiện tại | Report 3 | Việc cần làm |
 |---|---|---|---|---|
-| 1 | Domain Expert | Role `DOMAIN_EXPERT` có màn từ PR #91 nhưng nằm ở `expert/`, `ExpertLayout` (13.14); `SALES_STAFF` đã gỡ (PR #106) | Luồng chính | Dời về bucket `domain-expert/`, `DomainExpertLayout` theo 12.10 |
-| 2 | `/dashboard`, `/analytics`, `/vision` | `FARM_OWNER_ONLY` | Farm Owner + Domain Expert (chỉ đọc) | Đổi sang `FARM_SIDE_ROLES` khi thêm Domain Expert |
-| 3 | `/stream/:id` | `OPS_ROLES` (có Technician, Admin) | Chỉ Farm Owner + Domain Expert | Thu hẹp quyền route |
+| 1 | Domain Expert | Role `DOMAIN_EXPERT` có màn từ PR #91 nhưng nằm ở `expert/`, `ExpertLayout` (13.14); `/expert/analytics` lặp lại phân tích của Farm Owner; `SALES_STAFF` đã gỡ (PR #106) | Luồng chính | **Đã chốt 27/10/2026:** màn vận hành dùng chung (dòng 2); khu `/expert/*` chỉ giữ việc quyết định của chuyên gia: trang chủ là hàng đợi việc (cảnh báo chờ kết luận, mục duyệt, đề xuất hệ số, báo cáo chờ kết luận), kết luận cảnh báo, tham số phát hiện + vòng đếm + lịch đếm, ngưỡng/hệ số, báo cáo + kết luận, lịch sử hoạt động. Bỏ `/expert/analytics` (dùng `/analytics` chỉ đọc). Các màn quyết định này mở cho Farm Owner khi farm chưa có chuyên gia (BR-22, backend quyết). Dời về bucket `domain-expert/`, `DomainExpertLayout` theo 12.10 |
+| 2 | `/dashboard`, `/analytics`, `/vision`, `/devices`, `/harvests` | `FARM_OWNER_ONLY` / `OPS_ROLES` / `HARVEST_ROLES` | Farm Owner + Domain Expert (chỉ đọc) | Đổi sang `FARM_SIDE_ROLES`; trang giữ nguyên của Farm Owner, nút ghi đã ẩn theo role (PR #101) — kiểm lại từng nút, không tạo bản sao cho chuyên gia |
+| 3 | `/stream/:id` | `OPS_ROLES` (có Technician, Admin), trỏ tới stub `FarmOwnerLiveStreamPage` (ghi RPi) | Chỉ Farm Owner + Domain Expert | **Đã chốt 27/10/2026:** xoá route và trang stub; xem live ở `/vision` (`LiveCameraCard`/`useWhepStream`, token 60 giây) |
 | 4 | `/harvests` | `HARVEST_ROLES` (Farm Owner + Admin) | Farm Owner R, Domain Expert I, Admin – | Bỏ Admin, thêm Domain Expert chỉ xem |
 | 5 | `/ota` | `OPS_ROLES` (Farm Owner vào được) | Chỉ Technician (`/maintenance` đã gỡ ở PR #106) | Tạo nhóm quyền riêng cho Technician |
 | 5b | `/onboarding` | Màn nhập tay Device ID + khoá của Technician | Farm Owner + Technician, quét nhãn QR và mã QR tầng (MF-10, FARM-FR-003…012) | Thêm quét QR (`html5-qrcode`) và tiến trình setup; mobile là nơi làm chính |
