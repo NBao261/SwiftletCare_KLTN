@@ -139,7 +139,7 @@ flowchart LR
   BE <-- REST + WebSocket --> APP
   BE -- alert messages --> TG
   BE -- push notifications --> FCM
-  BE -- OTP, invitations --> MAIL
+  BE -- invitations, temporary passwords,<br/>password-reset codes --> MAIL
   FO --- APP
   DE --- APP
   TE --- APP
