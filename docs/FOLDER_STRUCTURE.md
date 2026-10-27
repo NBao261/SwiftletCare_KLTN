@@ -64,7 +64,7 @@ docs/
 │   ├── registration/       #   phiếu v3 và BM03 dạng Word (sinh từ Markdown, không có số điện thoại)
 │   ├── design-brief/       #   BM01 dạng Word (sinh từ design-brief.md)
 │   ├── report5/            #   danh sách test case (tc.py) + script sinh report5-test.md
-│   ├── templates/          #   biểu mẫu trống BM01, BM03 của môn
+│   ├── templates/          #   biểu mẫu trống BM01–BM04 của môn
 │   └── tools/              #   script điền biểu mẫu Word từ Markdown
 ├── deploy/                 # staging.md — môi trường staging (VPS + PC cũ tại nhà một thành viên làm AI node, đọc camera qua Internet)
 ├── database/               # init.mongo.js — database script sinh từ model Mongoose (`npm run db:script`), không sửa tay
