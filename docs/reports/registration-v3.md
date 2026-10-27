@@ -46,7 +46,7 @@ The system is designed so that the house regulates and protects itself; people s
 
 **Autonomous Micro-Climate Control:**
 
-An ESP32 controller reads five RS485 Modbus sensors (temperature and humidity, CO2, NH3, light, noise level) every second, filters the signals, and uses a fuzzy-logic controller to set the power level of the misting pump and the ventilation fan, and plays the attractant speaker on schedule. The control loop runs entirely on the controller, so it keeps working without an internet connection. NH3 and CO2 are monitored as air-quality indicators and reported; they do not drive the actuators. Current transformers on the pump and fan circuits let the controller check that each load actually runs when its relay is on.
+An ESP32 controller reads five RS485 Modbus sensors (temperature and humidity, CO2, NH3, light, noise level) every second, filters the signals, and uses a fuzzy-logic controller to set the power level of the misting pump and the ventilation fan, and plays the attractant speaker on schedule. The control loop runs entirely on the controller, so it keeps working without an internet connection. NH3 and CO2 are monitored as air-quality indicators and reported; they do not drive the actuators. Current sensing on the pump and fan circuits lets the controller check that each load actually runs when its relay is on.
 
 **Swiftlet Entry/Exit Counting by Computer Vision:**
 

@@ -91,7 +91,7 @@ Cập nhật 26/10/2026, sau khi đồng bộ hồ sơ: phiếu v3 + BM03 1.1, S
 | [ ] | Biên bản phỏng vấn 2–3 người nuôi: BR-01, BR-02, mức lệch BR-28, luật BR-29, mưa BR-30 (`docs/evidence-register.md` §7.2) | P0-Demo |
 | [ ] | Ghi kết quả thử board thật vào `firmware/README.md`: mất mạng 30 phút, mất điện, watchdog, rút cảm biến, phun không tăng ẩm, RESTART, OTA, SHA sai, rollback | P0-Demo |
 | [ ] | Kiểm tra cách đấu công tắc của nhà yến, viết cách chạy tay (Report 3 §8.1) | P1 |
-| [ ] | Vẽ, in mạch có ADS1115 + 2 biến dòng kẹp (G-13) | P1 |
+| [ ] | Vẽ, in mạch có ADS1115 + 2 điện trở shunt đo dòng phun sương và quạt (tải demo một chiều, G-13) | P1 |
 | [ ] | In nhãn QR cho board thật và mã QR từng tầng | P1 |
 | [ ] | Camera (NFR-10 e): xác nhận luật lọc IP nguồn trên modem nhà yến chỉ cho IP tĩnh của nhà thành viên vào cổng 18554 (chuyển cổng thôi là chưa đủ); thử từ 4G và một mạng khác phải thất bại, AI node vẫn kéo được hình; lưu ảnh chụp luật + kết quả vào `docs/evidence-register.md` | P0-Demo |
 
