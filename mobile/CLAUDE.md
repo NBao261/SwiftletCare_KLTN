@@ -95,7 +95,6 @@ There is no `components/` folder yet; `tsconfig.json` already maps `@components/
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| `types/index.ts` | `AlertType` still has `PREDATOR_DETECTED` (the backend too); `NotificationPreferences` keeps `zalo`/`sms` because the backend model still has them — never show them | Remove `PREDATOR_DETECTED` on all three sides in one PR |
 | `services/socket/index.ts` | `on*` helpers have no matching `off*`, so screens cannot clean up | Add `off*` helpers before the first screen subscribes |
 | `services/notification/index.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-002) |
 | Tooling | No tests yet; `npm run lint` passes with ~44 warnings (UTF-8 BOM at the top of files, `Array<T>` instead of `T[]`) | Write tests with the features; `npx eslint . --fix` clears most warnings |

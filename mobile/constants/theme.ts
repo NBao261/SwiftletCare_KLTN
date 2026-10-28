@@ -14,7 +14,7 @@ export const Colors = {
   // Severity (SRS §ALERT-FR-001)
   severity:   { CRITICAL:'#DC2626', HIGH:'#EA580C', MEDIUM:'#EAB308', LOW:'#3B82F6' },
   // Device status
-  device:     { ONLINE:'#22C55E', OFFLINE:'#9CA3AF', ERROR:'#EF4444', DEGRADED:'#EAB308' },
+  device:     { PENDING:'#EAB308', ONLINE:'#22C55E', OFFLINE:'#9CA3AF' },
   // Neutral
   gray:       { 50:'#F9FAFB', 100:'#F3F4F6', 200:'#E5E7EB', 300:'#D1D5DB', 400:'#9CA3AF', 500:'#6B7280', 600:'#4B5563', 700:'#374151', 800:'#1F2937', 900:'#111827', 950:'#030712' },
   // System

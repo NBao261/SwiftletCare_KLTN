@@ -10,7 +10,6 @@ export default function AlertDetailScreen() {
       <Text style={styles.title}>Cảnh báo {alertId}</Text>
       {/* TODO: M4
         - Alert header (severity badge, type icon)
-        - Snapshot image (if predator)
         - Alert message & metadata
         - Acknowledge button + note input
         - Related zone link

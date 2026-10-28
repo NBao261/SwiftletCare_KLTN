@@ -43,10 +43,9 @@ export function getSeverityLabel(severity: string): string {
 
 export function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
+    PENDING:  'Chờ kết nối',
     ONLINE:   'Trực tuyến',
     OFFLINE:  'Mất kết nối',
-    ERROR:    'Lỗi',
-    DEGRADED: 'Suy giảm',
   }
   return labels[status] ?? status
 }

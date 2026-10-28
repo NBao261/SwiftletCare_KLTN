@@ -6,16 +6,21 @@
 // ── Enums ──────────────────────────────────────────────────────────────────────
 // Khớp backend/src/types/domain.types.ts (Report 3 §2.3)
 export type Role         = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'TECHNICIAN'
-export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
+// PENDING: đã thêm vào kho, chưa có heartbeat đầu tiên; chỉ 3 trạng thái kết nối (Report 3 §6.6)
+export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
-export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'
+// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận (EXPERT-FR-003)
+export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'DISMISSED' | 'RESOLVED'
 export type AlertType =
-  | 'THRESHOLD_BREACH' | 'PREDATOR_DETECTED' | 'NODE_OFFLINE'
-  | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'NOISE_ANOMALY'
-  | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
+  | 'THRESHOLD_BREACH' | 'NODE_OFFLINE'
+  | 'SPEAKER_FAILURE'  | 'MISTING_INEFFECTIVE' // trước là PUMP_DRY
+  | 'NOISE_ANOMALY'
+  | 'UNEXPECTED_RESTART'                      // trước là POWER_OUTAGE
+  | 'LOW_RETURN_RATE'  | 'EDGE_AI_DEGRADED'
   | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'
   | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'
   | 'MAINTENANCE_DUE'
+  | 'ACTUATOR_FAULT'   | 'CONFIG_MISMATCH'
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
 
@@ -36,9 +41,6 @@ export interface NotificationPreferences {
   push: boolean
   /** ALERT-FR-013 — chỉ có tác dụng khi tài khoản đã liên kết bot Telegram */
   telegram: boolean
-  // zalo/sms còn trong model backend nhưng ngoài phạm vi (Report 3 §8) — không hiện trên UI
-  zalo: boolean
-  sms: boolean
   quiet_hours: { start: string; end: string }
 }
 
@@ -86,12 +88,11 @@ export interface Thresholds {
   co2_max: number
 }
 
-// Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation, IN4=heating
+// Relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation; IN4 dự phòng (đã bỏ sưởi)
 export interface RelayStates {
   misting: boolean
   speaker: boolean
   ventilation: boolean
-  heating: boolean
 }
 
 export interface SensorNode {
