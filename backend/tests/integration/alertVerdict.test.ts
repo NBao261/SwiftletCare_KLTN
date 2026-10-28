@@ -110,8 +110,8 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
 
   it('firmware không gửi title: tiêu đề mặc định mang tên Zone', async () => {
     const { zone, node } = await seed()
-    await ingestDeviceAlert({ deviceId: node.device_id, type: 'PUMP_DRY', severity: 'MEDIUM', message: 'khô' })
-    expect((await Alert.findOne().lean())!.title).toBe(`PUMP_DRY tại ${zone.name}`)
+    await ingestDeviceAlert({ deviceId: node.device_id, type: 'MISTING_INEFFECTIVE', severity: 'MEDIUM', message: 'khô' })
+    expect((await Alert.findOne().lean())!.title).toBe(`MISTING_INEFFECTIVE tại ${zone.name}`)
   })
 
   it('thiết bị không được gửi loại cảnh báo chỉ backend suy ra', async () => {

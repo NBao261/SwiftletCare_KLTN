@@ -109,7 +109,7 @@ describe('Technician trên mọi farm (FARM-FR-009)', () => {
     const b = await seedOwnerFarm()
     const base = { severity: 'HIGH', title: 't', message: 'm', status: 'ACTIVE' }
     const offline = await Alert.create({ ...base, farm_id: a.farm._id, zone_id: a.zone._id, type: 'NODE_OFFLINE' })
-    const pumpDry = await Alert.create({ ...base, farm_id: b.farm._id, zone_id: b.zone._id, type: 'PUMP_DRY' })
+    const pumpDry = await Alert.create({ ...base, farm_id: b.farm._id, zone_id: b.zone._id, type: 'MISTING_INEFFECTIVE' })
     const breach = await Alert.create({ ...base, farm_id: a.farm._id, zone_id: a.zone._id, type: 'THRESHOLD_BREACH' })
     const tech = as((await tokenOf('TECHNICIAN')).token)
 

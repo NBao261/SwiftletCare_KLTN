@@ -250,9 +250,9 @@ export async function reassignZone(
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
 
-  // DEGRADED vẫn đang kết nối (chỉ hỏng 1 phần) nên nhận được lệnh dời — cùng quy tắc
-  // với lệnh từ xa (sendRemoteCommand). Mất kết nối thì cần nhánh AP-mode, chưa hỗ trợ.
-  if (node.status !== 'ONLINE' && node.status !== 'DEGRADED') {
+  // Chỉ thiết bị đang kết nối nhận được lệnh dời — cùng quy tắc với lệnh từ xa
+  // (sendRemoteCommand). Mất kết nối thì cần nhánh AP-mode, chưa hỗ trợ.
+  if (node.status !== 'ONLINE') {
     throw ConflictError(`Thiết bị đang ${node.status} — chỉ dời Zone được khi thiết bị đang kết nối (nhánh AP-mode chưa được hỗ trợ)`)
   }
 
@@ -667,10 +667,10 @@ export async function decommissionDevice(
   const loc = await locateDevice(kind, node, user)
   assertInService(node)
 
-  // Gỡ thiết bị hỏng (OFFLINE/ERROR/PENDING) là việc thường ngày nên không hỏi gì
+  // Gỡ thiết bị hỏng (OFFLINE/PENDING) là việc thường ngày nên không hỏi gì
   // thêm. Nhưng thiết bị đang sống mà gỡ là mất luôn giám sát của cả Zone — bắt
   // gửi `force` để đó là quyết định có ý thức, không phải một cú bấm nhầm.
-  const isAlive = node.status === 'ONLINE' || node.status === 'DEGRADED'
+  const isAlive = node.status === 'ONLINE'
   if (isAlive && force !== true) {
     const lastSeen = node.last_heartbeat ? ` (heartbeat lúc ${node.last_heartbeat.toISOString()})` : ''
     throw ConflictError(
@@ -903,10 +903,9 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
     assertAllowedFirmwareUrl(input.ota.url)
   }
-  // DEGRADED = vẫn online, chỉ hỏng 1 phần (VD 1 cảm biến im) — restart/đẩy lại
-  // cấu hình chính là cách xử lý đầu tiên cho tình trạng đó, không được chặn.
-  if (node.status !== 'ONLINE' && node.status !== 'DEGRADED') {
-    throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE hoặc DEGRADED`)
+  // FARM-FR-013 — thiết bị không ONLINE không nhận được lệnh (409)
+  if (node.status !== 'ONLINE') {
+    throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE`)
   }
 
   if (COMMANDS_NEED_FIRMWARE.includes(input.command) && !versionAtLeast(node.firmware_version, COMMAND_SUPPORT_SINCE)) {

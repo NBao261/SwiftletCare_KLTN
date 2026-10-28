@@ -70,7 +70,7 @@ export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now
     return { ...base, suggestion: null, reason: `Mô hình giải thích dữ liệu kém (R² = ${round1(model.r2 * 100) / 100} < ${MIN_R2}) — đề xuất sẽ không đáng tin` }
   }
   if (model.a <= 0) {
-    return { ...base, suggestion: null, reason: 'Dữ liệu cho thấy phun sương không làm tăng độ ẩm — kiểm tra máy phun/bơm (PUMP_DRY) trước khi chỉnh hệ số' }
+    return { ...base, suggestion: null, reason: 'Dữ liệu cho thấy phun sương không làm tăng độ ẩm — kiểm tra máy phun/bơm (MISTING_INEFFECTIVE) trước khi chỉnh hệ số' }
   }
 
   const day = runs.flat().slice(-SIM_STEPS)

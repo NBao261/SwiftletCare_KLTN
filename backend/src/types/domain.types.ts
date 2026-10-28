@@ -12,16 +12,22 @@ export type Role         = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'TECHNICIA
 export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>
 // PENDING: Technician đã tạo record qua Web Console Onboarding nhưng thiết bị
 // chưa gửi heartbeat đầu tiên (SRS §8.2, Flow 1 bước 4).
-export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
+// Report 3 §6.6 — chỉ 3 trạng thái kết nối (ERROR/DEGRADED bỏ ở G-01, migrate:alert-types)
+export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
-export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'
+// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận (Report 3 §6.1, EXPERT-FR-003)
+export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'DISMISSED' | 'RESOLVED'
 export type AlertType =
-  | 'THRESHOLD_BREACH' | 'PREDATOR_DETECTED' | 'NODE_OFFLINE'
-  | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'NOISE_ANOMALY' // THREAT-FR-007 (v2.0.0, trước là BIRD_PANIC)
-  | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
-  | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE' // THREAT-FR-013
-  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'   // v1.24.0 — ALERT-FR-010/011
-  | 'MAINTENANCE_DUE'                       // ALERT-FR-016
+  | 'THRESHOLD_BREACH' | 'NODE_OFFLINE'
+  | 'SPEAKER_FAILURE'  | 'MISTING_INEFFECTIVE' // THREAT-FR-011 (SRS 3.1.0, trước là PUMP_DRY)
+  | 'NOISE_ANOMALY'                           // THREAT-FR-007 (v2.0.0, trước là BIRD_PANIC)
+  | 'UNEXPECTED_RESTART'                      // THREAT-FR-012 (SRS 3.1.0, trước là POWER_OUTAGE)
+  | 'LOW_RETURN_RATE'  | 'EDGE_AI_DEGRADED'
+  | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'   // THREAT-FR-013
+  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'     // v1.24.0 — ALERT-FR-010/011
+  | 'MAINTENANCE_DUE'                         // ALERT-FR-016
+  | 'ACTUATOR_FAULT'                          // THREAT-FR-014, BR-32
+  | 'CONFIG_MISMATCH'                         // ENV-FR-027, BR-24 — backend tự tính
 /** EXPERT-FR-003 — kết quả Domain Expert kiểm chứng 1 cảnh báo suy luận */
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
@@ -30,7 +36,7 @@ export type ControlMode  = 'AUTO' | 'MANUAL'
 
 // ── Module HARVEST (§5.8, §8.2) ───────────────────────────────────────────────
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-export type HarvestStatus = 'DRAFT' | 'ARCHIVED'
+export type HarvestStatus = 'DRAFT'
 
 // ── JWT Payload ────────────────────────────────────────────────────────────────
 export interface JwtAccessPayload {
@@ -52,8 +58,6 @@ export interface NotificationPreferences {
   push: boolean
   /** ALERT-FR-013 — chỉ có tác dụng khi tài khoản đã liên kết bot Telegram */
   telegram: boolean
-  zalo: boolean
-  sms: boolean
   quiet_hours: { start: string; end: string }
 }
 
@@ -173,16 +177,6 @@ export interface BirdCountPayload {
   bucket_start?: number
   bucket_minutes?: number
   timestamp?: number
-}
-
-export interface VisionAlertPayload {
-  deviceId: string
-  type: 'PREDATOR_DETECTED'
-  class: 'rat' | 'snake' | 'owl'
-  severity: AlertSeverity
-  confidence: number
-  snapshotUrl?: string
-  timestamp: number
 }
 
 // ── WebSocket Event Payloads (§9.3) ───────────────────────────────────────────

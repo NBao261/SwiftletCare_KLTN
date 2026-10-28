@@ -59,7 +59,7 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
       avg_return_rate_30d: { type: Number },
       estimated_population: { type: Number },
     },
-    status: { type: String, enum: ['DRAFT','ARCHIVED'] satisfies HarvestStatus[], default: 'DRAFT' },
+    status: { type: String, enum: ['DRAFT'] satisfies HarvestStatus[], default: 'DRAFT' },
     is_deleted: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }

@@ -423,13 +423,15 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     await send(techToken, node._id, { command: 'RESTART' }).expect(503)
   })
 
-  it('thiết bị DEGRADED vẫn nhận được lệnh, PENDING/OFFLINE thì không', async () => {
+  it('chỉ thiết bị ONLINE nhận được lệnh, PENDING/OFFLINE thì 409 (FARM-FR-013)', async () => {
     const { techToken, node } = await onlineNode()
-    await SensorNode.updateOne({ _id: node._id }, { status: 'DEGRADED' })
     await send(techToken, node._id, { command: 'RESTART' }).expect(202)
 
-    await SensorNode.updateOne({ _id: node._id }, { status: 'ERROR' })
-    await send(techToken, node._id, { command: 'RESTART' }).expect(409)
+    for (const status of ['PENDING', 'OFFLINE']) {
+      await SensorNode.updateOne({ _id: node._id }, { status })
+      const res = await send(techToken, node._id, { command: 'RESTART' }).expect(409)
+      expect(res.body.error.message).toContain(status)
+    }
   })
   it('firmware trước 1.4.0 chưa xử lý RESTART/OTA → 501, PUSH_CONFIG vẫn chạy', async () => {
     const { techToken, node, a } = await onlineNode()
@@ -533,10 +535,10 @@ describe('dời zone (FARM-FR-007b)', () => {
     expect(publishCommand).not.toHaveBeenCalled()
   })
 
-  it('thiết bị DEGRADED (vẫn kết nối) dời được như lệnh từ xa, OFFLINE thì không', async () => {
+  it('thiết bị ONLINE dời được như lệnh từ xa, OFFLINE thì không', async () => {
     const { techToken, a, b } = await seed()
-    const degraded = await SensorNode.create({ device_id: 'node_402', zone_id: a.zone._id, status: 'DEGRADED' })
-    await reassign(techToken, degraded._id, b.zone._id).expect(200)
+    const online = await SensorNode.create({ device_id: 'node_402', zone_id: a.zone._id, status: 'ONLINE' })
+    await reassign(techToken, online._id, b.zone._id).expect(200)
 
     const offline = await SensorNode.create({ device_id: 'node_403', zone_id: a.zone._id, status: 'OFFLINE' })
     const res = await reassign(techToken, offline._id, b.zone._id).expect(409)
@@ -568,7 +570,7 @@ describe('farm: sửa và xoá farm (FARM-FR-001)', () => {
   it('xoá farm đóng cảnh báo đang mở và không sinh cảnh báo mới cho farm đó', async () => {
     const { farm, primary } = await farmWithCoOwner()
     const open = await Alert.create({
-      farm_id: farm._id, type: 'POWER_OUTAGE', severity: 'HIGH', title: 'Mất điện', message: 'x', status: 'ACTIVE',
+      farm_id: farm._id, type: 'UNEXPECTED_RESTART', severity: 'HIGH', title: 'Mất điện', message: 'x', status: 'ACTIVE',
     })
 
     await removeFarm(String(farm._id), primary)
