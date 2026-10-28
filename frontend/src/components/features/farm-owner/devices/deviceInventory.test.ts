@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { buildDeviceInventory, queryInventory, tallyDevices, uptimeParts } from '@/components/features/farm-owner/devices/deviceInventory';
 import type { CameraNode, DeviceStatus, House, SensorNode, Zone } from '@/types';
@@ -6,7 +6,7 @@ import type { CameraNode, DeviceStatus, House, SensorNode, Zone } from '@/types'
 const limits = { temp_min: 26, temp_max: 31, humidity_min: 75, humidity_max: 95, light_max: 0.2, nh3_max: 25, co2_max: 1500 };
 
 function house(id: string): House {
-  return { _id: id, farm_id: 'farm', name: `NhÃ  ${id}`, floors: 1 };
+  return { _id: id, farm_id: 'farm', name: `Nhà ${id}`, floors: 1 };
 }
 
 function zone(id: string, houseId: string): Zone {
@@ -16,7 +16,7 @@ function zone(id: string, houseId: string): Zone {
 function sensor(id: string, zoneId: string, status: DeviceStatus, extra: Partial<SensorNode> = {}): SensorNode {
   return {
     _id: id, device_id: id, zone_id: zoneId, firmware_version: '1.4.0', status, control_mode: 'AUTO',
-    relay_states: { misting: false, speaker: false, ventilation: false }, // heating Ä‘Ã£ bá» (SRS 3.1.0)
+    relay_states: { misting: false, speaker: false, ventilation: false },
     speaker_schedule: { enabled: false, windows: [] }, audio: { current_track: 1, volume: 20, playing: false, loop: false },
     registered_at: '2026-10-01T00:00:00Z', ...extra,
   };
@@ -46,7 +46,7 @@ describe('buildDeviceInventory', () => {
     ]);
     expect(first.cameras.map(device => device.id)).toEqual(['c1']);
     expect(first.tally).toEqual({ total: 4, online: 1, faulty: 2, pending: 1 });
-    // Camera cÅ© chá»‰ cÃ³ zone_id Ä‘Æ°á»£c quy ra nhÃ  chá»©a Zone Ä‘Ã³
+    // Camera cũ chỉ có zone_id được quy ra nhà chứa Zone đó
     expect(second.cameras.map(device => device.id)).toEqual(['c2']);
     expect(second.tally).toEqual({ total: 2, online: 2, faulty: 0, pending: 0 });
   });
@@ -115,7 +115,7 @@ describe('queryInventory', () => {
   });
 
   it('finds a house by its name, a zone or a device id and marks inner matches to expand', () => {
-    expect(queryInventory(inventory, { ...base, keyword: 'nhÃ  a' }).items.map(item => item.house._id)).toEqual(['a']);
+    expect(queryInventory(inventory, { ...base, keyword: 'nhà a' }).items.map(item => item.house._id)).toEqual(['a']);
     const byDevice = queryInventory(inventory, { ...base, keyword: 'NODE_B2' });
     expect(byDevice.items.map(item => item.house._id)).toEqual(['b']);
     expect([...byDevice.matchedInside]).toEqual(['b']);
