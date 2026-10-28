@@ -1,18 +1,13 @@
 {
   "expo": {
     "name": "SwiftletCare",
-    "slug": "swiftletcare-mobile",
+    "slug": "swiftletcare",
+    "owner": "vulen",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "swiftletcare",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0D9488"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "vn.swiftletcare.app",
@@ -24,7 +19,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0D9488"
+        "backgroundColor": "#172008"
       },
       "package": "vn.swiftletcare.app",
       "permissions": [
@@ -41,19 +36,32 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-blank.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
       "expo-secure-store",
       "expo-notifications",
       [
         "expo-camera",
-        { "cameraPermission": "Cho phép SwiftletCare sử dụng camera để quét QR Code." }
-      ]
+        {
+          "cameraPermission": "Cho phép SwiftletCare sử dụng camera để quét QR Code."
+        }
+      ],
+      "expo-asset",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "87eeb21a-5a6e-45b5-85c6-20ac0c57716f"
       },
       "router": {
         "origin": false
