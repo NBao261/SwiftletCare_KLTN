@@ -89,7 +89,7 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 **PR A — G-01, nhánh `refactor/g01-enum-cleanup` (Kiệt mở PR, Bảo duyệt và merge):**
 
-1. **Kiệt:** backend `domain.types.ts`, model, service, `ALERT_TYPE_ALIAS`, nhánh `DEGRADED` ở `device.service.ts`, migration `migrate:alert-types` + test, `api-spec.yaml` (enum), `npm run db:script`; firmware gửi tên mới, `reset_reason`, bump `FIRMWARE_VERSION`, `pio test -e native`.
+1. **Kiệt:** backend `domain.types.ts`, model, service, `ALERT_TYPE_ALIAS`, nhánh `DEGRADED` ở `device.service.ts`, migration `migrate:alert-types` + test, `api-spec.yaml` (enum), `npm run db:script`; firmware gửi tên mới, `reset_reason`, bump `FIRMWARE_VERSION`, `pio test -e native`. — **Xong 28/10** (backend `31e85d2`, firmware 1.5.0 `70e5ff3`; `pio test -e native` chạy ở CI vì máy Kiệt chưa có g++)
 2. **Len:** `frontend/src/types/` (alert, device, auth), nhãn i18n, gỡ `heating` ở `ControlSubsystemPanel`, `dashboardMetrics`, `deviceInventory` (+ test), gỡ Zalo/SMS ở `SettingsPage.tsx`, `auth.types.ts`, `en.ts`.
 3. **Tuấn:** gỡ `heating` ở `ExpertControlPanel`, nhãn predator và nhãn tên cảnh báo cũ trong màn chuyên gia và Technician.
 4. **Nhi:** `mobile/types/` (enum, bỏ `zalo`/`sms`, `heating`).
@@ -188,23 +188,24 @@ Một PR cho backend, web, mobile, firmware:
   - đổi `PUMP_DRY` → `MISTING_INEFFECTIVE`, `POWER_OUTAGE` → `UNEXPECTED_RESTART`;
   - thêm `CONFIG_MISMATCH`, `ACTUATOR_FAULT`;
   - bỏ `PREDATOR_DETECTED`.
-- [ ] `AlertStatus`: thêm `DISMISSED`.
-- [ ] Ở 3 phía `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/types/`: bỏ `DeviceStatus` `ERROR`/`DEGRADED`, `HarvestStatus` `ARCHIVED`, trường `heating` trong `RelayStates`, Zalo/SMS trong tùy chọn thông báo (backend `user.model.ts`, `auth.service.ts`, `notification.service.ts`; web `SettingsPage.tsx`, `auth.types.ts`, `en.ts`).
-- [ ] Backend:
+  - *Backend xong (`31e85d2`); còn web, mobile.*
+- [ ] `AlertStatus`: thêm `DISMISSED`. *Backend xong (chỉ thêm giá trị; luồng bác bỏ ở G-03); còn web, mobile.*
+- [ ] Ở 3 phía `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/types/`: bỏ `DeviceStatus` `ERROR`/`DEGRADED`, `HarvestStatus` `ARCHIVED`, trường `heating` trong `RelayStates`, Zalo/SMS trong tùy chọn thông báo (backend `user.model.ts`, `auth.service.ts`, `notification.service.ts`; web `SettingsPage.tsx`, `auth.types.ts`, `en.ts`). *Backend xong; còn web, mobile.*
+- [x] Backend (`31e85d2`):
   - `ALERT_TYPE_ALIAS` nhận tên cũ từ firmware cũ (`PUMP_DRY`, `POWER_OUTAGE`, `BIRD_PANIC`);
-  - `UNEXPECTED_RESTART` mang `details.reset_reason` lấy từ heartbeat;
+  - `UNEXPECTED_RESTART` mang `details.reset_reason` lấy từ heartbeat; *code lưu ở `metadata.reset_reason` (lấy từ cảnh báo, thiếu thì từ heartbeat) — đổi `metadata` → `details` theo ERD làm ở G-05/G-14;*
   - bỏ các nhánh `DEGRADED` ở `device.service.ts` (lệnh từ xa và dời thiết bị chỉ khi `ONLINE`), sửa test `deviceOnboarding.test.ts` theo.
-- [ ] Firmware:
+- [x] Firmware 1.5.0 (`70e5ff3`):
   - gửi tên mới;
-  - `UNEXPECTED_RESTART` kèm `reset_reason` (`POWER_ON` | `WATCHDOG` | `BROWNOUT` | `CRASH`);
+  - `UNEXPECTED_RESTART` kèm `reset_reason` (`POWER_ON` | `WATCHDOG` | `BROWNOUT` | `CRASH`); *thêm: mất điện (`POWER_ON`) giờ được báo, trừ lần cấp điện đầu khi thiết bị chưa từng kết nối;*
   - không gửi sau RESTART/OTA chủ động;
   - bump `FIRMWARE_VERSION`.
 - [ ] Web/mobile:
   - nhãn i18n mới;
   - gỡ `heating` khỏi `ExpertControlPanel`, `ControlSubsystemPanel`, `dashboardMetrics`, `deviceInventory` và test;
   - gỡ nhãn predator.
-- [ ] `migrate:alert-types` (đổi tên trong `alerts`, xoá cảnh báo predator, bỏ `heating`, map `ERROR`/`DEGRADED` → `ONLINE`, bỏ `ARCHIVED`, bỏ Zalo/SMS, bỏ `sla_hours` trong `systemsettings`) kèm test migration.
-- [ ] Sau khi sửa: `api-spec.yaml`, `npm run db:script`.
+- [x] `migrate:alert-types` (đổi tên trong `alerts`, xoá cảnh báo predator, bỏ `heating`, map `ERROR`/`DEGRADED` → `ONLINE`, bỏ `ARCHIVED`, bỏ Zalo/SMS, bỏ `sla_hours` trong `systemsettings`) kèm test migration. (`31e85d2`)
+- [x] Sau khi sửa: `api-spec.yaml`, `npm run db:script`. (`31e85d2`)
 
 ### G-02 — Tài khoản theo lời mời, không đăng ký công khai, không đăng nhập OTP — Kiệt (backend), Nhi (web, mobile)
 
