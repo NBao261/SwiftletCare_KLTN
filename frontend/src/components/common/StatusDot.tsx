@@ -3,25 +3,21 @@ import type { DeviceStatus } from '@/types'
 import { translated } from '@/i18n'
 
 const STATUS_CLASS: Record<DeviceStatus, string> = {
-  PENDING:  'bg-orange-300', // chờ kết nối lần đầu — nhạt hơn DEGRADED để phân biệt 2 mức "chưa ổn"
+  PENDING:  'bg-orange-300', // chờ kết nối lần đầu
   ONLINE:   'bg-success',
-  OFFLINE:  'bg-gray-400',
-  ERROR:    'bg-alertRed',
-  DEGRADED: 'bg-climateOrange',
+  OFFLINE:  'bg-gray-400',  // ERROR/DEGRADED đã bỏ (SRS 3.1.0) — OFFLINE bao phủ mọi trường hợp mất kết nối
 }
 
 const STATUS_LABEL: Record<DeviceStatus, string> = translated({
   // PENDING = đã khai báo nhưng chưa từng gửi heartbeat (Flow 1 bước 4→8)
-  PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Offline', ERROR: 'Lỗi', DEGRADED: 'Suy giảm',
+  PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Offline', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
 })
 
 /** Màu chữ cùng tông chấm nhưng đậm hơn 1–2 nấc cho đọc được trên nền trắng (dùng khi `colored`) */
 const STATUS_TEXT: Record<DeviceStatus, string> = {
   PENDING:  'text-orange-500',
   ONLINE:   'text-accent-700',
-  OFFLINE:  'text-gray-600',
-  ERROR:    'text-alertRed',
-  DEGRADED: 'text-orange-700',
+  OFFLINE:  'text-gray-600', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
 }
 
 interface StatusDotProps {

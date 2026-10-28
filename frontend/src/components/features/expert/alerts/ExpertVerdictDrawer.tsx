@@ -33,7 +33,7 @@ function StatusBadge({ verdict }: { verdict?: InferredAlertItem['expert_verdict'
 function renderActuatorStatus(type?: string) {
   if (type === 'NOISE_ANOMALY') return <>Loa dẫn dụ: <b className="text-[#27231F]">Đang tắt</b></>
   if (type === 'SENSOR_ANOMALY') return <>Phun sương: <b className="text-[#27231F]">Đang tắt (0%)</b></>
-  if (type === 'PUMP_DRY') return <>Bơm cấp ẩm: <b className="text-red-600">Sụt tải (chạy khô)</b></>
+  if (type === 'MISTING_INEFFECTIVE') return <>Bơm phún sương: <b className="text-red-600">Phún sương kém hiệu quả</b></> // PUMP_DRY → MISTING_INEFFECTIVE
   if (type === 'FORECAST_BREACH') return <>Phun sương đón đầu: <b className="text-[#27231F]">Sẵn sàng</b></>
   if (type === 'LOW_RETURN_RATE') return <>Cửa thu chim: <b className="text-[#27231F]">Đang mở</b></>
   return <>Thiết bị: <b className="text-[#27231F]">Ổn định</b></>

@@ -6,7 +6,7 @@ import type { ExpertVerdictStats, InferredAlertItem } from '@/types/expert.types
 
 export const MOCK_EXPERT_VERDICT_STATS: ExpertVerdictStats[] = [
   { type: 'NOISE_ANOMALY', confirmed: 8, rejected: 1, pending: 2, confirmedPct: 89 },
-  { type: 'PUMP_DRY', confirmed: 5, rejected: 0, pending: 1, confirmedPct: 100 },
+  { type: 'MISTING_INEFFECTIVE', confirmed: 5, rejected: 0, pending: 1, confirmedPct: 100 }, // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
   { type: 'SENSOR_ANOMALY', confirmed: 3, rejected: 1, pending: 0, confirmedPct: 75 },
   { type: 'LOW_RETURN_RATE', confirmed: 2, rejected: 1, pending: 0, confirmedPct: 67 },
 ]

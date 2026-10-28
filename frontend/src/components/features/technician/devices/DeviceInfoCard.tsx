@@ -29,7 +29,7 @@ function Item({ label, value, warn }: { label: string; value: string; warn?: boo
 
 /** Thông tin chẩn đoán từ heartbeat gần nhất (FARM-FR-006); firmware cũ không gửi thì hiện "—" */
 export default function DeviceInfoCard({ node }: { node: SensorNode }) {
-  const online = node.status === "ONLINE" || node.status === "DEGRADED"
+  const online = node.status === "ONLINE" // DEGRADED đã bỏ (SRS 3.1.0)
   const reason = node.reset_reason
   return (
     <div className="rounded-2xl border border-warmGray/15 bg-white p-5 shadow-sm">

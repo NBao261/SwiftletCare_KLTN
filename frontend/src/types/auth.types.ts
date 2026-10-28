@@ -12,7 +12,7 @@ export type UserStatus = 'ACTIVE' | 'LOCKED' | 'PENDING_DELETION' | 'DELETED'
 export interface User {
   _id: string; email: string; phone?: string; full_name: string; role: Role; avatar_url?: string
   notification_preferences: {
-    push: boolean; zalo: boolean; sms: boolean
+    push: boolean // zalo/sms đã bỏ theo SRS 3.1.0 (G-01)
     quiet_hours: { start: string; end: string }
   }
   /** AUTH-FR-011 — false khi Admin khoá (Flow 19) HOẶC đã xoá theo yêu cầu (xem deleted_at) */

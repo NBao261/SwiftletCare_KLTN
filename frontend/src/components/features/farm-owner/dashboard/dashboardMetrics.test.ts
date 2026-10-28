@@ -33,7 +33,7 @@ describe('house stability', () => {
       { zone_id: 'z2', status: 'ONLINE' as const, type: 'sensor' as const },
       { zone_id: 'z1', status: 'ONLINE' as const, type: 'sensor' as const },
       { zone_id: 'z1', status: 'OFFLINE' as const, type: 'camera' as const },
-      { zone_id: 'z1', status: 'ERROR' as const, type: 'sensor' as const },
+      { zone_id: 'z1', status: 'OFFLINE' as const, type: 'sensor' as const }, // ERROR đã bỏ (SRS 3.1.0)
     ]
     const items = buildHouseStability(houses, zones, devices)
     expect(items.map(item => [item.name, item.status, item.faultyDevices])).toEqual([
@@ -240,7 +240,7 @@ describe('zoneHasIssue', () => {
 
   it('chỉ lỗi, suy giảm, mất kết nối là thiết bị hư', () => {
     expect(isFaultDeviceStatus('OFFLINE')).toBe(true)
-    expect(isFaultDeviceStatus('ERROR')).toBe(true)
+    expect(isFaultDeviceStatus('OFFLINE')).toBe(true) // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
     expect(isFaultDeviceStatus('PENDING')).toBe(false)
     expect(isFaultDeviceStatus('ONLINE')).toBe(false)
   })

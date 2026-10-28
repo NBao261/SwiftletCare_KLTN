@@ -29,7 +29,7 @@ function generateDraft(report: ZoneHealthReportItem | null, zoneName: string): s
   } else {
     const list = []
     if (alerts.NOISE_ANOMALY) list.push(`${alerts.NOISE_ANOMALY} lần ồn`)
-    if (alerts.PUMP_DRY) list.push(`${alerts.PUMP_DRY} lần bơm khô`)
+    if (alerts.MISTING_INEFFECTIVE) list.push(`${alerts.MISTING_INEFFECTIVE} lần phún sương kém`) // PUMP_DRY → MISTING_INEFFECTIVE
     if (alerts.SPEAKER_FAILURE) list.push(`${alerts.SPEAKER_FAILURE} lỗi thiết bị`)
     s2 = `2. Sự cố & Đàn chim: Ghi nhận ${list.join(', ')} tại ${zoneName}. Tỉ lệ chim quay về đạt ${ret}%.`
   }
@@ -37,8 +37,8 @@ function generateDraft(report: ZoneHealthReportItem | null, zoneName: string): s
   let s3 = ''
   if (nh3 > 25) {
     s3 = `3. Khuyến nghị Chủ trại: Khí NH3 đạt ${nh3.toFixed(0)} ppm (vượt ngưỡng 25 ppm). Cần tăng thông gió và vệ sinh phân yến tại ${zoneName}.`
-  } else if (alerts.PUMP_DRY) {
-    s3 = `3. Khuyến nghị Chủ trại: Kiểm tra nguồn cấp nước máy bơm do có cảnh báo bơm chạy khô tại ${zoneName}.`
+  } else if (alerts.MISTING_INEFFECTIVE) {
+    s3 = `3. Khuyến nghị Chủ trại: Kiểm tra hệ thống phún sương do có cảnh báo phún sương kém hiệu quả tại ${zoneName}.` // PUMP_DRY → MISTING_INEFFECTIVE
   } else {
     s3 = `3. Khuyến nghị Chủ trại: Duy trì chu kỳ vận hành tự động và bộ tham số hiện tại. Tiếp tục theo dõi độ ẩm buồng tổ ${zoneName}.`
   }

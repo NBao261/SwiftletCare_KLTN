@@ -4,7 +4,7 @@
 // thay mã "ADMIN"; nút Đăng xuất chuyển lên card hồ sơ; 2 cột trên desktop. Logic/API/hook giữ nguyên.
 import { useState, useEffect, FormEvent, type ReactNode } from 'react'
 import {
-  BellIcon, ChatCircleTextIcon, DeviceMobileIcon, EnvelopeIcon, MoonIcon, PhoneIcon,
+  BellIcon, EnvelopeIcon, MoonIcon, PhoneIcon,
   ShieldCheckIcon, SignOutIcon, TrashIcon, type Icon,
 } from '@phosphor-icons/react'
 import { useAuthStore } from '@/stores/authStore'
@@ -105,8 +105,7 @@ function NotificationPreferencesCard() {
   const prefs = user?.notification_preferences
 
   const [push_, setPush] = useState(prefs?.push ?? true)
-  const [zalo, setZalo] = useState(prefs?.zalo ?? false)
-  const [sms, setSms] = useState(prefs?.sms ?? false)
+  // zalo/sms đã bỏ theo SRS 3.1.0 (G-01) — chỉ còn kênh push
   const [quietStart, setQuietStart] = useState(prefs?.quiet_hours?.start ?? '')
   const [quietEnd, setQuietEnd] = useState(prefs?.quiet_hours?.end ?? '')
 
@@ -114,15 +113,13 @@ function NotificationPreferencesCard() {
   // này đang mở — resync lại form thay vì chỉ seed 1 lần lúc mount.
   useEffect(() => {
     setPush(prefs?.push ?? true)
-    setZalo(prefs?.zalo ?? false)
-    setSms(prefs?.sms ?? false)
     setQuietStart(prefs?.quiet_hours?.start ?? '')
     setQuietEnd(prefs?.quiet_hours?.end ?? '')
   }, [prefs])
 
   function handleSave() {
     updateNotificationPreferences.mutate(
-      { push: push_, zalo, sms, quiet_hours: { start: quietStart, end: quietEnd } },
+      { push: push_, quiet_hours: { start: quietStart, end: quietEnd } },
       {
         onSuccess: () => push('Đã lưu cài đặt thông báo'),
         onError: (err) => push(getApiErrorMessage(err, 'Lưu thất bại'), 'error'),
@@ -134,8 +131,7 @@ function NotificationPreferencesCard() {
     <SettingsCard icon={BellIcon} title="Thông báo" subtitle="Kênh nhận cảnh báo và giờ im lặng">
       <div className="flex flex-col gap-2">
         <ToggleRow icon={BellIcon} label="Push notification" description="Thông báo trên trình duyệt/ứng dụng" checked={push_} onChange={setPush} />
-        <ToggleRow icon={ChatCircleTextIcon} label="Zalo ZNS" description="Cảnh báo CRITICAL/HIGH" checked={zalo} onChange={setZalo} />
-        <ToggleRow icon={DeviceMobileIcon} label="SMS dự phòng" description="Chỉ cảnh báo CRITICAL" checked={sms} onChange={setSms} />
+        {/* Zalo ZNS và SMS đã bỏ theo SRS 3.1.0 (G-01) */}
       </div>
 
       <div className="mt-4 border-t border-warmGray/10 pt-4">

@@ -39,8 +39,8 @@ function OtaChip({ node }: { node: SensorNode }) {
 }
 
 function DeviceRow({ node, zoneName, selected, onSelect }: DeviceRowProps) {
-  // BE (409): chỉ node ONLINE/DEGRADED mới nhận lệnh từ xa
-  const isOffline = node.status !== 'ONLINE' && node.status !== 'DEGRADED'
+  // DEGRADED đã bỏ (SRS 3.1.0): chỉ node ONLINE mới nhận lệnh từ xa
+  const isOffline = node.status !== 'ONLINE'
   // Viền trái: đang chọn → đen; OTA đang chờ → cam; OTA lỗi → đỏ; còn lại không viền
   const accent = selected ? 'bg-charcoal' : node.ota_pending ? 'bg-climateOrange' : node.ota_failed ? 'bg-alertRed' : 'bg-transparent'
   return (

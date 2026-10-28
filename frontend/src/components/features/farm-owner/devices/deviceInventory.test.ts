@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 
 import { buildDeviceInventory, queryInventory, tallyDevices, uptimeParts } from '@/components/features/farm-owner/devices/deviceInventory';
 import type { CameraNode, DeviceStatus, House, SensorNode, Zone } from '@/types';
@@ -6,7 +6,7 @@ import type { CameraNode, DeviceStatus, House, SensorNode, Zone } from '@/types'
 const limits = { temp_min: 26, temp_max: 31, humidity_min: 75, humidity_max: 95, light_max: 0.2, nh3_max: 25, co2_max: 1500 };
 
 function house(id: string): House {
-  return { _id: id, farm_id: 'farm', name: `Nhà ${id}`, floors: 1 };
+  return { _id: id, farm_id: 'farm', name: `NhÃ  ${id}`, floors: 1 };
 }
 
 function zone(id: string, houseId: string): Zone {
@@ -16,7 +16,7 @@ function zone(id: string, houseId: string): Zone {
 function sensor(id: string, zoneId: string, status: DeviceStatus, extra: Partial<SensorNode> = {}): SensorNode {
   return {
     _id: id, device_id: id, zone_id: zoneId, firmware_version: '1.4.0', status, control_mode: 'AUTO',
-    relay_states: { misting: false, speaker: false, ventilation: false, heating: false },
+    relay_states: { misting: false, speaker: false, ventilation: false }, // heating Ä‘Ã£ bá» (SRS 3.1.0)
     speaker_schedule: { enabled: false, windows: [] }, audio: { current_track: 1, volume: 20, playing: false, loop: false },
     registered_at: '2026-10-01T00:00:00Z', ...extra,
   };
@@ -36,7 +36,7 @@ describe('buildDeviceInventory', () => {
     sensor('s4', 'z3', 'ONLINE'),
     sensor('gone', 'z1', 'ONLINE', { decommissioned_at: '2026-10-10T00:00:00Z' }),
   ];
-  const cameras = [camera('c1', 'ERROR', { house_id: 'h1' }), camera('c2', 'ONLINE', { zone_id: 'z3' })];
+  const cameras = [camera('c1', 'OFFLINE', { house_id: 'h1' }), camera('c2', 'ONLINE', { zone_id: 'z3' })];
 
   it('groups sensors by zone and cameras by house, skipping decommissioned devices', () => {
     const [first, second] = buildDeviceInventory({ houses, zones, sensors, cameras });
@@ -46,7 +46,7 @@ describe('buildDeviceInventory', () => {
     ]);
     expect(first.cameras.map(device => device.id)).toEqual(['c1']);
     expect(first.tally).toEqual({ total: 4, online: 1, faulty: 2, pending: 1 });
-    // Camera cũ chỉ có zone_id được quy ra nhà chứa Zone đó
+    // Camera cÅ© chá»‰ cÃ³ zone_id Ä‘Æ°á»£c quy ra nhÃ  chá»©a Zone Ä‘Ã³
     expect(second.cameras.map(device => device.id)).toEqual(['c2']);
     expect(second.tally).toEqual({ total: 2, online: 2, faulty: 0, pending: 0 });
   });
@@ -72,11 +72,11 @@ describe('buildDeviceInventory', () => {
 });
 
 describe('tallyDevices', () => {
-  it('counts ERROR and DEGRADED as faulty', () => {
+  it('counts OFFLINE devices as faulty (ERROR/DEGRADED removed in SRS 3.1.0)', () => {
     const [inventory] = buildDeviceInventory({
       houses: [house('h1')],
       zones: [zone('z1', 'h1')],
-      sensors: [sensor('a', 'z1', 'ERROR'), sensor('b', 'z1', 'DEGRADED')],
+      sensors: [sensor('a', 'z1', 'OFFLINE'), sensor('b', 'z1', 'OFFLINE')],
       cameras: [],
     });
     expect(tallyDevices(inventory.zoneGroups[0].devices)).toEqual({ total: 2, online: 0, faulty: 2, pending: 0 });
@@ -115,7 +115,7 @@ describe('queryInventory', () => {
   });
 
   it('finds a house by its name, a zone or a device id and marks inner matches to expand', () => {
-    expect(queryInventory(inventory, { ...base, keyword: 'nhà a' }).items.map(item => item.house._id)).toEqual(['a']);
+    expect(queryInventory(inventory, { ...base, keyword: 'nhÃ  a' }).items.map(item => item.house._id)).toEqual(['a']);
     const byDevice = queryInventory(inventory, { ...base, keyword: 'NODE_B2' });
     expect(byDevice.items.map(item => item.house._id)).toEqual(['b']);
     expect([...byDevice.matchedInside]).toEqual(['b']);

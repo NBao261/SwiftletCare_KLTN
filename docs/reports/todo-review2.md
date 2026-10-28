@@ -90,8 +90,8 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 **PR A — G-01, nhánh `refactor/g01-enum-cleanup` (Kiệt mở PR, Bảo duyệt và merge):**
 
 1. **Kiệt:** backend `domain.types.ts`, model, service, `ALERT_TYPE_ALIAS`, nhánh `DEGRADED` ở `device.service.ts`, migration `migrate:alert-types` + test, `api-spec.yaml` (enum), `npm run db:script`; firmware gửi tên mới, `reset_reason`, bump `FIRMWARE_VERSION`, `pio test -e native`. — **Xong 28/10** (backend `31e85d2`, firmware 1.5.0 `70e5ff3`; `pio test -e native` chạy ở CI vì máy Kiệt chưa có g++)
-2. **Len:** `frontend/src/types/` (alert, device, auth), nhãn i18n, gỡ `heating` ở `ControlSubsystemPanel`, `dashboardMetrics`, `deviceInventory` (+ test), gỡ Zalo/SMS ở `SettingsPage.tsx`, `auth.types.ts`, `en.ts`.
-3. **Tuấn:** gỡ `heating` ở `ExpertControlPanel`, nhãn predator và nhãn tên cảnh báo cũ trong màn chuyên gia và Technician.
+2. **[x] Len (Tuấn đảm nhiệm):** `frontend/src/types/` (alert, device, auth), nhãn i18n, gỡ `heating` ở `ControlSubsystemPanel`, `dashboardMetrics`, `deviceInventory` (+ test), gỡ Zalo/SMS ở `SettingsPage.tsx`, `auth.types.ts`, `en.ts`. — **Xong 28/10** (Tuấn thực hiện theo uỷ quyền; lint+tsc+vitest: 0 error, 106 pass)
+3. **[x] Tuấn:** gỡ `heating` ở `ExpertControlPanel`, nhãn predator và nhãn tên cảnh báo cũ trong màn chuyên gia và Technician. — **Xong 28/10** (ESLint 0 w, tsc exit 0, vitest 106/106)
 4. **Nhi:** `mobile/types/` (enum, bỏ `zalo`/`sms`, `heating`).
 5. Kiệt chạy lint/typecheck/test cả 4 module rồi mở PR.
 

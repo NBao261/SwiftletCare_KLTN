@@ -108,7 +108,7 @@ function countDevices(devices: DeviceRow[]): DeviceCounts {
   let offline = 0
   for (const d of devices) {
     if (d.status === 'ONLINE') online += 1
-    else if (d.status === 'OFFLINE' || d.status === 'ERROR') offline += 1
+    else if (d.status === 'OFFLINE') offline += 1 // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
   }
   return { total: devices.length, online, offline }
 }

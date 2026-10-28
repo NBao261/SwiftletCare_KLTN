@@ -434,9 +434,9 @@ const en: Record<string, string> = {
   'Kênh nhận cảnh báo và giờ im lặng': 'Alert channels and quiet hours',
   'Push notification': 'Push notification',
   'Thông báo trên trình duyệt/ứng dụng': 'Notifications in the browser/app',
-  'Cảnh báo CRITICAL/HIGH': 'CRITICAL/HIGH alerts',
-  'SMS dự phòng': 'Backup SMS',
-  'Chỉ cảnh báo CRITICAL': 'CRITICAL alerts only',
+  // 'Ảnh báo CRITICAL/HIGH': 'CRITICAL/HIGH alerts',  // Zalo ZNS đã bỏ (G-01)
+  // 'SMS dự phòng': 'Backup SMS',                      // SMS đã bỏ (G-01)
+  // 'Chỉ cảnh báo CRITICAL': 'CRITICAL alerts only',  // đã bỏ (G-01)
   'Giờ im lặng': 'Quiet hours',
   '— không nhận thông báo, trừ CRITICAL': '— no notifications except CRITICAL',
   'Từ': 'From',

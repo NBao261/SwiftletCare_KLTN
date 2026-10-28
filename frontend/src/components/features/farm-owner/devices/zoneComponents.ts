@@ -89,7 +89,7 @@ function componentStatus(kind: ComponentKind, node: DeviceItem, check: DeviceChe
   const nodeStatus = detail?.status ?? node.status;
   if (nodeStatus === 'PENDING') return { ...item, status: 'pending' };
   if (nodeStatus === 'OFFLINE') return { ...item, status: 'offline' };
-  if (nodeStatus === 'ERROR') return { ...item, status: 'fault' };
+  // ERROR/DEGRADED đã bỏ theo SRS 3.1.0 — OFFLINE là trạng thái hư duy nhất
   if (!check) return { ...item, status: 'unchecked' };
 
   const relays = detail?.relay_states;

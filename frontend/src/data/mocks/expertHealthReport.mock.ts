@@ -72,7 +72,7 @@ export const MOCK_HEALTH_REPORTS: ZoneHealthReportItem[] = [
       auto_mode_pct: 95.0,
       misting_switches: 460,
       ventilation_switches: 210,
-      alerts_by_type: { PUMP_DRY: 1 },
+      alerts_by_type: { MISTING_INEFFECTIVE: 1 }, // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
       avg_return_rate: 94.9,
       nh3_avg: 0.012,
       nh3_max: 0.020,

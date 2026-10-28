@@ -33,10 +33,8 @@ export default function AdminSystemHealthPage() {
 
   const { farms, zones, devices } = data
   const hasDevices = devices.total > 0
-  // Liệt kê mọi trạng thái khác ONLINE đang có (bỏ số 0) — trước đây có lỗi thì ẩn mất offline/chờ kết nối
+  // Liệt kê mọi trạng thái khác ONLINE đang có (bỏ số 0); ERROR/DEGRADED đã bỏ theo SRS 3.1.0
   const deviceIssues = ([
-    [devices.error, 'lỗi'],
-    [devices.degraded, 'suy giảm'],
     [devices.offline, 'offline'],
     [devices.pending, 'chờ kết nối'],
   ] as const).filter(([n]) => n > 0).map(([n, label]) => `${n} ${i18nT(label)}`)

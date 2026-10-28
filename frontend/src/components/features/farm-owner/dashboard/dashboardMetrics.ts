@@ -40,8 +40,8 @@ export function getAnomalies(data: EnvReadings, limits: Thresholds): Anomalies {
   }
 }
 
-// Trạng thái thiết bị tính là hư: lỗi, suy giảm hoặc mất kết nối (PENDING là chưa kích hoạt, không tính)
-const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['ERROR', 'DEGRADED', 'OFFLINE'])
+// Trạng thái thiết bị tính là hư: mất kết nối (ERROR/DEGRADED đã bỏ theo SRS 3.1.0)
+const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['OFFLINE'])
 
 export function isFaultDeviceStatus(status: DeviceStatus): boolean {
   return FAULT_DEVICE_STATUSES.has(status)
@@ -99,7 +99,7 @@ interface HouseStats {
   faultDeviceType?: StabilityDeviceType
 }
 
-const FAULT_STATUSES: DeviceStatus[] = ['OFFLINE', 'ERROR', 'DEGRADED']
+const FAULT_STATUSES: DeviceStatus[] = ['OFFLINE'] // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
 const STATUS_ORDER: Record<StabilityStatus, number> = { FAULT: 0, STABLE: 1, EMPTY: 2 }
 
 export function buildHouseStability(houses: House[], zones: Zone[], devices: DeviceRef[]): HouseStability[] {
@@ -240,8 +240,8 @@ interface NodeRef {
   relay_states: RelayStates
 }
 
-// Relay hiển thị trên Dashboard: sưởi tuỳ chọn vì backend SRS v2 đã bỏ relay heating (ENV-FR-012)
-export type DashboardRelayStates = Omit<RelayStates, 'heating'> & { heating?: boolean }
+// Relay hiển thị trên Dashboard: heating đã bỏ khỏi RelayStates theo SRS 3.1.0 (ENV-FR-012)
+export type DashboardRelayStates = RelayStates
 
 export interface NodesSummary {
   controlMode?: ControlMode
@@ -260,8 +260,6 @@ export function summarizeNodes(nodes: NodeRef[]): NodesSummary {
       misting: nodes.some(node => node.relay_states.misting),
       speaker: nodes.some(node => node.relay_states.speaker),
       ventilation: nodes.some(node => node.relay_states.ventilation),
-      // Sưởi chỉ có khi còn node gửi khoá heating (dữ liệu cũ); không có thì để trống thay vì báo TẮT
-      heating: nodes.some(node => node.relay_states.heating !== undefined) ? nodes.some(node => node.relay_states.heating) : undefined,
     },
   }
 }
@@ -307,6 +305,7 @@ export function getSeverityGroup(severity: AlertSeverity): SeverityGroup {
 export const STATUS_BADGE_CLASS: Record<AlertStatus, string> = {
   ACTIVE: 'bg-infoBlue/10 text-infoBlue',
   ACKNOWLEDGED: 'bg-accent-600 text-charcoal',
+  DISMISSED: 'bg-warmGray/10 text-warmGray', // EXPERT-FR-003
   RESOLVED: 'bg-warmGray/15 text-warmGray',
 }
 

@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { ArrowsInIcon, ArrowsOutIcon, HourglassIcon, VideoCameraSlashIcon, WarningIcon, WifiSlashIcon } from '@phosphor-icons/react'
+import { ArrowsInIcon, ArrowsOutIcon, HourglassIcon, VideoCameraSlashIcon, WifiSlashIcon } from '@phosphor-icons/react'
 import StatusDot from '@/components/common/StatusDot'
 import { Button, Card, SelectMenu } from '@/components/ui'
 import { NO_VALUE } from '@/constants/display'
@@ -11,8 +11,8 @@ import { useWhepStream } from '@/hooks/farm-owner/useWhepStream'
 import { cn } from '@/lib/cn'
 import type { DeviceStatus } from '@/types'
 
-// Trạng thái camera backend trả về mà vẫn mở luồng xem (DEGRADED: camera còn hình nhưng nút AI suy giảm)
-const STREAMABLE_STATUSES = new Set<DeviceStatus>(['ONLINE', 'DEGRADED'])
+// Trạng thái camera backend trả về mà vẫn mở luồng xem (DEGRADED đã bỏ theo SRS 3.1.0)
+const STREAMABLE_STATUSES = new Set<DeviceStatus>(['ONLINE'])
 
 interface LiveCameraCardProps {
   houseId: string
@@ -42,8 +42,8 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
   else if (isError) overlay = <StreamMessage title={t('camera.loadError')} action={<RetryButton label={t('camera.retry')} onClick={() => void refetch()} />} />
   else if (!camera) overlay = <StreamMessage icon={<VideoCameraSlashIcon size={28} />} title={t('camera.noCamera')} description={t('camera.noCameraDesc')} />
   else if (camera.status === 'PENDING') overlay = <StreamMessage icon={<HourglassIcon size={28} />} title={t('camera.pending')} description={t('camera.pendingDesc')} />
-  else if (camera.status === 'ERROR') overlay = <StreamMessage icon={<WarningIcon size={28} />} title={t('camera.error')} description={t('camera.errorDesc')} />
   else if (camera.status === 'OFFLINE') overlay = <StreamMessage icon={<WifiSlashIcon size={28} />} title={t('camera.offline')} description={t('camera.offlineDesc')} />
+  // ERROR đã bỏ theo SRS 3.1.0 — OFFLINE bao phủ mọi trường hợp mất kết nối
   else if (status === 'failed') overlay = <StreamMessage title={t('camera.failed')} description={t('camera.failedDesc')} action={<RetryButton label={t('camera.retry')} onClick={retry} />} />
   else if (!isPlaying) overlay = <StreamMessage title={t('camera.connecting')} />
 
@@ -103,12 +103,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
               <span className="h-1.5 w-1.5 rounded-full bg-accent-600" />
               {t('camera.live')}
             </span>
-            {camera?.status === 'DEGRADED' && (
-              <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-safetyOrange/90 px-3">
-                <WarningIcon size={12} weight="bold" />
-                {t('camera.degraded')}
-              </span>
-            )}
+            {/* DEGRADED đã bỏ (SRS 3.1.0): camera chỉ có ONLINE/OFFLINE/PENDING */}
           </span>
           {onToggleExpand && (
             <button

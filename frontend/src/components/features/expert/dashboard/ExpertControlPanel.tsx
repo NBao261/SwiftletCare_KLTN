@@ -29,7 +29,7 @@ const ICON_CLASS: Record<RelayTone, string> = {
   off: 'text-warmGray',
 }
 
-export type ExpertRelayStates = { misting: boolean; speaker: boolean; ventilation: boolean; heating?: boolean }
+export type ExpertRelayStates = { misting: boolean; speaker: boolean; ventilation: boolean } // heating đã bỏ (SRS 3.1.0)
 
 interface Props {
   zoneName?: string

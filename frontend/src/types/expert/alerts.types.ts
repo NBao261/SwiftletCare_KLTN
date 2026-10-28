@@ -1,6 +1,6 @@
 import type { AlertSeverity, AlertStatus } from '@/types'
 
-export type InferredAlertType = 'NOISE_ANOMALY' | 'SENSOR_ANOMALY' | 'FORECAST_BREACH' | 'LOW_RETURN_RATE' | 'PUMP_DRY'
+export type InferredAlertType = 'NOISE_ANOMALY' | 'SENSOR_ANOMALY' | 'FORECAST_BREACH' | 'LOW_RETURN_RATE' | 'MISTING_INEFFECTIVE' // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 
 export interface ExpertVerdict {

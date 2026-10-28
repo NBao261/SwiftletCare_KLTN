@@ -17,7 +17,7 @@ const ICON = 'bg-warmGray/10 text-charcoal'
 export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
   const { summary, nodes } = status
   const sensors = nodes.filter(n => n.type === 'sensor').length
-  const faulty = summary.error + summary.degraded
+  const faulty = summary.offline // ERROR/DEGRADED đã bỏ (SRS 3.1.0) — Offline là trạng thái hư duy nhất
 
   return (
     <Card className="flex flex-col gap-4">
@@ -64,7 +64,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           value={faulty}
           // Có thiết bị lỗi/suy giảm → ô nổi đỏ (nghiêm trọng nhất)
           tone={faulty > 0 ? 'critical' : undefined}
-          sub={faulty > 0 ? t('{{error}} lỗi · {{degraded}} suy giảm', { error: summary.error, degraded: summary.degraded }) : 'Không có thiết bị lỗi'}
+          sub={faulty > 0 ? `${faulty} thiết bị mất kết nối` : 'Không có thiết bị lỗi'}
         />
         <StatTile
           className="shadow-none"
