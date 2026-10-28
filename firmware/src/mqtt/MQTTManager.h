@@ -25,8 +25,9 @@ void publishTelemetry(const SensorData &data, const RelayState &relay);
 // publish* trả true khi đã gửi được (false: mất kết nối/buffer đầy) để caller thử lại
 bool publishHeartbeat();
 bool publishRelayState(const RelayState &relay);
+// resetReason: chỉ cho UNEXPECTED_RESTART (THREAT-FR-012) — POWER_ON | WATCHDOG | BROWNOUT | CRASH
 bool publishAlert(const char *alertType, const char *severity,
-                  const char *payload);
+                  const char *payload, const char *resetReason = nullptr);
 // Publish 1 dòng JSON telemetry NGUYÊN VĂN (không build lại từ SensorData
 // sống) — dùng làm callback cho StorageManager::flushBuffer() khi re-publish
 // dữ liệu buffer offline (REL-NFR-003). Trả về true nếu publish thành công.

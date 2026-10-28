@@ -203,7 +203,7 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
     }
   }
 
-  // THREAT-FR-011: PUMP_DRY — bơm BẬT cộng dồn đủ lâu trong 1 đợt phun mà độ ẩm
+  // THREAT-FR-011: MISTING_INEFFECTIVE — bơm BẬT cộng dồn đủ lâu trong 1 đợt phun mà độ ẩm
   // không tăng → chốt ngừng phun (runHumidityControl đọc pumpMonitor.blocked()),
   // tự thử lại sau PUMP_DRY_RETRY_MS. Chỉ xét khi độ ẩm còn dưới humidityMin (quanh
   // mục tiêu độ ẩm đứng yên là bình thường). Thời gian + mức tăng chỉnh theo Zone
@@ -216,7 +216,7 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
                                   (uint32_t)Config::pumpDryOnSec * 1000UL, Config::pumpDryMinRisePct,
                                   PUMP_DRY_RETRY_MS);
   if (fired) {
-    Serial.println("[THREAT] ⚠ PUMP_DRY: bơm BẬT " + String(Config::pumpDryOnSec) +
+    Serial.println("[THREAT] ⚠ MISTING_INEFFECTIVE: bơm BẬT " + String(Config::pumpDryOnSec) +
                    "s nhưng độ ẩm không tăng → ngừng phun, thử lại sau " + String(PUMP_DRY_RETRY_MS / 60000UL) + " phút");
   }
   // Cờ theo MỨC (đang chốt), không theo xung 1 chu kỳ: nếu MQTT rớt đúng lúc phát
