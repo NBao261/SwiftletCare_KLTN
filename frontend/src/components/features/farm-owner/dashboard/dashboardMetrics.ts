@@ -240,7 +240,7 @@ interface NodeRef {
   relay_states: RelayStates
 }
 
-// Relay hiển thị trên Dashboard: heating đã bỏ khỏi RelayStates theo SRS 3.1.0 (ENV-FR-012)
+// Relay hiển thị trên Dashboard: phun sương, loa, quạt (Report 3 §8: không có relay sưởi)
 export type DashboardRelayStates = RelayStates
 
 export interface NodesSummary {
@@ -264,7 +264,7 @@ export function summarizeNodes(nodes: NodeRef[]): NodesSummary {
   }
 }
 
-// 3 relay bắt buộc của SRS v2 — sưởi đã bỏ nên không đòi khoá heating trong telemetry socket
+// 3 relay bắt buộc trong telemetry socket: phun sương, loa, quạt
 const RELAY_KEYS: Array<keyof RelayStates> = ['misting', 'speaker', 'ventilation']
 
 interface LiveControl {

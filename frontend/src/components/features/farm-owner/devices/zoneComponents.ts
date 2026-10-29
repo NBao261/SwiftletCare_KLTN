@@ -98,7 +98,7 @@ function componentStatus(kind: ComponentKind, node: DeviceItem, check: DeviceChe
     return { ...item, status: relays?.speaker && detail?.audio?.playing ? 'on' : 'off' };
   }
   if (kind === 'misting') {
-    if (alertTypes.has('PUMP_DRY')) return { ...item, status: 'fault' };
+    if (alertTypes.has('MISTING_INEFFECTIVE')) return { ...item, status: 'fault' };
     return { ...item, status: relays?.misting ? 'on' : 'off' };
   }
   if (kind === 'ventilation') return { ...item, status: relays?.ventilation ? 'on' : 'off' };

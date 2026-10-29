@@ -9,7 +9,7 @@ export const alertTypeDict: Dictionary<AlertType> = {
     THRESHOLD_BREACH:    'Vượt ngưỡng môi trường',
     NODE_OFFLINE:        'Thiết bị mất kết nối',
     SPEAKER_FAILURE:     'Lỗi loa ru',
-    MISTING_INEFFECTIVE: 'Phún sương không hiệu quả', // THREAT-FR-011, trước là PUMP_DRY
+    MISTING_INEFFECTIVE: 'Phun sương không hiệu quả', // THREAT-FR-011, trước là PUMP_DRY
     NOISE_ANOMALY:       'Ồn bất thường',
     LOW_RETURN_RATE:     'Tỉ lệ chim về thấp',
     EDGE_AI_DEGRADED:    'Camera AI suy giảm',

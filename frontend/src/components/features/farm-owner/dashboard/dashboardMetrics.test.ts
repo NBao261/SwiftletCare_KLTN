@@ -61,7 +61,7 @@ describe('house stability', () => {
 })
 
 describe('house control summary', () => {
-  const relay = (on: boolean) => ({ misting: on, speaker: false, ventilation: false, heating: false })
+  const relay = (on: boolean) => ({ misting: on, speaker: false, ventilation: false })
 
   it('picks the latest timestamp and ignores missing ones', () => {
     expect(latestTimestamp(['2026-10-10T05:00:00Z', undefined, '2026-10-10T06:00:00Z'])).toBe('2026-10-10T06:00:00Z')
@@ -83,12 +83,12 @@ describe('house control summary', () => {
 })
 
 describe('withLiveRelays', () => {
-  const allOff = { misting: false, speaker: false, ventilation: false, heating: false }
+  const allOff = { misting: false, speaker: false, ventilation: false }
   const node = { zone_id: 'z1', control_mode: 'AUTO' as const, relay_states: allOff }
 
-  it('uses the socket relay states of the zone once all 4 relays are known and keeps the REST mode', () => {
-    const [next] = withLiveRelays([node], new Map([['z1', { relayStates: { ...allOff, heating: true } }]]))
-    expect(next.relay_states.heating).toBe(true)
+  it('uses the socket relay states of the zone once all 3 relays are known and keeps the REST mode', () => {
+    const [next] = withLiveRelays([node], new Map([['z1', { relayStates: { ...allOff, misting: true } }]]))
+    expect(next.relay_states.misting).toBe(true)
     expect(next.control_mode).toBe('AUTO')
   })
 

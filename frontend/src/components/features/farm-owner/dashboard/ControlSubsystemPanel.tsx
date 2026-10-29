@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn'
 import type { DashboardRelayStates } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import type { ControlMode, ControlOutput } from '@/types'
 
-// SRS v2.0.0 đã bỏ sưởi (ENV-FR-012) nên chỉ còn 3 relay
+// 3 relay: phun sương, loa, quạt (Report 3 §8: không có relay sưởi)
 const RELAY_ITEMS = [
   { key: 'misting', labelKey: 'relay.misting', icon: DropIcon },
   { key: 'ventilation', labelKey: 'relay.ventilation', icon: WindIcon },
@@ -96,7 +96,7 @@ interface RelayTileProps {
 function RelayTile({ item, relayStates, controlMode, fuzzyPercent, isAnomaly }: RelayTileProps) {
   const { t } = useTranslation(dashboardDict)
   const Icon = item.icon
-  // Relay thiếu trong dữ liệu (VD heating — backend SRS v2 đã bỏ) thì xem như chưa có dữ liệu, không báo TẮT sai
+  // Relay thiếu trong dữ liệu thì xem như chưa có dữ liệu, không báo TẮT sai
   const hasData = relayStates?.[item.key] !== undefined
   const isOn = relayStates?.[item.key] ?? false
   const hasFuzzy = hasData && fuzzyPercent !== undefined
