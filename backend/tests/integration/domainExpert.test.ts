@@ -24,8 +24,7 @@ import { Invitation } from '@/models/invitation.model'
 import { User } from '@/models/user.model'
 import { listAlerts } from '@/services/alert.service'
 import { completeDeletionRequest } from '@/services/admin.service'
-import { registerUser } from '@/services/auth.service'
-import { acceptInvitation, getFarm, inviteMember, listHouses } from '@/services/farm.service'
+import { acceptInvitation, createAccountFromInvitation, getFarm, inviteMember, listHouses } from '@/services/farm.service'
 import { findRecipients } from '@/services/notification.service'
 import type { CurrentUser, Role } from '@/types'
 
@@ -95,12 +94,12 @@ const call = (method: 'get' | 'post' | 'put' | 'delete', path: string, token: st
   request(app)[method](path).set('Authorization', `Bearer ${token}`).send(body)
 
 describe('mời Domain Expert (AUTH-FR-005/010, EXPERT-FR-001)', () => {
-  it('đăng ký mới tự nhận lời mời, mang role DOMAIN_EXPERT và thành thành viên cả farm', async () => {
+  it('tạo tài khoản từ link lời mời: mang role DOMAIN_EXPERT và thành thành viên cả farm', async () => {
     const { owner, farm } = await seed()
     const inv = await inviteMember(String(farm._id), asUser(owner), { email: 'ex@test.vn', role: 'DOMAIN_EXPERT' })
     expect(inv.invited_role).toBe('DOMAIN_EXPERT')
 
-    const user = await registerUser({ email: 'ex@test.vn', password: 'password123', full_name: 'Ex' })
+    const user = await createAccountFromInvitation(inv.token, { full_name: 'Ex', password: 'password123' })
     expect(user.role).toBe('DOMAIN_EXPERT')
     const member = (await Farm.findById(farm._id))!.members.find(m => String(m.user_id) === String(user._id))!
     expect(member.role).toBe('DOMAIN_EXPERT')

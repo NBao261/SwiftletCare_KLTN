@@ -97,8 +97,8 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 **PR B — phần P0 của G-02, nhánh `refactor/g02-invitation-accounts` (Kiệt mở PR, Bảo duyệt):**
 
-1. **Kiệt — spec trước** (commit đầu, Nhi duyệt): bỏ `/auth/register`, `/auth/otp/send`, `/auth/otp/verify`; thêm `POST /invitations/{token}/create-account` (công khai, body `full_name`, `password`; e-mail và role lấy từ lời mời; 201; lời mời hết hạn hoặc đã dùng → 409, token sai → 404).
-2. **Kiệt — backend:** bỏ `registerUser`, `sendOtp`, `verifyOtp`, controller, `otp_code`/`otp_expires` (migration `$unset`); thêm endpoint mới, đánh dấu lời mời `ACCEPTED`; đổi tên `otpSendLimiter`; test 404 cho 3 route cũ và test endpoint mới.
+1. **[x] Kiệt — spec trước** (commit đầu, Nhi duyệt): bỏ `/auth/register`, `/auth/otp/send`, `/auth/otp/verify`; thêm `POST /invitations/{token}/create-account` (công khai, body `full_name`, `password`; e-mail và role lấy từ lời mời; 201; lời mời hết hạn hoặc đã dùng → 409, token sai → 404). — **Xong 29/10** (chưa push, chờ Nhi duyệt)
+2. **[x] Kiệt — backend:** bỏ `registerUser`, `sendOtp`, `verifyOtp`, controller, `otp_code`/`otp_expires` (migration `$unset`); thêm endpoint mới, đánh dấu lời mời `ACCEPTED`; đổi tên `otpSendLimiter`; test 404 cho 3 route cũ và test endpoint mới. — **Xong 29/10** (đổi tên `otpSendLimiter` → `passwordResetLimiter`; migration `migrate:remove-otp-login`; lint + tsc + 531/531 test)
 3. **Nhi — web:** xoá `RegisterPage`, route `/register`, link "Đăng ký" ở `LoginPage`, `authApi.register`, mutation `register`, `RegisterRequest`; `InvitationPage` có form tên + mật khẩu gọi endpoint mới; bỏ kiểu `salesAssignment` còn sót trong `invitations.api.ts`.
 4. **Nhi — mobile:** xoá `(auth)/register.tsx`, `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY`, `register`, `sendOtp`, `verifyOtp`.
 
@@ -211,7 +211,7 @@ Một PR cho backend, web, mobile, firmware:
 
 **P0-Tag:** bỏ các endpoint công khai và thay luồng tạo tài khoản từ lời mời. **P1:** Admin tạo Farm Owner, gửi e-mail thật.
 
-- [ ] **P0-Tag — backend:**
+- [x] **P0-Tag — backend:** *(29/10, nhánh `refactor/g02-invitation-accounts`)*
   - bỏ `POST /auth/register` và `registerUser`;
   - bỏ luồng **đăng nhập không mật khẩu bằng OTP** (ngoài SRS: chỉ có AUTH-FR-002 đăng nhập bằng mật khẩu và AUTH-FR-009 đặt lại mật khẩu): `POST /auth/otp/send`, `POST /auth/otp/verify`, `sendOtp`/`verifyOtp` trong `auth.service.ts` và controller, các trường `otp_code`/`otp_expires` của `users` (migration `$unset`, `npm run db:script`);
   - thêm luồng tạo tài khoản từ link lời mời (e-mail và role lấy từ lời mời, người nhận chỉ đặt tên và mật khẩu) — hiện người được mời chưa có tài khoản đi qua `/auth/register` (`registerUser` tự nhận lời mời theo e-mail), bỏ route mà thiếu luồng này thì chuyên gia mới không vào được;

@@ -59,6 +59,12 @@ export const acceptInvitation = asyncHandler(async (req: Request, res: Response)
   res.json({ success: true, data: result })
 })
 
+/** POST /invitations/:token/create-account – AUTH-FR-010, người được mời chưa có tài khoản */
+export const createAccountFromInvitation = asyncHandler(async (req: Request, res: Response) => {
+  const user = await farmService.createAccountFromInvitation(req.params.token, req.body)
+  res.status(201).json({ success: true, data: user })
+})
+
 /** POST /invitations/:token/decline – Flow 12 case 3c, công khai không cần đăng nhập */
 export const declineInvitation = asyncHandler(async (req: Request, res: Response) => {
   await farmService.declineInvitation(req.params.token)

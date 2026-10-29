@@ -32,12 +32,6 @@ function readRefreshToken(req: Request): string | undefined {
     (req.cookies as Record<string, string | undefined>)?.refreshToken
 }
 
-/** POST /auth/register – AUTH-FR-001 */
-export const register = asyncHandler(async (req: Request, res: Response) => {
-  const user = await authService.registerUser(req.body)
-  res.status(201).json({ success: true, data: user })
-})
-
 /** POST /auth/login – AUTH-FR-002 */
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { user, accessToken, refreshToken } = await authService.loginUser(req.body)
@@ -60,23 +54,6 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   await authService.logoutUser(req.user._id, token)
   res.clearCookie('refreshToken', REFRESH_COOKIE_OPTIONS)
   res.json({ success: true, data: { message: 'Đã đăng xuất' } })
-})
-
-/** POST /auth/otp/send – AUTH-FR-005 */
-export const sendOtp = asyncHandler(async (req: Request, res: Response) => {
-  const { email } = req.body as { email: string }
-  await authService.sendOtp(email)
-  res.json({ success: true, data: { message: 'Nếu email tồn tại, OTP đã được gửi' } })
-})
-
-/** POST /auth/otp/verify – AUTH-FR-005 */
-export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
-  const { email, otp } = req.body as { email: string; otp: string }
-  const { user, accessToken, refreshToken } = await authService.verifyOtp(email, otp)
-  setRefreshCookie(res, refreshToken)
-  const data: { accessToken: string; user: typeof user; refreshToken?: string } = { accessToken, user }
-  if (isMobileClient(req)) data.refreshToken = refreshToken
-  res.json({ success: true, data })
 })
 
 /** POST /auth/forgot-password – AUTH-FR-009, Flow 11 bước 6 */

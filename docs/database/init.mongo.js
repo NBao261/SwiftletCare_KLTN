@@ -1109,12 +1109,6 @@ ensureCollection("users", {
     "telegram_link_expires_at": {
       "bsonType": ["date", "null"]
     },
-    "otp_code": {
-      "bsonType": ["string", "null"]
-    },
-    "otp_expires": {
-      "bsonType": ["date", "null"]
-    },
     "password_reset_token_hash": {
       "bsonType": ["string", "null"]
     },

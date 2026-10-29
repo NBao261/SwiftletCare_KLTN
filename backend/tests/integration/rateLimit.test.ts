@@ -13,7 +13,7 @@ process.env.AUTH_RATE_LIMIT_MAX = '2'
 process.env.REFRESH_RATE_LIMIT_MAX = '5'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const limiters = require('@/middlewares/rateLimiter.middleware') as Record<
-  'apiLimiter' | 'loginLimiter' | 'otpSendLimiter' | 'refreshLimiter', RequestHandler
+  'apiLimiter' | 'loginLimiter' | 'passwordResetLimiter' | 'refreshLimiter', RequestHandler
 >
 
 const ok: RequestHandler = (_req, res) => { res.json({ success: true }) }
@@ -27,7 +27,7 @@ app.post('/auth/refresh', limiters.refreshLimiter, ok)
 app.post('/auth/login', limiters.loginLimiter, (req, res) => {
   res.status(req.body.password === 'right' ? 200 : 401).json({ success: req.body.password === 'right' })
 })
-app.post('/auth/otp/send', limiters.otpSendLimiter, ok)
+app.post('/auth/forgot-password', limiters.passwordResetLimiter, ok)
 
 const bearer = (sub: string) => `Bearer ${jwt.sign({ sub, role: 'FARM_OWNER' }, process.env.JWT_ACCESS_SECRET!)}`
 
@@ -70,9 +70,9 @@ describe('đăng nhập / OTP — đếm theo IP', () => {
     expect(blocked.body.error.code).toBe('RATE_LIMITED')
   })
 
-  it('counts every OTP send, successful or not', async () => {
-    await request(app).post('/auth/otp/send').expect(200)
-    await request(app).post('/auth/otp/send').expect(200)
-    await request(app).post('/auth/otp/send').expect(429)
+  it('counts every password-reset e-mail, successful or not', async () => {
+    await request(app).post('/auth/forgot-password').expect(200)
+    await request(app).post('/auth/forgot-password').expect(200)
+    await request(app).post('/auth/forgot-password').expect(429)
   })
 })

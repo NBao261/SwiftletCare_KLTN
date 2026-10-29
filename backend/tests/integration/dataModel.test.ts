@@ -12,8 +12,8 @@ import { HarvestBatch } from '@/models/harvestBatch.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Invitation } from '@/models/invitation.model'
 import { User } from '@/models/user.model'
-import { loginUser, logoutUser, refreshAccessToken, registerUser } from '@/services/auth.service'
-import { removeFarm, updateZoneThresholds } from '@/services/farm.service'
+import { loginUser, logoutUser, refreshAccessToken } from '@/services/auth.service'
+import { createAccountFromInvitation, removeFarm, updateZoneThresholds } from '@/services/farm.service'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { migrateDataModel } from '@/scripts/migrate-data-model.script'
 import type { CurrentUser } from '@/types'
@@ -102,7 +102,7 @@ describe('schema', () => {
 })
 
 describe('xoá farm', () => {
-  it('huỷ lời mời còn chờ — người được mời đăng ký sau không thành Domain Expert', async () => {
+  it('huỷ lời mời còn chờ — người được mời không tạo được tài khoản từ link nữa', async () => {
     const { farm, owner } = await mkFarm()
     await Invitation.create({
       farm_id: farm._id, invited_email: 'op@test.vn', invited_role: 'DOMAIN_EXPERT', invited_by: owner._id,
@@ -111,8 +111,8 @@ describe('xoá farm', () => {
     await removeFarm(String(farm._id), asUser(owner))
 
     expect((await Invitation.findOne({ token: 'tok' }))!.status).toBe('EXPIRED')
-    const user = await registerUser({ email: 'op@test.vn', password: 'password123', full_name: 'Op' })
-    expect(user.role).toBe('FARM_OWNER')
+    await expect(createAccountFromInvitation('tok', { full_name: 'Op', password: 'password123' })).rejects.toMatchObject({ statusCode: 409 })
+    expect(await User.exists({ email: 'op@test.vn' })).toBeNull()
   })
 })
 

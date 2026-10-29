@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
 import { House, Zone, IHouse, IZone } from '@/models/houseZone.model'
-import { User } from '@/models/user.model'
+import { User, IUser } from '@/models/user.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
@@ -145,8 +145,8 @@ export async function softDeleteFarm(farm: IFarm): Promise<void> {
     { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },
   )
-  // Lời mời còn chờ: nếu để nguyên, người được mời đăng ký sau đó vẫn được auto-accept
-  // (registerUser) và thành Farm Owner/Domain Expert không gắn farm nào
+  // Lời mời còn chờ: nếu để nguyên, người được mời vẫn tạo được tài khoản từ link
+  // (createAccountFromInvitation) cho một farm không ai mở được nữa
   await Invitation.updateMany({ farm_id: farm._id, status: 'PENDING' }, { $set: { status: 'EXPIRED' } })
 }
 
@@ -158,9 +158,9 @@ export interface InviteMemberInput {
 
 /**
  * AUTH-FR-005/AUTH-FR-010, Flow 12 bước 1-2 — tạo Invitation thay vì thêm thẳng
- * vào farm.members. Không còn đòi email đã có tài khoản (khác bản cũ): nếu
- * chưa có, người được mời sẽ đăng ký trước rồi tự động accept (Flow 12 bước 3b,
- * xử lý ở registerUser bên auth.service khi email trùng invitation PENDING).
+ * vào farm.members. Không đòi email đã có tài khoản: chưa có thì người được mời
+ * tạo tài khoản ngay từ link (createAccountFromInvitation, AUTH-FR-010) — không có
+ * đăng ký công khai (Report 3 §1.2).
  * Mời đồng sở hữu (FARM_OWNER) hoặc Domain Expert (v2.0.0) — cả hai đều theo cả farm.
  */
 export async function inviteMember(farmId: string, user: CurrentUser, input: InviteMemberInput): Promise<IInvitation> {
@@ -206,14 +206,7 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
  * thầm thành công, để UI không hiểu nhầm.
  */
 export async function acceptInvitation(token: string, user: CurrentUser): Promise<IFarm> {
-  const invitation = await Invitation.findOne({ token })
-  if (!invitation) throw NotFoundError('Lời mời không tồn tại')
-  if (invitation.status !== 'PENDING') throw ConflictError(`Lời mời này đã ${STATUS_LABEL[invitation.status]}`)
-  if (invitation.expires_at < new Date()) {
-    invitation.status = 'EXPIRED'
-    await invitation.save()
-    throw ConflictError('Lời mời đã hết hạn (quá 7 ngày) — yêu cầu Farm Owner mời lại')
-  }
+  const invitation = await findPendingInvitationOrThrow(token)
   if (invitation.invited_email !== user.email?.toLowerCase()) {
     throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
   }
@@ -235,6 +228,61 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
     await farm.save()
   }
   return farm
+}
+
+/** Lời mời còn dùng được: không có → 404; đã trả lời hoặc hết hạn → 409 (hết hạn thì ghi luôn EXPIRED) */
+async function findPendingInvitationOrThrow(token: string): Promise<IInvitation> {
+  const invitation = await Invitation.findOne({ token })
+  if (!invitation) throw NotFoundError('Lời mời không tồn tại')
+  if (invitation.status !== 'PENDING') throw ConflictError(`Lời mời này đã ${STATUS_LABEL[invitation.status]}`)
+  if (invitation.expires_at < new Date()) {
+    invitation.status = 'EXPIRED'
+    await invitation.save()
+    throw ConflictError('Lời mời đã hết hạn (quá 7 ngày) — yêu cầu Farm Owner mời lại')
+  }
+  return invitation
+}
+
+export interface CreateAccountFromInvitationInput { full_name: string; password: string }
+
+/**
+ * AUTH-FR-010 — người được mời chưa có tài khoản tạo nó ngay từ link: e-mail và role lấy
+ * từ lời mời, người nhận chỉ đặt tên và mật khẩu; tài khoản vào thẳng farm của lời mời.
+ * Thay cho đăng ký công khai đã bỏ (Report 3 §1.2). Email đã có tài khoản thì 409 — người
+ * đó đăng nhập rồi `acceptInvitation`, không được tạo tài khoản thứ hai.
+ */
+export async function createAccountFromInvitation(token: string, input: CreateAccountFromInvitationInput): Promise<IUser> {
+  const invitation = await findPendingInvitationOrThrow(token)
+  // Kiểm farm TRƯỚC khi ghi gì: farm bị xoá giữa chừng thì không tạo tài khoản mồ côi
+  const farm = await findFarmOrThrow(String(invitation.farm_id))
+  if (await User.exists({ email: invitation.invited_email })) {
+    throw ConflictError('Email này đã có tài khoản — đăng nhập rồi chấp nhận lời mời')
+  }
+
+  let user: IUser
+  try {
+    user = await User.create({
+      email: invitation.invited_email, // đã chuẩn hoá lúc mời
+      password_hash: input.password,   // pre-save hook tự hash
+      full_name: input.full_name.trim(),
+      role: invitation.invited_role,
+    })
+  } catch (err) {
+    // 2 request cùng link chạy song song: unique index email chặn bản thứ hai
+    if ((err as { code?: number }).code === 11000) throw ConflictError('Email này đã có tài khoản — đăng nhập rồi chấp nhận lời mời')
+    throw err
+  }
+
+  farm.members.push({ user_id: user._id, is_primary: false, role: invitation.invited_role, joined_at: new Date() } as never)
+  await farm.save()
+  invitation.status = 'ACCEPTED'
+  invitation.responded_at = new Date()
+  await invitation.save()
+
+  await logAction(String(user._id), 'ACCOUNT_CREATED_FROM_INVITATION', 'user', String(user._id), {
+    farm_id: String(farm._id), role: invitation.invited_role,
+  })
+  return user
 }
 
 const STATUS_LABEL: Record<IInvitation['status'], string> = {
