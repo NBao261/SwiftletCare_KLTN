@@ -92,8 +92,8 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 1. **Kiệt:** backend `domain.types.ts`, model, service, `ALERT_TYPE_ALIAS`, nhánh `DEGRADED` ở `device.service.ts`, migration `migrate:alert-types` + test, `api-spec.yaml` (enum), `npm run db:script`; firmware gửi tên mới, `reset_reason`, bump `FIRMWARE_VERSION`, `pio test -e native`. — **Xong 28/10** (backend `31e85d2`, firmware 1.5.0 `70e5ff3`; `pio test -e native` chạy ở CI vì máy Kiệt chưa có g++)
 2. **[x] Len:** `frontend/src/types/` (alert, device, auth), nhãn i18n, gỡ `heating` ở `ControlSubsystemPanel`, `dashboardMetrics`, `deviceInventory` (+ test), gỡ Zalo/SMS ở `SettingsPage.tsx`, `auth.types.ts`, `en.ts`. — **Xong 29/10** (28/10 Tuấn làm phần chính theo uỷ quyền, `c54f050`; 29/10 Len làm lại phần Farm Owner, `2839abc`, `dff99d3`: `zoneComponents` đổi `PUMP_DRY` → `MISTING_INEFFECTIVE` và bỏ qua cảnh báo `DISMISSED`, `HarvestStatus` bỏ `ARCHIVED`, bỏ `heating` khỏi test và comment, bỏ nhãn mất điện/thiên địch và dòng Zalo/SMS thừa ở `en.ts`, sửa nhãn "Phun sương"; lint+tsc+vitest: 0 error, 108 pass, build xanh)
 3. **[x] Tuấn:** gỡ `heating` ở `ExpertControlPanel`, nhãn predator và nhãn tên cảnh báo cũ trong màn chuyên gia và Technician. — **Xong 28/10** (ESLint 0 w, tsc exit 0, vitest 106/106)
-4. **Nhi:** `mobile/types/` (enum, bỏ `zalo`/`sms`, `heating`).
-5. Kiệt chạy lint/typecheck/test cả 4 module rồi mở PR.
+4. **[x] Nhi:** `mobile/types/` (enum, bỏ `zalo`/`sms`, `heating`). — **Xong 28/10** (`9d17fbc`)
+5. Kiệt chạy lint/typecheck/test cả 4 module rồi mở PR. — *Kiểm tra xong 29/10: backend lint + tsc + 524/524 test; web lint + tsc + vitest 108/108 + build; mobile lint (0 lỗi) + typecheck + jest; firmware `pio test -e native` để CI chạy (máy Kiệt chưa có g++). Kèm sửa chữ "phún sương" → "phun sương" ở 6 file màn chuyên gia (Tuấn duyệt). Còn mở PR.*
 
 **PR B — phần P0 của G-02, nhánh `refactor/g02-invitation-accounts` (Kiệt mở PR, Bảo duyệt):**
 
@@ -184,13 +184,13 @@ Mỗi gap: tên ở Project Tracking §6, yêu cầu ở SRS, thiết kế ở S
 
 Một PR cho backend, web, mobile, firmware:
 
-- [ ] `AlertType`:
+- [x] `AlertType`:
   - đổi `PUMP_DRY` → `MISTING_INEFFECTIVE`, `POWER_OUTAGE` → `UNEXPECTED_RESTART`;
   - thêm `CONFIG_MISMATCH`, `ACTUATOR_FAULT`;
   - bỏ `PREDATOR_DETECTED`.
-  - *Backend xong (`31e85d2`); còn web, mobile.*
-- [ ] `AlertStatus`: thêm `DISMISSED`. *Backend xong (chỉ thêm giá trị; luồng bác bỏ ở G-03); còn web, mobile.*
-- [ ] Ở 3 phía `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/types/`: bỏ `DeviceStatus` `ERROR`/`DEGRADED`, `HarvestStatus` `ARCHIVED`, trường `heating` trong `RelayStates`, Zalo/SMS trong tùy chọn thông báo (backend `user.model.ts`, `auth.service.ts`, `notification.service.ts`; web `SettingsPage.tsx`, `auth.types.ts`, `en.ts`). *Backend xong; còn web, mobile.*
+  - *Backend `31e85d2`, web `c54f050`, mobile `9d17fbc`.*
+- [x] `AlertStatus`: thêm `DISMISSED`. *Cả 3 phía (chỉ thêm giá trị; luồng bác bỏ ở G-03).*
+- [x] Ở 3 phía `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/types/`: bỏ `DeviceStatus` `ERROR`/`DEGRADED`, `HarvestStatus` `ARCHIVED`, trường `heating` trong `RelayStates`, Zalo/SMS trong tùy chọn thông báo (backend `user.model.ts`, `auth.service.ts`, `notification.service.ts`; web `SettingsPage.tsx`, `auth.types.ts`, `en.ts`). *Cả 3 phía: backend `31e85d2`, web `c54f050` + `dff99d3`, mobile `9d17fbc`.*
 - [x] Backend (`31e85d2`):
   - `ALERT_TYPE_ALIAS` nhận tên cũ từ firmware cũ (`PUMP_DRY`, `POWER_OUTAGE`, `BIRD_PANIC`);
   - `UNEXPECTED_RESTART` mang `details.reset_reason` lấy từ heartbeat; *code lưu ở `metadata.reset_reason` (lấy từ cảnh báo, thiếu thì từ heartbeat) — đổi `metadata` → `details` theo ERD làm ở G-05/G-14;*
@@ -200,7 +200,7 @@ Một PR cho backend, web, mobile, firmware:
   - `UNEXPECTED_RESTART` kèm `reset_reason` (`POWER_ON` | `WATCHDOG` | `BROWNOUT` | `CRASH`); *thêm: mất điện (`POWER_ON`) giờ được báo, trừ lần cấp điện đầu khi thiết bị chưa từng kết nối;*
   - không gửi sau RESTART/OTA chủ động;
   - bump `FIRMWARE_VERSION`.
-- [ ] Web/mobile:
+- [x] Web/mobile (`c54f050`, `2839abc`, `dff99d3`, `9d17fbc`):
   - nhãn i18n mới;
   - gỡ `heating` khỏi `ExpertControlPanel`, `ControlSubsystemPanel`, `dashboardMetrics`, `deviceInventory` và test;
   - gỡ nhãn predator.
