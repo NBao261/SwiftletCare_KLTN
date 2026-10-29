@@ -1,13 +1,13 @@
 // Module DEVICE (§5.3) — Sensor/Camera Node, relay, chế độ điều khiển.
 
 // PENDING: Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi
-// heartbeat đầu tiên (SRS §8.2, Flow 1).
-export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
+// heartbeat đầu tiên (SRS §8.2, Flow 1). ERROR/DEGRADED đã bỏ theo SRS 3.1.0.
+export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 
 export type ControlMode = 'AUTO' | 'MANUAL'
 
-// Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation, IN4=heating
-export interface RelayStates { misting: boolean; speaker: boolean; ventilation: boolean; heating: boolean }
+// Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation; IN4=heating đã bỏ (ENV-FR-012)
+export interface RelayStates { misting: boolean; speaker: boolean; ventilation: boolean }
 export type RelayName = keyof RelayStates
 
 // ENV-FR-010/011: % công suất 0-100 do bộ điều khiển mờ trên ESP32 tính (tỉ lệ
@@ -94,6 +94,6 @@ export interface SystemNodeStatusItem {
   zone_id: string; farm_id: string; farm_name: string; house_name: string; floor?: number; zone_name: string
 }
 export interface SystemNodeStatus {
-  summary: { total: number; online: number; offline: number; pending: number; error: number; degraded: number }
+  summary: { total: number; online: number; offline: number; pending: number }
   nodes: SystemNodeStatusItem[]
 }

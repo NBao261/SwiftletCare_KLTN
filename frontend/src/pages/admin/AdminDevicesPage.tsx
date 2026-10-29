@@ -25,8 +25,7 @@ const STATUS_OPTIONS: { value: DeviceStatus | ''; label: string }[] = [
   { value: '', label: 'Tất cả trạng thái' },
   { value: 'ONLINE', label: 'Online' },
   { value: 'OFFLINE', label: 'Offline' },
-  { value: 'ERROR', label: 'Lỗi' },
-  { value: 'DEGRADED', label: 'Suy giảm' },
+  // ERROR/DEGRADED đã bỏ theo SRS 3.1.0
   { value: 'PENDING', label: 'Chờ kết nối' },
 ]
 const TYPE_OPTIONS: { value: SystemNodeStatusItem['type'] | ''; label: string }[] = [
@@ -41,8 +40,8 @@ const SORT_FIELDS: { key: DeviceSortKey; label: string }[] = [
   { key: 'device_id', label: 'Tên thiết bị' },
   { key: 'status', label: 'Trạng thái' },
 ]
-/** Sắp theo trạng thái: cần chú ý lên trước khi tăng dần */
-const STATUS_RANK: Record<DeviceStatus, number> = { ERROR: 0, DEGRADED: 1, OFFLINE: 2, PENDING: 3, ONLINE: 4 }
+/** Sắp theo trạng thái: cần chú ý lên trước khi tăng dần; ERROR/DEGRADED đã bỏ (SRS 3.1.0) */
+const STATUS_RANK: Record<DeviceStatus, number> = { OFFLINE: 0, PENDING: 1, ONLINE: 2 }
 const DEFAULT_SORT_BY: DeviceSortKey = 'last_heartbeat'
 const DEFAULT_SORT_DIR: SortDirection = 'desc'
 

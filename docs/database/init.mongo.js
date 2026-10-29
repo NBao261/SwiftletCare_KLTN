@@ -28,7 +28,7 @@ ensureCollection("alerts", {
     },
     "type": {
       "bsonType": "string",
-      "enum": ["THRESHOLD_BREACH", "PREDATOR_DETECTED", "NODE_OFFLINE", "SPEAKER_FAILURE", "PUMP_DRY", "NOISE_ANOMALY", "POWER_OUTAGE", "LOW_RETURN_RATE", "EDGE_AI_DEGRADED", "SENSOR_FAULT", "RS485_BUS_FAILURE", "SENSOR_ANOMALY", "FORECAST_BREACH", "MAINTENANCE_DUE"]
+      "enum": ["THRESHOLD_BREACH", "NODE_OFFLINE", "SPEAKER_FAILURE", "MISTING_INEFFECTIVE", "NOISE_ANOMALY", "UNEXPECTED_RESTART", "LOW_RETURN_RATE", "EDGE_AI_DEGRADED", "SENSOR_FAULT", "RS485_BUS_FAILURE", "SENSOR_ANOMALY", "FORECAST_BREACH", "MAINTENANCE_DUE", "ACTUATOR_FAULT", "CONFIG_MISMATCH"]
     },
     "severity": {
       "bsonType": "string",
@@ -46,7 +46,7 @@ ensureCollection("alerts", {
     "metadata": {},
     "status": {
       "bsonType": ["string", "null"],
-      "enum": ["ACTIVE", "ACKNOWLEDGED", "RESOLVED", null]
+      "enum": ["ACTIVE", "ACKNOWLEDGED", "DISMISSED", "RESOLVED", null]
     },
     "created_at": {
       "bsonType": ["date", "null"]
@@ -253,7 +253,7 @@ ensureCollection("cameranodes", {
     },
     "status": {
       "bsonType": ["string", "null"],
-      "enum": ["PENDING", "ONLINE", "OFFLINE", "ERROR", "DEGRADED", null]
+      "enum": ["PENDING", "ONLINE", "OFFLINE", null]
     },
     "last_heartbeat": {
       "bsonType": ["date", "null"]
@@ -484,7 +484,7 @@ ensureCollection("harvestbatches", {
     },
     "status": {
       "bsonType": ["string", "null"],
-      "enum": ["DRAFT", "ARCHIVED", null]
+      "enum": ["DRAFT", null]
     },
     "is_deleted": {
       "bsonType": ["bool", "null"]
@@ -784,7 +784,7 @@ ensureCollection("sensornodes", {
     },
     "status": {
       "bsonType": ["string", "null"],
-      "enum": ["PENDING", "ONLINE", "OFFLINE", "ERROR", "DEGRADED", null]
+      "enum": ["PENDING", "ONLINE", "OFFLINE", null]
     },
     "rssi": {
       "bsonType": ["number", "null"]
@@ -1085,12 +1085,6 @@ ensureCollection("users", {
           "bsonType": ["bool", "null"]
         },
         "telegram": {
-          "bsonType": ["bool", "null"]
-        },
-        "zalo": {
-          "bsonType": ["bool", "null"]
-        },
-        "sms": {
           "bsonType": ["bool", "null"]
         },
         "quiet_hours": {

@@ -87,8 +87,8 @@ async function seed(withData = true) {
       misting_pct: mistingOn[i] ? 60 : 0, ventilation_pct: 0, misting_on: mistingOn[i], ventilation_on: i === 9,
     })))
     const alert = (type: string) => ({ farm_id: farm._id, zone_id: zone._id, node_id: node._id, type, severity: 'MEDIUM', title: 't', message: 'm', created_at: new Date(now - 5 * 60_000) }) // trước mốc kỳ (làm tròn xuống phút)
-    await Alert.create([alert('PUMP_DRY'), alert('NOISE_ANOMALY')])
-    await Alert.create({ ...alert('PUMP_DRY'), status: 'RESOLVED' }) // cùng loại, đã đóng — vẫn tính là đã phát sinh trong kỳ
+    await Alert.create([alert('MISTING_INEFFECTIVE'), alert('NOISE_ANOMALY')])
+    await Alert.create({ ...alert('MISTING_INEFFECTIVE'), status: 'RESOLVED' }) // cùng loại, đã đóng — vẫn tính là đã phát sinh trong kỳ
     await RelayOverrideLog.create({
       node_id: node._id, zone_id: zone._id, farm_id: farm._id, relay: 'misting', state: true,
       started_by: owner._id, started_by_role: 'FARM_OWNER',
@@ -115,7 +115,7 @@ describe('tổng hợp báo cáo (EXPERT-FR-005/007)', () => {
       auto_mode_pct: 90, // 16,8 giờ can thiệp tay trên 168 giờ
       misting_switches: 3,
       ventilation_switches: 1,
-      alerts_by_type: { PUMP_DRY: 2, NOISE_ANOMALY: 1 },
+      alerts_by_type: { MISTING_INEFFECTIVE: 2, NOISE_ANOMALY: 1 },
       avg_return_rate: null, // chưa có dữ liệu đếm chim
       nh3_avg: 8.5, nh3_max: 13,
       co2_avg: 790, co2_max: 880,

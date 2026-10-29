@@ -37,7 +37,7 @@
 #define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
 
 // ── Firmware version (báo lên backend qua heartbeat — FARM-FR-006) ──────────
-#define FIRMWARE_VERSION "1.4.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện); 1.4.0: RESTART/OTA từ xa + rollback, heartbeat có lý do khởi động lại và IP
+#define FIRMWARE_VERSION "1.5.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện); 1.4.0: RESTART/OTA từ xa + rollback, heartbeat có lý do khởi động lại và IP; 1.5.0: tên cảnh báo SRS 3.1.0 (MISTING_INEFFECTIVE, UNEXPECTED_RESTART kèm lý do), báo cả mất điện
 
 // ── OTA từ xa (TICKET-FR-008, Flow 15) ──────────────────────────────────────
 // Bản vừa OTA phải kết nối được MQTT trong khoảng này, nếu không bootloader quay về
@@ -78,7 +78,7 @@
 #define DEFAULT_PUMP_DRY_ON_SEC 300       // s bơm BẬT cộng dồn trước khi xét, 120..900
 #define DEFAULT_PUMP_DRY_MIN_RISE_PCT 2.0f // điểm %RH phải tăng, 0.5..10
 #define DEFAULT_SPEAKER_DROP_PCT 70       // % mức âm giảm so với nền, 30..90
-// Sau khi chốt ngừng phun vì PUMP_DRY, bao lâu thì tự thử phun lại (PumpDryMonitor).
+// Sau khi chốt ngừng phun vì MISTING_INEFFECTIVE, bao lâu thì tự thử phun lại (PumpDryMonitor).
 // Hằng số kỹ thuật chọn tay (bằng thời hạn can thiệp tay mặc định), KHÔNG có nguồn
 // nuôi yến và chưa chỉnh được qua MQTT — đủ dài để bơm khô thật không chạy liên
 // tục, đủ ngắn để một lần báo nhầm không làm nhà yến mất phun sương cả ngày.
@@ -92,7 +92,7 @@
 // Chuỗi hoá số phút cho câu cảnh báo — đổi PUMP_DRY_RETRY_MIN là nội dung đổi theo
 #define SC_STR_(x) #x
 #define SC_STR(x) SC_STR_(x)
-// Cảnh báo "theo đợt" (NOISE_ANOMALY, PUMP_DRY) được gửi LẠI mỗi khoảng này chừng nào
+// Cảnh báo "theo đợt" (NOISE_ANOMALY, MISTING_INEFFECTIVE) được gửi LẠI mỗi khoảng này chừng nào
 // sự cố còn tiếp diễn. Backend gộp vào cảnh báo đang mở (không thông báo lại) và tự
 // đóng cảnh báo sau 60 phút không được ghi nhận lại — nếu firmware chỉ gửi 1 lần lúc
 // bắt đầu thì một đợt dài hơn 60 phút bị đóng khi vẫn đang diễn ra. Phải < 60 phút.

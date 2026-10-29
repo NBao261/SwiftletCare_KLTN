@@ -15,6 +15,7 @@
     "migrate:bird-count-house": "tsx src/scripts/migrate-bird-count-house.script.ts",
     "migrate:remove-tickets": "tsx src/scripts/migrate-remove-tickets.script.ts",
     "migrate:remove-regions": "tsx src/scripts/migrate-remove-regions.script.ts",
+    "migrate:alert-types": "tsx src/scripts/migrate-alert-types.script.ts",
     "db:script": "tsx src/scripts/export-db-script.script.ts",
     "build": "tsc",
     "build:check": "tsc --noEmit",

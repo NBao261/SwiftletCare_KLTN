@@ -16,7 +16,7 @@ function zone(id: string, houseId: string): Zone {
 function sensor(id: string, zoneId: string, status: DeviceStatus, extra: Partial<SensorNode> = {}): SensorNode {
   return {
     _id: id, device_id: id, zone_id: zoneId, firmware_version: '1.4.0', status, control_mode: 'AUTO',
-    relay_states: { misting: false, speaker: false, ventilation: false, heating: false },
+    relay_states: { misting: false, speaker: false, ventilation: false },
     speaker_schedule: { enabled: false, windows: [] }, audio: { current_track: 1, volume: 20, playing: false, loop: false },
     registered_at: '2026-10-01T00:00:00Z', ...extra,
   };
@@ -36,7 +36,7 @@ describe('buildDeviceInventory', () => {
     sensor('s4', 'z3', 'ONLINE'),
     sensor('gone', 'z1', 'ONLINE', { decommissioned_at: '2026-10-10T00:00:00Z' }),
   ];
-  const cameras = [camera('c1', 'ERROR', { house_id: 'h1' }), camera('c2', 'ONLINE', { zone_id: 'z3' })];
+  const cameras = [camera('c1', 'OFFLINE', { house_id: 'h1' }), camera('c2', 'ONLINE', { zone_id: 'z3' })];
 
   it('groups sensors by zone and cameras by house, skipping decommissioned devices', () => {
     const [first, second] = buildDeviceInventory({ houses, zones, sensors, cameras });
@@ -72,11 +72,11 @@ describe('buildDeviceInventory', () => {
 });
 
 describe('tallyDevices', () => {
-  it('counts ERROR and DEGRADED as faulty', () => {
+  it('counts OFFLINE devices as faulty', () => {
     const [inventory] = buildDeviceInventory({
       houses: [house('h1')],
       zones: [zone('z1', 'h1')],
-      sensors: [sensor('a', 'z1', 'ERROR'), sensor('b', 'z1', 'DEGRADED')],
+      sensors: [sensor('a', 'z1', 'OFFLINE'), sensor('b', 'z1', 'OFFLINE')],
       cameras: [],
     });
     expect(tallyDevices(inventory.zoneGroups[0].devices)).toEqual({ total: 2, online: 0, faulty: 2, pending: 0 });

@@ -140,7 +140,7 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     // PENDING = Technician vừa tạo qua Web Console Onboarding, chờ heartbeat đầu
     // tiên (Flow 1 bước 4→8). cron job `deviceOffline.job` chỉ quét node ONLINE nên node
     // PENDING không bị nhầm thành OFFLINE khi chưa từng kết nối.
-    status:           { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] satisfies DeviceStatus[], default: 'PENDING' },
+    status:           { type: String, enum: ['PENDING','ONLINE','OFFLINE'] satisfies DeviceStatus[], default: 'PENDING' },
     rssi:             { type: Number },
     booted_at:        { type: Date },
     free_heap:        { type: Number },
@@ -185,7 +185,7 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     device_id:      { type: String, required: true, unique: true },
     house_id:       { type: Schema.Types.ObjectId, ref: 'House', required: true },
     rtsp_url:       { type: String },
-    status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE','ERROR','DEGRADED'] satisfies DeviceStatus[], default: 'PENDING' },
+    status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE'] satisfies DeviceStatus[], default: 'PENDING' },
     last_heartbeat: { type: Date },
     model_version:  { type: String },
     registered_at:  { type: Date, default: Date.now },

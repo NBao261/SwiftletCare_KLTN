@@ -24,7 +24,7 @@ const WIFI_COLOR = { excellent: 'text-accent-700', good: 'text-accent-700', fair
 export function WifiSignal({ node }: { node: SystemNodeStatusItem }) {
   const q = wifiQuality(node.rssi)
   if (node.rssi == null || !q) return <span className="text-warmGray">—</span>
-  if (node.status !== 'ONLINE' && node.status !== 'DEGRADED') {
+  if (node.status !== 'ONLINE') { // DEGRADED đã bỏ (SRS 3.1.0)
     return <span className="italic text-warmGray" title={t('Đo lần cuối trước khi mất kết nối')}>{node.rssi} dBm</span>
   }
   return <span className={cn('font-bold', WIFI_COLOR[q])}>{node.rssi} dBm · {WIFI_LABEL[q]}</span>

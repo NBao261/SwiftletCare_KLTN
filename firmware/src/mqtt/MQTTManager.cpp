@@ -274,13 +274,14 @@ bool publishRelayState(const RelayState &relay) {
 
 // Topic `{base}/alert` (SRS §9.2) — backend alert.handler.ts tra thiết bị
 // theo field `deviceId`. Trả false nếu chưa gửi được để caller thử lại.
-bool publishAlert(const char *alertType, const char *severity, const char *payload) {
+bool publishAlert(const char *alertType, const char *severity, const char *payload, const char *resetReason) {
   if (!mqtt.connected()) return false;
   JsonDocument doc;
   doc["deviceId"] = Config::deviceId;
   doc["type"] = alertType;
   doc["severity"] = severity;
   doc["message"] = payload;
+  if (resetReason) doc["resetReason"] = resetReason; // backend lưu vào metadata.reset_reason
 
   String msg;
   serializeJson(doc, msg);

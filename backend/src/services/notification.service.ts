@@ -101,15 +101,12 @@ export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVer
     const body = `[${alert.severity}] ${title} — ${alert.message}`
 
     // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
-    // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot;
-    // ALERT-FR-003: Zalo ZNS chỉ CRITICAL/HIGH; ALERT-FR-004: SMS chỉ cho CRITICAL.
-    // Các kênh của 1 người cũng chạy song song; kênh nào ném lỗi thì ghi log riêng,
+    // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot.
+    // Zalo/SMS nằm ngoài phạm vi (Report 3 §8). Các kênh của 1 người cũng chạy song song; kênh nào ném lỗi thì ghi log riêng,
     // không kéo theo kênh còn lại.
     const channels: Array<[string, Promise<unknown> | undefined]> = [
       ['push', prefs?.push ? sendPush(String(user._id), title, body) : undefined],
       ['telegram', prefs?.telegram !== false && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
-      ['zalo', prefs?.zalo && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH') ? sendZalo(user.phone, body) : undefined],
-      ['sms', prefs?.sms && alert.severity === 'CRITICAL' ? sendSms(user.phone, body) : undefined],
     ]
     const outcomes = await Promise.allSettled(channels.map(([, sending]) => sending))
     outcomes.forEach((outcome, i) => {
@@ -130,16 +127,6 @@ async function sendPush(userId: string, title: string, body: string): Promise<vo
   // TODO(E6): nối Firebase FCM bằng service account; cần lưu device token của
   // từng user khi họ đăng nhập trên PWA (ALERT-FR-002).
   logger.info('[notify:push] (chưa nối FCM thật)', { userId, title, body })
-}
-
-async function sendZalo(phone: string | undefined, body: string): Promise<void> {
-  // TODO(E6): nối Zalo ZNS template — cần OA đã duyệt template (ALERT-FR-003).
-  logger.info('[notify:zalo] (chưa nối ZNS thật)', { phone, body })
-}
-
-async function sendSms(phone: string | undefined, body: string): Promise<void> {
-  // TODO(E6): nối Twilio/ESMS (ALERT-FR-004, kênh dự phòng khi mạng kém).
-  logger.info('[notify:sms] (chưa nối SMS gateway thật)', { phone, body })
 }
 
 async function sendEmail(email: string | undefined, subject: string, body: string): Promise<void> {

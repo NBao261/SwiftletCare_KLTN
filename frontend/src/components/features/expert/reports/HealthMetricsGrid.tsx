@@ -55,7 +55,7 @@ export default function HealthMetricsGrid({ report, isLoading }: Props) {
   const m = report.metrics
   const alerts = m?.alerts_by_type ?? {}
   const noiseCount = alerts.NOISE_ANOMALY ?? 0
-  const pumpCount = alerts.PUMP_DRY ?? 0
+  const pumpCount = alerts.MISTING_INEFFECTIVE ?? 0 // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
   const speakerCount = alerts.SPEAKER_FAILURE ?? 0
   const returnCount = alerts.LOW_RETURN_RATE ?? 0
 
@@ -154,7 +154,7 @@ export default function HealthMetricsGrid({ report, isLoading }: Props) {
           <div className="grid grid-cols-2 gap-2">
             {[
               { key: 'NOISE_ANOMALY', count: noiseCount, label: 'Ồn bất thường' },
-              { key: 'PUMP_DRY', count: pumpCount, label: 'Bơm chạy khô' },
+              { key: 'MISTING_INEFFECTIVE', count: pumpCount, label: 'Phun sương kém' }, // PUMP_DRY → MISTING_INEFFECTIVE
               { key: 'SPEAKER_FAILURE', count: speakerCount, label: 'Hỏng loa / Lỗi' },
               { key: 'LOW_RETURN_RATE', count: returnCount, label: 'Giảm tỉ lệ chim' },
             ].map(item => (

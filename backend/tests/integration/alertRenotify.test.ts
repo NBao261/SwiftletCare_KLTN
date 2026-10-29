@@ -63,7 +63,7 @@ describe('renotifyStaleAlerts (ALERT-FR-015)', () => {
 
   it('không gửi lại cảnh báo đã xác nhận hoặc đã đóng', async () => {
     const { alert } = await seed()
-    await alert('POWER_OUTAGE', 'HIGH', minutesAgo(20), 'ACKNOWLEDGED')
+    await alert('UNEXPECTED_RESTART', 'HIGH', minutesAgo(20), 'ACKNOWLEDGED')
     await alert('SPEAKER_FAILURE', 'HIGH', minutesAgo(20), 'RESOLVED')
     expect(await renotifyStaleAlerts()).toBe(0)
   })
@@ -94,7 +94,7 @@ describe('renotifyStaleAlerts (ALERT-FR-015)', () => {
   it('bỏ qua cảnh báo của thiết bị đã gỡ', async () => {
     const { node, alert } = await seed()
     await SensorNode.updateOne({ _id: node._id }, { decommissioned_at: new Date() })
-    await alert('POWER_OUTAGE', 'HIGH', minutesAgo(20))
+    await alert('UNEXPECTED_RESTART', 'HIGH', minutesAgo(20))
     expect(await renotifyStaleAlerts()).toBe(0)
   })
 })

@@ -150,15 +150,15 @@ describe('gửi cảnh báo qua Telegram', () => {
   const DAY = { start: '00:00', end: '00:00' }   // không bao giờ im lặng
 
   async function farmWith(quiet: { start: string; end: string }, telegram = true) {
-    const owner = await mkUser({ telegram_chat_id: '100', notification_preferences: { push: false, telegram, zalo: false, sms: false, quiet_hours: quiet } })
-    const coOwner = await mkUser({ notification_preferences: { push: false, telegram: true, zalo: false, sms: false, quiet_hours: quiet } }) // chưa liên kết
-    const expert = await mkUser({ role: 'DOMAIN_EXPERT', telegram_chat_id: '300', notification_preferences: { push: false, telegram: true, zalo: false, sms: false, quiet_hours: quiet } })
+    const owner = await mkUser({ telegram_chat_id: '100', notification_preferences: { push: false, telegram, quiet_hours: quiet } })
+    const coOwner = await mkUser({ notification_preferences: { push: false, telegram: true, quiet_hours: quiet } }) // chưa liên kết
+    const expert = await mkUser({ role: 'DOMAIN_EXPERT', telegram_chat_id: '300', notification_preferences: { push: false, telegram: true, quiet_hours: quiet } })
     const farm = await Farm.create({
       name: 'F', address: 'x', owner_id: owner._id,
       members: [{ user_id: owner._id, is_primary: true }, { user_id: coOwner._id, role: 'FARM_OWNER' }, { user_id: expert._id, role: 'DOMAIN_EXPERT' }],
     })
     const alert = (severity: AlertSeverity) =>
-      new Alert({ farm_id: farm._id, type: 'PUMP_DRY', severity, title: 'Bơm chạy khô', message: 'Đã ngừng phun' }) as IAlert
+      new Alert({ farm_id: farm._id, type: 'MISTING_INEFFECTIVE', severity, title: 'Bơm chạy khô', message: 'Đã ngừng phun' }) as IAlert
     return { alert }
   }
 

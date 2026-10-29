@@ -47,7 +47,7 @@ describe('notifyUser', () => {
   it('skips push when the user turned it off but still emails', async () => {
     const user = await User.create({
       email: 'quiet@test.vn', password_hash: 'password123', full_name: 'Quiet', role: 'FARM_OWNER',
-      notification_preferences: { push: false, zalo: false, sms: false, quiet_hours: { start: '22:00', end: '06:00' } },
+      notification_preferences: { push: false, quiet_hours: { start: '22:00', end: '06:00' } },
     })
 
     await notifyUser(String(user._id), message)
@@ -60,7 +60,7 @@ describe('notifyUser', () => {
     const user = await User.create({
       email: 'night@test.vn', password_hash: 'password123', full_name: 'Night', role: 'FARM_OWNER',
       notification_preferences: {
-        push: true, zalo: false, sms: false,
+        push: true,
         quiet_hours: { start: '00:00', end: '23:59' }, // gần như cả ngày là giờ im lặng
       },
     })

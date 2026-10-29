@@ -3,14 +3,18 @@
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 // 3 cấp hiển thị của mức cảnh báo: P1 Khẩn cấp, P2 Cao, P3 Thường
 export type SeverityLevel = 'P1' | 'P2' | 'P3'
-export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'
+// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận (Report 3 §6.1, EXPERT-FR-003)
+export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'DISMISSED' | 'RESOLVED'
 export type AlertType =
-  | 'THRESHOLD_BREACH' | 'PREDATOR_DETECTED' | 'NODE_OFFLINE'
-  | 'SPEAKER_FAILURE'  | 'PUMP_DRY'          | 'NOISE_ANOMALY'
-  | 'POWER_OUTAGE'     | 'LOW_RETURN_RATE'   | 'EDGE_AI_DEGRADED'
-  | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'
-  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'
+  | 'THRESHOLD_BREACH'     | 'NODE_OFFLINE'
+  | 'SPEAKER_FAILURE'      | 'MISTING_INEFFECTIVE'  // THREAT-FR-011 (SRS 3.1.0, trước là PUMP_DRY)
+  | 'NOISE_ANOMALY'        | 'LOW_RETURN_RATE'      | 'EDGE_AI_DEGRADED'
+  | 'UNEXPECTED_RESTART'                            // THREAT-FR-012 (SRS 3.1.0, trước là POWER_OUTAGE)
+  | 'SENSOR_FAULT'         | 'RS485_BUS_FAILURE'
+  | 'SENSOR_ANOMALY'       | 'FORECAST_BREACH'
   | 'MAINTENANCE_DUE'
+  | 'ACTUATOR_FAULT'                                // THREAT-FR-014, BR-32
+  | 'CONFIG_MISMATCH'                               // ENV-FR-027, BR-24 - backend tự tính
 
 export interface Alert {
   _id: string; farm_id: string; zone_id?: string; node_id?: string

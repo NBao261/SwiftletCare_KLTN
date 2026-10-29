@@ -67,8 +67,6 @@ const userSchema = new Schema<IUser>(
     notification_preferences: {
       push:  { type: Boolean, default: true },
       telegram: { type: Boolean, default: true },
-      zalo:  { type: Boolean, default: true },
-      sms:   { type: Boolean, default: false },
       quiet_hours: {
         start: { type: String, default: '22:00' },
         end:   { type: String, default: '06:00' },

@@ -2,9 +2,9 @@ import { CpuIcon, HourglassIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from
 import StatTile from '@/components/ui/StatTile'
 import type { SensorNode } from '@/types'
 
-/** Node cần Technician xử lý: suy giảm / lỗi / quá hạn kích hoạt / OTA lỗi */
+/** Node cần Technician xử lý: quá hạn kích hoạt / OTA lỗi (ERROR/DEGRADED đã bỏ SRS 3.1.0) */
 export const needsAttention = (n: SensorNode) =>
-  n.status === 'ERROR' || n.status === 'DEGRADED' || !!n.activation_overdue_at || !!n.ota_failed
+  !!n.activation_overdue_at || !!n.ota_failed
 
 /**
  * Hàng KPI đầu trang Thiết bị — cùng StatTile với Admin/Farm Owner. Đếm theo node của zone đang chọn.

@@ -122,6 +122,10 @@ void saveMqttBroker(const String &broker) {
   Serial.println("[Storage] Đã lưu MQTT broker mới vào NVS: " + broker);
 }
 
+bool loadEverConnected() { return prefs.getBool("everConn", false); }
+
+void markEverConnected() { prefs.putBool("everConn", true); }
+
 bool loadIdentity(String &farmId, String &houseId, String &zoneId) {
   if (!prefs.isKey("idFarmId"))
     return false; // chưa từng dời Zone — dùng mặc định Secrets.h

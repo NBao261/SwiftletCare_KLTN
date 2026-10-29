@@ -26,33 +26,33 @@ export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
  * Firmware ≥ 1.3.0 gửi LẠI cảnh báo mỗi 15 phút chừng nào sự cố còn tiếp diễn
  * (EPISODE_ALERT_RESEND_MS) nên đợt dài không bị đóng giữa chừng; mốc này phải dài hơn
  * khoảng gửi lại đó.
- * ponytail: 60 phút là mốc kỹ thuật chọn tay (dài hơn 30 phút tự thử lại của PUMP_DRY
+ * ponytail: 60 phút là mốc kỹ thuật chọn tay (dài hơn 30 phút tự thử lại của MISTING_INEFFECTIVE
  * trên firmware để thử lại vẫn khô thì gộp vào cùng 1 cảnh báo), không có nguồn nuôi yến.
  */
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
-export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'PUMP_DRY']
+export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE']
 
 /** Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này */
 export const OPEN_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
 
 /**
- * ALERT-FR-001 — mức độ mặc định theo loại sự kiện. Firmware/RPi có thể gửi kèm
- * severity riêng (VD PREDATOR_DETECTED: snake/owl=CRITICAL nhưng rat=HIGH theo
- * THREAT-FR-004), khi đó giá trị gửi lên được ưu tiên.
+ * ALERT-FR-001, BR-15 — mức độ mặc định theo loại sự kiện. Thiết bị có thể gửi kèm
+ * severity riêng, khi đó giá trị gửi lên được ưu tiên (trừ loại không leo thang, xem createAlert).
  */
 const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   RS485_BUS_FAILURE: 'CRITICAL',
-  PREDATOR_DETECTED: 'CRITICAL',
-  POWER_OUTAGE:      'HIGH',
+  UNEXPECTED_RESTART: 'HIGH',
   SPEAKER_FAILURE:   'HIGH',
   NODE_OFFLINE:      'HIGH',
+  ACTUATOR_FAULT:    'HIGH',
   // MEDIUM: tín hiệu tham khảo theo dB (THREAT-FR-007), chờ Domain Expert kiểm chứng —
   // HIGH sẽ bị alertEscalation.job gửi lại sau 15 phút nếu báo nhầm (ALERT-FR-015).
   NOISE_ANOMALY:     'MEDIUM',
   THRESHOLD_BREACH:  'MEDIUM',
   SENSOR_FAULT:      'MEDIUM',
-  PUMP_DRY:          'MEDIUM',
+  MISTING_INEFFECTIVE: 'MEDIUM',
   EDGE_AI_DEGRADED:  'MEDIUM',
+  CONFIG_MISMATCH:   'MEDIUM',
   LOW_RETURN_RATE:   'LOW',
   // v1.24.0 — suy luận thống kê, có thể báo nhầm → không để mức được gửi lại
   SENSOR_ANOMALY:    'MEDIUM',
@@ -72,17 +72,20 @@ export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMA
 /**
  * Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, báo giả).
  * LOW_RETURN_RATE do job của backend tính từ số đếm (VISION-FR-011), nút AI không tự báo;
- * MAINTENANCE_DUE do relayUsage tính từ telemetry (ALERT-FR-016).
+ * MAINTENANCE_DUE do relayUsage tính từ telemetry (ALERT-FR-016); CONFIG_MISMATCH do backend so
+ * phiên bản cấu hình trong heartbeat (ENV-FR-027, BR-24).
  */
-const BACKEND_ONLY_ALERT_TYPES: AlertType[] = ['NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE', 'MAINTENANCE_DUE']
+const BACKEND_ONLY_ALERT_TYPES: AlertType[] = [
+  'NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE', 'MAINTENANCE_DUE', 'CONFIG_MISMATCH',
+]
 
 /**
  * "Device alert" (Report 3 §1.3) — cảnh báo về thiết bị, không về nhà yến: Technician thấy loại này
- * ở mọi farm (FARM-FR-009) và không thấy loại nào khác. ACTUATOR_FAULT, CONFIG_MISMATCH chưa có trong code.
+ * ở mọi farm (FARM-FR-009) và không thấy loại nào khác.
  */
 export const DEVICE_ALERT_TYPES: AlertType[] = [
-  'NODE_OFFLINE', 'EDGE_AI_DEGRADED', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'POWER_OUTAGE',
-  'SPEAKER_FAILURE', 'PUMP_DRY', 'MAINTENANCE_DUE',
+  'NODE_OFFLINE', 'EDGE_AI_DEGRADED', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'UNEXPECTED_RESTART',
+  'SPEAKER_FAILURE', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT', 'CONFIG_MISMATCH', 'MAINTENANCE_DUE',
 ]
 
 /** Loại nút AI đếm chim được tự báo qua `vision/alert` (THREAT-FR-010: tốc độ xử lý < 10 FPS) */
@@ -91,8 +94,15 @@ const CAMERA_ALERT_TYPES: AlertType[] = ['EDGE_AI_DEGRADED']
 /** Cảnh báo không bao giờ được ở mức gửi lại (ALERT-FR-015): mọi loại suy luận + vượt ngưỡng (ALERT-FR-012) */
 const NEVER_ESCALATE = new Set<AlertType>([...INFERRED_ALERT_TYPES, 'THRESHOLD_BREACH'])
 
-/** Tên loại cảnh báo firmware cũ còn gửi → tên hiện hành */
-const ALERT_TYPE_ALIAS: Record<string, AlertType> = { BIRD_PANIC: 'NOISE_ANOMALY' } // firmware < 1.3.0
+/** Tên loại cảnh báo firmware cũ còn gửi → tên hiện hành (SRS 3.1.0 không giữ alias nào khác) */
+const ALERT_TYPE_ALIAS: Record<string, AlertType> = {
+  BIRD_PANIC:   'NOISE_ANOMALY',        // firmware < 1.3.0
+  PUMP_DRY:     'MISTING_INEFFECTIVE',  // firmware ≤ 1.4.0
+  POWER_OUTAGE: 'UNEXPECTED_RESTART',   // firmware ≤ 1.4.0
+}
+
+/** Giới hạn độ dài như `applyDiagnostics` (device.service) — chuỗi lạ từ thiết bị không được làm phình cảnh báo */
+const MAX_RESET_REASON_LENGTH = 32
 
 export interface CreateAlertInput {
   farmId: string
@@ -191,8 +201,8 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
 /**
  * Cảnh báo do thiết bị tự phát hiện, gọi từ mqtt/handlers/alert.handler.ts
  * (ESP32 `{base}/alert`: SENSOR_FAULT, RS485_BUS_FAILURE, SPEAKER_FAILURE,
- * PUMP_DRY, POWER_OUTAGE, NOISE_ANOMALY — THREAT-FR-006/007/011/012/013; nút AI
- * `vision/alert`: EDGE_AI_DEGRADED).
+ * MISTING_INEFFECTIVE, UNEXPECTED_RESTART, NOISE_ANOMALY, ACTUATOR_FAULT —
+ * THREAT-FR-006/007/011/012/013/014; nút AI `vision/alert`: EDGE_AI_DEGRADED).
  *
  * Thiết bị được nhận diện qua `deviceId` trong payload, KHÔNG qua slug trong
  * topic (xem ghi chú ở telemetry.service) — nên cảnh báo vẫn vào đúng farm kể
@@ -213,11 +223,18 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     severity:    message.severity as AlertSeverity | undefined, // createAlert giới hạn mức cho loại không leo thang
     message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
     snapshotUrl: message.snapshotUrl as string | undefined,
-    metadata:    { raw: message },
+    metadata:    { raw: message } as Record<string, unknown>,
   }
 
-  const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('zone_id').lean()
+  const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('zone_id reset_reason').lean()
   if (node) {
+    // THREAT-FR-012 — lý do khởi động lại: lấy trong cảnh báo, firmware không gửi thì lấy
+    // từ heartbeat gần nhất (applyDiagnostics lưu `reset_reason` ở mỗi heartbeat)
+    if (type === 'UNEXPECTED_RESTART') {
+      const sent = message.resetReason ?? message.reset_reason
+      const resetReason = typeof sent === 'string' && sent.length <= MAX_RESET_REASON_LENGTH ? sent : node.reset_reason
+      if (resetReason) common.metadata = { ...common.metadata, reset_reason: resetReason }
+    }
     // `name` cho tiêu đề mặc định — firmware không gửi kèm title
     const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
     if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)

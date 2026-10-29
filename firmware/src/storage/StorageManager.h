@@ -25,6 +25,11 @@ void saveWifiCredentials(const String &ssid, const String &password);
 bool loadMqttBroker(String &broker); // false nếu chưa từng lưu
 void saveMqttBroker(const String &broker);
 
+// NVS – thiết bị đã từng kết nối MQTT (THREAT-FR-012): lần cấp điện đầu tiên lúc lắp đặt
+// không phải mất điện nên không báo UNEXPECTED_RESTART. Chỉ ghi 1 lần trong đời thiết bị.
+bool loadEverConnected();
+void markEverConnected();
+
 // NVS – định danh Farm/House/Zone nhận qua lệnh MQTT config/reassign (Flow 21
 // Nhánh A, FARM-FR-007b) — tách riêng vì chỉ ghi khi Technician dời thiết bị
 // sang Zone khác, không phải lúc khởi động bình thường. Chưa từng dời →

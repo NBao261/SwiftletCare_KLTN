@@ -9,10 +9,10 @@ import { t, translated } from '@/i18n'
 import type { DeviceStatus, SystemNodeStatusItem } from '@/types'
 
 const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
-  ONLINE: 'positive', OFFLINE: 'neutral', ERROR: 'critical', DEGRADED: 'warning', PENDING: 'warning',
+  ONLINE: 'positive', OFFLINE: 'neutral', PENDING: 'warning', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
 }
 const STATUS_LABEL: Record<DeviceStatus, string> = translated({
-  ONLINE: 'Online', OFFLINE: 'Offline', ERROR: 'Lỗi', DEGRADED: 'Suy giảm', PENDING: 'Chờ kết nối',
+  ONLINE: 'Online', OFFLINE: 'Offline', PENDING: 'Chờ kết nối', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
 })
 
 const DAY = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })

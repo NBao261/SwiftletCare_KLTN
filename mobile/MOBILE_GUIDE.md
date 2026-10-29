@@ -2,7 +2,7 @@
 
 > **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; yêu cầu là Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md)), thiết kế là Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.4). Việc phải làm ở mobile:
 >
-> - Đồng bộ enum với backend: đã xong `Role` (`DOMAIN_EXPERT`), `NOISE_ANOMALY`, `MAINTENANCE_DUE`, kênh `telegram`; còn `PREDATOR_DETECTED` (gỡ cả ba phía trong một PR). Không hiện Zalo/SMS, không có relay sưởi.
+> - Đồng bộ enum với backend: đã xong `Role` (`DOMAIN_EXPERT`), `NOISE_ANOMALY`, `MAINTENANCE_DUE`, kênh `telegram` và các tên của SRS 3.1.0 (G-01): `MISTING_INEFFECTIVE`, `UNEXPECTED_RESTART`, `ACTUATOR_FAULT`, `CONFIG_MISMATCH`, `DISMISSED`; đã gỡ `PREDATOR_DETECTED`, Zalo/SMS, relay sưởi, trạng thái thiết bị `ERROR`/`DEGRADED`.
 > - Thiết lập thiết bị (MF-10): quét nhãn QR của bộ điều khiển và mã QR tầng bằng `expo-camera`, hướng dẫn cài Wi-Fi qua AP-mode, hiện tiến trình setup (đã đăng ký → online → đã áp cấu hình).
 > - Đăng ký FCM token sau khi đăng nhập, huỷ khi đăng xuất, nhận push (ALERT-FR-002) — **chỉ Farm Owner**: Domain Expert không nhận thông báo ngoài app (Report 3 §2.4), chỉ có thông báo trong app. Live stream HLS bằng `expo-video` theo camera của nhà yến (VISION-FR-013); Farm Owner đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009).
 > - Domain Expert dùng **cùng màn hình** với Farm Owner, chỉ đọc vận hành; trên mobile có kiểm chứng cảnh báo suy luận, sửa ngưỡng/hệ số/tham số phát hiện, trạng thái sức khỏe ngày của **nhà yến** và chấm điểm, báo cáo và kết luận (Report 4 §5.4). Vẽ vòng đếm chỉ làm trên web (VISION-FR-018). Cây luồng: mục 2.1.

@@ -24,6 +24,7 @@
 #include "sensors/SensorManager.h"
 #include "sensors/SignalFilter.h"
 #include "storage/StorageManager.h"
+#include "system/ResetReason.h"
 #include "wifi/WiFiProvisioner.h"
 #include <Arduino.h>
 #include <WiFi.h>
@@ -74,9 +75,28 @@ bool noiseAnomalyActive = false;
 String mqttTopicBase;
 
 // ── Boot reason tracking (THREAT-FR-012) ─────────────────────────────────────
-static bool wasUnexpectedReset = false;
+// Lý do gửi kèm UNEXPECTED_RESTART (POWER_ON/WATCHDOG/BROWNOUT/CRASH); nullptr = boot bình thường
+static const char *unexpectedRestart = nullptr;
+// THREAT-FR-012 — đã từng kết nối MQTT (cờ NVS): lần cấp điện đầu lúc lắp đặt không báo
+static bool everConnected = false;
 // FARM-FR-006 — gửi trong heartbeat để chẩn đoán từ xa (brownout/watchdog lặp lại…)
 const char *bootResetReason = "UNKNOWN";
+
+static BootReset toBootReset(esp_reset_reason_t r) {
+  switch (r) {
+  case ESP_RST_POWERON: return BootReset::PowerOn;
+  case ESP_RST_EXT: return BootReset::External;
+  case ESP_RST_SW: return BootReset::Software;
+  case ESP_RST_PANIC: return BootReset::Panic;
+  case ESP_RST_INT_WDT: return BootReset::IntWdt;
+  case ESP_RST_TASK_WDT: return BootReset::TaskWdt;
+  case ESP_RST_WDT: return BootReset::Wdt;
+  case ESP_RST_DEEPSLEEP: return BootReset::DeepSleep;
+  case ESP_RST_BROWNOUT: return BootReset::Brownout;
+  case ESP_RST_SDIO: return BootReset::Sdio;
+  default: return BootReset::Unknown;
+  }
+}
 
 static const char *resetReasonName(esp_reset_reason_t r) {
   switch (r) {
@@ -139,18 +159,8 @@ void setup() {
   Serial.println("║     SRS: ENV + THREAT + FARM modules     ║");
   Serial.println("╚══════════════════════════════════════════╝");
 
-  // ── THREAT-FR-012: Check for unexpected reset ────────────────────────────
   esp_reset_reason_t reason = esp_reset_reason();
   bootResetReason = resetReasonName(reason);
-  if (reason == ESP_RST_PANIC || reason == ESP_RST_INT_WDT ||
-      reason == ESP_RST_TASK_WDT || reason == ESP_RST_BROWNOUT) {
-    wasUnexpectedReset = true;
-    Serial.println("[BOOT] ⚠ UNEXPECTED RESET detected! Reason: " +
-                   String(reason));
-    Serial.println("[BOOT] Will publish POWER_OUTAGE alert when MQTT connects");
-  } else {
-    Serial.println("[BOOT] Normal boot. Reset reason: " + String(reason));
-  }
 
   // ── Hardware watchdog (REL-NFR-002) ──────────────────────────────────────
   esp_task_wdt_init(WATCHDOG_TIMEOUT_SEC, true);
@@ -160,6 +170,16 @@ void setup() {
   // ── Initialize storage (NVS + SPIFFS) ────────────────────────────────────
   StorageManager::begin();
   Config::load();
+
+  // ── THREAT-FR-012: khởi động lại bất thường (cần NVS cho cờ đã từng kết nối) ──
+  everConnected = StorageManager::loadEverConnected();
+  unexpectedRestart = unexpectedRestartReason(toBootReset(reason), everConnected);
+  if (unexpectedRestart) {
+    Serial.println("[BOOT] ⚠ UNEXPECTED RESTART: " + String(unexpectedRestart) + " (" +
+                   bootResetReason + ") — sẽ báo khi kết nối MQTT");
+  } else {
+    Serial.println("[BOOT] Normal boot. Reset reason: " + String(bootResetReason));
+  }
 
   // ── Nạp định danh Farm/House/Zone đã dời (nếu có) — Flow 21 Nhánh A ──────
   // FARM-FR-007b: chưa từng dời Zone → giữ mặc định Secrets.h (đã gán trong
@@ -390,17 +410,19 @@ void pidTask(void *pvParameters) {
                    "CRITICAL", "Amplitude dB không tăng khi loa ru đang phát");
       // pumpDry giữ true suốt lúc đang chốt ngừng phun: gửi thất bại (MQTT
       // rớt) thì reportOnRise thử lại ở chu kỳ sau; gửi được rồi thì không lặp.
-      reportOnRise(threats.pumpDry, pumpReported, "PUMP_DRY", "MEDIUM",
+      // THREAT-FR-011 — không đoán nguyên nhân (hết nước, tắc béc, mở cửa…): nêu việc cần kiểm tra
+      reportOnRise(threats.pumpDry, pumpReported, "MISTING_INEFFECTIVE", "MEDIUM",
                    threats.pumpDryWhileManual
-                       ? "Bơm phun sương chạy nhưng độ ẩm không tăng — bơm đang "
-                         "được BẬT TAY nên VẪN CHẠY, hãy tắt bơm và kiểm tra nước"
-                       : "Bơm phun sương chạy nhưng độ ẩm không tăng — đã tự ngừng "
-                         "phun để bảo vệ bơm, sẽ thử lại sau " SC_STR(PUMP_DRY_RETRY_MIN) " phút",
+                       ? "Phun sương không làm tăng độ ẩm — bơm đang được BẬT TAY "
+                         "nên VẪN CHẠY; kiểm tra nước, béc phun, cửa và vị trí cảm biến"
+                       : "Phun sương không làm tăng độ ẩm — đã tự ngừng phun, sẽ thử "
+                         "lại sau " SC_STR(PUMP_DRY_RETRY_MIN) " phút; kiểm tra nước, "
+                         "béc phun, cửa và vị trí cảm biến",
                    EPISODE_ALERT_RESEND_MS);
       reportOnRise(threats.sensorFault, sensorReported, "SENSOR_FAULT",
                    "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");
       // MEDIUM (không phải HIGH): phát hiện chỉ theo dB, ngưỡng chưa hiệu chỉnh
-      // bằng dữ liệu thật — HIGH sẽ bị alertEscalation tự tạo ticket sau 15'.
+      // bằng dữ liệu thật — HIGH sẽ bị alertEscalation gửi lại sau 15' (ALERT-FR-015).
       // Tín hiệu tham khảo: backend hiển thị kèm số đếm chim và chờ Domain
       // Expert kiểm chứng (THREAT-FR-007) — không kết luận gì về hành vi chim.
       reportOnRise(threats.noiseAnomaly, noiseReported, "NOISE_ANOMALY",
@@ -426,20 +448,25 @@ void mqttTask(void *pvParameters) {
   esp_task_wdt_add(NULL);
   MQTTManager::begin();
 
-  // Publish power outage alert if unexpected reset (THREAT-FR-012)
-  bool powerOutagePublished = false;
+  // THREAT-FR-012: báo khởi động lại bất thường đúng 1 lần, khi đã kết nối
+  bool restartReported = false;
 
   while (true) {
     esp_task_wdt_reset();
     MQTTManager::loop();
 
-    // THREAT-FR-012: Publish POWER_OUTAGE alert once after reconnect
-    if (wasUnexpectedReset && MQTTManager::isConnected() &&
-        !powerOutagePublished) {
-      powerOutagePublished = MQTTManager::publishAlert(
-          "POWER_OUTAGE", "HIGH", "ESP32 recovered from unexpected reset");
-      if (powerOutagePublished)
-        Serial.println("[MQTT] Published POWER_OUTAGE alert");
+    // Lần kết nối đầu tiên trong đời thiết bị: từ nay mất điện mới tính là bất thường
+    if (!everConnected && MQTTManager::isConnected()) {
+      StorageManager::markEverConnected();
+      everConnected = true;
+    }
+
+    if (unexpectedRestart && MQTTManager::isConnected() && !restartReported) {
+      restartReported = MQTTManager::publishAlert(
+          "UNEXPECTED_RESTART", "HIGH", "Bộ điều khiển vừa khởi động lại bất thường",
+          unexpectedRestart);
+      if (restartReported)
+        Serial.println("[MQTT] Published UNEXPECTED_RESTART (" + String(unexpectedRestart) + ")");
     }
 
     // Publish telemetry (ENV-FR-001). Chỉ gửi khi lấy được snapshot thật VÀ
@@ -475,7 +502,7 @@ void mqttTask(void *pvParameters) {
       }
     }
 
-    // Threat alerts (SPEAKER_FAILURE/PUMP_DRY/SENSOR_FAULT/RS485_BUS_FAILURE)
+    // Threat alerts (SPEAKER_FAILURE/MISTING_INEFFECTIVE/SENSOR_FAULT/RS485_BUS_FAILURE)
     // are published directly from pidTask (THREAT-FR-006/011/013) where the
     // flags are computed against the latest SensorData/RelayState.
 

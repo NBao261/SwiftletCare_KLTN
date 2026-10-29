@@ -12,7 +12,7 @@ import { useToastStore } from '@/stores/toastStore';
 import type { ControlOutput, RelayName, SensorNode } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
-// 3 relay theo SRS v2 (sưởi đã bỏ), nhãn dùng chung với khung Phân hệ điều khiển
+// 3 relay (phun sương, quạt, loa), nhãn dùng chung với khung Phân hệ điều khiển
 const RELAYS: Array<{ key: Extract<RelayName, 'misting' | 'ventilation' | 'speaker'>; labelKey: 'relay.misting' | 'relay.ventilation' | 'relay.speaker'; icon: Icon }> = [
   { key: 'misting', labelKey: 'relay.misting', icon: DropIcon },
   { key: 'ventilation', labelKey: 'relay.ventilation', icon: WindIcon },

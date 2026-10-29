@@ -19,7 +19,7 @@ interface HouseKpiRowProps {
 export default function HouseKpiRow({ totals, monthLabel, showYield }: HouseKpiRowProps) {
   const { t, num, day } = useTranslation(farmDict)
   const { counts, alerts } = totals
-  // Thiết bị chưa online = mất kết nối (OFFLINE/ERROR) + đang chờ kết nối (PENDING/DEGRADED)
+  // Thiết bị chưa online = mất kết nối (OFFLINE) + đang chờ kết nối (PENDING)
   const waiting = counts.total - counts.online - counts.offline
   const deviceIssues = [
     counts.offline > 0 && t('kpi.offlineCount', { n: counts.offline }),

@@ -10,7 +10,7 @@ export const ALERT_TYPE_LABELS: Record<string, string> = {
   SENSOR_ANOMALY: 'Cảm biến bất thường',
   FORECAST_BREACH: 'Dự báo vượt ngưỡng độ ẩm',
   LOW_RETURN_RATE: 'Giảm tỉ lệ chim về tổ',
-  PUMP_DRY: 'Bơm khô bất thường',
+  MISTING_INEFFECTIVE: 'Phun sương không hiệu quả', // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
 }
 
 export const SEVERITY_LABELS: Record<string, string> = {

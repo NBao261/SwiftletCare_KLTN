@@ -286,7 +286,7 @@ export async function changePassword(
 /** ALERT-FR-005/006 — Farm Owner chọn kênh nhận thông báo + giờ im lặng */
 export async function updateNotificationPreferences(
   userId: string,
-  prefs: Partial<{ push: boolean; telegram: boolean; zalo: boolean; sms: boolean; quiet_hours: { start: string; end: string } }>,
+  prefs: Partial<{ push: boolean; telegram: boolean; quiet_hours: { start: string; end: string } }>,
 ): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')

@@ -15,7 +15,7 @@ function node(id: string, status: DeviceStatus): DeviceItem {
 function detail(id: string, status: DeviceStatus, extra: Partial<SensorNode> = {}): SensorNode {
   return {
     _id: id, device_id: id, zone_id: 'z1', firmware_version: '1.4.0', status, control_mode: 'AUTO',
-    relay_states: { misting: false, speaker: false, ventilation: false, heating: false },
+    relay_states: { misting: false, speaker: false, ventilation: false },
     speaker_schedule: { enabled: false, windows: [] }, audio: { current_track: 1, volume: 20, playing: false, loop: false },
     registered_at: '2026-10-01T00:00:00Z', ...extra,
   };
@@ -91,11 +91,11 @@ describe('buildZoneComponents', () => {
 
   it('uses relay states, audio and open alerts for speakers, pumps and the RS485 bus', () => {
     const playing = detail('a', 'ONLINE', {
-      relay_states: { misting: true, speaker: true, ventilation: false, heating: false },
+      relay_states: { misting: true, speaker: true, ventilation: false },
       audio: { current_track: 2, volume: 18, playing: true, loop: true },
     });
     const records = [reading('b', '2026-10-23T10:00:00Z', { temperature: 27, sound_db: 40 })];
-    const alerts = [alert('b', 'SPEAKER_FAILURE'), alert('b', 'RS485_BUS_FAILURE'), alert('a', 'PUMP_DRY', 'RESOLVED')];
+    const alerts = [alert('b', 'SPEAKER_FAILURE'), alert('b', 'RS485_BUS_FAILURE'), alert('a', 'MISTING_INEFFECTIVE', 'RESOLVED')];
     const groups = buildZoneComponents([node('a', 'ONLINE'), node('b', 'ONLINE')], check([playing, detail('b', 'ONLINE')], records, alerts));
     expect(statusOf(groups, 'speaker', 'a')).toMatchObject({ status: 'on', detail: playing });
     expect(statusOf(groups, 'misting', 'a')?.status).toBe('on');
@@ -104,6 +104,18 @@ describe('buildZoneComponents', () => {
     // Lỗi bus RS485 kéo cả 5 cảm biến RS485 về lỗi, micro âm thanh vẫn đọc
     expect(statusOf(groups, 'temperature', 'b')?.status).toBe('fault');
     expect(statusOf(groups, 'sound', 'b')).toMatchObject({ status: 'ok', value: 40 });
+  });
+
+  it('marks the pump as faulty while a MISTING_INEFFECTIVE alert is open', () => {
+    const misting = detail('a', 'ONLINE', { relay_states: { misting: true, speaker: false, ventilation: false } });
+    const groups = buildZoneComponents([node('a', 'ONLINE')], check([misting], [], [alert('a', 'MISTING_INEFFECTIVE')]));
+    expect(statusOf(groups, 'misting', 'a')?.status).toBe('fault');
+  });
+
+  it('ignores an alert the expert dismissed', () => {
+    const misting = detail('a', 'ONLINE', { relay_states: { misting: true, speaker: false, ventilation: false } });
+    const groups = buildZoneComponents([node('a', 'ONLINE')], check([misting], [], [alert('a', 'MISTING_INEFFECTIVE', 'DISMISSED')]));
+    expect(statusOf(groups, 'misting', 'a')?.status).toBe('on');
   });
 
   it('returns no group for a zone without sensor nodes', () => {

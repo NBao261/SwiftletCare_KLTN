@@ -112,7 +112,6 @@ src/
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| `src/types/alert.types.ts`, `auth.types.ts` | `AlertType` still has `PREDATOR_DETECTED` (the backend too); `NotificationPreferences` keeps `zalo`/`sms` because the backend model still has them — never show them | Remove `PREDATOR_DETECTED` on all three sides in one PR |
 | `src/services/socket/socketClient.ts` | No `JOIN_HOUSE` / `NOTIFICATION_NEW` yet | Add the house room and the notification event (with `off*`) before the first screen subscribes |
 | `src/services/notification/pushNotification.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-002) |
 | `package.json`, `app.json` | No `expo-video` (HLS stream) or `expo-location` (farm coordinates); `react-native-maps` is installed although Report 4 §5.4 adds no map library; location permission text speaks of a map | MOBILE_GUIDE §1 "Cấu hình còn thiếu" |

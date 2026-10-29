@@ -41,9 +41,10 @@ const alertSchema = new Schema<IAlert>(
     type: {
       type: String,
       enum: [
-        'THRESHOLD_BREACH','PREDATOR_DETECTED','NODE_OFFLINE','SPEAKER_FAILURE',
-        'PUMP_DRY','NOISE_ANOMALY','POWER_OUTAGE','LOW_RETURN_RATE','EDGE_AI_DEGRADED',
+        'THRESHOLD_BREACH','NODE_OFFLINE','SPEAKER_FAILURE',
+        'MISTING_INEFFECTIVE','NOISE_ANOMALY','UNEXPECTED_RESTART','LOW_RETURN_RATE','EDGE_AI_DEGRADED',
         'SENSOR_FAULT','RS485_BUS_FAILURE','SENSOR_ANOMALY','FORECAST_BREACH','MAINTENANCE_DUE',
+        'ACTUATOR_FAULT','CONFIG_MISMATCH',
       ] satisfies AlertType[],
       required: true,
     },
@@ -52,7 +53,7 @@ const alertSchema = new Schema<IAlert>(
     message:     { type: String, required: true },
     snapshot_url:        { type: String },
     metadata:            { type: Schema.Types.Mixed },
-    status:              { type: String, enum: ['ACTIVE','ACKNOWLEDGED','RESOLVED'] satisfies AlertStatus[], default: 'ACTIVE' },
+    status:              { type: String, enum: ['ACTIVE','ACKNOWLEDGED','DISMISSED','RESOLVED'] satisfies AlertStatus[], default: 'ACTIVE' },
     created_at:          { type: Date, default: Date.now },
     last_seen_at:        { type: Date },
     occurrence_count:    { type: Number, default: 1 },

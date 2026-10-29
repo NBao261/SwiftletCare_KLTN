@@ -135,7 +135,7 @@ describe('Domain Expert đọc cả farm và tinh chỉnh thông số', () => {
   it('thấy mọi Zone, House và cảnh báo của farm được mời — không thấy farm khác', async () => {
     const { farm, expert, zoneA, zoneB, t } = await seed()
     const other = await seed()
-    const base = { farm_id: farm._id, type: 'POWER_OUTAGE', severity: 'HIGH', title: 't', message: 'm' }
+    const base = { farm_id: farm._id, type: 'UNEXPECTED_RESTART', severity: 'HIGH', title: 't', message: 'm' }
     await Alert.create([{ ...base, zone_id: zoneA._id }, { ...base, zone_id: zoneB._id }, { ...base }])
     await Alert.create({ ...base, farm_id: other.farm._id })
 
@@ -187,7 +187,7 @@ describe('việc Domain Expert không được làm (mục 4.4)', () => {
 
   it('không xác nhận (acknowledge) cảnh báo — đó là việc của Farm Owner', async () => {
     const { farm, zoneA, t } = await seed()
-    const alert = await Alert.create({ farm_id: farm._id, zone_id: zoneA._id, type: 'PUMP_DRY', severity: 'MEDIUM', title: 't', message: 'm' })
+    const alert = await Alert.create({ farm_id: farm._id, zone_id: zoneA._id, type: 'MISTING_INEFFECTIVE', severity: 'MEDIUM', title: 't', message: 'm' })
     await call('get', `/alerts/${alert._id}`, t.expert).expect(200)
     await call('put', `/alerts/${alert._id}/acknowledge`, t.expert, { note: 'x' }).expect(403)
     await call('put', `/alerts/${alert._id}/acknowledge`, t.owner, { note: 'đã châm nước' }).expect(200)

@@ -425,7 +425,7 @@ describe('nút AI: heartbeat, offline, vision/alert (THREAT-FR-010)', () => {
     const { camera, house } = await seed()
     const alert = await ingestDeviceAlert({ deviceId: camera.device_id, type: 'EDGE_AI_DEGRADED', message: 'FPS 6' })
     expect(alert).toMatchObject({ type: 'EDGE_AI_DEGRADED', node_id: camera._id, house_id: house._id, title: `EDGE_AI_DEGRADED tại ${house.name}` })
-    await expect(ingestDeviceAlert({ deviceId: camera.device_id, type: 'PUMP_DRY' })).rejects.toThrow()
+    await expect(ingestDeviceAlert({ deviceId: camera.device_id, type: 'MISTING_INEFFECTIVE' })).rejects.toThrow()
   })
 
   it('GET /devices/camera-nodes theo houseId (hoặc zoneId cũ), không trả rtsp_url', async () => {

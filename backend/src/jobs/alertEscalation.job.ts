@@ -4,7 +4,7 @@
  * Farm Owner có thể đang ngủ/không mở app.
  *
  * Cùng nhịp này cũng tự đóng THRESHOLD_BREACH đã hết (ALERT-FR-008), cảnh báo theo đợt
- * (NOISE_ANOMALY/PUMP_DRY) không còn tái phát, và
+ * (NOISE_ANOMALY/MISTING_INEFFECTIVE) không còn tái phát, và
  * NODE_OFFLINE của thiết bị đã online lại (lưới an toàn cho race job ↔ heartbeat).
  */
 import cron from 'node-cron'

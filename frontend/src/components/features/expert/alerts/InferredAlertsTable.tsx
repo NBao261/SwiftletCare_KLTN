@@ -64,7 +64,7 @@ function MeasuredValueCell({ alert }: { alert: InferredAlertItem }) {
       </div>
     )
   }
-  if (alert.type === 'PUMP_DRY') {
+  if (alert.type === 'MISTING_INEFFECTIVE') { // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
     return <div className="flex flex-col text-xs leading-tight"><b className="text-[#27231F] whitespace-nowrap">Bơm {(m.pump_on_sec as number | undefined) ?? 30}s</b><span className="text-[11px] text-[#878380] whitespace-nowrap">Ngưỡng: 5%</span></div>
   }
   if (alert.type === 'FORECAST_BREACH') {
