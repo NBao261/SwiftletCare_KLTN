@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom'
-import ExpertScadaBanner from '@/components/features/expert/ExpertScadaBanner'
+import ExpertScadaBanner from '@/components/features/domain-expert/ExpertScadaBanner'
 
 /**
  * Khung nội dung chung cho toàn bộ các trang của Chuyên gia nuôi yến:

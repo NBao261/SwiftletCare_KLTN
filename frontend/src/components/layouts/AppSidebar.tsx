@@ -9,7 +9,7 @@ import { menuLinkState } from '@/lib/navigationState'
 import { IconLogout } from '@/components/ui/icons'
 import { ROLE_LABEL } from '@/constants/roles'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
-import { useExpertPendingAlerts } from '@/hooks/expert/useExpertDashboard'
+import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard'
 
 export interface MenuItem {
   label: string
@@ -77,7 +77,7 @@ export default function AppSidebar({
                   <p className="px-[10px] py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{navigationLabel(section.title)}</p>
                   <div className="space-y-1">
                     {section.items.map(item => {
-                      const badgeCount = item.path === '/expert/audit-logs'
+                      const badgeCount = (item.path === '/domain-expert/alert-verdicts' || item.path === '/expert/audit-logs')
                         ? (isExpert ? expertPendingCount : unreadCount)
                         : item.path === '/alerts'
                           ? unreadCount
