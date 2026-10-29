@@ -2,26 +2,15 @@
 import { body } from 'express-validator'
 import * as authController from '@/controllers/auth.controller'
 import { authenticate } from '@/middlewares/auth.middleware'
-import { loginLimiter, otpSendLimiter, refreshLimiter } from '@/middlewares/rateLimiter.middleware'
+import { loginLimiter, passwordResetLimiter, refreshLimiter } from '@/middlewares/rateLimiter.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
 
 // SEC-NFR-004 — đếm theo IP, đứng trước validate để request sai định dạng cũng bị tính.
-// Gửi email/OTP đếm mọi lần; đăng nhập/nhập mã chỉ đếm lần sai (loginLimiter).
-
-/** POST /auth/register – AUTH-FR-001 */
-router.post(
-  '/register',
-  otpSendLimiter,
-  [
-    body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
-    body('full_name').trim().notEmpty(),
-  ],
-  validate,
-  authController.register,
-)
+// Gửi mã đặt lại mật khẩu đếm mọi lần; đăng nhập/nhập mã chỉ đếm lần sai (loginLimiter).
+// Không có đăng ký công khai, không đăng nhập bằng OTP (Report 3 §1.2, §8): tài khoản do Admin
+// tạo (AUTH-FR-005c) hoặc từ link lời mời (POST /invitations/:token/create-account, AUTH-FR-010).
 
 /** POST /auth/login – AUTH-FR-002 */
 router.post(
@@ -52,20 +41,8 @@ router.put(
 /** POST /auth/logout – AUTH-FR-006 */
 router.post('/logout', authenticate, authController.logout)
 
-/** POST /auth/otp/send – AUTH-FR-005 */
-router.post('/otp/send', otpSendLimiter, [body('email').isEmail()], validate, authController.sendOtp)
-
-/** POST /auth/otp/verify – AUTH-FR-005 */
-router.post(
-  '/otp/verify',
-  loginLimiter,
-  [body('email').isEmail(), body('otp').isLength({ min: 6, max: 6 }).isNumeric()],
-  validate,
-  authController.verifyOtp,
-)
-
 /** POST /auth/forgot-password – AUTH-FR-009 */
-router.post('/forgot-password', otpSendLimiter, [body('email').isEmail()], validate, authController.forgotPassword)
+router.post('/forgot-password', passwordResetLimiter, [body('email').isEmail()], validate, authController.forgotPassword)
 
 /** POST /auth/reset-password – AUTH-FR-009 */
 router.post(

@@ -56,7 +56,7 @@ describe('User Model', () => {
   })
 
   describe('toJSON()', () => {
-    it('strips password_hash, otp_code, otp_expires, refresh_tokens from output', () => {
+    it('strips password_hash and refresh_tokens from output', () => {
       const user = new User({
         email:         'test3@swiftletcare.vn',
         password_hash: 'password123',
@@ -66,8 +66,6 @@ describe('User Model', () => {
       const json = user.toJSON() as Record<string, unknown>
 
       expect(json.password_hash).toBeUndefined()
-      expect(json.otp_code).toBeUndefined()
-      expect(json.otp_expires).toBeUndefined()
       expect(json.refresh_tokens).toBeUndefined()
     })
 

@@ -98,11 +98,11 @@ describe('GET /admin/users — query validation & pagination', () => {
 
 describe('không để lọt mã dùng 1 lần qua API', () => {
   /**
-   * Mã OTP và mã đặt lại mật khẩu đều là 6 chữ số hash SHA-256 không salt — dò
+   * Mã đặt lại mật khẩu là 6 chữ số hash SHA-256 không salt — dò
    * hết 900.000 khả năng mất dưới 1 giây, nên hash lọt ra ngoài là coi như mã
    * lọt ra ngoài: ai đọc được response này đổi được mật khẩu của user đó.
    */
-  const secretKeys = ['password_hash', 'otp_code', 'otp_expires', 'refresh_tokens',
+  const secretKeys = ['password_hash', 'refresh_tokens',
     'password_reset_token_hash', 'password_reset_expires_at']
 
   it('GET /admin/users không trả field bí mật nào, kể cả khi user đang trong 15 phút đặt lại mật khẩu', async () => {
@@ -111,7 +111,6 @@ describe('không để lọt mã dùng 1 lần qua API', () => {
     await User.updateOne({ _id: target._id }, {
       password_reset_token_hash: createHash('sha256').update('483912').digest('hex'),
       password_reset_expires_at: new Date(Date.now() + 900_000),
-      otp_code: createHash('sha256').update('112233').digest('hex'),
     })
 
     const res = await request(app).get('/admin/users').set('Authorization', `Bearer ${token}`).expect(200)

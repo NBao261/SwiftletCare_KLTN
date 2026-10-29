@@ -16,7 +16,7 @@ export interface ChangePasswordPayload {
   refreshToken?: string
 }
 
-// API xác thực (AUTH-FR-002, 003, 005c, 009) — không có đăng ký công khai (Report 3 §1.2)
+// API xác thực (AUTH-FR-002, 003, 005c, 009) — không có đăng ký công khai, không đăng nhập bằng OTP (Report 3 §1.2, §8)
 export const authApi = {
   login: (email: string, password: string) =>
     apiClient.post<ApiResponse<LoginResponse>>(ENDPOINTS.AUTH_LOGIN, { email, password }),
@@ -34,9 +34,4 @@ export const authApi = {
   resetPassword: (payload: ResetPasswordPayload) => apiClient.post(ENDPOINTS.AUTH_RESET_PASSWORD, payload),
 
   changePassword: (payload: ChangePasswordPayload) => apiClient.put(ENDPOINTS.AUTH_CHANGE_PASSWORD, payload),
-
-  sendOtp: (email: string) => apiClient.post(ENDPOINTS.AUTH_OTP_SEND, { email }),
-
-  verifyOtp: (email: string, otp: string) =>
-    apiClient.post<ApiResponse<LoginResponse>>(ENDPOINTS.AUTH_OTP_VERIFY, { email, otp }),
 }

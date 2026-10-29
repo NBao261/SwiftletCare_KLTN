@@ -1,9 +1,7 @@
 import api from '@/lib/axios'
-import type { ApiResponse, LoginRequest, LoginResponse, RegisterRequest, User } from '@/types'
+import type { ApiResponse, LoginRequest, LoginResponse, User } from '@/types'
 
 export const authApi = {
-  register: (input: RegisterRequest) =>
-    api.post<ApiResponse<User>>('/auth/register', input),
   login: (input: LoginRequest) =>
     api.post<ApiResponse<LoginResponse>>('/auth/login', input),
   logout: () => api.post<ApiResponse<{ message: string }>>('/auth/logout'),

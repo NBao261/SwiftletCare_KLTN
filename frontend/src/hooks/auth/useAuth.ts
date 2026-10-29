@@ -8,7 +8,7 @@ import { queryClient } from '@/lib/queryClient'
 import { getRoleHomePath, canAccessPath } from '@/constants/roles'
 import type { User } from '@/types'
 
-/** useAuth – login/register/logout/quên mật khẩu/thông báo/xoá tài khoản (AUTH-FR-001..003/009/012) */
+/** useAuth – login/logout/quên mật khẩu/thông báo/xoá tài khoản (AUTH-FR-002/003/009/012) */
 export function useAuth() {
   const navigate = useNavigate()
   const setAuth = useAuthStore(s => s.setAuth)
@@ -31,12 +31,6 @@ export function useAuth() {
       useLoginSplashStore.getState().start()
       navigate(target)
     },
-  })
-
-  const register = useMutation({
-    mutationFn: (input: { email: string; password: string; full_name: string; phone?: string }) =>
-      authApi.register(input),
-    onSuccess: () => navigate('/login'),
   })
 
   const logout = useMutation({
@@ -81,5 +75,5 @@ export function useAuth() {
     onSuccess: () => updateUser({ deletion_requested_at: new Date().toISOString() }),
   })
 
-  return { login, register, logout, forgotPassword, resetPassword, updateNotificationPreferences, requestDeletion }
+  return { login, logout, forgotPassword, resetPassword, updateNotificationPreferences, requestDeletion }
 }

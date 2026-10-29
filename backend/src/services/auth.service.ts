@@ -2,12 +2,10 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { User, IUser } from '@/models/user.model'
-import { Farm } from '@/models/farm.model'
-import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { notifyAdmins } from '@/services/notification.service'
 import type { JwtAccessPayload } from '@/types'
-import { AppError, ConflictError, UnauthorizedError } from '@/utils/appError.util'
+import { AppError, UnauthorizedError } from '@/utils/appError.util'
 
 const ACCESS_TTL  = process.env.JWT_ACCESS_TTL  ?? '15m'
 const REFRESH_TTL = process.env.JWT_REFRESH_TTL ?? '30d'
@@ -17,7 +15,7 @@ const REFRESH_TTL_MS = 30 * 86400 * 1000
  *  và 'user@test.com' bị coi là 2 tài khoản khác nhau. */
 const normalizeEmail = (email: string) => email.toLowerCase().trim()
 
-/** Hash 1 chiều (sha256) cho OTP đăng nhập, token reset mật khẩu và refresh
+/** Hash 1 chiều (sha256) cho mã đặt lại mật khẩu và refresh
  *  token — dùng chung, để lộ DB đọc cũng không lấy được mã gốc còn hiệu lực. */
 const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
 
@@ -49,56 +47,11 @@ function issueRefreshToken(user: IUser): string {
   return token
 }
 
-export interface RegisterInput { email: string; password: string; full_name: string; phone?: string }
 export interface LoginInput { email: string; password: string }
 
-/** AUTH-FR-001 */
-export async function registerUser(input: RegisterInput): Promise<IUser> {
-  const normalizedEmail = normalizeEmail(input.email)
-  const existing = await User.findOne({ email: normalizedEmail })
-  if (existing) throw ConflictError('Email đã được đăng ký')
-
-  // Flow 12 bước 3b — nếu email trùng một lời mời PENDING còn hạn (đồng sở hữu hoặc
-  // Domain Expert), lời mời tự động được accept ngay khi đăng ký xong và tài khoản
-  // mang đúng role được mời. Không có lời mời thì là Farm Owner tự đăng ký (mặc định).
-  const invitation = await Invitation.findOne({
-    invited_email: normalizedEmail,
-    status: 'PENDING',
-    expires_at: { $gt: new Date() },
-  }).sort({ created_at: 1 })
-
-  const user = new User({
-    // Lưu dạng đã chuẩn hoá — nếu lưu input.email thô, dup-check ở trên (query
-    // theo normalizedEmail) sẽ không khớp lần đăng ký sau với case khác, tạo
-    // được 2 tài khoản cho cùng 1 email thật.
-    email: normalizedEmail,
-    password_hash: input.password, // hash tự động qua pre-save hook (User.ts)
-    full_name: input.full_name,
-    phone: input.phone,
-    ...(invitation ? { role: invitation.invited_role } : {}),
-  })
-  await user.save()
-
-  if (invitation) {
-    invitation.status = 'ACCEPTED'
-    invitation.responded_at = new Date()
-    await invitation.save()
-
-    await Farm.findByIdAndUpdate(invitation.farm_id, {
-      $addToSet: {
-        members: {
-          user_id: user._id, is_primary: false, role: invitation.invited_role, joined_at: new Date(),
-        },
-      },
-    })
-  }
-
-  return user
-}
-
 /**
- * AUTH-FR-011, Flow 19 bước 4 — chặn tài khoản bị Admin khoá ở MỌI đường đăng
- * nhập (mật khẩu lẫn OTP), kèm lý do để user biết phải liên hệ ai. Chỉ gọi sau
+ * AUTH-FR-011, Flow 19 bước 4 — chặn tài khoản bị Admin khoá khi đăng
+ * nhập, kèm lý do để user biết phải liên hệ ai. Chỉ gọi sau
  * khi đã xác thực xong danh tính, để người đoán mò không dò được trạng thái
  * tài khoản người khác.
  */
@@ -167,44 +120,6 @@ export async function logoutUser(userId: string, refreshToken: string | undefine
   }
 }
 
-/** AUTH-FR-001/005 – gửi OTP (không tiết lộ email có tồn tại hay không) */
-export async function sendOtp(email: string): Promise<void> {
-  const user = await User.findOne({ email: normalizeEmail(email) })
-  if (!user) return // im lặng, tránh dò email tồn tại
-
-  const otp = crypto.randomInt(100000, 999999).toString()
-  // Hash trước khi lưu — giống token reset mật khẩu, tránh lộ DB đọc là dùng
-  // được OTP còn hiệu lực để đăng nhập (khác trước đây lưu thẳng plaintext).
-  user.otp_code = hashToken(otp)
-  user.otp_expires = new Date(Date.now() + 10 * 60 * 1000)
-  await user.save()
-
-  // TODO: gửi thật qua SMTP / Zalo ZNS (ALERT-FR-003) — hiện chỉ log ở dev
-  // eslint-disable-next-line no-console
-  console.log(`[DEV OTP] ${email} → ${otp}`)
-}
-
-/** AUTH-FR-001/005 */
-export async function verifyOtp(email: string, otp: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-  const user = await User.findOne({ email: normalizeEmail(email) })
-  if (!user || user.otp_code !== hashToken(otp) || !user.otp_expires || user.otp_expires < new Date()) {
-    throw new AppError(400, 'INVALID_OTP', 'OTP không đúng hoặc đã hết hạn')
-  }
-
-  await assertLoginAllowed(user)
-
-  user.otp_code = undefined
-  user.otp_expires = undefined
-
-  // Giống loginUser() — phải cấp refresh token ở đây, nếu không phiên đăng nhập
-  // qua OTP không có cách nào silent-refresh và hết hạn sau ACCESS_TTL (15 phút).
-  const refreshToken = issueRefreshToken(user)
-  await user.save()
-
-  await logAction(String(user._id), 'LOGIN', 'user', String(user._id), { method: 'OTP' })
-  return { user, accessToken: signAccess(String(user._id), user.role), refreshToken }
-}
-
 /** AUTH-FR-009 — TTL 15 phút, dùng 1 lần (Flow 11 bước 6) */
 const RESET_TOKEN_TTL_MS = 15 * 60 * 1000
 
@@ -221,7 +136,7 @@ export async function forgotPassword(email: string): Promise<void> {
   user.password_reset_expires_at = new Date(Date.now() + RESET_TOKEN_TTL_MS)
   await user.save()
 
-  // TODO(E6): gửi thật qua SMTP/Zalo — hiện log ở dev như luồng OTP
+  // TODO(G-02 P1): gửi thật qua SMTP — hiện chỉ log ở dev
   // eslint-disable-next-line no-console
   console.log(`[DEV RESET] ${email} → ${token}`)
 }

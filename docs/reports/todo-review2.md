@@ -97,10 +97,10 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 **PR B — phần P0 của G-02, nhánh `refactor/g02-invitation-accounts` (Kiệt mở PR, Bảo duyệt):**
 
-1. **Kiệt — spec trước** (commit đầu, Nhi duyệt): bỏ `/auth/register`, `/auth/otp/send`, `/auth/otp/verify`; thêm `POST /invitations/{token}/create-account` (công khai, body `full_name`, `password`; e-mail và role lấy từ lời mời; 201; lời mời hết hạn hoặc đã dùng → 409, token sai → 404).
-2. **Kiệt — backend:** bỏ `registerUser`, `sendOtp`, `verifyOtp`, controller, `otp_code`/`otp_expires` (migration `$unset`); thêm endpoint mới, đánh dấu lời mời `ACCEPTED`; đổi tên `otpSendLimiter`; test 404 cho 3 route cũ và test endpoint mới.
-3. **Nhi — web:** xoá `RegisterPage`, route `/register`, link "Đăng ký" ở `LoginPage`, `authApi.register`, mutation `register`, `RegisterRequest`; `InvitationPage` có form tên + mật khẩu gọi endpoint mới; bỏ kiểu `salesAssignment` còn sót trong `invitations.api.ts`.
-4. **Nhi — mobile:** xoá `(auth)/register.tsx`, `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY`, `register`, `sendOtp`, `verifyOtp`.
+1. **[x] Kiệt — spec trước** (commit đầu, Nhi duyệt): bỏ `/auth/register`, `/auth/otp/send`, `/auth/otp/verify`; thêm `POST /invitations/{token}/create-account` (công khai, body `full_name`, `password`; e-mail và role lấy từ lời mời; 201; lời mời hết hạn hoặc đã dùng → 409, token sai → 404). — **Xong 29/10** (`59b39d2`, bổ sung schema `GET /invitations/{token}` theo góp ý của Nhi)
+2. **[x] Kiệt — backend:** bỏ `registerUser`, `sendOtp`, `verifyOtp`, controller, `otp_code`/`otp_expires` (migration `$unset`); thêm endpoint mới, đánh dấu lời mời `ACCEPTED`; đổi tên `otpSendLimiter`; test 404 cho 3 route cũ và test endpoint mới. — **Xong 29/10** (đổi tên `otpSendLimiter` → `passwordResetLimiter`; migration `migrate:remove-otp-login`; lint + tsc + 531/531 test)
+3. **[x] Nhi — web:** xoá `RegisterPage`, route `/register`, link "Đăng ký" ở `LoginPage`, `authApi.register`, mutation `register`, `RegisterRequest`; `InvitationPage` có form tên + mật khẩu gọi endpoint mới; bỏ kiểu `salesAssignment` còn sót trong `invitations.api.ts`. — **Xong 30/10** (`13073b5`; tạo xong chuyển `/login?email=…`, `LoginPage` điền sẵn email; lint + tsc + vitest 108/108 + build)
+4. **[x] Nhi — mobile:** xoá `(auth)/register.tsx`, `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY`, `register`, `sendOtp`, `verifyOtp`. — **Xong 30/10** (`5402753`; màn đăng ký, `AUTH_REGISTER`, `register` đã bỏ ở PR #114; lint + typecheck + jest 18/18)
 
 **Hồ sơ (song song với 2 PR):**
 
@@ -211,17 +211,17 @@ Một PR cho backend, web, mobile, firmware:
 
 **P0-Tag:** bỏ các endpoint công khai và thay luồng tạo tài khoản từ lời mời. **P1:** Admin tạo Farm Owner, gửi e-mail thật.
 
-- [ ] **P0-Tag — backend:**
+- [x] **P0-Tag — backend:** *(29/10, nhánh `refactor/g02-invitation-accounts`)*
   - bỏ `POST /auth/register` và `registerUser`;
   - bỏ luồng **đăng nhập không mật khẩu bằng OTP** (ngoài SRS: chỉ có AUTH-FR-002 đăng nhập bằng mật khẩu và AUTH-FR-009 đặt lại mật khẩu): `POST /auth/otp/send`, `POST /auth/otp/verify`, `sendOtp`/`verifyOtp` trong `auth.service.ts` và controller, các trường `otp_code`/`otp_expires` của `users` (migration `$unset`, `npm run db:script`);
   - thêm luồng tạo tài khoản từ link lời mời (e-mail và role lấy từ lời mời, người nhận chỉ đặt tên và mật khẩu) — hiện người được mời chưa có tài khoản đi qua `/auth/register` (`registerUser` tự nhận lời mời theo e-mail), bỏ route mà thiếu luồng này thì chuyên gia mới không vào được;
   - bỏ các endpoint cũ khỏi `api-spec.yaml` (kể cả dòng giới hạn tốc độ nhắc `/auth/register`, `/auth/otp/send`), thêm endpoint mới; `otpSendLimiter` chỉ còn cho `/auth/forgot-password`, đổi tên cho đúng;
   - test: `/auth/register`, `/auth/otp/send`, `/auth/otp/verify` trả 404; người được mời tạo tài khoản từ link có đúng e-mail và role; link hết hạn hoặc đã dùng bị từ chối.
-- [ ] **P0-Tag — web:**
+- [x] **P0-Tag — web:**
   - xoá `pages/auth/RegisterPage.tsx`, route và import `/register` ở `routes/public.routes.tsx`, link "Đăng ký" trên `LoginPage.tsx`;
   - xoá `authApi.register` (`apis/auth/auth.api.ts`), mutation `register` trong `hooks/auth/useAuth.ts`, `RegisterRequest` (`types/auth.types.ts`) và các comment AUTH-FR-001;
   - `InvitationPage.tsx`: người chưa có tài khoản đặt tên và mật khẩu ngay trên trang lời mời, gọi endpoint mới, không điều hướng sang `/register`.
-- [ ] **P0-Tag — mobile:** xoá `app/(auth)/register.tsx`; xoá `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY` (`constants/api.ts`) và `register`, `sendOtp`, `verifyOtp` (`services/api/auth.ts`).
+- [x] **P0-Tag — mobile:** xoá `app/(auth)/register.tsx`; xoá `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY` (`constants/api.ts`) và `register`, `sendOtp`, `verifyOtp` (`services/api/auth.ts`).
 - [ ] **P1 — Admin tạo Farm Owner:** `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, như Technician); màn Admin "Tạo Farm Owner"; test quyền và đổi mật khẩu lần đầu; sửa `api-spec.yaml`, `docs/database/` nếu đổi model.
 - [ ] **P1 — e-mail thật** cho lời mời, mã đặt lại mật khẩu và mật khẩu tạm (SF-03 chạy end-to-end; hiện `auth.service.ts` chỉ `console.log` mã reset, `notification.service.ts#sendEmail` chỉ ghi log):
   - SMTP qua `nodemailer` (đã có trong dependencies), thông tin đăng nhập SMTP bằng biến môi trường, thêm vào `.env.example`;

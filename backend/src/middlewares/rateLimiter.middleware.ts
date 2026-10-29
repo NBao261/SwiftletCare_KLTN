@@ -9,7 +9,7 @@ import logger from '@/utils/logger.util'
  * - `apiLimiter`: API đã đăng nhập, đếm theo TÀI KHOẢN. Trước đây đếm theo IP nên
  *   mọi người chung mạng (hoặc sau proxy) dùng chung 1 suất, và chính trang Tổng
  *   quan (gọi API theo từng zone, ~85 request/lần mở) đã đủ chặn cả /auth/refresh.
- * - `loginLimiter` / `otpSendLimiter`: đăng nhập, OTP — đếm theo IP, chặt hơn
+ * - `loginLimiter` / `passwordResetLimiter`: đăng nhập, mã đặt lại mật khẩu — đếm theo IP, chặt hơn
  *   nhiều, vì đây mới là chỗ bị dò mật khẩu và spam email.
  * - `refreshLimiter`: /auth/refresh có suất riêng — hết suất API thì vẫn làm mới
  *   được token, không bị đá ra màn đăng nhập.
@@ -62,7 +62,7 @@ function userOrIpKey(req: Request): string {
 
 /** Các route đếm ở limiter riêng (đăng ký trong auth.route.ts) */
 const OWN_LIMITER_PATHS = new Set([
-  '/auth/login', '/auth/register', '/auth/otp/send', '/auth/otp/verify',
+  '/auth/login',
   '/auth/forgot-password', '/auth/reset-password', '/auth/refresh',
 ])
 
@@ -97,8 +97,8 @@ export const loginLimiter = rateLimit({
   skipSuccessfulRequests: true,
 })
 
-/** Đăng ký, gửi OTP, quên mật khẩu — đếm MỌI lần, vì mỗi lần thành công là 1 email gửi đi */
-export const otpSendLimiter = rateLimit({
+/** Quên mật khẩu — đếm MỌI lần, vì mỗi lần thành công là 1 email gửi đi */
+export const passwordResetLimiter = rateLimit({
   ...common,
   windowMs: authWindowMs,
   limit: authLimit,

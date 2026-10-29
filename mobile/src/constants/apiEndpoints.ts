@@ -11,8 +11,6 @@ export const ENDPOINTS = {
   AUTH_FORGOT_PASSWORD: '/auth/forgot-password',
   AUTH_RESET_PASSWORD: '/auth/reset-password',
   AUTH_CHANGE_PASSWORD: '/auth/password',
-  AUTH_OTP_SEND: '/auth/otp/send',
-  AUTH_OTP_VERIFY: '/auth/otp/verify',
 
   // Trang trại (FARM-FR-*)
   FARMS: '/farms',
