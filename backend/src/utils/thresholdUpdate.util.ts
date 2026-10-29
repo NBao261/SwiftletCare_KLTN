@@ -1,5 +1,6 @@
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { logAction } from '@/services/auditLog.service'
+import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
 import type { IZone, IHouse } from '@/models/houseZone.model'
 import type { IFarm } from '@/models/farm.model'
 import type { Thresholds, CurrentUser } from '@/types'
@@ -51,8 +52,16 @@ export async function applyThresholdUpdate(
   await zone.save()
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
-  await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), {
-    source: params.source, before: oldValues, after: zone.thresholds, ...params.logDetails,
+  const newValues = zone.toObject().thresholds as Thresholds
+  const auditId = await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), {
+    source: params.source, before: oldValues, after: newValues, zone_id: String(zone._id), house_id: String(house._id),
+    ...params.logDetails,
+  }, { farmId: String(farm._id) })
+  // EXPERT-FR-009 — sửa/reset ngưỡng của chuyên gia báo cho Farm Owner
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: params.source === 'RESET_TO_DEFAULT' ? 'đặt lại ngưỡng về mặc định' : 'sửa ngưỡng',
+    place: `Khu vực "${zone.name}"`,
+    detail: formatChanges(oldValues, newValues),
   })
 
   return zone

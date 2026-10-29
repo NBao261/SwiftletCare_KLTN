@@ -7,9 +7,10 @@ import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import {
   hasFarmAccess, hasDeviceAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
-  assertZoneAccess, assertHouseAccess,
+  assertZoneAccess, assertHouseAccess, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
+import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
 import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
@@ -436,7 +437,12 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
   await zone.save()
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', { ...zone.fuzzy_tuning })
-  await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
+  const auditId = await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), {
+    before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'chỉnh hệ số điều khiển mờ', place: `Khu vực "${zone.name}"`, detail: formatChanges(oldValues, merged),
+  })
   return zone
 }
 
@@ -447,6 +453,8 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
  */
 export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
   const { zone, house, farm } = await assertZoneAccess(zoneId, user)
+  // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia
+  assertExpertDecision(farm, user)
 
   const picked = pickDetectionTuning(updates)
   if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
@@ -463,7 +471,12 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
   await zone.save()
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', firmwareDetectionConfig(merged))
-  await logAction(user._id, 'DETECTION_TUNING_UPDATED', 'zone', String(zone._id), { before: oldValues, after: merged })
+  const auditId = await logAction(user._id, 'DETECTION_TUNING_UPDATED', 'zone', String(zone._id), {
+    before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'chỉnh tham số phát hiện', place: `Khu vực "${zone.name}"`, detail: formatChanges(oldValues, merged),
+  })
   return zone
 }
 
@@ -473,7 +486,9 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
  * Cùng cách làm với tham số Zone: kiểm tra khoảng, lưu lịch sử, ghi audit. Backend dùng, không gửi thiết bị.
  */
 export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IHouse> {
-  const { house } = await assertHouseAccess(houseId, user)
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia
+  assertExpertDecision(farm, user)
 
   const picked = pickBirdCountTuning(updates)
   if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
@@ -489,6 +504,11 @@ export async function updateHouseBirdCountTuning(houseId: string, user: CurrentU
   if (overflow > 0) house.bird_count_tuning_history.splice(0, overflow)
   await house.save()
 
-  await logAction(user._id, 'BIRD_COUNT_TUNING_UPDATED', 'house', String(house._id), { before: oldValues, after: merged })
+  const auditId = await logAction(user._id, 'BIRD_COUNT_TUNING_UPDATED', 'house', String(house._id), {
+    before: oldValues, after: merged, house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'chỉnh mức giảm tỷ lệ chim về', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
+  })
   return house
 }
