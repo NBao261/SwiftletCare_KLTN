@@ -1,5 +1,5 @@
-// Khớp backend/src/types/domain.types.ts — PENDING: đã đăng ký nhưng chưa gửi heartbeat đầu tiên
-export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'ERROR' | 'DEGRADED'
+// Khớp backend/src/types/domain.types.ts — PENDING: đã đăng ký nhưng chưa gửi heartbeat đầu tiên; chỉ 3 trạng thái kết nối (Report 3 §6.6)
+export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 export type ControlMode = 'AUTO' | 'MANUAL'
 
 // Relay IN1 phun sương, IN2 loa ru, IN3 quạt — khớp backend; IN4 dự phòng, đã bỏ sưởi (Report 3 §8)

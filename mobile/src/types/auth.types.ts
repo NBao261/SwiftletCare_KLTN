@@ -6,9 +6,6 @@ export interface NotificationPreferences {
   push: boolean
   // Chỉ có tác dụng khi tài khoản đã liên kết bot Telegram
   telegram: boolean
-  // zalo/sms còn trong model backend nhưng ngoài phạm vi (Report 3 §8) — không hiện trên giao diện
-  zalo: boolean
-  sms: boolean
   quiet_hours: { start: string; end: string }
 }
 
