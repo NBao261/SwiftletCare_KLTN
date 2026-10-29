@@ -3,12 +3,13 @@ import { House, Zone, IZone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
 import {
   findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertHouseAccessByParams,
-  listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds,
+  listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { publishCommand, publishHouseCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
+import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
@@ -992,7 +993,9 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   const camera = await CameraNode.findById(cameraNodeId)
   if (!camera) throw NotFoundError('Không tìm thấy camera')
   assertInService(camera)
-  await assertHouseAccess(String(camera.house_id), user)
+  const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
+  // BR-22 — Farm Owner chỉ vẽ thay khi farm chưa có chuyên gia
+  assertExpertDecision(farm, user)
 
   const before = camera.counting_ring ? ringOf(camera.counting_ring) : undefined
   const after = ringOf(ring)
@@ -1005,7 +1008,13 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   await camera.save()
 
   const delivered = await pushCountingRing(camera)
-  await logAction(user._id, 'COUNTING_RING_UPDATED', 'camera_node', String(camera._id), { before: before ?? null, after, delivered })
+  const auditId = await logAction(user._id, 'COUNTING_RING_UPDATED', 'camera_node', String(camera._id), {
+    before: before ?? null, after, delivered, house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'vẽ lại vòng đếm', place: `Camera ${camera.device_id}, nhà "${house.name}"`,
+    detail: `${after.points.length} đỉnh, ${after.into_ring_is_exit ? 'trong vòng là phía ngoài trời' : 'trong vòng là phía trong nhà'}`,
+  })
   const { rtsp_url: _rtspUrl, ...publicFields } = camera.toObject()
   return { ...publicFields, ring_delivered: delivered }
 }

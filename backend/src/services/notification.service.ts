@@ -60,10 +60,12 @@ export async function findFarmExperts(farmId: unknown): Promise<string[]> {
 /**
  * EXPERT-FR-007 — cảnh báo suy luận mới chờ kiểm chứng. Chỉ báo trong ứng dụng: ALERT-FR-005
  * ghi Domain Expert "chỉ nhận thông báo trong ứng dụng" cho loại sự kiện này, không Telegram/push.
+ * Farm chưa có chuyên gia thì Farm Owner kết luận thay (BR-22), nên thông báo này tới họ.
  */
 async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
   const experts = await findFarmExperts(alert.farm_id)
-  const active = await User.find({ _id: { $in: experts }, is_active: true }).select('_id').lean()
+  const deciders = experts.length > 0 ? experts : (await findRecipients(String(alert.farm_id))).map(u => String(u._id))
+  const active = await User.find({ _id: { $in: deciders }, is_active: true }).select('_id').lean()
   await Promise.all(active.map(u => createInAppNotification(String(u._id), {
     title: `Cảnh báo chờ kiểm chứng: ${alert.title}`,
     body: alert.message,

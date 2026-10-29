@@ -94,9 +94,10 @@ router.post('/camera-nodes/register',        requireRole('FARM_OWNER','TECHNICIA
 router.get ('/camera-nodes',
   query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(), validate,
   deviceController.listCameraNodes)
-// VISION-FR-018, SRS §4.4 — vòng đếm do Domain Expert vẽ; 3 đỉnh là tối thiểu của một vòng kín,
-// 12 là giới hạn kỹ thuật chống nhập nhầm (SRS 0.5), toạ độ theo tỉ lệ khung hình
-router.put ('/camera-nodes/:id/counting-ring', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(),
+// VISION-FR-018, SRS §4.4 — vòng đếm do Domain Expert vẽ (Farm Owner chỉ khi farm chưa có chuyên gia,
+// BR-22, service kiểm); 3 đỉnh là tối thiểu của một vòng kín, 12 là giới hạn kỹ thuật chống nhập nhầm
+// (SRS 0.5), toạ độ theo tỉ lệ khung hình
+router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('id').isMongoId(),
   body('points').isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
   body('points.*').isArray({ min: 2, max: 2 }).withMessage('mỗi đỉnh là [x, y]'),
   body('points.*.*').isFloat({ min: 0, max: 1 }).withMessage('toạ độ theo tỉ lệ khung hình 0-1').toFloat(),
