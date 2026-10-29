@@ -1096,7 +1096,8 @@ frontend/src/
 │   │                          vòng đếm, lịch đếm
 │   ├── technician/            TechnicianDevicesPage · TechnicianAlertsPage · TechnicianFarmsPage
 │   │                          TechnicianOnboardingPage · TechnicianOtaPage
-│   ├── auth/                  LoginPage · RegisterPage · ForgotPasswordPage · InvitationPage
+│   ├── auth/                  LoginPage · ForgotPasswordPage · InvitationPage (không có đăng ký công khai —
+│   │                          người được mời tạo tài khoản trên trang lời mời, G-02)
 │   └── (gốc)                  SettingsPage · ForbiddenPage
 │                              — 2 trang không thuộc nghiệp vụ role nào
 │
