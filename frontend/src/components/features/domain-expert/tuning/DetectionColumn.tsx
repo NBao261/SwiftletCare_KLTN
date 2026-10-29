@@ -22,7 +22,8 @@ interface Props {
 
 const TYPE_LABELS: Record<string, string> = {
   NOISE_ANOMALY: 'Ồn bất thường',
-  PUMP_DRY: 'Bơm khô',
+  PUMP_DRY: 'Phun sương kém / Bơm khô',
+  MISTING_INEFFECTIVE: 'Phun sương không hiệu quả',
   SENSOR_ANOMALY: 'Cảm biến bất thường',
   LOW_RETURN_RATE: 'Giảm tỉ lệ chim về',
 }
@@ -77,7 +78,7 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
   const rejPct = Math.round((worst.rejected / total) * 100)
   const label = TYPE_LABELS[worst.type] ?? worst.type
   const hint = worst.type === 'NOISE_ANOMALY' ? 'Tăng biên độ ồn (noise_margin_db).'
-    : worst.type === 'PUMP_DRY' ? 'Tăng pump_dry_on_sec hoặc pump_dry_min_rise_pct.'
+    : (worst.type === 'MISTING_INEFFECTIVE' || (worst.type as string) === 'PUMP_DRY') ? 'Tăng pump_dry_on_sec hoặc pump_dry_min_rise_pct.'
     : 'Điều chỉnh tham số phát hiện tương ứng.'
 
   return (

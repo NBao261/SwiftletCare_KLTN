@@ -51,7 +51,7 @@ interface Props {
 const TYPE_OPTS: Array<{ value: InferredAlertType | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Loại cảnh báo' }, { value: 'NOISE_ANOMALY', label: 'Ồn bất thường' },
   { value: 'SENSOR_ANOMALY', label: 'Cảm biến bất thường' }, { value: 'FORECAST_BREACH', label: 'Dự báo vượt ngưỡng' },
-  { value: 'LOW_RETURN_RATE', label: 'Giảm tỉ lệ chim về' }, { value: 'PUMP_DRY', label: 'Bơm khô bất thường' },
+  { value: 'LOW_RETURN_RATE', label: 'Giảm tỉ lệ chim về' }, { value: 'MISTING_INEFFECTIVE', label: 'Phun sương kém' },
 ]
 
 const SEV_OPTS: Array<{ value: AlertSeverity | 'ALL'; label: string }> = [
