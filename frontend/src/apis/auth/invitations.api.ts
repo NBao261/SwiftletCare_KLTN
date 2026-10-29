@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Invitation, Farm } from '@/types'
+import type { ApiResponse, Invitation, Farm, User } from '@/types'
 
 export interface InvitationPreview {
   invitation: Invitation
@@ -13,6 +13,9 @@ export interface InvitationPreview {
  */
 export const invitationApi = {
   getByToken: (token: string) => api.get<ApiResponse<InvitationPreview>>(`/invitations/${token}`),
-  accept:     (token: string) => api.post<ApiResponse<Farm | { salesAssignment: true }>>(`/invitations/${token}/accept`),
+  accept:     (token: string) => api.post<ApiResponse<Farm>>(`/invitations/${token}/accept`),
+  /** Người được mời chưa có tài khoản: chỉ đặt tên + mật khẩu, email và role lấy từ lời mời. Không trả token → đăng nhập sau */
+  createAccount: (token: string, input: { full_name: string; password: string }) =>
+    api.post<ApiResponse<User>>(`/invitations/${token}/create-account`, input),
   decline:    (token: string) => api.post<ApiResponse<{ message: string }>>(`/invitations/${token}/decline`),
 }

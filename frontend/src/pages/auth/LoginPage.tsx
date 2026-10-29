@@ -5,12 +5,13 @@ import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { getApiErrorMessage } from '@/lib/helpers';
 
-// Trang đăng nhập (AUTH-FR-002) — khung và ảnh ở AuthLayout
+// Trang đăng nhập (AUTH-FR-002) — khung và ảnh ở AuthLayout. Không có link đăng ký: tài khoản do Admin tạo hoặc
+// tạo từ link lời mời; `?email=` điền sẵn khi vừa tạo tài khoản ở trang lời mời
 export default function LoginPage(): JSX.Element {
   const { login } = useAuth();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo') ?? undefined;
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
 
   function handleSubmit(event: FormEvent): void {
@@ -55,13 +56,6 @@ export default function LoginPage(): JSX.Element {
           Đăng nhập
         </Button>
       </form>
-
-      <p className="mt-8 text-center text-sm text-warmGray">
-        Chưa có tài khoản?{' '}
-        <Link to="/register" className="font-semibold text-charcoal underline underline-offset-2">
-          Đăng ký
-        </Link>
-      </p>
     </>
   );
 }

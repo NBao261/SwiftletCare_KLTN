@@ -19,6 +19,14 @@ export function useAcceptInvitation() {
   })
 }
 
+/** AUTH-FR-010 — thay đăng ký công khai: tạo tài khoản từ link lời mời, tài khoản vào ngay farm của lời mời */
+export function useCreateAccountFromInvitation() {
+  return useMutation({
+    mutationFn: ({ token, ...input }: { token: string; full_name: string; password: string }) =>
+      invitationApi.createAccount(token, input),
+  })
+}
+
 export function useDeclineInvitation() {
   const queryClient = useQueryClient()
   return useMutation({

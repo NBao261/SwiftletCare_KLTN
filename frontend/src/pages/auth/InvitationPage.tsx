@@ -1,13 +1,18 @@
-// Invitation Page (public) – AUTH-FR-010, Flow 12
+// Invitation Page (public) – AUTH-FR-010, Flow 12. Không có đăng ký công khai (Report 3 §1.2): người được mời chưa có
+// tài khoản đặt tên + mật khẩu ngay tại đây (POST /invitations/{token}/create-account), rồi đăng nhập với email đã điền sẵn
+import { useState, type FormEvent } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { useInvitationPreview, useAcceptInvitation, useDeclineInvitation } from '@/hooks/auth/useInvitations'
-import { Button, Card } from '@/components/ui'
+import { useInvitationPreview, useAcceptInvitation, useDeclineInvitation, useCreateAccountFromInvitation } from '@/hooks/auth/useInvitations'
+import { Button, Card, Input } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { INVITE_ROLE_LABEL } from '@/constants/roles'
 import { getRoleHomePath } from '@/constants/roles'
+
+/** Khớp spec create-account: full_name ≥ 1 ký tự, password ≥ 8 */
+const PASSWORD_MIN = 8
 
 export default function InvitationPage() {
   const { token } = useParams<{ token: string }>()
@@ -17,6 +22,10 @@ export default function InvitationPage() {
   const { data, isLoading, isError } = useInvitationPreview(token)
   const accept = useAcceptInvitation()
   const decline = useDeclineInvitation()
+  const createAccount = useCreateAccountFromInvitation()
+  const [fullName, setFullName] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitted, setSubmitted] = useState(false)
 
   if (isLoading) {
     return <div className="mx-auto max-w-md px-4 py-16"><LoadingSkeleton className="h-64 w-full" /></div>
@@ -50,6 +59,24 @@ export default function InvitationPage() {
     })
   }
 
+  const nameError = submitted && !fullName.trim() ? 'Chưa nhập họ tên' : undefined
+  const passwordError = submitted && password.length < PASSWORD_MIN ? `Tối thiểu ${PASSWORD_MIN} ký tự` : undefined
+
+  function handleCreateAccount(event: FormEvent) {
+    event.preventDefault()
+    setSubmitted(true)
+    if (!token || !fullName.trim() || password.length < PASSWORD_MIN) return
+    createAccount.mutate({ token, full_name: fullName.trim(), password }, {
+      // Tài khoản mới đã vào farm của lời mời; backend không trả token → đăng nhập với email điền sẵn
+      onSuccess: () => {
+        push('Đã tạo tài khoản, hãy đăng nhập')
+        navigate(`/login?email=${encodeURIComponent(invitation.invited_email)}`)
+      },
+      // 409 lời mời đã dùng/hết hạn hoặc email đã có tài khoản, 404 farm đã xoá — backend trả message tiếng Việt
+      onError: (err) => push(getApiErrorMessage(err, 'Tạo tài khoản thất bại'), 'error'),
+    })
+  }
+
   function handleDecline() {
     if (!token) return
     decline.mutate(token, {
@@ -75,9 +102,31 @@ export default function InvitationPage() {
             Lời mời này đã {invitation.status === 'ACCEPTED' ? 'được chấp nhận' : invitation.status === 'DECLINED' ? 'bị từ chối' : 'hết hạn'} trước đó.
           </p>
         ) : !userExists ? (
-          <Button className="mt-5 w-full" onClick={() => navigate(`/register?email=${encodeURIComponent(invitation.invited_email)}`)}>
-            Tạo tài khoản để tham gia
-          </Button>
+          <form onSubmit={handleCreateAccount} noValidate className="mt-5 flex flex-col gap-3">
+            <p className="text-sm text-warmGray">Email này chưa có tài khoản. Đặt họ tên và mật khẩu để tham gia farm.</p>
+            <Input
+              label="Họ và tên"
+              required
+              autoComplete="name"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              error={nameError}
+            />
+            <Input
+              label="Mật khẩu"
+              type="password"
+              required
+              autoComplete="new-password"
+              placeholder={`Ít nhất ${PASSWORD_MIN} ký tự`}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              error={passwordError}
+            />
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" className="flex-1" loading={decline.isPending} onClick={handleDecline}>Từ chối</Button>
+              <Button type="submit" className="flex-1" loading={createAccount.isPending}>Tạo tài khoản</Button>
+            </div>
+          </form>
         ) : !loggedInAsInvitedEmail ? (
           <Button className="mt-5 w-full" onClick={() => navigate(`/login?returnTo=${encodeURIComponent(`/invitations/${token}`)}`)}>
             Đăng nhập để chấp nhận

@@ -27,9 +27,8 @@ export interface User {
   created_at?: string
 }
 
-// AUTH-FR-002/003 — request/response cho POST /auth/login, /auth/register
+// AUTH-FR-002/003 — request/response cho POST /auth/login
 export interface LoginRequest { email: string; password: string }
-export interface RegisterRequest { email: string; password: string; full_name: string; phone?: string }
 export interface LoginResponse { accessToken: string; user: User }
 
 /** AUTH-FR-010, Flow 12 — lời mời đồng sở hữu/chuyên gia, hết hạn sau 7 ngày nếu không phản hồi */
