@@ -1,14 +1,14 @@
 import { ActivityIndicator, StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
-import { Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
 interface ButtonProps {
   label: string
   onPress: () => void
-  // primary: nút chính nền xanh; link: chữ gạch chân, không nền
-  variant?: 'primary' | 'link'
+  // primary: nút chính nền xanh; secondary: nền trắng viền xanh; link: chữ gạch chân, không nền
+  variant?: 'primary' | 'secondary' | 'link'
   loading?: boolean
   disabled?: boolean
   // Chỉ cho variant link
@@ -20,7 +20,19 @@ interface ButtonProps {
 export function Button({ label, onPress, variant = 'primary', loading = false, disabled = false, color, style }: ButtonProps) {
   const palette = usePalette()
   const isDisabled = disabled || loading
-  const isPrimary = variant === 'primary'
+  const isLink = variant === 'link'
+
+  const variantStyle = {
+    primary: [styles.filled, { backgroundColor: palette.primary }],
+    secondary: [styles.filled, styles.outlined, { backgroundColor: palette.background, borderColor: palette.primary }],
+    link: styles.link,
+  }[variant]
+
+  const textColor = {
+    primary: palette.onPrimary,
+    secondary: palette.text,
+    link: color ?? palette.textSecondary,
+  }[variant]
 
   return (
     <PressableScale
@@ -29,21 +41,13 @@ export function Button({ label, onPress, variant = 'primary', loading = false, d
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPress={onPress}
-      hitSlop={isPrimary ? undefined : Spacing.sm}
-      style={[
-        isPrimary ? [styles.primary, { backgroundColor: palette.primary }] : styles.link,
-        isDisabled && styles.disabled,
-        style,
-      ]}
+      hitSlop={isLink ? Spacing.sm : undefined}
+      style={[variantStyle, isDisabled && styles.disabled, style]}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? palette.onPrimary : palette.textSecondary} />
+        <ActivityIndicator color={isLink ? palette.textSecondary : textColor} />
       ) : (
-        <Text
-          variant="button"
-          color={isPrimary ? palette.onPrimary : (color ?? palette.textSecondary)}
-          style={!isPrimary && styles.underline}
-        >
+        <Text variant="button" color={textColor} style={isLink && styles.underline}>
           {label}
         </Text>
       )}
@@ -52,13 +56,14 @@ export function Button({ label, onPress, variant = 'primary', loading = false, d
 }
 
 const styles = StyleSheet.create({
-  primary: {
+  filled: {
     height: 52,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  outlined: { borderWidth: BorderWidth.strong },
   link: { minHeight: 32, justifyContent: 'center' },
   underline: { textDecorationLine: 'underline' },
   disabled: { opacity: 0.5 },

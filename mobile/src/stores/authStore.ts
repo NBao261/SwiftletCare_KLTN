@@ -5,10 +5,12 @@ import type { User } from '@/types'
 
 interface AuthState {
   user: User | null
+  // Bản trong bộ nhớ của access token — apiClient đọc ở đây cho nhanh, SecureStore chỉ để giữ qua lần mở app sau
   accessToken: string | null
   isAuthenticated: boolean
   isLoading: boolean
   setAuth: (user: User, accessToken: string, refreshToken: string) => Promise<void>
+  setAccessToken: (accessToken: string) => Promise<void>
   updateUser: (changes: Partial<User>) => Promise<void>
   clearAuth: () => Promise<void>
   loadStoredAuth: () => Promise<void>
@@ -22,10 +24,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
 
   setAuth: async (user, accessToken, refreshToken) => {
-    await SecureStore.setItemAsync('accessToken', accessToken)
-    await SecureStore.setItemAsync('refreshToken', refreshToken)
-    await SecureStore.setItemAsync('user', JSON.stringify(user))
+    // Ba khoá độc lập — ghi song song cho đăng nhập nhanh hơn
+    await Promise.all([
+      SecureStore.setItemAsync('accessToken', accessToken),
+      SecureStore.setItemAsync('refreshToken', refreshToken),
+      SecureStore.setItemAsync('user', JSON.stringify(user)),
+    ])
     set({ user, accessToken, isAuthenticated: true, isLoading: false })
+  },
+
+  // Access token mới sau khi làm mới (POST /auth/refresh)
+  setAccessToken: async accessToken => {
+    set({ accessToken })
+    await SecureStore.setItemAsync('accessToken', accessToken)
   },
 
   // Sửa thông tin user trong phiên, ví dụ bỏ cờ mật khẩu tạm sau khi đổi
@@ -38,17 +49,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearAuth: async () => {
-    await SecureStore.deleteItemAsync('accessToken')
-    await SecureStore.deleteItemAsync('refreshToken')
-    await SecureStore.deleteItemAsync('user')
+    await Promise.all([
+      SecureStore.deleteItemAsync('accessToken'),
+      SecureStore.deleteItemAsync('refreshToken'),
+      SecureStore.deleteItemAsync('user'),
+    ])
     set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false })
   },
 
   // Đọc lại phiên đã lưu khi mở app, trước khi ẩn splash; role không dùng mobile thì bỏ phiên
   loadStoredAuth: async () => {
     try {
-      const accessToken = await SecureStore.getItemAsync('accessToken')
-      const storedUser = await SecureStore.getItemAsync('user')
+      const [accessToken, storedUser] = await Promise.all([
+        SecureStore.getItemAsync('accessToken'),
+        SecureStore.getItemAsync('user'),
+      ])
       const user = storedUser ? (JSON.parse(storedUser) as User) : null
       if (accessToken && user && isMobileRole(user.role)) {
         set({ user, accessToken, isAuthenticated: true, isLoading: false })

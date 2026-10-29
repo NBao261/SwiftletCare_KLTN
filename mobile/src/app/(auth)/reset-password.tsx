@@ -3,12 +3,12 @@ import type { TextInputInstance } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { LockIcon, LockKeyIcon } from 'phosphor-react-native'
 import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout'
+import { LogoutButton } from '@/components/auth/LogoutButton'
 import { Button } from '@/components/ui/button'
 import { FormMessage } from '@/components/ui/form-message'
 import { TextField } from '@/components/ui/text-field'
 import { getRoleHomeHref } from '@/constants/roleTabs'
 import { useChangePassword } from '@/hooks/auth/useChangePassword'
-import { useLogout } from '@/hooks/auth/useLogout'
 import { useResetPassword } from '@/hooks/auth/useResetPassword'
 import { useAuthStore } from '@/stores/authStore'
 import { getAuthErrorMessage, readApiError } from '@/utils/apiError.utils'
@@ -32,7 +32,6 @@ export default function ResetPasswordScreen() {
   const user = useAuthStore(state => state.user)
   const resetPassword = useResetPassword()
   const changePassword = useChangePassword()
-  const logout = useLogout()
   const newPasswordRef = useRef<TextInputInstance>(null)
   const confirmPasswordRef = useRef<TextInputInstance>(null)
 
@@ -117,10 +116,6 @@ export default function ResetPasswordScreen() {
     else submitReset()
   }
 
-  const handleLogout = () => {
-    logout.mutate(undefined, { onSettled: () => router.replace('/(auth)/login') })
-  }
-
   return (
     <AuthScreenLayout
       title={isTemporary ? 'Đổi mật khẩu tạm' : 'Đặt mật khẩu mới'}
@@ -130,11 +125,7 @@ export default function ResetPasswordScreen() {
           : 'Mật khẩu mới dùng cho lần đăng nhập sau.'
       }
       onBack={isTemporary ? undefined : () => router.back()}
-      footer={
-        isTemporary ? (
-          <Button variant="link" label="Đăng xuất" onPress={handleLogout} disabled={logout.isPending} />
-        ) : undefined
-      }
+      footer={isTemporary ? <LogoutButton variant="link" /> : undefined}
     >
       {isTemporary && (
         <TextField

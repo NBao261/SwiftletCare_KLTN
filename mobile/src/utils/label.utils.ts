@@ -8,6 +8,7 @@ const SEVERITY_LABELS: Record<AlertSeverity, string> = {
 }
 
 const DEVICE_STATUS_LABELS: Record<DeviceStatus, string> = {
+  PENDING: 'Chờ kết nối',
   ONLINE: 'Trực tuyến',
   OFFLINE: 'Mất kết nối',
   ERROR: 'Lỗi',

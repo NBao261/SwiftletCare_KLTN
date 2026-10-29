@@ -34,11 +34,11 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
-  // Menu tạm — đổi tên và gán route thật khi làm màn chuyên gia
+  // menu-1..2 tạm — đổi tên và gán route thật khi làm màn chuyên gia; Tài khoản dùng chung màn với Farm Owner
   DOMAIN_EXPERT: [
     { name: 'menu-1', title: 'Menu 1', icon: SquaresFourIcon },
     { name: 'menu-2', title: 'Menu 2', icon: SquaresFourIcon },
-    { name: 'menu-3', title: 'Menu 3', icon: SquaresFourIcon },
+    { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
 }
 
@@ -52,7 +52,7 @@ export function getRoleTabs(role: Role): readonly RoleTab[] {
   return ROLE_TABS[role] ?? []
 }
 
-// Tiêu đề     n tạm
+// Tiêu đề của tab theo tên route — màn tạm lấy tiêu đề từ đây
 export function findTabTitle(name: string): string | undefined {
   for (const tabs of Object.values(ROLE_TABS)) {
     const tab = tabs?.find(roleTab => roleTab.name === name)

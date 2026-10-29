@@ -75,7 +75,7 @@ Thay đổi code đi kèm: `runOnJS` → `scheduleOnRN` (`react-native-worklets`
 Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở đây.
 
 ### Cấu hình chính
-- `app.json`: `typedRoutes` bật; chỉ portrait; `userInterfaceStyle: automatic` (sáng/tối theo máy); plugin `expo-router`, `expo-splash-screen`, `expo-secure-store`, `expo-notifications`, `expo-camera`, `expo-asset`, `expo-font`. Từ SDK 57 splash khai báo trong plugin `expo-splash-screen` (không còn khoá `splash` ở gốc): ảnh `splash-blank.png`, nền `#FFFFFF`; adaptive icon nền `#172008` trùng nền logo.
+- `app.json`: `typedRoutes` bật; chỉ portrait; `userInterfaceStyle: light` (app chỉ có giao diện sáng, máy bật chế độ tối cũng không đổi; Android cần gói `expo-system-ui` để giữ đúng giao diện sáng); plugin `expo-router`, `expo-splash-screen`, `expo-secure-store`, `expo-notifications`, `expo-camera`, `expo-asset`, `expo-font`. Từ SDK 57 splash khai báo trong plugin `expo-splash-screen` (không còn khoá `splash` ở gốc): ảnh `splash-blank.png`, nền `#FFFFFF`; adaptive icon nền `#172008` trùng nền logo.
 - `tsconfig.json`: `strict`; không dùng `baseUrl` (TypeScript 6 đã bỏ); alias `@/assets/*` → `./assets/*` (ảnh, font ở gốc `mobile/`) và `@/*` → `./src/*` (toàn bộ code). expo-router tự nhận route trong `src/app/`.
 - `babel.config.js`: chỉ `babel-preset-expo` (tự đọc alias của tsconfig và tự thêm plugin Reanimated).
 - `package.json` → `expo.install.exclude`: `@shopify/react-native-skia` (lý do ở Known debt của `mobile/CLAUDE.md`).
@@ -90,7 +90,7 @@ Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở �
 | FCM: chưa có `google-services.json` (`android.googleServicesFile`), backend chưa có endpoint nhận token trong `api-spec.yaml` | push (ALERT-FR-002) | chờ backend (G-10); không tự đặt endpoint |
 | Endpoint MF-11 (trạng thái ngày, chấm điểm, bỏ qua) chưa có trong `api-spec.yaml` | màn sức khỏe ngày (BR-31) | chờ backend (G-11) |
 | `ENDPOINTS` chưa có: `/notifications`, `/alerts/{id}/verdict`, `/health-reports`, `/harvests`, `/devices/camera-nodes/{id}/stream-token`, `/devices/sensor-nodes/{id}/relay-override` | thông báo trong app, kiểm chứng, báo cáo, harvest, live stream, chế độ tay | thêm khi làm màn, đúng `api-spec.yaml` |
-| Socket chưa có `JOIN_HOUSE`, `NOTIFICATION_NEW`, hàm `off*` | đếm chim, cảnh báo nhà yến, thông báo | thêm trước màn đầu tiên đăng ký sự kiện |
+| Socket chưa có `JOIN_HOUSE`, `NOTIFICATION_NEW` | đếm chim, cảnh báo nhà yến, thông báo | thêm trước màn đầu tiên đăng ký sự kiện |
 | `.env.example` còn ghi "SRS §9.1" | — | đổi thành `docs/api/api-spec.yaml` |
 - Enum và kiểu dữ liệu giữ tay trong `src/types/<module>.types.ts`, phải khớp `backend/src/types/domain.types.ts` (không có package dùng chung).
 
@@ -105,7 +105,7 @@ mobile/
 ├─ app.json, eas.json, babel.config.js, metro.config.js, tsconfig.json, .env.example
 ├─ assets/                       # ở gốc vì app.json trỏ tới — import bằng @/assets/...
 │  ├─ images/                    # icon, splash-icon, adaptive-icon, favicon;
-│  │                             #   mobile-scare-icon (nhà yến, nền tối), mobile-scare-text (chữ, nền trong suốt)
+│  │                             #   mobile-scare-icon (nhà yến, nền tối), mobile-scare-text (chữ, nền trong suốt, cắt sát chữ)
 │  └─ fonts/                     # Plus Jakarta Sans .ttf 400/500/600/700 + OFL.txt
 └─ src/
    ├─ app/                       # expo-router: file = route, chỉ đọc params + gọi hook + render
@@ -114,7 +114,7 @@ mobile/
    │  ├─ (auth)/                 # _layout · login · forgot-password · verify-code · reset-password (cả đổi mật khẩu tạm)
    │  │                          #   không có đăng ký công khai (Report 3 §1.2)
    │  ├─ (tabs)/                 # _layout (tab theo role từ constants/roleTabs.ts) · dashboard/ · farms/ · alerts/ ·
-   │  │                          #   analytics/ · profile/ · menu-1/ · menu-2/ · menu-3/ (menu tạm của Domain Expert)
+   │  │                          #   analytics/ · profile/ (Tài khoản, mọi role) · menu-1/ · menu-2/ (menu tạm của Domain Expert)
    │  ├─ farm/[farmId].tsx       # chi tiết trang trại
    │  ├─ zone/[zoneId].tsx       # chi tiết Zone
    │  ├─ device/[deviceId].tsx   # chi tiết thiết bị
@@ -122,13 +122,15 @@ mobile/
    │  └─ livestream/[zoneId].tsx # live stream (sẽ đổi theo camera nhà yến — VISION-FR-013)
    ├─ components/
    │  ├─ ui/                     # text · button · pressable-scale · text-field · code-input · form-message
-   │  ├─ auth/                   # AuthScreenLayout.tsx (khung chung các màn xác thực, không cuộn)
-   │  └─ layout/                 # AnimatedSplash.tsx · BottomTabBar.tsx (thanh tab, nút nổi) · AppHeader.tsx (header dùng chung, tự chừa vùng an toàn) ·
+   │  ├─ auth/                   # AuthScreenLayout.tsx (khung chung các màn xác thực, không cuộn; form nhích lên vừa đủ khi bàn phím mở) ·
+   │  │                          #   CollapsesWithKeyboard.tsx (logo, mô tả, chân trang thu lại cùng nhịp bàn phím) ·
+   │  │                          #   LogoutButton.tsx (đăng xuất có hỏi xác nhận — tab Tài khoản, màn mật khẩu tạm)
+   │  └─ layout/                 # AnimatedSplash.tsx · TextLogo.tsx (logo chữ của splash và màn đăng nhập) · BottomTabBar.tsx (thanh tab, nút nổi) · AppHeader.tsx (header dùng chung, tự chừa vùng an toàn) ·
    │                             #   PlaceholderScreen.tsx (màn tạm của menu chưa gán)
    ├─ config/                    # queryClient.ts
    ├─ constants/                 # theme.ts (Colors, Radius, BorderWidth, Spacing, FontFamily, Typography)
    │                             # apiEndpoints.ts (API_BASE_URL, WEBSOCKET_BASE_URL, ENDPOINTS)
-   │                             # roleTabs.ts (tab của từng role, isMobileRole) · authTiming.ts (hạn mã, chờ gửi lại)
+   │                             # roleTabs.ts (tab của từng role, isMobileRole) · authTiming.ts (độ dài và hạn của mã đặt lại mật khẩu)
    ├─ hooks/                     # một hook một file, chia theo nghiệp vụ
    │  ├─ auth/                   # useLogin · useLogout · useForgotPassword · useResetPassword · useChangePassword
    │  ├─ farm/                   # useFarms · useFarmDetail
@@ -148,11 +150,11 @@ mobile/
    └─ utils/                     # date.utils · number.utils · label.utils · validation.utils · apiError.utils
 ```
 
-**Menu theo role:** sửa duy nhất `src/constants/roleTabs.ts` (`ROLE_TABS`): mỗi mục gồm `name` (thư mục route trong `(tabs)/`), `title`, `icon` (Phosphor). Farm Owner giữ 5 tab; Domain Expert có 3 menu tạm `menu-1..3`, đổi tên và trỏ `name` sang route thật khi làm màn. Role không có trong `ROLE_TABS` thì không vào được app (Technician, Admin dùng web). Route không thuộc role nào bị ẩn khỏi thanh tab (`hidden`).
+**Menu theo role:** sửa duy nhất `src/constants/roleTabs.ts` (`ROLE_TABS`): mỗi mục gồm `name` (thư mục route trong `(tabs)/`), `title`, `icon` (Phosphor). Farm Owner giữ 5 tab; Domain Expert có 2 menu tạm `menu-1..2` (đổi tên và trỏ `name` sang route thật khi làm màn) và tab `profile` dùng chung. Role không có trong `ROLE_TABS` thì không vào được app (Technician, Admin dùng web). Route không thuộc role nào bị ẩn khỏi thanh tab (`hidden`).
 
 ### 2.1 Luồng theo role trên mobile
 
-Nguồn: Report 3 §2.2 (luồng MF), §2.4 (quyền), Report 4 §5.4 (phạm vi mobile). Chỉ **Farm Owner** và **Domain Expert** vào app. Technician và Administrator đăng nhập đúng vẫn bị đăng xuất, kèm câu "Tài khoản này dùng trên bản web".
+Nguồn: Report 3 §2.2 (luồng MF), §2.4 (quyền), Report 4 §5.4 (phạm vi mobile). Chỉ **Farm Owner** và **Domain Expert** vào app. Technician và Administrator đăng nhập đúng vẫn bị đăng xuất, kèm câu "Tài khoản này chỉ dùng được trên bản web".
 
 ```
 Splash
@@ -174,7 +176,7 @@ Farm Owner — (tabs)
 │                          kết luận và quyết định của chuyên gia (EXPERT-FR-009)
 └─ Tài khoản   profile     hồ sơ, đổi mật khẩu, kênh thông báo (push, Telegram), thông báo trong app, đăng xuất
 
-Domain Expert — (tabs)   (hiện là menu-1..3 tạm; đích như dưới, đổi trong ROLE_TABS)
+Domain Expert — (tabs)   (hiện là menu-1..2 tạm + profile; đích như dưới, đổi trong ROLE_TABS)
 ├─ Tổng quan   dashboard   như Farm Owner, chỉ đọc
 ├─ Trang trại  farms ─► cùng cây màn của Farm Owner, KHÔNG có relay, device-setup, ghi harvest
 │                zone : sửa ngưỡng, hệ số, 5 tham số phát hiện (EXPERT-FR-008)
@@ -203,7 +205,7 @@ Domain Expert — (tabs)   (hiện là menu-1..3 tạm; đích như dưới, đ�
 - **Một màn cho mọi role.** Hai role đi chung route, chung component, chung style; role chỉ quyết định nút thao tác nào hiện. Cấm tạo route hay component riêng theo role (`expert/zone/…`, `ZoneCardExpert`, `OwnerAlertDetail`).
 - **Quyền lấy từ một chỗ:** `src/utils/permission.utils.ts` (tạo khi màn đầu tiên cần), hàm `canPerform(user, action, { farmHasExpert })` theo bảng trên, có test. Màn hình không tự so `user.role === '…'`. Ngoại lệ duy nhất: menu trong `constants/roleTabs.ts`.
 - Ẩn nút không phải bảo mật (backend chặn), nhưng app không đưa ra thao tác mà backend sẽ từ chối.
-- **Role nào cũng phải có tab Tài khoản** để đăng xuất và đổi mật khẩu. Hiện Domain Expert chỉ có `menu-1..3`, chưa đăng xuất được — gán một menu sang `profile` khi làm màn này.
+- **Role nào cũng phải có tab Tài khoản** (`profile`) để đăng xuất và đổi mật khẩu — `roleTabs.test.ts` kiểm tra điều này. Nút đăng xuất là `components/auth/LogoutButton.tsx`: hỏi xác nhận, khoá nút khi request chạy; không viết lại ở màn khác.
 
 ### 2.2 Đồ dùng chung đặt ở đâu
 
@@ -212,7 +214,7 @@ Domain Expert — (tabs)   (hiện là menu-1..3 tạm; đích như dưới, đ�
 | Thứ dùng chung | Đặt ở | Quy định |
 |----------------|-------|----------|
 | Nút, chữ, ô nhập, ô mã, dòng báo lỗi, badge, toggle, chip, hộp xác nhận, skeleton, khung rỗng | `components/ui/` (kebab-case) | Một component cho một loại; khác nhau bằng `variant`/`size`, không bằng role |
-| Header, khung màn auth, màn tạm | `components/layout/` · `components/auth/` | Mọi màn bắt đầu bằng `AppHeader`; màn auth dùng `AuthScreenLayout` |
+| Header, khung màn auth, màn tạm, nút đăng xuất | `components/layout/` · `components/auth/` | Mọi màn bắt đầu bằng `AppHeader`; màn auth dùng `AuthScreenLayout`; đăng xuất luôn qua `LogoutButton` |
 | Mảnh nghiệp vụ ≥ 2 màn dùng | `components/common/` | `StatusDot`, `SeverityBadge`, `AlertStatusBadge`, `MetricTile`, `card/` |
 | Mảnh của một luồng | `components/<nghiệp vụ>/` | `device-setup/`, `alert/`, `zone/`, `vision/`, `health/`, `harvest/`, `report/` |
 | Trang hồ sơ / tài khoản | `src/app/(tabs)/profile/` (`index`, `change-password`, `notifications`) | Một màn cho mọi role; mục push, Telegram chỉ hiện với Farm Owner |
@@ -233,8 +235,8 @@ Domain Expert — (tabs)   (hiện là menu-1..3 tạm; đích như dưới, đ�
 Màn hình (`src/app/`) → hook (`src/hooks/<nghiệp vụ>/`) → API (`src/services/api/<resource>.api.ts`) → `apiClient.ts` → backend. Màn hình không gọi axios hay `services/api` trực tiếp.
 
 - **HTTP**: `services/api/apiClient.ts` — axios instance `apiClient`, `baseURL` = `EXPO_PUBLIC_API_URL` (route không có tiền tố, theo `docs/api/api-spec.yaml`), header `X-Client: mobile` (backend trả `refreshToken` trong body thay vì chỉ cookie), timeout 15s.
-  - Interceptor gắn `Bearer accessToken` đọc từ SecureStore; gặp 401 thì gọi `POST /auth/refresh` 1 lần (các request đồng thời xếp hàng chờ chung 1 lần refresh) rồi gửi lại.
-  - Route xác thực (đăng nhập, quên/đặt lại mật khẩu, OTP) không làm mới token: 401 ở đó là sai thông tin.
+  - Interceptor gắn `Bearer accessToken` đọc từ bộ nhớ (`authStore.accessToken`), không đọc SecureStore mỗi request vì giải mã Keystore/Keychain chậm — SecureStore chỉ giữ token qua lần mở app sau; gặp 401 thì gọi `POST /auth/refresh` 1 lần (các request đồng thời xếp hàng chờ chung 1 lần refresh) rồi gửi lại; request mang token cũ hơn token hiện tại (lần làm mới khác vừa xong) thì gửi lại ngay, không làm mới thêm. Lời gọi refresh dùng axios instance riêng không interceptor, cùng `baseURL`, `X-Client` và timeout 15s — refresh treo thì hết giờ, không giữ các request chờ mãi.
+  - Route xác thực (đăng nhập, quên/đặt lại mật khẩu, OTP) không làm mới token: 401 ở đó là sai thông tin. Đăng xuất **có** làm mới: backend đòi access token còn hạn cho `/auth/logout`, không làm mới thì refresh token không bị thu hồi (AUTH-FR-006).
   - Backend từ chối refresh (401) thì xoá phiên (`authStore.clearAuth`) và về `(auth)/login`; mất mạng thì giữ phiên.
   - Gặp 403 `PASSWORD_CHANGE_REQUIRED` thì mở `(auth)/reset-password` chế độ `temporary` (AUTH-FR-005c).
 - **Token**: `accessToken`, `refreshToken`, `user` luôn lưu trong SecureStore (Keychain/Keystore) qua `authStore.setAuth`; không lưu vào MMKV, AsyncStorage hay log.
@@ -244,11 +246,11 @@ Màn hình (`src/app/`) → hook (`src/hooks/<nghiệp vụ>/`) → API (`src/se
   - Danh sách trả `{ data, meta: { page, limit, total } }`, màn hình phân trang theo `meta`.
   - Dữ liệu server chỉ nằm trong cache React Query, không chép sang zustand hay `useState`.
 - **Realtime**: `services/socket/socketClient.ts` — `connectSocket()` sau khi đăng nhập (`useLogin`), mỗi lần kết nối lại đọc lại token, tự kết nối lại 1–5s; vào/ra phòng `JOIN_ZONE` / `LEAVE_ZONE`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`.
-  - Màn hình đăng ký sự kiện trong effect phải huỷ trong cleanup. **Chưa làm:** hàm `off*` tương ứng.
+  - Màn hình đăng ký sự kiện trong effect phải huỷ trong cleanup bằng `off*` cùng handler (`offTelemetryUpdate`, `offAlertNew`, `offBirdCountUpdate`, `offRelayUpdate`); mẫu: `hooks/telemetry/useLiveTelemetry.ts`.
 - **Client state**: zustand trong `stores/` — `authStore.ts` (`user`, `accessToken`, `isAuthenticated`, `isLoading`; `setAuth` / `clearAuth` / `loadStoredAuth`), `alertStore.ts` (`unreadCount`, `latestAlert` cho badge tab Cảnh báo).
-- **Push**: `services/notification/pushNotification.ts` xin quyền, lấy push token, tạo kênh Android `alerts`. **Chưa làm:** gửi token lên backend (chờ endpoint trong `api-spec.yaml`, ALERT-FR-013).
-- **Lỗi**: hiện 1 câu tiếng Việt ngắn theo nhóm (phiên đăng nhập/quyền, không tìm thấy, dữ liệu không hợp lệ, lỗi hệ thống/mạng); không hiện mã HTTP hay nguyên văn thông báo backend.
-  - Xác thực: `utils/apiError.utils.ts` (`getAuthErrorMessage`) đổi `error.code` + status thành câu theo từng thao tác; sai email hay sai mật khẩu chung một câu; 429 lấy `retryAfterSec` của backend. Mutation xác thực đặt `retry: false` vì mỗi lần sai đều bị backend tính vào giới hạn 10 lần / 15 phút.
+- **Push**: `services/notification/pushNotification.ts` xin quyền, lấy push token, tạo kênh Android `alerts`. **Chưa làm:** gửi token lên backend (chờ endpoint trong `api-spec.yaml`, ALERT-FR-002).
+- **Lỗi**: hiện 1 câu tiếng Việt ngắn theo nhóm (phiên đăng nhập/quyền, không tìm thấy, dữ liệu không hợp lệ, lỗi hệ thống, mất mạng); câu đầy đủ, có hướng dẫn "Vui lòng …" khi người dùng làm được gì đó; không hiện mã HTTP hay nguyên văn thông báo backend. Mất mạng (`NETWORK_ERROR_MESSAGE`) và lỗi máy chủ 5xx (`SERVER_ERROR_MESSAGE`) là hai câu khác nhau.
+  - Xác thực: `utils/apiError.utils.ts` (`getAuthErrorMessage`) đổi `error.code` + status thành câu theo từng thao tác; sai email hay sai mật khẩu chung một câu; 429 lấy `retryAfterSec` của backend. Nút "Gửi lại mã" không có thời gian chờ đặt ở máy (không có nguồn) — giới hạn là của backend. Mutation xác thực đặt `retry: false` vì mỗi lần sai đều bị backend tính vào giới hạn 10 lần / 15 phút.
 - **Route params**: id đi qua route động của expo-router (`farm/[farmId]`, `house/[houseId]`, `zone/[zoneId]`, `device/[deviceId]`, `alert/[alertId]`), đọc bằng `useLocalSearchParams`; không hiện id lên giao diện.
 
 ---
@@ -261,36 +263,36 @@ Phong cách: **tối giản, phẳng** theo ảnh mẫu — nền trắng, khố
 - Chỉ dùng `StyleSheet.create` + token trong `@/constants/theme`. **Không** hard-code màu/font/radius/khoảng cách trong màn hình.
 - Không dùng thư viện UI ngoài (không Tailwind/NativeWind, không UI kit). Ghép từ primitive trong `components/ui`.
 - Chữ luôn đi qua `<Text variant=…>`; icon luôn qua `<Icon …>`; nút bấm có hiệu ứng dùng `<PressableScale>` / `<Button>`.
-- Có cả sáng và tối: lấy `const palette = usePalette()` (`hooks/theme/usePalette.ts`), không dùng thẳng `Colors.light`. Màu áp theo `palette` đặt inline (`[styles.title, { color: palette.text }]`), phần không đổi theo sáng/tối để trong `StyleSheet`.
+- **Chỉ có giao diện sáng** — không làm chế độ tối, không đọc `useColorScheme()`. Lấy màu qua `const palette = usePalette()` (`hooks/theme/usePalette.ts`), không dùng thẳng `Colors.light`, để mọi màn lấy màu từ một chỗ.
 - Toàn bộ chữ trên giao diện bằng tiếng Việt; giữ "Zone", "Farm" giống web.
 
 ### 3.2 Màu (`Colors`)
-Nguồn: `constants/theme.ts`. Lấy bộ màu theo giao diện máy bằng `usePalette()`; `Colors.raw` là mã hex gốc cho chỗ không đổi theo sáng/tối (khung video, màu đèn kênh thông báo). Không viết hex trực tiếp trong màn hình.
+Nguồn: `constants/theme.ts`. Lấy bộ màu bằng `usePalette()`; `Colors.raw` là mã hex gốc cho chỗ cần màu cố định ngoài bảng (khung video nền tối, màu đèn kênh thông báo). Không viết hex trực tiếp trong màn hình.
 
 **Cấm tuyệt đối tự phối màu mới.** Chỉ dùng token có trong hai bảng dưới. Không viết mã hex, không pha độ trong suốt mới (`palette.primary + '33'`), không lấy màu mặc định của thư viện, không làm bảng màu riêng cho một role hay một màn. Chỉ được thêm màu khi prompt yêu cầu **và ghi rõ mã `#RRGGBB`**. Khi đó:
-1. thêm token vào cả `Colors.light` và `Colors.dark` trong `theme.ts` (prompt không cho mã tối thì dùng cùng mã), comment ghi "thêm theo yêu cầu";
+1. thêm token vào `Colors.light` trong `theme.ts`, comment ghi "thêm theo yêu cầu";
 2. thêm dòng vào bảng ở mục này;
 3. cuối câu trả lời ghi rõ: "Đã thêm mã màu ngoài bảng màu hệ thống: `<token>` = `#…`".
 
 Quy tắc màu: **xanh `primary` là điểm nhấn duy nhất** (nút chính, tab đang chọn, badge số, nhãn nhỏ); **cam `alert` chỉ dùng cho cảnh báo, lỗi, khẩn cấp**, không dùng cho nút; số liệu tĩnh để xám/trắng.
 
-| Nhóm | Token | Sáng | Tối | Dùng cho |
-|------|-------|------|-----|----------|
-| Nền | `background` | `#FFFFFF` | `#343434` | nền màn hình (Stack/Tabs `contentStyle`, tab bar) |
-| | `surface` | `#CBCBCB33` | `#9D9D9D33` | nền ô/card (xám mờ 20%) |
-| | `surfaceStrong` | `#CBCBCB` | `#9D9D9D` | khung ảnh, khối nền lớn |
-| | `border` | `#CBCBCB` | `#9D9D9D` | viền nút outline, ô nhập |
-| | `divider` | `#CBCBCB80` | `#9D9D9D80` | đường kẻ mảnh chia dòng, chia khối |
-| Chữ | `text` | `#343434` | `#FFFFFF` | chữ chính |
-| | `textSecondary` | `#9D9D9D` | `#CBCBCB` | chữ phụ, label nhỏ |
-| | `secondary` | `#9D9D9D` | `#9D9D9D` | icon/phần tử trung tính |
-| Primary | `primary` / `tint` | `#446401` / `#446401` | `#B5D32C` / `#FFFFFF` | nền nút chính, điểm nhấn |
-| | `onPrimary` | `#FFFFFF` | `#343434` | chữ/icon trên nền `primary` |
-| Tab bar | `tabIconSelected` | `#446401` | `#FFFFFF` | tab đang chọn |
-| | `tabIconDefault` | `#9D9D9D` | `#FFFFFF80` | tab chưa chọn |
-| Cảnh báo | `alert` | `#FF7426` | `#FF7426` | cảnh báo, lỗi thiết bị, khẩn cấp |
+| Nhóm | Token | Hex | Dùng cho |
+|------|-------|-----|----------|
+| Nền | `background` | `#FFFFFF` | nền màn hình (Stack/Tabs `contentStyle`, tab bar) |
+| | `surface` | `#CBCBCB33` | nền ô/card (xám mờ 20%) |
+| | `surfaceStrong` | `#CBCBCB` | khung ảnh, khối nền lớn |
+| | `border` | `#CBCBCB` | viền nút outline, ô nhập |
+| | `divider` | `#CBCBCB80` | đường kẻ mảnh chia dòng, chia khối |
+| Chữ | `text` | `#343434` | chữ chính |
+| | `textSecondary` | `#9D9D9D` | chữ phụ, label nhỏ |
+| | `secondary` | `#9D9D9D` | icon/phần tử trung tính |
+| Primary | `primary` / `tint` | `#446401` | nền nút chính, điểm nhấn |
+| | `onPrimary` | `#FFFFFF` | chữ/icon trên nền `primary` |
+| Tab bar | `tabIconSelected` | `#446401` | tab đang chọn |
+| | `tabIconDefault` | `#9D9D9D` | tab chưa chọn |
+| Cảnh báo | `alert` | `#FF7426` | cảnh báo, lỗi thiết bị, khẩn cấp |
 
-Màu trạng thái — **giống nhau ở sáng và tối, chép đúng từ web** (`frontend/tailwind.config.ts`):
+Màu trạng thái — **chép đúng từ web** (`frontend/tailwind.config.ts`):
 
 | Nhóm | Token | Hex | Dùng cho |
 |------|-------|-----|----------|
@@ -350,7 +352,7 @@ row:    { borderBottomWidth: BorderWidth.hairline, borderBottomColor: palette.di
 ```
 
 ### 3.5 Component primitive (`components/ui`)
-Đã có: `text`, `button` (`primary`, `link`), `pressable-scale`, `text-field` (nền `surface` bo `Radius.full`, icon trái, chữ gợi ý thay nhãn, không viền — viền `primary` khi đang nhập, `alert` khi lỗi; lỗi/gợi ý dưới ô, nút mắt cho mật khẩu), `code-input` (ô mã số nền `surface` bo `Radius.md`, dán và tự điền mã, rung khi mã bị từ chối), `form-message` (dòng lỗi màu `alert` / dòng thành công màu `primary`). Còn lại trong bảng là quy ước khi viết. Giá trị animated (reanimated) đọc/ghi bằng `.get()` / `.set()`, không gán `.value` trong handler (luật React Compiler của eslint).
+Đã có: `text`, `button` (`primary`, `secondary`, `link`), `pressable-scale`, `text-field` (nền `surface` bo `Radius.full`, icon trái, chữ gợi ý thay nhãn, không viền — viền `primary` khi đang nhập, `alert` khi lỗi; lỗi/gợi ý dưới ô, nút mắt cho mật khẩu), `code-input` (ô mã số nền `surface` bo `Radius.md`, dán và tự điền mã, rung khi mã bị từ chối), `form-message` (dòng lỗi màu `alert` / dòng thành công màu `primary`). Còn lại trong bảng là quy ước khi viết. Giá trị animated (reanimated) đọc/ghi bằng `.get()` / `.set()`, không gán `.value` trong handler (luật React Compiler của eslint).
 
 | Component | Ghi chú |
 |-----------|---------|
@@ -371,7 +373,7 @@ Layout: `AppHeader` (đã có), `BottomTabBar` (đã có, `components/layout/Bot
 - Tab dựng từ `ROLE_TABS`; route không thuộc role bị ẩn bằng `hidden`.
 - Nền vẽ bằng `react-native-svg`: bo 2 góc trên, bóng đổ nhoè (`SHADOW_BLUR`, `SHADOW_OFFSET_Y`, màu `divider`), viền mép `BORDER_COLOR_TOKEN`, có bướu nhô quanh nút nổi.
 - Tab có `isFeatured: true` (mỗi role tối đa một) thành nút tròn 60 nổi lên, nền xanh loang `expo-linear-gradient` từ `Colors.raw.successLime` sang `Colors.raw.brandPrimary`, icon trắng 32; nhãn thẳng hàng các tab khác. Role không có tab nổi thì mép thẳng.
-- Tab đang chọn: icon `fill` + màu `tabIconSelected`; badge số nền `primary` viền màu nền.
+- Tab đang chọn: icon `fill` + màu `tabIconSelected` (riêng nút nổi luôn icon `fill` trắng, không đổi khi chọn); badge số nền `primary` viền màu nền.
 - Thanh kéo lên đè đáy màn một khoảng `TAB_BAR_OVERLAP` (đủ chứa nút nổi, bướu và phần nhoè của bóng): màn tab có nội dung cuộn phải chừa thêm `TAB_BAR_OVERLAP` ở đáy.
 - Màn con như `profile/notifications` nằm trong thư mục của tab cha nên tab cha vẫn sáng.
 
@@ -382,7 +384,7 @@ Layout: `AppHeader` (đã có), `BottomTabBar` (đã có, `components/layout/Bot
 - Số đo realtime (nhiệt độ, độ ẩm, NH3/CO2) cập nhật tại chỗ, không chạy animation mỗi lần có giá trị mới.
 - Rung nhẹ (`expo-haptics`) chỉ cho hành động có hậu quả: bật/tắt relay, xác nhận cảnh báo.
 - Ảnh dùng `expo-image`.
-- **Splash** (`components/layout/AnimatedSplash.tsx`, gắn ở `app/_layout.tsx`): splash gốc chỉ là màn trắng (ảnh `splash-blank.png` trong suốt — Android 12+ luôn cắt icon splash gốc thành hình tròn nên không dùng icon ở đây) → splash JS: cụm icon khối vuông 120 (bo `Radius.lg` 24) + logo chữ rộng 200, cách nhau `Spacing.lg` 16, căn giữa tuyệt đối trên nền `#FFFFFF`, không có dòng chữ phụ → nạp xong font/phiên đăng nhập, giữ tối thiểu 0.8s rồi mờ dần 0.6s để lộ màn auth. Splash luôn nền trắng (chữ "Care" đen); app dựng bên dưới ngay khi nạp xong; "Giảm chuyển động" bật thì bỏ qua hiệu ứng mờ.
+- **Splash** (`components/layout/AnimatedSplash.tsx`, gắn ở `app/_layout.tsx`): splash gốc chỉ là màn trắng (ảnh `splash-blank.png` trong suốt — Android 12+ luôn cắt icon splash gốc thành hình tròn nên không dùng icon ở đây) → splash JS: cụm icon khối vuông 120 (bo `Radius.lg` 24) + logo chữ rộng 200, cách nhau `Spacing.lg` 16, căn giữa tuyệt đối trên nền `#FFFFFF`, không có dòng chữ phụ → nạp xong font/phiên đăng nhập, giữ tối thiểu 0.8s rồi mờ dần 0.6s để lộ màn auth. Splash nền trắng như cả app; app dựng bên dưới ngay khi nạp xong; "Giảm chuyển động" bật thì bỏ qua hiệu ứng mờ.
 
 ### 3.7 Accessibility
 - Nút icon-only phải có `accessibilityLabel` (tiếng Việt) và vùng chạm tối thiểu 44×44 pt / 48×48 dp (thêm `hitSlop` nếu icon nhỏ hơn).

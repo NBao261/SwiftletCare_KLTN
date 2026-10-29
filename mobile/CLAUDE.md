@@ -36,18 +36,18 @@ src/
   app/            Expo Router routes — the folder tree IS the navigation
     _layout.tsx     root Stack: fonts, stored auth, QueryClientProvider, AnimatedSplash on top until ready
     (auth)/         login, forgot-password, verify-code, reset-password (also the first-sign-in temporary password) — no public sign-up
-    (tabs)/         dashboard, farms, alerts, analytics, profile, menu-1..3 (each <tab>/index.tsx); which tabs a role sees comes from constants/roleTabs.ts
+    (tabs)/         dashboard, farms, alerts, analytics, profile (both roles), menu-1..2 (each <tab>/index.tsx); which tabs a role sees comes from constants/roleTabs.ts
     farm/[farmId] · zone/[zoneId] · device/[deviceId] · alert/[alertId] · livestream/[zoneId]
   components/
     ui/           primitives: text, button, pressable-scale, text-field, code-input, form-message
-    auth/         AuthScreenLayout.tsx (shared frame of the auth screens, no scrolling)
-    layout/       AnimatedSplash.tsx · AppHeader.tsx (shared header, adds the top safe-area inset; no router header is used) · PlaceholderScreen.tsx (menus not wired to a real screen yet)
+    auth/         AuthScreenLayout.tsx (shared frame of the auth screens, no scrolling; the form moves up only as far as the keyboard needs — `react-native-keyboard-controller`) · CollapsesWithKeyboard.tsx (logo, description, footer shrink and fade frame by frame with the keyboard) · LogoutButton.tsx (sign-out with confirmation: profile tab, temporary-password screen)
+    layout/       AnimatedSplash.tsx · TextLogo.tsx (text logo of splash and login) · AppHeader.tsx (shared header, adds the top safe-area inset; no router header is used) · PlaceholderScreen.tsx (menus not wired to a real screen yet)
   config/         queryClient.ts
   constants/      apiEndpoints.ts (API_BASE_URL, WEBSOCKET_BASE_URL, ENDPOINTS) · theme.ts (Colors, Radius, Spacing, Typography…) · roleTabs.ts (tabs per role, isMobileRole) · authTiming.ts
-  hooks/<domain>/ one hook per file: auth/ (useLogin, useLogout, useForgotPassword, useResetPassword, useChangePassword) · farm/ · alert/ · telemetry/ · bird-count/ · theme/ (usePalette)
+  hooks/<domain>/ one hook per file: auth/ (useLogin, useLogout, useForgotPassword, useResetPassword, useChangePassword) · farm/ · alert/ · telemetry/ · bird-count/ · theme/ (usePalette — light palette only)
   services/
     api/          apiClient.ts (axios instance) + one <resource>.api.ts per resource (auth, farm, device, telemetry, alert, analytics)
-    socket/       socketClient.ts — connect/disconnect, joinZone/leaveZone, on* subscribers
+    socket/       socketClient.ts — connect/disconnect, joinZone/leaveZone, on*/off* subscribers; a connection the backend rejects (expired token after reopening the app) refreshes the token once through apiClient and reconnects
     notification/ pushNotification.ts — permission + Expo push token + Android "alerts" channel
     session/      localSession.ts — startRealtimeIfReady (after sign-in or a restored session) · clearLocalSession (sign-out and expired session: socket, React Query cache, alert badge, tokens)
   stores/         Zustand: authStore (SecureStore-backed), alertStore
@@ -57,10 +57,10 @@ src/
 
 `components/common/` and the other `components/<domain>/` folders do not exist yet — create them when a second screen needs the same piece.
 
-**Tabs per role:** `src/constants/roleTabs.ts` (`ROLE_TABS`) is the only place to change a role's menu — title, icon and the `(tabs)` route it opens. A role with no entry cannot use the app (`isMobileRole`): Technician and Administrator are signed out with "use the web console". The Farm Owner keeps the five tabs; the Domain Expert has three placeholder menus (`menu-1..3`) until its screens exist.
+**Tabs per role:** `src/constants/roleTabs.ts` (`ROLE_TABS`) is the only place to change a role's menu — title, icon and the `(tabs)` route it opens. A role with no entry cannot use the app (`isMobileRole`): Technician and Administrator are signed out with "use the web console". The Farm Owner keeps the five tabs; the Domain Expert has two placeholder menus (`menu-1..2`) until its screens exist, plus the shared `profile` tab. Every mobile role must have `profile` (checked by `roleTabs.test.ts`); sign-out always goes through `components/auth/LogoutButton.tsx`.
 
 **Plumbing as written:**
-- `src/services/api/apiClient.ts` — axios with `X-Client: mobile` (the backend then returns the refresh token in the JSON body instead of only a cookie), `Authorization` from SecureStore, and a 401 interceptor that queues concurrent requests behind one `POST /auth/refresh`, then retries. Auth routes (login, forgot/reset password, OTP) never trigger a refresh. A refresh the backend rejects (401) clears the session and opens `(auth)/login`; a network failure keeps it. A 403 `PASSWORD_CHANGE_REQUIRED` opens `reset-password` in `temporary` mode (AUTH-FR-005c).
+- `src/services/api/apiClient.ts` — axios with `X-Client: mobile` (the backend then returns the refresh token in the JSON body instead of only a cookie), `Authorization` from the in-memory token in `authStore` (SecureStore only keeps it across app launches — reading the Keystore on every request is slow), and a 401 interceptor that queues concurrent requests behind one `POST /auth/refresh`, then retries; a 401 on a request sent with an older token than the current one is retried at once without another refresh. Auth routes (login, forgot/reset password, OTP) never trigger a refresh; logout does, since the backend puts `/auth/logout` behind `authenticate`. The refresh call uses its own axios instance without interceptors but with the same base URL, `X-Client` and 15 s timeout. A refresh the backend rejects (401) clears the session and opens `(auth)/login`; a network failure keeps it. A 403 `PASSWORD_CHANGE_REQUIRED` opens `reset-password` in `temporary` mode (AUTH-FR-005c).
 - `src/stores/authStore.ts` — `accessToken`, `refreshToken` and `user` in `expo-secure-store`; `loadStoredAuth()` runs before the splash screen hides and drops a stored session whose role cannot use the app.
 - Auth error messages: `src/utils/apiError.utils.ts` maps the backend's `error.code` and status to one Vietnamese sentence per action; a wrong email or password is always the same sentence, and a 429 shows the backend's `retryAfterSec`. Auth mutations never retry, since every failure counts toward the backend's 10-per-15-minutes limit.
 - `src/services/socket/socketClient.ts` — singleton, `auth` callback re-reads the token on every (re)connect, infinite reconnection with back-off; `JOIN_ZONE`/`LEAVE_ZONE` rooms like the web.
@@ -73,7 +73,7 @@ src/
 - **[Bắt buộc]** Names follow `MOBILE_GUIDE.md` §3.8: one hook per file in `src/hooks/<domain>/use<Action>.ts`; one `src/services/api/<resource>.api.ts` per resource exporting `<resource>Api`; `src/types/<module>.types.ts`; `src/stores/<name>Store.ts`; `src/utils/<topic>.utils.ts`; multi-word folders kebab-case. Screens are default exports named after the screen (`DashboardScreen`).
 - **[Bắt buộc]** No abbreviations in variable, parameter or function names (`response`, `state`, `accessToken` — not `res`, `s`, `tk`); backend field names (`temp_min`) stay as the API sends them.
 - **[Bắt buộc]** Before building a screen, read `MOBILE_GUIDE.md` §2.1 (role flow tree) and §2.2 (where shared pieces live) and reuse what exists in `components/ui/`, `components/layout/`, `components/common/`; a missing style is a new `variant`/`size` on that component. One screen and one component serve both roles — no per-role routes, components or styles; which actions show comes from `utils/permission.utils.ts`, never an inline `user.role === …` (menus aside: `constants/roleTabs.ts`).
-- **[Bắt buộc]** No new colour, ever, unless the prompt asks for it with an explicit `#RRGGBB`: only tokens of `src/constants/theme.ts` through `usePalette()` (`Colors.raw` for fixed dark surfaces), no raw hex, no new alpha mixes, no library default colours, no per-role palette. A requested colour is added as a token in `Colors.light` and `Colors.dark` plus the table of `MOBILE_GUIDE.md` §3.2, and the reply ends with a note naming the colour added outside the system palette.
+- **[Bắt buộc]** No new colour, ever, unless the prompt asks for it with an explicit `#RRGGBB`: only tokens of `src/constants/theme.ts` through `usePalette()` (`Colors.raw` for fixed dark surfaces), no raw hex, no new alpha mixes, no library default colours, no per-role palette. The app has a light theme only (`app.json` `userInterfaceStyle: light`, no dark palette, no `useColorScheme()`). A requested colour is added as a token in `Colors.light` plus the table of `MOBILE_GUIDE.md` §3.2, and the reply ends with a note naming the colour added outside the system palette.
 - **[Nên]** Styles via `StyleSheet.create` with spacing, radius and type from `src/constants/theme.ts`.
 
 ### API, data and state
@@ -113,13 +113,12 @@ src/
 | Where | Out of line | How to pay it |
 |---|---|---|
 | `src/types/alert.types.ts`, `auth.types.ts` | `AlertType` still has `PREDATOR_DETECTED` (the backend too); `NotificationPreferences` keeps `zalo`/`sms` because the backend model still has them — never show them | Remove `PREDATOR_DETECTED` on all three sides in one PR |
-| `src/services/socket/socketClient.ts` | `on*` helpers have no matching `off*`, so screens cannot clean up; no `JOIN_HOUSE` / `NOTIFICATION_NEW` yet | Add `off*` helpers and the house room before the first screen subscribes |
+| `src/services/socket/socketClient.ts` | No `JOIN_HOUSE` / `NOTIFICATION_NEW` yet | Add the house room and the notification event (with `off*`) before the first screen subscribes |
 | `src/services/notification/pushNotification.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-002) |
-| `src/constants/roleTabs.ts` | The Domain Expert's tabs are `menu-1..3` only, so that role has no profile tab and cannot sign out or change its password | Point one menu at the shared `(tabs)/profile` screen (MOBILE_GUIDE §2.1) |
 | `package.json`, `app.json` | No `expo-video` (HLS stream) or `expo-location` (farm coordinates); `react-native-maps` is installed although Report 4 §5.4 adds no map library; location permission text speaks of a map | MOBILE_GUIDE §1 "Cấu hình còn thiếu" |
 | `package.json` | Libraries declared for planned screens but not imported yet (`expo-camera` — needed for MF-10 QR setup, `expo-linear-gradient`, `react-native-maps`, `victory-native` + Skia, `react-native-mmkv` + `react-native-nitro-modules`, `burnt`). `victory-native` stays on 42.x because 43 needs Skia ≥ 2.15 and SDK 58 ships 2.14 | Drop what the screens end up not using |
 | `src/app/livestream/[zoneId]` | Keyed by zone, but cameras, bird counts and the stream belong to the house's camera (Report 3 §2.8, VISION-FR-013) | Key the route by camera (house) when the screen is built |
-| `src/app/**` screens other than `(auth)` | Stubs with `TODO` comments; the Domain Expert's tabs are placeholders `menu-1..3` | Implement per Report 3 (main flows first: MF-10 setup, alerts, dashboard, live stream) |
+| `src/app/**` screens other than `(auth)` | Stubs with `TODO` comments (profile shows name, email and sign-out only); the Domain Expert's first two tabs are placeholders `menu-1..2` | Implement per Report 3 (main flows first: MF-10 setup, alerts, dashboard, live stream) |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse (e.g. using `PREDATOR_DETECTED` or a Zalo/SMS option in new code).
 
