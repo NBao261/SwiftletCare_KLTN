@@ -238,9 +238,8 @@ describe('zoneHasIssue', () => {
     expect(zoneHasIssue({ readings: { temperature: 28, humidity: 80 }, thresholds: limits, isOnline: true, hasFaultDevice: false })).toBe(false)
   })
 
-  it('chỉ lỗi, suy giảm, mất kết nối là thiết bị hư', () => {
+  it('chỉ thiết bị mất kết nối là thiết bị hư', () => {
     expect(isFaultDeviceStatus('OFFLINE')).toBe(true)
-    expect(isFaultDeviceStatus('OFFLINE')).toBe(true) // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
     expect(isFaultDeviceStatus('PENDING')).toBe(false)
     expect(isFaultDeviceStatus('ONLINE')).toBe(false)
   })

@@ -121,9 +121,7 @@ const en: Record<string, string> = {
   'Lỗi bus RS485': 'RS485 bus failure',
   'Thiết bị mất kết nối': 'Device offline',
   'Camera AI suy giảm': 'AI camera degraded',
-  'Mất điện': 'Power outage',
   'Lỗi loa ru': 'Speaker failure',
-  'Phát hiện thiên địch': 'Predator detected',
 
   // ── Nhật ký: hành động, đối tượng, lý do ─────────────────────────────────────────────────────────────────────────
   'Khoá tài khoản': 'Lock account',
@@ -434,9 +432,6 @@ const en: Record<string, string> = {
   'Kênh nhận cảnh báo và giờ im lặng': 'Alert channels and quiet hours',
   'Push notification': 'Push notification',
   'Thông báo trên trình duyệt/ứng dụng': 'Notifications in the browser/app',
-  // 'Ảnh báo CRITICAL/HIGH': 'CRITICAL/HIGH alerts',  // Zalo ZNS đã bỏ (G-01)
-  // 'SMS dự phòng': 'Backup SMS',                      // SMS đã bỏ (G-01)
-  // 'Chỉ cảnh báo CRITICAL': 'CRITICAL alerts only',  // đã bỏ (G-01)
   'Giờ im lặng': 'Quiet hours',
   '— không nhận thông báo, trừ CRITICAL': '— no notifications except CRITICAL',
   'Từ': 'From',

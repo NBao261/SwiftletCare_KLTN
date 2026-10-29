@@ -25,7 +25,7 @@ export interface ZoneDeviceGroup {
   devices: DeviceItem[];
 }
 
-// Số thiết bị theo trạng thái: lỗi = OFFLINE/ERROR/DEGRADED, chờ = PENDING
+// Số thiết bị theo trạng thái: lỗi = OFFLINE, chờ = PENDING
 export interface DeviceTally {
   total: number;
   online: number;

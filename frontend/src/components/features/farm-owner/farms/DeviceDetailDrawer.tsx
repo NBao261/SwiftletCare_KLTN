@@ -11,7 +11,7 @@ import type { DeviceStatus } from '@/types'
 import { NO_VALUE } from '@/constants/display'
 
 const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
-  ONLINE: 'positive', OFFLINE: 'neutral', PENDING: 'warning', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
+  ONLINE: 'positive', OFFLINE: 'neutral', PENDING: 'warning',
 }
 
 interface DeviceDetailDrawerProps { device: DeviceRow | null; zoneNode?: ZoneNode; onClose: () => void }

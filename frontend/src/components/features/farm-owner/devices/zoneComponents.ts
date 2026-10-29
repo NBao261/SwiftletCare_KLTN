@@ -68,11 +68,11 @@ export function latestReadingByNode(records: TelemetryRecord[]): Map<string, Tel
   return latest;
 }
 
-// Loại cảnh báo đang mở của từng node
+// Loại cảnh báo đang mở của từng node — đã xử lý (RESOLVED) hoặc bị bác bỏ (DISMISSED) thì không tính
 function openAlertTypesByNode(alerts: Alert[]): Map<string, Set<string>> {
   const types = new Map<string, Set<string>>();
   for (const alert of alerts) {
-    if (!alert.node_id || alert.status === 'RESOLVED') continue;
+    if (!alert.node_id || alert.status === 'RESOLVED' || alert.status === 'DISMISSED') continue;
     const set = types.get(alert.node_id) ?? new Set<string>();
     set.add(alert.type);
     types.set(alert.node_id, set);
@@ -89,7 +89,7 @@ function componentStatus(kind: ComponentKind, node: DeviceItem, check: DeviceChe
   const nodeStatus = detail?.status ?? node.status;
   if (nodeStatus === 'PENDING') return { ...item, status: 'pending' };
   if (nodeStatus === 'OFFLINE') return { ...item, status: 'offline' };
-  // ERROR/DEGRADED đã bỏ theo SRS 3.1.0 — OFFLINE là trạng thái hư duy nhất
+  // OFFLINE là trạng thái hư duy nhất của thiết bị (Report 3 §6.6)
   if (!check) return { ...item, status: 'unchecked' };
 
   const relays = detail?.relay_states;

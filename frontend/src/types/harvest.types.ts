@@ -2,8 +2,8 @@
 
 // Module HARVEST (§5.8)
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-// Khớp backend v2.0.0 (domain.types.ts): bỏ LISTED cùng Marketplace
-export type HarvestStatus = 'DRAFT' | 'ARCHIVED'
+// Khớp backend (domain.types.ts): chỉ còn DRAFT, đã bỏ LISTED và ARCHIVED (G-01)
+export type HarvestStatus = 'DRAFT'
 
 // Module HARVEST (§5.8, §8.2)
 export interface EnvSnapshot {

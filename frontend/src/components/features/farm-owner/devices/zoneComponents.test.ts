@@ -112,6 +112,12 @@ describe('buildZoneComponents', () => {
     expect(statusOf(groups, 'misting', 'a')?.status).toBe('fault');
   });
 
+  it('ignores an alert the expert dismissed', () => {
+    const misting = detail('a', 'ONLINE', { relay_states: { misting: true, speaker: false, ventilation: false } });
+    const groups = buildZoneComponents([node('a', 'ONLINE')], check([misting], [], [alert('a', 'MISTING_INEFFECTIVE', 'DISMISSED')]));
+    expect(statusOf(groups, 'misting', 'a')?.status).toBe('on');
+  });
+
   it('returns no group for a zone without sensor nodes', () => {
     expect(buildZoneComponents([])).toEqual([]);
   });

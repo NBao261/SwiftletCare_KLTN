@@ -40,7 +40,7 @@ export function getAnomalies(data: EnvReadings, limits: Thresholds): Anomalies {
   }
 }
 
-// Trạng thái thiết bị tính là hư: mất kết nối (ERROR/DEGRADED đã bỏ theo SRS 3.1.0)
+// Trạng thái thiết bị tính là hư: mất kết nối (PENDING là chưa kết nối lần đầu, không tính)
 const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['OFFLINE'])
 
 export function isFaultDeviceStatus(status: DeviceStatus): boolean {
@@ -99,7 +99,7 @@ interface HouseStats {
   faultDeviceType?: StabilityDeviceType
 }
 
-const FAULT_STATUSES: DeviceStatus[] = ['OFFLINE'] // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
+const FAULT_STATUSES: DeviceStatus[] = ['OFFLINE']
 const STATUS_ORDER: Record<StabilityStatus, number> = { FAULT: 0, STABLE: 1, EMPTY: 2 }
 
 export function buildHouseStability(houses: House[], zones: Zone[], devices: DeviceRef[]): HouseStability[] {

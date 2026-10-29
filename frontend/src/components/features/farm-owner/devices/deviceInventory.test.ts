@@ -72,7 +72,7 @@ describe('buildDeviceInventory', () => {
 });
 
 describe('tallyDevices', () => {
-  it('counts OFFLINE devices as faulty (ERROR/DEGRADED removed in SRS 3.1.0)', () => {
+  it('counts OFFLINE devices as faulty', () => {
     const [inventory] = buildDeviceInventory({
       houses: [house('h1')],
       zones: [zone('z1', 'h1')],
