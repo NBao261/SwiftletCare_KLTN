@@ -232,18 +232,18 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-03 — Vòng chuyên gia (P1) — Kiệt (backend), Tuấn (web)
 
-- [ ] `DISMISSED`:
+- [x] `DISMISSED`: *(Kiệt, 30/10, `b738cf4` spec + `865102f` backend, nhánh `feat/g03-expert-loop`; `OPEN_STATUSES` gồm `DISMISSED` nên gộp trùng im lặng và tự đóng như cảnh báo mở; xác nhận đã xử lý cảnh báo `DISMISSED` → 409)*
   - lưu `previous_status`;
   - `REJECTED` bắt buộc ghi chú (422);
   - đổi sang `CONFIRMED` thì khôi phục trạng thái cũ và báo lại Farm Owner;
   - gộp trùng và tự đóng tính cả `DISMISSED`;
   - `DISMISSED` không gửi thông báo.
-- [ ] BR-22: farm chưa có chuyên gia thì Farm Owner ghi kết luận, sửa tham số phát hiện, vòng đếm, lịch đếm; thông báo cảnh báo suy luận chuyển cho Farm Owner.
-- [ ] EXPERT-FR-009:
+- [x] BR-22: farm chưa có chuyên gia thì Farm Owner ghi kết luận, sửa tham số phát hiện, vòng đếm, lịch đếm; thông báo cảnh báo suy luận chuyển cho Farm Owner. *(Kiệt, 30/10: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm, thông báo chờ kiểm chứng. **Kết luận báo cáo không mở cho Farm Owner**: BR-22 ghi "No conclusions are written without an expert" và EXPERT-FR-006 cho Farm Owner 403. Lịch đếm làm ở G-12)*
+- [x] EXPERT-FR-009: *(Kiệt, 30/10; `actor_role` lấy từ ngữ cảnh request nên mọi audit đều có; thông báo chỉ trong ứng dụng, trỏ tới mục lịch sử)*
   - `notifyUser` cho mọi Farm Owner ở mỗi quyết định của chuyên gia;
   - `audit_logs` thêm `farm_id`, `actor_role`;
   - `GET /expert-activity?farmId=` đọc từ audit log.
-- [ ] ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận (thiếu dữ liệu thì báo "missing", không phải 0).
+- [x] ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận (thiếu dữ liệu thì báo "missing", không phải 0). *(Kiệt, 30/10: `GET /alerts/{id}/evidence`, kèm kết luận trước cùng loại cùng nơi theo EXPERT-FR-003)*
 - [ ] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động.
 
 ### G-04 — Mục duyệt và đề xuất hệ số (P1) — Kiệt (backend), Tuấn (màn chuyên gia), Len (nút "gửi chuyên gia" của Farm Owner)
