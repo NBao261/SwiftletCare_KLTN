@@ -72,8 +72,8 @@ export function CodeInput({
       </Animated.View>
       <TextInput
         value={value}
+        // Không đặt maxLength: dán "123 456" sẽ bị cắt trước khi bỏ dấu cách — lọc chữ số rồi mới cắt đủ độ dài
         onChangeText={text => onChange(text.replace(/\D/g, '').slice(0, length))}
-        maxLength={length}
         keyboardType="number-pad"
         textContentType="oneTimeCode"
         autoComplete="sms-otp"

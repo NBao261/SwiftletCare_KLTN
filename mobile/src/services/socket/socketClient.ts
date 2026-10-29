@@ -35,7 +35,14 @@ async function handleConnectError(): Promise<void> {
 // Kết nối Socket.io — mỗi lần nối (lại) đều lấy token mới nhất, tự nối lại 1–5s khi mất mạng
 export function connectSocket(): Socket {
   // Đã có socket (đang nối hoặc đang tự nối lại) thì dùng tiếp — kiểm tra .connected sẽ tạo thêm kết nối thứ hai
-  if (socket) return socket
+  if (socket) {
+    // Socket đã dừng hẳn (bị từ chối và lần làm mới token cũng lỗi): nối lại, cho làm mới token thêm một lần
+    if (!socket.active) {
+      hasRefreshedForThisConnection = false
+      socket.connect()
+    }
+    return socket
+  }
 
   socket = io(WEBSOCKET_BASE_URL, {
     transports: ['websocket'],

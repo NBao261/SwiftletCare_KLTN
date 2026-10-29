@@ -40,6 +40,8 @@ export default function LoginScreen() {
   }
 
   const handleSubmit = () => {
+    // Phím Done trên bàn phím gọi thẳng hàm này, không qua nút đang khoá — chặn gửi lần hai
+    if (login.isPending || isRateLimited) return
     const isEmailMissing = !email.trim()
     const isPasswordMissing = !password
     setMissingFields({ email: isEmailMissing, password: isPasswordMissing })

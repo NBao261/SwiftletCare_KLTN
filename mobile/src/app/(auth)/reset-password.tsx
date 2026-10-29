@@ -110,6 +110,8 @@ export default function ResetPasswordScreen() {
   }
 
   const handleSubmit = () => {
+    // Phím Done trên bàn phím gọi thẳng hàm này, không qua nút đang khoá — chặn gửi lần hai
+    if (resetPassword.isPending || changePassword.isPending) return
     clearErrors()
     if (!validate()) return
     if (isTemporary) submitChange()

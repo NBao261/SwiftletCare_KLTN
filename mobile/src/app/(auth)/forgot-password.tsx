@@ -18,6 +18,8 @@ export default function ForgotPasswordScreen() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const handleSubmit = () => {
+    // Phím Done trên bàn phím gọi thẳng hàm này, không qua nút đang khoá — chặn gửi lần hai
+    if (forgotPassword.isPending) return
     if (!isValidEmail(email)) {
       setEmailError('Email không hợp lệ')
       return
