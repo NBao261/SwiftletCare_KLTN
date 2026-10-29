@@ -19,10 +19,9 @@ info:
 
     **Mã lỗi dùng chung cho mọi endpoint đã đăng nhập (SRS v2.1.3–2.1.4):**
     - `429 RATE_LIMITED` (SEC-NFR-004) — API đã đăng nhập: 300 request/phút **mỗi tài
-      khoản** (chưa đăng nhập: theo IP). `POST /auth/login`, `/auth/otp/verify`,
-      `/auth/reset-password`, `PUT /auth/password`: 10 lần **sai**/15 phút theo IP;
-      `/auth/register`, `/auth/otp/send`, `/auth/forgot-password`: 10 lần/15 phút theo
-      IP; `/auth/refresh`: 30/phút theo IP. Kèm header `Retry-After` và
+      khoản** (chưa đăng nhập: theo IP). `POST /auth/login`, `/auth/reset-password`,
+      `PUT /auth/password`, `POST /invitations/{token}/create-account`: 10 lần **sai**/15 phút
+      theo IP; `/auth/forgot-password`: 10 lần/15 phút theo IP; `/auth/refresh`: 30/phút theo IP. Kèm header `Retry-After` và
       `error.details.retryAfterSec`; response có `X-RateLimit-Limit` / `X-RateLimit-Remaining`.
     - `403 PASSWORD_CHANGE_REQUIRED` (AUTH-FR-005c) — tài khoản đang giữ mật khẩu tạm do
       Admin cấp (`must_change_password`): mọi route trả mã này, trừ `PUT /auth/password` và
@@ -67,7 +66,7 @@ servers:
 
 tags:
   - name: Auth
-    description: AUTH-FR-001..003/004/005/009/010/012 (đăng ký/đăng nhập/JWT/quên-đặt lại mật khẩu/lời mời/yêu cầu xoá tài khoản)
+    description: "AUTH-FR-002..004/009/012 (đăng nhập/JWT/quên-đặt lại mật khẩu/yêu cầu xoá tài khoản). Không có đăng ký công khai và không đăng nhập bằng OTP (Report 3 §1.2, §8): Admin tạo tài khoản Farm Owner và Technician (AUTH-FR-005c), co-owner và Domain Expert tạo tài khoản từ link lời mời (`POST /invitations/{token}/create-account`, AUTH-FR-010)"
   - name: Admin
     description: AUTH-FR-005c/007/011/012, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician và cấp lại mật khẩu tạm, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
   - name: System
@@ -97,35 +96,6 @@ security:
 
 paths:
   # ── AUTH ──────────────────────────────────────────────────────────────────
-  /auth/register:
-    post:
-      tags: [Auth]
-      summary: Đăng ký tài khoản
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password, full_name]
-              properties:
-                email: { type: string, format: email }
-                password: { type: string, minLength: 8 }
-                full_name: { type: string }
-                phone: { type: string }
-      responses:
-        "201":
-          description: Đăng ký thành công
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/User" } }
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
   /auth/login:
     post:
       tags: [Auth]
@@ -208,78 +178,6 @@ paths:
               },
           }
         "401": { $ref: "#/components/responses/Unauthorized" }
-
-  /auth/otp/send:
-    post:
-      tags: [Auth]
-      summary: Gửi OTP về email (dev hiện chỉ log ra console, chưa nối SMTP/Zalo thật)
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                required: [email],
-                properties: { email: { type: string, format: email } },
-              }
-      responses:
-        "200":
-          {
-            description: Đã gửi (hoặc im lặng nếu email không tồn tại),
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiSuccess" } },
-              },
-          }
-
-  /auth/otp/verify:
-    post:
-      tags: [Auth]
-      summary: Xác thực OTP, trả accessToken
-      description: |
-        Tài khoản bị Admin khoá cũng bị chặn ở đây giống `/auth/login`, trả 403
-        `ACCOUNT_DISABLED` kèm `details.reason` (AUTH-FR-011, Flow 19 bước 4).
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, otp]
-              properties:
-                {
-                  email: { type: string, format: email },
-                  otp: { type: string },
-                }
-      responses:
-        "200":
-          description: OTP hợp lệ
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          {
-                            accessToken: { type: string },
-                            user: { $ref: "#/components/schemas/User" },
-                          }
-        "400":
-          {
-            description: OTP sai hoặc hết hạn,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiError" } },
-              },
-          }
 
   /auth/forgot-password:
     post:
@@ -1326,6 +1224,59 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
+
+  /invitations/{token}/create-account:
+    post:
+      tags: [Farms]
+      summary: "Tạo tài khoản từ link lời mời (AUTH-FR-010) — người được mời chưa có tài khoản; công khai"
+      description: |
+        Thay cho đăng ký công khai (đã bỏ, Report 3 §1.2). E-mail và role lấy từ lời mời, người
+        nhận chỉ đặt tên và mật khẩu; tài khoản mới vào ngay farm của lời mời và lời mời chuyển
+        sang `ACCEPTED`. Email đã có tài khoản thì đăng nhập rồi gọi `/invitations/{token}/accept`
+        (`GET /invitations/{token}` trả `userExists` để client chọn đúng luồng). Giới hạn 10 lần
+        **sai**/15 phút theo IP.
+      security: []
+      parameters:
+        [{ name: token, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [full_name, password]
+              properties:
+                full_name: { type: string, minLength: 1 }
+                password: { type: string, minLength: 8 }
+      responses:
+        "201":
+          description: Đã tạo tài khoản và tham gia farm — đăng nhập bằng `POST /auth/login`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/User" } }
+        "404":
+          {
+            description: Token sai, hoặc farm của lời mời đã bị xoá,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/ApiError" } },
+              },
+          }
+        "409":
+          {
+            description: "Lời mời đã accept/decline/hết hạn, hoặc email đã có tài khoản (đăng nhập rồi accept)",
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/ApiError" } },
+              },
+          }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { description: "Quá nhiều lần sai (RATE_LIMITED)" }
 
   /invitations/{token}/decline:
     post:
@@ -3778,7 +3729,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: "Header: `Authorization: Bearer <accessToken>` — accessToken lấy từ /auth/login, /auth/refresh, hoặc /auth/otp/verify"
+      description: "Header: `Authorization: Bearer <accessToken>` — accessToken lấy từ /auth/login hoặc /auth/refresh"
 
   parameters:
     FarmId:
