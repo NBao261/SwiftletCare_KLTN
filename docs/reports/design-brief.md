@@ -61,7 +61,7 @@ Code against SRS and SDD, grouped by owner; each gap in Project Tracking §6.
 
 | ID | Gap | Location | Plan | Owner | Due |
 | --- | --- | --- | --- | --- | --- |
-| G-01, 14 | Alert-type renames, `DISMISSED`, new types; predator, Zalo/SMS, heating left; data model behind SDD 6.1 | all modules | One enum PR with migration, then SDD 6.4 | Kiệt | Tag; It. 2 |
+| G-14 | Data model behind SDD 6.1 (user status, audit source, harvest type and photo, alert details) | backend | SDD 6.1–6.4 | Kiệt | It. 2 |
 | G-02, 09, 10, 16 | Public sign-up open (removed before the tag); QR setup screens; FCM only logged; mobile a scaffold | backend, web, mobile | AUTH-FR-005c; AD-10; ALERT-FR-002; SDD 5.4 | Kiệt, Nhi, Bảo | Tag; It. 2–3 |
 | G-03, 04, 15 | `DISMISSED`, owner fallback and notices, evidence, review items, proposals; expert screens on mock data | backend, web | SM-01, 10, 11 | Tuấn, Kiệt | It. 2 |
 | G-05, 06 | Breach without dwell; one override expiry per controller, no pump limit or confirmation | backend, firmware, web | BR-34, BR-08, 20, 35 | Kiệt, Len | It. 2 |

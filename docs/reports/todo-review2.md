@@ -188,12 +188,12 @@ Một PR cho backend, web, mobile, firmware:
   - đổi `PUMP_DRY` → `MISTING_INEFFECTIVE`, `POWER_OUTAGE` → `UNEXPECTED_RESTART`;
   - thêm `CONFIG_MISMATCH`, `ACTUATOR_FAULT`;
   - bỏ `PREDATOR_DETECTED`.
-  - *Backend `31e85d2`, web `c54f050`, mobile `9d17fbc`.*
+  - *Backend `31e85d2`, web `c54f050`, mobile `9d17fbc` → `ab08455`.*
 - [x] `AlertStatus`: thêm `DISMISSED`. *Cả 3 phía (chỉ thêm giá trị; luồng bác bỏ ở G-03).*
-- [x] Ở 3 phía `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/types/`: bỏ `DeviceStatus` `ERROR`/`DEGRADED`, `HarvestStatus` `ARCHIVED`, trường `heating` trong `RelayStates`, Zalo/SMS trong tùy chọn thông báo (backend `user.model.ts`, `auth.service.ts`, `notification.service.ts`; web `SettingsPage.tsx`, `auth.types.ts`, `en.ts`). *Cả 3 phía: backend `31e85d2`, web `c54f050` + `dff99d3`, mobile `9d17fbc`.*
+- [x] Ở 3 phía `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/src/types/`: bỏ `DeviceStatus` `ERROR`/`DEGRADED`, `HarvestStatus` `ARCHIVED`, trường `heating` trong `RelayStates`, Zalo/SMS trong tùy chọn thông báo (backend `user.model.ts`, `auth.service.ts`, `notification.service.ts`; web `SettingsPage.tsx`, `auth.types.ts`, `en.ts`). *Cả 3 phía: backend `31e85d2`, web `c54f050` + `dff99d3`, mobile `9d17fbc` (chuyển sang `mobile/src/` ở `ab08455`). Merge PR #113, 29/10/2026.*
 - [x] Backend (`31e85d2`):
   - `ALERT_TYPE_ALIAS` nhận tên cũ từ firmware cũ (`PUMP_DRY`, `POWER_OUTAGE`, `BIRD_PANIC`);
-  - `UNEXPECTED_RESTART` mang `details.reset_reason` lấy từ heartbeat; *code lưu ở `metadata.reset_reason` (lấy từ cảnh báo, thiếu thì từ heartbeat) — đổi `metadata` → `details` theo ERD làm ở G-05/G-14;*
+  - `UNEXPECTED_RESTART` mang `details.reset_reason` lấy từ heartbeat; *code lưu ở `metadata.reset_reason` (lấy từ cảnh báo, thiếu thì từ heartbeat) — đổi `metadata` → `details` theo ERD làm ở G-14 (Tracking §6);*
   - bỏ các nhánh `DEGRADED` ở `device.service.ts` (lệnh từ xa và dời thiết bị chỉ khi `ONLINE`), sửa test `deviceOnboarding.test.ts` theo.
 - [x] Firmware 1.5.0 (`70e5ff3`):
   - gửi tên mới;
