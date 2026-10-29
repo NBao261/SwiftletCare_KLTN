@@ -62,7 +62,7 @@ const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
   ADMIN: '/system/health',
   TECHNICIAN: '/devices',
-  DOMAIN_EXPERT: '/expert/dashboard',
+  DOMAIN_EXPERT: '/domain-expert/queue',
 }
 
 export function getRoleHomePath(role: Role | undefined): string {
@@ -91,11 +91,11 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/devices',   roles: ADMIN_ONLY },
   { path: '/analytics',        roles: FARM_OWNER_ONLY },
   { path: '/vision',           roles: FARM_OWNER_ONLY },
-  { path: '/expert/dashboard', roles: EXPERT_ROLES },
-  { path: '/expert/audit-logs',roles: EXPERT_ROLES },
-  { path: '/expert/tuning',    roles: EXPERT_ROLES },
-  { path: '/expert/analytics', roles: EXPERT_ROLES },
-  { path: '/expert/reports',   roles: EXPERT_ROLES },
+  { path: '/domain-expert/queue',          roles: EXPERT_ROLES },
+  { path: '/domain-expert/alert-verdicts',  roles: EXPERT_ROLES },
+  { path: '/domain-expert/tuning',          roles: EXPERT_ROLES },
+  { path: '/domain-expert/reports',         roles: EXPERT_ROLES },
+  { path: '/domain-expert/history',         roles: EXPERT_ROLES },
   { path: '/settings',         roles: ALL_ROLES },
 ]
 
