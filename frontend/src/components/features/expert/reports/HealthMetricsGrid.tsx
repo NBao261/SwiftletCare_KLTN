@@ -154,7 +154,7 @@ export default function HealthMetricsGrid({ report, isLoading }: Props) {
           <div className="grid grid-cols-2 gap-2">
             {[
               { key: 'NOISE_ANOMALY', count: noiseCount, label: 'Ồn bất thường' },
-              { key: 'MISTING_INEFFECTIVE', count: pumpCount, label: 'Phún sương kém' }, // PUMP_DRY → MISTING_INEFFECTIVE
+              { key: 'MISTING_INEFFECTIVE', count: pumpCount, label: 'Phun sương kém' }, // PUMP_DRY → MISTING_INEFFECTIVE
               { key: 'SPEAKER_FAILURE', count: speakerCount, label: 'Hỏng loa / Lỗi' },
               { key: 'LOW_RETURN_RATE', count: returnCount, label: 'Giảm tỉ lệ chim' },
             ].map(item => (

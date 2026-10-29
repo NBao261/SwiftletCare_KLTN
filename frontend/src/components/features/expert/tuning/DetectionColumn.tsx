@@ -22,7 +22,7 @@ interface Props {
 
 const TYPE_LABELS: Record<string, string> = {
   NOISE_ANOMALY: 'Ồn bất thường',
-  MISTING_INEFFECTIVE: 'Phún sương không hiệu quả', // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
+  MISTING_INEFFECTIVE: 'Phun sương không hiệu quả', // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
   SENSOR_ANOMALY: 'Cảm biến bất thường',
   LOW_RETURN_RATE: 'Giảm tỉ lệ chim về',
 }
