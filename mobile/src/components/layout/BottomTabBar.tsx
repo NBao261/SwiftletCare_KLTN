@@ -143,7 +143,8 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
             >
               {tab.isFeatured ? (
                 <LinearGradient colors={FEATURED_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.featuredCircle}>
-                  <TabIcon size={FEATURED_ICON_SIZE} color={Colors.raw.pureWhite} weight={isFocused ? 'fill' : 'regular'} />
+                  {/* Nút nổi luôn icon đặc, không đổi khi chọn — nền xanh loang đã đủ nổi bật */}
+                  <TabIcon size={FEATURED_ICON_SIZE} color={Colors.raw.pureWhite} weight="fill" />
                   <TabBadge count={badgeCount} />
                 </LinearGradient>
               ) : (

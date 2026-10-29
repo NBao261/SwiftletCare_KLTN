@@ -6,6 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/config/queryClient'
 import { useAuthStore } from '@/stores/authStore'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { StyleSheet } from 'react-native'
 import { useFonts } from 'expo-font'
 import { FontFamily } from '@/constants/theme'
@@ -41,28 +42,31 @@ export default function RootLayout() {
   // Splash gốc được AnimatedSplash ẩn khi nó vẽ xong; app dựng bên dưới ngay khi nạp xong
   return (
     <GestureHandlerRootView style={styles.root}>
-      {isReady && (
-        <QueryClientProvider client={queryClient}>
-          <StatusBar style="auto" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: 'slide_from_right',
-              contentStyle: { backgroundColor: palette.background },
-            }}
-          >
-            {/* Không dùng header gốc của router: mỗi màn tự vẽ AppHeader (components/layout), tự chừa vùng an toàn */}
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="farm/[farmId]" />
-            <Stack.Screen name="zone/[zoneId]" />
-            <Stack.Screen name="device/[deviceId]" />
-            <Stack.Screen name="alert/[alertId]" />
-            <Stack.Screen name="livestream/[zoneId]" />
-          </Stack>
-        </QueryClientProvider>
-      )}
-      {!isSplashDone && <AnimatedSplash isReady={isReady} onFinish={handleSplashFinish} />}
+      {/* Bàn phím theo từng khung hình (react-native-keyboard-controller) — khung auth nhích lên cùng nhịp bàn phím */}
+      <KeyboardProvider>
+        {isReady && (
+          <QueryClientProvider client={queryClient}>
+            <StatusBar style="dark" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'slide_from_right',
+                contentStyle: { backgroundColor: palette.background },
+              }}
+            >
+              {/* Không dùng header gốc của router: mỗi màn tự vẽ AppHeader (components/layout), tự chừa vùng an toàn */}
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="farm/[farmId]" />
+              <Stack.Screen name="zone/[zoneId]" />
+              <Stack.Screen name="device/[deviceId]" />
+              <Stack.Screen name="alert/[alertId]" />
+              <Stack.Screen name="livestream/[zoneId]" />
+            </Stack>
+          </QueryClientProvider>
+        )}
+        {!isSplashDone && <AnimatedSplash isReady={isReady} onFinish={handleSplashFinish} />}
+      </KeyboardProvider>
     </GestureHandlerRootView>
   )
 }

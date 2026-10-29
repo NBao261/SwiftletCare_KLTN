@@ -9,6 +9,7 @@
  * - #446401: Xanh thương hiệu — thay cho mọi điểm nhấn cam của mẫu (nút CTA, tab đang chọn, badge số, nhãn nhỏ)
  * Màu trạng thái (mức độ, trạng thái cảnh báo, thiết bị, loại yến) lấy đúng của web (frontend/tailwind.config.ts).
  */
+// App chỉ có giao diện sáng — không có bảng màu tối
 export const Colors = {
   light: {
     primary: "#446401",         // Brand Green — điểm nhấn duy nhất
@@ -52,44 +53,6 @@ export const Colors = {
     deviceDegraded: "#ED8F50",  // Suy giảm
     devicePending: "#F3B287",   // Chờ kết nối
   },
-  dark: {
-    primary: "#B5D32C",         // Lime accent cho dark mode
-    onPrimary: "#343434",
-    secondary: "#9D9D9D",
-    alert: "#FF7426",
-    text: "#FFFFFF",            // White text
-    textSecondary: "#CBCBCB",
-    background: "#343434",      // Dark Charcoal
-    surface: "#9D9D9D33",       // Medium Gray mờ 20%
-    surfaceStrong: "#9D9D9D",
-    border: "#9D9D9D",
-    divider: "#9D9D9D80",
-    tint: "#FFFFFF",
-    tabIconDefault: "#FFFFFF80",
-    tabIconSelected: "#FFFFFF",
-
-    severityP1: "#FF7426",
-    severityP1Text: "#FFFFFF",
-    severityP2: "#FAE1D1",
-    severityP2Text: "#8B400E",
-    severityP3: "#87838026",
-    severityP3Text: "#878380",
-
-    nestWhite: "#B5D32C",
-    nestPink: "#89A022",
-    nestBlood: "#414C10",
-
-    statusNew: "#4A89EB",
-    statusInProgress: "#B5D32C",
-    statusResolved: "#878380",
-    statusWait: "#FFE033",
-
-    deviceOnline: "#B5D32C",
-    deviceOffline: "#A5A3A1",
-    deviceError: "#D53F35",
-    deviceDegraded: "#ED8F50",
-    devicePending: "#F3B287",
-  },
   // Các mã màu thuần túy (Raw Hex) để lập trình viên sử dụng bất kỳ đâu
   raw: {
     brandPrimary: "#446401",
@@ -123,13 +86,7 @@ export const BorderWidth = {
 
 // Khoảng cách — lề màn hình dùng lg (16)
 export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-} as const;
+  xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
 // Font Plus Jakarta Sans (cùng web) — mỗi nét một file trong assets/fonts, Android không tự chọn nét theo fontWeight
 export const FontFamily = {

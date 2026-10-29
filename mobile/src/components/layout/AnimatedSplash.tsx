@@ -11,15 +11,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
+import { TextLogo } from '@/components/layout/TextLogo'
 import { Colors, Radius, Spacing } from '@/constants/theme'
-
-// Tỉ lệ ảnh gốc logo chữ (mobile-scare-text.png)
-const TEXT_SOURCE = { width: 1492, height: 342 }
 
 // Icon khối vuông nhỏ gọn bo góc mềm, logo chữ cân theo icon
 const ICON_SIZE = 120
-const TEXT_WIDTH = 200
-const TEXT_HEIGHT = TEXT_SOURCE.height * (TEXT_WIDTH / TEXT_SOURCE.width)
+const TEXT_LOGO_WIDTH = 200
 
 // View gốc của app dừng trên thanh điều hướng Android — phủ đúng kích thước màn hình để căn giữa cả màn hình
 const SCREEN = Dimensions.get('screen')
@@ -29,7 +26,6 @@ const MIN_VISIBLE_DURATION = 800
 const FADE_DURATION = 600
 
 const ICON_IMAGE = require('@/assets/images/mobile-scare-icon.png')
-const TEXT_IMAGE = require('@/assets/images/mobile-scare-text.png')
 
 interface AnimatedSplashProps {
   // Font và phiên đăng nhập đã nạp xong
@@ -45,14 +41,16 @@ export function AnimatedSplash({ isReady, onFinish }: AnimatedSplashProps) {
   // Nạp xong thì mờ dần cả splash
   useEffect(() => {
     if (!isReady) return
-    opacity.value = withDelay(
-      MIN_VISIBLE_DURATION,
-      withTiming(
-        0,
-        { duration: FADE_DURATION, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System },
-        finished => {
-          if (finished) scheduleOnRN(onFinish)
-        },
+    opacity.set(
+      withDelay(
+        MIN_VISIBLE_DURATION,
+        withTiming(
+          0,
+          { duration: FADE_DURATION, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System },
+          finished => {
+            if (finished) scheduleOnRN(onFinish)
+          },
+        ),
       ),
     )
   }, [isReady, opacity, onFinish])
@@ -62,7 +60,7 @@ export function AnimatedSplash({ isReady, onFinish }: AnimatedSplashProps) {
     SplashScreen.hideAsync()
   }
 
-  const containerStyle = useAnimatedStyle(() => ({ opacity: opacity.value }))
+  const containerStyle = useAnimatedStyle(() => ({ opacity: opacity.get() }))
 
   return (
     <Animated.View
@@ -72,12 +70,12 @@ export function AnimatedSplash({ isReady, onFinish }: AnimatedSplashProps) {
       accessibilityLabel="Đang tải SwiftletCare"
     >
       <Image source={ICON_IMAGE} style={styles.icon} contentFit="cover" />
-      <Image source={TEXT_IMAGE} style={styles.text} contentFit="contain" />
+      <TextLogo width={TEXT_LOGO_WIDTH} />
     </Animated.View>
   )
 }
 
-// Splash luôn nền trắng ở cả sáng/tối — chữ "Care" màu đen không đọc được trên nền tối
+// Splash nền trắng, cùng nền với cả app
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -91,5 +89,4 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
   },
   icon: { width: ICON_SIZE, height: ICON_SIZE, borderRadius: Radius.lg },
-  text: { width: TEXT_WIDTH, height: TEXT_HEIGHT },
 })
