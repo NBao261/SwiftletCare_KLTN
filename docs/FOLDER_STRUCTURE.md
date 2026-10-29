@@ -34,7 +34,7 @@ SwiftletCare_KLTN/
 |---|---|---|
 | `backend/` | `src/{routes,controllers,services,models,middlewares,jobs,mqtt/handlers,socket,utils,config,types,scripts}` · `tests/{unit,integration}` | `backend/CLAUDE.md` · `backend/README.md` · `backend/.eslintrc.cjs` |
 | `frontend/` | `src/{apis,components/{ui,common,features/<role>,layouts,auth},constants,hooks,lib,pages/<role>,providers,routes,stores,types,validations}` | `frontend/FE_Design_Claude.md` (§12 cấu trúc + đặt tên, §13 quy tắc code) · `frontend/CLAUDE.md` (cấu trúc như code hiện tại) · `frontend/README.md` |
-| `mobile/` | `app/` (Expo Router: `(auth)`, `(tabs)`, route chi tiết) · `config/ constants/ hooks/ services/{api,socket,notification} store/ types/ utils/` | `mobile/CLAUDE.md` · `mobile/README.md` |
+| `mobile/` | `src/app/` (Expo Router: `(auth)`, `(tabs)`, route chi tiết) · `src/{components,config,constants,hooks/<nghiệp vụ>,services/{api,socket,notification},stores,types,utils}` · `assets/` | `mobile/CLAUDE.md` · `mobile/MOBILE_GUIDE.md` |
 | `firmware/` | `src/{sensors,pid,mqtt,storage,wifi,audio,config}` + `main.cpp` · `test/` (unit test chạy trên máy) | `firmware/CLAUDE.md` · `firmware/README.md` |
 | `ai-pipeline/` | `src/` · `config/config.yaml` · cấu trúc đích ở `docs/bird-counting-plan.md` §4 | `ai-pipeline/CLAUDE.md` · `ai-pipeline/README.md` · `docs/bird-counting-plan.md` |
 
@@ -46,7 +46,7 @@ SwiftletCare_KLTN/
 | Job chạy định kỳ / xử lý tin MQTT | `backend/src/jobs/<việc>.job.ts` / `backend/src/mqtt/handlers/<topic>.handler.ts` |
 | Trang web | `frontend/src/pages/<role>/<Role><Tên>Page.tsx` + route trong `frontend/src/routes/<role>.routes.tsx` |
 | Thành phần của một trang web | `frontend/src/components/features/<role>/<khu vực>/` (không đặt trong `pages/`) |
-| Màn hình mobile | `mobile/app/...` theo đường dẫn route |
+| Màn hình mobile | `mobile/src/app/...` theo đường dẫn route; hook ở `mobile/src/hooks/<nghiệp vụ>/`, API ở `mobile/src/services/api/<resource>.api.ts` |
 | Logic điều khiển / lọc / phát hiện trên ESP32 | `firmware/src/<nhóm>/` dạng C++ thuần + test trong `firmware/test/` |
 | Tài liệu | `docs/` (xem dưới) |
 
