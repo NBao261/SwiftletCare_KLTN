@@ -26,7 +26,7 @@ sensors/  SensorManager — 5 RS485 Modbus sensors (RX GPIO16 / TX GPIO17, 4800b
           learned p90 baseline, so daily bird exit/return noise is normal; skipped while the speaker plays) — both at 1 Hz in sensorTask
 pid/      PIDController — 3 relays (misting/speaker/ventilation; IN4 is a spare, heating removed) + threat flags;
           misting + ventilation use FuzzyControl (Sugeno fuzzy → % duty, time-proportioned over a tunable window, default 120 s);
-          PumpDryMonitor (PUMP_DRY → stop misting until the spray session ends)
+          PumpDryMonitor (MISTING_INEFFECTIVE → stop misting until the spray session ends)
 audio/    AudioManager — DFPlayer Mini lullaby playback on schedule
 mqtt/     publish telemetry/heartbeat/relay-status, subscribe to command topics
 ota/      RemoteCommand (plain C++: reads RESTART/OTA out of config/update, SHA-256 compare, rollback decision)
@@ -42,7 +42,7 @@ main.cpp  SensorTask / PIDTask / MQTTTask
 
 **Safe state (THREAT-FR-013).** The loop uses the last valid temperature/humidity reading for at most `CONTROL_INPUT_MAX_AGE_CYCLES` (2) control periods; with no valid reading in that window (or one out of physical range) both demands are 0 and the relays switch off, while the loop keeps running so overrides still expire and sensor-fault alerts are still raised.
 
-**PUMP_DRY (THREAT-FR-011).** Evaluated only while humidity is below `humidity_min`. After the pump has been on for `pump_dry_on_sec` (cumulative within one spray session, since the pump cycles) without humidity rising `pump_dry_min_rise_pct`, misting stops; the alert flag follows the latch and is re-sent until MQTT accepts it. The latch clears when demand reaches zero, on a manual override, or after `PUMP_DRY_RETRY_MS` (30 min, hand-picked) so a false positive cannot switch misting off for good. A failed sensor read keeps the monitor state.
+**MISTING_INEFFECTIVE (THREAT-FR-011, `PUMP_DRY` before 1.5.0; the class and the `pump_dry_*` parameters keep the old name).** Evaluated only while humidity is below `humidity_min`. After the pump has been on for `pump_dry_on_sec` (cumulative within one spray session, since the pump cycles) without humidity rising `pump_dry_min_rise_pct`, misting stops; the alert flag follows the latch and is re-sent until MQTT accepts it. The latch clears when demand reaches zero, on a manual override, or after `PUMP_DRY_RETRY_MS` (30 min, hand-picked) so a false positive cannot switch misting off for good. A failed sensor read keeps the monitor state.
 
 **Detection parameters (EXPERT-FR-008).** `noise_margin_db`, `noise_min_sec`, `pump_dry_on_sec`, `pump_dry_min_rise_pct`, `speaker_drop_pct` arrive over `config/update`, are clamped and stored in NVS like the fuzzy coefficients.
 

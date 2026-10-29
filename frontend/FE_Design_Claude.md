@@ -1411,9 +1411,9 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | Nhãn mã backend khai riêng/viết cứng ngoài `enumLabels.i18n.ts`: `STATUS_LABEL` (`common/StatusDot.tsx`), `ROLE_LABEL` (`constants/roles.ts`), bản dịch trùng trong `src/i18n/en.ts` | 6.3 | Người phụ trách role đó chuyển sang đọc `enumLabels.i18n.ts` khi sửa màn |
 | ~230 chỗ `text-xs`/`text-sm`/`text-lg`/`text-2xl`… | Lệch thang chữ 2.8 (13.7 [Nên]) | Đổi dần khi sửa file đó |
 | ~~`pages/sales-staff/` · `routes/sales-staff.routes.tsx` · `SalesStaffLayout` · role `SALES_STAFF`, form tạo chuyên gia và tab đề xuất chuyên gia của Admin~~ | Role đã bỏ từ SRS v1.23.0 | ✅ Đã gỡ ở PR #106; Admin chỉ tạo Kỹ thuật viên (AUTH-FR-005c) |
-| ~~`MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · kiểu `NestListing`/`ContactInquiry`/`ListingStatus`~~ | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ ở PR #93; `HarvestStatus` còn `DRAFT \| ARCHIVED` khớp backend. Gói `qrcode` vẫn giữ cho nhãn thiết bị và mã QR tầng (MF-10) |
+| ~~`MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · kiểu `NestListing`/`ContactInquiry`/`ListingStatus`~~ | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ ở PR #93; `HarvestStatus` chỉ còn `DRAFT` (bỏ `ARCHIVED` ở PR #113, G-01). Gói `qrcode` vẫn giữ cho nhãn thiết bị và mã QR tầng (MF-10) |
 | Màn `DOMAIN_EXPERT` nằm ở `expert/`, `ExpertLayout`; chưa có `FARM_SIDE_ROLES`/`EXPERT_ONLY` | Mục 12 mô tả trạng thái đích | Dời theo checklist "Thêm role mới" ở 12.10 |
-| Trường `heating` trong `RelayStates` (`types/device.types.ts`), tùy chọn kênh Zalo/SMS ở `SettingsPage` (`BIRD_PANIC` và relay sưởi trên màn đã gỡ ở PR #93) | Ngoài phạm vi (Report 3 §8) | Gỡ `heating` khỏi kiểu và Zalo/SMS khỏi màn cài đặt |
+| ~~Trường `heating` trong `RelayStates` (`types/device.types.ts`), tùy chọn kênh Zalo/SMS ở `SettingsPage`~~ | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ ở PR #113 (G-01) |
 | `/onboarding` chỉ là màn Technician nhập tay Device ID + khoá | MF-10 (12.0 c dòng 5b) | Làm `FarmOwnerDeviceSetupPage` quét QR, mở cho `SETUP_ROLES` |
 | Chữ "PLC" trên Dashboard; mốc 20 giây và mốc điểm cân bằng Zone tự chọn; câu "Camera AI đếm chim, Raspberry Pi" ở `BirdTab`, `CorrelationCard` | 6.2, 2.6.1; Report 3: nút AI là PC/máy chủ, không phải Raspberry Pi | Đổi chữ thành "Bộ điều khiển", "nút AI" khi sửa màn; mốc giữ đúng giá trị ghi ở Report 3 §4.5 |
 
@@ -1451,7 +1451,7 @@ Quy tắc định dạng ở đầu tài liệu phải do máy bắt, không tr�
 ### 13.16. Không lộ thông tin nội bộ
 
 **a) Không hiện id, mã, enum thô** — **[Bắt buộc]** cho mọi role:
-- Không hiện `_id` MongoDB, mã rút gọn từ id (`#6A8494`), khoá enum (`POWER_OUTAGE`, `HIGH`, `ACKNOWLEDGED`) trên giao diện, `title`, `aria-label` hay HTML. Luôn đổi sang nhãn qua từ điển (`type.<ENUM>`, `status.<ENUM>`) hoặc bảng nhãn chung (2.4).
+- Không hiện `_id` MongoDB, mã rút gọn từ id (`#6A8494`), khoá enum (`UNEXPECTED_RESTART`, `HIGH`, `ACKNOWLEDGED`) trên giao diện, `title`, `aria-label` hay HTML. Luôn đổi sang nhãn qua từ điển (`type.<ENUM>`, `status.<ENUM>`) hoặc bảng nhãn chung (2.4).
 - Không đưa id lên URL khi không cần chia sẻ link: trang chi tiết nhận id qua **history state** (`navigate(path, { state })`) — mẫu `DEVICE_DETAIL_PATH` của trang thiết bị Farm Owner; không có state (mở tab mới) thì quay về danh sách. Mã thiết bị in trên nhãn (`node_001`) là tên người dùng đọc được, được hiện.
 - Chuỗi backend/firmware tự ghép (có mã enum, tiếng Anh, `undefined`) không hiện nguyên văn — dựng lại câu từ loại + dữ liệu đã dịch (mẫu khung báo lỗi thiết bị Farm Owner).
 - **[Bắt buộc] Chữ phụ (dòng xám, gợi ý, mô tả) phải đúng với dữ liệu thật** — không viết câu chung chung có thể sai: cảnh báo hệ thống tự sinh không ghi "Đã gửi"; chưa có ai xác nhận thì không ghi "đã tiếp nhận"; mô tả ở đầu trang chỉ hiện khi đúng người tạo đã nhập; mỗi ghi chú ghi rõ người viết (Hệ thống · Bạn · Kỹ thuật viên · Thành viên khác — suy từ id người viết).

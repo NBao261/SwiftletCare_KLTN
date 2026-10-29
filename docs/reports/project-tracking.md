@@ -13,7 +13,7 @@ This sheet is the only record of progress. Report 3 and Report 4 describe what t
 | Registration v1 | 22/07/2026 | Done | |
 | Review 1 | `[TEAM: date]` | Done | Registration v2; scope narrowed to the automated system |
 | Iteration 1 | until Review 2 | Done | Pull requests #2…#107 |
-| Review 2 documents | `[TEAM: date]` | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1 aligned on 26/10/2026; left: `[TEAM]` cells, the enumeration PR (G-01), tag `review-2`, CI run on the tag, BM02 |
+| Review 2 documents | `[TEAM: date]` | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1 aligned on 26/10/2026; enumeration PR (G-01) merged 29/10/2026; left: `[TEAM]` cells, the invitation-only account PR (G-02 P0), tag `review-2`, CI run on the tag, BM02 |
 | Iteration 2 | `[TEAM: dates]` | Planned | Gaps due "It. 2" in Section 6 |
 | Iteration 3 | `[TEAM: dates]` | Planned | Gaps due "It. 3" |
 | Defense 1.1 | `[TEAM: date]` | Planned | Thresholds of the guideline §9.4 |
@@ -41,8 +41,8 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-01 | Telemetry, live dashboard | Nguyễn Chí Bảo | Done | `[TEAM: PR]`; TC-F01-01..03 | — | — |
 | F-02 | Fuzzy control | Nguyễn Chí Bảo | Done | `[TEAM: PR]`; TC-F02-01..03 | — | — |
 | F-03 | Thresholds, coefficients | Nguyễn Chí Bảo | In progress | #100, #101; TC-F03-01..03 | Configuration version (G-08) | 2 |
-| F-04 | Offline operation | Nguyễn Chí Bảo | In progress | `[TEAM: PR]`; TC-F04-02 | 30-min outage run on the prototype (NFR-06); alerts kept until PUBACK and `UNEXPECTED_RESTART` (G-01, G-07) | 2 |
-| F-05 | Self-diagnosis | Trần Minh Kiệt | In progress | `[TEAM: PR]`; TC-F05-01..03 | — (`MISTING_INEFFECTIVE` rename done in G-01) | 2 |
+| F-04 | Offline operation | Nguyễn Chí Bảo | In progress | `[TEAM: PR]`; TC-F04-02 | 30-min outage run on the prototype (NFR-06); alerts kept until PUBACK (G-07) | 2 |
+| F-05 | Self-diagnosis | Trần Minh Kiệt | In progress | `[TEAM: PR]`; TC-F05-01..03 | Board test of misting without humidity rise and of an unplugged sensor, recorded in `firmware/README.md` (G-19) | 2 |
 | F-06 | Actuator current check | Trần Minh Kiệt | Planned | — | Board with ADS1115 and shunt resistors on the DC demo loads; firmware; `ACTUATOR_FAULT` (G-13) | 3 |
 | F-07 | Alert lifecycle | Nguyễn Vũ Len | In progress | #103; TC-F07-01, 03 | Breach dwell (G-05); event IDs (G-07); `DISMISSED` (G-03) | 2 |
 | F-08 | Push and Telegram | Trần Minh Kiệt | In progress | `[TEAM: PR]`; TC-F08-01, 02 | FCM sending and mobile token (G-10) | 2 |
@@ -108,7 +108,7 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 | G-11 | MF-11: health assessment job, `househealthdays` with current status and rating snapshots, levels per house, house reports (day, week, month), PDF and CSV, weather job, evaluation (agreement, CI, weighted kappa, AC1) | ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33; SM-17, AD-14 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (web, mobile) | It. 2–3 |
 | G-12 | Counting: trained one-class model; sessions computed by the backend from buckets per the house schedule; incomplete sessions; AI heartbeat with fps; ring editor screen | VISION-FR-003, 008, 016, 018–020, THREAT-FR-010 | AI node, backend, web | Nguyễn Chí Bảo (AI node, backend); Thái Minh Tuấn (ring editor); Len, Tuấn, Nhi (labelling, clip counts) | It. 2 |
 | G-13 | Actuator current sensing on the team's board | THREAT-FR-014, BR-32 | hardware, firmware, backend | Nguyễn Chí Bảo | It. 3 |
-| G-14 | Data model behind the ERD: user `status`, audit source fields, harvest type and photo, notification references, telemetry validity fields, per-relay override, `sla_hours` left in settings; database script regenerated | SDD 6.1–6.4 | backend | Trần Minh Kiệt | It. 2 |
+| G-14 | Data model behind the ERD: user `status`, audit source fields, harvest type and photo, notification references, telemetry validity fields, per-relay override, alert `metadata` renamed `details` (e.g. `reset_reason`); database script regenerated | SDD 6.1–6.4 | backend | Trần Minh Kiệt | It. 2 |
 | G-15 | Web leftovers: Domain Expert screens on mock fallback and outside the FE_Design folder plan; `/stream/:id` routed to the `FarmOwnerLiveStreamPage` stub (Raspberry Pi wording); "PLC" wording; routes, menu and buttons not per Report 3 §2.4 (`OPS_ROLES` lets Admin into `/devices`, `/alerts`, `/farms`, `/onboarding`, `/ota`, `/stream/:id`; `HARVEST_ROLES` includes Admin) | Report 3 §2.4; FE_Design §7, §12, §13.14 | web | Thái Minh Tuấn (expert, Technician); Nguyễn Thị Yến Nhi (role matrix); Nguyễn Vũ Len ("PLC"); Nguyễn Chí Bảo (`/stream/:id`) | It. 2 |
 | G-16 | Mobile: login, dashboard, alerts with acknowledge, manual override, QR setup, analytics and HLS live stream, daily status and rating, reports, harvests, expert validation and tuning; screens and buttons per role; socket clean-up | Registration 3.2 b, SDD 5.4 | mobile | Nguyễn Thị Yến Nhi (sign-in, push, QR setup, daily status); Nguyễn Vũ Len (Farm Owner, live stream); Thái Minh Tuấn (expert) | It. 2–3 |
 | G-17 | Staging: compose file, Dockerfiles, Caddy, TLS proxy, EMQX authentication and authorisation files, demo seed for every scenario of Appendix A2, backup off the VPS | SDD 3.4, 11 | deploy | Whole team, led by Nguyễn Chí Bảo (Bảo infrastructure, Kiệt backend image, migrations, seed and backup, Len web build, Nhi mobile build, Tuấn E2E runs); scenario conditions and E2E tests by the workflow owners | It. 2 |
