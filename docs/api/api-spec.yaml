@@ -1169,16 +1169,31 @@ paths:
     get:
       tags: [Farms]
       summary: Xem trước lời mời qua token (AUTH-FR-010, Flow 12 bước 3) — không cần đăng nhập, dùng để hiển thị tên farm trước khi accept/decline
+      security: []
       responses:
         "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiSuccess" } },
-              },
-          }
+          description: OK — thông tin xem trước lời mời
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          invitation: { $ref: "#/components/schemas/Invitation" }
+                          farm:
+                            type: object
+                            nullable: true
+                            description: "null khi farm của lời mời đã bị xoá"
+                            properties:
+                              _id: { type: string }
+                              name: { type: string }
+                              address: { type: string }
+                          userExists:
+                            type: boolean
+                            description: "Email được mời đã có tài khoản chưa. true: đăng nhập rồi gọi /invitations/{token}/accept; false: hiện form tên + mật khẩu gọi /invitations/{token}/create-account"
         "404":
           {
             description: Lời mời không tồn tại,
