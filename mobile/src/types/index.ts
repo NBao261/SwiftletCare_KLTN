@@ -1,0 +1,10 @@
+// Kiểu dữ liệu dùng chung — enum phải khớp backend/src/types/domain.types.ts
+export * from './api.types'
+export * from './auth.types'
+export * from './farm.types'
+export * from './device.types'
+export * from './telemetry.types'
+export * from './alert.types'
+export * from './birdCount.types'
+export * from './socket.types'
+export * from './navigation.types'

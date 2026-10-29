@@ -1,26 +1,7 @@
+// babel-preset-expo (SDK 53) đã tự đọc alias `@/*` từ tsconfig.json và tự thêm plugin Reanimated
 module.exports = function (api) {
   api.cache(true)
   return {
     presets: ['babel-preset-expo'],
-    plugins: [
-      [
-        'module-resolver',
-        {
-          alias: {
-            '@': './',
-            '@components': './components',
-            '@hooks': './hooks',
-            '@services': './services',
-            '@store': './store',
-            '@utils': './utils',
-            '@constants': './constants',
-            '@types': './types',
-            '@config': './config',
-            '@assets': './assets',
-          },
-        },
-      ],
-      'react-native-reanimated/plugin', // Must be last
-    ],
   }
 }
