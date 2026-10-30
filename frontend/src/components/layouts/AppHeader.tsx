@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
 import { useHeaderSlotStore } from '@/stores/headerSlotStore'
-import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
+import { useAuth } from '@/hooks/auth/useAuth'
 import { usePermission } from '@/hooks/common/usePermission'
 import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
@@ -71,7 +71,7 @@ function LanguageToggle() {
 // isOverHero: header nằm trên ảnh nền đầu trang, chưa cuộn → bỏ lớp kính để ảnh không bị nhòe
 export default function AppHeader({ menuSections, elevated = false, isOverHero = false }: { menuSections: MenuSection[]; elevated?: boolean; isOverHero?: boolean }) {
   const user = useAuthStore(s => s.user)
-  const askLogout = useLogoutConfirmStore(s => s.ask)
+  const { logout } = useAuth()
   const setHeaderSlot = useHeaderSlotStore(state => state.setSlot)
   const { t } = useTranslation(shellDict)
   const { pathname } = useLocation()
@@ -148,7 +148,7 @@ export default function AppHeader({ menuSections, elevated = false, isOverHero =
 
         {/* Mobile: sidebar (chứa nút đăng xuất) bị ẩn nên đưa ra đây */}
         <button
-          onClick={askLogout}
+          onClick={() => logout.mutate()}
           aria-label={t('logout.action')}
           title={user?.full_name ? t('logout.actionUser', { name: user.full_name }) : t('logout.action')}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"

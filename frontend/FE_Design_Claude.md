@@ -1072,7 +1072,7 @@ frontend/src/
 │   │                          + icons.tsx · useFloatingMenu.ts · index.ts (barrel duy nhất)
 │   ├── common/                CÓ biết domain và dùng ở >= 2 nơi. Cố ý giữ nhỏ.
 │   │                          NotificationPopover · Toast · ScopeFilter · StatusDot
-│   │                          LogoutConfirmModal · ProfilePopover · SeverityBadge · TableEmptyState
+│   │                          ProfilePopover · SeverityBadge · TableEmptyState
 │   ├── features/              Component riêng của từng tính năng
 │   │   ├── admin/             users/ · system/ · devices/ · audit-log/ · dashboard/
 │   │   ├── farm-owner/        dashboard/ · analytics/ · farms/ · harvest/ · vision/ · devices/
@@ -1132,7 +1132,7 @@ frontend/src/
 │
 ├── stores/                    Zustand: authStore · alertStore · toastStore
 │                              zoneStore · breadcrumbStore · languageStore · pinnedHouseStore
-│                              logoutConfirmStore · readAlertStore
+│                              readAlertStore
 │
 ├── lib/                       axios · queryClient · socket · cn
 │                              helpers · navigation · chartTheme · i18n (Hệ 2, mục 6)
@@ -1552,7 +1552,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `TableEmptyState` | Trạng thái rỗng chuẩn của bảng (truyền vào `FixedRowsTable emptyContent`) | 1.1 |
 | `StatusDot` | Chấm + chữ trạng thái thiết bị | 2.5 |
 | `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/farm-owner/useScopeFilter`) | — |
-| `NotificationPopover` · `ProfilePopover` · `LogoutConfirmModal` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
+| `NotificationPopover` · `ProfilePopover` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
 
 **Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, đóng băng 4.1) · `components/auth/RequireRole.tsx` (chặn route).
 
@@ -1580,7 +1580,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Hook hạ tầng | `hooks/common/` | `useTranslation` (Hệ 2: `t` `num` `day` `time` `date` `hourMinute` `dateTime` `ago`) · `usePermission` · `useSocket` · `usePaginatedListQuery` · `useBreadcrumb` (`usePageBreadcrumb`, `usePageBack`) · `useNavigationLabel` · `useScrollToTop` · `useCanScrollDown` · `useSyncedState` |
 | Hook dữ liệu ≥ 2 role | `hooks/shared/` | `useFarms` · `useAlerts` · `useAlertNotifications` · `useReadAlerts` · `useDevices` · `useAudioTracks` (nợ: chỉ Technician) |
 | API ≥ 2 role | `apis/shared/` | `farms.api` · `alerts.api` · `devices.api` · `audioTracks.api` (nợ) |
-| Store (Zustand) | `stores/` | `authStore` · `languageStore` · `zoneStore` · `alertStore` · `readAlertStore` · `toastStore` · `breadcrumbStore` · `pinnedHouseStore` · `logoutConfirmStore` |
+| Store (Zustand) | `stores/` | `authStore` · `languageStore` · `zoneStore` · `alertStore` · `readAlertStore` · `toastStore` · `breadcrumbStore` · `pinnedHouseStore` |
 | Validator | `validations/common/` · `validations/farm-owner/` | `threshold.validation` · `fuzzyTuning.validation` · `speakerSchedule.validation` · `farm.validation` (vị trí farm: vĩ độ −90…90, kinh độ −180…180) |
 
 ### D.5. Dữ liệu giả
