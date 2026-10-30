@@ -1,5 +1,7 @@
 // Nội dung chính sách quyền riêng tư, dùng chung cho trang công khai /privacy và trang trong app /settings/privacy.
-// Mỗi câu lấy từ Report 3 (mã yêu cầu ghi ở comment); đổi nội dung thì tăng POLICY_VERSION và ngày hiệu lực.
+// Mỗi câu lấy từ Report 3 (mã yêu cầu ghi ở comment); đổi nội dung thì sửa cả 2 bản VI/EN, tăng POLICY_VERSION và ngày hiệu lực.
+import { useLanguageStore, type Lang } from '@/stores/languageStore';
+
 const POLICY_VERSION = '1.0';
 const EFFECTIVE_DATE = '30/10/2026';
 
@@ -9,7 +11,7 @@ interface PolicySection {
   items?: string[];
 }
 
-const SECTIONS: PolicySection[] = [
+const SECTIONS_VI: PolicySection[] = [
   {
     // §1.2, C-5
     title: '1. Phạm vi',
@@ -102,15 +104,102 @@ const SECTIONS: PolicySection[] = [
   },
 ];
 
+// Bản tiếng Anh, cùng thứ tự mục với SECTIONS_VI
+const SECTIONS_EN: PolicySection[] = [
+  {
+    title: '1. Scope',
+    paragraphs: [
+      'Each SwiftletCare installation serves one swiftlet house owner and that owner’s farms. There is no public sign-up: the Administrator creates the Farm Owner and Technician accounts; co-owners and the Domain Expert join by invitation.',
+      'Personal data is processed according to Decree 13/2023/ND-CP on personal data protection (Vietnam).',
+    ],
+  },
+  {
+    title: '2. Data the system collects',
+    items: [
+      'Account: full name, e-mail, role and password (stored only as a bcrypt hash, never in plain text).',
+      'Swiftlet house data: sensor readings (temperature, humidity, light, NH3, CO2, noise), relay states, manual control history, device information and harvests.',
+      'Bird counting: the camera at the house entrance is processed on an AI node to count birds going in and out; the system keeps counts per 5 minutes and per morning and afternoon session of each house.',
+      'Notifications: in-app notifications, and the Telegram account if the Farm Owner links it.',
+      'Logs: sign-ins and every configuration change (who made it, when); the IP address at sign-in is used to block repeated failed sign-ins.',
+      'Location: farm coordinates entered by the Farm Owner.',
+    ],
+  },
+  {
+    title: '3. How the data is used',
+    items: [
+      'Automatic microclimate control, incident alerts and early warning.',
+      'Counting birds and computing the return rate of each house.',
+      'Protecting accounts and tracing changes through the logs.',
+    ],
+    paragraphs: [
+      'SwiftletCare does not sell, broker or share data for advertising.',
+    ],
+  },
+  {
+    title: '4. Who can see the data',
+    items: [
+      'Farm Owner and co-owners: all data of their own farms.',
+      'The farm’s Domain Expert: operational data, bird counts and reports; cannot control relays.',
+      'Technician: houses, zones, devices and device alerts; cannot see environmental readings, bird counts, the camera stream, harvests or reports. Every device action is logged and reported to the Farm Owner.',
+      'Administrator: accounts, system logs and overview figures; cannot see the data of any farm.',
+    ],
+  },
+  {
+    title: '5. External services',
+    items: [
+      'Telegram: sends alerts to a Farm Owner who has linked an account.',
+    ],
+  },
+  {
+    title: '6. Retention',
+    items: [
+      '90 days: sensor readings, 5-minute bird counts and in-app notifications.',
+      '180 days after being resolved: alerts.',
+      'For as long as the system is used: session counts, harvests, manual control history, change history and system logs.',
+    ],
+  },
+  {
+    title: '7. Security',
+    items: [
+      'Every non-public API requires a token; a session uses a 15-minute access token and a 30-day refresh token.',
+      'More than 10 failed sign-ins within 15 minutes from one IP address are blocked for a while.',
+      'The camera stream opens only with a 60-second viewing token, issued to the Farm Owner or the farm’s Domain Expert.',
+    ],
+  },
+  {
+    title: '8. Your rights',
+    items: [
+      'Request deletion of your account and personal data: the Administrator handles it within 30 days. On deletion, farm ownership passes to the earliest co-owner (or the farm is soft-deleted if there is none) and personal data is anonymised.',
+      'Reset your password with a one-time code valid for 15 minutes; after a reset, every old session is revoked.',
+      'Unlink Telegram at any time.',
+    ],
+  },
+  {
+    title: '9. Contact and policy changes',
+    paragraphs: [
+      'Send any question or request about personal data to the Administrator of your installation.',
+      'When the policy changes, the version and effective date at the top of the page are updated.',
+      'Push notifications in the mobile app (Firebase Cloud Messaging), weather by farm coordinates (Open-Meteo) and the daily status of each house will be added later; this policy is updated before those features go live.',
+    ],
+  },
+];
+
+const POLICY_TEXT: Record<Lang, { heading: string; versionLabel: string; effectiveLabel: string; sections: PolicySection[] }> = {
+  vi: { heading: 'Chính sách quyền riêng tư', versionLabel: 'Phiên bản', effectiveLabel: 'Hiệu lực từ', sections: SECTIONS_VI },
+  en: { heading: 'Privacy policy', versionLabel: 'Version', effectiveLabel: 'Effective from', sections: SECTIONS_EN },
+};
+
 export default function PrivacyPolicy(): JSX.Element {
+  const lang = useLanguageStore(state => state.lang);
+  const text = POLICY_TEXT[lang];
   return (
     <>
-      <h1 className="text-h1 text-charcoal">Chính sách quyền riêng tư</h1>
+      <h1 className="text-h1 text-charcoal">{text.heading}</h1>
       <p className="mt-1 text-small text-warmGray">
-        Phiên bản {POLICY_VERSION} · Hiệu lực từ {EFFECTIVE_DATE}
+        {text.versionLabel} {POLICY_VERSION} · {text.effectiveLabel} {EFFECTIVE_DATE}
       </p>
 
-      {SECTIONS.map(section => (
+      {text.sections.map(section => (
         <section key={section.title} className="mt-6">
           <h2 className="text-h3 text-charcoal">{section.title}</h2>
           {section.items && (
