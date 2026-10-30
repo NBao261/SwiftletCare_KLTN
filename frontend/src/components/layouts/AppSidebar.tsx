@@ -133,9 +133,9 @@ export default function AppSidebar({
         <div className="mx-[18px] border-t border-warmGray/15 pb-6 pt-3">
           <button
             onClick={() => logout.mutate()}
-            className="flex h-[42px] w-full items-center justify-center gap-2 rounded-full border border-warmGray/15 px-4 text-[12.5px] font-medium text-graphite transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-safetyOrange transition-colors hover:bg-safetyOrange/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <IconLogout width={15} height={15} />
+            <IconLogout width={16} height={16} />
             {navigationLabel('Đăng xuất')}
           </button>
         </div>
