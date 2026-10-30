@@ -2,7 +2,7 @@ import type { ComponentType, SVGProps } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useAlertStore } from '@/stores/alertStore'
-import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
+import { useAuth } from '@/hooks/auth/useAuth'
 import { useCanScrollDown } from '@/hooks/common/useCanScrollDown'
 import { cn } from '@/lib/cn'
 import { menuLinkState } from '@/lib/navigationState'
@@ -42,7 +42,7 @@ export default function AppSidebar({
   const isExpert = user?.role === 'DOMAIN_EXPERT'
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
   const expertPendingCount = isExpert ? (expertAlerts?.length ?? 0) : 0
-  const askLogout = useLogoutConfirmStore(s => s.ask)
+  const { logout } = useAuth()
   // Trang hiện tại: ở trang con của 1 mục menu thì link mục đó mang state đi lên
   const { pathname } = useLocation()
   const navigationLabel = useNavigationLabel()
@@ -132,7 +132,7 @@ export default function AppSidebar({
 
         <div className="mx-[18px] border-t border-warmGray/15 pb-6 pt-3">
           <button
-            onClick={askLogout}
+            onClick={() => logout.mutate()}
             className="flex h-[42px] w-full items-center justify-center gap-2 rounded-full border border-warmGray/15 px-4 text-[12.5px] font-medium text-graphite transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <IconLogout width={15} height={15} />

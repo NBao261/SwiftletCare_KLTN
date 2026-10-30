@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, CircleHelp, LogOut, ShieldCheck, UserCog } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
+import { useAuth } from '@/hooks/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { shellDict } from '@/constants/shell.i18n'
@@ -12,7 +12,7 @@ import Avatar from '@/components/ui/Avatar'
 export default function ProfilePopover() {
   const { t } = useTranslation(shellDict)
   const user = useAuthStore(s => s.user)
-  const askLogout = useLogoutConfirmStore(s => s.ask)
+  const { logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -81,7 +81,7 @@ export default function ProfilePopover() {
             <button
               type="button"
               role="menuitem"
-              onClick={() => { setOpen(false); askLogout() }}
+              onClick={() => { setOpen(false); logout.mutate() }}
               className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-safetyOrange transition-colors hover:bg-safetyOrange/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <LogOut width={16} height={16} />

@@ -30,10 +30,6 @@ const vi = {
 
   'logout.action': 'Đăng xuất',
   'logout.actionUser': 'Đăng xuất {name}',
-  'logout.pending': 'Đang đăng xuất...',
-  'logout.title': 'Xác nhận đăng xuất',
-  'logout.desc': 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản SwiftletCare?',
-  'logout.cancel': 'Hủy bỏ',
 
   'lang.label': 'Ngôn ngữ hiển thị',
   'lang.current': 'Tiếng Việt',
@@ -69,10 +65,6 @@ const en: Record<ShellKey, string> = {
 
   'logout.action': 'Log out',
   'logout.actionUser': 'Log out {name}',
-  'logout.pending': 'Logging out...',
-  'logout.title': 'Confirm log out',
-  'logout.desc': 'Are you sure you want to log out of your SwiftletCare account?',
-  'logout.cancel': 'Cancel',
 
   'lang.label': 'Display language',
   'lang.current': 'English',
