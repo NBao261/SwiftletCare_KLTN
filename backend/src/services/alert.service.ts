@@ -11,6 +11,7 @@ import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
+import type { DwelledBreach } from '@/utils/breachDwell.util'
 import type {
   AlertType, AlertSeverity, AlertStatus, AlertVerdictResult, CurrentUser, FarmMemberRole, Thresholds, TelemetryPayload,
 } from '@/types'
@@ -123,6 +124,8 @@ export interface CreateAlertInput {
   message: string
   snapshotUrl?: string
   metadata?: Record<string, unknown>
+  /** Chi tiết của sự cố theo ERD (Report 4 §6.1) */
+  details?: Record<string, unknown>
 }
 
 /**
@@ -162,7 +165,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     const lastSeen = (open.last_seen_at ?? open.created_at).getTime()
     if (now.getTime() - lastSeen >= ALERT_SEEN_UPDATE_MS) {
       await Alert.updateOne({ _id: open._id }, {
-        $set: { last_seen_at: now, message: input.message, metadata: input.metadata },
+        $set: { last_seen_at: now, message: input.message, metadata: input.metadata, ...(input.details && { details: input.details }) },
         $inc: { occurrence_count: 1 },
       })
     }
@@ -182,6 +185,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     message:      input.message,
     snapshot_url: input.snapshotUrl,
     metadata:     input.metadata,
+    details:      input.details,
     status:       'ACTIVE',
   })
 
@@ -231,6 +235,7 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
     snapshotUrl: message.snapshotUrl as string | undefined,
     metadata:    { raw: message } as Record<string, unknown>,
+    details:     undefined as Record<string, unknown> | undefined,
   }
 
   const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('zone_id reset_reason').lean()
@@ -240,7 +245,10 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     if (type === 'UNEXPECTED_RESTART') {
       const sent = message.resetReason ?? message.reset_reason
       const resetReason = typeof sent === 'string' && sent.length <= MAX_RESET_REASON_LENGTH ? sent : node.reset_reason
-      if (resetReason) common.metadata = { ...common.metadata, reset_reason: resetReason }
+      if (resetReason) {
+        common.metadata = { ...common.metadata, reset_reason: resetReason }
+        common.details = { reset_reason: resetReason }
+      }
     }
     // `name` cho tiêu đề mặc định — firmware không gửi kèm title
     const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
@@ -307,17 +315,30 @@ const METRIC_LABEL: Record<string, string> = {
   co2_ppm:     'CO2',
 }
 
-/** ENV-FR-004 + ALERT-FR-001 — gọi từ telemetry.service sau khi lưu bản ghi */
-export async function raiseThresholdAlert(zoneId: string, nodeId: string, breaches: ThresholdBreach[]): Promise<void> {
-  if (breaches.length === 0) return
+/**
+ * ENV-FR-004, ALERT-FR-012, BR-34 — gọi từ telemetry.service ở mẫu sống được lưu, sau khi
+ * trackBreachDwell (utils/breachDwell.util) tính quãng vượt ngưỡng của thiết bị:
+ * - có chỉ số đã ở ngoài ngưỡng đủ thời gian chờ (`dwelled`) → tạo THRESHOLD_BREACH (hoặc gộp vào cảnh
+ *   báo đang mở); `details` là chỉ số bắt đầu sớm nhất, `metadata.breaches` là mọi chỉ số đang vượt;
+ * - chỉ có chỉ số đang vượt chưa đủ thời gian chờ → không tạo mới, chỉ giữ cảnh báo đang mở còn sống
+ *   để nó chỉ tự đóng sau THRESHOLD_CLEAR_MS thật sự về trong ngưỡng (BR-16).
+ */
+export async function raiseThresholdAlert(
+  zoneId: string, nodeId: string, dwelled: DwelledBreach[], ongoing: ThresholdBreach[] = dwelled,
+): Promise<void> {
+  if (dwelled.length === 0) {
+    if (ongoing.length > 0) await keepThresholdAlertAlive(zoneId, nodeId)
+    return
+  }
 
   const zone = await Zone.findById(zoneId).lean()
   if (!zone) return
 
-  const detail = breaches
+  const detail = dwelled
     .map(b => `${METRIC_LABEL[b.metric] ?? b.metric} ${b.value} (${b.direction === 'above' ? 'vượt' : 'dưới'} ngưỡng ${b.limit})`)
     .join(', ')
-  const airQuality = breaches.some(b => AIR_QUALITY_METRICS.has(b.metric))
+  const airQuality = dwelled.some(b => AIR_QUALITY_METRICS.has(b.metric))
+  const first = dwelled.reduce((a, b) => (b.started_at < a.started_at ? b : a))
 
   await createAlert({
     farmId:   String(zone.farm_id),
@@ -326,8 +347,21 @@ export async function raiseThresholdAlert(zoneId: string, nodeId: string, breach
     type:     'THRESHOLD_BREACH',
     title:    `Vượt ngưỡng tại ${zone.name}`,
     message:  airQuality ? `${detail}. ${AIR_QUALITY_NOTE}` : detail,
-    metadata: { breaches },
+    metadata: { breaches: ongoing },
+    details:  { metric: first.metric, observed: first.value, threshold: first.limit, direction: first.direction, started_at: first.started_at },
   })
+}
+
+/** BR-16 — chỉ số còn ngoài ngưỡng: cảnh báo đang mở chưa được đóng; cập nhật lần thấy cuối tối đa 1 lần/ALERT_SEEN_UPDATE_MS */
+async function keepThresholdAlertAlive(zoneId: string, nodeId: string): Promise<void> {
+  const now = new Date()
+  await Alert.updateOne(
+    {
+      zone_id: zoneId, node_id: nodeId, type: 'THRESHOLD_BREACH', status: { $in: OPEN_STATUSES },
+      $or: [{ last_seen_at: { $lt: new Date(now.getTime() - ALERT_SEEN_UPDATE_MS) } }, { last_seen_at: { $exists: false } }],
+    },
+    { $set: { last_seen_at: now } },
+  )
 }
 
 // ── Truy vấn phía Farm Owner (ALERT-FR-007/009) ─────────────────────────────
@@ -561,8 +595,8 @@ export async function resolveHouseAlerts(houseId: string, type: AlertType, reaso
  * THRESHOLD_CLEAR_MS (chỉ số đã về bình thường, hoặc thiết bị ngừng gửi — khi
  * đó đã có NODE_OFFLINE riêng) thì tự đóng. Gọi định kỳ từ jobs/alertEscalation.job.ts.
  */
-export async function resolveStaleThresholdAlerts(): Promise<number> {
-  const clearBefore = new Date(Date.now() - THRESHOLD_CLEAR_MS)
+export async function resolveStaleThresholdAlerts(now = new Date()): Promise<number> {
+  const clearBefore = new Date(now.getTime() - THRESHOLD_CLEAR_MS)
   const { modifiedCount } = await Alert.updateMany(
     {
       type: 'THRESHOLD_BREACH',
@@ -572,7 +606,7 @@ export async function resolveStaleThresholdAlerts(): Promise<number> {
         { last_seen_at: { $exists: false }, created_at: { $lt: clearBefore } },
       ],
     },
-    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Chỉ số đã trở lại bình thường' },
+    { status: 'RESOLVED', resolved_at: now, acknowledgement_note: 'Chỉ số đã trở lại bình thường' },
   )
   return modifiedCount
 }

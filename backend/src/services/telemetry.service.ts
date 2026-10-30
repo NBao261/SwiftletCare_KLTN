@@ -4,6 +4,7 @@ import { Zone } from '@/models/houseZone.model'
 import { emitTelemetryUpdate } from '@/socket'
 import { findThresholdBreaches, raiseThresholdAlert } from '@/services/alert.service'
 import { markNodeSeen } from '@/services/device.service'
+import { trackBreachDwell } from '@/utils/breachDwell.util'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
 import { NotFoundError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
@@ -67,13 +68,13 @@ function resolveSampleTime(ts: unknown, now: number): number {
   return isFiniteNumber(ts) && ts >= now - MAX_BACKDATE_MS && ts <= now + MAX_CLOCK_SKEW_MS ? ts : now
 }
 
-export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> {
+/** `now`: giờ nhận mẫu — test truyền vào để chạy qua thời gian chờ của BR-34 mà không phải đợi thật */
+export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now()): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong payload telemetry')
 
   const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
 
-  const now = Date.now()
   const sampleTime = resolveSampleTime(payload.timestamp, now)
   const isStale = now - sampleTime > STALE_TELEMETRY_MS
   const nodeId = String(node._id)
@@ -83,6 +84,9 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
   // qua phần đánh giá ngưỡng.
   const zone = await Zone.findById(node.zone_id).lean()
   const breaches = zone ? findThresholdBreaches(payload, zone.thresholds) : []
+  // BR-34 — quãng vượt ngưỡng tính trên MỌI mẫu sống (không chỉ mẫu được lưu) để 1 mẫu trong ngưỡng
+  // cắt được quãng chờ; mẫu buffer cũ không tham gia (tình trạng đã qua)
+  const dwell = zone && !isStale ? trackBreachDwell(nodeId, payload, breaches, sampleTime) : undefined
 
   // Mẫu buffer offline luôn được ghi (mỗi dòng đã cách nhau ~10s ở firmware) và
   // không tham gia throttle của luồng sống. Mẫu sống: tối đa 1 mẫu/TELEMETRY_PERSIST_INTERVAL_MS
@@ -125,8 +129,10 @@ export async function ingestTelemetry(payload: TelemetryPayload): Promise<void> 
   // quan trọng hơn việc gửi được cảnh báo. Chỉ gọi ở mẫu được lưu (lúc bắt đầu
   // vượt ngưỡng + mỗi 10s): mỗi lần gọi tốn ~3 lượt đọc DB, gọi mỗi giây là thừa
   // khi last_seen_at chỉ cập nhật 1 lần/phút và tự đóng sau 5 phút (ALERT-FR-008).
-  if (anomaly && persist) {
-    void raiseThresholdAlert(String(node.zone_id), nodeId, breaches).catch((err: Error) =>
+  // Chỉ tạo cảnh báo khi đủ thời gian chờ (BR-34, ALERT-FR-012); chưa đủ thì chỉ giữ
+  // cảnh báo đang mở còn sống (BR-16).
+  if (dwell && dwell.ongoing.length > 0 && persist) {
+    void raiseThresholdAlert(String(node.zone_id), nodeId, dwell.dwelled, dwell.ongoing).catch((err: Error) =>
       logger.error('Tạo cảnh báo vượt ngưỡng thất bại', { deviceId: payload.deviceId, err }),
     )
   }

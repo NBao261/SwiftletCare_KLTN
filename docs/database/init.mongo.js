@@ -44,6 +44,7 @@ ensureCollection("alerts", {
       "bsonType": ["string", "null"]
     },
     "metadata": {},
+    "details": {},
     "status": {
       "bsonType": ["string", "null"],
       "enum": ["ACTIVE", "ACKNOWLEDGED", "DISMISSED", "RESOLVED", null]
