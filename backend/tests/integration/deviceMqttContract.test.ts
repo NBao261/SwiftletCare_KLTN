@@ -127,7 +127,7 @@ describe('ingestTelemetry', () => {
     expect(await Telemetry.countDocuments({ is_anomaly: true })).toBe(1)
   })
 
-  it('throttles a sustained breach like normal readings, with one alert', async () => {
+  it('throttles a short breach like normal readings and raises no alert before the dwell time (DF-6)', async () => {
     const { deviceId, zone } = await seed()
     const t0 = Date.now()
     const hot = { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }
@@ -135,11 +135,25 @@ describe('ingestTelemetry', () => {
     for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, hot))
     await ingestTelemetry(reading(deviceId, t0 + 5_000)) // hết vượt ngưỡng: chờ mốc 10s
     await ingestTelemetry(reading(deviceId, t0 + 10_000))
-    await thresholdAlertRaised() // raiseThresholdAlert chạy fire-and-forget
+    await new Promise(r => setTimeout(r, 100)) // raiseThresholdAlert chạy fire-and-forget
 
     expect(await Telemetry.countDocuments({ is_anomaly: true })).toBe(1)
     expect(await Telemetry.countDocuments({ is_anomaly: false })).toBe(1)
-    expect(await Alert.countDocuments({ zone_id: zone._id, type: 'THRESHOLD_BREACH' })).toBe(1)
+    expect(await Alert.countDocuments({ zone_id: zone._id, type: 'THRESHOLD_BREACH' })).toBe(0)
+  })
+
+  it('raises one alert once a breach lasts its dwell time (BR-34)', async () => {
+    const { deviceId, zone } = await seed()
+    const t0 = Date.now()
+    const hot = { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }
+
+    // 10 phút + 1 mẫu, mẫu cách nhau 10s; `now` đi theo mẫu để không bị coi là dữ liệu buffer cũ
+    for (let i = 0; i <= 60; i++) await ingestTelemetry(reading(deviceId, t0 + i * 10_000, hot), t0 + i * 10_000)
+    await thresholdAlertRaised()
+
+    const alerts = await Alert.find({ zone_id: zone._id, type: 'THRESHOLD_BREACH' }).lean()
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0].details).toMatchObject({ metric: 'temperature', direction: 'above', threshold: DEFAULT_THRESHOLDS.temp_max })
   })
 
   it('keeps a reading flapping around the threshold every second to ~2 writes per 10s', async () => {
@@ -257,14 +271,15 @@ describe('online/offline race (FARM-FR-005)', () => {
 
   it('evaluates threshold alerts only on persisted samples, not every second', async () => {
     const { deviceId } = await seed()
-    const findOne = jest.spyOn(Alert, 'findOne')
+    // Chưa đủ thời gian chờ: mỗi lần đánh giá chỉ gia hạn cảnh báo đang mở (1 updateOne trên Alert)
+    const updateOne = jest.spyOn(Alert, 'updateOne')
     const t0 = Date.now()
 
     for (let i = 0; i < 5; i++) await ingestTelemetry(reading(deviceId, t0 + i * 1_000, { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }))
-    await thresholdAlertRaised()
+    await new Promise(r => setTimeout(r, 100)) // raiseThresholdAlert chạy fire-and-forget
 
-    expect(findOne).toHaveBeenCalledTimes(1) // chỉ mẫu bắt đầu vượt ngưỡng
-    findOne.mockRestore()
+    expect(updateOne).toHaveBeenCalledTimes(1) // chỉ mẫu bắt đầu vượt ngưỡng
+    updateOne.mockRestore()
   })
 })
 

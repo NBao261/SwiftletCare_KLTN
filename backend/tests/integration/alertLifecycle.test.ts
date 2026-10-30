@@ -146,11 +146,14 @@ describe('tên cảnh báo theo SRS 3.1.0 (G-01)', () => {
     const { node } = await seed()
     const sent = (await ingestDeviceAlert({ deviceId: node.device_id, type: 'UNEXPECTED_RESTART', resetReason: 'WATCHDOG' }))!
     expect(sent.metadata).toMatchObject({ reset_reason: 'WATCHDOG' })
+    // Report 4 §6.1 — chi tiết theo ERD (metadata giữ cho client cũ)
+    expect(sent.details).toEqual({ reset_reason: 'WATCHDOG' })
 
     await Alert.deleteMany({})
     await SensorNode.updateOne({ _id: node._id }, { reset_reason: 'POWER_ON' })
     const fromHeartbeat = (await ingestDeviceAlert({ deviceId: node.device_id, type: 'POWER_OUTAGE' }))!
     expect(fromHeartbeat.metadata).toMatchObject({ reset_reason: 'POWER_ON' })
+    expect(fromHeartbeat.details).toEqual({ reset_reason: 'POWER_ON' })
   })
 
   it('thiết bị không được tự gửi CONFIG_MISMATCH (backend tự tính, ENV-FR-027); ACTUATOR_FAULT thì nhận', async () => {
