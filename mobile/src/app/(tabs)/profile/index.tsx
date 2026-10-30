@@ -40,5 +40,5 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { padding: Spacing.lg, gap: Spacing.xl },
-  profileCard: { padding: Spacing.lg, gap: Spacing.xs, borderRadius: Radius.none },
+  profileCard: { padding: Spacing.lg, gap: Spacing.xs, borderRadius: Radius.lg },
 })

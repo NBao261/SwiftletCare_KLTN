@@ -46,7 +46,11 @@ export function AppHeader({
             accessibilityLabel="Quay lại"
             hitSlop={Spacing.xs}
             onPress={onBack}
-            style={[styles.backButton, { borderColor: foregroundColor ?? palette.border }]}
+            style={[
+              styles.backButton,
+              // Nền sáng: nút tròn trắng không viền; nền tối (khung video) giữ viền màu chữ
+              foregroundColor ? { borderWidth: BorderWidth.regular, borderColor: foregroundColor } : { backgroundColor: palette.surface },
+            ]}
           >
             <ArrowLeftIcon size={20} color={textColor} />
           </Pressable>
@@ -79,12 +83,11 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
   },
-  // Nút tròn viền mảnh, vùng chạm 44 × 44
+  // Nút tròn, vùng chạm 44 × 44
   backButton: {
     width: BACK_BUTTON_SIZE,
     height: BACK_BUTTON_SIZE,
     borderRadius: Radius.full,
-    borderWidth: BorderWidth.regular,
     alignItems: 'center',
     justifyContent: 'center',
   },

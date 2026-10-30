@@ -39,7 +39,7 @@ export function TextField({
   const [isFocused, setFocused] = useState(false)
   const [isPasswordVisible, setPasswordVisible] = useState(false)
   const isInvalid = Boolean(error) || Boolean(hasError)
-  const borderColor = isInvalid ? palette.alert : isFocused ? palette.primary : 'transparent'
+  const borderColor = isInvalid ? palette.alert : isFocused ? palette.text : 'transparent'
 
   return (
     <View style={styles.field}>
