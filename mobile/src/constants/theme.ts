@@ -11,6 +11,7 @@
 // App chỉ có giao diện sáng — không có bảng màu tối
 export const Colors = {
   light: {
+    // Lime chỉ làm NỀN: không dùng primary làm màu chữ/viền trên nền sáng (Paper, trắng) — dùng text
     primary: "#C3FD47",         // Lime — nền nút chính, nút tròn giữa, badge (đổi theo yêu cầu)
     onPrimary: "#0B0B0C",       // Ink — chữ/icon trên nền lime (đổi theo yêu cầu)
     secondary: "#0B0B0C8C",     // Ink mờ 55% — icon trung tính (đổi theo yêu cầu)
