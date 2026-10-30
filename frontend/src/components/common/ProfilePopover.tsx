@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CircleHelp, LogOut, UserCog } from 'lucide-react'
+import { Bell, CircleHelp, LogOut, ShieldCheck, UserCog } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
 import { cn } from '@/lib/cn'
@@ -74,6 +74,7 @@ export default function ProfilePopover() {
             <MenuItem icon={<UserCog width={16} height={16} />} label={t('profile.accountSettings')} onClick={() => goTo('/settings')} />
             <MenuItem icon={<Bell width={16} height={16} />} label={t('profile.notificationSettings')} onClick={() => goTo('/settings')} />
             <MenuItem icon={<CircleHelp width={16} height={16} />} label={t('profile.help')} badge={t('profile.comingSoon')} disabled />
+            <MenuItem icon={<ShieldCheck width={16} height={16} />} label={t('profile.privacy')} onClick={() => goTo('/settings/privacy')} />
           </div>
 
           <div className="border-t border-gray-200 p-1.5">

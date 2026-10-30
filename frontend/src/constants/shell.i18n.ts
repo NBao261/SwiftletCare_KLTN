@@ -26,6 +26,7 @@ const vi = {
   'profile.notificationSettings': 'Cấu hình thông báo',
   'profile.help': 'Trợ giúp & Hướng dẫn',
   'profile.comingSoon': 'Sắp có',
+  'profile.privacy': 'Chính sách quyền riêng tư',
 
   'logout.action': 'Đăng xuất',
   'logout.actionUser': 'Đăng xuất {name}',
@@ -64,6 +65,7 @@ const en: Record<ShellKey, string> = {
   'profile.notificationSettings': 'Notification settings',
   'profile.help': 'Help & Support',
   'profile.comingSoon': 'Soon',
+  'profile.privacy': 'Privacy policy',
 
   'logout.action': 'Log out',
   'logout.actionUser': 'Log out {name}',

@@ -16,8 +16,9 @@ import { technicianRoutes } from "@/routes/technician.routes";
 import { adminRoutes } from "@/routes/admin.routes";
 import { expertRoutes } from "@/routes/expert.routes";
 
-/** Cài đặt tài khoản — route duy nhất mọi role đã đăng nhập đều dùng, nên nằm ngay đây thay vì trong một file route theo role. */
+/** Cài đặt tài khoản và chính sách quyền riêng tư — route mọi role đã đăng nhập đều dùng, nên nằm ngay đây thay vì trong một file route theo role. */
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const SettingsPrivacyPage = lazy(() => import("@/pages/SettingsPrivacyPage"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -110,6 +111,7 @@ export default function App() {
           >
             <Route index element={<RoleHomeRedirect />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings/privacy" element={<SettingsPrivacyPage />} />
             {farmOwnerRoutes}
             {technicianRoutes}
             {adminRoutes}
