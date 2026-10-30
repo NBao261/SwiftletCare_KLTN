@@ -248,7 +248,7 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-04 — Mục duyệt và đề xuất hệ số (P1) — Kiệt (backend), Tuấn (màn chuyên gia), Len (nút "gửi chuyên gia" của Farm Owner)
 
-- [ ] Collection `parameterreviews`, `coefficientproposals` theo SDD 6.1; route accept/revert/adjust, submit/approve/reject; thông báo hai chiều; Farm Owner áp gợi ý trực tiếp khi farm có chuyên gia → 403.
+- [x] Collection `parameterreviews`, `coefficientproposals` theo SDD 6.1; route accept/revert/adjust, submit/approve/reject; thông báo hai chiều; Farm Owner áp gợi ý trực tiếp khi farm có chuyên gia → 403. *(Kiệt, 30/10, `cad151d` spec + `b8070bc` backend, nhánh `feat/g04-review-proposals` tạo từ nhánh G-03; "adjust" không có route riêng: chuyên gia sửa cùng nhóm tham số thì mục đóng `ADJUSTED` (EXPERT-FR-010); áp gợi ý trực tiếp: `POST /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion`)*
 - [ ] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner.
 
 ### G-05 — Vượt ngưỡng có thời gian chờ (P1) — Kiệt; Len hiện chi tiết cảnh báo ở màn Farm Owner
