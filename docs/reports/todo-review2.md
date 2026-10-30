@@ -253,13 +253,13 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-05 — Vượt ngưỡng có thời gian chờ (P1) — Kiệt; Len hiện chi tiết cảnh báo ở màn Farm Owner
 
-- [ ] `telemetry.service.ts`:
+- [x] `telemetry.service.ts`: *(Kiệt, 31/10, `ea27558` spec + `aded604` backend, nhánh `feat/g05-breach-dwell` tạo từ nhánh G-04; quãng chờ tính ở `utils/breachDwell.util.ts`; số đo thiếu không bắt đầu, không cắt quãng chờ; cảnh báo đang mở được gia hạn khi chỉ số còn ngoài ngưỡng để BR-16 đóng đúng; `details` có cả `reset_reason` của `UNEXPECTED_RESTART`)*
   - giữ thời điểm bắt đầu vượt ngưỡng theo `(node, metric, direction)`;
   - chỉ tạo `THRESHOLD_BREACH` khi vượt liên tục `BREACH_DWELL_MS`: 10 phút cho nhiệt độ/độ ẩm, 5 phút cho ánh sáng/NH3/CO2;
   - mẫu stale không tính;
   - `details = {metric, observed, threshold, direction, started_at}`.
-- [ ] Test `thresholdBreach.test.ts` (TC-F07-02): 9 phút không có cảnh báo, 10 phút có 1 cảnh báo.
-- [ ] Đóng defect DF-6.
+- [x] Test `thresholdBreach.test.ts` (TC-F07-02): 9 phút không có cảnh báo, 10 phút có 1 cảnh báo. *(kèm `tests/unit/utils/breachDwell.util.test.ts`)*
+- [x] Đóng defect DF-6. *(Project Tracking §5: Closed 31/10)*
 
 ### G-06 — Can thiệp tay (P1) — Kiệt (backend), Bảo (firmware, trong G-07), Len (web, mobile)
 
