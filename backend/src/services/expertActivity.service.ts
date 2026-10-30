@@ -7,13 +7,14 @@ import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
 /**
- * EXPERT-FR-009 — các quyết định của Domain Expert trên 1 farm, theo tên hành động trong audit log.
- * Lịch đếm (VISION-FR-019, G-12), mục duyệt và đề xuất hệ số (EXPERT-FR-010/011, G-04) thêm vào
- * đây khi các gap đó làm.
+ * EXPERT-FR-009 — các quyết định của Domain Expert trên 1 farm, theo tên hành động trong audit log:
+ * tham số, kết luận, và kết quả mục duyệt / đề xuất hệ số (EXPERT-FR-010/011). Lịch đếm (VISION-FR-019,
+ * G-12) thêm vào đây khi gap đó làm.
  */
 export const EXPERT_DECISION_ACTIONS = [
   'THRESHOLD_UPDATED', 'FUZZY_TUNING_UPDATED', 'DETECTION_TUNING_UPDATED', 'BIRD_COUNT_TUNING_UPDATED',
   'COUNTING_RING_UPDATED', 'ALERT_VERDICT_SET', 'HEALTH_REPORT_CONCLUDED',
+  'REVIEW_ACCEPTED', 'REVIEW_REVERTED', 'PROPOSAL_APPROVED', 'PROPOSAL_REJECTED',
 ] as const
 export type ExpertDecisionAction = typeof EXPERT_DECISION_ACTIONS[number]
 

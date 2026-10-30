@@ -33,8 +33,12 @@ export interface IThresholdHistoryEntry {
   changed_at: Date
   old_values: Partial<Thresholds>
   new_values: Partial<Thresholds>
-  source: 'MANUAL' | 'RESET_TO_DEFAULT'
+  /** EXPERT_REVERT: chuyên gia hoàn lại thay đổi của Farm Owner (EXPERT-FR-010) */
+  source: 'MANUAL' | 'RESET_TO_DEFAULT' | 'EXPERT_REVERT'
 }
+
+/** Nguồn 1 lần đổi hệ số mờ: sửa tay, chuyên gia hoàn lại (EXPERT-FR-010), áp gợi ý đã duyệt (EXPERT-FR-011) */
+export type FuzzyTuningSource = 'MANUAL' | 'EXPERT_REVERT' | 'SUGGESTION_APPROVED'
 
 export interface IFuzzyTuningHistoryEntry {
   changed_by: Types.ObjectId
@@ -42,6 +46,8 @@ export interface IFuzzyTuningHistoryEntry {
   changed_at: Date
   old_values: Partial<FuzzyTuning>
   new_values: Partial<FuzzyTuning>
+  /** Bản ghi trước G-04 không có — đều là sửa tay */
+  source?: FuzzyTuningSource
 }
 
 export interface IDetectionTuningHistoryEntry {
@@ -109,7 +115,7 @@ const zoneSchema = new Schema<IZone>(
       changed_at: { type: Date },
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
-      source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT'] },
+      source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT', 'EXPERT_REVERT'] },
       changed_by_role: { type: String },
     }],
     fuzzy_tuning: {
@@ -125,6 +131,7 @@ const zoneSchema = new Schema<IZone>(
       changed_at: { type: Date },
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
+      source: { type: String, enum: ['MANUAL', 'EXPERT_REVERT', 'SUGGESTION_APPROVED'] satisfies FuzzyTuningSource[] },
     }],
     detection_tuning: {
       noise_margin_db:       { type: Number, default: DEFAULT_DETECTION_TUNING.noise_margin_db },

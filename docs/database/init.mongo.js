@@ -352,6 +352,50 @@ db.getCollection("cameranodes").createIndex({"status":1,"last_heartbeat":1})
 db.getCollection("cameranodes").createIndex({"house_id":1})
 db.getCollection("cameranodes").createIndex({"status":1,"registered_at":1})
 
+// ── coefficientproposals (model CoefficientProposal) ──
+ensureCollection("coefficientproposals", {
+  "bsonType": "object",
+  "properties": {
+    "zone_id": {
+      "bsonType": "objectId"
+    },
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "submitted_by": {
+      "bsonType": "objectId"
+    },
+    "suggested_values": {},
+    "current_values": {},
+    "predicted": {},
+    "status": {
+      "bsonType": ["string", "null"],
+      "enum": ["PROPOSED", "APPROVED", "REJECTED", "SUPERSEDED", null]
+    },
+    "note": {
+      "bsonType": ["string", "null"]
+    },
+    "decided_by": {
+      "bsonType": ["objectId", "null"]
+    },
+    "decided_at": {
+      "bsonType": ["date", "null"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "updated_at": {
+      "bsonType": ["date", "null"]
+    }
+  },
+  "required": ["zone_id", "farm_id", "submitted_by", "suggested_values", "current_values"]
+})
+db.getCollection("coefficientproposals").createIndex({"zone_id":1,"status":1})
+db.getCollection("coefficientproposals").createIndex({"farm_id":1,"created_at":-1})
+
 // ── farms (model Farm) ──
 ensureCollection("farms", {
   "bsonType": "object",
@@ -640,7 +684,7 @@ ensureCollection("notifications", {
       "properties": {
         "kind": {
           "bsonType": "string",
-          "enum": ["alert", "health_report", "expert_decision"]
+          "enum": ["alert", "health_report", "expert_decision", "parameter_review", "coefficient_proposal"]
         },
         "id": {
           "bsonType": "objectId"
@@ -662,6 +706,51 @@ ensureCollection("notifications", {
 })
 db.getCollection("notifications").createIndex({"user_id":1,"created_at":-1})
 db.getCollection("notifications").createIndex({"created_at":1}, {"expireAfterSeconds":7776000})
+
+// ── parameterreviews (model ParameterReview) ──
+ensureCollection("parameterreviews", {
+  "bsonType": "object",
+  "properties": {
+    "zone_id": {
+      "bsonType": "objectId"
+    },
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "group": {
+      "bsonType": "string",
+      "enum": ["thresholds", "fuzzy"]
+    },
+    "old_values": {},
+    "new_values": {},
+    "status": {
+      "bsonType": ["string", "null"],
+      "enum": ["PENDING_REVIEW", "ACCEPTED", "REVERTED", "ADJUSTED", null]
+    },
+    "changed_by": {
+      "bsonType": "objectId"
+    },
+    "reviewed_by": {
+      "bsonType": ["objectId", "null"]
+    },
+    "reviewed_at": {
+      "bsonType": ["date", "null"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "updated_at": {
+      "bsonType": ["date", "null"]
+    }
+  },
+  "required": ["zone_id", "farm_id", "group", "old_values", "new_values", "changed_by"]
+})
+db.getCollection("parameterreviews").createIndex({"zone_id":1,"group":1,"status":1})
+db.getCollection("parameterreviews").createIndex({"zone_id":1,"group":1}, {"unique":true,"partialFilterExpression":{"status":"PENDING_REVIEW"}})
+db.getCollection("parameterreviews").createIndex({"farm_id":1,"created_at":-1})
 
 // ── provisioneddevices (model ProvisionedDevice) ──
 ensureCollection("provisioneddevices", {
@@ -1275,7 +1364,7 @@ ensureCollection("zones", {
           "new_values": {},
           "source": {
             "bsonType": ["string", "null"],
-            "enum": ["MANUAL", "RESET_TO_DEFAULT", null]
+            "enum": ["MANUAL", "RESET_TO_DEFAULT", "EXPERT_REVERT", null]
           },
           "changed_by_role": {
             "bsonType": ["string", "null"]
@@ -1322,6 +1411,10 @@ ensureCollection("zones", {
           },
           "old_values": {},
           "new_values": {},
+          "source": {
+            "bsonType": ["string", "null"],
+            "enum": ["MANUAL", "EXPERT_REVERT", "SUGGESTION_APPROVED", null]
+          },
           "_id": {
             "bsonType": ["objectId", "null"]
           }

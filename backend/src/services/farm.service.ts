@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
-import { House, Zone, IHouse, IZone } from '@/models/houseZone.model'
+import { House, Zone, IHouse, IZone, type FuzzyTuningSource } from '@/models/houseZone.model'
+import { CoefficientProposal } from '@/models/coefficientProposal.model'
 import { User, IUser } from '@/models/user.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
@@ -11,6 +12,7 @@ import {
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
+import { trackParameterChange } from '@/services/parameterReview.service'
 import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
@@ -21,7 +23,7 @@ import {
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
-import type { Thresholds, CurrentUser, FarmMemberRole } from '@/types'
+import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning } from '@/types'
 
 /** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
 const INVITATION_TTL_MS = 7 * 86400_000
@@ -424,13 +426,31 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
 
   const picked = pickFuzzyTuning(updates)
   if (Object.keys(picked).length === 0) throw BadRequestError('Không có hệ số nào để cập nhật')
+  return applyFuzzyTuning({ zone, house, farm }, user, picked, 'MANUAL')
+}
+
+/**
+ * Áp hệ số mờ cho 1 Zone kèm mọi tác dụng phụ — dùng chung cho sửa tay (ENV-FR-021), chuyên gia hoàn
+ * lại (EXPERT-FR-010) và áp gợi ý đã duyệt (EXPERT-FR-011): gộp + kiểm khoảng, lưu lịch sử có nguồn,
+ * gửi `config/update` xuống ESP32, ghi audit, báo Farm Owner khi chuyên gia đổi (EXPERT-FR-009), mở/đóng
+ * mục duyệt; chuyên gia đổi hệ số thì đề xuất đang chờ của Zone thành SUPERSEDED. `notify: false` khi
+ * người gọi tự báo kết quả (duyệt đề xuất báo PROPOSAL_APPROVED) để Farm Owner không nhận 2 thông báo.
+ */
+export async function applyFuzzyTuning(
+  chain: { zone: IZone; house: IHouse; farm: IFarm },
+  user: CurrentUser,
+  picked: Partial<FuzzyTuning>,
+  source: FuzzyTuningSource,
+  opts: { notify?: boolean } = {},
+): Promise<IZone> {
+  const { zone, house, farm } = chain
   const oldValues = { ...zone.fuzzy_tuning }
   const merged = { ...oldValues, ...picked }
   assertValidFuzzyTuning(merged)
 
   zone.fuzzy_tuning = merged
   zone.fuzzy_tuning_history.push({
-    changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_values: oldValues, new_values: picked,
+    changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_values: oldValues, new_values: picked, source,
   } as never)
   const overflow = zone.fuzzy_tuning_history.length - THRESHOLD_HISTORY_LIMIT
   if (overflow > 0) zone.fuzzy_tuning_history.splice(0, overflow)
@@ -438,11 +458,20 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
 
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', { ...zone.fuzzy_tuning })
   const auditId = await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), {
-    before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
+    source, before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
   }, { farmId: String(farm._id) })
-  await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'chỉnh hệ số điều khiển mờ', place: `Khu vực "${zone.name}"`, detail: formatChanges(oldValues, merged),
+  // Đề xuất đang chờ không còn khớp hệ số Zone khi chuyên gia đã tự đổi (EXPERT-FR-011)
+  if (user.role === 'DOMAIN_EXPERT') {
+    await CoefficientProposal.updateMany({ zone_id: zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
+  }
+  // Hoàn lại do chuyên gia: mục duyệt tự báo Farm Owner và tự đóng (expertReview.service)
+  if (source === 'EXPERT_REVERT') return zone
+
+  if (opts.notify !== false) await notifyExpertDecision(user, farm._id, auditId, {
+    what: source === 'SUGGESTION_APPROVED' ? 'áp gợi ý hệ số điều khiển mờ' : 'chỉnh hệ số điều khiển mờ',
+    place: `Khu vực "${zone.name}"`, detail: formatChanges(oldValues, merged),
   })
+  await trackParameterChange(chain, user, 'fuzzy', oldValues, merged)
   return zone
 }
 
