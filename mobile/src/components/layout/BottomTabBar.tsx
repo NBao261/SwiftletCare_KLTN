@@ -1,11 +1,9 @@
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 import type { BottomTabBarProps as NavigatorTabBarProps } from 'expo-router/tabs'
-import { LinearGradient } from 'expo-linear-gradient'
 import Svg, { Defs, FeGaussianBlur, FeOffset, Filter, Path } from 'react-native-svg'
-import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import type { RoleTab } from '@/constants/roleTabs'
-import { BorderWidth, Colors, Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
 // ===================== BẢNG CHỈNH — chỉ sửa số ở khối này =====================
@@ -21,6 +19,8 @@ const LABEL_BOTTOM = -5
 // Icon thường — dùng chung cho mọi tab TRỪ nút nổi
 const TAB_ICON_SIZE = 24
 const ICON_LABEL_GAP = 4
+// Vòng tròn sáng sau icon tab đang chọn
+const ACTIVE_CIRCLE_SIZE = 36
 
 // Nút tròn nổi
 const FEATURED_SIZE = 49
@@ -36,8 +36,8 @@ const HUMP_PEAK_ROUNDNESS = 0.4
 const SHADOW_BLUR = 3
 const SHADOW_OFFSET_Y = 0
 
-// Đường viền mép thanh: 'background' (trắng, trùng nền thanh) · 'divider' (xám mảnh)
-const BORDER_COLOR_TOKEN = 'background'
+// Đường viền mép thanh: 'surface' (trắng, trùng nền thanh) · 'divider' (xám mảnh)
+const BORDER_COLOR_TOKEN = 'surface'
 
 // ============== Tự tính từ bảng trên — không cần sửa ==============
 
@@ -49,8 +49,6 @@ const SHADOW_SPACE = SHADOW_BLUR * 3 + Math.abs(SHADOW_OFFSET_Y)
 const EDGE_TOP = Math.max(FEATURED_RISE, HUMP_HEIGHT + SHADOW_SPACE)
 // Thanh đè lên đáy màn bằng khoảng này: màn tab có nội dung cuộn chừa thêm ở đáy
 export const TAB_BAR_OVERLAP = EDGE_TOP
-// Xanh loang của nút nổi, từ hai màu có sẵn trong theme
-const FEATURED_GRADIENT = [Colors.raw.successLime, Colors.raw.brandPrimary] as const
 
 interface BottomTabBarProps extends NavigatorTabBarProps {
   tabs: readonly RoleTab[]
@@ -88,7 +86,7 @@ function TabBadge({ count }: { count: number }) {
   const palette = usePalette()
   if (count <= 0) return null
   return (
-    <View style={[styles.badge, { backgroundColor: palette.primary, borderColor: palette.background }]}>
+    <View style={[styles.badge, { backgroundColor: palette.primary, borderColor: palette.surface }]}>
       <Text variant="label" color={palette.onPrimary}>{count > 99 ? '99+' : count}</Text>
     </View>
   )
@@ -117,7 +115,7 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
         </Defs>
         {/* Bản sao hình thanh, làm nhoè, nằm dưới thanh thật: phần lộ ra ngoài mép là bóng */}
         <Path d={fillPath} fill={palette.divider} filter="url(#tabBarShadow)" />
-        <Path d={fillPath} fill={palette.background} stroke={palette[BORDER_COLOR_TOKEN]} strokeWidth={BorderWidth.hairline} />
+        <Path d={fillPath} fill={palette.surface} stroke={palette[BORDER_COLOR_TOKEN]} strokeWidth={BorderWidth.hairline} />
       </Svg>
       <View pointerEvents="box-none" style={[styles.row, { paddingBottom: insets.bottom }]}>
         {state.routes.map((route, index) => {
@@ -133,7 +131,8 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
           }
 
           return (
-            <PressableScale
+            // Pressable thường: bấm là chuyển tab ngay, không có hiệu ứng nhấn
+            <Pressable
               key={route.key}
               accessibilityRole="tab"
               accessibilityLabel={tab.title}
@@ -142,19 +141,19 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
               style={tab.isFeatured ? styles.featuredItem : styles.item}
             >
               {tab.isFeatured ? (
-                <LinearGradient colors={FEATURED_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.featuredCircle}>
-                  {/* Nút nổi luôn icon đặc, không đổi khi chọn — nền xanh loang đã đủ nổi bật */}
-                  <TabIcon size={FEATURED_ICON_SIZE} color={Colors.raw.pureWhite} weight="fill" />
+                <View style={[styles.featuredCircle, { backgroundColor: palette.primary }]}>
+                  {/* Nút nổi luôn icon đặc, không đổi khi chọn — nền lime đã đủ nổi bật */}
+                  <TabIcon size={FEATURED_ICON_SIZE} color={palette.onPrimary} weight="fill" />
                   <TabBadge count={badgeCount} />
-                </LinearGradient>
+                </View>
               ) : (
-                <View>
+                <View style={[styles.iconCircle, isFocused && { backgroundColor: palette.tabActiveBackground }]}>
                   <TabIcon size={TAB_ICON_SIZE} color={color} weight={isFocused ? 'fill' : 'regular'} />
                   <TabBadge count={badgeCount} />
                 </View>
               )}
               <Text variant="label" color={color} numberOfLines={1} style={styles.label}>{tab.title}</Text>
-            </PressableScale>
+            </Pressable>
           )
         })}
       </View>
@@ -185,6 +184,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   featuredCircle: { width: FEATURED_SIZE, height: FEATURED_SIZE, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  iconCircle: { width: ACTIVE_CIRCLE_SIZE, height: ACTIVE_CIRCLE_SIZE, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',
     top: -Spacing.xs,

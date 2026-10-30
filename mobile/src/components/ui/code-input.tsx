@@ -60,7 +60,7 @@ export function CodeInput({
       <Animated.View style={[styles.row, shakeStyle]}>
         {digits.map((digit, index) => {
           const isActive = isFocused && index === Math.min(value.length, length - 1)
-          const borderColor = hasError ? palette.alert : isActive ? palette.primary : 'transparent'
+          const borderColor = hasError ? palette.alert : isActive ? palette.text : 'transparent'
           return (
             <View key={index} style={[styles.cell, { backgroundColor: palette.surface, borderColor }]}>
               <Text variant="heading" center>

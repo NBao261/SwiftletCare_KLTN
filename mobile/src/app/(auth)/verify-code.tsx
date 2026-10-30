@@ -100,7 +100,7 @@ export default function VerifyCodeScreen() {
         <Button
           variant="link"
           label={forgotPassword.isPending ? 'Đang gửi lại mã…' : 'Gửi lại mã'}
-          color={palette.primary}
+          color={palette.text}
           disabled={forgotPassword.isPending}
           onPress={handleResend}
         />

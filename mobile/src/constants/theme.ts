@@ -1,31 +1,35 @@
 /**
  * Bảng màu nhận diện thương hiệu của SwiftletCare (mobile)
- * Bảng màu thiết kế:
- * - #FFFFFF: Trắng tinh khiết (Pure White / nền)
- * - #CBCBCB: Xám nhạt (Light Gray / viền, khung ảnh, nền ô)
- * - #343434: Than đậm (Dark Charcoal / chữ chính)
- * - #9D9D9D: Xám trung tính (Medium Gray / chữ phụ, icon chưa chọn)
+ * Bảng màu thiết kế (đổi theo yêu cầu 2026-10-30):
+ * - #C3FD47: Lime — điểm nhấn; CHỈ làm nền (nút chính, nút tròn giữa, badge) hoặc chữ/icon trên nền Ink
+ * - #0B0B0C: Ink — chữ chính, khối tối (thanh tab, card nổi bật)
+ * - #F3F3EE: Paper — nền màn hình
+ * - #FFFFFF: Trắng — card, ô nhập
  * - #FF7426: Cam an toàn (Safety Orange) — CHỈ cho cảnh báo, lỗi, khẩn cấp
- * - #446401: Xanh thương hiệu — thay cho mọi điểm nhấn cam của mẫu (nút CTA, tab đang chọn, badge số, nhãn nhỏ)
  * Màu trạng thái (mức độ, trạng thái cảnh báo, thiết bị, loại yến) lấy đúng của web (frontend/tailwind.config.ts).
  */
 // App chỉ có giao diện sáng — không có bảng màu tối
 export const Colors = {
   light: {
-    primary: "#446401",         // Brand Green — điểm nhấn duy nhất
-    onPrimary: "#FFFFFF",       // Chữ trên nền xanh
-    secondary: "#9D9D9D",       // Medium Gray
+    // Lime chỉ làm NỀN: không dùng primary làm màu chữ/viền trên nền sáng (Paper, trắng) — dùng text
+    primary: "#C3FD47",         // Lime — nền nút chính, nút tròn giữa, badge (đổi theo yêu cầu)
+    onPrimary: "#0B0B0C",       // Ink — chữ/icon trên nền lime (đổi theo yêu cầu)
+    secondary: "#0B0B0C8C",     // Ink mờ 55% — icon trung tính (đổi theo yêu cầu)
     alert: "#FF7426",           // Safety Orange — chỉ cảnh báo/lỗi, không dùng cho nút
-    text: "#343434",            // Dark Charcoal — chữ chính
-    textSecondary: "#9D9D9D",   // Medium Gray — chữ phụ
-    background: "#FFFFFF",      // Pure White
-    surface: "#CBCBCB33",       // Light Gray mờ 20% — nền ô/card
-    surfaceStrong: "#CBCBCB",   // Light Gray — khung ảnh, khối nền lớn
-    border: "#CBCBCB",          // Light Gray — viền nút outline, ô nhập
-    divider: "#CBCBCB80",       // Light Gray mờ 50% — đường kẻ mảnh chia dòng, chia khối
-    tint: "#446401",            // Brand Tint
-    tabIconDefault: "#9D9D9D",  // Tab chưa chọn
-    tabIconSelected: "#446401", // Tab đang chọn
+    text: "#0B0B0C",            // Ink — chữ chính (đổi theo yêu cầu)
+    textSecondary: "#0B0B0C8C", // Ink mờ 55% — chữ giải thích (đổi theo yêu cầu)
+    background: "#F3F3EE",      // Paper — nền màn hình (đổi theo yêu cầu)
+    surface: "#FFFFFF",         // Trắng — nền card, ô nhập (đổi theo yêu cầu)
+    surfaceStrong: "#F3F3EE",   // Paper — khối nền bên trong card trắng (đổi theo yêu cầu)
+    border: "#0B0B0C1A",        // Ink mờ 10% — viền mảnh (đổi theo yêu cầu)
+    divider: "#0B0B0C14",       // Ink mờ 8% — đường kẻ mảnh chia dòng, chia khối (đổi theo yêu cầu)
+    inverse: "#0B0B0C",         // Ink — khối tối: card nổi bật (thêm theo yêu cầu)
+    onInverse: "#FFFFFF",       // Chữ trên khối tối (thêm theo yêu cầu)
+    onInverseSecondary: "#FFFFFF8C", // Trắng mờ 55% — chữ phụ trên khối tối (thêm theo yêu cầu)
+    tint: "#C3FD47",            // Lime (đổi theo yêu cầu)
+    tabIconDefault: "#0B0B0C8C",  // Ink mờ 55% — tab chưa chọn, trên thanh trắng (đổi theo yêu cầu)
+    tabIconSelected: "#0B0B0C",   // Ink — icon và chữ tab đang chọn (đổi theo yêu cầu)
+    tabActiveBackground: "#C3FD47", // Lime — vòng tròn sau icon tab đang chọn (thêm theo yêu cầu)
 
     // 3 Mức độ cảnh báo (Severities) — nền + chữ badge, cùng web (frontend/src/constants/severity.ts)
     severityP1: "#FF7426",      // Khẩn cấp (Safety Orange)
@@ -55,11 +59,10 @@ export const Colors = {
   },
   // Các mã màu thuần túy (Raw Hex) để lập trình viên sử dụng bất kỳ đâu
   raw: {
-    brandPrimary: "#446401",
+    lime: "#C3FD47",
+    ink: "#0B0B0C",
+    paper: "#F3F3EE",
     pureWhite: "#FFFFFF",
-    lightGray: "#CBCBCB",
-    mediumGray: "#9D9D9D",
-    darkCharcoal: "#343434",
     safetyOrange: "#FF7426",
     successLime: "#B5D32C",
     alertRed: "#D53F35",
@@ -68,13 +71,12 @@ export const Colors = {
 
 export type AppColors = typeof Colors;
 
-// Bo góc — ảnh và ô nội dung vuông góc, nút bấm bo tròn hết cỡ (theo ảnh mẫu)
+// Bo góc theo ảnh mẫu (đổi theo yêu cầu 2026-10-30) — không còn khung vuông góc
 export const Radius = {
-  none: 0,    // khung ảnh, ô nội dung, card
-  sm: 4,      // ô nhập, checkbox
-  md: 12,     // sheet, hộp thoại
-  lg: 24,     // khối logo icon (splash)
-  full: 999,  // nút bấm, nút tròn icon, badge, chip
+  sm: 8,      // khối nhỏ bên trong card (dòng tiêu đề bảng), checkbox
+  md: 16,     // ô hành động nhanh, dòng danh sách, khối nhấn trong card, ô mã số
+  lg: 24,     // card, card tối nổi bật, sheet, hộp thoại, khối logo icon, góc thanh tab
+  full: 999,  // nút bấm, ô nhập, nút tròn icon, avatar, badge, chip
 } as const;
 
 // Độ dày viền — giao diện phẳng, không dùng đổ bóng
@@ -104,5 +106,5 @@ export const Typography = {
   body: { fontFamily: FontFamily.regular, fontSize: 14, lineHeight: 20 },                          // nội dung
   small: { fontFamily: FontFamily.regular, fontSize: 12, lineHeight: 16 },                         // mô tả, giá trị phụ
   label: { fontFamily: FontFamily.medium, fontSize: 12, lineHeight: 16 },                          // nhãn nhấn màu primary ("Tech Specs")
-  button: { fontFamily: FontFamily.medium, fontSize: 14, lineHeight: 20 },                         // chữ trên nút
+  button: { fontFamily: FontFamily.bold, fontSize: 14, lineHeight: 20 },                           // chữ trên nút — đậm theo yêu cầu
 } as const;

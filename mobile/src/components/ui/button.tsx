@@ -1,13 +1,13 @@
 import { ActivityIndicator, StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
-import { BorderWidth, Radius, Spacing } from '@/constants/theme'
+import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
 interface ButtonProps {
   label: string
   onPress: () => void
-  // primary: nút chính nền xanh; secondary: nền trắng viền xanh; link: chữ gạch chân, không nền
+  // primary: nút chính nền lime; secondary: nền trắng không viền; link: chữ gạch chân, không nền
   variant?: 'primary' | 'secondary' | 'link'
   loading?: boolean
   disabled?: boolean
@@ -24,7 +24,7 @@ export function Button({ label, onPress, variant = 'primary', loading = false, d
 
   const variantStyle = {
     primary: [styles.filled, { backgroundColor: palette.primary }],
-    secondary: [styles.filled, styles.outlined, { backgroundColor: palette.background, borderColor: palette.primary }],
+    secondary: [styles.filled, { backgroundColor: palette.surface }],
     link: styles.link,
   }[variant]
 
@@ -63,7 +63,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  outlined: { borderWidth: BorderWidth.strong },
   link: { minHeight: 32, justifyContent: 'center' },
   underline: { textDecorationLine: 'underline' },
   disabled: { opacity: 0.5 },
