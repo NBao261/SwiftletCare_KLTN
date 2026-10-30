@@ -4714,6 +4714,10 @@ components:
 
     AlertType:
       type: string
+      description: |
+        `THRESHOLD_BREACH` (ALERT-FR-012, BR-34): chỉ tạo khi 1 chỉ số ở ngoài ngưỡng của Zone liên tục,
+        không có mẫu hợp lệ nằm trong ngưỡng xen giữa, trong 10 phút (nhiệt độ, độ ẩm) hoặc 5 phút (ánh
+        sáng, NH3, CO2); số đo thiếu hoặc stale không tính. Tự đóng sau 5 phút về trong ngưỡng (BR-16).
       enum:
         - THRESHOLD_BREACH
         - NODE_OFFLINE
@@ -4745,6 +4749,20 @@ components:
         message: { type: string }
         snapshot_url: { type: string, nullable: true }
         metadata: { type: object }
+        details:
+          type: object
+          nullable: true
+          description: |
+            Report 4 §6.1 — chi tiết của sự cố. `THRESHOLD_BREACH` (ALERT-FR-012): chỉ số đã đủ thời gian
+            chờ sớm nhất. `UNEXPECTED_RESTART` (THREAT-FR-012): `reset_reason`. `metadata` giữ nguyên cho
+            client cũ (`metadata.breaches` có mọi chỉ số đang vượt).
+          properties:
+            metric: { type: string, enum: [temperature, humidity, light_lux, nh3_ppm, co2_ppm] }
+            observed: { type: number, description: "Giá trị đo mới nhất" }
+            threshold: { type: number, description: "Ngưỡng của Zone bị vượt" }
+            direction: { type: string, enum: [above, below] }
+            started_at: { type: string, format: date-time, description: "Mẫu đầu tiên của quãng vượt ngưỡng liên tục" }
+            reset_reason: { type: string, description: "Firmware ≥ 1.5.0 gửi POWER_ON, WATCHDOG, BROWNOUT, CRASH; thiếu thì lấy lý do chi tiết của heartbeat gần nhất (VD TASK_WDT)" }
         status: { type: string, enum: [ACTIVE, ACKNOWLEDGED, DISMISSED, RESOLVED], description: "DISMISSED — cảnh báo suy luận bị bác bỏ, không còn hiệu lực (Report 3 §6.1, EXPERT-FR-003)" }
         previous_status: { type: string, enum: [ACTIVE, ACKNOWLEDGED], nullable: true, description: "Trạng thái trước khi bị bác bỏ; đổi kết luận sang CONFIRMED thì cảnh báo trở về trạng thái này" }
         created_at: { type: string, format: date-time }
