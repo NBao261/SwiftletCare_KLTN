@@ -38,6 +38,22 @@ export function isPrimaryOwner(farm: Pick<IFarm, 'owner_id'>, user: CurrentUser)
   return String(farm.owner_id) === user._id
 }
 
+/** BR-22 — farm có Domain Expert khi có ít nhất 1 thành viên vai trò DOMAIN_EXPERT */
+export function farmHasExpert(farm: Pick<IFarm, 'members'>): boolean {
+  return farm.members.some(m => m.role === 'DOMAIN_EXPERT')
+}
+
+/**
+ * BR-22 — quyết định của chuyên gia (kết luận cảnh báo suy luận, tham số phát hiện, mức giảm tỷ lệ chim
+ * về, vòng đếm): Domain Expert của farm luôn làm được; Farm Owner chỉ làm thay khi farm chưa có chuyên
+ * gia. Gọi SAU bước kiểm quyền trên farm (assert*Access).
+ */
+export function assertExpertDecision(farm: Pick<IFarm, 'members'>, user: CurrentUser): void {
+  if (user.role === 'DOMAIN_EXPERT') return
+  if (user.role === 'FARM_OWNER' && !farmHasExpert(farm)) return
+  throw ForbiddenError('Farm đã có chuyên gia — quyết định này do Domain Expert thực hiện')
+}
+
 // ── Lookup + check gộp — nguồn duy nhất, tránh mỗi service tự viết lại ──────
 // (trước đây `findFarmOrThrow`/`findZoneChainOrThrow` nằm trong farm.service.ts,
 // `assertFarmAccess`/`listAccessibleFarmIds` nằm trong alert.service.ts — bị

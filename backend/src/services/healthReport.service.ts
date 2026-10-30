@@ -190,9 +190,15 @@ export async function setReportConclusion(id: string, user: CurrentUser, text: s
   }
 
   const isEdit = !!report.expert_conclusion
-  report.expert_conclusion = { text, by: user._id as never, at: new Date() }
+  const now = new Date()
+  report.expert_conclusion = isEdit
+    ? { text, by: user._id as never, at: report.expert_conclusion!.at, edited_at: now }
+    : { text, by: user._id as never, at: now }
   await report.save()
-  await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'zone_health_report', String(report._id), { zone_id: String(report.zone_id), isEdit })
+  // farmId: vào lịch sử hoạt động chuyên gia (EXPERT-FR-009); Farm Owner đã được báo ngay dưới (EXPERT-FR-006)
+  await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'zone_health_report', String(report._id), {
+    zone_id: String(report.zone_id), isEdit,
+  }, { farmId: String(report.farm_id) })
 
   const zone = await Zone.findById(report.zone_id).select('name').lean()
   // Không chờ gửi: kết luận đã lưu, Telegram chậm không được giữ response
