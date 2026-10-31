@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { AppHeader } from '@/components/layout/AppHeader'
@@ -8,17 +7,11 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
-import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { useSwitchLanguage } from '@/hooks/i18n/useSwitchLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
-import { useLanguageStore, type Language } from '@/stores/languageStore'
+import type { Language } from '@/stores/languageStore'
 import { t, translate } from '@/utils/i18n.utils'
-
-// Cho lớp chờ kịp hiện rồi mới đổi ngôn ngữ (dựng lại cả màn)
-const OVERLAY_APPEAR_MS = 50
-// Giữ lớp chờ thêm 500 ms sau khi đổi để các khối dựng lại xong
-const LANGUAGE_SWITCH_MS = 500
-const TOAST_DURATION_MS = 2500
 
 // Câu báo xong, viết bằng chính ngôn ngữ vừa chọn
 const SWITCHED_MESSAGES: Record<Language, string> = {
@@ -31,41 +24,9 @@ export default function ProfileScreen() {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
   // Đổi ngôn ngữ thì dựng lại phần nội dung (key = ngôn ngữ) để mọi chữ ra đúng ngôn ngữ
-  const language = useLanguage()
-  const setLanguage = useLanguageStore(state => state.setLanguage)
-  // Ngôn ngữ đang đổi sang — có giá trị thì hiện lớp chờ và chặn thao tác
-  const [switchingTo, setSwitchingTo] = useState<Language | null>(null)
-  // Ngôn ngữ vừa đổi xong — có giá trị thì hiện toast
-  const [switchedTo, setSwitchedTo] = useState<Language | null>(null)
+  const { language, switchingTo, switchedTo, switchLanguage } = useSwitchLanguage()
   // Chừa phần thanh tab đè lên đáy màn (MOBILE_GUIDE 3.5) cộng lề dưới; vùng an toàn dưới đã nằm trong thanh tab
   const bottomPadding = Spacing.lg + TAB_BAR_OVERLAP
-
-  // Lớp chờ hiện → đổi ngôn ngữ → giữ thêm 500 ms → ẩn lớp chờ, hiện toast
-  useEffect(() => {
-    if (!switchingTo || !user) return
-    const applyTimer = setTimeout(() => setLanguage(switchingTo, user._id), OVERLAY_APPEAR_MS)
-    const doneTimer = setTimeout(() => {
-      setSwitchingTo(null)
-      setSwitchedTo(switchingTo)
-    }, OVERLAY_APPEAR_MS + LANGUAGE_SWITCH_MS)
-    return () => {
-      clearTimeout(applyTimer)
-      clearTimeout(doneTimer)
-    }
-  }, [switchingTo, user, setLanguage])
-
-  // Toast tự ẩn sau vài giây
-  useEffect(() => {
-    if (!switchedTo) return
-    const timer = setTimeout(() => setSwitchedTo(null), TOAST_DURATION_MS)
-    return () => clearTimeout(timer)
-  }, [switchedTo])
-
-  const handleSwitchLanguage = () => {
-    if (!user || switchingTo) return
-    setSwitchedTo(null)
-    setSwitchingTo(language === 'vi' ? 'en' : 'vi')
-  }
 
   return (
     // Lớp chờ và toast nằm ngoài phần được dựng lại để không mất khi đổi ngôn ngữ
@@ -91,7 +52,7 @@ export default function ProfileScreen() {
           <Button
             variant="secondary"
             label={language === 'vi' ? 'Chuyển sang English' : 'Switch to Tiếng Việt'}
-            onPress={handleSwitchLanguage}
+            onPress={switchLanguage}
             disabled={switchingTo !== null}
           />
           <LogoutButton />
