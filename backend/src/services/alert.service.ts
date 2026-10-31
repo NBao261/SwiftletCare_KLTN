@@ -5,12 +5,16 @@ import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew, emitHouseAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
-import { assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
-import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { notifyExpertDecision } from '@/services/expertActivity.service'
+import { assertExpertDecision, assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
-import type { AlertType, AlertSeverity, AlertVerdictResult, CurrentUser, Thresholds, TelemetryPayload } from '@/types'
+import type { DwelledBreach } from '@/utils/breachDwell.util'
+import type {
+  AlertType, AlertSeverity, AlertStatus, AlertVerdictResult, CurrentUser, FarmMemberRole, Thresholds, TelemetryPayload,
+} from '@/types'
 
 /** ALERT-FR-008 — sự cố còn đang mở thì chỉ cập nhật `last_seen_at` tối đa 1 lần/khoảng này */
 export const ALERT_SEEN_UPDATE_MS = 60 * 1000
@@ -32,8 +36,12 @@ export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
 export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE']
 
-/** Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này */
-export const OPEN_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
+/**
+ * Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này.
+ * Gồm cả `DISMISSED` (SM-01): cảnh báo bị bác bỏ vẫn gộp lần gặp lại cùng sự cố (không tạo cảnh báo
+ * mới, không thông báo — ALERT-FR-008) và tự đóng khi hết sự cố như cảnh báo còn hiệu lực (BR-16).
+ */
+export const OPEN_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED']
 
 /**
  * ALERT-FR-001, BR-15 — mức độ mặc định theo loại sự kiện. Thiết bị có thể gửi kèm
@@ -116,6 +124,8 @@ export interface CreateAlertInput {
   message: string
   snapshotUrl?: string
   metadata?: Record<string, unknown>
+  /** Chi tiết của sự cố theo ERD (Report 4 §6.1) */
+  details?: Record<string, unknown>
 }
 
 /**
@@ -155,7 +165,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     const lastSeen = (open.last_seen_at ?? open.created_at).getTime()
     if (now.getTime() - lastSeen >= ALERT_SEEN_UPDATE_MS) {
       await Alert.updateOne({ _id: open._id }, {
-        $set: { last_seen_at: now, message: input.message, metadata: input.metadata },
+        $set: { last_seen_at: now, message: input.message, metadata: input.metadata, ...(input.details && { details: input.details }) },
         $inc: { occurrence_count: 1 },
       })
     }
@@ -175,6 +185,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     message:      input.message,
     snapshot_url: input.snapshotUrl,
     metadata:     input.metadata,
+    details:      input.details,
     status:       'ACTIVE',
   })
 
@@ -224,6 +235,7 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
     snapshotUrl: message.snapshotUrl as string | undefined,
     metadata:    { raw: message } as Record<string, unknown>,
+    details:     undefined as Record<string, unknown> | undefined,
   }
 
   const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('zone_id reset_reason').lean()
@@ -233,7 +245,10 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     if (type === 'UNEXPECTED_RESTART') {
       const sent = message.resetReason ?? message.reset_reason
       const resetReason = typeof sent === 'string' && sent.length <= MAX_RESET_REASON_LENGTH ? sent : node.reset_reason
-      if (resetReason) common.metadata = { ...common.metadata, reset_reason: resetReason }
+      if (resetReason) {
+        common.metadata = { ...common.metadata, reset_reason: resetReason }
+        common.details = { reset_reason: resetReason }
+      }
     }
     // `name` cho tiêu đề mặc định — firmware không gửi kèm title
     const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
@@ -300,17 +315,30 @@ const METRIC_LABEL: Record<string, string> = {
   co2_ppm:     'CO2',
 }
 
-/** ENV-FR-004 + ALERT-FR-001 — gọi từ telemetry.service sau khi lưu bản ghi */
-export async function raiseThresholdAlert(zoneId: string, nodeId: string, breaches: ThresholdBreach[]): Promise<void> {
-  if (breaches.length === 0) return
+/**
+ * ENV-FR-004, ALERT-FR-012, BR-34 — gọi từ telemetry.service ở mẫu sống được lưu, sau khi
+ * trackBreachDwell (utils/breachDwell.util) tính quãng vượt ngưỡng của thiết bị:
+ * - có chỉ số đã ở ngoài ngưỡng đủ thời gian chờ (`dwelled`) → tạo THRESHOLD_BREACH (hoặc gộp vào cảnh
+ *   báo đang mở); `details` là chỉ số bắt đầu sớm nhất, `metadata.breaches` là mọi chỉ số đang vượt;
+ * - chỉ có chỉ số đang vượt chưa đủ thời gian chờ → không tạo mới, chỉ giữ cảnh báo đang mở còn sống
+ *   để nó chỉ tự đóng sau THRESHOLD_CLEAR_MS thật sự về trong ngưỡng (BR-16).
+ */
+export async function raiseThresholdAlert(
+  zoneId: string, nodeId: string, dwelled: DwelledBreach[], ongoing: ThresholdBreach[] = dwelled,
+): Promise<void> {
+  if (dwelled.length === 0) {
+    if (ongoing.length > 0) await keepThresholdAlertAlive(zoneId, nodeId)
+    return
+  }
 
   const zone = await Zone.findById(zoneId).lean()
   if (!zone) return
 
-  const detail = breaches
+  const detail = dwelled
     .map(b => `${METRIC_LABEL[b.metric] ?? b.metric} ${b.value} (${b.direction === 'above' ? 'vượt' : 'dưới'} ngưỡng ${b.limit})`)
     .join(', ')
-  const airQuality = breaches.some(b => AIR_QUALITY_METRICS.has(b.metric))
+  const airQuality = dwelled.some(b => AIR_QUALITY_METRICS.has(b.metric))
+  const first = dwelled.reduce((a, b) => (b.started_at < a.started_at ? b : a))
 
   await createAlert({
     farmId:   String(zone.farm_id),
@@ -319,8 +347,21 @@ export async function raiseThresholdAlert(zoneId: string, nodeId: string, breach
     type:     'THRESHOLD_BREACH',
     title:    `Vượt ngưỡng tại ${zone.name}`,
     message:  airQuality ? `${detail}. ${AIR_QUALITY_NOTE}` : detail,
-    metadata: { breaches },
+    metadata: { breaches: ongoing },
+    details:  { metric: first.metric, observed: first.value, threshold: first.limit, direction: first.direction, started_at: first.started_at },
   })
+}
+
+/** BR-16 — chỉ số còn ngoài ngưỡng: cảnh báo đang mở chưa được đóng; cập nhật lần thấy cuối tối đa 1 lần/ALERT_SEEN_UPDATE_MS */
+async function keepThresholdAlertAlive(zoneId: string, nodeId: string): Promise<void> {
+  const now = new Date()
+  await Alert.updateOne(
+    {
+      zone_id: zoneId, node_id: nodeId, type: 'THRESHOLD_BREACH', status: { $in: OPEN_STATUSES },
+      $or: [{ last_seen_at: { $lt: new Date(now.getTime() - ALERT_SEEN_UPDATE_MS) } }, { last_seen_at: { $exists: false } }],
+    },
+    { $set: { last_seen_at: now } },
+  )
 }
 
 // ── Truy vấn phía Farm Owner (ALERT-FR-007/009) ─────────────────────────────
@@ -372,7 +413,8 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total, unreadCount] = await Promise.all([
-    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+    // ALERT-FR-007 — cảnh báo DISMISSED hiện ai bác bỏ: kèm tên người kết luận
+    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).populate('expert_verdict.by', 'full_name').lean(),
     Alert.countDocuments(filter),
     Alert.countDocuments({ ...filter, status: 'ACTIVE' }),
   ])
@@ -380,11 +422,17 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   return { records, total, page, limit, unreadCount }
 }
 
-export async function getAlert(alertId: string, user: CurrentUser): Promise<IAlert> {
+/** Cảnh báo + farm của nó, đã kiểm quyền cùng phạm vi với danh sách (Technician chỉ cảnh báo thiết bị) */
+async function findAlertWithAccess(alertId: string, user: CurrentUser) {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')
-  await assertFarmAccess(String(alert.farm_id), user, DEVICE_ALERT_TYPES.includes(alert.type) ? 'device' : 'farm')
-  return alert
+  const farm = await assertFarmAccess(String(alert.farm_id), user, DEVICE_ALERT_TYPES.includes(alert.type) ? 'device' : 'farm')
+  return { alert, farm }
+}
+
+export async function getAlert(alertId: string, user: CurrentUser): Promise<IAlert> {
+  const { alert } = await findAlertWithAccess(alertId, user)
+  return alert.populate('expert_verdict.by', 'full_name')
 }
 
 /**
@@ -392,7 +440,8 @@ export async function getAlert(alertId: string, user: CurrentUser): Promise<IAle
  * được giữ lại làm dữ liệu đánh giá chất lượng model AI sau này (Flow 4 case 9a).
  */
 export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?: string): Promise<IAlert> {
-  const alert = await getAlert(alertId, user)
+  const { alert } = await findAlertWithAccess(alertId, user)
+  if (alert.status === 'DISMISSED') throw ConflictError('Cảnh báo này đã bị bác bỏ, không còn hiệu lực')
   if (alert.status !== 'ACTIVE') throw ConflictError('Cảnh báo này đã được xác nhận trước đó')
 
   alert.status = 'ACKNOWLEDGED'
@@ -418,44 +467,97 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
 }
 
 /**
- * EXPERT-FR-003 — Domain Expert ghi kết quả kiểm chứng 1 cảnh báo suy luận. Ghi lại
- * được (chuyên gia đổi ý sau khi xem thêm dữ liệu); không đổi trạng thái xử lý của
- * cảnh báo — xác nhận đã xử lý vẫn là việc của Farm Owner (ALERT-FR-009).
+ * EXPERT-FR-003 — Domain Expert (Farm Owner khi farm chưa có chuyên gia, BR-22) ghi kết quả kiểm
+ * chứng 1 cảnh báo suy luận. Ghi lại được (đổi ý sau khi xem thêm dữ liệu). Tác động lên trạng
+ * thái theo SM-01:
+ * - `REJECTED` khi còn hiệu lực (ACTIVE/ACKNOWLEDGED) → DISMISSED, nhớ `previous_status`;
+ * - đổi sang `CONFIRMED` khi DISMISSED → về `previous_status` và báo lại Farm Owner;
+ * - còn lại (CONFIRMED trên cảnh báo còn hiệu lực, mọi kết luận trên RESOLVED) giữ nguyên.
+ * Xác nhận đã xử lý vẫn là việc của Farm Owner (ALERT-FR-009).
  */
 export async function setAlertVerdict(
   alertId: string, user: CurrentUser, result: AlertVerdictResult, note?: string,
 ): Promise<IAlert> {
-  const alert = await getAlert(alertId, user)
+  const { alert, farm } = await findAlertWithAccess(alertId, user)
   if (!INFERRED_ALERT_TYPES.includes(alert.type)) {
     throw BadRequestError(`Chỉ kiểm chứng cảnh báo suy luận (${INFERRED_ALERT_TYPES.join(', ')})`)
   }
-  alert.expert_verdict = { result, note, by: user._id as never, at: new Date() }
+  assertExpertDecision(farm, user)
+  const trimmedNote = note?.trim() || undefined
+  // Route đã chặn; giữ ở service cho mọi đường gọi khác
+  if (result === 'REJECTED' && !trimmedNote) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Bác bỏ cảnh báo phải ghi lý do')
+  }
+
+  const statusBefore = alert.status
+  if (result === 'REJECTED' && (alert.status === 'ACTIVE' || alert.status === 'ACKNOWLEDGED')) {
+    alert.previous_status = alert.status
+    alert.status = 'DISMISSED'
+  } else if (result === 'CONFIRMED' && alert.status === 'DISMISSED') {
+    alert.status = alert.previous_status ?? 'ACTIVE'
+    alert.previous_status = undefined
+  }
+  alert.expert_verdict = { result, note: trimmedNote, by: user._id as never, role: user.role as FarmMemberRole, at: new Date() }
   await alert.save()
-  await logAction(user._id, 'ALERT_VERDICT_SET', 'alert', String(alert._id), { type: alert.type, result })
-  return alert
+
+  const auditId = await logAction(user._id, 'ALERT_VERDICT_SET', 'alert', String(alert._id), {
+    type: alert.type, result, note: trimmedNote, status_before: statusBefore, status_after: alert.status,
+    zone_id: alert.zone_id ? String(alert.zone_id) : undefined, house_id: alert.house_id ? String(alert.house_id) : undefined,
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: result === 'CONFIRMED' ? 'xác nhận một cảnh báo' : 'bác bỏ một cảnh báo',
+    place: alert.title,
+    detail: trimmedNote,
+  })
+  // SM-01 — cảnh báo bị bác bỏ nhầm được xác nhận lại: Farm Owner phải được báo lại như cảnh báo mới
+  if (statusBefore === 'DISMISSED' && alert.status !== 'DISMISSED') {
+    void dispatchAlertNotification(alert).catch((err: Error) =>
+      logger.error('Báo lại cảnh báo được xác nhận lại thất bại', { alertId: String(alert._id), err }),
+    )
+  }
+  return alert.populate('expert_verdict.by', 'full_name')
 }
 
 /**
  * EXPERT-FR-003 — số cảnh báo suy luận được xác nhận / bác bỏ / còn chờ theo từng loại,
  * làm căn cứ chỉnh tham số phát hiện (EXPERT-FR-008). `confirmedPct` tính trên số đã
- * kiểm chứng; null khi chưa kiểm chứng cái nào.
+ * kiểm chứng; null khi chưa kiểm chứng cái nào. `byRole` tách theo vai trò người kết luận (Farm
+ * Owner kết luận khi farm chưa có chuyên gia, BR-22); kết luận trước G-03 không lưu vai trò và chỉ
+ * Domain Expert ghi được, nên tính cho DOMAIN_EXPERT.
  */
 export async function getVerdictStats(user: CurrentUser, query: { farmId?: string; zoneId?: string }) {
   const accessibleFarms = await listAccessibleFarmIds(user)
   if (query.farmId && !accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
   const farmIds = query.farmId ? accessibleFarms.filter(id => String(id) === query.farmId) : accessibleFarms
 
-  const rows = await Alert.aggregate<{ _id: { type: AlertType; result: AlertVerdictResult | null }; count: number }>([
+  type Row = { _id: { type: AlertType; result: AlertVerdictResult | null; role: FarmMemberRole | null }; count: number }
+  const rows = await Alert.aggregate<Row>([
     { $match: { farm_id: { $in: farmIds }, type: { $in: INFERRED_ALERT_TYPES }, ...(query.zoneId && { zone_id: new Types.ObjectId(query.zoneId) }) } },
-    { $group: { _id: { type: '$type', result: { $ifNull: ['$expert_verdict.result', null] } }, count: { $sum: 1 } } },
+    {
+      $group: {
+        _id: {
+          type: '$type',
+          result: { $ifNull: ['$expert_verdict.result', null] },
+          role: { $cond: [{ $ifNull: ['$expert_verdict.result', false] }, { $ifNull: ['$expert_verdict.role', 'DOMAIN_EXPERT'] }, null] },
+        },
+        count: { $sum: 1 },
+      },
+    },
   ])
 
   return INFERRED_ALERT_TYPES.map(type => {
-    const of = (result: AlertVerdictResult | null) => rows.find(r => r._id.type === type && r._id.result === result)?.count ?? 0
+    const of = (result: AlertVerdictResult | null, role?: FarmMemberRole) => rows
+      .filter(r => r._id.type === type && r._id.result === result && (role === undefined || r._id.role === role))
+      .reduce((sum, r) => sum + r.count, 0)
     const confirmed = of('CONFIRMED')
     const rejected = of('REJECTED')
     const reviewed = confirmed + rejected
-    return { type, confirmed, rejected, pending: of(null), confirmedPct: reviewed ? Math.round((100 * confirmed) / reviewed) : null }
+    const byRole = Object.fromEntries((['DOMAIN_EXPERT', 'FARM_OWNER'] as const).map(role =>
+      [role, { confirmed: of('CONFIRMED', role), rejected: of('REJECTED', role) }]))
+    return {
+      type, confirmed, rejected, pending: of(null),
+      confirmedPct: reviewed ? Math.round((100 * confirmed) / reviewed) : null, byRole,
+    }
   })
 }
 
@@ -493,8 +595,8 @@ export async function resolveHouseAlerts(houseId: string, type: AlertType, reaso
  * THRESHOLD_CLEAR_MS (chỉ số đã về bình thường, hoặc thiết bị ngừng gửi — khi
  * đó đã có NODE_OFFLINE riêng) thì tự đóng. Gọi định kỳ từ jobs/alertEscalation.job.ts.
  */
-export async function resolveStaleThresholdAlerts(): Promise<number> {
-  const clearBefore = new Date(Date.now() - THRESHOLD_CLEAR_MS)
+export async function resolveStaleThresholdAlerts(now = new Date()): Promise<number> {
+  const clearBefore = new Date(now.getTime() - THRESHOLD_CLEAR_MS)
   const { modifiedCount } = await Alert.updateMany(
     {
       type: 'THRESHOLD_BREACH',
@@ -504,7 +606,7 @@ export async function resolveStaleThresholdAlerts(): Promise<number> {
         { last_seen_at: { $exists: false }, created_at: { $lt: clearBefore } },
       ],
     },
-    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Chỉ số đã trở lại bình thường' },
+    { status: 'RESOLVED', resolved_at: now, acknowledgement_note: 'Chỉ số đã trở lại bình thường' },
   )
   return modifiedCount
 }

@@ -2,7 +2,7 @@
 import { body, param, query } from 'express-validator'
 import multer from 'multer'
 import * as deviceController from '@/controllers/devices.controller'
-import { MAX_OVERRIDE_MS, MIN_OVERRIDE_MS } from '@/services/device.service'
+import { MAX_OVERRIDE_MS, MIN_OVERRIDE_MS, RELAY_NAMES } from '@/services/device.service'
 import * as audioTrackController from '@/controllers/audioTracks.controller'
 import * as streamController from '@/controllers/stream.controller'
 import { MAX_AUDIO_BYTES } from '@/services/audioTrack.service'
@@ -37,8 +37,12 @@ router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER'), par
 // Can thiệp tay relay chỉ Farm Owner (ENV-FR-016, Report 3 §2.4): Technician, Admin, Domain Expert không
 router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(),
   // Không chặn thì 1 giá trị cực lớn tạo override hàng chục năm: Zone bị tính 0% tự động mãi (ANALYTICS-FR-011)
-  body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(), validate, deviceController.controlRelay)
-router.delete('/sensor-nodes/:id/relay-override', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, deviceController.clearRelayOverride)
+  body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(),
+  // ENV-FR-016 — xác nhận bật bơm khi Zone có cảnh báo cảm biến/phun sương (giới hạn 30 phút của bơm kiểm ở service)
+  body('confirmed').optional().isBoolean().toBoolean(), validate, deviceController.controlRelay)
+// ENV-FR-018, BR-20 — huỷ sớm 1 relay (`?relayName=`) hoặc mọi relay
+router.delete('/sensor-nodes/:id/relay-override', requireRole('FARM_OWNER'), param('id').isMongoId(),
+  query('relayName').optional().isString().isIn([...RELAY_NAMES]), validate, deviceController.clearRelayOverride)
 // ENV-FR-019 — lịch sử can thiệp tay: Farm Owner và Domain Expert (chỉ đọc)
 router.get   ('/sensor-nodes/:id/relay-overrides', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('id').isMongoId(), validate, deviceController.listRelayOverrides)
 
@@ -94,9 +98,10 @@ router.post('/camera-nodes/register',        requireRole('FARM_OWNER','TECHNICIA
 router.get ('/camera-nodes',
   query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(), validate,
   deviceController.listCameraNodes)
-// VISION-FR-018, SRS §4.4 — vòng đếm do Domain Expert vẽ; 3 đỉnh là tối thiểu của một vòng kín,
-// 12 là giới hạn kỹ thuật chống nhập nhầm (SRS 0.5), toạ độ theo tỉ lệ khung hình
-router.put ('/camera-nodes/:id/counting-ring', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(),
+// VISION-FR-018, SRS §4.4 — vòng đếm do Domain Expert vẽ (Farm Owner chỉ khi farm chưa có chuyên gia,
+// BR-22, service kiểm); 3 đỉnh là tối thiểu của một vòng kín, 12 là giới hạn kỹ thuật chống nhập nhầm
+// (SRS 0.5), toạ độ theo tỉ lệ khung hình
+router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('id').isMongoId(),
   body('points').isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
   body('points.*').isArray({ min: 2, max: 2 }).withMessage('mỗi đỉnh là [x, y]'),
   body('points.*.*').isFloat({ min: 0, max: 1 }).withMessage('toạ độ theo tỉ lệ khung hình 0-1').toFloat(),

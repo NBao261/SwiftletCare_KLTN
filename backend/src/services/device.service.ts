@@ -1,29 +1,31 @@
 import { SensorNode, CameraNode, ISensorNode, ICameraNode, IN_SERVICE } from '@/models/device.model'
 import { House, Zone, IZone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
+import { Alert } from '@/models/alert.model'
 import {
   findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertHouseAccessByParams,
-  listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds,
+  listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { publishCommand, publishHouseCommand } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
+import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { firmwareDetectionConfig, resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import {
-  closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogsFromDevice, openOverrideLog, openOverrideState,
-  DEVICE_CONFIRM_GRACE_MS,
+  closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogsFromDevice, closeRelayOverrideLog, hasOpenOverride,
+  openOverrideLog, openOverrideState, DEVICE_CONFIRM_GRACE_MS,
 } from '@/services/relayOverrideLog.service'
-import { NotFoundError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
+import { AppError, NotFoundError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
-import type { RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange, CountingRing } from '@/types'
+import type { AlertType, RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange, CountingRing } from '@/types'
 
 // SRS v2.0.0 bỏ sưởi (ENV-FR-012): kênh IN4 để dự phòng, không còn là relay điều khiển được
-const RELAY_NAMES = ['misting', 'speaker', 'ventilation'] as const
+export const RELAY_NAMES = ['misting', 'speaker', 'ventilation'] as const
 type RelayName = typeof RELAY_NAMES[number]
 /** ENV-FR-018 — thời hạn can thiệp tay mặc định */
 const DEFAULT_OVERRIDE_MS = 30 * 60 * 1000
@@ -35,6 +37,10 @@ const DEFAULT_OVERRIDE_MS = 30 * 60 * 1000
  */
 export const MIN_OVERRIDE_MS = 2 * DEVICE_CONFIRM_GRACE_MS
 export const MAX_OVERRIDE_MS = 24 * 60 * 60 * 1000
+/** BR-08 — bật bơm tay tối đa 30 phút: lệnh bị quên không được chạy bơm hàng giờ trên cảm biến hỏng (SDD D15) */
+export const MAX_PUMP_ON_OVERRIDE_MS = 30 * 60 * 1000
+/** ENV-FR-016 — Zone có cảnh báo còn hiệu lực thuộc các loại này thì bật bơm phải được Farm Owner xác nhận */
+export const PUMP_CONFIRM_ALERT_TYPES: AlertType[] = ['SENSOR_FAULT', 'RS485_BUS_FAILURE', 'MISTING_INEFFECTIVE']
 
 /** FARM-FR-005 — quá thời gian này không có heartbeat mới thì coi là mất kết nối */
 export const OFFLINE_THRESHOLD_MS = 30_000
@@ -164,7 +170,7 @@ export async function updateNodeThresholds(nodeId: string, user: CurrentUser, up
 export async function controlRelay(
   nodeId: string,
   user: CurrentUser,
-  input: { relayName: string; state: boolean; durationMs?: number },
+  input: { relayName: string; state: boolean; durationMs?: number; confirmed?: boolean },
 ): Promise<{ node: ISensorNode; delivered: boolean }> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
@@ -175,6 +181,7 @@ export async function controlRelay(
     throw BadRequestError(`relayName phải là 1 trong: ${RELAY_NAMES.join(', ')}`)
   }
   const overrideMs = input.durationMs ?? DEFAULT_OVERRIDE_MS
+  const alertConfirmed = await assertPumpOnAllowed(String(node.zone_id), input, overrideMs)
 
   // Cập nhật lạc quan trong DB — trạng thái thật sẽ được ESP32 xác nhận lại
   // qua topic relay/status (relayStatus.handler.ts) khi lệnh được thực thi.
@@ -204,21 +211,51 @@ export async function controlRelay(
   // lệnh đã publish và không throw: lịch sử hỏng không được chặn lệnh điều khiển.
   await openOverrideLog({
     nodeId: node._id, zoneId: chain.zone._id, farmId: chain.farm._id,
-    relay: input.relayName as RelayName, state: input.state, user, expiresAt: node.override_expiry,
+    relay: input.relayName as RelayName, state: input.state, user, expiresAt: node.override_expiry, alertConfirmed,
   })
   await logAction(user._id, 'RELAY_OVERRIDE', 'sensor_node', String(node._id), {
-    relayName: input.relayName, state: input.state, durationMs: overrideMs, delivered,
+    relayName: input.relayName, state: input.state, durationMs: overrideMs, delivered, alertConfirmed,
   })
   return { node, delivered }
 }
 
-/** ENV-FR-018 — trả thiết bị về AUTO ngay, không đợi hết hạn override */
-export async function clearRelayOverride(nodeId: string, user: CurrentUser): Promise<ISensorNode> {
+/**
+ * BR-08, ENV-FR-016 — chỉ áp cho BẬT bơm (tắt bơm, quạt, loa giữ giới hạn chung 1 phút – 24 giờ):
+ * tối đa MAX_PUMP_ON_OVERRIDE_MS (422); Zone có cảnh báo cảm biến/phun sương còn hiệu lực thì phải có
+ * `confirmed: true` (409 kèm danh sách cảnh báo để app hiện). Trả true khi đã xác nhận trên cảnh báo đang mở.
+ */
+async function assertPumpOnAllowed(
+  zoneId: string, input: { relayName: string; state: boolean; confirmed?: boolean }, overrideMs: number,
+): Promise<boolean> {
+  if (input.relayName !== 'misting' || !input.state) return false
+  if (overrideMs > MAX_PUMP_ON_OVERRIDE_MS) {
+    throw new AppError(422, 'VALIDATION_ERROR', `Bật bơm tay tối đa ${MAX_PUMP_ON_OVERRIDE_MS / 60_000} phút (BR-08)`)
+  }
+  const open = await Alert.find({
+    zone_id: zoneId, type: { $in: PUMP_CONFIRM_ALERT_TYPES }, status: { $in: ['ACTIVE', 'ACKNOWLEDGED'] },
+  }).select('type title created_at').sort({ created_at: -1 }).lean()
+  if (open.length === 0) return false
+  if (input.confirmed !== true) {
+    throw new AppError(409, 'CONFIRMATION_REQUIRED',
+      'Khu vực đang có cảnh báo cảm biến hoặc phun sương — xác nhận để vẫn bật bơm',
+      open.map(a => ({ _id: String(a._id), type: a.type, title: a.title, created_at: a.created_at })))
+  }
+  return true
+}
+
+/**
+ * ENV-FR-018, BR-20 — huỷ can thiệp tay sớm, không đợi hết hạn. Không có `relayName` → mọi relay về
+ * AUTO ngay. Có `relayName` → chỉ relay đó: đóng lịch sử của nó và gửi `clear_override` kèm tên relay;
+ * thiết bị còn relay khác đang tay thì vẫn MANUAL. Firmware chưa đọc `relayName` (trước G-07) thì huỷ
+ * mọi relay rồi báo AUTO qua relay/status — confirmRelayStatus đóng phần còn lại theo trạng thái đó.
+ */
+export async function clearRelayOverride(nodeId: string, user: CurrentUser, relayName?: RelayName): Promise<ISensorNode> {
   const node = await SensorNode.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user)
   if (node.control_mode === 'AUTO') return node
+  if (relayName) return clearOneRelayOverride(node, chain, user, relayName)
 
   node.control_mode = 'AUTO'
   node.override_expiry = undefined
@@ -226,11 +263,30 @@ export async function clearRelayOverride(nodeId: string, user: CurrentUser): Pro
 
   const zoneId = String(chain.zone._id)
   publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', { deviceId: node.device_id, action: 'clear_override' })
-  for (const relayName of RELAY_NAMES) {
-    emitRelayUpdate(zoneId, { zoneId, relayName, state: node.relay_states[relayName], mode: 'AUTO' })
+  for (const name of RELAY_NAMES) {
+    emitRelayUpdate(zoneId, { zoneId, relayName: name, state: node.relay_states[name], mode: 'AUTO' })
   }
   await closeOverrideLogs([node._id], 'CLEARED_EARLY')
   await logAction(user._id, 'RELAY_OVERRIDE_CLEARED', 'sensor_node', String(node._id), {})
+  return node
+}
+
+/** ENV-FR-018, BR-20 — huỷ sớm 1 relay; thiết bị chỉ về AUTO khi không còn relay nào đang can thiệp tay */
+async function clearOneRelayOverride(
+  node: ISensorNode, chain: Awaited<ReturnType<typeof assertZoneAccess>>, user: CurrentUser, relayName: RelayName,
+): Promise<ISensorNode> {
+  const zoneId = String(chain.zone._id)
+  publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', {
+    deviceId: node.device_id, action: 'clear_override', relayName,
+  })
+  await closeRelayOverrideLog(node._id, relayName, 'CLEARED_EARLY')
+  if (!(await hasOpenOverride(node._id))) {
+    node.control_mode = 'AUTO'
+    node.override_expiry = undefined
+    await node.save()
+  }
+  emitRelayUpdate(zoneId, { zoneId, relayName, state: node.relay_states[relayName], mode: 'AUTO' })
+  await logAction(user._id, 'RELAY_OVERRIDE_CLEARED', 'sensor_node', String(node._id), { relayName })
   return node
 }
 
@@ -992,7 +1048,9 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   const camera = await CameraNode.findById(cameraNodeId)
   if (!camera) throw NotFoundError('Không tìm thấy camera')
   assertInService(camera)
-  await assertHouseAccess(String(camera.house_id), user)
+  const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
+  // BR-22 — Farm Owner chỉ vẽ thay khi farm chưa có chuyên gia
+  assertExpertDecision(farm, user)
 
   const before = camera.counting_ring ? ringOf(camera.counting_ring) : undefined
   const after = ringOf(ring)
@@ -1005,7 +1063,13 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   await camera.save()
 
   const delivered = await pushCountingRing(camera)
-  await logAction(user._id, 'COUNTING_RING_UPDATED', 'camera_node', String(camera._id), { before: before ?? null, after, delivered })
+  const auditId = await logAction(user._id, 'COUNTING_RING_UPDATED', 'camera_node', String(camera._id), {
+    before: before ?? null, after, delivered, house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'vẽ lại vòng đếm', place: `Camera ${camera.device_id}, nhà "${house.name}"`,
+    detail: `${after.points.length} đỉnh, ${after.into_ring_is_exit ? 'trong vòng là phía ngoài trời' : 'trong vòng là phía trong nhà'}`,
+  })
   const { rtsp_url: _rtspUrl, ...publicFields } = camera.toObject()
   return { ...publicFields, ring_delivered: delivered }
 }

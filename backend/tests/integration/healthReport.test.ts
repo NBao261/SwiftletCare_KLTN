@@ -221,7 +221,14 @@ describe('kết luận của chuyên gia (EXPERT-FR-006)', () => {
     const read = await call('get', `/health-reports/${id}`, t.owner).expect(200)
     expect(read.body.data.expert_conclusion.by.full_name).toBe(expert.full_name)
 
-    await call('put', `/health-reports/${id}/conclusion`, t.expert, { text: 'Bản sửa.' }).expect(200)
+    const firstAt = res.body.data.expert_conclusion.at
+    expect(res.body.data.expert_conclusion.edited_at).toBeUndefined()
+    const edited = await call('put', `/health-reports/${id}/conclusion`, t.expert, { text: 'Bản sửa.' }).expect(200)
+    // EXPERT-FR-006 — lưu thời điểm sửa, giữ lúc viết lần đầu
+    expect(edited.body.data.expert_conclusion.at).toBe(firstAt)
+    expect(edited.body.data.expert_conclusion.edited_at).toEqual(expect.any(String))
+    // EXPERT-FR-009 — kết luận vào lịch sử hoạt động của farm
+    expect(await AuditLog.countDocuments({ action: 'HEALTH_REPORT_CONCLUDED', farm_id: farm._id })).toBe(2)
     const second = await mkUser('DOMAIN_EXPERT')
     await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: second._id, role: 'DOMAIN_EXPERT' } } })
     await call('put', `/health-reports/${id}/conclusion`, tokenFor(second._id, 'DOMAIN_EXPERT'), { text: 'Ghi đè' }).expect(403)
