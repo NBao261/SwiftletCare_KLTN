@@ -133,15 +133,21 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
             </button>
             <button
               type="button"
-              onClick={() => { onClose(); navigate('/expert/tuning') }}
+              onClick={() => { onClose(); navigate('/domain-expert/tuning') }}
               className="text-xs text-[#878380] hover:text-[#27231F] hover:underline font-medium px-2 py-1.5 transition-colors cursor-pointer"
             >
               Chỉnh độ nhạy phát hiện →
             </button>
           </div>
-          <button type="button" disabled={!verdict || mutation.isPending} onClick={handleSave}
+          <button
+            type="button"
+            disabled={!verdict || mutation.isPending || (verdict === 'REJECTED' && !note.trim())}
+            onClick={handleSave}
             className={cn('inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
-              verdict && !mutation.isPending ? 'bg-[#27231F] text-white hover:bg-[#3D3630] shadow-md' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed')}>
+              verdict && !mutation.isPending && (verdict !== 'REJECTED' || note.trim())
+                ? 'bg-[#27231F] text-white hover:bg-[#3D3630] shadow-md'
+                : 'bg-neutral-200 text-neutral-400 cursor-not-allowed')}
+          >
             {mutation.isPending ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Đang lưu...</> : 'Lưu phán quyết'}
           </button>
         </div>

@@ -74,14 +74,23 @@ export default function VerdictForm({ verdict, note, onVerdictChange, onNoteChan
 
       {/* Ghi chú chuyên môn */}
       <div>
-        <label className="block text-sm font-semibold text-[#27231F] mb-2" htmlFor="expert-note">
-          Ghi chú chuyên môn
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-[#27231F]" htmlFor="expert-note">
+            Ghi chú chuyên môn
+          </label>
+          {verdict === 'REJECTED' && (
+            <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+              Bắt buộc nhập lý do bác bỏ
+            </span>
+          )}
+        </div>
         <textarea
           id="expert-note"
           rows={4}
           maxLength={MAX_NOTE}
-          placeholder="Nhập nhận xét kỹ thuật, bằng chứng thêm hoặc hướng xử lý..."
+          placeholder={verdict === 'REJECTED'
+            ? 'Nhập rõ lý do vì sao nhận định đây là báo động giả (bắt buộc)...'
+            : 'Nhập nhận xét kỹ thuật, bằng chứng thêm hoặc hướng xử lý...'}
           value={note}
           onChange={e => onNoteChange(e.target.value)}
           className="w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-[#27231F] placeholder-[#B8B4B0] focus:outline-none focus:ring-2 focus:ring-[#B5D32C] focus:border-transparent transition-all"
