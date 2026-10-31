@@ -16,6 +16,7 @@ export const Colors = {
     onPrimary: "#0B0B0C",       // Ink — chữ/icon trên nền lime (đổi theo yêu cầu)
     secondary: "#0B0B0C8C",     // Ink mờ 55% — icon trung tính (đổi theo yêu cầu)
     alert: "#FF7426",           // Safety Orange — chỉ cảnh báo/lỗi, không dùng cho nút
+    onAlertTint: "#FFFFFF33",   // Trắng mờ 20% — nền vòng icon và nhãn trên khung cảnh báo khẩn (thêm theo yêu cầu)
     text: "#0B0B0C",            // Ink — chữ chính (đổi theo yêu cầu)
     textSecondary: "#0B0B0C8C", // Ink mờ 55% — chữ giải thích (đổi theo yêu cầu)
     background: "#F3F3EE",      // Paper — nền màn hình (đổi theo yêu cầu)
@@ -29,7 +30,6 @@ export const Colors = {
     tint: "#C3FD47",            // Lime (đổi theo yêu cầu)
     tabIconDefault: "#0B0B0C8C",  // Ink mờ 55% — tab chưa chọn, trên thanh trắng (đổi theo yêu cầu)
     tabIconSelected: "#0B0B0C",   // Ink — icon và chữ tab đang chọn (đổi theo yêu cầu)
-    tabActiveBackground: "#C3FD47", // Lime — vòng tròn sau icon tab đang chọn (thêm theo yêu cầu)
 
     // 3 Mức độ cảnh báo (Severities) — nền + chữ badge, cùng web (frontend/src/constants/severity.ts)
     severityP1: "#FF7426",      // Khẩn cấp (Safety Orange)
@@ -56,6 +56,7 @@ export const Colors = {
     deviceError: "#D53F35",     // Lỗi (Alert Red)
     deviceDegraded: "#ED8F50",  // Suy giảm
     devicePending: "#F3B287",   // Chờ kết nối
+    houseHealthy: "#446401",    // Nhà yến ổn — chấm xanh trên thẻ nhà ở Trang chủ (thêm theo yêu cầu)
   },
   // Các mã màu thuần túy (Raw Hex) để lập trình viên sử dụng bất kỳ đâu
   raw: {
