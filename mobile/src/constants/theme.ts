@@ -57,6 +57,19 @@ export const Colors = {
     deviceDegraded: "#ED8F50",  // Suy giảm
     devicePending: "#F3B287",   // Chờ kết nối
     houseHealthy: "#446401",    // Nhà yến ổn — chấm xanh trên thẻ nhà ở Trang chủ (thêm theo yêu cầu)
+
+    // Trang chủ — token riêng cho phần trang trí và lớp phủ, cùng mã màu đã duyệt (thêm theo yêu cầu 2026-10-31)
+    farmRingOuter: "#414C1073",       // Olive mờ 45% — vòng ngoài trên card Farm
+    farmRingInner: "#414C10CC",       // Olive mờ 80% — vòng trong trên card Farm
+    houseRingOuter: "#0B0B0C14",      // Ink mờ 8% — vòng ngoài trên thẻ nhà yến
+    houseRingInner: "#0B0B0C29",      // Ink mờ 16% — vòng trong trên thẻ nhà yến
+    reportLabel: "#414C10",           // Olive — icon và nhãn "BÁO CÁO MỚI"
+    notificationBadge: "#D53F35",     // Đỏ — badge số trên chuông thông báo
+    urgentAlertGradientEnd: "#D53F35",// Đỏ — cuối dải loang của khung cảnh báo khẩn (đầu dải là alert)
+    videoControlBackdrop: "#0B0B0C8C",// Ink mờ 55% — nền nút tròn trên video
+    videoFlashBackdrop: "#0B0B0C99",  // Ink mờ 60% — nền chữ báo khi chạm đúp video
+    videoInfoBackdrop: "#0B0B0CCC",   // Ink mờ 80% — nền bảng thông tin camera trên video
+    videoDim: "#0B0B0C59",            // Ink mờ 35% — lớp tối phủ video khi hiện điều khiển
   },
   // Các mã màu thuần túy (Raw Hex) để lập trình viên sử dụng bất kỳ đâu
   raw: {

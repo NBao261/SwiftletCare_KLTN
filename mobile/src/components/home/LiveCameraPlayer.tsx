@@ -41,8 +41,6 @@ const CENTER_BUTTON_SIZE = 64
 // Cỡ nút của hàng điều khiển góc trên (PlayerControlButton mặc định) — bảng thông tin nằm ngay dưới hàng này
 const CONTROL_ROW_HEIGHT = 36
 const INFO_PANEL_MAX_WIDTH = 260
-const FLASH_BACKDROP_OPACITY = 0.6
-const INFO_BACKDROP_OPACITY = 0.8
 const STATUS_DOT_SIZE = 8
 // Điều khiển tự ẩn sau 3 giây không chạm
 const HUD_HIDE_DELAY_MS = 3000
@@ -52,7 +50,6 @@ const DOUBLE_TAP_MS = 250
 const FLASH_DURATION_MS = 800
 // Vuốt xuống quá đoạn này thì thu nhỏ (dọc) hoặc thoát toàn màn (ngang)
 const SWIPE_DOWN_DISTANCE = 100
-const DIM_OPACITY = 0.35
 const LIVE_ORIENTATIONS = ['portrait', 'landscape-left', 'landscape-right'] as const
 
 type PlayerMode = 'expanded' | 'mini'
@@ -172,7 +169,6 @@ export function LiveCameraPlayer({ card, onClose }: LiveCameraPlayerProps) {
   )
 
   const hudStyle = useAnimatedStyle(() => ({ opacity: hudOpacity.get() }))
-  const dimStyle = useAnimatedStyle(() => ({ opacity: hudOpacity.get() * DIM_OPACITY }))
   // Kéo xuống thì khung trượt theo tay và nhỏ dần
   const swipeStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: swipeOffset.get() }, { scale: 1 - Math.min(swipeOffset.get() / 1000, 0.2) }],
@@ -250,7 +246,7 @@ export function LiveCameraPlayer({ card, onClose }: LiveCameraPlayerProps) {
           {/* Lớp mực mờ phủ video khi điều khiển hiện, như thanh điều khiển của YouTube */}
           <Animated.View
             pointerEvents="none"
-            style={[StyleSheet.absoluteFill, { backgroundColor: palette.inverse }, isScreenLocked ? styles.hidden : dimStyle]}
+            style={[StyleSheet.absoluteFill, { backgroundColor: palette.videoDim }, isScreenLocked ? styles.hidden : hudStyle]}
           />
 
           {/* Số đếm chim: luôn ở góc trên trái, không nền, chữ lime có bóng */}
@@ -329,7 +325,7 @@ export function LiveCameraPlayer({ card, onClose }: LiveCameraPlayerProps) {
           {/* Chạm đúp: luồng trực tiếp không có lịch sử để tua */}
           {flashSide && (
             <View style={[styles.flash, flashSide === 'left' ? styles.flashLeft : styles.flashRight]} pointerEvents="none">
-              <View style={[StyleSheet.absoluteFill, styles.flashBackdrop, { backgroundColor: palette.inverse }]} />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: palette.videoFlashBackdrop }]} />
               <Text variant="small" weight="semiBold" color={palette.onInverse}>
                 {t('Đang phát trực tiếp · không tua được')}
               </Text>
@@ -339,7 +335,7 @@ export function LiveCameraPlayer({ card, onClose }: LiveCameraPlayerProps) {
           {/* Bảng thông tin luồng (nút bánh răng): chưa có lựa chọn chất lượng vì máy chủ chỉ phát một luồng HLS */}
           {isInfoOpen && !isScreenLocked && (
             <View style={styles.infoPanel}>
-              <View style={[StyleSheet.absoluteFill, styles.infoBackdrop, { backgroundColor: palette.inverse }]} />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: palette.videoInfoBackdrop }]} />
               {[
                 t('Chất lượng: Tự động'),
                 `Camera: ${camera.device_id}`,
@@ -398,7 +394,6 @@ const styles = StyleSheet.create({
   },
   flashLeft: { left: Spacing.lg },
   flashRight: { right: Spacing.lg },
-  flashBackdrop: { opacity: FLASH_BACKDROP_OPACITY },
   infoPanel: {
     position: 'absolute',
     top: Spacing.md + CONTROL_ROW_HEIGHT + Spacing.sm,
@@ -409,5 +404,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     maxWidth: INFO_PANEL_MAX_WIDTH,
   },
-  infoBackdrop: { opacity: INFO_BACKDROP_OPACITY },
 })

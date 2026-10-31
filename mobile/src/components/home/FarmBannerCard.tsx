@@ -48,11 +48,11 @@ export function FarmBannerCard({ farm, width }: FarmBannerCardProps) {
     <Card tone="inverse" style={[styles.card, { width }]}>
       {/* 2 vòng trang trí: vòng ngoài olive mờ, vòng trong olive đậm hơn */}
       <View
-        style={[styles.ring, styles.outerRing, { backgroundColor: palette.nestBlood }]}
+        style={[styles.ring, styles.outerRing, { backgroundColor: palette.farmRingOuter }]}
         importantForAccessibility="no"
       />
       <View
-        style={[styles.ring, styles.innerRing, { backgroundColor: palette.nestBlood }]}
+        style={[styles.ring, styles.innerRing, { backgroundColor: palette.farmRingInner }]}
         importantForAccessibility="no"
       />
 
@@ -94,14 +94,12 @@ const styles = StyleSheet.create({
     height: OUTER_RING_SIZE,
     top: RING_CENTER_OFFSET - OUTER_RING_SIZE / 2 - 10,
     right: RING_CENTER_OFFSET - OUTER_RING_SIZE / 2,
-    opacity: 0.45,
   },
   innerRing: {
     width: INNER_RING_SIZE,
     height: INNER_RING_SIZE,
     top: RING_CENTER_OFFSET - INNER_RING_SIZE / 2 - 10,
-    right: RING_CENTER_OFFSET - INNER_RING_SIZE / 2 ,
-    opacity: 0.8,
+    right: RING_CENTER_OFFSET - INNER_RING_SIZE / 2,
   },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
   name: { flex: 1 },

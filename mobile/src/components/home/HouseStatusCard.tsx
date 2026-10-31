@@ -95,8 +95,8 @@ export function HouseStatusCard({ data, width }: HouseStatusCardProps) {
       accessibilityLabel={accessibilityLabel}
     >
       {/* 2 vòng mực chồng nhau: vòng dưới nhạt, vòng trên đậm hơn */}
-      <View style={[styles.ring, styles.outerRing, { backgroundColor: palette.inverse }]} />
-      <View style={[styles.ring, styles.innerRing, { backgroundColor: palette.inverse }]} />
+      <View style={[styles.ring, styles.outerRing, { backgroundColor: palette.houseRingOuter }]} />
+      <View style={[styles.ring, styles.innerRing, { backgroundColor: palette.houseRingInner }]} />
 
       <View style={styles.topRow}>
         <View style={[styles.iconCircle, { backgroundColor: palette.surface }]}>
@@ -143,14 +143,12 @@ const styles = StyleSheet.create({
     height: OUTER_RING_SIZE,
     left: -OUTER_RING_SIZE / 3,
     bottom: -OUTER_RING_SIZE / 2,
-    opacity: 0.08,
   },
   innerRing: {
     width: INNER_RING_SIZE,
     height: INNER_RING_SIZE,
     left: -INNER_RING_SIZE / 4,
     bottom: -INNER_RING_SIZE / 2,
-    opacity: 0.16,
   },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   iconCircle: {

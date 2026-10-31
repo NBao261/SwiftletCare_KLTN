@@ -39,8 +39,8 @@ export function IconButton({ icon: ButtonIcon, label, onPress, badgeCount = 0 }:
     >
       <ButtonIcon size={ICON_SIZE} color={palette.text} />
       {hasBadge && (
-        // Badge số đỏ (Alert Red, token deviceError có sẵn) chữ trắng — theo yêu cầu, khác badge lime của thanh tab
-        <View style={[styles.badge, { backgroundColor: palette.deviceError, borderColor: palette.background }]}>
+        // Badge số đỏ chữ trắng — theo yêu cầu, khác badge lime của thanh tab
+        <View style={[styles.badge, { backgroundColor: palette.notificationBadge, borderColor: palette.background }]}>
           <Text variant="label" weight="bold" color={palette.onInverse}>
             {badgeText}
           </Text>

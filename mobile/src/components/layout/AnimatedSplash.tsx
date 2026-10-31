@@ -13,7 +13,8 @@ import Animated, {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 import { TextLogo } from '@/components/layout/TextLogo'
-import { Colors, Radius, Spacing } from '@/constants/theme'
+import { Radius, Spacing } from '@/constants/theme'
+import { usePalette } from '@/hooks/theme/usePalette'
 import { t } from '@/utils/i18n.utils'
 
 // Icon khối vuông nhỏ gọn bo góc mềm, logo chữ cân theo icon
@@ -29,8 +30,7 @@ const FADE_DURATION = 600
 
 const ICON_IMAGE = require('@/assets/images/mobile-scare-icon.png')
 
-// Nền loang từ trên xuống: lime ở mép trên nhạt dần, tới khoảng giữa màn thì thành trắng (theo ảnh mẫu)
-const GRADIENT_COLORS = [Colors.raw.lime, Colors.raw.pureWhite] as const
+// Nền loang từ trên xuống: lime (primary) ở mép trên nhạt dần, tới khoảng giữa màn thì thành trắng (surface), theo ảnh mẫu
 const GRADIENT_LOCATIONS = [0, 0.55] as const
 
 interface AnimatedSplashProps {
@@ -42,6 +42,7 @@ interface AnimatedSplashProps {
 
 // Splash: cụm icon + logo chữ căn giữa nền loang lime → trắng, nạp xong thì mờ dần
 export function AnimatedSplash({ isReady, onFinish }: AnimatedSplashProps) {
+  const palette = usePalette()
   const opacity = useSharedValue(1)
 
   // Nạp xong thì mờ dần cả splash
@@ -70,19 +71,19 @@ export function AnimatedSplash({ isReady, onFinish }: AnimatedSplashProps) {
 
   return (
     <Animated.View
-      style={[styles.container, containerStyle]}
+      style={[styles.container, { backgroundColor: palette.surface }, containerStyle]}
       onLayout={handleLayout}
       accessible
       accessibilityLabel={t('Đang tải SwiftletCare')}
     >
-      <LinearGradient colors={GRADIENT_COLORS} locations={GRADIENT_LOCATIONS} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[palette.primary, palette.surface]} locations={GRADIENT_LOCATIONS} style={StyleSheet.absoluteFill} />
       <Image source={ICON_IMAGE} style={styles.icon} contentFit="cover" />
       <TextLogo width={TEXT_LOGO_WIDTH} />
     </Animated.View>
   )
 }
 
-// Nền trắng dưới lớp loang (phần dưới màn vẫn trắng như splash gốc)
+// Phủ đúng kích thước màn hình; nền trắng (surface) dưới lớp loang để phần dưới màn vẫn trắng như splash gốc
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -90,7 +91,6 @@ const styles = StyleSheet.create({
     left: 0,
     width: SCREEN.width,
     height: SCREEN.height,
-    backgroundColor: Colors.raw.pureWhite,
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.lg,
