@@ -25,7 +25,7 @@ npm run build:dev|build:preview|build:prod   # EAS profiles in eas.json
 
 SDK upgrades (steps and the packages kept outside the SDK list, with reasons): `MOBILE_GUIDE.md` §1 "Nâng cấp Expo SDK". After an upgrade, delete `node_modules` + `package-lock.json` and reinstall clean — installing over the old lock nests `expo-modules-core`/`babel-preset-expo` under `node_modules/expo/` and breaks autolinking.
 
-Configure `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` in `.env` (template `.env.example`); defaults point at `localhost:3000`. CI (`.github/workflows/ci.yml`, job Mobile) runs `npm ci`, `lint`, `typecheck` and `jest --passWithNoTests` on every PR that touches `mobile/`.
+Configure `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` in `.env` (template `.env.example`); defaults point at `localhost:3000`. `EXPO_PUBLIC_STREAM_URL` is the HLS root of MediaMTX (default `http://localhost:8888`); the live stream plays HLS with `expo-video` and a 60 s token from `GET /devices/camera-nodes/{id}/stream-token` (VISION-FR-013) — MediaMTX must have HLS enabled. The app is locked to portrait (`app/_layout.tsx`); only `LiveCameraPlayer` unlocks rotation while expanded (`expo-screen-orientation`). CI (`.github/workflows/ci.yml`, job Mobile) runs `npm ci`, `lint`, `typecheck` and `jest --passWithNoTests` on every PR that touches `mobile/`.
 
 ## Structure
 
@@ -36,23 +36,27 @@ src/
   app/            Expo Router routes — the folder tree IS the navigation
     _layout.tsx     root Stack: fonts, stored auth, QueryClientProvider, AnimatedSplash on top until ready
     (auth)/         login, forgot-password, verify-code, reset-password (also the first-sign-in temporary password) — no public sign-up
-    (tabs)/         dashboard, farms, alerts, analytics, profile (both roles), menu-1..2 (each <tab>/index.tsx); which tabs a role sees comes from constants/roleTabs.ts
+    (tabs)/         home (Home, shared by both roles), farms, alerts, analytics, profile (both roles), menu-1..2 (each <tab>/index.tsx); which tabs a role sees comes from constants/roleTabs.ts
     farm/[farmId] · zone/[zoneId] · device/[deviceId] · alert/[alertId] · livestream/[zoneId]
   components/
-    ui/           primitives: text, button, pressable-scale, text-field, code-input, form-message
+    ui/           primitives: text, button (variant primary|secondary|inverse|link, size sm|md|lg, trailingIcon), pressable-scale, text-field, code-input, form-message, card (tone, pressable with onPress), icon-button, bottom-sheet, split-badge, skeleton, empty-state, loading-overlay (full-screen wait that blocks taps), toast (short floating notice)
     auth/         AuthScreenLayout.tsx (shared frame of the auth screens, no scrolling; the form moves up only as far as the keyboard needs — `react-native-keyboard-controller`) · CollapsesWithKeyboard.tsx (logo, description, footer shrink and fade frame by frame with the keyboard) · LogoutButton.tsx (sign-out with confirmation: profile tab, temporary-password screen)
-    layout/       AnimatedSplash.tsx · TextLogo.tsx (text logo of splash and login) · AppHeader.tsx (shared header, adds the top safe-area inset; no router header is used) · PlaceholderScreen.tsx (menus not wired to a real screen yet)
+    layout/       AnimatedSplash.tsx · TextLogo.tsx (text logo of splash and login) · AppHeader.tsx (shared header, adds the top safe-area inset; no router header is used) · PlaceholderScreen.tsx (menus not wired to a real screen yet) · StatusBarGlass.tsx (blurred glass over the status bar while the page scrolls)
+    home/         blocks of the Home screen, shared by every role — a block shown to one role only is gated in the screen with canPerform, never by a per-role folder:
+                  HomeHeader · HomeSection · FarmCarousel/FarmBannerCard · OverviewStats + StatTile, DeviceStatTile, AlertStatTile, ZoneThresholdStatTile, StatDetailSheet, ReturnRateBar ·
+                  UrgentAlertBanner · PendingTasksCard · RelayOverrideStrip · NewReportCard · HouseCarousel/HouseStatusCard ·
+                  CameraCarousel/CameraCard · LiveCameraPlayer (YouTube-style live player opened in place: expanded modal, landscape full screen, swipe down to the floating CameraMiniPlayer bar) · CameraVideoSurface · PlayerControlButton
   config/         queryClient.ts
   constants/      apiEndpoints.ts (API_BASE_URL, WEBSOCKET_BASE_URL, ENDPOINTS) · theme.ts (Colors, Radius, Spacing, Typography…) · roleTabs.ts (tabs per role, isMobileRole) · authTiming.ts
-  hooks/<domain>/ one hook per file: auth/ (useLogin, useLogout, useForgotPassword, useResetPassword, useChangePassword) · farm/ · alert/ · telemetry/ · bird-count/ · theme/ (usePalette — light palette only)
+  hooks/<domain>/ one hook per file: auth/ (useLogin, useLogout, useForgotPassword, useResetPassword, useChangePassword) · farm/ · alert/ · telemetry/ · bird-count/ · device/ · health/ · notification/ · time/ (useNow) · theme/ (usePalette — light palette only)
   services/
-    api/          apiClient.ts (axios instance) + one <resource>.api.ts per resource (auth, farm, device, telemetry, alert, analytics)
+    api/          apiClient.ts (axios instance) + one <resource>.api.ts per resource (auth, farm, device, telemetry, alert, analytics, notification, healthReport)
     socket/       socketClient.ts — connect/disconnect, joinZone/leaveZone, on*/off* subscribers; a connection the backend rejects (expired token after reopening the app) refreshes the token once through apiClient and reconnects
     notification/ pushNotification.ts — permission + Expo push token + Android "alerts" channel
     session/      localSession.ts — startRealtimeIfReady (after sign-in or a restored session) · clearLocalSession (sign-out and expired session: socket, React Query cache, alert badge, tokens)
-  stores/         Zustand: authStore (SecureStore-backed), alertStore
+  stores/         Zustand: authStore (SecureStore-backed), alertStore, languageStore (vi/en, saved per account in SecureStore)
   types/          <module>.types.ts per domain + index.ts (the only barrel)
-  utils/          date.utils · number.utils · label.utils · validation.utils · apiError.utils
+  utils/          date · number · label · validation · apiError · name · permission (canPerform) · threshold · device · returnRate · alert · severity · relay · healthDay · houseStatus (each <topic>.utils.ts)
 ```
 
 `components/common/` and the other `components/<domain>/` folders do not exist yet — create them when a second screen needs the same piece.
@@ -107,16 +111,18 @@ src/
 - **[Bắt buộc]** TypeScript strict: no `any`, `as any`, `@ts-ignore`/`@ts-expect-error`; unknown data is `unknown` and narrowed. No `console.log` left in committed code (`console.warn`/`error` only for real fault paths).
 - **[Bắt buộc]** Touchable elements have an `accessibilityLabel` when they show only an icon.
 - **[Nên]** Pure logic (formatters, validators, mappers) gets a jest test next to it.
-- **[Nên]** User-facing text is Vietnamese with the same terms as the web ("Zone", "Farm" kept in English).
+- **[Nên]** User-facing text is written in Vietnamese with the same terms as the web ("Zone", "Farm" kept in English) and goes through `t('…')` (`utils/i18n.utils.ts`): the key is the Vietnamese sentence, variables are `{name}`, the English text is one line in `constants/i18n.en.ts` (a missing line shows the Vietnamese). The language is chosen in the Account tab, saved per account (`stores/languageStore.ts`, loaded by `hooks/i18n/useAccountLanguage`), and a screen re-mounts on change (`key={language}` on its root, `useLanguage()`), so `t` works in plain functions too.
 
 ## Known debt — not held against PRs that don't touch it
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| `src/services/socket/socketClient.ts` | No `JOIN_HOUSE` / `NOTIFICATION_NEW` yet | Add the house room and the notification event (with `off*`) before the first screen subscribes |
+| `src/services/socket/socketClient.ts` | No `NOTIFICATION_NEW` yet (`JOIN_HOUSE`/`LEAVE_HOUSE` exist since the Home camera player) | Add the notification event (with `off*`) before the first screen subscribes |
 | `src/services/notification/pushNotification.ts` | Gets an Expo push token but never sends it to the backend; uses `console.warn` | Wire it once the backend exposes a token endpoint (FCM, ALERT-FR-002) |
-| `package.json`, `app.json` | No `expo-video` (HLS stream) or `expo-location` (farm coordinates); `react-native-maps` is installed although Report 4 §5.4 adds no map library; location permission text speaks of a map | MOBILE_GUIDE §1 "Cấu hình còn thiếu" |
-| `package.json` | Libraries declared for planned screens but not imported yet (`expo-camera` — needed for MF-10 QR setup, `expo-linear-gradient`, `react-native-maps`, `victory-native` + Skia, `react-native-mmkv` + `react-native-nitro-modules`, `burnt`). `victory-native` stays on 42.x because 43 needs Skia ≥ 2.15 and SDK 58 ships 2.14 | Drop what the screens end up not using |
+| `package.json`, `app.json` | No `expo-location` (farm coordinates); `react-native-maps` is installed although Report 4 §5.4 adds no map library; location permission text speaks of a map | MOBILE_GUIDE §1 "Cấu hình còn thiếu" |
+| `package.json` | Libraries declared for planned screens but not imported yet (`expo-camera` — needed for MF-10 QR setup, `react-native-maps`, `victory-native` + Skia, `react-native-mmkv` + `react-native-nitro-modules`, `burnt`). `victory-native` stays on 42.x because 43 needs Skia ≥ 2.15 and SDK 58 ships 2.14 | Drop what the screens end up not using |
+| `src/app/(tabs)/home/` | No daily health status of each house (MF-11) because the backend has no route yet (G-11); the pending-day part of "Việc chờ bạn" has no API either; the house cards show a status the app derives from devices and alerts, not the MF-11 status | Add the MF-11 status and the rating entry when the G-11 routes are in `api-spec.yaml` |
+| `src/components/home/LiveCameraPlayer.tsx` | Plays HLS from `EXPO_PUBLIC_STREAM_URL`, but MediaMTX ships with `hls: false` (`deploy/mediamtx.yml`) and HLS asks `/internal/stream-auth` on its repeated requests while the token lives 60 s | Infrastructure and backend (Bảo, Kiệt): enable HLS and check the token lifetime for HLS |
 | `src/app/livestream/[zoneId]` | Keyed by zone, but cameras, bird counts and the stream belong to the house's camera (Report 3 §2.8, VISION-FR-013) | Key the route by camera (house) when the screen is built |
 | `src/app/**` screens other than `(auth)` | Stubs with `TODO` comments (profile shows name, email and sign-out only); the Domain Expert's first two tabs are placeholders `menu-1..2` | Implement per Report 3 (main flows first: MF-10 setup, alerts, dashboard, live stream) |
 
