@@ -1878,12 +1878,18 @@ paths:
   /devices/sensor-nodes/{id}/relay-override:
     delete:
       tags: [Devices]
-      summary: "Tắt Manual Override sớm, trả thiết bị về AUTO ngay (ENV-FR-018), chỉ FARM_OWNER"
+      summary: "Tắt Manual Override sớm của 1 relay hoặc mọi relay (ENV-FR-018, BR-20), chỉ FARM_OWNER"
       description: |
-        Đặt `control_mode=AUTO`, xoá `override_expiry`, publish MQTT `relay/command`
-        `{action:"clear_override"}` để ESP32 trả mọi relay về điều khiển tự động. Gọi
-        khi thiết bị đang AUTO thì không làm gì (idempotent). Ghi audit `RELAY_OVERRIDE_CLEARED`.
-      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+        Không có `relayName`: đặt `control_mode=AUTO`, xoá `override_expiry`, publish MQTT `relay/command`
+        `{action:"clear_override"}` để ESP32 trả mọi relay về điều khiển tự động; đóng mọi lịch sử còn mở.
+        Có `relayName`: chỉ đóng lịch sử của relay đó và publish `{action:"clear_override", relayName}`;
+        thiết bị còn relay khác đang can thiệp tay thì vẫn `MANUAL`. Gọi khi thiết bị đang AUTO thì không
+        làm gì (idempotent). Ghi audit `RELAY_OVERRIDE_CLEARED`.
+        Hạn riêng từng relay phía thiết bị (BR-20) làm cùng firmware G-07: firmware chưa đọc `relayName`
+        thì huỷ mọi relay và báo AUTO qua `relay/status`, backend đóng phần còn lại theo trạng thái đó.
+      parameters:
+        - $ref: "#/components/parameters/NodeId"
+        - { name: relayName, in: query, schema: { type: string, enum: [misting, speaker, ventilation] }, description: "Chỉ huỷ relay này; bỏ trống = huỷ mọi relay" }
       responses:
         "200":
           {
@@ -1894,6 +1900,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Thiết bị đã được gỡ bỏ khỏi hệ thống (FARM-FR-008) — không nhận lệnh nữa" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}/audio-tracks:
     get:
@@ -2110,6 +2117,12 @@ paths:
         `override_expiry = now + durationMs`. Technician, Administrator, Domain Expert → 403
         (Report 3 §2.4). Gọi lại cùng trạng thái
         để gia hạn override (Flow 13 case 4a).
+
+        BR-08: bật bơm (`relayName=misting`, `state=true`) 1–30 phút — quá 30 phút → 422; tắt bơm, quạt,
+        loa 1 phút – 24 giờ. ENV-FR-016: bật bơm khi Zone đang có `SENSOR_FAULT`, `RS485_BUS_FAILURE` hoặc
+        `MISTING_INEFFECTIVE` còn hiệu lực (`ACTIVE`, `ACKNOWLEDGED`) phải gửi `confirmed: true`, thiếu thì
+        409 `CONFIRMATION_REQUIRED`, `error.details` là danh sách các cảnh báo đó để app hiện cho người dùng;
+        lịch sử can thiệp ghi `alert_confirmed` (ENV-FR-019).
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -2131,7 +2144,12 @@ paths:
                     minimum: 60000,
                     maximum: 86400000,
                     default: 1800000,
-                    description: "Thời gian override trước khi tự trả về AUTO (mặc định 30 phút, từ 1 phút tới 24 giờ)",
+                    description: "Thời gian override trước khi tự trả về AUTO (mặc định 30 phút, từ 1 phút tới 24 giờ; bật bơm tối đa 30 phút — BR-08)",
+                  }
+                confirmed:
+                  {
+                    type: boolean,
+                    description: "ENV-FR-016 — Farm Owner xác nhận bật bơm dù Zone đang có cảnh báo cảm biến/phun sương",
                   }
       responses:
         "200":
@@ -2168,6 +2186,28 @@ paths:
               },
           }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "CONFIRMATION_REQUIRED — bật bơm khi Zone có cảnh báo cảm biến/phun sương mà chưa xác nhận; hoặc thiết bị đã gỡ"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiError"
+                  - properties:
+                      error:
+                        type: object
+                        properties:
+                          code: { type: string, example: CONFIRMATION_REQUIRED }
+                          message: { type: string }
+                          details:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                _id: { type: string }
+                                type: { type: string, enum: [SENSOR_FAULT, RS485_BUS_FAILURE, MISTING_INEFFECTIVE] }
+                                title: { type: string }
+                                created_at: { type: string, format: date-time }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/camera-nodes/register:
@@ -4538,6 +4578,7 @@ components:
         expires_at: { type: string, format: date-time }
         ended_at: { type: string, format: date-time, nullable: true }
         end_reason: { type: string, enum: [EXPIRED, CLEARED_EARLY, REPLACED], nullable: true }
+        alert_confirmed: { type: boolean, description: "ENV-FR-019 — bật bơm lúc Zone có cảnh báo cảm biến/phun sương và Farm Owner đã xác nhận" }
 
     RelayStates:
       type: object
