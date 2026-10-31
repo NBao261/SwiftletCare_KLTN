@@ -6,16 +6,27 @@ import type {
   BirdCountTrendsResponse, ZoneHealthReportItem, HarvestBatchItem,
 } from '@/types/expert.types'
 
+const INFERRED_TYPES: Set<string> = new Set([
+  'NOISE_ANOMALY',
+  'SENSOR_ANOMALY',
+  'FORECAST_BREACH',
+  'LOW_RETURN_RATE',
+  'MISTING_INEFFECTIVE',
+  'PUMP_DRY',
+])
+
 export const expertService = {
-  // ── Đọc dữ liệu (Không thay dữ liệu rỗng bằng mock) ─────────────────────
+  // ── Đọc dữ liệu (Chỉ lấy cảnh báo suy luận theo SRS EXPERT-FR-003) ───────
   async getPendingAlerts(params?: { farmId?: string; zoneId?: string }): Promise<InferredAlertItem[]> {
     const res = await expertApi.getPendingAlerts(params)
-    return Array.isArray(res.data?.data) ? res.data.data : []
+    const list = Array.isArray(res.data?.data) ? res.data.data : []
+    return list.filter(item => INFERRED_TYPES.has(item.type))
   },
 
   async getAllAlerts(params?: { farmId?: string; zoneId?: string }): Promise<InferredAlertItem[]> {
     const res = await expertApi.getAllAlerts(params)
-    return Array.isArray(res.data?.data) ? res.data.data : []
+    const list = Array.isArray(res.data?.data) ? res.data.data : []
+    return list.filter(item => INFERRED_TYPES.has(item.type))
   },
 
   async getVerdictStats(params?: { farmId?: string; zoneId?: string }): Promise<ExpertVerdictStats[]> {

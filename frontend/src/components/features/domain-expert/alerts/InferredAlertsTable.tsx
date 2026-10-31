@@ -10,7 +10,7 @@ import {
   SEVERITY_BADGE_CLASS,
 } from '@/hooks/domain-expert/useExpertAlerts'
 
-const HEADERS = ['MỨC ĐỘ', 'THỜI GIAN', 'LOẠI CẢNH BÁO', 'GIÁ TRỊ ĐO / NGƯỠNG', 'LẶP LẠI', 'VẬN HÀNH', 'PHÁN QUYẾT', 'THAO TÁC']
+const HEADERS = ['MỨC ĐỘ', 'THỜI GIAN', 'LOẠI CẢNH BÁO', 'BẰNG CHỨNG PHÁT HIỆN', 'LẶP LẠI', 'VẬN HÀNH', 'PHÁN QUYẾT', 'THAO TÁC']
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr)
@@ -22,13 +22,13 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 function StatusDot({ alert }: { alert: InferredAlertItem }) {
-  if (alert.expert_verdict?.result === 'CONFIRMED')
-    return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />Đã xác nhận</span>
-  if (alert.expert_verdict?.result === 'REJECTED')
-    return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#878380] whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-neutral-400 shrink-0" />Đã bác bỏ</span>
   if (alert.status === 'RESOLVED')
-    return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#878380] whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-[#B5D32C] shrink-0" />Đã xử lý</span>
-  return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#27231F] whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />Đang mở</span>
+    return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />Đã xử lý</span>
+  if (alert.status === 'ACKNOWLEDGED')
+    return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />Chủ nhà đã nhận</span>
+  if (alert.status === 'DISMISSED')
+    return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-warmGray whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-warmGray/50 shrink-0" />Đã bác bỏ</span>
+  return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />Chưa xử lý</span>
 }
 
 const BADGE_BASE = 'inline-flex items-center justify-center min-w-[112px] h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap'
@@ -44,41 +44,59 @@ function VerdictBadge({ alert }: { alert: InferredAlertItem }) {
 function MeasuredValueCell({ alert }: { alert: InferredAlertItem }) {
   const m = alert.metadata ?? {}
   if (alert.type === 'NOISE_ANOMALY') {
-    const db = m.sound_db as number | undefined
-    const thresh = db !== undefined && m.noise_margin !== undefined ? db - (m.noise_margin as number) : 67
+    const db = (m.sound_db as number | undefined) ?? (m.db as number | undefined)
+    const thresh = db !== undefined && m.noise_margin !== undefined ? db - (m.noise_margin as number) : 75
     return (
       <div className="flex flex-col text-xs leading-tight">
-        <b className="text-[#27231F] whitespace-nowrap">{db ?? '—'} dB</b>
-        <span className="text-[11px] text-[#878380] whitespace-nowrap">Ngưỡng: {thresh} dB</span>
+        <b className="text-charcoal whitespace-nowrap">{db !== undefined ? `${db} dB` : 'Tiếng ồn bất thường'}</b>
+        <span className="text-[11px] text-warmGray whitespace-nowrap">Ngưỡng: {thresh} dB</span>
       </div>
     )
   }
   if (alert.type === 'SENSOR_ANOMALY') {
-    const metric = (m.sensor_type as string) || (m.metric as string) || 'Độ ẩm'
+    const metric = (m.sensor_type as string) || (m.metric as string) || 'Cảm biến'
     const delta = m.delta as number | undefined
-    const mainText = delta !== undefined ? `${metric} nhảy ${delta > 0 ? `+${delta}` : delta}%` : 'Độ ẩm nhảy +12%'
+    const thresh = (m.threshold as number | undefined) ?? 5
+    const mainText = delta !== undefined ? `${metric} lệch ${delta > 0 ? `+${delta}` : delta}%` : (alert.title || 'Cảm biến bất thường')
     return (
       <div className="flex flex-col text-xs leading-tight">
-        <b className="text-[#27231F] whitespace-nowrap">{mainText}</b>
-        <span className="text-[11px] text-[#878380] whitespace-nowrap">Ngưỡng: {(m.threshold as number | undefined) ?? 5}%</span>
+        <b className="text-charcoal whitespace-nowrap">{mainText}</b>
+        <span className="text-[11px] text-warmGray whitespace-nowrap">Ngưỡng sai lệch: ±{thresh}%</span>
       </div>
     )
   }
   if (alert.type === 'MISTING_INEFFECTIVE' || (alert.type as string) === 'PUMP_DRY') {
-    return <div className="flex flex-col text-xs leading-tight"><b className="text-[#27231F] whitespace-nowrap">Bơm {(m.pump_on_sec as number | undefined) ?? 30}s</b><span className="text-[11px] text-[#878380] whitespace-nowrap">Ngưỡng: 5%</span></div>
-  }
-  if (alert.type === 'FORECAST_BREACH') {
-    return <div className="flex flex-col text-xs leading-tight"><b className="text-[#27231F] whitespace-nowrap">Dự báo 73,6% RH</b><span className="text-[11px] text-[#878380] whitespace-nowrap">Ngưỡng: 75% RH</span></div>
-  }
-  if (alert.type === 'LOW_RETURN_RATE') {
+    const current = m.motor_current !== undefined ? `${m.motor_current} A` : undefined
     return (
       <div className="flex flex-col text-xs leading-tight">
-        <b className="text-[#27231F] whitespace-nowrap">Giảm {(m.drop_pct as number | undefined) ?? '—'}%</b>
-        <span className="text-[11px] text-[#878380] whitespace-nowrap">Chuẩn: {(m.baseline_rate as number | undefined) ?? 95}%</span>
+        <b className="text-charcoal whitespace-nowrap">{current ? `Tải bơm: ${current}` : 'Phun sương không tăng ẩm'}</b>
+        <span className="text-[11px] text-warmGray whitespace-nowrap">Định mức: 4.2 A / &lt; 2.5 A</span>
       </div>
     )
   }
-  return <span className="text-xs text-[#878380] whitespace-nowrap">—</span>
+  if (alert.type === 'FORECAST_BREACH') {
+    const val = m.forecast_value !== undefined ? `${m.forecast_value}% RH` : '73.6% RH'
+    return (
+      <div className="flex flex-col text-xs leading-tight">
+        <b className="text-charcoal whitespace-nowrap">Dự báo 60p: {val}</b>
+        <span className="text-[11px] text-warmGray whitespace-nowrap">Ngưỡng an toàn: 75% RH</span>
+      </div>
+    )
+  }
+  if (alert.type === 'LOW_RETURN_RATE') {
+    const drop = (m.drop_pct as number | undefined) ?? (m.drop as number | undefined)
+    return (
+      <div className="flex flex-col text-xs leading-tight">
+        <b className="text-charcoal whitespace-nowrap">{drop !== undefined ? `Giảm ${drop}% đàn chim` : 'Tỉ lệ chim về sụt giảm'}</b>
+        <span className="text-[11px] text-warmGray whitespace-nowrap">Chuẩn nền: {(m.baseline_rate as number | undefined) ?? 95}%</span>
+      </div>
+    )
+  }
+  return (
+    <div className="flex flex-col text-xs leading-tight max-w-[160px]">
+      <span className="text-charcoal truncate" title={alert.message}>{alert.message || '—'}</span>
+    </div>
+  )
 }
 
 interface Props {
@@ -133,12 +151,12 @@ export default function InferredAlertsTable({
                       <td className="px-4 py-3.5 text-center whitespace-nowrap shrink-0">
                         {isPending ? (
                           <button id={`btn-verdict-${alert._id}`} type="button" onClick={() => onOpenDrawer(alert)}
-                            className="inline-flex items-center justify-center min-w-[104px] h-8 px-4 rounded-full text-xs font-semibold whitespace-nowrap bg-[#ECFFA9] text-[#27231F] border border-[#B5D32C] hover:bg-[#B5D32C] hover:text-white transition-all duration-150 shadow-sm active:scale-95">
+                            className="inline-flex items-center justify-center min-w-[96px] h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#ECFFA9] text-[#27231F] border border-[#B5D32C] hover:bg-[#B5D32C] hover:text-[#27231F] transition-all duration-150 shadow-xs active:scale-95">
                             Kiểm chứng
                           </button>
                         ) : (
                           <button id={`btn-detail-${alert._id}`} type="button" onClick={() => onOpenDrawer(alert)}
-                            className="inline-flex items-center justify-center min-w-[104px] h-8 px-4 rounded-full text-xs font-semibold whitespace-nowrap bg-white text-[#27231F] border border-neutral-200 hover:border-neutral-400 transition-all duration-150 active:scale-95">
+                            className="inline-flex items-center justify-center min-w-[96px] h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap bg-white text-[#27231F] border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-150 active:scale-95">
                             Chi tiết
                           </button>
                         )}

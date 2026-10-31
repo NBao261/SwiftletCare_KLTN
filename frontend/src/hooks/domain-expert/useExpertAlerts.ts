@@ -42,26 +42,40 @@ export function useExpertVerdictStats(farmId?: string, zoneId?: string) {
   })
 }
 
+const INFERRED_TYPES: Set<string> = new Set([
+  'NOISE_ANOMALY',
+  'SENSOR_ANOMALY',
+  'FORECAST_BREACH',
+  'LOW_RETURN_RATE',
+  'MISTING_INEFFECTIVE',
+  'PUMP_DRY',
+])
+
 // ── 3. Bộ lọc + Phân trang client-side ───────────────────────────────────────
 export function useAlertsWithFilters(farmId?: string, zoneId?: string) {
   const [filters, setFilters] = useState<AlertFilters>({ tab: 'ALL', type: 'ALL', severity: 'ALL', page: 1 })
   const { data: allAlerts = [], isLoading, isFetching } = useAllInferredAlerts(farmId, zoneId)
 
-  const kpiCounts = useMemo(() => ({
-    total: allAlerts.length,
-    pending: allAlerts.filter(a => !a.expert_verdict).length,
-    confirmed: allAlerts.filter(a => a.expert_verdict?.result === 'CONFIRMED').length,
-    rejected: allAlerts.filter(a => a.expert_verdict?.result === 'REJECTED').length,
-  }), [allAlerts])
+  // Chỉ lấy cảnh báo thuộc nhóm suy luận (EXPERT-FR-003)
+  const inferredAlerts = useMemo(() => {
+    return allAlerts.filter(a => INFERRED_TYPES.has(a.type))
+  }, [allAlerts])
 
-  const filteredAlerts = useMemo(() => allAlerts.filter(alert => {
+  const kpiCounts = useMemo(() => ({
+    total: inferredAlerts.length,
+    pending: inferredAlerts.filter(a => !a.expert_verdict).length,
+    confirmed: inferredAlerts.filter(a => a.expert_verdict?.result === 'CONFIRMED').length,
+    rejected: inferredAlerts.filter(a => a.expert_verdict?.result === 'REJECTED').length,
+  }), [inferredAlerts])
+
+  const filteredAlerts = useMemo(() => inferredAlerts.filter(alert => {
     if (filters.tab === 'PENDING' && alert.expert_verdict) return false
     if (filters.tab === 'CONFIRMED' && alert.expert_verdict?.result !== 'CONFIRMED') return false
     if (filters.tab === 'REJECTED' && alert.expert_verdict?.result !== 'REJECTED') return false
     if (filters.type !== 'ALL' && alert.type !== filters.type) return false
     if (filters.severity !== 'ALL' && alert.severity !== filters.severity) return false
     return true
-  }), [allAlerts, filters])
+  }), [inferredAlerts, filters])
 
   const totalPages = Math.ceil(filteredAlerts.length / PAGE_SIZE)
   const paginatedAlerts = filteredAlerts.slice((filters.page - 1) * PAGE_SIZE, filters.page * PAGE_SIZE)
