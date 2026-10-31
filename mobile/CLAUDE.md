@@ -36,7 +36,7 @@ src/
   app/            Expo Router routes — the folder tree IS the navigation
     _layout.tsx     root Stack: fonts, stored auth, QueryClientProvider, AnimatedSplash on top until ready
     (auth)/         login, forgot-password, verify-code, reset-password (also the first-sign-in temporary password) — no public sign-up
-    (tabs)/         home (Home, shared by both roles), farms, alerts, analytics, profile (both roles), menu-1..2 (each <tab>/index.tsx); which tabs a role sees comes from constants/roleTabs.ts
+    (tabs)/         home (Home; only the Farm Owner's tabs open it for now — the Domain Expert has menu-1..2 + profile in ROLE_TABS, and the expert-only branches inside Home wait for that tab), farms, alerts, analytics, profile (both roles), menu-1..2 (each <tab>/index.tsx); which tabs a role sees comes from constants/roleTabs.ts
     farm/[farmId] · zone/[zoneId] · device/[deviceId] · alert/[alertId] · livestream/[zoneId]
   components/
     ui/           primitives: text, button (variant primary|secondary|inverse|link, size sm|md|lg, trailingIcon), pressable-scale, text-field, code-input, form-message, card (tone, pressable with onPress), icon-button, bottom-sheet, split-badge, skeleton, empty-state, loading-overlay (full-screen wait that blocks taps), toast (short floating notice)

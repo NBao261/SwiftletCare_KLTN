@@ -88,7 +88,7 @@ Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở �
 
 ### Cấu hình chính
 
-- `app.json`: `typedRoutes` bật; chỉ portrait; `userInterfaceStyle: light` (app chỉ có giao diện sáng, máy bật chế độ tối cũng không đổi; Android cần gói `expo-system-ui` để giữ đúng giao diện sáng); plugin `expo-router`, `expo-splash-screen`, `expo-secure-store`, `expo-notifications`, `expo-camera`, `expo-asset`, `expo-font`. Từ SDK 57 splash khai báo trong plugin `expo-splash-screen` (không còn khoá `splash` ở gốc): ảnh `splash-blank.png`, nền `#FFFFFF`; adaptive icon nền `#172008` trùng nền logo.
+- `app.json`: `typedRoutes` bật; `orientation: default` (app tự khoá dọc trong `app/_layout.tsx`, chỉ trình phát camera xoay ngang); `userInterfaceStyle: light` (app chỉ có giao diện sáng, máy bật chế độ tối cũng không đổi; Android cần gói `expo-system-ui` để giữ đúng giao diện sáng); plugin `expo-router`, `expo-splash-screen`, `expo-secure-store`, `expo-notifications`, `expo-camera`, `expo-asset`, `expo-font`. Từ SDK 57 splash khai báo trong plugin `expo-splash-screen` (không còn khoá `splash` ở gốc): ảnh `splash-blank.png`, nền `#FFFFFF`; adaptive icon nền `#172008` trùng nền logo.
 - `tsconfig.json`: `strict`; không dùng `baseUrl` (TypeScript 6 đã bỏ); alias `@/assets/*` → `./assets/*` (ảnh, font ở gốc `mobile/`) và `@/*` → `./src/*` (toàn bộ code). expo-router tự nhận route trong `src/app/`.
 - `babel.config.js`: chỉ `babel-preset-expo` (tự đọc alias của tsconfig và tự thêm plugin Reanimated).
 - `package.json` → `expo.install.exclude`: `@shopify/react-native-skia` (lý do ở Known debt của `mobile/CLAUDE.md`).
@@ -127,7 +127,7 @@ mobile/
    │  ├─ index.tsx               # chuyển hướng: chưa đăng nhập → (auth)/login; mật khẩu tạm → reset-password; còn lại → tab đầu của role
    │  ├─ (auth)/                 # _layout · login · forgot-password · verify-code · reset-password (cả đổi mật khẩu tạm)
    │  │                          #   không có đăng ký công khai (Report 3 §1.2)
-   │  ├─ (tabs)/                 # _layout (tab theo role từ constants/roleTabs.ts) · home/ (Trang chủ, mọi role dùng chung) · farms/ · alerts/ ·
+   │  ├─ (tabs)/                 # _layout (tab theo role từ constants/roleTabs.ts) · home/ (Trang chủ — hiện chỉ tab của Farm Owner mở; Domain Expert chưa có tab này trong ROLE_TABS) · farms/ · alerts/ ·
    │  │                          #   analytics/ · profile/ (Tài khoản, mọi role) · menu-1/ · menu-2/ (menu tạm của Domain Expert)
    │  ├─ farm/[farmId].tsx       # chi tiết trang trại
    │  ├─ zone/[zoneId].tsx       # chi tiết Zone
@@ -141,7 +141,7 @@ mobile/
    │  │                          #   LogoutButton.tsx (đăng xuất có hỏi xác nhận — tab Tài khoản, màn mật khẩu tạm)
    │  ├─ layout/                 # AnimatedSplash.tsx · TextLogo.tsx (logo chữ của splash và màn đăng nhập) · BottomTabBar.tsx (thanh tab, nút nổi) · AppHeader.tsx (header dùng chung, tự chừa vùng an toàn) ·
    │  │                          #   PlaceholderScreen.tsx (màn tạm của menu chưa gán) · StatusBarGlass.tsx (kính mờ vùng giờ/pin khi cuộn)
-   │  └─ home/                   # các khối của màn Trang chủ, mọi role dùng chung — khối chỉ một role thấy thì quyết ở màn bằng canPerform:
+   │  └─ home/                   # các khối của màn Trang chủ (viết chung cho hai role, hiện chỉ Farm Owner vào được) — khối chỉ một role thấy thì quyết ở màn bằng canPerform:
    │                             #   HomeHeader · HomeSection · FarmCarousel/FarmBannerCard · OverviewStats + StatTile, 3 ô, StatDetailSheet, ReturnRateBar ·
    │                             #   UrgentAlertBanner · PendingTasksCard · RelayOverrideStrip · NewReportCard · HouseCarousel/HouseStatusCard ·
    │                             #   CameraCarousel/CameraCard · LiveCameraPlayer (trình phát kiểu YouTube mở tại chỗ: phóng to, xoay ngang toàn màn, vuốt xuống thành thanh CameraMiniPlayer) · CameraVideoSurface · PlayerControlButton
@@ -152,12 +152,12 @@ mobile/
    ├─ hooks/                     # một hook một file, chia theo nghiệp vụ
    │  ├─ auth/                   # useLogin · useLogout · useForgotPassword · useResetPassword · useChangePassword
    │  ├─ farm/                   # useFarms · useFarmDetail · useHouses · useAllHouses · useZonesOfHouses · useZoneDirectory · useHouseStatuses
-   │  ├─ alert/                  # useAlerts · useAcknowledgeAlert · useActiveAlertCount · useActiveAlertSummary · usePendingVerdictAlerts
+   │  ├─ alert/                  # useAlerts · useAcknowledgeAlert · useActiveAlertCount · useActiveAlertSummary · useAllActiveAlerts · useMostUrgentAlert · usePendingVerdictAlertCount
    │  ├─ telemetry/              # useLatestTelemetryOfZones · useZoneTelemetryStream · useLiveTelemetry · useTelemetryHistory
    │  ├─ bird-count/             # useBirdCountDaily · useBirdCountTrends · useTodayBirdCounts · useLiveHouseBirdCount
    │  ├─ device/                 # useSensorNodes · useCameraNodes · useActiveRelayOverrides · useClearRelayOverride · useCameraCards · useCameraStreamUrl
    │  ├─ health/                 # usePendingHealthDays (chưa có API — G-11) · useUnreadHealthReports
-   │  ├─ notification/           # useUnreadNotificationCount · useMarkNotificationRead
+   │  ├─ notification/           # useUnreadNotificationCount
    │  ├─ time/                   # useNow (mốc thời gian tự cập nhật cho chữ đếm ngược)
    │  └─ theme/                  # usePalette
    ├─ services/
@@ -345,6 +345,14 @@ Màu trạng thái — **chép đúng từ web** (`frontend/tailwind.config.ts`)
 |                          | `deviceDegraded`                       | `#ED8F50`                         | Suy giảm                       |
 |                          | `devicePending`                        | `#F3B287`                         | Chờ kết nối                    |
 | Nhà yến (thẻ Trang chủ)  | `houseHealthy`                         | `#446401`                         | Nhà ổn (thêm theo yêu cầu)     |
+| Trang chủ (thêm theo yêu cầu 2026-10-31) | `farmRingOuter` / `farmRingInner` | `#414C1073` / `#414C10CC` | Vòng trang trí trên card Farm (olive 45% / 80%) |
+|                          | `houseRingOuter` / `houseRingInner`    | `#0B0B0C14` / `#0B0B0C29`         | Vòng trang trí trên thẻ nhà yến (Ink 8% / 16%) |
+|                          | `reportLabel`                          | `#414C10`                         | Icon và nhãn "BÁO CÁO MỚI"     |
+|                          | `notificationBadge`                    | `#D53F35`                         | Badge số trên chuông thông báo |
+|                          | `urgentAlertGradientEnd`               | `#D53F35`                         | Cuối dải loang khung cảnh báo khẩn (đầu dải là `alert`) |
+|                          | `videoControlBackdrop`                 | `#0B0B0C8C`                       | Nền nút tròn trên video (Ink 55%) |
+|                          | `videoFlashBackdrop` / `videoInfoBackdrop` | `#0B0B0C99` / `#0B0B0CCC`     | Nền chữ chạm đúp / bảng thông tin trên video (Ink 60% / 80%) |
+|                          | `videoDim`                             | `#0B0B0C59`                       | Lớp tối phủ video khi hiện điều khiển (Ink 35%) |
 | Loại yến                 | `nestWhite` / `nestPink` / `nestBlood` | `#B5D32C` / `#89A022` / `#414C10` | Yến trắng / hồng / huyết       |
 
 `Colors.raw`: `lime #C3FD47`, `ink #0B0B0C`, `paper #F3F3EE`, `pureWhite #FFFFFF`, `safetyOrange #FF7426`, `successLime #B5D32C`, `alertRed #D53F35`.
@@ -429,7 +437,7 @@ Layout: `AppHeader` (đã có), `BottomTabBar` (đã có, `components/layout/Bot
 - Số đo realtime (nhiệt độ, độ ẩm, NH3/CO2) cập nhật tại chỗ, không chạy animation mỗi lần có giá trị mới.
 - Rung nhẹ (`expo-haptics`) chỉ cho hành động có hậu quả: bật/tắt relay, xác nhận cảnh báo.
 - Ảnh dùng `expo-image`.
-- **Splash** (`components/layout/AnimatedSplash.tsx`, gắn ở `app/_layout.tsx`): splash gốc chỉ là màn trắng (ảnh `splash-blank.png` trong suốt — Android 12+ luôn cắt icon splash gốc thành hình tròn nên không dùng icon ở đây) → splash JS: cụm icon khối vuông 88 (bo `Radius.lg` 24) + logo chữ rộng 200, cách nhau `Spacing.lg` 16, căn giữa tuyệt đối trên nền loang từ trên xuống (lime `Colors.raw.lime` `#C3FD47` ở mép trên nhạt dần thành trắng `#FFFFFF` ở khoảng giữa màn, `expo-linear-gradient`), không có dòng chữ phụ → nạp xong font/phiên đăng nhập, giữ tối thiểu 0.5s rồi mờ dần 0.6s để lộ màn auth. Splash gốc vẫn trắng (Android/iOS không vẽ được nền loang ở splash gốc) nên lớp loang hiện khi splash JS lên; app dựng bên dưới ngay khi nạp xong; "Giảm chuyển động" bật thì bỏ qua hiệu ứng mờ.
+- **Splash** (`components/layout/AnimatedSplash.tsx`, gắn ở `app/_layout.tsx`): splash gốc chỉ là màn trắng (ảnh `splash-blank.png` trong suốt — Android 12+ luôn cắt icon splash gốc thành hình tròn nên không dùng icon ở đây) → splash JS: cụm icon khối vuông 88 (bo `Radius.lg` 24) + logo chữ rộng 200, cách nhau `Spacing.lg` 16, căn giữa tuyệt đối trên nền loang từ trên xuống (lime `primary` `#C3FD47` ở mép trên nhạt dần thành trắng `surface` `#FFFFFF` ở khoảng giữa màn, `expo-linear-gradient`), không có dòng chữ phụ → nạp xong font/phiên đăng nhập, giữ tối thiểu 0.5s rồi mờ dần 0.6s để lộ màn auth. Splash gốc vẫn trắng (Android/iOS không vẽ được nền loang ở splash gốc) nên lớp loang hiện khi splash JS lên; app dựng bên dưới ngay khi nạp xong; "Giảm chuyển động" bật thì bỏ qua hiệu ứng mờ.
 
 ### 3.7 Accessibility
 

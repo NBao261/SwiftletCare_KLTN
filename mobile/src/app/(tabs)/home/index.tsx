@@ -37,7 +37,7 @@ import { useLanguage } from '@/hooks/i18n/useLanguage'
 // Vòng tải của Android cao khoảng 40 và nằm dưới vùng giờ/pin (progressViewOffset): chữ đặt ngay bên dưới
 const ANDROID_REFRESH_LABEL_OFFSET = 56
 
-/** Trang chủ – Farm Owner và Domain Expert dùng chung; các khối xếp từ trên xuống */
+/** Trang chủ – viết chung cho Farm Owner và Domain Expert (hiện chỉ tab của Farm Owner mở màn này); các khối xếp từ trên xuống */
 export default function HomeScreen() {
   const palette = usePalette()
   // Đổi ngôn ngữ thì dựng lại cả màn (key = ngôn ngữ) để mọi chữ ra đúng ngôn ngữ
