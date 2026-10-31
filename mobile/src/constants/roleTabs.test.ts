@@ -11,7 +11,7 @@ describe('roleTabs', () => {
 
   it('Farm Owner giữ 5 tab theo đúng thứ tự', () => {
     expect(getRoleTabs('FARM_OWNER').map(tab => tab.name)).toEqual([
-      'dashboard',
+      'home',
       'farms',
       'alerts',
       'analytics',
@@ -30,7 +30,7 @@ describe('roleTabs', () => {
   })
 
   it('sau đăng nhập vào tab đầu của role; role không dùng mobile về màn đăng nhập', () => {
-    expect(getRoleHomeHref('FARM_OWNER')).toBe('/(tabs)/dashboard')
+    expect(getRoleHomeHref('FARM_OWNER')).toBe('/(tabs)/home')
     expect(getRoleHomeHref('DOMAIN_EXPERT')).toBe('/(tabs)/menu-1')
     expect(getRoleHomeHref('TECHNICIAN')).toBe('/(auth)/login')
   })

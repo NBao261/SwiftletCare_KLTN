@@ -4,6 +4,7 @@ import { EyeIcon, EyeSlashIcon, type Icon } from 'phosphor-react-native'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { t } from '@/utils/i18n.utils'
 
 interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   // Tên ô cho trình đọc màn hình; cũng là chữ gợi ý khi không truyền placeholder
@@ -67,7 +68,7 @@ export function TextField({
         {isPassword && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={isPasswordVisible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+            accessibilityLabel={isPasswordVisible ? t('Ẩn mật khẩu') : t('Hiện mật khẩu')}
             hitSlop={Spacing.md}
             onPress={() => setPasswordVisible(isVisible => !isVisible)}
           >

@@ -12,6 +12,7 @@ import { UnsupportedRoleError, useLogin } from '@/hooks/auth/useLogin'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { getAuthErrorMessage, readApiError } from '@/utils/apiError.utils'
 import { isValidEmail } from '@/utils/validation.utils'
+import { t } from '@/utils/i18n.utils'
 
 const REQUIRED_MESSAGE = 'Vui lòng nhập đầy đủ thông tin'
 
@@ -36,7 +37,7 @@ export default function LoginScreen() {
   }
 
   const handleEmailBlur = () => {
-    if (email.trim() && !isValidEmail(email)) setEmailError('Email không hợp lệ')
+    if (email.trim() && !isValidEmail(email)) setEmailError(t('Email không hợp lệ'))
   }
 
   const handleSubmit = () => {
@@ -46,11 +47,11 @@ export default function LoginScreen() {
     const isPasswordMissing = !password
     setMissingFields({ email: isEmailMissing, password: isPasswordMissing })
     if (isEmailMissing || isPasswordMissing) {
-      setFormError(REQUIRED_MESSAGE)
+      setFormError(t(REQUIRED_MESSAGE))
       return
     }
     if (!isValidEmail(email)) {
-      setEmailError('Email không hợp lệ')
+      setEmailError(t('Email không hợp lệ'))
       return
     }
 
@@ -79,17 +80,17 @@ export default function LoginScreen() {
 
   return (
     <AuthScreenLayout
-      title="Đăng nhập"
-      description="Theo dõi và điều khiển nhà yến của bạn"
+      title={t('Đăng nhập')}
+      description={t('Theo dõi và điều khiển nhà yến của bạn')}
       showsLogo
       footer={
         <Text variant="small" color={palette.textSecondary} center>
-          Chưa có tài khoản? Liên hệ chủ trang trại hoặc quản trị viên
+          {t('Chưa có tài khoản? Liên hệ chủ trang trại hoặc quản trị viên')}
         </Text>
       }
     >
       {notice === 'password-reset' && !formError && (
-        <FormMessage tone="success" message="Đã đổi mật khẩu, hãy đăng nhập lại" />
+        <FormMessage tone="success" message={t('Đã đổi mật khẩu, hãy đăng nhập lại')} />
       )}
 
       <TextField
@@ -114,7 +115,7 @@ export default function LoginScreen() {
 
       <TextField
         ref={passwordRef}
-        label="Mật khẩu"
+        label={t('Mật khẩu')}
         icon={LockIcon}
         value={password}
         onChangeText={text => {
@@ -133,14 +134,14 @@ export default function LoginScreen() {
       <View style={styles.forgotRow}>
         <Button
           variant="link"
-          label="Quên mật khẩu?"
+          label={t('Quên mật khẩu?')}
           onPress={() => router.push({ pathname: '/(auth)/forgot-password', params: { email: email.trim() } })}
         />
       </View>
 
       <FormMessage message={formError} />
 
-      <Button label="Đăng nhập" onPress={handleSubmit} loading={login.isPending} disabled={isRateLimited} />
+      <Button label={t('Đăng nhập')} onPress={handleSubmit} loading={login.isPending} disabled={isRateLimited} />
     </AuthScreenLayout>
   )
 }

@@ -13,7 +13,7 @@ export default function FarmDetailScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader title="Chi tiết trang trại" onBack={() => router.back()} />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}>
         {/* TODO: M4
           - Đọc farmId qua useLocalSearchParams, lấy dữ liệu qua useFarmDetail (không hiện id lên giao diện)
           - Farm info header + map (react-native-maps)

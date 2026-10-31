@@ -28,7 +28,7 @@ export interface RoleTab {
  */
 export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
   FARM_OWNER: [
-    { name: 'dashboard', title: 'Trang chủ', icon: HouseIcon },
+    { name: 'home', title: 'Trang chủ', icon: HouseIcon },
     { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
     { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, showsAlertBadge: true, isFeatured: true },
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },

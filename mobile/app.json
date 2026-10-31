@@ -4,7 +4,7 @@
     "slug": "swiftletcare",
     "owner": "vulen",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "swiftletcare",
     "userInterfaceStyle": "light",
@@ -54,7 +54,14 @@
         }
       ],
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "expo-video",
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "PORTRAIT_UP"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

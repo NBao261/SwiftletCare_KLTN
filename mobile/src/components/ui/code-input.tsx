@@ -10,6 +10,7 @@ import Animated, {
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { t } from '@/utils/i18n.utils'
 
 interface CodeInputProps {
   value: string
@@ -80,7 +81,7 @@ export function CodeInput({
         autoFocus={autoFocus}
         editable={!disabled}
         caretHidden
-        accessibilityLabel={`Mã xác thực ${length} số`}
+        accessibilityLabel={t('Mã xác thực {length} số', { length })}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={styles.hiddenInput}

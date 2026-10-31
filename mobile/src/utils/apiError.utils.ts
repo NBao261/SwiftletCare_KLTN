@@ -1,4 +1,5 @@
 import type { ApiError } from '@/types'
+import { t } from '@/utils/i18n.utils'
 
 // Thông tin rút từ lỗi axios: không có status nghĩa là chưa tới được backend (mất mạng, hết thời gian chờ)
 export interface ApiErrorInfo {
@@ -29,8 +30,8 @@ export function readApiError(error: unknown): ApiErrorInfo {
 
 // Thời gian chờ đọc được: dưới 1 phút ghi giây, từ 1 phút làm tròn lên theo phút
 export function formatWaitTime(seconds: number): string {
-  if (seconds < 60) return `${Math.max(1, Math.ceil(seconds))} giây`
-  return `${Math.ceil(seconds / 60)} phút`
+  if (seconds < 60) return t('{count} giây', { count: Math.max(1, Math.ceil(seconds)) })
+  return t('{count} phút', { count: Math.ceil(seconds / 60) })
 }
 
 // Số giây phải chờ khi backend trả 429 RATE_LIMITED; không đọc được thì null
@@ -42,31 +43,31 @@ export function getRetryAfterSeconds(errorInfo: ApiErrorInfo): number | null {
 // Câu báo lỗi tiếng Việt cho từng thao tác xác thực — không lộ email nào có tài khoản
 export function getAuthErrorMessage(error: unknown, action: AuthAction): string {
   const errorInfo = readApiError(error)
-  if (errorInfo.status === null) return NETWORK_ERROR_MESSAGE
-  if (errorInfo.status >= 500) return SERVER_ERROR_MESSAGE
+  if (errorInfo.status === null) return t(NETWORK_ERROR_MESSAGE)
+  if (errorInfo.status >= 500) return t(SERVER_ERROR_MESSAGE)
 
   if (errorInfo.status === 429) {
     const retryAfterSeconds = getRetryAfterSeconds(errorInfo)
-    const waitText = retryAfterSeconds === null ? 'ít phút' : formatWaitTime(retryAfterSeconds)
+    const waitText = retryAfterSeconds === null ? t('ít phút') : formatWaitTime(retryAfterSeconds)
     // Gửi mã: backend đếm mọi lần yêu cầu; đăng nhập, đặt lại, đổi mật khẩu: chỉ đếm lần nhập sai
-    if (action === 'request-code') return `Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau ${waitText}`
-    return `Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau ${waitText}`
+    if (action === 'request-code') return t('Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau {wait}', { wait: waitText })
+    return t('Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau {wait}', { wait: waitText })
   }
 
   if (errorInfo.code === 'ACCOUNT_DISABLED') {
     const reason = errorInfo.details.reason
     return typeof reason === 'string' && reason
-      ? `Tài khoản đã bị khoá. Lý do: ${reason}`
-      : 'Tài khoản đã bị khoá. Vui lòng liên hệ quản trị viên'
+      ? t('Tài khoản đã bị khoá. Lý do: {reason}', { reason })
+      : t('Tài khoản đã bị khoá. Vui lòng liên hệ quản trị viên')
   }
-  if (errorInfo.code === 'INVALID_RESET_TOKEN') return INVALID_CODE_MESSAGE
-  if (errorInfo.code === 'INVALID_CURRENT_PASSWORD') return 'Mật khẩu tạm không chính xác'
-  if (errorInfo.code === 'PASSWORD_UNCHANGED') return 'Mật khẩu mới phải khác mật khẩu tạm'
+  if (errorInfo.code === 'INVALID_RESET_TOKEN') return t(INVALID_CODE_MESSAGE)
+  if (errorInfo.code === 'INVALID_CURRENT_PASSWORD') return t('Mật khẩu tạm không chính xác')
+  if (errorInfo.code === 'PASSWORD_UNCHANGED') return t('Mật khẩu mới phải khác mật khẩu tạm')
 
   // Sai email hay sai mật khẩu đều chung một câu (AUTH-FR-002)
-  if (action === 'login' && errorInfo.status === 401) return 'Tài khoản hoặc mật khẩu không chính xác'
+  if (action === 'login' && errorInfo.status === 401) return t('Tài khoản hoặc mật khẩu không chính xác')
   if (errorInfo.status === 422) {
-    return action === 'request-code' ? 'Email không hợp lệ' : 'Thông tin không hợp lệ. Vui lòng kiểm tra lại'
+    return action === 'request-code' ? t('Email không hợp lệ') : t('Thông tin không hợp lệ. Vui lòng kiểm tra lại')
   }
-  return 'Đã có lỗi xảy ra. Vui lòng thử lại sau'
+  return t('Đã có lỗi xảy ra. Vui lòng thử lại sau')
 }

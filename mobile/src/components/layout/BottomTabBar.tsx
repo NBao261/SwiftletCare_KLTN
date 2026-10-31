@@ -5,6 +5,8 @@ import { Text } from '@/components/ui/text'
 import type { RoleTab } from '@/constants/roleTabs'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { translate } from '@/utils/i18n.utils'
 
 // ===================== BẢNG CHỈNH — chỉ sửa số ở khối này =====================
 
@@ -95,6 +97,8 @@ function TabBadge({ count }: { count: number }) {
 // Thanh tab dùng chung mọi role: tab dựng từ ROLE_TABS, tab isFeatured thành nút tròn nổi giữa
 export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unreadCount }: BottomTabBarProps) {
   const palette = usePalette()
+  // Tên tab dịch theo ngôn ngữ đang chọn
+  const language = useLanguage()
   const { width } = useWindowDimensions()
   const height = EDGE_TOP + BAR_HEIGHT + insets.bottom
   const itemWidth = width / state.routes.length
@@ -135,7 +139,7 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
             <Pressable
               key={route.key}
               accessibilityRole="tab"
-              accessibilityLabel={tab.title}
+              accessibilityLabel={translate(tab.title, language)}
               accessibilityState={{ selected: isFocused }}
               onPress={handlePress}
               style={tab.isFeatured ? styles.featuredItem : styles.item}
@@ -147,12 +151,13 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
                   <TabBadge count={badgeCount} />
                 </View>
               ) : (
-                <View style={[styles.iconCircle, isFocused && { backgroundColor: palette.tabActiveBackground }]}>
+                // Tab thường đang chọn: chỉ icon đặc + chữ màu mực, không nền tròn lime (người dùng đổi 2026-10-31)
+                <View style={styles.iconCircle}>
                   <TabIcon size={TAB_ICON_SIZE} color={color} weight={isFocused ? 'fill' : 'regular'} />
                   <TabBadge count={badgeCount} />
                 </View>
               )}
-              <Text variant="label" color={color} numberOfLines={1} style={styles.label}>{tab.title}</Text>
+              <Text variant="label" color={color} numberOfLines={1} style={styles.label}>{translate(tab.title, language)}</Text>
             </Pressable>
           )
         })}
