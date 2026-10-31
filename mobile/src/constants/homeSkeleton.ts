@@ -3,6 +3,8 @@ export const HOME_SKELETON_DELAY_MS = {
   farms: 0,
   stats: 150,
   returnRate: 300,
+  tasks: 350,
+  reports: 400,
   houses: 450,
   cameras: 600,
 } as const

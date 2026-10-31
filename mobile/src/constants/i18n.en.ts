@@ -112,7 +112,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Tất cả trong ngưỡng': 'All within thresholds',
   'Mở thêm lựa chọn': 'Open more options',
   'Xem chi tiết cảnh báo': 'View alert details',
-  'Xem chi tiết cảnh báo, {summary}': 'View alert details, {summary}',
+  'Xem chi tiết thiết bị': 'View device details',
+  'Xem chi tiết tầng vượt ngưỡng': 'View floors out of range',
   'Còn {count} mục khác': '{count} more items',
 
   // Tỷ lệ về tổ
@@ -174,6 +175,13 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Chưa có camera AI': 'No AI cameras yet',
   'Chưa có báo cáo mới': 'No new reports',
   'Không có việc nào đang chờ': 'Nothing waiting for you',
+  'Không có cảnh báo chờ phán quyết': 'No alerts waiting for your verdict',
+  'Đánh giá ngày: Sắp có': 'Daily rating: coming soon',
+  'Không tải được việc chờ bạn': 'Could not load your tasks',
+  'Đang tải báo cáo mới': 'Loading new reports',
+  'Không tải được báo cáo mới': 'Could not load new reports',
+  'Không tải được, kéo xuống để tải lại': 'Could not load, pull down to reload',
+  'Không gửi được lệnh, thử lại': 'Command not sent, try again',
   '{count} cảnh báo': '{count} alerts',
   '{subject} mất kết nối {duration}': '{subject} offline for {duration}',
   '{subject} mất kết nối': '{subject} offline',

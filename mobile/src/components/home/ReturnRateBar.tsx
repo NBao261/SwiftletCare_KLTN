@@ -8,7 +8,7 @@ import { useTodayBirdCounts } from '@/hooks/bird-count/useTodayBirdCounts'
 import { useCameraNodes } from '@/hooks/device/useCameraNodes'
 import { useAllHouses } from '@/hooks/farm/useAllHouses'
 import { usePalette } from '@/hooks/theme/usePalette'
-import { formatDayMonth } from '@/utils/date.utils'
+import { formatVietnamDayMonth } from '@/utils/date.utils'
 import { formatPercentValue } from '@/utils/number.utils'
 import { summarizeReturnRate } from '@/utils/returnRate.utils'
 import { t } from '@/utils/i18n.utils'
@@ -43,7 +43,8 @@ export function ReturnRateBar() {
 
   // Nội dung theo trạng thái; giờ phiên chiều do backend tính theo lịch của từng nhà nên không ghi giờ cụ thể
   const getContent = (): ReturnRateContent => {
-    if (isLoading || isError) return { title: t('Tỷ lệ về tổ'), value: '_', caption: '_' }
+    if (isLoading) return { title: t('Tỷ lệ về tổ'), value: '_', caption: '_' }
+    if (isError) return { title: t('Tỷ lệ về tổ'), value: '_', caption: t('Không tải được, kéo xuống để tải lại') }
     if (countedHouseIds.length === 0) return { title: t('Chưa có dữ liệu đếm'), value: '', caption: t('Thêm camera AI') }
     if (summary.rate === null) {
       return { title: t('Tỷ lệ về tổ'), value: '_', caption: t('Chờ phiên chiều để tính tỷ lệ') }
@@ -59,7 +60,7 @@ export function ReturnRateBar() {
   }
   const content = getContent()
   // Ngày theo giờ máy — người dùng ở Việt Nam nên trùng ngày phiên đếm của backend
-  const dateText = t('Ngày {date}', { date: formatDayMonth(new Date()) })
+  const dateText = t('Ngày {date}', { date: formatVietnamDayMonth() })
 
   // Một nhà thì vào thẳng nhà đó, nhiều nhà thì mở danh sách nhà kèm tỷ lệ
   const handlePress = () => {

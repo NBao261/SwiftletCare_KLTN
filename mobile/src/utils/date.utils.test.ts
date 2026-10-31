@@ -1,9 +1,15 @@
 import { describe, expect, it } from '@jest/globals'
-import { formatElapsed, getIsoWeekNumber, getVietnamDate } from '@/utils/date.utils'
+import { formatElapsed, formatVietnamDayMonth, getIsoWeekNumber, getVietnamDate } from '@/utils/date.utils'
 
 describe('getVietnamDate', () => {
   it('đổi sang ngày giờ Việt Nam', () => {
     expect(getVietnamDate(new Date('2026-10-29T18:00:00.000Z').getTime())).toBe('2026-10-30')
+  })
+})
+
+describe('formatVietnamDayMonth', () => {
+  it('01:00 sáng 30/10 giờ Việt Nam (18:00 ngày 29 UTC) là 30/10', () => {
+    expect(formatVietnamDayMonth(new Date('2026-10-29T18:00:00.000Z').getTime())).toBe('30/10')
   })
 })
 

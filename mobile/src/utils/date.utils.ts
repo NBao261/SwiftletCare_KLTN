@@ -24,6 +24,11 @@ export function formatDayMonth(date: Date): string {
 
 const VIETNAM_OFFSET_MS = 7 * 60 * 60 * 1000
 
+// Ngày hôm nay theo giờ Việt Nam, dạng dd/MM — không phụ thuộc múi giờ của máy
+export function formatVietnamDayMonth(time: number = Date.now()): string {
+  return formatDayMonth(parseISO(getVietnamDate(time)))
+}
+
 // Ngày theo giờ Việt Nam của một thời điểm (mặc định bây giờ), dạng YYYY-MM-DD — không phụ thuộc múi giờ của máy
 export function getVietnamDate(time: number = Date.now()): string {
   return new Date(time + VIETNAM_OFFSET_MS).toISOString().slice(0, 10)
