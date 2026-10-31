@@ -132,6 +132,18 @@ export const updateBirdCountTuning = asyncHandler(async (req: Request, res: Resp
   res.json({ success: true, data: house })
 })
 
+/** GET /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-28 */
+export const getHealthLevels = asyncHandler(async (req: Request, res: Response) => {
+  const data = await farmService.getHouseHealthLevels(req.params.houseId, req.user)
+  res.json({ success: true, data })
+})
+
+/** PUT /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-22 */
+export const updateHealthLevels = asyncHandler(async (req: Request, res: Response) => {
+  const data = await farmService.updateHouseHealthLevels(req.params.houseId, req.user, req.body)
+  res.json({ success: true, data })
+})
+
 /** PUT /farms/zones/:zoneId/thresholds/reset – ENV-FR-020 */
 export const resetThresholds = asyncHandler(async (req: Request, res: Response) => {
   const zone = await farmService.resetZoneThresholds(req.params.zoneId, req.user)

@@ -52,5 +52,9 @@ router.put ('/zones/:zoneId/detection-tuning', requireRole('FARM_OWNER','DOMAIN_
 // EXPERT-FR-008 (v2.1.8) — mức giảm tỷ lệ chim về theo nhà yến (camera ở cửa ra vào của cả nhà): Domain Expert
 // sửa; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22)
 router.put ('/houses/:houseId/bird-count-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateBirdCountTuning)
+// ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà yến: Farm Owner và Domain Expert xem; Domain Expert
+// sửa, Farm Owner chỉ khi farm chưa có chuyên gia (BR-22, service kiểm)
+router.get ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.getHealthLevels)
+router.put ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateHealthLevels)
 
 export default router

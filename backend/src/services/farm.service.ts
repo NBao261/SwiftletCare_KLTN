@@ -19,6 +19,7 @@ import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/threshold
 import {
   assertValidBirdCountTuning, assertValidDetectionTuning, firmwareDetectionConfig, pickBirdCountTuning,
   pickDetectionTuning, resolveBirdCountTuning, resolveDetectionTuning,
+  DEFAULT_HEALTH_LEVELS, assertValidHealthLevels, pickHealthLevels, resolveHealthLevels,
 } from '@/utils/detectionTuning.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishCommand } from '@/mqtt/mqtt.client'
@@ -514,6 +515,35 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
  * của cả nhà nên mức giảm tỷ lệ chim về (cảnh báo LOW_RETURN_RATE) đặt theo House, không theo Zone.
  * Cùng cách làm với tham số Zone: kiểm tra khoảng, lưu lịch sử, ghi audit. Backend dùng, không gửi thiết bị.
  */
+/** ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà (bản ghi cũ thiếu trường nào thì dùng mặc định) */
+export async function getHouseHealthLevels(houseId: string, user: CurrentUser) {
+  const { house } = await assertHouseAccess(houseId, user)
+  return { house_id: String(house._id), health_levels: resolveHealthLevels(house.health_levels), defaults: DEFAULT_HEALTH_LEVELS }
+}
+
+/** ANALYTICS-FR-012 — Domain Expert đặt mức trong khoảng BR-28; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22) */
+export async function updateHouseHealthLevels(houseId: string, user: CurrentUser, updates: Record<string, unknown>) {
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  assertExpertDecision(farm, user)
+
+  const picked = pickHealthLevels(updates)
+  if (Object.keys(picked).length === 0) throw BadRequestError('Không có mức nào để cập nhật')
+  const oldValues = resolveHealthLevels(house.health_levels)
+  const merged = { ...oldValues, ...picked }
+  assertValidHealthLevels(merged)
+
+  house.health_levels = merged
+  await house.save()
+
+  const auditId = await logAction(user._id, 'HEALTH_LEVELS_UPDATED', 'house', String(house._id), {
+    before: oldValues, after: merged, house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'chỉnh mức chỉ số sức khỏe', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
+  })
+  return { house_id: String(house._id), health_levels: merged, defaults: DEFAULT_HEALTH_LEVELS }
+}
+
 export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IHouse> {
   const { house, farm } = await assertHouseAccess(houseId, user)
   // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia

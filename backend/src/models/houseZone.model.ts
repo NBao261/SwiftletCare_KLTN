@@ -1,8 +1,8 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
-import type { BirdCountTuning, DetectionTuning, FuzzyTuning, Thresholds, Role } from '@/types'
-import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING } from '@/utils/detectionTuning.util'
+import type { BirdCountTuning, DetectionTuning, FuzzyTuning, HealthLevels, Thresholds, Role } from '@/types'
+import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_HEALTH_LEVELS } from '@/utils/detectionTuning.util'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
@@ -24,6 +24,8 @@ export interface IHouse extends Document {
   /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
+  /** ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà; thiếu trường nào thì dùng mặc định */
+  health_levels: HealthLevels
 }
 
 export interface IThresholdHistoryEntry {
@@ -91,6 +93,14 @@ const houseSchema = new Schema<IHouse>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
     }],
+    health_levels: {
+      in_range_slight_pct: { type: Number, default: DEFAULT_HEALTH_LEVELS.in_range_slight_pct },
+      in_range_clear_pct:  { type: Number, default: DEFAULT_HEALTH_LEVELS.in_range_clear_pct },
+      air_slight_h:        { type: Number, default: DEFAULT_HEALTH_LEVELS.air_slight_h },
+      air_clear_h:         { type: Number, default: DEFAULT_HEALTH_LEVELS.air_clear_h },
+      noise_slight:        { type: Number, default: DEFAULT_HEALTH_LEVELS.noise_slight },
+      noise_clear:         { type: Number, default: DEFAULT_HEALTH_LEVELS.noise_clear },
+    },
   },
   { timestamps: { createdAt: 'created_at' } }
 )
