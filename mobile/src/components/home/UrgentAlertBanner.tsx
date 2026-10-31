@@ -2,18 +2,17 @@ import { StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { ArrowRightIcon, ThermometerIcon, WarningIcon, WifiSlashIcon } from 'phosphor-react-native'
-import { LATEST_ALERT_PARAMS } from '@/components/home/AlertStatTile'
 import { Button } from '@/components/ui/button'
 import { SplitBadge } from '@/components/ui/split-badge'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { useActiveAlertSummary } from '@/hooks/alert/useActiveAlertSummary'
-import { useAlerts } from '@/hooks/alert/useAlerts'
+import { useMostUrgentAlert } from '@/hooks/alert/useMostUrgentAlert'
 import { useAllHouses } from '@/hooks/farm/useAllHouses'
 import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Alert, AlertType, House, Zone } from '@/types'
-import { getAlertHeadline, pickMostUrgentAlert } from '@/utils/alert.utils'
+import { getAlertHeadline } from '@/utils/alert.utils'
 import { formatTimeAgo } from '@/utils/date.utils'
 import { truncateText } from '@/utils/name.utils'
 import { getSeverityLevel, getSeverityLevelColors, getSeverityLevelLabel } from '@/utils/severity.utils'
@@ -46,11 +45,10 @@ function getAlertLocation(alert: Alert, zones: Zone[], houses: House[]): { zone?
 export function UrgentAlertBanner() {
   const palette = usePalette()
   const { data: alertSummary } = useActiveAlertSummary()
-  const latestAlertsQuery = useAlerts(LATEST_ALERT_PARAMS)
+  const { alert } = useMostUrgentAlert()
   const housesQuery = useAllHouses()
   const zonesQuery = useZonesOfHouses(housesQuery.houses.map(house => house._id))
 
-  const alert = pickMostUrgentAlert(latestAlertsQuery.data?.data ?? [])
   if (!alert) return null
   const pendingCount = alertSummary?.total
 
@@ -63,8 +61,8 @@ export function UrgentAlertBanner() {
   const pendingText =
     pendingCount === undefined ? t('_ chưa xử lý') : t('{count} chưa xử lý', { count: String(pendingCount).padStart(2, '0') })
   const headline = getAlertHeadline(alert, zone?.name)
-  // Nền loang cam #FF7426 → đỏ cảnh báo #D53F35, đều là token cảnh báo/lỗi có sẵn
-  const backgroundColors = [palette.alert, palette.deviceError] as const
+  // Nền loang cam #FF7426 → đỏ #D53F35
+  const backgroundColors = [palette.alert, palette.urgentAlertGradientEnd] as const
 
   return (
     <LinearGradient colors={backgroundColors} start={GRADIENT_START} end={GRADIENT_END} style={styles.card}>

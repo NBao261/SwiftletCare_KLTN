@@ -1,4 +1,4 @@
-import { useAlerts } from '@/hooks/alert/useAlerts'
+import { useAllActiveAlerts } from '@/hooks/alert/useAllActiveAlerts'
 import { useActiveRelayOverrides } from '@/hooks/device/useActiveRelayOverrides'
 import { useCameraNodes } from '@/hooks/device/useCameraNodes'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
@@ -7,9 +7,6 @@ import { useFarms } from '@/hooks/farm/useFarms'
 import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import type { House } from '@/types'
 import { getHouseStatus, getHouseStatusRank, type HouseStatus, type HouseStatusInput } from '@/utils/houseStatus.utils'
-
-// Cảnh báo chờ xác nhận của mọi Farm — 100 là mức tối đa một trang của API
-const ACTIVE_ALERT_PARAMS = { status: 'ACTIVE', limit: '100' }
 
 export interface HouseCardData {
   house: House
@@ -26,7 +23,7 @@ export function useHouseStatuses(now: number) {
   const zonesQuery = useZonesOfHouses(housesQuery.houses.map(house => house._id))
   const sensorNodesQuery = useSensorNodes()
   const cameraNodesQuery = useCameraNodes()
-  const alertsQuery = useAlerts(ACTIVE_ALERT_PARAMS)
+  const alertsQuery = useAllActiveAlerts()
   const { overrides } = useActiveRelayOverrides()
 
   const isLoading = [farmsQuery, housesQuery, zonesQuery, sensorNodesQuery, cameraNodesQuery, alertsQuery].some(
@@ -50,7 +47,7 @@ export function useHouseStatuses(now: number) {
   zonesQuery.zones.forEach(zone => groupOf(zone.house_id)?.zones.push(zone))
   ;(sensorNodesQuery.data?.data ?? []).forEach(node => groupOf(houseIdByZoneId.get(node.zone_id))?.sensorNodes.push(node))
   ;(cameraNodesQuery.data?.data ?? []).forEach(camera => groupOf(camera.house_id)?.cameraNodes.push(camera))
-  ;(alertsQuery.data?.data ?? []).forEach(alert =>
+  ;(alertsQuery.data ?? []).forEach(alert =>
     groupOf(alert.house_id ?? (alert.zone_id ? houseIdByZoneId.get(alert.zone_id) : undefined))?.activeAlerts.push(alert),
   )
   overrides.forEach(({ log }) => groupOf(houseIdByZoneId.get(log.zone_id))?.manualOverrides.push(log))
