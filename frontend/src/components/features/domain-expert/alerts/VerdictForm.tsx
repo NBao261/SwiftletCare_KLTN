@@ -97,7 +97,7 @@ export default function VerdictForm({ verdict, note, onVerdictChange, onNoteChan
         />
         <div className="flex items-start justify-between mt-1.5 gap-2">
           <p className="text-[11px] text-[#878380] italic leading-relaxed flex-1">
-            Lưu ý: Phán quyết của Chuyên gia sẽ xác thực độ tin cậy và hiệu chuẩn hệ thống, không tự động thay đổi trạng thái xử lý của cảnh báo.
+            Lưu ý: Kết luận thẩm định của Chuyên gia sẽ xác thực độ tin cậy và hiệu chuẩn hệ thống, không tự động thay đổi trạng thái vận hành của thiết bị.
           </p>
           <span className="text-xs text-[#878380] flex-shrink-0 font-mono">
             {note.length}/{MAX_NOTE} ký tự

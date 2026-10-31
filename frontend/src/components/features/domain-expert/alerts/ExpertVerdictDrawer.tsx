@@ -113,13 +113,13 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-[#27231F]">Bước 1 — Bằng chứng đối chiếu đa phương thức</h3>
+              <h3 className="text-sm font-semibold text-[#27231F]">Bước 1 — Dữ liệu đối chiếu chéo (±30 phút)</h3>
               <span className="text-xs text-[#878380]">{windowLabel}</span>
             </div>
             {alert && <MultimodalEvidenceCharts alert={alert} />}
           </section>
           <section>
-            <h3 className="text-sm font-semibold text-[#27231F] mb-3">Bước 2 — Phán quyết của Chuyên gia</h3>
+            <h3 className="text-sm font-semibold text-[#27231F] mb-3">Bước 2 — Kết luận thẩm định của Chuyên gia</h3>
             <VerdictForm verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
           </section>
         </div>
@@ -148,7 +148,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
                 ? 'bg-[#27231F] text-white hover:bg-[#3D3630] shadow-md'
                 : 'bg-neutral-200 text-neutral-400 cursor-not-allowed')}
           >
-            {mutation.isPending ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Đang lưu...</> : 'Lưu phán quyết'}
+            {mutation.isPending ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Đang lưu...</> : 'Lưu kết luận thẩm định'}
           </button>
         </div>
       </aside>

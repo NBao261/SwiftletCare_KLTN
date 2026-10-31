@@ -89,13 +89,13 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
       <EvidenceBarCard src={cfg.src1} dotColor="bg-[#27231F]" />
       <EvidenceBarCard src={cfg.src2} dotColor="bg-[#B5D32C]" />
 
-      {/* Hộp tương quan */}
+      {/* Hộp tương quan / chẩn đoán */}
       <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex gap-3">
         <span className="mt-0.5 flex-shrink-0">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
         </span>
         <p className="text-xs text-amber-800 leading-relaxed">
-          <strong>Phân tích tương quan:</strong> {cfg.correlation}
+          <strong>Chẩn đoán nguyên nhân:</strong> {cfg.correlation}
         </p>
       </div>
     </div>
