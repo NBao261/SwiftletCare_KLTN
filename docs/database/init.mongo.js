@@ -829,6 +829,9 @@ ensureCollection("relayoverridelogs", {
       "bsonType": ["string", "null"],
       "enum": ["EXPIRED", "CLEARED_EARLY", "REPLACED", null]
     },
+    "alert_confirmed": {
+      "bsonType": ["bool", "null"]
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     }

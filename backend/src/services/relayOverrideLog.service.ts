@@ -20,6 +20,8 @@ import type { CurrentUser } from '@/types'
 export async function openOverrideLog(input: {
   nodeId: unknown; zoneId: unknown; farmId: unknown
   relay: OverrideRelay; state: boolean; user: CurrentUser; expiresAt: Date
+  /** ENV-FR-016 — bật bơm lúc Zone có cảnh báo cảm biến/phun sương và đã xác nhận */
+  alertConfirmed?: boolean
 }): Promise<IRelayOverrideLog | null> {
   try {
     const now = new Date()
@@ -31,7 +33,7 @@ export async function openOverrideLog(input: {
       node_id: input.nodeId, zone_id: input.zoneId, farm_id: input.farmId,
       relay: input.relay, state: input.state,
       started_by: input.user._id, started_by_role: input.user.role,
-      started_at: now, expires_at: input.expiresAt,
+      started_at: now, expires_at: input.expiresAt, alert_confirmed: input.alertConfirmed ?? false,
     })
   } catch (err) {
     logger.warn('Ghi lịch sử can thiệp tay thất bại (ENV-FR-019)', { err, nodeId: String(input.nodeId), relay: input.relay })
@@ -52,6 +54,30 @@ export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndR
   } catch (err) {
     logger.warn('Đóng lịch sử can thiệp tay thất bại (ENV-FR-019)', { err, reason })
     return 0
+  }
+}
+
+/** ENV-FR-018, BR-20 — huỷ sớm 1 relay: đóng bản ghi còn mở của relay đó, các relay khác giữ nguyên */
+export async function closeRelayOverrideLog(nodeId: unknown, relay: OverrideRelay, reason: OverrideEndReason, at = new Date()): Promise<number> {
+  try {
+    const { modifiedCount } = await RelayOverrideLog.updateMany(
+      { node_id: nodeId, relay, ended_at: null, started_at: { $lte: at } },
+      { ended_at: at, end_reason: reason },
+    )
+    return modifiedCount
+  } catch (err) {
+    logger.warn('Đóng lịch sử can thiệp tay thất bại (ENV-FR-019)', { err, relay, reason })
+    return 0
+  }
+}
+
+/** Thiết bị còn relay nào đang can thiệp tay (bản ghi còn mở) — đọc lỗi thì coi như còn, để không trả về AUTO nhầm */
+export async function hasOpenOverride(nodeId: unknown): Promise<boolean> {
+  try {
+    return !!(await RelayOverrideLog.exists({ node_id: nodeId, ended_at: null }))
+  } catch (err) {
+    logger.warn('Đọc lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
+    return true
   }
 }
 

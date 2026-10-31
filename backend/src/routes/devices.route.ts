@@ -2,7 +2,7 @@
 import { body, param, query } from 'express-validator'
 import multer from 'multer'
 import * as deviceController from '@/controllers/devices.controller'
-import { MAX_OVERRIDE_MS, MIN_OVERRIDE_MS } from '@/services/device.service'
+import { MAX_OVERRIDE_MS, MIN_OVERRIDE_MS, RELAY_NAMES } from '@/services/device.service'
 import * as audioTrackController from '@/controllers/audioTracks.controller'
 import * as streamController from '@/controllers/stream.controller'
 import { MAX_AUDIO_BYTES } from '@/services/audioTrack.service'
@@ -37,8 +37,12 @@ router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER'), par
 // Can thiệp tay relay chỉ Farm Owner (ENV-FR-016, Report 3 §2.4): Technician, Admin, Domain Expert không
 router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(),
   // Không chặn thì 1 giá trị cực lớn tạo override hàng chục năm: Zone bị tính 0% tự động mãi (ANALYTICS-FR-011)
-  body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(), validate, deviceController.controlRelay)
-router.delete('/sensor-nodes/:id/relay-override', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, deviceController.clearRelayOverride)
+  body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(),
+  // ENV-FR-016 — xác nhận bật bơm khi Zone có cảnh báo cảm biến/phun sương (giới hạn 30 phút của bơm kiểm ở service)
+  body('confirmed').optional().isBoolean().toBoolean(), validate, deviceController.controlRelay)
+// ENV-FR-018, BR-20 — huỷ sớm 1 relay (`?relayName=`) hoặc mọi relay
+router.delete('/sensor-nodes/:id/relay-override', requireRole('FARM_OWNER'), param('id').isMongoId(),
+  query('relayName').optional().isString().isIn([...RELAY_NAMES]), validate, deviceController.clearRelayOverride)
 // ENV-FR-019 — lịch sử can thiệp tay: Farm Owner và Domain Expert (chỉ đọc)
 router.get   ('/sensor-nodes/:id/relay-overrides', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('id').isMongoId(), validate, deviceController.listRelayOverrides)
 
