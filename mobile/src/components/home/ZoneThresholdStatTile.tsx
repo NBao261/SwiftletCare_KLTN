@@ -75,6 +75,7 @@ export function ZoneThresholdStatTile() {
         visible={isSheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t('Khu vực vượt ngưỡng')}
+        detailLabel={t('Xem chi tiết tầng vượt ngưỡng')}
         value={value}
         summary={isReady ? getBreachSummary(zoneCount, breaches) : '_'}
         items={breaches.slice(0, MAX_DETAIL_ITEMS).map(({ zone, metrics }) => ({

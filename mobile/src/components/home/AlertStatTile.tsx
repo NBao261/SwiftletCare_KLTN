@@ -8,8 +8,8 @@ import { useAlerts } from '@/hooks/alert/useAlerts'
 import { getSeverityLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
-// Vài cảnh báo đang mở mới nhất — khung cảnh báo khẩn dùng chung bộ lọc này để chung cache
-export const LATEST_ALERT_PARAMS = { status: 'ACTIVE', limit: String(MAX_DETAIL_ITEMS) }
+// Vài cảnh báo đang mở mới nhất cho phần chi tiết
+const LATEST_ALERT_PARAMS = { status: 'ACTIVE', limit: String(MAX_DETAIL_ITEMS) }
 
 // Câu tóm tắt: báo số cảnh báo mức Nghiêm trọng/Cao, không có thì nhắc chờ xác nhận
 function getAlertSummary(total: number, urgent: number): string {
@@ -46,6 +46,7 @@ export function AlertStatTile() {
         visible={isSheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t('Cảnh báo đang mở')}
+        detailLabel={t('Xem chi tiết cảnh báo')}
         value={value}
         summary={alertSummary ? getAlertSummary(alertSummary.total, alertSummary.urgent) : '_'}
         items={latestAlerts.map(alert => ({

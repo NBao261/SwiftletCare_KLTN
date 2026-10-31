@@ -51,6 +51,7 @@ export function DeviceStatTile() {
         visible={isSheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t('Thiết bị online')}
+        detailLabel={t('Xem chi tiết thiết bị')}
         value={summary ? `${summary.online}/${summary.total}` : '_'}
         summary={summary ? getDeviceSummary(summary) : '_'}
         items={notOnlineNodes.slice(0, MAX_DETAIL_ITEMS).map(node => ({

@@ -11,7 +11,7 @@ import { t } from '@/utils/i18n.utils'
 // Số dòng tối đa trong phần chi tiết — xem hết thì bấm "Xem tất cả"
 export const MAX_DETAIL_ITEMS = 5
 
-// Ô icon đầu dòng của mục "Xem chi tiết cảnh báo"
+// Ô icon đầu dòng của mục xem chi tiết
 const ICON_BOX_SIZE = 40
 
 // Một dòng trong phần chi tiết: tên (thiết bị, cảnh báo, tầng) và mô tả tình trạng
@@ -27,6 +27,8 @@ interface StatDetailSheetProps {
   onClose: () => void
   title: string
   value: string
+  // Tên mục mở/thu phần chi tiết, theo nội dung của ô: "Xem chi tiết thiết bị", "Xem chi tiết cảnh báo"…
+  detailLabel: string
   // Câu tóm tắt hiện dưới tiêu đề phần chi tiết khi còn thu gọn
   summary: string
   items: StatDetailItem[]
@@ -35,12 +37,13 @@ interface StatDetailSheetProps {
   onViewAll: () => void
 }
 
-// Bảng lựa chọn của một ô số liệu: phần "Xem chi tiết cảnh báo" mở/thu được và nút xem toàn bộ
+// Bảng lựa chọn của một ô số liệu: phần xem chi tiết mở/thu được và nút xem toàn bộ
 export function StatDetailSheet({
   visible,
   onClose,
   title,
   value,
+  detailLabel,
   summary,
   items,
   hiddenCount,
@@ -76,14 +79,14 @@ export function StatDetailSheet({
           onPress={() => setExpanded(current => !current)}
           accessibilityRole="button"
           accessibilityState={{ expanded: isExpanded }}
-          accessibilityLabel={t('Xem chi tiết cảnh báo, {summary}', { summary })}
+          accessibilityLabel={`${detailLabel}, ${summary}`}
         >
           <View style={[styles.iconBox, { backgroundColor: palette.surface }]}>
             <WarningIcon size={20} color={palette.text} />
           </View>
           <View style={styles.detailTexts}>
             <Text variant="body" weight="semiBold">
-              {t('Xem chi tiết cảnh báo')}
+              {detailLabel}
             </Text>
             <Text variant="small" color={palette.textSecondary}>
               {summary}
