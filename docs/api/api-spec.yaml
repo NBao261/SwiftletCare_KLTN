@@ -88,7 +88,7 @@ tags:
   - name: Harvests
     description: "HARVEST-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0) — ghi: Farm Owner; đọc: Farm Owner, Domain Expert; Technician, Administrator → 403 (Report 3 §2.4)"
   - name: HealthReports
-    description: EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert)
+    description: "EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert); ANALYTICS-FR-012…014, EXPERT-FR-012/013 (trạng thái sức khỏe ngày theo nhà yến, chấm độc lập BR-31, CSV, độ khớp) — FARM_OWNER, DOMAIN_EXPERT; Technician, Administrator → 403"
   - name: Notifications
     description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
 
@@ -1536,6 +1536,52 @@ paths:
                   - properties:
                       data: { $ref: "#/components/schemas/House" }
         "400": { description: "Ngoài khoảng 5–50 / không phải số / body không có tham số nào" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /farms/houses/{houseId}/health-levels:
+    get:
+      tags: [Farms]
+      summary: "Mức chỉ số sức khỏe của nhà yến (ANALYTICS-FR-012, BR-28) — FARM_OWNER, DOMAIN_EXPERT"
+      parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: "Mức đang dùng (thiếu trường nào thì là mặc định) kèm mặc định"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HouseHealthLevels" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Farms]
+      summary: "Đặt mức chỉ số sức khỏe của nhà yến (ANALYTICS-FR-012, BR-28) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
+      description: |
+        Farm Owner trên farm đã có Domain Expert → 403. Gửi 1 hoặc nhiều mức; server gộp với giá trị
+        hiện tại rồi kiểm khoảng BR-28 (50–100 %, 0,5–12 giờ, 1–10 đợt) và thứ tự (mức CLEAR không được
+        nhẹ hơn mức SLIGHT) — vi phạm hoặc không có khoá hợp lệ nào → 400. Mức đàn chim là
+        `return_rate_drop_pct` (`PUT /farms/houses/{houseId}/bird-count-tuning`): SLIGHT từ một nửa,
+        CLEAR từ đúng mức đó. Ghi audit `HEALTH_LEVELS_UPDATED`; thay đổi của Domain Expert báo trong app
+        cho mọi Farm Owner và vào lịch sử hoạt động (EXPERT-FR-009). Áp từ lần đánh giá kế tiếp.
+      parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HealthLevels" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HouseHealthLevels" }
+        "400": { description: "Ngoài khoảng / CLEAR nhẹ hơn SLIGHT / không phải số / body không có mức nào", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -3750,6 +3796,192 @@ paths:
         "400": { description: "from không trước to, hoặc khoảng quá 30 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /health-reports/days:
+    get:
+      tags: [HealthReports]
+      summary: "Trạng thái sức khỏe các ngày của nhà yến (ANALYTICS-FR-012, BR-31) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        Mỗi nhà mỗi ngày (giờ VN) một bản ghi, do job đánh giá tạo sau kiểm tra tỷ lệ chim về (19:15,
+        BR-21) và tính lại khi dữ liệu trễ hoặc kết luận cảnh báo đổi trong 7 ngày (SM-17). Mới nhất trước.
+        **BR-31:** ngày người gọi còn `PENDING` (chưa chấm, chưa bỏ qua, còn trong hạn) chỉ có nhà, ngày,
+        thời tiết, `my_rating_state`, `rating_deadline` — không có trạng thái, lý do, chỉ số, bằng chứng
+        hay điểm của người khác. Khoảng tối đa 31 ngày (400).
+      parameters:
+        - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
+        - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
+        - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định to − 6 ngày" }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định hôm nay" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/HouseHealthDay" } }
+        "400": { description: "Thiếu houseId và farmId / from sau to / quá 31 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /health-reports/days.csv:
+    get:
+      tags: [HealthReports]
+      summary: "CSV chỉ số theo ngày (EXPERT-FR-013) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        1 dòng mỗi nhà × ngày: tên nhà, ngày, trạng thái chấm của người gọi, giá trị và mức của 4 chỉ số,
+        tỷ lệ chim về, trạng thái, lý do, điểm của từng người chấm (tên, vai trò), thời tiết. Không có id
+        nội bộ. Dòng người gọi còn `PENDING` để trống các cột bị che (BR-31). UTF-8 có BOM để Excel đọc
+        đúng tiếng Việt. Cùng tham số và giới hạn với `GET /health-reports/days`.
+      parameters:
+        - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
+        - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
+        - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định to − 6 ngày" }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định hôm nay" }
+      responses:
+        "200":
+          description: OK
+          content:
+            text/csv:
+              schema: { type: string }
+        "400": { description: "Thiếu houseId và farmId / from sau to / quá 31 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /health-reports/days/{dayId}:
+    get:
+      tags: [HealthReports]
+      summary: "Chi tiết 1 ngày (ANALYTICS-FR-012) — che theo BR-31 như danh sách"
+      parameters: [{ name: dayId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HouseHealthDay" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /health-reports/days/{dayId}/rating:
+    post:
+      tags: [HealthReports]
+      summary: "Chấm trạng thái ngày theo quan sát của mình (EXPERT-FR-012) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        Điểm và ảnh chụp đánh giá (`current_status`, `current_reasons` và mức từng nguồn lúc ghi) được lưu
+        trong một lệnh ghi, rồi mới trả ngày đầy đủ. Ảnh chụp không bao giờ đổi; NFR-14 chỉ dùng ảnh chụp.
+        Mỗi người chấm riêng; chấm được tới hết 7 ngày sau ngày đó (Report 3 §4.5). Ghi audit
+        `HEALTH_DAY_RATED`.
+      parameters: [{ name: dayId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: string, enum: [GOOD, WATCH, ACTION] }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "201":
+          description: Đã lưu; trả ngày đầy đủ
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HouseHealthDay" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "RATING_CLOSED — người gọi đã chấm, đã bỏ qua, hoặc ngày đã quá 7 ngày (SM-18)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /health-reports/days/{dayId}/skip:
+    post:
+      tags: [HealthReports]
+      summary: "Bỏ qua chấm ngày này (EXPERT-FR-012, BR-31) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        Hiện trạng thái cho người gọi; lần bỏ qua không tính vào NFR-14 (SM-18 `PENDING → SKIPPED`).
+        Ghi audit `HEALTH_DAY_SKIPPED`.
+      parameters: [{ name: dayId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "201":
+          description: Đã bỏ qua; trả ngày đầy đủ
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HouseHealthDay" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "RATING_CLOSED — người gọi đã chấm, đã bỏ qua, hoặc ngày đã quá 7 ngày (SM-18)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /health-reports/days/{dayId}/rating/note:
+    patch:
+      tags: [HealthReports]
+      summary: "Thêm ghi chú vào điểm đã chấm (SM-18 RATED → RATED) — điểm không đổi"
+      parameters: [{ name: dayId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note: { type: string, minLength: 1, maxLength: 1000, description: "Thay ghi chú cũ" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HouseHealthDay" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "RATING_CLOSED — người gọi chưa chấm ngày này (bỏ qua hoặc hết hạn thì không có điểm để ghi chú)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /health-reports/evaluation:
+    get:
+      tags: [HealthReports]
+      summary: "Độ khớp giữa hệ thống và người chấm (ANALYTICS-FR-014, NFR-14) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        So ảnh chụp lúc chấm với điểm của người chấm trên 3 mức có thứ tự GOOD < WATCH < ACTION: tỷ lệ
+        khớp kèm khoảng tin cậy Wilson 95 %, kappa Cohen trọng số tuyến tính, AC1 của Gwet, ma trận nhầm
+        lẫn, tỷ lệ báo động giả của trạng thái gộp và của từng nguồn riêng (mức NORMAL/SLIGHT/CLEAR quy ra
+        GOOD/WATCH/ACTION). Ảnh chụp `INSUFFICIENT_DATA` đếm riêng, không vào độ khớp. Ngày người gọi còn
+        `PENDING` bị bỏ ra (BR-31). `ratings` liệt kê từng cặp để mọi con số tính lại được. Khoảng tối đa
+        366 ngày.
+      parameters:
+        - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
+        - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
+        - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định to − 6 ngày" }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định hôm nay" }
+        - { name: role, in: query, schema: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT] }, description: "Chỉ điểm của vai trò này" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HealthEvaluation" }
+        "400": { description: "Thiếu houseId và farmId / from sau to / quá 366 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /health-reports/{id}:
     get:
       tags: [HealthReports]
@@ -3811,9 +4043,10 @@ paths:
         (`DETECTION_TUNING_UPDATED`), mức giảm tỷ lệ chim về (`BIRD_COUNT_TUNING_UPDATED`), vòng đếm
         (`COUNTING_RING_UPDATED`), kết luận cảnh báo (`ALERT_VERDICT_SET`), kết luận báo cáo
         (`HEALTH_REPORT_CONCLUDED`), chấp nhận / hoàn lại thay đổi của Farm Owner (`REVIEW_ACCEPTED`,
-        `REVIEW_REVERTED`), duyệt / từ chối đề xuất hệ số (`PROPOSAL_APPROVED`, `PROPOSAL_REJECTED`).
+        `REVIEW_REVERTED`), duyệt / từ chối đề xuất hệ số (`PROPOSAL_APPROVED`, `PROPOSAL_REJECTED`),
+        mức chỉ số sức khỏe của nhà (`HEALTH_LEVELS_UPDATED`).
         Quyết định mà Farm Owner làm thay khi farm chưa có chuyên gia
-        (BR-22: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm) cũng được liệt kê,
+        (BR-22: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm, mức chỉ số sức khỏe) cũng được liệt kê,
         với `actor_role = FARM_OWNER`. Mới nhất trước. Technician, Administrator → 403.
       parameters:
         - { name: farmId, in: query, required: true, schema: { type: string } }
@@ -3823,7 +4056,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED]
+            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED]
         - { name: zoneId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }
         - { $ref: "#/components/parameters/Page" }
@@ -4378,6 +4611,7 @@ components:
         floors: { type: integer }
         description: { type: string }
         bird_count_tuning: { $ref: "#/components/schemas/BirdCountTuning" }
+        health_levels: { $ref: "#/components/schemas/HealthLevels" }
         created_at: { type: string, format: date-time }
 
     Thresholds:
@@ -4520,10 +4754,151 @@ components:
           nullable: true
           description: "Đối tượng để client mở tới"
           properties:
-            kind: { type: string, enum: [alert, health_report, expert_decision, parameter_review, coefficient_proposal], description: "`expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007)" }
+            kind: { type: string, enum: [alert, health_report, health_day, expert_decision, parameter_review, coefficient_proposal], description: "`health_day`: ngày đánh giá mới của nhà yến, mở `GET /health-reports/days/{dayId}` (thông báo không kèm trạng thái, BR-31); `expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007)" }
             id: { type: string }
         read_at: { type: string, format: date-time, nullable: true }
         created_at: { type: string, format: date-time }
+
+    HealthLevels:
+      type: object
+      description: "ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà yến; mặc định là hằng số kỹ thuật (Report 3 §4.5) cho Domain Expert đặt lại sau khi người nuôi xác nhận"
+      properties:
+        in_range_slight_pct: { type: number, minimum: 50, maximum: 100, example: 90, description: "% thời gian nhiệt độ, độ ẩm trong ngưỡng — dưới mức này là SLIGHT" }
+        in_range_clear_pct: { type: number, minimum: 50, maximum: 100, example: 75, description: "dưới mức này là CLEAR; không lớn hơn in_range_slight_pct" }
+        air_slight_h: { type: number, minimum: 0.5, maximum: 12, example: 1, description: "giờ NH3 hoặc CO2 vượt ngưỡng của Zone — từ mức này là SLIGHT" }
+        air_clear_h: { type: number, minimum: 0.5, maximum: 12, example: 4, description: "từ mức này là CLEAR; không nhỏ hơn air_slight_h" }
+        noise_slight: { type: integer, minimum: 1, maximum: 10, example: 1, description: "số đợt NOISE_ANOMALY (không tính đợt bị bác bỏ) — từ mức này là SLIGHT" }
+        noise_clear: { type: integer, minimum: 1, maximum: 10, example: 3, description: "từ mức này là CLEAR; không nhỏ hơn noise_slight" }
+
+    HouseHealthLevels:
+      type: object
+      properties:
+        house_id: { type: string }
+        health_levels: { $ref: "#/components/schemas/HealthLevels" }
+        defaults: { $ref: "#/components/schemas/HealthLevels" }
+
+    HealthIndicator:
+      type: object
+      properties:
+        value: { type: number, nullable: true, description: "environment: % thời gian trong ngưỡng của Zone thấp nhất; air: giờ vượt ngưỡng của Zone cao nhất; flock: % tỷ lệ chim về giảm so với trung bình ≥ 3 ngày đủ phiên trước đó (null khi chưa đủ ngày nền); noise: số đợt" }
+        level: { type: string, enum: [NORMAL, SLIGHT, CLEAR], nullable: true, description: "null khi nguồn không đủ dữ liệu (không đánh giá)" }
+        details: { type: object, additionalProperties: true, description: "environment: từng Zone (in_range_pct, valid_pct); flock: return_rate, baseline_days" }
+
+    HouseHealthDay:
+      type: object
+      description: |
+        ANALYTICS-FR-012, SM-17 — trạng thái sức khỏe 1 ngày (giờ VN) của 1 nhà yến. Thứ tự BR-29:
+        INSUFFICIENT_DATA khi môi trường hoặc đàn chim không đủ dữ liệu; ACTION khi đàn chim CLEAR và
+        có nguồn khác SLIGHT/CLEAR; WATCH khi có chỉ số CLEAR hoặc ≥ 2 chỉ số SLIGHT; còn lại GOOD. BR-30:
+        ACTION do đúng đàn chim + tiếng ồn hạ xuống WATCH khi mưa ≥ 1 mm/giờ trùng phiên đếm và trùng
+        đợt ồn. Khi `my_rating_state = PENDING` chỉ có các trường không đánh dấu "(ẩn khi PENDING)" (BR-31).
+      properties:
+        _id: { type: string }
+        house_id: { type: string }
+        house_name: { type: string }
+        farm_id: { type: string }
+        date: { type: string, format: date, description: "'YYYY-MM-DD' giờ VN" }
+        weather:
+          type: object
+          nullable: true
+          description: "ANALYTICS-FR-013 — chỉ hiển thị; null khi không có dữ liệu thời tiết (farm không có toạ độ hoặc lấy lỗi)"
+          properties:
+            temperature_min: { type: number, nullable: true }
+            temperature_max: { type: number, nullable: true }
+            humidity_avg: { type: number, nullable: true }
+            precipitation_mm: { type: number, nullable: true, description: "Tổng lượng mưa của ngày" }
+            hours: { type: integer, description: "Số giờ có dữ liệu" }
+        computed_at: { type: string, format: date-time, description: "Lần tính gần nhất của trạng thái hiện tại" }
+        my_rating_state: { type: string, enum: [PENDING, RATED, SKIPPED, EXPIRED], description: "SM-18 của người gọi — suy ra từ ratings và ngày" }
+        rating_deadline: { type: string, format: date-time, description: "Hết hạn chấm: đầu ngày thứ 8 sau ngày đó (giờ VN)" }
+        indicators:
+          type: object
+          description: "(ẩn khi PENDING)"
+          properties:
+            environment: { $ref: "#/components/schemas/HealthIndicator" }
+            air: { $ref: "#/components/schemas/HealthIndicator" }
+            flock: { $ref: "#/components/schemas/HealthIndicator" }
+            noise: { $ref: "#/components/schemas/HealthIndicator" }
+        completeness:
+          type: object
+          description: "(ẩn khi PENDING) BR-28 — mỗi nguồn đủ khi ≥ 80 % số mẫu hợp lệ kỳ vọng (1 mẫu / 10 giây mỗi Zone); đàn chim đủ khi có cả 2 phiên"
+          properties:
+            environment: { type: boolean }
+            air: { type: boolean }
+            flock: { type: boolean }
+            noise: { type: boolean }
+        current_status: { type: string, enum: [GOOD, WATCH, ACTION, INSUFFICIENT_DATA], description: "(ẩn khi PENDING)" }
+        current_reasons: { type: array, items: { type: string }, description: "(ẩn khi PENDING) Chỉ số quyết định kèm số liệu; nguồn tuỳ chọn không đánh giá; mưa; thiếu thời tiết" }
+        evidence:
+          type: object
+          description: "(ẩn khi PENDING) ALERT-FR-014"
+          properties:
+            noise_alert_ids: { type: array, items: { type: string } }
+        ratings:
+          type: array
+          description: "(ẩn khi PENDING) Điểm của mọi người chấm"
+          items:
+            type: object
+            properties:
+              _id: { type: string }
+              by: { type: object, properties: { _id: { type: string }, full_name: { type: string, nullable: true } } }
+              role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT] }
+              outcome: { type: string, enum: [RATED, SKIPPED] }
+              rating: { type: string, enum: [GOOD, WATCH, ACTION], nullable: true }
+              note: { type: string, nullable: true }
+              at: { type: string, format: date-time }
+              snapshot:
+                type: object
+                description: "Ảnh chụp lúc chấm — không bao giờ đổi (BR-31, D16)"
+                properties:
+                  status: { type: string, enum: [GOOD, WATCH, ACTION, INSUFFICIENT_DATA] }
+                  reasons: { type: array, items: { type: string } }
+
+    HealthEvaluation:
+      type: object
+      description: "ANALYTICS-FR-014 — mọi tỷ lệ là số 0–1; null khi chưa đủ dữ liệu để tính"
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        role: { type: string, nullable: true }
+        rated_count: { type: integer, description: "Số cặp (ngày × người chấm) đưa vào độ khớp" }
+        insufficient_data_count: { type: integer, description: "Số cặp có ảnh chụp INSUFFICIENT_DATA — báo riêng" }
+        agreement:
+          type: object
+          nullable: true
+          properties:
+            value: { type: number }
+            ci_low: { type: number }
+            ci_high: { type: number }
+        weighted_kappa: { type: number, nullable: true, description: "null khi kỳ vọng ngẫu nhiên = 1 (mọi cặp cùng 1 mức)" }
+        gwet_ac1: { type: number, nullable: true }
+        confusion_matrix:
+          type: object
+          properties:
+            labels: { type: array, items: { type: string }, example: [GOOD, WATCH, ACTION] }
+            rows: { type: string, example: system }
+            columns: { type: string, example: rater }
+            counts: { type: array, items: { type: array, items: { type: integer } } }
+        false_alarm_rate:
+          type: object
+          description: "Trong các lần người chấm cho GOOD, phần trạng thái gộp (combined) hoặc từng nguồn riêng báo khác GOOD"
+          properties:
+            combined: { type: number, nullable: true }
+            environment: { type: number, nullable: true }
+            air: { type: number, nullable: true }
+            flock: { type: number, nullable: true }
+            noise: { type: number, nullable: true }
+        ratings:
+          type: array
+          items:
+            type: object
+            properties:
+              house_name: { type: string }
+              date: { type: string, format: date }
+              assessor: { type: object, properties: { full_name: { type: string, nullable: true }, role: { type: string } } }
+              snapshot_status: { type: string, enum: [GOOD, WATCH, ACTION, INSUFFICIENT_DATA] }
+              rating: { type: string, enum: [GOOD, WATCH, ACTION] }
+              counted: { type: boolean, description: "false khi ảnh chụp là INSUFFICIENT_DATA" }
 
     ZoneHealthReport:
       type: object
