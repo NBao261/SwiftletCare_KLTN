@@ -1,7 +1,8 @@
 /**
- * InferredAlertsTable — Bảng danh sách cảnh báo suy luận chuẩn responsive & no-wrap
+ * InferredAlertsTable — Bảng danh sách cảnh báo suy luận dùng DataTable và Pagination chuẩn hệ thống
  * SRS v2.1.4: EXPERT-FR-003
  */
+import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import type { InferredAlertItem } from '@/types/expert.types'
 import {
@@ -9,8 +10,9 @@ import {
   SEVERITY_LABELS,
   SEVERITY_BADGE_CLASS,
 } from '@/hooks/domain-expert/useExpertAlerts'
-
-const HEADERS = ['MỨC ĐỘ', 'THỜI GIAN', 'LOẠI CẢNH BÁO', 'BẰNG CHỨNG PHÁT HIỆN', 'LẶP LẠI', 'VẬN HÀNH', 'PHÁN QUYẾT', 'THAO TÁC']
+import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
+import Pagination from '@/components/ui/Pagination'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr)
@@ -31,13 +33,13 @@ function StatusDot({ alert }: { alert: InferredAlertItem }) {
   return <span className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />Chưa xử lý</span>
 }
 
-const BADGE_BASE = 'inline-flex items-center justify-center min-w-[112px] h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap'
+const BADGE_BASE = 'inline-flex items-center justify-center min-w-[112px] h-7 px-3 rounded-full text-xs font-semibold whitespace-nowrap'
 
 function VerdictBadge({ alert }: { alert: InferredAlertItem }) {
   if (alert.expert_verdict?.result === 'CONFIRMED')
     return <span className={cn(BADGE_BASE, 'bg-red-50 text-red-600 border border-red-200')}>Đã xác nhận</span>
   if (alert.expert_verdict?.result === 'REJECTED')
-    return <span className={cn(BADGE_BASE, 'bg-neutral-100 text-[#878380] border border-neutral-200')}>Đã bác bỏ</span>
+    return <span className={cn(BADGE_BASE, 'bg-neutral-100 text-warmGray border border-neutral-200')}>Đã bác bỏ</span>
   return <span className={cn(BADGE_BASE, 'bg-amber-50 text-amber-800 border border-amber-200/80')}>Chờ kiểm chứng</span>
 }
 
@@ -106,84 +108,137 @@ interface Props {
   page: number
   pageSize?: number
   filteredTotal: number
-  totalPages: number
+  totalPages?: number
   onPageChange: (p: number) => void
-  isFetching: boolean
+  isFetching?: boolean
 }
 
 export default function InferredAlertsTable({
-  alerts, isLoading, onOpenDrawer, page, filteredTotal, totalPages, onPageChange, isFetching,
+  alerts,
+  isLoading,
+  onOpenDrawer,
+  page,
+  pageSize = 5,
+  filteredTotal,
+  onPageChange,
 }: Props) {
-  return (
-    <>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-[11px] uppercase tracking-wider text-[#878380] bg-neutral-50/80 border-b border-neutral-100">
-              {HEADERS.map(h => (
-                <th key={h} className={cn('font-bold px-4 py-3 first:px-6 whitespace-nowrap',
-                  (h === 'LẶP LẠI' || h === 'PHÁN QUYẾT' || h === 'THAO TÁC') ? 'text-center' : 'text-left')}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-50">
-            {isLoading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="animate-pulse">{Array.from({ length: 8 }).map((__, j) => <td key={j} className="px-4 py-4"><div className="h-4 bg-neutral-100 rounded w-full" /></td>)}</tr>
-                ))
-              : alerts.length === 0
-              ? <tr><td colSpan={8} className="text-center py-12 text-sm text-[#878380]">Không có cảnh báo nào phù hợp bộ lọc.</td></tr>
-              : alerts.map(alert => {
-                  const isPending = !alert.expert_verdict
-                  return (
-                    <tr key={alert._id} className="hover:bg-neutral-50/80 transition-colors duration-100">
-                      <td className="px-6 py-3.5 whitespace-nowrap">
-                        <span className={cn('inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap', SEVERITY_BADGE_CLASS[alert.severity] ?? 'bg-neutral-100 text-neutral-600')}>
-                          {SEVERITY_LABELS[alert.severity] ?? alert.severity}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-xs text-[#27231F] font-medium whitespace-nowrap">{formatRelativeTime(alert.created_at)}</td>
-                      <td className="px-4 py-3.5 text-sm font-semibold text-[#27231F] whitespace-nowrap">{ALERT_TYPE_LABELS[alert.type] ?? alert.type}</td>
-                      <td className="px-4 py-3.5 whitespace-nowrap"><MeasuredValueCell alert={alert} /></td>
-                      <td className="px-4 py-3.5 text-center text-xs font-semibold text-[#27231F] whitespace-nowrap">{alert.occurrence_count ?? 1} lần</td>
-                      <td className="px-4 py-3.5 whitespace-nowrap"><StatusDot alert={alert} /></td>
-                      <td className="px-4 py-3.5 text-center whitespace-nowrap"><VerdictBadge alert={alert} /></td>
-                      <td className="px-4 py-3.5 text-center whitespace-nowrap shrink-0">
-                        {isPending ? (
-                          <button id={`btn-verdict-${alert._id}`} type="button" onClick={() => onOpenDrawer(alert)}
-                            className="inline-flex items-center justify-center min-w-[96px] h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#ECFFA9] text-[#27231F] border border-[#B5D32C] hover:bg-[#B5D32C] hover:text-[#27231F] transition-all duration-150 shadow-xs active:scale-95">
-                            Kiểm chứng
-                          </button>
-                        ) : (
-                          <button id={`btn-detail-${alert._id}`} type="button" onClick={() => onOpenDrawer(alert)}
-                            className="inline-flex items-center justify-center min-w-[96px] h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap bg-white text-[#27231F] border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-150 active:scale-95">
-                            Chi tiết
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-6 py-3.5 border-t border-neutral-100">
-        <span className="text-xs text-[#878380]">
-          {isFetching ? 'Đang tải...' : `Hiển thị ${Math.min((page - 1) * 5 + 1, filteredTotal)}-${Math.min(page * 5, filteredTotal)} trong ${filteredTotal} cảnh báo`}
+  const columns = useMemo<DataTableColumn<InferredAlertItem>[]>(() => [
+    {
+      key: 'severity',
+      header: 'Mức độ',
+      className: 'w-[90px]',
+      render: alert => (
+        <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap', SEVERITY_BADGE_CLASS[alert.severity] ?? 'bg-neutral-100 text-neutral-600')}>
+          {SEVERITY_LABELS[alert.severity] ?? alert.severity}
         </span>
-        <div className="flex items-center gap-1">
-          {Array.from({ length: Math.min(totalPages, 3) }).map((_, i) => (
-            <button key={i} type="button" onClick={() => onPageChange(i + 1)}
-              className={cn('w-8 h-8 rounded-lg text-xs font-medium transition-all duration-150',
-                page === i + 1 ? 'bg-[#27231F] text-white shadow-sm' : 'text-[#878380] hover:bg-neutral-100')}>
-              {i + 1}
-            </button>
-          ))}
-          {totalPages > 3 && <span className="text-[#878380] text-xs px-1">...</span>}
-        </div>
+      ),
+    },
+    {
+      key: 'time',
+      header: 'Thời gian',
+      className: 'w-[120px] whitespace-nowrap',
+      render: alert => (
+        <span className="text-xs text-charcoal font-medium whitespace-nowrap">
+          {formatRelativeTime(alert.created_at)}
+        </span>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Loại cảnh báo',
+      className: 'w-[180px]',
+      render: alert => (
+        <span className="text-sm font-semibold text-charcoal">
+          {ALERT_TYPE_LABELS[alert.type] ?? alert.type}
+        </span>
+      ),
+    },
+    {
+      key: 'evidence',
+      header: 'Bằng chứng phát hiện',
+      className: 'min-w-[200px]',
+      render: alert => <MeasuredValueCell alert={alert} />,
+    },
+    {
+      key: 'occurrence',
+      header: 'Lặp lại',
+      align: 'center',
+      className: 'w-[85px]',
+      render: alert => (
+        <span className="text-xs font-semibold text-charcoal whitespace-nowrap">
+          {alert.occurrence_count ?? 1} lần
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Vận hành',
+      align: 'center',
+      className: 'w-[125px]',
+      render: alert => <StatusDot alert={alert} />,
+    },
+    {
+      key: 'verdict',
+      header: 'Phán quyết',
+      align: 'center',
+      className: 'w-[135px]',
+      render: alert => <VerdictBadge alert={alert} />,
+    },
+    {
+      key: 'actions',
+      header: 'Thao tác',
+      align: 'center',
+      className: 'w-[115px] whitespace-nowrap',
+      render: alert => {
+        const isPending = !alert.expert_verdict
+        return isPending ? (
+          <button
+            id={`btn-verdict-${alert._id}`}
+            type="button"
+            onClick={e => { e.stopPropagation(); onOpenDrawer(alert) }}
+            className="inline-flex items-center justify-center min-w-[92px] h-8 px-3 rounded-full text-xs font-semibold whitespace-nowrap bg-[#ECFFA9] text-[#27231F] border border-[#B5D32C] hover:bg-[#B5D32C] hover:text-[#27231F] transition-all duration-150 shadow-xs active:scale-95 cursor-pointer"
+          >
+            Kiểm chứng
+          </button>
+        ) : (
+          <button
+            id={`btn-detail-${alert._id}`}
+            type="button"
+            onClick={e => { e.stopPropagation(); onOpenDrawer(alert) }}
+            className="inline-flex items-center justify-center min-w-[92px] h-8 px-3 rounded-full text-xs font-semibold whitespace-nowrap bg-white text-[#27231F] border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-150 active:scale-95 cursor-pointer"
+          >
+            Chi tiết
+          </button>
+        )
+      },
+    },
+  ], [onOpenDrawer])
+
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <LoadingSkeleton count={4} className="h-14 w-full" />
       </div>
-    </>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <DataTable
+        columns={columns}
+        rows={alerts}
+        getRowKey={alert => alert._id}
+        onRowClick={onOpenDrawer}
+        emptyMessage="Không có cảnh báo nào phù hợp bộ lọc."
+        minTableWidth={960}
+      />
+      <Pagination
+        page={page}
+        limit={pageSize}
+        total={filteredTotal}
+        onChange={onPageChange}
+        variant="full"
+      />
+    </div>
   )
 }
