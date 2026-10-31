@@ -142,7 +142,7 @@ TC=[
 ('TC-F17-01','F-17','Pump in AUTO','Override ON; override the same relay again; clear early','—','One log opened; earlier REPLACED; last CLEARED_EARLY',
  (J,I+'relayOverrideLog.test.ts','bật tay mở 1 bản ghi')),
 ('TC-F17-02','F-17','Same device; a `SENSOR_FAULT` open in the zone','POST pump ON for 31 min; pump ON for 10 min without confirmation; then with confirmation','—','422; 409; accepted, and the log records the confirmation',
- (T,'backend jest `relayCommand.test.ts` (G-06)')),
+ (J,I+'relayCommand.test.ts','TC-F17-02: có SENSOR_FAULT')),
 ('TC-F17-03','F-17','Farm with an expert','POST relay, speaker and schedule as the expert','—','403 for each',
  (J,I+'domainExpert.test.ts','không điều khiển relay, loa hay lịch loa')),
 # F-18

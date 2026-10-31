@@ -263,16 +263,18 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-06 — Can thiệp tay (P1) — Kiệt (backend), Bảo (firmware, trong G-07), Len (web, mobile)
 
-- [ ] Backend:
+- [x] Backend phần 1: *(Kiệt, 31/10, `50468cb` spec + `fae12fe` backend, nhánh `feat/g06-manual-override` tạo từ nhánh G-05)*
   - `MAX_PUMP_ON_OVERRIDE_MS` = 30 phút (422);
-  - đang có `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` mà thiếu `confirmed: true` thì 409;
+  - đang có `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` mà thiếu `confirmed: true` thì 409 *(`CONFIRMATION_REQUIRED`, `error.details` liệt kê cảnh báo)*;
   - `relay_override_logs.alert_confirmed`;
-  - `sensornodes.relays` có hạn riêng từng relay (`overrideExpiry.job.ts` theo relay);
-  - huỷ theo relay hoặc tất cả.
-- [ ] Firmware: `overrideExpiryMs` theo từng relay (BR-20); test native.
+  - huỷ theo relay hoặc tất cả *(`DELETE …/relay-override?relayName=`)*.
+- [ ] Backend phần 2 — làm cùng firmware G-07 của Bảo (firmware hiện chỉ có 1 hạn chung và `clear_override` chưa đọc `relayName`):
+  - `sensornodes.relays` có hạn riêng từng relay (`overrideExpiry.job.ts` theo relay).
+- [ ] Firmware: `overrideExpiryMs` theo từng relay (BR-20); `clear_override` đọc `relayName`; test native.
 - [ ] Lệnh có `commandId`, `issuedAt` (làm cùng G-07).
 - [ ] Web/mobile: hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm.
-- [ ] Test TC-F17-02, TC-ST "MANUAL → MANUAL".
+- [x] Test TC-F17-02 *(`relayCommand.test.ts`, Kiệt 31/10, `fae12fe`)*.
+- [ ] Test TC-ST "MANUAL → MANUAL" (làm cùng Backend phần 2).
 
 ### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Bảo
 
