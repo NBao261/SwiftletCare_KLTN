@@ -15,20 +15,13 @@ export interface RoleTab {
   name: string
   title: string
   icon: Icon
-  // Hiện số cảnh báo chưa đọc trên tab
   showsAlertBadge?: boolean
-  // Nút tròn lớn nổi lên khỏi thanh tab (nền xanh loang); mỗi role tối đa một tab
   isFeatured?: boolean
 }
 
-/**
- * Tab của từng role trên mobile — chỗ duy nhất cần sửa khi đổi menu.
- * Đổi menu: sửa title/icon, trỏ name sang route thật trong src/app/(tabs)/.
- * Role không có ở đây thì không được vào app: Technician và Admin dùng bản web (Report 4 §5.4).
- */
 export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
   FARM_OWNER: [
-    { name: 'dashboard', title: 'Trang chủ', icon: HouseIcon },
+    { name: 'home', title: 'Trang chủ', icon: HouseIcon },
     { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
     { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, showsAlertBadge: true, isFeatured: true },
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
