@@ -6,7 +6,8 @@ import { buildHlsUrl } from '@/utils/camera.utils'
 // Địa chỉ HLS để mở live stream của một camera: xin token 60 giây mỗi lần mở (VISION-FR-013)
 export function useCameraStreamUrl(cameraId: string | null) {
   return useQuery({
-    queryKey: ['devices', 'stream-token', cameraId],
+    // Khoá nằm ngoài nhánh ['devices'] để việc tải lại thiết bị không xin token mới và làm video tải lại
+    queryKey: ['stream-token', cameraId],
     queryFn: () =>
       deviceApi
         .getStreamToken(cameraId as string)

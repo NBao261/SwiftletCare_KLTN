@@ -51,7 +51,9 @@ export function RelayOverrideStrip() {
   // Có relay đã quá giờ hết hạn thì hỏi lại server; controller trả relay về tự động trong khoảng 10 giây
   const hasExpiredOverride = overrides.some(({ log }) => new Date(log.expires_at).getTime() <= now)
   useEffect(() => {
-    if (hasExpiredOverride) queryClient.invalidateQueries({ queryKey: ['devices'] })
+    if (!hasExpiredOverride) return
+    queryClient.invalidateQueries({ queryKey: ['devices', 'sensor-nodes'] })
+    queryClient.invalidateQueries({ queryKey: ['devices', 'relay-overrides'] })
   }, [hasExpiredOverride, now, queryClient])
 
   if (overrides.length === 0) return null
@@ -76,7 +78,8 @@ export function RelayOverrideStrip() {
   const [override] = overrides
   const zoneName = zoneById.get(override.log.zone_id)?.name ?? '_'
   const title = `${getRelayLabel(override.log.relay)} · ${zoneName}`
-  const caption = getOverrideCaption(override, now)
+  // Lệnh "Về tự động" lỗi (mất mạng, 409…) thì báo ngay ở dòng phụ, bấm lại được
+  const caption = clearOverride.isError ? t('Không gửi được lệnh, thử lại') : getOverrideCaption(override, now)
   // Lệnh gửi tới controller mất kết nối quá 60 giây sẽ không được áp dụng nên khoá nút
   const isActionDisabled = override.node.status !== 'ONLINE' || clearOverride.isPending
 
@@ -89,7 +92,7 @@ export function RelayOverrideStrip() {
         <Text variant="body" weight="semiBold" color={palette.onInverse} numberOfLines={1}>
           {title}
         </Text>
-        <Text variant="small" color={palette.onInverseSecondary} numberOfLines={1}>
+        <Text variant="small" color={clearOverride.isError ? palette.alert : palette.onInverseSecondary} numberOfLines={1}>
           {caption}
         </Text>
       </View>
