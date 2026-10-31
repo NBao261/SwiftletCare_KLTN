@@ -4,6 +4,7 @@ import { connectSocket } from '@/services/socket/socketClient'
 import { useAuthStore } from '@/stores/authStore'
 import { isMobileRole } from '@/constants/roleTabs'
 import type { User } from '@/types'
+import { t } from '@/utils/i18n.utils'
 
 interface LoginCredentials {
   email: string
@@ -13,7 +14,7 @@ interface LoginCredentials {
 // Đăng nhập đúng nhưng role không dùng app mobile (Technician, Admin dùng bản web)
 export class UnsupportedRoleError extends Error {
   constructor() {
-    super('Tài khoản này chỉ dùng được trên bản web')
+    super(t('Tài khoản này chỉ dùng được trên bản web'))
     this.name = 'UnsupportedRoleError'
   }
 }

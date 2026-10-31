@@ -8,6 +8,7 @@ import { TextField } from '@/components/ui/text-field'
 import { useForgotPassword } from '@/hooks/auth/useForgotPassword'
 import { getAuthErrorMessage } from '@/utils/apiError.utils'
 import { isValidEmail } from '@/utils/validation.utils'
+import { t } from '@/utils/i18n.utils'
 
 /** AUTH-FR-009 bước 1: nhập email để nhận mã đặt lại mật khẩu */
 export default function ForgotPasswordScreen() {
@@ -21,7 +22,7 @@ export default function ForgotPasswordScreen() {
     // Phím Done trên bàn phím gọi thẳng hàm này, không qua nút đang khoá — chặn gửi lần hai
     if (forgotPassword.isPending) return
     if (!isValidEmail(email)) {
-      setEmailError('Email không hợp lệ')
+      setEmailError(t('Email không hợp lệ'))
       return
     }
 
@@ -39,8 +40,8 @@ export default function ForgotPasswordScreen() {
 
   return (
     <AuthScreenLayout
-      title="Quên mật khẩu"
-      description="Nhập email của tài khoản. Nếu email có tài khoản, mã xác thực 6 số sẽ được gửi tới email này."
+      title={t('Quên mật khẩu')}
+      description={t('Nhập email của tài khoản. Nếu email có tài khoản, mã xác thực 6 số sẽ được gửi tới email này.')}
       onBack={() => router.back()}
     >
       <TextField
@@ -63,7 +64,7 @@ export default function ForgotPasswordScreen() {
 
       <FormMessage message={formError} />
 
-      <Button label="Gửi mã" onPress={handleSubmit} loading={forgotPassword.isPending} />
+      <Button label={t('Gửi mã')} onPress={handleSubmit} loading={forgotPassword.isPending} />
     </AuthScreenLayout>
   )
 }

@@ -13,7 +13,7 @@ export default function ZoneDetailScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader title="Chi tiết Zone" onBack={() => router.back()} />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}>
         {/* TODO: M4
           - Đọc zoneId qua useLocalSearchParams, lấy dữ liệu qua hook (không hiện id lên giao diện)
           - Live telemetry cards (temp, humidity, light, co2, sound)
