@@ -378,9 +378,9 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 
 ### G-15 — Dọn web (P1) — Tuấn (chuyên gia, Technician), Nhi (ma trận quyền), Bảo (`/stream/:id`)
 
-- [ ] **Tuấn:** bỏ dữ liệu giả của màn chuyên gia (`expertFallback.service.ts`, `data/mocks/`), nối API thật; chuyển thư mục theo FE_Design §12 (`domain-expert/`, `apis/`).
+- [x] **Tuấn:** bỏ dữ liệu giả của màn chuyên gia (`expertFallback.service.ts`, `data/mocks/`), nối API thật; chuyển thư mục theo FE_Design §12 (`domain-expert/`, `apis/`).
 - [ ] **Bảo:** xoá route `/stream/:id` và trang stub `FarmOwnerLiveStreamPage` (ghi Raspberry Pi); live xem ở `/vision` (`LiveCameraCard`/`useWhepStream`, token 60 giây, chỉ Farm Owner và Domain Expert); bỏ mọi chữ Raspberry Pi/RPi (FE_Design §12.0 c dòng 3).
-- [ ] **Tuấn — màn chuyên gia (đã chốt, FE_Design §12.0 c dòng 1–2):** chuyên gia đọc màn vận hành của Farm Owner ở chế độ chỉ đọc, không làm bản sao; khu `/expert/*` chỉ còn việc quyết định: trang chủ là hàng đợi việc (cảnh báo chờ kết luận, mục duyệt, đề xuất, báo cáo chờ kết luận), kết luận cảnh báo, tham số phát hiện + vòng đếm + lịch đếm, ngưỡng/hệ số, báo cáo + kết luận, lịch sử hoạt động; bỏ `/expert/analytics`; các màn quyết định mở cho Farm Owner khi farm chưa có chuyên gia (BR-22).
+- [x] **Tuấn — màn chuyên gia (đã chốt, FE_Design §12.0 c dòng 1–2):** chuyên gia đọc màn vận hành của Farm Owner ở chế độ chỉ đọc, không làm bản sao; khu `/expert/*` chỉ còn việc quyết định: trang chủ là hàng đợi việc (cảnh báo chờ kết luận, mục duyệt, đề xuất, báo cáo chờ kết luận), kết luận cảnh báo, tham số phát hiện + vòng đếm + lịch đếm, ngưỡng/hệ số, báo cáo + kết luận, lịch sử hoạt động; bỏ `/expert/analytics`; các màn quyết định mở cho Farm Owner khi farm chưa có chuyên gia (BR-22).
 - [ ] **Len:** đổi chữ "PLC" → "Bộ điều khiển" (`farmStructure.i18n.ts`, `ScadaModeBanner`).
 - [ ] **Nhi — ma trận quyền (PR đầu tiên của Iteration 2, trước các màn mới):** đồng bộ route, menu và nút theo Report 3 §2.4 (hiện `OPS_ROLES = FARM_OWNER, TECHNICIAN, ADMIN` dùng cho `/devices`, `/alerts`, `/farms`, `/onboarding`, `/ota`, `/stream/:id`; `HARVEST_ROLES` còn Admin):
   - `/dashboard`, `/analytics`, `/vision`: Farm Owner; Domain Expert chỉ đọc qua chính các trang đó (`FARM_SIDE_ROLES`);
