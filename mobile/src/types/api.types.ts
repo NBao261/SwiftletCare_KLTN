@@ -1,7 +1,13 @@
 // Vỏ phản hồi chung của backend; danh sách có thêm meta phân trang
 export interface ApiResponse<Data = unknown> {
   data: Data
-  meta?: { page?: number; limit?: number; total?: number }
+  meta?: {
+    page?: number
+    limit?: number
+    total?: number
+    // Chỉ có ở GET /notifications: số chưa đọc của người gọi
+    unreadCount?: number
+  }
 }
 
 // Phản hồi lỗi của backend (ApiError trong docs/api/api-spec.yaml)

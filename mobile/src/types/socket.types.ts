@@ -8,6 +8,7 @@ export interface SocketTelemetryUpdate {
   temperature: number
   humidity: number
   light: number
+  nh3: number
   co2: number
   sound: number
   relayStates: RelayStates

@@ -9,6 +9,7 @@ import { RESET_CODE_LENGTH, RESET_CODE_LIFETIME_MS } from '@/constants/authTimin
 import { useForgotPassword } from '@/hooks/auth/useForgotPassword'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { getAuthErrorMessage, INVALID_CODE_MESSAGE } from '@/utils/apiError.utils'
+import { t } from '@/utils/i18n.utils'
 
 const EXPIRED_CODE_MESSAGE = 'Mã xác thực đã hết hạn. Vui lòng bấm "Gửi lại mã" để nhận mã mới'
 const CODE_LIFETIME_MINUTES = RESET_CODE_LIFETIME_MS / 60_000
@@ -50,7 +51,7 @@ export default function VerifyCodeScreen() {
   if (rejectedAt && rejectedAt !== handledRejectedAt) {
     setHandledRejectedAt(rejectedAt)
     setCode('')
-    setCodeError(INVALID_CODE_MESSAGE)
+    setCodeError(t(INVALID_CODE_MESSAGE))
     setShakeKey(key => key + 1)
   }
 
@@ -77,8 +78,12 @@ export default function VerifyCodeScreen() {
 
   return (
     <AuthScreenLayout
-      title="Nhập mã xác thực"
-      description={`Nếu email có tài khoản, mã ${RESET_CODE_LENGTH} số đã được gửi tới ${email}. Mã có hiệu lực ${CODE_LIFETIME_MINUTES} phút.`}
+      title={t('Nhập mã xác thực')}
+      description={t('Nếu email có tài khoản, mã {length} số đã được gửi tới {email}. Mã có hiệu lực {minutes} phút.', {
+        length: RESET_CODE_LENGTH,
+        email,
+        minutes: CODE_LIFETIME_MINUTES,
+      })}
       onBack={() => router.back()}
     >
       <CodeInput
@@ -94,19 +99,19 @@ export default function VerifyCodeScreen() {
         autoFocus
       />
 
-      <FormMessage message={isExpired ? EXPIRED_CODE_MESSAGE : (codeError ?? formError)} />
+      <FormMessage message={isExpired ? t(EXPIRED_CODE_MESSAGE) : (codeError ?? formError)} />
 
       <View style={styles.resendRow}>
         <Button
           variant="link"
-          label={forgotPassword.isPending ? 'Đang gửi lại mã…' : 'Gửi lại mã'}
+          label={forgotPassword.isPending ? t('Đang gửi lại mã…') : t('Gửi lại mã')}
           color={palette.text}
           disabled={forgotPassword.isPending}
           onPress={handleResend}
         />
       </View>
 
-      <Button label="Xác nhận" onPress={handleConfirm} disabled={!isCodeComplete || isExpired} />
+      <Button label={t('Xác nhận')} onPress={handleConfirm} disabled={!isCodeComplete || isExpired} />
     </AuthScreenLayout>
   )
 }

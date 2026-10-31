@@ -13,7 +13,7 @@ export default function AlertDetailScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader title="Chi tiết cảnh báo" onBack={() => router.back()} />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}>
         {/* TODO: M4
           - Đọc alertId qua useLocalSearchParams, lấy dữ liệu qua hook (không hiện id lên giao diện)
           - Alert header (severity badge, type icon)

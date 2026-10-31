@@ -9,6 +9,9 @@ import type {
 } from '@/types'
 
 let socket: Socket | null = null
+// Phòng đang theo dõi — backend quên phòng khi mất kết nối nên nối lại xong phải vào lại
+const joinedZoneIds = new Set<string>()
+const joinedHouseIds = new Set<string>()
 
 // Hàm làm mới access token, apiClient đăng ký lúc khởi động (socketClient không import apiClient để tránh vòng import)
 let refreshAccessToken: (() => Promise<string>) | null = null
@@ -57,6 +60,8 @@ export function connectSocket(): Socket {
   })
   socket.on('connect', () => {
     hasRefreshedForThisConnection = false
+    joinedZoneIds.forEach(zoneId => socket?.emit('JOIN_ZONE', { zoneId }))
+    joinedHouseIds.forEach(houseId => socket?.emit('JOIN_HOUSE', { houseId }))
   })
   socket.on('connect_error', handleConnectError)
 
@@ -67,6 +72,8 @@ export function disconnectSocket(): void {
   socket?.disconnect()
   socket = null
   hasRefreshedForThisConnection = false
+  joinedZoneIds.clear()
+  joinedHouseIds.clear()
 }
 
 export function getSocket(): Socket | null {
@@ -75,11 +82,24 @@ export function getSocket(): Socket | null {
 
 // Vào/ra phòng của Zone để nhận số đo realtime
 export function joinZone(zoneId: string): void {
+  joinedZoneIds.add(zoneId)
   socket?.emit('JOIN_ZONE', { zoneId })
 }
 
 export function leaveZone(zoneId: string): void {
+  joinedZoneIds.delete(zoneId)
   socket?.emit('LEAVE_ZONE', { zoneId })
+}
+
+// Vào/ra phòng của nhà yến để nhận số đếm chim realtime (BIRD_COUNT_UPDATE, VISION-FR-012)
+export function joinHouse(houseId: string): void {
+  joinedHouseIds.add(houseId)
+  socket?.emit('JOIN_HOUSE', { houseId })
+}
+
+export function leaveHouse(houseId: string): void {
+  joinedHouseIds.delete(houseId)
+  socket?.emit('LEAVE_HOUSE', { houseId })
 }
 
 // Đăng ký sự kiện — màn hình đăng ký trong effect thì gọi off* cùng handler trong cleanup
