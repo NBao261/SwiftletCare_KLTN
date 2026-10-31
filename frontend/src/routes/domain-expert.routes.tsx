@@ -33,7 +33,7 @@ const DomainExpertHistoryPage = lazy(() => import('@/pages/domain-expert/DomainE
  */
 function DomainExpertShell() {
   return (
-    <div className="flex w-full flex-1 flex-col gap-5 p-2">
+    <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">
       {/* Thanh banner SCADA Chuyên gia với bộ chọn Farm/House/Zone */}
       <ExpertScadaBanner />
       <div className="flex w-full flex-1 flex-col">

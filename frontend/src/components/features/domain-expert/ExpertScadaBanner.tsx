@@ -15,7 +15,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
-import { useExpertPendingAlerts, useExpertAutonomy } from '@/hooks/domain-expert/useExpertDashboard'
+import { useAlertsWithFilters } from '@/hooks/domain-expert/useExpertAlerts'
+import { useExpertAutonomy } from '@/hooks/domain-expert/useExpertDashboard'
 import { useHealthReportList } from '@/hooks/domain-expert/useHealthReports'
 import ExpertScadaKpiPills from './ExpertScadaKpiPills'
 import ZoneSelectorDropdown from './ZoneSelectorDropdown'
@@ -28,19 +29,26 @@ interface ExpertScadaBannerProps {
 
 // ─── Component chính ──────────────────────────────────────────────────────────
 export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScadaBannerProps = {}) {
-  const { selectedFarmId, selectedFarmName, selectedZoneId, selectedZoneName, setZone } = useZoneStore()
+  const {
+    selectedFarmId,
+    selectedFarmName,
+    selectedZoneId,
+    selectedZoneName,
+    selectedHouseId,
+    setHouse,
+    setZone,
+  } = useZoneStore()
 
   const [isOpen, setIsOpen] = useState(false)
   const [activeFarmId, setActiveFarmId] = useState<string | null>(null)
   const [activeHouseId, setActiveHouseId] = useState<string | null>(null)
-  const [activeHouseName, setActiveHouseName] = useState<string>('')
 
   const containerRef = useRef<HTMLDivElement>(null)
 
   // ── 1. Lấy danh sách Farm thật từ API ──────────────────────────────────────
   const { data: farms, isLoading: isLoadingFarms } = useFarms()
 
-  // ── 2. Xác định farmId đang hoạt động — ưu tiên: user vừa chọn → store → farms[0] ──
+  // ── 2. Xác định farmId đang hoạt động ──────────────────────────────────────
   const currentFarmId = useMemo(() => {
     if (!farms || farms.length === 0) return undefined
     if (activeFarmId && farms.some(f => f._id === activeFarmId)) return activeFarmId
@@ -54,8 +62,9 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
   const currentHouseId = useMemo(() => {
     if (!houses || houses.length === 0) return undefined
     if (activeHouseId && houses.some(h => h._id === activeHouseId)) return activeHouseId
+    if (selectedHouseId && houses.some(h => h._id === selectedHouseId)) return selectedHouseId
     return houses[0]._id
-  }, [houses, activeHouseId])
+  }, [houses, activeHouseId, selectedHouseId])
 
   const { data: zones } = useZones(currentHouseId)
 
@@ -71,7 +80,10 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
     if (!isFarmInStore || !isZoneInList) {
       setZone(targetFarm._id, targetFarm.name, targetZone._id, targetZone.name)
     }
-  }, [farms, zones, currentFarmId, selectedFarmId, selectedZoneId, setZone])
+    if (currentHouseId && selectedHouseId !== currentHouseId) {
+      setHouse(currentHouseId)
+    }
+  }, [farms, zones, currentFarmId, currentHouseId, selectedFarmId, selectedHouseId, selectedZoneId, setZone, setHouse])
 
   // ── 5. Đóng dropdown khi click ra ngoài, bấm Escape hoặc cuộn trang ───────
   useEffect(() => {
@@ -96,28 +108,34 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
     }
   }, [isOpen])
 
-  // ── KPI pills ──────────────────────────────────────────────────────────────
+  // ── 6. KPI pills: Đồng bộ 100% với Backend API & Trang Hàng Đợi Việc ──────
   const effectiveFarmId = farmId || currentFarmId
   const effectiveZoneId = pendingZoneId || selectedZoneId || zones?.[0]?._id
 
-  const { data: pendingAlerts } = useExpertPendingAlerts(effectiveFarmId, effectiveZoneId)
+  // Dùng chung hook useAlertsWithFilters để số liệu cảnh báo luôn khớp chính xác với thẻ bên dưới
+  const { kpiCounts } = useAlertsWithFilters(effectiveFarmId, effectiveZoneId)
   const { data: autonomy } = useExpertAutonomy(effectiveZoneId ?? '', '24h')
   const { data: healthReports } = useHealthReportList(effectiveZoneId)
 
-  const pendingCount = pendingAlerts?.length ?? 0
-  const autoModePct = autonomy?.auto_mode_pct ?? 0
+  const pendingCount = kpiCounts?.pending ?? 0
+  const autoModePct = autonomy?.auto_mode_pct ?? 100
   const pendingReports = healthReports?.filter(r => !r.expert_conclusion?.text).length ?? 0
 
-  // ── Tên hiển thị trên pill selector ────────────────────────────────────────
+  // ── Tên hiển thị trên capsule selector ─────────────────────────────────────
   const currentFarm = farms?.find(f => f._id === currentFarmId)
-  const displayName = [
-    currentFarm?.name ?? selectedFarmName ?? '—',
-    activeHouseName || houses?.[0]?.name || '—',
-    selectedZoneName ?? zones?.[0]?.name ?? '—',
-  ].join(' • ')
+  const currentHouse = houses?.find(h => h._id === currentHouseId)
+  const currentZone = zones?.find(z => z._id === selectedZoneId) || zones?.[0]
+
+  const farmName = currentFarm?.name ?? selectedFarmName ?? '—'
+  const houseName = currentHouse?.name ?? '—'
+  const zoneName = currentZone?.name ?? selectedZoneName ?? '—'
+  const displayName = [farmName, houseName, zoneName].join(' • ')
 
   const handleSelectZone = (zoneId: string, zoneName: string) => {
     if (!currentFarmId || !currentFarm) return
+    if (currentHouseId) {
+      setHouse(currentHouseId)
+    }
     setZone(currentFarmId, currentFarm.name, zoneId, zoneName)
     setIsOpen(false)
   }
@@ -129,45 +147,52 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
   return (
     <div
       ref={containerRef}
-      className="relative z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-charcoal px-4 py-3 text-white shadow-card lg:flex-nowrap"
+      className="relative z-30 w-full rounded-2xl bg-white p-2.5 sm:px-4 sm:py-3 text-charcoal shadow-[0_4px_20px_rgba(39,35,31,0.06)] border border-warmGray/20"
     >
-      {/* Vế trái: Chấm xanh trạng thái + Tiêu đề SCADA Chuyên gia */}
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span className="relative flex h-2.5 w-2.5 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
-        </span>
-        <span className="shrink-0 text-xs font-extrabold uppercase tracking-wider text-white">
-          GIÁM SÁT VẬN HÀNH SCADA
-        </span>
-        <span className="text-warmGray/50">•</span>
-        <span className="truncate text-xs font-semibold text-limeMist">
-          CHẾ ĐỘ CHUYÊN GIA
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-2.5 xl:flex-nowrap">
+        {/* Vế trái: Badge SCADA LIVE tinh gọn (Màu xanh lá accent của hệ thống) */}
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-full border border-accent-600/30 bg-accent-50 px-2.5 py-1 shadow-sm">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-500 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-600" />
+            </span>
+            <span className="font-mono text-[11px] font-bold tracking-wider text-accent-900">
+              SCADA LIVE
+            </span>
+          </div>
+
+          <span className="text-xs font-bold uppercase tracking-tight text-charcoal sm:text-sm whitespace-nowrap">
+            Giám Sát Vận Hành
+          </span>
+        </div>
+
+        {/* Giữa: 3 KPI Pills telemetry hiển thị dữ liệu thực chất từ API */}
+        <ExpertScadaKpiPills
+          autoModePct={autoModePct}
+          pendingCount={pendingCount}
+          pendingReports={pendingReports}
+        />
+
+        {/* Vế phải: Nút hình viên thuốc chọn Zone 3 cấp co giãn mượt mà */}
+        <ZoneSelectorDropdown
+          isOpen={isOpen}
+          displayName={displayName}
+          farmName={farmName}
+          houseName={houseName}
+          zoneName={zoneName}
+          farms={farms}
+          houses={houses ?? []}
+          zones={zones ?? []}
+          currentFarmId={currentFarmId ?? ''}
+          currentHouseId={currentHouseId ?? ''}
+          selectedZoneId={selectedZoneId}
+          onToggle={() => setIsOpen(prev => !prev)}
+          onSelectFarm={fId => { setActiveFarmId(fId); setActiveHouseId(null) }}
+          onSelectHouse={(hId) => { setActiveHouseId(hId); setHouse(hId) }}
+          onSelectZone={handleSelectZone}
+        />
       </div>
-
-      {/* Giữa: 3 KPI Pills */}
-      <ExpertScadaKpiPills
-        autoModePct={autoModePct}
-        pendingCount={pendingCount}
-        pendingReports={pendingReports}
-      />
-
-      {/* Vế phải: Nút hình viên thuốc chọn Zone 3 cấp */}
-      <ZoneSelectorDropdown
-        isOpen={isOpen}
-        displayName={displayName}
-        farms={farms}
-        houses={houses ?? []}
-        zones={zones ?? []}
-        currentFarmId={currentFarmId ?? ''}
-        currentHouseId={currentHouseId ?? ''}
-        selectedZoneId={selectedZoneId}
-        onToggle={() => setIsOpen(prev => !prev)}
-        onSelectFarm={fId => { setActiveFarmId(fId); setActiveHouseId(null); setActiveHouseName('') }}
-        onSelectHouse={(hId, hName) => { setActiveHouseId(hId); setActiveHouseName(hName) }}
-        onSelectZone={handleSelectZone}
-      />
     </div>
   )
 }
