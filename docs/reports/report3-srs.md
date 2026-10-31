@@ -587,8 +587,9 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Health-indicator level defaults | in range 90 % / 75 %; air quality 1 h / 4 h; noise 1 / 3 episodes; completeness 80 % of valid samples per source | Daily health status until the Domain Expert sets confirmed levels (BR-28) |
 | Rain confounder | ≥ 1 mm in an hour overlapping a session and a noise episode | Avoids `ACTION` on rainy days (BR-30) |
 | Actuator current check | learn over 30 s; fault below 50 % (ON) or above 20 % (OFF) of normal for 30 s | `ACTUATOR_FAULT` (BR-32) |
-| Weather fetch | every hour | Weather context (ANALYTICS-FR-013) |
+| Weather fetch | every hour; a request is dropped after 10 s and the next hour fetches the last day again | Weather context (ANALYTICS-FR-013) |
 | Rating window | 7 days after the day | Ratings stay close to the observation (EXPERT-FR-012) |
+| Evaluation range | up to 366 days per request | Bounds one agreement computation (ANALYTICS-FR-014) |
 | Size of the detection test set | at least 200 labelled frames per lighting condition | Enough boxes for Precision and Recall per lighting (NFR-09) |
 | Size of one installation | 5 farms, 20 houses, 60 zones, 120 controllers, 20 AI nodes, 50 accounts | Sizing of the staging server and of the NFR-03 load test (A-7) |
 

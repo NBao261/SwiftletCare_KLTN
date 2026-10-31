@@ -336,20 +336,23 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 
 ### G-11 — MF-11 (P0-Demo) — Kiệt (backend), Nhi (web, mobile)
 
-- [ ] `houses.health_levels` (Domain Expert sửa, Farm Owner khi không có chuyên gia).
-- [ ] Job `weather` mỗi giờ (Open-Meteo, chỉ gửi tọa độ), `weatherobservations` TTL 90 ngày.
-- [ ] Job `healthAssessment` sau `returnRate`:
+- [x] `houses.health_levels` (Domain Expert sửa, Farm Owner khi không có chuyên gia). *(Kiệt, 31/10, `caf7eef` spec + `f502b5b` backend, nhánh `feat/g11-health-assessment` tạo từ nhánh G-06: `GET`/`PUT /farms/houses/{houseId}/health-levels`, sai khoảng 400 như các tham số khác)*
+- [x] Job `weather` mỗi giờ (Open-Meteo, chỉ gửi tọa độ), `weatherobservations` TTL 90 ngày. *(31/10)*
+- [x] Job `healthAssessment` sau `returnRate` *(31/10; phiên không đầy đủ do `EDGE_AI_DEGRADED` (VISION-FR-020) và khung phiên theo lịch do G-12 bổ sung vào `isFlockDayComplete`, `sessionWindows`)*:
   - chỉ số và completeness theo từng nguồn (BR-28);
   - luật BR-29 theo thứ tự;
   - mưa BR-30;
   - bỏ `NOISE_ANOMALY` đã `DISMISSED`;
   - lưu `current_status` và `current_reasons`;
   - tính lại khi có dữ liệu trễ hoặc kết luận mới trong 7 ngày.
-- [ ] Chấm điểm (BR-31, chặn ở **API**, không chỉ ở màn hình): với Farm Owner/Domain Expert chưa chấm hoặc chưa bỏ qua ngày đó trong 7 ngày, mọi endpoint (ngày, báo cáo ngày/tuần/tháng, CSV) trả ngày **không có** status, reasons, rating của người khác; thông báo "ngày đã sẵn sàng" không kèm status; `POST …/rating` lưu rating + `evaluation_snapshot` trong một lần ghi atomic rồi mới trả status; `POST …/skip` mở status, không tính vào NFR-14; không cho đổi rating sau khi đã xem, chỉ thêm ghi chú; trạng thái chấm theo **từng người** (PENDING → RATED / SKIPPED / EXPIRED, Report 3 §6.18), quá 7 ngày người chưa chấm thành `EXPIRED`; ngày không có trạng thái chấm riêng. Test TC-F22-01..03 thử xem trước qua mọi endpoint.
-- [ ] Báo cáo theo House ngày/tuần/tháng (`househealthreports`, unique `house_id + kind + period_start + period_end`), migrate báo cáo tuần theo Zone cũ; CSV chỉ số theo ngày; PDF bằng `jspdf` ở web.
-- [ ] `ANALYTICS-FR-014`: đồng thuận + CI 95 %, kappa có trọng số tuyến tính, Gwet's AC1, ma trận nhầm lẫn, ngày `INSUFFICIENT_DATA` tách riêng.
+- [x] Chấm điểm (BR-31, chặn ở **API**, không chỉ ở màn hình): với Farm Owner/Domain Expert chưa chấm hoặc chưa bỏ qua ngày đó trong 7 ngày, mọi endpoint (ngày, báo cáo ngày/tuần/tháng, CSV) trả ngày **không có** status, reasons, rating của người khác; thông báo "ngày đã sẵn sàng" không kèm status; `POST …/rating` lưu rating + `evaluation_snapshot` trong một lần ghi atomic rồi mới trả status; `POST …/skip` mở status, không tính vào NFR-14; không cho đổi rating sau khi đã xem, chỉ thêm ghi chú; trạng thái chấm theo **từng người** (PENDING → RATED / SKIPPED / EXPIRED, Report 3 §6.18), quá 7 ngày người chưa chấm thành `EXPIRED`; ngày không có trạng thái chấm riêng. Test TC-F22-01..03 thử xem trước qua mọi endpoint. *(31/10: ngày, danh sách, CSV, độ khớp đều che; báo cáo ngày/tuần/tháng che khi làm phần báo cáo bên dưới)*
+- [x] CSV chỉ số theo ngày. *(31/10: `GET /health-reports/days.csv`, mỗi dòng 1 nhà × 1 ngày, không có id nội bộ, che theo BR-31)*
+- [ ] Báo cáo theo House ngày/tuần/tháng (`househealthreports`, unique `house_id + kind + period_start + period_end`), migrate báo cáo tuần theo Zone cũ. *(Kiệt, phần b — PR riêng vì đổi `/health-reports` mà màn của Tuấn và Len đang dùng)*
+- [ ] PDF bằng `jspdf` ở web. *(Nhi)*
+- [x] `ANALYTICS-FR-014`: đồng thuận + CI 95 %, kappa có trọng số tuyến tính, Gwet's AC1, ma trận nhầm lẫn, ngày `INSUFFICIENT_DATA` tách riêng. *(31/10: `GET /health-reports/evaluation`, kèm tỷ lệ báo động giả theo từng nguồn)*
 - [ ] Web + mobile: trạng thái ngày, màn chấm điểm, báo cáo.
-- [ ] Test TC-F20/21/22 và 5 dòng TC-ST 6.17.
+- [x] Test phần a: TC-F20-01..03, TC-F21-02, TC-F22-01..03, TC-ST 6.17 và 6.18. *(31/10: `healthAssessment.test.ts`, `healthDays.test.ts`, `weather.test.ts`, `agreement.util.test.ts`; backend 629/629)*
+- [ ] Test còn lại: TC-ST 6.9 sinh báo cáo theo nhà (phần b), TC-F21-03 (thủ công, sau khi có màn web).
 
 ### G-12 — Đếm chim (P1) — Bảo (AI, backend), Tuấn (trình vẽ vòng đếm), Len, Tuấn, Nhi (gán nhãn, đếm clip)
 
