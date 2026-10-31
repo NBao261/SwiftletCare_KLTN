@@ -13,6 +13,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Check, Info, ArrowRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import SelectMenu from '@/components/ui/SelectMenu'
+import ClearFiltersButton from '@/components/ui/ClearFiltersButton'
 import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import AlertsKpiAndStatsBar, {
   TYPE_OPTS,
@@ -130,15 +131,6 @@ export default function DomainExpertAlertVerdictsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-              {isFiltered && (
-                <button
-                  type="button"
-                  onClick={() => { setType('ALL'); setSeverity('ALL'); setTab('ALL') }}
-                  className="text-xs text-warmGray hover:text-charcoal underline font-medium px-1 transition-colors cursor-pointer"
-                >
-                  Xóa lọc
-                </button>
-              )}
               <SelectMenu
                 value={filters.type}
                 options={TYPE_OPTS}
@@ -151,6 +143,11 @@ export default function DomainExpertAlertVerdictsPage() {
                 onChange={val => setSeverity(val as AlertSeverity | 'ALL')}
                 ariaLabel="Lọc theo mức độ cảnh báo"
               />
+              {isFiltered && (
+                <ClearFiltersButton
+                  onClick={() => { setType('ALL'); setSeverity('ALL'); setTab('ALL') }}
+                />
+              )}
             </div>
           </div>
 
