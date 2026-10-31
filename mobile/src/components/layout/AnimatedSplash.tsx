@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Dimensions, StyleSheet } from 'react-native'
 import { Image } from 'expo-image'
+import { LinearGradient } from 'expo-linear-gradient'
 import * as SplashScreen from 'expo-splash-screen'
 import Animated, {
   Easing,
@@ -13,19 +14,24 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets'
 import { TextLogo } from '@/components/layout/TextLogo'
 import { Colors, Radius, Spacing } from '@/constants/theme'
+import { t } from '@/utils/i18n.utils'
 
 // Icon khối vuông nhỏ gọn bo góc mềm, logo chữ cân theo icon
-const ICON_SIZE = 120
+const ICON_SIZE = 88
 const TEXT_LOGO_WIDTH = 200
 
 // View gốc của app dừng trên thanh điều hướng Android — phủ đúng kích thước màn hình để căn giữa cả màn hình
 const SCREEN = Dimensions.get('screen')
 
 // Logo hiện tối thiểu một lúc trước khi mờ, tránh loé lên rồi mất khi nạp quá nhanh
-const MIN_VISIBLE_DURATION = 800
+const MIN_VISIBLE_DURATION = 500
 const FADE_DURATION = 600
 
 const ICON_IMAGE = require('@/assets/images/mobile-scare-icon.png')
+
+// Nền loang từ trên xuống: lime ở mép trên nhạt dần, tới khoảng giữa màn thì thành trắng (theo ảnh mẫu)
+const GRADIENT_COLORS = [Colors.raw.lime, Colors.raw.pureWhite] as const
+const GRADIENT_LOCATIONS = [0, 0.55] as const
 
 interface AnimatedSplashProps {
   // Font và phiên đăng nhập đã nạp xong
@@ -34,7 +40,7 @@ interface AnimatedSplashProps {
   onFinish: () => void
 }
 
-// Splash: cụm icon + logo chữ căn giữa màn hình trắng, nạp xong thì mờ dần
+// Splash: cụm icon + logo chữ căn giữa nền loang lime → trắng, nạp xong thì mờ dần
 export function AnimatedSplash({ isReady, onFinish }: AnimatedSplashProps) {
   const opacity = useSharedValue(1)
 
@@ -67,15 +73,16 @@ export function AnimatedSplash({ isReady, onFinish }: AnimatedSplashProps) {
       style={[styles.container, containerStyle]}
       onLayout={handleLayout}
       accessible
-      accessibilityLabel="Đang tải SwiftletCare"
+      accessibilityLabel={t('Đang tải SwiftletCare')}
     >
+      <LinearGradient colors={GRADIENT_COLORS} locations={GRADIENT_LOCATIONS} style={StyleSheet.absoluteFill} />
       <Image source={ICON_IMAGE} style={styles.icon} contentFit="cover" />
       <TextLogo width={TEXT_LOGO_WIDTH} />
     </Animated.View>
   )
 }
 
-// Splash nền trắng, cùng nền với cả app
+// Nền trắng dưới lớp loang (phần dưới màn vẫn trắng như splash gốc)
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
