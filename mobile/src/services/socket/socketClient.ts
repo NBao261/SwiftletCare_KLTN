@@ -82,6 +82,15 @@ export function leaveZone(zoneId: string): void {
   socket?.emit('LEAVE_ZONE', { zoneId })
 }
 
+// Vào/ra phòng của nhà yến để nhận số đếm chim realtime (BIRD_COUNT_UPDATE, VISION-FR-012)
+export function joinHouse(houseId: string): void {
+  socket?.emit('JOIN_HOUSE', { houseId })
+}
+
+export function leaveHouse(houseId: string): void {
+  socket?.emit('LEAVE_HOUSE', { houseId })
+}
+
 // Đăng ký sự kiện — màn hình đăng ký trong effect thì gọi off* cùng handler trong cleanup
 export function onTelemetryUpdate(handler: (update: SocketTelemetryUpdate) => void): void {
   socket?.on('TELEMETRY_UPDATE', handler)
