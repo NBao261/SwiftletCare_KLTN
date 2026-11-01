@@ -319,15 +319,16 @@ const METRIC_LABEL: Record<string, string> = {
  * ENV-FR-004, ALERT-FR-012, BR-34 — gọi từ telemetry.service ở mẫu sống được lưu, sau khi
  * trackBreachDwell (utils/breachDwell.util) tính quãng vượt ngưỡng của thiết bị:
  * - có chỉ số đã ở ngoài ngưỡng đủ thời gian chờ (`dwelled`) → tạo THRESHOLD_BREACH (hoặc gộp vào cảnh
- *   báo đang mở); `details` là chỉ số bắt đầu sớm nhất, `metadata.breaches` là mọi chỉ số đang vượt;
- * - chỉ có chỉ số đang vượt chưa đủ thời gian chờ → không tạo mới, chỉ giữ cảnh báo đang mở còn sống
- *   để nó chỉ tự đóng sau THRESHOLD_CLEAR_MS thật sự về trong ngưỡng (BR-16).
+ *   báo đang mở); `details` là chỉ số bắt đầu sớm nhất, `metadata.metrics` là các chỉ số cảnh báo đang
+ *   báo (đã đủ thời gian chờ), `metadata.breaches` là mọi chỉ số đang vượt;
+ * - chỉ có chỉ số đang vượt chưa đủ thời gian chờ → không tạo mới, chỉ giữ cảnh báo đang mở còn sống khi
+ *   chỉ số của chính nó còn vượt, để nó tự đóng sau THRESHOLD_CLEAR_MS các chỉ số đó về trong ngưỡng (BR-16).
  */
 export async function raiseThresholdAlert(
   zoneId: string, nodeId: string, dwelled: DwelledBreach[], ongoing: ThresholdBreach[] = dwelled,
 ): Promise<void> {
   if (dwelled.length === 0) {
-    if (ongoing.length > 0) await keepThresholdAlertAlive(zoneId, nodeId)
+    if (ongoing.length > 0) await keepThresholdAlertAlive(zoneId, nodeId, ongoing.map(b => b.metric))
     return
   }
 
@@ -347,17 +348,21 @@ export async function raiseThresholdAlert(
     type:     'THRESHOLD_BREACH',
     title:    `Vượt ngưỡng tại ${zone.name}`,
     message:  airQuality ? `${detail}. ${AIR_QUALITY_NOTE}` : detail,
-    metadata: { breaches: ongoing },
+    metadata: { metrics: dwelled.map(b => b.metric), breaches: ongoing },
     details:  { metric: first.metric, observed: first.value, threshold: first.limit, direction: first.direction, started_at: first.started_at },
   })
 }
 
-/** BR-16 — chỉ số còn ngoài ngưỡng: cảnh báo đang mở chưa được đóng; cập nhật lần thấy cuối tối đa 1 lần/ALERT_SEEN_UPDATE_MS */
-async function keepThresholdAlertAlive(zoneId: string, nodeId: string): Promise<void> {
+/**
+ * BR-16 — chỉ số của cảnh báo còn ngoài ngưỡng: cảnh báo đang mở chưa được đóng; cập nhật lần thấy cuối tối
+ * đa 1 lần/ALERT_SEEN_UPDATE_MS. Chỉ số khác vừa vượt (chưa đủ thời gian chờ) không giữ cảnh báo này.
+ */
+async function keepThresholdAlertAlive(zoneId: string, nodeId: string, metrics: string[]): Promise<void> {
   const now = new Date()
   await Alert.updateOne(
     {
       zone_id: zoneId, node_id: nodeId, type: 'THRESHOLD_BREACH', status: { $in: OPEN_STATUSES },
+      'metadata.metrics': { $in: metrics },
       $or: [{ last_seen_at: { $lt: new Date(now.getTime() - ALERT_SEEN_UPDATE_MS) } }, { last_seen_at: { $exists: false } }],
     },
     { $set: { last_seen_at: now } },

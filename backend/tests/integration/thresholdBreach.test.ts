@@ -148,6 +148,19 @@ describe('THRESHOLD_BREACH có thời gian chờ (TC-F07-02)', () => {
     expect(await breaches(other.zone._id)).toHaveLength(0)
   })
 
+  it('thiết bị im lặng 58 phút rồi gửi lại vẫn thấp: không bắn ngay, đếm lại 10 phút từ mẫu mới', async () => {
+    const { zone, t0, run } = await seed()
+    await run(0, 2, LOW_HUMIDITY)
+    await run(60, 69.5, LOW_HUMIDITY)
+    await settle()
+    expect(await breaches(zone._id)).toHaveLength(0)
+
+    await run(69.5 + 1 / 6, 70, LOW_HUMIDITY)
+    await settle()
+    const [alert] = await breaches(zone._id)
+    expect(alert.details).toMatchObject({ metric: 'humidity', started_at: new Date(t0 + 60 * MIN) })
+  })
+
   it('mẫu buffer offline cũ vượt ngưỡng không tạo cảnh báo', async () => {
     const { zone, node } = await seed()
     const twoHoursAgo = Date.now() - 2 * 60 * MIN
@@ -179,6 +192,20 @@ describe('tự đóng (BR-16)', () => {
 
     // Không còn mẫu ngoài ngưỡng: 5 phút sau thì đóng
     expect(await resolveStaleThresholdAlerts(new Date(Date.now() + 6 * MIN))).toBe(1)
+    expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
+  })
+
+  it('cảnh báo độ ẩm không được giữ sống bởi nhiệt độ vừa vượt (chưa đủ thời gian chờ)', async () => {
+    const { zone, run } = await seed()
+    await run(0, 10, LOW_HUMIDITY)
+    await settle()
+    const [alert] = await breaches(zone._id)
+    expect(alert.metadata).toMatchObject({ metrics: ['humidity'] })
+
+    await Alert.updateOne({ _id: alert._id }, { last_seen_at: new Date(Date.now() - 2 * MIN) })
+    await run(10 + 1 / 6, 11, { temperature: DEFAULT_THRESHOLDS.temp_max + 2 })
+    await settle()
+    expect(await resolveStaleThresholdAlerts(new Date(Date.now() + 4 * MIN))).toBe(1)
     expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
   })
 
