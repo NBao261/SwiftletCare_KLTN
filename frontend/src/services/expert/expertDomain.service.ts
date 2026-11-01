@@ -12,7 +12,6 @@ const INFERRED_TYPES: Set<string> = new Set([
   'FORECAST_BREACH',
   'LOW_RETURN_RATE',
   'MISTING_INEFFECTIVE',
-  'PUMP_DRY',
 ])
 
 export const expertService = {
