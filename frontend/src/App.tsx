@@ -90,7 +90,7 @@ function RouteFallback() {
  * (code-splitting theo route) và tự khai `RequireRole`. Thư mục chứa trang cho
  * biết role SỞ HỮU nghiệp vụ đó, còn `allow={...}` trong file route mới là
  * danh sách role thật sự vào được — VD trang trong `pages/technician/` vẫn mở
- * cho Farm Owner và Admin qua `allow={OPS_ROLES}`.
+ * cho Farm Owner qua `allow={ALERT_ROLES}` (/alerts).
  */
 export default function App() {
   return (

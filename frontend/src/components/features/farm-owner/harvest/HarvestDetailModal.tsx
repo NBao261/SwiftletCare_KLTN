@@ -18,8 +18,9 @@ interface HarvestDetailModalProps {
   houseName: string;
   creatorName: string;
   onClose: () => void;
-  onEdit: (group: HarvestGroup) => void;
-  onDelete: (group: HarvestGroup) => void;
+  // Không truyền (Domain Expert chỉ đọc) thì ẩn nút sửa, xoá
+  onEdit?: (group: HarvestGroup) => void;
+  onDelete?: (group: HarvestGroup) => void;
 }
 
 // Chi tiết 1 lần thu: khu vực + ngày, sản lượng từng loại yến và tổng, ảnh sản phẩm, snapshot môi trường/đàn chim, nút sửa/xoá
@@ -72,10 +73,12 @@ export default function HarvestDetailModal({ group, houseName, creatorName, onCl
         {/* Các loại cùng zone + ngày nên snapshot giống nhau, lấy của đợt đầu */}
         <SnapshotSection batch={group.batches[0]} />
 
-        <div className="flex flex-wrap justify-end gap-2 border-t border-warmGray/10 pt-4">
-          <Button variant="danger" size="sm" onClick={() => onDelete(group)}>{t('action.delete')}</Button>
-          <Button variant="secondary" size="sm" onClick={() => onEdit(group)}>{t('action.edit')}</Button>
-        </div>
+        {onEdit && onDelete && (
+          <div className="flex flex-wrap justify-end gap-2 border-t border-warmGray/10 pt-4">
+            <Button variant="danger" size="sm" onClick={() => onDelete(group)}>{t('action.delete')}</Button>
+            <Button variant="secondary" size="sm" onClick={() => onEdit(group)}>{t('action.edit')}</Button>
+          </div>
+        )}
       </div>
     </Modal>
   );
