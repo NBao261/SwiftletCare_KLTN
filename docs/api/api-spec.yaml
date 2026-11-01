@@ -1884,8 +1884,9 @@ paths:
         Không có `relayName`: đặt `control_mode=AUTO`, xoá `override_expiry`, publish MQTT `relay/command`
         `{action:"clear_override"}` để ESP32 trả mọi relay về điều khiển tự động; đóng mọi lịch sử còn mở.
         Có `relayName`: chỉ đóng lịch sử của relay đó và publish `{action:"clear_override", relayName}`;
-        thiết bị còn relay khác đang can thiệp tay thì vẫn `MANUAL`. Gọi khi thiết bị đang AUTO thì không
-        làm gì (idempotent). Ghi audit `RELAY_OVERRIDE_CLEARED`.
+        thiết bị còn relay khác đang can thiệp tay thì vẫn `MANUAL`. Gọi khi thiết bị đang AUTO, hoặc relay
+        được chọn không đang can thiệp tay, thì không làm gì (200, không publish, không ghi audit).
+        Ghi audit `RELAY_OVERRIDE_CLEARED`.
         Hạn riêng từng relay phía thiết bị (BR-20) làm cùng firmware G-07: firmware chưa đọc `relayName`
         thì huỷ mọi relay và báo AUTO qua `relay/status`, backend đóng phần còn lại theo trạng thái đó.
       parameters:
