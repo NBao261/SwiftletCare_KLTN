@@ -1322,6 +1322,34 @@ paths:
               },
           }
 
+  /farms/{id}/weather:
+    parameters: [{ $ref: "#/components/parameters/FarmId" }]
+    get:
+      tags: [Farms]
+      summary: "Thời tiết ngoài trời theo giờ (ANALYTICS-FR-013) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        Nhiệt độ, độ ẩm, lượng mưa theo giờ do job lấy từ Open-Meteo (chỉ gửi toạ độ farm), để hiện cạnh
+        số đo trong nhà. Không bao giờ điều khiển thiết bị (C-6). Giá trị thiếu là `null`, không phải 0;
+        farm chưa có toạ độ thì `has_coordinates: false` và `hours` rỗng. Mặc định 24 giờ gần nhất, tối đa
+        7 ngày mỗi lần (Report 3 §4.5). Giữ 90 ngày (BR-36). Technician, Administrator → 403.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định to − 24 giờ" }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định bây giờ" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/FarmWeather" }
+        "400": { description: "from không trước to / khoảng quá 7 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /farms/{id}/houses:
     parameters: [{ $ref: "#/components/parameters/FarmId" }]
     post:
@@ -3807,12 +3835,14 @@ paths:
         BR-21) và tính lại khi dữ liệu trễ hoặc kết luận cảnh báo đổi trong 7 ngày (SM-17). Mới nhất trước.
         **BR-31:** ngày người gọi còn `PENDING` (chưa chấm, chưa bỏ qua, còn trong hạn) chỉ có nhà, ngày,
         thời tiết, `my_rating_state`, `rating_deadline` — không có trạng thái, lý do, chỉ số, bằng chứng
-        hay điểm của người khác. Khoảng tối đa 31 ngày (400).
+        hay điểm của người khác. Khoảng tối đa 31 ngày (400). `myRatingState` lọc theo trạng thái chấm
+        của chính người gọi (vd `PENDING`: các ngày còn phải chấm, cho màn "ngày cần chấm" và hàng đợi việc).
       parameters:
         - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
         - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
         - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định to − 6 ngày" }
         - { name: to, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định hôm nay" }
+        - { name: myRatingState, in: query, schema: { type: string, enum: [PENDING, RATED, SKIPPED, EXPIRED] }, description: "Chỉ các ngày người gọi đang ở trạng thái chấm này (SM-18)" }
       responses:
         "200":
           description: OK
@@ -3835,12 +3865,14 @@ paths:
         1 dòng mỗi nhà × ngày: tên nhà, ngày, trạng thái chấm của người gọi, giá trị và mức của 4 chỉ số,
         tỷ lệ chim về, trạng thái, lý do, điểm của từng người chấm (tên, vai trò), thời tiết. Không có id
         nội bộ. Dòng người gọi còn `PENDING` để trống các cột bị che (BR-31). UTF-8 có BOM để Excel đọc
-        đúng tiếng Việt. Cùng tham số và giới hạn với `GET /health-reports/days`.
+        đúng tiếng Việt. Tiêu đề cột, trạng thái, mức và lý do (in từ `HealthReason`) theo `lang`. Cùng
+        tham số và giới hạn với `GET /health-reports/days`.
       parameters:
         - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
         - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
         - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định to − 6 ngày" }
         - { name: to, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định hôm nay" }
+        - { name: lang, in: query, schema: { type: string, enum: [vi, en], default: vi }, description: "Ngôn ngữ của file" }
       responses:
         "200":
           description: OK
@@ -3849,6 +3881,7 @@ paths:
               schema: { type: string }
         "400": { description: "Thiếu houseId và farmId / from sau to / quá 31 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /health-reports/days/{dayId}:
     get:
@@ -4781,6 +4814,48 @@ components:
         health_levels: { $ref: "#/components/schemas/HealthLevels" }
         defaults: { $ref: "#/components/schemas/HealthLevels" }
 
+    HealthReason:
+      type: object
+      description: |
+        ANALYTICS-FR-012 — 1 lý do của trạng thái ngày, dạng mã + số liệu để web, mobile tự dịch (VI/EN).
+        Ảnh chụp lúc chấm lưu cùng dạng. `values` theo mã:
+        - `ALL_NORMAL`: {} — mọi chỉ số đã đánh giá đều bình thường (ngày GOOD)
+        - `MISSING_DATA` (environment): `{ no_zones: true }` hoặc `{ min_pct, zones: [{ zone_name, valid_pct }] }`
+        - `MISSING_DATA` (flock): `{ missing: MORNING | EVENING | NO_DEPARTURES }`
+        - `NOT_ASSESSED` (air, noise): {} — thiếu mẫu, nguồn không đánh giá
+        - `ENV_IN_RANGE`: `{ zone_name, in_range_pct }`
+        - `AIR_OVER_LIMIT`: `{ zone_name, hours }`
+        - `FLOCK_DROP`: `{ return_rate, drop_pct, baseline_avg, baseline_days }`
+        - `FLOCK_NO_BASELINE`: `{ min_days, baseline_days }`
+        - `NOISE_EPISODES`: `{ episodes }`
+        - `WEATHER_UNAVAILABLE`: {}
+        - `RAIN_DOWNGRADE`: `{ mm_per_hour }` — ACTION hạ xuống WATCH (BR-30)
+      required: [code, source, level, values]
+      properties:
+        code:
+          type: string
+          enum: [ALL_NORMAL, MISSING_DATA, NOT_ASSESSED, ENV_IN_RANGE, AIR_OVER_LIMIT, FLOCK_DROP, FLOCK_NO_BASELINE, NOISE_EPISODES, WEATHER_UNAVAILABLE, RAIN_DOWNGRADE]
+        source: { type: string, enum: [environment, air, flock, noise], nullable: true }
+        level: { type: string, enum: [SLIGHT, CLEAR], nullable: true, description: "Mức của nguồn khi lý do là một chỉ số lệch" }
+        values: { type: object, additionalProperties: true }
+
+    FarmWeather:
+      type: object
+      properties:
+        farm_id: { type: string }
+        has_coordinates: { type: boolean }
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        hours:
+          type: array
+          items:
+            type: object
+            properties:
+              hour: { type: string, format: date-time, description: "Đầu giờ (UTC); lượng mưa là tổng của giờ đó" }
+              temperature: { type: number, nullable: true }
+              humidity: { type: number, nullable: true }
+              precipitation_mm: { type: number, nullable: true }
+
     HealthIndicator:
       type: object
       properties:
@@ -4832,7 +4907,7 @@ components:
             flock: { type: boolean }
             noise: { type: boolean }
         current_status: { type: string, enum: [GOOD, WATCH, ACTION, INSUFFICIENT_DATA], description: "(ẩn khi PENDING)" }
-        current_reasons: { type: array, items: { type: string }, description: "(ẩn khi PENDING) Chỉ số quyết định kèm số liệu; nguồn tuỳ chọn không đánh giá; mưa; thiếu thời tiết" }
+        current_reasons: { type: array, items: { $ref: "#/components/schemas/HealthReason" }, description: "(ẩn khi PENDING) Chỉ số quyết định kèm số liệu; nguồn tuỳ chọn không đánh giá; mưa; thiếu thời tiết" }
         evidence:
           type: object
           description: "(ẩn khi PENDING) ALERT-FR-014"
@@ -4856,7 +4931,7 @@ components:
                 description: "Ảnh chụp lúc chấm — không bao giờ đổi (BR-31, D16)"
                 properties:
                   status: { type: string, enum: [GOOD, WATCH, ACTION, INSUFFICIENT_DATA] }
-                  reasons: { type: array, items: { type: string } }
+                  reasons: { type: array, items: { $ref: "#/components/schemas/HealthReason" } }
 
     HealthEvaluation:
       type: object
