@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as alertService from '@/services/alert.service'
+import * as alertEvidenceService from '@/services/alertEvidence.service'
 import type { AlertVerdictResult } from '@/types'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
@@ -46,4 +47,10 @@ export const verdictStats = asyncHandler(async (req: Request, res: Response) => 
     zoneId: req.query.zoneId as string | undefined,
   })
   res.json({ success: true, data: stats })
+})
+
+/** GET /alerts/:id/evidence – ALERT-FR-014 (dữ liệu quanh cảnh báo suy luận) */
+export const evidence = asyncHandler(async (req: Request, res: Response) => {
+  const data = await alertEvidenceService.getAlertEvidence(req.params.id, req.user)
+  res.json({ success: true, data })
 })
