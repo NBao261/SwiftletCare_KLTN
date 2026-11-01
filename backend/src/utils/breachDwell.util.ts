@@ -20,6 +20,8 @@ export interface DwelledBreach extends ThresholdBreach { started_at: Date }
 // quãng chờ đếm lại từ đầu (cảnh báo chậm tối đa 1 lần thời gian chờ); chạy nhiều instance thì chuyển
 // sang Redis.
 const startedAt = new Map<string, number>()
+/** Mẫu sống cuối của mỗi thiết bị — để biết thiết bị đã im lặng bao lâu trước mẫu này */
+const lastSampleAt = new Map<string, number>()
 
 const DIRECTIONS: ThresholdBreach['direction'][] = ['above', 'below']
 
@@ -29,13 +31,23 @@ const DIRECTIONS: ThresholdBreach['direction'][] = ['above', 'below']
  * - `ongoing`: mọi vượt ngưỡng của mẫu này (đủ thời gian chờ hay chưa).
  * Chỉ số có số đo nằm trong ngưỡng cắt quãng chờ của nó; chỉ số không có số đo (cảm biến lỗi, stale)
  * không bắt đầu cũng không cắt quãng chờ; đổi chiều (dưới → trên) đếm lại từ đầu.
+ * Thiết bị im lặng lâu hơn `maxGapMs` (ngưỡng mất kết nối của BR-10) thì mọi quãng chờ của nó đếm lại
+ * từ mẫu này: khoảng không có dữ liệu không được tính là "ở ngoài ngưỡng liên tục".
  */
 export function trackBreachDwell(
   nodeId: string,
   readings: Partial<Record<BreachMetric, unknown>>,
   breaches: ThresholdBreach[],
   sampleTime: number,
+  maxGapMs: number,
 ): { dwelled: DwelledBreach[]; ongoing: ThresholdBreach[] } {
+  const previous = lastSampleAt.get(nodeId)
+  if (previous !== undefined && sampleTime - previous > maxGapMs) {
+    for (const key of startedAt.keys()) if (key.startsWith(`${nodeId}|`)) startedAt.delete(key)
+  }
+  // Mẫu tới lệch thứ tự (sớm hơn mẫu trước) không lùi mốc
+  if (previous === undefined || sampleTime > previous) lastSampleAt.set(nodeId, sampleTime)
+
   for (const metric of Object.keys(BREACH_DWELL_MS) as BreachMetric[]) {
     const value = readings[metric]
     if (typeof value !== 'number' || !Number.isFinite(value)) continue
@@ -60,4 +72,5 @@ export function trackBreachDwell(
 /** Xoá mọi quãng chờ — cho test */
 export function clearBreachDwell(): void {
   startedAt.clear()
+  lastSampleAt.clear()
 }

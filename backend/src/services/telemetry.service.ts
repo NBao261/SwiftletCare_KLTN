@@ -3,7 +3,7 @@ import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'
 import { emitTelemetryUpdate } from '@/socket'
 import { findThresholdBreaches, raiseThresholdAlert } from '@/services/alert.service'
-import { markNodeSeen } from '@/services/device.service'
+import { OFFLINE_THRESHOLD_MS, markNodeSeen } from '@/services/device.service'
 import { trackBreachDwell } from '@/utils/breachDwell.util'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
 import { NotFoundError } from '@/utils/appError.util'
@@ -85,8 +85,9 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
   const zone = await Zone.findById(node.zone_id).lean()
   const breaches = zone ? findThresholdBreaches(payload, zone.thresholds) : []
   // BR-34 — quãng vượt ngưỡng tính trên MỌI mẫu sống (không chỉ mẫu được lưu) để 1 mẫu trong ngưỡng
-  // cắt được quãng chờ; mẫu buffer cũ không tham gia (tình trạng đã qua)
-  const dwell = zone && !isStale ? trackBreachDwell(nodeId, payload, breaches, sampleTime) : undefined
+  // cắt được quãng chờ; mẫu buffer cũ không tham gia (tình trạng đã qua). Im lặng quá ngưỡng mất kết nối
+  // (BR-10) thì đếm lại
+  const dwell = zone && !isStale ? trackBreachDwell(nodeId, payload, breaches, sampleTime, OFFLINE_THRESHOLD_MS) : undefined
 
   // Mẫu buffer offline luôn được ghi (mỗi dòng đã cách nhau ~10s ở firmware) và
   // không tham gia throttle của luồng sống. Mẫu sống: tối đa 1 mẫu/TELEMETRY_PERSIST_INTERVAL_MS
