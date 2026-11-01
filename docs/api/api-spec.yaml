@@ -80,7 +80,9 @@ tags:
   - name: Telemetry
     description: "ENV-FR-001..005 — Farm Owner, Domain Expert của farm; Technician, Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
   - name: Alerts
-    description: ALERT-FR-001/002/006/007/008/009 (Alert Engine — dedup, quiet hours, danh sách, xác nhận)
+    description: ALERT-FR-001/002/006/007/008/009/014, EXPERT-FR-003 (Alert Engine — dedup, quiet hours, danh sách, xác nhận, kiểm chứng và bằng chứng của cảnh báo suy luận)
+  - name: ExpertActivity
+    description: "EXPERT-FR-009 — lịch sử quyết định của Domain Expert trên một farm (và của Farm Owner khi farm chưa có chuyên gia, BR-22); chỉ Farm Owner và Domain Expert của farm"
   - name: Analytics
     description: "ANALYTICS-FR-001..005, VISION-FR-008..011 (biểu đồ môi trường, so sánh đa Zone, đếm chim/return-rate — chờ dữ liệu thật từ module VISION) — Farm Owner, Domain Expert của farm; Technician, Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
   - name: Harvests
@@ -1477,7 +1479,12 @@ paths:
         (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `fuzzy_tuning_history`, ghi audit
         `FUZZY_TUNING_UPDATED` rồi publish MQTT `config/update` (4 key `fuzzy_*`) để mọi ESP32
         trong Zone áp dụng ngay — không cần nạp lại firmware. Khoá lạ bị bỏ qua.
-        Technician, Administrator → 403 (Report 3 §2.4).
+        Technician, Administrator → 403 (Report 3 §2.4). Lịch sử ghi `source=MANUAL`.
+        EXPERT-FR-010 — farm có Domain Expert mà Farm Owner sửa: thay đổi vẫn áp dụng ngay và mở
+        (hoặc cập nhật, giữ giá trị gốc) 1 mục duyệt `PENDING_REVIEW` cho chuyên gia; chuyên gia sửa
+        cùng nhóm thì mục đang chờ đóng `ADJUSTED`. Farm chưa có chuyên gia: không mở mục duyệt.
+        Mọi lần sửa hệ số (Farm Owner hay Domain Expert) đều chuyển đề xuất `PROPOSED` của Zone sang
+        `SUPERSEDED` (EXPERT-FR-011), để duyệt đề xuất cũ không ghi đè chỉnh sửa vừa làm.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -1507,8 +1514,10 @@ paths:
   /farms/houses/{houseId}/bird-count-tuning:
     put:
       tags: [Farms]
-      summary: "Chỉnh mức giảm tỷ lệ chim về của nhà yến (EXPERT-FR-008, SRS v2.1.8) — DOMAIN_EXPERT"
+      summary: "Chỉnh mức giảm tỷ lệ chim về của nhà yến (EXPERT-FR-008, SRS v2.1.8) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
       description: |
+        Farm Owner trên farm đã có Domain Expert → 403. Thay đổi của Domain Expert báo trong app cho mọi
+        Farm Owner và vào lịch sử hoạt động (EXPERT-FR-009).
         Chim ra vào ở cửa của cả nhà yến nên số đếm, tỷ lệ chim về và cảnh báo `LOW_RETURN_RATE` tính theo
         House; mức giảm cho phép đặt ở đây (mặc định 20%, khoảng 5–50%). Lưu `bird_count_tuning_history`,
         ghi audit `BIRD_COUNT_TUNING_UPDATED`. Backend dùng, không gửi xuống thiết bị.
@@ -1534,8 +1543,10 @@ paths:
   /farms/zones/{zoneId}/detection-tuning:
     put:
       tags: [Farms]
-      summary: "Chỉnh tham số phát hiện của Zone (EXPERT-FR-008) — DOMAIN_EXPERT"
+      summary: "Chỉnh tham số phát hiện của Zone (EXPERT-FR-008) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
       description: |
+        Farm Owner trên farm đã có Domain Expert → 403. Thay đổi của Domain Expert báo trong app cho mọi
+        Farm Owner và vào lịch sử hoạt động (EXPERT-FR-009).
         Gửi 1 hoặc nhiều trong 5 tham số; server gộp với giá trị hiện tại, kiểm tra khoảng
         (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `detection_tuning_history`
         (người sửa, role, thời điểm, cũ/mới), ghi audit `DETECTION_TUNING_UPDATED` rồi publish
@@ -1565,6 +1576,30 @@ paths:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion:
+    post:
+      tags: [Farms]
+      summary: "Áp gợi ý hệ số của hệ thống (ANALYTICS-FR-010, EXPERT-FR-011) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
+      description: |
+        Server tính gợi ý hiện tại (như `GET /analytics/control/suggestion`) rồi áp ngay như ENV-FR-021,
+        lịch sử ghi `source=SUGGESTION_APPROVED`. Farm Owner trên farm đã có Domain Expert → 403, hệ số
+        giữ nguyên — phải gửi đề xuất (`POST /expert-activity/proposals`). Không có gợi ý (dữ liệu ít, mô
+        hình kém, hệ số hiện tại đã tốt) → 409 kèm lý do. Đề xuất `PROPOSED` của Zone chuyển `SUPERSEDED`.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      responses:
+        "200":
+          description: Zone sau khi áp gợi ý
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Zone" }
+        "403": { description: "Không có quyền trên Zone, hoặc Farm Owner trên farm đã có Domain Expert", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Hiện không có gợi ý — message nêu lý do", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
   /farms/zones/{zoneId}/thresholds:
     put:
       tags: [Farms]
@@ -1573,6 +1608,9 @@ paths:
         Kiểm tra từng cặp min<max và khoảng đo của từng cảm biến (nhiệt −40..125°C,
         ẩm 0..100%, ánh sáng ≤ 200.000 lux, NH3 ≤ 500 ppm, CO2 ≤ 5000 ppm) — 400 nếu vi phạm.
         Technician, Administrator → 403 (Report 3 §2.4).
+        EXPERT-FR-010 — farm có Domain Expert mà Farm Owner sửa: thay đổi vẫn áp dụng ngay và mở
+        (hoặc cập nhật, giữ giá trị gốc) 1 mục duyệt `PENDING_REVIEW` cho chuyên gia; chuyên gia sửa
+        cùng nhóm thì mục đang chờ đóng `ADJUSTED`. Farm chưa có chuyên gia: không mở mục duyệt.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -1612,6 +1650,9 @@ paths:
         hành (chưa cấu hình thì dùng giá trị gốc khớp firmware), thêm 1 bản ghi
         `threshold_history` với `source=RESET_TO_DEFAULT`, publish `config/update`
         xuống thiết bị và ghi audit log `THRESHOLD_UPDATED`.
+        EXPERT-FR-010 — farm có Domain Expert mà Farm Owner sửa: thay đổi vẫn áp dụng ngay và mở
+        (hoặc cập nhật, giữ giá trị gốc) 1 mục duyệt `PENDING_REVIEW` cho chuyên gia; chuyên gia sửa
+        cùng nhóm thì mục đang chờ đóng `ADJUSTED`. Farm chưa có chuyên gia: không mở mục duyệt.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       responses:
         "200":
@@ -2300,8 +2341,10 @@ paths:
   /devices/camera-nodes/{id}/counting-ring:
     put:
       tags: [Devices]
-      summary: "Vẽ vòng đếm chim của 1 camera (VISION-FR-018) — DOMAIN_EXPERT của farm chứa camera"
+      summary: "Vẽ vòng đếm chim của 1 camera (VISION-FR-018) — DOMAIN_EXPERT của farm chứa camera; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
       description: |
+        Farm Owner trên farm đã có Domain Expert → 403. Thay đổi của Domain Expert báo trong app cho mọi
+        Farm Owner và vào lịch sử hoạt động (EXPERT-FR-009).
         Vòng khép kín quanh miệng lỗ ra vào (`docs/bird-counting-plan.md` 3.3 ý 7, 19.8), các đỉnh
         `[x, y]` theo tỉ lệ khung hình 0–1, theo thứ tự quanh vòng; 3–12 đỉnh (12 là giới hạn kỹ thuật
         chống nhập nhầm). `into_ring_is_exit`: true khi trong vòng là phía ngoài trời (camera trong nhà).
@@ -2747,7 +2790,8 @@ paths:
         - {
             name: status,
             in: query,
-            schema: { type: string, enum: [ACTIVE, ACKNOWLEDGED, RESOLVED] },
+            description: "`DISMISSED` — cảnh báo suy luận bị bác bỏ, không còn hiệu lực (ALERT-FR-007)",
+            schema: { type: string, enum: [ACTIVE, ACKNOWLEDGED, DISMISSED, RESOLVED] },
           }
         - {
             name: severity,
@@ -2791,6 +2835,8 @@ paths:
       description: |
         Căn cứ để Domain Expert chỉnh tham số phát hiện (EXPERT-FR-008). `confirmedPct`
         tính trên số đã kiểm chứng; `null` khi chưa kiểm chứng cảnh báo nào của loại đó.
+        `byRole` tách số xác nhận / bác bỏ theo vai trò người kết luận (Farm Owner kết luận
+        khi farm chưa có chuyên gia, BR-22).
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
@@ -2813,6 +2859,11 @@ paths:
                             rejected: { type: integer }
                             pending: { type: integer }
                             confirmedPct: { type: integer, nullable: true }
+                            byRole:
+                              type: object
+                              properties:
+                                DOMAIN_EXPERT: { type: object, properties: { confirmed: { type: integer }, rejected: { type: integer } } }
+                                FARM_OWNER: { type: object, properties: { confirmed: { type: integer }, rejected: { type: integer } } }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /alerts/{id}:
@@ -2846,6 +2897,37 @@ paths:
                   },
               },
           }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /alerts/{id}/evidence:
+    get:
+      tags: [Alerts]
+      summary: "Bằng chứng của một cảnh báo suy luận (ALERT-FR-014, EXPERT-FR-003) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        Hệ thống trình bày dữ liệu, không tự kết luận.
+        - `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`: cửa sổ `created_at ± 30 phút`; mẫu
+          telemetry của zone (nhiệt độ, độ ẩm, NH3, CO2, tiếng ồn), số đếm 5 phút của nhà chứa zone,
+          cảnh báo thiết bị đang mở của zone.
+        - `LOW_RETURN_RATE`: ngày của phiên (`metadata.sessionDate`); % thời gian trong ngưỡng của từng
+          zone trong nhà, `NOISE_ANOMALY` và cảnh báo thiết bị của nhà trong ngày đó.
+
+        Nguồn không có dữ liệu trong cửa sổ (VD nút AI offline) có `status: missing`, không trả 0.
+        `earlier_verdicts`: tối đa 10 cảnh báo trước cùng loại, cùng zone/nhà, đã có kết luận.
+        Loại không phải suy luận → 400; không có quyền trên farm → 403 (Technician, Administrator).
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/AlertEvidence" }
+        "400": { description: "Cảnh báo không thuộc loại suy luận", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -2899,11 +2981,19 @@ paths:
   /alerts/{id}/verdict:
     put:
       tags: [Alerts]
-      summary: "Domain Expert xác nhận/bác bỏ một cảnh báo suy luận (EXPERT-FR-003) — DOMAIN_EXPERT"
+      summary: "Xác nhận/bác bỏ một cảnh báo suy luận (EXPERT-FR-003) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
       description: |
         Chỉ áp cho `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE`
-        (loại khác → 400). Ghi lại được. Không đổi `status` của cảnh báo — xác nhận đã
-        xử lý vẫn là việc của Farm Owner. Ghi audit `ALERT_VERDICT_SET`.
+        (loại khác → 400). Ghi lại được; lưu người, vai trò, thời điểm, ghi chú. Farm Owner
+        trên farm đã có Domain Expert → 403. `REJECTED` bắt buộc có `note` (422).
+
+        Tác động lên `status` (Report 3 §6.1, SM-01):
+        - `REJECTED` khi `ACTIVE`/`ACKNOWLEDGED` → `DISMISSED`, trạng thái cũ lưu ở `previous_status`;
+          cảnh báo không còn hiệu lực, lần gặp lại cùng sự cố chỉ tăng `occurrence_count`, không thông báo;
+        - đổi sang `CONFIRMED` khi `DISMISSED` → về `previous_status` và báo lại Farm Owner;
+        - `CONFIRMED` trên cảnh báo còn hiệu lực, hoặc mọi kết luận trên cảnh báo `RESOLVED` → giữ nguyên.
+
+        Ghi audit `ALERT_VERDICT_SET`; kết luận của Domain Expert báo trong app cho mọi Farm Owner (EXPERT-FR-009).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -2915,7 +3005,7 @@ paths:
               required: [result]
               properties:
                 result: { type: string, enum: [CONFIRMED, REJECTED] }
-                note: { type: string, maxLength: 1000 }
+                note: { type: string, maxLength: 1000, description: "Bắt buộc khi `result = REJECTED`" }
       responses:
         "200":
           description: Đã ghi kết quả kiểm chứng
@@ -2927,8 +3017,9 @@ paths:
                   - properties:
                       data: { $ref: "#/components/schemas/Alert" }
         "400": { description: "Cảnh báo không thuộc loại suy luận", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
+        "403": { description: "Không có quyền trên farm, hoặc Farm Owner trên farm đã có Domain Expert (BR-22)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   # ── ANALYTICS ─────────────────────────────────────────────────────────────
   /analytics/env/summary:
@@ -3670,6 +3761,217 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ── EXPERT ACTIVITY (EXPERT-FR-009) ───────────────────────────────────────
+  /expert-activity:
+    get:
+      tags: [ExpertActivity]
+      summary: "Lịch sử hoạt động của chuyên gia trên một farm (EXPERT-FR-009) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        Đọc từ audit log theo `farm_id` (Report 4 §6.1). Gồm các quyết định của Domain Expert: sửa và
+        reset ngưỡng zone (`THRESHOLD_UPDATED`), hệ số mờ (`FUZZY_TUNING_UPDATED`), tham số phát hiện
+        (`DETECTION_TUNING_UPDATED`), mức giảm tỷ lệ chim về (`BIRD_COUNT_TUNING_UPDATED`), vòng đếm
+        (`COUNTING_RING_UPDATED`), kết luận cảnh báo (`ALERT_VERDICT_SET`), kết luận báo cáo
+        (`HEALTH_REPORT_CONCLUDED`), chấp nhận / hoàn lại thay đổi của Farm Owner (`REVIEW_ACCEPTED`,
+        `REVIEW_REVERTED`), duyệt / từ chối đề xuất hệ số (`PROPOSAL_APPROVED`, `PROPOSAL_REJECTED`).
+        Mỗi quyết định một dòng: hoàn lại hoặc duyệt đề xuất chỉ hiện `REVIEW_REVERTED` / `PROPOSAL_APPROVED`,
+        không thêm dòng đổi ngưỡng / hệ số của chính thao tác đó. Quyết định mà Farm Owner làm thay khi farm chưa có chuyên gia
+        (BR-22: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm) cũng được liệt kê,
+        với `actor_role = FARM_OWNER`. Mới nhất trước. Technician, Administrator → 403.
+      parameters:
+        - { name: farmId, in: query, required: true, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED]
+        - { name: zoneId, in: query, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/ExpertActivityEntry" } }
+                      meta:
+                        type: object
+                        properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /expert-activity/reviews:
+    get:
+      tags: [ExpertActivity]
+      summary: "Mục duyệt thay đổi của Farm Owner (EXPERT-FR-010) — FARM_OWNER, DOMAIN_EXPERT"
+      description: "Mới nhất trước. Technician, Administrator → 403."
+      parameters:
+        - { name: farmId, in: query, required: true, schema: { type: string } }
+        - { name: zoneId, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { name: status, in: query, schema: { type: string, enum: [PENDING_REVIEW, ACCEPTED, REVERTED, ADJUSTED] } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/ParameterReview" } }
+                      meta: { type: object, properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /expert-activity/reviews/{id}/accept:
+    put:
+      tags: [ExpertActivity]
+      summary: "Chuyên gia chấp nhận thay đổi của Farm Owner (EXPERT-FR-010, SM-10) — DOMAIN_EXPERT"
+      description: "PENDING_REVIEW → ACCEPTED; báo Farm Owner (EXPERT-FR-009), audit REVIEW_ACCEPTED. Farm Owner, Technician, Administrator → 403."
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ParameterReview" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Mục duyệt đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /expert-activity/reviews/{id}/revert:
+    put:
+      tags: [ExpertActivity]
+      summary: "Chuyên gia hoàn lại thay đổi của Farm Owner (EXPERT-FR-010, SM-10) — DOMAIN_EXPERT"
+      description: |
+        Khôi phục giá trị gốc (trước lần sửa đầu của Farm Owner) của nhóm `thresholds` hoặc `fuzzy`, gửi
+        xuống mọi thiết bị của Zone, lịch sử ghi `source=EXPERT_REVERT`; `PENDING_REVIEW` → `REVERTED`;
+        báo Farm Owner, audit `REVIEW_REVERTED`. Farm Owner, Technician, Administrator → 403.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ParameterReview" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Mục duyệt đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /expert-activity/proposals:
+    get:
+      tags: [ExpertActivity]
+      summary: "Đề xuất hệ số (EXPERT-FR-011) — FARM_OWNER, DOMAIN_EXPERT"
+      description: "Mới nhất trước. Technician, Administrator → 403."
+      parameters:
+        - { name: farmId, in: query, required: true, schema: { type: string } }
+        - { name: zoneId, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { name: status, in: query, schema: { type: string, enum: [PROPOSED, APPROVED, REJECTED, SUPERSEDED] } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/CoefficientProposal" } }
+                      meta: { type: object, properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [ExpertActivity]
+      summary: "Farm Owner gửi gợi ý hệ số của hệ thống cho chuyên gia (EXPERT-FR-011, SM-11) — FARM_OWNER"
+      description: |
+        Server tính gợi ý hiện tại của Zone (ANALYTICS-FR-010) và lưu cùng hệ số đang dùng; đề xuất
+        `PROPOSED` cũ của Zone chuyển `SUPERSEDED`; báo Domain Expert trong ứng dụng. Không có gợi ý → 409
+        kèm lý do. Farm chưa có chuyên gia → 409 (Farm Owner áp trực tiếp, `POST /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [zoneId], properties: { zoneId: { type: string } } }
+      responses:
+        "201":
+          description: Đã gửi đề xuất
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/CoefficientProposal" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Không có gợi ý, hoặc farm chưa có chuyên gia", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /expert-activity/proposals/{id}/approve:
+    put:
+      tags: [ExpertActivity]
+      summary: "Chuyên gia duyệt đề xuất hệ số (EXPERT-FR-011, SM-11) — DOMAIN_EXPERT"
+      description: |
+        Áp `suggested_values` như ENV-FR-021 (lịch sử `source=SUGGESTION_APPROVED`, gửi xuống thiết bị);
+        `PROPOSED` → `APPROVED`; báo Farm Owner, audit `PROPOSAL_APPROVED`.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/CoefficientProposal" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Đề xuất đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /expert-activity/proposals/{id}/reject:
+    put:
+      tags: [ExpertActivity]
+      summary: "Chuyên gia từ chối đề xuất hệ số (EXPERT-FR-011, SM-11) — DOMAIN_EXPERT"
+      description: "PROPOSED → REJECTED; bắt buộc ghi chú (422); báo Farm Owner, audit PROPOSAL_REJECTED."
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [note], properties: { note: { type: string, maxLength: 1000 } } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/CoefficientProposal" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Đề xuất đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   # ── NOTIFICATIONS (EXPERT-FR-006/007) ─────────────────────────────────────
   /notifications:
     get:
@@ -4180,7 +4482,7 @@ components:
           nullable: true
           description: "Đối tượng để client mở tới"
           properties:
-            kind: { type: string, enum: [alert, health_report] }
+            kind: { type: string, enum: [alert, health_report, expert_decision, parameter_review, coefficient_proposal], description: "`expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007)" }
             id: { type: string }
         read_at: { type: string, format: date-time, nullable: true }
         created_at: { type: string, format: date-time }
@@ -4216,7 +4518,8 @@ components:
           properties:
             text: { type: string }
             by: { type: object, properties: { _id: { type: string }, full_name: { type: string } } }
-            at: { type: string, format: date-time }
+            at: { type: string, format: date-time, description: "Lúc viết kết luận lần đầu" }
+            edited_at: { type: string, format: date-time, nullable: true, description: "Lần sửa gần nhất của tác giả (EXPERT-FR-006)" }
 
     RelayOverrideLog:
       type: object
@@ -4444,7 +4747,8 @@ components:
         message: { type: string }
         snapshot_url: { type: string, nullable: true }
         metadata: { type: object }
-        status: { type: string, enum: [ACTIVE, ACKNOWLEDGED, DISMISSED, RESOLVED], description: "DISMISSED — Domain Expert bác bỏ cảnh báo suy luận (Report 3 §6.1); luồng bác bỏ làm ở G-03" }
+        status: { type: string, enum: [ACTIVE, ACKNOWLEDGED, DISMISSED, RESOLVED], description: "DISMISSED — cảnh báo suy luận bị bác bỏ, không còn hiệu lực (Report 3 §6.1, EXPERT-FR-003)" }
+        previous_status: { type: string, enum: [ACTIVE, ACKNOWLEDGED], nullable: true, description: "Trạng thái trước khi bị bác bỏ; đổi kết luận sang CONFIRMED thì cảnh báo trở về trạng thái này" }
         created_at: { type: string, format: date-time }
         last_seen_at: { type: string, format: date-time, nullable: true, description: "Lần gần nhất sự cố còn được ghi nhận (cập nhật tối đa 1 lần/phút) — ALERT-FR-008" }
         occurrence_count: { type: integer, minimum: 1, description: "Số lần sự cố được ghi nhận lại trong khi alert còn mở (thay vì tạo alert trùng)" }
@@ -4456,12 +4760,133 @@ components:
         expert_verdict:
           type: object
           nullable: true
-          description: "EXPERT-FR-003 — kết quả kiểm chứng của Domain Expert; không có = chờ kiểm chứng"
+          description: "EXPERT-FR-003 — kết quả kiểm chứng; không có = chờ kiểm chứng. Farm Owner kết luận khi farm chưa có chuyên gia (BR-22)"
           properties:
             result: { type: string, enum: [CONFIRMED, REJECTED] }
             note: { type: string, nullable: true }
-            by: { type: string }
+            by:
+              type: object
+              description: "Người kết luận (ALERT-FR-007: cảnh báo DISMISSED hiện ai bác bỏ)"
+              properties: { _id: { type: string }, full_name: { type: string } }
+            role: { type: string, enum: [DOMAIN_EXPERT, FARM_OWNER] }
             at: { type: string, format: date-time }
+
+    AlertEvidence:
+      type: object
+      description: "ALERT-FR-014 — dữ liệu quanh một cảnh báo suy luận. Mỗi nguồn có `status: ok | missing`"
+      properties:
+        alert_id: { type: string }
+        type: { $ref: "#/components/schemas/AlertType" }
+        window:
+          type: object
+          properties: { from: { type: string, format: date-time }, to: { type: string, format: date-time } }
+        telemetry:
+          type: object
+          nullable: true
+          description: "Loại theo zone — mẫu của zone trong cửa sổ"
+          properties:
+            status: { type: string, enum: [ok, missing] }
+            samples:
+              type: array
+              items:
+                type: object
+                properties:
+                  timestamp: { type: string, format: date-time }
+                  temperature: { type: number, nullable: true }
+                  humidity: { type: number, nullable: true }
+                  nh3_ppm: { type: number, nullable: true }
+                  co2_ppm: { type: number, nullable: true }
+                  sound_db: { type: number, nullable: true }
+        bird_counts:
+          type: object
+          nullable: true
+          description: "Loại theo zone — số đếm 5 phút của nhà chứa zone"
+          properties:
+            status: { type: string, enum: [ok, missing] }
+            buckets:
+              type: array
+              items:
+                type: object
+                properties:
+                  bucket_start: { type: string, format: date-time }
+                  entry_count: { type: integer }
+                  exit_count: { type: integer }
+        zones_in_range:
+          type: array
+          nullable: true
+          description: "LOW_RETURN_RATE — % thời gian trong ngưỡng của từng zone trong ngày"
+          items:
+            type: object
+            properties:
+              zone_id: { type: string }
+              name: { type: string }
+              status: { type: string, enum: [ok, missing] }
+              temp_in_range_pct: { type: number, nullable: true }
+              humidity_in_range_pct: { type: number, nullable: true }
+        noise_alerts:
+          type: array
+          nullable: true
+          description: "LOW_RETURN_RATE — NOISE_ANOMALY của nhà trong ngày"
+          items: { $ref: "#/components/schemas/Alert" }
+        device_alerts:
+          type: array
+          description: "Cảnh báo thiết bị: đang mở của zone (loại theo zone), hoặc của nhà trong ngày (LOW_RETURN_RATE)"
+          items: { $ref: "#/components/schemas/Alert" }
+        earlier_verdicts:
+          type: array
+          description: "EXPERT-FR-003 — tối đa 10 cảnh báo trước cùng loại, cùng zone/nhà, đã có kết luận"
+          items: { $ref: "#/components/schemas/Alert" }
+
+    ParameterReview:
+      type: object
+      description: "EXPERT-FR-010, Report 3 §6.10 — mục duyệt thay đổi của Farm Owner trên farm có chuyên gia; mỗi Zone, mỗi nhóm chỉ 1 mục PENDING_REVIEW"
+      properties:
+        _id: { type: string }
+        zone_id: { type: string }
+        farm_id: { type: string }
+        group: { type: string, enum: [thresholds, fuzzy] }
+        old_values: { type: object, description: "Giá trị trước lần sửa đầu tiên của Farm Owner — giữ nguyên khi Farm Owner sửa tiếp" }
+        new_values: { type: object, description: "Giá trị sau lần sửa gần nhất" }
+        status: { type: string, enum: [PENDING_REVIEW, ACCEPTED, REVERTED, ADJUSTED] }
+        changed_by: { type: string }
+        reviewed_by: { type: string, nullable: true }
+        reviewed_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CoefficientProposal:
+      type: object
+      description: "EXPERT-FR-011, Report 3 §6.11 — gợi ý hệ số Farm Owner gửi chuyên gia"
+      properties:
+        _id: { type: string }
+        zone_id: { type: string }
+        farm_id: { type: string }
+        submitted_by: { type: string }
+        suggested_values: { type: object, description: "Hệ số gợi ý lúc gửi (fuzzy_humidity_band, fuzzy_temp_band, fuzzy_fan_dry_level)" }
+        current_values: { type: object, description: "Hệ số đang dùng lúc gửi" }
+        predicted: { type: object, nullable: true, description: "% thời gian trong ngưỡng và % phun dự kiến (hiện tại / gợi ý)" }
+        status: { type: string, enum: [PROPOSED, APPROVED, REJECTED, SUPERSEDED] }
+        note: { type: string, nullable: true, description: "Lý do từ chối" }
+        decided_by: { type: string, nullable: true }
+        decided_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    ExpertActivityEntry:
+      type: object
+      description: "EXPERT-FR-009 — một quyết định trong lịch sử hoạt động của farm"
+      properties:
+        _id: { type: string }
+        action: { type: string }
+        actor:
+          type: object
+          properties: { _id: { type: string }, full_name: { type: string } }
+        actor_role: { type: string, enum: [DOMAIN_EXPERT, FARM_OWNER] }
+        target_type: { type: string }
+        target_id: { type: string }
+        zone_id: { type: string, nullable: true }
+        house_id: { type: string, nullable: true }
+        metadata: { type: object, description: "Giá trị cũ/mới (`before`, `after`) hoặc kết quả kiểm chứng" }
+        created_at: { type: string, format: date-time }
 
     ProvisionedDevice:
       type: object
