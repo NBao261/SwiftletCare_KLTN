@@ -26,7 +26,7 @@ Skill thiết kế UI/UX mobile cho Claude Code:https://github.com/ceorkm/mobile
 - JDK 17 trở lên — dùng luôn JDK đi kèm Android Studio (`jbr`, JDK 21).
 - Android Studio: Android SDK + emulator (vd. Pixel 6). Lần build đầu Gradle tự tải platform, build-tools và NDK mà React Native 0.88 cần (có thể lâu, cần mạng).
 - Backend chạy local: `docker compose up -d mongodb emqx` rồi `cd backend && npm run dev` (API ở `:3000`).
-- **Không chạy được trên Expo Go**: app có module native (mmkv, skia, maps) và chưa cài `expo-dev-client` — phải dùng bản build `npm run android`.
+- **Không chạy được trên Expo Go**: app có module native (mmkv, maps) và chưa cài `expo-dev-client` — phải dùng bản build `npm run android`.
 
 ### Biến môi trường máy (Windows)
 
@@ -66,8 +66,7 @@ Ghi chú các gói ngoài danh sách SDK 58:
 | Gói                             | Phiên bản                             | Lý do                                                                                              |
 | ------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `react-dom`                     | trùng `react` (19.3.0)                | `burnt` → `sonner` cần `react-dom`; không khai báo thì npm kéo bản mới hơn `react` và báo xung đột |
-| `victory-native`                | ~42.0.1                               | bản 43 cần Skia ≥ 2.15, SDK 58 đi kèm Skia 2.14                                                    |
-| `react-native-mmkv`             | ^4.3.2 + `react-native-nitro-modules` | mmkv 4 chạy trên Nitro Modules                                                                     |
+| `react-native-mmkv`             | ^4.3.2 + `react-native-nitro-modules` | mmkv 4 chạy trên Nitro Modules — chưa dùng: cần bản build có Nitro, Expo Go không có, nên lựa chọn trên máy lưu bằng `expo-file-system` |
 | `@testing-library/react-native` | ~14.1.0 + `test-renderer`             | `expo-router` 58 cần bản ≥ 14; bản 14 thay `react-test-renderer` bằng `test-renderer`              |
 | `jest` / `typescript`           | ~30.5.2 / ~6.0.3                      | theo `expo install --check` của SDK 58                                                             |
 | `expo-av`                       | đã gỡ                                 | không còn trong SDK — phát video/âm thanh dùng `expo-video` / `expo-audio`                         |
@@ -82,7 +81,7 @@ Thay đổi code đi kèm: `runOnJS` → `scheduleOnRN` (`react-native-worklets`
 | `EXPO_PUBLIC_WS_URL`  | `ws://localhost:3000`   | Socket.io, đổi host giống dòng trên.                                                                                                |
 | `EXPO_PUBLIC_STREAM_URL` | `http://localhost:8888` | Gốc HLS của MediaMTX cho live stream camera AI (`expo-video`, token 60 giây — VISION-FR-013). MediaMTX phải bật HLS; đổi host giống dòng trên. |
 
-App khoá chiều dọc (`app/_layout.tsx`, `expo-screen-orientation`); riêng trình phát camera (`components/home/LiveCameraPlayer.tsx`) mở khoá xoay khi đang phóng to. Thêm `expo-video`, `expo-screen-orientation` là gói native: sau khi kéo code phải `npm ci` rồi `npm run android` để build lại app.
+App khoá chiều dọc (`app/_layout.tsx`, `expo-screen-orientation`); riêng trình phát camera (`components/home/LiveCameraPlayer.tsx`) mở khoá xoay khi đang phóng to, và nút toàn màn của camera ở tab Trang trại (`components/farm/CameraFullscreenModal.tsx`) khoá ngang rồi trả lại dọc khi đóng. `expo-network` cho biết đang dùng Wi-Fi hay dữ liệu di động để quyết camera có tự phát không. Thêm `expo-video`, `expo-screen-orientation`, `expo-network` là gói native: sau khi kéo code phải `npm ci` rồi `npm run android` để build lại app.
 
 Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở đây.
 
@@ -91,19 +90,18 @@ Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở �
 - `app.json`: `typedRoutes` bật; `orientation: default` (app tự khoá dọc trong `app/_layout.tsx`, chỉ trình phát camera xoay ngang); `userInterfaceStyle: light` (app chỉ có giao diện sáng, máy bật chế độ tối cũng không đổi; Android cần gói `expo-system-ui` để giữ đúng giao diện sáng); plugin `expo-router`, `expo-splash-screen`, `expo-secure-store`, `expo-notifications`, `expo-camera`, `expo-asset`, `expo-font`. Từ SDK 57 splash khai báo trong plugin `expo-splash-screen` (không còn khoá `splash` ở gốc): ảnh `splash-blank.png`, nền `#FFFFFF`; adaptive icon nền `#172008` trùng nền logo.
 - `tsconfig.json`: `strict`; không dùng `baseUrl` (TypeScript 6 đã bỏ); alias `@/assets/*` → `./assets/*` (ảnh, font ở gốc `mobile/`) và `@/*` → `./src/*` (toàn bộ code). expo-router tự nhận route trong `src/app/`.
 - `babel.config.js`: chỉ `babel-preset-expo` (tự đọc alias của tsconfig và tự thêm plugin Reanimated).
-- `package.json` → `expo.install.exclude`: `@shopify/react-native-skia` (lý do ở Known debt của `mobile/CLAUDE.md`).
+- Biểu đồ: `react-native-gifted-charts` (chạy trên `react-native-svg` và `expo-linear-gradient` đã có), chỉ import trong `src/components/charts/`. Đã gỡ `victory-native` và Skia (2026-11-01).
+- `expo-location` (toạ độ farm, FARM-FR-001): chỉ xin quyền vị trí khi người dùng bấm "Lấy vị trí hiện tại"; câu xin quyền ở plugin `expo-location` và `ios.infoPlist` của `app.json` ("lấy vị trí để điền toạ độ trang trại", không dùng bản đồ — Report 4 §5.4). `expo-camera` quét nhãn QR khi thêm thiết bị (MF-10). Cả hai cần build lại app (`npm run android`) sau khi cài.
 
 **Cấu hình còn thiếu so với Report 3/4** (làm cùng PR của tính năng cần nó):
 
 | Thiếu                                                                                                                                                                                 | Cần cho                                                                    | Việc                                                                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `expo-video` chưa cài                                                                                                                                                                 | live stream HLS (VISION-FR-013, Report 4 §5.4)                             | `npx expo install expo-video`                                                                                                           |
-| `expo-location` chưa cài, dù `app.json` đã xin `ACCESS_FINE_LOCATION`                                                                                                                 | toạ độ trang trại lấy tại nhà yến (FARM-FR-001)                            | cài, sửa câu `NSLocationWhenInUseUsageDescription` thành "Lấy toạ độ trang trại khi đứng tại nhà yến" (Report 4 §5.4 không dùng bản đồ) |
 | `react-native-maps` có trong `package.json`                                                                                                                                           | — Report 4 §5.4 nói không thêm thư viện bản đồ                             | gỡ khi làm màn trang trại                                                                                                               |
 | FCM: chưa có `google-services.json` (`android.googleServicesFile`), backend chưa có endpoint nhận token trong `api-spec.yaml`                                                         | push (ALERT-FR-002)                                                        | chờ backend (G-10); không tự đặt endpoint                                                                                               |
 | Endpoint MF-11 (trạng thái ngày, chấm điểm, bỏ qua) chưa có trong `api-spec.yaml`                                                                                                     | màn sức khỏe ngày (BR-31)                                                  | chờ backend (G-11)                                                                                                                      |
 | `ENDPOINTS` chưa có: `/notifications`, `/alerts/{id}/verdict`, `/health-reports`, `/harvests`, `/devices/camera-nodes/{id}/stream-token`, `/devices/sensor-nodes/{id}/relay-override` | thông báo trong app, kiểm chứng, báo cáo, harvest, live stream, chế độ tay | thêm khi làm màn, đúng `api-spec.yaml`                                                                                                  |
-| Socket chưa có `JOIN_HOUSE`, `NOTIFICATION_NEW`                                                                                                                                       | đếm chim, cảnh báo nhà yến, thông báo                                      | thêm trước màn đầu tiên đăng ký sự kiện                                                                                                 |
+| Socket chưa có `NOTIFICATION_NEW` (phòng nhà, tầng đã đếm số màn dùng chung)                                                                                                                                       | đếm chim, cảnh báo nhà yến, thông báo                                      | thêm trước màn đầu tiên đăng ký sự kiện                                                                                                 |
 | `.env.example` còn ghi "SRS §9.1"                                                                                                                                                     | —                                                                          | đổi thành `docs/api/api-spec.yaml`                                                                                                      |
 
 - Enum và kiểu dữ liệu giữ tay trong `src/types/<module>.types.ts`, phải khớp `backend/src/types/domain.types.ts` (không có package dùng chung).
@@ -127,12 +125,14 @@ mobile/
    │  ├─ index.tsx               # chuyển hướng: chưa đăng nhập → (auth)/login; mật khẩu tạm → reset-password; còn lại → tab đầu của role
    │  ├─ (auth)/                 # _layout · login · forgot-password · verify-code · reset-password (cả đổi mật khẩu tạm)
    │  │                          #   không có đăng ký công khai (Report 3 §1.2)
-   │  ├─ (tabs)/                 # _layout (tab theo role từ constants/roleTabs.ts) · home/ (Trang chủ — hiện chỉ tab của Farm Owner mở; Domain Expert chưa có tab này trong ROLE_TABS) · farms/ · alerts/ ·
-   │  │                          #   analytics/ · profile/ (Tài khoản, mọi role) · menu-1/ · menu-2/ (menu tạm của Domain Expert)
-   │  ├─ farm/[farmId].tsx       # chi tiết trang trại
-   │  ├─ zone/[zoneId].tsx       # chi tiết Zone
+   │  ├─ (tabs)/                 # _layout (tab theo role từ constants/roleTabs.ts) · home/ (Trang chủ — hiện chỉ tab của Farm Owner mở; Domain Expert chưa có tab này trong ROLE_TABS) ·
+   │  │                          #   farms/ (Stack lồng trong tab: _layout · index = Màn A danh sách nhà của farm · [houseId]/index = Màn B một nhà ·
+   │  │                          #   [houseId]/settings = Cài đặt nhà · farm-settings = Cài đặt farm · farm-create = Tạo farm) · alerts/ ·
+   │  │                          #   analytics/ · profile/ (Tài khoản, mọi role) · menu-1/ (không role nào dùng) · menu-2/ (menu tạm của Domain Expert)
+   │  ├─ farm/[farmId].tsx       # chuyển tiếp sang Màn A của farm đó (giữ cho link cũ)
+   │  ├─ zone/[zoneId].tsx       # chuyển tiếp sang Màn B của nhà chứa zone, đúng tab tầng (giữ cho link cũ)
    │  ├─ device/[deviceId].tsx   # chi tiết thiết bị
-   │  ├─ alert/[alertId].tsx     # chi tiết cảnh báo
+   │  ├─ alert/[alertId].tsx     # chi tiết cảnh báo dạng trang (Trang chủ, sau này push) — cùng AlertDetailContent với sheet của tab Cảnh báo
    │  └─ livestream/[zoneId].tsx # live stream (sẽ đổi theo camera nhà yến — VISION-FR-013)
    ├─ components/
    │  ├─ ui/                     # text · button · pressable-scale · text-field · code-input · form-message · card · icon-button · bottom-sheet · split-badge · skeleton · empty-state · loading-overlay · toast
@@ -141,6 +141,24 @@ mobile/
    │  │                          #   LogoutButton.tsx (đăng xuất có hỏi xác nhận — tab Tài khoản, màn mật khẩu tạm)
    │  ├─ layout/                 # AnimatedSplash.tsx · TextLogo.tsx (logo chữ của splash và màn đăng nhập) · BottomTabBar.tsx (thanh tab, nút nổi) · AppHeader.tsx (header dùng chung, tự chừa vùng an toàn) ·
    │  │                          #   PlaceholderScreen.tsx (màn tạm của menu chưa gán) · StatusBarGlass.tsx (kính mờ vùng giờ/pin khi cuộn)
+   │  ├─ charts/                 # bọc react-native-gifted-charts, chỉ ở đây import thư viện: ChartFrame (cao 220, 4 trạng thái, chú thích, câu cho trình đọc màn hình) ·
+   │  │                          #   MetricLineChart (đường theo thời gian, vạch ngưỡng, điểm ngoài ngưỡng cam, chạm giữ xem giá trị, nhiều chuỗi, nét đứt dự báo) ·
+   │  │                          #   BirdBarChart (cột đôi Ra/Về + đường tỉ lệ về tổ) · ControlChart (độ ẩm + vùng phun sương, quạt, mốc đổi hệ số) · HarvestStackedChart (sản lượng xếp chồng theo loại tổ, như web) · ChartFullscreenModal (xoay ngang)
+   │  ├─ analytics/              # màn Phân tích: AnalyticsFilterBar (chip tầng, đầu màn) · AnalyticsRangeChips (chip thời gian, dưới hàng tab, dính khi cuộn) · ChoiceChips · KpiGrid/KpiTile · AnalyticsTabs (dính khi cuộn, cùng kiểu chip tầng) · StatRow ·
+   │  │                          #   BirdTab (BucketSheet, CorrelationCard) · EnvironmentTab · ControlTab (OverrideHistoryCard, SuggestionCard) · HarvestTab · ReportTab (ReportMetrics)
+   │  ├─ alert/                  # tab Cảnh báo: SeveritySummary (dải mức = lọc nhanh) · SeverityLabel · AlertFilterChips (Tầng · Loại · Phán quyết) ·
+   │  │                          #   AlertRow (vuốt trái để xác nhận) · AcknowledgeSheet (chip ghi chú nhanh) · AlertDetailSheet (toàn màn, kéo xuống để đóng) ·
+   │  │                          #   AlertDetailContent · AlertEvidence (bằng chứng ghép ±30 phút) · VerdictSheet · NotificationSettingsSheet (⚙)
+   │  ├─ common/                 # ComingSoonAction (thao tác backend chưa có API, nhãn "Sắp có") · RelayIcon (icon theo loại relay — Trang chủ và tab Trang trại) · ZoomableView (zoom và chạm hiện/ẩn thanh điều khiển trên khung camera)
+   │  ├─ farm/                   # tab Trang trại — Màn A: HeaderPicker · OptionSheet (chọn farm/nhà) · FarmSummaryStrip; thẻ nhà dùng lại home/HouseStatusCard (onPress mở Màn B, nút ghim ★ như web);
+   │  │                          #   Màn B: HouseCameraPanel (ghim đầu, thu gọn 48 px) · CameraFullscreenModal · CameraControlColumn (cột nút dọc mép phải, nút 40 icon 24 nét rỗng — khung nhỏ và toàn màn dùng chung) · CellularPlaybackPrompt · BirdCountStrip · ZoneTabs ·
+   │  │                          #   HouseYieldRow (ô ngang sản lượng tháng của nhà, dưới dải chim ra/về) · ZoneAlertRow · SensorTileGrid · CollapsibleSection · ActuatorSection · RelayControlSheet · DeviceSection · DeviceDetailSheet ·
+   │  │                          #   ZoneSettingsSection (Cài đặt zone xem nhanh, ⋮ mỗi nhóm mở đúng mục trong Cài đặt nhà) · ActionMenuSheet (bảng thao tác của nút ⋮)
+   │  │                          #   settings/ (trang Cài đặt nhà, Cài đặt farm, Tạo farm — khung theo ảnh mẫu dạng hoá đơn, xem 3.10): SettingsSection (khung một mục) · SettingsMetaGrid ·
+   │  │                          #   SettingsTable · SettingsInput · SettingsActionBar (thanh đen) · SettingsEditActions (Cập nhật/Huỷ) · SettingsTileButton · ComingSoonAction ·
+   │  │                          #   ThresholdSection · NumberTuningSection (dùng cho FuzzyTuningSection · DetectionTuningSection · BirdCountTuningSection) · HouseInfoSection ·
+   │  │                          #   ZoneInfoSection · DeviceListSection · ZoneSettingsTabs · AddDeviceSheet + QrScanner · CreateItemSheet · FarmInfoSection · FarmLocationSection ·
+   │  │                          #   FarmHousesSection · LocateRow
    │  └─ home/                   # các khối của màn Trang chủ (viết chung cho hai role, hiện chỉ Farm Owner vào được) — khối chỉ một role thấy thì quyết ở màn bằng canPerform:
    │                             #   HomeHeader · HomeSection · FarmCarousel/FarmBannerCard · OverviewStats + StatTile, 3 ô, StatDetailSheet, ReturnRateBar ·
    │                             #   UrgentAlertBanner · PendingTasksCard · RelayOverrideStrip · NewReportCard · HouseCarousel/HouseStatusCard ·
@@ -149,31 +167,52 @@ mobile/
    ├─ constants/                 # theme.ts (Colors, Radius, BorderWidth, Spacing, FontFamily, Typography)
    │                             # apiEndpoints.ts (API_BASE_URL, WEBSOCKET_BASE_URL, ENDPOINTS)
    │                             # roleTabs.ts (tab của từng role, isMobileRole) · authTiming.ts (độ dài và hạn của mã đặt lại mật khẩu)
+   │                             # relayOverride.ts (thời lượng điều khiển tay BR-08, cảnh báo phải xác nhận trước khi bật bơm ENV-FR-016) · homeSkeleton.ts · i18n.en.ts
    ├─ hooks/                     # một hook một file, chia theo nghiệp vụ
    │  ├─ auth/                   # useLogin · useLogout · useForgotPassword · useResetPassword · useChangePassword
-   │  ├─ farm/                   # useFarms · useFarmDetail · useHouses · useAllHouses · useZonesOfHouses · useZoneDirectory · useHouseStatuses
-   │  ├─ alert/                  # useAlerts · useAcknowledgeAlert · useActiveAlertCount · useActiveAlertSummary · useAllActiveAlerts · useMostUrgentAlert · usePendingVerdictAlertCount
-   │  ├─ telemetry/              # useLatestTelemetryOfZones · useZoneTelemetryStream · useLiveTelemetry · useTelemetryHistory
+   │  ├─ farm/                   # useFarms · useFarmDetail · useHouses · useAllHouses · useZonesOfHouses · useZoneDirectory · useHouseStatuses ·
+   │  │                          #   useFarmPrefs · useCurrentFarm · useOrderedHouses · useFarmHouseCards · useFarmSummary · useAutoOpenLastHouse · useHouseZones · useHouseDetail ·
+   │  │                          #   useCreateFarm · useUpdateFarm · useDeleteFarm · useCreateHouse · useCreateZone · useUpdateThresholds · useResetThresholds ·
+   │  │                          #   useUpdateFuzzyTuning · useUpdateDetectionTuning · useUpdateBirdCountTuning · useCurrentLocation (expo-location) ·
+   │  │                          #   useSingleSectionEdit (trang cài đặt sửa từng mục, hỏi trước khi bỏ thay đổi chưa lưu)
+   │  ├─ alert/                  # useAlerts · useAcknowledgeAlert · useActiveAlertCount · useActiveAlertSummary · useAllActiveAlerts · useMostUrgentAlert · usePendingVerdictAlertCount ·
+   │  │                          #   useActiveAlertsOfScopes (cảnh báo theo nhà/zone) · useActiveAlertCountsBySeverity · useRefreshAlertsOnNew ·
+   │  │                          #   useAlertsScope (farm, nhà, tầng, mức, loại, phán quyết; nhớ khi tắt app) · useActiveAlertList · useResolvedAlertList ·
+   │  │                          #   useAlertDetail · useSetAlertVerdict · useAlertEvidence · useAlertLocations · useAlertRooms · useNewAlertIds · useSyncAlertBadge
+   │  ├─ telemetry/              # useLatestTelemetryOfZones · useZoneTelemetryStream · useLiveTelemetry · useTelemetryHistory · useSocketConnection
    │  ├─ bird-count/             # useBirdCountDaily · useBirdCountTrends · useTodayBirdCounts · useLiveHouseBirdCount
-   │  ├─ device/                 # useSensorNodes · useCameraNodes · useActiveRelayOverrides · useClearRelayOverride · useCameraCards · useCameraStreamUrl
+   │  ├─ device/                 # useSensorNodes · useCameraNodes · useActiveRelayOverrides · useClearRelayOverride · useCameraCards · useCameraStreamUrl ·
+   │  │                          #   useControlRelay · useDeviceStream (RELAY_UPDATE, DEVICE_STATUS_CHANGE) · useCameraAutoplay (Wi-Fi / dữ liệu di động, app chạy nền) ·
+   │  │                          #   useVideoZoom (chụm hai ngón zoom 1–4 lần, kéo khi đang phóng to, chạm đúp bật/tắt, nút +/-) ·
+   │  │                          #   useAutoHideControls (thanh điều khiển trên video kiểu YouTube: chạm video hiện/ẩn, tự ẩn 3 giây khi đang phát) ·
+   │  │                          #   useRegisterSensorNode · useRegisterCameraNode (đăng ký bằng mã trên nhãn; gcTime 0 để không giữ mã kích hoạt)
+   │  ├─ analytics/              # useAnalyticsScope (nhà, tầng, khoảng, tab, chỉ số: tham số route → đã nhớ → mặc định) · useAnalyticsKpis ·
+   │  │                          #   useBirdDaily · useBirdBuckets · useCorrelations · useEnvSummaries · useForecast · useControlPerformances · useAutonomies ·
+   │  │                          #   useControlSuggestion · useZoneRelayOverrides · useHealthReports · useHealthReportPreview · useUpdateConclusion
+   │  ├─ harvest/                # useFarmHarvests (đợt thu của farm)
    │  ├─ health/                 # usePendingHealthDays (chưa có API — G-11) · useUnreadHealthReports
    │  ├─ notification/           # useUnreadNotificationCount
    │  ├─ time/                   # useNow (mốc thời gian tự cập nhật cho chữ đếm ngược)
+   │  ├─ ui/                     # useToastMessage (câu toast tự ẩn sau 3 giây)
    │  └─ theme/                  # usePalette
    ├─ services/
    │  ├─ api/                    # apiClient.ts (axios + làm mới token) · <resource>.api.ts:
-   │  │                          #   auth · farm · device · telemetry · alert · analytics · notification · healthReport
+   │  │                          #   auth · farm · device · telemetry · alert · analytics · notification · healthReport · harvest
    │  ├─ socket/                 # socketClient.ts (Socket.io realtime)
    │  ├─ notification/           # pushNotification.ts (quyền + push token)
+   │  ├─ storage/                # preferenceStorage.ts: lựa chọn trên máy (không bí mật) lưu file JSON bằng expo-file-system, làm storage của Zustand persist
    │  └─ session/                # localSession.ts: startRealtimeIfReady (mở realtime khi có phiên) · clearLocalSession (đăng xuất / hết phiên: ngắt socket, xoá cache, badge, token)
-   ├─ stores/                    # authStore.ts · alertStore.ts (zustand)
+   ├─ stores/                    # authStore.ts · alertStore.ts · languageStore.ts · farmPrefsStore.ts (zustand; farmPrefs lưu file trên máy theo tài khoản:
+   │                             #   farm/nhà/tầng xem gần nhất, nhà đã ghim, thu gọn camera, tự phát khi dùng dữ liệu di động)
    ├─ types/                     # <module>.types.ts: api · auth · farm · device · telemetry · alert ·
-   │                             #   birdCount · socket · navigation · notification · healthReport — index.ts gom lại
+   │                             #   birdCount · socket · navigation · notification · healthReport · harvest — index.ts gom lại
    └─ utils/                     # <chủ đề>.utils.ts: date · number · label · validation · apiError · name · permission (canPerform) ·
-                                 #   threshold · device · returnRate · alert · severity · relay · healthDay · houseStatus · camera
+                                 #   threshold · device · returnRate · alert · severity · relay · healthDay · houseStatus · camera ·
+                                 #   pagination · harvest (sản lượng tháng của nhà, gộp theo tháng / quý / năm và loại tổ — cách tính như web) · houseOrder (nhà ghim lên đầu) · sort (farm, zone tạo trước đứng đầu theo _id, như web) · sensorTile · farm ·
+                                 #   alertList (sắp xếp, lọc, đếm theo mức, nhắc lại) · alertDetail (tự đóng, nội dung riêng theo loại) · qrCode (nhãn thiết bị, mã tầng) · settingsSection (khoá mục cài đặt, quyền sửa từng mục) · settingsValidation (khoảng hợp lệ của ngưỡng, hệ số, tham số phát hiện, toạ độ — lấy từ api-spec và backend)
 ```
 
-**Menu theo role:** sửa duy nhất `src/constants/roleTabs.ts` (`ROLE_TABS`): mỗi mục gồm `name` (thư mục route trong `(tabs)/`), `title`, `icon` (Phosphor). Farm Owner giữ 5 tab; Domain Expert có 2 menu tạm `menu-1..2` (đổi tên và trỏ `name` sang route thật khi làm màn) và tab `profile` dùng chung. Role không có trong `ROLE_TABS` thì không vào được app (Technician, Admin dùng web). Route không thuộc role nào bị ẩn khỏi thanh tab (`hidden`).
+**Menu theo role:** sửa duy nhất `src/constants/roleTabs.ts` (`ROLE_TABS`): mỗi mục gồm `name` (thư mục route trong `(tabs)/`), `title`, `icon` (Phosphor). Farm Owner giữ 5 tab; Domain Expert có tab `alerts` (dùng chung màn, không badge), menu tạm `menu-2` (đổi tên và trỏ `name` sang route thật khi làm màn) và tab `profile` dùng chung. Role không có trong `ROLE_TABS` thì không vào được app (Technician, Admin dùng web). Route không thuộc role nào bị ẩn khỏi thanh tab (`hidden`).
 
 ### 2.1 Luồng theo role trên mobile
 
@@ -189,22 +228,35 @@ Splash
 
 Farm Owner — (tabs)
 ├─ Trang chủ   home        trạng thái ngày từng nhà, số đo realtime, cảnh báo đang mở
-├─ Trang trại  farms ─► farm/[farmId] ─► house/[houseId] ─► zone/[zoneId] ─► device/[deviceId]
-│                house: camera, live stream, đếm chim, trạng thái ngày + chấm điểm (BR-31), báo cáo
-│                zone : số đo, relay chế độ tay (MF-09), sửa ngưỡng và hệ số; đọc tham số phát hiện
-│                device-setup/ (MF-10): quét nhãn ─► quét mã tầng ─► Wi-Fi AP-mode ─► tiến trình setup
+├─ Trang trại  farms (Màn A: nhà của farm, đổi farm, ghim ★ nhà lên đầu, ⚙ cài đặt farm, + tạo farm) ─► farms/[houseId] (Màn B: một nhà)
+│                vào tab thì mở thẳng nhà xem gần nhất (farm 1 nhà thì nhà đó); zone là tab, thiết bị là sheet — không có màn thứ 3
+│                Màn B: camera ghim đầu (live stream, số chim), đàn chim hôm nay, tab tầng, 6 ô cảm biến,
+│                       relay chế độ tay (MF-09), thiết bị (chỉ xem), Cài đặt zone xem nhanh (⋮ "Chỉnh sửa" ─► đúng mục, mở sẵn chế độ sửa),
+│                       ⚙ ─► [houseId]/settings
+│                Cài đặt nhà: thông tin nhà, camera AI (+ thêm), mức giảm tỷ lệ về tổ; theo tầng: thông tin tầng, ngưỡng (+ đặt lại mặc định),
+│                       hệ số mờ, tham số phát hiện, controller (+ thêm), + thêm tầng — mỗi mục "Sửa" / "Lưu" riêng
+│                Cài đặt farm (farm-settings): thông tin, toạ độ (lấy vị trí hiện tại), nhà yến (+ thêm nhà), xoá farm (chủ chính); farm-create: tạo farm
+│                thêm thiết bị (MF-10): quét nhãn QR hoặc nhập tay ─► đăng ký vào nhà / tầng; còn thiếu: Wi-Fi AP-mode, tiến trình setup (FARM-FR-012)
+│                còn thiếu: trạng thái ngày + chấm điểm (BR-31), báo cáo; sửa tên, xoá nhà và tầng (backend chưa có API)
 │                harvests (ghi, sửa — SF-04)
-├─ Cảnh báo    alerts ─► alert/[alertId]: xác nhận đã xử lý; kiểm chứng khi farm chưa có chuyên gia (BR-22)
-├─ Phân tích   analytics   đếm chim, tỷ lệ về, dự báo, lịch sử chế độ tay, báo cáo ngày/tuần/tháng,
-│                          kết luận và quyết định của chuyên gia (EXPERT-FR-009)
+├─ Cảnh báo    alerts: nhà ▾ (có "Tất cả nhà", đổi farm), ⚙ cài đặt thông báo; dải mức = lọc nhanh; Đang hiệu lực · Đã đóng;
+│                Tầng · Loại · Phán quyết; vuốt trái để xác nhận (chip ghi chú nhanh); chạm hàng ─► sheet chi tiết toàn màn
+│                (bằng chứng ±30 phút cho cảnh báo suy luận, Đi tới tầng, Điều khiển tay); nhắc lại sau 15 phút / 1 giờ (ALERT-FR-015)
+│                còn thiếu: phán quyết khi farm chưa có chuyên gia (BR-22), nhóm "Bị bác bỏ", mở từ push — "Sắp có"
+├─ Phân tích   analytics   một màn: chọn nhà ▾, chip tầng ("Tất cả tầng"); 4 ô KPI (tỉ lệ về tổ, trong ngưỡng, tự động,
+│                          cảnh báo); tab nội bộ Đàn chim · Môi trường · Điều khiển · Sản lượng · Báo cáo, ngay dưới là chip khoảng thời gian (cùng dính khi cuộn, ẩn ở Sản lượng, Báo cáo); nhớ lựa chọn khi tắt app;
+│                          cùng giao diện các màn khác: nền Paper, card trắng, chip kiểu tab tầng, header chọn nhà ▾
+│                          lối vào: ô cảm biến / dải chim ở Màn B, thẻ Báo cáo mới và tỉ lệ về tổ ở Trang chủ (tham số houseId, zoneId, tab, metric, reportId)
+│                          còn thiếu: quyết định của chuyên gia (EXPERT-FR-009), gửi gợi ý chờ duyệt, phiên thiếu (VISION-FR-020) — "Sắp có"
 └─ Tài khoản   profile     hồ sơ, đổi mật khẩu, kênh thông báo (push, Telegram), thông báo trong app, đăng xuất
 
-Domain Expert — (tabs)   (hiện là menu-1..2 tạm + profile; đích như dưới, đổi trong ROLE_TABS)
+Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích như dưới, đổi trong ROLE_TABS)
 ├─ Trang chủ   home        cùng màn với Farm Owner, chỉ đọc; khối riêng mỗi role quyết bằng canPerform
 ├─ Trang trại  farms ─► cùng cây màn của Farm Owner, KHÔNG có relay, device-setup, ghi harvest
-│                zone : sửa ngưỡng, hệ số, 5 tham số phát hiện (EXPERT-FR-008)
-│                house: mức tỷ lệ về giảm, lịch đếm; vẽ vòng đếm làm trên web
-├─ Cảnh báo    alerts ─► alert/[alertId]: kiểm chứng Đúng/Sai cảnh báo suy luận; KHÔNG xác nhận đã xử lý
+│                zone : sửa ngưỡng, hệ số, 5 tham số phát hiện (EXPERT-FR-008) — trong Cài đặt nhà, cùng màn với Farm Owner
+│                house: mức tỷ lệ về giảm (Cài đặt nhà), lịch đếm; vẽ vòng đếm làm trên web
+├─ Cảnh báo    alerts (mặc định lọc "Chờ phán quyết"): kiểm chứng Xác nhận đúng / Bác bỏ (bắt buộc lý do) cảnh báo suy luận;
+│                KHÔNG xác nhận đã xử lý, không vuốt, không ⚙
 ├─ Báo cáo     analytics   báo cáo + viết kết luận, duyệt thay đổi của Farm Owner, áp dụng gợi ý hệ số
 └─ Tài khoản   profile     hồ sơ, đổi mật khẩu, thông báo trong app, đăng xuất (không có push, Telegram)
 ```
@@ -253,7 +305,7 @@ Domain Expert — (tabs)   (hiện là menu-1..2 tạm + profile; đích như d�
 - `components/ui/` — primitive không biết nghiệp vụ: `text`, `button`, `input`, `chip`, `badge`, `icon`, `pressable-scale`, `skeleton`, `empty-state` (mục 3.5).
 - `components/common/` — biết nghiệp vụ, ≥ 2 màn dùng: `StatusDot`, `SeverityBadge`, `AlertStatusBadge`, `MetricTile`, `card/` (`FarmCard`, `HouseCard`, `ZoneCard`).
 - `components/<nghiệp vụ>/` — component riêng một luồng: `device-setup/` (quét QR, AP-mode — MF-10), `home/`, `zone/`, `alert/`, `vision/`, `analytics/`, `harvest/`, `report/`.
-- Route theo Report 3: thiết lập thiết bị bằng QR (MF-10), `house/[houseId]`, live stream theo camera nhà yến, `reports/`, `harvests/`, `notifications`; tab theo role (Report 3 §2.4 — chỉ Farm Owner và Domain Expert), `settings` đã đổi tên `profile`.
+- Route theo Report 3: thiết lập thiết bị bằng QR (MF-10), live stream theo camera nhà yến (Màn B đã phát tại chỗ), `reports/`, `harvests/`, `notifications`; tab theo role (Report 3 §2.4 — chỉ Farm Owner và Domain Expert), `settings` đã đổi tên `profile`.
 - `hooks/` và `services/api/` cho thiết lập thiết bị, harvest, health report, notification, FCM token theo `docs/api/api-spec.yaml`.
 
 ### Luồng dữ liệu
@@ -277,7 +329,9 @@ Màn hình (`src/app/`) → hook (`src/hooks/<nghiệp vụ>/`) → API (`src/se
 - **Push**: `services/notification/pushNotification.ts` xin quyền, lấy push token, tạo kênh Android `alerts`. **Chưa làm:** gửi token lên backend (chờ endpoint trong `api-spec.yaml`, ALERT-FR-002).
 - **Lỗi**: hiện 1 câu tiếng Việt ngắn theo nhóm (phiên đăng nhập/quyền, không tìm thấy, dữ liệu không hợp lệ, lỗi hệ thống, mất mạng); câu đầy đủ, có hướng dẫn "Vui lòng …" khi người dùng làm được gì đó; không hiện mã HTTP hay nguyên văn thông báo backend. Mất mạng (`NETWORK_ERROR_MESSAGE`) và lỗi máy chủ 5xx (`SERVER_ERROR_MESSAGE`) là hai câu khác nhau.
   - Xác thực: `utils/apiError.utils.ts` (`getAuthErrorMessage`) đổi `error.code` + status thành câu theo từng thao tác; sai email hay sai mật khẩu chung một câu; 429 lấy `retryAfterSec` của backend. Nút "Gửi lại mã" không có thời gian chờ đặt ở máy (không có nguồn) — giới hạn là của backend. Mutation xác thực đặt `retry: false` vì mỗi lần sai đều bị backend tính vào giới hạn 10 lần / 15 phút.
-- **Route params**: id đi qua route động của expo-router (`farm/[farmId]`, `house/[houseId]`, `zone/[zoneId]`, `device/[deviceId]`, `alert/[alertId]`), đọc bằng `useLocalSearchParams`; không hiện id lên giao diện.
+- **Route params**: id đi qua route động của expo-router (`(tabs)/farms/[houseId]` kèm `?zoneId`, `(tabs)/farms/[houseId]/settings` kèm `?section&zoneId&edit`, `(tabs)/farms/farm-settings?farmId`, `(tabs)/farms?farmId`, `device/[deviceId]`, `alert/[alertId]`), đọc bằng `useLocalSearchParams`; không hiện id lên giao diện.
+- **Thứ tự danh sách giống web**: farm và zone tạo trước đứng đầu (so `_id`, `utils/sort.utils.ts` — như `FarmOwnerFarmsPage`, `deviceInventory` của web); nhà yến giữ thứ tự backend trả (mới nhất trước), nhà đã ghim ★ lên đầu (`sortPinnedFirst`, lưu trên máy theo tài khoản như `pinnedHouseStore` của web); carousel nhà ở Trang chủ xếp theo trạng thái nặng nhất rồi theo tên như dashboard web. Web đổi cách sắp thì mobile đổi theo.
+- **Hook điều hướng** (`useIsFocused`, `useFocusEffect`, `useNavigation`…) import từ `expo-router`, không từ `@react-navigation/native`: expo-router 58 mang bản React Navigation riêng, import từ gói ngoài thì báo "Couldn't find a navigation object". Stack lồng trong tab dùng `unstable_settings.anchor` (không còn `initialRouteName`).
 
 ---
 
@@ -406,7 +460,7 @@ row:    { borderBottomWidth: BorderWidth.hairline, borderBottomColor: palette.di
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Button`                    | Bo tròn hết cỡ (`Radius.full`). `variant`: `primary` (nền `primary`, chữ `onPrimary`) · `secondary` (nền `surface` trắng, không viền, chữ `text`) · `danger` (thao tác phá huỷ: tắt relay, xoá, đăng xuất) · `icon` (nút tròn chỉ có icon, nền `primary`) · `link` (chữ `textSecondary` gạch chân); `size`: `sm` 36 / `md` 44 / `lg` 52; `loading` → khoá nút; `disabled` → opacity 0.5. |
 | `Text`                      | Xem 3.3.                                                                                                                                                                                                                                                                                                                                                                                                |
-| `Icon`                      | Chỉ dùng **`phosphor-react-native`** (cùng bộ Phosphor với web Farm Owner, chạy trên `react-native-svg`). Cỡ theo thang 12 / 14 / 16 / 20 / 24 / 32, mặc định 20; `weight` mặc định `regular`, tab đang chọn `fill`; màu theo `Colors` (`text`, `textSecondary`, `primary`, `alert`), không truyền mã hex.                                                                                              |
+| `Icon`                      | Chỉ dùng **`phosphor-react-native`** (cùng bộ Phosphor với web Farm Owner, chạy trên `react-native-svg`). Cỡ theo thang 12 / 14 / 16 / 20 / 24 / 32, mặc định 20; `weight` mặc định `regular`, tab đang chọn `fill`; màu theo `Colors` (`text`, `textSecondary`, `primary`, `alert`), không truyền mã hex. Nút quay lại trên mọi màn là **`CaretLeftIcon`** cỡ 20, `weight="bold"`, trong nút tròn 44 của `AppHeader` — không dùng `ArrowLeftIcon`; màn mới chỉ truyền `onBack`, không tự vẽ nút quay lại.                                                                                              |
 | `PressableScale`            | Pressable co lại (`scaleTo` mặc định 0.96) và bật về bằng spring (reanimated); tắt khi bật "Giảm chuyển động".                                                                                                                                                                                                                                                                                          |
 | `Input`, `Checkbox`, `Chip` | Form & bộ lọc.                                                                                                                                                                                                                                                                                                                                                                                          |
 | `Toggle`                    | Công tắc bật/tắt (relay, cài đặt thông báo).                                                                                                                                                                                                                                                                                                                                                            |
@@ -425,6 +479,7 @@ Layout: `AppHeader` (đã có), `BottomTabBar` (đã có, `components/layout/Bot
 - Nền trắng (`surface`) vẽ bằng `react-native-svg`: bo 2 góc trên, bóng đổ nhoè (`SHADOW_BLUR`, `SHADOW_OFFSET_Y`, màu `divider`), viền mép `BORDER_COLOR_TOKEN`, có bướu nhô quanh nút nổi.
 - Tab có `isFeatured: true` (mỗi role tối đa một) thành nút tròn 60 nổi lên, nền `primary` (lime), icon `onPrimary` 32; nhãn thẳng hàng các tab khác. Role không có tab nổi thì mép thẳng.
 - Tab đang chọn: icon `fill` + icon và chữ màu `tabIconSelected` (Ink), không có vòng nền (đổi 2026-10-31); tab chưa chọn màu `tabIconDefault` (riêng nút nổi luôn icon `fill`, không đổi khi chọn); badge số nền `primary` viền `surface`.
+- Màn chi tiết mở bên trong một tab thì ẩn thanh tab để nội dung chiếm cả màn: hiện là chi tiết nhà yến `(tabs)/farms/[houseId]`, Cài đặt nhà, Cài đặt farm và Tạo farm (danh sách `ROUTES_WITHOUT_TAB_BAR` trong `BottomTabBar.tsx`, nhận ra bằng `useSegments()`; thêm màn mới vào danh sách đó). Màn đó chừa đáy bằng vùng an toàn (`insets.bottom`), không cộng `TAB_BAR_OVERLAP`; quay về danh sách thì thanh tab hiện lại (đổi theo yêu cầu 2026-11-01).
 - Tab dùng `Pressable` thường, **không** `PressableScale`: bấm là chuyển ngay, không có hiệu ứng nhấn.
 - Thanh kéo lên đè đáy màn một khoảng `TAB_BAR_OVERLAP` (đủ chứa nút nổi, bướu và phần nhoè của bóng): màn tab có nội dung cuộn phải chừa thêm `TAB_BAR_OVERLAP` ở đáy.
 - Màn con như `profile/notifications` nằm trong thư mục của tab cha nên tab cha vẫn sáng.
@@ -546,3 +601,16 @@ const styles = StyleSheet.create({
   footer: { padding: Spacing.lg, borderRadius: Radius.lg },
 });
 ```
+
+### 3.10 Trang cài đặt: sửa từng mục, khung theo ảnh mẫu
+
+Áp dụng cho Cài đặt nhà, Cài đặt farm và Tạo farm (Len chốt 2026-11-01, kèm ảnh mẫu dạng hoá đơn):
+
+- **Sửa từng mục, không sửa hàng loạt.** Trang gồm các mục thu gọn; bấm mục thì sổ ra **chỉ để xem**. Nút **"Sửa"** ở góc trên phải của mục đang mở (chỉ hiện khi `canPerform` cho phép). Bấm "Sửa" thì riêng mục đó nhập được; ngay dưới là thanh đen **Cập nhật** (một chữ lime căn giữa; chỉ gửi đúng mục đó, một request) và nút chữ **Huỷ**. Nút khoá khi chưa đổi gì, đang gửi, hoặc có ô lỗi (lỗi hiện ngay dưới dòng).
+- **Mỗi lúc chỉ một mục được sửa** (`hooks/farm/useSingleSectionEdit.ts`). Sửa dở mà bấm "Sửa" mục khác, thu mục, đổi tab tầng hay rời trang (`usePreventRemove`) thì hỏi "Bỏ thay đổi chưa lưu?". Lưu xong: mục về chế độ xem, toast "Đã lưu…".
+- **Khung một mục** (`components/farm/settings/SettingsSection.tsx`), từ trên xuống: ô icon nền lime + tên mục và dòng phụ · nhãn phạm vi viết HOA giãn chữ ở góc phải (TẦNG 2, NHÀ, TRANG TRẠI) và nút "Sửa" dưới nhãn · đường kẻ · lưới thông tin 2 cột (`SettingsMetaGrid`) · bảng có dòng tiêu đề nền Paper, cột số căn phải (`SettingsTable`) · thanh đen nền Ink chữ lime (`SettingsActionBar`: chế độ xem là con số chính có thật của mục, chế độ sửa là nút "Cập nhật" chữ căn giữa) · chân card: câu ai sửa được bên trái, ô vuông icon 32 bên phải (`SettingsTileButton`: quét QR, lấy vị trí, đặt lại mặc định).
+- **Chỉ trường có thật** trong api-spec; khoảng hợp lệ lấy từ schema api-spec và `THRESHOLD_LIMITS` của backend (`utils/settingsValidation.utils.ts`), không tự đặt. Thao tác chưa có API thì hiện `ComingSoonAction` ("Sắp có"), không giả lập.
+- **Mở thẳng một mục:** khối "Cài đặt zone" ở chi tiết nhà chỉ để xem nhanh; nút ⋮ của từng nhóm mở `[houseId]/settings?section=<thresholds|fuzzy|detection|bird-count>&zoneId=…&edit=1`. Trang mở đúng tầng, sổ sẵn mục đó, cuộn tới mục; `edit=1` chỉ mở chế độ sửa khi `canPerform` cho phép, không có quyền thì nút ⋮ chỉ có "Xem trong Cài đặt nhà".
+- **Không bịa:** mọi số ở khối xem nhanh và trang cài đặt lấy đúng từ backend (`formatStoredNumber` giữ phần lẻ); thứ backend chưa có (lịch đếm chim VISION-FR-019, sửa tên / xoá nhà và tầng) hiện "Sắp có".
+- **Mã kích hoạt** trên nhãn thiết bị chỉ nằm trong ô nhập và đi một lần tới API: không lưu store, không ghi log; mutation đăng ký đặt `gcTime: 0`; sheet dựng lại (key mới) mỗi lần mở.
+- Chỉ dùng token sẵn có (`surface`, `surfaceStrong`, `divider`, `inverse`, `onInverse`, `primary`, `text`, `textSecondary`, `alert`); nhãn HOA là `small` + `textTransform: 'uppercase'` + `letterSpacing` trong style của component, không thêm variant.
