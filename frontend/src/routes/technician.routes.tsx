@@ -43,7 +43,7 @@ export const technicianRoutes = (
     <Route
       path="onboarding"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={['TECHNICIAN', 'ADMIN']}>
           <TechnicianOnboardingPage />
         </RequireRole>
       }
@@ -51,7 +51,7 @@ export const technicianRoutes = (
     <Route
       path="ota"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={['TECHNICIAN', 'ADMIN']}>
           <TechnicianOtaPage />
         </RequireRole>
       }

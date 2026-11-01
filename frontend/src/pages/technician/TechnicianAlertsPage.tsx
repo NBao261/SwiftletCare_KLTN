@@ -1,22 +1,19 @@
 // Alerts Page – ALERT-FR-001/002/006/007/008/009
 import { useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { useAlertsList, useAcknowledgeAlert } from "@/hooks/shared/useAlerts";
+import { useAlertsList } from "@/hooks/shared/useAlerts";
 import { useSensorNodes } from "@/hooks/shared/useDevices";
 import { useAllZones } from "@/hooks/shared/useFarms";
 import { NO_VALUE } from "@/constants/display";
-import { Card, Button } from "@/components/ui";
+import { Card } from "@/components/ui";
 import AlertBadge from "@/components/features/technician/alerts/AlertBadge";
 import EmptyState from "@/components/ui/EmptyState";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import Pagination from "@/components/ui/Pagination";
 import FilterChip from "@/components/ui/FilterChip";
-import NoteActionModal from "@/components/ui/NoteActionModal";
 import { IconAlert } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
-import { formatDate, getApiErrorMessage } from "@/lib/helpers";
-import { useToastStore } from "@/stores/toastStore";
-import { usePermission } from "@/hooks/common/usePermission";
+import { formatDate } from "@/lib/helpers";
 import type { AlertSeverity, AlertStatus } from "@/types";
 
 const STATUS_FILTERS: Array<{ value: AlertStatus | undefined; label: string }> =
@@ -44,10 +41,6 @@ export default function TechnicianAlertsPage() {
     undefined,
   );
   const [page, setPage] = useState(1);
-  const [ackTargetId, setAckTargetId] = useState<string | null>(null);
-  // Chỉ Farm Owner xác nhận cảnh báo (ALERT-FR-009, Report 3 §2.4); Technician, Admin chỉ xem.
-  // Backend chặn cùng role ở PUT /alerts/:id/acknowledge.
-  const canAcknowledge = usePermission("FARM_OWNER");
   // Bấm 1 thông báo ở NotificationPopover (AppHeader) điều hướng sang đây kèm
   // ?highlight=<id> — cuộn tới & làm nổi đúng dòng đó nếu đang nằm trong trang/filter hiện tại.
   const [searchParams] = useSearchParams();
@@ -106,7 +99,7 @@ export default function TechnicianAlertsPage() {
         <EmptyState
           icon={<IconAlert width={28} height={28} />}
           title="Không có cảnh báo nào"
-          description="Khi hệ thống phát hiện bất thường (môi trường vượt ngưỡng, thiết bị mất kết nối, thiên địch...), cảnh báo sẽ hiện ở đây."
+          description="Khi hệ thống phát hiện sự cố phần cứng, thiết bị mất kết nối hoặc cảm biến lỗi, cảnh báo kỹ thuật sẽ hiển thị tại đây."
         />
       )}
 
@@ -145,15 +138,6 @@ export default function TechnicianAlertsPage() {
                     ? "Đã xác nhận"
                     : "Đã xử lý"}
               </span>
-              {alert.status === 'ACTIVE' && canAcknowledge && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setAckTargetId(alert._id)}
-                >
-                  Xác nhận
-                </Button>
-              )}
             </div>
             
             <div className="flex items-center gap-2 mt-2 pt-2 border-t border-warmGray/10">
@@ -189,48 +173,6 @@ export default function TechnicianAlertsPage() {
       </div>
 
       <Pagination page={page} limit={limit} total={total} onChange={setPage} />
-
-      <AcknowledgeModal
-        alertId={ackTargetId}
-        onClose={() => setAckTargetId(null)}
-      />
     </div>
-  );
-}
-
-function AcknowledgeModal({
-  alertId,
-  onClose,
-}: {
-  alertId: string | null;
-  onClose: () => void;
-}) {
-  const acknowledge = useAcknowledgeAlert();
-  const push = useToastStore((s) => s.push);
-
-  return (
-    <NoteActionModal
-      open={!!alertId}
-      onClose={onClose}
-      title="Xác nhận cảnh báo"
-      label="Ghi chú (tùy chọn)"
-      placeholder="VD: Báo động giả, đã kiểm tra tại chỗ..."
-      submitLabel="Xác nhận"
-      loading={acknowledge.isPending}
-      onSubmit={(note) => {
-        if (!alertId) return;
-        acknowledge.mutate(
-          { id: alertId, note: note.trim() || undefined },
-          {
-            onSuccess: () => {
-              push("Đã xác nhận cảnh báo");
-              onClose();
-            },
-            onError: (err) =>
-              push(getApiErrorMessage(err, "Xác nhận thất bại"), "error"),
-          },
-        );
-      }}
-    />
   );
 }
