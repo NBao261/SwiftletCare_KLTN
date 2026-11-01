@@ -1,7 +1,7 @@
 import { ParameterReview, type ParameterGroup } from '@/models/parameterReview.model'
 import { User } from '@/models/user.model'
 import { createInAppNotification, findFarmExperts } from '@/services/notification.service'
-import { farmHasExpert } from '@/utils/farmAccess.util'
+import { farmHasActiveExpert } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
 import type { IFarm } from '@/models/farm.model'
 import type { IZone } from '@/models/houseZone.model'
@@ -35,7 +35,7 @@ export async function trackParameterChange(
       )
       return
     }
-    if (user.role !== 'FARM_OWNER' || !farmHasExpert(farm)) return
+    if (user.role !== 'FARM_OWNER' || !(await farmHasActiveExpert(farm))) return
 
     const open = await ParameterReview.findOneAndUpdate(
       { zone_id: zone._id, group, status: 'PENDING_REVIEW' },

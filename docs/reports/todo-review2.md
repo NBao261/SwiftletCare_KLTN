@@ -245,6 +245,10 @@ Một PR cho backend, web, mobile, firmware:
   - `GET /expert-activity?farmId=` đọc từ audit log.
 - [x] ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận (thiếu dữ liệu thì báo "missing", không phải 0). *(Kiệt, 30/10: `GET /alerts/{id}/evidence`, kèm kết luận trước cùng loại cùng nơi theo EXPERT-FR-003)*
 - [ ] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động.
+- [x] Sửa theo review PR #117 *(Kiệt, 01/11)*:
+  - `EARLIER_VERDICTS_LIMIT` (10 kết luận trước) ghi vào Report 3 §4.5 và Report 4 §5.5 *(`c14a8c7`)*;
+  - BR-22 chỉ tính chuyên gia còn hoạt động: chuyên gia bị khoá thì Farm Owner làm thay và nhận thông báo chờ kiểm chứng *(`688a604`)*;
+  - `HEALTH_REPORT_CONCLUDED` có `house_id` nên lọc được theo nhà ở `/expert-activity` *(`536f23c`)*.
 
 ### G-04 — Mục duyệt và đề xuất hệ số (P1) — Kiệt (backend), Tuấn (màn chuyên gia), Len (nút "gửi chuyên gia" của Farm Owner)
 
