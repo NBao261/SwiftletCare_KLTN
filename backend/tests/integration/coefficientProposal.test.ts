@@ -19,6 +19,7 @@ import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
+import * as farmService from '@/services/farm.service'
 import { getTuningSuggestion } from '@/services/tuningSuggestion.service'
 import type { Role } from '@/types'
 
@@ -45,6 +46,7 @@ let mongod: MongoMemoryServer
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create()
   await mongoose.connect(mongod.getUri())
+  await CoefficientProposal.init() // index unique 1 đề xuất chờ mỗi Zone
 })
 afterAll(async () => {
   await mongoose.disconnect()
@@ -52,6 +54,7 @@ afterAll(async () => {
 })
 beforeEach(() => suggest(SUGGESTION))
 afterEach(async () => {
+  jest.restoreAllMocks()
   jest.clearAllMocks()
   await Promise.all([AuditLog, CoefficientProposal, Farm, House, Zone, Notification, User].map(m => (m as typeof User).deleteMany({})))
 })
@@ -101,6 +104,22 @@ describe('Farm Owner gửi đề xuất (EXPERT-FR-011)', () => {
     expect((await CoefficientProposal.findById(second._id).lean())!.status).toBe('SUPERSEDED')
   })
 
+  it('Farm Owner tự sửa hệ số sau khi gửi → đề xuất SUPERSEDED, chuyên gia không duyệt đè được (409)', async () => {
+    const { zone, t, send, submit } = await seed()
+    const proposal = (await submit().expect(201)).body.data
+    await send('put', `/farms/zones/${zone._id}/fuzzy-tuning`, t.owner, { fuzzy_temp_band: 6 }).expect(200)
+    expect((await CoefficientProposal.findById(proposal._id).lean())!.status).toBe('SUPERSEDED')
+    await send('put', `/expert-activity/proposals/${proposal._id}/approve`, t.expert).expect(409)
+    expect((await fuzzyOf(zone._id)).fuzzy_tuning.fuzzy_temp_band).toBe(6)
+  })
+
+  it('gửi 2 lần cùng lúc → đúng 1 đề xuất PROPOSED, cái kia SUPERSEDED', async () => {
+    const { zone, submit } = await seed()
+    await Promise.all([submit().expect(201), submit().expect(201)])
+    const statuses = (await CoefficientProposal.find({ zone_id: zone._id }).lean()).map(p => p.status).sort()
+    expect(statuses).toEqual(['PROPOSED', 'SUPERSEDED'])
+  })
+
   it('không có gợi ý → 409 kèm lý do; farm chưa có chuyên gia → 409', async () => {
     const s = await seed()
     suggest(null, 'Cần ít nhất 3 ngày dữ liệu')
@@ -125,6 +144,27 @@ describe('chuyên gia duyệt / từ chối (Report 3 §6.11)', () => {
     expect(after.fuzzy_tuning_history.at(-1)).toMatchObject({ source: 'SUGGESTION_APPROVED', changed_by_role: 'DOMAIN_EXPERT' })
     expect((await CoefficientProposal.findById(proposal._id).lean())!.status).toBe('APPROVED')
     expect(await Notification.countDocuments({ user_id: owner._id })).toBe(1)
+  })
+
+  it('áp hệ số lỗi → đề xuất về lại PROPOSED, hệ số giữ nguyên, duyệt lại được', async () => {
+    const { zone, t, send, submit } = await seed()
+    const proposal = (await submit().expect(201)).body.data
+    jest.spyOn(farmService, 'applyFuzzyTuning').mockRejectedValueOnce(new Error('Mất kết nối DB'))
+    await send('put', `/expert-activity/proposals/${proposal._id}/approve`, t.expert).expect(500)
+
+    const reopened = (await CoefficientProposal.findById(proposal._id).lean())!
+    expect(reopened.status).toBe('PROPOSED')
+    expect(reopened.decided_by).toBeUndefined()
+    expect((await fuzzyOf(zone._id)).fuzzy_tuning.fuzzy_humidity_band).toBe(8)
+    await send('put', `/expert-activity/proposals/${proposal._id}/approve`, t.expert).expect(200)
+  })
+
+  it('lịch sử hoạt động: duyệt đề xuất là 1 dòng PROPOSAL_APPROVED, không thêm dòng FUZZY_TUNING_UPDATED', async () => {
+    const { farm, t, send, submit } = await seed()
+    const proposal = (await submit().expect(201)).body.data
+    await send('put', `/expert-activity/proposals/${proposal._id}/approve`, t.expert).expect(200)
+    const res = await send('get', `/expert-activity?farmId=${farm._id}`, t.owner).expect(200)
+    expect(res.body.data.map((e: { action: string }) => e.action)).toEqual(['PROPOSAL_APPROVED'])
   })
 
   it('từ chối thiếu lý do → 422; có lý do → REJECTED, hệ số giữ nguyên', async () => {

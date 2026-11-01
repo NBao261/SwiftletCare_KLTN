@@ -37,15 +37,23 @@ export async function trackParameterChange(
     }
     if (user.role !== 'FARM_OWNER' || !(await farmHasActiveExpert(farm))) return
 
-    const open = await ParameterReview.findOneAndUpdate(
+    const updateOpen = () => ParameterReview.findOneAndUpdate(
       { zone_id: zone._id, group, status: 'PENDING_REVIEW' },
       { new_values: after, changed_by: user._id },
     )
-    if (open) return
+    if (await updateOpen()) return
 
-    const review = await ParameterReview.create({
-      zone_id: zone._id, farm_id: farm._id, group, old_values: before, new_values: after, changed_by: user._id,
-    })
+    let review
+    try {
+      review = await ParameterReview.create({
+        zone_id: zone._id, farm_id: farm._id, group, old_values: before, new_values: after, changed_by: user._id,
+      })
+    } catch (err) {
+      // 2 lần sửa đầu tiên tới cùng lúc: lần kia vừa mở mục (unique index) — ghi giá trị mới vào mục đó
+      if ((err as { code?: number }).code !== 11000) throw err
+      await updateOpen()
+      return
+    }
     await notifyExpertsOfReview(farm._id, user, group, zone.name, String(review._id))
   } catch (err) {
     logger.warn('Ghi mục duyệt thay đổi của Farm Owner thất bại', { err, zoneId: String(zone._id), group })

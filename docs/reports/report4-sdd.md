@@ -675,7 +675,7 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date` | Soft delete; photo in MinIO |
 | `auditlogs` | Audit entry | `actor_id + created_at`, `farm_id + created_at`, `target_type + target_id`, `action + created_at` | Source of the expert activity history |
 | `parameterreviews` | Review item | `zone_id + group + status` | One open item per zone and group |
-| `coefficientproposals` | Proposal | `zone_id + status` | |
+| `coefficientproposals` | Proposal | `zone_id + status`; `zone_id` unique while `PROPOSED` | One open proposal per zone |
 | `systemsettings` | Singleton settings | `_singleton` unique | Default thresholds and their sourced history |
 
 The exact field list, types and indexes of every collection are those of the database script (6.5).
@@ -896,7 +896,7 @@ stateDiagram-v2
   [*] --> PROPOSED : owner submits a suggestion (EXPERT-FR-011)
   PROPOSED --> APPROVED : expert approves, coefficients applied
   PROPOSED --> REJECTED : expert rejects with note
-  PROPOSED --> SUPERSEDED : newer proposal or expert edit
+  PROPOSED --> SUPERSEDED : newer proposal or any edit
   APPROVED --> [*]
   REJECTED --> [*]
   SUPERSEDED --> [*]

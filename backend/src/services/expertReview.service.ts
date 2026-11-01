@@ -5,6 +5,7 @@ import { applyFuzzyTuning } from '@/services/farm.service'
 import { assertFarmAccess, assertZoneAccess } from '@/utils/farmAccess.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { paginate } from '@/utils/helpers.util'
+import logger from '@/utils/logger.util'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate } from '@/utils/thresholdUpdate.util'
 import { ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
@@ -77,24 +78,33 @@ export async function acceptReview(reviewId: string, user: CurrentUser) {
 /**
  * EXPERT-FR-010 — chuyên gia hoàn lại thay đổi của Farm Owner: khôi phục giá trị gốc (trước lần sửa
  * đầu tiên), gửi xuống mọi thiết bị của Zone, lịch sử ghi EXPERT_REVERT; PENDING_REVIEW → REVERTED,
- * báo Farm Owner.
+ * báo Farm Owner. Đóng mục trước rồi mới áp: chuyên gia khác vừa chấp nhận thì 409 và Zone không bị
+ * hoàn tác; áp lỗi thì mở lại mục.
  */
 export async function revertReview(reviewId: string, user: CurrentUser) {
   const { review, chain } = await loadPendingReview(reviewId, user)
+  const current: object = review.group === 'thresholds' ? chain.zone.toObject().thresholds : chain.zone.toObject().fuzzy_tuning
+  const restoredThresholds = { ...current, ...pickThresholds(review.old_values) } as Thresholds
+  const restoredFuzzy = pickFuzzyTuning(review.old_values)
+  if (review.group === 'thresholds') assertValidThresholds(restoredThresholds)
+  else assertValidFuzzyTuning({ ...chain.zone.toObject().fuzzy_tuning, ...restoredFuzzy })
 
-  let current: object
-  if (review.group === 'thresholds') {
-    current = chain.zone.toObject().thresholds
-    const restored = { ...current, ...pickThresholds(review.old_values) } as Thresholds
-    assertValidThresholds(restored)
-    await applyThresholdUpdate(chain, user, { thresholds: restored, historyValues: restored, source: 'EXPERT_REVERT' })
-  } else {
-    current = chain.zone.toObject().fuzzy_tuning
-    const restored = pickFuzzyTuning(review.old_values)
-    assertValidFuzzyTuning({ ...chain.zone.toObject().fuzzy_tuning, ...restored })
-    await applyFuzzyTuning(chain, user, restored, 'EXPERT_REVERT')
-  }
   const closed = await closeReview(review, user, 'REVERTED')
+  // Lịch sử hoạt động chuyên gia chỉ hiện REVIEW_REVERTED, không thêm dòng đổi Zone (EXPERT-FR-009)
+  const logDetails = { decided_in: 'parameter_review' }
+  try {
+    if (review.group === 'thresholds') {
+      await applyThresholdUpdate(chain, user, { thresholds: restoredThresholds, historyValues: restoredThresholds, source: 'EXPERT_REVERT', logDetails })
+    } else {
+      await applyFuzzyTuning(chain, user, restoredFuzzy, 'EXPERT_REVERT', { logDetails })
+    }
+  } catch (err) {
+    await ParameterReview.updateOne(
+      { _id: review._id, status: 'REVERTED' },
+      { status: 'PENDING_REVIEW', $unset: { reviewed_by: 1, reviewed_at: 1 } },
+    ).catch((reopenErr: Error) => logger.warn('Mở lại mục duyệt sau khi hoàn lại lỗi thất bại', { err: reopenErr, reviewId }))
+    throw err
+  }
 
   const auditId = await logAction(user._id, 'REVIEW_REVERTED', 'parameter_review', String(review._id), {
     group: review.group, zone_id: String(chain.zone._id), house_id: String(chain.house._id),
