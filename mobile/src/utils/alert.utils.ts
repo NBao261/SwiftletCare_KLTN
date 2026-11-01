@@ -1,3 +1,4 @@
+import { PUMP_ON_CONFIRM_ALERT_TYPES } from '@/constants/relayOverride'
 import type { Alert, AlertSeverity } from '@/types'
 import { getMetricLabel, getMetricUnit } from '@/utils/label.utils'
 import type { ThresholdMetric } from '@/utils/threshold.utils'
@@ -67,4 +68,29 @@ export function getAlertHeadline(alert: Alert, locationName?: string): string {
       : '{metric}{place}: {value}{unit} (Vượt ngưỡng {limit}{unit})'
   const metric = getMetricLabel(firstBreach.metric)
   return t(template, { metric, place, value: firstBreach.value, unit, limit: firstBreach.limit }) + otherText
+}
+
+// Mức cao nhất trong các cảnh báo; không có cảnh báo thì null
+export function getHighestSeverity(alerts: Alert[]): AlertSeverity | null {
+  return pickMostUrgentAlert(alerts)?.severity ?? null
+}
+
+// Số phút tới lúc dự báo vượt ngưỡng của một chỉ số (FORECAST_BREACH, ALERT-FR-011, metadata.predicted của backend);
+// nhiều cảnh báo thì lấy mốc sớm nhất, không có thì null
+export function getForecastMinutesAhead(alerts: Alert[], metric: 'temperature' | 'humidity'): number | null {
+  let earliest: number | null = null
+  for (const alert of alerts) {
+    if (alert.type !== 'FORECAST_BREACH') continue
+    const predicted = alert.metadata?.predicted
+    if (typeof predicted !== 'object' || predicted === null) continue
+    const { metric: predictedMetric, minutesAhead } = predicted as Record<string, unknown>
+    if (predictedMetric !== metric || typeof minutesAhead !== 'number') continue
+    if (earliest === null || minutesAhead < earliest) earliest = minutesAhead
+  }
+  return earliest
+}
+
+// Cảnh báo đang mở khiến việc bật bơm phải được xác nhận (ENV-FR-016)
+export function getPumpOnBlockingAlerts(alerts: Alert[]): Alert[] {
+  return alerts.filter(alert => PUMP_ON_CONFIRM_ALERT_TYPES.includes(alert.type))
 }
