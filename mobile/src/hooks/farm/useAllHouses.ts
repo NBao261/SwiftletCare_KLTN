@@ -2,7 +2,8 @@ import { useQueries } from '@tanstack/react-query'
 import { useFarms } from '@/hooks/farm/useFarms'
 import { farmApi } from '@/services/api/farm.api'
 
-// Nhà yến của mọi Farm người dùng được xem — key trùng useHouses nên dùng chung cache với khung Farm
+// Nhà yến của mọi Farm người dùng được xem, theo thứ tự farm (tạo trước đứng đầu) rồi thứ tự backend trả nhà —
+// key trùng useHouses nên dùng chung cache
 export function useAllHouses() {
   const farmsQuery = useFarms()
   const farmIds = (farmsQuery.data?.data ?? []).map(farm => farm._id)
