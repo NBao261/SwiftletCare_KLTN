@@ -4719,7 +4719,9 @@ components:
       description: |
         `THRESHOLD_BREACH` (ALERT-FR-012, BR-34): chỉ tạo khi 1 chỉ số ở ngoài ngưỡng của Zone liên tục,
         không có mẫu hợp lệ nằm trong ngưỡng xen giữa, trong 10 phút (nhiệt độ, độ ẩm) hoặc 5 phút (ánh
-        sáng, NH3, CO2); số đo thiếu hoặc stale không tính. Tự đóng sau 5 phút về trong ngưỡng (BR-16).
+        sáng, NH3, CO2); số đo thiếu hoặc stale không tính; thiết bị im lặng quá 30 giây (BR-10) thì đếm
+        lại từ mẫu tiếp theo. Tự đóng sau 5 phút các chỉ số của cảnh báo về trong ngưỡng (BR-16); chỉ số
+        khác vừa vượt mà chưa đủ thời gian chờ không giữ cảnh báo mở.
       enum:
         - THRESHOLD_BREACH
         - NODE_OFFLINE
@@ -4757,7 +4759,8 @@ components:
           description: |
             Report 4 §6.1 — chi tiết của sự cố. `THRESHOLD_BREACH` (ALERT-FR-012): chỉ số đã đủ thời gian
             chờ sớm nhất. `UNEXPECTED_RESTART` (THREAT-FR-012): `reset_reason`. `metadata` giữ nguyên cho
-            client cũ (`metadata.breaches` có mọi chỉ số đang vượt).
+            client cũ (`metadata.breaches` có mọi chỉ số đang vượt); `metadata.metrics` là các chỉ số
+            cảnh báo đang báo (đã đủ thời gian chờ).
           properties:
             metric: { type: string, enum: [temperature, humidity, light_lux, nh3_ppm, co2_ppm] }
             observed: { type: number, description: "Giá trị đo mới nhất" }
