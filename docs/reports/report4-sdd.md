@@ -341,9 +341,11 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Service limits of the pump and the fan | backend `RELAY_SERVICE_LIMITS` |
 | Temporary password | backend account-creation service of AUTH-FR-005c |
 | Live-data label, zone balance bands | web `LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`, `ZoneBalanceCard` |
-| Health-indicator level defaults, rain confounder, rating window | backend `healthAssessment` service |
+| Health-indicator level defaults | backend `DEFAULT_HEALTH_LEVELS` (`detectionTuning.util.ts`), `COMPLETENESS_MIN_PCT` (`healthAssessment.service.ts`) |
+| Rain confounder, rating window | backend `RAIN_MM_PER_HOUR`, `RATING_WINDOW_DAYS` (`healthAssessment.service.ts`) |
 | Actuator current check | firmware actuator-current monitor |
-| Weather fetch | backend `jobs/weather.job.ts` |
+| Weather fetch | backend `jobs/weather.job.ts`, `WEATHER_FETCH_TIMEOUT_MS` (`weather.service.ts`) |
+| Evaluation range | backend `MAX_EVALUATION_RANGE` (`healthDay.service.ts`) |
 | Size of one installation | staging sizing (Section 3.4) and the NFR-03 load script |
 | Retention (BR-36) | TTL indexes of Section 6.3 |
 
