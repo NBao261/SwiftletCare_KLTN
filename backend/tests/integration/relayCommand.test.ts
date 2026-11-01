@@ -9,6 +9,7 @@ import request from 'supertest'
 import deviceRoutes from '@/routes/devices.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
+import { AuditLog } from '@/models/auditLog.model'
 import { SensorNode } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
@@ -174,6 +175,15 @@ describe('huỷ can thiệp tay 1 relay hoặc tất cả (ENV-FR-018, BR-20)', 
     const after = (await SensorNode.findById(node._id))!
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
+  })
+
+  it('huỷ relay không đang can thiệp tay (loa): không gửi lệnh, không ghi audit, bơm và quạt vẫn tay', async () => {
+    const { node, clear } = await overridden()
+    await clear('speaker').expect(200)
+    expect(publishCommand).not.toHaveBeenCalled()
+    expect(await AuditLog.countDocuments({ action: 'RELAY_OVERRIDE_CLEARED' })).toBe(0)
+    expect(await openLogs()).toEqual(['misting', 'ventilation'])
+    expect((await SensorNode.findById(node._id))!.control_mode).toBe('MANUAL')
   })
 
   it('không chọn relay → huỷ tất cả như trước; tên relay sai → 422', async () => {

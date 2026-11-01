@@ -271,10 +271,14 @@ export async function clearRelayOverride(nodeId: string, user: CurrentUser, rela
   return node
 }
 
-/** ENV-FR-018, BR-20 — huỷ sớm 1 relay; thiết bị chỉ về AUTO khi không còn relay nào đang can thiệp tay */
+/**
+ * ENV-FR-018, BR-20 — huỷ sớm 1 relay; thiết bị chỉ về AUTO khi không còn relay nào đang can thiệp tay.
+ * Relay đó không đang can thiệp tay thì không làm gì (không gửi lệnh, không ghi audit), như khi thiết bị AUTO.
+ */
 async function clearOneRelayOverride(
   node: ISensorNode, chain: Awaited<ReturnType<typeof assertZoneAccess>>, user: CurrentUser, relayName: RelayName,
 ): Promise<ISensorNode> {
+  if (!(await hasOpenOverride(node._id, relayName))) return node
   const zoneId = String(chain.zone._id)
   publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', {
     deviceId: node.device_id, action: 'clear_override', relayName,

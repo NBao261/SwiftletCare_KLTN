@@ -71,10 +71,13 @@ export async function closeRelayOverrideLog(nodeId: unknown, relay: OverrideRela
   }
 }
 
-/** Thiết bị còn relay nào đang can thiệp tay (bản ghi còn mở) — đọc lỗi thì coi như còn, để không trả về AUTO nhầm */
-export async function hasOpenOverride(nodeId: unknown): Promise<boolean> {
+/**
+ * Thiết bị (hoặc 1 relay của nó khi có `relay`) còn đang can thiệp tay (bản ghi còn mở) — đọc lỗi thì coi
+ * như còn, để không trả về AUTO nhầm và không bỏ qua lệnh huỷ
+ */
+export async function hasOpenOverride(nodeId: unknown, relay?: OverrideRelay): Promise<boolean> {
   try {
-    return !!(await RelayOverrideLog.exists({ node_id: nodeId, ended_at: null }))
+    return !!(await RelayOverrideLog.exists({ node_id: nodeId, ended_at: null, ...(relay && { relay }) }))
   } catch (err) {
     logger.warn('Đọc lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
     return true
