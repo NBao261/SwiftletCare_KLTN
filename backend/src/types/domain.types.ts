@@ -115,6 +115,40 @@ export interface BirdCountTuning {
   return_rate_drop_pct: number   // % — tỷ lệ chim về giảm so với trung bình kỳ trước
 }
 
+// ANALYTICS-FR-012, BR-28: mức của chỉ số sức khỏe theo House do Domain Expert đặt (Farm Owner khi
+// farm chưa có chuyên gia, BR-22). Mức đàn chim lấy từ BirdCountTuning.return_rate_drop_pct.
+export interface HealthLevels {
+  in_range_slight_pct: number    // % thời gian trong ngưỡng — dưới mức này là SLIGHT
+  in_range_clear_pct: number     // % — dưới mức này là CLEAR
+  air_slight_h: number           // giờ NH3/CO2 vượt ngưỡng — từ mức này là SLIGHT
+  air_clear_h: number            // giờ — từ mức này là CLEAR
+  noise_slight: number           // số đợt NOISE_ANOMALY — từ mức này là SLIGHT
+  noise_clear: number            // số đợt — từ mức này là CLEAR
+}
+
+export type HealthLevel = 'NORMAL' | 'SLIGHT' | 'CLEAR'
+export type HealthStatus = 'GOOD' | 'WATCH' | 'ACTION' | 'INSUFFICIENT_DATA'
+/** Trạng thái người chấm tự chọn (EXPERT-FR-012) — không có INSUFFICIENT_DATA */
+export type HealthRatingValue = Exclude<HealthStatus, 'INSUFFICIENT_DATA'>
+export type HealthSource = 'environment' | 'air' | 'flock' | 'noise'
+/** SM-18 — suy ra từ ratings và ngày, không lưu */
+export type HealthRatingState = 'PENDING' | 'RATED' | 'SKIPPED' | 'EXPIRED'
+
+export type HealthReasonCode =
+  | 'ALL_NORMAL' | 'MISSING_DATA' | 'NOT_ASSESSED' | 'ENV_IN_RANGE' | 'AIR_OVER_LIMIT'
+  | 'FLOCK_DROP' | 'FLOCK_NO_BASELINE' | 'NOISE_EPISODES' | 'WEATHER_UNAVAILABLE' | 'RAIN_DOWNGRADE'
+
+/**
+ * ANALYTICS-FR-012 — 1 lý do của trạng thái ngày: mã + số liệu, không phải câu, để web và mobile tự dịch
+ * (VI/EN) và ảnh chụp lúc chấm (không bao giờ đổi) không phụ thuộc ngôn ngữ. `values` chỉ có số và tên.
+ */
+export interface HealthReason {
+  code: HealthReasonCode
+  source: HealthSource | null
+  level: Exclude<HealthLevel, 'NORMAL'> | null
+  values: Record<string, unknown>
+}
+
 // ── MQTT Message Payloads ──────────────────────────────────────────────────────
 export interface TelemetryPayload {
   deviceId: string

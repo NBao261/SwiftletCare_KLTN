@@ -11,26 +11,30 @@ import { AudioTrack } from '@/models/audioTrack.model'
 import { AuditLog } from '@/models/auditLog.model'
 import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
+import { CoefficientProposal } from '@/models/coefficientProposal.model'
 import { SensorNode, CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { HarvestBatch } from '@/models/harvestBatch.model'
+import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Invitation } from '@/models/invitation.model'
 import { Notification } from '@/models/notification.model'
+import { ParameterReview } from '@/models/parameterReview.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
+import { WeatherObservation } from '@/models/weatherObservation.model'
 import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- models have different document types
 type AnyModel = Model<any>
 
 export const ALL_MODELS: AnyModel[] = [
-  Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode,
-  Farm, HarvestBatch, House, Zone, Invitation, Notification,
-  ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, ZoneHealthReport,
+  Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode, CoefficientProposal,
+  Farm, HarvestBatch, House, HouseHealthDay, Zone, Invitation, Notification, ParameterReview,
+  ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, ZoneHealthReport,
 ]
 
 export interface JsonSchemaNode {

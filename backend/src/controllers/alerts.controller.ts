@@ -1,5 +1,7 @@
 import { Request, Response } from 'express'
 import * as alertService from '@/services/alert.service'
+import * as alertEvidenceService from '@/services/alertEvidence.service'
+import { recomputeForAlert } from '@/services/healthAssessment.service'
 import type { AlertVerdictResult } from '@/types'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
@@ -36,6 +38,8 @@ export const setVerdict = asyncHandler(async (req: Request, res: Response) => {
   const alert = await alertService.setAlertVerdict(
     req.params.id, req.user, req.body.result as AlertVerdictResult, req.body.note as string | undefined,
   )
+  // SM-17 — NOISE_ANOMALY bị bác bỏ / xác nhận lại đổi chỉ số tiếng ồn của ngày (BR-28)
+  await recomputeForAlert(alert)
   res.json({ success: true, data: alert })
 })
 
@@ -46,4 +50,10 @@ export const verdictStats = asyncHandler(async (req: Request, res: Response) => 
     zoneId: req.query.zoneId as string | undefined,
   })
   res.json({ success: true, data: stats })
+})
+
+/** GET /alerts/:id/evidence – ALERT-FR-014 (dữ liệu quanh cảnh báo suy luận) */
+export const evidence = asyncHandler(async (req: Request, res: Response) => {
+  const data = await alertEvidenceService.getAlertEvidence(req.params.id, req.user)
+  res.json({ success: true, data })
 })

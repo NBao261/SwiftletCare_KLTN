@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as farmService from '@/services/farm.service'
+import * as coefficientProposalService from '@/services/coefficientProposal.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** GET /farms – FARM-FR-001 */
@@ -113,6 +114,12 @@ export const updateFuzzyTuning = asyncHandler(async (req: Request, res: Response
   res.json({ success: true, data: zone })
 })
 
+/** POST /farms/zones/:zoneId/fuzzy-tuning/apply-suggestion – EXPERT-FR-011, BR-22 */
+export const applySuggestion = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await coefficientProposalService.applySuggestionDirect(req.user, req.params.zoneId)
+  res.json({ success: true, data: zone })
+})
+
 /** PUT /farms/zones/:zoneId/detection-tuning – EXPERT-FR-008 */
 export const updateDetectionTuning = asyncHandler(async (req: Request, res: Response) => {
   const zone = await farmService.updateZoneDetectionTuning(req.params.zoneId, req.user, req.body)
@@ -123,6 +130,18 @@ export const updateDetectionTuning = asyncHandler(async (req: Request, res: Resp
 export const updateBirdCountTuning = asyncHandler(async (req: Request, res: Response) => {
   const house = await farmService.updateHouseBirdCountTuning(req.params.houseId, req.user, req.body)
   res.json({ success: true, data: house })
+})
+
+/** GET /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-28 */
+export const getHealthLevels = asyncHandler(async (req: Request, res: Response) => {
+  const data = await farmService.getHouseHealthLevels(req.params.houseId, req.user)
+  res.json({ success: true, data })
+})
+
+/** PUT /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-22 */
+export const updateHealthLevels = asyncHandler(async (req: Request, res: Response) => {
+  const data = await farmService.updateHouseHealthLevels(req.params.houseId, req.user, req.body)
+  res.json({ success: true, data })
 })
 
 /** PUT /farms/zones/:zoneId/thresholds/reset – ENV-FR-020 */

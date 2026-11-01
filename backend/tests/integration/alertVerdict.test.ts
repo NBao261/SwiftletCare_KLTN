@@ -17,7 +17,10 @@ import { SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
-import { findThresholdBreaches, ingestDeviceAlert, raiseThresholdAlert, renotifyStaleAlerts } from '@/services/alert.service'
+import {
+  EPISODE_CLEAR_MS, findThresholdBreaches, ingestDeviceAlert, raiseThresholdAlert, renotifyStaleAlerts, resolveStaleEpisodeAlerts,
+} from '@/services/alert.service'
+import { dispatchAlertNotification } from '@/services/notification.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import type { AlertType, Role } from '@/types'
 
@@ -86,7 +89,8 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
     const breaches = findThresholdBreaches(
       { temperature: 28, humidity: 85, light_lux: 0.1, nh3_ppm: DEFAULT_THRESHOLDS.nh3_max + 10, co2_ppm: 800 }, DEFAULT_THRESHOLDS,
     )
-    await raiseThresholdAlert(String(zone._id), String(node._id), breaches)
+    // Đã ở ngoài ngưỡng đủ thời gian chờ (BR-34) — thời gian chờ có test riêng ở thresholdBreach.test.ts
+    await raiseThresholdAlert(String(zone._id), String(node._id), breaches.map(b => ({ ...b, started_at: new Date() })))
 
     const alert = (await Alert.findOne({ type: 'THRESHOLD_BREACH' }).lean())!
     expect(alert.severity).toBe('MEDIUM')
@@ -97,7 +101,7 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
 
   it('breach nhiệt độ không kèm ghi chú chất lượng không khí', async () => {
     const { zone, node } = await seed()
-    await raiseThresholdAlert(String(zone._id), String(node._id), [{ metric: 'temperature', value: 36, limit: 31, direction: 'above' }])
+    await raiseThresholdAlert(String(zone._id), String(node._id), [{ metric: 'temperature', value: 36, limit: 31, direction: 'above', started_at: new Date() }])
     expect((await Alert.findOne().lean())!.message).not.toContain('chuyên gia')
   })
 
@@ -146,13 +150,19 @@ describe('kiểm chứng của Domain Expert (EXPERT-FR-003)', () => {
     const { expert, mkAlert, t } = await seed()
     const alert = await mkAlert('NOISE_ANOMALY')
 
+    // Farm đã có chuyên gia: Farm Owner không kết luận thay (BR-22)
     await call('put', `/alerts/${alert._id}/verdict`, t.owner, { result: 'CONFIRMED' }).expect(403)
     await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'MAYBE' }).expect(422)
     const res = await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'REJECTED', note: 'Chim về tổ như mọi ngày' }).expect(200)
-    expect(res.body.data.expert_verdict).toMatchObject({ result: 'REJECTED', note: 'Chim về tổ như mọi ngày', by: String(expert._id) })
-    expect(res.body.data.status).toBe('ACTIVE') // kiểm chứng không thay cho xác nhận đã xử lý
+    expect(res.body.data.expert_verdict).toMatchObject({
+      result: 'REJECTED', note: 'Chim về tổ như mọi ngày', role: 'DOMAIN_EXPERT', by: { _id: String(expert._id), full_name: 'E' },
+    })
+    // SM-01 — bác bỏ đưa cảnh báo ra khỏi danh sách còn hiệu lực, nhớ trạng thái cũ
+    expect(res.body.data).toMatchObject({ status: 'DISMISSED', previous_status: 'ACTIVE' })
 
-    await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'CONFIRMED' }).expect(200)
+    const back = await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'CONFIRMED' }).expect(200)
+    expect(back.body.data.status).toBe('ACTIVE')
+    expect(back.body.data.previous_status).toBeUndefined()
     expect((await Alert.findById(alert._id).lean())!.expert_verdict!.result).toBe('CONFIRMED')
     expect(await AuditLog.countDocuments({ action: 'ALERT_VERDICT_SET' })).toBe(2)
   })
@@ -184,8 +194,103 @@ describe('kiểm chứng của Domain Expert (EXPERT-FR-003)', () => {
 
     const stats = await call('get', `/alerts/verdict-stats?zoneId=${zone._id}`, t.owner).expect(200)
     expect(stats.body.data).toEqual(expect.arrayContaining([
-      { type: 'NOISE_ANOMALY', confirmed: 1, rejected: 2, pending: 0, confirmedPct: 33 },
-      { type: 'FORECAST_BREACH', confirmed: 0, rejected: 0, pending: 1, confirmedPct: null },
+      expect.objectContaining({ type: 'NOISE_ANOMALY', confirmed: 1, rejected: 2, pending: 0, confirmedPct: 33 }),
+      expect.objectContaining({ type: 'FORECAST_BREACH', confirmed: 0, rejected: 0, pending: 1, confirmedPct: null }),
     ]))
+  })
+
+  it('thống kê tách theo vai trò người kết luận; kết luận cũ không có vai trò tính cho Domain Expert', async () => {
+    const { owner, expert, zone, mkAlert, t } = await seed()
+    const [n1, n2, n3] = await Promise.all([mkAlert('NOISE_ANOMALY'), mkAlert('NOISE_ANOMALY'), mkAlert('NOISE_ANOMALY')])
+    await Alert.updateOne({ _id: n1._id }, { expert_verdict: { result: 'CONFIRMED', by: expert._id, role: 'DOMAIN_EXPERT', at: new Date() } })
+    await Alert.updateOne({ _id: n2._id }, { expert_verdict: { result: 'REJECTED', by: owner._id, role: 'FARM_OWNER', at: new Date() } })
+    await Alert.updateOne({ _id: n3._id }, { expert_verdict: { result: 'REJECTED', by: expert._id, at: new Date() } })
+
+    const stats = await call('get', `/alerts/verdict-stats?zoneId=${zone._id}`, t.expert).expect(200)
+    const noise = stats.body.data.find((s: { type: string }) => s.type === 'NOISE_ANOMALY')
+    expect(noise.byRole).toEqual({
+      DOMAIN_EXPERT: { confirmed: 1, rejected: 1 },
+      FARM_OWNER: { confirmed: 0, rejected: 1 },
+    })
+  })
+})
+
+describe('cảnh báo bị bác bỏ — DISMISSED (SM-01, EXPERT-FR-003, ALERT-FR-007/008)', () => {
+  beforeEach(() => jest.mocked(dispatchAlertNotification).mockClear())
+
+  it('bác bỏ bắt buộc ghi lý do (422)', async () => {
+    const { mkAlert, t } = await seed()
+    const alert = await mkAlert('NOISE_ANOMALY')
+    await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'REJECTED' }).expect(422)
+    await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'REJECTED', note: '   ' }).expect(422)
+    expect((await Alert.findById(alert._id).lean())!.status).toBe('ACTIVE')
+  })
+
+  it('bác bỏ cảnh báo đã xác nhận nhớ ACKNOWLEDGED; xác nhận lại thì về đúng trạng thái đó và báo lại Farm Owner', async () => {
+    const { mkAlert, t } = await seed()
+    const alert = await mkAlert('SENSOR_ANOMALY')
+    await Alert.updateOne({ _id: alert._id }, { status: 'ACKNOWLEDGED' })
+
+    await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'REJECTED', note: 'Cảm biến vừa được lau' }).expect(200)
+    expect(await Alert.findById(alert._id).lean()).toMatchObject({ status: 'DISMISSED', previous_status: 'ACKNOWLEDGED' })
+    expect(dispatchAlertNotification).not.toHaveBeenCalled()
+
+    await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'CONFIRMED' }).expect(200)
+    expect((await Alert.findById(alert._id).lean())!.status).toBe('ACKNOWLEDGED')
+    expect(dispatchAlertNotification).toHaveBeenCalledTimes(1)
+  })
+
+  it('kết luận trên cảnh báo đã đóng không đổi trạng thái', async () => {
+    const { mkAlert, t } = await seed()
+    const alert = await mkAlert('FORECAST_BREACH')
+    await Alert.updateOne({ _id: alert._id }, { status: 'RESOLVED', resolved_at: new Date() })
+    await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'REJECTED', note: 'Dự báo sai' }).expect(200)
+    expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
+  })
+
+  it('Farm Owner xác nhận cảnh báo ACTIVE kèm người, lúc, ghi chú; cảnh báo bị bác bỏ hoặc đã đóng → 409', async () => {
+    const { owner, mkAlert, t } = await seed()
+    const active = await mkAlert('NOISE_ANOMALY')
+    const ack = await call('put', `/alerts/${active._id}/acknowledge`, t.owner, { note: 'Đã kiểm tra' }).expect(200)
+    expect(ack.body.data).toMatchObject({ status: 'ACKNOWLEDGED', acknowledged_by: String(owner._id), acknowledgement_note: 'Đã kiểm tra' })
+    expect(ack.body.data.acknowledged_at).toEqual(expect.any(String))
+
+    const dismissed = await mkAlert('NOISE_ANOMALY')
+    await call('put', `/alerts/${dismissed._id}/verdict`, t.expert, { result: 'REJECTED', note: 'Tiếng mưa' }).expect(200)
+    await call('put', `/alerts/${dismissed._id}/acknowledge`, t.owner, { note: 'ok' }).expect(409)
+    expect((await Alert.findById(dismissed._id).lean())!.status).toBe('DISMISSED')
+
+    const resolved = await mkAlert('FORECAST_BREACH')
+    await Alert.updateOne({ _id: resolved._id }, { status: 'RESOLVED', resolved_at: new Date() })
+    await call('put', `/alerts/${resolved._id}/acknowledge`, t.owner, { note: 'ok' }).expect(409)
+    expect((await Alert.findById(resolved._id).lean())!.status).toBe('RESOLVED')
+  })
+
+  it('gặp lại cùng sự cố: gộp vào cảnh báo DISMISSED, không tạo mới, không thông báo; hết đợt thì tự đóng', async () => {
+    const { node, mkAlert, t } = await seed()
+    const alert = await mkAlert('NOISE_ANOMALY')
+    await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'REJECTED', note: 'Tiếng mưa' }).expect(200)
+    // Lần ghi nhận trước đã quá 1 phút → lần này được đếm (ALERT_SEEN_UPDATE_MS)
+    await Alert.updateOne({ _id: alert._id }, { last_seen_at: new Date(Date.now() - 2 * 60_000) })
+    jest.mocked(dispatchAlertNotification).mockClear()
+
+    await ingestDeviceAlert({ deviceId: node.device_id, type: 'NOISE_ANOMALY', message: 'ồn' })
+    expect(await Alert.countDocuments()).toBe(1)
+    expect(await Alert.findById(alert._id).lean()).toMatchObject({ status: 'DISMISSED', occurrence_count: 2 })
+    expect(dispatchAlertNotification).not.toHaveBeenCalled()
+
+    await resolveStaleEpisodeAlerts(new Date(Date.now() + EPISODE_CLEAR_MS + 60_000))
+    expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
+  })
+
+  it('lọc danh sách theo status=DISMISSED; danh sách có tên người bác bỏ', async () => {
+    const { mkAlert, t } = await seed()
+    const [dismissed] = await Promise.all([mkAlert('NOISE_ANOMALY'), mkAlert('NOISE_ANOMALY')])
+    await call('put', `/alerts/${dismissed._id}/verdict`, t.expert, { result: 'REJECTED', note: 'Tiếng mưa' }).expect(200)
+
+    const res = await call('get', '/alerts?status=DISMISSED', t.owner).expect(200)
+    expect(res.body.meta.total).toBe(1)
+    expect(res.body.data[0].expert_verdict.by).toMatchObject({ full_name: 'E' })
+    expect((await call('get', '/alerts?status=ACTIVE', t.owner).expect(200)).body.meta.total).toBe(1)
   })
 })

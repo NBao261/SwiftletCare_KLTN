@@ -328,6 +328,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Default session windows | AI node `config.yaml`, backend `DEFAULT_SESSION_WINDOWS` |
 | Return-rate check | backend `jobs/returnRate.job.ts`, `MIN_BASELINE_DAYS` |
 | One read of 5-minute counts | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS` |
+| Earlier verdicts shown with an inferred alert | backend `EARLIER_VERDICTS_LIMIT` (`alertEvidence.service.ts`) |
 | Live-stream viewing token | backend `STREAM_TOKEN_TTL_SEC` |
 | Counting ring vertices | backend `devices.route.ts`, AI node `remote_config.MAX_POINTS` |
 | Ring margin, tile overlap, extrapolation | AI node `config.yaml` (`tracking.ring`, tile overlap, `extrapolate_min_speed_px`, `extrapolate_frames`) |
@@ -340,9 +341,11 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Service limits of the pump and the fan | backend `RELAY_SERVICE_LIMITS` |
 | Temporary password | backend account-creation service of AUTH-FR-005c |
 | Live-data label, zone balance bands | web `LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`, `ZoneBalanceCard` |
-| Health-indicator level defaults, rain confounder, rating window | backend `healthAssessment` service |
+| Health-indicator level defaults | backend `DEFAULT_HEALTH_LEVELS` (`detectionTuning.util.ts`), `COMPLETENESS_MIN_PCT` (`healthAssessment.service.ts`) |
+| Rain confounder, rating window | backend `RAIN_MM_PER_HOUR`, `RATING_WINDOW_DAYS` (`healthAssessment.service.ts`) |
 | Actuator current check | firmware actuator-current monitor |
-| Weather fetch | backend `jobs/weather.job.ts` |
+| Weather fetch | backend `jobs/weather.job.ts`, `WEATHER_FETCH_TIMEOUT_MS` (`weather.service.ts`) |
+| Evaluation range | backend `MAX_EVALUATION_RANGE` (`healthDay.service.ts`) |
 | Size of one installation | staging sizing (Section 3.4) and the NFR-03 load script |
 | Retention (BR-36) | TTL indexes of Section 6.3 |
 
@@ -533,7 +536,7 @@ erDiagram
     object indicators "environment, air, flock, noise: value and level"
     object completeness "per source"
     string current_status "GOOD | WATCH | ACTION | INSUFFICIENT_DATA"
-    array current_reasons
+    array current_reasons "code, source, level, values"
     date computed_at
     array ratings "by, role, outcome RATED | SKIPPED, rating, note, at, snapshot status and reasons"
   }
@@ -674,7 +677,7 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date` | Soft delete; photo in MinIO |
 | `auditlogs` | Audit entry | `actor_id + created_at`, `farm_id + created_at`, `target_type + target_id`, `action + created_at` | Source of the expert activity history |
 | `parameterreviews` | Review item | `zone_id + group + status` | One open item per zone and group |
-| `coefficientproposals` | Proposal | `zone_id + status` | |
+| `coefficientproposals` | Proposal | `zone_id + status`; `zone_id` unique while `PROPOSED` | One open proposal per zone |
 | `systemsettings` | Singleton settings | `_singleton` unique | Default thresholds and their sourced history |
 
 The exact field list, types and indexes of every collection are those of the database script (6.5).
@@ -895,7 +898,7 @@ stateDiagram-v2
   [*] --> PROPOSED : owner submits a suggestion (EXPERT-FR-011)
   PROPOSED --> APPROVED : expert approves, coefficients applied
   PROPOSED --> REJECTED : expert rejects with note
-  PROPOSED --> SUPERSEDED : newer proposal or expert edit
+  PROPOSED --> SUPERSEDED : newer proposal or any edit
   APPROVED --> [*]
   REJECTED --> [*]
   SUPERSEDED --> [*]
