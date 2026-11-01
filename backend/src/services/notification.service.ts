@@ -4,6 +4,7 @@ import { Notification, type NotificationRefKind } from '@/models/notification.mo
 import { sendTelegram } from '@/services/telegram.service'
 import { emitNotificationNew } from '@/socket'
 import { NotFoundError } from '@/utils/appError.util'
+import { activeExpertIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { IAlert } from '@/models/alert.model'
@@ -60,13 +61,15 @@ export async function findFarmExperts(farmId: unknown): Promise<string[]> {
 /**
  * EXPERT-FR-007 — cảnh báo suy luận mới chờ kiểm chứng. Chỉ báo trong ứng dụng: ALERT-FR-005
  * ghi Domain Expert "chỉ nhận thông báo trong ứng dụng" cho loại sự kiện này, không Telegram/push.
- * Farm chưa có chuyên gia thì Farm Owner kết luận thay (BR-22), nên thông báo này tới họ.
+ * Farm chưa có chuyên gia còn hoạt động thì Farm Owner kết luận thay (BR-22), nên thông báo này tới họ.
  */
 async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
-  const experts = await findFarmExperts(alert.farm_id)
+  const farm = await Farm.findById(alert.farm_id).select('members')
+  if (!farm) return
+  const experts = await activeExpertIds(farm)
+  // findRecipients đã lọc is_active
   const deciders = experts.length > 0 ? experts : (await findRecipients(String(alert.farm_id))).map(u => String(u._id))
-  const active = await User.find({ _id: { $in: deciders }, is_active: true }).select('_id').lean()
-  await Promise.all(active.map(u => createInAppNotification(String(u._id), {
+  await Promise.all(deciders.map(id => createInAppNotification(id, {
     title: `Cảnh báo chờ kiểm chứng: ${alert.title}`,
     body: alert.message,
     ref: { kind: 'alert', id: String(alert._id) },

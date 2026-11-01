@@ -448,7 +448,7 @@ export async function setAlertVerdict(
   if (!INFERRED_ALERT_TYPES.includes(alert.type)) {
     throw BadRequestError(`Chỉ kiểm chứng cảnh báo suy luận (${INFERRED_ALERT_TYPES.join(', ')})`)
   }
-  assertExpertDecision(farm, user)
+  await assertExpertDecision(farm, user)
   const trimmedNote = note?.trim() || undefined
   // Route đã chặn; giữ ở service cho mọi đường gọi khác
   if (result === 'REJECTED' && !trimmedNote) {
