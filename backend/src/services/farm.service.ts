@@ -524,7 +524,7 @@ export async function getHouseHealthLevels(houseId: string, user: CurrentUser) {
 /** ANALYTICS-FR-012 — Domain Expert đặt mức trong khoảng BR-28; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22) */
 export async function updateHouseHealthLevels(houseId: string, user: CurrentUser, updates: Record<string, unknown>) {
   const { house, farm } = await assertHouseAccess(houseId, user)
-  assertExpertDecision(farm, user)
+  await assertExpertDecision(farm, user)
 
   const picked = pickHealthLevels(updates)
   if (Object.keys(picked).length === 0) throw BadRequestError('Không có mức nào để cập nhật')
