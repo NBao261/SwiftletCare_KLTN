@@ -19,6 +19,8 @@ async function currentSuggestion(user: CurrentUser, zoneId: string) {
   return result as typeof result & { suggestion: NonNullable<typeof result.suggestion> }
 }
 
+const SUBMIT_ATTEMPTS = 3
+
 /**
  * EXPERT-FR-011 — Farm Owner gửi gợi ý hiện tại của hệ thống cho chuyên gia. Chụp gợi ý và hệ số
  * đang dùng lúc gửi; đề xuất cũ còn chờ của Zone thành SUPERSEDED; báo Domain Expert trong ứng dụng
@@ -32,11 +34,20 @@ export async function submitProposal(user: CurrentUser, zoneId: string): Promise
   }
   const { suggestion, predicted } = await currentSuggestion(user, zoneId)
 
-  await CoefficientProposal.updateMany({ zone_id: zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
-  const proposal = await CoefficientProposal.create({
-    zone_id: zone._id, farm_id: farm._id, submitted_by: user._id,
-    suggested_values: suggestion, current_values: zone.toObject().fuzzy_tuning, predicted,
-  })
+  // Mỗi Zone chỉ 1 đề xuất PROPOSED (unique index): 2 lần gửi cùng lúc thì lần tạo sau gặp E11000,
+  // chạy lại để đề xuất mới nhất thắng và cái kia thành SUPERSEDED
+  let proposal: ICoefficientProposal | undefined
+  for (let attempt = 1; !proposal; attempt++) {
+    await CoefficientProposal.updateMany({ zone_id: zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
+    try {
+      proposal = await CoefficientProposal.create({
+        zone_id: zone._id, farm_id: farm._id, submitted_by: user._id,
+        suggested_values: suggestion, current_values: zone.toObject().fuzzy_tuning, predicted,
+      })
+    } catch (err) {
+      if ((err as { code?: number }).code !== 11000 || attempt >= SUBMIT_ATTEMPTS) throw err
+    }
+  }
   await logAction(user._id, 'PROPOSAL_SUBMITTED', 'coefficient_proposal', String(proposal._id), {
     zone_id: String(zone._id), house_id: String(zone.house_id), suggested: suggestion,
   }, { farmId: String(farm._id) })
@@ -89,9 +100,19 @@ export async function approveProposal(proposalId: string, user: CurrentUser): Pr
   const before = chain.zone.toObject().fuzzy_tuning
   assertValidFuzzyTuning({ ...before, ...suggested })
 
-  // Đóng trước rồi mới áp: applyFuzzyTuning chuyển mọi đề xuất PROPOSED của Zone thành SUPERSEDED
+  // Đóng trước rồi mới áp: 2 chuyên gia cùng duyệt thì chỉ 1 người áp, và applyFuzzyTuning chuyển mọi
+  // đề xuất PROPOSED của Zone thành SUPERSEDED. Áp lỗi thì đề xuất về lại PROPOSED để duyệt lại được.
   const closed = await closeProposal(proposal, user, 'APPROVED')
-  await applyFuzzyTuning(chain, user, suggested, 'SUGGESTION_APPROVED', { notify: false })
+  try {
+    // Lịch sử hoạt động chuyên gia chỉ hiện PROPOSAL_APPROVED, không thêm dòng đổi hệ số (EXPERT-FR-009)
+    await applyFuzzyTuning(chain, user, suggested, 'SUGGESTION_APPROVED', { notify: false, logDetails: { decided_in: 'coefficient_proposal' } })
+  } catch (err) {
+    await CoefficientProposal.updateOne(
+      { _id: proposal._id, status: 'APPROVED' },
+      { status: 'PROPOSED', $unset: { decided_by: 1, decided_at: 1 } },
+    ).catch((reopenErr: Error) => logger.warn('Mở lại đề xuất sau khi áp lỗi thất bại', { err: reopenErr, proposalId }))
+    throw err
+  }
 
   const auditId = await logAction(user._id, 'PROPOSAL_APPROVED', 'coefficient_proposal', String(proposal._id), {
     zone_id: String(chain.zone._id), house_id: String(chain.house._id), before, after: { ...before, ...suggested },
@@ -150,6 +171,5 @@ export async function applySuggestionDirect(user: CurrentUser, zoneId: string) {
   const chain = await assertZoneAccess(zoneId, user)
   await assertExpertDecision(chain.farm, user)
   const { suggestion } = await currentSuggestion(user, zoneId)
-  await CoefficientProposal.updateMany({ zone_id: chain.zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
   return applyFuzzyTuning(chain, user, pickFuzzyTuning(suggestion), 'SUGGESTION_APPROVED')
 }

@@ -23,6 +23,7 @@ import { ParameterReview } from '@/models/parameterReview.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { User } from '@/models/user.model'
 import { publishCommand } from '@/mqtt/mqtt.client'
+import * as thresholdUpdate from '@/utils/thresholdUpdate.util'
 import type { Role } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true), publishHouseCommand: jest.fn().mockReturnValue(true) }))
@@ -53,6 +54,7 @@ afterAll(async () => {
   await mongod.stop()
 })
 afterEach(async () => {
+  jest.restoreAllMocks()
   jest.clearAllMocks()
   await Promise.all([AuditLog, SensorNode, Farm, House, Zone, Notification, ParameterReview, SystemSetting, User]
     .map(m => (m as typeof User).deleteMany({})))
@@ -128,6 +130,21 @@ describe('mở mục duyệt khi Farm Owner sửa (EXPERT-FR-010)', () => {
     await solo.send('put', `/farms/zones/${solo.zone._id}/fuzzy-tuning`, solo.t.owner, { fuzzy_humidity_band: 10 }).expect(200)
     expect(await reviewsOf(solo.zone._id)).toHaveLength(0)
   })
+
+  it('2 lần sửa đầu tiên tới cùng lúc: lần mở mục sau gặp E11000 thì ghi giá trị mới vào mục đã mở', async () => {
+    const { zone, t, send } = await seed()
+    // Giả lập lần sửa kia vừa mở mục (giá trị cũ hơn) ngay trước khi lần này tạo mục
+    const realCreate = ParameterReview.create.bind(ParameterReview)
+    jest.spyOn(ParameterReview, 'create').mockImplementationOnce((async (doc: Record<string, unknown>) => {
+      await realCreate({ ...doc, new_values: { ...(doc.new_values as object), humidity_min: 77 } })
+      throw Object.assign(new Error('E11000 duplicate key'), { code: 11000 })
+    }) as never)
+
+    await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 78 }).expect(200)
+    const reviews = await reviewsOf(zone._id)
+    expect(reviews).toHaveLength(1)
+    expect(reviews[0].new_values.humidity_min).toBe(78)
+  })
 })
 
 describe('chuyên gia duyệt (Report 3 §6.10)', () => {
@@ -167,6 +184,38 @@ describe('chuyên gia duyệt (Report 3 §6.10)', () => {
     const after = (await Zone.findById(s.zone._id).lean())!
     expect(after.fuzzy_tuning.fuzzy_humidity_band).toBe(8)
     expect(after.fuzzy_tuning_history.at(-1)!.source).toBe('EXPERT_REVERT')
+  })
+
+  it('chấp nhận và hoàn lại cùng lúc: đúng 1 bên thắng, trạng thái mục khớp giá trị Zone', async () => {
+    const { zone, review, t, send } = await pending()
+    const results = await Promise.all([
+      send('put', `/expert-activity/reviews/${review._id}/accept`, t.expert),
+      send('put', `/expert-activity/reviews/${review._id}/revert`, t.expert),
+    ])
+    expect(results.map(r => r.status).sort()).toEqual([200, 409])
+
+    const status = (await ParameterReview.findById(review._id).lean())!.status
+    const humidityMin = (await Zone.findById(zone._id).lean())!.thresholds.humidity_min
+    expect(status === 'ACCEPTED' ? 78 : 75).toBe(humidityMin)
+  })
+
+  it('hoàn lại lỗi khi áp → mục mở lại PENDING_REVIEW, giá trị giữ nguyên, hoàn lại lần sau được', async () => {
+    const { zone, review, t, send } = await pending()
+    jest.spyOn(thresholdUpdate, 'applyThresholdUpdate').mockRejectedValueOnce(new Error('Mất kết nối DB'))
+    await send('put', `/expert-activity/reviews/${review._id}/revert`, t.expert).expect(500)
+    expect((await ParameterReview.findById(review._id).lean())!.status).toBe('PENDING_REVIEW')
+    expect((await Zone.findById(zone._id).lean())!.thresholds.humidity_min).toBe(78)
+
+    await send('put', `/expert-activity/reviews/${review._id}/revert`, t.expert).expect(200)
+    expect((await Zone.findById(zone._id).lean())!.thresholds.humidity_min).toBe(75)
+  })
+
+  it('lịch sử hoạt động: hoàn lại là 1 dòng REVIEW_REVERTED; chuyên gia tự sửa ngưỡng vẫn có THRESHOLD_UPDATED', async () => {
+    const { farm, zone, review, t, send } = await pending()
+    await send('put', `/expert-activity/reviews/${review._id}/revert`, t.expert).expect(200)
+    await send('put', `/farms/zones/${zone._id}/thresholds`, t.expert, { humidity_min: 76 }).expect(200)
+    const res = await send('get', `/expert-activity?farmId=${farm._id}`, t.owner).expect(200)
+    expect(res.body.data.map((e: { action: string }) => e.action)).toEqual(['THRESHOLD_UPDATED', 'REVIEW_REVERTED'])
   })
 
   it('chuyên gia tự sửa cùng nhóm → ADJUSTED với giá trị mới của chuyên gia', async () => {

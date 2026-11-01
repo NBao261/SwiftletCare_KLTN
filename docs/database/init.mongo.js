@@ -394,6 +394,7 @@ ensureCollection("coefficientproposals", {
   "required": ["zone_id", "farm_id", "submitted_by", "suggested_values", "current_values"]
 })
 db.getCollection("coefficientproposals").createIndex({"zone_id":1,"status":1})
+db.getCollection("coefficientproposals").createIndex({"zone_id":1}, {"unique":true,"partialFilterExpression":{"status":"PROPOSED"}})
 db.getCollection("coefficientproposals").createIndex({"farm_id":1,"created_at":-1})
 
 // ── farms (model Farm) ──
