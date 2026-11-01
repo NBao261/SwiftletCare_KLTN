@@ -69,7 +69,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
             <div className="min-w-0">
               <p className="truncate text-h3 text-charcoal">{node.device_id}</p>
               <p className="truncate text-small text-warmGray">
-                {/* SRS v2.0.0: camera là camera IP phát RTSP, AI đếm chim chạy trên nút PC/cloud — không còn Raspberry Pi */}
+                {/* SRS v2.0.0: camera là camera IP phát RTSP, AI đếm chim chạy trên AI node (PC) */}
                 {t(isSensor ? 'ESP32 · 5 cảm biến RS485' : 'Camera IP · RTSP Stream')}
               </p>
             </div>

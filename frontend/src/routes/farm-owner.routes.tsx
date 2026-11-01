@@ -14,7 +14,6 @@ const FarmOwnerFarmsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmsP
 const FarmOwnerFarmZonesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZonesPage'))
 const FarmOwnerFarmZoneDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZoneDetailPage'))
 const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarvestPage'))
-const FarmOwnerLiveStreamPage = lazy(() => import('@/pages/farm-owner/FarmOwnerLiveStreamPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
 
 /** /farms dùng chung URL nhưng Technician có trang riêng (chỉ cấu trúc + thiết bị trong vùng, không sản lượng) */
@@ -94,14 +93,6 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={HARVEST_ROLES}>
           <FarmOwnerHarvestPage />
-        </RequireRole>
-      }
-    />
-    <Route
-      path="stream/:id"
-      element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
-          <FarmOwnerLiveStreamPage />
         </RequireRole>
       }
     />

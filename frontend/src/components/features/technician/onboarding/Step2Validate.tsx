@@ -43,7 +43,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         zone_id: data.location.zoneId!,
         secret_key: data.secretKey.trim(),
       }
-      // Camera Node (RPi) có endpoint riêng — gọi nhầm sang sensor sẽ bị BE từ chối vì khác loại trong kho thiết bị
+      // Camera Node có endpoint riêng — gọi nhầm sang sensor sẽ bị BE từ chối vì khác loại trong kho thiết bị
       const res = data.deviceType === 'CAMERA_NODE'
         ? await deviceApi.registerCameraNode(payload)
         : await deviceApi.registerSensorNode(payload)

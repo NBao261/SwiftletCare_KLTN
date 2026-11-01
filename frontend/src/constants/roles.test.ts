@@ -14,7 +14,6 @@ const MATRIX: Record<string, Role[]> = {
   '/dashboard/scada': [FO],
   '/analytics': [FO, DE],
   '/vision': [FO, DE],
-  '/stream/abc': [FO, DE],
   '/harvests': [FO, DE],
   '/farms': [FO, DE, TECH],
   '/farms/f1/houses/h1/zones/z1': [FO, DE, TECH],
