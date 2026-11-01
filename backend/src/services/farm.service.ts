@@ -454,7 +454,7 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
 export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
   const { zone, house, farm } = await assertZoneAccess(zoneId, user)
   // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia
-  assertExpertDecision(farm, user)
+  await assertExpertDecision(farm, user)
 
   const picked = pickDetectionTuning(updates)
   if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
@@ -488,7 +488,7 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
 export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IHouse> {
   const { house, farm } = await assertHouseAccess(houseId, user)
   // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia
-  assertExpertDecision(farm, user)
+  await assertExpertDecision(farm, user)
 
   const picked = pickBirdCountTuning(updates)
   if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
