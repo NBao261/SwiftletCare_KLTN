@@ -254,6 +254,13 @@ Một PR cho backend, web, mobile, firmware:
 
 - [x] Collection `parameterreviews`, `coefficientproposals` theo SDD 6.1; route accept/revert/adjust, submit/approve/reject; thông báo hai chiều; Farm Owner áp gợi ý trực tiếp khi farm có chuyên gia → 403. *(Kiệt, 30/10, `cad151d` spec + `b8070bc` backend, nhánh `feat/g04-review-proposals` tạo từ nhánh G-03; "adjust" không có route riêng: chuyên gia sửa cùng nhóm tham số thì mục đóng `ADJUSTED` (EXPERT-FR-010); áp gợi ý trực tiếp: `POST /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion`)*
 - [ ] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner.
+- [x] Sửa theo review PR #119 *(Kiệt, 01/11, `df41db9` spec + `9ead2ba` backend; mục chặn merge là hằng số của G-03, đã sửa ở #117)*:
+  - hoàn lại: đóng mục trước rồi mới áp, áp lỗi thì mở lại mục;
+  - duyệt đề xuất: áp lỗi thì đề xuất về lại `PROPOSED`;
+  - mỗi Zone chỉ 1 đề xuất `PROPOSED` (unique index), gửi 2 lần cùng lúc thì cái mới nhất thắng;
+  - 2 lần sửa đầu tiên cùng lúc của Farm Owner: mục duyệt giữ giá trị mới nhất;
+  - mọi lần sửa hệ số (cả Farm Owner) đều làm đề xuất đang chờ `SUPERSEDED` (Report 3 EXPERT-FR-011, §6.11);
+  - `/expert-activity`: 1 quyết định 1 dòng.
 
 ### G-05 — Vượt ngưỡng có thời gian chờ (P1) — Kiệt; Len hiện chi tiết cảnh báo ở màn Farm Owner
 

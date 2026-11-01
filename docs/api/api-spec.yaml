@@ -1483,7 +1483,8 @@ paths:
         EXPERT-FR-010 — farm có Domain Expert mà Farm Owner sửa: thay đổi vẫn áp dụng ngay và mở
         (hoặc cập nhật, giữ giá trị gốc) 1 mục duyệt `PENDING_REVIEW` cho chuyên gia; chuyên gia sửa
         cùng nhóm thì mục đang chờ đóng `ADJUSTED`. Farm chưa có chuyên gia: không mở mục duyệt.
-        Domain Expert sửa thì đề xuất hệ số `PROPOSED` của Zone chuyển `SUPERSEDED` (EXPERT-FR-011).
+        Mọi lần sửa hệ số (Farm Owner hay Domain Expert) đều chuyển đề xuất `PROPOSED` của Zone sang
+        `SUPERSEDED` (EXPERT-FR-011), để duyệt đề xuất cũ không ghi đè chỉnh sửa vừa làm.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -4045,6 +4046,8 @@ paths:
         (`HEALTH_REPORT_CONCLUDED`), chấp nhận / hoàn lại thay đổi của Farm Owner (`REVIEW_ACCEPTED`,
         `REVIEW_REVERTED`), duyệt / từ chối đề xuất hệ số (`PROPOSAL_APPROVED`, `PROPOSAL_REJECTED`),
         mức chỉ số sức khỏe của nhà (`HEALTH_LEVELS_UPDATED`).
+        Mỗi quyết định một dòng: hoàn lại hoặc duyệt đề xuất chỉ hiện `REVIEW_REVERTED` / `PROPOSAL_APPROVED`,
+        không thêm dòng đổi ngưỡng / hệ số của chính thao tác đó.
         Quyết định mà Farm Owner làm thay khi farm chưa có chuyên gia
         (BR-22: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm, mức chỉ số sức khỏe) cũng được liệt kê,
         với `actor_role = FARM_OWNER`. Mới nhất trước. Technician, Administrator → 403.

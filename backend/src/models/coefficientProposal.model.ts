@@ -46,6 +46,8 @@ const coefficientProposalSchema = new Schema<ICoefficientProposal>(
 )
 
 coefficientProposalSchema.index({ zone_id: 1, status: 1 })
+// Mỗi Zone chỉ 1 đề xuất đang chờ: 2 lần gửi cùng lúc không để lại 2 đề xuất PROPOSED (EXPERT-FR-011)
+coefficientProposalSchema.index({ zone_id: 1 }, { unique: true, partialFilterExpression: { status: 'PROPOSED' } })
 // Danh sách đề xuất của 1 farm, mới nhất trước
 coefficientProposalSchema.index({ farm_id: 1, created_at: -1 })
 

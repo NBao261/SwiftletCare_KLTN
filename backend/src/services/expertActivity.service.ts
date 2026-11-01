@@ -85,6 +85,8 @@ export async function listExpertActivity(user: CurrentUser, query: ExpertActivit
 
   const filter: Record<string, unknown> = {
     farm_id: farm._id,
+    // Đổi Zone do duyệt mục / đề xuất đã có dòng REVIEW_* / PROPOSAL_* riêng: 1 quyết định 1 dòng
+    'metadata.decided_in': { $exists: false },
     $or: [
       { actor_role: 'DOMAIN_EXPERT', action: { $in: expertActions } },
       { actor_role: 'FARM_OWNER', action: { $in: ownerActions } },

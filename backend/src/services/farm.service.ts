@@ -442,7 +442,8 @@ export async function applyFuzzyTuning(
   user: CurrentUser,
   picked: Partial<FuzzyTuning>,
   source: FuzzyTuningSource,
-  opts: { notify?: boolean } = {},
+  /** logDetails: trường thêm vào audit, như applyThresholdUpdate (VD `decided_in` khi áp từ mục duyệt / đề xuất) */
+  opts: { notify?: boolean; logDetails?: Record<string, unknown> } = {},
 ): Promise<IZone> {
   const { zone, house, farm } = chain
   const oldValues = { ...zone.fuzzy_tuning }
@@ -460,11 +461,11 @@ export async function applyFuzzyTuning(
   publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', { ...zone.fuzzy_tuning })
   const auditId = await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), {
     source, before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
+    ...opts.logDetails,
   }, { farmId: String(farm._id) })
-  // Đề xuất đang chờ không còn khớp hệ số Zone khi chuyên gia đã tự đổi (EXPERT-FR-011)
-  if (user.role === 'DOMAIN_EXPERT') {
-    await CoefficientProposal.updateMany({ zone_id: zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
-  }
+  // Đề xuất đang chờ không còn khớp hệ số Zone sau bất kỳ lần sửa nào — duyệt nó sẽ ghi đè chỉnh sửa vừa
+  // làm (EXPERT-FR-011). Đề xuất đang được duyệt đã APPROVED trước khi áp nên không bị đụng.
+  await CoefficientProposal.updateMany({ zone_id: zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
   // Hoàn lại do chuyên gia: mục duyệt tự báo Farm Owner và tự đóng (expertReview.service)
   if (source === 'EXPERT_REVERT') return zone
 
