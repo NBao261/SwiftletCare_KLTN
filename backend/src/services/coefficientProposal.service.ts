@@ -5,7 +5,7 @@ import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.s
 import { applyFuzzyTuning } from '@/services/farm.service'
 import { createInAppNotification, findFarmExperts } from '@/services/notification.service'
 import { getTuningSuggestion } from '@/services/tuningSuggestion.service'
-import { assertExpertDecision, assertFarmAccess, assertZoneAccess, farmHasExpert } from '@/utils/farmAccess.util'
+import { assertExpertDecision, assertFarmAccess, assertZoneAccess, farmHasActiveExpert } from '@/utils/farmAccess.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { paginate } from '@/utils/helpers.util'
 import { ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
@@ -27,7 +27,7 @@ async function currentSuggestion(user: CurrentUser, zoneId: string) {
 export async function submitProposal(user: CurrentUser, zoneId: string): Promise<ICoefficientProposal> {
   const { zone, farm } = await assertZoneAccess(zoneId, user)
   if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner gửi đề xuất cho chuyên gia')
-  if (!farmHasExpert(farm)) {
+  if (!(await farmHasActiveExpert(farm))) {
     throw ConflictError('Farm chưa có chuyên gia — Farm Owner áp gợi ý trực tiếp (POST /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion)')
   }
   const { suggestion, predicted } = await currentSuggestion(user, zoneId)
@@ -148,7 +148,7 @@ export async function listProposals(user: CurrentUser, query: ListProposalsQuery
  */
 export async function applySuggestionDirect(user: CurrentUser, zoneId: string) {
   const chain = await assertZoneAccess(zoneId, user)
-  assertExpertDecision(chain.farm, user)
+  await assertExpertDecision(chain.farm, user)
   const { suggestion } = await currentSuggestion(user, zoneId)
   await CoefficientProposal.updateMany({ zone_id: chain.zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
   return applyFuzzyTuning(chain, user, pickFuzzyTuning(suggestion), 'SUGGESTION_APPROVED')
