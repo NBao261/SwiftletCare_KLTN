@@ -48,6 +48,8 @@ async function scenario(opts: { humidityOutSlots?: number; sound?: boolean; rate
   return seeded
 }
 const compute = (houseId: unknown) => computeHouseDay(String(houseId), DATE, NOW)
+/** Lý do có cấu trúc (mã + số liệu), không phải câu — web, mobile tự dịch */
+const reasonOf = (code: string, fields: object = {}) => expect.objectContaining({ code, ...fields })
 
 describe('TC-F20-01 — đồng thuận giữa các nguồn', () => {
   it('đàn chim CLEAR + độ ẩm SLIGHT → ACTION, lý do nêu cả hai kèm số liệu', async () => {
@@ -58,8 +60,10 @@ describe('TC-F20-01 — đồng thuận giữa các nguồn', () => {
     expect(a?.indicators.flock).toMatchObject({ value: 30, level: 'CLEAR' })
     expect(a?.indicators.environment).toMatchObject({ value: 85, level: 'SLIGHT' })
     expect(a?.indicators.air.level).toBe('NORMAL')
-    expect(a?.current_reasons.some(r => r.startsWith('Đàn chim') && r.includes('30 %'))).toBe(true)
-    expect(a?.current_reasons.some(r => r.startsWith('Môi trường') && r.includes('85 %'))).toBe(true)
+    expect(a?.current_reasons).toEqual(expect.arrayContaining([
+      reasonOf('FLOCK_DROP', { source: 'flock', level: 'CLEAR', values: { return_rate: 70, drop_pct: 30, baseline_avg: 100, baseline_days: 3 } }),
+      reasonOf('ENV_IN_RANGE', { source: 'environment', level: 'SLIGHT', values: expect.objectContaining({ in_range_pct: 85 }) }),
+    ]))
   })
 
   it('mức của nhà đổi thì mức chỉ số đổi theo (BR-28: chuyên gia đặt mức)', async () => {
@@ -92,7 +96,7 @@ describe('TC-F20-02 — một nguồn đơn lẻ và mưa (BR-29, BR-30)', () =>
     await seedRainOverEvening(farm, house, DATE, 2)
     const a = await compute(house._id)
     expect(a?.current_status).toBe('WATCH')
-    expect(a?.current_reasons.some(r => r.includes('Mưa') && r.includes('BR-30'))).toBe(true)
+    expect(a?.current_reasons).toContainEqual({ code: 'RAIN_DOWNGRADE', source: null, level: null, values: { mm_per_hour: 1 } })
   })
 
   it('mưa dưới 1 mm không đổi gì', async () => {
@@ -124,7 +128,7 @@ describe('TC-F20-03 — thiếu dữ liệu (DS-22)', () => {
     const a = await compute(house._id)
     expect(a?.current_status).toBe('INSUFFICIENT_DATA')
     expect(a?.completeness.flock).toBe(false)
-    expect(a?.current_reasons[0]).toContain('thiếu phiên chiều')
+    expect(a?.current_reasons[0]).toEqual({ code: 'MISSING_DATA', source: 'flock', level: null, values: { missing: 'EVENING' } })
   })
 
   it('mẫu nhiệt độ, độ ẩm hợp lệ dưới 80 % → INSUFFICIENT_DATA', async () => {
@@ -133,7 +137,7 @@ describe('TC-F20-03 — thiếu dữ liệu (DS-22)', () => {
     await seedCounts(seeded.house, DATE, [100, 100, 100, 100])
     const a = await compute(seeded.house._id)
     expect(a?.current_status).toBe('INSUFFICIENT_DATA')
-    expect(a?.current_reasons[0]).toContain('Thiếu dữ liệu môi trường')
+    expect(a?.current_reasons[0]).toEqual(reasonOf('MISSING_DATA', { source: 'environment', values: expect.objectContaining({ min_pct: 80 }) }))
   })
 
   it('không có mẫu độ ồn → vẫn đánh giá, tiếng ồn không đánh giá và lý do ghi rõ', async () => {
@@ -141,14 +145,16 @@ describe('TC-F20-03 — thiếu dữ liệu (DS-22)', () => {
     const a = await compute(house._id)
     expect(a?.current_status).toBe('GOOD')
     expect(a?.indicators.noise).toMatchObject({ value: null, level: null })
-    expect(a?.current_reasons).toContain('Chưa đánh giá tiếng ồn (thiếu mẫu độ ồn)')
+    expect(a?.current_reasons).toEqual([
+      reasonOf('ALL_NORMAL'), { code: 'NOT_ASSESSED', source: 'noise', level: null, values: {} },
+    ])
   })
 
   it('không có thời tiết → trạng thái giữ nguyên, lý do ghi "Không có dữ liệu thời tiết"', async () => {
     const { house } = await scenario({ weather: false })
     const a = await compute(house._id)
     expect(a?.current_status).toBe('GOOD')
-    expect(a?.current_reasons).toContain('Không có dữ liệu thời tiết')
+    expect(a?.current_reasons).toContainEqual({ code: 'WEATHER_UNAVAILABLE', source: null, level: null, values: {} })
     expect(a?.weather).toBeNull()
   })
 
@@ -156,7 +162,7 @@ describe('TC-F20-03 — thiếu dữ liệu (DS-22)', () => {
     const { house } = await scenario({ rates: [100, 60] })
     const a = await compute(house._id)
     expect(a?.indicators.flock).toMatchObject({ value: null, level: 'NORMAL' })
-    expect(a?.current_reasons.some(r => r.includes('chưa đủ 3 ngày nền'))).toBe(true)
+    expect(a?.current_reasons).toContainEqual(reasonOf('FLOCK_NO_BASELINE', { source: 'flock', values: { min_days: 3, baseline_days: 1 } }))
   })
 })
 
@@ -201,7 +207,7 @@ describe('job đánh giá (SM-17)', () => {
     const { house, owner } = await scenario({ rates: FLOCK_CLEAR })
     const first = await assessHouseDay(String(house._id), DATE, NOW)
     await HouseHealthDay.updateOne({ _id: first!.day._id }, {
-      $push: { ratings: { by: owner._id, role: 'FARM_OWNER', outcome: 'RATED', rating: 'GOOD', at: NOW, snapshot: { status: 'WATCH', reasons: ['x'] } } },
+      $push: { ratings: { by: owner._id, role: 'FARM_OWNER', outcome: 'RATED', rating: 'GOOD', at: NOW, snapshot: { status: 'WATCH', reasons: [{ code: 'FLOCK_DROP', source: 'flock', level: 'CLEAR', values: { drop_pct: 30 } }] } } },
     })
     const again = await assessHouseDay(String(house._id), DATE, NOW)
     expect(again?.created).toBe(false)

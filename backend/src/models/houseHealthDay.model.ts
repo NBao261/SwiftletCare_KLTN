@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose'
-import type { FarmMemberRole, HealthLevel, HealthRatingValue, HealthSource, HealthStatus } from '@/types'
+import type { FarmMemberRole, HealthLevel, HealthRatingValue, HealthReason, HealthReasonCode, HealthSource, HealthStatus } from '@/types'
 
 /**
  * ANALYTICS-FR-012, EXPERT-FR-012, SM-17 — trạng thái sức khỏe 1 ngày (giờ VN) của 1 nhà yến.
@@ -21,7 +21,7 @@ export type HealthIndicators = Record<HealthSource, IHealthIndicator>
 
 export interface IHealthSnapshot {
   status: HealthStatus
-  reasons: string[]
+  reasons: HealthReason[]
   /** Mức của từng nguồn lúc chấm — để tính tỷ lệ báo động giả theo từng nguồn (ANALYTICS-FR-014) */
   levels: Record<HealthSource, HealthLevel | null>
 }
@@ -56,7 +56,7 @@ export interface IHouseHealthDay extends Document {
   /** Đủ dữ liệu theo từng nguồn (BR-28) */
   completeness: Record<HealthSource, boolean>
   current_status: HealthStatus
-  current_reasons: string[]
+  current_reasons: HealthReason[]
   /** ALERT-FR-014 — cảnh báo NOISE_ANOMALY được tính trong ngày */
   evidence: { noise_alert_ids: Types.ObjectId[] }
   /** ANALYTICS-FR-013 — thời tiết ngoài trời của ngày (chỉ hiển thị); null khi không có dữ liệu.
@@ -76,6 +76,22 @@ const indicatorSchema = new Schema<IHealthIndicator>(
     details: { type: Schema.Types.Mixed },
   },
   { _id: false }
+)
+
+const SOURCES = ['environment', 'air', 'flock', 'noise'] satisfies HealthSource[]
+export const HEALTH_REASON_CODES = [
+  'ALL_NORMAL', 'MISSING_DATA', 'NOT_ASSESSED', 'ENV_IN_RANGE', 'AIR_OVER_LIMIT',
+  'FLOCK_DROP', 'FLOCK_NO_BASELINE', 'NOISE_EPISODES', 'WEATHER_UNAVAILABLE', 'RAIN_DOWNGRADE',
+] satisfies HealthReasonCode[]
+
+const reasonSchema = new Schema<HealthReason>(
+  {
+    code:   { type: String, enum: HEALTH_REASON_CODES, required: true },
+    source: { type: String, enum: SOURCES, default: null },
+    level:  { type: String, enum: ['SLIGHT', 'CLEAR'], default: null },
+    values: { type: Schema.Types.Mixed, default: {} },
+  },
+  { _id: false, minimize: false }
 )
 
 const sourceFlags = { environment: Boolean, air: Boolean, flock: Boolean, noise: Boolean }
@@ -99,7 +115,7 @@ const houseHealthDaySchema = new Schema<IHouseHealthDay>(
     },
     completeness:    sourceFlags,
     current_status:  { type: String, enum: STATUSES, required: true },
-    current_reasons: [{ type: String }],
+    current_reasons: [reasonSchema],
     evidence: {
       noise_alert_ids: [{ type: Schema.Types.ObjectId, ref: 'Alert' }],
     },
@@ -114,7 +130,7 @@ const houseHealthDaySchema = new Schema<IHouseHealthDay>(
       at:      { type: Date, required: true },
       snapshot: {
         status:  { type: String, enum: STATUSES, required: true },
-        reasons: [{ type: String }],
+        reasons: [reasonSchema],
         levels:  sourceLevels,
       },
     }],

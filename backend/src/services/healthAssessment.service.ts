@@ -11,7 +11,7 @@ import { listActiveHouseIds } from '@/utils/farmAccess.util'
 import { resolveBirdCountTuning, resolveHealthLevels } from '@/utils/detectionTuning.util'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import logger from '@/utils/logger.util'
-import type { HealthLevel, HealthLevels, HealthSource, HealthStatus, Thresholds } from '@/types'
+import type { HealthLevel, HealthLevels, HealthReason, HealthReasonCode, HealthSource, HealthStatus, Thresholds } from '@/types'
 
 /**
  * ANALYTICS-FR-012, BR-28…30, AD-14 — trạng thái sức khỏe 1 ngày của 1 nhà yến, gộp 4 nguồn (môi
@@ -32,7 +32,10 @@ const DAY_MS = 86_400_000
 const HOUR_MS = 3_600_000
 const BUCKET_MS = 5 * 60_000
 const SOURCES: HealthSource[] = ['environment', 'air', 'flock', 'noise']
-const LEVEL_LABEL: Record<HealthLevel, string> = { NORMAL: 'bình thường', SLIGHT: 'nhẹ', CLEAR: 'rõ' }
+/** 1 lý do có cấu trúc (client tự dịch); mức NORMAL không ghi vào lý do */
+const reason = (
+  code: HealthReasonCode, source: HealthSource | null = null, values: Record<string, unknown> = {}, level: HealthLevel | null = null,
+): HealthReason => ({ code, source, level: level === 'SLIGHT' || level === 'CLEAR' ? level : null, values })
 const round1 = (n: number) => Math.round(n * 10) / 10
 
 /** Đầu ngày giờ VN (UTC) của 'YYYY-MM-DD' */
@@ -172,7 +175,7 @@ export interface Assessment {
   indicators: HealthIndicators
   completeness: Record<HealthSource, boolean>
   current_status: HealthStatus
-  current_reasons: string[]
+  current_reasons: HealthReason[]
   evidence: { noise_alert_ids: Types.ObjectId[] }
   weather: IDayWeather | null
 }
@@ -194,8 +197,8 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
   const complete = (key: 'env_pct' | 'air_pct' | 'sound_pct') =>
     zoneStats.length > 0 && zoneStats.every(z => z[key] >= COMPLETENESS_MIN_PCT)
 
-  const reasons: string[] = []
-  const missingReasons: string[] = []
+  const reasons: HealthReason[] = []
+  const missingReasons: HealthReason[] = []
   const indicators = {} as HealthIndicators
 
   // Môi trường — nhà lấy Zone thấp nhất
@@ -208,12 +211,12 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
     details: { zones: zoneStats.map(z => ({ zone_name: z.zone_name, in_range_pct: z.in_range_pct === null ? null : round1(z.in_range_pct), valid_pct: round1(z.env_pct) })) },
   }
   if (!envComplete) {
-    const short = zoneStats.filter(z => z.env_pct < COMPLETENESS_MIN_PCT).map(z => `${z.zone_name} ${round1(z.env_pct)} %`)
+    const short = zoneStats.filter(z => z.env_pct < COMPLETENESS_MIN_PCT).map(z => ({ zone_name: z.zone_name, valid_pct: round1(z.env_pct) }))
     missingReasons.push(zones.length === 0
-      ? 'Thiếu dữ liệu môi trường: nhà chưa có Zone'
-      : `Thiếu dữ liệu môi trường: mẫu nhiệt độ, độ ẩm hợp lệ dưới ${COMPLETENESS_MIN_PCT} % (${short.join(', ')})`)
+      ? reason('MISSING_DATA', 'environment', { no_zones: true })
+      : reason('MISSING_DATA', 'environment', { min_pct: COMPLETENESS_MIN_PCT, zones: short }))
   } else if (indicators.environment.level !== 'NORMAL') {
-    reasons.push(`Môi trường: ${worstEnv.zone_name} chỉ ${envValue} % thời gian nhiệt độ, độ ẩm trong ngưỡng (mức ${LEVEL_LABEL[indicators.environment.level as HealthLevel]})`)
+    reasons.push(reason('ENV_IN_RANGE', 'environment', { zone_name: worstEnv.zone_name, in_range_pct: envValue }, indicators.environment.level))
   }
 
   // Không khí — nhà lấy Zone cao nhất
@@ -224,9 +227,9 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
     value: airValue,
     level: airValue === null ? null : fromLevel(airValue, levels.air_slight_h, levels.air_clear_h),
   }
-  if (!airComplete) reasons.push('Chưa đánh giá không khí (thiếu mẫu NH3, CO2)')
+  if (!airComplete) reasons.push(reason('NOT_ASSESSED', 'air'))
   else if (indicators.air.level !== 'NORMAL') {
-    reasons.push(`Không khí: NH3 hoặc CO2 vượt ngưỡng ${airValue} giờ ở ${worstAir.zone_name} (mức ${LEVEL_LABEL[indicators.air.level as HealthLevel]})`)
+    reasons.push(reason('AIR_OVER_LIMIT', 'air', { zone_name: worstAir.zone_name, hours: airValue }, indicators.air.level))
   }
 
   // Đàn chim — so với trung bình các ngày đủ phiên trước đó (BR-21)
@@ -239,18 +242,20 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
   if (flockComplete) {
     if (previous.length < MIN_BASELINE_DAYS) {
       flockLevel = 'NORMAL'
-      reasons.push(`Đàn chim: chưa đủ ${MIN_BASELINE_DAYS} ngày nền để so sánh tỷ lệ chim về`)
+      reasons.push(reason('FLOCK_NO_BASELINE', 'flock', { min_days: MIN_BASELINE_DAYS, baseline_days: previous.length }))
     } else {
       const avg = previous.reduce((s, d) => s + (d.return_rate as number), 0) / previous.length
       flockValue = avg > 0 ? round1(((avg - (today!.return_rate as number)) / avg) * 100) : 0
       flockLevel = fromLevel(flockValue, dropPct / 2, dropPct)
       if (flockLevel !== 'NORMAL') {
-        reasons.push(`Đàn chim: tỷ lệ chim về ${today!.return_rate} %, giảm ${flockValue} % so với trung bình ${previous.length} ngày trước (${round1(avg)} %) (mức ${LEVEL_LABEL[flockLevel]})`)
+        reasons.push(reason('FLOCK_DROP', 'flock', {
+          return_rate: today!.return_rate, drop_pct: flockValue, baseline_avg: round1(avg), baseline_days: previous.length,
+        }, flockLevel))
       }
     }
   } else {
-    const missing = !today?.has_morning ? 'thiếu phiên sáng' : !today.has_evening ? 'thiếu phiên chiều' : 'phiên sáng không có chim ra'
-    missingReasons.push(`Thiếu dữ liệu đàn chim: ${missing}`)
+    const missing = !today?.has_morning ? 'MORNING' : !today.has_evening ? 'EVENING' : 'NO_DEPARTURES'
+    missingReasons.push(reason('MISSING_DATA', 'flock', { missing }))
   }
   indicators.flock = {
     value: flockValue,
@@ -270,9 +275,9 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
     value: noiseComplete ? episodes.length : null,
     level: noiseComplete ? fromLevel(episodes.length, levels.noise_slight, levels.noise_clear) : null,
   }
-  if (!noiseComplete) reasons.push('Chưa đánh giá tiếng ồn (thiếu mẫu độ ồn)')
+  if (!noiseComplete) reasons.push(reason('NOT_ASSESSED', 'noise'))
   else if (indicators.noise.level !== 'NORMAL') {
-    reasons.push(`Tiếng ồn: ${episodes.length} đợt ồn bất thường (mức ${LEVEL_LABEL[indicators.noise.level as HealthLevel]})`)
+    reasons.push(reason('NOISE_EPISODES', 'noise', { episodes: episodes.length }, indicators.noise.level))
   }
 
   // BR-29 — theo thứ tự
@@ -286,7 +291,7 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
 
   // BR-30 — mưa chỉ hạ ACTION mà nguồn quyết định đúng là đàn chim + tiếng ồn
   const weather = await dayWeather(house.farm_id, start)
-  if (!weather.summary) reasons.push('Không có dữ liệu thời tiết')
+  if (!weather.summary) reasons.push(reason('WEATHER_UNAVAILABLE'))
   const flockAndNoiseOnly = lv('noise') !== 'NORMAL' && lv('noise') !== null
     && (lv('environment') === 'NORMAL') && (lv('air') === 'NORMAL' || lv('air') === null)
   if (status === 'ACTION' && flockAndNoiseOnly && weather.rainHours.length) {
@@ -299,12 +304,12 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
     const rainOnNoise = weather.rainHours.some(r => episodeIntervals.some(e => overlaps(r, e)))
     if (rainOnSession && rainOnNoise) {
       status = 'WATCH'
-      reasons.push(`Mưa ≥ ${RAIN_MM_PER_HOUR} mm/giờ trùng phiên đếm và đợt ồn — hạ từ ACTION xuống WATCH (BR-30)`)
+      reasons.push(reason('RAIN_DOWNGRADE', null, { mm_per_hour: RAIN_MM_PER_HOUR }))
     }
   }
 
   const allReasons = status === 'INSUFFICIENT_DATA' ? [...missingReasons, ...reasons] : reasons
-  if (status === 'GOOD') allReasons.unshift('Các chỉ số đã đánh giá đều bình thường')
+  if (status === 'GOOD') allReasons.unshift(reason('ALL_NORMAL'))
 
   return {
     indicators,

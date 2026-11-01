@@ -11,6 +11,7 @@ import {
   type OrderedStatus, type RatingPair,
 } from '@/utils/agreement.util'
 import { assertFarmAccess, assertHouseAccess } from '@/utils/farmAccess.util'
+import { formatReason, type ReasonLang } from '@/utils/healthReason.util'
 import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, HealthRatingValue, HealthSource } from '@/types'
 
 /**
@@ -115,11 +116,19 @@ async function findDays(user: CurrentUser, params: { houseId?: string; farmId?: 
   return { days, houseNames, from, to }
 }
 
-/** GET /health-reports/days — ANALYTICS-FR-012, EXPERT-FR-012 */
-export async function listHealthDays(user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, now = new Date()) {
+/**
+ * GET /health-reports/days — ANALYTICS-FR-012, EXPERT-FR-012. `myRatingState` lọc theo trạng thái chấm của
+ * chính người gọi (vd PENDING: các ngày còn phải chấm), suy ra lúc đọc nên lọc sau khi dựng.
+ */
+export async function listHealthDays(
+  user: CurrentUser,
+  params: { houseId?: string; farmId?: string; from?: string; to?: string; myRatingState?: HealthRatingState },
+  now = new Date(),
+) {
   const { days, houseNames } = await findDays(user, params, MAX_DAY_RANGE, now)
   const names = await userNames(days)
-  return days.map(d => present(d, houseNames.get(String(d.house_id)) ?? '', user, names, now))
+  const presented = days.map(d => present(d, houseNames.get(String(d.house_id)) ?? '', user, names, now))
+  return params.myRatingState ? presented.filter(d => d.my_rating_state === params.myRatingState) : presented
 }
 
 async function findDayForUser(dayId: string, user: CurrentUser) {
@@ -195,9 +204,43 @@ export async function addRatingNote(dayId: string, user: CurrentUser, note: stri
 
 // ── CSV (EXPERT-FR-013) ───────────────────────────────────────────────────────────────────────────
 
-const STATUS_VI: Record<string, string> = { GOOD: 'Tốt', WATCH: 'Theo dõi', ACTION: 'Cần xử lý', INSUFFICIENT_DATA: 'Thiếu dữ liệu' }
-const LEVEL_VI: Record<HealthLevel, string> = { NORMAL: 'Bình thường', SLIGHT: 'Nhẹ', CLEAR: 'Rõ' }
-const ROLE_VI: Record<FarmMemberRole, string> = { FARM_OWNER: 'Chủ trại', DOMAIN_EXPERT: 'Chuyên gia' }
+const CSV_TEXT: Record<ReasonLang, {
+  header: string[]; status: Record<string, string>; level: Record<HealthLevel, string>
+  notAssessed: string; role: Record<FarmMemberRole, string>; skipped: string
+}> = {
+  vi: {
+    header: [
+      'Nhà yến', 'Ngày', 'Trạng thái chấm của bạn',
+      'Môi trường (% thời gian trong ngưỡng)', 'Mức môi trường',
+      'Không khí (giờ vượt ngưỡng)', 'Mức không khí',
+      'Đàn chim (% tỷ lệ chim về giảm)', 'Tỷ lệ chim về (%)', 'Mức đàn chim',
+      'Tiếng ồn (số đợt)', 'Mức tiếng ồn',
+      'Trạng thái', 'Lý do', 'Điểm của người chấm',
+      'Nhiệt độ ngoài trời thấp nhất', 'Nhiệt độ ngoài trời cao nhất', 'Lượng mưa (mm)',
+    ],
+    status: { GOOD: 'Tốt', WATCH: 'Theo dõi', ACTION: 'Cần xử lý', INSUFFICIENT_DATA: 'Thiếu dữ liệu' },
+    level: { NORMAL: 'Bình thường', SLIGHT: 'Nhẹ', CLEAR: 'Rõ' },
+    notAssessed: 'Không đánh giá',
+    role: { FARM_OWNER: 'Chủ trại', DOMAIN_EXPERT: 'Chuyên gia' },
+    skipped: 'Bỏ qua',
+  },
+  en: {
+    header: [
+      'House', 'Date', 'Your rating state',
+      'Environment (% of time in range)', 'Environment level',
+      'Air quality (hours over the limit)', 'Air quality level',
+      'Flock (% drop of the return rate)', 'Return rate (%)', 'Flock level',
+      'Noise (episodes)', 'Noise level',
+      'Status', 'Reasons', 'Ratings',
+      'Outdoor temperature min', 'Outdoor temperature max', 'Rainfall (mm)',
+    ],
+    status: { GOOD: 'Good', WATCH: 'Watch', ACTION: 'Action needed', INSUFFICIENT_DATA: 'Insufficient data' },
+    level: { NORMAL: 'Normal', SLIGHT: 'Slight', CLEAR: 'Clear' },
+    notAssessed: 'Not assessed',
+    role: { FARM_OWNER: 'Farm Owner', DOMAIN_EXPERT: 'Domain Expert' },
+    skipped: 'Skipped',
+  },
+}
 
 const csvCell = (v: unknown) => {
   const s = v === null || v === undefined ? '' : String(v)
@@ -207,30 +250,24 @@ const csvCell = (v: unknown) => {
 }
 
 /**
- * GET /health-reports/days.csv — 1 dòng mỗi nhà × ngày: mọi chỉ số kèm mức, trạng thái và điểm.
- * Không có id nội bộ; dòng người gọi còn PENDING để trống phần bị che (BR-31).
+ * GET /health-reports/days.csv — 1 dòng mỗi nhà × ngày: mọi chỉ số kèm mức, trạng thái và điểm, theo
+ * ngôn ngữ `lang` (mặc định vi). Không có id nội bộ; dòng người gọi còn PENDING để trống phần bị che (BR-31).
  */
-export async function healthDaysCsv(user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, now = new Date()): Promise<string> {
+export async function healthDaysCsv(
+  user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, lang: ReasonLang = 'vi', now = new Date(),
+): Promise<string> {
   const rows = await listHealthDays(user, params, now)
-  const header = [
-    'Nhà yến', 'Ngày', 'Trạng thái chấm của bạn',
-    'Môi trường (% thời gian trong ngưỡng)', 'Mức môi trường',
-    'Không khí (giờ vượt ngưỡng)', 'Mức không khí',
-    'Đàn chim (% tỷ lệ chim về giảm)', 'Tỷ lệ chim về (%)', 'Mức đàn chim',
-    'Tiếng ồn (số đợt)', 'Mức tiếng ồn',
-    'Trạng thái', 'Lý do', 'Điểm của người chấm',
-    'Nhiệt độ ngoài trời thấp nhất', 'Nhiệt độ ngoài trời cao nhất', 'Lượng mưa (mm)',
-  ]
-  const lines = [header.map(csvCell).join(',')]
+  const text = CSV_TEXT[lang]
+  const lines = [text.header.map(csvCell).join(',')]
   for (const d of rows) {
     const shown = 'indicators' in d
     const ind = (s: HealthSource) => (shown ? d.indicators[s] : undefined)
     const level = (s: HealthSource) => {
       const l = ind(s)?.level
-      return l ? LEVEL_VI[l] : shown ? 'Không đánh giá' : ''
+      return l ? text.level[l] : shown ? text.notAssessed : ''
     }
     const ratings = shown
-      ? d.ratings.map(r => `${r.by.full_name ?? ''} (${ROLE_VI[r.role]}): ${r.outcome === 'SKIPPED' ? 'Bỏ qua' : STATUS_VI[r.rating as string]}`).join('; ')
+      ? d.ratings.map(r => `${r.by.full_name ?? ''} (${text.role[r.role]}): ${r.outcome === 'SKIPPED' ? text.skipped : text.status[r.rating as string]}`).join('; ')
       : ''
     lines.push([
       d.house_name, d.date, d.my_rating_state,
@@ -238,11 +275,11 @@ export async function healthDaysCsv(user: CurrentUser, params: { houseId?: strin
       ind('air')?.value, level('air'),
       ind('flock')?.value, (ind('flock')?.details as { return_rate?: number } | undefined)?.return_rate, level('flock'),
       ind('noise')?.value, level('noise'),
-      shown ? STATUS_VI[d.current_status] : '', shown ? d.current_reasons.join('; ') : '', ratings,
+      shown ? text.status[d.current_status] : '', shown ? d.current_reasons.map(r => formatReason(r, lang)).join('; ') : '', ratings,
       d.weather?.temperature_min, d.weather?.temperature_max, d.weather?.precipitation_mm,
     ].map(csvCell).join(','))
   }
-  // BOM để Excel đọc đúng tiếng Việt
+  // BOM để Excel đọc đúng UTF-8 (tiếng Việt)
   return String.fromCharCode(0xfeff) + lines.join('\r\n') + '\r\n'
 }
 

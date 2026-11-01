@@ -58,6 +58,10 @@ const call = (method: 'get' | 'post' | 'put' | 'patch', path: string, token: str
 const TODAY = vnDate(new Date())
 const YESTERDAY = addDays(TODAY, -1)
 const levels = { environment: 'NORMAL', air: 'NORMAL', flock: 'CLEAR', noise: 'SLIGHT' }
+/** Lý do có cấu trúc của ngày mẫu: CSV tiếng Việt in thành "…giảm 30 %…", tiếng Anh "…30 % below…" */
+const FLOCK_REASON = {
+  code: 'FLOCK_DROP', source: 'flock', level: 'CLEAR', values: { return_rate: 70, drop_pct: 30, baseline_avg: 100, baseline_days: 3 },
+}
 
 /** Ngày đã đánh giá (ghi thẳng — phần tính đã có ở healthAssessment.test.ts) */
 const mkDay = (house: { _id: unknown; farm_id: unknown }, date: string, status: HealthStatus = 'ACTION', extra: object = {}) =>
@@ -68,7 +72,7 @@ const mkDay = (house: { _id: unknown; farm_id: unknown }, date: string, status: 
       flock: { value: 30, level: levels.flock, details: { return_rate: 70 } }, noise: { value: 1, level: levels.noise },
     },
     completeness: { environment: true, air: true, flock: true, noise: true },
-    current_status: status, current_reasons: [`Lý do của ${status}`],
+    current_status: status, current_reasons: [FLOCK_REASON],
     evidence: { noise_alert_ids: [new Types.ObjectId()] },
     computed_at: new Date(), ratings: [], ...extra,
   })
@@ -101,16 +105,16 @@ describe('TC-F22-01 — chưa chấm thì mọi kênh che trạng thái (BR-31)'
     for (const key of HIDDEN) expect(list.body.data[0]).not.toHaveProperty(key)
 
     const csv = await call('get', `/health-reports/days.csv?houseId=${house._id}`, ownerToken)
-    expect(csv.text).not.toMatch(/Cần xử lý|Theo dõi|Lý do của|CG \d/)
+    expect(csv.text).not.toMatch(/Cần xử lý|Theo dõi|giảm 30 %|CG \d/)
 
     const rated = await call('post', `/health-reports/days/${day._id}/rating`, ownerToken, { rating: 'GOOD', note: 'Chim về đều' })
     expect(rated.status).toBe(201)
-    expect(rated.body.data).toMatchObject({ my_rating_state: 'RATED', current_status: 'ACTION', current_reasons: ['Lý do của ACTION'] })
+    expect(rated.body.data).toMatchObject({ my_rating_state: 'RATED', current_status: 'ACTION', current_reasons: [FLOCK_REASON] })
     expect(rated.body.data.ratings).toHaveLength(2)
 
     const saved = await HouseHealthDay.findById(day._id).lean()
     const mine = saved!.ratings.find(r => r.role === 'FARM_OWNER')
-    expect(mine).toMatchObject({ outcome: 'RATED', rating: 'GOOD', note: 'Chim về đều', snapshot: { status: 'ACTION', reasons: ['Lý do của ACTION'] } })
+    expect(mine).toMatchObject({ outcome: 'RATED', rating: 'GOOD', note: 'Chim về đều', snapshot: { status: 'ACTION', reasons: [FLOCK_REASON] } })
     expect(mine!.snapshot.levels).toMatchObject(levels)
     expect(await AuditLog.countDocuments({ action: 'HEALTH_DAY_RATED' })).toBe(2)
   })
@@ -229,7 +233,39 @@ describe('TC-F21-02 — CSV ngày (EXPERT-FR-013)', () => {
     expect(lines[1]).toContain('Cần xử lý')
     expect(lines[1]).toContain('Theo dõi')
     expect(lines[1]).toContain('Rõ')
+    expect(lines[1]).toContain('giảm 30 % so với trung bình 3 ngày trước')
     expect(res.text).not.toMatch(/[0-9a-f]{24}/)
+  })
+
+  it('lang=en: tiêu đề, trạng thái, mức và lý do tiếng Anh; ngôn ngữ khác → 422', async () => {
+    const { house, ownerToken } = await setup()
+    const day = await mkDay(house, YESTERDAY)
+    await call('post', `/health-reports/days/${day._id}/rating`, ownerToken, { rating: 'WATCH' })
+
+    const res = await call('get', `/health-reports/days.csv?houseId=${house._id}&lang=en`, ownerToken)
+    const [header, row] = res.text.replace(/^\uFEFF/, '').trim().split('\r\n')
+    expect(header).toContain('Environment level')
+    expect(row).toContain('Action needed')
+    expect(row).toContain('Clear')
+    expect(row).toContain('30 % below the mean of the 3 previous days')
+    expect(res.text).not.toMatch(/Cần xử lý|giảm/)
+
+    expect((await call('get', `/health-reports/days.csv?houseId=${house._id}&lang=fr`, ownerToken)).status).toBe(422)
+  })
+})
+
+describe('lọc theo trạng thái chấm của người gọi', () => {
+  it('myRatingState=PENDING chỉ trả ngày chưa chấm, RATED chỉ trả ngày đã chấm; giá trị lạ → 422', async () => {
+    const { house, ownerToken } = await setup()
+    const rated = await mkDay(house, YESTERDAY)
+    const pending = await mkDay(house, addDays(YESTERDAY, -1))
+    await call('post', `/health-reports/days/${rated._id}/rating`, ownerToken, { rating: 'WATCH' })
+
+    const ids = async (state: string) =>
+      (await call('get', `/health-reports/days?houseId=${house._id}&myRatingState=${state}`, ownerToken)).body.data.map((d: { _id: string }) => d._id)
+    expect(await ids('PENDING')).toEqual([String(pending._id)])
+    expect(await ids('RATED')).toEqual([String(rated._id)])
+    expect((await call('get', `/health-reports/days?houseId=${house._id}&myRatingState=DONE`, ownerToken)).status).toBe(422)
   })
 })
 

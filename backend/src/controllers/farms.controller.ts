@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import * as farmService from '@/services/farm.service'
 import * as coefficientProposalService from '@/services/coefficientProposal.service'
+import * as weatherService from '@/services/weather.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** GET /farms – FARM-FR-001 */
@@ -130,6 +131,14 @@ export const updateDetectionTuning = asyncHandler(async (req: Request, res: Resp
 export const updateBirdCountTuning = asyncHandler(async (req: Request, res: Response) => {
   const house = await farmService.updateHouseBirdCountTuning(req.params.houseId, req.user, req.body)
   res.json({ success: true, data: house })
+})
+
+/** GET /farms/:id/weather – ANALYTICS-FR-013: thời tiết theo giờ cạnh số đo trong nhà */
+export const getWeather = asyncHandler(async (req: Request, res: Response) => {
+  const data = await weatherService.listFarmWeather(req.params.id, req.user, {
+    from: req.query.from as string | undefined, to: req.query.to as string | undefined,
+  })
+  res.json({ success: true, data })
 })
 
 /** GET /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-28 */

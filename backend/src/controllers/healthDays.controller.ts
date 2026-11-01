@@ -1,7 +1,8 @@
 import { Request, Response } from 'express'
 import * as healthDayService from '@/services/healthDay.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
-import type { FarmMemberRole, HealthRatingValue } from '@/types'
+import type { ReasonLang } from '@/utils/healthReason.util'
+import type { FarmMemberRole, HealthRatingState, HealthRatingValue } from '@/types'
 
 const scope = (req: Request) => ({
   houseId: req.query.houseId as string | undefined,
@@ -12,13 +13,15 @@ const scope = (req: Request) => ({
 
 /** GET /health-reports/days – ANALYTICS-FR-012, BR-31 */
 export const listDays = asyncHandler(async (req: Request, res: Response) => {
-  const data = await healthDayService.listHealthDays(req.user, scope(req))
+  const data = await healthDayService.listHealthDays(req.user, {
+    ...scope(req), myRatingState: req.query.myRatingState as HealthRatingState | undefined,
+  })
   res.json({ success: true, data })
 })
 
-/** GET /health-reports/days.csv – EXPERT-FR-013 */
+/** GET /health-reports/days.csv – EXPERT-FR-013; `lang` vi (mặc định) hoặc en */
 export const exportCsv = asyncHandler(async (req: Request, res: Response) => {
-  const csv = await healthDayService.healthDaysCsv(req.user, scope(req))
+  const csv = await healthDayService.healthDaysCsv(req.user, scope(req), (req.query.lang as ReasonLang | undefined) ?? 'vi')
   res.setHeader('Content-Type', 'text/csv; charset=utf-8')
   res.setHeader('Content-Disposition', 'attachment; filename="health-days.csv"')
   res.send(csv)

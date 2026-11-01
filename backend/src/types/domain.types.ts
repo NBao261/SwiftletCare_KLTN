@@ -134,6 +134,21 @@ export type HealthSource = 'environment' | 'air' | 'flock' | 'noise'
 /** SM-18 — suy ra từ ratings và ngày, không lưu */
 export type HealthRatingState = 'PENDING' | 'RATED' | 'SKIPPED' | 'EXPIRED'
 
+export type HealthReasonCode =
+  | 'ALL_NORMAL' | 'MISSING_DATA' | 'NOT_ASSESSED' | 'ENV_IN_RANGE' | 'AIR_OVER_LIMIT'
+  | 'FLOCK_DROP' | 'FLOCK_NO_BASELINE' | 'NOISE_EPISODES' | 'WEATHER_UNAVAILABLE' | 'RAIN_DOWNGRADE'
+
+/**
+ * ANALYTICS-FR-012 — 1 lý do của trạng thái ngày: mã + số liệu, không phải câu, để web và mobile tự dịch
+ * (VI/EN) và ảnh chụp lúc chấm (không bao giờ đổi) không phụ thuộc ngôn ngữ. `values` chỉ có số và tên.
+ */
+export interface HealthReason {
+  code: HealthReasonCode
+  source: HealthSource | null
+  level: Exclude<HealthLevel, 'NORMAL'> | null
+  values: Record<string, unknown>
+}
+
 // ── MQTT Message Payloads ──────────────────────────────────────────────────────
 export interface TelemetryPayload {
   deviceId: string

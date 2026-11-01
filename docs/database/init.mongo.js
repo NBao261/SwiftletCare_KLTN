@@ -660,7 +660,23 @@ ensureCollection("househealthdays", {
     "current_reasons": {
       "bsonType": ["array", "null"],
       "items": {
-        "bsonType": "string"
+        "bsonType": "object",
+        "properties": {
+          "code": {
+            "bsonType": "string",
+            "enum": ["ALL_NORMAL", "MISSING_DATA", "NOT_ASSESSED", "ENV_IN_RANGE", "AIR_OVER_LIMIT", "FLOCK_DROP", "FLOCK_NO_BASELINE", "NOISE_EPISODES", "WEATHER_UNAVAILABLE", "RAIN_DOWNGRADE"]
+          },
+          "source": {
+            "bsonType": ["string", "null"],
+            "enum": ["environment", "air", "flock", "noise", null]
+          },
+          "level": {
+            "bsonType": ["string", "null"],
+            "enum": ["SLIGHT", "CLEAR", null]
+          },
+          "values": {}
+        },
+        "required": ["code"]
       }
     },
     "evidence": {
@@ -714,7 +730,23 @@ ensureCollection("househealthdays", {
               "reasons": {
                 "bsonType": ["array", "null"],
                 "items": {
-                  "bsonType": "string"
+                  "bsonType": "object",
+                  "properties": {
+                    "code": {
+                      "bsonType": "string",
+                      "enum": ["ALL_NORMAL", "MISSING_DATA", "NOT_ASSESSED", "ENV_IN_RANGE", "AIR_OVER_LIMIT", "FLOCK_DROP", "FLOCK_NO_BASELINE", "NOISE_EPISODES", "WEATHER_UNAVAILABLE", "RAIN_DOWNGRADE"]
+                    },
+                    "source": {
+                      "bsonType": ["string", "null"],
+                      "enum": ["environment", "air", "flock", "noise", null]
+                    },
+                    "level": {
+                      "bsonType": ["string", "null"],
+                      "enum": ["SLIGHT", "CLEAR", null]
+                    },
+                    "values": {}
+                  },
+                  "required": ["code"]
                 }
               },
               "levels": {

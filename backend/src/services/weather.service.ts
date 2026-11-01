@@ -1,6 +1,9 @@
 import { Farm } from '@/models/farm.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
+import { BadRequestError } from '@/utils/appError.util'
+import { assertFarmAccess } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
+import type { CurrentUser } from '@/types'
 
 /**
  * ANALYTICS-FR-013, DF-11 — thời tiết ngoài trời theo giờ của mỗi farm có toạ độ, lấy từ Open-Meteo.
@@ -11,6 +14,9 @@ const OPEN_METEO_URL = () => process.env.OPEN_METEO_URL || 'https://api.open-met
 /** ponytail: Open-Meteo treo thì bỏ sau 10 giây, giờ sau gọi lại (hằng số kỹ thuật, Report 3 §4.5) */
 export const WEATHER_FETCH_TIMEOUT_MS = 10_000
 const HOUR_MS = 3600_000
+/** ponytail: 1 lần đọc tối đa 7 ngày, mặc định 24 giờ gần nhất — cùng giá trị với số đếm 5 phút (Report 3 §4.5) */
+export const WEATHER_MAX_RANGE_MS = 7 * 24 * HOUR_MS
+export const WEATHER_DEFAULT_RANGE_MS = 24 * HOUR_MS
 
 interface OpenMeteoHourly {
   time?: string[]
@@ -65,6 +71,32 @@ export async function fetchFarmWeather(farm: { _id: unknown; coordinates?: { lat
   }
   if (ops.length) await WeatherObservation.bulkWrite(ops, { ordered: false })
   return ops.length
+}
+
+/**
+ * ANALYTICS-FR-013 — thời tiết theo giờ của 1 farm để hiện cạnh số đo trong nhà. Giá trị thiếu là null,
+ * không bao giờ là 0; farm chưa có toạ độ thì `has_coordinates: false` và không có giờ nào.
+ */
+export async function listFarmWeather(farmId: string, user: CurrentUser, query: { from?: string; to?: string }) {
+  const farm = await assertFarmAccess(farmId, user)
+  const to = query.to ? new Date(query.to) : new Date()
+  const from = query.from ? new Date(query.from) : new Date(to.getTime() - WEATHER_DEFAULT_RANGE_MS)
+  if (from >= to) throw BadRequestError('from phải trước to')
+  if (to.getTime() - from.getTime() > WEATHER_MAX_RANGE_MS) throw BadRequestError('Khoảng thời gian tối đa 7 ngày')
+
+  const rows = await WeatherObservation.find({ farm_id: farm._id, hour: { $gte: from, $lt: to } }).sort({ hour: 1 }).lean()
+  return {
+    farm_id: String(farm._id),
+    has_coordinates: !!farm.coordinates?.lat,
+    from,
+    to,
+    hours: rows.map(r => ({
+      hour: r.hour,
+      temperature: r.temperature ?? null,
+      humidity: r.humidity ?? null,
+      precipitation_mm: r.precipitation_mm ?? null,
+    })),
+  }
 }
 
 /** Gọi mỗi giờ từ jobs/weather.job.ts. Lỗi ở một farm không làm bỏ qua các farm sau */

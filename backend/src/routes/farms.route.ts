@@ -1,5 +1,5 @@
 ﻿import { Router } from 'express'
-import { body, param } from 'express-validator'
+import { body, param, query } from 'express-validator'
 import * as farmController from '@/controllers/farms.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
@@ -32,6 +32,10 @@ router.delete('/:id/members/:userId', requireRole('FARM_OWNER'), param('id').isM
 // Houses — cấu trúc farm chỉ Farm Owner tạo (FARM-FR-002, Report 3 §2.4)
 router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createHouse)
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
+// ANALYTICS-FR-013 — thời tiết ngoài trời theo giờ, hiện cạnh số đo trong nhà (Farm Owner, Domain Expert)
+router.get ('/:id/weather', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('id').isMongoId(),
+  ...['from', 'to'].map(name => query(name).optional().isISO8601().withMessage(`${name} không phải ngày hợp lệ`)),
+  validate, farmController.getWeather)
 
 // Zones (under house)
 router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('houseId').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createZone)

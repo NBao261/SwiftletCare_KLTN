@@ -4,6 +4,7 @@ import * as healthReportController from '@/controllers/healthReports.controller'
 import * as healthDayController from '@/controllers/healthDays.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { REASON_LANGS } from '@/utils/healthReason.util'
 
 const router = Router()
 router.use(authenticate)
@@ -19,8 +20,9 @@ const dayScope = [
   query('to').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
 ]
 const dayId = param('dayId').isMongoId()
-router.get('/days', ...dayScope, validate, healthDayController.listDays)
-router.get('/days.csv', ...dayScope, validate, healthDayController.exportCsv)
+router.get('/days', ...dayScope, query('myRatingState').optional().isIn(['PENDING', 'RATED', 'SKIPPED', 'EXPIRED']),
+  validate, healthDayController.listDays)
+router.get('/days.csv', ...dayScope, query('lang').optional().isIn(REASON_LANGS), validate, healthDayController.exportCsv)
 router.get('/evaluation', ...dayScope, query('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT']), validate, healthDayController.evaluation)
 router.get('/days/:dayId', dayId, validate, healthDayController.getDay)
 router.post('/days/:dayId/rating', dayId,
