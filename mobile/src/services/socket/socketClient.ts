@@ -4,14 +4,16 @@ import { useAuthStore } from '@/stores/authStore'
 import type {
   SocketAlertNew,
   SocketBirdCountUpdate,
+  SocketDeviceStatusChange,
   SocketRelayUpdate,
   SocketTelemetryUpdate,
 } from '@/types'
 
 let socket: Socket | null = null
 // Phòng đang theo dõi — backend quên phòng khi mất kết nối nên nối lại xong phải vào lại
-const joinedZoneIds = new Set<string>()
-const joinedHouseIds = new Set<string>()
+// Số màn đang theo dõi từng phòng: nhiều màn cùng vào một phòng (chi tiết nhà, Cảnh báo) thì chỉ rời phòng khi màn cuối rời
+const joinedZoneIds = new Map<string, number>()
+const joinedHouseIds = new Map<string, number>()
 
 // Hàm làm mới access token, apiClient đăng ký lúc khởi động (socketClient không import apiClient để tránh vòng import)
 let refreshAccessToken: (() => Promise<string>) | null = null
@@ -60,8 +62,8 @@ export function connectSocket(): Socket {
   })
   socket.on('connect', () => {
     hasRefreshedForThisConnection = false
-    joinedZoneIds.forEach(zoneId => socket?.emit('JOIN_ZONE', { zoneId }))
-    joinedHouseIds.forEach(houseId => socket?.emit('JOIN_HOUSE', { houseId }))
+    joinedZoneIds.forEach((_count, zoneId) => socket?.emit('JOIN_ZONE', { zoneId }))
+    joinedHouseIds.forEach((_count, houseId) => socket?.emit('JOIN_HOUSE', { houseId }))
   })
   socket.on('connect_error', handleConnectError)
 
@@ -82,22 +84,34 @@ export function getSocket(): Socket | null {
 
 // Vào/ra phòng của Zone để nhận số đo realtime
 export function joinZone(zoneId: string): void {
-  joinedZoneIds.add(zoneId)
-  socket?.emit('JOIN_ZONE', { zoneId })
+  const count = joinedZoneIds.get(zoneId) ?? 0
+  joinedZoneIds.set(zoneId, count + 1)
+  if (count === 0) socket?.emit('JOIN_ZONE', { zoneId })
 }
 
 export function leaveZone(zoneId: string): void {
+  const count = joinedZoneIds.get(zoneId) ?? 0
+  if (count > 1) {
+    joinedZoneIds.set(zoneId, count - 1)
+    return
+  }
   joinedZoneIds.delete(zoneId)
   socket?.emit('LEAVE_ZONE', { zoneId })
 }
 
 // Vào/ra phòng của nhà yến để nhận số đếm chim realtime (BIRD_COUNT_UPDATE, VISION-FR-012)
 export function joinHouse(houseId: string): void {
-  joinedHouseIds.add(houseId)
-  socket?.emit('JOIN_HOUSE', { houseId })
+  const count = joinedHouseIds.get(houseId) ?? 0
+  joinedHouseIds.set(houseId, count + 1)
+  if (count === 0) socket?.emit('JOIN_HOUSE', { houseId })
 }
 
 export function leaveHouse(houseId: string): void {
+  const count = joinedHouseIds.get(houseId) ?? 0
+  if (count > 1) {
+    joinedHouseIds.set(houseId, count - 1)
+    return
+  }
   joinedHouseIds.delete(houseId)
   socket?.emit('LEAVE_HOUSE', { houseId })
 }
@@ -133,4 +147,29 @@ export function onRelayUpdate(handler: (update: SocketRelayUpdate) => void): voi
 
 export function offRelayUpdate(handler: (update: SocketRelayUpdate) => void): void {
   socket?.off('RELAY_UPDATE', handler)
+}
+
+export function onDeviceStatusChange(handler: (change: SocketDeviceStatusChange) => void): void {
+  socket?.on('DEVICE_STATUS_CHANGE', handler)
+}
+
+export function offDeviceStatusChange(handler: (change: SocketDeviceStatusChange) => void): void {
+  socket?.off('DEVICE_STATUS_CHANGE', handler)
+}
+
+// Socket đang nối được không — chưa tạo socket thì coi như chưa nối
+export function isSocketConnected(): boolean {
+  return socket?.connected ?? false
+}
+
+// Nghe nối/mất kết nối để báo trên màn; trả hàm huỷ đăng ký cho cleanup của effect
+export function onConnectionChange(handler: (isConnected: boolean) => void): () => void {
+  const handleConnect = () => handler(true)
+  const handleDisconnect = () => handler(false)
+  socket?.on('connect', handleConnect)
+  socket?.on('disconnect', handleDisconnect)
+  return () => {
+    socket?.off('connect', handleConnect)
+    socket?.off('disconnect', handleDisconnect)
+  }
 }
