@@ -391,7 +391,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - `/alerts`: Farm Owner xem và xác nhận; Technician chỉ cảnh báo thiết bị; Domain Expert dùng hàng đợi kiểm chứng; bỏ Admin;
   - Admin chỉ dùng `/system/devices`, `/system/health`, `/system/settings`, `/system/audit-log`, `/users`, `/account-requests`;
   - sửa `constants/roles.ts` (`OPS_ROLES`, `HARVEST_ROLES`, `MENU_ACCESS`), sidebar, `RequireRole` ở `routes/*.tsx`; test Vitest cho bảng role → route.
-- [ ] Đóng DF-5.
+- [x] Đóng DF-5 (Tuấn: bỏ dữ liệu giả của màn chuyên gia, nối API thật; chuyển thư mục domain-expert/ theo FE_Design §12, 01/11).
 
 ### G-16 — Mobile đủ phạm vi phiếu (P0-Demo cho luồng Farm Owner, P1 phần còn lại) — Nhi (nền, setup QR, trạng thái ngày), Len (màn Farm Owner), Tuấn (màn chuyên gia), Len (live stream)
 
