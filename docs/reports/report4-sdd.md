@@ -328,6 +328,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Default session windows | AI node `config.yaml`, backend `DEFAULT_SESSION_WINDOWS` |
 | Return-rate check | backend `jobs/returnRate.job.ts`, `MIN_BASELINE_DAYS` |
 | One read of 5-minute counts | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS` |
+| Earlier verdicts shown with an inferred alert | backend `EARLIER_VERDICTS_LIMIT` (`alertEvidence.service.ts`) |
 | Live-stream viewing token | backend `STREAM_TOKEN_TTL_SEC` |
 | Counting ring vertices | backend `devices.route.ts`, AI node `remote_config.MAX_POINTS` |
 | Ring margin, tile overlap, extrapolation | AI node `config.yaml` (`tracking.ring`, tile overlap, `extrapolate_min_speed_px`, `extrapolate_frames`) |
@@ -674,7 +675,7 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date` | Soft delete; photo in MinIO |
 | `auditlogs` | Audit entry | `actor_id + created_at`, `farm_id + created_at`, `target_type + target_id`, `action + created_at` | Source of the expert activity history |
 | `parameterreviews` | Review item | `zone_id + group + status` | One open item per zone and group |
-| `coefficientproposals` | Proposal | `zone_id + status` | |
+| `coefficientproposals` | Proposal | `zone_id + status`; `zone_id` unique while `PROPOSED` | One open proposal per zone |
 | `systemsettings` | Singleton settings | `_singleton` unique | Default thresholds and their sourced history |
 
 The exact field list, types and indexes of every collection are those of the database script (6.5).
@@ -895,7 +896,7 @@ stateDiagram-v2
   [*] --> PROPOSED : owner submits a suggestion (EXPERT-FR-011)
   PROPOSED --> APPROVED : expert approves, coefficients applied
   PROPOSED --> REJECTED : expert rejects with note
-  PROPOSED --> SUPERSEDED : newer proposal or expert edit
+  PROPOSED --> SUPERSEDED : newer proposal or any edit
   APPROVED --> [*]
   REJECTED --> [*]
   SUPERSEDED --> [*]

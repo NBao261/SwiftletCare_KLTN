@@ -266,11 +266,19 @@ export async function getBirdCountBuckets(
   if (from >= to) throw BadRequestError('from phải trước to')
   if (to.getTime() - from.getTime() > MAX_BUCKET_RANGE_MS) throw BadRequestError('Khoảng thời gian tối đa 7 ngày')
 
-  const buckets = await BirdCountBucket.aggregate<{ bucket_start: Date; entry_count: number; exit_count: number }>([
-    { $match: { house_id: house._id, bucket_start: { $gte: from, $lt: to } } },
+  const buckets = await sumHouseBuckets(house._id, from, to)
+  return { house_id: String(house._id), from, to, buckets }
+}
+
+/**
+ * Số chim ra/vào theo khoảng 5 phút của 1 nhà trong [from, to), cộng các camera của nhà. Không kiểm
+ * quyền — người gọi đã kiểm (getBirdCountBuckets, bằng chứng cảnh báo ALERT-FR-014).
+ */
+export async function sumHouseBuckets(houseId: unknown, from: Date, to: Date) {
+  return BirdCountBucket.aggregate<{ bucket_start: Date; entry_count: number; exit_count: number }>([
+    { $match: { house_id: new Types.ObjectId(String(houseId)), bucket_start: { $gte: from, $lt: to } } },
     { $group: { _id: '$bucket_start', entry_count: { $sum: '$entry_count' }, exit_count: { $sum: '$exit_count' } } },
     { $sort: { _id: 1 } },
     { $project: { _id: 0, bucket_start: '$_id', entry_count: 1, exit_count: 1 } },
   ])
-  return { house_id: String(house._id), from, to, buckets }
 }

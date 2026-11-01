@@ -190,11 +190,18 @@ export async function setReportConclusion(id: string, user: CurrentUser, text: s
   }
 
   const isEdit = !!report.expert_conclusion
-  report.expert_conclusion = { text, by: user._id as never, at: new Date() }
+  const now = new Date()
+  report.expert_conclusion = isEdit
+    ? { text, by: user._id as never, at: report.expert_conclusion!.at, edited_at: now }
+    : { text, by: user._id as never, at: now }
   await report.save()
-  await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'zone_health_report', String(report._id), { zone_id: String(report.zone_id), isEdit })
+  const zone = await Zone.findById(report.zone_id).select('name house_id').lean()
+  // farmId, house_id: vào lịch sử hoạt động chuyên gia và lọc được theo nhà (EXPERT-FR-009); Farm Owner
+  // đã được báo ngay dưới (EXPERT-FR-006)
+  await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'zone_health_report', String(report._id), {
+    zone_id: String(report.zone_id), house_id: zone ? String(zone.house_id) : undefined, isEdit,
+  }, { farmId: String(report.farm_id) })
 
-  const zone = await Zone.findById(report.zone_id).select('name').lean()
   // Không chờ gửi: kết luận đã lưu, Telegram chậm không được giữ response
   for (const ownerId of await ownerIdsOf(report.farm_id)) {
     void notifyUser(ownerId, {
