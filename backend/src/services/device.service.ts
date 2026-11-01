@@ -995,7 +995,7 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   assertInService(camera)
   const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
   // BR-22 — Farm Owner chỉ vẽ thay khi farm chưa có chuyên gia
-  assertExpertDecision(farm, user)
+  await assertExpertDecision(farm, user)
 
   const before = camera.counting_ring ? ringOf(camera.counting_ring) : undefined
   const after = ringOf(ring)

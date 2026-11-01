@@ -1,7 +1,8 @@
 /**
  * BR-22 — farm chưa có Domain Expert thì Farm Owner làm thay quyết định của chuyên gia: kết luận cảnh
  * báo suy luận (EXPERT-FR-003), tham số phát hiện và mức giảm tỷ lệ chim về (EXPERT-FR-008), vòng đếm
- * (VISION-FR-018), thông báo chờ kiểm chứng (EXPERT-FR-007). Farm đã có chuyên gia → Farm Owner 403.
+ * (VISION-FR-018), thông báo chờ kiểm chứng (EXPERT-FR-007). Farm đã có chuyên gia còn hoạt động → Farm
+ * Owner 403; chuyên gia bị khoá không tính.
  */
 import express from 'express'
 import jwt from 'jsonwebtoken'
@@ -131,5 +132,17 @@ describe('BR-22 — Farm Owner làm thay chuyên gia', () => {
     await createAlert({ farmId: String(farm._id), zoneId: String(zone._id), type: 'SENSOR_ANOMALY', title: 'Cảm biến đứng số', message: 'm' })
     expect((await waitForNotification(expert._id))?.title).toContain('chờ kiểm chứng')
     expect(await Notification.countDocuments({ user_id: owner._id })).toBe(0)
+  })
+
+  it('chuyên gia duy nhất bị khoá: Farm Owner làm thay cả 4 quyết định và nhận thông báo chờ kiểm chứng', async () => {
+    const { owner, expert, farm, zone, alert, decisions } = await seed({ withExpert: true })
+    await User.updateOne({ _id: expert._id }, { is_active: false })
+
+    for (const decide of Object.values(decisions)) await decide().expect(200)
+    expect((await Alert.findById(alert._id).lean())!.expert_verdict).toMatchObject({ role: 'FARM_OWNER' })
+
+    await createAlert({ farmId: String(farm._id), zoneId: String(zone._id), type: 'SENSOR_ANOMALY', title: 'Cảm biến đứng số', message: 'm' })
+    expect((await waitForNotification(owner._id))?.title).toContain('chờ kiểm chứng')
+    expect(await Notification.countDocuments({ user_id: expert._id })).toBe(0)
   })
 })

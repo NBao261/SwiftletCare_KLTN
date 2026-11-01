@@ -12,6 +12,7 @@ import alertRoutes from '@/routes/alerts.route'
 import deviceRoutes from '@/routes/devices.route'
 import expertActivityRoutes from '@/routes/expertActivity.route'
 import farmRoutes from '@/routes/farms.route'
+import healthReportRoutes from '@/routes/healthReports.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { requestContext } from '@/middlewares/requestContext.middleware'
 import { Alert } from '@/models/alert.model'
@@ -21,6 +22,7 @@ import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
+import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 import type { Role } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true), publishHouseCommand: jest.fn().mockReturnValue(true) }))
@@ -38,6 +40,7 @@ app.use(requestContext)
 app.use('/alerts', alertRoutes)
 app.use('/devices', deviceRoutes)
 app.use('/farms', farmRoutes)
+app.use('/health-reports', healthReportRoutes)
 app.use('/expert-activity', expertActivityRoutes)
 app.use(errorHandler)
 
@@ -52,7 +55,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  await Promise.all([Alert, AuditLog, CameraNode, Farm, House, Zone, Notification, User].map(m => (m as typeof User).deleteMany({})))
+  await Promise.all([Alert, AuditLog, CameraNode, Farm, House, Zone, Notification, User, ZoneHealthReport].map(m => (m as typeof User).deleteMany({})))
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -164,6 +167,18 @@ describe('GET /expert-activity (EXPERT-FR-009)', () => {
     expect(await total(`houseId=${s.house._id}`)).toBe(5) // các quyết định theo zone của nhà + mức giảm + vòng đếm
     expect(await total(`from=${new Date(Date.now() + 60_000).toISOString()}`)).toBe(0)
     await s.send('get', `/expert-activity?farmId=${s.farm._id}&type=ACCOUNT_LOCKED`, s.t.owner).expect(422)
+  })
+
+  it('kết luận báo cáo sức khoẻ lọc được theo cả zone và nhà', async () => {
+    const s = await seed()
+    const report = await ZoneHealthReport.create({
+      farm_id: s.farm._id, zone_id: s.zone._id, period_start: new Date(Date.now() - 7 * 86_400_000), period_end: new Date(), metrics: { zone: 'Tầng 1' },
+    })
+    await s.send('put', `/health-reports/${report._id}/conclusion`, s.t.expert, { text: 'Ổn định' }).expect(200)
+    for (const query of [`zoneId=${s.zone._id}`, `houseId=${s.house._id}`]) {
+      const res = await s.send('get', `/expert-activity?farmId=${s.farm._id}&${query}`, s.t.owner).expect(200)
+      expect(res.body.data.map((e: { action: string }) => e.action)).toEqual(['HEALTH_REPORT_CONCLUDED'])
+    }
   })
 
   it('Technician, Administrator và chuyên gia farm khác bị 403', async () => {
