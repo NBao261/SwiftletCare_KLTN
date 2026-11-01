@@ -20,6 +20,8 @@ export interface User {
   // Đang giữ mật khẩu tạm do Admin cấp — phải đổi trước khi dùng app (AUTH-FR-005c)
   must_change_password?: boolean
   notification_preferences: NotificationPreferences
+  // Đã liên kết bot Telegram (ALERT-FR-013)
+  telegram_linked?: boolean
   created_at: string
 }
 
