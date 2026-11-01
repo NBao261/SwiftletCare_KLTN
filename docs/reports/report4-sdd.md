@@ -327,7 +327,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | AI node frame rate that raises `EDGE_AI_DEGRADED` | AI node `config.yaml`, backend `CAMERA_MIN_FPS` |
 | Default session windows | AI node `config.yaml`, backend `DEFAULT_SESSION_WINDOWS` |
 | Return-rate check | backend `jobs/returnRate.job.ts`, `MIN_BASELINE_DAYS` |
-| One read of 5-minute counts | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS` |
+| One read of 5-minute counts or of hourly weather | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS`; `WEATHER_MAX_RANGE_MS`, `WEATHER_DEFAULT_RANGE_MS` (`weather.service.ts`) |
 | Earlier verdicts shown with an inferred alert | backend `EARLIER_VERDICTS_LIMIT` (`alertEvidence.service.ts`) |
 | Live-stream viewing token | backend `STREAM_TOKEN_TTL_SEC` |
 | Counting ring vertices | backend `devices.route.ts`, AI node `remote_config.MAX_POINTS` |
@@ -536,7 +536,7 @@ erDiagram
     object indicators "environment, air, flock, noise: value and level"
     object completeness "per source"
     string current_status "GOOD | WATCH | ACTION | INSUFFICIENT_DATA"
-    array current_reasons
+    array current_reasons "code, source, level, values"
     date computed_at
     array ratings "by, role, outcome RATED | SKIPPED, rating, note, at, snapshot status and reasons"
   }

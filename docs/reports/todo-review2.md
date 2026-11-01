@@ -366,6 +366,11 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Báo cáo theo House ngày/tuần/tháng (`househealthreports`, unique `house_id + kind + period_start + period_end`), migrate báo cáo tuần theo Zone cũ. *(Kiệt, phần b — PR riêng vì đổi `/health-reports` mà màn của Tuấn và Len đang dùng)*
 - [ ] PDF bằng `jspdf` ở web. *(Nhi)*
 - [x] `ANALYTICS-FR-014`: đồng thuận + CI 95 %, kappa có trọng số tuyến tính, Gwet's AC1, ma trận nhầm lẫn, ngày `INSUFFICIENT_DATA` tách riêng. *(31/10: `GET /health-reports/evaluation`, kèm tỷ lệ báo động giả theo từng nguồn)*
+- [x] Sửa theo góp ý của Nhi trên PR #126 *(Kiệt, 02/11, `395cb17` spec + `5baed97` backend)*:
+  - lý do trạng thái ngày lưu dạng mã `{code, source, level, values}` (schema `HealthReason`), cả trong ảnh chụp lúc chấm — web, mobile tự dịch VI/EN;
+  - `GET /health-reports/days?myRatingState=` (màn "ngày cần chấm", hàng đợi việc);
+  - CSV `?lang=vi|en`;
+  - `GET /farms/{id}/weather`: thời tiết theo giờ cạnh số đo trong nhà (ANALYTICS-FR-013; màn dashboard của Len).
 - [ ] Web + mobile: trạng thái ngày, màn chấm điểm, báo cáo.
 - [x] Test phần a: TC-F20-01..03, TC-F21-02, TC-F22-01..03, TC-ST 6.17 và 6.18. *(31/10: `healthAssessment.test.ts`, `healthDays.test.ts`, `weather.test.ts`, `agreement.util.test.ts`; backend 629/629)*
 - [ ] Test còn lại: TC-ST 6.9 sinh báo cáo theo nhà (phần b), TC-F21-03 (thủ công, sau khi có màn web).
