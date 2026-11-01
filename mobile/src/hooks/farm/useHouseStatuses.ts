@@ -62,6 +62,7 @@ export function useHouseStatuses(now: number) {
         activeAlertCount: input.activeAlerts.length,
       }
     })
+    // Cùng mức trạng thái thì theo tên nhà, như dashboard web
     .sort(
       (first, second) =>
         getHouseStatusRank(first.status.kind) - getHouseStatusRank(second.status.kind) ||

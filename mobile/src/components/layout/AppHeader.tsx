@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ArrowLeftIcon } from 'phosphor-react-native'
+import { CaretLeftIcon } from 'phosphor-react-native'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -56,7 +56,7 @@ export function AppHeader({
               foregroundColor ? { borderWidth: BorderWidth.regular, borderColor: foregroundColor } : { backgroundColor: palette.surface },
             ]}
           >
-            <ArrowLeftIcon size={20} color={textColor} />
+            <CaretLeftIcon size={20} color={textColor} weight="bold" />
           </Pressable>
         )}
 

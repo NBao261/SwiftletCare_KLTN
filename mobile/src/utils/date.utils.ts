@@ -51,3 +51,18 @@ export function formatElapsed(elapsedMs: number): string {
   if (elapsedMs < DAY_MS) return t('{count} giờ', { count: Math.floor(elapsedMs / HOUR_MS) })
   return t('{count} ngày', { count: Math.floor(elapsedMs / DAY_MS) })
 }
+
+// Giờ phút theo giờ Việt Nam của một thời điểm, dạng HH:mm — trục thời gian biểu đồ, không phụ thuộc múi giờ của máy
+export function formatVietnamTime(isoDate: string): string {
+  return new Date(Date.parse(isoDate) + VIETNAM_OFFSET_MS).toISOString().slice(11, 16)
+}
+
+// Ngày tháng theo giờ Việt Nam của một thời điểm, dạng dd/MM
+export function formatVietnamDayMonthOf(isoDate: string): string {
+  return formatVietnamDayMonth(Date.parse(isoDate))
+}
+
+// Nửa đêm (00:00 giờ Việt Nam) của ngày chứa thời điểm, dạng mili giây
+export function getVietnamDayStart(time: number): number {
+  return Date.parse(`${getVietnamDate(time)}T00:00:00+07:00`)
+}

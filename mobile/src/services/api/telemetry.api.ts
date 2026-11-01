@@ -8,6 +8,9 @@ export const telemetryApi = {
   getLatest: (zoneId: string) =>
     apiClient.get<ApiResponse<TelemetryRecord | null>>(ENDPOINTS.TELEMETRY_LATEST(zoneId)),
 
-  getHistory: (zoneId: string, from?: string, to?: string) =>
-    apiClient.get<ApiResponse<TelemetryRecord[]>>(ENDPOINTS.TELEMETRY_HISTORY(zoneId), { params: { from, to } }),
+  // Mới nhất trước; limit mặc định 100, tối đa 1000 (api-spec)
+  getHistory: (zoneId: string, from?: string, to?: string, limit?: number) =>
+    apiClient.get<ApiResponse<TelemetryRecord[]>>(ENDPOINTS.TELEMETRY_HISTORY(zoneId), {
+      params: { from, to, limit },
+    }),
 }

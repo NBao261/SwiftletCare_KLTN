@@ -71,3 +71,24 @@ export function getAuthErrorMessage(error: unknown, action: AuthAction): string 
   }
   return t('Đã có lỗi xảy ra. Vui lòng thử lại sau')
 }
+
+// Câu báo lỗi khi lưu cài đặt farm, nhà, zone; overrides: câu riêng của thao tác theo mã HTTP (ví dụ 403 khi xoá farm)
+export function getSettingsErrorMessage(error: unknown, overrides: Partial<Record<number, string>> = {}): string {
+  const errorInfo = readApiError(error)
+  if (errorInfo.status === null) return t(NETWORK_ERROR_MESSAGE)
+  const override = overrides[errorInfo.status]
+  if (override) return override
+  if (errorInfo.status >= 500) return t(SERVER_ERROR_MESSAGE)
+  if (errorInfo.status === 400 || errorInfo.status === 422) return t('Giá trị không hợp lệ. Vui lòng kiểm tra lại')
+  if (errorInfo.status === 403) return t('Bạn không có quyền thực hiện thao tác này')
+  if (errorInfo.status === 404) return t('Không tìm thấy, có thể đã bị xoá')
+  return t('Đã có lỗi xảy ra. Vui lòng thử lại sau')
+}
+
+// Câu báo lỗi khi đăng ký thiết bị bằng mã trên nhãn (FARM-FR-003, Flow 1 case 3a)
+export function getDeviceRegisterErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    400: t('Mã thiết bị hoặc mã kích hoạt không đúng'),
+    409: t('Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký'),
+  })
+}

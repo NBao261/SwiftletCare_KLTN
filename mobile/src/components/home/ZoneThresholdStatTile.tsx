@@ -54,7 +54,8 @@ export function ZoneThresholdStatTile() {
   // Một tầng lệch thì vào thẳng tầng đó
   const handleViewAll = () => {
     if (breaches.length === 1) {
-      router.push({ pathname: '/zone/[zoneId]', params: { zoneId: breaches[0].zone._id } })
+      const { zone } = breaches[0]
+      router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: zone.house_id, zoneId: zone._id } })
       return
     }
     // shortcut: chưa có màn danh sách tầng lệch nhóm theo nhà — tạm mở tab Trang trại

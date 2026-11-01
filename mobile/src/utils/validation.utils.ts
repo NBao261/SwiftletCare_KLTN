@@ -12,3 +12,10 @@ export function isValidEmail(email: string): boolean {
 export function isValidPassword(password: string): boolean {
   return password.length >= PASSWORD_MIN_LENGTH
 }
+
+const CLOCK_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
+
+// Giờ dạng HH:MM 24 giờ, như quiet_hours của backend ("22:00", "06:00")
+export function isValidClockTime(value: string): boolean {
+  return CLOCK_TIME_PATTERN.test(value.trim())
+}
