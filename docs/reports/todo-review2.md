@@ -271,6 +271,10 @@ Một PR cho backend, web, mobile, firmware:
   - `details = {metric, observed, threshold, direction, started_at}`.
 - [x] Test `thresholdBreach.test.ts` (TC-F07-02): 9 phút không có cảnh báo, 10 phút có 1 cảnh báo. *(kèm `tests/unit/utils/breachDwell.util.test.ts`)*
 - [x] Đóng defect DF-6. *(Project Tracking §5: Closed 31/10)*
+- [x] Sửa theo review PR #122 *(Kiệt, 02/11, `779e994` spec + `35c03c6` backend; mục chặn merge là hằng số của G-03, đã sửa ở #117)*:
+  - thiết bị im lặng quá 30 giây (ngưỡng mất kết nối BR-10) thì quãng chờ đếm lại từ mẫu tiếp theo (BR-34, Report 3 ALERT-FR-012);
+  - cảnh báo đang mở chỉ được giữ sống bởi chính chỉ số nó báo (`metadata.metrics`), chỉ số khác vừa vượt không giữ (BR-16);
+  - quãng chờ không xoá khi gỡ node hoặc đổi ngưỡng: rò nhỏ, tự hết, Bảo đã chấp nhận.
 
 ### G-06 — Can thiệp tay (P1) — Kiệt (backend), Bảo (firmware, trong G-07), Len (web, mobile)
 
