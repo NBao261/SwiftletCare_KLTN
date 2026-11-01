@@ -9,5 +9,6 @@ export function useZoneDirectory() {
   return {
     zoneById: new Map(zonesQuery.zones.map(zone => [zone._id, zone])),
     houseById: new Map(housesQuery.houses.map(house => [house._id, house])),
+    isLoading: housesQuery.isLoading || zonesQuery.isLoading,
   }
 }

@@ -2,6 +2,8 @@ import type { TelemetryRecord, Thresholds } from '@/types'
 
 // Chỉ số có ngưỡng trong Zone (ENV-FR-007) — NH3/CO2 chỉ để cảnh báo, không điều khiển quạt
 export type ThresholdMetric = 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2'
+// Chỉ số cảm biến hiển thị (ENV-FR-001): 5 chỉ số có ngưỡng + tiếng ồn (không có ngưỡng, THREAT-FR-005)
+export type SensorMetric = ThresholdMetric | 'sound'
 
 // Số đo cũ hơn khoảng này không còn tính là "đang vượt ngưỡng" — cùng mốc backend tự đóng THRESHOLD_BREACH
 // (THRESHOLD_CLEAR_MS trong backend/src/services/alert.service.ts)

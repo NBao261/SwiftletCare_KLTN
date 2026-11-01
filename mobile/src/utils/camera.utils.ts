@@ -1,5 +1,7 @@
+import { isAxiosError } from 'axios'
 import type { BirdCountDay, DeviceStatus } from '@/types'
 import { getCurrentLanguage, t } from '@/utils/i18n.utils'
+import { formatPercentValue } from '@/utils/number.utils'
 
 const CAMERA_STATUS_BADGES: Record<DeviceStatus, string> = {
   ONLINE: 'LIVE',
@@ -35,4 +37,19 @@ export function formatBirdCountRows(day: BirdCountDay | undefined): { exitText: 
 // Địa chỉ HLS của một stream trên MediaMTX, kèm token xem (VISION-FR-013)
 export function buildHlsUrl(baseUrl: string, path: string, token: string): string {
   return `${baseUrl.replace(/\/$/, '')}/${path}/index.m3u8?token=${encodeURIComponent(token)}`
+}
+
+// Backend từ chối xem camera (403: không thuộc farm, hoặc role không được xem)
+export function isForbiddenError(error: unknown): boolean {
+  return isAxiosError(error) && error.response?.status === 403
+}
+
+// Số chim hôm nay của nhà: ra phiên sáng, về phiên chiều (số ròng) và tỷ lệ về tổ làm tròn số nguyên (chừa chỗ "000%");
+// phiên chưa có hoặc tỷ lệ null thì "_"
+export function formatBirdDayFigures(day: BirdCountDay | undefined): { exitText: string; entryText: string; rateText: string } {
+  return {
+    exitText: day?.has_morning ? formatCount(day.net_exit) : '_',
+    entryText: day?.has_evening ? formatCount(day.net_entry) : '_',
+    rateText: day?.return_rate === null || day?.return_rate === undefined ? '_' : formatPercentValue(day.return_rate, 0),
+  }
 }

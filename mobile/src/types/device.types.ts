@@ -19,9 +19,17 @@ export interface SensorNode {
   last_heartbeat?: string
   status: DeviceStatus
   rssi?: number
+  // FARM-FR-006 — chẩn đoán từ heartbeat: thời điểm khởi động (tính uptime), RAM trống, lý do khởi động, IP trong LAN
+  booted_at?: string
+  free_heap?: number
+  reset_reason?: string
+  ip?: string
   relay_states: RelayStates
   control_mode: ControlMode
+  // Một hạn chung cho cả controller: hết hạn thì mọi relay về AUTO
   override_expiry?: string
+  // Khung giờ phát loa ru (ENV-FR-013b), giờ dạng HH:mm
+  speaker_schedule?: { enabled?: boolean; windows?: { start: string; end: string }[] }
   registered_at?: string
   // Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat
   activation_overdue_at?: string | null

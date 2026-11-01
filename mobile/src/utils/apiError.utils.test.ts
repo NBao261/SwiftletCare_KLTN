@@ -2,6 +2,8 @@ import { describe, expect, it } from '@jest/globals'
 import {
   formatWaitTime,
   getAuthErrorMessage,
+  getDeviceRegisterErrorMessage,
+  getSettingsErrorMessage,
   INVALID_CODE_MESSAGE,
   NETWORK_ERROR_MESSAGE,
   readApiError,
@@ -29,7 +31,9 @@ describe('readApiError', () => {
 
 describe('getAuthErrorMessage', () => {
   it('đăng nhập sai chỉ báo một câu chung', () => {
-    expect(getAuthErrorMessage(backendError(401, 'UNAUTHORIZED'), 'login')).toBe('Tài khoản hoặc mật khẩu không chính xác')
+    expect(getAuthErrorMessage(backendError(401, 'UNAUTHORIZED'), 'login')).toBe(
+      'Tài khoản hoặc mật khẩu không chính xác',
+    )
   })
 
   it('tài khoản bị khoá kèm lý do; không có lý do thì hướng dẫn liên hệ quản trị viên', () => {
@@ -88,5 +92,28 @@ describe('formatWaitTime', () => {
     expect(formatWaitTime(45)).toBe('45 giây')
     expect(formatWaitTime(60)).toBe('1 phút')
     expect(formatWaitTime(601)).toBe('11 phút')
+  })
+})
+
+describe('getSettingsErrorMessage', () => {
+  it('mỗi mã HTTP một câu ngắn, câu riêng của thao tác được ưu tiên', () => {
+    expect(getSettingsErrorMessage(new Error('Network Error'))).toBe(NETWORK_ERROR_MESSAGE)
+    expect(getSettingsErrorMessage(backendError(400, 'BAD_REQUEST'))).toBe(
+      'Giá trị không hợp lệ. Vui lòng kiểm tra lại',
+    )
+    expect(getSettingsErrorMessage(backendError(403, 'FORBIDDEN'))).toBe('Bạn không có quyền thực hiện thao tác này')
+    expect(getSettingsErrorMessage(backendError(403, 'FORBIDDEN'), { 403: 'Chỉ chủ chính' })).toBe('Chỉ chủ chính')
+    expect(getSettingsErrorMessage(backendError(503))).toBe(SERVER_ERROR_MESSAGE)
+  })
+})
+
+describe('getDeviceRegisterErrorMessage', () => {
+  it('sai mã trên nhãn là 400, thiết bị đã dùng nơi khác là 409', () => {
+    expect(getDeviceRegisterErrorMessage(backendError(400, 'BAD_REQUEST'))).toBe(
+      'Mã thiết bị hoặc mã kích hoạt không đúng',
+    )
+    expect(getDeviceRegisterErrorMessage(backendError(409, 'CONFLICT'))).toBe(
+      'Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký',
+    )
   })
 })

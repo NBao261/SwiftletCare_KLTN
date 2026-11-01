@@ -65,13 +65,12 @@ export function ReturnRateBar() {
   // Một nhà thì vào thẳng nhà đó, nhiều nhà thì mở danh sách nhà kèm tỷ lệ
   const handlePress = () => {
     const singleHouse = countedHouseIds.length === 1 ? houseById.get(countedHouseIds[0]) : undefined
-    // shortcut: chưa có màn chi tiết nhà — tạm mở Farm chứa nhà đó
     if (singleHouse) {
-      router.push({ pathname: '/farm/[farmId]', params: { farmId: singleHouse.farm_id } })
+      router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: singleHouse._id } })
       return
     }
-    // shortcut: chưa có màn danh sách nhà kèm tỷ lệ — tạm mở tab Phân tích
-    router.navigate('/(tabs)/analytics')
+    // Nhiều nhà: mở tab Đàn chim của Phân tích (đổi nhà ở thanh trên)
+    router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'birds' } })
   }
 
   if (isLoading) return <Skeleton width="100%" height={BAR_HEIGHT} delayMs={HOME_SKELETON_DELAY_MS.returnRate} />

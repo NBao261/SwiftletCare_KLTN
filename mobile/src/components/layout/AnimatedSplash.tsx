@@ -25,8 +25,8 @@ const TEXT_LOGO_WIDTH = 200
 const SCREEN = Dimensions.get('screen')
 
 // Logo hiện tối thiểu một lúc trước khi mờ, tránh loé lên rồi mất khi nạp quá nhanh
-const MIN_VISIBLE_DURATION = 500
-const FADE_DURATION = 600
+const MIN_VISIBLE_DURATION = 600
+const FADE_DURATION = 500
 
 const ICON_IMAGE = require('@/assets/images/mobile-scare-icon.png')
 

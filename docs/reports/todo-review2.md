@@ -45,7 +45,7 @@ Cập nhật 27/10/2026 (phân công lại theo vai trò từng người), sau k
 | **Kiệt** | Backend, firmware | Backend thiết bị, tài khoản, cảnh báo, chuyên gia, sức khỏe ngày; firmware tự chẩn đoán | WF-04, 10 | F-05, 06, 08, 18, 19 |
 | **Len** | Web + mobile — Farm Owner | Màn Farm Owner (web, mobile, cả live stream HLS); E2E các DS của mình; gán nhãn; NFR-01 | WF-02, 05, 09 | F-07, 17 |
 | **Tuấn** | Web + mobile — Domain Expert, một phần Technician | Màn chuyên gia (web `/expert/*`, mobile); màn Technician; E2E các DS của mình; gán nhãn; NFR-08, 13 | WF-07, 08 | F-13, 14, 15, 16 |
-| **Nhi** | Web + mobile — Admin, sức khỏe theo ngày | Màn Admin; màn trạng thái ngày, chấm điểm, báo cáo (web, mobile); nền mobile (đăng nhập, push, setup QR); E2E các DS của mình; gán nhãn; NFR-02, 03, 14 | WF-11 | F-20, 21, 22 |
+| **Nhi** | Web + mobile — Admin, sức khỏe theo ngày | Màn Admin; màn trạng thái ngày, chấm điểm, báo cáo (web, mobile); nền mobile (đăng nhập, push; setup QR **[Ủy quyền cho Len làm]**); E2E các DS của mình; gán nhãn; NFR-02, 03, 14 | WF-11 | F-20, 21, 22 |
 
 **Staging và tài liệu: cả team cùng làm, Bảo chịu trách nhiệm chính** (Report 2 RACI: Bảo A, mọi người R cho phần của mình). Phần của từng người ở staging ghi tại G-17; tài liệu: mỗi người viết phần workflow của mình trong Report 3 và Report 4 (AD, SM, mô tả luồng), hướng dẫn sử dụng màn của mình, kết quả test của mình trong Report 5 (qua `tc.py`) và khối cam kết cá nhân trong BM04; Bảo biên tập, giữ nhất quán, sinh Word/PDF, làm BM02 và gắn tag.
 
@@ -313,12 +313,12 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN).
 - [ ] Test TC-ST config sync 4 dòng.
 
-### G-09 — Màn MF-10 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, setup QR trên mobile), Len (in mã tầng), Tuấn (`/onboarding` web)
+### G-09 — Màn MF-10 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin), Len (setup QR trên mobile **[Ủy quyền cho Len làm]**, in mã tầng), Tuấn (`/onboarding` web)
 
 - [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
 - [ ] Màn Zone: in mã QR tầng.
 - [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
-- [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED).
+- [ ] Mobile **[Ủy quyền cho Len làm]**: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
 - [ ] Web: `/onboarding` cho Farm Owner + Technician.
 
 ### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Nhi (mobile, đo NFR-02)
@@ -393,7 +393,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - sửa `constants/roles.ts` (`OPS_ROLES`, `HARVEST_ROLES`, `MENU_ACCESS`), sidebar, `RequireRole` ở `routes/*.tsx`; test Vitest cho bảng role → route.
 - [ ] Đóng DF-5.
 
-### G-16 — Mobile đủ phạm vi phiếu (P0-Demo cho luồng Farm Owner, P1 phần còn lại) — Nhi (nền, setup QR, trạng thái ngày), Len (màn Farm Owner), Tuấn (màn chuyên gia), Len (live stream)
+### G-16 — Mobile đủ phạm vi phiếu (P0-Demo cho luồng Farm Owner, P1 phần còn lại) — Nhi (nền, trạng thái ngày), Len (màn Farm Owner, setup QR **[Ủy quyền cho Len làm]**), Tuấn (màn chuyên gia), Len (live stream)
 
 Thứ tự:
 
@@ -402,7 +402,7 @@ Thứ tự:
 3. **Len:** dashboard số đo hiện tại + chế độ relay.
 4. **Len:** cảnh báo: danh sách, chi tiết, xác nhận, `DISMISSED`.
 5. **Len:** can thiệp tay có xác nhận (G-06).
-6. **Nhi:** setup QR (G-09).
+6. **Len** (Nhi → **[Ủy quyền cho Len làm]**): setup QR (G-09).
 7. **Nhi:** trạng thái ngày + chấm điểm (G-11).
 8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; đổi route `livestream/[zoneId]` → theo camera của House).
 9. **Nhi:** báo cáo.
@@ -442,5 +442,5 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
    - Len: G-15 chữ "PLC", form thu hoạch (G-14), cấu hình Playwright, màn Farm Owner mobile bước 3–4 khi nền mobile xong;
    - Len, Tuấn, Nhi: gán nhãn trong những ngày chờ API;
    - Tuấn: dời màn chuyên gia sang `domain-expert/`, bỏ dữ liệu giả, trang chủ hàng đợi việc (G-15).
-3. **Tuần 2–3:** Kiệt backend G-03 → G-04 → G-11 → G-02 phần P1; Bảo train model, G-10 backend; Tuấn web G-03/G-04 theo spec, trình vẽ vòng đếm (G-12); Nhi màn G-11 web + mobile, in nhãn và setup QR (G-09); Len G-06 web/mobile (sau backend G-06), in mã tầng (G-09); Bảo G-08 sau G-07, G-12 backend, staging (G-17).
+3. **Tuần 2–3:** Kiệt backend G-03 → G-04 → G-11 → G-02 phần P1; Bảo train model, G-10 backend; Tuấn web G-03/G-04 theo spec, trình vẽ vòng đếm (G-12); Nhi màn G-11 web + mobile, in nhãn (G-09); Len G-06 web/mobile (sau backend G-06), in mã tầng và setup QR mobile (G-09, **[Ủy quyền cho Len làm]**); Bảo G-08 sau G-07, G-12 backend, staging (G-17).
 4. **Iteration 3:** G-13 (Bảo), G-18 (Kiệt); seed (Kiệt, Bảo) + test E2E từng DS (chủ workflow); đếm tay clip, đánh giá NFR-09; chạy thực địa ≥ 14 ngày, đo NFR (mỗi người số đo của mình); tổng duyệt demo trên staging.

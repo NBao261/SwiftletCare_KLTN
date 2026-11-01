@@ -1,33 +1,33 @@
-import { ScrollView, StyleSheet, View } from 'react-native'
-import { router } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { AppHeader } from '@/components/layout/AppHeader'
-import { usePalette } from '@/hooks/theme/usePalette'
+import { useEffect } from 'react'
+import { StyleSheet, View } from 'react-native'
+import { router, useLocalSearchParams } from 'expo-router'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Spacing } from '@/constants/theme'
+import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
+import { usePalette } from '@/hooks/theme/usePalette'
 
-/** Zone Detail – ENV-FR-001..015, realtime telemetry */
-export default function ZoneDetailScreen() {
+const SKELETON_HEIGHT = 164
+
+/** Chuyển tiếp: zone giờ là tab tầng trong Màn B của nhà chứa nó — giữ route cho link cũ */
+export default function ZoneRedirectScreen() {
   const palette = usePalette()
-  const insets = useSafeAreaInsets()
+  const { zoneId } = useLocalSearchParams<{ zoneId: string }>()
+  const { zoneById, isLoading } = useZoneDirectory()
+  const houseId = zoneById.get(zoneId)?.house_id
+
+  // Tìm được nhà thì mở Màn B đúng tầng; tải xong mà không thấy zone thì về danh sách nhà
+  useEffect(() => {
+    if (houseId) router.dismissTo({ pathname: '/(tabs)/farms/[houseId]', params: { houseId, zoneId } })
+    else if (!isLoading) router.dismissTo('/(tabs)/farms')
+  }, [houseId, zoneId, isLoading])
 
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
-      <AppHeader title="Chi tiết Zone" onBack={() => router.back()} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}>
-        {/* TODO: M4
-          - Đọc zoneId qua useLocalSearchParams, lấy dữ liệu qua hook (không hiện id lên giao diện)
-          - Live telemetry cards (temp, humidity, light, co2, sound)
-          - Relay control panel (phun sương, quạt, loa — SRS v2 bỏ sưởi)
-          - Threshold config form
-          - Recent alerts
-          - Telemetry history chart
-        */}
-      </ScrollView>
+      <Skeleton width="100%" height={SKELETON_HEIGHT} />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  screen:  { flex: 1 },
-  content: { padding: Spacing.lg },
+  screen: { flex: 1, padding: Spacing.lg },
 })

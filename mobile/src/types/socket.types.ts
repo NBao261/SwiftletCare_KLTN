@@ -1,18 +1,27 @@
 import type { AlertSeverity, AlertType } from './alert.types'
 import type { SessionType } from './birdCount.types'
-import type { ControlMode, RelayStates } from './device.types'
+import type { ControlMode, DeviceStatus, RelayStates } from './device.types'
 
-// Sự kiện TELEMETRY_UPDATE — số đo mới của Zone
+// Sự kiện TELEMETRY_UPDATE — số đo mới của Zone; cảm biến hỏng thì chỉ số đó null (THREAT-FR-013)
 export interface SocketTelemetryUpdate {
   zoneId: string
-  temperature: number
-  humidity: number
-  light: number
-  nh3: number
-  co2: number
-  sound: number
+  temperature: number | null
+  humidity: number | null
+  light: number | null
+  nh3: number | null
+  co2: number | null
+  sound: number | null
   relayStates: RelayStates
   controlMode: ControlMode
+  // % phun sương và % quạt do bộ điều khiển mờ tính
+  controlOutput?: { misting: number; ventilation: number }
+  timestamp: string
+}
+
+// Sự kiện DEVICE_STATUS_CHANGE — controller gửi vào room zone, camera gửi vào room house
+export interface SocketDeviceStatusChange {
+  nodeId: string
+  status: DeviceStatus
   timestamp: string
 }
 
