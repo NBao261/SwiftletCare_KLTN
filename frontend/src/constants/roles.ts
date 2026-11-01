@@ -29,7 +29,7 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPE
  * cấu trúc và thiết bị của mọi farm, không thấy số liệu môi trường, đàn chim, thu hoạch.
  */
 
-/** Màn quyết định của Chuyên gia nuôi yến (/expert/*). */
+/** Màn quyết định của Chuyên gia nuôi yến (/domain-expert/*). */
 export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
 
 /** Việc chỉ Farm Owner làm: điều khiển relay (/dashboard/scada). */
