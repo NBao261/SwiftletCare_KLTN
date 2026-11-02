@@ -10,6 +10,7 @@ import Animated, {
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { t } from '@/utils/i18n.utils'
 
 interface CodeInputProps {
   value: string
@@ -60,7 +61,7 @@ export function CodeInput({
       <Animated.View style={[styles.row, shakeStyle]}>
         {digits.map((digit, index) => {
           const isActive = isFocused && index === Math.min(value.length, length - 1)
-          const borderColor = hasError ? palette.alert : isActive ? palette.primary : 'transparent'
+          const borderColor = hasError ? palette.alert : isActive ? palette.text : 'transparent'
           return (
             <View key={index} style={[styles.cell, { backgroundColor: palette.surface, borderColor }]}>
               <Text variant="heading" center>
@@ -80,7 +81,7 @@ export function CodeInput({
         autoFocus={autoFocus}
         editable={!disabled}
         caretHidden
-        accessibilityLabel={`Mã xác thực ${length} số`}
+        accessibilityLabel={t('Mã xác thực {length} số', { length })}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={styles.hiddenInput}

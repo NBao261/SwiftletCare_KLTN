@@ -1,13 +1,13 @@
 import { lazy } from 'react'
 import { Route } from 'react-router-dom'
 import RequireRole from '@/components/auth/RequireRole'
-import { OPS_ROLES } from '@/constants/roles'
+import { ALERT_ROLES, DEVICE_SETUP_ROLES, FARM_STRUCTURE_ROLES, TECHNICIAN_ONLY } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
 
 /**
  * Nghiệp vụ kỹ thuật — Technician là role sở hữu các màn hình này (/devices là
- * trang nhà của họ sau đăng nhập), nhưng Farm Owner + Admin cũng vào được:
- * `allow={OPS_ROLES}` mới là danh sách quyền thật.
+ * trang nhà của họ sau đăng nhập); `allow` mới là danh sách quyền thật (Report 3 §2.4).
+ * Admin không vào: thiết bị toàn hệ thống Admin xem ở /system/devices.
  */
 const TechnicianDevicesPage = lazy(() => import('@/pages/technician/TechnicianDevicesPage'))
 // Farm Owner mở /devices qua trang bọc của mình (thêm khung lọc Nhà + Zone), trang Technician giữ nguyên
@@ -16,10 +16,10 @@ const TechnicianAlertsPage = lazy(() => import('@/pages/technician/TechnicianAle
 const TechnicianOnboardingPage = lazy(() => import('@/pages/technician/TechnicianOnboardingPage'))
 const TechnicianOtaPage = lazy(() => import('@/pages/technician/TechnicianOtaPage'))
 
-// /devices dùng chung URL: Farm Owner đi qua trang bọc, role khác mở thẳng trang Technician
+// /devices dùng chung URL: Technician mở trang làm việc của mình, Farm Owner và Domain Expert (chỉ đọc) đi qua trang bọc
 function DevicesIndexRoute() {
-  const isFarmOwner = usePermission('FARM_OWNER')
-  return isFarmOwner ? <FarmOwnerDevicesPage /> : <TechnicianDevicesPage />
+  const isTechnician = usePermission('TECHNICIAN')
+  return isTechnician ? <TechnicianDevicesPage /> : <FarmOwnerDevicesPage />
 }
 
 export const technicianRoutes = (
@@ -27,7 +27,7 @@ export const technicianRoutes = (
     <Route
       path="devices"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={FARM_STRUCTURE_ROLES}>
           <DevicesIndexRoute />
         </RequireRole>
       }
@@ -35,7 +35,7 @@ export const technicianRoutes = (
     <Route
       path="alerts"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={ALERT_ROLES}>
           <TechnicianAlertsPage />
         </RequireRole>
       }
@@ -43,7 +43,7 @@ export const technicianRoutes = (
     <Route
       path="onboarding"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={DEVICE_SETUP_ROLES}>
           <TechnicianOnboardingPage />
         </RequireRole>
       }
@@ -51,7 +51,7 @@ export const technicianRoutes = (
     <Route
       path="ota"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={TECHNICIAN_ONLY}>
           <TechnicianOtaPage />
         </RequireRole>
       }

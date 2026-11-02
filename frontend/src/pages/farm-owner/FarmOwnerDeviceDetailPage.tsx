@@ -16,6 +16,7 @@ import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
 import { devicesDict } from '@/constants/devices.i18n';
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb';
+import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeZones } from '@/hooks/farm-owner/useFarmOwnerDashboard';
@@ -43,6 +44,8 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const houseZones = house ? zones : [];
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
+  // Lịch và bài loa ru chỉ Farm Owner đặt (BR-07); Domain Expert chỉ đọc, vẫn sửa được ngưỡng Zone
+  const canOperateSpeaker = usePermission('FARM_OWNER');
   // Popup vận hành Farm Owner được làm: ngưỡng của 1 Zone, lịch / bài loa ru của 1 node cảm biến
   const [thresholdZone, setThresholdZone] = useState<{ id: string; name: string }>();
   const [scheduleNodeId, setScheduleNodeId] = useState<string>();
@@ -92,8 +95,8 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
           key={device.id}
           device={device}
           zoneName={zoneName}
-          onOpenSchedule={device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
-          onOpenTracks={device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
+          onOpenSchedule={canOperateSpeaker && device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
+          onOpenTracks={canOperateSpeaker && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
         />
       ))}
     </div>

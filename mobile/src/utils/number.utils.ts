@@ -1,3 +1,4 @@
+import { getCurrentLanguage } from '@/utils/i18n.utils'
 // Nhiệt độ 1 chữ số thập phân ("28.4°C")
 export function formatTemperature(value: number): string {
   return `${value.toFixed(1)}°C`
@@ -11,4 +12,10 @@ export function formatHumidity(value: number): string {
 // Tỉ lệ 0–1 thành phần trăm ("0.875" → "87.5%")
 export function formatPercentage(ratio: number, decimals = 1): string {
   return `${(ratio * 100).toFixed(decimals)}%`
+}
+
+// Giá trị đã là phần trăm, dấu thập phân theo ngôn ngữ: tiếng Việt "94,7%", tiếng Anh "94.7%"
+export function formatPercentValue(value: number, decimals = 1): string {
+  const fixed = value.toFixed(decimals)
+  return `${getCurrentLanguage() === 'en' ? fixed : fixed.replace('.', ',')}%`
 }

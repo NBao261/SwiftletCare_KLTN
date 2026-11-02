@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
+import * as ScreenOrientation from 'expo-screen-orientation'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/config/queryClient'
 import { useAuthStore } from '@/stores/authStore'
@@ -13,8 +14,11 @@ import { FontFamily } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { AnimatedSplash } from '@/components/layout/AnimatedSplash'
 import { startRealtimeIfReady } from '@/services/session/localSession'
+import { useAccountLanguage } from '@/hooks/i18n/useAccountLanguage'
 
 SplashScreen.preventAutoHideAsync()
+// Cả app chỉ dùng chiều dọc; riêng trình phát camera mở khoá xoay khi đang phóng to (components/home/LiveCameraPlayer.tsx)
+ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => undefined)
 
 // Font Plus Jakarta Sans — tên khoá trùng FontFamily để Typography trỏ đúng file
 const FONT_FILES = {
@@ -26,6 +30,8 @@ const FONT_FILES = {
 
 export default function RootLayout() {
   const loadStoredAuth = useAuthStore(state => state.loadStoredAuth)
+  // Ngôn ngữ: của tài khoản khi đã đăng nhập, của máy khi chưa
+  useAccountLanguage()
   const isLoading = useAuthStore(state => state.isLoading)
   const [fontsLoaded, fontError] = useFonts(FONT_FILES)
   const palette = usePalette()

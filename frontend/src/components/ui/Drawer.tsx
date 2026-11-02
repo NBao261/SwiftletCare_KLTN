@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/Button'
 
 interface DrawerProps {
@@ -36,7 +37,8 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
   }, [open])
 
   if (!open) return null
-  return (
+  // Portal ra body: <main> của AppShell là stacking context z-10 nên drawer vẽ bên trong sẽ nằm dưới header z-20
+  return createPortal(
     <>
       {/* Lớp nền mờ */}
       <div 
@@ -62,7 +64,8 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
           {children}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 

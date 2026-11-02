@@ -9,7 +9,6 @@ import {
 } from '@phosphor-icons/react'
 import { useAuthStore } from '@/stores/authStore'
 import { useAuth } from '@/hooks/auth/useAuth'
-import { useLogoutConfirmStore } from '@/stores/logoutConfirmStore'
 import { Avatar, Button, Input, Toggle } from '@/components/ui'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
@@ -21,7 +20,7 @@ import { t } from '@/i18n'
 /** Settings Page — hồ sơ, thông báo (ALERT-FR-005/006), bảo mật (AUTH-FR-009), xoá tài khoản (AUTH-FR-012) */
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
-  const askLogout = useLogoutConfirmStore(s => s.ask)
+  const { logout } = useAuth()
 
   if (!user) return null
 
@@ -44,7 +43,7 @@ export default function SettingsPage() {
           <InfoItem icon={PhoneIcon} label="Số điện thoại" value={user.phone || '--'} />
         </dl>
 
-        <Button variant="danger" size="sm" onClick={askLogout}>
+        <Button variant="danger" size="sm" onClick={() => logout.mutate()}>
           <SignOutIcon size={14} weight="bold" />
           Đăng xuất
         </Button>
