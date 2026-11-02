@@ -47,8 +47,8 @@ export function useSystemNodeStatus() {
 export function useControlRelay() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ nodeId, relayName, state, durationMs }: { nodeId: string; relayName: RelayName; state: boolean; durationMs?: number }) =>
-      deviceApi.controlRelay(nodeId, relayName, state, durationMs),
+    mutationFn: ({ nodeId, relayName, state, durationMs, confirmed }: { nodeId: string; relayName: RelayName; state: boolean; durationMs?: number; confirmed?: boolean }) =>
+      deviceApi.controlRelay(nodeId, relayName, state, durationMs, confirmed),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
   })
 }
