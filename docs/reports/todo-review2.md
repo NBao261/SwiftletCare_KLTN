@@ -287,7 +287,9 @@ Một PR cho backend, web, mobile, firmware:
   - `sensornodes.relays` có hạn riêng từng relay (`overrideExpiry.job.ts` theo relay).
 - [ ] Firmware: `overrideExpiryMs` theo từng relay (BR-20); `clear_override` đọc `relayName`; test native.
 - [ ] Lệnh có `commandId`, `issuedAt` (làm cùng G-07).
-- [ ] Web/mobile: hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm.
+- [x] **Len — web:** giới hạn bơm 30 phút và hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm. *(Nhi làm thay theo nhờ của Len, 03/11, `eab3be5`, nhánh `feat/g06-manual-override`: nút bật phun sương chạy tối đa 30 phút dù chọn thời hạn dài hơn (BR-08), quạt, loa và tắt bơm vẫn theo thời hạn đã chọn; 409 `CONFIRMATION_REQUIRED` mở popup liệt kê cảnh báo, "Vẫn bật bơm" gửi lại với `confirmed: true`; `ScadaNodeCard.tsx`, `scada.constants.ts`, `scadaRelay.ts`, `dashboard.i18n.ts` của Len — Len duyệt)*
+- [ ] **Len — web:** huỷ từng relay (`DELETE …/relay-override?relayName=`) khi thiết bị báo hạn riêng từng relay (sau Backend phần 2).
+- [ ] **Len — mobile:** giới hạn bơm 30 phút và hộp xác nhận như web.
 - [x] Test TC-F17-02 *(`relayCommand.test.ts`, Kiệt 31/10, `fae12fe`)*.
 - [ ] Test TC-ST "MANUAL → MANUAL" (làm cùng Backend phần 2).
 - [x] Sửa theo review PR #124 *(Kiệt, 02/11, `37f61a2` spec + `c3d3ff8` backend)*: huỷ 1 relay không đang can thiệp tay thì không gửi lệnh, không ghi audit (200, như khi thiết bị AUTO). Góp ý còn lại không sửa code: web `ScadaNodeCard.tsx` cần giới hạn bơm 30 phút và hộp xác nhận (dòng Web/mobile ở trên, Len) trước khi G-06 lên staging.
