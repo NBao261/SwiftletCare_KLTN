@@ -101,11 +101,11 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
       render: row => <span className="block">{t(`alertType.${row.type}`)}</span>,
     },
     {
-      key: 'value', header: t('log.colValue'), className: 'w-[150px] whitespace-nowrap',
+      key: 'value', header: t('log.colValue'), className: 'w-[190px] whitespace-nowrap',
       render: row => row.breach ? (
         <p>
           <span className="font-bold text-safetyOrange">{formatValue(row.breach.value)} {row.breach.unit}</span>{' '}
-          <span className="text-xs text-warmGray">/ {row.breach.sign} {formatValue(row.breach.limit)} {row.breach.unit}</span>
+          <span className="text-xs text-warmGray">/ {t(row.breach.sign === '<' ? 'log.limitMax' : 'log.limitMin')} {formatValue(row.breach.limit)} {row.breach.unit}</span>
         </p>
       ) : <span className="text-warmGray">{NO_VALUE}</span>,
     },
