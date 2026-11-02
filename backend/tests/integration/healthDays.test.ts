@@ -287,9 +287,22 @@ describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
 
   it('farm chưa có chuyên gia → chủ trại sửa được', async () => {
     const { house, owner } = await seedHouse({ withExpert: false })
-    const res = await call('put', `/farms/houses/${house._id}/health-levels`, tokenFor(owner._id, 'FARM_OWNER'), { air_slight_h: 2 })
+    const ownerToken = tokenFor(owner._id, 'FARM_OWNER')
+    expect((await call('get', `/farms/houses/${house._id}/health-levels`, ownerToken)).body.data.can_edit).toBe(true)
+    const res = await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { air_slight_h: 2 })
     expect(res.status).toBe(200)
     expect((await House.findById(house._id).lean())!.health_levels.air_slight_h).toBe(2)
+  })
+
+  it('can_edit theo đúng luật của PUT: chuyên gia true; chủ trại false khi chuyên gia hoạt động, true khi chuyên gia bị khoá', async () => {
+    const { house, expert, ownerToken, expertToken } = await setup()
+    const canEdit = async (token: string) => (await call('get', `/farms/houses/${house._id}/health-levels`, token)).body.data.can_edit
+    expect(await canEdit(expertToken)).toBe(true)
+    expect(await canEdit(ownerToken)).toBe(false)
+
+    await User.updateOne({ _id: expert!._id }, { is_active: false })
+    expect(await canEdit(ownerToken)).toBe(true)
+    expect((await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { noise_clear: 5 })).status).toBe(200)
   })
 })
 

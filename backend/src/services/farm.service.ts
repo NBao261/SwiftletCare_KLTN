@@ -516,10 +516,17 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
  * của cả nhà nên mức giảm tỷ lệ chim về (cảnh báo LOW_RETURN_RATE) đặt theo House, không theo Zone.
  * Cùng cách làm với tham số Zone: kiểm tra khoảng, lưu lịch sử, ghi audit. Backend dùng, không gửi thiết bị.
  */
-/** ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà (bản ghi cũ thiếu trường nào thì dùng mặc định) */
+/**
+ * ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà (bản ghi cũ thiếu trường nào thì dùng mặc định).
+ * `can_edit` dùng đúng luật của PUT (BR-22) để client không phải tự đoán chuyên gia còn hoạt động hay không.
+ */
 export async function getHouseHealthLevels(houseId: string, user: CurrentUser) {
-  const { house } = await assertHouseAccess(houseId, user)
-  return { house_id: String(house._id), health_levels: resolveHealthLevels(house.health_levels), defaults: DEFAULT_HEALTH_LEVELS }
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  const canEdit = await assertExpertDecision(farm, user).then(() => true, () => false)
+  return {
+    house_id: String(house._id), health_levels: resolveHealthLevels(house.health_levels), defaults: DEFAULT_HEALTH_LEVELS,
+    can_edit: canEdit,
+  }
 }
 
 /** ANALYTICS-FR-012 — Domain Expert đặt mức trong khoảng BR-28; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22) */
