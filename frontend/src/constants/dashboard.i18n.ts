@@ -193,6 +193,9 @@ const vi = {
   'sensorKind.co2': 'Cảm biến khí CO2',
   'log.colType': 'Loại cảnh báo',
   'log.colValue': 'Giá trị / Ngưỡng',
+  // Ngưỡng bị vượt: dấu '<' của breach (giá trị trên ngưỡng) là mức tối đa, '>' là mức tối thiểu
+  'log.limitMax': 'tối đa',
+  'log.limitMin': 'tối thiểu',
   'log.colSeverity': 'Mức độ',
   'log.colStatus': 'Trạng thái',
   'log.colActions': 'Thao tác',
@@ -403,6 +406,8 @@ const en: Record<DashboardKey, string> = {
   'sensorKind.co2': 'CO2 gas sensor',
   'log.colType': 'Alert type',
   'log.colValue': 'Value / Threshold',
+  'log.limitMax': 'max',
+  'log.limitMin': 'min',
   'log.colSeverity': 'Severity',
   'log.colStatus': 'Status',
   'log.colActions': 'Actions',
