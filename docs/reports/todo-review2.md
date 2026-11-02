@@ -253,7 +253,7 @@ Một PR cho backend, web, mobile, firmware:
 ### G-04 — Mục duyệt và đề xuất hệ số (P1) — Kiệt (backend), Tuấn (màn chuyên gia), Len (nút "gửi chuyên gia" của Farm Owner)
 
 - [x] Collection `parameterreviews`, `coefficientproposals` theo SDD 6.1; route accept/revert/adjust, submit/approve/reject; thông báo hai chiều; Farm Owner áp gợi ý trực tiếp khi farm có chuyên gia → 403. *(Kiệt, 30/10, `cad151d` spec + `b8070bc` backend, nhánh `feat/g04-review-proposals` tạo từ nhánh G-03; "adjust" không có route riêng: chuyên gia sửa cùng nhóm tham số thì mục đóng `ADJUSTED` (EXPERT-FR-010); áp gợi ý trực tiếp: `POST /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion`)*
-- [ ] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner.
+- [x] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner. *(Tuấn, 02/11: màn duyệt thay đổi tham số GET /expert-activity/reviews, chấp thuận / hoàn nguyên; màn duyệt đề xuất hệ số mờ GET /expert-activity/proposals, duyệt / từ chối bắt buộc lý do; tích hợp Bento hàng đợi & tuning; nút "Gửi chuyên gia duyệt" ở FuzzyTuningModal của Farm Owner; vitest 207/207 + tsc xanh)*
 - [x] Sửa theo review PR #119 *(Kiệt, 01/11, `df41db9` spec + `9ead2ba` backend; mục chặn merge là hằng số của G-03, đã sửa ở #117)*:
   - hoàn lại: đóng mục trước rồi mới áp, áp lỗi thì mở lại mục;
   - duyệt đề xuất: áp lỗi thì đề xuất về lại `PROPOSED`;

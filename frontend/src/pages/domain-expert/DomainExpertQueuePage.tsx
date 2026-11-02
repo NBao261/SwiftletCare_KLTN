@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   SlidersHorizontal,
   FileText,
+  FileCheck,
   ArrowRight,
   CheckCircle2,
   Clock,
@@ -35,6 +36,10 @@ import {
 } from '@/hooks/domain-expert/useExpertAlerts'
 import { useHealthReportList } from '@/hooks/domain-expert/useHealthReports'
 import { useExpertAiSuggestion } from '@/hooks/domain-expert/useZoneTuning'
+import {
+  useParameterReviews,
+  useCoefficientProposals,
+} from '@/hooks/domain-expert/useExpertReviews'
 import { useZoneStore } from '@/stores/zoneStore'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 
@@ -92,6 +97,22 @@ export default function DomainExpertQueuePage() {
 
   // ── Dữ liệu gợi ý tối ưu AI cho tham số Fuzzy Logic ───────────────────────
   const { data: aiSuggestion } = useExpertAiSuggestion(selectedZoneId ?? undefined)
+
+  // ── Dữ liệu mục duyệt tham số & đề xuất hệ số mờ (G-04) ────────────────────
+  const { data: pendingReviewsRes } = useParameterReviews({
+    farmId: selectedFarmId ?? '',
+    zoneId: selectedZoneId ?? undefined,
+    status: 'PENDING_REVIEW',
+  })
+  const { data: pendingProposalsRes } = useCoefficientProposals({
+    farmId: selectedFarmId ?? '',
+    zoneId: selectedZoneId ?? undefined,
+    status: 'PROPOSED',
+  })
+
+  const pendingReviewsCount = pendingReviewsRes?.data?.length ?? 0
+  const pendingProposalsCount = pendingProposalsRes?.data?.length ?? 0
+  const totalPendingReviews = pendingReviewsCount + pendingProposalsCount
 
   // ── Tính toán các chỉ số thực chất từ Backend ─────────────────────────────
   const pendingAlerts = useMemo(
@@ -294,7 +315,57 @@ export default function DomainExpertQueuePage() {
             </div>
           </div>
 
-          {/* ── Thẻ 2: Báo cáo sức khỏe & kết luận chuyên môn ── */}
+          {/* ── Thẻ 2: Mục duyệt tham số & Đề xuất hệ số mờ (G-04) ── */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate('/domain-expert/reviews')}
+            onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/reviews')}
+            className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
+          >
+            <div className="flex flex-col gap-2.5 sm:gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warmGray/15 bg-stone/70 text-charcoal transition-colors group-hover:border-lime-500/40 group-hover:bg-lime-50 group-hover:text-lime-800">
+                  <FileCheck className="h-4 w-4" />
+                </div>
+                {totalPendingReviews > 0 ? (
+                  <span className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-900">
+                    Chờ duyệt ({totalPendingReviews})
+                  </span>
+                ) : (
+                  <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
+                    Đã đồng bộ
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
+                  Duyệt Tham số & Đề xuất Fuzzy
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
+                  Xem xét thay đổi ngưỡng vi khí hậu do Farm Owner chỉnh sửa hoặc phê duyệt đề xuất hệ số mờ gửi lên.
+                </p>
+              </div>
+
+              {/* Chi tiết số liệu thực tế */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2 py-0.5 font-mono text-[11px] font-medium text-graphite">
+                  Ngưỡng chờ duyệt: {pendingReviewsCount}
+                </span>
+                <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2 py-0.5 font-mono text-[11px] font-medium text-graphite">
+                  Hệ số mờ chờ duyệt: {pendingProposalsCount}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
+              <span>Mở danh sách phê duyệt</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </div>
+
+          {/* ── Thẻ 3: Báo cáo sức khỏe & kết luận chuyên môn ── */}
           <div
             role="button"
             tabIndex={0}

@@ -52,7 +52,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-12 | Abnormal noise | Nguyễn Chí Bảo | Done | `[TEAM: PR]`; TC-F12-01..03 | — | — |
 | F-13 | Expert verdict | Thái Minh Tuấn | In progress | #91; TC-F13-01, 02, 03 | Web screens for `DISMISSED`, evidence and owner fallback (G-03, backend done) | 2 |
 | F-14 | Tuning, ring, schedule | Thái Minh Tuấn | In progress | #91; TC-F14-01..03 | Seasonal schedule; ring editor (G-12) | 2 |
-| F-15 | Review and suggestions | Thái Minh Tuấn | In progress | TC-F15-01, 02, 03 | Review and proposal screens (G-04, backend done) | 2 |
+| F-15 | Review and suggestions | Thái Minh Tuấn | In progress | TC-F15-01, 02, 03 | Review and proposal screens (G-04, backend & web done, PR #119) | 2 |
 | F-16 | Conclusions, owner notice | Thái Minh Tuấn | In progress | #91; TC-F16-01, 02, 03 | Activity history screen (G-03, backend done) | 2 |
 | F-17 | Manual override | Nguyễn Vũ Len | In progress | #93, #100, #101; TC-F17-01, 03 | Pump limit, confirmation, per-relay expiry, command freshness (G-06) | 2 |
 | F-18 | Farm structure and device registration | Trần Minh Kiệt | In progress | #100; TC-F18-01..03 | Label printing; QR scan in mobile (G-09) | 2 |
