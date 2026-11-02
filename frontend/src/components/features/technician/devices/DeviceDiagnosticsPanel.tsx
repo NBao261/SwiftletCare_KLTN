@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from "react"
 import { Badge, Button } from "@/components/ui"
 import DeviceInfoCard from "@/components/features/technician/devices/DeviceInfoCard"
-import { useTelemetry } from "@/hooks/farm-owner/useTelemetry"
+import { useSendNodeCommand } from "@/hooks/shared/useDevices"
+import { useToastStore } from "@/stores/toastStore"
+import { getApiErrorMessage } from "@/lib/helpers"
 import type { SensorNode } from "@/types"
-import { cn } from "@/lib/cn"
 import { Music, Clock, ListMusic } from "lucide-react"
 
 interface DeviceDiagnosticsPanelProps {
   node: SensorNode
-  zoneId: string
+  zoneId?: string
   onOpenAudio: () => void
   onOpenReassign: () => void
   onOpenReplace: () => void
@@ -18,19 +19,31 @@ interface DeviceDiagnosticsPanelProps {
 
 export default function DeviceDiagnosticsPanel({
   node,
-  zoneId,
+  zoneId: _zoneId,
   onOpenAudio,
   onOpenReassign,
   onOpenReplace,
   onOpenDecommission,
   canOnboard,
 }: DeviceDiagnosticsPanelProps) {
-  const [activeTab, setActiveTab] = useState<"telemetry" | "audio" | "config">("telemetry")
+  const [activeTab, setActiveTab] = useState<"config" | "audio">("config")
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const sendCommand = useSendNodeCommand()
+  const push = useToastStore(s => s.push)
+
+  function handlePushConfig() {
+    sendCommand.mutate(
+      { nodeId: node._id, input: { command: "PUSH_CONFIG" } },
+      {
+        onSuccess: () => push(`Đã gửi lệnh đồng bộ cấu hình tới ${node.device_id}`),
+        onError: (err) => push(getApiErrorMessage(err, "Đồng bộ cấu hình thất bại"), "error"),
+      }
+    )
+  }
 
   useEffect(() => {
-    const activeIndex = activeTab === "telemetry" ? 0 : activeTab === "audio" ? 1 : 2;
+    const activeIndex = activeTab === "config" ? 0 : 1;
     const activeElement = tabRefs.current[activeIndex];
     if (activeElement) {
       setIndicatorStyle({
@@ -39,22 +52,6 @@ export default function DeviceDiagnosticsPanel({
       });
     }
   }, [activeTab]);
-  const telemetry = useTelemetry(zoneId)
-
-  // Số đo gần nhất của ZONE (useTelemetry theo zoneId) — không phải riêng thiết bị này; phục vụ chẩn đoán (FARM-FR-009)
-  const renderReading = (label: string, value: string | number | undefined, unit: string) => {
-    const hasValue = value !== undefined && !Number.isNaN(value)
-    const display = hasValue ? value : '--'
-    return (
-      <div className="flex flex-col gap-1 rounded-2xl border border-warmGray/15 bg-white px-4 py-3">
-        <span className="label-caption">{label}</span>
-        <div className={cn('mt-1 text-2xl font-extrabold leading-none tracking-tight', !hasValue ? 'text-warmGray' : 'text-charcoal')}>
-          {display}
-          <span className="ml-1 text-xs font-medium text-warmGray">{unit}</span>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col">
@@ -66,10 +63,10 @@ export default function DeviceDiagnosticsPanel({
         />
         <button
           ref={el => { tabRefs.current[0] = el; }}
-          onClick={() => setActiveTab("telemetry")}
-          className={`relative z-10 px-5 py-2 text-sm font-bold rounded-lg transition-colors duration-300 ${activeTab === "telemetry" ? "text-white" : "text-warmGray hover:text-charcoal"}`}
+          onClick={() => setActiveTab("config")}
+          className={`relative z-10 px-5 py-2 text-sm font-bold rounded-lg transition-colors duration-300 ${activeTab === "config" ? "text-white" : "text-warmGray hover:text-charcoal"}`}
         >
-          Môi trường
+          Cấu hình Kỹ thuật
         </button>
         <button
           ref={el => { tabRefs.current[1] = el; }}
@@ -78,28 +75,9 @@ export default function DeviceDiagnosticsPanel({
         >
           Âm thanh Loa ru
         </button>
-        <button
-          ref={el => { tabRefs.current[2] = el; }}
-          onClick={() => setActiveTab("config")}
-          className={`relative z-10 px-5 py-2 text-sm font-bold rounded-lg transition-colors duration-300 ${activeTab === "config" ? "text-white" : "text-warmGray hover:text-charcoal"}`}
-        >
-          Cấu hình Kỹ thuật
-        </button>
       </div>
 
       {/* Tab Content */}
-      {activeTab === "telemetry" && (
-        <div className="flex flex-col gap-6 animate-fade-in">
-          <div>
-            <h3 className="label-caption mb-3">Số đo gần nhất của zone</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {renderReading("Nhiệt độ", telemetry.data.temperature, "°C")}
-              {renderReading("Độ ẩm", telemetry.data.humidity, "%")}
-              {renderReading("Khí NH₃", telemetry.data.nh3_ppm, "ppm")}
-            </div>
-          </div>
-        </div>
-      )}
 
       {activeTab === "audio" && (
         <div className="flex flex-col lg:flex-row gap-6 animate-fade-in">
@@ -177,10 +155,28 @@ export default function DeviceDiagnosticsPanel({
         <DeviceInfoCard node={node} />
         <div className="flex flex-col md:flex-row gap-4">
           {canOnboard && node.status === "ONLINE" && (
-            <div className="flex-1 p-5 bg-white border border-warmGray/10 rounded-2xl shadow-sm">
-              <h4 className="text-small font-bold text-charcoal mb-4">Điều chuyển Zone</h4>
-              <p className="text-xs text-warmGray mb-4">Dời thiết bị này sang Zone khác. Yêu cầu thiết bị đang online để nhận cấu hình mới.</p>
-              <Button variant="secondary" onClick={onOpenReassign} className="w-full">Dời sang Zone khác</Button>
+            <div className="flex-1 p-5 bg-white border border-warmGray/10 rounded-2xl shadow-sm flex flex-col justify-between">
+              <div>
+                <h4 className="text-small font-bold text-charcoal mb-1">Thao tác thiết bị</h4>
+                <p className="text-xs text-warmGray mb-4">Đồng bộ lại cấu hình chuẩn từ Zone hoặc dời thiết bị sang Zone khác khi cần thiết.</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={handlePushConfig}
+                  loading={sendCommand.isPending}
+                  className="flex-1"
+                >
+                  Đồng bộ cấu hình
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={onOpenReassign}
+                  className="flex-1"
+                >
+                  Dời Zone
+                </Button>
+              </div>
             </div>
           )}
           {canOnboard && (

@@ -130,7 +130,7 @@ export default function TechnicianFarmsPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {rows.map(n => (
-                <TechnicianHouseRow key={n.house._id} node={n} onOpen={() => navigate(`/farms/${n.farm._id}/houses/${n.house._id}`)} />
+                <TechnicianHouseRow key={n.house._id} node={n} onOpen={() => navigate(`/devices?farmId=${n.farm._id}&houseId=${n.house._id}`)} />
               ))}
               <Pagination page={safePage} limit={PAGE_SIZE} total={visible.length} onChange={setPage} variant="full" />
             </div>

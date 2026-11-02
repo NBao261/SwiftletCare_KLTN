@@ -22,27 +22,39 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPE
   get DOMAIN_EXPERT() { return ROLE_LABEL.DOMAIN_EXPERT },
 }
 
-/**
- * Nhóm role vận hành trang trại (Tổng quan/Thiết bị/Cảnh báo/Trang trại…). Khai báo một chỗ để bảng
- * route (`routes/`) và menu sidebar (`components/layouts/<Role>Layout.tsx`) không lệch nhau.
+/*
+ * Nhóm role theo Report 3 §2.4. Khai báo một chỗ để bảng route (`routes/`), menu sidebar
+ * (`components/layouts/<Role>Layout.tsx`) và MENU_ACCESS bên dưới không lệch nhau.
+ * Admin không thấy farm nào (chỉ /system/*, /users, /account-requests); Technician chỉ thấy
+ * cấu trúc và thiết bị của mọi farm, không thấy số liệu môi trường, đàn chim, thu hoạch.
  */
-export const OPS_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'ADMIN']
 
-/**
- * Nhóm role Chuyên gia nuôi yến — SRS v2.1.4:
- * Bảng điều khiển, Kiểm chứng cảnh báo suy luận, Tinh chỉnh & Hiệu chuẩn, Phân tích dự báo, Báo cáo sức khỏe.
- */
+/** Màn quyết định của Chuyên gia nuôi yến (/domain-expert/*). */
 export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
 
-/**
- * Tổng quan/Phân tích (giám sát môi trường chi tiết theo zone) là công cụ vận
- * hành hằng ngày CỦA RIÊNG Farm Owner — Technician/Admin xử lý kỹ thuật,
- * họ "check tín hiệu" qua trang Thiết bị chứ không cần chi tiết tới mức đó.
- */
+/** Việc chỉ Farm Owner làm: điều khiển relay (/dashboard/scada). */
 export const FARM_OWNER_ONLY: Role[] = ['FARM_OWNER']
 
-/** Thống kê sản lượng (thu hoạch) — khớp backend: router harvests chỉ requireRole(FARM_OWNER, ADMIN). */
-export const HARVEST_ROLES: Role[] = ['FARM_OWNER', 'ADMIN']
+/**
+ * Màn vận hành của farm: Tổng quan, Phân tích, Giám sát đàn chim, Thu hoạch, chi tiết thiết bị.
+ * Domain Expert đọc qua chính các trang này (nút ghi gate bằng usePermission('FARM_OWNER')).
+ */
+export const FARM_SIDE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
+
+/** Thu hoạch: Farm Owner ghi, Domain Expert chỉ đọc — khớp backend harvests (canRead/canWrite). */
+export const HARVEST_ROLES: Role[] = FARM_SIDE_ROLES
+
+/** Trang trại và Thiết bị: Farm Owner quản lý, Domain Expert chỉ đọc, Technician xem mọi farm. */
+export const FARM_STRUCTURE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN']
+
+/** Lắp thiết bị (MF-10, FARM-FR-010/011): Farm Owner và Technician. */
+export const DEVICE_SETUP_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN']
+
+/** Cảnh báo: Farm Owner xem và xác nhận, Technician chỉ cảnh báo thiết bị; Domain Expert dùng hàng đợi kiểm chứng. */
+export const ALERT_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN']
+
+/** Lệnh từ xa và OTA (FARM-FR-013). */
+export const TECHNICIAN_ONLY: Role[] = ['TECHNICIAN']
 
 /** Module SYSTEM (mục 5.11) + quản lý tài khoản toàn hệ thống. */
 export const ADMIN_ONLY: Role[] = ['ADMIN']
@@ -62,7 +74,7 @@ const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
   ADMIN: '/system/health',
   TECHNICIAN: '/devices',
-  DOMAIN_EXPERT: '/expert/dashboard',
+  DOMAIN_EXPERT: '/domain-expert/queue',
 }
 
 export function getRoleHomePath(role: Role | undefined): string {
@@ -75,27 +87,30 @@ export function getRoleHomePath(role: Role | undefined): string {
  * layout, vì `useAuth` dùng bảng này mà layout lại dựng ra `AppHeader` gọi
  * `useAuth`, import vòng sẽ lỗi lúc chạy.
  */
+// Path con cụ thể đặt TRƯỚC path cha: canAccessPath lấy dòng khớp đầu tiên
 const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/health',    roles: ADMIN_ONLY },
-  { path: '/dashboard',        roles: FARM_OWNER_ONLY },
-  { path: '/devices',          roles: OPS_ROLES },
-  { path: '/alerts',           roles: OPS_ROLES },
-  { path: '/farms',            roles: OPS_ROLES },
-  { path: '/onboarding',       roles: OPS_ROLES },
-  { path: '/ota',              roles: OPS_ROLES },
+  { path: '/dashboard/scada',  roles: FARM_OWNER_ONLY },
+  { path: '/dashboard',        roles: FARM_SIDE_ROLES },
+  { path: '/devices/detail',   roles: FARM_SIDE_ROLES },
+  { path: '/devices',          roles: FARM_STRUCTURE_ROLES },
+  { path: '/alerts',           roles: ALERT_ROLES },
+  { path: '/farms',            roles: FARM_STRUCTURE_ROLES },
+  { path: '/onboarding',       roles: DEVICE_SETUP_ROLES },
+  { path: '/ota',              roles: TECHNICIAN_ONLY },
   { path: '/users',            roles: ADMIN_ONLY },
   { path: '/account-requests', roles: ADMIN_ONLY },
-  { path: '/harvests',         roles: FARM_OWNER_ONLY },
+  { path: '/harvests',         roles: HARVEST_ROLES },
   { path: '/system/settings',  roles: ADMIN_ONLY },
   { path: '/system/audit-log', roles: ADMIN_ONLY },
   { path: '/system/devices',   roles: ADMIN_ONLY },
-  { path: '/analytics',        roles: FARM_OWNER_ONLY },
-  { path: '/vision',           roles: FARM_OWNER_ONLY },
-  { path: '/expert/dashboard', roles: EXPERT_ROLES },
-  { path: '/expert/audit-logs',roles: EXPERT_ROLES },
-  { path: '/expert/tuning',    roles: EXPERT_ROLES },
-  { path: '/expert/analytics', roles: EXPERT_ROLES },
-  { path: '/expert/reports',   roles: EXPERT_ROLES },
+  { path: '/analytics',        roles: FARM_SIDE_ROLES },
+  { path: '/vision',           roles: FARM_SIDE_ROLES },
+  { path: '/domain-expert/queue',          roles: EXPERT_ROLES },
+  { path: '/domain-expert/alert-verdicts',  roles: EXPERT_ROLES },
+  { path: '/domain-expert/tuning',          roles: EXPERT_ROLES },
+  { path: '/domain-expert/reports',         roles: EXPERT_ROLES },
+  { path: '/domain-expert/history',         roles: EXPERT_ROLES },
   { path: '/settings',         roles: ALL_ROLES },
 ]
 

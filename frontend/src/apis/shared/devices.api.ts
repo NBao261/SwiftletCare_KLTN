@@ -13,7 +13,7 @@ export interface ReplaceSensorNodeInput { new_device_id: string; secret_key: str
 export const deviceApi = {
   registerSensorNode: (input: RegisterDeviceInput) =>
     api.post<ApiResponse<SensorNode>>('/devices/sensor-nodes/register', input),
-  /** FARM-FR-004 — Camera Node (RPi) cùng luồng onboarding với sensor node (Flow 1b) */
+  /** FARM-FR-004 — Camera Node (camera IP, AI node đọc RTSP) cùng luồng onboarding với sensor node (Flow 1b) */
   registerCameraNode: (input: RegisterDeviceInput & { rtsp_url?: string }) =>
     api.post<ApiResponse<CameraNode>>('/devices/camera-nodes/register', input),
   listSensorNodes: (zoneId?: string) =>

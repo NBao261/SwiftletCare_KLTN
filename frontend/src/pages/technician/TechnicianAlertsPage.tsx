@@ -1,4 +1,3 @@
-// Alerts Page – ALERT-FR-001/002/006/007/008/009
 import { useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useAlertsList, useAcknowledgeAlert } from "@/hooks/shared/useAlerts";
@@ -45,7 +44,7 @@ export default function TechnicianAlertsPage() {
   );
   const [page, setPage] = useState(1);
   const [ackTargetId, setAckTargetId] = useState<string | null>(null);
-  // Chỉ Farm Owner xác nhận cảnh báo (ALERT-FR-009, Report 3 §2.4); Technician, Admin chỉ xem.
+  // Chỉ Farm Owner xác nhận cảnh báo (ALERT-FR-009, Report 3 §2.4); Technician chỉ xem.
   // Backend chặn cùng role ở PUT /alerts/:id/acknowledge.
   const canAcknowledge = usePermission("FARM_OWNER");
   // Bấm 1 thông báo ở NotificationPopover (AppHeader) điều hướng sang đây kèm
@@ -106,7 +105,7 @@ export default function TechnicianAlertsPage() {
         <EmptyState
           icon={<IconAlert width={28} height={28} />}
           title="Không có cảnh báo nào"
-          description="Khi hệ thống phát hiện bất thường (môi trường vượt ngưỡng, thiết bị mất kết nối, thiên địch...), cảnh báo sẽ hiện ở đây."
+          description="Khi hệ thống phát hiện sự cố phần cứng, thiết bị mất kết nối hoặc cảm biến lỗi, cảnh báo kỹ thuật sẽ hiển thị tại đây."
         />
       )}
 
@@ -145,7 +144,7 @@ export default function TechnicianAlertsPage() {
                     ? "Đã xác nhận"
                     : "Đã xử lý"}
               </span>
-              {alert.status === 'ACTIVE' && canAcknowledge && (
+              {alert.status === "ACTIVE" && canAcknowledge && (
                 <Button
                   variant="secondary"
                   size="sm"
