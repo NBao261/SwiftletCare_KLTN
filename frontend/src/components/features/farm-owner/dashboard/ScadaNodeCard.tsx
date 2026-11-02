@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { DropIcon, SpeakerHighIcon, WarningIcon, WindIcon, type Icon } from '@phosphor-icons/react';
 
-import { Button } from '@/components/ui';
+import { pumpConfirmAlerts, relayMinutes, type PumpConfirmAlert } from '@/components/features/farm-owner/dashboard/scadaRelay';
+import { Button, Modal } from '@/components/ui';
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { deviceStatusDict } from '@/constants/enumLabels.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -19,6 +20,17 @@ const RELAYS: Array<{ key: Extract<RelayName, 'misting' | 'ventilation' | 'speak
   { key: 'speaker', labelKey: 'relay.speaker', icon: SpeakerHighIcon },
 ];
 
+type RelayLabelKey = 'relay.misting' | 'relay.ventilation' | 'relay.speaker';
+
+// Lệnh bật bơm đang chờ Farm Owner xác nhận (409 CONFIRMATION_REQUIRED, ENV-FR-016)
+interface PendingConfirm {
+  relay: RelayName;
+  labelKey: RelayLabelKey;
+  minutes: number;
+  label: string;
+  alerts: PumpConfirmAlert[];
+}
+
 interface ScadaNodeCardProps {
   node: SensorNode;
   controlOutput?: ControlOutput;
@@ -28,27 +40,47 @@ interface ScadaNodeCardProps {
 
 // 1 thiết bị: trạng thái, cảnh báo đang can thiệp tay, 3 relay với nút bật/tắt có thời hạn (ENV-FR-016..018)
 export default function ScadaNodeCard({ node, controlOutput, durationMinutes, durationText }: ScadaNodeCardProps): JSX.Element {
-  const { t, hourMinute } = useTranslation(dashboardDict);
+  const { t, hourMinute, dateTime } = useTranslation(dashboardDict);
   const { t: translateStatus } = useTranslation(deviceStatusDict);
   const controlRelay = useControlRelay();
   const clearOverride = useClearRelayOverride();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   const [pendingRelay, setPendingRelay] = useState<RelayName | null>(null);
+  const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
   const isOnline = node.status === 'ONLINE';
   const isManual = node.control_mode === 'MANUAL';
 
-  function handleSetRelay(relay: RelayName, labelKey: 'relay.misting' | 'relay.ventilation' | 'relay.speaker', nextState: boolean): void {
+  // Thời hạn thật của nút: bật bơm tối đa 30 phút (BR-08), còn lại theo thời hạn đang chọn
+  function relayDuration(relay: RelayName, turnOn: boolean): { minutes: number; label: string } {
+    const minutes = relayMinutes(relay, turnOn, durationMinutes);
+    return { minutes, label: minutes === durationMinutes ? durationText : t('scada.minutes', { n: minutes }) };
+  }
+
+  function handleSetRelay(relay: RelayName, labelKey: RelayLabelKey, nextState: boolean, confirmed = false): void {
+    const { minutes, label } = relayDuration(relay, nextState);
     setPendingRelay(relay);
     controlRelay.mutate(
-      { nodeId: node._id, relayName: relay, state: nextState, durationMs: durationMinutes * 60_000 },
+      { nodeId: node._id, relayName: relay, state: nextState, durationMs: minutes * 60_000, confirmed },
       {
-        onSuccess: () => push(t('scada.sent', {
-          relay: t(labelKey),
-          state: nextState ? t('scada.stateOn') : t('scada.stateOff'),
-          duration: durationText,
-        })),
-        onError: error => push(apiErrorMessage(error, t('scada.sendFailed')), 'error'),
+        onSuccess: () => {
+          setConfirm(null);
+          push(t('scada.sent', {
+            relay: t(labelKey),
+            state: nextState ? t('scada.stateOn') : t('scada.stateOff'),
+            duration: label,
+          }));
+        },
+        onError: error => {
+          // Zone đang có cảnh báo cảm biến/phun sương: hỏi Farm Owner trước khi gửi lại với confirmed
+          const alerts = pumpConfirmAlerts(error);
+          if (alerts && !confirmed) {
+            setConfirm({ relay, labelKey, minutes, label, alerts });
+            return;
+          }
+          setConfirm(null);
+          push(apiErrorMessage(error, t('scada.sendFailed')), 'error');
+        },
         onSettled: () => setPendingRelay(null),
       },
     );
@@ -101,6 +133,8 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
           const RelayIcon = relay.icon;
           const isOn = node.relay_states[relay.key];
           const output = relay.key === 'misting' || relay.key === 'ventilation' ? controlOutput?.[relay.key] : undefined;
+          const { minutes, label } = relayDuration(relay.key, !isOn);
+          const isCapped = minutes < durationMinutes;
           return (
             <div key={relay.key} className="flex items-center justify-between gap-3 py-2.5">
               <div className="flex min-w-0 items-center gap-3">
@@ -115,6 +149,7 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
                     </span>
                     {output !== undefined && !isManual && t('scada.output', { percent: output })}
                   </p>
+                  {isCapped && <p className="text-[11px] text-warmGray">{t('scada.pumpCap', { n: minutes })}</p>}
                 </div>
               </div>
               <Button
@@ -125,12 +160,40 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
                 loading={controlRelay.isPending && pendingRelay === relay.key}
                 onClick={() => handleSetRelay(relay.key, relay.labelKey, !isOn)}
               >
-                {isOn ? t('scada.turnOff', { duration: durationText }) : t('scada.turnOn', { duration: durationText })}
+                {isOn ? t('scada.turnOff', { duration: label }) : t('scada.turnOn', { duration: label })}
               </Button>
             </div>
           );
         })}
       </div>
+
+      {/* ENV-FR-016 — xác nhận bật bơm khi Zone đang có cảnh báo cảm biến/phun sương; lịch sử ghi alert_confirmed */}
+      <Modal open={Boolean(confirm)} onClose={() => setConfirm(null)} title={t('scada.confirmTitle')}>
+        {confirm && (
+          <div className="flex flex-col gap-4">
+            <hr className="border-gray-200" />
+            <p className="text-sm text-warmGray">{t('scada.confirmDesc')}</p>
+            <ul className="flex flex-col divide-y divide-orange-100 rounded-xl border-2 border-orange-300 bg-orange-50 px-3">
+              {confirm.alerts.map(alert => (
+                <li key={alert._id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span className="font-semibold text-charcoal">{alert.title}</span>
+                  <span className="text-xs text-warmGray">{dateTime(alert.created_at)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={() => setConfirm(null)} disabled={controlRelay.isPending}>{t('scada.confirmCancel')}</Button>
+              <Button
+                variant="danger"
+                loading={controlRelay.isPending}
+                onClick={() => handleSetRelay(confirm.relay, confirm.labelKey, true, true)}
+              >
+                {t('scada.confirmOn')} · {confirm.label}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
