@@ -962,7 +962,7 @@ Chỉ ảnh đã duyệt mới vào version: sau khi sửa một trang ảnh tr�
 4. *Augmentation*: không thêm gì, vì ultralytics tự làm lúc train.
 5. Create, rồi ghi lại số version.
 
-**Bước 2 — Colab.** Runtime → Change runtime type → **T4 GPU**. GPU mạnh hơn (L4, A100) chỉ làm train nhanh hơn, không đổi kết quả; nếu dùng thì cả ba model ở mục 7.9 train trên cùng một loại GPU. Lưu API key Roboflow vào **Secrets** của Colab (biểu tượng chìa khóa, tên `ROBOFLOW_API_KEY`, bật quyền cho notebook), không dán vào cell. Mỗi khối dưới đây là một cell.
+**Bước 2 — Colab.** Runtime → Change runtime type → **T4 GPU**. GPU mạnh hơn (L4, A100) chỉ làm train nhanh hơn, không đổi kết quả; nếu dùng thì cả hai model ở mục 7.9 train trên cùng một loại GPU. Lưu API key Roboflow vào **Secrets** của Colab (biểu tượng chìa khóa, tên `ROBOFLOW_API_KEY`, bật quyền cho notebook), không dán vào cell. Mỗi khối dưới đây là một cell.
 
 ```python
 # Cell 1 — môi trường + tải dataset từ Roboflow
@@ -2642,7 +2642,31 @@ Số liệu công bố của Ultralytics, đầu vào 640, chạy ONNX trên CPU
 
 Cả YOLOv8n lẫn YOLO11n ở đầu vào 640 đều quá 40 ms, chưa tính phần giải mã và nén video, và pipeline còn suy luận 2 ô mỗi frame (mục 19.8). VPS dùng chung còn thường chậm hơn máy đo chuẩn. Vì vậy cấu hình 2 vCPU ở mục 15 không đủ, và phải áp dụng thêm các bước dưới.
 
-Cách đạt tốc độ, áp dụng theo thứ tự. Bước nào không tốn tiền làm trước. Dừng ngay khi đạt cổng 1 (mục 19.5):
+**Máy AI node dự kiến có GPU: PC với GTX 1050 Ti (MSI Gaming X, 4 GB), chốt 03/11/2026.** Số liệu CPU ở bảng trên không áp dụng khi chạy trên GPU. Làm bước 0 trước các bước khác:
+
+0. **Chạy model trên GPU NVIDIA.** Vẫn dùng đúng file `.onnx`.
+   - `config.yaml` mặc định đặt `model.providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]`. Máy cài gói `onnxruntime` CPU sẽ bỏ qua CUDA và chạy CPU, nên cấu hình này an toàn cho mọi máy.
+   - Trong venv của máy có GPU, cài `onnxruntime-gpu[cuda,cudnn]` thay cho `onnxruntime`. CUDA và cuDNN được pip cài kèm, không cần cài CUDA Toolkit. Tạo venv trên ổ D:, vì các gói này nặng 1–2 GB.
+   - `inference.py` gọi `ort.preload_dlls()` để nạp các DLL đó. Thiếu bước này thì ONNX Runtime âm thầm chạy CPU (đã gặp 03/11/2026). Log phải ghi `providers: ['CUDAExecutionProvider', ...]`; nếu phải quay về CPU thì log có dòng cảnh báo "Không dùng được CUDAExecutionProvider".
+   - **Chọn bản theo đời GPU.** [Từ 1.27, `onnxruntime-gpu` trên PyPI dùng CUDA 13; các bản 1.21–1.26 dùng CUDA 12.8](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html). CUDA 13 bỏ Maxwell, Pascal và Volta, nên:
+     - Card từ Turing trở lên (RTX), như máy dev: `onnxruntime-gpu[cuda,cudnn]>=1.30,<1.31`.
+     - GTX 1050 Ti (Pascal, compute capability 6.1): `onnxruntime-gpu[cuda,cudnn]>=1.26,<1.27`.
+   - [NVIDIA đã thông báo](https://www.tomshardware.com/pc-components/gpu-drivers/nvidia-to-axe-maxwell-pascal-and-volta-gpus-with-end-of-driver-support-580-series-drivers-will-be-the-last-to-support-gtx-900-and-1000-cards) nhánh driver 580 là nhánh cuối hỗ trợ Pascal. Giữ máy 1050 Ti ở nhánh 580.
+   - Chưa có nguồn chính thức xác nhận bản 1.26 còn biên dịch cho compute capability 6.1, nên phải thử trên chính máy đó. Nếu CUDA không chạy thì cài `onnxruntime-directml` và đặt `["DmlExecutionProvider", "CPUExecutionProvider"]`. DirectML chạy trên mọi card hỗ trợ DirectX 12, nhưng chậm hơn CUDA.
+   - Card Pascal dòng GeForce không có tensor core và chạy FP16 rất chậm, nên giữ model FP32 (không export `half=True`). Cũng không nên trông vào TensorRT trên card này.
+   - **Số đo trên máy dev, 03/11/2026.** Máy dev là laptop RTX 3050 4 GB với CPU Ryzen 7 6800H. Đo với model `yolo26n` COCO 640, 2 ô mỗi frame, clip `20261022_morning_01` từ giây 420:
+
+     | | GPU (CUDA) | CPU |
+     |---|---|---|
+     | Chỉ model, 1 ô (đầu vào ngẫu nhiên, 100 lượt) | 10,4 ms | 24,9 ms |
+     | Cả vòng lặp (đọc frame, che, 2 ô, ByteTrack, vẽ), không ghi file | **27,9 FPS** | 16,2 FPS |
+     | `tools/track_clip.py`, có ghi mp4 | 22,1 FPS | 13,2 FPS |
+
+     Ngay cả trên GPU, khoảng một nửa thời gian của bước theo dõi vẫn là việc của CPU. Tiền xử lý từng tốn 16 ms mỗi frame vì làm bằng numpy; đổi sang `cv2.dnn.blobFromImage` thì còn khoảng 4 ms. Vì vậy CPU của máy AI node cũng ảnh hưởng tới FPS.
+   - **Chưa có số đo trên 1050 Ti**, nên phải đo cổng 1 trên chính máy đó. Sức tính FP32 của 1050 Ti chỉ bằng khoảng một phần ba RTX 3050. Theo đó, phần chạy model (khoảng 26 ms cho 2 ô trên máy dev) có thể vượt 40 ms; đây là ước lượng, chưa đo. Có thể đo ngay bằng `yolov8n.onnx` và `yolo11n.onnx` bản COCO, không cần chờ model tự train: tốc độ gần như chỉ phụ thuộc kiến trúc, đầu ra 1 class hay 80 class chênh lệch không đáng kể.
+   - Nếu GPU vẫn chưa đạt: chạy 2 ô trong một lần gọi model (batch 2). Phải export lại với batch 2 và sửa `infer_tiles`. Chưa làm, chỉ làm khi đo thấy thiếu. Nếu vẫn thiếu thì áp dụng các bước dưới, nhất là bước 3 (giảm đầu vào xuống 480).
+
+Các bước 1–5 dưới đây dành cho máy chỉ có CPU, hoặc khi GPU vẫn chưa đạt cổng 1. Cách đạt tốc độ, áp dụng theo thứ tự. Bước nào không tốn tiền làm trước. Dừng ngay khi đạt cổng 1 (mục 19.5):
 
 1. **Ưu tiên YOLO11n nếu sai số đếm ngang YOLOv8n** (mục 7.9): nhanh hơn khoảng 1,4 lần trên CPU theo số liệu của Ultralytics.
 2. **CPU Intel thì dùng OpenVINO.** Áp dụng cho VPS chạy Xeon, hoặc laptop/PC i5 cũ ở phương án lùi. Cài `onnxruntime-openvino` thay cho `onnxruntime`, rồi đặt `model.providers: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]`. Vẫn dùng đúng file `.onnx` cũ, không phải sửa code. Ultralytics công bố OpenVINO nhanh hơn tới khoảng 3 lần trên CPU. Mức tăng khi chạy qua ONNX Runtime thì phải tự đo. Xem dòng `providers:` trong log để chắc OpenVINO đã được dùng.
