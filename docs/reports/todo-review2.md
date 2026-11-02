@@ -89,11 +89,11 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 **PR A — G-01, nhánh `refactor/g01-enum-cleanup` (Kiệt mở PR, Bảo duyệt và merge):**
 
-1. **Kiệt:** backend `domain.types.ts`, model, service, `ALERT_TYPE_ALIAS`, nhánh `DEGRADED` ở `device.service.ts`, migration `migrate:alert-types` + test, `api-spec.yaml` (enum), `npm run db:script`; firmware gửi tên mới, `reset_reason`, bump `FIRMWARE_VERSION`, `pio test -e native`. — **Xong 28/10** (backend `31e85d2`, firmware 1.5.0 `70e5ff3`; `pio test -e native` chạy ở CI vì máy Kiệt chưa có g++)
+1. **[x] Kiệt:** backend `domain.types.ts`, model, service, `ALERT_TYPE_ALIAS`, nhánh `DEGRADED` ở `device.service.ts`, migration `migrate:alert-types` + test, `api-spec.yaml` (enum), `npm run db:script`; firmware gửi tên mới, `reset_reason`, bump `FIRMWARE_VERSION`, `pio test -e native`. — **Xong 28/10** (backend `31e85d2`, firmware 1.5.0 `70e5ff3`; `pio test -e native` chạy ở CI vì máy Kiệt chưa có g++)
 2. **[x] Len:** `frontend/src/types/` (alert, device, auth), nhãn i18n, gỡ `heating` ở `ControlSubsystemPanel`, `dashboardMetrics`, `deviceInventory` (+ test), gỡ Zalo/SMS ở `SettingsPage.tsx`, `auth.types.ts`, `en.ts`. — **Xong 29/10** (28/10 Tuấn làm phần chính theo uỷ quyền, `c54f050`; 29/10 Len làm lại phần Farm Owner, `2839abc`, `dff99d3`: `zoneComponents` đổi `PUMP_DRY` → `MISTING_INEFFECTIVE` và bỏ qua cảnh báo `DISMISSED`, `HarvestStatus` bỏ `ARCHIVED`, bỏ `heating` khỏi test và comment, bỏ nhãn mất điện/thiên địch và dòng Zalo/SMS thừa ở `en.ts`, sửa nhãn "Phun sương"; lint+tsc+vitest: 0 error, 108 pass, build xanh)
 3. **[x] Tuấn:** gỡ `heating` ở `ExpertControlPanel`, nhãn predator và nhãn tên cảnh báo cũ trong màn chuyên gia và Technician. — **Xong 28/10** (ESLint 0 w, tsc exit 0, vitest 106/106)
 4. **[x] Nhi:** `mobile/src/types/` (enum, bỏ `zalo`/`sms`, `heating`, `ERROR`/`DEGRADED`) và `src/utils/label.utils.ts`. — **Xong 28/10**, chuyển sang `mobile/src/` ngày 29/10 khi gỡ xung đột với PR #114
-5. Kiệt chạy lint/typecheck/test cả 4 module rồi mở PR. — *Kiểm tra xong 29/10: backend lint + tsc + 524/524 test; web lint + tsc + vitest 108/108 + build; mobile lint + typecheck + jest 18/18 (chạy lại sau khi gộp PR #114, cấu trúc `mobile/src`); firmware `pio test -e native` để CI chạy (máy Kiệt chưa có g++). Kèm sửa chữ "phún sương" → "phun sương" ở 6 file màn chuyên gia (Tuấn duyệt). Còn mở PR.*
+5. **[x] Kiệt** chạy lint/typecheck/test cả 4 module rồi mở PR. — *Kiểm tra xong 29/10: backend lint + tsc + 524/524 test; web lint + tsc + vitest 108/108 + build; mobile lint + typecheck + jest 18/18 (chạy lại sau khi gộp PR #114, cấu trúc `mobile/src`); firmware `pio test -e native` để CI chạy (máy Kiệt chưa có g++). Kèm sửa chữ "phún sương" → "phun sương" ở 6 file màn chuyên gia (Tuấn duyệt).* — **PR #113 đã merge** (`dce0700`)
 
 **PR B — phần P0 của G-02, nhánh `refactor/g02-invitation-accounts` (Kiệt mở PR, Bảo duyệt):**
 
@@ -119,7 +119,7 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 | [x] | Đồng bộ **cấu trúc** phiếu v3, BM03, SRS, SDD, BM01, Tracking, Report 5 theo các quyết định trên (chưa phải baseline cuối: còn G-01, G-02, `[TEAM]`, CI trên tag, BM02) | P0-Tag | 26/10/2026 |
 | [x] | Sinh lại Word: `tools/make_registration_v3.py`, `make_bm03.py`, `make_bm01.py`; BM01 mục 0–8 = 4 trang (đo bằng Word 26/10) | P0-Tag | Sinh lại và đo lại sau khi điền `[TEAM]` |
 | [ ] | Điền các ô `[TEAM]` (mục 2) | P0-Tag | |
-| [ ] | PR code nhỏ **G-01** (enum + dọn phạm vi) và phần P0 của **G-02** (bỏ đăng ký công khai, bỏ đăng nhập OTP, thay luồng tạo tài khoản từ lời mời) merge trước khi gắn tag | P0-Tag | Mục 4 |
+| [x] | PR code nhỏ **G-01** (enum + dọn phạm vi) và phần P0 của **G-02** (bỏ đăng ký công khai, bỏ đăng nhập OTP, thay luồng tạo tài khoản từ lời mời) merge trước khi gắn tag | P0-Tag | Mục 4 — G-01 PR #113, G-02 PR #116 đã merge |
 | [x] | Mở PR nhánh tài liệu vào `develop` | P0-Tag | PR #108, #109, #111 đã merge |
 | [ ] | Chạy CI đủ mọi module trên commit cuối của `develop` (Actions → CI → *Run workflow*); xanh thì gắn tag `review-2` **đúng commit đó** (push tag chạy CI lần nữa, không phải dời tag). Tải 3 artifact của lần chạy trên tag (`backend-jest-results`, `firmware-pio-junit`, `ai-pipeline-pytest-junit`), rồi `python docs/reports/report5/gen_report5.py docs/reports/report5/template.md docs/reports/report5-test.md --jest jest-results.json --pio pio-junit.xml --pytest pytest-junit.xml`; ghi link lần chạy CI vào Report 5 §6 | P0-Tag | CI đã có trigger tag `review-*`, chạy tay và artifact (26/10) |
 | [ ] | **BM02**: chạy prompt chuẩn trên tag, không sửa prompt, giữ nguyên kết quả; trả lời Fixed/Kept/Planned, mỗi điểm Planned ghi **một** người chịu trách nhiệm và hạn (gap nhiều người thì tách theo phần, như Tracking §6); điểm High Kept/Planned thêm vào BM01 §5 | P0-Nộp | Tắt Memory trước khi chạy |
@@ -232,19 +232,23 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-03 — Vòng chuyên gia (P1) — Kiệt (backend), Tuấn (web)
 
-- [ ] `DISMISSED`:
+- [x] `DISMISSED`: *(Kiệt, 30/10, `b738cf4` spec + `865102f` backend, nhánh `feat/g03-expert-loop`; `OPEN_STATUSES` gồm `DISMISSED` nên gộp trùng im lặng và tự đóng như cảnh báo mở; xác nhận đã xử lý cảnh báo `DISMISSED` → 409)*
   - lưu `previous_status`;
   - `REJECTED` bắt buộc ghi chú (422);
   - đổi sang `CONFIRMED` thì khôi phục trạng thái cũ và báo lại Farm Owner;
   - gộp trùng và tự đóng tính cả `DISMISSED`;
   - `DISMISSED` không gửi thông báo.
-- [ ] BR-22: farm chưa có chuyên gia thì Farm Owner ghi kết luận, sửa tham số phát hiện, vòng đếm, lịch đếm; thông báo cảnh báo suy luận chuyển cho Farm Owner.
-- [ ] EXPERT-FR-009:
+- [x] BR-22: farm chưa có chuyên gia thì Farm Owner ghi kết luận, sửa tham số phát hiện, vòng đếm, lịch đếm; thông báo cảnh báo suy luận chuyển cho Farm Owner. *(Kiệt, 30/10: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm, thông báo chờ kiểm chứng. **Kết luận báo cáo không mở cho Farm Owner**: BR-22 ghi "No conclusions are written without an expert" và EXPERT-FR-006 cho Farm Owner 403. Lịch đếm làm ở G-12)*
+- [x] EXPERT-FR-009: *(Kiệt, 30/10; `actor_role` lấy từ ngữ cảnh request nên mọi audit đều có; thông báo chỉ trong ứng dụng, trỏ tới mục lịch sử)*
   - `notifyUser` cho mọi Farm Owner ở mỗi quyết định của chuyên gia;
   - `audit_logs` thêm `farm_id`, `actor_role`;
   - `GET /expert-activity?farmId=` đọc từ audit log.
-- [ ] ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận (thiếu dữ liệu thì báo "missing", không phải 0).
-- [ ] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động.
+- [x] ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận (thiếu dữ liệu thì báo "missing", không phải 0). *(Kiệt, 30/10: `GET /alerts/{id}/evidence`, kèm kết luận trước cùng loại cùng nơi theo EXPERT-FR-003)*
+- [x] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động. *(Tuấn, 02/11: hiển thị trạng thái DISMISSED, previous_status, ai bác bỏ và lý do; kết nối GET /alerts/{id}/evidence với chỉ báo missing và 10 kết luận tiền lệ; màn lịch sử hoạt động GET /expert-activity; lint + tsc + vitest 195/195 + build xanh)*
+- [x] Sửa theo review PR #117 *(Kiệt, 01/11)*:
+  - `EARLIER_VERDICTS_LIMIT` (10 kết luận trước) ghi vào Report 3 §4.5 và Report 4 §5.5 *(`c14a8c7`)*;
+  - BR-22 chỉ tính chuyên gia còn hoạt động: chuyên gia bị khoá thì Farm Owner làm thay và nhận thông báo chờ kiểm chứng *(`688a604`)*;
+  - `HEALTH_REPORT_CONCLUDED` có `house_id` nên lọc được theo nhà ở `/expert-activity` *(`536f23c`)*.
 
 ### G-04 — Mục duyệt và đề xuất hệ số (P1) — Kiệt (backend), Tuấn (màn chuyên gia), Len (nút "gửi chuyên gia" của Farm Owner)
 

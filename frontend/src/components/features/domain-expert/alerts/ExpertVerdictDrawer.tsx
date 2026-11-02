@@ -22,8 +22,12 @@ interface Props {
   onVerdictSaved?: (alertId: string, result: 'CONFIRMED' | 'REJECTED') => void
 }
 
-function StatusBadge({ verdict }: { verdict?: InferredAlertItem['expert_verdict'] }) {
+function StatusBadge({ alert }: { alert?: InferredAlertItem | null }) {
   const base = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold'
+  const verdict = alert?.expert_verdict
+  if (alert?.status === 'DISMISSED' || verdict?.result === 'REJECTED') {
+    return <span className={cn(base, 'bg-neutral-100 text-[#878380] border border-neutral-300')}>Đã bác bỏ (DISMISSED)</span>
+  }
   if (!verdict) return <span className={cn(base, 'bg-amber-50 text-amber-800 border border-amber-200/80')}>Chờ kiểm chứng</span>
   return verdict.result === 'CONFIRMED'
     ? <span className={cn(base, 'bg-red-50 text-red-600 border border-red-200')}>Đã xác nhận</span>
@@ -95,7 +99,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-lg font-bold text-[#27231F] leading-tight">Cảnh báo {alert ? ALERT_TYPE_LABELS[alert.type] : ''}</h2>
-              <StatusBadge verdict={alert?.expert_verdict} />
+              <StatusBadge alert={alert} />
             </div>
             <p className="mt-1 text-xs text-[#878380] leading-relaxed">
               {dateLabel}{zoneLabel && <> &nbsp;•&nbsp; {zoneLabel}</>}
@@ -120,7 +124,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
           </section>
           <section>
             <h3 className="text-sm font-semibold text-[#27231F] mb-3">Bước 2 — Kết luận thẩm định của Chuyên gia</h3>
-            <VerdictForm verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
+            <VerdictForm alert={alert} verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
           </section>
         </div>
 

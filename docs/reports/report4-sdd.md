@@ -328,6 +328,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Default session windows | AI node `config.yaml`, backend `DEFAULT_SESSION_WINDOWS` |
 | Return-rate check | backend `jobs/returnRate.job.ts`, `MIN_BASELINE_DAYS` |
 | One read of 5-minute counts | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS` |
+| Earlier verdicts shown with an inferred alert | backend `EARLIER_VERDICTS_LIMIT` (`alertEvidence.service.ts`) |
 | Live-stream viewing token | backend `STREAM_TOKEN_TTL_SEC` |
 | Counting ring vertices | backend `devices.route.ts`, AI node `remote_config.MAX_POINTS` |
 | Ring margin, tile overlap, extrapolation | AI node `config.yaml` (`tracking.ring`, tile overlap, `extrapolate_min_speed_px`, `extrapolate_frames`) |

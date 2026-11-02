@@ -48,6 +48,10 @@ ensureCollection("alerts", {
       "bsonType": ["string", "null"],
       "enum": ["ACTIVE", "ACKNOWLEDGED", "DISMISSED", "RESOLVED", null]
     },
+    "previous_status": {
+      "bsonType": ["string", "null"],
+      "enum": ["ACTIVE", "ACKNOWLEDGED", null]
+    },
     "created_at": {
       "bsonType": ["date", "null"]
     },
@@ -84,6 +88,10 @@ ensureCollection("alerts", {
         },
         "by": {
           "bsonType": "objectId"
+        },
+        "role": {
+          "bsonType": ["string", "null"],
+          "enum": ["DOMAIN_EXPERT", "FARM_OWNER", null]
         },
         "at": {
           "bsonType": "date"
@@ -144,6 +152,13 @@ ensureCollection("auditlogs", {
     "actor_id": {
       "bsonType": ["objectId", "null"]
     },
+    "actor_role": {
+      "bsonType": ["string", "null"],
+      "enum": ["ADMIN", "FARM_OWNER", "DOMAIN_EXPERT", "TECHNICIAN", null]
+    },
+    "farm_id": {
+      "bsonType": ["objectId", "null"]
+    },
     "action": {
       "bsonType": "string"
     },
@@ -170,6 +185,7 @@ db.getCollection("auditlogs").createIndex({"target_type":1,"target_id":1})
 db.getCollection("auditlogs").createIndex({"actor_id":1,"created_at":-1})
 db.getCollection("auditlogs").createIndex({"created_at":-1})
 db.getCollection("auditlogs").createIndex({"action":1,"created_at":-1})
+db.getCollection("auditlogs").createIndex({"farm_id":1,"created_at":-1})
 
 // ── birdcountbuckets (model BirdCountBucket) ──
 ensureCollection("birdcountbuckets", {
@@ -624,7 +640,7 @@ ensureCollection("notifications", {
       "properties": {
         "kind": {
           "bsonType": "string",
-          "enum": ["alert", "health_report"]
+          "enum": ["alert", "health_report", "expert_decision"]
         },
         "id": {
           "bsonType": "objectId"
@@ -1187,6 +1203,9 @@ ensureCollection("zonehealthreports", {
         },
         "at": {
           "bsonType": "date"
+        },
+        "edited_at": {
+          "bsonType": ["date", "null"]
         }
       },
       "required": ["text", "by", "at"]
