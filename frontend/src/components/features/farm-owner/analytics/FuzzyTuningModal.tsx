@@ -66,7 +66,9 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
     return farms?.find(item => item._id === farmId);
   }, [farms, farmId]);
   const hasExpert = Boolean(
-    farm?.members?.some(member => member.role === 'DOMAIN_EXPERT'),
+    farm?.members?.some(
+      member => member.role === 'DOMAIN_EXPERT' && (member as { is_active?: boolean }).is_active !== false,
+    ),
   );
 
   // Gửi gợi ý hiện tại cho Chuyên gia miền phê duyệt (EXPERT-FR-011, Report 3 §6.11)
@@ -76,6 +78,11 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
       push('Đã gửi đề xuất hệ số mờ cho Chuyên gia miền phê duyệt.');
       onClose();
     } catch (error) {
+      const isConflict = (error as { response?: { status?: number } })?.response?.status === 409;
+      if (isConflict) {
+        push('Trang trại chưa có Chuyên gia đang hoạt động. Vui lòng sử dụng tính năng Áp dụng trực tiếp.', 'error');
+        return;
+      }
       push(apiErrorMessage(error, 'Không thể gửi đề xuất cho chuyên gia'), 'error');
     }
   }

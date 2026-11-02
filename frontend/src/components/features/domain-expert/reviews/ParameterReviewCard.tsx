@@ -1,6 +1,4 @@
-// ParameterReviewCard.tsx — Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner (EXPERT-FR-010)
-// SRS: EXPERT-FR-010; Report 3 §6.10
-// Design: Chuẩn Ops Console FE_Design_Claude.md §13.5 (ConfirmModal) & §13.16a
+// ParameterReviewCard.tsx — Thẻ duyệt thay đổi tham số của Farm Owner (EXPERT-FR-010)
 
 import { useState } from 'react';
 import {
@@ -64,10 +62,6 @@ const FIELD_LABELS: Record<string, string> = {
   light_max: 'Ánh sáng tối đa (lux)',
   nh3_max: 'Khí NH3 tối đa (ppm)',
   co2_max: 'Khí CO2 tối đa (ppm)',
-  // Khóa alias dự phòng
-  light_lux_max: 'Ánh sáng tối đa (lux)',
-  nh3_ppm_max: 'Khí NH3 tối đa (ppm)',
-  co2_ppm_max: 'Khí CO2 tối đa (ppm)',
   fuzzy_humidity_band: 'Dải biên độ ẩm (%RH)',
   fuzzy_temp_band: 'Dải biên nhiệt độ (°C)',
   fuzzy_fan_dry_level: 'Mức quạt hút khử ẩm (%)',
@@ -133,7 +127,7 @@ export default function ParameterReviewCard({
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-warmGray mt-0.5">
               <span className="flex items-center gap-1 font-semibold text-charcoal">
                 <MapPin className="w-3 h-3 text-accent-700" />
-                {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : review.zone_id}
+                {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : 'Khu vực không xác định'}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">

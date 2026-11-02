@@ -1,6 +1,4 @@
-// CoefficientProposalCard.tsx — Thẻ hiển thị đề xuất hệ số mờ Fuzzy của Farm Owner gửi lên (EXPERT-FR-011)
-// SRS: EXPERT-FR-011; Report 3 §6.11
-// Design: Chuẩn Ops Console FE_Design_Claude.md §13.7
+// CoefficientProposalCard.tsx — Thẻ đề xuất hệ số mờ Fuzzy của Farm Owner (EXPERT-FR-011)
 
 import { useState } from 'react';
 import {
@@ -27,7 +25,7 @@ import type {
 interface CoefficientProposalCardProps {
   proposal: CoefficientProposal;
   onApprove: (proposalId: string) => Promise<void>;
-  onReject: (proposalId: string, note: string) => Promise<void>;
+  onReject: (proposalId: string, note: string) => Promise<boolean>;
   isProcessing?: boolean;
 }
 
@@ -136,7 +134,7 @@ export default function CoefficientProposalCard({
         <div className="flex flex-wrap items-center gap-2.5 text-xs text-warmGray">
           <div className="flex items-center gap-1 font-semibold text-charcoal">
             <MapPin className="w-3.5 h-3.5 text-accent-700" />
-            <span>{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : proposal.zone_id}</span>
+            <span>{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : 'Khu vực không xác định'}</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
@@ -288,8 +286,10 @@ export default function CoefficientProposalCard({
         isOpen={showRejectModal}
         onClose={() => setShowRejectModal(false)}
         onConfirm={async (note) => {
-          await onReject(proposal._id, note);
-          setShowRejectModal(false);
+          const isSuccess = await onReject(proposal._id, note);
+          if (isSuccess) {
+            setShowRejectModal(false);
+          }
         }}
         isSubmitting={isProcessing}
       />

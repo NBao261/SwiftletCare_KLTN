@@ -1,6 +1,4 @@
 // DomainExpertReviewsPage.tsx — Màn hình thẩm định thay đổi tham số và đề xuất hệ số mờ (G-04)
-// SRS: EXPERT-FR-010, EXPERT-FR-011; Report 3 §6.10, §6.11
-// Design: Chuẩn Ops Console FE_Design_Claude.md §1.1 & §2.1
 
 import { useState } from 'react';
 import {
@@ -145,14 +143,16 @@ export default function DomainExpertReviewsPage() {
     }
   };
 
-  const handleRejectProposal = async (proposalId: string, note: string) => {
+  const handleRejectProposal = async (proposalId: string, note: string): Promise<boolean> => {
     try {
       setProcessingId(proposalId);
       await rejectProposalMutation.mutateAsync({ proposalId, note });
       pushToast('Đã từ chối đề xuất hệ số mờ kèm lý do chuyên môn.', 'success');
       void refetchProposals();
+      return true;
     } catch (error: unknown) {
       pushToast(apiErrorMessage(error, 'Lỗi khi từ chối đề xuất'), 'error');
+      return false;
     } finally {
       setProcessingId(null);
     }
