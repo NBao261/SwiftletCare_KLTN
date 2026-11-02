@@ -15,10 +15,13 @@ import type {
   ZoneHealthReportItem,
   HarvestBatchItem,
   RelayOverrideLogItem,
+  AlertEvidence,
+  ExpertActivityEntry,
+  ExpertActivityQuery,
 } from '@/types/expert.types'
 
 export const expertApi = {
-  // ── 1. Kiểm chứng Cảnh báo suy luận (EXPERT-FR-003) ────────────────────────
+  // ── 1. Kiểm chứng Cảnh báo suy luận (EXPERT-FR-003, ALERT-FR-014) ───────────
   getPendingAlerts: (params?: { farmId?: string; zoneId?: string }) =>
     api.get<ApiResponse<InferredAlertItem[]>>('/alerts', {
       params: { ...params, verdict: 'pending' },
@@ -32,6 +35,16 @@ export const expertApi = {
 
   setAlertVerdict: (alertId: string, result: 'CONFIRMED' | 'REJECTED', note?: string) =>
     api.put<ApiResponse<InferredAlertItem>>(`/alerts/${alertId}/verdict`, { result, note }),
+
+  getAlertEvidence: (alertId: string) =>
+    api.get<ApiResponse<AlertEvidence>>(`/alerts/${alertId}/evidence`),
+
+  // ── 1b. Lịch sử hoạt động chuyên gia (EXPERT-FR-009) ───────────────────────
+  getExpertActivity: (params: ExpertActivityQuery) =>
+    api.get<ApiResponse<ExpertActivityEntry[]> & { meta: { total: number; page: number; limit: number } }>(
+      '/expert-activity',
+      { params },
+    ),
 
   // ── 2. Cấu hình Ngưỡng & Zone Config (EXPERT-FR-004, ENV-FR-006) ─────────────
   getZone: (zoneId: string) =>

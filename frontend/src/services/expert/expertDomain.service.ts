@@ -4,6 +4,7 @@ import type {
   ExpertFuzzyTuning, ExpertDetectionTuning, FuzzySuggestionResponse,
   ForecastResponse, ControlPerformanceResponse, AutonomyResponse,
   BirdCountTrendsResponse, ZoneHealthReportItem, HarvestBatchItem,
+  AlertEvidence, ExpertActivityEntry, ExpertActivityQuery,
 } from '@/types/expert.types'
 
 const INFERRED_TYPES: Set<string> = new Set([
@@ -31,6 +32,18 @@ export const expertService = {
   async getVerdictStats(params?: { farmId?: string; zoneId?: string }): Promise<ExpertVerdictStats[]> {
     const res = await expertApi.getVerdictStats(params)
     return Array.isArray(res.data?.data) ? res.data.data : []
+  },
+
+  async getAlertEvidence(alertId: string): Promise<AlertEvidence> {
+    const res = await expertApi.getAlertEvidence(alertId)
+    return res.data.data
+  },
+
+  async getExpertActivity(params: ExpertActivityQuery): Promise<{ records: ExpertActivityEntry[]; total: number; page: number; limit: number }> {
+    const res = await expertApi.getExpertActivity(params)
+    const records = Array.isArray(res.data?.data) ? res.data.data : []
+    const meta = res.data?.meta ?? { total: records.length, page: 1, limit: 10 }
+    return { records, total: meta.total, page: meta.page, limit: meta.limit }
   },
 
   async getFuzzySuggestion(zoneId: string): Promise<FuzzySuggestionResponse> {
