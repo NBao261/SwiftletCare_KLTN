@@ -18,12 +18,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   SlidersHorizontal,
   FileText,
+  FileCheck,
   ArrowRight,
-  CheckCircle2,
   Clock,
   MapPin,
   AlertTriangle,
-  ChevronRight,
   Sparkles,
 } from 'lucide-react'
 import {
@@ -35,8 +34,13 @@ import {
 } from '@/hooks/domain-expert/useExpertAlerts'
 import { useHealthReportList } from '@/hooks/domain-expert/useHealthReports'
 import { useExpertAiSuggestion } from '@/hooks/domain-expert/useZoneTuning'
+import {
+  useParameterReviews,
+  useCoefficientProposals,
+} from '@/hooks/domain-expert/useExpertReviews'
 import { useZoneStore } from '@/stores/zoneStore'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import ExpertQueueEmptyState from '@/components/features/domain-expert/ExpertQueueEmptyState'
 
 const INFERRED_TYPES: Set<string> = new Set([
   'NOISE_ANOMALY',
@@ -93,6 +97,22 @@ export default function DomainExpertQueuePage() {
   // ── Dữ liệu gợi ý tối ưu AI cho tham số Fuzzy Logic ───────────────────────
   const { data: aiSuggestion } = useExpertAiSuggestion(selectedZoneId ?? undefined)
 
+  // ── Dữ liệu mục duyệt tham số & đề xuất hệ số mờ (G-04) ────────────────────
+  const { data: pendingReviewsRes } = useParameterReviews({
+    farmId: selectedFarmId ?? '',
+    zoneId: selectedZoneId ?? undefined,
+    status: 'PENDING_REVIEW',
+  })
+  const { data: pendingProposalsRes } = useCoefficientProposals({
+    farmId: selectedFarmId ?? '',
+    zoneId: selectedZoneId ?? undefined,
+    status: 'PROPOSED',
+  })
+
+  const pendingReviewsCount = pendingReviewsRes?.data?.length ?? 0
+  const pendingProposalsCount = pendingProposalsRes?.data?.length ?? 0
+  const totalPendingReviews = pendingReviewsCount + pendingProposalsCount
+
   // ── Tính toán các chỉ số thực chất từ Backend ─────────────────────────────
   const pendingAlerts = useMemo(
     () => allAlerts.filter(a => INFERRED_TYPES.has(a.type) && !a.expert_verdict),
@@ -117,15 +137,169 @@ export default function DomainExpertQueuePage() {
     )
   }
 
+  // ── 3 Thẻ nhiệm vụ điều vận định kỳ (Dùng chung cho cả 2 chế độ hiển thị) ──
+  const renderActionCards = (containerClassName: string) => (
+    <div className={containerClassName}>
+      {/* ── Thẻ 1: Cấu hình Ngưỡng & Hệ số mờ ── */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate('/domain-expert/tuning')}
+        onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/tuning')}
+        className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
+      >
+        <div className="flex flex-col gap-2.5 sm:gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warmGray/15 bg-stone/70 text-charcoal transition-colors group-hover:border-accent-600/40 group-hover:bg-accent-50 group-hover:text-accent-900">
+              <SlidersHorizontal className="h-4 w-4" />
+            </div>
+            {hasAiTuningSuggestion ? (
+              <span className="flex items-center gap-1 rounded-md border border-accent-600/40 bg-accent-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent-900">
+                <Sparkles className="h-3 w-3 text-accent-700" />
+                <span>Có gợi ý AI tối ưu</span>
+              </span>
+            ) : (
+              <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
+                Cấu hình vận hành
+              </span>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
+              Cấu hình Ngưỡng & Hệ số mờ
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
+              Thiết lập ngưỡng an toàn và tinh chỉnh hệ số điều khiển mờ cho thiết bị.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+              Ngưỡng an toàn
+            </span>
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+              Hệ số Fuzzy
+            </span>
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+              Độ nhạy AI
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
+          <span>Vào cấu hình tham số</span>
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+        </div>
+      </div>
+
+      {/* ── Thẻ 2: Mục duyệt tham số & Đề xuất hệ số mờ (G-04) ── */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate('/domain-expert/reviews')}
+        onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/reviews')}
+        className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
+      >
+        <div className="flex flex-col gap-2.5 sm:gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warmGray/15 bg-stone/70 text-charcoal transition-colors group-hover:border-lime-500/40 group-hover:bg-lime-50 group-hover:text-lime-800">
+              <FileCheck className="h-4 w-4" />
+            </div>
+            {totalPendingReviews > 0 ? (
+              <span className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-900">
+                Chờ duyệt ({totalPendingReviews})
+              </span>
+            ) : (
+              <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
+                Đã đồng bộ
+              </span>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
+              Duyệt Tham số & Đề xuất
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
+              Thẩm định thay đổi thông số từ Chủ trang trại và phê duyệt đề xuất hệ số mờ.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+              Ngưỡng chờ: <strong className="font-semibold text-charcoal">{pendingReviewsCount}</strong>
+            </span>
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+              Đề xuất: <strong className="font-semibold text-charcoal">{pendingProposalsCount}</strong>
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
+          <span>Mở danh sách phê duyệt</span>
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+        </div>
+      </div>
+
+      {/* ── Thẻ 3: Báo cáo sức khỏe & kết luận chuyên môn ── */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate('/domain-expert/reports')}
+        onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/reports')}
+        className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
+      >
+        <div className="flex flex-col gap-2.5 sm:gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warmGray/15 bg-stone/70 text-charcoal transition-colors group-hover:border-accent-600/40 group-hover:bg-accent-50 group-hover:text-accent-900">
+              <FileText className="h-4 w-4" />
+            </div>
+            {pendingReports > 0 ? (
+              <span className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-900">
+                Cần ký duyệt ({pendingReports})
+              </span>
+            ) : (
+              <span className="rounded-md border border-accent-600/30 bg-accent-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent-900">
+                Đã cập nhật tuần này
+              </span>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
+              Báo cáo & Khuyến nghị
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
+              Tổng hợp sức khỏe đàn yến theo tuần và ban hành kết luận chuyên môn kỹ thuật.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+              Chờ duyệt: <strong className="font-semibold text-charcoal">{pendingReports}</strong>
+            </span>
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+              Đã ban hành: <strong className="font-semibold text-charcoal">{publishedReports}</strong>
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
+          <span>Xem danh sách báo cáo</span>
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-col gap-4 pt-4">
-      {/* ── Bento Grid 2 cột bất đối xứng (Tỉ lệ gọn gàng, cân đối) ── */}
-      <section className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12 lg:gap-5">
-
-        {/* ════ CỘT TRÁI (7/12 ≈ 58%): Hàng đợi thẩm định cảnh báo AI — Ưu tiên P0 ════ */}
-        <div className="flex flex-col lg:col-span-7">
-          {pendingCount > 0 ? (
-            /* ── Trạng thái: Có sự cố chờ thẩm định ── */
+      {pendingCount > 0 ? (
+        /* ── KỊCH BẢN 1: CÓ SỰ CỐ P0 → Bento Grid 2 cột bất đối xứng (7/12 vs 5/12) ── */
+        <section className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12 lg:gap-5">
+          {/* CỘT TRÁI (7/12 ≈ 58%): Hàng đợi thẩm định cảnh báo AI — Ưu tiên P0 */}
+          <div className="flex flex-col lg:col-span-7">
             <div className="group relative flex h-full flex-col justify-between rounded-2xl border border-amber-300 bg-gradient-to-b from-amber-50/70 via-white to-white p-4 shadow-sm transition-all hover:border-amber-400 hover:shadow-md sm:p-5">
               <div className="flex flex-col gap-3.5">
                 {/* Nhãn phân loại & đếm số lượng */}
@@ -134,14 +308,14 @@ export default function DomainExpertQueuePage() {
                     <span className="rounded-md border border-amber-400 bg-amber-100 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-amber-900">
                       Ưu tiên P0 · Suy luận AI
                     </span>
-                    <span className="text-[11px] font-medium text-warmGray">Cần phán quyết</span>
+                    <span className="text-[11px] font-medium text-warmGray">Cần thẩm định</span>
                   </div>
                   <span className="rounded-full bg-amber-500 px-2.5 py-0.5 font-mono text-xs font-bold text-white shadow-xs">
                     {pendingCount} chờ xử lý
                   </span>
                 </div>
 
-                {/* Tiêu đề nhiệm vụ — Kích thước vừa vặn, không quá to */}
+                {/* Tiêu đề nhiệm vụ */}
                 <div>
                   <h2 className="text-base font-bold text-charcoal sm:text-[18px]">
                     Thẩm định cảnh báo suy luận AI
@@ -209,142 +383,31 @@ export default function DomainExpertQueuePage() {
                 </button>
               </div>
             </div>
-          ) : (
-            /* ── Trạng thái: Hàng đợi trống — mọi sự cố đã được xử lý ── */
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-5 shadow-sm sm:p-6">
-              <div className="flex flex-col gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-accent-600/30 bg-accent-50">
-                  <CheckCircle2 className="h-6 w-6 text-accent-700" />
-                </div>
-                <h2 className="text-base font-bold text-charcoal sm:text-lg">
-                  Không có sự cố chờ thẩm định
-                </h2>
-                <p className="text-xs leading-relaxed text-warmGray sm:text-[13px]">
-                  Tất cả cảnh báo suy luận AI trong phạm vi giám sát hiện tại đã được phán quyết. Hệ thống Fuzzy Logic đang vận hành trong ngưỡng an toàn.
-                </p>
-              </div>
-              <div className="mt-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/domain-expert/history')}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-charcoal hover:text-black hover:underline sm:text-[13px]"
-                >
-                  <span>Xem lịch sử phán quyết</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ════ CỘT PHẢI (5/12 ≈ 42%): Nhiệm vụ điều vận định kỳ ════ */}
-        <div className="flex flex-col gap-4 lg:col-span-5">
-
-          {/* ── Thẻ 1: Cấu hình tham số & Hệ số mờ ── */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate('/domain-expert/tuning')}
-            onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/tuning')}
-            className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
-          >
-            <div className="flex flex-col gap-2.5 sm:gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warmGray/15 bg-stone/70 text-charcoal transition-colors group-hover:border-accent-600/40 group-hover:bg-accent-50 group-hover:text-accent-900">
-                  <SlidersHorizontal className="h-4 w-4" />
-                </div>
-                {hasAiTuningSuggestion ? (
-                  <span className="flex items-center gap-1 rounded-md border border-accent-600/40 bg-accent-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent-900">
-                    <Sparkles className="h-3 w-3 text-accent-700" />
-                    <span>Có gợi ý AI tối ưu</span>
-                  </span>
-                ) : (
-                  <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
-                    Cấu hình vận hành
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
-                  Cấu hình Ngưỡng & Tham số mờ
-                </h3>
-                <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
-                  Điều chỉnh ngưỡng vi khí hậu an toàn, ma trận điều khiển mờ (Fuzzy Logic) và độ nhạy phát hiện bất thường thiết bị.
-                </p>
-              </div>
-
-              {/* 3 Module chuyên môn thực tế có trong màn hình (Trung thực, không bịa số liệu) */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2 py-0.5 font-mono text-[11px] font-medium text-graphite">
-                  Ngưỡng vi khí hậu
-                </span>
-                <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2 py-0.5 font-mono text-[11px] font-medium text-graphite">
-                  Hệ số Fuzzy Logic
-                </span>
-                <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2 py-0.5 font-mono text-[11px] font-medium text-graphite">
-                  Độ nhạy cảnh báo
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
-              <span>Vào cấu hình tham số</span>
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
           </div>
 
-          {/* ── Thẻ 2: Báo cáo sức khỏe & kết luận chuyên môn ── */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate('/domain-expert/reports')}
-            onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/reports')}
-            className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
-          >
-            <div className="flex flex-col gap-2.5 sm:gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warmGray/15 bg-stone/70 text-charcoal transition-colors group-hover:border-accent-600/40 group-hover:bg-accent-50 group-hover:text-accent-900">
-                  <FileText className="h-4 w-4" />
-                </div>
-                {pendingReports > 0 ? (
-                  <span className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-900">
-                    Cần ký duyệt ({pendingReports})
-                  </span>
-                ) : (
-                  <span className="rounded-md border border-accent-600/30 bg-accent-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent-900">
-                    Đã cập nhật tuần này
-                  </span>
-                )}
-              </div>
+          {/* CỘT PHẢI (5/12 ≈ 42%): Nhiệm vụ chuyên môn thường trực xếp dọc */}
+          {renderActionCards('flex flex-col gap-4 lg:col-span-5')}
+        </section>
+      ) : (
+        /* ── KỊCH BẢN 2: KHÔNG CÓ SỰ CỐ → Empty State nghệ thuật + Grid 3 Cột tác vụ ── */
+        <section className="flex flex-col gap-5">
+          {/* Component Empty State đồ họa nghệ thuật (tương tự Thống kê sản lượng) */}
+          <ExpertQueueEmptyState onViewHistory={() => navigate('/domain-expert/history')} />
 
-              <div>
-                <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
-                  Báo cáo & Kết luận chuyên môn
-                </h3>
-                <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
-                  Đánh giá dữ liệu vi khí hậu tổng hợp theo tuần và ban hành khuyến nghị can thiệp kỹ thuật cho Chủ nhà yến.
-                </p>
-              </div>
-
-              {/* Số liệu thực tế từ API useHealthReportList */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2 py-0.5 font-mono text-[11px] font-medium text-graphite">
-                  Chờ ký duyệt: {pendingReports}
-                </span>
-                <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2 py-0.5 font-mono text-[11px] font-medium text-graphite">
-                  Đã ban hành: {publishedReports}
-                </span>
-              </div>
+          {/* 3 Thẻ nhiệm vụ chuyên môn thường trực dàn đều 3 cột ngang */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-warmGray">
+                Nhiệm vụ chuyên môn thường trực
+              </h3>
+              <span className="text-[11px] text-warmGray">
+                3 phân hệ quản lý
+              </span>
             </div>
-
-            <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
-              <span>Xem danh sách báo cáo</span>
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
+            {renderActionCards('grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5')}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   )
 }
