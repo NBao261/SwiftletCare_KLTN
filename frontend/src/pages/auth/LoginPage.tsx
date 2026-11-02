@@ -56,6 +56,9 @@ export default function LoginPage(): JSX.Element {
           Đăng nhập
         </Button>
       </form>
+      <Link to="/privacy" className="mt-6 self-center text-xs text-warmGray underline underline-offset-2 hover:text-charcoal">
+        Chính sách quyền riêng tư
+      </Link>
     </>
   );
 }

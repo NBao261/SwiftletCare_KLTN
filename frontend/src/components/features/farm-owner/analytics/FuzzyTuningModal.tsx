@@ -8,6 +8,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useTuningSuggestion } from '@/hooks/farm-owner/useAnalytics';
 import { useUpdateFuzzyTuning } from '@/hooks/shared/useFarms';
+import { useSubmitCoefficientProposal } from '@/hooks/domain-expert/useExpertReviews';
 import { useToastStore } from '@/stores/toastStore';
 import { parseThresholdInput } from '@/validations/common/threshold.validation';
 import { FUZZY_TUNING_LIMITS, validateFuzzyTuning } from '@/validations/common/fuzzyTuning.validation';
@@ -46,10 +47,22 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
   const { t } = useTranslation(analyticsDict);
   const updateTuning = useUpdateFuzzyTuning(zoneId);
   const suggestion = useTuningSuggestion(zoneId);
+  const submitProposal = useSubmitCoefficientProposal();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   const [form, setForm] = useState<TuningForm>(() => toForm(current));
   const [errors, setErrors] = useState<Partial<Record<FuzzyNumericKey, string>>>({});
+
+  // Gửi gợi ý hiện tại cho Chuyên gia miền phê duyệt (EXPERT-FR-011, Report 3 §6.11)
+  async function handleSubmitProposal(): Promise<void> {
+    try {
+      await submitProposal.mutateAsync(zoneId);
+      push('Đã gửi đề xuất hệ số mờ cho Chuyên gia miền phê duyệt.');
+      onClose();
+    } catch (error) {
+      push(apiErrorMessage(error, 'Không thể gửi đề xuất cho chuyên gia'), 'error');
+    }
+  }
 
   // Câu lỗi của 1 ô theo ngôn ngữ đang chọn (validator dùng chung chỉ báo ô nào sai)
   function fieldError(key: FuzzyNumericKey, value: number): string {
@@ -124,9 +137,23 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
         <div className="flex flex-col gap-2 rounded-2xl border border-warmGray/15 bg-warmGray/5 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-small text-warmGray">{t('fuzzy.suggestHint')}</p>
-            <Button type="button" size="sm" variant="secondary" loading={suggestion.isFetching} onClick={() => void handleSuggest()}>
-              {t('fuzzy.suggest')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" size="sm" variant="secondary" loading={suggestion.isFetching} onClick={() => void handleSuggest()}>
+                {t('fuzzy.suggest')}
+              </Button>
+              {suggestionData?.suggestion && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  loading={submitProposal.isPending}
+                  onClick={() => void handleSubmitProposal()}
+                  title="Gửi gợi ý tối ưu này cho Chuyên gia miền phê duyệt theo EXPERT-FR-011"
+                >
+                  Gửi chuyên gia duyệt
+                </Button>
+              )}
+            </div>
           </div>
           {suggestion.isError && <p className="text-small text-alertRed">{apiErrorMessage(suggestion.error, t('fuzzy.suggestFailed'))}</p>}
           {suggestionData?.suggestion && (

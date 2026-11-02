@@ -244,7 +244,7 @@ Một PR cho backend, web, mobile, firmware:
   - `audit_logs` thêm `farm_id`, `actor_role`;
   - `GET /expert-activity?farmId=` đọc từ audit log.
 - [x] ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận (thiếu dữ liệu thì báo "missing", không phải 0). *(Kiệt, 30/10: `GET /alerts/{id}/evidence`, kèm kết luận trước cùng loại cùng nơi theo EXPERT-FR-003)*
-- [ ] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động.
+- [x] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động. *(Tuấn, 02/11: hiển thị trạng thái DISMISSED, previous_status, ai bác bỏ và lý do; kết nối GET /alerts/{id}/evidence với chỉ báo missing và 10 kết luận tiền lệ; màn lịch sử hoạt động GET /expert-activity; lint + tsc + vitest 195/195 + build xanh)*
 - [x] Sửa theo review PR #117 *(Kiệt, 01/11)*:
   - `EARLIER_VERDICTS_LIMIT` (10 kết luận trước) ghi vào Report 3 §4.5 và Report 4 §5.5 *(`c14a8c7`)*;
   - BR-22 chỉ tính chuyên gia còn hoạt động: chuyên gia bị khoá thì Farm Owner làm thay và nhận thông báo chờ kiểm chứng *(`688a604`)*;
@@ -253,7 +253,7 @@ Một PR cho backend, web, mobile, firmware:
 ### G-04 — Mục duyệt và đề xuất hệ số (P1) — Kiệt (backend), Tuấn (màn chuyên gia), Len (nút "gửi chuyên gia" của Farm Owner)
 
 - [x] Collection `parameterreviews`, `coefficientproposals` theo SDD 6.1; route accept/revert/adjust, submit/approve/reject; thông báo hai chiều; Farm Owner áp gợi ý trực tiếp khi farm có chuyên gia → 403. *(Kiệt, 30/10, `cad151d` spec + `b8070bc` backend, nhánh `feat/g04-review-proposals` tạo từ nhánh G-03; "adjust" không có route riêng: chuyên gia sửa cùng nhóm tham số thì mục đóng `ADJUSTED` (EXPERT-FR-010); áp gợi ý trực tiếp: `POST /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion`)*
-- [ ] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner.
+- [x] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner. *(Tuấn, 02/11: màn duyệt thay đổi tham số GET /expert-activity/reviews, chấp thuận / hoàn nguyên; màn duyệt đề xuất hệ số mờ GET /expert-activity/proposals, duyệt / từ chối bắt buộc lý do; tích hợp Bento hàng đợi & tuning; nút "Gửi chuyên gia duyệt" ở FuzzyTuningModal của Farm Owner; vitest 207/207 + tsc xanh)*
 - [x] Sửa theo review PR #119 *(Kiệt, 01/11, `df41db9` spec + `9ead2ba` backend; mục chặn merge là hằng số của G-03, đã sửa ở #117)*:
   - hoàn lại: đóng mục trước rồi mới áp, áp lỗi thì mở lại mục;
   - duyệt đề xuất: áp lỗi thì đề xuất về lại `PROPOSED`;
@@ -396,11 +396,11 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 
 ### G-15 — Dọn web (P1) — Tuấn (chuyên gia, Technician), Nhi (ma trận quyền), Bảo (`/stream/:id`)
 
-- [ ] **Tuấn:** bỏ dữ liệu giả của màn chuyên gia (`expertFallback.service.ts`, `data/mocks/`), nối API thật; chuyển thư mục theo FE_Design §12 (`domain-expert/`, `apis/`).
-- [ ] **Bảo:** xoá route `/stream/:id` và trang stub `FarmOwnerLiveStreamPage` (ghi Raspberry Pi); live xem ở `/vision` (`LiveCameraCard`/`useWhepStream`, token 60 giây, chỉ Farm Owner và Domain Expert); bỏ mọi chữ Raspberry Pi/RPi (FE_Design §12.0 c dòng 3).
-- [ ] **Tuấn — màn chuyên gia (đã chốt, FE_Design §12.0 c dòng 1–2):** chuyên gia đọc màn vận hành của Farm Owner ở chế độ chỉ đọc, không làm bản sao; khu `/expert/*` chỉ còn việc quyết định: trang chủ là hàng đợi việc (cảnh báo chờ kết luận, mục duyệt, đề xuất, báo cáo chờ kết luận), kết luận cảnh báo, tham số phát hiện + vòng đếm + lịch đếm, ngưỡng/hệ số, báo cáo + kết luận, lịch sử hoạt động; bỏ `/expert/analytics`; các màn quyết định mở cho Farm Owner khi farm chưa có chuyên gia (BR-22).
-- [ ] **Len:** đổi chữ "PLC" → "Bộ điều khiển" (`farmStructure.i18n.ts`, `ScadaModeBanner`).
-- [ ] **Nhi — ma trận quyền (PR đầu tiên của Iteration 2, trước các màn mới):** đồng bộ route, menu và nút theo Report 3 §2.4 (hiện `OPS_ROLES = FARM_OWNER, TECHNICIAN, ADMIN` dùng cho `/devices`, `/alerts`, `/farms`, `/onboarding`, `/ota`, `/stream/:id`; `HARVEST_ROLES` còn Admin):
+- [x] **Tuấn:** bỏ dữ liệu giả của màn chuyên gia (`expertFallback.service.ts`, `data/mocks/`), nối API thật; chuyển thư mục theo FE_Design §12 (`domain-expert/`, `apis/`).
+- [x] **Bảo:** xoá route `/stream/:id` và trang stub `FarmOwnerLiveStreamPage` (ghi Raspberry Pi); live xem ở `/vision` (`LiveCameraCard`/`useWhepStream`, token 60 giây, chỉ Farm Owner và Domain Expert); bỏ mọi chữ Raspberry Pi/RPi (FE_Design §12.0 c dòng 3). *(01/11: xoá route, lazy import và `FarmOwnerLiveStreamPage.tsx`, dòng `/stream` ở `MENU_ACCESS` và bảng test; chữ RPi/Raspberry Pi ở `farmStructure.i18n.ts`, `devices.api.ts`, `Step2Validate.tsx`, `DeviceDetailDrawer.tsx`)*
+- [x] **Tuấn — màn chuyên gia (đã chốt, FE_Design §12.0 c dòng 1–2):** chuyên gia đọc màn vận hành của Farm Owner ở chế độ chỉ đọc, không làm bản sao; khu `/expert/*` chỉ còn việc quyết định: trang chủ là hàng đợi việc (cảnh báo chờ kết luận, mục duyệt, đề xuất, báo cáo chờ kết luận), kết luận cảnh báo, tham số phát hiện + vòng đếm + lịch đếm, ngưỡng/hệ số, báo cáo + kết luận, lịch sử hoạt động; bỏ `/expert/analytics`; các màn quyết định mở cho Farm Owner khi farm chưa có chuyên gia (BR-22).
+- [x] **Len:** đổi chữ "PLC" → "Bộ điều khiển" (`farmStructure.i18n.ts`, `ScadaModeBanner`). *(Nhi làm thay theo nhờ của Len, 01/11, `4b3944b`, nhánh `feat/g15-expert-technician-ui`; đổi cả key i18n `banner.controller.*`, `zone.controller`)*
+- [x] **Nhi — ma trận quyền (PR đầu tiên của Iteration 2, trước các màn mới):** *(01/11, `9ec3e79`, nhánh `feat/g15-expert-technician-ui`; `OPS_ROLES` thay bằng `FARM_SIDE_ROLES`, `FARM_STRUCTURE_ROLES`, `DEVICE_SETUP_ROLES`, `ALERT_ROLES`, `TECHNICIAN_ONLY`; `/dashboard/scada` (relay) giữ riêng Farm Owner; chuông thông báo theo `/alerts`; sidebar chuyên gia thêm nhóm "Vận hành (chỉ đọc)"; test `constants/roles.test.ts`; có sửa file Farm Owner của Len để ẩn nút ghi với Domain Expert — `FarmOwnerHarvestPage`, `HarvestTable`, `HarvestDetailModal`, `FarmOwnerDeviceDetailPage` — Len duyệt)* đồng bộ route, menu và nút theo Report 3 §2.4 (hiện `OPS_ROLES = FARM_OWNER, TECHNICIAN, ADMIN` dùng cho `/devices`, `/alerts`, `/farms`, `/onboarding`, `/ota`, `/stream/:id`; `HARVEST_ROLES` còn Admin):
   - `/dashboard`, `/analytics`, `/vision`: Farm Owner; Domain Expert chỉ đọc qua chính các trang đó (`FARM_SIDE_ROLES`);
   - `/harvests`: Farm Owner ghi, Domain Expert chỉ đọc, bỏ Admin;
   - `/farms`: Farm Owner quản lý, Domain Expert chỉ đọc, Technician chỉ xem cấu trúc mọi farm, bỏ Admin;
@@ -409,7 +409,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - `/alerts`: Farm Owner xem và xác nhận; Technician chỉ cảnh báo thiết bị; Domain Expert dùng hàng đợi kiểm chứng; bỏ Admin;
   - Admin chỉ dùng `/system/devices`, `/system/health`, `/system/settings`, `/system/audit-log`, `/users`, `/account-requests`;
   - sửa `constants/roles.ts` (`OPS_ROLES`, `HARVEST_ROLES`, `MENU_ACCESS`), sidebar, `RequireRole` ở `routes/*.tsx`; test Vitest cho bảng role → route.
-- [ ] Đóng DF-5.
+- [x] Đóng DF-5 (Tuấn: bỏ dữ liệu giả của màn chuyên gia, nối API thật; chuyển thư mục domain-expert/ theo FE_Design §12, 01/11).
 
 ### G-16 — Mobile đủ phạm vi phiếu (P0-Demo cho luồng Farm Owner, P1 phần còn lại) — Nhi (nền, setup QR, trạng thái ngày), Len (màn Farm Owner), Tuấn (màn chuyên gia), Len (live stream)
 
@@ -457,7 +457,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
    - Nhi: ma trận quyền web (G-15), rồi nền mobile (G-16 bước 1–2);
    - Kiệt: PR spec cho G-03, G-04, G-10, G-11 (một PR `api-spec.yaml`, Tuấn và Nhi ghi endpoint cần), rồi backend G-05;
    - Bảo: G-07 (nhánh dài, thử trên bàn); chia ngày quay và giao gán nhãn (mục 3);
-   - Len: G-15 chữ "PLC", form thu hoạch (G-14), cấu hình Playwright, màn Farm Owner mobile bước 3–4 khi nền mobile xong;
+   - Len: G-15 chữ "PLC", form thu hoạch (G-14), cấu hình Playwright, màn Farm Owner mobile bước 3–4 khi nền mobile xong; *(từ 01/11 Nhi làm thay các việc này theo nhờ của Len, Len duyệt PR; "PLC" xong 01/11, `4b3944b`)*
    - Len, Tuấn, Nhi: gán nhãn trong những ngày chờ API;
    - Tuấn: dời màn chuyên gia sang `domain-expert/`, bỏ dữ liệu giả, trang chủ hàng đợi việc (G-15).
 3. **Tuần 2–3:** Kiệt backend G-03 → G-04 → G-11 → G-02 phần P1; Bảo train model, G-10 backend; Tuấn web G-03/G-04 theo spec, trình vẽ vòng đếm (G-12); Nhi màn G-11 web + mobile, in nhãn và setup QR (G-09); Len G-06 web/mobile (sau backend G-06), in mã tầng (G-09); Bảo G-08 sau G-07, G-12 backend, staging (G-17).

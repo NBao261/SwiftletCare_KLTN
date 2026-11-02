@@ -1,6 +1,6 @@
 import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
-import type { ApiResponse, CameraNode, RelayStates, SensorNode } from '@/types'
+import type { ApiResponse, CameraNode, RelayOverrideLog, RelayStates, SensorNode, StreamToken } from '@/types'
 
 export interface RegisterDevicePayload {
   device_id: string
@@ -17,4 +17,15 @@ export const deviceApi = {
 
   controlRelay: (sensorNodeId: string, relayName: keyof RelayStates, state: boolean) =>
     apiClient.post(ENDPOINTS.RELAY_CONTROL(sensorNodeId), { relayName, state }),
+
+  // Lịch sử can thiệp tay, mới nhất trước (ENV-FR-019)
+  listRelayOverrides: (sensorNodeId: string, params?: Record<string, string>) =>
+    apiClient.get<ApiResponse<RelayOverrideLog[]>>(ENDPOINTS.RELAY_OVERRIDES(sensorNodeId), { params }),
+
+  // Token 60 giây để mở live stream của một camera (VISION-FR-013)
+  getStreamToken: (cameraId: string) =>
+    apiClient.get<ApiResponse<StreamToken>>(ENDPOINTS.CAMERA_STREAM_TOKEN(cameraId)),
+
+  // Tắt override sớm, trả mọi relay của thiết bị về tự động (ENV-FR-018)
+  clearRelayOverride: (sensorNodeId: string) => apiClient.delete(ENDPOINTS.RELAY_OVERRIDE(sensorNodeId)),
 }

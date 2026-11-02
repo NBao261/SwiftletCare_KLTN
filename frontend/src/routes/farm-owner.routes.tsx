@@ -1,10 +1,10 @@
 import { lazy } from 'react'
 import { Route } from 'react-router-dom'
 import RequireRole from '@/components/auth/RequireRole'
-import { FARM_OWNER_ONLY, HARVEST_ROLES, OPS_ROLES } from '@/constants/roles'
+import { FARM_OWNER_ONLY, FARM_SIDE_ROLES, FARM_STRUCTURE_ROLES, HARVEST_ROLES } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
 
-// Màn nuôi yến của Farm Owner; allow quyết định ai vào: Trang trại / Camera mở cho Technician + Admin, Thu hoạch cho Admin (khớp backend)
+// Màn nuôi yến của Farm Owner; allow quyết định ai vào (Report 3 §2.4): Domain Expert đọc qua chính các trang này, Technician chỉ Trang trại
 const FarmOwnerDashboardPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDashboardPage'))
 const FarmOwnerScadaPage = lazy(() => import('@/pages/farm-owner/FarmOwnerScadaPage'))
 const FarmOwnerDeviceDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDeviceDetailPage'))
@@ -14,7 +14,6 @@ const FarmOwnerFarmsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmsP
 const FarmOwnerFarmZonesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZonesPage'))
 const FarmOwnerFarmZoneDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZoneDetailPage'))
 const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarvestPage'))
-const FarmOwnerLiveStreamPage = lazy(() => import('@/pages/farm-owner/FarmOwnerLiveStreamPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
 
 /** /farms dùng chung URL nhưng Technician có trang riêng (chỉ cấu trúc + thiết bị trong vùng, không sản lượng) */
@@ -28,7 +27,7 @@ export const farmOwnerRoutes = (
     <Route
       path="dashboard"
       element={
-        <RequireRole allow={FARM_OWNER_ONLY}>
+        <RequireRole allow={FARM_SIDE_ROLES}>
           <FarmOwnerDashboardPage />
         </RequireRole>
       }
@@ -44,7 +43,7 @@ export const farmOwnerRoutes = (
     <Route
       path="devices/detail"
       element={
-        <RequireRole allow={FARM_OWNER_ONLY}>
+        <RequireRole allow={FARM_SIDE_ROLES}>
           <FarmOwnerDeviceDetailPage />
         </RequireRole>
       }
@@ -52,7 +51,7 @@ export const farmOwnerRoutes = (
     <Route
       path="analytics"
       element={
-        <RequireRole allow={FARM_OWNER_ONLY}>
+        <RequireRole allow={FARM_SIDE_ROLES}>
           <FarmOwnerAnalyticsPage />
         </RequireRole>
       }
@@ -60,7 +59,7 @@ export const farmOwnerRoutes = (
     <Route
       path="vision"
       element={
-        <RequireRole allow={FARM_OWNER_ONLY}>
+        <RequireRole allow={FARM_SIDE_ROLES}>
           <FarmOwnerVisionPage />
         </RequireRole>
       }
@@ -68,7 +67,7 @@ export const farmOwnerRoutes = (
     <Route
       path="farms"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={FARM_STRUCTURE_ROLES}>
           <FarmsIndexRoute />
         </RequireRole>
       }
@@ -76,7 +75,7 @@ export const farmOwnerRoutes = (
     <Route
       path="farms/:farmId/houses/:houseId"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={FARM_STRUCTURE_ROLES}>
           <FarmOwnerFarmZonesPage />
         </RequireRole>
       }
@@ -84,7 +83,7 @@ export const farmOwnerRoutes = (
     <Route
       path="farms/:farmId/houses/:houseId/zones/:zoneId"
       element={
-        <RequireRole allow={OPS_ROLES}>
+        <RequireRole allow={FARM_STRUCTURE_ROLES}>
           <FarmOwnerFarmZoneDetailPage />
         </RequireRole>
       }
@@ -94,14 +93,6 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={HARVEST_ROLES}>
           <FarmOwnerHarvestPage />
-        </RequireRole>
-      }
-    />
-    <Route
-      path="stream/:id"
-      element={
-        <RequireRole allow={OPS_ROLES}>
-          <FarmOwnerLiveStreamPage />
         </RequireRole>
       }
     />

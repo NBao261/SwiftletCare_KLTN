@@ -13,9 +13,11 @@ import { useResetPassword } from '@/hooks/auth/useResetPassword'
 import { useAuthStore } from '@/stores/authStore'
 import { getAuthErrorMessage, readApiError } from '@/utils/apiError.utils'
 import { isValidPassword, PASSWORD_MIN_LENGTH } from '@/utils/validation.utils'
+import { t } from '@/utils/i18n.utils'
 
 const REQUIRED_MESSAGE = 'Vui lòng nhập đầy đủ thông tin'
-const PASSWORD_RULE = `Tối thiểu ${PASSWORD_MIN_LENGTH} ký tự`
+// Câu quy tắc mật khẩu theo ngôn ngữ đang chọn
+const getPasswordRule = () => t('Tối thiểu {count} ký tự', { count: PASSWORD_MIN_LENGTH })
 
 type ResetPasswordParams = {
   // reset: quên mật khẩu, đi từ màn nhập mã; temporary: vừa đăng nhập bằng mật khẩu tạm Admin cấp
@@ -57,15 +59,15 @@ export default function ResetPasswordScreen() {
     }
     setMissingFields(missing)
     if (missing.current || missing.new || missing.confirm) {
-      setFormError(REQUIRED_MESSAGE)
+      setFormError(t(REQUIRED_MESSAGE))
       return false
     }
     if (!isValidPassword(newPassword)) {
-      setFieldErrors({ new: PASSWORD_RULE })
+      setFieldErrors({ new: getPasswordRule() })
       return false
     }
     if (newPassword !== confirmPassword) {
-      setFieldErrors({ confirm: 'Mật khẩu nhập lại không khớp' })
+      setFieldErrors({ confirm: t('Mật khẩu nhập lại không khớp') })
       return false
     }
     return true
@@ -120,18 +122,18 @@ export default function ResetPasswordScreen() {
 
   return (
     <AuthScreenLayout
-      title={isTemporary ? 'Đổi mật khẩu tạm' : 'Đặt mật khẩu mới'}
+      title={isTemporary ? t('Đổi mật khẩu tạm') : t('Đặt mật khẩu mới')}
       description={
         isTemporary
-          ? 'Tài khoản đang dùng mật khẩu tạm do quản trị viên cấp. Hãy đặt mật khẩu mới để tiếp tục.'
-          : 'Mật khẩu mới dùng cho lần đăng nhập sau.'
+          ? t('Tài khoản đang dùng mật khẩu tạm do quản trị viên cấp. Hãy đặt mật khẩu mới để tiếp tục.')
+          : t('Mật khẩu mới dùng cho lần đăng nhập sau.')
       }
       onBack={isTemporary ? undefined : () => router.back()}
       footer={isTemporary ? <LogoutButton variant="link" /> : undefined}
     >
       {isTemporary && (
         <TextField
-          label="Mật khẩu tạm"
+          label={t('Mật khẩu tạm')}
           icon={LockIcon}
           value={currentPassword}
           onChangeText={text => {
@@ -150,7 +152,7 @@ export default function ResetPasswordScreen() {
 
       <TextField
         ref={newPasswordRef}
-        label="Mật khẩu mới"
+        label={t('Mật khẩu mới')}
         icon={LockKeyIcon}
         value={newPassword}
         onChangeText={text => {
@@ -159,7 +161,7 @@ export default function ResetPasswordScreen() {
         }}
         error={fieldErrors.new}
         hasError={missingFields.new}
-        helperText={PASSWORD_RULE}
+        helperText={getPasswordRule()}
         isPassword
         autoComplete="new-password"
         textContentType="newPassword"
@@ -169,7 +171,7 @@ export default function ResetPasswordScreen() {
 
       <TextField
         ref={confirmPasswordRef}
-        label="Nhập lại mật khẩu"
+        label={t('Nhập lại mật khẩu')}
         icon={LockKeyIcon}
         value={confirmPassword}
         onChangeText={text => {
@@ -188,7 +190,7 @@ export default function ResetPasswordScreen() {
       <FormMessage message={formError} />
 
       <Button
-        label="Đổi mật khẩu"
+        label={t('Đổi mật khẩu')}
         onPress={handleSubmit}
         loading={resetPassword.isPending || changePassword.isPending}
       />

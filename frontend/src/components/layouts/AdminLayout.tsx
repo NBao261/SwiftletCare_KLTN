@@ -1,16 +1,15 @@
 import AppShell from '@/components/layouts/AppShell'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import {
-  IconAlert, IconAnalytics, IconBell, IconDashboard,
+  IconAnalytics, IconBell, IconDashboard,
   IconDevice, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
 /**
  * Khung ứng dụng cho Admin. "Tổng quan hệ thống" đặt ngay đầu sidebar vì là
  * trang nhà sau đăng nhập (SYSTEM-FR-003, gộp luôn OPS-NFR-004 — trạng thái
- * node), không lặp lại ở nhóm "Hệ thống". Cố ý không có Thu hoạch: backend vẫn
- * cho Admin gọi /harvests, nhưng theo lựa chọn sản phẩm sidebar Admin đi theo
- * hướng kỹ thuật, giống Technician.
+ * node), không lặp lại ở nhóm "Hệ thống". Admin không thấy farm nào (Report 3
+ * §2.4): không có Cảnh báo, Thu hoạch hay Trang trại.
  */
 const menuSections: MenuSection[] = [
   {
@@ -20,7 +19,6 @@ const menuSections: MenuSection[] = [
       // OPS-NFR-004 — bảng chỉ xem toàn hệ thống; không trỏ /devices (màn kích hoạt/điều khiển của Technician,
       // SRS RACI: Admin chỉ "I (audit)" với thiết bị)
       { label: 'Thiết bị & Cảm biến', path: '/system/devices', icon: IconDevice },
-      { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
     ],
   },
   {
