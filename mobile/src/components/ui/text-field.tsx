@@ -1,5 +1,14 @@
 import { useState, type Ref } from 'react'
-import { Pressable, StyleSheet, TextInput, View, type TextInputInstance, type TextInputProps } from 'react-native'
+import {
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+  type StyleProp,
+  type TextInputInstance,
+  type TextInputProps,
+  type ViewStyle,
+} from 'react-native'
 import { EyeIcon, EyeSlashIcon, type Icon } from 'phosphor-react-native'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
@@ -19,10 +28,12 @@ interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   helperText?: string
   // Ô mật khẩu: ẩn chữ, có nút mắt để hiện
   isPassword?: boolean
+  // Tùy biến kiểu dáng khung ngoài
+  style?: StyleProp<ViewStyle>
   ref?: Ref<TextInputInstance>
 }
 
-// Ô nhập nền xám bo tròn hết cỡ, icon bên trái; không viền, chỉ viền khi đang nhập (xanh) hoặc lỗi (cam)
+// Ô nhập nền xám bo tròn hết cỡ (hoặc Radius.lg khi multiline), icon bên trái; không viền, chỉ viền khi đang nhập hoặc lỗi
 export function TextField({
   label,
   icon: LeadingIcon,
@@ -31,6 +42,7 @@ export function TextField({
   helperText,
   isPassword = false,
   placeholder,
+  style,
   ref,
   onFocus,
   onBlur,
@@ -42,9 +54,17 @@ export function TextField({
   const isInvalid = Boolean(error) || Boolean(hasError)
   const borderColor = isInvalid ? palette.alert : isFocused ? palette.text : 'transparent'
 
+  const isMultiline = Boolean(props.multiline)
+
   return (
-    <View style={styles.field}>
-      <View style={[styles.box, { backgroundColor: palette.surface, borderColor }]}>
+    <View style={[styles.field, style]}>
+      <View
+        style={[
+          styles.box,
+          { backgroundColor: palette.surface, borderColor },
+          isMultiline && styles.boxMultiline,
+        ]}
+      >
         {LeadingIcon && <LeadingIcon size={20} color={palette.textSecondary} />}
         <TextInput
           ref={ref}
@@ -54,7 +74,11 @@ export function TextField({
           secureTextEntry={isPassword && !isPasswordVisible}
           autoCapitalize="none"
           autoCorrect={false}
-          style={[styles.input, { color: palette.text }]}
+          style={[
+            styles.input,
+            { color: palette.text },
+            isMultiline && styles.inputMultiline,
+          ]}
           onFocus={event => {
             setFocused(true)
             onFocus?.(event)
@@ -104,7 +128,19 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.lg,
   },
+  boxMultiline: {
+    height: undefined,
+    minHeight: 88,
+    borderRadius: Radius.lg,
+    alignItems: 'flex-start',
+    paddingVertical: Spacing.sm,
+  },
   input: { ...Typography.body, flex: 1, height: '100%', paddingVertical: 0 },
+  inputMultiline: {
+    height: undefined,
+    minHeight: 72,
+    textAlignVertical: 'top',
+  },
   // Thụt vào thẳng mép chữ trong ô bo tròn
   note: { paddingHorizontal: Spacing.lg },
 })
