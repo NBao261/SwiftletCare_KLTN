@@ -17,7 +17,7 @@ export default function LivestreamScreen() {
       <AppHeader
         title="Camera nhà yến"
         onBack={() => router.back()}
-        backgroundColor={Colors.raw.darkCharcoal}
+        backgroundColor={Colors.raw.ink}
         foregroundColor={Colors.raw.pureWhite}
       />
       <View style={styles.video}>
@@ -35,6 +35,6 @@ export default function LivestreamScreen() {
 
 // Khung video luôn nền tối, không đổi theo giao diện sáng/tối
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.raw.darkCharcoal },
+  screen: { flex: 1, backgroundColor: Colors.raw.ink },
   video:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
 })

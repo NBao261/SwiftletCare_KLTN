@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { body, param } from 'express-validator'
 import * as farmController from '@/controllers/farms.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'

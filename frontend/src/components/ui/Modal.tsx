@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/Button'
 import { t, tr } from '@/i18n'
 import { cn } from '@/lib/cn'
@@ -56,7 +57,8 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
   }, [open])
 
   if (!open) return null
-  return (
+  // Portal ra body: <main> của AppShell là stacking context z-10 nên modal vẽ bên trong sẽ nằm dưới header z-20
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/30 p-4 backdrop-blur-sm animate-fade-in">
       <div
         ref={panelRef}
@@ -82,7 +84,8 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

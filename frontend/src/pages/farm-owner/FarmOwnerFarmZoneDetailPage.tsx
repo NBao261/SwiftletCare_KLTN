@@ -139,7 +139,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
             {isFarmOwner && (
               <Button size="sm" className="h-9 text-xs" onClick={() => goTo('/dashboard')}>
                 <CubeIcon size={14} />
-                {t('zone.plc')}
+                {t('zone.controller')}
                 <ArrowRightIcon size={12} weight="bold" />
               </Button>
             )}

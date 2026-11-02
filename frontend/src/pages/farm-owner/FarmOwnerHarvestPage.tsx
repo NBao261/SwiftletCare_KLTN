@@ -13,6 +13,7 @@ import NestTypeBreakdownCard from '@/components/features/farm-owner/harvest/Nest
 import { environmentSummary, groupHarvests } from '@/components/features/farm-owner/harvest/harvestMetrics';
 import { harvestDict, type HarvestTranslate } from '@/constants/harvest.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeleteHarvest, useHarvests } from '@/hooks/farm-owner/useHarvests';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
@@ -82,6 +83,8 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   const detailFarmIds = useMemo(() => (farmId ? [farmId] : scope.farms.map(farm => farm._id)), [farmId, scope.farms]);
   const farmDetails = useFarmDetails(detailFarmIds);
   const user = useAuthStore(state => state.user);
+  // HARVEST-FR: Farm Owner ghi, Domain Expert chỉ đọc (Report 3 §2.4)
+  const canWrite = usePermission('FARM_OWNER');
   const deleteHarvest = useDeleteHarvest();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
@@ -192,9 +195,9 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
             houses={scope.houseId ? [] : scope.houses}
             creatorName={creatorName}
             onOpenDetail={group => setDetailGroupKey(group.key)}
-            onEdit={group => setEditGroupKey(group.key)}
-            onDelete={group => setDeleteGroupKey(group.key)}
-            onCreate={() => setIsCreateOpen(true)}
+            onEdit={canWrite ? group => setEditGroupKey(group.key) : undefined}
+            onDelete={canWrite ? group => setDeleteGroupKey(group.key) : undefined}
+            onCreate={canWrite ? () => setIsCreateOpen(true) : undefined}
             createBlockedReason={createBlockedReason}
             onExport={() => exportCsv(allBatches, houseNameByZone, personNames, t)}
           />
@@ -215,11 +218,11 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
           houseName={houseNameByZone.get(detailGroup.zone_id) ?? NO_VALUE}
           creatorName={creatorName(detailGroup)}
           onClose={() => setDetailGroupKey(null)}
-          onEdit={group => {
+          onEdit={canWrite ? group => {
             setDetailGroupKey(null);
             setEditGroupKey(group.key);
-          }}
-          onDelete={group => setDeleteGroupKey(group.key)}
+          } : undefined}
+          onDelete={canWrite ? group => setDeleteGroupKey(group.key) : undefined}
         />
       )}
 
