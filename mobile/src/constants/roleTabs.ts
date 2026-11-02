@@ -2,9 +2,11 @@ import type { Href } from 'expo-router'
 import {
   BellIcon,
   ChartLineIcon,
-  UserCircleIcon,
   HouseIcon,
-  SquaresFourIcon,
+  ShieldCheckIcon,
+  SlidersHorizontalIcon,
+  TrayIcon,
+  UserCircleIcon,
   WarehouseIcon,
   type Icon,
 } from 'phosphor-react-native'
@@ -34,10 +36,11 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
-  // menu-1..2 tạm — đổi tên và gán route thật khi làm màn chuyên gia; Tài khoản dùng chung màn với Farm Owner
+  // Tab nghiệp vụ Chuyên gia (Domain Expert) — Thẩm định là tab trung tâm nổi bật (isFeatured: true)
   DOMAIN_EXPERT: [
-    { name: 'menu-1', title: 'Menu 1', icon: SquaresFourIcon },
-    { name: 'menu-2', title: 'Menu 2', icon: SquaresFourIcon },
+    { name: 'queue', title: 'Hàng đợi', icon: TrayIcon },
+    { name: 'verdicts', title: 'Thẩm định', icon: ShieldCheckIcon, showsAlertBadge: true, isFeatured: true },
+    { name: 'tuning', title: 'Tham số', icon: SlidersHorizontalIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
 }

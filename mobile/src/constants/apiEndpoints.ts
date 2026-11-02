@@ -49,6 +49,37 @@ export const ENDPOINTS = {
   NOTIFICATIONS: '/notifications',
   NOTIFICATION_READ: (notificationId: string) => `/notifications/${notificationId}/read`,
 
-  // Báo cáo sức khoẻ (EXPERT-FR-005/006)
+  // Báo cáo sức khoẻ (EXPERT-FR-005/006/013)
+  HEALTH_REPORTS: '/health-reports',
+  HEALTH_REPORT_PREVIEW: '/health-reports/preview',
   HEALTH_REPORT_DETAIL: (reportId: string) => `/health-reports/${reportId}`,
+  HEALTH_REPORT_CONCLUSION: (reportId: string) => `/health-reports/${reportId}/conclusion`,
+  HEALTH_REPORT_PDF: (reportId: string) => `/health-reports/${reportId}/pdf`,
+  HEALTH_REPORT_DAILY_CSV: '/health-reports/daily-csv',
+
+  // Nghiệp vụ Chuyên gia (Domain Expert: EXPERT-FR-*)
+  ALERT_VERDICT: (alertId: string) => `/alerts/${alertId}/verdict`,
+  ALERT_VERDICT_STATS: '/alerts/verdict-stats',
+  ALERT_EVIDENCE: (alertId: string) => `/alerts/${alertId}/evidence`,
+
+  // Tinh chỉnh cấu hình Zone & House (EXPERT-FR-004, EXPERT-FR-008, ENV-FR-006)
+  ZONE_DETAIL: (zoneId: string) => `/farms/zones/${zoneId}`,
+  ZONE_FUZZY_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning`,
+  ZONE_DETECTION_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/detection-tuning`,
+  ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
+  HOUSE_BIRD_COUNT_TUNING: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning`,
+  HOUSE_DAILY_RATING: (houseId: string) => `/farms/houses/${houseId}/daily-rating`,
+
+  // Gợi ý mờ & Phân tích chuyên gia (ANALYTICS-FR-*)
+  ANALYTICS_CONTROL_SUGGESTION: '/analytics/control/suggestion',
+  ANALYTICS_CONTROL_PERFORMANCE: '/analytics/control/performance',
+  ANALYTICS_AUTONOMY: '/analytics/autonomy',
+  ANALYTICS_FORECAST: '/analytics/forecast',
+
+  // Kiểm duyệt & Đề xuất (EXPERT-FR-009/010/011)
+  EXPERT_REVIEW_ITEMS: '/expert/review-items',
+  EXPERT_REVIEW_ITEM_ACTION: (itemId: string) => `/expert/review-items/${itemId}`,
+  EXPERT_PROPOSALS: '/expert/proposals',
+  EXPERT_PROPOSAL_ACTION: (proposalId: string) => `/expert/proposals/${proposalId}`,
+  EXPERT_ACTIVITY: (farmId: string) => `/farms/${farmId}/expert-activity`,
 } as const
