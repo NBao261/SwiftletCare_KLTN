@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 
 import { Button, Input, Modal, Toggle } from '@/components/ui';
 import { analyticsDict } from '@/constants/analytics.i18n';
@@ -7,8 +7,9 @@ import { DEFAULT_FUZZY_TUNING } from '@/constants/thresholds';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useTuningSuggestion } from '@/hooks/farm-owner/useAnalytics';
-import { useUpdateFuzzyTuning } from '@/hooks/shared/useFarms';
-import { useSubmitCoefficientProposal } from '@/hooks/domain-expert/useExpertReviews';
+import { useAllZones, useFarms, useUpdateFuzzyTuning } from '@/hooks/shared/useFarms';
+import { useApplySuggestion, useSubmitCoefficientProposal } from '@/hooks/domain-expert/useExpertReviews';
+import { useZoneStore } from '@/stores/zoneStore';
 import { useToastStore } from '@/stores/toastStore';
 import { parseThresholdInput } from '@/validations/common/threshold.validation';
 import { FUZZY_TUNING_LIMITS, validateFuzzyTuning } from '@/validations/common/fuzzyTuning.validation';
@@ -48,10 +49,25 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
   const updateTuning = useUpdateFuzzyTuning(zoneId);
   const suggestion = useTuningSuggestion(zoneId);
   const submitProposal = useSubmitCoefficientProposal();
+  const applySuggestion = useApplySuggestion();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   const [form, setForm] = useState<TuningForm>(() => toForm(current));
   const [errors, setErrors] = useState<Partial<Record<FuzzyNumericKey, string>>>({});
+
+  // Tra cứu farm để xác định có chuyên gia hay không (BR-22)
+  const { data: allZones } = useAllZones();
+  const { data: farms } = useFarms();
+  const selectedFarmId = useZoneStore(state => state.selectedFarmId || state.scopeFarmId);
+  const farmId = useMemo(() => {
+    return allZones?.find(item => item._id === zoneId)?.farmId || selectedFarmId;
+  }, [allZones, zoneId, selectedFarmId]);
+  const farm = useMemo(() => {
+    return farms?.find(item => item._id === farmId);
+  }, [farms, farmId]);
+  const hasExpert = Boolean(
+    farm?.members?.some(member => member.role === 'DOMAIN_EXPERT'),
+  );
 
   // Gửi gợi ý hiện tại cho Chuyên gia miền phê duyệt (EXPERT-FR-011, Report 3 §6.11)
   async function handleSubmitProposal(): Promise<void> {
@@ -61,6 +77,17 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
       onClose();
     } catch (error) {
       push(apiErrorMessage(error, 'Không thể gửi đề xuất cho chuyên gia'), 'error');
+    }
+  }
+
+  // Áp dụng gợi ý trực tiếp vào Zone khi Farm chưa có chuyên gia (BR-22)
+  async function handleApplySuggestion(): Promise<void> {
+    try {
+      await applySuggestion.mutateAsync(zoneId);
+      push('Đã áp dụng gợi ý hệ số cho khu vực thành công.');
+      onClose();
+    } catch (error) {
+      push(apiErrorMessage(error, 'Không thể áp dụng gợi ý hệ số'), 'error');
     }
   }
 
@@ -130,6 +157,38 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
 
   const suggestionData = suggestion.data;
 
+  // Nút hành động gợi ý: gửi chuyên gia nếu farm có chuyên gia, hoặc áp trực tiếp nếu chưa có (BR-22)
+  let suggestionActionButton: JSX.Element | null = null;
+  if (suggestionData?.suggestion) {
+    if (hasExpert) {
+      suggestionActionButton = (
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          loading={submitProposal.isPending}
+          onClick={() => void handleSubmitProposal()}
+          title="Gửi gợi ý tối ưu này cho Chuyên gia miền phê duyệt theo EXPERT-FR-011"
+        >
+          Gửi chuyên gia duyệt
+        </Button>
+      );
+    } else {
+      suggestionActionButton = (
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          loading={applySuggestion.isPending}
+          onClick={() => void handleApplySuggestion()}
+          title="Áp dụng gợi ý trực tiếp vào khu vực (Farm chưa có chuyên gia theo BR-22)"
+        >
+          Áp dụng gợi ý
+        </Button>
+      );
+    }
+  }
+
   return (
     <Modal open onClose={onClose} title={t('fuzzy.title', { zone: zoneName })} size="lg">
       <form onSubmit={handleSave} className="flex flex-col gap-4">
@@ -141,18 +200,7 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
               <Button type="button" size="sm" variant="secondary" loading={suggestion.isFetching} onClick={() => void handleSuggest()}>
                 {t('fuzzy.suggest')}
               </Button>
-              {suggestionData?.suggestion && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="primary"
-                  loading={submitProposal.isPending}
-                  onClick={() => void handleSubmitProposal()}
-                  title="Gửi gợi ý tối ưu này cho Chuyên gia miền phê duyệt theo EXPERT-FR-011"
-                >
-                  Gửi chuyên gia duyệt
-                </Button>
-              )}
+              {suggestionActionButton}
             </div>
           </div>
           {suggestion.isError && <p className="text-small text-alertRed">{apiErrorMessage(suggestion.error, t('fuzzy.suggestFailed'))}</p>}

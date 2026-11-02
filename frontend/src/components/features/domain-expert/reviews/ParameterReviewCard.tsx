@@ -1,9 +1,3 @@
-/**
- * ParameterReviewCard.tsx — Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner (G-04)
- * SRS: EXPERT-FR-010, Report 3 §6.10
- * Design: Chuẩn Ops Console FE_Design_Claude.md §1.1 & §2.1
- */
-
 import { useState } from 'react';
 import {
   SlidersHorizontal,
@@ -16,9 +10,10 @@ import {
   Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { formatDateTime } from '@/lib/i18n';
 import type { ParameterReview, ParameterReviewStatus } from '@/types/expert/reviews.types';
 
-interface Props {
+interface ParameterReviewCardProps {
   review: ParameterReview;
   onAccept: (id: string) => Promise<void>;
   onRevert: (id: string) => Promise<void>;
@@ -31,9 +26,9 @@ const STATUS_CONFIG: Record<
 > = {
   PENDING_REVIEW: {
     label: 'Chờ duyệt',
-    bg: 'bg-amber-50',
-    text: 'text-amber-800',
-    border: 'border-amber-200',
+    bg: 'bg-orange-50',
+    text: 'text-orange-700',
+    border: 'border-orange-200',
   },
   ACCEPTED: {
     label: 'Đã chấp thuận',
@@ -44,14 +39,14 @@ const STATUS_CONFIG: Record<
   REVERTED: {
     label: 'Đã hoàn nguyên',
     bg: 'bg-red-50',
-    text: 'text-red-700',
+    text: 'text-alertRed',
     border: 'border-red-200',
   },
   ADJUSTED: {
     label: 'Chuyên gia đã chỉnh',
-    bg: 'bg-blue-50',
-    text: 'text-blue-700',
-    border: 'border-blue-200',
+    bg: 'bg-stone',
+    text: 'text-graphite',
+    border: 'border-warmGray/25',
   },
 };
 
@@ -70,26 +65,34 @@ const FIELD_LABELS: Record<string, string> = {
   fuzzy_input_filter: 'Lọc nhiễu cảm biến đầu vào',
 };
 
-function formatParamValue(_key: string, val: unknown): string {
-  if (val === undefined || val === null) return '—';
-  if (typeof val === 'boolean') return val ? 'Bật' : 'Tắt';
-  return String(val);
+// Lấy danh sách các trường có thay đổi giữa old_values và new_values
+export function getChangedParameterKeys(
+  oldValues: Record<string, unknown> | undefined,
+  newValues: Record<string, unknown> | undefined,
+): string[] {
+  return Object.keys(newValues || {}).filter(
+    key => JSON.stringify(oldValues?.[key]) !== JSON.stringify(newValues?.[key]),
+  );
 }
 
+// Định dạng giá trị hiển thị của tham số
+export function formatParamValue(value: unknown, _key?: string): string {
+  if (value === undefined || value === null) return '—';
+  if (typeof value === 'boolean') return value ? 'Bật' : 'Tắt';
+  return String(value);
+}
+
+// Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner (EXPERT-FR-010)
 export default function ParameterReviewCard({
   review,
   onAccept,
   onRevert,
   isProcessing = false,
-}: Props) {
+}: ParameterReviewCardProps): JSX.Element {
   const [showConfirmRevert, setShowConfirmRevert] = useState(false);
-  const statusCfg = STATUS_CONFIG[review.status] || STATUS_CONFIG.PENDING_REVIEW;
+  const statusConfig = STATUS_CONFIG[review.status] || STATUS_CONFIG.PENDING_REVIEW;
   const isPending = review.status === 'PENDING_REVIEW';
-
-  // Lấy danh sách các trường có sự thay đổi giữa old_values và new_values
-  const changedKeys = Object.keys(review.new_values || {}).filter(
-    (key) => JSON.stringify(review.old_values?.[key]) !== JSON.stringify(review.new_values?.[key])
-  );
+  const changedKeys = getChangedParameterKeys(review.old_values, review.new_values);
 
   const authorName =
     typeof review.changed_by === 'object' && review.changed_by?.full_name
@@ -103,7 +106,7 @@ export default function ParameterReviewCard({
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-warmGray/10 flex items-center justify-center text-charcoal">
             {review.group === 'thresholds' ? (
-              <Thermometer className="w-4 h-4 text-emerald-600" />
+              <Thermometer className="w-4 h-4 text-accent-700" />
             ) : (
               <SlidersHorizontal className="w-4 h-4 text-accent-700" />
             )}
@@ -122,16 +125,16 @@ export default function ParameterReviewCard({
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {new Date(review.updated_at || review.created_at).toLocaleString('vi-VN')}
+                {formatDateTime(review.updated_at || review.created_at)}
               </span>
             </div>
           </div>
         </div>
 
         <span
-          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}
+          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
         >
-          {statusCfg.label}
+          {statusConfig.label}
         </span>
       </div>
 
@@ -141,24 +144,24 @@ export default function ParameterReviewCard({
           Chi tiết tham số thay đổi ({changedKeys.length} chỉ số):
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {changedKeys.map((key) => {
-            const oldVal = review.old_values?.[key];
-            const newVal = review.new_values?.[key];
+          {changedKeys.map(key => {
+            const oldValue = review.old_values?.[key];
+            const newValue = review.new_values?.[key];
             return (
               <div
                 key={key}
-                className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-warmGray/15 text-xs shadow-2xs"
+                className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-warmGray/15 text-xs shadow-sm"
               >
                 <span className="text-charcoal font-medium truncate max-w-[140px]">
                   {FIELD_LABELS[key] || key}
                 </span>
                 <div className="flex items-center gap-1.5 font-mono shrink-0">
                   <span className="text-warmGray line-through">
-                    {formatParamValue(key, oldVal)}
+                    {formatParamValue(oldValue, key)}
                   </span>
                   <ArrowRight className="w-3 h-3 text-warmGray/50" />
                   <span className="text-accent-900 font-bold bg-accent-50 px-1.5 py-0.5 rounded border border-accent-600/30">
-                    {formatParamValue(key, newVal)}
+                    {formatParamValue(newValue, key)}
                   </span>
                 </div>
               </div>
@@ -167,14 +170,14 @@ export default function ParameterReviewCard({
         </div>
       </div>
 
-      {/* Confirmation Box for Revert */}
+      {/* Hộp xác nhận hoàn nguyên */}
       {showConfirmRevert && (
-        <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-800 space-y-2 animate-in fade-in duration-150">
-          <p className="font-semibold flex items-center gap-1.5">
-            <Info className="w-4 h-4 text-red-600" />
+        <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-alertRed space-y-2 transition-all duration-150">
+          <p className="font-semibold flex items-center gap-1.5 text-alertRed">
+            <Info className="w-4 h-4 text-alertRed" />
             Xác nhận hoàn nguyên về giá trị an toàn ban đầu?
           </p>
-          <p className="text-[11px] text-red-700">
+          <p className="text-[11px] text-graphite">
             Hệ thống sẽ gửi lệnh cập nhật giá trị cũ xuống bộ điều khiển tại nhà yến và đóng mục duyệt này với trạng thái HOÀN NGUYÊN (REVERTED).
           </p>
           <div className="flex items-center justify-end gap-2 pt-1">
@@ -189,8 +192,8 @@ export default function ParameterReviewCard({
             </Button>
             <Button
               type="button"
+              variant="danger"
               size="sm"
-              className="bg-red-600 hover:bg-red-700 text-white font-medium"
               loading={isProcessing}
               onClick={async () => {
                 await onRevert(review._id);
@@ -203,14 +206,14 @@ export default function ParameterReviewCard({
         </div>
       )}
 
-      {/* Actions (Only when PENDING_REVIEW and not confirming revert) */}
+      {/* Nút hành động cho mục chờ duyệt */}
       {isPending && !showConfirmRevert && (
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
           <Button
             type="button"
             variant="secondary"
             size="sm"
-            className="text-warmGray hover:text-alertRed hover:bg-alertRed/10 gap-1.5 font-medium"
+            className="text-warmGray hover:text-alertRed hover:bg-red-50 gap-1.5 font-medium"
             onClick={() => setShowConfirmRevert(true)}
             disabled={isProcessing}
           >
@@ -219,12 +222,13 @@ export default function ParameterReviewCard({
           </Button>
           <Button
             type="button"
+            variant="primary"
             size="sm"
-            className="bg-charcoal hover:bg-black text-[#B5D32C] font-semibold gap-1.5 shadow-sm"
             loading={isProcessing}
             onClick={() => onAccept(review._id)}
+            className="gap-1.5"
           >
-            <CheckCircle className="w-3.5 h-3.5 text-[#B5D32C]" />
+            <CheckCircle className="w-3.5 h-3.5 text-limeMist" />
             Chấp thuận thay đổi
           </Button>
         </div>
