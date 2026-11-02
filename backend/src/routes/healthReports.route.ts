@@ -4,6 +4,7 @@ import * as healthReportController from '@/controllers/healthReports.controller'
 import * as healthDayController from '@/controllers/healthDays.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { HOUSE_REPORT_KINDS } from '@/models/houseHealthReport.model'
 import { REASON_LANGS } from '@/utils/healthReason.util'
 
 const router = Router()
@@ -31,7 +32,17 @@ router.post('/days/:dayId/rating', dayId,
 router.post('/days/:dayId/skip', dayId, validate, healthDayController.skip)
 router.patch('/days/:dayId/rating/note', dayId, body('note').isString().trim().isLength({ min: 1, max: 1000 }), validate, healthDayController.addNote)
 
-router.get('/', query('zoneId').isMongoId(), validate, healthReportController.list)
+// EXPERT-FR-005 — báo cáo theo nhà (houseId | farmId); zoneId là kiểu cũ (báo cáo tuần theo Zone), giữ cho màn hiện có
+router.get('/',
+  query('zoneId').optional().isMongoId(), query('houseId').optional().isMongoId(), query('farmId').optional().isMongoId(),
+  query('kind').optional().isIn(HOUSE_REPORT_KINDS),
+  query('from').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
+  query('to').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
+  validate, healthReportController.list)
+router.post('/',
+  body('houseId').isMongoId(),
+  body('from').isDate({ format: 'YYYY-MM-DD', strictMode: true }), body('to').isDate({ format: 'YYYY-MM-DD', strictMode: true }),
+  validate, healthReportController.createCustom)
 // Đặt trước '/:id' để "preview" không bị hiểu là một id
 router.get('/preview',
   query('zoneId').isMongoId(), query('from').isISO8601(), query('to').optional().isISO8601(), validate, healthReportController.preview)

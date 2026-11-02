@@ -117,6 +117,16 @@ async function findDays(user: CurrentUser, params: { houseId?: string; farmId?: 
 }
 
 /**
+ * EXPERT-FR-005, BR-31 — các ngày của 1 nhà trong [from, to] dựng cho người gọi (che y như /days), cho báo
+ * cáo theo nhà. Quyền trên nhà đã kiểm ở nơi gọi.
+ */
+export async function presentHouseDays(user: CurrentUser, house: { _id: unknown; name: string }, from: string, to: string, now = new Date()) {
+  const days = await HouseHealthDay.find({ house_id: house._id, date: { $gte: from, $lte: to } }).sort({ date: 1 }).lean<LeanDay[]>()
+  const names = await userNames(days)
+  return days.map(d => present(d, house.name, user, names, now))
+}
+
+/**
  * GET /health-reports/days — ANALYTICS-FR-012, EXPERT-FR-012. `myRatingState` lọc theo trạng thái chấm của
  * chính người gọi (vd PENDING: các ngày còn phải chấm), suy ra lúc đọc nên lọc sau khi dựng.
  */

@@ -789,6 +789,62 @@ ensureCollection("househealthdays", {
 db.getCollection("househealthdays").createIndex({"house_id":1,"date":1}, {"unique":true})
 db.getCollection("househealthdays").createIndex({"farm_id":1,"date":1})
 
+// ── househealthreports (model HouseHealthReport) ──
+ensureCollection("househealthreports", {
+  "bsonType": "object",
+  "properties": {
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "kind": {
+      "bsonType": "string",
+      "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]
+    },
+    "period_start": {
+      "bsonType": "string"
+    },
+    "period_end": {
+      "bsonType": "string"
+    },
+    "generated_at": {
+      "bsonType": "date"
+    },
+    "house_metrics": {},
+    "zone_sections": {
+      "bsonType": ["array", "null"],
+      "items": {}
+    },
+    "expert_conclusion": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "text": {
+          "bsonType": "string"
+        },
+        "by": {
+          "bsonType": "objectId"
+        },
+        "at": {
+          "bsonType": "date"
+        },
+        "edited_at": {
+          "bsonType": ["date", "null"]
+        }
+      },
+      "required": ["text", "by", "at"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["house_id", "farm_id", "kind", "period_start", "period_end", "generated_at", "house_metrics"]
+})
+db.getCollection("househealthreports").createIndex({"house_id":1,"kind":1,"period_start":1,"period_end":1}, {"unique":true})
+db.getCollection("househealthreports").createIndex({"house_id":1,"period_end":-1})
+db.getCollection("househealthreports").createIndex({"farm_id":1,"period_end":-1})
+
 // ── houses (model House) ──
 ensureCollection("houses", {
   "bsonType": "object",

@@ -16,6 +16,7 @@ import { SensorNode, CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { HarvestBatch } from '@/models/harvestBatch.model'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
+import { HouseHealthReport } from '@/models/houseHealthReport.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Invitation } from '@/models/invitation.model'
 import { Notification } from '@/models/notification.model'
@@ -33,7 +34,7 @@ type AnyModel = Model<any>
 
 export const ALL_MODELS: AnyModel[] = [
   Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode, CoefficientProposal,
-  Farm, HarvestBatch, House, HouseHealthDay, Zone, Invitation, Notification, ParameterReview,
+  Farm, HarvestBatch, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, Notification, ParameterReview,
   ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, ZoneHealthReport,
 ]
 
