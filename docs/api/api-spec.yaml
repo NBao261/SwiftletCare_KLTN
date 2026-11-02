@@ -3761,9 +3761,10 @@ paths:
       description: |
         Báo cáo theo nhà yến, mỗi Zone một mục (G-11 phần b). Job tạo theo lịch BR-33: `DAILY` ngay sau
         đánh giá ngày (sau kiểm tra tỷ lệ chim về 19:15), `WEEKLY` thứ Hai 06:00 (7 ngày trước đó),
-        `MONTHLY` ngày 1 lúc 06:00 (tháng trước), giờ VN; `CUSTOM` do người dùng tạo (`POST`). Mỗi báo cáo
-        tạo xong báo trong ứng dụng cho Farm Owner và Domain Expert của farm (thông báo kind `health_report`,
-        không kèm trạng thái ngày). Mới nhất trước. Danh sách chỉ có phần tóm tắt (không có `zone_sections`,
+        `MONTHLY` ngày 1 lúc 06:00 (tháng trước), giờ VN; `CUSTOM` do người dùng tạo (`POST`). Báo cáo tuần,
+        tháng tạo xong báo trong ứng dụng cho Farm Owner và Domain Expert của farm (thông báo kind `health_report`,
+        không kèm trạng thái ngày); báo cáo ngày không có thông báo riêng vì thông báo "ngày đã sẵn sàng" của
+        đánh giá ngày đi cùng lúc; báo cáo theo yêu cầu không báo. Mới nhất trước. Danh sách chỉ có phần tóm tắt (không có `zone_sections`,
         `days`).
 
         **Kiểu cũ, vẫn chạy (`deprecated`):** gọi với `zoneId` (không có `houseId`/`farmId`) trả báo cáo tuần
