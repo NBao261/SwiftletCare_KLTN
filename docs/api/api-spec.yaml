@@ -1544,6 +1544,10 @@ paths:
     get:
       tags: [Farms]
       summary: "Mức chỉ số sức khỏe của nhà yến (ANALYTICS-FR-012, BR-28) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        `can_edit` cho biết người gọi có sửa được mức không, theo đúng điều kiện của `PUT` (BR-22): Domain
+        Expert luôn được; Farm Owner chỉ khi farm không có chuyên gia còn hoạt động. Client dùng trường này
+        thay vì tự đoán từ danh sách thành viên.
       parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
       responses:
         "200":
@@ -4866,6 +4870,7 @@ components:
         house_id: { type: string }
         health_levels: { $ref: "#/components/schemas/HealthLevels" }
         defaults: { $ref: "#/components/schemas/HealthLevels" }
+        can_edit: { type: boolean, description: "Người gọi sửa được mức không: Domain Expert luôn true; Farm Owner true khi farm không có chuyên gia còn hoạt động (BR-22) — đúng điều kiện của PUT" }
 
     HealthReason:
       type: object
