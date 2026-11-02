@@ -56,7 +56,7 @@ export function useControlRelay() {
 export function useClearRelayOverride() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (nodeId: string) => deviceApi.clearRelayOverride(nodeId),
+    mutationFn: ({ nodeId, relayName }: { nodeId: string; relayName?: RelayName }) => deviceApi.clearRelayOverride(nodeId, relayName),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
   })
 }

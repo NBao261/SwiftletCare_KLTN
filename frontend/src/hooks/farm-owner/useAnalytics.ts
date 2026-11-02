@@ -5,6 +5,7 @@ import { deviceApi } from '@/apis/shared/devices.api'
 import { mergeBirdCountRecords } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import { mergeBirdCountBuckets, sumTodayBirdCounts } from '@/components/features/farm-owner/analytics/analyticsMetrics'
 import type { AnalyticsRange, EnvCompareZone } from '@/apis/farm-owner/analytics.api'
+import type { RelayOverrideLog } from '@/types'
 
 /** ANALYTICS-FR-010 — gợi ý hệ số mờ; chỉ chạy khi người dùng bấm (mô phỏng 120 bộ hệ số, không cần tự động) */
 export function useTuningSuggestion(zoneId: string) {
@@ -54,7 +55,16 @@ export function useZoneRelayOverrides(nodeIds: string[], limit: number) {
     combine: results => {
       const logs = results.flatMap(result => result.data ?? [])
       logs.sort((first, second) => second.started_at.localeCompare(first.started_at))
+      // G-06 — relay đang can thiệp tay của từng thiết bị: log chưa có ended_at (huỷ từng relay)
+      const openRelays = new Map<string, Set<RelayOverrideLog['relay']>>()
+      for (const log of logs) {
+        if (log.ended_at) continue
+        const relays = openRelays.get(log.node_id) ?? new Set()
+        relays.add(log.relay)
+        openRelays.set(log.node_id, relays)
+      }
       return {
+        openRelays,
         isLoading: results.some(result => result.isLoading),
         isError: results.some(result => result.isError),
         refetch: () => results.forEach(result => void result.refetch()),

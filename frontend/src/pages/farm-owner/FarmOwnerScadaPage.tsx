@@ -131,6 +131,7 @@ export default function FarmOwnerScadaPage(): JSX.Element {
                     controlOutput={live.get(node.zone_id)?.controlOutput}
                     durationMinutes={durationMinutes}
                     durationText={durationLabel(durationMinutes)}
+                    overriddenRelays={history.openRelays.get(node._id)}
                   />
                 ))}
               </div>
