@@ -366,7 +366,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - tính lại khi có dữ liệu trễ hoặc kết luận mới trong 7 ngày.
 - [x] Chấm điểm (BR-31, chặn ở **API**, không chỉ ở màn hình): với Farm Owner/Domain Expert chưa chấm hoặc chưa bỏ qua ngày đó trong 7 ngày, mọi endpoint (ngày, báo cáo ngày/tuần/tháng, CSV) trả ngày **không có** status, reasons, rating của người khác; thông báo "ngày đã sẵn sàng" không kèm status; `POST …/rating` lưu rating + `evaluation_snapshot` trong một lần ghi atomic rồi mới trả status; `POST …/skip` mở status, không tính vào NFR-14; không cho đổi rating sau khi đã xem, chỉ thêm ghi chú; trạng thái chấm theo **từng người** (PENDING → RATED / SKIPPED / EXPIRED, Report 3 §6.18), quá 7 ngày người chưa chấm thành `EXPIRED`; ngày không có trạng thái chấm riêng. Test TC-F22-01..03 thử xem trước qua mọi endpoint. *(31/10: ngày, danh sách, CSV, độ khớp đều che; báo cáo ngày/tuần/tháng che khi làm phần báo cáo bên dưới)*
 - [x] CSV chỉ số theo ngày. *(31/10: `GET /health-reports/days.csv`, mỗi dòng 1 nhà × 1 ngày, không có id nội bộ, che theo BR-31)*
-- [ ] Báo cáo theo House ngày/tuần/tháng (`househealthreports`, unique `house_id + kind + period_start + period_end`), migrate báo cáo tuần theo Zone cũ. *(Kiệt, phần b — PR riêng vì đổi `/health-reports` mà màn của Tuấn và Len đang dùng)*
+- [x] Báo cáo theo House ngày/tuần/tháng (`househealthreports`, unique `house_id + kind + period_start + period_end`), migrate báo cáo tuần theo Zone cũ. *(Kiệt, phần b, 03/11, `49e1360` spec (Nhi duyệt) + `cc3b04a` + `9e6a40d` backend, trên #126: ngày sau đánh giá ngày, tuần thứ Hai 06:00, tháng ngày 1 06:00, theo yêu cầu `POST /health-reports` tối đa 31 ngày; `GET /health-reports/{id}` có `days` che theo BR-31, `status_counts`, `hidden_days`; báo cáo ngày không có thông báo riêng. Báo cáo tuần theo Zone cũ, `?zoneId`, `/preview` giữ `deprecated` cho màn của Tuấn và Len — **chuyển dữ liệu cũ sang theo nhà khi màn báo cáo mới thay màn cũ**)*
 - [ ] PDF bằng `jspdf` ở web. *(Nhi)*
 - [x] `ANALYTICS-FR-014`: đồng thuận + CI 95 %, kappa có trọng số tuyến tính, Gwet's AC1, ma trận nhầm lẫn, ngày `INSUFFICIENT_DATA` tách riêng. *(31/10: `GET /health-reports/evaluation`, kèm tỷ lệ báo động giả theo từng nguồn)*
 - [x] Sửa theo góp ý của Nhi trên PR #126 *(Kiệt, 02/11, `395cb17` spec + `5baed97` backend)*:
@@ -377,7 +377,8 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [x] **Kiệt:** `can_edit` trong `HouseHealthLevels` của `GET /farms/houses/{houseId}/health-levels`, tính bằng `assertExpertDecision` như `PUT` — web đang đoán theo `members[].role` nên không biết chuyên gia bị khoá (sau `02ec43d`); tới khi có, web chuyển sang chỉ xem khi `PUT` trả 403. *(Nhi đề xuất 03/11; Kiệt 03/11, `ac44918` spec + `2edb284` backend — web dùng `can_edit` thay phần đoán)*
 - [ ] Mobile: trạng thái ngày, màn đánh giá, báo cáo (G-16 bước 7, 9). *(Nhi)*
 - [x] Test phần a: TC-F20-01..03, TC-F21-02, TC-F22-01..03, TC-ST 6.17 và 6.18. *(31/10: `healthAssessment.test.ts`, `healthDays.test.ts`, `weather.test.ts`, `agreement.util.test.ts`; backend 629/629)*
-- [ ] Test còn lại: TC-ST 6.9 sinh báo cáo theo nhà (phần b), TC-F21-03 (thủ công, sau khi có màn web).
+- [x] Test TC-ST 6.9 (sinh báo cáo theo nhà) và TC-F21-01 (xem báo cáo). *(03/11, `houseHealthReport.test.ts`, backend 660/660)*
+- [ ] Test TC-F21-03 (PDF, thủ công, sau khi có màn báo cáo web). *(Nhi)*
 
 ### G-12 — Đếm chim (P1) — Bảo (AI, backend), Tuấn (trình vẽ vòng đếm), Len, Tuấn, Nhi (gán nhãn, đếm clip)
 

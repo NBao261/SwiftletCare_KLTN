@@ -165,7 +165,7 @@ TC=[
 ('TC-F20-03','F-20','Seeded day with an incomplete evening session; another day without valid noise samples','Run the assessment','—','`INSUFFICIENT_DATA` for the first; the second assessed with "noise not assessed"',[(J,I+'healthAssessment.test.ts','thiếu phiên chiều → INSUFFICIENT_DATA'),(J,I+'healthAssessment.test.ts','không có mẫu độ ồn → vẫn đánh giá')]),
 # F-21
 ('TC-F21-01','F-21','Reports of a farm; user of another farm','List and open reports as owner, expert and outsider','—','Owner and expert read them; outsider 403',
- (J,I+'healthReport.test.ts','Farm Owner và Domain Expert xem danh sách, chi tiết')),
+ (J,I+'houseHealthReport.test.ts','Farm Owner và Domain Expert xem danh sách và chi tiết')),
 ('TC-F21-02','F-21','Seeded month','GET the CSV of daily indicators','—','One row per house and day with every indicator, level, status and ratings; no internal IDs',(J,I+'healthDays.test.ts','1 dòng mỗi nhà × ngày')),
 ('TC-F21-03','F-21','A daily report in the web app','Download the PDF and compare with the screen','—','Same figures; no internal IDs',(M,'web, staging')),
 # F-22
@@ -227,9 +227,9 @@ ST=[
 ('6.18 Assessor rating','PENDING → EXPIRED','7 days pass; the Farm Owner rated, the expert did not','Expert\'s rating EXPIRED and the status shown to the expert; the Farm Owner\'s rating kept',(J,I+'healthDays.test.ts','EXPIRED theo từng người')),
 ('6.18 Assessor rating','RATED → RATED','Rated assessor adds a note','Note stored; rating unchanged',(J,I+'healthDays.test.ts','số đếm về trễ đổi current_status, snapshot giữ nguyên')),
 ('6.18 Assessor rating','RATED/SKIPPED/EXPIRED → (rejected)','Rate again after rating, skipping or expiry','409; nothing changed',[(J,I+'healthDays.test.ts','số đếm về trễ đổi current_status, snapshot giữ nguyên'),(J,I+'healthDays.test.ts','SKIPPED: hiện trạng thái, không có điểm'),(J,I+'healthDays.test.ts','ngày cũ 8 ngày → 409')]),
-('6.9 Health report','(new) → GENERATED','Daily, weekly or monthly report job','One report per house and period, with a section per zone (the current per-zone weekly test does not count)',(T,'backend jest `healthReport.test.ts` (G-11)')),
-('6.9 Health report','GENERATED → CONCLUDED','Expert writes a conclusion','Conclusion stored; Farm Owners notified',(J,I+'healthReport.test.ts','chỉ Domain Expert viết; Farm Owner được báo')),
-('6.9 Health report','CONCLUDED → CONCLUDED','Author edits; another expert edits','Author\'s edit stored with time; the other expert gets 403',(J,I+'healthReport.test.ts','chỉ Domain Expert viết; Farm Owner được báo')),
+('6.9 Health report','(new) → GENERATED','Daily, weekly or monthly report job','One report per house and period, with a section per zone (the current per-zone weekly test does not count)',[(J,I+'houseHealthReport.test.ts','báo cáo ngày: 1 bản mỗi nhà'),(J,I+'houseHealthReport.test.ts','tuần: thứ Hai tới Chủ nhật tuần trước')]),
+('6.9 Health report','GENERATED → CONCLUDED','Expert writes a conclusion','Conclusion stored; Farm Owners notified',(J,I+'houseHealthReport.test.ts','GENERATED → CONCLUDED')),
+('6.9 Health report','CONCLUDED → CONCLUDED','Author edits; another expert edits','Author\'s edit stored with time; the other expert gets 403',(J,I+'houseHealthReport.test.ts','GENERATED → CONCLUDED')),
 ]
 NFR=[
 ('NFR-01','Script publishes 200 telemetry messages over MQTT on staging with the send time; a Socket.io client records receive times','P95 ≤ 2 s',(M,'script `scripts/nfr01-latency` to write; staging')),
