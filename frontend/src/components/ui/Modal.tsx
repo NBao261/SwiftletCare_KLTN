@@ -19,11 +19,13 @@ interface ModalProps {
   size?: 'md' | 'lg' | 'xl'
   /** Ghi đè class của khung (VD `max-w-sm` cho popup xác nhận ngắn) — thắng `size` nhờ tailwind-merge */
   className?: string
+  /** Nhấn ra vùng tối ngoài khung thì đóng — chỉ bật cho popup không có form dễ mất dữ liệu */
+  closeOnBackdrop?: boolean
 }
 
 const SIZE_CLASS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-3xl' } as const
 
-export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', className }: ModalProps) {
+export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', className, closeOnBackdrop = false }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   // Nơi gọi hay truyền onClose inline (hàm mới mỗi render). Để onClose trong deps
   // thì mỗi phím gõ vào input → parent render lại → effect chạy lại → focus() giật
@@ -59,7 +61,11 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
   if (!open) return null
   // Portal ra body: <main> của AppShell là stacking context z-10 nên modal vẽ bên trong sẽ nằm dưới header z-20
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/30 p-4 backdrop-blur-sm animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/30 p-4 backdrop-blur-sm animate-fade-in"
+      // mousedown (không phải click): kéo bôi chữ từ trong khung rồi thả ra ngoài không đóng nhầm
+      onMouseDown={closeOnBackdrop ? e => { if (e.target === e.currentTarget) onClose() } : undefined}
+    >
       <div
         ref={panelRef}
         tabIndex={-1}
