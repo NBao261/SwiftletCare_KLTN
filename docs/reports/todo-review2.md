@@ -244,7 +244,7 @@ Một PR cho backend, web, mobile, firmware:
   - `audit_logs` thêm `farm_id`, `actor_role`;
   - `GET /expert-activity?farmId=` đọc từ audit log.
 - [x] ALERT-FR-014: endpoint gói bằng chứng của cảnh báo suy luận (thiếu dữ liệu thì báo "missing", không phải 0). *(Kiệt, 30/10: `GET /alerts/{id}/evidence`, kèm kết luận trước cùng loại cùng nơi theo EXPERT-FR-003)*
-- [ ] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động.
+- [x] Web: hiện `DISMISSED`, ai bác bỏ và lý do; màn bằng chứng; lịch sử hoạt động. *(Tuấn, 02/11: hiển thị trạng thái DISMISSED, previous_status, ai bác bỏ và lý do; kết nối GET /alerts/{id}/evidence với chỉ báo missing và 10 kết luận tiền lệ; màn lịch sử hoạt động GET /expert-activity; lint + tsc + vitest 195/195 + build xanh)*
 - [x] Sửa theo review PR #117 *(Kiệt, 01/11)*:
   - `EARLIER_VERDICTS_LIMIT` (10 kết luận trước) ghi vào Report 3 §4.5 và Report 4 §5.5 *(`c14a8c7`)*;
   - BR-22 chỉ tính chuyên gia còn hoạt động: chuyên gia bị khoá thì Farm Owner làm thay và nhận thông báo chờ kiểm chứng *(`688a604`)*;
