@@ -121,7 +121,7 @@ export default function ExpertQueueEmptyState({ onViewHistory }: ExpertQueueEmpt
         </h2>
         <p className="text-xs sm:text-[13px] leading-relaxed text-warmGray">
           Tất cả cảnh báo suy luận AI trong phạm vi giám sát hiện tại đã được thẩm định và xử lý xong.
-          Hệ thống Fuzzy Logic đang vận hành ổn định trong ngưỡng an toàn.
+          Bạn có thể kiểm tra các tác vụ định kỳ hoặc xem lịch sử hoạt động.
         </p>
 
         {/* Nút hành động xem lịch sử dạng pill thanh lịch */}

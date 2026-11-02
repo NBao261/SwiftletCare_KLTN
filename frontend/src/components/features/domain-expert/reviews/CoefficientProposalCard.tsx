@@ -1,3 +1,7 @@
+// CoefficientProposalCard.tsx — Thẻ hiển thị đề xuất hệ số mờ Fuzzy của Farm Owner gửi lên (EXPERT-FR-011)
+// SRS: EXPERT-FR-011; Report 3 §6.11
+// Design: Chuẩn Ops Console FE_Design_Claude.md §13.7
+
 import { useState } from 'react';
 import {
   Sparkles,
@@ -9,9 +13,11 @@ import {
   Sliders,
   User,
   AlertTriangle,
+  MapPin,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { formatDateTime } from '@/lib/i18n';
+import { useAllZones } from '@/hooks/shared/useFarms';
 import ProposalRejectModal from './ProposalRejectModal';
 import type {
   CoefficientProposal,
@@ -20,8 +26,8 @@ import type {
 
 interface CoefficientProposalCardProps {
   proposal: CoefficientProposal;
-  onApprove: (id: string) => Promise<void>;
-  onReject: (id: string, note: string) => Promise<void>;
+  onApprove: (proposalId: string) => Promise<void>;
+  onReject: (proposalId: string, note: string) => Promise<void>;
   isProcessing?: boolean;
 }
 
@@ -96,6 +102,9 @@ export default function CoefficientProposalCard({
   const statusConfig = STATUS_CONFIG[proposal.status] || STATUS_CONFIG.PROPOSED;
   const isPending = proposal.status === 'PROPOSED';
 
+  const { data: allZones } = useAllZones();
+  const zoneInfo = allZones?.find(zone => zone._id === proposal.zone_id);
+
   const authorName =
     typeof proposal.submitted_by === 'object' && proposal.submitted_by?.full_name
       ? proposal.submitted_by.full_name
@@ -124,11 +133,17 @@ export default function CoefficientProposalCard({
           </span>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-warmGray">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs text-warmGray">
+          <div className="flex items-center gap-1 font-semibold text-charcoal">
+            <MapPin className="w-3.5 h-3.5 text-accent-700" />
+            <span>{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : proposal.zone_id}</span>
+          </div>
+          <span>•</span>
           <div className="flex items-center gap-1">
             <User className="w-3.5 h-3.5" />
             <span>{authorName}</span>
           </div>
+          <span>•</span>
           <div className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
             <span>{formatDateTime(proposal.created_at)}</span>
@@ -138,25 +153,20 @@ export default function CoefficientProposalCard({
 
       {/* 2. Body: So sánh các hệ số mờ giữa Hiện tại vs Đề xuất */}
       <div className="flex flex-col gap-2">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-warmGray flex items-center gap-1.5">
-          <Sliders className="w-3.5 h-3.5 text-warmGray/70" />
-          <span>Thông số hệ số mờ đề xuất</span>
-        </h4>
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-charcoal">
+          <Sliders className="w-3.5 h-3.5 text-accent-700" />
+          <span>Thông số hệ số đề xuất tối ưu:</span>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {suggestedKeys.map(key => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {suggestedKeys.map((key) => {
             const currentVal = proposal.current_values?.[key];
             const suggestedVal = proposal.suggested_values?.[key];
-            const isChanged = JSON.stringify(currentVal) !== JSON.stringify(suggestedVal);
 
             return (
               <div
                 key={key}
-                className={`p-3 rounded-xl border flex flex-col gap-1.5 ${
-                  isChanged
-                    ? 'border-accent-600/30 bg-accent-50/40'
-                    : 'border-warmGray/10 bg-warmGray/5'
-                }`}
+                className="flex flex-col justify-between p-2.5 rounded-xl border border-warmGray/15 bg-warmGray/5 text-xs gap-1.5"
               >
                 <span className="text-xs font-medium text-charcoal">
                   {FUZZY_LABELS[key] || key}
@@ -273,12 +283,13 @@ export default function CoefficientProposalCard({
         </div>
       )}
 
-      {/* Modal từ chối với lý do bắt buộc */}
+      {/* Modal từ chối với lý do bắt buộc (Đóng sau khi hoàn thành) */}
       <ProposalRejectModal
         isOpen={showRejectModal}
         onClose={() => setShowRejectModal(false)}
         onConfirm={async (note) => {
           await onReject(proposal._id, note);
+          setShowRejectModal(false);
         }}
         isSubmitting={isProcessing}
       />

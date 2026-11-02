@@ -1,3 +1,6 @@
+// ProposalRejectModal.tsx — Modal từ chối đề xuất hệ số mờ với lý do bắt buộc (EXPERT-FR-011)
+// Design: Chuẩn NoteActionModal FE_Design §13.7
+
 import NoteActionModal from '@/components/ui/NoteActionModal';
 
 interface Props {
@@ -7,13 +10,17 @@ interface Props {
   isSubmitting?: boolean;
 }
 
-// Modal từ chối đề xuất hệ số mờ với lý do bắt buộc (EXPERT-FR-011) dùng NoteActionModal chuẩn FE_Design §13.7
 export default function ProposalRejectModal({
   isOpen,
   onClose,
   onConfirm,
   isSubmitting = false,
 }: Props): JSX.Element {
+  const handleSubmit = async (note: string) => {
+    await onConfirm(note);
+    onClose();
+  };
+
   return (
     <NoteActionModal
       open={isOpen}
@@ -28,7 +35,7 @@ export default function ProposalRejectModal({
       emptyMessage="Bắt buộc phải ghi rõ lý do chuyên môn khi từ chối đề xuất."
       danger
       loading={isSubmitting}
-      onSubmit={(note) => void onConfirm(note)}
+      onSubmit={(note) => void handleSubmit(note)}
     />
   );
 }

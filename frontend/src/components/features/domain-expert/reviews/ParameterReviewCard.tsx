@@ -1,3 +1,7 @@
+// ParameterReviewCard.tsx — Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner (EXPERT-FR-010)
+// SRS: EXPERT-FR-010; Report 3 §6.10
+// Design: Chuẩn Ops Console FE_Design_Claude.md §13.5 (ConfirmModal) & §13.16a
+
 import { useState } from 'react';
 import {
   SlidersHorizontal,
@@ -7,16 +11,18 @@ import {
   Clock,
   ArrowRight,
   User,
-  Info,
+  MapPin,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatDateTime } from '@/lib/i18n';
+import { useAllZones } from '@/hooks/shared/useFarms';
 import type { ParameterReview, ParameterReviewStatus } from '@/types/expert/reviews.types';
 
 interface ParameterReviewCardProps {
   review: ParameterReview;
-  onAccept: (id: string) => Promise<void>;
-  onRevert: (id: string) => Promise<void>;
+  onAccept: (reviewId: string) => Promise<void>;
+  onRevert: (reviewId: string) => Promise<void>;
   isProcessing?: boolean;
 }
 
@@ -55,6 +61,10 @@ const FIELD_LABELS: Record<string, string> = {
   temp_max: 'Nhiệt độ tối đa (°C)',
   humidity_min: 'Độ ẩm tối thiểu (%)',
   humidity_max: 'Độ ẩm tối đa (%)',
+  light_max: 'Ánh sáng tối đa (lux)',
+  nh3_max: 'Khí NH3 tối đa (ppm)',
+  co2_max: 'Khí CO2 tối đa (ppm)',
+  // Khóa alias dự phòng
   light_lux_max: 'Ánh sáng tối đa (lux)',
   nh3_ppm_max: 'Khí NH3 tối đa (ppm)',
   co2_ppm_max: 'Khí CO2 tối đa (ppm)',
@@ -94,6 +104,9 @@ export default function ParameterReviewCard({
   const isPending = review.status === 'PENDING_REVIEW';
   const changedKeys = getChangedParameterKeys(review.old_values, review.new_values);
 
+  const { data: allZones } = useAllZones();
+  const zoneInfo = allZones?.find(zone => zone._id === review.zone_id);
+
   const authorName =
     typeof review.changed_by === 'object' && review.changed_by?.full_name
       ? review.changed_by.full_name
@@ -117,7 +130,12 @@ export default function ParameterReviewCard({
                 ? 'Thay đổi Ngưỡng vi khí hậu'
                 : 'Thay đổi Hệ số điều khiển mờ (Fuzzy)'}
             </h4>
-            <div className="flex items-center gap-2 text-[11px] text-warmGray mt-0.5">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-warmGray mt-0.5">
+              <span className="flex items-center gap-1 font-semibold text-charcoal">
+                <MapPin className="w-3 h-3 text-accent-700" />
+                {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : review.zone_id}
+              </span>
+              <span>•</span>
               <span className="flex items-center gap-1">
                 <User className="w-3 h-3" />
                 {authorName}
@@ -170,44 +188,8 @@ export default function ParameterReviewCard({
         </div>
       </div>
 
-      {/* Hộp xác nhận hoàn nguyên */}
-      {showConfirmRevert && (
-        <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-alertRed space-y-2 transition-all duration-150">
-          <p className="font-semibold flex items-center gap-1.5 text-alertRed">
-            <Info className="w-4 h-4 text-alertRed" />
-            Xác nhận hoàn nguyên về giá trị an toàn ban đầu?
-          </p>
-          <p className="text-[11px] text-graphite">
-            Hệ thống sẽ gửi lệnh cập nhật giá trị cũ xuống bộ điều khiển tại nhà yến và đóng mục duyệt này với trạng thái HOÀN NGUYÊN (REVERTED).
-          </p>
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowConfirmRevert(false)}
-              disabled={isProcessing}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              loading={isProcessing}
-              onClick={async () => {
-                await onRevert(review._id);
-                setShowConfirmRevert(false);
-              }}
-            >
-              Xác nhận Hoàn nguyên
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Nút hành động cho mục chờ duyệt */}
-      {isPending && !showConfirmRevert && (
+      {isPending && (
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
           <Button
             type="button"
@@ -233,6 +215,21 @@ export default function ParameterReviewCard({
           </Button>
         </div>
       )}
+
+      {/* Modal xác nhận hoàn nguyên chuẩn ConfirmModal (FE_Design_Claude §13.5 & §13.16a) */}
+      <ConfirmModal
+        open={showConfirmRevert}
+        title="Xác nhận hoàn nguyên giá trị cũ"
+        description="Hệ thống sẽ gửi lệnh cập nhật giá trị an toàn ban đầu xuống thiết bị và chuyển trạng thái mục duyệt sang Đã hoàn nguyên."
+        confirmLabel="Hoàn nguyên"
+        danger
+        loading={isProcessing}
+        onCancel={() => setShowConfirmRevert(false)}
+        onConfirm={async () => {
+          await onRevert(review._id);
+          setShowConfirmRevert(false);
+        }}
+      />
     </div>
   );
 }
