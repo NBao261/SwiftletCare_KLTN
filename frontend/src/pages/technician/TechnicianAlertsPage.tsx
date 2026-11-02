@@ -6,6 +6,7 @@ import { useAllZones } from "@/hooks/shared/useFarms";
 import { NO_VALUE } from "@/constants/display";
 import { Card, Button } from "@/components/ui";
 import AlertBadge from "@/components/features/technician/alerts/AlertBadge";
+import AlertDetailsLine from "@/components/common/AlertDetailsLine";
 import EmptyState from "@/components/ui/EmptyState";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import Pagination from "@/components/ui/Pagination";
@@ -132,6 +133,7 @@ export default function TechnicianAlertsPage() {
               </span>
             </div>
             <p className="text-sm text-warmGray">{alert.message}</p>
+            <AlertDetailsLine alert={alert} />
             <div className="flex items-center justify-between pt-1">
               <span
                 className={cn(
