@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { t, tr } from '@/i18n'
@@ -5,7 +6,8 @@ import { t, tr } from '@/i18n'
 interface ConfirmModalProps {
   open: boolean
   title: string
-  description?: string
+  /** Chữ (tự dịch qua tr) hoặc nội dung đã dịch sẵn có định dạng (VD cụm in đậm) — truyền nguyên */
+  description?: ReactNode
   confirmLabel?: string
   danger?: boolean
   loading?: boolean
@@ -19,7 +21,7 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Modal open={open} onClose={onCancel} title={title}>
-      {description && <p className="mb-6 text-sm text-warmGray">{tr(description)}</p>}
+      {description && <p className="mb-6 text-sm text-warmGray">{typeof description === 'string' ? tr(description) : description}</p>}
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onCancel} disabled={loading}>
           {t('Hủy')}
