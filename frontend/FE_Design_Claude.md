@@ -998,7 +998,7 @@ Farm Owner (luồng chính — UI MẪU)
 ├── Đích (Report 3): đọc kết luận + lịch sử quyết định của chuyên gia · gửi đề xuất hệ số cho chuyên gia
 ├── Thiết lập thiết bị (MF-10, mobile là chính; web là đích): quét nhãn, quét mã tầng, tiến trình setup, in mã tầng
 ├── Dùng chung với Domain Expert (Domain Expert chỉ đọc, ẩn nút ghi bằng usePermission):
-│              /dashboard · /analytics · /vision · /stream/:id · /harvests (xem) · báo cáo sức khỏe Zone (đích)
+│              /dashboard · /analytics · /vision (live stream) · /harvests (xem) · báo cáo sức khỏe Zone (đích)
 ├── Dùng chung với Technician (trang thuộc technician/, mở bằng OPS_ROLES):
 │              /devices (relay, lịch loa — chỉ Farm Owner) · /alerts (xác nhận — chỉ Farm Owner) · /farms (cấu trúc)
 └── Chung mọi role: /settings · chuông thông báo · đổi ngôn ngữ
@@ -1029,7 +1029,7 @@ Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile
 |---|---|---|---|---|
 | 1 | Domain Expert | Role `DOMAIN_EXPERT` có màn từ PR #91 nhưng nằm ở `expert/`, `ExpertLayout` (13.14); `/expert/analytics` lặp lại phân tích của Farm Owner; `SALES_STAFF` đã gỡ (PR #106) | Luồng chính | **Đã chốt 27/10/2026:** màn vận hành dùng chung (dòng 2); khu `/expert/*` chỉ giữ việc quyết định của chuyên gia: trang chủ là hàng đợi việc (cảnh báo chờ kết luận, mục duyệt, đề xuất hệ số, báo cáo chờ kết luận), kết luận cảnh báo, tham số phát hiện + vòng đếm + lịch đếm, ngưỡng/hệ số, báo cáo + kết luận, lịch sử hoạt động. Bỏ `/expert/analytics` (dùng `/analytics` chỉ đọc). Các màn quyết định này mở cho Farm Owner khi farm chưa có chuyên gia (BR-22, backend quyết). Dời về bucket `domain-expert/`, `DomainExpertLayout` theo 12.10 |
 | 2 | `/dashboard`, `/analytics`, `/vision`, `/devices`, `/harvests` | `FARM_OWNER_ONLY` / `OPS_ROLES` / `HARVEST_ROLES` | Farm Owner + Domain Expert (chỉ đọc) | Đổi sang `FARM_SIDE_ROLES`; trang giữ nguyên của Farm Owner, nút ghi đã ẩn theo role (PR #101) — kiểm lại từng nút, không tạo bản sao cho chuyên gia |
-| 3 | `/stream/:id` | `OPS_ROLES` (có Technician, Admin), trỏ tới stub `FarmOwnerLiveStreamPage` (ghi RPi) | Chỉ Farm Owner + Domain Expert | **Đã chốt 27/10/2026:** xoá route và trang stub; xem live ở `/vision` (`LiveCameraCard`/`useWhepStream`, token 60 giây) |
+| 3 | `/stream/:id` | `OPS_ROLES` (có Technician, Admin), trỏ tới stub `FarmOwnerLiveStreamPage` (ghi RPi) | Chỉ Farm Owner + Domain Expert | **Đã chốt 27/10/2026:** xoá route và trang stub; xem live ở `/vision` (`LiveCameraCard`/`useWhepStream`, token 60 giây). ✅ Đã xoá 01/11/2026 (G-15) |
 | 4 | `/harvests` | `HARVEST_ROLES` (Farm Owner + Admin) | Farm Owner R, Domain Expert I, Admin – | Bỏ Admin, thêm Domain Expert chỉ xem |
 | 5 | `/ota` | `OPS_ROLES` (Farm Owner vào được) | Chỉ Technician (`/maintenance` đã gỡ ở PR #106) | Tạo nhóm quyền riêng cho Technician |
 | 5b | `/onboarding` | Màn nhập tay Device ID + khoá của Technician | Farm Owner + Technician, quét nhãn QR và mã QR tầng (MF-10, FARM-FR-003…012) | Thêm quét QR (`html5-qrcode`) và tiến trình setup; mobile là nơi làm chính |
@@ -1072,7 +1072,7 @@ frontend/src/
 │   │                          + icons.tsx · useFloatingMenu.ts · index.ts (barrel duy nhất)
 │   ├── common/                CÓ biết domain và dùng ở >= 2 nơi. Cố ý giữ nhỏ.
 │   │                          NotificationPopover · Toast · ScopeFilter · StatusDot
-│   │                          LogoutConfirmModal · ProfilePopover · SeverityBadge · TableEmptyState
+│   │                          ProfilePopover · SeverityBadge · TableEmptyState
 │   ├── features/              Component riêng của từng tính năng
 │   │   ├── admin/             users/ · system/ · devices/ · audit-log/ · dashboard/
 │   │   ├── farm-owner/        dashboard/ · analytics/ · farms/ · harvest/ · vision/ · devices/
@@ -1132,7 +1132,7 @@ frontend/src/
 │
 ├── stores/                    Zustand: authStore · alertStore · toastStore
 │                              zoneStore · breadcrumbStore · languageStore · pinnedHouseStore
-│                              logoutConfirmStore · readAlertStore
+│                              readAlertStore
 │
 ├── lib/                       axios · queryClient · socket · cn
 │                              helpers · navigation · chartTheme · i18n (Hệ 2, mục 6)
@@ -1552,7 +1552,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `TableEmptyState` | Trạng thái rỗng chuẩn của bảng (truyền vào `FixedRowsTable emptyContent`) | 1.1 |
 | `StatusDot` | Chấm + chữ trạng thái thiết bị | 2.5 |
 | `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/farm-owner/useScopeFilter`) | — |
-| `NotificationPopover` · `ProfilePopover` · `LogoutConfirmModal` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
+| `NotificationPopover` · `ProfilePopover` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
 
 **Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, đóng băng 4.1) · `components/auth/RequireRole.tsx` (chặn route).
 
@@ -1580,7 +1580,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Hook hạ tầng | `hooks/common/` | `useTranslation` (Hệ 2: `t` `num` `day` `time` `date` `hourMinute` `dateTime` `ago`) · `usePermission` · `useSocket` · `usePaginatedListQuery` · `useBreadcrumb` (`usePageBreadcrumb`, `usePageBack`) · `useNavigationLabel` · `useScrollToTop` · `useCanScrollDown` · `useSyncedState` |
 | Hook dữ liệu ≥ 2 role | `hooks/shared/` | `useFarms` · `useAlerts` · `useAlertNotifications` · `useReadAlerts` · `useDevices` · `useAudioTracks` (nợ: chỉ Technician) |
 | API ≥ 2 role | `apis/shared/` | `farms.api` · `alerts.api` · `devices.api` · `audioTracks.api` (nợ) |
-| Store (Zustand) | `stores/` | `authStore` · `languageStore` · `zoneStore` · `alertStore` · `readAlertStore` · `toastStore` · `breadcrumbStore` · `pinnedHouseStore` · `logoutConfirmStore` |
+| Store (Zustand) | `stores/` | `authStore` · `languageStore` · `zoneStore` · `alertStore` · `readAlertStore` · `toastStore` · `breadcrumbStore` · `pinnedHouseStore` |
 | Validator | `validations/common/` · `validations/farm-owner/` | `threshold.validation` · `fuzzyTuning.validation` · `speakerSchedule.validation` · `farm.validation` (vị trí farm: vĩ độ −90…90, kinh độ −180…180) |
 
 ### D.5. Dữ liệu giả

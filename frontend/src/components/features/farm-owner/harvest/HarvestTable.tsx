@@ -47,9 +47,10 @@ interface HarvestTableProps {
   // Tên người tạo lần thu
   creatorName: (group: HarvestGroup) => string;
   onOpenDetail: (group: HarvestGroup) => void;
-  onEdit: (group: HarvestGroup) => void;
-  onDelete: (group: HarvestGroup) => void;
-  onCreate: () => void;
+  // Không truyền (Domain Expert chỉ đọc) thì ẩn nút ghi, sửa, xoá
+  onEdit?: (group: HarvestGroup) => void;
+  onDelete?: (group: HarvestGroup) => void;
+  onCreate?: () => void;
   onExport: () => void;
   // Có thì khoá nút ghi đợt thu và hiện lý do (phạm vi đang lọc chưa có Zone)
   createBlockedReason?: string;
@@ -141,8 +142,8 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
           <ActionsMenu
             items={[
               { label: t('action.detail'), onClick: () => onOpenDetail(group) },
-              { label: t('action.edit'), onClick: () => onEdit(group) },
-              { label: t('action.delete'), onClick: () => onDelete(group), danger: true },
+              ...(onEdit ? [{ label: t('action.edit'), onClick: () => onEdit(group) }] : []),
+              ...(onDelete ? [{ label: t('action.delete'), onClick: () => onDelete(group), danger: true }] : []),
             ]}
           />
         </div>
@@ -173,10 +174,12 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
             <DownloadSimpleIcon size={14} weight="bold" />
             {t('page.export')}
           </Button>
-          <Button size="sm" className="h-9 text-xs" onClick={onCreate} disabled={Boolean(createBlockedReason)} title={createBlockedReason}>
-            <PlusIcon size={14} weight="bold" />
-            {t('page.create')}
-          </Button>
+          {onCreate && (
+            <Button size="sm" className="h-9 text-xs" onClick={onCreate} disabled={Boolean(createBlockedReason)} title={createBlockedReason}>
+              <PlusIcon size={14} weight="bold" />
+              {t('page.create')}
+            </Button>
+          )}
         </div>
       </div>
 

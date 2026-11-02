@@ -1,6 +1,8 @@
 // Địa chỉ backend — route không có tiền tố, theo docs/api/api-spec.yaml
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000'
 export const WEBSOCKET_BASE_URL = process.env.EXPO_PUBLIC_WS_URL ?? 'ws://localhost:3000'
+// Gốc HLS của MediaMTX — video không đi qua backend (Report 4 D8)
+export const STREAM_BASE_URL = process.env.EXPO_PUBLIC_STREAM_URL ?? 'http://localhost:8888'
 
 // Mọi đường dẫn API của app — không viết URL cứng trong hook hay màn hình
 export const ENDPOINTS = {
@@ -24,6 +26,9 @@ export const ENDPOINTS = {
   CAMERA_NODES: '/devices/camera-nodes',
   DEVICE_REGISTER: '/devices/sensor-nodes/register',
   RELAY_CONTROL: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay`,
+  RELAY_OVERRIDE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-override`,
+  RELAY_OVERRIDES: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-overrides`,
+  CAMERA_STREAM_TOKEN: (cameraId: string) => `/devices/camera-nodes/${cameraId}/stream-token`,
 
   // Dữ liệu cảm biến (ENV-FR-*)
   TELEMETRY_LATEST: (zoneId: string) => `/telemetry/zones/${zoneId}/latest`,
@@ -37,5 +42,13 @@ export const ENDPOINTS = {
   // Phân tích (ANALYTICS-FR-*)
   BIRD_COUNT_DAILY: '/analytics/bird-count/daily',
   BIRD_COUNT_TRENDS: '/analytics/bird-count/trends',
+  BIRD_COUNT_CURRENT: '/analytics/bird-count/current',
   ENVIRONMENT_CORRELATION: '/analytics/correlation',
+
+  // Thông báo trong ứng dụng (EXPERT-FR-006/007)
+  NOTIFICATIONS: '/notifications',
+  NOTIFICATION_READ: (notificationId: string) => `/notifications/${notificationId}/read`,
+
+  // Báo cáo sức khoẻ (EXPERT-FR-005/006)
+  HEALTH_REPORT_DETAIL: (reportId: string) => `/health-reports/${reportId}`,
 } as const
