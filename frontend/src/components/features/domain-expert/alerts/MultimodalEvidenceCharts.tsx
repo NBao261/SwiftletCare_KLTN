@@ -9,7 +9,6 @@ import {
   Tooltip, ReferenceLine, Cell, ResponsiveContainer,
 } from 'recharts'
 import { AlertTriangle, Clock, History, AlertCircle, ShieldAlert, Cpu } from 'lucide-react'
-import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import type { InferredAlertItem } from '@/types/expert.types'
 import { useAlertEvidence } from '@/hooks/domain-expert/useExpertAlerts'
@@ -37,7 +36,6 @@ function EvidenceBarCard({ src, dotColor }: { src: EvidenceSource; dotColor: str
         <div className="flex items-center gap-1.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full ${dotColor} shrink-0`} />
           <span className="text-xs font-semibold text-[#27231F] whitespace-nowrap">{src.title}</span>
-          <MockDataTooltip reason="Dữ liệu chuỗi thời gian được chuẩn hóa từ telemetry cảm biến và AI đối chứng." />
         </div>
         <div className="flex items-center gap-2 text-[11px] text-[#878380] shrink-0">
           <span>{src.badge1}</span>
@@ -66,8 +64,10 @@ function EvidenceBarCard({ src, dotColor }: { src: EvidenceSource; dotColor: str
             unit={src.unit}
           />
           <Tooltip content={<ChartTooltip unit={src.unit} />} />
-          <ReferenceLine y={src.refY} stroke="#F59E0B" strokeDasharray="4 3" strokeWidth={1.5}
-            label={{ value: src.refLabel, position: 'insideTopRight', fontSize: 9, fill: '#B45309' }} />
+          {src.refY !== undefined && (
+            <ReferenceLine y={src.refY} stroke="#F59E0B" strokeDasharray="4 3" strokeWidth={1.5}
+              label={{ value: src.refLabel, position: 'insideTopRight', fontSize: 9, fill: '#B45309' }} />
+          )}
           <Bar dataKey="value" radius={[3, 3, 0, 0]}>
             {src.data.map((entry, i) => (
               <Cell key={i} fill={entry.isAnomaly ? '#D53F35' : (src.barColor ?? '#D4D0CB')} />
@@ -102,8 +102,8 @@ function MissingBadge({ label }: { label: string }) {
 export default function MultimodalEvidenceCharts({ alert }: Props) {
   const { data: evidence, isLoading } = useAlertEvidence(alert._id)
 
-  // Dữ liệu đồ thị mô phỏng / bổ trợ khi không có telemetry samples
-  const fallbackCfg = useMemo(() => buildAlertEvidence(alert), [alert])
+  // Chuyển đổi dữ liệu thực từ GET /alerts/{id}/evidence thành cấu hình biểu đồ
+  const cfg = useMemo(() => buildAlertEvidence(alert, evidence), [alert, evidence])
 
   if (isLoading) {
     return (
@@ -115,8 +115,8 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
   }
 
   const isLowReturn = alert.type === 'LOW_RETURN_RATE'
-  const telemetryMissing = evidence?.telemetry?.status === 'missing'
-  const birdCountsMissing = evidence?.bird_counts?.status === 'missing'
+  const telemetryMissing = evidence?.telemetry?.status === 'missing' || !cfg.src1
+  const birdCountsMissing = evidence?.bird_counts?.status === 'missing' || !cfg.src2
 
   return (
     <div className="space-y-4">
@@ -197,18 +197,23 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         </div>
       ) : (
         <div className="space-y-3">
+          <div className="flex items-center justify-between text-[11px] text-warmGray px-1">
+            <span className="font-semibold text-charcoal">{cfg.windowLabel}</span>
+            <span className="text-[10.5px] uppercase tracking-wider text-warmGray">ALERT-FR-014</span>
+          </div>
+
           {/* Nguồn 1: Cảm biến & Telemetry */}
-          {telemetryMissing ? (
+          {telemetryMissing || !cfg.src1 ? (
             <MissingBadge label="Nguồn 1 (Telemetry cảm biến ±30 phút): Không có mẫu ghi nhận" />
           ) : (
-            <EvidenceBarCard src={fallbackCfg.src1} dotColor="bg-[#27231F]" />
+            <EvidenceBarCard src={cfg.src1} dotColor="bg-[#27231F]" />
           )}
 
           {/* Nguồn 2: Dữ liệu đối chứng / Đếm chim */}
-          {birdCountsMissing ? (
+          {birdCountsMissing || !cfg.src2 ? (
             <MissingBadge label="Nguồn 2 (Số đếm chim 5 phút ±30 phút): Không có chuỗi đếm" />
           ) : (
-            <EvidenceBarCard src={fallbackCfg.src2} dotColor="bg-[#B5D32C]" />
+            <EvidenceBarCard src={cfg.src2} dotColor="bg-[#B5D32C]" />
           )}
 
           {/* Cảnh báo thiết bị đang mở tại khu vực */}
@@ -236,7 +241,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
           <AlertTriangle className="w-4 h-4 text-amber-500" />
         </span>
         <p className="text-xs text-amber-800 leading-relaxed">
-          <strong>Chẩn đoán nguyên nhân:</strong> {fallbackCfg.correlation}
+          <strong>Chẩn đoán nguyên nhân:</strong> {cfg.correlation}
         </p>
       </div>
 

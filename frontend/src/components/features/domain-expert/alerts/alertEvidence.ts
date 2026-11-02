@@ -1,10 +1,17 @@
 /**
  * alertEvidence.ts — Dynamic evidence config builder for MultimodalEvidenceCharts
- * SRS v2.1.4: EXPERT-FR-003
+ * SRS v2.1.4: EXPERT-FR-003, ALERT-FR-014
+ * Chuyển đổi telemetry.samples và bird_counts.buckets từ GET /alerts/{id}/evidence
+ * thành dữ liệu đồ thị thực tế (tuyệt đối không dùng số cứng giả lập)
  */
-import type { InferredAlertItem } from '@/types/expert.types'
+import type { AlertEvidence, BirdCountBucket, InferredAlertItem, TelemetrySample } from '@/types/expert.types'
+import { formatHM } from '@/lib/helpers'
 
-export interface EvidenceBarPoint { time: string; value: number; isAnomaly: boolean }
+export interface EvidenceBarPoint {
+  time: string
+  value: number
+  isAnomaly: boolean
+}
 
 export interface EvidenceSource {
   title: string
@@ -14,8 +21,8 @@ export interface EvidenceSource {
   unit: string
   domain: [number, number]
   ticks: number[]
-  refY: number
-  refLabel: string
+  refY?: number
+  refLabel?: string
   data: EvidenceBarPoint[]
   anomalyTag: string
   barColor?: string
@@ -23,135 +30,260 @@ export interface EvidenceSource {
 
 export interface AlertEvidenceConfig {
   windowLabel: string
-  src1: EvidenceSource
-  src2: EvidenceSource
+  src1: EvidenceSource | null
+  src2: EvidenceSource | null
   correlation: string
 }
 
-function getTimeSlots(createdAt: string): { slots: string[]; targetTime: string; windowLabel: string } {
-  const d = new Date(createdAt)
-  const baseTime = isNaN(d.getTime()) ? new Date() : d
-  const slots: string[] = []
-  for (let m = -30; m <= 30; m += 5) {
-    const t = new Date(baseTime.getTime() + m * 60_000)
-    slots.push(`${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`)
-  }
-  return {
-    slots,
-    targetTime: slots[6] ?? '16:00',
-    windowLabel: `Khung giờ ±30 phút (${slots[0]} – ${slots[12]})`,
+export function safeFormatHM(date: string | Date | undefined): string {
+  if (!date) return '--:--'
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return '--:--'
+    return formatHM(d)
+  } catch {
+    return '--:--'
   }
 }
 
-export function buildAlertEvidence(alert: InferredAlertItem): AlertEvidenceConfig {
-  const { slots, targetTime, windowLabel } = getTimeSlots(alert.created_at)
+export function generateTicks(min: number, max: number, count = 5): number[] {
+  if (min >= max) return [min, min + 1]
+  const step = Math.ceil((max - min) / (count - 1))
+  const ticks: number[] = []
+  for (let i = 0; i < count; i++) {
+    ticks.push(Math.round(min + i * step))
+  }
+  return Array.from(new Set(ticks))
+}
+
+export function buildTelemetryEvidenceSource(
+  alert: InferredAlertItem,
+  samples?: TelemetrySample[] | null
+): EvidenceSource | null {
+  if (!samples || samples.length === 0) return null
+
+  // 1. NOISE_ANOMALY — nguồn âm thanh
+  if (alert.type === 'NOISE_ANOMALY') {
+    const validSamples = samples.filter(s => typeof s.sound_db === 'number' && Number.isFinite(s.sound_db))
+    if (validSamples.length === 0) return null
+
+    const soundValues = validSamples.map(s => Number(s.sound_db))
+    const maxSound = Math.max(...soundValues)
+    const minSound = Math.min(...soundValues)
+    const peakSample = validSamples.find(s => Number(s.sound_db) === maxSound)
+
+    const metaSound = typeof alert.metadata?.sound_db === 'number' ? alert.metadata.sound_db : maxSound
+    const noiseMargin = typeof alert.metadata?.noise_margin === 'number' ? alert.metadata.noise_margin : 7.5
+    const refY = Math.round((metaSound - noiseMargin) * 10) / 10
+    const topDomain = Math.max(80, Math.ceil((maxSound + 10) / 10) * 10)
+    const bottomDomain = Math.max(0, Math.floor((minSound - 10) / 10) * 10)
+
+    const data: EvidenceBarPoint[] = validSamples.map(s => {
+      const val = Number(s.sound_db)
+      const isAnomaly = val >= refY || val >= maxSound - 0.1
+      return {
+        time: safeFormatHM(s.timestamp),
+        value: val,
+        isAnomaly,
+      }
+    })
+
+    const peakTime = safeFormatHM(peakSample?.timestamp ?? alert.created_at)
+
+    return {
+      title: 'Nguồn 1: Cảm biến Âm thanh (Telemetry thực tế)',
+      badge1: `Số mẫu: ${validSamples.length}`,
+      badge2: `Ngưỡng: ${refY} dB`,
+      highlight: `Đỉnh: ${maxSound} dB`,
+      unit: ' dB',
+      domain: [bottomDomain, topDomain],
+      ticks: generateTicks(bottomDomain, topDomain, 5),
+      refY,
+      refLabel: `${refY} dB`,
+      data,
+      anomalyTag: `${peakTime} — ${maxSound} dB (vượt ngưỡng ${refY} dB)`,
+    }
+  }
+
+  // 2. SENSOR_ANOMALY hoặc FORECAST_BREACH
   const m = alert.metadata ?? {}
+  const metricKey = String(m.metric || m.sensor_type || '').toLowerCase()
+  const isTemp = metricKey.includes('temp') || metricKey.includes('nhiệt')
+  const isCo2 = metricKey.includes('co2')
+  const isNh3 = metricKey.includes('nh3')
 
-  if (alert.type === 'SENSOR_ANOMALY') {
-    const metric = (m.sensor_type as string) || (m.metric as string) || 'Độ ẩm'
-    const delta = (m.delta as number) ?? 12
-    const v1 = [78, 78.5, 78, 77.8, 78.2, 78, 90, 78.5, 78.2, 78, 78.1, 78, 78.2]
-    const v2 = [78.2, 78.1, 78.3, 78.2, 78.1, 78.2, 78.2, 78.3, 78.1, 78.2, 78.2, 78.1, 78.2]
-    return {
-      windowLabel,
-      src1: {
-        title: `Nguồn 1: Cảm biến ${metric} chính`,
-        badge1: 'Chuẩn nền: 78% RH',
-        badge2: `Ngưỡng lệch: ±5%`,
-        highlight: `Đỉnh: 90% RH (+${delta}%)`,
-        unit: ' %',
-        domain: [0, 100],
-        ticks: [0, 25, 50, 75, 100],
-        refY: 83,
-        refLabel: '83% RH',
-        data: slots.map((time, i) => ({ time, value: v1[i] ?? 78, isAnomaly: i === 6 })),
-        anomalyTag: `${targetTime} — 90% RH (nhảy vọt +${delta}% trong 10s)`,
-      },
-      src2: {
-        title: 'Nguồn 2: Cảm biến đối chứng lân cận',
-        badge1: 'Phun sương: Tắt (0%)',
-        badge2: 'CB đối chứng: 78,2%',
-        unit: ' %',
-        domain: [0, 100],
-        ticks: [0, 25, 50, 75, 100],
-        refY: 78.2,
-        refLabel: '78,2% RH',
-        data: slots.map((time, i) => ({ time, value: v2[i] ?? 78.2, isAnomaly: false })),
-        anomalyTag: `${targetTime} — Node đối chứng: 78,2% RH (ổn định) • Phun sương: TẮT`,
-        barColor: '#8BAF2A',
-      },
-      correlation: `Node chính nhảy vọt (+${delta}% trong 10s) nhưng Node đối chứng cùng phòng vẫn phẳng lì (78,2%) và Phun sương đang TẮT (0%) → Khẳng định cảm biến chính bị lỗi hoặc nhiễu kết nối cục bộ.`,
+  let key: keyof TelemetrySample = 'humidity'
+  let unit = ' %'
+  let titleMetric = 'Độ ẩm'
+
+  if (isTemp) {
+    key = 'temperature'
+    unit = ' °C'
+    titleMetric = 'Nhiệt độ'
+  } else if (isCo2) {
+    key = 'co2_ppm'
+    unit = ' ppm'
+    titleMetric = 'CO2'
+  } else if (isNh3) {
+    key = 'nh3_ppm'
+    unit = ' ppm'
+    titleMetric = 'NH3'
+  }
+
+  const validSamples = samples.filter(s => typeof s[key] === 'number' && Number.isFinite(s[key] as number))
+  if (validSamples.length === 0) return null
+
+  const values = validSamples.map(s => Number(s[key]))
+  const maxVal = Math.max(...values)
+  const minVal = Math.min(...values)
+  const avgVal = values.reduce((sum, v) => sum + v, 0) / values.length
+
+  let maxDev = -1
+  let peakSample = validSamples[0]
+  for (const s of validSamples) {
+    const dev = Math.abs(Number(s[key]) - avgVal)
+    if (dev > maxDev) {
+      maxDev = dev
+      peakSample = s
     }
   }
 
-  if (alert.type === 'MISTING_INEFFECTIVE' || (alert.type as string) === 'PUMP_DRY') {
-    const v1 = [4.2, 4.1, 4.3, 4.2, 4.1, 4.2, 0.8, 0.8, 0.8, 4.2, 4.2, 4.1, 4.2]
-    const v2 = [22, 20, 18, 16, 14, 10, 3, 3, 2, 2, 2, 2, 2]
+  const peakVal = Number(peakSample?.[key] ?? maxVal)
+  const peakTime = safeFormatHM(peakSample?.timestamp ?? alert.created_at)
+
+  let domainMin = Math.max(0, Math.floor(minVal - 5))
+  let domainMax = Math.ceil(maxVal + 5)
+  if (key === 'humidity') {
+    domainMin = 0
+    domainMax = 100
+  }
+
+  const data: EvidenceBarPoint[] = validSamples.map(s => {
+    const val = Number(s[key])
+    const isAnomaly = s === peakSample || Math.abs(val - avgVal) >= Math.max(maxDev * 0.8, 1)
     return {
-      windowLabel,
-      src1: {
-        title: 'Nguồn 1: Dòng điện tải động cơ Bơm',
-        badge1: 'Định mức: 4,2 A',
-        badge2: 'Ngưỡng kẹt/hụt: < 2,5 A',
-        highlight: 'Tải thực: 0,8 A',
-        unit: ' A',
-        domain: [0, 6],
-        ticks: [0, 2, 4, 6],
-        refY: 2.5,
-        refLabel: '2,5 A',
-        data: slots.map((time, i) => ({ time, value: v1[i] ?? 4.2, isAnomaly: i === 6 })),
-        anomalyTag: `${targetTime} — 0,8 A (dòng sụt -81%, chạy không tải)`,
-      },
-      src2: {
-        title: 'Nguồn 2: Mực nước bồn cấp',
-        badge1: 'Mực nước: 3%',
-        badge2: 'Ngưỡng cạn: 15%',
-        unit: ' %',
-        domain: [0, 100],
-        ticks: [0, 25, 50, 75, 100],
-        refY: 15,
-        refLabel: 'Cạn 15%',
-        data: slots.map((time, i) => ({ time, value: v2[i] ?? 20, isAnomaly: i === 6 })),
-        anomalyTag: `${targetTime} — Mực nước bồn cạn: 3% (dưới ngưỡng 15%)`,
-        barColor: '#3B82F6',
-      },
-      correlation: 'Bơm đang bật nhưng dòng điện tiêu thụ giảm sâu (0,8 A) đồng thời mực nước bồn cạn (3%) → Bơm đang chạy khô (hụt nước), nguy cơ cháy động cơ.',
+      time: safeFormatHM(s.timestamp),
+      value: val,
+      isAnomaly,
+    }
+  })
+
+  return {
+    title: `Nguồn 1: Cảm biến ${titleMetric} (Telemetry thực tế)`,
+    badge1: `Số mẫu: ${validSamples.length}`,
+    badge2: `Khoảng: ${minVal} – ${maxVal}${unit}`,
+    highlight: `Lệch đỉnh: ${peakVal}${unit}`,
+    unit,
+    domain: [domainMin, domainMax],
+    ticks: generateTicks(domainMin, domainMax, 5),
+    refY: Math.round(avgVal * 10) / 10,
+    refLabel: `TB: ${(Math.round(avgVal * 10) / 10)}${unit}`,
+    data,
+    anomalyTag: `${peakTime} — ${peakVal}${unit} (lệch ${maxDev.toFixed(1)}${unit} so với TB)`,
+  }
+}
+
+export function buildBirdCountEvidenceSource(
+  alert: InferredAlertItem,
+  buckets?: BirdCountBucket[] | null
+): EvidenceSource | null {
+  if (!buckets || buckets.length === 0) return null
+
+  const validBuckets = buckets.filter(b => typeof b.entry_count === 'number' && Number.isFinite(b.entry_count))
+  if (validBuckets.length === 0) return null
+
+  const totalEntry = validBuckets.reduce((sum, b) => sum + (b.entry_count || 0), 0)
+  const totalExit = validBuckets.reduce((sum, b) => sum + (b.exit_count || 0), 0)
+  const entryValues = validBuckets.map(b => b.entry_count)
+  const maxEntry = Math.max(...entryValues, 5)
+  const avgEntry = totalEntry / validBuckets.length
+
+  const alertTime = new Date(alert.created_at).getTime()
+  let closestBucket = validBuckets[0]
+  let minDiff = Infinity
+  for (const b of validBuckets) {
+    const diff = Math.abs(new Date(b.bucket_start).getTime() - alertTime)
+    if (diff < minDiff) {
+      minDiff = diff
+      closestBucket = b
     }
   }
 
-  // Mặc định hoặc NOISE_ANOMALY
-  const soundDb = (m.sound_db as number) ?? 74.5
-  const soundThresh = soundDb - ((m.noise_margin as number) ?? 7.5)
-  const v1 = [52, 54, 51, 53, 55, 53, soundDb, 56, 54, 52, 51, 53, 52]
-  const v2 = [118, 122, 120, 115, 119, 121, 72, 110, 116, 118, 120, 119, 121]
+  const domainMax = Math.max(10, Math.ceil(maxEntry * 1.25))
+
+  const data: EvidenceBarPoint[] = validBuckets.map(b => ({
+    time: safeFormatHM(b.bucket_start),
+    value: b.entry_count,
+    isAnomaly: b === closestBucket && b.entry_count < avgEntry,
+  }))
+
+  const closestTime = safeFormatHM(closestBucket.bucket_start)
+
+  return {
+    title: 'Nguồn 2: Camera AI chim Ra/Vào (Buckets 5 phút)',
+    badge1: `Chim vào: ${totalEntry} con`,
+    badge2: `Chim ra: ${totalExit} con`,
+    highlight: `Tại mốc: ${closestBucket.entry_count} vào`,
+    unit: ' con',
+    domain: [0, domainMax],
+    ticks: generateTicks(0, domainMax, 5),
+    refY: Math.round(avgEntry),
+    refLabel: `TB: ${Math.round(avgEntry)}`,
+    data,
+    anomalyTag: `${closestTime} — ${closestBucket.entry_count} vào / ${closestBucket.exit_count} ra`,
+    barColor: '#8BAF2A',
+  }
+}
+
+export function buildAlertEvidence(
+  alert: InferredAlertItem,
+  evidence?: AlertEvidence | null
+): AlertEvidenceConfig {
+  let windowLabel = ''
+  if (evidence?.window?.from && evidence?.window?.to) {
+    windowLabel = `Khung giờ ±30 phút (${safeFormatHM(evidence.window.from)} – ${safeFormatHM(evidence.window.to)})`
+  } else {
+    const d = new Date(alert.created_at)
+    const baseTime = isNaN(d.getTime()) ? new Date() : d
+    const from = new Date(baseTime.getTime() - 30 * 60_000)
+    const to = new Date(baseTime.getTime() + 30 * 60_000)
+    windowLabel = `Khung giờ ±30 phút (${safeFormatHM(from)} – ${safeFormatHM(to)})`
+  }
+
+  const src1 = buildTelemetryEvidenceSource(alert, evidence?.telemetry?.samples)
+  const src2 = buildBirdCountEvidenceSource(alert, evidence?.bird_counts?.buckets)
+
+  let correlation = ''
+  if (alert.type === 'NOISE_ANOMALY') {
+    if (src1 && src2) {
+      correlation = `Cảm biến âm thanh ghi nhận ${src1.highlight} tại thời điểm cảnh báo; chuỗi đếm chim ghi nhận tổng ${src2.badge1} và ${src2.badge2} trong cửa sổ ±30 phút → Dữ liệu thực tế đối chiếu giữa âm thanh và phản ứng đàn chim.`
+    } else if (src1) {
+      correlation = `Cảm biến âm thanh ghi nhận ${src1.badge1} với ${src1.highlight}. Camera AI không có dữ liệu chuỗi đếm chim trong khung giờ này (trạng thái missing).`
+    } else if (src2) {
+      correlation = `Thiếu dữ liệu telemetry âm thanh (trạng thái missing). Chuỗi đếm chim ghi nhận ${src2.badge1}, ${src2.badge2}.`
+    } else {
+      correlation = `Không có dữ liệu đo đạc telemetry và đếm chim trong khung giờ ±30 phút (trạng thái missing). ${alert.message}`
+    }
+  } else if (alert.type === 'SENSOR_ANOMALY') {
+    if (src1) {
+      correlation = `Chuỗi đo telemetry ghi nhận ${src1.badge1} quanh mốc cảnh báo (${src1.badge2}). ${src1.anomalyTag}.`
+    } else {
+      correlation = `Không có mẫu đo telemetry trong khung giờ ±30 phút để đối chiếu cảm biến (trạng thái missing). ${alert.message}`
+    }
+  } else if (alert.type === 'FORECAST_BREACH') {
+    if (src1) {
+      correlation = `Dữ liệu đo đạc thực tế gồm ${src1.badge1} trong cửa sổ ±30 phút quanh thời điểm phát cảnh báo dự báo vi phạm ngưỡng.`
+    } else {
+      correlation = `Không có dữ liệu đo đạc thực tế trong khung giờ ±30 phút quanh cảnh báo dự báo (trạng thái missing).`
+    }
+  } else {
+    correlation = alert.message || 'Hệ thống trình bày dữ liệu đối chiếu quanh thời điểm phát sinh sự cố để chuyên gia thẩm định.'
+  }
+
   return {
     windowLabel,
-    src1: {
-      title: 'Nguồn 1: Cảm biến Âm thanh',
-      badge1: 'Nền P90: 52 dB',
-      badge2: `Ngưỡng: ${soundThresh} dB`,
-      highlight: `Đỉnh: ${soundDb} dB`,
-      unit: ' dB',
-      domain: [0, 80],
-      ticks: [0, 20, 40, 60, 80],
-      refY: soundThresh,
-      refLabel: `${soundThresh} dB`,
-      data: slots.map((time, i) => ({ time, value: v1[i] ?? 52, isAnomaly: i === 6 })),
-      anomalyTag: `${targetTime} — ${soundDb} dB (+${(soundDb - 52).toFixed(1)} dB trên nền P90)`,
-    },
-    src2: {
-      title: 'Nguồn 2: Camera AI chim Ra/Vào',
-      badge1: 'Chim vào (IN)',
-      badge2: 'Chuẩn: 120 con',
-      unit: ' con',
-      domain: [0, 140],
-      ticks: [0, 35, 70, 105, 140],
-      refY: 120,
-      refLabel: '120',
-      data: slots.map((time, i) => ({ time, value: v2[i] ?? 120, isAnomaly: i === 6 })),
-      anomalyTag: `${targetTime} — 72 con (−40% so với chuẩn)`,
-      barColor: '#8BAF2A',
-    },
-    correlation: `Ồn tăng vọt (+${(soundDb - 52).toFixed(1)} dB trên nền P90) khi Loa tắt + Chim bay vào giảm đột ngột (−40%). Chim bay ra = 0 → Dấu hiệu đàn chim hoảng loạn ngoài giờ thu.`,
+    src1,
+    src2,
+    correlation,
   }
 }
