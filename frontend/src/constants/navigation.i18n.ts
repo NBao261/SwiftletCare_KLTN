@@ -3,6 +3,7 @@ import type { Dictionary } from '@/lib/i18n'
 // Từ điển nhãn menu: key là chữ tiếng Việt khai trong <Role>Layout.tsx
 const vi = {
   'Vận hành': 'Vận hành',
+  'Vận hành (chỉ đọc)': 'Vận hành (chỉ đọc)',
   'Quản lý': 'Quản lý',
   'Hệ thống': 'Hệ thống',
   'Kỹ thuật': 'Kỹ thuật',
@@ -10,6 +11,7 @@ const vi = {
 
   'Tổng quan': 'Tổng quan',
   'Tổng quan hệ thống': 'Tổng quan hệ thống',
+  'Tổng quan nhà yến': 'Tổng quan nhà yến',
   'Thiết bị & Cảm biến': 'Thiết bị & Cảm biến',
   'Cảnh báo': 'Cảnh báo',
   'Giám sát đàn chim': 'Giám sát đàn chim',
@@ -39,6 +41,7 @@ type NavigationKey = keyof typeof vi
 
 const en: Record<NavigationKey, string> = {
   'Vận hành': 'Operations',
+  'Vận hành (chỉ đọc)': 'Operations (read-only)',
   'Quản lý': 'Management',
   'Hệ thống': 'System',
   'Kỹ thuật': 'Technical',
@@ -46,6 +49,7 @@ const en: Record<NavigationKey, string> = {
 
   'Tổng quan': 'Overview',
   'Tổng quan hệ thống': 'System overview',
+  'Tổng quan nhà yến': 'House overview',
   'Thiết bị & Cảm biến': 'Devices & Sensors',
   'Cảnh báo': 'Alerts',
   'Giám sát đàn chim': 'Bird monitoring',

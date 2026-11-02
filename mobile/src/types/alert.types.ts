@@ -24,6 +24,8 @@ export interface Alert {
   _id: string
   farm_id: string
   zone_id?: string
+  // Cảnh báo của cả nhà yến (camera đếm chim) — khi đó không có zone_id
+  house_id?: string
   node_id?: string
   type: AlertType
   severity: AlertSeverity

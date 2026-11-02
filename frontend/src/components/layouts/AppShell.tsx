@@ -7,7 +7,6 @@ import { cn } from '@/lib/cn'
 import AppSidebar, { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar'
 import AppHeader from '@/components/layouts/AppHeader'
 import Toast from '@/components/common/Toast'
-import LogoutConfirmModal from '@/components/common/LogoutConfirmModal'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useAlertNotifications } from '@/hooks/shared/useAlertNotifications'
 import { useTranslation as useI18next } from 'react-i18next'
@@ -91,7 +90,6 @@ export default function AppShell({
         </main>
       </div>
       <Toast />
-      <LogoutConfirmModal />
     </div>
   )
 }

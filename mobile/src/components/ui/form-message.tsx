@@ -15,7 +15,7 @@ export function FormMessage({ message, tone = 'error' }: FormMessageProps) {
   const palette = usePalette()
   if (!message) return null
 
-  const color = tone === 'error' ? palette.alert : palette.primary
+  const color = tone === 'error' ? palette.alert : palette.text
   const StatusIcon = tone === 'error' ? WarningCircleIcon : CheckCircleIcon
 
   return (
