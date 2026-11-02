@@ -25,6 +25,7 @@ import alertRoutes     from '@/routes/alerts.route'
 import analyticsRoutes from '@/routes/analytics.route'
 import harvestRoutes        from '@/routes/harvests.route'
 import healthReportRoutes   from '@/routes/healthReports.route'
+import expertActivityRoutes from '@/routes/expertActivity.route'
 import notificationRoutes   from '@/routes/notifications.route'
 import internalRoutes from '@/routes/internal.route'
 
@@ -91,6 +92,7 @@ app.use('/harvests',    harvestRoutes)
 
 // Module EXPERT (§5.12) — báo cáo sức khỏe Zone + kết luận của chuyên gia
 app.use('/health-reports', healthReportRoutes)
+app.use('/expert-activity', expertActivityRoutes)
 // Hộp thông báo trong ứng dụng (EXPERT-FR-006/007)
 app.use('/notifications', notificationRoutes)
 

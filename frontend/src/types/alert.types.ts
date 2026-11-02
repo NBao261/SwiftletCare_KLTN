@@ -23,5 +23,13 @@ export interface Alert {
   type: AlertType; severity: AlertSeverity; title: string; message: string
   snapshot_url?: string; metadata?: Record<string, unknown>
   status: AlertStatus; created_at: string
+  previous_status?: 'ACTIVE' | 'ACKNOWLEDGED'
   acknowledged_at?: string; acknowledged_by?: string; acknowledgement_note?: string
+  expert_verdict?: {
+    result: 'CONFIRMED' | 'REJECTED'
+    note?: string | null
+    by?: { _id: string; full_name: string } | string
+    role?: 'DOMAIN_EXPERT' | 'FARM_OWNER'
+    at: string
+  }
 }

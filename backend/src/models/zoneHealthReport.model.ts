@@ -31,7 +31,8 @@ export interface IZoneHealthReport extends Document {
   period_end: Date
   metrics: ZoneHealthMetrics
   generated_at: Date
-  expert_conclusion?: { text: string; by: Types.ObjectId; at: Date }
+  /** EXPERT-FR-006 — `at` lúc viết lần đầu, `edited_at` lần sửa gần nhất của tác giả */
+  expert_conclusion?: { text: string; by: Types.ObjectId; at: Date; edited_at?: Date }
 }
 
 const zoneHealthReportSchema = new Schema<IZoneHealthReport>(
@@ -47,6 +48,7 @@ const zoneHealthReportSchema = new Schema<IZoneHealthReport>(
         text: { type: String, required: true },
         by:   { type: Schema.Types.ObjectId, ref: 'User', required: true },
         at:   { type: Date, required: true },
+        edited_at: { type: Date },
         _id: false,
       },
     },

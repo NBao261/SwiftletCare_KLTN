@@ -4,6 +4,7 @@ import { User } from '@/models/user.model'
 import type { JwtAccessPayload, Role } from '@/types'
 import { AppError, UnauthorizedError, ForbiddenError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
+import { setRequestActorRole } from '@/utils/requestContext.util'
 
 /**
  * Đi qua `next(err)` để errorHandler.middleware.ts xử lý — trước đây middleware
@@ -46,6 +47,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       is_active:                user.is_active,
       notification_preferences: user.notification_preferences,
     }
+    // Audit log ghi vai trò người làm (EXPERT-FR-009) mà không phải truyền qua từng service
+    setRequestActorRole(user.role)
     next()
   } catch (err) {
     if ((err as Error).name === 'TokenExpiredError') {

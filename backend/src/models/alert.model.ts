@@ -1,5 +1,5 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
-import type { AlertType, AlertSeverity, AlertStatus, AlertVerdictResult } from '@/types'
+import type { AlertType, AlertSeverity, AlertStatus, AlertVerdictResult, FarmMemberRole } from '@/types'
 
 /** Alert document – SRS §8.2, ALERT-FR-001 */
 export interface IAlert extends Document {
@@ -16,6 +16,8 @@ export interface IAlert extends Document {
   snapshot_url?: string
   metadata?: Record<string, unknown>
   status: AlertStatus
+  /** SM-01 — trạng thái trước khi bị bác bỏ (`DISMISSED`); đổi kết luận sang CONFIRMED thì trở về đây */
+  previous_status?: Extract<AlertStatus, 'ACTIVE' | 'ACKNOWLEDGED'>
   created_at: Date
   /** Lần gần nhất sự cố còn được ghi nhận (cập nhật tối đa 1 lần/phút) — ALERT-FR-008 */
   last_seen_at?: Date
@@ -28,8 +30,11 @@ export interface IAlert extends Document {
   acknowledgement_note?: string
   /** ALERT-FR-015 — lúc đã gửi lại vì chưa ai xác nhận; có rồi thì không gửi lần nữa */
   renotified_at?: Date
-  /** EXPERT-FR-003 — Domain Expert xác nhận/bác bỏ cảnh báo suy luận; không có = chờ kiểm chứng */
-  expert_verdict?: { result: AlertVerdictResult; note?: string; by: Types.ObjectId; at: Date }
+  /**
+   * EXPERT-FR-003 — xác nhận/bác bỏ cảnh báo suy luận; không có = chờ kiểm chứng. `role`: Domain Expert,
+   * hoặc Farm Owner khi farm chưa có chuyên gia (BR-22); kết luận cũ trước G-03 không có `role`
+   */
+  expert_verdict?: { result: AlertVerdictResult; note?: string; by: Types.ObjectId; role?: FarmMemberRole; at: Date }
 }
 
 const alertSchema = new Schema<IAlert>(
@@ -54,6 +59,7 @@ const alertSchema = new Schema<IAlert>(
     snapshot_url:        { type: String },
     metadata:            { type: Schema.Types.Mixed },
     status:              { type: String, enum: ['ACTIVE','ACKNOWLEDGED','DISMISSED','RESOLVED'] satisfies AlertStatus[], default: 'ACTIVE' },
+    previous_status:     { type: String, enum: ['ACTIVE','ACKNOWLEDGED'] satisfies AlertStatus[] },
     created_at:          { type: Date, default: Date.now },
     last_seen_at:        { type: Date },
     occurrence_count:    { type: Number, default: 1 },
@@ -67,6 +73,7 @@ const alertSchema = new Schema<IAlert>(
         result: { type: String, enum: ['CONFIRMED', 'REJECTED'] satisfies AlertVerdictResult[], required: true },
         note:   { type: String },
         by:     { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        role:   { type: String, enum: ['DOMAIN_EXPERT', 'FARM_OWNER'] satisfies FarmMemberRole[] },
         at:     { type: Date, required: true },
         _id: false,
       },

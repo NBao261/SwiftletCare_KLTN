@@ -565,6 +565,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Default session windows | 05:30–07:00 and 17:30–19:00 | Used when no seasonal profile covers the day (BR-13) |
 | Return-rate check | 15 min after the evening window; ≥ 3 of up to 7 earlier days | Waits for the last message of the session; one odd day alone raises no alert (BR-21) |
 | One read of 5-minute counts | at most 7 days; 24 h when no start is given | Response size (VISION-FR-017) |
+| Earlier verdicts shown with an inferred alert | the 10 latest on the same alert type at the same zone or house | Size of the evidence (EXPERT-FR-003) |
 | Live-stream viewing token | 60 s | A leaked token expires quickly (VISION-FR-013) |
 | Counting ring vertices | 3–12 | Input check (VISION-FR-018) |
 | Ring margin around the hole outline | 60 px | Outline measured on 21/10/2026, widened evenly (VISION-FR-005) |
