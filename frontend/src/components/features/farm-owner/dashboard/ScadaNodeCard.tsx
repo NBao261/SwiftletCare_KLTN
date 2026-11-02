@@ -36,10 +36,12 @@ interface ScadaNodeCardProps {
   controlOutput?: ControlOutput;
   durationMinutes: number;
   durationText: string;
+  // Relay đang can thiệp tay (log chưa kết thúc) — hiện nút về tự động riêng từng relay
+  overriddenRelays?: ReadonlySet<RelayName>;
 }
 
 // 1 thiết bị: trạng thái, cảnh báo đang can thiệp tay, 3 relay với nút bật/tắt có thời hạn (ENV-FR-016..018)
-export default function ScadaNodeCard({ node, controlOutput, durationMinutes, durationText }: ScadaNodeCardProps): JSX.Element {
+export default function ScadaNodeCard({ node, controlOutput, durationMinutes, durationText, overriddenRelays }: ScadaNodeCardProps): JSX.Element {
   const { t, hourMinute, dateTime } = useTranslation(dashboardDict);
   const { t: translateStatus } = useTranslation(deviceStatusDict);
   const controlRelay = useControlRelay();
@@ -86,10 +88,15 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
     );
   }
 
-  function handleBackToAuto(): void {
-    clearOverride.mutate(node._id, {
-      onSuccess: () => push(t('scada.backToAutoDone', { device: node.device_id })),
+  // Không truyền relay: cả thiết bị về tự động; có relay: chỉ relay đó (DELETE …/relay-override?relayName=)
+  function handleBackToAuto(relay?: { key: RelayName; labelKey: RelayLabelKey }): void {
+    setPendingRelay(relay?.key ?? null);
+    clearOverride.mutate({ nodeId: node._id, relayName: relay?.key }, {
+      onSuccess: () => push(relay
+        ? t('scada.relayToAutoDone', { relay: t(relay.labelKey), device: node.device_id })
+        : t('scada.backToAutoDone', { device: node.device_id })),
       onError: error => push(apiErrorMessage(error, t('scada.backToAutoFailed')), 'error'),
+      onSettled: () => setPendingRelay(null),
     });
   }
 
@@ -119,7 +126,7 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
             <WarningIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-safetyOrange" aria-hidden="true" />
             {t('scada.manualBanner', { time: node.override_expiry ? hourMinute(node.override_expiry) : NO_VALUE })}
           </p>
-          <Button variant="secondary" size="sm" className="self-start" loading={clearOverride.isPending} onClick={handleBackToAuto}>
+          <Button variant="secondary" size="sm" className="self-start" loading={clearOverride.isPending && pendingRelay === null} onClick={() => handleBackToAuto()}>
             {t('scada.backToAuto')}
           </Button>
         </div>
@@ -152,16 +159,29 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
                   {isCapped && <p className="text-[11px] text-warmGray">{t('scada.pumpCap', { n: minutes })}</p>}
                 </div>
               </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="shrink-0"
-                disabled={!isOnline || (controlRelay.isPending && pendingRelay !== relay.key)}
-                loading={controlRelay.isPending && pendingRelay === relay.key}
-                onClick={() => handleSetRelay(relay.key, relay.labelKey, !isOn)}
-              >
-                {isOn ? t('scada.turnOff', { duration: label }) : t('scada.turnOn', { duration: label })}
-              </Button>
+              <div className="flex shrink-0 items-center gap-2">
+                {isManual && overriddenRelays?.has(relay.key) && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!isOnline || clearOverride.isPending}
+                    loading={clearOverride.isPending && pendingRelay === relay.key}
+                    onClick={() => handleBackToAuto({ key: relay.key, labelKey: relay.labelKey })}
+                  >
+                    {t('scada.relayToAuto')}
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={!isOnline || (controlRelay.isPending && pendingRelay !== relay.key)}
+                  loading={controlRelay.isPending && pendingRelay === relay.key}
+                  onClick={() => handleSetRelay(relay.key, relay.labelKey, !isOn)}
+                >
+                  {isOn ? t('scada.turnOff', { duration: label }) : t('scada.turnOn', { duration: label })}
+                </Button>
+              </div>
             </div>
           );
         })}
