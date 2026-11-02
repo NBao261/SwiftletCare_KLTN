@@ -48,7 +48,7 @@ interface HealthLevelsModalProps {
  * Bảng điều kiện: cột "Lệch nhẹ khi / Lệch rõ khi", mỗi ô là phép so sánh + mốc + đơn vị nên đọc ra luôn ý nghĩa, không cần chữ giải thích.
  * Một khung dọc, mọi chỉ số thấy cùng lúc; thân popup cuộn khi màn thấp nên không tràn.
  */
-export default function HealthLevelsModal({ open, onClose, house, canEdit, readOnlyNote }: HealthLevelsModalProps): JSX.Element {
+export default function HealthLevelsModal({ open, onClose, house, canEdit: canEditGuess, readOnlyNote }: HealthLevelsModalProps): JSX.Element {
   const { t, exact } = useTranslation(healthDict);
   const { data, isLoading, isError, error, refetch } = useHealthLevels(open ? house.id : '');
   const update = useUpdateHealthLevels(house.id);
@@ -56,6 +56,10 @@ export default function HealthLevelsModal({ open, onClose, house, canEdit, readO
   const apiErrorMessage = useApiErrorMessage();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [errors, setErrors] = useState<Partial<Record<HealthLevelKey, HealthLevelError>>>({});
+  // Backend là chốt cuối của BR-22: lưu bị 403 thì chuyển sang chỉ xem với lý do backend trả về.
+  // ponytail: canEdit của trang đoán theo members[].role (không biết chuyên gia bị khoá) — bỏ khi backend trả can_edit trong HouseHealthLevels
+  const [deniedReason, setDeniedReason] = useState<string | null>(null);
+  const canEdit = canEditGuess && !deniedReason;
 
   // Mở popup hoặc tải xong thì lấy giá trị đang dùng
   useEffect(() => {
@@ -63,6 +67,7 @@ export default function HealthLevelsModal({ open, onClose, house, canEdit, readO
     if (!open) {
       setDraft(null);
       setErrors({});
+      setDeniedReason(null);
     }
   }, [open, data]);
 
@@ -77,7 +82,11 @@ export default function HealthLevelsModal({ open, onClose, house, canEdit, readO
         push(t('levels.saved'));
         onClose();
       },
-      onError: saveError => push(apiErrorMessage(saveError), 'error'),
+      onError: saveError => {
+        const status = (saveError as { response?: { status?: number } }).response?.status;
+        if (status === 403) setDeniedReason(apiErrorMessage(saveError));
+        else push(apiErrorMessage(saveError), 'error');
+      },
     });
   }
 
@@ -166,7 +175,7 @@ export default function HealthLevelsModal({ open, onClose, house, canEdit, readO
                   <Button onClick={handleSave} loading={update.isPending}>{t('levels.save')}</Button>
                 </>
               ) : (
-                <p className="text-sm italic text-warmGray">{readOnlyNote}</p>
+                <p className="text-sm italic text-warmGray">{deniedReason ?? readOnlyNote}</p>
               )}
             </div>
           </>
