@@ -288,7 +288,7 @@ Một PR cho backend, web, mobile, firmware:
 - [ ] Firmware: `overrideExpiryMs` theo từng relay (BR-20); `clear_override` đọc `relayName`; test native.
 - [ ] Lệnh có `commandId`, `issuedAt` (làm cùng G-07).
 - [x] **Len — web:** giới hạn bơm 30 phút và hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm. *(Nhi làm thay theo nhờ của Len, 03/11, `eab3be5`, nhánh `feat/g06-manual-override`: nút bật phun sương chạy tối đa 30 phút dù chọn thời hạn dài hơn (BR-08), quạt, loa và tắt bơm vẫn theo thời hạn đã chọn; 409 `CONFIRMATION_REQUIRED` mở popup liệt kê cảnh báo, "Vẫn bật bơm" gửi lại với `confirmed: true`; `ScadaNodeCard.tsx`, `scada.constants.ts`, `scadaRelay.ts`, `dashboard.i18n.ts` của Len — Len duyệt)*
-- [ ] **Len — web:** huỷ từng relay (`DELETE …/relay-override?relayName=`) khi thiết bị báo hạn riêng từng relay (sau Backend phần 2).
+- [x] **Len — web:** huỷ từng relay (`DELETE …/relay-override?relayName=`). *(Nhi làm thay theo nhờ của Len, 03/11, nhánh `feat/g06-manual-override`: relay đang can thiệp tay lấy từ lịch sử can thiệp còn mở (`ended_at` trống), dòng relay đó có nút "Về tự động"; firmware chưa đọc `relayName` thì thiết bị vẫn trả mọi relay về tự động cho tới Backend phần 2 + G-07; `ScadaNodeCard.tsx`, `useAnalytics.ts`, `FarmOwnerScadaPage.tsx` của Len — Len duyệt)*
 - [ ] **Len — mobile:** giới hạn bơm 30 phút và hộp xác nhận như web.
 - [x] Test TC-F17-02 *(`relayCommand.test.ts`, Kiệt 31/10, `fae12fe`)*.
 - [ ] Test TC-ST "MANUAL → MANUAL" (làm cùng Backend phần 2).
