@@ -370,7 +370,9 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - lý do trạng thái ngày lưu dạng mã `{code, source, level, values}` (schema `HealthReason`), cả trong ảnh chụp lúc chấm — web, mobile tự dịch VI/EN;
   - `GET /health-reports/days?myRatingState=` (màn "ngày cần chấm", hàng đợi việc);
   - CSV `?lang=vi|en`.
-- [ ] Web + mobile: trạng thái ngày, màn chấm điểm, báo cáo.
+- [x] Web: trạng thái ngày, màn đánh giá, mức chỉ số, CSV. *(Nhi, 03/11, nhánh `feat/g11-health-assessment`, `ff84550`…`05a40ff`, `0573ff7`: trang `/health` cho Farm Owner và Domain Expert — bảng ngày khung 10 dòng, lọc "Cần đánh giá" và 7/14/30 ngày; popup đánh giá giữ nháp, bỏ qua xác nhận không hoàn tác; ngăn chi tiết: trạng thái, lý do, 4 chỉ số, thời tiết, các đánh giá; popup mức chỉ số dạng bảng điều kiện; CSV theo ngôn ngữ màn; chữ: "đánh giá" chỉ dành cho người, hệ thống "tính trạng thái"; `ConfirmModal` nhận chữ có định dạng, `Modal` thêm `closeOnBackdrop`; thư mục `components/features/farm-owner/health/` — Len duyệt)*
+- [ ] **Kiệt:** `can_edit` trong `HouseHealthLevels` của `GET /farms/houses/{houseId}/health-levels`, tính bằng `assertExpertDecision` như `PUT` — web đang đoán theo `members[].role` nên không biết chuyên gia bị khoá (sau `02ec43d`); tới khi có, web chuyển sang chỉ xem khi `PUT` trả 403. *(Nhi đề xuất 03/11)*
+- [ ] Mobile: trạng thái ngày, màn đánh giá, báo cáo (G-16 bước 7, 9). *(Nhi)*
 - [x] Test phần a: TC-F20-01..03, TC-F21-02, TC-F22-01..03, TC-ST 6.17 và 6.18. *(31/10: `healthAssessment.test.ts`, `healthDays.test.ts`, `weather.test.ts`, `agreement.util.test.ts`; backend 629/629)*
 - [ ] Test còn lại: TC-ST 6.9 sinh báo cáo theo nhà (phần b), TC-F21-03 (thủ công, sau khi có màn web).
 
