@@ -14,7 +14,7 @@
  */
 
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   SlidersHorizontal,
   FileText,
@@ -98,19 +98,17 @@ export default function DomainExpertQueuePage() {
   const { data: aiSuggestion } = useExpertAiSuggestion(selectedZoneId ?? undefined)
 
   // ── Dữ liệu mục duyệt tham số & đề xuất hệ số mờ (G-04) ────────────────────
-  const { data: pendingReviewsRes } = useParameterReviews({
+  const { total: pendingReviewsCount } = useParameterReviews({
     farmId: selectedFarmId ?? '',
     zoneId: selectedZoneId ?? undefined,
     status: 'PENDING_REVIEW',
   })
-  const { data: pendingProposalsRes } = useCoefficientProposals({
+  const { total: pendingProposalsCount } = useCoefficientProposals({
     farmId: selectedFarmId ?? '',
     zoneId: selectedZoneId ?? undefined,
     status: 'PROPOSED',
   })
 
-  const pendingReviewsCount = pendingReviewsRes?.data?.length ?? 0
-  const pendingProposalsCount = pendingProposalsRes?.data?.length ?? 0
   const totalPendingReviews = pendingReviewsCount + pendingProposalsCount
 
   // ── Tính toán các chỉ số thực chất từ Backend ─────────────────────────────
@@ -141,12 +139,9 @@ export default function DomainExpertQueuePage() {
   const renderActionCards = (containerClassName: string) => (
     <div className={containerClassName}>
       {/* ── Thẻ 1: Cấu hình Ngưỡng & Hệ số mờ ── */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => navigate('/domain-expert/tuning')}
-        onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/tuning')}
-        className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
+      <Link
+        to="/domain-expert/tuning"
+        className="group flex flex-1 flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
       >
         <div className="flex flex-col gap-2.5 sm:gap-3">
           <div className="flex items-center justify-between">
@@ -191,23 +186,20 @@ export default function DomainExpertQueuePage() {
           <span>Vào cấu hình tham số</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
-      </div>
+      </Link>
 
       {/* ── Thẻ 2: Mục duyệt tham số & Đề xuất hệ số mờ (G-04) ── */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => navigate('/domain-expert/reviews')}
-        onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/reviews')}
-        className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
+      <Link
+        to="/domain-expert/reviews"
+        className="group flex flex-1 flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
       >
         <div className="flex flex-col gap-2.5 sm:gap-3">
           <div className="flex items-center justify-between">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warmGray/15 bg-stone/70 text-charcoal transition-colors group-hover:border-lime-500/40 group-hover:bg-lime-50 group-hover:text-lime-800">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warmGray/15 bg-stone/70 text-charcoal transition-colors group-hover:border-accent-600/40 group-hover:bg-accent-50 group-hover:text-accent-900">
               <FileCheck className="h-4 w-4" />
             </div>
             {totalPendingReviews > 0 ? (
-              <span className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-900">
+              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-orange-700">
                 Chờ duyệt ({totalPendingReviews})
               </span>
             ) : (
@@ -240,15 +232,12 @@ export default function DomainExpertQueuePage() {
           <span>Mở danh sách phê duyệt</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
-      </div>
+      </Link>
 
       {/* ── Thẻ 3: Báo cáo sức khỏe & kết luận chuyên môn ── */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => navigate('/domain-expert/reports')}
-        onKeyDown={e => e.key === 'Enter' && navigate('/domain-expert/reports')}
-        className="group flex flex-1 cursor-pointer flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
+      <Link
+        to="/domain-expert/reports"
+        className="group flex flex-1 flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
       >
         <div className="flex flex-col gap-2.5 sm:gap-3">
           <div className="flex items-center justify-between">
@@ -256,7 +245,7 @@ export default function DomainExpertQueuePage() {
               <FileText className="h-4 w-4" />
             </div>
             {pendingReports > 0 ? (
-              <span className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-900">
+              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-orange-700">
                 Cần ký duyệt ({pendingReports})
               </span>
             ) : (
@@ -289,7 +278,7 @@ export default function DomainExpertQueuePage() {
           <span>Xem danh sách báo cáo</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
-      </div>
+      </Link>
     </div>
   )
 

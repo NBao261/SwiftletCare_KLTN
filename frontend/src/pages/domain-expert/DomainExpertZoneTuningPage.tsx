@@ -51,12 +51,11 @@ export default function DomainExpertZoneTuningPage() {
   const { data: verdictStats = [] } = useExpertVerdictStats(undefined, zoneId);
 
   // Đề xuất hệ số mờ đang chờ duyệt của zone (EXPERT-FR-011)
-  const { data: pendingProposalsRes } = useCoefficientProposals({
+  const { total: pendingProposalsCount = 0 } = useCoefficientProposals({
     farmId: selectedFarmId ?? '',
     zoneId,
     status: 'PROPOSED',
   });
-  const pendingProposalsCount = pendingProposalsRes?.data?.length ?? 0;
 
   // Mutation hooks
   const updateThresholds = useUpdateThresholds(zoneId);
