@@ -70,17 +70,15 @@ export function buildTelemetryEvidenceSource(
     const soundValues = validSamples.map(s => Number(s.sound_db))
     const maxSound = Math.max(...soundValues)
     const minSound = Math.min(...soundValues)
+    const avgSound = Math.round((soundValues.reduce((sum, v) => sum + v, 0) / soundValues.length) * 10) / 10
     const peakSample = validSamples.find(s => Number(s.sound_db) === maxSound)
 
-    const metaSound = typeof alert.metadata?.sound_db === 'number' ? alert.metadata.sound_db : maxSound
-    const noiseMargin = typeof alert.metadata?.noise_margin === 'number' ? alert.metadata.noise_margin : 7.5
-    const refY = Math.round((metaSound - noiseMargin) * 10) / 10
     const topDomain = Math.max(80, Math.ceil((maxSound + 10) / 10) * 10)
     const bottomDomain = Math.max(0, Math.floor((minSound - 10) / 10) * 10)
 
     const data: EvidenceBarPoint[] = validSamples.map(s => {
       const val = Number(s.sound_db)
-      const isAnomaly = val >= refY || val >= maxSound - 0.1
+      const isAnomaly = val === maxSound || (maxSound > avgSound && val >= maxSound - 0.1)
       return {
         time: safeFormatHM(s.timestamp),
         value: val,
@@ -93,15 +91,15 @@ export function buildTelemetryEvidenceSource(
     return {
       title: 'Nguồn 1: Cảm biến Âm thanh (Telemetry thực tế)',
       badge1: `Số mẫu: ${validSamples.length}`,
-      badge2: `Ngưỡng: ${refY} dB`,
+      badge2: `TB mẫu: ${avgSound} dB`,
       highlight: `Đỉnh: ${maxSound} dB`,
       unit: ' dB',
       domain: [bottomDomain, topDomain],
       ticks: generateTicks(bottomDomain, topDomain, 5),
-      refY,
-      refLabel: `${refY} dB`,
+      refY: avgSound,
+      refLabel: `TB: ${avgSound} dB`,
       data,
-      anomalyTag: `${peakTime} — ${maxSound} dB (vượt ngưỡng ${refY} dB)`,
+      anomalyTag: `${peakTime} — ${maxSound} dB (đỉnh đo được trong khung giờ)`,
     }
   }
 

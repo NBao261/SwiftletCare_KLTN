@@ -128,7 +128,6 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
               <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
                 % Thời gian trong ngưỡng theo từng Zone trong ngày
               </h4>
-              <span className="text-[11px] text-warmGray">Chuẩn nền: 95%</span>
             </div>
             {evidence?.zones_in_range && evidence.zones_in_range.length > 0 ? (
               <div className="divide-y divide-neutral-100">
@@ -241,7 +240,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
           <AlertTriangle className="w-4 h-4 text-amber-500" />
         </span>
         <p className="text-xs text-amber-800 leading-relaxed">
-          <strong>Chẩn đoán nguyên nhân:</strong> {cfg.correlation}
+          <strong>Tóm tắt dữ liệu:</strong> {cfg.correlation}
         </p>
       </div>
 

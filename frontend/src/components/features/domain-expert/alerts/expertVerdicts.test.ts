@@ -39,6 +39,8 @@ describe('G-03 — Chuyển đổi dữ liệu bằng chứng chuỗi thời gia
     expect(source.data.map(d => d.value)).toEqual([55.2, 58.1, 82.0, 57.4])
     expect(source.highlight).toContain('82')
     expect(source.badge1).toContain('Số mẫu: 4')
+    expect(source.badge2).toContain('TB mẫu: 63.2 dB')
+    expect(source.refLabel).toBe('TB: 63.2 dB')
 
     // Điểm đỉnh 82 dB phải được đánh dấu bất thường
     const peakPoint = source.data[2]
