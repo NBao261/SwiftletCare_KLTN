@@ -250,10 +250,10 @@ Một PR cho backend, web, mobile, firmware:
   - BR-22 chỉ tính chuyên gia còn hoạt động: chuyên gia bị khoá thì Farm Owner làm thay và nhận thông báo chờ kiểm chứng *(`688a604`)*;
   - `HEALTH_REPORT_CONCLUDED` có `house_id` nên lọc được theo nhà ở `/expert-activity` *(`536f23c`)*.
 
-### G-04 — Mục duyệt và đề xuất hệ số (P1) — Kiệt (backend), Tuấn (màn chuyên gia), Len (nút "gửi chuyên gia" của Farm Owner)
+### G-04 — Mục duyệt và đề xuất hệ số (P1) — Kiệt (backend), Tuấn (màn chuyên gia & nút Farm Owner)
 
 - [x] Collection `parameterreviews`, `coefficientproposals` theo SDD 6.1; route accept/revert/adjust, submit/approve/reject; thông báo hai chiều; Farm Owner áp gợi ý trực tiếp khi farm có chuyên gia → 403. *(Kiệt, 30/10, `cad151d` spec + `b8070bc` backend, nhánh `feat/g04-review-proposals` tạo từ nhánh G-03; "adjust" không có route riêng: chuyên gia sửa cùng nhóm tham số thì mục đóng `ADJUSTED` (EXPERT-FR-010); áp gợi ý trực tiếp: `POST /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion`)*
-- [x] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner. *(Tuấn, 02/11: màn duyệt thay đổi tham số GET /expert-activity/reviews, chấp thuận / hoàn nguyên; màn duyệt đề xuất hệ số mờ GET /expert-activity/proposals, duyệt / từ chối bắt buộc lý do; tích hợp Bento hàng đợi & tuning; nút "Gửi chuyên gia duyệt" ở FuzzyTuningModal của Farm Owner; vitest 207/207 + tsc xanh)*
+- [x] Web: màn duyệt cho chuyên gia, nút "gửi chuyên gia" cho Farm Owner. *(Tuấn, 02/11: màn duyệt thay đổi tham số GET /expert-activity/reviews, chấp thuận / hoàn nguyên; màn duyệt đề xuất hệ số mờ GET /expert-activity/proposals, duyệt / từ chối bắt buộc lý do; tích hợp Bento hàng đợi & tuning; hoàn thiện nút "Gửi chuyên gia duyệt" / "Áp dụng gợi ý" ở FuzzyTuningModal; vitest 210/210 + tsc xanh. **Lưu ý**: Phần task của Len về nút Farm Owner đã do Tuấn thực hiện luôn trong G-04 để khép kín luồng BR-22)*
 - [x] Sửa theo review PR #119 *(Kiệt, 01/11, `df41db9` spec + `9ead2ba` backend; mục chặn merge là hằng số của G-03, đã sửa ở #117)*:
   - hoàn lại: đóng mục trước rồi mới áp, áp lỗi thì mở lại mục;
   - duyệt đề xuất: áp lỗi thì đề xuất về lại `PROPOSED`;

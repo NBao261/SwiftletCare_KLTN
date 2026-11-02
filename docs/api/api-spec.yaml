@@ -3871,6 +3871,8 @@ paths:
                       data: { type: array, items: { $ref: "#/components/schemas/ParameterReview" } }
                       meta: { type: object, properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } } }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /expert-activity/reviews/{id}/accept:
     put:
@@ -3891,6 +3893,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Mục duyệt đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /expert-activity/reviews/{id}/revert:
     put:
@@ -3911,9 +3914,11 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/ParameterReview" }
+        "400": { description: "Giá trị không qua kiểm khoảng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Mục duyệt đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /expert-activity/proposals:
     get:
@@ -3938,6 +3943,8 @@ paths:
                       data: { type: array, items: { $ref: "#/components/schemas/CoefficientProposal" } }
                       meta: { type: object, properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } } }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     post:
       tags: [ExpertActivity]
       summary: "Farm Owner gửi gợi ý hệ số của hệ thống cho chuyên gia (EXPERT-FR-011, SM-11) — FARM_OWNER"
@@ -3983,9 +3990,11 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/CoefficientProposal" }
+        "400": { description: "Giá trị không qua kiểm khoảng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Đề xuất đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /expert-activity/proposals/{id}/reject:
     put:
@@ -4460,6 +4469,7 @@ components:
               changed_at: { type: string, format: date-time }
               old_values: { type: object }
               new_values: { type: object }
+              source: { type: string, enum: [MANUAL, EXPERT_REVERT, SUGGESTION_APPROVED] }
         detection_tuning: { $ref: "#/components/schemas/DetectionTuning" }
         detection_tuning_history:
           type: array

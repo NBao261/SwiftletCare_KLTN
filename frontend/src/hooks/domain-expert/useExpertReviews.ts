@@ -1,125 +1,140 @@
-/**
- * useExpertReviews.ts — React Query Hooks cho Mục duyệt tham số và Đề xuất hệ số mờ (G-04)
- * SRS: EXPERT-FR-010, EXPERT-FR-011
- */
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { expertReviewService } from '@/services/expert/expertReview.service';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { reviewsApi } from '@/apis/domain-expert/reviews.api';
+import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery';
 import type {
+  ParameterReview,
+  CoefficientProposal,
   ParameterReviewsQueryParams,
   CoefficientProposalsQueryParams,
 } from '@/types/expert/reviews.types';
 
-export const REVIEWS_QUERY_KEY = (params: Partial<ParameterReviewsQueryParams>) => [
+// Query key đồng bộ cho mục duyệt tham số
+export const REVIEWS_QUERY_KEY = (parameters: Partial<ParameterReviewsQueryParams>) => [
   'expert',
   'reviews',
-  params.farmId,
-  params.zoneId,
-  params.status,
-  params.page,
+  parameters.farmId,
+  parameters.zoneId,
+  parameters.status,
+  parameters.page,
 ];
 
-export const PROPOSALS_QUERY_KEY = (params: Partial<CoefficientProposalsQueryParams>) => [
+// Query key đồng bộ cho đề xuất hệ số mờ
+export const PROPOSALS_QUERY_KEY = (parameters: Partial<CoefficientProposalsQueryParams>) => [
   'expert',
   'proposals',
-  params.farmId,
-  params.zoneId,
-  params.status,
-  params.page,
+  parameters.farmId,
+  parameters.zoneId,
+  parameters.status,
+  parameters.page,
 ];
 
-// ── 1. Hooks cho Mục duyệt thay đổi tham số (EXPERT-FR-010) ──────────────────
-export function useParameterReviews(params: ParameterReviewsQueryParams) {
-  return useQuery({
-    queryKey: REVIEWS_QUERY_KEY(params),
-    queryFn: async () => {
-      const res = await expertReviewService.getReviews(params);
-      return res;
-    },
-    enabled: Boolean(params.farmId),
-    staleTime: 30_000,
-  });
+// Hook danh sách phân trang mục duyệt tham số (EXPERT-FR-010)
+export function useParameterReviews(
+  parameters: ParameterReviewsQueryParams,
+  options?: { enabled?: boolean },
+) {
+  return usePaginatedListQuery<ParameterReview>(
+    REVIEWS_QUERY_KEY(parameters),
+    () => reviewsApi.listReviews(parameters),
+    parameters.page ?? 1,
+    parameters.limit ?? 20,
+    { enabled: Boolean(parameters.farmId) && (options?.enabled ?? true), staleTime: 30_000 },
+  );
 }
 
+// Chuyên gia chấp thuận thay đổi tham số của Farm Owner
 export function useAcceptParameterReview() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (reviewId: string) => expertReviewService.acceptReview(reviewId),
+    mutationFn: (reviewId: string) => reviewsApi.acceptReview(reviewId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['expert', 'reviews'] });
-      void qc.invalidateQueries({ queryKey: ['expert', 'activity'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'reviews'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'activity'] });
     },
   });
 }
 
+// Chuyên gia hoàn nguyên tham số về giá trị ban đầu
 export function useRevertParameterReview() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (reviewId: string) => expertReviewService.revertReview(reviewId),
+    mutationFn: (reviewId: string) => reviewsApi.revertReview(reviewId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['expert', 'reviews'] });
-      void qc.invalidateQueries({ queryKey: ['expert', 'tuning'] });
-      void qc.invalidateQueries({ queryKey: ['expert', 'activity'] });
-      void qc.invalidateQueries({ queryKey: ['farms'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'reviews'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'tuning'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'activity'] });
+      void queryClient.invalidateQueries({ queryKey: ['farms'] });
+      void queryClient.invalidateQueries({ queryKey: ['zone'] });
+      void queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
 }
 
-// ── 2. Hooks cho Đề xuất hệ số mờ (EXPERT-FR-011) ────────────────────────────
-export function useCoefficientProposals(params: CoefficientProposalsQueryParams) {
-  return useQuery({
-    queryKey: PROPOSALS_QUERY_KEY(params),
-    queryFn: async () => {
-      const res = await expertReviewService.getProposals(params);
-      return res;
-    },
-    enabled: Boolean(params.farmId),
-    staleTime: 30_000,
-  });
+// Hook danh sách phân trang đề xuất hệ số mờ (EXPERT-FR-011)
+export function useCoefficientProposals(
+  parameters: CoefficientProposalsQueryParams,
+  options?: { enabled?: boolean },
+) {
+  return usePaginatedListQuery<CoefficientProposal>(
+    PROPOSALS_QUERY_KEY(parameters),
+    () => reviewsApi.listProposals(parameters),
+    parameters.page ?? 1,
+    parameters.limit ?? 20,
+    { enabled: Boolean(parameters.farmId) && (options?.enabled ?? true), staleTime: 30_000 },
+  );
 }
 
+// Farm Owner gửi đề xuất hệ số mờ cho chuyên gia
 export function useSubmitCoefficientProposal() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (zoneId: string) => expertReviewService.submitProposal(zoneId),
+    mutationFn: (zoneId: string) => reviewsApi.submitProposal(zoneId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['expert', 'proposals'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'proposals'] });
     },
   });
 }
 
+// Chuyên gia duyệt và áp dụng đề xuất hệ số mờ
 export function useApproveCoefficientProposal() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (proposalId: string) => expertReviewService.approveProposal(proposalId),
+    mutationFn: (proposalId: string) => reviewsApi.approveProposal(proposalId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['expert', 'proposals'] });
-      void qc.invalidateQueries({ queryKey: ['expert', 'tuning'] });
-      void qc.invalidateQueries({ queryKey: ['expert', 'activity'] });
-      void qc.invalidateQueries({ queryKey: ['farms'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'proposals'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'tuning'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'activity'] });
+      void queryClient.invalidateQueries({ queryKey: ['farms'] });
+      void queryClient.invalidateQueries({ queryKey: ['zone'] });
+      void queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
 }
 
+// Chuyên gia từ chối đề xuất hệ số mờ kèm lý do
 export function useRejectCoefficientProposal() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ proposalId, note }: { proposalId: string; note: string }) =>
-      expertReviewService.rejectProposal(proposalId, note),
+      reviewsApi.rejectProposal(proposalId, note),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['expert', 'proposals'] });
-      void qc.invalidateQueries({ queryKey: ['expert', 'activity'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'proposals'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'activity'] });
     },
   });
 }
 
+// Áp dụng gợi ý trực tiếp khi Farm chưa có chuyên gia (BR-22)
 export function useApplySuggestion() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (zoneId: string) => expertReviewService.applySuggestion(zoneId),
+    mutationFn: (zoneId: string) => reviewsApi.applySuggestion(zoneId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['expert', 'tuning'] });
-      void qc.invalidateQueries({ queryKey: ['farms'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'proposals'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'tuning'] });
+      void queryClient.invalidateQueries({ queryKey: ['farms'] });
+      void queryClient.invalidateQueries({ queryKey: ['zone'] });
+      void queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
 }

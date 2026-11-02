@@ -66,7 +66,7 @@ export default function ExpertQueueEmptyState({ onViewHistory }: ExpertQueueEmpt
         {/* 3 Thẻ trạng thái giả xếp tầng — thẻ giữa nổi bật biểu tượng an toàn */}
         <div className="relative flex flex-col items-center gap-2">
           {/* Thẻ mờ phía trên */}
-          <div className="flex w-52 sm:w-56 items-center gap-2.5 rounded-xl border border-warmGray/10 bg-white/70 px-3 py-2 shadow-2xs">
+          <div className="flex w-52 sm:w-56 items-center gap-2.5 rounded-xl border border-warmGray/10 bg-white/70 px-3 py-2 shadow-sm">
             <span className="h-6 w-6 shrink-0 rounded-full bg-warmGray/10" />
             <span className="flex flex-1 flex-col gap-1">
               <span className="h-1.5 w-24 rounded-full bg-warmGray/15" />
@@ -74,7 +74,7 @@ export default function ExpertQueueEmptyState({ onViewHistory }: ExpertQueueEmpt
             </span>
           </div>
 
-          {/* Thẻ chính giữa: Biểu chứng an toàn 100% */}
+          {/* Thẻ chính giữa: Biểu chứng an toàn tự động */}
           <div className="flex w-56 sm:w-64 items-center justify-between rounded-xl border-2 border-accent-600 bg-white px-3.5 py-2.5 shadow-card">
             <div className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-700">
@@ -85,13 +85,13 @@ export default function ExpertQueueEmptyState({ onViewHistory }: ExpertQueueEmpt
                 <span className="text-[10px] text-warmGray">Fuzzy Logic tự động</span>
               </div>
             </div>
-            <span className="rounded-full bg-accent-50 px-2 py-0.5 font-mono text-[10px] font-bold text-accent-900 border border-accent-600/30">
-              100%
+            <span className="rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-semibold text-accent-900 border border-accent-600/30">
+              Tự động
             </span>
           </div>
 
           {/* Thẻ mờ phía dưới */}
-          <div className="flex w-52 sm:w-56 items-center gap-2.5 rounded-xl border border-warmGray/10 bg-white/70 px-3 py-2 shadow-2xs">
+          <div className="flex w-52 sm:w-56 items-center gap-2.5 rounded-xl border border-warmGray/10 bg-white/70 px-3 py-2 shadow-sm">
             <span className="h-6 w-6 shrink-0 rounded-full bg-warmGray/10" />
             <span className="flex flex-1 flex-col gap-1">
               <span className="h-1.5 w-20 rounded-full bg-warmGray/15" />
@@ -121,14 +121,14 @@ export default function ExpertQueueEmptyState({ onViewHistory }: ExpertQueueEmpt
         </h2>
         <p className="text-xs sm:text-[13px] leading-relaxed text-warmGray">
           Tất cả cảnh báo suy luận AI trong phạm vi giám sát hiện tại đã được thẩm định và xử lý xong.
-          Hệ thống Fuzzy Logic đang vận hành ổn định trong ngưỡng an toàn.
+          Bạn có thể kiểm tra các tác vụ định kỳ hoặc xem lịch sử hoạt động.
         </p>
 
         {/* Nút hành động xem lịch sử dạng pill thanh lịch */}
         <button
           type="button"
           onClick={onViewHistory}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-warmGray/25 bg-stone/40 px-4 py-1.5 text-xs font-semibold text-charcoal shadow-2xs transition-all hover:bg-stone/70 hover:border-warmGray/40 active:scale-98"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-warmGray/25 bg-stone/40 px-4 py-1.5 text-xs font-semibold text-charcoal shadow-sm transition-all hover:bg-stone/70 hover:border-warmGray/40 active:scale-98"
         >
           <span>Xem lịch sử hoạt động</span>
           <ChevronRight className="h-3.5 w-3.5 text-warmGray" />
