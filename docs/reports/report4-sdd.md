@@ -154,7 +154,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 
 | Layer | Technology | Version (from the repository) |
 | --- | --- | --- |
-| Firmware | ESP32 (ESP32-WROOM-32D), Arduino framework on FreeRTOS, PlatformIO `espressif32` | Arduino-ESP32 core 2.0.17; firmware 1.4.0 |
+| Firmware | ESP32 (ESP32-WROOM-32D), Arduino framework on FreeRTOS, PlatformIO `espressif32` | Arduino-ESP32 core 2.0.17; firmware 1.5.0 |
 | Firmware libraries | ESP-IDF MQTT client `esp-mqtt` (`mqtt_client.h`, shipped with the Arduino-ESP32 core: QoS 1 publish, TLS with a CA certificate, persistent session), ArduinoJson, ModbusMaster, DFRobotDFPlayerMini, ElegantOTA, Adafruit ADS1X15 for the load-current shunts | core 2.0.17, ^7.0, ^2.0.1, ^1.0.6, ^3.1; ADS1X15 pinned when it is added |
 | Controller board | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC reading two 0.1 Ω low-side shunt resistors on the 5 V misting and 12 V fan outputs, which the board switches for the team's DC demo loads (no mains on the board) | Not built yet (gap G-13, Iteration 3); the prototype uses an ESP32-WROOM-32D with a 4-channel relay module (`docs/hardware/BOM.md`) |
 | AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, supervision (ByteTrack), paho-mqtt, PyYAML, loguru; detection model YOLO26n exported to ONNX (one class, trained on Colab; `torch`/`ultralytics` are not runtime dependencies) | Python 3.11–3.12; opencv-python ≥ 4.14 < 5; numpy ≥ 1.26 < 3; onnxruntime 1.30; supervision 0.30; paho-mqtt 2.x |
