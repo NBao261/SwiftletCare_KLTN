@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { Alert as NativeAlert, StyleSheet, View } from 'react-native'
-import { useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/card'
 import { StatRow } from '@/components/analytics/StatRow'
-import { ComingSoonAction } from '@/components/common/ComingSoonAction'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { FormMessage } from '@/components/ui/form-message'
@@ -11,11 +9,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import { useControlSuggestion } from '@/hooks/analytics/useControlSuggestion'
-import { useUpdateFuzzyTuning } from '@/hooks/farm/useUpdateFuzzyTuning'
+import { useSubmitProposal } from '@/hooks/expert-activity/useSubmitProposal'
+import { useApplySuggestion } from '@/hooks/farm/useApplySuggestion'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import type { Farm, SuggestedTuning } from '@/types'
-import { getSettingsErrorMessage } from '@/utils/apiError.utils'
+import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
 import { farmHasExpert } from '@/utils/farm.utils'
 import { getFuzzyTuningLabel } from '@/utils/label.utils'
 import { formatPercentValue } from '@/utils/number.utils'
@@ -38,15 +37,17 @@ function formatTuning(key: keyof SuggestedTuning, value: number | undefined): st
 }
 
 // Thẻ gợi ý hệ số (ANALYTICS-FR-010): có gợi ý thì nói tăng thời gian trong ngưỡng bao nhiêu, không thì lý do backend trả.
-// "Áp dụng" khi có quyền (chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia — BR-22, EXPERT-FR-011);
-// gửi chuyên gia duyệt (PROPOSED) backend chưa có
+// "Áp dụng" khi có quyền (chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia — BR-22, EXPERT-FR-011) gọi
+// POST …/apply-suggestion: server tự tính lại gợi ý, không gửi số đang hiện. Chủ trại ở farm có chuyên gia thì gửi gợi ý
+// cho chuyên gia duyệt (POST /expert-activity/proposals)
 export function SuggestionCard({ zoneId, zoneName, farm }: SuggestionCardProps) {
   const palette = usePalette()
-  const queryClient = useQueryClient()
   const user = useAuthStore(state => state.user)
   const suggestionQuery = useControlSuggestion(zoneId, true)
-  const updateFuzzyTuning = useUpdateFuzzyTuning()
+  const applySuggestion = useApplySuggestion()
+  const submitProposal = useSubmitProposal()
   const [isSheetOpen, setSheetOpen] = useState(false)
+  const [sentMessage, setSentMessage] = useState<string | null>(null)
   const data = suggestionQuery.data
   const suggestion = data?.suggestion ?? null
   const hasExpert = farm ? farmHasExpert(farm) : undefined
@@ -64,19 +65,38 @@ export function SuggestionCard({ zoneId, zoneName, farm }: SuggestionCardProps) 
         {
           text: t('Áp dụng'),
           onPress: () =>
-            updateFuzzyTuning.mutate(
-              { zoneId, tuning: suggestion },
-              {
-                onSuccess: () => {
-                  setSheetOpen(false)
-                  queryClient.invalidateQueries({ queryKey: ['analytics'] })
-                },
+            applySuggestion.mutate(zoneId, {
+              onSuccess: () => setSheetOpen(false),
+              // 409: server không còn thấy gợi ý (dữ liệu đã đổi) — tải lại để thẻ hiện lý do mới
+              onError: error => {
+                if (readApiError(error).status === 409) void suggestionQuery.refetch()
               },
-            ),
+            }),
         },
       ],
     )
   }
+
+  const confirmSubmit = () => {
+    NativeAlert.alert(
+      t('Gửi chuyên gia duyệt?'),
+      t('Chuyên gia của farm sẽ xem gợi ý cho {zone} và quyết định áp dụng hay không.', { zone: zoneName }),
+      [
+        { text: t('Huỷ'), style: 'cancel' },
+        {
+          text: t('Gửi'),
+          onPress: () =>
+            submitProposal.mutate(zoneId, {
+              onSuccess: () => setSentMessage(t('Đã gửi gợi ý cho chuyên gia')),
+              onError: error => {
+                if (readApiError(error).status === 409) void suggestionQuery.refetch()
+              },
+            }),
+        },
+      ],
+    )
+  }
+  const actionError = applySuggestion.error ?? submitProposal.error
 
   const renderBody = () => {
     if (suggestionQuery.isLoading) return <Skeleton width="100%" height={SKELETON_HEIGHT} />
@@ -149,10 +169,24 @@ export function SuggestionCard({ zoneId, zoneName, farm }: SuggestionCardProps) 
             </Text>
           )}
         </View>
-        <FormMessage message={updateFuzzyTuning.error ? getSettingsErrorMessage(updateFuzzyTuning.error) : null} />
-        {canApply && <Button label={t('Áp dụng')} onPress={confirmApply} loading={updateFuzzyTuning.isPending} />}
-        {/* EXPERT-FR-011: farm có chuyên gia thì chủ trại gửi gợi ý để chuyên gia duyệt — backend chưa có trạng thái PROPOSED */}
-        {isOwnerWithExpert && <ComingSoonAction label={t('Gửi chuyên gia duyệt')} />}
+        <FormMessage
+          message={
+            actionError
+              ? getSettingsErrorMessage(actionError, { 409: t('Gợi ý không còn phù hợp với dữ liệu mới, đã tải lại') })
+              : null
+          }
+        />
+        <FormMessage message={sentMessage} tone="success" />
+        {canApply && <Button label={t('Áp dụng')} onPress={confirmApply} loading={applySuggestion.isPending} />}
+        {/* EXPERT-FR-011: farm có chuyên gia thì chủ trại gửi gợi ý để chuyên gia duyệt */}
+        {isOwnerWithExpert && !sentMessage && (
+          <Button
+            label={t('Gửi chuyên gia duyệt')}
+            variant="secondary"
+            onPress={confirmSubmit}
+            loading={submitProposal.isPending}
+          />
+        )}
       </BottomSheet>
     </Card>
   )

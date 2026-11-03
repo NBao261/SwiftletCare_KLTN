@@ -13,6 +13,10 @@ import { getRelayLabel } from '@/utils/label.utils'
 import { clampOverrideDuration, formatDuration, getOverrideDurationLimits } from '@/utils/relay.utils'
 import { t } from '@/utils/i18n.utils'
 
+// Thời gian chờ controller báo đã chuyển trạng thái. ENV-FR-015 yêu cầu thay đổi relay hiện trong app ≤ 2 s; chờ gấp 5 lần
+// để bù mạng di động chậm trước khi báo lỗi (hằng kỹ thuật của màn, không phải ngưỡng nghiệp vụ)
+const RELAY_ACK_TIMEOUT_MS = 10 * 1000
+
 interface RelayControlSheetProps {
   // Controller mới nhất trong cache (tải lại sau RELAY_UPDATE) để biết lệnh đã áp dụng chưa
   controller: SensorNode | null
@@ -55,6 +59,8 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
   const [durationMs, setDurationMs] = useState(OVERRIDE_DEFAULT_MS)
   // Đã gửi lệnh, chờ controller báo đúng trạng thái
   const [isWaiting, setWaiting] = useState(false)
+  // Lệnh không tới được controller: backend chưa nối broker, hoặc controller không báo lại trong thời gian chờ
+  const [deliveryProblem, setDeliveryProblem] = useState<'not-delivered' | 'timed-out' | null>(null)
 
   const limits = relay ? getOverrideDurationLimits(relay, targetState) : null
   const options = limits ? OVERRIDE_DURATION_OPTIONS_MS.filter(option => option >= limits.minMs && option <= limits.maxMs) : []
@@ -69,14 +75,31 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
     if (isWaiting && isApplied) onClose()
   }, [isWaiting, isApplied, onClose])
 
+  // Không chờ mãi: quá thời gian mà controller chưa báo thì mở lại nút để thử lại
+  useEffect(() => {
+    if (!isWaiting || isApplied) return
+    const timer = setTimeout(() => {
+      setWaiting(false)
+      setDeliveryProblem('timed-out')
+    }, RELAY_ACK_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [isWaiting, isApplied])
+
   if (!controller || !relay) return null
   const relayLabel = getRelayLabel(relay)
 
-  const send = () =>
+  const send = () => {
+    setDeliveryProblem(null)
     controlRelay.mutate(
       { sensorNodeId: controller._id, relay, state: targetState, durationMs: effectiveDuration },
-      { onSuccess: () => setWaiting(true) },
+      {
+        onSuccess: ({ isCommandDelivered }) => {
+          setDeliveryProblem(isCommandDelivered ? null : 'not-delivered')
+          setWaiting(isCommandDelivered)
+        },
+      },
     )
+  }
 
   // TẮT và bật bơm khi có cảnh báo chặn đều hỏi lại trước khi gửi
   const handleSubmit = () => {
@@ -142,6 +165,16 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
       {controlRelay.isError && (
         <Text variant="small" weight="semiBold" color={palette.alert}>
           {t('Không gửi được lệnh, thử lại')}
+        </Text>
+      )}
+      {deliveryProblem === 'not-delivered' && (
+        <Text variant="small" weight="semiBold" color={palette.alert}>
+          {t('Máy chủ chưa kết nối được tới bộ điều khiển nên lệnh chưa được gửi. Thử lại sau ít phút')}
+        </Text>
+      )}
+      {deliveryProblem === 'timed-out' && (
+        <Text variant="small" weight="semiBold" color={palette.alert}>
+          {t('Bộ điều khiển chưa phản hồi. Kiểm tra thiết bị còn online rồi thử lại')}
         </Text>
       )}
       {isWaiting && !isApplied && (

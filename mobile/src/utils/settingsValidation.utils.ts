@@ -64,9 +64,15 @@ export const COORDINATE_RULES: Record<keyof Coordinates, NumberRule> = {
 // Số tầng của nhà, tầng của zone: số nguyên từ 1 (model backend mặc định 1)
 export const FLOOR_RULE: NumberRule = { min: 1, max: Number.MAX_SAFE_INTEGER, integer: true }
 
-// Chữ người dùng gõ thành số: nhận cả dấu phẩy lẫn dấu chấm làm dấu thập phân, không nhận ngăn hàng nghìn
+// Chữ người dùng gõ thành số: nhận cả dấu phẩy lẫn dấu chấm làm dấu thập phân (bàn phím số Android chỉ có dấu chấm), không
+// nhận ngăn hàng nghìn. Khung xem ghi số theo ngôn ngữ (tiếng Việt "1.500" là một nghìn năm trăm), nên dấu ngăn nghìn của
+// ngôn ngữ đang dùng mà theo sau đúng 3 chữ số ở phần nguyên khác 0 ("1.500" khi tiếng Việt, "1,500" khi tiếng Anh) là mơ
+// hồ — từ chối để người dùng gõ lại, không đoán thành 1,5
 export function parseNumberInput(text: string): number | null {
-  const normalized = text.trim().replace(',', '.')
+  const trimmed = text.trim()
+  const groupingPattern = getCurrentLanguage() === 'en' ? /^-?[1-9]\d{0,2},\d{3}$/ : /^-?[1-9]\d{0,2}\.\d{3}$/
+  if (groupingPattern.test(trimmed)) return null
+  const normalized = trimmed.replace(',', '.')
   if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null
   return Number(normalized)
 }

@@ -9,24 +9,25 @@ import {
   ClipboardTextIcon,
   DeviceMobileIcon,
   EnvelopeSimpleIcon,
+  GlobeIcon,
   IdentificationBadgeIcon,
   InfoIcon,
   KeyIcon,
   ListChecksIcon,
   PhoneIcon,
   ShieldCheckIcon,
+  ShieldIcon,
   SlidersHorizontalIcon,
-  TranslateIcon,
   TrashIcon,
   UsersThreeIcon,
 } from 'phosphor-react-native'
 import Constants from 'expo-constants'
 import { NotificationSettingsSheet } from '@/components/alert/NotificationSettingsSheet'
 import { LogoutButton } from '@/components/auth/LogoutButton'
-import { MockDataBadge } from '@/components/common/MockDataBadge'
 import { HomeSection } from '@/components/home/HomeSection'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
+import { LanguageFlag } from '@/components/profile/LanguageFlag'
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
 import { ProfileBasicContent } from '@/components/profile/ProfileBasicContent'
 import { ProfileRow } from '@/components/profile/ProfileRow'
@@ -39,18 +40,18 @@ import { IS_MOCK_API_ENABLED } from '@/constants/mockApi'
 import { Spacing } from '@/constants/theme'
 import { useCancelAccountDeletion } from '@/hooks/auth/useCancelAccountDeletion'
 import { useRequestAccountDeletion } from '@/hooks/auth/useRequestAccountDeletion'
+import { usePendingExpertReviewCount } from '@/hooks/expert-activity/usePendingExpertReviewCount'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
 import { usePendingHealthDays, HAS_PENDING_HEALTH_DAYS_API } from '@/hooks/health/usePendingHealthDays'
 import { useSwitchLanguage } from '@/hooks/i18n/useSwitchLanguage'
 import { useNow } from '@/hooks/time/useNow'
 import { useUnreadNotificationCount } from '@/hooks/notification/useUnreadNotificationCount'
-import { useMyReviewItems } from '@/hooks/profile/useMyReviewItems'
 import { usePushRegistration } from '@/hooks/profile/usePushRegistration'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
 import type { Language } from '@/stores/languageStore'
-import { getDaysLeft, getDeletionDeadline, isReviewPending } from '@/utils/account.utils'
+import { getDaysLeft, getDeletionDeadline } from '@/utils/account.utils'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { formatDate } from '@/utils/date.utils'
 import { getRoleLabel } from '@/utils/label.utils'
@@ -128,14 +129,13 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
 
   const unreadQuery = useUnreadNotificationCount()
   const pendingDaysQuery = usePendingHealthDays()
-  const reviewItemsQuery = useMyReviewItems(farm?._id ?? '')
+  const pendingReviewQuery = usePendingExpertReviewCount(farm?._id ?? '')
   const requestDeletion = useRequestAccountDeletion()
   const cancelDeletion = useCancelAccountDeletion()
   const push = usePushRegistration()
   // Số ngày còn lại tới hạn xử lý yêu cầu xoá: cập nhật mỗi giờ là đủ
   const now = useNow(HOUR_MS)
 
-  const pendingReviewCount = (reviewItemsQuery.data ?? []).filter(item => isReviewPending(item.status)).length
   // Trạng thái yêu cầu xoá lấy từ User của phiên (deletion_requested_at, AUTH-FR-012, §6.14)
   const deletionRequestedAt = user?.deletion_requested_at ?? null
   const memberCount = farm?.members.length
@@ -177,7 +177,11 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
   const enablePush = () =>
     push.enable.mutate(undefined, {
       onSuccess: isEnabled =>
-        toast.show(isEnabled ? t('Đã bật thông báo trên máy này') : t('Chưa được cấp quyền thông báo')),
+        toast.show(
+          isEnabled
+            ? t('Đã cho phép thông báo. Máy chủ chưa gửi push tới máy này (Sắp có)')
+            : t('Chưa được cấp quyền thông báo'),
+        ),
     })
 
   return (
@@ -210,7 +214,7 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
           />
         </Card>
 
-        <HomeSection title={t('Lối tắt')}>
+        <HomeSection isCompact title={t('Lối tắt')}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shortcuts}>
             <ProfileShortcutCard
               icon={BellIcon}
@@ -234,14 +238,17 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
             <ProfileShortcutCard
               icon={ListChecksIcon}
               title={t('Quyết định chuyên gia')}
-              caption={t('{count} mục chờ duyệt', { count: pendingReviewCount })}
+              caption={
+                pendingReviewQuery.data === undefined
+                  ? '_'
+                  : t('{count} mục chờ duyệt', { count: pendingReviewQuery.data })
+              }
               onPress={() => router.push('/(tabs)/profile/expert-activity')}
-              isComingSoon={!IS_MOCK_API_ENABLED}
             />
           </ScrollView>
         </HomeSection>
 
-        <HomeSection title={t('Thông báo')}>
+        <HomeSection isCompact title={t('Thông báo')}>
           <Card style={styles.listCard}>
             <ProfileRow
               icon={BellRingingIcon}
@@ -261,15 +268,19 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
               icon={DeviceMobileIcon}
               label={t('Nhận push trên máy này')}
               caption={
-                push.isLoading ? '_' : push.isGranted ? t('Đã cho phép thông báo') : t('Chưa cho phép, chạm để bật')
+                // Quyền là thật, nhưng backend chưa nhận mã thiết bị (G-10) nên chưa có push nào được gửi
+                push.isLoading
+                  ? '_'
+                  : push.isGranted
+                    ? t('Đã cho phép · máy chủ chưa gửi push (Sắp có)')
+                    : t('Chưa cho phép, chạm để bật')
               }
               onPress={push.isGranted || push.enable.isPending ? undefined : enablePush}
-              trailing={<MockDataBadge />}
             />
           </Card>
         </HomeSection>
 
-        <HomeSection title={t('Quản lý')}>
+        <HomeSection isCompact title={t('Quản lý')}>
           <Card style={styles.listCard}>
             <ProfileRow
               icon={UsersThreeIcon}
@@ -284,7 +295,7 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
           </Card>
         </HomeSection>
 
-        <HomeSection title={t('Bảo mật')}>
+        <HomeSection isCompact title={t('Bảo mật')}>
           <Card style={styles.listCard}>
             <ProfileRow
               icon={KeyIcon}
@@ -312,15 +323,21 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
           </Card>
         </HomeSection>
 
-        <HomeSection title={t('Ứng dụng')}>
+        <HomeSection isCompact title={t('Ứng dụng')}>
           <Card style={styles.listCard}>
-            {/* Nhãn viết bằng ngôn ngữ đích để ai cũng đọc được; lưu theo tài khoản */}
+            {/* Chạm để chuyển Việt ⇄ Anh, lưu theo tài khoản; bên phải là mã + cờ của ngôn ngữ đang dùng */}
             <ProfileRow
-              icon={TranslateIcon}
+              icon={GlobeIcon}
               label={t('Ngôn ngữ')}
-              value={language === 'vi' ? 'Tiếng Việt' : 'English'}
-              caption={language === 'vi' ? 'Chạm để chuyển sang English' : 'Tap to switch to Tiếng Việt'}
               onPress={isSwitching ? undefined : onSwitchLanguage}
+              trailing={<LanguageFlag language={language} />}
+              accessibilityLabel={language === 'vi' ? 'Ngôn ngữ: Tiếng Việt. Chạm để chuyển sang English' : 'Language: English. Tap to switch to Tiếng Việt'}
+              hasDivider
+            />
+            <ProfileRow
+              icon={ShieldIcon}
+              label={t('Chính sách quyền riêng tư')}
+              onPress={() => router.push('/(tabs)/profile/privacy')}
               hasDivider
             />
             <ProfileRow icon={InfoIcon} label={t('Phiên bản ứng dụng')} value={Constants.expoConfig?.version ?? '_'} />
@@ -338,7 +355,7 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: Spacing.lg, gap: Spacing.xl },
+  content: { padding: Spacing.lg, gap: Spacing.lg },
   identity: { alignItems: 'center', gap: Spacing.xs },
   listCard: { paddingVertical: Spacing.xs },
   shortcuts: { gap: Spacing.sm },

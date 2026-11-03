@@ -90,6 +90,17 @@ export function filterAlerts(
   })
 }
 
+// Bỏ cảnh báo trùng id khi ghép nhiều trang: backend chỉ sắp theo created_at nên các bản ghi cùng giờ tạo có thể nằm ở
+// hai trang, và một cảnh báo đổi trạng thái giữa hai lần tải trang cũng có thể xuất hiện hai lần — trùng thì đếm sai
+export function uniqueById(alerts: Alert[]): Alert[] {
+  const seen = new Set<string>()
+  return alerts.filter(alert => {
+    if (seen.has(alert._id)) return false
+    seen.add(alert._id)
+    return true
+  })
+}
+
 // Số cảnh báo theo từng cấp hiển thị (dải tóm tắt, đặc tả §2.2); CRITICAL và HIGH cùng tính vào Khẩn cấp
 export function countBySeverityLevel(alerts: Alert[]): Record<SeverityLevel, number> {
   const counts: Record<SeverityLevel, number> = { P1: 0, P2: 0, P3: 0 }

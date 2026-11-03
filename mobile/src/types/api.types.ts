@@ -7,6 +7,8 @@ export interface ApiResponse<Data = unknown> {
     total?: number
     // Chỉ có ở GET /notifications: số chưa đọc của người gọi
     unreadCount?: number
+    // POST …/relay: false khi backend chưa kết nối broker nên lệnh chưa gửi tới controller (api-spec)
+    commandDelivered?: boolean
   }
 }
 

@@ -29,6 +29,8 @@ export const ENDPOINTS = {
   ZONE_THRESHOLDS: (zoneId: string) => `/farms/zones/${zoneId}/thresholds`,
   ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
   ZONE_FUZZY_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning`,
+  // Áp gợi ý hệ số hiện tại do server tính (EXPERT-FR-011): chuyên gia; chủ trại khi farm chưa có chuyên gia (BR-22)
+  ZONE_APPLY_SUGGESTION: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning/apply-suggestion`,
   ZONE_DETECTION_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/detection-tuning`,
   HOUSE_BIRD_COUNT_TUNING: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning`,
 
@@ -51,6 +53,13 @@ export const ENDPOINTS = {
   ALERT_DETAIL: (alertId: string) => `/alerts/${alertId}`,
   ALERT_ACKNOWLEDGE: (alertId: string) => `/alerts/${alertId}/acknowledge`,
   ALERT_VERDICT: (alertId: string) => `/alerts/${alertId}/verdict`,
+  // Bằng chứng ±30 phút của cảnh báo suy luận (ALERT-FR-014)
+  ALERT_EVIDENCE: (alertId: string) => `/alerts/${alertId}/evidence`,
+
+  // Hoạt động chuyên gia (EXPERT-FR-009/010/011)
+  EXPERT_ACTIVITY: '/expert-activity',
+  EXPERT_REVIEWS: '/expert-activity/reviews',
+  EXPERT_PROPOSALS: '/expert-activity/proposals',
 
   // Phân tích (ANALYTICS-FR-*)
   BIRD_COUNT_DAILY: '/analytics/bird-count/daily',

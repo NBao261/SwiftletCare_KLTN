@@ -17,3 +17,9 @@ export const queryClient = new QueryClient({
     },
   },
 })
+
+// Kéo để làm mới / "Thử lại": tải lại mọi dữ liệu đang hiện (các tab vẫn sống nên gồm cả tab khác), trừ token xem camera —
+// token mới đổi URL HLS nên video đang phát sẽ khởi động lại (mở lại trình phát thì useCameraStreamUrl tự xin token mới)
+export function refetchVisibleQueries(client: QueryClient) {
+  return client.refetchQueries({ type: 'active', predicate: query => query.queryKey[0] !== 'stream-token' })
+}

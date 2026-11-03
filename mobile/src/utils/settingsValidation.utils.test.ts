@@ -38,6 +38,14 @@ describe('parseNumberInput', () => {
     expect(parseNumberInput('abc')).toBeNull()
     expect(parseNumberInput('1.500,5')).toBeNull()
   })
+
+  it('tiếng Việt: "1.500" như khung xem ghi (một nghìn năm trăm) là mơ hồ, không đọc thành 1,5', () => {
+    expect(parseNumberInput('1.500')).toBeNull()
+    expect(parseNumberInput('1500')).toBe(1500)
+    // Phần nguyên 0 hoặc không đủ 3 chữ số sau dấu chấm vẫn là số thập phân
+    expect(parseNumberInput('0.125')).toBe(0.125)
+    expect(parseNumberInput('1.5')).toBe(1.5)
+  })
 })
 
 describe('toInputText', () => {

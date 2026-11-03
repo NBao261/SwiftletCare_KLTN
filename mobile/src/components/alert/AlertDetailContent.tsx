@@ -6,7 +6,6 @@ import { AlertEvidence } from '@/components/alert/AlertEvidence'
 import { SeverityLabel } from '@/components/alert/SeverityLabel'
 import { VerdictSheet } from '@/components/alert/VerdictSheet'
 import { StatRow } from '@/components/analytics/StatRow'
-import { ComingSoonAction } from '@/components/common/ComingSoonAction'
 import { OptionSheet } from '@/components/farm/OptionSheet'
 import { RelayControlSheet } from '@/components/farm/RelayControlSheet'
 import { Button } from '@/components/ui/button'
@@ -20,7 +19,6 @@ import { useAlertDetail } from '@/hooks/alert/useAlertDetail'
 import { useAlertLocations } from '@/hooks/alert/useAlertLocations'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
 import { useFarmDetail } from '@/hooks/farm/useFarmDetail'
-import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import type { Alert, RelayName } from '@/types'
@@ -41,7 +39,6 @@ interface AlertDetailContentProps {
   initialAlert?: Alert | null
   // Bằng chứng chỉ tải sau khi sheet mở xong
   isReady: boolean
-  now: number
   // Trước khi chuyển màn (đi tới tầng): sheet đóng trước
   onLeave?: () => void
   // Thông báo ngắn sau khi xác nhận, phán quyết
@@ -54,7 +51,6 @@ export function AlertDetailContent({
   alertId,
   initialAlert,
   isReady,
-  now,
   onLeave,
   onMessage,
 }: AlertDetailContentProps) {
@@ -65,7 +61,6 @@ export function AlertDetailContent({
   const { locate } = useAlertLocations()
   const location = alert ? locate(alert) : null
   const houseId = location?.houseId ?? null
-  const houseZonesQuery = useHouseZones(houseId ?? '')
   const farmQuery = useFarmDetail(alert?.farm_id ?? '')
   const farm = farmQuery.data?.data ?? null
   const sensorNodesQuery = useSensorNodes()
@@ -92,10 +87,12 @@ export function AlertDetailContent({
     farm?.members.find(member => member.user_id === userId)?.full_name ?? null
   const isInferred = isInferredAlert(alert)
   const canAcknowledge = canPerform(user, 'acknowledgeAlert') && alert.status === 'ACTIVE'
-  const canVerdict = canPerform(user, 'setAlertVerdict') && isInferred
-  // BR-22: chủ trại phán quyết khi farm chưa có chuyên gia — backend chưa làm
-  const isOwnerWithoutExpert =
-    isInferred && canPerform(user, 'acknowledgeAlert') && farm !== null && !farmHasExpert(farm)
+  // Chuyên gia phán quyết; farm chưa có chuyên gia thì chủ trại phán quyết thay (BR-22). Cảnh báo đã hết (RESOLVED) thì
+  // không kết luận nữa; bị bác bỏ (DISMISSED) vẫn đổi lại "Đúng" được
+  const canVerdict =
+    isInferred &&
+    alert.status !== 'RESOLVED' &&
+    canPerform(user, 'setAlertVerdict', { farmHasExpert: farm ? farmHasExpert(farm) : undefined })
   const controllers = (sensorNodesQuery.data?.data ?? []).filter(node => node.zone_id === alert.zone_id)
   const canControl = canPerform(user, 'controlRelay') && isEnvironmentAlert(alert) && controllers.length > 0
   const selectedController = controllers.find(node => node._id === relaySelection?.controllerId) ?? null
@@ -156,13 +153,7 @@ export function AlertDetailContent({
 
         {isInferred && (
           <Card>
-            <AlertEvidence
-              alert={alert}
-              houseId={houseId}
-              houseZones={houseZonesQuery.data ?? []}
-              enabled={isReady}
-              now={now}
-            />
+            <AlertEvidence alert={alert} enabled={isReady} />
           </Card>
         )}
 
@@ -188,7 +179,7 @@ export function AlertDetailContent({
               label={t('Phán quyết')}
               value={
                 verdict
-                  ? `${verdict.result === 'CONFIRMED' ? t('Đúng') : t('Bác bỏ')} · ${memberName(verdict.by) ?? t('Chuyên gia')} · ${formatDateTime(verdict.at)}`
+                  ? `${verdict.result === 'CONFIRMED' ? t('Đúng') : t('Bác bỏ')} · ${verdict.by?.full_name ?? (verdict.role === 'FARM_OWNER' ? t('Chủ trại') : t('Chuyên gia'))} · ${formatDateTime(verdict.at)}`
                   : t('Chờ phán quyết')
               }
               isWarning={!verdict}
@@ -199,8 +190,6 @@ export function AlertDetailContent({
               {t('Ghi chú phán quyết: {note}', { note: verdict.note })}
             </Text>
           ) : null}
-          {/* Bác bỏ chưa chuyển cảnh báo sang "Bị bác bỏ" (DISMISSED) — backend chưa làm */}
-          {verdict?.result === 'REJECTED' && <ComingSoonAction label={t('Chuyển sang "Bị bác bỏ"')} />}
         </Card>
       </ScrollView>
 
@@ -248,7 +237,6 @@ export function AlertDetailContent({
             />
           </>
         )}
-        {isOwnerWithoutExpert && <ComingSoonAction label={t('Phán quyết (farm chưa có chuyên gia)')} />}
       </View>
 
       <AcknowledgeSheet

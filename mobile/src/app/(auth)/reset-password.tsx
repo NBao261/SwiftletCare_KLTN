@@ -105,6 +105,7 @@ export default function ResetPasswordScreen() {
         // Đổi mật khẩu tạm: form dùng chung với tab Tài khoản, xong thì vào tab đầu của role
         <ChangePasswordForm
           currentPasswordLabel={t('Mật khẩu tạm')}
+          isTemporary
           onSuccess={() => {
             if (user) router.replace(getRoleHomeHref(user.role))
           }}
