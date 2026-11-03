@@ -973,12 +973,12 @@ The state is derived from `provisioneddevices` (`claimed_at`, `revoked_at`) and 
 ```mermaid
 stateDiagram-v2
   [*] --> COMPUTED : daily assessment (ANALYTICS-FR-012)
-  COMPUTED --> COMPUTED : late data or verdict, current status recomputed; snapshots kept
+  COMPUTED --> COMPUTED : late data or verdict, current status recomputed, snapshots kept
 ```
 
 ```mermaid
 stateDiagram-v2
-  [*] --> PENDING : day computed, one per Farm Owner and Domain Expert; status hidden (BR-31)
+  [*] --> PENDING : day computed, one per Farm Owner and Domain Expert, status hidden (BR-31)
   PENDING --> RATED : rating + snapshot stored together, status shown (EXPERT-FR-012)
   PENDING --> SKIPPED : status shown, not in NFR-14
   PENDING --> EXPIRED : 7 days without rating
