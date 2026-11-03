@@ -79,7 +79,7 @@ export function ControlTab({ scope }: ControlTabProps) {
     <View style={styles.tab}>
       {scope.selectedZoneId === null && (
         <Text variant="small" color={palette.textSecondary}>
-          {t('Đang xem {zone} · chọn tầng ở trên để đổi', { zone: zone.name })}
+          {t('Đang xem {zone} · chọn khu vực ở trên để đổi', { zone: zone.name })}
         </Text>
       )}
       <Card>

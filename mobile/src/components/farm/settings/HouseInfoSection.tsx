@@ -16,7 +16,7 @@ interface HouseInfoSectionProps {
   editor: SectionEditor
 }
 
-// Mục "Thông tin nhà": tên, số tầng, mô tả và danh sách tầng. Chỉ xem — backend chưa có API sửa tên, xoá nhà
+// Mục "Thông tin nhà": tên, số tầng, mô tả và danh sách khu vực. Chỉ xem — backend chưa có API sửa tên, xoá nhà
 // (FARM-FR-002) nên hai nút này khoá, ghi "Sắp có"
 export function HouseInfoSection({ house, zones, editor }: HouseInfoSectionProps) {
   const id = 'house-info'
@@ -40,7 +40,7 @@ export function HouseInfoSection({ house, zones, editor }: HouseInfoSectionProps
       />
       <SettingsTable
         columns={[
-          { label: t('Tầng đã tạo'), flex: 2 },
+          { label: t('Khu vực đã tạo'), flex: 2 },
           { label: t('Tầng số'), align: 'right' },
         ]}
         rows={zones.map(zone => ({
@@ -48,9 +48,9 @@ export function HouseInfoSection({ house, zones, editor }: HouseInfoSectionProps
           cells: [{ text: zone.name }, { text: zone.floor ? String(zone.floor) : '_' }],
           accessibilityLabel: t('{zone}, tầng số {floor}', { zone: zone.name, floor: zone.floor }),
         }))}
-        emptyText={t('Nhà chưa có tầng')}
+        emptyText={t('Nhà chưa có khu vực')}
       />
-      <SettingsActionBar label={t('Số tầng đã tạo')} value={String(zones.length)} />
+      <SettingsActionBar label={t('Số khu vực đã tạo')} value={String(zones.length)} />
       <View style={styles.actions}>
         <ComingSoonAction label={t('Đổi tên nhà')} />
         <ComingSoonAction label={t('Xoá nhà')} />

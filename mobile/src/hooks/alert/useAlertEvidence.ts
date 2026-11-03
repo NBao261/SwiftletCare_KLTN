@@ -24,7 +24,7 @@ interface EvidenceScope {
 }
 
 // Bằng chứng của cảnh báo suy luận, ghép từ API sẵn có vì backend chưa có API bằng chứng riêng (ALERT-FR-014):
-// số đo của tầng và số chim 5 phút của nhà ±30 phút quanh lúc cảnh báo, cảnh báo thiết bị đang mở của tầng;
+// số đo của khu vực và số chim 5 phút của nhà ±30 phút quanh lúc cảnh báo, cảnh báo thiết bị đang mở của khu vực;
 // tỉ lệ về tổ giảm: báo cáo xem trước cả ngày của từng tầng (% trong ngưỡng, cảnh báo theo loại)
 export function useAlertEvidence({ alert, houseId, houseZones, enabled, now }: EvidenceScope) {
   const createdAt = alert ? Date.parse(alert.created_at) : 0

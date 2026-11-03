@@ -13,29 +13,29 @@ interface ZoneInfoSectionProps {
   editor: SectionEditor
 }
 
-// Mục "Thông tin tầng": tên và tầng số của zone. Chỉ xem — backend chưa có API sửa, xoá zone (FARM-FR-002)
+// Mục "Thông tin khu vực": tên và tầng số của zone. Chỉ xem — backend chưa có API sửa, xoá zone (FARM-FR-002)
 export function ZoneInfoSection({ zone, editor }: ZoneInfoSectionProps) {
   const id = `zone-info:${zone._id}`
 
   return (
     <SettingsSection
       icon={StackIcon}
-      title={t('Thông tin tầng')}
+      title={t('Thông tin khu vực')}
       subtitle={zone.name}
       scopeLabel={zone.name}
       isExpanded={editor.isExpanded(id)}
       onToggle={() => editor.toggle(id)}
-      footerNote={t('Đổi tên, xoá tầng sẽ mở khi backend có API')}
+      footerNote={t('Đổi tên, xoá khu vực sẽ mở khi backend có API')}
     >
       <SettingsMetaGrid
         items={[
-          { label: t('Tên tầng'), value: zone.name },
+          { label: t('Tên khu vực'), value: zone.name },
           { label: t('Tầng số'), value: zone.floor ? String(zone.floor) : undefined },
         ]}
       />
       <View style={styles.actions}>
-        <ComingSoonAction label={t('Đổi tên tầng')} />
-        <ComingSoonAction label={t('Xoá tầng')} />
+        <ComingSoonAction label={t('Đổi tên khu vực')} />
+        <ComingSoonAction label={t('Xoá khu vực')} />
       </View>
     </SettingsSection>
   )

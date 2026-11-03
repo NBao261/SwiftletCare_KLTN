@@ -41,8 +41,8 @@ interface AlertEvidenceProps {
   now: number
 }
 
-// Bằng chứng của cảnh báo suy luận (ALERT-FR-014, BR-23), ghép từ API sẵn có: các chỉ số của tầng và số chim 5 phút
-// của nhà ±30 phút quanh lúc cảnh báo (vạch cam tại lúc cảnh báo), cảnh báo thiết bị đang mở của tầng;
+// Bằng chứng của cảnh báo suy luận (ALERT-FR-014, BR-23), ghép từ API sẵn có: các chỉ số của khu vực và số chim 5 phút
+// của nhà ±30 phút quanh lúc cảnh báo (vạch cam tại lúc cảnh báo), cảnh báo thiết bị đang mở của khu vực;
 // tỉ lệ về tổ giảm thì xem cả ngày của từng tầng. Nguồn không có số thì ghi "Thiếu dữ liệu", không vẽ về 0
 export function AlertEvidence({ alert, houseId, houseZones, enabled, now }: AlertEvidenceProps) {
   const palette = usePalette()
@@ -190,7 +190,7 @@ export function AlertEvidence({ alert, houseId, houseZones, enabled, now }: Aler
       </ChartFrame>
       <View style={styles.zoneBlock}>
         <Text variant="small" weight="semiBold">
-          {t('Cảnh báo thiết bị đang mở của tầng')}
+          {t('Cảnh báo thiết bị đang mở của khu vực')}
         </Text>
         {evidence.deviceAlerts.isLoading ? (
           <Text variant="small" color={palette.textSecondary}>

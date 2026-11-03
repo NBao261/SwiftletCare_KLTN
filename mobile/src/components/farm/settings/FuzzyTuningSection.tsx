@@ -31,7 +31,7 @@ export function FuzzyTuningSection({ zone, editor, onSaved }: FuzzyTuningSection
       title={t('Hệ số bộ điều khiển mờ')}
       subtitle={t('Cách phun sương và quạt phản ứng quanh ngưỡng')}
       scopeLabel={zone.name}
-      footerNote={t('Chủ trại và chuyên gia sửa được. Lưu xong controller của tầng áp dụng ngay')}
+      footerNote={t('Chủ trại và chuyên gia sửa được. Lưu xong controller của khu vực áp dụng ngay')}
       keys={FUZZY_KEYS}
       rules={FUZZY_TUNING_RULES}
       values={zone.fuzzy_tuning}

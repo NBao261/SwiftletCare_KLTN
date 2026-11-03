@@ -150,7 +150,7 @@ export function EnvironmentTab({ scope }: EnvironmentTabProps) {
   )
 
   const toggleCompare = (isOn: boolean) => {
-    // Tắt so sánh khi đang chọn "Tất cả tầng": chuyển về một tầng
+    // Tắt so sánh khi đang chọn "Tất cả khu vực": chuyển về một tầng
     if (!isOn && scope.selectedZoneId === null && focusZone) scope.selectZone(focusZone._id)
     scope.setCompareZones(isOn)
   }
@@ -168,19 +168,19 @@ export function EnvironmentTab({ scope }: EnvironmentTabProps) {
         {canCompare && (
           <View style={styles.switchRow}>
             <Text variant="body" style={styles.flex}>
-              {t('So sánh tầng')}
+              {t('So sánh khu vực')}
             </Text>
             <Switch
               value={isCompare}
               onValueChange={toggleCompare}
-              accessibilityLabel={t('So sánh tầng')}
+              accessibilityLabel={t('So sánh khu vực')}
               trackColor={{ false: palette.border, true: palette.inverse }}
               thumbColor={palette.surface}
             />
           </View>
         )}
         <ChartFrame
-          title={isCompare ? t('{metric} các tầng', { metric: metricLabel }) : metricLabel}
+          title={isCompare ? t('{metric} các khu vực', { metric: metricLabel }) : metricLabel}
           summary={summary}
           isLoading={summaries.isLoading}
           isError={summaries.isError}
@@ -221,7 +221,7 @@ export function EnvironmentTab({ scope }: EnvironmentTabProps) {
 
       <ChartFullscreenModal
         visible={isFullscreen}
-        title={isCompare ? t('{metric} các tầng', { metric: metricLabel }) : metricLabel}
+        title={isCompare ? t('{metric} các khu vực', { metric: metricLabel }) : metricLabel}
         onClose={() => setFullscreen(false)}
       >
         {(width, height) => renderChart(width, height)}

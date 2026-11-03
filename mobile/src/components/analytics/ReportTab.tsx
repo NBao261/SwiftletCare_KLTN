@@ -158,7 +158,7 @@ export function ReportTab({ scope }: ReportTabProps) {
     <View style={styles.tab}>
       {scope.selectedZoneId === null && (
         <Text variant="small" color={palette.textSecondary}>
-          {t('Đang xem {zone} · chọn tầng ở trên để đổi', { zone: zone.name })}
+          {t('Đang xem {zone} · chọn khu vực ở trên để đổi', { zone: zone.name })}
         </Text>
       )}
       <Card>
@@ -178,7 +178,7 @@ export function ReportTab({ scope }: ReportTabProps) {
           </Text>
         ) : reports.length === 0 ? (
           <Text variant="small" color={palette.textSecondary}>
-            {t('Tầng chưa có báo cáo tuần')}
+            {t('Khu vực chưa có báo cáo tuần')}
           </Text>
         ) : (
           <View>{reports.map(renderReport)}</View>

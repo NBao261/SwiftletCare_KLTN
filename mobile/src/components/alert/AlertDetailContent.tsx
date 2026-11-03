@@ -69,7 +69,7 @@ export function AlertDetailContent({
   const farmQuery = useFarmDetail(alert?.farm_id ?? '')
   const farm = farmQuery.data?.data ?? null
   const sensorNodesQuery = useSensorNodes()
-  // Cảnh báo đang mở của tầng: sheet điều khiển tay dùng để hỏi lại trước khi bật bơm (ENV-FR-016)
+  // Cảnh báo đang mở của khu vực: sheet điều khiển tay dùng để hỏi lại trước khi bật bơm (ENV-FR-016)
   const zoneScopes = alert?.zone_id ? [{ zoneId: alert.zone_id }] : []
   const zoneAlertsQuery = useActiveAlertsOfScopes(zoneScopes)
   const [isAcknowledgeOpen, setAcknowledgeOpen] = useState(false)
@@ -207,7 +207,7 @@ export function AlertDetailContent({
       <View style={[styles.actions, { backgroundColor: palette.background, borderTopColor: palette.divider }]}>
         {houseId && (
           <Button
-            label={alert.type === 'LOW_RETURN_RATE' ? t('Xem đàn chim') : t('Đi tới tầng')}
+            label={alert.type === 'LOW_RETURN_RATE' ? t('Xem đàn chim') : t('Đi tới khu vực')}
             variant="secondary"
             size="md"
             onPress={goToSource}

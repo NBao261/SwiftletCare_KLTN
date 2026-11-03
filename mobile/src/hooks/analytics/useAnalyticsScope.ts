@@ -59,7 +59,7 @@ export function useAnalyticsScope() {
       zones.find(zone => zone._id === prefs.lastZoneIdByHouse[houseId])?._id ??
       zones[0]?._id ??
       null
-  // Tầng dùng cho khối chỉ một tầng (Điều khiển, Báo cáo) khi đang chọn "Tất cả tầng"
+  // Tầng dùng cho khối chỉ một tầng (Điều khiển, Báo cáo) khi đang chọn "Tất cả khu vực"
   const focusZone = zones.find(zone => zone._id === selectedZoneId) ?? zones[0] ?? null
 
   const remembered = prefs.analytics ?? {}

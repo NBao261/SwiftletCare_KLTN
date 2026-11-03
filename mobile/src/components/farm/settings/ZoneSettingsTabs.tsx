@@ -10,7 +10,7 @@ interface ZoneSettingsTabsProps {
   zones: Zone[]
   selectedZoneId: string | null
   onSelect: (zoneId: string) => void
-  // Có quyền tạo zone thì có thẻ "+ Thêm tầng" cuối hàng
+  // Có quyền tạo zone thì có thẻ "+ Thêm khu vực" cuối hàng
   onAdd?: () => void
 }
 
@@ -42,11 +42,11 @@ export function ZoneSettingsTabs({ zones, selectedZoneId, onSelect, onAdd }: Zon
           onPress={onAdd}
           style={[styles.tab, styles.addTab, { borderColor: palette.text }]}
           accessibilityRole="button"
-          accessibilityLabel={t('Thêm tầng')}
+          accessibilityLabel={t('Thêm khu vực')}
         >
           <PlusIcon size={16} color={palette.text} weight="bold" />
           <Text variant="body" weight="semiBold">
-            {t('Thêm tầng')}
+            {t('Thêm khu vực')}
           </Text>
         </Pressable>
       )}

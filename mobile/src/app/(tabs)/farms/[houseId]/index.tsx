@@ -121,7 +121,7 @@ export default function HouseDetailScreen() {
     if (detail.isSensorsError || detail.isZonesError) {
       return <EmptyState message={t('Không tải được số đo')} actionLabel={t('Thử lại')} onAction={retry} />
     }
-    if (!detail.zone) return <EmptyState message={t('Nhà chưa có tầng')} />
+    if (!detail.zone) return <EmptyState message={t('Nhà chưa có khu vực')} />
     if (detail.controllers.length === 0) return <EmptyState message={t('Zone chưa có thiết bị gửi dữ liệu')} />
 
     const tiles = buildSensorTiles(detail.telemetry, detail.zone.thresholds, now)

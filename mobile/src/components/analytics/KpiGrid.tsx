@@ -9,7 +9,7 @@ import { t } from '@/utils/i18n.utils'
 
 interface KpiGridProps {
   kpis: ReturnType<typeof useAnalyticsKpis>
-  // "Tất cả tầng": ô theo tầng ghi tên tầng thấp nhất
+  // "Tất cả khu vực": ô theo tầng ghi tên tầng thấp nhất
   isAllZones: boolean
   onSelectTab: (tab: AnalyticsTab) => void
   onOpenAlerts: () => void

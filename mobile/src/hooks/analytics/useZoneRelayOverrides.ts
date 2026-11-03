@@ -7,7 +7,7 @@ import type { RelayOverrideLog } from '@/types'
 const OVERRIDES_PER_CONTROLLER = 20
 
 // Lịch sử điều khiển tay của một tầng (ENV-FR-019): backend chỉ có route theo controller nên gộp các controller
-// của tầng, mới nhất trước
+// của khu vực, mới nhất trước
 export function useZoneRelayOverrides(zoneId: string, enabled: boolean) {
   const sensorNodesQuery = useSensorNodes()
   const nodes = (sensorNodesQuery.data?.data ?? []).filter(node => node.zone_id === zoneId)

@@ -35,7 +35,7 @@ function formatBucket(bucket: number, period: HarvestPeriod): string {
   return String(bucket)
 }
 
-// Tab Sản lượng (ANALYTICS-FR-004, HARVEST-FR-001): đợt thu của nhà hoặc tầng đang chọn, cột xếp chồng theo loại tổ,
+// Tab Sản lượng (ANALYTICS-FR-004, HARVEST-FR-001): đợt thu của nhà hoặc khu vực đang chọn, cột xếp chồng theo loại tổ,
 // gộp theo tháng / quý / năm, đổi giữa kg và số tổ — cùng cách tính biểu đồ năm của web
 export function HarvestTab({ scope, today }: HarvestTabProps) {
   const palette = usePalette()
@@ -154,7 +154,7 @@ export function HarvestTab({ scope, today }: HarvestTabProps) {
         )}
         <Text variant="small" color={palette.textSecondary}>
           {t(
-            'Tính từ các đợt thu đã ghi của {scope}; đợt đã xoá không tính. Một lần thu là các loại yến cùng tầng, cùng ngày.',
+            'Tính từ các đợt thu đã ghi của {scope}; đợt đã xoá không tính. Một lần thu là các loại yến cùng khu vực, cùng ngày.',
             {
               scope: scopeName,
             },

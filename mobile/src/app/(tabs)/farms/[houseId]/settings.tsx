@@ -152,19 +152,19 @@ export default function HouseSettingsScreen() {
   const renderZoneSections = () => {
     if (zonesQuery.isLoading) return <Skeleton width="100%" height={SECTION_SKELETON_HEIGHT} />
     if (zonesQuery.isError) {
-      return <EmptyState message={t('Không tải được danh sách tầng')} actionLabel={t('Thử lại')} onAction={retry} />
+      return <EmptyState message={t('Không tải được danh sách khu vực')} actionLabel={t('Thử lại')} onAction={retry} />
     }
     if (!zone) {
       return (
         <EmptyState
-          message={t('Nhà chưa có tầng')}
-          actionLabel={canCreateZone ? t('Thêm tầng') : undefined}
+          message={t('Nhà chưa có khu vực')}
+          actionLabel={canCreateZone ? t('Thêm khu vực') : undefined}
           onAction={canCreateZone ? openZoneSheet : undefined}
         />
       )
     }
     return (
-      // key = zone: đổi tầng thì các mục dựng lại, không mang bản nháp của tầng trước
+      // key = zone: đổi tầng thì các mục dựng lại, không mang bản nháp của khu vực trước
       <View
         key={zone._id}
         style={styles.group}
@@ -234,7 +234,7 @@ export default function HouseSettingsScreen() {
             </View>
 
             <Text variant="small" weight="semiBold" color={palette.textSecondary} style={styles.groupLabel}>
-              {t('Theo tầng')}
+              {t('Theo khu vực')}
             </Text>
             {zones.length > 0 && (
               <ZoneSettingsTabs
@@ -260,9 +260,9 @@ export default function HouseSettingsScreen() {
         <CreateItemSheet
           key={`zone-${sheetKey}`}
           visible={isZoneSheetOpen}
-          title={t('Thêm tầng')}
+          title={t('Thêm khu vực')}
           scopeLabel={house.name}
-          nameLabel={t('Tên tầng')}
+          nameLabel={t('Tên khu vực')}
           numberLabel={t('Tầng số')}
           submit={async (name, floor) => {
             const created = await createZone.mutateAsync({ houseId: house._id, payload: { name, floor } })
@@ -270,7 +270,7 @@ export default function HouseSettingsScreen() {
           }}
           onCreated={() => {
             setZoneSheetOpen(false)
-            toast.show(t('Đã thêm tầng'))
+            toast.show(t('Đã thêm khu vực'))
           }}
           onClose={() => setZoneSheetOpen(false)}
         />

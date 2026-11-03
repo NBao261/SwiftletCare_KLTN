@@ -33,7 +33,7 @@ export function DetectionTuningSection({ zone, editor, onSaved }: DetectionTunin
       subtitle={t('Khi nào báo tiếng ồn lạ, phun sương không hiệu quả, loa hỏng')}
       scopeLabel={zone.name}
       footerNote={
-        canEdit ? t('Chỉ chuyên gia sửa được. Lưu xong controller của tầng áp dụng ngay') : t('Do chuyên gia chỉnh')
+        canEdit ? t('Chỉ chuyên gia sửa được. Lưu xong controller của khu vực áp dụng ngay') : t('Do chuyên gia chỉnh')
       }
       keys={DETECTION_KEYS}
       rules={DETECTION_TUNING_RULES}

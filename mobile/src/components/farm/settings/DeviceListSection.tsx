@@ -43,7 +43,7 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
     <SettingsSection
       icon={isCamera ? VideoCameraIcon : CpuIcon}
       title={isCamera ? t('Camera AI') : t('Controller')}
-      subtitle={isCamera ? t('Đếm chim ở cửa ra vào của cả nhà') : t('Đo môi trường và bật tắt relay của tầng')}
+      subtitle={isCamera ? t('Đếm chim ở cửa ra vào của cả nhà') : t('Đo môi trường và bật tắt relay của khu vực')}
       scopeLabel={scopeLabel}
       isExpanded={editor.isExpanded(id)}
       onToggle={() => editor.toggle(id)}
@@ -56,7 +56,7 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
           { label: t('Trạng thái'), align: 'right', flex: 1.5 },
         ]}
         rows={rows}
-        emptyText={isCamera ? t('Nhà chưa có camera') : t('Tầng chưa có controller')}
+        emptyText={isCamera ? t('Nhà chưa có camera') : t('Khu vực chưa có controller')}
       />
       {devices.length > 0 && (
         <SettingsActionBar label={t('Đang trực tuyến')} value={`${onlineCount}/${devices.length}`} />

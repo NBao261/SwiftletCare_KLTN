@@ -55,7 +55,7 @@ export function AlertFilterChips({ scope }: AlertFilterChipsProps) {
   const chips: { id: Exclude<OpenSheet, null>; label: string; isActive: boolean; isVisible: boolean }[] = [
     {
       id: 'zone',
-      label: zoneName ?? t('Tất cả tầng'),
+      label: zoneName ?? t('Tất cả khu vực'),
       isActive: Boolean(scope.zoneId),
       // Chỉ lọc tầng khi đang xem một nhà có từ 2 tầng
       isVisible: Boolean(scope.house) && scope.zones.length > 1,
@@ -103,9 +103,9 @@ export function AlertFilterChips({ scope }: AlertFilterChipsProps) {
 
       <OptionSheet
         visible={openSheet === 'zone'}
-        title={t('Chọn tầng')}
+        title={t('Chọn khu vực')}
         options={[
-          { id: ALL, label: t('Tất cả tầng') },
+          { id: ALL, label: t('Tất cả khu vực') },
           ...scope.zones.map(zone => ({ id: zone._id, label: zone.name })),
         ]}
         selectedId={scope.zoneId ?? ALL}

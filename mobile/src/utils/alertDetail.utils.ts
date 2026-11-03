@@ -154,7 +154,7 @@ export function describeAlertDetail(alert: Alert): string[] {
   return lines
 }
 
-// Cảnh báo môi trường: chủ trại có thể mở điều khiển tay của tầng (ENV-FR-016)
+// Cảnh báo môi trường: chủ trại có thể mở điều khiển tay của khu vực (ENV-FR-016)
 export function isEnvironmentAlert(alert: Pick<Alert, 'type' | 'zone_id'>): boolean {
   return Boolean(alert.zone_id) && ['THRESHOLD_BREACH', 'FORECAST_BREACH', 'MISTING_INEFFECTIVE'].includes(alert.type)
 }

@@ -20,7 +20,7 @@ export interface AutoKpi {
   overrideCount: number
 }
 
-// Bốn ô tổng quan đầu màn Phân tích (đặc tả §3.2). "Tất cả tầng": ô theo tầng hiện tầng thấp nhất.
+// Bốn ô tổng quan đầu màn Phân tích (đặc tả §3.2). "Tất cả khu vực": ô theo tầng hiện tầng thấp nhất.
 // Chỉ tải dữ liệu của ô; nội dung tab tải khi mở tab
 export function useAnalyticsKpis(scope: AnalyticsScope, today: string) {
   const houseId = scope.house?._id ?? ''

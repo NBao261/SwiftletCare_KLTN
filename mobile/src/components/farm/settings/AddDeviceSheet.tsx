@@ -54,7 +54,7 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
     // Quét nhầm mã tầng hoặc mã lạ: báo rồi cho quét lại
     setScanNotice(
       parseZoneCode(data)
-        ? t('Đây là mã tầng. Hãy quét nhãn dán trên thiết bị')
+        ? t('Đây là mã khu vực. Hãy quét nhãn dán trên thiết bị')
         : t('Mã này không phải nhãn thiết bị SwiftletCare'),
     )
     setScanAttempt(attempt => attempt + 1)
@@ -103,7 +103,7 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
         <View style={styles.body}>
           <SettingsMetaGrid
             items={[
-              { label: isCamera ? t('Gắn vào nhà') : t('Gắn vào tầng'), value: target?.name, isFullWidth: true },
+              { label: isCamera ? t('Gắn vào nhà') : t('Gắn vào khu vực'), value: target?.name, isFullWidth: true },
               {
                 label: t('Mã thiết bị'),
                 input: {

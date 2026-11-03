@@ -2,7 +2,7 @@ import { ChoiceChips, type ChoiceOption } from '@/components/analytics/ChoiceChi
 import type { AnalyticsScope } from '@/hooks/analytics/useAnalyticsScope'
 import { t } from '@/utils/i18n.utils'
 
-// Giá trị chip "Tất cả tầng"
+// Giá trị chip "Tất cả khu vực"
 const ALL_ZONES = '__all__'
 
 interface AnalyticsFilterBarProps {
@@ -15,7 +15,7 @@ export function AnalyticsFilterBar({ scope }: AnalyticsFilterBarProps) {
   if (scope.zones.length < 2) return null
 
   const zoneOptions: ChoiceOption<string>[] = [
-    { id: ALL_ZONES, label: t('Tất cả tầng') },
+    { id: ALL_ZONES, label: t('Tất cả khu vực') },
     ...scope.zones.map(zone => ({ id: zone._id, label: zone.name })),
   ]
 
@@ -25,7 +25,7 @@ export function AnalyticsFilterBar({ scope }: AnalyticsFilterBarProps) {
       selectedId={scope.selectedZoneId ?? ALL_ZONES}
       onSelect={id => scope.selectZone(id === ALL_ZONES ? null : id)}
       disabled={scope.tab === 'birds'}
-      accessibilityLabel={t('Chọn tầng')}
+      accessibilityLabel={t('Chọn khu vực')}
     />
   )
 }

@@ -23,7 +23,7 @@ function joinMetricLabels(metrics: Iterable<ThresholdMetric>): string {
 
 // Câu tóm tắt: một tầng thì "chỉ số · tên tầng", nhiều tầng thì gộp các chỉ số đang lệch
 function getBreachSummary(zoneCount: number, breaches: ZoneBreach[]): string {
-  if (zoneCount === 0) return t('Chưa có tầng')
+  if (zoneCount === 0) return t('Chưa có khu vực')
   if (breaches.length === 0) return t('Tất cả trong ngưỡng')
   if (breaches.length === 1) return `${joinMetricLabels(breaches[0].metrics)} · ${breaches[0].zone.name}`
   return joinMetricLabels(new Set(breaches.flatMap(breach => breach.metrics)))
@@ -34,7 +34,7 @@ function getBreachTone(isReady: boolean, breachCount: number): StatTone {
   return isReady && breachCount > 0 ? 'problem' : 'neutral'
 }
 
-// Ô 3: số tầng có số đo mới nhất nằm ngoài ngưỡng của tầng, cộng mọi Farm
+// Ô 3: số tầng có số đo mới nhất nằm ngoài ngưỡng của khu vực, cộng mọi Farm
 export function ZoneThresholdStatTile() {
   const [isSheetOpen, setSheetOpen] = useState(false)
   const housesQuery = useAllHouses()
@@ -43,7 +43,7 @@ export function ZoneThresholdStatTile() {
 
   const isReady = ![housesQuery, zonesQuery, telemetryQuery].some(query => query.isLoading || query.isError)
   const zoneCount = zonesQuery.zones.length
-  // Tầng chưa có số đo, hoặc số đo đã cũ (thiết bị ngừng gửi), thì bỏ qua
+  // Khu vực chưa có số đo, hoặc số đo đã cũ (thiết bị ngừng gửi), thì bỏ qua
   const breaches: ZoneBreach[] = zonesQuery.zones.flatMap(zone => {
     const record = telemetryQuery.latestByZoneId.get(zone._id)
     const metrics = record && isRecentReading(record) ? getBreachedMetrics(record, zone.thresholds) : []
@@ -58,7 +58,7 @@ export function ZoneThresholdStatTile() {
       router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: zone.house_id, zoneId: zone._id } })
       return
     }
-    // shortcut: chưa có màn danh sách tầng lệch nhóm theo nhà — tạm mở tab Trang trại
+    // shortcut: chưa có màn danh sách khu vực lệch nhóm theo nhà — tạm mở tab Trang trại
     router.navigate('/(tabs)/farms')
   }
 
@@ -67,7 +67,7 @@ export function ZoneThresholdStatTile() {
       <StatTile
         icon={ThermometerIcon}
         tone={getBreachTone(isReady, breaches.length)}
-        label={t('Ngưỡng')}
+        label={t('Vượt ngưỡng')}
         value={value}
         onPress={() => setSheetOpen(true)}
         isLoading={[housesQuery, zonesQuery, telemetryQuery].some(query => query.isLoading)}
@@ -76,7 +76,7 @@ export function ZoneThresholdStatTile() {
         visible={isSheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t('Khu vực vượt ngưỡng')}
-        detailLabel={t('Xem chi tiết tầng vượt ngưỡng')}
+        detailLabel={t('Xem chi tiết khu vực vượt ngưỡng')}
         value={value}
         summary={isReady ? getBreachSummary(zoneCount, breaches) : '_'}
         items={breaches.slice(0, MAX_DETAIL_ITEMS).map(({ zone, metrics }) => ({
