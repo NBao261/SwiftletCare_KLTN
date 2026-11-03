@@ -4,11 +4,11 @@
 
 | Field | Value |
 | --- | --- |
-| Project code | `[TEAM: approved project code]` |
+| Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
-| Supervisor | `[TEAM: supervisor name]` |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Document version | 1.1.0 (Review 2) |
-| Date | 26/10/2026 |
+| Date | 03/11/2026 |
 | Requirements baseline | Report 3 – SRS 3.1.0; Design Brief (BM01) 1.1 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.

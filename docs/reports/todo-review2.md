@@ -118,7 +118,7 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 |---|---|:---:|---|
 | [x] | Đồng bộ **cấu trúc** phiếu v3, BM03, SRS, SDD, BM01, Tracking, Report 5 theo các quyết định trên (chưa phải baseline cuối: còn G-01, G-02, `[TEAM]`, CI trên tag, BM02) | P0-Tag | 26/10/2026 |
 | [x] | Sinh lại Word: `tools/make_registration_v3.py`, `make_bm03.py`, `make_bm01.py`; BM01 mục 0–8 = 4 trang (đo bằng Word 26/10) | P0-Tag | Sinh lại và đo lại sau khi điền `[TEAM]` |
-| [ ] | Điền các ô `[TEAM]` (mục 2) | P0-Tag | |
+| [x] | Điền các ô `[TEAM]` (mục 2) | P0-Tag | 03/11/2026; còn các ô điền tay trong phiếu Word |
 | [x] | PR code nhỏ **G-01** (enum + dọn phạm vi) và phần P0 của **G-02** (bỏ đăng ký công khai, bỏ đăng nhập OTP, thay luồng tạo tài khoản từ lời mời) merge trước khi gắn tag | P0-Tag | Mục 4 — G-01 PR #113, G-02 PR #116 đã merge |
 | [x] | Mở PR nhánh tài liệu vào `develop` | P0-Tag | PR #108, #109, #111 đã merge |
 | [ ] | Chạy CI đủ mọi module trên commit cuối của `develop` (Actions → CI → *Run workflow*); xanh thì gắn tag `review-2` **đúng commit đó** (push tag chạy CI lần nữa, không phải dời tag). Tải 3 artifact của lần chạy trên tag (`backend-jest-results`, `firmware-pio-junit`, `ai-pipeline-pytest-junit`), rồi `python docs/reports/report5/gen_report5.py docs/reports/report5/template.md docs/reports/report5-test.md --jest jest-results.json --pio pio-junit.xml --pytest pytest-junit.xml`; ghi link lần chạy CI vào Report 5 §6 | P0-Tag | CI đã có trigger tag `review-*`, chạy tay và artifact (26/10) |
@@ -135,30 +135,10 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 ## 2. Ô `[TEAM]` cần điền
 
-- **Mọi hồ sơ:** mã đề tài, GVHD, ngày.
-- **Phiếu đăng ký (Word), các ô không có `[TEAM]`:** Class; chọn Specialty (ES/IS/JS); đánh dấu "Kinds of person make registers" (Lecturer/Students); bảng Supervisor (tên, điện thoại, e-mail, chức danh); ngày ký; số điện thoại sinh viên (chỉ điền ở bản nộp, không commit). Sửa trong `tools/make_registration_v3.py` rồi sinh lại.
-- **Report 3:**
-  - REF-9: có mua bản đầy đủ MS 2273:2012 hay bỏ tham chiếu.
-  - REF-10: đọc nguyên văn Nghị định 13/2020 Điều 25 và quy định của tỉnh về giờ phát loa.
-  - §2.5: cấu hình PC làm AI node.
-  - BR-01: mức sàn độ ẩm 75 % hay 80 % (hỏi người nuôi).
-  - BR-07: giờ phát loa được phép.
-  - §8.1: cách chạy tay bơm/quạt bằng công tắc của nhà yến.
-  - Ngày phiên bản 3.0.0.
-- **Report 4:**
-  - Điều khoản sử dụng Open-Meteo.
-  - Phiên bản mạch tự vẽ.
-  - Nhà cung cấp VPS và tên miền.
-  - Công cụ AI và model đã dùng.
-  - Nơi lưu bản sao lưu.
-  - Ngày các phiên bản 1.0.x.
-- **Report 1:** sản phẩm trên thị trường (tên, giá, link) và số liệu ngành có nguồn. Không bịa số.
-- **Report 2:** ngày các mốc, xác nhận ước lượng công.
-- **Design Brief §8:** PR tiêu biểu của từng người.
-- **Project Tracking:**
-  - §1: ngày các mốc.
-  - §2: đếm lại số PR của Bảo sau #107.
-  - §3: PR của F-01, 02, 04, 05, 08, 09, 12.
+**Đã điền hết trong các file Markdown ngày 03/11/2026** (mã đề tài FA26SE158, GVHD Nguyễn Văn Chiến và Trương Long, các mốc ngày, PR minh chứng, công cụ AI, cấu hình AI node, nguồn REF-9, REF-10, BR-07, số nhà yến Việt Nam). Còn lại:
+
+- [ ] **Phiếu đăng ký (Word), các ô điền tay:** Class; Specialty (ES/IS/JS); "Kinds of person make registers"; bảng Supervisor (tên, điện thoại, e-mail, chức danh); ngày ký; số điện thoại (không đưa vào repo).
+- [ ] **Theo dõi sau Review 2 (G-19):** người nuôi xác nhận mức sàn độ ẩm 75 % hay 80 % (BR-01); chọn nhà cung cấp VPS và tên miền khi dựng staging (G-17); phiên bản mạch khi làm board (G-13).
 
 ## 3. Việc thực tế ngoài code (G-19)
 

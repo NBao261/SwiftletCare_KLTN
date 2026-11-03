@@ -4,11 +4,11 @@
 
 | Field | Value |
 | --- | --- |
-| Project code | `[TEAM: approved project code]` |
+| Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
-| Supervisor | `[TEAM: supervisor name]` |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Document version | 1.0.0 (Review 2) |
-| Date | 23/10/2026 |
+| Date | 03/11/2026 |
 | Scope baseline | Registration form v3 with Record of Changes (BM03) |
 
 Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commitment (BM04). Progress against this plan is kept in Project Tracking (`project-tracking.md`).
@@ -19,14 +19,14 @@ Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commi
 
 ### 1.1 Scope and Estimation
 
-Scope is the registration form v3: main flows MF-01…11 and supporting flows SF-02…04 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are draft estimates `[TEAM: confirm]`.
+Scope is the registration form v3: main flows MF-01…11 and supporting flows SF-02…04 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are the team's estimates at 03/11/2026.
 
 | WBS | Work package | Main deliverable | Owner | Estimate (person-days) | Done at Review 2 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.4.x (sensing, fuzzy control, self-diagnosis, offline buffer, OTA); controller board with current sensing | Bảo, Kiệt | 45 | About 70 % (board, current check, config version and MQTT TLS remain) |
-| 2 | Vision (Task 2) | Labelled dataset, trained YOLO model, counting pipeline, annotated stream, accuracy report | Nguyễn Chí Bảo | 40 | About 50 % (pipeline, MQTT publishing, video push and tests done; trained model, device topics and evaluation remain) |
-| 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine, forecasting, expert module, daily health assessment, reports | Kiệt, Bảo | 70 | About 70 % (MF-11, review items, proposals, config sync, FCM remain) |
-| 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens; mobile app with QR setup and push | Len, Nhi, Tuấn, Bảo | 75 | Web about 60 %, mobile about 10 % |
+| 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.5.x (sensing, fuzzy control, self-diagnosis, offline buffer, OTA); controller board with current sensing | Bảo, Kiệt | 45 | About 70 % (board, current check, config version and MQTT TLS remain) |
+| 2 | Vision (Task 2) | Labelled dataset, trained YOLO model, counting pipeline, annotated stream, accuracy report | Nguyễn Chí Bảo | 40 | About 55 % (pipeline, MQTT publishing, video push and tests done; first YOLOv8n and YOLO11n models trained on the team's labelled frames on 03/11/2026; evaluation on held-out clips, device topics remain) |
+| 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine, forecasting, expert module, daily health assessment, reports | Kiệt, Bảo | 70 | About 80 % (expert loop, review items, proposals, breach dwell and invitation-only accounts done; MF-11, manual override limits, config sync, FCM remain) |
+| 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens; mobile app with QR setup and push | Len, Nhi, Tuấn, Bảo | 75 | Web about 70 %, mobile about 25 % |
 | 5 | Evaluation and thesis (Task 5) | Staging, field run, NFR measurements, practitioner interview, test report, thesis | Whole team, led by Bảo | 40 | About 15 % (camera installed in the test house, 3 days of clips recorded) |
 | 6 | Project management and documents | Reports 1–7, reviews, tracking | Bảo (lead), whole team | 20 | Reports 1–5 drafted |
 
@@ -73,13 +73,13 @@ The team works in iterations of two-week sprints with Scrum-style ceremonies, ad
 | Milestone | Date | Content |
 | --- | --- | --- |
 | Registration | 22/07/2026 | Registration form v1 |
-| Review 1 | `[TEAM: date]` | Registration v2; scope narrowed to the automated system |
-| Iteration 1 | until Review 2 | Firmware 1.4.0, backend of the main flows except MF-11 and the review items and proposals of MF-08, counting pipeline with MQTT publishing and video push, Farm Owner, Admin and Domain Expert web screens, test house camera |
-| **Review 2** | `[TEAM: date]` | Registration v3, Reports 1–5, Design Brief, self-review |
-| Iteration 2 | Review 2 + 4 weeks `[TEAM: dates]` | Gaps due "It. 2" in Project Tracking: device topics and TLS; MF-11 backend; review items and proposals; config sync; FCM; QR setup on mobile; pipeline against staging; trained model; staging; field run starts |
-| Iteration 3 | 3 weeks `[TEAM: dates]` | Current sensing; reports and export; remaining screens; all committed test cases; NFR measurements; evaluation report |
-| **Defense 1.1** | `[TEAM: date]` | Workflows, scenarios, tests and NFRs against the Commitment |
-| Viva | `[TEAM: date]` | Thesis (Report 7), final package |
+| Review 1 | 30/09/2026 | Registration v2; scope narrowed to the automated system |
+| Iteration 1 | until Review 2 | Firmware 1.5.0, backend of the main flows except MF-11, with the expert loop, review items and proposals of MF-08 and the breach dwell time, counting pipeline with MQTT publishing and video push, Farm Owner, Admin and Domain Expert web screens, test house camera |
+| **Review 2** | 04/11/2026 | Registration v3, Reports 1–5, Design Brief, self-review |
+| Iteration 2 | 05/11–02/12/2026 (4 weeks) | Gaps due "It. 2" in Project Tracking: device topics and TLS; MF-11 backend; manual override limits; config sync; FCM; QR setup on mobile; pipeline against staging; trained model; staging; field run starts |
+| Iteration 3 | 03/12–23/12/2026 (3 weeks) | Current sensing; reports and export; remaining screens; all committed test cases; NFR measurements; evaluation report |
+| **Defense 1.1** | Per the course schedule | Workflows, scenarios, tests and NFRs against the Commitment |
+| Viva | Per the course schedule | Thesis (Report 7), final package |
 
 ### 2.3 Quality Management
 
@@ -151,7 +151,7 @@ Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03, 06; Kiệt WF-0
 | Channel | Purpose | Frequency |
 | --- | --- | --- |
 | Meeting with the supervisor | Progress, decisions, review preparation | Weekly |
-| Team chat `[TEAM: Zalo/Discord group]` | Daily coordination | Daily |
+| Team chat (Zalo and Discord groups) | Daily coordination | Daily |
 | GitHub issues and pull requests | Tasks, code review, decisions on code | Continuous |
 | Sprint review notes | Results and retrospective | Every sprint, `docs/sprint-reviews/` |
 | Practitioner interview | Thresholds, health levels, validation | At least once before Defense 1.1, recorded in `docs/evidence-register.md` |

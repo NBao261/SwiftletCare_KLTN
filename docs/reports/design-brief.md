@@ -6,13 +6,13 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 
 | Field | Value |
 | --- | --- |
-| Project code | `[TEAM: approved project code]` |
+| Project code | FA26SE158 |
 | Project name | SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
-| Supervisor | `[TEAM: supervisor name]` |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Repository link (tag review-2) | https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2 |
 | Version | 1.1 (registration v3, BM03 1.1, SRS 3.1.0, SDD 1.1.0) |
-| Date | 26/10/2026 |
+| Date | 03/11/2026 |
 
 ## 1. Scope
 
@@ -62,12 +62,11 @@ Code against SRS and SDD, grouped by owner; each gap in Project Tracking §6.
 | ID | Gap | Location | Plan | Owner | Due |
 | --- | --- | --- | --- | --- | --- |
 | G-14 | Data model behind SDD 6.1 (user status, audit source, harvest type and photo, alert details) | backend | SDD 6.1–6.4 | Kiệt | It. 2 |
-| G-02, 09, 10, 16 | Public sign-up open (removed before the tag); QR setup screens; FCM only logged; mobile a scaffold | backend, web, mobile | AUTH-FR-005c; AD-10; ALERT-FR-002; SDD 5.4 | Kiệt, Nhi, Bảo | Tag; It. 2–3 |
-| G-03, 04, 15 | `DISMISSED`, owner fallback and notices, evidence, review items, proposals; expert screens on mock data | backend, web | SM-01, 10, 11 | Tuấn, Kiệt | It. 2 |
-| G-05, 06 | Breach without dwell; one override expiry per controller, no pump limit or confirmation | backend, firmware, web | BR-34, BR-08, 20, 35 | Kiệt, Len | It. 2 |
+| G-02, 09, 10, 16 | Administrator-created Farm Owner, real e-mail; QR setup screens; FCM only logged; mobile screens partly built | backend, web, mobile | AUTH-FR-005c; AD-10; ALERT-FR-002; SDD 5.4 | Kiệt, Nhi, Len | It. 2–3 |
+| G-06 | One override expiry per controller; no pump limit, confirmation or command freshness (PR #124 open) | backend, firmware, web, mobile | BR-08, 20, 35 | Kiệt, Len | It. 2 |
 | G-07, 08 | Zone topics, shared credential, QoS 0, no TLS on the ESP32; no configuration version | firmware, backend, AI node | SDD D3, 7.2; SM-12 | Bảo | It. 2 |
 | G-11 | Daily status, ratings with snapshot, house reports, PDF/CSV, weather, evaluation | backend, web, mobile | SM-17, AD-14 | Nhi, Kiệt | It. 2–3 |
-| G-12, 13 | No trained model; sessions from buckets; ring editor; current sensing | AI node, backend, web, board | VISION-FR-008…020; THREAT-FR-014 | Bảo | It. 2–3 |
+| G-12, 13 | Model not yet evaluated on held-out clips; sessions from buckets; ring editor; current sensing | AI node, backend, web, board | VISION-FR-008…020; THREAT-FR-014 | Bảo | It. 2–3 |
 | G-17 | Staging, TLS proxy, demo seed | deploy | SDD 3.4, 11 | Bảo | It. 2 |
 
 ## 6. Proposed Mandatory Features
@@ -115,10 +114,10 @@ FO = Farm Owner, DE = Domain Expert (Farm Owner if none, BR-22); auto = done by 
 | Member | Role | Owned parts (2–3) | Main workflow owned | Key decisions / PRs |
 | --- | --- | --- | --- | --- |
 | Nguyễn Chí Bảo | Leader; IoT, AI | Firmware, MQTT; AI pipeline; staging, push, documents | WF-01, 03, 06 | D1, D2; #88 |
-| Trần Minh Kiệt | Backend, firmware | Devices, accounts; alerts, expert; daily health | WF-04, 10 | D4; `[TEAM]` |
-| Nguyễn Vũ Len | Web, mobile: Owner | Farm Owner screens; E2E | WF-02, 05, 09 | `[TEAM]` |
-| Nguyễn Thị Yến Nhi | Web, mobile: Admin | Admin, daily status screens; mobile base; E2E | WF-11 | D5; `[TEAM]` |
-| Thái Minh Tuấn | Web, mobile: Expert | Expert, Technician screens; E2E | WF-07, 08 | D3; #91 |
+| Trần Minh Kiệt | Backend, firmware | Devices, accounts; alerts, expert; daily health | WF-04, 10 | D4; #113, #116 |
+| Nguyễn Vũ Len | Web, mobile: Owner | Farm Owner screens; E2E | WF-02, 05, 09 | #93, #123 |
+| Nguyễn Thị Yến Nhi | Web, mobile: Admin | Admin, daily status screens; mobile base; E2E | WF-11 | D5; #26, #72 |
+| Thái Minh Tuấn | Web, mobile: Expert | Expert, Technician screens; E2E | WF-07, 08 | D3; #91, #125 |
 
 ---
 
