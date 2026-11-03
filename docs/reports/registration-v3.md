@@ -106,15 +106,13 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 #### 4. Supporting roles (outside the main flow)
 
-**Technician:** Set up, move and remove devices on any farm with the same steps as the Farm Owner, diagnose them remotely, and send restarts, configuration pushes and firmware updates; no relay control and no access to the environmental data.
-
-**Administrator:** Technical administrator of the installation: create the accounts of the Farm Owner and the Technicians, lock accounts and handle data-deletion requests, keep the device stock with its printed labels, the system-wide default thresholds and the audit log. The Administrator does not create or manage farms.
+**Administrator:** Technical administrator of the installation: create the Farm Owner's account, lock accounts and handle data-deletion requests, keep the device stock with its printed labels, the system-wide default thresholds and the audit log, see every device with its device alerts, diagnose it remotely and send restarts, configuration pushes and firmware updates; no relay control and no access to the environmental data. The Administrator does not create or manage farms.
 
 ### D. Main flow
 
 **Flow 1: Automatic Micro-Climate Control:** Sensors are read every second. Every 10 seconds the fuzzy controller converts humidity and temperature into a power level for misting and ventilation, applied over a time window; as conditions return to range, the output decreases gradually. Readings and actuator state are reported to the cloud and shown on the dashboard. When the internet connection is lost, the controller keeps regulating with its stored configuration and buffers telemetry in flash memory, uploaded when the connection returns; if the controller hangs, the hardware watchdog restarts it. The Farm Owner may switch an actuator from the application for a limited duration (the pump for at most 30 minutes, and only after confirming any open sensor or misting alert); the controller reports manual mode and returns to automatic control when the duration expires. If the controller itself fails, the existing electrical switches of the house, outside the system, remain the manual fallback.
 
-**Flow 2: Incident Handling:** An incident raises one alert with its severity and details: a reading outside its threshold for its dwell time; NH3 or CO2 above the alert limit set by the Domain Expert (no established limits exist for swiftlet houses, so these readings never drive the fan); misting that does not raise the humidity within an accumulated 5 minutes (automatic misting then stops for that session and the alert asks to check the water, the nozzles, the pump and the doors); a sensor that stops responding or returns implausible values (excluded from control, the loop holds a safe state); a speaker whose sound stays far below its baseline; a pump or fan that does not draw current as commanded; an unexpected restart; a device offline; a pump or fan past its service limit; or a forecast that a value still in range will cross its threshold within 60 minutes, with the expected time. The alert reaches the Farm Owner in the applications and on the phone through both mobile push and a Telegram bot, is sent again while nobody acknowledges it, is acknowledged with a note and closes when the condition recovers. The Technician sees the device alerts of every farm.
+**Flow 2: Incident Handling:** An incident raises one alert with its severity and details: a reading outside its threshold for its dwell time; NH3 or CO2 above the alert limit set by the Domain Expert (no established limits exist for swiftlet houses, so these readings never drive the fan); misting that does not raise the humidity within an accumulated 5 minutes (automatic misting then stops for that session and the alert asks to check the water, the nozzles, the pump and the doors); a sensor that stops responding or returns implausible values (excluded from control, the loop holds a safe state); a speaker whose sound stays far below its baseline; a pump or fan that does not draw current as commanded; an unexpected restart; a device offline; a pump or fan past its service limit; or a forecast that a value still in range will cross its threshold within 60 minutes, with the expected time. The alert reaches the Farm Owner in the applications and on the phone through both mobile push and a Telegram bot, is sent again while nobody acknowledges it, is acknowledged with a note and closes when the condition recovers. The Administrator sees the device alerts of every farm.
 
 **Flow 3: Bird Counting Session:** During the morning exit and evening return sessions, the AI pipeline detects and tracks birds at the entrance, counts their crossings of the ring around the entrance hole in each direction and publishes the counts of the house, while the live stream shows a box on each tracked bird. At the end of the day the return rate is computed; a drop of more than the house's threshold (default 20%) against the average of the previous 7 days raises an alert.
 
@@ -124,7 +122,7 @@ The system combines three sources of evidence (environmental sensors, noise leve
 
 **Flow 6: Daily Health Assessment & Periodic Reports:** After the evening session, the system rates the environment, air quality, return rate and abnormal noise of each house against the house's levels, combines them by agreement into one daily status (good, watch, action or insufficient data) with its reasons and the weather of the day, and notifies the Farm Owner and the Domain Expert. Each of them rates the day from their own observation before the status is shown. Weekly and monthly reports aggregate the days, the Domain Expert writes a conclusion on them, and every report can be downloaded as PDF or CSV.
 
-**Supporting flows:** Device setup by the Farm Owner: the Administrator adds the device to the stock and prints its label; the Farm Owner scans the label and the QR code of the floor in the mobile app and enters only the Wi-Fi network on the device; the backend links the device to that zone and sends it that zone's configuration, and the application shows when it is applied; a Technician may follow the same steps on any farm. Remote device maintenance by the Technician, account and access management, and harvest logging also support the main flows; there are no maintenance tickets.
+**Supporting flows:** Device setup by the Farm Owner: the Administrator adds the device to the stock and prints its label; the Farm Owner scans the label and the QR code of the floor in the mobile app and enters only the Wi-Fi network on the device; the backend links the device to that zone and sends it that zone's configuration, and the application shows when it is applied. Remote device maintenance by the Administrator, account and access management, and harvest logging also support the main flows; there are no maintenance tickets.
 
 ### E. Non-functional requirement
 
@@ -190,13 +188,13 @@ Default temperature, humidity and light thresholds are taken from the swiftlet-f
 
 (6) Notifications are delivered in the applications and on the phone through a Telegram bot or mobile push; Zalo and SMS channels are out of scope.
 
-(7) Technician and Administrator functions are supporting features outside the main flow; online trading of nests is out of scope and only harvest logging is included.
+(7) Administrator functions are supporting features outside the main flow; online trading of nests is out of scope and only harvest logging is included.
 
 **Scope adjustments at Review 2 (version 3, see the Record of Changes BM03):**
 
 (8) The detection model is named "YOLO" without a version (declared in the design document), and birds are counted by crossings of a closed ring around the entrance hole instead of a virtual line.
 
-(9) Device setup by the Farm Owner becomes a supporting flow done with two QR scans in the mobile app (the device label and the floor code), instead of an installation by a Technician; a Technician may follow the same steps on any farm.
+(9) Device setup by the Farm Owner becomes a supporting flow done with two QR scans in the mobile app (the device label and the floor code), instead of an installation by a Technician.
 
 (10) The health assessment becomes a daily status per house combining the sources by agreement, with daily, weekly and monthly reports exportable to PDF and CSV, rated by the Farm Owner and the Domain Expert (Flow 6).
 
@@ -208,8 +206,10 @@ Default temperature, humidity and light thresholds are taken from the swiftlet-f
 
 (14) Both mobile push notifications and a Telegram bot are committed, and predator detection is removed from the possible extensions.
 
-(15) Maintenance tickets, service levels (SLA), Technician regions and ticket statistics are removed: the Technician is the technical role that works on the devices of every farm without controlling relays; faults reach the Farm Owner as alerts that are sent again until acknowledged, and pump or fan wear raises a maintenance alert.
+(15) Maintenance tickets, service levels (SLA), Technician regions and ticket statistics are removed; faults reach the Farm Owner as alerts that are sent again until acknowledged, and pump or fan wear raises a maintenance alert.
 
 (16) One installation serves one owner of swiftlet houses and that owner's farms: the Administrator creates the Farm Owner's account, co-owners and the Domain Expert join by invitation, and there is no public sign-up. The health status is described as a rule-based indicator, not as an automatic expert.
 
 (17) The main flows are grouped by business process, one outcome each: offline operation and manual override become paths of the automatic control (Flow 1); air-quality limits, equipment faults and early warnings become one incident-handling flow (Flow 2); the expert's verdicts on inferred alerts (Flow 4) and the review of control parameters (Flow 5) are separate flows.
+
+(18) The Technician role is removed: one installation serves one owner, so device setup stays with the Farm Owner, and remote restarts, configuration pushes and firmware updates move to the Administrator, who already keeps the device stock; the Farm Owner may restart a controller of the farm.

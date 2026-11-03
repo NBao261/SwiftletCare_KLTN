@@ -10,7 +10,7 @@ Cập nhật 03/11/2026 (6 luồng chính theo quy trình nghiệp vụ, SRS 3.2
 
 ## Các quyết định đã chốt (26/10/2026)
 
-1. Một installation phục vụ một chủ sở hữu nhà yến; **không có đăng ký công khai**. Admin tạo tài khoản Farm Owner và Technician; co-owner và Domain Expert vào bằng lời mời (BM03 dòng 10).
+1. Một installation phục vụ một chủ sở hữu nhà yến; **không có đăng ký công khai**. Admin tạo tài khoản Farm Owner; co-owner và Domain Expert vào bằng lời mời (BM03 dòng 10).
 2. Kênh ngoài app: **cả FCM push và Telegram**.
 3. Mobile **giữ đủ phạm vi phiếu** (3.2 b): theo dõi, phân tích số đếm, live stream (HLS), cảnh báo + push, can thiệp tay, setup QR, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, kiểm chứng và tinh chỉnh của chuyên gia.
 4. NFR:
@@ -44,7 +44,7 @@ Cập nhật 03/11/2026 (6 luồng chính theo quy trình nghiệp vụ, SRS 3.2
 | **Bảo** (leader) | Backend, firmware, AI, ít web/mobile, tài liệu | Firmware + MQTT; AI pipeline; backend MQTT, đếm chim, push FCM, đo dòng; staging; tài liệu, tag | WF-01, 03 | F-01, 02, 03, 04, 09, 10, 11, 12 |
 | **Kiệt** | Backend, firmware | Backend thiết bị, tài khoản, cảnh báo, chuyên gia, sức khỏe ngày; firmware tự chẩn đoán | WF-05 | F-05, 06, 08; phụ F-18, 19 |
 | **Len** | Mobile — Farm Owner | App mobile của Farm Owner: đăng nhập, push, dashboard, cảnh báo, can thiệp tay, nhà/tầng, setup QR, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, live stream HLS; E2E các DS của mình; gán nhãn; NFR-02 | WF-02 | F-07, 17 |
-| **Tuấn** | Web + mobile — Domain Expert, một phần Technician | Màn chuyên gia (web `/expert/*`, mobile); màn Technician; E2E các DS của mình; gán nhãn; NFR-08, 13 | WF-04 | F-13, 14, 15, 16 |
+| **Tuấn** | Web + mobile — Domain Expert, màn thiết bị của Admin | Màn chuyên gia (web `/expert/*`, mobile); màn Technician chuyển thành màn thiết bị của Admin (G-20); E2E các DS của mình; gán nhãn; NFR-08, 13 | WF-04 | F-13, 14, 15, 16 |
 | **Nhi** | Web — Farm Owner + Admin | Web Farm Owner (dashboard, cảnh báo, thiết bị + can thiệp tay, nhà/tầng + in mã tầng, phân tích + dự báo, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, vision); web Admin (in nhãn); cấu hình Playwright; E2E các DS của mình; gán nhãn; NFR-01, 03, 14 | WF-06 | F-20, 21, 22 |
 
 **Farm Owner chia theo nền tảng (03/11/2026):** Len làm toàn bộ app mobile của Farm Owner, Nhi làm toàn bộ web Farm Owner cùng web Admin. Hai bạn không sửa chung thư mục; màn nào cần cả web và mobile thì mỗi người làm phía của mình theo cùng một spec.
@@ -317,7 +317,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Màn Zone: in mã QR tầng.
 - [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
 - [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED).
-- [ ] Web: `/onboarding` cho Farm Owner + Technician.
+- [ ] Web: `/onboarding` cho Farm Owner.
 
 ### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Len (mobile, đo NFR-02)
 
@@ -411,7 +411,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 - chỉ Farm Owner xác nhận cảnh báo và bật/tắt relay;
 - Domain Expert chỉ đọc vận hành, được kết luận cảnh báo, chỉnh tham số, viết kết luận;
 - Farm Owner chỉ làm thay quyết định của chuyên gia khi farm chưa có Domain Expert (BR-22);
-- Technician và Admin không dùng mobile (đăng nhập bằng hai role này thì báo dùng web).
+- Admin không dùng mobile (đăng nhập bằng role này thì báo dùng web).
 
 ### G-17 — Staging (P0-Demo) — cả team, Bảo chịu trách nhiệm chính; điều kiện DS và test E2E: chủ từng workflow
 
@@ -419,7 +419,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 - [ ] **Kiệt:** Dockerfile backend, `.env.staging.example`, chạy migration và seed trên staging, `mongodump` hằng ngày chép ra ngoài VPS.
 - [ ] **Nhi:** Dockerfile và bản build web; kiểm tra nhanh các màn Farm Owner và Admin trên web staging sau mỗi lần triển khai.
 - [ ] **Len:** bản build mobile (EAS profile `preview`) trỏ tới staging; kiểm tra nhanh đăng nhập, push và các màn Farm Owner trên mobile.
-- [ ] **Tuấn:** kiểm tra nhanh màn chuyên gia và Technician; chạy bộ E2E trên staging trước mỗi buổi tổng duyệt.
+- [ ] **Tuấn:** kiểm tra nhanh màn chuyên gia và màn thiết bị của Admin; chạy bộ E2E trên staging trước mỗi buổi tổng duyệt.
 - [ ] Seed demo đủ 22 kịch bản Phụ lục A2 (Kiệt, Bảo), theo điều kiện chủ workflow ghi.
 - [ ] Test E2E Playwright cho từng DS (chủ workflow; FE_Design §13.17); Bảo thêm job E2E vào CI (test chỉ được tính là tự động khi chạy trong CI, hướng dẫn mục 9.4) và đọc kết quả JUnit vào Report 5 (`gen_report5.py --playwright`); PR cài Playwright ghi tên và phiên bản vào dòng Testing của Report 4 §3 (Technology Declaration).
 - [ ] Theo `docs/deploy/staging.md`; mỗi người ghi phần mình vào đó (Bảo duyệt), để ai cũng trả lời được "staging hỏng thì làm gì" ở phần mình.
@@ -429,6 +429,14 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 - [ ] ENV-FR-007: bắt buộc nguồn khi Admin đổi ngưỡng mặc định (422).
 - [ ] HARVEST-FR-001: số tổ, khối lượng > 0, ngày không ở tương lai.
 - [ ] (Tùy chọn) ENV-FR-026; device ID lấy từ MAC.
+
+### G-20 — Bỏ vai Technician (P1, sau Review 2) — Kiệt (backend), Tuấn (web), Len (mobile)
+
+BM03 dòng 13: một installation chỉ một chủ, nên Technician trùng Farm Owner. Lắp, dời, gỡ thiết bị chỉ còn Farm Owner (SF-01); lệnh từ xa (RESTART, đẩy cấu hình) và OTA chuyển cho Admin; Farm Owner được RESTART bộ điều khiển của farm mình (FARM-FR-013).
+
+- [ ] **Kiệt — backend:** bỏ `TECHNICIAN` khỏi `Role` và seed; `technicianAccess` → quyền Admin xem mọi thiết bị kèm farm/house/zone và cảnh báo thiết bị, không dữ liệu môi trường (FARM-FR-009); lệnh từ xa và OTA cho Admin, RESTART cho Farm Owner của farm, đẩy cấu hình/OTA của Farm Owner trả 403; audit và thông báo Farm Owner; thông báo `TECHNICIAN_ACTION` → `DEVICE_ACTION`; `npm run migrate:*` đổi tài khoản Technician cũ (khóa hoặc đổi sang Admin); sửa `api-spec.yaml`; test quyền.
+- [ ] **Tuấn — web:** màn Technician thành màn thiết bị của Admin (danh sách thiết bị mọi farm, chẩn đoán, RESTART, đẩy cấu hình, OTA); `/onboarding` chỉ Farm Owner; nút RESTART ở màn thiết bị của Farm Owner; bỏ role khỏi `src/types/`, ma trận quyền và Vitest.
+- [ ] **Len — mobile:** bỏ `TECHNICIAN` khỏi `src/types/`; nút RESTART ở màn thiết bị.
 
 ## 5. Thứ tự đề xuất
 

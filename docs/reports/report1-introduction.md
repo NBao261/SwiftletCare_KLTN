@@ -34,7 +34,7 @@
 | Trần Minh Kiệt | SE182180 | Backend (devices, accounts, alerts, expert module, daily health); firmware self-diagnosis |
 | Nguyễn Vũ Len | SE182055 | Mobile application – Farm Owner |
 | Nguyễn Thị Yến Nhi | SE184223 | Web application – Farm Owner (with analytics, daily health and reports) and Administrator |
-| Thái Minh Tuấn | SE181850 | Web and mobile application – Domain Expert; Technician screens |
+| Thái Minh Tuấn | SE181850 | Web and mobile application – Domain Expert; Administrator device console |
 
 Responsibilities in detail are in Report 2, Section 4, and in the Ownership Map of the Design Brief.
 
@@ -79,8 +79,7 @@ Users and what they do (Report 3, Section 2.3):
 | --- | --- |
 | Farm Owner | Watch the houses live, receive alerts by push and Telegram, override an actuator for a limited time, set up devices by scanning QR codes, read the daily status and reports, rate each day, record harvests |
 | Domain Expert | Review data and reports, confirm or reject inferred alerts, tune thresholds, coefficients, detection parameters and the counting ring, write conclusions, rate each day |
-| Technician (supporting) | Set up, move and remove devices on any farm, diagnose them remotely, send restarts, configuration pushes and firmware updates; no relay control and no environmental data |
-| Administrator (supporting) | Manage accounts (including Technician accounts), the device stock and its labels, system-wide defaults and the audit log; no farm management |
+| Administrator (supporting) | Manage accounts, the device stock and its labels, system-wide defaults and the audit log; see every device with its device alerts, diagnose it remotely and send restarts, configuration pushes and firmware updates; no relay control, no environmental data, no farm management |
 
 ## 6. Project Scope and Limitations
 
@@ -97,7 +96,7 @@ The main flows of the registration form v3 (Report 3, Section 2.2):
 | MF-05 | Control-parameter tuning | The expert reviews the owner's changes and approves coefficient suggestions; the new configuration reaches the controllers and is confirmed applied |
 | MF-06 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF/CSV and independent ratings |
 
-Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remote device maintenance by the Technician (SF-02), accounts and access (SF-03), harvest logging (SF-04). There are no maintenance tickets: faults reach the Farm Owner as alerts that are sent again until acknowledged (MF-04).
+Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remote device maintenance by the Administrator (SF-02), accounts and access (SF-03), harvest logging (SF-04). There are no maintenance tickets: faults reach the Farm Owner as alerts that are sent again until acknowledged (MF-04).
 
 ### 6.2 Limitations and Exclusions
 
@@ -122,7 +121,7 @@ Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remo
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.0.3 | 03/11/2026 | Six business main flows (SRS 3.2.0); device setup is supporting flow SF-01 |
+| 1.0.3 | 03/11/2026 | Technician role removed (BM03 row 13): remote maintenance by the Administrator. Six business main flows (SRS 3.2.0); device setup is supporting flow SF-01 |
 | 1.0.2 | 03/11/2026 | Farm Owner screens split by platform: Len the mobile app, Nhi the web with the Administrator web |
 | 1.0.1 | 27/10/2026 | Team roles re-split: backend and firmware for Bảo and Kiệt, web and mobile per role for Len, Nhi and Tuấn |
 | 1.0.0 | 23/10/2026 | First version for Review 2, written from the registration form v3 |

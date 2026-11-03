@@ -51,7 +51,7 @@ TC=[
  (J,I+'zoneThresholds.test.ts','records only the known keys, with source MANUAL, in the threshold history')),
 ('TC-F03-02','F-03','Same zone','PUT an out-of-range threshold','`humidity_min` = 150','400; nothing stored',
  (J,I+'zoneThresholds.test.ts','PUT /farms/zones/:id/thresholds answers 400 for an out-of-range value')),
-('TC-F03-03','F-03','Technician and Administrator accounts','PUT thresholds, reset and fuzzy tuning as each of them','Valid body','403 for both on every route (ENV-FR-006, 020, 021)',
+('TC-F03-03','F-03','Administrator account','PUT thresholds, reset and fuzzy tuning','Valid body','403 on every route (ENV-FR-006, 020, 021)',
  (J,I+'roleMatrix.test.ts','mỗi dòng của bảng quyền trả 403 cho role bị bỏ')),
 # F-04
 ('TC-F04-01','F-04','Prototype running in AUTO; logging on','Cut the router uplink for 30 min, then restore it','—','A control decision every 10 s during the outage (100 %)',
@@ -104,7 +104,7 @@ TC=[
  (T,'AI pipeline pytest `test_annotate.py` (G-12)')),
 ('TC-F11-02','F-11','Camera of a farm; its Farm Owner and Domain Expert','GET stream-token as each','—','Token valid 60 s for path `cam-<device_id>` only',
  (J,I+'streamAuth.test.ts','Farm Owner và Domain Expert của farm nhận token 60 giây')),
-('TC-F11-03','F-11','Technician; Farm Owner of another farm','GET stream-token as each','—','403',
+('TC-F11-03','F-11','User who is not a member of the farm; Farm Owner of another farm','GET stream-token as each','—','403',
  (J,I+'streamAuth.test.ts','Technician (SRS §4.4) và Farm Owner của farm khác bị chặn')),
 # F-12
 ('TC-F12-01','F-12','Hour with a learned quiet baseline','Feed noise above the baseline for the minimum duration','+20 dB for 12 s of 15 s','Anomaly raised',
@@ -173,7 +173,7 @@ TC=[
 # F-22
 ('TC-F22-01','F-22','Computed day; Farm Owner who has not rated it','GET the day, the daily report and the CSV; then POST a rating','—','No status, reasons or other ratings before the rating; the rating and its snapshot stored together, and the status returned only in the rating response',(T,'backend jest (G-11)')),
 ('TC-F22-02','F-22','Rated day','Ingest a late count that changes the status; then try to change the rating','—','Current status recomputed, snapshot unchanged; rating change rejected, a note accepted',(T,'backend jest (G-11)')),
-('TC-F22-03','F-22','Technician, Administrator; a day 8 days ago','Rate as each; rate the old day','—','403; old day rejected',(T,'backend jest (G-11)')),
+('TC-F22-03','F-22','Administrator; a day 8 days ago','Rate as each; rate the old day','—','403; old day rejected',(T,'backend jest (G-11)')),
 ]
 # Main workflows: end-to-end on staging following the main scenario of the Design Brief
 WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11')]

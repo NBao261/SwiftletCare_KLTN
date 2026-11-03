@@ -134,7 +134,7 @@ R = responsible, A = accountable, C = consulted.
 | Backend daily health and reports | C | A, R | | C | |
 | Web – Farm Owner | | | C | A, R | |
 | Web – Administrator, role matrix | | | | A, R | |
-| Web – Domain Expert, Technician | | | | | A, R |
+| Web – Domain Expert, Admin device console | | | | | A, R |
 | Mobile – sign-in, push, QR setup, daily status | C | | A, R | | |
 | Mobile – Farm Owner screens, live stream | | | A, R | | |
 | Mobile – Domain Expert screens | | | C | | A, R |

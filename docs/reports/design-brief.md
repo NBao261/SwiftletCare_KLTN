@@ -21,7 +21,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | Section | Current | Proposed | Reason |
 | --- | --- | --- | --- |
 | B, D6, 3.2a | YOLOv8; virtual line | YOLO (version in SDD); ring around the hole | Birds leave the hole in every direction |
-| B, C, D, 4 | Technician installs on tickets; public sign-up | Owner sets up by QR (supporting flow); one owner per installation; no tickets, no sign-up | Review 1: system, not platform |
+| B, C, D, 4 | Technician installs on tickets; public sign-up | Owner sets up by QR (supporting flow); no Technician, Admin maintains remotely; one owner per installation; no tickets, no sign-up | Review 1: system, not platform |
 | B, C, D, E | Periodic summary per zone | Daily status per house, reports, PDF/CSV, ratings (Flow 6); rule-based indicator | Measurable multi-modal output |
 | B, C.1, 4 | No weather or load current; "pump dry", "power loss" | Weather as context; pump and fan current; "misting ineffective", "unexpected restart" | No unmeasured cause claimed |
 | D9, 4, C.2 | Bypass; Telegram or push; predator; any override length | No bypass; Telegram and push; no predator; pump ON ≤ 30 min | Borrowed house; Review 1; safety |
@@ -36,7 +36,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 
 ## 2. System at a Glance
 
-Owners visit their closed swiftlet houses every few days, so humidity drift, equipment faults and a falling flock go unnoticed. SwiftletCare, installed for one owner's houses, lets each house regulate and watch itself. On each floor an ESP32 reads five RS485 sensors and drives misting, fan and speaker with fuzzy logic, even offline. A PC counts birds at the entrance camera (YOLO + ByteTrack) and streams annotated video. A cloud backend raises alerts, forecasts breaches and gives each house a daily rule-based health status from environment, air, return rate and noise. The Farm Owner monitors, overrides and sets up devices by QR; a Domain Expert validates and tunes; Technician and Administrator support them. Architecture: SDD 2.1; deployment: SDD 11.
+Owners visit their closed swiftlet houses every few days, so humidity drift, equipment faults and a falling flock go unnoticed. SwiftletCare, installed for one owner's houses, lets each house regulate and watch itself. On each floor an ESP32 reads five RS485 sensors and drives misting, fan and speaker with fuzzy logic, even offline. A PC counts birds at the entrance camera (YOLO + ByteTrack) and streams annotated video. A cloud backend raises alerts, forecasts breaches and gives each house a daily rule-based health status from environment, air, return rate and noise. The Farm Owner monitors, overrides and sets up devices by QR; a Domain Expert validates and tunes; the Administrator supports them. Architecture: SDD 2.1; deployment: SDD 11.
 
 ## 3. Key Design Decisions
 
@@ -76,7 +76,7 @@ Code against SRS and SDD, grouped by owner; each gap in Project Tracking §6.
 | --- | --- | --- | --- | --- | --- |
 | F-01 | Telemetry, dashboard | FO, DE | On the dashboard ≤ 2 s; dead sensor stale; no event to other farms | TC-F01 | Done |
 | F-02 | Fuzzy control | auto | Decision every 10 s ± 1 s; firmware = backend on shared cases | TC-F02 | Done |
-| F-03 | Thresholds, coefficients | FO, DE | Stored with history, sent; out of range 400; Technician/Admin 403 | TC-F03 | In progress |
+| F-03 | Thresholds, coefficients | FO, DE | Stored with history, sent; out of range 400; Admin 403 | TC-F03 | In progress |
 | F-04 | Offline operation | auto | 30-min outage: all decisions, 0 samples lost; hang → `UNEXPECTED_RESTART` | TC-F04 | In progress |
 | F-05 | Self-diagnosis | auto | 300 s pump ON, no +2 % → `MISTING_INEFFECTIVE`; timeout → `SENSOR_FAULT` | TC-F05 | In progress |
 | F-06 | Actuator current | auto | Relay ON, current < 50 % of normal 30 s → `ACTUATOR_FAULT` | TC-F06 | Planned |
@@ -93,7 +93,7 @@ Code against SRS and SDD, grouped by owner; each gap in Project Tracking §6.
 | F-17 | Manual override | FO | Own expiry per relay; pump 31 min 422; unconfirmed with alert 409 | TC-F17 | In progress |
 | F-20 | Daily health status | auto | Flock `CLEAR` + humidity `SLIGHT` → `ACTION`; flock alone → `WATCH` | TC-F20 | Planned |
 | F-21 | Reports, PDF/CSV | FO, DE | Day/week/month per house; files match the screen; others 403 | TC-F21 | In progress |
-| F-22 | Independent rating | FO, DE | Asked before status; snapshot kept; Technician/Admin 403 | TC-F22 | Planned |
+| F-22 | Independent rating | FO, DE | Asked before status; snapshot kept; Admin 403 | TC-F22 | Planned |
 
 FO = Farm Owner, DE = Domain Expert (Farm Owner if none, BR-22); auto = done by a system component, not an actor; TC-Fnn = TC-Fnn-01..03 in Report 5. Status is copied from Project Tracking. F-18 and F-19 (device setup, supporting flow SF-01) are built and tested but not proposed as mandatory features.
 
@@ -116,7 +116,7 @@ FO = Farm Owner, DE = Domain Expert (Farm Owner if none, BR-22); auto = done by 
 | Trần Minh Kiệt | Backend, firmware | Devices, accounts; alerts, expert; daily health | WF-05 | D4; #113, #116 |
 | Nguyễn Vũ Len | Mobile: Farm Owner | Farm Owner mobile app; E2E | WF-02 | #123, #93 |
 | Nguyễn Thị Yến Nhi | Web: Owner, Admin | Farm Owner web; Admin; E2E | WF-06 | D5; #26, #72 |
-| Thái Minh Tuấn | Web, mobile: Expert | Expert, Technician screens; E2E | WF-04 | D3; #91, #125 |
+| Thái Minh Tuấn | Web, mobile: Expert | Expert screens, Admin device console; E2E | WF-04 | D3; #91, #125 |
 
 ---
 
@@ -129,7 +129,7 @@ Actors are people and external services only; the controller, the AI node and th
 | ID | Workflow | Actors | Trigger | Business outcome | Features | Entity states | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | WF-01 | Automatic micro-climate control (MF-01, AD-01) | Farm Owner, Domain Expert | 10-s control cycle; Internet or power loss; owner switches a relay | Misting and fan follow humidity and temperature, also offline; an override lasts a limited time, then automatic | F-01, F-02, F-04, F-17 | Relay: `AUTO` → `MANUAL` → `AUTO`; device: `ONLINE` → `OFFLINE` → `ONLINE` | Nguyễn Chí Bảo |
-| WF-02 | Incident handling (MF-02, AD-02) | Farm Owner, Technician, Telegram, FCM | Breach after the dwell time, NH3/CO2 above limit, equipment fault, restart, offline, forecast | Alert sent by push and Telegram, repeated until acknowledged, closed on recovery; loop held safe | F-05, F-06, F-07, F-08, F-09 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Nguyễn Vũ Len |
+| WF-02 | Incident handling (MF-02, AD-02) | Farm Owner, Telegram, FCM | Breach after the dwell time, NH3/CO2 above limit, equipment fault, restart, offline, forecast | Alert sent by push and Telegram, repeated until acknowledged, closed on recovery; loop held safe | F-05, F-06, F-07, F-08, F-09 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Nguyễn Vũ Len |
 | WF-03 | Bird counting session (MF-03, AD-03) | Farm Owner, Domain Expert | Morning and evening sessions | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11 | AI node: `PENDING` → `ONLINE`; `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
 | WF-04 | Expert validation of inferred alerts (MF-04, AD-04) | Domain Expert, Farm Owner | Abnormal noise, implausible readings, early warning | Verdict with evidence; rejected alert dismissed; owner notified | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED`; verdict: pending → `REJECTED` | Thái Minh Tuấn |
 | WF-05 | Control-parameter tuning (MF-05, AD-05) | Domain Expert, Farm Owner | Owner change, coefficient suggestion, detection or ring change | Changes reviewed, suggestion approved, new configuration applied on the controllers, owner notified | F-03, F-14, F-15 | Review item: `PENDING_REVIEW` → `ADJUSTED`; proposal: `PROPOSED` → `APPROVED`; config: `PENDING` → `APPLIED` | Trần Minh Kiệt |
