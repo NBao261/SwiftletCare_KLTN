@@ -1,6 +1,6 @@
 import type { AlertType } from './alert.types'
 
-// Báo cáo sức khoẻ và đánh giá ngày (EXPERT-FR-005/006, MF-11)
+// Báo cáo sức khoẻ và đánh giá ngày (EXPERT-FR-005/006, MF-06)
 
 export interface ExpertConclusion {
   text: string
@@ -47,7 +47,7 @@ export interface HealthReportPreview {
   metrics: ZoneHealthMetrics
 }
 
-// Một ngày của một nhà đang chờ người dùng chấm (MF-11, BR-31) — CHƯA CÓ API (gap G-11).
+// Một ngày của một nhà đang chờ người dùng chấm (MF-06, BR-31) — CHƯA CÓ API (gap G-11).
 // Dạng theo bảng HOUSE_HEALTH_DAY của Report 4 §6, cộng tên nhà/trang trại do server trả sẵn;
 // không có trạng thái, lý do hay đánh giá của người khác vì người dùng phải chấm trước khi thấy
 export interface PendingHealthDay {

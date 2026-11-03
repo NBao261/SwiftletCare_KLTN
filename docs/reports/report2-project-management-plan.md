@@ -19,13 +19,13 @@ Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commi
 
 ### 1.1 Scope and Estimation
 
-Scope is the registration form v3: main flows MF-01…11 and supporting flows SF-02…04 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are the team's estimates at 03/11/2026.
+Scope is the registration form v3: main flows MF-01…06 and supporting flows SF-01…04 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are the team's estimates at 03/11/2026.
 
 | WBS | Work package | Main deliverable | Owner | Estimate (person-days) | Done at Review 2 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.5.x (sensing, fuzzy control, self-diagnosis, offline buffer, OTA); controller board with current sensing | Bảo, Kiệt | 45 | About 70 % (board, current check, config version and MQTT TLS remain) |
 | 2 | Vision (Task 2) | Labelled dataset, trained YOLO model, counting pipeline, annotated stream, accuracy report | Nguyễn Chí Bảo | 40 | About 55 % (pipeline, MQTT publishing, video push and tests done; first YOLOv8n and YOLO11n models trained on the team's labelled frames on 03/11/2026; evaluation on held-out clips, device topics remain) |
-| 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine, forecasting, expert module, daily health assessment, reports | Kiệt, Bảo | 70 | About 80 % (expert loop, review items, proposals, breach dwell and invitation-only accounts done; MF-11, manual override limits, config sync, FCM remain) |
+| 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine, forecasting, expert module, daily health assessment, reports | Kiệt, Bảo | 70 | About 80 % (expert loop, review items, proposals, breach dwell and invitation-only accounts done; MF-06, manual override limits, config sync, FCM remain) |
 | 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens; mobile app with QR setup and push | Len, Nhi, Tuấn, Bảo | 75 | Web about 70 %, mobile about 25 % |
 | 5 | Evaluation and thesis (Task 5) | Staging, field run, NFR measurements, practitioner interview, test report, thesis | Whole team, led by Bảo | 40 | About 15 % (camera installed in the test house, 3 days of clips recorded) |
 | 6 | Project management and documents | Reports 1–7, reviews, tracking | Bảo (lead), whole team | 20 | Reports 1–5 drafted |
@@ -35,7 +35,7 @@ Scope is the registration form v3: main flows MF-01…11 and supporting flows SF
 | Objective | Target | Measured by |
 | --- | --- | --- |
 | Scope | Every mandatory feature of the Design Brief (F-01…22) done and in at least one main workflow | Project Tracking; Report 5 |
-| Defense 1.1 thresholds | 100 % of the 11 main workflows run end-to-end on staging; 100 % main and ≥ 80 % exception demo scenarios pass; ≥ 90 % of test cases pass, 100 % of main-path tests; ≥ 50 % automated in CI; no open Critical or High defect | Report 5; CI on the submitted tag |
+| Defense 1.1 thresholds | 100 % of the 6 main workflows run end-to-end on staging; 100 % main and ≥ 80 % exception demo scenarios pass; ≥ 90 % of test cases pass, 100 % of main-path tests; ≥ 50 % automated in CI; no open Critical or High defect | Report 5; CI on the submitted tag |
 | Quality of code | Every pull request passes CI and one review; backend line coverage ≥ 80 % | CI (`.github/workflows/ci.yml`) |
 | Non-functional | The six committed NFRs of the Design Brief measured with their stated method | Report 5, NFR test cases |
 | Field evidence | ≥ 14 rated days in the test house (NFR-14); counting accuracy on recorded clips (NFR-09) | Evaluation report |
@@ -45,9 +45,9 @@ Scope is the registration form v3: main flows MF-01…11 and supporting flows SF
 | ID | Risk | Probability | Impact | Mitigation | Owner |
 | --- | --- | --- | --- | --- | --- |
 | RK-1 | No trained swiftlet model in time; the spare PC is too slow for 25 fps | High | High | Train early on the 3 recorded days; measure fps on the PC in Iteration 2; fall back to a smaller input or one tile; demo on clips through the same pipeline | Nguyễn Chí Bảo |
-| RK-2 | Daily health assessment built late, leaving fewer than 14 rated days | Medium | High | Build MF-11 first in Iteration 2; start the field run as soon as the system is installed | Nguyễn Thị Yến Nhi |
+| RK-2 | Daily health assessment built late, leaving fewer than 14 rated days | Medium | High | Build MF-06 first in Iteration 2; start the field run as soon as the system is installed | Nguyễn Thị Yến Nhi |
 | RK-3 | Staging not ready or unreachable from the defence room | Medium | High | Staging in Iteration 2; rehearse from the university network; 4G hotspot and recorded demo as back-up (`docs/deploy/staging.md`) | Nguyễn Chí Bảo |
-| RK-4 | Test house unavailable (borrowed), power or Internet cuts at the house | Medium | Medium | Bench prototype with the same firmware; offline operation is itself tested (MF-03) | Nguyễn Chí Bảo |
+| RK-4 | Test house unavailable (borrowed), power or Internet cuts at the house | Medium | Medium | Bench prototype with the same firmware; offline operation is itself tested (MF-01) | Nguyễn Chí Bảo |
 | RK-5 | Web screens lag behind the backend scope | Medium | Medium | Remove v1.24.0 leftovers first; one owner per role screen set; weekly integration on `develop` | Nguyễn Vũ Len |
 | RK-6 | Thresholds or health levels without a source | Medium | Medium | Evidence register and practitioner interview; constants declared in Report 3 §4.5 | Nguyễn Chí Bảo |
 | RK-7 | A member cannot explain the part they own at Review 2 or Defense 1.1 | Low | High | Ownership Map; each owner presents their workflow at internal rehearsals | Nguyễn Chí Bảo |
@@ -74,9 +74,9 @@ The team works in iterations of two-week sprints with Scrum-style ceremonies, ad
 | --- | --- | --- |
 | Registration | 22/07/2026 | Registration form v1 |
 | Review 1 | 30/09/2026 | Registration v2; scope narrowed to the automated system |
-| Iteration 1 | until Review 2 | Firmware 1.5.0, backend of the main flows except MF-11, with the expert loop, review items and proposals of MF-08 and the breach dwell time, counting pipeline with MQTT publishing and video push, Farm Owner, Admin and Domain Expert web screens, test house camera |
+| Iteration 1 | until Review 2 | Firmware 1.5.0, backend of the main flows except MF-06, with the expert loop (MF-04), review items and proposals (MF-05) and the breach dwell time, counting pipeline with MQTT publishing and video push, Farm Owner, Admin and Domain Expert web screens, test house camera |
 | **Review 2** | 04/11/2026 | Registration v3, Reports 1–5, Design Brief, self-review |
-| Iteration 2 | 05/11–02/12/2026 (4 weeks) | Gaps due "It. 2" in Project Tracking: device topics and TLS; MF-11 backend; manual override limits; config sync; FCM; QR setup on mobile; pipeline against staging; trained model; staging; field run starts |
+| Iteration 2 | 05/11–02/12/2026 (4 weeks) | Gaps due "It. 2" in Project Tracking: device topics and TLS; MF-06 backend; manual override limits; config sync; FCM; QR setup on mobile; pipeline against staging; trained model; staging; field run starts |
 | Iteration 3 | 03/12–23/12/2026 (3 weeks) | Current sensing; reports and export; remaining screens; all committed test cases; NFR measurements; evaluation report |
 | **Defense 1.1** | Per the course schedule | Workflows, scenarios, tests and NFRs against the Commitment |
 | Viva | Per the course schedule | Thesis (Report 7), final package |
@@ -134,7 +134,7 @@ R = responsible, A = accountable, C = consulted.
 | Backend daily health and reports | C | A, R | | C | |
 | Web – Farm Owner | | | C | A, R | |
 | Web – Administrator, role matrix | | | | A, R | |
-| Web – Domain Expert, Technician | | | | | A, R |
+| Web – Domain Expert, Admin device console | | | | | A, R |
 | Mobile – sign-in, push, QR setup, daily status | C | | A, R | | |
 | Mobile – Farm Owner screens, live stream | | | A, R | | |
 | Mobile – Domain Expert screens | | | C | | A, R |
@@ -144,7 +144,7 @@ R = responsible, A = accountable, C = consulted.
 
 Staging and documents are shared: Bảo is accountable and runs the infrastructure and the final documents, and every member is responsible for their part (Kiệt the backend image, migrations, seed and backup; Nhi the web build; Len the mobile build; Tuấn the E2E runs on staging; each member the report sections of their own workflows). Backend code is written only by Bảo and Kiệt. Len, Nhi and Tuấn are consulted on the backend of the features they own and answer for those features working end to end (Project Tracking, Section 3).
 
-Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03, 06; Kiệt WF-04, 10; Len WF-02, 09; Nhi WF-05, 11; Tuấn WF-07, 08. Since 03/11/2026 the Farm Owner screens are split by platform: Len the mobile app, Nhi the web. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
+Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03; Kiệt WF-05; Len WF-02; Nhi WF-06; Tuấn WF-04. Since 03/11/2026 the Farm Owner screens are split by platform: Len the mobile app, Nhi the web. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
 
 ## 5. Project Communications
 
@@ -190,6 +190,7 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…06; device setup is supporting flow SF-01 |
 | 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo; Farm Owner web to Nhi, mobile to Len on 03/11/2026), skills, workflow owners, RK-3 and RK-8 |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0 and SDD 1.1.0: progress judged from Project Tracking, Iteration 1 and 2 content corrected, RACI wording, risks RK-8 (mobile scope) and RK-9 (move to device topics) |
 | 1.0.0 | 23/10/2026 | First version for Review 2 |

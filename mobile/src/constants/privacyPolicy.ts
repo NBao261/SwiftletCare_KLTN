@@ -98,7 +98,7 @@ const SECTIONS_VI: PolicySection[] = [
     paragraphs: [
       'Mọi câu hỏi hoặc yêu cầu về dữ liệu cá nhân xin gửi Quản trị viên của bản cài đặt.',
       'Khi chính sách thay đổi, phiên bản và ngày hiệu lực ở đầu trang được cập nhật.',
-      // ALERT-FR-002, MF-11 — chưa có trong code (gap G-10, G-11)
+      // ALERT-FR-002, MF-06 — chưa có trong code (gap G-10, G-11)
       'Thông báo push trên app mobile (Firebase Cloud Messaging), thời tiết theo tọa độ trang trại (Open-Meteo) và đánh giá tình trạng mỗi nhà theo ngày sẽ được bổ sung sau; chính sách này được cập nhật trước khi các tính năng đó hoạt động.',
     ],
   },

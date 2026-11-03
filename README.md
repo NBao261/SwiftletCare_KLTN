@@ -36,7 +36,7 @@ Luồng chính của hệ thống:
 
 Một bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các farm của chủ đó: Admin tạo tài khoản, thành viên vào bằng lời mời, không có đăng ký công khai; không có mua bán, ticket hay điều phối dịch vụ.
 
-Report 3 chia thành 11 luồng chính (MF-01…11), gồm cả việc chủ nhà yến tự gắn bộ điều khiển vào tầng bằng hai lần quét QR (MF-10) và trạng thái sức khỏe nhà yến theo ngày kèm báo cáo ngày/tuần/tháng (MF-11).
+Report 3 chia thành 6 luồng chính theo quy trình nghiệp vụ (MF-01…06: điều khiển vi khí hậu tự động, xử lý sự cố, đếm chim, chuyên gia kiểm chứng cảnh báo suy luận, tinh chỉnh tham số, sức khỏe nhà yến theo ngày kèm báo cáo ngày/tuần/tháng) và 4 luồng phụ, gồm việc chủ nhà yến tự gắn bộ điều khiển vào tầng bằng hai lần quét QR (SF-01).
 
 Vai trò người dùng:
 
@@ -44,8 +44,7 @@ Vai trò người dùng:
 |---|---|
 | Farm Owner | Theo dõi nhà yến, tự lắp và gán thiết bị bằng QR, điều khiển tay khi cần, nhận cảnh báo, ghi nhận thu hoạch, mời thành viên; quyết thay chuyên gia khi farm chưa có chuyên gia |
 | Domain Expert | Chuyên gia nuôi yến: kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và hệ số điều khiển, duyệt thay đổi của chủ farm, viết kết luận báo cáo sức khỏe (chỉ đọc phần vận hành); mọi quyết định đều báo cho chủ farm |
-| Technician | Vai trò kỹ thuật: xem thiết bị và cảnh báo thiết bị của mọi farm, lắp/dời/gỡ thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường |
-| Admin | Tạo tài khoản Farm Owner và Technician, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; không quản lý farm |
+| Admin | Tạo tài khoản Farm Owner, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; xem mọi thiết bị và cảnh báo thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường, không quản lý farm. Vai Technician đã bỏ (BM03 dòng 13); code còn role này đến khi xong G-20 |
 
 ## Tính năng chính
 
@@ -63,7 +62,7 @@ Vai trò người dùng:
 - Mỗi nhà yến có một trạng thái sức khỏe theo ngày (chỉ báo theo luật, không phải chẩn đoán) và báo cáo ngày/tuần/tháng theo nhà, xuất PDF/CSV; chủ farm và chuyên gia tự đánh giá ngày trước khi xem trạng thái của hệ thống để đo mức trùng khớp; chuyên gia viết kết luận.
 - Dashboard thời gian thực qua Socket.io, biểu đồ và phân tích hiệu quả điều khiển.
 
-**Thiết lập thiết bị (MF-10)**
+**Thiết lập thiết bị (SF-01)**
 - Chủ farm quét nhãn QR trên bộ điều khiển (Device ID + mã kích hoạt) và mã QR dán ở tầng trong app mobile; cài Wi-Fi qua AP-mode, không nạp lại firmware; không phải nhập farm/zone trên thiết bị — farm, nhà và tầng chỉ lưu ở backend, thiết bị chỉ nhận cấu hình của tầng.
 - Dời bộ điều khiển sang tầng khác từ xa, lịch sử dữ liệu đi theo thiết bị.
 
@@ -173,7 +172,7 @@ Khi dev, `MQTT_BROKER_URL` phải là `mqtt://localhost:1883` (EMQX dev tự ký
 |---|---|
 | `owner@swiftletcare.dev` | Farm Owner |
 | `expert@swiftletcare.dev` | Domain Expert |
-| `tech@swiftletcare.dev` | Technician |
+| `tech@swiftletcare.dev` | Technician (bỏ ở G-20) |
 
 ### 3. Frontend
 

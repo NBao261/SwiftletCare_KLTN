@@ -16,7 +16,7 @@ function buildUser(role: Role): User {
 }
 
 describe('canPerform', () => {
-  it('chỉ Farm Owner được thiết lập thiết bị bằng QR (MF-10)', () => {
+  it('chỉ Farm Owner được thiết lập thiết bị bằng QR (SF-01)', () => {
     expect(canPerform(buildUser('FARM_OWNER'), 'setupDevice')).toBe(true)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'setupDevice')).toBe(false)
   })

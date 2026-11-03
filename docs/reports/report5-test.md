@@ -9,7 +9,7 @@
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Document version | 1.1.0 (Review 2) |
 | Date | 03/11/2026 |
-| Requirements baseline | Report 3 – SRS 3.1.0; Design Brief (BM01) 1.1 sections 6–7 and Appendix A |
+| Requirements baseline | Report 3 – SRS 3.2.0; Design Brief (BM01) 1.2 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
 
@@ -19,7 +19,7 @@ This file is generated from the test-case list `docs/reports/report5/tc.py` by `
 
 ### 1.1 Purpose
 
-This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…22), main workflow (WF-01…11), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
+This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…17, F-20…22), main workflow (WF-01…06), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
 
 ### 1.2 Scope of Testing
 
@@ -31,11 +31,11 @@ This report is the test plan and the test cases of SwiftletCare for Defense 1.1.
 
 | Source | Count | Minimum per item | Subtotal |
 | --- | --- | --- | --- |
-| Mandatory features | 22 | 3 | 66 |
-| Main workflows (end-to-end) | 11 | 1 | 11 |
+| Mandatory features | 20 | 3 | 60 |
+| Main workflows (end-to-end) | 6 | 1 | 6 |
 | State transitions of main entities | 53 | 1 | 53 |
 | Committed NFRs | 6 | 1 | 6 |
-| **Total** | | | **136** |
+| **Total** | | | **125** |
 
 ## 2. Test Strategy
 
@@ -71,7 +71,7 @@ Defects are GitHub issues labelled `bug` with a severity:
 | Severity | Meaning | Example |
 | --- | --- | --- |
 | Critical | A main workflow cannot complete, data is lost, or a safety rule is broken | Fan driven by NH3; override never returns to AUTO |
-| High | A mandatory feature gives a wrong result or a permission is wrong | A Technician can edit thresholds |
+| High | A mandatory feature gives a wrong result or a permission is wrong | An Administrator can edit thresholds |
 | Medium | Wrong result with a workaround, or a non-mandatory feature broken | Wrong label in a report |
 | Low | Cosmetic | Alignment, wording |
 
@@ -91,7 +91,7 @@ Every defect is fixed by a pull request that adds a test failing without the fix
 
 Columns follow the guideline: ID, feature or workflow, preconditions, steps, data, expected result, how it runs (automatic or manual), actual result.
 
-### 4.1 Mandatory Features (66)
+### 4.1 Mandatory Features (60)
 
 Requirements covered by each mandatory feature:
 
@@ -114,8 +114,8 @@ Requirements covered by each mandatory feature:
 | F-15 | Review and suggestions | EXPERT-FR-010, 011, ANALYTICS-FR-010 |
 | F-16 | Conclusions, owner notice | EXPERT-FR-001, 002, 006, 009 |
 | F-17 | Manual override | ENV-FR-016, 017, 018, 019, ANALYTICS-FR-011 |
-| F-18 | Farm structure and device registration | FARM-FR-001, 002, 003, 003b, 003c, 010, 011 |
-| F-19 | Device lifecycle, diagnostics and setup progress | FARM-FR-005, 006, 007, 007b, 008, 012, ENV-FR-027 |
+| F-18 | Farm structure and device registration (supporting, SF-01) | FARM-FR-001, 002, 003, 003b, 003c, 010, 011 |
+| F-19 | Device lifecycle, diagnostics and setup progress (supporting, SF-01) | FARM-FR-005, 006, 007, 007b, 008, 012, ENV-FR-027 |
 | F-20 | Daily health status | ANALYTICS-FR-012, 013 |
 | F-21 | Reports, PDF/CSV | EXPERT-FR-005, 013 |
 | F-22 | Independent rating | EXPERT-FR-012, ANALYTICS-FR-014 |
@@ -130,7 +130,7 @@ Requirements covered by each mandatory feature:
 | TC-F02-03 | F-02 | ENV-FR-010, 011, THREAT-FR-013 | Default coefficients | Call the controller with invalid (NaN) inputs | NaN humidity and temperature | Safe state: misting and fan output 0 | Auto (CI) – firmware `pio test -e native` `test_fuzzy` › `test_invalid_inputs_give_safe_state` | Not run on the tag |
 | TC-F03-01 | F-03 | ENV-FR-006, 009 | Zone with thresholds; Farm Owner signed in | PUT a valid partial threshold update | `humidity_min` = 80 | Values stored as numbers; history entry with source MANUAL; other keys unchanged | Auto (CI) – backend Jest `tests/integration/zoneThresholds.test.ts` › “records only the known keys, with source MANUAL, in the threshold history” | Not run on the tag |
 | TC-F03-02 | F-03 | ENV-FR-006 | Same zone | PUT an out-of-range threshold | `humidity_min` = 150 | 400; nothing stored | Auto (CI) – backend Jest `tests/integration/zoneThresholds.test.ts` › “PUT /farms/zones/:id/thresholds answers 400 for an out-of-range value” | Not run on the tag |
-| TC-F03-03 | F-03 | ENV-FR-006, 020, 021 | Technician and Administrator accounts | PUT thresholds, reset and fuzzy tuning as each of them | Valid body | 403 for both on every route (ENV-FR-006, 020, 021) | Auto (CI) – backend Jest `tests/integration/roleMatrix.test.ts` › “mỗi dòng của bảng quyền trả 403 cho role bị bỏ” | Not run on the tag |
+| TC-F03-03 | F-03 | ENV-FR-006, 020, 021 | Administrator account | PUT thresholds, reset and fuzzy tuning | Valid body | 403 on every route (ENV-FR-006, 020, 021) | Auto (CI) – backend Jest `tests/integration/roleMatrix.test.ts` › “mỗi dòng của bảng quyền trả 403 cho role bị bỏ” | Not run on the tag |
 | TC-F04-01 | F-04 | ENV-FR-014 | Prototype running in AUTO; logging on | Cut the router uplink for 30 min, then restore it | — | A control decision every 10 s during the outage (100 %) | Manual – prototype, test house | Not run |
 | TC-F04-02 | F-04 | ENV-FR-004, 024 | Controller reconnects with buffered samples | Ingest flushed offline-buffer readings | Readings with their own timestamps | Stored at their own time; the live dashboard is not touched | Auto (CI) – backend Jest `tests/integration/deviceMqttContract.test.ts` › “stores flushed offline-buffer readings at their own time” | Not run on the tag |
 | TC-F04-03 | F-04 | ENV-FR-025, THREAT-FR-012 | Prototype running | Block the main loop on purpose (debug build) | — | Watchdog restarts the controller; control resumes; one `UNEXPECTED_RESTART` with reset reason `WATCHDOG` | Manual – prototype | Not run |
@@ -154,7 +154,7 @@ Requirements covered by each mandatory feature:
 | TC-F10-03 | F-10 | VISION-FR-004, 005 | Same ring | Feed a track lost at the frame edge, and a slow circling bird lost near the ring | — | Nothing counted for either | Auto (CI) – AI pipeline `pytest` `tests/test_counting.py` › `test_track_lost_at_the_frame_edge_counts_nothing` + Auto (CI) – AI pipeline `pytest` `tests/test_counting.py` › `test_slow_circling_bird_lost_near_the_ring_counts_nothing` | Not run on the tag |
 | TC-F11-01 | F-11 | VISION-FR-014 | Pipeline running on a recorded clip | Process frames and read the published frames | Clip with tracked birds | Every published frame shows the ring and a box with a track ID on each tracked bird | Auto (CI, to be written) – AI pipeline pytest `test_annotate.py` (G-12) | Not run – test to be written |
 | TC-F11-02 | F-11 | VISION-FR-013 | Camera of a farm; its Farm Owner and Domain Expert | GET stream-token as each | — | Token valid 60 s for path `cam-<device_id>` only | Auto (CI) – backend Jest `tests/integration/streamAuth.test.ts` › “Farm Owner và Domain Expert của farm nhận token 60 giây” | Not run on the tag |
-| TC-F11-03 | F-11 | VISION-FR-013 | Technician; Farm Owner of another farm | GET stream-token as each | — | 403 | Auto (CI) – backend Jest `tests/integration/streamAuth.test.ts` › “Technician (SRS §4.4) và Farm Owner của farm khác bị chặn” | Not run on the tag |
+| TC-F11-03 | F-11 | VISION-FR-013 | User who is not a member of the farm; Farm Owner of another farm | GET stream-token as each | — | 403 | Auto (CI) – backend Jest `tests/integration/streamAuth.test.ts` › “Technician (SRS §4.4) và Farm Owner của farm khác bị chặn” | Not run on the tag |
 | TC-F12-01 | F-12 | THREAT-FR-007 | Hour with a learned quiet baseline | Feed noise above the baseline for the minimum duration | +20 dB for 12 s of 15 s | Anomaly raised | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_same_loudness_in_a_quiet_hour_triggers` | Not run on the tag |
 | TC-F12-02 | F-12 | THREAT-FR-007 | Same baseline | Feed a short burst | +20 dB for 8 s | No anomaly | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_short_noise_does_not_trigger` | Not run on the tag |
 | TC-F12-03 | F-12 | THREAT-FR-005, 007 | Speaker playing | Feed loud samples | — | Not evaluated and not learned into the baseline | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_speaker_playing_is_ignored_and_not_learned` | Not run on the tag |
@@ -173,12 +173,6 @@ Requirements covered by each mandatory feature:
 | TC-F17-01 | F-17 | ENV-FR-016, 019 | Pump in AUTO | Override ON; override the same relay again; clear early | — | One log opened; earlier REPLACED; last CLEARED_EARLY | Auto (CI) – backend Jest `tests/integration/relayOverrideLog.test.ts` › “bật tay mở 1 bản ghi” | Not run on the tag |
 | TC-F17-02 | F-17 | ENV-FR-016 | Same device; a `SENSOR_FAULT` open in the zone | POST pump ON for 31 min; pump ON for 10 min without confirmation; then with confirmation | — | 422; 409; accepted, and the log records the confirmation | Auto (CI, to be written) – backend jest `relayCommand.test.ts` (G-06) | Not run – test to be written |
 | TC-F17-03 | F-17 | ENV-FR-016 | Farm with an expert | POST relay, speaker and schedule as the expert | — | 403 for each | Auto (CI) – backend Jest `tests/integration/domainExpert.test.ts` › “không điều khiển relay, loa hay lịch loa” | Not run on the tag |
-| TC-F18-01 | F-18 | FARM-FR-001, 002, 003 | Farm Owner account; device in stock with its key | Create a farm with coordinates, a house and a zone; POST register with the label values | Coordinates; device ID and key (case-insensitive) | Farm, house and zone created under the owner, the zone linked to its house's farm; device `PENDING` in the zone; stock entry marked activated | Auto (CI) – backend Jest `tests/integration/technicianAccess.test.ts` › “lets one Farm Owner create two farms” + Auto (CI) – backend Jest `tests/integration/dataModel.test.ts` › “Zone tự lấy farm_id từ House” + Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “đúng secretKey → PENDING” | Not run on the tag |
-| TC-F18-02 | F-18 | FARM-FR-003 | Same stock | POST register without key; with a wrong key; with an unknown ID | — | 422 without key; 400 with the same message for the other two | Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “thiếu secretKey → 422” | Not run on the tag |
-| TC-F18-03 | F-18 | FARM-FR-003 | Device in service in another farm | POST register | — | 409 with a clear message | Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “thiết bị đã thuộc Farm khác → 409” | Not run on the tag |
-| TC-F19-01 | F-19 | FARM-FR-003c, 012 | Controller registered to a zone, never connected | Ingest its first heartbeat on its device topics | — | Device `ONLINE`; the zone configuration with its version published retained on `swiftletcare/dev/<id>/config` | Auto (CI, to be written) – backend jest `deviceMqttContract.test.ts` (G-07) | Not run – test to be written |
-| TC-F19-02 | F-19 | FARM-FR-005, 006, 012 | Device `PENDING` for 15 min | Run the activation job; then a first heartbeat carrying diagnostics | Firmware 1.4.0 heartbeat | Flagged once; the heartbeat sets `ONLINE`, clears the flag and stores firmware, uptime, RSSI, free memory, reset reason and IP | Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “đánh dấu node PENDING quá 15 phút 1 lần” + Auto (CI) – backend Jest `tests/integration/deviceMqttContract.test.ts` › “stores the diagnostics of firmware 1.4.0” | Not run on the tag |
-| TC-F19-03 | F-19 | FARM-FR-007b, ENV-FR-027 | Offline controller | Move it to another zone; then it reconnects and reports the new version | — | Move accepted while offline; new zone configuration retained; "applied" shown after the heartbeat reports the version | Auto (CI, to be written) – backend jest `deviceOnboarding.test.ts` (G-07, G-08) | Not run – test to be written |
 | TC-F20-01 | F-20 | ANALYTICS-FR-012 | Seeded house-day: return rate `CLEAR`, humidity `SLIGHT` | Run the daily assessment | Seed of BR-28 | Status `ACTION` with both reasons | Auto (CI, to be written) – backend jest `healthAssessment.test.ts` (G-11) | Not run – test to be written |
 | TC-F20-02 | F-20 | ANALYTICS-FR-012, 013 | Seeded days: return rate `CLEAR` only; return rate `CLEAR` + noise `SLIGHT` without rain; the same with 2 mm rain over the evening session and the noise episode | Run the assessment on each | — | `WATCH`; `ACTION`; `WATCH` with the rain named | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
 | TC-F20-03 | F-20 | ANALYTICS-FR-012 | Seeded day with an incomplete evening session; another day without valid noise samples | Run the assessment | — | `INSUFFICIENT_DATA` for the first; the second assessed with "noise not assessed" | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
@@ -187,9 +181,9 @@ Requirements covered by each mandatory feature:
 | TC-F21-03 | F-21 | EXPERT-FR-013 | A daily report in the web app | Download the PDF and compare with the screen | — | Same figures; no internal IDs | Manual – web, staging | Not run |
 | TC-F22-01 | F-22 | EXPERT-FR-012 | Computed day; Farm Owner who has not rated it | GET the day, the daily report and the CSV; then POST a rating | — | No status, reasons or other ratings before the rating; the rating and its snapshot stored together, and the status returned only in the rating response | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
 | TC-F22-02 | F-22 | EXPERT-FR-012 | Rated day | Ingest a late count that changes the status; then try to change the rating | — | Current status recomputed, snapshot unchanged; rating change rejected, a note accepted | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
-| TC-F22-03 | F-22 | EXPERT-FR-012 | Technician, Administrator; a day 8 days ago | Rate as each; rate the old day | — | 403; old day rejected | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
+| TC-F22-03 | F-22 | EXPERT-FR-012 | Administrator; a day 8 days ago | Rate as each; rate the old day | — | 403; old day rejected | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
 
-### 4.2 Main Workflows (11)
+### 4.2 Main Workflows (6)
 
 | ID | Feature / workflow | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -199,11 +193,6 @@ Requirements covered by each mandatory feature:
 | TC-WF-04 | WF-04 | Staging with demo seed; preconditions of DS-07 | Run the main scenario DS-07 of the Design Brief end-to-end | Data of DS-07 | Expected result of DS-07 | Manual – staging, presenter of the workflow | Not run |
 | TC-WF-05 | WF-05 | Staging with demo seed; preconditions of DS-09 | Run the main scenario DS-09 of the Design Brief end-to-end | Data of DS-09 | Expected result of DS-09 | Manual – staging, presenter of the workflow | Not run |
 | TC-WF-06 | WF-06 | Staging with demo seed; preconditions of DS-11 | Run the main scenario DS-11 of the Design Brief end-to-end | Data of DS-11 | Expected result of DS-11 | Manual – staging, presenter of the workflow | Not run |
-| TC-WF-07 | WF-07 | Staging with demo seed; preconditions of DS-13 | Run the main scenario DS-13 of the Design Brief end-to-end | Data of DS-13 | Expected result of DS-13 | Manual – staging, presenter of the workflow | Not run |
-| TC-WF-08 | WF-08 | Staging with demo seed; preconditions of DS-15 | Run the main scenario DS-15 of the Design Brief end-to-end | Data of DS-15 | Expected result of DS-15 | Manual – staging, presenter of the workflow | Not run |
-| TC-WF-09 | WF-09 | Staging with demo seed; preconditions of DS-17 | Run the main scenario DS-17 of the Design Brief end-to-end | Data of DS-17 | Expected result of DS-17 | Manual – staging, presenter of the workflow | Not run |
-| TC-WF-10 | WF-10 | Staging with demo seed; preconditions of DS-19 | Run the main scenario DS-19 of the Design Brief end-to-end | Data of DS-19 | Expected result of DS-19 | Manual – staging, presenter of the workflow | Not run |
-| TC-WF-11 | WF-11 | Staging with demo seed; preconditions of DS-21 | Run the main scenario DS-21 of the Design Brief end-to-end | Data of DS-21 | Expected result of DS-21 | Manual – staging, presenter of the workflow | Not run |
 
 Exception scenarios of the Design Brief (Appendix A2), run in the same session as their workflow. They are demo evidence for the guideline's threshold of 80 % of exception scenarios passing and are **not counted** among the committed cases.
 
@@ -215,11 +204,6 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 | DS-08 (exception) | WF-04 | Manual – staging, presenter of the workflow | Not run |
 | DS-10 (exception) | WF-05 | Manual – staging, presenter of the workflow | Not run |
 | DS-12 (exception) | WF-06 | Manual – staging, presenter of the workflow | Not run |
-| DS-14 (exception) | WF-07 | Manual – staging, presenter of the workflow | Not run |
-| DS-16 (exception) | WF-08 | Manual – staging, presenter of the workflow | Not run |
-| DS-18 (exception) | WF-09 | Manual – staging, presenter of the workflow | Not run |
-| DS-20 (exception) | WF-10 | Manual – staging, presenter of the workflow | Not run |
-| DS-22 (exception) | WF-11 | Manual – staging, presenter of the workflow | Not run |
 
 ### 4.3 State Transitions (53)
 
@@ -301,103 +285,103 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | ENV-FR-004 | TC-F01-01, TC-F04-02 | TC-WF-01 |
 | ENV-FR-005 | TC-F01-01, TC-F01-03 | TC-WF-01 |
 | ENV-FR-022 | TC-F01-02 | TC-WF-01 |
-| ENV-FR-006 | TC-F03-01, TC-F03-02, TC-F03-03 | TC-WF-02 |
-| ENV-FR-007 | — (traced only) | TC-WF-02 |
-| ENV-FR-009 | TC-F03-01 | TC-WF-08 |
-| ENV-FR-020 | TC-F03-03 | TC-WF-08 |
-| ENV-FR-021 | TC-F03-03 | TC-WF-01 |
-| ENV-FR-027 | TC-F19-03 | TC-WF-01, TC-WF-10 |
+| ENV-FR-006 | TC-F03-01, TC-F03-02, TC-F03-03 | TC-WF-02, TC-WF-05 |
+| ENV-FR-007 | — (traced only) | TC-WF-02, supporting flow SF-03 |
+| ENV-FR-009 | TC-F03-01 | TC-WF-05 |
+| ENV-FR-020 | TC-F03-03 | TC-WF-05 |
+| ENV-FR-021 | TC-F03-03 | TC-WF-01, TC-WF-05 |
+| ENV-FR-027 | TC-F19-03 | TC-WF-01, TC-WF-05, supporting flow SF-01 |
 | ENV-FR-010 | TC-F02-01, TC-F02-02, TC-F02-03 | TC-WF-01 |
 | ENV-FR-011 | TC-F02-02, TC-F02-03 | TC-WF-01 |
 | ENV-FR-013b | — (traced only) | TC-WF-01 |
-| ENV-FR-014 | TC-F04-01 | TC-WF-03 |
-| ENV-FR-024 | TC-F04-02 | TC-WF-03 |
-| ENV-FR-025 | TC-F04-03 | TC-WF-03 |
+| ENV-FR-014 | TC-F04-01 | TC-WF-01 |
+| ENV-FR-024 | TC-F04-02 | TC-WF-01 |
+| ENV-FR-025 | TC-F04-03 | TC-WF-01 |
 | ENV-FR-015 | — (traced only) | TC-WF-01 |
-| ENV-FR-016 | TC-F17-01, TC-F17-02, TC-F17-03 | TC-WF-09 |
-| ENV-FR-017 | — (traced only) | TC-WF-09 |
-| ENV-FR-018 | — (traced only) | TC-WF-09 |
-| ENV-FR-019 | TC-F17-01 | TC-WF-09 |
-| THREAT-FR-005 | TC-F12-03 | TC-WF-07 |
-| THREAT-FR-006 | — (traced only) | TC-WF-04 |
-| THREAT-FR-007 | TC-F12-01, TC-F12-02, TC-F12-03 | TC-WF-07 |
-| THREAT-FR-009 | — (traced only) | TC-WF-03 |
-| THREAT-FR-010 | — (traced only) | TC-WF-06 |
-| THREAT-FR-011 | TC-F05-01, TC-F05-02 | TC-WF-04 |
-| THREAT-FR-012 | TC-F04-03 | TC-WF-03 |
-| THREAT-FR-013 | TC-F02-03 | TC-WF-04 |
-| THREAT-FR-014 | TC-F06-01, TC-F06-02, TC-F06-03 | TC-WF-04 |
+| ENV-FR-016 | TC-F17-01, TC-F17-02, TC-F17-03 | TC-WF-01 |
+| ENV-FR-017 | — (traced only) | TC-WF-01 |
+| ENV-FR-018 | — (traced only) | TC-WF-01 |
+| ENV-FR-019 | TC-F17-01 | TC-WF-01 |
+| THREAT-FR-005 | TC-F12-03 | TC-WF-04 |
+| THREAT-FR-006 | — (traced only) | TC-WF-02 |
+| THREAT-FR-007 | TC-F12-01, TC-F12-02, TC-F12-03 | TC-WF-04 |
+| THREAT-FR-009 | — (traced only) | TC-WF-02 |
+| THREAT-FR-010 | — (traced only) | TC-WF-03 |
+| THREAT-FR-011 | TC-F05-01, TC-F05-02 | TC-WF-02 |
+| THREAT-FR-012 | TC-F04-03 | TC-WF-02 |
+| THREAT-FR-013 | TC-F02-03 | TC-WF-02 |
+| THREAT-FR-014 | TC-F06-01, TC-F06-02, TC-F06-03 | TC-WF-02 |
 | ALERT-FR-010 | TC-F05-03 | TC-WF-04 |
-| ALERT-FR-001 | — (traced only) | TC-WF-02, TC-WF-04 |
+| ALERT-FR-001 | — (traced only) | TC-WF-02 |
 | ALERT-FR-005 | — (traced only) | TC-WF-02 |
 | ALERT-FR-006 | TC-F08-02 | TC-WF-02 |
 | ALERT-FR-007 | — (traced only) | TC-WF-02 |
-| ALERT-FR-008 | TC-F07-01 | TC-WF-04 |
-| ALERT-FR-009 | TC-F07-03 | TC-WF-02, TC-WF-04 |
-| ALERT-FR-011 | TC-F09-01 | TC-WF-05 |
-| ALERT-FR-012 | TC-F07-02 | TC-WF-01, TC-WF-02 |
+| ALERT-FR-008 | TC-F07-01 | TC-WF-02 |
+| ALERT-FR-009 | TC-F07-03 | TC-WF-02 |
+| ALERT-FR-011 | TC-F09-01 | TC-WF-02 |
+| ALERT-FR-012 | TC-F07-02 | TC-WF-02 |
 | ALERT-FR-013 | TC-F08-01, TC-F08-02 | TC-WF-02 |
-| ALERT-FR-014 | — (traced only) | TC-WF-07, TC-WF-08 |
+| ALERT-FR-014 | — (traced only) | TC-WF-04 |
 | ALERT-FR-002 | TC-F08-03 | TC-WF-02 |
-| ALERT-FR-015 | — (traced only) | TC-WF-04 |
-| ALERT-FR-016 | — (traced only) | TC-WF-04 |
+| ALERT-FR-015 | — (traced only) | TC-WF-02 |
+| ALERT-FR-016 | — (traced only) | TC-WF-02 |
 | ANALYTICS-FR-001 | — (traced only) | TC-WF-01 |
-| ANALYTICS-FR-002 | — (traced only) | TC-WF-06 |
-| ANALYTICS-FR-003 | — (traced only) | TC-WF-06 |
+| ANALYTICS-FR-002 | — (traced only) | TC-WF-03 |
+| ANALYTICS-FR-003 | — (traced only) | TC-WF-03 |
 | ANALYTICS-FR-005 | — (traced only) | TC-WF-01 |
-| ANALYTICS-FR-008 | TC-F02-02 | TC-WF-08 |
-| ANALYTICS-FR-009 | TC-F09-02, TC-F09-03 | TC-WF-05 |
-| ANALYTICS-FR-010 | TC-F15-01 | TC-WF-08 |
-| ANALYTICS-FR-011 | — (traced only) | TC-WF-08 |
-| ANALYTICS-FR-012 | TC-F20-01, TC-F20-02, TC-F20-03 | TC-WF-11 |
-| ANALYTICS-FR-013 | TC-F20-02 | TC-WF-11 |
-| ANALYTICS-FR-014 | TC-NFR-14 | TC-WF-11 |
-| VISION-FR-001 | — (traced only) | TC-WF-06 |
-| VISION-FR-002 | — (traced only) | TC-WF-06 |
-| VISION-FR-003 | — (traced only) | TC-WF-06 |
-| VISION-FR-004 | TC-F10-03 | TC-WF-06 |
-| VISION-FR-005 | TC-F10-01, TC-F10-03 | TC-WF-06 |
-| VISION-FR-006 | — (traced only) | TC-WF-06 |
-| VISION-FR-007 | — (traced only) | TC-WF-06 |
-| VISION-FR-008 | — (traced only) | TC-WF-06 |
-| VISION-FR-009 | TC-F10-02 | TC-WF-06 |
-| VISION-FR-010 | — (traced only) | TC-WF-06 |
-| VISION-FR-011 | TC-F10-02 | TC-WF-06 |
-| VISION-FR-012 | — (traced only) | TC-WF-06 |
-| VISION-FR-013 | TC-F11-02, TC-F11-03 | TC-WF-06 |
-| VISION-FR-014 | TC-F11-01 | TC-WF-06 |
-| VISION-FR-016 | TC-NFR-09 | TC-WF-06 |
-| VISION-FR-017 | — (traced only) | TC-WF-06, TC-WF-07 |
-| VISION-FR-018 | TC-F14-02 | TC-WF-08 |
-| VISION-FR-019 | — (traced only) | TC-WF-06 |
-| VISION-FR-020 | — (traced only) | TC-WF-06 |
-| EXPERT-FR-001 | — (traced only) | TC-WF-08 |
-| EXPERT-FR-002 | — (traced only) | TC-WF-08 |
-| EXPERT-FR-003 | TC-F13-01, TC-F13-02, TC-F13-03 | TC-WF-07, TC-WF-08 |
-| EXPERT-FR-004 | — (traced only) | TC-WF-02, TC-WF-08 |
-| EXPERT-FR-005 | TC-F21-01 | TC-WF-08, TC-WF-11 |
-| EXPERT-FR-006 | TC-F16-01 | TC-WF-08, TC-WF-11 |
-| EXPERT-FR-007 | TC-F16-02 | TC-WF-08 |
-| EXPERT-FR-008 | TC-F14-01, TC-F14-03 | TC-WF-08 |
-| EXPERT-FR-009 | TC-F16-03 | TC-WF-08 |
-| EXPERT-FR-010 | TC-F15-02 | TC-WF-08 |
-| EXPERT-FR-011 | TC-F15-03 | TC-WF-08 |
-| EXPERT-FR-012 | TC-F22-01, TC-F22-02, TC-F22-03 | TC-WF-11 |
-| EXPERT-FR-013 | TC-F21-02, TC-F21-03 | TC-WF-11 |
-| FARM-FR-001 | TC-F18-01 | — |
-| FARM-FR-002 | TC-F18-01 | — |
-| FARM-FR-003 | TC-F18-01, TC-F18-02, TC-F18-03 | TC-WF-10 |
-| FARM-FR-003b | — (traced only) | TC-WF-10 |
-| FARM-FR-003c | TC-F19-01 | TC-WF-10 |
-| FARM-FR-004 | — (traced only) | TC-WF-06 |
-| FARM-FR-005 | TC-F19-02 | TC-WF-03 |
-| FARM-FR-006 | TC-F19-02 | TC-WF-10 |
-| FARM-FR-007 | — (traced only) | TC-WF-10 |
-| FARM-FR-007b | TC-F19-03 | TC-WF-10 |
-| FARM-FR-008 | — (traced only) | TC-WF-10 |
-| FARM-FR-010 | — (traced only) | TC-WF-10 |
-| FARM-FR-011 | — (traced only) | TC-WF-10 |
-| FARM-FR-012 | TC-F19-01, TC-F19-02 | TC-WF-10 |
+| ANALYTICS-FR-008 | TC-F02-02 | TC-WF-05 |
+| ANALYTICS-FR-009 | TC-F09-02, TC-F09-03 | TC-WF-02 |
+| ANALYTICS-FR-010 | TC-F15-01 | TC-WF-05 |
+| ANALYTICS-FR-011 | — (traced only) | TC-WF-01 |
+| ANALYTICS-FR-012 | TC-F20-01, TC-F20-02, TC-F20-03 | TC-WF-06 |
+| ANALYTICS-FR-013 | TC-F20-02 | TC-WF-06 |
+| ANALYTICS-FR-014 | TC-NFR-14 | TC-WF-06 |
+| VISION-FR-001 | — (traced only) | TC-WF-03 |
+| VISION-FR-002 | — (traced only) | TC-WF-03 |
+| VISION-FR-003 | — (traced only) | TC-WF-03 |
+| VISION-FR-004 | TC-F10-03 | TC-WF-03 |
+| VISION-FR-005 | TC-F10-01, TC-F10-03 | TC-WF-03 |
+| VISION-FR-006 | — (traced only) | TC-WF-03 |
+| VISION-FR-007 | — (traced only) | TC-WF-03 |
+| VISION-FR-008 | — (traced only) | TC-WF-03 |
+| VISION-FR-009 | TC-F10-02 | TC-WF-03 |
+| VISION-FR-010 | — (traced only) | TC-WF-03 |
+| VISION-FR-011 | TC-F10-02 | TC-WF-03 |
+| VISION-FR-012 | — (traced only) | TC-WF-03 |
+| VISION-FR-013 | TC-F11-02, TC-F11-03 | TC-WF-03 |
+| VISION-FR-014 | TC-F11-01 | TC-WF-03 |
+| VISION-FR-016 | TC-NFR-09 | TC-WF-03 |
+| VISION-FR-017 | — (traced only) | TC-WF-03, TC-WF-04 |
+| VISION-FR-018 | TC-F14-02 | TC-WF-05 |
+| VISION-FR-019 | — (traced only) | TC-WF-03, TC-WF-05 |
+| VISION-FR-020 | — (traced only) | TC-WF-03 |
+| EXPERT-FR-001 | — (traced only) | TC-WF-04, supporting flow SF-03 |
+| EXPERT-FR-002 | — (traced only) | TC-WF-04 |
+| EXPERT-FR-003 | TC-F13-01, TC-F13-02, TC-F13-03 | TC-WF-04 |
+| EXPERT-FR-004 | — (traced only) | TC-WF-05 |
+| EXPERT-FR-005 | TC-F21-01 | TC-WF-06 |
+| EXPERT-FR-006 | TC-F16-01 | TC-WF-06 |
+| EXPERT-FR-007 | TC-F16-02 | TC-WF-04, TC-WF-05 |
+| EXPERT-FR-008 | TC-F14-01, TC-F14-03 | TC-WF-05 |
+| EXPERT-FR-009 | TC-F16-03 | TC-WF-04, TC-WF-05 |
+| EXPERT-FR-010 | TC-F15-02 | TC-WF-05 |
+| EXPERT-FR-011 | TC-F15-03 | TC-WF-05 |
+| EXPERT-FR-012 | TC-F22-01, TC-F22-02, TC-F22-03 | TC-WF-06 |
+| EXPERT-FR-013 | TC-F21-02, TC-F21-03 | TC-WF-06 |
+| FARM-FR-001 | TC-F18-01 | supporting flow SF-03 |
+| FARM-FR-002 | TC-F18-01 | supporting flow SF-03 |
+| FARM-FR-003 | TC-F18-01, TC-F18-02, TC-F18-03 | supporting flow SF-01 |
+| FARM-FR-003b | — (traced only) | supporting flow SF-01 |
+| FARM-FR-003c | TC-F19-01 | supporting flow SF-01 |
+| FARM-FR-004 | — (traced only) | TC-WF-03 |
+| FARM-FR-005 | TC-F19-02 | TC-WF-01 |
+| FARM-FR-006 | TC-F19-02 | supporting flow SF-01, supporting flow SF-02 |
+| FARM-FR-007 | — (traced only) | supporting flow SF-01 |
+| FARM-FR-007b | TC-F19-03 | supporting flow SF-01 |
+| FARM-FR-008 | — (traced only) | supporting flow SF-01 |
+| FARM-FR-010 | — (traced only) | supporting flow SF-01 |
+| FARM-FR-011 | — (traced only) | supporting flow SF-01 |
+| FARM-FR-012 | TC-F19-01, TC-F19-02 | supporting flow SF-01 |
 
 ### 4.6 Supporting Regression Tests (not counted in the commitment)
 
@@ -405,9 +389,21 @@ Requirements of priority `S` are kept working by the automated suites that run o
 
 | Supporting flow | Requirements | Suites |
 | --- | --- | --- |
+| SF-01 Device setup by the Farm Owner | FARM-FR-001…003c, 005…008, 010…012, ENV-FR-027 | Features F-18 and F-19 below (6 cases, written and run like the committed ones) |
 | SF-02 Remote device maintenance | FARM-FR-009, 013, ENV-FR-013c | backend `technicianAccess.test.ts`, `deviceOnboarding.test.ts` (remote commands, OTA), `audioTracks.test.ts`; firmware `pio test` remote-command suite |
 | SF-03 Accounts and access | AUTH-FR-002…012, SYSTEM-FR-001…003 | backend `passwordAndProfile.test.ts`, `invitations.test.ts`, `adminUserLifecycle.test.ts`, `rateLimit.test.ts`, `auditLog.test.ts`, `systemOverview.test.ts`, `systemSettingSingleton.test.ts`, `dataPrivacy.test.ts` |
 | SF-04 Harvest logging | HARVEST-FR-001…005 | backend `harvest.test.ts` |
+
+Test cases of the device-setup features (supporting flow SF-01):
+
+| ID | Feature / workflow | Requirements verified | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| TC-F18-01 | F-18 | FARM-FR-001, 002, 003 | Farm Owner account; device in stock with its key | Create a farm with coordinates, a house and a zone; POST register with the label values | Coordinates; device ID and key (case-insensitive) | Farm, house and zone created under the owner, the zone linked to its house's farm; device `PENDING` in the zone; stock entry marked activated | Auto (CI) – backend Jest `tests/integration/technicianAccess.test.ts` › “lets one Farm Owner create two farms” + Auto (CI) – backend Jest `tests/integration/dataModel.test.ts` › “Zone tự lấy farm_id từ House” + Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “đúng secretKey → PENDING” | Not run on the tag |
+| TC-F18-02 | F-18 | FARM-FR-003 | Same stock | POST register without key; with a wrong key; with an unknown ID | — | 422 without key; 400 with the same message for the other two | Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “thiếu secretKey → 422” | Not run on the tag |
+| TC-F18-03 | F-18 | FARM-FR-003 | Device in service in another farm | POST register | — | 409 with a clear message | Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “thiết bị đã thuộc Farm khác → 409” | Not run on the tag |
+| TC-F19-01 | F-19 | FARM-FR-003c, 012 | Controller registered to a zone, never connected | Ingest its first heartbeat on its device topics | — | Device `ONLINE`; the zone configuration with its version published retained on `swiftletcare/dev/<id>/config` | Auto (CI, to be written) – backend jest `deviceMqttContract.test.ts` (G-07) | Not run – test to be written |
+| TC-F19-02 | F-19 | FARM-FR-005, 006, 012 | Device `PENDING` for 15 min | Run the activation job; then a first heartbeat carrying diagnostics | Firmware 1.4.0 heartbeat | Flagged once; the heartbeat sets `ONLINE`, clears the flag and stores firmware, uptime, RSSI, free memory, reset reason and IP | Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “đánh dấu node PENDING quá 15 phút 1 lần” + Auto (CI) – backend Jest `tests/integration/deviceMqttContract.test.ts` › “stores the diagnostics of firmware 1.4.0” | Not run on the tag |
+| TC-F19-03 | F-19 | FARM-FR-007b, ENV-FR-027 | Offline controller | Move it to another zone; then it reconnects and reports the new version | — | Move accepted while offline; new zone configuration retained; "applied" shown after the heartbeat reports the version | Auto (CI, to be written) – backend jest `deviceOnboarding.test.ts` (G-07, G-08) | Not run – test to be written |
 
 ## 5. Responsibilities
 
@@ -415,11 +411,11 @@ Each owner runs the test cases of their features and workflows and records the r
 
 | Member | Owns and runs | Writes |
 | --- | --- | --- |
-| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12; WF-01, 03, 06; config sync transitions; NFR-04, 05, 06, 07, 09, 11 | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push and current sensing |
-| Trần Minh Kiệt | F-05, 06, 08, 18, 19; WF-04, 10; device and label transitions; NFR-10 | Backend tests of devices, accounts, alerts, the expert module and daily health (including those of F-07, 13–17, 20–22) |
-| Nguyễn Vũ Len | F-07, 17; WF-02, 09; alert and relay transitions; NFR-02 | E2E tests of DS-03, 04, 17, 18; mobile tests |
-| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-05, 11; daily status and health report transitions; NFR-01, 03, 14 | E2E tests of DS-09, 10, 21, 22 |
-| Thái Minh Tuấn | F-13, 14, 15, 16; WF-07, 08; verdict, review item and proposal transitions; NFR-08, 13 | E2E tests of DS-13, 14, 15, 16 |
+| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12; WF-01, 03; config sync transitions; NFR-04, 05, 06, 07, 09, 11 | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push and current sensing; DS-05, 06 run on staging with the AI node |
+| Trần Minh Kiệt | F-05, 06, 08; supporting F-18, 19; WF-05; device and label transitions; NFR-10 | Backend tests of devices, accounts, alerts, the expert module and daily health (including those of F-07, 13–17, 20–22) |
+| Nguyễn Vũ Len | F-07, 17; WF-02; alert and relay transitions; NFR-02 | E2E tests of DS-01, 02, 03, 04; mobile tests |
+| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-06; daily status and health report transitions; NFR-01, 03, 14 | E2E tests of DS-11, 12 |
+| Thái Minh Tuấn | F-13, 14, 15, 16; WF-04; verdict, review item and proposal transitions; NFR-08, 13 | E2E tests of DS-07, 08, 09, 10 |
 
 ## 6. Test Results at Review 2
 
@@ -427,7 +423,7 @@ Results are reported only from the CI run on the tag `review-2`; the tag has not
 
 | Test cases | Automated, test written | Automated, to be written | Manual | Passed on the tag |
 | --- | --- | --- | --- | --- |
-| 136 | 87 (63 %) | 29 (automated in total: 116, 85 %) | 20 | — (no run on the tag yet) |
+| 125 | 83 (66 %) | 27 (automated in total: 110, 88 %) | 15 | — (no run on the tag yet) |
 
 Committed test cases that are not automated yet are written in Iteration 2 together with the feature they test (Project Tracking, Section 6).
 
@@ -435,5 +431,6 @@ Committed test cases that are not automated yet are written in Iteration 2 toget
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.2.0 | 03/11/2026 | Six business main workflows (SRS 3.2.0): WF-01…06 with demo scenarios DS-01…12; device-setup features F-18, F-19 move to supporting flow SF-01 (still tested, not counted) |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0: 53 state transitions (relay mode 4, device 5, configuration sync 5, daily status 2, assessor rating 5), 136 committed cases; a concrete expected result for every transition; mappings to existing tests corrected (TC-F03-03, PENDING → ONLINE, ONLINE → OFFLINE, RESOLVED → new alert); new cases for breach dwell, pump limit and confirmation, device topics, rain confounder and rating snapshot; results counted only from a run on the tag; a "Requirements verified" column for every feature case and a generated requirement coverage table (Section 4.5); supporting regression suites listed (Section 4.6); the per-zone report test no longer counts for TC-ST-48; table of the FRs of each feature; firmware and AI-pipeline results read from the PlatformIO and pytest JUnit reports; F-10 and F-11 test the pipeline itself (ring crossing, lost tracks, annotated frames); F-22 tests that the API hides the status before rating |
 | 1.0.0 | 23/10/2026 | First version for Review 2: test plan, 131 committed test cases, results of the backend and firmware suites |

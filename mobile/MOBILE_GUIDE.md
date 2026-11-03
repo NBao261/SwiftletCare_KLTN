@@ -3,7 +3,7 @@
 > **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa; yêu cầu là Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md)), thiết kế là Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.4). Việc phải làm ở mobile:
 >
 > - Đồng bộ enum với backend: đã xong `Role` (`DOMAIN_EXPERT`), `NOISE_ANOMALY`, `MAINTENANCE_DUE`, kênh `telegram` và các tên của SRS 3.1.0 (G-01): `MISTING_INEFFECTIVE`, `UNEXPECTED_RESTART`, `ACTUATOR_FAULT`, `CONFIG_MISMATCH`, `DISMISSED`; đã gỡ `PREDATOR_DETECTED`, Zalo/SMS, relay sưởi, trạng thái thiết bị `ERROR`/`DEGRADED`.
-> - Thiết lập thiết bị (MF-10): quét nhãn QR của bộ điều khiển và mã QR tầng bằng `expo-camera`, hướng dẫn cài Wi-Fi qua AP-mode, hiện tiến trình setup (đã đăng ký → online → đã áp cấu hình).
+> - Thiết lập thiết bị (SF-01): quét nhãn QR của bộ điều khiển và mã QR tầng bằng `expo-camera`, hướng dẫn cài Wi-Fi qua AP-mode, hiện tiến trình setup (đã đăng ký → online → đã áp cấu hình).
 > - Đăng ký FCM token sau khi đăng nhập, huỷ khi đăng xuất, nhận push (ALERT-FR-002) — **chỉ Farm Owner**: Domain Expert không nhận thông báo ngoài app (Report 3 §2.4), chỉ có thông báo trong app. Live stream HLS bằng `expo-video` theo camera của nhà yến (VISION-FR-013); Farm Owner đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009).
 > - Domain Expert dùng **cùng màn hình** với Farm Owner, chỉ đọc vận hành; trên mobile có kiểm chứng cảnh báo suy luận, sửa ngưỡng/hệ số/tham số phát hiện, trạng thái sức khỏe ngày của **nhà yến** và chấm điểm, báo cáo và kết luận (Report 4 §5.4). Vẽ vòng đếm chỉ làm trên web (VISION-FR-018). Cây luồng: mục 2.1.
 > - Ticket, SLA, khu vực Technician đã ra ngoài phạm vi (Report 3 §8) và đã gỡ khỏi app.
@@ -12,7 +12,7 @@ App Expo Router (React Native) cho **Farm Owner và Domain Expert** (Report 4 §
 
 **Phiên bản:** Expo SDK 58 · React Native 0.88 · React 19.3 · Expo Router 58 · Reanimated 4.7 · TypeScript 6 · New Architecture bắt buộc (không còn tuỳ chọn `newArchEnabled`). Đối chiếu docs đúng phiên bản: https://docs.expo.dev/versions/v58.0.0/
 
-**Trạng thái màn hình:** luồng xác thực đã chạy với backend thật (đăng nhập, quên mật khẩu bằng mã 6 số, đổi mật khẩu tạm, tab theo role). Các màn còn lại là stub (`AppHeader` + `TODO`) — implement theo Report 3, luồng chính trước: thiết lập thiết bị bằng QR (MF-10), cảnh báo + push, dashboard, live stream. Route `livestream/[zoneId]` phải đổi theo camera của nhà yến (VISION-FR-013, Report 3 §2.8).
+**Trạng thái màn hình:** luồng xác thực đã chạy với backend thật (đăng nhập, quên mật khẩu bằng mã 6 số, đổi mật khẩu tạm, tab theo role). Các màn còn lại là stub (`AppHeader` + `TODO`) — implement theo Report 3, luồng chính trước: cảnh báo + push, dashboard, live stream; rồi luồng phụ thiết lập thiết bị bằng QR (SF-01). Route `livestream/[zoneId]` phải đổi theo camera của nhà yến (VISION-FR-013, Report 3 §2.8).
 
 ---
 
@@ -92,7 +92,7 @@ Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở �
 - `tsconfig.json`: `strict`; không dùng `baseUrl` (TypeScript 6 đã bỏ); alias `@/assets/*` → `./assets/*` (ảnh, font ở gốc `mobile/`) và `@/*` → `./src/*` (toàn bộ code). expo-router tự nhận route trong `src/app/`.
 - `babel.config.js`: chỉ `babel-preset-expo` (tự đọc alias của tsconfig và tự thêm plugin Reanimated).
 - Biểu đồ: `react-native-gifted-charts` (chạy trên `react-native-svg` và `expo-linear-gradient` đã có), chỉ import trong `src/components/charts/`. Đã gỡ `victory-native` và Skia (2026-11-01).
-- `expo-location` (toạ độ farm, FARM-FR-001): chỉ xin quyền vị trí khi người dùng bấm "Lấy vị trí hiện tại"; câu xin quyền ở plugin `expo-location` và `ios.infoPlist` của `app.json` ("lấy vị trí để điền toạ độ trang trại", không dùng bản đồ — Report 4 §5.4). `expo-camera` quét nhãn QR khi thêm thiết bị (MF-10). Cả hai cần build lại app (`npm run android`) sau khi cài.
+- `expo-location` (toạ độ farm, FARM-FR-001): chỉ xin quyền vị trí khi người dùng bấm "Lấy vị trí hiện tại"; câu xin quyền ở plugin `expo-location` và `ios.infoPlist` của `app.json` ("lấy vị trí để điền toạ độ trang trại", không dùng bản đồ — Report 4 §5.4). `expo-camera` quét nhãn QR khi thêm thiết bị (SF-01). Cả hai cần build lại app (`npm run android`) sau khi cài.
 
 **Cấu hình còn thiếu so với Report 3/4** (làm cùng PR của tính năng cần nó):
 
@@ -100,7 +100,7 @@ Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở �
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `react-native-maps` có trong `package.json`                                                                                                                                           | — Report 4 §5.4 nói không thêm thư viện bản đồ                             | gỡ khi làm màn trang trại                                                                                                               |
 | FCM: chưa có `google-services.json` (`android.googleServicesFile`), backend chưa có endpoint nhận token trong `api-spec.yaml`                                                         | push (ALERT-FR-002)                                                        | chờ backend (G-10); không tự đặt endpoint                                                                                               |
-| Endpoint MF-11 (trạng thái ngày, chấm điểm, bỏ qua) chưa có trong `api-spec.yaml`                                                                                                     | màn sức khỏe ngày (BR-31)                                                  | chờ backend (G-11)                                                                                                                      |
+| Endpoint MF-06 (trạng thái ngày, chấm điểm, bỏ qua) chưa có trong `api-spec.yaml`                                                                                                     | màn sức khỏe ngày (BR-31)                                                  | chờ backend (G-11)                                                                                                                      |
 | `ENDPOINTS` chưa có: `/notifications`, `/alerts/{id}/verdict`, `/health-reports`, `/harvests`, `/devices/camera-nodes/{id}/stream-token`, `/devices/sensor-nodes/{id}/relay-override` | thông báo trong app, kiểm chứng, báo cáo, harvest, live stream, chế độ tay | thêm khi làm màn, đúng `api-spec.yaml`                                                                                                  |
 | Socket chưa có `NOTIFICATION_NEW` (phòng nhà, tầng đã đếm số màn dùng chung)                                                                                                                                       | đếm chim, cảnh báo nhà yến, thông báo                                      | thêm trước màn đầu tiên đăng ký sự kiện                                                                                                 |
 | `.env.example` còn ghi "SRS §9.1"                                                                                                                                                     | —                                                                          | đổi thành `docs/api/api-spec.yaml`                                                                                                      |
@@ -239,12 +239,12 @@ Farm Owner — (tabs)
 │                đổi farm, ghim ★ nhà lên đầu, ⚙ cài đặt farm, + tạo farm) ─► farms/[houseId] (Màn B: một nhà)
 │                vào một farm thì mở thẳng nhà xem gần nhất (farm 1 nhà thì nhà đó); zone là tab, thiết bị là sheet — không có màn thứ 3
 │                Màn B: camera ghim đầu (live stream, số chim), đàn chim hôm nay, tab tầng, 6 ô cảm biến,
-│                       relay chế độ tay (MF-09), thiết bị (chỉ xem), Cài đặt zone xem nhanh (⋮ "Chỉnh sửa" ─► đúng mục, mở sẵn chế độ sửa),
+│                       relay chế độ tay (MF-01), thiết bị (chỉ xem), Cài đặt zone xem nhanh (⋮ "Chỉnh sửa" ─► đúng mục, mở sẵn chế độ sửa),
 │                       ⚙ ─► [houseId]/settings
 │                Cài đặt nhà: thông tin nhà, camera AI (+ thêm), mức giảm tỷ lệ về tổ; theo tầng: thông tin tầng, ngưỡng (+ đặt lại mặc định),
 │                       hệ số mờ, tham số phát hiện, controller (+ thêm), + thêm tầng — mỗi mục "Sửa" / "Lưu" riêng
 │                Cài đặt farm (farm-settings): thông tin, toạ độ (lấy vị trí hiện tại), nhà yến (+ thêm nhà), xoá farm (chủ chính); farm-create: tạo farm
-│                thêm thiết bị (MF-10): quét nhãn QR hoặc nhập tay ─► đăng ký vào nhà / tầng; còn thiếu: Wi-Fi AP-mode, tiến trình setup (FARM-FR-012)
+│                thêm thiết bị (SF-01): quét nhãn QR hoặc nhập tay ─► đăng ký vào nhà / tầng; còn thiếu: Wi-Fi AP-mode, tiến trình setup (FARM-FR-012)
 │                còn thiếu: trạng thái ngày + chấm điểm (BR-31), báo cáo; sửa tên, xoá nhà và tầng (backend chưa có API)
 │                harvests (ghi, sửa — SF-04)
 ├─ Cảnh báo    alerts: phạm vi ▾ riêng của tab, mặc định tất cả: Tất cả trang trại ─► một farm (Tất cả nhà) ─► một nhà (chip Tầng);
@@ -283,7 +283,7 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 | Viết kết luận, duyệt thay đổi của Farm Owner                                |                           đọc                            |          ✓           |
 | Sửa ngưỡng, hệ số fuzzy của Zone                                            |                            ✓                             |          ✓           |
 | Relay chế độ tay, lịch loa                                                  |                            ✓                             |          –           |
-| Thiết lập / chuyển / gỡ thiết bị bằng QR (MF-10)                            |                            ✓                             | – (chỉ xem thiết bị) |
+| Thiết lập / chuyển / gỡ thiết bị bằng QR (SF-01)                            |                            ✓                             | – (chỉ xem thiết bị) |
 | Ghi, sửa harvest                                                            |                            ✓                             |         đọc          |
 
 **Quy tắc luồng:**
@@ -315,8 +315,8 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 
 - `components/ui/` — primitive không biết nghiệp vụ: `text`, `button`, `input`, `chip`, `badge`, `icon`, `pressable-scale`, `skeleton`, `empty-state` (mục 3.5).
 - `components/common/` — biết nghiệp vụ, ≥ 2 màn dùng: `StatusDot`, `SeverityBadge`, `AlertStatusBadge`, `MetricTile`, `card/` (`FarmCard`, `HouseCard`, `ZoneCard`).
-- `components/<nghiệp vụ>/` — component riêng một luồng: `device-setup/` (quét QR, AP-mode — MF-10), `home/`, `zone/`, `alert/`, `vision/`, `analytics/`, `harvest/`, `report/`.
-- Route theo Report 3: thiết lập thiết bị bằng QR (MF-10), live stream theo camera nhà yến (Màn B đã phát tại chỗ), `reports/`, `harvests/`, `notifications`; tab theo role (Report 3 §2.4 — chỉ Farm Owner và Domain Expert), `settings` đã đổi tên `profile`.
+- `components/<nghiệp vụ>/` — component riêng một luồng: `device-setup/` (quét QR, AP-mode — SF-01), `home/`, `zone/`, `alert/`, `vision/`, `analytics/`, `harvest/`, `report/`.
+- Route theo Report 3: thiết lập thiết bị bằng QR (SF-01), live stream theo camera nhà yến (Màn B đã phát tại chỗ), `reports/`, `harvests/`, `notifications`; tab theo role (Report 3 §2.4 — chỉ Farm Owner và Domain Expert), `settings` đã đổi tên `profile`.
 - `hooks/` và `services/api/` cho thiết lập thiết bị, harvest, health report, notification, FCM token theo `docs/api/api-spec.yaml`.
 
 ### Luồng dữ liệu

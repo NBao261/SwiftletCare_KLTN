@@ -27,7 +27,7 @@ export type PermissionAction =
 
 // Role được làm từng thao tác (Report 3 §2.4); Technician và Admin không vào app
 const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
-  // Thiết lập thiết bị bằng QR (MF-10): chỉ Farm Owner, Domain Expert chỉ xem thiết bị
+  // Thiết lập thiết bị bằng QR (SF-01): chỉ Farm Owner, Domain Expert chỉ xem thiết bị
   setupDevice: ['FARM_OWNER'],
   // Điều khiển tay một relay (ENV-FR-016): chỉ Farm Owner, chuyên gia chỉ xem (Report 3 §2.4)
   controlRelay: ['FARM_OWNER'],
