@@ -117,6 +117,49 @@ Items explicitly excluded are listed in Section 8.
 
 ### 2.1 Product Perspective
 
+**Context diagram (DFD level 0).** SwiftletCare is one process; the people who use it, the swiftlet house it senses and acts on, and the external services exchange the data flows below. An entity marked * is drawn twice to avoid crossing lines: on the left as the source of the flows it sends, on the right as the receiver of the flows it gets.
+
+```mermaid
+flowchart LR
+  FOi["<b>FARM OWNER</b><br/>Owner of the swiftlet houses"]
+  DEi["<b>DOMAIN EXPERT</b><br/>Swiftlet-farming specialist"]
+  TEi["<b>TECHNICIAN</b><br/>Device technical staff"]
+  ADi["<b>ADMINISTRATOR</b><br/>Installation administrator"]
+  SHi["<b>SWIFTLET HOUSE</b><br/>Micro-climate and bird flock"]
+  TGi["<b>TELEGRAM BOT API</b><br/>Alert messaging"]
+  OMi["<b>OPEN-METEO</b><br/>Weather service"]
+  NTP["<b>NTP POOL</b><br/>Time service"]
+  SYS(("<b>SWIFTLETCARE SYSTEM</b><br/>Automated Environmental Control<br/>& Multi-Modal Health Monitoring"))
+  FOo["<b>FARM OWNER *</b><br/>Owner of the swiftlet houses"]
+  DEo["<b>DOMAIN EXPERT *</b><br/>Swiftlet-farming specialist"]
+  TEo["<b>TECHNICIAN *</b><br/>Device technical staff"]
+  ADo["<b>ADMINISTRATOR *</b><br/>Installation administrator"]
+  SHo["<b>SWIFTLET HOUSE *</b><br/>Micro-climate and bird flock"]
+  TGo["<b>TELEGRAM BOT API *</b><br/>Alert messaging"]
+  FCM["<b>FIREBASE CLOUD MESSAGING</b><br/>Mobile push service"]
+  OMo["<b>OPEN-METEO *</b><br/>Weather service"]
+  GM["<b>GMAIL SMTP</b><br/>E-mail delivery service"]
+  FOi -- "Login Credentials<br/>Farm, House & Zone Structure<br/>Co-Owner & Expert Invitations<br/>Device QR Scans & Wi-Fi Network<br/>Relay Override & Alert Acknowledgement<br/>Threshold & Coefficient Changes<br/>Daily Rating<br/>Harvest Records" --> SYS
+  DEi -- "Login Credentials<br/>Alert Verdicts (Confirm / Reject)<br/>Review Decisions & Suggestion Approval<br/>Thresholds, Coefficients & Detection Parameters<br/>Counting Ring & Counting Schedule<br/>Daily Rating & Report Conclusions" --> SYS
+  TEi -- "Login Credentials<br/>Device Setup, Move & Removal<br/>Restart, Configuration Push & OTA" --> SYS
+  ADi -- "Login Credentials<br/>User Accounts<br/>Device Stock<br/>System Default Thresholds" --> SYS
+  SHi -- "Temperature, Humidity, NH3, CO2 & Sound<br/>Birds at the Entrance" --> SYS
+  TGi -- "Account Link Command" --> SYS
+  OMi -- "Hourly Weather" --> SYS
+  NTP -- "Time Synchronization" --> SYS
+  SYS -- "Live Telemetry & Relay Status<br/>Alerts & Expert Decisions<br/>Bird Counts & Annotated Live Stream<br/>Daily Health Status & Reports (PDF/CSV)" --> FOo
+  SYS -- "Inferred Alerts with Evidence<br/>Review Items & Coefficient Suggestions<br/>Telemetry, Bird Counts & Health Reports" --> DEo
+  SYS -- "Device Status & Device Alerts<br/>Command & Update Results" --> TEo
+  SYS -- "Account List<br/>Device Labels (QR)" --> ADo
+  SYS -- "Misting, Ventilation & Lullaby Sound" --> SHo
+  SYS -- "Alert Message" --> TGo
+  SYS -- "Push Notification" --> FCM
+  SYS -- "Farm Coordinates" --> OMo
+  SYS -- "Invitation, Temporary Password & Reset Code" --> GM
+```
+
+**Components.** Inside the boundary, the system is an edge controller per zone, an AI camera node per house, the cloud backend and the web and mobile apps:
+
 ```mermaid
 flowchart LR
   FO([Farm Owner])
@@ -914,7 +957,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 3.2.0 | 03/11/2026 | Main flows regrouped into six business processes (Section 2.2; BM03 row 12): automatic micro-climate control with offline operation and manual override as its paths (MF-01), incident handling for thresholds, air quality, equipment faults, restarts and early warnings (MF-02), bird counting (MF-03), expert validation of inferred alerts (MF-04), control-parameter tuning (MF-05), daily health assessment and reports (MF-06); device setup becomes supporting flow SF-01. BR-37 rating guide. No requirement added or removed |
+| 3.2.0 | 03/11/2026 | Main flows regrouped into six business processes (Section 2.2; BM03 row 12): automatic micro-climate control with offline operation and manual override as its paths (MF-01), incident handling for thresholds, air quality, equipment faults, restarts and early warnings (MF-02), bird counting (MF-03), expert validation of inferred alerts (MF-04), control-parameter tuning (MF-05), daily health assessment and reports (MF-06); device setup becomes supporting flow SF-01. BR-37 rating guide. No requirement added or removed; context diagram (DFD level 0) added to Section 2.1 |
 | 3.1.0 | 26/10/2026 | Review of the specification before Review 2: one installation for one owner, no public sign-up (Section 1.2, A-7, AUTH-FR-001 removed, AUTH-FR-005c, 010; BM03 row 10); `PUMP_DRY` renamed `MISTING_INEFFECTIVE` and `POWER_OUTAGE` renamed `UNEXPECTED_RESTART` with a reset reason (BM03 row 11); C-7 and BR-19: software checks are not safety interlocks; manual pump ON limited to 30 min with a confirmation while a sensor or misting alert is open, and one expiry per relay (BR-08, BR-20, ENV-FR-016…018); `THRESHOLD_BREACH` for every threshold with a dwell time (ALERT-FR-012, BR-34); command freshness (BR-35); retention in one rule (BR-36); health status rules rewritten: per-source completeness, required and optional sources, rain confounder only for flock + noise, dismissed alerts not counted, evaluation snapshot apart from the current status (BR-28…31, ANALYTICS-FR-012, 014, Section 6.17, C-6); device topics and broker credential per device (FARM-FR-003c, 010, BR-27, NFR-10 d); acknowledged delivery of buffered samples and device alerts (ENV-FR-024, THREAT-FR-012, ALERT-FR-008, NFR-06 c); NFR-04, 08, 09, 11, 13, 14 thresholds set; `DEGRADED` removed from FARM-FR-013; one device lifecycle with `PENDING` → `DECOMMISSIONED`; label reuse after removal (BR-26); flock snapshot of the house (HARVEST-FR-003); code locations of the engineering constants moved to the SDD; rejection codes: parameter ranges are 400 (SYSTEM-FR-002 aligned); alert list apart from the notification inbox (ALERT-FR-007); MF-10 covers controllers, camera registration moves to MF-06; traceability statements limited to the committed items of the Design Brief; camera RTSP port open only to the AI node's IP, unencrypted RTSP as residual risk (NFR-10 e, Section 8.1); status hidden from an assessor until they rate or skip (BR-31, EXPERT-FR-012), with one rating state per assessor (Section 6.18) instead of a rating state of the day; SYSTEM-FR-002 refers to ENV-FR-007 for the rules of default thresholds; NFR-09 split into detection on labelled frames and count error on clips, with test days kept out of training and tuning; FARM-FR-004 raised to M (MF-06), harvest logging FRs set to S (SF-04) and renamed `MARKET-FR` → `HARVEST-FR`; THREAT-FR-014 no longer names the sensing method (Report 4 D11) |
 | 3.0.0 | 21–24/10/2026 | Every mandatory and supporting FR belongs to a flow; supporting flow SF-04 (harvest logging); lifecycles 6.13–6.15 (harvest, account, firmware update); rejection codes 400 / 422 distinguished. The Farm Owner is notified of every expert decision and sees them in one activity history (EXPERT-FR-009). Bird counting tracks over the whole frame and extrapolates fast tracks at the hole (VISION-FR-004, 005, BR-25). Expert in the loop for owner changes (EXPERT-FR-010) and suggestions (EXPERT-FR-011); configuration sync with `CONFIG_MISMATCH` (ENV-FR-027); multi-modal evidence on inferred alerts (ALERT-FR-014); incomplete counting sessions (VISION-FR-020); no maintenance tickets, SLA or Technician regions (BM03 row 9): the Technician is the technical role that sees the devices of every farm and never switches relays (FARM-FR-009, SF-02 remote device maintenance with FARM-FR-013, formerly TICKET-FR-008), an unacknowledged alert is sent again (ALERT-FR-015, replacing TICKET-FR-002) and pump or fan wear raises `MAINTENANCE_DUE` (ALERT-FR-016, replacing TICKET-FR-018), farms are created and managed only by their owners; a farm is one place with required coordinates, so an owner with houses in several places has one farm per place (FARM-FR-001, A-5); only the Farm Owner sets the speaker schedule, and the override history is shown to the Farm Owner and the Domain Expert only; Farm/House/Zone responsibilities (2.8) and known limitations (8.1). A rejected inferred alert becomes `DISMISSED`; session windows follow per-house seasonal profiles and temporary windows (VISION-FR-019). Zone thresholds and fuzzy coefficients are edited and reset only by the Farm Owner or Domain Expert of the farm; without an expert the Farm Owner takes the expert's decisions (BR-22). Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Device setup becomes main flow MF-10 for the Farm Owner (replacing SF-01): label QR code with device ID and activation key (FARM-FR-010), floor QR code (FARM-FR-011), setup progress (FARM-FR-012), move of an offline controller applied when it reconnects; farm, house and zone are never entered on the controller (FARM-FR-003c); rules BR-26, BR-27; lifecycle 6.16; NFR-13. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Engineering constants listed in one table (Section 4.5). Daily health assessment of each house by agreement between sources, with weather context, independent ratings by Farm Owner and expert, daily/weekly/monthly reports with PDF and CSV export (MF-11, ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33, NFR-14, lifecycle 6.17); actuator current sensing (THREAT-FR-014, BR-32, `ACTUATOR_FAULT`); references REF-9…13. Bypass switches (former ENV-FR-023) removed by BM03 because the borrowed test house cannot be rewired; BR-19 and the known limitations say how the loads run when the controller fails. NFR-12 (hardware cost) removed; the registration's Cost-Efficiency is traced to constraint C-4. AI node declared as the team's spare PC at a member's home, reading the camera over the Internet. Actors (people and external services) separated from the system's own components (controller, backend, AI node) in Section 2.3; flow actors and the FR column follow. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |
 | 2.1.5 | 10/2026 | Internal working SRS (Vietnamese) after Review 1, aligned with registration form v2 |
