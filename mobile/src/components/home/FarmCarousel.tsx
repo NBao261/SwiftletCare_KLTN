@@ -36,8 +36,8 @@ export function FarmCarousel() {
   const { width: screenWidth } = useWindowDimensions()
   const { data, isLoading, isError, refetch } = useFarms()
   const [activeIndex, setActiveIndex] = useState(0)
-  // Backend trả Farm mới nhất trước; Trang chủ hiện Farm tạo trước ở đầu (chuỗi ISO so sánh được theo thứ tự thời gian)
-  const farms = [...(data?.data ?? [])].sort((first, second) => first.created_at.localeCompare(second.created_at))
+  // useFarms đã xếp farm tạo trước đứng đầu (backend trả mới nhất trước)
+  const farms = data?.data ?? []
   // Khung rộng bằng màn trừ lề hai bên của ScrollView Trang chủ
   const cardWidth = screenWidth - Spacing.lg * 2
 
@@ -63,11 +63,10 @@ export function FarmCarousel() {
   if (farms.length === 0) {
     // Chủ trại thấy ô "Tạo trang trại" viền nét đứt; chuyên gia chỉ thấy câu báo
     return canPerform(user, 'createFarm') ? (
-      // shortcut: chưa có màn tạo trang trại — tạm mở tab Trang trại
       <EmptyState
         variant="create"
         message={t('Tạo trang trại')}
-        onAction={() => router.navigate('/(tabs)/farms')}
+        onAction={() => router.navigate('/(tabs)/farms/farm-create')}
         height={PLACEHOLDER_HEIGHT}
       />
     ) : (

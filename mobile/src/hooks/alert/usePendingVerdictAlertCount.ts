@@ -1,14 +1,13 @@
 import { useQueries } from '@tanstack/react-query'
 import { useFarms } from '@/hooks/farm/useFarms'
 import { alertApi } from '@/services/api/alert.api'
+import { farmHasExpert } from '@/utils/farm.utils'
 
 // Số cảnh báo suy luận chờ chủ trại phán quyết — chỉ ở farm chưa có chuyên gia (BR-22); có chuyên gia thì chuyên gia quyết.
 // Chỉ cần meta.total nên mỗi farm tải 1 dòng
 export function usePendingVerdictAlertCount() {
   const farmsQuery = useFarms()
-  const farmIdsWithoutExpert = (farmsQuery.data?.data ?? [])
-    .filter(farm => !farm.members.some(member => member.role === 'DOMAIN_EXPERT'))
-    .map(farm => farm._id)
+  const farmIdsWithoutExpert = (farmsQuery.data?.data ?? []).filter(farm => !farmHasExpert(farm)).map(farm => farm._id)
 
   return useQueries({
     queries: farmIdsWithoutExpert.map(farmId => ({

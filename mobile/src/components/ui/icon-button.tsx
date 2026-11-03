@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native'
-import type { Icon } from 'phosphor-react-native'
+import type { Icon, IconWeight } from 'phosphor-react-native'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
@@ -20,10 +20,12 @@ interface IconButtonProps {
   onPress?: () => void
   // Số trên badge góc phải; 0 thì không hiện badge
   badgeCount?: number
+  // Nét icon: 'fill' cho trạng thái đang bật (ví dụ đã ghim)
+  weight?: IconWeight
 }
 
 // Nút chỉ có icon, không nền, kèm badge số tuỳ chọn
-export function IconButton({ icon: ButtonIcon, label, onPress, badgeCount = 0 }: IconButtonProps) {
+export function IconButton({ icon: ButtonIcon, label, onPress, badgeCount = 0, weight = 'regular' }: IconButtonProps) {
   const palette = usePalette()
   const hasBadge = badgeCount > 0
   const badgeText = badgeCount > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : String(badgeCount)
@@ -37,7 +39,7 @@ export function IconButton({ icon: ButtonIcon, label, onPress, badgeCount = 0 }:
       onPress={onPress}
       style={styles.button}
     >
-      <ButtonIcon size={ICON_SIZE} color={palette.text} />
+      <ButtonIcon size={ICON_SIZE} color={palette.text} weight={weight} />
       {hasBadge && (
         // Badge số đỏ chữ trắng — theo yêu cầu, khác badge lime của thanh tab
         <View style={[styles.badge, { backgroundColor: palette.notificationBadge, borderColor: palette.background }]}>
