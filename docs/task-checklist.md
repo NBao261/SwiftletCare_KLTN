@@ -8,7 +8,7 @@
 >
 > **[Report 3 — BM03 dòng 9, 24/10/2026]** **Bỏ ticket, SLA, chat ticket, lịch bảo trì, vùng của Technician, KPI, Admin quản lý farm** (Report 3 §8). Technician là vai trò kỹ thuật: thấy thiết bị và cảnh báo thiết bị của mọi farm, lắp/dời/gỡ, lệnh từ xa, OTA; không bật/tắt relay, không xác nhận cảnh báo. Mục **C7, D6** và các dòng ticket ở mục khác dưới đây không còn làm (❌); việc gỡ code theo `docs/reports/todo-remove-platform.md`.
 >
-> **[Report 3 — thay mục v3 dưới đây]** Thiết lập thiết bị quay về **Farm Owner tự làm trên mobile bằng QR** (MF-10: quét nhãn thiết bị và mã QR tầng, FARM-FR-003…012); Technician làm cùng các bước được ở mọi farm. Việc còn thiếu: `docs/reports/README.md` #25–28.
+> **[Report 3 — thay mục v3 dưới đây]** Thiết lập thiết bị quay về **Farm Owner tự làm trên mobile bằng QR** (SF-01: quét nhãn thiết bị và mã QR tầng, FARM-FR-003…012); Technician làm cùng các bước được ở mọi farm. Việc còn thiếu: `docs/reports/README.md` #25–28.
 >
 > **[v3 cập nhật — theo SRS v1.12.0]** Đổi mô hình onboarding thiết bị: **Technician thao tác qua Web Console** (không phải Farm Owner tự quét QR qua Mobile App như bản checklist cũ) — xem Flow 1/1b. Thêm hẳn 9 Flow mới (Flow 11→19: đăng ký/đăng nhập/quên mật khẩu, mời thành viên, điều khiển relay thủ công + auto-revert, offline-detection, OTA, mời Sales Staff, duyệt sản phẩm, cảnh báo tồn kho, quản lý tài khoản Admin) → mục A/C/D/E dưới đây đã bổ sung task tương ứng. Ticket thêm loại `INSTALLATION` (Flow 9b) đi kèm cơ chế tự động định tuyến giống ticket báo lỗi.
 >
@@ -539,13 +539,13 @@
 - [ ] **M3+M4** — Đăng ký/đăng nhập/quên mật khẩu/mời thành viên end-to-end (Sprint 1-2) `[Flow 11, 12]`
 - [ ] **M3+M4** — Admin khoá/mở khoá + xử lý yêu cầu xoá tài khoản end-to-end (Sprint 6) `[Flow 19]`
 - ~~**M3+M4** — Harvest → Listing → Buyer tra cứu Trace (Sprint 6) `[Flow 7]`~~ — ❌ bỏ ở SRS v2.0.0
-- [ ] **Cả nhóm** — Demo tổng theo 11 luồng chính của Report 3 §2.2 (MF-01…11): điều tiết tự động, NH3/CO2 chỉ cảnh báo, mất mạng và phục hồi, lỗi thiết bị (bơm khô/cảm biến/loa), cảnh báo sớm, đếm chim + live stream có khung, ồn bất thường, chuyên gia kiểm chứng và tinh chỉnh, can thiệp tay, Farm Owner tự setup thiết bị bằng QR, trạng thái sức khỏe theo ngày + báo cáo (Sprint 8)
+- [ ] **Cả nhóm** — Demo tổng theo 6 luồng chính của Report 3 §2.2 (MF-01…06): điều khiển tự động (gồm mất mạng và can thiệp tay), xử lý sự cố (vượt ngưỡng, NH3/CO2, lỗi thiết bị, cảnh báo sớm), đếm chim + live stream có khung, chuyên gia kiểm chứng cảnh báo suy luận, tinh chỉnh tham số, trạng thái sức khỏe theo ngày + báo cáo; thêm luồng phụ Farm Owner tự setup thiết bị bằng QR (SF-01) (Sprint 8)
 
 ---
 
 # G. Việc theo SRS v2.0.0 (sau Review 1) — ưu tiên
 
-> Danh sách này là SRS cũ mục 0.5 viết lại thành đầu việc tick được; các yêu cầu Report 3 thêm sau đó (MF-10, `DISMISSED`, duyệt thay đổi, đồng bộ cấu hình…) nằm ở `docs/reports/README.md` mục "Chỗ lệch". Hội đồng đánh giá theo phiếu đăng ký bản sửa, nên các việc dưới đây đi trước mọi task còn mở ở mục A–F. Thứ tự ưu tiên: **G2 (đếm chim) → G1 → G3/G4 → G5**.
+> Danh sách này là SRS cũ mục 0.5 viết lại thành đầu việc tick được; các yêu cầu Report 3 thêm sau đó (SF-01, `DISMISSED`, duyệt thay đổi, đồng bộ cấu hình…) nằm ở `docs/reports/README.md` mục "Chỗ lệch". Hội đồng đánh giá theo phiếu đăng ký bản sửa, nên các việc dưới đây đi trước mọi task còn mở ở mục A–F. Thứ tự ưu tiên: **G2 (đếm chim) → G1 → G3/G4 → G5**.
 
 ## G1. M1 — Firmware / Hardware
 

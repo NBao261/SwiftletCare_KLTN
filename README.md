@@ -36,7 +36,7 @@ Luồng chính của hệ thống:
 
 Một bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các farm của chủ đó: Admin tạo tài khoản, thành viên vào bằng lời mời, không có đăng ký công khai; không có mua bán, ticket hay điều phối dịch vụ.
 
-Report 3 chia thành 11 luồng chính (MF-01…11), gồm cả việc chủ nhà yến tự gắn bộ điều khiển vào tầng bằng hai lần quét QR (MF-10) và trạng thái sức khỏe nhà yến theo ngày kèm báo cáo ngày/tuần/tháng (MF-11).
+Report 3 chia thành 6 luồng chính theo quy trình nghiệp vụ (MF-01…06: điều khiển vi khí hậu tự động, xử lý sự cố, đếm chim, chuyên gia kiểm chứng cảnh báo suy luận, tinh chỉnh tham số, sức khỏe nhà yến theo ngày kèm báo cáo ngày/tuần/tháng) và 4 luồng phụ, gồm việc chủ nhà yến tự gắn bộ điều khiển vào tầng bằng hai lần quét QR (SF-01).
 
 Vai trò người dùng:
 
@@ -63,7 +63,7 @@ Vai trò người dùng:
 - Mỗi nhà yến có một trạng thái sức khỏe theo ngày (chỉ báo theo luật, không phải chẩn đoán) và báo cáo ngày/tuần/tháng theo nhà, xuất PDF/CSV; chủ farm và chuyên gia tự đánh giá ngày trước khi xem trạng thái của hệ thống để đo mức trùng khớp; chuyên gia viết kết luận.
 - Dashboard thời gian thực qua Socket.io, biểu đồ và phân tích hiệu quả điều khiển.
 
-**Thiết lập thiết bị (MF-10)**
+**Thiết lập thiết bị (SF-01)**
 - Chủ farm quét nhãn QR trên bộ điều khiển (Device ID + mã kích hoạt) và mã QR dán ở tầng trong app mobile; cài Wi-Fi qua AP-mode, không nạp lại firmware; không phải nhập farm/zone trên thiết bị — farm, nhà và tầng chỉ lưu ở backend, thiết bị chỉ nhận cấu hình của tầng.
 - Dời bộ điều khiển sang tầng khác từ xa, lịch sử dữ liệu đi theo thiết bị.
 
