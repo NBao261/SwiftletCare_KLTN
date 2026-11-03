@@ -1,6 +1,6 @@
 # ai-pipeline/CLAUDE.md
 
-Rules and map for `ai-pipeline/` (Python: OpenCV + YOLO26n on ONNX Runtime + ByteTrack, bird in/out counting). This file wins over the root `CLAUDE.md` for pipeline code; `/review-pr` judges pipeline changes by it together with `ai-pipeline/README.md`. Rule tags: **[Bắt buộc]** = blocking (review requests changes), **[Nên]** = advisory. Only lines a PR adds or changes are judged; "Known debt" lists what is already out of line.
+Rules and map for `ai-pipeline/` (Python: OpenCV + YOLOv8n or YOLO11n on ONNX Runtime + ByteTrack, bird in/out counting; the model is chosen in plan §7.9, YOLO26n is not trained). This file wins over the root `CLAUDE.md` for pipeline code; `/review-pr` judges pipeline changes by it together with `ai-pipeline/README.md`. Rule tags: **[Bắt buộc]** = blocking (review requests changes), **[Nên]** = advisory. Only lines a PR adds or changes are judged; "Known debt" lists what is already out of line.
 
 ## Where the pipeline stands
 
