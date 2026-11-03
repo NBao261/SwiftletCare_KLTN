@@ -22,6 +22,8 @@ export interface User {
   notification_preferences: NotificationPreferences
   // Đã liên kết bot Telegram (ALERT-FR-013)
   telegram_linked?: boolean
+  // Đã gửi yêu cầu xoá tài khoản, chờ Administrator xử lý trong 30 ngày (AUTH-FR-012, §6.14); null là không có yêu cầu
+  deletion_requested_at?: string | null
   created_at: string
 }
 

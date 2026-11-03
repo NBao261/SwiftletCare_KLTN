@@ -128,7 +128,9 @@ mobile/
    │  ├─ (tabs)/                 # _layout (tab theo role từ constants/roleTabs.ts) · home/ (Trang chủ — hiện chỉ tab của Farm Owner mở; Domain Expert chưa có tab này trong ROLE_TABS) ·
    │  │                          #   farms/ (Stack lồng trong tab: _layout · index = Màn A danh sách nhà của farm · [houseId]/index = Màn B một nhà ·
    │  │                          #   [houseId]/settings = Cài đặt nhà · farm-settings = Cài đặt farm · farm-create = Tạo farm) · alerts/ ·
-   │  │                          #   analytics/ · profile/ (Tài khoản, mọi role) · menu-1/ (không role nào dùng) · menu-2/ (menu tạm của Domain Expert)
+   │  │                          #   analytics/ · profile/ (Tài khoản — Stack lồng: index = trang đầy đủ của Farm Owner theo ảnh mẫu, Domain Expert giữ trang cơ bản ·
+   │  │                          #   members (thành viên, mời/gỡ — chỉ Primary Owner) · notifications · change-password · expert-activity · notification-channels; ngôn ngữ và phiên bản app nằm ngay trang chính) ·
+   │  │                          #   menu-1/ (không role nào dùng) · menu-2/ (menu tạm của Domain Expert)
    │  ├─ farm/[farmId].tsx       # chuyển tiếp sang Màn A của farm đó (giữ cho link cũ)
    │  ├─ zone/[zoneId].tsx       # chuyển tiếp sang Màn B của nhà chứa zone, đúng tab tầng (giữ cho link cũ)
    │  ├─ device/[deviceId].tsx   # chi tiết thiết bị
@@ -191,7 +193,9 @@ mobile/
    │  │                          #   useControlSuggestion · useZoneRelayOverrides · useHealthReports · useHealthReportPreview · useUpdateConclusion
    │  ├─ harvest/                # useFarmHarvests (đợt thu của farm)
    │  ├─ health/                 # usePendingHealthDays (chưa có API — G-11) · useUnreadHealthReports
-   │  ├─ notification/           # useUnreadNotificationCount
+   │  ├─ notification/           # useUnreadNotificationCount · useNotifications (phân trang) · useMarkNotificationRead · useMarkAllNotificationsRead
+   │  ├─ profile/                # hook của trang Tài khoản cho mục backend chưa có route (dữ liệu mẫu): useExpertDecisions · useMyReviewItems · usePendingInvitations ·
+   │  │                          #   useNotificationChannels · useUpdateNotificationChannel · usePushRegistration (yêu cầu xoá và huỷ là API thật: hooks/auth/useRequestAccountDeletion, useCancelAccountDeletion)
    │  ├─ time/                   # useNow (mốc thời gian tự cập nhật cho chữ đếm ngược)
    │  ├─ ui/                     # useToastMessage (câu toast tự ẩn sau 3 giây)
    │  └─ theme/                  # usePalette
@@ -200,6 +204,7 @@ mobile/
    │  │                          #   auth · farm · device · telemetry · alert · analytics · notification · healthReport · harvest
    │  ├─ socket/                 # socketClient.ts (Socket.io realtime)
    │  ├─ notification/           # pushNotification.ts (quyền + push token)
+   │  ├─ mock/                   # account.mock.ts: dữ liệu mẫu cho mục Report 3 backend chưa có route; *.api.ts tương ứng có TODO thay bằng route thật (constants/mockApi.ts, EXPO_PUBLIC_USE_MOCK_API)
    │  ├─ storage/                # preferenceStorage.ts: lựa chọn trên máy (không bí mật) lưu file JSON bằng expo-file-system, làm storage của Zustand persist
    │  └─ session/                # localSession.ts: startRealtimeIfReady (mở realtime khi có phiên) · clearLocalSession (đăng xuất / hết phiên: ngắt socket, xoá cache, badge, token)
    ├─ stores/                    # authStore.ts · alertStore.ts · languageStore.ts · farmPrefsStore.ts (zustand; farmPrefs lưu file trên máy theo tài khoản:
@@ -293,8 +298,9 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 | Header, khung màn auth, màn tạm, nút đăng xuất                                                | `components/layout/` · `components/auth/`                               | Mọi màn bắt đầu bằng `AppHeader`; màn auth dùng `AuthScreenLayout`; đăng xuất luôn qua `LogoutButton` |
 | Mảnh nghiệp vụ ≥ 2 màn dùng                                                                   | `components/common/`                                                    | `StatusDot`, `SeverityBadge`, `AlertStatusBadge`, `MetricTile`, `card/`                               |
 | Mảnh của một luồng                                                                            | `components/<nghiệp vụ>/`                                               | `home/`, `device-setup/`, `alert/`, `zone/`, `vision/`, `health/`, `harvest/`, `report/` — chia theo nghiệp vụ, **không** theo role (không có `farmowner/`, `expert/`); khối chỉ một role thấy thì màn quyết bằng `canPerform` |
-| Trang hồ sơ / tài khoản                                                                       | `src/app/(tabs)/profile/` (`index`, `change-password`, `notifications`) | Một màn cho mọi role; mục push, Telegram chỉ hiện với Farm Owner                                      |
-| Form đổi mật khẩu                                                                             | `components/auth/ChangePasswordForm.tsx`                                | Tách từ `(auth)/reset-password` khi `profile/change-password` cần; hai nơi dùng chung một form        |
+| Trang hồ sơ / tài khoản                                                                       | `src/app/(tabs)/profile/` + `components/profile/` (`ProfileRow`, `ProfileShortcutCard`, `ProfileAvatar`, `InviteMemberSheet`, `ProfileBasicContent`) | Một route; trang đầy đủ theo `canPerform(user, 'viewOwnerProfile')` (Farm Owner), Domain Expert giữ trang cơ bản; mời/gỡ thành viên theo `manageFarmMembers` (Primary Owner) |
+| Form đổi mật khẩu                                                                             | `components/auth/ChangePasswordForm.tsx`                                | Đã tách: `(auth)/reset-password` (mật khẩu tạm) và `profile/change-password` dùng chung một form      |
+| Dữ liệu mẫu (mục SRS chưa có route)                                                           | `services/mock/` + `components/common/MockDataBadge.tsx`                | Luôn gắn nhãn "Dữ liệu mẫu"; tắt bằng `EXPO_PUBLIC_USE_MOCK_API=false` thì hiện "Sắp có"; ghi vào Known debt |
 | Menu theo role                                                                                | `constants/roleTabs.ts`                                                 | Chỗ duy nhất đổi tên, icon, thứ tự tab                                                                |
 | Quyền thao tác                                                                                | `utils/permission.utils.ts`                                             | Chỗ duy nhất quyết định nút nào hiện                                                                  |
 | Nhãn tiếng Việt của enum                                                                      | `utils/label.utils.ts`                                                  | Không viết lại nhãn trong màn                                                                         |
@@ -326,7 +332,7 @@ Màn hình (`src/app/`) → hook (`src/hooks/<nghiệp vụ>/`) → API (`src/se
 - **Realtime**: `services/socket/socketClient.ts` — `connectSocket()` sau khi đăng nhập (`useLogin`), mỗi lần kết nối lại đọc lại token, tự kết nối lại 1–5s; vào/ra phòng `JOIN_ZONE` / `LEAVE_ZONE`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`.
   - Màn hình đăng ký sự kiện trong effect phải huỷ trong cleanup bằng `off*` cùng handler (`offTelemetryUpdate`, `offAlertNew`, `offBirdCountUpdate`, `offRelayUpdate`); mẫu: `hooks/telemetry/useLiveTelemetry.ts`.
 - **Client state**: zustand trong `stores/` — `authStore.ts` (`user`, `accessToken`, `isAuthenticated`, `isLoading`; `setAuth` / `clearAuth` / `loadStoredAuth`), `alertStore.ts` (`unreadCount`, `latestAlert` cho badge tab Cảnh báo).
-- **Push**: `services/notification/pushNotification.ts` xin quyền, lấy push token, tạo kênh Android `alerts`. **Chưa làm:** gửi token lên backend (chờ endpoint trong `api-spec.yaml`, ALERT-FR-002).
+- **Push**: `services/notification/pushNotification.ts` xin quyền, lấy push token, tạo kênh Android `alerts` — chỉ khi người dùng bấm hàng "Nhận push trên máy này" ở tab Tài khoản (`hooks/profile/usePushRegistration.ts`). **Chưa làm:** gửi token lên backend — `services/api/pushToken.api.ts` là bản mẫu không gửi gì (chờ endpoint trong `api-spec.yaml`, ALERT-FR-002, G-10).
 - **Lỗi**: hiện 1 câu tiếng Việt ngắn theo nhóm (phiên đăng nhập/quyền, không tìm thấy, dữ liệu không hợp lệ, lỗi hệ thống, mất mạng); câu đầy đủ, có hướng dẫn "Vui lòng …" khi người dùng làm được gì đó; không hiện mã HTTP hay nguyên văn thông báo backend. Mất mạng (`NETWORK_ERROR_MESSAGE`) và lỗi máy chủ 5xx (`SERVER_ERROR_MESSAGE`) là hai câu khác nhau.
   - Xác thực: `utils/apiError.utils.ts` (`getAuthErrorMessage`) đổi `error.code` + status thành câu theo từng thao tác; sai email hay sai mật khẩu chung một câu; 429 lấy `retryAfterSec` của backend. Nút "Gửi lại mã" không có thời gian chờ đặt ở máy (không có nguồn) — giới hạn là của backend. Mutation xác thực đặt `retry: false` vì mỗi lần sai đều bị backend tính vào giới hạn 10 lần / 15 phút.
 - **Route params**: id đi qua route động của expo-router (`(tabs)/farms/[houseId]` kèm `?zoneId`, `(tabs)/farms/[houseId]/settings` kèm `?section&zoneId&edit`, `(tabs)/farms/farm-settings?farmId`, `(tabs)/farms?farmId`, `device/[deviceId]`, `alert/[alertId]`), đọc bằng `useLocalSearchParams`; không hiện id lên giao diện.

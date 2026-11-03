@@ -9,4 +9,6 @@ export const notificationApi = {
 
   markRead: (notificationId: string) =>
     apiClient.put<ApiResponse<InAppNotification>>(ENDPOINTS.NOTIFICATION_READ(notificationId)),
+
+  markAllRead: () => apiClient.put(ENDPOINTS.NOTIFICATIONS_READ_ALL),
 }

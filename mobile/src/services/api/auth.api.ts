@@ -44,4 +44,10 @@ export const authApi = {
     apiClient.post<ApiResponse<{ deep_link: string; expires_at: string }>>(ENDPOINTS.AUTH_TELEGRAM_LINK),
 
   unlinkTelegram: () => apiClient.delete(ENDPOINTS.AUTH_TELEGRAM_LINK),
+
+  // Yêu cầu xoá tài khoản (AUTH-FR-012): chỉ đánh dấu, Admin xử lý trong 30 ngày; đã có yêu cầu chờ thì 409
+  requestDeletion: () => apiClient.post(ENDPOINTS.AUTH_DELETE_REQUEST),
+
+  // Huỷ yêu cầu xoá đang chờ, trước khi Admin xử lý (AUTH-FR-012); chưa có yêu cầu thì 409
+  cancelDeletion: () => apiClient.delete(ENDPOINTS.AUTH_DELETE_REQUEST),
 }

@@ -78,6 +78,18 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'editNotificationSettings')).toBe(false)
   })
 
+  it('tài khoản: trang đầy đủ và xem thành viên chỉ cho chủ trại; mời, gỡ chỉ chủ chính', () => {
+    expect(canPerform(buildUser('FARM_OWNER'), 'viewOwnerProfile')).toBe(true)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewOwnerProfile')).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'viewFarmMembers')).toBe(true)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewFarmMembers')).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'manageFarmMembers', { isPrimaryOwner: true })).toBe(true)
+    // Đồng sở hữu, hoặc chưa biết có phải chủ chính không, thì chỉ xem
+    expect(canPerform(buildUser('FARM_OWNER'), 'manageFarmMembers', { isPrimaryOwner: false })).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'manageFarmMembers')).toBe(false)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'manageFarmMembers', { isPrimaryOwner: true })).toBe(false)
+  })
+
   it('chưa đăng nhập thì không được thao tác nào', () => {
     expect(canPerform(null, 'setupDevice')).toBe(false)
   })

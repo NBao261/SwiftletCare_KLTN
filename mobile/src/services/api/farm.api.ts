@@ -2,6 +2,8 @@ import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
 import type {
   ApiResponse,
+  Invitation,
+  InviteMemberPayload,
   BirdCountTuning,
   CreateFarmPayload,
   CreateHousePayload,
@@ -28,6 +30,15 @@ export const farmApi = {
 
   // Xoá mềm, chỉ chủ chính (FARM-FR-001)
   remove: (farmId: string) => apiClient.delete(ENDPOINTS.FARM_DETAIL(farmId)),
+
+  // Mời đồng sở hữu hoặc Domain Expert (AUTH-FR-005, EXPERT-FR-001) — chỉ Primary Owner; phản hồi có token lời mời,
+  // nơi gọi không hiển thị, không lưu
+  inviteMember: (farmId: string, payload: InviteMemberPayload) =>
+    apiClient.post<ApiResponse<Invitation>>(ENDPOINTS.FARM_MEMBERS(farmId), payload),
+
+  // Gỡ thành viên — chỉ Primary Owner, không gỡ được Primary Owner
+  removeMember: (farmId: string, userId: string) =>
+    apiClient.delete<ApiResponse<Farm>>(ENDPOINTS.FARM_MEMBER(farmId, userId)),
 
   listHouses: (farmId: string) => apiClient.get<ApiResponse<House[]>>(ENDPOINTS.FARM_HOUSES(farmId)),
 

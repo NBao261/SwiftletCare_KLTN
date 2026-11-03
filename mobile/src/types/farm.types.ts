@@ -8,6 +8,8 @@ export interface FarmMember {
   joined_at: string
   // Chỉ có ở GET /farms/{id} (tên người xác nhận, người phán quyết cảnh báo)
   full_name?: string
+  // Chỉ có ở GET /farms/{id} khi người xem là Farm Owner (chuyên gia không thấy email thành viên khác)
+  email?: string
 }
 
 // Toạ độ GPS của farm (FARM-FR-001, A-5): vĩ độ −90…90, kinh độ −180…180

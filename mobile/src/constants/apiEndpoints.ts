@@ -15,11 +15,16 @@ export const ENDPOINTS = {
   AUTH_CHANGE_PASSWORD: '/auth/password',
   AUTH_NOTIFICATION_PREFERENCES: '/auth/notification-preferences',
   AUTH_TELEGRAM_LINK: '/auth/telegram/link',
+  // Yêu cầu xoá tài khoản và dữ liệu cá nhân (AUTH-FR-012)
+  AUTH_DELETE_REQUEST: '/auth/delete-request',
 
   // Trang trại (FARM-FR-*)
   FARMS: '/farms',
   FARM_DETAIL: (farmId: string) => `/farms/${farmId}`,
   FARM_HOUSES: (farmId: string) => `/farms/${farmId}/houses`,
+  // Mời và gỡ thành viên farm — chỉ Primary Owner (AUTH-FR-005, EXPERT-FR-001)
+  FARM_MEMBERS: (farmId: string) => `/farms/${farmId}/members`,
+  FARM_MEMBER: (farmId: string, userId: string) => `/farms/${farmId}/members/${userId}`,
   HOUSE_ZONES: (houseId: string) => `/farms/houses/${houseId}/zones`,
   ZONE_THRESHOLDS: (zoneId: string) => `/farms/zones/${zoneId}/thresholds`,
   ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
@@ -62,6 +67,7 @@ export const ENDPOINTS = {
   // Thông báo trong ứng dụng (EXPERT-FR-006/007)
   NOTIFICATIONS: '/notifications',
   NOTIFICATION_READ: (notificationId: string) => `/notifications/${notificationId}/read`,
+  NOTIFICATIONS_READ_ALL: '/notifications/read-all',
 
   // Báo cáo sức khoẻ (EXPERT-FR-005/006)
   HEALTH_REPORTS: '/health-reports',

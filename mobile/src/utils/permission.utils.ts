@@ -21,6 +21,9 @@ export type PermissionAction =
   | 'acknowledgeAlert'
   | 'setAlertVerdict'
   | 'editNotificationSettings'
+  | 'viewOwnerProfile'
+  | 'viewFarmMembers'
+  | 'manageFarmMembers'
 
 // Role được làm từng thao tác (Report 3 §2.4); Technician và Admin không vào app
 const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
@@ -60,14 +63,25 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   setAlertVerdict: ['DOMAIN_EXPERT'],
   // Kênh push, Telegram, giờ yên lặng (ALERT-FR-005, 006, 013): chuyên gia không nhận push, Telegram
   editNotificationSettings: ['FARM_OWNER'],
+  // Trang Tài khoản đầy đủ (hồ sơ, lối tắt, thành viên, bảo mật): làm cho Farm Owner; Domain Expert giữ trang cơ bản
+  viewOwnerProfile: ['FARM_OWNER'],
+  // Xem thành viên farm: Farm Owner (GET /farms/{id} chỉ trả bản ghi của chính chuyên gia)
+  viewFarmMembers: ['FARM_OWNER'],
+  // Mời, gỡ thành viên (AUTH-FR-005, EXPERT-FR-001): Farm Owner và phải là chủ chính, xem PRIMARY_OWNER_ONLY
+  manageFarmMembers: ['FARM_OWNER'],
 }
 
 // Thao tác chủ trại chỉ được làm khi farm chưa có chuyên gia (BR-22); có chuyên gia thì việc đó của chuyên gia
 const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set(['applyCoefficientSuggestion'])
 
+// Thao tác backend chỉ cho Primary Owner (người tạo farm); đồng sở hữu chỉ xem
+const PRIMARY_OWNER_ONLY: ReadonlySet<PermissionAction> = new Set(['manageFarmMembers'])
+
 export interface PermissionContext {
   // Farm đang xem có thành viên DOMAIN_EXPERT (utils/farm.utils farmHasExpert)
   farmHasExpert?: boolean
+  // Người dùng là Primary Owner của farm đang xem (farm.owner_id === user._id)
+  isPrimaryOwner?: boolean
 }
 
 // Chỗ duy nhất quyết định nút thao tác nào hiện — màn hình không tự so user.role
@@ -75,5 +89,6 @@ export function canPerform(user: User | null, action: PermissionAction, context:
   if (!user) return false
   if (!ALLOWED_ROLES[action].includes(user.role)) return false
   if (user.role === 'FARM_OWNER' && FARM_OWNER_WITHOUT_EXPERT.has(action)) return context.farmHasExpert === false
+  if (PRIMARY_OWNER_ONLY.has(action)) return context.isPrimaryOwner === true
   return true
 }
