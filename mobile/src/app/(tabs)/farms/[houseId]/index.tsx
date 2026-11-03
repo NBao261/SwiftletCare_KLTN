@@ -264,7 +264,6 @@ export default function HouseDetailScreen() {
         key={relaySelection ? `${relaySelection.controllerId}-${relaySelection.relay}` : 'closed'}
         controller={selectedController}
         relay={relaySelection?.relay ?? null}
-        zoneAlerts={detail.zoneAlerts}
         onClose={() => setRelaySelection(null)}
       />
       <DeviceDetailSheet selected={selectedDevice} onClose={() => setSelectedDevice(null)} />

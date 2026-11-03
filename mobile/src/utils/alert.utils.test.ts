@@ -97,4 +97,12 @@ describe('getPumpOnBlockingAlerts', () => {
     const breach = buildAlert('t', 'HIGH', '2026-10-30T01:00:00.000Z')
     expect(getPumpOnBlockingAlerts([sensorFault, breach]).map(alert => alert._id)).toEqual(['s'])
   })
+
+  it('tính cả cảnh báo đã xác nhận (vẫn đang mở, §6.1), bỏ cảnh báo đã tự hết', () => {
+    const base = buildAlert('x', 'MEDIUM', '2026-10-30T01:00:00.000Z')
+    const acknowledged: Alert = { ...base, _id: 'ack', type: 'MISTING_INEFFECTIVE', status: 'ACKNOWLEDGED' }
+    const resolved: Alert = { ...base, _id: 'done', type: 'SENSOR_FAULT', status: 'RESOLVED' }
+    const busFailure: Alert = { ...base, _id: 'bus', type: 'RS485_BUS_FAILURE', status: 'ACTIVE' }
+    expect(getPumpOnBlockingAlerts([acknowledged, resolved, busFailure]).map(alert => alert._id)).toEqual(['ack', 'bus'])
+  })
 })

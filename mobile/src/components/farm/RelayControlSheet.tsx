@@ -3,21 +3,21 @@ import { Alert as NativeAlert, Pressable, StyleSheet, View } from 'react-native'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { Text } from '@/components/ui/text'
-import { OVERRIDE_DEFAULT_MS, OVERRIDE_DURATION_OPTIONS_MS } from '@/constants/relayOverride'
+import { HAS_OVERRIDE_CONFIRM_API, OVERRIDE_DEFAULT_MS, OVERRIDE_DURATION_OPTIONS_MS } from '@/constants/relayOverride'
 import { Radius, Spacing } from '@/constants/theme'
+import { usePumpBlockingAlerts } from '@/hooks/alert/usePumpBlockingAlerts'
 import { useControlRelay } from '@/hooks/device/useControlRelay'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Alert, RelayName, SensorNode } from '@/types'
-import { getPumpOnBlockingAlerts } from '@/utils/alert.utils'
-import { getRelayLabel } from '@/utils/label.utils'
-import { clampOverrideDuration, formatDuration, getOverrideDurationLimits } from '@/utils/relay.utils'
+import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
+import { getAlertStatusLabel, getAlertTypeLabel, getRelayLabel } from '@/utils/label.utils'
+import { buildPumpConfirmMessage, clampOverrideDuration, formatDuration, getOverrideDurationLimits } from '@/utils/relay.utils'
 import { t } from '@/utils/i18n.utils'
 
 interface RelayControlSheetProps {
   // Controller mới nhất trong cache (tải lại sau RELAY_UPDATE) để biết lệnh đã áp dụng chưa
   controller: SensorNode | null
   relay: RelayName | null
-  zoneAlerts: Alert[]
   onClose: () => void
 }
 
@@ -46,8 +46,9 @@ function ChoiceChip({ label, isSelected, onPress }: ChoiceChipProps) {
 }
 
 // Sheet điều khiển tay một relay (ENV-FR-016): BẬT/TẮT, thời lượng theo BR-08, hết giờ tự về AUTO.
-// Bật bơm khi zone đang có cảnh báo cảm biến hỏng / phun sương không hiệu quả thì phải xác nhận
-export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: RelayControlSheetProps) {
+// Bật bơm khi khu vực đang có cảnh báo cảm biến hỏng / phun sương không hiệu quả (mới hoặc đã xác nhận) thì phải xác nhận;
+// sheet tự tải mới các cảnh báo đó mỗi lần mở, chưa tải xong thì chưa cho gửi
+export function RelayControlSheet({ controller, relay, onClose }: RelayControlSheetProps) {
   const palette = usePalette()
   const controlRelay = useControlRelay()
   const currentState = controller && relay ? controller.relay_states[relay] : false
@@ -59,7 +60,11 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
   const limits = relay ? getOverrideDurationLimits(relay, targetState) : null
   const options = limits ? OVERRIDE_DURATION_OPTIONS_MS.filter(option => option >= limits.minMs && option <= limits.maxMs) : []
   const effectiveDuration = limits ? clampOverrideDuration(durationMs, limits) : durationMs
-  const blockingAlerts = relay === 'misting' && targetState ? getPumpOnBlockingAlerts(zoneAlerts) : []
+  const isPumpOn = relay === 'misting' && targetState
+  const blockingQuery = usePumpBlockingAlerts(controller?.zone_id ?? '', isPumpOn)
+  const blockingAlerts: Alert[] = isPumpOn ? (blockingQuery.data ?? []) : []
+  // Bật bơm mà chưa biết khu vực có cảnh báo chặn hay không thì chưa cho gửi
+  const isCheckingAlerts = isPumpOn && (blockingQuery.isLoading || blockingQuery.isError)
   const isApplied = Boolean(
     controller && relay && controller.control_mode === 'MANUAL' && controller.relay_states[relay] === targetState,
   )
@@ -72,19 +77,32 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
   if (!controller || !relay) return null
   const relayLabel = getRelayLabel(relay)
 
-  const send = () =>
+  // Hỏi lại trước khi bật bơm, liệt kê từng cảnh báo đang mở; đồng ý thì gửi kèm xác nhận
+  const confirmPumpOn = (alerts: Alert[]) =>
+    NativeAlert.alert(t('Vẫn bật bơm?'), buildPumpConfirmMessage(alerts, effectiveDuration), [
+      { text: t('Huỷ'), style: 'cancel' },
+      { text: t('Vẫn bật bơm'), style: 'destructive', onPress: () => send(true) },
+    ])
+
+  const send = (isAlertConfirmed: boolean) =>
     controlRelay.mutate(
-      { sensorNodeId: controller._id, relay, state: targetState, durationMs: effectiveDuration },
-      { onSuccess: () => setWaiting(true) },
+      { sensorNodeId: controller._id, relay, state: targetState, durationMs: effectiveDuration, isAlertConfirmed },
+      {
+        onSuccess: () => setWaiting(true),
+        onError: async error => {
+          // 409: lúc gửi đã có cảnh báo chặn mới mở (backend G-06) — tải lại rồi hỏi lại, đồng ý thì gửi kèm xác nhận
+          if (!HAS_OVERRIDE_CONFIRM_API || !isPumpOn || readApiError(error).status !== 409) return
+          const { data } = await blockingQuery.refetch()
+          if (data && data.length > 0) confirmPumpOn(data)
+        },
+      },
     )
 
   // TẮT và bật bơm khi có cảnh báo chặn đều hỏi lại trước khi gửi
   const handleSubmit = () => {
+    if (isCheckingAlerts) return
     if (blockingAlerts.length > 0) {
-      NativeAlert.alert(t('Vẫn bật bơm?'), t('Zone đang có cảnh báo về cảm biến hoặc phun sương. Bơm có thể chạy không đúng.'), [
-        { text: t('Huỷ'), style: 'cancel' },
-        { text: t('Vẫn bật bơm'), style: 'destructive', onPress: send },
-      ])
+      confirmPumpOn(blockingAlerts)
       return
     }
     if (!targetState) {
@@ -93,12 +111,20 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
         duration: formatDuration(effectiveDuration),
       }), [
         { text: t('Huỷ'), style: 'cancel' },
-        { text: t('Tắt'), onPress: send },
+        { text: t('Tắt'), onPress: () => send(false) },
       ])
       return
     }
-    send()
+    send(false)
   }
+
+  // Câu lỗi theo mã của backend thay cho một câu chung
+  const errorMessage = controlRelay.isError
+    ? getSettingsErrorMessage(controlRelay.error, {
+        422: t('Thời lượng không hợp lệ: bật bơm tối đa 30 phút, còn lại tối đa 24 giờ'),
+        409: t('Khu vực vừa có cảnh báo chặn bật bơm, vui lòng xem lại'),
+      })
+    : null
 
   return (
     <BottomSheet visible onClose={onClose}>
@@ -126,22 +152,32 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
         ))}
       </View>
 
+      {isPumpOn && blockingQuery.isLoading && (
+        <Text variant="small" color={palette.textSecondary}>
+          {t('Đang kiểm tra cảnh báo của khu vực…')}
+        </Text>
+      )}
+      {isPumpOn && blockingQuery.isError && (
+        <Text variant="small" weight="semiBold" color={palette.alert}>
+          {t('Không kiểm tra được cảnh báo của khu vực nên chưa bật được bơm. Vui lòng thử lại')}
+        </Text>
+      )}
       {blockingAlerts.length > 0 && (
         <View style={[styles.warning, { backgroundColor: palette.surfaceStrong }]}>
           <Text variant="small" weight="semiBold" color={palette.alert}>
-            {t('Zone đang có cảnh báo:')}
+            {t('Khu vực đang có cảnh báo:')}
           </Text>
           {blockingAlerts.map(alert => (
             <Text key={alert._id} variant="small" numberOfLines={2}>
-              {alert.title}
+              {getAlertTypeLabel(alert.type) + ' · ' + getAlertStatusLabel(alert.status)}
             </Text>
           ))}
         </View>
       )}
 
-      {controlRelay.isError && (
+      {errorMessage && (
         <Text variant="small" weight="semiBold" color={palette.alert}>
-          {t('Không gửi được lệnh, thử lại')}
+          {errorMessage}
         </Text>
       )}
       {isWaiting && !isApplied && (
@@ -154,7 +190,7 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
         label={blockingAlerts.length > 0 ? t('Vẫn bật bơm') : t('Gửi lệnh')}
         onPress={handleSubmit}
         loading={controlRelay.isPending}
-        disabled={controlRelay.isPending || isWaiting}
+        disabled={controlRelay.isPending || isWaiting || isCheckingAlerts}
       />
     </BottomSheet>
   )

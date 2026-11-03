@@ -1,5 +1,7 @@
 import { describe, expect, it } from '@jest/globals'
+import type { Alert } from '@/types'
 import {
+  buildPumpConfirmMessage,
   clampOverrideDuration,
   formatClockTime,
   formatDuration,
@@ -66,5 +68,28 @@ describe('formatSpeakerWindows', () => {
     expect(formatSpeakerWindows({ enabled: true, windows })).toBe('05:00–07:00 · 17:00–19:00')
     expect(formatSpeakerWindows({ enabled: false, windows })).toBeNull()
     expect(formatSpeakerWindows(undefined)).toBeNull()
+  })
+})
+
+describe('buildPumpConfirmMessage', () => {
+  it('liệt kê từng cảnh báo đang mở với trạng thái, rồi hỏi kèm thời lượng (ENV-FR-016)', () => {
+    const base: Alert = {
+      _id: 'a',
+      farm_id: 'farm-1',
+      type: 'SENSOR_FAULT',
+      severity: 'MEDIUM',
+      title: '',
+      message: '',
+      status: 'ACKNOWLEDGED',
+      created_at: '2026-11-03T00:00:00.000Z',
+    }
+    const message = buildPumpConfirmMessage([base, { ...base, _id: 'b', type: 'MISTING_INEFFECTIVE', status: 'ACTIVE' }], 15 * 60_000)
+    expect(message.split('\n')).toEqual([
+      'Khu vực đang có cảnh báo:',
+      '• Lỗi cảm biến · Đã xác nhận',
+      '• Phun sương không hiệu quả · Mới',
+      '',
+      'Bơm có thể chạy không đúng. Vẫn bật bơm trong 15 phút?',
+    ])
   })
 })

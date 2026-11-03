@@ -15,7 +15,6 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Spacing } from '@/constants/theme'
-import { getScopeKey, useActiveAlertsOfScopes } from '@/hooks/alert/useActiveAlertsOfScopes'
 import { useAlertDetail } from '@/hooks/alert/useAlertDetail'
 import { useAlertLocations } from '@/hooks/alert/useAlertLocations'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
@@ -69,9 +68,6 @@ export function AlertDetailContent({
   const farmQuery = useFarmDetail(alert?.farm_id ?? '')
   const farm = farmQuery.data?.data ?? null
   const sensorNodesQuery = useSensorNodes()
-  // Cảnh báo đang mở của khu vực: sheet điều khiển tay dùng để hỏi lại trước khi bật bơm (ENV-FR-016)
-  const zoneScopes = alert?.zone_id ? [{ zoneId: alert.zone_id }] : []
-  const zoneAlertsQuery = useActiveAlertsOfScopes(zoneScopes)
   const [isAcknowledgeOpen, setAcknowledgeOpen] = useState(false)
   const [verdictResult, setVerdictResult] = useState<'CONFIRMED' | 'REJECTED' | null>(null)
   const [isRelayPickerOpen, setRelayPickerOpen] = useState(false)
@@ -290,9 +286,6 @@ export function AlertDetailContent({
         key={relaySelection ? `${relaySelection.controllerId}-${relaySelection.relay}` : 'closed'}
         controller={selectedController}
         relay={relaySelection?.relay ?? null}
-        zoneAlerts={
-          alert.zone_id ? (zoneAlertsQuery.byScopeKey.get(getScopeKey({ zoneId: alert.zone_id }))?.alerts ?? []) : []
-        }
         onClose={() => setRelaySelection(null)}
       />
     </View>

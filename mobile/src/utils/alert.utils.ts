@@ -1,4 +1,4 @@
-import { PUMP_ON_CONFIRM_ALERT_TYPES } from '@/constants/relayOverride'
+import { PUMP_ON_CONFIRM_ALERT_STATUSES, PUMP_ON_CONFIRM_ALERT_TYPES } from '@/constants/relayOverride'
 import type { Alert, AlertSeverity } from '@/types'
 import { getMetricLabel, getMetricUnit } from '@/utils/label.utils'
 import type { ThresholdMetric } from '@/utils/threshold.utils'
@@ -90,7 +90,9 @@ export function getForecastMinutesAhead(alerts: Alert[], metric: 'temperature' |
   return earliest
 }
 
-// Cảnh báo đang mở khiến việc bật bơm phải được xác nhận (ENV-FR-016)
+// Cảnh báo đang mở (mới hoặc đã xác nhận) khiến việc bật bơm phải được xác nhận (ENV-FR-016)
 export function getPumpOnBlockingAlerts(alerts: Alert[]): Alert[] {
-  return alerts.filter(alert => PUMP_ON_CONFIRM_ALERT_TYPES.includes(alert.type))
+  return alerts.filter(
+    alert => PUMP_ON_CONFIRM_ALERT_TYPES.includes(alert.type) && PUMP_ON_CONFIRM_ALERT_STATUSES.includes(alert.status),
+  )
 }
