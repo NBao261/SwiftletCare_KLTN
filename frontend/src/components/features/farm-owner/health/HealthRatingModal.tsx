@@ -19,7 +19,7 @@ const SELECTED_CLASS: Record<HealthRatingValue, string> = {
 const NOTE_MAX_LENGTH = 1000;
 
 // Câu dịch có đoạn **…** → đoạn đó in đậm chữ đen, phần còn lại giữ màu của khối chứa
-function withBold(text: string): ReactNode[] {
+export function withBold(text: string): ReactNode[] {
   return text.split('**').map((part, index) =>
     index % 2 === 1 ? <strong key={index} className="font-semibold text-charcoal">{part}</strong> : part);
 }

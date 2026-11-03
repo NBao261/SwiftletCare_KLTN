@@ -8,6 +8,7 @@ import HealthDayDrawer from '@/components/features/farm-owner/health/HealthDayDr
 import HealthDayTable from '@/components/features/farm-owner/health/HealthDayTable';
 import HealthLevelsModal from '@/components/features/farm-owner/health/HealthLevelsModal';
 import HealthRatingModal from '@/components/features/farm-owner/health/HealthRatingModal';
+import HealthReportSection from '@/components/features/farm-owner/health/HealthReportSection';
 import { shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import { Button, EmptyState, FilterChip, SectionCard } from '@/components/ui';
@@ -18,6 +19,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useFarm } from '@/hooks/shared/useFarms';
 import { useHealthDays } from '@/hooks/shared/useHealthDays';
+import { isHealthPreview, setPreviewHouses } from '@/data/healthPreview.data';
 import { useToastStore } from '@/stores/toastStore';
 import type { HouseHealthDay } from '@/types';
 
@@ -51,9 +53,16 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const [isLevelsOpen, setIsLevelsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
+  // /health?preview: dữ liệu giả (src/data/healthPreview.data.ts) theo nhà thật của tài khoản; chờ tải xong nhà để không lưu cache rỗng
+  const isPreview = isHealthPreview();
+  if (isPreview) setPreviewHouses(scope.houses.map(item => ({ _id: item._id, name: item.name, farm_id: item.farm_id })));
+  const isPreviewWaiting = isPreview && scope.isLoading;
+  const isPreviewNoFarm = isPreview && !scope.isLoading && scope.farms.length === 0;
+
   const to = vietnamDate();
   const from = shiftDate(to, -(rangeDays - 1));
-  const farmIds = useMemo(() => (scope.farmId ? [scope.farmId] : scope.farms.map(farm => farm._id)), [scope.farmId, scope.farms]);
+  const realFarmIds = useMemo(() => (scope.farmId ? [scope.farmId] : scope.farms.map(farm => farm._id)), [scope.farmId, scope.farms]);
+  const farmIds = isPreviewWaiting ? [] : isPreviewNoFarm ? ['preview-farm'] : realFarmIds;
   const { days, isLoading, isError, error, refetch } = useHealthDays({ farmIds, houseId: scope.houseId, from, to });
   const pendingDays = useMemo(() => days.filter(day => day.my_rating_state === 'PENDING'), [days]);
   const shownDays = isToRateOnly ? pendingDays : days;
@@ -64,11 +73,12 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const farmHasExpert = (houseFarm?.members ?? []).some(member => member.role === 'DOMAIN_EXPERT');
   const canEditLevels = isExpert || !farmHasExpert;
 
-  // CSV theo nhà hoặc farm đang lọc; xem tất cả trang trại mà chỉ có 1 farm thì dùng farm đó
-  const csvScope: HealthDayScope | null = scope.houseId
-    ? { houseId: scope.houseId }
-    : scope.farmId ? { farmId: scope.farmId }
-      : scope.farms.length === 1 ? { farmId: scope.farms[0]._id } : null;
+  // CSV và báo cáo theo nhà hoặc farm đang lọc; xem tất cả trang trại mà chỉ có 1 farm thì dùng farm đó
+  const csvScope: HealthDayScope | null = isPreviewWaiting ? null
+    : isPreviewNoFarm ? { farmId: 'preview-farm' }
+      : scope.houseId ? { houseId: scope.houseId }
+        : scope.farmId ? { farmId: scope.farmId }
+          : scope.farms.length === 1 ? { farmId: scope.farms[0]._id } : null;
 
   const openRating = useCallback((day: HouseHealthDay) => setRatingDay(day), []);
   const openView = useCallback((day: HouseHealthDay) => setViewDay(day), []);
@@ -99,7 +109,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
     </>
   );
 
-  if (scope.farms.length === 0 && !scope.isLoading) {
+  if (scope.farms.length === 0 && !scope.isLoading && !isPreview) {
     return (
       <EmptyState
         title={t('page.noFarmTitle')}
@@ -173,6 +183,8 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           <HealthDayTable days={shownDays} onRate={openRating} onView={openView} />
         )}
       </SectionCard>
+
+      <HealthReportSection scope={csvScope} house={house ? { id: house._id, name: house.name } : null} />
 
       <HealthRatingModal day={ratingDay} onClose={() => setRatingDay(null)} onRevealed={setViewDay} />
       <HealthDayDrawer day={viewDay} onClose={() => setViewDay(null)} onChanged={setViewDay} />

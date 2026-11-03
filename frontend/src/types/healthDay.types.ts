@@ -80,3 +80,63 @@ export interface HouseHealthLevels {
   health_levels: HealthLevels;
   defaults: HealthLevels;
 }
+
+// EXPERT-FR-005 — báo cáo sức khỏe theo nhà yến (api-spec HouseHealthReportSummary, BR-33; CUSTOM do người dùng tạo)
+export type HealthReportKind = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
+
+export interface HouseHealthReportSummary {
+  _id: string;
+  farm_id: string;
+  house_id: string;
+  house_name: string;
+  kind: HealthReportKind;
+  // 'YYYY-MM-DD' giờ VN, tính cả 2 đầu
+  period_start: string;
+  period_end: string;
+  generated_at: string;
+  has_conclusion: boolean;
+  // Đề xuất cho backend (chưa có trong api-spec): kèm kết luận ở danh sách để bảng hiện được; thiếu thì bảng chỉ ghi "Đã có kết luận"
+  expert_conclusion?: {
+    text: string;
+    by: { _id: string; full_name: string | null };
+    at: string;
+    edited_at?: string | null;
+  } | null;
+}
+
+export interface HealthReportZoneSection {
+  zone_id: string;
+  zone_name: string;
+  sample_count: number;
+  temp_in_range_pct: number | null;
+  humidity_in_range_pct: number | null;
+  auto_mode_pct: number | null;
+  misting_switches: number;
+  ventilation_switches: number;
+  alerts_by_type: Record<string, number>;
+  inferred_alerts: { confirmed: number; dismissed: number; pending: number };
+  device_faults: Record<string, number>;
+  nh3_avg: number | null;
+  nh3_max: number | null;
+  co2_avg: number | null;
+  co2_max: number | null;
+}
+
+// Chi tiết báo cáo: days che theo người gọi (BR-31), status_counts chỉ đếm ngày đã thấy
+export interface HouseHealthReport extends HouseHealthReportSummary {
+  house_metrics: {
+    return_rate_trend: Array<{ date: string; return_rate: number | null; complete: boolean }>;
+    avg_return_rate: number | null;
+    weather: {
+      temperature_min: number | null;
+      temperature_max: number | null;
+      humidity_avg: number | null;
+      precipitation_mm: number | null;
+      rain_days: number;
+    } | null;
+  };
+  zone_sections: HealthReportZoneSection[];
+  days: HouseHealthDay[];
+  status_counts: Record<HealthStatus, number>;
+  hidden_days: number;
+}
