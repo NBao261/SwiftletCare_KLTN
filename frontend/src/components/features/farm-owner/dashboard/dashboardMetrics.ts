@@ -1,6 +1,7 @@
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
 import type { Alert, AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, House, RelayStates, Thresholds, SeverityLevel, Zone, ZoneThresholdHistoryEntry } from '@/types'
 import { SEVERITY_TO_LEVEL } from '@/constants/severity'
+import { alertBreach } from '@/lib/helpers'
 
 const DAY_MS = 86_400_000
 
@@ -319,33 +320,6 @@ const SENSOR_KIND_BY_METRIC: Record<string, SensorKind> = {
   co2_ppm: 'co2',
 }
 
-const METRIC_UNIT: Record<string, string> = {
-  temperature: '°C',
-  humidity: '%',
-  light_lux: 'lux',
-  nh3_ppm: 'ppm',
-  co2_ppm: 'ppm',
-}
-
-interface Breach {
-  metric: string
-  value: number
-  limit: number
-  direction: 'above' | 'below'
-}
-
-function isBreach(item: unknown): item is Breach {
-  if (typeof item !== 'object' || item === null) return false
-  const candidate = item as Record<string, unknown>
-  return typeof candidate.metric === 'string' && typeof candidate.value === 'number' && typeof candidate.limit === 'number'
-}
-
-function getFirstBreach(alert: Alert): Breach | undefined {
-  const breaches = alert.metadata?.breaches
-  if (!Array.isArray(breaches)) return undefined
-  return breaches.find(isBreach)
-}
-
 export interface AlertBreach {
   value: number
   limit: number
@@ -373,7 +347,7 @@ function alertSensorKind(alert: Alert, metric: string | undefined): SensorKind {
 }
 
 export function buildAlertRow(alert: Alert, deviceName: string, locationName: string): AlertLogRow {
-  const breach = getFirstBreach(alert)
+  const breach = alertBreach(alert)
 
   return {
     id: alert._id,
@@ -385,7 +359,7 @@ export function buildAlertRow(alert: Alert, deviceName: string, locationName: st
     breach: breach && {
       value: breach.value,
       limit: breach.limit,
-      unit: METRIC_UNIT[breach.metric] ?? '',
+      unit: breach.unit,
       sign: breach.direction === 'below' ? '>' : '<',
     },
     severity: alert.severity,

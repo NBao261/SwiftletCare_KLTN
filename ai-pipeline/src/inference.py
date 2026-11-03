@@ -87,10 +87,18 @@ class InferenceEngine:
         # Không đặt intra_op_num_threads = os.cpu_count(): số luồng logic (gấp đôi số nhân khi có SMT) làm
         # suy luận chậm gấp đôi (45 ms so với 21 ms trên Ryzen 7 6800H, đo 20/10). Để mặc định của ONNX Runtime.
         sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        self.session = ort.InferenceSession(model_path, sess_opts, providers=list(providers or ["CPUExecutionProvider"]))
+        wanted = list(providers or ["CPUExecutionProvider"])
+        if "CUDAExecutionProvider" in wanted:
+            # CUDA/cuDNN cài qua pip (onnxruntime-gpu[cuda,cudnn]) không nằm trong PATH: không nạp trước thì
+            # ONNX Runtime âm thầm chạy CPU (đo 03/11/2026, plan §18.4 bước 0). Gói CPU thì hàm này không làm gì.
+            ort.preload_dlls()
+        self.session = ort.InferenceSession(model_path, sess_opts, providers=wanted)
         self.input_name  = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
-        logger.info(f"Model loaded: {model_path} | providers: {self.session.get_providers()}")
+        used = self.session.get_providers()
+        logger.info(f"Model loaded: {model_path} | providers: {used}")
+        if used[0] != wanted[0]:
+            logger.warning(f"Không dùng được {wanted[0]}, đang chạy {used[0]} (plan §18.4 bước 0)")
 
     def preprocess(self, image: np.ndarray) -> Tuple[np.ndarray, float, int, int]:
         """Letterbox to input_size, BGR -> RGB (the model trains on RGB), NCHW float."""
@@ -101,8 +109,8 @@ class InferenceEngine:
         pad_x = (self.input_size - new_w) // 2
         pad_y = (self.input_size - new_h) // 2
         padded[pad_y:pad_y + new_h, pad_x:pad_x + new_w] = cv2.resize(image, (new_w, new_h))
-        blob = padded[:, :, ::-1].astype(np.float32) / 255.0
-        return np.ascontiguousarray(np.transpose(blob, (2, 0, 1))[np.newaxis]), scale, pad_x, pad_y
+        # BGR→RGB, /255, HWC→NCHW trong một lệnh C++: 2 ms/ô so với 5–8 ms bằng numpy (đo 03/11/2026)
+        return cv2.dnn.blobFromImage(padded, 1 / 255.0, swapRB=True), scale, pad_x, pad_y
 
     def infer(self, image: np.ndarray) -> List[Detection]:
         blob, scale, pad_x, pad_y = self.preprocess(image)

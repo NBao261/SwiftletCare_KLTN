@@ -330,6 +330,7 @@ Nội dung xác nhận:
 | BR-28 | Ồn bất thường: lệch nhẹ / lệch rõ | từ 1 / từ 3 đợt trong ngày |                         |         |
 | BR-29 | "Cần xử lý" khi chim về giảm rõ VÀ có thêm 1 nguồn khác lệch cùng ngày | (luật kết hợp) |              |         |
 | BR-30 | Ngày mưa trong giờ đếm thì chim về ít không tính là "cần xử lý" | mưa ≥ 1 mm/giờ |              |         |
+| BR-37 | Người chấm quan sát gì để chấm ngày: chim về lúc chiều, nóng ẩm trong nhà, mùi phân, chim hoảng/chuột/tiếng ồn, thiết bị, chim chết/tổ rơi; Tốt = không gì lạ, Theo dõi = 1 dấu hiệu nhẹ, Cần xử lý = chim về ít rõ + 1 dấu hiệu khác hoặc 1 dấu hiệu nặng | (hướng dẫn chấm) |              |         |
 | ...   |                         |                            |                                      |         |
 
 Ý kiến khác: ______________________________________________________

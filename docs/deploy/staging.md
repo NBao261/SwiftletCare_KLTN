@@ -147,8 +147,8 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 
 - tài khoản Administrator;
 - một farm **không** có chuyên gia (BR-22);
-- thiết bị trong kho có nhãn (MF-10);
-- cảnh báo suy luận đang chờ kết luận (MF-08);
-- số đếm 5 phút và bản ghi phiên của ≥ 7 ngày (MF-06);
-- telemetry ≥ 1 ngày cho dự báo và đánh giá sức khỏe (MF-05, MF-11);
+- thiết bị trong kho có nhãn (SF-01);
+- cảnh báo suy luận đang chờ kết luận (MF-04);
+- số đếm 5 phút và bản ghi phiên của ≥ 7 ngày (MF-03);
+- telemetry ≥ 1 ngày cho dự báo và đánh giá sức khỏe (MF-02, MF-06);
 - một bơm đã quá giới hạn giờ chạy (cảnh báo `MAINTENANCE_DUE`).

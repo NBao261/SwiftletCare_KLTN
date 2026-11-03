@@ -89,7 +89,8 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
     const breaches = findThresholdBreaches(
       { temperature: 28, humidity: 85, light_lux: 0.1, nh3_ppm: DEFAULT_THRESHOLDS.nh3_max + 10, co2_ppm: 800 }, DEFAULT_THRESHOLDS,
     )
-    await raiseThresholdAlert(String(zone._id), String(node._id), breaches)
+    // Đã ở ngoài ngưỡng đủ thời gian chờ (BR-34) — thời gian chờ có test riêng ở thresholdBreach.test.ts
+    await raiseThresholdAlert(String(zone._id), String(node._id), breaches.map(b => ({ ...b, started_at: new Date() })))
 
     const alert = (await Alert.findOne({ type: 'THRESHOLD_BREACH' }).lean())!
     expect(alert.severity).toBe('MEDIUM')
@@ -100,7 +101,7 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
 
   it('breach nhiệt độ không kèm ghi chú chất lượng không khí', async () => {
     const { zone, node } = await seed()
-    await raiseThresholdAlert(String(zone._id), String(node._id), [{ metric: 'temperature', value: 36, limit: 31, direction: 'above' }])
+    await raiseThresholdAlert(String(zone._id), String(node._id), [{ metric: 'temperature', value: 36, limit: 31, direction: 'above', started_at: new Date() }])
     expect((await Alert.findOne().lean())!.message).not.toContain('chuyên gia')
   })
 

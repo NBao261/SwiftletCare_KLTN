@@ -4,7 +4,9 @@
 # A jest, pio or pytest source must name a test that exists: gen_report5.py checks it.
 J='jest'; P='pio'; Y='pytest'; T='todo-auto'; M='manual'
 I='tests/integration/'
-# FRs covered by each mandatory feature (Report 5, Section 4.1)
+# Features of supporting flow SF-01 (device setup): built and tested, not counted in the committed minimum
+SUPPORTING={'F-18','F-19'}
+# FRs covered by each feature (Report 5, Section 4.1)
 FEATURES=[
 ('F-01','Telemetry, live dashboard','ENV-FR-001, 002, 004, 005, 015, 022, ANALYTICS-FR-001, 005'),
 ('F-02','Fuzzy control','ENV-FR-010, 011, 013b, ANALYTICS-FR-008'),
@@ -49,7 +51,7 @@ TC=[
  (J,I+'zoneThresholds.test.ts','records only the known keys, with source MANUAL, in the threshold history')),
 ('TC-F03-02','F-03','Same zone','PUT an out-of-range threshold','`humidity_min` = 150','400; nothing stored',
  (J,I+'zoneThresholds.test.ts','PUT /farms/zones/:id/thresholds answers 400 for an out-of-range value')),
-('TC-F03-03','F-03','Technician and Administrator accounts','PUT thresholds, reset and fuzzy tuning as each of them','Valid body','403 for both on every route (ENV-FR-006, 020, 021)',
+('TC-F03-03','F-03','Administrator account','PUT thresholds, reset and fuzzy tuning','Valid body','403 on every route (ENV-FR-006, 020, 021)',
  (J,I+'roleMatrix.test.ts','mỗi dòng của bảng quyền trả 403 cho role bị bỏ')),
 # F-04
 ('TC-F04-01','F-04','Prototype running in AUTO; logging on','Cut the router uplink for 30 min, then restore it','—','A control decision every 10 s during the outage (100 %)',
@@ -73,7 +75,7 @@ TC=[
 ('TC-F07-01','F-07','Open alert of a type for a zone and device','Ingest the same incident again','Same type, zone, device','No new alert; the open one is bumped (occurrence count)',
  (J,I+'deviceMqttContract.test.ts','folds a repeat into the open alert however old it is')),
 ('TC-F07-02','F-07','Zone with `humidity_min` = 80','Ingest humidity 75 % for 9 min, then for 10 min','1 reading per second','No alert after 9 min; after 10 min one `THRESHOLD_BREACH` with metric, observed value, threshold, direction and start time',
- (T,'backend jest `thresholdBreach.test.ts` (G-05)')),
+ (J,I+'thresholdBreach.test.ts','9 phút không có cảnh báo, 10 phút có 1 cảnh báo mang chi tiết')),
 ('TC-F07-03','F-07','Open alert; Domain Expert signed in','PUT acknowledge as the expert','Note text','403; status unchanged',
  (J,I+'domainExpert.test.ts','không xác nhận (acknowledge) cảnh báo')),
 # F-08
@@ -102,7 +104,7 @@ TC=[
  (T,'AI pipeline pytest `test_annotate.py` (G-12)')),
 ('TC-F11-02','F-11','Camera of a farm; its Farm Owner and Domain Expert','GET stream-token as each','—','Token valid 60 s for path `cam-<device_id>` only',
  (J,I+'streamAuth.test.ts','Farm Owner và Domain Expert của farm nhận token 60 giây')),
-('TC-F11-03','F-11','Technician; Farm Owner of another farm','GET stream-token as each','—','403',
+('TC-F11-03','F-11','User who is not a member of the farm; Farm Owner of another farm','GET stream-token as each','—','403',
  (J,I+'streamAuth.test.ts','Technician (SRS §4.4) và Farm Owner của farm khác bị chặn')),
 # F-12
 ('TC-F12-01','F-12','Hour with a learned quiet baseline','Feed noise above the baseline for the minimum duration','+20 dB for 12 s of 15 s','Anomaly raised',
@@ -171,10 +173,10 @@ TC=[
 # F-22
 ('TC-F22-01','F-22','Computed day; Farm Owner who has not rated it','GET the day, the daily report and the CSV; then POST a rating','—','No status, reasons or other ratings before the rating; the rating and its snapshot stored together, and the status returned only in the rating response',(T,'backend jest (G-11)')),
 ('TC-F22-02','F-22','Rated day','Ingest a late count that changes the status; then try to change the rating','—','Current status recomputed, snapshot unchanged; rating change rejected, a note accepted',(T,'backend jest (G-11)')),
-('TC-F22-03','F-22','Technician, Administrator; a day 8 days ago','Rate as each; rate the old day','—','403; old day rejected',(T,'backend jest (G-11)')),
+('TC-F22-03','F-22','Administrator; a day 8 days ago','Rate as each; rate the old day','—','403; old day rejected',(T,'backend jest (G-11)')),
 ]
 # Main workflows: end-to-end on staging following the main scenario of the Design Brief
-WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11'),('WF-07','DS-13'),('WF-08','DS-15'),('WF-09','DS-17'),('WF-10','DS-19'),('WF-11','DS-21')]
+WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11')]
 # State transitions (SRS Section 6): (entity, transition, trigger, expected, source)
 ST=[
 ('6.1 Alert','(new) → ACTIVE','Ingest a device alert','One ACTIVE alert in the device\'s farm and zone with the default severity of its type',(J,I+'deviceMqttContract.test.ts','creates an alert in the device farm/zone from the ESP32 payload')),
