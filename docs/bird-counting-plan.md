@@ -6,7 +6,7 @@
 > - **Phiên do backend tính** từ số đếm 5 phút theo lịch đếm của nhà yến: hồ sơ theo mùa + khung tạm thời do Domain Expert đặt, không có thì mặc định 05:30–07:00 và 17:30–19:00 (VISION-FR-008, 019, BR-13); ngày nút AI mất kết nối giữa phiên là phiên không đầy đủ (VISION-FR-020); job so tỷ lệ chim về chạy 15 phút sau khung chiều của ngày đó (BR-21), không cố định 19:15. Khung `sessions` trong `config.yaml` chỉ còn là mặc định. Phần backend của các điểm này chưa làm (Project Tracking G-12).
 > - **Vòng đếm do Domain Expert vẽ** trên khung hình live (VISION-FR-018); farm chưa có chuyên gia thì Farm Owner vẽ (BR-22). Người xem live stream: Farm Owner và Domain Expert của farm (VISION-FR-013).
 > - Hằng số tự chọn (khoảng chồng 2 ô, mốc ngoại suy, vòng nới 60 px…) ghi ở Report 3 §4.5; vị trí trong code ở Report 4 §5.5.
-> - **Đánh giá độ chính xác (NFR-09, VISION-FR-016):** Precision/Recall phát hiện đo trên ≥ 200 khung có gán hộp cho mỗi điều kiện sáng (IoU ≥ 0,5); sai số đếm đo trên 20 clip 5 phút (10 ban ngày, 10 hồng ngoại) so với đếm tay của 2 người. Tập test lấy từ **ngày quay** không dùng cho train, val, chọn model, ngưỡng confidence, vòng đếm hay tham số tracker; chia train/val/test theo ngày **trước** khi trích frame (`tools/split_by_day.py`), augmentation chỉ cho train. NFR-04: tốc độ xử lý ≥ tốc độ luồng camera dùng để đếm (25 fps), đo trên đúng PC làm AI node.
+> - **Đánh giá độ chính xác (NFR-09, VISION-FR-016):** Precision/Recall phát hiện đo trên ≥ 200 khung có gán hộp cho mỗi điều kiện sáng (IoU ≥ 0,5); sai số đếm đo trên 20 clip 5 phút (10 ban ngày, 10 hồng ngoại) so với đếm tay của 2 người. Tập test lấy từ **ngày quay** không dùng cho train, val, chọn model, ngưỡng confidence, vòng đếm hay tham số tracker (ngoại lệ ngày 26/10: mục 7.4); tập train/val/test gán theo ngày ngay lúc tải ảnh lên Roboflow (mục 7.4), augmentation chỉ cho train. NFR-04: tốc độ xử lý ≥ tốc độ luồng camera dùng để đếm (25 fps), đo trên đúng PC làm AI node.
 > - **AI node là PC cũ của nhóm đặt tại nhà một thành viên** (Report 4 D5, §11; `docs/deploy/staging.md`, chốt 23/10/2026): PC kéo RTSP của camera qua Internet nhờ IP tĩnh của đường VNPT nhà yến (cổng 18554, mục 19.7), gửi MQTT TLS và đẩy video có khung lên VPS. Cần chạy cổng 3b (kéo liên tục 24 giờ) trước khi chốt. Mục 15.2 bước 1 (VPS 4 vCPU / 8 GB) và phần "model chạy trên VPS" của mục 18–19 đã cũ: VPS staging chỉ cần 2 vCPU / 4 GB vì model chạy trên PC. Cách mở cổng 18554 ở mục 19.4, 19.7 vẫn dùng, nhưng người kéo hình là PC ở nhà thành viên thay cho VPS. **Cổng 18554 phải có luật lọc IP nguồn trên modem nhà yến, chỉ cho IP tĩnh của nhà thành viên** (Report 3 NFR-10 e; chuyển cổng một mình không chặn ai), kiểm tra bằng cách thử từ 4G phải thất bại; RTSP không mã hoá là rủi ro còn lại đã ghi ở Report 3 §8.1.
 
 > Phạm vi: VISION-FR-001…014, 016, 017 (đếm chim, live stream có khung nhận diện, báo cáo độ chính xác, số đếm theo khoảng 5 phút).
@@ -53,7 +53,7 @@ Modem VNPT (IP public, mở 1 cổng về camera) ──Internet──► MediaM
                                                               │
 ESP32 các Zone ──MQTT qua TLS (8883)──► EMQX                  ▼
                                                     pipeline (container `vision`)
-                                                    [crop ROI → YOLO26n (ONNX) → ByteTrack → vạch đếm → vẽ ô xanh]
+                                                    [crop ROI → YOLO (ONNX) → ByteTrack → vạch đếm → vẽ ô xanh]
                                                        │ MQTT nội bộ                 │ đẩy lại MediaMTX "cam-<id>"
                                                        │  • số đếm của phiên, 30 giây/lần
                                                        │  • số đếm theo khoảng 5 phút, cả ngày
@@ -291,7 +291,7 @@ YOLO("yolo26n.pt").export(format="onnx", imgsz=640, nms=False, simplify=True)
 
 `nms=False` xuất đầu ra không cần NMS: mảng `(1, 300, 6)`, mỗi dòng là `[x1, y1, x2, y2, confidence, class_id]` theo tọa độ ảnh đầu vào đã letterbox. Không có `nms=False` thì file ONNX ra định dạng cũ `(1, 84, 8400)` và phải tự chạy NMS. `inference.py` ở mục 6.3 đọc định dạng mới. Nếu `onnxruntime` báo không hỗ trợ opset, export lại với `opset=17`.
 
-Vì sao chọn YOLO26n (tra cứu 20/10/2026):
+Vì sao từng chọn YOLO26n làm model tạm (tra cứu 20/10/2026; bảng giữ để tham khảo khi so sánh ở mục 7.9):
 
 | Model | mAP COCO 50-95 | CPU ONNX, đầu vào 640 | Ghi chú |
 |---|---|---|---|
@@ -302,6 +302,10 @@ Vì sao chọn YOLO26n (tra cứu 20/10/2026):
 Số liệu là của Ultralytics, đo trên Intel Xeon 2,0 GHz, chưa có nhóm độc lập nào đo lại. YOLO27 đã công bố ở YOLO Vision 2026 nhưng chưa phát hành trọng số. Khi có, chỉ cần đổi tên model rồi train lại theo mục 7.5. Cách train, định dạng nhãn và giấy phép (AGPL-3.0) của YOLO26 giống YOLOv8.
 
 Model này bắt sót nhiều chim yến (nhỏ, nhòe). Nó chỉ dùng để kiểm tra đường ống, không dùng để báo cáo số liệu.
+
+**Quyết định 02/11/2026:** nhóm **không train YOLO26n**. Model tự train chọn giữa **YOLOv8n và YOLO11n** (mục 7.9). YOLO26n COCO ở trên chỉ còn là model tạm cho tới khi có `swiftlet_v1.onnx`; `inference.py` vẫn đọc cả hai kiểu đầu ra nên không phải sửa code.
+
+**Lý do:** YOLOv8 (01/2023) và YOLO11 (09/2024) ra mắt đã lâu, nên có nhiều nguồn uy tín để trích dẫn và được dùng phổ biến hơn. Ưu điểm của YOLO26n (01/2026) mới chỉ là số liệu của Ultralytics trên COCO. Cái giá: bỏ bản nhanh nhất trên CPU (38,9 ms so với 56,1 ms của YOLO11n); nếu cả hai model không đạt 25 fps thì áp dụng các bước tăng tốc ở mục 18.4.
 
 ### 6.2. `config/config.yaml`
 
@@ -911,7 +915,7 @@ Quy trình trên Roboflow (hoặc CVAT):
 1. Tạo project loại Object Detection, một class `swiftlet`.
 2. Tải lên ảnh **kèm** file `.txt` cùng tên (định dạng YOLO) để nhận sẵn nhãn nháp.
 3. Sửa từng ảnh theo quy tắc dưới.
-4. Export định dạng **YOLOv8** (nhãn dạng txt dùng chung cho YOLO26), **tắt** resize và augmentation của Roboflow (ultralytics tự làm khi train).
+4. Export định dạng **YOLOv8** (nhãn dạng txt dùng chung cho YOLO11), **tắt** resize và augmentation của Roboflow (ultralytics tự làm khi train).
 
 Quy tắc gán nhãn (cả nhóm thống nhất trước khi làm):
 
@@ -930,50 +934,74 @@ Mục tiêu số lượng:
 - Khoảng 10% ảnh âm (không có chim), ưu tiên ảnh có dơi/côn trùng.
 - Mỗi người gán thử 50 ảnh rồi đối chiếu chéo trước khi gán hàng loạt.
 
-### 7.4. Chia tập theo ngày — `tools/split_by_day.py`
+### 7.4. Chia tập theo ngày — gán lúc tải ảnh lên Roboflow
 
-Frame liên tiếp gần như giống hệt nhau. Chia ngẫu nhiên theo frame sẽ để ảnh "sinh đôi" lọt vào cả train lẫn test, cho kết quả đẹp giả. Phải chia theo **ngày quay**. Code: `ai-pipeline/tools/split_by_day.py`.
+Frame liên tiếp gần như giống hệt nhau. Chia ngẫu nhiên theo frame sẽ để ảnh "sinh đôi" lọt vào cả train lẫn test, cho kết quả đẹp giả. Phải chia theo **ngày quay**.
 
-```powershell
-# bản export YOLOv8 của Roboflow giải nén vào D:\SwiftletCare\dataset\roboflow
-python tools/split_by_day.py D:\SwiftletCare\dataset\roboflow D:\SwiftletCare\dataset\final --val 20261024 --test 20261025
-Compress-Archive D:\SwiftletCare\dataset\final\* D:\SwiftletCare\dataset\dataset.zip
-```
+Tập của mỗi ảnh được gán **ngay lúc tải lên Roboflow**, theo ngày trong tên file. Việc này do script chạy sau mỗi phiên quay trên máy thu clip làm (`D:\SwiftletCare\process_session.py`, nằm ngoài repo: tách frame → chia ảnh ngày/IR → tải lên kèm tag `<ngày> <morning|evening> <day|ir>`). Vì vậy khi tạo version ở mục 7.5 chỉ cần giữ nguyên cách chia, **không bấm Rebalance**.
 
-- Ngày lấy từ 8 chữ số đầu tên file; Roboflow giữ tên gốc và thêm đuôi `_jpg.rf.<hash>` nên vẫn đọc được.
-- Ảnh không có file nhãn được ghi nhãn rỗng (ảnh âm). Ghi `data.yaml` (`path: /content/dataset`, 1 class `swiftlet`).
-- Một ngày không được vừa ở val vừa ở test; thiếu một trong ba tập thì công cụ báo lỗi.
+| Tập | Ngày quay (10/2026) |
+|---|---|
+| Train | 22, 23, 27, 28, 29 (sáng và tối) và sáng 26 |
+| Valid | 24 (sáng và tối) |
+| Test | sáng 25 và tối 26 |
 
-Sau đó tải `dataset.zip` lên Google Drive (`MyDrive/swiftletcare/`).
+**Ngoại lệ ngày 26/10:** phiên tối 25/10 không quay được vì máy tắt. Test lấy phiên tối 26/10 để có cảnh chim về lúc chạng vạng, trong khi sáng 26/10 đã nằm ở train. Hai phiên cách nhau khoảng 10 giờ, khác hẳn ánh sáng và cảnh chim (chim ra so với chim về), nhưng vẫn cùng một ngày. Báo cáo phải ghi rõ điểm này khi nêu kết quả trên tập test.
+
+Chỉ ảnh đã duyệt mới vào version: sau khi sửa một trang ảnh trên Roboflow thì gắn tag `checked` (chọn cả trang → Apply Tags). Ảnh đánh Null có thể gắn tag hàng loạt bằng API (thêm tag `checked` vào mọi ảnh có 0 ô và chưa có tag này).
+
+`tools/split_by_day.py` vẫn dùng được cho bản export **chưa** chia tập (ví dụ gán nhãn bằng CVAT): `python tools/split_by_day.py <thư mục export> <thư mục ra> --val 20261024 --test 20261025`. Công cụ đọc ngày từ 8 chữ số đầu tên file, ghi nhãn rỗng cho ảnh âm, viết `data.yaml` và báo lỗi khi một ngày vừa ở val vừa ở test.
 
 ### 7.5. Train trên Google Colab
 
-Runtime → Change runtime type → **T4 GPU**. Mỗi khối dưới đây là một cell.
+**Bước 1 — tạo version trên Roboflow** (Versions → Generate New Version):
+
+1. *Source Images* → **Filter by Tag**: *Require* `checked`, để chỉ ảnh đã duyệt được dùng.
+2. *Train/Test Split*: giữ cách chia sẵn có theo ngày (mục 7.4), **không** Rebalance.
+3. *Preprocessing*: **xóa bước Resize**, vì ultralytics tự letterbox về `imgsz` giống hệt `src/inference.py`. Auto-Orient để nguyên cũng được.
+4. *Augmentation*: không thêm gì, vì ultralytics tự làm lúc train.
+5. Create, rồi ghi lại số version.
+
+**Bước 2 — Colab.** Runtime → Change runtime type → **T4 GPU**. GPU mạnh hơn (L4, A100) chỉ làm train nhanh hơn, không đổi kết quả; nếu dùng thì cả hai model ở mục 7.9 train trên cùng một loại GPU. Lưu API key Roboflow vào **Secrets** của Colab (biểu tượng chìa khóa, tên `ROBOFLOW_API_KEY`, bật quyền cho notebook), không dán vào cell. Mỗi khối dưới đây là một cell.
 
 ```python
-# Cell 1 — môi trường
-!pip install -q "ultralytics==8.4.170"    # ghim bản, xem mục 4
-from google.colab import drive
+# Cell 1 — môi trường + tải dataset từ Roboflow
+!pip install -q "ultralytics==8.4.170" roboflow    # ghim bản ultralytics, xem mục 4
+from google.colab import drive, userdata
 drive.mount("/content/drive")
-!rm -rf /content/dataset && unzip -q "/content/drive/MyDrive/swiftletcare/dataset.zip" -d /content/dataset
-!cat /content/dataset/data.yaml
-!ls /content/dataset/images/train | wc -l
+
+from roboflow import Roboflow
+VERSION = 1                                       # số version vừa tạo ở bước 1
+rf = Roboflow(api_key=userdata.get("ROBOFLOW_API_KEY"))
+rf.workspace("bos-workspace-qqfi0").project("swiftletcare-4vusa") \
+  .version(VERSION).download("yolov11", location="/content/dataset")   # nhãn txt dùng chung cho YOLOv8/11/26
+
+# data.yaml của Roboflow dùng đường dẫn tương đối "../train/images": viết lại cho Colab
+open("/content/dataset/data.yaml", "w").write("""path: /content/dataset
+train: train/images
+val: valid/images
+test: test/images
+names:
+  0: swiftlet
+""")
+!for s in train valid test; do echo $s $(ls /content/dataset/$s/images | wc -l); done
 ```
 
-Nếu file zip chứa thêm một cấp thư mục (`final/…`), sửa dòng `path:` trong `data.yaml` cho khớp.
+Số ảnh mỗi tập phải khớp số ảnh `checked` trên Roboflow.
 
 ```python
 # Cell 2 — train
 from ultralytics import YOLO
 
-model = YOLO("yolo26n.pt")            # bản nano: nhanh nhất trên CPU (mục 6.1)
+model = YOLO("yolo11n.pt")            # bản nano; ứng viên còn lại là yolov8n.pt (mục 7.9)
 model.train(
     data="/content/dataset/data.yaml",
     imgsz=640,                        # bằng model.input_size; chim < 12 px sau khi resize → thu hẹp ROI trước, 960 làm chậm hơn 2,25 lần
     epochs=120,
     patience=25,                      # dừng sớm nếu val không cải thiện
-    batch=16,
-    project="/content/drive/MyDrive/swiftletcare/runs",
+    batch=16,                         # giữ 16 kể cả trên GPU lớn, để so sánh ở mục 7.9 công bằng
+    seed=0,
+    project="/content/drive/MyDrive/swiftletcare/runs",   # lưu lên Drive: Colab ngắt phiên cũng không mất
     name="swiftlet_v1",
     # augmentation phù hợp camera cố định:
     degrees=0.0,                      # camera không xoay
@@ -986,25 +1014,26 @@ model.train(
 )
 ```
 
+Colab ngắt phiên giữa chừng thì chạy lại Cell 1, rồi train tiếp từ checkpoint cuối: `YOLO("/content/drive/MyDrive/swiftletcare/runs/swiftlet_v1/weights/last.pt").train(resume=True)`.
+
 ```python
 # Cell 3 — đánh giá trên tập TEST (ngày chưa từng thấy)
 best = YOLO("/content/drive/MyDrive/swiftletcare/runs/swiftlet_v1/weights/best.pt")
-metrics = best.val(data="/content/dataset/data.yaml", split="test", imgsz=640, conf=0.25,
-                   nms=False)          # đo đúng đầu ra không NMS mà pipeline dùng
+metrics = best.val(data="/content/dataset/data.yaml", split="test", imgsz=640, conf=0.25)
 print("precision:", metrics.box.mp, "recall:", metrics.box.mr,
       "mAP50:", metrics.box.map50, "mAP50-95:", metrics.box.map)
 ```
 
 ```python
 # Cell 4 — xem thử dự đoán bằng mắt
-best.predict("/content/dataset/images/test", conf=0.25, save=True, max_det=100,
+best.predict("/content/dataset/test/images", conf=0.25, save=True, max_det=100,
              project="/content/preview", name="test")
 # mở /content/preview/test trong trình duyệt file của Colab
 ```
 
 ```python
 # Cell 5 — export ONNX cho pipeline (imgsz phải bằng model.input_size trong config)
-best.export(format="onnx", imgsz=640, nms=False, simplify=True)
+best.export(format="onnx", imgsz=640, simplify=True)   # YOLOv8n/YOLO11n: inference.py tự chạy NMS
 !cp /content/drive/MyDrive/swiftletcare/runs/swiftlet_v1/weights/best.onnx \
     /content/drive/MyDrive/swiftletcare/swiftlet_v1.onnx
 ```
@@ -1066,7 +1095,7 @@ Kết quả tra cứu tháng 10/2026: **không tìm thấy bộ dữ liệu côn
 | Roboflow Universe: [ionest/swiftlet](https://universe.roboflow.com/ionest/swiftlet) | Bộ dữ liệu có tên chim yến, hai lớp `swiftlet`/`walet` | Nhỏ | **Chưa rõ** | Không mở được trang để kiểm tra. Phải tự xem ảnh: nếu là chim đậu trên tổ trong nhà thì không dùng được cho bài toán đếm chim bay |
 | Roboflow Universe: [không gian `swiftlet`](https://universe.roboflow.com/swiftlet) | Một dự án object detection về chim yến | Khoảng 1.080 ảnh | **Chưa rõ** | Như trên: tự xem ảnh và giấy phép trước khi dùng |
 | Roboflow Universe: [bird_flock](https://universe.roboflow.com/mai-ofuyr/bird_flock), [bird-flying](https://universe.roboflow.com/nycuproject/bird-flying-z8lwp) | Chim bay, đàn chim trên nền trời | Chưa kiểm tra | Thấp – trung bình | Ghi giấy phép CC BY 4.0. Chất lượng nhãn không đồng đều, phải xem mẫu trước |
-| COCO (trọng số `yolo26n.pt`) | 80 lớp, có lớp `bird` | — | Đã dùng làm điểm xuất phát ở mục 7.5 | Chim trong COCO phần lớn to và rõ, khác chim yến đang bay |
+| COCO (trọng số `yolov8n.pt`, `yolo11n.pt`) | 80 lớp, có lớp `bird` | — | Đã dùng làm điểm xuất phát ở mục 7.5 | Chim trong COCO phần lớn to và rõ, khác chim yến đang bay |
 
 Dữ liệu thiên địch (để dành cho THREAT-FR-001, ngoài phạm vi đợt này): Roboflow Universe có nhiều bộ ảnh cú, chuột, rắn. Đã có [một nghiên cứu](https://journal.ittelkom-sby.ac.id/jaiit/article/view/733) dùng ảnh cú từ Roboflow để train YOLOv8n phát hiện cú trong nhà yến.
 
@@ -1108,7 +1137,7 @@ for xml in src.rglob("*.xml"):
 print(f"Đã chuyển {n} file")
 ```
 
-Sắp ảnh và nhãn theo đúng cấu trúc `images/train`, `labels/train`, `images/val`, `labels/val` (dùng sẵn cách chia train/val của bộ dữ liệu), rồi viết `fbd.yaml` giống `data.yaml` ở mục 7.4 với một lớp `bird`. Cấu trúc thư mục gốc của bộ dữ liệu cần xem thực tế sau khi tải về.
+Sắp ảnh và nhãn theo đúng cấu trúc `images/train`, `labels/train`, `images/val`, `labels/val` (dùng sẵn cách chia train/val của bộ dữ liệu), rồi viết `fbd.yaml` giống `data.yaml` ở mục 7.5 với một lớp `bird`. Cấu trúc thư mục gốc của bộ dữ liệu cần xem thực tế sau khi tải về.
 
 Bước 2 — hai lượt train trên Colab:
 
@@ -1118,7 +1147,7 @@ from ultralytics import YOLO
 RUNS = "/content/drive/MyDrive/swiftletcare/runs"
 
 # Lượt 1: học chim bay nói chung từ FBD-SV-2024
-YOLO("yolo26n.pt").train(data="/content/fbd/fbd.yaml", imgsz=640, epochs=50, patience=15,
+YOLO("yolo11n.pt").train(data="/content/fbd/fbd.yaml", imgsz=640, epochs=50, patience=15,
                          batch=16, project=RUNS, name="pretrain_fbd")
 
 # Lượt 2: tinh chỉnh trên chim yến của mình, xuất phát từ kết quả lượt 1
@@ -1133,7 +1162,7 @@ Bước 3 — so sánh công bằng, cùng tập test, cùng ngưỡng:
 
 ```python
 for name in ("swiftlet_v1", "swiftlet_v1_fbd"):          # v1: chỉ COCO → dữ liệu của mình (mục 7.5)
-    m = YOLO(f"{RUNS}/{name}/weights/best.pt").val(data="/content/dataset/data.yaml", split="test", conf=0.25, nms=False)
+    m = YOLO(f"{RUNS}/{name}/weights/best.pt").val(data="/content/dataset/data.yaml", split="test", conf=0.25)
     print(name, "precision", round(m.box.mp, 3), "recall", round(m.box.mr, 3), "mAP50", round(m.box.map50, 3))
 ```
 
@@ -1142,21 +1171,20 @@ Chọn bản có recall và mAP50 cao hơn trên tập test, rồi kiểm lại 
 Lợi ích của dữ liệu ngoài thường rõ nhất khi ảnh tự gán nhãn còn ít (vài trăm ảnh), và giảm dần khi đã có vài nghìn ảnh.
 
 
-### 7.9. So sánh model: YOLOv8n, YOLO11n, YOLO26n
+### 7.9. So sánh model: YOLOv8n, YOLO11n
 
-Chọn model theo **số đo trên dữ liệu chim yến của mình**, không theo bảng COCO ở mục 6.1. Trong lúc chưa so sánh xong, YOLO26n là mặc định (mục 6.1). Pipeline đọc được cả ba (mục 6.3), nên mỗi lần đổi model chỉ phải sửa `model.path` và `model.version` trong config.
+Chọn model theo **số đo trên dữ liệu chim yến của mình**, không theo bảng COCO ở mục 6.1. Từ 02/11/2026 nhóm chỉ so **hai** ứng viên, YOLOv8n và YOLO11n; YOLO26n không train (mục 6.1). Pipeline đọc được cả hai (mục 6.3), nên mỗi lần đổi model chỉ phải sửa `model.path` và `model.version` trong config.
 
 | Ứng viên | Ra mắt | Mạnh | Yếu |
 |---|---|---|---|
 | YOLOv8n | 01/2023 | Ổn định nhất, nhiều tài liệu và ví dụ nhất, đúng tên trên phiếu đăng ký | Chậm nhất: 80,4 ms/khung trên CPU, gần như chắc chắn cần OpenVINO hoặc đầu vào nhỏ hơn mới đạt 25 fps |
 | YOLO11n | 09/2024 | Đã dùng rộng rãi hơn 2 năm; 56,1 ms/khung | Vẫn chưa đủ 25 fps nếu không tăng tốc |
-| YOLO26n | 01/2026 | Nhanh nhất (38,9 ms), mAP COCO cao nhất, có STAL cho vật thể nhỏ, không cần NMS | Mới nhất nên ít ví dụ trên mạng hơn |
 
-Bản `s` (lớn hơn) không đưa vào: YOLO26s mất 87,2 ms/khung trên CPU, không đạt 25 fps nếu không có GPU.
+Bản `s` (lớn hơn) không đưa vào: chậm hơn bản `n` nhiều lần trên CPU, không đạt 25 fps nếu không có GPU.
 
 **Giữ mọi thứ giống nhau** để so sánh công bằng: cùng tập dữ liệu và cách chia theo ngày (mục 7.4), cùng `ultralytics==8.4.170`, cùng `imgsz`, epoch, augmentation và `seed`. Đo đếm trên cùng các clip test (mục 7.7). Đo FPS trên cùng máy sẽ chạy thật, cùng `providers`.
 
-Bước 1 — train cả ba trên Colab. Mỗi model chạy khoảng 2 giờ trên T4. Nếu Colab ngắt phiên giữa chừng thì chạy lại vòng lặp; nên sửa `CANDIDATES` để bỏ model đã xong, vì kết quả đã lưu trên Drive.
+Bước 1 — train cả hai trên Colab. Mỗi model chạy khoảng 1,5–3 giờ trên T4. Bản chạy được ngay là notebook `D:\SwiftletCare\colab\swiftlet_train_v1.ipynb` (ngoài repo): tải dataset theo mục 7.5, train, chấm test, lưu ảnh dự đoán và export ONNX; Colab ngắt phiên thì Run all lại, model xong rồi được bỏ qua, model dở train tiếp từ `last.pt`. Lõi của notebook:
 
 ```python
 !pip install -q "ultralytics==8.4.170"
@@ -1165,7 +1193,7 @@ from ultralytics import YOLO
 RUNS = "/content/drive/MyDrive/swiftletcare/runs"
 DATA = "/content/dataset/data.yaml"
 AUG = dict(degrees=0.0, flipud=0.0, fliplr=0.5, scale=0.3, hsv_v=0.5, mosaic=1.0, close_mosaic=15)
-CANDIDATES = {"yolov8n": {}, "yolo11n": {}, "yolo26n": {"nms": False}}   # YOLO26: đo và export đúng đầu ra không NMS
+CANDIDATES = {"yolov8n": {}, "yolo11n": {}}
 
 for name, head in CANDIDATES.items():
     YOLO(f"{name}.pt").train(data=DATA, imgsz=640, epochs=120, patience=25, batch=16,
@@ -1185,17 +1213,16 @@ Bước 3 — điền bảng (đưa thẳng vào báo cáo VISION-FR-016):
 |---|---|---|---|---|---|---|---|
 | YOLOv8n | | | | | | | |
 | YOLO11n | | | | | | | |
-| YOLO26n | | | | | | | |
 
 **Cách chọn**, áp dụng theo thứ tự:
 
 1. Loại model không đạt **≥ 25 fps** trên máy thật. Mọi model được dùng cùng cách tăng tốc ở bước 2 của mục 18.4 (OpenVINO nếu là CPU Intel).
 2. Loại model có sai số đếm **> 10%**, theo ngưỡng nội bộ ở mục 7.7.
 3. Trong các model còn lại, chọn model có **sai số ròng thấp nhất**, xét cả hai nhóm đủ sáng và thiếu sáng.
-4. Nếu sai số chênh nhau không đáng kể (ngưỡng nhóm tự chọn: ≤ 1 điểm %), chọn **bản ổn định hơn**, theo thứ tự YOLOv8n → YOLO11n → YOLO26n.
-5. Nếu cả ba đều trượt bước 1, áp dụng tiếp các bước 3–5 của mục 18.4 cho model có sai số thấp nhất, rồi đo lại.
+4. Nếu sai số chênh nhau không đáng kể (ngưỡng nhóm tự chọn: ≤ 1 điểm %), chọn **bản ổn định hơn**, theo thứ tự YOLOv8n → YOLO11n.
+5. Nếu cả hai đều trượt bước 1, áp dụng tiếp các bước 3–5 của mục 18.4 cho model có sai số thấp nhất, rồi đo lại.
 
-Chỉ model được chọn mới đi tiếp vào GĐ5 (chạy 24 giờ, mục 10). Ghi tên model và phiên bản (`model.version`, ví dụ `swiftlet_v1_yolo26n`) vào config và báo cáo.
+Chỉ model được chọn mới đi tiếp vào GĐ5 (chạy 24 giờ, mục 10). Ghi tên model và phiên bản (`model.version`, ví dụ `swiftlet_v1_yolo11n`) vào config và báo cáo.
 
 ---
 
@@ -1655,7 +1682,7 @@ Checklist:
 - [ ] Clip của ít nhất 4 ngày
 - [ ] 1.500+ ảnh đã gán nhãn, chia tập theo ngày
 - [ ] Model v1 đã train, export ONNX, có số liệu trên tập test
-- [ ] Đã so sánh YOLOv8n / YOLO11n / YOLO26n trên cùng dữ liệu, chọn theo mục 7.9
+- [ ] Đã so sánh YOLOv8n / YOLO11n trên cùng dữ liệu, chọn theo mục 7.9
 - [ ] Sai số đếm trên các clip test đạt ngưỡng, có bảng tách đủ sáng / thiếu sáng
 - [ ] Backend: bản ghi được upsert, `return_rate` tính trên số ròng, `returnRate.job` tạo alert `LOW_RETURN_RATE`, test tích hợp qua
 - [ ] Số đếm 5 phút: pipeline gửi cả ngoài phiên, backend lưu `BirdCountBucket`, có API và biểu đồ
@@ -1681,7 +1708,7 @@ Checklist:
 - ESP32: cài TLS, có giới hạn thời gian và phương án lùi (mục 15.7).
 - Nhà yến lắp cáp quang VNPT có IP public, camera IP có RTSP mua riêng và nối dây vào modem; VPS kéo hình thẳng từ camera (mục 19). Phương án 4G ở mục 17 không còn dùng.
 - Không có máy dư để đặt tại nhà yến → thử chạy model trên cloud trước (mục 18), có 5 cổng kiểm tra; trượt thì quay về đặt máy tại chỗ.
-- Model mặc định: **YOLO26n**, export ONNX `nms=False` (20/10/2026, thay YOLOv8n). Bản cuối chọn sau khi so với YOLOv8n và YOLO11n trên dữ liệu thật (mục 7.9). Cùng kích thước, nhanh hơn khoảng 2 lần trên CPU theo số liệu của Ultralytics (mục 6.1, 18.4). Mục tiêu xử lý **25 khung hình/giây**, bằng tốc độ thật của camera VIGI C320I (mục 19.3).
+- Model: **YOLOv8n hoặc YOLO11n**, chọn theo số đo trên dữ liệu thật (mục 7.9; quyết định 02/11/2026, không train YOLO26n). YOLO26n COCO chỉ là model tạm để thử đường ống (mục 6.1). Mục tiêu xử lý **25 khung hình/giây**, bằng tốc độ thật của camera VIGI C320I (mục 19.3).
 
 ---
 
@@ -2611,13 +2638,37 @@ Số liệu công bố của Ultralytics, đầu vào 640, chạy ONNX trên CPU
 |---|---|---|
 | YOLOv8n | 80,4 ms | khoảng 12 khung hình/giây |
 | YOLO11n | 56,1 ms | khoảng 18 khung hình/giây |
-| **YOLO26n** (`nms=False`) | **38,9 ms** | khoảng 25 khung hình/giây |
+| YOLO26n (không dùng, mục 6.1) | 38,9 ms | khoảng 25 khung hình/giây |
 
-Ngay cả YOLO26n ở đầu vào 640 cũng dùng gần hết 40 ms, chưa tính phần giải mã và nén video. VPS dùng chung còn thường chậm hơn máy đo chuẩn. Vì vậy cấu hình 2 vCPU ở mục 15 không đủ, và phải áp dụng thêm các bước dưới.
+Cả YOLOv8n lẫn YOLO11n ở đầu vào 640 đều quá 40 ms, chưa tính phần giải mã và nén video, và pipeline còn suy luận 2 ô mỗi frame (mục 19.8). VPS dùng chung còn thường chậm hơn máy đo chuẩn. Vì vậy cấu hình 2 vCPU ở mục 15 không đủ, và phải áp dụng thêm các bước dưới.
 
-Cách đạt tốc độ, áp dụng theo thứ tự. Bước nào không tốn tiền làm trước. Dừng ngay khi đạt cổng 1 (mục 19.5):
+**Máy AI node dự kiến có GPU: PC với GTX 1050 Ti (MSI Gaming X, 4 GB), chốt 03/11/2026.** Số liệu CPU ở bảng trên không áp dụng khi chạy trên GPU. Làm bước 0 trước các bước khác:
 
-1. **YOLO26n, export `nms=False`.** Đây là mặc định của plan từ 20/10/2026 (mục 6.1, 7.5).
+0. **Chạy model trên GPU NVIDIA.** Vẫn dùng đúng file `.onnx`.
+   - `config.yaml` mặc định đặt `model.providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]`. Máy cài gói `onnxruntime` CPU sẽ bỏ qua CUDA và chạy CPU, nên cấu hình này an toàn cho mọi máy.
+   - Trong venv của máy có GPU, cài `onnxruntime-gpu[cuda,cudnn]` thay cho `onnxruntime`. CUDA và cuDNN được pip cài kèm, không cần cài CUDA Toolkit. Tạo venv trên ổ D:, vì các gói này nặng 1–2 GB.
+   - `inference.py` gọi `ort.preload_dlls()` để nạp các DLL đó. Thiếu bước này thì ONNX Runtime âm thầm chạy CPU (đã gặp 03/11/2026). Log phải ghi `providers: ['CUDAExecutionProvider', ...]`; nếu phải quay về CPU thì log có dòng cảnh báo "Không dùng được CUDAExecutionProvider".
+   - **Chọn bản theo đời GPU.** [Từ 1.27, `onnxruntime-gpu` trên PyPI dùng CUDA 13; các bản 1.21–1.26 dùng CUDA 12.8](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html). CUDA 13 bỏ Maxwell, Pascal và Volta, nên:
+     - Card từ Turing trở lên (RTX), như máy dev: `onnxruntime-gpu[cuda,cudnn]>=1.30,<1.31`.
+     - GTX 1050 Ti (Pascal, compute capability 6.1): `onnxruntime-gpu[cuda,cudnn]>=1.26,<1.27`.
+   - [NVIDIA đã thông báo](https://www.tomshardware.com/pc-components/gpu-drivers/nvidia-to-axe-maxwell-pascal-and-volta-gpus-with-end-of-driver-support-580-series-drivers-will-be-the-last-to-support-gtx-900-and-1000-cards) nhánh driver 580 là nhánh cuối hỗ trợ Pascal. Giữ máy 1050 Ti ở nhánh 580.
+   - Chưa có nguồn chính thức xác nhận bản 1.26 còn biên dịch cho compute capability 6.1, nên phải thử trên chính máy đó. Nếu CUDA không chạy thì cài `onnxruntime-directml` và đặt `["DmlExecutionProvider", "CPUExecutionProvider"]`. DirectML chạy trên mọi card hỗ trợ DirectX 12, nhưng chậm hơn CUDA.
+   - Card Pascal dòng GeForce không có tensor core và chạy FP16 rất chậm, nên giữ model FP32 (không export `half=True`). Cũng không nên trông vào TensorRT trên card này.
+   - **Số đo trên máy dev, 03/11/2026.** Máy dev là laptop RTX 3050 4 GB với CPU Ryzen 7 6800H. Đo với model `yolo26n` COCO 640, 2 ô mỗi frame, clip `20261022_morning_01` từ giây 420:
+
+     | | GPU (CUDA) | CPU |
+     |---|---|---|
+     | Chỉ model, 1 ô (đầu vào ngẫu nhiên, 100 lượt) | 10,4 ms | 24,9 ms |
+     | Cả vòng lặp (đọc frame, che, 2 ô, ByteTrack, vẽ), không ghi file | **27,9 FPS** | 16,2 FPS |
+     | `tools/track_clip.py`, có ghi mp4 | 22,1 FPS | 13,2 FPS |
+
+     Ngay cả trên GPU, khoảng một nửa thời gian của bước theo dõi vẫn là việc của CPU. Tiền xử lý từng tốn 16 ms mỗi frame vì làm bằng numpy; đổi sang `cv2.dnn.blobFromImage` thì còn khoảng 4 ms. Vì vậy CPU của máy AI node cũng ảnh hưởng tới FPS.
+   - **Chưa có số đo trên 1050 Ti**, nên phải đo cổng 1 trên chính máy đó. Sức tính FP32 của 1050 Ti chỉ bằng khoảng một phần ba RTX 3050. Theo đó, phần chạy model (khoảng 26 ms cho 2 ô trên máy dev) có thể vượt 40 ms; đây là ước lượng, chưa đo. Có thể đo ngay bằng `yolov8n.onnx` và `yolo11n.onnx` bản COCO, không cần chờ model tự train: tốc độ gần như chỉ phụ thuộc kiến trúc, đầu ra 1 class hay 80 class chênh lệch không đáng kể.
+   - Nếu GPU vẫn chưa đạt: chạy 2 ô trong một lần gọi model (batch 2). Phải export lại với batch 2 và sửa `infer_tiles`. Chưa làm, chỉ làm khi đo thấy thiếu. Nếu vẫn thiếu thì áp dụng các bước dưới, nhất là bước 3 (giảm đầu vào xuống 480).
+
+Các bước 1–5 dưới đây dành cho máy chỉ có CPU, hoặc khi GPU vẫn chưa đạt cổng 1. Cách đạt tốc độ, áp dụng theo thứ tự. Bước nào không tốn tiền làm trước. Dừng ngay khi đạt cổng 1 (mục 19.5):
+
+1. **Ưu tiên YOLO11n nếu sai số đếm ngang YOLOv8n** (mục 7.9): nhanh hơn khoảng 1,4 lần trên CPU theo số liệu của Ultralytics.
 2. **CPU Intel thì dùng OpenVINO.** Áp dụng cho VPS chạy Xeon, hoặc laptop/PC i5 cũ ở phương án lùi. Cài `onnxruntime-openvino` thay cho `onnxruntime`, rồi đặt `model.providers: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]`. Vẫn dùng đúng file `.onnx` cũ, không phải sửa code. Ultralytics công bố OpenVINO nhanh hơn tới khoảng 3 lần trên CPU. Mức tăng khi chạy qua ONNX Runtime thì phải tự đo. Xem dòng `providers:` trong log để chắc OpenVINO đã được dùng.
 3. **Giảm đầu vào xuống 480 hoặc 416** trên vùng ROI hẹp. Khối lượng tính giảm khoảng 1,8 lần (480) hoặc 2,4 lần (416). Phải train và export lại với cùng `imgsz`, đổi `model.input_size` cho khớp, rồi kiểm tra chim vẫn ≥ khoảng 15 px trong ảnh đầu vào (cổng 5) và sai số đếm vẫn đạt (cổng 2).
 4. Dùng VPS **4 vCPU loại dedicated, 8 GB RAM**. Nếu đặt máy tại chỗ thì cần CPU từ 4 nhân.

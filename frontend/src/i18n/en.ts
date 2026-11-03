@@ -487,6 +487,11 @@ const en: Record<string, string> = {
   'Lưu ngưỡng mặc định thất bại': 'Failed to save default thresholds',
   'Đã khôi phục về mặc định gốc': 'Restored to factory default',
   'Khôi phục mặc định gốc thất bại': 'Failed to restore factory default',
+  // Chi tiết cảnh báo (G-05: ALERT-FR-012, BR-34; THREAT-FR-012)
+  '{{metric}} {{value}} · vượt ngưỡng trên {{limit}}': '{{metric}} {{value}} · above the {{limit}} limit',
+  '{{metric}} {{value}} · dưới ngưỡng {{limit}}': '{{metric}} {{value}} · below the {{limit}} limit',
+  'liên tục từ {{time}}': 'continuously since {{time}}',
+  'Lý do khởi động lại: {{reason}}': 'Restart reason: {{reason}}',
 }
 
 export default en

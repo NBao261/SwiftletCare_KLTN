@@ -174,6 +174,16 @@ describe('alert log row', () => {
     expect(row).toMatchObject({ deviceName: 'node_001', locationName: 'Nhà chính | Tầng 1', sensorKind: 'temperature', breach: { value: 33.5, limit: 31, unit: '°C', sign: '<' }, group: 'P1' })
   })
 
+  it('prefers the dwell details over the breach metadata (G-05)', () => {
+    const row = buildAlertRow({
+      ...base,
+      // metadata có cả chỉ số chưa đủ thời gian chờ; details là chỉ số cảnh báo thật sự báo
+      metadata: { breaches: [{ metric: 'humidity', value: 60, limit: 70, direction: 'below' }, { metric: 'temperature', value: 35.2, limit: 33, direction: 'above' }] },
+      details: { metric: 'temperature', observed: 35.2, threshold: 33, direction: 'above', started_at: '2026-10-10T04:48:00Z' },
+    }, 'node_001', 'Tầng 1')
+    expect(row).toMatchObject({ sensorKind: 'temperature', breach: { value: 35.2, limit: 33, unit: '°C', sign: '<' } })
+  })
+
   it('shows a dash when the alert has no breach data', () => {
     const row = buildAlertRow({ ...base, type: 'SENSOR_FAULT' }, 'node_001', 'Tầng 1')
     expect(row).toMatchObject({ sensorKind: 'env', breach: undefined })

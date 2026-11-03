@@ -1,5 +1,6 @@
 // SwiftletCare utility functions
 import { intlLocale, t } from '@/i18n'
+import type { Alert } from '@/types'
 
 /** Mức tín hiệu Wi-Fi theo RSSI (dBm) — chung cho bảng thiết bị Farm Owner (key i18n `wifi.*`) và Admin */
 export function wifiQuality(rssi: number | undefined): 'excellent' | 'good' | 'fair' | 'weak' | undefined {
@@ -77,6 +78,55 @@ export function formatDuration(ms: number): string {
 /** Format sensor value with unit */
 export const formatSensor = (value: number | undefined, unit: string, decimals = 1) =>
   value !== undefined ? `${value.toFixed(decimals)} ${unit}` : '--'
+
+/** Đơn vị theo chỉ số môi trường của cảnh báo (FE_Design §6: đơn vị không dịch) */
+export const ALERT_METRIC_UNIT: Record<string, string> = {
+  temperature: '°C',
+  humidity: '%',
+  light_lux: 'lux',
+  nh3_ppm: 'ppm',
+  co2_ppm: 'ppm',
+}
+
+export interface AlertBreach {
+  metric: string
+  value: number
+  limit: number
+  unit: string
+  direction: 'above' | 'below'
+  startedAt?: string
+}
+
+/**
+ * Chỉ số cảnh báo đang báo — dùng chung cho Dashboard Farm Owner và trang /alerts. Ưu tiên `details` (G-05,
+ * ALERT-FR-012: chỉ số đã đủ thời gian chờ BR-34); cảnh báo cũ không có `details` thì lấy chỉ số đầu của
+ * `metadata.breaches` (mọi chỉ số đang vượt, kể cả chưa đủ thời gian chờ).
+ */
+export function alertBreach(alert: Pick<Alert, 'details' | 'metadata'>): AlertBreach | undefined {
+  const details = alert.details
+  if (details?.metric && typeof details.observed === 'number' && typeof details.threshold === 'number') {
+    return {
+      metric: details.metric,
+      value: details.observed,
+      limit: details.threshold,
+      unit: ALERT_METRIC_UNIT[details.metric] ?? '',
+      direction: details.direction ?? 'above',
+      startedAt: details.started_at,
+    }
+  }
+  const breaches = alert.metadata?.breaches
+  if (!Array.isArray(breaches)) return undefined
+  const first = breaches.find((item): item is { metric: string; value: number; limit: number; direction?: string } =>
+    typeof item === 'object' && item !== null && typeof item.metric === 'string' && typeof item.value === 'number' && typeof item.limit === 'number')
+  if (!first) return undefined
+  return {
+    metric: first.metric,
+    value: first.value,
+    limit: first.limit,
+    unit: ALERT_METRIC_UNIT[first.metric] ?? '',
+    direction: first.direction === 'below' ? 'below' : 'above',
+  }
+}
 
 /** Format return rate */
 export const formatReturnRate = (rate: number) => `${rate.toFixed(1)}%`
