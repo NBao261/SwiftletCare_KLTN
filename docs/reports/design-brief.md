@@ -6,13 +6,13 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 
 | Field | Value |
 | --- | --- |
-| Project code | `[TEAM: approved project code]` |
+| Project code | FA26SE158 |
 | Project name | SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
-| Supervisor | `[TEAM: supervisor name]` |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Repository link (tag review-2) | https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2 |
 | Version | 1.1 (registration v3, BM03 1.1, SRS 3.1.0, SDD 1.1.0) |
-| Date | 26/10/2026 |
+| Date | 03/11/2026 |
 
 ## 1. Scope
 
@@ -62,12 +62,11 @@ Code against SRS and SDD, grouped by owner; each gap in Project Tracking §6.
 | ID | Gap | Location | Plan | Owner | Due |
 | --- | --- | --- | --- | --- | --- |
 | G-14 | Data model behind SDD 6.1 (user status, audit source, harvest type and photo, alert details) | backend | SDD 6.1–6.4 | Kiệt | It. 2 |
-| G-02, 09, 10, 16 | Public sign-up open (removed before the tag); QR setup screens; FCM only logged; mobile a scaffold | backend, web, mobile | AUTH-FR-005c; AD-10; ALERT-FR-002; SDD 5.4 | Kiệt, Nhi, Bảo | Tag; It. 2–3 |
-| G-03, 04, 15 | `DISMISSED`, owner fallback and notices, evidence, review items, proposals; expert screens on mock data | backend, web | SM-01, 10, 11 | Tuấn, Kiệt | It. 2 |
-| G-05, 06 | Breach without dwell; one override expiry per controller, no pump limit or confirmation | backend, firmware, web | BR-34, BR-08, 20, 35 | Kiệt, Len | It. 2 |
+| G-02, 09, 10, 16 | Administrator-created Farm Owner, real e-mail; QR setup screens; FCM only logged; mobile screens partly built | backend, web, mobile | AUTH-FR-005c; AD-10; ALERT-FR-002; SDD 5.4 | Kiệt, Nhi, Len | It. 2–3 |
+| G-06 | One override expiry per controller; no pump limit, confirmation or command freshness (PR #124 open) | backend, firmware, web, mobile | BR-08, 20, 35 | Kiệt, Len | It. 2 |
 | G-07, 08 | Zone topics, shared credential, QoS 0, no TLS on the ESP32; no configuration version | firmware, backend, AI node | SDD D3, 7.2; SM-12 | Bảo | It. 2 |
 | G-11 | Daily status, ratings with snapshot, house reports, PDF/CSV, weather, evaluation | backend, web, mobile | SM-17, AD-14 | Nhi, Kiệt | It. 2–3 |
-| G-12, 13 | No trained model; sessions from buckets; ring editor; current sensing | AI node, backend, web, board | VISION-FR-008…020; THREAT-FR-014 | Bảo | It. 2–3 |
+| G-12, 13 | Model not yet evaluated on held-out clips; sessions from buckets; ring editor; current sensing | AI node, backend, web, board | VISION-FR-008…020; THREAT-FR-014 | Bảo | It. 2–3 |
 | G-17 | Staging, TLS proxy, demo seed | deploy | SDD 3.4, 11 | Bảo | It. 2 |
 
 ## 6. Proposed Mandatory Features
@@ -115,10 +114,10 @@ FO = Farm Owner, DE = Domain Expert (Farm Owner if none, BR-22); auto = done by 
 | Member | Role | Owned parts (2–3) | Main workflow owned | Key decisions / PRs |
 | --- | --- | --- | --- | --- |
 | Nguyễn Chí Bảo | Leader; IoT, AI | Firmware, MQTT; AI pipeline; staging, push, documents | WF-01, 03, 06 | D1, D2; #88 |
-| Trần Minh Kiệt | Backend, firmware | Devices, accounts; alerts, expert; daily health | WF-04, 10 | D4; `[TEAM]` |
-| Nguyễn Vũ Len | Web, mobile: Owner | Farm Owner screens; E2E | WF-02, 05, 09 | `[TEAM]` |
-| Nguyễn Thị Yến Nhi | Web, mobile: Admin | Admin, daily status screens; mobile base; E2E | WF-11 | D5; `[TEAM]` |
-| Thái Minh Tuấn | Web, mobile: Expert | Expert, Technician screens; E2E | WF-07, 08 | D3; #91 |
+| Trần Minh Kiệt | Backend, firmware | Devices, accounts; alerts, expert; daily health | WF-04, 10 | D4; #113, #116 |
+| Nguyễn Vũ Len | Mobile: Farm Owner | Farm Owner mobile app; E2E | WF-02, 09 | #123, #93 |
+| Nguyễn Thị Yến Nhi | Web: Owner, Admin | Farm Owner web; Admin; E2E | WF-05, 11 | D5; #26, #72 |
+| Thái Minh Tuấn | Web, mobile: Expert | Expert, Technician screens; E2E | WF-07, 08 | D3; #91, #125 |
 
 ---
 
@@ -134,7 +133,7 @@ Actors are people and external services only; the controller, the AI node and th
 | WF-02 | Air-quality monitoring (MF-02, AD-02) | Farm Owner, Domain Expert, Telegram, FCM | NH3 or CO2 above the zone limit | Alert raised for assessment; fan not driven | F-01, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Nguyễn Vũ Len |
 | WF-03 | Offline operation and recovery (MF-03, AD-03) | Farm Owner | Internet lost, hang or power loss | Control continues; buffered data uploaded; restart reported | F-04, F-07, F-08 | Device: `ONLINE` → `OFFLINE` → `ONLINE`; `NODE_OFFLINE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
 | WF-04 | Equipment fault handling (MF-04, AD-04) | Farm Owner, Technician, Telegram, FCM | Misting without humidity rise, sensor fault, load not drawing current | Loop in a safe state; alert raised, sent again until acknowledged | F-05, F-06, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Trần Minh Kiệt |
-| WF-05 | Early warning by forecast (MF-05, AD-05) | Farm Owner, Domain Expert | Every 10 min | Early warning with the expected crossing time; verdict recorded | F-09, F-07, F-13 | Nguyễn Vũ Len | Nguyễn Thị Yến Nhi |
+| WF-05 | Early warning by forecast (MF-05, AD-05) | Farm Owner, Domain Expert | Every 10 min | Early warning with the expected crossing time; verdict recorded | F-09, F-07, F-13 | Nguyễn Thị Yến Nhi | Nguyễn Thị Yến Nhi |
 | WF-06 | Bird counting session (MF-06, AD-06) | Farm Owner, Domain Expert | Morning and evening sessions | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11, F-07 | AI node: `PENDING` → `ONLINE`; `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
 | WF-07 | Abnormal noise (MF-07, AD-07) | Domain Expert, Farm Owner | Noise above the hourly baseline | Indication shown with bird counts; validated by the expert | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED` (verdict `REJECTED`) | Thái Minh Tuấn |
 | WF-08 | Expert validation and tuning (MF-08, AD-08) | Domain Expert, Farm Owner | Owner change, suggestion, health report | Changes reviewed, suggestion applied, conclusion delivered, owner notified | F-03, F-14, F-15, F-16 | Review item: `PENDING_REVIEW` → `ADJUSTED`; proposal: `PROPOSED` → `APPROVED`; report: `GENERATED` → `CONCLUDED` | Thái Minh Tuấn |
@@ -156,8 +155,8 @@ Run on staging (SDD Section 3.4) with data loaded by the demo seed script (`docs
 | DS-06 | WF-03 | Exception | Controller online | Cut the controller's power and restore it | Heartbeat back within 30 s; `UNEXPECTED_RESTART` with reset reason `POWER_ON` | Nguyễn Chí Bảo |
 | DS-07 | WF-04 | Main | Humidity below range; water to the pump closed | Let misting run | After 300 s without rise automatic misting stops and one `MISTING_INEFFECTIVE` is raised; owner acknowledges | Trần Minh Kiệt |
 | DS-08 | WF-04 | Exception | Controller running | Unplug the temperature-humidity sensor | `SENSOR_FAULT` raised; reading marked stale; after 2 cycles without temperature and humidity, misting and fan are 0 | Trần Minh Kiệt |
-| DS-09 | WF-05 | Main | Seeded 6 h of humidity falling toward the threshold | Run the forecast job | `FORECAST_BREACH` with the expected crossing time; expert confirms it | Nguyễn Vũ Len |
-| DS-10 | WF-05 | Exception | Zone with less than 2 h of data | Open the forecast | "Insufficient data" shown; no alert | Nguyễn Vũ Len |
+| DS-09 | WF-05 | Main | Seeded 6 h of humidity falling toward the threshold | Run the forecast job | `FORECAST_BREACH` with the expected crossing time; expert confirms it | Nguyễn Thị Yến Nhi |
+| DS-10 | WF-05 | Exception | Zone with less than 2 h of data | Open the forecast | "Insufficient data" shown; no alert | Nguyễn Thị Yến Nhi |
 | DS-11 | WF-06 | Main | AI node online; seeded 7 days of counts | Play a recorded entrance clip through the AI node during a session window | Counts of the house rise on the page; live stream shows boxes; next return-rate check raises `LOW_RETURN_RATE` for the seeded drop | Nguyễn Chí Bảo |
 | DS-12 | WF-06 | Exception | Session in progress | Stop the AI node | `EDGE_AI_DEGRADED` after 90 s; the day is incomplete and not evaluated | Nguyễn Chí Bảo |
 | DS-13 | WF-07 | Main | Speaker off; seeded hourly baseline | Play loud noise near the sensor for the sustain period | `NOISE_ANOMALY` shown with bird counts; expert rejects with a note; status `DISMISSED`, owner notified | Thái Minh Tuấn |

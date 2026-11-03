@@ -4,13 +4,13 @@
 
 | Field | Value |
 | --- | --- |
-| Project code | `[TEAM: approved project code]` |
+| Project code | FA26SE158 |
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
-| Supervisor | `[TEAM: supervisor name]` |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Duration | July 2026 – December 2026 |
 | Document version | 1.0.0 (Review 2) |
-| Date | 23/10/2026 |
+| Date | 03/11/2026 |
 | Scope baseline | Registration form v3 (`docs/reports/registration-v3.md`) with Record of Changes (`bm03-record-of-changes.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -32,8 +32,8 @@
 | --- | --- | --- |
 | Nguyễn Chí Bảo | SE183383 | Leader; firmware, AI pipeline, backend core; documents |
 | Trần Minh Kiệt | SE182180 | Backend (devices, accounts, alerts, expert module, daily health); firmware self-diagnosis |
-| Nguyễn Vũ Len | SE182055 | Web and mobile application – Farm Owner |
-| Nguyễn Thị Yến Nhi | SE184223 | Web and mobile application – Administrator, daily health and reports; mobile sign-in, push and QR setup |
+| Nguyễn Vũ Len | SE182055 | Mobile application – Farm Owner |
+| Nguyễn Thị Yến Nhi | SE184223 | Web application – Farm Owner (with analytics, daily health and reports) and Administrator |
 | Thái Minh Tuấn | SE181850 | Web and mobile application – Domain Expert; Technician screens |
 
 Responsibilities in detail are in Report 2, Section 4, and in the Ownership Map of the Design Brief.
@@ -50,7 +50,7 @@ A swiftlet house has nobody inside, and owners usually visit only every few days
 
 ## 3. Existing Solutions
 
-The team's market survey `[TEAM: add the named products and prices found in the survey, with links]` groups what farmers use today into four kinds:
+What farmers use today falls into four kinds:
 
 | Kind | What it does | What it lacks for this problem |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ The team's market survey `[TEAM: add the named products and prices found in the 
 
 ## 4. Business Opportunity
 
-Swiftlet farming is a significant agricultural business in Southeast Asia, and Vietnam has a large number of house farms `[TEAM: cite a figure with its source]`. A house is a large investment whose return depends on keeping the flock, yet it is supervised by occasional visits. A low-cost system that keeps the environment in range by itself, reports equipment faults at once, shows the flock's daily trend and asks an experienced farmer to confirm what it infers gives the owner:
+Swiftlet farming is a significant agricultural business in Southeast Asia, and Vietnam has a large number of house farms: about 24,000 houses in more than 43 provinces, harvesting some 120–150 tonnes of nests a year (Báo Nông nghiệp Việt Nam, 3 January 2024; `docs/evidence-register.md`, TL-492). A house is a large investment whose return depends on keeping the flock, yet it is supervised by occasional visits. A low-cost system that keeps the environment in range by itself, reports equipment faults at once, shows the flock's daily trend and asks an experienced farmer to confirm what it infers gives the owner:
 
 - fewer losses from unnoticed drift and failed equipment;
 - an objective daily indicator of the flock (return rate) and of the house (daily health status);
@@ -127,5 +127,6 @@ Supporting flows: remote device maintenance by the Technician (SF-02), accounts 
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.2 | 03/11/2026 | Farm Owner screens split by platform: Len the mobile app, Nhi the web with the Administrator web |
 | 1.0.1 | 27/10/2026 | Team roles re-split: backend and firmware for Bảo and Kiệt, web and mobile per role for Len, Nhi and Tuấn |
 | 1.0.0 | 23/10/2026 | First version for Review 2, written from the registration form v3 |

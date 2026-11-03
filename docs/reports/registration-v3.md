@@ -6,7 +6,7 @@
 | --- | --- |
 | Duration | July 2026 – December 2026 |
 | Profession | Software Engineering |
-| Supervisor | `[TEAM: supervisor name]` |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Current version | v2 (after Review 1) |
 | Proposed version | v3 (Review 2) |
 

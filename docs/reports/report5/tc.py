@@ -73,7 +73,7 @@ TC=[
 ('TC-F07-01','F-07','Open alert of a type for a zone and device','Ingest the same incident again','Same type, zone, device','No new alert; the open one is bumped (occurrence count)',
  (J,I+'deviceMqttContract.test.ts','folds a repeat into the open alert however old it is')),
 ('TC-F07-02','F-07','Zone with `humidity_min` = 80','Ingest humidity 75 % for 9 min, then for 10 min','1 reading per second','No alert after 9 min; after 10 min one `THRESHOLD_BREACH` with metric, observed value, threshold, direction and start time',
- (T,'backend jest `thresholdBreach.test.ts` (G-05)')),
+ (J,I+'thresholdBreach.test.ts','9 phút không có cảnh báo, 10 phút có 1 cảnh báo mang chi tiết')),
 ('TC-F07-03','F-07','Open alert; Domain Expert signed in','PUT acknowledge as the expert','Note text','403; status unchanged',
  (J,I+'domainExpert.test.ts','không xác nhận (acknowledge) cảnh báo')),
 # F-08
