@@ -264,13 +264,18 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-05 — Vượt ngưỡng có thời gian chờ (P1) — Kiệt; Len hiện chi tiết cảnh báo ở màn Farm Owner
 
-- [ ] `telemetry.service.ts`:
+- [x] `telemetry.service.ts`: *(Kiệt, 31/10, `ea27558` spec + `aded604` backend, nhánh `feat/g05-breach-dwell` tạo từ nhánh G-04; quãng chờ tính ở `utils/breachDwell.util.ts`; số đo thiếu không bắt đầu, không cắt quãng chờ; cảnh báo đang mở được gia hạn khi chỉ số còn ngoài ngưỡng để BR-16 đóng đúng; `details` có cả `reset_reason` của `UNEXPECTED_RESTART`)*
   - giữ thời điểm bắt đầu vượt ngưỡng theo `(node, metric, direction)`;
   - chỉ tạo `THRESHOLD_BREACH` khi vượt liên tục `BREACH_DWELL_MS`: 10 phút cho nhiệt độ/độ ẩm, 5 phút cho ánh sáng/NH3/CO2;
   - mẫu stale không tính;
   - `details = {metric, observed, threshold, direction, started_at}`.
-- [ ] Test `thresholdBreach.test.ts` (TC-F07-02): 9 phút không có cảnh báo, 10 phút có 1 cảnh báo.
-- [ ] Đóng defect DF-6.
+- [x] Test `thresholdBreach.test.ts` (TC-F07-02): 9 phút không có cảnh báo, 10 phút có 1 cảnh báo. *(kèm `tests/unit/utils/breachDwell.util.test.ts`)*
+- [x] Đóng defect DF-6. *(Project Tracking §5: Closed 31/10)*
+- [x] **Len — web:** hiện chi tiết cảnh báo vượt ngưỡng ở màn Farm Owner. *(Nhi làm thay theo nhờ của Len, 03/11, `1d5832f`, `df863c3`, `3b62706`, nhánh `feat/g05-breach-dwell`: `alerts.details` vào kiểu `Alert`; `alertBreach()` ở `lib/helpers.ts` ưu tiên `details`, cảnh báo cũ lấy `metadata.breaches`; bảng nhật ký cảnh báo ở Dashboard dùng đúng chỉ số đã đủ thời gian chờ, cột ngưỡng ghi "tối đa / tối thiểu" thay cho dấu `<`; trang `/alerts` hiện "Nhiệt độ 35,2 °C · vượt ngưỡng trên 33 °C · liên tục từ …" và lý do khởi động lại; có sửa `dashboardMetrics.ts`, `SensorAlertLogTable.tsx`, `dashboard.i18n.ts` của Len — Len duyệt, `TechnicianAlertsPage.tsx` của Tuấn — Tuấn duyệt)*
+- [x] Sửa theo review PR #122 *(Kiệt, 02/11, `779e994` spec + `35c03c6` backend; mục chặn merge là hằng số của G-03, đã sửa ở #117)*:
+  - thiết bị im lặng quá 30 giây (ngưỡng mất kết nối BR-10) thì quãng chờ đếm lại từ mẫu tiếp theo (BR-34, Report 3 ALERT-FR-012);
+  - cảnh báo đang mở chỉ được giữ sống bởi chính chỉ số nó báo (`metadata.metrics`), chỉ số khác vừa vượt không giữ (BR-16);
+  - quãng chờ không xoá khi gỡ node hoặc đổi ngưỡng: rò nhỏ, tự hết, Bảo đã chấp nhận.
 
 ### G-06 — Can thiệp tay (P1) — Kiệt (backend), Bảo (firmware, trong G-07), Len (web, mobile)
 

@@ -15,6 +15,11 @@ export interface IAlert extends Document {
   message: string
   snapshot_url?: string
   metadata?: Record<string, unknown>
+  /**
+   * Report 4 §6.1 — chi tiết của sự cố: THRESHOLD_BREACH {metric, observed, threshold, direction, started_at}
+   * (ALERT-FR-012); UNEXPECTED_RESTART {reset_reason} (THREAT-FR-012). `metadata` giữ cho client cũ
+   */
+  details?: Record<string, unknown>
   status: AlertStatus
   /** SM-01 — trạng thái trước khi bị bác bỏ (`DISMISSED`); đổi kết luận sang CONFIRMED thì trở về đây */
   previous_status?: Extract<AlertStatus, 'ACTIVE' | 'ACKNOWLEDGED'>
@@ -58,6 +63,7 @@ const alertSchema = new Schema<IAlert>(
     message:     { type: String, required: true },
     snapshot_url:        { type: String },
     metadata:            { type: Schema.Types.Mixed },
+    details:             { type: Schema.Types.Mixed },
     status:              { type: String, enum: ['ACTIVE','ACKNOWLEDGED','DISMISSED','RESOLVED'] satisfies AlertStatus[], default: 'ACTIVE' },
     previous_status:     { type: String, enum: ['ACTIVE','ACKNOWLEDGED'] satisfies AlertStatus[] },
     created_at:          { type: Date, default: Date.now },
