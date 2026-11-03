@@ -26,6 +26,7 @@ const DomainExpertAlertVerdictsPage = lazy(() => import('@/pages/domain-expert/D
 const DomainExpertZoneTuningPage = lazy(() => import('@/pages/domain-expert/DomainExpertZoneTuningPage'));
 const DomainExpertReportsPage = lazy(() => import('@/pages/domain-expert/DomainExpertReportsPage'));
 const DomainExpertHistoryPage = lazy(() => import('@/pages/domain-expert/DomainExpertHistoryPage'));
+const DomainExpertReviewsPage = lazy(() => import('@/pages/domain-expert/DomainExpertReviewsPage'));
 
 // ── Redirect helpers giữ nguyên query parameters (ví dụ: ?alertId=...) ─────────
 function RedirectToVerdicts() {
@@ -41,6 +42,11 @@ function RedirectToReports() {
 function RedirectToTuning() {
   const location = useLocation();
   return <Navigate to={`/domain-expert/tuning${location.search}`} replace />;
+}
+
+function RedirectToReviews() {
+  const location = useLocation();
+  return <Navigate to={`/domain-expert/reviews${location.search}`} replace />;
 }
 
 /**
@@ -80,6 +86,9 @@ export const domainExpertRoutes = (
       {/* Ngưỡng & Hệ số mờ + Tham số phát hiện */}
       <Route path="tuning" element={<DomainExpertZoneTuningPage />} />
 
+      {/* Duyệt tham số & Đề xuất hệ số mờ (G-04) */}
+      <Route path="reviews" element={<DomainExpertReviewsPage />} />
+
       {/* Báo cáo sức khỏe & Kết luận */}
       <Route path="reports" element={<DomainExpertReportsPage />} />
 
@@ -96,6 +105,7 @@ export const domainExpertRoutes = (
     <Route path="expert/alerts" element={<RedirectToVerdicts />} />
     <Route path="expert/reports" element={<RedirectToReports />} />
     <Route path="expert/tuning" element={<RedirectToTuning />} />
+    <Route path="expert/reviews" element={<RedirectToReviews />} />
     <Route path="expert/dashboard" element={<Navigate to="/domain-expert/queue" replace />} />
     <Route path="expert" element={<Navigate to="/domain-expert/queue" replace />} />
     <Route path="expert/*" element={<Navigate to="/domain-expert/queue" replace />} />

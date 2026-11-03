@@ -13,7 +13,8 @@
  * Bucket: pages/domain-expert/ — §12.4.
  */
 import { useState, useCallback } from 'react';
-import { Check } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Check, Sparkles, ArrowRight } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import ThresholdColumn from '@/components/features/domain-expert/tuning/ThresholdColumn';
 import FuzzyTuningColumn from '@/components/features/domain-expert/tuning/FuzzyTuningColumn';
@@ -25,6 +26,7 @@ import {
   useExpertDetectionTuning, useUpdateDetectionTuning,
 } from '@/hooks/domain-expert/useZoneTuning';
 import { useExpertVerdictStats } from '@/hooks/domain-expert/useExpertAlerts';
+import { useCoefficientProposals } from '@/hooks/domain-expert/useExpertReviews';
 import type { ExpertFuzzyTuning } from '@/types/expert.types';
 
 function Toast({ show, message }: { show: boolean; message: string }) {
@@ -38,7 +40,7 @@ function Toast({ show, message }: { show: boolean; message: string }) {
 }
 
 export default function DomainExpertZoneTuningPage() {
-  const { selectedZoneId } = useZoneStore();
+  const { selectedFarmId, selectedZoneId } = useZoneStore();
   const zoneId = selectedZoneId ?? undefined;
 
   // Data hooks — nguồn từ domain-expert/
@@ -47,6 +49,13 @@ export default function DomainExpertZoneTuningPage() {
   const aiSuggestion = useExpertAiSuggestion(zoneId);
   const detection = useExpertDetectionTuning(zoneId);
   const { data: verdictStats = [] } = useExpertVerdictStats(undefined, zoneId);
+
+  // Đề xuất hệ số mờ đang chờ duyệt của zone (EXPERT-FR-011)
+  const { total: pendingProposalsCount = 0 } = useCoefficientProposals({
+    farmId: selectedFarmId ?? '',
+    zoneId,
+    status: 'PROPOSED',
+  });
 
   // Mutation hooks
   const updateThresholds = useUpdateThresholds(zoneId);
@@ -74,6 +83,25 @@ export default function DomainExpertZoneTuningPage() {
   return (
     <div className="relative w-full flex-1 flex flex-col gap-6">
       <div className="w-full max-w-screen-xl mx-auto space-y-6">
+
+        {/* Banner thông báo nếu zone đang có đề xuất hệ số mờ chờ duyệt (G-04) */}
+        {pendingProposalsCount > 0 && (
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                Khu vực này đang có <strong>{pendingProposalsCount} đề xuất hệ số mờ</strong> từ Chủ trang trại chờ chuyên gia phê duyệt.
+              </span>
+            </div>
+            <Link
+              to="/domain-expert/reviews"
+              className="flex items-center gap-1 font-semibold text-amber-800 hover:text-amber-950 underline px-3 py-1 rounded-lg bg-amber-100/60 hover:bg-amber-100 transition-colors"
+            >
+              <span>Xem và duyệt</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
 
         {/* TẦNG 1: Tham số điều khiển mờ (Fuzzy Logic) & Gợi ý AI */}
         <FuzzyTuningColumn

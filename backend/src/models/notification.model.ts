@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-export type NotificationRefKind = 'alert' | 'health_report'
+export type NotificationRefKind = 'alert' | 'health_report' | 'expert_decision' | 'parameter_review' | 'coefficient_proposal'
 
 /**
  * Hộp thông báo trong ứng dụng (EXPERT-FR-006/007, SRS §3.2 "thông báo trong ứng dụng").
@@ -27,7 +27,7 @@ const notificationSchema = new Schema<INotification>(
     body:    { type: String, required: true },
     ref: {
       type: {
-        kind: { type: String, enum: ['alert', 'health_report'] satisfies NotificationRefKind[], required: true },
+        kind: { type: String, enum: ['alert', 'health_report', 'expert_decision', 'parameter_review', 'coefficient_proposal'] satisfies NotificationRefKind[], required: true },
         id:   { type: Schema.Types.ObjectId, required: true },
         _id: false,
       },

@@ -1,4 +1,4 @@
-import { ClipboardList, ShieldCheck, SlidersHorizontal, FileText, History } from 'lucide-react';
+import { ClipboardList, ShieldCheck, SlidersHorizontal, FileCheck, FileText, History } from 'lucide-react';
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 import { IconSettings } from '@/components/ui/icons';
@@ -16,6 +16,7 @@ import { BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, HouseIcon, SquaresFourIcon
  *   /domain-expert/queue          ← Trang chủ: việc cần xử lý
  *   /domain-expert/alert-verdicts ← Thẩm định cảnh báo AI
  *   /domain-expert/tuning         ← Ngưỡng & Hệ số mờ
+ *   /domain-expert/reviews        ← Duyệt thay đổi tham số & Đề xuất hệ số mờ (G-04)
  *   /domain-expert/reports        ← Báo cáo & Kết luận
  *   /domain-expert/history        ← Lịch sử hoạt động
  *
@@ -31,6 +32,7 @@ const menuSections: MenuSection[] = [
       { label: 'Hàng đợi việc', path: '/domain-expert/queue', icon: ClipboardList },
       { label: 'Thẩm định Cảnh báo', path: '/domain-expert/alert-verdicts', icon: ShieldCheck },
       { label: 'Ngưỡng & Hệ số mờ', path: '/domain-expert/tuning', icon: SlidersHorizontal },
+      { label: 'Duyệt & Đề xuất', path: '/domain-expert/reviews', icon: FileCheck },
       { label: 'Báo cáo & Kết luận', path: '/domain-expert/reports', icon: FileText },
       { label: 'Lịch sử hoạt động', path: '/domain-expert/history', icon: History },
     ],

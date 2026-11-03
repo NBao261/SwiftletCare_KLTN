@@ -1,5 +1,6 @@
 import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
+import { User } from '@/models/user.model'
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
@@ -36,6 +37,33 @@ function canAccess(farm: FarmScope, user: CurrentUser, scope: AccessScope): bool
  */
 export function isPrimaryOwner(farm: Pick<IFarm, 'owner_id'>, user: CurrentUser): boolean {
   return String(farm.owner_id) === user._id
+}
+
+/**
+ * BR-22 — Domain Expert của farm còn hoạt động. Chuyên gia bị khoá vẫn nằm trong `members` nhưng không
+ * quyết định được, nên không tính: farm chỉ còn chuyên gia bị khoá thì Farm Owner làm thay.
+ */
+export async function activeExpertIds(farm: Pick<IFarm, 'members'>): Promise<string[]> {
+  const ids = farm.members.filter(m => m.role === 'DOMAIN_EXPERT').map(m => m.user_id)
+  if (ids.length === 0) return []
+  const active = await User.find({ _id: { $in: ids }, is_active: true }).select('_id').lean()
+  return active.map(u => String(u._id))
+}
+
+/** BR-22 — farm có Domain Expert khi có ít nhất 1 chuyên gia còn hoạt động */
+export async function farmHasActiveExpert(farm: Pick<IFarm, 'members'>): Promise<boolean> {
+  return (await activeExpertIds(farm)).length > 0
+}
+
+/**
+ * BR-22 — quyết định của chuyên gia (kết luận cảnh báo suy luận, tham số phát hiện, mức giảm tỷ lệ chim
+ * về, vòng đếm): Domain Expert của farm luôn làm được; Farm Owner chỉ làm thay khi farm chưa có chuyên
+ * gia còn hoạt động. Gọi SAU bước kiểm quyền trên farm (assert*Access).
+ */
+export async function assertExpertDecision(farm: Pick<IFarm, 'members'>, user: CurrentUser): Promise<void> {
+  if (user.role === 'DOMAIN_EXPERT') return
+  if (user.role === 'FARM_OWNER' && !(await farmHasActiveExpert(farm))) return
+  throw ForbiddenError('Farm đã có chuyên gia — quyết định này do Domain Expert thực hiện')
 }
 
 // ── Lookup + check gộp — nguồn duy nhất, tránh mỗi service tự viết lại ──────

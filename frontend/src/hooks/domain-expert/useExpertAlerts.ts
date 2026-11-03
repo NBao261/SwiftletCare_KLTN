@@ -101,10 +101,53 @@ export function useSubmitAlertVerdict() {
   return useMutation({
     mutationFn: ({ alertId, result, note }: { alertId: string; result: 'CONFIRMED' | 'REJECTED'; note?: string }) =>
       expertService.setAlertVerdict(alertId, result, note),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       void queryClient.invalidateQueries({ queryKey: ['expert', 'all-alerts'] })
       void queryClient.invalidateQueries({ queryKey: ['expert', 'pending-alerts'] })
       void queryClient.invalidateQueries({ queryKey: ['expert', 'verdict-stats'] })
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'evidence', vars.alertId] })
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'activity'] })
     },
+  })
+}
+
+// ── 5. Gói bằng chứng cảnh báo suy luận (ALERT-FR-014) ────────────────────────
+export function useAlertEvidence(alertId?: string) {
+  return useQuery({
+    queryKey: ['expert', 'evidence', alertId],
+    queryFn: () => (alertId ? expertService.getAlertEvidence(alertId) : Promise.reject('No alertId')),
+    enabled: !!alertId,
+    staleTime: 60_000,
+  })
+}
+
+// ── 6. Lịch sử hoạt động của Chuyên gia / Farm Owner (EXPERT-FR-009) ─────────
+export function useExpertActivity(params: {
+  farmId?: string
+  houseId?: string
+  zoneId?: string
+  type?: string
+  from?: string
+  to?: string
+  page?: number
+  limit?: number
+}, enabled = true) {
+  return useQuery({
+    queryKey: ['expert', 'activity', params],
+    queryFn: () => {
+      if (!params.farmId) return Promise.resolve({ records: [], total: 0, page: 1, limit: params.limit ?? 10 })
+      return expertService.getExpertActivity({
+        farmId: params.farmId,
+        houseId: params.houseId,
+        zoneId: params.zoneId,
+        type: params.type,
+        from: params.from,
+        to: params.to,
+        page: params.page,
+        limit: params.limit,
+      })
+    },
+    enabled: enabled && !!params.farmId,
+    staleTime: 30_000,
   })
 }
