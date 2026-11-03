@@ -124,3 +124,90 @@ export function getRenotifyState(alert: Alert, now: number): RenotifyState | nul
   const remaining = Date.parse(alert.created_at) + delay - now
   return { kind: 'countdown', minutes: Math.max(0, Math.ceil(remaining / MINUTE_MS)) }
 }
+
+// ── Danh sách cảnh báo phân trang ở server (khi không lọc theo nhà) ─────────────────────────────────────────────────────
+
+// Trạng thái của hai phần tab Cảnh báo, theo thứ tự hiện: chưa xác nhận trước đã xác nhận; đã hết trước bị bác bỏ
+export const ACTIVE_ALERT_STATUSES: readonly Alert['status'][] = ['ACTIVE', 'ACKNOWLEDGED']
+export const CLOSED_ALERT_STATUSES: readonly Alert['status'][] = ['RESOLVED', 'DISMISSED']
+
+// Mức backend của từng cấp hiển thị, nặng trước
+const LEVEL_SEVERITIES: Record<SeverityLevel, readonly AlertSeverity[]> = {
+  P1: ['CRITICAL', 'HIGH'],
+  P2: ['MEDIUM'],
+  P3: ['LOW'],
+}
+export const ALERT_SEVERITIES: readonly AlertSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+
+// Bộ lọc backend GET /alerts nhận được (farmId, zoneId, type, verdict); lọc nhà gồm cả tầng thì chưa (Known debt)
+export interface ServerAlertFilter {
+  // null: mọi farm người dùng được xem
+  farmId: string | null
+  zoneId: string | null
+  type: AlertType | null
+  verdict: VerdictFilter | null
+}
+
+// Một mắt của chuỗi trang: một trạng thái và (khi đang lọc cấp) một mức backend — backend chỉ nhận một giá trị mỗi tham số
+export interface AlertChainLink {
+  status: Alert['status']
+  severity: AlertSeverity | null
+}
+
+// Chuỗi trang theo thứ tự hiện: từng trạng thái, trong đó từng mức của cấp đang lọc (không lọc thì mọi mức một lượt)
+export function buildAlertChain(statuses: readonly Alert['status'][], level: SeverityLevel | null): AlertChainLink[] {
+  const severities = level ? LEVEL_SEVERITIES[level] : [null]
+  return statuses.flatMap(status => severities.map(severity => ({ status, severity })))
+}
+
+// Tham số GET /alerts của một mắt
+export function toAlertQueryParams(
+  filter: ServerAlertFilter,
+  link: AlertChainLink,
+  page: number,
+  limit: number,
+): Record<string, string> {
+  return {
+    ...(filter.farmId ? { farmId: filter.farmId } : {}),
+    ...(filter.zoneId ? { zoneId: filter.zoneId } : {}),
+    ...(filter.type ? { type: filter.type } : {}),
+    ...(filter.verdict ? { verdict: filter.verdict } : {}),
+    status: link.status,
+    ...(link.severity ? { severity: link.severity } : {}),
+    page: String(page),
+    limit: String(limit),
+  }
+}
+
+// Vị trí trang trong chuỗi: mắt thứ mấy, trang thứ mấy của mắt đó
+export interface AlertChainPageParam {
+  link: number
+  page: number
+}
+
+export interface AlertChainPage {
+  link: number
+  items: Alert[]
+  // meta.total của mắt đó
+  total: number
+}
+
+// Trang kế tiếp theo meta.total: mắt hiện tại còn thì trang sau, hết thì sang mắt sau; hết chuỗi thì undefined
+export function getNextAlertChainPage(
+  chainLength: number,
+  pages: readonly AlertChainPage[],
+): AlertChainPageParam | undefined {
+  const lastPage = pages[pages.length - 1]
+  if (!lastPage) return { link: 0, page: 1 }
+  const linkPages = pages.filter(page => page.link === lastPage.link)
+  const loaded = linkPages.reduce((total, page) => total + page.items.length, 0)
+  if (loaded < lastPage.total && lastPage.items.length > 0) return { link: lastPage.link, page: linkPages.length + 1 }
+  return lastPage.link + 1 < chainLength ? { link: lastPage.link + 1, page: 1 } : undefined
+}
+
+// Số cảnh báo theo cấp từ meta.total của từng mức backend
+export function sumLevelCounts(totals: Readonly<Record<AlertSeverity, number>>): Record<SeverityLevel, number> {
+  const counts: Record<SeverityLevel, number> = { P1: 0, P2: 0, P3: 0 }
+  for (const severity of ALERT_SEVERITIES) counts[getSeverityLevel(severity)] += totals[severity]
+  return counts
+}

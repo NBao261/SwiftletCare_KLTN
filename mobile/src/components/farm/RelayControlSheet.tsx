@@ -13,9 +13,9 @@ import { getRelayLabel } from '@/utils/label.utils'
 import { clampOverrideDuration, formatDuration, getOverrideDurationLimits } from '@/utils/relay.utils'
 import { t } from '@/utils/i18n.utils'
 
-// Thời gian chờ controller báo đã chuyển trạng thái. ENV-FR-015 yêu cầu thay đổi relay hiện trong app ≤ 2 s; chờ gấp 5 lần
-// để bù mạng di động chậm trước khi báo lỗi (hằng kỹ thuật của màn, không phải ngưỡng nghiệp vụ)
-const RELAY_ACK_TIMEOUT_MS = 10 * 1000
+// Thời gian chờ controller báo đã chuyển trạng thái = độ tươi của lệnh (BR-35, Report 3 §4.5: 60 s). Quá mốc này controller
+// không còn áp dụng lệnh nên báo "chưa phản hồi" và cho gửi lại mà không sợ thành hai lệnh
+const RELAY_ACK_TIMEOUT_MS = 60 * 1000
 
 interface RelayControlSheetProps {
   // Controller mới nhất trong cache (tải lại sau RELAY_UPDATE) để biết lệnh đã áp dụng chưa
@@ -59,6 +59,9 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
   const [durationMs, setDurationMs] = useState(OVERRIDE_DEFAULT_MS)
   // Đã gửi lệnh, chờ controller báo đúng trạng thái
   const [isWaiting, setWaiting] = useState(false)
+  // Đã có lệnh tới broker trong lần mở sheet này: relay chuyển MANUAL đúng trạng thái lúc nào thì đóng sheet lúc đó, kể cả sau
+  // khi đã hết thời gian chờ
+  const [hasSent, setHasSent] = useState(false)
   // Lệnh không tới được controller: backend chưa nối broker, hoặc controller không báo lại trong thời gian chờ
   const [deliveryProblem, setDeliveryProblem] = useState<'not-delivered' | 'timed-out' | null>(null)
 
@@ -72,8 +75,8 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
 
   // Controller đã chuyển MANUAL đúng trạng thái thì đóng sheet
   useEffect(() => {
-    if (isWaiting && isApplied) onClose()
-  }, [isWaiting, isApplied, onClose])
+    if (hasSent && isApplied) onClose()
+  }, [hasSent, isApplied, onClose])
 
   // Không chờ mãi: quá thời gian mà controller chưa báo thì mở lại nút để thử lại
   useEffect(() => {
@@ -96,6 +99,7 @@ export function RelayControlSheet({ controller, relay, zoneAlerts, onClose }: Re
         onSuccess: ({ isCommandDelivered }) => {
           setDeliveryProblem(isCommandDelivered ? null : 'not-delivered')
           setWaiting(isCommandDelivered)
+          if (isCommandDelivered) setHasSent(true)
         },
       },
     )

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert as NativeAlert, StyleSheet, View } from 'react-native'
 import { Card } from '@/components/ui/card'
 import { StatRow } from '@/components/analytics/StatRow'
@@ -48,6 +48,25 @@ export function SuggestionCard({ zoneId, zoneName, farm }: SuggestionCardProps) 
   const submitProposal = useSubmitProposal()
   const [isSheetOpen, setSheetOpen] = useState(false)
   const [sentMessage, setSentMessage] = useState<string | null>(null)
+  // Đóng sheet hoặc đổi khu vực thì bỏ thông báo "đã gửi" và lỗi cũ, để gửi lại được khi chuyên gia từ chối hay gợi ý đổi
+  // (backend chuyển đề xuất cũ sang SUPERSEDED)
+  const [shownZoneId, setShownZoneId] = useState(zoneId)
+  if (zoneId !== shownZoneId) {
+    setShownZoneId(zoneId)
+    setSentMessage(null)
+  }
+  const resetApply = applySuggestion.reset
+  const resetSubmit = submitProposal.reset
+  useEffect(() => {
+    resetApply()
+    resetSubmit()
+  }, [zoneId, resetApply, resetSubmit])
+  const closeSheet = () => {
+    setSheetOpen(false)
+    setSentMessage(null)
+    resetApply()
+    resetSubmit()
+  }
   const data = suggestionQuery.data
   const suggestion = data?.suggestion ?? null
   const hasExpert = farm ? farmHasExpert(farm) : undefined
@@ -66,7 +85,7 @@ export function SuggestionCard({ zoneId, zoneName, farm }: SuggestionCardProps) 
           text: t('Áp dụng'),
           onPress: () =>
             applySuggestion.mutate(zoneId, {
-              onSuccess: () => setSheetOpen(false),
+              onSuccess: closeSheet,
               // 409: server không còn thấy gợi ý (dữ liệu đã đổi) — tải lại để thẻ hiện lý do mới
               onError: error => {
                 if (readApiError(error).status === 409) void suggestionQuery.refetch()
@@ -137,7 +156,7 @@ export function SuggestionCard({ zoneId, zoneName, farm }: SuggestionCardProps) 
       </Text>
       {renderBody()}
 
-      <BottomSheet visible={isSheetOpen} onClose={() => setSheetOpen(false)}>
+      <BottomSheet visible={isSheetOpen} onClose={closeSheet}>
         <Text variant="heading">{t('Gợi ý hệ số · {zone}', { zone: zoneName })}</Text>
         <View style={styles.compare}>
           {SUGGESTED_KEYS.map(key => (

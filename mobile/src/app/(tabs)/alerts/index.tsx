@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native'
 import { useIsFocused } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
@@ -22,10 +22,12 @@ import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
 import { useActiveAlertList } from '@/hooks/alert/useActiveAlertList'
+import { useAlertLevelCounts } from '@/hooks/alert/useAlertLevelCounts'
 import { useAlertLocations } from '@/hooks/alert/useAlertLocations'
 import { useAlertRooms } from '@/hooks/alert/useAlertRooms'
 import { useAlertsScope } from '@/hooks/alert/useAlertsScope'
 import { useNewAlertIds } from '@/hooks/alert/useNewAlertIds'
+import { usePagedAlertList } from '@/hooks/alert/usePagedAlertList'
 import { useResolvedAlertList } from '@/hooks/alert/useResolvedAlertList'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { useSocketConnection } from '@/hooks/telemetry/useSocketConnection'
@@ -34,16 +36,27 @@ import { useNow } from '@/hooks/time/useNow'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
 import type { Alert } from '@/types'
-import { countBySeverityLevel, filterAlerts, sortAlerts } from '@/utils/alertList.utils'
+import {
+  ACTIVE_ALERT_STATUSES,
+  CLOSED_ALERT_STATUSES,
+  countBySeverityLevel,
+  filterAlerts,
+  sortAlerts,
+  uniqueById,
+} from '@/utils/alertList.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
 // Đồng hồ cho "3 phút trước" và đếm ngược nhắc lại
 const CLOCK_INTERVAL_MS = 30 * 1000
+// Không có sự kiện socket khi cảnh báo đổi trạng thái nên phần "Đang hiệu lực" tải lại định kỳ khi tab đang hiện
+const ACTIVE_REFRESH_INTERVAL_MS = 30 * 1000
 const SKELETON_ROW_COUNT = 5
 const ROW_GAP = Spacing.sm
 // Giá trị "Tất cả" trong bảng chọn farm, nhà
 const ALL = '__all__'
+// Dải mức khi số chưa tải xong (lúc đó dải hiện khung xương)
+const EMPTY_LEVEL_COUNTS = { P1: 0, P2: 0, P3: 0 }
 
 /** Cảnh báo – một danh sách, một lớp chi tiết (ALERT-FR-007…009, 013…015, EXPERT-FR-003; đặc tả "Trang Cảnh báo"):
  * dải tóm tắt theo mức là bộ lọc nhanh, đang hiệu lực / đã đóng, lọc tầng, loại, phán quyết, vuốt để xác nhận */
@@ -59,8 +72,34 @@ export default function AlertsScreen() {
   const isResolved = scope.segment === 'resolved'
   // Tab vẫn sống khi chuyển tab khác: chỉ tải lại định kỳ khi đang hiện
   const isFocused = useIsFocused()
-  const activeQuery = useActiveAlertList(scope.farmId, scope.isReady, isFocused)
-  const resolvedQuery = useResolvedAlertList(scope.farmId, scope.isReady && isResolved)
+  // Chọn một nhà: backend chưa lọc nhà gồm cả tầng nên tải đủ cảnh báo của farm rồi lọc trên máy (Known debt); còn lại
+  // phân trang và lọc ở server, số trên dải mức lấy từ meta.total
+  const isHouseMode = Boolean(scope.house)
+  const serverFilter = { farmId: scope.farmId, zoneId: null, type: scope.type, verdict: scope.verdict }
+  const pollInterval = isFocused ? ACTIVE_REFRESH_INTERVAL_MS : false
+  const serverEnabled = scope.isReady && !isHouseMode
+  const pagedQuery = usePagedAlertList({
+    statuses: isResolved ? CLOSED_ALERT_STATUSES : ACTIVE_ALERT_STATUSES,
+    filter: serverFilter,
+    level: scope.severity,
+    enabled: serverEnabled,
+    refetchInterval: isResolved ? false : pollInterval,
+  })
+  const levelCountsQuery = useAlertLevelCounts({
+    statuses: isResolved ? CLOSED_ALERT_STATUSES : ACTIVE_ALERT_STATUSES,
+    filter: serverFilter,
+    enabled: serverEnabled,
+    refetchInterval: isResolved ? false : pollInterval,
+  })
+  // Số trên chip "Đang hiệu lực" khi đang xem "Đã đóng" (cùng khoá với dải mức của phần đang hiệu lực)
+  const activeCountsQuery = useAlertLevelCounts({
+    statuses: ACTIVE_ALERT_STATUSES,
+    filter: serverFilter,
+    enabled: serverEnabled,
+    refetchInterval: pollInterval,
+  })
+  const activeQuery = useActiveAlertList(scope.farmId, scope.isReady && isHouseMode, isFocused)
+  const resolvedQuery = useResolvedAlertList(scope.farmId, scope.isReady && isHouseMode && isResolved)
   const newAlertIds = useNewAlertIds()
   const isSocketConnected = useSocketConnection()
   const [detailAlert, setDetailAlert] = useState<Alert | null>(null)
@@ -76,8 +115,7 @@ export default function AlertsScreen() {
 
   useAlertRooms(scope.house?._id ?? null, zoneIds)
 
-  const source = (isResolved ? resolvedQuery.data : activeQuery.data) ?? []
-  const query = isResolved ? resolvedQuery : activeQuery
+  const houseQuery = isResolved ? resolvedQuery : activeQuery
   const baseFilter = {
     houseId: scope.house?._id ?? null,
     houseZoneIds: zoneIds,
@@ -85,12 +123,40 @@ export default function AlertsScreen() {
     type: scope.type,
     verdict: scope.verdict,
   }
-  // Dải tóm tắt đếm theo mọi bộ lọc trừ mức; danh sách lọc thêm mức đang chọn
-  const withoutSeverity = filterAlerts(source, baseFilter)
-  const counts = countBySeverityLevel(withoutSeverity)
-  const filtered = filterAlerts(withoutSeverity, { ...baseFilter, severity: scope.severity })
-  const alerts = isResolved ? filtered : sortAlerts(filtered)
-  const activeTotal = filterAlerts(activeQuery.data ?? [], baseFilter).length
+  // Chế độ một nhà: dải tóm tắt đếm theo mọi bộ lọc trừ mức; danh sách lọc thêm mức đang chọn
+  const houseSource = filterAlerts(houseQuery.data ?? [], baseFilter)
+  const houseFiltered = filterAlerts(houseSource, { ...baseFilter, severity: scope.severity })
+  const alerts = isHouseMode
+    ? isResolved
+      ? houseFiltered
+      : sortAlerts(houseFiltered)
+    : uniqueById(pagedQuery.data?.pages.flatMap(page => page.items) ?? [])
+  const counts = isHouseMode ? countBySeverityLevel(houseSource) : (levelCountsQuery.data ?? null)
+  const activeCounts = isHouseMode
+    ? countBySeverityLevel(filterAlerts(activeQuery.data ?? [], baseFilter))
+    : activeCountsQuery.data
+  const activeTotal = activeCounts ? activeCounts.P1 + activeCounts.P2 + activeCounts.P3 : null
+  const isListLoading = !scope.isReady || (isHouseMode ? houseQuery.isLoading : pagedQuery.isLoading)
+  const isListError = isHouseMode ? houseQuery.isError : pagedQuery.isError
+  const retryList = () => (isHouseMode ? houseQuery.refetch() : pagedQuery.refetch())
+
+  // Cảnh báo mới / xác nhận / phán quyết chỉ đánh dấu danh sách cũ (invalidateAlertQueries): tab đang hiện thì tải lại ngay
+  const hasStaleList = isHouseMode
+    ? houseQuery.isStale && !houseQuery.isFetching
+    : (pagedQuery.isStale && !pagedQuery.isFetching) || (levelCountsQuery.isStale && !levelCountsQuery.isFetching)
+  const refetchHouseList = houseQuery.refetch
+  const refetchPagedList = pagedQuery.refetch
+  const refetchLevelCounts = levelCountsQuery.refetch
+  useEffect(() => {
+    // refetch() chạy cả query đang tắt, nên chờ phạm vi sẵn sàng
+    if (!isFocused || !hasStaleList || !scope.isReady) return
+    if (isHouseMode) {
+      void refetchHouseList()
+      return
+    }
+    void refetchPagedList()
+    void refetchLevelCounts()
+  }, [isFocused, hasStaleList, scope.isReady, isHouseMode, refetchHouseList, refetchPagedList, refetchLevelCounts])
   const hasFilter = Boolean(scope.zoneId || scope.type || scope.verdict || scope.severity)
   // Phạm vi trên header: nhà › farm › tất cả. Đang xem mọi farm thì hàng cảnh báo ghi thêm tên farm
   const scopeTitle = scope.house?.name ?? (scope.farmId === null ? t('Tất cả trang trại') : t('Tất cả nhà'))
@@ -117,7 +183,7 @@ export default function AlertsScreen() {
   }
 
   const renderEmpty = () => {
-    if (query.isLoading || !scope.isReady) {
+    if (isListLoading) {
       return (
         <View style={styles.list}>
           {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
@@ -126,12 +192,12 @@ export default function AlertsScreen() {
         </View>
       )
     }
-    if (query.isError) {
+    if (isListError) {
       return (
         <EmptyState
           message={t('Không tải được cảnh báo')}
           actionLabel={t('Thử lại')}
-          onAction={() => query.refetch()}
+          onAction={() => void retryList()}
         />
       )
     }
@@ -167,14 +233,14 @@ export default function AlertsScreen() {
         </View>
       )}
       <SeveritySummary
-        counts={counts}
+        counts={counts ?? EMPTY_LEVEL_COUNTS}
         selected={scope.severity}
         onToggle={scope.toggleSeverity}
-        isLoading={query.isLoading}
+        isLoading={isListLoading || counts === null}
       />
       <ChoiceChips
         options={[
-          { id: 'active', label: t('Đang hiệu lực ({count})', { count: activeTotal }) },
+          { id: 'active', label: t('Đang hiệu lực ({count})', { count: activeTotal ?? '_' }) },
           { id: 'resolved', label: t('Đã đóng') },
         ]}
         selectedId={scope.segment}
@@ -223,6 +289,21 @@ export default function AlertsScreen() {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListHeaderComponent={header}
           ListEmptyComponent={renderEmpty()}
+          // Phân trang ở server: cuộn gần cuối hoặc bấm "Xem thêm" thì tải trang kế (có thể sang trạng thái/mức kế tiếp)
+          ListFooterComponent={
+            !isHouseMode && pagedQuery.hasNextPage ? (
+              <Button
+                label={t('Xem thêm')}
+                variant="link"
+                loading={pagedQuery.isFetchingNextPage}
+                onPress={() => pagedQuery.fetchNextPage()}
+              />
+            ) : undefined
+          }
+          onEndReached={() => {
+            if (!isHouseMode && pagedQuery.hasNextPage && !pagedQuery.isFetchingNextPage) void pagedQuery.fetchNextPage()
+          }}
+          onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, { paddingBottom: TAB_BAR_OVERLAP + Spacing.lg }]}
           refreshControl={

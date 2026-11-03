@@ -8,8 +8,9 @@ import { fetchAllPages, MAX_PAGE_LIMIT } from '@/utils/pagination.utils'
 // tải lại là đủ mọi trang (Known debt: backend chưa lọc nhà gồm cả tầng, chưa nhận nhiều trạng thái một lần)
 const REFRESH_INTERVAL_MS = 30 * 1000
 
-// Cảnh báo đang hiệu lực (ACTIVE + ACKNOWLEDGED, ALERT-FR-007) của một farm, hoặc mọi farm khi farmId null, đủ mọi trang.
-// Lọc nhà, tầng, mức, loại, phán quyết làm trong app: ?houseId của backend chỉ trả cảnh báo mức nhà, không gồm các tầng
+// Chỉ dùng khi tab Cảnh báo đang lọc MỘT nhà: backend ?houseId chỉ trả cảnh báo mức nhà, không gồm các tầng, nên tải đủ
+// cảnh báo đang hiệu lực (ACTIVE + ACKNOWLEDGED, ALERT-FR-007) của farm rồi lọc nhà, tầng, mức, loại, phán quyết trên máy
+// (Known debt). Không lọc nhà thì màn dùng usePagedAlertList (phân trang ở server)
 export function useActiveAlertList(farmId: string | null, enabled: boolean, isFocused: boolean) {
   return useQuery({
     queryKey: ['alerts', 'list', 'active', farmId ?? 'all'],

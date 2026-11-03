@@ -492,6 +492,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Mã thiết bị hoặc mã kích hoạt không đúng': 'Wrong device ID or activation key',
   'Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký': 'The device belongs to another farm or is already registered',
   'Nhập một số': 'Enter a number',
+  'Nhập số không có dấu ngăn nghìn': 'Enter the number without thousands separators',
   'Nhập số nguyên': 'Enter a whole number',
   'Từ {min} trở lên': '{min} or more',
   'Từ {min} đến {max}': '{min} to {max}',

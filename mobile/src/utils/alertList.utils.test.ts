@@ -1,11 +1,16 @@
 import { describe, expect, it } from '@jest/globals'
 import type { Alert } from '@/types'
 import {
+  ACTIVE_ALERT_STATUSES,
+  buildAlertChain,
   countBySeverityLevel,
   filterAlerts,
+  getNextAlertChainPage,
   getRenotifyState,
   isInferredAlert,
   sortAlerts,
+  sumLevelCounts,
+  toAlertQueryParams,
   uniqueById,
 } from '@/utils/alertList.utils'
 
@@ -111,5 +116,45 @@ describe('getRenotifyState', () => {
     })
     expect(getRenotifyState(buildAlert('b'), created)).toBeNull()
     expect(getRenotifyState(buildAlert('c', { severity: 'HIGH', status: 'ACKNOWLEDGED' }), created)).toBeNull()
+  })
+})
+
+describe('chuỗi trang phân trang ở server', () => {
+  it('chưa xác nhận trước đã xác nhận; lọc Khẩn cấp thì CRITICAL rồi HIGH trong từng trạng thái', () => {
+    expect(buildAlertChain(ACTIVE_ALERT_STATUSES, null)).toEqual([
+      { status: 'ACTIVE', severity: null },
+      { status: 'ACKNOWLEDGED', severity: null },
+    ])
+    expect(buildAlertChain(['ACTIVE'], 'P1')).toEqual([
+      { status: 'ACTIVE', severity: 'CRITICAL' },
+      { status: 'ACTIVE', severity: 'HIGH' },
+    ])
+  })
+
+  it('tham số chỉ gửi bộ lọc đang dùng; mọi farm thì không gửi farmId', () => {
+    const params = toAlertQueryParams(
+      { farmId: null, zoneId: null, type: 'NOISE_ANOMALY', verdict: 'pending' },
+      { status: 'RESOLVED', severity: 'LOW' },
+      2,
+      20,
+    )
+    expect(params).toEqual({ type: 'NOISE_ANOMALY', verdict: 'pending', status: 'RESOLVED', severity: 'LOW', page: '2', limit: '20' })
+  })
+
+  it('trang kế: mắt còn thì trang sau, hết thì sang mắt sau, hết chuỗi thì dừng', () => {
+    const alerts = (count: number) => Array.from({ length: count }, (_, index) => buildAlert(`a${index}`))
+    expect(getNextAlertChainPage(2, [])).toEqual({ link: 0, page: 1 })
+    expect(getNextAlertChainPage(2, [{ link: 0, items: alerts(20), total: 25 }])).toEqual({ link: 0, page: 2 })
+    expect(
+      getNextAlertChainPage(2, [
+        { link: 0, items: alerts(20), total: 25 },
+        { link: 0, items: alerts(5), total: 25 },
+      ]),
+    ).toEqual({ link: 1, page: 1 })
+    expect(getNextAlertChainPage(2, [{ link: 1, items: [], total: 0 }])).toBeUndefined()
+  })
+
+  it('cộng số theo cấp: CRITICAL và HIGH cùng Khẩn cấp', () => {
+    expect(sumLevelCounts({ CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 })).toEqual({ P1: 3, P2: 3, P3: 4 })
   })
 })

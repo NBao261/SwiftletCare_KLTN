@@ -88,8 +88,13 @@ export function useAlertsScope() {
     verdict,
     segment: remembered.segment ?? 'active',
     isExpert,
-    // Danh sách farm đã tải: mới biết "tất cả" gồm những farm nào, nên chưa tải cảnh báo trước đó
-    isReady: !farmsQuery.isLoading && !farmsQuery.isError,
+    // Danh sách farm đã tải (mới biết "tất cả" gồm những farm nào); mở bằng ?houseId thì chờ cả danh sách nhà, để lần gọi đầu
+    // không lấy nhầm phạm vi đã nhớ khi cache còn lạnh
+    isReady:
+      !farmsQuery.isLoading &&
+      !farmsQuery.isError &&
+      !(params.houseId && !requestedHouse && allHouses.isLoading) &&
+      !(Boolean(farmId) && housesQuery.isLoading),
     isLoading: farmsQuery.isLoading || (Boolean(farmId) && housesQuery.isLoading),
     isError: farmsQuery.isError || housesQuery.isError,
     // Đổi farm thì về mọi nhà, mọi tầng của farm đó; null là mọi farm

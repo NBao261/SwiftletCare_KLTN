@@ -90,6 +90,21 @@ function updatePrefs(
   return { byUserId: { ...state.byUserId, [userId]: { ...current, ...change(current) } } }
 }
 
+// Đọc dữ liệu đã lưu của bản cũ. Trước bản 2 (thứ tự nhà tự sắp) thì bỏ hết. Bản 2 → 3: giữ mọi lựa chọn; bộ lọc tab
+// Cảnh báo chưa có farmId thì nhà/tầng đã nhớ thuộc phạm vi cũ (nhà xem gần nhất của tab Farm) — đưa về mặc định mới
+// "tất cả" thay vì đoán farm
+export function migrateFarmPrefs(persistedState: unknown, version: number): Pick<FarmPrefsState, 'byUserId'> {
+  const byUserId = (persistedState as { byUserId?: unknown } | null)?.byUserId
+  if (version < 2 || typeof byUserId !== 'object' || byUserId === null) return { byUserId: {} }
+  const migrated: Record<string, FarmPrefs> = {}
+  for (const [userId, prefs] of Object.entries(byUserId as Record<string, FarmPrefs>)) {
+    const alerts = prefs.alerts
+    migrated[userId] =
+      alerts && alerts.farmId === undefined ? { ...prefs, alerts: { ...alerts, houseId: null, zoneId: null } } : prefs
+  }
+  return { byUserId: migrated }
+}
+
 export const useFarmPrefsStore = create<FarmPrefsState>()(
   persist(
     set => ({
@@ -135,9 +150,9 @@ export const useFarmPrefsStore = create<FarmPrefsState>()(
     }),
     {
       name: 'farm-prefs',
-      // Bản 2: bỏ thứ tự nhà tự sắp (↑↓), thay bằng nhà ghim như web
-      version: 2,
-      migrate: () => ({ byUserId: {} }),
+      // Bản 2: bỏ thứ tự nhà tự sắp (↑↓), thay bằng nhà ghim như web. Bản 3: tab Cảnh báo có farmId riêng
+      version: 3,
+      migrate: (persistedState, version) => migrateFarmPrefs(persistedState, version),
       storage: createJSONStorage(() => preferenceStateStorage),
       // Chỉ lưu lựa chọn theo tài khoản; danh sách farm đã tự mở là của phiên hiện tại
       partialize: state => ({ byUserId: state.byUserId }),

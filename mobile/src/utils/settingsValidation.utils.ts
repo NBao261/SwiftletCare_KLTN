@@ -65,16 +65,21 @@ export const COORDINATE_RULES: Record<keyof Coordinates, NumberRule> = {
 export const FLOOR_RULE: NumberRule = { min: 1, max: Number.MAX_SAFE_INTEGER, integer: true }
 
 // Chữ người dùng gõ thành số: nhận cả dấu phẩy lẫn dấu chấm làm dấu thập phân (bàn phím số Android chỉ có dấu chấm), không
-// nhận ngăn hàng nghìn. Khung xem ghi số theo ngôn ngữ (tiếng Việt "1.500" là một nghìn năm trăm), nên dấu ngăn nghìn của
-// ngôn ngữ đang dùng mà theo sau đúng 3 chữ số ở phần nguyên khác 0 ("1.500" khi tiếng Việt, "1,500" khi tiếng Anh) là mơ
-// hồ — từ chối để người dùng gõ lại, không đoán thành 1,5
+// nhận ngăn hàng nghìn
 export function parseNumberInput(text: string): number | null {
-  const trimmed = text.trim()
-  const groupingPattern = getCurrentLanguage() === 'en' ? /^-?[1-9]\d{0,2},\d{3}$/ : /^-?[1-9]\d{0,2}\.\d{3}$/
-  if (groupingPattern.test(trimmed)) return null
-  const normalized = trimmed.replace(',', '.')
+  const normalized = text.trim().replace(',', '.')
   if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null
   return Number(normalized)
+}
+
+// Ô có giới hạn từ 1000 trở lên (vd. ánh sáng tối đa 200.000 lux) mới có thể bị gõ theo kiểu khung xem ghi số: tiếng Việt
+// "1.500" là một nghìn năm trăm. Ô nhỏ hơn (toạ độ, hệ số) thì "10.762" luôn là số thập phân
+const GROUPING_AMBIGUOUS_MIN = 1000
+
+// Chữ trông như số có dấu ngăn nghìn của ngôn ngữ đang dùng ("1.500" khi tiếng Việt, "1,500" khi tiếng Anh)
+function looksLikeThousandsGrouping(text: string): boolean {
+  const pattern = getCurrentLanguage() === 'en' ? /^-?[1-9]\d{0,2},\d{3}$/ : /^-?[1-9]\d{0,2}\.\d{3}$/
+  return pattern.test(text.trim())
 }
 
 // Số đang lưu thành chữ trong ô nhập, dấu thập phân theo ngôn ngữ; chưa có thì ô trống
@@ -88,6 +93,7 @@ export function toInputText(value: number | undefined): string {
 export function validateNumber(text: string, rule: NumberRule): string | null {
   const value = parseNumberInput(text)
   if (value === null) return t('Nhập một số')
+  if (rule.max >= GROUPING_AMBIGUOUS_MIN && looksLikeThousandsGrouping(text)) return t('Nhập số không có dấu ngăn nghìn')
   if (rule.integer && !Number.isInteger(value)) return t('Nhập số nguyên')
   if (value < rule.min || value > rule.max) {
     return rule.max === Number.MAX_SAFE_INTEGER

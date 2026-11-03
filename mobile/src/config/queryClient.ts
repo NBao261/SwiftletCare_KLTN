@@ -23,3 +23,17 @@ export const queryClient = new QueryClient({
 export function refetchVisibleQueries(client: QueryClient) {
   return client.refetchQueries({ type: 'active', predicate: query => query.queryKey[0] !== 'stream-token' })
 }
+
+// Có cảnh báo mới, vừa xác nhận hoặc phán quyết: số đếm, chi tiết… tải lại ngay; danh sách của tab Cảnh báo (khoá
+// ['alerts','list',…] và ['alerts','counts',…], có thể tải nhiều trang) chỉ đánh dấu cũ — tab Cảnh báo tự tải lại khi đang hiện
+export function invalidateAlertQueries(client: QueryClient) {
+  const isAlertListKey = (key: readonly unknown[]) => key[1] === 'list' || key[1] === 'counts'
+  return Promise.all([
+    client.invalidateQueries({ queryKey: ['alerts'], predicate: query => !isAlertListKey(query.queryKey) }),
+    client.invalidateQueries({
+      queryKey: ['alerts'],
+      predicate: query => isAlertListKey(query.queryKey),
+      refetchType: 'none',
+    }),
+  ])
+}
