@@ -5,11 +5,13 @@ import {
   CircleIcon,
   DropIcon,
   PlusCircleIcon,
+  StarIcon,
   ThermometerIcon,
   ToggleRightIcon,
   WarningIcon,
   WifiSlashIcon,
 } from 'phosphor-react-native'
+import { IconButton } from '@/components/ui/icon-button'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import type { AppColors } from '@/constants/theme'
@@ -48,7 +50,7 @@ function HouseStatusIcon({ status, palette }: { status: HouseStatus; palette: Ap
   }
 }
 
-// Mở màn theo trạng thái; màn nào chưa có thì tạm mở trang Farm chứa nhà hoặc tab gần nhất
+// Mở màn theo trạng thái: cảnh báo, tầng hoặc nhà (Màn B của tab Trang trại); màn nào chưa có thì tạm mở tab gần nhất
 function openStatusTarget({ house, status }: HouseCardData) {
   const target = status.target
   if (target.screen === 'alert') {
@@ -56,30 +58,35 @@ function openStatusTarget({ house, status }: HouseCardData) {
     return
   }
   if (target.screen === 'zone') {
-    router.push({ pathname: '/zone/[zoneId]', params: { zoneId: target.zoneId } })
+    router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: house._id, zoneId: target.zoneId } })
     return
   }
-  // shortcut: chưa có danh sách cảnh báo lọc theo nhà — tạm mở tab Cảnh báo
+  // Cảnh báo của nhà: tab Cảnh báo lọc sẵn nhà này
   if (target.screen === 'house-alerts') {
-    router.navigate('/(tabs)/alerts')
+    router.navigate({ pathname: '/(tabs)/alerts', params: { houseId: house._id } })
     return
   }
-  // shortcut: chưa có màn quét QR thêm thiết bị (MF-10) — tạm mở tab Trang trại
+  // Nhà chưa có thiết bị: mở Cài đặt nhà, nơi thêm camera và controller bằng nhãn QR hoặc nhập tay (MF-10)
   if (target.screen === 'add-device') {
-    router.navigate('/(tabs)/farms')
+    router.navigate({ pathname: '/(tabs)/farms/[houseId]/settings', params: { houseId: house._id } })
     return
   }
-  // shortcut: chưa có màn chi tiết nhà và trang thiết bị của nhà — tạm mở Farm chứa nhà
-  router.push({ pathname: '/farm/[farmId]', params: { farmId: house.farm_id } })
+  // Nhà và thiết bị của nhà: Màn B (thiết bị nằm trong khối "Thiết bị")
+  router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: house._id } })
 }
 
 interface HouseStatusCardProps {
   data: HouseCardData
   width: number
+  // Không truyền thì mở màn theo trạng thái (Trang chủ); tab Trang trại truyền vào để mở Màn B của nhà
+  onPress?: () => void
+  // Tab Trang trại truyền vào để hiện nút ghim ★ (nhà ghim lên đầu danh sách, như web); Trang chủ không có
+  pin?: { isPinned: boolean; onToggle: () => void }
 }
 
-// Thẻ một nhà yến: nền lime, 2 vòng mực trang trí ở góc dưới trái, trạng thái nặng nhất ở dòng cuối
-export function HouseStatusCard({ data, width }: HouseStatusCardProps) {
+// Thẻ một nhà yến: nền lime, 2 vòng mực trang trí ở góc dưới trái, trạng thái nặng nhất ở dòng cuối —
+// dùng chung cho carousel Trang chủ và danh sách nhà ở tab Trang trại
+export function HouseStatusCard({ data, width, onPress, pin }: HouseStatusCardProps) {
   const palette = usePalette()
   const { house, farmName, status, activeAlertCount } = data
   const alertText = t('{count} cảnh báo', { count: activeAlertCount })
@@ -90,7 +97,7 @@ export function HouseStatusCard({ data, width }: HouseStatusCardProps) {
   return (
     <PressableScale
       style={[styles.card, { width, backgroundColor: palette.primary }]}
-      onPress={() => openStatusTarget(data)}
+      onPress={onPress ?? (() => openStatusTarget(data))}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
@@ -116,6 +123,14 @@ export function HouseStatusCard({ data, width }: HouseStatusCardProps) {
               {alertText}
             </Text>
           </View>
+        )}
+        {pin && (
+          <IconButton
+            icon={StarIcon}
+            weight={pin.isPinned ? 'fill' : 'regular'}
+            label={pin.isPinned ? t('Bỏ ghim') : t('Ghim nhà này lên đầu danh sách')}
+            onPress={pin.onToggle}
+          />
         )}
       </View>
 

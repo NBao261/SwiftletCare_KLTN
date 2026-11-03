@@ -19,3 +19,12 @@ export function formatPercentValue(value: number, decimals = 1): string {
   const fixed = value.toFixed(decimals)
   return `${getCurrentLanguage() === 'en' ? fixed : fixed.replace('.', ',')}%`
 }
+
+// Số thập phân theo ngôn ngữ, có ngăn hàng nghìn: tiếng Việt "1.320" / "29,8", tiếng Anh "1,320" / "29.8"
+export function formatDecimal(value: number, decimals = 0): string {
+  const isEnglish = getCurrentLanguage() === 'en'
+  const [integerPart, fractionPart] = Math.abs(value).toFixed(decimals).split('.')
+  const grouped = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, isEnglish ? ',' : '.')
+  const sign = value < 0 && Number(Math.abs(value).toFixed(decimals)) !== 0 ? '-' : ''
+  return `${sign}${grouped}${fractionPart ? `${isEnglish ? '.' : ','}${fractionPart}` : ''}`
+}
