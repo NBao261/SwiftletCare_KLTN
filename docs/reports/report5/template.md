@@ -71,7 +71,7 @@ Defects are GitHub issues labelled `bug` with a severity:
 | Severity | Meaning | Example |
 | --- | --- | --- |
 | Critical | A main workflow cannot complete, data is lost, or a safety rule is broken | Fan driven by NH3; override never returns to AUTO |
-| High | A mandatory feature gives a wrong result or a permission is wrong | A Technician can edit thresholds |
+| High | A mandatory feature gives a wrong result or a permission is wrong | An Administrator can edit thresholds |
 | Medium | Wrong result with a workaround, or a non-mandatory feature broken | Wrong label in a report |
 | Low | Cosmetic | Alignment, wording |
 

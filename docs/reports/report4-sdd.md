@@ -214,7 +214,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D11 | Actuator current sensing | None (infer from humidity); Hall-effect IC (ACS712); clamp-on current transformer with an external ADC; **low-side shunt with an external ADC** | **Shunt + ADS1115**: the test house is borrowed and cannot be rewired, so the controller drives the team's own 5 V misting unit and 12 V fan, and a current transformer senses only alternating current; on its ±0.256 V range the ADS1115 reads the 0.09 A fan across 0.1 Ω (about 9 mV) without an amplifier, while the ESP32's own ADC is not linear enough. A house with mains loads would use clamp-on current transformers on the same ADC. Normal current is learned per load, so no threshold is invented for an unknown pump or fan | THREAT-FR-014, BR-32 |
 | D12 | Outdoor conditions | Outdoor sensor node; **weather API**; none | **Weather API (Open-Meteo)** by farm coordinates: no hardware, includes rainfall, which a node does not measure easily and which explains low return rates; it is a regional estimate, so it is context only. An outdoor node stays optional | ANALYTICS-FR-013, BR-30, C-6 |
 | D13 | Report files | Server-side PDF; **PDF in the web client, CSV from the API** | **`jspdf` in the web client** (already a dependency) renders the report the API returns, so the file shows the same figures as the screen; the CSV of daily indicators is produced by the API so every client gets the same columns | EXPERT-FR-013 |
-| D14 | Scope of the supporting roles | Maintenance tickets with routing by region, SLA and KPIs; Technician invited into each farm by its owner; **Technician sees every farm's devices, without relay control** | **Technician on every farm, devices only**: tickets, SLA, regions and KPIs serve a service company with many customers, not the house (Review 1: "more a platform than a system"); an invitation per farm adds a step for every repair. The risk of a role that is not a farm member is limited by what it can do: no relays, thresholds, coefficients or alert acknowledgement, no environmental data, and every device action is audited and notified to the Farm Owners. Faults reach the owner as repeated alerts instead of tickets | FARM-FR-009, 013, ALERT-FR-015, 016, Report 3 §2.4 |
+| D14 | Scope of the supporting roles | Maintenance tickets with routing by region, SLA and KPIs; Technician invited into each farm by its owner; Technician on every farm, devices only; **no Technician: setup by the Farm Owner, remote maintenance by the Administrator** | **No Technician role** (BM03 row 13): tickets, SLA, regions and KPIs serve a service company with many customers, not the house (Review 1: "more a platform than a system"); one installation serves one owner, so a Technician's device setup only repeated the Farm Owner's (SF-01), and what was left (remote commands, firmware updates) is technical administration next to the device stock the Administrator already keeps. The Administrator is not a farm member; the risk is limited by what it can do: no relays, thresholds, coefficients or alert acknowledgement, no environmental data, and every remote command is audited and notified to the Farm Owners. The Farm Owner may restart a controller. Faults reach the owner as repeated alerts instead of tickets | FARM-FR-009, 013, ALERT-FR-015, 016, Report 3 §2.4 |
 | D15 | Manual override against the controller's checks | Manual override above everything; protections above manual; **manual above the software checks, with limits** | **Manual override passes the fuzzy output, the misting latch and the sensor safe state, within limits:** these checks infer a fault from humidity or from a missing reading, so they must not lock out the owner who sees the house; the electrical protection stays in the house's panel (C-7). A remote pump ON lasts at most 30 min and needs a confirmation while a sensor or misting alert is open, so a forgotten command cannot run the pump for hours on a faulty sensor; each relay has its own expiry | ENV-FR-016…018, BR-08, BR-19, BR-20, C-7 |
 | D16 | Daily status when data arrives late | Freeze the day at the first rating; recompute and overwrite; **keep both** | **A current status that follows the data and an evaluation snapshot per rating that never changes:** operations see the best status, while the agreement measure (NFR-14) compares each rating with exactly what the assessor saw | ANALYTICS-FR-012, 014, EXPERT-FR-012, BR-31 |
 
@@ -292,7 +292,7 @@ Background jobs:
 
 ### 5.4 Web and Mobile
 
-Both clients follow the same pattern: TanStack Query for server state, Zustand for session state, axios for REST, socket.io-client for real-time events, one route group per role, data from the API only (no mock data). The web application is a PWA with the Farm Owner, Domain Expert, Technician and Administrator screens; the mobile application uses Expo Router and serves the Farm Owner and the Domain Expert with the scope of the registration form (3.2 b): monitoring, count analytics and the live stream, alerts with push, manual override, device setup by QR code, daily health status, reports and ratings, harvest logging, and expert validation and tuning.
+Both clients follow the same pattern: TanStack Query for server state, Zustand for session state, axios for REST, socket.io-client for real-time events, one route group per role, data from the API only (no mock data). The web application is a PWA with the Farm Owner, Domain Expert and Administrator screens; the mobile application uses Expo Router and serves the Farm Owner and the Domain Expert with the scope of the registration form (3.2 b): monitoring, count analytics and the live stream, alerts with push, manual override, device setup by QR code, daily health status, reports and ratings, harvest logging, and expert validation and tuning.
 
 Domain Expert on the web: the expert reads the Farm Owner's operational pages (dashboard, analytics, vision, devices, harvests) in read-only mode, without a copy of them, and works in its own area for its decisions (work queue, alert verdicts, detection parameters, counting ring and schedule, thresholds and coefficients, reports and conclusions, activity history); those decision pages open to a Farm Owner while the farm has no expert (BR-22), the backend deciding who may act.
 
@@ -359,7 +359,7 @@ erDiagram
   USER {
     ObjectId _id PK
     string email UK
-    string role "ADMIN | FARM_OWNER | DOMAIN_EXPERT | TECHNICIAN"
+    string role "ADMIN | FARM_OWNER | DOMAIN_EXPERT"
     string full_name
     string status "ACTIVE | LOCKED | DELETION_REQUESTED | DELETED"
     string locked_reason
@@ -562,7 +562,7 @@ erDiagram
     ObjectId _id PK
     ObjectId user_id FK
     string title
-    object ref "type: ALERT | HEALTH_REPORT | HEALTH_DAY | EXPERT_DECISION | PARAMETER_REVIEW | COEFFICIENT_PROPOSAL | TECHNICIAN_ACTION | INVITATION; id"
+    object ref "type: ALERT | HEALTH_REPORT | HEALTH_DAY | EXPERT_DECISION | PARAMETER_REVIEW | COEFFICIENT_PROPOSAL | DEVICE_ACTION | INVITATION; id"
     date read_at
     date created_at
   }
@@ -741,7 +741,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011) |
 | `/notifications` | Inbox, mark read; push-token registration and removal (ALERT-FR-002) |
 | `/harvests` | Harvest batches |
-| `/admin`, `/system` | Provisioned-device stock (add and return the activation key and the broker secret once, revoke, re-issue key), Farm Owner and Technician accounts, lock, deletion requests, default thresholds, audit log, technical overview |
+| `/admin`, `/system` | Provisioned-device stock (add and return the activation key and the broker secret once, revoke, re-issue key), Farm Owner's account, lock, deletion requests, default thresholds, audit log, technical overview with every device and its device alerts |
 | `/internal/stream-auth`, `/internal/mqtt-auth` | MediaMTX authorisation and EMQX device authentication (no user token, reachable only inside the Docker network) |
 
 ### 7.2 MQTT
@@ -844,7 +844,7 @@ stateDiagram-v2
   DECOMMISSIONED --> [*]
 ```
 
-Registration is done by the Farm Owner or a Technician (SF-01). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
+Registration is done by the Farm Owner (SF-01). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
 
 ### 8.7 Misting protection (SM-07, controller)
 
@@ -945,7 +945,7 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> NONE
-  NONE --> PENDING : Technician sends OTA, firmware >= 1.4.0 (FARM-FR-013)
+  NONE --> PENDING : Administrator sends OTA, firmware >= 1.4.0 (FARM-FR-013)
   PENDING --> NONE : heartbeat reports the new version
   PENDING --> FAILED : no confirmation in 30 min, image discarded or rolled back
   FAILED --> PENDING : OTA sent again
@@ -1062,7 +1062,7 @@ flowchart TB
   subgraph O[Farm Owner]
     O1[Acknowledge with note,<br/>act on site]
   end
-  subgraph T[Technician]
+  subgraph T[Administrator]
     T1[Sees device alerts of every farm:<br/>diagnose, restart, OTA - SF-02]
   end
   subgraph E[Domain Expert]
@@ -1247,20 +1247,20 @@ flowchart TB
   B8 --> O4
 ```
 
-Moving a controller to another floor: scan the new floor's code; the backend changes the zone in the database and republishes the new zone's configuration, which an online controller applies at once and an offline one at its next connection. A Technician may follow the same steps on any farm; the Farm Owners are notified of each registration or move (FARM-FR-009).
+Moving a controller to another floor: scan the new floor's code; the backend changes the zone in the database and republishes the new zone's configuration, which an online controller applies at once and an offline one at its next connection.
 
 ### 9.8 SF-02 Remote device maintenance (AD-08)
 
 ```mermaid
 flowchart TB
-  subgraph T[Technician - console]
+  subgraph T[Administrator - console]
     T0[Device alert, or new firmware] --> T1[Open device: firmware, uptime,<br/>RSSI, memory, reset reason]
     T1 --> T2{Remote fix?}
     T2 -- yes --> T3[Restart, push configuration or OTA]
-    T2 -- no --> T4[Replace or set up again on site<br/>steps of SF-01]
+    T2 -- no --> T4[Ask the Farm Owner to replace it<br/>or set it up again - SF-01]
   end
   subgraph B[Backend]
-    B1{Role Technician,<br/>device online?} -- no --> B2[Reject 403 / 409]
+    B1{Administrator, or Farm Owner<br/>restart; device online?} -- no --> B2[Reject 403 / 409]
     B1 -- yes --> B3[Send command with deviceId, audit]
     B3 --> B4[Notify the Farm Owners in the app]
     B5{OTA confirmed by heartbeat<br/>within 30 min?} -- no --> B6[FAILED]
@@ -1270,9 +1270,11 @@ flowchart TB
     C1 --> C2{New firmware reaches<br/>broker in 10 min?} -- no --> C3[Roll back]
   end
   subgraph O[Farm Owner]
-    O1[Sees what the Technician did]
+    O0[Restart a controller<br/>of the farm]
+    O1[Sees what the Administrator did]
   end
   T3 --> B1
+  O0 --> B1
   B3 --> C1
   C2 -- yes --> B5
   B4 --> O1
@@ -1298,7 +1300,7 @@ flowchart TB
     E1[Accept or decline;<br/>no account: create it from the link]
   end
   subgraph A[Administrator]
-    A1[Create Technicians, lock accounts,<br/>handle deletion requests]
+    A1[Lock accounts,<br/>handle deletion requests]
   end
   A0a --> U1
   U3 --> B1 --> E1 --> B2
@@ -1329,7 +1331,7 @@ flowchart TB
 | Concern | Design |
 | --- | --- |
 | Authentication | JWT access token (15 min) in the response body; refresh token (30 days) in an httpOnly, `sameSite=strict` cookie and stored hashed per user so each one can be revoked; password reset revokes all |
-| Authorisation | No public sign-up: accounts are created by the Administrator or from an invitation link; `requireRole` on every route following Report 3, Section 2.4; farm membership checked in services (`farmAccess.util`); a Technician reaches every farm's devices and their device alerts (FARM-FR-009) but never its environmental data, relays, thresholds, or its environmental and inferred alerts, and every device action is audited and notified to the Farm Owners |
+| Authorisation | No public sign-up: accounts are created by the Administrator or from an invitation link; `requireRole` on every route following Report 3, Section 2.4; farm membership checked in services (`farmAccess.util`); the Administrator reaches every farm's devices and their device alerts (FARM-FR-009) but never its environmental data, relays, thresholds, or its environmental and inferred alerts, and every remote command is audited and notified to the Farm Owners |
 | Passwords and codes | bcrypt; one-time codes hashed and never returned by the API |
 | Rate limiting | 300 requests/min per account; 10 failed sign-ins / 15 min per IP; 30 refreshes/min per IP |
 | Devices | Activation key from the provisioned stock, printed on the device label and checked only by the backend (stored hashed, compared in constant time, one message for an unknown ID and a wrong key); never stored on the controller; a device in service is never registered again (BR-26); labels and floor codes carry no Wi-Fi or broker credential. Each device has its own broker secret, flashed with its device ID and stored hashed in the stock; EMQX checks it through `/internal/mqtt-auth` and refuses it once the entry is revoked |
@@ -1381,7 +1383,7 @@ Why this split: users, the panel's network and the controllers need one stable p
 | Rollback | Re-deploy the previous tag; restore the MongoDB dump taken before the deployment |
 | Backup | `mongodump` before each deployment and once a day by cron, 7 dumps kept, copied off the VPS to the team's shared drive |
 | AI node | `stream.py` runs as a service on the spare PC at a member's home that starts at boot and restarts on failure, reconnecting to the camera with back-off; the PC's BIOS is set to power on after a power cut; the camera URL and password live only in the node's `.env`; the counting ring and model file are versioned with the tag |
-| Firmware | OTA from the Technician console; the new image is kept only after it reaches the broker within 10 minutes, otherwise the bootloader returns to the previous one |
+| Firmware | OTA from the Administrator console; the new image is kept only after it reaches the broker within 10 minutes, otherwise the bootloader returns to the previous one |
 | Monitoring | Technical overview (SYSTEM-FR-003), device and AI-node status and alerts (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`), audit log, `docker compose logs` |
 
 The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of the backend and the web, the Caddyfile, the TLS proxy configuration, the EMQX authentication and authorisation files, `.env.staging.example` and the demo seed of every scenario of the Design Brief, Appendix A2 (procedure: `docs/deploy/staging.md`).
@@ -1392,7 +1394,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13 |
+| 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller |
 | 1.1.0 | 26/10/2026 | SM-17 splits the day status from the rating state of each assessor (`ratingWindow` job and the day's `state` field removed). Harvest requirements referred to as `HARVEST-FR` (Report 3 3.1.0). Camera port restricted to the AI node's static IP by a modem rule (D5, Sections 10, 11). Final design for Review 2 against Report 3 3.1.0: device topics and one broker credential per device with a static authorisation rule, QoS 1 with event and command IDs, retained configuration, `esp-mqtt` on the ESP32, `config/reassign` removed (D3, D9, Sections 2.2, 5.1, 7.2, 10, AD-10); decisions D15 (manual override within limits) and D16 (current status and evaluation snapshot); Logical ERD as the final design: user status, push tokens, per-relay override, telemetry validity, alert event ID and details, house health reports with a unique key per kind and period, notification references, harvest type and photo, audit source, stock credentials, `sla_hours` removed; Section 6.3 data retention (BR-36), Section 6.4 schema migrations, Section 5.5 code location of the engineering constants; mobile scope, HLS stream and FCM token in Section 5.4; state machines and activity diagrams aligned (SM-03, 06, 14, 17; AD-02, 03, 04, 08, 09, 10, 11, 12, 14); 'planned' marks and the former Section 12 removed: implementation gaps are tracked only in Project Tracking. D11: the DC demo loads are measured with shunt resistors instead of current transformers (Section 3 controller board) |
 | 1.0.10 | 26/10/2026 | Tickets, SLA, Technician regions and the Administrator's farm management removed from the code (pull requests #100–#106): permission and supporting-role gaps closed in Section 12, done ticket, region, coordinate and `MAINTENANCE_DUE` rows dropped from Section 6.4 |
 | 1.0.9 | 24/10/2026 | A farm is one place with required coordinates (Report 3 FARM-FR-001, A-5): `address` and `coordinates` in the ERD, planned validator in Section 6.4, location field in the farm form (Section 5.4) |

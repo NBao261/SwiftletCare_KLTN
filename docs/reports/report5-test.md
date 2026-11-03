@@ -71,7 +71,7 @@ Defects are GitHub issues labelled `bug` with a severity:
 | Severity | Meaning | Example |
 | --- | --- | --- |
 | Critical | A main workflow cannot complete, data is lost, or a safety rule is broken | Fan driven by NH3; override never returns to AUTO |
-| High | A mandatory feature gives a wrong result or a permission is wrong | A Technician can edit thresholds |
+| High | A mandatory feature gives a wrong result or a permission is wrong | An Administrator can edit thresholds |
 | Medium | Wrong result with a workaround, or a non-mandatory feature broken | Wrong label in a report |
 | Low | Cosmetic | Alignment, wording |
 
@@ -130,7 +130,7 @@ Requirements covered by each mandatory feature:
 | TC-F02-03 | F-02 | ENV-FR-010, 011, THREAT-FR-013 | Default coefficients | Call the controller with invalid (NaN) inputs | NaN humidity and temperature | Safe state: misting and fan output 0 | Auto (CI) – firmware `pio test -e native` `test_fuzzy` › `test_invalid_inputs_give_safe_state` | Not run on the tag |
 | TC-F03-01 | F-03 | ENV-FR-006, 009 | Zone with thresholds; Farm Owner signed in | PUT a valid partial threshold update | `humidity_min` = 80 | Values stored as numbers; history entry with source MANUAL; other keys unchanged | Auto (CI) – backend Jest `tests/integration/zoneThresholds.test.ts` › “records only the known keys, with source MANUAL, in the threshold history” | Not run on the tag |
 | TC-F03-02 | F-03 | ENV-FR-006 | Same zone | PUT an out-of-range threshold | `humidity_min` = 150 | 400; nothing stored | Auto (CI) – backend Jest `tests/integration/zoneThresholds.test.ts` › “PUT /farms/zones/:id/thresholds answers 400 for an out-of-range value” | Not run on the tag |
-| TC-F03-03 | F-03 | ENV-FR-006, 020, 021 | Technician and Administrator accounts | PUT thresholds, reset and fuzzy tuning as each of them | Valid body | 403 for both on every route (ENV-FR-006, 020, 021) | Auto (CI) – backend Jest `tests/integration/roleMatrix.test.ts` › “mỗi dòng của bảng quyền trả 403 cho role bị bỏ” | Not run on the tag |
+| TC-F03-03 | F-03 | ENV-FR-006, 020, 021 | Administrator account | PUT thresholds, reset and fuzzy tuning | Valid body | 403 on every route (ENV-FR-006, 020, 021) | Auto (CI) – backend Jest `tests/integration/roleMatrix.test.ts` › “mỗi dòng của bảng quyền trả 403 cho role bị bỏ” | Not run on the tag |
 | TC-F04-01 | F-04 | ENV-FR-014 | Prototype running in AUTO; logging on | Cut the router uplink for 30 min, then restore it | — | A control decision every 10 s during the outage (100 %) | Manual – prototype, test house | Not run |
 | TC-F04-02 | F-04 | ENV-FR-004, 024 | Controller reconnects with buffered samples | Ingest flushed offline-buffer readings | Readings with their own timestamps | Stored at their own time; the live dashboard is not touched | Auto (CI) – backend Jest `tests/integration/deviceMqttContract.test.ts` › “stores flushed offline-buffer readings at their own time” | Not run on the tag |
 | TC-F04-03 | F-04 | ENV-FR-025, THREAT-FR-012 | Prototype running | Block the main loop on purpose (debug build) | — | Watchdog restarts the controller; control resumes; one `UNEXPECTED_RESTART` with reset reason `WATCHDOG` | Manual – prototype | Not run |
@@ -154,7 +154,7 @@ Requirements covered by each mandatory feature:
 | TC-F10-03 | F-10 | VISION-FR-004, 005 | Same ring | Feed a track lost at the frame edge, and a slow circling bird lost near the ring | — | Nothing counted for either | Auto (CI) – AI pipeline `pytest` `tests/test_counting.py` › `test_track_lost_at_the_frame_edge_counts_nothing` + Auto (CI) – AI pipeline `pytest` `tests/test_counting.py` › `test_slow_circling_bird_lost_near_the_ring_counts_nothing` | Not run on the tag |
 | TC-F11-01 | F-11 | VISION-FR-014 | Pipeline running on a recorded clip | Process frames and read the published frames | Clip with tracked birds | Every published frame shows the ring and a box with a track ID on each tracked bird | Auto (CI, to be written) – AI pipeline pytest `test_annotate.py` (G-12) | Not run – test to be written |
 | TC-F11-02 | F-11 | VISION-FR-013 | Camera of a farm; its Farm Owner and Domain Expert | GET stream-token as each | — | Token valid 60 s for path `cam-<device_id>` only | Auto (CI) – backend Jest `tests/integration/streamAuth.test.ts` › “Farm Owner và Domain Expert của farm nhận token 60 giây” | Not run on the tag |
-| TC-F11-03 | F-11 | VISION-FR-013 | Technician; Farm Owner of another farm | GET stream-token as each | — | 403 | Auto (CI) – backend Jest `tests/integration/streamAuth.test.ts` › “Technician (SRS §4.4) và Farm Owner của farm khác bị chặn” | Not run on the tag |
+| TC-F11-03 | F-11 | VISION-FR-013 | User who is not a member of the farm; Farm Owner of another farm | GET stream-token as each | — | 403 | Auto (CI) – backend Jest `tests/integration/streamAuth.test.ts` › “Technician (SRS §4.4) và Farm Owner của farm khác bị chặn” | Not run on the tag |
 | TC-F12-01 | F-12 | THREAT-FR-007 | Hour with a learned quiet baseline | Feed noise above the baseline for the minimum duration | +20 dB for 12 s of 15 s | Anomaly raised | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_same_loudness_in_a_quiet_hour_triggers` | Not run on the tag |
 | TC-F12-02 | F-12 | THREAT-FR-007 | Same baseline | Feed a short burst | +20 dB for 8 s | No anomaly | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_short_noise_does_not_trigger` | Not run on the tag |
 | TC-F12-03 | F-12 | THREAT-FR-005, 007 | Speaker playing | Feed loud samples | — | Not evaluated and not learned into the baseline | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_speaker_playing_is_ignored_and_not_learned` | Not run on the tag |
@@ -181,7 +181,7 @@ Requirements covered by each mandatory feature:
 | TC-F21-03 | F-21 | EXPERT-FR-013 | A daily report in the web app | Download the PDF and compare with the screen | — | Same figures; no internal IDs | Manual – web, staging | Not run |
 | TC-F22-01 | F-22 | EXPERT-FR-012 | Computed day; Farm Owner who has not rated it | GET the day, the daily report and the CSV; then POST a rating | — | No status, reasons or other ratings before the rating; the rating and its snapshot stored together, and the status returned only in the rating response | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
 | TC-F22-02 | F-22 | EXPERT-FR-012 | Rated day | Ingest a late count that changes the status; then try to change the rating | — | Current status recomputed, snapshot unchanged; rating change rejected, a note accepted | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
-| TC-F22-03 | F-22 | EXPERT-FR-012 | Technician, Administrator; a day 8 days ago | Rate as each; rate the old day | — | 403; old day rejected | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
+| TC-F22-03 | F-22 | EXPERT-FR-012 | Administrator; a day 8 days ago | Rate as each; rate the old day | — | 403; old day rejected | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
 
 ### 4.2 Main Workflows (6)
 

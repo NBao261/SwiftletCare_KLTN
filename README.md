@@ -44,8 +44,7 @@ Vai trò người dùng:
 |---|---|
 | Farm Owner | Theo dõi nhà yến, tự lắp và gán thiết bị bằng QR, điều khiển tay khi cần, nhận cảnh báo, ghi nhận thu hoạch, mời thành viên; quyết thay chuyên gia khi farm chưa có chuyên gia |
 | Domain Expert | Chuyên gia nuôi yến: kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và hệ số điều khiển, duyệt thay đổi của chủ farm, viết kết luận báo cáo sức khỏe (chỉ đọc phần vận hành); mọi quyết định đều báo cho chủ farm |
-| Technician | Vai trò kỹ thuật: xem thiết bị và cảnh báo thiết bị của mọi farm, lắp/dời/gỡ thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường |
-| Admin | Tạo tài khoản Farm Owner và Technician, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; không quản lý farm |
+| Admin | Tạo tài khoản Farm Owner, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; xem mọi thiết bị và cảnh báo thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường, không quản lý farm. Vai Technician đã bỏ (BM03 dòng 13); code còn role này đến khi xong G-20 |
 
 ## Tính năng chính
 
@@ -173,7 +172,7 @@ Khi dev, `MQTT_BROKER_URL` phải là `mqtt://localhost:1883` (EMQX dev tự ký
 |---|---|
 | `owner@swiftletcare.dev` | Farm Owner |
 | `expert@swiftletcare.dev` | Domain Expert |
-| `tech@swiftletcare.dev` | Technician |
+| `tech@swiftletcare.dev` | Technician (bỏ ở G-20) |
 
 ### 3. Frontend
 
