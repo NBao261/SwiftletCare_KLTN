@@ -6,14 +6,14 @@ Draft of form BM03, which goes with the proposed final registration form (`regis
 
 | Field | Value |
 | --- | --- |
-| Project code | `[TEAM: approved project code]` |
+| Project code | FA26SE158 |
 | Project name | SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
-| Supervisor | `[TEAM: supervisor name]` |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Current registration version | v2 (after Review 1) |
 | Proposed version | v3 |
 | Version | 1.1 |
-| Date | 26/10/2026 |
+| Date | 03/11/2026 |
 
 ## 2. Changes
 

@@ -4,11 +4,11 @@
 
 | Field | Value |
 | --- | --- |
-| Project code | `[TEAM: approved project code]` |
+| Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
-| Supervisor | `[TEAM: supervisor name]` |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Document version | 1.1.0 (Review 2) |
-| Date | 26/10/2026 |
+| Date | 03/11/2026 |
 | Requirements baseline | Report 3 – SRS 3.1.0; Design Brief (BM01) 1.1 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
@@ -139,8 +139,8 @@ Each owner runs the test cases of their features and workflows and records the r
 | --- | --- | --- |
 | Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12; WF-01, 03, 06; config sync transitions; NFR-04, 05, 06, 07, 09, 11 | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push and current sensing |
 | Trần Minh Kiệt | F-05, 06, 08, 18, 19; WF-04, 10; device and label transitions; NFR-10 | Backend tests of devices, accounts, alerts, the expert module and daily health (including those of F-07, 13–17, 20–22) |
-| Nguyễn Vũ Len | F-07, 17; WF-02, 05, 09; alert and relay transitions; NFR-01 | E2E tests of DS-03, 04, 09, 10, 17, 18 |
-| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-11; daily status and health report transitions; NFR-02, 03, 14 | E2E tests of DS-21, 22; mobile tests |
+| Nguyễn Vũ Len | F-07, 17; WF-02, 09; alert and relay transitions; NFR-02 | E2E tests of DS-03, 04, 17, 18; mobile tests |
+| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-05, 11; daily status and health report transitions; NFR-01, 03, 14 | E2E tests of DS-09, 10, 21, 22 |
 | Thái Minh Tuấn | F-13, 14, 15, 16; WF-07, 08; verdict, review item and proposal transitions; NFR-08, 13 | E2E tests of DS-13, 14, 15, 16 |
 
 ## 6. Test Results at Review 2
