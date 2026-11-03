@@ -158,9 +158,18 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
         </Text>
       )}
       {isPumpOn && blockingQuery.isError && (
-        <Text variant="small" weight="semiBold" color={palette.alert}>
-          {t('Không kiểm tra được cảnh báo của khu vực nên chưa bật được bơm. Vui lòng thử lại')}
-        </Text>
+        <View style={styles.retryRow}>
+          <Text variant="small" weight="semiBold" color={palette.alert} style={styles.retryText}>
+            {t('Không kiểm tra được cảnh báo của khu vực nên chưa bật được bơm. Vui lòng thử lại')}
+          </Text>
+          <Button
+            variant="link"
+            size="sm"
+            label={t('Thử lại')}
+            onPress={() => blockingQuery.refetch()}
+            loading={blockingQuery.isFetching}
+          />
+        </View>
       )}
       {blockingAlerts.length > 0 && (
         <View style={[styles.warning, { backgroundColor: palette.surfaceStrong }]}>
@@ -200,4 +209,6 @@ const styles = StyleSheet.create({
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   chip: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
   warning: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.xs },
+  retryRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  retryText: { flex: 1 },
 })
