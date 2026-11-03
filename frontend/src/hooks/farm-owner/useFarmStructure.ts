@@ -28,7 +28,7 @@ const STRUCTURE_STALE_MS = 5 * 60 * 1000
  */
 export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
   const queryClient = useQueryClient()
-  // GET /harvests chỉ cho FARM_OWNER/ADMIN — Technician cũng mở được màn này nên không gọi, tránh 403 rồi hiện 0 kg sai
+  // GET /harvests chỉ cho FARM_OWNER/DOMAIN_EXPERT — Technician cũng mở được màn này nên không gọi, tránh 403 rồi hiện 0 kg sai
   const canViewHarvest = usePermission(...HARVEST_ROLES)
   const farmsQ = useFarms()
   const farms = farmsQ.data

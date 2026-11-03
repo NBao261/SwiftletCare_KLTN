@@ -5,6 +5,7 @@ import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
 import { useHeaderSlotStore } from '@/stores/headerSlotStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { usePermission } from '@/hooks/common/usePermission'
+import { ALERT_ROLES } from '@/constants/roles'
 import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { shellDict } from '@/constants/shell.i18n'
@@ -79,8 +80,8 @@ export default function AppHeader({ menuSections, elevated = false, isOverHero =
   const page = usePageTitle(menuSections)
   const registeredTrail = useBreadcrumbStore(s => s.trail)
   const rootState = useBreadcrumbStore(s => s.rootState)
-  // Khớp RequireRole của thông báo cảnh báo — cho phép cả Chuyên gia xem thông báo
-  const canViewAlerts = usePermission('FARM_OWNER', 'TECHNICIAN', 'ADMIN', 'DOMAIN_EXPERT')
+  // Khớp RequireRole của /alerts (popup mở tới đó); Chuyên gia theo dõi cảnh báo qua hàng đợi kiểm chứng, Admin không thấy farm
+  const canViewAlerts = usePermission(...ALERT_ROLES)
 
   // Chỉ trang tự đăng ký breadcrumb (VD Farms drill-down) mới có cấp con —
   // header không còn ô chọn Zone nên không gắn tên Zone đang lưu vào đây nữa.

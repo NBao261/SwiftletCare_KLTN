@@ -1,4 +1,3 @@
-// Alerts Page – ALERT-FR-001/002/006/007/008/009
 import { useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useAlertsList, useAcknowledgeAlert } from "@/hooks/shared/useAlerts";
@@ -24,6 +23,7 @@ const STATUS_FILTERS: Array<{ value: AlertStatus | undefined; label: string }> =
     { value: undefined, label: "Tất cả" },
     { value: "ACTIVE", label: "Đang mở" },
     { value: "ACKNOWLEDGED", label: "Đã xác nhận" },
+    { value: "DISMISSED", label: "Đã bác bỏ" },
     { value: "RESOLVED", label: "Đã xử lý" },
   ];
 
@@ -45,7 +45,7 @@ export default function TechnicianAlertsPage() {
   );
   const [page, setPage] = useState(1);
   const [ackTargetId, setAckTargetId] = useState<string | null>(null);
-  // Chỉ Farm Owner xác nhận cảnh báo (ALERT-FR-009, Report 3 §2.4); Technician, Admin chỉ xem.
+  // Chỉ Farm Owner xác nhận cảnh báo (ALERT-FR-009, Report 3 §2.4); Technician chỉ xem.
   // Backend chặn cùng role ở PUT /alerts/:id/acknowledge.
   const canAcknowledge = usePermission("FARM_OWNER");
   // Bấm 1 thông báo ở NotificationPopover (AppHeader) điều hướng sang đây kèm
@@ -106,7 +106,7 @@ export default function TechnicianAlertsPage() {
         <EmptyState
           icon={<IconAlert width={28} height={28} />}
           title="Không có cảnh báo nào"
-          description="Khi hệ thống phát hiện bất thường (môi trường vượt ngưỡng, thiết bị mất kết nối, thiên địch...), cảnh báo sẽ hiện ở đây."
+          description="Khi hệ thống phát hiện sự cố phần cứng, thiết bị mất kết nối hoặc cảm biến lỗi, cảnh báo kỹ thuật sẽ hiển thị tại đây."
         />
       )}
 
@@ -136,16 +136,24 @@ export default function TechnicianAlertsPage() {
               <span
                 className={cn(
                   "text-xs font-semibold",
-                  alert.status === "ACTIVE" ? "text-alertRed" : "text-warmGray",
+                  alert.status === "ACTIVE"
+                    ? "text-alertRed"
+                    : alert.status === "ACKNOWLEDGED"
+                      ? "text-blue-700"
+                      : alert.status === "DISMISSED"
+                        ? "text-warmGray"
+                        : "text-emerald-700",
                 )}
               >
                 {alert.status === "ACTIVE"
                   ? "Chưa xác nhận"
                   : alert.status === "ACKNOWLEDGED"
                     ? "Đã xác nhận"
-                    : "Đã xử lý"}
+                    : alert.status === "DISMISSED"
+                      ? "Đã bác bỏ (DISMISSED)"
+                      : "Đã xử lý"}
               </span>
-              {alert.status === 'ACTIVE' && canAcknowledge && (
+              {alert.status === "ACTIVE" && canAcknowledge && (
                 <Button
                   variant="secondary"
                   size="sm"
@@ -155,6 +163,29 @@ export default function TechnicianAlertsPage() {
                 </Button>
               )}
             </div>
+
+            {alert.status === "DISMISSED" && (
+              <div className="rounded-xl bg-neutral-100/90 border border-neutral-200 p-2.5 text-xs text-warmGray mt-1.5 space-y-1.5">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <span className="font-semibold text-charcoal">
+                    Bác bỏ bởi: {typeof alert.expert_verdict?.by === 'object' ? alert.expert_verdict.by?.full_name : 'Chuyên gia'}{' '}
+                    <span className="font-normal text-warmGray">
+                      ({alert.expert_verdict?.role === 'FARM_OWNER' ? 'Chủ nhà yến' : 'Chuyên gia'})
+                    </span>
+                  </span>
+                  {alert.previous_status && (
+                    <span className="text-[11px] text-warmGray">
+                      Trạng thái trước: <strong className="text-charcoal">{alert.previous_status === 'ACKNOWLEDGED' ? 'Đã xác nhận' : 'Đang mở'}</strong>
+                    </span>
+                  )}
+                </div>
+                {alert.expert_verdict?.note && (
+                  <p className="text-charcoal italic bg-white/80 p-2 rounded-lg border border-neutral-200">
+                    Lý do: "{alert.expert_verdict.note}"
+                  </p>
+                )}
+              </div>
+            )}
             
             <div className="flex items-center gap-2 mt-2 pt-2 border-t border-warmGray/10">
               <span className="text-xs text-warmGray/80 flex-1">

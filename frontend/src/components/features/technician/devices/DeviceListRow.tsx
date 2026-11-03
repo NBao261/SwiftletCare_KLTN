@@ -8,7 +8,8 @@ import DeviceDiagnosticsPanel from "@/components/features/technician/devices/Dev
 
 interface DeviceListRowProps {
   node: SensorNode;
-  zoneId: string;
+  zoneId?: string;
+  locationLabel?: string;
   index?: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -51,7 +52,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pu
 }
 
 export default function DeviceListRow({
-  node, zoneId, index = 0, isExpanded, onToggleExpand,
+  node, zoneId, locationLabel, index = 0, isExpanded, onToggleExpand,
   onReboot, rebootUnsupported,
   onOpenAudio, onOpenReassign, onOpenReplace, onOpenDecommission, canOnboard
 }: DeviceListRowProps) {
@@ -71,16 +72,22 @@ export default function DeviceListRow({
         className="group flex flex-col md:flex-row md:items-center gap-4 p-3 cursor-pointer"
         onClick={onToggleExpand}
       >
-        {/* Cột 1: Mã thiết bị + firmware */}
+        {/* Cột 1: Mã thiết bị + firmware + vị trí */}
         <div className="flex items-center gap-3 w-full md:w-3/12 min-w-0">
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isOnline ? 'bg-success/10 text-charcoal' : 'bg-stone text-warmGray'}`}>
             <IconDevice />
           </div>
           <div className="min-w-0 flex flex-col">
             <p className="truncate font-mono font-bold text-charcoal">{node.device_id}</p>
-            <p className="mt-0.5 truncate font-mono text-xs text-warmGray">
-              Firmware {node.firmware_version || "—"}
-            </p>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-warmGray">
+              <span className="font-mono">v{node.firmware_version || "—"}</span>
+              {locationLabel && (
+                <>
+                  <span>·</span>
+                  <span className="truncate max-w-[150px] text-graphite font-sans" title={locationLabel}>{locationLabel}</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -162,7 +169,7 @@ export default function DeviceListRow({
             {isExpanded && (
               <DeviceDiagnosticsPanel
                 node={node}
-                zoneId={zoneId}
+                zoneId={zoneId || node.zone_id}
                 onOpenAudio={onOpenAudio}
                 onOpenReassign={onOpenReassign}
                 onOpenReplace={onOpenReplace}

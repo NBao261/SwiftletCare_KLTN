@@ -4,7 +4,7 @@ import { useAuthStore } from "@/stores/authStore";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import FarmOwnerLayout from "@/components/layouts/FarmOwnerLayout";
 import TechnicianLayout from "@/components/layouts/TechnicianLayout";
-import ExpertLayout from "@/components/layouts/ExpertLayout";
+import DomainExpertLayout from "@/components/layouts/DomainExpertLayout";
 import AppShell from "@/components/layouts/AppShell";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { setNavigate } from "@/lib/navigation";
@@ -14,7 +14,7 @@ import LoginSplash from "@/components/auth/LoginSplash";
 import { farmOwnerRoutes } from "@/routes/farm-owner.routes";
 import { technicianRoutes } from "@/routes/technician.routes";
 import { adminRoutes } from "@/routes/admin.routes";
-import { expertRoutes } from "@/routes/expert.routes";
+import { domainExpertRoutes } from "@/routes/domain-expert.routes";
 
 /** Cài đặt tài khoản và chính sách quyền riêng tư — route mọi role đã đăng nhập đều dùng, nên nằm ngay đây thay vì trong một file route theo role. */
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
@@ -50,7 +50,7 @@ function RoleLayout() {
     case "TECHNICIAN":
       return <TechnicianLayout />;
     case "DOMAIN_EXPERT":
-      return <ExpertLayout />;
+      return <DomainExpertLayout />;
     case "FARM_OWNER":
       return <FarmOwnerLayout />;
     // Role lạ từ token cũ: vẫn dựng khung để Outlet render được, chỉ là chưa có
@@ -90,7 +90,7 @@ function RouteFallback() {
  * (code-splitting theo route) và tự khai `RequireRole`. Thư mục chứa trang cho
  * biết role SỞ HỮU nghiệp vụ đó, còn `allow={...}` trong file route mới là
  * danh sách role thật sự vào được — VD trang trong `pages/technician/` vẫn mở
- * cho Farm Owner và Admin qua `allow={OPS_ROLES}`.
+ * cho Farm Owner qua `allow={ALERT_ROLES}` (/alerts).
  */
 export default function App() {
   return (
@@ -115,7 +115,7 @@ export default function App() {
             {farmOwnerRoutes}
             {technicianRoutes}
             {adminRoutes}
-            {expertRoutes}
+            {domainExpertRoutes}
           </Route>
 
           <Route path="*" element={<RoleHomeRedirect />} />
