@@ -1,11 +1,12 @@
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from inference import Detection, decode, merge_tiles  # noqa: E402
+from inference import Detection, InferenceEngine, decode, merge_tiles  # noqa: E402
 
 BIRD = {14: "swiftlet"}
 
@@ -36,3 +37,13 @@ def test_merge_keeps_one_box_for_a_bird_in_the_tile_overlap():
     other = Detection(14, "swiftlet", 0.7, (1100, 500, 1140, 540))
     kept = merge_tiles([cut, full, other], max_overlap=0.6)
     assert [d.bbox for d in kept] == [full.bbox, other.bbox]
+
+
+def test_preprocess_gives_rgb_nchw_in_0_1_with_grey_letterbox():
+    img = np.zeros((100, 200, 3), np.uint8)
+    img[:, :] = (255, 0, 0)                      # pure blue in BGR
+    blob, scale, pad_x, pad_y = InferenceEngine.preprocess(SimpleNamespace(input_size=64), img)
+    assert blob.shape == (1, 3, 64, 64) and blob.dtype == np.float32
+    assert (scale, pad_x, pad_y) == (0.32, 0, 16)
+    assert np.allclose(blob[0, :, 32, 32], [0, 0, 1])          # image: R=0, G=0, B=1
+    assert np.allclose(blob[0, :, 0, 32], 114 / 255)           # letterbox band above the image

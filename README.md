@@ -31,12 +31,12 @@ Nhà yến cần giữ nhiệt độ, độ ẩm và ánh sáng ổn định su�
 Luồng chính của hệ thống:
 
 1. **Điều khiển vi khí hậu tự động** — bộ điều khiển mờ (fuzzy) trên ESP32 bật/tắt phun sương và quạt theo nhiệt độ, độ ẩm.
-2. **Đếm chim ra/vào** — camera tại cửa ra vào, model YOLO26n + ByteTrack đếm chim và phát live stream có khung nhận diện.
+2. **Đếm chim ra/vào** — camera tại cửa ra vào, model YOLO (YOLOv8n hoặc YOLO11n) + ByteTrack đếm chim và phát live stream có khung nhận diện.
 3. **Giám sát sức khỏe đa nguồn có chuyên gia tham gia** — kết hợp dữ liệu môi trường, khí, tiếng ồn và số chim; Domain Expert kiểm chứng cảnh báo và viết kết luận cho chủ nhà yến.
 
 Một bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các farm của chủ đó: Admin tạo tài khoản, thành viên vào bằng lời mời, không có đăng ký công khai; không có mua bán, ticket hay điều phối dịch vụ.
 
-Report 3 chia thành 11 luồng chính (MF-01…11), gồm cả việc chủ nhà yến tự gắn bộ điều khiển vào tầng bằng hai lần quét QR (MF-10) và trạng thái sức khỏe nhà yến theo ngày kèm báo cáo ngày/tuần/tháng (MF-11).
+Report 3 chia thành 6 luồng chính theo quy trình nghiệp vụ (MF-01…06: điều khiển vi khí hậu tự động, xử lý sự cố, đếm chim, chuyên gia kiểm chứng cảnh báo suy luận, tinh chỉnh tham số, sức khỏe nhà yến theo ngày kèm báo cáo ngày/tuần/tháng) và 4 luồng phụ, gồm việc chủ nhà yến tự gắn bộ điều khiển vào tầng bằng hai lần quét QR (SF-01).
 
 Vai trò người dùng:
 
@@ -44,8 +44,7 @@ Vai trò người dùng:
 |---|---|
 | Farm Owner | Theo dõi nhà yến, tự lắp và gán thiết bị bằng QR, điều khiển tay khi cần, nhận cảnh báo, ghi nhận thu hoạch, mời thành viên; quyết thay chuyên gia khi farm chưa có chuyên gia |
 | Domain Expert | Chuyên gia nuôi yến: kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và hệ số điều khiển, duyệt thay đổi của chủ farm, viết kết luận báo cáo sức khỏe (chỉ đọc phần vận hành); mọi quyết định đều báo cho chủ farm |
-| Technician | Vai trò kỹ thuật: xem thiết bị và cảnh báo thiết bị của mọi farm, lắp/dời/gỡ thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường |
-| Admin | Tạo tài khoản Farm Owner và Technician, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; không quản lý farm |
+| Admin | Tạo tài khoản Farm Owner, khoá/mở tài khoản, xử lý yêu cầu xoá dữ liệu, kho thiết bị và in nhãn QR, ngưỡng mặc định, audit log, tổng quan kỹ thuật; xem mọi thiết bị và cảnh báo thiết bị, khởi động lại, đẩy cấu hình, cập nhật firmware từ xa; không bật/tắt relay, không xem dữ liệu môi trường, không quản lý farm. Vai Technician đã bỏ (BM03 dòng 13); code còn role này đến khi xong G-20 |
 
 ## Tính năng chính
 
@@ -63,7 +62,7 @@ Vai trò người dùng:
 - Mỗi nhà yến có một trạng thái sức khỏe theo ngày (chỉ báo theo luật, không phải chẩn đoán) và báo cáo ngày/tuần/tháng theo nhà, xuất PDF/CSV; chủ farm và chuyên gia tự đánh giá ngày trước khi xem trạng thái của hệ thống để đo mức trùng khớp; chuyên gia viết kết luận.
 - Dashboard thời gian thực qua Socket.io, biểu đồ và phân tích hiệu quả điều khiển.
 
-**Thiết lập thiết bị (MF-10)**
+**Thiết lập thiết bị (SF-01)**
 - Chủ farm quét nhãn QR trên bộ điều khiển (Device ID + mã kích hoạt) và mã QR dán ở tầng trong app mobile; cài Wi-Fi qua AP-mode, không nạp lại firmware; không phải nhập farm/zone trên thiết bị — farm, nhà và tầng chỉ lưu ở backend, thiết bị chỉ nhận cấu hình của tầng.
 - Dời bộ điều khiển sang tầng khác từ xa, lịch sử dữ liệu đi theo thiết bị.
 
@@ -81,7 +80,7 @@ Vai trò người dùng:
    │ RTSP        └────────┼─────────────────────────────────┘
    ▼                      │ MQTT (TLS khi deploy)
  AI node ── MQTT ──────►  EMQX broker
- (YOLO26 + ByteTrack)     │
+ (YOLO + ByteTrack)       │
                           ▼
                  Backend (Node.js / Express) ──► MongoDB
                  REST + Socket.io, cron jobs ──► MinIO (file)
@@ -100,7 +99,7 @@ Sơ đồ draw.io cũ ở [`docs/diagrams/`](./docs/diagrams/) vẽ theo phạm 
 | Backend | Node.js 22, Express, TypeScript, MongoDB (Mongoose), MQTT (EMQX), Socket.io, node-cron, Jest |
 | Frontend | React 18, Vite, TypeScript, TailwindCSS, React Query, Zustand, Vitest, PWA |
 | Mobile | Expo, Expo Router, React Native, React Query, Zustand |
-| AI pipeline | Python, OpenCV, YOLO26n (ONNX Runtime), ByteTrack |
+| AI pipeline | Python, OpenCV, YOLOv8n/YOLO11n (ONNX Runtime), ByteTrack |
 | Hạ tầng | Docker Compose (MongoDB, EMQX, MinIO, Redis), GitHub Actions |
 
 ## Trạng thái phát triển
@@ -123,7 +122,7 @@ SwiftletCare_KLTN/
 ├── frontend/             # Web dashboard / PWA
 ├── mobile/               # Ứng dụng di động
 ├── firmware/             # ESP32: cảm biến, điều khiển, MQTT, loa ru
-├── ai-pipeline/          # Đếm chim yến (YOLO26n + ByteTrack)
+├── ai-pipeline/          # Đếm chim yến (YOLO + ByteTrack)
 ├── docs/                 # Report 3–4 (SRS, SDD), API spec, database script, phần cứng, sơ đồ, kế hoạch
 ├── .github/              # CI, CODEOWNERS, PR template
 ├── docker-compose.yml    # Môi trường dev
@@ -173,7 +172,7 @@ Khi dev, `MQTT_BROKER_URL` phải là `mqtt://localhost:1883` (EMQX dev tự ký
 |---|---|
 | `owner@swiftletcare.dev` | Farm Owner |
 | `expert@swiftletcare.dev` | Domain Expert |
-| `tech@swiftletcare.dev` | Technician |
+| `tech@swiftletcare.dev` | Technician (bỏ ở G-20) |
 
 ### 3. Frontend
 

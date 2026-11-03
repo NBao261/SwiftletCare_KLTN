@@ -8,7 +8,7 @@ React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: 
 > - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009), live stream có khung và số đếm trực tiếp.
 > - Technician/Admin: Admin không có nút can thiệp tay hay xác nhận cảnh báo; Technician cũng không có hai nút đó (Report 3 §2.4). Ticket, SLA, vùng của Technician và màn quản lý farm của Admin đã ra ngoài phạm vi (Report 3 §8) và đã gỡ khỏi code.
 > - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận, duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010), duyệt đề xuất hệ số (EXPERT-FR-011), vòng đếm và lịch đếm theo mùa; Farm Owner chỉ xem, trừ khi farm chưa có chuyên gia (BR-22).
-> - Thiết lập thiết bị (MF-10): Farm Owner quét nhãn QR và mã QR tầng, xem tiến trình setup; Admin in nhãn QR khi thêm thiết bị vào kho; màn Zone in mã QR tầng. Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician.
+> - Thiết lập thiết bị (SF-01): Farm Owner quét nhãn QR và mã QR tầng, xem tiến trình setup; Admin in nhãn QR khi thêm thiết bị vào kho; màn Zone in mã QR tầng. Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician.
 > - Gỡ trường `heating` còn sót trong `RelayStates` (màn đã chỉ hiện 3 relay); NH3/CO2 ghi rõ là ngưỡng cảnh báo của Zone (không điều khiển quạt); nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
 
 ## Chạy local
