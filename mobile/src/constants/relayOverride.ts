@@ -26,6 +26,5 @@ export const PUMP_ON_CONFIRM_ALERT_TYPES: readonly AlertType[] = ['SENSOR_FAULT'
 // "Đang mở" theo Report 3 §6.1: chưa xác nhận hoặc đã xác nhận nhưng chưa tự hết — cả hai đều buộc hỏi lại khi bật bơm
 export const PUMP_ON_CONFIRM_ALERT_STATUSES: readonly AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED']
 
-// TODO(G-06, Kiệt): backend chưa nhận xác nhận cảnh báo trong lệnh bật bơm (api-spec chưa có trường, chưa trả 409).
-// Khi POST /devices/sensor-nodes/{id}/relay có trường xác nhận thì đổi thành true — app gửi kèm khi người dùng đã đồng ý
-export const HAS_OVERRIDE_CONFIRM_API: boolean = false
+// Mã lỗi backend trả khi bật bơm mà chưa xác nhận các cảnh báo trên (409, error.details là danh sách cảnh báo)
+export const CONFIRMATION_REQUIRED_CODE = 'CONFIRMATION_REQUIRED'

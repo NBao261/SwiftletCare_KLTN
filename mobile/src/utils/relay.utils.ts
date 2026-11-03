@@ -1,5 +1,6 @@
 import { OVERRIDE_MAX_MS, OVERRIDE_MIN_MS, PUMP_ON_MAX_MS } from '@/constants/relayOverride'
-import type { Alert, RelayName, SensorNode } from '@/types'
+import type { RelayName, SensorNode } from '@/types'
+import type { PumpBlockingAlert } from '@/utils/alert.utils'
 import { getAlertStatusLabel, getAlertTypeLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -61,9 +62,14 @@ export function formatSpeakerWindows(schedule: SensorNode['speaker_schedule']): 
   return schedule.windows.map(window => `${window.start}–${window.end}`).join(' · ')
 }
 
-// Nội dung hộp xác nhận bật bơm (ENV-FR-016): mỗi cảnh báo đang mở một dòng "• loại · trạng thái", rồi câu hỏi kèm thời lượng
-export function buildPumpConfirmMessage(alerts: Alert[], durationMs: number): string {
-  const lines = alerts.map(alert => `• ${getAlertTypeLabel(alert.type)} · ${getAlertStatusLabel(alert.status)}`)
+// Nội dung hộp xác nhận bật bơm (ENV-FR-016): mỗi cảnh báo đang mở một dòng "• loại · trạng thái" (không biết trạng thái
+// thì chỉ ghi loại), rồi câu hỏi kèm thời lượng
+export function buildPumpConfirmMessage(alerts: PumpBlockingAlert[], durationMs: number): string {
+  const lines = alerts.map(alert =>
+    alert.status
+      ? `• ${getAlertTypeLabel(alert.type)} · ${getAlertStatusLabel(alert.status)}`
+      : `• ${getAlertTypeLabel(alert.type)}`,
+  )
   const question = t('Bơm có thể chạy không đúng. Vẫn bật bơm trong {duration}?', { duration: formatDuration(durationMs) })
   return [t('Khu vực đang có cảnh báo:'), ...lines, '', question].join('\n')
 }

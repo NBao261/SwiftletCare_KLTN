@@ -3,12 +3,13 @@ import { Alert as NativeAlert, Pressable, StyleSheet, View } from 'react-native'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { Text } from '@/components/ui/text'
-import { HAS_OVERRIDE_CONFIRM_API, OVERRIDE_DEFAULT_MS, OVERRIDE_DURATION_OPTIONS_MS } from '@/constants/relayOverride'
+import { CONFIRMATION_REQUIRED_CODE, OVERRIDE_DEFAULT_MS, OVERRIDE_DURATION_OPTIONS_MS } from '@/constants/relayOverride'
 import { Radius, Spacing } from '@/constants/theme'
 import { usePumpBlockingAlerts } from '@/hooks/alert/usePumpBlockingAlerts'
 import { useControlRelay } from '@/hooks/device/useControlRelay'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Alert, RelayName, SensorNode } from '@/types'
+import { parseConfirmationAlerts, type PumpBlockingAlert } from '@/utils/alert.utils'
 import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
 import { getAlertStatusLabel, getAlertTypeLabel, getRelayLabel } from '@/utils/label.utils'
 import { buildPumpConfirmMessage, clampOverrideDuration, formatDuration, getOverrideDurationLimits } from '@/utils/relay.utils'
@@ -78,7 +79,7 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
   const relayLabel = getRelayLabel(relay)
 
   // Hỏi lại trước khi bật bơm, liệt kê từng cảnh báo đang mở; đồng ý thì gửi kèm xác nhận
-  const confirmPumpOn = (alerts: Alert[]) =>
+  const confirmPumpOn = (alerts: PumpBlockingAlert[]) =>
     NativeAlert.alert(t('Vẫn bật bơm?'), buildPumpConfirmMessage(alerts, effectiveDuration), [
       { text: t('Huỷ'), style: 'cancel' },
       { text: t('Vẫn bật bơm'), style: 'destructive', onPress: () => send(true) },
@@ -89,11 +90,14 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
       { sensorNodeId: controller._id, relay, state: targetState, durationMs: effectiveDuration, isAlertConfirmed },
       {
         onSuccess: () => setWaiting(true),
-        onError: async error => {
-          // 409: lúc gửi đã có cảnh báo chặn mới mở (backend G-06) — tải lại rồi hỏi lại, đồng ý thì gửi kèm xác nhận
-          if (!HAS_OVERRIDE_CONFIRM_API || !isPumpOn || readApiError(error).status !== 409) return
-          const { data } = await blockingQuery.refetch()
-          if (data && data.length > 0) confirmPumpOn(data)
+        onError: error => {
+          // 409 CONFIRMATION_REQUIRED: lúc gửi khu vực đã có cảnh báo chặn mà app chưa kịp thấy — backend gửi kèm danh sách
+          // trong error.details; hỏi lại bằng danh sách đó, đồng ý thì gửi lại kèm confirmed
+          const errorInfo = readApiError(error)
+          if (!isPumpOn || errorInfo.status !== 409 || errorInfo.code !== CONFIRMATION_REQUIRED_CODE) return
+          const alerts = parseConfirmationAlerts(errorInfo.details)
+          if (alerts.length > 0) confirmPumpOn(alerts)
+          void blockingQuery.refetch()
         },
       },
     )

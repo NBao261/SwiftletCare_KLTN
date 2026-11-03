@@ -1,6 +1,5 @@
 import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
-import { HAS_OVERRIDE_CONFIRM_API } from '@/constants/relayOverride'
 import type { ApiResponse, CameraNode, RelayOverrideLog, RelayStates, SensorNode, StreamToken } from '@/types'
 
 // Body đăng ký controller vào một Zone (FARM-FR-003): device_id và mã kích hoạt in trên nhãn
@@ -31,7 +30,7 @@ export const deviceApi = {
     apiClient.post<ApiResponse<CameraNode>>(ENDPOINTS.CAMERA_NODE_REGISTER, payload),
 
   // Điều khiển tay một relay (ENV-FR-016): controller chuyển MANUAL tới hết durationMs rồi tự về AUTO.
-  // Trường xác nhận cảnh báo chỉ gửi khi api-spec đã có (HAS_OVERRIDE_CONFIRM_API, G-06) — chưa có thì giữ đúng body hiện tại
+  // confirmed: Farm Owner đã đồng ý bật bơm dù khu vực có cảnh báo cảm biến/phun sương; thiếu thì backend trả 409 (ENV-FR-016)
   controlRelay: (
     sensorNodeId: string,
     relayName: keyof RelayStates,
@@ -43,7 +42,7 @@ export const deviceApi = {
       relayName,
       state,
       durationMs,
-      ...(HAS_OVERRIDE_CONFIRM_API && isAlertConfirmed ? { confirmed: true } : {}),
+      ...(isAlertConfirmed ? { confirmed: true } : {}),
     }),
 
   // Lịch sử can thiệp tay, mới nhất trước (ENV-FR-019)

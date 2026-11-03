@@ -93,3 +93,10 @@ describe('buildPumpConfirmMessage', () => {
     ])
   })
 })
+
+describe('buildPumpConfirmMessage từ error.details', () => {
+  it('cảnh báo không có trạng thái thì chỉ ghi loại', () => {
+    const message = buildPumpConfirmMessage([{ _id: 'a', type: 'RS485_BUS_FAILURE', title: '' }], 30 * 60_000)
+    expect(message.split('\n')[1]).toBe('• Lỗi bus cảm biến')
+  })
+})
