@@ -90,19 +90,14 @@ The main flows of the registration form v3 (Report 3, Section 2.2):
 
 | ID | Flow | In one sentence |
 | --- | --- | --- |
-| MF-01 | Automatic micro-climate regulation | Every 10 s a fuzzy controller on each floor sets misting and fan power from humidity and temperature |
-| MF-02 | Air-quality monitoring | NH3 and CO2 above the limit set by the expert raise an alert; they never drive the fan |
-| MF-03 | Offline operation and recovery | Control continues without Internet; buffered data is uploaded later; a hang restarts the controller |
-| MF-04 | Equipment fault handling | Misting that does not raise the humidity, a failed sensor, a silent speaker or a load drawing no current is detected and reported |
-| MF-05 | Early warning by forecast | A 60-minute forecast warns before a threshold is crossed |
-| MF-06 | Bird counting session | Birds crossing a ring around the entrance hole are counted per session; the return rate is computed; the annotated video is streamed |
-| MF-07 | Abnormal noise | Noise above the learned hourly baseline is shown with the bird counts and judged by the expert |
-| MF-08 | Expert validation and tuning | The expert validates inferred alerts, reviews the owner's changes, applies tuning suggestions and writes conclusions |
-| MF-09 | Manual override | The owner switches an actuator for a limited time; the system returns to automatic control |
-| MF-10 | Device setup by the Farm Owner | Scanning the device label and the floor code puts a new controller online in the right zone |
-| MF-11 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF and CSV, rated by the owner and the expert |
+| MF-01 | Automatic micro-climate control | Every 10 s a fuzzy controller on each floor sets misting and fan power from humidity and temperature; it keeps doing so without Internet, and the owner can take one relay by hand for a limited time before it returns to automatic |
+| MF-02 | Incident handling | A threshold or NH3/CO2 breach, an equipment fault, a restart, a device offline or a forecast crossing raises one alert that reaches the owner by push and Telegram, is repeated until acknowledged and closes on recovery |
+| MF-03 | Bird counting session | Birds crossing a ring around the entrance hole are counted per session; the return rate is computed; the annotated video is streamed |
+| MF-04 | Expert validation of inferred alerts | Abnormal noise, implausible readings and early warnings are shown with their evidence and confirmed or rejected by the expert |
+| MF-05 | Control-parameter tuning | The expert reviews the owner's changes and approves coefficient suggestions; the new configuration reaches the controllers and is confirmed applied |
+| MF-06 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF/CSV and independent ratings |
 
-Supporting flows: remote device maintenance by the Technician (SF-02), accounts and access (SF-03), harvest logging (SF-04). There are no maintenance tickets: faults reach the Farm Owner as alerts that are sent again until acknowledged (MF-04).
+Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remote device maintenance by the Technician (SF-02), accounts and access (SF-03), harvest logging (SF-04). There are no maintenance tickets: faults reach the Farm Owner as alerts that are sent again until acknowledged (MF-04).
 
 ### 6.2 Limitations and Exclusions
 
@@ -127,6 +122,7 @@ Supporting flows: remote device maintenance by the Technician (SF-02), accounts 
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0.3 | 03/11/2026 | Six business main flows (SRS 3.2.0); device setup is supporting flow SF-01 |
 | 1.0.2 | 03/11/2026 | Farm Owner screens split by platform: Len the mobile app, Nhi the web with the Administrator web |
 | 1.0.1 | 27/10/2026 | Team roles re-split: backend and firmware for Bảo and Kiệt, web and mobile per role for Len, Nhi and Tuấn |
 | 1.0.0 | 23/10/2026 | First version for Review 2, written from the registration form v3 |

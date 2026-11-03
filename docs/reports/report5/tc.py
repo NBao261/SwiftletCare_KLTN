@@ -4,7 +4,9 @@
 # A jest, pio or pytest source must name a test that exists: gen_report5.py checks it.
 J='jest'; P='pio'; Y='pytest'; T='todo-auto'; M='manual'
 I='tests/integration/'
-# FRs covered by each mandatory feature (Report 5, Section 4.1)
+# Features of supporting flow SF-01 (device setup): built and tested, not counted in the committed minimum
+SUPPORTING={'F-18','F-19'}
+# FRs covered by each feature (Report 5, Section 4.1)
 FEATURES=[
 ('F-01','Telemetry, live dashboard','ENV-FR-001, 002, 004, 005, 015, 022, ANALYTICS-FR-001, 005'),
 ('F-02','Fuzzy control','ENV-FR-010, 011, 013b, ANALYTICS-FR-008'),
@@ -174,7 +176,7 @@ TC=[
 ('TC-F22-03','F-22','Technician, Administrator; a day 8 days ago','Rate as each; rate the old day','—','403; old day rejected',(T,'backend jest (G-11)')),
 ]
 # Main workflows: end-to-end on staging following the main scenario of the Design Brief
-WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11'),('WF-07','DS-13'),('WF-08','DS-15'),('WF-09','DS-17'),('WF-10','DS-19'),('WF-11','DS-21')]
+WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11')]
 # State transitions (SRS Section 6): (entity, transition, trigger, expected, source)
 ST=[
 ('6.1 Alert','(new) → ACTIVE','Ingest a device alert','One ACTIVE alert in the device\'s farm and zone with the default severity of its type',(J,I+'deviceMqttContract.test.ts','creates an alert in the device farm/zone from the ESP32 payload')),

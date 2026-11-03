@@ -1,6 +1,6 @@
 # Việc cần làm — Review 2 và Iteration 2
 
-Cập nhật 27/10/2026 (phân công lại theo vai trò từng người), sau khi đồng bộ hồ sơ: phiếu v3 + BM03 1.1, SRS 3.1.0, SDD 1.1.0, Design Brief 1.1, Report 5 1.1.0 (136 test case).
+Cập nhật 03/11/2026 (6 luồng chính theo quy trình nghiệp vụ, SRS 3.2.0; lắp thiết bị thành luồng phụ SF-01), 27/10/2026 (phân công lại theo vai trò từng người), sau khi đồng bộ hồ sơ: phiếu v3 + BM03 1.2, SRS 3.2.0, SDD 1.2.0, Design Brief 1.2, Report 5 1.2.0 (136 test case).
 
 **Cách dùng:**
 - Trạng thái chỉ ghi ở `project-tracking.md`. File này chỉ liệt kê **các bước** làm từng gap (G-xx).
@@ -41,11 +41,11 @@ Cập nhật 27/10/2026 (phân công lại theo vai trò từng người), sau k
 
 | Người | Vai trò | Phần sở hữu (Ownership Map, Design Brief §8) | Workflow sở hữu | Tính năng sở hữu |
 |---|---|---|---|---|
-| **Bảo** (leader) | Backend, firmware, AI, ít web/mobile, tài liệu | Firmware + MQTT; AI pipeline; backend MQTT, đếm chim, push FCM, đo dòng; staging; tài liệu, tag | WF-01, 03, 06 | F-01, 02, 03, 04, 09, 10, 11, 12 |
-| **Kiệt** | Backend, firmware | Backend thiết bị, tài khoản, cảnh báo, chuyên gia, sức khỏe ngày; firmware tự chẩn đoán | WF-04, 10 | F-05, 06, 08, 18, 19 |
-| **Len** | Mobile — Farm Owner | App mobile của Farm Owner: đăng nhập, push, dashboard, cảnh báo, can thiệp tay, nhà/tầng, setup QR, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, live stream HLS; E2E các DS của mình; gán nhãn; NFR-02 | WF-02, 09 | F-07, 17 |
-| **Tuấn** | Web + mobile — Domain Expert, một phần Technician | Màn chuyên gia (web `/expert/*`, mobile); màn Technician; E2E các DS của mình; gán nhãn; NFR-08, 13 | WF-07, 08 | F-13, 14, 15, 16 |
-| **Nhi** | Web — Farm Owner + Admin | Web Farm Owner (dashboard, cảnh báo, thiết bị + can thiệp tay, nhà/tầng + in mã tầng, phân tích + dự báo, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, vision); web Admin (in nhãn); cấu hình Playwright; E2E các DS của mình; gán nhãn; NFR-01, 03, 14 | WF-05, 11 | F-20, 21, 22 |
+| **Bảo** (leader) | Backend, firmware, AI, ít web/mobile, tài liệu | Firmware + MQTT; AI pipeline; backend MQTT, đếm chim, push FCM, đo dòng; staging; tài liệu, tag | WF-01, 03 | F-01, 02, 03, 04, 09, 10, 11, 12 |
+| **Kiệt** | Backend, firmware | Backend thiết bị, tài khoản, cảnh báo, chuyên gia, sức khỏe ngày; firmware tự chẩn đoán | WF-05 | F-05, 06, 08; phụ F-18, 19 |
+| **Len** | Mobile — Farm Owner | App mobile của Farm Owner: đăng nhập, push, dashboard, cảnh báo, can thiệp tay, nhà/tầng, setup QR, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, live stream HLS; E2E các DS của mình; gán nhãn; NFR-02 | WF-02 | F-07, 17 |
+| **Tuấn** | Web + mobile — Domain Expert, một phần Technician | Màn chuyên gia (web `/expert/*`, mobile); màn Technician; E2E các DS của mình; gán nhãn; NFR-08, 13 | WF-04 | F-13, 14, 15, 16 |
+| **Nhi** | Web — Farm Owner + Admin | Web Farm Owner (dashboard, cảnh báo, thiết bị + can thiệp tay, nhà/tầng + in mã tầng, phân tích + dự báo, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, vision); web Admin (in nhãn); cấu hình Playwright; E2E các DS của mình; gán nhãn; NFR-01, 03, 14 | WF-06 | F-20, 21, 22 |
 
 **Farm Owner chia theo nền tảng (03/11/2026):** Len làm toàn bộ app mobile của Farm Owner, Nhi làm toàn bộ web Farm Owner cùng web Admin. Hai bạn không sửa chung thư mục; màn nào cần cả web và mobile thì mỗi người làm phía của mình theo cùng một spec.
 
@@ -311,7 +311,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN).
 - [ ] Test TC-ST config sync 4 dòng.
 
-### G-09 — Màn MF-10 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, in mã tầng trên web), Len (setup QR trên mobile), Tuấn (`/onboarding` web)
+### G-09 — Màn SF-01 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, in mã tầng trên web), Len (setup QR trên mobile), Tuấn (`/onboarding` web)
 
 - [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
 - [ ] Màn Zone: in mã QR tầng.
@@ -330,7 +330,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo.
 - [ ] Test TC-F08-03 (mock Firebase Admin).
 
-### G-11 — MF-11 (P0-Demo) — Kiệt (backend), Nhi (web), Len (mobile)
+### G-11 — MF-06 (P0-Demo) — Kiệt (backend), Nhi (web), Len (mobile)
 
 - [ ] `houses.health_levels` (Domain Expert sửa, Farm Owner khi không có chuyên gia).
 - [ ] Job `weather` mỗi giờ (Open-Meteo, chỉ gửi tọa độ), `weatherobservations` TTL 90 ngày.
