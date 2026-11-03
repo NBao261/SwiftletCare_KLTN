@@ -415,7 +415,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-17 — Staging (P0-Demo) — cả team, Bảo chịu trách nhiệm chính; điều kiện DS và test E2E: chủ từng workflow
 
-- [ ] **Bảo:** VPS, `deploy/docker-compose.staging.yml`, Caddyfile, tls-proxy (8883 MQTT, 8322 RTSPS), file auth/authz EMQX, AI node nối vào staging, rollback theo tag.
+- [ ] **Bảo:** VPS, `deploy/docker-compose.staging.yml`, Nginx + Certbot (`nginx.conf`: HTTPS, `stream` 8883 MQTT, 8322 RTSPS), file auth/authz EMQX, AI node nối vào staging, rollback theo tag.
 - [ ] **Kiệt:** Dockerfile backend, `.env.staging.example`, chạy migration và seed trên staging, `mongodump` hằng ngày chép ra ngoài VPS.
 - [ ] **Nhi:** Dockerfile và bản build web; kiểm tra nhanh các màn Farm Owner và Admin trên web staging sau mỗi lần triển khai.
 - [ ] **Len:** bản build mobile (EAS profile `preview`) trỏ tới staging; kiểm tra nhanh đăng nhập, push và các màn Farm Owner trên mobile.

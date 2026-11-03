@@ -161,7 +161,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs, firebase-admin (FCM) | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
 | Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `victory-native` | Expo ~53, React Native 0.79.6, React 19.0 |
-| Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1 |
+| Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1, nginx 1.27, certbot latest |
 | Testing | Jest + mongodb-memory-server (backend, mobile), Vitest (web), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7, Vitest ^1.6 |
 
 ### 3.3 Source Code and DevOps
@@ -181,7 +181,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Environment | Where | How it is deployed | Rollback |
 | --- | --- | --- | --- |
 | Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA | — |
-| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Caddy reverse proxy with Let's Encrypt TLS, a TLS proxy for MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
+| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Nginx with a Let's Encrypt certificate renewed by Certbot, serving HTTPS and the TLS ports of MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
 | Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (FARM-FR-013) |
 
 Defense 1.1 demonstrations run on staging with seeded data (guideline §9.2).
@@ -1349,13 +1349,12 @@ flowchart TB
 ```mermaid
 flowchart LR
   subgraph VPS[Staging VPS - Docker]
-    RP[Caddy reverse proxy<br/>Let's Encrypt TLS, 443] --> API[backend container]
+    RP[Nginx<br/>HTTPS 443, TLS 8883 and 8322<br/>Let's Encrypt via Certbot] --> API[backend container]
     RP --> WEBS[web static build]
-    RP --> MTX[MediaMTX<br/>WebRTC signalling]
+    RP -- WHEP signalling,<br/>RTSPS 8322 to RTSP --> MTX[MediaMTX]
+    RP -- MQTT TLS 8883<br/>to 1883 --> EMQX[(EMQX)]
     API --> MONGO[(MongoDB<br/>internal only)]
-    API -- MQTT 1883<br/>Docker network --> EMQX[(EMQX)]
-    TLSP[TLS proxy<br/>8883 MQTT, 8322 RTSPS] --> EMQX
-    TLSP --> MTX
+    API -- MQTT 1883<br/>Docker network --> EMQX
     API --> MINIO[(MinIO<br/>internal only)]
     MTX -- stream auth --> API
   end
@@ -1367,15 +1366,15 @@ flowchart LR
     PC[AI node:<br/>spare desktop PC]
   end
   CAM -- RTSP over TCP<br/>across the Internet --> PC
-  ESP -- MQTT over TLS 8883 --> TLSP
-  PC -- counts, heartbeat<br/>MQTT TLS 8883 --> TLSP
-  PC -- annotated video<br/>RTSPS 8322 --> TLSP
+  ESP -- MQTT over TLS 8883 --> RP
+  PC -- counts, heartbeat<br/>MQTT TLS 8883 --> RP
+  PC -- annotated video<br/>RTSPS 8322 --> RP
   USERS[Web and mobile users] -- HTTPS / WSS 443 --> RP
   USERS -- WebRTC media UDP 8189 --> MTX
   API -- outbound HTTPS --> EXT[[Telegram, FCM,<br/>Open-Meteo]]
 ```
 
-Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a static public IP, but on a consumer modem in a borrowed house), so the backend runs on a VPS. The AI node runs on a spare PC at a member's home and pulls the camera's RTSP feed over the Internet through the one port forwarded on the house modem (D5); it sends counts and the annotated stream on to the VPS. Only ports 80/443 (Caddy), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only) — both wrapped by a TLS proxy that reuses Caddy's certificate — and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
+Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a static public IP, but on a consumer modem in a borrowed house), so the backend runs on a VPS. The AI node runs on a spare PC at a member's home and pulls the camera's RTSP feed over the Internet through the one port forwarded on the house modem (D5); it sends counts and the annotated stream on to the VPS. Only ports 80/443 (HTTPS), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only), all served by Nginx with one Let's Encrypt certificate renewed by Certbot, and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
 
 | Operation | Procedure |
 | --- | --- |
@@ -1386,7 +1385,7 @@ Why this split: users, the panel's network and the controllers need one stable p
 | Firmware | OTA from the Administrator console; the new image is kept only after it reaches the broker within 10 minutes, otherwise the bootloader returns to the previous one |
 | Monitoring | Technical overview (SYSTEM-FR-003), device and AI-node status and alerts (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`), audit log, `docker compose logs` |
 
-The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of the backend and the web, the Caddyfile, the TLS proxy configuration, the EMQX authentication and authorisation files, `.env.staging.example` and the demo seed of every scenario of the Design Brief, Appendix A2 (procedure: `docs/deploy/staging.md`).
+The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of the backend and the web, the Nginx configuration (HTTPS sites and the stream proxy for MQTT and video), the EMQX authentication and authorisation files, `.env.staging.example` and the demo seed of every scenario of the Design Brief, Appendix A2 (procedure: `docs/deploy/staging.md`).
 
 ---
 
@@ -1394,7 +1393,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller |
+| 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller. Staging: Nginx with Certbot replaces Caddy and the separate TLS proxy, one component for HTTPS and the TLS ports of MQTT and the video publish (Sections 3.2, 3.4, 11) |
 | 1.1.0 | 26/10/2026 | SM-17 splits the day status from the rating state of each assessor (`ratingWindow` job and the day's `state` field removed). Harvest requirements referred to as `HARVEST-FR` (Report 3 3.1.0). Camera port restricted to the AI node's static IP by a modem rule (D5, Sections 10, 11). Final design for Review 2 against Report 3 3.1.0: device topics and one broker credential per device with a static authorisation rule, QoS 1 with event and command IDs, retained configuration, `esp-mqtt` on the ESP32, `config/reassign` removed (D3, D9, Sections 2.2, 5.1, 7.2, 10, AD-10); decisions D15 (manual override within limits) and D16 (current status and evaluation snapshot); Logical ERD as the final design: user status, push tokens, per-relay override, telemetry validity, alert event ID and details, house health reports with a unique key per kind and period, notification references, harvest type and photo, audit source, stock credentials, `sla_hours` removed; Section 6.3 data retention (BR-36), Section 6.4 schema migrations, Section 5.5 code location of the engineering constants; mobile scope, HLS stream and FCM token in Section 5.4; state machines and activity diagrams aligned (SM-03, 06, 14, 17; AD-02, 03, 04, 08, 09, 10, 11, 12, 14); 'planned' marks and the former Section 12 removed: implementation gaps are tracked only in Project Tracking. D11: the DC demo loads are measured with shunt resistors instead of current transformers (Section 3 controller board) |
 | 1.0.10 | 26/10/2026 | Tickets, SLA, Technician regions and the Administrator's farm management removed from the code (pull requests #100–#106): permission and supporting-role gaps closed in Section 12, done ticket, region, coordinate and `MAINTENANCE_DUE` rows dropped from Section 6.4 |
 | 1.0.9 | 24/10/2026 | A farm is one place with required coordinates (Report 3 FARM-FR-001, A-5): `address` and `coordinates` in the ERD, planned validator in Section 6.4, location field in the farm form (Section 5.4) |
