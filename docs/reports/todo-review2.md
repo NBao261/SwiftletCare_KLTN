@@ -43,9 +43,11 @@ Cập nhật 27/10/2026 (phân công lại theo vai trò từng người), sau k
 |---|---|---|---|---|
 | **Bảo** (leader) | Backend, firmware, AI, ít web/mobile, tài liệu | Firmware + MQTT; AI pipeline; backend MQTT, đếm chim, push FCM, đo dòng; staging; tài liệu, tag | WF-01, 03, 06 | F-01, 02, 03, 04, 09, 10, 11, 12 |
 | **Kiệt** | Backend, firmware | Backend thiết bị, tài khoản, cảnh báo, chuyên gia, sức khỏe ngày; firmware tự chẩn đoán | WF-04, 10 | F-05, 06, 08, 18, 19 |
-| **Len** | Web + mobile — Farm Owner | Màn Farm Owner (web, mobile, cả live stream HLS); E2E các DS của mình; gán nhãn; NFR-01 | WF-02, 05, 09 | F-07, 17 |
+| **Len** | Mobile — Farm Owner | App mobile của Farm Owner: đăng nhập, push, dashboard, cảnh báo, can thiệp tay, nhà/tầng, setup QR, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, live stream HLS; E2E các DS của mình; gán nhãn; NFR-02 | WF-02, 09 | F-07, 17 |
 | **Tuấn** | Web + mobile — Domain Expert, một phần Technician | Màn chuyên gia (web `/expert/*`, mobile); màn Technician; E2E các DS của mình; gán nhãn; NFR-08, 13 | WF-07, 08 | F-13, 14, 15, 16 |
-| **Nhi** | Web + mobile — Admin, sức khỏe theo ngày | Màn Admin; màn trạng thái ngày, chấm điểm, báo cáo (web, mobile); nền mobile (đăng nhập, push, setup QR); E2E các DS của mình; gán nhãn; NFR-02, 03, 14 | WF-11 | F-20, 21, 22 |
+| **Nhi** | Web — Farm Owner + Admin | Web Farm Owner (dashboard, cảnh báo, thiết bị + can thiệp tay, nhà/tầng + in mã tầng, phân tích + dự báo, trạng thái ngày + chấm điểm, báo cáo, thu hoạch, vision); web Admin (in nhãn); cấu hình Playwright; E2E các DS của mình; gán nhãn; NFR-01, 03, 14 | WF-05, 11 | F-20, 21, 22 |
+
+**Farm Owner chia theo nền tảng (03/11/2026):** Len làm toàn bộ app mobile của Farm Owner, Nhi làm toàn bộ web Farm Owner cùng web Admin. Hai bạn không sửa chung thư mục; màn nào cần cả web và mobile thì mỗi người làm phía của mình theo cùng một spec.
 
 **Staging và tài liệu: cả team cùng làm, Bảo chịu trách nhiệm chính** (Report 2 RACI: Bảo A, mọi người R cho phần của mình). Phần của từng người ở staging ghi tại G-17; tài liệu: mỗi người viết phần workflow của mình trong Report 3 và Report 4 (AD, SM, mô tả luồng), hướng dẫn sử dụng màn của mình, kết quả test của mình trong Report 5 (qua `tc.py`) và khối cam kết cá nhân trong BM04; Bảo biên tập, giữ nhất quán, sinh Word/PDF, làm BM02 và gắn tag.
 
@@ -58,7 +60,7 @@ Cập nhật 27/10/2026 (phân công lại theo vai trò từng người), sau k
 Việc không cần backend mà Len, Tuấn, Nhi nhận thêm (mục 3, mục 5):
 
 - gán nhãn hộp `swiftlet` trên Roboflow và đếm tay clip cho NFR-09 (Bảo chia ngày quay, duyệt 20 khung đầu của mỗi người);
-- đo NFR phía client trên staging: Len NFR-01; Nhi NFR-02, 03 (k6); Tuấn NFR-13;
+- đo NFR phía client trên staging: Nhi NFR-01, 03 (k6); Len NFR-02; Tuấn NFR-13;
 - ảnh màn hình cho Report 4 §5 và hướng dẫn sử dụng phần màn của mình.
 
 ### 0.2 Quy tắc để không giẫm chân nhau
@@ -71,13 +73,13 @@ Việc không cần backend mà Len, Tuấn, Nhi nhận thêm (mục 3, mục 5)
    |---|---|---|
    | `backend/` | Kiệt, Bảo | Len, Tuấn, Nhi không sửa |
    | `docs/api/api-spec.yaml` | Kiệt (Bảo cho phần MQTT/stream) | Đề xuất trong PR spec |
-   | `frontend/playwright.config.ts`, `frontend/e2e/` | Len lập cấu hình (PR E2E đầu tiên) | Mỗi người file DS của mình |
-   | `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/types/` | Chỉ sửa trong PR G-01 | Sau G-01 thêm kiểu mới trong PR của gap đó |
+   | `frontend/playwright.config.ts`, `frontend/e2e/` | Nhi lập cấu hình (PR E2E đầu tiên) | Mỗi người file DS của mình |
+   | `backend/src/types/domain.types.ts`, `frontend/src/types/`, `mobile/src/types/` | Chỉ sửa trong PR G-01 | Sau G-01 thêm kiểu mới trong PR của gap đó |
    | `frontend/src/constants/roles.ts`, dòng `RequireRole` trong `routes/*.tsx`, sidebar các layout | Nhi (PR ma trận quyền G-15) | Không sửa nhóm quyền trong PR khác |
-   | `frontend/src/routes/farm-owner.routes.tsx`, `pages/farm-owner/`, `components/features/farm-owner/` | Len | — |
+   | `frontend/src/routes/farm-owner.routes.tsx`, `pages/farm-owner/`, `components/features/farm-owner/` | Nhi | Len duyệt khi đổi hành vi chung với mobile |
    | `routes/expert.routes.tsx`, `pages/expert/` (sau đổi `domain-expert/`), `routes/technician.routes.tsx`, `pages/technician/` | Tuấn | — |
    | `routes/admin.routes.tsx`, `pages/admin/`, `pages/auth/` | Nhi | — |
-   | `mobile/app/_layout.tsx`, `(auth)/`, `store/`, `services/api/client`, `constants/api.ts` | Nhi | Len, Tuấn thêm màn trong thư mục route của mình |
+   | `mobile/src/` (app, components, hooks, services, stores, constants) | Len | Tuấn thêm màn chuyên gia trong thư mục của mình |
    | `docs/reports/*` | Bảo duyệt mọi PR tài liệu | Mỗi người sửa phần workflow của mình (Report 3, 4), dòng gap của mình ở Tracking §6 và `report5/tc.py` |
    | File sinh ra: Word trong `docs/reports/`, `report5-test.md` | Chỉ Bảo sinh lại | Không sửa tay |
 4. **Thứ tự phụ thuộc** (gap sau chỉ bắt đầu khi gap trước đã merge): G-01 → mọi gap; G-02 P0 → G-16 bước 1; spec G-03/G-04 → web G-03/G-04; G-07 → G-06 phần lệnh, G-08 → G-09 tiến trình setup; G-03 (`DISMISSED`) → G-11 tính tiếng ồn; G-15 ma trận quyền → các màn mới của web; G-10 backend → push trên mobile. Gán nhãn và đếm clip không phụ thuộc gì: làm trong những ngày chờ API.
@@ -257,7 +259,7 @@ Một PR cho backend, web, mobile, firmware:
   - cảnh báo đang mở chỉ được giữ sống bởi chính chỉ số nó báo (`metadata.metrics`), chỉ số khác vừa vượt không giữ (BR-16);
   - quãng chờ không xoá khi gỡ node hoặc đổi ngưỡng: rò nhỏ, tự hết, Bảo đã chấp nhận.
 
-### G-06 — Can thiệp tay (P1) — Kiệt (backend), Bảo (firmware, trong G-07), Len (web, mobile)
+### G-06 — Can thiệp tay (P1) — Kiệt (backend), Bảo (firmware, trong G-07), Nhi (web), Len (mobile)
 
 - [ ] Backend:
   - `MAX_PUMP_ON_OVERRIDE_MS` = 30 phút (422);
@@ -309,7 +311,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN).
 - [ ] Test TC-ST config sync 4 dòng.
 
-### G-09 — Màn MF-10 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, setup QR trên mobile), Len (in mã tầng), Tuấn (`/onboarding` web)
+### G-09 — Màn MF-10 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, in mã tầng trên web), Len (setup QR trên mobile), Tuấn (`/onboarding` web)
 
 - [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
 - [ ] Màn Zone: in mã QR tầng.
@@ -317,7 +319,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED).
 - [ ] Web: `/onboarding` cho Farm Owner + Technician.
 
-### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Nhi (mobile, đo NFR-02)
+### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Len (mobile, đo NFR-02)
 
 - [ ] Backend:
   - collection `pushtokens`;
@@ -328,7 +330,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo.
 - [ ] Test TC-F08-03 (mock Firebase Admin).
 
-### G-11 — MF-11 (P0-Demo) — Kiệt (backend), Nhi (web, mobile)
+### G-11 — MF-11 (P0-Demo) — Kiệt (backend), Nhi (web), Len (mobile)
 
 - [ ] `houses.health_levels` (Domain Expert sửa, Farm Owner khi không có chuyên gia).
 - [ ] Job `weather` mỗi giờ (Open-Meteo, chỉ gửi tọa độ), `weatherobservations` TTL 90 ngày.
@@ -363,7 +365,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Firmware: ADS1115 (Adafruit ADS1X15), học dòng bình thường 30 giây đầu mỗi tải, so với trạng thái relay (BR-32), `ACTUATOR_FAULT`; telemetry `pump_current_a`, `fan_current_a`; test native TC-F06-01..03.
 - [ ] Backend lưu dòng, nhận cảnh báo (HIGH).
 
-### G-14 — Mô hình dữ liệu theo ERD (P1) — Kiệt; trường của gap nào thì làm trong PR gap đó; Len làm form thu hoạch (web, mobile)
+### G-14 — Mô hình dữ liệu theo ERD (P1) — Kiệt; trường của gap nào thì làm trong PR gap đó; Nhi làm form thu hoạch web, Len trên mobile
 
 - [ ] `users.status` thay `is_active` (+ `locked_reason`, `locked_at`, `deletion_requested_at`, `deleted_at`).
 - [ ] `auditlogs`: `actor_role`, `farm_id`, `before`, `after`, `source_ip`, `client`, `correlation_id`.
@@ -389,19 +391,19 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - sửa `constants/roles.ts` (`OPS_ROLES`, `HARVEST_ROLES`, `MENU_ACCESS`), sidebar, `RequireRole` ở `routes/*.tsx`; test Vitest cho bảng role → route.
 - [x] Đóng DF-5 (Tuấn: bỏ dữ liệu giả của màn chuyên gia, nối API thật; chuyển thư mục domain-expert/ theo FE_Design §12, 01/11).
 
-### G-16 — Mobile đủ phạm vi phiếu (P0-Demo cho luồng Farm Owner, P1 phần còn lại) — Nhi (nền, setup QR, trạng thái ngày), Len (màn Farm Owner), Tuấn (màn chuyên gia), Len (live stream)
+### G-16 — Mobile đủ phạm vi phiếu (P0-Demo cho luồng Farm Owner, P1 phần còn lại) — Len (toàn bộ màn Farm Owner), Tuấn (màn chuyên gia)
 
 Thứ tự:
 
-1. **Nhi:** đăng nhập (đổi mật khẩu lần đầu), lưu token an toàn, điều hướng theo role, `off*` socket khi unmount — làm trước, các bước sau dựa vào.
-2. **Nhi:** FCM (G-10).
+1. **Len:** đăng nhập (đổi mật khẩu lần đầu), lưu token an toàn, điều hướng theo role, `off*` socket khi unmount — làm trước, các bước sau dựa vào.
+2. **Len:** FCM (G-10).
 3. **Len:** dashboard số đo hiện tại + chế độ relay.
 4. **Len:** cảnh báo: danh sách, chi tiết, xác nhận, `DISMISSED`.
 5. **Len:** can thiệp tay có xác nhận (G-06).
-6. **Nhi:** setup QR (G-09).
-7. **Nhi:** trạng thái ngày + chấm điểm (G-11).
+6. **Len:** setup QR (G-09).
+7. **Len:** trạng thái ngày + chấm điểm (G-11).
 8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; đổi route `livestream/[zoneId]` → theo camera của House).
-9. **Nhi:** báo cáo.
+9. **Len:** báo cáo.
 10. **Len:** thu hoạch.
 11. **Tuấn:** màn chuyên gia (hàng đợi việc, kết luận cảnh báo, tham số).
 
@@ -415,8 +417,8 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 - [ ] **Bảo:** VPS, `deploy/docker-compose.staging.yml`, Caddyfile, tls-proxy (8883 MQTT, 8322 RTSPS), file auth/authz EMQX, AI node nối vào staging, rollback theo tag.
 - [ ] **Kiệt:** Dockerfile backend, `.env.staging.example`, chạy migration và seed trên staging, `mongodump` hằng ngày chép ra ngoài VPS.
-- [ ] **Len:** Dockerfile và bản build web; kiểm tra nhanh các màn Farm Owner trên staging sau mỗi lần triển khai.
-- [ ] **Nhi:** bản build mobile (EAS profile `preview`) trỏ tới staging; kiểm tra nhanh màn Admin, đăng nhập và push.
+- [ ] **Nhi:** Dockerfile và bản build web; kiểm tra nhanh các màn Farm Owner và Admin trên web staging sau mỗi lần triển khai.
+- [ ] **Len:** bản build mobile (EAS profile `preview`) trỏ tới staging; kiểm tra nhanh đăng nhập, push và các màn Farm Owner trên mobile.
 - [ ] **Tuấn:** kiểm tra nhanh màn chuyên gia và Technician; chạy bộ E2E trên staging trước mỗi buổi tổng duyệt.
 - [ ] Seed demo đủ 22 kịch bản Phụ lục A2 (Kiệt, Bảo), theo điều kiện chủ workflow ghi.
 - [ ] Test E2E Playwright cho từng DS (chủ workflow; FE_Design §13.17); Bảo thêm job E2E vào CI (test chỉ được tính là tự động khi chạy trong CI, hướng dẫn mục 9.4) và đọc kết quả JUnit vào Report 5 (`gen_report5.py --playwright`); PR cài Playwright ghi tên và phiên bản vào dòng Testing của Report 4 §3 (Technology Declaration).

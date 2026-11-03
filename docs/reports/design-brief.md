@@ -115,8 +115,8 @@ FO = Farm Owner, DE = Domain Expert (Farm Owner if none, BR-22); auto = done by 
 | --- | --- | --- | --- | --- |
 | Nguyễn Chí Bảo | Leader; IoT, AI | Firmware, MQTT; AI pipeline; staging, push, documents | WF-01, 03, 06 | D1, D2; #88 |
 | Trần Minh Kiệt | Backend, firmware | Devices, accounts; alerts, expert; daily health | WF-04, 10 | D4; #113, #116 |
-| Nguyễn Vũ Len | Web, mobile: Owner | Farm Owner screens; E2E | WF-02, 05, 09 | #93, #123 |
-| Nguyễn Thị Yến Nhi | Web, mobile: Admin | Admin, daily status screens; mobile base; E2E | WF-11 | D5; #26, #72 |
+| Nguyễn Vũ Len | Mobile: Farm Owner | Farm Owner mobile app; E2E | WF-02, 09 | #123, #93 |
+| Nguyễn Thị Yến Nhi | Web: Owner, Admin | Farm Owner web; Admin; E2E | WF-05, 11 | D5; #26, #72 |
 | Thái Minh Tuấn | Web, mobile: Expert | Expert, Technician screens; E2E | WF-07, 08 | D3; #91, #125 |
 
 ---
@@ -133,7 +133,7 @@ Actors are people and external services only; the controller, the AI node and th
 | WF-02 | Air-quality monitoring (MF-02, AD-02) | Farm Owner, Domain Expert, Telegram, FCM | NH3 or CO2 above the zone limit | Alert raised for assessment; fan not driven | F-01, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Nguyễn Vũ Len |
 | WF-03 | Offline operation and recovery (MF-03, AD-03) | Farm Owner | Internet lost, hang or power loss | Control continues; buffered data uploaded; restart reported | F-04, F-07, F-08 | Device: `ONLINE` → `OFFLINE` → `ONLINE`; `NODE_OFFLINE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
 | WF-04 | Equipment fault handling (MF-04, AD-04) | Farm Owner, Technician, Telegram, FCM | Misting without humidity rise, sensor fault, load not drawing current | Loop in a safe state; alert raised, sent again until acknowledged | F-05, F-06, F-07, F-08 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Trần Minh Kiệt |
-| WF-05 | Early warning by forecast (MF-05, AD-05) | Farm Owner, Domain Expert | Every 10 min | Early warning with the expected crossing time; verdict recorded | F-09, F-07, F-13 | Nguyễn Vũ Len | Nguyễn Thị Yến Nhi |
+| WF-05 | Early warning by forecast (MF-05, AD-05) | Farm Owner, Domain Expert | Every 10 min | Early warning with the expected crossing time; verdict recorded | F-09, F-07, F-13 | Nguyễn Thị Yến Nhi | Nguyễn Thị Yến Nhi |
 | WF-06 | Bird counting session (MF-06, AD-06) | Farm Owner, Domain Expert | Morning and evening sessions | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11, F-07 | AI node: `PENDING` → `ONLINE`; `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
 | WF-07 | Abnormal noise (MF-07, AD-07) | Domain Expert, Farm Owner | Noise above the hourly baseline | Indication shown with bird counts; validated by the expert | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED` (verdict `REJECTED`) | Thái Minh Tuấn |
 | WF-08 | Expert validation and tuning (MF-08, AD-08) | Domain Expert, Farm Owner | Owner change, suggestion, health report | Changes reviewed, suggestion applied, conclusion delivered, owner notified | F-03, F-14, F-15, F-16 | Review item: `PENDING_REVIEW` → `ADJUSTED`; proposal: `PROPOSED` → `APPROVED`; report: `GENERATED` → `CONCLUDED` | Thái Minh Tuấn |
@@ -155,8 +155,8 @@ Run on staging (SDD Section 3.4) with data loaded by the demo seed script (`docs
 | DS-06 | WF-03 | Exception | Controller online | Cut the controller's power and restore it | Heartbeat back within 30 s; `UNEXPECTED_RESTART` with reset reason `POWER_ON` | Nguyễn Chí Bảo |
 | DS-07 | WF-04 | Main | Humidity below range; water to the pump closed | Let misting run | After 300 s without rise automatic misting stops and one `MISTING_INEFFECTIVE` is raised; owner acknowledges | Trần Minh Kiệt |
 | DS-08 | WF-04 | Exception | Controller running | Unplug the temperature-humidity sensor | `SENSOR_FAULT` raised; reading marked stale; after 2 cycles without temperature and humidity, misting and fan are 0 | Trần Minh Kiệt |
-| DS-09 | WF-05 | Main | Seeded 6 h of humidity falling toward the threshold | Run the forecast job | `FORECAST_BREACH` with the expected crossing time; expert confirms it | Nguyễn Vũ Len |
-| DS-10 | WF-05 | Exception | Zone with less than 2 h of data | Open the forecast | "Insufficient data" shown; no alert | Nguyễn Vũ Len |
+| DS-09 | WF-05 | Main | Seeded 6 h of humidity falling toward the threshold | Run the forecast job | `FORECAST_BREACH` with the expected crossing time; expert confirms it | Nguyễn Thị Yến Nhi |
+| DS-10 | WF-05 | Exception | Zone with less than 2 h of data | Open the forecast | "Insufficient data" shown; no alert | Nguyễn Thị Yến Nhi |
 | DS-11 | WF-06 | Main | AI node online; seeded 7 days of counts | Play a recorded entrance clip through the AI node during a session window | Counts of the house rise on the page; live stream shows boxes; next return-rate check raises `LOW_RETURN_RATE` for the seeded drop | Nguyễn Chí Bảo |
 | DS-12 | WF-06 | Exception | Session in progress | Stop the AI node | `EDGE_AI_DEGRADED` after 90 s; the day is incomplete and not evaluated | Nguyễn Chí Bảo |
 | DS-13 | WF-07 | Main | Speaker off; seeded hourly baseline | Play loud noise near the sensor for the sustain period | `NOISE_ANOMALY` shown with bird counts; expert rejects with a note; status `DISMISSED`, owner notified | Thái Minh Tuấn |

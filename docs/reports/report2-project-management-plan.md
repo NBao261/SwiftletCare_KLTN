@@ -51,7 +51,7 @@ Scope is the registration form v3: main flows MF-01…11 and supporting flows SF
 | RK-5 | Web screens lag behind the backend scope | Medium | Medium | Remove v1.24.0 leftovers first; one owner per role screen set; weekly integration on `develop` | Nguyễn Vũ Len |
 | RK-6 | Thresholds or health levels without a source | Medium | Medium | Evidence register and practitioner interview; constants declared in Report 3 §4.5 | Nguyễn Chí Bảo |
 | RK-7 | A member cannot explain the part they own at Review 2 or Defense 1.1 | Low | High | Ownership Map; each owner presents their workflow at internal rehearsals | Nguyễn Chí Bảo |
-| RK-8 | The mobile application must cover the whole scope of the registration form (3.2 b) while the same members build the web screens | High | High | Split per role: Nhi sign-in, push, QR setup and daily status first, Len the Farm Owner screens, Tuấn the expert screens, Len also the live stream; reuse the web API hooks and types; Farm Owner flows first (Project Tracking G-16) | Nguyễn Thị Yến Nhi |
+| RK-8 | The mobile application must cover the whole scope of the registration form (3.2 b) while the same members build the web screens | High | High | Split by platform and role: Len owns the Farm Owner mobile app (sign-in, push, QR setup, daily status, live stream) while Nhi builds the Farm Owner web, Tuấn the expert screens; reuse the web API hooks and types; Farm Owner flows first (Project Tracking G-16) | Nguyễn Vũ Len |
 | RK-9 | The move to device topics, `esp-mqtt` and TLS (Report 4 D3) breaks the link between controllers, AI node and backend | Medium | High | One pull request for firmware, backend and AI node; bench test with two controllers and the AI node before staging; old firmware reflashed over USB if needed (Project Tracking G-07) | Nguyễn Chí Bảo |
 
 ## 2. Management Approach
@@ -132,19 +132,19 @@ R = responsible, A = accountable, C = consulted.
 | Backend devices, accounts, alerts, setup | C | A, R | C | C | C |
 | Backend expert module | C | A, R | | | C |
 | Backend daily health and reports | C | A, R | | C | |
-| Web – Farm Owner | | | A, R | | |
+| Web – Farm Owner | | | C | A, R | |
 | Web – Administrator, role matrix | | | | A, R | |
 | Web – Domain Expert, Technician | | | | | A, R |
-| Mobile – sign-in, push, QR setup, daily status | C | | | A, R | |
-| Mobile – Farm Owner screens, live stream | | | A, R | C | |
-| Mobile – Domain Expert screens | | | | C | A, R |
+| Mobile – sign-in, push, QR setup, daily status | C | | A, R | | |
+| Mobile – Farm Owner screens, live stream | | | A, R | | |
+| Mobile – Domain Expert screens | | | C | | A, R |
 | E2E tests of the demo scenarios | A | C | R | R | R |
 | Staging and deployment | A, R | R | R | R | R |
 | Tests and Report 5 | A | R | R | R | R |
 
-Staging and documents are shared: Bảo is accountable and runs the infrastructure and the final documents, and every member is responsible for their part (Kiệt the backend image, migrations, seed and backup; Len the web build; Nhi the mobile build; Tuấn the E2E runs on staging; each member the report sections of their own workflows). Backend code is written only by Bảo and Kiệt. Len, Nhi and Tuấn are consulted on the backend of the features they own and answer for those features working end to end (Project Tracking, Section 3).
+Staging and documents are shared: Bảo is accountable and runs the infrastructure and the final documents, and every member is responsible for their part (Kiệt the backend image, migrations, seed and backup; Nhi the web build; Len the mobile build; Tuấn the E2E runs on staging; each member the report sections of their own workflows). Backend code is written only by Bảo and Kiệt. Len, Nhi and Tuấn are consulted on the backend of the features they own and answer for those features working end to end (Project Tracking, Section 3).
 
-Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03, 06; Kiệt WF-04, 10; Len WF-02, 05, 09; Nhi WF-11; Tuấn WF-07, 08. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
+Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03, 06; Kiệt WF-04, 10; Len WF-02, 09; Nhi WF-05, 11; Tuấn WF-07, 08. Since 03/11/2026 the Farm Owner screens are split by platform: Len the mobile app, Nhi the web. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
 
 ## 5. Project Communications
 
@@ -190,6 +190,6 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo), skills, workflow owners, RK-3 and RK-8 |
+| 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo; Farm Owner web to Nhi, mobile to Len on 03/11/2026), skills, workflow owners, RK-3 and RK-8 |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0 and SDD 1.1.0: progress judged from Project Tracking, Iteration 1 and 2 content corrected, RACI wording, risks RK-8 (mobile scope) and RK-9 (move to device topics) |
 | 1.0.0 | 23/10/2026 | First version for Review 2 |
