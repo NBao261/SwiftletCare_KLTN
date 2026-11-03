@@ -132,6 +132,8 @@ flowchart LR
   TG[[Telegram Bot API]]
   FCM[[Firebase Cloud Messaging]]
   MAIL[[Email service]]
+  WX[[Open-Meteo weather API]]
+  NTP[[NTP pool]]
   ESP <-- MQTT over TLS --> BE
   AI -- MQTT counts --> BE
   AI -- annotated video --> BE
@@ -140,6 +142,9 @@ flowchart LR
   BE -- alert messages --> TG
   BE -- push notifications --> FCM
   BE -- invitations, temporary passwords,<br/>password-reset codes --> MAIL
+  BE -- farm coordinates --> WX
+  WX -- hourly weather --> BE
+  ESP -- time sync --> NTP
   FO --- APP
   DE --- APP
   TE --- APP
