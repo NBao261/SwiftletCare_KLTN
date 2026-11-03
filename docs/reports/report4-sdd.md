@@ -352,7 +352,83 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 
 ## 6. Data Design
 
-### 6.1 Logical ERD
+### 6.1 Conceptual Model and Logical ERD
+
+**Conceptual model (level 1).** The business entities of SwiftletCare and how they relate, with no attribute, key or storage choice. `User` stands for every account; its role (Farm Owner, Domain Expert, Administrator) decides which relationships it may take part in (Report 3, Section 2.4). Every lifecycle of Section 8 belongs to one of these entities, and every entity with a lifecycle has one.
+
+```mermaid
+erDiagram
+  User ||--o{ Farm : "owns"
+  User ||--o{ DeviceStockItem : "adds to stock"
+  User ||--o{ ManualOverride : "performs"
+  User |o--o{ Alert : "acknowledges"
+  User ||--o{ ExpertVerdict : "gives"
+  User ||--o{ DailyRating : "gives"
+  User |o--o{ HealthReport : "concludes"
+  User ||--o{ HarvestBatch : "records"
+  User |o--o{ ReviewItem : "decides"
+  User |o--o{ CoefficientProposal : "approves"
+  User ||--o{ Notification : "receives"
+  User ||--o{ ActivityRecord : "performs"
+  Farm }o--o{ User : "has as member"
+  Farm ||--o{ Invitation : "sends"
+  Farm ||--o{ WeatherObservation : "has weather"
+  Farm ||--o{ House : "contains"
+  House ||--|{ Zone : "has"
+  House ||--o{ CameraNode : "is watched by"
+  House ||--o{ Alert : "raises"
+  House ||--o{ DailyHealthStatus : "is assessed by"
+  House ||--o{ HealthReport : "is summarised in"
+  Zone ||--o{ Controller : "is regulated by"
+  Zone ||--o{ Alert : "raises"
+  Zone ||--o{ HarvestBatch : "yields"
+  Zone ||--o{ ReviewItem : "opens"
+  Zone ||--o{ CoefficientProposal : "receives"
+  Controller ||--o{ SensorReading : "publishes"
+  Controller ||--o{ ManualOverride : "is switched by"
+  Controller ||--o{ AttractantTrack : "plays"
+  CameraNode ||--o{ BirdCountSession : "records"
+  CameraNode ||--o{ FiveMinuteCount : "counts"
+  DeviceStockItem ||--o| Controller : "is registered as"
+  DeviceStockItem ||--o| CameraNode : "is registered as"
+  DefaultThreshold ||--o{ Zone : "seeds"
+  Alert ||--o| ExpertVerdict : "is validated by"
+  BirdCountSession ||--o{ FiveMinuteCount : "is computed from"
+  DailyHealthStatus ||--o{ DailyRating : "is rated by"
+```
+
+Each conceptual entity maps to one logical entity below; two are embedded in another logical entity, and one logical entity is purely technical.
+
+| Conceptual entity | Logical entity | Note |
+| --- | --- | --- |
+| `User` | `USER` | Roles Farm Owner, Domain Expert, Administrator |
+| `Farm` | `FARM` |  |
+| `Invitation` | `INVITATION` |  |
+| `WeatherObservation` | `WEATHER_OBSERVATION` |  |
+| `House` | `HOUSE` |  |
+| `Zone` | `ZONE` | One floor of a house |
+| `Controller` | `SENSOR_NODE` | ESP32 controller; relays embedded |
+| `CameraNode` | `CAMERA_NODE` | AI node at an entrance |
+| `DeviceStockItem` | `PROVISIONED_DEVICE` | Device label state (SM-16) derived from it |
+| `DefaultThreshold` | `SYSTEM_SETTING` | `default_thresholds` of the singleton |
+| `SensorReading` | `TELEMETRY` |  |
+| `ManualOverride` | `RELAY_OVERRIDE_LOG` |  |
+| `AttractantTrack` | `AUDIO_TRACK` |  |
+| `Alert` | `ALERT` |  |
+| `ExpertVerdict` | `ALERT` | Embedded as `expert_verdict` |
+| `BirdCountSession` | `BIRD_COUNT_RECORD` |  |
+| `FiveMinuteCount` | `BIRD_COUNT_BUCKET` |  |
+| `DailyHealthStatus` | `HOUSE_HEALTH_DAY` |  |
+| `DailyRating` | `HOUSE_HEALTH_DAY` | Embedded in `ratings` |
+| `HealthReport` | `HOUSE_HEALTH_REPORT` |  |
+| `HarvestBatch` | `HARVEST_BATCH` |  |
+| `ReviewItem` | `PARAMETER_REVIEW` |  |
+| `CoefficientProposal` | `COEFFICIENT_PROPOSAL` |  |
+| `Notification` | `NOTIFICATION` |  |
+| `ActivityRecord` | `AUDIT_LOG` | Source of the expert activity history |
+| — | `PUSH_TOKEN` | Technical only: FCM token of a device |
+
+**Logical ERD.** Entities with their attributes and keys, as stored.
 
 ```mermaid
 erDiagram
@@ -771,7 +847,7 @@ Clients authenticate with the access token. Rooms: `zone:<id>` (`JOIN_ZONE`), `h
 
 ## 8. State Machine Diagrams
 
-One diagram per lifecycle of Report 3, Section 6. Transition labels name the triggering requirement; the diagrams add no rule of their own.
+One diagram per lifecycle of Report 3, Section 6, named after the entity of the conceptual model (Section 6.1) that owns it. Transition labels name the triggering requirement; the diagrams add no rule of their own.
 
 ### 8.1 Alert — status (SM-01)
 
@@ -791,7 +867,7 @@ stateDiagram-v2
   RESOLVED --> [*]
 ```
 
-### 8.2 Alert — expert verdict (SM-02)
+### 8.2 ExpertVerdict (SM-02)
 
 ```mermaid
 stateDiagram-v2
@@ -802,7 +878,7 @@ stateDiagram-v2
   REJECTED --> CONFIRMED : verdict changed
 ```
 
-### 8.3 Relay — control mode (SM-03)
+### 8.3 Controller — relay control mode (SM-03)
 
 ```mermaid
 stateDiagram-v2
@@ -830,7 +906,7 @@ stateDiagram-v2
 
 The number is kept so that SM-06…SM-17 match Report 3, Sections 6.6–6.17.
 
-### 8.6 Device — connection status (SM-06)
+### 8.6 Controller and CameraNode — connection status (SM-06)
 
 ```mermaid
 stateDiagram-v2
@@ -846,7 +922,7 @@ stateDiagram-v2
 
 Registration is done by the Farm Owner (SF-01). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
 
-### 8.7 Misting protection (SM-07, controller)
+### 8.7 Controller — misting protection (SM-07)
 
 ```mermaid
 stateDiagram-v2
@@ -858,7 +934,7 @@ stateDiagram-v2
   LATCHED --> MONITORING : retry after 30 min (BR-11)
 ```
 
-### 8.8 Noise baseline per hour (SM-08, controller)
+### 8.8 Controller — noise baseline per hour (SM-08)
 
 ```mermaid
 stateDiagram-v2
@@ -867,7 +943,7 @@ stateDiagram-v2
   READY --> READY : baseline keeps learning while speaker off
 ```
 
-### 8.9 Health report (SM-09)
+### 8.9 HealthReport (SM-09)
 
 ```mermaid
 stateDiagram-v2
@@ -876,7 +952,7 @@ stateDiagram-v2
   CONCLUDED --> CONCLUDED : author edits
 ```
 
-### 8.10 Review of a Farm Owner's change (SM-10)
+### 8.10 ReviewItem (SM-10)
 
 ```mermaid
 stateDiagram-v2
@@ -890,7 +966,7 @@ stateDiagram-v2
   ADJUSTED --> [*]
 ```
 
-### 8.11 Coefficient suggestion proposal (SM-11)
+### 8.11 CoefficientProposal (SM-11)
 
 ```mermaid
 stateDiagram-v2
@@ -903,7 +979,7 @@ stateDiagram-v2
   SUPERSEDED --> [*]
 ```
 
-### 8.12 Configuration sync per controller (SM-12)
+### 8.12 Controller — configuration sync (SM-12)
 
 ```mermaid
 stateDiagram-v2
@@ -917,7 +993,7 @@ stateDiagram-v2
 
 ---
 
-### 8.13 Harvest batch (SM-13)
+### 8.13 HarvestBatch (SM-13)
 
 ```mermaid
 stateDiagram-v2
@@ -927,7 +1003,7 @@ stateDiagram-v2
   DELETED --> [*]
 ```
 
-### 8.14 User account (SM-14)
+### 8.14 User (SM-14)
 
 ```mermaid
 stateDiagram-v2
@@ -940,7 +1016,7 @@ stateDiagram-v2
   DELETED --> [*]
 ```
 
-### 8.15 Firmware update per controller (SM-15)
+### 8.15 Controller — firmware update (SM-15)
 
 ```mermaid
 stateDiagram-v2
@@ -951,7 +1027,7 @@ stateDiagram-v2
   FAILED --> PENDING : OTA sent again
 ```
 
-### 8.16 Device label — stock entry (SM-16)
+### 8.16 DeviceStockItem — label (SM-16)
 
 ```mermaid
 stateDiagram-v2
@@ -968,7 +1044,7 @@ stateDiagram-v2
 
 The state is derived from `provisioneddevices` (`claimed_at`, `revoked_at`) and whether a sensor or camera node with that device ID is in service; it is not a stored field.
 
-### 8.17 Daily health status of a house and assessor rating (SM-17)
+### 8.17 DailyHealthStatus and DailyRating (SM-17)
 
 ```mermaid
 stateDiagram-v2
@@ -1393,7 +1469,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller. Staging: Nginx with Certbot replaces Caddy and the separate TLS proxy, one component for HTTPS and the TLS ports of MQTT and the video publish (Sections 3.2, 3.4, 11) |
+| 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller. Staging: Nginx with Certbot replaces Caddy and the separate TLS proxy, one component for HTTPS and the TLS ports of MQTT and the video publish (Sections 3.2, 3.4, 11). Conceptual model added to Section 6.1 with its mapping to the logical entities; state machines named after the conceptual entities (Section 8) |
 | 1.1.0 | 26/10/2026 | SM-17 splits the day status from the rating state of each assessor (`ratingWindow` job and the day's `state` field removed). Harvest requirements referred to as `HARVEST-FR` (Report 3 3.1.0). Camera port restricted to the AI node's static IP by a modem rule (D5, Sections 10, 11). Final design for Review 2 against Report 3 3.1.0: device topics and one broker credential per device with a static authorisation rule, QoS 1 with event and command IDs, retained configuration, `esp-mqtt` on the ESP32, `config/reassign` removed (D3, D9, Sections 2.2, 5.1, 7.2, 10, AD-10); decisions D15 (manual override within limits) and D16 (current status and evaluation snapshot); Logical ERD as the final design: user status, push tokens, per-relay override, telemetry validity, alert event ID and details, house health reports with a unique key per kind and period, notification references, harvest type and photo, audit source, stock credentials, `sla_hours` removed; Section 6.3 data retention (BR-36), Section 6.4 schema migrations, Section 5.5 code location of the engineering constants; mobile scope, HLS stream and FCM token in Section 5.4; state machines and activity diagrams aligned (SM-03, 06, 14, 17; AD-02, 03, 04, 08, 09, 10, 11, 12, 14); 'planned' marks and the former Section 12 removed: implementation gaps are tracked only in Project Tracking. D11: the DC demo loads are measured with shunt resistors instead of current transformers (Section 3 controller board) |
 | 1.0.10 | 26/10/2026 | Tickets, SLA, Technician regions and the Administrator's farm management removed from the code (pull requests #100–#106): permission and supporting-role gaps closed in Section 12, done ticket, region, coordinate and `MAINTENANCE_DUE` rows dropped from Section 6.4 |
 | 1.0.9 | 24/10/2026 | A farm is one place with required coordinates (Report 3 FARM-FR-001, A-5): `address` and `coordinates` in the ERD, planned validator in Section 6.4, location field in the farm form (Section 5.4) |
