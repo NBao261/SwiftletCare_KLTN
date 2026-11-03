@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { preferenceStateStorage } from '@/services/storage/preferenceStorage'
-import type { AlertSeverity, AlertType, AnalyticsRange } from '@/types'
+import type { AlertType, AnalyticsRange } from '@/types'
 import type { VerdictFilter } from '@/utils/alertList.utils'
 import type { BirdPeriod } from '@/utils/analytics.utils'
+import type { SeverityLevel } from '@/utils/severity.utils'
 import type { SensorMetric } from '@/utils/threshold.utils'
 
 // Lựa chọn của người dùng ở tab Farm, lưu trên máy (file JSON, services/storage/preferenceStorage) theo từng tài khoản.
@@ -20,7 +21,7 @@ export interface AlertsPrefs {
   segment: 'active' | 'resolved'
   houseId: string | null
   zoneId: string | null
-  severity: AlertSeverity | null
+  severity: SeverityLevel | null
   type: AlertType | null
   verdict: VerdictFilter | null
 }
@@ -45,7 +46,7 @@ export interface FarmPrefs {
   cellularAutoplay?: CellularAutoplay
   // Màn Phân tích; nhà dùng chung lastHouseIdByFarm với tab Farm
   analytics?: Partial<AnalyticsPrefs>
-  // Tầng đang xem ở Phân tích theo nhà; null là "Tất cả tầng"
+  // Tầng đang xem ở Phân tích theo nhà; null là "Tất cả khu vực"
   analyticsZoneIdByHouse?: Record<string, string | null>
   alerts?: Partial<AlertsPrefs>
 }

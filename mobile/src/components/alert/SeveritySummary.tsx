@@ -4,51 +4,44 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
-import type { AlertSeverity } from '@/types'
-import { SEVERITIES } from '@/utils/alertList.utils'
-import { getSeverityLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
+import { getSeverityLevelLabel, SEVERITY_LEVELS, type SeverityLevel } from '@/utils/severity.utils'
 
 const TILE_HEIGHT = 64
 
 interface SeveritySummaryProps {
-  counts: Record<AlertSeverity, number>
-  selected: AlertSeverity | null
-  onToggle: (severity: AlertSeverity) => void
+  counts: Record<SeverityLevel, number>
+  selected: SeverityLevel | null
+  onToggle: (level: SeverityLevel) => void
   isLoading: boolean
 }
 
-// Dải tóm tắt theo mức, cũng là bộ lọc nhanh (đặc tả §2.2): chạm một ô để chỉ xem mức đó, chạm lại để bỏ lọc;
-// ô số 0 mờ nhưng vẫn chạm được; ô đang chọn có viền Ink
+// Dải tóm tắt theo 3 cấp như web (Khẩn cấp · Cao · Thường), cũng là bộ lọc nhanh (đặc tả §2.2): chạm một ô để chỉ xem
+// cấp đó, chạm lại để bỏ lọc. Màu mỗi ô là màu badge của cấp, giữ nguyên cả khi số 0; ô đang chọn có viền Ink
 export function SeveritySummary({ counts, selected, onToggle, isLoading }: SeveritySummaryProps) {
   const palette = usePalette()
   if (isLoading) return <Skeleton width="100%" height={TILE_HEIGHT} radius={Radius.md} />
 
   return (
     <View style={styles.row}>
-      {SEVERITIES.map(severity => {
-        const style = getSeverityStyle(severity, palette)
-        const isSelected = selected === severity
-        const count = counts[severity]
-        // Ô Trung bình, Thấp nền trắng để nổi trên nền Paper
-        const background = severity === 'MEDIUM' || severity === 'LOW' ? palette.surface : style.background
+      {SEVERITY_LEVELS.map(level => {
+        const style = getSeverityStyle(level, palette)
+        const isSelected = selected === level
+        const count = counts[level]
+        const label = getSeverityLevelLabel(level)
         return (
           <Pressable
-            key={severity}
-            onPress={() => onToggle(severity)}
-            style={[
-              styles.tile,
-              { backgroundColor: background, borderColor: isSelected ? palette.text : 'transparent' },
-              count === 0 && !isSelected && styles.empty,
-            ]}
+            key={level}
+            onPress={() => onToggle(level)}
+            style={[styles.tile, { backgroundColor: style.background, borderColor: isSelected ? palette.text : 'transparent' }]}
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
-            accessibilityLabel={t('{severity}: {count} cảnh báo', { severity: getSeverityLabel(severity), count })}
+            accessibilityLabel={t('{severity}: {count} cảnh báo', { severity: label, count })}
           >
             <View style={styles.labelRow}>
               <View style={[styles.dot, { backgroundColor: style.dot }]} />
               <Text variant="small" weight="semiBold" color={style.text} numberOfLines={1} style={styles.flex}>
-                {getSeverityLabel(severity)}
+                {label}
               </Text>
             </View>
             <Text variant="heading" weight="semiBold" color={style.text}>
@@ -72,7 +65,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     justifyContent: 'space-between',
   },
-  empty: { opacity: 0.5 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   dot: { width: SEVERITY_DOT_SIZE, height: SEVERITY_DOT_SIZE, borderRadius: Radius.full },
   flex: { flex: 1 },

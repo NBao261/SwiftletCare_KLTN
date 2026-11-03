@@ -5,10 +5,8 @@ import { Radius, Spacing } from '@/constants/theme'
 import type { FarmSummary } from '@/hooks/farm/useFarmSummary'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { AlertSeverity } from '@/types'
-import { getSeverityLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
-
-const SEVERITY_ORDER: AlertSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+import { getSeverityLevel, getSeverityLevelLabel, SEVERITY_LEVELS } from '@/utils/severity.utils'
 
 interface FarmSummaryStripProps {
   summary: FarmSummary
@@ -24,18 +22,25 @@ export function FarmSummaryStrip({ summary, severityCounts, hasExpert, isDetailL
   const palette = usePalette()
   const zoneText = isDetailLoading ? '_' : String(summary.zoneCount)
   const deviceText = isDetailLoading ? '_' : `${summary.deviceOnlineCount}/${summary.deviceCount}`
-  const activeSeverities = severityCounts ? SEVERITY_ORDER.filter(severity => severityCounts[severity] > 0) : []
+  // Gộp 4 mức backend thành 3 cấp như web (CRITICAL và HIGH cùng là Khẩn cấp)
+  const levelCounts = { P1: 0, P2: 0, P3: 0 }
+  if (severityCounts) {
+    for (const severity of Object.keys(severityCounts) as AlertSeverity[]) {
+      levelCounts[getSeverityLevel(severity)] += severityCounts[severity]
+    }
+  }
+  const activeLevels = SEVERITY_LEVELS.filter(level => levelCounts[level] > 0)
   const alertText = !severityCounts
     ? '_'
-    : activeSeverities.length === 0
+    : activeLevels.length === 0
       ? t('Không có cảnh báo')
-      : activeSeverities.map(severity => `${getSeverityLabel(severity)} ${severityCounts[severity]}`).join(' · ')
+      : activeLevels.map(level => `${getSeverityLevelLabel(level)} ${levelCounts[level]}`).join(' · ')
 
   return (
     <Card style={styles.card}>
       <View style={styles.row}>
         <Text variant="body" weight="semiBold" style={styles.flexText}>
-          {t('{houses} nhà · {zones} tầng', { houses: summary.houseCount, zones: zoneText })}
+          {t('{houses} nhà · {zones} khu vực', { houses: summary.houseCount, zones: zoneText })}
         </Text>
         {/* Nhãn tĩnh: farm có chuyên gia thì chuyên gia quyết các tham số phát hiện (BR-22) */}
         {hasExpert && (

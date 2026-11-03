@@ -34,7 +34,7 @@ import { useNow } from '@/hooks/time/useNow'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
 import type { Alert } from '@/types'
-import { countBySeverity, filterAlerts, sortAlerts } from '@/utils/alertList.utils'
+import { countBySeverityLevel, filterAlerts, sortAlerts } from '@/utils/alertList.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -86,7 +86,7 @@ export default function AlertsScreen() {
   }
   // Dải tóm tắt đếm theo mọi bộ lọc trừ mức; danh sách lọc thêm mức đang chọn
   const withoutSeverity = filterAlerts(source, baseFilter)
-  const counts = countBySeverity(withoutSeverity)
+  const counts = countBySeverityLevel(withoutSeverity)
   const filtered = filterAlerts(withoutSeverity, { ...baseFilter, severity: scope.severity })
   const alerts = isResolved ? filtered : sortAlerts(filtered)
   const activeTotal = filterAlerts(activeQuery.data ?? [], baseFilter).length

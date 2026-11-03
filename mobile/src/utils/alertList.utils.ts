@@ -1,4 +1,5 @@
 import type { Alert, AlertSeverity, AlertType } from '@/types'
+import { getSeverityLevel, type SeverityLevel } from '@/utils/severity.utils'
 
 // Bốn loại cảnh báo suy luận cần chuyên gia phán quyết — khớp INFERRED_ALERT_TYPES của backend (alert.service.ts)
 export const INFERRED_ALERT_TYPES: readonly AlertType[] = [
@@ -7,8 +8,6 @@ export const INFERRED_ALERT_TYPES: readonly AlertType[] = [
   'FORECAST_BREACH',
   'LOW_RETURN_RATE',
 ]
-
-export const SEVERITIES: readonly AlertSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
 
 // Cảnh báo về thiết bị — khớp danh sách loại Technician được xem ở backend (alert.service.ts)
 export const DEVICE_ALERT_TYPES: readonly AlertType[] = [
@@ -40,7 +39,8 @@ export interface AlertFilter {
   // Các tầng của nhà đang xem: cảnh báo tầng không mang house_id nên lọc nhà theo tầng
   houseZoneIds: readonly string[]
   zoneId: string | null
-  severity: AlertSeverity | null
+  // Cấp hiển thị (Khẩn cấp · Cao · Thường), không phải 4 mức của backend
+  severity: SeverityLevel | null
   type: AlertType | null
   verdict: VerdictFilter | null
 }
@@ -69,7 +69,7 @@ export function sortAlerts(alerts: Alert[]): Alert[] {
 // đang lọc phán quyết thì loại khác bị bỏ, như GET /alerts?verdict của backend
 export function filterAlerts(
   alerts: Alert[],
-  filter: Omit<AlertFilter, 'severity'> & { severity?: AlertSeverity | null },
+  filter: Omit<AlertFilter, 'severity'> & { severity?: SeverityLevel | null },
 ): Alert[] {
   const houseZoneIds = new Set(filter.houseZoneIds)
   return alerts.filter(alert => {
@@ -77,7 +77,7 @@ export function filterAlerts(
       return false
     }
     if (filter.zoneId && alert.zone_id !== filter.zoneId) return false
-    if (filter.severity && alert.severity !== filter.severity) return false
+    if (filter.severity && getSeverityLevel(alert.severity) !== filter.severity) return false
     if (filter.type && alert.type !== filter.type) return false
     if (filter.verdict) {
       if (!isInferredAlert(alert)) return false
@@ -90,10 +90,10 @@ export function filterAlerts(
   })
 }
 
-// Số cảnh báo theo từng mức (dải tóm tắt, đặc tả §2.2)
-export function countBySeverity(alerts: Alert[]): Record<AlertSeverity, number> {
-  const counts: Record<AlertSeverity, number> = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 }
-  for (const alert of alerts) counts[alert.severity] += 1
+// Số cảnh báo theo từng cấp hiển thị (dải tóm tắt, đặc tả §2.2); CRITICAL và HIGH cùng tính vào Khẩn cấp
+export function countBySeverityLevel(alerts: Alert[]): Record<SeverityLevel, number> {
+  const counts: Record<SeverityLevel, number> = { P1: 0, P2: 0, P3: 0 }
+  for (const alert of alerts) counts[getSeverityLevel(alert.severity)] += 1
   return counts
 }
 

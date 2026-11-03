@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals'
 import type { Alert } from '@/types'
 import { describeAlertDetail, getAutoCloseText } from '@/utils/alertDetail.utils'
-import { countBySeverity, filterAlerts, getRenotifyState, isInferredAlert, sortAlerts } from '@/utils/alertList.utils'
+import { countBySeverityLevel, filterAlerts, getRenotifyState, isInferredAlert, sortAlerts } from '@/utils/alertList.utils'
 
 // Cảnh báo tối thiểu cho test
 function buildAlert(id: string, overrides: Partial<Alert> = {}): Alert {
@@ -53,7 +53,7 @@ describe('filterAlerts', () => {
 
   it('lọc tầng, mức, loại', () => {
     expect(filterAlerts(alerts, { ...noFilter, zoneId: 'zone-2' }).map(alert => alert._id)).toEqual(['zone-2'])
-    expect(filterAlerts(alerts, { ...noFilter, severity: 'LOW' }).map(alert => alert._id)).toEqual(['house'])
+    expect(filterAlerts(alerts, { ...noFilter, severity: 'P3' }).map(alert => alert._id)).toEqual(['house'])
     expect(filterAlerts(alerts, { ...noFilter, type: 'NOISE_ANOMALY' })).toHaveLength(1)
   })
 
@@ -65,14 +65,11 @@ describe('filterAlerts', () => {
   })
 })
 
-describe('countBySeverity và isInferredAlert', () => {
-  it('đếm đủ 4 mức, mức không có là 0', () => {
-    expect(countBySeverity([buildAlert('a'), buildAlert('b', { severity: 'CRITICAL' })])).toEqual({
-      CRITICAL: 1,
-      HIGH: 0,
-      MEDIUM: 1,
-      LOW: 0,
-    })
+describe('countBySeverityLevel và isInferredAlert', () => {
+  it('đếm đủ 3 cấp, CRITICAL và HIGH cùng là Khẩn cấp, cấp không có là 0', () => {
+    expect(
+      countBySeverityLevel([buildAlert('a'), buildAlert('b', { severity: 'CRITICAL' }), buildAlert('c', { severity: 'HIGH' })]),
+    ).toEqual({ P1: 2, P2: 1, P3: 0 })
   })
 
   it('4 loại suy luận như backend', () => {

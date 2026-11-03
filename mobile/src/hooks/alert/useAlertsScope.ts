@@ -6,8 +6,7 @@ import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useOrderedHouses } from '@/hooks/farm/useOrderedHouses'
 import { useAuthStore } from '@/stores/authStore'
 import { useFarmPrefsStore, type AlertsPrefs } from '@/stores/farmPrefsStore'
-import type { AlertSeverity } from '@/types'
-import { SEVERITIES } from '@/utils/alertList.utils'
+import { parseSeverityLevel, type SeverityLevel } from '@/utils/severity.utils'
 import { canPerform } from '@/utils/permission.utils'
 
 // Tham số route của tab Cảnh báo: mở từ chuông chi tiết nhà, hàng cảnh báo tầng, thẻ nhà, ô thống kê Trang chủ
@@ -51,8 +50,8 @@ export function useAlertsScope() {
     zones.find(zone => zone._id === params.zoneId)?._id ??
     zones.find(zone => zone._id === remembered.zoneId)?._id ??
     null
-  const severity: AlertSeverity | null =
-    SEVERITIES.find(item => item === params.severity) ?? remembered.severity ?? null
+  // Giá trị đã nhớ từ bản cũ có thể là mức backend (CRITICAL…): đổi sang cấp, giá trị lạ thì bỏ
+  const severity: SeverityLevel | null = parseSeverityLevel(params.severity) ?? parseSeverityLevel(remembered.severity)
   // Chuyên gia chưa chọn phán quyết lần nào thì mặc định "Chờ phán quyết" (đặc tả §6)
   const isExpert = canPerform(user, 'setAlertVerdict')
   const verdict = remembered.verdict === undefined ? (isExpert ? 'pending' : null) : remembered.verdict
@@ -85,7 +84,7 @@ export function useAlertsScope() {
     },
     selectZone: (nextZoneId: string | null) => remember({ zoneId: nextZoneId }, ['zoneId']),
     // Chạm lại ô đang chọn thì bỏ lọc mức
-    toggleSeverity: (next: AlertSeverity) => remember({ severity: severity === next ? null : next }, ['severity']),
+    toggleSeverity: (next: SeverityLevel) => remember({ severity: severity === next ? null : next }, ['severity']),
     selectType: (next: AlertsPrefs['type']) => remember({ type: next }),
     selectVerdict: (next: AlertsPrefs['verdict']) => remember({ verdict: next }),
     selectSegment: (next: AlertsPrefs['segment']) => remember({ segment: next }),

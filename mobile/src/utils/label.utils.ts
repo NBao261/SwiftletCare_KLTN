@@ -1,13 +1,7 @@
 import type { AlertSeverity, AlertStatus, AlertType, ControlMode, DetectionTuning, DeviceStatus, FuzzyTuning, NestType, RelayName, Role } from '@/types'
 import type { SensorMetric, ThresholdMetric } from '@/utils/threshold.utils'
 import { t } from '@/utils/i18n.utils'
-
-const SEVERITY_LABELS: Record<AlertSeverity, string> = {
-  CRITICAL: 'Nghiêm trọng',
-  HIGH: 'Cao',
-  MEDIUM: 'Trung bình',
-  LOW: 'Thấp',
-}
+import { getSeverityLevel, getSeverityLevelLabel } from '@/utils/severity.utils'
 
 const DEVICE_STATUS_LABELS: Record<DeviceStatus, string> = {
   PENDING: 'Chờ kết nối',
@@ -24,9 +18,9 @@ const METRIC_LABELS: Record<SensorMetric, string> = {
   sound: 'Tiếng ồn',
 }
 
-// Nhãn tiếng Việt của mức độ cảnh báo
+// Nhãn tiếng Việt của mức độ cảnh báo: 3 cấp Khẩn cấp · Cao · Thường như web (CRITICAL và HIGH cùng là Khẩn cấp)
 export function getSeverityLabel(severity: AlertSeverity): string {
-  return t(SEVERITY_LABELS[severity])
+  return getSeverityLevelLabel(getSeverityLevel(severity))
 }
 
 // Nhãn tiếng Việt của trạng thái thiết bị
@@ -191,6 +185,9 @@ const ALERT_TYPE_LABELS: Record<AlertType, string> = {
   ACTUATOR_FAULT: 'Bơm hoặc quạt không chạy đúng',
   CONFIG_MISMATCH: 'Thiết bị chưa nhận cấu hình mới',
 }
+
+// Đủ 15 loại cảnh báo theo thứ tự của bảng nhãn (màn chọn kênh theo loại, ALERT-FR-005)
+export const ALERT_TYPES = Object.keys(ALERT_TYPE_LABELS) as AlertType[]
 
 export function getAlertTypeLabel(type: AlertType): string {
   return t(ALERT_TYPE_LABELS[type])
