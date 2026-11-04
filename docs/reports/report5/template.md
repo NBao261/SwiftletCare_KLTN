@@ -7,8 +7,8 @@
 | Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 1.1.0 (Review 2) |
-| Date | 03/11/2026 |
+| Document version | 1.3.0 (Review 2) |
+| Date | 04/11/2026 |
 | Requirements baseline | Report 3 – SRS 3.2.0; Design Brief (BM01) 1.2 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
@@ -150,7 +150,7 @@ Each owner runs the test cases of their features and workflows and records the r
 
 ## 6. Test Results at Review 2
 
-Results are reported only from the CI run on the tag `review-2`; the tag has not been created yet, so no case is reported as passed. After the tag: download the three artifacts of that CI run (backend Jest JSON, firmware PlatformIO JUnit, AI-pipeline pytest JUnit; the workflow runs every module on a `review-*` tag), regenerate this report with them, and write the CI run link here. Manual cases are filled from the test report of Defense 1.1. The automated suites also hold tests beyond this list; only the cases above count toward the commitment.
+Results come only from the CI run on the tag `review-2` (commit `7d5e643b`, 04/11/2026): https://github.com/NBao261/SwiftletCare_KLTN/actions/runs/41801124931. Every module passed there: backend lint, type check and Jest (599 of 599 tests in 61 suites), web lint, type check, Vitest and build, firmware host tests (50 of 50), mobile lint, type check and Jest, AI-pipeline pytest (50 of 50). The "Actual result" column above is generated from that run's three artifacts (backend Jest JSON, firmware PlatformIO JUnit, AI-pipeline pytest JUnit). Cases whose test is still to be written and manual cases are "Not run"; manual cases are filled from the test report of Defense 1.1. The automated suites also hold tests beyond this list; only the cases above count toward the commitment.
 
 {{SUMMARY}}
 
@@ -160,6 +160,7 @@ Committed test cases that are not automated yet are written in Iteration 2 toget
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.3.0 | 04/11/2026 | Results of the CI run on the tag `review-2` (Section 6): 83 of the 83 automated cases with a written test pass; the generator reads the PlatformIO JUnit report, whose suite name sits on the test suite |
 | 1.2.0 | 03/11/2026 | Six business main workflows (SRS 3.2.0): WF-01…06 with demo scenarios DS-01…12; device-setup features F-18, F-19 move to supporting flow SF-01 (still tested, not counted) |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0: 53 state transitions (relay mode 4, device 5, configuration sync 5, daily status 2, assessor rating 5), 136 committed cases; a concrete expected result for every transition; mappings to existing tests corrected (TC-F03-03, PENDING → ONLINE, ONLINE → OFFLINE, RESOLVED → new alert); new cases for breach dwell, pump limit and confirmation, device topics, rain confounder and rating snapshot; results counted only from a run on the tag; a "Requirements verified" column for every feature case and a generated requirement coverage table (Section 4.5); supporting regression suites listed (Section 4.6); the per-zone report test no longer counts for TC-ST-48; table of the FRs of each feature; firmware and AI-pipeline results read from the PlatformIO and pytest JUnit reports; F-10 and F-11 test the pipeline itself (ring crossing, lost tracks, annotated frames); F-22 tests that the API hides the status before rating |
 | 1.0.0 | 23/10/2026 | First version for Review 2: test plan, 131 committed test cases, results of the backend and firmware suites |
