@@ -26,6 +26,14 @@ fill_table(d.tables[3], [[n,ids,en['Top '+n][0]] for n,ids,_ in top])
 for row in d.tables[4].rows[1:]:
     vals=next(r for r in summary if r[0]==row.cells[0].text.strip())
     for c,v in zip(row.cells[1:], vals[1:]): set_cell(c, v)
+# Long file names would let Word widen the 7 columns past the margin: fix the layout and the widths (17 cm)
+from docx.shared import Cm
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+ft=d.tables[2]
+lay=OxmlElement('w:tblLayout'); lay.set(qn('w:type'),'fixed'); ft._tbl.tblPr.append(lay)
+for col,w in zip(ft.columns,[1.3,2.5,2.1,3.8,1.5,2.2,3.6]):
+    for c in col.cells: c.width=Cm(w)
 drop_grey(d)
 NOTE=('The AI answered in Vietnamese (the repository instructs the agent to reply in Vietnamese). '
       'Findings and evidence below are the team\'s English translation, with no finding added, removed or changed; '
