@@ -1,6 +1,6 @@
 # Project Tracking
 
-**SwiftletCare** · updated 26/10/2026 (Review 2) · plan: Report 2 · requirements: Report 3 · design: Report 4 · tests: Report 5
+**SwiftletCare** · updated 04/11/2026 (Review 2) · plan: Report 2 · requirements: Report 3 · design: Report 4 · tests: Report 5
 
 This sheet is the only record of progress. Report 3 and Report 4 describe what the system must do and how it is built, without status; the Design Brief (Section 5) summarises the gaps below. Status values: **Done** (merged into `develop`, its committed tests pass, and it runs end to end from the client), **In progress** (partly merged, or the backend works without its client), **Planned** (not started). Owners follow the Design Brief, Section 8.
 
@@ -12,19 +12,19 @@ This sheet is the only record of progress. Report 3 and Report 4 describe what t
 | --- | --- | --- | --- |
 | Registration v1 | 22/07/2026 | Done | |
 | Review 1 | 30/09/2026 | Done | Registration v2; scope narrowed to the automated system |
-| Iteration 1 | until Review 2 | Done | Pull requests #2…#122 (tag `review-2`) |
-| Review 2 | 04/11/2026 | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1; enumeration PR (G-01, #113) and invitation-only accounts (G-02 P0, #116) merged 29/10/2026; left: tag `review-2`, CI run on the tag, BM02 |
+| Iteration 1 | until Review 2 | Done | Pull requests #2…#133 (tag `review-2`, commit `7d5e643b`) |
+| Review 2 | 04/11/2026 | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1; enumeration PR (G-01, #113) and invitation-only accounts (G-02 P0, #116) merged 29/10/2026; tag `review-2` on 04/11/2026, CI run on the tag green (all modules); left: BM02 |
 | Iteration 2 | 05/11–02/12/2026 | Planned | Gaps due "It. 2" in Section 6 |
 | Iteration 3 | 03/12–23/12/2026 | Planned | Gaps due "It. 3" |
 | Defense 1.1 | Per the course schedule | Planned | Thresholds of the guideline §9.4 |
 
 ## 2. Iteration 1 — Work Merged
 
-Merged pull requests on GitHub, grouped by author account (`NBao261/SwiftletCare_KLTN`, #1…#122 at the `review-2` tag; #1 and #22 were closed without merge). A pull request counts for the account that opened it; commits of other members inside it are named in the content column.
+Merged pull requests on GitHub, grouped by author account (`NBao261/SwiftletCare_KLTN`, #1…#133 at the `review-2` tag; 128 merged; #1, #22, #124, #126 and #127 were not merged at the tag). A pull request counts for the account that opened it; commits of other members inside it are named in the content column.
 
 | Member (account) | Merged PRs | Main content |
 | --- | --- | --- |
-| Nguyễn Chí Bảo (`NBao261`) | 81 | Backend modules (farm, device, telemetry, alert, analytics, expert, bird counting, stream access); firmware (MQTT contract, speaker, fuzzy control, filters, anomaly, remote restart/OTA); counting pipeline (#85, #88, #95); CI, review rules, SRS/SDD; scope removal of tickets, SLA and regions (#100–#107); Review 2 documents and evidence register (#108–#112, #115, #121) |
+| Nguyễn Chí Bảo (`NBao261`) | 87 | Backend modules (farm, device, telemetry, alert, analytics, expert, bird counting, stream access); firmware (MQTT contract, speaker, fuzzy control, filters, anomaly, remote restart/OTA); counting pipeline (#85, #88, #95); CI, review rules, SRS/SDD; scope removal of tickets, SLA and regions (#100–#107); Review 2 documents and evidence register (#108–#112, #115, #121); model training plan (#128); six business main flows, context diagram, conceptual model, Technician role removed, Nginx on staging (#129–#133) |
 | Trần Minh Kiệt (`minhkiet1001`) | 12 | Admin backend modules, technician backend, device decommission and restore, admin logic fixes (#16, #21, #23, #35, #40, #62, #80); shared enumerations of SRS 3.1.0 with firmware 1.5.0 (#113, with the web and mobile parts of Len, Tuấn and Nhi); invitation-only accounts (#116, with Nhi's web and mobile part); expert loop, review items and proposals, breach dwell time (#117, #119, #122) |
 | Nguyễn Vũ Len (`VuLen203`) | 17 | Web design rules, sidebar, Farm Owner dashboard, analytics, monitor, farms, harvest, auth screens; Farm Owner rework with devices, live stream over WHEP, house-level counts, override history and autonomy, marketplace removal, farm → house → zone scope filter (#2, #20, #33, #34, #37, #48, #54, #55, #63, #78, #79, #82, #93, #94); mobile app structure, sign-in and Farm Owner home (#114, #118, #123) |
 | Nguyễn Thị Yến Nhi (`NhiNhi306`) | 7 | Admin web: users and account requests, design-system components, system pages, settings and logs, overview (#26, #27, #28, #47, #49, #72); privacy policy page (#120) |
@@ -65,16 +65,16 @@ Summary: 4 Done, 14 In progress, 4 Planned.
 
 ## 4. Test Progress (Report 5)
 
-Results count only when they come from a CI run on the tag being reported (Report 5, Section 6). Until the tag `review-2` exists, no committed test case is reported as passed.
+Results count only when they come from a CI run on the tag being reported (Report 5, Section 6): run https://github.com/NBao261/SwiftletCare_KLTN/actions/runs/41801124931 on the tag `review-2`.
 
 | Item | Count |
 | --- | --- |
-| Committed test cases | 136 |
-| Automated, test written | 66 (49 %; the Defense 1.1 bar of 50 % is met once the tests of Iteration 2 are written) |
-| Automated, to be written with its feature | 50 |
+| Committed test cases | 125 |
+| Automated, test written | 83 (66 %; Defense 1.1 bar: 50 % automated in CI) |
+| Automated, to be written with its feature | 27 |
 | Mandatory requirements verified by a committed case | 62 of 102; the other 40 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
-| Manual (staging, prototype, test house) | 20 |
-| Passed on the tag | — (tag not created) |
+| Manual (staging, prototype, test house) | 15 |
+| Passed on the tag | 83 of 83 written (100 %); 42 not run yet (27 tests to be written, 15 manual) |
 
 ## 5. Defect List
 
