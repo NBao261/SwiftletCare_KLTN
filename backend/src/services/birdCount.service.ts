@@ -18,9 +18,9 @@ const DAY_MS = 86_400_000
 const BUCKET_MS = 5 * 60_000
 
 /** VISION-FR-011 — "so với trung bình 7 ngày trước" */
-const BASELINE_DAYS = 7
+export const BASELINE_DAYS = 7
 /** ponytail: tối thiểu 3 ngày nền chọn tay, không có nguồn — ít hơn thì 1 ngày lệch đã thành cảnh báo (SRS §0.5) */
-const MIN_BASELINE_DAYS = 3
+export const MIN_BASELINE_DAYS = 3
 /** ponytail: khoảng tối đa 1 lần đọc bucket chọn tay (7 ngày ≈ 2016 khoảng/camera), không có nguồn (SRS §0.5) */
 const MAX_BUCKET_RANGE_MS = 7 * DAY_MS
 /** ponytail: khoảng đọc mặc định khi không gửi from (24 giờ gần nhất) chọn tay, không có nguồn (SRS §0.5) */
@@ -132,8 +132,11 @@ function emptyDay(date: string): HouseDayCounts {
   })
 }
 
-/** VISION-FR-006/008/009/017 — gọi từ mqtt/handlers/birdCount.handler.ts */
-export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> {
+/**
+ * VISION-FR-006/008/009/017 — gọi từ mqtt/handlers/birdCount.handler.ts. Tin của phiên trả nhà và ngày
+ * của nó để handler tính lại sức khỏe ngày khi số đếm về trễ (SM-17); tin BUCKET trả null.
+ */
+export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ houseId: string; sessionDate: string } | null> {
   const { deviceId, entry_count, exit_count } = payload
   if (typeof deviceId !== 'string' || !deviceId || !isCount(entry_count) || !isCount(exit_count)) {
     throw BadRequestError('Payload bird-count không hợp lệ')
@@ -156,7 +159,7 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> 
       { $set: { house_id: node.house_id }, ...counts },
       { upsert: true },
     )
-    return
+    return null
   }
 
   const sessionType = payload.session_type
@@ -189,6 +192,7 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> 
     returnRate: day.return_rate,
     timestamp: timestamp.toISOString(),
   })
+  return { houseId, sessionDate }
 }
 
 /**

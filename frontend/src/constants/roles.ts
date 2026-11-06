@@ -106,6 +106,7 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/devices',   roles: ADMIN_ONLY },
   { path: '/analytics',        roles: FARM_SIDE_ROLES },
   { path: '/vision',           roles: FARM_SIDE_ROLES },
+  { path: '/health',           roles: FARM_SIDE_ROLES },
   { path: '/domain-expert/queue',          roles: EXPERT_ROLES },
   { path: '/domain-expert/alert-verdicts',  roles: EXPERT_ROLES },
   { path: '/domain-expert/reviews',         roles: EXPERT_ROLES },

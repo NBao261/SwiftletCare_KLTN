@@ -27,12 +27,16 @@ export function useZoneTelemetryStream(zoneIds: string[]) {
         data: {
           ...cached.data,
           timestamp: update.timestamp,
-          temperature: update.temperature,
-          humidity: update.humidity,
-          light_lux: update.light,
-          nh3_ppm: update.nh3,
-          co2_ppm: update.co2,
-          sound_db: update.sound,
+          // Cảm biến hỏng gửi null: để trống (hiện "_"), không ghi thành 0
+          temperature: update.temperature ?? undefined,
+          humidity: update.humidity ?? undefined,
+          light_lux: update.light ?? undefined,
+          nh3_ppm: update.nh3 ?? undefined,
+          co2_ppm: update.co2 ?? undefined,
+          sound_db: update.sound ?? undefined,
+          // Không có controlOutput thì giữ % cũ của bản ghi
+          misting_pct: update.controlOutput?.misting ?? cached.data.misting_pct,
+          ventilation_pct: update.controlOutput?.ventilation ?? cached.data.ventilation_pct,
         },
       })
     }

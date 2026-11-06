@@ -566,6 +566,285 @@ ensureCollection("harvestbatches", {
 db.getCollection("harvestbatches").createIndex({"trace_code":1}, {"unique":true})
 db.getCollection("harvestbatches").createIndex({"farm_id":1,"harvest_date":-1})
 
+// ── househealthdays (model HouseHealthDay) ──
+ensureCollection("househealthdays", {
+  "bsonType": "object",
+  "properties": {
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "date": {
+      "bsonType": "string"
+    },
+    "indicators": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "environment": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "value": {
+              "bsonType": ["number", "null"]
+            },
+            "level": {
+              "bsonType": ["string", "null"],
+              "enum": ["NORMAL", "SLIGHT", "CLEAR", null]
+            },
+            "details": {}
+          }
+        },
+        "air": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "value": {
+              "bsonType": ["number", "null"]
+            },
+            "level": {
+              "bsonType": ["string", "null"],
+              "enum": ["NORMAL", "SLIGHT", "CLEAR", null]
+            },
+            "details": {}
+          }
+        },
+        "flock": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "value": {
+              "bsonType": ["number", "null"]
+            },
+            "level": {
+              "bsonType": ["string", "null"],
+              "enum": ["NORMAL", "SLIGHT", "CLEAR", null]
+            },
+            "details": {}
+          }
+        },
+        "noise": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "value": {
+              "bsonType": ["number", "null"]
+            },
+            "level": {
+              "bsonType": ["string", "null"],
+              "enum": ["NORMAL", "SLIGHT", "CLEAR", null]
+            },
+            "details": {}
+          }
+        }
+      }
+    },
+    "completeness": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "environment": {
+          "bsonType": ["bool", "null"]
+        },
+        "air": {
+          "bsonType": ["bool", "null"]
+        },
+        "flock": {
+          "bsonType": ["bool", "null"]
+        },
+        "noise": {
+          "bsonType": ["bool", "null"]
+        }
+      }
+    },
+    "current_status": {
+      "bsonType": "string",
+      "enum": ["GOOD", "WATCH", "ACTION", "INSUFFICIENT_DATA"]
+    },
+    "current_reasons": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "code": {
+            "bsonType": "string",
+            "enum": ["ALL_NORMAL", "MISSING_DATA", "NOT_ASSESSED", "ENV_IN_RANGE", "AIR_OVER_LIMIT", "FLOCK_DROP", "FLOCK_NO_BASELINE", "NOISE_EPISODES", "WEATHER_UNAVAILABLE", "RAIN_DOWNGRADE"]
+          },
+          "source": {
+            "bsonType": ["string", "null"],
+            "enum": ["environment", "air", "flock", "noise", null]
+          },
+          "level": {
+            "bsonType": ["string", "null"],
+            "enum": ["SLIGHT", "CLEAR", null]
+          },
+          "values": {}
+        },
+        "required": ["code"]
+      }
+    },
+    "evidence": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "noise_alert_ids": {
+          "bsonType": ["array", "null"],
+          "items": {
+            "bsonType": "objectId"
+          }
+        }
+      }
+    },
+    "weather": {},
+    "computed_at": {
+      "bsonType": "date"
+    },
+    "ratings": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "by": {
+            "bsonType": "objectId"
+          },
+          "role": {
+            "bsonType": "string",
+            "enum": ["FARM_OWNER", "DOMAIN_EXPERT"]
+          },
+          "outcome": {
+            "bsonType": "string",
+            "enum": ["RATED", "SKIPPED"]
+          },
+          "rating": {
+            "bsonType": ["string", "null"],
+            "enum": ["GOOD", "WATCH", "ACTION", null]
+          },
+          "note": {
+            "bsonType": ["string", "null"]
+          },
+          "at": {
+            "bsonType": "date"
+          },
+          "snapshot": {
+            "bsonType": ["object", "null"],
+            "properties": {
+              "status": {
+                "bsonType": "string",
+                "enum": ["GOOD", "WATCH", "ACTION", "INSUFFICIENT_DATA"]
+              },
+              "reasons": {
+                "bsonType": ["array", "null"],
+                "items": {
+                  "bsonType": "object",
+                  "properties": {
+                    "code": {
+                      "bsonType": "string",
+                      "enum": ["ALL_NORMAL", "MISSING_DATA", "NOT_ASSESSED", "ENV_IN_RANGE", "AIR_OVER_LIMIT", "FLOCK_DROP", "FLOCK_NO_BASELINE", "NOISE_EPISODES", "WEATHER_UNAVAILABLE", "RAIN_DOWNGRADE"]
+                    },
+                    "source": {
+                      "bsonType": ["string", "null"],
+                      "enum": ["environment", "air", "flock", "noise", null]
+                    },
+                    "level": {
+                      "bsonType": ["string", "null"],
+                      "enum": ["SLIGHT", "CLEAR", null]
+                    },
+                    "values": {}
+                  },
+                  "required": ["code"]
+                }
+              },
+              "levels": {
+                "bsonType": ["object", "null"],
+                "properties": {
+                  "environment": {
+                    "bsonType": ["string", "null"],
+                    "enum": ["NORMAL", "SLIGHT", "CLEAR", null]
+                  },
+                  "air": {
+                    "bsonType": ["string", "null"],
+                    "enum": ["NORMAL", "SLIGHT", "CLEAR", null]
+                  },
+                  "flock": {
+                    "bsonType": ["string", "null"],
+                    "enum": ["NORMAL", "SLIGHT", "CLEAR", null]
+                  },
+                  "noise": {
+                    "bsonType": ["string", "null"],
+                    "enum": ["NORMAL", "SLIGHT", "CLEAR", null]
+                  }
+                }
+              }
+            },
+            "required": ["status"]
+          },
+          "_id": {
+            "bsonType": ["objectId", "null"]
+          }
+        },
+        "required": ["by", "role", "outcome", "at"]
+      }
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["house_id", "farm_id", "date", "current_status", "computed_at"]
+})
+db.getCollection("househealthdays").createIndex({"house_id":1,"date":1}, {"unique":true})
+db.getCollection("househealthdays").createIndex({"farm_id":1,"date":1})
+
+// ── househealthreports (model HouseHealthReport) ──
+ensureCollection("househealthreports", {
+  "bsonType": "object",
+  "properties": {
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "kind": {
+      "bsonType": "string",
+      "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]
+    },
+    "period_start": {
+      "bsonType": "string"
+    },
+    "period_end": {
+      "bsonType": "string"
+    },
+    "generated_at": {
+      "bsonType": "date"
+    },
+    "house_metrics": {},
+    "zone_sections": {
+      "bsonType": ["array", "null"],
+      "items": {}
+    },
+    "expert_conclusion": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "text": {
+          "bsonType": "string"
+        },
+        "by": {
+          "bsonType": "objectId"
+        },
+        "at": {
+          "bsonType": "date"
+        },
+        "edited_at": {
+          "bsonType": ["date", "null"]
+        }
+      },
+      "required": ["text", "by", "at"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["house_id", "farm_id", "kind", "period_start", "period_end", "generated_at", "house_metrics"]
+})
+db.getCollection("househealthreports").createIndex({"house_id":1,"kind":1,"period_start":1,"period_end":1}, {"unique":true})
+db.getCollection("househealthreports").createIndex({"house_id":1,"period_end":-1})
+db.getCollection("househealthreports").createIndex({"farm_id":1,"period_end":-1})
+
 // ── houses (model House) ──
 ensureCollection("houses", {
   "bsonType": "object",
@@ -609,6 +888,29 @@ ensureCollection("houses", {
           "_id": {
             "bsonType": ["objectId", "null"]
           }
+        }
+      }
+    },
+    "health_levels": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "in_range_slight_pct": {
+          "bsonType": ["number", "null"]
+        },
+        "in_range_clear_pct": {
+          "bsonType": ["number", "null"]
+        },
+        "air_slight_h": {
+          "bsonType": ["number", "null"]
+        },
+        "air_clear_h": {
+          "bsonType": ["number", "null"]
+        },
+        "noise_slight": {
+          "bsonType": ["number", "null"]
+        },
+        "noise_clear": {
+          "bsonType": ["number", "null"]
         }
       }
     },
@@ -686,7 +988,7 @@ ensureCollection("notifications", {
       "properties": {
         "kind": {
           "bsonType": "string",
-          "enum": ["alert", "health_report", "expert_decision", "parameter_review", "coefficient_proposal"]
+          "enum": ["alert", "health_report", "health_day", "expert_decision", "parameter_review", "coefficient_proposal"]
         },
         "id": {
           "bsonType": "objectId"
@@ -830,6 +1132,9 @@ ensureCollection("relayoverridelogs", {
       "bsonType": ["string", "null"],
       "enum": ["EXPIRED", "CLEARED_EARLY", "REPLACED", null]
     },
+    "alert_confirmed": {
+      "bsonType": ["bool", "null"]
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     }
@@ -919,6 +1224,56 @@ ensureCollection("sensornodes", {
         },
         "ventilation": {
           "bsonType": ["bool", "null"]
+        }
+      }
+    },
+    "relays": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "misting": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        },
+        "speaker": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        },
+        "ventilation": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
         }
       }
     },
@@ -1262,6 +1617,34 @@ ensureCollection("users", {
 })
 db.getCollection("users").createIndex({"email":1}, {"unique":true})
 db.getCollection("users").createIndex({"telegram_link_code_hash":1}, {"sparse":true})
+
+// ── weatherobservations (model WeatherObservation) ──
+ensureCollection("weatherobservations", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "hour": {
+      "bsonType": "date"
+    },
+    "temperature": {
+      "bsonType": ["number", "null"]
+    },
+    "humidity": {
+      "bsonType": ["number", "null"]
+    },
+    "precipitation_mm": {
+      "bsonType": ["number", "null"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["farm_id", "hour"]
+})
+db.getCollection("weatherobservations").createIndex({"farm_id":1,"hour":1}, {"unique":true})
+db.getCollection("weatherobservations").createIndex({"hour":1}, {"expireAfterSeconds":7776000})
 
 // ── zonehealthreports (model ZoneHealthReport) ──
 ensureCollection("zonehealthreports", {

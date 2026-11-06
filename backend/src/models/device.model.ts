@@ -4,6 +4,13 @@ import type { DeviceStatus, ControlMode, RelayStates, CountingRing, Role } from 
 /**
  * SensorNode + CameraNode Documents – SRS §8.2
  */
+/** BR-20 — mỗi relay có chế độ và hạn riêng (Report 4 ERD); trạng thái bật/tắt vẫn ở `relay_states` tới G-14 */
+export interface IRelayOverride {
+  mode: ControlMode
+  override_expiry?: Date
+  override_by?: Types.ObjectId
+}
+
 export interface ISensorNode extends Document {
   _id: Types.ObjectId
   device_id: string
@@ -25,7 +32,10 @@ export interface ISensorNode extends Document {
   reset_reason?: string
   ip?: string
   relay_states: RelayStates
+  relays: Record<keyof RelayStates, IRelayOverride>
+  /** Tóm tắt của `relays` cho màn hình: MANUAL khi có relay MANUAL */
   control_mode: ControlMode
+  /** Tóm tắt của `relays`: hạn muộn nhất của các relay MANUAL */
   override_expiry?: Date
   // ENV-FR-013b: hệ thống loa ru (Relay IN2 + DFPlayer Mini)
   speaker_schedule: {
@@ -114,6 +124,15 @@ const relayUsageSchema = {
   since_service_switches: { type: Number, default: 0 },
 }
 
+const relayOverrideSchema = new Schema<IRelayOverride>(
+  {
+    mode:            { type: String, enum: ['AUTO','MANUAL'] satisfies ControlMode[], default: 'AUTO' },
+    override_expiry: { type: Date },
+    override_by:     { type: Schema.Types.ObjectId, ref: 'User' },
+  },
+  { _id: false },
+)
+
 const sensorNodeSchema = new Schema<ISensorNode>(
   {
     device_id:        { type: String, required: true, unique: true },
@@ -150,6 +169,11 @@ const sensorNodeSchema = new Schema<ISensorNode>(
       misting:     { type: Boolean, default: false },
       speaker:     { type: Boolean, default: false },
       ventilation: { type: Boolean, default: false },
+    },
+    relays: {
+      misting:     { type: relayOverrideSchema, default: () => ({}) },
+      speaker:     { type: relayOverrideSchema, default: () => ({}) },
+      ventilation: { type: relayOverrideSchema, default: () => ({}) },
     },
     control_mode:    { type: String, enum: ['AUTO','MANUAL'] satisfies ControlMode[], default: 'AUTO' },
     override_expiry: { type: Date },
