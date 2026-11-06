@@ -1881,14 +1881,14 @@ paths:
       tags: [Devices]
       summary: "Tắt Manual Override sớm của 1 relay hoặc mọi relay (ENV-FR-018, BR-20), chỉ FARM_OWNER"
       description: |
-        Không có `relayName`: đặt `control_mode=AUTO`, xoá `override_expiry`, publish MQTT `relay/command`
+        Không có `relayName`: đặt mọi mục của `relays` về `AUTO`, publish MQTT `relay/command`
         `{action:"clear_override"}` để ESP32 trả mọi relay về điều khiển tự động; đóng mọi lịch sử còn mở.
         Có `relayName`: chỉ đóng lịch sử của relay đó và publish `{action:"clear_override", relayName}`;
         thiết bị còn relay khác đang can thiệp tay thì vẫn `MANUAL`. Gọi khi thiết bị đang AUTO, hoặc relay
         được chọn không đang can thiệp tay, thì không làm gì (200, không publish, không ghi audit).
         Ghi audit `RELAY_OVERRIDE_CLEARED`.
-        Hạn riêng từng relay phía thiết bị (BR-20) làm cùng firmware G-07: firmware chưa đọc `relayName`
-        thì huỷ mọi relay và báo AUTO qua `relay/status`, backend đóng phần còn lại theo trạng thái đó.
+        Firmware < 1.6.0 chưa đọc `relayName` nên huỷ mọi relay rồi báo AUTO qua `relay/status`; backend đóng
+        phần còn lại theo trạng thái đó.
       parameters:
         - $ref: "#/components/parameters/NodeId"
         - { name: relayName, in: query, schema: { type: string, enum: [misting, speaker, ventilation] }, description: "Chỉ huỷ relay này; bỏ trống = huỷ mọi relay" }
@@ -2115,9 +2115,9 @@ paths:
       tags: [Devices]
       summary: "Điều khiển relay — Manual Override (ENV-FR-016..018), chỉ FARM_OWNER"
       description: |
-        Publish MQTT `relay/command` tới ESP32, đặt `control_mode=MANUAL` và
-        `override_expiry = now + durationMs`. Technician, Administrator, Domain Expert → 403
-        (Report 3 §2.4). Gọi lại cùng trạng thái
+        Publish MQTT `relay/command` tới ESP32 kèm `commandId`, `issuedAt` (BR-35), đặt relay đó trong
+        `relays` thành `MANUAL` với hạn `now + durationMs`; các relay khác giữ hạn của chúng (BR-20).
+        Technician, Administrator, Domain Expert → 403 (Report 3 §2.4). Gọi lại cùng trạng thái
         để gia hạn override (Flow 13 case 4a).
 
         BR-08: bật bơm (`relayName=misting`, `state=true`) 1–30 phút — quá 30 phút → 422; tắt bơm, quạt,
@@ -4593,6 +4593,12 @@ components:
         end_reason: { type: string, enum: [EXPIRED, CLEARED_EARLY, REPLACED], nullable: true }
         alert_confirmed: { type: boolean, description: "ENV-FR-019 — bật bơm lúc Zone có cảnh báo cảm biến/phun sương và Farm Owner đã xác nhận" }
 
+    RelayOverride:
+      type: object
+      properties:
+        mode: { type: string, enum: [AUTO, MANUAL] }
+        override_expiry: { type: string, format: date-time, description: "Chỉ có khi `mode=MANUAL`" }
+        override_by: { type: string, description: "ID người bật tay; thiết bị tự báo MANUAL thì không có" }
     RelayStates:
       type: object
       description: "Guide v3.3 §8-9: IN1=misting, IN2=speaker (loa ru), IN3=ventilation. IN4 để dự phòng (SRS v2.0.0 bỏ sưởi)"
@@ -4642,8 +4648,15 @@ components:
         reset_reason: { type: string, example: BROWNOUT, description: "FARM-FR-006 — lý do lần khởi động gần nhất (esp_reset_reason: POWERON, SW, PANIC, INT_WDT, TASK_WDT, WDT, BROWNOUT…), firmware ≥ 1.4.0" }
         ip: { type: string, description: "FARM-FR-006 — IP trong LAN nhà yến (ElegantOTA tại http://<ip>/update), firmware ≥ 1.4.0" }
         relay_states: { $ref: "#/components/schemas/RelayStates" }
-        control_mode: { type: string, enum: [AUTO, MANUAL] }
-        override_expiry: { type: string, format: date-time }
+        control_mode: { type: string, enum: [AUTO, MANUAL], description: "Tóm tắt của `relays`: MANUAL khi có relay MANUAL" }
+        override_expiry: { type: string, format: date-time, description: "Tóm tắt của `relays`: hạn muộn nhất của các relay MANUAL" }
+        relays:
+          type: object
+          description: "BR-20 — chế độ và hạn của từng relay"
+          properties:
+            misting: { $ref: "#/components/schemas/RelayOverride" }
+            speaker: { $ref: "#/components/schemas/RelayOverride" }
+            ventilation: { $ref: "#/components/schemas/RelayOverride" }
         speaker_schedule:
           type: object
           properties:
