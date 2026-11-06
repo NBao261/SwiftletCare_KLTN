@@ -52,16 +52,11 @@ void RelayState::applyRelay(int pin, bool state) {
 }
 
 // Field names/cấu trúc khớp backend/src/types/domain.ts RelayStatusPayload.
-// LƯU Ý: mỗi relay có cờ override riêng (mistingOverride, speakerOverride...)
-// nhưng schema backend (SensorNode.control_mode) chỉ có 1 field AUTO/MANUAL
-// cho cả node — đây là rút gọn hợp lý: MANUAL nếu CÓ BẤT KỲ relay nào đang bị
-// override, AUTO nếu không cái nào. Trạng thái override chi tiết từng relay
-// hiện chưa expose qua API/MQTT riêng.
-bool RelayState::anyOverride() const {
-  return mistingOverride || speakerOverride || ventilationOverride;
-}
+// control_mode của cả thiết bị: MANUAL nếu CÓ BẤT KỲ relay nào đang bị override.
+// Chế độ và thời gian còn lại của từng relay gửi trong `relays` (BR-20).
+bool RelayState::anyOverride() const { return overrides.any(); }
 
-String RelayState::toJson() const {
+String RelayState::toJson(bool withRemaining) const {
 
   String json = "{";
   json += "\"deviceId\":\"" + String(Config::deviceId) + "\",";
@@ -70,8 +65,19 @@ String RelayState::toJson() const {
   json += "\"speaker\":" + String(speaker ? "true" : "false") + ",";
   json += "\"ventilation\":" + String(ventilation ? "true" : "false");
   json += "},";
-  json += "\"control_mode\":\"" + String(anyOverride() ? "MANUAL" : "AUTO") + "\"";
-  json += "}";
+  json += "\"control_mode\":\"" + String(anyOverride() ? "MANUAL" : "AUTO") + "\",";
+  json += "\"relays\":{";
+  uint32_t now = millis();
+  for (uint8_t i = 0; i < RELAY_CHANNEL_COUNT; i++) {
+    RelayChannel channel = static_cast<RelayChannel>(i);
+    if (i > 0) json += ",";
+    json += "\"" + String(relayChannelName(channel)) + "\":{\"mode\":\"";
+    json += overrides.active(channel) ? "MANUAL\"" : "AUTO\"";
+    if (withRemaining && overrides.active(channel))
+      json += ",\"remaining_ms\":" + String(overrides.remainingMs(channel, now));
+    json += "}";
+  }
+  json += "}}";
   return json;
 }
 
@@ -103,7 +109,7 @@ static uint32_t windowMs() { return (uint32_t)Config::fuzzyWindowSec * 1000UL; }
 // thời gian BẬT trong cửa sổ Config::fuzzyWindowSec (xem FuzzyControl.h). Phun sương
 // vừa tăng ẩm vừa hạ nhiệt nên trời nóng thì phun sớm hơn, ẩm đã cao thì tắt.
 void runHumidityControl(float humidity, float temperature, RelayState &relay) {
-  if (relay.mistingOverride) return;
+  if (relay.overrides.active(RELAY_MISTING)) return;
 
   float duty = FuzzyControl::mistingDemand(humidity, temperature, Config::humidityMin,
                                            Config::humidityMax, Config::tempMax, currentTuning());
@@ -126,7 +132,7 @@ void runHumidityControl(float humidity, float temperature, RelayState &relay) {
 // số này chỉ theo dõi + cảnh báo ở backend. Số đo không hợp lệ → nhu cầu 0
 // (FuzzyControl::inputsValid, THREAT-FR-013).
 void runVentilationControl(float temperature, float humidity, RelayState &relay) {
-  if (relay.ventilationOverride) return;
+  if (relay.overrides.active(RELAY_VENTILATION)) return;
 
   float duty = FuzzyControl::ventilationDemand(temperature, humidity, Config::tempMax, Config::humidityMin,
                                                currentTuning());
@@ -144,40 +150,49 @@ void runVentilationControl(float temperature, float humidity, RelayState &relay)
 // ── Manual Override (ENV-FR-016..018) ──────────────────────────────────────
 
 void setManualOverride(const char *relayName, bool state, unsigned long durationMs, RelayState &relay) {
-  String name(relayName);
-  if (name == "misting") {
-    relay.mistingOverride = true;
+  RelayChannel channel;
+  if (!relayChannelFromName(relayName, channel)) {
+    Serial.println("[PID] MANUAL OVERRIDE: relayName không hợp lệ: " + String(relayName));
+    return; // không động tới hạn override của các relay khác
+  }
+  switch (channel) {
+  case RELAY_MISTING:
     relay.misting = state;
     relay.mistingPct = state ? 100 : 0;
     relay.applyRelay(PIN_RELAY_MISTING, state);
-  } else if (name == "speaker") {
-    relay.speakerOverride = true;
+    break;
+  case RELAY_SPEAKER:
     relay.speaker = state;
     relay.applyRelay(PIN_RELAY_SPEAKER, state);
-  } else if (name == "ventilation") {
-    relay.ventilationOverride = true;
+    break;
+  default:
     relay.ventilation = state;
     relay.ventilationPct = state ? 100 : 0;
     relay.applyRelay(PIN_RELAY_VENTILATION, state);
-  } else {
-    Serial.println("[PID] MANUAL OVERRIDE: relayName không hợp lệ: " + name);
-    return; // không động tới hạn override của các relay khác
+    break;
   }
-  relay.overrideExpiryMs = millis() + durationMs;
-  Serial.println("[PID] MANUAL OVERRIDE: " + name + " = " + String(state ? "ON" : "OFF") + " for " + String(durationMs / 60000) + " min");
+  relay.overrides.set(channel, millis(), durationMs);
+  Serial.println("[PID] MANUAL OVERRIDE: " + String(relayName) + " = " + String(state ? "ON" : "OFF") + " for " + String(durationMs / 60000) + " min");
 }
 
-void clearOverrides(RelayState &relay) {
-  relay.mistingOverride = false;
-  relay.speakerOverride = false;
-  relay.ventilationOverride = false;
-  relay.overrideExpiryMs = 0;
+void clearOverrides(RelayState &relay, const char *relayName) {
+  if (strlen(relayName) == 0) {
+    relay.overrides.clearAll();
+    return;
+  }
+  RelayChannel channel;
+  if (relayChannelFromName(relayName, channel)) relay.overrides.clear(channel);
+  else Serial.println("[PID] clear_override: relayName không hợp lệ: " + String(relayName));
 }
 
 void checkOverrideExpiry(RelayState &relay) {
-  if (relay.overrideExpiryMs > 0 && millis() > relay.overrideExpiryMs) {
-    clearOverrides(relay);
-    Serial.println("[PID] Manual override EXPIRED → back to AUTO");
+  uint32_t now = millis();
+  for (uint8_t i = 0; i < RELAY_CHANNEL_COUNT; i++) {
+    RelayChannel channel = static_cast<RelayChannel>(i);
+    if (relay.overrides.expired(channel, now)) {
+      relay.overrides.clear(channel);
+      Serial.println("[PID] Manual override EXPIRED → " + String(relayChannelName(channel)) + " back to AUTO");
+    }
   }
 }
 
@@ -209,9 +224,10 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
   // mục tiêu độ ẩm đứng yên là bình thường). Thời gian + mức tăng chỉnh theo Zone
   // (EXPERT-FR-008). Đợt phun: AUTO = bộ mờ muốn phun; override = relay được ép BẬT.
   bool humidityOk = data.tempHumidOk && isfinite(data.humidity);
-  bool sensorOk = humidityOk && (relay.mistingOverride || autoDemandKnown);
-  bool demand = relay.mistingOverride ? relay.misting : autoMistingDemand;
-  bool fired = pumpMonitor.update(sensorOk, demand, relay.mistingOverride, relay.misting, data.humidity,
+  bool mistingManual = relay.overrides.active(RELAY_MISTING);
+  bool sensorOk = humidityOk && (mistingManual || autoDemandKnown);
+  bool demand = mistingManual ? relay.misting : autoMistingDemand;
+  bool fired = pumpMonitor.update(sensorOk, demand, mistingManual, relay.misting, data.humidity,
                                   data.humidity < Config::humidityMin, millis(),
                                   (uint32_t)Config::pumpDryOnSec * 1000UL, Config::pumpDryMinRisePct,
                                   PUMP_DRY_RETRY_MS);
@@ -225,7 +241,7 @@ ThreatFlags handleThreatAlerts(const SensorData &data, const RelayState &relay, 
   flags.pumpDry = pumpMonitor.blocked();
   // Chốt chỉ ngắt được phun TỰ ĐỘNG: đang can thiệp tay thì bơm vẫn chạy (ENV-FR-016) —
   // cảnh báo phải nói đúng điều đó thay vì "đã tự ngừng phun".
-  flags.pumpDryWhileManual = flags.pumpDry && relay.mistingOverride;
+  flags.pumpDryWhileManual = flags.pumpDry && mistingManual;
 
   return flags;
 }

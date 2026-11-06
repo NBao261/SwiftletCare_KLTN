@@ -20,6 +20,9 @@ struct RemoteCommand {
   char url[256] = "";
   char sha256[65] = "";
   const char *error = ""; // lý do khi INVALID — chỉ để log
+  // BR-35 — xem CommandFilter.h. Trống / 0 khi backend cũ không gửi
+  char commandId[40] = "";
+  uint64_t issuedAt = 0;
 };
 
 /** `runningVersion`: FIRMWARE_VERSION đang chạy — OTA trùng bản bị từ chối như backend */
