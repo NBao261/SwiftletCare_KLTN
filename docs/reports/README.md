@@ -8,11 +8,12 @@ Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn c
 | [`bm03-record-of-changes.md`](bm03-record-of-changes.md) | BM03 – Record of Changes (phiếu v2 → v3, 11 dòng) |
 | [`report1-introduction.md`](report1-introduction.md) | Report 1 – Introduction |
 | [`report2-project-management-plan.md`](report2-project-management-plan.md) | Report 2 – Project Management Plan |
-| [`report3-srs.md`](report3-srs.md) | Report 3 – SRS 3.1.0: chỉ yêu cầu, không ghi trạng thái code |
-| [`report4-sdd.md`](report4-sdd.md) | Report 4 – SDD 1.1.0: thiết kế cuối, không ghi trạng thái code |
+| [`report3-srs.md`](report3-srs.md) | Report 3 – SRS 3.2.0: chỉ yêu cầu, không ghi trạng thái code |
+| [`report4-sdd.md`](report4-sdd.md) | Report 4 – SDD 1.2.0: thiết kế cuối, không ghi trạng thái code |
 | [`report5-test.md`](report5-test.md) | Report 5 – Test (136 test case), **sinh** từ `report5/tc.py` bằng `report5/gen_report5.py`, không sửa tay |
 | [`project-tracking.md`](project-tracking.md) | Project Tracking — **nguồn trạng thái duy nhất**: tính năng, test, defect, danh sách gap G-01…G-19 |
 | [`design-brief.md`](design-brief.md) | Design Brief BM01 + Phụ lục A (docx: `design-brief/`) |
+| [`bm02-self-review.md`](bm02-self-review.md) | BM02 – Self-Review Report: kết quả gốc của prompt chuẩn trên tag `review-2` + Team response (docx: `registration/`) |
 | [`todo-review2.md`](todo-review2.md) | Việc cần làm, theo gap của Project Tracking (tiếng Việt) |
 | [`todo-remove-platform.md`](todo-remove-platform.md) | Lưu trữ: các bước bỏ ticket, SLA, vùng (đã xong ở PR #100–#107) |
 
@@ -22,4 +23,4 @@ Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn c
 - Trạng thái (Done, gap, defect, số test đạt) chỉ ghi ở `project-tracking.md`. SRS và SDD không ghi "planned", "chưa làm", số PR.
 - Sửa một thay đổi phạm vi thì sửa cùng lúc: BM03, phiếu v3, mục 1.1 của Design Brief.
 - Report 5 chỉ ghi "Pass" từ lần chạy CI trên tag `review-2`.
-- Word: sinh lại từ Markdown bằng `tools/` (`make_registration_v3.py`, `make_bm03.py`, `make_bm01.py`).
+- Word: sinh lại từ Markdown bằng `tools/` (`make_registration_v3.py`, `make_bm03.py`, `make_bm01.py`, `make_bm02.py`).

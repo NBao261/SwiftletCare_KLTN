@@ -4,12 +4,12 @@
 
 | Field | Value |
 | --- | --- |
-| Project code | `[TEAM: approved project code]` |
+| Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
-| Supervisor | `[TEAM: supervisor name]` |
-| Document version | 1.1.0 (Review 2) |
-| Date | 26/10/2026 |
-| Requirements baseline | Report 3 – SRS 3.1.0; Design Brief (BM01) 1.1 sections 6–7 and Appendix A |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
+| Document version | 1.3.0 (Review 2) |
+| Date | 04/11/2026 |
+| Requirements baseline | Report 3 – SRS 3.2.0; Design Brief (BM01) 1.2 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
 
@@ -19,7 +19,7 @@ This file is generated from the test-case list `docs/reports/report5/tc.py` by `
 
 ### 1.1 Purpose
 
-This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…22), main workflow (WF-01…11), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
+This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…17, F-20…22), main workflow (WF-01…06), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
 
 ### 1.2 Scope of Testing
 
@@ -31,8 +31,8 @@ This report is the test plan and the test cases of SwiftletCare for Defense 1.1.
 
 | Source | Count | Minimum per item | Subtotal |
 | --- | --- | --- | --- |
-| Mandatory features | 22 | 3 | 66 |
-| Main workflows (end-to-end) | 11 | 1 | 11 |
+| Mandatory features | {{NF}} | 3 | {{NF3}} |
+| Main workflows (end-to-end) | {{NWF}} | 1 | {{NWF}} |
 | State transitions of main entities | {{NST}} | 1 | {{NST}} |
 | Committed NFRs | 6 | 1 | 6 |
 | **Total** | | | **{{TOTAL}}** |
@@ -71,7 +71,7 @@ Defects are GitHub issues labelled `bug` with a severity:
 | Severity | Meaning | Example |
 | --- | --- | --- |
 | Critical | A main workflow cannot complete, data is lost, or a safety rule is broken | Fan driven by NH3; override never returns to AUTO |
-| High | A mandatory feature gives a wrong result or a permission is wrong | A Technician can edit thresholds |
+| High | A mandatory feature gives a wrong result or a permission is wrong | An Administrator can edit thresholds |
 | Medium | Wrong result with a workaround, or a non-mandatory feature broken | Wrong label in a report |
 | Low | Cosmetic | Alignment, wording |
 
@@ -83,7 +83,7 @@ Every defect is fixed by a pull request that adds a test failing without the fix
 | --- | --- |
 | CI | GitHub Actions, Ubuntu runner, Node 22, Python 3 + PlatformIO, Python + pytest for the AI pipeline, MongoDB in memory |
 | Local | Members' machines with `docker compose` (MongoDB, EMQX, MinIO, MediaMTX) |
-| Staging | VPS with backend, web, EMQX (TLS), MongoDB, MinIO, MediaMTX behind Caddy; AI node on the spare PC at a member's home, reading the camera over the Internet (`docs/deploy/staging.md`) |
+| Staging | VPS with backend, web, EMQX (TLS), MongoDB, MinIO, MediaMTX behind Nginx; AI node on the spare PC at a member's home, reading the camera over the Internet (`docs/deploy/staging.md`) |
 | Prototype | ESP32 controller with the five RS485 sensors, relay module, DFPlayer and speaker; test house in the field run |
 | Data | `npm run seed` plus the demo seed (Project Tracking G-17); recorded entrance clips for counting |
 
@@ -91,7 +91,7 @@ Every defect is fixed by a pull request that adds a test failing without the fix
 
 Columns follow the guideline: ID, feature or workflow, preconditions, steps, data, expected result, how it runs (automatic or manual), actual result.
 
-### 4.1 Mandatory Features (66)
+### 4.1 Mandatory Features ({{NF3}})
 
 Requirements covered by each mandatory feature:
 
@@ -99,7 +99,7 @@ Requirements covered by each mandatory feature:
 
 {{F}}
 
-### 4.2 Main Workflows (11)
+### 4.2 Main Workflows ({{NWF}})
 
 {{WF}}
 
@@ -127,9 +127,14 @@ Requirements of priority `S` are kept working by the automated suites that run o
 
 | Supporting flow | Requirements | Suites |
 | --- | --- | --- |
+| SF-01 Device setup by the Farm Owner | FARM-FR-001…003c, 005…008, 010…012, ENV-FR-027 | Features F-18 and F-19 below ({{NSUP}} cases, written and run like the committed ones) |
 | SF-02 Remote device maintenance | FARM-FR-009, 013, ENV-FR-013c | backend `technicianAccess.test.ts`, `deviceOnboarding.test.ts` (remote commands, OTA), `audioTracks.test.ts`; firmware `pio test` remote-command suite |
 | SF-03 Accounts and access | AUTH-FR-002…012, SYSTEM-FR-001…003 | backend `passwordAndProfile.test.ts`, `invitations.test.ts`, `adminUserLifecycle.test.ts`, `rateLimit.test.ts`, `auditLog.test.ts`, `systemOverview.test.ts`, `systemSettingSingleton.test.ts`, `dataPrivacy.test.ts` |
 | SF-04 Harvest logging | HARVEST-FR-001…005 | backend `harvest.test.ts` |
+
+Test cases of the device-setup features (supporting flow SF-01):
+
+{{FS}}
 
 ## 5. Responsibilities
 
@@ -137,15 +142,15 @@ Each owner runs the test cases of their features and workflows and records the r
 
 | Member | Owns and runs | Writes |
 | --- | --- | --- |
-| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12; WF-01, 03, 06; config sync transitions; NFR-04, 05, 06, 07, 09, 11 | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push and current sensing |
-| Trần Minh Kiệt | F-05, 06, 08, 18, 19; WF-04, 10; device and label transitions; NFR-10 | Backend tests of devices, accounts, alerts, the expert module and daily health (including those of F-07, 13–17, 20–22) |
-| Nguyễn Vũ Len | F-07, 17; WF-02, 05, 09; alert and relay transitions; NFR-01 | E2E tests of DS-03, 04, 09, 10, 17, 18 |
-| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-11; daily status and health report transitions; NFR-02, 03, 14 | E2E tests of DS-21, 22; mobile tests |
-| Thái Minh Tuấn | F-13, 14, 15, 16; WF-07, 08; verdict, review item and proposal transitions; NFR-08, 13 | E2E tests of DS-13, 14, 15, 16 |
+| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12; WF-01, 03; config sync transitions; NFR-04, 05, 06, 07, 09, 11 | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push and current sensing; DS-05, 06 run on staging with the AI node |
+| Trần Minh Kiệt | F-05, 06, 08; supporting F-18, 19; WF-05; device and label transitions; NFR-10 | Backend tests of devices, accounts, alerts, the expert module and daily health (including those of F-07, 13–17, 20–22) |
+| Nguyễn Vũ Len | F-07, 17; WF-02; alert and relay transitions; NFR-02 | E2E tests of DS-01, 02, 03, 04; mobile tests |
+| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-06; daily status and health report transitions; NFR-01, 03, 14 | E2E tests of DS-11, 12 |
+| Thái Minh Tuấn | F-13, 14, 15, 16; WF-04; verdict, review item and proposal transitions; NFR-08, 13 | E2E tests of DS-07, 08, 09, 10 |
 
 ## 6. Test Results at Review 2
 
-Results are reported only from the CI run on the tag `review-2`; the tag has not been created yet, so no case is reported as passed. After the tag: download the three artifacts of that CI run (backend Jest JSON, firmware PlatformIO JUnit, AI-pipeline pytest JUnit; the workflow runs every module on a `review-*` tag), regenerate this report with them, and write the CI run link here. Manual cases are filled from the test report of Defense 1.1. The automated suites also hold tests beyond this list; only the cases above count toward the commitment.
+Results come only from the CI run on the tag `review-2` (commit `7d5e643b`, 04/11/2026): https://github.com/NBao261/SwiftletCare_KLTN/actions/runs/41801124931. Every module passed there: backend lint, type check and Jest (599 of 599 tests in 61 suites), web lint, type check, Vitest and build, firmware host tests (50 of 50), mobile lint, type check and Jest, AI-pipeline pytest (50 of 50). The "Actual result" column above is generated from that run's three artifacts (backend Jest JSON, firmware PlatformIO JUnit, AI-pipeline pytest JUnit). Cases whose test is still to be written and manual cases are "Not run"; manual cases are filled from the test report of Defense 1.1. The automated suites also hold tests beyond this list; only the cases above count toward the commitment.
 
 {{SUMMARY}}
 
@@ -155,5 +160,7 @@ Committed test cases that are not automated yet are written in Iteration 2 toget
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.3.0 | 04/11/2026 | Results of the CI run on the tag `review-2` (Section 6): 83 of the 83 automated cases with a written test pass; the generator reads the PlatformIO JUnit report, whose suite name sits on the test suite |
+| 1.2.0 | 03/11/2026 | Six business main workflows (SRS 3.2.0): WF-01…06 with demo scenarios DS-01…12; device-setup features F-18, F-19 move to supporting flow SF-01 (still tested, not counted) |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0: 53 state transitions (relay mode 4, device 5, configuration sync 5, daily status 2, assessor rating 5), 136 committed cases; a concrete expected result for every transition; mappings to existing tests corrected (TC-F03-03, PENDING → ONLINE, ONLINE → OFFLINE, RESOLVED → new alert); new cases for breach dwell, pump limit and confirmation, device topics, rain confounder and rating snapshot; results counted only from a run on the tag; a "Requirements verified" column for every feature case and a generated requirement coverage table (Section 4.5); supporting regression suites listed (Section 4.6); the per-zone report test no longer counts for TC-ST-48; table of the FRs of each feature; firmware and AI-pipeline results read from the PlatformIO and pytest JUnit reports; F-10 and F-11 test the pipeline itself (ring crossing, lost tracks, annotated frames); F-22 tests that the API hides the status before rating |
 | 1.0.0 | 23/10/2026 | First version for Review 2: test plan, 131 committed test cases, results of the backend and firmware suites |

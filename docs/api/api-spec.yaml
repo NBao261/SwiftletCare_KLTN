@@ -1670,9 +1670,9 @@ paths:
   /devices/sensor-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — FARM_OWNER/TECHNICIAN (FARM-FR-003, MF-10)"
+      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — FARM_OWNER/TECHNICIAN (FARM-FR-003, SF-01)"
       description: |
-        Farm Owner tự setup thiết bị ở farm của mình (MF-10): Zone thuộc farm khác → 403
+        Farm Owner tự setup thiết bị ở farm của mình (SF-01): Zone thuộc farm khác → 403
         (FARM-FR-007). Technician hỗ trợ; Administrator, Domain Expert → 403 (Report 3 §2.4).
 
         Technician đăng ký được ở mọi farm, không cần là thành viên (FARM-FR-009); mỗi lần
@@ -2215,7 +2215,7 @@ paths:
   /devices/camera-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — FARM_OWNER (farm của mình)/TECHNICIAN (FARM-FR-004, MF-10)"
+      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — FARM_OWNER (farm của mình)/TECHNICIAN (FARM-FR-004, SF-01)"
       description: |
         Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho. SRS v2.1.8: camera lắp ở
         cửa ra vào của cả nhà yến nên gắn House (`house_id`). `zone_id` là cách gửi cũ (trước v2.1.8), được quy

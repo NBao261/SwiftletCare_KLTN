@@ -1,0 +1,13 @@
+# Gitleaks false positives in the history, checked by hand on 03/11/2026 (no real secret):
+# a query string in a removed ticket test, the activation-key alphabet, file hashes and a fake
+# Stripe key in the removed AG-Kit toolkit (PR #19). Format: commit:file:rule:line
+364a678ccd89193ef75e72c7409bcd7d1ae1c3ea:backend/tests/integration/ticketListQuery.test.ts:generic-api-key:124
+694a983e4d2b0f0bbfed45ffc41345a0ace720ef:backend/tests/integration/ticketListQuery.test.ts:generic-api-key:243
+6af9e2c92a47f9eac4eb936b202af1c1f6c531e3:backend/src/services/provisionedDevice.service.ts:generic-api-key:11
+0c9b63c1e4eb0f45e8a9e38694679fa023517059:.agents/manifest.lock.json:generic-api-key:68
+0c9b63c1e4eb0f45e8a9e38694679fa023517059:.agents/manifest.lock.json:generic-api-key:69
+0c9b63c1e4eb0f45e8a9e38694679fa023517059:.agents/manifest.lock.json:generic-api-key:75
+0c9b63c1e4eb0f45e8a9e38694679fa023517059:.agents/.ag-kit/manifest.json:generic-api-key:73
+0c9b63c1e4eb0f45e8a9e38694679fa023517059:.agents/.ag-kit/manifest.json:generic-api-key:74
+0c9b63c1e4eb0f45e8a9e38694679fa023517059:.agents/.ag-kit/manifest.json:generic-api-key:80
+0c9b63c1e4eb0f45e8a9e38694679fa023517059:.agents/scripts/tests/test_toolkit.py:stripe-access-token:65

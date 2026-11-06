@@ -1,6 +1,6 @@
 # Môi trường staging — đề xuất cho Review 2 và Defense 1.1
 
-Tài liệu này giải thích **staging là gì**, cấu hình nhóm chọn và các bước dựng nó. Report 4 §3.4, §11 và quyết định D5 là bản chính thức bằng tiếng Anh. Phần Dockerfile, compose và Caddyfile mẫu nằm ở `docs/bird-counting-plan.md` §15.3–15.5 (bản thiết kế, **chưa chạy thử**). Mục 15.2 và mục 18 của plan còn giả định model chạy trên VPS. Tài liệu này thay hai mục đó: **model chạy trên PC cũ đặt tại nhà một thành viên**. PC kéo hình camera qua Internet, nhờ IP tĩnh của đường VNPT ở nhà yến.
+Tài liệu này giải thích **staging là gì**, cấu hình nhóm chọn và các bước dựng nó. Report 4 §3.4, §11 và quyết định D5 là bản chính thức bằng tiếng Anh. Phần Dockerfile và compose mẫu nằm ở `docs/bird-counting-plan.md` §15.3–15.5 (bản thiết kế, **chưa chạy thử**); mẫu ở đó còn dùng Caddy, nay đổi sang **Nginx + Certbot** (mục 2.2). Mục 15.2 và mục 18 của plan còn giả định model chạy trên VPS. Tài liệu này thay hai mục đó: **model chạy trên PC cũ đặt tại nhà một thành viên**. PC kéo hình camera qua Internet, nhờ IP tĩnh của đường VNPT ở nhà yến.
 
 ## 1. Staging là gì, vì sao phải có
 
@@ -16,10 +16,10 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
 
 ```
                 ┌──────────── VPS (Docker) ─────────────┐
- Người dùng ──443──► Caddy (TLS) ─► backend, web, MediaMTX (WHEP)
+ Người dùng ──443──► Nginx (TLS) ─► backend, web, MediaMTX (WHEP)
  (web/mobile)  ─8189/udp──────────► MediaMTX (WebRTC)
-                │  tls-proxy 8883 ─► EMQX ◄─1883 nội bộ─ backend
-                │  tls-proxy 8322 ─► MediaMTX (nhận video)
+                │  Nginx 8883 ─► EMQX ◄─1883 nội bộ─ backend
+                │  Nginx 8322 ─► MediaMTX (nhận video)
                 │  MongoDB, MinIO: chỉ trong mạng Docker
                 └────────────────────────────────────────┘
                         ▲ 8883 MQTT TLS     ▲ 8322 RTSPS
@@ -46,10 +46,10 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
 
 | Service | Vai trò | Cổng mở ra Internet |
 | --- | --- | --- |
-| Caddy | HTTPS tự động (Let's Encrypt); phục vụ web đã build; chuyển `/api`, `/socket.io` vào backend; chuyển trang WHEP sang MediaMTX; chặn `/internal/*` | 80, 443 |
-| tls-proxy (nginx stream) | Bọc TLS cho MQTT và cho luồng đẩy video, dùng lại chứng chỉ của Caddy | 8883, 8322 |
+| Nginx | Reverse proxy: phục vụ web đã build; chuyển `/api`, `/socket.io` (WebSocket) vào backend; chuyển trang WHEP sang MediaMTX; chặn `/internal/*`. Module `stream` bọc TLS cho MQTT (8883 → EMQX 1883) và cho luồng đẩy video (8322 → MediaMTX 8554). Một chứng chỉ Let's Encrypt cho mọi tên miền | 80, 443, 8883, 8322 |
+| Certbot | Xin và gia hạn chứng chỉ Let's Encrypt (webroot qua cổng 80); cron nạp lại Nginx sau mỗi lần gia hạn | không |
 | backend | API, Socket.io, job nền; nối EMQX qua `mqtt://emqx:1883` trong mạng Docker | không |
-| EMQX | Broker; bắt buộc mật khẩu (tắt anonymous); dashboard 18083 chỉ mở cho `127.0.0.1` và vào qua SSH tunnel | không (đi qua tls-proxy) |
+| EMQX | Broker; bắt buộc mật khẩu (tắt anonymous); dashboard 18083 chỉ mở cho `127.0.0.1` và vào qua SSH tunnel | không (đi qua Nginx 8883) |
 | MongoDB, MinIO | Dữ liệu, file âm thanh | không |
 | MediaMTX | Nhận video có khung từ PC cũ (AI node); phát WebRTC; hỏi backend `/internal/stream-auth` ở mỗi lần đẩy hoặc xem | 8189 TCP + UDP (WebRTC tự mã hoá) |
 
@@ -106,9 +106,9 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
 
 Còn thiếu trong repo, cần làm trước khi dựng (gap #40):
 
-- `deploy/docker-compose.staging.yml`, gồm Caddy, tls-proxy, backend, MongoDB, EMQX, MinIO, MediaMTX; **không có** Redis vì chưa module nào dùng.
+- `deploy/docker-compose.staging.yml`, gồm Nginx, Certbot, backend, MongoDB, EMQX, MinIO, MediaMTX; **không có** Redis vì chưa module nào dùng.
 - `backend/Dockerfile`, `frontend/Dockerfile` hoặc bản build tĩnh.
-- `deploy/Caddyfile`, `deploy/nginx-stream.conf`.
+- `deploy/nginx.conf` (các site HTTPS và khối `stream` cho 8883, 8322).
 - `deploy/.env.staging.example`, trong đó mọi mật khẩu là placeholder.
 - Script seed demo.
 
@@ -147,8 +147,8 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 
 - tài khoản Administrator;
 - một farm **không** có chuyên gia (BR-22);
-- thiết bị trong kho có nhãn (MF-10);
-- cảnh báo suy luận đang chờ kết luận (MF-08);
-- số đếm 5 phút và bản ghi phiên của ≥ 7 ngày (MF-06);
-- telemetry ≥ 1 ngày cho dự báo và đánh giá sức khỏe (MF-05, MF-11);
+- thiết bị trong kho có nhãn (SF-01);
+- cảnh báo suy luận đang chờ kết luận (MF-04);
+- số đếm 5 phút và bản ghi phiên của ≥ 7 ngày (MF-03);
+- telemetry ≥ 1 ngày cho dự báo và đánh giá sức khỏe (MF-02, MF-06);
 - một bơm đã quá giới hạn giờ chạy (cảnh báo `MAINTENANCE_DUE`).
