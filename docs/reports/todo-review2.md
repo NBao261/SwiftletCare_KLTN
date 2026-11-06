@@ -266,15 +266,15 @@ Một PR cho backend, web, mobile, firmware:
   - đang có `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` mà thiếu `confirmed: true` thì 409 *(`CONFIRMATION_REQUIRED`, `error.details` liệt kê cảnh báo)*;
   - `relay_override_logs.alert_confirmed`;
   - huỷ theo relay hoặc tất cả *(`DELETE …/relay-override?relayName=`)*.
-- [ ] Backend phần 2 — làm cùng firmware G-07 của Bảo (firmware hiện chỉ có 1 hạn chung và `clear_override` chưa đọc `relayName`):
-  - `sensornodes.relays` có hạn riêng từng relay (`overrideExpiry.job.ts` theo relay).
-- [ ] Firmware: `overrideExpiryMs` theo từng relay (BR-20); `clear_override` đọc `relayName`; test native.
-- [ ] Lệnh có `commandId`, `issuedAt` (làm cùng G-07).
+- [x] Backend phần 2 *(Kiệt, 06/11, `7da3879` spec + `6c1b116` backend + `52c84bd` firmware, nhánh `feat/g06-manual-override`; Bảo chuyển G-07 cho Kiệt nên phần firmware của G-06 do Kiệt làm luôn)*:
+  - `sensornodes.relays` có hạn riêng từng relay (`overrideExpiry.job.ts` theo relay); `control_mode`, `override_expiry` giữ làm bản tóm tắt cho màn hình, gộp hẳn ở G-14.
+- [x] Firmware: hạn theo từng relay (BR-20, `pid/RelayOverride`); `clear_override` đọc `relayName`; test native. *(Kiệt, 06/11, `52c84bd`, firmware 1.6.0 — **chưa thử trên board thật**)*
+- [x] Lệnh có `commandId`, `issuedAt` (BR-35). *(Kiệt, 06/11, `6c1b116` + `52c84bd`: backend gắn cho lệnh relay, audio, RESTART, OTA; firmware `mqtt/CommandFilter` nhớ 16 mã, bỏ lệnh relay, audio, RESTART trễ quá 60 giây. Còn lại cho G-07: chuyển sang topic `cmd`, lưu mã RESTART/OTA vào NVS, bắt buộc có `commandId`)*
 - [x] **Len — web:** giới hạn bơm 30 phút và hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm. *(Nhi làm thay theo nhờ của Len, 03/11, `eab3be5`, nhánh `feat/g06-manual-override`: nút bật phun sương chạy tối đa 30 phút dù chọn thời hạn dài hơn (BR-08), quạt, loa và tắt bơm vẫn theo thời hạn đã chọn; 409 `CONFIRMATION_REQUIRED` mở popup liệt kê cảnh báo, "Vẫn bật bơm" gửi lại với `confirmed: true`; `ScadaNodeCard.tsx`, `scada.constants.ts`, `scadaRelay.ts`, `dashboard.i18n.ts` của Len — Len duyệt)*
 - [x] **Len — web:** huỷ từng relay (`DELETE …/relay-override?relayName=`). *(Nhi làm thay theo nhờ của Len, 03/11, nhánh `feat/g06-manual-override`: relay đang can thiệp tay lấy từ lịch sử can thiệp còn mở (`ended_at` trống), dòng relay đó có nút "Về tự động"; firmware chưa đọc `relayName` thì thiết bị vẫn trả mọi relay về tự động cho tới Backend phần 2 + G-07; `ScadaNodeCard.tsx`, `useAnalytics.ts`, `FarmOwnerScadaPage.tsx` của Len — Len duyệt)*
 - [x] **Len — mobile:** giới hạn bơm 30 phút và hộp xác nhận như web. *(Len, 03/11, nhánh `feat/g06-manual-override` — merge nền mobile `feat/mobile-farmowner-farm` vào vì `RelayControlSheet.tsx` chưa có trên `develop`: giới hạn bật bơm 1–30 phút (BR-08) giữ nguyên; sửa lỗi chỉ xét cảnh báo `ACTIVE` — hook `usePumpBlockingAlerts` lấy `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` cả `ACTIVE` lẫn `ACKNOWLEDGED`, tải mới mỗi lần mở sheet, lỗi thì khoá nút và có "Thử lại"; hộp xác nhận liệt kê từng cảnh báo kèm trạng thái và thời lượng; "Vẫn bật bơm" gửi `confirmed: true` (`useControlRelay`, `deviceApi.controlRelay`); 409 `CONFIRMATION_REQUIRED` đọc `error.details` bằng `parseConfirmationAlerts` rồi hỏi lại; câu lỗi riêng 422/403/409; nút "Về tự động" ở Trang chủ hỏi xác nhận. Còn lại ở mobile: huỷ từng relay và hiện `alert_confirmed` trong lịch sử — ghi ở Known debt `mobile/CLAUDE.md`)*
 - [x] Test TC-F17-02 *(`relayCommand.test.ts`, Kiệt 31/10, `fae12fe`)*.
-- [ ] Test TC-ST "MANUAL → MANUAL" (làm cùng Backend phần 2).
+- [x] Test TC-ST "MANUAL → MANUAL". *(06/11, `relayCommand.test.ts` + `test_relay_override`, backend 615/615)*
 - [x] Sửa theo review PR #124 *(Kiệt, 02/11, `37f61a2` spec + `c3d3ff8` backend)*: huỷ 1 relay không đang can thiệp tay thì không gửi lệnh, không ghi audit (200, như khi thiết bị AUTO). Góp ý còn lại không sửa code: web `ScadaNodeCard.tsx` cần giới hạn bơm 30 phút và hộp xác nhận (dòng Web/mobile ở trên, Len) trước khi G-06 lên staging.
 
 ### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Bảo

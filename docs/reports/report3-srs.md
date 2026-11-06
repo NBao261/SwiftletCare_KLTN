@@ -597,6 +597,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | AUTO status ignored after a manual command | 30 s | A status sent before the command but received after it does not cancel the override |
 | Override duration limits | pump ON 1–30 min; other cases 1 min – 24 h | 1 min = 2 × the 30 s above; 30 min keeps a remote pump command from running unattended on a faulty sensor; 24 h keeps the autonomy ratio meaningful (BR-08) |
 | Command freshness | 60 s | A relay, audio or restart command delivered late after a reconnection is not applied (BR-35) |
+| Command IDs remembered | 16 | A command delivered twice is applied once (BR-35); the list is kept in memory, so a restart forgets it |
 | Threshold-breach dwell time | 10 min (temperature, humidity); 5 min (light, NH3, CO2) | Short excursions while the control acts raise no alert (BR-34) |
 | AI node silent before it is offline | 90 s (three 30 s heartbeats) | `EDGE_AI_DEGRADED` (THREAT-FR-010, BR-10) |
 | AI node frame rate that raises `EDGE_AI_DEGRADED` | below 10 fps | The node is running but too slow to count (THREAT-FR-010) |
@@ -934,6 +935,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 | Limitation | Effect | Handling |
 | --- | --- | --- |
 | The controller has no battery-backed clock | After a power loss while the Internet is down, the speaker keeps its current state instead of following the schedule, and abnormal noise is not evaluated, until the clock is synchronised again | Control of misting and fan does not depend on the clock and continues (ENV-FR-014) |
+| The controller has no clock until NTP answers | A command received before the first synchronisation cannot be checked against BR-35 and is applied, so that the Farm Owner is never locked out of manual control (Report 4, D15) | The window lasts seconds after a connection, and a pump ON stays limited to 30 min (BR-08) |
 | When the controller fails, its relays release and the pump and fan stop | Misting and ventilation stop until someone acts; the system cannot run the loads without the controller | The house keeps its own switches, which the system never rewires (Section 8.1): the farmer runs the house's pump and fan with them, and the controller only drives the team's own 5 V misting unit and 12 V fan (Report 4, D11), so a failed controller never blocks the house's equipment; `NODE_OFFLINE` and THREAT-FR-014 tell the Farm Owner that the loads are not driven |
 | Actuator current is compared with a level learned at installation | A load replaced by one of a different power raises a false `ACTUATOR_FAULT` until the level is learned again; the speaker has no current sensing | The level is learned again after a replacement or on request (THREAT-FR-014) |
 | The AI node reads the camera over the Internet | An outage of the house's line or of the AI node's line, or lost frames on the way, can miss birds or part of a session | The session is marked incomplete and left out of the return-rate comparison (VISION-FR-020); counts read over the Internet are compared with the same clip read locally before the field run (Report 4, D5) |

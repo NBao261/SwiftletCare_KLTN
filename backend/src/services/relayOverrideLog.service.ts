@@ -41,7 +41,7 @@ export async function openOverrideLog(input: {
   }
 }
 
-/** Đóng mọi bản ghi còn mở của các thiết bị (thiết bị về AUTO thì mọi relay cùng về AUTO) */
+/** Đóng mọi bản ghi còn mở của các thiết bị: huỷ tất cả, dời zone, gỡ thiết bị */
 export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndReason, at = new Date()): Promise<number> {
   if (nodeIds.length === 0) return 0
   try {
@@ -72,76 +72,64 @@ export async function closeRelayOverrideLog(nodeId: unknown, relay: OverrideRela
 }
 
 /**
- * Thiết bị (hoặc 1 relay của nó khi có `relay`) còn đang can thiệp tay (bản ghi còn mở) — đọc lỗi thì coi
- * như còn, để không trả về AUTO nhầm và không bỏ qua lệnh huỷ
- */
-export async function hasOpenOverride(nodeId: unknown, relay?: OverrideRelay): Promise<boolean> {
-  try {
-    return !!(await RelayOverrideLog.exists({ node_id: nodeId, ended_at: null, ...(relay && { relay }) }))
-  } catch (err) {
-    logger.warn('Đọc lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
-    return true
-  }
-}
-
-/**
  * Lệnh relay tới thiết bị và trạng thái báo ngược lại mất vài giây (chu kỳ điều khiển
  * của ESP32 là 10 giây). ponytail: 30 giây là biên chọn tay cho độ trễ đó.
  */
 export const DEVICE_CONFIRM_GRACE_MS = 30_000
 
 /**
- * Trạng thái các bản ghi còn mở của 1 thiết bị — cho confirmRelayStatus quyết định:
- * `fresh` = có override vừa mở trong DEVICE_CONFIRM_GRACE_MS (bản tin AUTO lúc này nhiều
- * khả năng là bản tin cũ đang trên đường tới); `latestExpiry` = hạn muộn nhất còn hiệu lực.
+ * Các bản ghi còn mở của 1 thiết bị, theo relay — cho confirmRelayStatus quyết định:
+ * `fresh` = override vừa mở trong DEVICE_CONFIRM_GRACE_MS (bản tin AUTO lúc này nhiều khả
+ * năng là bản tin cũ đang trên đường tới); `expiry` = hạn của override đó.
  * Không throw: đọc lỗi thì coi như không có gì đặc biệt.
  */
-export async function openOverrideState(nodeId: unknown, now = new Date()): Promise<{ fresh: boolean; latestExpiry: Date | null }> {
+export async function openOverrideStates(nodeId: unknown, now = new Date()): Promise<Partial<Record<OverrideRelay, { fresh: boolean; expiry: Date }>>> {
   try {
-    const open = await RelayOverrideLog.find({ node_id: nodeId, ended_at: null }).select('started_at expires_at').lean()
+    const open = await RelayOverrideLog.find({ node_id: nodeId, ended_at: null }).select('relay started_at expires_at').lean()
     const freshAfter = now.getTime() - DEVICE_CONFIRM_GRACE_MS
-    const latest = open.reduce((max, l) => Math.max(max, l.expires_at.getTime()), 0)
-    return { fresh: open.some(l => l.started_at.getTime() > freshAfter), latestExpiry: latest > 0 ? new Date(latest) : null }
+    return Object.fromEntries(open.map(l => [l.relay, { fresh: l.started_at.getTime() > freshAfter, expiry: l.expires_at }]))
   } catch (err) {
     logger.warn('Đọc lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
-    return { fresh: false, latestExpiry: null }
+    return {}
   }
 }
 
 /**
- * Thiết bị tự báo đã về AUTO (relay/status): đóng bản ghi còn mở — quá hạn thì là
- * EXPIRED, chưa tới hạn (thiết bị khởi động lại, mất override) thì là CLEARED_EARLY.
+ * Thiết bị tự báo 1 relay đã về AUTO (relay/status): đóng bản ghi còn mở của relay đó — quá hạn
+ * thì là EXPIRED, chưa tới hạn (thiết bị khởi động lại, bỏ lệnh trễ) thì là CLEARED_EARLY.
  * Caller (confirmRelayStatus) đã loại trường hợp bản tin AUTO cũ tới ngay sau khi bật tay.
  */
-export async function closeOverrideLogsFromDevice(nodeId: unknown, at = new Date()): Promise<void> {
+export async function closeOverrideLogFromDevice(nodeId: unknown, relay: OverrideRelay, at = new Date()): Promise<void> {
   try {
     await RelayOverrideLog.updateMany(
-      { node_id: nodeId, ended_at: null, expires_at: { $lte: at } },
+      { node_id: nodeId, relay, ended_at: null, expires_at: { $lte: at } },
       { ended_at: at, end_reason: 'EXPIRED' satisfies OverrideEndReason },
     )
   } catch (err) {
     logger.warn('Đóng lịch sử can thiệp tay thất bại (ENV-FR-019)', { err })
   }
-  await closeOverrideLogs([nodeId], 'CLEARED_EARLY', at)
+  await closeRelayOverrideLog(nodeId, relay, 'CLEARED_EARLY', at)
 }
 
 /**
- * Lưới an toàn: đóng mọi bản ghi còn mở đã QUÁ HẠN mà thiết bị của nó không còn đang
- * được can thiệp tay. Các đường đóng thông thường đều dựa vào trạng thái node; nếu node
- * về AUTO bằng đường nào đó mà bản ghi không được đóng theo (ghi lịch sử là best-effort,
- * có thể lỗi đúng lúc đóng), nó sẽ mở mãi và tỷ lệ thời gian tự động sai mãi. Đóng tại
- * đúng `expires_at` của bản ghi.
- * Node vẫn MANUAL và còn hạn (relay khác vừa gia hạn chung) thì để job hết hạn lo.
+ * Lưới an toàn: đóng mọi bản ghi còn mở đã QUÁ HẠN mà relay của nó không còn đang được can
+ * thiệp tay. Các đường đóng thông thường đều dựa vào trạng thái relay; nếu relay về AUTO bằng
+ * đường nào đó mà bản ghi không được đóng theo (ghi lịch sử là best-effort, có thể lỗi đúng
+ * lúc đóng), nó sẽ mở mãi và tỷ lệ thời gian tự động sai mãi. Đóng tại đúng `expires_at`.
+ * Relay vẫn MANUAL và còn hạn (vừa gia hạn) thì để job hết hạn lo.
  */
 export async function closeOrphanedOverrideLogs(now = new Date()): Promise<number> {
   try {
-    const overdueNodeIds = await RelayOverrideLog.distinct('node_id', { ended_at: null, expires_at: { $lt: now } })
-    if (overdueNodeIds.length === 0) return 0
-    const stillManual = await SensorNode.distinct('_id', {
-      _id: { $in: overdueNodeIds }, control_mode: 'MANUAL', override_expiry: { $gt: now },
+    const overdue = await RelayOverrideLog.find({ ended_at: null, expires_at: { $lt: now } }).select('node_id relay').lean()
+    if (overdue.length === 0) return 0
+    const nodes = await SensorNode.find({ _id: { $in: overdue.map(l => l.node_id) } }).select('relays').lean()
+    const relaysOf = new Map(nodes.map(n => [String(n._id), n.relays]))
+    const orphaned = overdue.filter(l => {
+      const relay = relaysOf.get(String(l.node_id))?.[l.relay]
+      return !(relay?.mode === 'MANUAL' && relay.override_expiry && relay.override_expiry > now)
     })
     const { modifiedCount } = await RelayOverrideLog.updateMany(
-      { ended_at: null, expires_at: { $lt: now }, node_id: { $nin: stillManual } },
+      { _id: { $in: orphaned.map(l => l._id) } },
       [{ $set: { ended_at: '$expires_at', end_reason: 'EXPIRED' satisfies OverrideEndReason } }],
     )
     return modifiedCount

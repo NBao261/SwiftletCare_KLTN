@@ -1227,6 +1227,56 @@ ensureCollection("sensornodes", {
         }
       }
     },
+    "relays": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "misting": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        },
+        "speaker": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        },
+        "ventilation": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        }
+      }
+    },
     "control_mode": {
       "bsonType": ["string", "null"],
       "enum": ["AUTO", "MANUAL", null]

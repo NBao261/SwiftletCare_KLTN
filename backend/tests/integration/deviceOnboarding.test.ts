@@ -366,7 +366,9 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, version: '1.4.0' } }).expect(409)
 
     await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(202)
-    expect((publishCommand as jest.Mock).mock.calls[0][4]).toEqual({ deviceId: node.device_id, command: 'OTA', ota: OTA })
+    expect((publishCommand as jest.Mock).mock.calls[0][4]).toEqual({
+      deviceId: node.device_id, command: 'OTA', ota: OTA, commandId: expect.any(String), issuedAt: expect.any(Number),
+    })
     expect((await SensorNode.findById(node._id))!.ota_pending!.version).toBe('1.4.1')
 
     await recordHeartbeat({ deviceId: 'node_100', firmwareVersion: '1.4.0' } as never) // chưa lên bản mới
@@ -486,6 +488,7 @@ describe('thiết bị đã gỡ không còn nhận lệnh (FARM-FR-008)', () =>
     const node = await SensorNode.create({
       device_id: 'node_300', zone_id: a.zone._id, status: 'ONLINE',
       control_mode: 'MANUAL', override_expiry: new Date(Date.now() + 10 * 60_000),
+      relays: { misting: { mode: 'MANUAL', override_expiry: new Date(Date.now() + 10 * 60_000) } },
     })
 
     // Thiết bị đang ONLINE nên phải xác nhận bằng force (xem decommissionDevice)
@@ -494,6 +497,7 @@ describe('thiết bị đã gỡ không còn nhận lệnh (FARM-FR-008)', () =>
     const removed = (await SensorNode.findById(node._id))!
     expect(removed.control_mode).toBe('AUTO')
     expect(removed.override_expiry).toBeUndefined()
+    expect(removed.relays.misting.mode).toBe('AUTO')
 
     await request(app).put(`/devices/sensor-nodes/${node._id}/speaker-schedule`)
       .set('Authorization', `Bearer ${ownerToken}`).send({ enabled: false }).expect(409)
@@ -501,7 +505,7 @@ describe('thiết bị đã gỡ không còn nhận lệnh (FARM-FR-008)', () =>
       .set('Authorization', `Bearer ${ownerToken}`).expect(409)
 
     // Dữ liệu cũ còn MANUAL quá hạn trên node đã gỡ: không được bắn clear_override lên topic Zone
-    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date(Date.now() - 60_000) })
+    await SensorNode.updateOne({ _id: node._id }, { 'relays.misting.mode': 'MANUAL', 'relays.misting.override_expiry': new Date(Date.now() - 60_000) })
     jest.clearAllMocks()
     expect(await expireManualOverrides()).toBe(0)
     expect(publishCommand).not.toHaveBeenCalled()

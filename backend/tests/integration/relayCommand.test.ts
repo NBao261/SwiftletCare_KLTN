@@ -14,7 +14,7 @@ import { SensorNode } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { publishCommand } from '@/mqtt/mqtt.client'
-import { expireManualOverrides, reassignZone } from '@/services/device.service'
+import { confirmRelayStatus, expireManualOverrides, reassignZone } from '@/services/device.service'
 import { seedOwnerFarm as seed, useTestDb } from '../helpers/ownerFarm'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
@@ -63,7 +63,7 @@ describe('lịch sử can thiệp tay không được chặn lệnh điều khi�
     const { node, relay, token } = await seed()
     await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
     const expiry = new Date(Date.now() - 45_000) // job chạy trễ 45 giây sau hạn
-    await SensorNode.updateOne({ _id: node._id }, { override_expiry: expiry })
+    await SensorNode.updateOne({ _id: node._id }, { 'relays.misting.override_expiry': expiry })
     // Override bật trước hạn của nó (như thật) — ended_at không bao giờ sớm hơn started_at
     await RelayOverrideLog.updateOne({}, { started_at: new Date(expiry.getTime() - 60_000) })
 
@@ -165,7 +165,7 @@ describe('huỷ can thiệp tay 1 relay hoặc tất cả (ENV-FR-018, BR-20)', 
 
     await clear('misting').expect(200)
     expect(publishCommand).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), 'relay/command',
-      { deviceId: node.device_id, action: 'clear_override', relayName: 'misting' })
+      expect.objectContaining({ deviceId: node.device_id, action: 'clear_override', relayName: 'misting' }))
     expect(await openLogs()).toEqual(['ventilation'])
     expect((await RelayOverrideLog.findOne({ relay: 'misting' }).lean())!.end_reason).toBe('CLEARED_EARLY')
     expect((await SensorNode.findById(node._id))!.control_mode).toBe('MANUAL')
@@ -191,9 +191,116 @@ describe('huỷ can thiệp tay 1 relay hoặc tất cả (ENV-FR-018, BR-20)', 
     await clear('heating').expect(422)
     await clear().expect(200)
     expect(publishCommand).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), 'relay/command',
-      { deviceId: node.device_id, action: 'clear_override' })
+      expect.not.objectContaining({ relayName: expect.anything() }))
     expect(await openLogs()).toEqual([])
     expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')
+  })
+})
+
+describe('mỗi relay một hạn (BR-20, ENV-FR-018)', () => {
+  const MIN = 60_000
+
+  async function twoRelays() {
+    const s = await seed()
+    const post = (relayName: string, durationMs: number) => request(app).post(`${s.relay}/relay`)
+      .set('Authorization', `Bearer ${s.token}`).send({ relayName, state: true, durationMs }).expect(200)
+    await post('misting', 10 * MIN)
+    const mistingExpiry = (await SensorNode.findById(s.node._id))!.relays.misting.override_expiry!
+    await post('ventilation', 20 * MIN)
+    // Đã qua cửa sổ bỏ qua bản tin AUTO cũ
+    await RelayOverrideLog.updateMany({}, { started_at: new Date(Date.now() - MIN) })
+    jest.mocked(publishCommand).mockClear()
+    return { ...s, mistingExpiry }
+  }
+  const status = (deviceId: string, relays: object) => confirmRelayStatus({
+    deviceId, relay_states: { misting: true, speaker: false, ventilation: true }, control_mode: 'MANUAL', relays,
+  })
+
+  it('MANUAL → MANUAL: bật tay relay thứ hai, relay đầu giữ hạn của nó', async () => {
+    const { node, mistingExpiry } = await twoRelays()
+    const after = (await SensorNode.findById(node._id))!
+    expect(after.relays.misting).toMatchObject({ mode: 'MANUAL', override_expiry: mistingExpiry })
+    expect(after.relays.ventilation.mode).toBe('MANUAL')
+    expect(after.relays.ventilation.override_expiry!.getTime()).toBeGreaterThan(mistingExpiry.getTime())
+    expect(after.relays.speaker.mode).toBe('AUTO')
+    expect(after.control_mode).toBe('MANUAL')
+    expect(after.override_expiry).toEqual(after.relays.ventilation.override_expiry)
+    expect(String(after.relays.misting.override_by)).toBeTruthy()
+  })
+
+  it('hết hạn 1 relay: relay kia vẫn MANUAL, chỉ gửi clear_override của relay đó', async () => {
+    const { node } = await twoRelays()
+    const past = new Date(Date.now() - 1000)
+    await SensorNode.updateOne({ _id: node._id }, { 'relays.misting.override_expiry': past })
+
+    expect(await expireManualOverrides()).toBe(1)
+
+    expect(publishCommand).toHaveBeenCalledTimes(1)
+    expect(publishCommand).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), 'relay/command',
+      expect.objectContaining({ deviceId: node.device_id, action: 'clear_override', relayName: 'misting' }))
+    expect(await RelayOverrideLog.findOne({ relay: 'misting' }).lean()).toMatchObject({ end_reason: 'EXPIRED', ended_at: past })
+    expect((await RelayOverrideLog.findOne({ relay: 'ventilation' }).lean())!.ended_at).toBeNull()
+    const after = (await SensorNode.findById(node._id))!
+    expect(after.relays.misting.mode).toBe('AUTO')
+    expect(after.relays.misting.override_expiry).toBeUndefined()
+    expect(after.control_mode).toBe('MANUAL')
+    expect(after.override_expiry).toEqual(after.relays.ventilation.override_expiry)
+  })
+
+  it('relay cuối hết hạn thì thiết bị về AUTO, không còn hạn', async () => {
+    const { node } = await twoRelays()
+    const past = new Date(Date.now() - 1000)
+    await SensorNode.updateOne({ _id: node._id }, { 'relays.misting.override_expiry': past, 'relays.ventilation.override_expiry': past })
+
+    expect(await expireManualOverrides()).toBe(2)
+    const after = (await SensorNode.findById(node._id))!
+    expect(after.control_mode).toBe('AUTO')
+    expect(after.override_expiry).toBeUndefined()
+  })
+
+  it('relay/status theo relay: 1 relay về AUTO thì chỉ đóng lịch sử của relay đó', async () => {
+    const { node } = await twoRelays()
+    await status(node.device_id, { misting: { mode: 'AUTO' }, speaker: { mode: 'AUTO' }, ventilation: { mode: 'MANUAL', remaining_ms: 600_000 } })
+
+    expect((await RelayOverrideLog.findOne({ relay: 'misting' }).lean())!.end_reason).toBe('CLEARED_EARLY')
+    expect((await RelayOverrideLog.findOne({ relay: 'ventilation' }).lean())!.ended_at).toBeNull()
+    const after = (await SensorNode.findById(node._id))!
+    expect(after.relays.misting.mode).toBe('AUTO')
+    expect(after.relays.ventilation.mode).toBe('MANUAL')
+    expect(after.control_mode).toBe('MANUAL')
+  })
+
+  it('relay/status báo MANUAL mà DB không có hạn: lấy thời gian còn lại thiết bị báo', async () => {
+    const { node } = await seed()
+    await status(node.device_id, { misting: { mode: 'MANUAL', remaining_ms: 5 * MIN } })
+
+    const after = (await SensorNode.findById(node._id))!
+    expect(after.relays.misting.mode).toBe('MANUAL')
+    expect(after.relays.misting.override_expiry!.getTime() - Date.now()).toBeLessThanOrEqual(5 * MIN)
+    expect(after.relays.misting.override_expiry!.getTime() - Date.now()).toBeGreaterThan(4 * MIN)
+    expect(after.relays.ventilation.mode).toBe('AUTO')
+  })
+
+  it('lệnh trễ bị thiết bị bỏ: relay/status AUTO sau cửa sổ chờ trả relay về AUTO', async () => {
+    const { node } = await twoRelays()
+    await status(node.device_id, { misting: { mode: 'AUTO' }, ventilation: { mode: 'AUTO' } })
+    expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')
+    expect(await RelayOverrideLog.countDocuments({ ended_at: null })).toBe(0)
+  })
+})
+
+describe('độ tươi của lệnh (BR-35)', () => {
+  it('lệnh relay và clear_override mang commandId, issuedAt; mỗi lệnh một mã', async () => {
+    const { relay, token } = await seed()
+    const before = Date.now()
+    await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
+    await request(app).delete(`${relay}/relay-override`).set('Authorization', `Bearer ${token}`).expect(200)
+
+    const commands = jest.mocked(publishCommand).mock.calls.map(call => call[4] as { commandId: string; issuedAt: number })
+    expect(commands).toHaveLength(2)
+    expect(commands[0].commandId).toEqual(expect.any(String))
+    expect(commands[1].commandId).not.toBe(commands[0].commandId)
+    commands.forEach(command => expect(command.issuedAt).toBeGreaterThanOrEqual(before))
   })
 })
 
