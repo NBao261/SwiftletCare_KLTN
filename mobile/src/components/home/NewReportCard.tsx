@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native'
+import { router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { SealCheckIcon } from 'phosphor-react-native'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { HOME_SKELETON_DELAY_MS } from '@/constants/homeSkeleton'
 import { Radius, Spacing } from '@/constants/theme'
 import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useUnreadHealthReports } from '@/hooks/health/useUnreadHealthReports'
+import { useMarkNotificationRead } from '@/hooks/notification/useMarkNotificationRead'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { getIsoWeekNumber } from '@/utils/date.utils'
 import { t } from '@/utils/i18n.utils'
@@ -41,6 +43,7 @@ export function NewReportCard() {
   const queryClient = useQueryClient()
   const { reports, isLoading, isError } = useUnreadHealthReports()
   const { zoneById, houseById } = useZoneDirectory()
+  const markRead = useMarkNotificationRead()
 
   // Đang tải: giữ khung và nhãn, dòng nội dung là khung xương
   if (isLoading) {
@@ -94,10 +97,25 @@ export function NewReportCard() {
     : t('{count} báo cáo mới', { count: reports.length })
   const conclusion = isSingle ? report.expert_conclusion : null
 
+  const openReports = () => {
+    for (const item of reports) markRead.mutate(item.notificationId)
+    router.navigate({
+      pathname: '/(tabs)/analytics',
+      params: {
+        tab: 'reports',
+        houseId: houseId ?? '',
+        zoneId: report.zone_id,
+        reportId: isSingle ? report._id : '',
+      },
+    })
+  }
+
   return (
-    // shortcut: chưa có màn báo cáo và màn danh sách báo cáo — khi có route thì truyền onPress mở báo cáo và đánh dấu
-    // thông báo đã đọc (PUT /notifications/{id}/read); màn báo cáo vẫn phải ẩn trạng thái ngày chủ chưa chấm (BR-31)
+    // Mở tab Báo cáo của Phân tích, đúng nhà, tầng và báo cáo; đánh dấu thông báo đã đọc.
+    // Tab Báo cáo không hiện trạng thái ngày nên không lộ trạng thái chủ chưa chấm (BR-31)
     <Card
+      onPress={openReports}
+      accessibilityHint={t('Mở báo cáo ở Phân tích')}
       accessibilityLabel={
         conclusion ? t('{title}. Chuyên gia {name}: {text}', { title, name: conclusion.by.full_name, text: conclusion.text }) : title
       }

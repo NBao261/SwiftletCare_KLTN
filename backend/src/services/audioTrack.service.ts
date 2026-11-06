@@ -3,6 +3,7 @@ import { AudioTrack, IAudioTrack } from '@/models/audioTrack.model'
 import { SensorNode, ISensorNode } from '@/models/device.model'
 import { putObject, removeObject, presignedGetUrl } from '@/config/minio.config'
 import { publishCommand } from '@/mqtt/mqtt.client'
+import { stampCommand } from '@/utils/deviceCommand.util'
 import { assertInService, buildDeviceConfig } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
@@ -132,7 +133,7 @@ export async function playNow(nodeId: string, trackId: string, user: CurrentUser
   assertSynced(track)
   assertOnline(node)
   publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'audio/command',
-    { deviceId: node.device_id, action: 'play', track: track.track_number })
+    stampCommand({ deviceId: node.device_id, action: 'play', track: track.track_number }))
   return { track_number: track.track_number }
 }
 
@@ -142,7 +143,7 @@ export async function stopPlayback(nodeId: string, user: CurrentUser) {
   assertInService(node)
   assertOnline(node)
   publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'audio/command',
-    { deviceId: node.device_id, action: 'stop' })
+    stampCommand({ deviceId: node.device_id, action: 'stop' }))
 }
 
 /** Xoá khỏi danh mục web — KHÔNG xoá được file vật lý trên thẻ SD */

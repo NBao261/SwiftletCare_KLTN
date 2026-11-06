@@ -144,7 +144,7 @@ TC=[
 ('TC-F17-01','F-17','Pump in AUTO','Override ON; override the same relay again; clear early','—','One log opened; earlier REPLACED; last CLEARED_EARLY',
  (J,I+'relayOverrideLog.test.ts','bật tay mở 1 bản ghi')),
 ('TC-F17-02','F-17','Same device; a `SENSOR_FAULT` open in the zone','POST pump ON for 31 min; pump ON for 10 min without confirmation; then with confirmation','—','422; 409; accepted, and the log records the confirmation',
- (T,'backend jest `relayCommand.test.ts` (G-06)')),
+ (J,I+'relayCommand.test.ts','TC-F17-02: có SENSOR_FAULT')),
 ('TC-F17-03','F-17','Farm with an expert','POST relay, speaker and schedule as the expert','—','403 for each',
  (J,I+'domainExpert.test.ts','không điều khiển relay, loa hay lịch loa')),
 # F-18
@@ -192,7 +192,7 @@ ST=[
 ('6.2 ExpertVerdict','pending → CONFIRMED/REJECTED','Expert records a verdict','Verdict stored with author, role and time',(J,I+'alertVerdict.test.ts','chỉ Domain Expert ghi được kết quả')),
 ('6.2 ExpertVerdict','CONFIRMED ↔ REJECTED','Expert changes the verdict','New verdict stored; audit entry for the change',(J,I+'alertVerdict.test.ts','chỉ Domain Expert ghi được kết quả')),
 ('6.3 Controller relay','AUTO → MANUAL','Owner override applied','Relay MANUAL; one override log opened',(J,I+'relayOverrideLog.test.ts','bật tay mở 1 bản ghi')),
-('6.3 Controller relay','MANUAL → MANUAL','Second relay of the controller overridden','The first relay keeps its own expiry',(T,'backend jest + firmware native test (G-06)')),
+('6.3 Controller relay','MANUAL → MANUAL','Second relay of the controller overridden','The first relay keeps its own expiry',[(J,I+'relayCommand.test.ts','MANUAL → MANUAL: bật tay relay thứ hai'),(P,'test_relay_override','test_second_relay_does_not_change_the_first_expiry')]),
 ('6.3 Controller relay','MANUAL → AUTO','Override expires','Relay AUTO; log closed with EXPIRED',(J,I+'relayOverrideLog.test.ts','job hết hạn đóng bản ghi với EXPIRED')),
 ('6.3 Controller relay','AUTO → AUTO (rejected)','Override with an invalid duration','422; relay stays AUTO; no log opened',(J,I+'relayCommand.test.ts','durationMs của lệnh relay phải là số nguyên')),
 ('6.6 Controller/CameraNode','(new) → PENDING','Register from the label','Device PENDING in the scanned zone',(J,I+'deviceOnboarding.test.ts','đúng secretKey → PENDING')),

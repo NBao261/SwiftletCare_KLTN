@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
 import type { BirdCountDay } from '@/types'
-import { buildHlsUrl, formatBirdCountRows, getCameraCountSummary, getCameraStatusBadge } from '@/utils/camera.utils'
+import { buildHlsUrl, formatBirdCountRows, formatBirdDayFigures, getCameraCountSummary, getCameraStatusBadge } from '@/utils/camera.utils'
 
 // Số đếm một ngày tối thiểu cho test
 function buildDay(overrides: Partial<BirdCountDay>): BirdCountDay {
@@ -53,5 +53,27 @@ describe('buildHlsUrl', () => {
     expect(buildHlsUrl('http://192.168.1.5:8888/', 'cam-cam_01', 'a b')).toBe(
       'http://192.168.1.5:8888/cam-cam_01/index.m3u8?token=a%20b',
     )
+  })
+})
+
+describe('formatBirdDayFigures', () => {
+  it('phiên chưa có và tỷ lệ null thì gạch dưới', () => {
+    expect(formatBirdDayFigures(undefined)).toEqual({ exitText: '_', entryText: '_', rateText: '_' })
+  })
+
+  it('đủ hai phiên thì có số và tỷ lệ', () => {
+    const day = {
+      date: '2026-10-31',
+      morning_entry: 0,
+      morning_exit: 1000,
+      evening_entry: 920,
+      evening_exit: 0,
+      net_exit: 1000,
+      net_entry: 920,
+      return_rate: 92,
+      has_morning: true,
+      has_evening: true,
+    }
+    expect(formatBirdDayFigures(day)).toEqual({ exitText: '1.000', entryText: '920', rateText: '92%' })
   })
 })

@@ -20,12 +20,13 @@ export const deviceApi = {
     api.get<ApiResponse<SensorNode[]>>('/devices/sensor-nodes', { params: zoneId ? { zoneId } : undefined }),
   getSensorNode: (id: string) => api.get<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}`),
 
-  controlRelay: (id: string, relayName: RelayName, state: boolean, durationMs?: number) =>
-    api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/relay`, { relayName, state, durationMs }),
+  // ENV-FR-016 — `confirmed`: Farm Owner xác nhận bật bơm dù Zone đang có cảnh báo cảm biến/phun sương (thiếu thì 409)
+  controlRelay: (id: string, relayName: RelayName, state: boolean, durationMs?: number, confirmed?: boolean) =>
+    api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/relay`, { relayName, state, durationMs, ...(confirmed && { confirmed: true }) }),
 
-  // ENV-FR-018 — trả về AUTO ngay, không đợi hết hạn override
-  clearRelayOverride: (id: string) =>
-    api.delete<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/relay-override`),
+  // ENV-FR-018 — trả về AUTO ngay, không đợi hết hạn override; có relayName thì chỉ huỷ relay đó (G-06)
+  clearRelayOverride: (id: string, relayName?: RelayName) =>
+    api.delete<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/relay-override`, { params: relayName ? { relayName } : undefined }),
 
   // ENV-FR-019 — lịch sử can thiệp tay của thiết bị, mới nhất trước
   listRelayOverrides: (id: string, params?: { page?: number; limit?: number }) =>

@@ -1,6 +1,13 @@
 import { describe, expect, it } from '@jest/globals'
 import type { Alert } from '@/types'
-import { getAlertHeadline, pickMostUrgentAlert } from '@/utils/alert.utils'
+import {
+  getAlertHeadline,
+  getForecastMinutesAhead,
+  getHighestSeverity,
+  getPumpOnBlockingAlerts,
+  parseConfirmationAlerts,
+  pickMostUrgentAlert,
+} from '@/utils/alert.utils'
 
 // Cảnh báo đang mở tối thiểu cho test
 function buildAlert(id: string, severity: Alert['severity'], createdAt: string): Alert {
@@ -60,5 +67,63 @@ describe('getAlertHeadline', () => {
 
   it('không có số liệu ngưỡng thì dùng tiêu đề', () => {
     expect(getAlertHeadline(breachAlert([]))).toBe('Vượt ngưỡng tại Tầng 1')
+  })
+})
+
+describe('getHighestSeverity', () => {
+  it('lấy mức cao nhất, rỗng thì null', () => {
+    const alerts = [buildAlert('a', 'LOW', '2026-10-30T01:00:00.000Z'), buildAlert('b', 'HIGH', '2026-10-29T01:00:00.000Z')]
+    expect(getHighestSeverity(alerts)).toBe('HIGH')
+    expect(getHighestSeverity([])).toBeNull()
+  })
+})
+
+describe('getForecastMinutesAhead', () => {
+  it('lấy mốc sớm nhất của đúng chỉ số, bỏ metadata sai dạng', () => {
+    const forecast = (minutesAhead: unknown, metric: string): Alert => ({
+      ...buildAlert(`f-${String(minutesAhead)}`, 'LOW', '2026-10-30T01:00:00.000Z'),
+      type: 'FORECAST_BREACH',
+      metadata: { predicted: { metric, minutesAhead } },
+    })
+    const alerts = [forecast(40, 'humidity'), forecast(25, 'humidity'), forecast(10, 'temperature'), forecast('x', 'humidity')]
+    expect(getForecastMinutesAhead(alerts, 'humidity')).toBe(25)
+    expect(getForecastMinutesAhead(alerts, 'temperature')).toBe(10)
+    expect(getForecastMinutesAhead([buildAlert('a', 'LOW', '2026-10-30T01:00:00.000Z')], 'humidity')).toBeNull()
+  })
+})
+
+describe('getPumpOnBlockingAlerts', () => {
+  it('chỉ lấy cảnh báo cảm biến hỏng và phun sương không hiệu quả (ENV-FR-016)', () => {
+    const sensorFault: Alert = { ...buildAlert('s', 'MEDIUM', '2026-10-30T01:00:00.000Z'), type: 'SENSOR_FAULT' }
+    const breach = buildAlert('t', 'HIGH', '2026-10-30T01:00:00.000Z')
+    expect(getPumpOnBlockingAlerts([sensorFault, breach]).map(alert => alert._id)).toEqual(['s'])
+  })
+
+  it('tính cả cảnh báo đã xác nhận (vẫn đang mở, §6.1), bỏ cảnh báo đã tự hết', () => {
+    const base = buildAlert('x', 'MEDIUM', '2026-10-30T01:00:00.000Z')
+    const acknowledged: Alert = { ...base, _id: 'ack', type: 'MISTING_INEFFECTIVE', status: 'ACKNOWLEDGED' }
+    const resolved: Alert = { ...base, _id: 'done', type: 'SENSOR_FAULT', status: 'RESOLVED' }
+    const busFailure: Alert = { ...base, _id: 'bus', type: 'RS485_BUS_FAILURE', status: 'ACTIVE' }
+    expect(getPumpOnBlockingAlerts([acknowledged, resolved, busFailure]).map(alert => alert._id)).toEqual(['ack', 'bus'])
+  })
+})
+
+describe('parseConfirmationAlerts', () => {
+  it('đọc danh sách cảnh báo trong error.details của 409 CONFIRMATION_REQUIRED, bỏ phần tử sai dạng', () => {
+    const details = [
+      { _id: 'a', type: 'SENSOR_FAULT', title: 'Cảm biến lỗi', created_at: '2026-11-03T00:00:00.000Z' },
+      { _id: 'b', type: 'MISTING_INEFFECTIVE' },
+      { type: 'SENSOR_FAULT' },
+      'x',
+    ]
+    expect(parseConfirmationAlerts(details)).toEqual([
+      { _id: 'a', type: 'SENSOR_FAULT', title: 'Cảm biến lỗi' },
+      { _id: 'b', type: 'MISTING_INEFFECTIVE', title: '' },
+    ])
+  })
+
+  it('details không phải mảng thì rỗng', () => {
+    expect(parseConfirmationAlerts({})).toEqual([])
+    expect(parseConfirmationAlerts(undefined)).toEqual([])
   })
 })

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Modal, Pressable, StyleSheet, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native'
 import Animated, { SlideInDown } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Radius, Spacing } from '@/constants/theme'
@@ -22,7 +22,8 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <View style={styles.container}>
+      {/* Sheet có ô nhập (thêm thiết bị, thêm tầng) thì đẩy bảng lên trên bàn phím */}
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         {/* Nền mờ dùng token secondary (Ink mờ 55%) — không thêm màu mới */}
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: palette.secondary }]}
@@ -38,7 +39,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
           <View style={[styles.handle, { backgroundColor: palette.border }]} />
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }

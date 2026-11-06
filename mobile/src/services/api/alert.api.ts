@@ -1,6 +1,6 @@
 import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
-import type { Alert, ApiResponse } from '@/types'
+import type { Alert, AlertVerdictResult, ApiResponse } from '@/types'
 
 // API cảnh báo (ALERT-FR-*)
 export const alertApi = {
@@ -8,5 +8,11 @@ export const alertApi = {
 
   getDetail: (alertId: string) => apiClient.get<ApiResponse<Alert>>(ENDPOINTS.ALERT_DETAIL(alertId)),
 
-  acknowledge: (alertId: string, note?: string) => apiClient.put(ENDPOINTS.ALERT_ACKNOWLEDGE(alertId), { note }),
+  // Chỉ Farm Owner; cảnh báo không còn ACTIVE thì 409 (ALERT-FR-009)
+  acknowledge: (alertId: string, note?: string) =>
+    apiClient.put<ApiResponse<Alert>>(ENDPOINTS.ALERT_ACKNOWLEDGE(alertId), { note }),
+
+  // Phán quyết cảnh báo suy luận, chỉ Domain Expert; ghi đè được (EXPERT-FR-003)
+  setVerdict: (alertId: string, result: AlertVerdictResult, note?: string) =>
+    apiClient.put<ApiResponse<Alert>>(ENDPOINTS.ALERT_VERDICT(alertId), { result, note }),
 }

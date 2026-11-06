@@ -25,6 +25,8 @@ export interface IRelayOverrideLog extends Document {
   /** null khi đang override */
   ended_at?: Date | null
   end_reason?: OverrideEndReason
+  /** ENV-FR-016/019 — bật bơm lúc Zone có cảnh báo cảm biến/phun sương và Farm Owner đã xác nhận */
+  alert_confirmed: boolean
 }
 
 const relayOverrideLogSchema = new Schema<IRelayOverrideLog>(
@@ -40,6 +42,7 @@ const relayOverrideLogSchema = new Schema<IRelayOverrideLog>(
     expires_at: { type: Date, required: true },
     ended_at:   { type: Date, default: null },
     end_reason: { type: String, enum: ['EXPIRED', 'CLEARED_EARLY', 'REPLACED'] satisfies OverrideEndReason[] },
+    alert_confirmed: { type: Boolean, default: false },
   },
   { versionKey: false },
 )
