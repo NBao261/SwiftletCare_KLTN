@@ -1,6 +1,6 @@
 # Project Tracking
 
-**SwiftletCare** · updated 26/10/2026 (Review 2) · plan: Report 2 · requirements: Report 3 · design: Report 4 · tests: Report 5
+**SwiftletCare** · updated 04/11/2026 (Review 2) · plan: Report 2 · requirements: Report 3 · design: Report 4 · tests: Report 5
 
 This sheet is the only record of progress. Report 3 and Report 4 describe what the system must do and how it is built, without status; the Design Brief (Section 5) summarises the gaps below. Status values: **Done** (merged into `develop`, its committed tests pass, and it runs end to end from the client), **In progress** (partly merged, or the backend works without its client), **Planned** (not started). Owners follow the Design Brief, Section 8.
 
@@ -12,19 +12,19 @@ This sheet is the only record of progress. Report 3 and Report 4 describe what t
 | --- | --- | --- | --- |
 | Registration v1 | 22/07/2026 | Done | |
 | Review 1 | 30/09/2026 | Done | Registration v2; scope narrowed to the automated system |
-| Iteration 1 | until Review 2 | Done | Pull requests #2…#122 (tag `review-2`) |
-| Review 2 | 04/11/2026 | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1; enumeration PR (G-01, #113) and invitation-only accounts (G-02 P0, #116) merged 29/10/2026; left: tag `review-2`, CI run on the tag, BM02 |
+| Iteration 1 | until Review 2 | Done | Pull requests #2…#133 (tag `review-2`, commit `7d5e643b`) |
+| Review 2 | 04/11/2026 | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1; enumeration PR (G-01, #113) and invitation-only accounts (G-02 P0, #116) merged 29/10/2026; tag `review-2` on 04/11/2026, CI run on the tag green (all modules); BM02 1.0: 42 findings (13 High), all High Planned |
 | Iteration 2 | 05/11–02/12/2026 | Planned | Gaps due "It. 2" in Section 6 |
 | Iteration 3 | 03/12–23/12/2026 | Planned | Gaps due "It. 3" |
 | Defense 1.1 | Per the course schedule | Planned | Thresholds of the guideline §9.4 |
 
 ## 2. Iteration 1 — Work Merged
 
-Merged pull requests on GitHub, grouped by author account (`NBao261/SwiftletCare_KLTN`, #1…#122 at the `review-2` tag; #1 and #22 were closed without merge). A pull request counts for the account that opened it; commits of other members inside it are named in the content column.
+Merged pull requests on GitHub, grouped by author account (`NBao261/SwiftletCare_KLTN`, #1…#133 at the `review-2` tag; 128 merged; #1, #22, #124, #126 and #127 were not merged at the tag). A pull request counts for the account that opened it; commits of other members inside it are named in the content column.
 
 | Member (account) | Merged PRs | Main content |
 | --- | --- | --- |
-| Nguyễn Chí Bảo (`NBao261`) | 81 | Backend modules (farm, device, telemetry, alert, analytics, expert, bird counting, stream access); firmware (MQTT contract, speaker, fuzzy control, filters, anomaly, remote restart/OTA); counting pipeline (#85, #88, #95); CI, review rules, SRS/SDD; scope removal of tickets, SLA and regions (#100–#107); Review 2 documents and evidence register (#108–#112, #115, #121) |
+| Nguyễn Chí Bảo (`NBao261`) | 87 | Backend modules (farm, device, telemetry, alert, analytics, expert, bird counting, stream access); firmware (MQTT contract, speaker, fuzzy control, filters, anomaly, remote restart/OTA); counting pipeline (#85, #88, #95); CI, review rules, SRS/SDD; scope removal of tickets, SLA and regions (#100–#107); Review 2 documents and evidence register (#108–#112, #115, #121); model training plan (#128); six business main flows, context diagram, conceptual model, Technician role removed, Nginx on staging (#129–#133) |
 | Trần Minh Kiệt (`minhkiet1001`) | 12 | Admin backend modules, technician backend, device decommission and restore, admin logic fixes (#16, #21, #23, #35, #40, #62, #80); shared enumerations of SRS 3.1.0 with firmware 1.5.0 (#113, with the web and mobile parts of Len, Tuấn and Nhi); invitation-only accounts (#116, with Nhi's web and mobile part); expert loop, review items and proposals, breach dwell time (#117, #119, #122) |
 | Nguyễn Vũ Len (`VuLen203`) | 17 | Web design rules, sidebar, Farm Owner dashboard, analytics, monitor, farms, harvest, auth screens; Farm Owner rework with devices, live stream over WHEP, house-level counts, override history and autonomy, marketplace removal, farm → house → zone scope filter (#2, #20, #33, #34, #37, #48, #54, #55, #63, #78, #79, #82, #93, #94); mobile app structure, sign-in and Farm Owner home (#114, #118, #123) |
 | Nguyễn Thị Yến Nhi (`NhiNhi306`) | 7 | Admin web: users and account requests, design-system components, system pages, settings and logs, overview (#26, #27, #28, #47, #49, #72); privacy policy page (#120) |
@@ -65,16 +65,16 @@ Summary: 4 Done, 14 In progress, 4 Planned.
 
 ## 4. Test Progress (Report 5)
 
-Results count only when they come from a CI run on the tag being reported (Report 5, Section 6). Until the tag `review-2` exists, no committed test case is reported as passed.
+Results count only when they come from a CI run on the tag being reported (Report 5, Section 6): run https://github.com/NBao261/SwiftletCare_KLTN/actions/runs/41801124931 on the tag `review-2`.
 
 | Item | Count |
 | --- | --- |
-| Committed test cases | 136 |
-| Automated, test written | 66 (49 %; the Defense 1.1 bar of 50 % is met once the tests of Iteration 2 are written) |
-| Automated, to be written with its feature | 50 |
+| Committed test cases | 125 |
+| Automated, test written | 83 (66 %; Defense 1.1 bar: 50 % automated in CI) |
+| Automated, to be written with its feature | 27 |
 | Mandatory requirements verified by a committed case | 62 of 102; the other 40 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
-| Manual (staging, prototype, test house) | 20 |
-| Passed on the tag | — (tag not created) |
+| Manual (staging, prototype, test house) | 15 |
+| Passed on the tag | 83 of 83 written (100 %); 42 not run yet (27 tests to be written, 15 manual) |
 
 ## 5. Defect List
 
@@ -104,14 +104,14 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 | G-07 | MQTT design: topics per zone instead of per device; shared credential; no `/internal/mqtt-auth` or broker authorisation rule; ESP32 on PubSubClient (QoS 0 only), port 1883 without TLS; no event ID on alerts, no command envelope, no retained configuration; `config/reassign` still used; AI node on house topics; OTA with `setInsecure()` | SDD D3, 5.1, 7.2, 10; FARM-FR-003c, 010, BR-27, 35, NFR-06 c, NFR-10 d | firmware, backend, AI node, deploy | Nguyễn Chí Bảo | It. 2 |
 | G-08 | Configuration version and `CONFIG_MISMATCH` | ENV-FR-027, BR-24; SM-12 | firmware, backend | Nguyễn Chí Bảo | It. 2 |
 | G-09 | SF-01 screens: label printing in the stock screen, floor code printing, QR scan, AP-mode guide, setup progress; key re-issue of a released device | FARM-FR-010…012, BR-26; AD-10 | web, mobile, backend | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (labels, floor codes on the web); Nguyễn Vũ Len (QR scan in the mobile app); Thái Minh Tuấn (web setup) | It. 2 |
-| G-10 | FCM sending and push tokens | ALERT-FR-002 | backend, mobile | Nguyễn Chí Bảo (backend); Nguyễn Vũ Len (mobile) | It. 2 |
+| G-10 | FCM sending and push tokens; the mobile app registers an Expo push token instead of the FCM device token of SDD 5.4 (BM02 A-02) | ALERT-FR-002 | backend, mobile | Nguyễn Chí Bảo (backend); Nguyễn Vũ Len (mobile) | It. 2 |
 | G-11 | MF-06: health assessment job, `househealthdays` with current status and rating snapshots, levels per house, house reports (day, week, month), PDF and CSV, weather job, evaluation (agreement, CI, weighted kappa, AC1) | ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33; SM-17, AD-06 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (web); Nguyễn Vũ Len (mobile) | It. 2–3 (backend part a done 31/10/2026 on `feat/g11-health-assessment`, `caf7eef` spec + `f502b5b` backend: levels per house, hourly weather, daily assessment after the return-rate check with recompute on late counts and noise verdicts, rating and skip with snapshot and BR-31 hiding on every read, CSV, evaluation; part b done 03/11/2026, `49e1360` spec + `cc3b04a` + `9e6a40d` backend: house reports by day after the daily assessment, week, month (BR-33) and on demand up to 31 days, days hidden per caller (BR-31); the zone weekly reports stay deprecated until the new report screens replace them, then they move to house reports; incomplete sessions of VISION-FR-020 come with G-12; web screens of the days, rating, levels and CSV done 03/11/2026 on the same branch, PDF and house reports on the web wait for part b; `can_edit` on the levels read done 03/11/2026 (`2edb284`); mobile pending. ANALYTICS-FR-013 display beside the indoor readings (hourly weather read API and the dashboard chart) is not part of G-11: the weather job stores the data; owner and gap to be assigned by Bảo) |
 | G-12 | Counting: trained one-class model; sessions computed by the backend from buckets per the house schedule; incomplete sessions; AI heartbeat with fps; ring editor screen | VISION-FR-003, 008, 016, 018–020, THREAT-FR-010 | AI node, backend, web | Nguyễn Chí Bảo (AI node, backend); Thái Minh Tuấn (ring editor); Len, Tuấn, Nhi (labelling, clip counts) | It. 2 |
 | G-13 | Actuator current sensing on the team's board | THREAT-FR-014, BR-32 | hardware, firmware, backend | Nguyễn Chí Bảo | It. 3 |
-| G-14 | Data model behind the ERD: user `status`, audit source fields, harvest type and photo, notification references, telemetry validity fields, per-relay override, alert `metadata` renamed `details` (e.g. `reset_reason`); collections `househealthdays`, `househealthreports`, `weatherobservations` (G-11) and `pushtokens` (G-10) not in the database script yet, `zonehealthreports` migrated (Report 4 §6.4); database script regenerated | SDD 6.1–6.4 | backend | Trần Minh Kiệt | It. 2 |
+| G-14 | Data model behind the ERD: user `status`, audit source fields, harvest type and photo, notification references, telemetry validity fields, per-relay override, alert `metadata` renamed `details` (e.g. `reset_reason`); collections `househealthdays`, `househealthreports`, `weatherobservations` (G-11) and `pushtokens` (G-10) not in the database script yet, `zonehealthreports` migrated (Report 4 §6.4); database script regenerated; unique indexes `telemetries(node_id, timestamp)` and partial `alerts(node_id, event_id)` missing from the database script (BM02 D-06) | SDD 6.1–6.4 | backend | Trần Minh Kiệt | It. 2 |
 | G-15 | Web leftovers: Domain Expert screens on mock fallback and outside the FE_Design folder plan; `/stream/:id` routed to the `FarmOwnerLiveStreamPage` stub (Raspberry Pi wording); "PLC" wording; routes, menu and buttons not per Report 3 §2.4 (`OPS_ROLES` lets Admin into `/devices`, `/alerts`, `/farms`, `/onboarding`, `/ota`, `/stream/:id`; `HARVEST_ROLES` includes Admin) | Report 3 §2.4; FE_Design §7, §12, §13.14 | web | Thái Minh Tuấn (expert, Technician); Nguyễn Thị Yến Nhi (role matrix); Nguyễn Vũ Len ("PLC"); Nguyễn Chí Bảo (`/stream/:id`) | Closed 02/11/2026 by PR #125 (role matrix and "PLC" wording done 01/11/2026 on `feat/g15-expert-technician-ui`: one role group per permission, Admin out of farm pages, Domain Expert reads the Farm Owner pages, `/ota` Technician only, Vitest role → path table; "PLC" done by Nhi for Len; `/stream/:id` route and stub page removed 01/11/2026, live view only on `/vision`, no Raspberry Pi wording left; expert screens and technician flow completed 01/11/2026 on `feat/g15-expert-technician-ui`, DF-5 closed) |
 | G-16 | Mobile: login, dashboard, alerts with acknowledge, manual override, QR setup, analytics and HLS live stream, daily status and rating, reports, harvests, expert validation and tuning; screens and buttons per role; socket clean-up | Registration 3.2 b, SDD 5.4 | mobile | Nguyễn Vũ Len (Farm Owner: sign-in, push, QR setup, daily status, live stream); Thái Minh Tuấn (expert) | It. 2–3 |
-| G-17 | Staging: compose file, Dockerfiles, Caddy, TLS proxy, EMQX authentication and authorisation files, demo seed for every scenario of Appendix A2, backup off the VPS | SDD 3.4, 11 | deploy | Whole team, led by Nguyễn Chí Bảo (Bảo infrastructure, Kiệt backend image, migrations, seed and backup, Nhi web build, Len mobile build, Tuấn E2E runs); scenario conditions and E2E tests by the workflow owners | It. 2 |
+| G-17 | Staging: compose file, Dockerfiles, Nginx with Certbot (HTTPS and the TLS ports of MQTT and video), EMQX authentication and authorisation files, demo seed for every scenario of Appendix A2, backup off the VPS | SDD 3.4, 11 | deploy | Whole team, led by Nguyễn Chí Bảo (Bảo infrastructure, Kiệt backend image, migrations, seed and backup, Nhi web build, Len mobile build, Tuấn E2E runs); scenario conditions and E2E tests by the workflow owners | It. 2 |
 | G-18 | Smaller rules: source required for default thresholds (ENV-FR-007); harvest validation (HARVEST-FR-001); optional ENV-FR-026; optional device ID from the MAC address | ENV-FR-007, 026, HARVEST-FR-001 | backend, firmware | Trần Minh Kiệt | It. 3 |
 | G-19 | Evidence and field work: sources in `docs/evidence-register.md`, practitioner interviews (BR-01, 02, 28–30), field run of ≥ 14 rated days, hardware test record (NFR-05…07), NFR measurements | REF-5, NFR-04…14 | team | Nguyễn Chí Bảo; labelling and clip counts by Len, Tuấn, Nhi; each NFR by its owner (Report 5 §5) | It. 2–3 |
 | G-20 | Technician role still in the code (removed by BM03 row 13): role `TECHNICIAN` in the shared enums, the seed account, `technicianAccess`, the `/ota` and `/onboarding` web routes and the Technician screens; remote commands and OTA are allowed to the Technician only, the Administrator has no device console (every device with its device alerts, restart, configuration push, OTA) and the Farm Owner cannot restart a controller | Report 3 §2.3, §2.4, FARM-FR-006, 009, 013, ENV-FR-013c, AUTH-FR-005c; SDD D14, AD-08 | backend, web, mobile, `docs/api/api-spec.yaml` | Trần Minh Kiệt (backend, API spec); Thái Minh Tuấn (web: Technician screens become the Administrator device console); Nguyễn Vũ Len (mobile enum) | It. 2 |

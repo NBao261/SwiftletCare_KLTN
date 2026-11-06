@@ -663,7 +663,7 @@ The Design Brief (BM01, section 7) proposes at most six of these NFRs for commit
 
 ## 6. Main Entity Lifecycles
 
-Each lifecycle below has a state machine diagram in the SDD. Every transition names the FR that triggers it. The transitions of the main entities (alert status and verdict, relay mode, device, device label, configuration sync, review item, proposal, daily health status, assessor rating, health report) are each covered by one test case in Report 5, including the rejected ones (Design Brief, Appendix A3). Sections 6.1–6.3, 6.6–6.12 and 6.16–6.18 belong to the automated system and the expert loop; 6.4, 6.14 and 6.15 belong to the supporting flows (6.5 is no longer used); 6.13 to harvest logging.
+Each lifecycle below belongs to an entity of the conceptual model and has a state machine diagram in the SDD (REF-2, Sections 6.1 and 8). Every transition names the FR that triggers it. The transitions of the main entities (alert status and verdict, relay mode, device, device label, configuration sync, review item, proposal, daily health status, assessor rating, health report) are each covered by one test case in Report 5, including the rejected ones (Design Brief, Appendix A3). Sections 6.1–6.3, 6.6–6.12 and 6.16–6.18 belong to the automated system and the expert loop; 6.4, 6.14 and 6.15 belong to the supporting flows (6.5 is no longer used); 6.13 to harvest logging.
 
 ### 6.1 Alert — status
 
@@ -680,7 +680,7 @@ Each lifecycle below has a state machine diagram in the SDD. Every transition na
 | `ACTIVE`, `ACKNOWLEDGED`, `RESOLVED` | unchanged | `CONFIRMED` verdict on an alert in force, or any verdict on a resolved alert | EXPERT-FR-003 |
 | `RESOLVED` | — | A later occurrence creates a new alert | ALERT-FR-008 |
 
-### 6.2 Alert — expert verdict (inferred alert types only)
+### 6.2 ExpertVerdict (inferred alert types only)
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -688,7 +688,7 @@ Each lifecycle below has a state machine diagram in the SDD. Every transition na
 | `CONFIRMED` / `REJECTED` | `REJECTED` / `CONFIRMED` | Domain Expert changes the verdict after reviewing more data; the alert status follows Section 6.1 | EXPERT-FR-003 |
 | any | — | Verdict on a non-inferred type rejected (400) | EXPERT-FR-003 |
 
-### 6.3 Relay — control mode
+### 6.3 Controller — relay control mode
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -711,7 +711,7 @@ Each lifecycle below has a state machine diagram in the SDD. Every transition na
 
 The number is kept so that Sections 6.6–6.17 keep the numbers that code, tests and Report 5 refer to (Section 9, version 3.0.0).
 
-### 6.6 Device (controller and AI node) — connection status
+### 6.6 Controller and CameraNode — connection status
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -723,7 +723,7 @@ The number is kept so that Sections 6.6–6.17 keep the numbers that code, tests
 
 These are the only device states. A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
 
-### 6.7 Misting protection (controller, per controller)
+### 6.7 Controller — misting protection
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -736,7 +736,7 @@ These are the only device states. A device still `PENDING` 15 min after registra
 
 While `LATCHED`, automatic misting output is 0; a manual ON override still runs the pump within BR-08 (BR-19).
 
-### 6.8 Noise baseline (controller, per hour of the day)
+### 6.8 Controller — noise baseline (per hour of the day)
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -746,7 +746,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 
 `NOISE_ANOMALY` is evaluated only for an hour in `READY`.
 
-### 6.9 Health report (house; daily, weekly, monthly)
+### 6.9 HealthReport (house; daily, weekly, monthly)
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -754,7 +754,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 | `GENERATED` | `CONCLUDED` | Domain Expert writes a conclusion; Farm Owners notified | EXPERT-FR-006 |
 | `CONCLUDED` | `CONCLUDED` | The author edits the conclusion (edit time stored); another expert is rejected with 403 | EXPERT-FR-006 |
 
-### 6.10 Review of a Farm Owner's change (farm with a Domain Expert)
+### 6.10 ReviewItem (farm with a Domain Expert)
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -765,7 +765,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 | `PENDING_REVIEW` | `ADJUSTED` | Expert saves new values for the same group | EXPERT-FR-010, 004 |
 | `ACCEPTED`, `REVERTED`, `ADJUSTED` | — | Further review actions rejected (409) | EXPERT-FR-010 |
 
-### 6.11 Coefficient suggestion proposal (farm with a Domain Expert)
+### 6.11 CoefficientProposal (farm with a Domain Expert)
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -775,7 +775,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 | `PROPOSED` | `SUPERSEDED` | A newer proposal for the zone, or any edit of its coefficients | EXPERT-FR-011 |
 | `APPROVED`, `REJECTED`, `SUPERSEDED` | — | Further actions rejected (409) | EXPERT-FR-011 |
 
-### 6.12 Configuration sync (per controller)
+### 6.12 Controller — configuration sync
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -787,7 +787,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 
 ---
 
-### 6.13 Harvest batch
+### 6.13 HarvestBatch
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -798,7 +798,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 
 `DRAFT` is the only stored state of a batch; a soft-deleted batch keeps it with a deletion flag.
 
-### 6.14 User account
+### 6.14 User
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -810,7 +810,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 | `DELETION_REQUESTED` | `DELETED` | Administrator completes the request: ownership passed on or farm soft-deleted, personal data anonymised | AUTH-FR-012 |
 | `DELETED` | — | Lock or unlock rejected (409) | AUTH-FR-011, 012 |
 
-### 6.15 Firmware update (per controller)
+### 6.15 Controller — firmware update
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -819,7 +819,7 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 | `PENDING` | `FAILED` | No confirmation within 30 min (the controller discarded a bad image or rolled back) | FARM-FR-013 |
 | `FAILED` | `PENDING` | Administrator sends the OTA command again | FARM-FR-013 |
 | any | — | OTA to a device that is not online, or with firmware older than 1.4.0, rejected (409 / 501) | FARM-FR-013 |
-### 6.16 Device label (provisioned-device stock entry)
+### 6.16 DeviceStockItem — label
 
 The state is derived from the stock entry and the device record; it is not a stored field.
 
@@ -832,7 +832,7 @@ The state is derived from the stock entry and the device record; it is not a sto
 | `IN_STOCK`, `RELEASED` | same state | Administrator re-issues the key; the earlier label is rejected | FARM-FR-010, BR-26 |
 | `IN_STOCK`, `RELEASED` | `REVOKED` | Administrator revokes the entry (lost, faulty); it can no longer be registered | FARM-FR-010 |
 
-### 6.17 Daily health status (per house and day)
+### 6.17 DailyHealthStatus (per house and day)
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -841,7 +841,7 @@ The state is derived from the stock entry and the device record; it is not a sto
 
 The day itself has no rating state: ratings are per assessor (Section 6.18). `INSUFFICIENT_DATA` is a value of the status, not a state: such a day can still be rated.
 
-### 6.18 Assessor rating (per Farm Owner or Domain Expert, house and day)
+### 6.18 DailyRating (per Farm Owner or Domain Expert, house and day)
 
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
@@ -952,7 +952,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 3.2.0 | 03/11/2026 | Main flows regrouped into six business processes (Section 2.2; BM03 row 12): automatic micro-climate control with offline operation and manual override as its paths (MF-01), incident handling for thresholds, air quality, equipment faults, restarts and early warnings (MF-02), bird counting (MF-03), expert validation of inferred alerts (MF-04), control-parameter tuning (MF-05), daily health assessment and reports (MF-06); device setup becomes supporting flow SF-01. BR-37 rating guide. No requirement added or removed; context diagram (DFD level 0) added to Section 2.1; Technician role removed (BM03 row 13): device setup stays with the Farm Owner, remote commands and firmware updates move to the Administrator, the Farm Owner may restart a controller |
+| 3.2.0 | 03/11/2026 | Main flows regrouped into six business processes (Section 2.2; BM03 row 12): automatic micro-climate control with offline operation and manual override as its paths (MF-01), incident handling for thresholds, air quality, equipment faults, restarts and early warnings (MF-02), bird counting (MF-03), expert validation of inferred alerts (MF-04), control-parameter tuning (MF-05), daily health assessment and reports (MF-06); device setup becomes supporting flow SF-01. BR-37 rating guide. No requirement added or removed; context diagram (DFD level 0) added to Section 2.1; Technician role removed (BM03 row 13): device setup stays with the Farm Owner, remote commands and firmware updates move to the Administrator, the Farm Owner may restart a controller; lifecycles of Section 6 named after the entities of the SDD conceptual model |
 | 3.1.0 | 26/10/2026 | Review of the specification before Review 2: one installation for one owner, no public sign-up (Section 1.2, A-7, AUTH-FR-001 removed, AUTH-FR-005c, 010; BM03 row 10); `PUMP_DRY` renamed `MISTING_INEFFECTIVE` and `POWER_OUTAGE` renamed `UNEXPECTED_RESTART` with a reset reason (BM03 row 11); C-7 and BR-19: software checks are not safety interlocks; manual pump ON limited to 30 min with a confirmation while a sensor or misting alert is open, and one expiry per relay (BR-08, BR-20, ENV-FR-016…018); `THRESHOLD_BREACH` for every threshold with a dwell time (ALERT-FR-012, BR-34); command freshness (BR-35); retention in one rule (BR-36); health status rules rewritten: per-source completeness, required and optional sources, rain confounder only for flock + noise, dismissed alerts not counted, evaluation snapshot apart from the current status (BR-28…31, ANALYTICS-FR-012, 014, Section 6.17, C-6); device topics and broker credential per device (FARM-FR-003c, 010, BR-27, NFR-10 d); acknowledged delivery of buffered samples and device alerts (ENV-FR-024, THREAT-FR-012, ALERT-FR-008, NFR-06 c); NFR-04, 08, 09, 11, 13, 14 thresholds set; `DEGRADED` removed from FARM-FR-013; one device lifecycle with `PENDING` → `DECOMMISSIONED`; label reuse after removal (BR-26); flock snapshot of the house (HARVEST-FR-003); code locations of the engineering constants moved to the SDD; rejection codes: parameter ranges are 400 (SYSTEM-FR-002 aligned); alert list apart from the notification inbox (ALERT-FR-007); MF-10 covers controllers, camera registration moves to MF-06; traceability statements limited to the committed items of the Design Brief; camera RTSP port open only to the AI node's IP, unencrypted RTSP as residual risk (NFR-10 e, Section 8.1); status hidden from an assessor until they rate or skip (BR-31, EXPERT-FR-012), with one rating state per assessor (Section 6.18) instead of a rating state of the day; SYSTEM-FR-002 refers to ENV-FR-007 for the rules of default thresholds; NFR-09 split into detection on labelled frames and count error on clips, with test days kept out of training and tuning; FARM-FR-004 raised to M (MF-06), harvest logging FRs set to S (SF-04) and renamed `MARKET-FR` → `HARVEST-FR`; THREAT-FR-014 no longer names the sensing method (Report 4 D11) |
 | 3.0.0 | 21–24/10/2026 | Every mandatory and supporting FR belongs to a flow; supporting flow SF-04 (harvest logging); lifecycles 6.13–6.15 (harvest, account, firmware update); rejection codes 400 / 422 distinguished. The Farm Owner is notified of every expert decision and sees them in one activity history (EXPERT-FR-009). Bird counting tracks over the whole frame and extrapolates fast tracks at the hole (VISION-FR-004, 005, BR-25). Expert in the loop for owner changes (EXPERT-FR-010) and suggestions (EXPERT-FR-011); configuration sync with `CONFIG_MISMATCH` (ENV-FR-027); multi-modal evidence on inferred alerts (ALERT-FR-014); incomplete counting sessions (VISION-FR-020); no maintenance tickets, SLA or Technician regions (BM03 row 9): the Technician is the technical role that sees the devices of every farm and never switches relays (FARM-FR-009, SF-02 remote device maintenance with FARM-FR-013, formerly TICKET-FR-008), an unacknowledged alert is sent again (ALERT-FR-015, replacing TICKET-FR-002) and pump or fan wear raises `MAINTENANCE_DUE` (ALERT-FR-016, replacing TICKET-FR-018), farms are created and managed only by their owners; a farm is one place with required coordinates, so an owner with houses in several places has one farm per place (FARM-FR-001, A-5); only the Farm Owner sets the speaker schedule, and the override history is shown to the Farm Owner and the Domain Expert only; Farm/House/Zone responsibilities (2.8) and known limitations (8.1). A rejected inferred alert becomes `DISMISSED`; session windows follow per-house seasonal profiles and temporary windows (VISION-FR-019). Zone thresholds and fuzzy coefficients are edited and reset only by the Farm Owner or Domain Expert of the farm; without an expert the Farm Owner takes the expert's decisions (BR-22). Default thresholds are a reference copied only at zone creation or reset, require a source, and only the Farm Owner or Domain Expert of the farm resets a zone; ENV-FR-026 (optional) tells experts which zones differ from new defaults. New requirements ENV-FR-024 (offline buffer) and ENV-FR-025 (watchdog restart), previously stated only as NFRs; VISION-FR-018 (counting ring drawn by the Domain Expert); bird counts, return rate and their alerts per house; in-app notification inbox; live-stream viewing token; remote restart and OTA with rollback; rules BR-19 (control precedence) and BR-20 (override expiry); push notifications (ALERT-FR-002) committed together with Telegram. Device setup becomes main flow MF-10 for the Farm Owner (replacing SF-01): label QR code with device ID and activation key (FARM-FR-010), floor QR code (FARM-FR-011), setup progress (FARM-FR-012), move of an offline controller applied when it reconnects; farm, house and zone are never entered on the controller (FARM-FR-003c); rules BR-26, BR-27; lifecycle 6.16; NFR-13. Rewritten in English for Review 2: requirements only, with actor and acceptance criteria per FR, NFRs with metric/threshold/method, entity lifecycles and traceability to the registration form. Design content moved to Report 4, test plan to Report 5, progress to Project Tracking. Engineering constants listed in one table (Section 4.5). Daily health assessment of each house by agreement between sources, with weather context, independent ratings by Farm Owner and expert, daily/weekly/monthly reports with PDF and CSV export (MF-11, ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33, NFR-14, lifecycle 6.17); actuator current sensing (THREAT-FR-014, BR-32, `ACTUATOR_FAULT`); references REF-9…13. Bypass switches (former ENV-FR-023) removed by BM03 because the borrowed test house cannot be rewired; BR-19 and the known limitations say how the loads run when the controller fails. NFR-12 (hardware cost) removed; the registration's Cost-Efficiency is traced to constraint C-4. AI node declared as the team's spare PC at a member's home, reading the camera over the Internet. Actors (people and external services) separated from the system's own components (controller, backend, AI node) in Section 2.3; flow actors and the FR column follow. Requirements removed from scope after Review 1 (predator detection, marketplace, heating, Zalo/SMS, sales) are no longer listed; their IDs are not reused. |
 | 2.1.5 | 10/2026 | Internal working SRS (Vietnamese) after Review 1, aligned with registration form v2 |

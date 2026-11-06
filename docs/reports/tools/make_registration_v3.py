@@ -62,6 +62,8 @@ set1(87,'Task 3: Build Backend API (NodeJS/Express), set up MQTT Broker, design 
 set1(88,'Task 4: Build Web Dashboard (React.js) and Mobile App (React Native) for the Farm Owner and the Domain Expert: monitoring, swiftlet counting analytics and live stream, real-time alert notifications, manual override, device setup by QR code, daily health status, reports and ratings, harvest logging, and expert validation and tuning.')
 set1(89,'Task 5: Define the automation scenarios, deploy empirical system runs in a simulated/real swiftlet environment, measure control performance, counting accuracy (Precision/Recall), response latency and the agreement of the daily health status with the practitioners\' ratings, review the related literature, obtain validation from a swiftlet-farming practitioner, test, and write the thesis/scientific paper.')
 # Review 1 items kept from v2, (7) without the Technician
+set1(98,'(4) Predator detection by camera is removed; the camera pipeline detects one class (swiftlet) for counting.')
+set1(100,'(6) Notifications are delivered in the applications and on the phone through both a Telegram bot and mobile push notifications; Zalo and SMS channels are out of scope.')
 set1(101,'(7) Administrator functions are supporting features outside the main flow; online trading of nests is out of scope and only harvest logging is included.')
 # 4
 set1(91,'The hardware prototype will be built with fail-safe hardware watchdogs and load-current sensing on the pump and fan. The test house is borrowed and its electrical installation cannot be modified, so no bypass switch is added: if the controller fails, the house\'s existing switches remain the manual fallback.')
