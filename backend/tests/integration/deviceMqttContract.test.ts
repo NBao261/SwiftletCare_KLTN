@@ -301,7 +301,7 @@ describe('ingestDeviceAlert', () => {
 describe('confirmRelayStatus', () => {
   it('updates relays without reviving an OFFLINE device and clears the override expiry on AUTO', async () => {
     const { node, deviceId } = await seed('OFFLINE')
-    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date() })
+    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date(), 'relays.misting': { mode: 'MANUAL', override_expiry: new Date() } })
 
     // firmware < 1.3.0 còn gửi `heating` — phải bị bỏ, không lưu và không phát socket
     await confirmRelayStatus({ deviceId, relay_states: { misting: true, speaker: false, ventilation: false, heating: true } as never, control_mode: 'AUTO' })
