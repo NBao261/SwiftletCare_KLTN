@@ -182,11 +182,11 @@ Default temperature, humidity and light thresholds are taken from the swiftlet-f
 
 (3) A Domain Expert role is added to validate the system's conclusions and tune its parameters.
 
-(4) Predator detection by camera is no longer a committed deliverable; it is kept only as a possible extension if time allows.
+(4) Predator detection by camera is removed; the camera pipeline detects one class (swiftlet) for counting.
 
 (5) Acoustic monitoring is limited to noise level (speaker failure and abnormal noise) and does not classify bird calls.
 
-(6) Notifications are delivered in the applications and on the phone through a Telegram bot or mobile push; Zalo and SMS channels are out of scope.
+(6) Notifications are delivered in the applications and on the phone through both a Telegram bot and mobile push notifications; Zalo and SMS channels are out of scope.
 
 (7) Administrator functions are supporting features outside the main flow; online trading of nests is out of scope and only harvest logging is included.
 

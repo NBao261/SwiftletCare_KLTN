@@ -26,9 +26,11 @@ if '--jest' in opts:
             res.setdefault(name,[]).append((a['title'].lower(), a['status']))
 def junit(path):
     out={}
-    for tc in ET.parse(path).getroot().iter('testcase'):
-        failed=any(c.tag in ('failure','error','skipped') for c in tc)
-        out[(tc.get('classname') or '')+'::'+(tc.get('name') or '')]='Fail' if failed else 'Pass'
+    # PlatformIO writes no classname: the suite (e.g. "native:test_filter") is the parent testsuite's name
+    for ts in ET.parse(path).getroot().iter('testsuite'):
+        for tc in ts.findall('testcase'):
+            failed=any(c.tag in ('failure','error','skipped') for c in tc) or tc.get('status') not in (None,'PASSED')
+            out[(tc.get('classname') or ts.get('name') or '')+'::'+(tc.get('name') or '')]='Fail' if failed else 'Pass'
     return out
 pio=junit(opts['--pio']) if '--pio' in opts else None
 pyt=junit(opts['--pytest']) if '--pytest' in opts else None
@@ -143,5 +145,5 @@ summ=f"""| Test cases | Automated, test written | Automated, to be written | Man
 | --- | --- | --- | --- | --- |
 | {total} | {stats['written']} ({100*stats['written']//total} %) | {stats['todo']} (automated in total: {auto}, {100*auto//total} %) | {stats['manual']} | {stats['pass'] if (res is not None or pio is not None or pyt is not None) else '— (no run on the tag yet)'} |"""
 tpl=tpl.replace('{{SUMMARY}}',summ)
-open(sys.argv[2],'w',encoding='utf-8').write(tpl)
+open(sys.argv[2],'w',encoding='utf-8',newline='\n').write(tpl)
 print(total, stats, 'supporting', sup)

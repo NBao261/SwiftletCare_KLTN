@@ -11,8 +11,8 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Repository link (tag review-2) | https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2 |
-| Version | 1.2 (registration v3, BM03 1.2, SRS 3.2.0, SDD 1.2.0) |
-| Date | 03/11/2026 |
+| Version | 1.3 (registration v3, BM03 1.2, SRS 3.2.0, SDD 1.2.0, BM02 1.0) |
+| Date | 04/11/2026 |
 
 ## 1. Scope
 
@@ -58,16 +58,16 @@ Owners visit their closed swiftlet houses every few days, so humidity drift, equ
 
 ## 5. Known Gaps
 
-Code against SRS and SDD, grouped by owner; each gap in Project Tracking §6.
+Code against SRS and SDD, grouped by owner; each gap in Project Tracking §6. In brackets: the High findings of the self-review (BM02) that the gap answers, all Planned.
 
 | ID | Gap | Location | Plan | Owner | Due |
 | --- | --- | --- | --- | --- | --- |
-| G-14 | Data model behind SDD 6.1 (user status, audit source, harvest type and photo, alert details) | backend | SDD 6.1–6.4 | Kiệt | It. 2 |
-| G-02, 09, 10, 16 | Administrator-created Farm Owner, real e-mail; QR setup screens; FCM only logged; mobile screens partly built | backend, web, mobile | AUTH-FR-005c; AD-07; ALERT-FR-002; SDD 5.4 | Kiệt, Nhi, Len | It. 2–3 |
-| G-06 | One override expiry per controller; no pump limit, confirmation or command freshness (PR #124 open) | backend, firmware, web, mobile | BR-08, 20, 35 | Kiệt, Len | It. 2 |
-| G-07, 08 | Zone topics, shared credential, QoS 0, no TLS on the ESP32; no configuration version | firmware, backend, AI node | SDD D3, 7.2; SM-12 | Bảo | It. 2 |
-| G-11 | Daily status, ratings with snapshot, house reports, PDF/CSV, weather, evaluation | backend, web, mobile | SM-17, AD-06 | Nhi, Kiệt | It. 2–3 |
-| G-12, 13 | Model not yet evaluated on held-out clips; sessions from buckets; ring editor; current sensing | AI node, backend, web, board | VISION-FR-008…020; THREAT-FR-014 | Bảo | It. 2–3 |
+| G-14 (D-01, D-03) | Data model behind SDD 6.1 (user status, audit source, harvest type and photo, alert details) | backend | SDD 6.1–6.4 | Kiệt | It. 2 |
+| G-02, 09, 10, 16, 20 (C-02, F-04) | Administrator-created Farm Owner, real e-mail; QR setup screens; FCM only logged; mobile screens partly built; Technician role still in the code | backend, web, mobile | AUTH-FR-005c; AD-07; ALERT-FR-002; SDD 5.4; D14 | Kiệt, Nhi, Len, Tuấn | It. 2–3 |
+| G-06 (ST-02, C-03) | One override expiry per controller; no pump limit, confirmation or command freshness (PR #124 open) | backend, firmware, web, mobile | BR-08, 20, 35 | Kiệt, Len | It. 2 |
+| G-07, 08 (C-01, F-02, F-05) | Zone topics, shared credential, QoS 0, no TLS on the ESP32; no configuration version | firmware, backend, AI node | SDD D3, 7.2; SM-12 | Bảo | It. 2 |
+| G-11 (F-01, C-04, D-04) | Daily status, ratings with snapshot, house reports, PDF/CSV, weather, evaluation | backend, web, mobile | SM-17, AD-06 | Nhi, Kiệt | It. 2–3 |
+| G-12, 13 (F-03, F-04) | Model not yet evaluated on held-out clips; sessions from buckets; ring editor; current sensing | AI node, backend, web, board | VISION-FR-008…020; THREAT-FR-014 | Bảo | It. 2–3 |
 | G-17 | Staging, TLS proxy, demo seed | deploy | SDD 3.4, 11 | Bảo | It. 2 |
 
 ## 6. Proposed Mandatory Features
@@ -128,12 +128,12 @@ Actors are people and external services only; the controller, the AI node and th
 
 | ID | Workflow | Actors | Trigger | Business outcome | Features | Entity states | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| WF-01 | Automatic micro-climate control (MF-01, AD-01) | Farm Owner, Domain Expert | 10-s control cycle; Internet or power loss; owner switches a relay | Misting and fan follow humidity and temperature, also offline; an override lasts a limited time, then automatic | F-01, F-02, F-04, F-17 | Relay: `AUTO` → `MANUAL` → `AUTO`; device: `ONLINE` → `OFFLINE` → `ONLINE` | Nguyễn Chí Bảo |
+| WF-01 | Automatic micro-climate control (MF-01, AD-01) | Farm Owner, Domain Expert | 10-s control cycle; Internet or power loss; owner switches a relay | Misting and fan follow humidity and temperature, also offline; an override lasts a limited time, then automatic | F-01, F-02, F-04, F-17 | Controller relay: `AUTO` → `MANUAL` → `AUTO`; Controller: `ONLINE` → `OFFLINE` → `ONLINE` | Nguyễn Chí Bảo |
 | WF-02 | Incident handling (MF-02, AD-02) | Farm Owner, Telegram, FCM | Breach after the dwell time, NH3/CO2 above limit, equipment fault, restart, offline, forecast | Alert sent by push and Telegram, repeated until acknowledged, closed on recovery; loop held safe | F-05, F-06, F-07, F-08, F-09 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED` | Nguyễn Vũ Len |
-| WF-03 | Bird counting session (MF-03, AD-03) | Farm Owner, Domain Expert | Morning and evening sessions | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11 | AI node: `PENDING` → `ONLINE`; `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
-| WF-04 | Expert validation of inferred alerts (MF-04, AD-04) | Domain Expert, Farm Owner | Abnormal noise, implausible readings, early warning | Verdict with evidence; rejected alert dismissed; owner notified | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED`; verdict: pending → `REJECTED` | Thái Minh Tuấn |
-| WF-05 | Control-parameter tuning (MF-05, AD-05) | Domain Expert, Farm Owner | Owner change, coefficient suggestion, detection or ring change | Changes reviewed, suggestion approved, new configuration applied on the controllers, owner notified | F-03, F-14, F-15 | Review item: `PENDING_REVIEW` → `ADJUSTED`; proposal: `PROPOSED` → `APPROVED`; config: `PENDING` → `APPLIED` | Trần Minh Kiệt |
-| WF-06 | Daily health assessment and reports (MF-06, AD-06) | Farm Owner, Domain Expert, Open-Meteo | End of day; week; month | Daily status with reasons; day rated independently; reports downloaded and concluded | F-20, F-21, F-22 | Daily status: (new) → `COMPUTED`; rating: `PENDING` → `RATED`; report: `GENERATED` → `CONCLUDED` | Nguyễn Thị Yến Nhi |
+| WF-03 | Bird counting session (MF-03, AD-03) | Farm Owner, Domain Expert | Morning and evening sessions | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11 | CameraNode: `PENDING` → `ONLINE`; Alert `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
+| WF-04 | Expert validation of inferred alerts (MF-04, AD-04) | Domain Expert, Farm Owner | Abnormal noise, implausible readings, early warning | Verdict with evidence; rejected alert dismissed; owner notified | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED`; ExpertVerdict: pending → `REJECTED` | Thái Minh Tuấn |
+| WF-05 | Control-parameter tuning (MF-05, AD-05) | Domain Expert, Farm Owner | Owner change, coefficient suggestion, detection or ring change | Changes reviewed, suggestion approved, new configuration applied on the controllers, owner notified | F-03, F-14, F-15 | ReviewItem: `PENDING_REVIEW` → `ADJUSTED`; CoefficientProposal: `PROPOSED` → `APPROVED`; Controller config: `PENDING` → `APPLIED` | Trần Minh Kiệt |
+| WF-06 | Daily health assessment and reports (MF-06, AD-06) | Farm Owner, Domain Expert, Open-Meteo | End of day; week; month | Daily status with reasons; day rated independently; reports downloaded and concluded | F-20, F-21, F-22 | DailyHealthStatus: (new) → `COMPUTED`; DailyRating: `PENDING` → `RATED`; HealthReport: `GENERATED` → `CONCLUDED` | Nguyễn Thị Yến Nhi |
 
 ## A2. Demo Scenarios
 
