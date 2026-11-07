@@ -9,7 +9,8 @@ export interface ApiErrorInfo {
 }
 
 // Thao tác xác thực đang chạy — cùng một mã lỗi nhưng câu báo khác nhau theo màn
-export type AuthAction = 'login' | 'request-code' | 'reset-password' | 'change-password'
+// change-temporary-password: đổi mật khẩu tạm ở lần đăng nhập đầu; change-password: đổi mật khẩu ở tab Tài khoản
+export type AuthAction = 'login' | 'request-code' | 'reset-password' | 'change-password' | 'change-temporary-password'
 
 // Chưa tới được backend (mất mạng, sai địa chỉ máy chủ, hết thời gian chờ)
 export const NETWORK_ERROR_MESSAGE = 'Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại'
@@ -61,8 +62,13 @@ export function getAuthErrorMessage(error: unknown, action: AuthAction): string 
       : t('Tài khoản đã bị khoá. Vui lòng liên hệ quản trị viên')
   }
   if (errorInfo.code === 'INVALID_RESET_TOKEN') return t(INVALID_CODE_MESSAGE)
-  if (errorInfo.code === 'INVALID_CURRENT_PASSWORD') return t('Mật khẩu tạm không chính xác')
-  if (errorInfo.code === 'PASSWORD_UNCHANGED') return t('Mật khẩu mới phải khác mật khẩu tạm')
+  const isTemporary = action === 'change-temporary-password'
+  if (errorInfo.code === 'INVALID_CURRENT_PASSWORD') {
+    return isTemporary ? t('Mật khẩu tạm không chính xác') : t('Mật khẩu hiện tại không chính xác')
+  }
+  if (errorInfo.code === 'PASSWORD_UNCHANGED') {
+    return isTemporary ? t('Mật khẩu mới phải khác mật khẩu tạm') : t('Mật khẩu mới phải khác mật khẩu hiện tại')
+  }
 
   // Sai email hay sai mật khẩu đều chung một câu (AUTH-FR-002)
   if (action === 'login' && errorInfo.status === 401) return t('Tài khoản hoặc mật khẩu không chính xác')
@@ -70,4 +76,25 @@ export function getAuthErrorMessage(error: unknown, action: AuthAction): string 
     return action === 'request-code' ? t('Email không hợp lệ') : t('Thông tin không hợp lệ. Vui lòng kiểm tra lại')
   }
   return t('Đã có lỗi xảy ra. Vui lòng thử lại sau')
+}
+
+// Câu báo lỗi khi lưu cài đặt farm, nhà, zone; overrides: câu riêng của thao tác theo mã HTTP (ví dụ 403 khi xoá farm)
+export function getSettingsErrorMessage(error: unknown, overrides: Partial<Record<number, string>> = {}): string {
+  const errorInfo = readApiError(error)
+  if (errorInfo.status === null) return t(NETWORK_ERROR_MESSAGE)
+  const override = overrides[errorInfo.status]
+  if (override) return override
+  if (errorInfo.status >= 500) return t(SERVER_ERROR_MESSAGE)
+  if (errorInfo.status === 400 || errorInfo.status === 422) return t('Giá trị không hợp lệ. Vui lòng kiểm tra lại')
+  if (errorInfo.status === 403) return t('Bạn không có quyền thực hiện thao tác này')
+  if (errorInfo.status === 404) return t('Không tìm thấy, có thể đã bị xoá')
+  return t('Đã có lỗi xảy ra. Vui lòng thử lại sau')
+}
+
+// Câu báo lỗi khi đăng ký thiết bị bằng mã trên nhãn (FARM-FR-003, Flow 1 case 3a)
+export function getDeviceRegisterErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    400: t('Mã thiết bị hoặc mã kích hoạt không đúng'),
+    409: t('Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký'),
+  })
 }

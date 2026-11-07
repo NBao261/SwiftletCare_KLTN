@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet } from 'react-native'
-import type { Icon } from 'phosphor-react-native'
+import type { Icon, IconWeight } from 'phosphor-react-native'
 import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
@@ -13,10 +13,14 @@ interface PlayerControlButtonProps {
   onPress: () => void
   // Đường kính nút; nút phát/tạm dừng giữa khung to hơn
   size?: number
+  // Cỡ icon theo thang; không truyền thì 32 cho nút lớn, 16 cho nút thường
+  iconSize?: 16 | 20 | 24 | 32
+  // Nét icon; mặc định đặc (fill). Cột nút của khung camera dùng nét rỗng 'bold' cho cùng một kiểu
+  iconWeight?: IconWeight
 }
 
 // Nút tròn trên video: nền mực mờ (videoControlBackdrop) để icon trắng luôn rõ trên mọi khung hình
-export function PlayerControlButton({ icon: IconComponent, label, onPress, size = DEFAULT_SIZE }: PlayerControlButtonProps) {
+export function PlayerControlButton({ icon: IconComponent, label, onPress, size = DEFAULT_SIZE, iconSize, iconWeight = 'fill' }: PlayerControlButtonProps) {
   const palette = usePalette()
 
   return (
@@ -27,7 +31,7 @@ export function PlayerControlButton({ icon: IconComponent, label, onPress, size 
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <IconComponent size={size >= LARGE_BUTTON_SIZE ? 32 : 16} color={palette.onInverse} weight="fill" />
+      <IconComponent size={iconSize ?? (size >= LARGE_BUTTON_SIZE ? 32 : 16)} color={palette.onInverse} weight={iconWeight} />
     </Pressable>
   )
 }

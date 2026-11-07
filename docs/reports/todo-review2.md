@@ -316,8 +316,8 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
 - [ ] Màn Zone: in mã QR tầng.
 - [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
-- [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED).
-- [ ] Web: `/onboarding` cho Farm Owner.
+- [ ] Mobile (Len): quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
+- [ ] Web: `/onboarding` cho Farm Owner + Technician.
 
 ### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Len (mobile, đo NFR-02)
 
@@ -402,7 +402,7 @@ Thứ tự:
 5. **Len:** can thiệp tay có xác nhận (G-06).
 6. **Len:** setup QR (G-09).
 7. **Len:** trạng thái ngày + chấm điểm (G-11).
-8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; đổi route `livestream/[zoneId]` → theo camera của House).
+8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; phát tại chỗ theo camera của House, không dùng route riêng).
 9. **Len:** báo cáo.
 10. **Len:** thu hoạch.
 11. **Tuấn:** màn chuyên gia (hàng đợi việc, kết luận cảnh báo, tham số).

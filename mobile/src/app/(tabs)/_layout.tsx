@@ -1,6 +1,7 @@
 import { Redirect, Tabs } from 'expo-router'
 import { BottomTabBar } from '@/components/layout/BottomTabBar'
 import { getRoleTabs } from '@/constants/roleTabs'
+import { useSyncAlertBadge } from '@/hooks/alert/useSyncAlertBadge'
 import { useAlertStore } from '@/stores/alertStore'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -9,13 +10,14 @@ export default function TabsLayout() {
   const user = useAuthStore(state => state.user)
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
   const unreadCount = useAlertStore(state => state.unreadCount)
+  // Số trên badge tab Cảnh báo, chỉ role có badge; gọi trước các lệnh return để thứ tự hook không đổi
+  const tabs = user ? getRoleTabs(user.role) : []
+  useSyncAlertBadge(isAuthenticated && tabs.some(tab => tab.showsAlertBadge))
 
   if (!isAuthenticated || !user) return <Redirect href="/(auth)/login" />
   if (user.must_change_password) {
     return <Redirect href={{ pathname: '/(auth)/reset-password', params: { mode: 'temporary' } }} />
   }
-
-  const tabs = getRoleTabs(user.role)
 
   return (
     <Tabs

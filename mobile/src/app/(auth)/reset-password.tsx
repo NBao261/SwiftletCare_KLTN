@@ -1,14 +1,14 @@
 import { useRef, useState } from 'react'
 import type { TextInputInstance } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { LockIcon, LockKeyIcon } from 'phosphor-react-native'
+import { LockKeyIcon } from 'phosphor-react-native'
 import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout'
+import { ChangePasswordForm } from '@/components/auth/ChangePasswordForm'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { Button } from '@/components/ui/button'
 import { FormMessage } from '@/components/ui/form-message'
 import { TextField } from '@/components/ui/text-field'
 import { getRoleHomeHref } from '@/constants/roleTabs'
-import { useChangePassword } from '@/hooks/auth/useChangePassword'
 import { useResetPassword } from '@/hooks/auth/useResetPassword'
 import { useAuthStore } from '@/stores/authStore'
 import { getAuthErrorMessage, readApiError } from '@/utils/apiError.utils'
@@ -33,32 +33,25 @@ export default function ResetPasswordScreen() {
   const isTemporary = mode === 'temporary'
   const user = useAuthStore(state => state.user)
   const resetPassword = useResetPassword()
-  const changePassword = useChangePassword()
-  const newPasswordRef = useRef<TextInputInstance>(null)
   const confirmPasswordRef = useRef<TextInputInstance>(null)
 
-  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<{ current?: string; new?: string; confirm?: string }>({})
-  const [missingFields, setMissingFields] = useState({ current: false, new: false, confirm: false })
+  const [fieldErrors, setFieldErrors] = useState<{ new?: string; confirm?: string }>({})
+  const [missingFields, setMissingFields] = useState({ new: false, confirm: false })
   const [formError, setFormError] = useState<string | null>(null)
 
   const clearErrors = () => {
     setFieldErrors({})
-    setMissingFields({ current: false, new: false, confirm: false })
+    setMissingFields({ new: false, confirm: false })
     setFormError(null)
   }
 
   // Kiểm tra ở máy trước khi gửi: đủ ô, đủ độ dài backend yêu cầu, hai ô khớp nhau
   const validate = (): boolean => {
-    const missing = {
-      current: isTemporary && !currentPassword,
-      new: !newPassword,
-      confirm: !confirmPassword,
-    }
+    const missing = { new: !newPassword, confirm: !confirmPassword }
     setMissingFields(missing)
-    if (missing.current || missing.new || missing.confirm) {
+    if (missing.new || missing.confirm) {
       setFormError(t(REQUIRED_MESSAGE))
       return false
     }
@@ -73,7 +66,11 @@ export default function ResetPasswordScreen() {
     return true
   }
 
-  const submitReset = () => {
+  const handleSubmit = () => {
+    // Phím Done trên bàn phím gọi thẳng hàm này, không qua nút đang khoá — chặn gửi lần hai
+    if (resetPassword.isPending) return
+    clearErrors()
+    if (!validate()) return
     resetPassword.mutate(
       { email, token: code, newPassword },
       {
@@ -93,33 +90,6 @@ export default function ResetPasswordScreen() {
     )
   }
 
-  const submitChange = () => {
-    changePassword.mutate(
-      { currentPassword, newPassword },
-      {
-        onSuccess: () => {
-          if (user) router.replace(getRoleHomeHref(user.role))
-        },
-        onError: error => {
-          const errorCode = readApiError(error).code
-          const message = getAuthErrorMessage(error, 'change-password')
-          if (errorCode === 'INVALID_CURRENT_PASSWORD') setFieldErrors({ current: message })
-          else if (errorCode === 'PASSWORD_UNCHANGED') setFieldErrors({ new: message })
-          else setFormError(message)
-        },
-      },
-    )
-  }
-
-  const handleSubmit = () => {
-    // Phím Done trên bàn phím gọi thẳng hàm này, không qua nút đang khoá — chặn gửi lần hai
-    if (resetPassword.isPending || changePassword.isPending) return
-    clearErrors()
-    if (!validate()) return
-    if (isTemporary) submitChange()
-    else submitReset()
-  }
-
   return (
     <AuthScreenLayout
       title={isTemporary ? t('Đổi mật khẩu tạm') : t('Đặt mật khẩu mới')}
@@ -131,69 +101,58 @@ export default function ResetPasswordScreen() {
       onBack={isTemporary ? undefined : () => router.back()}
       footer={isTemporary ? <LogoutButton variant="link" /> : undefined}
     >
-      {isTemporary && (
-        <TextField
-          label={t('Mật khẩu tạm')}
-          icon={LockIcon}
-          value={currentPassword}
-          onChangeText={text => {
-            setCurrentPassword(text)
-            clearErrors()
+      {isTemporary ? (
+        // Đổi mật khẩu tạm: form dùng chung với tab Tài khoản, xong thì vào tab đầu của role
+        <ChangePasswordForm
+          currentPasswordLabel={t('Mật khẩu tạm')}
+          isTemporary
+          onSuccess={() => {
+            if (user) router.replace(getRoleHomeHref(user.role))
           }}
-          error={fieldErrors.current}
-          hasError={missingFields.current}
-          isPassword
-          autoComplete="current-password"
-          textContentType="password"
-          returnKeyType="next"
-          onSubmitEditing={() => newPasswordRef.current?.focus()}
         />
+      ) : (
+        <>
+          <TextField
+            label={t('Mật khẩu mới')}
+            icon={LockKeyIcon}
+            value={newPassword}
+            onChangeText={text => {
+              setNewPassword(text)
+              clearErrors()
+            }}
+            error={fieldErrors.new}
+            hasError={missingFields.new}
+            helperText={getPasswordRule()}
+            isPassword
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="next"
+            onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+          />
+
+          <TextField
+            ref={confirmPasswordRef}
+            label={t('Nhập lại mật khẩu')}
+            icon={LockKeyIcon}
+            value={confirmPassword}
+            onChangeText={text => {
+              setConfirmPassword(text)
+              clearErrors()
+            }}
+            error={fieldErrors.confirm}
+            hasError={missingFields.confirm}
+            isPassword
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+          />
+
+          <FormMessage message={formError} />
+
+          <Button label={t('Đổi mật khẩu')} onPress={handleSubmit} loading={resetPassword.isPending} />
+        </>
       )}
-
-      <TextField
-        ref={newPasswordRef}
-        label={t('Mật khẩu mới')}
-        icon={LockKeyIcon}
-        value={newPassword}
-        onChangeText={text => {
-          setNewPassword(text)
-          clearErrors()
-        }}
-        error={fieldErrors.new}
-        hasError={missingFields.new}
-        helperText={getPasswordRule()}
-        isPassword
-        autoComplete="new-password"
-        textContentType="newPassword"
-        returnKeyType="next"
-        onSubmitEditing={() => confirmPasswordRef.current?.focus()}
-      />
-
-      <TextField
-        ref={confirmPasswordRef}
-        label={t('Nhập lại mật khẩu')}
-        icon={LockKeyIcon}
-        value={confirmPassword}
-        onChangeText={text => {
-          setConfirmPassword(text)
-          clearErrors()
-        }}
-        error={fieldErrors.confirm}
-        hasError={missingFields.confirm}
-        isPassword
-        autoComplete="new-password"
-        textContentType="newPassword"
-        returnKeyType="done"
-        onSubmitEditing={handleSubmit}
-      />
-
-      <FormMessage message={formError} />
-
-      <Button
-        label={t('Đổi mật khẩu')}
-        onPress={handleSubmit}
-        loading={resetPassword.isPending || changePassword.isPending}
-      />
     </AuthScreenLayout>
   )
 }

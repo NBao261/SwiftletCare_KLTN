@@ -7,7 +7,7 @@ import type { ThresholdMetric } from '@/utils/threshold.utils'
 import { getCurrentLanguage, t } from '@/utils/i18n.utils'
 
 // 7 trạng thái của một nhà, từ nặng đến nhẹ — mỗi nhà rơi vào đúng một trạng thái nặng nhất.
-// SRS không có trạng thái cho cả nhà: các trạng thái này suy ra từ thiết bị và cảnh báo, KHÔNG phải trạng thái ngày MF-11.
+// SRS không có trạng thái cho cả nhà: các trạng thái này suy ra từ thiết bị và cảnh báo, KHÔNG phải trạng thái ngày MF-06.
 // Không có trạng thái "dữ liệu cũ": Report 3 chưa có mốc thời gian nào cho việc đó (mốc kỹ thuật phải ghi ở §4.5 A-4)
 const HOUSE_STATUS_ORDER = [
   'offline',

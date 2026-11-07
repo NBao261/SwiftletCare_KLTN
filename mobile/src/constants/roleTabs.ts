@@ -34,9 +34,10 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
-  // menu-1..2 tạm — đổi tên và gán route thật khi làm màn chuyên gia; Tài khoản dùng chung màn với Farm Owner
+  // Cảnh báo dùng chung màn với Farm Owner (chuyên gia phán quyết cảnh báo suy luận, không xác nhận, không có badge);
+  // menu-2 còn tạm — đổi tên và gán route thật khi làm màn chuyên gia; Tài khoản dùng chung màn với Farm Owner
   DOMAIN_EXPERT: [
-    { name: 'menu-1', title: 'Menu 1', icon: SquaresFourIcon },
+    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon },
     { name: 'menu-2', title: 'Menu 2', icon: SquaresFourIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],

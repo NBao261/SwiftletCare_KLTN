@@ -13,7 +13,7 @@
       "bundleIdentifier": "vn.swiftletcare.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Quét QR Code để đăng ký thiết bị",
-        "NSLocationWhenInUseUsageDescription": "Hiển thị vị trí trang trại trên bản đồ"
+        "NSLocationWhenInUseUsageDescription": "Cho phép SwiftletCare lấy vị trí để điền toạ độ trang trại khi bạn đứng tại nhà yến."
       }
     },
     "android": {
@@ -51,6 +51,12 @@
         "expo-camera",
         {
           "cameraPermission": "Cho phép SwiftletCare sử dụng camera để quét QR Code."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Cho phép SwiftletCare lấy vị trí để điền toạ độ trang trại khi bạn đứng tại nhà yến."
         }
       ],
       "expo-asset",
