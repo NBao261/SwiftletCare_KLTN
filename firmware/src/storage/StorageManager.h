@@ -30,14 +30,20 @@ void saveMqttBroker(const String &broker);
 bool loadEverConnected();
 void markEverConnected();
 
-// NVS – định danh Farm/House/Zone nhận qua lệnh MQTT config/reassign (Flow 21
-// Nhánh A, FARM-FR-007b) — tách riêng vì chỉ ghi khi Technician dời thiết bị
-// sang Zone khác, không phải lúc khởi động bình thường. Chưa từng dời →
-// dùng mặc định Secrets.h (SECRET_FARM_ID/HOUSE_ID/ZONE_ID).
-bool loadIdentity(String &farmId, String &houseId,
-                  String &zoneId); // false nếu chưa từng lưu
-void saveIdentity(const String &farmId, const String &houseId,
-                  const String &zoneId);
+// NVS – device ID và mật khẩu broker do tools/flash_identity.py ghi (namespace `identity`). false nếu chưa flash
+bool loadDeviceIdentity(String &deviceId, String &brokerSecret);
+
+// NVS – hàng đợi cảnh báo chờ PUBACK (Report 4 §7.2, NFR-06 c), lưu nguyên khối
+void saveAlertQueue(const void *data, size_t size);
+void loadAlertQueue(void *data, size_t size); // kích thước lệch (đổi firmware) thì giữ nguyên hàng đợi rỗng
+
+// NVS – mã lệnh RESTART/OTA vừa áp (BR-35): bản giao lại sau khi khởi động không được áp lần nữa
+void saveLastRestartCommand(const char *commandId);
+String loadLastRestartCommand();
+
+// NVS – dấu của `config` đã áp, `config` retained về lại mỗi lần kết nối
+uint32_t loadConfigHash();
+void saveConfigHash(uint32_t hash);
 
 // SPIFFS – offline telemetry buffer
 void bufferTelemetry(const SensorData &data);

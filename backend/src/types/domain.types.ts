@@ -142,6 +142,9 @@ export interface HeartbeatPayload {
   /** FARM-FR-006 — firmware ≥ 1.4.0: lý do lần khởi động gần nhất (POWERON, BROWNOUT, TASK_WDT…) và IP LAN */
   resetReason?: string
   ip?: string
+  /** Report 4 §7.2 — heartbeat của nút AI */
+  modelVersion?: string
+  fps?: number
 }
 
 /** VISION-FR-018 — vòng đếm quanh lỗ ra vào, các đỉnh (x, y) theo tỉ lệ khung hình 0–1 */
@@ -155,6 +158,8 @@ export interface RelayStatusPayload {
   relay_states: RelayStates
   control_mode: ControlMode
   override_expiry?: number
+  /** Firmware ≥ 1.6.0 (BR-20): chế độ và thời gian còn lại của từng relay */
+  relays?: Partial<Record<keyof RelayStates, { mode: ControlMode; remaining_ms?: number }>>
 }
 
 /**

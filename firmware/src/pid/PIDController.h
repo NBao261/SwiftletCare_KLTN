@@ -6,6 +6,7 @@
  * SRS: ENV-FR-010..019, THREAT-FR-006, THREAT-FR-011, THREAT-FR-013
  */
 #pragma once
+#include "pid/RelayOverride.h"
 #include "sensors/SensorManager.h"
 
 struct RelayState {
@@ -13,11 +14,8 @@ struct RelayState {
   bool speaker = false;     // IN2 GPIO26 – nguồn amply loa ru
   bool ventilation = false; // IN3 GPIO27 – quạt thông gió
 
-  // Manual override flags (ENV-FR-016..018)
-  bool mistingOverride = false;
-  bool speakerOverride = false;
-  bool ventilationOverride = false;
-  unsigned long overrideExpiryMs = 0;
+  // Manual override (ENV-FR-016..018): mỗi relay một hạn (BR-20)
+  RelayOverrides overrides;
 
   // Đầu ra bộ điều khiển mờ, % công suất 0-100 (= tỉ lệ thời gian BẬT trong
   // cửa sổ Config::fuzzyWindowSec). Override → 100/0. Gửi lên qua telemetry
@@ -28,7 +26,10 @@ struct RelayState {
   void init();
   void applyRelay(int pin, bool state); // kích mức CAO = bật (Guide §8)
   bool anyOverride() const; // control_mode MANUAL/AUTO gửi lên backend
-  String toJson() const;
+  // withRemaining = false: bỏ thời gian còn lại, số này đổi liên tục nên không dùng để phát
+  // hiện trạng thái đổi (main.cpp)
+  // commandId: lệnh vừa gây ra thay đổi này, nếu có (Report 4 §7.2)
+  String toJson(bool withRemaining = true, const char *commandId = "") const;
 };
 
 /**
@@ -56,9 +57,9 @@ void runVentilationControl(float temperature, float humidity, RelayState &relay)
 void setManualOverride(const char *relayName, bool state,
                        unsigned long durationMs, RelayState &relay);
 void checkOverrideExpiry(RelayState &relay);
-// Trả mọi relay về AUTO ngay — dùng khi hết hạn override và khi backend gửi
-// relay/command {"action":"clear_override"} (overrideExpiry.job.ts).
-void clearOverrides(RelayState &relay);
+// Trả relay về AUTO ngay khi backend gửi relay/command {"action":"clear_override"}:
+// có `relayName` thì 1 relay, không có thì mọi relay.
+void clearOverrides(RelayState &relay, const char *relayName = "");
 
 // Threat detection (THREAT-FR-006, 011, 013) – chỉ tính flags, main.cpp/MQTTManager publish alert
 struct ThreatFlags {

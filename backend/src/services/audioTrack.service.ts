@@ -2,8 +2,9 @@ import { randomUUID } from 'crypto'
 import { AudioTrack, IAudioTrack } from '@/models/audioTrack.model'
 import { SensorNode, ISensorNode } from '@/models/device.model'
 import { putObject, removeObject, presignedGetUrl } from '@/config/minio.config'
-import { publishCommand } from '@/mqtt/mqtt.client'
-import { assertInService, buildDeviceConfig } from '@/services/device.service'
+import { publishDeviceCommand } from '@/mqtt/mqtt.client'
+import { publishNodeConfig } from '@/services/deviceConfig.service'
+import { assertInService } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
 import { NotFoundError, BadRequestError, ConflictError } from '@/utils/appError.util'
@@ -117,8 +118,7 @@ export async function selectTrack(nodeId: string, trackId: string, user: Current
 
   node.audio.current_track = track.track_number
   await node.save()
-  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update',
-    { deviceId: node.device_id, ...buildDeviceConfig(chain.zone, node) })
+  publishNodeConfig(chain.zone, node)
   await logAction(user._id, 'AUDIO_TRACK_SELECTED', 'sensor_node', String(node._id), {
     trackId, trackNumber: track.track_number, displayName: track.display_name,
   })
@@ -127,22 +127,20 @@ export async function selectTrack(nodeId: string, trackId: string, user: Current
 
 /** ENV-FR-013c(c) — phát thử ngay trên loa, bỏ qua lịch (firmware tự dừng sau FORCE_PLAY_MAX_MS) */
 export async function playNow(nodeId: string, trackId: string, user: CurrentUser) {
-  const { node, chain, track } = await loadTrack(nodeId, trackId, user)
+  const { node, track } = await loadTrack(nodeId, trackId, user)
   assertInService(node)
   assertSynced(track)
   assertOnline(node)
-  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'audio/command',
-    { deviceId: node.device_id, action: 'play', track: track.track_number })
+  publishDeviceCommand(node.device_id, 'AUDIO', { action: 'play', track: track.track_number })
   return { track_number: track.track_number }
 }
 
 /** Dừng phát thử — thiết bị quay về phát theo lịch nếu đang trong khung giờ */
 export async function stopPlayback(nodeId: string, user: CurrentUser) {
-  const { node, chain } = await loadNode(nodeId, user)
+  const { node } = await loadNode(nodeId, user)
   assertInService(node)
   assertOnline(node)
-  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'audio/command',
-    { deviceId: node.device_id, action: 'stop' })
+  publishDeviceCommand(node.device_id, 'AUDIO', { action: 'stop' })
 }
 
 /** Xoá khỏi danh mục web — KHÔNG xoá được file vật lý trên thẻ SD */

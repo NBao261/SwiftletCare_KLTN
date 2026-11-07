@@ -1,64 +1,78 @@
 /**
- * MQTTManager.cpp – MQTT client (PubSubClient) over WiFi
- * Topic schema đúng SRS §9.2: swiftletcare/{farmId}/{houseId}/{zoneId}/...
- * SRS: ENV-FR-001, ENV-FR-015, §9.2, SEC-NFR-001
+ * MQTTManager.cpp – MQTT qua ESP-IDF esp-mqtt, mỗi thiết bị một cây topic
+ * swiftletcare/dev/{deviceId}/… và một tài khoản broker (Report 4 D3, §7.2)
+ * SRS: ENV-FR-001, ENV-FR-015, BR-35, NFR-06 c, NFR-10 d
+ *
+ * esp-mqtt chạy trong task riêng và gọi onMqttEvent() từ đó. Handler chỉ ghi cờ và đẩy tin nhận được vào
+ * hàng đợi: lệnh và cấu hình vẫn được xử lý trong mqttTask (loop()), vì lệnh OTA chặn hàng phút và
+ * dataMutex, CommandFilter, Config vốn được dùng từ task này.
  */
 #include "MQTTManager.h"
+#include "AlertQueue.h"
+#include "CommandFilter.h"
 #include "audio/AudioManager.h"
+#include "config/CaCert.h"
 #include "config/Config.h"
 #include "ota/RemoteCommand.h"
 #include "ota/RemoteOta.h"
 #include "storage/StorageManager.h"
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
-#include <PubSubClient.h>
 #include <WiFi.h>
 #include <esp_ota_ops.h>
+#include <esp_random.h>
 #include <esp_timer.h>
+#include <mqtt_client.h>
 
-// Dev dùng cổng 1883 non-TLS (xem MQTT_PORT ở Config.h) — WiFiClient thường,
-// không cần WiFiClientSecure/setInsecure() nữa.
-static WiFiClient wifiClient;
-static PubSubClient mqtt;
+static esp_mqtt_client_handle_t client = nullptr;
+static String brokerUri;
 static unsigned long lastHeartbeat = 0;
-// true từ lúc connect thành công tới khi heartbeat đầu tiên gửi được — heartbeat
-// đó mang cờ justConnected để backend đẩy lại config/update (ngưỡng + lịch loa)
-// mà thiết bị có thể đã lỡ lúc offline/restart. Chỉ đọc/ghi trong mqttTask.
-static bool justConnected = false;
 
-// Đếm số lần connect() thất bại liên tiếp — sai/đổi IP broker không làm WiFi
-// fail nên không tái dùng được trigger captive-portal cũ, cần đếm riêng.
-// volatile: biến này được GHI trong mqttTask (pin vào Core 0, xem main.cpp)
-// và ĐỌC trong isBrokerUnreachable() gọi từ Arduino loop() (Core 1 mặc định)
-// — 2 core khác nhau, không có mutex/atomic bảo vệ, nên cần volatile để loop()
-// không bao giờ đọc phải giá trị cache cũ trong register do compiler tối ưu.
-// volatile (không cần mutex/std::atomic) là đủ vì đây là counter đơn giản với
-// đúng 1 writer + 1 reader, không có read-modify-write phức hợp xuyên core
-// (mqttTask chỉ increment/reset; loop() chỉ so sánh với ngưỡng). Khác với
-// portalActive trong WiFiProvisioner.cpp (cố tình KHÔNG volatile, vì chỉ được
-// ghi/đọc từ cùng 1 task/core, không có race xuyên core) — đừng "sửa" biến đó
-// theo cùng lý do vì không áp dụng được.
+// Ghi trong task esp-mqtt, đọc ở mqttTask và pidTask: mỗi biến một writer, không có
+// read-modify-write xuyên task (mqttFailCount chỉ task esp-mqtt tăng và reset)
+static volatile bool connected = false;
 static volatile int mqttFailCount = 0;
-// ≈30 lần retry ở nhịp hiện tại (mqttTask delay = Config::sensorIntervalMs ≈
-// 1s/lần) ≈ 30 giây — đủ lâu để không trigger nhầm lúc broker container mới
-// khởi động chưa kịp lên, nhưng không quá lâu để người dùng phải chờ.
+// true từ lúc connect thành công tới khi heartbeat đầu tiên gửi được — heartbeat đó mang cờ
+// justConnected để backend gửi lại `config` (lấp lần publish backend lỡ khi mất broker).
+static volatile bool justConnected = false;
+static volatile bool everConnected = false;
+// Mỗi lần kết nối lại phải gửi lại hàng đợi alert: msgId của phiên trước không còn nghĩa
+static volatile bool resendAlerts = false;
+
+// ≈30 lần thử ở nhịp 1 giây (reconnect_timeout_ms) ≈ 30 giây — đủ lâu để không trigger nhầm lúc
+// broker mới khởi động chưa kịp lên, nhưng không quá lâu để người dùng phải chờ.
 static const int MQTT_PROVISION_TRIGGER_FAILURES = 30;
+static const int MQTT_RECONNECT_MS = 1000;
+static const int MQTT_KEEPALIVE_SEC = 30;
+// Đủ cho gói `config` đầy đủ; tin dài hơn sẽ bị chia mảnh và bị bỏ
+static const int MQTT_BUFFER_BYTES = 2048;
+static const int MQTT_TASK_STACK_BYTES = 8192; // TLS bắt tay trong task này
+static const int MQTT_QOS_LIVE = 0;
+static const int MQTT_QOS_ACKED = 1;
+static const TickType_t PUBACK_WAIT_MS = 5000;
+static const UBaseType_t INBOUND_QUEUE_SIZE = 8;
 
-// Flow 15 bước 5a — bản vừa OTA chờ xác nhận (main.cpp verifyRollbackLater()): kết nối
-// được MQTT lần đầu mới đánh dấu hợp lệ; chỉ đọc/ghi trong mqttTask.
+// Flow 15 bước 5a — bản vừa OTA chờ xác nhận: kết nối được MQTT lần đầu mới đánh dấu hợp lệ
 static bool imagePendingVerify = false;
-static bool everConnected = false;
 
-// ── mDNS broker discovery ────────────────────────────────────────────────────
+// ── mDNS broker discovery (chỉ dev) ─────────────────────
 // "swiftletcare-broker.local" (chạy `npm run mdns` trên máy host docker-compose,
 // xem backend/src/scripts/mdns-responder.script.ts) trỏ về IP LAN hiện tại của
 // broker — ESP32 tự hỏi lại mỗi khi cần thay vì phải biết/nhập tay IP, kể cả
-// khi đổi mạng WiFi hay router cấp lại DHCP giữa lúc đang chạy.
+// khi đổi mạng WiFi hay router cấp lại DHCP giữa lúc đang chạy. Bản TLS kiểm tên miền trong chứng
+// chỉ nên không dùng IP tìm được qua mDNS.
 static const char *MDNS_BROKER_HOST = "swiftletcare-broker"; // resolve "<host>.local"
 static bool mdnsStarted = false;
 
-/** true nếu resolve được (đã cập nhật Config::mqttBroker + mqtt.setServer() nếu cần) */
+static String uriOf(const String &host) {
+  return String(MQTT_PORT == 8883 ? "mqtts://" : "mqtt://") + host + ":" + String(MQTT_PORT);
+}
+
+/** true nếu resolve được (đã cập nhật Config::mqttBroker nếu cần) */
 static bool resolveBrokerViaMdns() {
+#if MQTT_PORT == 8883
+  return false;
+#else
   if (!mdnsStarted) {
     mdnsStarted = MDNS.begin(Config::deviceId);
     if (!mdnsStarted) {
@@ -75,83 +89,281 @@ static bool resolveBrokerViaMdns() {
     Serial.println("[MQTT] mDNS tìm được broker tại " + ipStr);
     Config::mqttBroker = ipStr;
   }
-  mqtt.setServer(Config::mqttBroker.c_str(), MQTT_PORT);
   return true;
+#endif
 }
 
 // relayState sống trong main.cpp (dùng chung với pidTask) — MQTTManager chỉ
 // áp Manual Override lên đó khi có lệnh từ cloud (ENV-FR-016).
 extern RelayState relayState;
-// dataMutex sống trong main.cpp, bảo vệ relayState/latestSensorData xuyên
-// 3 task — MQTTManager cần lock khi đọc/ghi relayState từ onRelayCommand()
-// (chạy trong mqttTask, Core 0) vì pidTask (Core 1) đọc/ghi relayState mỗi
-// chu kỳ không đồng bộ (relayState là struct nhiều field, không phải 1
-// scalar như mqttFailCount — cần mutex thật, volatile không đủ).
+// dataMutex sống trong main.cpp, bảo vệ relayState/latestSensorData xuyên 3 task.
 extern SemaphoreHandle_t dataMutex;
 // pidTask chạy mỗi PID_INTERVAL_MS (10s) — lệnh nghe thử đánh thức nó ngay để
 // loa kêu trong ~1s thay vì chờ tới chu kỳ kế tiếp.
 extern TaskHandle_t pidTaskHandle;
 
-// MQTT topic helpers (§9.2). Base đã được tính 1 lần trong main.cpp setup()
-// (đơn luồng, trước khi tạo task nào) vào biến toàn cục mqttTopicBase — vì
-// hàm này được gọi từ CẢ mqttTask (Core 0) LẪN pidTask (Core 1, qua
-// publishAlert()), và Config::farmId/houseId/zoneId không đổi lúc runtime
-// SAU setup() (nay là String, có thể được nạp từ NVS TRONG setup() — xem
-// main.cpp — nhưng lần đổi tiếp theo, nếu có, chỉ tới qua onConfigReassign()
-// bên dưới, luôn kết thúc bằng ESP.restart() nên không có ai đổi giá trị này
-// trong lúc task đang chạy). KHÔNG dùng
-// biến static cục bộ tính lười ("magic static") trong hàm này dù C++11 có
-// guard thread-safe cho kiểu đó — lý do là lần gọi ĐẦU TIÊN của hàm này chỉ
-// xảy ra sau khi mqtt.connected() lần đầu trả true (mọi hàm publish* đều
-// return sớm nếu chưa connected), mà bản thân mqtt.connected()/
-// PubSubClient::_state lại bị đọc xuyên core KHÔNG có đồng bộ (gap có sẵn từ
-// trước, ngoài phạm vi fix này) — không muốn chồng thêm 1 giả định "trust
-// compiler guard" lên trên 1 gap đồng bộ đã tồn tại. Tính sẵn 1 lần ở
-// setup() đơn giản hơn, chứng minh đúng dễ hơn.
-extern String mqttTopicBase; // định nghĩa + gán 1 lần trong main.cpp setup()
+// Base tính 1 lần trong main.cpp setup() (đơn luồng, trước khi tạo task nào); hàm này được gọi từ cả
+// mqttTask lẫn task khác nên không tính lười ở đây.
+extern String mqttTopicBase;
 // FARM-FR-006 — lý do lần khởi động gần nhất, gán 1 lần trong main.cpp setup()
 extern const char *bootResetReason;
 static const String &topicBase() { return mqttTopicBase; }
 
-static void mqttCallback(char *topic, byte *payload, unsigned int length) {
-  String msg;
-  msg.reserve(length);
-  for (unsigned int i = 0; i < length; i++)
-    msg += (char)payload[i];
+// ── Tin nhận được ───────────────────────────────────────
+struct InboundMessage {
+  bool isConfig;
+  char *payload; // malloc ở task esp-mqtt, free ở mqttTask
+};
+static QueueHandle_t inboundQueue = nullptr;
 
-  // Topic lệnh là theo Zone, mà 1 Zone có thể có nhiều ESP32 (SRS §8: Zone 1─N
-  // SensorNode). Lệnh riêng 1 thiết bị mang `deviceId` → thiết bị khác bỏ qua.
-  // Không có `deviceId` (ngưỡng chung của Zone, hoặc backend cũ) → áp dụng như trước.
-  {
-    JsonDocument filter;
-    filter["deviceId"] = true;
-    JsonDocument target;
-    if (!deserializeJson(target, msg, DeserializationOption::Filter(filter))) {
-      const char *targetId = target["deviceId"] | "";
-      if (strlen(targetId) > 0 && strcmp(targetId, Config::deviceId) != 0) {
-        Serial.println("[MQTT] Bỏ qua lệnh cho thiết bị khác: " + String(targetId));
-        return;
-      }
-    }
+static void queueInbound(const esp_mqtt_event_t *event) {
+  if (event->current_data_offset != 0 || event->data_len != event->total_data_len) {
+    Serial.println("[MQTT] Bỏ tin quá dài: " + String(event->total_data_len) + " byte");
+    return;
   }
+  // topic của event không kết thúc bằng '\0'
+  String topic(event->topic, event->topic_len);
+  bool isConfig = topic.endsWith("/config");
+  if (!isConfig && !topic.endsWith("/cmd")) return;
 
-  String t(topic);
-  if (t.endsWith("/relay/command")) {
-    MQTTManager::onRelayCommand(msg.c_str());
-  } else if (t.endsWith("/config/update")) {
-    MQTTManager::onConfigUpdate(msg.c_str());
-  } else if (t.endsWith("/config/reassign")) {
-    MQTTManager::onConfigReassign(msg.c_str());
-  } else if (t.endsWith("/audio/command")) {
-    MQTTManager::onAudioCommand(msg.c_str());
+  char *payload = static_cast<char *>(malloc(event->data_len + 1));
+  if (!payload) return;
+  memcpy(payload, event->data, event->data_len);
+  payload[event->data_len] = '\0';
+  InboundMessage message = {isConfig, payload};
+  if (xQueueSend(inboundQueue, &message, 0) != pdTRUE) {
+    Serial.println("[MQTT] Hàng đợi tin nhận đầy — bỏ tin");
+    free(payload);
   }
+}
+
+// ── Xác nhận PUBACK ─────────────────────────────────────
+// Cảnh báo chờ PUBACK (Report 4 §7.2): pidTask và mqttTask dùng chung, có alertMutex. PUBACK đi qua
+// pubackQueue chứ task esp-mqtt không tự xoá: nó đang giữ khoá của client trong lúc gọi handler, còn
+// sendQueuedAlerts giữ alertMutex trong lúc publish, nên khoá ở đây sẽ làm mất PUBACK và kẹt cảnh báo.
+static AlertQueue alertQueue;
+static SemaphoreHandle_t alertMutex = nullptr;
+static QueueHandle_t pubackQueue = nullptr;
+static const UBaseType_t PUBACK_QUEUE_SIZE = 32;
+
+// Vài msgId vừa được xác nhận để publishAwaitAck đối chiếu: PUBACK có thể tới trước khi nó bắt đầu đợi
+static const int RECENT_ACK_COUNT = 4;
+static volatile int recentAcks[RECENT_ACK_COUNT] = {};
+static volatile uint8_t recentAckNext = 0;
+static SemaphoreHandle_t ackSignal = nullptr;
+
+static void onPublished(int msgId) {
+  recentAcks[recentAckNext] = msgId;
+  recentAckNext = (recentAckNext + 1) % RECENT_ACK_COUNT;
+  xSemaphoreGive(ackSignal);
+  xQueueSend(pubackQueue, &msgId, 0); // đầy thì cảnh báo được gửi lại ở lần kết nối sau, backend bỏ bản trùng
+}
+
+static bool wasAcked(int msgId) {
+  for (int i = 0; i < RECENT_ACK_COUNT; i++)
+    if (recentAcks[i] == msgId) return true;
+  return false;
+}
+
+static void subscribeDeviceTopics() {
+  esp_mqtt_client_subscribe(client, (topicBase() + "/cmd").c_str(), MQTT_QOS_ACKED);
+  esp_mqtt_client_subscribe(client, (topicBase() + "/config").c_str(), MQTT_QOS_ACKED);
+}
+
+static void onMqttEvent(void *, esp_event_base_t, int32_t eventId, void *eventData) {
+  auto *event = static_cast<esp_mqtt_event_handle_t>(eventData);
+  switch (eventId) {
+  case MQTT_EVENT_CONNECTED:
+    Serial.println("[MQTT] Connected");
+    connected = true;
+    mqttFailCount = 0;
+    justConnected = true;
+    everConnected = true;
+    resendAlerts = true;
+    subscribeDeviceTopics();
+    break;
+  case MQTT_EVENT_DISCONNECTED:
+    connected = false;
+    mqttFailCount = mqttFailCount + 1;
+    break;
+  case MQTT_EVENT_PUBLISHED:
+    onPublished(event->msg_id);
+    break;
+  case MQTT_EVENT_DATA:
+    queueInbound(event);
+    break;
+  default:
+    break;
+  }
+}
+
+// ── Lệnh ────────────────────────────────────────────────
+static CommandFilter commandFilter;
+// Lệnh vừa đổi relay, gắn vào relay/status kế tiếp (Report 4 §7.2)
+static String lastRelayCommandId;
+
+static CommandFilter::Result filterCommand(const RemoteCommand &cmd, CommandFilter::AgePolicy policy) {
+  time_t now = time(nullptr);
+  uint64_t nowEpochMs = now > 1700000000 ? (uint64_t)now * 1000ULL : 0; // chưa sync NTP → 0
+  CommandFilter::Result result = commandFilter.check(cmd.commandId, cmd.issuedAt, nowEpochMs, policy);
+  if (result == CommandFilter::DUPLICATE) Serial.println("[MQTT] Bỏ lệnh trùng: " + String(cmd.commandId));
+  if (result == CommandFilter::STALE) Serial.println("[MQTT] Bỏ lệnh trễ hoặc chưa kiểm được tuổi: " + String(cmd.commandId));
+  return result;
+}
+
+static void withRelayState(void (*change)(const RemoteCommand &), const RemoteCommand &cmd) {
+  // relayState là struct nhiều field đọc/ghi đồng thời bởi pidTask (Core 1) — khoá dataMutex
+  // để tránh torn read/write xuyên struct.
+  if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) != pdTRUE) return;
+  change(cmd);
+  // Xác nhận lại trạng thái ngay cho backend/dashboard (ENV-FR-015)
+  MQTTManager::publishRelayState(relayState);
+  xSemaphoreGive(dataMutex);
+}
+
+static void applyRelay(const RemoteCommand &cmd) {
+  unsigned long durationMs = cmd.durationMs > 0 ? cmd.durationMs : (unsigned long)MANUAL_OVERRIDE_MS;
+  PIDController::setManualOverride(cmd.relayName, cmd.state, durationMs, relayState);
+}
+
+static void applyClearOverride(const RemoteCommand &cmd) { PIDController::clearOverrides(relayState, cmd.relayName); }
+static void reportOnly(const RemoteCommand &) {}
+
+static void handleRelay(const RemoteCommand &cmd) {
+  CommandFilter::Result result = filterCommand(cmd, CommandFilter::FRESH_REQUIRED);
+  if (result == CommandFilter::DUPLICATE) return;
+  // Bỏ lệnh trễ: backend đã ghi MANUAL lạc quan, báo trạng thái thật để nó sửa lại
+  if (result == CommandFilter::APPLY) lastRelayCommandId = cmd.commandId;
+  withRelayState(result == CommandFilter::APPLY ? applyRelay : reportOnly, cmd);
+}
+
+static void handleAudio(const RemoteCommand &cmd) {
+  if (filterCommand(cmd, CommandFilter::FRESH_IF_KNOWN) != CommandFilter::APPLY) return;
+  // ENV-FR-013c(c): one-shot, không ghi NVS (khác `config`). Xem AudioManager::requestPlay().
+  if (cmd.audioPlay) AudioManager::requestPlay(cmd.track);
+  else AudioManager::requestStop();
+  if (pidTaskHandle) xTaskNotifyGive(pidTaskHandle);
+}
+
+// BR-35: RESTART trễ thì bỏ; OTA chỉ chặn trùng vì đã có kiểm tra phiên bản. Mã lưu NVS trước khi khởi
+// động lại, nếu không bản giao lại sẽ làm thiết bị khởi động lại lần nữa.
+static void restartAfter(const RemoteCommand &cmd) {
+  StorageManager::saveLastRestartCommand(cmd.commandId);
+  delay(1500); // để log kịp flush trước khi restart
+  ESP.restart();
+}
+
+static void handleCommand(const char *payload) {
+  Serial.println("[MQTT] Lệnh: " + String(payload));
+  RemoteCommand cmd = parseRemoteCommand(payload, FIRMWARE_VERSION);
+  switch (cmd.type) {
+  case RemoteCommand::INVALID:
+    Serial.println("[MQTT] Bỏ lệnh: " + String(cmd.error));
+    break;
+  case RemoteCommand::RELAY:
+    handleRelay(cmd);
+    break;
+  case RemoteCommand::CLEAR_OVERRIDE:
+    // Về AUTO luôn an toàn nên lệnh trễ vẫn áp, chỉ chặn trùng (Report 4 §7.2)
+    if (filterCommand(cmd, CommandFilter::ANY_AGE) == CommandFilter::APPLY) withRelayState(applyClearOverride, cmd);
+    break;
+  case RemoteCommand::AUDIO:
+    handleAudio(cmd);
+    break;
+  case RemoteCommand::RESTART:
+    if (filterCommand(cmd, CommandFilter::FRESH_IF_KNOWN) != CommandFilter::APPLY) break;
+    Serial.println("[MQTT] Lệnh RESTART — khởi động lại...");
+    restartAfter(cmd);
+    break;
+  case RemoteCommand::OTA:
+    if (filterCommand(cmd, CommandFilter::ANY_AGE) != CommandFilter::APPLY) break;
+    Serial.println("[OTA] Tải " + String(cmd.version) + " từ " + cmd.url);
+    // Thất bại thì giữ bản cũ; backend biết qua heartbeat vẫn báo bản cũ (markOtaTimeouts)
+    if (!RemoteOta::download(cmd.url, cmd.sha256)) break;
+    Serial.println("[OTA] Đã ghi " + String(cmd.version) + " — khởi động lại vào bản mới");
+    restartAfter(cmd);
+    break;
+  }
+}
+
+// `config` retained về lại mỗi lần kết nối: giống hệt lần trước thì bỏ qua để không ghi NVS vô ích
+static uint32_t fnv1a(const char *text) {
+  uint32_t hash = 2166136261u;
+  for (; *text; text++) hash = (hash ^ static_cast<uint8_t>(*text)) * 16777619u;
+  return hash;
+}
+
+static void handleConfig(const char *payload) {
+  uint32_t hash = fnv1a(payload);
+  if (hash == StorageManager::loadConfigHash()) return;
+  Serial.println("[MQTT] Cấu hình mới: " + String(payload));
+  Config::update(payload);
+  StorageManager::saveConfigHash(hash);
+}
+
+// ── Gửi ─────────────────────────────────────────────────
+/** msgId ≥ 0 khi đã đưa cho esp-mqtt (QoS 0 luôn là 0), -1 khi chưa gửi được */
+static int publish(const char *suffix, const String &payload, int qos) {
+  if (!connected) return -1;
+  String topic = topicBase() + suffix;
+  return esp_mqtt_client_publish(client, topic.c_str(), payload.c_str(), payload.length(), qos, 0);
+}
+
+/** Gửi QoS 1 và đợi PUBACK: true nghĩa là broker đã nhận (ENV-FR-024) */
+static bool publishAwaitAck(const char *suffix, const String &payload) {
+  int msgId = publish(suffix, payload, MQTT_QOS_ACKED);
+  if (msgId <= 0) return false;
+  TickType_t start = xTaskGetTickCount();
+  while (xTaskGetTickCount() - start < pdMS_TO_TICKS(PUBACK_WAIT_MS)) {
+    if (wasAcked(msgId)) return true;
+    xSemaphoreTake(ackSignal, pdMS_TO_TICKS(100));
+  }
+  return wasAcked(msgId);
+}
+
+static String alertJson(const QueuedAlert &alert) {
+  JsonDocument doc;
+  doc["deviceId"] = Config::deviceId;
+  doc["eventId"] = alert.eventId;
+  doc["type"] = alert.type;
+  doc["severity"] = alert.severity;
+  doc["message"] = alert.message;
+  if (alert.resetReason[0]) doc["resetReason"] = alert.resetReason; // backend lưu vào metadata.reset_reason
+  String payload;
+  serializeJson(doc, payload);
+  return payload;
+}
+
+static void sendQueuedAlerts() {
+  if (xSemaphoreTake(alertMutex, pdMS_TO_TICKS(100)) != pdTRUE) return;
+  bool removed = false;
+  int ackedId;
+  while (xQueueReceive(pubackQueue, &ackedId, 0) == pdTRUE) removed = alertQueue.ack(ackedId) || removed;
+  if (removed) StorageManager::saveAlertQueue(&alertQueue, sizeof alertQueue);
+  if (!connected) {
+    xSemaphoreGive(alertMutex);
+    return;
+  }
+  if (resendAlerts) {
+    alertQueue.resetSent();
+    resendAlerts = false;
+  }
+  for (int index = alertQueue.nextUnsent(); index >= 0; index = alertQueue.nextUnsent()) {
+    int msgId = publish("/alert", alertJson(alertQueue.at(index)), MQTT_QOS_ACKED);
+    if (msgId <= 0) break;
+    alertQueue.markSent(index, msgId);
+  }
+  xSemaphoreGive(alertMutex);
+}
+
+static void copyText(char *dst, size_t size, const char *src) {
+  strncpy(dst, src, size - 1);
+  dst[size - 1] = '\0';
 }
 
 namespace MQTTManager {
 
 void begin() {
-  mqtt.setClient(wifiClient);
-
   esp_ota_img_states_t imageState;
   imagePendingVerify = esp_ota_get_state_partition(esp_ota_get_running_partition(), &imageState) == ESP_OK &&
                        imageState == ESP_OTA_IMG_PENDING_VERIFY;
@@ -163,6 +375,14 @@ void begin() {
                  "nha yen that (SEC-NFR-001) khi con o cau hinh nay.");
 #endif
 
+  inboundQueue = xQueueCreate(INBOUND_QUEUE_SIZE, sizeof(InboundMessage));
+  alertMutex = xSemaphoreCreateMutex();
+  ackSignal = xSemaphoreCreateBinary();
+  pubackQueue = xQueueCreate(PUBACK_QUEUE_SIZE, sizeof(int));
+  StorageManager::loadAlertQueue(&alertQueue, sizeof alertQueue);
+  alertQueue.resetSent(); // msgId trong NVS thuộc phiên trước
+  commandFilter.remember(StorageManager::loadLastRestartCommand().c_str());
+
   // Ưu tiên tự tìm broker qua mDNS — hoạt động ngay cả khi đổi mạng WiFi,
   // không ai cần biết/nhập IP thủ công. Chỉ khi mDNS thất bại (mạng chặn
   // multicast, hoặc chưa chạy `npm run mdns` trên máy host) mới rơi về IP đã
@@ -171,52 +391,56 @@ void begin() {
     String savedBroker;
     if (StorageManager::loadMqttBroker(savedBroker)) {
       Config::mqttBroker = savedBroker;
-      Serial.println("[MQTT] mDNS thất bại — dùng broker đã lưu trong NVS: " + savedBroker);
+      Serial.println("[MQTT] Dùng broker đã lưu trong NVS: " + savedBroker);
     } else {
-      Serial.println("[MQTT] mDNS thất bại — dùng mặc định Secrets.h: " + Config::mqttBroker);
+      Serial.println("[MQTT] Dùng mặc định Secrets.h: " + Config::mqttBroker);
     }
-    mqtt.setServer(Config::mqttBroker.c_str(), MQTT_PORT);
   }
 
-  mqtt.setCallback(mqttCallback);
-  mqtt.setBufferSize(1024);
-  Serial.println("[MQTT] Client initialized, broker=" + Config::mqttBroker);
+  brokerUri = uriOf(Config::mqttBroker);
+  esp_mqtt_client_config_t config = {};
+  config.uri = brokerUri.c_str();
+  config.client_id = Config::deviceId;
+  config.username = Config::deviceId;
+  config.password = Config::mqttPassword;
+  config.disable_clean_session = true; // phiên bền: lệnh QoS 1 không mất khi mất mạng ngắn
+  config.keepalive = MQTT_KEEPALIVE_SEC;
+  config.reconnect_timeout_ms = MQTT_RECONNECT_MS;
+  config.buffer_size = MQTT_BUFFER_BYTES;
+  config.task_stack = MQTT_TASK_STACK_BYTES;
+#if MQTT_PORT == 8883
+  config.cert_pem = ISRG_ROOT_X1;
+#endif
+  client = esp_mqtt_client_init(&config);
+  esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, onMqttEvent, nullptr);
+  esp_mqtt_client_start(client);
+  Serial.println("[MQTT] Client initialized, broker=" + brokerUri);
 }
 
 void loop() {
-  if (!mqtt.connected()) {
-    // Thử lại mDNS mỗi 5 lần fail liên tiếp (~5s) — IP host có thể đã đổi
-    // (router cấp lại DHCP) ngay trong lúc ESP32 đang chạy, không cần đợi tới
-    // ngưỡng captive-portal mới tự sửa được.
-    if (mqttFailCount > 0 && mqttFailCount % 5 == 0) {
-      resolveBrokerViaMdns();
+  // Thử lại mDNS mỗi 5 lần fail liên tiếp (~5s) — IP host có thể đã đổi (router cấp lại DHCP) ngay
+  // trong lúc ESP32 đang chạy, không cần đợi tới ngưỡng captive-portal mới tự sửa được.
+  static int lastMdnsRetry = 0;
+  if (!connected && mqttFailCount > 0 && mqttFailCount % 5 == 0 && mqttFailCount != lastMdnsRetry) {
+    lastMdnsRetry = mqttFailCount;
+    if (resolveBrokerViaMdns() && uriOf(Config::mqttBroker) != brokerUri) {
+      brokerUri = uriOf(Config::mqttBroker);
+      esp_mqtt_client_set_uri(client, brokerUri.c_str());
     }
+  }
 
-    String clientId = String("SC-") + Config::deviceId;
-    if (mqtt.connect(clientId.c_str(), Config::mqttUsername, Config::mqttPassword)) {
-      Serial.println("[MQTT] Connected");
-      mqttFailCount = 0;
-      justConnected = true;
-      everConnected = true;
-      if (imagePendingVerify) {
-        esp_ota_mark_app_valid_cancel_rollback();
-        imagePendingVerify = false;
-        Serial.println("[OTA] Đã xác nhận firmware " FIRMWARE_VERSION);
-      }
-      mqtt.subscribe((topicBase() + "/relay/command").c_str(), MQTT_QOS_COMMAND);
-      mqtt.subscribe((topicBase() + "/config/update").c_str(), MQTT_QOS_COMMAND);
-      mqtt.subscribe((topicBase() + "/config/reassign").c_str(), MQTT_QOS_COMMAND);
-      mqtt.subscribe((topicBase() + "/audio/command").c_str(), MQTT_QOS_COMMAND);
-    } else {
-      mqttFailCount++;
-      Serial.println("[MQTT] Connection failed, rc=" + String(mqtt.state()));
-    }
+  if (imagePendingVerify && everConnected) {
+    esp_ota_mark_app_valid_cancel_rollback();
+    imagePendingVerify = false;
+    Serial.println("[OTA] Đã xác nhận firmware " FIRMWARE_VERSION);
   }
   if (otaShouldRollback(imagePendingVerify, everConnected, millis(), OTA_VERIFY_TIMEOUT_MS)) {
     Serial.println("[OTA] Bản mới không kết nối được MQTT — quay về firmware cũ");
     esp_ota_mark_app_invalid_rollback_and_reboot();
   }
-  mqtt.loop();
+
+  processInbound();
+  sendQueuedAlerts();
 
   // Heartbeat (FARM-FR-005) — gửi ngay sau mỗi lần connect, sau đó mỗi 30s
   if (justConnected || millis() - lastHeartbeat > MQTT_HEARTBEAT_MS) {
@@ -225,12 +449,21 @@ void loop() {
   }
 }
 
-bool isConnected() { return mqtt.connected(); }
+void processInbound() {
+  InboundMessage message;
+  while (xQueueReceive(inboundQueue, &message, 0) == pdTRUE) {
+    if (message.isConfig) handleConfig(message.payload);
+    else handleCommand(message.payload);
+    free(message.payload);
+  }
+}
+
+bool isConnected() { return connected; }
 
 bool isBrokerUnreachable() { return mqttFailCount >= MQTT_PROVISION_TRIGGER_FAILURES; }
 
 void publishTelemetry(const SensorData &data, const RelayState &relay) {
-  if (!mqtt.connected()) return;
+  if (!connected) return;
   JsonDocument doc;
   data.fillJson(doc); // deviceId + 6 cảm biến + timestamp (epoch ms)
   doc["relay_states"]["misting"] = relay.misting;
@@ -243,11 +476,11 @@ void publishTelemetry(const SensorData &data, const RelayState &relay) {
 
   String payload;
   serializeJson(doc, payload);
-  mqtt.publish((topicBase() + "/telemetry").c_str(), payload.c_str(), false);
+  publish("/telemetry", payload, MQTT_QOS_LIVE);
 }
 
 bool publishHeartbeat() {
-  if (!mqtt.connected()) return false;
+  if (!connected) return false;
   JsonDocument doc;
   // Field names khớp backend/src/types/domain.ts HeartbeatPayload
   doc["deviceId"] = Config::deviceId;
@@ -262,161 +495,43 @@ bool publishHeartbeat() {
 
   String payload;
   serializeJson(doc, payload);
-  return mqtt.publish((topicBase() + "/heartbeat").c_str(), payload.c_str(), false);
+  return publish("/heartbeat", payload, MQTT_QOS_LIVE) >= 0;
 }
 
 // KHÔNG retain: relay/status là trạng thái sống — message retained bị broker
 // phát lại cho backend mỗi lần backend (re)connect, kể cả khi thiết bị đã chết.
 bool publishRelayState(const RelayState &relay) {
-  if (!mqtt.connected()) return false;
-  return mqtt.publish((topicBase() + "/relay/status").c_str(), relay.toJson().c_str(), false);
+  bool sent = publish("/relay/status", relay.toJson(true, lastRelayCommandId.c_str()), MQTT_QOS_ACKED) >= 0;
+  if (sent) lastRelayCommandId = "";
+  return sent;
 }
 
-// Topic `{base}/alert` (SRS §9.2) — backend alert.handler.ts tra thiết bị
-// theo field `deviceId`. Trả false nếu chưa gửi được để caller thử lại.
+// NFR-06 c — vào hàng đợi NVS rồi mqttTask gửi, xoá khi có PUBACK. Trả true khi đã nhận vào hàng đợi,
+// nên caller coi như đã báo; hàng đợi đầy thì false để caller thử lại.
 bool publishAlert(const char *alertType, const char *severity, const char *payload, const char *resetReason) {
-  if (!mqtt.connected()) return false;
-  JsonDocument doc;
-  doc["deviceId"] = Config::deviceId;
-  doc["type"] = alertType;
-  doc["severity"] = severity;
-  doc["message"] = payload;
-  if (resetReason) doc["resetReason"] = resetReason; // backend lưu vào metadata.reset_reason
+  if (!alertMutex) return false; // mqttTask chưa chạy begin()
+  QueuedAlert alert;
+  snprintf(alert.eventId, sizeof alert.eventId, "%08lx%08lx", (unsigned long)esp_random(), (unsigned long)esp_random());
+  copyText(alert.type, sizeof alert.type, alertType);
+  copyText(alert.severity, sizeof alert.severity, severity);
+  copyText(alert.message, sizeof alert.message, payload);
+  if (resetReason) copyText(alert.resetReason, sizeof alert.resetReason, resetReason);
 
-  String msg;
-  serializeJson(doc, msg);
-  return mqtt.publish((topicBase() + "/alert").c_str(), msg.c_str(), false);
+  if (xSemaphoreTake(alertMutex, pdMS_TO_TICKS(100)) != pdTRUE) return false;
+  uint8_t before = alertQueue.size();
+  bool queued = alertQueue.push(alert);
+  if (alertQueue.size() != before) StorageManager::saveAlertQueue(&alertQueue, sizeof alertQueue);
+  xSemaphoreGive(alertMutex);
+  return queued;
 }
 
-// Publish 1 dòng JSON telemetry đã buffer offline, nguyên văn (không build
-// lại từ SensorData sống) — dùng làm callback cho StorageManager::flushBuffer()
-// (REL-NFR-003). Trả về true nếu publish thành công (StorageManager dùng giá
-// trị này để quyết định có xoá buffer hay giữ lại thử lại lần sau).
-bool publishRawTelemetryLine(const String &jsonLine) {
-  if (!mqtt.connected()) return false;
-  return mqtt.publish((topicBase() + "/telemetry").c_str(), jsonLine.c_str(), false);
+// Publish 1 dòng JSON telemetry đã buffer offline, nguyên văn — callback của
+// StorageManager::flushBuffer() (ENV-FR-024). Buffer vài giờ mất vài phút mới gửi xong: phần việc thường
+// của mqttTask vẫn chạy giữa các dòng, nếu không thì lệnh nằm tới khi quá 60 giây (BR-35), PUBACK của
+// cảnh báo không được xử lý và heartbeat ngừng.
+bool publishBufferedLine(const String &jsonLine) {
+  loop();
+  return publishAwaitAck("/telemetry/buffered", jsonLine);
 }
 
-void onRelayCommand(const char *payload) {
-  Serial.println("[MQTT] Relay command: " + String(payload));
-
-  JsonDocument doc;
-  if (deserializeJson(doc, payload)) {
-    Serial.println("[MQTT] Relay command: invalid JSON");
-    return;
-  }
-
-  // Backend overrideExpiry.job.ts: override đã hết hạn phía server → về AUTO ngay
-  if (doc["action"] == "clear_override") {
-    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      PIDController::clearOverrides(relayState);
-      publishRelayState(relayState);
-      xSemaphoreGive(dataMutex);
-    }
-    Serial.println("[MQTT] Relay command: clear_override → AUTO");
-    return;
-  }
-
-  const char *relayName = doc["relayName"] | "";
-  bool state = doc["state"] | false;
-  unsigned long durationMs = doc["durationMs"] | (unsigned long)MANUAL_OVERRIDE_MS;
-
-  if (strlen(relayName) == 0) {
-    Serial.println("[MQTT] Relay command: missing relayName");
-    return;
-  }
-
-  // ENV-FR-016..018: bật Manual Override, tạm dừng PID cho relay này.
-  // relayState là struct nhiều field (3 relay bool + 3 override bool + 1
-  // expiry) đọc/ghi đồng thời bởi pidTask (Core 1) — khoá dataMutex để tránh
-  // torn read/write xuyên struct.
-  if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-    PIDController::setManualOverride(relayName, state, durationMs, relayState);
-    // Xác nhận lại trạng thái ngay cho backend/dashboard (ENV-FR-015)
-    publishRelayState(relayState);
-    xSemaphoreGive(dataMutex);
-  }
-}
-
-// ENV-FR-013c(c): {"action":"play","track":N} | {"action":"stop"} — one-shot,
-// không ghi NVS (khác config/update). Xem AudioManager::requestPlay().
-void onAudioCommand(const char *payload) {
-  Serial.println("[MQTT] Audio command: " + String(payload));
-  JsonDocument doc;
-  if (deserializeJson(doc, payload)) {
-    Serial.println("[MQTT] Audio command: invalid JSON");
-    return;
-  }
-  if (doc["action"] == "play") {
-    int track = doc["track"] | 0;
-    if (track <= 0) {
-      Serial.println("[MQTT] Audio command: thiếu track");
-      return;
-    }
-    AudioManager::requestPlay(track);
-  } else if (doc["action"] == "stop") {
-    AudioManager::requestStop();
-  } else {
-    return;
-  }
-  if (pidTaskHandle) xTaskNotifyGive(pidTaskHandle);
-}
-
-// TICKET-FR-008 — RESTART/OTA đi chung topic với gói cấu hình, phân biệt bằng `command`
-void onConfigUpdate(const char *payload) {
-  Serial.println("[MQTT] Config update: " + String(payload));
-  RemoteCommand cmd = parseRemoteCommand(payload, FIRMWARE_VERSION);
-  switch (cmd.type) {
-  case RemoteCommand::NONE:
-    Config::update(payload);
-    return;
-  case RemoteCommand::INVALID:
-    Serial.println("[MQTT] Bỏ lệnh từ xa: " + String(cmd.error));
-    return;
-  case RemoteCommand::RESTART:
-    Serial.println("[MQTT] Lệnh RESTART — khởi động lại...");
-    break;
-  case RemoteCommand::OTA:
-    Serial.println("[OTA] Tải " + String(cmd.version) + " từ " + cmd.url);
-    // Thất bại thì giữ bản cũ; backend biết qua heartbeat vẫn báo bản cũ (markOtaTimeouts)
-    if (!RemoteOta::download(cmd.url, cmd.sha256)) return;
-    Serial.println("[OTA] Đã ghi " + String(cmd.version) + " — khởi động lại vào bản mới");
-    break;
-  }
-  delay(1500); // để log kịp flush trước khi restart
-  ESP.restart();
-}
-
-// Flow 21 Nhánh A (FARM-FR-007b): Technician dời thiết bị sang Zone/Farm khác
-// trong khi thiết bị còn ONLINE. Backend publish lệnh này lên topic CŨ (dựa
-// trên farmId/houseId/zoneId hiện tại của thiết bị). Lưu định danh mới vào
-// NVS rồi restart — mqttTopicBase chỉ được tính lại 1 lần trong setup() (xem
-// main.cpp + giải thích ở topicBase() phía trên), không hot-swap khi task
-// đang chạy, để không phá vỡ giả định "đọc xuyên core không cần mutex".
-// newMqttUsername/newMqttPassword (nếu có trong payload) bị BỎ QUA có chủ ý —
-// hệ thống MQTT credential riêng theo thiết bị chưa được implement (ngoài
-// phạm vi Flow 21 Nhánh A hiện tại).
-void onConfigReassign(const char *payload) {
-  Serial.println("[MQTT] Config reassign: " + String(payload));
-
-  JsonDocument doc;
-  if (deserializeJson(doc, payload)) {
-    Serial.println("[MQTT] Config reassign: invalid JSON");
-    return;
-  }
-
-  const char *newFarmId = doc["newFarmId"] | "";
-  const char *newHouseId = doc["newHouseId"] | "";
-  const char *newZoneId = doc["newZoneId"] | "";
-
-  if (strlen(newFarmId) == 0 || strlen(newHouseId) == 0 || strlen(newZoneId) == 0) {
-    Serial.println("[MQTT] Config reassign: thiếu newFarmId/newHouseId/newZoneId");
-    return;
-  }
-
-  StorageManager::saveIdentity(newFarmId, newHouseId, newZoneId);
-  Serial.println("[MQTT] Đã lưu định danh mới — khởi động lại để áp dụng...");
-  delay(1500); // để log/response kịp flush trước khi restart
-  ESP.restart();
-}
 } // namespace MQTTManager

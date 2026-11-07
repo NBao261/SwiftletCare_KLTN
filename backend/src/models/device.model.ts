@@ -4,6 +4,13 @@ import type { DeviceStatus, ControlMode, RelayStates, CountingRing, Role } from 
 /**
  * SensorNode + CameraNode Documents – SRS §8.2
  */
+/** BR-20 — mỗi relay có chế độ và hạn riêng (Report 4 ERD); trạng thái bật/tắt vẫn ở `relay_states` tới G-14 */
+export interface IRelayOverride {
+  mode: ControlMode
+  override_expiry?: Date
+  override_by?: Types.ObjectId
+}
+
 export interface ISensorNode extends Document {
   _id: Types.ObjectId
   device_id: string
@@ -25,7 +32,10 @@ export interface ISensorNode extends Document {
   reset_reason?: string
   ip?: string
   relay_states: RelayStates
+  relays: Record<keyof RelayStates, IRelayOverride>
+  /** Tóm tắt của `relays` cho màn hình: MANUAL khi có relay MANUAL */
   control_mode: ControlMode
+  /** Tóm tắt của `relays`: hạn muộn nhất của các relay MANUAL */
   override_expiry?: Date
   // ENV-FR-013b: hệ thống loa ru (Relay IN2 + DFPlayer Mini)
   speaker_schedule: {
@@ -81,6 +91,8 @@ export interface ICameraNode extends Document {
   status: DeviceStatus
   last_heartbeat?: Date
   model_version?: string
+  /** Số khung hình xử lý mỗi giây ở heartbeat gần nhất */
+  fps?: number
   registered_at: Date
   /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
   registered_by?: Types.ObjectId
@@ -113,6 +125,15 @@ const relayUsageSchema = {
   since_service_hours:    { type: Number, default: 0 },
   since_service_switches: { type: Number, default: 0 },
 }
+
+const relayOverrideSchema = new Schema<IRelayOverride>(
+  {
+    mode:            { type: String, enum: ['AUTO','MANUAL'] satisfies ControlMode[], default: 'AUTO' },
+    override_expiry: { type: Date },
+    override_by:     { type: Schema.Types.ObjectId, ref: 'User' },
+  },
+  { _id: false },
+)
 
 const sensorNodeSchema = new Schema<ISensorNode>(
   {
@@ -151,6 +172,11 @@ const sensorNodeSchema = new Schema<ISensorNode>(
       speaker:     { type: Boolean, default: false },
       ventilation: { type: Boolean, default: false },
     },
+    relays: {
+      misting:     { type: relayOverrideSchema, default: () => ({}) },
+      speaker:     { type: relayOverrideSchema, default: () => ({}) },
+      ventilation: { type: relayOverrideSchema, default: () => ({}) },
+    },
     control_mode:    { type: String, enum: ['AUTO','MANUAL'] satisfies ControlMode[], default: 'AUTO' },
     override_expiry: { type: Date },
     speaker_schedule: {
@@ -188,6 +214,7 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE'] satisfies DeviceStatus[], default: 'PENDING' },
     last_heartbeat: { type: Date },
     model_version:  { type: String },
+    fps:            { type: Number },
     registered_at:  { type: Date, default: Date.now },
     registered_by:  { type: Schema.Types.ObjectId, ref: 'User' },
     activation_overdue_at: { type: Date },

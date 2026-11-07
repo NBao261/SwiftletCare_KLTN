@@ -12,19 +12,56 @@ static const uint8_t SHA_BYTES[32] = {0x9f, 0x86, 0xd0, 0x81, 0x88, 0x4c, 0x7d, 
                                       0xa0, 0xc5, 0x5a, 0xd0, 0x15, 0xa3, 0xbf, 0x4f, 0x1b, 0x2b, 0x0b,
                                       0x82, 0x2c, 0xd1, 0x5d, 0x6c, 0x15, 0xb0, 0xf0, 0x0a, 0x08};
 
-static RemoteCommand parseOta(const char *version, const char *url, const char *sha) {
-  char json[512];
-  snprintf(json, sizeof json, "{\"deviceId\":\"d1\",\"command\":\"OTA\",\"ota\":{\"version\":\"%s\",\"url\":\"%s\",\"sha256\":\"%s\"}}",
-           version, url, sha);
+static const char *HEAD = "\"commandId\":\"c1\",\"issuedAt\":1770000000000";
+
+static RemoteCommand parse(const char *type, const char *payload) {
+  char json[640];
+  snprintf(json, sizeof json, "{%s,\"type\":\"%s\",\"payload\":%s}", HEAD, type, payload);
   return parseRemoteCommand(json, "1.4.0");
 }
 
-void test_config_payload_without_command_is_not_a_command() {
-  TEST_ASSERT_EQUAL(RemoteCommand::NONE, parseRemoteCommand("{\"deviceId\":\"d1\",\"temp_min\":26}", "1.4.0").type);
+static RemoteCommand parseOta(const char *version, const char *url, const char *sha) {
+  char payload[512];
+  snprintf(payload, sizeof payload, "{\"version\":\"%s\",\"url\":\"%s\",\"sha256\":\"%s\"}", version, url, sha);
+  return parse("OTA", payload);
 }
 
-void test_restart() {
-  TEST_ASSERT_EQUAL(RemoteCommand::RESTART, parseRemoteCommand("{\"deviceId\":\"d1\",\"command\":\"RESTART\"}", "1.4.0").type);
+void test_envelope_needs_id_and_time() {
+  TEST_ASSERT_EQUAL(RemoteCommand::INVALID, parseRemoteCommand("{\"type\":\"RESTART\",\"issuedAt\":1}", "1.4.0").type);
+  TEST_ASSERT_EQUAL(RemoteCommand::INVALID, parseRemoteCommand("{\"type\":\"RESTART\",\"commandId\":\"c\"}", "1.4.0").type);
+  TEST_ASSERT_EQUAL(RemoteCommand::INVALID, parse("HEATING", "{}").type);
+}
+
+void test_relay() {
+  RemoteCommand cmd = parse("RELAY", "{\"relayName\":\"misting\",\"state\":true,\"durationMs\":600000}");
+  TEST_ASSERT_EQUAL(RemoteCommand::RELAY, cmd.type);
+  TEST_ASSERT_EQUAL_STRING("misting", cmd.relayName);
+  TEST_ASSERT_TRUE(cmd.state);
+  TEST_ASSERT_EQUAL_UINT32(600000, cmd.durationMs);
+  TEST_ASSERT_EQUAL(RemoteCommand::INVALID, parse("RELAY", "{\"state\":true}").type);
+}
+
+void test_clear_override_names_one_relay_or_none() {
+  TEST_ASSERT_EQUAL_STRING("speaker", parse("CLEAR_OVERRIDE", "{\"relayName\":\"speaker\"}").relayName);
+  RemoteCommand all = parse("CLEAR_OVERRIDE", "{}");
+  TEST_ASSERT_EQUAL(RemoteCommand::CLEAR_OVERRIDE, all.type);
+  TEST_ASSERT_EQUAL_STRING("", all.relayName);
+}
+
+void test_audio() {
+  RemoteCommand play = parse("AUDIO", "{\"action\":\"play\",\"track\":2}");
+  TEST_ASSERT_TRUE(play.audioPlay);
+  TEST_ASSERT_EQUAL(2, play.track);
+  TEST_ASSERT_FALSE(parse("AUDIO", "{\"action\":\"stop\"}").audioPlay);
+  TEST_ASSERT_EQUAL(RemoteCommand::AUDIO, parse("AUDIO", "{\"action\":\"stop\"}").type);
+  TEST_ASSERT_EQUAL(RemoteCommand::INVALID, parse("AUDIO", "{\"action\":\"play\"}").type);
+}
+
+void test_restart_keeps_its_command_id() {
+  RemoteCommand cmd = parse("RESTART", "{}");
+  TEST_ASSERT_EQUAL(RemoteCommand::RESTART, cmd.type);
+  TEST_ASSERT_EQUAL_STRING("c1", cmd.commandId);
+  TEST_ASSERT_TRUE(cmd.issuedAt == 1770000000000ULL);
 }
 
 void test_valid_ota_keeps_its_fields() {
@@ -77,8 +114,11 @@ void test_rollback_only_for_an_unconfirmed_image_that_never_connected() {
 
 int main() {
   UNITY_BEGIN();
-  RUN_TEST(test_config_payload_without_command_is_not_a_command);
-  RUN_TEST(test_restart);
+  RUN_TEST(test_envelope_needs_id_and_time);
+  RUN_TEST(test_relay);
+  RUN_TEST(test_clear_override_names_one_relay_or_none);
+  RUN_TEST(test_audio);
+  RUN_TEST(test_restart_keeps_its_command_id);
   RUN_TEST(test_valid_ota_keeps_its_fields);
   RUN_TEST(test_ota_is_rejected_when_unsafe_or_incomplete);
   RUN_TEST(test_too_long_url_is_rejected_not_truncated);

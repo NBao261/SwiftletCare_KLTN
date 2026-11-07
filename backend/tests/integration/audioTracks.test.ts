@@ -16,7 +16,7 @@ import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { putObject, removeObject } from '@/config/minio.config'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceCommand, publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { emitRelayUpdate } from '@/socket'
 
 jest.mock('@/config/minio.config', () => ({
@@ -24,7 +24,7 @@ jest.mock('@/config/minio.config', () => ({
   removeObject: jest.fn().mockResolvedValue(undefined),
   presignedGetUrl: jest.fn(async (key: string) => `http://minio.test/${key}?sig=1`),
 }))
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(),
@@ -151,7 +151,7 @@ describe('select / play-now / stop', () => {
     expect(select.status).toBe(400)
     expect(select.body.error.message).toMatch(/chưa được chép vào thẻ SD/)
     expect(play.status).toBe(400)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
   })
 
   it('makes a synced track the scheduled default via config/update', async () => {
@@ -162,7 +162,7 @@ describe('select / play-now / stop', () => {
 
     expect(res.status).toBe(200)
     expect((await SensorNode.findById(ctx.node._id))!.audio.current_track).toBe(2)
-    expect(publishCommand).toHaveBeenCalledWith(...ctx.chain, 'config/update', expect.objectContaining({ speaker_track: 2 }))
+    expect(publishDeviceConfig).toHaveBeenCalledWith(ctx.node.device_id, expect.objectContaining({ speaker_track: 2 }))
   })
 
   it('plays and stops a synced track on an online device', async () => {
@@ -174,8 +174,8 @@ describe('select / play-now / stop', () => {
 
     expect(play.status).toBe(200)
     expect(stop.status).toBe(200)
-    expect(publishCommand).toHaveBeenNthCalledWith(1, ...ctx.chain, 'audio/command', { deviceId: ctx.node.device_id, action: 'play', track: 2 })
-    expect(publishCommand).toHaveBeenNthCalledWith(2, ...ctx.chain, 'audio/command', { deviceId: ctx.node.device_id, action: 'stop' })
+    expect(publishDeviceCommand).toHaveBeenNthCalledWith(1, ctx.node.device_id, 'AUDIO', { action: 'play', track: 2 })
+    expect(publishDeviceCommand).toHaveBeenNthCalledWith(2, ctx.node.device_id, 'AUDIO', { action: 'stop' })
   })
 
   it('refuses to play on an offline device', async () => {
@@ -185,7 +185,7 @@ describe('select / play-now / stop', () => {
     const res = await request(app).post(`${base(ctx.node._id)}/audio-tracks/${trackId}/play-now`).set('Authorization', `Bearer ${ctx.ownerToken}`)
 
     expect(res.status).toBe(409)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
   })
 
   it('does not let a Technician play (operation belongs to the Farm Owner)', async () => {
@@ -238,7 +238,10 @@ describe('decommissioned device', () => {
 describe('DELETE /relay-override', () => {
   it('returns a MANUAL device to AUTO and tells the firmware', async () => {
     const ctx = await seed()
-    await SensorNode.updateOne({ _id: ctx.node._id }, { control_mode: 'MANUAL', override_expiry: new Date(Date.now() + 60_000) })
+    await SensorNode.updateOne({ _id: ctx.node._id }, {
+      control_mode: 'MANUAL', override_expiry: new Date(Date.now() + 60_000),
+      relays: { misting: { mode: 'MANUAL', override_expiry: new Date(Date.now() + 60_000) } },
+    })
 
     const res = await request(app).delete(`${base(ctx.node._id)}/relay-override`).set('Authorization', `Bearer ${ctx.ownerToken}`)
 
@@ -246,7 +249,7 @@ describe('DELETE /relay-override', () => {
     const after = (await SensorNode.findById(ctx.node._id))!
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
-    expect(publishCommand).toHaveBeenCalledWith(...ctx.chain, 'relay/command', { deviceId: ctx.node.device_id, action: 'clear_override' })
+    expect(publishDeviceCommand).toHaveBeenCalledWith(ctx.node.device_id, 'CLEAR_OVERRIDE')
     expect(emitRelayUpdate).toHaveBeenCalledTimes(3) // misting, speaker, ventilation
     expect(await AuditLog.countDocuments({ action: 'RELAY_OVERRIDE_CLEARED' })).toBe(1)
   })
@@ -255,6 +258,6 @@ describe('DELETE /relay-override', () => {
     const ctx = await seed()
     const res = await request(app).delete(`${base(ctx.node._id)}/relay-override`).set('Authorization', `Bearer ${ctx.ownerToken}`)
     expect(res.status).toBe(200)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
   })
 })

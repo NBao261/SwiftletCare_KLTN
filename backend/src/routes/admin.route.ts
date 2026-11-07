@@ -74,4 +74,7 @@ router.put('/provisioned-devices/:id/revoke',
 /** Cấp secretKey mới để in lại nhãn — chỉ thiết bị chưa kích hoạt (key mới trả 1 lần) */
 router.post('/provisioned-devices/:id/rotate-key', param('id').isMongoId(), validate, adminController.rotateProvisionedKey)
 
+/** FARM-FR-010 — cấp mật khẩu broker mới (trả 1 lần, phải flash lại vào thiết bị) */
+router.post('/provisioned-devices/:id/rotate-broker-secret', param('id').isMongoId(), validate, adminController.rotateBrokerSecret)
+
 export default router

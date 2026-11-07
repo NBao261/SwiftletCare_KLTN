@@ -26,6 +26,9 @@ ensureCollection("alerts", {
     "node_id": {
       "bsonType": ["objectId", "null"]
     },
+    "event_id": {
+      "bsonType": ["string", "null"]
+    },
     "type": {
       "bsonType": "string",
       "enum": ["THRESHOLD_BREACH", "NODE_OFFLINE", "SPEAKER_FAILURE", "MISTING_INEFFECTIVE", "NOISE_ANOMALY", "UNEXPECTED_RESTART", "LOW_RETURN_RATE", "EDGE_AI_DEGRADED", "SENSOR_FAULT", "RS485_BUS_FAILURE", "SENSOR_ANOMALY", "FORECAST_BREACH", "MAINTENANCE_DUE", "ACTUATOR_FAULT", "CONFIG_MISMATCH"]
@@ -108,6 +111,7 @@ ensureCollection("alerts", {
 })
 db.getCollection("alerts").createIndex({"farm_id":1,"zone_id":1,"node_id":1,"type":1,"status":1})
 db.getCollection("alerts").createIndex({"house_id":1,"type":1,"status":1}, {"partialFilterExpression":{"house_id":{"$exists":true}}})
+db.getCollection("alerts").createIndex({"node_id":1,"event_id":1}, {"unique":true,"partialFilterExpression":{"event_id":{"$type":"string"}}})
 db.getCollection("alerts").createIndex({"resolved_at":1}, {"expireAfterSeconds":15552000})
 
 // ── audiotracks (model AudioTrack) ──
@@ -277,6 +281,9 @@ ensureCollection("cameranodes", {
     },
     "model_version": {
       "bsonType": ["string", "null"]
+    },
+    "fps": {
+      "bsonType": ["number", "null"]
     },
     "registered_at": {
       "bsonType": ["date", "null"]
@@ -768,6 +775,9 @@ ensureCollection("provisioneddevices", {
     "secret_key_hash": {
       "bsonType": "string"
     },
+    "broker_secret_hash": {
+      "bsonType": ["string", "null"]
+    },
     "claimed_at": {
       "bsonType": ["date", "null"]
     },
@@ -829,6 +839,9 @@ ensureCollection("relayoverridelogs", {
     "end_reason": {
       "bsonType": ["string", "null"],
       "enum": ["EXPIRED", "CLEARED_EARLY", "REPLACED", null]
+    },
+    "alert_confirmed": {
+      "bsonType": ["bool", "null"]
     },
     "_id": {
       "bsonType": ["objectId", "null"]
@@ -919,6 +932,56 @@ ensureCollection("sensornodes", {
         },
         "ventilation": {
           "bsonType": ["bool", "null"]
+        }
+      }
+    },
+    "relays": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "misting": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        },
+        "speaker": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        },
+        "ventilation": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
         }
       }
     },
@@ -1148,6 +1211,7 @@ ensureCollection("telemetries", {
   "required": ["node_id", "zone_id", "timestamp"]
 })
 db.getCollection("telemetries").createIndex({"zone_id":1,"timestamp":-1})
+db.getCollection("telemetries").createIndex({"node_id":1,"timestamp":1}, {"unique":true})
 db.getCollection("telemetries").createIndex({"timestamp":1}, {"expireAfterSeconds":7776000})
 
 // ── users (model User) ──

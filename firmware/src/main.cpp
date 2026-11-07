@@ -63,15 +63,8 @@ FilteredEnv latestFiltered;
 // THREAT-FR-007: trạng thái NoiseAnomalyDetector (tính mỗi mẫu 1 Hz trong sensorTask)
 bool noiseAnomalyActive = false;
 
-// MQTT topic base "swiftletcare/{farmId}/{houseId}/{zoneId}" — tính 1 lần
-// trong setup() (đơn luồng, trước khi tạo task nào), SAU KHI đã nạp
-// farmId/houseId/zoneId từ NVS (nếu có, xem StorageManager::loadIdentity()
-// bên dưới — Flow 21 Nhánh A, FARM-FR-007b). Từ đây tới lần dời Zone tiếp
-// theo (luôn kèm ESP.restart(), xem MQTTManager::onConfigReassign()),
-// Config::farmId/houseId/zoneId không đổi lúc runtime; sau setup() biến này
-// chỉ ĐỌC (không ghi lại) nên mqttTask (Core 0) và pidTask (Core 1, qua
-// publishAlert) đọc an toàn không cần mutex. Xem giải thích đầy đủ ở
-// MQTTManager.cpp topicBase().
+// MQTT topic base "swiftletcare/dev/{deviceId}" — tính 1 lần trong setup() (đơn luồng,
+// trước khi tạo task nào), sau đó chỉ ĐỌC nên mqttTask và pidTask đọc an toàn không cần mutex.
 String mqttTopicBase;
 
 // ── Boot reason tracking (THREAT-FR-012) ─────────────────────────────────────
@@ -181,18 +174,14 @@ void setup() {
     Serial.println("[BOOT] Normal boot. Reset reason: " + String(bootResetReason));
   }
 
-  // ── Nạp định danh Farm/House/Zone đã dời (nếu có) — Flow 21 Nhánh A ──────
-  // FARM-FR-007b: chưa từng dời Zone → giữ mặc định Secrets.h (đã gán trong
-  // Config.cpp). PHẢI chạy trước khi mqttTopicBase được tính bên dưới.
+  // ── Tài khoản broker flash riêng từng thiết bị (Report 4 D3) ────
+  // PHẢI chạy trước khi mqttTopicBase được tính và trước khi tạo task. static: Config giữ con trỏ.
   {
-    String savedFarmId, savedHouseId, savedZoneId;
-    if (StorageManager::loadIdentity(savedFarmId, savedHouseId, savedZoneId)) {
-      Config::farmId = savedFarmId;
-      Config::houseId = savedHouseId;
-      Config::zoneId = savedZoneId;
-      Serial.println("[Config] Đã nạp định danh Farm/House/Zone từ NVS (đã "
-                     "dời qua config/reassign): " +
-                     savedFarmId + "/" + savedHouseId + "/" + savedZoneId);
+    static String flashedDeviceId, flashedBrokerSecret;
+    if (StorageManager::loadDeviceIdentity(flashedDeviceId, flashedBrokerSecret)) {
+      Config::deviceId = flashedDeviceId.c_str();
+      Config::mqttPassword = flashedBrokerSecret.c_str();
+      Serial.println("[Config] Thiết bị " + flashedDeviceId + " (tài khoản trong NVS)");
     }
   }
 
@@ -236,8 +225,7 @@ void setup() {
   dataMutex = xSemaphoreCreateMutex();
 
   // ── MQTT topic base (đơn luồng, phải chạy trước khi tạo mqttTask/pidTask) ──
-  mqttTopicBase = String("swiftletcare/") + Config::farmId + "/" +
-                 Config::houseId + "/" + Config::zoneId;
+  mqttTopicBase = String("swiftletcare/dev/") + Config::deviceId;
 
   // ── Create FreeRTOS Tasks ────────────────────────────────────────────────
   xTaskCreatePinnedToCore(sensorTask, "SensorTask", 4096, NULL, 2,
@@ -374,20 +362,20 @@ void pidTask(void *pvParameters) {
     bool haveThreats = false;
 
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      // Check manual override expiry (ENV-FR-018, BR-20): trước mọi relay để relay vừa hết
+      // hạn về AUTO ngay trong chu kỳ này. Chạy MỌI chu kỳ, kể cả khi mất nhiệt độ/độ ẩm
+      // (THREAT-FR-013): trước đây cả khối nằm trong if (data.isValid) nên cảm biến chết
+      // thì relay kẹt ở trạng thái cũ, override không hết hạn và chính cảnh báo lỗi cảm
+      // biến cũng không được phát.
+      PIDController::checkOverrideExpiry(relayState);
+
       // Loa ru (ENV-FR-013b/013c) – luôn cập nhật lịch + lệnh nghe thử cho
       // DFPlayer, nhưng chỉ áp ra Relay IN2 khi không Manual Override
       bool shouldPlay = AudioManager::updateSchedule();
-      if (!relayState.speakerOverride) {
+      if (!relayState.overrides.active(RELAY_SPEAKER)) {
         relayState.speaker = shouldPlay;
         relayState.applyRelay(PIN_RELAY_SPEAKER, shouldPlay);
       }
-
-      // Chạy MỌI chu kỳ, kể cả khi mất nhiệt độ/độ ẩm (THREAT-FR-013): trước đây
-      // cả khối nằm trong if (data.isValid) nên cảm biến chết thì relay kẹt ở
-      // trạng thái cũ, override không hết hạn và chính cảnh báo lỗi cảm biến
-      // cũng không được phát.
-      // Check manual override expiry (ENV-FR-018)
-      PIDController::checkOverrideExpiry(relayState);
 
       // Closed-loop control (ENV-FR-010/011): phun sương + quạt theo logic mờ;
       // đầu vào NAN → nhu cầu 0 → relay TẮT (trạng thái an toàn)
@@ -492,7 +480,7 @@ void mqttTask(void *pvParameters) {
     if (!MQTTManager::isConnected()) {
       lastRelayJson = ""; // kết nối lại → gửi ngay trạng thái hiện tại
     } else if (haveSnapshot) {
-      String relayJson = relaySnapshot.toJson();
+      String relayJson = relaySnapshot.toJson(false);
       if (relayJson != lastRelayJson ||
           millis() - lastRelayPublish > MQTT_HEARTBEAT_MS) {
         if (MQTTManager::publishRelayState(relaySnapshot)) {
@@ -510,7 +498,7 @@ void mqttTask(void *pvParameters) {
     if (MQTTManager::isConnected()) {
       StorageManager::flushBuffer([](const String &jsonLine) {
         esp_task_wdt_reset(); // buffer vài giờ ≈ 1-2 nghìn dòng, lâu hơn WDT 30s
-        return MQTTManager::publishRawTelemetryLine(jsonLine);
+        return MQTTManager::publishBufferedLine(jsonLine);
       });
     }
 

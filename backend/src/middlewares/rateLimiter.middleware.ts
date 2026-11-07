@@ -71,6 +71,8 @@ function isExemptFromApiLimit(req: Request): boolean {
   return path === '/health'
     || path.startsWith('/files/')   // file audio phục vụ tĩnh (STORAGE_DRIVER=local)
     || path.startsWith('/api-docs')
+    // EMQX và MediaMTX gọi cho mọi kết nối từ 1 IP: bị chặn là mọi thiết bị mất kết nối theo. Có khoá riêng
+    || path.startsWith('/internal/')
     || OWN_LIMITER_PATHS.has(path)
 }
 

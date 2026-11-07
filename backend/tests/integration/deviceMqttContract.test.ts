@@ -16,18 +16,19 @@ import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { emitTelemetryUpdate } from '@/socket'
 import {
   createAlert, ingestDeviceAlert, raiseNodeOfflineAlert, resolveNodeOfflineAlertsOfOnlineNodes, resolveStaleThresholdAlerts,
 } from '@/services/alert.service'
-import { buildDeviceConfig, confirmRelayStatus, markNodeSeen, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
+import { confirmRelayStatus, markNodeSeen, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
+import { buildDeviceConfig } from '@/services/deviceConfig.service'
 import { ingestTelemetry } from '@/services/telemetry.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
 import type { TelemetryPayload } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(),
@@ -301,7 +302,7 @@ describe('ingestDeviceAlert', () => {
 describe('confirmRelayStatus', () => {
   it('updates relays without reviving an OFFLINE device and clears the override expiry on AUTO', async () => {
     const { node, deviceId } = await seed('OFFLINE')
-    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date() })
+    await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date(), 'relays.misting': { mode: 'MANUAL', override_expiry: new Date() } })
 
     // firmware < 1.3.0 còn gửi `heating` — phải bị bỏ, không lưu và không phát socket
     await confirmRelayStatus({ deviceId, relay_states: { misting: true, speaker: false, ventilation: false, heating: true } as never, control_mode: 'AUTO' })
@@ -318,13 +319,13 @@ describe('recordHeartbeat', () => {
   const hb = (deviceId: string, justConnected?: boolean) =>
     ({ deviceId, firmwareVersion: '1.1.0', rssi: -60, freeHeap: 1, uptime: 1, timestamp: 1, justConnected })
 
-  it('re-sends the full config/update when the device has just (re)connected', async () => {
+  it('re-sends the full config when the device has just (re)connected', async () => {
     const { deviceId, topic } = await seed()
 
-    await recordHeartbeat(hb(deviceId, true), topic)
+    await recordHeartbeat(hb(deviceId, true))
 
-    expect(publishCommand).toHaveBeenCalledWith(topic[1], topic[2], topic[3], 'config/update',
-      expect.objectContaining({ temp_max: DEFAULT_THRESHOLDS.temp_max, speaker_schedule_enabled: true }))
+    expect(publishDeviceConfig).toHaveBeenCalledWith(deviceId,
+      expect.objectContaining({ deviceId, temp_max: DEFAULT_THRESHOLDS.temp_max, speaker_schedule_enabled: true }))
   })
 
   it('closes the NODE_OFFLINE alert when a heartbeat arrives before any telemetry', async () => {
@@ -334,7 +335,7 @@ describe('recordHeartbeat', () => {
       type: 'NODE_OFFLINE', title: 'Mất kết nối', message: 'x',
     })
 
-    await recordHeartbeat(hb(deviceId, true), topic)
+    await recordHeartbeat(hb(deviceId, true))
     await ingestTelemetry(reading(deviceId, Date.now())) // node đã ONLINE — markNodeSeen không còn đóng được nữa
 
     expect((await Alert.findById(offline!._id).lean())!.status).toBe('RESOLVED')
@@ -352,34 +353,24 @@ describe('recordHeartbeat', () => {
     const { node, deviceId, topic } = await provisioned()
 
     const before = Date.now()
-    await recordHeartbeat({ ...hb(deviceId), uptime: 3_600_000, freeHeap: 182_000, resetReason: 'BROWNOUT', ip: '192.168.1.50' }, topic)
+    await recordHeartbeat({ ...hb(deviceId), uptime: 3_600_000, freeHeap: 182_000, resetReason: 'BROWNOUT', ip: '192.168.1.50' })
     const saved = (await SensorNode.findById(node._id).lean())!
     expect(saved).toMatchObject({ free_heap: 182_000, reset_reason: 'BROWNOUT', ip: '192.168.1.50' })
     expect(before - saved.booted_at!.getTime()).toBeGreaterThanOrEqual(3_600_000 - 1000)
     expect(before - saved.booted_at!.getTime()).toBeLessThanOrEqual(3_600_000 + 1000)
 
-    await recordHeartbeat({ ...hb(deviceId), uptime: -5, freeHeap: 'lots', resetReason: 'X'.repeat(100), ip: { $ne: 1 } } as never, topic)
+    await recordHeartbeat({ ...hb(deviceId), uptime: -5, freeHeap: 'lots', resetReason: 'X'.repeat(100), ip: { $ne: 1 } } as never)
     expect(await SensorNode.findById(node._id).lean()).toMatchObject({ free_heap: 182_000, reset_reason: 'BROWNOUT', ip: '192.168.1.50' })
   })
 
   it('stays quiet on a routine heartbeat', async () => {
     const { deviceId, topic } = await provisioned()
 
-    await recordHeartbeat(hb(deviceId), topic)
+    await recordHeartbeat(hb(deviceId))
 
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 
-  it('only sends config/reassign when the topic is wrong', async () => {
-    const { deviceId, topic } = await provisioned()
-    const wrongTopic = ['swiftletcare', 'farm-default', 'house-default', 'zone-default', 'heartbeat']
-
-    await recordHeartbeat(hb(deviceId, true), wrongTopic)
-
-    expect(publishCommand).toHaveBeenCalledTimes(1)
-    expect(publishCommand).toHaveBeenCalledWith('farm-default', 'house-default', 'zone-default', 'config/reassign',
-      { deviceId, newFarmId: topic[1], newHouseId: topic[2], newZoneId: topic[3] })
-  })
 })
 
 describe('buildDeviceConfig', () => {
@@ -419,7 +410,7 @@ describe('PUT /devices/sensor-nodes/:id/speaker-schedule', () => {
     const saved = (await SensorNode.findById(node._id))!.toObject()
     expect(saved.speaker_schedule.windows).toMatchObject([{ start: '04:00', end: '06:00' }])
     expect(saved.audio).toMatchObject({ volume: 25, current_track: 2 })
-    expect(publishCommand).toHaveBeenCalledWith(topic[1], topic[2], topic[3], 'config/update',
+    expect(publishDeviceConfig).toHaveBeenCalledWith(expect.any(String),
       expect.objectContaining({ speaker_window1_start_hour: 4, speaker_window1_end_hour: 6, speaker_volume: 25, speaker_track: 2 }))
     expect(await AuditLog.countDocuments({ action: 'SPEAKER_SCHEDULE_UPDATED' })).toBe(1)
   })
@@ -439,6 +430,6 @@ describe('PUT /devices/sensor-nodes/:id/speaker-schedule', () => {
       .send(body)
 
     expect(res.status).toBe(status)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 })

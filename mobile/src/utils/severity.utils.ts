@@ -19,6 +19,17 @@ const LEVEL_LABELS: Record<SeverityLevel, string> = {
   P3: 'Thường',
 }
 
+// Thứ tự 3 cấp từ nặng đến nhẹ (dải tóm tắt, bộ lọc của tab Cảnh báo)
+export const SEVERITY_LEVELS: readonly SeverityLevel[] = ['P1', 'P2', 'P3']
+
+// Đọc giá trị lọc cấp từ tham số route hoặc bộ lọc đã nhớ: nhận 'P1'..'P3' và cả 4 mức cũ của backend; lạ thì null
+export function parseSeverityLevel(value: string | null | undefined): SeverityLevel | null {
+  if (!value) return null
+  const level = SEVERITY_LEVELS.find(item => item === value)
+  if (level) return level
+  return value in SEVERITY_TO_LEVEL ? SEVERITY_TO_LEVEL[value as AlertSeverity] : null
+}
+
 // Cấp hiển thị của một mức cảnh báo
 export function getSeverityLevel(severity: AlertSeverity): SeverityLevel {
   return SEVERITY_TO_LEVEL[severity]
