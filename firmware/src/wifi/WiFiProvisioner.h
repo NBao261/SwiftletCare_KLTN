@@ -15,8 +15,7 @@
  * WiFi và/hoặc IP MQTT broker (captive portal, chỉ cần dùng khi mDNS không
  * hoạt động được, VD mạng chặn multicast) — nhập xong, ESP32 lưu vào NVS và
  * khởi động lại. Không cần Web Dashboard, không cần Technician, không đổi
- * farmId/houseId/zoneId/mqttUsername/mqttPassword (những thứ đó vẫn của
- * Technician lúc lắp máy mới — xem Flow 1, FARM-FR-003b).
+ * device ID/mật khẩu broker (flash lúc xuất xưởng, tools/flash_identity.py).
  */
 #pragma once
 #include <Arduino.h>

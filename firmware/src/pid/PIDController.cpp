@@ -56,7 +56,7 @@ void RelayState::applyRelay(int pin, bool state) {
 // Chế độ và thời gian còn lại của từng relay gửi trong `relays` (BR-20).
 bool RelayState::anyOverride() const { return overrides.any(); }
 
-String RelayState::toJson(bool withRemaining) const {
+String RelayState::toJson(bool withRemaining, const char *commandId) const {
 
   String json = "{";
   json += "\"deviceId\":\"" + String(Config::deviceId) + "\",";
@@ -77,7 +77,9 @@ String RelayState::toJson(bool withRemaining) const {
       json += ",\"remaining_ms\":" + String(overrides.remainingMs(channel, now));
     json += "}";
   }
-  json += "}}";
+  json += "}";
+  if (commandId && commandId[0]) json += ",\"commandId\":\"" + String(commandId) + "\"";
+  json += "}";
   return json;
 }
 
