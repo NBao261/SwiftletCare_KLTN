@@ -8,7 +8,7 @@ import { Radius, Spacing } from '@/constants/theme'
 import type { AlertsScope } from '@/hooks/alert/useAlertsScope'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { AlertType } from '@/types'
-import type { VerdictFilter } from '@/utils/alertList.utils'
+import { isInferredAlert, type VerdictFilter } from '@/utils/alertList.utils'
 import { getAlertTypeLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -70,7 +70,8 @@ export function AlertFilterChips({ scope }: AlertFilterChipsProps) {
       id: 'verdict',
       label: scope.verdict ? getVerdictLabel(scope.verdict) : t('Phán quyết'),
       isActive: Boolean(scope.verdict),
-      isVisible: true,
+      // Đang lọc loại không suy luận thì không có gì để phán quyết (resolveVerdictFilter)
+      isVisible: !scope.type || isInferredAlert({ type: scope.type }),
     },
   ]
 

@@ -49,6 +49,12 @@ export function isInferredAlert(alert: Pick<Alert, 'type'>): boolean {
   return INFERRED_ALERT_TYPES.includes(alert.type)
 }
 
+// Phán quyết chỉ có nghĩa với loại suy luận: đang lọc một loại khác thì bỏ lọc phán quyết — backend trả 400 cho cặp đó
+// (listAlerts), và chuyên gia mặc định lọc "Chờ phán quyết" nên chọn loại nào cũng gặp
+export function resolveVerdictFilter(type: AlertType | null, verdict: VerdictFilter | null): VerdictFilter | null {
+  return type && !isInferredAlert({ type }) ? null : verdict
+}
+
 // Mốc thời gian gần nhất của cảnh báo: lần lặp gần nhất, chưa lặp thì lúc tạo
 function getLatestTime(alert: Alert): string {
   return alert.last_seen_at ?? alert.created_at
@@ -190,6 +196,20 @@ export interface AlertChainPage {
   items: Alert[]
   // meta.total của mắt đó
   total: number
+}
+
+// Tải một trang của chuỗi. Mắt rỗng thì tự đi tiếp đến khi có dữ liệu hoặc hết chuỗi: danh sách rỗng không có gì để cuộn hay
+// bấm "Xem thêm", nên dừng ở mắt rỗng sẽ hiện "Mọi thứ đang ổn" trong khi các mắt sau còn cảnh báo
+export async function fetchAlertChainPage(
+  chain: readonly AlertChainLink[],
+  pageParam: AlertChainPageParam,
+  fetchLinkPage: (link: AlertChainLink, page: number) => Promise<Pick<AlertChainPage, 'items' | 'total'>>,
+): Promise<AlertChainPage> {
+  const link = chain[pageParam.link]
+  if (!link) return { link: pageParam.link, items: [], total: 0 }
+  const result = await fetchLinkPage(link, pageParam.page)
+  if (result.items.length > 0 || pageParam.link + 1 >= chain.length) return { link: pageParam.link, ...result }
+  return fetchAlertChainPage(chain, { link: pageParam.link + 1, page: 1 }, fetchLinkPage)
 }
 
 // Trang kế tiếp theo meta.total: mắt hiện tại còn thì trang sau, hết thì sang mắt sau; hết chuỗi thì undefined

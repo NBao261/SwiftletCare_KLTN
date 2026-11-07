@@ -6,6 +6,7 @@ import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useOrderedHouses } from '@/hooks/farm/useOrderedHouses'
 import { useAuthStore } from '@/stores/authStore'
 import { useFarmPrefsStore, type AlertsPrefs } from '@/stores/farmPrefsStore'
+import { resolveVerdictFilter } from '@/utils/alertList.utils'
 import { parseSeverityLevel, type SeverityLevel } from '@/utils/severity.utils'
 import { canPerform } from '@/utils/permission.utils'
 
@@ -35,6 +36,8 @@ export function useAlertsScope() {
   const allHouses = useAllHouses()
   const remembered = prefs.alerts ?? {}
   const hasMultipleFarms = farms.length > 1
+  // Không có danh sách farm nào để dùng; tải lại nền lỗi mà còn danh sách cũ thì vẫn xem tiếp được
+  const isFarmsError = farmsQuery.isError && !farmsQuery.data
 
   const requestedHouse = allHouses.houses.find(house => house._id === params.houseId)
   const requestedFarm = farms.find(farm => farm._id === params.farmId)
@@ -65,7 +68,10 @@ export function useAlertsScope() {
   const severity: SeverityLevel | null = parseSeverityLevel(params.severity) ?? parseSeverityLevel(remembered.severity)
   // Chuyên gia chưa chọn phán quyết lần nào thì mặc định "Chờ phán quyết" (đặc tả §6)
   const isExpert = canPerform(user, 'setAlertVerdict')
-  const verdict = remembered.verdict === undefined ? (isExpert ? 'pending' : null) : remembered.verdict
+  const chosenVerdict = remembered.verdict === undefined ? (isExpert ? 'pending' : null) : remembered.verdict
+  const type = remembered.type ?? null
+  // Lựa chọn phán quyết vẫn được nhớ: bỏ lọc loại hoặc về loại suy luận thì áp lại
+  const verdict = resolveVerdictFilter(type, chosenVerdict)
 
   // Đổi bộ lọc: nhớ lại và xoá tham số route tương ứng để lựa chọn mới không bị tham số cũ đè
   const remember = (change: Partial<AlertsPrefs>, clearParams: (keyof AlertsParams)[] = []) => {
@@ -84,7 +90,7 @@ export function useAlertsScope() {
     zones,
     zoneId,
     severity,
-    type: remembered.type ?? null,
+    type,
     verdict,
     segment: remembered.segment ?? 'active',
     isExpert,
@@ -92,11 +98,13 @@ export function useAlertsScope() {
     // không lấy nhầm phạm vi đã nhớ khi cache còn lạnh
     isReady:
       !farmsQuery.isLoading &&
-      !farmsQuery.isError &&
+      !isFarmsError &&
       !(params.houseId && !requestedHouse && allHouses.isLoading) &&
       !(Boolean(farmId) && housesQuery.isLoading),
     isLoading: farmsQuery.isLoading || (Boolean(farmId) && housesQuery.isLoading),
     isError: farmsQuery.isError || housesQuery.isError,
+    isFarmsError,
+    retryFarms: farmsQuery.refetch,
     // Đổi farm thì về mọi nhà, mọi tầng của farm đó; null là mọi farm
     selectFarm: (nextFarmId: string | null) =>
       remember({ farmId: nextFarmId, houseId: null, zoneId: null }, ALL_PARAMS),

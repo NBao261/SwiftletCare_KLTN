@@ -2,12 +2,15 @@ import { describe, expect, it } from '@jest/globals'
 import type { Alert } from '@/types'
 import {
   ACTIVE_ALERT_STATUSES,
+  type AlertChainLink,
   buildAlertChain,
   countBySeverityLevel,
+  fetchAlertChainPage,
   filterAlerts,
   getNextAlertChainPage,
   getRenotifyState,
   isInferredAlert,
+  resolveVerdictFilter,
   sortAlerts,
   sumLevelCounts,
   toAlertQueryParams,
@@ -76,6 +79,19 @@ describe('filterAlerts', () => {
   })
 })
 
+describe('resolveVerdictFilter', () => {
+  it('loại không suy luận thì bỏ phán quyết, tránh backend trả 400', () => {
+    expect(resolveVerdictFilter('THRESHOLD_BREACH', 'pending')).toBeNull()
+    expect(resolveVerdictFilter('NODE_OFFLINE', 'confirmed')).toBeNull()
+  })
+
+  it('không lọc loại hoặc loại suy luận thì giữ phán quyết', () => {
+    expect(resolveVerdictFilter(null, 'pending')).toBe('pending')
+    expect(resolveVerdictFilter('NOISE_ANOMALY', 'rejected')).toBe('rejected')
+    expect(resolveVerdictFilter(null, null)).toBeNull()
+  })
+})
+
 describe('countBySeverityLevel và isInferredAlert', () => {
   it('đếm đủ 3 cấp, CRITICAL và HIGH cùng là Khẩn cấp, cấp không có là 0', () => {
     expect(
@@ -141,8 +157,9 @@ describe('chuỗi trang phân trang ở server', () => {
     expect(params).toEqual({ type: 'NOISE_ANOMALY', verdict: 'pending', status: 'RESOLVED', severity: 'LOW', page: '2', limit: '20' })
   })
 
+  const alerts = (count: number) => Array.from({ length: count }, (_, index) => buildAlert(`a${index}`))
+
   it('trang kế: mắt còn thì trang sau, hết thì sang mắt sau, hết chuỗi thì dừng', () => {
-    const alerts = (count: number) => Array.from({ length: count }, (_, index) => buildAlert(`a${index}`))
     expect(getNextAlertChainPage(2, [])).toEqual({ link: 0, page: 1 })
     expect(getNextAlertChainPage(2, [{ link: 0, items: alerts(20), total: 25 }])).toEqual({ link: 0, page: 2 })
     expect(
@@ -152,6 +169,68 @@ describe('chuỗi trang phân trang ở server', () => {
       ]),
     ).toEqual({ link: 1, page: 1 })
     expect(getNextAlertChainPage(2, [{ link: 1, items: [], total: 0 }])).toBeUndefined()
+  })
+
+  describe('fetchAlertChainPage', () => {
+    // Giả lập backend: số cảnh báo của từng mắt theo trạng thái + mức; ghi lại các lần gọi
+    function buildFetcher(itemsPerLink: Record<string, number>) {
+      const requests: string[] = []
+      const fetchLinkPage = (link: AlertChainLink, page: number) => {
+        const key = `${link.status}/${link.severity}`
+        requests.push(`${key}#${page}`)
+        const total = itemsPerLink[key] ?? 0
+        return Promise.resolve({ items: alerts(page === 1 ? total : 0), total })
+      }
+      return { fetchLinkPage, requests }
+    }
+    const firstPage = { link: 0, page: 1 }
+
+    it('mắt đầu rỗng (không có ACTIVE, có ACKNOWLEDGED): tự sang mắt sau, không cần bấm', async () => {
+      const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], null)
+      const { fetchLinkPage, requests } = buildFetcher({ 'ACKNOWLEDGED/null': 3 })
+      const page = await fetchAlertChainPage(chain, firstPage, fetchLinkPage)
+      expect(page).toMatchObject({ link: 1, total: 3 })
+      expect(page.items).toHaveLength(3)
+      expect(requests).toEqual(['ACTIVE/null#1', 'ACKNOWLEDGED/null#1'])
+      expect(getNextAlertChainPage(chain.length, [page])).toBeUndefined()
+    })
+
+    it('lọc Khẩn cấp chỉ có HIGH: bỏ qua CRITICAL rỗng', async () => {
+      const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], 'P1')
+      const { fetchLinkPage, requests } = buildFetcher({ 'ACTIVE/HIGH': 2 })
+      const page = await fetchAlertChainPage(chain, firstPage, fetchLinkPage)
+      expect(page).toMatchObject({ link: 1, total: 2 })
+      expect(requests).toEqual(['ACTIVE/CRITICAL#1', 'ACTIVE/HIGH#1'])
+    })
+
+    it('mắt đầu có dữ liệu thì không gọi các mắt sau', async () => {
+      const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], null)
+      const { fetchLinkPage, requests } = buildFetcher({ 'ACTIVE/null': 1, 'ACKNOWLEDGED/null': 1 })
+      expect(await fetchAlertChainPage(chain, firstPage, fetchLinkPage)).toMatchObject({ link: 0 })
+      expect(requests).toEqual(['ACTIVE/null#1'])
+    })
+
+    it('cả chuỗi rỗng: dừng ở mắt cuối và hết trang, màn hiện trạng thái rỗng', async () => {
+      const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], 'P1')
+      const { fetchLinkPage, requests } = buildFetcher({})
+      const page = await fetchAlertChainPage(chain, firstPage, fetchLinkPage)
+      expect(page).toEqual({ link: 3, items: [], total: 0 })
+      expect(requests).toHaveLength(4)
+      expect(getNextAlertChainPage(chain.length, [page])).toBeUndefined()
+    })
+
+    it('trang sau của một mắt rỗng (dữ liệu vừa đổi): đi tiếp từ trang 1 của mắt sau', async () => {
+      const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], null)
+      const { fetchLinkPage, requests } = buildFetcher({ 'ACKNOWLEDGED/null': 1 })
+      expect(await fetchAlertChainPage(chain, { link: 0, page: 2 }, fetchLinkPage)).toMatchObject({ link: 1 })
+      expect(requests).toEqual(['ACTIVE/null#2', 'ACKNOWLEDGED/null#1'])
+    })
+
+    it('vị trí ngoài chuỗi thì trả trang rỗng, không gọi API', async () => {
+      const { fetchLinkPage, requests } = buildFetcher({})
+      expect(await fetchAlertChainPage([], firstPage, fetchLinkPage)).toEqual({ link: 0, items: [], total: 0 })
+      expect(requests).toEqual([])
+    })
   })
 
   it('cộng số theo cấp: CRITICAL và HIGH cùng Khẩn cấp', () => {

@@ -2,9 +2,9 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { alertApi } from '@/services/api/alert.api'
 import type { Alert } from '@/types'
 import {
-  type AlertChainPage,
   type AlertChainPageParam,
   buildAlertChain,
+  fetchAlertChainPage,
   getNextAlertChainPage,
   type ServerAlertFilter,
   toAlertQueryParams,
@@ -31,15 +31,13 @@ export function usePagedAlertList({ statuses, filter, level, enabled, refetchInt
 
   return useInfiniteQuery({
     queryKey: ['alerts', 'list', 'paged', statuses.join(','), filter, level],
-    queryFn: ({ pageParam }): Promise<AlertChainPage> => {
-      const link = chain[pageParam.link]
-      if (!link) return Promise.resolve({ link: pageParam.link, items: [], total: 0 })
-      return alertApi.list(toAlertQueryParams(filter, link, pageParam.page, PAGE_SIZE)).then(response => ({
-        link: pageParam.link,
-        items: response.data.data,
-        total: response.data.meta?.total ?? 0,
-      }))
-    },
+    queryFn: ({ pageParam }) =>
+      fetchAlertChainPage(chain, pageParam, (link, page) =>
+        alertApi.list(toAlertQueryParams(filter, link, page, PAGE_SIZE)).then(response => ({
+          items: response.data.data,
+          total: response.data.meta?.total ?? 0,
+        })),
+      ),
     initialPageParam: { link: 0, page: 1 } as AlertChainPageParam,
     getNextPageParam: (_lastPage, pages) => getNextAlertChainPage(chain.length, pages),
     enabled,

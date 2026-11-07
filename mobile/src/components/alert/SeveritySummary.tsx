@@ -12,7 +12,8 @@ const TILE_HEIGHT = 64
 const DIMMED_OPACITY = 0.5
 
 interface SeveritySummaryProps {
-  counts: Record<SeverityLevel, number>
+  // null: không tải được số, ô hiện "_"
+  counts: Record<SeverityLevel, number> | null
   selected: SeverityLevel | null
   onToggle: (level: SeverityLevel) => void
   isLoading: boolean
@@ -31,7 +32,7 @@ export function SeveritySummary({ counts, selected, onToggle, isLoading }: Sever
         const style = getSeverityStyle(level, palette)
         const isSelected = selected === level
         const isDimmed = selected !== null && !isSelected
-        const count = counts[level]
+        const count = counts?.[level] ?? '_'
         const label = getSeverityLevelLabel(level)
         return (
           <Pressable

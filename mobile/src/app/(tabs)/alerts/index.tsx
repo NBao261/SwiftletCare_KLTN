@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native'
 import { useIsFocused } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
@@ -28,6 +28,7 @@ import { useAlertRooms } from '@/hooks/alert/useAlertRooms'
 import { useAlertsScope } from '@/hooks/alert/useAlertsScope'
 import { useNewAlertIds } from '@/hooks/alert/useNewAlertIds'
 import { usePagedAlertList } from '@/hooks/alert/usePagedAlertList'
+import { useRefetchInvalidatedAlertLists } from '@/hooks/alert/useRefetchInvalidatedAlertLists'
 import { useResolvedAlertList } from '@/hooks/alert/useResolvedAlertList'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { useSocketConnection } from '@/hooks/telemetry/useSocketConnection'
@@ -55,8 +56,6 @@ const SKELETON_ROW_COUNT = 5
 const ROW_GAP = Spacing.sm
 // Giá trị "Tất cả" trong bảng chọn farm, nhà
 const ALL = '__all__'
-// Dải mức khi số chưa tải xong (lúc đó dải hiện khung xương)
-const EMPTY_LEVEL_COUNTS = { P1: 0, P2: 0, P3: 0 }
 
 /** Cảnh báo – một danh sách, một lớp chi tiết (ALERT-FR-007…009, 013…015, EXPERT-FR-003; đặc tả "Trang Cảnh báo"):
  * dải tóm tắt theo mức là bộ lọc nhanh, đang hiệu lực / đã đóng, lọc tầng, loại, phán quyết, vuốt để xác nhận */
@@ -136,27 +135,20 @@ export default function AlertsScreen() {
     ? countBySeverityLevel(filterAlerts(activeQuery.data ?? [], baseFilter))
     : activeCountsQuery.data
   const activeTotal = activeCounts ? activeCounts.P1 + activeCounts.P2 + activeCounts.P3 : null
-  const isListLoading = !scope.isReady || (isHouseMode ? houseQuery.isLoading : pagedQuery.isLoading)
-  const isListError = isHouseMode ? houseQuery.isError : pagedQuery.isError
-  const retryList = () => (isHouseMode ? houseQuery.refetch() : pagedQuery.refetch())
+  // Không tải được danh sách farm thì query cảnh báo không bao giờ chạy: báo lỗi, không quay khung xương mãi
+  const isListLoading =
+    !scope.isFarmsError && (!scope.isReady || (isHouseMode ? houseQuery.isLoading : pagedQuery.isLoading))
+  const isListError = scope.isFarmsError || (isHouseMode ? houseQuery.isError : pagedQuery.isError)
+  const retryList = () => {
+    // Tải được farm thì query cảnh báo tự chạy
+    if (scope.isFarmsError) return void scope.retryFarms()
+    if (isHouseMode) return void houseQuery.refetch()
+    void pagedQuery.refetch()
+    void levelCountsQuery.refetch()
+  }
 
   // Cảnh báo mới / xác nhận / phán quyết chỉ đánh dấu danh sách cũ (invalidateAlertQueries): tab đang hiện thì tải lại ngay
-  const hasStaleList = isHouseMode
-    ? houseQuery.isStale && !houseQuery.isFetching
-    : (pagedQuery.isStale && !pagedQuery.isFetching) || (levelCountsQuery.isStale && !levelCountsQuery.isFetching)
-  const refetchHouseList = houseQuery.refetch
-  const refetchPagedList = pagedQuery.refetch
-  const refetchLevelCounts = levelCountsQuery.refetch
-  useEffect(() => {
-    // refetch() chạy cả query đang tắt, nên chờ phạm vi sẵn sàng
-    if (!isFocused || !hasStaleList || !scope.isReady) return
-    if (isHouseMode) {
-      void refetchHouseList()
-      return
-    }
-    void refetchPagedList()
-    void refetchLevelCounts()
-  }, [isFocused, hasStaleList, scope.isReady, isHouseMode, refetchHouseList, refetchPagedList, refetchLevelCounts])
+  useRefetchInvalidatedAlertLists(isFocused)
   const hasFilter = Boolean(scope.zoneId || scope.type || scope.verdict || scope.severity)
   // Phạm vi trên header: nhà › farm › tất cả. Đang xem mọi farm thì hàng cảnh báo ghi thêm tên farm
   const scopeTitle = scope.house?.name ?? (scope.farmId === null ? t('Tất cả trang trại') : t('Tất cả nhà'))
@@ -171,7 +163,10 @@ export default function AlertsScreen() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      await queryClient.refetchQueries({ queryKey: ['alerts'], type: 'active' })
+      await Promise.all([
+        scope.isFarmsError ? scope.retryFarms() : null,
+        queryClient.refetchQueries({ queryKey: ['alerts'], type: 'active' }),
+      ])
     } finally {
       setRefreshing(false)
     }
@@ -197,7 +192,7 @@ export default function AlertsScreen() {
         <EmptyState
           message={t('Không tải được cảnh báo')}
           actionLabel={t('Thử lại')}
-          onAction={() => void retryList()}
+          onAction={retryList}
         />
       )
     }
@@ -233,10 +228,11 @@ export default function AlertsScreen() {
         </View>
       )}
       <SeveritySummary
-        counts={counts ?? EMPTY_LEVEL_COUNTS}
+        counts={counts}
         selected={scope.severity}
         onToggle={scope.toggleSeverity}
-        isLoading={isListLoading || counts === null}
+        // Không tải được số thì dải vẫn hiện "_" và vẫn lọc được, không quay khung xương mãi
+        isLoading={isListLoading || (counts === null && !levelCountsQuery.isError && !scope.isFarmsError)}
       />
       <ChoiceChips
         options={[
