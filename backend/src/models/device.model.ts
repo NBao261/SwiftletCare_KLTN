@@ -91,6 +91,8 @@ export interface ICameraNode extends Document {
   status: DeviceStatus
   last_heartbeat?: Date
   model_version?: string
+  /** Số khung hình xử lý mỗi giây ở heartbeat gần nhất */
+  fps?: number
   registered_at: Date
   /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
   registered_by?: Types.ObjectId
@@ -212,6 +214,7 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE'] satisfies DeviceStatus[], default: 'PENDING' },
     last_heartbeat: { type: Date },
     model_version:  { type: String },
+    fps:            { type: Number },
     registered_at:  { type: Date, default: Date.now },
     registered_by:  { type: Schema.Types.ObjectId, ref: 'User' },
     activation_overdue_at: { type: Date },

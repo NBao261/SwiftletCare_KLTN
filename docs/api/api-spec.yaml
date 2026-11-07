@@ -2606,16 +2606,15 @@ paths:
   /devices/sensor-nodes/{id}/reassign-zone:
     put:
       tags: [Devices]
-      summary: "Dời thiết bị đang kết nối sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — FARM_OWNER/TECHNICIAN"
+      summary: "Dời thiết bị sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — FARM_OWNER/TECHNICIAN"
       description: |
         Farm Owner chỉ dời trong farm của mình: Zone nguồn hoặc đích thuộc farm khác → 403
         (FARM-FR-007); Administrator → 403 (Report 3 §2.4).
         Chỉ đổi Zone trong cơ sở dữ liệu rồi publish lại `config` (retained) của Zone mới lên topic
-        của thiết bị; thiết bị không biết farm, house, zone (D3). Kiểm quyền trên cả Zone
+        của thiết bị, thiết bị offline nhận khi kết nối lại; thiết bị không biết farm, house, zone (D3). Kiểm quyền trên cả Zone
         nguồn lẫn Zone đích; cảnh báo còn mở của thiết bị ở Zone cũ được đóng; audit
         `DEVICE_REASSIGNED`; người dời là Technician (mọi farm, FARM-FR-009) thì các Farm Owner của
-        farm nguồn và đích nhận thông báo trong app. Chỉ khi thiết bị `ONLINE` (đang kết nối) —
-        mất kết nối thì trả 409. Dời về chính Zone đang ở trả 400.
+        farm nguồn và đích nhận thông báo trong app. Dời về chính Zone đang ở trả 400.
         `meta.commandDelivered=false` khi backend chưa kết nối broker.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
@@ -4776,6 +4775,7 @@ components:
           }
         last_heartbeat: { type: string, format: date-time }
         model_version: { type: string }
+        fps: { type: number, description: "Số khung hình xử lý mỗi giây ở heartbeat gần nhất" }
         registered_at: { type: string, format: date-time }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }

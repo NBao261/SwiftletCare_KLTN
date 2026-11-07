@@ -24,11 +24,11 @@ import { RESTORE_WINDOW_MS } from '@/services/device.service'
 import { Alert } from '@/models/alert.model'
 import { createAlert, renotifyStaleAlerts } from '@/services/alert.service'
 import { removeFarm, updateFarm } from '@/services/farm.service'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceCommand, publishDeviceConfig } from '@/mqtt/mqtt.client'
 import * as socket from '@/socket'
 import type { Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/services/notification.service', () => ({
   ...jest.requireActual('@/services/notification.service'),
   notifyUser: jest.fn().mockResolvedValue(undefined),
@@ -62,7 +62,8 @@ afterEach(async () => {
     Alert.deleteMany({}),
   ])
   jest.clearAllMocks()
-  ;(publishCommand as jest.Mock).mockReturnValue(true)
+  ;(publishDeviceCommand as jest.Mock).mockReturnValue(true)
+  ;(publishDeviceConfig as jest.Mock).mockReturnValue(true)
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -348,8 +349,8 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
   it('PUSH_CONFIG đẩy toàn bộ cấu hình: ngưỡng, hệ số mờ, tham số phát hiện và lịch loa', async () => {
     const { techToken, node, a } = await onlineNode()
     await send(techToken, node._id, { command: 'PUSH_CONFIG' }).expect(202)
-    const [, , zoneId, topic, payload] = (publishCommand as jest.Mock).mock.calls[0]
-    expect([zoneId, topic]).toEqual([String(a.zone._id), 'config/update'])
+    const [deviceId, payload] = (publishDeviceConfig as jest.Mock).mock.calls[0]
+    expect(deviceId).toBe('node_100')
     // Thiết bị lệch hệ số mờ/lịch loa thì lệnh "đẩy lại cấu hình" phải sửa được cả phần đó
     expect(payload).toMatchObject({
       deviceId: 'node_100',
@@ -366,9 +367,7 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, version: '1.4.0' } }).expect(409)
 
     await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(202)
-    expect((publishCommand as jest.Mock).mock.calls[0][4]).toEqual({
-      deviceId: node.device_id, command: 'OTA', ota: OTA, commandId: expect.any(String), issuedAt: expect.any(Number),
-    })
+    expect(publishDeviceCommand).toHaveBeenCalledWith(node.device_id, 'OTA', OTA)
     expect((await SensorNode.findById(node._id))!.ota_pending!.version).toBe('1.4.1')
 
     await recordHeartbeat({ deviceId: 'node_100', firmwareVersion: '1.4.0' } as never) // chưa lên bản mới
@@ -388,7 +387,7 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
 
     await SensorNode.updateOne({ _id: node._id }, { status: 'OFFLINE' })
     await send(techToken, node._id, { command: 'RESTART' }).expect(409)
-    expect(publishCommand).toHaveBeenCalledTimes(1)
+    expect(publishDeviceCommand).toHaveBeenCalledTimes(1)
   })
 
   it('OTA chỉ nhận HTTPS từ host trong OTA_ALLOWED_HOSTS', async () => {
@@ -396,7 +395,7 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, url: 'http://fw.swiftletcare.vn/a.bin' } }).expect(422)
     const res = await send(techToken, node._id, { command: 'OTA', ota: { ...OTA, url: 'https://evil.example.com/a.bin' } }).expect(400)
     expect(res.body.error.message).toContain('OTA_ALLOWED_HOSTS')
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
   })
 
   it('OTA quá 30 phút chưa xác nhận → ota_failed + audit, lần gửi sau xoá cờ lỗi', async () => {
@@ -417,7 +416,7 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
 
   it('lệnh không tới được broker → 503, không ghi ota_pending', async () => {
     const { techToken, node } = await onlineNode()
-    ;(publishCommand as jest.Mock).mockReturnValue(false)
+    ;(publishDeviceCommand as jest.Mock).mockReturnValue(false)
 
     const res = await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(503)
     expect(res.body.error.message).toContain('MQTT')
@@ -443,11 +442,11 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
       expect(restart.body.error.message).toContain('chưa xử lý lệnh RESTART')
       await send(techToken, node._id, { command: 'OTA', ota: OTA }).expect(501)
     }
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
 
     // PUSH_CONFIG không phụ thuộc trường `command` nên firmware cũ vẫn hiểu
     await send(techToken, node._id, { command: 'PUSH_CONFIG' }).expect(202)
-    expect((publishCommand as jest.Mock).mock.calls[0][2]).toBe(String(a.zone._id))
+    expect(publishDeviceConfig).toHaveBeenCalledWith('node_100', expect.anything())
 
     // Bản mới hơn 1.4.0 (kể cả 1.10.0, so theo số chứ không theo chuỗi) thì gửi được
     await SensorNode.updateOne({ _id: node._id }, { firmware_version: '1.10.0' })
@@ -508,7 +507,7 @@ describe('thiết bị đã gỡ không còn nhận lệnh (FARM-FR-008)', () =>
     await SensorNode.updateOne({ _id: node._id }, { 'relays.misting.mode': 'MANUAL', 'relays.misting.override_expiry': new Date(Date.now() - 60_000) })
     jest.clearAllMocks()
     expect(await expireManualOverrides()).toBe(0)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
   })
 })
 
@@ -525,7 +524,7 @@ describe('dời zone (FARM-FR-007b)', () => {
       .set('Authorization', `Bearer ${techToken}`).send({ newZoneId: String(b.zone._id) }).expect(200)
 
     expect((await Alert.findById(alert._id))!.status).toBe('RESOLVED')
-    expect((publishCommand as jest.Mock).mock.calls.at(-1)![4]).toMatchObject({ deviceId: 'node_400', newZoneId: String(b.zone._id) })
+    expect(publishDeviceConfig).toHaveBeenCalledWith('node_400', expect.objectContaining({ deviceId: 'node_400' }))
   })
 
   const reassign = (token: string, nodeId: unknown, newZoneId: unknown) =>
@@ -536,17 +535,17 @@ describe('dời zone (FARM-FR-007b)', () => {
     const { techToken, a } = await seed()
     const node = await SensorNode.create({ device_id: 'node_401', zone_id: a.zone._id, status: 'ONLINE' })
     await reassign(techToken, node._id, a.zone._id).expect(400)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
   })
 
-  it('thiết bị ONLINE dời được như lệnh từ xa, OFFLINE thì không', async () => {
+  it('thiết bị ONLINE và OFFLINE đều dời được: cấu hình retained chờ thiết bị kết nối lại', async () => {
     const { techToken, a, b } = await seed()
     const online = await SensorNode.create({ device_id: 'node_402', zone_id: a.zone._id, status: 'ONLINE' })
     await reassign(techToken, online._id, b.zone._id).expect(200)
 
     const offline = await SensorNode.create({ device_id: 'node_403', zone_id: a.zone._id, status: 'OFFLINE' })
-    const res = await reassign(techToken, offline._id, b.zone._id).expect(409)
-    expect(res.body.error.message).toContain('OFFLINE')
+    await reassign(techToken, offline._id, b.zone._id).expect(200)
+    expect(String((await SensorNode.findById(offline._id))!.zone_id)).toBe(String(b.zone._id))
   })
 })
 
