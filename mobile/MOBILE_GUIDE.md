@@ -12,7 +12,7 @@ App Expo Router (React Native) cho **Farm Owner và Domain Expert** (Report 4 §
 
 **Phiên bản:** Expo SDK 58 · React Native 0.88 · React 19.3 · Expo Router 58 · Reanimated 4.7 · TypeScript 6 · New Architecture bắt buộc (không còn tuỳ chọn `newArchEnabled`). Đối chiếu docs đúng phiên bản: https://docs.expo.dev/versions/v58.0.0/
 
-**Trạng thái màn hình:** luồng xác thực đã chạy với backend thật (đăng nhập, quên mật khẩu bằng mã 6 số, đổi mật khẩu tạm, tab theo role). Các màn còn lại là stub (`AppHeader` + `TODO`) — implement theo Report 3, luồng chính trước: cảnh báo + push, dashboard, live stream; rồi luồng phụ thiết lập thiết bị bằng QR (SF-01). Route `livestream/[zoneId]` phải đổi theo camera của nhà yến (VISION-FR-013, Report 3 §2.8).
+**Trạng thái màn hình:** luồng xác thực đã chạy với backend thật (đăng nhập, quên mật khẩu bằng mã 6 số, đổi mật khẩu tạm, tab theo role). Các màn của Farm Owner đã gọi API thật, phần còn thiếu ghi ở Known debt trong `mobile/CLAUDE.md`; màn riêng của Domain Expert làm tiếp theo Report 3. Live stream phát tại chỗ (`LiveCameraPlayer`, `HouseCameraPanel`) theo camera của nhà yến (VISION-FR-013, Report 3 §2.8), không có route riêng.
 
 ---
 
@@ -134,9 +134,7 @@ mobile/
    │  │                          #   menu-1/ (không role nào dùng) · menu-2/ (menu tạm của Domain Expert)
    │  ├─ farm/[farmId].tsx       # chuyển tiếp sang Màn A của farm đó (giữ cho link cũ)
    │  ├─ zone/[zoneId].tsx       # chuyển tiếp sang Màn B của nhà chứa zone, đúng tab tầng (giữ cho link cũ)
-   │  ├─ device/[deviceId].tsx   # chi tiết thiết bị
-   │  ├─ alert/[alertId].tsx     # chi tiết cảnh báo dạng trang (Trang chủ, sau này push) — cùng AlertDetailContent với sheet của tab Cảnh báo
-   │  └─ livestream/[zoneId].tsx # live stream (sẽ đổi theo camera nhà yến — VISION-FR-013)
+   │  └─ alert/[alertId].tsx     # chi tiết cảnh báo dạng trang (Trang chủ, sau này push) — cùng AlertDetailContent với sheet của tab Cảnh báo
    ├─ components/
    │  ├─ ui/                     # text · button · pressable-scale · text-field · code-input · form-message · card · icon-button · bottom-sheet · split-badge · skeleton · empty-state · loading-overlay · toast
    │  ├─ auth/                   # AuthScreenLayout.tsx (khung chung các màn xác thực, không cuộn; form nhích lên vừa đủ khi bàn phím mở) ·
@@ -182,7 +180,7 @@ mobile/
    │  │                          #   useActiveAlertsOfScopes (cảnh báo theo nhà/zone) · useActiveAlertCountsBySeverity · useRefreshAlertsOnNew ·
    │  │                          #   useAlertsScope (farm, nhà, tầng, mức, loại, phán quyết; nhớ khi tắt app) · useActiveAlertList · useResolvedAlertList ·
    │  │                          #   useAlertDetail · useSetAlertVerdict · useAlertEvidence · useAlertLocations · useAlertRooms · useNewAlertIds · useSyncAlertBadge
-   │  ├─ telemetry/              # useLatestTelemetryOfZones · useZoneTelemetryStream · useLiveTelemetry · useTelemetryHistory · useSocketConnection
+   │  ├─ telemetry/              # useLatestTelemetryOfZones · useZoneTelemetryStream · useSocketConnection
    │  ├─ bird-count/             # useBirdCountDaily · useBirdCountTrends · useTodayBirdCounts · useLiveHouseBirdCount
    │  ├─ device/                 # useSensorNodes · useCameraNodes · useActiveRelayOverrides · useClearRelayOverride · useCameraCards · useCameraStreamUrl ·
    │  │                          #   useControlRelay · useDeviceStream (RELAY_UPDATE, DEVICE_STATUS_CHANGE) · useCameraAutoplay (Wi-Fi / dữ liệu di động, app chạy nền) ·
@@ -249,7 +247,7 @@ Farm Owner — (tabs)
 │                harvests (ghi, sửa — SF-04)
 ├─ Cảnh báo    alerts: phạm vi ▾ riêng của tab, mặc định tất cả: Tất cả trang trại ─► một farm (Tất cả nhà) ─► một nhà (chip Tầng);
 │                không theo farm/nhà của tab Farm, Phân tích; ⚙ cài đặt thông báo; dải mức = lọc nhanh; Đang hiệu lực · Đã đóng;
-│                Tầng · Loại · Phán quyết; vuốt trái để xác nhận (chip ghi chú nhanh); chạm hàng ─► sheet chi tiết toàn màn
+│                Tầng · Loại · Phán quyết (lọc loại không suy luận thì ẩn và không áp Phán quyết); vuốt trái để xác nhận (chip ghi chú nhanh); chạm hàng ─► sheet chi tiết toàn màn
 │                (bằng chứng ±30 phút cho cảnh báo suy luận, Đi tới tầng, Điều khiển tay); nhắc lại sau 15 phút / 1 giờ (ALERT-FR-015)
 │                "Đã đóng" gồm đã hết (RESOLVED) và bị bác bỏ (DISMISSED, đổi lại "Đúng" được); chủ trại phán quyết khi farm chưa có
 │                chuyên gia (BR-22); bằng chứng đọc GET /alerts/{id}/evidence; còn thiếu: mở từ push — "Sắp có"
@@ -335,12 +333,12 @@ Màn hình (`src/app/`) → hook (`src/hooks/<nghiệp vụ>/`) → API (`src/se
   - Danh sách trả `{ data, meta: { page, limit, total } }`, màn hình phân trang theo `meta`.
   - Dữ liệu server chỉ nằm trong cache React Query, không chép sang zustand hay `useState`.
 - **Realtime**: `services/socket/socketClient.ts` — `connectSocket()` sau khi đăng nhập (`useLogin`), mỗi lần kết nối lại đọc lại token, tự kết nối lại 1–5s; vào/ra phòng `JOIN_ZONE` / `LEAVE_ZONE`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`.
-  - Màn hình đăng ký sự kiện trong effect phải huỷ trong cleanup bằng `off*` cùng handler (`offTelemetryUpdate`, `offAlertNew`, `offBirdCountUpdate`, `offRelayUpdate`); mẫu: `hooks/telemetry/useLiveTelemetry.ts`.
+  - Màn hình đăng ký sự kiện trong effect phải huỷ trong cleanup bằng `off*` cùng handler (`offTelemetryUpdate`, `offAlertNew`, `offBirdCountUpdate`, `offRelayUpdate`); mẫu: `hooks/telemetry/useZoneTelemetryStream.ts`.
 - **Client state**: zustand trong `stores/` — `authStore.ts` (`user`, `accessToken`, `isAuthenticated`, `isLoading`; `setAuth` / `clearAuth` / `loadStoredAuth`), `alertStore.ts` (`unreadCount`, `latestAlert` cho badge tab Cảnh báo).
 - **Push**: `services/notification/pushNotification.ts` xin quyền, lấy push token, tạo kênh Android `alerts` — chỉ khi người dùng bấm hàng "Nhận push trên máy này" ở tab Tài khoản (`hooks/profile/usePushRegistration.ts`). **Chưa làm:** gửi token lên backend — `api-spec.yaml` chưa có endpoint (ALERT-FR-002, G-10) nên token không gửi đi đâu, hàng ghi rõ "máy chủ chưa gửi push (Sắp có)"; có endpoint thì thêm `ENDPOINTS` + `services/api/pushToken.api.ts`.
 - **Lỗi**: hiện 1 câu tiếng Việt ngắn theo nhóm (phiên đăng nhập/quyền, không tìm thấy, dữ liệu không hợp lệ, lỗi hệ thống, mất mạng); câu đầy đủ, có hướng dẫn "Vui lòng …" khi người dùng làm được gì đó; không hiện mã HTTP hay nguyên văn thông báo backend. Mất mạng (`NETWORK_ERROR_MESSAGE`) và lỗi máy chủ 5xx (`SERVER_ERROR_MESSAGE`) là hai câu khác nhau.
   - Xác thực: `utils/apiError.utils.ts` (`getAuthErrorMessage`) đổi `error.code` + status thành câu theo từng thao tác; sai email hay sai mật khẩu chung một câu; 429 lấy `retryAfterSec` của backend. Nút "Gửi lại mã" không có thời gian chờ đặt ở máy (không có nguồn) — giới hạn là của backend. Mutation xác thực đặt `retry: false` vì mỗi lần sai đều bị backend tính vào giới hạn 10 lần / 15 phút.
-- **Route params**: id đi qua route động của expo-router (`(tabs)/farms/[houseId]` kèm `?zoneId`, `(tabs)/farms/[houseId]/settings` kèm `?section&zoneId&edit`, `(tabs)/farms/farm-settings?farmId`, `(tabs)/farms?farmId`, `device/[deviceId]`, `alert/[alertId]`), đọc bằng `useLocalSearchParams`; không hiện id lên giao diện.
+- **Route params**: id đi qua route động của expo-router (`(tabs)/farms/[houseId]` kèm `?zoneId`, `(tabs)/farms/[houseId]/settings` kèm `?section&zoneId&edit`, `(tabs)/farms/farm-settings?farmId`, `(tabs)/farms?farmId`, `alert/[alertId]`), đọc bằng `useLocalSearchParams`; không hiện id lên giao diện.
 - **Thứ tự danh sách giống web**: farm và zone tạo trước đứng đầu (so `_id`, `utils/sort.utils.ts` — như `FarmOwnerFarmsPage`, `deviceInventory` của web); nhà yến giữ thứ tự backend trả (mới nhất trước), nhà đã ghim ★ lên đầu (`sortPinnedFirst`, lưu trên máy theo tài khoản như `pinnedHouseStore` của web); carousel nhà ở Trang chủ xếp theo trạng thái nặng nhất rồi theo tên như dashboard web. Web đổi cách sắp thì mobile đổi theo.
 - **Hook điều hướng** (`useIsFocused`, `useFocusEffect`, `useNavigation`…) import từ `expo-router`, không từ `@react-navigation/native`: expo-router 58 mang bản React Navigation riêng, import từ gói ngoài thì báo "Couldn't find a navigation object". Stack lồng trong tab dùng `unstable_settings.anchor` (không còn `initialRouteName`).
 

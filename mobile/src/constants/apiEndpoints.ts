@@ -46,7 +46,6 @@ export const ENDPOINTS = {
 
   // Dữ liệu cảm biến (ENV-FR-*)
   TELEMETRY_LATEST: (zoneId: string) => `/telemetry/zones/${zoneId}/latest`,
-  TELEMETRY_HISTORY: (zoneId: string) => `/telemetry/zones/${zoneId}/history`,
 
   // Cảnh báo (ALERT-FR-*)
   ALERTS: '/alerts',
