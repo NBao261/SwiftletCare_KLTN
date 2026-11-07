@@ -277,27 +277,27 @@ Một PR cho backend, web, mobile, firmware:
 - [x] Test TC-ST "MANUAL → MANUAL". *(06/11, `relayCommand.test.ts` + `test_relay_override`, backend 615/615)*
 - [x] Sửa theo review PR #124 *(Kiệt, 02/11, `37f61a2` spec + `c3d3ff8` backend)*: huỷ 1 relay không đang can thiệp tay thì không gửi lệnh, không ghi audit (200, như khi thiết bị AUTO). Góp ý còn lại không sửa code: web `ScadaNodeCard.tsx` cần giới hạn bơm 30 phút và hộp xác nhận (dòng Web/mobile ở trên, Len) trước khi G-06 lên staging.
 
-### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Bảo
+### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Kiệt (Bảo chuyển giao)
 
-Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 controller + AI node trước khi lên staging.
+Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, chưa merge: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging, chạy `npm run mqtt:isolation` trên EMQX thật, màn kho thiết bị hiện `broker_secret` một lần (web).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
 
-- [ ] Kho thiết bị: khi thêm thiết bị, sinh broker secret (trả một lần như activation key, lưu hash `broker_secret_hash`); thu hồi thì EMQX từ chối.
-- [ ] Backend:
+- [x] Kho thiết bị: khi thêm thiết bị, sinh broker secret (trả một lần như activation key, lưu hash `broker_secret_hash`); thu hồi thì EMQX từ chối.
+- [x] Backend:
   - `POST /internal/mqtt-auth` cho EMQX HTTP authentication;
   - service account của backend;
   - subscribe `swiftletcare/dev/+/…` với `clean: false`, QoS 1;
   - payload có `deviceId` khác topic thì bỏ;
   - không ingest retained.
-- [ ] EMQX: file authz một luật `swiftletcare/dev/${username}/#` + service account; tắt anonymous.
-- [ ] Topic:
+- [x] EMQX: file authz một luật `swiftletcare/dev/${username}/#` + service account; tắt anonymous.
+- [x] Topic:
   - lên (thiết bị → cloud): `telemetry` (0), `telemetry/buffered` (1), `heartbeat` (0), `relay/status` (1, kèm `commandId`), `alert` (1, kèm `eventId`), `vision/bird-count` (1), `vision/alert` (1);
   - xuống (cloud → thiết bị): `config` (retained, có `config_version`), `cmd` (envelope `commandId`, `type`, `issuedAt`).
-- [ ] Backend:
+- [x] Backend:
   - alert theo `eventId` (unique một phần `node_id + event_id`);
   - telemetry buffered unique `node_id + timestamp`;
   - bỏ `config/reassign` và `recordHeartbeat` sửa topic;
   - dời zone chỉ đổi DB và publish lại `config`.
-- [ ] Firmware:
+- [x] Firmware:
   - thay PubSubClient bằng `esp-mqtt` (`mqtt_client.h`), TLS với CA (ISRG Root X1), cổng 8883, user = device ID, password = secret flash cùng ID (NVS);
   - hàng đợi alert trong NVS, xoá khi có PUBACK;
   - buffer flash xoá khi có PUBACK;
@@ -305,9 +305,9 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - bỏ lệnh RELAY/AUDIO/RESTART cũ hơn 60 giây (cần NTP);
   - OTA bỏ `setInsecure()`, dùng CA;
   - test native cho bộ lọc lệnh trùng/cũ.
-- [ ] AI node: topic theo thiết bị, credential riêng, heartbeat có `fps` và `model_version`; đọc ring từ `config` retained.
-- [ ] Cập nhật quy tắc MQTT ở `CLAUDE.md` gốc, `backend/CLAUDE.md`, `firmware/CLAUDE.md`, `ai-pipeline/CLAUDE.md`; bỏ câu "current code".
-- [ ] Đóng DF-4.
+- [x] AI node: topic theo thiết bị, credential riêng, heartbeat có `fps` và `model_version`; đọc ring từ `config` retained.
+- [x] Cập nhật quy tắc MQTT ở `CLAUDE.md` gốc, `backend/CLAUDE.md`, `firmware/CLAUDE.md`, `ai-pipeline/CLAUDE.md`; bỏ câu "current code".
+- [ ] Đóng DF-4. *(khi G-07 merge và đã thử trên board)*
 - [ ] Test NFR-10 (d): script thử publish sang topic thiết bị khác thì bị từ chối.
 
 ### G-08 — Phiên bản cấu hình (P1) — Bảo
