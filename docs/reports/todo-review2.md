@@ -402,7 +402,7 @@ Thứ tự:
 5. **Len:** can thiệp tay có xác nhận (G-06).
 6. **Len:** setup QR (G-09).
 7. **Len:** trạng thái ngày + chấm điểm (G-11).
-8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; đổi route `livestream/[zoneId]` → theo camera của House).
+8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; phát tại chỗ theo camera của House, không dùng route riêng).
 9. **Len:** báo cáo.
 10. **Len:** thu hoạch.
 11. **Tuấn:** màn chuyên gia (hàng đợi việc, kết luận cảnh báo, tham số).
