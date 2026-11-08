@@ -5,6 +5,14 @@
 > **Thiết lập thiết bị (SF-01, FARM-FR-003c):** trang cài Wi-Fi (AP-mode) chỉ nhận Wi-Fi và địa chỉ broker, không có farm/house/zone hay khoá. Thiết bị không lưu mã kích hoạt in trên nhãn — backend kiểm tra mã đó khi Farm Owner quét nhãn; farm/house/zone do backend gửi xuống qua `config/reassign` khi heartbeat tới sai topic.
 >
 > **Thử trên thiết bị thật:** firmware đã chạy trên board ESP32 thật, nhưng chưa ghi lại bản nào và kịch bản nào đã thử. Ghi kết quả (ngày, bản firmware, đạt/không đạt) của từng kịch bản dưới đây vào đây trước khi báo cáo hoặc Report 5 dùng tới: rút cảm biến nhiệt-ẩm (relay phải TẮT), chạy bơm không có nước (phải báo `PUMP_DRY` và ngừng phun), đổi tham số từ web. Riêng 1.4.0: OTA từ trang OTA của Technician thành công (heartbeat báo bản mới); file sai SHA-256 và rút mạng giữa lúc tải (phải giữ bản cũ); bản mới không tới được broker (phải quay về bản cũ sau 10 phút); `RESTART` từ web; TLS bắt tay trong `mqttTask` (stack 12 KB) không tràn stack.
+>
+> **1.6.0 (hạn riêng từng relay BR-20, lọc lệnh BR-35) — chưa thử trên board.** Đã làm 09/11/2026: `pio run -e esp32dev` build được (`espressif32@6.9.0`, core 2.0.17; RAM 16,5 %, flash 58,3 %), test native `test_relay_override` 7/7, `test_command_filter` 10/10, `test_remote_command` 9/9. Còn phải thử trên board:
+> - bật tay bơm rồi quạt với 2 thời hạn khác nhau: mỗi relay về tự động đúng hạn của nó, relay kia giữ nguyên, `relay/status` báo `relays.{tên}.remaining_ms` giảm dần;
+> - `clear_override` kèm `relayName` (nút "Về tự động" của 1 relay) chỉ trả relay đó về tự động; không kèm `relayName` thì trả cả 3;
+> - lệnh giao lại cùng `commandId` (gửi lại tay bằng MQTTX) chỉ áp 1 lần;
+> - rút mạng, bấm bật relay trên web, cắm lại sau hơn 60 giây: lệnh bị bỏ và thiết bị gửi `relay/status` để web hiện đúng trạng thái;
+> - bật relay ngay sau khi khởi động, trước khi có giờ NTP: lệnh vẫn áp (Report 3 §8.1);
+> - board còn chạy 1.5.0 vẫn điều khiển tay được với backend mới (hết hạn hoặc huỷ 1 relay thì cả 3 relay về tự động như trước).
 
 PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `docs/hardware/components-guide.md`. Checklist lắp đặt: `docs/task-checklist.md` mục A.
 
@@ -49,10 +57,10 @@ src/
 ## Test
 
 ```bash
-pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry, test_remote_command
+pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry, test_remote_command, test_relay_override, test_command_filter
 ```
 
-Env `native` chỉ build các file C++ thuần (`pid/FuzzyControl`, `pid/PumpDryMonitor`, `sensors/SignalFilter`, `sensors/NoiseAnomalyDetector` — không phụ thuộc Arduino) và cần **g++ trên máy** — Windows: cài MinGW-w64 (vd `choco install mingw`) rồi thêm vào PATH.
+Env `native` chỉ build các file C++ thuần (`pid/FuzzyControl`, `pid/PumpDryMonitor`, `pid/RelayOverride`, `mqtt/CommandFilter`, `sensors/SignalFilter`, `sensors/NoiseAnomalyDetector` — không phụ thuộc Arduino) và cần **g++ trên máy** — Windows: cài MinGW-w64 (vd `choco install mingw`) rồi thêm vào PATH.
 
 ## Điều khiển mờ (ENV-FR-010/011)
 

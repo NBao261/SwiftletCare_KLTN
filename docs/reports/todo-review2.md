@@ -276,6 +276,7 @@ Một PR cho backend, web, mobile, firmware:
 - [x] Test TC-F17-02 *(`relayCommand.test.ts`, Kiệt 31/10, `fae12fe`)*.
 - [x] Test TC-ST "MANUAL → MANUAL". *(06/11, `relayCommand.test.ts` + `test_relay_override`, backend 615/615)*
 - [x] Sửa theo review PR #124 *(Kiệt, 02/11, `37f61a2` spec + `c3d3ff8` backend)*: huỷ 1 relay không đang can thiệp tay thì không gửi lệnh, không ghi audit (200, như khi thiết bị AUTO). Góp ý còn lại không sửa code: web `ScadaNodeCard.tsx` cần giới hạn bơm 30 phút và hộp xác nhận (dòng Web/mobile ở trên, Len) trước khi G-06 lên staging.
+- [x] Sửa theo review PR #124 lần 3 *(Kiệt, 09/11, `00c1308` ghim `espressif32@6.9.0` + `9d746bb` backend + commit tài liệu này)*: `pio run -e esp32dev` build được, test native `test_relay_override`, `test_command_filter`, `test_remote_command` đạt; `npm run migrate:relay-overrides` đặt hạn từng relay cho controller đang MANUAL từ trước phần 2; 6 kiểm tra firmware 1.6.0 còn nợ trên board ghi ở `firmware/README.md`.
 
 ### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Bảo
 
