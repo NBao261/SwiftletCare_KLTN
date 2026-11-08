@@ -161,7 +161,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs, firebase-admin (FCM) | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
 | Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `victory-native` | Expo ~53, React Native 0.79.6, React 19.0 |
-| Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1 |
+| Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1, nginx 1.27, certbot latest |
 | Testing | Jest + mongodb-memory-server (backend, mobile), Vitest (web), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7, Vitest ^1.6 |
 
 ### 3.3 Source Code and DevOps
@@ -181,7 +181,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Environment | Where | How it is deployed | Rollback |
 | --- | --- | --- | --- |
 | Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA | — |
-| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Caddy reverse proxy with Let's Encrypt TLS, a TLS proxy for MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
+| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Nginx with a Let's Encrypt certificate renewed by Certbot, serving HTTPS and the TLS ports of MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
 | Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (FARM-FR-013) |
 
 Defense 1.1 demonstrations run on staging with seeded data (guideline §9.2).
@@ -352,7 +352,83 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 
 ## 6. Data Design
 
-### 6.1 Logical ERD
+### 6.1 Conceptual Model and Logical ERD
+
+**Conceptual model (level 1).** The business entities of SwiftletCare and how they relate, with no attribute, key or storage choice. `User` stands for every account; its role (Farm Owner, Domain Expert, Administrator) decides which relationships it may take part in (Report 3, Section 2.4). Every lifecycle of Section 8 belongs to one of these entities, and every entity with a lifecycle has one.
+
+```mermaid
+erDiagram
+  User ||--o{ Farm : "owns"
+  User ||--o{ DeviceStockItem : "adds to stock"
+  User ||--o{ ManualOverride : "performs"
+  User |o--o{ Alert : "acknowledges"
+  User ||--o{ ExpertVerdict : "gives"
+  User ||--o{ DailyRating : "gives"
+  User |o--o{ HealthReport : "concludes"
+  User ||--o{ HarvestBatch : "records"
+  User |o--o{ ReviewItem : "decides"
+  User |o--o{ CoefficientProposal : "approves"
+  User ||--o{ Notification : "receives"
+  User ||--o{ ActivityRecord : "performs"
+  Farm }o--o{ User : "has as member"
+  Farm ||--o{ Invitation : "sends"
+  Farm ||--o{ WeatherObservation : "has weather"
+  Farm ||--o{ House : "contains"
+  House ||--|{ Zone : "has"
+  House ||--o{ CameraNode : "is watched by"
+  House ||--o{ Alert : "raises"
+  House ||--o{ DailyHealthStatus : "is assessed by"
+  House ||--o{ HealthReport : "is summarised in"
+  Zone ||--o{ Controller : "is regulated by"
+  Zone ||--o{ Alert : "raises"
+  Zone ||--o{ HarvestBatch : "yields"
+  Zone ||--o{ ReviewItem : "opens"
+  Zone ||--o{ CoefficientProposal : "receives"
+  Controller ||--o{ SensorReading : "publishes"
+  Controller ||--o{ ManualOverride : "is switched by"
+  Controller ||--o{ AttractantTrack : "plays"
+  CameraNode ||--o{ BirdCountSession : "records"
+  CameraNode ||--o{ FiveMinuteCount : "counts"
+  DeviceStockItem ||--o| Controller : "is registered as"
+  DeviceStockItem ||--o| CameraNode : "is registered as"
+  DefaultThreshold ||--o{ Zone : "seeds"
+  Alert ||--o| ExpertVerdict : "is validated by"
+  BirdCountSession ||--o{ FiveMinuteCount : "is computed from"
+  DailyHealthStatus ||--o{ DailyRating : "is rated by"
+```
+
+Each conceptual entity maps to one logical entity below; two are embedded in another logical entity, and one logical entity is purely technical.
+
+| Conceptual entity | Logical entity | Note |
+| --- | --- | --- |
+| `User` | `USER` | Roles Farm Owner, Domain Expert, Administrator |
+| `Farm` | `FARM` |  |
+| `Invitation` | `INVITATION` |  |
+| `WeatherObservation` | `WEATHER_OBSERVATION` |  |
+| `House` | `HOUSE` |  |
+| `Zone` | `ZONE` | One floor of a house |
+| `Controller` | `SENSOR_NODE` | ESP32 controller; relays embedded |
+| `CameraNode` | `CAMERA_NODE` | AI node at an entrance |
+| `DeviceStockItem` | `PROVISIONED_DEVICE` | Device label state (SM-16) derived from it |
+| `DefaultThreshold` | `SYSTEM_SETTING` | `default_thresholds` of the singleton |
+| `SensorReading` | `TELEMETRY` |  |
+| `ManualOverride` | `RELAY_OVERRIDE_LOG` |  |
+| `AttractantTrack` | `AUDIO_TRACK` |  |
+| `Alert` | `ALERT` |  |
+| `ExpertVerdict` | `ALERT` | Embedded as `expert_verdict` |
+| `BirdCountSession` | `BIRD_COUNT_RECORD` |  |
+| `FiveMinuteCount` | `BIRD_COUNT_BUCKET` |  |
+| `DailyHealthStatus` | `HOUSE_HEALTH_DAY` |  |
+| `DailyRating` | `HOUSE_HEALTH_DAY` | Embedded in `ratings` |
+| `HealthReport` | `HOUSE_HEALTH_REPORT` |  |
+| `HarvestBatch` | `HARVEST_BATCH` |  |
+| `ReviewItem` | `PARAMETER_REVIEW` |  |
+| `CoefficientProposal` | `COEFFICIENT_PROPOSAL` |  |
+| `Notification` | `NOTIFICATION` |  |
+| `ActivityRecord` | `AUDIT_LOG` | Source of the expert activity history |
+| — | `PUSH_TOKEN` | Technical only: FCM token of a device |
+
+**Logical ERD.** Entities with their attributes and keys, as stored.
 
 ```mermaid
 erDiagram
@@ -771,7 +847,7 @@ Clients authenticate with the access token. Rooms: `zone:<id>` (`JOIN_ZONE`), `h
 
 ## 8. State Machine Diagrams
 
-One diagram per lifecycle of Report 3, Section 6. Transition labels name the triggering requirement; the diagrams add no rule of their own.
+One diagram per lifecycle of Report 3, Section 6, named after the entity of the conceptual model (Section 6.1) that owns it. Transition labels name the triggering requirement; the diagrams add no rule of their own.
 
 ### 8.1 Alert — status (SM-01)
 
@@ -791,7 +867,7 @@ stateDiagram-v2
   RESOLVED --> [*]
 ```
 
-### 8.2 Alert — expert verdict (SM-02)
+### 8.2 ExpertVerdict (SM-02)
 
 ```mermaid
 stateDiagram-v2
@@ -802,7 +878,7 @@ stateDiagram-v2
   REJECTED --> CONFIRMED : verdict changed
 ```
 
-### 8.3 Relay — control mode (SM-03)
+### 8.3 Controller — relay control mode (SM-03)
 
 ```mermaid
 stateDiagram-v2
@@ -830,7 +906,7 @@ stateDiagram-v2
 
 The number is kept so that SM-06…SM-17 match Report 3, Sections 6.6–6.17.
 
-### 8.6 Device — connection status (SM-06)
+### 8.6 Controller and CameraNode — connection status (SM-06)
 
 ```mermaid
 stateDiagram-v2
@@ -846,7 +922,7 @@ stateDiagram-v2
 
 Registration is done by the Farm Owner (SF-01). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
 
-### 8.7 Misting protection (SM-07, controller)
+### 8.7 Controller — misting protection (SM-07)
 
 ```mermaid
 stateDiagram-v2
@@ -858,7 +934,7 @@ stateDiagram-v2
   LATCHED --> MONITORING : retry after 30 min (BR-11)
 ```
 
-### 8.8 Noise baseline per hour (SM-08, controller)
+### 8.8 Controller — noise baseline per hour (SM-08)
 
 ```mermaid
 stateDiagram-v2
@@ -867,7 +943,7 @@ stateDiagram-v2
   READY --> READY : baseline keeps learning while speaker off
 ```
 
-### 8.9 Health report (SM-09)
+### 8.9 HealthReport (SM-09)
 
 ```mermaid
 stateDiagram-v2
@@ -876,7 +952,7 @@ stateDiagram-v2
   CONCLUDED --> CONCLUDED : author edits
 ```
 
-### 8.10 Review of a Farm Owner's change (SM-10)
+### 8.10 ReviewItem (SM-10)
 
 ```mermaid
 stateDiagram-v2
@@ -890,7 +966,7 @@ stateDiagram-v2
   ADJUSTED --> [*]
 ```
 
-### 8.11 Coefficient suggestion proposal (SM-11)
+### 8.11 CoefficientProposal (SM-11)
 
 ```mermaid
 stateDiagram-v2
@@ -903,7 +979,7 @@ stateDiagram-v2
   SUPERSEDED --> [*]
 ```
 
-### 8.12 Configuration sync per controller (SM-12)
+### 8.12 Controller — configuration sync (SM-12)
 
 ```mermaid
 stateDiagram-v2
@@ -917,7 +993,7 @@ stateDiagram-v2
 
 ---
 
-### 8.13 Harvest batch (SM-13)
+### 8.13 HarvestBatch (SM-13)
 
 ```mermaid
 stateDiagram-v2
@@ -927,7 +1003,7 @@ stateDiagram-v2
   DELETED --> [*]
 ```
 
-### 8.14 User account (SM-14)
+### 8.14 User (SM-14)
 
 ```mermaid
 stateDiagram-v2
@@ -940,7 +1016,7 @@ stateDiagram-v2
   DELETED --> [*]
 ```
 
-### 8.15 Firmware update per controller (SM-15)
+### 8.15 Controller — firmware update (SM-15)
 
 ```mermaid
 stateDiagram-v2
@@ -951,7 +1027,7 @@ stateDiagram-v2
   FAILED --> PENDING : OTA sent again
 ```
 
-### 8.16 Device label — stock entry (SM-16)
+### 8.16 DeviceStockItem — label (SM-16)
 
 ```mermaid
 stateDiagram-v2
@@ -968,7 +1044,7 @@ stateDiagram-v2
 
 The state is derived from `provisioneddevices` (`claimed_at`, `revoked_at`) and whether a sensor or camera node with that device ID is in service; it is not a stored field.
 
-### 8.17 Daily health status of a house and assessor rating (SM-17)
+### 8.17 DailyHealthStatus and DailyRating (SM-17)
 
 ```mermaid
 stateDiagram-v2
@@ -1349,13 +1425,12 @@ flowchart TB
 ```mermaid
 flowchart LR
   subgraph VPS[Staging VPS - Docker]
-    RP[Caddy reverse proxy<br/>Let's Encrypt TLS, 443] --> API[backend container]
+    RP[Nginx<br/>HTTPS 443, TLS 8883 and 8322<br/>Let's Encrypt via Certbot] --> API[backend container]
     RP --> WEBS[web static build]
-    RP --> MTX[MediaMTX<br/>WebRTC signalling]
+    RP -- WHEP signalling,<br/>RTSPS 8322 to RTSP --> MTX[MediaMTX]
+    RP -- MQTT TLS 8883<br/>to 1883 --> EMQX[(EMQX)]
     API --> MONGO[(MongoDB<br/>internal only)]
-    API -- MQTT 1883<br/>Docker network --> EMQX[(EMQX)]
-    TLSP[TLS proxy<br/>8883 MQTT, 8322 RTSPS] --> EMQX
-    TLSP --> MTX
+    API -- MQTT 1883<br/>Docker network --> EMQX
     API --> MINIO[(MinIO<br/>internal only)]
     MTX -- stream auth --> API
   end
@@ -1367,15 +1442,15 @@ flowchart LR
     PC[AI node:<br/>spare desktop PC]
   end
   CAM -- RTSP over TCP<br/>across the Internet --> PC
-  ESP -- MQTT over TLS 8883 --> TLSP
-  PC -- counts, heartbeat<br/>MQTT TLS 8883 --> TLSP
-  PC -- annotated video<br/>RTSPS 8322 --> TLSP
+  ESP -- MQTT over TLS 8883 --> RP
+  PC -- counts, heartbeat<br/>MQTT TLS 8883 --> RP
+  PC -- annotated video<br/>RTSPS 8322 --> RP
   USERS[Web and mobile users] -- HTTPS / WSS 443 --> RP
   USERS -- WebRTC media UDP 8189 --> MTX
   API -- outbound HTTPS --> EXT[[Telegram, FCM,<br/>Open-Meteo]]
 ```
 
-Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a static public IP, but on a consumer modem in a borrowed house), so the backend runs on a VPS. The AI node runs on a spare PC at a member's home and pulls the camera's RTSP feed over the Internet through the one port forwarded on the house modem (D5); it sends counts and the annotated stream on to the VPS. Only ports 80/443 (Caddy), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only) — both wrapped by a TLS proxy that reuses Caddy's certificate — and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
+Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a static public IP, but on a consumer modem in a borrowed house), so the backend runs on a VPS. The AI node runs on a spare PC at a member's home and pulls the camera's RTSP feed over the Internet through the one port forwarded on the house modem (D5); it sends counts and the annotated stream on to the VPS. Only ports 80/443 (HTTPS), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only), all served by Nginx with one Let's Encrypt certificate renewed by Certbot, and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
 
 | Operation | Procedure |
 | --- | --- |
@@ -1386,7 +1461,7 @@ Why this split: users, the panel's network and the controllers need one stable p
 | Firmware | OTA from the Administrator console; the new image is kept only after it reaches the broker within 10 minutes, otherwise the bootloader returns to the previous one |
 | Monitoring | Technical overview (SYSTEM-FR-003), device and AI-node status and alerts (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`), audit log, `docker compose logs` |
 
-The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of the backend and the web, the Caddyfile, the TLS proxy configuration, the EMQX authentication and authorisation files, `.env.staging.example` and the demo seed of every scenario of the Design Brief, Appendix A2 (procedure: `docs/deploy/staging.md`).
+The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of the backend and the web, the Nginx configuration (HTTPS sites and the stream proxy for MQTT and video), the EMQX authentication and authorisation files, `.env.staging.example` and the demo seed of every scenario of the Design Brief, Appendix A2 (procedure: `docs/deploy/staging.md`).
 
 ---
 
@@ -1394,7 +1469,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller |
+| 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller. Staging: Nginx with Certbot replaces Caddy and the separate TLS proxy, one component for HTTPS and the TLS ports of MQTT and the video publish (Sections 3.2, 3.4, 11). Conceptual model added to Section 6.1 with its mapping to the logical entities; state machines named after the conceptual entities (Section 8) |
 | 1.1.0 | 26/10/2026 | SM-17 splits the day status from the rating state of each assessor (`ratingWindow` job and the day's `state` field removed). Harvest requirements referred to as `HARVEST-FR` (Report 3 3.1.0). Camera port restricted to the AI node's static IP by a modem rule (D5, Sections 10, 11). Final design for Review 2 against Report 3 3.1.0: device topics and one broker credential per device with a static authorisation rule, QoS 1 with event and command IDs, retained configuration, `esp-mqtt` on the ESP32, `config/reassign` removed (D3, D9, Sections 2.2, 5.1, 7.2, 10, AD-10); decisions D15 (manual override within limits) and D16 (current status and evaluation snapshot); Logical ERD as the final design: user status, push tokens, per-relay override, telemetry validity, alert event ID and details, house health reports with a unique key per kind and period, notification references, harvest type and photo, audit source, stock credentials, `sla_hours` removed; Section 6.3 data retention (BR-36), Section 6.4 schema migrations, Section 5.5 code location of the engineering constants; mobile scope, HLS stream and FCM token in Section 5.4; state machines and activity diagrams aligned (SM-03, 06, 14, 17; AD-02, 03, 04, 08, 09, 10, 11, 12, 14); 'planned' marks and the former Section 12 removed: implementation gaps are tracked only in Project Tracking. D11: the DC demo loads are measured with shunt resistors instead of current transformers (Section 3 controller board) |
 | 1.0.10 | 26/10/2026 | Tickets, SLA, Technician regions and the Administrator's farm management removed from the code (pull requests #100–#106): permission and supporting-role gaps closed in Section 12, done ticket, region, coordinate and `MAINTENANCE_DUE` rows dropped from Section 6.4 |
 | 1.0.9 | 24/10/2026 | A farm is one place with required coordinates (Report 3 FARM-FR-001, A-5): `address` and `coordinates` in the ERD, planned validator in Section 6.4, location field in the farm form (Section 5.4) |
