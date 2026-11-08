@@ -24,7 +24,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | B, C, D, 4 | Technician on tickets; public sign-up | Owner sets up by QR; Farm Technician on assigned houses; Work Orders closed by data; one owner, no sign-up | Review 1: system, not platform; Review 2 |
 | B, C, D, E | Periodic zone summary; harvest log | Daily house status, reports, ratings; overview, KPIs, harvest cycles, profiles | Measurable output; Review 2 |
 | B, C.1, 4 | No weather, no current; "pump dry" | Weather context and capped misting offset; load current, run hours; "misting ineffective" | No unmeasured cause |
-| D, 4, C.2 | Nine flows; bypass; Telegram or push | Nine business flows (maintenance, recommendations, harvest added); no bypass; both channels | One outcome per flow |
+| D, 4, C.2 | Nine flows; bypass; Telegram or push | Eight business flows (maintenance, recommendations added), harvest a supporting flow; no bypass; both channels | One outcome per flow |
 
 ### 1.2 Out of Scope
 
@@ -104,9 +104,8 @@ Code against SRS and SDD; each gap in Project Tracking §6. In brackets: High fi
 | F-27 | Recommendation rules | DE, FO | Rule met → one recommendation; effect measured | TC-F27 | Planned |
 | F-28 | Profiles, house stage | DE, FO | Applied → new versions; attracting: no return rate | TC-F28 | Planned |
 | F-29 | Overview, comparison | FO | Cells = BR-44; 1 A × 12 V × 10 h = 0.12 kWh | TC-F29 | Planned |
-| F-30 | Harvest cycles | FT, FO, DE | Confirm closes the cycle; expert concludes | TC-F30 | Planned |
 
-FO Farm Owner, FT Farm Technician, DE Domain Expert (FO if none); auto = system component; TC-Fnn = TC-Fnn-01..03 (Report 5); status from Project Tracking. F-18, F-19 (SF-01) are tested, not mandatory.
+FO Farm Owner, FT Farm Technician, DE Domain Expert (FO if none); auto = system component; TC-Fnn = TC-Fnn-01..03 (Report 5); status from Project Tracking. F-18, F-19 (SF-01) and F-30 (SF-06, harvest cycles) are tested, not mandatory.
 
 ## 7. Non-Functional Requirements
 
@@ -127,7 +126,7 @@ FO Farm Owner, FT Farm Technician, DE Domain Expert (FO if none); auto = system 
 | Nguyễn Chí Bảo | Leader; IoT, AI | Firmware, weather offset; AI pipeline; analytics backend, simulator | WF-01, 03 | D1, D2; #88 |
 | Trần Minh Kiệt | Backend | Devices, alerts, expert; operations backend; daily health | WF-05 | D4, D6; #113 |
 | Nguyễn Vũ Len | Mobile | Owner and Technician mobile app; E2E | WF-02, 07 | #123, #93 |
-| Nguyễn Thị Yến Nhi | Web: Owner, Admin | Owner web: overview, KPIs, Work Orders, cycles; Admin | WF-06, 09 | D5; #26, #72 |
+| Nguyễn Thị Yến Nhi | Web: Owner, Admin | Owner web: overview, KPIs, Work Orders, cycles; Admin | WF-06 | D5; #26, #72 |
 | Thái Minh Tuấn | Web: Expert | Expert screens: verdicts, profiles, rules, seasons | WF-04, 08 | D3; #91, #125 |
 
 ---
@@ -140,15 +139,14 @@ Actors are people only; external services (Telegram, FCM, Open-Meteo) and the co
 
 | ID | Workflow | Actors | Trigger | Business outcome | Features | Entity states | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| WF-01 | Automatic micro-climate control (MF-01, AD-01) | Farm Owner, Farm Technician, Domain Expert | 10-s control cycle; forecast; Internet or power loss; a relay switched by hand | Misting and fan follow humidity and temperature, with the bounded weather offset, also offline; an override lasts a limited time, then automatic | F-01, F-02, F-04, F-17, F-26 | Controller relay: `AUTO` → `MANUAL` → `AUTO`; Controller: `ONLINE` → `OFFLINE` → `ONLINE` | Nguyễn Chí Bảo |
+| WF-01 | Automatic micro-climate control (MF-01, AD-01) | Farm Owner, Farm Technician | 10-s control cycle; forecast; Internet or power loss; a relay switched by hand | Misting and fan follow humidity and temperature, with the bounded weather offset, also offline; an override lasts a limited time, then automatic | F-01, F-02, F-04, F-17, F-26 | Controller relay: `AUTO` → `MANUAL` → `AUTO`; Controller: `ONLINE` → `OFFLINE` → `ONLINE` | Nguyễn Chí Bảo |
 | WF-02 | Incident handling (MF-02, AD-02) | Farm Technician, Farm Owner | Breach after the dwell time, NH3/CO2 above limit, equipment fault, restart, offline, forecast | Alert to the technician, escalated to the owner; fault repaired as a Work Order closed by the data; loop held safe | F-05…F-09, F-23, F-24 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED`; WorkOrder: `OPEN` → `IN_PROGRESS` → `VERIFYING` → `AWAITING_APPROVAL` → `CLOSED` | Nguyễn Vũ Len |
-| WF-03 | Bird counting session (MF-03, AD-03) | Farm Technician, Domain Expert, Farm Owner | Morning and evening sessions; ring drawn on site | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11, F-14 | CameraNode: `PENDING` → `ONLINE`; Alert `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
-| WF-04 | Expert validation of inferred alerts (MF-04, AD-04) | Domain Expert, Farm Owner | Abnormal noise, implausible readings, early warning | Verdict with evidence; rejected alert dismissed; owner notified | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED`; ExpertVerdict: pending → `REJECTED` | Thái Minh Tuấn |
+| WF-03 | Bird counting session (MF-03, AD-03) | Farm Technician, Domain Expert | Morning and evening sessions; ring drawn on site | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11, F-14 | CameraNode: `PENDING` → `ONLINE`; Alert `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
+| WF-04 | Expert validation of inferred alerts (MF-04, AD-04) | Domain Expert, Farm Technician (on-site check), Farm Owner (BR-22) | Abnormal noise, implausible readings, early warning | Verdict with evidence; rejected alert dismissed; owner notified | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED`; ExpertVerdict: pending → `REJECTED` | Thái Minh Tuấn |
 | WF-05 | Control-parameter tuning (MF-05, AD-05) | Domain Expert, Farm Owner, Farm Technician | Owner change, coefficient suggestion, profile, detection or ring change | Changes reviewed, suggestion approved, profiles applied, new configuration applied on the controllers, owner notified | F-03, F-14, F-15, F-28 | ReviewItem: `PENDING_REVIEW` → `ADJUSTED`; CoefficientProposal: `PROPOSED` → `APPROVED`; Controller config: `PENDING` → `APPLIED` | Trần Minh Kiệt |
 | WF-06 | Daily health assessment and reports (MF-06, AD-06) | Farm Technician, Farm Owner, Domain Expert | End of day; week; month | Daily status with reasons; day rated independently; reports downloaded and concluded; houses compared | F-20, F-21, F-22, F-29 | DailyHealthStatus: (new) → `COMPUTED`; DailyRating: `PENDING` → `RATED`; HealthReport: `GENERATED` → `CONCLUDED` | Nguyễn Thị Yến Nhi |
-| WF-07 | Preventive maintenance (MF-07, AD-07) | Farm Owner, Farm Technician, Domain Expert | Plan due by run hours, switches or date | Preventive Work Order done with its checklist; counter reset; overdue escalated | F-25 | MaintenancePlan: `SCHEDULED` → `DUE` → `SCHEDULED`; WorkOrder: `OPEN` → `CLOSED` | Nguyễn Vũ Len |
+| WF-07 | Preventive maintenance (MF-07, AD-07) | Farm Owner, Farm Technician | Plan due by run hours, switches or date | Preventive Work Order done with its checklist; counter reset; overdue escalated | F-25 | MaintenancePlan: `SCHEDULED` → `DUE` → `SCHEDULED`; WorkOrder: `OPEN` → `CLOSED` | Nguyễn Vũ Len |
 | WF-08 | Recommendation loop (MF-08, AD-08) | Domain Expert, Farm Owner, Farm Technician | An expert rule holds for a house | Recommendation accepted (Work Order or parameter change) or rejected; effect measured | F-27 | Recommendation: `OPEN` → `ACCEPTED` → `MEASURED` | Thái Minh Tuấn |
-| WF-09 | Harvest season assessment (MF-09, AD-09) | Farm Technician, Farm Owner, Domain Expert | Harvest entered and confirmed | Cycle closed and compared with the previous cycle and season; expert conclusion | F-30 | HarvestBatch: `DRAFT` → `CONFIRMED`; HarvestCycle: `OPEN` → `CLOSED` → `CONCLUDED` | Nguyễn Thị Yến Nhi |
 
 ## A2. Demo Scenarios
 
@@ -172,17 +170,15 @@ Run on staging (SDD Section 3.4) with data loaded by the demo seed script (`docs
 | DS-14 | WF-07 | Exception | Plan due for 7 days | Run the due job; answer a checklist item "defect" | Plan `OVERDUE`, owner notified; repair Work Order opened | Nguyễn Vũ Len |
 | DS-15 | WF-08 | Main | Rule "NH3 above limit 4 h/day for 3 days"; seeded days | Run the daily job; owner accepts; run the effect job on seeded later days | Recommendation with evidence; Work Order created; effect shown on the rule page | Thái Minh Tuấn |
 | DS-16 | WF-08 | Exception | Open recommendation | Owner rejects without a reason; 7 days pass | 422; then `EXPIRED` | Thái Minh Tuấn |
-| DS-17 | WF-09 | Main | Seeded previous cycles (sample data, marked) | Technician enters a harvest; owner confirms; expert writes the conclusion | Cycle closed with yield and comparisons; `CONCLUDED`; owner notified | Nguyễn Thị Yến Nhi |
-| DS-18 | WF-09 | Exception | Confirmed harvest | Expert tries to enter a harvest; owner confirms it again | 403; 409 | Nguyễn Thị Yến Nhi |
 
 ## A3. Functional Test Case Target
 
 | Source | Count | Minimum per item | Subtotal |
 | --- | --- | --- | --- |
-| Mandatory features | 28 | 3 | 84 |
-| Main workflows (end-to-end) | 9 | 1 | 9 |
-| State transitions of main entities | 86 | 1 | 86 |
+| Mandatory features | 27 | 3 | 81 |
+| Main workflows (end-to-end) | 8 | 1 | 8 |
+| State transitions of main entities | 74 | 1 | 74 |
 | Committed NFRs | 7 | 1 | 7 |
-| Total | | | 186 |
+| Total | | | 170 |
 
-Automated in CI: at least 50% of the committed total, i.e. at least 93 test cases. State transitions counted (SRS Section 6): alert status 10, alert verdict 2, relay mode 4, device connection 5, device label 6, configuration sync 5, review item 6, suggestion proposal 5, daily health status 2, assessor rating 5, health report 3, harvest batch 7, Work Order 10, maintenance plan 5, recommendation 6, harvest cycle 5. Test cases are listed in Report 5.
+Automated in CI: at least 50% of the committed total, i.e. at least 85 test cases. State transitions counted (SRS Section 6): alert status 10, alert verdict 2, relay mode 4, device connection 5, device label 6, configuration sync 5, review item 6, suggestion proposal 5, daily health status 2, assessor rating 5, health report 3, Work Order 10, maintenance plan 5, recommendation 6. Test cases are listed in Report 5.

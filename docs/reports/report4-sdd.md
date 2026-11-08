@@ -648,6 +648,7 @@ erDiagram
     string previous_status "status before DISMISSED"
     object details "metric, observed, threshold, direction, started_at, reset_reason"
     object expert_verdict "result, note, by, role, at"
+    array onsite_checks "requested_by, technician, observation, photo, at"
     number occurrence_count
     date renotified_at
     date resolved_at
@@ -983,7 +984,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/invitations` | Accept, decline |
 | `/devices` | Sensor nodes (register and move, also by the Farm Owner for SF-01; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
 | `/telemetry` | Latest and history |
-| `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert |
+| `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
 | `/analytics` | Charts, comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
 | `/health-reports` | Daily, weekly and monthly reports per house and conclusions; daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (days not yet rated or skipped by the caller are returned without status, BR-31) |
 | `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011) |
@@ -1330,7 +1331,7 @@ stateDiagram-v2
 
 ## 9. Activity Diagrams
 
-One diagram per main flow (AD-01…09, numbered like MF-01…09) and per supporting flow with more than one actor (AD-10…12 for SF-01…03) of Report 3, Section 2.2; SF-04 (notification settings) and SF-05 (system administration) are single-actor settings without a diagram. Lanes are the actors (people), the external services and the SwiftletCare components that act for them (controller, backend, AI node); only the people are actors (Report 3, Section 2.3). The diagram shows who takes part and the business decisions, not the internal processing.
+One diagram per main flow (AD-01…08, numbered like MF-01…08) and per supporting flow with more than one actor (AD-09 for SF-06, AD-10…12 for SF-01…03) of Report 3, Section 2.2; SF-04 (notification settings) and SF-05 (system administration) are single-actor settings without a diagram. Lanes are the actors (people), the external services and the SwiftletCare components that act for them (controller, backend, AI node); only the people are actors (Report 3, Section 2.3). The diagram shows who takes part and the business decisions, not the internal processing.
 
 ### 9.1 MF-01 Automatic micro-climate control (AD-01)
 
@@ -1356,8 +1357,8 @@ flowchart TB
     B5[Heartbeat back: ONLINE,<br/>retained configuration delivered]
     B6[Hourly: forecast x expert rules<br/>-> offset within BR-38, retained]
   end
-  subgraph W[Weather service / Domain Expert]
-    W1[Forecast of the next 2 h;<br/>compensation rules approved by the expert]
+  subgraph W[Weather service]
+    W1[Forecast of the next 2 h;<br/>rules approved in MF-05]
   end
   subgraph O[Farm Owner / Farm Technician]
     O1[Watch live values,<br/>power levels and mode]
@@ -1493,13 +1494,18 @@ flowchart TB
     E1 -- no --> E3[REJECTED with note:<br/>alert DISMISSED]
     E3 --> E4[Tune detection parameters<br/>if needed - MF-05]
   end
+  subgraph T[Farm Technician]
+    T1[Check the house on site:<br/>birds, work nearby, rain;<br/>answer with a photo]
+  end
   subgraph O[Farm Owner]
     O1[Informed of the verdict,<br/>reads it in the activity history]
   end
   A5 --> B1
   B01 --> B1
   B03 --> B1
-  B2 --> E1
+  B2 --> E0{Evidence enough?}
+  E0 -- yes --> E1
+  E0 -- no --> T1 --> E1
   E2 & E3 --> B3 --> O1
 ```
 
@@ -1587,9 +1593,6 @@ flowchart TB
     O2[Approve the Work Order]
     O3[Overdue plan notified]
   end
-  subgraph E[Domain Expert]
-    E1[Comments on the intervals]
-  end
   subgraph C[Controller]
     C1[Relay state and load current<br/>in every telemetry message]
   end
@@ -1605,7 +1608,6 @@ flowchart TB
     T2 -- yes --> T3[Repair Work Order - MF-02]
   end
   O1 --> B2
-  E1 -.-> O1
   C1 --> B1 --> B2
   B3 --> T1
   B3 --> B4
@@ -1644,7 +1646,7 @@ flowchart TB
 
 The system never concludes a cause and never changes a parameter by itself: every action passes through the Farm Owner, and a parameter change through the review of MF-05.
 
-### 9.9 MF-09 Harvest season assessment (AD-09)
+### 9.9 SF-06 Harvest recording and season summary (AD-09)
 
 ```mermaid
 flowchart TB
@@ -1833,6 +1835,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.1.0 | 10/11/2026 | Eight main flows (SRS 4.1.0): AD-09 is the diagram of supporting flow SF-06 (harvest recording and season summary); AD-04 adds the on-site check by the Farm Technician (EXPERT-FR-021, `onsite_checks` in `ALERT`); AD-07 without the Domain Expert lane; the weather lane of AD-01 takes its rules from MF-05 |
 | 2.0.1 | 10/11/2026 | Only people are actors in the activity diagrams (Section 9); AD-03 shows the Farm Technician drawing the counting ring; the ring editor is also in the mobile app (Section 5.4) |
 | 2.0.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0, BM03 1.3): D14 rewritten for the Farm Technician; decisions D17 (Work Order closed by the data), D18 (bounded weather compensation), D19 (recommendation rules), D20 (device simulator); data flows DF-12…17; operations and knowledge modules (Section 5.3), technician client (5.4), new constants (5.5); conceptual model and logical ERD with `WORK_ORDER`, `MAINTENANCE_PLAN`, `RECOMMENDATION_RULE`, `RECOMMENDATION`, `CONFIG_PROFILE`, `HARVEST_CYCLE`, technicians and weather rules of the house, run hours and weather offset of the controller, harvest status; six collections; REST routers, MQTT topic `compensation`, socket events; state machines SM-13 updated and SM-19…24; activity diagrams AD-02 and AD-06 updated, AD-07…09 for MF-07…09, supporting flows renumbered AD-10…12, harvest logging diagram replaced by AD-09; technician scope in Section 10; simulator in Section 11 |
 | 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller. Staging: Nginx with Certbot replaces Caddy and the separate TLS proxy, one component for HTTPS and the TLS ports of MQTT and the video publish (Sections 3.2, 3.4, 11). Conceptual model added to Section 6.1 with its mapping to the logical entities; state machines named after the conceptual entities (Section 8) |

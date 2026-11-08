@@ -137,7 +137,7 @@ out['COVERAGE']='\n'.join(cov)
 out['COVSUM']=f'{len(mand)} mandatory requirements: {len(mand)-only_wf} are verified by a committed feature or NFR case; {only_wf} are only traced to the end-to-end test of their workflow, which exercises the flow but does not check each of their acceptance criteria.'
 tpl=open(sys.argv[1],encoding='utf-8').read()
 for k,v in out.items(): tpl=tpl.replace('{{'+k+'}}',v)
-feat=['| Feature | Name | Requirements |','| --- | --- | --- |']+[f'| {a} | {b}{" (supporting, SF-01)" if a in SUPPORTING else ""} | {c} |' for a,b,c in FEATURES]
+feat=['| Feature | Name | Requirements |','| --- | --- | --- |']+[f'| {a} | {b}{" (supporting)" if a in SUPPORTING else ""} | {c} |' for a,b,c in FEATURES]
 tpl=tpl.replace('{{FEATURES}}','\n'.join(feat))
 tpl=tpl.replace('{{NST}}',str(len(ST))).replace('{{TOTAL}}',str(total)).replace('{{NF}}',str(NF)).replace('{{NF3}}',str(3*NF)).replace('{{NWF}}',str(len(WF))).replace('{{NSUP}}',str(len(TC)-NTC))
 auto=stats['written']+stats['todo']

@@ -67,7 +67,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-27 | Recommendation rules | Thái Minh Tuấn | Planned | — | Rules, daily evaluation, effect (G-24): backend Bảo, web Tuấn | 2–3 |
 | F-28 | Configuration profiles and house stage | Thái Minh Tuấn | Planned | — | Profiles, apply to houses, house stage (G-24): backend Bảo, web Tuấn | 2 |
 | F-29 | Farm overview and house comparison | Nguyễn Thị Yến Nhi | Planned | — | Overview, comparison, energy, flock trend (G-25): backend Bảo, web Nhi | 3 |
-| F-30 | Harvest cycles and season conclusion | Nguyễn Thị Yến Nhi | Planned | — | Technician entry, confirmation, cycles, conclusion (G-26): backend Bảo, web Nhi, mobile Len, conclusion Tuấn | 3 |
+| F-30 | Harvest cycles and season conclusion (supporting, SF-06) | Nguyễn Thị Yến Nhi | Planned | — | Technician entry, confirmation, cycles, conclusion (G-26): backend Bảo, web Nhi, mobile Len, conclusion Tuấn | 3 |
 
 Summary: 4 Done, 14 In progress, 12 Planned (F-23…F-30 added with the final scope of Review 2).
 
@@ -135,6 +135,7 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 
 | Date | Change |
 | --- | --- |
+| 10/11/2026 | Eight main flows: harvest season summary becomes supporting flow SF-06 (F-30 tested, not mandatory); on-site check in MF-04 (EXPERT-FR-021); test counts of Report 5 1.5.0 |
 | 09/11/2026 | Final scope of Review 2 agreed with the supervisor: features F-23…F-30, gaps G-20 rewritten and G-21…G-27 added, test counts of Report 5 1.4.0; owners per work package (Kiệt operations backend, Bảo firmware, knowledge and analytics backend and simulator, Len technician mobile, Tuấn expert web, Nhi owner web) |
 | 23/10/2026 | First tracking sheet for Review 2: milestones, Iteration 1 pull requests, feature status, tests, defects |
 | 23/10/2026 | After PR #93 (Farm Owner web rework): pull-request counts, F-11 and F-17 |

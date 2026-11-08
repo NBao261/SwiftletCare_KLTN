@@ -5,7 +5,7 @@
 J='jest'; P='pio'; Y='pytest'; T='todo-auto'; M='manual'
 I='tests/integration/'
 # Features of supporting flow SF-01 (device setup): built and tested, not counted in the committed minimum
-SUPPORTING={'F-18','F-19'}
+SUPPORTING={'F-18','F-19','F-30'}
 # FRs covered by each feature (Report 5, Section 4.1)
 FEATURES=[
 ('F-01','Telemetry, live dashboard','ENV-FR-001, 002, 004, 005, 015, 022, ANALYTICS-FR-001, 005'),
@@ -20,7 +20,7 @@ FEATURES=[
 ('F-10','Counting, return rate','VISION-FR-001…011, 016, 017, 020, THREAT-FR-010, ANALYTICS-FR-002, 003, FARM-FR-004'),
 ('F-11','Annotated live stream','VISION-FR-012, 013, 014'),
 ('F-12','Abnormal noise','THREAT-FR-007'),
-('F-13','Expert verdict','EXPERT-FR-003, 007, ALERT-FR-014'),
+('F-13','Expert verdict','EXPERT-FR-003, 007, 021, ALERT-FR-014'),
 ('F-14','Tuning, ring, schedule','EXPERT-FR-008, VISION-FR-018, 019'),
 ('F-15','Review and suggestions','EXPERT-FR-010, 011, ANALYTICS-FR-010'),
 ('F-16','Conclusions, owner notice','EXPERT-FR-001, 002, 006, 009'),
@@ -216,7 +216,7 @@ TC=[
 ('TC-F30-03','F-30','CLOSED cycle; farm with a Domain Expert','Expert writes the season conclusion; Farm Owner writes one','—','CONCLUDED and one notification per Farm Owner; 403',(T,'backend jest (G-26)')),
 ]
 # Main workflows: end-to-end on staging following the main scenario of the Design Brief
-WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11'),('WF-07','DS-13'),('WF-08','DS-15'),('WF-09','DS-17')]
+WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11'),('WF-07','DS-13'),('WF-08','DS-15')]
 # State transitions (SRS Section 6): (entity, transition, trigger, expected, source)
 ST=[
 ('6.1 Alert','(new) → ACTIVE','Ingest a device alert','One ACTIVE alert in the device\'s farm and zone with the default severity of its type',(J,I+'deviceMqttContract.test.ts','creates an alert in the device farm/zone from the ESP32 payload')),
@@ -273,13 +273,6 @@ ST=[
 ('6.9 HealthReport','GENERATED → CONCLUDED','Expert writes a conclusion','Conclusion stored; Farm Owners notified',(J,I+'healthReport.test.ts','chỉ Domain Expert viết; Farm Owner được báo')),
 ('6.9 HealthReport','CONCLUDED → CONCLUDED','Author edits; another expert edits','Author\'s edit stored with time; the other expert gets 403',(J,I+'healthReport.test.ts','chỉ Domain Expert viết; Farm Owner được báo')),
 
-('6.13 HarvestBatch','(new) → DRAFT','Farm Technician enters a harvest','DRAFT with snapshots and trace code',(T,'backend jest (G-26)')),
-('6.13 HarvestBatch','(new) → CONFIRMED','Farm Owner enters a harvest','CONFIRMED at once; cycle of the zone closed',(T,'backend jest (G-26)')),
-('6.13 HarvestBatch','DRAFT → DRAFT','Author edits','Values updated; still DRAFT',(T,'backend jest (G-26)')),
-('6.13 HarvestBatch','DRAFT → CONFIRMED','Farm Owner confirms','CONFIRMED; cycle closed',(T,'backend jest (G-26)')),
-('6.13 HarvestBatch','CONFIRMED → CONFIRMED','Farm Owner corrects the weight','Cycle figures recomputed',(T,'backend jest (G-26)')),
-('6.13 HarvestBatch','DRAFT/CONFIRMED → deleted','Farm Owner soft-deletes','Hidden from lists, kept in the database; cycle merged with the next',(T,'backend jest (G-26)')),
-('6.13 HarvestBatch','any → (rejected)','Expert edits; owner confirms a confirmed batch','403; 409',(T,'backend jest (G-26)')),
 ('6.19 WorkOrder','(new) → OPEN','MISTING_INEFFECTIVE raised on a house with a technician','One OPEN Work Order assigned to the technician',(T,'backend jest (G-21)')),
 ('6.19 WorkOrder','OPEN → IN_PROGRESS','Technician starts it','IN_PROGRESS with start time',(T,'backend jest (G-21)')),
 ('6.19 WorkOrder','OPEN → CLOSED','Alert recovers for 10 min before the work starts','CLOSED with result SELF_RECOVERED',(T,'backend jest (G-21)')),
@@ -301,11 +294,6 @@ ST=[
 ('6.21 Recommendation','OPEN → EXPIRED','7 days without a decision','EXPIRED',(T,'backend jest (G-24)')),
 ('6.21 Recommendation','ACCEPTED → MEASURED','7 days after acceptance','Effect stored; rule statistics updated',(T,'backend jest (G-24)')),
 ('6.21 Recommendation','closed → (rejected)','Accept a rejected or expired one','409',(T,'backend jest (G-24)')),
-('6.22 HarvestCycle','(new) → OPEN','First controller of a zone registered','OPEN cycle from the registration date',(T,'backend jest (G-26)')),
-('6.22 HarvestCycle','OPEN → CLOSED','Harvest of the zone confirmed','CLOSED with yield, comparisons and health; next cycle OPEN',(T,'backend jest (G-26)')),
-('6.22 HarvestCycle','CLOSED → CLOSED','Closing harvest corrected','Figures recomputed',(T,'backend jest (G-26)')),
-('6.22 HarvestCycle','CLOSED → CONCLUDED','Expert writes the season conclusion','CONCLUDED; Farm Owners notified',(T,'backend jest (G-26)')),
-('6.22 HarvestCycle','CONCLUDED → CONCLUDED','Expert edits the conclusion','Conclusion updated with time',(T,'backend jest (G-26)')),
 ]
 NFR=[
 ('NFR-01','Script publishes 200 telemetry messages over MQTT on staging with the send time; a Socket.io client records receive times','P95 ≤ 2 s',(M,'script `scripts/nfr01-latency` to write; staging')),

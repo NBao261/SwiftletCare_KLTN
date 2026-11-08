@@ -9,8 +9,8 @@
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Duration | July 2026 – December 2026 |
-| Document version | 1.1.0 (Review 2, final scope) |
-| Date | 09/11/2026 |
+| Document version | 1.2.0 (Review 2, final scope) |
+| Date | 10/11/2026 |
 | Scope baseline | Registration form v3 (`docs/reports/registration-v3.md`) with Record of Changes (`bm03-record-of-changes.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -93,14 +93,13 @@ The main flows of the registration form v3 (Report 3, Section 2.2):
 | MF-01 | Automatic micro-climate control | Every 10 s a fuzzy controller on each floor sets misting and fan power from humidity and temperature, with a small expert-approved weather offset on misting; it keeps doing so without Internet, and the owner or the technician can take one relay by hand for a limited time before it returns to automatic |
 | MF-02 | Incident handling | A threshold or NH3/CO2 breach, an equipment fault, a restart, a device offline or a forecast crossing raises one alert that reaches the house's technician first and the owner when it is critical or not acknowledged in time; a fault that needs a visit becomes a Work Order closed only when the data confirm recovery |
 | MF-03 | Bird counting session | Birds crossing a ring around the entrance hole are counted per session; the return rate is computed; the annotated video is streamed |
-| MF-04 | Expert validation of inferred alerts | Abnormal noise, implausible readings and early warnings are shown with their evidence and confirmed or rejected by the expert |
+| MF-04 | Expert validation of inferred alerts | Abnormal noise, implausible readings, early warnings and return-rate drops are shown with their evidence; the expert may ask the technician to check the house on site, then confirms or rejects them |
 | MF-05 | Control-parameter tuning | The expert reviews the owner's changes and approves coefficient suggestions; the new configuration reaches the controllers and is confirmed applied |
 | MF-06 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF/CSV, independent ratings, a farm overview and a comparison of houses |
 | MF-07 | Preventive maintenance | Plans by run hours or calendar make preventive Work Orders due for the technician, with checklists; overdue plans escalate |
 | MF-08 | Recommendation loop | The expert's rules turn patterns in the data into recommendations that the owner accepts or rejects; their effect is measured after 7 days |
-| MF-09 | Harvest season assessment | A confirmed harvest closes the cycle of its zone, compared with the previous cycle and season and concluded by the expert |
 
-Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remote device maintenance by the Administrator (SF-02), accounts and access with technician assignment (SF-03), notification settings (SF-04), system administration (SF-05). Maintenance stays inside the owner's organisation: there are no external service providers, regions or queues.
+Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remote device maintenance by the Administrator (SF-02), accounts and access with technician assignment (SF-03), notification settings (SF-04), system administration (SF-05), harvest recording with a season summary (SF-06), which happens only a few times a year. Maintenance stays inside the owner's organisation: there are no external service providers, regions or queues.
 
 ### 6.2 Limitations and Exclusions
 
@@ -125,6 +124,7 @@ Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remo
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.2.0 | 10/11/2026 | Eight main flows; harvest recording and season summary is supporting flow SF-06; on-site check by the technician in MF-04 |
 | 1.1.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0, BM03 rows 13–19): Farm Technician; nine main flows with preventive maintenance, recommendation loop and harvest season assessment; five supporting flows; team roles of the new work packages |
 | 1.0.3 | 03/11/2026 | Technician role removed (BM03 row 13): remote maintenance by the Administrator. Six business main flows (SRS 3.2.0); device setup is supporting flow SF-01 |
 | 1.0.2 | 03/11/2026 | Farm Owner screens split by platform: Len the mobile app, Nhi the web with the Administrator web |

@@ -7,8 +7,8 @@
 | Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 1.4.0 (Review 2, final scope) |
-| Date | 09/11/2026 |
+| Document version | 1.5.0 (Review 2, final scope) |
+| Date | 10/11/2026 |
 | Scope baseline | Registration form v3 with Record of Changes (BM03) |
 
 Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commitment (BM04). Progress against this plan is kept in Project Tracking (`project-tracking.md`).
@@ -19,7 +19,7 @@ Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commi
 
 ### 1.1 Scope and Estimation
 
-Scope is the final registration form v3: main flows MF-01…09 and supporting flows SF-01…05 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are the team's estimates at 03/11/2026.
+Scope is the final registration form v3: main flows MF-01…08 and supporting flows SF-01…06 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are the team's estimates at 03/11/2026.
 
 | WBS | Work package | Main deliverable | Owner | Estimate (person-days) | Done at Review 2 |
 | --- | --- | --- | --- | --- | --- |
@@ -34,7 +34,7 @@ Scope is the final registration form v3: main flows MF-01…09 and supporting fl
 
 | Objective | Target | Measured by |
 | --- | --- | --- |
-| Scope | Every mandatory feature of the Design Brief (F-01…17, F-20…30) done and in at least one main workflow | Project Tracking; Report 5 |
+| Scope | Every mandatory feature of the Design Brief (F-01…17, F-20…29) done and in at least one main workflow | Project Tracking; Report 5 |
 | Defense 1.1 thresholds | 100 % of the 6 main workflows run end-to-end on staging; 100 % main and ≥ 80 % exception demo scenarios pass; ≥ 90 % of test cases pass, 100 % of main-path tests; ≥ 50 % automated in CI; no open Critical or High defect | Report 5; CI on the submitted tag |
 | Quality of code | Every pull request passes CI and one review; backend line coverage ≥ 80 % | CI (`.github/workflows/ci.yml`) |
 | Non-functional | The seven committed NFRs of the Design Brief measured with their stated method | Report 5, NFR test cases |
@@ -147,7 +147,7 @@ R = responsible, A = accountable, C = consulted.
 
 Staging and documents are shared: Bảo is accountable and runs the infrastructure and the final documents, and every member is responsible for their part (Kiệt the backend image, migrations, seed and backup; Nhi the web build; Len the mobile build; Tuấn the E2E runs on staging; each member the report sections of their own workflows). Backend code is written only by Bảo and Kiệt. Len, Nhi and Tuấn are consulted on the backend of the features they own and answer for those features working end to end (Project Tracking, Section 3).
 
-Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03; Kiệt WF-05; Len WF-02, 07; Nhi WF-06, 09; Tuấn WF-04, 08. Since 03/11/2026 the Farm Owner screens are split by platform: Len the mobile app, Nhi the web. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
+Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03; Kiệt WF-05; Len WF-02, 07; Nhi WF-06; Tuấn WF-04, 08. Since 03/11/2026 the Farm Owner screens are split by platform: Len the mobile app, Nhi the web. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
 
 ## 5. Project Communications
 
@@ -193,6 +193,7 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.5.0 | 10/11/2026 | Eight main flows (harvest season summary is supporting flow SF-06): 27 mandatory features and 170 committed test cases |
 | 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): work packages of the new scope (Kiệt operations backend; Bảo firmware weather offset, knowledge and analytics backend, simulator; Len technician mobile; Tuấn expert web; Nhi owner web), workflows WF-07…09, 28 mandatory features and 186 committed test cases, risk of the larger scope |
 | 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…09; device setup is supporting flow SF-01 |
 | 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo; Farm Owner web to Nhi, mobile to Len on 03/11/2026), skills, workflow owners, RK-3 and RK-8 |

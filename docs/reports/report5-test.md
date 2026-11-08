@@ -7,8 +7,8 @@
 | Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 1.4.0 (Review 2, final scope) |
-| Date | 09/11/2026 |
+| Document version | 1.5.0 (Review 2, final scope) |
+| Date | 10/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.0.0; Design Brief (BM01) 1.2 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
@@ -19,7 +19,7 @@ This file is generated from the test-case list `docs/reports/report5/tc.py` by `
 
 ### 1.1 Purpose
 
-This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…17, F-20…30), main workflow (WF-01…09), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
+This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…17, F-20…29), main workflow (WF-01…08), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
 
 ### 1.2 Scope of Testing
 
@@ -31,11 +31,11 @@ This report is the test plan and the test cases of SwiftletCare for Defense 1.1.
 
 | Source | Count | Minimum per item | Subtotal |
 | --- | --- | --- | --- |
-| Mandatory features | 28 | 3 | 84 |
-| Main workflows (end-to-end) | 9 | 1 | 9 |
-| State transitions of main entities | 86 | 1 | 86 |
+| Mandatory features | 27 | 3 | 81 |
+| Main workflows (end-to-end) | 8 | 1 | 8 |
+| State transitions of main entities | 74 | 1 | 74 |
 | Committed NFRs | 7 | 1 | 7 |
-| **Total** | | | **186** |
+| **Total** | | | **170** |
 
 ## 2. Test Strategy
 
@@ -91,7 +91,7 @@ Every defect is fixed by a pull request that adds a test failing without the fix
 
 Columns follow the guideline: ID, feature or workflow, preconditions, steps, data, expected result, how it runs (automatic or manual), actual result.
 
-### 4.1 Mandatory Features (84)
+### 4.1 Mandatory Features (81)
 
 Requirements covered by each mandatory feature:
 
@@ -109,13 +109,13 @@ Requirements covered by each mandatory feature:
 | F-10 | Counting, return rate | VISION-FR-001…011, 016, 017, 020, THREAT-FR-010, ANALYTICS-FR-002, 003, FARM-FR-004 |
 | F-11 | Annotated live stream | VISION-FR-012, 013, 014 |
 | F-12 | Abnormal noise | THREAT-FR-007 |
-| F-13 | Expert verdict | EXPERT-FR-003, 007, ALERT-FR-014 |
+| F-13 | Expert verdict | EXPERT-FR-003, 007, 021, ALERT-FR-014 |
 | F-14 | Tuning, ring, schedule | EXPERT-FR-008, VISION-FR-018, 019 |
 | F-15 | Review and suggestions | EXPERT-FR-010, 011, ANALYTICS-FR-010 |
 | F-16 | Conclusions, owner notice | EXPERT-FR-001, 002, 006, 009 |
 | F-17 | Manual override | ENV-FR-016, 017, 018, 019, ANALYTICS-FR-011 |
-| F-18 | Farm structure and device registration (supporting, SF-01) | FARM-FR-001, 002, 003, 003b, 003c, 010, 011 |
-| F-19 | Device lifecycle, diagnostics and setup progress (supporting, SF-01) | FARM-FR-005, 006, 007, 007b, 008, 012, ENV-FR-027 |
+| F-18 | Farm structure and device registration (supporting) | FARM-FR-001, 002, 003, 003b, 003c, 010, 011 |
+| F-19 | Device lifecycle, diagnostics and setup progress (supporting) | FARM-FR-005, 006, 007, 007b, 008, 012, ENV-FR-027 |
 | F-20 | Daily health status | ANALYTICS-FR-012, 013 |
 | F-21 | Reports, PDF/CSV | EXPERT-FR-005, 013 |
 | F-22 | Independent rating | EXPERT-FR-012, ANALYTICS-FR-014 |
@@ -126,7 +126,7 @@ Requirements covered by each mandatory feature:
 | F-27 | Recommendation rules | EXPERT-FR-016, 017, 018, 019 |
 | F-28 | Configuration profiles and house stage | EXPERT-FR-014, 015, FARM-FR-014 |
 | F-29 | Farm overview and house comparison | ANALYTICS-FR-002, 015, 016, 017 |
-| F-30 | Harvest cycles and season conclusion | HARVEST-FR-001, 006, 007, ANALYTICS-FR-004, EXPERT-FR-020 |
+| F-30 | Harvest cycles and season conclusion (supporting) | HARVEST-FR-001, 006, 007, ANALYTICS-FR-004, EXPERT-FR-020 |
 
 | ID | Feature / workflow | Requirements verified | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -211,11 +211,8 @@ Requirements covered by each mandatory feature:
 | TC-F29-01 | F-29 | ANALYTICS-FR-015 | Seeded farm of 3 houses (2 simulated) | GET the farm overview | — | Each house shows stage, today's status, open alerts and Work Orders, latest return rate equal to the seed; simulated houses marked | Auto (CI, to be written) – backend jest (G-25) | Not run – test to be written |
 | TC-F29-02 | F-29 | ANALYTICS-FR-016 | Same farm; 30 days of seed | GET the comparison; sort by MTTR | — | Each cell equals BR-44; houses ordered by MTTR; no score column | Auto (CI, to be written) – backend jest (G-25) | Not run – test to be written |
 | TC-F29-03 | F-29 | ANALYTICS-FR-002, 017 | Load drawing 1.0 A at 12 V for 10 h; 8 weeks of counts | GET energy and flock trend | — | 0.12 kWh; weekly and monthly mean morning exits equal the seed | Auto (CI, to be written) – backend jest (G-25) | Not run – test to be written |
-| TC-F30-01 | F-30 | HARVEST-FR-001 | Technician of the zone's house | Enter a valid harvest; enter one without weight; expert enters one | — | DRAFT batch; 422; 403 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-F30-02 | F-30 | HARVEST-FR-006, 007, ANALYTICS-FR-004 | DRAFT batch; seeded previous cycle and the cycle of the previous year | Farm Owner confirms it; confirms it again | — | CONFIRMED; cycle CLOSED with yield, comparisons, GOOD share, return rate and time in range equal to the seed; 409 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-F30-03 | F-30 | EXPERT-FR-020 | CLOSED cycle; farm with a Domain Expert | Expert writes the season conclusion; Farm Owner writes one | — | CONCLUDED and one notification per Farm Owner; 403 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
 
-### 4.2 Main Workflows (9)
+### 4.2 Main Workflows (8)
 
 | ID | Feature / workflow | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -227,7 +224,6 @@ Requirements covered by each mandatory feature:
 | TC-WF-06 | WF-06 | Staging with demo seed; preconditions of DS-11 | Run the main scenario DS-11 of the Design Brief end-to-end | Data of DS-11 | Expected result of DS-11 | Manual – staging, presenter of the workflow | Not run |
 | TC-WF-07 | WF-07 | Staging with demo seed; preconditions of DS-13 | Run the main scenario DS-13 of the Design Brief end-to-end | Data of DS-13 | Expected result of DS-13 | Manual – staging, presenter of the workflow | Not run |
 | TC-WF-08 | WF-08 | Staging with demo seed; preconditions of DS-15 | Run the main scenario DS-15 of the Design Brief end-to-end | Data of DS-15 | Expected result of DS-15 | Manual – staging, presenter of the workflow | Not run |
-| TC-WF-09 | WF-09 | Staging with demo seed; preconditions of DS-17 | Run the main scenario DS-17 of the Design Brief end-to-end | Data of DS-17 | Expected result of DS-17 | Manual – staging, presenter of the workflow | Not run |
 
 Exception scenarios of the Design Brief (Appendix A2), run in the same session as their workflow. They are demo evidence for the guideline's threshold of 80 % of exception scenarios passing and are **not counted** among the committed cases.
 
@@ -241,9 +237,8 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 | DS-12 (exception) | WF-06 | Manual – staging, presenter of the workflow | Not run |
 | DS-14 (exception) | WF-07 | Manual – staging, presenter of the workflow | Not run |
 | DS-16 (exception) | WF-08 | Manual – staging, presenter of the workflow | Not run |
-| DS-18 (exception) | WF-09 | Manual – staging, presenter of the workflow | Not run |
 
-### 4.3 State Transitions (86)
+### 4.3 State Transitions (74)
 
 | ID | Feature / workflow | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -300,39 +295,27 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 | TC-ST-51 | SRS 6.9 HealthReport | Entity in the source state of (new) → GENERATED | Daily, weekly or monthly report job | — | One report per house and period, with a section per zone (the current per-zone weekly test does not count) | Auto (CI, to be written) – backend jest `healthReport.test.ts` (G-11) | Not run – test to be written |
 | TC-ST-52 | SRS 6.9 HealthReport | Entity in the source state of GENERATED → CONCLUDED | Expert writes a conclusion | — | Conclusion stored; Farm Owners notified | Auto (CI) – backend Jest `tests/integration/healthReport.test.ts` › “chỉ Domain Expert viết; Farm Owner được báo” | Pass |
 | TC-ST-53 | SRS 6.9 HealthReport | Entity in the source state of CONCLUDED → CONCLUDED | Author edits; another expert edits | — | Author's edit stored with time; the other expert gets 403 | Auto (CI) – backend Jest `tests/integration/healthReport.test.ts` › “chỉ Domain Expert viết; Farm Owner được báo” | Pass |
-| TC-ST-54 | SRS 6.13 HarvestBatch | Entity in the source state of (new) → DRAFT | Farm Technician enters a harvest | — | DRAFT with snapshots and trace code | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-55 | SRS 6.13 HarvestBatch | Entity in the source state of (new) → CONFIRMED | Farm Owner enters a harvest | — | CONFIRMED at once; cycle of the zone closed | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-56 | SRS 6.13 HarvestBatch | Entity in the source state of DRAFT → DRAFT | Author edits | — | Values updated; still DRAFT | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-57 | SRS 6.13 HarvestBatch | Entity in the source state of DRAFT → CONFIRMED | Farm Owner confirms | — | CONFIRMED; cycle closed | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-58 | SRS 6.13 HarvestBatch | Entity in the source state of CONFIRMED → CONFIRMED | Farm Owner corrects the weight | — | Cycle figures recomputed | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-59 | SRS 6.13 HarvestBatch | Entity in the source state of DRAFT/CONFIRMED → deleted | Farm Owner soft-deletes | — | Hidden from lists, kept in the database; cycle merged with the next | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-60 | SRS 6.13 HarvestBatch | Entity in the source state of any → (rejected) | Expert edits; owner confirms a confirmed batch | — | 403; 409 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-61 | SRS 6.19 WorkOrder | Entity in the source state of (new) → OPEN | MISTING_INEFFECTIVE raised on a house with a technician | — | One OPEN Work Order assigned to the technician | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-62 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → IN_PROGRESS | Technician starts it | — | IN_PROGRESS with start time | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-63 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → CLOSED | Alert recovers for 10 min before the work starts | — | CLOSED with result SELF_RECOVERED | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-64 | SRS 6.19 WorkOrder | Entity in the source state of IN_PROGRESS → VERIFYING | Technician marks it done with cause and photo | — | VERIFYING; cause stored with the alert | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-65 | SRS 6.19 WorkOrder | Entity in the source state of VERIFYING → AWAITING_APPROVAL | Condition recovered for recovery_verify_min | — | AWAITING_APPROVAL; Farm Owners notified | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-66 | SRS 6.19 WorkOrder | Entity in the source state of VERIFYING → IN_PROGRESS | Condition comes back during verification | — | IN_PROGRESS; technician notified | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-67 | SRS 6.19 WorkOrder | Entity in the source state of AWAITING_APPROVAL → CLOSED | Farm Owner approves | — | CLOSED; alert RESOLVED; MTTR recorded | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-68 | SRS 6.19 WorkOrder | Entity in the source state of AWAITING_APPROVAL → IN_PROGRESS | Farm Owner reopens with a note | — | IN_PROGRESS with the note | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-69 | SRS 6.19 WorkOrder | Entity in the source state of OPEN/IN_PROGRESS → CANCELLED | Farm Owner cancels with a reason | — | CANCELLED; without a reason 422 | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-70 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → OPEN (escalated) | Not started within escalation_min | — | Farm Owners notified once; still OPEN | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
-| TC-ST-71 | SRS 6.20 MaintenancePlan | Entity in the source state of (new) → SCHEDULED | Farm Owner defines a plan | — | SCHEDULED with its first due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
-| TC-ST-72 | SRS 6.20 MaintenancePlan | Entity in the source state of SCHEDULED → DUE | Run hours reach the interval | — | DUE; MAINTENANCE_DUE and a preventive Work Order | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
-| TC-ST-73 | SRS 6.20 MaintenancePlan | Entity in the source state of DUE → OVERDUE | 7 days without the record | — | OVERDUE; Farm Owners notified | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
-| TC-ST-74 | SRS 6.20 MaintenancePlan | Entity in the source state of DUE/OVERDUE → SCHEDULED | Maintenance recorded | — | SCHEDULED; counter reset; next due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
-| TC-ST-75 | SRS 6.20 MaintenancePlan | Entity in the source state of any → RETIRED | Farm Owner deletes the plan | — | RETIRED; no further due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
-| TC-ST-76 | SRS 6.21 Recommendation | Entity in the source state of (new) → OPEN | Active rule holds for a house | — | OPEN with evidence | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
-| TC-ST-77 | SRS 6.21 Recommendation | Entity in the source state of OPEN → ACCEPTED | Farm Owner accepts | — | ACCEPTED; Work Order or review item created | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
-| TC-ST-78 | SRS 6.21 Recommendation | Entity in the source state of OPEN → REJECTED | Farm Owner rejects with a reason | — | REJECTED; reason stored | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
-| TC-ST-79 | SRS 6.21 Recommendation | Entity in the source state of OPEN → EXPIRED | 7 days without a decision | — | EXPIRED | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
-| TC-ST-80 | SRS 6.21 Recommendation | Entity in the source state of ACCEPTED → MEASURED | 7 days after acceptance | — | Effect stored; rule statistics updated | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
-| TC-ST-81 | SRS 6.21 Recommendation | Entity in the source state of closed → (rejected) | Accept a rejected or expired one | — | 409 | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
-| TC-ST-82 | SRS 6.22 HarvestCycle | Entity in the source state of (new) → OPEN | First controller of a zone registered | — | OPEN cycle from the registration date | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-83 | SRS 6.22 HarvestCycle | Entity in the source state of OPEN → CLOSED | Harvest of the zone confirmed | — | CLOSED with yield, comparisons and health; next cycle OPEN | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-84 | SRS 6.22 HarvestCycle | Entity in the source state of CLOSED → CLOSED | Closing harvest corrected | — | Figures recomputed | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-85 | SRS 6.22 HarvestCycle | Entity in the source state of CLOSED → CONCLUDED | Expert writes the season conclusion | — | CONCLUDED; Farm Owners notified | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
-| TC-ST-86 | SRS 6.22 HarvestCycle | Entity in the source state of CONCLUDED → CONCLUDED | Expert edits the conclusion | — | Conclusion updated with time | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-54 | SRS 6.19 WorkOrder | Entity in the source state of (new) → OPEN | MISTING_INEFFECTIVE raised on a house with a technician | — | One OPEN Work Order assigned to the technician | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-55 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → IN_PROGRESS | Technician starts it | — | IN_PROGRESS with start time | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-56 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → CLOSED | Alert recovers for 10 min before the work starts | — | CLOSED with result SELF_RECOVERED | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-57 | SRS 6.19 WorkOrder | Entity in the source state of IN_PROGRESS → VERIFYING | Technician marks it done with cause and photo | — | VERIFYING; cause stored with the alert | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-58 | SRS 6.19 WorkOrder | Entity in the source state of VERIFYING → AWAITING_APPROVAL | Condition recovered for recovery_verify_min | — | AWAITING_APPROVAL; Farm Owners notified | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-59 | SRS 6.19 WorkOrder | Entity in the source state of VERIFYING → IN_PROGRESS | Condition comes back during verification | — | IN_PROGRESS; technician notified | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-60 | SRS 6.19 WorkOrder | Entity in the source state of AWAITING_APPROVAL → CLOSED | Farm Owner approves | — | CLOSED; alert RESOLVED; MTTR recorded | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-61 | SRS 6.19 WorkOrder | Entity in the source state of AWAITING_APPROVAL → IN_PROGRESS | Farm Owner reopens with a note | — | IN_PROGRESS with the note | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-62 | SRS 6.19 WorkOrder | Entity in the source state of OPEN/IN_PROGRESS → CANCELLED | Farm Owner cancels with a reason | — | CANCELLED; without a reason 422 | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-63 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → OPEN (escalated) | Not started within escalation_min | — | Farm Owners notified once; still OPEN | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-64 | SRS 6.20 MaintenancePlan | Entity in the source state of (new) → SCHEDULED | Farm Owner defines a plan | — | SCHEDULED with its first due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-65 | SRS 6.20 MaintenancePlan | Entity in the source state of SCHEDULED → DUE | Run hours reach the interval | — | DUE; MAINTENANCE_DUE and a preventive Work Order | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-66 | SRS 6.20 MaintenancePlan | Entity in the source state of DUE → OVERDUE | 7 days without the record | — | OVERDUE; Farm Owners notified | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-67 | SRS 6.20 MaintenancePlan | Entity in the source state of DUE/OVERDUE → SCHEDULED | Maintenance recorded | — | SCHEDULED; counter reset; next due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-68 | SRS 6.20 MaintenancePlan | Entity in the source state of any → RETIRED | Farm Owner deletes the plan | — | RETIRED; no further due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-69 | SRS 6.21 Recommendation | Entity in the source state of (new) → OPEN | Active rule holds for a house | — | OPEN with evidence | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-70 | SRS 6.21 Recommendation | Entity in the source state of OPEN → ACCEPTED | Farm Owner accepts | — | ACCEPTED; Work Order or review item created | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-71 | SRS 6.21 Recommendation | Entity in the source state of OPEN → REJECTED | Farm Owner rejects with a reason | — | REJECTED; reason stored | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-72 | SRS 6.21 Recommendation | Entity in the source state of OPEN → EXPIRED | 7 days without a decision | — | EXPIRED | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-73 | SRS 6.21 Recommendation | Entity in the source state of ACCEPTED → MEASURED | 7 days after acceptance | — | Effect stored; rule statistics updated | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-74 | SRS 6.21 Recommendation | Entity in the source state of closed → (rejected) | Accept a rejected or expired one | — | 409 | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
 
 ### 4.4 Non-Functional Requirements (6)
 
@@ -348,7 +331,7 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 
 ### 4.5 Requirement Coverage
 
-Generated from the "Requirements verified" column of Section 4.1, the NFR cases that measure a requirement (TC-NFR-09 for VISION-FR-016, TC-NFR-14 for ANALYTICS-FR-014) and the requirement lists of the main flows (Report 3, Section 2.2). "Verified" means a committed case has steps and an expected result for that requirement; "traced" means only that the requirement belongs to a workflow whose end-to-end test runs. 137 mandatory requirements: 95 are verified by a committed feature or NFR case; 42 are only traced to the end-to-end test of their workflow, which exercises the flow but does not check each of their acceptance criteria. The traced-only requirements are covered by the module suites or get a case when their gap is closed (Project Tracking, Section 6).
+Generated from the "Requirements verified" column of Section 4.1, the NFR cases that measure a requirement (TC-NFR-09 for VISION-FR-016, TC-NFR-14 for ANALYTICS-FR-014) and the requirement lists of the main flows (Report 3, Section 2.2). "Verified" means a committed case has steps and an expected result for that requirement; "traced" means only that the requirement belongs to a workflow whose end-to-end test runs. 138 mandatory requirements: 95 are verified by a committed feature or NFR case; 43 are only traced to the end-to-end test of their workflow, which exercises the flow but does not check each of their acceptance criteria. The traced-only requirements are covered by the module suites or get a case when their gap is closed (Project Tracking, Section 6).
 
 | Requirement | Verified by (committed case with steps and expected result) | Traced to (end-to-end test of its workflow) |
 | --- | --- | --- |
@@ -413,7 +396,7 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | ANALYTICS-FR-012 | TC-F20-01, TC-F20-02, TC-F20-03 | TC-WF-06 |
 | ANALYTICS-FR-013 | TC-F20-02 | TC-WF-06 |
 | ANALYTICS-FR-014 | TC-NFR-14 | TC-WF-06 |
-| ANALYTICS-FR-004 | TC-F30-02 | TC-WF-09 |
+| ANALYTICS-FR-004 | TC-F30-02 | supporting flow SF-06 |
 | ANALYTICS-FR-015 | TC-F29-01 | TC-WF-06 |
 | ANALYTICS-FR-016 | TC-F29-02 | TC-WF-06 |
 | ANALYTICS-FR-017 | TC-F29-03 | TC-WF-06 |
@@ -455,7 +438,8 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | EXPERT-FR-017 | TC-F27-01, TC-F27-03 | TC-WF-08 |
 | EXPERT-FR-018 | TC-F27-02 | TC-WF-08 |
 | EXPERT-FR-019 | TC-F27-03 | TC-WF-08 |
-| EXPERT-FR-020 | TC-F30-03 | TC-WF-09 |
+| EXPERT-FR-020 | TC-F30-03 | supporting flow SF-06 |
+| EXPERT-FR-021 | — (traced only) | TC-WF-04 |
 | FARM-FR-001 | TC-F18-01 | supporting flow SF-03 |
 | FARM-FR-002 | TC-F18-01 | supporting flow SF-03 |
 | FARM-FR-003 | TC-F18-01, TC-F18-02, TC-F18-03 | supporting flow SF-01 |
@@ -471,13 +455,13 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | FARM-FR-011 | — (traced only) | supporting flow SF-01 |
 | FARM-FR-012 | TC-F19-01, TC-F19-02 | supporting flow SF-01 |
 | FARM-FR-014 | TC-F28-03 | TC-WF-05 |
-| HARVEST-FR-001 | TC-F30-01 | TC-WF-09 |
-| HARVEST-FR-002 | — (traced only) | TC-WF-09 |
-| HARVEST-FR-003 | — (traced only) | TC-WF-09 |
-| HARVEST-FR-004 | — (traced only) | TC-WF-09 |
-| HARVEST-FR-005 | — (traced only) | TC-WF-09 |
-| HARVEST-FR-006 | TC-F30-02 | TC-WF-09 |
-| HARVEST-FR-007 | TC-F30-02 | TC-WF-09 |
+| HARVEST-FR-001 | TC-F30-01 | supporting flow SF-06 |
+| HARVEST-FR-002 | — (traced only) | supporting flow SF-06 |
+| HARVEST-FR-003 | — (traced only) | supporting flow SF-06 |
+| HARVEST-FR-004 | — (traced only) | supporting flow SF-06 |
+| HARVEST-FR-005 | — (traced only) | supporting flow SF-06 |
+| HARVEST-FR-006 | TC-F30-02 | supporting flow SF-06 |
+| HARVEST-FR-007 | TC-F30-02 | supporting flow SF-06 |
 | AUTH-FR-013 | TC-F23-03 | supporting flow SF-03 |
 | SYSTEM-FR-004 | — (traced only) | supporting flow SF-05 |
 | OPS-FR-001 | TC-F24-01, TC-F24-03 | TC-WF-02, TC-WF-04 |
@@ -496,12 +480,13 @@ Requirements of priority `S` are kept working by the automated suites that run o
 
 | Supporting flow | Requirements | Suites |
 | --- | --- | --- |
-| SF-01 Device setup by the Farm Owner | FARM-FR-001…003c, 005…008, 010…012, ENV-FR-027 | Features F-18 and F-19 below (6 cases, written and run like the committed ones) |
+| SF-01 Device setup by the Farm Owner | FARM-FR-001…003c, 005…008, 010…012, ENV-FR-027 | Features F-18 and F-19 below, written and run like the committed ones |
+| SF-06 Harvest recording and season summary | HARVEST-FR-001…007, ANALYTICS-FR-004, EXPERT-FR-020 | Feature F-30 below, written and run like the committed ones |
 | SF-02 Remote device maintenance | FARM-FR-009, 013, ENV-FR-013c | backend `technicianAccess.test.ts`, `deviceOnboarding.test.ts` (remote commands, OTA), `audioTracks.test.ts`; firmware `pio test` remote-command suite |
 | SF-03 Accounts and access | AUTH-FR-002…012, SYSTEM-FR-001…003 | backend `passwordAndProfile.test.ts`, `invitations.test.ts`, `adminUserLifecycle.test.ts`, `rateLimit.test.ts`, `auditLog.test.ts`, `systemOverview.test.ts`, `systemSettingSingleton.test.ts`, `dataPrivacy.test.ts` |
 | SF-04 Harvest logging | HARVEST-FR-001…005 | backend `harvest.test.ts` |
 
-Test cases of the device-setup features (supporting flow SF-01):
+Test cases of the features of the supporting flows SF-01 (device setup) and SF-06 (harvest recording), 9 cases:
 
 | ID | Feature / workflow | Requirements verified | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -511,6 +496,9 @@ Test cases of the device-setup features (supporting flow SF-01):
 | TC-F19-01 | F-19 | FARM-FR-003c, 012 | Controller registered to a zone, never connected | Ingest its first heartbeat on its device topics | — | Device `ONLINE`; the zone configuration with its version published retained on `swiftletcare/dev/<id>/config` | Auto (CI, to be written) – backend jest `deviceMqttContract.test.ts` (G-07) | Not run – test to be written |
 | TC-F19-02 | F-19 | FARM-FR-005, 006, 012 | Device `PENDING` for 15 min | Run the activation job; then a first heartbeat carrying diagnostics | Firmware 1.4.0 heartbeat | Flagged once; the heartbeat sets `ONLINE`, clears the flag and stores firmware, uptime, RSSI, free memory, reset reason and IP | Auto (CI) – backend Jest `tests/integration/deviceOnboarding.test.ts` › “đánh dấu node PENDING quá 15 phút 1 lần” + Auto (CI) – backend Jest `tests/integration/deviceMqttContract.test.ts` › “stores the diagnostics of firmware 1.4.0” | Pass |
 | TC-F19-03 | F-19 | FARM-FR-007b, ENV-FR-027 | Offline controller | Move it to another zone; then it reconnects and reports the new version | — | Move accepted while offline; new zone configuration retained; "applied" shown after the heartbeat reports the version | Auto (CI, to be written) – backend jest `deviceOnboarding.test.ts` (G-07, G-08) | Not run – test to be written |
+| TC-F30-01 | F-30 | HARVEST-FR-001 | Technician of the zone's house | Enter a valid harvest; enter one without weight; expert enters one | — | DRAFT batch; 422; 403 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-F30-02 | F-30 | HARVEST-FR-006, 007, ANALYTICS-FR-004 | DRAFT batch; seeded previous cycle and the cycle of the previous year | Farm Owner confirms it; confirms it again | — | CONFIRMED; cycle CLOSED with yield, comparisons, GOOD share, return rate and time in range equal to the seed; 409 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-F30-03 | F-30 | EXPERT-FR-020 | CLOSED cycle; farm with a Domain Expert | Expert writes the season conclusion; Farm Owner writes one | — | CONCLUDED and one notification per Farm Owner; 403 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
 
 ## 5. Responsibilities
 
@@ -530,7 +518,7 @@ Results come only from the CI run on the tag `review-2` (commit `7d5e643b`, 04/1
 
 | Test cases | Automated, test written | Automated, to be written | Manual | Passed on the tag |
 | --- | --- | --- | --- | --- |
-| 186 | 83 (44 %) | 84 (automated in total: 167, 89 %) | 19 | 83 |
+| 170 | 83 (48 %) | 69 (automated in total: 152, 89 %) | 18 | 83 |
 
 Committed test cases that are not automated yet are written in Iteration 2 together with the feature they test (Project Tracking, Section 6).
 
@@ -538,6 +526,7 @@ Committed test cases that are not automated yet are written in Iteration 2 toget
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.5.0 | 10/11/2026 | Eight main workflows: WF-09 removed, F-30 (harvest cycles) becomes a supporting feature of SF-06, the transitions of HarvestBatch and HarvestCycle leave the committed list; F-13 covers the on-site check (EXPERT-FR-021) |
 | 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): features F-23…F-30 (alert routing and escalation, Work Orders closed by the data, preventive maintenance, weather compensation, recommendation rules, profiles and house stage, farm overview and house comparison, harvest cycles), workflows WF-07…09 with demo scenarios DS-13…18, transitions of HarvestBatch, WorkOrder, MaintenancePlan, Recommendation and HarvestCycle, NFR-15. The results of Section 6 are still those of the run on the tag `review-2`; the new cases are written in Iterations 2 and 3 |
 | 1.3.0 | 04/11/2026 | Results of the CI run on the tag `review-2` (Section 6): 83 of the 83 automated cases with a written test pass; the generator reads the PlatformIO JUnit report, whose suite name sits on the test suite |
 | 1.2.0 | 03/11/2026 | Six business main workflows (SRS 3.2.0): WF-01…06 with demo scenarios DS-01…12; device-setup features F-18, F-19 move to supporting flow SF-01 (still tested, not counted) |

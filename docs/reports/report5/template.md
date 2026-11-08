@@ -7,8 +7,8 @@
 | Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 1.4.0 (Review 2, final scope) |
-| Date | 09/11/2026 |
+| Document version | 1.5.0 (Review 2, final scope) |
+| Date | 10/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.0.0; Design Brief (BM01) 1.2 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
@@ -19,7 +19,7 @@ This file is generated from the test-case list `docs/reports/report5/tc.py` by `
 
 ### 1.1 Purpose
 
-This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…17, F-20…30), main workflow (WF-01…09), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
+This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…17, F-20…29), main workflow (WF-01…08), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
 
 ### 1.2 Scope of Testing
 
@@ -127,12 +127,13 @@ Requirements of priority `S` are kept working by the automated suites that run o
 
 | Supporting flow | Requirements | Suites |
 | --- | --- | --- |
-| SF-01 Device setup by the Farm Owner | FARM-FR-001…003c, 005…008, 010…012, ENV-FR-027 | Features F-18 and F-19 below ({{NSUP}} cases, written and run like the committed ones) |
+| SF-01 Device setup by the Farm Owner | FARM-FR-001…003c, 005…008, 010…012, ENV-FR-027 | Features F-18 and F-19 below, written and run like the committed ones |
+| SF-06 Harvest recording and season summary | HARVEST-FR-001…007, ANALYTICS-FR-004, EXPERT-FR-020 | Feature F-30 below, written and run like the committed ones |
 | SF-02 Remote device maintenance | FARM-FR-009, 013, ENV-FR-013c | backend `technicianAccess.test.ts`, `deviceOnboarding.test.ts` (remote commands, OTA), `audioTracks.test.ts`; firmware `pio test` remote-command suite |
 | SF-03 Accounts and access | AUTH-FR-002…012, SYSTEM-FR-001…003 | backend `passwordAndProfile.test.ts`, `invitations.test.ts`, `adminUserLifecycle.test.ts`, `rateLimit.test.ts`, `auditLog.test.ts`, `systemOverview.test.ts`, `systemSettingSingleton.test.ts`, `dataPrivacy.test.ts` |
 | SF-04 Harvest logging | HARVEST-FR-001…005 | backend `harvest.test.ts` |
 
-Test cases of the device-setup features (supporting flow SF-01):
+Test cases of the features of the supporting flows SF-01 (device setup) and SF-06 (harvest recording), {{NSUP}} cases:
 
 {{FS}}
 
@@ -160,6 +161,7 @@ Committed test cases that are not automated yet are written in Iteration 2 toget
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.5.0 | 10/11/2026 | Eight main workflows: WF-09 removed, F-30 (harvest cycles) becomes a supporting feature of SF-06, the transitions of HarvestBatch and HarvestCycle leave the committed list; F-13 covers the on-site check (EXPERT-FR-021) |
 | 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): features F-23…F-30 (alert routing and escalation, Work Orders closed by the data, preventive maintenance, weather compensation, recommendation rules, profiles and house stage, farm overview and house comparison, harvest cycles), workflows WF-07…09 with demo scenarios DS-13…18, transitions of HarvestBatch, WorkOrder, MaintenancePlan, Recommendation and HarvestCycle, NFR-15. The results of Section 6 are still those of the run on the tag `review-2`; the new cases are written in Iterations 2 and 3 |
 | 1.3.0 | 04/11/2026 | Results of the CI run on the tag `review-2` (Section 6): 83 of the 83 automated cases with a written test pass; the generator reads the PlatformIO JUnit report, whose suite name sits on the test suite |
 | 1.2.0 | 03/11/2026 | Six business main workflows (SRS 3.2.0): WF-01…06 with demo scenarios DS-01…12; device-setup features F-18, F-19 move to supporting flow SF-01 (still tested, not counted) |
