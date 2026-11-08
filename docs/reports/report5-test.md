@@ -7,9 +7,9 @@
 | Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 1.3.0 (Review 2) |
-| Date | 04/11/2026 |
-| Requirements baseline | Report 3 – SRS 3.2.0; Design Brief (BM01) 1.2 sections 6–7 and Appendix A |
+| Document version | 1.4.0 (Review 2, final scope) |
+| Date | 09/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.0.0; Design Brief (BM01) 1.2 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
 
@@ -19,7 +19,7 @@ This file is generated from the test-case list `docs/reports/report5/tc.py` by `
 
 ### 1.1 Purpose
 
-This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…17, F-20…22), main workflow (WF-01…06), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
+This report is the test plan and the test cases of SwiftletCare for Defense 1.1. It maps every mandatory feature (F-01…17, F-20…30), main workflow (WF-01…09), state transition of a main entity (Report 3, Section 6) and committed NFR of the Design Brief to test cases with their expected and actual results.
 
 ### 1.2 Scope of Testing
 
@@ -31,11 +31,11 @@ This report is the test plan and the test cases of SwiftletCare for Defense 1.1.
 
 | Source | Count | Minimum per item | Subtotal |
 | --- | --- | --- | --- |
-| Mandatory features | 20 | 3 | 60 |
-| Main workflows (end-to-end) | 6 | 1 | 6 |
-| State transitions of main entities | 53 | 1 | 53 |
-| Committed NFRs | 6 | 1 | 6 |
-| **Total** | | | **125** |
+| Mandatory features | 28 | 3 | 84 |
+| Main workflows (end-to-end) | 9 | 1 | 9 |
+| State transitions of main entities | 86 | 1 | 86 |
+| Committed NFRs | 7 | 1 | 7 |
+| **Total** | | | **186** |
 
 ## 2. Test Strategy
 
@@ -91,7 +91,7 @@ Every defect is fixed by a pull request that adds a test failing without the fix
 
 Columns follow the guideline: ID, feature or workflow, preconditions, steps, data, expected result, how it runs (automatic or manual), actual result.
 
-### 4.1 Mandatory Features (60)
+### 4.1 Mandatory Features (84)
 
 Requirements covered by each mandatory feature:
 
@@ -119,6 +119,14 @@ Requirements covered by each mandatory feature:
 | F-20 | Daily health status | ANALYTICS-FR-012, 013 |
 | F-21 | Reports, PDF/CSV | EXPERT-FR-005, 013 |
 | F-22 | Independent rating | EXPERT-FR-012, ANALYTICS-FR-014 |
+| F-23 | Alert routing and escalation | ALERT-FR-005, 009, 017, 018, AUTH-FR-013 |
+| F-24 | Work Orders closed by the data | OPS-FR-001, 002, 003, 004, 009 |
+| F-25 | Preventive maintenance | OPS-FR-005, 006, 007, 008, ALERT-FR-016 |
+| F-26 | Weather compensation | ENV-FR-028, 029, 030 |
+| F-27 | Recommendation rules | EXPERT-FR-016, 017, 018, 019 |
+| F-28 | Configuration profiles and house stage | EXPERT-FR-014, 015, FARM-FR-014 |
+| F-29 | Farm overview and house comparison | ANALYTICS-FR-002, 015, 016, 017 |
+| F-30 | Harvest cycles and season conclusion | HARVEST-FR-001, 006, 007, ANALYTICS-FR-004, EXPERT-FR-020 |
 
 | ID | Feature / workflow | Requirements verified | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -182,8 +190,32 @@ Requirements covered by each mandatory feature:
 | TC-F22-01 | F-22 | EXPERT-FR-012 | Computed day; Farm Owner who has not rated it | GET the day, the daily report and the CSV; then POST a rating | — | No status, reasons or other ratings before the rating; the rating and its snapshot stored together, and the status returned only in the rating response | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
 | TC-F22-02 | F-22 | EXPERT-FR-012 | Rated day | Ingest a late count that changes the status; then try to change the rating | — | Current status recomputed, snapshot unchanged; rating change rejected, a note accepted | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
 | TC-F22-03 | F-22 | EXPERT-FR-012 | Administrator; a day 8 days ago | Rate as each; rate the old day | — | 403; old day rejected | Auto (CI, to be written) – backend jest (G-11) | Not run – test to be written |
+| TC-F23-01 | F-23 | ALERT-FR-017 | House with an assigned Farm Technician; Farm Owners with push and Telegram | Raise a HIGH alert; do not acknowledge for 15 min | — | Delivered to the technician only; after 15 min delivered once to the Farm Owners (ALERT_ESCALATED) | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-F23-02 | F-23 | ALERT-FR-017 | Same house; a second house without a technician | Raise a CRITICAL alert on the first house and a HIGH alert on the second | — | CRITICAL reaches the technician and the Farm Owners at once; the second house's alert goes to the Farm Owners | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-F23-03 | F-23 | ALERT-FR-005, 009, 018, AUTH-FR-013 | Technician of house A; open MISTING_INEFFECTIVE on house A and an alert on house B | Acknowledge the alert of house B; close the Work Order of house A without a cause; disable every out-of-app channel for CRITICAL | — | 403; 422; 400 | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-F24-01 | F-24 | OPS-FR-001 | House with a technician | Ingest MISTING_INEFFECTIVE, then the same incident again | — | One Work Order OPEN assigned to the technician; no second one | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-F24-02 | F-24 | OPS-FR-002, 003 | Work Order IN_PROGRESS | Technician marks it done with cause WATER; humidity back in range for 10 min; then a new MISTING_INEFFECTIVE during verification of a second Work Order | — | First: VERIFYING then AWAITING_APPROVAL; second: back to IN_PROGRESS | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-F24-03 | F-24 | OPS-FR-001, 004, 009 | Work Order AWAITING_APPROVAL; another OPEN | Farm Owner approves the first and the second; technician tries to open one | — | First CLOSED with its alert RESOLVED and MTTR recorded; second 409; technician 403 | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-F25-01 | F-25 | OPS-FR-006, ALERT-FR-016 | Pump plan every 500 run hours; 499 h counted | Ingest telemetry with the pump running at normal current for 1 h | Current ≥ 50 % of normal | One MAINTENANCE_DUE and one preventive Work Order for the house's technician | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-F25-02 | F-25 | OPS-FR-005, 008 | Plan DUE with its Work Order | Technician records the maintenance; owner creates a plan with interval 0 | — | Counter 0, alert RESOLVED, next due point = interval from now; 422 for interval 0 | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-F25-03 | F-25 | OPS-FR-006, 007 | Plan DUE for 7 days; open inspection checklist | Run the due job; answer one checklist item "defect" | — | Farm Owners notified once (OVERDUE); one repair Work Order opened | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-F26-01 | F-26 | ENV-FR-028 | House rule: +5 % when the forecast reaches 33 °C | Run the compensation job with a forecast of 34 °C within 2 h, then with no active rule | Seeded forecast | Controllers receive +5 % with expiry ≤ 2 h; then 0 | Auto (CI, to be written) – backend jest (G-23) | Not run – test to be written |
+| TC-F26-02 | F-26 | ENV-FR-029 | Controller with fuzzy misting demand 40 % | Receive +5 %; let it expire; receive +80 % in a forged message | — | 45 %; 40 % after expiry; demand clamped to 0–100 % and offset clamped to ±10; ventilation unchanged | Auto (CI, to be written) – firmware native (G-23) | Not run – test to be written |
+| TC-F26-03 | F-26 | ENV-FR-030 | Farm with a Domain Expert | Expert saves offset 12 %; expert saves a duration of 3 h; technician saves a rule | — | 400; 400; 403 | Auto (CI, to be written) – backend jest (G-23) | Not run – test to be written |
+| TC-F27-01 | F-27 | EXPERT-FR-016, 017 | Active rule: NH3 above the limit ≥ 4 h a day for 3 days | Seed 3 such days; run the daily job twice | — | One OPEN recommendation with its evidence; no second one while it is open | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-F27-02 | F-27 | EXPERT-FR-018 | OPEN recommendation | Farm Owner accepts; another is rejected without a reason | — | Exactly one Work Order linked; 422 | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-F27-03 | F-27 | EXPERT-FR-017, 019 | One ACCEPTED 14 days ago; one OPEN for 7 days | Run the effect and expiry jobs | Seeded indicator values | MEASURED with the change equal to after − before; the other EXPIRED | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-F28-01 | F-28 | EXPERT-FR-014 | Farm with a Domain Expert | Expert creates and approves a profile; saves one with humidity_min out of range; Farm Owner approves a draft | — | DRAFT then APPROVED; 400; 403 | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-F28-02 | F-28 | EXPERT-FR-015 | APPROVED profile; DRAFT profile | Farm Owner applies the approved one to two houses; applies the draft | — | Every zone of both houses holds the values with history source PROFILE and a new configuration version; 409 | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-F28-03 | F-28 | FARM-FR-014 | House with a seeded return-rate drop | Set the house ATTRACTING; run the daily assessment; technician sets the stage | — | Flock indicator not assessed, reasons say "attracting stage", no LOW_RETURN_RATE; 403 | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-F29-01 | F-29 | ANALYTICS-FR-015 | Seeded farm of 3 houses (2 simulated) | GET the farm overview | — | Each house shows stage, today's status, open alerts and Work Orders, latest return rate equal to the seed; simulated houses marked | Auto (CI, to be written) – backend jest (G-25) | Not run – test to be written |
+| TC-F29-02 | F-29 | ANALYTICS-FR-016 | Same farm; 30 days of seed | GET the comparison; sort by MTTR | — | Each cell equals BR-44; houses ordered by MTTR; no score column | Auto (CI, to be written) – backend jest (G-25) | Not run – test to be written |
+| TC-F29-03 | F-29 | ANALYTICS-FR-002, 017 | Load drawing 1.0 A at 12 V for 10 h; 8 weeks of counts | GET energy and flock trend | — | 0.12 kWh; weekly and monthly mean morning exits equal the seed | Auto (CI, to be written) – backend jest (G-25) | Not run – test to be written |
+| TC-F30-01 | F-30 | HARVEST-FR-001 | Technician of the zone's house | Enter a valid harvest; enter one without weight; expert enters one | — | DRAFT batch; 422; 403 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-F30-02 | F-30 | HARVEST-FR-006, 007, ANALYTICS-FR-004 | DRAFT batch; seeded previous cycle and the cycle of the previous year | Farm Owner confirms it; confirms it again | — | CONFIRMED; cycle CLOSED with yield, comparisons, GOOD share, return rate and time in range equal to the seed; 409 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-F30-03 | F-30 | EXPERT-FR-020 | CLOSED cycle; farm with a Domain Expert | Expert writes the season conclusion; Farm Owner writes one | — | CONCLUDED and one notification per Farm Owner; 403 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
 
-### 4.2 Main Workflows (6)
+### 4.2 Main Workflows (9)
 
 | ID | Feature / workflow | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -193,6 +225,9 @@ Requirements covered by each mandatory feature:
 | TC-WF-04 | WF-04 | Staging with demo seed; preconditions of DS-07 | Run the main scenario DS-07 of the Design Brief end-to-end | Data of DS-07 | Expected result of DS-07 | Manual – staging, presenter of the workflow | Not run |
 | TC-WF-05 | WF-05 | Staging with demo seed; preconditions of DS-09 | Run the main scenario DS-09 of the Design Brief end-to-end | Data of DS-09 | Expected result of DS-09 | Manual – staging, presenter of the workflow | Not run |
 | TC-WF-06 | WF-06 | Staging with demo seed; preconditions of DS-11 | Run the main scenario DS-11 of the Design Brief end-to-end | Data of DS-11 | Expected result of DS-11 | Manual – staging, presenter of the workflow | Not run |
+| TC-WF-07 | WF-07 | Staging with demo seed; preconditions of DS-13 | Run the main scenario DS-13 of the Design Brief end-to-end | Data of DS-13 | Expected result of DS-13 | Manual – staging, presenter of the workflow | Not run |
+| TC-WF-08 | WF-08 | Staging with demo seed; preconditions of DS-15 | Run the main scenario DS-15 of the Design Brief end-to-end | Data of DS-15 | Expected result of DS-15 | Manual – staging, presenter of the workflow | Not run |
+| TC-WF-09 | WF-09 | Staging with demo seed; preconditions of DS-17 | Run the main scenario DS-17 of the Design Brief end-to-end | Data of DS-17 | Expected result of DS-17 | Manual – staging, presenter of the workflow | Not run |
 
 Exception scenarios of the Design Brief (Appendix A2), run in the same session as their workflow. They are demo evidence for the guideline's threshold of 80 % of exception scenarios passing and are **not counted** among the committed cases.
 
@@ -204,8 +239,11 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 | DS-08 (exception) | WF-04 | Manual – staging, presenter of the workflow | Not run |
 | DS-10 (exception) | WF-05 | Manual – staging, presenter of the workflow | Not run |
 | DS-12 (exception) | WF-06 | Manual – staging, presenter of the workflow | Not run |
+| DS-14 (exception) | WF-07 | Manual – staging, presenter of the workflow | Not run |
+| DS-16 (exception) | WF-08 | Manual – staging, presenter of the workflow | Not run |
+| DS-18 (exception) | WF-09 | Manual – staging, presenter of the workflow | Not run |
 
-### 4.3 State Transitions (53)
+### 4.3 State Transitions (86)
 
 | ID | Feature / workflow | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -262,6 +300,39 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 | TC-ST-51 | SRS 6.9 HealthReport | Entity in the source state of (new) → GENERATED | Daily, weekly or monthly report job | — | One report per house and period, with a section per zone (the current per-zone weekly test does not count) | Auto (CI, to be written) – backend jest `healthReport.test.ts` (G-11) | Not run – test to be written |
 | TC-ST-52 | SRS 6.9 HealthReport | Entity in the source state of GENERATED → CONCLUDED | Expert writes a conclusion | — | Conclusion stored; Farm Owners notified | Auto (CI) – backend Jest `tests/integration/healthReport.test.ts` › “chỉ Domain Expert viết; Farm Owner được báo” | Pass |
 | TC-ST-53 | SRS 6.9 HealthReport | Entity in the source state of CONCLUDED → CONCLUDED | Author edits; another expert edits | — | Author's edit stored with time; the other expert gets 403 | Auto (CI) – backend Jest `tests/integration/healthReport.test.ts` › “chỉ Domain Expert viết; Farm Owner được báo” | Pass |
+| TC-ST-54 | SRS 6.13 HarvestBatch | Entity in the source state of (new) → DRAFT | Farm Technician enters a harvest | — | DRAFT with snapshots and trace code | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-55 | SRS 6.13 HarvestBatch | Entity in the source state of (new) → CONFIRMED | Farm Owner enters a harvest | — | CONFIRMED at once; cycle of the zone closed | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-56 | SRS 6.13 HarvestBatch | Entity in the source state of DRAFT → DRAFT | Author edits | — | Values updated; still DRAFT | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-57 | SRS 6.13 HarvestBatch | Entity in the source state of DRAFT → CONFIRMED | Farm Owner confirms | — | CONFIRMED; cycle closed | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-58 | SRS 6.13 HarvestBatch | Entity in the source state of CONFIRMED → CONFIRMED | Farm Owner corrects the weight | — | Cycle figures recomputed | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-59 | SRS 6.13 HarvestBatch | Entity in the source state of DRAFT/CONFIRMED → deleted | Farm Owner soft-deletes | — | Hidden from lists, kept in the database; cycle merged with the next | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-60 | SRS 6.13 HarvestBatch | Entity in the source state of any → (rejected) | Expert edits; owner confirms a confirmed batch | — | 403; 409 | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-61 | SRS 6.19 WorkOrder | Entity in the source state of (new) → OPEN | MISTING_INEFFECTIVE raised on a house with a technician | — | One OPEN Work Order assigned to the technician | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-62 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → IN_PROGRESS | Technician starts it | — | IN_PROGRESS with start time | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-63 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → CLOSED | Alert recovers for 10 min before the work starts | — | CLOSED with result SELF_RECOVERED | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-64 | SRS 6.19 WorkOrder | Entity in the source state of IN_PROGRESS → VERIFYING | Technician marks it done with cause and photo | — | VERIFYING; cause stored with the alert | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-65 | SRS 6.19 WorkOrder | Entity in the source state of VERIFYING → AWAITING_APPROVAL | Condition recovered for recovery_verify_min | — | AWAITING_APPROVAL; Farm Owners notified | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-66 | SRS 6.19 WorkOrder | Entity in the source state of VERIFYING → IN_PROGRESS | Condition comes back during verification | — | IN_PROGRESS; technician notified | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-67 | SRS 6.19 WorkOrder | Entity in the source state of AWAITING_APPROVAL → CLOSED | Farm Owner approves | — | CLOSED; alert RESOLVED; MTTR recorded | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-68 | SRS 6.19 WorkOrder | Entity in the source state of AWAITING_APPROVAL → IN_PROGRESS | Farm Owner reopens with a note | — | IN_PROGRESS with the note | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-69 | SRS 6.19 WorkOrder | Entity in the source state of OPEN/IN_PROGRESS → CANCELLED | Farm Owner cancels with a reason | — | CANCELLED; without a reason 422 | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-70 | SRS 6.19 WorkOrder | Entity in the source state of OPEN → OPEN (escalated) | Not started within escalation_min | — | Farm Owners notified once; still OPEN | Auto (CI, to be written) – backend jest (G-21) | Not run – test to be written |
+| TC-ST-71 | SRS 6.20 MaintenancePlan | Entity in the source state of (new) → SCHEDULED | Farm Owner defines a plan | — | SCHEDULED with its first due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-72 | SRS 6.20 MaintenancePlan | Entity in the source state of SCHEDULED → DUE | Run hours reach the interval | — | DUE; MAINTENANCE_DUE and a preventive Work Order | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-73 | SRS 6.20 MaintenancePlan | Entity in the source state of DUE → OVERDUE | 7 days without the record | — | OVERDUE; Farm Owners notified | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-74 | SRS 6.20 MaintenancePlan | Entity in the source state of DUE/OVERDUE → SCHEDULED | Maintenance recorded | — | SCHEDULED; counter reset; next due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-75 | SRS 6.20 MaintenancePlan | Entity in the source state of any → RETIRED | Farm Owner deletes the plan | — | RETIRED; no further due point | Auto (CI, to be written) – backend jest (G-22) | Not run – test to be written |
+| TC-ST-76 | SRS 6.21 Recommendation | Entity in the source state of (new) → OPEN | Active rule holds for a house | — | OPEN with evidence | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-77 | SRS 6.21 Recommendation | Entity in the source state of OPEN → ACCEPTED | Farm Owner accepts | — | ACCEPTED; Work Order or review item created | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-78 | SRS 6.21 Recommendation | Entity in the source state of OPEN → REJECTED | Farm Owner rejects with a reason | — | REJECTED; reason stored | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-79 | SRS 6.21 Recommendation | Entity in the source state of OPEN → EXPIRED | 7 days without a decision | — | EXPIRED | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-80 | SRS 6.21 Recommendation | Entity in the source state of ACCEPTED → MEASURED | 14 days after acceptance | — | Effect stored; rule statistics updated | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-81 | SRS 6.21 Recommendation | Entity in the source state of closed → (rejected) | Accept a rejected or expired one | — | 409 | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
+| TC-ST-82 | SRS 6.22 HarvestCycle | Entity in the source state of (new) → OPEN | First controller of a zone registered | — | OPEN cycle from the registration date | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-83 | SRS 6.22 HarvestCycle | Entity in the source state of OPEN → CLOSED | Harvest of the zone confirmed | — | CLOSED with yield, comparisons and health; next cycle OPEN | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-84 | SRS 6.22 HarvestCycle | Entity in the source state of CLOSED → CLOSED | Closing harvest corrected | — | Figures recomputed | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-85 | SRS 6.22 HarvestCycle | Entity in the source state of CLOSED → CONCLUDED | Expert writes the season conclusion | — | CONCLUDED; Farm Owners notified | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
+| TC-ST-86 | SRS 6.22 HarvestCycle | Entity in the source state of CONCLUDED → CONCLUDED | Expert edits the conclusion | — | Conclusion updated with time | Auto (CI, to be written) – backend jest (G-26) | Not run – test to be written |
 
 ### 4.4 Non-Functional Requirements (6)
 
@@ -273,10 +344,11 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 | TC-NFR-09 | NFR-09 | Environment of the method | Measure as described | Test days kept out of training and tuning: detection on ≥ 200 labelled frames per lighting (IoU ≥ 0.5); counting on 20 clips of 5 min (10 daylight, 10 low light) against counts by two members | Threshold: Precision ≥ 0.80, Recall ≥ 0.80; count error ≤ 10 % per direction; each per lighting | Manual – AI node, evaluation script and `tools/track_clip.py` | Not run |
 | TC-NFR-13 | NFR-13 | Environment of the method | Measure as described | 5 people who have not set up a device before, timed from power-on to "configuration applied" | Threshold: ≤ 10 min in 5/5; two scans + Wi-Fi | Manual – prototype, mobile app | Not run |
 | TC-NFR-14 | NFR-14 | Environment of the method | Measure as described | Snapshots and independent ratings over ≥ 14 rated days (ANALYTICS-FR-014) | Threshold: Agreement ≥ 70 % with its 95 % CI; weighted kappa and AC1 reported | Manual – field run, test house | Not run |
+| TC-NFR-15 | NFR-15 | Environment of the method | Measure as described | 30 alerts and 10 Work Orders injected with the device simulator on staging; times from the backend log and a Socket.io client | Threshold: P95 ≤ 60 s after the escalation deadline and after the end of recovery_verify_min | Manual – staging, device simulator | Not run |
 
 ### 4.5 Requirement Coverage
 
-Generated from the "Requirements verified" column of Section 4.1, the NFR cases that measure a requirement (TC-NFR-09 for VISION-FR-016, TC-NFR-14 for ANALYTICS-FR-014) and the requirement lists of the main flows (Report 3, Section 2.2). "Verified" means a committed case has steps and an expected result for that requirement; "traced" means only that the requirement belongs to a workflow whose end-to-end test runs. 102 mandatory requirements: 62 are verified by a committed feature or NFR case; 40 are only traced to the end-to-end test of their workflow, which exercises the flow but does not check each of their acceptance criteria. The traced-only requirements are covered by the module suites or get a case when their gap is closed (Project Tracking, Section 6).
+Generated from the "Requirements verified" column of Section 4.1, the NFR cases that measure a requirement (TC-NFR-09 for VISION-FR-016, TC-NFR-14 for ANALYTICS-FR-014) and the requirement lists of the main flows (Report 3, Section 2.2). "Verified" means a committed case has steps and an expected result for that requirement; "traced" means only that the requirement belongs to a workflow whose end-to-end test runs. 137 mandatory requirements: 95 are verified by a committed feature or NFR case; 42 are only traced to the end-to-end test of their workflow, which exercises the flow but does not check each of their acceptance criteria. The traced-only requirements are covered by the module suites or get a case when their gap is closed (Project Tracking, Section 6).
 
 | Requirement | Verified by (committed case with steps and expected result) | Traced to (end-to-end test of its workflow) |
 | --- | --- | --- |
@@ -286,11 +358,12 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | ENV-FR-005 | TC-F01-01, TC-F01-03 | TC-WF-01 |
 | ENV-FR-022 | TC-F01-02 | TC-WF-01 |
 | ENV-FR-006 | TC-F03-01, TC-F03-02, TC-F03-03 | TC-WF-02, TC-WF-05 |
-| ENV-FR-007 | — (traced only) | TC-WF-02, supporting flow SF-03 |
+| ENV-FR-007 | — (traced only) | TC-WF-02, supporting flow SF-05 |
 | ENV-FR-009 | TC-F03-01 | TC-WF-05 |
 | ENV-FR-020 | TC-F03-03 | TC-WF-05 |
 | ENV-FR-021 | TC-F03-03 | TC-WF-01, TC-WF-05 |
 | ENV-FR-027 | TC-F19-03 | TC-WF-01, TC-WF-05, supporting flow SF-01 |
+| ENV-FR-030 | TC-F26-03 | TC-WF-05 |
 | ENV-FR-010 | TC-F02-01, TC-F02-02, TC-F02-03 | TC-WF-01 |
 | ENV-FR-011 | TC-F02-02, TC-F02-03 | TC-WF-01 |
 | ENV-FR-013b | — (traced only) | TC-WF-01 |
@@ -298,6 +371,8 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | ENV-FR-024 | TC-F04-02 | TC-WF-01 |
 | ENV-FR-025 | TC-F04-03 | TC-WF-01 |
 | ENV-FR-015 | — (traced only) | TC-WF-01 |
+| ENV-FR-028 | TC-F26-01 | TC-WF-01 |
+| ENV-FR-029 | TC-F26-02 | TC-WF-01 |
 | ENV-FR-016 | TC-F17-01, TC-F17-02, TC-F17-03 | TC-WF-01 |
 | ENV-FR-017 | — (traced only) | TC-WF-01 |
 | ENV-FR-018 | — (traced only) | TC-WF-01 |
@@ -313,20 +388,22 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | THREAT-FR-014 | TC-F06-01, TC-F06-02, TC-F06-03 | TC-WF-02 |
 | ALERT-FR-010 | TC-F05-03 | TC-WF-04 |
 | ALERT-FR-001 | — (traced only) | TC-WF-02 |
-| ALERT-FR-005 | — (traced only) | TC-WF-02 |
-| ALERT-FR-006 | TC-F08-02 | TC-WF-02 |
+| ALERT-FR-005 | TC-F23-03 | TC-WF-02, supporting flow SF-04 |
+| ALERT-FR-006 | TC-F08-02 | TC-WF-02, supporting flow SF-04 |
 | ALERT-FR-007 | — (traced only) | TC-WF-02 |
 | ALERT-FR-008 | TC-F07-01 | TC-WF-02 |
-| ALERT-FR-009 | TC-F07-03 | TC-WF-02 |
+| ALERT-FR-009 | TC-F07-03, TC-F23-03 | TC-WF-02 |
 | ALERT-FR-011 | TC-F09-01 | TC-WF-02 |
 | ALERT-FR-012 | TC-F07-02 | TC-WF-02 |
-| ALERT-FR-013 | TC-F08-01, TC-F08-02 | TC-WF-02 |
+| ALERT-FR-013 | TC-F08-01, TC-F08-02 | TC-WF-02, supporting flow SF-04 |
 | ALERT-FR-014 | — (traced only) | TC-WF-04 |
 | ALERT-FR-002 | TC-F08-03 | TC-WF-02 |
 | ALERT-FR-015 | — (traced only) | TC-WF-02 |
-| ALERT-FR-016 | — (traced only) | TC-WF-02 |
+| ALERT-FR-016 | TC-F25-01 | TC-WF-07 |
+| ALERT-FR-017 | TC-F23-01, TC-F23-02 | TC-WF-02 |
+| ALERT-FR-018 | TC-F23-03 | TC-WF-02 |
 | ANALYTICS-FR-001 | — (traced only) | TC-WF-01 |
-| ANALYTICS-FR-002 | — (traced only) | TC-WF-03 |
+| ANALYTICS-FR-002 | TC-F29-03 | TC-WF-03 |
 | ANALYTICS-FR-003 | — (traced only) | TC-WF-03 |
 | ANALYTICS-FR-005 | — (traced only) | TC-WF-01 |
 | ANALYTICS-FR-008 | TC-F02-02 | TC-WF-05 |
@@ -336,6 +413,10 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | ANALYTICS-FR-012 | TC-F20-01, TC-F20-02, TC-F20-03 | TC-WF-06 |
 | ANALYTICS-FR-013 | TC-F20-02 | TC-WF-06 |
 | ANALYTICS-FR-014 | TC-NFR-14 | TC-WF-06 |
+| ANALYTICS-FR-004 | TC-F30-02 | TC-WF-09 |
+| ANALYTICS-FR-015 | TC-F29-01 | TC-WF-06 |
+| ANALYTICS-FR-016 | TC-F29-02 | TC-WF-06 |
+| ANALYTICS-FR-017 | TC-F29-03 | TC-WF-06 |
 | VISION-FR-001 | — (traced only) | TC-WF-03 |
 | VISION-FR-002 | — (traced only) | TC-WF-03 |
 | VISION-FR-003 | — (traced only) | TC-WF-03 |
@@ -368,6 +449,13 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | EXPERT-FR-011 | TC-F15-03 | TC-WF-05 |
 | EXPERT-FR-012 | TC-F22-01, TC-F22-02, TC-F22-03 | TC-WF-06 |
 | EXPERT-FR-013 | TC-F21-02, TC-F21-03 | TC-WF-06 |
+| EXPERT-FR-014 | TC-F28-01 | TC-WF-05 |
+| EXPERT-FR-015 | TC-F28-02 | TC-WF-05 |
+| EXPERT-FR-016 | TC-F27-01 | TC-WF-08 |
+| EXPERT-FR-017 | TC-F27-01, TC-F27-03 | TC-WF-08 |
+| EXPERT-FR-018 | TC-F27-02 | TC-WF-08 |
+| EXPERT-FR-019 | TC-F27-03 | TC-WF-08 |
+| EXPERT-FR-020 | TC-F30-03 | TC-WF-09 |
 | FARM-FR-001 | TC-F18-01 | supporting flow SF-03 |
 | FARM-FR-002 | TC-F18-01 | supporting flow SF-03 |
 | FARM-FR-003 | TC-F18-01, TC-F18-02, TC-F18-03 | supporting flow SF-01 |
@@ -382,6 +470,25 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | FARM-FR-010 | — (traced only) | supporting flow SF-01 |
 | FARM-FR-011 | — (traced only) | supporting flow SF-01 |
 | FARM-FR-012 | TC-F19-01, TC-F19-02 | supporting flow SF-01 |
+| FARM-FR-014 | TC-F28-03 | TC-WF-05 |
+| HARVEST-FR-001 | TC-F30-01 | TC-WF-09 |
+| HARVEST-FR-002 | — (traced only) | TC-WF-09 |
+| HARVEST-FR-003 | — (traced only) | TC-WF-09 |
+| HARVEST-FR-004 | — (traced only) | TC-WF-09 |
+| HARVEST-FR-005 | — (traced only) | TC-WF-09 |
+| HARVEST-FR-006 | TC-F30-02 | TC-WF-09 |
+| HARVEST-FR-007 | TC-F30-02 | TC-WF-09 |
+| AUTH-FR-013 | TC-F23-03 | supporting flow SF-03 |
+| SYSTEM-FR-004 | — (traced only) | supporting flow SF-05 |
+| OPS-FR-001 | TC-F24-01, TC-F24-03 | TC-WF-02, TC-WF-04 |
+| OPS-FR-002 | TC-F24-02 | TC-WF-02 |
+| OPS-FR-003 | TC-F24-02 | TC-WF-02 |
+| OPS-FR-004 | TC-F24-03 | TC-WF-02 |
+| OPS-FR-005 | TC-F25-02 | TC-WF-07 |
+| OPS-FR-006 | TC-F25-01, TC-F25-03 | TC-WF-07 |
+| OPS-FR-007 | TC-F25-03 | TC-WF-07 |
+| OPS-FR-008 | TC-F25-02 | TC-WF-07 |
+| OPS-FR-009 | TC-F24-03 | TC-WF-02, TC-WF-07 |
 
 ### 4.6 Supporting Regression Tests (not counted in the commitment)
 
@@ -423,7 +530,7 @@ Results come only from the CI run on the tag `review-2` (commit `7d5e643b`, 04/1
 
 | Test cases | Automated, test written | Automated, to be written | Manual | Passed on the tag |
 | --- | --- | --- | --- | --- |
-| 125 | 83 (66 %) | 27 (automated in total: 110, 88 %) | 15 | 83 |
+| 186 | 83 (44 %) | 84 (automated in total: 167, 89 %) | 19 | 83 |
 
 Committed test cases that are not automated yet are written in Iteration 2 together with the feature they test (Project Tracking, Section 6).
 
@@ -431,6 +538,7 @@ Committed test cases that are not automated yet are written in Iteration 2 toget
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): features F-23…F-30 (alert routing and escalation, Work Orders closed by the data, preventive maintenance, weather compensation, recommendation rules, profiles and house stage, farm overview and house comparison, harvest cycles), workflows WF-07…09 with demo scenarios DS-13…18, transitions of HarvestBatch, WorkOrder, MaintenancePlan, Recommendation and HarvestCycle, NFR-15. The results of Section 6 are still those of the run on the tag `review-2`; the new cases are written in Iterations 2 and 3 |
 | 1.3.0 | 04/11/2026 | Results of the CI run on the tag `review-2` (Section 6): 83 of the 83 automated cases with a written test pass; the generator reads the PlatformIO JUnit report, whose suite name sits on the test suite |
 | 1.2.0 | 03/11/2026 | Six business main workflows (SRS 3.2.0): WF-01…06 with demo scenarios DS-01…12; device-setup features F-18, F-19 move to supporting flow SF-01 (still tested, not counted) |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0: 53 state transitions (relay mode 4, device 5, configuration sync 5, daily status 2, assessor rating 5), 136 committed cases; a concrete expected result for every transition; mappings to existing tests corrected (TC-F03-03, PENDING → ONLINE, ONLINE → OFFLINE, RESOLVED → new alert); new cases for breach dwell, pump limit and confirmation, device topics, rain confounder and rating snapshot; results counted only from a run on the tag; a "Requirements verified" column for every feature case and a generated requirement coverage table (Section 4.5); supporting regression suites listed (Section 4.6); the per-zone report test no longer counts for TC-ST-48; table of the FRs of each feature; firmware and AI-pipeline results read from the PlatformIO and pytest JUnit reports; F-10 and F-11 test the pipeline itself (ring crossing, lost tracks, annotated frames); F-22 tests that the API hides the status before rating |
