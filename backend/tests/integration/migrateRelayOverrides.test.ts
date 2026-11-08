@@ -15,6 +15,8 @@ jest.mock('@/socket', () => ({
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(), disconnectUser: jest.fn(),
 }))
 
+process.env.JWT_ACCESS_SECRET = 'test-access-secret'
+
 useTestDb()
 
 const db = () => mongoose.connection.db!
