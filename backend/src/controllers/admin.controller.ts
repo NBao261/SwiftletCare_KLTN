@@ -83,7 +83,7 @@ export const revokeProvisionedDevice = asyncHandler(async (req: Request, res: Re
   res.json({ success: true, data: device })
 })
 
-/** POST /admin/provisioned-devices/:id/rotate-key – FARM-FR-003 (secret_key mới chỉ trả về 1 lần) */
+/** POST /admin/provisioned-devices/:id/rotate-key – FARM-FR-010, BR-26: thiết bị trong kho hoặc đã gỡ (secret_key mới chỉ trả về 1 lần) */
 export const rotateProvisionedKey = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await provisionedDeviceService.rotateProvisionedKey(req.user._id, req.params.id) })
 })
