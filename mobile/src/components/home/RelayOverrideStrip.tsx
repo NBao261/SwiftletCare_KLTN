@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Alert as NativeAlert, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { CaretRightIcon, DropIcon, FanIcon, SpeakerHighIcon } from 'phosphor-react-native'
+import { CaretRightIcon } from 'phosphor-react-native'
+import { RelayIcon } from '@/components/common/RelayIcon'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Text } from '@/components/ui/text'
@@ -13,7 +14,6 @@ import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useNow } from '@/hooks/time/useNow'
 import { useAuthStore } from '@/stores/authStore'
-import type { RelayName } from '@/types'
 import { getRelayLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { formatRemainingTime } from '@/utils/relay.utils'
@@ -22,13 +22,6 @@ import { t } from '@/utils/i18n.utils'
 const ICON_CIRCLE_SIZE = 40
 // Cập nhật chữ "còn … phút" mỗi 30 giây
 const COUNTDOWN_INTERVAL_MS = 30 * 1000
-
-// Icon theo loại relay: bơm phun sương → giọt nước, quạt → quạt, loa → loa
-function RelayIcon({ relay, color }: { relay: RelayName; color: string }) {
-  if (relay === 'ventilation') return <FanIcon size={20} color={color} weight="bold" />
-  if (relay === 'speaker') return <SpeakerHighIcon size={20} color={color} weight="bold" />
-  return <DropIcon size={20} color={color} weight="bold" />
-}
 
 // Dòng phụ: controller mất kết nối thì báo ngay; còn lại là lệnh bật/tắt kèm thời gian còn lại
 function getOverrideCaption({ log, node }: ActiveRelayOverride, now: number): string {
@@ -101,7 +94,17 @@ export function RelayOverrideStrip() {
         <Button
           label={t('VỀ TỰ ĐỘNG')}
           size="sm"
-          onPress={() => clearOverride.mutate(override.node._id)}
+          onPress={() =>
+            // Backend chỉ có một hạn chung cho controller: trả về AUTO là mọi relay của controller (ENV-FR-018)
+            NativeAlert.alert(
+              t('Trả về AUTO'),
+              t('Mọi relay của bộ điều khiển {device} sẽ về tự động.', { device: override.node.device_id }),
+              [
+                { text: t('Huỷ'), style: 'cancel' },
+                { text: t('Trả về AUTO'), onPress: () => clearOverride.mutate(override.node._id) },
+              ],
+            )
+          }
           disabled={isActionDisabled}
           accessibilityLabel={t('Về tự động: {title}', { title })}
         />

@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native'
 import { Image } from 'expo-image'
-import { BellIcon, MagnifyingGlassIcon, ScanIcon } from 'phosphor-react-native'
+import { router } from 'expo-router'
+import { BellIcon, MagnifyingGlassIcon } from 'phosphor-react-native'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { IconButton } from '@/components/ui/icon-button'
 import { Text } from '@/components/ui/text'
@@ -14,7 +15,7 @@ import { t } from '@/utils/i18n.utils'
 
 const AVATAR_SIZE = 44
 
-// Đầu Trang chủ: ảnh đại diện + tên bên trái; tìm kiếm, quét QR, thông báo bên phải
+// Đầu Trang chủ: ảnh đại diện + tên bên trái; tìm kiếm, thông báo bên phải
 export function HomeHeader() {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
@@ -42,10 +43,13 @@ export function HomeHeader() {
         <View style={styles.actions}>
           {/* shortcut: chưa có màn tìm kiếm (Report 3 chưa có yêu cầu) — gắn onPress khi nhóm chốt màn */}
           <IconButton icon={MagnifyingGlassIcon} label={t('Tìm kiếm')} />
-          {/* Thiết lập thiết bị bằng QR (MF-10) — gắn onPress khi có route device-setup */}
-          {canPerform(user, 'setupDevice') && <IconButton icon={ScanIcon} label={t('Quét mã QR thiết bị')} />}
-          {/* Thông báo trong ứng dụng (EXPERT-FR-009) — gắn onPress khi có route profile/notifications */}
-          <IconButton icon={BellIcon} label={t('Thông báo')} badgeCount={unreadCount} />
+          {/* Hộp thông báo trong ứng dụng (EXPERT-FR-007) ở tab Tài khoản — màn đó chỉ mở cho Farm Owner */}
+          <IconButton
+            icon={BellIcon}
+            label={t('Thông báo')}
+            badgeCount={unreadCount}
+            onPress={canPerform(user, 'viewOwnerProfile') ? () => router.push('/(tabs)/profile/notifications') : undefined}
+          />
         </View>
       }
     />

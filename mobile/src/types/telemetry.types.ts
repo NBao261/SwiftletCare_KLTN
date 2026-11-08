@@ -10,5 +10,8 @@ export interface TelemetryRecord {
   nh3_ppm?: number
   co2_ppm?: number
   sound_db?: number
+  // % phun sương và % quạt do bộ điều khiển mờ tính (firmware ≥ 1.1.0)
+  misting_pct?: number | null
+  ventilation_pct?: number | null
   is_anomaly: boolean
 }

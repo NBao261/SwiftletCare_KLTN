@@ -19,8 +19,8 @@ describe('roleTabs', () => {
     ])
   })
 
-  it('Domain Expert có 2 menu tạm và tab Tài khoản', () => {
-    expect(getRoleTabs('DOMAIN_EXPERT').map(tab => tab.name)).toEqual(['menu-1', 'menu-2', 'profile'])
+  it('Domain Expert có tab Cảnh báo, 1 menu tạm và tab Tài khoản', () => {
+    expect(getRoleTabs('DOMAIN_EXPERT').map(tab => tab.name)).toEqual(['alerts', 'menu-2', 'profile'])
     expect(findTabTitle('menu-2')).toBe('Menu 2')
   })
 
@@ -31,7 +31,7 @@ describe('roleTabs', () => {
 
   it('sau đăng nhập vào tab đầu của role; role không dùng mobile về màn đăng nhập', () => {
     expect(getRoleHomeHref('FARM_OWNER')).toBe('/(tabs)/home')
-    expect(getRoleHomeHref('DOMAIN_EXPERT')).toBe('/(tabs)/menu-1')
+    expect(getRoleHomeHref('DOMAIN_EXPERT')).toBe('/(tabs)/alerts')
     expect(getRoleHomeHref('TECHNICIAN')).toBe('/(auth)/login')
   })
 })

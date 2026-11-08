@@ -43,9 +43,10 @@ export const controlRelay = asyncHandler(async (req: Request, res: Response) => 
   res.json({ success: true, data: node, meta: { commandDelivered: delivered } })
 })
 
-/** DELETE /devices/sensor-nodes/:id/relay-override – ENV-FR-018 (tắt override sớm) */
+/** DELETE /devices/sensor-nodes/:id/relay-override – ENV-FR-018 (tắt override sớm 1 relay hoặc mọi relay) */
 export const clearRelayOverride = asyncHandler(async (req: Request, res: Response) => {
-  const node = await deviceService.clearRelayOverride(req.params.id, req.user)
+  const relayName = req.query.relayName as (typeof deviceService.RELAY_NAMES)[number] | undefined
+  const node = await deviceService.clearRelayOverride(req.params.id, req.user, relayName)
   res.json({ success: true, data: node })
 })
 

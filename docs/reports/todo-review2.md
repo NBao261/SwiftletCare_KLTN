@@ -261,16 +261,22 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-06 — Can thiệp tay (P1) — Kiệt (backend), Bảo (firmware, trong G-07), Nhi (web), Len (mobile)
 
-- [ ] Backend:
+- [x] Backend phần 1: *(Kiệt, 31/10, `50468cb` spec + `fae12fe` backend, nhánh `feat/g06-manual-override` tạo từ nhánh G-05)*
   - `MAX_PUMP_ON_OVERRIDE_MS` = 30 phút (422);
-  - đang có `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` mà thiếu `confirmed: true` thì 409;
+  - đang có `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` mà thiếu `confirmed: true` thì 409 *(`CONFIRMATION_REQUIRED`, `error.details` liệt kê cảnh báo)*;
   - `relay_override_logs.alert_confirmed`;
-  - `sensornodes.relays` có hạn riêng từng relay (`overrideExpiry.job.ts` theo relay);
-  - huỷ theo relay hoặc tất cả.
-- [ ] Firmware: `overrideExpiryMs` theo từng relay (BR-20); test native.
-- [ ] Lệnh có `commandId`, `issuedAt` (làm cùng G-07).
-- [ ] Web/mobile: hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm.
-- [ ] Test TC-F17-02, TC-ST "MANUAL → MANUAL".
+  - huỷ theo relay hoặc tất cả *(`DELETE …/relay-override?relayName=`)*.
+- [x] Backend phần 2 *(Kiệt, 06/11, `7da3879` spec + `6c1b116` backend + `52c84bd` firmware, nhánh `feat/g06-manual-override`; Bảo chuyển G-07 cho Kiệt nên phần firmware của G-06 do Kiệt làm luôn)*:
+  - `sensornodes.relays` có hạn riêng từng relay (`overrideExpiry.job.ts` theo relay); `control_mode`, `override_expiry` giữ làm bản tóm tắt cho màn hình, gộp hẳn ở G-14.
+- [x] Firmware: hạn theo từng relay (BR-20, `pid/RelayOverride`); `clear_override` đọc `relayName`; test native. *(Kiệt, 06/11, `52c84bd`, firmware 1.6.0 — **chưa thử trên board thật**)*
+- [x] Lệnh có `commandId`, `issuedAt` (BR-35). *(Kiệt, 06/11, `6c1b116` + `52c84bd`: backend gắn cho lệnh relay, audio, RESTART, OTA; firmware `mqtt/CommandFilter` nhớ 16 mã, bỏ lệnh relay, audio, RESTART trễ quá 60 giây. Còn lại cho G-07: chuyển sang topic `cmd`, lưu mã RESTART/OTA vào NVS, bắt buộc có `commandId`)*
+- [x] **Len — web:** giới hạn bơm 30 phút và hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm. *(Nhi làm thay theo nhờ của Len, 03/11, `eab3be5`, nhánh `feat/g06-manual-override`: nút bật phun sương chạy tối đa 30 phút dù chọn thời hạn dài hơn (BR-08), quạt, loa và tắt bơm vẫn theo thời hạn đã chọn; 409 `CONFIRMATION_REQUIRED` mở popup liệt kê cảnh báo, "Vẫn bật bơm" gửi lại với `confirmed: true`; `ScadaNodeCard.tsx`, `scada.constants.ts`, `scadaRelay.ts`, `dashboard.i18n.ts` của Len — Len duyệt)*
+- [x] **Len — web:** huỷ từng relay (`DELETE …/relay-override?relayName=`). *(Nhi làm thay theo nhờ của Len, 03/11, nhánh `feat/g06-manual-override`: relay đang can thiệp tay lấy từ lịch sử can thiệp còn mở (`ended_at` trống), dòng relay đó có nút "Về tự động"; firmware chưa đọc `relayName` thì thiết bị vẫn trả mọi relay về tự động cho tới Backend phần 2 + G-07; `ScadaNodeCard.tsx`, `useAnalytics.ts`, `FarmOwnerScadaPage.tsx` của Len — Len duyệt)*
+- [x] **Len — mobile:** giới hạn bơm 30 phút và hộp xác nhận như web. *(Len, 03/11, nhánh `feat/g06-manual-override` — merge nền mobile `feat/mobile-farmowner-farm` vào vì `RelayControlSheet.tsx` chưa có trên `develop`: giới hạn bật bơm 1–30 phút (BR-08) giữ nguyên; sửa lỗi chỉ xét cảnh báo `ACTIVE` — hook `usePumpBlockingAlerts` lấy `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` cả `ACTIVE` lẫn `ACKNOWLEDGED`, tải mới mỗi lần mở sheet, lỗi thì khoá nút và có "Thử lại"; hộp xác nhận liệt kê từng cảnh báo kèm trạng thái và thời lượng; "Vẫn bật bơm" gửi `confirmed: true` (`useControlRelay`, `deviceApi.controlRelay`); 409 `CONFIRMATION_REQUIRED` đọc `error.details` bằng `parseConfirmationAlerts` rồi hỏi lại; câu lỗi riêng 422/403/409; nút "Về tự động" ở Trang chủ hỏi xác nhận. Còn lại ở mobile: huỷ từng relay và hiện `alert_confirmed` trong lịch sử — ghi ở Known debt `mobile/CLAUDE.md`)*
+- [x] Test TC-F17-02 *(`relayCommand.test.ts`, Kiệt 31/10, `fae12fe`)*.
+- [x] Test TC-ST "MANUAL → MANUAL". *(06/11, `relayCommand.test.ts` + `test_relay_override`, backend 615/615)*
+- [x] Sửa theo review PR #124 *(Kiệt, 02/11, `37f61a2` spec + `c3d3ff8` backend)*: huỷ 1 relay không đang can thiệp tay thì không gửi lệnh, không ghi audit (200, như khi thiết bị AUTO). Góp ý còn lại không sửa code: web `ScadaNodeCard.tsx` cần giới hạn bơm 30 phút và hộp xác nhận (dòng Web/mobile ở trên, Len) trước khi G-06 lên staging.
+- [x] Sửa theo review PR #124 lần 3 *(Kiệt, 09/11, `00c1308` ghim `espressif32@6.9.0` + `9d746bb` backend + commit tài liệu này)*: `pio run -e esp32dev` build được, test native `test_relay_override`, `test_command_filter`, `test_remote_command` đạt; `npm run migrate:relay-overrides` đặt hạn từng relay cho controller đang MANUAL từ trước phần 2; 6 kiểm tra firmware 1.6.0 còn nợ trên board ghi ở `firmware/README.md`.
 
 ### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Bảo
 
@@ -316,7 +322,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
 - [ ] Màn Zone: in mã QR tầng.
 - [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
-- [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED).
+- [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
 - [ ] Web: `/onboarding` cho Farm Owner.
 
 ### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Len (mobile, đo NFR-02)
@@ -448,5 +454,5 @@ BM03 dòng 13: một installation chỉ một chủ, nên Technician trùng Farm
    - Len: G-15 chữ "PLC", form thu hoạch (G-14), cấu hình Playwright, màn Farm Owner mobile bước 3–4 khi nền mobile xong; *(từ 01/11 Nhi làm thay các việc này theo nhờ của Len, Len duyệt PR; "PLC" xong 01/11, `4b3944b`)*
    - Len, Tuấn, Nhi: gán nhãn trong những ngày chờ API;
    - Tuấn: dời màn chuyên gia sang `domain-expert/`, bỏ dữ liệu giả, trang chủ hàng đợi việc (G-15).
-3. **Tuần 2–3:** Kiệt backend G-03 → G-04 → G-11 → G-02 phần P1; Bảo train model, G-10 backend; Tuấn web G-03/G-04 theo spec, trình vẽ vòng đếm (G-12); Nhi màn G-11 web + mobile, in nhãn và setup QR (G-09); Len G-06 web/mobile (sau backend G-06), in mã tầng (G-09); Bảo G-08 sau G-07, G-12 backend, staging (G-17).
+3. **Tuần 2–3:** Kiệt backend G-03 → G-04 → G-11 → G-02 phần P1; Bảo train model, G-10 backend; Tuấn web G-03/G-04 theo spec, trình vẽ vòng đếm (G-12); Nhi màn G-11 web + mobile, in nhãn (G-09); Len G-06 web/mobile (sau backend G-06), in mã tầng và setup QR mobile (G-09, **[Ủy quyền cho Len làm]**); Bảo G-08 sau G-07, G-12 backend, staging (G-17).
 4. **Iteration 3:** G-13 (Bảo), G-18 (Kiệt); seed (Kiệt, Bảo) + test E2E từng DS (chủ workflow); đếm tay clip, đánh giá NFR-09; chạy thực địa ≥ 14 ngày, đo NFR (mỗi người số đo của mình); tổng duyệt demo trên staging.
