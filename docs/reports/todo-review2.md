@@ -430,13 +430,41 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 - [ ] HARVEST-FR-001: số tổ, khối lượng > 0, ngày không ở tương lai.
 - [ ] (Tùy chọn) ENV-FR-026; device ID lấy từ MAC.
 
-### G-20 — Bỏ vai Technician (P1, sau Review 2) — Kiệt (backend), Tuấn (web), Len (mobile)
+### G-20 — Farm Technician thay vai Technician cũ (P1, phạm vi cuối 09/11/2026) — Kiệt (backend), Tuấn (console thiết bị của Admin), Len (đăng nhập technician trên mobile), Nhi (màn gán nhà)
 
-BM03 dòng 13: một installation chỉ một chủ, nên Technician trùng Farm Owner. Lắp, dời, gỡ thiết bị chỉ còn Farm Owner (SF-01); lệnh từ xa (RESTART, đẩy cấu hình) và OTA chuyển cho Admin; Farm Owner được RESTART bộ điều khiển của farm mình (FARM-FR-013).
+- [ ] Đổi `TECHNICIAN` (mọi farm, lệnh từ xa) thành `FARM_TECHNICIAN`: thành viên farm, chỉ thao tác trên nhà được gán (AUTH-FR-004, 005, 013); enum đổi ở cả backend, web, mobile, `migrate:*` cho dữ liệu cũ.
+- [ ] Lệnh từ xa và OTA chuyển sang console thiết bị của Administrator (FARM-FR-009, 013); Farm Owner và technician của nhà được RESTART.
+- [ ] Gán technician vào nhà; lịch trực (AUTH-FR-014, O — làm sau cùng).
 
-- [ ] **Kiệt — backend:** bỏ `TECHNICIAN` khỏi `Role` và seed; `technicianAccess` → quyền Admin xem mọi thiết bị kèm farm/house/zone và cảnh báo thiết bị, không dữ liệu môi trường (FARM-FR-009); lệnh từ xa và OTA cho Admin, RESTART cho Farm Owner của farm, đẩy cấu hình/OTA của Farm Owner trả 403; audit và thông báo Farm Owner; thông báo `TECHNICIAN_ACTION` → `DEVICE_ACTION`; `npm run migrate:*` đổi tài khoản Technician cũ (khóa hoặc đổi sang Admin); sửa `api-spec.yaml`; test quyền.
-- [ ] **Tuấn — web:** màn Technician thành màn thiết bị của Admin (danh sách thiết bị mọi farm, chẩn đoán, RESTART, đẩy cấu hình, OTA); `/onboarding` chỉ Farm Owner; nút RESTART ở màn thiết bị của Farm Owner; bỏ role khỏi `src/types/`, ma trận quyền và Vitest.
-- [ ] **Len — mobile:** bỏ `TECHNICIAN` khỏi `src/types/`; nút RESTART ở màn thiết bị.
+### G-21 — Định tuyến, leo thang, Work Order (P0-Demo cho WF-02) — Kiệt (backend), Len (mobile technician), Nhi (duyệt trên web)
+
+- [ ] `alertRouting.service` + `alertEscalation.job` mỗi phút (ALERT-FR-017, BR-40); CRITICAL luôn tới ít nhất một kênh ngoài app (ALERT-FR-005).
+- [ ] Work Order: mở tự động theo BR-39, start, done kèm nguyên nhân và ảnh (ALERT-FR-018), `recoveryCheck.job` (BR-41), duyệt, mở lại, huỷ; MTTA/MTTR (OPS-FR-009).
+- [ ] Test TC-F23, TC-F24, TC-ST WorkOrder (Report 5) viết cùng PR.
+
+### G-22 — Bảo trì phòng ngừa (P1) — Kiệt (backend), Len (mobile), Nhi (web)
+
+- [ ] Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ dòng điện (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008).
+
+### G-23 — Bù theo thời tiết (P1) — Bảo (firmware, backend), Tuấn (màn luật)
+
+- [ ] Lấy dự báo Open-Meteo; luật theo nhà (ENV-FR-030); `weatherCompensation.job`; topic retained `compensation`; firmware cộng offset có hạn, 0 khi offline 2 h (ENV-FR-028, 029, BR-38); test native + jest.
+
+### G-24 — Tri thức: giai đoạn nhà, hồ sơ cấu hình, luật khuyến nghị (P1) — Bảo (backend), Tuấn (web)
+
+- [ ] FARM-FR-014, EXPERT-FR-014…019; job đánh giá luật hằng ngày và đo hiệu quả (BR-42).
+
+### G-25 — Farm overview, so sánh nhà, điện năng, xu hướng đàn (P1, It. 3) — Bảo (backend), Nhi (web)
+
+- [ ] ANALYTICS-FR-002, 015…017, VISION-FR-011 (lượng mưa trên cảnh báo), BR-44, 45.
+
+### G-26 — Chu kỳ thu hoạch (P1, It. 3) — Bảo (backend), Nhi (web), Len (nhập trên mobile), Tuấn (kết luận mùa vụ)
+
+- [ ] HARVEST-FR-001…007, EXPERT-FR-020, BR-43; nhập sổ sản lượng các mùa trước của nhà thử nghiệm nếu chủ nhà còn (A-8), không có thì dữ liệu mẫu ghi rõ.
+
+### G-27 — Bộ giả lập thiết bị (P0-Demo, cần cho NFR-03 và demo nhiều nhà) — Bảo
+
+- [ ] `simulator/` (Node.js + mqtt.js): đăng ký N thiết bị qua API Admin, publish telemetry, heartbeat, số đếm trên topic riêng; cờ `simulated` hiện trên mọi màn hình (SYSTEM-FR-004).
 
 ## 5. Thứ tự đề xuất
 
