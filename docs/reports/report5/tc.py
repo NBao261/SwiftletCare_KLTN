@@ -201,7 +201,7 @@ TC=[
 # F-27
 ('TC-F27-01','F-27','Active rule: NH3 above the limit ≥ 4 h a day for 3 days','Seed 3 such days; run the daily job twice','—','One OPEN recommendation with its evidence; no second one while it is open',(T,'backend jest (G-24)')),
 ('TC-F27-02','F-27','OPEN recommendation','Farm Owner accepts; another is rejected without a reason','—','Exactly one Work Order linked; 422',(T,'backend jest (G-24)')),
-('TC-F27-03','F-27','One ACCEPTED 14 days ago; one OPEN for 7 days','Run the effect and expiry jobs','Seeded indicator values','MEASURED with the change equal to after − before; the other EXPIRED',(T,'backend jest (G-24)')),
+('TC-F27-03','F-27','One ACCEPTED 7 days ago; one OPEN for 7 days','Run the effect and expiry jobs','Seeded indicator values','MEASURED with the change equal to after − before; the other EXPIRED',(T,'backend jest (G-24)')),
 # F-28
 ('TC-F28-01','F-28','Farm with a Domain Expert','Expert creates and approves a profile; saves one with humidity_min out of range; Farm Owner approves a draft','—','DRAFT then APPROVED; 400; 403',(T,'backend jest (G-24)')),
 ('TC-F28-02','F-28','APPROVED profile; DRAFT profile','Farm Owner applies the approved one to two houses; applies the draft','—','Every zone of both houses holds the values with history source PROFILE and a new configuration version; 409',(T,'backend jest (G-24)')),
@@ -299,7 +299,7 @@ ST=[
 ('6.21 Recommendation','OPEN → ACCEPTED','Farm Owner accepts','ACCEPTED; Work Order or review item created',(T,'backend jest (G-24)')),
 ('6.21 Recommendation','OPEN → REJECTED','Farm Owner rejects with a reason','REJECTED; reason stored',(T,'backend jest (G-24)')),
 ('6.21 Recommendation','OPEN → EXPIRED','7 days without a decision','EXPIRED',(T,'backend jest (G-24)')),
-('6.21 Recommendation','ACCEPTED → MEASURED','14 days after acceptance','Effect stored; rule statistics updated',(T,'backend jest (G-24)')),
+('6.21 Recommendation','ACCEPTED → MEASURED','7 days after acceptance','Effect stored; rule statistics updated',(T,'backend jest (G-24)')),
 ('6.21 Recommendation','closed → (rejected)','Accept a rejected or expired one','409',(T,'backend jest (G-24)')),
 ('6.22 HarvestCycle','(new) → OPEN','First controller of a zone registered','OPEN cycle from the registration date',(T,'backend jest (G-26)')),
 ('6.22 HarvestCycle','OPEN → CLOSED','Harvest of the zone confirmed','CLOSED with yield, comparisons and health; next cycle OPEN',(T,'backend jest (G-26)')),

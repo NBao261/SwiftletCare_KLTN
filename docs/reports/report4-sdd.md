@@ -137,8 +137,8 @@ Redis is started by `docker-compose.yml` but no module uses it yet (reserved); i
 | DF-11 | Weather | Hourly job → Open-Meteo by farm coordinates → `weatherobservations` → charts and DF-10 | Only coordinates leave the system; used only by BR-30 and for display (C-6) |
 | DF-12 | Weather compensation | Hourly job after the weather fetch → forecast of the next 2 h × active rules of the house (ENV-FR-030) → offset and expiry (BR-38) → retained `…/{deviceId}/compensation` of every controller of the house → controller adds it to the misting demand | 0 after the expiry or 2 h offline; never ventilation (C-6) |
 | DF-13 | Routing, escalation and Work Orders | `createAlert()` → recipients by the house's technician on duty (ALERT-FR-017) → escalation job every minute → Farm Owners after `escalation_min`; an alert of BR-39 opens a Work Order → technician's record → recovery check every minute (BR-41) → `AWAITING_APPROVAL` → Farm Owner closes | `WORK_ORDER_UPDATE` to the house room; MTTA/MTTR from the timestamps |
-| DF-14 | Preventive maintenance | Telemetry current → run hours and switch counts per load (BR-45) → hourly due check of the plans → `MAINTENANCE_DUE` + preventive Work Order → technician's checklist → counter reset | Calendar plans checked daily at 07:00 |
-| DF-15 | Recommendations | Daily job after the daily assessment → active rules per house (BR-42) → recommendation with its evidence → Farm Owner accepts (Work Order or review item) or rejects → effect job 14 days after acceptance | Rule statistics for the Domain Expert |
+| DF-14 | Preventive maintenance | Relay state, confirmed by the load current where measured → run hours and switch counts per load (BR-45) → hourly due check of the plans → `MAINTENANCE_DUE` + preventive Work Order → technician's checklist → counter reset | Calendar plans checked daily at 07:00 |
+| DF-15 | Recommendations | Daily job after the daily assessment → active rules per house (BR-42) → recommendation with its evidence → Farm Owner accepts (Work Order or review item) or rejects → effect job 7 days after acceptance | Rule statistics for the Domain Expert |
 | DF-16 | Harvest cycles | Farm Technician enters a harvest (`DRAFT`) → Farm Owner confirms → cycle of the zone closed with yield, comparisons and the health of the cycle (BR-43) → expert's season conclusion | Cycles opened at the first controller of a zone |
 | DF-17 | Simulator | `simulator/` registers N devices in the stock and publishes like real devices on their own topics | Flag `simulated` on the device record, shown on every screen |
 
@@ -251,7 +251,7 @@ FreeRTOS tasks pinned to core 1:
 
 Configuration (`config/Config`) is stored in NVS with its version, and every received value is clamped to the same ranges as the backend validator. Pure C++ parts (fuzzy, filter, noise detector, misting check, current check, command de-duplication, remote command) are unit-tested on the host.
 
-**Additions of SRS 4.0.0.** The controller subscribes to its retained `compensation` topic and adds the offset to the misting demand of the fuzzy output until the expiry, or until 2 h without a broker connection (ENV-FR-029, BR-38); it publishes the pump and fan current in every telemetry message, from which the backend counts run hours (BR-45).
+**Additions of SRS 4.0.0.** The controller subscribes to its retained `compensation` topic and adds the offset to the misting demand of the fuzzy output until the expiry, or until 2 h without a broker connection (ENV-FR-029, BR-38); it publishes the relay state and the pump and fan current in every telemetry message, from which the backend counts run hours (BR-45; relay ON time alone on a controller without current sensing).
 
 ### 5.2 AI Pipeline (AI node)
 
@@ -312,7 +312,7 @@ Background jobs:
 | --- | --- | --- |
 | Routing | `alertRouting.service` (recipients by house assignment and duty roster); `alertEscalation.job` every minute (escalation after `escalation_min`, repeat of ALERT-FR-015) | ALERT-FR-015, 017 |
 | Work Orders | `workOrder.service` (open, start, done, approve, reopen, cancel; cause and photos in MinIO); `recoveryCheck.job` every minute (BR-41) | OPS-FR-001…004, ALERT-FR-018 |
-| Maintenance | `maintenance.service` (plans, checklists, records, calibration); `runHours.job` hourly from telemetry current (BR-45); `maintenanceDue.job` hourly and at 07:00 for calendar plans | OPS-FR-005…008, ALERT-FR-016 |
+| Maintenance | `maintenance.service` (plans, checklists, records, calibration); `runHours.job` hourly from the relay state and, where measured, the current (BR-45); `maintenanceDue.job` hourly and at 07:00 for calendar plans | OPS-FR-005…008, ALERT-FR-016 |
 | Operational indicators | `opsMetrics.service` (MTTA, MTTR, on-time maintenance); `houseComparison.service` (BR-44, energy BR-45); `farmOverview.service` | OPS-FR-009, ANALYTICS-FR-015…017 |
 | Weather compensation | `weatherCompensation.job` hourly after `weather.job`; rules embedded in the house | ENV-FR-028, 030 |
 | Knowledge | `configProfile.service` (draft, approve, apply as one change per zone); `recommendation.service`; `recommendation.job` daily after the assessment; `recommendationEffect.job` daily | EXPERT-FR-014…019 |
@@ -1289,7 +1289,7 @@ stateDiagram-v2
   OPEN --> ACCEPTED : owner accepts, Work Order or review item (EXPERT-FR-018)
   OPEN --> REJECTED : owner rejects with reason
   OPEN --> EXPIRED : 7 days without decision (BR-42)
-  ACCEPTED --> MEASURED : effect computed 14 days after acceptance (EXPERT-FR-019)
+  ACCEPTED --> MEASURED : effect computed 7 days after acceptance (EXPERT-FR-019)
   REJECTED --> [*]
   EXPIRED --> [*]
   MEASURED --> [*]
@@ -1587,7 +1587,7 @@ flowchart TB
     E1[Comments on the intervals]
   end
   subgraph C[Controller]
-    C1[Pump and fan current<br/>in every telemetry message]
+    C1[Relay state and load current<br/>in every telemetry message]
   end
   subgraph B[Backend]
     B1[Run hours and switch counts<br/>per load - BR-45]
@@ -1621,7 +1621,7 @@ flowchart TB
     B1[Daily, after the assessment:<br/>evaluate active rules per house]
     B2{Rule holds and none open?} -- yes --> B3[Recommendation with evidence]
     B4{Decision within 7 days?} -- no --> B5[EXPIRED]
-    B6[14 days after acceptance:<br/>indicator before vs after - BR-42]
+    B6[7 days after acceptance:<br/>7 days before vs 7 days after - BR-42]
   end
   subgraph O[Farm Owner]
     O1{Accept?}
