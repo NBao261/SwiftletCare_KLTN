@@ -204,7 +204,7 @@ ST=[
 ('6.16 DeviceStockItem','IN_STOCK → IN_SERVICE','Registered from its label','Stock entry marked activated; device PENDING',(J,I+'deviceOnboarding.test.ts','đúng secretKey → PENDING')),
 ('6.16 DeviceStockItem','IN_SERVICE → RELEASED','Device removed','Entry no longer in service; device document kept',(J,I+'deviceOnboarding.test.ts','gỡ bỏ: giữ document')),
 ('6.16 DeviceStockItem','RELEASED → IN_SERVICE','Registered again with the same label','Registration accepted',(J,I+'deviceOnboarding.test.ts','thiết bị đã gỡ lắp lại được')),
-('6.16 DeviceStockItem','IN_STOCK → IN_STOCK (key re-issued)','Admin re-issues the key','New key returned once; the old label rejected with 400',(J,I+'adminInventoryAndSearch.test.ts','replaces the key of an unclaimed device')),
+('6.16 DeviceStockItem','IN_STOCK, RELEASED → same state (key re-issued)','Admin re-issues the key of a device in stock, then of a released device','New key returned once; the old label rejected with 400',[(J,I+'adminInventoryAndSearch.test.ts','replaces the key of an unclaimed device'),(J,I+'adminInventoryAndSearch.test.ts','re-issues the key of a released device')]),
 ('6.16 DeviceStockItem','IN_STOCK → REVOKED','Admin revokes the entry','Registration with the label rejected with 409',(J,I+'adminInventoryAndSearch.test.ts','blocks activation once revoked')),
 ('6.12 Controller config','APPLIED → PENDING','New configuration version saved','Controller shown PENDING; configuration republished',(T,'backend jest (G-08)')),
 ('6.12 Controller config','PENDING → APPLIED','Heartbeat reports the version','Controller shown APPLIED',(T,'backend jest (G-08)')),

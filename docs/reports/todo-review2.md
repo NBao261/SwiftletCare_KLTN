@@ -321,7 +321,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 
 - [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
 - [ ] Màn Zone: in mã QR tầng.
-- [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
+- [x] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS". *(Kiệt, 09/11, `adf3a60` spec + `7631056` backend, nhánh `feat/g09-device-setup`: cấp được khi thiết bị `IN_STOCK` hoặc `RELEASED`, đang dùng hoặc đã thu hồi thì 409; `GET /admin/provisioned-devices` trả `stock_status` (Report 3 §6.16) cho màn kho của Nhi; TC-ST-26 thêm trường hợp `RELEASED`)*
 - [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
 - [ ] Web: `/onboarding` cho Farm Owner.
 
