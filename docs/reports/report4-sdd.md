@@ -327,7 +327,7 @@ Both clients follow the same pattern: TanStack Query for server state, Zustand f
 
 Domain Expert on the web: the expert reads the Farm Owner's operational pages (dashboard, analytics, vision, devices, harvests) in read-only mode, without a copy of them, and works in its own area for its decisions (work queue, alert verdicts, detection parameters, counting ring and schedule, thresholds and coefficients, reports and conclusions, activity history); those decision pages open to a Farm Owner while the farm has no expert (BR-22), the backend deciding who may act.
 
-Live stream (VISION-FR-013): the web plays WebRTC (WHEP) and the mobile app plays HLS with `expo-video`, both from MediaMTX with the same 60-second token. The counting-ring editor draws the ring over a frame of the stream (web, VISION-FR-018).
+Live stream (VISION-FR-013): the web plays WebRTC (WHEP) and the mobile app plays HLS with `expo-video`, both from MediaMTX with the same 60-second token. The counting-ring editor draws the ring over a frame of the stream (web for the Domain Expert, mobile for the Farm Technician on site, VISION-FR-018).
 
 Push (ALERT-FR-002): after sign-in the mobile app gets the FCM device token with `expo-notifications` and registers it with the API; sign-out removes it; the backend deletes a token that FCM reports invalid.
 
@@ -1330,7 +1330,7 @@ stateDiagram-v2
 
 ## 9. Activity Diagrams
 
-One diagram per main flow (AD-01…09, numbered like MF-01…09) and per supporting flow with more than one actor (AD-10…12 for SF-01…03) of Report 3, Section 2.2; SF-04 (notification settings) and SF-05 (system administration) are single-actor settings without a diagram. Lanes are the actors (people and external services) and the SwiftletCare components that act for them (controller, backend, AI node); the components are parts of the system, not actors (Report 3, Section 2.3). The diagram shows who takes part and the business decisions, not the internal processing.
+One diagram per main flow (AD-01…09, numbered like MF-01…09) and per supporting flow with more than one actor (AD-10…12 for SF-01…03) of Report 3, Section 2.2; SF-04 (notification settings) and SF-05 (system administration) are single-actor settings without a diagram. Lanes are the actors (people), the external services and the SwiftletCare components that act for them (controller, backend, AI node); only the people are actors (Report 3, Section 2.3). The diagram shows who takes part and the business decisions, not the internal processing.
 
 ### 9.1 MF-01 Automatic micro-climate control (AD-01)
 
@@ -1457,10 +1457,14 @@ flowchart TB
   subgraph O[Farm Owner]
     O1[Watch live count and stream,<br/>trends]
   end
+  subgraph T[Farm Technician]
+    T1[Draw or adjust the counting ring<br/>on the live frame, on site]
+  end
   subgraph E[Domain Expert]
     E1[Draw counting ring,<br/>set seasonal windows]
     E2[Confirm or reject alert]
   end
+  T1 --> A1
   A4 --> B1
   A5 --> O1
   B1 --> O1
@@ -1829,6 +1833,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.0.1 | 10/11/2026 | Only people are actors in the activity diagrams (Section 9); AD-03 shows the Farm Technician drawing the counting ring; the ring editor is also in the mobile app (Section 5.4) |
 | 2.0.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0, BM03 1.3): D14 rewritten for the Farm Technician; decisions D17 (Work Order closed by the data), D18 (bounded weather compensation), D19 (recommendation rules), D20 (device simulator); data flows DF-12…17; operations and knowledge modules (Section 5.3), technician client (5.4), new constants (5.5); conceptual model and logical ERD with `WORK_ORDER`, `MAINTENANCE_PLAN`, `RECOMMENDATION_RULE`, `RECOMMENDATION`, `CONFIG_PROFILE`, `HARVEST_CYCLE`, technicians and weather rules of the house, run hours and weather offset of the controller, harvest status; six collections; REST routers, MQTT topic `compensation`, socket events; state machines SM-13 updated and SM-19…24; activity diagrams AD-02 and AD-06 updated, AD-07…09 for MF-07…09, supporting flows renumbered AD-10…12, harvest logging diagram replaced by AD-09; technician scope in Section 10; simulator in Section 11 |
 | 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller. Staging: Nginx with Certbot replaces Caddy and the separate TLS proxy, one component for HTTPS and the TLS ports of MQTT and the video publish (Sections 3.2, 3.4, 11). Conceptual model added to Section 6.1 with its mapping to the logical entities; state machines named after the conceptual entities (Section 8) |
 | 1.1.0 | 26/10/2026 | SM-17 splits the day status from the rating state of each assessor (`ratingWindow` job and the day's `state` field removed). Harvest requirements referred to as `HARVEST-FR` (Report 3 3.1.0). Camera port restricted to the AI node's static IP by a modem rule (D5, Sections 10, 11). Final design for Review 2 against Report 3 3.1.0: device topics and one broker credential per device with a static authorisation rule, QoS 1 with event and command IDs, retained configuration, `esp-mqtt` on the ESP32, `config/reassign` removed (D3, D9, Sections 2.2, 5.1, 7.2, 10, AD-10); decisions D15 (manual override within limits) and D16 (current status and evaluation snapshot); Logical ERD as the final design: user status, push tokens, per-relay override, telemetry validity, alert event ID and details, house health reports with a unique key per kind and period, notification references, harvest type and photo, audit source, stock credentials, `sla_hours` removed; Section 6.3 data retention (BR-36), Section 6.4 schema migrations, Section 5.5 code location of the engineering constants; mobile scope, HLS stream and FCM token in Section 5.4; state machines and activity diagrams aligned (SM-03, 06, 14, 17; AD-02, 03, 04, 08, 09, 10, 11, 12, 14); 'planned' marks and the former Section 12 removed: implementation gaps are tracked only in Project Tracking. D11: the DC demo loads are measured with shunt resistors instead of current transformers (Section 3 controller board) |

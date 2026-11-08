@@ -78,7 +78,7 @@ Users and what they do (Report 3, Section 2.3):
 | User | Main goals |
 | --- | --- |
 | Farm Owner | Watch and compare the houses, receive escalated and critical alerts, approve Work Orders and plan maintenance, accept or reject recommendations, apply configuration profiles, override an actuator for a limited time, set up devices by scanning QR codes, read the daily status and reports, rate each day, confirm harvests and compare seasons |
-| Farm Technician | The owner's staff on site, assigned to houses: receive their alerts first, record the cause found, carry out Work Orders, inspections and calibration, override an actuator or restart a controller there, rate each day, enter harvests |
+| Farm Technician | The owner's staff on site, assigned to houses: receive their alerts first, record the cause found, carry out Work Orders, inspections and calibration, override an actuator, restart a controller or draw the counting ring there, rate each day, enter harvests |
 | Domain Expert | Review data and reports, confirm or reject inferred alerts, tune thresholds, coefficients, detection parameters, the counting ring and the weather compensation, prepare configuration profiles, write recommendation rules, conclusions and season conclusions, rate each day |
 | Administrator (supporting) | Manage accounts, the device stock and its labels, system-wide defaults and the audit log; see every device with its device alerts, diagnose it remotely and send restarts, configuration pushes and firmware updates; no relay control, no environmental data, no farm management |
 

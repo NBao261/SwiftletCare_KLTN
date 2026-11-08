@@ -42,7 +42,7 @@ note5=re.search(r'## 5\. Known Gaps\n\n(.+?)\n', txt).group(1)
 note6=re.search(r'^FO Farm Owner.*$', txt, re.M).group(0)
 note_after(d.tables[5], note5)
 note_after(d.tables[6], note6)
-note_after(d.tables[9], 'Actors are people and external services only; the controller, the AI node and the backend are parts of SwiftletCare (SRS 2.3). Every workflow has at least two actors and changes the state of a main entity.')
+note_after(d.tables[9], re.search(r'^Actors are people only;.*$', txt, re.M).group(0))
 # A3 note, taken from the Markdown
 a3=re.search(r'^Automated in CI:.*$', txt, re.M).group(0)
 for p in d.paragraphs:
