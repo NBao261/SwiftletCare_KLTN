@@ -195,7 +195,7 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 | --- | --- | --- |
 | 1.5.0 | 09/11/2026 | Eight main flows (harvest season summary is supporting flow SF-06): 27 mandatory features and 170 committed test cases |
 | 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): work packages of the new scope (Kiệt operations backend; Bảo firmware weather offset, knowledge and analytics backend, simulator; Len technician mobile; Tuấn expert web; Nhi owner web), workflows WF-07…09, 28 mandatory features and 186 committed test cases, risk of the larger scope |
-| 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…09; device setup is supporting flow SF-01 |
+| 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…06; device setup is supporting flow SF-01 |
 | 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo; Farm Owner web to Nhi, mobile to Len on 03/11/2026), skills, workflow owners, RK-3 and RK-8 |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0 and SDD 1.1.0: progress judged from Project Tracking, Iteration 1 and 2 content corrected, RACI wording, risks RK-8 (mobile scope) and RK-9 (move to device topics) |
 | 1.0.0 | 23/10/2026 | First version for Review 2 |

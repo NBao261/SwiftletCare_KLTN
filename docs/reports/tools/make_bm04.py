@@ -245,6 +245,7 @@ MEMBERS = [  # name, student code, role, modules/entities, decisions, documentat
 NFR_OWNER = {m: [n for n, (w, o) in NFR_MAP.items() if o == m] for m, *_ in MEMBERS}
 DUE = '23/12/2026 (end of Iteration 3, before Defense 1.1)'
 REVIEWERS = ('VuLNS', 'TamPM')  # Review 2 board, as given by the team
+SUPERVISORS = ('Nguyễn Văn Chiến', 'Trương Long')
 
 # ---- build ----
 d = docx.Document(os.path.join(REPORTS, 'templates', 'SEP490_R2_BM04_Review2_Commitment.docx'))
@@ -371,9 +372,13 @@ for r in tb[ti + 3].rows[1:]:
     k = r.cells[0].text.strip()
     if k in agreed: set_cell(r.cells[2], agreed[k])
 fill_table(tb[ti + 4], [(i if i.startswith('RV') else f'{i} (BM02)', *rest) for i, *rest in FIXES])
+# two supervisors sign: the template's Supervisor row is repeated
+sup = next(r for r in tb[ti + 5].rows if r.cells[0].text.strip() == 'Supervisor')
+sup._tr.addnext(copy.deepcopy(sup._tr))
+names = {'Reviewer 1': [REVIEWERS[0]], 'Reviewer 2': [REVIEWERS[1]], 'Supervisor': list(SUPERVISORS), 'Team leader': [B]}
 for r in tb[ti + 5].rows[1:]:
-    names = {'Reviewer 1': REVIEWERS[0], 'Reviewer 2': REVIEWERS[1], 'Supervisor': 'Trương Long', 'Team leader': B}
-    if r.cells[0].text.strip() in names: set_cell(r.cells[1], names[r.cells[0].text.strip()])
+    k = r.cells[0].text.strip()
+    if names.get(k): set_cell(r.cells[1], names[k].pop(0))
 
 # compact tables
 for t in d.tables:
