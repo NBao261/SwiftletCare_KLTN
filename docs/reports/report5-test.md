@@ -160,7 +160,7 @@ Requirements covered by each mandatory feature:
 | TC-F10-01 | F-10 | VISION-FR-005 | Counting ring around the hole; one tracked bird | Feed the track of a bird moving into the hole across the ring | Synthetic track positions | One EXIT counted, no ENTRY | Auto (CI) – AI pipeline `pytest` `tests/test_counting.py` › `test_bird_going_into_the_hole_is_exit` | Pass |
 | TC-F10-02 | F-10 | VISION-FR-009, 011 | 3 earlier days at 90 % | Run the return-rate check with today at 60 % | `return_rate_drop_pct` = 20 | One `LOW_RETURN_RATE` for the house; re-run adds none; recovery resolves it | Auto (CI) – backend Jest `tests/integration/birdCount.test.ts` › “3 ngày trước 90%, hôm nay 60%” | Pass |
 | TC-F10-03 | F-10 | VISION-FR-004, 005 | Same ring | Feed a track lost at the frame edge, and a slow circling bird lost near the ring | — | Nothing counted for either | Auto (CI) – AI pipeline `pytest` `tests/test_counting.py` › `test_track_lost_at_the_frame_edge_counts_nothing` + Auto (CI) – AI pipeline `pytest` `tests/test_counting.py` › `test_slow_circling_bird_lost_near_the_ring_counts_nothing` | Pass |
-| TC-F11-01 | F-11 | VISION-FR-014 | Pipeline running on a recorded clip | Process frames and read the published frames | Clip with tracked birds | Every published frame shows the ring and a box with a track ID on each tracked bird | Auto (CI, to be written) – AI pipeline pytest `test_annotate.py` (G-12) | Not run – test to be written |
+| TC-F11-01 | F-11 | VISION-FR-014 | Pipeline running on a recorded clip | Process frames and read the published frames | Clip with tracked birds | Every published frame shows the ring and a box with a track ID on each tracked bird | Auto (CI) – AI pipeline `pytest` `tests/test_annotate.py` › `test_every_published_frame_has_the_ring_and_a_box_with_id_per_tracked_bird` + Auto (CI) – AI pipeline `pytest` `tests/test_annotate.py` › `test_bird_at_the_top_edge_keeps_its_id_inside_the_frame` | Not run on the tag |
 | TC-F11-02 | F-11 | VISION-FR-013 | Camera of a farm; its Farm Owner and Domain Expert | GET stream-token as each | — | Token valid 60 s for path `cam-<device_id>` only | Auto (CI) – backend Jest `tests/integration/streamAuth.test.ts` › “Farm Owner và Domain Expert của farm nhận token 60 giây” | Pass |
 | TC-F11-03 | F-11 | VISION-FR-013 | User who is not a member of the farm; Farm Owner of another farm | GET stream-token as each | — | 403 | Auto (CI) – backend Jest `tests/integration/streamAuth.test.ts` › “Technician (SRS §4.4) và Farm Owner của farm khác bị chặn” | Pass |
 | TC-F12-01 | F-12 | THREAT-FR-007 | Hour with a learned quiet baseline | Feed noise above the baseline for the minimum duration | +20 dB for 12 s of 15 s | Anomaly raised | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_same_loudness_in_a_quiet_hour_triggers` | Pass |
@@ -520,7 +520,7 @@ Results come only from the CI run on the tag `review-2` (commit `7d5e643b`, 04/1
 
 | Test cases | Automated, test written | Automated, to be written | Manual | Passed on the tag |
 | --- | --- | --- | --- | --- |
-| 170 | 84 (49 %) | 68 (automated in total: 152, 89 %) | 18 | 82 |
+| 170 | 85 (50 %) | 67 (automated in total: 152, 89 %) | 18 | 82 |
 
 Committed test cases that are not automated yet are written in Iteration 2 together with the feature they test (Project Tracking, Section 6).
 

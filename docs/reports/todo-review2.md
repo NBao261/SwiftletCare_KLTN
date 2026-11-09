@@ -367,7 +367,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - job tỷ lệ chạy 15 phút sau khung chiều của từng House;
   - heartbeat AI có `fps` < 10 thì `EDGE_AI_DEGRADED`.
 - [ ] Vòng đếm (VISION-FR-018): Domain Expert **và Farm Technician của nhà có camera** được vẽ, có lịch sử, vai trò và audit (Farm Owner khi farm không có chuyên gia, BR-22); technician nhà khác bị 403. Web: trình vẽ trên khung hình live (Tuấn); mobile: trình vẽ cho technician (Len).
-- [ ] AI pipeline: tách phần vẽ khung + vòng thành hàm có test `tests/test_annotate.py` (TC-F11-01: mọi khung có vòng và hộp kèm track ID).
+- [x] AI pipeline: tách phần vẽ khung + vòng thành hàm có test `tests/test_annotate.py` (TC-F11-01: mọi khung có vòng và hộp kèm track ID). *(Kiệt làm thay Bảo, 10/11, `a29396e`, nhánh `feat/g12-annotate-test`: hàm vẽ `draw()` trong `src/pipeline.py` đã tách từ trước, dùng chung cho stream và `tools/track_clip.py`; thêm `tests/test_annotate.py` 5 test (vòng, hộp và `#id` từng chim, dòng số đếm, khung không có chim, chạy qua `FramePipeline` + ByteTrack thật với engine giả); sửa lỗi nhãn `#id` của chim sát mép trên bị vẽ ra ngoài khung — `label_origin()` đặt nhãn dưới hộp. AI pipeline 55/55)*
 - [ ] Đánh giá NFR-09 (VISION-FR-016): P/R phát hiện trên ≥ 200 khung có nhãn hộp cho mỗi điều kiện sáng (IoU ≥ 0,5) và sai số đếm trên 20 clip, đều lấy từ ngày quay không dùng cho train, val, chọn model, ngưỡng confidence, vòng đếm hay tham số tracker; nếu đã chia ngẫu nhiên theo frame trên Roboflow thì chia lại theo ngày (`tools/split_by_day.py`).
 - [ ] Model: v1 đã train (03/11/2026), lệch đếm tay khoảng 10 %; train v2 trên frame khó và đo lại trên cùng ngày test (mục 3).
 
