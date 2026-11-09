@@ -18,6 +18,11 @@ export function lastRatingDay(deadline: string): string {
   return new Date(Date.parse(deadline) - 1).toISOString();
 }
 
+// Hạn đánh giá sắp hết: ngày cuối còn chấm là hôm nay hoặc ngày mai (giờ VN) — bảng tô cam dòng hạn
+export function isRatingDeadlineNear(deadline: string, now: Date = new Date()): boolean {
+  return vietnamDate(new Date(lastRatingDay(deadline))) <= shiftDate(vietnamDate(now), 1);
+}
+
 // Số trong lý do: format theo ngôn ngữ; thiếu thì để trống thay vì in "undefined"
 type FormatNumber = (value: number) => string;
 const numberOf = (value: unknown, format: FormatNumber): string => (typeof value === 'number' ? format(value) : '');

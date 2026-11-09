@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 
 import HealthStatusBadge from '@/components/features/farm-owner/health/HealthStatusBadge';
-import { lastRatingDay } from '@/components/features/farm-owner/health/healthDay.utils';
+import { isRatingDeadlineNear, lastRatingDay } from '@/components/features/farm-owner/health/healthDay.utils';
 import { Button, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { healthDict } from '@/constants/health.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
+import { cn } from '@/lib/cn';
 import type { HouseHealthDay } from '@/types';
 
 // Khung bảng cố định 10 dòng (thiếu thì bù dòng trống, nhiều hơn thì phân trang) — cùng cách HarvestTable
@@ -42,12 +43,18 @@ export default function HealthDayTable({ days, onRate, onView }: HealthDayTableP
       key: 'myRating',
       header: t('col.myRating'),
       render: day => (
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-charcoal">{t(`ratingState.${day.my_rating_state}`)}</span>
-          {day.my_rating_state === 'PENDING' && (
-            <span className="text-xs text-warmGray">{t('cell.deadline', { date: date(lastRatingDay(day.rating_deadline)) })}</span>
-          )}
-        </div>
+        // Không tô màu như cột Trạng thái (xanh/cam/đỏ là sức khỏe nhà): ngày cần chấm chữ đậm, ngày đã xong chữ xám;
+        // chỉ dòng hạn đổi cam khi còn hôm nay hoặc ngày mai
+        day.my_rating_state === 'PENDING' ? (
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-charcoal">{t(`ratingState.${day.my_rating_state}`)}</span>
+            <span className={cn('text-xs', isRatingDeadlineNear(day.rating_deadline) ? 'font-semibold text-climateOrange' : 'text-warmGray')}>
+              {t('cell.deadline', { date: date(lastRatingDay(day.rating_deadline)) })}
+            </span>
+          </div>
+        ) : (
+          <span className="text-sm text-warmGray">{t(`ratingState.${day.my_rating_state}`)}</span>
+        )
       ),
     },
     {
@@ -55,7 +62,7 @@ export default function HealthDayTable({ days, onRate, onView }: HealthDayTableP
       header: t('col.actions'),
       align: 'right',
       render: day => (day.my_rating_state === 'PENDING'
-        ? <Button size="sm" variant="accent" onClick={event => { event.stopPropagation(); onRate(day); }}>{t('action.rate')}</Button>
+        ? <Button size="sm" variant="secondary" onClick={event => { event.stopPropagation(); onRate(day); }}>{t('action.rate')}</Button>
         : <Button size="sm" variant="secondary" onClick={event => { event.stopPropagation(); onView(day); }}>{t('action.view')}</Button>),
     },
   ], [t, date, onRate, onView, orderById]);

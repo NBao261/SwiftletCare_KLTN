@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHealthReason, lastRatingDay, shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
+import { formatHealthReason, isRatingDeadlineNear, lastRatingDay, shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
 import { healthDict, type HealthTranslate } from '@/constants/health.i18n';
 import { formatStandardDate, translate } from '@/lib/i18n';
 import type { HealthReason } from '@/types';
@@ -49,5 +49,12 @@ describe('ngày giờ Việt Nam', () => {
   it('hạn chấm là 00:00 ngày thứ 8 (giờ VN), ngày cuối còn chấm là ngày trước đó', () => {
     // ngày 01/11 → hạn 00:00 09/11 giờ VN = 17:00 08/11 UTC
     expect(formatStandardDate(lastRatingDay('2026-11-08T17:00:00.000Z'))).toBe('08/11/2026');
+  });
+
+  it('hạn sắp hết khi ngày cuối còn chấm là hôm nay hoặc ngày mai (giờ VN)', () => {
+    const deadline = '2026-11-08T17:00:00.000Z'; // ngày cuối 08/11
+    expect(isRatingDeadlineNear(deadline, new Date('2026-11-06T05:00:00Z'))).toBe(false); // 06/11: còn 2 ngày
+    expect(isRatingDeadlineNear(deadline, new Date('2026-11-06T17:30:00Z'))).toBe(true); // đã 07/11 ở VN
+    expect(isRatingDeadlineNear(deadline, new Date('2026-11-08T16:00:00Z'))).toBe(true); // 23:00 ngày 08/11
   });
 });
