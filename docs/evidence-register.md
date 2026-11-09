@@ -31,7 +31,7 @@ Bảng ở mục 5 đã liệt kê sẵn những khẳng định đang có trong
 
 ### 2.2. Phân công
 
-Cả nhóm dùng **chung một file này**, không tách bản riêng cho từng người. Việc được chia theo **khẳng định** (`KD`), không chia theo tài liệu: mỗi nhóm có một người phụ trách chính, theo 5 vai trò trong `docs/task-checklist.md`. Người phụ trách chính chịu trách nhiệm nhóm đó có nguồn; người khác thấy nguồn tốt vẫn được ghi, theo quy tắc ở 2.3.
+Cả nhóm dùng **chung một file này**, không tách bản riêng cho từng người. Việc được chia theo **khẳng định** (`KD`), không chia theo tài liệu: mỗi nhóm có một người phụ trách chính, theo phân công 5 thành viên trong `docs/reports/todo-review2.md` §0.1. Người phụ trách chính chịu trách nhiệm nhóm đó có nguồn; người khác thấy nguồn tốt vẫn được ghi, theo quy tắc ở 2.3.
 
 | Người | Nhóm khẳng định (mục 5) | Nhóm tài liệu (mục 4) | Dải mã `TL` / `MC` |
 | --- | --- | --- | --- |

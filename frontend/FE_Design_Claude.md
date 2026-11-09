@@ -60,7 +60,7 @@
 
 | # | Thay đổi |
 |---|---|
-| 1 | **Đã xoá** màn, component, API, hook, type, hằng số của ticket, chat ticket, SLA, lịch bảo trì, vùng Technician, màn farm của Admin và role `SALES_STAFF` (`todo-remove-platform.md` PR 6). Các mục 2.4, 2.10, 5.5, 6.2, 6.3, 7, 12.0, 12.2, 12.7, 13.4, 13.14, 13.16 và Phụ lục D bỏ phần mô tả code đã xoá. |
+| 1 | **Đã xoá** màn, component, API, hook, type, hằng số của ticket, chat ticket, SLA, lịch bảo trì, vùng Technician, màn farm của Admin và role `SALES_STAFF` (PR #100–#107). Các mục 2.4, 2.10, 5.5, 6.2, 6.3, 7, 12.0, 12.2, 12.7, 13.4, 13.14, 13.16 và Phụ lục D bỏ phần mô tả code đã xoá. |
 | 2 | **2.4:** mức độ cảnh báo vẫn 3 cấp, kiểu `SeverityLevel`; `PriorityBadge`, `constants/priority.ts` bỏ — `SeverityBadge` là badge duy nhất. **2.10** chỉ còn `Stepper` cho luồng nhiều bước. |
 | 3 | **Form farm:** ô vị trí ("Dùng vị trí hiện tại" + vĩ độ/kinh độ, bắt buộc khi tạo) thay ô khu vực; validator `validations/farm-owner/farm.validation.ts`. Thuật ngữ "Vị trí · Vĩ độ · Kinh độ" thêm vào 6.2. |
 | 4 | **Admin** chỉ tạo tài khoản Kỹ thuật viên (AUTH-FR-005c); "Yêu cầu tài khoản" chỉ còn yêu cầu xoá. 12.0 c dòng 6, 7, 9, 11 đánh dấu xong. |
@@ -69,7 +69,7 @@
 
 | # | Thay đổi |
 |---|---|
-| 1 | **Ticket, chat ticket, SLA, lịch bảo trì, vùng của Technician và việc Admin quản lý farm ra ngoài phạm vi** (Report 3 §8). Màn và component ticket còn trong code chỉ được gỡ, không thêm hay sửa rộng; việc gỡ theo `docs/reports/todo-remove-platform.md` (PR 2 ẩn, PR 6 xoá). Các mục 2.4, 2.10, 6.2, 7, 12.2, 13.4 và Phụ lục D vẫn tả code hiện có cho tới khi gỡ xong. |
+| 1 | **Ticket, chat ticket, SLA, lịch bảo trì, vùng của Technician và việc Admin quản lý farm ra ngoài phạm vi** (Report 3 §8). Màn và component ticket còn trong code chỉ được gỡ, không thêm hay sửa rộng; đã gỡ ở PR #100–#107. Các mục 2.4, 2.10, 6.2, 7, 12.2, 13.4 và Phụ lục D vẫn tả code hiện có cho tới khi gỡ xong. |
 | 2 | **12.0 viết lại:** Technician là vai trò kỹ thuật, thấy nhà/tầng/thiết bị và cảnh báo thiết bị của **mọi farm**, không xem dữ liệu môi trường; đăng ký, dời, gỡ thiết bị, lệnh từ xa, OTA; **không** bật/tắt relay, không sửa ngưỡng/hệ số, không xác nhận cảnh báo; Farm Owner được báo mỗi thao tác thiết bị của Technician. Admin không tạo, xem hay quản lý farm. 12.0 c thêm dòng gỡ ticket và màn farm của Admin. |
 | 3 | **12.8 `OPS_ROLES`:** nút relay và xác nhận cảnh báo chỉ Farm Owner thấy. **13.4:** phòng `ticket:<id>` và sự kiện chat ticket sẽ gỡ. **13.14:** thêm nợ ticket/vùng. Cảnh báo `ACTIVE` quá 15 phút giờ được **gửi lại** cho Farm Owner (ALERT-FR-015), không còn sinh ticket; loại cảnh báo mới `MAINTENANCE_DUE` (ALERT-FR-016) cần nhãn ở `enumLabels.i18n.ts` khi backend có. |
 

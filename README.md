@@ -241,7 +241,6 @@ Chi tiết quy trình Git của nhóm: [`docs/github-setup.md`](./docs/github-se
 | [`docs/hardware/`](./docs/hardware/) | BOM, hướng dẫn linh kiện và đấu nối |
 | [`docs/diagrams/`](./docs/diagrams/) | Context diagram, kiến trúc hệ thống (bản cũ trước Review 1; bản hiện hành trong Report 4) |
 | [`docs/bird-counting-plan.md`](./docs/bird-counting-plan.md) | Kế hoạch triển khai đếm chim |
-| [`docs/task-checklist.md`](./docs/task-checklist.md) | Checklist công việc theo sprint |
 | `<module>/README.md` | Hướng dẫn riêng từng module |
 
 ## Nhóm phát triển
