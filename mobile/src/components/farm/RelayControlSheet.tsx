@@ -10,9 +10,15 @@ import { useControlRelay } from '@/hooks/device/useControlRelay'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Alert, RelayName, SensorNode } from '@/types'
 import { parseConfirmationAlerts, type PumpBlockingAlert } from '@/utils/alert.utils'
-import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
+import { readApiError } from '@/utils/apiError.utils'
 import { getAlertStatusLabel, getAlertTypeLabel, getRelayLabel } from '@/utils/label.utils'
-import { buildPumpConfirmMessage, clampOverrideDuration, formatDuration, getOverrideDurationLimits } from '@/utils/relay.utils'
+import {
+  buildPumpConfirmMessage,
+  clampOverrideDuration,
+  formatDuration,
+  getOverrideDurationLimits,
+  getRelayControlErrorMessage,
+} from '@/utils/relay.utils'
 import { t } from '@/utils/i18n.utils'
 
 // Thời gian chờ controller báo đã chuyển trạng thái = độ tươi của lệnh (BR-35, Report 3 §4.5: 60 s). Quá mốc này controller
@@ -148,12 +154,7 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
   }
 
   // Câu lỗi theo mã của backend thay cho một câu chung
-  const errorMessage = controlRelay.isError
-    ? getSettingsErrorMessage(controlRelay.error, {
-        422: t('Thời lượng không hợp lệ: bật bơm tối đa 30 phút, còn lại tối đa 24 giờ'),
-        409: t('Khu vực vừa có cảnh báo chặn bật bơm, vui lòng xem lại'),
-      })
-    : null
+  const errorMessage = controlRelay.isError ? getRelayControlErrorMessage(controlRelay.error, isPumpOn) : null
 
   return (
     <BottomSheet visible onClose={onClose}>
