@@ -52,7 +52,7 @@ Owners visit their closed houses every few days, so drift, faults and a falling 
 
 | ID | Risk | Impact | How we verify or mitigate | Owner |
 | --- | --- | --- | --- | --- |
-| R1 | No trained model; PC may not keep up with 25 fps (7–12 fps on a laptop) | NFR-04/09 fail | Train by recording day; measure on the PC; else lower camera rate, re-measure NFR-09 | Nguyễn Chí Bảo |
+| R1 | Model v1 about 10 % off hand counts; PC may not keep up with 25 fps | NFR-04/09 fail | v2 on hard frames, same test days; measure on the PC; else lower camera rate | Nguyễn Chí Bảo |
 | R2 | MF-06 not merged yet; NFR-14 needs ≥ 14 rated days | Health not measured | Daily job first on seeded days; field run from installation | Nguyễn Thị Yến Nhi |
 | R3 | No staging; MQTT moves to device topics, `esp-mqtt`, TLS | Demos need staging | Staging first in It. 2; one firmware-backend-AI PR, bench-tested | Nguyễn Chí Bảo |
 | R4 | Scope grew at Review 2 with 7 weeks left | Features unfinished | One owner per package; simulator first; roster last | Nguyễn Chí Bảo |

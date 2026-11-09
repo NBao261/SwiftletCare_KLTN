@@ -44,7 +44,7 @@ Scope is the final registration form v3: main flows MF-01…08 and supporting fl
 
 | ID | Risk | Probability | Impact | Mitigation | Owner |
 | --- | --- | --- | --- | --- | --- |
-| RK-1 | No trained swiftlet model in time; the spare PC is too slow for 25 fps | High | High | Train early on the 3 recorded days; measure fps on the PC in Iteration 2; fall back to a smaller input or one tile; demo on clips through the same pipeline | Nguyễn Chí Bảo |
+| RK-1 | The count error of the swiftlet model stays above the 10 % of NFR-09 (model v1, trained 03/11/2026: about 10 % against hand counts); the spare PC is too slow for 25 fps | High | High | Retrain (v2) on hard frames (fast birds, belly views, birds rising from below), measured on the same test days and clips as v1; measure fps on the PC in Iteration 2; fall back to a smaller input or one tile; demo on clips through the same pipeline | Nguyễn Chí Bảo |
 | RK-2 | Daily health assessment built late, leaving fewer than 14 rated days | Medium | High | Build MF-06 first in Iteration 2; start the field run as soon as the system is installed | Nguyễn Thị Yến Nhi |
 | RK-3 | Staging not ready or unreachable from the defence room | Medium | High | Staging in Iteration 2; rehearse from the university network; 4G hotspot and recorded demo as back-up (`docs/deploy/staging.md`) | Nguyễn Chí Bảo |
 | RK-4 | Test house unavailable (borrowed), power or Internet cuts at the house | Medium | Medium | Bench prototype with the same firmware; offline operation is itself tested (MF-01) | Nguyễn Chí Bảo |

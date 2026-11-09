@@ -146,7 +146,8 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 | | Việc | Ưu tiên |
 |---|---|:---:|
-| [ ] | Train model 1 lớp `swiftlet` (Roboflow → Colab → ONNX). Chia **train / val / test theo ngày quay trước khi trích frame**; augmentation chỉ cho train; ngày test không dùng để chỉnh tham số; 20 clip NFR-09 lấy từ ngày test, chưa từng dùng cho train hay val | P0-Demo |
+| [x] | Train model v1 (YOLOv8n, YOLO11n, 03/11/2026); đếm tay trên clip đánh giá: lệch khoảng 10 %. |  |
+| [ ] | Train model v2 1 lớp `swiftlet` trên frame khó (chim bay nhanh, lộ bụng, bay từ dưới lên), đo lại trên cùng ngày test và clip của v1 (NFR-09 ≤ 10 %). Roboflow → Colab → ONNX. Chia **train / val / test theo ngày quay trước khi trích frame**; augmentation chỉ cho train; ngày test không dùng để chỉnh tham số; 20 clip NFR-09 lấy từ ngày test, chưa từng dùng cho train hay val | P0-Demo |
 | [ ] | **Len, Tuấn, Nhi:** gán nhãn hộp ≥ 200 khung mỗi điều kiện sáng cho tập test và phần train được giao, theo ngày quay Bảo chia (không trộn ngày train với ngày test) | P0-Demo |
 | [ ] | **Len, Tuấn, Nhi:** đếm tay 20 clip 5 phút (10 ban ngày, 10 hồng ngoại), mỗi clip 2 người đếm, đối chiếu từng khung chỗ lệch | P0-Demo |
 | [ ] | Đo NFR-04 trên PC thật với luồng 25 fps cả một phiên 90 phút. Không kịp thì giảm fps camera và **đo lại NFR-09 ở fps đó** | P0-Demo |

@@ -209,7 +209,7 @@ FIXES = [  # id, item, workflow, owner, due  (Review 2 feedback, then BM02 Plann
     ('F-01a', 'Daily status and ratings with their tests (G-11)', 'WF-06', K, '02/12/2026'),
     ('F-01b', 'Daily, weekly and monthly reports per house (G-11)', 'WF-06', K, '23/12/2026'),
     ('F-02', 'Configuration version and CONFIG_MISMATCH (G-08); counting schedule (G-12), with their tests', 'WF-05, WF-03', B, '02/12/2026'),
-    ('F-03', 'Sessions from buckets, incomplete sessions, trained model, NFR-09 measurement (G-12)', 'WF-03', B, '02/12/2026'),
+    ('F-03', 'Sessions from buckets, incomplete sessions; model v2 (v1 about 10 % off hand counts) and NFR-09 measurement (G-12)', 'WF-03', B, '02/12/2026'),
     ('F-04a', 'FCM sending (G-10) and event IDs (G-07)', 'WF-02', B, '02/12/2026'),
     ('F-04b', 'ACTUATOR_FAULT with the current-sensing board (G-13)', 'WF-02', B, '23/12/2026'),
     ('F-05', 'QoS 1 upload kept until PUBACK; native test of StorageManager (G-07)', 'WF-01', B, '02/12/2026'),
