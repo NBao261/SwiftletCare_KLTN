@@ -62,3 +62,7 @@ coverage/
 .coverage
 *.tsbuildinfo
 .stitch/
+
+# Editor and draw.io leftovers
+*.code-workspace
+*.bkp
