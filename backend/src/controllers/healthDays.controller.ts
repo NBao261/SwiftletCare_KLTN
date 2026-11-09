@@ -51,6 +51,12 @@ export const addNote = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data })
 })
 
+/** GET /health-reports/disagreements – EXPERT-FR-022 */
+export const disagreements = asyncHandler(async (req: Request, res: Response) => {
+  const data = await healthDayService.listDisagreements(req.user, scope(req))
+  res.json({ success: true, data })
+})
+
 /** GET /health-reports/evaluation – ANALYTICS-FR-014 */
 export const evaluation = asyncHandler(async (req: Request, res: Response) => {
   const data = await healthDayService.evaluateRatings(req.user, { ...scope(req), role: req.query.role as FarmMemberRole | undefined })

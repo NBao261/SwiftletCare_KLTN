@@ -165,11 +165,18 @@ describe('số liệu của báo cáo (EXPERT-FR-005)', () => {
 
 describe('BR-31 — báo cáo che ngày người gọi chưa chấm', () => {
   it('ngày chưa chấm không có trạng thái, lý do, điểm; status_counts bỏ ngày đó; chấm xong thì hiện', async () => {
-    const { house, ownerToken, expertToken } = await setup()
+    const { farm, house, ownerToken, expertToken } = await setup()
+    // Người chấm thứ hai là chủ đồng sở hữu (BR-31, Report 3 4.2.0: chuyên gia không chấm)
+    const coOwner = await User.create({ email: 'co-report@t.vn', password_hash: 'password123', full_name: 'Đồng chủ', role: 'FARM_OWNER' })
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: coOwner._id, role: 'FARM_OWNER' } } })
+    const coOwnerToken = tokenFor(coOwner._id, 'FARM_OWNER')
     const shown = await mkDay(house, addDays(DAY, -1), 'WATCH')
     const hidden = await mkDay(house, DAY, 'ACTION')
     await call('post', `/health-reports/days/${shown._id}/rating`, ownerToken, { rating: 'GOOD' }).expect(201)
-    await call('post', `/health-reports/days/${hidden._id}/rating`, expertToken, { rating: 'ACTION' }).expect(201)
+    await call('post', `/health-reports/days/${hidden._id}/rating`, coOwnerToken, { rating: 'ACTION' }).expect(201)
+    // Chuyên gia không phải người chấm: báo cáo không che ngày nào với chuyên gia
+    const expertView = await call('get', `/health-reports/${(await generateHouseReport('CUSTOM', String(house._id), addDays(DAY, -1), DAY))!.report._id}`, expertToken).expect(200)
+    expect(expertView.body.data).toMatchObject({ status_counts: { WATCH: 1, ACTION: 1 }, hidden_days: 0 })
     const { report } = (await generateHouseReport('CUSTOM', String(house._id), addDays(DAY, -1), DAY))!
 
     const res = await call('get', `/health-reports/${report._id}`, ownerToken).expect(200)

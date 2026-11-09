@@ -1,6 +1,8 @@
 /**
  * EXPERT-FR-012/013, BR-31, SM-18, ANALYTICS-FR-014 — chấm độc lập trạng thái ngày (TC-F22-01…03,
- * TC-ST §6.18), CSV (TC-F21-02), mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22), độ khớp.
+ * TC-ST §6.18), CSV (TC-F21-02), mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22), độ khớp, ngày lệch
+ * (EXPERT-FR-022). Người chấm theo Report 3 4.2.0: Farm Owner (Farm Technician thêm ở G-20); Domain
+ * Expert không chấm.
  */
 import express from 'express'
 import jwt from 'jsonwebtoken'
@@ -12,6 +14,7 @@ import healthReportRoutes from '@/routes/healthReports.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { AuditLog } from '@/models/auditLog.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
+import { Farm } from '@/models/farm.model'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { House } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
@@ -86,14 +89,26 @@ async function setup() {
   }
 }
 
+/** Chủ đồng sở hữu: người chấm thứ hai (BR-31: mỗi Farm Owner chấm riêng) */
+async function addCoOwner(farm: { _id: unknown }) {
+  const coOwner = await User.create({ email: `co${new Types.ObjectId()}@t.vn`, password_hash: 'password123', full_name: 'Đồng chủ', role: 'FARM_OWNER' })
+  await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: coOwner._id, role: 'FARM_OWNER' } } })
+  return { coOwner, coOwnerToken: tokenFor(coOwner._id, 'FARM_OWNER') }
+}
+
 const HIDDEN = ['current_status', 'current_reasons', 'indicators', 'completeness', 'evidence', 'ratings']
 
 describe('TC-F22-01 — chưa chấm thì mọi kênh che trạng thái (BR-31)', () => {
   it('ngày, danh sách và CSV không có trạng thái, lý do, điểm người khác; chấm xong 201 kèm trạng thái và ảnh chụp', async () => {
-    const { house, ownerToken, expertToken } = await setup()
+    const { farm, house, ownerToken, expertToken } = await setup()
+    const { coOwnerToken } = await addCoOwner(farm)
     const day = await mkDay(house, YESTERDAY)
-    // Chuyên gia chấm trước — điểm của chuyên gia không được lộ cho chủ trại
-    expect((await call('post', `/health-reports/days/${day._id}/rating`, expertToken, { rating: 'WATCH' })).status).toBe(201)
+    // Chủ đồng sở hữu chấm trước — điểm của người đó không được lộ cho chủ trại chưa chấm
+    expect((await call('post', `/health-reports/days/${day._id}/rating`, coOwnerToken, { rating: 'WATCH' })).status).toBe(201)
+
+    // Chuyên gia không phải người chấm: thấy đủ trạng thái ngay, my_rating_state null (BR-31)
+    const expertView = await call('get', `/health-reports/days/${day._id}`, expertToken)
+    expect(expertView.body.data).toMatchObject({ my_rating_state: null, current_status: 'ACTION', current_reasons: [FLOCK_REASON] })
 
     const one = await call('get', `/health-reports/days/${day._id}`, ownerToken)
     expect(one.status).toBe(200)
@@ -113,7 +128,7 @@ describe('TC-F22-01 — chưa chấm thì mọi kênh che trạng thái (BR-31)'
     expect(rated.body.data.ratings).toHaveLength(2)
 
     const saved = await HouseHealthDay.findById(day._id).lean()
-    const mine = saved!.ratings.find(r => r.role === 'FARM_OWNER')
+    const mine = saved!.ratings.find(r => r.rating === 'GOOD')
     expect(mine).toMatchObject({ outcome: 'RATED', rating: 'GOOD', note: 'Chim về đều', snapshot: { status: 'ACTION', reasons: [FLOCK_REASON] } })
     expect(mine!.snapshot.levels).toMatchObject(levels)
     expect(await AuditLog.countDocuments({ action: 'HEALTH_DAY_RATED' })).toBe(2)
@@ -152,14 +167,20 @@ describe('TC-F22-02 — trạng thái hiện tại theo dữ liệu, ảnh chụ
 })
 
 describe('TC-F22-03 — quyền và hạn chấm', () => {
-  it('Technician, Administrator → 403', async () => {
-    const { house } = await setup()
+  it('Domain Expert, Technician, Administrator → 403 (BR-31: chỉ người chấm)', async () => {
+    const { house, expertToken } = await setup()
     const day = await mkDay(house, YESTERDAY)
     for (const role of ['TECHNICIAN', 'ADMIN'] as Role[]) {
       const user = await User.create({ email: `${role}@t.vn`, password_hash: 'password123', full_name: role, role })
       const res = await call('post', `/health-reports/days/${day._id}/rating`, tokenFor(user._id, role), { rating: 'GOOD' })
       expect(res.status).toBe(403)
     }
+    // Chuyên gia không chấm, không bỏ qua, không ghi chú; không có gì được ghi
+    expect((await call('post', `/health-reports/days/${day._id}/rating`, expertToken, { rating: 'GOOD' })).status).toBe(403)
+    expect((await call('post', `/health-reports/days/${day._id}/skip`, expertToken)).status).toBe(403)
+    expect((await call('patch', `/health-reports/days/${day._id}/rating/note`, expertToken, { note: 'x' })).status).toBe(403)
+    expect((await HouseHealthDay.findById(day._id).lean())!.ratings).toHaveLength(0)
+    expect(await AuditLog.countDocuments({ action: { $in: ['HEALTH_DAY_RATED', 'HEALTH_DAY_SKIPPED'] } })).toBe(0)
   })
 
   it('ngày cũ 8 ngày → 409 và trạng thái đã hiện (EXPIRED); ngày cũ 7 ngày vẫn chấm được', async () => {
@@ -186,15 +207,18 @@ describe('TC-ST §6.18 — trạng thái chấm của từng người', () => {
     expect((await call('post', `/health-reports/days/${day._id}/rating`, ownerToken, { rating: 'GOOD' })).status).toBe(409)
   })
 
-  it('EXPIRED theo từng người: chủ trại đã chấm thì điểm giữ nguyên, chuyên gia chưa chấm thì hết hạn', async () => {
-    const { house, owner, expertToken } = await setup()
+  it('EXPIRED theo từng người: chủ trại đã chấm thì điểm giữ nguyên, đồng chủ chưa chấm thì hết hạn; chuyên gia không có lượt chấm', async () => {
+    const { farm, house, owner, ownerToken, expertToken } = await setup()
+    const { coOwnerToken } = await addCoOwner(farm)
     const date = addDays(TODAY, -9)
     const day = await mkDay(house, date, 'WATCH', {
       ratings: [{ by: owner._id, role: 'FARM_OWNER', outcome: 'RATED', rating: 'WATCH', at: new Date(), snapshot: { status: 'WATCH', reasons: [] } }],
     })
-    const res = await call('get', `/health-reports/days/${day._id}`, expertToken)
+    const res = await call('get', `/health-reports/days/${day._id}`, coOwnerToken)
     expect(res.body.data.my_rating_state).toBe('EXPIRED')
     expect(res.body.data.ratings).toEqual([expect.objectContaining({ outcome: 'RATED', rating: 'WATCH', role: 'FARM_OWNER' })])
+    expect((await call('get', `/health-reports/days/${day._id}`, ownerToken)).body.data.my_rating_state).toBe('RATED')
+    expect((await call('get', `/health-reports/days/${day._id}`, expertToken)).body.data.my_rating_state).toBeNull()
   })
 
   it('thêm ghi chú khi chưa chấm → 409; người ngoài farm → 403', async () => {
@@ -320,19 +344,82 @@ describe('độ khớp (ANALYTICS-FR-014, NFR-14)', () => {
     const res = await call('get', `/health-reports/evaluation?houseId=${house._id}&from=${addDays(TODAY, -6)}&to=${TODAY}`, ownerToken)
     expect(res.status).toBe(200)
     const data = res.body.data
-    expect(data.rated_count).toBe(3)
+    // Điểm chuyên gia chấm trước Report 3 4.2.0 không tính (BR-31): chỉ còn 2 điểm của chủ trại
+    expect(data.rated_count).toBe(2)
     expect(data.insufficient_data_count).toBe(1)
-    expect(data.agreement.value).toBeCloseTo(2 / 3)
-    expect(data.confusion_matrix.counts).toEqual([[2, 0, 0], [1, 0, 0], [0, 0, 0]])
-    // 3 lần người chấm GOOD, hệ thống báo WATCH 1 lần
-    expect(data.false_alarm_rate.combined).toBeCloseTo(1 / 3)
+    expect(data.agreement.value).toBeCloseTo(1 / 2)
+    expect(data.confusion_matrix.counts).toEqual([[1, 0, 0], [1, 0, 0], [0, 0, 0]])
+    // 2 lần người chấm GOOD, hệ thống báo WATCH 1 lần
+    expect(data.false_alarm_rate.combined).toBeCloseTo(1 / 2)
     // flock luôn CLEAR trong ảnh chụp → mọi lần GOOD đều là báo động giả của riêng nguồn đàn chim
     expect(data.false_alarm_rate.flock).toBe(1)
     expect(data.false_alarm_rate.environment).toBe(0)
-    expect(data.ratings).toHaveLength(4)
+    expect(data.ratings).toHaveLength(3)
+    expect(data.ratings.every((r: { assessor: { role: string } }) => r.assessor.role === 'FARM_OWNER')).toBe(true)
     expect(data.ratings.map((r: { date: string }) => r.date)).not.toContain(TODAY)
 
-    const ownerOnly = await call('get', `/health-reports/evaluation?houseId=${house._id}&from=${addDays(TODAY, -6)}&to=${TODAY}&role=DOMAIN_EXPERT`, ownerToken)
-    expect(ownerOnly.body.data.rated_count).toBe(1)
+    const ownerOnly = await call('get', `/health-reports/evaluation?houseId=${house._id}&from=${addDays(TODAY, -6)}&to=${TODAY}&role=FARM_OWNER`, ownerToken)
+    expect(ownerOnly.body.data.rated_count).toBe(2)
+    expect((await call('get', `/health-reports/evaluation?houseId=${house._id}&role=DOMAIN_EXPERT`, ownerToken)).status).toBe(422)
+  })
+})
+
+describe('ngày lệch (EXPERT-FR-022)', () => {
+  const rated = (by: { _id: unknown }, role: string, snap: HealthStatus, value: string, note?: string) => ({
+    by: by._id, role, outcome: 'RATED', rating: value, note, at: new Date(),
+    snapshot: { status: snap, reasons: [FLOCK_REASON], levels },
+  })
+
+  it('chỉ trả ngày có điểm của người chấm khác ảnh chụp, kèm chỉ số, lý do và mức của nhà', async () => {
+    const { farm, house, owner, expert, expertToken } = await setup()
+    const { coOwner } = await addCoOwner(farm)
+    const differs = await mkDay(house, addDays(TODAY, -2), 'ACTION', {
+      ratings: [rated(owner, 'FARM_OWNER', 'ACTION', 'GOOD', 'Chim về đều'), rated(coOwner, 'FARM_OWNER', 'ACTION', 'ACTION')],
+    })
+    await mkDay(house, addDays(TODAY, -3), 'WATCH', { ratings: [rated(owner, 'FARM_OWNER', 'WATCH', 'WATCH')] })
+    await mkDay(house, addDays(TODAY, -4), 'INSUFFICIENT_DATA', { ratings: [rated(owner, 'FARM_OWNER', 'INSUFFICIENT_DATA', 'GOOD')] })
+    // Điểm chuyên gia chấm trước Report 3 4.2.0: không phải người chấm nên không tính là lệch
+    await mkDay(house, addDays(TODAY, -5), 'ACTION', { ratings: [rated(expert!, 'DOMAIN_EXPERT', 'ACTION', 'GOOD')] })
+    await mkDay(house, addDays(TODAY, -6), 'ACTION', {
+      ratings: [{ by: owner._id, role: 'FARM_OWNER', outcome: 'SKIPPED', at: new Date(), snapshot: { status: 'ACTION', reasons: [] } }],
+    })
+
+    const res = await call('get', `/health-reports/disagreements?houseId=${house._id}&from=${addDays(TODAY, -6)}&to=${TODAY}`, expertToken)
+    expect(res.status).toBe(200)
+    expect(res.body.data.days).toHaveLength(1)
+    expect(res.body.data.days[0]).toMatchObject({
+      day_id: String(differs._id), house_name: house.name, date: addDays(TODAY, -2),
+      current_status: 'ACTION', current_reasons: [FLOCK_REASON],
+      indicators: { flock: { level: 'CLEAR' } },
+      disagreements: [{
+        assessor: { full_name: owner.full_name, role: 'FARM_OWNER' }, rating: 'GOOD', snapshot_status: 'ACTION',
+        snapshot_reasons: [FLOCK_REASON], snapshot_levels: levels, note: 'Chim về đều',
+      }],
+    })
+    expect(res.body.data.houses).toEqual([{ house_id: String(house._id), house_name: house.name, health_levels: DEFAULT_HEALTH_LEVELS }])
+  })
+
+  it('chủ trại ở farm có chuyên gia → 403; farm chưa có chuyên gia thì chủ trại xem được; thiếu nhà → 400', async () => {
+    const { house, ownerToken, expertToken } = await setup()
+    expect((await call('get', `/health-reports/disagreements?houseId=${house._id}`, ownerToken)).status).toBe(403)
+    expect((await call('get', '/health-reports/disagreements', expertToken)).status).toBe(400)
+
+    const alone = await seedHouse({ withExpert: false })
+    const res = await call('get', `/health-reports/disagreements?farmId=${alone.farm._id}`, tokenFor(alone.owner._id, 'FARM_OWNER'))
+    expect(res.status).toBe(200)
+    expect(res.body.data.days).toEqual([])
+  })
+
+  it('chuyên gia chỉnh mức của nhà sau khi xem: lưu lịch sử (audit trước/sau) và trả mức mới cho danh sách', async () => {
+    const { house, expertToken } = await setup()
+    const put = await call('put', `/farms/houses/${house._id}/health-levels`, expertToken, { noise_slight: 2 })
+    expect(put.status).toBe(200)
+    const audit = await AuditLog.findOne({ action: 'HEALTH_LEVELS_UPDATED' }).lean()
+    expect(audit?.metadata).toMatchObject({
+      before: expect.objectContaining({ noise_slight: DEFAULT_HEALTH_LEVELS.noise_slight }),
+      after: expect.objectContaining({ noise_slight: 2 }),
+    })
+    const res = await call('get', `/health-reports/disagreements?houseId=${house._id}`, expertToken)
+    expect(res.body.data.houses[0].health_levels.noise_slight).toBe(2)
   })
 })
