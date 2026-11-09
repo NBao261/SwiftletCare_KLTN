@@ -50,7 +50,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-10 | Counting, return rate | Nguyễn Chí Bảo | In progress | #85, #88, #95; TC-F10-01..03 | Trained model; sessions from buckets; incomplete sessions (G-12) | 2 |
 | F-11 | Annotated live stream | Nguyễn Chí Bảo | In progress | #89 (via #95), #93; TC-F11-01..03 | Run against staging (G-17); mobile HLS screen (G-16) | 2 |
 | F-12 | Abnormal noise | Nguyễn Chí Bảo | Done | #50, #59; TC-F12-01..03 | — | — |
-| F-13 | Expert verdict | Thái Minh Tuấn | In progress | #91, #117, #125; TC-F13-01, 02, 03 | Mobile expert screens (G-16) | 2 |
+| F-13 | On-site check and expert verdict | Thái Minh Tuấn | In progress | #91, #117, #125; TC-F13-01, 02, 03 | Mobile expert screens (G-16) | 2 |
 | F-14 | Tuning, ring, schedule | Thái Minh Tuấn | In progress | #91; TC-F14-01..03 | Seasonal schedule; ring editor (G-12) | 2 |
 | F-15 | Review and suggestions | Thái Minh Tuấn | In progress | #119, #125; TC-F15-01, 02, 03 | Mobile expert screens (G-16) | 2 |
 | F-16 | Conclusions, owner notice | Thái Minh Tuấn | In progress | #91, #117, #125; TC-F16-01, 02, 03 | Mobile expert screens (G-16) | 2 |
@@ -78,11 +78,11 @@ Results count only when they come from a CI run on the tag being reported (Repor
 | Item | Count |
 | --- | --- |
 | Committed test cases | 170 (Report 5 1.5.0, final scope) |
-| Automated, test written | 83 (48 %; Defense 1.1 bar: 50 %, so at least 85 by Defense 1.1) |
-| Automated, to be written with its feature | 69 |
-| Mandatory requirements verified by a committed case | 96 of 139; the other 43 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
+| Automated, test written | 82 (48 %; Defense 1.1 bar: 50 %, so at least 85 by Defense 1.1) |
+| Automated, to be written with its feature | 70 |
+| Mandatory requirements verified by a committed case | 97 of 139; the other 42 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
 | Manual (staging, prototype, test house) | 18 |
-| Passed on the tag | 83 of 83 written (100 %); 87 not run yet (69 tests to be written, 18 manual) |
+| Passed on the tag | 82 of 82 written (100 %); 88 not run yet (70 tests to be written, 18 manual) |
 
 ## 5. Defect List
 
@@ -113,7 +113,7 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 | G-08 | Configuration version and `CONFIG_MISMATCH` | ENV-FR-027, BR-24; SM-12 | firmware, backend | Nguyễn Chí Bảo | It. 2 |
 | G-09 | SF-01 screens: label printing in the stock screen, floor code printing, QR scan, AP-mode guide, setup progress; key re-issue of a released device | FARM-FR-010…012, BR-26; AD-10 | web, mobile, backend | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (labels, floor codes on the web); Nguyễn Vũ Len (QR scan in the mobile app); Thái Minh Tuấn (web setup) | It. 2 |
 | G-10 | FCM sending and push tokens; the mobile app registers an Expo push token instead of the FCM device token of SDD 5.4 (BM02 A-02) | ALERT-FR-002 | backend, mobile | Nguyễn Chí Bảo (backend); Nguyễn Vũ Len (mobile) | It. 2 |
-| G-11 | MF-06: health assessment job, `househealthdays` with current status and rating snapshots, levels per house, house reports (day, week, month), PDF and CSV, weather job, evaluation (agreement, CI, weighted kappa, AC1) | ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33; SM-17, AD-06 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (web); Nguyễn Vũ Len (mobile) | It. 2–3 |
+| G-11 | MF-06: health assessment job, `househealthdays` with current status and rating snapshots (Farm Technician daily, Farm Owner on days at the house), expert review of the days that disagree, levels per house, house reports (day, week, month), PDF and CSV, weather job, evaluation (agreement, CI, weighted kappa, AC1) | ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, 022, BR-28…31, 33; SM-17, SM-18, AD-06 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (web); Nguyễn Vũ Len (mobile) | It. 2–3 |
 | G-12 | Counting: trained one-class model; sessions computed by the backend from buckets per the house schedule; incomplete sessions; AI heartbeat with fps; ring editor screen | VISION-FR-003, 008, 016, 018–020, THREAT-FR-010 | AI node, backend, web, mobile | Nguyễn Chí Bảo (AI node, backend); Thái Minh Tuấn (ring editor on the web); Nguyễn Vũ Len (ring editor on the mobile app for the Farm Technician); Len, Tuấn, Nhi (labelling, clip counts) | It. 2 |
 | G-13 | Actuator current sensing on the team's board | THREAT-FR-014, BR-32 | hardware, firmware, backend | Nguyễn Chí Bảo | It. 3 |
 | G-14 | Data model behind the ERD: user `status`, audit source fields, harvest type and photo, notification references, telemetry validity fields, per-relay override, alert `metadata` renamed `details` (e.g. `reset_reason`); collections `househealthdays`, `househealthreports`, `weatherobservations` (G-11) and `pushtokens` (G-10) not in the database script yet, `zonehealthreports` migrated (Report 4 §6.4); database script regenerated; unique indexes `telemetries(node_id, timestamp)` and partial `alerts(node_id, event_id)` missing from the database script (BM02 D-06) | SDD 6.1–6.4 | backend | Trần Minh Kiệt | It. 2 |
@@ -123,8 +123,8 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 | G-18 | Smaller rules: source required for default thresholds (ENV-FR-007); harvest validation (HARVEST-FR-001); optional ENV-FR-026; optional device ID from the MAC address | ENV-FR-007, 026, HARVEST-FR-001 | backend, firmware | Trần Minh Kiệt | It. 3 |
 | G-19 | Evidence and field work: sources in `docs/evidence-register.md`, practitioner interviews (BR-01, 02, 28–30), field run of ≥ 14 rated days, hardware test record (NFR-05…07), NFR measurements | REF-5, NFR-04…14 | team | Nguyễn Chí Bảo; labelling and clip counts by Len, Tuấn, Nhi; each NFR by its owner (Report 5 §5) | It. 2–3 |
 | G-20 | Farm Technician role (Report 3 4.0.0, BM03 row 13): the old role `TECHNICIAN` in the shared enums, the seed account, `technicianAccess`, the `/ota` and `/onboarding` web routes and the Technician screens serves every farm with remote commands; it becomes `FARM_TECHNICIAN`, a farm member limited to the houses assigned to it (AUTH-FR-004, 005, 013, 014), and remote commands and OTA move to the Administrator device console (FARM-FR-009, 013) | AUTH-FR-004, 005, 013, 014, FARM-FR-009, 013; SDD D14, 10 | backend, web, mobile | Trần Minh Kiệt (backend, API spec); Thái Minh Tuấn (Administrator device console); Nguyễn Vũ Len (mobile technician sign-in); Nguyễn Thị Yến Nhi (assignment screen) | It. 2 |
-| G-21 | Routing, escalation and Work Orders: recipients by house assignment, escalation job, on-site cause, CRITICAL always delivered, Work Orders with recovery check and approval, MTTA/MTTR | ALERT-FR-005, 017, 018, OPS-FR-001…004, 009, BR-39…41; SM-19, AD-02 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Vũ Len (technician mobile); Nguyễn Thị Yến Nhi (Work Order approval on the web) | It. 2 |
-| G-22 | Preventive maintenance: plans and checklists, run hours from the load current, due job, records and calibration | OPS-FR-005…008, ALERT-FR-016, BR-45; SM-20, AD-07 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Vũ Len (mobile); Nguyễn Thị Yến Nhi (plans on the web) | It. 2–3 |
+| G-21 | Routing, escalation and Work Orders: recipients by house assignment, escalation job, on-site cause, on-site check of inferred alerts before the verdict, CRITICAL always delivered, Work Orders with recovery check and approval, MTTA/MTTR | ALERT-FR-005, 017, 018, OPS-FR-001…004, 009, EXPERT-FR-021, BR-39…41; SM-19, AD-02, AD-04 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Vũ Len (technician mobile); Nguyễn Thị Yến Nhi (Work Order approval on the web) | It. 2 |
+| G-22 | Preventive maintenance: plans and checklists, run hours from the relay state (confirmed by the load current where measured), due job, records and calibration | OPS-FR-005…008, ALERT-FR-016, BR-45; SM-20, AD-07 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Vũ Len (mobile); Nguyễn Thị Yến Nhi (plans on the web) | It. 2–3 |
 | G-23 | Weather compensation: forecast fetch, rules per house, `compensation` topic, firmware offset with expiry | ENV-FR-028…030, BR-38; SM-24, SDD D18 | firmware, backend, web | Nguyễn Chí Bảo (firmware, backend); Thái Minh Tuấn (rule screen) | It. 2 |
 | G-24 | Knowledge: house stage, configuration profiles, recommendation rules, daily evaluation and effect | FARM-FR-014, EXPERT-FR-014…019, BR-42, 46; SM-21, 23, AD-08 | backend, web | Nguyễn Chí Bảo (backend); Thái Minh Tuấn (web) | It. 2–3 |
 | G-25 | Farm overview, house comparison, energy estimate, flock trend, rain on `LOW_RETURN_RATE` | ANALYTICS-FR-002, 015…017, VISION-FR-011, BR-44, 45 | backend, web | Nguyễn Chí Bảo (backend); Nguyễn Thị Yến Nhi (web) | It. 3 |

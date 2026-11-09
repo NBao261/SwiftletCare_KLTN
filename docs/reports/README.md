@@ -8,12 +8,13 @@ Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn c
 | [`bm03-record-of-changes.md`](bm03-record-of-changes.md) | BM03 – Record of Changes (phiếu v2 → v3 bản cuối, 19 dòng) |
 | [`report1-introduction.md`](report1-introduction.md) | Report 1 – Introduction |
 | [`report2-project-management-plan.md`](report2-project-management-plan.md) | Report 2 – Project Management Plan |
-| [`report3-srs.md`](report3-srs.md) | Report 3 – SRS 4.0.0: chỉ yêu cầu, không ghi trạng thái code |
-| [`report4-sdd.md`](report4-sdd.md) | Report 4 – SDD 2.0.0: thiết kế cuối, không ghi trạng thái code |
-| [`report5-test.md`](report5-test.md) | Report 5 – Test (136 test case), **sinh** từ `report5/tc.py` bằng `report5/gen_report5.py`, không sửa tay |
+| [`report3-srs.md`](report3-srs.md) | Report 3 – SRS 4.2.0: chỉ yêu cầu, không ghi trạng thái code |
+| [`report4-sdd.md`](report4-sdd.md) | Report 4 – SDD 2.2.0: thiết kế cuối, không ghi trạng thái code |
+| [`report5-test.md`](report5-test.md) | Report 5 – Test (170 test case cam kết), **sinh** từ `report5/tc.py` bằng `report5/gen_report5.py`, không sửa tay |
 | [`project-tracking.md`](project-tracking.md) | Project Tracking — **nguồn trạng thái duy nhất**: tính năng, test, defect, danh sách gap G-01…G-27 |
 | [`design-brief.md`](design-brief.md) | Design Brief BM01 + Phụ lục A (docx: `design-brief/`) |
 | [`bm02-self-review.md`](bm02-self-review.md) | BM02 – Self-Review Report: kết quả gốc của prompt chuẩn trên tag `review-2` + Team response (docx: `registration/`) |
+| BM04 – Review 2 Commitment | Sinh bằng `tools/make_bm04.py` từ `report5/tc.py` (docx: `registration/`); chữ ký và kết luận để trống cho hội đồng |
 | [`todo-review2.md`](todo-review2.md) | Việc cần làm, theo gap của Project Tracking (tiếng Việt) |
 | [`todo-remove-platform.md`](todo-remove-platform.md) | Lưu trữ: các bước bỏ ticket, SLA, vùng (đã xong ở PR #100–#107) |
 

@@ -47,7 +47,7 @@ This report is the test plan and the test cases of SwiftletCare for Defense 1.1.
 | Integration | Backend routes, services, jobs and MQTT handlers against an in-memory MongoDB; role checks | Jest + supertest + mongodb-memory-server | CI | Module owner |
 | System (end-to-end) | Each main workflow through real devices or simulators, backend, web and mobile | Manual, following the demo scenarios | Staging (Report 4, Section 3.4) with the demo seed | Workflow owner |
 | Field | Control, counting, health assessment in the test house | Manual measurement, scripts | Test house, AI node | Whole team |
-| Non-functional | NFR-01, 02, 06, 09, 13, 14 | Scripts (latency), stopwatch, evaluation scripts | Staging, prototype, test house | Owner in Section 5 |
+| Non-functional | NFR-01, 02, 06, 09, 13, 14, 15 | Scripts (latency), device simulator, stopwatch, evaluation scripts | Staging, prototype, test house | Owner in Section 5 |
 
 ### 2.2 Test Types per Feature
 
@@ -109,7 +109,7 @@ Requirements covered by each mandatory feature:
 | F-10 | Counting, return rate | VISION-FR-001…011, 016, 017, 020, THREAT-FR-010, ANALYTICS-FR-002, 003, FARM-FR-004 |
 | F-11 | Annotated live stream | VISION-FR-012, 013, 014 |
 | F-12 | Abnormal noise | THREAT-FR-007 |
-| F-13 | Expert verdict | EXPERT-FR-003, 007, 021, ALERT-FR-014 |
+| F-13 | On-site check and expert verdict | EXPERT-FR-003, 007, 021, ALERT-FR-014 |
 | F-14 | Tuning, ring, schedule | EXPERT-FR-008, VISION-FR-018, 019 |
 | F-15 | Review and suggestions | EXPERT-FR-010, 011, ANALYTICS-FR-010 |
 | F-16 | Conclusions, owner notice | EXPERT-FR-001, 002, 006, 009 |
@@ -166,7 +166,7 @@ Requirements covered by each mandatory feature:
 | TC-F12-01 | F-12 | THREAT-FR-007 | Hour with a learned quiet baseline | Feed noise above the baseline for the minimum duration | +20 dB for 12 s of 15 s | Anomaly raised | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_same_loudness_in_a_quiet_hour_triggers` | Pass |
 | TC-F12-02 | F-12 | THREAT-FR-007 | Same baseline | Feed a short burst | +20 dB for 8 s | No anomaly | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_short_noise_does_not_trigger` | Pass |
 | TC-F12-03 | F-12 | THREAT-FR-005, 007 | Speaker playing | Feed loud samples | — | Not evaluated and not learned into the baseline | Auto (CI) – firmware `pio test -e native` `test_noise_anomaly` › `test_speaker_playing_is_ignored_and_not_learned` | Pass |
-| TC-F13-01 | F-13 | EXPERT-FR-003 | Inferred alert of a farm with an expert | PUT a verdict as the expert, then change it | CONFIRMED, then REJECTED with note | Stored with author, time, note and audit; can be changed | Auto (CI) – backend Jest `tests/integration/alertVerdict.test.ts` › “chỉ Domain Expert ghi được kết quả” | Pass |
+| TC-F13-01 | F-13 | EXPERT-FR-003, 021 | Inferred alert of a house with a Farm Technician, on a farm with an expert | The technician records the on-site observation; then PUT a verdict as the expert and change it | Observation "speaker cable loose"; CONFIRMED, then REJECTED with note | The technician is asked to check the house; the observation is in the alert evidence with author and time; the verdict is stored with author, time, note and audit and can be changed | Auto (CI) – backend Jest `tests/integration/alertVerdict.test.ts` › “chỉ Domain Expert ghi được kết quả” + Auto (CI, to be written) – backend jest (G-21): on-site check request and observation in the evidence | Not run – test to be written |
 | TC-F13-02 | F-13 | EXPERT-FR-003 | A measured (non-inferred) alert; an alert of another farm | PUT a verdict on each | — | Rejected | Auto (CI) – backend Jest `tests/integration/alertVerdict.test.ts` › “từ chối cảnh báo đo trực tiếp và cảnh báo của farm khác” | Pass |
 | TC-F13-03 | F-13 | EXPERT-FR-003 | Inferred alert | PUT `REJECTED` without a note; then with a note | — | 422 without note; with note the alert becomes `DISMISSED` | Auto (CI) – backend Jest `tests/integration/alertVerdict.test.ts` › “bác bỏ bắt buộc ghi lý do” | Pass |
 | TC-F14-01 | F-14 | EXPERT-FR-008 | Zone of a farm with an expert | PUT detection tuning as the expert | Five zone parameters | Stored with history and audit; only the five firmware parameters sent to the devices | Auto (CI) – backend Jest `tests/integration/detectionTuning.test.ts` › “Domain Expert lưu tham số kèm lịch sử + audit” | Pass |
@@ -317,7 +317,7 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 | TC-ST-73 | SRS 6.21 Recommendation | Entity in the source state of ACCEPTED → MEASURED | 7 days after acceptance | — | Effect stored; rule statistics updated | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
 | TC-ST-74 | SRS 6.21 Recommendation | Entity in the source state of closed → (rejected) | Accept a rejected or expired one | — | 409 | Auto (CI, to be written) – backend jest (G-24) | Not run – test to be written |
 
-### 4.4 Non-Functional Requirements (6)
+### 4.4 Non-Functional Requirements (7)
 
 | ID | Feature / workflow | Preconditions | Steps | Data | Expected result | How it runs | Actual result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -331,7 +331,7 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 
 ### 4.5 Requirement Coverage
 
-Generated from the "Requirements verified" column of Section 4.1, the NFR cases that measure a requirement (TC-NFR-09 for VISION-FR-016, TC-NFR-14 for ANALYTICS-FR-014) and the requirement lists of the main flows (Report 3, Section 2.2). "Verified" means a committed case has steps and an expected result for that requirement; "traced" means only that the requirement belongs to a workflow whose end-to-end test runs. 139 mandatory requirements: 96 are verified by a committed feature or NFR case; 43 are only traced to the end-to-end test of their workflow, which exercises the flow but does not check each of their acceptance criteria. The traced-only requirements are covered by the module suites or get a case when their gap is closed (Project Tracking, Section 6).
+Generated from the "Requirements verified" column of Section 4.1, the NFR cases that measure a requirement (TC-NFR-09 for VISION-FR-016, TC-NFR-14 for ANALYTICS-FR-014) and the requirement lists of the main flows (Report 3, Section 2.2). "Verified" means a committed case has steps and an expected result for that requirement; "traced" means only that the requirement belongs to a workflow whose end-to-end test runs. 139 mandatory requirements: 97 are verified by a committed feature or NFR case; 42 are only traced to the end-to-end test of their workflow, which exercises the flow but does not check each of their acceptance criteria. The traced-only requirements are covered by the module suites or get a case when their gap is closed (Project Tracking, Section 6).
 
 | Requirement | Verified by (committed case with steps and expected result) | Traced to (end-to-end test of its workflow) |
 | --- | --- | --- |
@@ -439,7 +439,7 @@ Generated from the "Requirements verified" column of Section 4.1, the NFR cases 
 | EXPERT-FR-018 | TC-F27-02 | TC-WF-08 |
 | EXPERT-FR-019 | TC-F27-03 | TC-WF-08 |
 | EXPERT-FR-020 | TC-F30-03 | supporting flow SF-06 |
-| EXPERT-FR-021 | — (traced only) | TC-WF-04 |
+| EXPERT-FR-021 | TC-F13-01 | TC-WF-04 |
 | EXPERT-FR-022 | TC-F22-03 | TC-WF-06 |
 | FARM-FR-001 | TC-F18-01 | supporting flow SF-03 |
 | FARM-FR-002 | TC-F18-01 | supporting flow SF-03 |
@@ -484,8 +484,9 @@ Requirements of priority `S` are kept working by the automated suites that run o
 | SF-01 Device setup by the Farm Owner | FARM-FR-001…003c, 005…008, 010…012, ENV-FR-027 | Features F-18 and F-19 below, written and run like the committed ones |
 | SF-06 Harvest recording and season summary | HARVEST-FR-001…007, ANALYTICS-FR-004, EXPERT-FR-020 | Feature F-30 below, written and run like the committed ones |
 | SF-02 Remote device maintenance | FARM-FR-009, 013, ENV-FR-013c | backend `technicianAccess.test.ts`, `deviceOnboarding.test.ts` (remote commands, OTA), `audioTracks.test.ts`; firmware `pio test` remote-command suite |
-| SF-03 Accounts and access | AUTH-FR-002…012, SYSTEM-FR-001…003 | backend `passwordAndProfile.test.ts`, `invitations.test.ts`, `adminUserLifecycle.test.ts`, `rateLimit.test.ts`, `auditLog.test.ts`, `systemOverview.test.ts`, `systemSettingSingleton.test.ts`, `dataPrivacy.test.ts` |
-| SF-04 Harvest logging | HARVEST-FR-001…005 | backend `harvest.test.ts` |
+| SF-03 Accounts and access | AUTH-FR-002…012, FARM-FR-001, 002 | backend `passwordAndProfile.test.ts`, `invitations.test.ts`, `adminUserLifecycle.test.ts`, `rateLimit.test.ts`, `dataPrivacy.test.ts`, `roleMatrix.test.ts` |
+| SF-04 Notification settings | ALERT-FR-005, 006, 013 | backend `notification.test.ts`, `telegram.test.ts`; feature F-08 above |
+| SF-05 System administration | ENV-FR-007, SYSTEM-FR-001…003 | backend `auditLog.test.ts`, `systemOverview.test.ts`, `systemSettingSingleton.test.ts`, `zoneThresholds.test.ts` |
 
 Test cases of the features of the supporting flows SF-01 (device setup) and SF-06 (harvest recording), 9 cases:
 
@@ -505,13 +506,13 @@ Test cases of the features of the supporting flows SF-01 (device setup) and SF-0
 
 Each owner runs the test cases of their features and workflows and records the result (Design Brief, Section 8); a test case is counted for one person only, its owner (BM04). Automated tests of backend code are written by the author of that code.
 
-| Member | Owns and runs | Writes |
+| Member | Owns and runs (counted for this member in BM04) | Writes |
 | --- | --- | --- |
-| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12; WF-01, 03; config sync transitions; NFR-04, 05, 06, 07, 09, 11 | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push and current sensing; DS-05, 06 run on staging with the AI node |
-| Trần Minh Kiệt | F-05, 06, 08; supporting F-18, 19; WF-05; device and label transitions; NFR-10 | Backend tests of devices, accounts, alerts, the expert module and daily health (including those of F-07, 13–17, 20–22) |
-| Nguyễn Vũ Len | F-07, 17; WF-02; alert and relay transitions; NFR-02 | E2E tests of DS-01, 02, 03, 04; mobile tests |
-| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-06; daily status and health report transitions; NFR-01, 03, 14 | E2E tests of DS-11, 12 |
-| Thái Minh Tuấn | F-13, 14, 15, 16; WF-04; verdict, review item and proposal transitions; NFR-08, 13 | E2E tests of DS-07, 08, 09, 10 |
+| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12, 26; WF-01, 03; configuration sync transitions; NFR-06, 09 (36 cases) | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push, weather compensation, knowledge rules and current sensing; DS-01, 02, 05, 06 on staging |
+| Trần Minh Kiệt | F-05, 06, 08, 23, 24; supporting F-18, 19; WF-05; device connection, device label and Work Order transitions; NFR-15 (38 cases) | Backend tests of devices, accounts, alerts, the expert module, daily health and operations (including those of F-07, 13–17, 20–22, 25); DS-09, 10 |
+| Nguyễn Vũ Len | F-07, 17, 25; WF-02, 07; alert status, relay mode and maintenance plan transitions; NFR-02 (31 cases) | E2E tests of DS-03, 04, 13, 14; mobile tests |
+| Nguyễn Thị Yến Nhi | F-20, 21, 22, 29; supporting F-30; WF-06; daily status, rating and health report transitions; NFR-01, 14 (25 cases) | E2E tests of DS-11, 12; web tests |
+| Thái Minh Tuấn | F-13, 14, 15, 16, 27, 28; WF-04, 08; verdict, review item, proposal and recommendation transitions; NFR-13 (40 cases) | E2E tests of DS-07, 08, 15, 16; web tests |
 
 ## 6. Test Results at Review 2
 
@@ -519,7 +520,7 @@ Results come only from the CI run on the tag `review-2` (commit `7d5e643b`, 04/1
 
 | Test cases | Automated, test written | Automated, to be written | Manual | Passed on the tag |
 | --- | --- | --- | --- | --- |
-| 170 | 83 (48 %) | 69 (automated in total: 152, 89 %) | 18 | 83 |
+| 170 | 82 (48 %) | 70 (automated in total: 152, 89 %) | 18 | 82 |
 
 Committed test cases that are not automated yet are written in Iteration 2 together with the feature they test (Project Tracking, Section 6).
 

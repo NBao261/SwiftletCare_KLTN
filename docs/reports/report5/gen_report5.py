@@ -49,7 +49,7 @@ def actual(src):
     if isinstance(src,list):
         parts=[actual(x) for x in src]
         res_=[a for a,_ in parts]
-        a='Pass' if all(x=='Pass' for x in res_) else ('Fail' if 'Fail' in res_ else res_[0])
+        a='Pass' if all(x=='Pass' for x in res_) else ('Fail' if 'Fail' in res_ else next(x for x in res_ if x!='Pass'))
         return a, ' + '.join(h for _,h in parts)
     kind=src[0]
     if kind=='jest':

@@ -341,7 +341,7 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
   - bỏ `NOISE_ANOMALY` đã `DISMISSED`;
   - lưu `current_status` và `current_reasons`;
   - tính lại khi có dữ liệu trễ hoặc kết luận mới trong 7 ngày.
-- [ ] Chấm điểm (BR-31, chặn ở **API**, không chỉ ở màn hình): với Farm Owner/Domain Expert chưa chấm hoặc chưa bỏ qua ngày đó trong 7 ngày, mọi endpoint (ngày, báo cáo ngày/tuần/tháng, CSV) trả ngày **không có** status, reasons, rating của người khác; thông báo "ngày đã sẵn sàng" không kèm status; `POST …/rating` lưu rating + `evaluation_snapshot` trong một lần ghi atomic rồi mới trả status; `POST …/skip` mở status, không tính vào NFR-14; không cho đổi rating sau khi đã xem, chỉ thêm ghi chú; trạng thái chấm theo **từng người** (PENDING → RATED / SKIPPED / EXPIRED, Report 3 §6.18), quá 7 ngày người chưa chấm thành `EXPIRED`; ngày không có trạng thái chấm riêng. Test TC-F22-01..03 thử xem trước qua mọi endpoint.
+- [ ] Chấm điểm (BR-31, chặn ở **API**, không chỉ ở màn hình): người chấm là Farm Technician được giao nhà (mỗi ngày) và Farm Owner (ngày có mặt ở nhà); Domain Expert không chấm. Với người chấm chưa chấm hoặc chưa bỏ qua ngày đó trong 7 ngày, mọi endpoint (ngày, báo cáo ngày/tuần/tháng, CSV) trả ngày **không có** status, reasons, rating của người khác; thông báo "ngày đã sẵn sàng" không kèm status; `POST …/rating` lưu rating + `evaluation_snapshot` trong một lần ghi atomic rồi mới trả status; `POST …/skip` mở status, không tính vào NFR-14; không cho đổi rating sau khi đã xem, chỉ thêm ghi chú; trạng thái chấm theo **từng người** (PENDING → RATED / SKIPPED / EXPIRED, Report 3 §6.18), quá 7 ngày người chưa chấm thành `EXPIRED`; ngày không có trạng thái chấm riêng. Domain Expert xem các ngày đánh giá lệch với trạng thái và chỉnh mức của nhà (EXPERT-FR-022). Test TC-F22-01..03 thử xem trước qua mọi endpoint.
 - [ ] Báo cáo theo House ngày/tuần/tháng (`househealthreports`, unique `house_id + kind + period_start + period_end`), migrate báo cáo tuần theo Zone cũ; CSV chỉ số theo ngày; PDF bằng `jspdf` ở web.
 - [ ] `ANALYTICS-FR-014`: đồng thuận + CI 95 %, kappa có trọng số tuyến tính, Gwet's AC1, ma trận nhầm lẫn, ngày `INSUFFICIENT_DATA` tách riêng.
 - [ ] Web (Nhi) + mobile (Len): trạng thái ngày, màn chấm điểm, báo cáo. Màn chấm điểm hiện hướng dẫn quan sát BR-37 trước khi chọn mức, nhắc "chấm trước khi xem biểu đồ" và có nút "Bỏ qua" cho ngày không ra nhà yến.
@@ -439,12 +439,13 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 ### G-21 — Định tuyến, leo thang, Work Order (P0-Demo cho WF-02) — Kiệt (backend), Len (mobile technician), Nhi (duyệt trên web)
 
 - [ ] `alertRouting.service` + `alertEscalation.job` mỗi phút (ALERT-FR-017, BR-40); CRITICAL luôn tới ít nhất một kênh ngoài app (ALERT-FR-005).
+- [ ] Kiểm tra tại chỗ cảnh báo suy luận: backend yêu cầu Farm Technician của nhà kiểm tra trước khi chuyên gia kết luận, cảm biến hỏng mở Work Order ngay (EXPERT-FR-021).
 - [ ] Work Order: mở tự động theo BR-39, start, done kèm nguyên nhân và ảnh (ALERT-FR-018), `recoveryCheck.job` (BR-41), duyệt, mở lại, huỷ; MTTA/MTTR (OPS-FR-009).
 - [ ] Test TC-F23, TC-F24, TC-ST WorkOrder (Report 5) viết cùng PR.
 
 ### G-22 — Bảo trì phòng ngừa (P1) — Kiệt (backend), Len (mobile), Nhi (web)
 
-- [ ] Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ dòng điện (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008).
+- [ ] Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ thời gian relay ON, xác nhận bằng dòng điện nếu bộ điều khiển đo được (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008).
 
 ### G-23 — Bù theo thời tiết (P1) — Bảo (firmware, backend), Tuấn (màn luật)
 

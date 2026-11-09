@@ -83,17 +83,17 @@ Code against SRS and SDD; each gap in Project Tracking §6. In brackets: High fi
 | F-04 | Offline operation | auto | 30-min outage: no decision or sample lost | TC-F04 | In progress |
 | F-05 | Self-diagnosis | auto | 300 s pump, no +2 % → MISTING_INEFFECTIVE | TC-F05 | In progress |
 | F-06 | Actuator current | auto | ON, current < 50 % for 30 s → ACTUATOR_FAULT | TC-F06 | Planned |
-| F-07 | Alert lifecycle | FO | Repeats merge; 10 min out → breach; ack resolved 409 | TC-F07 | In progress |
-| F-08 | Push and Telegram | FO | CRITICAL on both ≤ 5 s; none after sign-out | TC-F08 | In progress |
+| F-07 | Alert lifecycle | FT, FO | Repeats merge; 10 min out → breach; ack resolved 409 | TC-F07 | In progress |
+| F-08 | Push and Telegram | FT, FO | CRITICAL on both ≤ 5 s; none after sign-out | TC-F08 | In progress |
 | F-09 | Forecast warning | auto | Crossing within 60 min → FORECAST_BREACH | TC-F09 | Done |
 | F-10 | Counting, return rate | auto | Counts per house; drop > limit → one alert | TC-F10 | In progress |
 | F-11 | Live stream | FO, DE | Box on each bird; 60-s token; others 403 | TC-F11 | In progress |
 | F-12 | Abnormal noise | auto | +20 dB 12 s of 15 → NOISE_ANOMALY | TC-F12 | Done |
-| F-13 | Expert verdict | DE | Reject without note 422, with note DISMISSED | TC-F13 | In progress |
+| F-13 | On-site check, verdict | FT, DE | Technician observation in the evidence; reject without note 422, with note DISMISSED | TC-F13 | In progress |
 | F-14 | Tuning, ring, schedule | DE, FT | History kept; out of range 400; 13 vertices 422 | TC-F14 | In progress |
 | F-15 | Review, suggestions | DE, FO | Owner change → review item; owner applies 403 | TC-F15 | Planned |
 | F-16 | Conclusions, notices | DE, FO | Each expert decision notifies every owner | TC-F16 | In progress |
-| F-17 | Manual override | FO | Own expiry per relay; pump 31 min 422 | TC-F17 | In progress |
+| F-17 | Manual override | FO, FT | Own expiry per relay; pump 31 min 422 | TC-F17 | In progress |
 | F-20 | Daily health status | auto | Flock CLEAR + humidity SLIGHT → ACTION | TC-F20 | Planned |
 | F-21 | Reports, PDF/CSV | FO, DE | Day/week/month per house; files = screen | TC-F21 | In progress |
 | F-22 | Rating, disagreements | FT, FO, DE | Rated on site before status; expert reviews disagreements | TC-F22 | Planned |

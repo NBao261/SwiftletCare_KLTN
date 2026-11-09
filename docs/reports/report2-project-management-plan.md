@@ -35,7 +35,7 @@ Scope is the final registration form v3: main flows MF-01…08 and supporting fl
 | Objective | Target | Measured by |
 | --- | --- | --- |
 | Scope | Every mandatory feature of the Design Brief (F-01…17, F-20…29) done and in at least one main workflow | Project Tracking; Report 5 |
-| Defense 1.1 thresholds | 100 % of the 6 main workflows run end-to-end on staging; 100 % main and ≥ 80 % exception demo scenarios pass; ≥ 90 % of test cases pass, 100 % of main-path tests; ≥ 50 % automated in CI; no open Critical or High defect | Report 5; CI on the submitted tag |
+| Defense 1.1 thresholds | 100 % of the 8 main workflows run end-to-end on staging; 100 % main and ≥ 80 % exception demo scenarios pass; ≥ 90 % of test cases pass, 100 % of main-path tests; ≥ 50 % automated in CI; no open Critical or High defect | Report 5; CI on the submitted tag |
 | Quality of code | Every pull request passes CI and one review; backend line coverage ≥ 80 % | CI (`.github/workflows/ci.yml`) |
 | Non-functional | The seven committed NFRs of the Design Brief measured with their stated method | Report 5, NFR test cases |
 | Field evidence | ≥ 14 rated days in the test house (NFR-14); counting accuracy on recorded clips (NFR-09) | Evaluation report |

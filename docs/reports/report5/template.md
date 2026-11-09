@@ -47,7 +47,7 @@ This report is the test plan and the test cases of SwiftletCare for Defense 1.1.
 | Integration | Backend routes, services, jobs and MQTT handlers against an in-memory MongoDB; role checks | Jest + supertest + mongodb-memory-server | CI | Module owner |
 | System (end-to-end) | Each main workflow through real devices or simulators, backend, web and mobile | Manual, following the demo scenarios | Staging (Report 4, Section 3.4) with the demo seed | Workflow owner |
 | Field | Control, counting, health assessment in the test house | Manual measurement, scripts | Test house, AI node | Whole team |
-| Non-functional | NFR-01, 02, 06, 09, 13, 14 | Scripts (latency), stopwatch, evaluation scripts | Staging, prototype, test house | Owner in Section 5 |
+| Non-functional | NFR-01, 02, 06, 09, 13, 14, 15 | Scripts (latency), device simulator, stopwatch, evaluation scripts | Staging, prototype, test house | Owner in Section 5 |
 
 ### 2.2 Test Types per Feature
 
@@ -111,7 +111,7 @@ Exception scenarios of the Design Brief (Appendix A2), run in the same session a
 
 {{ST}}
 
-### 4.4 Non-Functional Requirements (6)
+### 4.4 Non-Functional Requirements (7)
 
 {{NFR}}
 
@@ -130,8 +130,9 @@ Requirements of priority `S` are kept working by the automated suites that run o
 | SF-01 Device setup by the Farm Owner | FARM-FR-001…003c, 005…008, 010…012, ENV-FR-027 | Features F-18 and F-19 below, written and run like the committed ones |
 | SF-06 Harvest recording and season summary | HARVEST-FR-001…007, ANALYTICS-FR-004, EXPERT-FR-020 | Feature F-30 below, written and run like the committed ones |
 | SF-02 Remote device maintenance | FARM-FR-009, 013, ENV-FR-013c | backend `technicianAccess.test.ts`, `deviceOnboarding.test.ts` (remote commands, OTA), `audioTracks.test.ts`; firmware `pio test` remote-command suite |
-| SF-03 Accounts and access | AUTH-FR-002…012, SYSTEM-FR-001…003 | backend `passwordAndProfile.test.ts`, `invitations.test.ts`, `adminUserLifecycle.test.ts`, `rateLimit.test.ts`, `auditLog.test.ts`, `systemOverview.test.ts`, `systemSettingSingleton.test.ts`, `dataPrivacy.test.ts` |
-| SF-04 Harvest logging | HARVEST-FR-001…005 | backend `harvest.test.ts` |
+| SF-03 Accounts and access | AUTH-FR-002…012, FARM-FR-001, 002 | backend `passwordAndProfile.test.ts`, `invitations.test.ts`, `adminUserLifecycle.test.ts`, `rateLimit.test.ts`, `dataPrivacy.test.ts`, `roleMatrix.test.ts` |
+| SF-04 Notification settings | ALERT-FR-005, 006, 013 | backend `notification.test.ts`, `telegram.test.ts`; feature F-08 above |
+| SF-05 System administration | ENV-FR-007, SYSTEM-FR-001…003 | backend `auditLog.test.ts`, `systemOverview.test.ts`, `systemSettingSingleton.test.ts`, `zoneThresholds.test.ts` |
 
 Test cases of the features of the supporting flows SF-01 (device setup) and SF-06 (harvest recording), {{NSUP}} cases:
 
@@ -141,13 +142,13 @@ Test cases of the features of the supporting flows SF-01 (device setup) and SF-0
 
 Each owner runs the test cases of their features and workflows and records the result (Design Brief, Section 8); a test case is counted for one person only, its owner (BM04). Automated tests of backend code are written by the author of that code.
 
-| Member | Owns and runs | Writes |
+| Member | Owns and runs (counted for this member in BM04) | Writes |
 | --- | --- | --- |
-| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12; WF-01, 03; config sync transitions; NFR-04, 05, 06, 07, 09, 11 | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push and current sensing; DS-05, 06 run on staging with the AI node |
-| Trần Minh Kiệt | F-05, 06, 08; supporting F-18, 19; WF-05; device and label transitions; NFR-10 | Backend tests of devices, accounts, alerts, the expert module and daily health (including those of F-07, 13–17, 20–22) |
-| Nguyễn Vũ Len | F-07, 17; WF-02; alert and relay transitions; NFR-02 | E2E tests of DS-01, 02, 03, 04; mobile tests |
-| Nguyễn Thị Yến Nhi | F-20, 21, 22; WF-06; daily status and health report transitions; NFR-01, 03, 14 | E2E tests of DS-11, 12 |
-| Thái Minh Tuấn | F-13, 14, 15, 16; WF-04; verdict, review item and proposal transitions; NFR-08, 13 | E2E tests of DS-07, 08, 09, 10 |
+| Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12, 26; WF-01, 03; configuration sync transitions; NFR-06, 09 (36 cases) | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push, weather compensation, knowledge rules and current sensing; DS-01, 02, 05, 06 on staging |
+| Trần Minh Kiệt | F-05, 06, 08, 23, 24; supporting F-18, 19; WF-05; device connection, device label and Work Order transitions; NFR-15 (38 cases) | Backend tests of devices, accounts, alerts, the expert module, daily health and operations (including those of F-07, 13–17, 20–22, 25); DS-09, 10 |
+| Nguyễn Vũ Len | F-07, 17, 25; WF-02, 07; alert status, relay mode and maintenance plan transitions; NFR-02 (31 cases) | E2E tests of DS-03, 04, 13, 14; mobile tests |
+| Nguyễn Thị Yến Nhi | F-20, 21, 22, 29; supporting F-30; WF-06; daily status, rating and health report transitions; NFR-01, 14 (25 cases) | E2E tests of DS-11, 12; web tests |
+| Thái Minh Tuấn | F-13, 14, 15, 16, 27, 28; WF-04, 08; verdict, review item, proposal and recommendation transitions; NFR-13 (40 cases) | E2E tests of DS-07, 08, 15, 16; web tests |
 
 ## 6. Test Results at Review 2
 
