@@ -20,6 +20,7 @@ import { Invitation } from '@/models/invitation.model'
 import { Notification } from '@/models/notification.model'
 import { ParameterReview } from '@/models/parameterReview.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
+import { PushToken } from '@/models/pushToken.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Telemetry } from '@/models/telemetry.model'
@@ -31,7 +32,7 @@ type AnyModel = Model<any>
 
 export const ALL_MODELS: AnyModel[] = [
   Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode, CoefficientProposal,
-  Farm, HarvestBatch, House, Zone, Invitation, Notification, ParameterReview,
+  Farm, HarvestBatch, House, Zone, Invitation, Notification, ParameterReview, PushToken,
   ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, ZoneHealthReport,
 ]
 

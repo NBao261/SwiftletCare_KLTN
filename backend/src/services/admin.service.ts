@@ -6,6 +6,7 @@ import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { softDeleteFarm } from '@/services/farm.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
+import { removeUserPushTokens } from '@/services/push.service'
 import { disconnectUser } from '@/socket'
 import { escapeRegex, paginate } from '@/utils/helpers.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
@@ -186,6 +187,8 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   user.deleted_at = new Date()
   await user.save()
   disconnectUser(userId)
+  // Token FCM cũng là đường gửi tới máy thật (ALERT-FR-002)
+  await removeUserPushTokens(userId)
 
   // Chỉ báo "đã xoá" SAU khi ẩn danh đã lưu thành công: lưu lỗi thì user không bị báo nhầm,
   // và lần chạy lại gửi đúng 1 lần. Email cũ truyền riêng vì tài khoản vừa bị ẩn danh.

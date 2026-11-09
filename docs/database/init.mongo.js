@@ -791,6 +791,32 @@ ensureCollection("provisioneddevices", {
 })
 db.getCollection("provisioneddevices").createIndex({"device_id":1}, {"unique":true})
 
+// ── pushtokens (model PushToken) ──
+ensureCollection("pushtokens", {
+  "bsonType": "object",
+  "properties": {
+    "user_id": {
+      "bsonType": "objectId"
+    },
+    "token": {
+      "bsonType": "string"
+    },
+    "platform": {
+      "bsonType": "string",
+      "enum": ["android", "ios"]
+    },
+    "last_seen_at": {
+      "bsonType": ["date", "null"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["user_id", "token", "platform"]
+})
+db.getCollection("pushtokens").createIndex({"user_id":1})
+db.getCollection("pushtokens").createIndex({"token":1}, {"unique":true})
+
 // ── relayoverridelogs (model RelayOverrideLog) ──
 ensureCollection("relayoverridelogs", {
   "bsonType": "object",
