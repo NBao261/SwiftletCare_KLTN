@@ -7,7 +7,7 @@ feeds the same tracks to the session counter and to the all-day counter.
 
 SRS: VISION-FR-004, VISION-FR-005, VISION-FR-014; plan §6.6, §19.8
 """
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -74,13 +74,28 @@ def track_ids(tracks: sv.Detections):
     return tracks.tracker_id if tracks.tracker_id is not None else []
 
 
+# "#id" at font scale 0.5 rises about 10 px above its baseline
+LABEL_HEIGHT = 12
+
+
+def label_origin(box: Sequence[int], frame_shape: Tuple[int, ...]) -> Tuple[int, int]:
+    """
+    Where the "#id" text starts (its baseline). Above the box when there is room; a bird at the top
+    edge gets it below the box, so every tracked bird keeps its id inside the frame (VISION-FR-014).
+    """
+    height, width = frame_shape[0], frame_shape[1]
+    x = min(max(int(box[0]), 0), max(width - 1, 0))
+    y = int(box[1]) - 4 if int(box[1]) - 4 >= LABEL_HEIGHT else int(box[3]) + LABEL_HEIGHT + 2
+    return x, min(y, height - 1)
+
+
 def draw(frame: np.ndarray, tracks: sv.Detections, counter: RingCounter, fps: float,
          session: Optional[str] = None) -> np.ndarray:
     """Green box + #id per bird, the counting ring and the counts; text at the bottom (the camera's clock is top-left)."""
     cv2.polylines(frame, [counter.polygon.astype(np.int32)], True, YELLOW, 2)
     for box, tid in zip(tracks.xyxy.astype(int), track_ids(tracks)):
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), GREEN, 2)
-        cv2.putText(frame, f"#{tid}", (box[0], box[1] - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 1)
+        cv2.putText(frame, f"#{tid}", label_origin(box, frame.shape), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 1)
     text = (f"VAO {counter.entry_count}  RA {counter.exit_count}  ?{counter.ambiguous}  {fps:.0f} FPS"
             f"  {session or 'ngoai phien'}")
     org = (10, frame.shape[0] - 16)
