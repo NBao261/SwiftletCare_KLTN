@@ -15,6 +15,10 @@ import { getAlertStatusLabel, getAlertTypeLabel, getRelayLabel } from '@/utils/l
 import { buildPumpConfirmMessage, clampOverrideDuration, formatDuration, getOverrideDurationLimits } from '@/utils/relay.utils'
 import { t } from '@/utils/i18n.utils'
 
+// Thời gian chờ controller báo đã chuyển trạng thái = độ tươi của lệnh (BR-35, Report 3 §4.5: 60 s). Quá mốc này controller
+// không còn áp dụng lệnh nên báo "chưa phản hồi" và cho gửi lại mà không sợ thành hai lệnh
+const RELAY_ACK_TIMEOUT_MS = 60 * 1000
+
 interface RelayControlSheetProps {
   // Controller mới nhất trong cache (tải lại sau RELAY_UPDATE) để biết lệnh đã áp dụng chưa
   controller: SensorNode | null
@@ -57,6 +61,11 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
   const [durationMs, setDurationMs] = useState(OVERRIDE_DEFAULT_MS)
   // Đã gửi lệnh, chờ controller báo đúng trạng thái
   const [isWaiting, setWaiting] = useState(false)
+  // Đã có lệnh tới broker trong lần mở sheet này: relay chuyển MANUAL đúng trạng thái lúc nào thì đóng sheet lúc đó, kể cả sau
+  // khi đã hết thời gian chờ
+  const [hasSent, setHasSent] = useState(false)
+  // Lệnh không tới được controller: backend chưa nối broker, hoặc controller không báo lại trong thời gian chờ
+  const [deliveryProblem, setDeliveryProblem] = useState<'not-delivered' | 'timed-out' | null>(null)
 
   const limits = relay ? getOverrideDurationLimits(relay, targetState) : null
   const options = limits ? OVERRIDE_DURATION_OPTIONS_MS.filter(option => option >= limits.minMs && option <= limits.maxMs) : []
@@ -72,8 +81,18 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
 
   // Controller đã chuyển MANUAL đúng trạng thái thì đóng sheet
   useEffect(() => {
-    if (isWaiting && isApplied) onClose()
-  }, [isWaiting, isApplied, onClose])
+    if (hasSent && isApplied) onClose()
+  }, [hasSent, isApplied, onClose])
+
+  // Không chờ mãi: quá thời gian mà controller chưa báo thì mở lại nút để thử lại
+  useEffect(() => {
+    if (!isWaiting || isApplied) return
+    const timer = setTimeout(() => {
+      setWaiting(false)
+      setDeliveryProblem('timed-out')
+    }, RELAY_ACK_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [isWaiting, isApplied])
 
   if (!controller || !relay) return null
   const relayLabel = getRelayLabel(relay)
@@ -85,11 +104,16 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
       { text: t('Vẫn bật bơm'), style: 'destructive', onPress: () => send(true) },
     ])
 
-  const send = (isAlertConfirmed: boolean) =>
+  const send = (isAlertConfirmed: boolean) => {
+    setDeliveryProblem(null)
     controlRelay.mutate(
       { sensorNodeId: controller._id, relay, state: targetState, durationMs: effectiveDuration, isAlertConfirmed },
       {
-        onSuccess: () => setWaiting(true),
+        onSuccess: ({ isCommandDelivered }) => {
+          setDeliveryProblem(isCommandDelivered ? null : 'not-delivered')
+          setWaiting(isCommandDelivered)
+          if (isCommandDelivered) setHasSent(true)
+        },
         onError: error => {
           // 409 CONFIRMATION_REQUIRED: lúc gửi khu vực đã có cảnh báo chặn mà app chưa kịp thấy — backend gửi kèm danh sách
           // trong error.details; hỏi lại bằng danh sách đó, đồng ý thì gửi lại kèm confirmed
@@ -101,6 +125,7 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
         },
       },
     )
+  }
 
   // TẮT và bật bơm khi có cảnh báo chặn đều hỏi lại trước khi gửi
   const handleSubmit = () => {
@@ -191,6 +216,16 @@ export function RelayControlSheet({ controller, relay, onClose }: RelayControlSh
       {errorMessage && (
         <Text variant="small" weight="semiBold" color={palette.alert}>
           {errorMessage}
+        </Text>
+      )}
+      {deliveryProblem === 'not-delivered' && (
+        <Text variant="small" weight="semiBold" color={palette.alert}>
+          {t('Máy chủ chưa kết nối được tới bộ điều khiển nên lệnh chưa được gửi. Thử lại sau ít phút')}
+        </Text>
+      )}
+      {deliveryProblem === 'timed-out' && (
+        <Text variant="small" weight="semiBold" color={palette.alert}>
+          {t('Bộ điều khiển chưa phản hồi. Kiểm tra thiết bị còn online rồi thử lại')}
         </Text>
       )}
       {isWaiting && !isApplied && (
