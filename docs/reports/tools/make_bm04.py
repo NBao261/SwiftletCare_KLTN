@@ -4,7 +4,7 @@ Usage (repository root): python3 docs/reports/tools/make_bm04.py
 
 Workflows, features and demo scenarios follow the Design Brief (BM01, Appendix A); every count is
 computed from docs/reports/report5/tc.py, so sections 6-8 always equal Report 5. A test case is
-counted for one member and one workflow only (ALLOCATION below). Signatures, the reviewers' names,
+counted for one member and one workflow only (ALLOCATION below). Signatures, dates,
 the reviewers' verification and the conclusion are left blank for the review board.
 """
 import copy, os, sys
@@ -244,6 +244,7 @@ MEMBERS = [  # name, student code, role, modules/entities, decisions, documentat
 ]
 NFR_OWNER = {m: [n for n, (w, o) in NFR_MAP.items() if o == m] for m, *_ in MEMBERS}
 DUE = '23/12/2026 (end of Iteration 3, before Defense 1.1)'
+REVIEWERS = ('VuLNS', 'TamPM')  # Review 2 board, as given by the team
 
 # ---- build ----
 d = docx.Document(os.path.join(REPORTS, 'templates', 'SEP490_R2_BM04_Review2_Commitment.docx'))
@@ -287,7 +288,7 @@ tb = d.tables
 set_kv(tb[0], {'Project code': 'FA26SE158',
                'Project name': 'SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming',
                'Team': f'{B} (Leader), {K}, {L}, {N}, {T}', 'Supervisor': 'Nguyễn Văn Chiến, Trương Long',
-               'Review 2 date': '04/11/2026', 'Reviewer 1': '', 'Reviewer 2': '', 'Version': '1.0', 'Date': '09/11/2026'})
+               'Review 2 date': '04/11/2026', 'Reviewer 1': REVIEWERS[0], 'Reviewer 2': REVIEWERS[1], 'Version': '1.0', 'Date': '09/11/2026'})
 set_kv(tb[1], {'Final version': 'Registration form v3 (final) with BM03 Record of Changes 1.3 (rows 1–19); Report 3 SRS 4.2.0, Report 4 SDD 2.2.0, Report 5 1.5.0, Design Brief 2.0',
                'Approved at Review 2 (Yes/No)': 'Yes – final scope agreed with the supervisor on 09/11/2026 after the Review 2 feedback; confirmed by the signatures in section 11',
                'Attached file name': 'SEP490_FA26SE158_R2_Registration.pdf (registration form v3 + BM03)'})
@@ -371,7 +372,8 @@ for r in tb[ti + 3].rows[1:]:
     if k in agreed: set_cell(r.cells[2], agreed[k])
 fill_table(tb[ti + 4], [(i if i.startswith('RV') else f'{i} (BM02)', *rest) for i, *rest in FIXES])
 for r in tb[ti + 5].rows[1:]:
-    if r.cells[0].text.strip() == 'Team leader': set_cell(r.cells[1], B)
+    names = {'Reviewer 1': REVIEWERS[0], 'Reviewer 2': REVIEWERS[1], 'Supervisor': 'Trương Long', 'Team leader': B}
+    if r.cells[0].text.strip() in names: set_cell(r.cells[1], names[r.cells[0].text.strip()])
 
 # compact tables
 for t in d.tables:
