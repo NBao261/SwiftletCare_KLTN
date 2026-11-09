@@ -167,14 +167,16 @@ describe('TC-F20-03 — thiếu dữ liệu (DS-22)', () => {
 })
 
 describe('job đánh giá (SM-17)', () => {
-  it('ngày mới: ghi 1 bản ghi và báo "ngày đã sẵn sàng" không kèm trạng thái; chạy lại không trùng, không báo lại', async () => {
+  it('ngày mới: ghi 1 bản ghi và báo "ngày đã sẵn sàng" không kèm trạng thái cho người chấm, không báo chuyên gia; chạy lại không trùng, không báo lại', async () => {
     const { house, owner, expert } = await scenario({ humidityOutSlots: HUMIDITY_SLIGHT, rates: FLOCK_CLEAR })
     expect(await assessAllHouses(DATE, NOW)).toBe(1)
     expect(await assessAllHouses(DATE, NOW)).toBe(0)
 
     expect(await HouseHealthDay.countDocuments({ house_id: house._id })).toBe(1)
+    // Chỉ người chấm được báo (BR-31, Report 3 4.2.0): chuyên gia không chấm nên không nhận
     const recipients = (notifyUser as jest.Mock).mock.calls.map(c => c[0])
-    expect(recipients.sort()).toEqual([String(owner._id), String(expert!._id)].sort())
+    expect(recipients).toEqual([String(owner._id)])
+    expect(recipients).not.toContain(String(expert!._id))
     for (const [, message] of (notifyUser as jest.Mock).mock.calls) {
       expect(JSON.stringify(message)).not.toMatch(/ACTION|WATCH|GOOD|Cần xử lý/)
       expect(message.ref.kind).toBe('health_day')

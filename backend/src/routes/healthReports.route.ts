@@ -5,6 +5,7 @@ import * as healthDayController from '@/controllers/healthDays.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 import { HOUSE_REPORT_KINDS } from '@/models/houseHealthReport.model'
+import { ASSESSOR_ROLES } from '@/services/healthDay.service'
 import { REASON_LANGS } from '@/utils/healthReason.util'
 
 const router = Router()
@@ -24,13 +25,17 @@ const dayId = param('dayId').isMongoId()
 router.get('/days', ...dayScope, query('myRatingState').optional().isIn(['PENDING', 'RATED', 'SKIPPED', 'EXPIRED']),
   validate, healthDayController.listDays)
 router.get('/days.csv', ...dayScope, query('lang').optional().isIn(REASON_LANGS), validate, healthDayController.exportCsv)
-router.get('/evaluation', ...dayScope, query('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT']), validate, healthDayController.evaluation)
+router.get('/evaluation', ...dayScope, query('role').optional().isIn([...ASSESSOR_ROLES]), validate, healthDayController.evaluation)
+// EXPERT-FR-022 — chuyên gia xem các ngày người chấm đánh giá khác hệ thống (quyền BR-22 kiểm ở service)
+router.get('/disagreements', ...dayScope, validate, healthDayController.disagreements)
 router.get('/days/:dayId', dayId, validate, healthDayController.getDay)
-router.post('/days/:dayId/rating', dayId,
+// BR-31 (Report 3 4.2.0) — chỉ người chấm; G-20 thêm FARM_TECHNICIAN cùng ASSESSOR_ROLES
+const assessorOnly = requireRole(...ASSESSOR_ROLES)
+router.post('/days/:dayId/rating', assessorOnly, dayId,
   body('rating').isIn(['GOOD', 'WATCH', 'ACTION']), body('note').optional().isString().trim().isLength({ max: 1000 }),
   validate, healthDayController.rate)
-router.post('/days/:dayId/skip', dayId, validate, healthDayController.skip)
-router.patch('/days/:dayId/rating/note', dayId, body('note').isString().trim().isLength({ min: 1, max: 1000 }), validate, healthDayController.addNote)
+router.post('/days/:dayId/skip', assessorOnly, dayId, validate, healthDayController.skip)
+router.patch('/days/:dayId/rating/note', assessorOnly, dayId, body('note').isString().trim().isLength({ min: 1, max: 1000 }), validate, healthDayController.addNote)
 
 // EXPERT-FR-005 — báo cáo theo nhà (houseId | farmId); zoneId là kiểu cũ (báo cáo tuần theo Zone), giữ cho màn hiện có
 router.get('/',

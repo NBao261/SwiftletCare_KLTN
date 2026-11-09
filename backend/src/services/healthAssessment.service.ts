@@ -6,7 +6,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
 import { BASELINE_DAYS, MIN_BASELINE_DAYS, houseDailyCounts, vnDate, type HouseDayCounts } from '@/services/birdCount.service'
-import { findFarmExperts, findRecipients, notifyUser } from '@/services/notification.service'
+import { findRecipients, notifyUser } from '@/services/notification.service'
 import { listActiveHouseIds } from '@/utils/farmAccess.util'
 import { resolveBirdCountTuning, resolveHealthLevels } from '@/utils/detectionTuning.util'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
@@ -377,11 +377,13 @@ export async function assessAllHouses(date = vnDate(new Date()), now = new Date(
   return created
 }
 
-/** EXPERT-FR-012 — thông báo không có trạng thái: người nhận phải chấm trước khi xem */
+/**
+ * EXPERT-FR-012 — thông báo không có trạng thái: người nhận phải chấm trước khi xem. Chỉ người chấm
+ * (BR-31: Farm Owner; G-20 thêm Farm Technician của nhà); Domain Expert không chấm nên không nhận.
+ */
 async function notifyDayReady(day: IHouseHealthDay): Promise<void> {
   const house = await House.findById(day.house_id).select('name').lean()
-  const owners = (await findRecipients(String(day.farm_id))).map(u => String(u._id))
-  const recipients = [...owners, ...await findFarmExperts(day.farm_id)]
+  const recipients = (await findRecipients(String(day.farm_id))).map(u => String(u._id))
   await Promise.all(recipients.map(id => notifyUser(id, {
     title: `Đánh giá ngày ${day.date} của ${house?.name ?? 'nhà yến'}`,
     body: 'Hãy chấm tình trạng đàn theo quan sát của bạn trước khi xem kết quả của hệ thống.',

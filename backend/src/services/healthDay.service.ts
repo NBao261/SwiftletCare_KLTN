@@ -5,20 +5,29 @@ import { User } from '@/models/user.model'
 import { logAction } from '@/services/auditLog.service'
 import { vnDate } from '@/services/birdCount.service'
 import { RATING_WINDOW_DAYS, addDays, vnDayStart } from '@/services/healthAssessment.service'
-import { AppError, BadRequestError, NotFoundError } from '@/utils/appError.util'
+import { AppError, BadRequestError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import {
   ORDERED_STATUSES, agreementWithCI, confusionMatrix, falseAlarmRate, gwetAC1, linearWeightedKappa,
   type OrderedStatus, type RatingPair,
 } from '@/utils/agreement.util'
-import { assertFarmAccess, assertHouseAccess } from '@/utils/farmAccess.util'
+import { resolveHealthLevels } from '@/utils/detectionTuning.util'
+import { assertExpertDecision, assertFarmAccess, assertHouseAccess } from '@/utils/farmAccess.util'
 import { formatReason, type ReasonLang } from '@/utils/healthReason.util'
-import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, HealthRatingValue, HealthSource } from '@/types'
+import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, HealthRatingValue, HealthSource, Role } from '@/types'
 
 /**
  * EXPERT-FR-012, BR-31, SM-18 — chấm độc lập trạng thái ngày. Người chưa chấm (hoặc chưa bỏ qua) một
  * ngày còn trong hạn thì MỌI đường đọc (ngày, danh sách, CSV, độ khớp) không trả trạng thái, lý do, mức
  * của chỉ số hay điểm của người khác — che ở server, không dựa vào màn hình.
  */
+
+/**
+ * BR-31 (Report 3 4.2.0) — người chấm: Farm Owner (những ngày có mặt ở nhà) và Farm Technician của nhà
+ * (mỗi ngày, thêm vào đây cùng vai `FARM_TECHNICIAN` ở G-20). Domain Expert không chấm: xem các ngày lệch
+ * (EXPERT-FR-022) và thấy trạng thái ngay vì không có gì để che.
+ */
+export const ASSESSOR_ROLES: readonly Role[] = ['FARM_OWNER']
+export const isAssessor = (role: Role) => ASSESSOR_ROLES.includes(role)
 
 /** Khoảng đọc tối đa 1 lần (EXPERT-FR-005: báo cáo theo yêu cầu tới 31 ngày) */
 export const MAX_DAY_RANGE = 31
@@ -32,9 +41,10 @@ const ratingClosed = (message: string) => new AppError(409, 'RATING_CLOSED', mes
 /** Hết hạn chấm: đầu ngày thứ 8 sau ngày đó (giờ VN) — ngày D chấm được tới hết ngày D + 7 */
 export const ratingDeadline = (date: string) => vnDayStart(addDays(date, RATING_WINDOW_DAYS + 1))
 
-/** SM-18 — suy ra từ ratings và ngày, không lưu */
-export function ratingState(day: Pick<IHouseHealthDay, 'date' | 'ratings'>, userId: string, now = new Date()): HealthRatingState {
-  const mine = day.ratings.find(r => String(r.by) === userId)
+/** SM-18 — suy ra từ ratings và ngày, không lưu; null khi người gọi không phải người chấm (BR-31) */
+export function ratingState(day: Pick<IHouseHealthDay, 'date' | 'ratings'>, user: CurrentUser, now = new Date()): HealthRatingState | null {
+  if (!isAssessor(user.role)) return null
+  const mine = day.ratings.find(r => String(r.by) === user._id)
   if (mine) return mine.outcome
   return now < ratingDeadline(day.date) ? 'PENDING' : 'EXPIRED'
 }
@@ -50,7 +60,7 @@ async function userNames(days: LeanDay[]): Promise<Map<string, string>> {
 
 /** Bản trả cho client — đang PENDING thì chỉ còn nhà, ngày, thời tiết và hạn chấm */
 function present(day: LeanDay, houseName: string, user: CurrentUser, names: Map<string, string>, now: Date) {
-  const state = ratingState(day, user._id, now)
+  const state = ratingState(day, user, now)
   const base = {
     _id: String(day._id),
     house_id: String(day.house_id),
@@ -154,6 +164,11 @@ export async function getHealthDay(dayId: string, user: CurrentUser, now = new D
   return present(day, house.name, user, await userNames([day]), now)
 }
 
+/** BR-31 — chặn cả ở service, không chỉ ở route: chỉ người chấm mới chấm, bỏ qua hay ghi chú */
+function assertAssessor(user: CurrentUser): void {
+  if (!isAssessor(user.role)) throw ForbiddenError('Chỉ người chấm (Farm Owner, Farm Technician của nhà) mới chấm ngày này')
+}
+
 /**
  * POST …/rating và …/skip — EXPERT-FR-012: lưu điểm cùng ảnh chụp trong MỘT lệnh ghi (pipeline update
  * đọc `current_*` ngay lúc ghi), rồi mới trả trạng thái. Đã chấm / đã bỏ qua / quá hạn → 409.
@@ -161,8 +176,9 @@ export async function getHealthDay(dayId: string, user: CurrentUser, now = new D
 async function submit(
   dayId: string, user: CurrentUser, input: { outcome: 'RATED' | 'SKIPPED'; rating?: HealthRatingValue; note?: string }, now: Date,
 ) {
+  assertAssessor(user)
   const { day, house } = await findDayForUser(dayId, user)
-  const state = ratingState(day, user._id, now)
+  const state = ratingState(day, user, now)
   if (state === 'EXPIRED') throw ratingClosed(`Đã quá ${RATING_WINDOW_DAYS} ngày, không chấm ngày này được nữa`)
   if (state !== 'PENDING') throw ratingClosed('Bạn đã chấm hoặc bỏ qua ngày này; chỉ thêm được ghi chú')
 
@@ -202,6 +218,7 @@ export const skipHealthDay = (dayId: string, user: CurrentUser, now = new Date()
 
 /** PATCH …/rating/note — SM-18 RATED → RATED: thêm ghi chú, điểm không đổi */
 export async function addRatingNote(dayId: string, user: CurrentUser, note: string, now = new Date()) {
+  assertAssessor(user)
   const { day, house } = await findDayForUser(dayId, user)
   const updated = await HouseHealthDay.findOneAndUpdate(
     { _id: day._id, ratings: { $elemMatch: { by: new Types.ObjectId(user._id), outcome: 'RATED' } } },
@@ -305,10 +322,11 @@ export async function evaluateRatings(
 ) {
   const { days, houseNames, from, to } = await findDays(user, params, MAX_EVALUATION_RANGE, now)
   const names = await userNames(days)
-  const visible = days.filter(d => ratingState(d, user._id, now) !== 'PENDING')
+  const visible = days.filter(d => ratingState(d, user, now) !== 'PENDING')
 
+  // Chỉ điểm của người chấm (BR-31); điểm Domain Expert chấm trước Report 3 4.2.0 không tính
   const rated = visible.flatMap(d => d.ratings
-    .filter(r => r.outcome === 'RATED' && r.rating && (!params.role || r.role === params.role))
+    .filter(r => r.outcome === 'RATED' && r.rating && isAssessor(r.role) && (!params.role || r.role === params.role))
     .map(r => ({ day: d, r })))
   const insufficient = rated.filter(x => x.r.snapshot.status === 'INSUFFICIENT_DATA')
   const counted = rated.filter(x => x.r.snapshot.status !== 'INSUFFICIENT_DATA')
@@ -339,5 +357,58 @@ export async function evaluateRatings(
       rating: r.rating,
       counted: r.snapshot.status !== 'INSUFFICIENT_DATA',
     })),
+  }
+}
+
+// ── Ngày lệch (EXPERT-FR-022) ─────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /health-reports/disagreements — các ngày có điểm của người chấm khác trạng thái trong ảnh chụp lúc
+ * chấm, để chuyên gia xem mức chỉ số của nhà (BR-28) có hợp không rồi chỉnh bằng PUT …/health-levels.
+ * Ảnh chụp INSUFFICIENT_DATA không so được nên bỏ. Quyền như mọi quyết định của chuyên gia (BR-22).
+ */
+export async function listDisagreements(
+  user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, now = new Date(),
+) {
+  const farm = params.houseId
+    ? (await assertHouseAccess(params.houseId, user)).farm
+    : params.farmId ? await assertFarmAccess(params.farmId, user) : null
+  if (!farm) throw BadRequestError('Cần houseId hoặc farmId')
+  await assertExpertDecision(farm, user)
+
+  const { days, houseNames, from, to } = await findDays(user, params, MAX_EVALUATION_RANGE, now)
+  const names = await userNames(days)
+  const houses = await House.find({ _id: { $in: [...houseNames.keys()] } }).select('name health_levels').lean()
+
+  const result = days.flatMap(d => {
+    const disagreements = d.ratings
+      .filter(r => r.outcome === 'RATED' && r.rating && isAssessor(r.role)
+        && r.snapshot.status !== 'INSUFFICIENT_DATA' && r.rating !== r.snapshot.status)
+      .map(r => ({
+        assessor: { full_name: names.get(String(r.by)) ?? null, role: r.role },
+        rating: r.rating,
+        snapshot_status: r.snapshot.status,
+        snapshot_reasons: r.snapshot.reasons,
+        snapshot_levels: r.snapshot.levels ?? {},
+        note: r.note ?? null,
+        at: r.at,
+      }))
+    if (disagreements.length === 0) return []
+    return [{
+      day_id: String(d._id),
+      house_id: String(d.house_id),
+      house_name: houseNames.get(String(d.house_id)) ?? '',
+      date: d.date,
+      current_status: d.current_status,
+      current_reasons: d.current_reasons,
+      indicators: d.indicators,
+      disagreements,
+    }]
+  })
+
+  return {
+    from, to,
+    houses: houses.map(h => ({ house_id: String(h._id), house_name: h.name, health_levels: resolveHealthLevels(h.health_levels) })),
+    days: result,
   }
 }
