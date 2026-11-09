@@ -56,9 +56,9 @@ ST_MAP = {'6.1 Alert': ('WF-02', L), '6.2 ExpertVerdict': ('WF-04', T), '6.3 Con
           '6.6 Controller/CameraNode': ('WF-01', K), '6.16 DeviceStockItem': ('WF-03', K), '6.12 Controller config': ('WF-05', B),
           '6.10 ReviewItem': ('WF-05', T), '6.11 CoefficientProposal': ('WF-05', T), '6.17 DailyHealthStatus': ('WF-06', N),
           '6.18 DailyRating': ('WF-06', N), '6.9 HealthReport': ('WF-06', N), '6.19 WorkOrder': ('WF-02', K),
-          '6.20 MaintenancePlan': ('WF-07', L), '6.21 Recommendation': ('WF-08', T)}
+          '6.20 MaintenancePlan': ('WF-07', L), '6.21 Recommendation': ('WF-08', N)}
 NFR_MAP = {'NFR-01': ('WF-01', N), 'NFR-06': ('WF-01', B), 'NFR-02': ('WF-02', L), 'NFR-15': ('WF-02', K),
-           'NFR-09': ('WF-03', B), 'NFR-13': ('WF-05', T), 'NFR-14': ('WF-06', N)}
+           'NFR-09': ('WF-03', B), 'NFR-13': ('WF-05', N), 'NFR-14': ('WF-06', N)}
 
 
 def kind(src):
@@ -144,7 +144,7 @@ WORKFLOWS = [
      'MaintenancePlan: SCHEDULED → DUE → SCHEDULED; WorkOrder: OPEN → CLOSED', 'Report 4 §9.7 (AD-07)',
      [('DS-13', 'Main', 'Pump plan of 500 h; counter seeded at 499 h', 'Run the pump 1 h; the technician follows the checklist and records it', 'MAINTENANCE_DUE and a preventive Work Order; counter reset, next due point shown'),
       ('DS-14', 'Exception', 'Plan due for 7 days', 'Run the due job; answer a checklist item "defect"', 'Plan OVERDUE, Farm Owner notified; repair Work Order opened')]),
-    ('WF-08', 'Recommendation loop (MF-08)', T, [B, K], f'{DE}, {FO}, {FT}',
+    ('WF-08', 'Recommendation loop (MF-08)', T, [N, B, K], f'{DE}, {FO}, {FT}',
      "An active recommendation rule of the Domain Expert holds for a house",
      'A recommendation with its evidence accepted (Work Order or proposed parameter change) or rejected with a reason; its effect measured after 7 days',
      'Recommendation: OPEN → ACCEPTED → MEASURED', 'Report 4 §9.8 (AD-08)',
@@ -239,7 +239,7 @@ MEMBERS = [  # name, student code, role, modules/entities, decisions, documentat
     (B, 'SE183383', 'Leader; IoT and AI', 'Firmware (controller, weather offset); AI pipeline (AI node); backend of bird counting, configuration sync, knowledge rules, farm overview, harvest cycles; device simulator; staging. Entities: Controller configuration, CameraNode, BirdCountRecord, ConfigProfile, RecommendationRule, Recommendation, HarvestCycle', 'D1, D2', 'Reports 1–5 and Project Tracking (editor); Report 4 §2–4, §8'),
     (K, 'SE182180', 'Backend', 'Backend of devices, accounts, alerts, the expert module, daily health and operations (routing, Work Orders, maintenance plans). Entities: Device, DeviceStockItem, Alert, ReviewItem, CoefficientProposal, HouseHealthDay, WorkOrder, MaintenancePlan', 'D4, D6', 'Report 4 §5–6 (backend, data model, database script)'),
     (L, 'SE182055', 'Mobile', 'Mobile app for the Farm Owner and the Farm Technician: alerts, manual override, Work Orders, checklists, QR setup, counting ring, daily rating, push token', '—', 'Report 4 §9.2, §9.7 (AD-02, AD-07)'),
-    (N, 'SE184223', 'Web: Farm Owner, Administrator', 'Web for the Farm Owner and the Administrator: overview, house comparison, daily status, reports PDF/CSV, Work Order approval, maintenance plans, harvest cycles, labels', 'D5', 'Report 4 §9.6 (AD-06)'),
+    (N, 'SE184223', 'Web: Farm Owner, Administrator', 'Web for the Farm Owner and the Administrator: overview, house comparison, daily status, reports PDF/CSV, Work Order approval, decisions on recommendations, maintenance plans, harvest cycles, labels', 'D5', 'Report 4 §9.6 (AD-06)'),
     (T, 'SE181850', 'Web: Domain Expert', 'Web for the Domain Expert: verdicts, tuning, review items, suggestions, profiles, recommendation and weather rules, counting ring, season conclusions; Administrator device console', 'D3', 'Report 4 §9.4, §9.5, §9.8 (AD-04, AD-05, AD-08)'),
 ]
 NFR_OWNER = {m: [n for n, (w, o) in NFR_MAP.items() if o == m] for m, *_ in MEMBERS}

@@ -33,7 +33,7 @@
 | Nguyễn Chí Bảo | SE183383 | Leader; firmware, AI pipeline, backend core; documents |
 | Trần Minh Kiệt | SE182180 | Backend (devices, accounts, alerts, expert module, daily health); firmware self-diagnosis |
 | Nguyễn Vũ Len | SE182055 | Mobile application – Farm Owner and Farm Technician |
-| Nguyễn Thị Yến Nhi | SE184223 | Web application – Farm Owner (analytics, daily health, reports, farm overview, house comparison, Work Orders, harvest cycles) and Administrator |
+| Nguyễn Thị Yến Nhi | SE184223 | Web application – Farm Owner (analytics, daily health, reports, farm overview, house comparison, Work Orders, decisions on recommendations, harvest cycles) and Administrator |
 | Thái Minh Tuấn | SE181850 | Web and mobile application – Domain Expert (verdicts, profiles, recommendation rules, season conclusions); Administrator device console |
 
 Responsibilities in detail are in Report 2, Section 4, and in the Ownership Map of the Design Brief.

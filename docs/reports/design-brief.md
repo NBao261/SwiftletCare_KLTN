@@ -126,7 +126,7 @@ FO Farm Owner, FT Farm Technician, DE Domain Expert (FO if none); auto = system 
 | Nguyễn Chí Bảo | Leader; IoT, AI | Firmware, weather offset; AI pipeline; analytics backend, simulator | WF-01, 03 | D1, D2; #88 |
 | Trần Minh Kiệt | Backend | Devices, alerts, expert; operations backend; daily health | WF-05 | D4, D6; #113 |
 | Nguyễn Vũ Len | Mobile | Owner and Technician mobile app; E2E | WF-02, 07 | #123, #93 |
-| Nguyễn Thị Yến Nhi | Web: Owner, Admin | Owner web: overview, KPIs, Work Orders, cycles; Admin | WF-06 | D5; #26, #72 |
+| Nguyễn Thị Yến Nhi | Web: Owner, Admin | Owner web: overview, KPIs, Work Orders, recommendations, cycles; Admin | WF-06 | D5; #26, #72 |
 | Thái Minh Tuấn | Web: Expert | Expert screens: verdicts, profiles, rules, seasons | WF-04, 08 | D3; #91, #125 |
 
 ---

@@ -60,7 +60,7 @@ Cập nhật 03/11/2026 (6 luồng chính theo quy trình nghiệp vụ, SRS 3.2
 Việc không cần backend mà Len, Tuấn, Nhi nhận thêm (mục 3, mục 5):
 
 - gán nhãn hộp `swiftlet` trên Roboflow và đếm tay clip cho NFR-09 (Bảo chia ngày quay, duyệt 20 khung đầu của mỗi người);
-- đo NFR phía client trên staging: Nhi NFR-01, 03 (k6); Len NFR-02; Tuấn NFR-13;
+- đo NFR phía client trên staging: Nhi NFR-01, 03 (k6) và NFR-13; Len NFR-02;
 - ảnh màn hình cho Report 4 §5 và hướng dẫn sử dụng phần màn của mình.
 
 ### 0.2 Quy tắc để không giẫm chân nhau
