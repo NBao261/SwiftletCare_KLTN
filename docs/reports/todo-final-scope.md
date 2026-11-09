@@ -196,13 +196,13 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo scope cuối:
 
-- [ ] Người chấm (BR-31, EXPERT-FR-012):
+- [ ] Người chấm (BR-31, EXPERT-FR-012): *(Farm Owner xong, Domain Expert và Administrator 403 — Kiệt, 10/11, `08c5e18`; Farm Technician chờ G-20)*
   - Farm Technician của nhà chấm **mỗi ngày**; Farm Owner chấm **những ngày có mặt ở nhà**;
   - Domain Expert và Administrator gửi chấm điểm thì 403;
   - mỗi technician và mỗi Farm Owner chấm riêng.
-- [ ] Trước khi chấm hoặc bỏ qua, mọi endpoint (ngày, báo cáo, CSV) không trả trạng thái, lý do hay điểm của người khác. Rating và snapshot lưu trong một lần ghi atomic, rồi mới trả trạng thái.
-- [ ] Ngày được tạo lượt chấm chờ cho từng technician được gán và từng Farm Owner. Quá 7 ngày chưa chấm thì `EXPIRED` (SM-18).
-- [ ] **Xem ngày lệch (EXPERT-FR-022):**
+- [x] Trước khi chấm hoặc bỏ qua, mọi endpoint (ngày, báo cáo, CSV) không trả trạng thái, lý do hay điểm của người khác. Rating và snapshot lưu trong một lần ghi atomic, rồi mới trả trạng thái. *(đã có từ 31/10, giữ nguyên khi đổi người chấm)*
+- [ ] Ngày được tạo lượt chấm chờ cho từng technician được gán và từng Farm Owner. *(lượt chấm suy ra lúc đọc, không lưu; Farm Owner xong, chuyên gia không còn lượt chấm — `08c5e18`; technician chờ G-20)* Quá 7 ngày chưa chấm thì `EXPIRED` (SM-18).
+- [x] **Xem ngày lệch (EXPERT-FR-022):** *(backend: Kiệt, 10/11, `4dda5e6` + `08c5e18`, `GET /health-reports/disagreements`; màn hình: Tuấn)*
   - chuyên gia xem các ngày có điểm chấm khác snapshot, kèm chỉ số và lý do của từng ngày;
   - chuyên gia chỉnh mức chỉ số sức khỏe của nhà (BR-28); thay đổi lưu lịch sử và áp từ lần đánh giá tiếp theo;
   - Farm Owner (ở farm có chuyên gia) hoặc technician vào chức năng này thì 403.
