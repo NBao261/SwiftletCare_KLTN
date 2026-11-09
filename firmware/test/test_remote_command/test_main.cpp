@@ -23,6 +23,12 @@ void test_config_payload_without_command_is_not_a_command() {
   TEST_ASSERT_EQUAL(RemoteCommand::NONE, parseRemoteCommand("{\"deviceId\":\"d1\",\"temp_min\":26}", "1.4.0").type);
 }
 
+void test_restart_keeps_its_command_id() {
+  RemoteCommand cmd = parseRemoteCommand("{\"command\":\"RESTART\",\"commandId\":\"c1\",\"issuedAt\":1770000000000}", "1.4.0");
+  TEST_ASSERT_EQUAL_STRING("c1", cmd.commandId);
+  TEST_ASSERT_TRUE(cmd.issuedAt == 1770000000000ULL);
+}
+
 void test_restart() {
   TEST_ASSERT_EQUAL(RemoteCommand::RESTART, parseRemoteCommand("{\"deviceId\":\"d1\",\"command\":\"RESTART\"}", "1.4.0").type);
 }
@@ -79,6 +85,7 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_config_payload_without_command_is_not_a_command);
   RUN_TEST(test_restart);
+  RUN_TEST(test_restart_keeps_its_command_id);
   RUN_TEST(test_valid_ota_keeps_its_fields);
   RUN_TEST(test_ota_is_rejected_when_unsafe_or_incomplete);
   RUN_TEST(test_too_long_url_is_rejected_not_truncated);

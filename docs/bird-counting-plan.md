@@ -85,7 +85,7 @@ Các quyết định thiết kế:
 | Vẽ ô xanh thẳng lên frame rồi mới phát | Khung luôn khớp hình. Gửi tọa độ qua socket cho frontend tự vẽ sẽ lệch pha với video |
 | Xem bằng WebRTC qua MediaMTX | Độ trễ dưới khoảng 1–2 giây, H.264 tốn băng thông ít hơn MJPEG nhiều lần |
 | MJPEG qua HTTP chỉ dùng khi dev | Mở `http://127.0.0.1:8090/stream` trên máy đang chạy pipeline để hiệu chỉnh ROI và vạch đếm |
-| Một tên miền, Caddy làm reverse proxy | Caddy tự cấp HTTPS và lặp lại đúng proxy của Vite (`/api`, `/socket.io`), nên frontend không cần đổi cấu hình và cookie refresh `sameSite: strict` vẫn hoạt động |
+| Một tên miền, reverse proxy (nay là Nginx + Certbot, xem mục 15) | Caddy tự cấp HTTPS và lặp lại đúng proxy của Vite (`/api`, `/socket.io`), nên frontend không cần đổi cấu hình và cookie refresh `sameSite: strict` vẫn hoạt động |
 | Nguồn vào là RTSP **hoặc** file video | Dev, gán nhãn và đo độ chính xác đều làm được khi chưa có camera |
 | Một class `swiftlet` | SRS v2.1 đã bỏ phát hiện thiên địch |
 | Lưu 1 bản ghi cho mỗi (camera, phiên, ngày) **và** 1 bản ghi cho mỗi khoảng 5 phút | Bản ghi theo phiên cho tỷ lệ chim về. Bản ghi 5 phút (VISION-FR-017) là dữ liệu để đối chiếu với cảnh báo ồn bất thường, kể cả ngoài phiên (SRS Flow 25, EXPERT-FR-003) |
@@ -1713,6 +1713,8 @@ Checklist:
 ---
 
 ## 15. GĐ-C — Triển khai cloud
+
+> **Cập nhật 04/11/2026:** staging dùng **Nginx + Certbot** thay Caddy và tls-proxy (Report 4 §3.4, §11; `docs/deploy/staging.md` §2.2). Compose và Caddyfile mẫu dưới đây viết lại theo Nginx khi làm G-17.
 
 Thời gian: khoảng 3 ngày công. Chạy song song GĐ1–GĐ4; cần GĐ3 (backend) xong mới thử được video end-to-end.
 
