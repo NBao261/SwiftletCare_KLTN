@@ -23,7 +23,7 @@ Scope is the final registration form v3: main flows MF-01…08 and supporting fl
 
 | WBS | Work package | Main deliverable | Owner | Estimate (person-days) | Done at Review 2 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.5.x (sensing, fuzzy control with weather offset, self-diagnosis, run hours, offline buffer, OTA); controller board with current sensing | Bảo, Kiệt | 50 | About 70 % (board, current check, config version and MQTT TLS remain) |
+| 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.6.x (sensing, fuzzy control with weather offset, self-diagnosis, run hours, offline buffer, OTA); controller board with current sensing | Bảo, Kiệt | 50 | About 70 % (board, current check, config version and MQTT TLS remain) |
 | 2 | Vision (Task 2) | Labelled dataset, trained YOLO model, counting pipeline, annotated stream, accuracy report | Nguyễn Chí Bảo | 40 | About 55 % (pipeline, MQTT publishing, video push and tests done; first YOLOv8n and YOLO11n models trained on the team's labelled frames on 03/11/2026; evaluation on held-out clips, device topics remain) |
 | 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine with routing and escalation, Work Orders and maintenance, forecasting and weather offset, expert module with profiles and recommendation rules, daily health assessment, reports, farm overview and comparison, harvest cycles | Kiệt, Bảo | 115 | About 50 % (final scope); before Review 2 about 80 % (expert loop, review items, proposals, breach dwell and invitation-only accounts done; MF-06, manual override limits, config sync, FCM remain) |
 | 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens (overview, comparison, Work Orders, plans, profiles, rules, harvest cycles); mobile app for the Farm Owner and the Farm Technician with QR setup, push, Work Orders and checklists | Len, Nhi, Tuấn, Bảo | 105 | Web about 50 %, mobile about 20 % (final scope) |
@@ -44,7 +44,7 @@ Scope is the final registration form v3: main flows MF-01…08 and supporting fl
 
 | ID | Risk | Probability | Impact | Mitigation | Owner |
 | --- | --- | --- | --- | --- | --- |
-| RK-1 | No trained swiftlet model in time; the spare PC is too slow for 25 fps | High | High | Train early on the 3 recorded days; measure fps on the PC in Iteration 2; fall back to a smaller input or one tile; demo on clips through the same pipeline | Nguyễn Chí Bảo |
+| RK-1 | The count error of the swiftlet model stays above the 10 % of NFR-09 (model v1, trained 03/11/2026: about 10 % against hand counts); the spare PC is too slow for 25 fps | High | High | Retrain (v2) on hard frames (fast birds, belly views, birds rising from below), measured on the same test days and clips as v1; measure fps on the PC in Iteration 2; fall back to a smaller input or one tile; demo on clips through the same pipeline | Nguyễn Chí Bảo |
 | RK-2 | Daily health assessment built late, leaving fewer than 14 rated days | Medium | High | Build MF-06 first in Iteration 2; start the field run as soon as the system is installed | Nguyễn Thị Yến Nhi |
 | RK-3 | Staging not ready or unreachable from the defence room | Medium | High | Staging in Iteration 2; rehearse from the university network; 4G hotspot and recorded demo as back-up (`docs/deploy/staging.md`) | Nguyễn Chí Bảo |
 | RK-4 | Test house unavailable (borrowed), power or Internet cuts at the house | Medium | Medium | Bench prototype with the same firmware; offline operation is itself tested (MF-01) | Nguyễn Chí Bảo |
@@ -195,7 +195,7 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 | --- | --- | --- |
 | 1.5.0 | 09/11/2026 | Eight main flows (harvest season summary is supporting flow SF-06): 27 mandatory features and 170 committed test cases |
 | 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): work packages of the new scope (Kiệt operations backend; Bảo firmware weather offset, knowledge and analytics backend, simulator; Len technician mobile; Tuấn expert web; Nhi owner web), workflows WF-07…09, 28 mandatory features and 186 committed test cases, risk of the larger scope |
-| 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…09; device setup is supporting flow SF-01 |
+| 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…06; device setup is supporting flow SF-01 |
 | 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo; Farm Owner web to Nhi, mobile to Len on 03/11/2026), skills, workflow owners, RK-3 and RK-8 |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0 and SDD 1.1.0: progress judged from Project Tracking, Iteration 1 and 2 content corrected, RACI wording, risks RK-8 (mobile scope) and RK-9 (move to device topics) |
 | 1.0.0 | 23/10/2026 | First version for Review 2 |

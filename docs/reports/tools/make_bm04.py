@@ -4,7 +4,7 @@ Usage (repository root): python3 docs/reports/tools/make_bm04.py
 
 Workflows, features and demo scenarios follow the Design Brief (BM01, Appendix A); every count is
 computed from docs/reports/report5/tc.py, so sections 6-8 always equal Report 5. A test case is
-counted for one member and one workflow only (ALLOCATION below). Signatures, the reviewers' names,
+counted for one member and one workflow only (ALLOCATION below). Signatures, dates,
 the reviewers' verification and the conclusion are left blank for the review board.
 """
 import copy, os, sys
@@ -199,7 +199,7 @@ FIXES = [  # id, item, workflow, owner, due  (Review 2 feedback, then BM02 Plann
     ('D-06', 'Unique indexes telemetries(node_id, timestamp) and partial alerts(node_id, event_id) (G-14)', 'WF-01, WF-02', K, '02/12/2026'),
     ('D-07', 'Enumerations aligned with the ERD; TECHNICIAN replaced by FARM_TECHNICIAN (G-14, G-20)', 'WF-02', K, '02/12/2026'),
     ('ST-01', 'Restore transition DECOMMISSIONED → previous state within 24 h in SM-06 (Report 3 §6.6, Report 4 §8.6)', 'SF-02', B, '11/11/2026'),
-    ('ST-02', 'Per-relay mode and expiry; end reasons as in ENV-FR-019 (G-06)', 'WF-01', K, '02/12/2026'),
+    ('ST-02', 'Per-relay mode and expiry; end reasons as in ENV-FR-019 (G-06; backend and firmware 1.6.0 merged by PR #124, mobile and a board trial remain)', 'WF-01', K, '02/12/2026'),
     ('ST-03a', 'SM-12 starts at PENDING; UNKNOWN exits to APPLIED (Report 3 §6.12, Report 4 §8.12)', 'WF-05', B, '11/11/2026'),
     ('ST-03b', 'Configuration version in code (G-08)', 'WF-05', B, '02/12/2026'),
     ('ST-04', 'User status field (G-14)', 'SF-03', K, '02/12/2026'),
@@ -209,7 +209,7 @@ FIXES = [  # id, item, workflow, owner, due  (Review 2 feedback, then BM02 Plann
     ('F-01a', 'Daily status and ratings with their tests (G-11)', 'WF-06', K, '02/12/2026'),
     ('F-01b', 'Daily, weekly and monthly reports per house (G-11)', 'WF-06', K, '23/12/2026'),
     ('F-02', 'Configuration version and CONFIG_MISMATCH (G-08); counting schedule (G-12), with their tests', 'WF-05, WF-03', B, '02/12/2026'),
-    ('F-03', 'Sessions from buckets, incomplete sessions, trained model, NFR-09 measurement (G-12)', 'WF-03', B, '02/12/2026'),
+    ('F-03', 'Sessions from buckets, incomplete sessions; model v2 (v1 about 10 % off hand counts) and NFR-09 measurement (G-12)', 'WF-03', B, '02/12/2026'),
     ('F-04a', 'FCM sending (G-10) and event IDs (G-07)', 'WF-02', B, '02/12/2026'),
     ('F-04b', 'ACTUATOR_FAULT with the current-sensing board (G-13)', 'WF-02', B, '23/12/2026'),
     ('F-05', 'QoS 1 upload kept until PUBACK; native test of StorageManager (G-07)', 'WF-01', B, '02/12/2026'),
@@ -229,7 +229,7 @@ FIXES = [  # id, item, workflow, owner, due  (Review 2 feedback, then BM02 Plann
     ('A-07', 'List expertReview, tuningSuggestion, alertEvidence, storage, deletionRequestReminder in Report 4 §5.3', 'WF-04, WF-05', B, '11/11/2026'),
     ('C-01', 'Device topics, per-device credential, config/reassign removed, identity kept only in the backend (G-07)', 'WF-01, SF-01', B, '02/12/2026'),
     ('C-02', 'FARM_TECHNICIAN on assigned houses replaces TECHNICIAN; remote commands for the Administrator; Administrator creates Farm Owner accounts (G-20, G-02)', 'WF-02, SF-02, SF-03', K, '02/12/2026'),
-    ('C-03', 'Pump limit, confirmation (409), command freshness and the constants of Report 4 §5.5 (G-06)', 'WF-01', K, '02/12/2026'),
+    ('C-03', 'Pump limit, confirmation (409), command freshness and the constants of Report 4 §5.5 (G-06; backend, firmware and web merged by PR #124, mobile remains)', 'WF-01', K, '02/12/2026'),
     ('C-04', 'Daily, weekly and monthly reports per house (EXPERT-FR-005, BR-33; G-11)', 'WF-06', K, '23/12/2026'),
     ('C-05', 'Source required and history of default thresholds (ENV-FR-007; G-18)', 'SF-05', K, '23/12/2026'),
 ]
@@ -244,6 +244,8 @@ MEMBERS = [  # name, student code, role, modules/entities, decisions, documentat
 ]
 NFR_OWNER = {m: [n for n, (w, o) in NFR_MAP.items() if o == m] for m, *_ in MEMBERS}
 DUE = '23/12/2026 (end of Iteration 3, before Defense 1.1)'
+REVIEWERS = ('VuLNS', 'TamPM')  # Review 2 board, as given by the team
+SUPERVISORS = ('Nguyễn Văn Chiến', 'Trương Long')
 
 # ---- build ----
 d = docx.Document(os.path.join(REPORTS, 'templates', 'SEP490_R2_BM04_Review2_Commitment.docx'))
@@ -287,7 +289,7 @@ tb = d.tables
 set_kv(tb[0], {'Project code': 'FA26SE158',
                'Project name': 'SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming',
                'Team': f'{B} (Leader), {K}, {L}, {N}, {T}', 'Supervisor': 'Nguyễn Văn Chiến, Trương Long',
-               'Review 2 date': '04/11/2026', 'Reviewer 1': '', 'Reviewer 2': '', 'Version': '1.0', 'Date': '09/11/2026'})
+               'Review 2 date': '04/11/2026', 'Reviewer 1': REVIEWERS[0], 'Reviewer 2': REVIEWERS[1], 'Version': '1.0', 'Date': '09/11/2026'})
 set_kv(tb[1], {'Final version': 'Registration form v3 (final) with BM03 Record of Changes 1.3 (rows 1–19); Report 3 SRS 4.2.0, Report 4 SDD 2.2.0, Report 5 1.5.0, Design Brief 2.0',
                'Approved at Review 2 (Yes/No)': 'Yes – final scope agreed with the supervisor on 09/11/2026 after the Review 2 feedback; confirmed by the signatures in section 11',
                'Attached file name': 'SEP490_FA26SE158_R2_Registration.pdf (registration form v3 + BM03)'})
@@ -360,7 +362,7 @@ fill_table(tb[ti + 1], rows)
 set_kv(tb[ti + 2], {'Number of main workflows': str(len(WORKFLOWS)),
                     'Number of demo scenarios (main / exception)': f'{len(WORKFLOWS)} / {len(WORKFLOWS)}',
                     'Committed functional test cases': f'{TOTAL} (Report 5 1.5.0: {3 * len(FEATURES)} feature, {len(WF)} end-to-end, {len(ST)} state transition, {len(NFR)} NFR)',
-                    'Of which automated in CI': f'{AUTO} designed as automated ({sum(1 for c in CASES if c[4] == "auto")} written and passing on the tag review-2); at least {(TOTAL + 1) // 2} (50 %) by Defense 1.1'})
+                    'Of which automated in CI': f'{AUTO} designed as automated ({sum(1 for c in CASES if c[4] == "auto")} written; the 82 that existed at the tag review-2 pass there); at least {(TOTAL + 1) // 2} (50 %) by Defense 1.1'})
 agreed = {'Main workflows': f'100 % ({len(WORKFLOWS)} of {len(WORKFLOWS)}) run end-to-end on staging',
           'Demo scenarios': f'100 % main ({len(WORKFLOWS)}); ≥ 80 % exception (at least 7 of {len(WORKFLOWS)})',
           'Test case count': f'≥ {TOTAL}', 'Test pass rate': '≥ 90 % overall; 100 % of main-path tests of mandatory features',
@@ -370,8 +372,20 @@ for r in tb[ti + 3].rows[1:]:
     k = r.cells[0].text.strip()
     if k in agreed: set_cell(r.cells[2], agreed[k])
 fill_table(tb[ti + 4], [(i if i.startswith('RV') else f'{i} (BM02)', *rest) for i, *rest in FIXES])
+# two supervisors sign: the template's Supervisor row is repeated
+sup = next(r for r in tb[ti + 5].rows if r.cells[0].text.strip() == 'Supervisor')
+sup._tr.addnext(copy.deepcopy(sup._tr))
+names = {'Reviewer 1': [REVIEWERS[0]], 'Reviewer 2': [REVIEWERS[1]], 'Supervisor': list(SUPERVISORS), 'Team leader': [B]}
 for r in tb[ti + 5].rows[1:]:
-    if r.cells[0].text.strip() == 'Team leader': set_cell(r.cells[1], B)
+    k = r.cells[0].text.strip()
+    if names.get(k): set_cell(r.cells[1], names[k].pop(0))
+# the signature block stays on one page: heading 11 and every row but the last keep with the next
+heading('11. Confirmation').paragraph_format.keep_with_next = True
+from docx.shared import Cm
+for r in tb[ti + 5].rows[1:]: r.height = Cm(1.2)  # room for a handwritten signature
+for r in tb[ti + 5].rows[:-1]:
+    for c in r.cells:
+        for p_ in c.paragraphs: p_.paragraph_format.keep_with_next = True
 
 # compact tables
 for t in d.tables:
