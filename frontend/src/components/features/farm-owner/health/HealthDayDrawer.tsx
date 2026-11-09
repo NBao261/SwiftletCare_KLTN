@@ -186,7 +186,8 @@ export default function HealthDayDrawer({ day, onClose, onChanged }: HealthDayDr
               </ul>
             )}
             {/* Điểm đã chấm không đổi được, chỉ thay ghi chú (SM-18 RATED → RATED); API thay ghi chú cũ nên đã có ghi chú thì gọi là "Sửa" */}
-            {myRating?.outcome === 'RATED' && (isNoteOpen ? (
+            {/* Ghi chú chỉ cho người chấm; Domain Expert (my_rating_state null) bị 403 dù còn đánh giá cũ trước SRS 4.2.0 */}
+            {myRating?.outcome === 'RATED' && Boolean(day?.my_rating_state) && (isNoteOpen ? (
               <div className="flex flex-col gap-3">
                 <Textarea
                   label={t(myRating.note ? 'detail.editNote' : 'detail.addNote')}

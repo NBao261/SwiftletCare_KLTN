@@ -27,6 +27,7 @@ const vi = {
   // Bảng ngày
   'table.title': 'Đánh giá theo ngày',
   'table.subtitle': 'Hãy đánh giá ngày theo quan sát của bạn trước, trạng thái của hệ thống chỉ hiện sau khi đánh giá hoặc bỏ qua.',
+  'table.subtitleExpert': 'Trạng thái hệ thống tính cho từng ngày, kèm đánh giá của Farm Owner theo quan sát tại nhà yến.',
   'table.loading': 'Đang tải các ngày…',
   'table.emptyTitle': 'Chưa có ngày nào',
   'table.emptyHint': 'Hệ thống tính trạng thái mỗi tối sau khi kiểm tra tỷ lệ chim về.',
@@ -267,6 +268,7 @@ const en: Record<HealthKey, string> = {
 
   'table.title': 'Daily ratings',
   'table.subtitle': 'Rate each day from your own observation first; the system status shows only after you rate or skip it.',
+  'table.subtitleExpert': 'The status the system assessed for each day, with the Farm Owner\'s rating from what they saw at the house.',
   'table.loading': 'Loading days…',
   'table.emptyTitle': 'No day yet',
   'table.emptyHint': 'The system assesses every evening after the return-rate check.',

@@ -55,7 +55,8 @@ export interface HouseHealthDay {
   date: string;
   weather: HealthDayWeather | null;
   computed_at: string;
-  my_rating_state: HealthRatingState;
+  // null = người xem không phải người chấm (Domain Expert, SRS 4.2.0): thấy đủ trạng thái, không có hạn chấm
+  my_rating_state: HealthRatingState | null;
   rating_deadline: string;
   indicators?: Record<HealthSource, HealthIndicator>;
   completeness?: Record<HealthSource, boolean>;

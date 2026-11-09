@@ -47,6 +47,8 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   // Trạng thái tính theo nhà yến nên chỉ lọc tới nhà (ô Zone khoá)
   const scope = { ...useScopeFilter(), zone: undefined };
   const isExpert = usePermission('DOMAIN_EXPERT');
+  // SRS 4.2.0 (BR-31, EXPERT-FR-012): chỉ Farm Owner đánh giá ngày; Domain Expert xem đủ trạng thái (my_rating_state null), backend trả 403 khi chấm
+  const canRate = !isExpert;
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
 
@@ -78,7 +80,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const farmIds = isPreviewWaiting ? [] : isPreviewNoFarm ? ['preview-farm'] : realFarmIds;
   const { days, isLoading, isError, error, refetch } = useHealthDays({ farmIds, houseId: scope.houseId, from, to });
   const pendingDays = useMemo(() => days.filter(day => day.my_rating_state === 'PENDING'), [days]);
-  const shownDays = isToRateOnly ? pendingDays : days;
+  const shownDays = canRate && isToRateOnly ? pendingDays : days;
 
   // BR-22: Farm Owner chỉ sửa mức khi farm chưa có chuyên gia; backend vẫn là chốt chặn (403)
   const house = scope.houses.find(item => item._id === scope.houseId);
@@ -168,7 +170,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
         <SectionCard
           className="flex-1"
           title={t('table.title')}
-          description={t('table.subtitle')}
+          description={t(canRate ? 'table.subtitle' : 'table.subtitleExpert')}
           action={
             <div className="flex flex-wrap gap-2">
               <Button
@@ -187,17 +189,19 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           }
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
-              <FilterChip active={!isToRateOnly} label={t('filter.all')} onClick={() => setIsToRateOnly(false)} />
-              <FilterChip active={isToRateOnly} label={t('filter.toRate', { n: pendingDays.length })} onClick={() => setIsToRateOnly(true)} />
-            </div>
+            {canRate ? (
+              <div className="flex flex-wrap gap-2">
+                <FilterChip active={!isToRateOnly} label={t('filter.all')} onClick={() => setIsToRateOnly(false)} />
+                <FilterChip active={isToRateOnly} label={t('filter.toRate', { n: pendingDays.length })} onClick={() => setIsToRateOnly(true)} />
+              </div>
+            ) : <span />}
             <div className="flex flex-wrap gap-2">
               {RANGE_DAYS.map(value => (
                 <FilterChip key={value} active={rangeDays === value} label={t(`filter.days${value}`)} onClick={() => setRangeDays(value)} />
               ))}
             </div>
           </div>
-  
+
           {/* Đang tải và rỗng: khung viền đứt (như EmptyState) chứa hình minh hoạ bảng của Dashboard, giãn hết phần còn lại của thẻ */}
           {isLoading || scope.isLoading ? (
             <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12 motion-safe:animate-pulse" role="status">
@@ -217,7 +221,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
               />
             </div>
           ) : (
-            <HealthDayTable days={shownDays} onRate={openRating} onView={openView} />
+            <HealthDayTable days={shownDays} canRate={canRate} onRate={openRating} onView={openView} />
           )}
         </SectionCard>
       ) : (

@@ -106,13 +106,15 @@ function fullDay(house: PreviewHouse, date: string): HouseHealthDay {
   const dayId = `preview-day-${house._id}-${date}`;
   const rainy = seed % 3 === 0;
 
-  // Đánh giá của tôi: 3 ngày gần nhất để trống (cần đánh giá), quá 7 ngày không làm thì hết hạn
-  const action = myActions.get(dayId)
+  // Đánh giá của tôi: 3 ngày gần nhất để trống (cần đánh giá), quá 7 ngày không làm thì hết hạn.
+  // Domain Expert không chấm (SRS 4.2.0): không có đánh giá của mình, my_rating_state null, thấy đủ trạng thái
+  const isAssessor = me().role !== 'DOMAIN_EXPERT';
+  const action = !isAssessor ? undefined : myActions.get(dayId)
     ?? (age <= 3 ? undefined
       : age % 5 === 0 ? { outcome: 'SKIPPED' as const, rating: null, note: null, at: `${date}T14:00:00Z` }
         : age > 7 && age % 4 === 1 ? undefined
           : { outcome: 'RATED' as const, rating: (status === 'INSUFFICIENT_DATA' ? 'GOOD' : status) as HealthRatingValue, note: age % 3 === 0 ? 'Chim về hơi muộn, chiều có mưa nhẹ' : null, at: `${date}T13:30:00Z` });
-  const myState = action ? action.outcome : age > 7 ? 'EXPIRED' as const : 'PENDING' as const;
+  const myState = !isAssessor ? null : action ? action.outcome : age > 7 ? 'EXPIRED' as const : 'PENDING' as const;
 
   const self = me();
   const ratings: NonNullable<HouseHealthDay['ratings']> = [];

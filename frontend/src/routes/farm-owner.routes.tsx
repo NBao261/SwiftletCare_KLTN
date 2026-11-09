@@ -98,7 +98,7 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
-    {/* MF-11 — trạng thái ngày và đánh giá ngày: Farm Owner và Domain Expert đều chấm (Report 3 §2.4) */}
+    {/* MF-11 — trạng thái ngày và đánh giá ngày: Farm Owner đánh giá, Domain Expert chỉ xem (SRS 4.2.0, BR-31) */}
     <Route
       path="health"
       element={
