@@ -1,6 +1,6 @@
 # Design Brief – Review 2 (BM01)
 
-Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_SwiftletCare.docx` is generated from the tables below, so edit this file first and then regenerate it. Details are in the registration form v3 (`registration-v3.md`), Report 3 (SRS) and Report 4 (SDD); this brief only points to them. Sections 0–8 must fit on 4 A4 pages; Appendix A is not counted.
+Source of form BM01. The Word file `design-brief/SEP490_R2_BM01_Design_Brief_SwiftletCare.docx` is generated from the tables below, so edit this file first and then regenerate it. Details are in the registration form v3 (`registration-v3.md`), Report 3 (SRS) and Report 4 (SDD); this brief only points to them. Sections 0–8 must fit on 4 A4 pages; Appendix A is not counted.
 
 ## 0. Header
 

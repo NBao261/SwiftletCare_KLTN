@@ -1,6 +1,6 @@
 # Hồ sơ Review 2 — mục lục
 
-Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn chuẩn bị Review 2" (SWP490, v1.0, 10/2026). Mỗi hồ sơ xuất ra PDF theo mẫu của môn, tên file `SWP490_<Mã đề tài>_R2_<Tên hồ sơ>.pdf`.
+Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn chuẩn bị Review 2" (SEP490, v1.0, 10/2026). Mỗi hồ sơ xuất ra PDF theo mẫu của môn, tên file `SEP490_<Mã đề tài>_R2_<Tên hồ sơ>.pdf`.
 
 | File | Hồ sơ |
 | --- | --- |

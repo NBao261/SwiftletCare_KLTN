@@ -246,7 +246,7 @@ NFR_OWNER = {m: [n for n, (w, o) in NFR_MAP.items() if o == m] for m, *_ in MEMB
 DUE = '23/12/2026 (end of Iteration 3, before Defense 1.1)'
 
 # ---- build ----
-d = docx.Document(os.path.join(REPORTS, 'templates', 'SWP490_R2_BM04_Review2_Commitment.docx'))
+d = docx.Document(os.path.join(REPORTS, 'templates', 'SEP490_R2_BM04_Review2_Commitment.docx'))
 body = d.element.body
 
 
@@ -290,7 +290,7 @@ set_kv(tb[0], {'Project code': 'FA26SE158',
                'Review 2 date': '04/11/2026', 'Reviewer 1': '', 'Reviewer 2': '', 'Version': '1.0', 'Date': '09/11/2026'})
 set_kv(tb[1], {'Final version': 'Registration form v3 (final) with BM03 Record of Changes 1.3 (rows 1–19); Report 3 SRS 4.2.0, Report 4 SDD 2.2.0, Report 5 1.5.0, Design Brief 2.0',
                'Approved at Review 2 (Yes/No)': 'Yes – final scope agreed with the supervisor on 09/11/2026 after the Review 2 feedback; confirmed by the signatures in section 11',
-               'Attached file name': 'SWP490_FA26SE158_R2_Registration.pdf (registration form v3 + BM03)'})
+               'Attached file name': 'SEP490_FA26SE158_R2_Registration.pdf (registration form v3 + BM03)'})
 fill_table(tb[2], [(f[0], f[1], f[2], f[3], ', '.join(f[4]), f[5]) for f in FEATURES])
 fill_table(tb[3], [(n[0], n[1], n[2], n[3], n[4], NFR_MAP[n[0]][1]) for n in NFRS])
 fill_table(tb[4], OUT_OF_SCOPE)
@@ -351,9 +351,9 @@ for w in WORKFLOWS:
 rows.append(('Total', '5 members', f'{len(FEATURES)} mandatory features', f'{len(WORKFLOWS)} / {len(WORKFLOWS)}', str(TOTAL), f'{AUTO} ({100 * AUTO // TOTAL} %)'))
 fill_table(tb[ti], rows)
 rows = []
-for m, *_ in MEMBERS:
+for m, _code, role, *_ in MEMBERS:
     c, a, _ = count(m=m)
-    rows.append((m, ', '.join(w[0] for w in WORKFLOWS if w[2] == m), ', '.join(f[0] for f in FEATURES if f[5] == m),
+    rows.append((f"{m} ({role})", ', '.join(w[0] for w in WORKFLOWS if w[2] == m), ', '.join(f[0] for f in FEATURES if f[5] == m),
                  str(c), str(a), str(sum(len(w[9]) for w in WORKFLOWS if w[2] == m)), ''))
 rows.append(('Total', str(len(WORKFLOWS)), str(len(FEATURES)), str(TOTAL), str(AUTO), str(2 * len(WORKFLOWS)), ''))
 fill_table(tb[ti + 1], rows)
@@ -379,7 +379,7 @@ for t in d.tables:
         for c in row.cells:
             for p_ in c.paragraphs:
                 for r in p_.runs: r.font.size = Pt(8.5)
-out = os.path.join(REPORTS, 'registration', 'SWP490_R2_BM04_Review2_Commitment_SwiftletCare.docx')
+out = os.path.join(REPORTS, 'registration', 'SEP490_R2_BM04_Review2_Commitment_SwiftletCare.docx')
 d.save(out)
 print(out, 'cases', TOTAL, 'automated', AUTO, 'fixes', len(FIXES))
 for m, *_ in MEMBERS: print(' ', m, count(m=m)[:2], [f[0] for f in FIXES if f[3] == m].__len__())

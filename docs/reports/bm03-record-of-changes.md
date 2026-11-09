@@ -1,6 +1,6 @@
 # BM03 – Registration Form: Record of Changes
 
-Draft of form BM03, which goes with the final registration form (`registration-v3.md`). The filled Word file is `registration/SWP490_R2_BM03_Record_of_Changes_SwiftletCare.docx`. It is generated from the table below, so edit this file first and then regenerate the Word file. The approved project code and title stay unchanged.
+Draft of form BM03, which goes with the final registration form (`registration-v3.md`). The filled Word file is `registration/SEP490_R2_BM03_Record_of_Changes_SwiftletCare.docx`. It is generated from the table below, so edit this file first and then regenerate the Word file. The approved project code and title stay unchanged.
 
 ## 1. Project Information
 

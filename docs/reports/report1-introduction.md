@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Project code | FA26SE158 |
-| Course | SWP490 – Capstone Project, FA26 |
+| Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Duration | July 2026 – December 2026 |

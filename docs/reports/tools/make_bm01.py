@@ -11,7 +11,7 @@ from docxfill import *
 from md_tables import tables
 md=os.path.join(REPORTS,'design-brief.md')
 T=tables(md)
-d=docx.Document(os.path.join(REPORTS,'templates','SWP490_R2_BM01_Design_Brief.docx'))
+d=docx.Document(os.path.join(REPORTS,'templates','SEP490_R2_BM01_Design_Brief.docx'))
 assert len(T)==12, len(T)
 set_kv(d.tables[0], {r[0]:r[1] for r in T[0][1][1:]})
 for i in range(1,12):
@@ -49,4 +49,4 @@ for p in d.paragraphs:
     if p.text.startswith('Automated in CI'):
         p.runs[0].text=a3
         for r in p.runs[1:]: r.text=''
-d.save(os.path.join(REPORTS,'design-brief','SWP490_R2_BM01_Design_Brief_SwiftletCare.docx'))
+d.save(os.path.join(REPORTS,'design-brief','SEP490_R2_BM01_Design_Brief_SwiftletCare.docx'))
