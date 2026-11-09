@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LayoutChangeEvent,
   RefreshControl,
@@ -9,6 +9,8 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
+import { useQueryClient } from '@tanstack/react-query'
+import { offNotificationNew, onNotificationNew } from '@/services/socket/socketClient'
 import {
   ArrowRight,
   CalendarCheck,
@@ -24,16 +26,18 @@ import { QueueProposalCard } from '@/components/expert/queue/QueueProposalCard'
 import { QueueReportCard } from '@/components/expert/queue/QueueReportCard'
 import { QueueReviewCard } from '@/components/expert/queue/QueueReviewCard'
 import { AppHeader } from '@/components/layout/AppHeader'
-import { PersistentScopeBar } from '@/components/layout/PersistentScopeBar'
+import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
+import { ExpertHeaderPicker, PersistentScopeBar } from '@/components/layout/PersistentScopeBar'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SplitBadge } from '@/components/ui/split-badge'
 import { Text } from '@/components/ui/text'
-import { FontFamily, Radius, Spacing } from '@/constants/theme'
+import { Toast } from '@/components/ui/toast'
+import { Radius, Spacing } from '@/constants/theme'
 import { useInferredAlerts } from '@/hooks/expert/useInferredAlerts'
 import {
+  useDayRating,
   useHealthReports,
   useSetReportConclusion,
   useSubmitDayRating,
@@ -44,6 +48,7 @@ import {
   useTakeProposalAction,
   useTakeReviewAction,
 } from '@/hooks/expert/useExpertReviews'
+import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
@@ -52,14 +57,16 @@ import { formatTimeAgo } from '@/utils/date.utils'
 import { getInferredAlertDescription, getInferredAlertLabel } from '@/utils/inferredAlert.utils'
 import { t } from '@/utils/i18n.utils'
 
+const KPI_TILE_HEIGHT = 112
+
 interface QueueInferredAlertCardProps {
   alert: InferredAlert
 }
 
 /**
  * Thẻ Cảnh báo suy luận AI khẩn cấp P0 trong Hàng đợi (EXPERT-FR-003, ALERT-FR-014).
- * Chuẩn hóa bằng <Card> và <PressableScale> theo design system FARM_OWNER.
- * Chạm [Thẩm định ngay →] chuyển thẳng sang tab Thẩm định với alertId chọn sẵn đúng 1 chạm.
+ * Chuẩn hóa bằng <Card> phẳng không viền theo design system FARM_OWNER.
+ * Chạm [Kiểm tra ngay →] chuyển thẳng sang tab Thẩm định với alertId chọn sẵn đúng 1 chạm.
  */
 function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
   const palette = usePalette()
@@ -70,7 +77,6 @@ function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
   const timeStr = formatTimeAgo(alert.created_at)
 
   const handleInspect = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
     router.push({
       pathname: '/(tabs)/verdicts',
       params: { alertId: alert._id },
@@ -78,26 +84,15 @@ function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
   }
 
   return (
-    <Card
-      style={[
-        styles.alertCard,
-        {
-          borderColor: palette.border,
-          borderLeftColor: palette.alert,
-          borderLeftWidth: 4,
-        },
-      ]}
-    >
-      {/* Hàng 1: SplitBadge mức độ & Thời gian tương đối */}
+    <Card style={styles.alertCard}>
+      {/* Hàng 1: Badge mức độ Báo động & Thời gian tương đối */}
       <View style={styles.alertTopRow}>
-        <SplitBadge
-          left="P0"
-          right={t('KHẨN CẤP')}
-          color={palette.alert}
-          textColor={palette.onInverse}
-          innerColor={palette.onInverse}
-          innerTextColor={palette.alert}
-        />
+        <View style={[styles.alertBadgePill, { backgroundColor: palette.severityP2 }]}>
+          <View style={[styles.alertDot, { backgroundColor: palette.alert }]} />
+          <Text variant="label" weight="bold" color={palette.severityP2Text}>
+            {t('Báo động')}
+          </Text>
+        </View>
 
         <View style={styles.alertTimeWrapper}>
           <Clock size={12} color={palette.textSecondary} />
@@ -109,7 +104,7 @@ function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
 
       {/* Hàng 2: Tên sự cố & Vị trí Zone */}
       <View style={styles.alertTitleRow}>
-        <Text variant="heading" weight="bold">
+        <Text variant="heading" weight="semiBold">
           {alertTitle}
         </Text>
         <View style={styles.alertLocationWrapper}>
@@ -125,20 +120,20 @@ function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
         {alertDesc}
       </Text>
 
-      {/* Hàng 4: Nút hành động 1 chạm [Thẩm định ngay →] */}
+      {/* Hàng 4: Nút hành động 1 chạm [Kiểm tra ngay →] */}
       <PressableScale
         onPress={handleInspect}
         style={[
           styles.alertActionButton,
           {
-            backgroundColor: palette.text,
+            backgroundColor: palette.inverse,
           },
         ]}
         accessibilityRole="button"
-        accessibilityLabel={t('Thẩm định ngay sự cố này')}
+        accessibilityLabel={t('Kiểm tra ngay sự cố này')}
       >
-        <Text variant="body" weight="bold" color={palette.onInverse}>
-          {t('Thẩm định ngay')}
+        <Text variant="body" weight="semiBold" color={palette.onInverse}>
+          {t('Kiểm tra ngay')}
         </Text>
         <ArrowRight size={16} weight="bold" color={palette.onInverse} />
       </PressableScale>
@@ -148,15 +143,8 @@ function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
 
 /**
  * [PHẦN 1] MOBILE — MENU HÀNG ĐỢI (src/app/(tabs)/queue/index.tsx)
- * Kiến trúc 1 màn hình duy nhất (One-Screen Consolidated) cho Domain Expert.
- * Xử lý tại chỗ 5 nhóm công việc:
- * - Khối 1: PersistentScopeBar ghim cố định đầu trang (Zustand v5 + MMKV)
- * - Khối 2: Lưới 2x2 gồm 4 Thẻ KPI Phản Xạ Nhanh — chạm để cuộn mượt xuống khối tương ứng
- * - Khối 3: Cảnh báo suy luận P0 (EXPERT-FR-003, ALERT-FR-014) -> [Thẩm định ngay →]
- * - Khối 4: Review thay đổi của Chủ trại (EXPERT-FR-010) -> [Chấp thuận] [Hoàn nguyên] [Hiệu chỉnh]
- * - Khối 5: Duyệt đề xuất hệ số mờ Fuzzy (EXPERT-FR-011) -> [Duyệt áp dụng] [Từ chối...]
- * - Khối 6: Đánh giá ngày độc lập BR-31 (EXPERT-FR-012) -> [Tốt] [Theo dõi] [Cần xử lý] [Bỏ qua]
- * - Khối 7: Báo cáo sức khỏe & Kết luận (EXPERT-FR-005, 006, 013) -> [PDF / CSV] & [Viết kết luận]
+ * Kiến trúc 1 màn hình duy nhất (One-Screen Consolidated) cho Domain Expert,
+ * đồng bộ 100% quy chuẩn thẩm mỹ Calm Industrial với nhánh FARM_OWNER.
  */
 export default function QueueScreen() {
   const palette = usePalette()
@@ -165,12 +153,50 @@ export default function QueueScreen() {
   const scrollRef = useRef<ScrollViewInstance>(null)
   const sectionYPositions = useRef<Record<string, number>>({})
 
-  // Phạm vi giám sát dùng chung (PersistentScopeBar)
+  const queryClient = useQueryClient()
+
+  // Realtime WebSocket: tự động làm mới hàng đợi khi có thông báo mới (EXPERT-FR-007)
+  useEffect(() => {
+    const handleNotification = () => {
+      void queryClient.invalidateQueries({ queryKey: ['expert'] })
+      void queryClient.invalidateQueries({ queryKey: ['inferred-alerts'] })
+    }
+    onNotificationNew(handleNotification)
+    return () => {
+      offNotificationNew(handleNotification)
+    }
+  }, [queryClient])
+
   const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)
   const selectedHouseId = useExpertScopeStore(state => state.selectedHouseId)
   const selectedZoneId = useExpertScopeStore(state => state.selectedZoneId)
 
-  // ── Khối 3: Cảnh báo suy luận AI khẩn cấp P0 (EXPERT-FR-003, ALERT-FR-014) ──
+  const { zones } = useZonesOfHouses(selectedHouseId ? [selectedHouseId] : [])
+  const effectiveZoneId = selectedZoneId || zones[0]?._id || undefined
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg)
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null)
+    }, 3000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    }
+  }, [])
+
+  const yesterday = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0, 10)
+  }, [])
+
   const {
     data: alertsResponse,
     isLoading: isAlertsLoading,
@@ -181,7 +207,6 @@ export default function QueueScreen() {
     zone_id: selectedZoneId || undefined,
   })
 
-  // ── Khối 4: Review thay đổi của Chủ trại (EXPERT-FR-010) ──
   const {
     data: reviewsResponse,
     isLoading: isReviewsLoading,
@@ -189,11 +214,11 @@ export default function QueueScreen() {
     refetch: refetchReviews,
   } = useExpertReviewItems({
     farm_id: selectedFarmId || undefined,
+    zone_id: selectedZoneId || undefined,
     status: 'PENDING_REVIEW',
   })
   const takeReviewAction = useTakeReviewAction()
 
-  // ── Khối 5: Duyệt đề xuất hệ số Fuzzy (EXPERT-FR-011) ──
   const {
     data: proposalsResponse,
     isLoading: isProposalsLoading,
@@ -201,11 +226,11 @@ export default function QueueScreen() {
     refetch: refetchProposals,
   } = useExpertProposals({
     farm_id: selectedFarmId || undefined,
+    zone_id: selectedZoneId || undefined,
     status: 'PROPOSED',
   })
   const takeProposalAction = useTakeProposalAction()
 
-  // ── Khối 7: Báo cáo sức khỏe định kỳ & Kết luận (EXPERT-FR-005, 006, 013) ──
   const {
     data: reportsResponse,
     isLoading: isReportsLoading,
@@ -213,14 +238,18 @@ export default function QueueScreen() {
     refetch: refetchReports,
   } = useHealthReports({
     farm_id: selectedFarmId || undefined,
-    zone_id: selectedZoneId || undefined,
+    zone_id: effectiveZoneId,
   })
   const setReportConclusion = useSetReportConclusion()
 
-  // ── Khối 6: Đánh giá ngày độc lập 2 bước (EXPERT-FR-012, BR-31) ──
+  const {
+    data: dayRatingResponse,
+    isLoading: isDayRatingLoading,
+    isRefetching: isDayRatingRefetching,
+    refetch: refetchDayRating,
+  } = useDayRating(selectedHouseId || '', yesterday)
   const submitDayRating = useSubmitDayRating()
 
-  // Lọc dữ liệu hàng đợi
   const pendingInferredAlerts = useMemo<InferredAlert[]>(() => {
     const list = alertsResponse?.data || []
     return list.filter(a => !a.expert_verdict)
@@ -237,111 +266,135 @@ export default function QueueScreen() {
   const pendingReports = useMemo<ZoneHealthReportItem[]>(() => {
     const list = reportsResponse?.data || []
     const unfinalized = list.filter(r => !r.expert_conclusion)
-    // Nếu tất cả đã có kết luận, hiển thị báo cáo gần nhất để chuyên gia vẫn có thể tải PDF/CSV
     return unfinalized.length > 0 ? unfinalized : list.slice(0, 1)
   }, [reportsResponse])
 
-  // Ngày đánh giá độc lập mẫu hôm qua tuân thủ BR-31
-  const yesterday = useMemo(() => {
-    const d = new Date()
-    d.setDate(d.getDate() - 1)
-    return d.toISOString().slice(0, 10)
-  }, [])
+  const pendingRatings = useMemo<DayRating[]>(() => {
+    const raw = dayRatingResponse?.data
+    if (!raw) return []
+    const list = Array.isArray(raw) ? raw : [raw]
+    return list.filter(item => item.state === 'PENDING' || item.state === 'RATED')
+  }, [dayRatingResponse])
 
-  const samplePendingRatings = useMemo<DayRating[]>(() => {
-    const houseId = selectedHouseId || 'house-default-01'
-    return [
-      {
-        _id: `rating-${houseId}-${yesterday}`,
-        house_id: houseId,
-        date: yesterday,
-        state: 'PENDING',
-        system_status: 'WATCH',
-        system_reasons: [
-          'Độ ẩm dưới ngưỡng 70% liên tục 45 phút (14:30 - 15:15)',
-          'Nhiệt độ đạt đỉnh 32.4°C lúc 15:00',
-        ],
-      },
-    ]
-  }, [selectedHouseId, yesterday])
-
-  // Tính số liệu cho 4 thẻ KPI phản xạ nhanh
   const kpiAlertsCount = pendingInferredAlerts.length
   const kpiReviewsCount = pendingReviewItems.length
   const kpiProposalsCount = pendingProposals.length
-  const kpiRatingsAndReportsCount = samplePendingRatings.length + pendingReports.length
+  const kpiRatingsAndReportsCount =
+    pendingRatings.filter(r => r.state === 'PENDING').length + pendingReports.length
 
   const isRefreshing =
-    isAlertsRefetching || isReviewsRefetching || isProposalsRefetching || isReportsRefetching
+    isAlertsRefetching ||
+    isReviewsRefetching ||
+    isProposalsRefetching ||
+    isReportsRefetching ||
+    isDayRatingRefetching
 
   const handleRefreshAll = () => {
-    refetchAlerts()
-    refetchReviews()
-    refetchProposals()
-    refetchReports()
+    void refetchAlerts()
+    void refetchReviews()
+    void refetchProposals()
+    void refetchReports()
+    void refetchDayRating()
   }
 
-  // Ghi nhận vị trí Y từng khối để cuộn mượt 1 chạm
   const handleSectionLayout = (key: string, event: LayoutChangeEvent) => {
     sectionYPositions.current[key] = event.nativeEvent.layout.y
   }
 
   const scrollToSection = (key: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
     const targetY = sectionYPositions.current[key]
     if (targetY != null && scrollRef.current) {
       scrollRef.current.scrollTo({ y: Math.max(0, targetY - 12), animated: true })
     }
   }
 
-  // Xử lý hành động Review chủ trại (Khối 4)
   const handleAcceptReview = async (itemId: string) => {
-    await takeReviewAction.mutateAsync({ itemId, action: 'ACCEPT' })
+    try {
+      await takeReviewAction.mutateAsync({ itemId, action: 'ACCEPT' })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
+      showToast(t('Đã chấp thuận thay đổi tham số của chủ nhà'))
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
+      showToast(t('Không thể chấp thuận thay đổi, vui lòng thử lại'))
+    }
   }
 
   const handleRevertReview = async (itemId: string) => {
-    await takeReviewAction.mutateAsync({ itemId, action: 'REVERT' })
+    try {
+      await takeReviewAction.mutateAsync({ itemId, action: 'REVERT' })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
+      showToast(t('Đã hoàn nguyên tham số về giá trị an toàn'))
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
+      showToast(t('Không thể hoàn nguyên tham số, vui lòng thử lại'))
+    }
   }
 
-  // Xử lý phê duyệt đề xuất Fuzzy (Khối 5)
   const handleApproveProposal = async (proposalId: string) => {
-    await takeProposalAction.mutateAsync({ proposalId, action: 'APPROVE' })
+    try {
+      await takeProposalAction.mutateAsync({ proposalId, action: 'APPROVE' })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
+      showToast(t('Đã duyệt áp dụng bộ hệ số độ ẩm & gió'))
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
+      showToast(t('Không thể duyệt đề xuất, vui lòng thử lại'))
+    }
   }
 
   const handleRejectProposal = async (proposalId: string, reason: string) => {
-    await takeProposalAction.mutateAsync({
-      proposalId,
-      action: 'REJECT',
-      rejectionReason: reason,
-    })
+    try {
+      await takeProposalAction.mutateAsync({
+        proposalId,
+        action: 'REJECT',
+        rejectionReason: reason,
+      })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
+      showToast(t('Đã từ chối đề xuất và gửi phản hồi'))
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
+      showToast(t('Không thể từ chối đề xuất, vui lòng thử lại'))
+    }
   }
 
-  // Xử lý nộp đánh giá ngày độc lập BR-31 (Khối 6)
   const handleSubmitDayRating = async (
     houseId: string,
     date: string,
     status: DailyHealthStatus,
     note?: string
   ) => {
-    await submitDayRating.mutateAsync({ houseId, date, status, note })
+    try {
+      await submitDayRating.mutateAsync({ houseId, date, status, note })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
+      showToast(t('Đã lưu đánh giá sức khỏe ngày và mở đối chiếu'))
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
+      showToast(t('Không thể lưu đánh giá ngày, vui lòng thử lại'))
+      throw err
+    }
   }
 
-  // Xử lý ban hành kết luận báo cáo (Khối 7)
   const handleSetReportConclusion = async (reportId: string, text: string) => {
-    await setReportConclusion.mutateAsync({ reportId, text })
+    try {
+      await setReportConclusion.mutateAsync({ reportId, text })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
+      showToast(t('Đã ban hành kết luận chuyên môn cho báo cáo'))
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
+      showToast(t('Không thể lưu kết luận báo cáo, vui lòng thử lại'))
+    }
   }
+
+  const alertTileWarning = kpiAlertsCount > 0
+  const alertTileSecondary = alertTileWarning ? palette.severityP2Text : palette.textSecondary
 
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
-      {/* Header với nút lối vào nhanh Nhật ký hoạt động S13 (EXPERT-FR-009, BZ-14) */}
+      {/* Header chọn Nhà yến trực tiếp ở leading + nút Nhật ký hoạt động ở right */}
       <AppHeader
-        title={t('Hàng đợi công việc')}
+        leading={<ExpertHeaderPicker />}
         right={
           <PressableScale
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-              router.push('/expert/activity')
-            }}
+            onPress={() => router.push('/expert/activity')}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t('Mở nhật ký hoạt động chuyên gia')}
@@ -355,7 +408,10 @@ export default function QueueScreen() {
         ref={scrollRef}
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: Spacing.xxl * 3 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl * 3 },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -364,139 +420,101 @@ export default function QueueScreen() {
           />
         }
       >
-        {/* KHỐI 1: PersistentScopeBar ghim cố định ở đầu trang */}
+        {/* KHỐI 1: Hàng Chip chọn Tầng & Thời gian ghim cố định đầu trang */}
         <View style={[styles.stickyScopeContainer, { backgroundColor: palette.background }]}>
           <PersistentScopeBar />
         </View>
 
         <View style={styles.mainContent}>
-          {/* KHỐI 2: Lưới 2x2 gồm 4 Thẻ KPI Phản Xạ Nhanh */}
+          {/* KHỐI 2: Lưới 2x2 gồm 4 Ô KPI chuẩn KpiTile của FARM_OWNER */}
           <View style={styles.kpiGrid}>
-            {/* Thẻ 1: Cảnh báo suy luận P0 (chữ số màu palette.alert nếu > 0) */}
-            <PressableScale
-              onPress={() => scrollToSection('alerts')}
-              style={[
-                styles.kpiCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: kpiAlertsCount > 0 ? palette.alert : palette.border,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Cuộn tới danh sách cảnh báo suy luận P0')}
-            >
-              <View style={styles.kpiHeader}>
-                <WarningCircle
-                  size={16}
-                  weight="bold"
-                  color={kpiAlertsCount > 0 ? palette.alert : palette.text}
-                />
-                <Text
-                  variant="label"
-                  weight="bold"
-                  color={kpiAlertsCount > 0 ? palette.alert : palette.textSecondary}
-                >
-                  {t('CHỜ THẨM ĐỊNH')}
-                </Text>
-              </View>
-              <Text
-                variant="display"
-                weight="bold"
+            {/* Ô 1: Cảnh báo chờ kiểm tra */}
+            <View style={styles.kpiCell}>
+              <PressableScale
+                onPress={() => scrollToSection('alerts')}
                 style={[
-                  styles.kpiValue,
-                  { color: kpiAlertsCount > 0 ? palette.alert : palette.text },
+                  styles.kpiTile,
+                  {
+                    backgroundColor: alertTileWarning ? palette.severityP2 : palette.surface,
+                  },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Cuộn tới danh sách cảnh báo')}
               >
-                {kpiAlertsCount.toString().padStart(2, '0')}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {t('Cảnh báo P0')}
-              </Text>
-            </PressableScale>
-
-            {/* Thẻ 2: Review chủ trại */}
-            <PressableScale
-              onPress={() => scrollToSection('reviews')}
-              style={[
-                styles.kpiCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.border,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Cuộn tới danh sách review thay đổi')}
-            >
-              <View style={styles.kpiHeader}>
-                <ClipboardText size={16} weight="bold" color={palette.text} />
-                <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {t('REVIEW CHỦ TRẠI')}
+                <Text variant="small" color={alertTileSecondary} numberOfLines={1}>
+                  {t('Chờ kiểm tra')}
                 </Text>
-              </View>
-              <Text variant="display" weight="bold" style={styles.kpiValue}>
-                {kpiReviewsCount.toString().padStart(2, '0')}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {t('Yêu cầu thay đổi')}
-              </Text>
-            </PressableScale>
-
-            {/* Thẻ 3: Đề xuất Fuzzy */}
-            <PressableScale
-              onPress={() => scrollToSection('proposals')}
-              style={[
-                styles.kpiCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.border,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Cuộn tới danh sách đề xuất hệ số mờ')}
-            >
-              <View style={styles.kpiHeader}>
-                <SlidersHorizontal size={16} weight="bold" color={palette.text} />
-                <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {t('ĐỀ XUẤT FUZZY')}
+                <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
+                  {t('{count} đang mở', { count: kpiAlertsCount })}
                 </Text>
-              </View>
-              <Text variant="display" weight="bold" style={styles.kpiValue}>
-                {kpiProposalsCount.toString().padStart(2, '0')}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {t('Gợi ý hệ số từ AI')}
-              </Text>
-            </PressableScale>
-
-            {/* Thẻ 4: Ngày / Báo cáo */}
-            <PressableScale
-              onPress={() => scrollToSection('ratings')}
-              style={[
-                styles.kpiCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.border,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Cuộn tới danh sách đánh giá ngày và báo cáo')}
-            >
-              <View style={styles.kpiHeader}>
-                <CalendarCheck size={16} weight="bold" color={palette.text} />
-                <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {t('NGÀY / BÁO CÁO')}
+                <Text variant="small" color={alertTileSecondary} numberOfLines={1}>
+                  {kpiAlertsCount > 0 ? t('Sự cố cần xem ngay') : t('Chưa có cảnh báo')}
                 </Text>
-              </View>
-              <Text variant="display" weight="bold" style={styles.kpiValue}>
-                {kpiRatingsAndReportsCount.toString().padStart(2, '0')}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {t('Đánh giá & Kết luận')}
-              </Text>
-            </PressableScale>
+              </PressableScale>
+            </View>
+
+            {/* Ô 2: Yêu cầu từ chủ nhà */}
+            <View style={styles.kpiCell}>
+              <PressableScale
+                onPress={() => scrollToSection('reviews')}
+                style={[styles.kpiTile, { backgroundColor: palette.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Cuộn tới danh sách yêu cầu thay đổi')}
+              >
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Chủ nhà xin đổi')}
+                </Text>
+                <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
+                  {t('{count} yêu cầu', { count: kpiReviewsCount })}
+                </Text>
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Chờ duyệt ngưỡng')}
+                </Text>
+              </PressableScale>
+            </View>
+
+            {/* Ô 3: Đề xuất độ ẩm & gió */}
+            <View style={styles.kpiCell}>
+              <PressableScale
+                onPress={() => scrollToSection('proposals')}
+                style={[styles.kpiTile, { backgroundColor: palette.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Cuộn tới danh sách đề xuất độ ẩm và gió')}
+              >
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Gợi ý độ ẩm & gió')}
+                </Text>
+                <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
+                  {t('{count} đề xuất', { count: kpiProposalsCount })}
+                </Text>
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Tự động hóa từ AI')}
+                </Text>
+              </PressableScale>
+            </View>
+
+            {/* Ô 4: Chấm ngày & Báo cáo */}
+            <View style={styles.kpiCell}>
+              <PressableScale
+                onPress={() => scrollToSection('ratings')}
+                style={[styles.kpiTile, { backgroundColor: palette.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Cuộn tới danh sách chấm ngày và báo cáo')}
+              >
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Chấm ngày & báo cáo')}
+                </Text>
+                <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
+                  {t('{count} kỳ', { count: kpiRatingsAndReportsCount })}
+                </Text>
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Đánh giá định kỳ')}
+                </Text>
+              </PressableScale>
+            </View>
           </View>
 
-          {/* KHỐI 3: Section Cảnh báo suy luận AI khẩn cấp P0 (EXPERT-FR-003, ALERT-FR-014) */}
+          {/* KHỐI 3: Section Cảnh báo bất thường */}
           <View
             onLayout={e => handleSectionLayout('alerts', e)}
             style={styles.sectionContainer}
@@ -504,22 +522,22 @@ export default function QueueScreen() {
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <WarningCircle size={18} weight="bold" color={kpiAlertsCount > 0 ? palette.alert : palette.text} />
-                <Text variant="heading" weight="bold">
-                  {t('CẢNH BÁO SUY LUẬN AI')}
+                <Text variant="heading" weight="semiBold">
+                  {t('Cảnh báo bất thường')}
                 </Text>
               </View>
               <View
                 style={[
                   styles.countBadge,
                   {
-                    backgroundColor: kpiAlertsCount > 0 ? palette.alert : palette.surfaceStrong,
+                    backgroundColor: kpiAlertsCount > 0 ? palette.severityP2 : palette.surface,
                   },
                 ]}
               >
                 <Text
                   variant="label"
                   weight="bold"
-                  color={kpiAlertsCount > 0 ? palette.onInverse : palette.textSecondary}
+                  color={kpiAlertsCount > 0 ? palette.severityP2Text : palette.textSecondary}
                 >
                   {kpiAlertsCount}
                 </Text>
@@ -537,12 +555,12 @@ export default function QueueScreen() {
             ) : (
               <EmptyState
                 height={80}
-                message={t('Không có cảnh báo suy luận P0 nào đang chờ thẩm định.')}
+                message={t('Không có cảnh báo bất thường nào cần kiểm tra.')}
               />
             )}
           </View>
 
-          {/* KHỐI 4: Section Review thay đổi của Chủ trại (EXPERT-FR-010, SRS §6.10) */}
+          {/* KHỐI 4: Section Yêu cầu đổi thông số từ Chủ nhà */}
           <View
             onLayout={e => handleSectionLayout('reviews', e)}
             style={styles.sectionContainer}
@@ -550,14 +568,14 @@ export default function QueueScreen() {
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <ClipboardText size={18} weight="bold" color={palette.text} />
-                <Text variant="heading" weight="bold">
-                  {t('REVIEW THAY ĐỔI CỦA CHỦ TRẠI')}
+                <Text variant="heading" weight="semiBold">
+                  {t('Yêu cầu đổi thông số từ chủ nhà')}
                 </Text>
               </View>
               <View
                 style={[
                   styles.countBadge,
-                  { backgroundColor: palette.surfaceStrong },
+                  { backgroundColor: palette.surface },
                 ]}
               >
                 <Text variant="label" weight="bold" color={palette.textSecondary}>
@@ -583,12 +601,12 @@ export default function QueueScreen() {
             ) : (
               <EmptyState
                 height={80}
-                message={t('Tất cả thay đổi tham số của chủ trại đã được phê duyệt hoặc hoàn nguyên.')}
+                message={t('Tất cả yêu cầu thay đổi từ chủ nhà đã được xử lý xong.')}
               />
             )}
           </View>
 
-          {/* KHỐI 5: Section Duyệt đề xuất hệ số mờ Fuzzy (EXPERT-FR-011, ANALYTICS-FR-010) */}
+          {/* KHỐI 5: Section Đề xuất độ ẩm & gió tự động */}
           <View
             onLayout={e => handleSectionLayout('proposals', e)}
             style={styles.sectionContainer}
@@ -596,14 +614,14 @@ export default function QueueScreen() {
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <SlidersHorizontal size={18} weight="bold" color={palette.text} />
-                <Text variant="heading" weight="bold">
-                  {t('ĐỀ XUẤT HỆ SỐ MỜ FUZZY')}
+                <Text variant="heading" weight="semiBold">
+                  {t('Đề xuất độ ẩm & gió tự động')}
                 </Text>
               </View>
               <View
                 style={[
                   styles.countBadge,
-                  { backgroundColor: palette.surfaceStrong },
+                  { backgroundColor: palette.surface },
                 ]}
               >
                 <Text variant="label" weight="bold" color={palette.textSecondary}>
@@ -629,12 +647,12 @@ export default function QueueScreen() {
             ) : (
               <EmptyState
                 height={80}
-                message={t('Không có đề xuất hệ số mờ mới từ thuật toán học máy.')}
+                message={t('Không có đề xuất độ ẩm & gió mới từ AI.')}
               />
             )}
           </View>
 
-          {/* KHỐI 6: Section Đánh giá ngày độc lập theo quy tắc BR-31 (EXPERT-FR-012) */}
+          {/* KHỐI 6: Section Đánh giá sức khỏe nhà yến */}
           <View
             onLayout={e => handleSectionLayout('ratings', e)}
             style={styles.sectionContainer}
@@ -642,33 +660,44 @@ export default function QueueScreen() {
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <CalendarCheck size={18} weight="bold" color={palette.text} />
-                <Text variant="heading" weight="bold">
-                  {t('ĐÁNH GIÁ NGÀY ĐỘC LẬP (BR-31)')}
+                <Text variant="heading" weight="semiBold">
+                  {t('Đánh giá sức khỏe nhà yến')}
                 </Text>
               </View>
               <View
                 style={[
                   styles.countBadge,
-                  { backgroundColor: palette.surfaceStrong },
+                  { backgroundColor: palette.surface },
                 ]}
               >
                 <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {samplePendingRatings.length}
+                  {pendingRatings.length}
                 </Text>
               </View>
             </View>
 
-            {samplePendingRatings.map(dayRating => (
-              <QueueDayRatingCard
-                key={dayRating._id}
-                dayRating={dayRating}
-                onSubmitRating={handleSubmitDayRating}
-                isSubmitting={submitDayRating.isPending}
+            {isDayRatingLoading ? (
+              <View style={styles.skeletonBox}>
+                <Skeleton width="100%" height={140} radius={Radius.lg} />
+              </View>
+            ) : pendingRatings.length > 0 ? (
+              pendingRatings.map(dayRating => (
+                <QueueDayRatingCard
+                  key={dayRating._id}
+                  dayRating={dayRating}
+                  onSubmitRating={handleSubmitDayRating}
+                  isSubmitting={submitDayRating.isPending}
+                />
+              ))
+            ) : (
+              <EmptyState
+                height={80}
+                message={t('Chưa có kỳ đánh giá sức khỏe ngày nào đang chờ xử lý.')}
               />
-            ))}
+            )}
           </View>
 
-          {/* KHỐI 7: Section Báo cáo sức khỏe & Kết luận (EXPERT-FR-005, 006, 013) */}
+          {/* KHỐI 7: Section Báo cáo vi khí hậu & Kết luận */}
           <View
             onLayout={e => handleSectionLayout('reports', e)}
             style={styles.sectionContainer}
@@ -676,14 +705,14 @@ export default function QueueScreen() {
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <CalendarCheck size={18} weight="bold" color={palette.text} />
-                <Text variant="heading" weight="bold">
-                  {t('BÁO CÁO SỨC KHỎE CẦN KẾT LUẬN')}
+                <Text variant="heading" weight="semiBold">
+                  {t('Báo cáo vi khí hậu & kết luận')}
                 </Text>
               </View>
               <View
                 style={[
                   styles.countBadge,
-                  { backgroundColor: palette.surfaceStrong },
+                  { backgroundColor: palette.surface },
                 ]}
               >
                 <Text variant="label" weight="bold" color={palette.textSecondary}>
@@ -708,12 +737,16 @@ export default function QueueScreen() {
             ) : (
               <EmptyState
                 height={80}
-                message={t('Tất cả báo cáo sức khỏe đã được hoàn tất kết luận chuyên môn.')}
+                message={t('Tất cả báo cáo vi khí hậu đã được hoàn tất kết luận chuyên môn.')}
               />
             )}
           </View>
         </View>
       </ScrollView>
+
+      {toastMessage && (
+        <Toast message={toastMessage} bottomOffset={TAB_BAR_OVERLAP + Spacing.lg} />
+      )}
     </View>
   )
 }
@@ -726,39 +759,30 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   stickyScopeContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xs,
     zIndex: 10,
   },
   mainContent: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     paddingTop: Spacing.xs,
   },
   kpiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.md,
+    gap: Spacing.sm,
     marginBottom: Spacing.lg,
   },
-  kpiCard: {
-    width: '48%',
+  kpiCell: {
     flexGrow: 1,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    padding: Spacing.md,
-    elevation: 0,
+    flexBasis: '40%',
   },
-  kpiHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.xs,
+  kpiTile: {
+    height: KPI_TILE_HEIGHT,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    justifyContent: 'space-between',
   },
   kpiValue: {
-    fontFamily: FontFamily.bold,
     fontVariant: ['tabular-nums'],
-    marginBottom: Spacing.xs / 2,
   },
   sectionContainer: {
     marginBottom: Spacing.lg,
@@ -783,13 +807,27 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   alertCard: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
     marginBottom: Spacing.sm,
+    gap: 0,
   },
   alertTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  alertBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+  },
+  alertDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   alertTimeWrapper: {
     flexDirection: 'row',

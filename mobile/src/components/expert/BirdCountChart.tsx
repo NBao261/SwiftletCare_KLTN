@@ -64,7 +64,7 @@ export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
 
   if (isMissing) {
     return (
-      <View style={[styles.missingBox, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+      <View style={[styles.missingBox, { backgroundColor: palette.surfaceStrong }]}>
         <Bird size={24} color={palette.textSecondary} />
         <Text variant="small" weight="medium" color={palette.textSecondary} style={styles.missingText}>
           {t('Không có dữ liệu đếm chim (ALERT-FR-014)')}
@@ -74,25 +74,25 @@ export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+    <View style={[styles.container, { backgroundColor: palette.surfaceStrong }]}>
       {/* Tiêu đề & Tổng kết */}
       <View style={styles.headerRow}>
         <View style={styles.titleGroup}>
           <Bird size={16} color={palette.text} />
-          <Text variant="small" weight="bold">
+          <Text variant="small" weight="semiBold">
             {t('Lưu lượng chim ±30 phút (Bucket 5m)')}
           </Text>
         </View>
 
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.barIndicator, { backgroundColor: palette.primary }]} />
+            <View style={[styles.barIndicator, { backgroundColor: palette.houseHealthy }]} />
             <Text variant="small" weight="medium" color={palette.text}>
               {t('Vào: {count}', { count: totalEntry })}
             </Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.barIndicator, { backgroundColor: palette.textSecondary }]} />
+            <View style={[styles.barIndicator, { backgroundColor: palette.text }]} />
             <Text variant="small" weight="medium" color={palette.textSecondary}>
               {t('Ra: {count}', { count: totalExit })}
             </Text>
@@ -110,7 +110,7 @@ export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
           axisOptions={{
             font: font ?? undefined,
             tickCount: { x: Math.min(5, Math.max(2, chartData.length)), y: 4 },
-            lineColor: palette.border,
+            lineColor: palette.divider,
             labelColor: palette.textSecondary,
             formatXLabel: val => {
               const idx = Math.round(Number(val))
@@ -126,8 +126,8 @@ export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
               withinGroupPadding={0.1}
               roundedCorners={{ topLeft: 4, topRight: 4 }}
             >
-              <BarGroup.Bar points={points.entry_count} color={palette.primary} />
-              <BarGroup.Bar points={points.exit_count} color={palette.textSecondary} />
+              <BarGroup.Bar points={points.entry_count} color={palette.houseHealthy} />
+              <BarGroup.Bar points={points.exit_count} color={palette.text} />
             </BarGroup>
           )}
         </CartesianChart>
@@ -139,13 +139,11 @@ export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
 const styles = StyleSheet.create({
   container: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     marginTop: Spacing.sm,
   },
   missingBox: {
     borderRadius: Radius.md,
-    borderWidth: 1,
     padding: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',

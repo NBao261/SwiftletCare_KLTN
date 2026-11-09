@@ -86,7 +86,7 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
 
   if (isMissing) {
     return (
-      <View style={[styles.missingBox, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+      <View style={[styles.missingBox, { backgroundColor: palette.surfaceStrong }]}>
         <Waveform size={24} color={palette.textSecondary} />
         <Text variant="small" weight="medium" color={palette.textSecondary} style={styles.missingText}>
           {t('Không có dữ liệu viễn trắc (ALERT-FR-014)')}
@@ -96,7 +96,7 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+    <View style={[styles.container, { backgroundColor: palette.surfaceStrong }]}>
       {/* Legend & Chú giải */}
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
@@ -107,7 +107,7 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
         </View>
 
         <View style={styles.legendItem}>
-          <View style={[styles.dot, { backgroundColor: palette.primary }]} />
+          <View style={[styles.dot, { backgroundColor: palette.houseHealthy }]} />
           <Text variant="small" color={palette.textSecondary}>
             {t('Độ ẩm (%)')}
           </Text>
@@ -140,7 +140,7 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
           axisOptions={{
             font: font ?? undefined,
             tickCount: { x: Math.min(5, Math.max(2, chartData.length)), y: 4 },
-            lineColor: palette.border,
+            lineColor: palette.divider,
             labelColor: palette.textSecondary,
             formatXLabel: val => {
               const idx = Math.round(Number(val))
@@ -168,7 +168,7 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
                 />
                 <VictoryLine
                   points={points.humidity}
-                  color={palette.primary}
+                  color={palette.houseHealthy}
                   strokeWidth={2}
                   curveType="monotoneX"
                   connectMissingData
@@ -205,13 +205,11 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
 const styles = StyleSheet.create({
   container: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     marginTop: Spacing.sm,
   },
   missingBox: {
     borderRadius: Radius.md,
-    borderWidth: 1,
     padding: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',

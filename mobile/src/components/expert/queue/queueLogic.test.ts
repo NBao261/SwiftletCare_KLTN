@@ -16,7 +16,10 @@ describe('Queue business logic & BR-31 guardrails', () => {
     const isBlind = pendingRating.state === 'PENDING' && !pendingRating.assessor_status
     expect(isBlind).toBe(true)
 
-    // Khi chuyên gia đã chấm điểm (assessor_status được set), mở khóa reveal đối chiếu
+    const revealedSystemStatusBeforeRate = !isBlind ? pendingRating.system_status : undefined
+    expect(revealedSystemStatusBeforeRate).toBeUndefined()
+
+    // Khi chuyên gia đã chấm điểm (assessor_status được set sau khi POST thành công), mở khóa reveal đối chiếu
     const ratedRating: DayRating = {
       ...pendingRating,
       assessor_status: 'GOOD',
@@ -24,12 +27,14 @@ describe('Queue business logic & BR-31 guardrails', () => {
     }
     const isRevealed = ratedRating.state === 'RATED' || Boolean(ratedRating.assessor_status)
     expect(isRevealed).toBe(true)
+    const revealedSystemStatusAfterRate = isRevealed ? ratedRating.system_status : undefined
+    expect(revealedSystemStatusAfterRate).toBe('WATCH')
   })
 
-  it('Khối 5: Từ chối đề xuất Fuzzy bắt buộc phải có lý do (tránh HTTP 422)', () => {
+  it('Khối 5: Từ chối đề xuất Fuzzy bắt buộc phải có lý do', () => {
     const validateRejection = (reason: string): { valid: boolean; error?: string } => {
       if (!reason.trim()) {
-        return { valid: false, error: 'Bắt buộc nhập lý do khi từ chối đề xuất (tránh lỗi 422)' }
+        return { valid: false, error: 'Vui lòng nhập lý do từ chối để phản hồi cho người đề xuất' }
       }
       return { valid: true }
     }

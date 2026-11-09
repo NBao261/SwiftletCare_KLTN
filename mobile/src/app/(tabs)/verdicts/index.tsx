@@ -7,16 +7,17 @@ import {
   View,
   type ScrollViewInstance,
 } from 'react-native'
+import { PressableScale } from '@/components/ui/pressable-scale'
 import { useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
+import { useQueryClient } from '@tanstack/react-query'
+import { offNotificationNew, onNotificationNew } from '@/services/socket/socketClient'
 import {
-  CheckCircle,
-  Lightning,
+  ArrowUp,
   SlidersHorizontal,
-  WarningCircle,
-  XCircle,
 } from 'phosphor-react-native'
-import { PersistentScopeBar } from '@/components/layout/PersistentScopeBar'
+import { ExpertHeaderPicker, PersistentScopeBar } from '@/components/layout/PersistentScopeBar'
+import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { VerdictCard } from '@/components/expert/VerdictCard'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -24,6 +25,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
 import { useInferredAlerts, useSetAlertVerdict, useVerdictStats } from '@/hooks/expert/useInferredAlerts'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
@@ -32,29 +34,31 @@ import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import type { InferredAlert, VerdictResult } from '@/types'
 import { t } from '@/utils/i18n.utils'
 
+const KPI_TILE_HEIGHT = 112
+
 type FilterStatus = 'ALL' | 'PENDING' | 'CONFIRMED' | 'REJECTED'
 
 const INFERRED_TYPE_OPTIONS: { key: string; label: string }[] = [
   { key: 'ALL', label: 'Tất cả loại sự cố' },
-  { key: 'NOISE_ANOMALY', label: 'Dị thường âm thanh' },
-  { key: 'SENSOR_ANOMALY', label: 'Cảm biến sai lệch' },
-  { key: 'MISTING_INEFFECTIVE', label: 'Bơm sương không hiệu quả' },
-  { key: 'LOW_RETURN_RATE', label: 'Tỷ lệ chim về thấp' },
-  { key: 'FORECAST_BREACH', label: 'Dự báo vi phạm vi khí hậu' },
+  { key: 'NOISE_ANOMALY', label: 'Tiếng ồn bất thường trong nhà' },
+  { key: 'SENSOR_ANOMALY', label: 'Cảm biến nhảy số bất thường' },
+  { key: 'MISTING_INEFFECTIVE', label: 'Bơm sương chạy nhưng không lên ẩm' },
+  { key: 'LOW_RETURN_RATE', label: 'Đàn chim về tổ sụt giảm' },
+  { key: 'FORECAST_BREACH', label: 'Dự báo sắp lệch nhiệt ẩm' },
 ]
 
 const SEVERITY_OPTIONS: { key: string; label: string }[] = [
   { key: 'ALL', label: 'Tất cả mức độ' },
-  { key: 'CRITICAL', label: 'Khẩn cấp (P1)' },
-  { key: 'HIGH', label: 'Cao (P1)' },
-  { key: 'MEDIUM', label: 'Trung bình (P2)' },
-  { key: 'LOW', label: 'Thường (P3)' },
+  { key: 'CRITICAL', label: 'Khẩn cấp' },
+  { key: 'HIGH', label: 'Cao' },
+  { key: 'MEDIUM', label: 'Trung bình' },
+  { key: 'LOW', label: 'Thường' },
 ]
 
 /**
  * [PHẦN 2] MOBILE — MENU THẨM ĐỊNH (src/app/(tabs)/verdicts/index.tsx)
- * Kiến trúc 1 màn hình duy nhất (One-Screen Consolidated) cho Domain Expert.
- * Đáp ứng EXPERT-FR-003, ALERT-FR-007, ALERT-FR-014, EXPERT-FR-008, BR-16.
+ * Kiến trúc 1 màn hình duy nhất (One-Screen Consolidated) cho Domain Expert,
+ * đồng bộ 100% quy chuẩn thẩm mỹ Calm Industrial với nhánh FARM_OWNER.
  */
 export default function VerdictsScreen() {
   const palette = usePalette()
@@ -62,22 +66,51 @@ export default function VerdictsScreen() {
   const params = useLocalSearchParams<{ alertId?: string }>()
   const scrollRef = useRef<ScrollViewInstance>(null)
   const cardLayouts = useRef<Record<string, number>>({})
+  const listSectionY = useRef(0)
 
-  // Phạm vi giám sát dùng chung (PersistentScopeBar)
+  const queryClient = useQueryClient()
+
+  // Realtime WebSocket: tự động làm mới danh sách thẩm định khi có thông báo mới (EXPERT-FR-007)
+  useEffect(() => {
+    const handleNotification = () => {
+      void queryClient.invalidateQueries({ queryKey: ['inferred-alerts'] })
+      void queryClient.invalidateQueries({ queryKey: ['verdict-stats'] })
+      void queryClient.invalidateQueries({ queryKey: ['expert'] })
+    }
+    onNotificationNew(handleNotification)
+    return () => {
+      offNotificationNew(handleNotification)
+    }
+  }, [queryClient])
+
   const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)
   const selectedZoneId = useExpertScopeStore(state => state.selectedZoneId)
 
-  // Trạng thái lọc danh sách
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('ALL')
   const [selectedType, setSelectedType] = useState<string>('ALL')
   const [selectedSeverity, setSelectedSeverity] = useState<string>('ALL')
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
 
-  // Quản lý thẻ mở rộng (Collapsible Drawer)
   const [userToggledAlertId, setUserToggledAlertId] = useState<string | null | undefined>(undefined)
   const expandedAlertId = userToggledAlertId !== undefined ? userToggledAlertId : (params.alertId ?? null)
 
-  // Nạp danh sách cảnh báo suy luận từ API
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg)
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null)
+    }, 3000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    }
+  }, [])
+
   const {
     data: alertsResponse,
     isLoading: isAlertsLoading,
@@ -88,7 +121,6 @@ export default function VerdictsScreen() {
     zone_id: selectedZoneId || undefined,
   })
 
-  // Thống kê phán quyết chuyên gia (EXPERT-FR-008)
   const { refetch: refetchStats } = useVerdictStats({
     farm_id: selectedFarmId || undefined,
     zone_id: selectedZoneId || undefined,
@@ -100,7 +132,6 @@ export default function VerdictsScreen() {
     return alertsResponse?.data || []
   }, [alertsResponse])
 
-  // Tính toán số liệu cho 4 thẻ KPI phản xạ nhanh (Khối 2)
   const kpiData = useMemo(() => {
     let pending = 0
     let confirmed = 0
@@ -129,25 +160,19 @@ export default function VerdictsScreen() {
     }
   }, [rawAlerts])
 
-  // Lọc danh sách theo các tiêu chí đã chọn
   const filteredAlerts = useMemo(() => {
     return rawAlerts.filter(item => {
-      // 1. Lọc theo trạng thái phán quyết
       if (filterStatus === 'PENDING' && Boolean(item.expert_verdict)) return false
       if (filterStatus === 'CONFIRMED' && item.expert_verdict?.result !== 'CONFIRMED') return false
       if (filterStatus === 'REJECTED' && item.expert_verdict?.result !== 'REJECTED') return false
 
-      // 2. Lọc theo loại cảnh báo
       if (selectedType !== 'ALL' && item.type !== selectedType) return false
-
-      // 3. Lọc theo mức độ nghiêm trọng
       if (selectedSeverity !== 'ALL' && item.severity !== selectedSeverity) return false
 
       return true
     })
   }, [filterStatus, rawAlerts, selectedSeverity, selectedType])
 
-  // Xử lý tự động cuộn tới vị trí thẻ khi nhận params.alertId từ màn Hàng đợi
   useEffect(() => {
     if (params.alertId) {
       const timer = setTimeout(() => {
@@ -163,7 +188,6 @@ export default function VerdictsScreen() {
 
   const handleToggleCard = useCallback(
     (alertId: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
       setUserToggledAlertId(prev => {
         const current = prev !== undefined ? prev : (params.alertId ?? null)
         return current === alertId ? null : alertId
@@ -177,27 +201,40 @@ export default function VerdictsScreen() {
       try {
         await setAlertVerdict.mutateAsync({ alertId, result, note })
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
+        showToast(
+          result === 'CONFIRMED'
+            ? t('Đã xác nhận cảnh báo đúng')
+            : t('Đã bác bỏ cảnh báo ảo và gửi lý do')
+        )
       } catch {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
+        showToast(t('Không thể lưu kết luận thẩm định, vui lòng thử lại'))
       }
     },
-    [setAlertVerdict]
+    [setAlertVerdict, showToast]
   )
 
   const handleKpiPress = useCallback((status: FilterStatus) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
     setFilterStatus(status)
+    scrollRef.current?.scrollTo({ y: Math.max(0, listSectionY.current - 12), animated: true })
   }, [])
+
+  const pendingTileWarning = kpiData.pending > 0
+  const pendingSecondaryColor = pendingTileWarning ? palette.severityP2Text : palette.textSecondary
+  const hasAdvancedFilter = selectedType !== 'ALL' || selectedSeverity !== 'ALL'
 
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
-      <AppHeader title={t('Thẩm định cảnh báo AI')} />
+      <AppHeader leading={<ExpertHeaderPicker />} />
 
       <ScrollView
         ref={scrollRef}
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: Spacing.xxl * 3 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl * 3 },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -209,146 +246,110 @@ export default function VerdictsScreen() {
           />
         }
       >
-        {/* KHỐI 1: PersistentScopeBar ghim cố định đầu trang */}
+        {/* KHỐI 1: Thanh chọn Tầng & Khoảng thời gian ghim cố định đầu trang */}
         <View style={[styles.stickyScopeContainer, { backgroundColor: palette.background }]}>
           <PersistentScopeBar />
         </View>
 
         <View style={styles.mainContent}>
-          {/* KHỐI 2: Lưới 2x2 gồm 4 Thẻ KPI Phản Xạ Nhanh */}
+          {/* KHỐI 2: Lưới 2x2 gồm 4 Ô KPI chuẩn KpiTile của FARM_OWNER */}
           <View style={styles.kpiGrid}>
-            {/* Thẻ 1: Tổng cảnh báo */}
-            <Pressable
-              onPress={() => handleKpiPress('ALL')}
-              style={({ pressed }) => [
-                styles.kpiCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: filterStatus === 'ALL' ? palette.text : palette.border,
-                  borderWidth: filterStatus === 'ALL' ? 2 : 1,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Lọc tất cả cảnh báo')}
-            >
-              <View style={styles.kpiHeader}>
-                <Lightning size={16} weight="bold" color={palette.text} />
-                <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {t('TỔNG CẢNH BÁO')}
-                </Text>
-              </View>
-              <Text variant="display" weight="bold" style={styles.kpiValue}>
-                {kpiData.total.toString().padStart(2, '0')}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {t('Sự cố suy luận')}
-              </Text>
-            </Pressable>
-
-            {/* Thẻ 2: Chờ thẩm định (dùng màu palette.alert nếu > 0) */}
-            <Pressable
-              onPress={() => handleKpiPress('PENDING')}
-              style={({ pressed }) => [
-                styles.kpiCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: filterStatus === 'PENDING' ? palette.alert : palette.border,
-                  borderWidth: filterStatus === 'PENDING' ? 2 : 1,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Lọc cảnh báo chờ thẩm định')}
-            >
-              <View style={styles.kpiHeader}>
-                <WarningCircle
-                  size={16}
-                  weight="bold"
-                  color={kpiData.pending > 0 ? palette.alert : palette.text}
-                />
-                <Text
-                  variant="label"
-                  weight="bold"
-                  color={kpiData.pending > 0 ? palette.alert : palette.textSecondary}
-                >
-                  {t('CHỜ THẨM ĐỊNH')}
-                </Text>
-              </View>
-              <Text
-                variant="display"
-                weight="bold"
-                color={kpiData.pending > 0 ? palette.alert : palette.text}
-                style={styles.kpiValue}
+            {/* Ô 1: Tổng cảnh báo */}
+            <View style={styles.kpiCell}>
+              <PressableScale
+                onPress={() => handleKpiPress('ALL')}
+                style={[styles.kpiTile, { backgroundColor: palette.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Lọc tất cả cảnh báo')}
               >
-                {kpiData.pending.toString().padStart(2, '0')}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {t('Cần phán quyết')}
-              </Text>
-            </Pressable>
-
-            {/* Thẻ 3: Tỷ lệ xác nhận (%) */}
-            <Pressable
-              onPress={() => handleKpiPress('CONFIRMED')}
-              style={({ pressed }) => [
-                styles.kpiCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: filterStatus === 'CONFIRMED' ? palette.text : palette.border,
-                  borderWidth: filterStatus === 'CONFIRMED' ? 2 : 1,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Lọc cảnh báo đã xác nhận')}
-            >
-              <View style={styles.kpiHeader}>
-                <CheckCircle size={16} weight="bold" color={palette.text} />
-                <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {t('XÁC NHẬN')}
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Tổng cảnh báo')}
                 </Text>
-              </View>
-              <Text variant="display" weight="bold" style={styles.kpiValue}>
-                {`${kpiData.confirmRate}%`}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {t('Tỷ lệ chuẩn xác')}
-              </Text>
-            </Pressable>
-
-            {/* Thẻ 4: Đã bác bỏ */}
-            <Pressable
-              onPress={() => handleKpiPress('REJECTED')}
-              style={({ pressed }) => [
-                styles.kpiCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: filterStatus === 'REJECTED' ? palette.text : palette.border,
-                  borderWidth: filterStatus === 'REJECTED' ? 2 : 1,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Lọc cảnh báo đã bác bỏ')}
-            >
-              <View style={styles.kpiHeader}>
-                <XCircle size={16} weight="bold" color={palette.text} />
-                <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {t('ĐÃ BÁC BỎ')}
+                <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
+                  {t('{count} sự cố', { count: kpiData.total })}
                 </Text>
-              </View>
-              <Text variant="display" weight="bold" style={styles.kpiValue}>
-                {kpiData.rejected.toString().padStart(2, '0')}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {t('Báo sai / Loại trừ')}
-              </Text>
-            </Pressable>
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Đã ghi nhận')}
+                </Text>
+              </PressableScale>
+            </View>
+
+            {/* Ô 2: Chờ kiểm tra */}
+            <View style={styles.kpiCell}>
+              <PressableScale
+                onPress={() => handleKpiPress('PENDING')}
+                style={[
+                  styles.kpiTile,
+                  {
+                    backgroundColor: pendingTileWarning ? palette.severityP2 : palette.surface,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Lọc cảnh báo chờ kiểm tra')}
+              >
+                <Text variant="small" color={pendingSecondaryColor} numberOfLines={1}>
+                  {t('Chờ kiểm tra')}
+                </Text>
+                <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
+                  {t('{count} đang mở', { count: kpiData.pending })}
+                </Text>
+                <Text variant="small" color={pendingSecondaryColor} numberOfLines={1}>
+                  {kpiData.pending > 0 ? t('Cần chuyên gia xem') : t('Đã xử lý hết')}
+                </Text>
+              </PressableScale>
+            </View>
+
+            {/* Ô 3: Tỷ lệ báo đúng (%) */}
+            <View style={styles.kpiCell}>
+              <PressableScale
+                onPress={() => handleKpiPress('CONFIRMED')}
+                style={[styles.kpiTile, { backgroundColor: palette.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Lọc cảnh báo báo đúng')}
+              >
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Báo đúng')}
+                </Text>
+                <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
+                  {`${kpiData.confirmRate}%`}
+                </Text>
+                <View style={styles.kpiCaptionRow}>
+                  <ArrowUp size={12} color={palette.houseHealthy} weight="bold" />
+                  <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                    {t('Tỷ lệ chuẩn xác')}
+                  </Text>
+                </View>
+              </PressableScale>
+            </View>
+
+            {/* Ô 4: Báo ảo (Bác bỏ) */}
+            <View style={styles.kpiCell}>
+              <PressableScale
+                onPress={() => handleKpiPress('REJECTED')}
+                style={[styles.kpiTile, { backgroundColor: palette.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Lọc cảnh báo báo ảo')}
+              >
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Báo ảo (Bác bỏ)')}
+                </Text>
+                <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
+                  {t('{count} đã loại', { count: kpiData.rejected })}
+                </Text>
+                <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                  {t('Báo sai / nhiễu')}
+                </Text>
+              </PressableScale>
+            </View>
           </View>
 
-          {/* KHỐI 3: Hàng Filter Chips bo tròn Radius.full & Nút Lọc phụ */}
-          <View style={styles.filterSection}>
+          {/* KHỐI 3: Hàng Filter Chips bo tròn không viền chuẩn ChoiceChips của FARM_OWNER */}
+          <View
+            onLayout={e => {
+              listSectionY.current = e.nativeEvent.layout.y
+            }}
+            style={styles.filterSection}
+          >
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -356,131 +357,105 @@ export default function VerdictsScreen() {
             >
               {/* Chip: Tất cả */}
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-                  setFilterStatus('ALL')
-                }}
+                hitSlop={8}
+                onPress={() => setFilterStatus('ALL')}
                 style={[
                   styles.filterChip,
                   {
-                    backgroundColor: filterStatus === 'ALL' ? palette.text : palette.surface,
-                    borderColor: filterStatus === 'ALL' ? palette.text : palette.border,
+                    backgroundColor: filterStatus === 'ALL' ? palette.inverse : palette.surface,
                   },
                 ]}
               >
                 <Text
-                  variant="small"
-                  weight={filterStatus === 'ALL' ? 'bold' : 'medium'}
+                  variant="body"
+                  weight="semiBold"
                   color={filterStatus === 'ALL' ? palette.onInverse : palette.text}
                 >
                   {t('Tất cả ({count})', { count: kpiData.total })}
                 </Text>
               </Pressable>
 
-              {/* Chip: Chờ xử lý */}
+              {/* Chip: Chờ kiểm tra */}
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-                  setFilterStatus('PENDING')
-                }}
+                hitSlop={8}
+                onPress={() => setFilterStatus('PENDING')}
                 style={[
                   styles.filterChip,
                   {
-                    backgroundColor: filterStatus === 'PENDING' ? palette.text : palette.surface,
-                    borderColor: filterStatus === 'PENDING' ? palette.text : palette.border,
+                    backgroundColor: filterStatus === 'PENDING' ? palette.inverse : palette.surface,
                   },
                 ]}
               >
                 <Text
-                  variant="small"
-                  weight={filterStatus === 'PENDING' ? 'bold' : 'medium'}
+                  variant="body"
+                  weight="semiBold"
                   color={filterStatus === 'PENDING' ? palette.onInverse : palette.text}
                 >
-                  {t('Chờ xử lý ({count})', { count: kpiData.pending })}
+                  {t('Chờ kiểm tra ({count})', { count: kpiData.pending })}
                 </Text>
               </Pressable>
 
-              {/* Chip: Đã xác nhận */}
+              {/* Chip: Báo đúng */}
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-                  setFilterStatus('CONFIRMED')
-                }}
+                hitSlop={8}
+                onPress={() => setFilterStatus('CONFIRMED')}
                 style={[
                   styles.filterChip,
                   {
-                    backgroundColor: filterStatus === 'CONFIRMED' ? palette.text : palette.surface,
-                    borderColor: filterStatus === 'CONFIRMED' ? palette.text : palette.border,
+                    backgroundColor: filterStatus === 'CONFIRMED' ? palette.inverse : palette.surface,
                   },
                 ]}
               >
                 <Text
-                  variant="small"
-                  weight={filterStatus === 'CONFIRMED' ? 'bold' : 'medium'}
+                  variant="body"
+                  weight="semiBold"
                   color={filterStatus === 'CONFIRMED' ? palette.onInverse : palette.text}
                 >
-                  {t('Đã xác nhận ({count})', { count: kpiData.confirmed })}
+                  {t('Báo đúng ({count})', { count: kpiData.confirmed })}
                 </Text>
               </Pressable>
 
-              {/* Chip: Đã bác bỏ */}
+              {/* Chip: Báo ảo */}
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-                  setFilterStatus('REJECTED')
-                }}
+                hitSlop={8}
+                onPress={() => setFilterStatus('REJECTED')}
                 style={[
                   styles.filterChip,
                   {
-                    backgroundColor: filterStatus === 'REJECTED' ? palette.text : palette.surface,
-                    borderColor: filterStatus === 'REJECTED' ? palette.text : palette.border,
+                    backgroundColor: filterStatus === 'REJECTED' ? palette.inverse : palette.surface,
                   },
                 ]}
               >
                 <Text
-                  variant="small"
-                  weight={filterStatus === 'REJECTED' ? 'bold' : 'medium'}
+                  variant="body"
+                  weight="semiBold"
                   color={filterStatus === 'REJECTED' ? palette.onInverse : palette.text}
                 >
-                  {t('Đã bác bỏ ({count})', { count: kpiData.rejected })}
+                  {t('Báo ảo ({count})', { count: kpiData.rejected })}
                 </Text>
               </Pressable>
 
               {/* Nút Lọc nâng cao */}
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-                  setIsFilterSheetOpen(true)
-                }}
+                hitSlop={8}
+                onPress={() => setIsFilterSheetOpen(true)}
                 style={[
                   styles.filterChip,
                   styles.advancedFilterButton,
                   {
-                    backgroundColor:
-                      selectedType !== 'ALL' || selectedSeverity !== 'ALL'
-                        ? palette.primary
-                        : palette.surface,
-                    borderColor: palette.border,
+                    backgroundColor: hasAdvancedFilter ? palette.inverse : palette.surface,
                   },
                 ]}
               >
                 <SlidersHorizontal
                   size={14}
                   weight="bold"
-                  color={
-                    selectedType !== 'ALL' || selectedSeverity !== 'ALL'
-                      ? palette.onPrimary
-                      : palette.text
-                  }
+                  color={hasAdvancedFilter ? palette.onInverse : palette.text}
                 />
                 <Text
-                  variant="small"
-                  weight="bold"
-                  color={
-                    selectedType !== 'ALL' || selectedSeverity !== 'ALL'
-                      ? palette.onPrimary
-                      : palette.text
-                  }
+                  variant="body"
+                  weight="semiBold"
+                  color={hasAdvancedFilter ? palette.onInverse : palette.text}
                 >
                   {t('Bộ lọc')}
                 </Text>
@@ -500,7 +475,7 @@ export default function VerdictsScreen() {
               </View>
             ) : filteredAlerts.length === 0 ? (
               <EmptyState
-                message={t('Không tìm thấy sự cố suy luận nào thỏa mãn bộ lọc hiện tại.')}
+                message={t('Không tìm thấy sự cố nào thỏa mãn bộ lọc hiện tại.')}
               />
             ) : (
               filteredAlerts.map(alert => (
@@ -530,14 +505,14 @@ export default function VerdictsScreen() {
         onClose={() => setIsFilterSheetOpen(false)}
       >
         <View style={styles.sheetHeader}>
-          <Text variant="heading" weight="bold">
+          <Text variant="heading" weight="semiBold">
             {t('Bộ lọc nâng cao')}
           </Text>
         </View>
 
         <View style={styles.bottomSheetBody}>
-          <Text variant="small" weight="bold" color={palette.textSecondary}>
-            {t('LOẠI CẢNH BÁO SUY LUẬN')}
+          <Text variant="small" weight="semiBold" color={palette.textSecondary}>
+            {t('Loại cảnh báo suy luận')}
           </Text>
           <View style={styles.sheetChipGroup}>
             {INFERRED_TYPE_OPTIONS.map(opt => {
@@ -545,18 +520,18 @@ export default function VerdictsScreen() {
               return (
                 <Pressable
                   key={opt.key}
+                  hitSlop={8}
                   onPress={() => setSelectedType(opt.key)}
                   style={[
                     styles.sheetChip,
                     {
-                      backgroundColor: active ? palette.text : palette.surfaceStrong,
-                      borderColor: active ? palette.text : palette.border,
+                      backgroundColor: active ? palette.inverse : palette.surfaceStrong,
                     },
                   ]}
                 >
                   <Text
-                    variant="small"
-                    weight={active ? 'bold' : 'medium'}
+                    variant="body"
+                    weight="semiBold"
                     color={active ? palette.onInverse : palette.text}
                   >
                     {opt.label}
@@ -566,8 +541,8 @@ export default function VerdictsScreen() {
             })}
           </View>
 
-          <Text variant="small" weight="bold" color={palette.textSecondary} style={{ marginTop: Spacing.md }}>
-            {t('MỨC ĐỘ NGHIÊM TRỌNG')}
+          <Text variant="small" weight="semiBold" color={palette.textSecondary} style={{ marginTop: Spacing.md }}>
+            {t('Mức độ nghiêm trọng')}
           </Text>
           <View style={styles.sheetChipGroup}>
             {SEVERITY_OPTIONS.map(opt => {
@@ -575,18 +550,18 @@ export default function VerdictsScreen() {
               return (
                 <Pressable
                   key={opt.key}
+                  hitSlop={8}
                   onPress={() => setSelectedSeverity(opt.key)}
                   style={[
                     styles.sheetChip,
                     {
-                      backgroundColor: active ? palette.text : palette.surfaceStrong,
-                      borderColor: active ? palette.text : palette.border,
+                      backgroundColor: active ? palette.inverse : palette.surfaceStrong,
                     },
                   ]}
                 >
                   <Text
-                    variant="small"
-                    weight={active ? 'bold' : 'medium'}
+                    variant="body"
+                    weight="semiBold"
                     color={active ? palette.onInverse : palette.text}
                   >
                     {opt.label}
@@ -616,6 +591,10 @@ export default function VerdictsScreen() {
           </View>
         </View>
       </BottomSheet>
+
+      {toastMessage && (
+        <Toast message={toastMessage} bottomOffset={TAB_BAR_OVERLAP + Spacing.lg} />
+      )}
     </View>
   )
 }
@@ -631,8 +610,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   mainContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xs,
   },
   kpiGrid: {
     flexDirection: 'row',
@@ -640,42 +619,41 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
-  kpiCard: {
-    width: '48%',
+  kpiCell: {
     flexGrow: 1,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    elevation: 0,
+    flexBasis: '40%',
   },
-  kpiHeader: {
+  kpiTile: {
+    height: KPI_TILE_HEIGHT,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    justifyContent: 'space-between',
+  },
+  kpiValue: {
+    fontVariant: ['tabular-nums'],
+  },
+  kpiCaptionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    marginBottom: Spacing.xs,
-  },
-  kpiValue: {
-    fontSize: 26,
-    fontVariant: ['tabular-nums'],
-    marginVertical: 2,
   },
   filterSection: {
     marginBottom: Spacing.md,
   },
   filterChipsRow: {
     flexDirection: 'row',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
     alignItems: 'center',
   },
   filterChip: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.full,
-    borderWidth: 1,
   },
   advancedFilterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   alertListSection: {
     marginTop: Spacing.xs,
@@ -692,14 +670,13 @@ const styles = StyleSheet.create({
   sheetChipGroup: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
     marginTop: Spacing.xs,
   },
   sheetChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
     borderRadius: Radius.full,
-    borderWidth: 1,
   },
   sheetActions: {
     flexDirection: 'row',
@@ -708,10 +685,8 @@ const styles = StyleSheet.create({
   },
   sheetResetButton: {
     flex: 1,
-    borderRadius: Radius.full,
   },
   sheetApplyButton: {
     flex: 1,
-    borderRadius: Radius.full,
   },
 })

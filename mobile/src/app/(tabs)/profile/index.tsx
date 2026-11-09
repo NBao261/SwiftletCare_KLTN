@@ -1,4 +1,6 @@
 import { ScrollView, StyleSheet, View } from 'react-native'
+import { useRouter } from 'expo-router'
+import { ClockCounterClockwise } from 'phosphor-react-native'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
@@ -25,6 +27,7 @@ export default function ProfileScreen() {
   const user = useAuthStore(state => state.user)
   // Đổi ngôn ngữ thì dựng lại phần nội dung (key = ngôn ngữ) để mọi chữ ra đúng ngôn ngữ
   const { language, switchingTo, switchedTo, switchLanguage } = useSwitchLanguage()
+  const router = useRouter()
   // Chừa phần thanh tab đè lên đáy màn (MOBILE_GUIDE 3.5) cộng lề dưới; vùng an toàn dưới đã nằm trong thanh tab
   const bottomPadding = Spacing.lg + TAB_BAR_OVERLAP
 
@@ -43,6 +46,16 @@ export default function ProfileScreen() {
               {user?.email || '_'}
             </Text>
           </View>
+
+          {/* Lối tắt 1 chạm vào Nhật ký Hoạt động chuyên gia (EXPERT-FR-009, BZ-14) */}
+          {user?.role === 'DOMAIN_EXPERT' && (
+            <Button
+              variant="secondary"
+              label={t('Nhật ký hoạt động Chuyên gia')}
+              onPress={() => router.push('/expert/activity')}
+              trailingIcon={ClockCounterClockwise}
+            />
+          )}
 
           {/* TODO: đổi mật khẩu (profile/change-password, dùng chung form với (auth)/reset-password),
             kênh thông báo push + Telegram chỉ cho Farm Owner (không có Zalo/SMS — Report 3 §8),

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Modal, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import {
@@ -11,10 +11,12 @@ import {
   User,
   Warning,
 } from 'phosphor-react-native'
+import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
-import { Colors, Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import type { ReviewItem } from '@/types'
@@ -36,16 +38,16 @@ const PARAM_LABELS: Record<string, string> = {
   light_max: 'Ánh sáng tối đa (lux)',
   nh3_max: 'Khí NH3 tối đa (ppm)',
   co2_max: 'Khí CO2 tối đa (ppm)',
-  fuzzy_humidity_band: 'Dải dung sai độ ẩm (%)',
-  fuzzy_temp_band: 'Dải dung sai nhiệt độ (°C)',
+  fuzzy_humidity_band: 'Dung sai độ ẩm (%)',
+  fuzzy_temp_band: 'Dung sai nhiệt độ (°C)',
   fuzzy_fan_dry_level: 'Mức quạt sấy sàn (%)',
-  fuzzy_window_sec: 'Cửa sổ trượt Fuzzy (s)',
+  fuzzy_window_sec: 'Cửa sổ lọc (s)',
 }
 
 /**
- * Thẻ Kiểm duyệt thay đổi tham số của Chủ trại (EXPERT-FR-010, SRS §6.10).
- * Cho phép Chuyên gia Chấp thuận, Hoàn nguyên hoặc Hiệu chỉnh chỉ trong 1 chạm.
- * Sử dụng <Card> và <PressableScale> chuẩn hóa đồng bộ với FARM_OWNER.
+ * Thẻ Kiểm duyệt thay đổi tham số của Chủ nhà.
+ * Cho phép Chuyên gia Chấp thuận, Hoàn nguyên hoặc Chỉnh thêm chỉ trong 1 chạm.
+ * Sử dụng <Card> phẳng không viền và <BottomSheet> đồng bộ với FARM_OWNER.
  */
 export function QueueReviewCard({
   item,
@@ -59,11 +61,11 @@ export function QueueReviewCard({
 
   const [isConfirmRevertOpen, setIsConfirmRevertOpen] = useState(false)
 
-  const changedByName = item.changed_by?.full_name || t('Chủ nhà yến')
+  const changedByName = item.changed_by?.full_name || t('Chủ nhà')
   const timeStr = formatTimeAgo(item.created_at)
-  const groupLabel = item.parameter_group === 'thresholds' ? t('Ngưỡng an toàn') : t('Hệ số Fuzzy')
+  const groupKey = item.group ?? item.parameter_group
+  const groupLabel = groupKey === 'thresholds' ? t('Ngưỡng nhiệt ẩm') : t('Độ ẩm & Gió')
 
-  // Danh sách các cặp tham số thay đổi
   const diffKeys = Object.keys(item.new_values || {})
 
   const handleAcceptPress = async () => {
@@ -78,28 +80,25 @@ export function QueueReviewCard({
   }
 
   const handleAdjustPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
     if (item.zone_id) {
       setZoneId(item.zone_id)
     }
-    router.push('/(tabs)/tuning')
+    router.push({
+      pathname: '/(tabs)/tuning',
+      params: { zoneId: item.zone_id, chip: 'thresholds' },
+    })
   }
 
   return (
-    <Card
-      style={[
-        styles.card,
-        { borderColor: palette.border, borderWidth: 1 },
-      ]}
-    >
+    <Card style={styles.card}>
       {/* Header thẻ: Người sửa & Nhóm tham số & Thời gian */}
       <View style={styles.headerRow}>
         <View style={styles.authorRow}>
           <User size={14} color={palette.textSecondary} />
-          <Text variant="small" weight="bold">
+          <Text variant="small" weight="semiBold">
             {changedByName}
           </Text>
-          <View style={[styles.groupTag, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+          <View style={[styles.groupTag, { backgroundColor: palette.surfaceStrong }]}>
             <Text variant="label" color={palette.textSecondary}>
               {groupLabel}
             </Text>
@@ -115,21 +114,30 @@ export function QueueReviewCard({
       </View>
 
       {/* Hộp Diff đối chiếu trực quan Giá trị cũ ➔ Giá trị mới */}
-      <View style={[styles.diffBox, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+      <View style={[styles.diffBox, { backgroundColor: palette.surfaceStrong }]}>
         {diffKeys.length === 0 ? (
           <Text variant="small" color={palette.textSecondary}>
             {t('Không có chi tiết sai lệch')}
           </Text>
         ) : (
-          diffKeys.map(key => {
+          diffKeys.map((key, idx) => {
             const oldVal = item.old_values?.[key] ?? '--'
             const newVal = item.new_values?.[key] ?? '--'
             const label = PARAM_LABELS[key] || key
 
             return (
-              <View key={key} style={styles.diffRow}>
+              <View
+                key={key}
+                style={[
+                  styles.diffRow,
+                  idx < diffKeys.length - 1 && {
+                    borderBottomWidth: BorderWidth.hairline,
+                    borderBottomColor: palette.divider,
+                  },
+                ]}
+              >
                 <Text variant="small" weight="medium" style={styles.paramName} numberOfLines={1}>
-                  {label}:
+                  {label}
                 </Text>
 
                 <View style={styles.diffValues}>
@@ -137,7 +145,7 @@ export function QueueReviewCard({
                     {oldVal}
                   </Text>
                   <ArrowRight size={12} color={palette.textSecondary} />
-                  <Text variant="small" weight="bold" color={palette.text} style={styles.newVal}>
+                  <Text variant="small" weight="semiBold" color={palette.text} style={styles.newVal}>
                     {newVal}
                   </Text>
                 </View>
@@ -147,14 +155,55 @@ export function QueueReviewCard({
         )}
       </View>
 
-      {/* Cụm 3 nút hành động 1 chạm chuẩn công thái học 44pt */}
+      {/* Cụm 3 nút hành động thuận tay cái: Nút phụ bên trái, nút chính [Chấp thuận] bên phải */}
       <View style={styles.actionsContainer}>
-        {/* Nút 1: Chấp thuận */}
+        {/* Nút 1 (Phụ bên trái): Hoàn nguyên */}
+        <PressableScale
+          onPress={() => setIsConfirmRevertOpen(true)}
+          disabled={isSubmitting}
+          style={[
+            styles.actionButton,
+            {
+              backgroundColor: palette.surfaceStrong,
+              opacity: isSubmitting ? 0.6 : 1,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t('Hoàn nguyên giá trị cũ')}
+        >
+          <ArrowCounterClockwise size={15} color={palette.deviceError} />
+          <Text variant="small" weight="semiBold" color={palette.deviceError}>
+            {t('Hoàn nguyên')}
+          </Text>
+        </PressableScale>
+
+        {/* Nút 2 (Phụ bên trái): Chỉnh thêm */}
+        <PressableScale
+          onPress={handleAdjustPress}
+          disabled={isSubmitting}
+          style={[
+            styles.actionButton,
+            {
+              backgroundColor: palette.surfaceStrong,
+              opacity: isSubmitting ? 0.6 : 1,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t('Chỉnh thêm trên tab tham số')}
+        >
+          <SlidersHorizontal size={15} color={palette.text} />
+          <Text variant="small" weight="semiBold" color={palette.text}>
+            {t('Chỉnh thêm')}
+          </Text>
+        </PressableScale>
+
+        {/* Nút 3 (Chính bên phải - thuận tay cái): Chấp thuận */}
         <PressableScale
           onPress={handleAcceptPress}
           disabled={isSubmitting}
           style={[
             styles.actionButton,
+            styles.primaryButton,
             {
               backgroundColor: palette.primary,
               opacity: isSubmitting ? 0.6 : 1,
@@ -164,110 +213,52 @@ export function QueueReviewCard({
           accessibilityLabel={t('Chấp thuận thay đổi này')}
         >
           <CheckCircle size={16} weight="bold" color={palette.onPrimary} />
-          <Text variant="small" weight="bold" color={palette.onPrimary}>
+          <Text variant="small" weight="semiBold" color={palette.onPrimary}>
             {t('Chấp thuận')}
-          </Text>
-        </PressableScale>
-
-        {/* Nút 2: Hoàn nguyên */}
-        <PressableScale
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-            setIsConfirmRevertOpen(true)
-          }}
-          disabled={isSubmitting}
-          style={[
-            styles.actionButton,
-            styles.outlinedButton,
-            {
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
-              opacity: isSubmitting ? 0.6 : 1,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={t('Hoàn nguyên giá trị cũ')}
-        >
-          <ArrowCounterClockwise size={16} color={Colors.light.deviceError} />
-          <Text variant="small" weight="bold" color={Colors.light.deviceError}>
-            {t('Hoàn nguyên')}
-          </Text>
-        </PressableScale>
-
-        {/* Nút 3: Hiệu chỉnh */}
-        <PressableScale
-          onPress={handleAdjustPress}
-          disabled={isSubmitting}
-          style={[
-            styles.actionButton,
-            styles.outlinedButton,
-            {
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
-              opacity: isSubmitting ? 0.6 : 1,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={t('Hiệu chỉnh trên tab tham số')}
-        >
-          <SlidersHorizontal size={16} color={palette.text} />
-          <Text variant="small" weight="bold" color={palette.text}>
-            {t('Hiệu chỉnh')}
           </Text>
         </PressableScale>
       </View>
 
-      {/* Modal xác nhận Hoàn nguyên nhanh */}
-      <Modal
+      {/* BottomSheet xác nhận Hoàn nguyên đồng bộ với toàn app */}
+      <BottomSheet
         visible={isConfirmRevertOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsConfirmRevertOpen(false)}
+        onClose={() => setIsConfirmRevertOpen(false)}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: palette.secondary }]}>
-          <View style={[styles.modalContent, { backgroundColor: palette.surface }]}>
-            <View style={styles.modalTitleRow}>
-              <Warning size={20} color={Colors.light.deviceError} weight="bold" />
-              <Text variant="heading" weight="bold">
-                {t('Xác nhận hoàn nguyên?')}
-              </Text>
-            </View>
-            <Text variant="body" color={palette.textSecondary} style={{ marginTop: Spacing.xs }}>
-              {t(
-                'Hệ thống sẽ đặt lại toàn bộ tham số của Zone về giá trị an toàn trước khi Chủ trại chỉnh sửa.'
-              )}
-            </Text>
-
-            <View style={styles.modalButtons}>
-              <PressableScale
-                onPress={() => setIsConfirmRevertOpen(false)}
-                style={[styles.modalBtn, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}
-              >
-                <Text variant="body" weight="medium">
-                  {t('Hủy')}
-                </Text>
-              </PressableScale>
-              <PressableScale
-                onPress={handleRevertConfirm}
-                style={[styles.modalBtn, { backgroundColor: Colors.light.deviceError }]}
-              >
-                <Text variant="body" weight="bold" color={palette.onInverse}>
-                  {t('Hoàn nguyên ngay')}
-                </Text>
-              </PressableScale>
-            </View>
-          </View>
+        <View style={styles.sheetHeaderRow}>
+          <Warning size={20} color={palette.deviceError} weight="bold" />
+          <Text variant="heading" weight="semiBold">
+            {t('Xác nhận hoàn nguyên?')}
+          </Text>
         </View>
-      </Modal>
+        <Text variant="body" color={palette.textSecondary}>
+          {t(
+            'Hệ thống sẽ đặt lại toàn bộ tham số của tầng về giá trị an toàn trước khi chủ trại chỉnh sửa.'
+          )}
+        </Text>
+
+        <View style={styles.sheetButtons}>
+          <Button
+            label={t('Hủy')}
+            variant="secondary"
+            onPress={() => setIsConfirmRevertOpen(false)}
+            style={styles.sheetBtn}
+          />
+          <Button
+            label={t('Hoàn nguyên ngay')}
+            variant="primary"
+            onPress={handleRevertConfirm}
+            style={styles.sheetBtn}
+          />
+        </View>
+      </BottomSheet>
     </Card>
   )
 }
 
 const styles = StyleSheet.create({
   card: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
     gap: 0,
-    elevation: 0,
     marginBottom: Spacing.sm,
   },
   headerRow: {
@@ -281,10 +272,9 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   groupTag: {
-    paddingHorizontal: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radius.full,
-    borderWidth: 1,
     marginLeft: 4,
   },
   timeRow: {
@@ -294,15 +284,15 @@ const styles = StyleSheet.create({
   },
   diffBox: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
     marginTop: Spacing.sm,
-    gap: Spacing.xs,
   },
   diffRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: Spacing.sm,
   },
   paramName: {
     flex: 1,
@@ -314,12 +304,15 @@ const styles = StyleSheet.create({
   },
   oldVal: {
     textDecorationLine: 'line-through',
+    fontVariant: ['tabular-nums'],
   },
-  newVal: {},
+  newVal: {
+    fontVariant: ['tabular-nums'],
+  },
   actionsContainer: {
     flexDirection: 'row',
     gap: Spacing.xs,
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
   },
   actionButton: {
     flex: 1,
@@ -330,37 +323,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  outlinedButton: {
-    borderWidth: 1,
+  primaryButton: {
+    flex: 1.25,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.lg,
-  },
-  modalContent: {
-    width: '100%',
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-  },
-  modalTitleRow: {
+  sheetHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
   },
-  modalButtons: {
+  sheetButtons: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginTop: Spacing.md,
+    marginTop: Spacing.xs,
   },
-  modalBtn: {
+  sheetBtn: {
     flex: 1,
-    height: 44,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
 })

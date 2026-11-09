@@ -14,7 +14,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
-import { Colors, Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { DailyHealthStatus, DayRating } from '@/types'
 import { formatDate } from '@/utils/date.utils'
@@ -41,7 +41,7 @@ const STATUS_LABELS: Record<DailyHealthStatus, string> = {
 /**
  * Thẻ Đánh giá ngày độc lập theo quy tắc mù hai bước (EXPERT-FR-012, Quy tắc BR-31).
  * Che ẩn hoàn toàn hệ thống khi PENDING, mở khóa và bung thẻ đối chiếu ngay sau khi chấm.
- * Sử dụng <Card> và <PressableScale> chuẩn hóa đồng bộ với FARM_OWNER.
+ * Sử dụng <Card> phẳng không viền đồng bộ 100% với FARM_OWNER.
  */
 export function QueueDayRatingCard({
   dayRating,
@@ -50,45 +50,52 @@ export function QueueDayRatingCard({
 }: QueueDayRatingCardProps) {
   const palette = usePalette()
 
-  // Trạng thái local cho phép reveal ngay cả trước khi refetch hoàn tất
+  const [prevRatingKey, setPrevRatingKey] = useState(
+    `${dayRating._id}-${dayRating.state}-${dayRating.assessor_status ?? ''}`
+  )
   const [localRatedStatus, setLocalRatedStatus] = useState<DailyHealthStatus | null>(
     dayRating.assessor_status || null
   )
 
-  const isPending = dayRating.state === 'PENDING' && !localRatedStatus
+  const currentRatingKey = `${dayRating._id}-${dayRating.state}-${dayRating.assessor_status ?? ''}`
+  if (currentRatingKey !== prevRatingKey) {
+    setPrevRatingKey(currentRatingKey)
+    setLocalRatedStatus(dayRating.assessor_status || null)
+  }
+
+  const effectiveRatedStatus = dayRating.assessor_status ?? localRatedStatus
+  const isPending = dayRating.state === 'PENDING' && !effectiveRatedStatus
   const dateFormatted = formatDate(dayRating.date)
+
+  // BR-31 guardrail: tuyệt đối ẩn trạng thái và lý do hệ thống khi chưa hoàn tất chấm điểm
+  const revealedSystemStatus = !isPending ? dayRating.system_status : undefined
+  const revealedSystemReasons = !isPending ? dayRating.system_reasons : undefined
 
   const handleSelectScore = async (status: DailyHealthStatus) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
-    setLocalRatedStatus(status)
-    await onSubmitRating(dayRating.house_id, dayRating.date, status)
+    try {
+      await onSubmitRating(dayRating.house_id, dayRating.date, status)
+      setLocalRatedStatus(status)
+    } catch {
+      // Giữ nguyên trạng thái PENDING nếu API lỗi để không rò rỉ dữ liệu hệ thống (BR-31)
+    }
   }
 
   return (
-    <Card
-      style={[
-        styles.card,
-        { borderColor: palette.border, borderWidth: 1 },
-      ]}
-    >
+    <Card style={styles.card}>
       {/* Header thẻ: Ngày đánh giá & Badge quy tắc BR-31 */}
       <View style={styles.headerRow}>
         <View style={styles.dateRow}>
           <CalendarCheck size={16} color={palette.text} weight="bold" />
-          <Text variant="heading" weight="bold">
+          <Text variant="heading" weight="semiBold">
             {t('Ngày {date}', { date: dateFormatted })}
           </Text>
         </View>
 
-        <View
-          style={[
-            styles.ruleBadge,
-            { backgroundColor: palette.surfaceStrong, borderColor: palette.border },
-          ]}
-        >
+        <View style={[styles.ruleBadge, { backgroundColor: palette.surfaceStrong }]}>
           <ShieldCheck size={12} color={palette.textSecondary} weight="bold" />
           <Text variant="label" color={palette.textSecondary}>
-            {t('QUY TẮC BR-31')}
+            {t('Đánh giá độc lập')}
           </Text>
         </View>
       </View>
@@ -96,17 +103,14 @@ export function QueueDayRatingCard({
       {/* Trạng thái 1: Khi PENDING — Khóa và ẩn hoàn toàn trạng thái hệ thống */}
       {isPending ? (
         <View style={styles.pendingSection}>
-          <View style={[styles.lockBox, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+          <View style={[styles.lockBox, { backgroundColor: palette.surfaceStrong }]}>
             <LockKey size={20} color={palette.textSecondary} weight="bold" />
             <Text variant="small" color={palette.textSecondary} center style={styles.lockMessage}>
-              {t(
-                'Trạng thái hệ thống và chủ trại được ẩn để đảm bảo tính khách quan (Quy tắc mù hai bước BR-31).'
-              )}
+              {t('Trạng thái hệ thống và chủ trại được ẩn để đảm bảo đánh giá khách quan.')}
             </Text>
           </View>
 
-          {/* 3 Nút chấm điểm 1 chạm + nút Bỏ qua */}
-          <Text variant="small" weight="bold" style={styles.promptText}>
+          <Text variant="small" weight="semiBold" style={styles.promptText}>
             {t('Chuyên gia đánh giá ngày này:')}
           </Text>
 
@@ -118,16 +122,15 @@ export function QueueDayRatingCard({
               style={[
                 styles.scoreBtn,
                 {
-                  backgroundColor: palette.surface,
-                  borderColor: Colors.light.deviceOnline,
+                  backgroundColor: palette.surfaceStrong,
                   opacity: isSubmitting ? 0.6 : 1,
                 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={t('Đánh giá ngày tốt')}
             >
-              <CheckCircle size={16} weight="bold" color={Colors.light.deviceOnline} />
-              <Text variant="small" weight="bold" color={Colors.light.deviceOnline}>
+              <CheckCircle size={16} weight="bold" color={palette.houseHealthy} />
+              <Text variant="small" weight="semiBold" color={palette.houseHealthy}>
                 {t('Tốt')}
               </Text>
             </PressableScale>
@@ -139,8 +142,7 @@ export function QueueDayRatingCard({
               style={[
                 styles.scoreBtn,
                 {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.alert,
+                  backgroundColor: palette.surfaceStrong,
                   opacity: isSubmitting ? 0.6 : 1,
                 },
               ]}
@@ -148,7 +150,7 @@ export function QueueDayRatingCard({
               accessibilityLabel={t('Đánh giá ngày cần theo dõi')}
             >
               <Warning size={16} weight="bold" color={palette.alert} />
-              <Text variant="small" weight="bold" color={palette.alert}>
+              <Text variant="small" weight="semiBold" color={palette.alert}>
                 {t('Theo dõi')}
               </Text>
             </PressableScale>
@@ -160,16 +162,15 @@ export function QueueDayRatingCard({
               style={[
                 styles.scoreBtn,
                 {
-                  backgroundColor: palette.surface,
-                  borderColor: Colors.light.deviceError,
+                  backgroundColor: palette.surfaceStrong,
                   opacity: isSubmitting ? 0.6 : 1,
                 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={t('Đánh giá ngày cần xử lý')}
             >
-              <WarningCircle size={16} weight="bold" color={Colors.light.deviceError} />
-              <Text variant="small" weight="bold" color={Colors.light.deviceError}>
+              <WarningCircle size={16} weight="bold" color={palette.deviceError} />
+              <Text variant="small" weight="semiBold" color={palette.deviceError}>
                 {t('Cần xử lý')}
               </Text>
             </PressableScale>
@@ -184,36 +185,36 @@ export function QueueDayRatingCard({
         >
           <View style={styles.revealHeader}>
             <Eye size={16} color={palette.text} weight="bold" />
-            <Text variant="small" weight="bold">
-              {t('Đối chiếu phán quyết & Hệ thống AI (Đã mở khóa)')}
+            <Text variant="small" weight="semiBold">
+              {t('Đối chiếu kết quả đánh giá & Hệ thống')}
             </Text>
           </View>
 
-          <View style={[styles.comparisonGrid, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+          <View style={[styles.comparisonGrid, { backgroundColor: palette.surfaceStrong }]}>
             {/* Cột Chuyên gia */}
             <View style={styles.compColumn}>
-              <Text variant="label" color={palette.textSecondary}>
-                {t('CHUYÊN GIA')}
+              <Text variant="small" color={palette.textSecondary}>
+                {t('Chuyên gia')}
               </Text>
               <View
                 style={[
                   styles.statusTag,
                   {
                     backgroundColor:
-                      localRatedStatus === 'GOOD'
+                      effectiveRatedStatus === 'GOOD'
                         ? palette.primary
-                        : localRatedStatus === 'WATCH'
+                        : effectiveRatedStatus === 'WATCH'
                           ? palette.alert
-                          : Colors.light.deviceError,
+                          : palette.deviceError,
                   },
                 ]}
               >
                 <Text
                   variant="label"
                   weight="bold"
-                  color={localRatedStatus === 'GOOD' ? palette.onPrimary : palette.onInverse}
+                  color={effectiveRatedStatus === 'GOOD' ? palette.onPrimary : palette.onInverse}
                 >
-                  {localRatedStatus ? STATUS_LABELS[localRatedStatus] : '--'}
+                  {effectiveRatedStatus ? STATUS_LABELS[effectiveRatedStatus] : '--'}
                 </Text>
               </View>
             </View>
@@ -222,40 +223,40 @@ export function QueueDayRatingCard({
 
             {/* Cột Hệ thống AI */}
             <View style={styles.compColumn}>
-              <Text variant="label" color={palette.textSecondary}>
-                {t('HỆ THỐNG AI')}
+              <Text variant="small" color={palette.textSecondary}>
+                {t('Hệ thống AI')}
               </Text>
               <View
                 style={[
                   styles.statusTag,
                   {
                     backgroundColor:
-                      dayRating.system_status === 'GOOD'
+                      revealedSystemStatus === 'GOOD'
                         ? palette.primary
-                        : dayRating.system_status === 'WATCH'
+                        : revealedSystemStatus === 'WATCH'
                           ? palette.alert
-                          : Colors.light.deviceError,
+                          : palette.deviceError,
                   },
                 ]}
               >
                 <Text
                   variant="label"
                   weight="bold"
-                  color={dayRating.system_status === 'GOOD' ? palette.onPrimary : palette.onInverse}
+                  color={revealedSystemStatus === 'GOOD' ? palette.onPrimary : palette.onInverse}
                 >
-                  {dayRating.system_status ? STATUS_LABELS[dayRating.system_status] : '--'}
+                  {revealedSystemStatus ? STATUS_LABELS[revealedSystemStatus] : '--'}
                 </Text>
               </View>
             </View>
           </View>
 
           {/* Lý do hệ thống viễn trắc */}
-          {dayRating.system_reasons && dayRating.system_reasons.length > 0 && (
+          {revealedSystemReasons && revealedSystemReasons.length > 0 && (
             <View style={styles.reasonsBox}>
-              <Text variant="label" weight="bold" color={palette.textSecondary}>
-                {t('CĂN CỨ TỪ HỆ THỐNG VIỄN TRẮC:')}
+              <Text variant="small" weight="semiBold" color={palette.textSecondary}>
+                {t('Căn cứ từ hệ thống viễn trắc:')}
               </Text>
-              {dayRating.system_reasons.map((r, i) => (
+              {revealedSystemReasons.map((r, i) => (
                 <Text key={i} variant="small" color={palette.text} style={styles.reasonLine}>
                   • {r}
                 </Text>
@@ -277,9 +278,8 @@ export function QueueDayRatingCard({
 
 const styles = StyleSheet.create({
   card: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
     gap: 0,
-    elevation: 0,
     marginBottom: Spacing.sm,
   },
   headerRow: {
@@ -297,17 +297,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: Radius.full,
-    borderWidth: 1,
   },
   pendingSection: {
     marginTop: Spacing.sm,
   },
   lockBox: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     alignItems: 'center',
     gap: Spacing.xs,
   },
@@ -327,7 +325,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: Radius.full,
-    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -336,7 +333,7 @@ const styles = StyleSheet.create({
   revealSection: {
     marginTop: Spacing.sm,
     paddingTop: Spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: BorderWidth.hairline,
   },
   revealHeader: {
     flexDirection: 'row',
@@ -347,8 +344,7 @@ const styles = StyleSheet.create({
   comparisonGrid: {
     flexDirection: 'row',
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
   },
   compColumn: {
     flex: 1,
@@ -356,7 +352,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   columnDivider: {
-    width: 1,
+    width: BorderWidth.hairline,
     height: '100%',
   },
   statusTag: {

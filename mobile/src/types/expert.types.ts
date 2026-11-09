@@ -59,7 +59,8 @@ export interface ReviewItem {
   _id: string
   farm_id: string
   zone_id: string
-  parameter_group: 'thresholds' | 'fuzzy'
+  group?: 'thresholds' | 'fuzzy'
+  parameter_group?: 'thresholds' | 'fuzzy'
   status: ReviewItemStatus
   old_values: Record<string, number>
   new_values: Record<string, number>
@@ -77,8 +78,13 @@ export interface CoefficientProposal {
   status: ProposalStatus
   suggested_values: Record<string, number>
   current_values: Record<string, number>
-  r_squared: number
-  predicted_in_range_pct: number
+  r_squared?: number
+  predicted_in_range_pct?: number
+  predicted?: {
+    inRangeNow?: number
+    inRangeSuggested?: number
+    in_range_pct?: number
+  }
   submitted_by: { _id: string; full_name: string }
   created_at: string
 }

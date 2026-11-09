@@ -8,12 +8,13 @@ export type PermissionAction =
   | 'createFarm'
   | 'createHouse'
   | 'registerCamera'
+  | 'acknowledgeAlert'
 
 // Role được làm từng thao tác (Report 3 §2.4); Technician và Admin không vào app
 const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   // Thiết lập thiết bị bằng QR (MF-10): chỉ Farm Owner, Domain Expert chỉ xem thiết bị
   setupDevice: ['FARM_OWNER'],
-  // Trả relay về tự động (ENV-FR-018): chỉ Farm Owner, chuyên gia chỉ xem
+  // Trả relay về tự động (ENV-FR-018, BZ-15): chỉ Farm Owner, chuyên gia chỉ xem
   clearRelayOverride: ['FARM_OWNER'],
   // Khối "Việc chờ bạn" và "Báo cáo mới" ở Trang chủ: việc của chủ trại
   viewOwnerTasks: ['FARM_OWNER'],
@@ -22,6 +23,8 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   createHouse: ['FARM_OWNER'],
   // Đăng ký camera AI cho nhà (FARM-FR-004, MF-06): chủ trại; chuyên gia chỉ xem
   registerCamera: ['FARM_OWNER'],
+  // Xác nhận cảnh báo vận hành (ALERT-FR-009, BZ-16): chỉ chủ trại, chuyên gia chỉ thẩm định chuyên môn
+  acknowledgeAlert: ['FARM_OWNER'],
 }
 
 // Chỗ duy nhất quyết định nút thao tác nào hiện — màn hình không tự so user.role

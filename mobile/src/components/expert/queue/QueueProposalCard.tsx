@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/card'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { TextField } from '@/components/ui/text-field'
-import { FontFamily, Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, FontFamily, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { CoefficientProposal } from '@/types'
 import { formatTimeAgo } from '@/utils/date.utils'
@@ -38,7 +38,7 @@ const FUZZY_LABELS: Record<string, string> = {
 /**
  * Thẻ Phê duyệt đề xuất hệ số mờ Fuzzy từ AI / Chủ trại (EXPERT-FR-011, SRS §6.11).
  * Hiển thị chỉ số R², % cải thiện dự kiến, bảng 4 hệ số mờ và BottomSheet nhập lý do khi Từ chối.
- * Sử dụng <Card>, <PressableScale> và <TextField> chuẩn hóa đồng bộ với FARM_OWNER.
+ * Sử dụng <Card> phẳng không viền đồng bộ 100% với FARM_OWNER.
  */
 export function QueueProposalCard({
   proposal,
@@ -54,10 +54,12 @@ export function QueueProposalCard({
 
   const timeStr = formatTimeAgo(proposal.created_at)
   const submittedBy = proposal.submitted_by?.full_name || t('Hệ thống AI gợi ý')
-  const rSquared = proposal.r_squared ? proposal.r_squared.toFixed(2) : '0.85'
-  const predictedPct = proposal.predicted_in_range_pct
-    ? `+${proposal.predicted_in_range_pct.toFixed(1)}%`
-    : '+12.5%'
+  const rSquared = `${Math.round((proposal.r_squared ?? 0.85) * 100)}%`
+  const rawPredictedPct =
+    proposal.predicted_in_range_pct ??
+    proposal.predicted?.inRangeSuggested ??
+    proposal.predicted?.in_range_pct
+  const predictedPct = rawPredictedPct != null ? `+${rawPredictedPct.toFixed(1)}%` : '+12.5%'
 
   const suggestedKeys = Object.keys(proposal.suggested_values || {})
 
@@ -69,7 +71,7 @@ export function QueueProposalCard({
   const handleRejectConfirm = async () => {
     if (!rejectReason.trim()) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined)
-      setRejectError(t('Bắt buộc nhập lý do khi từ chối đề xuất (tránh lỗi 422)'))
+      setRejectError(t('Vui lòng nhập lý do từ chối để phản hồi cho người đề xuất'))
       return
     }
 
@@ -80,17 +82,12 @@ export function QueueProposalCard({
   }
 
   return (
-    <Card
-      style={[
-        styles.card,
-        { borderColor: palette.border, borderWidth: 1 },
-      ]}
-    >
+    <Card style={styles.card}>
       {/* Header: Nguồn đề xuất & Thời gian */}
       <View style={styles.headerRow}>
         <View style={styles.sourceRow}>
           <Sparkle size={14} color={palette.text} weight="bold" />
-          <Text variant="small" weight="bold">
+          <Text variant="small" weight="semiBold">
             {submittedBy}
           </Text>
         </View>
@@ -103,13 +100,13 @@ export function QueueProposalCard({
         </View>
       </View>
 
-      {/* Chỉ số R² và % cải thiện dự kiến */}
-      <View style={[styles.metricsBox, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+      {/* Chỉ số Độ tin cậy AI và % cải thiện dự kiến */}
+      <View style={[styles.metricsBox, { backgroundColor: palette.surfaceStrong }]}>
         <View style={styles.metricItem}>
-          <Text variant="label" color={palette.textSecondary}>
-            {t('ĐỘ TIN CẬY R²')}
+          <Text variant="small" color={palette.textSecondary}>
+            {t('Độ tin cậy AI')}
           </Text>
-          <Text variant="heading" weight="bold" style={styles.metricValue}>
+          <Text variant="heading" weight="semiBold" style={styles.metricValue}>
             {rSquared}
           </Text>
         </View>
@@ -118,28 +115,28 @@ export function QueueProposalCard({
 
         <View style={styles.metricItem}>
           <View style={styles.metricLabelRow}>
-            <TrendUp size={12} color={palette.primary} weight="bold" />
-            <Text variant="label" color={palette.textSecondary}>
-              {t('DỰ KIẾN ĐẠT CHUẨN')}
+            <TrendUp size={12} color={palette.houseHealthy} weight="bold" />
+            <Text variant="small" color={palette.textSecondary}>
+              {t('Dự kiến đạt chuẩn')}
             </Text>
           </View>
-          <Text variant="heading" weight="bold" style={styles.metricValue}>
+          <Text variant="heading" weight="semiBold" color={palette.houseHealthy} style={styles.metricValue}>
             {predictedPct}
           </Text>
         </View>
       </View>
 
-      {/* Bảng 4 hệ số mờ Fuzzy so sánh hiện tại vs đề xuất */}
-      <View style={[styles.coefTable, { borderColor: palette.border }]}>
+      {/* Bảng 4 hệ số độ ẩm & gió so sánh hiện tại vs đề xuất (kiểu SettingsTable của Farmer) */}
+      <View style={styles.coefTable}>
         <View style={[styles.tableHeader, { backgroundColor: palette.surfaceStrong }]}>
-          <Text variant="label" weight="bold" style={styles.colParam}>
-            {t('HỆ SỐ FUZZY')}
+          <Text variant="small" weight="semiBold" color={palette.textSecondary} style={styles.colParam}>
+            {t('Hệ số độ ẩm & gió')}
           </Text>
-          <Text variant="label" weight="bold" style={styles.colOld} center>
-            {t('HIỆN TẠI')}
+          <Text variant="small" weight="semiBold" color={palette.textSecondary} style={styles.colOld} center>
+            {t('Hiện tại')}
           </Text>
-          <Text variant="label" weight="bold" style={styles.colNew} center>
-            {t('ĐỀ XUẤT')}
+          <Text variant="small" weight="semiBold" color={palette.textSecondary} style={styles.colNew} center>
+            {t('Đề xuất')}
           </Text>
         </View>
 
@@ -154,7 +151,7 @@ export function QueueProposalCard({
               style={[
                 styles.tableRow,
                 index < suggestedKeys.length - 1 && {
-                  borderBottomWidth: 1,
+                  borderBottomWidth: BorderWidth.hairline,
                   borderBottomColor: palette.divider,
                 },
               ]}
@@ -167,7 +164,7 @@ export function QueueProposalCard({
               </Text>
               <View style={styles.colNewWrapper}>
                 <ArrowRight size={10} color={palette.textSecondary} />
-                <Text variant="small" weight="bold" color={palette.text}>
+                <Text variant="small" weight="semiBold" color={palette.text} style={styles.tabularNum}>
                   {suggestedVal}
                 </Text>
               </View>
@@ -179,17 +176,12 @@ export function QueueProposalCard({
       {/* Cụm 2 nút hành động 1 chạm chuẩn 44pt */}
       <View style={styles.actionsContainer}>
         <PressableScale
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-            setIsRejectSheetOpen(true)
-          }}
+          onPress={() => setIsRejectSheetOpen(true)}
           disabled={isSubmitting}
           style={[
             styles.actionBtn,
-            styles.rejectBtn,
             {
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
+              backgroundColor: palette.surfaceStrong,
               opacity: isSubmitting ? 0.6 : 1,
             },
           ]}
@@ -197,7 +189,7 @@ export function QueueProposalCard({
           accessibilityLabel={t('Từ chối đề xuất này')}
         >
           <XCircle size={16} color={palette.text} />
-          <Text variant="small" weight="bold" color={palette.text}>
+          <Text variant="small" weight="semiBold" color={palette.text}>
             {t('Từ chối...')}
           </Text>
         </PressableScale>
@@ -216,7 +208,7 @@ export function QueueProposalCard({
           accessibilityLabel={t('Duyệt áp dụng bộ hệ số mờ này')}
         >
           <CheckCircle size={16} weight="bold" color={palette.onPrimary} />
-          <Text variant="small" weight="bold" color={palette.onPrimary}>
+          <Text variant="small" weight="semiBold" color={palette.onPrimary}>
             {t('Duyệt áp dụng')}
           </Text>
         </PressableScale>
@@ -228,7 +220,7 @@ export function QueueProposalCard({
         onClose={() => setIsRejectSheetOpen(false)}
       >
         <View style={styles.sheetHeader}>
-          <Text variant="heading" weight="bold">
+          <Text variant="heading" weight="semiBold">
             {t('Lý do từ chối đề xuất')}
           </Text>
           <Text variant="small" color={palette.textSecondary} style={{ marginTop: 2 }}>
@@ -272,9 +264,8 @@ export function QueueProposalCard({
 
 const styles = StyleSheet.create({
   card: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
     gap: 0,
-    elevation: 0,
     marginBottom: Spacing.sm,
   },
   headerRow: {
@@ -296,8 +287,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     marginTop: Spacing.sm,
   },
   metricItem: {
@@ -310,37 +300,36 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metricValue: {
-    fontFamily: FontFamily.bold,
+    fontFamily: FontFamily.semiBold,
     fontVariant: ['tabular-nums'],
     marginTop: 2,
   },
   metricDivider: {
-    width: 1,
+    width: BorderWidth.hairline,
     height: 32,
   },
   coefTable: {
-    borderRadius: Radius.md,
-    borderWidth: 1,
     marginTop: Spacing.sm,
-    overflow: 'hidden',
   },
   tableHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
   colParam: {
     flex: 2,
   },
   colOld: {
     flex: 1,
+    fontVariant: ['tabular-nums'],
   },
   colNew: {
     flex: 1,
@@ -352,10 +341,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
+  tabularNum: {
+    fontVariant: ['tabular-nums'],
+  },
   actionsContainer: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
   },
   actionBtn: {
     flex: 1,
@@ -366,11 +358,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  rejectBtn: {
-    borderWidth: 1,
-  },
   sheetHeader: {
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   sheetBody: {
     gap: Spacing.sm,

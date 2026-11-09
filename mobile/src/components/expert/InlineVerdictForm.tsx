@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import { ArrowsCounterClockwise, CheckCircle, XCircle } from 'phosphor-react-native'
 import { PressableScale } from '@/components/ui/pressable-scale'
@@ -27,7 +27,7 @@ const REASON_SUGGESTIONS = [
 /**
  * Cụm Form Kiểm chứng tại chỗ (Inline Verdict Form).
  * Đặt ngay dưới ngăn bằng chứng đa phương thức (EXPERT-FR-003, ALERT-FR-014).
- * Sử dụng TextField & PressableScale chuẩn hóa đồng bộ với FARM_OWNER.
+ * Sử dụng TextField & PressableScale chuẩn hóa phẳng không viền đồng bộ với FARM_OWNER.
  */
 export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false }: InlineVerdictFormProps) {
   const palette = usePalette()
@@ -38,7 +38,6 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
   const [errorText, setErrorText] = useState<string | null>(null)
 
   const handleSelectReason = (reason: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
     setErrorText(null)
     setNote(prev => {
       const trimmed = prev.trim()
@@ -58,7 +57,7 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
   const handleReject = async () => {
     if (!note.trim()) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined)
-      setErrorText(t('Bắt buộc nhập lý do khi bác bỏ cảnh báo (tránh lỗi 422)'))
+      setErrorText(t('Vui lòng nhập lý do để phản hồi về cho chủ nhà'))
       return
     }
 
@@ -75,7 +74,7 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
     const verdictTime = formatDateTime(alert.expert_verdict.at)
 
     return (
-      <View style={[styles.existingCard, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+      <View style={[styles.existingCard, { backgroundColor: palette.surfaceStrong }]}>
         <View style={styles.existingHeader}>
           <View
             style={[
@@ -93,30 +92,27 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
               weight="bold"
               color={isConfirmed ? palette.onPrimary : palette.onInverse}
             >
-              {isConfirmed ? t('ĐÃ XÁC NHẬN SỰ CỐ') : t('ĐÃ BÁC BỎ (BÁO SAI)')}
+              {isConfirmed ? t('Báo đúng') : t('Báo ảo (Bác bỏ)')}
             </Text>
           </View>
 
-          <PressableScale
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-              setIsEditing(true)
-            }}
+          <Pressable
+            hitSlop={8}
+            onPress={() => setIsEditing(true)}
             style={[
               styles.changeVerdictButton,
               {
-                borderColor: palette.border,
                 backgroundColor: palette.surface,
               },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={t('Đổi phán quyết')}
+            accessibilityLabel={t('Đổi kết luận')}
           >
             <ArrowsCounterClockwise size={14} color={palette.text} />
             <Text variant="small" weight="semiBold" color={palette.text} style={{ marginLeft: 4 }}>
-              {t('Đổi phán quyết')}
+              {t('Đổi kết luận')}
             </Text>
-          </PressableScale>
+          </Pressable>
         </View>
 
         <Text variant="small" color={palette.textSecondary} style={styles.existingMeta}>
@@ -133,24 +129,24 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
   }
 
   return (
-    <View style={[styles.formContainer, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
-      <Text variant="small" weight="bold">
-        {t('Phán quyết chuyên môn (EXPERT-FR-003)')}
+    <View style={[styles.formContainer, { backgroundColor: palette.surfaceStrong }]}>
+      <Text variant="small" weight="semiBold">
+        {t('Kết luận của chuyên gia')}
       </Text>
 
-      {/* 4 Chip gợi ý lý do 1 chạm */}
+      {/* 4 Chip gợi ý lý do 1 chạm (chuẩn ChoiceChips placement="card") */}
       <View style={styles.chipsContainer}>
         {REASON_SUGGESTIONS.map(reason => {
           const isSelected = note.includes(reason)
           return (
-            <PressableScale
+            <Pressable
               key={reason}
+              hitSlop={8}
               onPress={() => handleSelectReason(reason)}
               style={[
                 styles.reasonChip,
                 {
-                  backgroundColor: isSelected ? palette.text : palette.surface,
-                  borderColor: isSelected ? palette.text : palette.border,
+                  backgroundColor: isSelected ? palette.inverse : palette.surface,
                 },
               ]}
               accessibilityRole="button"
@@ -158,12 +154,12 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
             >
               <Text
                 variant="small"
-                weight={isSelected ? 'bold' : 'medium'}
+                weight="semiBold"
                 color={isSelected ? palette.onInverse : palette.text}
               >
                 {reason}
               </Text>
-            </PressableScale>
+            </Pressable>
           )
         })}
       </View>
@@ -171,13 +167,13 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
       {/* Ô nhập ghi chú dùng TextField gốc */}
       <View style={styles.inputWrapper}>
         <TextField
-          label={t('Ghi chú phán quyết')}
+          label={t('Nhận xét chuyên môn')}
           value={note}
           onChangeText={val => {
             setNote(val)
             if (errorText) setErrorText(null)
           }}
-          placeholder={t('Nhập nhận định chuyên môn (bắt buộc khi Bác bỏ)...')}
+          placeholder={t('Nhập nhận xét chuyên môn (bắt buộc khi báo ảo)...')}
           multiline
           numberOfLines={3}
           error={errorText}
@@ -191,19 +187,17 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
           disabled={isSubmitting}
           style={[
             styles.actionButton,
-            styles.rejectButton,
             {
               backgroundColor: palette.surface,
-              borderColor: palette.border,
               opacity: isSubmitting ? 0.6 : 1,
             },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={t('Bác bỏ báo sai')}
+          accessibilityLabel={t('Báo ảo (Bác bỏ)')}
         >
           <XCircle size={18} weight="bold" color={palette.text} />
-          <Text variant="body" weight="bold" color={palette.text}>
-            {t('✕ Bác bỏ')}
+          <Text variant="body" weight="semiBold" color={palette.text}>
+            {t('Báo ảo (Bác bỏ)')}
           </Text>
         </PressableScale>
 
@@ -212,27 +206,26 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
           disabled={isSubmitting}
           style={[
             styles.actionButton,
-            styles.confirmButton,
             {
               backgroundColor: palette.primary,
               opacity: isSubmitting ? 0.6 : 1,
             },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={t('Xác nhận sự cố')}
+          accessibilityLabel={t('Báo đúng (Xác nhận)')}
         >
           <CheckCircle size={18} weight="bold" color={palette.onPrimary} />
-          <Text variant="body" weight="bold" color={palette.onPrimary}>
-            {t('✓ Xác nhận sự cố')}
+          <Text variant="body" weight="semiBold" color={palette.onPrimary}>
+            {t('Báo đúng (Xác nhận)')}
           </Text>
         </PressableScale>
       </View>
 
       {/* Nút hủy khi đang ở chế độ đổi phán quyết */}
       {hasExistingVerdict && isEditing && (
-        <PressableScale
+        <Pressable
+          hitSlop={8}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
             setIsEditing(false)
             setNote(alert.expert_verdict?.note ?? '')
             setErrorText(null)
@@ -244,7 +237,7 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
           <Text variant="small" color={palette.textSecondary}>
             {t('Hủy thay đổi')}
           </Text>
-        </PressableScale>
+        </Pressable>
       )}
     </View>
   )
@@ -253,8 +246,7 @@ export function InlineVerdictForm({ alert, onSubmitVerdict, isSubmitting = false
 const styles = StyleSheet.create({
   formContainer: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     marginTop: Spacing.sm,
   },
   chipsContainer: {
@@ -264,10 +256,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   reasonChip: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
     borderRadius: Radius.full,
-    borderWidth: 1,
   },
   inputWrapper: {
     marginTop: Spacing.xs,
@@ -286,12 +277,6 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     borderRadius: Radius.full,
   },
-  rejectButton: {
-    borderWidth: 1,
-  },
-  confirmButton: {
-    borderWidth: 0,
-  },
   cancelButton: {
     alignItems: 'center',
     paddingVertical: Spacing.xs,
@@ -299,8 +284,7 @@ const styles = StyleSheet.create({
   },
   existingCard: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     marginTop: Spacing.sm,
   },
   existingHeader: {
@@ -313,16 +297,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: Radius.full,
   },
   changeVerdictButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
     borderRadius: Radius.full,
-    borderWidth: 1,
   },
   existingMeta: {
     marginTop: 4,

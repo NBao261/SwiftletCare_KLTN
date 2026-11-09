@@ -76,10 +76,15 @@ export const ENDPOINTS = {
   ANALYTICS_AUTONOMY: '/analytics/autonomy',
   ANALYTICS_FORECAST: '/analytics/forecast',
 
-  // Kiểm duyệt & Đề xuất (EXPERT-FR-009/010/011)
-  EXPERT_REVIEW_ITEMS: '/expert/review-items',
-  EXPERT_REVIEW_ITEM_ACTION: (itemId: string) => `/expert/review-items/${itemId}`,
-  EXPERT_PROPOSALS: '/expert/proposals',
-  EXPERT_PROPOSAL_ACTION: (proposalId: string) => `/expert/proposals/${proposalId}`,
-  EXPERT_ACTIVITY: (farmId: string) => `/farms/${farmId}/expert-activity`,
+  // Kiểm duyệt & Đề xuất (EXPERT-FR-009/010/011 — khớp backend /expert-activity)
+  EXPERT_REVIEW_ITEMS: '/expert-activity/reviews',
+  EXPERT_REVIEW_ITEM_ACTION: (itemId: string) => `/expert-activity/reviews/${itemId}`,
+  EXPERT_REVIEW_ACCEPT: (itemId: string) => `/expert-activity/reviews/${itemId}/accept`,
+  EXPERT_REVIEW_REVERT: (itemId: string) => `/expert-activity/reviews/${itemId}/revert`,
+  EXPERT_PROPOSALS: '/expert-activity/proposals',
+  EXPERT_PROPOSAL_ACTION: (proposalId: string) => `/expert-activity/proposals/${proposalId}`,
+  EXPERT_PROPOSAL_APPROVE: (proposalId: string) => `/expert-activity/proposals/${proposalId}/approve`,
+  EXPERT_PROPOSAL_REJECT: (proposalId: string) => `/expert-activity/proposals/${proposalId}/reject`,
+  EXPERT_ACTIVITY: (farmId: string) => `/expert-activity?farmId=${encodeURIComponent(farmId)}`,
+  EXPERT_ACTIVITY_LIST: '/expert-activity',
 } as const

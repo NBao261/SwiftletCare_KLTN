@@ -1,19 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native'
 import {
-  Buildings,
   CalendarBlank,
   CaretDown,
   Check,
-  House,
   Stack,
 } from 'phosphor-react-native'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
-import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { useFarms } from '@/hooks/farm/useFarms'
@@ -21,25 +19,154 @@ import { useHouses } from '@/hooks/farm/useHouses'
 import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useExpertScopeStore, type ExpertDateRange } from '@/stores/expertScopeStore'
+import { t } from '@/utils/i18n.utils'
 
 const DATE_RANGE_LABELS: Record<ExpertDateRange, string> = {
   today: 'Hôm nay',
-  '24h': '24 giờ qua',
-  '7d': '7 ngày qua',
-  '30d': '30 ngày qua',
+  '24h': '24 giờ',
+  '7d': '7 ngày',
+  '30d': '30 ngày',
 }
 
 interface PersistentScopeBarProps {
   showDateRange?: boolean
+  requireZone?: boolean
 }
 
 /**
- * Thanh chọn phạm vi dùng chung cho các màn hình của Chuyên gia và Chủ trại.
- * Nằm trong src/components/layout/ theo tiêu chí TC-07.
- * Thiết kế phẳng, tối ưu thao tác chọn Trang trại > Nhà yến > Tầng và Khoảng thời gian.
- * Lưu trữ trạng thái bền vững qua useExpertScopeStore (Zustand + MMKV).
+ * Nút chọn Nhà yến đặt trực tiếp trên AppHeader (prop `leading`),
+ * đồng bộ 100% với HeaderPicker + OptionSheet của nhánh FARM_OWNER.
  */
-export function PersistentScopeBar({ showDateRange = true }: PersistentScopeBarProps) {
+export function ExpertHeaderPicker() {
+  const palette = usePalette()
+  const {
+    selectedFarmId,
+    selectedHouseId,
+    setFarmId,
+    setHouseId,
+  } = useExpertScopeStore()
+
+  const { data: farmsData } = useFarms()
+  const farms = useMemo(() => farmsData?.data ?? [], [farmsData?.data])
+
+  const currentFarmId = selectedFarmId ?? farms[0]?._id ?? ''
+  const { data: housesData } = useHouses(currentFarmId)
+  const houses = useMemo(() => housesData?.data ?? [], [housesData?.data])
+
+  const currentHouseId = selectedHouseId ?? houses[0]?._id ?? ''
+
+  useEffect(() => {
+    if (!selectedFarmId && farms.length > 0) {
+      setFarmId(farms[0]._id)
+    }
+  }, [farms, selectedFarmId, setFarmId])
+
+  useEffect(() => {
+    if (selectedFarmId && !selectedHouseId && houses.length > 0) {
+      setHouseId(houses[0]._id)
+    }
+  }, [houses, selectedFarmId, selectedHouseId, setHouseId])
+
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const currentHouse = houses.find(h => h._id === currentHouseId)
+  const houseLabel = currentHouse ? currentHouse.name : t('Chọn nhà yến')
+
+  return (
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('Chọn nhà yến, hiện tại là {name}', { name: houseLabel })}
+        hitSlop={Spacing.xs}
+        onPress={() => setSheetOpen(true)}
+        style={styles.headerTrigger}
+      >
+        <Text variant="heading" numberOfLines={1} style={styles.headerTitle}>
+          {houseLabel}
+        </Text>
+        <CaretDown size={16} color={palette.text} weight="bold" />
+      </Pressable>
+
+      <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
+        <Text variant="heading">{t('Chọn nhà yến')}</Text>
+
+        {farms.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.farmChipsRow}
+          >
+            {farms.map(f => {
+              const isSelected = f._id === currentFarmId
+              return (
+                <Pressable
+                  key={f._id}
+                  onPress={() => setFarmId(f._id)}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: isSelected ? palette.inverse : palette.surfaceStrong,
+                    },
+                  ]}
+                >
+                  <Text
+                    variant="body"
+                    weight="semiBold"
+                    color={isSelected ? palette.onInverse : palette.text}
+                  >
+                    {f.name}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </ScrollView>
+        )}
+
+        <ScrollView style={styles.sheetList} showsVerticalScrollIndicator={false}>
+          {houses.map((houseItem, index) => {
+            const isSelected = houseItem._id === currentHouseId
+            return (
+              <Pressable
+                key={houseItem._id}
+                onPress={() => {
+                  setHouseId(houseItem._id)
+                  setSheetOpen(false)
+                }}
+                style={[
+                  styles.sheetRow,
+                  index > 0 && {
+                    borderTopWidth: BorderWidth.hairline,
+                    borderTopColor: palette.divider,
+                  },
+                ]}
+              >
+                <View style={styles.sheetRowText}>
+                  <Text variant="body" weight={isSelected ? 'semiBold' : 'regular'}>
+                    {houseItem.name}
+                  </Text>
+                  {Boolean(houseItem.description) && (
+                    <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
+                      {houseItem.description}
+                    </Text>
+                  )}
+                </View>
+                {isSelected && <Check size={20} color={palette.text} weight="bold" />}
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+      </BottomSheet>
+    </>
+  )
+}
+
+/**
+ * Thanh chọn Tầng (Zone) & Khoảng thời gian dạng Chip bo tròn không viền trên nền Paper,
+ * đồng bộ 100% với ChoiceChips / ZoneTabs / AlertFilterChips của nhánh FARM_OWNER.
+ */
+export function PersistentScopeBar({
+  showDateRange = true,
+  requireZone = false,
+}: PersistentScopeBarProps) {
   const palette = usePalette()
 
   const {
@@ -53,7 +180,6 @@ export function PersistentScopeBar({ showDateRange = true }: PersistentScopeBarP
     setDateRange,
   } = useExpertScopeStore()
 
-  // Dữ liệu trang trại & nhà yến
   const { data: farmsData } = useFarms()
   const farms = useMemo(() => farmsData?.data ?? [], [farmsData?.data])
 
@@ -64,7 +190,6 @@ export function PersistentScopeBar({ showDateRange = true }: PersistentScopeBarP
   const currentHouseId = selectedHouseId ?? houses[0]?._id ?? ''
   const { zones } = useZonesOfHouses(currentHouseId ? [currentHouseId] : [])
 
-  // Tự động gán mặc định Farm và House đầu tiên nếu chưa có
   useEffect(() => {
     if (!selectedFarmId && farms.length > 0) {
       setFarmId(farms[0]._id)
@@ -77,264 +202,209 @@ export function PersistentScopeBar({ showDateRange = true }: PersistentScopeBarP
     }
   }, [houses, selectedFarmId, selectedHouseId, setHouseId])
 
-  // Trạng thái hiển thị BottomSheet
-  const [houseSheetVisible, setHouseSheetVisible] = useState(false)
   const [zoneSheetVisible, setZoneSheetVisible] = useState(false)
   const [dateRangeSheetVisible, setDateRangeSheetVisible] = useState(false)
 
-  // Tên hiển thị hiện tại
   const currentHouse = houses.find(h => h._id === currentHouseId)
-  const currentZone = zones.find(z => z._id === selectedZoneId)
-
-  const houseLabel = currentHouse ? currentHouse.name : 'Chọn nhà yến'
-  const zoneLabel = currentZone ? currentZone.name : 'Tất cả các tầng'
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Chip chọn Nhà yến */}
-        <PressableScale
-          onPress={() => setHouseSheetVisible(true)}
-          style={[
-            styles.chip,
-            {
-              backgroundColor: palette.surfaceStrong,
-              borderColor: palette.border,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Chọn nhà yến, hiện tại là ${houseLabel}`}
-        >
-          <House size={14} color={palette.text} weight="bold" />
-          <Text variant="small" weight="medium" numberOfLines={1}>
-            {houseLabel}
-          </Text>
-          <CaretDown size={12} color={palette.secondary} weight="bold" />
-        </PressableScale>
+        {/* Hàng Chip chọn Tầng trực tiếp giống ZoneTabs / ChoiceChips của Farmer */}
+        {!requireZone && (
+          <Pressable
+            hitSlop={8}
+            onPress={() => setZoneId(null)}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: selectedZoneId === null ? palette.inverse : palette.surface,
+              },
+            ]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: selectedZoneId === null }}
+          >
+            <Text
+              variant="body"
+              weight="semiBold"
+              color={selectedZoneId === null ? palette.onInverse : palette.text}
+            >
+              {t('Tất cả tầng')}
+            </Text>
+          </Pressable>
+        )}
 
-        {/* Chip chọn Tầng / Zone */}
-        <PressableScale
-          onPress={() => setZoneSheetVisible(true)}
-          style={[
-            styles.chip,
-            {
-              backgroundColor: selectedZoneId ? palette.surfaceStrong : palette.surface,
-              borderColor: selectedZoneId ? palette.primary : palette.border,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Chọn tầng, hiện tại là ${zoneLabel}`}
-        >
-          <Stack size={14} color={palette.text} weight="bold" />
-          <Text variant="small" weight="medium" numberOfLines={1}>
-            {zoneLabel}
-          </Text>
-          <CaretDown size={12} color={palette.secondary} weight="bold" />
-        </PressableScale>
+        {zones.map(zoneItem => {
+          const isSelected = zoneItem._id === selectedZoneId
+          return (
+            <Pressable
+              key={zoneItem._id}
+              hitSlop={8}
+              onPress={() => setZoneId(zoneItem._id)}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: isSelected ? palette.inverse : palette.surface,
+                },
+              ]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isSelected }}
+            >
+              <Text
+                variant="body"
+                weight="semiBold"
+                color={isSelected ? palette.onInverse : palette.text}
+              >
+                {zoneItem.name}
+              </Text>
+            </Pressable>
+          )
+        })}
 
-        {/* Chip chọn khoảng thời gian */}
+        {/* Nếu chưa tải kịp danh sách tầng thì hiện chip mở sheet */}
+        {zones.length === 0 && (
+          <Pressable
+            hitSlop={8}
+            onPress={() => setZoneSheetVisible(true)}
+            style={[styles.chip, { backgroundColor: palette.surface }]}
+            accessibilityRole="button"
+          >
+            <Stack size={14} color={palette.text} weight="bold" />
+            <Text variant="body" weight="semiBold" color={palette.text}>
+              {t('Tất cả tầng')}
+            </Text>
+            <CaretDown size={14} color={palette.text} weight="bold" />
+          </Pressable>
+        )}
+
+        {/* Chip chọn khoảng thời gian (đồng bộ kiểu AlertFilterChips của Farmer) */}
         {showDateRange && (
-          <PressableScale
+          <Pressable
+            hitSlop={8}
             onPress={() => setDateRangeSheetVisible(true)}
             style={[
               styles.chip,
               {
-                backgroundColor: palette.surfaceStrong,
-                borderColor: palette.border,
+                backgroundColor: dateRange !== '24h' ? palette.inverse : palette.surface,
               },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={`Chọn khoảng thời gian, hiện tại là ${DATE_RANGE_LABELS[dateRange]}`}
+            accessibilityLabel={t('Chọn khoảng thời gian, hiện tại là {label}', {
+              label: DATE_RANGE_LABELS[dateRange],
+            })}
           >
-            <CalendarBlank size={14} color={palette.text} weight="bold" />
-            <Text variant="small" weight="medium" numberOfLines={1}>
+            <CalendarBlank
+              size={14}
+              color={dateRange !== '24h' ? palette.onInverse : palette.text}
+              weight="bold"
+            />
+            <Text
+              variant="body"
+              weight="semiBold"
+              color={dateRange !== '24h' ? palette.onInverse : palette.text}
+              numberOfLines={1}
+            >
               {DATE_RANGE_LABELS[dateRange]}
             </Text>
-            <CaretDown size={12} color={palette.secondary} weight="bold" />
-          </PressableScale>
+            <CaretDown
+              size={14}
+              color={dateRange !== '24h' ? palette.onInverse : palette.text}
+              weight="bold"
+            />
+          </Pressable>
         )}
       </ScrollView>
 
-      {/* ── BottomSheet 1: Chọn Nhà yến (kèm chuyển Trang trại) ── */}
-      <BottomSheet visible={houseSheetVisible} onClose={() => setHouseSheetVisible(false)}>
-        <View style={styles.sheetHeader}>
-          <Text variant="heading" weight="semiBold">Chọn Nhà Yến Giám Sát</Text>
-          <Text variant="small" color={palette.textSecondary}>
-            Phạm vi sẽ được áp dụng cho toàn bộ các tab nghiệp vụ
-          </Text>
-        </View>
-
-        {/* Danh sách trang trại nếu có nhiều trang trại */}
-        {farms.length > 1 && (
-          <View style={styles.farmSelectorRow}>
-            {farms.map(f => {
-              const isSelected = f._id === currentFarmId
-              return (
-                <PressableScale
-                  key={f._id}
-                  onPress={() => setFarmId(f._id)}
-                  style={[
-                    styles.farmChip,
-                    {
-                      backgroundColor: isSelected ? palette.text : palette.surfaceStrong,
-                      borderColor: palette.border,
-                    },
-                  ]}
-                >
-                  <Buildings size={12} color={isSelected ? palette.surface : palette.text} weight="bold" />
-                  <Text
-                    variant="label"
-                    weight="medium"
-                    color={isSelected ? palette.surface : palette.text}
-                  >
-                    {f.name}
-                  </Text>
-                </PressableScale>
-              )
-            })}
-          </View>
-        )}
-
-        <ScrollView style={styles.sheetList} showsVerticalScrollIndicator={false}>
-          {houses.map(houseItem => {
-            const isSelected = houseItem._id === currentHouseId
-            return (
-              <PressableScale
-                key={houseItem._id}
-                onPress={() => {
-                  setHouseId(houseItem._id)
-                  setHouseSheetVisible(false)
-                }}
-                style={[
-                  styles.sheetItem,
-                  {
-                    backgroundColor: isSelected ? palette.surfaceStrong : palette.surface,
-                    borderColor: isSelected ? palette.primary : palette.border,
-                  },
-                ]}
-              >
-                <View style={styles.sheetItemLeft}>
-                  <House size={18} color={palette.text} weight={isSelected ? 'bold' : 'regular'} />
-                  <View>
-                    <Text variant="body" weight="medium">{houseItem.name}</Text>
-                    {Boolean(houseItem.description) && (
-                      <Text variant="small" color={palette.textSecondary}>
-                        {houseItem.description}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                {isSelected && <Check size={18} color={palette.text} weight="bold" />}
-              </PressableScale>
-            )
-          })}
-        </ScrollView>
-      </BottomSheet>
-
-      {/* ── BottomSheet 2: Chọn Tầng / Vùng ── */}
+      {/* BottomSheet Chọn Tầng dự phòng */}
       <BottomSheet visible={zoneSheetVisible} onClose={() => setZoneSheetVisible(false)}>
         <View style={styles.sheetHeader}>
-          <Text variant="heading" weight="semiBold">Chọn Tầng / Vùng Giám Sát</Text>
-          <Text variant="small" color={palette.textSecondary}>
-            {currentHouse?.name ? `Thuộc ${currentHouse.name}` : 'Chọn tầng để xem chi tiết'}
-          </Text>
+          <Text variant="heading">{t('Chọn tầng')}</Text>
+          {Boolean(currentHouse?.name) && (
+            <Text variant="small" color={palette.textSecondary}>
+              {currentHouse?.name}
+            </Text>
+          )}
         </View>
 
         <ScrollView style={styles.sheetList} showsVerticalScrollIndicator={false}>
-          {/* Tuỳ chọn "Tất cả các tầng" */}
-          <PressableScale
-            onPress={() => {
-              setZoneId(null)
-              setZoneSheetVisible(false)
-            }}
-            style={[
-              styles.sheetItem,
-              {
-                backgroundColor: selectedZoneId === null ? palette.surfaceStrong : palette.surface,
-                borderColor: selectedZoneId === null ? palette.primary : palette.border,
-              },
-            ]}
-          >
-            <View style={styles.sheetItemLeft}>
-              <Stack size={18} color={palette.text} weight={selectedZoneId === null ? 'bold' : 'regular'} />
-              <Text variant="body" weight="medium">Tất cả các tầng</Text>
-            </View>
-            {selectedZoneId === null && <Check size={18} color={palette.text} weight="bold" />}
-          </PressableScale>
+          {!requireZone && (
+            <Pressable
+              onPress={() => {
+                setZoneId(null)
+                setZoneSheetVisible(false)
+              }}
+              style={styles.sheetRow}
+            >
+              <Text variant="body" weight={selectedZoneId === null ? 'semiBold' : 'regular'}>
+                {t('Tất cả tầng')}
+              </Text>
+              {selectedZoneId === null && <Check size={20} color={palette.text} weight="bold" />}
+            </Pressable>
+          )}
 
-          {/* Các tầng cụ thể */}
-          {zones.map(zoneItem => {
+          {zones.map((zoneItem, idx) => {
             const isSelected = zoneItem._id === selectedZoneId
             return (
-              <PressableScale
+              <Pressable
                 key={zoneItem._id}
                 onPress={() => {
                   setZoneId(zoneItem._id)
                   setZoneSheetVisible(false)
                 }}
                 style={[
-                  styles.sheetItem,
-                  {
-                    backgroundColor: isSelected ? palette.surfaceStrong : palette.surface,
-                    borderColor: isSelected ? palette.primary : palette.border,
+                  styles.sheetRow,
+                  (!requireZone || idx > 0) && {
+                    borderTopWidth: BorderWidth.hairline,
+                    borderTopColor: palette.divider,
                   },
                 ]}
               >
-                <View style={styles.sheetItemLeft}>
-                  <Stack size={18} color={palette.text} weight={isSelected ? 'bold' : 'regular'} />
-                  <View>
-                    <Text variant="body" weight="medium">{zoneItem.name}</Text>
-                    <Text variant="small" color={palette.textSecondary}>
-                      {`Tầng ${zoneItem.floor}`}
-                    </Text>
-                  </View>
+                <View style={styles.sheetRowText}>
+                  <Text variant="body" weight={isSelected ? 'semiBold' : 'regular'}>
+                    {zoneItem.name}
+                  </Text>
+                  <Text variant="small" color={palette.textSecondary}>
+                    {`Tầng ${zoneItem.floor}`}
+                  </Text>
                 </View>
-                {isSelected && <Check size={18} color={palette.text} weight="bold" />}
-              </PressableScale>
+                {isSelected && <Check size={20} color={palette.text} weight="bold" />}
+              </Pressable>
             )
           })}
         </ScrollView>
       </BottomSheet>
 
-      {/* ── BottomSheet 3: Chọn Khoảng thời gian ── */}
+      {/* BottomSheet Chọn Khoảng thời gian (kiểu OptionSheet phẳng) */}
       <BottomSheet visible={dateRangeSheetVisible} onClose={() => setDateRangeSheetVisible(false)}>
-        <View style={styles.sheetHeader}>
-          <Text variant="heading" weight="semiBold">Khoảng Thời Gian Dữ Liệu</Text>
-          <Text variant="small" color={palette.textSecondary}>
-            Áp dụng cho các chỉ số và chuỗi viễn trắc môi trường
-          </Text>
-        </View>
+        <Text variant="heading">{t('Khoảng thời gian')}</Text>
 
         <View style={styles.sheetList}>
-          {(['today', '24h', '7d', '30d'] as const).map(range => {
+          {(['today', '24h', '7d', '30d'] as const).map((range, index) => {
             const isSelected = range === dateRange
             return (
-              <PressableScale
+              <Pressable
                 key={range}
                 onPress={() => {
                   setDateRange(range)
                   setDateRangeSheetVisible(false)
                 }}
                 style={[
-                  styles.sheetItem,
-                  {
-                    backgroundColor: isSelected ? palette.surfaceStrong : palette.surface,
-                    borderColor: isSelected ? palette.primary : palette.border,
+                  styles.sheetRow,
+                  index > 0 && {
+                    borderTopWidth: BorderWidth.hairline,
+                    borderTopColor: palette.divider,
                   },
                 ]}
               >
-                <View style={styles.sheetItemLeft}>
-                  <CalendarBlank size={18} color={palette.text} weight={isSelected ? 'bold' : 'regular'} />
-                  <Text variant="body" weight="medium">
-                    {DATE_RANGE_LABELS[range]}
-                  </Text>
-                </View>
-                {isSelected && <Check size={18} color={palette.text} weight="bold" />}
-              </PressableScale>
+                <Text variant="body" weight={isSelected ? 'semiBold' : 'regular'}>
+                  {DATE_RANGE_LABELS[range]}
+                </Text>
+                {isSelected && <Check size={20} color={palette.text} weight="bold" />}
+              </Pressable>
             )
           })}
         </View>
@@ -344,12 +414,21 @@ export function PersistentScopeBar({ showDateRange = true }: PersistentScopeBarP
 }
 
 const styles = StyleSheet.create({
+  headerTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+  },
+  headerTitle: {
+    flexShrink: 1,
+  },
   container: {
-    borderBottomWidth: BorderWidth.regular,
     paddingVertical: Spacing.sm,
   },
   scrollContent: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     gap: Spacing.sm,
     alignItems: 'center',
   },
@@ -357,48 +436,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
     borderRadius: Radius.full,
-    borderWidth: BorderWidth.regular,
   },
-  sheetHeader: {
-    gap: Spacing.xs,
-    marginBottom: Spacing.xs,
-  },
-  farmSelectorRow: {
+  farmChipsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
     paddingVertical: Spacing.xs,
   },
-  farmChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.regular,
+  sheetHeader: {
+    gap: 2,
   },
   sheetList: {
     maxHeight: 320,
-    gap: Spacing.xs,
   },
-  sheetItem: {
+  sheetRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.md,
-    borderWidth: BorderWidth.regular,
-    marginBottom: Spacing.xs,
-  },
-  sheetItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  sheetRowText: {
     flex: 1,
+    gap: 2,
   },
 })

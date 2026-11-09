@@ -14,6 +14,7 @@ export function useHealthReports(params?: {
   return useQuery({
     queryKey: ['expert', 'health-reports', params],
     queryFn: () => expertApi.getHealthReports(params).then(res => res.data),
+    enabled: Boolean(params?.zone_id),
   })
 }
 
@@ -73,7 +74,10 @@ export function useSubmitDayRating() {
       status: DailyHealthStatus
       note?: string
     }) => expertApi.submitDayRating(houseId, date, status, note),
-    onSuccess: (_, vars) => {
+    onSuccess: (res, vars) => {
+      if (res?.data) {
+        queryClient.setQueryData(['expert', 'day-rating', vars.houseId, vars.date], res.data)
+      }
       queryClient.invalidateQueries({ queryKey: ['expert', 'day-rating', vars.houseId, vars.date] })
       queryClient.invalidateQueries({ queryKey: ['expert', 'health-reports'] })
     },

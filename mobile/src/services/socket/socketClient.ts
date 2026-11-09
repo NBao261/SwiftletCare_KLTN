@@ -134,3 +134,12 @@ export function onRelayUpdate(handler: (update: SocketRelayUpdate) => void): voi
 export function offRelayUpdate(handler: (update: SocketRelayUpdate) => void): void {
   socket?.off('RELAY_UPDATE', handler)
 }
+
+// Thông báo mới realtime — chuyên gia tự động cập nhật hàng đợi và thẩm định (EXPERT-FR-007)
+export function onNotificationNew(handler: (data: unknown) => void): void {
+  socket?.on('NOTIFICATION_NEW', handler)
+}
+
+export function offNotificationNew(handler: (data: unknown) => void): void {
+  socket?.off('NOTIFICATION_NEW', handler)
+}

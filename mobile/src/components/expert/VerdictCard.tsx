@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import React, { useMemo, useState } from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
 import {
   CaretDown,
@@ -10,14 +10,13 @@ import {
   Cpu,
   MapPin,
   ShieldCheck,
-  WarningCircle,
   XCircle,
 } from 'phosphor-react-native'
 import { Card } from '@/components/ui/card'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
-import { Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { useAlertEvidence } from '@/hooks/expert/useInferredAlerts'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Alert, InferredAlert, VerdictResult } from '@/types'
@@ -44,33 +43,32 @@ function EarlierVerdictsList({ earlierVerdicts = [] }: EarlierVerdictsListProps)
   const count = items.length
 
   return (
-    <View style={[earlierStyles.container, { borderColor: palette.border }]}>
-      <PressableScale
+    <View style={earlierStyles.container}>
+      <Pressable
         onPress={() => setIsExpanded(prev => !prev)}
         style={[
           earlierStyles.toggleButton,
           {
             backgroundColor: palette.surfaceStrong,
-            borderColor: palette.border,
           },
         ]}
         accessibilityRole="button"
-        accessibilityLabel={t('10 tiền lệ phán quyết gần nhất')}
+        accessibilityLabel={t('Lịch sử báo tương tự')}
       >
         <View style={earlierStyles.toggleContent}>
           <ClockCounterClockwise size={16} color={palette.text} />
-          <Text variant="small" weight="bold">
-            {t('10 Tiền lệ gần nhất ({count})', { count })}
+          <Text variant="small" weight="semiBold">
+            {t('Lịch sử báo tương tự ({count})', { count })}
           </Text>
         </View>
         {isExpanded ? <CaretUp size={16} color={palette.text} /> : <CaretDown size={16} color={palette.text} />}
-      </PressableScale>
+      </Pressable>
 
       {isExpanded && (
-        <View style={[earlierStyles.listContainer, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+        <View style={[earlierStyles.listContainer, { backgroundColor: palette.surfaceStrong }]}>
           {items.length === 0 ? (
             <Text variant="small" color={palette.textSecondary} center style={earlierStyles.emptyText}>
-              {t('Chưa có tiền lệ phán quyết tương tự tại khu vực này.')}
+              {t('Chưa có cảnh báo tương tự nào tại khu vực này.')}
             </Text>
           ) : (
             items.map((item, index) => {
@@ -86,7 +84,10 @@ function EarlierVerdictsList({ earlierVerdicts = [] }: EarlierVerdictsListProps)
                   key={item._id || index}
                   style={[
                     earlierStyles.itemRow,
-                    index < items.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
+                    index < items.length - 1 && {
+                      borderBottomWidth: BorderWidth.hairline,
+                      borderBottomColor: palette.divider,
+                    },
                   ]}
                 >
                   <View style={earlierStyles.badgeRow}>
@@ -108,7 +109,7 @@ function EarlierVerdictsList({ earlierVerdicts = [] }: EarlierVerdictsListProps)
                         weight="bold"
                         color={isConfirmed ? palette.onPrimary : palette.onInverse}
                       >
-                        {isConfirmed ? t('XÁC NHẬN') : t('BÁC BỎ')}
+                        {isConfirmed ? t('Báo đúng') : t('Báo ảo')}
                       </Text>
                     </View>
 
@@ -147,7 +148,6 @@ const earlierStyles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: Radius.md,
-    borderWidth: 1,
   },
   toggleContent: {
     flexDirection: 'row',
@@ -157,14 +157,13 @@ const earlierStyles = StyleSheet.create({
   listContainer: {
     marginTop: Spacing.xs,
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
   },
   emptyText: {
     paddingVertical: Spacing.sm,
   },
   itemRow: {
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.sm,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -175,7 +174,7 @@ const earlierStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radius.full,
   },
@@ -204,7 +203,7 @@ interface VerdictCardProps {
 /**
  * Thẻ cảnh báo suy luận tích hợp Ngăn bằng chứng đa phương thức tại chỗ (Inline Evidence Drawer).
  * Đáp ứng EXPERT-FR-003, ALERT-FR-007, ALERT-FR-014.
- * Sử dụng <Card> và <PressableScale> đồng bộ với FARM_OWNER.
+ * Sử dụng <Card> phẳng không viền đồng bộ 100% với FARM_OWNER.
  */
 export function VerdictCard({
   alert,
@@ -225,45 +224,86 @@ export function VerdictCard({
   const alertDescription = alert.message || getInferredAlertDescription(alert.type)
   const timeString = formatTimeAgo(alert.created_at)
 
+  // Dòng kết luận tóm tắt 1 câu bằng tiếng Việt rõ ràng cho Biểu đồ viễn trắc môi trường
+  const telemetrySummary = useMemo(() => {
+    const samples = evidence?.telemetry?.samples
+    if (!samples || samples.length === 0) {
+      return t('Không có số liệu nhiệt ẩm quanh thời điểm này.')
+    }
+    const temps = samples.map(s => s.temperature).filter((v): v is number => typeof v === 'number')
+    const hums = samples.map(s => s.humidity).filter((v): v is number => typeof v === 'number')
+    const sounds = samples.map(s => s.sound_db).filter((v): v is number => typeof v === 'number')
+
+    if (temps.length === 0 && hums.length === 0) {
+      return t('Dữ liệu cảm biến vi khí hậu trong 60 phút quanh thời điểm báo động.')
+    }
+
+    const minT = temps.length > 0 ? Math.min(...temps).toFixed(1) : '--'
+    const maxT = temps.length > 0 ? Math.max(...temps).toFixed(1) : '--'
+    const minH = hums.length > 0 ? Math.min(...hums).toFixed(0) : '--'
+    const maxH = hums.length > 0 ? Math.max(...hums).toFixed(0) : '--'
+    const maxS = sounds.length > 0 ? Math.max(...sounds).toFixed(0) : null
+
+    if (maxS && Number(maxS) > 70) {
+      return t('Nhiệt độ {minT}–{maxT}°C, độ ẩm {minH}–{maxH}%, phát hiện âm thanh đạt đỉnh {maxS} dB.', {
+        minT,
+        maxT,
+        minH,
+        maxH,
+        maxS,
+      })
+    }
+    return t('Nhiệt độ dao động {minT}–{maxT}°C, độ ẩm {minH}–{maxH}% trong 60 phút quanh thời điểm báo động.', {
+      minT,
+      maxT,
+      minH,
+      maxH,
+    })
+  }, [evidence?.telemetry?.samples])
+
+  // Dòng kết luận tóm tắt 1 câu bằng tiếng Việt rõ ràng cho Biểu đồ đếm chim
+  const birdSummary = useMemo(() => {
+    const buckets = evidence?.bird_counts?.buckets
+    if (!buckets || buckets.length === 0) {
+      return t('Không có dữ liệu đếm chim quanh thời điểm này.')
+    }
+    const totalIn = buckets.reduce((acc, b) => acc + (b.entry_count || 0), 0)
+    const totalOut = buckets.reduce((acc, b) => acc + (b.exit_count || 0), 0)
+    return t('Tổng 60 phút: {totalIn} chim bay vào, {totalOut} chim bay ra qua cửa thu.', {
+      totalIn,
+      totalOut,
+    })
+  }, [evidence?.bird_counts?.buckets])
+
   return (
-    <Card
-      style={[
-        styles.cardContainer,
-        {
-          borderColor: palette.border,
-          borderWidth: 1,
-          borderLeftColor: !hasVerdict ? palette.alert : palette.border,
-          borderLeftWidth: !hasVerdict ? 4 : 1,
-        },
-      ]}
-    >
+    <Card style={styles.cardContainer}>
       {/* Phần đầu Card — Bấm để bung mở / thu gọn ngăn bằng chứng */}
       <PressableScale
         onPress={onToggleExpand}
         style={styles.headerPressable}
         accessibilityRole="button"
-        accessibilityLabel={`${alertTitle}, ${hasVerdict ? 'đã phán quyết' : 'chờ thẩm định'}`}
+        accessibilityLabel={`${alertTitle}, ${hasVerdict ? 'đã xác nhận' : 'chờ kiểm tra'}`}
       >
         {/* Hàng 1: Trạng thái thẩm định & Thời gian & Mũi tên */}
         <View style={styles.topRow}>
           <View style={styles.badgeWrapper}>
             {!hasVerdict ? (
-              <View style={[styles.statusBadge, { backgroundColor: palette.alert }]}>
-                <WarningCircle size={12} weight="bold" color={palette.surface} />
-                <Text variant="label" weight="bold" color={palette.surface}>
-                  {t('CHỜ THẨM ĐỊNH')}
+              <View style={[styles.statusBadge, { backgroundColor: palette.severityP2 }]}>
+                <View style={[styles.statusDot, { backgroundColor: palette.alert }]} />
+                <Text variant="label" weight="bold" color={palette.severityP2Text}>
+                  {t('Chờ kiểm tra')}
                 </Text>
               </View>
             ) : isConfirmed ? (
               <View style={[styles.statusBadge, { backgroundColor: palette.primary }]}>
                 <Text variant="label" weight="bold" color={palette.onPrimary}>
-                  {t('ĐÃ XÁC NHẬN')}
+                  {t('Báo đúng')}
                 </Text>
               </View>
             ) : (
               <View style={[styles.statusBadge, { backgroundColor: palette.inverse }]}>
                 <Text variant="label" weight="bold" color={palette.onInverse}>
-                  {t('ĐÃ BÁC BỎ')}
+                  {t('Báo ảo')}
                 </Text>
               </View>
             )}
@@ -286,7 +326,7 @@ export function VerdictCard({
 
         {/* Hàng 2: Tên sự cố suy luận & Vị trí Zone */}
         <View style={styles.titleRow}>
-          <Text variant="heading" weight="bold" style={styles.titleText}>
+          <Text variant="heading" weight="semiBold" style={styles.titleText}>
             {alertTitle}
           </Text>
           <View style={styles.locationWrapper}>
@@ -313,7 +353,7 @@ export function VerdictCard({
         {!isExpanded && (
           <View style={styles.expandHintRow}>
             <Text variant="small" weight="semiBold" color={palette.alert}>
-              {hasVerdict ? t('Xem bằng chứng & lịch sử →') : t('Xem bằng chứng đa phương thức & thẩm định →')}
+              {hasVerdict ? t('Xem dữ liệu & lịch sử →') : t('Xem dữ liệu đo đạc & xác nhận →')}
             </Text>
           </View>
         )}
@@ -328,8 +368,8 @@ export function VerdictCard({
         >
           <View style={styles.drawerHeader}>
             <ShieldCheck size={16} weight="bold" color={palette.text} />
-            <Text variant="small" weight="bold">
-              {t('BẰNG CHỨNG ĐA PHƯƠNG THỨC (±30 MIN)')}
+            <Text variant="small" weight="semiBold">
+              {t('Số liệu đo đạc (±30 phút trước và sau)')}
             </Text>
           </View>
 
@@ -343,12 +383,26 @@ export function VerdictCard({
             </View>
           ) : (
             <>
+              {/* Dòng kết luận tóm tắt 1 câu bằng tiếng Việt rõ ràng cho Vi khí hậu */}
+              <View style={[styles.chartSummaryBanner, { backgroundColor: palette.surfaceStrong }]}>
+                <Text variant="small" weight="semiBold" color={palette.text}>
+                  {telemetrySummary}
+                </Text>
+              </View>
+
               {/* 1. Biểu đồ viễn trắc môi trường ±30 phút */}
               <EvidenceChart
                 telemetry={evidence?.telemetry}
                 alertTime={alert.created_at}
                 alertType={alert.type}
               />
+
+              {/* Dòng kết luận tóm tắt 1 câu bằng tiếng Việt rõ ràng cho Đếm chim */}
+              <View style={[styles.chartSummaryBanner, { backgroundColor: palette.surfaceStrong, marginTop: Spacing.sm }]}>
+                <Text variant="small" weight="semiBold" color={palette.text}>
+                  {birdSummary}
+                </Text>
+              </View>
 
               {/* 2. Biểu đồ cột đếm chim 5 phút ±30 phút */}
               <BirdCountChart birdCounts={evidence?.bird_counts} />
@@ -358,12 +412,12 @@ export function VerdictCard({
                 <View
                   style={[
                     styles.deviceAlertsBox,
-                    { backgroundColor: palette.surfaceStrong, borderColor: palette.border },
+                    { backgroundColor: palette.surfaceStrong },
                   ]}
                 >
                   <View style={styles.deviceAlertsHeader}>
                     <Cpu size={14} color={palette.alert} />
-                    <Text variant="small" weight="bold" color={palette.alert}>
+                    <Text variant="small" weight="semiBold" color={palette.alert}>
                       {t('Cảnh báo thiết bị liên quan ({count})', {
                         count: evidence.device_alerts.length,
                       })}
@@ -398,12 +452,11 @@ const styles = StyleSheet.create({
   cardContainer: {
     padding: 0,
     gap: 0,
-    elevation: 0,
     marginBottom: Spacing.md,
     overflow: 'hidden',
   },
   headerPressable: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
   },
   topRow: {
     flexDirection: 'row',
@@ -417,9 +470,9 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: Radius.full,
   },
   timeAndCaret: {
@@ -453,9 +506,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   drawerContainer: {
-    borderTopWidth: 1,
-    padding: Spacing.md,
-    paddingTop: Spacing.sm,
+    borderTopWidth: BorderWidth.hairline,
+    padding: Spacing.lg,
+    paddingTop: Spacing.md,
   },
   drawerHeader: {
     flexDirection: 'row',
@@ -468,14 +521,24 @@ const styles = StyleSheet.create({
   },
   deviceAlertsBox: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     marginTop: Spacing.sm,
   },
   deviceAlertsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  chartSummaryBanner: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
     marginBottom: 4,
   },
 })

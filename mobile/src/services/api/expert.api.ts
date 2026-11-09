@@ -46,7 +46,15 @@ export const expertApi = {
   // ── 1. Kiểm chứng Cảnh báo suy luận (EXPERT-FR-003, ALERT-FR-007, ALERT-FR-014) ──
   getInferredAlerts: (params?: InferredAlertsQueryParams) =>
     apiClient.get<ApiResponse<InferredAlert[]>>(ENDPOINTS.ALERTS, {
-      params: { ...params, inferred_only: true },
+      params: {
+        farmId: params?.farm_id,
+        zoneId: params?.zone_id,
+        verdict: params?.verdict,
+        type: params?.type,
+        severity: params?.severity,
+        page: params?.page,
+        limit: params?.limit,
+      },
     }),
 
   getAlertEvidence: (alertId: string) =>
@@ -56,7 +64,12 @@ export const expertApi = {
     apiClient.put<ApiResponse<InferredAlert>>(ENDPOINTS.ALERT_VERDICT(alertId), { result, note }),
 
   getVerdictStats: (params?: { farm_id?: string; zone_id?: string }) =>
-    apiClient.get<ApiResponse<ExpertVerdictStats[]>>(ENDPOINTS.ALERT_VERDICT_STATS, { params }),
+    apiClient.get<ApiResponse<ExpertVerdictStats[]>>(ENDPOINTS.ALERT_VERDICT_STATS, {
+      params: {
+        farmId: params?.farm_id,
+        zoneId: params?.zone_id,
+      },
+    }),
 
   // ── 2. Cấu hình Ngưỡng & Tinh chỉnh Zone (EXPERT-FR-004, ENV-FR-006) ─────────────
   getZone: (zoneId: string) =>
@@ -109,7 +122,14 @@ export const expertApi = {
 
   // ── 5. Báo cáo Sức khỏe & Kết luận (EXPERT-FR-005, EXPERT-FR-006, EXPERT-FR-013) ──
   getHealthReports: (params?: { farm_id?: string; zone_id?: string; page?: number; limit?: number }) =>
-    apiClient.get<ApiResponse<ZoneHealthReportItem[]>>(ENDPOINTS.HEALTH_REPORTS, { params }),
+    apiClient.get<ApiResponse<ZoneHealthReportItem[]>>(ENDPOINTS.HEALTH_REPORTS, {
+      params: {
+        farmId: params?.farm_id,
+        zoneId: params?.zone_id,
+        page: params?.page,
+        limit: params?.limit,
+      },
+    }),
 
   getHealthReportDetail: (reportId: string) =>
     apiClient.get<ApiResponse<ZoneHealthReportItem>>(ENDPOINTS.HEALTH_REPORT_DETAIL(reportId)),
@@ -118,28 +138,50 @@ export const expertApi = {
     apiClient.put<ApiResponse<ZoneHealthReportItem>>(ENDPOINTS.HEALTH_REPORT_CONCLUSION(reportId), { text }),
 
   // ── 6. Kiểm duyệt Thay đổi của Chủ Farm (EXPERT-FR-010) ─────────────────────────
-  getReviewItems: (params?: { farm_id?: string; status?: ReviewItemStatus }) =>
-    apiClient.get<ApiResponse<ReviewItem[]>>(ENDPOINTS.EXPERT_REVIEW_ITEMS, { params }),
+  getReviewItems: (params?: { farm_id?: string; zone_id?: string; status?: ReviewItemStatus }) =>
+    apiClient.get<ApiResponse<ReviewItem[]>>(ENDPOINTS.EXPERT_REVIEW_ITEMS, {
+      params: {
+        farmId: params?.farm_id,
+        zoneId: params?.zone_id,
+        status: params?.status,
+      },
+    }),
 
   takeReviewAction: (
     itemId: string,
     action: 'ACCEPT' | 'REVERT' | 'ADJUST',
     adjustedValues?: Record<string, number>
-  ) =>
-    apiClient.put<ApiResponse<ReviewItem>>(ENDPOINTS.EXPERT_REVIEW_ITEM_ACTION(itemId), {
+  ) => {
+    if (action === 'ACCEPT') {
+      return apiClient.put<ApiResponse<ReviewItem>>(ENDPOINTS.EXPERT_REVIEW_ACCEPT(itemId))
+    }
+    if (action === 'REVERT') {
+      return apiClient.put<ApiResponse<ReviewItem>>(ENDPOINTS.EXPERT_REVIEW_REVERT(itemId))
+    }
+    return apiClient.put<ApiResponse<ReviewItem>>(ENDPOINTS.EXPERT_REVIEW_ITEM_ACTION(itemId), {
       action,
       adjusted_values: adjustedValues,
-    }),
+    })
+  },
 
   // ── 7. Duyệt Đề xuất Hệ số mờ (EXPERT-FR-011) ──────────────────────────────────
-  getProposals: (params?: { farm_id?: string; status?: ProposalStatus }) =>
-    apiClient.get<ApiResponse<CoefficientProposal[]>>(ENDPOINTS.EXPERT_PROPOSALS, { params }),
-
-  takeProposalAction: (proposalId: string, action: 'APPROVE' | 'REJECT', rejectionReason?: string) =>
-    apiClient.put<ApiResponse<CoefficientProposal>>(ENDPOINTS.EXPERT_PROPOSAL_ACTION(proposalId), {
-      action,
-      rejection_reason: rejectionReason,
+  getProposals: (params?: { farm_id?: string; zone_id?: string; status?: ProposalStatus }) =>
+    apiClient.get<ApiResponse<CoefficientProposal[]>>(ENDPOINTS.EXPERT_PROPOSALS, {
+      params: {
+        farmId: params?.farm_id,
+        zoneId: params?.zone_id,
+        status: params?.status,
+      },
     }),
+
+  takeProposalAction: (proposalId: string, action: 'APPROVE' | 'REJECT', rejectionReason?: string) => {
+    if (action === 'APPROVE') {
+      return apiClient.put<ApiResponse<CoefficientProposal>>(ENDPOINTS.EXPERT_PROPOSAL_APPROVE(proposalId))
+    }
+    return apiClient.put<ApiResponse<CoefficientProposal>>(ENDPOINTS.EXPERT_PROPOSAL_REJECT(proposalId), {
+      note: rejectionReason,
+    })
+  },
 
   // ── 8. Đánh giá Ngày theo quy tắc BR-31 (EXPERT-FR-012) ────────────────────────
   getDayRating: (houseId: string, date: string) =>
@@ -156,5 +198,12 @@ export const expertApi = {
 
   // ── 9. Nhật ký Hoạt động Chuyên gia (EXPERT-FR-009) ───────────────────────────
   getExpertActivity: (farmId: string, params?: ExpertActivityQueryParams) =>
-    apiClient.get<ApiResponse<ExpertActivityEntry[]>>(ENDPOINTS.EXPERT_ACTIVITY(farmId), { params }),
+    apiClient.get<ApiResponse<ExpertActivityEntry[]>>(ENDPOINTS.EXPERT_ACTIVITY_LIST, {
+      params: {
+        farmId,
+        type: params?.action,
+        page: params?.page,
+        limit: params?.limit,
+      },
+    }),
 }

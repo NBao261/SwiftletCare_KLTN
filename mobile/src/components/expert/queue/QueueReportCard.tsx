@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Alert as NativeAlert, StyleSheet, View } from 'react-native'
+import { Alert as NativeAlert, Pressable, StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import {
   FileCsv,
@@ -13,7 +13,7 @@ import { Card } from '@/components/ui/card'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { TextField } from '@/components/ui/text-field'
-import { Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { ZoneHealthReportItem } from '@/types'
 import { formatDateTime } from '@/utils/date.utils'
@@ -28,13 +28,13 @@ interface QueueReportCardProps {
 const TEMPLATE_CONCLUSIONS = [
   'Vận hành ổn định, tiếp tục duy trì dải thông số hiện tại.',
   'Độ ẩm tầng trên có dấu hiệu khô, cần tăng thời gian phun sương +30s.',
-  'Phát hiện dị thường âm thanh đêm, khuyến nghị kiểm tra âm học và cửa thu chim.',
+  'Phát hiện âm thanh lạ về đêm, khuyến nghị kiểm tra loa dẫn dụ và cửa thu chim.',
 ]
 
 /**
  * Thẻ Báo cáo sức khỏe định kỳ cần Chuyên gia kết luận (EXPERT-FR-005, 006, 013).
  * Tích hợp tải nhanh PDF/CSV và BottomSheet ban hành kết luận chỉ trong đúng 2 chạm.
- * Sử dụng <Card>, <PressableScale> và <TextField> chuẩn hóa đồng bộ với FARM_OWNER.
+ * Sử dụng <Card> phẳng không viền đồng bộ 100% với ReportTab của FARM_OWNER.
  */
 export function QueueReportCard({
   report,
@@ -49,7 +49,7 @@ export function QueueReportCard({
 
   const hasConclusion = Boolean(report.expert_conclusion)
   const title = t('Báo cáo {type} kỳ {start}', {
-    type: report.report_type === 'DAILY' ? 'Ngày' : report.report_type === 'WEEKLY' ? 'Tuần' : 'Tháng',
+    type: report.report_type === 'DAILY' ? 'ngày' : report.report_type === 'WEEKLY' ? 'tuần' : 'tháng',
     start: report.period_start?.slice(0, 10) || '',
   })
 
@@ -57,23 +57,20 @@ export function QueueReportCard({
   const autonomyPct = `${Math.round(report.autonomy_pct || 85)}%`
 
   const handleDownloadPdf = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
     NativeAlert.alert(
       t('Tải báo cáo PDF'),
-      t('Đã tạo liên kết tải file PDF báo cáo sức khỏe (EXPERT-FR-013).')
+      t('Đã tạo liên kết tải file PDF báo cáo sức khỏe nhà yến.')
     )
   }
 
   const handleDownloadCsv = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
     NativeAlert.alert(
       t('Tải dữ liệu CSV'),
-      t('Đã chuẩn bị file CSV chuỗi thời gian vi khí hậu (EXPERT-FR-013).')
+      t('Đã chuẩn bị file CSV dữ liệu nhiệt ẩm theo thời gian.')
     )
   }
 
   const handleSelectTemplate = (template: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
     setErrorText(null)
     setConclusionText(template)
   }
@@ -92,15 +89,10 @@ export function QueueReportCard({
   }
 
   return (
-    <Card
-      style={[
-        styles.card,
-        { borderColor: palette.border, borderWidth: 1 },
-      ]}
-    >
+    <Card style={styles.card}>
       {/* Header: Tên báo cáo & Trạng thái kết luận */}
       <View style={styles.headerRow}>
-        <Text variant="heading" weight="bold">
+        <Text variant="heading" weight="semiBold" style={{ flex: 1 }}>
           {title}
         </Text>
         <View
@@ -108,7 +100,6 @@ export function QueueReportCard({
             styles.statusBadge,
             {
               backgroundColor: hasConclusion ? palette.primary : palette.surfaceStrong,
-              borderColor: palette.border,
             },
           ]}
         >
@@ -117,18 +108,18 @@ export function QueueReportCard({
             weight="bold"
             color={hasConclusion ? palette.onPrimary : palette.textSecondary}
           >
-            {hasConclusion ? t('ĐÃ CÓ KẾT LUẬN') : t('CHƯA CÓ KẾT LUẬN')}
+            {hasConclusion ? t('Có kết luận') : t('Chưa có kết luận')}
           </Text>
         </View>
       </View>
 
       {/* 3 Chỉ số tóm tắt vi khí hậu */}
-      <View style={[styles.statsBox, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
+      <View style={[styles.statsBox, { backgroundColor: palette.surfaceStrong }]}>
         <View style={styles.statCol}>
-          <Text variant="label" color={palette.textSecondary}>
-            {t('TRONG NGƯỠNG')}
+          <Text variant="small" color={palette.textSecondary}>
+            {t('Trong ngưỡng')}
           </Text>
-          <Text variant="body" weight="bold" style={styles.statVal}>
+          <Text variant="body" weight="semiBold" style={styles.statVal}>
             {inRangePct}
           </Text>
         </View>
@@ -136,10 +127,10 @@ export function QueueReportCard({
         <View style={[styles.statDivider, { backgroundColor: palette.divider }]} />
 
         <View style={styles.statCol}>
-          <Text variant="label" color={palette.textSecondary}>
-            {t('TỰ CHỦ FUZZY')}
+          <Text variant="small" color={palette.textSecondary}>
+            {t('Máy tự chạy')}
           </Text>
-          <Text variant="body" weight="bold" style={styles.statVal}>
+          <Text variant="body" weight="semiBold" style={styles.statVal}>
             {autonomyPct}
           </Text>
         </View>
@@ -147,12 +138,12 @@ export function QueueReportCard({
         <View style={[styles.statDivider, { backgroundColor: palette.divider }]} />
 
         <View style={styles.statCol}>
-          <Text variant="label" color={palette.textSecondary}>
-            {t('SỰ CỐ KHẨN')}
+          <Text variant="small" color={palette.textSecondary}>
+            {t('Sự cố khẩn')}
           </Text>
           <Text
             variant="body"
-            weight="bold"
+            weight="semiBold"
             color={report.alerts_count > 0 ? palette.alert : palette.text}
             style={styles.statVal}
           >
@@ -161,16 +152,16 @@ export function QueueReportCard({
         </View>
       </View>
 
-      {/* Hiển thị kết luận hiện tại nếu có */}
+      {/* Hiển thị kết luận hiện tại nếu có (giống ReportTab.conclusionBox của Farmer) */}
       {hasConclusion && (
-        <View style={[styles.conclusionBox, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}>
-          <Text variant="small" weight="bold" color={palette.textSecondary}>
+        <View style={[styles.conclusionBox, { backgroundColor: palette.surfaceStrong }]}>
+          <Text variant="small" weight="semiBold" color={palette.textSecondary}>
             {t('Kết luận chuyên gia ({at}):', {
               at: report.expert_conclusion_at ? formatDateTime(report.expert_conclusion_at) : '',
             })}
           </Text>
-          <Text variant="body" color={palette.text} style={styles.conclusionText}>
-            {`"${report.expert_conclusion}"`}
+          <Text variant="body" color={palette.text}>
+            {report.expert_conclusion}
           </Text>
         </View>
       )}
@@ -180,41 +171,36 @@ export function QueueReportCard({
         <View style={styles.downloadButtons}>
           <PressableScale
             onPress={handleDownloadPdf}
-            style={[styles.dlBtn, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}
+            style={[styles.dlBtn, { backgroundColor: palette.surfaceStrong }]}
             accessibilityRole="button"
             accessibilityLabel={t('Tải báo cáo PDF')}
           >
             <FilePdf size={16} color={palette.text} />
-            <Text variant="small" weight="bold">
+            <Text variant="small" weight="semiBold">
               PDF
             </Text>
           </PressableScale>
 
           <PressableScale
             onPress={handleDownloadCsv}
-            style={[styles.dlBtn, { backgroundColor: palette.surfaceStrong, borderColor: palette.border }]}
+            style={[styles.dlBtn, { backgroundColor: palette.surfaceStrong }]}
             accessibilityRole="button"
             accessibilityLabel={t('Tải số liệu CSV')}
           >
             <FileCsv size={16} color={palette.text} />
-            <Text variant="small" weight="bold">
+            <Text variant="small" weight="semiBold">
               CSV
             </Text>
           </PressableScale>
         </View>
 
         <PressableScale
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined)
-            setIsSheetOpen(true)
-          }}
+          onPress={() => setIsSheetOpen(true)}
           disabled={isSubmitting}
           style={[
             styles.writeBtn,
             {
-              backgroundColor: hasConclusion ? palette.surface : palette.primary,
-              borderColor: hasConclusion ? palette.border : 'transparent',
-              borderWidth: hasConclusion ? 1 : 0,
+              backgroundColor: hasConclusion ? palette.surfaceStrong : palette.primary,
               opacity: isSubmitting ? 0.6 : 1,
             },
           ]}
@@ -228,7 +214,7 @@ export function QueueReportCard({
           />
           <Text
             variant="small"
-            weight="bold"
+            weight="semiBold"
             color={hasConclusion ? palette.text : palette.onPrimary}
           >
             {hasConclusion ? t('Sửa kết luận') : t('Viết kết luận →')}
@@ -242,7 +228,7 @@ export function QueueReportCard({
         onClose={() => setIsSheetOpen(false)}
       >
         <View style={styles.sheetHeader}>
-          <Text variant="heading" weight="bold">
+          <Text variant="heading" weight="semiBold">
             {t('Kết luận & Khuyến nghị')}
           </Text>
           <Text variant="small" color={palette.textSecondary}>
@@ -251,22 +237,20 @@ export function QueueReportCard({
         </View>
 
         <View style={styles.sheetBody}>
-          {/* 3 Chip gợi ý mẫu */}
-          <Text variant="small" weight="bold" color={palette.textSecondary} style={{ marginBottom: 4 }}>
-            {t('MẪU KHUYẾN NGHỊ NHANH (1 CHẠM):')}
+          <Text variant="small" weight="semiBold" color={palette.textSecondary} style={{ marginBottom: 4 }}>
+            {t('Mẫu khuyến nghị nhanh (1 chạm):')}
           </Text>
           <View style={styles.templatesContainer}>
             {TEMPLATE_CONCLUSIONS.map((tmpl, idx) => {
               const isSelected = conclusionText === tmpl
               return (
-                <PressableScale
+                <Pressable
                   key={idx}
                   onPress={() => handleSelectTemplate(tmpl)}
                   style={[
                     styles.templateChip,
                     {
-                      backgroundColor: isSelected ? palette.text : palette.surfaceStrong,
-                      borderColor: isSelected ? palette.text : palette.border,
+                      backgroundColor: isSelected ? palette.inverse : palette.surfaceStrong,
                     },
                   ]}
                 >
@@ -277,19 +261,18 @@ export function QueueReportCard({
                   />
                   <Text
                     variant="small"
-                    weight={isSelected ? 'bold' : 'regular'}
+                    weight={isSelected ? 'semiBold' : 'regular'}
                     color={isSelected ? palette.onInverse : palette.text}
                     numberOfLines={2}
                     style={{ flex: 1 }}
                   >
                     {tmpl}
                   </Text>
-                </PressableScale>
+                </Pressable>
               )
             })}
           </View>
 
-          {/* Ô nhập nội dung bằng TextField */}
           <TextField
             label={t('Nội dung kết luận')}
             value={conclusionText}
@@ -325,28 +308,26 @@ export function QueueReportCard({
 
 const styles = StyleSheet.create({
   card: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
     gap: 0,
-    elevation: 0,
     marginBottom: Spacing.sm,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: Spacing.xs,
   },
   statusBadge: {
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: Radius.full,
-    borderWidth: 1,
   },
   statsBox: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     marginTop: Spacing.sm,
   },
   statCol: {
@@ -355,26 +336,23 @@ const styles = StyleSheet.create({
   },
   statVal: {
     marginTop: 2,
+    fontVariant: ['tabular-nums'],
   },
   statDivider: {
-    width: 1,
+    width: BorderWidth.hairline,
     height: 24,
   },
   conclusionBox: {
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Spacing.sm,
+    borderRadius: Radius.sm,
+    padding: Spacing.md,
     marginTop: Spacing.sm,
-    gap: 4,
-  },
-  conclusionText: {
-    fontStyle: 'italic',
+    gap: Spacing.xs,
   },
   bottomActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
     gap: Spacing.sm,
   },
   downloadButtons: {
@@ -385,7 +363,6 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: Spacing.md,
     borderRadius: Radius.full,
-    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -401,7 +378,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   sheetHeader: {
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   sheetBody: {
     gap: Spacing.sm,
@@ -413,9 +390,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     borderRadius: Radius.md,
-    borderWidth: 1,
   },
   sheetActions: {
     flexDirection: 'row',
