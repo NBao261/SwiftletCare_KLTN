@@ -7,8 +7,8 @@
 | Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 1.0.0 (Review 2) |
-| Date | 03/11/2026 |
+| Document version | 1.5.0 (Review 2, final scope) |
+| Date | 09/11/2026 |
 | Scope baseline | Registration form v3 with Record of Changes (BM03) |
 
 Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commitment (BM04). Progress against this plan is kept in Project Tracking (`project-tracking.md`).
@@ -19,25 +19,25 @@ Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commi
 
 ### 1.1 Scope and Estimation
 
-Scope is the registration form v3: main flows MF-01…06 and supporting flows SF-01…04 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are the team's estimates at 03/11/2026.
+Scope is the final registration form v3: main flows MF-01…08 and supporting flows SF-01…06 (Report 3, Section 2.2). The work breakdown follows the five tasks of the registration form (section 3.2 c). Effort is in person-days; "done" is the share already in the repository at the `review-2` tag, judged from the feature status and the gap list of Project Tracking (Sections 3 and 6). Both columns are the team's estimates at 03/11/2026.
 
 | WBS | Work package | Main deliverable | Owner | Estimate (person-days) | Done at Review 2 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.5.x (sensing, fuzzy control, self-diagnosis, offline buffer, OTA); controller board with current sensing | Bảo, Kiệt | 45 | About 70 % (board, current check, config version and MQTT TLS remain) |
+| 1 | Hardware and firmware (Task 1) | Controller prototype; firmware 1.5.x (sensing, fuzzy control with weather offset, self-diagnosis, run hours, offline buffer, OTA); controller board with current sensing | Bảo, Kiệt | 50 | About 70 % (board, current check, config version and MQTT TLS remain) |
 | 2 | Vision (Task 2) | Labelled dataset, trained YOLO model, counting pipeline, annotated stream, accuracy report | Nguyễn Chí Bảo | 40 | About 55 % (pipeline, MQTT publishing, video push and tests done; first YOLOv8n and YOLO11n models trained on the team's labelled frames on 03/11/2026; evaluation on held-out clips, device topics remain) |
-| 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine, forecasting, expert module, daily health assessment, reports | Kiệt, Bảo | 70 | About 80 % (expert loop, review items, proposals, breach dwell and invitation-only accounts done; MF-06, manual override limits, config sync, FCM remain) |
-| 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens; mobile app with QR setup and push | Len, Nhi, Tuấn, Bảo | 75 | Web about 70 %, mobile about 25 % |
-| 5 | Evaluation and thesis (Task 5) | Staging, field run, NFR measurements, practitioner interview, test report, thesis | Whole team, led by Bảo | 40 | About 15 % (camera installed in the test house, 3 days of clips recorded) |
+| 3 | Backend (Task 3) | REST API, MQTT ingestion, alert engine with routing and escalation, Work Orders and maintenance, forecasting and weather offset, expert module with profiles and recommendation rules, daily health assessment, reports, farm overview and comparison, harvest cycles | Kiệt, Bảo | 115 | About 50 % (final scope); before Review 2 about 80 % (expert loop, review items, proposals, breach dwell and invitation-only accounts done; MF-06, manual override limits, config sync, FCM remain) |
+| 4 | Web and mobile (Task 4) | Farm Owner, Domain Expert and Admin web screens (overview, comparison, Work Orders, plans, profiles, rules, harvest cycles); mobile app for the Farm Owner and the Farm Technician with QR setup, push, Work Orders and checklists | Len, Nhi, Tuấn, Bảo | 105 | Web about 50 %, mobile about 20 % (final scope) |
+| 5 | Evaluation and thesis (Task 5) | Staging, device simulator, field run, NFR measurements, practitioner interview, test report, thesis | Whole team, led by Bảo | 45 | About 15 % (camera installed in the test house, 3 days of clips recorded) |
 | 6 | Project management and documents | Reports 1–7, reviews, tracking | Bảo (lead), whole team | 20 | Reports 1–5 drafted |
 
 ### 1.2 Project Objectives
 
 | Objective | Target | Measured by |
 | --- | --- | --- |
-| Scope | Every mandatory feature of the Design Brief (F-01…22) done and in at least one main workflow | Project Tracking; Report 5 |
-| Defense 1.1 thresholds | 100 % of the 6 main workflows run end-to-end on staging; 100 % main and ≥ 80 % exception demo scenarios pass; ≥ 90 % of test cases pass, 100 % of main-path tests; ≥ 50 % automated in CI; no open Critical or High defect | Report 5; CI on the submitted tag |
+| Scope | Every mandatory feature of the Design Brief (F-01…17, F-20…29) done and in at least one main workflow | Project Tracking; Report 5 |
+| Defense 1.1 thresholds | 100 % of the 8 main workflows run end-to-end on staging; 100 % main and ≥ 80 % exception demo scenarios pass; ≥ 90 % of test cases pass, 100 % of main-path tests; ≥ 50 % automated in CI; no open Critical or High defect | Report 5; CI on the submitted tag |
 | Quality of code | Every pull request passes CI and one review; backend line coverage ≥ 80 % | CI (`.github/workflows/ci.yml`) |
-| Non-functional | The six committed NFRs of the Design Brief measured with their stated method | Report 5, NFR test cases |
+| Non-functional | The seven committed NFRs of the Design Brief measured with their stated method | Report 5, NFR test cases |
 | Field evidence | ≥ 14 rated days in the test house (NFR-14); counting accuracy on recorded clips (NFR-09) | Evaluation report |
 
 ### 1.3 Project Risks
@@ -53,6 +53,7 @@ Scope is the registration form v3: main flows MF-01…06 and supporting flows SF
 | RK-7 | A member cannot explain the part they own at Review 2 or Defense 1.1 | Low | High | Ownership Map; each owner presents their workflow at internal rehearsals | Nguyễn Chí Bảo |
 | RK-8 | The mobile application must cover the whole scope of the registration form (3.2 b) while the same members build the web screens | High | High | Split by platform and role: Len owns the Farm Owner mobile app (sign-in, push, QR setup, daily status, live stream) while Nhi builds the Farm Owner web, Tuấn the expert screens; reuse the web API hooks and types; Farm Owner flows first (Project Tracking G-16) | Nguyễn Vũ Len |
 | RK-9 | The move to device topics, `esp-mqtt` and TLS (Report 4 D3) breaks the link between controllers, AI node and backend | Medium | High | One pull request for firmware, backend and AI node; bench test with two controllers and the AI node before staging; old firmware reflashed over USB if needed (Project Tracking G-07) | Nguyễn Chí Bảo |
+| RK-10 | The scope grew at Review 2 (Farm Technician, Work Orders, maintenance, weather offset, recommendations, overview, harvest cycles) with seven weeks left | High | High | One owner per work package (Project Tracking G-20…G-27); simulator and Work Orders first in Iteration 2; the duty roster (optional) last; weekly integration on `develop` | Nguyễn Chí Bảo |
 
 ## 2. Management Approach
 
@@ -128,15 +129,17 @@ R = responsible, A = accountable, C = consulted.
 | Firmware, hardware | A, R | R | | | |
 | AI pipeline, model | A, R | | | | |
 | Dataset labelling, manual clip counts | A | | R | R | R |
-| Backend MQTT ingestion, configuration sync, bird counting, push, current sensing | A, R | C | | | |
+| Backend MQTT ingestion, configuration sync, bird counting, push, current sensing, weather offset, profiles, recommendation rules, overview and comparison, harvest cycles, simulator | A, R | C | | | |
 | Backend devices, accounts, alerts, setup | C | A, R | C | C | C |
 | Backend expert module | C | A, R | | | C |
 | Backend daily health and reports | C | A, R | | C | |
-| Web – Farm Owner | | | C | A, R | |
+| Backend Farm Technician, routing, escalation, Work Orders, maintenance plans | C | A, R | C | C | |
+| Web – Farm Owner (overview, comparison, Work Order approval, plans, harvest cycles) | | | C | A, R | |
 | Web – Administrator, role matrix | | | | A, R | |
-| Web – Domain Expert, Admin device console | | | | | A, R |
+| Web – Domain Expert (verdicts, profiles, weather and recommendation rules, season conclusions), Admin device console | | | | | A, R |
 | Mobile – sign-in, push, QR setup, daily status | C | | A, R | | |
 | Mobile – Farm Owner screens, live stream | | | A, R | | |
+| Mobile – Farm Technician (alerts, Work Orders, checklists, rating, harvest entry) | | C | A, R | | |
 | Mobile – Domain Expert screens | | | C | | A, R |
 | E2E tests of the demo scenarios | A | C | R | R | R |
 | Staging and deployment | A, R | R | R | R | R |
@@ -144,7 +147,7 @@ R = responsible, A = accountable, C = consulted.
 
 Staging and documents are shared: Bảo is accountable and runs the infrastructure and the final documents, and every member is responsible for their part (Kiệt the backend image, migrations, seed and backup; Nhi the web build; Len the mobile build; Tuấn the E2E runs on staging; each member the report sections of their own workflows). Backend code is written only by Bảo and Kiệt. Len, Nhi and Tuấn are consulted on the backend of the features they own and answer for those features working end to end (Project Tracking, Section 3).
 
-Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03; Kiệt WF-05; Len WF-02; Nhi WF-06; Tuấn WF-04. Since 03/11/2026 the Farm Owner screens are split by platform: Len the mobile app, Nhi the web. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
+Main workflows owned (Design Brief, Section 8): Bảo WF-01, 03; Kiệt WF-05; Len WF-02, 07; Nhi WF-06; Tuấn WF-04, 08. Since 03/11/2026 the Farm Owner screens are split by platform: Len the mobile app, Nhi the web. Work order per person before the `review-2` tag and in Iteration 2: `docs/reports/todo-review2.md` §0.
 
 ## 5. Project Communications
 
@@ -190,7 +193,9 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…06; device setup is supporting flow SF-01 |
+| 1.5.0 | 09/11/2026 | Eight main flows (harvest season summary is supporting flow SF-06): 27 mandatory features and 170 committed test cases |
+| 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): work packages of the new scope (Kiệt operations backend; Bảo firmware weather offset, knowledge and analytics backend, simulator; Len technician mobile; Tuấn expert web; Nhi owner web), workflows WF-07…09, 28 mandatory features and 186 committed test cases, risk of the larger scope |
+| 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…09; device setup is supporting flow SF-01 |
 | 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo; Farm Owner web to Nhi, mobile to Len on 03/11/2026), skills, workflow owners, RK-3 and RK-8 |
 | 1.1.0 | 26/10/2026 | Aligned with SRS 3.1.0 and SDD 1.1.0: progress judged from Project Tracking, Iteration 1 and 2 content corrected, RACI wording, risks RK-8 (mobile scope) and RK-9 (move to device topics) |
 | 1.0.0 | 23/10/2026 | First version for Review 2 |
