@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { Alert, ScrollView, StyleSheet, View } from 'react-native'
-import { router } from 'expo-router'
+import { useEffect, useRef, useState } from 'react'
+import { Alert, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native'
+import { router, useLocalSearchParams } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   ArrowCounterClockwiseIcon,
   BellIcon,
@@ -25,7 +26,6 @@ import Constants from 'expo-constants'
 import { NotificationSettingsSheet } from '@/components/alert/NotificationSettingsSheet'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { HomeSection } from '@/components/home/HomeSection'
-import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { LanguageFlag } from '@/components/profile/LanguageFlag'
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
@@ -126,6 +126,14 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
   const { farm } = useCurrentFarm()
   const toast = useToastMessage()
   const [isChannelSheetOpen, setChannelSheetOpen] = useState(false)
+  const insets = useSafeAreaInsets()
+  const scrollRef = useRef<ScrollViewInstance>(null)
+  // Mở từ ảnh/tên ở đầu Trang chủ: mỗi lần bấm có một mốc mới, tab vẫn giữ chỗ cuộn cũ nên cuộn về đầu trang
+  const { scrollToTopAt } = useLocalSearchParams<{ scrollToTopAt?: string }>()
+
+  useEffect(() => {
+    if (scrollToTopAt) scrollRef.current?.scrollTo({ y: 0, animated: false })
+  }, [scrollToTopAt])
 
   const unreadQuery = useUnreadNotificationCount()
   const pendingDaysQuery = usePendingHealthDays()
@@ -186,8 +194,12 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
 
   return (
     <>
-      <AppHeader title={t('Tài khoản')} titleAlign="center" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
+      {/* Không có tiêu đề: chừa vùng an toàn trên cùng (giờ, pin, tai thỏ) để ảnh đại diện không bị che */}
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.lg, paddingBottom: bottomPadding }]}
+      >
         {/* Hồ sơ: ảnh, tên, vai trò — Report 3 không có yêu cầu sửa hồ sơ nên chỉ đọc */}
         <View style={styles.identity}>
           <ProfileAvatar fullName={user?.full_name} avatarUrl={user?.avatar_url} />
