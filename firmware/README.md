@@ -14,7 +14,7 @@
 > - bật relay ngay sau khi khởi động, trước khi có giờ NTP: lệnh vẫn áp (Report 3 §8.1);
 > - board còn chạy 1.5.0 vẫn điều khiển tay được với backend mới (hết hạn hoặc huỷ 1 relay thì cả 3 relay về tự động như trước).
 
-PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `docs/hardware/components-guide.md`. Checklist lắp đặt: `docs/task-checklist.md` mục A.
+PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `docs/hardware/components-guide.md`. Việc lắp đặt và thử ngoài thực địa: `docs/reports/todo-review2.md` mục 3.
 
 ## Build / Nạp firmware
 

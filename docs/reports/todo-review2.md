@@ -131,7 +131,7 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 | [ ] | **Máy demo cho buổi review** (mục 07): một máy chạy được Iteration 1 từ tag (`docker compose up -d mongodb emqx`, backend, web), chạy được bộ test (`npm test`, `vitest run`, `pio test -e native`, `pytest`), mở sẵn repo, Design Brief và các sơ đồ Report 4 | P0-Nộp | Bảo chuẩn bị, Kiệt chạy thử trước 1 ngày |
 | [ ] | **Diễn tập phần 2 và 3** (mục 07): trình bày 5 quyết định (mỗi chủ quyết định tự nói), 3 rủi ro, các điểm Kept/Planned của BM02; tập phân tích tác động của tình huống thay đổi trên sơ đồ và code — thêm một role, thêm một trạng thái cho Alert hoặc Device, Telegram/FCM/Open-Meteo ngừng hoạt động, tải tăng 10 lần — chỉ ra thực thể, trạng thái, luồng, API, test nào đổi | P0-Nộp | Cả team, ít nhất 1 buổi |
 | [ ] | **Diễn tập phần 5** (xác minh sở hữu): từng người mở code phần mình trong BM01 §8, giải thích, chạy test của mình, trả lời 2–3 câu "nếu… thì sao" do người khác hỏi | P0-Nộp | Cả team; tất cả phải có mặt ở buổi review |
-| [ ] | (Tùy chọn) Chuyển `SwiftletCare_SRS.md` sang `docs/archive/` | P2 | |
+| [x] | Xoá SRS nội bộ cũ `SwiftletCare_SRS.md` (09/11/2026; còn trong lịch sử git) | P2 | |
 
 **Ngưỡng Defense 1.1** (không phải điều kiện nộp Review 2): 100 % workflow chạy end-to-end trên staging · ≥ 90 % test đạt · ≥ 50 % test tự động trong CI · không còn defect Critical/High.
 
