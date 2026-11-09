@@ -1,6 +1,6 @@
 /**
  * SwiftletCare – Global Configuration
- * Loaded from NVS on boot. Overridable via MQTT config/update command.
+ * Loaded from NVS on boot. Overridable via the retained MQTT topic …/{deviceId}/config.
  *
  * Hardware BOM: Components Guide v3.3 (RS485 Modbus sensor bus + GPIO relay)
  * SRS: ENV-FR-001, ENV-FR-006, ENV-FR-007, ENV-FR-013b
@@ -58,7 +58,7 @@
 #define PID_INTERVAL_MS 10000
 
 // ── Hệ số bộ điều khiển mờ (ENV-FR-010/011/021) ─────────────────────────────
-// Chỉnh lúc chạy qua MQTT config/update (fuzzy_*), lưu NVS; ngoài khoảng MIN/MAX
+// Chỉnh lúc chạy qua topic MQTT `config` (fuzzy_*), lưu NVS; ngoài khoảng MIN/MAX
 // bị kẹp lại. Mặc định cho ra đúng hàm thuộc gốc (xem pid/FuzzyControl.h).
 // Cửa sổ time-proportioning: relay BẬT duty×cửa sổ đầu mỗi cửa sổ; ≥60s để
 // relay cơ/bơm không đóng cắt quá dày, độ phân giải = PID_INTERVAL_MS/cửa sổ.
@@ -70,7 +70,7 @@
 #define DEFAULT_FUZZY_INPUT_FILTER true
 
 // ── Tham số phát hiện chỉnh theo Zone (EXPERT-FR-008) ────────────────────────
-// Domain Expert chỉnh qua web → MQTT config/update → lưu NVS. Mặc định là các
+// Domain Expert chỉnh qua web → topic MQTT `config` → lưu NVS. Mặc định là các
 // hằng số dùng trước v1.3.0; khoảng hợp lệ (kẹp trong Config::update) là giới
 // hạn kỹ thuật, không phải khuyến nghị nuôi yến.
 #define DEFAULT_NOISE_MARGIN_DB 15.0f     // dB trên mức nền của giờ đó, 5..30
@@ -191,7 +191,7 @@ extern volatile int pumpDryOnSec;
 extern volatile float pumpDryMinRisePct;
 extern volatile int speakerDropPct;
 
-// Speaker schedule (ENV-FR-013b) – overridable via MQTT config/update
+// Speaker schedule (ENV-FR-013b) – overridable via the MQTT `config` topic
 extern volatile bool speakerScheduleEnabled;
 extern volatile int speakerWindow1StartHour;
 extern volatile int speakerWindow1EndHour;

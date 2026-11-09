@@ -97,7 +97,7 @@ static bool autoDemandKnown = false;
 
 static uint8_t toPct(float duty) { return (uint8_t)lroundf(duty * 100.0f); }
 
-// Hệ số mờ + cửa sổ đọc lại mỗi chu kỳ: config/update (mqttTask) đổi được lúc chạy
+// Hệ số mờ + cửa sổ đọc lại mỗi chu kỳ: topic `config` (mqttTask) đổi được lúc chạy
 static FuzzyControl::Tuning currentTuning() {
   FuzzyControl::Tuning t;
   t.humidityBand = Config::fuzzyHumidityBand;

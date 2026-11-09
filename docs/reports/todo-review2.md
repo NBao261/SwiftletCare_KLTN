@@ -283,7 +283,7 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Kiệt (Bảo chuyển giao)
 
-Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, chưa merge: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging, chạy `npm run mqtt:isolation` trên EMQX thật, màn kho thiết bị hiện `broker_secret` một lần (web).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
+Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, chưa merge: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging (danh sách kiểm tra 2.0.0 ở `firmware/README.md`), màn kho thiết bị hiện `broker_secret` một lần (web, Nhi, sau khi merge).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
 
 - [x] Kho thiết bị: khi thêm thiết bị, sinh broker secret (trả một lần như activation key, lưu hash `broker_secret_hash`); thu hồi thì EMQX từ chối.
 - [x] Backend:
@@ -312,7 +312,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - [x] AI node: topic theo thiết bị, credential riêng, heartbeat có `fps` và `model_version`; đọc ring từ `config` retained.
 - [x] Cập nhật quy tắc MQTT ở `CLAUDE.md` gốc, `backend/CLAUDE.md`, `firmware/CLAUDE.md`, `ai-pipeline/CLAUDE.md`; bỏ câu "current code".
 - [ ] Đóng DF-4. *(khi G-07 merge và đã thử trên board)*
-- [ ] Test NFR-10 (d): script thử publish sang topic thiết bị khác thì bị từ chối.
+- [x] Test NFR-10 (d): script thử publish sang topic thiết bị khác thì bị từ chối. *(Kiệt, `npm run mqtt:isolation` trong `43d93f7`; chạy trên EMQX thật trong Docker 08/11: 8/8 lần thử chéo bị từ chối — publish, subscribe sang thiết bị khác, tài khoản sai mật khẩu, tài khoản đã thu hồi. Script cần EMQX thật nên không chạy trong CI; chạy lại trên staging, G-17)*
 
 ### G-08 — Phiên bản cấu hình (P1) — Bảo
 

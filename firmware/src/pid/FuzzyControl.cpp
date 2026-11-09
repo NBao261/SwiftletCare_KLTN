@@ -3,7 +3,7 @@
  * trung bình có trọng số Σ(wᵢ·zᵢ) / Σwᵢ (wᵢ = độ kích hoạt luật, VÀ = min).
  * Điểm gãy hàm thuộc là offset quanh ngưỡng Config, co giãn theo Tuning
  * (độ rộng vùng độ ẩm/nhiệt độ) — cả ngưỡng lẫn Tuning chỉnh được qua MQTT
- * config/update, không cần nạp lại firmware. Hiệu chỉnh bằng dữ liệu nhà yến
+ * topic `config`, không cần nạp lại firmware. Hiệu chỉnh bằng dữ liệu nhà yến
  * thật: trang Analytics → "Hiệu quả điều khiển".
  */
 #include "FuzzyControl.h"
