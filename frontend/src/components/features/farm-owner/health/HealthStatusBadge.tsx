@@ -11,7 +11,7 @@ const STATUS_TONE: Record<HealthStatus, BadgeTone> = {
   INSUFFICIENT_DATA: 'neutral',
 };
 
-export default function HealthStatusBadge({ status }: { status: HealthStatus }): JSX.Element {
+export default function HealthStatusBadge({ status, className }: { status: HealthStatus; className?: string }): JSX.Element {
   const { t } = useTranslation(healthDict);
-  return <Badge tone={STATUS_TONE[status]}>{t(`status.${status}`)}</Badge>;
+  return <Badge tone={STATUS_TONE[status]} className={className}>{t(`status.${status}`)}</Badge>;
 }

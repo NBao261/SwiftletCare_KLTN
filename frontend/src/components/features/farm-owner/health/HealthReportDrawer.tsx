@@ -12,6 +12,7 @@ import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseHealthReport } from '@/hooks/shared/useHealthDays';
+import { cn } from '@/lib/cn';
 import type { HouseHealthReport } from '@/types';
 
 function Section({ title, children }: { title: string; children: ReactNode }): JSX.Element {
@@ -77,14 +78,23 @@ export default function HealthReportDrawer({ reportId, onClose, onDownload, isDo
           </div>
 
           <Section title={t('rd.statusCounts')}>
-            <div className="flex flex-wrap gap-2">
-              {REPORT_STATUSES.map(status => (
-                <span key={status} className="flex items-center gap-1.5 text-sm font-semibold text-charcoal">
-                  <HealthStatusBadge status={status} />
-                  {report.status_counts[status] ?? 0}
-                </span>
+            {/* Lưới 2 × 2 kẻ ô như bảng: mỗi ô 1 trạng thái (nhãn trái) + số ngày (phải) — ngăn chi tiết hẹp nên không xếp 4 cột một hàng
+                (nhãn bị xuống dòng); ngày bị che (BR-31) ghi ở câu dưới */}
+            <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-warmGray/30 text-sm">
+              {REPORT_STATUSES.map((status, index) => (
+                <div
+                  key={status}
+                  className={cn(
+                    'flex items-center justify-between gap-2 px-3 py-2.5',
+                    index % 2 === 0 && 'border-r border-warmGray/15',
+                    index >= 2 && 'border-t border-warmGray/15',
+                  )}
+                >
+                  <dt><HealthStatusBadge status={status} className="whitespace-nowrap" /></dt>
+                  <dd className="whitespace-nowrap font-semibold text-charcoal">{t('rd.dayCount', { n: report.status_counts[status] ?? 0 })}</dd>
+                </div>
               ))}
-            </div>
+            </dl>
             {report.hidden_days > 0 && <p className="text-xs text-warmGray">{t('rd.hiddenDays', { n: report.hidden_days })}</p>}
             <p className="text-xs italic text-warmGray">{t('detail.disclaimer')}</p>
           </Section>
