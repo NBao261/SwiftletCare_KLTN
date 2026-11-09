@@ -20,7 +20,8 @@ export default function ConfirmModal({
   open, title, description, confirmLabel = 'Xác nhận', danger, loading, onConfirm, onCancel,
 }: ConfirmModalProps) {
   return (
-    <Modal open={open} onClose={onCancel} title={title}>
+    // Bấm ra ngoài = Hủy; đang xử lý thì không (như nút Hủy bị khoá)
+    <Modal open={open} onClose={onCancel} title={title} closeOnBackdrop={!loading}>
       {description && <p className="mb-6 text-sm text-warmGray">{typeof description === 'string' ? tr(description) : description}</p>}
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onCancel} disabled={loading}>

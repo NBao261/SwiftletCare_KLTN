@@ -90,8 +90,11 @@ export default function HealthLevelsModal({ open, onClose, house, canEdit: canEd
     });
   }
 
+  // Bấm ra ngoài đóng popup, trừ khi đang sửa dở hoặc đang lưu (khỏi mất số đã gõ)
+  const isDirty = !!draft && !!data && JSON.stringify(draft) !== JSON.stringify(toDraft(data.health_levels));
+
   return (
-    <Modal open={open} onClose={onClose} size="lg" title={t('levels.title', { house: house.name })}>
+    <Modal open={open} onClose={onClose} size="lg" title={t('levels.title', { house: house.name })} closeOnBackdrop={!isDirty && !update.isPending}>
       <div className="flex flex-col gap-5">
         {/* Thanh ngang ngăn tiêu đề với nội dung (cùng nét ModalHeader của popup người dùng) */}
         <hr className="border-gray-200" />

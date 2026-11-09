@@ -50,7 +50,8 @@ export default function HealthReportCreateModal({ open, onClose, house, onCreate
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={t('create.title', { house: house.name })} size="lg">
+    // Ngày chọn còn giữ khi đóng nên bấm ra ngoài đóng được; đang tạo thì không
+    <Modal open={open} onClose={onClose} title={t('create.title', { house: house.name })} size="lg" closeOnBackdrop={!create.isPending}>
       <div className="flex flex-col gap-5">
         <hr className="border-gray-200" />
         <p className="text-sm text-warmGray">{withBold(t('create.intro'))}</p>
