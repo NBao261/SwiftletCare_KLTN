@@ -379,6 +379,13 @@ names = {'Reviewer 1': [REVIEWERS[0]], 'Reviewer 2': [REVIEWERS[1]], 'Supervisor
 for r in tb[ti + 5].rows[1:]:
     k = r.cells[0].text.strip()
     if names.get(k): set_cell(r.cells[1], names[k].pop(0))
+# the signature block stays on one page: heading 11 and every row but the last keep with the next
+heading('11. Confirmation').paragraph_format.keep_with_next = True
+from docx.shared import Cm
+for r in tb[ti + 5].rows[1:]: r.height = Cm(1.2)  # room for a handwritten signature
+for r in tb[ti + 5].rows[:-1]:
+    for c in r.cells:
+        for p_ in c.paragraphs: p_.paragraph_format.keep_with_next = True
 
 # compact tables
 for t in d.tables:
