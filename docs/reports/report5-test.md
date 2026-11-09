@@ -145,7 +145,7 @@ Requirements covered by each mandatory feature:
 | TC-F07-03 | F-07 | ALERT-FR-009 | Open alert; Domain Expert signed in | PUT acknowledge as the expert | Note text | 403; status unchanged | Auto (CI) – backend Jest `tests/integration/domainExpert.test.ts` › “không xác nhận (acknowledge) cảnh báo” | Pass |
 | TC-F08-01 | F-08 | ALERT-FR-013 | Owner linked to the bot; another owner not linked; an expert | Create a CRITICAL alert | — | Telegram message to the linked owner only | Auto (CI) – backend Jest `tests/integration/telegram.test.ts` › “gửi tới chủ farm đã liên kết” | Pass |
 | TC-F08-02 | F-08 | ALERT-FR-006, 013 | Owner with quiet hours | Create a MEDIUM and a CRITICAL alert in quiet hours | — | MEDIUM not sent; CRITICAL sent | Auto (CI) – backend Jest `tests/integration/telegram.test.ts` › “tôn trọng giờ im lặng, trừ cảnh báo CRITICAL” | Pass |
-| TC-F08-03 | F-08 | ALERT-FR-002 | Mobile app signed in with a registered FCM token | Create a CRITICAL alert; sign out; create another | Firebase test project | Push received for the first only; an invalid token reported by FCM is removed | Auto (CI, to be written) – backend jest with a mocked Firebase Admin SDK (G-10) | Not run – test to be written |
+| TC-F08-03 | F-08 | ALERT-FR-002 | Mobile app signed in with a registered FCM token | Create a CRITICAL alert; sign out; create another | Firebase Admin SDK mocked | Push received for the first only; an invalid token reported by FCM is removed | Auto (CI) – backend Jest `tests/integration/pushNotification.test.ts` › “pushes a CRITICAL alert with high priority” + Auto (CI) – backend Jest `tests/integration/pushNotification.test.ts` › “deletes a token FCM reports invalid” | Not run on the tag |
 | TC-F09-01 | F-09 | ALERT-FR-011 | 6 h of humidity falling toward `humidity_min` | Run the forecast scan | Seeded 5-minute means | LOW `FORECAST_BREACH` with expected time; resolved when the trend is gone | Auto (CI) – backend Jest `tests/integration/forecastAndRelayUsage.test.ts` › “raises a LOW FORECAST_BREACH early warning” | Pass |
 | TC-F09-02 | F-09 | ANALYTICS-FR-009 | Same data | GET the 60-minute forecast | — | Forecast with back-tested MAE predicts the breach | Auto (CI) – backend Jest `tests/integration/forecastAndRelayUsage.test.ts` › “forecasts 60 minutes ahead with a backtested error” | Pass |
 | TC-F09-03 | F-09 | ANALYTICS-FR-009 | Only stale data (older than 15 min) | GET the forecast | — | No forecast ("insufficient data") | Auto (CI) – backend Jest `tests/integration/forecastAndRelayUsage.test.ts` › “does not forecast from stale data” | Pass |
@@ -423,7 +423,7 @@ Results come only from the CI run on the tag `review-2` (commit `7d5e643b`, 04/1
 
 | Test cases | Automated, test written | Automated, to be written | Manual | Passed on the tag |
 | --- | --- | --- | --- | --- |
-| 125 | 83 (66 %) | 27 (automated in total: 110, 88 %) | 15 | 83 |
+| 125 | 84 (67 %) | 26 (automated in total: 110, 88 %) | 15 | 83 |
 
 Committed test cases that are not automated yet are written in Iteration 2 together with the feature they test (Project Tracking, Section 6).
 

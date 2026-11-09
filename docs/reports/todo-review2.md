@@ -325,16 +325,16 @@ Một PR cho firmware, backend, AI node và deploy. Thử trên bàn với 2 con
 - [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
 - [ ] Web: `/onboarding` cho Farm Owner.
 
-### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Len (mobile, đo NFR-02)
+### G-10 — FCM (P0-Demo, cần cho NFR-02) — Kiệt (backend, Bảo chuyển giao), Len (mobile, đo NFR-02)
 
-- [ ] Backend:
+- [x] Backend: *(Kiệt làm thay Bảo, 09/11, nhánh `feat/g10-fcm-push`: `4dedb0d` spec + `177dedc` backend; credential là file service account trỏ bằng `FIREBASE_SERVICE_ACCOUNT_PATH`, `.gitignore` chặn file này ở mọi thư mục; token Expo bị từ chối 422; ẩn danh tài khoản xoá token; **chưa gửi thật** vì nhóm chưa có project Firebase)*
   - collection `pushtokens`;
   - `POST`/`DELETE /notifications/push-tokens`;
   - adapter `push` dùng `firebase-admin` (credential qua biến môi trường, không commit);
   - xoá token FCM báo invalid;
   - không log token.
 - [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo.
-- [ ] Test TC-F08-03 (mock Firebase Admin).
+- [x] Test TC-F08-03 (mock Firebase Admin). *(`pushNotification.test.ts`, `177dedc`)*
 
 ### G-11 — MF-06 (P0-Demo) — Kiệt (backend), Nhi (web), Len (mobile)
 
