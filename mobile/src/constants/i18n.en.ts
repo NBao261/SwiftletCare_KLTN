@@ -18,10 +18,10 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Cảnh báo': 'Alerts',
   'Phân tích': 'Analytics',
   'Tài khoản': 'Account',
+  'Mở trang Tài khoản': 'Open the account page',
   'Phân tích dữ liệu': 'Data analytics',
 
   // Đầu trang
-  'Tìm kiếm': 'Search',
   'Quét mã QR thiết bị': 'Scan device QR code',
   'Thông báo': 'Notifications',
 
