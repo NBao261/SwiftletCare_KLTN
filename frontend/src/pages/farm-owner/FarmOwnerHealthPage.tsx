@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { healthDayApi, type HealthDayScope } from '@/apis/shared/healthDays.api';
 import ScopeFilter from '@/components/common/ScopeFilter';
@@ -20,12 +20,16 @@ import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useFarm } from '@/hooks/shared/useFarms';
 import { useHealthDays } from '@/hooks/shared/useHealthDays';
 import { isHealthPreview, setPreviewHouses } from '@/data/healthPreview.data';
+import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
 import type { HouseHealthDay } from '@/types';
 
 // Khoảng ngày xem được; backend cho tối đa 31 ngày một lần đọc
 const RANGE_DAYS = [7, 14, 30] as const;
 type RangeDays = (typeof RANGE_DAYS)[number];
+// Tên tab trùng tiền tố khoá tiêu đề thẻ (table.title, report.title)
+const TABS = ['table', 'report'] as const;
+type HealthTab = (typeof TABS)[number];
 
 // Tải blob CSV backend trả về (đã có BOM, ngôn ngữ theo lang)
 function saveCsv(blob: Blob, fileName: string): void {
@@ -52,6 +56,15 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const [viewDay, setViewDay] = useState<HouseHealthDay | null>(null);
   const [isLevelsOpen, setIsLevelsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  // Tab nằm trên URL (?tab=report) để từ trang chi tiết báo cáo quay lại đúng tab; giữ các tham số khác (?preview)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: HealthTab = searchParams.get('tab') === 'report' ? 'report' : 'table';
+  const setTab = (value: HealthTab) => setSearchParams(previous => {
+    const next = new URLSearchParams(previous);
+    if (value === 'table') next.delete('tab');
+    else next.set('tab', value);
+    return next;
+  }, { replace: true });
 
   // /health?preview: dữ liệu giả (src/data/healthPreview.data.ts) theo nhà thật của tài khoản; chờ tải xong nhà để không lưu cache rỗng
   const isPreview = isHealthPreview();
@@ -109,6 +122,27 @@ export default function FarmOwnerHealthPage(): JSX.Element {
     </>
   );
 
+  // Tab pill như AdminUsersPage, trên thẻ: bảng ngày và bảng báo cáo, mỗi lúc 1 thẻ
+  const tabs = (
+    <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
+      {TABS.map(value => (
+        <button
+          key={value}
+          type="button"
+          role="tab"
+          aria-selected={tab === value}
+          onClick={() => setTab(value)}
+          className={cn(
+            'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
+            tab === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
+          )}
+        >
+          {t(`${value}.title`)}
+        </button>
+      ))}
+    </div>
+  );
+
   if (scope.farms.length === 0 && !scope.isLoading && !isPreview) {
     return (
       <EmptyState
@@ -126,65 +160,69 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   return (
     <div className="flex flex-1 flex-col gap-6">
       {filter}
+      {isPreview && <p className="-mt-4 text-[11px] font-medium italic text-warmGray">This data is FAKE and has not been MOCKAPI</p>}
+      {tabs}
 
       {/* Thẻ trắng kéo hết chiều cao còn lại của màn hình */}
-      <SectionCard
-        className="flex-1"
-        title={t('table.title')}
-        description={t('table.subtitle')}
-        action={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!house}
-              title={house ? undefined : t('page.levelsNeedHouse')}
-              onClick={() => setIsLevelsOpen(true)}
-            >
-              {t('page.levels')}
-            </Button>
-            <Button variant="secondary" size="sm" disabled={!csvScope} loading={isExporting} onClick={() => void handleExport()}>
-              {t('page.export')}
-            </Button>
+      {tab === 'table' ? (
+        <SectionCard
+          className="flex-1"
+          title={t('table.title')}
+          description={t('table.subtitle')}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!house}
+                title={house ? undefined : t('page.levelsNeedHouse')}
+                onClick={() => setIsLevelsOpen(true)}
+              >
+                {t('page.levels')}
+              </Button>
+              <Button variant="secondary" size="sm" disabled={!csvScope} loading={isExporting} onClick={() => void handleExport()}>
+                {t('page.export')}
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              <FilterChip active={!isToRateOnly} label={t('filter.all')} onClick={() => setIsToRateOnly(false)} />
+              <FilterChip active={isToRateOnly} label={t('filter.toRate', { n: pendingDays.length })} onClick={() => setIsToRateOnly(true)} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {RANGE_DAYS.map(value => (
+                <FilterChip key={value} active={rangeDays === value} label={t(`filter.days${value}`)} onClick={() => setRangeDays(value)} />
+              ))}
+            </div>
           </div>
-        }
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            <FilterChip active={!isToRateOnly} label={t('filter.all')} onClick={() => setIsToRateOnly(false)} />
-            <FilterChip active={isToRateOnly} label={t('filter.toRate', { n: pendingDays.length })} onClick={() => setIsToRateOnly(true)} />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {RANGE_DAYS.map(value => (
-              <FilterChip key={value} active={rangeDays === value} label={t(`filter.days${value}`)} onClick={() => setRangeDays(value)} />
-            ))}
-          </div>
-        </div>
-
-        {/* Đang tải và rỗng: khung viền đứt (như EmptyState) chứa hình minh hoạ bảng của Dashboard, giãn hết phần còn lại của thẻ */}
-        {isLoading || scope.isLoading ? (
-          <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12 motion-safe:animate-pulse" role="status">
-            <TableEmptyState title={t('table.loading')} />
-          </div>
-        ) : isError ? (
-          <EmptyState
-            title={t('page.errorTitle')}
-            description={apiErrorMessage(error)}
-            action={<Button variant="secondary" size="sm" onClick={refetch}>{t('page.retry')}</Button>}
-          />
-        ) : shownDays.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12">
-            <TableEmptyState
-              title={isToRateOnly ? t('table.emptyToRateTitle') : t('table.emptyTitle')}
-              description={isToRateOnly ? t('table.emptyToRateHint') : t('table.emptyHint')}
+  
+          {/* Đang tải và rỗng: khung viền đứt (như EmptyState) chứa hình minh hoạ bảng của Dashboard, giãn hết phần còn lại của thẻ */}
+          {isLoading || scope.isLoading ? (
+            <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12 motion-safe:animate-pulse" role="status">
+              <TableEmptyState title={t('table.loading')} />
+            </div>
+          ) : isError ? (
+            <EmptyState
+              title={t('page.errorTitle')}
+              description={apiErrorMessage(error)}
+              action={<Button variant="secondary" size="sm" onClick={refetch}>{t('page.retry')}</Button>}
             />
-          </div>
-        ) : (
-          <HealthDayTable days={shownDays} onRate={openRating} onView={openView} />
-        )}
-      </SectionCard>
-
-      <HealthReportSection scope={csvScope} house={house ? { id: house._id, name: house.name } : null} />
+          ) : shownDays.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12">
+              <TableEmptyState
+                title={isToRateOnly ? t('table.emptyToRateTitle') : t('table.emptyTitle')}
+                description={isToRateOnly ? t('table.emptyToRateHint') : t('table.emptyHint')}
+              />
+            </div>
+          ) : (
+            <HealthDayTable days={shownDays} onRate={openRating} onView={openView} />
+          )}
+        </SectionCard>
+      ) : (
+        <HealthReportSection scope={csvScope} house={house ? { id: house._id, name: house.name } : null} />
+      )}
 
       <HealthRatingModal day={ratingDay} onClose={() => setRatingDay(null)} onRevealed={setViewDay} />
       <HealthDayDrawer day={viewDay} onClose={() => setViewDay(null)} onChanged={setViewDay} />

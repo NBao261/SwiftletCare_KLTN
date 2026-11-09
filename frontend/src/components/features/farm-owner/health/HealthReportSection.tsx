@@ -1,12 +1,13 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import TableEmptyState from '@/components/common/TableEmptyState';
 import HealthReportCreateModal from '@/components/features/farm-owner/health/HealthReportCreateModal';
-import HealthReportDrawer from '@/components/features/farm-owner/health/HealthReportDrawer';
 import { reportPeriod } from '@/components/features/farm-owner/health/healthReport.utils';
 import { ActionsMenu, Badge, Button, EmptyState, FilterChip, SectionCard, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { healthDict } from '@/constants/health.i18n';
+import { keepPreview } from '@/data/healthPreview.data';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseHealthReports } from '@/hooks/shared/useHealthDays';
@@ -15,7 +16,7 @@ import { cn } from '@/lib/cn';
 import type { HealthReportKind, HouseHealthReportSummary } from '@/types';
 
 const KINDS: HealthReportKind[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
-// Cùng khung bảng ngày phía trên
+// Cùng khung bảng ngày (tab bên cạnh)
 const ROW_COUNT = 10;
 const ROW_HEIGHT = 72;
 
@@ -54,7 +55,9 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
   const { t, date, dateTime, exact } = useTranslation(healthDict);
   const apiErrorMessage = useApiErrorMessage();
   const [kind, setKind] = useState<HealthReportKind | undefined>(undefined);
-  const [openReportId, setOpenReportId] = useState<string | null>(null);
+  // Chi tiết là trang riêng /health/reports/:id (ngăn bên hẹp, khó đọc bảng)
+  const navigate = useNavigate();
+  const openReport = useCallback((reportId: string) => navigate(keepPreview(`/health/reports/${reportId}`)), [navigate]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { data: reports = [], isLoading, isError, error, refetch } = useHouseHealthReports(scope, kind);
   const { download, downloadingId } = useHealthReportPdf();
@@ -92,7 +95,7 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
         <div onClick={event => event.stopPropagation()} className="flex items-center justify-center">
           <ActionsMenu
             items={[
-              { label: t('action.view'), onClick: () => setOpenReportId(report._id) },
+              { label: t('action.view'), onClick: () => openReport(report._id) },
               {
                 label: downloadingId === report._id ? t('action.pdfLoading') : t('action.pdf'),
                 onClick: () => void download(report._id),
@@ -103,7 +106,7 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
         </div>
       ),
     },
-  ], [t, format, dateTime, orderById, download, downloadingId]);
+  ], [t, format, dateTime, orderById, download, downloadingId, openReport]);
 
   return (
     <SectionCard
@@ -151,19 +154,13 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
           columns={columns}
           rows={reports}
           getRowKey={report => report._id}
-          onRowClick={report => setOpenReportId(report._id)}
+          onRowClick={report => openReport(report._id)}
           rowHeight={ROW_HEIGHT}
           pageSize={ROW_COUNT}
           emptyNotice={t('report.emptyTitle')}
         />
       )}
 
-      <HealthReportDrawer
-        reportId={openReportId}
-        onClose={() => setOpenReportId(null)}
-        onDownload={report => void download(report)}
-        isDownloading={downloadingId === openReportId && openReportId !== null}
-      />
       {house && (
         <HealthReportCreateModal
           open={isCreateOpen}
@@ -171,7 +168,7 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
           house={house}
           onCreated={report => {
             setIsCreateOpen(false);
-            setOpenReportId(report._id);
+            openReport(report._id);
           }}
         />
       )}

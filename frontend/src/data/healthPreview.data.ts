@@ -10,6 +10,11 @@ export function isHealthPreview(): boolean {
   return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('preview');
 }
 
+// Giữ ?preview khi chuyển giữa /health và trang báo cáo
+export function keepPreview(path: string): string {
+  return isHealthPreview() ? `${path}${path.includes('?') ? '&' : '?'}preview` : path;
+}
+
 interface PreviewHouse { _id: string; name: string; farm_id: string }
 
 // Nhà thật của tài khoản (trang /health đưa vào) — không có thì dùng 2 nhà giả
