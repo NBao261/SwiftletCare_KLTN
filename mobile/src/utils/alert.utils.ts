@@ -1,5 +1,5 @@
-import { PUMP_ON_CONFIRM_ALERT_TYPES } from '@/constants/relayOverride'
-import type { Alert, AlertSeverity } from '@/types'
+import { PUMP_ON_CONFIRM_ALERT_STATUSES, PUMP_ON_CONFIRM_ALERT_TYPES } from '@/constants/relayOverride'
+import type { Alert, AlertSeverity, AlertStatus, AlertType } from '@/types'
 import { getMetricLabel, getMetricUnit } from '@/utils/label.utils'
 import type { ThresholdMetric } from '@/utils/threshold.utils'
 import { t } from '@/utils/i18n.utils'
@@ -90,7 +90,24 @@ export function getForecastMinutesAhead(alerts: Alert[], metric: 'temperature' |
   return earliest
 }
 
-// Cảnh báo đang mở khiến việc bật bơm phải được xác nhận (ENV-FR-016)
+// Cảnh báo đang mở (mới hoặc đã xác nhận) khiến việc bật bơm phải được xác nhận (ENV-FR-016)
 export function getPumpOnBlockingAlerts(alerts: Alert[]): Alert[] {
-  return alerts.filter(alert => PUMP_ON_CONFIRM_ALERT_TYPES.includes(alert.type))
+  return alerts.filter(
+    alert => PUMP_ON_CONFIRM_ALERT_TYPES.includes(alert.type) && PUMP_ON_CONFIRM_ALERT_STATUSES.includes(alert.status),
+  )
+}
+
+// Một cảnh báo chặn bật bơm để hiện trong hộp xác nhận: từ danh sách cảnh báo (có trạng thái) hoặc từ error.details
+// của 409 CONFIRMATION_REQUIRED (backend chỉ gửi _id, type, title)
+export type PumpBlockingAlert = Pick<Alert, '_id' | 'type' | 'title'> & { status?: AlertStatus }
+
+// Đọc error.details của 409 CONFIRMATION_REQUIRED; phần tử sai dạng thì bỏ qua
+export function parseConfirmationAlerts(details: unknown): PumpBlockingAlert[] {
+  if (!Array.isArray(details)) return []
+  return details.flatMap((item: unknown) => {
+    if (typeof item !== 'object' || item === null) return []
+    const { _id, type, title } = item as Record<string, unknown>
+    if (typeof _id !== 'string' || typeof type !== 'string') return []
+    return [{ _id, type: type as AlertType, title: typeof title === 'string' ? title : '' }]
+  })
 }

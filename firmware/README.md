@@ -5,6 +5,14 @@
 > **Thiết lập thiết bị (SF-01, FARM-FR-003c):** trang cài Wi-Fi (AP-mode) chỉ nhận Wi-Fi và địa chỉ broker, không có farm/house/zone hay khoá. Thiết bị không lưu mã kích hoạt in trên nhãn — backend kiểm tra mã đó khi Farm Owner quét nhãn; farm/house/zone do backend gửi xuống qua `config/reassign` khi heartbeat tới sai topic.
 >
 > **Thử trên thiết bị thật:** firmware đã chạy trên board ESP32 thật, nhưng chưa ghi lại bản nào và kịch bản nào đã thử. Ghi kết quả (ngày, bản firmware, đạt/không đạt) của từng kịch bản dưới đây vào đây trước khi báo cáo hoặc Report 5 dùng tới: rút cảm biến nhiệt-ẩm (relay phải TẮT), chạy bơm không có nước (phải báo `PUMP_DRY` và ngừng phun), đổi tham số từ web. Riêng 1.4.0: OTA từ trang OTA của Technician thành công (heartbeat báo bản mới); file sai SHA-256 và rút mạng giữa lúc tải (phải giữ bản cũ); bản mới không tới được broker (phải quay về bản cũ sau 10 phút); `RESTART` từ web; TLS bắt tay trong `mqttTask` (stack 12 KB) không tràn stack.
+>
+> **1.6.0 (hạn riêng từng relay BR-20, lọc lệnh BR-35) — chưa thử trên board.** Đã làm 09/11/2026: `pio run -e esp32dev` build được (`espressif32@6.9.0`, core 2.0.17; RAM 16,5 %, flash 58,3 %), test native `test_relay_override` 7/7, `test_command_filter` 10/10, `test_remote_command` 9/9. Còn phải thử trên board:
+> - bật tay bơm rồi quạt với 2 thời hạn khác nhau: mỗi relay về tự động đúng hạn của nó, relay kia giữ nguyên, `relay/status` báo `relays.{tên}.remaining_ms` giảm dần;
+> - `clear_override` kèm `relayName` (nút "Về tự động" của 1 relay) chỉ trả relay đó về tự động; không kèm `relayName` thì trả cả 3;
+> - lệnh giao lại cùng `commandId` (gửi lại tay bằng MQTTX) chỉ áp 1 lần;
+> - rút mạng, bấm bật relay trên web, cắm lại sau hơn 60 giây: lệnh bị bỏ và thiết bị gửi `relay/status` để web hiện đúng trạng thái;
+> - bật relay ngay sau khi khởi động, trước khi có giờ NTP: lệnh vẫn áp (Report 3 §8.1);
+> - board còn chạy 1.5.0 vẫn điều khiển tay được với backend mới (hết hạn hoặc huỷ 1 relay thì cả 3 relay về tự động như trước).
 
 PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `docs/hardware/components-guide.md`. Checklist lắp đặt: `docs/task-checklist.md` mục A.
 
@@ -49,10 +57,10 @@ src/
 ## Test
 
 ```bash
-pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry, test_remote_command
+pio test -e native   # unit test host (không cần board thật) — test/test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry, test_remote_command, test_relay_override, test_command_filter
 ```
 
-Env `native` chỉ build các file C++ thuần (`pid/FuzzyControl`, `pid/PumpDryMonitor`, `sensors/SignalFilter`, `sensors/NoiseAnomalyDetector` — không phụ thuộc Arduino) và cần **g++ trên máy** — Windows: cài MinGW-w64 (vd `choco install mingw`) rồi thêm vào PATH.
+Env `native` chỉ build các file C++ thuần (`pid/FuzzyControl`, `pid/PumpDryMonitor`, `pid/RelayOverride`, `mqtt/CommandFilter`, `sensors/SignalFilter`, `sensors/NoiseAnomalyDetector` — không phụ thuộc Arduino) và cần **g++ trên máy** — Windows: cài MinGW-w64 (vd `choco install mingw`) rồi thêm vào PATH.
 
 ## Điều khiển mờ (ENV-FR-010/011)
 
@@ -63,6 +71,7 @@ Env `native` chỉ build các file C++ thuần (`pid/FuzzyControl`, `pid/PumpDry
 - **Trạng thái an toàn (THREAT-FR-013):** không có số đo nhiệt-ẩm hợp lệ nào trong 2 chu kỳ điều khiển gần nhất (`CONTROL_INPUT_MAX_AGE_CYCLES` — một lần đọc RS485 lỗi lẻ thì vẫn dùng số đo hợp lệ gần nhất, không tắt relay), hoặc số đo ngoài dải vật lý (độ ẩm tới 101 % vẫn tính là bão hoà hợp lệ) → nhu cầu phun và quạt = 0, relay TẮT cho tới khi có số đo hợp lệ. Vòng điều khiển vẫn chạy nên override vẫn hết hạn và cảnh báo `SENSOR_FAULT`/`RS485_BUS_FAILURE` vẫn được phát. Can thiệp tay vẫn bật được relay.
 - % gửi lên trong telemetry `control_output {misting, ventilation}`; dashboard web hiển thị trên gauge relay.
 - **MISTING_INEFFECTIVE (THREAT-FR-011, `pid/PumpDryMonitor`; tên `PUMP_DRY` trước bản 1.5.0, lớp và tham số `pump_dry_*` giữ tên cũ):** chỉ xét khi độ ẩm còn **dưới `humidity_min`** — quanh mục tiêu bộ mờ giữ độ ẩm đứng yên là bình thường, xét ở đó thì bơm tốt cũng bị báo khô. Dưới mục tiêu, relay phun BẬT **cộng dồn** `pump_dry_on_sec` (mặc định 300 s) mà độ ẩm không tăng quá `pump_dry_min_rise_pct` (mặc định 2 điểm %RH) → báo và **ngừng phun** để bảo vệ bơm (`control_output.misting` = 0). Chốt nhả khi nhu cầu phun về 0, khi có can thiệp tay, hoặc **tự thử lại sau 30 phút** (`PUMP_DRY_RETRY_MS` trong `Config.h` — hằng số kỹ thuật chọn tay, chưa chỉnh được qua MQTT). Lần đọc cảm biến lỗi không xoá phần đã cộng dồn và không nhả chốt. Chốt **không** ngắt bơm đang được bật tay: khi đó nội dung cảnh báo nói rõ bơm vẫn chạy. Cảnh báo `PUMP_DRY` và `NOISE_ANOMALY` được gửi lại mỗi 15 phút (`EPISODE_ALERT_RESEND_MS`) chừng nào sự cố còn tiếp diễn, để backend không tự đóng một đợt đang diễn ra.
+- **Can thiệp tay (BR-20, BR-35, từ bản 1.6.0):** mỗi relay một hạn (`pid/RelayOverride`), `clear_override` có `relayName` thì chỉ huỷ relay đó; `mqtt/CommandFilter` áp mỗi `commandId` 1 lần (nhớ 16 mã trong RAM), bỏ lệnh relay, audio, RESTART trễ quá 60 giây. Chưa có giờ NTP thì không kiểm được tuổi lệnh nên vẫn áp.
 
 ## Lọc đầu vào + phát hiện ồn bất thường
 

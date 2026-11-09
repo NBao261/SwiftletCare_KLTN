@@ -4,6 +4,7 @@
  * SRS: ENV-FR-001, ENV-FR-015, §9.2, SEC-NFR-001
  */
 #include "MQTTManager.h"
+#include "CommandFilter.h"
 #include "audio/AudioManager.h"
 #include "config/Config.h"
 #include "ota/RemoteCommand.h"
@@ -297,6 +298,18 @@ bool publishRawTelemetryLine(const String &jsonLine) {
   return mqtt.publish((topicBase() + "/telemetry").c_str(), jsonLine.c_str(), false);
 }
 
+// BR-35 — bộ lọc chỉ chạy trong callback MQTT nên không cần khoá
+static CommandFilter::Result filterCommand(const char *commandId, uint64_t issuedAtMs, bool requireFresh) {
+  static CommandFilter filter;
+  time_t now = time(nullptr);
+  uint64_t nowEpochMs = now > 1700000000 ? (uint64_t)now * 1000ULL : 0; // chưa sync NTP → 0
+  CommandFilter::Result result = filter.check(commandId, issuedAtMs, nowEpochMs, requireFresh);
+  if (result == CommandFilter::DUPLICATE) Serial.println("[MQTT] Bỏ lệnh trùng: " + String(commandId));
+  if (result == CommandFilter::STALE) Serial.println("[MQTT] Bỏ lệnh trễ: " + String(commandId));
+  if (requireFresh && nowEpochMs == 0 && strlen(commandId) > 0) Serial.println("[MQTT] Chưa có giờ NTP, không kiểm được tuổi lệnh");
+  return result;
+}
+
 void onRelayCommand(const char *payload) {
   Serial.println("[MQTT] Relay command: " + String(payload));
 
@@ -306,10 +319,16 @@ void onRelayCommand(const char *payload) {
     return;
   }
 
-  // Backend overrideExpiry.job.ts: override đã hết hạn phía server → về AUTO ngay
+  const char *commandId = doc["commandId"] | "";
+  uint64_t issuedAt = doc["issuedAt"] | (uint64_t)0;
+  const char *relayName = doc["relayName"] | "";
+
+  // Huỷ sớm, hoặc backend overrideExpiry.job.ts báo hết hạn phía server → về AUTO ngay.
+  // Về AUTO luôn an toàn nên lệnh trễ vẫn áp, chỉ chặn trùng (Report 4 §7.2).
   if (doc["action"] == "clear_override") {
+    if (filterCommand(commandId, issuedAt, false) != CommandFilter::APPLY) return;
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      PIDController::clearOverrides(relayState);
+      PIDController::clearOverrides(relayState, relayName); // BR-20: có tên thì 1 relay
       publishRelayState(relayState);
       xSemaphoreGive(dataMutex);
     }
@@ -317,7 +336,6 @@ void onRelayCommand(const char *payload) {
     return;
   }
 
-  const char *relayName = doc["relayName"] | "";
   bool state = doc["state"] | false;
   unsigned long durationMs = doc["durationMs"] | (unsigned long)MANUAL_OVERRIDE_MS;
 
@@ -326,9 +344,20 @@ void onRelayCommand(const char *payload) {
     return;
   }
 
+  CommandFilter::Result filtered = filterCommand(commandId, issuedAt, true);
+  if (filtered == CommandFilter::DUPLICATE) return;
+  if (filtered == CommandFilter::STALE) {
+    // Backend đã ghi MANUAL lạc quan: báo trạng thái thật để nó sửa lại
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      publishRelayState(relayState);
+      xSemaphoreGive(dataMutex);
+    }
+    return;
+  }
+
   // ENV-FR-016..018: bật Manual Override, tạm dừng PID cho relay này.
-  // relayState là struct nhiều field (3 relay bool + 3 override bool + 1
-  // expiry) đọc/ghi đồng thời bởi pidTask (Core 1) — khoá dataMutex để tránh
+  // relayState là struct nhiều field (3 relay bool + hạn override từng
+  // relay) đọc/ghi đồng thời bởi pidTask (Core 1) — khoá dataMutex để tránh
   // torn read/write xuyên struct.
   if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
     PIDController::setManualOverride(relayName, state, durationMs, relayState);
@@ -347,6 +376,7 @@ void onAudioCommand(const char *payload) {
     Serial.println("[MQTT] Audio command: invalid JSON");
     return;
   }
+  if (filterCommand(doc["commandId"] | "", doc["issuedAt"] | (uint64_t)0, true) != CommandFilter::APPLY) return;
   if (doc["action"] == "play") {
     int track = doc["track"] | 0;
     if (track <= 0) {
@@ -366,6 +396,10 @@ void onAudioCommand(const char *payload) {
 void onConfigUpdate(const char *payload) {
   Serial.println("[MQTT] Config update: " + String(payload));
   RemoteCommand cmd = parseRemoteCommand(payload, FIRMWARE_VERSION);
+  // BR-35: RESTART trễ thì bỏ; OTA chỉ chặn trùng vì ghi đè bản mới bằng lệnh cũ đã bị backend
+  // và kiểm tra phiên bản chặn, còn bỏ lệnh thì Administrator phải gửi lại
+  bool isCommand = cmd.type == RemoteCommand::RESTART || cmd.type == RemoteCommand::OTA;
+  if (isCommand && filterCommand(cmd.commandId, cmd.issuedAt, cmd.type == RemoteCommand::RESTART) != CommandFilter::APPLY) return;
   switch (cmd.type) {
   case RemoteCommand::NONE:
     Config::update(payload);

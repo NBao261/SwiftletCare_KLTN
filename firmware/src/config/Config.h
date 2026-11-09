@@ -37,7 +37,7 @@
 #define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
 
 // ── Firmware version (báo lên backend qua heartbeat — FARM-FR-006) ──────────
-#define FIRMWARE_VERSION "1.5.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện); 1.4.0: RESTART/OTA từ xa + rollback, heartbeat có lý do khởi động lại và IP; 1.5.0: tên cảnh báo SRS 3.1.0 (MISTING_INEFFECTIVE, UNEXPECTED_RESTART kèm lý do), báo cả mất điện
+#define FIRMWARE_VERSION "1.6.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện); 1.4.0: RESTART/OTA từ xa + rollback, heartbeat có lý do khởi động lại và IP; 1.5.0: tên cảnh báo SRS 3.1.0 (MISTING_INEFFECTIVE, UNEXPECTED_RESTART kèm lý do), báo cả mất điện; 1.6.0: hạn can thiệp tay riêng từng relay (BR-20), lọc lệnh trùng và lệnh trễ (BR-35)
 
 // ── OTA từ xa (TICKET-FR-008, Flow 15) ──────────────────────────────────────
 // Bản vừa OTA phải kết nối được MQTT trong khoảng này, nếu không bootloader quay về

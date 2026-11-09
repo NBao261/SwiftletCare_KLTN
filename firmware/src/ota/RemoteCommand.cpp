@@ -37,6 +37,8 @@ RemoteCommand parseRemoteCommand(const char *json, const char *runningVersion) {
   const char *command = doc["command"] | "";
   RemoteCommand cmd;
   if (strlen(command) == 0) return cmd;
+  copyField(cmd.commandId, sizeof cmd.commandId, doc["commandId"] | "");
+  cmd.issuedAt = doc["issuedAt"] | (uint64_t)0;
   if (strcmp(command, "RESTART") == 0) {
     cmd.type = RemoteCommand::RESTART;
     return cmd;

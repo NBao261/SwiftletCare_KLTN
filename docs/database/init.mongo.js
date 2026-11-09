@@ -830,6 +830,9 @@ ensureCollection("relayoverridelogs", {
       "bsonType": ["string", "null"],
       "enum": ["EXPIRED", "CLEARED_EARLY", "REPLACED", null]
     },
+    "alert_confirmed": {
+      "bsonType": ["bool", "null"]
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     }
@@ -919,6 +922,56 @@ ensureCollection("sensornodes", {
         },
         "ventilation": {
           "bsonType": ["bool", "null"]
+        }
+      }
+    },
+    "relays": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "misting": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        },
+        "speaker": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
+        },
+        "ventilation": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "mode": {
+              "bsonType": ["string", "null"],
+              "enum": ["AUTO", "MANUAL", null]
+            },
+            "override_expiry": {
+              "bsonType": ["date", "null"]
+            },
+            "override_by": {
+              "bsonType": ["objectId", "null"]
+            }
+          }
         }
       }
     },

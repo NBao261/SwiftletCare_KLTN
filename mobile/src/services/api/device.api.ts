@@ -29,9 +29,21 @@ export const deviceApi = {
   registerCameraNode: (payload: RegisterCameraNodePayload) =>
     apiClient.post<ApiResponse<CameraNode>>(ENDPOINTS.CAMERA_NODE_REGISTER, payload),
 
-  // Điều khiển tay một relay (ENV-FR-016): controller chuyển MANUAL tới hết durationMs rồi tự về AUTO
-  controlRelay: (sensorNodeId: string, relayName: keyof RelayStates, state: boolean, durationMs: number) =>
-    apiClient.post<ApiResponse<SensorNode>>(ENDPOINTS.RELAY_CONTROL(sensorNodeId), { relayName, state, durationMs }),
+  // Điều khiển tay một relay (ENV-FR-016): controller chuyển MANUAL tới hết durationMs rồi tự về AUTO.
+  // confirmed: Farm Owner đã đồng ý bật bơm dù khu vực có cảnh báo cảm biến/phun sương; thiếu thì backend trả 409 (ENV-FR-016)
+  controlRelay: (
+    sensorNodeId: string,
+    relayName: keyof RelayStates,
+    state: boolean,
+    durationMs: number,
+    isAlertConfirmed = false,
+  ) =>
+    apiClient.post<ApiResponse<SensorNode>>(ENDPOINTS.RELAY_CONTROL(sensorNodeId), {
+      relayName,
+      state,
+      durationMs,
+      ...(isAlertConfirmed ? { confirmed: true } : {}),
+    }),
 
   // Lịch sử can thiệp tay, mới nhất trước (ENV-FR-019)
   listRelayOverrides: (sensorNodeId: string, params?: Record<string, string>) =>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Alert as NativeAlert, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { CaretRightIcon } from 'phosphor-react-native'
@@ -94,7 +94,17 @@ export function RelayOverrideStrip() {
         <Button
           label={t('VỀ TỰ ĐỘNG')}
           size="sm"
-          onPress={() => clearOverride.mutate(override.node._id)}
+          onPress={() =>
+            // Backend chỉ có một hạn chung cho controller: trả về AUTO là mọi relay của controller (ENV-FR-018)
+            NativeAlert.alert(
+              t('Trả về AUTO'),
+              t('Mọi relay của bộ điều khiển {device} sẽ về tự động.', { device: override.node.device_id }),
+              [
+                { text: t('Huỷ'), style: 'cancel' },
+                { text: t('Trả về AUTO'), onPress: () => clearOverride.mutate(override.node._id) },
+              ],
+            )
+          }
           disabled={isActionDisabled}
           accessibilityLabel={t('Về tự động: {title}', { title })}
         />

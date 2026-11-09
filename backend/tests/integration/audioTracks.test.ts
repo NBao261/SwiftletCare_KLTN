@@ -174,8 +174,8 @@ describe('select / play-now / stop', () => {
 
     expect(play.status).toBe(200)
     expect(stop.status).toBe(200)
-    expect(publishCommand).toHaveBeenNthCalledWith(1, ...ctx.chain, 'audio/command', { deviceId: ctx.node.device_id, action: 'play', track: 2 })
-    expect(publishCommand).toHaveBeenNthCalledWith(2, ...ctx.chain, 'audio/command', { deviceId: ctx.node.device_id, action: 'stop' })
+    expect(publishCommand).toHaveBeenNthCalledWith(1, ...ctx.chain, 'audio/command', expect.objectContaining({ commandId: expect.any(String), issuedAt: expect.any(Number), deviceId: ctx.node.device_id, action: 'play', track: 2 }))
+    expect(publishCommand).toHaveBeenNthCalledWith(2, ...ctx.chain, 'audio/command', expect.objectContaining({ commandId: expect.any(String), issuedAt: expect.any(Number), deviceId: ctx.node.device_id, action: 'stop' }))
   })
 
   it('refuses to play on an offline device', async () => {
@@ -238,7 +238,10 @@ describe('decommissioned device', () => {
 describe('DELETE /relay-override', () => {
   it('returns a MANUAL device to AUTO and tells the firmware', async () => {
     const ctx = await seed()
-    await SensorNode.updateOne({ _id: ctx.node._id }, { control_mode: 'MANUAL', override_expiry: new Date(Date.now() + 60_000) })
+    await SensorNode.updateOne({ _id: ctx.node._id }, {
+      control_mode: 'MANUAL', override_expiry: new Date(Date.now() + 60_000),
+      relays: { misting: { mode: 'MANUAL', override_expiry: new Date(Date.now() + 60_000) } },
+    })
 
     const res = await request(app).delete(`${base(ctx.node._id)}/relay-override`).set('Authorization', `Bearer ${ctx.ownerToken}`)
 
@@ -246,7 +249,7 @@ describe('DELETE /relay-override', () => {
     const after = (await SensorNode.findById(ctx.node._id))!
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
-    expect(publishCommand).toHaveBeenCalledWith(...ctx.chain, 'relay/command', { deviceId: ctx.node.device_id, action: 'clear_override' })
+    expect(publishCommand).toHaveBeenCalledWith(...ctx.chain, 'relay/command', expect.objectContaining({ deviceId: ctx.node.device_id, action: 'clear_override' }))
     expect(emitRelayUpdate).toHaveBeenCalledTimes(3) // misting, speaker, ventilation
     expect(await AuditLog.countDocuments({ action: 'RELAY_OVERRIDE_CLEARED' })).toBe(1)
   })
