@@ -16,6 +16,7 @@ Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn c
 | [`bm02-self-review.md`](bm02-self-review.md) | BM02 – Self-Review Report: kết quả gốc của prompt chuẩn trên tag `review-2` + Team response (docx: `registration/`) |
 | BM04 – Review 2 Commitment | Sinh bằng `tools/make_bm04.py` từ `report5/tc.py` (docx: `registration/`); chữ ký và kết luận để trống cho hội đồng |
 | [`todo-review2.md`](todo-review2.md) | Việc cần làm, theo gap của Project Tracking (tiếng Việt) |
+| [`todo-final-scope.md`](todo-final-scope.md) | Việc cần làm cho phần scope cuối (G-20…G-27), làm tiếp sau `todo-review2.md` (tiếng Việt) |
 | [`todo-remove-platform.md`](todo-remove-platform.md) | Lưu trữ: các bước bỏ ticket, SLA, vùng (đã xong ở PR #100–#107) |
 
 ## Quy tắc giữ hồ sơ nhất quán

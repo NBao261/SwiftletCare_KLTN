@@ -2,6 +2,8 @@
 
 Cập nhật 03/11/2026 (6 luồng chính theo quy trình nghiệp vụ, SRS 3.2.0; lắp thiết bị thành luồng phụ SF-01), 27/10/2026 (phân công lại theo vai trò từng người), sau khi đồng bộ hồ sơ: phiếu v3 + BM03 1.2, SRS 3.2.0, SDD 1.2.0, Design Brief 1.2, Report 5 1.2.0 (136 test case).
 
+**Phần scope cuối (G-20…G-27, EXPERT-FR-021, 022):** các bước chi tiết ở [`todo-final-scope.md`](todo-final-scope.md); làm tiếp ở đó sau khi xong phần của mình trong file này.
+
 **Cách dùng:**
 - Trạng thái chỉ ghi ở `project-tracking.md`. File này chỉ liệt kê **các bước** làm từng gap (G-xx).
 - Đóng một gap thì trong cùng PR: sửa **đúng dòng** gap của mình ở Project Tracking §6 và trạng thái tính năng ở §3, đổi nguồn test trong `report5/tc.py` từ `todo-auto` sang test thật. **Không** tự sinh lại `report5-test.md` trong PR (file sinh ra, sửa song song sẽ xung đột): Bảo sinh lại trước mỗi mốc.
