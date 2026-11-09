@@ -6,7 +6,7 @@ Hệ thống IoT tự động điều khiển vi khí hậu và giám sát sức
 
 [![CI](https://github.com/NBao261/SwiftletCare_KLTN/actions/workflows/ci.yml/badge.svg)](https://github.com/NBao261/SwiftletCare_KLTN/actions/workflows/ci.yml)
 
-> Yêu cầu chính thức là **Report 3 – SRS** ([`docs/reports/report3-srs.md`](./docs/reports/report3-srs.md)), thiết kế là **Report 4 – SDD** ([`docs/reports/report4-sdd.md`](./docs/reports/report4-sdd.md)), theo phiếu đăng ký bản sửa sau Review 1. Những chỗ code còn lệch với Report 3 nằm ở [`docs/reports/project-tracking.md`](./docs/reports/project-tracking.md) §6. `SwiftletCare_SRS.md` chỉ còn là ghi chú nội bộ.
+> Yêu cầu chính thức là **Report 3 – SRS** ([`docs/reports/report3-srs.md`](./docs/reports/report3-srs.md)), thiết kế là **Report 4 – SDD** ([`docs/reports/report4-sdd.md`](./docs/reports/report4-sdd.md)), theo phiếu đăng ký bản sửa sau Review 1. Những chỗ code còn lệch với Report 3 nằm ở [`docs/reports/project-tracking.md`](./docs/reports/project-tracking.md) §6.
 
 ---
 
@@ -125,8 +125,7 @@ SwiftletCare_KLTN/
 ├── ai-pipeline/          # Đếm chim yến (YOLO + ByteTrack)
 ├── docs/                 # Report 3–4 (SRS, SDD), API spec, database script, phần cứng, sơ đồ, kế hoạch
 ├── .github/              # CI, CODEOWNERS, PR template
-├── docker-compose.yml    # Môi trường dev
-└── SwiftletCare_SRS.md   # Ghi chú SRS nội bộ (đặc tả chính thức: docs/reports/report3-srs.md)
+└── docker-compose.yml    # Môi trường dev
 ```
 
 Mỗi module là một project độc lập, không import code của nhau; chúng giao tiếp qua REST, Socket.io và MQTT. Chi tiết từng thư mục: [`docs/FOLDER_STRUCTURE.md`](./docs/FOLDER_STRUCTURE.md).
@@ -235,7 +234,6 @@ Chi tiết quy trình Git của nhóm: [`docs/github-setup.md`](./docs/github-se
 | [`docs/reports/report4-sdd.md`](./docs/reports/report4-sdd.md) | **Report 4 – SDD**: kiến trúc, công nghệ, quyết định thiết kế, ERD, giao diện, sơ đồ trạng thái và hoạt động |
 | [`docs/reports/project-tracking.md`](./docs/reports/project-tracking.md) §6 | Trạng thái tiến độ: tính năng, test, defect và các gap G-01…G-19 của code so với Report 3/Report 4 |
 | [`docs/database/init.mongo.js`](./docs/database/init.mongo.js) | Database script (sinh từ model bằng `npm run db:script`) |
-| [`SwiftletCare_SRS.md`](./SwiftletCare_SRS.md) | Ghi chú SRS nội bộ (tiếng Việt): lịch sử phạm vi, mô tả luồng chi tiết — không còn là đặc tả chính thức |
 | [`docs/api/`](./docs/api/README.md) | OpenAPI spec và hướng dẫn xem API |
 | [`docs/FOLDER_STRUCTURE.md`](./docs/FOLDER_STRUCTURE.md) | Cấu trúc thư mục, file nào đặt ở đâu |
 | [`docs/hardware/`](./docs/hardware/) | BOM, hướng dẫn linh kiện và đấu nối |

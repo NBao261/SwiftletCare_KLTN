@@ -1,6 +1,6 @@
 # frontend/CLAUDE.md
 
-Map of `frontend/` (React 18 + Vite + TailwindCSS dashboard/PWA) **as the code is today**. The rules — design tokens, components, i18n, mock data, folder placement, file naming, code rules tagged **[Bắt buộc]**/**[Nên]**, known debt and the PR checklist — live in **`frontend/FE_Design_Claude.md`**, which is the first rule source for this module and describes the **target** structure. What the product must do is Report 3 (`docs/reports/report3-srs.md`; roles and permissions §2.4) and Report 4 (`docs/reports/report4-sdd.md` §5.4); they win over `SwiftletCare_SRS.md`. When this file and FE_Design disagree, FE_Design wins for rules and target; this file wins for "what exists now".
+Map of `frontend/` (React 18 + Vite + TailwindCSS dashboard/PWA) **as the code is today**. The rules — design tokens, components, i18n, mock data, folder placement, file naming, code rules tagged **[Bắt buộc]**/**[Nên]**, known debt and the PR checklist — live in **`frontend/FE_Design_Claude.md`**, which is the first rule source for this module and describes the **target** structure. What the product must do is Report 3 (`docs/reports/report3-srs.md`; roles and permissions §2.4) and Report 4 (`docs/reports/report4-sdd.md` §5.4). When this file and FE_Design disagree, FE_Design wins for rules and target; this file wins for "what exists now".
 
 ## Scope gap — read this first
 
